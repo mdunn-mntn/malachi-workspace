@@ -37,7 +37,7 @@ Needed a repeatable query to monitor RTC campaign performance (impressions, visi
 - Visit filter: `from_verified_impression = true`, `elapsed_time <= 1 day`
 - Query written in Greenplum SQL syntax (not BQ)
 
-**See:** `queries/dm-3118-rtc-monitor.sql`
+**See:** `queries/dm_3118_rtc_monitor.sql`
 
 ---
 

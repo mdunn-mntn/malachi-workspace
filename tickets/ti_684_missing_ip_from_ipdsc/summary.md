@@ -57,7 +57,9 @@ TBD.
 
 ## 7. Data Documentation Updates
 
-TBD — update `knowledge/data_catalog.md` entry for `ipdsc__v1` with freshness/TTL findings.
+- `knowledge/data_catalog.md` now has full entry for `dw-main-bronze.external.ipdsc__v1` (added 2026-03-03)
+  including GCS path, unnest pattern, and key facts from TI-644 investigation.
+- Update this section with freshness/TTL findings when investigation completes.
 
 ---
 

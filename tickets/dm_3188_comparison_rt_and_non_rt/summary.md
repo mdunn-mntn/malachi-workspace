@@ -31,8 +31,8 @@ After establishing the RTC monitoring query (DM-3118), needed to produce an actu
 ## 4. Investigation & Findings
 
 Two SQL approaches developed:
-- `dm-3188-comparison_rtc_and_non-rtc.sql` — initial comparison query
-- `dm-3188-rtc-vs-nonrtc.sql` — refined version
+- `dm_3188_comparison_rtc_and_non_rtc.sql` — initial comparison query
+- `dm_3188_rtc_vs_nonrtc.sql` — refined version
 
 Results exported to Drive as `Comparisson of Real Time To Non-Realtime IPs.csv`.
 

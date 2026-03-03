@@ -995,7 +995,7 @@ Systematic stress test of all audit claims, run against BQ Silver with fresh dat
 
 ### 16.1 Methodology
 
-Tested 10 areas identified in `HANDOFF_PROMPT.md`. Ran queries against BQ Silver using 5 advertisers NOT in the original sample (32766, 30506, 36743, 42097, 45573) over a different date range (Feb 17–23, 2026). Also re-ran key queries on the original data to check for temporal changes.
+Tested 10 areas identified in `handoff_prompt.md`. Ran queries against BQ Silver using 5 advertisers NOT in the original sample (32766, 30506, 36743, 42097, 45573) over a different date range (Feb 17–23, 2026). Also re-ran key queries on the original data to check for temporal changes.
 
 ### 16.2 Confirmed Claims
 

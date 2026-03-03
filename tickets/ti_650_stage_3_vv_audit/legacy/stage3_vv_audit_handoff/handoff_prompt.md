@@ -14,9 +14,9 @@ You have access to BigQuery. You can and should write and run queries against th
 
 ## Key Files (read in this order)
 
-1. `Stage_3_VV_Pipeline_Explained.md` — Ground-up explainer of the pipeline, tables, joins, and IP checkpoints. Has real data examples (Part 9) showing how a VV traces back to its bid IP. Start here for understanding.
-2. `Stage_3_VV_Audit_Consolidated_v5.md` — Single source of truth with all findings, results, and Q&A. Dense reference doc.
-3. `ZACH_REVIEW.md` — Distilled review document prepared for the principal architect.
+1. `stage_3_vv_pipeline_explained.md` — Ground-up explainer of the pipeline, tables, joins, and IP checkpoints. Has real data examples (Part 9) showing how a VV traces back to its bid IP. Start here for understanding.
+2. `stage_3_vv_audit_consolidated_v5.md` — Single source of truth with all findings, results, and Q&A. Dense reference doc.
+3. `zach_review.md` — Distilled review document prepared for the principal architect.
 4. `audit_trace_queries.sql` — All queries: A1-A8 (BQ Silver production) + Section B (GP legacy). Production audit table = A4 (A4a CREATE, A4b INSERT, A4f row-level examples).
 5. `questions_for_zach.txt` (parent directory) — Open questions for principal architect, with resolved items.
 6. `bqresults/` — All query result JSON files.

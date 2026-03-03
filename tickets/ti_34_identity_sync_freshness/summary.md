@@ -39,6 +39,11 @@ Key tables investigated for freshness signals (Greenplum):
 - `tpa.membership_updates_logs` — IP audience membership timestamps
 - Identity graph sync timestamps
 
+**Content note:** The SQL file `ti_34_identity_sync_freshness.sql` actually contains NTB (New-to-Brand)
+email prevalence analysis (querying `conversion_log.email` and `email_data` columns, threshold 0.5
+for qualifying advertisers). This may be a mismatch between the file's original purpose and final
+content. The Drive documents are the canonical freshness findings.
+
 **Note (Drive):** Drive has two additional documents:
 - `ID-34 Establish Freshness Measure for IP Blocklist.gdoc` — written findings
 - `ID-34 Establish Freshness Measure for IP Blocklist.gsheet` — data

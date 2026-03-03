@@ -400,9 +400,9 @@ Ran a systematic stress test of all audit claims using fresh data, new advertise
 
 | File | What It Is |
 |------|------------|
-| `ZACH_REVIEW.md` | This document |
-| `Stage_3_VV_Pipeline_Explained.md` | Ground-up explainer of the pipeline, tables, joins, IP checkpoints |
-| `Stage_3_VV_Audit_Consolidated_v5.md` | Dense reference doc with all findings, results, Q&A |
+| `zach_review.md` | This document |
+| `stage_3_vv_pipeline_explained.md` | Ground-up explainer of the pipeline, tables, joins, IP checkpoints |
+| `stage_3_vv_audit_consolidated_v5.md` | Dense reference doc with all findings, results, Q&A |
 | `audit_trace_queries.sql` | All queries: A1-A8 (BQ Silver) + Section B (GP legacy). A4 = production table. A4f = multi-example row-level lineage |
 | `column_definitions.tsv` | Column definitions for every query output — paste into Google Sheets |
 | `meeting_zach_1.txt` | Transcript from our 2026-02-25 call |
