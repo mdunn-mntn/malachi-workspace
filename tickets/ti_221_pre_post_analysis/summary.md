@@ -33,11 +33,11 @@ After a vertical classification update (likely tied to TI-033), needed to quanti
 
 **SQL queries:** `queries/pre_post_analysis_queries.sql`
 
-**Exported results** (gitignored, see Drive):
-- `Campaign Analysis.csv`
-- `Daily Analysis.csv`
-- `Full Daily.xlsx`
-- `Metrics Comparison.csv`
+**Exported results** (gitignored, see Drive or `outputs/`):
+- `outputs/campaign_analysis.csv`
+- `outputs/daily_analysis.csv`
+- `outputs/full_daily.xlsx`
+- `outputs/metrics_comparison.csv`
 
 ---
 
