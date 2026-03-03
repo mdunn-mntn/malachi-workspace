@@ -31,7 +31,8 @@ Some domains were not appearing in the TPA targeting pipeline. Needed to identif
 
 ## 4. Investigation & Findings
 
-- Missing domains identified via `ddp_url_verticals.py`
+- Missing domains identified via `artifacts/ddp_url_verticals.py`
+- Missing domain processing script: `artifacts/missing_domains.py`
 - Missing domains list persisted in `artifacts/missing_domains.yml`
 - Monitor script built: `artifacts/monitor_missing_domains.py`
 - IP-vertical association creation: `artifacts/create_ip_verticals_associations.py`

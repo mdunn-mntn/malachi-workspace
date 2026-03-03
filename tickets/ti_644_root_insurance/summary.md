@@ -66,7 +66,13 @@ Root Insurance ran a prospecting CTV campaign through MNTN using a CRM email lis
 - `dw-main-bronze.external.ipdsc__v1` — DS 4 IP resolution table (GCS-backed parquet)
 
 **Full context and all queries:** `artifacts/complete_context.md`
+**LLM session context:** `artifacts/llm_context.md`
 **Query reference:** `artifacts/query_reference.md`
+**Stakeholder talk track:** `artifacts/root_insurance_kale_talk_track.docx` (gitignored)
+
+Local output files (gitignored):
+- `outputs/city_analysis.csv` — local copy of Drive city-level IP analysis
+- `outputs/mntn_conversions_shared.csv` — conversions data shared with Root
 
 ---
 

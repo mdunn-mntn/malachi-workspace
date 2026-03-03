@@ -45,7 +45,25 @@ Three query versions were developed:
 - **v2:** 4-checkpoint trace (win → redirect → clickpass → ui_visits)
 - **v3:** 5-checkpoint trace, starting from clickpass_log as the anchor (better than ui_visits as starting point)
 
-**Queries:** See `queries/` directory (migrated from `ti_650_stage_3_audit/`)
+**Queries:**
+- `queries/audit_trace_queries.sql` — full 5-checkpoint IP trace (v1/v2/v3 versions)
+- `queries/questions_summary.sql` — questions for Zach / schema investigation queries
+
+**Outputs:**
+- `outputs/bqresults/` — BQ result JSON files (gitignored); `outputs/bqresults/readme.md` describes contents
+- `outputs/column_definitions.tsv` — column definitions reference (gitignored)
+
+**Artifacts:**
+- `artifacts/stage_3_vv_audit_consolidated_v5.md` — comprehensive audit document (v5)
+- `artifacts/stage_3_vv_pipeline_explained.md` — pipeline architecture explanation
+- `artifacts/stage_3_vv_audit.docx` — Word version of audit report (gitignored)
+- `artifacts/zach_review.md` — review notes with Zach
+- `artifacts/handoff_prompt.md` — Claude session handoff prompt
+- `artifacts/meeting_zach_1.txt` — meeting notes
+- `artifacts/questions_for_zach.txt` — open questions for Zach
+- `artifacts/questions_for_zach.docx` — formatted questions doc (gitignored)
+- `artifacts/membership_updates_proto_generate.py` — protobuf generation script
+- `artifacts/mes_pipeline.pdf` / `mes_pipeline.png` — MES pipeline diagrams (gitignored)
 
 ### Key Findings
 
@@ -82,7 +100,7 @@ Direct join on `ad_served_id` between win_log and clickpass_log is invalid — d
 
 - Delivered quantified analysis: mutation rate, hop breakdown, campaign decomposition, cross-device breakdown, NTB phantom event count
 - Documented methodology as reusable 5-checkpoint IP trace pattern
-- Produced per-campaign mutation table (`outputs/mutation_by_campaign.csv` — from legacy folder)
+- Produced per-campaign mutation table (BQ result JSON files in `outputs/bqresults/`; gitignored)
 - Documented BQ pipeline gap and Greenplum workaround
 - Provided remediation recommendations (targeted campaign fixes, cross-device infrastructure)
 

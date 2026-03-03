@@ -39,6 +39,10 @@ Multiple domain list exports in `outputs/domain_lists/`:
 - `whitelist_blocklist_domains.csv` — combined
 - `vertical_categorizations_ecommerce_whitelist.csv` — categorized whitelist
 
+Additional outputs (local, gitignored):
+- `outputs/ecommerce_whitelist_2.csv.gz` — updated whitelist version
+- `outputs/ecommerce_blocklist_2.csv` — updated blocklist version
+
 Analysis notebook: `artifacts/output.ipynb`
 
 ---
