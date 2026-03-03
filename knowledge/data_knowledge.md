@@ -145,10 +145,19 @@ Appears in spend_log, bidder_bid_events, bidder_auction_events:
 `is_test = TRUE` in spend_log and bidder_auction_events means test/QA auctions — **exclude from
 production analysis**.
 
-### ip vs ip_raw
-Many tables have both `ip` (potentially masked/enriched) and `ip_raw` (original). The `original_ip`
-column (where present) is the pre-proxy original. In ui_visits/visits, `impression_ip` is the IP
-at impression time.
+### ip vs ip_raw vs original_ip vs bid_ip vs impression_ip
+
+Zach explained the full IP column taxonomy on 2026-02-25 call and confirmed in docx review 2026-03-03:
+
+| Column | Present in | What it is |
+|--------|-----------|------------|
+| `ip` | most tables | **The IP used for all logic** — enriched/preferred IP. VV tracing, targeting, and geo all use this. |
+| `ip_raw` | clickpass_log, event_log, others | Raw IP before MNTN enrichment. Usually identical to `ip`. |
+| `original_ip` | event_log, cost_impression_log, others | Pre-iCloud Private Relay IP — raw TCP connection IP from x-forwarded-for header. MNTN overrides this with a more accurate device IP stored in `ip`. Use `ip` for analysis; `original_ip` for audit/debug only. |
+| `bid_ip` | event_log, click_log | IP at bid/auction time for the associated impression. In event_log, `bid_ip` = win_log.ip = cost_impression_log.ip at 100% (validated 30,502 rows, TI-650). The gold column for IP lineage — no need to join win_log or CIL. |
+| `impression_ip` | ui_visits | Bid IP carried forward from impression_log onto the visit record. Matches event_log.bid_ip at 95.8–100% (mismatch ~2–4% for CTV-heavy advertisers where impression_ip may reference a different impression than last-touch ad_served_id). Fallback for non-CTV VVs where event_log has no row. |
+
+**Rule:** Use `ip` for analysis. `bid_ip` to trace back to bid time. `impression_ip` as non-CTV fallback. `original_ip` only for pre-relay audit.
 
 ### icloud_ tables
 `icloud_vv_log`, `icloud_guids`, `icloud_ipv4`, `icloud_ipv6` relate to Apple iCloud Private Relay
@@ -167,6 +176,8 @@ traffic handling. IPs from iCloud relay require special treatment for geo-target
 ### Retention / TTL
 | Table | Retention |
 |-------|-----------|
+| silver.logdata.clickpass_log | **No TTL** — confirmed 2026-03-03 (expirationTime: none, no partition expiry) |
+| silver.logdata.event_log | **No TTL** — confirmed 2026-03-03 (expirationTime: none, no partition expiry) |
 | bidder_bid_events | 90 days (expirationMs on partition) |
 | bid_logs_enriched | 90 days |
 | event_log_filtered | 60 days |
