@@ -1,0 +1,160 @@
+Questions for Zach — Stage 3 VV IP Lineage Audit
+Updated 2026-03-02
+
+Hey Zach — quick update on open items from the audit. Most things
+resolved empirically, so this is short. Two scope decisions still
+need your input, plus one item we'd like you to confirm.
+
+
+================================================================
+1. NEED YOUR INPUT — Scope Decisions
+================================================================
+
+
+Q2: Is CTV-only IP tracing sufficient, or should we plan for non-CTV?
+---------------------------------------------------------------------
+
+Our event_log trace only works for CTV inventory (non-CTV doesn't
+fire VAST events). For CTV, we have a full 4-checkpoint trace:
+
+    bid_ip → vast_ip → redirect_ip → visit_ip
+
+For non-CTV verified visits, event_log won't have a match, but
+ui_visits.impression_ip already carries the bid IP (confirmed
+99.2-100% accuracy). So non-CTV gets a 2-checkpoint trace:
+
+    impression_ip (= bid_ip) → visit_ip
+
+Since all IP mutation happens at the VAST-to-redirect boundary —
+which non-CTV doesn't traverse — the 2-checkpoint trace is
+arguably complete for non-CTV.
+
+Question: Is impression_ip sufficient for non-CTV, or do you want
+us to build a separate non-CTV trace path?
+
+
+Q4: How far back should the IP lineage trace go?
+-------------------------------------------------
+
+The production table currently traces the last-touch bid IP — one
+row per verified visit, answering "where did this VV's IP come
+from?" for every VV.
+
+We've demonstrated that full backward traversal works (finding all
+prior impressions for a bid IP — our Q9/Q10 examples showed
+1 to 369 impressions per VV). And 14.28% of multi-impression VVs
+have different bid IPs between first and last touch. But full
+traversal means N rows per VV instead of 1, and
+first_touch_ad_served_id is NULL ~40% of the time (see Q1 below).
+
+Question: Is last-touch tracing sufficient for the DDM audit use
+case, or do you want the full impression chain?
+
+
+================================================================
+2. QUICK CONFIRMATION
+================================================================
+
+
+Q1: Is first_touch_ad_served_id populated by a batch backfill?
+--------------------------------------------------------------
+
+We see NULL rates that inversely correlate with recency:
+
+    < 1 hour after impression:   54% NULL
+    1-24 hours:                  49% NULL
+    1-7 days:                    37% NULL
+    7-14 days:                   25% NULL
+    14-21 days:                  18% NULL
+    21+ days:                     0% NULL
+
+This looks like a batch job that fills in first_touch after the
+fact — newer records haven't been backfilled yet. Can you confirm
+that's what's happening?
+
+Impact on audit: Low. The production table uses ad_served_id
+(last-touch) as the primary trace, which is always populated.
+first_touch is optional enrichment.
+
+
+================================================================
+3. RESOLVED — FYI only, no action needed
+================================================================
+
+
+Q5: Multiple clickpass rows per ad_served_id (RESOLVED)
+-------------------------------------------------------
+
+We found 84 out of 219,527 ad_served_ids (0.038%) with 2
+clickpass rows, and 1 with 3 rows. We investigated and these are
+NOT retries or data quality issues — they're multi-device
+attribution.
+
+Example (ad_served_id cf7659de-81e9-450b-83f2-4894b6f323a6):
+
+    Row 1: iPhone Safari,  ip=66.176.148.243,  is_cross_device=false
+           GA client: 2043036188.1770305431
+           Time: 2026-02-06 20:41:12
+
+    Row 2: Android Chrome,  ip=172.58.131.114,  is_cross_device=true
+           GA client: 40715985.1767325033
+           Time: 2026-02-07 00:47:08
+
+Same CTV ad (same ad_served_id, campaign, creative, impression),
+two different phones in the same household visiting independently.
+The ui_visits table mirrors the same pattern — two rows with
+different GUIDs, different IPs, same impression_ip.
+
+Resolution: Production table uses QUALIFY ROW_NUMBER() OVER
+(PARTITION BY ad_served_id ORDER BY time DESC) = 1 to take the
+most recent visit. At 0.038% prevalence, this has no material
+effect on aggregate metrics.
+
+
+Q6: /32 CIDR suffix on silver event_log.ip (RESOLVED)
+------------------------------------------------------
+
+Some silver event_log.ip values have a /32 suffix (e.g.,
+'72.128.72.212/32' instead of '72.128.72.212'). This is a GP
+inet-to-STRING conversion artifact — GP stores event_log.ip as
+inet type which inherently represents /32, and the suffix
+sometimes survives the bronze/silver ETL. bid_ip is text on GP,
+so it never has the suffix.
+
+Resolution: Production queries use REPLACE(el.ip, '/32', '') for
+all event_log.ip comparisons. Documented in edge cases.
+
+
+Q0: "Visits will include clicks" (RESOLVED)
+--------------------------------------------
+
+Click data is embedded in the visit row — there is no separate
+click row type. Each clickpass_log row = one verified visit, with
+click metadata columns (click_elapsed, click_url,
+destination_click_url) attached. ui_visits is the superset that
+includes display clicks; clickpass_log does not.
+
+
+================================================================
+4. PREVIOUSLY ANSWERED — reference only
+================================================================
+
+- Which impression's ad_served_id ends up on the clickpass record?
+  Always the most recent (last-touch) impression. Confirmed with
+  0 exceptions across 35,198 rows.
+
+- What does first_touch_ad_served_id represent?
+  The first impression for this user/advertiser pair.
+
+- Can ad_served_id and first_touch_ad_served_id be the same?
+  Yes — 42.48% of the time.
+
+- Does clickpass_log contain only CTV verified visits?
+  clickpass_log = verified visits only. ui_visits is the superset
+  that includes display clicks. (Confirmed by Zach.)
+
+- How does the targeting system track IPs in segments?
+  Groups by (ip, data_source_id, category_id) and stores only
+  MAX(epoch) per combination. No impression history — just the
+  latest timestamp. 90-day lookback for guid/conversion, 30-day
+  for impression/event/clickpass.

@@ -1,0 +1,48 @@
+# Data output files — don't commit raw data to GitHub
+*.csv
+*.csv.gz
+*.tsv
+*.xlsx
+*.xls
+*.parquet
+*.json
+
+# Video / audio recordings
+*.mp4
+*.m4a
+*.mov
+*.avi
+*.vtt
+*.m4v
+
+# Log files
+*.log
+
+# Binary/media files
+*.docx
+*.doc
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pptx
+
+# Python / notebook artifacts
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Secrets / credentials
+.env
+*.key

@@ -1,0 +1,301 @@
+Speaker 1  0:00  
+Pressure, right? There is a percentage of those that exist in that capacity, right? Or, yeah, no. I mean, that's like the main guy. We should be able to resolve that concept, that issue, right? So, like, whatever data set that this provides, ideally, we should be able to use it for that as like an example, among other like auditing purposes.
+
+Speaker 2  0:27  
+So something that just outputs, like the advertiser ID, campaign ID, and then it's like IP to it'd
+
+Unknown Speaker  0:35  
+be good to have the lineage,
+
+Unknown Speaker  0:37  
+right, like the full lineage,
+
+Speaker 1  0:39  
+the full lineage for like, an ad served a verified visit, or really any impression, like, honestly, any impression inside of stage three, right? Like, we have an impression stage three, we should be able to be like, Hey, okay, we got this from the stage three. Impression happened because we had a stage two verified visit that was two weeks ago, and you know, that thing got in there from a stage one impression a little bit ago, like, ideally, like, each lineage would have its own identifier. Like, kind of conceptually, but maybe a little bit overkill.
+
+Speaker 2  1:23  
+Okay, I mean, I don't think that's going to be very hard. In fact, I pretty much already have, like the whole so there were some things I was just trying to resolve without basically asking a billion questions, because I already did ask a bunch of them, but wanted to see if I pulled up. I wrote a ticket for the D Platt team,
+
+Unknown Speaker  1:44  
+just to kind of confirm some things.
+
+Speaker 2  1:49  
+But oh, let me see if I can just read one of these things here. I'm sorry before jumping next topic. So it sounds like it would be nice to have a table that basically gets populated with this that we just okay. I'm sure we can talk about the nuances there. When I everything's all finished, I'll probably be all done by the end of day tomorrow,
+
+Speaker 1  2:11  
+because, like, to your point, like, as, like, a base audit that could be generated off of your data set is like, okay, DDM team, they can go and look and, you know, compare every stage three impression, verify that like it, it's seen in your table, type deal, right? Or like, if your table is unable to resolve something, right, we can create an alert on that type deal, type, yeah, just as, like, something that's more tangible and in use, so that way it kind of stays up to date.
+
+Unknown Speaker  2:48  
+Okay, that makes sense.
+
+Unknown Speaker  2:52  
+Um, the other thing I had was,
+
+Speaker 2  2:57  
+well, I want to write this out, but like, the verifiable, like top level truths for each table, and I understand that that's pretty much the log tables in like every circumstance. But, yeah, but I understand that there's also other tables that people use
+
+Unknown Speaker  3:13  
+pretty regularly. So in this case,
+
+Speaker 2  3:18  
+there was the log data. Click, pass log. So between, basically the event log IP, and then the click pass log IP, that's the So can you just give me an idea? So the click pass log is basically the log in which, like when someone clicks on the ad, and then that's what happens. I'm kind of trying to understand exactly what is all contained in the click pass log.
+
+Speaker 1  3:49  
+The click pass log is the log of verified visits.
+
+Unknown Speaker  3:52  
+Oh, it's just as simple as that.
+
+Speaker 1  3:55  
+That is it. Okay? Click pass is the old original term for verified visit,
+
+Speaker 2  4:02  
+okay, that makes sense well, because, like when I was looking between click pass, log, IP and the the summary data, UI, visits, IP, they were like, almost 100% identical, almost
+
+Speaker 1  4:12  
+they should be identical the visits. The visits includes clicks, right? We do still serve display, and people do, or there are devices at least, that perform the click action on display, and the visits table will account for those as well. So you have BV versus the click. We actually don't sure this is the case, but, yeah, we don't put clicks into the stage three because, like, it's not the same thing. There's slightly different honestly, we probably should, but it's so small and insignificant that, like,
+
+Unknown Speaker  4:57  
+most of the time, it's not a
+
+Unknown Speaker  4:59  
+big deal. I. Okay, yeah, cuz I also found stuff too. So like, for
+
+Speaker 2  5:02  
+example, the bid IP and the event log the win log IP and the cost impression log IP were 100% matched for at least the stuff that I tested. I just grabbed like 10 advertisers. But, okay, cool, yeah, let's see just a few other things I was gonna double check here.
+
+Speaker 2  5:36  
+Sorry, I had a meeting, like right before this super long so would have put some stuff together. Oh, this was weird. So the tables that I mean, this is probably not something that you know off the top of your head. I asked this to D plat, but the is new flag
+
+Speaker 1  5:56  
+is useless. It's relevant to the pixel tracking. Pixel does some stuff where it technically tries to understand if this is the first time that the good shit is being populated for that device, and that's what triggers that is new.
+
+Speaker 2  6:14  
+Yeah, because basically what I found is that the click pass log is new and the summary data UI visits is new only match like 41% of the time, even though they would have like 100% match on their IP which I was like, Okay, well, which one? I don't know that.
+
+Speaker 1  6:33  
+Yeah, the is new inside of click pass. Yeah, that should be based off the good one. So it's all based off of whether or not the page view was the first time that good should have been seen. I guess for that advertiser, I was
+
+Speaker 2  6:54  
+trying to figure out what the reference table was. So I was joining the click pass log. Page view, good to the conversion log Good to see if the conversion log is the reference table.
+
+Speaker 1  7:04  
+Conversion log has nothing to do with verified visits or anything of this, anything we've been talking about, because conversion log is raw conversions, literally, the pixel fire on a conversion doesn't have any bearing on a verified visit,
+
+Speaker 2  7:24  
+what? Where is the logic for like the is new population,
+
+Speaker 1  7:31  
+then it looks inside of tracking pixel, like it is a service, JavaScript, Java code, not JavaScript, kind of JavaScript in the browser. Gotcha?
+
+Speaker 2  7:41  
+Okay, so there's not, like a table to table reference for no, okay, that makes a lot more sense, because then I was, alright, well, it was all good information. I don't think there's not too much more, just just a few notes, like we already talked about this. But just to be clear, I don't know what the cadence well. I do know what the cadence is of the current tables, like in the bronze architecture for like, the raw stuff, but there was not overlap between some of the tables I need to join, like they were in the I don't know
+
+Unknown Speaker  8:19  
+if that's like a current issue that's going to be, yeah, it sounds
+
+Speaker 1  8:23  
+like a current issue. Late. They all dump to cloud storage at the same cadence, which is like whenever the buffers fill up their import into the other downstream tables after that part, which is kind of what the D flat stuff does. That's all in Super flux right now. So yeah, I couldn't tell you what the cadence is off the top of my
+
+Speaker 2  8:45  
+head for those guys, I figured it out. But like, for example, I can't I've been doing so many different things, but for example, like, some of them didn't have any February data. Still, it was all the way up to January 31 for at least the tables. So I figured that things are just like in transition mode right now, and it'll probably change.
+
+Speaker 1  9:02  
+Yeah, it's kind of a pain, because if they're, I'm not even sure if you're referencing core DW or BigQuery in relation to that, like some of these things, like, they just stopped populating in core DW because they didn't need them in there anymore. So now they're only in BigQuery, and it's never fully clear which ones are which right now? So, yeah, it's just a bit of a pain, growing pain in relation to that stuff.
+
+Speaker 2  9:29  
+Question on the vast impression. So first off, when you say vast, does that stand for something?
+
+Speaker 1  9:35  
+Yes, literally, just Google. I don't know if the top of my head,
+
+Unknown Speaker  9:41  
+I'll take a vast impression. I imagine this is just Google vast standard.
+
+Speaker 1  9:45  
+Like, literally, that's, that's the best thing to do. Okay? Video, vast standard, right?
+
+Speaker 2  9:54  
+Like, gotcha. Okay, I'll do some I'll read up on this a little bit. Probably be helpful.
+
+Unknown Speaker  10:00  
+Video, ad serving template,
+
+Speaker 1  10:05  
+yeah, I be vast stamp this thing.
+
+Speaker 2  10:11  
+So is it expected to for a single ad served ID, to have multiple rows in the event log or the event type? Yes, like fast impression. So what causes the duplicates? Then, like re fires, what retries?
+
+Speaker 1  10:25  
+They're not duplicates, though. They're different events.
+
+Unknown Speaker  10:30  
+Oh, under okay,
+
+Speaker 1  10:35  
+there's vast underscore. Impression, start, first quartile,
+
+Speaker 2  10:43  
+when I filter by vast impression, or like something like that, where I'm only filtering. So in that case, we could still have more than one.
+
+Speaker 1  10:52  
+It shouldn't happen more ever. The only scenarios where that could or would happen is if they reuse the and a vast template that we return, or not even a template, the vast file that we return on the serve request, which is something that potentially they could do. It's not exactly something we want them to do, but we don't really have control once someone downloads a file.
+
+Unknown Speaker  11:22  
+Okay, that makes sense.
+
+Speaker 2  11:26  
+All right. Well, this question that I wrote down, pretty much, I think we already covered it, because I was asking about the last TV touch visits, but we're not going to use that as the source of truth table.
+
+Speaker 1  11:42  
+So I wouldn't like it like that was the best effort, right? And, like, I don't fully know their exact implementation off the top of my head, but I just remember it even it was still having issues of, like, not having 100% coverage. So, yeah.
+
+Speaker 2  12:02  
+So this is interesting. I it supports our claim here, but when I chose the advertisers, I chose some advertisers, they're 100% marked new to brand and meet our criteria, and then ones that were mixed and some that weren't. And when you have 100% new to brand campaigns, you actually have lower mutation rates, or that's what I'm referring to, is when the IP changes, which makes sense, because it seems like these, these people, are probably less likely to have changing IPs, just inherently, because they're being marked new to brand. I don't know, but there's, there's some interesting
+
+Speaker 1  12:37  
+that's interesting. I don't know if that statement fully makes sense, but it's definitely an interesting data point. Yeah, definitely something we gotta understand better. Yeah, I
+
+Speaker 2  12:48  
+was trying to make sense of why that would be the case. It was pretty consistent, too. I tried a bunch of them, and it just seemed to be,
+
+Speaker 1  12:55  
+it's the ones that I've seen, the indicators I've typically seen that help or have less mutation or mess issue. It's typically a publisher aspect or attribute, right, depending on where you're serving the ads,
+
+Unknown Speaker  13:17  
+that kind of plays into it a little bit
+
+Speaker 1  13:21  
+for whatever reason, bad and device type, right? So, like, if it's mobile, like, if they're not buying as much Mobile Inventory, right? You're much less likely to have things, you know, flipping between IP addresses and that fun stuff,
+
+Unknown Speaker  13:38  
+okay, that makes sense.
+
+Unknown Speaker  13:45  
+Think that's most of it. I'm trying to read through some of my notes here.
+
+Speaker 2  13:56  
+When this is probably not a yes no answer anyways, but just kind of curious. So when I'm going through multiple different types of tables, right? A lot of time, it's pretty standard that if, okay, like, for example, I'm in the events table, let's This is an arbitrary example, but like, Yep, and I'm recording IPs in the events table, if I'm recording the event IP, I don't mark it as event IP, but if I were to use the event IP in another table, then I'd mark it as event IP in that other table, right? I won't just leave it as IP unless, I don't know, unless there I don't know if you get what I'm saying, I get what you're
+
+Speaker 1  14:35  
+get that it's a naming convention. It is something that could and would happen if you have a IP, if you were using that event IP in another row that already had an IP, right? Exactly.
+
+Speaker 2  14:51  
+So, I guess my question on this is that one of the thing, the biggest drawbacks here, and this is something, again, might be a gap, right, and I want to but is there any. Clear place to know. Like, when I'm looking at something in one table and I've got four IPs or something like that, is there any way to know, like, Hey, I know that this IP comes from this or or any, any sort of documentation around that, or is it kind of just like, you know, you know,
+
+Speaker 1  15:19  
+the documentation in the old ecosystem, not really the SQL mesh migration that they're doing in Russian. BigQuery, that is supposed to have an aspect of data linear lineage, right? So like in that scenario, you'd be able to go into SQL meshes, UI, or whatever the hell and like, look and see where that column came from, from that table, and trace it back to a previous table, and chase that back to a previous table, etc, etc. So in that world, yes, that is something that's supposed to be coming out of the box, as my understanding in the old world. I mean, it's just kind of, there's only a very few set of tables that actually have multiple IP addresses in them. Yeah, pretty much cost, impression, log, event, log, ad server and pixel and the it's basically the IP, the original IP and the bid IP, right? IP being the one that we're actually using for any logic, right? That's the one that's actually being you. IP field is always the ones that's being used for the logic, right? Bid IP is pretty self explanatory. It's the IP that we saw at the time of bid for this event, then it's probably in relation to an impression, or it's not. Probably it has to be in relation to an impression in some way, shape or form, right? Whether it's a verified visit that is occurring for an impression and events serve an events log for an impression, an impression served. Right? Bid IP is bid IP, original IP in the tables where that exists. That is the IP address that we saw
+
+Unknown Speaker  17:12  
+come in
+
+Speaker 1  17:14  
+before our iCloud relay pack that exists out there that kind of bypasses DNS resolution. So that's the IP in those scenarios you're looking at.
+
+Unknown Speaker  17:29  
+Let's specify pricing
+
+Speaker 1  17:32  
+in those scenarios where you have original IP and IP address, right? The original was the one that, if you were to look at like the x4 to four header, or like the actual connection coming into the server, that's the IP you would see, right? But we override it with another IP address that we think is more accurate to the actual device, and that's what gets put in the IP column. So again, the one the one that matters is the one in or, I should say they both kind of matter, but the one that has any kind of external logic being applied to it is the one in the IP column. Gotcha, right? So if you're doing a verified visit on it, you're not using the original IP. You're only using the IP, right? So that way you don't have to have all the microservices and all the other infrastructure change. They always just look at the IP. They act on it. You add the other stuff for
+
+Unknown Speaker  18:31  
+these kind of exercises.
+
+Speaker 2  18:35  
+Okay, that makes sense. Well, one of the reasons I ask is I think that it would probably be worth doing, but kind of similar. I think this would be more impactful, but I did provide documentation for like, oh, how does targeting infrastructure work? You know, essentially whatever I did that before, but what I think would be really helpful, and maybe this is like a mostly an analyst thing, so maybe not like across the board, but one thing I thought would be pretty cool is to create some sort of markdown doc that at least can be referenced, whether someone's like using AI and they use it as a context, or somebody just needs to look up a confluence page where as I work on stuff, I'd like to create information for each of the tables. And kind of just like some of that domain knowledge about what's in them and stuff, because if we had something like that, at least for me, it'd be super helpful, because I could probably make queries and do a lot of stuff a lot faster, and then ultimately, too, if somebody else is trying to do something, and you know, even if we have new person. So I think I'm going to do that after this whole audit stuff, it's more important. But that's kind of where I'm leaning towards. And I mean, even this conversation, where a lot of it's kind of straightforward, even just saying, like, oh, well, if it's, you know, in this case, whatever, this case, whatever, that's
+
+Unknown Speaker  19:56  
+kind of one of my plans outside from that. I.
+
+Speaker 1  20:00  
+Oh, be good. Yeah, more of that stuff is always good. The only problem is is, like, not gonna lie, a lot of that stuff probably already exists in other places. It's just that the revolving door, it makes it hard to find in places like Confluence and XYZ. So like, honestly, it's not the data gathering aspect. That's the hard part. It's the making sure that people actually know about it. Yeah, and
+
+Speaker 2  20:25  
+I think that maybe even having one of those documents, like pinned and D flat or like the channel, would be helpful stuff like that, but that
+
+Unknown Speaker  20:33  
+assumes the channel is still around.
+
+Unknown Speaker  20:35  
+I know that's Yeah, that's true,
+
+Speaker 1  20:37  
+but those things come and go, unfortunately. But, yeah, it's good to do. I'm not saying don't do it. I think. I'm just saying that one aspect of doing it that would be good is to give some thought on how to make sure that it becomes super visible.
+
+Speaker 2  20:57  
+Yeah, well, at least for me too, it speeds. It would speed up a lot of stuff too. Yeah.
+
+Unknown Speaker  21:05  
+I mean, I don't know, maybe I over utilize some stuff, but
+
+Speaker 1  21:09  
+no, I mean, like, it's, everyone always has their patterns. You're not wrong, and it would be good to have. I'm just really kind of harping on, like, if, if you do it, and you should figure out a good place to put it, and how to like convey it, and how to make sure that it gets baked into other things that people are using.
+
+Unknown Speaker  21:30  
+Confluence, to be honest, is trash.
+
+Speaker 1  21:33  
+Like you can't search it, like they're like, it is an utterly garbage tool, and it's very painful to even I hate updating it so, like, there's there's that. So I don't have a good answer for you, because if we had a good answer, we be using a lot more heavily, but
+
+Unknown Speaker  21:52  
+something to think of. Well, do you know what
+
+Speaker 2  21:54  
+they did at Pinterest, which I thought, I mean, one of the smart things they did there is they had some sort of internal chat GBT tool, kind of like, you know, how when you go to the benefits log, you know, and you ask a question, it can more or less answer most of your questions, the AI thing. Well, they had the same thing, except with documentation, and different teams had it. And so you could literally just say, hey, I need to do this. What tables would I use for that? And it might not know exactly like, what to use, but it would point you in the right direction. Or it would say, Hey, here's your list of tables, depending what you want to do, you know, whatever, because there was some documentation that somewhere that just explained what that table was. And so at the very minimum, it would be super helpful, I think, like, what's what AI is not for. And I know this. I probably know this just as well as anybody else, because I use it all the time. Is it sucks for developing and doing actual work. Like, if you are, I don't know. I'm sorry. Like, whenever I see all the conversations talk about, AI is going to take people's jobs. I'm like, These people don't actually use it.
+
+Speaker 1  22:55  
+Like, oh, agreed. I mean, I use it pretty heavily myself. Like, it cuts down my boiler plate time, insane. So much, right? But like, I have side projects that are a little bit more complicated and it's just absolute trash at it, like it, it is good at auto fill, but more context. What you call it blanking on the good term summarization for like, a better way of phrasing it, right? It is pretty sense summarizing, yeah, so yeah, like, it would be good for that. I There is a team that is supposed to be doing things like that. I haven't really followed up with them in quite a while, but they that is something that they want to do. So, yeah. Well, step one is aggregating and creating that those docs to feed into it. So that would be good.
+
+Speaker 2  23:49  
+Well, yeah, I pretty much what I use for it, for now is context, like, when I've got, like, a ton of different tables and I'm trying to gather a bunch of information, usually a start, like a document, like you've seen, and I read on all my thoughts, and then I'll copy and paste that and be like, hey, like, make this understandable, like it's not just a bunch of random stuff, and then afterwards, it helps me, kind of, you know, that's mostly how I use it. But all right, well, that's all I have for that. I guess the only last question is more of a personal one. I'm kind of curious your background. I don't remember you've been here, obviously, for a super stupid amount of time. Were you like a software engineer? Background, like, what did you do? I mean, I know you pretty much are kind of more of like an independent contributor, still,
+
+Speaker 1  24:37  
+but oh, I mean, well, I mean, my before working here. I was working at E trade in market data. So like always been on the real time, large, low latency stuff. So that's the stuff I always kind of find interesting. But, um, lastly, my undergraduate degree is in electrical and computer engineering, so.
+
+Unknown Speaker  25:00  
+Hardware, not really all things.
+
+Speaker 2  25:03  
+Yeah, it's funny how the transition happens. I still, I'm just kind of curious. You know, I see a lot of the stuff that they're doing here. I want to eventually get to it. I really like doing analyst work. I do I like doing engineering work, but the only thing that I feel like is that I don't know, I feel like I'd really, really like to be like a solid software engineer, which I know is a kind of a much different, like path, but I'd like to be somebody that really understands how to code very well and understands, like back end infrastructure, in addition to the data stuff, because I have a lot of experience with data and doing data science and all that, but I feel like, and it's like, I can code too, but half the time when I'm coding stuff, it's not, like, super complex stuff, you know. It's, you know, I'd like to be that person that could, like, I don't know, you know, I'm saying, like, solve those pretty deep issues and stuff. So it's the only thing that I'd like to do additionally, I think eventually.
+
+Speaker 1  26:04  
+But I mean, I get it. I like those problems. It's, I always end up living the majority of my life. So, yeah, no, I don't blame you. It's, it's a fun problem set. It can be annoying at times, because there's only so much you can do sometimes.
+
+Unknown Speaker  26:20  
+But I don't know. I guess
+
+Unknown Speaker  26:26  
+there's anything relevant there that would really help.
+
+Speaker 1  26:33  
+I guess if I were to suggest anything, it would be like pick a an aspect of the domain that you really want to focus on first, and kind of branch out from there type deal, yeah? Because, like, I don't know, my hobbies lately have been, kind of want to build my own LSM database, just because, for the shits and giggles of it, because I use them all this fucking time, and it does help with the base understanding of what's all going on underneath the hood, right? So, like, pick a problem, just kind of, like, tease at it, go through lots of code bases, like, read a shit ton of code bases. That's the best thing. But with open source and everything, there's just so many interesting projects out there that
+
+Speaker 2  27:18  
+it's good. Well, I know we got a minute left. I was just going to, you know, I think the the closest adjacent thing is, I mean, since I work in data, like when we have that conversation with roguas and a boss stuff about the bitter and some of those things, I think that maybe doing, like, looking more into that, something I might be doing or interested in looking into just because it's, like, it's pretty adjacent, I want to have to learn, like, something
+
+Unknown Speaker  27:44  
+completely different, but it's, like, a little bit, I
+
+Unknown Speaker  27:47  
+mean, that's more software engineering focused,
+
+Speaker 1  27:49  
+like, yeah. I mean, it's a good problem set, right? They have the scale issue because it's not the complexities in the volume and the latency.
+
+Unknown Speaker  27:58  
+Yeah, so cool. All right. Well, thanks,
+
+Speaker 2  28:00  
+Zach, yeah, I'll throw in another meeting when I'm all done with this stuff, and then we'll, I'll figure out
+
+Unknown Speaker  28:07  
+the whole audit stuff and the tables, and cool.
+
+Speaker 1  28:09  
+Yeah, hit me up. We'll figure it out. Getting an audit going and something that's actually generating the data on a consistent basis is definitely like the end goal, I would say. Because if we don't do that, then it's just gonna wither and die eventually. And I'd love to just be able to there's always, like, this error of, like, people aren't 100% how these IPs get into, like, the stage three. Just being able to prove it for every single one in a very clean table representation would be like, so beneficial,
+
+Speaker 2  28:46  
+yeah, well, I'm doing that. Awesome. Cool. All right. Well, thanks, Zach, thanks. Take care. Later.
+
+Transcribed by https://otter.ai

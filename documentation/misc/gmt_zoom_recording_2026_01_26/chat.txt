@@ -1,0 +1,15 @@
+00:07:24	Forrest Bajbek:	Aerospike is a cool tech. It's a key-value like Redis, but it keeps the values on SSD. Near Redis latency with SSD size memory!
+00:07:41	Ryan Kleck:	Reacted to "Aerospike is a cool ..." with 😎
+00:15:17	Ryan Kleck:	@Rogus if you ever want to mess with a true GraphDB, I’d be interested.. I’m not sure it would have the low latency you need, but it would be way cool to have like ips and advertisers as nodes and edges between them that drop/add in real time
+00:16:09	Rogus:	Yeah I'm down, but that's the other side of the house, not really my domain. If only I had joined a year earlier (when first asked) then I could have been in charge of all of that 🙂
+00:18:42	Forrest Bajbek:	Replying to "@Rogus if you ever w..."
+
+I'm pretty familiar with Neo4J and Cypher. Happy to meet and chat options.
+00:21:49	Ryan Kleck:	Reacted to "Yeah I'm down, but t..." with 👍
+00:28:54	Ryan Kleck:	Yeah there’s like ~400B advertiser scores and ~200B campaign scores
+00:29:16	Zach Schoenberger:	Reacted to "Yeah there’s like ~4..." with 👍🏻
+00:29:48	Ryan Kleck:	I think if we ship scores to MemDB, we would only send (to the bidder) scores for IPs that belong in the segment .. just FYI
+00:30:24	Zach Schoenberger:	Reacted to "I think if we ship s..." with 👍🏻
+00:30:54	Zach Schoenberger:	correct - we already send a segment score. it would just go in there
+00:31:29	Ryan Kleck:	Reacted to "correct - we already..." with 👍
+00:32:25	Ryan Kleck:	Is the thresholding in here @Malachi Dunn ?
