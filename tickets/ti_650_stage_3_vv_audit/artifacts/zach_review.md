@@ -404,27 +404,21 @@ Zach reviewed the A4f multi-example row-level lineage query live on call. Key co
 
 Malachi's prior understanding was that Stage 2 = "all impressions after the first impression." Zach corrected this:
 
-| Stage | What it actually is | What populates it |
-|-------|---------------------|-------------------|
+| Stage | What it actually is | What populates the segment |
+|-------|---------------------|---------------------------|
 | Stage 1 | Initial targeting audience (e.g., 8.5M IPs from customer/lookalike data) | Campaign setup |
-| Stage 2 | IPs from **Stage 1 VAST playback events only** | `event_log.ip` WHERE impression came from Stage 1 campaign |
-| Stage 3 | IPs that have had a verified visit (from Stage 1 or Stage 2 impression) | `clickpass_log.ip` at VV time |
+| Stage 2 | IPs from **Stage 1 VAST Impression events** | `event_log.ip` from Stage 1 impressions (the pink "Used For Targeting" boxes) |
+| Stage 3 | IPs from **Stage 2 VAST Impression events** | `event_log.ip` from Stage 2 impressions (the pink "Used For Targeting" boxes) |
 
-Zach's exact words: *"the stage two is literally just IPs from the vast impression. And it starts from stage one, right? It is not the IPs from the vast impression from stage two or stage three. It's just stage one."*
+Zach's exact words on Stage 2: *"the stage two is literally just IPs from the vast impression. And it starts from stage one, right? It is not the IPs from the vast impression from stage two or stage three. It's just stage one."*
 
-**Scale context (Zach's example):** Stage 1 might have 8.5M IPs. Only ~10,000 get an impression served. Those 10,000 VAST IPs flow into Stage 2. Of those, ~2,000 get Stage 2 impressions. Stage 3 requires a VV — typically a second VV in the IP's history.
+**Update from MES Pipeline diagram (2026-03-03):** The diagram shows the green line rule: Stage N Vast Impression IP → Stage N+1 Segment IP. This means Stage 3 is populated from Stage 2 VAST IPs — NOT VVs. Zach's verbal statement in the meeting ("a VV from Stage 1 or 2 puts the IP into Stage 3") appears to be a simplification. The MES diagram shows VAST IP as the authoritative mechanism. **Confirm with Zach/Sharad: is Stage 3 populated from Stage 2 VAST IPs, VV IPs, or both?**
+
+**Scale context (Zach's example):** Stage 1 might have 8.5M IPs. Only ~10,000 get an impression served. Those 10,000 VAST IPs flow into Stage 2. Of those, ~2,000 get Stage 2 impressions → those VAST IPs flow into Stage 3.
 
 ### Mutation consequence for Stage 2 (Zach's nuance)
 
-If a Stage 2 impression serves to IP_a and VAST fires at IP_b (mutation within Stage 2 serving), IP_b does NOT get added to Stage 2. Stage 2 is frozen from Stage 1 VAST events. Zach: *"IPb would not actually show up in the targetable audience of stage two at that point."*
-
-### Stage 3 VV = second VV in the IP's history
-
-For a Stage 3 impression to be served, the IP must already have had a VV (first VV → Stage 3 audience). The Stage 3 impression then serves → VAST → user visits again → SECOND VV. **This second VV is what our `audit.stage3_vv_ip_lineage` table captures.** Our audit measures mutation within the Stage 3 impression's internal pipeline (bid → VAST → redirect).
-
-### Direct Stage 1 → Stage 3 path
-
-An IP can skip Stage 2 targeting entirely. If a Stage 1 impression generates a VV (user visits right away) before the IP is ever targeted in Stage 2, the IP goes directly into Stage 3. Zach: *"you generate a verified visit on that first impression, right before anything's happened in stage two. Boom. You just go from one to three."*
+If a Stage 2 impression serves to IP_a (the Stage 1 VAST IP) and VAST fires at IP_b (mutation within Stage 2), IP_b does NOT get added to Stage 2. Stage 2 is frozen from Stage 1 VAST events. That Stage 2 VAST IP (IP_b) DOES feed Stage 3, however. Zach: *"IP_b would not actually show up in the targetable audience of stage two at that point."*
 
 ### Terminology corrections from this call
 
