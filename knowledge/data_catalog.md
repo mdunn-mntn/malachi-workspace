@@ -743,7 +743,7 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 | click | BOOLEAN | Was this a click-through visit |
 | is_cross_device | BOOLEAN | |
 | efficient | BOOLEAN | Efficient attribution flag |
-| from_verified_impression | BOOLEAN | |
+| from_verified_impression | BOOLEAN | TRUE = visit is attributed via MNTN's verified impression attribution (used by the UI). Filter: `from_verified_impression = TRUE` to match what the UI reports. |
 | is_new | BOOLEAN | First visit for this advertiser |
 | visits_assist | BOOLEAN | Assist attribution flag |
 | attribution_model_id | INTEGER | |
@@ -804,7 +804,7 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 | click_through | BOOLEAN | Click-through vs view-through |
 | disputed | BOOLEAN | |
 | query | JSON | |
-| from_verified_impression | BOOLEAN | |
+| from_verified_impression | BOOLEAN | TRUE = visit is attributed via MNTN's verified impression attribution (used by the UI). Filter: `from_verified_impression = TRUE` to match what the UI reports. |
 | is_cross_device | BOOLEAN | |
 | attribution_model_id | INTEGER | |
 | country | STRING | |
@@ -1889,6 +1889,7 @@ Key columns (see audit_trace_queries.sql in mm_44_ipdsc_hh_discrepancy/queries/ 
 | `campaign_segment_history` | audience | Campaign segment change history (CONTAMINATED — mixes template + targeting objects) | campaign_id, segment history |
 | `audience_segment_campaigns` | audience | Maps active audience segment → campaign_group | campaign_group_id, expression_type_id |
 | `membership_updates_logs` | tpa | TPA membership update log (Greenplum version) | ip, segment_id, update_time |
+| `advertisers` | public | Advertiser dimension table (Greenplum version of bronze.integrationprod.advertisers) | advertiser_id, name, deleted, is_test |
 | `data_sources` | audience | Data source registry | data_source_id, name, data_source_type_id |
 | `locations` | geo | Geo location reference | location_id, state/country names |
 | `cost_impression_log` | logdata | Won impressions with cost — `model_params` key=value string | ip (TEXT), model_params, impression_id |

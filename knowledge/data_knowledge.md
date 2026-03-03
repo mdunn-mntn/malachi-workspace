@@ -560,6 +560,34 @@ exclude this hash when counting qualifying emailled conversions.
 **Email prevalence threshold:** ~0.5 is used in NTB/email analysis to determine which advertisers
 have sufficient email data to include in the analysis.
 
+### conversion_log.query Field — Two Email Extraction Patterns (Greenplum)
+
+The `query` column in `logdata.conversion_log` stores pixel query string data in two different
+formats. Classify first, then extract accordingly:
+
+```sql
+-- Step 1: Classify format
+CASE
+  WHEN query LIKE '{%' AND query NOT LIKE '%{%22%' THEN 'json'
+  WHEN query LIKE '%=%' THEN 'querystring'
+  ELSE 'other'
+END AS query_format
+
+-- Step 2: Extract email_data based on format
+CASE
+  WHEN query_format = 'json'
+    AND (query::json->>'email_data') IS NOT NULL
+    THEN query::json->>'email_data'
+  WHEN query_format = 'querystring'
+    AND query LIKE '%email_data=%'
+    THEN split_part(split_part(query, 'email_data=', 2), '&', 1)
+END AS email_data
+```
+
+Both `email` and `email_data` fields can be the source of email signals — always check both and
+use `COALESCE(email, email_data)` for combined NTB analysis. Prevalence threshold: ≥0.5
+(50%) to include an advertiser in NTB email analysis.
+
 ### ui_conversions vs conversions
 `summarydata.ui_conversions` (Greenplum) uses `order_amt` for purchase amount.
 **Do NOT use `order_amt_usd`** — this column is NULL in ui_conversions. Use `order_amt` directly.
