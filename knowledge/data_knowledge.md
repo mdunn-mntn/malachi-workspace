@@ -15,6 +15,27 @@ silver.logdata / summarydata / aggregates  (VIEWs)  ← Clean view aliases (quer
 silver.core  (VIEWs)   ← Direct views over bronze.integrationprod.core_* (no SQLMesh)
 ```
 
+### SQLMesh Table Tags (Supported vs. Unsupported)
+SQLMesh model definitions can carry `tags` that link a table to a topic in the internal data
+documentation app. A table is considered **supported** if it appears under a topic via a tag;
+all other tables are **unsupported**.
+
+Tags are added in the `MODEL()` block of a SQLMesh `.sql` model file:
+```sql
+MODEL (
+  name logdata.impression_log,
+  tags ['impressions_raw'],
+  ...
+);
+```
+
+Topic definitions (title, description, subtopics → tag mappings) live in a separate YAML file
+maintained by the data platform team. Tags are part of the regular dev workflow and can be
+linted/reviewed in PRs. When looking for the canonical table for a use case, filter by
+"supported" in the data doc app — it immediately excludes dev/staging tables.
+
+Reference: `documentation/docs/data_documentation_app.md`
+
 ### SQLMesh Versioned Table Pattern
 `dw-main-silver.logdata`, `dw-main-silver.summarydata`, and `dw-main-silver.aggregates` are
 **view layers only**. Every table is a VIEW pointing to a physically versioned table in the
