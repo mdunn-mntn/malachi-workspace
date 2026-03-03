@@ -63,6 +63,7 @@ Delivered pre/post metrics comparison across campaigns. Results summarized in Dr
 ## 8. Open Items / Follow-ups
 
 - TI-270 is a related pre/post analysis for the Jaguar release (separate feature).
+- Unassigned folder: `documentation/daily_trend_vertical_ab_test/` contains JSON result files (gitignored) likely from an exploratory vertical AB test analysis session. Contents include `coredw_audience_audince_segment_campaigns.json`, schema introspection files, and query result JSONs. Confirm which ticket these belong to and move to appropriate `outputs/` folder.
 
 ---
 
