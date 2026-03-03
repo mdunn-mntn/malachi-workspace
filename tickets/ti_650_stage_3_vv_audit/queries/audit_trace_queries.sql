@@ -349,7 +349,7 @@ SELECT
 
     -- Trace quality
     (el.ad_served_id IS NOT NULL)               AS el_matched,      -- event_log join hit? true = CTV (has VAST), false = non-CTV
-    (v.ad_served_id IS NOT NULL)                AS vv_matched,      -- ui_visits join hit? true = page view record found
+    (v.ad_served_id IS NOT NULL)                AS vv_matched,      -- ui_visits join hit? true = verified visit record found (NOT a GA page view)
 
     -- Metadata
     DATE(cp.time)                               AS trace_date,           -- DATE(cp_time), partition key
@@ -716,7 +716,7 @@ SELECT
 
     -- Trace quality
     (el.ad_served_id IS NOT NULL)                       AS el_matched,   -- CTV? (true = has VAST data)
-    (v.ad_served_id IS NOT NULL)                        AS vv_matched,   -- Page view found?
+    (v.ad_served_id IS NOT NULL)                        AS vv_matched,   -- Verified visit record found? (ui_visits is a VV record, NOT a GA page view)
     (ft.ad_served_id IS NOT NULL)                       AS ft_matched    -- First-touch VAST found?
 
 FROM target_vvs t
@@ -740,7 +740,7 @@ SELECT
     SUM(CASE WHEN el_matched THEN 1 ELSE 0 END)                    AS el_matched,     -- CTV VVs with event_log data (should match A1)
     ROUND(100.0 * SUM(CASE WHEN el_matched THEN 1 ELSE 0 END)
         / COUNT(*), 2)                                              AS el_match_pct,   -- CTV inventory % (should match A1)
-    SUM(CASE WHEN vv_matched THEN 1 ELSE 0 END)                    AS vv_matched,     -- VVs with ui_visits page view record
+    SUM(CASE WHEN vv_matched THEN 1 ELSE 0 END)                    AS vv_matched,     -- VVs with ui_visits verified visit record
     ROUND(100.0 * SUM(CASE WHEN vv_matched THEN 1 ELSE 0 END)
         / COUNT(*), 2)                                              AS vv_match_pct,   -- ui_visits match %
     SUM(CASE WHEN mutated_at_redirect THEN 1 ELSE 0 END)           AS mutated,        -- VVs with redirect-boundary mutation (should match A1)

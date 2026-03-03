@@ -28,44 +28,135 @@ A ground-up explanation of the MNTN ad-serving pipeline, how IPs move through it
 
 ## Part 2: What Stages Actually Are
 
-### Stages are segment states, not impression counts
+**Stages are campaign targeting stages, not just event types.** Stage 1, 2, and 3 are distinct campaign groups in the MES pipeline. Each stage targets a different IP audience based on prior events. The number of impressions doesn't determine the stage — what determines it is the IP's event history.
 
-The previous version of this document described stages as a linear sequence: "first impression, second impression, third impression + visit." That framing was wrong. **Stages describe what types of events have been observed for an IP, not how many impressions it has received.**
+### The three campaign stages
 
-An IP doesn't "move through" stages sequentially. It **accumulates** into higher stages as new event types occur. There can be 1, 2, 5, or 10 impressions — the number doesn't determine the stage.
+| Stage | Audience | What Populates It | What Happens |
+|-------|----------|-------------------|--------------|
+| Stage 1 | Initial audience (e.g., 8.5M IPs from customer data, lookalike model) | Campaign setup | MNTN serves ads to this audience. VAST playback IPs flow into Stage 2. |
+| Stage 2 | IPs from Stage 1 VAST playback events | `event_log.ip` from Stage 1 impressions | MNTN retargets with a second campaign. VVs from Stage 1 or 2 impressions flow into Stage 3. |
+| Stage 3 | IPs that have had a verified visit (from a Stage 1 or 2 impression) | `clickpass_log.ip` (the redirect IP at time of VV) | MNTN retargets with a third campaign. VVs from Stage 3 impressions are what this audit traces. |
 
-### How the targeting system populates segments
+**Important nuance from Zach (2026-03-03):** Stage 2 is populated **only** from Stage 1 VAST IPs — not from Stage 2 or Stage 3 VAST events: *"it's not the IPs from the vast impression from stage two or stage three. It's just stage one."* Stage 3 is populated when a VV occurs (from any stage impression): *"there's a verified visit that happens from stage one or two that puts the IP into stage three."*
 
-This comes from the `membership_updates_proto_generate.py` notebook (Zach's code that generates the segment update payloads). **Important nuance from Zach (2026-03-03):** "there is no SQL being run" in the actual segment store — the data is stored as a key-value structure: for every (ip, datasource) key there is a value list of (category, timestamp). Events are upserts. The Spark job below generates the protobuf update payloads that get applied to this KV store:
+### The mutation consequence for Stage 2 targeting
 
-| Event Type | Log Source | Segment Created | What Happens |
-|-----------|-----------|----------------|-------------|
-| Impression served | `impression_log` | Stage 1 segment | IP had an ad served to it. Added to targeting pool. |
-| VAST playback | `event_log` (vast_start / vast_impression) | Stage 2 segment | IP was seen playing the ad. Added to next targeting pool. |
-| Verified visit | `clickpass_log` | Stage 3 segment | IP visited the advertiser's site. VV recorded. |
+Because Stage 2 is built from Stage 1 VAST IPs, mutation at Stage 1 affects who ends up in Stage 2. If a Stage 1 impression bids on IP_a and the VAST fires at IP_b (mutation), it is **IP_b** (the VAST playback IP) that gets added to Stage 2 — not IP_a.
 
-**The critical detail:** segments are keyed on **IP**, not on `ad_served_id`. The membership update Spark job does:
+The reverse is also important: if a Stage 2 impression serves to IP_b and VAST fires at IP_c (a second mutation), IP_c does NOT get added to Stage 2. Stage 2 was already locked when Stage 1 VAST events ran. IP_c simply doesn't enter any targeting pool from that event. Zach: *"IP_b would not actually show up in the targetable audience of stage two at that point."*
+
+### The direct Stage 1 → Stage 3 path
+
+An IP doesn't have to be served in Stage 2 before reaching Stage 3. If a Stage 1 impression generates a VV (the user saw the ad and visited the advertiser's site) before the IP is ever targeted in Stage 2, the IP goes directly into Stage 3. Zach: *"you generate a verified visit on that first impression, right before anything's happened in stage two. Boom. You just go from one to three."*
+
+### How the segment system works internally
+
+**Important nuance from Zach (2026-03-03):** "there is no SQL being run" in the actual segment store — the data is stored as a key-value structure: for every (ip, datasource) key there is a value list of (category, timestamp). Events are upserts. The Spark job (`membership_updates_proto_generate.py`) generates the protobuf update payloads that get applied to this KV store:
 
 ```python
 .groupBy('ip', 'data_source_id').agg(F.max(F.col('epoch')).alias('epoch'), ...)
 ```
 
-This generates protobuf upsert payloads that get applied to a KV store keyed on (ip, datasource). **Zach's correction (2026-03-03):** "these events add the datasource/category data to the ip state. the segment expression then can evaluate to true. there is a difference between that and directly adding the ip to the segment." In other words: events update the IP's state (datasource/category data), and the segment expression evaluates against that state separately. The system doesn't "add IPs to segments" directly — it updates IP state, and segment membership is derived. The `ad_served_id` is completely absent from segment membership.
+**Zach's correction (2026-03-03):** "these events add the datasource/category data to the ip state. the segment expression then can evaluate to true. there is a difference between that and directly adding the ip to the segment." The system doesn't "add IPs to segments" directly — it updates IP state, and segment membership is derived. The `ad_served_id` is completely absent from segment membership.
 
 From Zach (Slack, 2026-03-02):
 > "stage 2 is as simple as it sounds: whatever ip we see in the vast_start/vast_impression event, we add it to that segment and target it. nothing else"
 
-### What this means concretely
+---
 
-- An IP with 1 impression and 1 VAST event is in Stage 2.
-- An IP with 5 impressions and 5 VAST events is **still** in Stage 2 — until a VV happens.
-- An IP that has a VV is in Stage 3, regardless of how many impressions preceded it.
-- Stages don't expire independently — an IP in Stage 2 is also still in Stage 1. Stages are additive.
-- Stage 2 overlaps approximately 97% with Stage 1.
+## Part 2.5: A Concrete Example — One IP Through the Full Pipeline
 
-### Stage 2 is not a separate hop in the data
+This is the thing that is hardest to reason about abstractly. Here it is with real numbers.
 
-Stage 2 has no dedicated table. It's just the state where an IP has entries in both `impression_log` (bid happened) and `event_log` (VAST played). Those are tables we already use. There's no "Stage 2 join" in the audit trace.
+### Scale: what each stage looks like
+
+Zach's example from the 2026-03-03 review meeting:
+
+- Stage 1 audience: **8.5 million IPs** (from customer data, lookalike, etc.)
+- Of those, ~10,000 get a Stage 1 impression served (only a fraction of the audience gets an ad)
+- Those 10,000 are now in the **Stage 2 targeting audience** (via their VAST playback IPs)
+- Of those 10,000, ~2,000 get a Stage 2 impression served
+- Those 2,000 Stage 2 impressions can generate Stage 3 VVs
+
+### The full journey for one IP
+
+Say IP `73.4.1.1` starts in the Stage 1 audience.
+
+```
+DAY 1 — Stage 1 impression
+  MNTN bids on 73.4.1.1  (Stage 1 audience member)
+  Ad is served to the living room CTV
+  VAST fires. Playback IP = 73.4.1.1  (same — no mutation)
+  → 73.4.1.1 is added to the Stage 2 targeting audience
+
+DAY 5 — Stage 2 impression
+  MNTN bids on 73.4.1.1  (Stage 2 audience member)
+  Ad is served to the living room CTV
+  VAST fires. Playback IP = 73.4.1.1
+  User grabs their phone and visits the advertiser's site from 73.4.1.1  (home Wi-Fi, same IP)
+  → FIRST VERIFIED VISIT recorded (clickpass_log row created)
+  → 73.4.1.1 is added to the Stage 3 targeting audience
+
+DAY 12 — Stage 3 impression  ← THIS IS WHAT OUR AUDIT TABLE CAPTURES
+  MNTN bids on 73.4.1.1  (Stage 3 audience member)
+  Ad is served to the living room CTV
+  VAST fires. Playback IP = 73.4.1.1  (same — no mutation at VAST)
+  User switches to cellular on their phone and visits from 67.9.2.8  (different network)
+  → SECOND VERIFIED VISIT recorded — this is the Stage 3 VV
+
+  Our audit table row:
+    bid_ip           = 73.4.1.1    (from event_log.bid_ip)
+    vast_playback_ip = 73.4.1.1    (from event_log.ip)
+    redirect_ip      = 67.9.2.8    (from clickpass_log.ip)  ← MUTATION HERE
+    mutated_at_redirect = true
+    is_cross_device     = true
+    el_matched          = true     (CTV — has VAST data)
+```
+
+**Key insight: a Stage 3 VV is the second VV in the IP's history.** The first VV (Day 5 above) is what earned the IP entry into Stage 3. The Stage 3 impression then delivers another ad, and the second VV is what our table records. The mutation we measure is within the Stage 3 impression's pipeline (bid IP → VAST IP → redirect IP).
+
+### The direct Stage 1 → Stage 3 path
+
+An IP can skip Stage 2 targeting entirely:
+
+```
+DAY 1 — Stage 1 impression
+  MNTN bids on 73.4.1.1  (Stage 1 audience member)
+  VAST fires. User immediately visits from 73.4.1.1
+  → FIRST VV from a Stage 1 impression
+  → 73.4.1.1 directly enters Stage 3 targeting audience  (skipped Stage 2 targeting)
+
+DAY 8 — Stage 3 impression  ← OUR TABLE CAPTURES THIS TOO
+  MNTN bids on 73.4.1.1  (Stage 3 audience member)
+  VAST fires. User visits → SECOND VV (Stage 3 VV)
+```
+
+### What mutation at Stage 1 means for Stage 2 targeting
+
+```
+Stage 1 impression: bid IP = 10.0.0.1
+  VAST fires at:    10.0.0.2  (mutation — TV on a different subnet)
+  → 10.0.0.2 added to Stage 2 targeting (the VAST IP, not the bid IP)
+
+Stage 2 impression: MNTN targets 10.0.0.2
+  VAST fires at:    10.0.0.3  (another mutation)
+  → 10.0.0.3 is NOT added back to Stage 2. Stage 2 was populated from Stage 1 VAST events only.
+  → 10.0.0.3 is simply not in any targeting pool from this event.
+```
+
+### What we CAN and CANNOT see from our audit table
+
+Our audit table (`audit.stage3_vv_ip_lineage`) gives us the IP lineage within the Stage 3 impression:
+
+| What | How | Available |
+|------|-----|-----------|
+| Bid IP for the Stage 3 impression | `event_log.bid_ip` | Yes |
+| VAST playback IP for the Stage 3 impression | `event_log.ip` | Yes (CTV only) |
+| Redirect IP (the visit IP) | `clickpass_log.ip` | Yes |
+| First-touch impression bid IP | `event_log.bid_ip` via `first_touch_ad_served_id` | Yes (when not NULL) |
+| What stage the impression was served in | Not stored on clickpass_log | No — would need campaign_id → stage lookup |
+| The IP's full history across Stage 1 and 2 | Not on the VV record | No — would require Zach's traversal method |
 
 ---
 
@@ -319,9 +410,11 @@ The `bid_ip` column is the key discovery that simplified our entire trace. It gi
 
 ---
 
-### `ui_visits` — The Page View (Step 7)
+### `ui_visits` — The Verified Visit Record (Step 7)
 
-When the advertiser's page actually loads in the user's browser, this table records the visit. It's a superset of clickpass — it includes display clicks and other visit types, not just CTV verified visits.
+**Terminology note (Zach, 2026-03-03):** `ui_visits` is NOT a "page view." Zach explicitly: *"Page View is something different. That's the Google blog."* `ui_visits` is the verified visit record — a visit that MNTN has confirmed is attributable to an ad impression. Page views (Google Analytics) are a superset; `ui_visits` is a subset filtered to attribution-confirmed visits.
+
+When the advertiser's page loads in the user's browser following a verified visit redirect, this table records it. It's a superset of clickpass — it includes display clicks and other visit types, not just CTV verified visits.
 
 | Column | What it is |
 |--------|-----------|

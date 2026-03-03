@@ -18,9 +18,21 @@ This is fundamentally an identity resolution problem. The current approach is to
 
 ## 2. Stage Definitions
 
-The MNTN ad-serving pipeline operates in three stages. All IPs originate in Stage 1 (bid/win). Stage 2 (VAST playback) and Stage 3 (verified visit) are downstream events — 100% of IPs in Stages 2 and 3 trace back to a Stage 1 bid. The IP can mutate as it moves through stages (this mutation is the core subject of this audit), but the lineage always begins at a Stage 1 bid.
+The MNTN ad-serving pipeline operates in three **campaign targeting stages**. Stages are not just event types — they are separate campaigns that target different IP audiences based on prior event history.
 
-Stage 2 is not a separate table or hop in the pipeline — it represents a state where an IP has been seen in both a bid event and a VAST playback event, which are already captured by win\_log and event\_log respectively. The ~97% overlap between Stage 1 and Stage 2 means nearly every VAST playback maps back to a bid, and the trace confirms the Win → CIL join is 100% reliable. A Stage 3 VV traces directly to Stage 1 (a win) without requiring a separate Stage 2 join.
+| Stage | Audience | What Populates It |
+|-------|----------|-------------------|
+| Stage 1 | Initial audience (e.g., 8.5M IPs from customer data/lookalike) | Campaign setup |
+| Stage 2 | IPs from **Stage 1 VAST playback events only** | `event_log.ip` from Stage 1 impressions |
+| Stage 3 | IPs that have had a verified visit (Stage 1 or Stage 2 impression) | `clickpass_log.ip` at VV time |
+
+**Zach's correction (2026-03-03, meeting):** Stage 2 is populated ONLY from Stage 1 VAST IPs — not Stage 2 or Stage 3 VAST events. *"It is not the IPs from the vast impression from stage two or stage three. It's just stage one."* Stage 3 is populated when a VV occurs: *"there's a verified visit that happens from stage one or two that puts the IP into stage three."*
+
+**Stage 3 VV = second VV in the IP's history.** For a Stage 3 impression to be served, the IP must already have had a VV (first VV → Stage 3 audience). The Stage 3 impression serves → VAST → user visits again → second VV. Our audit table captures this second VV and traces its IP lineage within the Stage 3 impression (bid IP → VAST IP → redirect IP).
+
+**Direct Stage 1 → Stage 3 path** is possible: if a Stage 1 impression generates a VV before the IP is ever targeted in Stage 2, the IP skips Stage 2 targeting and enters Stage 3 directly.
+
+All IPs in Stages 2 and 3 trace back to a Stage 1 bid. The IP can mutate as it moves through stages, but the lineage always begins at a Stage 1 bid.
 
 ### 2.1 MES Pipeline Architecture (from official MES Pipeline PDF)
 
