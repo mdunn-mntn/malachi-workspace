@@ -1,5 +1,5 @@
 # Data Catalog — MNTN BigQuery
-Last updated: 2026-03-03 | Phase 2 complete (core, aggregates, bronze.raw, bronze.coredw, bronze.integrationprod)
+Last updated: 2026-03-03 | Phase 2 complete + Phase 3 additions (bronze.external, bronze.tpa, audit, Greenplum tables)
 
 ## Catalog Index
 - [silver.logdata](#silver-logdata)
@@ -9,6 +9,10 @@ Last updated: 2026-03-03 | Phase 2 complete (core, aggregates, bronze.raw, bronz
 - [bronze.raw](#bronze-raw)
 - [bronze.integrationprod](#bronze-integrationprod)
 - [bronze.coredw](#bronze-coredw)
+- [bronze.external](#bronze-external) — ipdsc__v1 (CRM IP resolution)
+- [bronze.tpa](#bronze-tpa) — audience_upload_hashed_emails, audience_upload_ips
+- [audit](#audit-bq-dataset) — stage3_vv_ip_lineage
+- [Greenplum Tables Reference](#greenplum-coredw-tables-reference)
 
 ---
 
@@ -1357,18 +1361,29 @@ These are the bronze-layer SQLMesh models that eventually feed silver.
 
 ## bronze.raw.tmul_daily
 - **Type:** TABLE (physical), HOUR partition on `time`, **14-day TTL**
-- **Use for:** Third-party audience (TPA) user membership updates — daily segment in/out events.
+- **Use for:** Daily snapshot of IP → audience segment membership. The primary source for understanding
+  which IPs are in which segments at any point in time (within 14-day window).
+- **Scale:** ~32B rows, ~14.5TB
+- **Snapshot time:** Daily at 08:00 UTC
+- **CRITICAL:** Contains **DS 2 and DS 3 ONLY**. DS 4 (CRM) does NOT appear here.
+  CRM membership is resolved via the identity graph → ipdsc__v1.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | STRING | User identifier |
-| time / activity_time | TIMESTAMP | |
-| data_source_id | INTEGER | |
-| in_segments | RECORD | LIST of segments joined |
+| id | STRING | **IP address** (despite generic name) |
+| time / activity_time | TIMESTAMP | Partition column — daily snapshot at 08:00 UTC |
+| data_source_id | INTEGER | Only 2 and 3 in practice |
+| in_segments | RECORD | LIST of segments joined — unnest with `.list` wrapper |
 | out_segments | RECORD | LIST of segments left |
 | metadata_info | RECORD | |
 | scores | RECORD | Key-value score pairs |
 | delta | BOOLEAN | Whether this is a delta update |
+
+**Unnest pattern:**
+```sql
+UNNEST(td.in_segments.list) AS isl → isl.element.segment_id, isl.element.advertiser_id, isl.element.campaign_id
+```
+Note: `.list` wrapper + `.element` — different from tpa_membership_update_log which uses `.segments` directly.
 
 ---
 
@@ -1719,3 +1734,164 @@ Small internal dataset for data usage reporting/auditing.
 | domains | RECORD | |
 | reporting_month | DATE | |
 | status | STRING | |
+
+---
+
+# bronze.external
+
+**Project:** dw-main-bronze | **Dataset:** external
+External tables backed by GCS (Parquet/ORC files). Not managed by SQLMesh.
+
+---
+
+## bronze.external.ipdsc__v1
+- **Type:** EXTERNAL TABLE (GCS-backed Parquet)
+- **GCS path:** `gs://mntn-data-archive-prod/ipdsc/dt=<date>/data_source_id=<id>/`
+- **Partition:** `dt` (STRING 'YYYY-MM-DD') and `data_source_id` (INTEGER)
+- **No TTL** — historical data is available indefinitely
+- **Use for:** IP → audience category_id resolution. The source of truth for which IPs were in a given
+  CRM audience segment on a given date. Critical for CRM campaign debugging and audience size analysis.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| ip | STRING | IP address |
+| data_source_category_ids | RECORD | LIST of category_ids this IP is assigned to |
+| dt | STRING | Partition date ('YYYY-MM-DD') |
+| data_source_id | INTEGER | Data source (e.g. 4 = CRM, 2 = MNTN First Party) |
+
+**Unnest pattern:**
+```sql
+SELECT DISTINCT ip, dscid.element AS category_id
+FROM `dw-main-bronze.external.ipdsc__v1` t
+  , UNNEST(t.data_source_category_ids.list) AS dscid
+WHERE t.data_source_id = 4
+  AND t.dt = '2025-11-25'
+  AND dscid.element IN (17077, 17079)  -- audience_upload_ids
+```
+
+**Key fact:** `category_id` here = `audience_upload_id` = `data_source_category_id` in integrationprod.audience_uploads.
+
+---
+
+# bronze.tpa
+
+**Project:** dw-main-bronze | **Dataset:** tpa
+Tables related to Third Party Audience (TPA) uploads and management.
+
+---
+
+## bronze.tpa.audience_upload_hashed_emails
+- **Type:** TABLE
+- **Use for:** Hashed emails (HEMs) uploaded by advertisers for CRM targeting. One row per HEM
+  per audience_upload_id. The email is stored in three case variants (UPPERCASE, LOWERCASE, ORIGINAL).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| audience_upload_id | INTEGER | PK / FK → integrationprod.audience_uploads |
+| hashed_email | STRING | SHA256 hashed email |
+| pre_hash_case | STRING | 'UPPERCASE', 'LOWERCASE', or 'ORIGINAL' — filter on 'UPPERCASE' to count unique emails |
+| update_time | TIMESTAMP | When the row was ingested |
+
+**Query tip:** Always filter `pre_hash_case = 'UPPERCASE'` when counting distinct emails — otherwise
+you'll triple-count each email.
+
+**Empty HEM hash:** `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` = SHA256 of empty string.
+Exclude this value when counting qualifying HEMs.
+
+---
+
+## bronze.tpa.audience_upload_ips
+- **Type:** TABLE
+- **Use for:** IPs directly uploaded by advertisers (NOT for email-based CRM uploads).
+- **NOTE:** This table is **empty for email-based uploads.** Victor Savitskiy confirmed: for email
+  uploads, the HEM → IP resolution happens in the identity graph and lands in `ipdsc__v1`.
+  Only populated when an advertiser directly uploads an IP list.
+
+---
+
+# bronze.integrationprod.audience_uploads (addendum)
+- **Type:** TABLE (Postgres replica)
+- **Use for:** Metadata for CRM upload batches — name, entry count, match rate, data_source_category_id.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| audience_upload_id | INTEGER | PK |
+| advertiser_id | INTEGER | |
+| data_source_category_id | INTEGER | = audience_upload_id (same value) |
+| name | STRING | Upload name (often includes geographic partition info, e.g. "TX test", "FL control") |
+| entry_count | INTEGER | Number of emails in this upload file |
+| match_rate | FLOAT | Fraction of emails that resolved to IPs (typically 0.61–0.63) |
+| update_time | TIMESTAMP | |
+
+**IP estimate:** `match_rate * entry_count` approximates IP count. Use ipdsc__v1 for exact count.
+**Geographic partitions:** Advertisers often split uploads by state group (10 geo partitions common for national campaigns).
+
+---
+
+## bronze.raw.tpa_membership_update_log (full entry)
+- **Type:** VIEW (in bronze.raw) → physical table in `bronze.sqlmesh__raw`
+- **Partition:** `dt` (STRING 'YYYY-MM-DD') + `hh` (STRING, zero-padded hour, e.g. '00'–'23')
+- **Data available from:** 2025-11-21
+- **Use for:** Change log of IP segment membership (when IPs enter/leave segments). Complements
+  tmul_daily but goes back further and has finer-grained change events.
+- **Data sources:** DS 2 and DS 3. DS 4 (CRM) not confirmed to appear here.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id / ip | STRING | IP address |
+| data_source_id | INTEGER | |
+| in_segments | RECORD | Segments IP joined |
+| out_segments | RECORD | Segments IP left |
+| dt | STRING | Partition date (always filter this!) |
+| hh | STRING | Partition hour (zero-padded, e.g. '08') |
+
+**Unnest pattern (DIFFERENT from tmul_daily):**
+```sql
+-- tpa_membership_update_log: use .segments not .list, and no .element wrapper
+UNNEST(td.in_segments.segments) AS isl → isl.segment_id  (direct access)
+
+-- tmul_daily: uses .list and .element wrapper
+UNNEST(td.in_segments.list) AS isl → isl.element.segment_id
+```
+
+---
+
+# audit (BQ dataset)
+
+## audit.stage3_vv_ip_lineage
+- **Type:** TABLE (production audit table, created TI-650)
+- **Partition:** `trace_date` (DATE)
+- **Clustering:** `advertiser_id`
+- **Use for:** IP lineage trace for Stage 3 verified visits — maps VV back to its originating
+  bid IP. Enables NTB validation and general VV auditability.
+- **Requires:** 30-day event_log lookback for full coverage
+
+Key columns (see audit_trace_queries.sql in mm_44_ipdsc_hh_discrepancy/queries/ for full CREATE):
+- `ad_served_id` — join key (win_log → CIL → event_log → clickpass_log → ui_visits)
+- `win_ip`, `cil_ip`, `el_ip`, `cp_ip`, `visit_ip` — IP at each pipeline checkpoint
+- `ip_mutated` — boolean: win_ip ≠ visit_ip
+- `cross_device` — from ui_visits
+- `trace_date` — partition
+
+---
+
+# Greenplum (coreDW) Tables Reference
+**Note:** These tables exist in Greenplum/PostgreSQL coreDW, not directly in BigQuery.
+**coreDW deprecation date: April 30, 2026.**
+
+| Table | Schema | Purpose | Key Columns |
+|-------|--------|---------|-------------|
+| `sum_by_campaign_group_by_day` | summarydata | Daily pre-aggregated metrics by campaign group | advertiser_id, campaign_group_id, date, impressions, visits, conversions |
+| `v_campaign_group_segment_history` | summarydata | VIEW — segment history per campaign group | campaign_group_id, segment history |
+| `valid_campaign_groups` | dso | Active/valid campaign groups for DSO analysis | campaign_group_id |
+| `advertiser_verticals` | fpa | Advertiser → vertical mapping | advertiser_id, vertical_id, type (1=primary) |
+| `advertiser_settings` | r2 | Advertiser-level reporting settings | advertiser_id, reporting_style ('last_touch', etc.) |
+| `campaign_segment_history` | audience | Campaign segment change history (CONTAMINATED — mixes template + targeting objects) | campaign_id, segment history |
+| `audience_segment_campaigns` | audience | Maps active audience segment → campaign_group | campaign_group_id, expression_type_id |
+| `membership_updates_logs` | tpa | TPA membership update log (Greenplum version) | ip, segment_id, update_time |
+| `data_sources` | audience | Data source registry | data_source_id, name, data_source_type_id |
+| `locations` | geo | Geo location reference | location_id, state/country names |
+| `cost_impression_log` | logdata | Won impressions with cost — `model_params` key=value string | ip (TEXT), model_params, impression_id |
+| `impression_log` | logdata | All bid attempts (won + lost) | ip (INET), ip_raw, bid_ip, original_ip, campaign_id |
+| `ui_visits` | summarydata | Verified visits — `ip` is INET type; use `host(ip)` to strip /32 | ip (INET), impression_time, is_new |
+| `ui_conversions` | summarydata | Conversions — use `order_amt`, NOT `order_amt_usd` (which is NULL) | order_amt, advertiser_id |
