@@ -27,6 +27,7 @@ workspace/
 |------|---------|
 | `knowledge/data_catalog.md` | Table schemas and join keys — read at session start, update immediately when new schema learned |
 | `knowledge/data_knowledge.md` | Business logic and gotchas — read at session start, update immediately when new knowledge found |
+| `knowledge/folder_definitions.md` | **Exact definition of what goes in every folder** — check here before placing any file |
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
 
 ## Google Drive
