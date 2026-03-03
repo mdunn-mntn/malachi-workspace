@@ -50,7 +50,7 @@ Three query versions were developed:
 - `queries/questions_summary.sql` — questions for Zach / schema investigation queries
 
 **Outputs:**
-- `outputs/bqresults/` — BQ result JSON files (gitignored); `outputs/bqresults/readme.md` describes contents
+- `outputs/` — BQ result JSON files (gitignored); `outputs/readme.md` describes contents
 - `outputs/column_definitions.tsv` — column definitions reference (gitignored)
 
 **Artifacts:**
@@ -58,7 +58,6 @@ Three query versions were developed:
 - `artifacts/stage_3_vv_pipeline_explained.md` — pipeline architecture explanation
 - `artifacts/stage_3_vv_audit.docx` — Word version of audit report (gitignored)
 - `artifacts/zach_review.md` — review notes with Zach
-- `artifacts/handoff_prompt.md` — Claude session handoff prompt
 - `artifacts/meeting_zach_1.txt` — meeting notes
 - `artifacts/questions_for_zach.txt` — open questions for Zach
 - `artifacts/questions_for_zach.docx` — formatted questions doc (gitignored)
@@ -88,8 +87,8 @@ For audit purposes, starting from clickpass_log is nearly equivalent to starting
 **7. BQ data gap discovered**
 `raw.visits` and `cost_impression_log` stopped ingesting in BQ after 2026-01-31. Pivoted to Greenplum for post-Jan analysis.
 
-**8. win_log.device_ip is always NULL**
-Cannot use win_log for device-level IP trace.
+**8. win_log.device_ip is NULL in Greenplum; populated in BQ Silver**
+Cannot use Greenplum win_log for device-level IP trace. BQ Silver win_log has device_ip populated, but the Beeswax ID mismatch (Finding #9) makes the join invalid regardless.
 
 **9. win_log uses Beeswax IDs, not MNTN ad_served_id**
 Direct join on `ad_served_id` between win_log and clickpass_log is invalid — different ID systems.
@@ -100,7 +99,7 @@ Direct join on `ad_served_id` between win_log and clickpass_log is invalid — d
 
 - Delivered quantified analysis: mutation rate, hop breakdown, campaign decomposition, cross-device breakdown, NTB phantom event count
 - Documented methodology as reusable 5-checkpoint IP trace pattern
-- Produced per-campaign mutation table (BQ result JSON files in `outputs/bqresults/`; gitignored)
+- Produced per-campaign mutation table (BQ result JSON files in `outputs/`; gitignored)
 - Documented BQ pipeline gap and Greenplum workaround
 - Provided remediation recommendations (targeted campaign fixes, cross-device infrastructure)
 
@@ -136,9 +135,13 @@ Added to `data_catalog.md` (2026-03-03):
 - win_log entry with Beeswax ID and NULL device_ip warnings
 - cost_impression_log entry with BQ data gap note
 
+Added to `data_catalog.md` (2026-03-03, session 2):
+- clickpass_log: corrected description (VV log for ALL VV types, not CTV-only); added missing user_agent column; TTL confirmed no expiry; annotated ip, ad_served_id, is_new, first_touch_ad_served_id with audit findings; added 30-day lookback note
+- event_log: corrected description; added 5 missing columns (is_mobile_device, browser, operating_system, device_type, browser_version); TTL confirmed no expiry; bid_ip documented as gold column; original_ip vs ip distinction explained
+
 Added to `data_knowledge.md` (2026-03-03):
 - Visits table disambiguation
-- IP address columns per-table guide
+- IP address columns per-table guide (expanded in session 2: full taxonomy table — ip, ip_raw, original_ip, bid_ip, impression_ip — with source, enrichment status, and audit match rates)
 - NTB disagreement between tables
 - ID types (Beeswax vs MNTN)
 - BQ data gaps
@@ -146,6 +149,7 @@ Added to `data_knowledge.md` (2026-03-03):
 - Cross-device IP mutation stats
 - Per-campaign mutation variance
 - clickpass_log as VV proxy guidance
+- TTL confirmations for clickpass_log (no expiry) and event_log (no expiry) — verified 2026-03-03 via bq show
 
 ---
 
