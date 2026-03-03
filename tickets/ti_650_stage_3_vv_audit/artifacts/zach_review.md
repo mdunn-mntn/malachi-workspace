@@ -301,7 +301,7 @@ Two minor findings from the A4f row-level examples, both now resolved:
 | Attribution model (last-touch vs first-touch) | Done — empirically confirmed |
 | `is_new` root cause | Done — client-side pixel, not auditable via SQL |
 | Non-CTV coverage | Done — impression_ip covers all inventory. **Zach: "never assume only CTV. always assume all."** |
-| Production table schema and query | Done — **needs dedup fix before deploy** (see Section 8) |
+| Production table schema and query | Done — dedup fix already applied to A4b (cp_dedup + v_dedup both QUALIFY deduped, 2026-03-02) |
 | Duplicate cp/v rows per ad_served_id | Resolved — known edge case, monitored. Zach confirmed: "it should never happen but we monitor and alert." |
 | /32 CIDR suffix on event_log.ip | Resolved — GP inet representation. Zach: use `host()` function, not string replace. Zero /32 in silver. |
 
@@ -335,7 +335,7 @@ Zach reviewed the "Questions for Zach" document and left 13 inline comments. Key
 
 | What we said | Zach's correction | Action taken |
 |---|---|---|
-| "No click-type discriminator column" on clickpass_log | **"yes there is. there is a column 'click' that defines if it was a click" (on `ui_visits`)** | `ui_visits` has a `click` column (boolean). `clickpass_log` does not — it only has click metadata (`click_elapsed`, `click_url`, etc.). Updated all docs. |
+| "No click-type discriminator column" on clickpass_log | **"yes there is. there is a column 'click' that defines if it was a click" (on `ui_visits`)** | `ui_visits` has a `click` column (BOOLEAN) — **confirmed via `bq show --schema` (2026-03-03).** `clickpass_log` does not — it only has click metadata (`click_elapsed`, `click_url`, etc.). Updated all docs. |
 | "clickpass_log contains only CTV verified visits" | **"no, vv can happen for display as well and would be here"** | clickpass_log contains ALL verified visits (CTV + display), not CTV-only. This means EL match rate reflects CTV % of VVs, not CTV % of impressions. Updated all docs. |
 | "The targeting system groups by (ip, data_source_id, category_id)" | **"there is no sql being run so there is no 'group by'. the data is stored as: for every ip/datasource key there is a value list of category/timestamp. these events are upserts"** | The segment system is a KV store with upsert semantics, not SQL. Our Python code analysis described the Spark job that generates the update payloads — the actual storage is different. |
 | "Every vast_impression event adds the IP to its corresponding segment" | **"these events add the datasource/category data to the ip state. the segment expression then can evaluate to true. there is a difference between that and directly adding the ip to the segment."** | Events update IP state (datasource/category data); the segment expression evaluates separately against that state. The distinction matters for targeting logic. |
@@ -382,7 +382,7 @@ Ran a systematic stress test of all audit claims using fresh data, new advertise
 | Mutation range 5.9–20.8% | **Wider: 1.2%–33.4%** on new advertisers. Advertiser 36743 = 33.35% (55% cross-device, 50.93% cross-device mutation rate). | The stated range applies only to the original 10 advertisers, not all MNTN traffic. Document as "5.9–20.8% in sample; up to ~33% for cross-device-heavy advertisers." |
 | impression_ip = bid IP at 99.2–100% | **Drops to 95.8%** for 38710, 97.3% for 37775. 100% for 31357/32058/30857. | Mismatch likely because impression_ip references a different impression than the last-touch ad_served_id. Non-blocking but should be documented. |
 | first_touch NULL = batch backfill | **DISPROVEN.** NULL rates identical after 3+ weeks. NULLs are permanent, not backfilled. | **Zach confirmed (2026-03-03):** "clickpass_log is a real time log. there is no post processing." Follow up with Sharad — Zach believes first_touch lookup isn't done for Stage 1 CTV VV. |
-| A4b production query ready to deploy | **BUG: missing dedup.** clickpass_log and ui_visits both have duplicate rows per ad_served_id (confirmed: up to 3 cp rows, up to 3 v rows). A4b has no QUALIFY dedup — will produce row multiplication. A4f has the fix. | **Must add QUALIFY ROW_NUMBER() dedup to both clickpass and ui_visits in A4b before production.** |
+| A4b production query ready to deploy | ~~BUG: missing dedup~~ — **FIXED (2026-03-02).** A4b already has `QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1` on both `cp_dedup` and `v_dedup`. Confirmed in SQL. This gap analysis finding was resolved before the zach_review.md was updated. | No action needed. |
 
 ### Gap Analysis Queries (5 new advertisers, Feb 17–23, 2026)
 
