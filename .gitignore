@@ -46,3 +46,6 @@ __pycache__/
 # Secrets / credentials
 .env
 *.key
+
+# Personal notes — not for remote
+self_review/
