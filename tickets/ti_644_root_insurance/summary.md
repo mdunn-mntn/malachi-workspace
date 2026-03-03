@@ -129,7 +129,8 @@ Added to `knowledge/data_knowledge.md`:
 - `TI-644 Root Insurance Audience List.gsheet` — audience data
 - `bid_vs_served_ips_root_insurance.csv` — bid vs served IP comparison
 - `city_analysis.csv` — city-level IP analysis
-- `conversion_ips.csv`, `conversion_ips.gsheet` — converting IP list
+- `conversion_ips.csv` — converting IP list
+- `conversion_ips.gsheet` — converting IP list (spreadsheet)
 - `cost_impression_log_ips_root_insurance.csv`
 - `impression_log_ips_root_insurance.csv`
 - `ipdsc_excluded_ips_root_insurance.csv` — IPs from exclude list

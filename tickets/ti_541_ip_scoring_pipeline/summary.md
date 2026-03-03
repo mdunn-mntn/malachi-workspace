@@ -93,4 +93,8 @@ Full pipeline documented. Unscored IP investigation completed.
 - `TI-541 IP Scoring Walkthrough DRAFT.docx`
 - `TI-541 Unscored IPs Investigation.docx`
 - `Scores Breakdown.pdf`
-- Architecture images: `Audience Intent Graph.png`, `Audience Intent Scoring.png`, `Biddable Inventory Funnel.png`, `DS13 Data Pipeline.png`, `Ecommerce Classification Architecture API.png`
+- `Audience Intent Graph.png`
+- `Audience Intent Scoring.png`
+- `Biddable Inventory Funnel.png`
+- `DS13 Data Pipeline.png`
+- `Ecommerce Classification Architecture API.png`

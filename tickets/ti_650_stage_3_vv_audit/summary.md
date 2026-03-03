@@ -150,3 +150,16 @@ Added to `data_knowledge.md` (2026-03-03):
 **Adaptability:** When BQ pipeline gap was discovered (raw.visits/CIL stopped ingesting Jan 31), pivoted to Greenplum-first approach and documented BQ port requirements for when data resumes. Reframed v2 findings when v3 revealed mutation at visit was actually at redirect. Switched starting anchor from ui_visits to clickpass_log when the latter proved to be a better analytical starting point.
 
 **Revenue Impact:** 4,006 phantom NTB events/day for one advertiser directly impacts revenue retention — returning visitors misclassified as new-to-brand degrades campaign targeting accuracy and advertiser trust. Per-campaign variance (0.6% to 20.6%) enables targeted fixes. Cross-device mutation insight (61.2%) informs infrastructure investment decisions.
+
+---
+
+## Drive Files
+
+📁 `Tickets/TI-650 Stage 3 Audit/`
+- `Advertiser creates a campaign.gdoc`
+- `Stage_3_VV_Audit_Consolidated_v4.docx`
+- `Stage_3_VV_Audit_Consolidated_v5.docx`
+- `Stage_3_VV_Audit_Consolidated_v5.md`
+- `Stage_3_VV_Audit_Summary.docx`
+- `Stage_3_VV_Audit_Summary.md`
+- `Untitled spreadsheet.gsheet`
