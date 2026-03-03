@@ -412,7 +412,7 @@ Malachi's prior understanding was that Stage 2 = "all impressions after the firs
 
 Zach's exact words on Stage 2: *"the stage two is literally just IPs from the vast impression. And it starts from stage one, right? It is not the IPs from the vast impression from stage two or stage three. It's just stage one."*
 
-**Update from MES Pipeline diagram (2026-03-03):** The diagram shows the green line rule: Stage N Vast Impression IP → Stage N+1 Segment IP. This means Stage 3 is populated from Stage 2 VAST IPs — NOT VVs. Zach's verbal statement in the meeting ("a VV from Stage 1 or 2 puts the IP into Stage 3") appears to be a simplification. The MES diagram shows VAST IP as the authoritative mechanism. **Confirm with Zach/Sharad: is Stage 3 populated from Stage 2 VAST IPs, VV IPs, or both?**
+**RESOLVED (Zach confirmed via Slack 2026-03-03):** The MES diagram uses two line types. **Green lines = targeting** (VAST Impression IP → next stage segment). **Blue lines = VV attribution chain** (ad_served_id flows from each stage's Vast Start → Stage 3 VV, including `first_touch_ad_served_id` pointers). Zach: *"blue lines are vv"* and *"the lines are exactly how the data flows right now."* Stage 3 segment IS populated by Stage 2 VAST IPs (green line). The blue lines explain why `first_touch_ad_served_id` can point to a Stage 1 or Stage 2 impression — those are the Vast Start events from earlier stages that feed the VV attribution chain.
 
 **Scale context (Zach's example):** Stage 1 might have 8.5M IPs. Only ~10,000 get an impression served. Those 10,000 VAST IPs flow into Stage 2. Of those, ~2,000 get Stage 2 impressions → those VAST IPs flow into Stage 3.
 

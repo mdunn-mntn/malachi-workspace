@@ -30,7 +30,7 @@ The MNTN ad-serving pipeline operates in three **campaign targeting stages**. St
 
 **Stage 2 confirmed from Zach (2026-03-03):** Stage 2 is populated ONLY from Stage 1 VAST IPs. *"It is not the IPs from the vast impression from stage two or stage three. It's just stage one."* The same logic applies: Stage 3 = Stage 2 VAST IPs only.
 
-**Open question:** Zach's verbal statement in the 2026-03-03 review call described Stage 3 as populated by VVs ("a VV from Stage 1 or 2 puts the IP into Stage 3"). The MES diagram shows Stage 2 VAST IP → Stage 3. These two may be reconcilable (VAST and VV happen in close sequence), or one may be authoritative. Confirm with Zach/Sharad.
+**RESOLVED (2026-03-03, Zach confirmed):** The MES diagram's blue lines are the VV attribution chain, NOT segment population. Zach: *"blue lines are vv"* and *"the lines are exactly how the data flows right now."* Blue lines = `ad_served_id` flows from Stage 1/2/3 Vast Start events → Stage 3 VV (showing `first_touch_ad_served_id` and `ad_served_id` links). Green lines = VAST Impression IP → next stage segment (targeting). The diagram shows both systems: targeting (green) and audit attribution (blue). Stage 3 segment = Stage 2 VAST IPs via green line. Confirmed.
 
 All IPs in Stages 2 and 3 trace back to a Stage 1 bid. The IP can mutate as it moves through stages, but the lineage always begins at a Stage 1 bid.
 

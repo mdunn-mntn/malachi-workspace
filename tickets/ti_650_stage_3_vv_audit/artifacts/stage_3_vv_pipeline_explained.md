@@ -42,7 +42,9 @@ A ground-up explanation of the MNTN ad-serving pipeline, how IPs move through it
 
 **Stage 2 is populated ONLY from Stage 1 VAST IPs.** Zach (2026-03-03): *"it's not the IPs from the vast impression from stage two or stage three. It's just stage one."* The same logic applies at Stage 3: Stage 3 is populated from Stage 2 VAST IPs only, not Stage 3 VAST IPs.
 
-**Note on discrepancy with Zach's verbal statement (2026-03-03 review call):** Zach described Stage 3 as "when we finally have a verified visit" and said "a VV from Stage 1 or 2 puts the IP into stage three." The MES diagram shows Stage 3 is populated by Stage 2 VAST IPs via green lines (not VV IPs). These two signals are closely related — a VV almost always follows a VAST event — but they are not the same. Zach may have been simplifying for the discussion. **Confirm with Zach/Sharad which is the authoritative mechanism: Stage 2 VAST IP, VV IP, or both.**
+**The blue lines in the MES diagram are NOT segment population — they are the audit attribution chain (2026-03-03, Zach confirmed).** Zach: *"blue lines are vv"* and *"the lines are exactly how the data flows right now."* The blue lines show `ad_served_id` data flows: Stage 1 Vast Start → Stage 3 VV (via `first_touch_ad_served_id`), Stage 2 Vast Start → Stage 3 VV (via `first_touch_ad_served_id`), Stage 3 Vast Start → Stage 3 VV (via `ad_served_id`), and Stage 3 Bid → Stage 3 VV (via `bid_ip`). This is exactly what the `ft` and `cp` CTEs in A4f are tracing. The blue lines explain WHY `first_touch_ad_served_id` can point to a Stage 1 or Stage 2 impression.
+
+The diagram is showing **two systems simultaneously**: the green side (targeting — how segments get built from VAST IPs) and the blue side (attribution — how the audit traces from the Stage 3 VV back through ad_served_id to the original bid).
 
 ### The mutation consequence for Stage 2 targeting
 
