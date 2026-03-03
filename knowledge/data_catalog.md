@@ -94,13 +94,14 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 ## silver.logdata.clickpass_log
 - **Type:** VIEW → `sqlmesh__logdata.logdata__clickpass_log__218519243` (VIEW → upstream Postgres)
-- **Partition:** None at view level
-- **Use for:** Click-through events — user clicked an ad and was redirected
+- **Partition:** None at view level. **No TTL** — confirmed 2026-03-03 (expirationTime: none). Use `DATE(time)` for date filters.
+- **Use for:** Verified visit log — one row per verified visit redirect. "clickpass" is the old term for verified visit (VV). Contains ALL VV types: CTV and display. **Not** click-only; not CTV-only. (Confirmed by Zach: "vv can happen for display as well and would be here.") `ui_visits` is the superset that adds display clicks and non-VV traffic.
+- **36 columns** (confirmed schema 2026-03-03)
 
 | Column | Type | Notes |
 |--------|------|-------|
 | guid | STRING | User cookie ID |
-| time | TIMESTAMP | Click time |
+| time | TIMESTAMP | VV redirect time — use DATE(time) for filtering, no partition column |
 | epoch | INTEGER | Seconds |
 | advertiser_id | INTEGER | |
 | campaign_id | INTEGER | |
@@ -109,22 +110,23 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 | click_url | STRING | Original click URL |
 | destination_click_url | STRING | Final destination URL |
 | destination_with_suffix | STRING | Destination with tracking suffix |
-| ip | STRING | Enriched IP |
-| ip_raw | STRING | Raw IP |
-| is_new | BOOLEAN | First visit to advertiser site |
+| ip | STRING | **Primary IP** — enriched IP at redirect time. Use this for VV IP analysis. |
+| ip_raw | STRING | Raw IP before enrichment (known upstream issue: two ip columns — ip + ip_raw) |
+| is_new | BOOLEAN | NTB flag — determined by client-side JS pixel, NOT a DB lookup. Disagrees with ui_visits.is_new 41–56% of the time — expected, architectural. |
 | is_control_group | BOOLEAN | Control group exclusion flag |
-| is_cross_device | BOOLEAN | Cross-device attribution |
+| is_cross_device | BOOLEAN | Ad on one device, visit on another. Cross-device = 61% of IP mutation. |
 | referer | STRING | Referring URL |
 | parent_referer | STRING | Parent frame referrer |
 | query | STRING | Query params |
-| ad_served_id | STRING | Links to impression |
+| user_agent | STRING | Browser/device user agent |
+| ad_served_id | STRING | **Primary join key** — UUID linking this VV to its ad impression. Always last-touch (most recent impression). Join to event_log on this for IP trace. |
 | original_guid | STRING | Pre-cross-device GUID |
-| impression_time | TIMESTAMP | Original impression timestamp |
+| impression_time | TIMESTAMP | Time of the ad impression that triggered this VV. Gap to `time` is always ≤30 days (confirmed 3.25M VVs). |
 | impression_epoch | INTEGER | Impression epoch (seconds) |
 | page_view_guid | STRING | GUID from page view signal |
 | viewable | BOOLEAN | Was impression viewable |
-| first_touch_ad_served_id | STRING | First attribution touch |
-| first_touch_time | TIMESTAMP | **Unreliable** — "doesn't exist in coredw" |
+| first_touch_ad_served_id | STRING | UUID of first impression for this user/advertiser. NULL ~40% of the time — populated at write time, no batch backfill. (Confirmed by Zach: "clickpass_log is a real time log. there is no post processing.") |
+| first_touch_time | TIMESTAMP | Time of first touch impression |
 | attribution_model_id | INTEGER | Attribution model used |
 | app_bundle | STRING | |
 | publisher | STRING | |
@@ -135,7 +137,9 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 | ga_tracking_ids | STRING | |
 | ga_client_ids | STRING | |
 
-- **Query tip:** Join to impression_log on `ad_served_id`. `is_new` is first-time visitor flag.
+- **Key audit findings (TI-650, 2026-03-03):** clickpass_log is 99.6% proxy for ui_visits VVs. redirect_ip (clickpass.ip) = visit_ip (ui_visits.ip) at 99.93%+. All IP mutation occurs between event_log.ip (VAST) and clickpass.ip (redirect) — zero at the visit hop.
+- **Join tips:** `ad_served_id` → event_log for bid_ip and VAST IP. `ad_served_id` → CAST(ui_visits.ad_served_id AS STRING) + `from_verified_impression = true` for visit IP. Use 30-day EL lookback (impression_time is always ≤30 days before VV time).
+- **Gotcha:** No `dt` partition column — filter on `DATE(time)`. Bronze raw.clickpass_log has ~25% of silver volume (upstream filter) — always use silver.
 
 ---
 
@@ -206,26 +210,32 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 ## silver.logdata.event_log
 - **Type:** VIEW → `sqlmesh__logdata.logdata__event_log__314628680` (VIEW → upstream Postgres)
-- **Use for:** General pixel events (non-conversion) — page views, custom events
+- **Partition:** None at view level. **No TTL** — confirmed 2026-03-03 (expirationTime: none). Use `DATE(time)` for date filters.
+- **Use for:** Ad event log including VAST video events (vast_impression, vast_start, vast_firstQuartile, etc.) and general pixel events. Primary source for IP-at-VAST-playback and bid_ip. **38 columns** (confirmed schema 2026-03-03).
 
 | Column | Type | Notes |
 |--------|------|-------|
 | guid | STRING | |
-| time | TIMESTAMP | |
+| time | TIMESTAMP | Event time |
 | epoch | INTEGER | Seconds |
 | advertiser_id | INTEGER | |
 | campaign_id | INTEGER | |
 | creative_id | INTEGER | |
 | exchange_id | INTEGER | |
-| ad_served_id | STRING | |
+| ad_served_id | STRING | **Primary join key** — links to clickpass_log and cost_impression_log |
 | domain | STRING | |
 | subdomain | STRING | |
 | group_id | INTEGER | |
 | user_agent | STRING | |
-| ip | STRING | |
-| ip_raw | STRING | |
+| ip | STRING | **VAST playback IP** — IP of the CTV device during VAST ad playback. ≠ bid_ip ~3.5% of the time. |
+| ip_raw | STRING | Raw IP before enrichment |
+| is_mobile_device | BOOLEAN | |
+| browser | STRING | |
+| operating_system | STRING | |
+| device_type | STRING | STRING in silver (already enriched — e.g. "CTV", "Mobile"). INTEGER in bronze.raw. |
+| browser_version | STRING | |
 | event_type_id | INTEGER | Event type reference |
-| event_type_raw | STRING | Raw event type string |
+| event_type_raw | STRING | Raw event type string — filter on `'vast_impression'` for VAST IP trace |
 | geoname_id | INTEGER | |
 | country | STRING | |
 | metro_id | INTEGER | |
@@ -237,17 +247,17 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 | time_zone | STRING | |
 | device | STRING | |
 | deal_id | STRING | |
-| root_video | STRING | |
 | td_impression_id | STRING | |
-| bid_ip | STRING | |
-| original_ip | STRING | |
-| is_mobile_device | BOOLEAN | |
-| browser | STRING | |
-| operating_system | STRING | |
-| device_type | STRING | |
-| browser_version | STRING | |
+| root_video | STRING | |
+| bid_ip | STRING | **Bid IP** — IP at auction/win time. = win_log.ip and cost_impression_log.ip at 100% (validated 30,502 rows). This is the gold column — eliminates need to join win_log or CIL. |
+| original_ip | STRING | Pre-iCloud Private Relay IP — the raw connection IP before MNTN's IP enrichment override. `ip` = the enriched/preferred IP used for all logic. `original_ip` = raw header IP for audit/debug. |
 | app_bundle | STRING | |
 | publisher | STRING | |
+
+- **Key audit findings (TI-650, 2026-03-03):** `bid_ip` = win_log.ip at 100% — eliminates need for CIL/win_log joins. VAST events (vast_impression) = the IP at CTV playback. Multiple event types share one `ad_served_id` — always dedup with `ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time)` and take rn=1 for vast_impression.
+- **VAST filter:** `event_type_raw = 'vast_impression'` for IP trace. Other types: vast_start, vast_firstQuartile, vast_midpoint, vast_thirdQuartile, vast_complete — all share the same IPs.
+- **30-day lookback required:** A clickpass VV can occur up to 30 days after its VAST event. Confirmed: 100% of 3.25M VVs have impression_time within 30 days of visit time. Using 20-day lookback causes +3–5pp mutation offset.
+- **Non-CTV:** Display/mobile ads don't fire VAST events — no event_log row. `el_matched = false` in VV trace = non-CTV inventory.
 
 ---
 
