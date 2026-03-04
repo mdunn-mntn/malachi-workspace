@@ -500,11 +500,13 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 |-------|---------------------|-----------------|
 | Stage 1 | Campaign setup (initial audience — customer data, lookalike, etc.) | All targetable IPs |
 | Stage 2 | Stage 1 VAST Impression IPs | Users who were served an ad and it played |
-| Stage 3 | Stage 2 VAST Impression IPs **that resulted in a verified visit** | Users who saw an ad AND visited the site (retargeting audience) |
+| Stage 3 | **IPs that had a verified visit** (from any stage's impression) | Retargeting audience |
 
 **Key rules:**
-- Stage 2 is populated ONLY from Stage 1 VAST IPs. Stage 3 is populated ONLY from Stage 2 VAST IPs that had a VV.
-- The VAST Impression IP (not bid IP) feeds the next stage. If mutation occurs, the mutated IP enters the next stage.
+- Stage 2 is populated ONLY from Stage 1 VAST IPs.
+- Stage 3 = any IP that had a VV. Two paths: (1) Stage 1 impression → VV → Stage 3, or (2) Stage 1 → Stage 2 impression → VV → Stage 3. Attribution doesn't follow the stage sequence — a VV can be attributed to any stage's impression.
+- The VAST Impression IP (not bid IP) feeds Stage 2. If mutation occurs, the mutated IP enters Stage 2.
+- `first_touch_ad_served_id` always points to a Stage 1 impression (by definition: `funnel_level=1, objective_id=1`). `ad_served_id` (last touch) can point to Stage 1, 2, or 3.
 - Stage 3 exists for retargeting — "last touch is king in ad tech" (Zach). Users who already visited are highest-intent, so we keep serving to maintain last-touch attribution credit.
 - Scale: Stage 1 ~8.5M IPs → ~10K get impressions → ~2K enter Stage 3 (Zach's example).
 

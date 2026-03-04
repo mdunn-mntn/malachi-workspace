@@ -427,7 +427,7 @@ Malachi's prior understanding was that Stage 2 = "all impressions after the firs
 |-------|---------------------|---------------------------|
 | Stage 1 | Initial targeting audience (e.g., 8.5M IPs from customer/lookalike data) | Campaign setup |
 | Stage 2 | IPs from **Stage 1 VAST Impression events** | `event_log.ip` from Stage 1 impressions (the pink "Used For Targeting" boxes) |
-| Stage 3 | IPs from **Stage 2 VAST Impression events that resulted in a verified visit** | `event_log.ip` from Stage 2 impressions where a VV followed (retargeting audience) |
+| Stage 3 | **IPs that had a verified visit** (from any stage's impression) | Retargeting audience — VV can be attributed to Stage 1 or Stage 2 impression |
 
 Zach's exact words on Stage 2: *"the stage two is literally just IPs from the vast impression. And it starts from stage one, right? It is not the IPs from the vast impression from stage two or stage three. It's just stage one."*
 

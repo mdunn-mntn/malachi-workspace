@@ -35,16 +35,36 @@ A ground-up explanation of the MNTN ad-serving pipeline, how IPs move through it
 | Stage | What Populates the Segment | Source event | Signal in data |
 |-------|---------------------------|--------------|----------------|
 | Stage 1 | Initial audience (customer data, lookalike, etc.) | Campaign setup | — |
-| Stage 2 | **Stage 1 VAST Impression IP** | `event_log.ip` where Stage 1 impression fired VAST | Pink box in MES diagram = "Used For Targeting" |
-| Stage 3 | **Stage 2 VAST Impression IP that resulted in a verified visit** | `event_log.ip` where Stage 2 impression fired VAST AND a VV followed | Pink box in MES diagram = "Used For Targeting" |
+| Stage 2 | **Stage 1 VAST Impression IPs** (any IP that was served an ad) | `event_log.ip` where Stage 1 impression fired VAST | Green line in MES diagram |
+| Stage 3 | **IPs that had a verified visit** (from any stage's impression) | IP enters Stage 3 when a VV occurs | Green line in MES diagram |
 
-**The green line rule (from the MES Pipeline diagram):** `Stage N VAST Impression IP → Stage N+1 Segment IP`. The VAST Impression event (pink boxes) is explicitly "Used For Targeting" — that IP feeds the next stage's targeting segment. Bid, Serve, Win, and Vast Start are beige ("Not Really Used Directly For Targeting") — they don't generate segment membership.
+**Stage membership is sequential but attribution is not.**
 
-**Stage 2 is populated ONLY from Stage 1 VAST IPs.** Zach (2026-03-03): *"it's not the IPs from the vast impression from stage two or stage three. It's just stage one."* **Stage 3 is populated from Stage 2 VAST IPs that resulted in a verified visit** (Zach, 2026-03-04). This is the critical distinction: Stage 2 = "saw an ad" (VAST impression only), Stage 3 = "saw an ad AND visited the site" (VAST impression + VV). Stage 3 is a retargeting audience — users with demonstrated intent. Zach: *"that is literally the definition of stage 3"* and *"last touch is king in ad tech — more likely to get attribution."*
+Segment membership follows the funnel: an IP must be in Stage 1 to get an impression, and that impression's VAST IP enters Stage 2. An IP must have had an impression (and thus be in Stage 2) to get a VV, and having a VV puts the IP into Stage 3. But the VV can be attributed to an impression from **any** stage — Stage 1, Stage 2, or Stage 3.
 
-**The blue lines in the MES diagram are NOT segment population — they are the audit attribution chain (2026-03-03, Zach confirmed).** Zach: *"blue lines are vv"* and *"the lines are exactly how the data flows right now."* The blue lines show `ad_served_id` data flows: Stage 1 Vast Start → Stage 3 VV (via `first_touch_ad_served_id`), Stage 2 Vast Start → Stage 3 VV (via `first_touch_ad_served_id`), Stage 3 Vast Start → Stage 3 VV (via `ad_served_id`), and Stage 3 Bid → Stage 3 VV (via `bid_ip`). This is exactly what the `ft` and `cp` CTEs in A4f are tracing. The blue lines explain WHY `first_touch_ad_served_id` can point to a Stage 1 or Stage 2 impression.
+**Stage 2 is populated ONLY from Stage 1 VAST IPs.** Zach (2026-03-03): *"it's not the IPs from the vast impression from stage two or stage three. It's just stage one."*
 
-The diagram is showing **two systems simultaneously**: the green side (targeting — how segments get built from VAST IPs) and the blue side (attribution — how the audit traces from the Stage 3 VV back through ad_served_id to the original bid).
+**Stage 3 = IPs that had a verified visit.** Zach (2026-03-04): *"that is literally the definition of stage 3"* and *"last touch is king in ad tech — more likely to get attribution."* Stage 3 is a retargeting audience — users with demonstrated intent who keep receiving impressions to maintain last-touch attribution credit.
+
+**Two paths to Stage 3:**
+1. **Stage 1 → VV → Stage 3:** A Stage 1 impression produces a VV directly. The IP entered Stage 2 automatically (via VAST), and enters Stage 3 because of the VV. No Stage 2 impression was needed.
+2. **Stage 1 → Stage 2 → VV → Stage 3:** A Stage 1 impression puts the IP in Stage 2. A Stage 2 impression later produces a VV. The IP enters Stage 3.
+
+Once in Stage 3, the retargeting loop begins: Stage 3 impression → VV → Stage 3 impression → VV (each refreshing last-touch attribution).
+
+**The green lines (MES diagram) = targeting.** VAST Impression IP feeds the next stage's segment. Bid, Serve, Win, and Vast Start are beige ("Not Really Used Directly For Targeting").
+
+**The blue lines (MES diagram) = attribution.** They point **backward in time** from a VV to the impressions that get credit. Zach (2026-03-03): *"blue lines are vv."* Three attribution paths exist:
+
+| Blue line | What it represents | Field on clickpass_log |
+|-----------|-------------------|----------------------|
+| Stage 1 → VV | First-touch attribution (always Stage 1) | `first_touch_ad_served_id` |
+| Stage 2 → VV | Last-touch was a Stage 2 impression | `ad_served_id` |
+| Stage 3 → VV | Last-touch was a Stage 3 impression (retargeting) | `ad_served_id` |
+
+`first_touch_ad_served_id` always points to a Stage 1 impression (by definition — `funnel_level=1, objective_id=1`). If you're in Stage 2 or 3, you already had a Stage 1 impression before that. The first ad is always from Stage 1.
+
+The diagram shows **two systems simultaneously**: the green side (targeting — how segments get built from VAST IPs) and the blue side (attribution — how the audit traces from the VV back through ad_served_id to the original bid).
 
 ### The mutation consequence for Stage 2 targeting
 
@@ -81,58 +101,145 @@ Zach's example from the 2026-03-03 review meeting:
 - Of those 10,000, ~2,000 get a Stage 2 impression served
 - Those 2,000 Stage 2 impressions can generate Stage 3 VVs
 
-### The full journey for one IP — using the MES diagram IPs
+### Journey A: Stage 1 → Stage 3 directly (no Stage 2 impression)
 
-The MES Pipeline diagram (shared by Zach's team) uses concrete IPs to show mutation at every hop. Here is the same example traced from Stage 1 through the Stage 3 VV.
+This is the shorter path. The IP gets one impression from Stage 1, the user visits the site, and the IP enters Stage 3 — without ever receiving a Stage 2 impression.
 
 ```
-STAGE 1 IMPRESSION
-  Segment A targeted IP = 1.1.1.1  (the IP in the Stage 1 audience)
-  Bid               IP = 1.1.1.1  (bid on the segment IP — matching, no mutation yet)
-  Serve             IP = 1.1.1.2  (mutation at serve)
-  Win               IP = 1.1.1.3  (mutation at win)
-  Vast Impression   IP = 1.1.1.4  ← PINK "Used For Targeting"
-  Vast Start        IP = 1.1.1.5
+STAGE 1 AUDIENCE
+  IP 73.162.50.100 is in the campaign audience (customer data / lookalike)
 
-  → 1.1.1.4 (Stage 1 VAST IP) added to Stage 2 Segment B via green line
+STAGE 1 IMPRESSION  (Day 1)
+  MemDB selects IP 73.162.50.100 from the Stage 1 audience
+  Bid               IP = 73.162.50.100   ← event_log.bid_ip
+  Vast Impression   IP = 73.162.50.100   ← event_log.ip (no mutation — same CTV device)
+  Vast Start        IP = 73.162.50.100
 
-STAGE 2 IMPRESSION  (30 days later)
-  Segment B targeted IP = 1.1.1.4  (= Stage 1 VAST Impression IP — the green line target)
-  Bid               IP = 1.1.1.4
-  Serve             IP = 1.1.1.6
-  Win               IP = 1.1.1.7
-  Vast Impression   IP = 1.1.1.8  ← PINK "Used For Targeting"
-  Vast Start        IP = 1.1.1.9
+  GREEN LINE: 73.162.50.100 added to Stage 2 segment (saw an ad)
+  The IP is now targetable in Stage 2, but it doesn't have to receive
+  a Stage 2 impression to proceed.
 
-  → Stage 2 impression results in a verified visit
-  → 1.1.1.8 (Stage 2 VAST IP) added to Stage 3 Segment C via green line
-  → (Stage 3 entry requires BOTH: VAST impression + verified visit)
+VERIFIED VISIT  (Day 3 — user visits the site after seeing the Stage 1 ad)
+  The user saw the ad on their TV, and 2 days later visits the advertiser's
+  website on their laptop (same home Wi-Fi, same external IP).
 
-STAGE 3 IMPRESSION  (30 days later) ← THIS IS WHAT OUR AUDIT TABLE CAPTURES
-  Segment C targeted IP = 1.1.1.8  (= Stage 2 VAST Impression IP — the green line target)
-  Bid               IP = 1.1.1.10  (mutation — bid-time IP differs from segment IP)
-  Serve             IP = 1.1.1.11
-  Win               IP = 1.1.1.12
-  Vast Impression   IP = 1.1.1.13  ← PINK (would feed Stage 4 if it existed)
-  Vast Start        IP = 1.1.1.14
+  redirect_ip       = 73.162.50.100   ← clickpass_log.ip
+  visit_ip          = 73.162.50.100   ← ui_visits.ip
 
-  → Vast Start fires → user visits advertiser site → Stage 3 VV IP = 1.1.1.14
+  VV is attributed to the Stage 1 impression:
+    ad_served_id             = [Stage 1 impression UUID]
+    first_touch_ad_served_id = [Stage 1 impression UUID]  (same — only one impression)
 
-  Our audit table row:
-    bid_ip           = 1.1.1.10   (from event_log.bid_ip — Stage 3 bid IP)
-    vast_playback_ip = 1.1.1.13   (from event_log.ip — Stage 3 VAST Impression IP)
-    redirect_ip      = 1.1.1.14   (from clickpass_log.ip — Stage 3 VV IP)
-    bid_eq_vast         = false   (1.1.1.10 ≠ 1.1.1.13 — bid→VAST mutation)
-    vast_eq_redirect    = false   (1.1.1.13 ≠ 1.1.1.14 — VAST→redirect mutation)
-    mutated_at_redirect = false   (flag requires bid=vast AND vast≠redirect; bid≠vast here)
-    el_matched          = true    (CTV — has VAST data)
+  GREEN LINE: IP enters Stage 3 (had a verified visit)
+
+  Our audit table row (v2 schema):
+    lt_bid_ip        = 73.162.50.100   (last-touch = Stage 1 impression)
+    lt_vast_ip       = 73.162.50.100
+    redirect_ip      = 73.162.50.100
+    visit_ip         = 73.162.50.100
+    ft_ad_served_id  = [same as ad_served_id — single impression]
+    ft_bid_ip        = 73.162.50.100
+    bid_eq_vast      = true
+    vast_eq_redirect = true
+    ip_mutated       = false
+    any_mutation     = false
+    lt_bid_eq_ft_bid = true    (first touch = last touch)
+    is_ctv           = true
+    is_cross_device  = false
+
+STAGE 3 RETARGETING  (Day 10 — now in Stage 3, gets another ad)
+  MemDB selects IP 73.162.50.100 from the Stage 3 audience
+  A new impression is served. If the user visits the site again,
+  the new VV is attributed to this Stage 3 impression (last touch).
+  The cycle repeats — "last touch is king."
 ```
 
-**Key observations from the diagram:**
-1. The Segment IP is the TARGETED IP (white box = "Is the Targeted IP") — but the actual Bid IP can differ. In Stage 3, the segment has 1.1.1.8 but the bid fires for 1.1.1.10.
-2. Every single hop can have a different IP. The diagram deliberately shows unique IPs at every step to illustrate all possible mutation points.
-3. The Vast Impression IP (pink) is the ONLY event that contributes to the next stage's targeting segment.
-4. Our `mutated_at_redirect` flag catches the specific pattern where bid=VAST (CTV device stable) but VAST≠redirect (user switched devices/networks). The diagram's Stage 3 shows both hops mutated, so `mutated_at_redirect` would be false for this specific example — but `bid_eq_vast=false` catches the bid→VAST mutation.
+**What happened:** One impression, one visit. The IP entered Stage 2 automatically (VAST fired) and entered Stage 3 because of the VV. No Stage 2 impression was ever served. The blue line from Stage 1 → VV represents the `first_touch_ad_served_id` pointing back to this Stage 1 impression.
+
+
+### Journey B: Stage 1 → Stage 2 → Stage 3 (full funnel with mutation)
+
+This is the longer path. The IP gets a Stage 1 impression, then a Stage 2 impression, and the Stage 2 impression produces a VV. IP mutation occurs at the redirect boundary.
+
+```
+STAGE 1 AUDIENCE
+  IP 172.58.44.200 is in the campaign audience
+
+STAGE 1 IMPRESSION  (Day 1)
+  Bid               IP = 172.58.44.200   ← event_log.bid_ip
+  Vast Impression   IP = 172.58.44.200   ← event_log.ip
+  Vast Start        IP = 172.58.44.200
+
+  GREEN LINE: 172.58.44.200 added to Stage 2 segment
+
+  No verified visit follows this impression. The user saw the ad but
+  didn't visit the site yet.
+
+STAGE 2 IMPRESSION  (Day 15 — served from Stage 2 audience)
+  MemDB selects IP 172.58.44.200 from the Stage 2 audience
+  Bid               IP = 172.58.44.200   ← event_log.bid_ip (same IP, stable household)
+  Vast Impression   IP = 172.58.44.200   ← event_log.ip
+  Vast Start        IP = 172.58.44.200
+
+  GREEN LINE: 172.58.44.200 remains in Stage 2 (Stage 2 VAST IPs
+  don't re-enter Stage 2 — Zach confirmed)
+
+VERIFIED VISIT  (Day 16 — user visits the site the next day)
+  The user saw the Stage 2 ad on their CTV. The next day, they visit
+  the advertiser's website on their phone over cellular (different network).
+
+  redirect_ip       = 76.39.91.55       ← clickpass_log.ip (MUTATION — cellular IP)
+  visit_ip          = 76.39.91.55       ← ui_visits.ip
+
+  VV is attributed to the Stage 2 impression (last touch):
+    ad_served_id             = [Stage 2 impression UUID]
+    first_touch_ad_served_id = [Stage 1 impression UUID]  (first touch = Stage 1)
+
+  IP enters Stage 3 (had a verified visit)
+
+  Our audit table row (v2 schema):
+    lt_bid_ip        = 172.58.44.200    (last-touch = Stage 2 impression)
+    lt_vast_ip       = 172.58.44.200
+    redirect_ip      = 76.39.91.55     ← MUTATION HERE (cellular vs home)
+    visit_ip         = 76.39.91.55
+    ft_ad_served_id  = [Stage 1 UUID]
+    ft_bid_ip        = 172.58.44.200    (first-touch bid IP)
+    ft_vast_ip       = 172.58.44.200
+    bid_eq_vast      = true
+    vast_eq_redirect = false            ← THE MUTATION POINT
+    ip_mutated       = true             ← bid=vast AND vast≠redirect
+    any_mutation     = true             ← lt_bid_ip ≠ redirect_ip
+    lt_bid_eq_ft_bid = true             (bid IP stable across impressions)
+    is_ctv           = true
+    is_cross_device  = true             (CTV ad, phone visit)
+
+STAGE 3 RETARGETING  (Day 25 — retargeting impression)
+  MemDB selects the IP from the Stage 3 audience
+  Note: Stage 3 may target 76.39.91.55 (the VV IP) OR 172.58.44.200
+  (the VAST IP), depending on which IP the segment system recorded.
+  A new impression is served to maintain last-touch attribution.
+
+  If the user visits the site again after this Stage 3 impression:
+    ad_served_id             = [Stage 3 impression UUID]  (last touch = Stage 3)
+    first_touch_ad_served_id = [Stage 1 impression UUID]  (first touch = still Stage 1)
+```
+
+**What happened:** Two impressions (Stage 1, Stage 2), one VV. The VV's `ad_served_id` points to the Stage 2 impression (last touch), and `first_touch_ad_served_id` points to the Stage 1 impression (always Stage 1 by definition). IP mutation occurred at the VAST→redirect boundary because the user visited on their phone (cellular IP) after seeing the ad on their CTV (home IP). This is the 5.9-33.4% mutation we measure.
+
+
+### Key differences between Journey A and Journey B
+
+| | Journey A (short path) | Journey B (full funnel) |
+|---|---|---|
+| Impressions before VV | 1 (Stage 1 only) | 2 (Stage 1 + Stage 2) |
+| Stage 2 impression served? | No — IP entered Stage 2 but was never targeted there | Yes |
+| VV attributed to | Stage 1 impression | Stage 2 impression (last touch) |
+| `first_touch_ad_served_id` | = `ad_served_id` (same) | ≠ `ad_served_id` (different — Stage 1 vs Stage 2) |
+| IP mutation | None | Yes — cross-device at redirect |
+| `lt_bid_eq_ft_bid` | true (only one impression) | true (bid IP stable, mutation is at redirect) |
+
+Both paths end the same way: the IP is in Stage 3 and receives retargeting impressions. The difference is how many impressions it took to get the first VV.
+
 
 ### What mutation at Stage 1 means for Stage 2 targeting
 
@@ -143,12 +250,12 @@ Stage 1 impression: Segment IP = 1.1.1.1, Bid IP = 1.1.1.1
 
 Stage 2 impression: MNTN targets 1.1.1.4
   Bid fires at 1.1.1.4, VAST fires at:  1.1.1.8  (another mutation)
-  → 1.1.1.8 added to Stage 3 targeting (Stage 2 VAST IP)
-  → 1.1.1.4 stays in Stage 2; 1.1.1.8 does NOT go back into Stage 2
+  → 1.1.1.8 does NOT go back into Stage 2 (Stage 2 is locked from Stage 1 VAST)
+  → 1.1.1.4 stays in Stage 2
 
 If Stage 2 VAST had fired at the same IP as Stage 1 bid (1.1.1.1), the Stage 3 segment
-would be 1.1.1.1 again. In practice, mutation means Stage 3 often contains IPs that differ
-from what was originally bid at Stage 1.
+would eventually contain 1.1.1.1 again. In practice, mutation means Stage 3 often contains
+IPs that differ from what was originally bid at Stage 1.
 ```
 
 ### What we CAN and CANNOT see from our audit table

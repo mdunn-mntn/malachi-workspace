@@ -24,13 +24,15 @@ The MNTN ad-serving pipeline operates in three **campaign targeting stages**. St
 |-------|-----------------|-------------------|--------|
 | Stage 1 | Initial audience (e.g., 8.5M IPs from customer data/lookalike) | Campaign setup | — |
 | Stage 2 | Stage 1 VAST Impression IPs | `event_log.ip` from Stage 1 impressions | Green line in MES diagram |
-| Stage 3 | Stage 2 VAST Impression IPs **that resulted in a verified visit** | `event_log.ip` from Stage 2 impressions where a VV followed | Green line in MES diagram |
+| Stage 3 | **IPs that had a verified visit** (from any stage's impression) | IP enters Stage 3 when a VV occurs — retargeting audience | Green line in MES diagram |
 
 **The green line rule (MES Pipeline diagram):** Stage N Vast Impression IP → Stage N+1 Segment IP. The VAST Impression event is marked "Used For Targeting" (pink) — that IP feeds the next stage. All other events (Bid, Serve, Win, Vast Start) are "Not Really Used Directly For Targeting" (beige).
 
-**Stage 2 confirmed from Zach (2026-03-03):** Stage 2 is populated ONLY from Stage 1 VAST IPs. *"It is not the IPs from the vast impression from stage two or stage three. It's just stage one."* Stage 3 = Stage 2 VAST IPs that resulted in a verified visit (Zach, 2026-03-04). Stage 3 is a retargeting audience — users with demonstrated intent.
+**Stage 2 confirmed from Zach (2026-03-03):** Stage 2 is populated ONLY from Stage 1 VAST IPs. *"It is not the IPs from the vast impression from stage two or stage three. It's just stage one."*
 
-**RESOLVED (2026-03-03, Zach confirmed):** The MES diagram's blue lines are the VV attribution chain, NOT segment population. Zach: *"blue lines are vv"* and *"the lines are exactly how the data flows right now."* Blue lines = `ad_served_id` flows from Stage 1/2/3 Vast Start events → Stage 3 VV (showing `first_touch_ad_served_id` and `ad_served_id` links). Green lines = VAST Impression IP → next stage segment (targeting). The diagram shows both systems: targeting (green) and audit attribution (blue). Stage 3 segment = Stage 2 VAST IPs via green line. Confirmed.
+**Stage 3 = IPs that had a verified visit (Zach, 2026-03-04).** The VV can be attributed to a Stage 1 or Stage 2 impression — attribution doesn't follow the stage sequence. Two paths: (1) Stage 1 impression → VV → Stage 3, or (2) Stage 1 → Stage 2 impression → VV → Stage 3. Stage 3 is a retargeting audience — users with demonstrated intent.
+
+**Blue lines (MES diagram) = attribution, NOT segment population.** Zach (2026-03-03): *"blue lines are vv."* They point backward in time from VV to impressions. `first_touch_ad_served_id` always points to a Stage 1 impression (by definition: `funnel_level=1`). `ad_served_id` (last touch) can point to Stage 1, 2, or 3. Green lines = targeting (forward). Blue lines = attribution (backward).
 
 All IPs in Stages 2 and 3 trace back to a Stage 1 bid. The IP can mutate as it moves through stages, but the lineage always begins at a Stage 1 bid.
 
