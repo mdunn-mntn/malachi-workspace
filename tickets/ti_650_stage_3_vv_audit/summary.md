@@ -81,6 +81,11 @@ The aggregate 21.2% masks large campaign-level differences. Some campaigns are n
 **5. Phantom NTB events: ~4,006/day for advertiser 37775**
 Intersection of IP mutation + NTB disagreement: ~4,006 events/day where both `clickpass.is_new=TRUE` AND `ui_visits.is_new=TRUE` AND IP mutation is present. These are returning visitors misclassified as new-to-brand.
 
+**10. `first_touch_ad_served_id` NULL (~40%) is caused by IP mutation (Sharad, 2026-03-03)**
+Sharad confirmed the lookup for `first_touch_ad_served_id` requires a Stage 1 CTV impression (`funnel_level=1`, `objective_id=1`, same campaign group) served to the **same IP/Bid IP** as the VV. Because the lookup matches on IP, any bid IP mutation between Stage 1 and Stage 3 causes it to fail — the Stage 1 impression exists but at a different IP. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* This is not a design choice — it is a data quality problem directly caused by the mutation we're measuring.
+
+**The audit table can now quantify this.** `audit.stage3_vv_ip_lineage` captures both `ft_matched` (whether the first_touch was found) and the IP mutation flags. A query comparing `ft_matched=false` vs `mutated_at_redirect=true` across the same VVs would directly measure what fraction of the 40% NULL rate is attributable to IP mutation vs other causes (non-CTV first touch, Stage 1 serving gap, etc.). This is a concrete follow-up query that should be built.
+
 **6. clickpass_log is a 99.6% proxy for ui_visits VVs**
 For audit purposes, starting from clickpass_log is nearly equivalent to starting from ui_visits but provides richer IP audit columns.
 
@@ -160,6 +165,8 @@ Added to `data_knowledge.md` (2026-03-03):
 - mntn-coredw-prod: key tables not yet documented
 - Remediation: no code changes were part of this audit ticket — follow-up ticket needed for fixes
 - Greenplum port: BQ versions of post-Jan queries need to be ported when data resumes
+- **[NEW] Quantify mutation's contribution to first_touch NULLs:** Build a query against `audit.stage3_vv_ip_lineage` comparing `ft_matched=false` vs mutation flags (`mutated_at_redirect`, `bid_eq_vast`) to measure what fraction of the 40% NULL rate is directly attributable to IP mutation. The hypothesis: NULLs are highest for recent impressions (54% for <1hr gap) and cross-device VVs — both patterns consistent with mutation-driven lookup failure.
+- **[NEW] Deploy `audit.stage3_vv_ip_lineage` production table:** Schema finalized, A4b query ready. Needs: (a) Zach/Sharad sign-off on destination dataset and table name, (b) scheduling (dbt/SQLMesh/Airflow), (c) backfill range decision.
 
 ---
 

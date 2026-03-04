@@ -1,0 +1,442 @@
+Unknown Speaker  0:00  
+It carries the right meaning behind it.
+
+Unknown Speaker  0:04  
+I mean, you're not far off in calling it a redirect,
+
+Unknown Speaker  0:09  
+I guess, mutation at ad play or mutation at view or mutation, yeah, I would say mutation at view at that point, because it's the difference between when we serve it and when we view it, yeah. And there's some summary things too. So I can give you a list, like there eventually is, let me just pull it up here. I've been doing a lot of change in my personal stuff, just because,
+
+Unknown Speaker  0:35  
+where is it i
+
+Unknown Speaker  0:40  
+over.
+
+Unknown Speaker  0:54  
+Maybe, if I just hope, oh, this might probably be easier. Okay, yeah, I was just gonna open this one up. So I've been doing a lot of changes here, but
+
+Unknown Speaker  1:02  
+one of the things I wanted to bring up was, where is it here? Outputs,
+
+Unknown Speaker  1:18  
+oh, there it is. Excuse me, sorry. I was like trying to find where I put it here. So here's just some definitions I throw in here. I mean, they're just, I mean, it's a little bit, but it goes through each one of like, what this means. So like, like, for example, el match is gonna be Event Log matched. Over here, it says true. CTV inventory has vast events, but IP and this populated. It's false, if non CTV, no vast IP lineage, only things like that. Okay, cool. I'm not going to go into all that stuff, because it's just, you know, you can read that later. So anyways, here's the summary table, the other one, but this is probably a little bit more important, is here's the row level table. And I threw in a couple examples here. Not that you'd throw this in, like, the actual production table. But just like, what an example of like, this is an ad served ID with no mutation, same device. We've got cross device, you know,
+
+Unknown Speaker  2:12  
+one thing had, like, five impressions, things like that. And to be quite frank, the reason I was confused about the stage two is I misunderstood what stage two meant. So I understand that stage one is the impressions. It's basically the audience that we create when we, you know, have the campaign, all that stuff would be good, you know, that's a bit of a one. So I and then stage three, of course, is like when we finally have a verified visit, right? It's the last, you know. IP, so my thought process was that stage two meant all impressions after the first impression. But that's not quite right. It's basically all the IPs that have that vast playback event. So what I was confused about is, like when we're doing the whole
+
+Unknown Speaker  2:58  
+tracing back from stage three to stage one, my thought process is, well, what if somebody has like, 10 impressions, right? Like, do we want to log every single one of those impression? IPS? If somebody has 50 impressions? Like, I guess that's where I was coming from. But then I'm like, No, that doesn't really
+
+Unknown Speaker  3:18  
+matter. We care about the last touch, typically in stage one, right? And
+
+Unknown Speaker  3:28  
+something you said there was kind of off right, like
+
+Unknown Speaker  3:32  
+the stage two is literally just IPs from the vast impression. And best start from stage one, right? It is not the IPS from the vast start or impression from the stage two or stage three. It's just stage one,
+
+Unknown Speaker  3:53  
+just like a super nitpicky aspect there, right? Because, like, if you reference it as, like, all vast impression or start impressions for a campaign group, then you would assume it'd be for stage one and two, or, sorry, two and three as well. But technically, like you could see a impression serve in stage one, and the best media playback has IP a right, and that gets added to stage two. And when you buy it for stage two, it plays as IPB, right? That's that mutation aspect, right? IPB would not actually show up in the
+
+Unknown Speaker  4:33  
+targetable audience of stage two at that point. Right, right. Okay, just, just to call that out for,
+
+Unknown Speaker  4:43  
+sorry, just being a little nitpicky, because otherwise people will get confused.
+
+Unknown Speaker  4:48  
+Yeah, so no, that's that's great. And a lot of the stuff, too, I have to keep revisiting because it's not super complex. There's just a lot of different components here. So I mapped the full IP chain from the bid.
+
+Unknown Speaker  5:00  
+To Page View By joining, originally, by five tables. So I had the UI visits, it's the page view, the click pass log that has the redirect, or whatever we just talked about calling instead. Then the event log that has the vast UI visits is not page views, as my understanding. UI visits is verified visits in conjunction with, you know, the visit and the click, the click
+
+Unknown Speaker  5:24  
+Page View is something different. That's, that's the Google blog, Okay, gotcha, that is a, there's a very big difference in those two things and concepts,
+
+Unknown Speaker  5:36  
+okay, do we need to get into that right now?
+
+Unknown Speaker  5:39  
+I mean, like, the visits is a subset of the page views. But, like, I mean, I don't think you necessarily need it for the
+
+Unknown Speaker  5:50  
+what you're doing here. No, it's just, don't, you can't refer to it as the page view because, like, that's just
+
+Unknown Speaker  5:57  
+very, very far off base. Okay, that's, that's fine. So then I have the cost impression log, that's the serve, and then the win log bid, right? Okay, so the event log bid IP matches the win log IP 100% of the time. So I think that you can just use, I'm almost positive you can change it from four joins to just the one join. So click pass you can join it to the event log.
+
+Unknown Speaker  6:24  
+I'm gonna show I can show that too.
+
+Unknown Speaker  6:29  
+So
+
+Unknown Speaker  6:36  
+this is just an example. So okay, so the top level is just grabbing the specific ad served ID.
+
+Unknown Speaker  6:45  
+But we've got the click pass log here. Here's,
+
+Unknown Speaker  6:50  
+I call this the redirect IP in here, yeah, okay, of course. And then I mean, I get the concept like it actually, we need to call it something so it makes sense. Okay. Alright. So
+
+Unknown Speaker  7:04  
+what are we looking at? What are we trying to understand? Sorry, sorry, no, no, it's okay. So this is just how this quick, this tables, you know, I'm just going through the scene generate. Yeah, exactly. So the first one is like, grab them, the click pass log, just specific to a date, time frame, and then grabbing specific ad served Id just for the sake of this, right? And then when I grab from the event log, I grab everything has a vast impression, and then the same date filter.
+
+Unknown Speaker  7:32  
+And then this first touch is just grabbing all the ad served IDs where
+
+Unknown Speaker  7:39  
+this first touch ad cert ID is not null.
+
+Unknown Speaker  7:43  
+Okay, did you double check with Sharad how that's being populated? No, I haven't talked to Sharad yet about that. Yeah, okay, I'll double check with him after this one,
+
+Unknown Speaker  7:56  
+this meeting here, and
+
+Unknown Speaker  7:58  
+then I'm grabbing the summary data UI visits. And if I understand this correctly, I only think I'm using this to get the is new thing, because I don't think you need to actually use this table if,
+
+Unknown Speaker  8:13  
+well, I mean, this is a super set of the click pass, like you could use this instead of instead of it, yeah. Okay, that's what I thought, too. But I was just trying to do it from the log specifically, because that's fair. I definitely prefer going from the raw log variation, because you don't know what always is going to happen in other downstream filtering or creation of tables. So there's just some examples here, of like, I mean, pretty much. This is explanation of everything that's in here. I mean, yeah, it's pretty like, we can just go ahead and look at an example. So here's an example of a no mutation, same device, ad served ID. So here's the advertiser ID, the campaign ID
+
+Unknown Speaker  8:57  
+I'm going to visit time. So that's the verifier is a redirect fired. So here we have the redirect IP, and then click, pass is new, or, sorry, yeah, click pass is new, and then it just tells it just pulls that column in there. We don't necessarily need to include it, but it says is cross
+
+Unknown Speaker  9:14  
+device. We have the first touch ad cert ID here.
+
+Unknown Speaker  9:20  
+And then let's see, and that's coming from the click pass, log in this column right now. Just to double check yes, it should be first touch, I will check,
+
+Unknown Speaker  9:32  
+yeah, CP, yeah. Click pass, yep. And then we have the last touch bit IP, last touch, vast IP. And then we throw in the last touch fast time. And then there's a bunch of these, like, logical things on here that we don't necessarily need to have in here, but I'll just kind of go through. So if I
+
+Unknown Speaker  9:50  
+and can we go revisit what exactly we're defining as the last touch in here, like that is, like, you know, us trying to go back to stage one. Is that what that is? Yeah, it's.
+
+Unknown Speaker  10:00  
+It.
+
+Unknown Speaker  10:01  
+That's, that's exactly right. So,
+
+Unknown Speaker  10:04  
+yeah, specifically. And if we look here the, sorry,
+
+Unknown Speaker  10:15  
+was there a specific column that you were I was just trying to make sure I was understanding what we're defining as the last touch fast IP, last such fast time. Yeah, right. Because, like, the whole point of the the, one of the main things we want to be able to do is, like, go from stage three, vv, back to, you know, last touch impression from stage one, essentially, yep. And so that is coming from the event log.
+
+Unknown Speaker  10:41  
+Okay, that makes sense. Okay. So then I want some of these logical things. I just want to cover, and I don't again, I don't remember all these, so I'll just go up here. So we have the last touch, bid EQ, vast.
+
+Unknown Speaker  10:55  
+Okay, here it is. So does the bid IP equal the vast playback IP? It says true, if it does false, if it doesn't, okay.
+
+Unknown Speaker  11:05  
+So, I mean, that's whether or not it's mutated. Essential, yeah, basically. And then the same thing last test, vast EQ, redirect. So it's just the same thing, but between a different so the vast playback IP to the redirect IP is that, you know, the same yes, no. And then same thing with the mutated at redirect. So that's comparing the bit IP to the vast playback IP and the vast playback IP to the redirect IP. So it basically just says, Is there any redirect at all, or, sorry, any mutation at all between those? And
+
+Unknown Speaker  11:40  
+then some of these are just, I mean that I'm just going through what's in here. But we have the first touch bit IP,
+
+Unknown Speaker  11:47  
+the first touch fast IP, the first test fast time. Of
+
+Unknown Speaker  11:52  
+course, those are not going to be populated for non CTV
+
+Unknown Speaker  11:56  
+events. And then we have something like that, same thing, same bit, across the impression. So does it compares the event log bid IP to
+
+Unknown Speaker  12:06  
+the first touch bit. Are you including the first touch at served ID in this?
+
+Unknown Speaker  12:15  
+I If not, you should definitely add that and the timestamp, yeah, I do have it here. So we have the ad served ID from Ft. So first touch, absurd ID should be in here. I just where exactly is it,
+
+Unknown Speaker  12:30  
+or is it being filtered? Oh, no, just checks of here. I don't think the first the ID is being included in the
+
+Unknown Speaker  12:38  
+right.
+
+Unknown Speaker  12:40  
+That would be really useful information. Just make sure it's like, available. Like, I know you have it available. It's just like, make adding sure it's actually in there. Yeah, it's not in there, but it's being used to just do the quality. Like, is the vast found or not? But yeah, I can definitely throw the actual ID IP in there.
+
+Unknown Speaker  12:58  
+Yeah, the actual ad served ID and actual timestamp would be very useful. And also the,
+
+Unknown Speaker  13:06  
+just for completeness sake, the TD impression ID or impression ID, or whatever column name is correct in relation to that,
+
+Unknown Speaker  13:16  
+the, basically the external impression ID that was
+
+Unknown Speaker  13:21  
+used for the first touch, okay.
+
+Unknown Speaker  13:24  
+And then let me just double check this visit IP. Just want to make sure. Okay, so this is the IP at page load. So it's just your V table that is the,
+
+Unknown Speaker  13:37  
+what is the V table? Or the CTE that is the, oh, the UI visits. Okay.
+
+Unknown Speaker  13:46  
+And again, I think that's just the using the is new so, I mean, we can, we don't necessarily need to throw in that table at all, unless we care about this is new column. That's really, I think, the only reason that we would include it. Otherwise we can get all the stuff from the clip. Click pass log.
+
+Unknown Speaker  14:01  
+So just an unnecessary join, unless there's something valuable about that, and then lots of these are just the same type of interesting stuff. So Event Log matched just tells us if it's if it's CTV, does it have vast data, basically that
+
+Unknown Speaker  14:16  
+page view found. So just checks to see if the ad served ID from the UI
+
+Unknown Speaker  14:21  
+visits.
+
+Unknown Speaker  14:23  
+And so that's we just talked about that, though it page view is not so we'll change that.
+
+Unknown Speaker  14:32  
+So I'll change the logic on that one, and then the last one is it, and then the first touch fast found. So this is just seeing
+
+Unknown Speaker  14:39  
+true false for that one. Are you, I mean, I guess the one of the things is, the goal is, like, that first touch ad certified D should be 100%
+
+Unknown Speaker  14:47  
+are we able to get to there?
+
+Unknown Speaker  14:50  
+Yeah, or that, it should be 100% Oh, like, basically, because we've made the connection all the way through that, we get 100%
+
+Unknown Speaker  15:00  
+Matching between them? Yeah, yeah.
+
+Unknown Speaker  15:03  
+I think one of the queries I do
+
+Unknown Speaker  15:06  
+shows that, but I don't think I have it in this raw table here, so I could just throw a little
+
+Unknown Speaker  15:14  
+that would be beautiful. It's like, that's one of the amazing things we want to be able to prove, is that we have 100% coverage from end to end? Yeah, I we should, shouldn't have any issues on anything that has a I don't think we should have any issues at all. The only question that I have is that, I guess, what type of tables do we want to have? Because I have a few different queries. So here I'll just, I'm going to pull up this information here.
+
+Unknown Speaker  15:44  
+There's quite a few different queries that I have, and
+
+Unknown Speaker  15:49  
+we can use all of them, but I imagine that what we'll probably end up doing and, you know, confirm with me if you agree, but we probably should just build like this row level table, and then just have queries that query this one essentially, I completely agree, okay, we want the rotor level to be the basis, kind of like, honestly, what UI visits is in relation to visits, right? Everything gets based off of that when it's dealing with verified visits, right, at least from a reporting or monitoring or a lot of other standpoints, right? So if we want to monitor,
+
+Unknown Speaker  16:26  
+I don't know some aspect of how,
+
+Unknown Speaker  16:32  
+of what we're seeing, in terms of how IPS get into stage three, right? Like we would want to be basing off this table basically, I don't know how many of the verified visits and stationary are we seeing come from a
+
+Unknown Speaker  16:46  
+like,
+
+Unknown Speaker  16:48  
+two redirects, to use this terminology, right? Or two mutation, not not redirects, but two mutations, right? Like, how often is it?
+
+Unknown Speaker  16:57  
+No changes? Right? Type deal because, like, if we're at a stage three, like, we can go back to, like, okay, they potentially had, like, a stage two impression in there
+
+Unknown Speaker  17:09  
+that generate the verified visit, and have to go back to stage one. Like, how many did it change each time from each one of those steps type situation? Because that could happen,
+
+Unknown Speaker  17:20  
+right? And when you say, can you just make sure, like, define so when you say, like, it could be a stage two impression be very specific. What do you mean by that? Like, you just basically verified visit happens for
+
+Unknown Speaker  17:36  
+a stage three impression, right? For
+
+Unknown Speaker  17:41  
+that stage three impression to have happened, a verified visit had to have happened on either a stage one impression or a stage two impression.
+
+Unknown Speaker  17:52  
+Say it happens for a stage two impression, right? So now we've technically had two verified visits. We've had two different impressions, right? And we still need to go one step farther back to see what put that IP into stage two,
+
+Unknown Speaker  18:12  
+right?
+
+Unknown Speaker  18:14  
+So in that scenario, like we had three impressions, potentially at minimum, and two verified visits,
+
+Unknown Speaker  18:24  
+and it'd get to understand if, in that scenario, if the IP was consistent or not consistent across all those events, and if it changed, how many times did it change?
+
+Unknown Speaker  18:37  
+Potentially? The answer is only like twice, right? Once, one from, going from, you know, get gets put in stage two, changes when it gets served in stage three, and then
+
+Unknown Speaker  18:49  
+when it's in stage three, and it actually serves and generates the verified visit, it has a different IP. Yet again,
+
+Unknown Speaker  18:56  
+this is going to make some pretty substantial changes, especially for some advertisers too. Just being able to verify this, because the range, and I just chose 10, they were all good, so various levels, and due to brand and things like that, we had everywhere from like 5% mutation to like 20%
+
+Unknown Speaker  19:14  
+so I'm not surprised. Yeah,
+
+Unknown Speaker  19:16  
+this will be
+
+Unknown Speaker  19:18  
+interesting. It'll like, we'll want to understand and track, like, what the percentage of that mutation is for an advertiser, right? Like, we'll have to define what we define as an acceptable level of mutation, right? We just currently are not tracking it granularly enough
+
+Unknown Speaker  19:37  
+to be able to say that, right?
+
+Unknown Speaker  19:41  
+So, yeah, blue, green.
+
+Unknown Speaker  19:45  
+Okay, so just some ideas about how would actually load this into and create this table. Is this something that we should just load daily and like? Do we want to backfill this at all, or do we just want to start from a specific period of time and just go backfill it a little bit, just so that we have some data look at? We.
+
+Unknown Speaker  20:00  
+Can sync up and figure out if we want to go any further back. But typically it'll be a daily batch I would expect, I wouldn't expect it to be anything,
+
+Unknown Speaker  20:10  
+anything more granular in your it's just kind of pointless, right? Because, like these things,
+
+Unknown Speaker  20:17  
+I don't know it. I don't know if we gain much by trying to do it more than daily, but daily sounds great. We can always adjust. Yeah, that sounds that sounds good to me. I was thinking daily. So we're on the same page there, and just kind of an high level overview. This is, like the schema here. I can share this with you. This is just a review document of kind of what's in there, but this is what the table would look like, something like this, plus the changes that we just talked about, and then some simple queries that were thrown in here. So you'd just be like, how much mutation for this advertiser, you know, between this right in here, or you want to check a single verified visit, IP lineage, do something like that,
+
+Unknown Speaker  20:53  
+you know, stuff, anything like that. So this is just some examples of how it's done.
+
+Unknown Speaker  21:00  
+Yeah. So I can send this to you the if you, you know want to take a look. Yeah, let's do it. I would appreciate it. We can definitely do another review once I have a time to
+
+Unknown Speaker  21:12  
+once I take the time to read through it a little bit more, because I'm curious how, like, a what a good way to structure this table would be, because, like, we don't know what the campaign group structure of the future is going to be, type deal. And definitely don't want to, like, hard code in the concept of only, like having the three stages, like, if we can avoid it, type deal.
+
+Unknown Speaker  21:36  
+So that way we can kind of, you know, bend as we need to when we have
+
+Unknown Speaker  21:42  
+different changes coming down the line. I'm sure there's a data model we can come up with that
+
+Unknown Speaker  21:48  
+kind of will handle this scenario where, like in mountain go, they're only likely to have one campaign, like, cannot wait for that,
+
+Unknown Speaker  21:58  
+whereas, like Currently, we have the three stages, and maybe we have other stages in the future, like retargeting. We would want this table to be able to handle kind of retargeting standpoint, but that's kind of, yeah, there's just kind of four individual campaigns. I don't know if there really needs
+
+Unknown Speaker  22:16  
+much. We would get much or have much effort to handle that one.
+
+Unknown Speaker  22:21  
+But anyways, yeah, if you get what I'm getting at, like, we don't know what the structure of the future is going to be, just to make sure that we can make it a little bit dynamic and account for it. Okay, I'll go ahead and put those changes in there that we talked about. I'll review this. And to be honest, I need to read, like, kind of read a lot of this more in depth, because there's a lot of things I just want to make sure I understand fully, but the I want to just reiterate to you. So
+
+Unknown Speaker  22:45  
+let's walk through just a quick scenario. Okay, so I got an IP. I created an audience campaign. Right now the IP is in stage one. I now send an impression to that IP. Okay, yep, the IP views the ad
+
+Unknown Speaker  23:00  
+right now that has a best playback. So now that is part of the stage two. Yes, impression, okay, yep.
+
+Unknown Speaker  23:10  
+So it's now to get that a verified visit, right? If I then click on that ad, that adds me to stage three.
+
+Unknown Speaker  23:19  
+And if you go to the website, or if I go to that website, and we link those together, then that's, you know. So now, now, you know, obviously there's the tracing, but that's, that's one way. So the other way is, I have this ad in the first impression, when it goes from Stage Two to stage three. How would someone get a verified visit in the case where they didn't actually,
+
+Unknown Speaker  23:43  
+we don't have, like, the stage two. Is that just the non CTV? Or are you saying that there's a circumstance where something is CTV and it cannot have a stage two, but then have a stage three and a stage one? Well, there's an impression for stage one, right? That? IP, yes, it gets put into stage two, and you can have more ads in stage two, but that impression is still for stage one, right?
+
+Unknown Speaker  24:08  
+You generate a verified visit on that first impression, right before anything's happened in stage two. Boom. You just go from one to three, I see. So if is this correct? So if something is in stage one and it receives an impression, it doesn't, won't, it certainly have the vast playback, but it doesn't necessarily for stage one, yet for for stage one, yes. Okay, so, so all of stage one will eventually end up in stage two, but that doesn't mean necessarily gets the credit. Stage two gets the credit like, well, stage two has to have an impression served for it, right? Like we're we're conflating like, audience IPS being in an audience and impressions being served right. Stage one has like.
+
+Unknown Speaker  25:00  
+Eight, 5 million IPs in it, right? Only 10,000 get an ad.
+
+Unknown Speaker  25:06  
+Those 10,000 IPs are now available for stage two, but all those ads are still available to get a verified visit. Now, stage two serves ads, and only 2000 of those 10,000 IPS get an ad again,
+
+Unknown Speaker  25:20  
+right? Those impressions are available to generate a verified visit from stage three. There's like that 8000 IPs that are in the audience, but they just haven't gotten any more impressions. Sorry, percent of things given the credit for stage one will have to have had only one
+
+Unknown Speaker  25:39  
+well, that
+
+Unknown Speaker  25:41  
+you're not, you're you're not wrong, like, if, if a stage one verified visit happens, right? Like,
+
+Unknown Speaker  25:51  
+it can just go straight to stage three, but the the term credit, like, now we're talking about attribution, right? A conversion happens at a later point in time, right? And we, you know, just start from that timestamp and start going backwards and trying to find
+
+Unknown Speaker  26:10  
+the most recent verified visit for that IP address in relation to that conversion. Right now, if that was a stage three verified visit, okay, we want to find out what the stage one impression was, to put it in there, right?
+
+Unknown Speaker  26:26  
+If that was a stage one verified visit, then, boom, we're done,
+
+Unknown Speaker  26:30  
+right? Like, yeah. So Did that make sense? Yeah, I think that makes sense. So, so
+
+Unknown Speaker  26:38  
+does that mean that in stage three, right? They've had
+
+Unknown Speaker  26:43  
+a verified visit. Yes. Does that mean that
+
+Unknown Speaker  26:48  
+the only way that that stage three, no, because, because the verified visit IP always comes from stage three.
+
+Unknown Speaker  26:55  
+There's a slight nuance that I'm like trying to make sure I understand. So the
+
+Unknown Speaker  27:01  
+stage three
+
+Unknown Speaker  27:04  
+will only
+
+Unknown Speaker  27:09  
+It's
+
+Unknown Speaker  27:11  
+okay. I think that makes sense to me. I just so once it has the verified visit,
+
+Unknown Speaker  27:19  
+I guess this is okay. That's the point I'm trying to understand. So we have stage one, stage two, we're, we're, you know, stage two, right? We've started serving more than one impression, right? Yes,
+
+Unknown Speaker  27:30  
+that verified visit. IP,
+
+Unknown Speaker  27:34  
+what could
+
+Unknown Speaker  27:37  
+could come from stage two? Like, I guess, what I'm trying to understand is that for a stage three IP to get the credit, yeah, does that mean that that IP had to have had a visit already? I guess I just don't understand, like, what is there's not
+
+Unknown Speaker  27:55  
+two visits being, like, accredited to the same thing. So I guess I don't fully follow the question, yeah, right. And IP can still have two verified visits, but only the more recent one is going to get the conversion, attribution credit, right.
+
+Unknown Speaker  28:13  
+Okay, so if it's a stage three, that means that you're, by definition, two verified visits have happened in the pipeline,
+
+Unknown Speaker  28:24  
+right from stage one to conversion,
+
+Unknown Speaker  28:29  
+like there's been two verified visits.
+
+Unknown Speaker  28:33  
+Does that make sense? I think that might be the part that you're getting hung up on, okay, yeah, yeah. It can't. There can be two verified visits in the timeline of that conversion, if it's a stage three verified visit getting the attribution right, because there's a verified visit that happens from stage one or two that puts the IP into stage three, and then they naturally get another ad served, And then they generate another verified visit,
+
+Unknown Speaker  29:01  
+right? So, okay, that I think that makes sense. I think that that's like the exact logic of what
+
+Unknown Speaker  29:11  
+I want to I create an example for each of these ideas, going from each one of them, and then maybe we can talk about that. It's probably be a little bit easier for me to I think I understand it. It's just, there's slight nuance. I just want to make sure that I'm completely get it. Okay, that sounds good. I know we're over time. Zach, so I will, I will update these tables and change this review file, and I'll send it to you, and then we can kind of go from there, because I think the only next step after that is like
+
+Unknown Speaker  29:39  
+creating this table and backfilling it and then maybe creating a view with some summary stats, or something like quick, quick view. Yeah, that would be perfect. I think that is 100% the next right. Next steps. Cool. Let's get the table definition finalized, agreed on terminology, and then create some useful views on top of it, so that way we can understand what the hell's going on you.
+
+Unknown Speaker  30:00  
+Clients, Okay, sounds good. All right, well, thank you. Zach, appreciate your time. Yep, no worries. Talk to her. Take care. Bye, bye.
+
+Transcribed by https://otter.ai
