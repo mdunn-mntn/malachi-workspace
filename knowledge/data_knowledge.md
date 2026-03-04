@@ -172,7 +172,7 @@ traffic handling. IPs from iCloud relay require special treatment for geo-target
 2. **clickpass_log.first_touch_time**: "doesn't exist in coredw, but keep it just in case" — unreliable, may be NULL.
 3. **conversion_log._col_23**: unnamed JSON column (raw artifact from Postgres migration).
 4. **cost_impression_log.recency_elapsed_time**: INTERVAL type — BQ doesn't support INTERVAL in all contexts.
-5. **clickpass_log.first_touch_ad_served_id NULL (~40%)**: The lookup for `first_touch_ad_served_id` requires a CTV impression with `funnel_level=1` and `objective_id=1` from the same campaign group served to the **same IP/Bid IP** as the VV (Sharad, 2026-03-03). Because it matches on IP, any bid IP mutation between Stage 1 and Stage 3 causes the lookup to fail — the Stage 1 impression exists but was for a different IP. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The 40% NULL rate is a known problem, not a design choice.
+5. **clickpass_log.first_touch_ad_served_id NULL (~40%)**: The lookup for `first_touch_ad_served_id` requires a CTV impression with `funnel_level=1` and `objective_id=1` from the same campaign group. The system searches on **both bid_ip AND ip of the attributable impression** (Sharad, 2026-03-04). Open question: does "both" mean OR (either match) or AND (both must match)? A9a results show ft_null is 54.85% when mutated vs 38.19% when not (+16.66pp delta), but mutation explains only ~15% of NULLs. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The 40% NULL rate is a known problem, not a design choice.
 
 ### Retention / TTL
 | Table | Retention |
@@ -491,6 +491,22 @@ verify against `audience_segment_campaigns` for production analysis.
 ---
 
 ## Stage 3 VV Pipeline & IP Mutation Audit
+
+### Campaign Stage Definitions (Zach, 2026-03-03 & 2026-03-04)
+
+Stages are campaign targeting stages, not event types. Each stage targets a different IP audience.
+
+| Stage | Segment populated by | Business meaning |
+|-------|---------------------|-----------------|
+| Stage 1 | Campaign setup (initial audience — customer data, lookalike, etc.) | All targetable IPs |
+| Stage 2 | Stage 1 VAST Impression IPs | Users who were served an ad and it played |
+| Stage 3 | Stage 2 VAST Impression IPs **that resulted in a verified visit** | Users who saw an ad AND visited the site (retargeting audience) |
+
+**Key rules:**
+- Stage 2 is populated ONLY from Stage 1 VAST IPs. Stage 3 is populated ONLY from Stage 2 VAST IPs that had a VV.
+- The VAST Impression IP (not bid IP) feeds the next stage. If mutation occurs, the mutated IP enters the next stage.
+- Stage 3 exists for retargeting — "last touch is king in ad tech" (Zach). Users who already visited are highest-intent, so we keep serving to maintain last-touch attribution credit.
+- Scale: Stage 1 ~8.5M IPs → ~10K get impressions → ~2K enter Stage 3 (Zach's example).
 
 ### The 5-Checkpoint IP Trace
 Within a single CTV ad serve, the IP can change at each stage:

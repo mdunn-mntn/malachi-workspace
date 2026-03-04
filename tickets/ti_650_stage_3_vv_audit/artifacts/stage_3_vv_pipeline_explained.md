@@ -36,11 +36,11 @@ A ground-up explanation of the MNTN ad-serving pipeline, how IPs move through it
 |-------|---------------------------|--------------|----------------|
 | Stage 1 | Initial audience (customer data, lookalike, etc.) | Campaign setup | — |
 | Stage 2 | **Stage 1 VAST Impression IP** | `event_log.ip` where Stage 1 impression fired VAST | Pink box in MES diagram = "Used For Targeting" |
-| Stage 3 | **Stage 2 VAST Impression IP** | `event_log.ip` where Stage 2 impression fired VAST | Pink box in MES diagram = "Used For Targeting" |
+| Stage 3 | **Stage 2 VAST Impression IP that resulted in a verified visit** | `event_log.ip` where Stage 2 impression fired VAST AND a VV followed | Pink box in MES diagram = "Used For Targeting" |
 
 **The green line rule (from the MES Pipeline diagram):** `Stage N VAST Impression IP → Stage N+1 Segment IP`. The VAST Impression event (pink boxes) is explicitly "Used For Targeting" — that IP feeds the next stage's targeting segment. Bid, Serve, Win, and Vast Start are beige ("Not Really Used Directly For Targeting") — they don't generate segment membership.
 
-**Stage 2 is populated ONLY from Stage 1 VAST IPs.** Zach (2026-03-03): *"it's not the IPs from the vast impression from stage two or stage three. It's just stage one."* The same logic applies at Stage 3: Stage 3 is populated from Stage 2 VAST IPs only, not Stage 3 VAST IPs.
+**Stage 2 is populated ONLY from Stage 1 VAST IPs.** Zach (2026-03-03): *"it's not the IPs from the vast impression from stage two or stage three. It's just stage one."* **Stage 3 is populated from Stage 2 VAST IPs that resulted in a verified visit** (Zach, 2026-03-04). This is the critical distinction: Stage 2 = "saw an ad" (VAST impression only), Stage 3 = "saw an ad AND visited the site" (VAST impression + VV). Stage 3 is a retargeting audience — users with demonstrated intent. Zach: *"that is literally the definition of stage 3"* and *"last touch is king in ad tech — more likely to get attribution."*
 
 **The blue lines in the MES diagram are NOT segment population — they are the audit attribution chain (2026-03-03, Zach confirmed).** Zach: *"blue lines are vv"* and *"the lines are exactly how the data flows right now."* The blue lines show `ad_served_id` data flows: Stage 1 Vast Start → Stage 3 VV (via `first_touch_ad_served_id`), Stage 2 Vast Start → Stage 3 VV (via `first_touch_ad_served_id`), Stage 3 Vast Start → Stage 3 VV (via `ad_served_id`), and Stage 3 Bid → Stage 3 VV (via `bid_ip`). This is exactly what the `ft` and `cp` CTEs in A4f are tracing. The blue lines explain WHY `first_touch_ad_served_id` can point to a Stage 1 or Stage 2 impression.
 
@@ -104,7 +104,9 @@ STAGE 2 IMPRESSION  (30 days later)
   Vast Impression   IP = 1.1.1.8  ← PINK "Used For Targeting"
   Vast Start        IP = 1.1.1.9
 
+  → Stage 2 impression results in a verified visit
   → 1.1.1.8 (Stage 2 VAST IP) added to Stage 3 Segment C via green line
+  → (Stage 3 entry requires BOTH: VAST impression + verified visit)
 
 STAGE 3 IMPRESSION  (30 days later) ← THIS IS WHAT OUR AUDIT TABLE CAPTURES
   Segment C targeted IP = 1.1.1.8  (= Stage 2 VAST Impression IP — the green line target)
