@@ -1,142 +1,68 @@
 Questions for Zach — Stage 3 VV IP Lineage Audit
-Updated 2026-03-04 (v2 schema, retention questions added)
+Updated 2026-03-04 (v3 — post meeting_zach_3)
 
 The audit is done. Analysis is validated (3.25M VVs, 15 advertisers,
-BQ matches GP within 0.12pp). Production table query is ready to run (A4 v2).
-These are the only open items before we can deploy.
+BQ matches GP within 0.12pp). Production table needs v3 redesign
+to support stage-aware tracing (per meeting_zach_3).
 
 
 ================================================================
-OPEN — Need your input before we can deploy
+OPEN — Need input before we can deploy
 ================================================================
 
 
-1. Schema sign-off (v2 — updated 2026-03-04)
----------------------------------------------
+1. Schema redesign (v3 — stage-aware)
+--------------------------------------
 
-Updated schema per your feedback. Key changes from v1:
-  - Renamed columns for clarity (cp_time→vv_time, bid_ip→lt_bid_ip, etc.)
-  - Added first-touch attribution columns (ft_ad_served_id, ft_bid_ip,
-    ft_vast_ip, ft_time, ft_matched)
-  - Added broader mutation flag (any_mutation = lt_bid_ip != redirect_ip)
-  - Added cross-touch comparison (lt_bid_eq_ft_bid)
+Per meeting_zach_3: the table must support ALL stages, not just
+Stage 3. Each row should show the full stage chain for that VV:
 
-Full v2 schema:
+  - Stage 1 VV: only Stage 1 columns populated, Stage 2/3 NULL
+  - Stage 2 VV: Stage 1 + Stage 2 populated, Stage 3 NULL
+  - Stage 3 VV: entire row should be full
 
-    IDENTITY:
-      ad_served_id          STRING    PK (UUID from clickpass_log)
-      advertiser_id         INT64
-      campaign_id           INT64
-      vv_time               TIMESTAMP (verified visit timestamp)
+New requirements:
+  a. Add campaign_id → stage lookup (via campaigns.funnel_id or
+     campaign_template_id). Campaign = stage is 1:1.
+  b. Add stage classification column (vv_stage = 1, 2, or 3)
+  c. Add Stage 2 impression columns (between first-touch and
+     last-touch — currently missing)
+  d. For non-CTV: use impression_log instead of event_log
 
-    LAST-TOUCH IP LINEAGE:
-      lt_bid_ip             STRING    bid IP of last-touch impression (event_log.bid_ip)
-      lt_vast_ip            STRING    VAST playback IP of last-touch impression (event_log.ip)
-      redirect_ip           STRING    IP at clickpass redirect (clickpass_log.ip)
-      visit_ip              STRING    IP at verified visit (ui_visits.ip)
-      impression_ip         STRING    bid IP carried onto visit record (ui_visits.impression_ip)
-
-    FIRST-TOUCH ATTRIBUTION:
-      ft_ad_served_id       STRING    first_touch_ad_served_id from clickpass_log
-      ft_bid_ip             STRING    bid IP of first-touch impression
-      ft_vast_ip            STRING    VAST playback IP of first-touch impression
-      ft_time               TIMESTAMP time of first-touch VAST impression
-
-    IP COMPARISON FLAGS:
-      bid_eq_vast           BOOL      lt_bid_ip = lt_vast_ip?
-      vast_eq_redirect      BOOL      lt_vast_ip = redirect_ip? (THE MUTATION POINT)
-      redirect_eq_visit     BOOL      redirect_ip = visit_ip? (99.98%+ true)
-      ip_mutated            BOOL      bid=vast AND vast!=redirect
-      any_mutation          BOOL      lt_bid_ip != redirect_ip (broadest flag)
-      lt_bid_eq_ft_bid      BOOL      did bid IP change between first and last touch?
-
-    CLASSIFICATION:
-      clickpass_is_new      BOOL      NTB flag at redirect (client-side pixel)
-      visit_is_new          BOOL      NTB flag at verified visit (independent pixel)
-      ntb_agree             BOOL      both NTB flags agree?
-      is_cross_device       BOOL      ad on one device, visit on another
-
-    PRIOR VV (STAGE 3 IDENTIFICATION):
-      prior_vv_ad_served_id STRING    ad_served_id of most recent prior VV on same bid_ip
-      prior_vv_time         TIMESTAMP when the prior VV happened
-      is_retargeting_vv     BOOL      prior VV exists = Stage 3 impression (~60% of CTV VVs)
-
-    TRACE QUALITY:
-      is_ctv                BOOL      event_log join succeeded (true = CTV VV)
-      visit_matched         BOOL      ui_visits join succeeded
-      ft_matched            BOOL      first-touch event_log join succeeded
-                                      (NULL if ft_ad_served_id is NULL)
-
-    METADATA:
-      trace_date            DATE      DATE(vv_time), partition key
-      trace_run_timestamp   TIMESTAMP when this row was generated
-
-Full SQL: audit_trace_queries.sql, sections A4a-v2 (CREATE), A4b-v2 (INSERT).
-
-Anything to add, remove, or rename?
+Questions:
+  a. Confirm the campaigns table join: is it
+     `bronze.integrationprod.campaigns` or `silver.core.campaigns`?
+  b. Is funnel_id the right column, or campaign_template_id?
+  c. For the Stage 2 hop in a Stage 3 VV: we can find the prior VV
+     (done), but tracing back to the Stage 2 impression that caused
+     that prior VV requires joining through the prior VV's ad_served_id
+     → event_log. Should we do this, or is prior_vv sufficient?
 
 
 2. Where does the table live?
 -----------------------------
 
-I used "audit.stage3_vv_ip_lineage" as a placeholder.
-No "audit" dataset currently exists in dw-main-silver or dw-main-bronze.
+Zach said: "confirm with D Platt where this should live."
 
-What project and dataset should this table live in?
-
-
-3. Scheduling / pipeline ownership
-------------------------------------
-
-The INSERT query is idempotent (DELETE + INSERT on a date range).
-For daily loads: set trace_start = trace_end = target date.
-Requires:
-  - 30-day event_log lookback for last-touch
-  - 60-day event_log lookback for first-touch
-  - ±7 day ui_visits buffer around the trace date
-
-What's the right mechanism — dbt model? SQLMesh? Airflow DAG?
-And who owns the pipeline build-out?
+Action: ask D Platt.
 
 
-4. Data retention
------------------
+3. Pipeline: SQLMesh
+--------------------
 
-The row-level table will grow by millions of rows per day (all
-advertisers × all VVs). Three options:
+Zach confirmed: "you're gonna want to create a SQLMesh job."
+Not PySpark, not raw BigQuery DDL.
 
-OPTION A: 90-day rolling window
-  - Delete partitions older than 90 days each daily run.
-  - Matches cost_impression_log's 90-day TTL pattern.
-  - Pro: table stays manageable, consistent with existing conventions.
-  - Con: lose row-level drill-down for older data.
+Action: learn SQLMesh job creation process, check with D Platt.
 
-OPTION B: Keep everything
-  - Never delete. Storage grows linearly.
-  - BQ handles it fine with partitioning + clustering.
-  - Pro: enables year-over-year trend analysis at row level.
-  - Con: ever-growing storage cost, unclear if row-level granularity
-    is needed beyond 90 days.
 
-OPTION C: Hybrid — roll row-level, keep summaries
-  - Row-level table = 90-day rolling window (Option A).
-  - Daily summary views/tables = permanent (mutation rate,
-    ft_null rate, cross-device % by advertiser/campaign/day).
-  - Pro: best of both — cheap long-term storage with drill-down
-    for recent data.
-  - Con: slightly more infrastructure (summary table + daily agg job).
+4. Data retention: 90 days confirmed
+-------------------------------------
 
-My recommendation: Option C. Row-level data older than 90 days
-is rarely needed for ad-hoc investigation. Summary aggregates are
-tiny and give long-term trend visibility.
+Zach: "90 sounds like a good starting point. That's not going to
+break the bank." May need more or less, revisit after monitoring.
 
-Questions:
-  a. Which option?
-  b. If Option C: what dimensions should the summary table aggregate
-     by? (advertiser, campaign, day) seems minimal. Add device_type?
-     cross_device? NTB flags?
-  c. If we go with a rolling window: do we need a one-time "archive"
-     snapshot before deleting old partitions, or is summary sufficient?
+RESOLVED — go with 90-day rolling window.
 
 
 5. Backfill range
@@ -146,11 +72,9 @@ Source data has no TTL issues (clickpass_log, event_log, ui_visits
 all have no expiry). So we can backfill as far back as data exists.
 
 Questions:
-  a. How far back? 90 days from go-live (~Dec 2025)?
-  b. Or a specific business-relevant date?
-  c. Each day of backfill requires a 30-day last-touch + 60-day
-     first-touch event_log scan. Cost scales with range. Worth
-     scoping before running.
+  a. How far back? 90 days from go-live?
+  b. Each day of backfill requires a 30-day last-touch + 60-day
+     first-touch event_log scan. Cost scales with range.
 
 
 6. Alerting
@@ -167,26 +91,30 @@ framework, or does this need to be built?
 ------------------------------------
 
 Once the row-level table exists, we'll create views for common
-queries. Draft list:
+queries. Draft list (now stage-aware):
 
   a. Daily mutation summary
-     - By advertiser, campaign, day
+     - By advertiser, campaign, stage, day
      - Columns: total_vvs, ctv_vvs, mutated_count, mutation_pct,
        cross_device_pct, any_mutation_pct
 
   b. First-touch health
-     - By advertiser, day
+     - By advertiser, stage, day
      - Columns: total_vvs, ft_null_count, ft_null_pct,
        ft_matched_pct, ft_null_when_mutated, ft_null_when_clean
 
   c. NTB agreement
-     - By advertiser, day
+     - By advertiser, stage, day
      - Columns: total_vvs, ntb_agree_pct, ntb_disagree_count
 
   d. IP stability dashboard
-     - By advertiser, day
+     - By advertiser, stage, day
      - Columns: bid_eq_vast_pct, vast_eq_redirect_pct,
        redirect_eq_visit_pct, lt_bid_eq_ft_bid_pct
+
+  e. Stage distribution
+     - By advertiser, day
+     - Columns: stage1_vvs, stage2_vvs, stage3_vvs, pct_each
 
 Are these the right views? Anything to add or cut?
 
@@ -253,7 +181,29 @@ Can Sharad confirm which stages get the first_touch lookup?
 
 
 ================================================================
-RESOLVED — no action needed
+RESOLVED (meeting_zach_3, 2026-03-04)
+================================================================
+
+- Retention: 90-day rolling window confirmed.
+- Pipeline: SQLMesh job confirmed.
+- Table location: ask D Platt.
+- Intermediate impressions: "Do we care about those? No."
+  Only first-touch and last-touch matter.
+- Campaign ID = Stage: one-to-one. Use campaigns.funnel_id or
+  campaign_template_id. Objective ID: 1=S1, 5=S2, 6=S3.
+- IPs accumulate stages: never removed from prior stages.
+  Frequency capping (14-day) handles dedup, not targeting removal.
+- Budget split: S1 ~75-80%, S2 ~5-10%, S3 = remainder (highest intent).
+- Bidder has no concept of stages: treats each campaign independently.
+- VV attribution = stack model: impressions on stack, page view
+  checks top of stack (most recent), everything behind is ineligible.
+- Non-CTV: use impression_log instead of event_log for display.
+- Table supports all stages: not just Stage 3. Stage 1 VV = Stage 2/3
+  columns NULL. Stage 3 VV = entire row full.
+
+
+================================================================
+PREVIOUSLY RESOLVED
 ================================================================
 
 All analysis questions from previous versions are closed:

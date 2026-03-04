@@ -58,6 +58,25 @@ Segment membership follows the funnel: an IP must be in Stage 1 to get an impres
 
 Once in Stage 3, the retargeting loop begins: Stage 3 impression → VV → Stage 3 impression → VV (each refreshing last-touch attribution).
 
+### IPs accumulate stages, never removed (Zach, meeting 3)
+
+When an IP qualifies for Stage 2 or 3, it is **NOT removed from prior stages**. Frequency capping (14-day window) prevents duplicate serving, not targeting removal. Zach: *"Trying to move it between the stages just adds a level of complexity that gets us nothing."* Each stage has a separate campaign with its own budget: Stage 1 ~75-80%, Stage 2 ~5-10%, Stage 3 = remainder. The **bidder has no concept of stages** — it treats each campaign as an independent entity.
+
+### Campaign ID = Stage (one-to-one)
+
+Each campaign maps to exactly one stage. To determine the stage of any impression or VV:
+- Join `campaign_id` → `campaigns` table → `funnel_id` or `campaign_template_id`
+- Objective ID rough mapping: 1 = Stage 1, 5 = Stage 2, 6 = Stage 3
+- Zach recommends `campaign_template_id` over objective_id
+
+### VV attribution = stack model
+
+Zach (meeting 3): *"Verified visits acts on a stack. We put impressions on the stack. When a page view comes in, we check the top of the stack to see what the most recent impression was."* Anything behind the top impression on the stack is not eligible. This is why last-touch always wins.
+
+### Non-CTV inventory
+
+Display ads don't fire VAST events. For display, use `impression_log` instead of `event_log`. Zach: *"you can really just use the impression log for display instead of the event log."* The display equivalent of `vast_start` is "viewed" but IP drift is less likely.
+
 **The green lines (MES diagram) = targeting.** VAST Impression IP feeds the next stage's segment. Bid, Serve, Win, and Vast Start are beige ("Not Really Used Directly For Targeting").
 
 **The blue lines (MES diagram) = attribution.** They point **backward in time** from a VV to the impressions that get credit. Zach (2026-03-03): *"blue lines are vv."* Three attribution paths exist:

@@ -509,6 +509,11 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 - `first_touch_ad_served_id` always points to a Stage 1 impression (by definition: `funnel_level=1, objective_id=1`). `ad_served_id` (last touch) can point to Stage 1, 2, or 3.
 - Stage 3 exists for retargeting — "last touch is king in ad tech" (Zach). Users who already visited are highest-intent, so we keep serving to maintain last-touch attribution credit.
 - Scale: Stage 1 ~8.5M IPs → ~10K get impressions → ~2K enter Stage 3 (Zach's example).
+- **IPs accumulate stages, never removed.** Frequency capping (14-day) handles dedup, not targeting removal. Budget: S1 ~75-80%, S2 ~5-10%, S3 = remainder.
+- **Campaign ID = Stage (1:1).** Determine via campaigns.funnel_id or campaign_template_id. Objective ID: 1=S1, 5=S2, 6=S3. Bidder has no concept of stages.
+- **VV attribution = stack model.** Impressions stacked; page view checks top (most recent). Everything behind is ineligible.
+- **Non-CTV:** use impression_log instead of event_log for display inventory.
+- **Table design:** must support ALL stages per VV row. Stage 1 VV = S2/S3 cols NULL. Stage 3 VV = entire row full. Pipeline via SQLMesh. 90-day retention. Location: ask D Platt.
 
 ### The 5-Checkpoint IP Trace
 Within a single CTV ad serve, the IP can change at each stage:

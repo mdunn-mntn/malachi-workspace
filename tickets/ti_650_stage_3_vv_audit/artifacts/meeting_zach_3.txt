@@ -1,0 +1,235 @@
+Speaker 1  0:00  
+Want, but for all intents purposes, for this argument in which you're the well, you're trying to demonstrate, we can call it stage two. Just wanted to be little nitpicky there.
+
+Unknown Speaker  0:11  
+Okay, that sounds good. Okay.
+
+Speaker 2  0:15  
+So if this two plus impression, you know, IP gets a verified visit attributed to it, yes, then it has to be in stage three, right? So verified visit, whether it's attributed to stage one or stage two, is going to be stage will
+
+Unknown Speaker  0:29  
+then add it to stage three, yes.
+
+Speaker 2  0:30  
+So now every impression after the verified visit is going to be a stage three. Impression, it
+
+Speaker 1  0:39  
+can still technically be stage one or stage two again, like, it doesn't remove it, it gets added to the next stage.
+
+Speaker 2  0:47  
+Sorry. If that's the case, then how are we differentiating? Is that by the campaign ID?
+
+Unknown Speaker  0:53  
+Like, yeah, campaign ID is distinct.
+
+Speaker 2  0:55  
+Okay, so basically, we could say it this way. That's what that's the the link, I think I think that I was missing here. So even after that, it could still be attributed to any of those other stages. If, when we go to the cost impression log, we check the campaign ID, and then we probably have to check to see if that is what funnel one objective ID equals one. And then I'm trying to make it basically make the link. What is the link between campaign ID and the stages?
+
+Unknown Speaker  1:33  
+They're one to one.
+
+Speaker 1  1:36  
+Campaign ID and the stage slash segment slash funnel
+
+Speaker 2  1:41  
+is one to one. Well, let me pull this up here, because I got an example, right? So I just grabbed this one campaign group ID, right, and these are all the campaign IDs with it. So looking at this, the a few of them have objective ID one, right? Yeah. What? What are we looking at here, in regards to stages? Does anything here tell me that this is particularly from one stage versus the other.
+
+Speaker 1  2:10  
+You look, you're looking at the audience segments, campaigns, right? Yes, I don't remember if this is being pulled in, but technically, you can figure this out via the objective, the objective. One is stage one, five is two, or six is three, seven is ego, or something like that is ego, but that those are still the stages. And if you scroll the way to the left, like there's only there's duplicates in terms of the campaign ID being referenced, or there, at least there should be or and also some of these are not necessarily live. One of the pain points is like we have, like, the display, multi touch, the TV, multi touch, and they create the campaigns for them. And that doesn't mean at any given point in time they're both live at one point in time, one's live, one's not type deal. But the short version of it is campaign, a segment one to one, campaign to funnel, slash stage one to one. Those are all One to One things.
+
+Speaker 2  3:25  
+Okay, so is that like a strict, like, if it's, you know, objective ID one? I mean, I know that obvious makes sense. That's stage one, right? But then what five, stage two, and then six, stage three.
+
+Speaker 1  3:41  
+It's better to just go based off of the campaign template ID, which I don't know if it's being pulled into this table or not, but it's on the campaigns table for sure. And campaigns table should also have the funnel ID as well.
+
+Speaker 2  3:57  
+Okay, so that I this all makes sense. Now I've connected all the pieces. So that's the part that I was confused by. Well, there's a few things I misunderstood what stage two meant, and then I wasn't really quite understanding why we were doing a verified visit after stage three, because there was a verified visit. So my thought process is that once we've provided Once verified visit, we stop. We don't send any No, absolutely not. That's the assumption that I made, right? So that's why I was, like, super confused. I was like, Well, I don't understand this whole, like, verified visit being applied to the stage three. So that makes sense, that we do it that way, though. I mean, by
+
+Speaker 1  4:35  
+definition, if we're serving ads, we want to track a verified visit. So yeah, okay,
+
+Unknown Speaker  4:41  
+it's last touch. Yeah,
+
+Speaker 2  4:43  
+I thought that once somebody got a visit, though we were just, like, done, like we provided a visit for them, so we, I mean, yeah, I guess that makes sense in whole so we're not grading our own homework. Anyways, are we do all our advertisers use, like, their third party stuff to see who gets the credit, and we just accept. That, or how does mountain do that?
+
+Speaker 1  5:02  
+We generate the reports that are is the attribution like, there's definitely like, that's all of reporting. We do. Send data to Google to try to make sure that our model is being represented as best we can in terms of GA and there are definitely third parties that are,
+
+Unknown Speaker  5:24  
+you know, doing their own thing in relation to
+
+Speaker 1  5:28  
+tracking performance and all that fun stuff, and clients 100% compare our reports against those.
+
+Speaker 2  5:35  
+Well, that's why I'm wondering, is like, what if Google says, Hey, this is ours, and then we say, That's ours, and then that's,
+
+Speaker 1  5:41  
+that's a normal state of affairs, yeah, all right, that makes because that is, that's what the client's looking for. To look, to compare and contrast those things, right? Is to understand, like, How accurate is our reporting versus Google? Or, like, that's not even necessarily the best way to phrase it. It's like, okay, Google saying we get this percentage. We're saying we get this, this other percentage, some other third parties saying we get a different percentage, like, it's no one's right, no one's wrong. It's varying degrees of right and wrong between the three. So they kind of have to tease it out. Or do they just pick one that they trust more, and that's the one they go with?
+
+Speaker 2  6:17  
+Yeah, when I was on the third part, like, when I worked for Coach Java, and we did the attribution. I From what I understand, Google and Facebook don't even like, go back and forth. They say you're going to pay us what you owe us. And they didn't have any like, oh, that they this party says that they deserve it, and they had no leniency. It was basically, this is what you owe us. I didn't know if we did the same thing there, but okay, well, that's a totally different topic. So basically, this is another thing that I was thinking about too. Is it the idea? Well, number one, why are we when something moves from multiple stages? Are we still bidding from all the stages? I guess I don't really understand that logic there.
+
+Speaker 1  6:58  
+Trying to move it between the stages just adds a level of complexity that gets us nothing. And there's other systems that are in play that also end up defying the behavior of who gets what ad right. There's frequency capping stage one. Just because we don't remove the IP from stage one's IP pool does not mean that it is actually likely to get another ad for at least a foreseeable future, right? There's like a 14 day window in most cases where there that IP is now frequency cap blocked, right? So why block it in two places like targeting? Can't do frequency capping, okay, so why remove it? Same concept in stage two, right? Like, we don't know when we 100% want to be done with that IP in stage two, right? And there's a budgeting aspect and, like, there's just that whole, like, science slash song and dance that like it just makes literally no sense for targeting. Try to,
+
+Speaker 2  8:05  
+well, I just understand the benefit of doing the stages, then if they can all be bid on. Anyways, no matter the stage just budgeting,
+
+Speaker 1  8:10  
+there's a different you have a budget percentage for stage one, you have a different budget percentage for stage two, different budget percentage for stage three. Each one has its own different frequency cap. So, you know, we see an IP for sit in stage one, we try to spend 75 or 80% of our budget there. That way we cast a very wide net out stage two, okay, we have like, five or 10% of the budget, and we, we've already served an ad to this IP. So we're trying to, you know, capitalize on the fact that we've already made, you know, first contact. So we buy more there. Stage three is, like, they've already shown a shit ton of intent because they've gone to the site, or at least that's our base understanding of no assuming the verified visit and information is accurate. So like, we really want to make sure that we get the last touch slash, we drive them to the site again, right? They've already been to the site once. Why wouldn't they go again? Potentially, and since it started in prospecting, it's still considered a prospecting IP,
+
+Speaker 2  9:10  
+okay, that makes sense, I guess so, in that regard. Then the, I guess the easiest, this makes sense, but the easiest way to throw this in there is just to join the cost and pressure log, just see what the campaign idea is and or campaigns table you said, just to verify that. So basically, what you're saying is that in the bid on the bidder side, there's something that they understand about it being between stage two and stage one, even if it's the same IP. And it's possible that they bid that, and it takes from the budget stage two, but without again,
+
+Speaker 1  9:45  
+like each campaign has its own audience, right? Yeah, and each campaign has its own budget bidder doesn't even fundamentally understand that there are stages
+
+Speaker 2  9:57  
+at all. I get what you're saying. So immediately. Like client says, we have a million dollars. We behind the scenes allocate that budget to this the campaign IDs that we split out for them. Yes, Okay, gotcha, but there's nothing that says that. So all the better sees is the different campaigns. So they don't even know necessarily that it's the different or the same advertiser, right?
+
+Speaker 1  10:19  
+Well, you technically know that it's the same advertiser, but they don't use that information, right?
+
+Speaker 2  10:23  
+That's correct, okay? So basically, that's, that's how it could happen. So just the same way that we would choose an IP for this advertiser and this advertiser, the same type of logic is happening within campaigns, saying, Oh, well, he was sending an impression, and that just happens to be from the stage two impression, and not the stage one for this particular scenario. Okay, that
+
+Speaker 1  10:40  
+makes sense. They're all independent entities, right? Like they're
+
+Speaker 2  10:44  
+all Yeah, okay, all right. As far as this is concerned, I know I'm trying to did not make this a whole 30 minute meeting the I will add the last thing so the verified visit that gets attributed to the stage three ver, stage three group in there two things. So number one, there can be a lot of impressions in between. We only collect the ad cert ID, which is always the last touch, and then the first served ad ID, which is the first touch, obviously, right?
+
+Speaker 1  11:14  
+Well, they tried to do the first touch, that was the whole thing. Yeah. But yeah.
+
+Speaker 2  11:19  
+But what about all the impressions in between. Do we care about those? No, okay, because we could have tons in stage two and through stage three before we finally get that final verified visit. That's a trigger stage two. Okay, so we don't care about those. All right, I just wanted to make sure that was the case. Like I had an interesting example, actually, that I think
+
+Speaker 1  11:37  
+you might think is verified visits acts on a stack. We put impressions on the stack. When a page view comes in, we check the top of the stack to see if what the most recent impression was, and we mark it if it happens and anything that happened behind that impression on that stack is just not eligible.
+
+Speaker 2  11:59  
+And one of the easiest checks too. I don't even need to go back and check the campaign ID. I could just check if the first, well, okay, we have an issue with the nulls, right? But if we had, we could just check the first ad cert ID to the ad CD, if they're equivalent that we know that it was a stage one impression like,
+
+Speaker 1  12:15  
+um, you, I would just do based off the campaign ID. Like you don't have to do any of that junk. You just know by the definition of the campaign ID and the campaign itself, whether or not a stage one,
+
+Speaker 2  12:29  
+two or three, okay, I'll throw it in there like that. Then that sounds more logical. So the only thing I was going to show you is just an interesting example here, which like, this one, this one and 369, impressions here. And I'm pretty sure this is some sort of, like, I don't even know what this is.
+
+Speaker 1  12:49  
+It could very much be a display or something, or No, you said this is bass playback. But, yeah, okay. But anyways, which S, which were you saying was interesting, besides the raw number of impressions,
+
+Speaker 2  13:00  
+no, just the fact that it just had so many so, like, in some, most of the examples, it's like one or two. You know, some rare ones have three or more. But this one, I thought was interesting, 369 I think it's the one example. Yeah. Okay, cool. The last thing is, I think I have enough information to put this together. So this one, I do. I'm going to throw all the stuff together, throw on the campaign ID stuff, because that makes sense. Due from the so at most everything's going to have two verified visits, right? Because we're going to have the verified visit that's applied to the
+
+Unknown Speaker  13:30  
+well, we want to the
+
+Speaker 1  13:37  
+goal with the stage three verified visit, right? That's the hardest case to prove right. But any verified visit, we would want to be able to try sit back or to the stage one, right? That's the kind of secondary goal. So, like, the ideally, the table will be able to support both right, to understand, like, okay, was this a stage three verified visit, we can go all the way back to stage one. Or is this a stage two verified visit? We can go back to stage one. Or, you know, if it's stage one verified visit, I guess pretty obvious. You don't even have to take a step back. But it's more for this. It would be good to have the stage two verified visit stuff in support in there, because they can also have that whole mess issue that happens, right? It's just not as don't have to do the extra hop.
+
+Speaker 2  14:31  
+Well, I want to talk about this here. So stage two, verified visit. So like right here, this gets a verified visit. Technically, that could be the end of this cycle here. We don't have to talk about going from
+
+Unknown Speaker  14:41  
+here. That is correct. Yes, absolutely. Okay.
+
+Speaker 2  14:44  
+So there's going to be situations where we maybe just have this to this, or,
+
+Unknown Speaker  14:48  
+yeah, yeah, yeah. And it never gets from this to this, yeah.
+
+Speaker 2  14:52  
+Okay, okay. So we can leave those null, okay. I just yeah, oh. It's not just going to be a table of just ones that reached here through the whole. Thing we want every single stage, like, here, and then everything else is null here, yep, yep. Well, I mean, stage three, this is never gonna be null because we're doing verified visits, so, like, from here, but like, it doesn't necessarily have to go to here exactly.
+
+Speaker 1  15:12  
+And it's one of those things where, like, if it's a verified visit for a stage two campaign, that stage three part should be null, right? Yep, more than likely, if it's a stage three verified visit, then you want to go all the way back, right? Like, if we're defining it by in relation to the verified visit itself, right? Like, okay, if you have a stage one verified visit, you don't, you're not going to have anything for stage two or stage three in that scenario. So, and that can be, like, I guess the question is, for on my side, that I don't remember, off the top of my head is, I don't think you were going all the way through to the conversion being attributed to the verified
+
+Unknown Speaker  15:49  
+visit, right? No,
+
+Speaker 1  15:51  
+right. So if this, if this table is in relation to the verified visit, we should support each stage in relation to that. And we just know that, you know, stage one campaigns, if the data should be null in the second half of the table for stage two campaigns like, yeah, stage three stuff should be null. And for the stage three, vv, then the entire table row should be full.
+
+Speaker 2  16:12  
+And also including stuff like, you know, non CTV stuff doesn't have a vast event, well,
+
+Unknown Speaker  16:19  
+it has an impression event,
+
+Unknown Speaker  16:21  
+right? That is the vast event for them,
+
+Unknown Speaker  16:26  
+just not the
+
+Unknown Speaker  16:30  
+vast start, right?
+
+Speaker 1  16:32  
+It doesn't have a vast start, technically, has a view viewed. But the likelihood of that being have an IP drift is much less. But if you, for completeness sake, the equivalent for
+
+Unknown Speaker  16:49  
+display, which I don't even know
+
+Unknown Speaker  16:51  
+if it makes sense to do this because
+
+Speaker 1  16:52  
+of some other things that happen inside of UD, you can really just use the impression log or display instead of the event log.
+
+Speaker 2  17:04  
+Okay, all right. Last questions the as regards the the actual table. So when I create this, right, we don't want to store an infinite amount of days of stuff in the BigQuery table. I'm kind of curious. Do I was thinking like 90, maybe 90 day look back and then anything
+
+Speaker 1  17:26  
+sounds good for this data, because it's not terribly large,
+
+Unknown Speaker  17:30  
+yeah, and 30
+
+Speaker 1  17:31  
+to 30 to 60 spine 90s, kind of pushing it a little bit. Okay? It really depends on how we get the monitors, like, I'll say it this way, I cost impression always, probably a year. That's probably a bad example. I don't know why my hands find out how for 90 days sounds good. It may need to be more. May need to be less. Who knows like but 90 sounds like a good starting point. That's not going to break the bank. And no one really bat
+
+Unknown Speaker  18:10  
+an eye at that. Do I need to ask D Platt where to put it?
+
+Unknown Speaker  18:15  
+Yeah, you should confirm with
+
+Speaker 1  18:17  
+D flat where this should live, because it's going to you're representing as a BigQuery table. It should you probably want to be doing this inside of SQL mesh or, like, I'm not sure how you're currently generating it. Are you you're going, Are you going to the raw logs through, like, pi Spark, or are you
+
+Unknown Speaker  18:37  
+doing that in big story? I was just doing
+
+Unknown Speaker  18:38  
+it directly in BigQuery. All right, then you're
+
+Unknown Speaker  18:41  
+gonna want to create a SQL mesh job and go through
+
+Speaker 1  18:45  
+that process for it. Yeah, I do not know that off the top of my head. Oh, that's okay.
+
+Speaker 2  18:51  
+I can double check too, because I know a lot of times we were pulling I think most of the the DAGs and stuff I've run have just been like, PySpark stuff, creating things. So, all right, that's fine. I can figure it out. So I'm going to fix this table. That's what I'm going to be doing. So I probably won't talk to you for a couple days, but when I actually create the table, I'll let you know. But yeah,
+
+Speaker 1  19:12  
+that'd be dope. Let me know when, when something exists in BigQuery. Can go look
+
+Unknown Speaker  19:16  
+and look around. Okay,
+
+Unknown Speaker  19:19  
+sounds good. All right, hey, thanks. Zach,
+
+Unknown Speaker  19:21  
+appreciate it. Yep, no worries. Talk to you.
+
+Transcribed by https://otter.ai
