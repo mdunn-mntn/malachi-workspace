@@ -81,10 +81,18 @@ The aggregate 21.2% masks large campaign-level differences. Some campaigns are n
 **5. Phantom NTB events: ~4,006/day for advertiser 37775**
 Intersection of IP mutation + NTB disagreement: ~4,006 events/day where both `clickpass.is_new=TRUE` AND `ui_visits.is_new=TRUE` AND IP mutation is present. These are returning visitors misclassified as new-to-brand.
 
-**10. `first_touch_ad_served_id` NULL (~40%) is caused by IP mutation (Sharad, 2026-03-03)**
-Sharad confirmed the lookup for `first_touch_ad_served_id` requires a Stage 1 CTV impression (`funnel_level=1`, `objective_id=1`, same campaign group) served to the **same IP/Bid IP** as the VV. Because the lookup matches on IP, any bid IP mutation between Stage 1 and Stage 3 causes it to fail — the Stage 1 impression exists but at a different IP. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* This is not a design choice — it is a data quality problem directly caused by the mutation we're measuring.
+**10. `first_touch_ad_served_id` NULL (~40%) — targeting issue linked to IP mutation (Sharad, 2026-03-03 & 2026-03-04)**
 
-**The audit table can now quantify this.** `audit.stage3_vv_ip_lineage` captures both `ft_matched` (whether the first_touch was found) and the IP mutation flags. A query comparing `ft_matched=false` vs `mutated_at_redirect=true` across the same VVs would directly measure what fraction of the 40% NULL rate is attributable to IP mutation vs other causes (non-CTV first touch, Stage 1 serving gap, etc.). This is a concrete follow-up query that should be built.
+Sharad confirmed the lookup for `first_touch_ad_served_id` requires a Stage 1 CTV impression (`funnel_level=1`, `objective_id=1`, same campaign group). Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."*
+
+**First_touch lookup mechanism (Sharad, 2026-03-04):**
+- The system searches on **both bid_ip AND ip of the attributable impression** (i.e., both event_log.bid_ip and event_log.ip for the Stage 3 impression)
+- VV attribution itself (finding which impression to credit) uses **page view IP + guid + other identifiers** — not purely IP-based
+- *"the search for first touch is done using the Bid IP + IP of the attributable impression"*
+
+**Open question:** Does "search on both" mean OR (either match = found) or AND (both must match)? This determines how resilient the lookup is to partial mutation. If OR: mutation at only one hop wouldn't break the lookup. If AND: any mutation breaks it.
+
+**The audit table can quantify this.** A9 queries (added 2026-03-04) cross-tab ft_null against mutation flags and cross-device status to measure the correlation. A10 queries prove 100% coverage for VVs where first_touch IS populated.
 
 **6. clickpass_log is a 99.6% proxy for ui_visits VVs**
 For audit purposes, starting from clickpass_log is nearly equivalent to starting from ui_visits but provides richer IP audit columns.

@@ -187,7 +187,7 @@ When a verified visit occurs, the system records it in `clickpass_log` with two 
 | `ad_served_id` | UUID of the **most recent** ad serve before the visit | Last-touch attribution — always the newest impression (confirmed: 0 exceptions in 38,360 rows) |
 | `first_touch_ad_served_id` | UUID of a **Stage 1 CTV impression** for this IP in the same campaign group | First-touch attribution — may be NULL for 40% of VVs |
 
-**What `first_touch_ad_served_id` actually means (Sharad, 2026-03-03):** It is specifically a CTV impression where `funnel_level = 1` and `objective_id = 1`, from the **same campaign group** as the last-touch impression, served to the **same IP/Bid IP**. It is not just "the first-ever impression" — it is the first Stage 1 impression that matches on IP.
+**What `first_touch_ad_served_id` actually means (Sharad, 2026-03-03 & 2026-03-04):** It is specifically a CTV impression where `funnel_level = 1` and `objective_id = 1`, from the **same campaign group** as the last-touch impression. The first_touch lookup searches on **both bid_ip AND ip of the attributable impression** (Sharad: *"the search for first touch is done using the Bid IP + IP of the attributable impression"*). VV attribution itself (which impression gets credit) uses page view IP + guid + other identifiers — not purely IP-based. **Open question:** does "both" mean OR (either match = found) or AND (both required)?
 
 These are the **only** impression-level links stored on the VV record. Everything in between (the 2nd, 3rd, 4th impressions if they exist) is not individually traceable from the clickpass record.
 
@@ -199,7 +199,7 @@ These are the **only** impression-level links stored on the VV record. Everythin
 | Different IDs | 38,360 | 17.47% | Multi-impression attribution — distinct Stage 1 first-touch found |
 | `first_touch_ad_served_id` is NULL | 87,956 | 40.05% | No matching Stage 1 impression found for this IP — see below |
 
-**The 40% NULL rate is a targeting issue, not a design choice (Sharad, 2026-03-03):** Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The lookup requires a Stage 1 CTV impression served to the **same IP/Bid IP**. If IP mutation occurred between Stage 1 and Stage 3, the lookup searches for the wrong IP and fails. This means a substantial portion of the 40% NULLs may be directly caused by IP mutation — the bid IP at Stage 3 differs from what was used at Stage 1, so no matching Stage 1 record can be found. This connects the mutation finding to a concrete downstream data quality impact.
+**The 40% NULL rate is a targeting issue, not a design choice (Sharad, 2026-03-03 & 2026-03-04):** Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The lookup searches on both bid_ip and impression ip of the attributable Stage 3 impression. If IP mutation between Stage 1 and Stage 3 caused both IPs to differ from Stage 1, the lookup fails. **How much mutation contributes depends on whether the search is OR (either IP matching) or AND (both required)** — this is an open question for Sharad. Regardless, inter-stage IP mutation is a likely contributor to the 40% NULL rate, connecting the mutation finding to a concrete downstream data quality impact.
 
 **Confirmed (Zach, 2026-03-03):** Populated at write time — no batch backfill. NULLs are permanent.
 

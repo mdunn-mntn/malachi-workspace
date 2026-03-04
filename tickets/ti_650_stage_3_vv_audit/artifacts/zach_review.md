@@ -319,15 +319,26 @@ Two minor findings from the A4f row-level examples, both now resolved:
 
 5. **Alerting**: You mentioned creating alerts when lineage can't be resolved (`el_matched = false`). What system should those go to? Is there an existing alerting framework?
 
-6. **first_touch_ad_served_id — FULLY RESOLVED (Zach + Sharad, 2026-03-03).**
+6. **first_touch_ad_served_id — PARTIALLY RESOLVED (Zach + Sharad, 2026-03-03 & 2026-03-04).**
 
-**What it is (Sharad):** A CTV impression with `funnel_level = 1` and `objective_id = 1`, from the same campaign group as the last-touch impression, served to the **same IP/Bid IP**. It is not the first-ever impression — it is the first Stage 1 CTV impression matching on IP.
+**What it is (Sharad):** A CTV impression with `funnel_level = 1` and `objective_id = 1`, from the same campaign group as the last-touch impression. It is not the first-ever impression — it is the first Stage 1 impression that matches on IP.
 
-**Why it's NULL for 40% (Sharad):** *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The IP-matching requirement means that if mutation occurred between Stage 1 and Stage 3, the lookup searches for the wrong IP and fails to find a matching Stage 1 record. This links the mutation finding directly to a data quality impact: mutation → wrong IP in lookup → first_touch NULL.
+**How the lookup works (Sharad, 2026-03-04):**
+- The system searches on **both bid_ip AND ip of the attributable impression** (the Stage 3 impression's event_log.bid_ip and event_log.ip)
+- VV attribution itself (finding which impression to credit the visit to) uses **page view IP + guid + other identifiers** — it is NOT purely IP-based
+- Sharad: *"the search for first touch is done using the Bid IP + IP of the attributable impression"*
+
+**Open question:** Does "search on both" mean:
+- **OR** (either bid_ip or impression ip matching a Stage 1 record = found) — more resilient, partial mutation tolerated
+- **AND** (both must match) — more restrictive, any mutation at either IP breaks the lookup
+
+This distinction matters for quantifying mutation's contribution to the 40% NULL rate. If OR, then only VVs where BOTH bid_ip and vast_playback_ip differ from Stage 1 would fail. If AND, any single mutation breaks it.
+
+**Why it's NULL for 40% (Sharad):** *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."*
 
 **Timing (Zach):** "clickpass_log is a real time log. there is no post processing to generate it." Populated at write time, NULLs are permanent.
 
-This is a significant finding. Up to 40% of VVs may be missing their Stage 1 lineage specifically because IP mutation broke the lookup. The audit table (`first_touch_ad_served_id` is NULL for these rows) quantifies the scale of this problem per-advertiser.
+**Next steps:** A9 queries cross-tab ft_null against mutation flags and cross-device status. A10 queries prove 100% coverage for VVs where first_touch IS populated. Follow up with Sharad on the OR vs AND question.
 
 7. **Scope clarification — ANSWERED BY ZACH: "never assume only CTV. always assume all."** The production table must trace ALL verified visit types, not just CTV. Currently, non-CTV VVs have `el_matched = false` and rely on `impression_ip` for bid IP. Zach also noted that adding clicks to Stage 3 is "one thing we could improve" — they're currently not in Stage 3. **Action item:** Ensure the production table and all documentation treat CTV tracing as a subset, not the default.
 

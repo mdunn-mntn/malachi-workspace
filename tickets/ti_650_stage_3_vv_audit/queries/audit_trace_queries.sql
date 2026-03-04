@@ -1083,10 +1083,22 @@ ORDER BY ntb_vvs_checked DESC;
 -- Quantifies what fraction of the ~40% first_touch_ad_served_id NULL rate is
 -- attributable to IP mutation vs other causes.
 --
--- CONTEXT (Sharad, 2026-03-03): first_touch_ad_served_id is populated by
--- looking for a Stage 1 CTV impression (funnel_level=1, objective_id=1) served
--- to the SAME IP/Bid IP. If bid IP mutated between Stage 1 and Stage 3, the
--- lookup searches for the wrong IP and fails → NULL.
+-- CONTEXT (Sharad, 2026-03-03 & 2026-03-04):
+--   first_touch_ad_served_id = Stage 1 CTV impression (funnel_level=1,
+--   objective_id=1, same campaign group).
+--   The first_touch lookup searches on BOTH bid_ip AND ip of the attributable
+--   impression (event_log.bid_ip + event_log.ip for the Stage 3 impression).
+--   VV attribution itself uses page view IP + guid + other identifiers.
+--
+-- OPEN QUESTION: Does "search on both" mean OR (either match = found) or
+--   AND (both must match)? If OR, partial mutation is tolerated. If AND,
+--   any mutation at either IP breaks the lookup.
+--
+-- WHAT THESE QUERIES MEASURE: Correlation between Stage 3 intra-stage
+--   mutation signals and ft_null. This is a PROXY — the actual failure is
+--   inter-stage mutation (Stage 1 IPs != Stage 3 IPs). But VVs with more
+--   intra-stage mutation likely also have more inter-stage mutation (same
+--   underlying causes: network changes, cross-device, CGNAT).
 --
 -- HYPOTHESIS: ft_null rate should be HIGHER for mutated and cross-device VVs.
 --
