@@ -172,6 +172,7 @@ traffic handling. IPs from iCloud relay require special treatment for geo-target
 2. **clickpass_log.first_touch_time**: "doesn't exist in coredw, but keep it just in case" — unreliable, may be NULL.
 3. **conversion_log._col_23**: unnamed JSON column (raw artifact from Postgres migration).
 4. **cost_impression_log.recency_elapsed_time**: INTERVAL type — BQ doesn't support INTERVAL in all contexts.
+5. **clickpass_log.first_touch_ad_served_id NULL (~40%)**: The lookup for `first_touch_ad_served_id` requires a CTV impression with `funnel_level=1` and `objective_id=1` from the same campaign group served to the **same IP/Bid IP** as the VV (Sharad, 2026-03-03). Because it matches on IP, any bid IP mutation between Stage 1 and Stage 3 causes the lookup to fail — the Stage 1 impression exists but was for a different IP. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The 40% NULL rate is a known problem, not a design choice.
 
 ### Retention / TTL
 | Table | Retention |

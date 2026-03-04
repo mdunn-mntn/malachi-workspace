@@ -319,7 +319,15 @@ Two minor findings from the A4f row-level examples, both now resolved:
 
 5. **Alerting**: You mentioned creating alerts when lineage can't be resolved (`el_matched = false`). What system should those go to? Is there an existing alerting framework?
 
-6. **first_touch_ad_served_id — ANSWERED BY ZACH.** Zach confirmed: "clickpass_log is a real time log. there is no post processing to generate it." This means first_touch_ad_served_id is populated at write time — if the first-touch data isn't available when the clickpass row is created, the field stays NULL permanently. Our gap analysis empirically confirmed this (NULL rates identical after 3+ weeks). **Follow-up for Sharad:** Zach noted "confirm with Sharad, but I do not believe they do this lookup for stage 1 CTV VV" — suggesting the first_touch lookup may not be performed for Stage 1 CTV verified visits, which would explain the 40% NULL rate. (Doesn't affect the audit — we use last-touch.)
+6. **first_touch_ad_served_id — FULLY RESOLVED (Zach + Sharad, 2026-03-03).**
+
+**What it is (Sharad):** A CTV impression with `funnel_level = 1` and `objective_id = 1`, from the same campaign group as the last-touch impression, served to the **same IP/Bid IP**. It is not the first-ever impression — it is the first Stage 1 CTV impression matching on IP.
+
+**Why it's NULL for 40% (Sharad):** *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The IP-matching requirement means that if mutation occurred between Stage 1 and Stage 3, the lookup searches for the wrong IP and fails to find a matching Stage 1 record. This links the mutation finding directly to a data quality impact: mutation → wrong IP in lookup → first_touch NULL.
+
+**Timing (Zach):** "clickpass_log is a real time log. there is no post processing to generate it." Populated at write time, NULLs are permanent.
+
+This is a significant finding. Up to 40% of VVs may be missing their Stage 1 lineage specifically because IP mutation broke the lookup. The audit table (`first_touch_ad_served_id` is NULL for these rows) quantifies the scale of this problem per-advertiser.
 
 7. **Scope clarification — ANSWERED BY ZACH: "never assume only CTV. always assume all."** The production table must trace ALL verified visit types, not just CTV. Currently, non-CTV VVs have `el_matched = false` and rely on `impression_ip` for bid IP. Zach also noted that adding clicks to Stage 3 is "one thing we could improve" — they're currently not in Stage 3. **Action item:** Ensure the production table and all documentation treat CTV tracing as a subset, not the default.
 

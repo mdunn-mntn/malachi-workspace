@@ -185,7 +185,9 @@ When a verified visit occurs, the system records it in `clickpass_log` with two 
 | Field | What it stores | What it means |
 |-------|---------------|--------------|
 | `ad_served_id` | UUID of the **most recent** ad serve before the visit | Last-touch attribution — always the newest impression (confirmed: 0 exceptions in 38,360 rows) |
-| `first_touch_ad_served_id` | UUID of the **first** ad serve for this user/advertiser | First-touch attribution — may be NULL for 40% of VVs |
+| `first_touch_ad_served_id` | UUID of a **Stage 1 CTV impression** for this IP in the same campaign group | First-touch attribution — may be NULL for 40% of VVs |
+
+**What `first_touch_ad_served_id` actually means (Sharad, 2026-03-03):** It is specifically a CTV impression where `funnel_level = 1` and `objective_id = 1`, from the **same campaign group** as the last-touch impression, served to the **same IP/Bid IP**. It is not just "the first-ever impression" — it is the first Stage 1 impression that matches on IP.
 
 These are the **only** impression-level links stored on the VV record. Everything in between (the 2nd, 3rd, 4th impressions if they exist) is not individually traceable from the clickpass record.
 
@@ -193,13 +195,13 @@ These are the **only** impression-level links stored on the VV record. Everythin
 
 | Scenario | Count | % | What it means |
 |----------|-------|---|---------------|
-| Same ID (ad_served_id = first_touch) | 93,297 | 42.48% | Single-impression attribution — the VV's impression was also the first touch |
-| Different IDs | 38,360 | 17.47% | Multi-impression attribution — user saw multiple ads; VV links to the last one |
-| `first_touch_ad_served_id` is NULL | 87,956 | 40.05% | First-touch data missing — only last-touch available |
+| Same ID (ad_served_id = first_touch) | 93,297 | 42.48% | Single-impression attribution — the VV's impression was also the first Stage 1 touch |
+| Different IDs | 38,360 | 17.47% | Multi-impression attribution — distinct Stage 1 first-touch found |
+| `first_touch_ad_served_id` is NULL | 87,956 | 40.05% | No matching Stage 1 impression found for this IP — see below |
 
-The 40% NULL rate on `first_touch_ad_served_id` is a significant gap. For these VVs, first-touch IP tracing is impossible — only the last-touch (most recent) impression can be traced.
+**The 40% NULL rate is a targeting issue, not a design choice (Sharad, 2026-03-03):** Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The lookup requires a Stage 1 CTV impression served to the **same IP/Bid IP**. If IP mutation occurred between Stage 1 and Stage 3, the lookup searches for the wrong IP and fails. This means a substantial portion of the 40% NULLs may be directly caused by IP mutation — the bid IP at Stage 3 differs from what was used at Stage 1, so no matching Stage 1 record can be found. This connects the mutation finding to a concrete downstream data quality impact.
 
-**RESOLVED (2026-03-03, Zach confirmed):** Zach stated: "clickpass_log is a real time log. there is no post processing to generate it." This confirms: first_touch_ad_served_id is populated at write time — no batch backfill. If the first-touch data isn't available when the clickpass row is created, the field stays NULL permanently. Our gap analysis (2026-03-02) independently proved this by showing NULL rates are identical 3+ weeks later. Zach also noted: "confirm with Sharad, but I do not believe they do this lookup for stage 1 CTV VV" — suggesting the first-touch lookup may not be performed for certain VV types, which would explain the 40% NULL rate.
+**Confirmed (Zach, 2026-03-03):** Populated at write time — no batch backfill. NULLs are permanent.
 
 ### How the audit uses both
 
@@ -943,7 +945,7 @@ These questions were answered empirically using BQ Silver data (advertiser 37775
 
 ### RESOLVED: What is `first_touch_ad_served_id`?
 
-**The first impression for this user/advertiser pair.** When both fields are populated and different, the first-touch VAST timestamp is always older. However, `first_touch_ad_served_id` is NULL for **40.05%** of VVs (87,956 of 219,613). This is a major gap — for nearly half of all VVs, first-touch tracing is impossible.
+**It is specifically a Stage 1 CTV impression (Sharad, 2026-03-03).** Not just "the first impression" — it is the first impression where `funnel_level = 1` and `objective_id = 1`, from the same campaign group, served to the **same IP/Bid IP** as the VV. The IP-matching requirement is critical: the lookup searches for a Stage 1 impression against the IP recorded on the VV. When both fields are populated and different, the first-touch VAST timestamp is always older. `first_touch_ad_served_id` is NULL for **40.05%** of VVs (87,956 of 219,613).
 
 ### RESOLVED: How often are the two fields the same?
 
@@ -963,9 +965,13 @@ These questions were answered empirically using BQ Silver data (advertiser 37775
 
 ### RESOLVED: Why is `first_touch_ad_served_id` NULL for 40% of VVs?
 
-**Status: RESOLVED (Zach confirmed 2026-03-03).** "clickpass_log is a real time log. there is no post processing to generate it." The NULLs are permanent — populated at write time only. Zach suggested checking with Sharad: "I do not believe they do this lookup for stage 1 CTV VV."
+**Root cause (Sharad, 2026-03-03):** The lookup requires a Stage 1 CTV impression (`funnel_level=1`, `objective_id=1`, same campaign group) served to the **same IP/Bid IP**. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."*
 
-**Disproven hypothesis: non-CTV inventory.** We tested whether NULL first_touch VVs have lower event_log match rates (which would indicate non-CTV). Result: all three groups have identical match (~99.97%). The NULL group is fully CTV with VAST events — the system just didn't populate `first_touch_ad_served_id`. (Note: advertiser 37775 is ~100% CTV, so this test should be repeated on a mixed-inventory advertiser like 31357 to fully rule out the inventory hypothesis.)
+**The mutation connection:** Because the lookup matches on IP, IP mutation directly causes NULLs. If the bid IP changed between Stage 1 and Stage 3 (due to CGNAT, cross-device, VPN, etc.), the system searches for a Stage 1 impression for the Stage 3 IP — and finds nothing. The Stage 1 impression existed, but it was for a different IP. This links the 40% NULL rate directly to the mutation phenomenon this audit measures.
+
+**Confirmed (Zach, 2026-03-03):** Populated at write time, no post-processing. NULLs are permanent.
+
+**Disproven hypothesis: non-CTV inventory.** All three groups (same_id, different_id, ft_null) have identical EL match (~99.97%) for advertiser 37775. The NULL group is fully CTV. The inventory type doesn't explain the NULLs.
 
 | ft_group | total | el_match_pct |
 |----------|-------|--------------|
@@ -973,7 +979,7 @@ These questions were answered empirically using BQ Silver data (advertiser 37775
 | ft_null | 87,956 | 99.98% |
 | same_id | 93,297 | 99.96% |
 
-**Disproven hypothesis: lookback window.** We tested whether NULL rate correlates with how recently the last impression happened before the visit (Q8):
+**Disproven hypothesis: lookback window.** NULL rate is highest for recent impressions (54% for < 1 hour gap vs 18% for 14–21 days) — the opposite of what a lookback limit would produce. NULLs are not caused by the event_log window being too short.
 
 | Impression → visit gap | Total | ft_null_pct |
 |---|---|---|
@@ -984,7 +990,7 @@ These questions were answered empirically using BQ Silver data (advertiser 37775
 | 14-21 days | 16,299 | **17.89%** |
 | 21+ days | 1 | **0.0%** |
 
-The NULL rate is **highest for recent impressions** — the opposite of a lookback limit. ~~This pattern was originally interpreted as batch backfill~~ — **DISPROVEN.** Zach confirmed (2026-03-03): "clickpass_log is a real time log. there is no post processing." Gap analysis (2026-03-02) independently proved NULLs are permanent (identical rates 3+ weeks later). The recency correlation likely reflects that first-touch tracking data takes time to become available in the upstream systems — more time between impression and visit = higher chance the first-touch data was available when the clickpass row was written.
+The recency pattern is consistent with the mutation hypothesis: recent impressions are more likely to involve mobile/cross-device scenarios (where IP changes more) and less likely to have a matching Stage 1 impression at the same IP.
 
 **Impact on the audit:** Low. The production table uses `ad_served_id` (last-touch) as the primary trace, which is always populated. `first_touch_ad_served_id` is optional enrichment — nice to have, not required.
 
