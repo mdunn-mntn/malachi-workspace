@@ -92,7 +92,23 @@ Sharad confirmed the lookup for `first_touch_ad_served_id` requires a Stage 1 CT
 
 **Open question:** Does "search on both" mean OR (either match = found) or AND (both must match)? This determines how resilient the lookup is to partial mutation. If OR: mutation at only one hop wouldn't break the lookup. If AND: any mutation breaks it.
 
-**The audit table can quantify this.** A9 queries (added 2026-03-04) cross-tab ft_null against mutation flags and cross-device status to measure the correlation. A10 queries prove 100% coverage for VVs where first_touch IS populated.
+**Quantified via A9/A10 queries (run 2026-03-04):**
+
+*A9a — ft_null × mutation cross-tab (advertiser 37775, Feb 4-10, 219,527 VVs):*
+- ft_null rate when mutated: **54.85%** vs when not mutated: **38.19%** (+16.66pp delta)
+- However, 74,452 of 87,917 ft_null VVs had NO mutation — mutation explains only ~15% of NULLs
+- Cross-device delta is smaller: 42.2% vs 38.16% (+4.04pp)
+- Conclusion: mutation is a **contributing factor** but not the primary driver of ft_null
+
+*A9b — recency breakdown:*
+- Clear gradient: <1hr gap → 54.39% ft_null, 27.1% mutation; 14-21 day gap → 17.89% ft_null, 1.99% mutation
+- Both rates increase together as impression-to-visit gap shrinks, consistent with redirect-boundary mutation disrupting lookup
+
+*A10a — 100% coverage proof (advertiser 37775, Feb 4-10):*
+- ft_coverage: **99.78%** (131,314 of 131,610 VVs with ft_id have matching VAST event)
+- lt_coverage: **99.96%**; full_chain: **99.77%**
+- 296 VVs (0.22%) have ft_id but no matching VAST — likely outside lookback window
+- ft_null remains at 40.05% (87,917 VVs with no ft_id at all)
 
 **6. clickpass_log is a 99.6% proxy for ui_visits VVs**
 For audit purposes, starting from clickpass_log is nearly equivalent to starting from ui_visits but provides richer IP audit columns.
