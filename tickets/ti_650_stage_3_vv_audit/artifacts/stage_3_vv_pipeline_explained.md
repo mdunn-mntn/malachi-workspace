@@ -62,6 +62,8 @@ Once in Stage 3, the retargeting loop begins: Stage 3 impression → VV → Stag
 
 When an IP qualifies for Stage 2 or 3, it is **NOT removed from prior stages**. Frequency capping (14-day window) prevents duplicate serving, not targeting removal. Zach: *"Trying to move it between the stages just adds a level of complexity that gets us nothing."* Each stage has a separate campaign with its own budget: Stage 1 ~75-80%, Stage 2 ~5-10%, Stage 3 = remainder. The **bidder has no concept of stages** — it treats each campaign as an independent entity.
 
+**Key implication — attribution stage ≠ user journey stage.** Because IPs stay in all stages and S1 has 75-80% of budget, a VV can be attributed to a Stage 1 impression even if the IP has already progressed to Stage 3. Data confirms: **20% of Stage 1 VVs are on IPs that have reached Stage 3.** The v3 production table includes `max_historical_stage` to distinguish attribution stage (`vv_stage`) from the deepest funnel penetration for that IP.
+
 ### Campaign ID = Stage (one-to-one)
 
 Each campaign maps to exactly one stage. To determine the stage of any impression or VV:
