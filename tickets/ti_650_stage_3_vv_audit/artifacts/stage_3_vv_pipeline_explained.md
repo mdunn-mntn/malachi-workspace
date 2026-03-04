@@ -28,7 +28,13 @@ A ground-up explanation of the MNTN ad-serving pipeline, how IPs move through it
 
 ## Part 2: What Stages Actually Are
 
-**Stages are campaign targeting stages, not just event types.** Stage 1, 2, and 3 are distinct campaign groups in the MES pipeline. Each stage targets a different IP audience based on prior events. The number of impressions doesn't determine the stage — what determines it is the IP's event history.
+**Stages are a temporal state machine for each IP.** What determines the stage of an impression is the IP's event history at the time it's served:
+
+| IP's history when impression is served | Stage of that impression |
+|---------------------------------------|------------------------|
+| IP is in campaign audience, no prior impressions | Stage 1 |
+| IP had a VAST impression (entered Stage 2 pool), no VV yet | Stage 2 |
+| IP had a verified visit (entered Stage 3 pool) | Stage 3 |
 
 ### The three campaign stages
 
@@ -87,158 +93,322 @@ From Zach (Slack, 2026-03-02):
 
 ---
 
-## Part 2.5: A Concrete Example — One IP Through the Full Pipeline
+## Part 2.5: How We Link Everything Despite IP Mutation
 
-This is the thing that is hardest to reason about abstractly. Here it is with real numbers.
+**The core problem:** IP can change at every step. So how do we trace a verified visit back to the original bid?
 
-### Scale: what each stage looks like
+**The answer:** We use `ad_served_id` (a UUID), not IP, as the linking thread.
+
+### How ad_served_id works within a single impression
+
+When an ad is served, a UUID (`ad_served_id`) is assigned. This UUID follows the ad through every downstream event. Every table records the same UUID for the same ad serve:
+
+```
+                        ad_served_id = "abc-123"
+                               ↓
+  ┌──────────────────────────────────────────────────────────┐
+  │                                                          │
+  │   event_log      bid_ip = 73.162.50.100                  │
+  │   (bid/VAST)     vast_ip = 73.162.50.100                 │
+  │                  ad_served_id = "abc-123"  ───────┐      │
+  │                                                   │      │
+  │   clickpass_log  redirect_ip = 76.39.91.55        │ SAME │
+  │   (VV redirect)  ad_served_id = "abc-123"  ───────┤ UUID │
+  │                                                   │      │
+  │   ui_visits      visit_ip = 76.39.91.55           │      │
+  │   (visit record)  ad_served_id = "abc-123"  ──────┘      │
+  │                                                          │
+  └──────────────────────────────────────────────────────────┘
+```
+
+**IP changed from 73.162.50.100 to 76.39.91.55 — but ad_served_id stayed "abc-123".** That's how we join the tables despite mutation. We join on `ad_served_id`, not on IP.
+
+### How we link between impressions
+
+Between separate impressions (Stage 1 impression → Stage 2 impression), there is NO ad_served_id link. Each impression gets its own UUID. The link between impressions goes through the **targeting system** (MemDB segments) which operates on IP:
+
+```
+Impression 1 (Stage 1):  ad_served_id = "abc-123",  VAST IP = 73.162.50.100
+    ↓
+    └─ VAST IP 73.162.50.100 added to Stage 2 segment (targeting system, via IP)
+    ↓
+Impression 2 (Stage 2):  ad_served_id = "def-456",  bid on 73.162.50.100 from Stage 2 pool
+    ↓
+    └─ VV happens → clickpass_log records:
+         ad_served_id = "def-456"               (last touch — Impression 2)
+         first_touch_ad_served_id = "abc-123"    (first touch — Impression 1)
+```
+
+**The only bridge between impressions that we can trace in SQL is `first_touch_ad_served_id`.** It gives us the first impression's UUID. Everything in between (2nd, 3rd, 4th impressions) is invisible from the clickpass record.
+
+### What our audit table captures vs. what it can't
+
+| What | How we trace it | Available? |
+|------|----------------|------------|
+| Last-touch bid IP | `event_log.bid_ip` via `ad_served_id` | Yes — always |
+| Last-touch VAST IP | `event_log.ip` via `ad_served_id` | Yes (CTV only) |
+| Redirect/visit IP | `clickpass_log.ip` / `ui_visits.ip` | Yes — always |
+| First-touch bid IP | `event_log.bid_ip` via `first_touch_ad_served_id` | Yes (when ft not NULL, 60%) |
+| Intermediate impression IPs | No link on clickpass record | **No** — would need Zach's IP-based traversal |
+| Which stage an impression was served in | Not stored on clickpass_log | **No** — would need campaign_id → stage lookup |
+
+---
+
+## Part 2.6: Complete IP Journey Examples
+
+### Scale context
 
 Zach's example from the 2026-03-03 review meeting:
 
 - Stage 1 audience: **8.5 million IPs** (from customer data, lookalike, etc.)
-- Of those, ~10,000 get a Stage 1 impression served (only a fraction of the audience gets an ad)
+- Of those, ~10,000 get a Stage 1 impression served
 - Those 10,000 are now in the **Stage 2 targeting audience** (via their VAST playback IPs)
 - Of those 10,000, ~2,000 get a Stage 2 impression served
-- Those 2,000 Stage 2 impressions can generate Stage 3 VVs
+- VVs from any of those impressions put the IP into Stage 3
 
-### Journey A: Stage 1 → Stage 3 directly (no Stage 2 impression)
+### Journey A: Stage 1 → VV (simplest path, no mutation)
 
-This is the shorter path. The IP gets one impression from Stage 1, the user visits the site, and the IP enters Stage 3 — without ever receiving a Stage 2 impression.
+One impression, one visit, no IP change. The VV is attributed directly to the Stage 1 impression.
 
 ```
-STAGE 1 AUDIENCE
-  IP 73.162.50.100 is in the campaign audience (customer data / lookalike)
-
 STAGE 1 IMPRESSION  (Day 1)
-  MemDB selects IP 73.162.50.100 from the Stage 1 audience
-  Bid               IP = 73.162.50.100   ← event_log.bid_ip
-  Vast Impression   IP = 73.162.50.100   ← event_log.ip (no mutation — same CTV device)
-  Vast Start        IP = 73.162.50.100
+  ad_served_id = "aaa-111"
+  Bid IP            = 73.162.50.100   ← event_log.bid_ip
+  Vast Impression   = 73.162.50.100   ← event_log.ip
+  ↓
+  GREEN LINE: 73.162.50.100 enters Stage 2 pool
 
-  GREEN LINE: 73.162.50.100 added to Stage 2 segment (saw an ad)
-  The IP is now targetable in Stage 2, but it doesn't have to receive
-  a Stage 2 impression to proceed.
-
-VERIFIED VISIT  (Day 3 — user visits the site after seeing the Stage 1 ad)
-  The user saw the ad on their TV, and 2 days later visits the advertiser's
-  website on their laptop (same home Wi-Fi, same external IP).
-
+VERIFIED VISIT  (Day 3)
+  User visits site from laptop, same home Wi-Fi.
   redirect_ip       = 73.162.50.100   ← clickpass_log.ip
-  visit_ip          = 73.162.50.100   ← ui_visits.ip
+  ↓
+  IP enters Stage 3 (had a VV)
 
-  VV is attributed to the Stage 1 impression:
-    ad_served_id             = [Stage 1 impression UUID]
-    first_touch_ad_served_id = [Stage 1 impression UUID]  (same — only one impression)
+  clickpass_log records:
+    ad_served_id             = "aaa-111"   (last touch = Stage 1 impression)
+    first_touch_ad_served_id = "aaa-111"   (same — only one impression)
 
-  GREEN LINE: IP enters Stage 3 (had a verified visit)
-
-  Our audit table row (v2 schema):
-    lt_bid_ip        = 73.162.50.100   (last-touch = Stage 1 impression)
-    lt_vast_ip       = 73.162.50.100
-    redirect_ip      = 73.162.50.100
-    visit_ip         = 73.162.50.100
-    ft_ad_served_id  = [same as ad_served_id — single impression]
-    ft_bid_ip        = 73.162.50.100
-    bid_eq_vast      = true
-    vast_eq_redirect = true
-    ip_mutated       = false
-    any_mutation     = false
-    lt_bid_eq_ft_bid = true    (first touch = last touch)
-    is_ctv           = true
-    is_cross_device  = false
-
-STAGE 3 RETARGETING  (Day 10 — now in Stage 3, gets another ad)
-  MemDB selects IP 73.162.50.100 from the Stage 3 audience
-  A new impression is served. If the user visits the site again,
-  the new VV is attributed to this Stage 3 impression (last touch).
-  The cycle repeats — "last touch is king."
+  AUDIT TABLE ROW:
+    lt_bid_ip = 73.162.50.100    ft_bid_ip = 73.162.50.100
+    lt_vast_ip = 73.162.50.100   redirect_ip = 73.162.50.100
+    bid_eq_vast = true | vast_eq_redirect = true | ip_mutated = false
+    any_mutation = false | lt_bid_eq_ft_bid = true
+    is_ctv = true | is_cross_device = false
 ```
 
-**What happened:** One impression, one visit. The IP entered Stage 2 automatically (VAST fired) and entered Stage 3 because of the VV. No Stage 2 impression was ever served. The blue line from Stage 1 → VV represents the `first_touch_ad_served_id` pointing back to this Stage 1 impression.
+**Linking:** One `ad_served_id` ("aaa-111") threads through event_log → clickpass_log → ui_visits. No mutation, no complexity.
 
 
-### Journey B: Stage 1 → Stage 2 → Stage 3 (full funnel with mutation)
+### Journey B: Stage 1 → Stage 2 → VV (two impressions, mutation at redirect)
 
-This is the longer path. The IP gets a Stage 1 impression, then a Stage 2 impression, and the Stage 2 impression produces a VV. IP mutation occurs at the redirect boundary.
+Two impressions before the VV. The first impression doesn't produce a VV. The second impression (Stage 2) does.
 
 ```
-STAGE 1 AUDIENCE
-  IP 172.58.44.200 is in the campaign audience
-
 STAGE 1 IMPRESSION  (Day 1)
-  Bid               IP = 172.58.44.200   ← event_log.bid_ip
-  Vast Impression   IP = 172.58.44.200   ← event_log.ip
-  Vast Start        IP = 172.58.44.200
+  ad_served_id = "aaa-111"
+  Bid IP            = 172.58.44.200   ← event_log.bid_ip
+  Vast Impression   = 172.58.44.200   ← event_log.ip
+  ↓
+  GREEN LINE: 172.58.44.200 enters Stage 2 pool
+  No VV follows. User saw the ad but didn't visit the site.
 
-  GREEN LINE: 172.58.44.200 added to Stage 2 segment
+STAGE 2 IMPRESSION  (Day 15)
+  ad_served_id = "bbb-222"           ← NEW UUID, different impression
+  Bid IP            = 172.58.44.200   ← event_log.bid_ip (same household IP)
+  Vast Impression   = 172.58.44.200   ← event_log.ip
+  ↓
+  User watches ad on CTV. Next day, visits site on phone (cellular).
 
-  No verified visit follows this impression. The user saw the ad but
-  didn't visit the site yet.
+VERIFIED VISIT  (Day 16)
+  redirect_ip       = 76.39.91.55    ← clickpass_log.ip (MUTATION — cellular)
+  ↓
+  IP enters Stage 3
 
-STAGE 2 IMPRESSION  (Day 15 — served from Stage 2 audience)
-  MemDB selects IP 172.58.44.200 from the Stage 2 audience
-  Bid               IP = 172.58.44.200   ← event_log.bid_ip (same IP, stable household)
-  Vast Impression   IP = 172.58.44.200   ← event_log.ip
-  Vast Start        IP = 172.58.44.200
+  clickpass_log records:
+    ad_served_id             = "bbb-222"   (last touch = Stage 2 impression)
+    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1 impression)
 
-  GREEN LINE: 172.58.44.200 remains in Stage 2 (Stage 2 VAST IPs
-  don't re-enter Stage 2 — Zach confirmed)
-
-VERIFIED VISIT  (Day 16 — user visits the site the next day)
-  The user saw the Stage 2 ad on their CTV. The next day, they visit
-  the advertiser's website on their phone over cellular (different network).
-
-  redirect_ip       = 76.39.91.55       ← clickpass_log.ip (MUTATION — cellular IP)
-  visit_ip          = 76.39.91.55       ← ui_visits.ip
-
-  VV is attributed to the Stage 2 impression (last touch):
-    ad_served_id             = [Stage 2 impression UUID]
-    first_touch_ad_served_id = [Stage 1 impression UUID]  (first touch = Stage 1)
-
-  IP enters Stage 3 (had a verified visit)
-
-  Our audit table row (v2 schema):
-    lt_bid_ip        = 172.58.44.200    (last-touch = Stage 2 impression)
-    lt_vast_ip       = 172.58.44.200
-    redirect_ip      = 76.39.91.55     ← MUTATION HERE (cellular vs home)
-    visit_ip         = 76.39.91.55
-    ft_ad_served_id  = [Stage 1 UUID]
-    ft_bid_ip        = 172.58.44.200    (first-touch bid IP)
-    ft_vast_ip       = 172.58.44.200
-    bid_eq_vast      = true
-    vast_eq_redirect = false            ← THE MUTATION POINT
-    ip_mutated       = true             ← bid=vast AND vast≠redirect
-    any_mutation     = true             ← lt_bid_ip ≠ redirect_ip
-    lt_bid_eq_ft_bid = true             (bid IP stable across impressions)
-    is_ctv           = true
-    is_cross_device  = true             (CTV ad, phone visit)
-
-STAGE 3 RETARGETING  (Day 25 — retargeting impression)
-  MemDB selects the IP from the Stage 3 audience
-  Note: Stage 3 may target 76.39.91.55 (the VV IP) OR 172.58.44.200
-  (the VAST IP), depending on which IP the segment system recorded.
-  A new impression is served to maintain last-touch attribution.
-
-  If the user visits the site again after this Stage 3 impression:
-    ad_served_id             = [Stage 3 impression UUID]  (last touch = Stage 3)
-    first_touch_ad_served_id = [Stage 1 impression UUID]  (first touch = still Stage 1)
+  AUDIT TABLE ROW:
+    lt_bid_ip = 172.58.44.200    ft_bid_ip = 172.58.44.200
+    lt_vast_ip = 172.58.44.200   redirect_ip = 76.39.91.55  ← MUTATION
+    bid_eq_vast = true | vast_eq_redirect = false | ip_mutated = true
+    any_mutation = true | lt_bid_eq_ft_bid = true
+    is_ctv = true | is_cross_device = true
 ```
 
-**What happened:** Two impressions (Stage 1, Stage 2), one VV. The VV's `ad_served_id` points to the Stage 2 impression (last touch), and `first_touch_ad_served_id` points to the Stage 1 impression (always Stage 1 by definition). IP mutation occurred at the VAST→redirect boundary because the user visited on their phone (cellular IP) after seeing the ad on their CTV (home IP). This is the 5.9-33.4% mutation we measure.
+**Linking:** Two separate `ad_served_id`s ("aaa-111" and "bbb-222"). The clickpass record stores both: `ad_served_id` = last touch, `first_touch_ad_served_id` = first touch. We join event_log TWICE — once on each UUID — to get both impressions' IPs. The link between the two impressions went through the targeting system (MemDB), not through ad_served_id.
 
 
-### Key differences between Journey A and Journey B
+### Journey C: Stage 1 → multiple Stage 2 impressions → VV (many ads before first visit)
 
-| | Journey A (short path) | Journey B (full funnel) |
-|---|---|---|
-| Impressions before VV | 1 (Stage 1 only) | 2 (Stage 1 + Stage 2) |
-| Stage 2 impression served? | No — IP entered Stage 2 but was never targeted there | Yes |
-| VV attributed to | Stage 1 impression | Stage 2 impression (last touch) |
-| `first_touch_ad_served_id` | = `ad_served_id` (same) | ≠ `ad_served_id` (different — Stage 1 vs Stage 2) |
-| IP mutation | None | Yes — cross-device at redirect |
-| `lt_bid_eq_ft_bid` | true (only one impression) | true (bid IP stable, mutation is at redirect) |
+Three Stage 2 impressions before the VV. Only the first and last are traceable.
 
-Both paths end the same way: the IP is in Stage 3 and receives retargeting impressions. The difference is how many impressions it took to get the first VV.
+```
+STAGE 1 IMPRESSION  (Day 1)
+  ad_served_id = "aaa-111"
+  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
+  ↓
+  GREEN LINE: enters Stage 2 pool. No VV.
+
+STAGE 2 IMPRESSION #1  (Day 8)
+  ad_served_id = "bbb-222"
+  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
+  No VV.
+
+STAGE 2 IMPRESSION #2  (Day 15)
+  ad_served_id = "ccc-333"
+  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
+  No VV.
+
+STAGE 2 IMPRESSION #3  (Day 22)
+  ad_served_id = "ddd-444"
+  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
+  ↓
+  User finally visits the site.
+
+VERIFIED VISIT  (Day 23)
+  redirect_ip = 172.58.44.200   (no mutation — same Wi-Fi)
+
+  clickpass_log records:
+    ad_served_id             = "ddd-444"   (last touch = Stage 2 impression #3)
+    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1 impression)
+
+  AUDIT TABLE ROW:
+    lt_bid_ip = 172.58.44.200    ft_bid_ip = 172.58.44.200
+    redirect_ip = 172.58.44.200
+    bid_eq_vast = true | ip_mutated = false | any_mutation = false
+    lt_bid_eq_ft_bid = true
+```
+
+**What's invisible:** Impressions "bbb-222" and "ccc-333" (Stage 2 #1 and #2) are NOT traceable from the clickpass record. We only see the first touch ("aaa-111") and the last touch ("ddd-444"). The intermediate impressions exist in event_log but have no link from this VV. This is a known limitation — we trace endpoints, not the full chain.
+
+
+### Journey D: Stage 1 → Stage 2 → VV → Stage 3 retargeting → VV (full cycle with bid IP mutation)
+
+The complete path including retargeting. The bid IP changes between impressions.
+
+```
+STAGE 1 IMPRESSION  (Day 1)
+  ad_served_id = "aaa-111"
+  Bid IP = 172.59.190.73   ← T-Mobile cellular
+  Vast IP = 172.59.190.73
+  ↓
+  GREEN LINE: enters Stage 2 pool. No VV.
+
+STAGE 2 IMPRESSION  (Day 12)
+  ad_served_id = "bbb-222"
+  Bid IP = 172.56.16.39    ← DIFFERENT T-Mobile IP (cellular reassignment)
+  Vast IP = 172.56.16.39
+  ↓
+  User visits site on home broadband.
+
+FIRST VERIFIED VISIT  (Day 13)
+  redirect_ip = 73.168.42.52    ← home broadband (MUTATION from cellular)
+  ↓
+  IP enters Stage 3
+
+  clickpass_log records:
+    ad_served_id             = "bbb-222"   (last touch = Stage 2)
+    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1)
+
+  AUDIT TABLE ROW (VV #1):
+    lt_bid_ip = 172.56.16.39     ft_bid_ip = 172.59.190.73
+    redirect_ip = 73.168.42.52
+    ip_mutated = true | any_mutation = true
+    lt_bid_eq_ft_bid = false  ← BID IP CHANGED between impressions
+    is_cross_device = true
+
+  ─── NOW IN STAGE 3 — RETARGETING BEGINS ───
+
+STAGE 3 IMPRESSION  (Day 20)
+  ad_served_id = "eee-555"
+  Bid IP = 73.168.42.52    ← now targeting the home broadband IP
+  Vast IP = 73.168.42.52
+  ↓
+  User visits site again, same network this time.
+
+SECOND VERIFIED VISIT  (Day 21)
+  redirect_ip = 73.168.42.52    (no mutation — same network)
+
+  clickpass_log records:
+    ad_served_id             = "eee-555"   (last touch = Stage 3 impression)
+    first_touch_ad_served_id = "aaa-111"   (first touch = STILL Stage 1)
+
+  AUDIT TABLE ROW (VV #2):
+    lt_bid_ip = 73.168.42.52     ft_bid_ip = 172.59.190.73
+    redirect_ip = 73.168.42.52
+    ip_mutated = false | any_mutation = false
+    lt_bid_eq_ft_bid = false  ← ft bid IP is the original T-Mobile IP
+    is_cross_device = false
+```
+
+**Key observations:**
+1. **Two VVs = two rows in the audit table.** Each VV gets its own row. VV #1 is attributed to the Stage 2 impression. VV #2 is attributed to the Stage 3 impression.
+2. **`first_touch_ad_served_id` is the same on both VVs** — it always points back to the Stage 1 impression ("aaa-111"). This never changes regardless of how many VVs follow.
+3. **`lt_bid_eq_ft_bid = false`** on both VVs because the bid IP changed between the Stage 1 impression (T-Mobile 172.59.x) and the later impressions. This is the 14.28% of multi-impression VVs where bid IPs differ.
+4. **The Stage 3 impression bid IP (73.168.42.52)** is the home broadband IP — because the targeting system picked up the VV IP, not the original Stage 1 bid IP. This is how mutation propagates through stages.
+
+
+### Journey E: Stage 1 → VV → multiple Stage 3 impressions → VV (extended retargeting)
+
+Multiple retargeting impressions before the second VV.
+
+```
+STAGE 1 IMPRESSION  (Day 1)
+  ad_served_id = "aaa-111"
+  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
+
+FIRST VERIFIED VISIT  (Day 3)
+  redirect_ip = 73.162.50.100 (no mutation)
+  ad_served_id = "aaa-111" | first_touch = "aaa-111"
+  ↓
+  IP enters Stage 3
+
+  ─── RETARGETING ───
+
+STAGE 3 IMPRESSION #1  (Day 10)
+  ad_served_id = "fff-666"
+  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
+  No VV.
+
+STAGE 3 IMPRESSION #2  (Day 17)
+  ad_served_id = "ggg-777"
+  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
+  No VV.
+
+STAGE 3 IMPRESSION #3  (Day 24)
+  ad_served_id = "hhh-888"
+  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
+  ↓
+  User visits site again.
+
+SECOND VERIFIED VISIT  (Day 25)
+  redirect_ip = 73.162.50.100 (no mutation)
+
+  clickpass_log records:
+    ad_served_id             = "hhh-888"   (last touch = Stage 3 impression #3)
+    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1, 24 days ago)
+
+  AUDIT TABLE ROW (VV #2):
+    lt_bid_ip = 73.162.50.100    ft_bid_ip = 73.162.50.100
+    redirect_ip = 73.162.50.100
+    ip_mutated = false | lt_bid_eq_ft_bid = true
+```
+
+**What's invisible:** Stage 3 impressions #1 and #2 ("fff-666" and "ggg-777") are not traceable from VV #2's clickpass record. Only the last touch ("hhh-888") and first touch ("aaa-111") are linked. The user saw 4 total impressions, but the VV only records the first and last.
+
+
+### Summary: all journey types
+
+| Journey | Path | Impressions | VV attributed to | first_touch | Mutation? |
+|---------|------|-------------|-----------------|-------------|-----------|
+| A | Stage 1 → VV | 1 | Stage 1 | = ad_served_id | No |
+| B | Stage 1 → Stage 2 → VV | 2 | Stage 2 (last touch) | Stage 1 | Yes (redirect) |
+| C | Stage 1 → 3× Stage 2 → VV | 4 | Stage 2 #3 (last touch) | Stage 1 | No |
+| D | Stage 1 → Stage 2 → VV → Stage 3 → VV | 3 (2 VVs) | VV1: Stage 2, VV2: Stage 3 | Stage 1 (both) | Yes (bid IP + redirect) |
+| E | Stage 1 → VV → 3× Stage 3 → VV | 4 (2 VVs) | VV1: Stage 1, VV2: Stage 3 #3 | Stage 1 (both) | No |
+
+**The constant:** `first_touch_ad_served_id` always points to Stage 1. `ad_served_id` always points to the most recent impression before the VV. Everything in between is invisible from the clickpass record.
 
 
 ### What mutation at Stage 1 means for Stage 2 targeting
@@ -257,19 +427,6 @@ If Stage 2 VAST had fired at the same IP as Stage 1 bid (1.1.1.1), the Stage 3 s
 would eventually contain 1.1.1.1 again. In practice, mutation means Stage 3 often contains
 IPs that differ from what was originally bid at Stage 1.
 ```
-
-### What we CAN and CANNOT see from our audit table
-
-Our audit table (`audit.stage3_vv_ip_lineage`) gives us the IP lineage within the Stage 3 impression:
-
-| What | How | Available |
-|------|-----|-----------|
-| Bid IP for the Stage 3 impression | `event_log.bid_ip` | Yes |
-| VAST playback IP for the Stage 3 impression | `event_log.ip` | Yes (CTV only) |
-| Redirect IP (the visit IP) | `clickpass_log.ip` | Yes |
-| First-touch impression bid IP | `event_log.bid_ip` via `first_touch_ad_served_id` | Yes (when not NULL) |
-| What stage the impression was served in | Not stored on clickpass_log | No — would need campaign_id → stage lookup |
-| The IP's full history across Stage 1 and 2 | Not on the VV record | No — would require Zach's traversal method |
 
 ---
 
