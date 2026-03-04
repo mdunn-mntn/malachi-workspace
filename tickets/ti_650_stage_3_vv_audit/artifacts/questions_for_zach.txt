@@ -1,8 +1,8 @@
 Questions for Zach — Stage 3 VV IP Lineage Audit
-Updated 2026-03-03 (pre-meeting version)
+Updated 2026-03-04 (v2 schema, retention questions added)
 
 The audit is done. Analysis is validated (3.25M VVs, 15 advertisers,
-BQ matches GP within 0.12pp). Production table query is ready to run.
+BQ matches GP within 0.12pp). Production table query is ready to run (A4 v2).
 These are the only open items before we can deploy.
 
 
@@ -11,21 +11,64 @@ OPEN — Need your input before we can deploy
 ================================================================
 
 
-1. Schema sign-off
-------------------
+1. Schema sign-off (v2 — updated 2026-03-04)
+---------------------------------------------
 
-Does the production table schema look right?
+Updated schema per your feedback. Key changes from v1:
+  - Renamed columns for clarity (cp_time→vv_time, bid_ip→lt_bid_ip, etc.)
+  - Added first-touch attribution columns (ft_ad_served_id, ft_bid_ip,
+    ft_vast_ip, ft_time, ft_matched)
+  - Added broader mutation flag (any_mutation = lt_bid_ip != redirect_ip)
+  - Added cross-touch comparison (lt_bid_eq_ft_bid)
 
-    ad_served_id, advertiser_id, campaign_id, cp_time
-    bid_ip, vast_playback_ip, redirect_ip, visit_ip, impression_ip
-    bid_eq_vast, vast_eq_redirect, redirect_eq_visit, mutated_at_redirect
-    cp_is_new, vv_is_new, ntb_agree
-    is_cross_device, el_matched, vv_matched
-    trace_date (partition key), trace_run_timestamp
+Full v2 schema:
 
-Full schema with column descriptions is in zach_review.md Section 4.
+    IDENTITY:
+      ad_served_id          STRING    PK (UUID from clickpass_log)
+      advertiser_id         INT64
+      campaign_id           INT64
+      vv_time               TIMESTAMP (verified visit timestamp)
 
-Anything to add or remove?
+    LAST-TOUCH IP LINEAGE:
+      lt_bid_ip             STRING    bid IP of last-touch impression (event_log.bid_ip)
+      lt_vast_ip            STRING    VAST playback IP of last-touch impression (event_log.ip)
+      redirect_ip           STRING    IP at clickpass redirect (clickpass_log.ip)
+      visit_ip              STRING    IP at verified visit (ui_visits.ip)
+      impression_ip         STRING    bid IP carried onto visit record (ui_visits.impression_ip)
+
+    FIRST-TOUCH ATTRIBUTION:
+      ft_ad_served_id       STRING    first_touch_ad_served_id from clickpass_log
+      ft_bid_ip             STRING    bid IP of first-touch impression
+      ft_vast_ip            STRING    VAST playback IP of first-touch impression
+      ft_time               TIMESTAMP time of first-touch VAST impression
+
+    IP COMPARISON FLAGS:
+      bid_eq_vast           BOOL      lt_bid_ip = lt_vast_ip?
+      vast_eq_redirect      BOOL      lt_vast_ip = redirect_ip? (THE MUTATION POINT)
+      redirect_eq_visit     BOOL      redirect_ip = visit_ip? (99.98%+ true)
+      ip_mutated            BOOL      bid=vast AND vast!=redirect
+      any_mutation          BOOL      lt_bid_ip != redirect_ip (broadest flag)
+      lt_bid_eq_ft_bid      BOOL      did bid IP change between first and last touch?
+
+    CLASSIFICATION:
+      clickpass_is_new      BOOL      NTB flag at redirect (client-side pixel)
+      visit_is_new          BOOL      NTB flag at verified visit (independent pixel)
+      ntb_agree             BOOL      both NTB flags agree?
+      is_cross_device       BOOL      ad on one device, visit on another
+
+    TRACE QUALITY:
+      is_ctv                BOOL      event_log join succeeded (true = CTV VV)
+      visit_matched         BOOL      ui_visits join succeeded
+      ft_matched            BOOL      first-touch event_log join succeeded
+                                      (NULL if ft_ad_served_id is NULL)
+
+    METADATA:
+      trace_date            DATE      DATE(vv_time), partition key
+      trace_run_timestamp   TIMESTAMP when this row was generated
+
+Full SQL: audit_trace_queries.sql, sections A4a-v2 (CREATE), A4b-v2 (INSERT).
+
+Anything to add, remove, or rename?
 
 
 2. Where does the table live?
@@ -40,76 +83,180 @@ What project and dataset should this table live in?
 3. Scheduling / pipeline ownership
 ------------------------------------
 
-The INSERT query is ready (audit_trace_queries.sql, section A4b).
-Pattern: DELETE + INSERT on a date range, idempotent, safe to re-run.
+The INSERT query is idempotent (DELETE + INSERT on a date range).
 For daily loads: set trace_start = trace_end = target date.
-Requires 30-day event_log lookback (e.g., for Feb 10, scan Jan 11-Feb 10).
+Requires:
+  - 30-day event_log lookback for last-touch
+  - 60-day event_log lookback for first-touch
+  - ±7 day ui_visits buffer around the trace date
 
 What's the right mechanism — dbt model? SQLMesh? Airflow DAG?
 And who owns the pipeline build-out?
 
 
-4. Backfill range
+4. Data retention
 -----------------
 
-We've validated Feb 4-10 on BQ Silver. How far back should we backfill?
+The row-level table will grow by millions of rows per day (all
+advertisers × all VVs). Three options:
 
-Note: each day of backfill requires a 30-day event_log scan,
-so cost scales with the backfill range. Worth scoping before running.
+OPTION A: 90-day rolling window
+  - Delete partitions older than 90 days each daily run.
+  - Matches cost_impression_log's 90-day TTL pattern.
+  - Pro: table stays manageable, consistent with existing conventions.
+  - Con: lose row-level drill-down for older data.
+
+OPTION B: Keep everything
+  - Never delete. Storage grows linearly.
+  - BQ handles it fine with partitioning + clustering.
+  - Pro: enables year-over-year trend analysis at row level.
+  - Con: ever-growing storage cost, unclear if row-level granularity
+    is needed beyond 90 days.
+
+OPTION C: Hybrid — roll row-level, keep summaries
+  - Row-level table = 90-day rolling window (Option A).
+  - Daily summary views/tables = permanent (mutation rate,
+    ft_null rate, cross-device % by advertiser/campaign/day).
+  - Pro: best of both — cheap long-term storage with drill-down
+    for recent data.
+  - Con: slightly more infrastructure (summary table + daily agg job).
+
+My recommendation: Option C. Row-level data older than 90 days
+is rarely needed for ad-hoc investigation. Summary aggregates are
+tiny and give long-term trend visibility.
+
+Questions:
+  a. Which option?
+  b. If Option C: what dimensions should the summary table aggregate
+     by? (advertiser, campaign, day) seems minimal. Add device_type?
+     cross_device? NTB flags?
+  c. If we go with a rolling window: do we need a one-time "archive"
+     snapshot before deleting old partitions, or is summary sufficient?
 
 
-5. Alerting
+5. Backfill range
+-----------------
+
+Source data has no TTL issues (clickpass_log, event_log, ui_visits
+all have no expiry). So we can backfill as far back as data exists.
+
+Questions:
+  a. How far back? 90 days from go-live (~Dec 2025)?
+  b. Or a specific business-relevant date?
+  c. Each day of backfill requires a 30-day last-touch + 60-day
+     first-touch event_log scan. Cost scales with range. Worth
+     scoping before running.
+
+
+6. Alerting
 -----------
 
 You mentioned creating alerts when lineage can't be resolved
-(el_matched = false for a VV that should be CTV).
+(is_ctv = false for a VV that should be CTV).
 
 What system should those go to? Is there an existing alerting
 framework, or does this need to be built?
 
 
+7. Summary views — what do we want?
+------------------------------------
+
+Once the row-level table exists, we'll create views for common
+queries. Draft list:
+
+  a. Daily mutation summary
+     - By advertiser, campaign, day
+     - Columns: total_vvs, ctv_vvs, mutated_count, mutation_pct,
+       cross_device_pct, any_mutation_pct
+
+  b. First-touch health
+     - By advertiser, day
+     - Columns: total_vvs, ft_null_count, ft_null_pct,
+       ft_matched_pct, ft_null_when_mutated, ft_null_when_clean
+
+  c. NTB agreement
+     - By advertiser, day
+     - Columns: total_vvs, ntb_agree_pct, ntb_disagree_count
+
+  d. IP stability dashboard
+     - By advertiser, day
+     - Columns: bid_eq_vast_pct, vast_eq_redirect_pct,
+       redirect_eq_visit_pct, lt_bid_eq_ft_bid_pct
+
+Are these the right views? Anything to add or cut?
+
+
 ================================================================
-FOLLOW-UP — Needs Sharad, not you directly
+FOLLOW-UP — Needs Sharad
 ================================================================
 
 
-6. first_touch_ad_served_id for Stage 1 CTV VVs
-------------------------------------------------
+8. first_touch_ad_served_id — OR vs AND
+----------------------------------------
 
-You said: "confirm with Sharad, but I do not believe they do this
+Sharad confirmed (2026-03-04) the first_touch lookup searches on
+"both bid_ip AND ip of the attributable impression."
+
+Open question: does "both" mean:
+  - OR: either bid_ip or impression ip matching a Stage 1 record
+    = found (more resilient to partial mutation)
+  - AND: both must match (more restrictive, any mutation breaks it)
+
+This matters for quantifying mutation's contribution to the 40%
+NULL rate.
+
+Our A9a results show:
+  - ft_null when mutated:     54.85%
+  - ft_null when NOT mutated: 38.19%  (+16.66pp delta)
+  - But 74,452 of 87,917 ft_null VVs had NO mutation
+
+So mutation is a contributing factor (~15% of NULLs) but not the
+primary driver. Understanding OR vs AND would explain the mechanism.
+
+
+9. first_touch for Stage 1 CTV VVs
+-----------------------------------
+
+Zach said: "confirm with Sharad, but I do not believe they do this
 lookup for stage 1 CTV VV."
 
-This would explain the 40% NULL rate we see on first_touch_ad_served_id.
-Not blocking the audit — we use last-touch as the primary trace.
-But worth confirming for completeness.
+This would explain a large portion of the 40% NULL rate — if Stage 1
+VVs don't get a first_touch lookup at all, they'd always be NULL.
 
-Can you make the intro to Sharad, or should I reach out directly?
+Can Sharad confirm which stages get the first_touch lookup?
 
 
 ================================================================
 RESOLVED — no action needed
 ================================================================
 
-All analysis questions from the previous version of this doc are closed:
+All analysis questions from previous versions are closed:
 
 - Q1: first_touch batch backfill — ANSWERED: real-time log, no batch.
       NULLs are permanent, populated at write time.
 
 - Q2: CTV-only vs all VVs — ANSWERED: "never assume only CTV. always
-      assume all." Production table traces all VV types. Non-CTV VVs
-      use impression_ip for bid IP (2-checkpoint trace).
+      assume all." Production table traces all VV types.
 
-- Q4: Last-touch vs full impression chain — ANSWERED implicitly by the
-      above. One row per VV, last-touch. Full chain available via Q9/Q10
-      queries if DDM ever needs it.
+- Q4: Last-touch vs full impression chain — ANSWERED. One row per VV,
+      last-touch. First-touch now included via ft_ columns.
 
 - Q5: Multiple clickpass rows per ad_served_id — RESOLVED: known edge
-      case (0.038%), monitored. Production query deduplicates correctly.
+      case (0.038%), monitored. QUALIFY ROW_NUMBER() dedup handles it.
 
 - Q6: /32 CIDR suffix on event_log.ip — RESOLVED: GP inet artifact.
-      Zero /32 in BQ silver. Defensive SPLIT() in production query.
+      Zero /32 in BQ silver.
 
-- Dedup bug in A4b — FIXED: QUALIFY ROW_NUMBER() dedup already in A4b
-      on both cp_dedup and v_dedup.
+- Dedup bug in A4b — FIXED in v1, carried forward to v2.
 
-- ui_visits.click column — CONFIRMED: BOOLEAN, verified via bq show --schema.
+- ui_visits.click column — CONFIRMED: BOOLEAN, verified via bq show.
+
+- Schema renames — DONE in v2 per Zach feedback (2026-03-04).
+
+- First-touch columns — ADDED in v2 (ft_ad_served_id, ft_bid_ip,
+  ft_vast_ip, ft_time, ft_matched, lt_bid_eq_ft_bid).
+
+- vast_impression vs vast_start IP — VERIFIED (2026-03-04):
+  bid_ip is always identical (0 mismatches out of 6,036,379).
+  Playback ip differs 0.46% of the time (IP can change in seconds
+  between impression and start events on CTV device).
