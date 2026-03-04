@@ -1959,6 +1959,7 @@ CREATE TABLE IF NOT EXISTS audit.vv_ip_lineage (
     advertiser_id         INT64         NOT NULL,
     campaign_id           INT64,
     vv_stage              INT64,                    -- campaigns.funnel_level (1=S1, 2=S2, 3=S3)
+    max_historical_stage  INT64,                    -- deepest stage this IP has reached (max of vv_stage + all prior VV stages in 90-day window)
     vv_time               TIMESTAMP     NOT NULL,   -- verified visit timestamp
 
     -- Last-touch IP lineage (this VV's impression — Stage N where N = vv_stage)
@@ -2187,11 +2188,14 @@ with_all_joins AS (
         DATE(cp.time)                               AS trace_date,
         CURRENT_TIMESTAMP()                         AS trace_run_timestamp,
 
-        -- Dedup: keep only the most recent prior VV per current VV
+        -- Dedup + max historical stage (computed before dedup, across ALL prior VVs)
         ROW_NUMBER() OVER (
             PARTITION BY cp.ad_served_id
             ORDER BY pv.prior_vv_time DESC
-        )                                           AS _pv_rn
+        )                                           AS _pv_rn,
+        MAX(c_pv.stage) OVER (
+            PARTITION BY cp.ad_served_id
+        )                                           AS _max_prior_stage
     FROM cp_dedup cp
     LEFT JOIN lt_dedup lt
         ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
@@ -2213,7 +2217,9 @@ with_all_joins AS (
         ON c_pv.campaign_id = pv.pv_campaign_id
 )
 SELECT
-    ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
+    ad_served_id, advertiser_id, campaign_id, vv_stage,
+    GREATEST(vv_stage, COALESCE(_max_prior_stage, 0)) AS max_historical_stage,
+    vv_time,
     lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip,
     ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
     prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage,
@@ -2310,7 +2316,8 @@ with_all_joins AS (
              ELSE (pv_lt.ad_served_id IS NOT NULL) END AS pv_lt_matched,
         DATE(cp.time) AS trace_date,
         CURRENT_TIMESTAMP() AS trace_run_timestamp,
-        ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY pv.prior_vv_time DESC) AS _pv_rn
+        ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY pv.prior_vv_time DESC) AS _pv_rn,
+        MAX(c_pv.stage) OVER (PARTITION BY cp.ad_served_id) AS _max_prior_stage
     FROM cp_dedup cp
     LEFT JOIN lt_dedup lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
     LEFT JOIN ft_dedup ft ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
@@ -2326,7 +2333,9 @@ with_all_joins AS (
     LEFT JOIN campaigns_stage c_pv ON c_pv.campaign_id = pv.pv_campaign_id
 )
 SELECT
-    ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
+    ad_served_id, advertiser_id, campaign_id, vv_stage,
+    GREATEST(vv_stage, COALESCE(_max_prior_stage, 0)) AS max_historical_stage,
+    vv_time,
     lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip,
     ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
     prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage,
