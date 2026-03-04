@@ -56,6 +56,11 @@ Full v2 schema:
       ntb_agree             BOOL      both NTB flags agree?
       is_cross_device       BOOL      ad on one device, visit on another
 
+    PRIOR VV (STAGE 3 IDENTIFICATION):
+      prior_vv_ad_served_id STRING    ad_served_id of most recent prior VV on same bid_ip
+      prior_vv_time         TIMESTAMP when the prior VV happened
+      is_retargeting_vv     BOOL      prior VV exists = Stage 3 impression (~60% of CTV VVs)
+
     TRACE QUALITY:
       is_ctv                BOOL      event_log join succeeded (true = CTV VV)
       visit_matched         BOOL      ui_visits join succeeded
