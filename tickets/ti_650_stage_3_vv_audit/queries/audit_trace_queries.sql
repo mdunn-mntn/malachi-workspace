@@ -7,7 +7,8 @@
 --     A1: Per-advertiser summary (validated scale run)
 --     A2: Per-campaign breakdown (validated 2026-02-25)
 --     A3: Cross-device × mutation (validated 2026-02-25)
---     A4: Production audit table (A4a CREATE, A4b INSERT, A4c preview, A4d single-VV trace, A4e validate)
+--     A4: Production audit table v1 (SUPERSEDED by A4 v2 below)
+--     A4 v2: Production audit table (A4a-v2 CREATE, A4b-v2 INSERT, A4c-v2 preview)
 --     A5: NTB validation via conversion_log (validated 2026-02-25)
 --     A6: Visits discovery queries
 --     A7: Partition/clustering discovery
@@ -1544,6 +1545,292 @@ FROM cp
 LEFT JOIN ft ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
 WHERE ft.ad_served_id IS NULL  -- first-touch VAST NOT found
 ORDER BY cp.cp_time
+LIMIT 100;
+
+
+================================================================================
+== A4 v2: PRODUCTION AUDIT TABLE (revised schema per Zach feedback 2026-03-04)
+================================================================================
+--
+-- Changes from v1:
+--   RENAMES:
+--     cp_time → vv_time                    (verified visit time, not "clickpass time")
+--     bid_ip → lt_bid_ip                   (prefix distinguishes from first-touch)
+--     vast_playback_ip → lt_vast_ip        (shorter, consistent lt_ prefix)
+--     mutated_at_redirect → ip_mutated     (Zach: avoid "redirect" framing)
+--     cp_is_new → clickpass_is_new         (clearer source attribution)
+--     vv_is_new → visit_is_new             (clearer)
+--     el_matched → is_ctv                  (what people actually filter on)
+--     vv_matched → visit_matched           (clearer)
+--
+--   NEW COLUMNS:
+--     ft_ad_served_id      — first_touch_ad_served_id from clickpass_log
+--     ft_bid_ip            — bid_ip of the first-touch VAST impression
+--     ft_vast_ip           — VAST playback IP of the first-touch impression
+--     ft_time              — timestamp of the first-touch VAST impression
+--     ft_matched           — first-touch event_log join succeeded?
+--     lt_bid_eq_ft_bid     — did bid IP change between first and last touch?
+--     any_mutation         — lt_bid_ip != redirect_ip (broadest mutation flag)
+--
+--   OPERATIONAL:
+--     Partitioned by trace_date, clustered by advertiser_id
+--     DELETE+INSERT idempotent pattern (same as v1)
+--     No advertiser filter, no stage hard-coding (forward-compatible)
+--     Daily incremental: set trace_start = trace_end = target date
+--     Backfill: 90 days from go-live date
+--
+-- PARAMETERS (replace before running):
+--   @trace_start  = '2026-02-04'   -- clickpass date range start
+--   @trace_end    = '2026-02-10'   -- clickpass date range end (inclusive)
+--   @el_lookback  = '2026-01-05'   -- 30-day lookback start (trace_start - 30)
+--   @ft_lookback  = '2025-12-06'   -- 60-day lookback for first-touch (trace_start - 60)
+--   @vv_buffer    = 7              -- ±7 days on ui_visits partition filter
+--
+-- NOTES:
+--   - 30-day EL lookback for last-touch is REQUIRED (20-day causes +3-5pp mutation offset)
+--   - 60-day EL lookback for first-touch (first-touch can be much older than last-touch)
+--   - ad_served_id is the natural PK (one row per verified visit)
+--   - All comments use "verified visit" (not "page view") per Zach
+--------------------------------------------------------------------------------
+
+
+-- A4a-v2: CREATE TABLE (run once)
+
+CREATE TABLE IF NOT EXISTS audit.stage3_vv_ip_lineage (
+    -- Identity
+    ad_served_id          STRING        NOT NULL,   -- PK: UUID from clickpass_log (one row per verified visit)
+    advertiser_id         INT64         NOT NULL,
+    campaign_id           INT64,
+    vv_time               TIMESTAMP     NOT NULL,   -- verified visit timestamp (clickpass_log.time)
+
+    -- Last-touch IP lineage (4 checkpoints: bid → VAST → redirect → visit)
+    lt_bid_ip             STRING,       -- event_log.bid_ip for the last-touch impression (= win_log.ip at 100%)
+    lt_vast_ip            STRING,       -- event_log.ip for the last-touch VAST playback
+    redirect_ip           STRING,       -- clickpass_log.ip (IP at redirect)
+    visit_ip              STRING,       -- ui_visits.ip (IP at verified visit)
+    impression_ip         STRING,       -- ui_visits.impression_ip (bid IP carried onto visit record; all inventory)
+
+    -- First-touch attribution
+    ft_ad_served_id       STRING,       -- first_touch_ad_served_id from clickpass_log (Stage 1 CTV impression)
+    ft_bid_ip             STRING,       -- event_log.bid_ip for the first-touch impression
+    ft_vast_ip            STRING,       -- event_log.ip for the first-touch VAST playback
+    ft_time               TIMESTAMP,    -- event_log.time for the first-touch VAST impression
+
+    -- IP comparison flags
+    bid_eq_vast           BOOL,         -- lt_bid_ip = lt_vast_ip? (typically true)
+    vast_eq_redirect      BOOL,         -- lt_vast_ip = redirect_ip? (THE MUTATION POINT — false = mutation)
+    redirect_eq_visit     BOOL,         -- redirect_ip = visit_ip? (99.98%+ true)
+    ip_mutated            BOOL,         -- bid=vast AND vast!=redirect (isolated redirect-boundary mutation)
+    any_mutation          BOOL,         -- lt_bid_ip != redirect_ip (broadest mutation flag)
+    lt_bid_eq_ft_bid      BOOL,         -- lt_bid_ip = ft_bid_ip? (did bid IP change between first and last touch?)
+
+    -- Classification
+    clickpass_is_new      BOOL,         -- clickpass_log.is_new (NTB flag at redirect, client-side pixel)
+    visit_is_new          BOOL,         -- ui_visits.is_new (NTB flag at verified visit, independent pixel)
+    ntb_agree             BOOL,         -- clickpass_is_new = visit_is_new? (disagrees 41-56%, architectural)
+    is_cross_device       BOOL,         -- ad on one device, visit on another (~61% of mutation)
+
+    -- Trace quality
+    is_ctv                BOOL,         -- last-touch event_log join succeeded (true = CTV verified visit)
+    visit_matched         BOOL,         -- ui_visits join succeeded (verified visit record found)
+    ft_matched            BOOL,         -- first-touch event_log join succeeded (NULL if ft_ad_served_id is NULL)
+
+    -- Partition & metadata
+    trace_date            DATE          NOT NULL,   -- DATE(vv_time), partition key
+    trace_run_timestamp   TIMESTAMP     NOT NULL    -- when this row was generated
+)
+PARTITION BY trace_date
+CLUSTER BY advertiser_id;
+
+
+-- A4b-v2: INSERT (run for each date range — idempotent with DELETE+INSERT pattern)
+-- For incremental daily: set both dates to the same day.
+-- For backfill: use a wider range.
+--
+-- JOINS:
+--   clickpass_log (anchor) → event_log on ad_served_id (last-touch VAST)
+--                          → event_log on first_touch_ad_served_id (first-touch VAST)
+--                          → ui_visits on ad_served_id (verified visit record)
+
+-- Safety: delete existing rows for this date range to avoid duplicates on re-run
+DELETE FROM audit.stage3_vv_ip_lineage
+WHERE trace_date BETWEEN '2026-02-04' AND '2026-02-10';
+
+INSERT INTO audit.stage3_vv_ip_lineage
+WITH cp_dedup AS (
+    SELECT
+        ad_served_id,
+        advertiser_id,
+        campaign_id,
+        ip,
+        is_new,
+        is_cross_device,
+        first_touch_ad_served_id,
+        time
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+lt_dedup AS (
+    -- Last-touch: VAST impression matching the VV's ad_served_id
+    SELECT
+        ad_served_id,
+        ip          AS vast_ip,
+        bid_ip,
+        time,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2026-01-05' AND '2026-02-10'  -- 30-day lookback from trace_start
+),
+ft_dedup AS (
+    -- First-touch: VAST impression matching first_touch_ad_served_id
+    -- Uses 60-day lookback because first-touch can be much older than last-touch
+    SELECT
+        ad_served_id,
+        ip          AS vast_ip,
+        bid_ip,
+        time,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2025-12-06' AND '2026-02-10'  -- 60-day lookback from trace_start
+),
+v_dedup AS (
+    SELECT
+        CAST(ad_served_id AS STRING) AS ad_served_id,
+        ip,
+        is_new,
+        impression_ip
+    FROM `dw-main-silver.summarydata.ui_visits`
+    WHERE from_verified_impression = true
+      AND DATE(time) BETWEEN '2026-01-28' AND '2026-02-17'  -- ±7 days from CP range
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
+)
+SELECT
+    -- Identity
+    cp.ad_served_id,
+    cp.advertiser_id,
+    cp.campaign_id,
+    cp.time                                     AS vv_time,
+
+    -- Last-touch IP lineage
+    lt.bid_ip                                   AS lt_bid_ip,
+    lt.vast_ip                                  AS lt_vast_ip,
+    cp.ip                                       AS redirect_ip,
+    v.ip                                        AS visit_ip,
+    v.impression_ip,
+
+    -- First-touch attribution
+    cp.first_touch_ad_served_id                 AS ft_ad_served_id,
+    ft.bid_ip                                   AS ft_bid_ip,
+    ft.vast_ip                                  AS ft_vast_ip,
+    ft.time                                     AS ft_time,
+
+    -- IP comparison flags
+    (lt.bid_ip = lt.vast_ip)                    AS bid_eq_vast,
+    (lt.vast_ip = cp.ip)                        AS vast_eq_redirect,
+    (cp.ip = v.ip)                              AS redirect_eq_visit,
+    (lt.bid_ip = lt.vast_ip
+        AND lt.vast_ip != cp.ip)                AS ip_mutated,
+    (lt.bid_ip != cp.ip)                        AS any_mutation,
+    (lt.bid_ip = ft.bid_ip)                     AS lt_bid_eq_ft_bid,
+
+    -- Classification
+    cp.is_new                                   AS clickpass_is_new,
+    v.is_new                                    AS visit_is_new,
+    (cp.is_new = v.is_new)                      AS ntb_agree,
+    cp.is_cross_device,
+
+    -- Trace quality
+    (lt.ad_served_id IS NOT NULL)               AS is_ctv,
+    (v.ad_served_id IS NOT NULL)                AS visit_matched,
+    CASE
+        WHEN cp.first_touch_ad_served_id IS NULL THEN NULL
+        ELSE (ft.ad_served_id IS NOT NULL)
+    END                                         AS ft_matched,
+
+    -- Metadata
+    DATE(cp.time)                               AS trace_date,
+    CURRENT_TIMESTAMP()                         AS trace_run_timestamp
+FROM cp_dedup cp
+LEFT JOIN lt_dedup lt
+    ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
+LEFT JOIN ft_dedup ft
+    ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
+LEFT JOIN v_dedup v
+    ON v.ad_served_id = cp.ad_served_id;
+
+
+-- A4c-v2: SELECT preview (run this first to validate before INSERT)
+-- Same column definitions as A4b-v2 above. Add LIMIT for spot-checks.
+
+WITH cp_dedup AS (
+    SELECT
+        ad_served_id, advertiser_id, campaign_id, ip, is_new, is_cross_device,
+        first_touch_ad_served_id, time
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+lt_dedup AS (
+    SELECT ad_served_id, ip AS vast_ip, bid_ip, time,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2026-01-05' AND '2026-02-10'
+),
+ft_dedup AS (
+    SELECT ad_served_id, ip AS vast_ip, bid_ip, time,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2025-12-06' AND '2026-02-10'
+),
+v_dedup AS (
+    SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip, is_new, impression_ip
+    FROM `dw-main-silver.summarydata.ui_visits`
+    WHERE from_verified_impression = true
+      AND DATE(time) BETWEEN '2026-01-28' AND '2026-02-17'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
+)
+SELECT
+    cp.ad_served_id,
+    cp.advertiser_id,
+    cp.campaign_id,
+    cp.time                                     AS vv_time,
+    lt.bid_ip                                   AS lt_bid_ip,
+    lt.vast_ip                                  AS lt_vast_ip,
+    cp.ip                                       AS redirect_ip,
+    v.ip                                        AS visit_ip,
+    v.impression_ip,
+    cp.first_touch_ad_served_id                 AS ft_ad_served_id,
+    ft.bid_ip                                   AS ft_bid_ip,
+    ft.vast_ip                                  AS ft_vast_ip,
+    ft.time                                     AS ft_time,
+    (lt.bid_ip = lt.vast_ip)                    AS bid_eq_vast,
+    (lt.vast_ip = cp.ip)                        AS vast_eq_redirect,
+    (cp.ip = v.ip)                              AS redirect_eq_visit,
+    (lt.bid_ip = lt.vast_ip
+        AND lt.vast_ip != cp.ip)                AS ip_mutated,
+    (lt.bid_ip != cp.ip)                        AS any_mutation,
+    (lt.bid_ip = ft.bid_ip)                     AS lt_bid_eq_ft_bid,
+    cp.is_new                                   AS clickpass_is_new,
+    v.is_new                                    AS visit_is_new,
+    (cp.is_new = v.is_new)                      AS ntb_agree,
+    cp.is_cross_device,
+    (lt.ad_served_id IS NOT NULL)               AS is_ctv,
+    (v.ad_served_id IS NOT NULL)                AS visit_matched,
+    CASE
+        WHEN cp.first_touch_ad_served_id IS NULL THEN NULL
+        ELSE (ft.ad_served_id IS NOT NULL)
+    END                                         AS ft_matched,
+    DATE(cp.time)                               AS trace_date,
+    CURRENT_TIMESTAMP()                         AS trace_run_timestamp
+FROM cp_dedup cp
+LEFT JOIN lt_dedup lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
+LEFT JOIN ft_dedup ft ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
+LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
 LIMIT 100;
 
 
