@@ -12,6 +12,8 @@
 --     A6: Visits discovery queries
 --     A7: Partition/clustering discovery
 --     A8: Attribution model investigation (Q7-Q10: schema, first_touch, examples)
+--     A9: Mutation → first_touch NULL analysis (A9a summary, A9b recency, A9c multi-advertiser)
+--     A10: 100% end-to-end coverage proof (A10a single, A10b multi-advertiser, A10c failure rows)
 --   SECTION B: Greenplum (coredw) — Full 5-Checkpoint Trace (LEGACY)
 --
 -- NOTE: greenplum_trace_v3.sql is SUPERSEDED by this file.
@@ -1074,6 +1076,463 @@ ORDER BY ntb_vvs_checked DESC;
 --   AND rn = 1
 --   AND impression_time <= TIMESTAMP('2026-02-04 00:00:11.000000 UTC')
 -- ORDER BY impression_time;
+
+
+--------------------------------------------------------------------------------
+-- A9: Mutation → first_touch NULL analysis
+-- Quantifies what fraction of the ~40% first_touch_ad_served_id NULL rate is
+-- attributable to IP mutation vs other causes.
+--
+-- CONTEXT (Sharad, 2026-03-03): first_touch_ad_served_id is populated by
+-- looking for a Stage 1 CTV impression (funnel_level=1, objective_id=1) served
+-- to the SAME IP/Bid IP. If bid IP mutated between Stage 1 and Stage 3, the
+-- lookup searches for the wrong IP and fails → NULL.
+--
+-- HYPOTHESIS: ft_null rate should be HIGHER for mutated and cross-device VVs.
+--
+-- PARAMETERS:
+--   37775            → advertiser_id (single-advertiser for fast iteration)
+--   2026-02-04       → date range start
+--   2026-02-10       → date range end
+--   2026-01-05       → 30-day lookback start
+--------------------------------------------------------------------------------
+
+
+-- A9a: first_touch NULL × mutation cross-tab (summary)
+-- One row of key metrics showing ft_null rates split by mutation and cross-device.
+
+WITH cp AS (
+    SELECT
+        ad_served_id,
+        advertiser_id,
+        ip                          AS redirect_ip,
+        is_cross_device,
+        first_touch_ad_served_id,
+        time                        AS cp_time,
+        (first_touch_ad_served_id IS NULL) AS ft_null
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE advertiser_id = 37775
+      AND DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+el AS (
+    SELECT
+        ad_served_id,
+        bid_ip,
+        ip                          AS vast_playback_ip,
+        time                        AS el_time,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE advertiser_id = 37775
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2026-01-05' AND '2026-02-10'
+),
+joined AS (
+    SELECT
+        cp.*,
+        el.bid_ip,
+        el.vast_playback_ip,
+        el.el_time,
+        (el.ad_served_id IS NOT NULL)                                       AS el_matched,
+        (el.bid_ip = el.vast_playback_ip)                                   AS bid_eq_vast,
+        (el.vast_playback_ip = cp.redirect_ip)                              AS vast_eq_redirect,
+        (el.bid_ip = el.vast_playback_ip AND el.vast_playback_ip != cp.redirect_ip) AS mutated_at_redirect,
+        (el.bid_ip != cp.redirect_ip)                                       AS any_bid_to_redirect_mutation
+    FROM cp
+    LEFT JOIN el ON el.ad_served_id = cp.ad_served_id AND el.rn = 1
+)
+SELECT
+    -- Totals
+    COUNT(*)                                            AS total_vvs,
+    COUNTIF(el_matched)                                 AS ctv_vvs,
+    COUNTIF(ft_null)                                    AS ft_null_total,
+    ROUND(100.0 * COUNTIF(ft_null) / COUNT(*), 2)      AS ft_null_pct,
+
+    -- 2x2: ft_null × mutated_at_redirect (CTV only)
+    COUNTIF(el_matched AND ft_null AND mutated_at_redirect)         AS ft_null_AND_mutated,
+    COUNTIF(el_matched AND ft_null AND NOT mutated_at_redirect)     AS ft_null_AND_no_mutation,
+    COUNTIF(el_matched AND NOT ft_null AND mutated_at_redirect)     AS ft_present_AND_mutated,
+    COUNTIF(el_matched AND NOT ft_null AND NOT mutated_at_redirect) AS ft_present_AND_no_mutation,
+
+    -- ft_null rate BY mutation status (CTV only)
+    ROUND(100.0 * COUNTIF(el_matched AND ft_null AND mutated_at_redirect)
+        / NULLIF(COUNTIF(el_matched AND mutated_at_redirect), 0), 2)
+        AS ft_null_pct_WHEN_mutated,
+    ROUND(100.0 * COUNTIF(el_matched AND ft_null AND NOT mutated_at_redirect)
+        / NULLIF(COUNTIF(el_matched AND NOT mutated_at_redirect), 0), 2)
+        AS ft_null_pct_WHEN_not_mutated,
+
+    -- ft_null rate BY cross-device (all VVs)
+    ROUND(100.0 * COUNTIF(ft_null AND is_cross_device)
+        / NULLIF(COUNTIF(is_cross_device), 0), 2)
+        AS ft_null_pct_cross_device,
+    ROUND(100.0 * COUNTIF(ft_null AND NOT is_cross_device)
+        / NULLIF(COUNTIF(NOT is_cross_device), 0), 2)
+        AS ft_null_pct_same_device,
+
+    -- ft_null rate BY any bid→redirect mutation (broadest definition, CTV only)
+    ROUND(100.0 * COUNTIF(el_matched AND ft_null AND any_bid_to_redirect_mutation)
+        / NULLIF(COUNTIF(el_matched AND any_bid_to_redirect_mutation), 0), 2)
+        AS ft_null_pct_any_mutation,
+    ROUND(100.0 * COUNTIF(el_matched AND ft_null AND NOT any_bid_to_redirect_mutation)
+        / NULLIF(COUNTIF(el_matched AND NOT any_bid_to_redirect_mutation), 0), 2)
+        AS ft_null_pct_no_any_mutation
+FROM joined;
+
+
+-- A9b: first_touch NULL × mutation × recency breakdown
+-- Shows ft_null rate by impression-to-visit gap AND mutation status.
+-- Tests whether recent impressions have higher ft_null (Sharad: 54% at <1hr).
+
+WITH cp AS (
+    SELECT
+        ad_served_id,
+        ip                          AS redirect_ip,
+        is_cross_device,
+        first_touch_ad_served_id,
+        time                        AS cp_time,
+        (first_touch_ad_served_id IS NULL) AS ft_null
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE advertiser_id = 37775
+      AND DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+el AS (
+    SELECT
+        ad_served_id,
+        bid_ip,
+        ip                          AS vast_playback_ip,
+        time                        AS el_time,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE advertiser_id = 37775
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2026-01-05' AND '2026-02-10'
+),
+joined AS (
+    SELECT
+        cp.*,
+        el.bid_ip,
+        el.vast_playback_ip,
+        el.el_time,
+        (el.ad_served_id IS NOT NULL) AS el_matched,
+        (el.bid_ip = el.vast_playback_ip AND el.vast_playback_ip != cp.redirect_ip) AS mutated_at_redirect,
+        (el.bid_ip != cp.redirect_ip) AS any_mutation,
+        CASE
+            WHEN TIMESTAMP_DIFF(cp.cp_time, el.el_time, HOUR) < 1 THEN '1: < 1 hour'
+            WHEN TIMESTAMP_DIFF(cp.cp_time, el.el_time, HOUR) < 24 THEN '2: 1-24 hours'
+            WHEN TIMESTAMP_DIFF(cp.cp_time, el.el_time, HOUR) < 168 THEN '3: 1-7 days'
+            WHEN TIMESTAMP_DIFF(cp.cp_time, el.el_time, HOUR) < 336 THEN '4: 7-14 days'
+            WHEN TIMESTAMP_DIFF(cp.cp_time, el.el_time, HOUR) < 504 THEN '5: 14-21 days'
+            ELSE '6: 21+ days'
+        END AS recency_bucket
+    FROM cp
+    LEFT JOIN el ON el.ad_served_id = cp.ad_served_id AND el.rn = 1
+)
+SELECT
+    recency_bucket,
+    COUNT(*)                                                    AS total,
+    COUNTIF(ft_null)                                            AS ft_null,
+    ROUND(100.0 * COUNTIF(ft_null) / COUNT(*), 2)              AS ft_null_pct,
+    COUNTIF(mutated_at_redirect)                                AS mutated,
+    ROUND(100.0 * COUNTIF(mutated_at_redirect) / COUNT(*), 2)  AS mutation_pct,
+    COUNTIF(ft_null AND mutated_at_redirect)                    AS ft_null_and_mutated,
+    COUNTIF(ft_null AND any_mutation)                           AS ft_null_and_any_mutation,
+    COUNTIF(is_cross_device)                                    AS cross_device,
+    COUNTIF(ft_null AND is_cross_device)                        AS ft_null_and_cross_device
+FROM joined
+WHERE el_matched   -- CTV only (has VAST data)
+GROUP BY recency_bucket
+ORDER BY recency_bucket;
+
+
+-- A9c: first_touch NULL × mutation — multi-advertiser
+-- Same cross-tab as A9a but across multiple advertisers for comparison.
+-- Replace advertiser list as needed.
+
+WITH cp AS (
+    SELECT
+        ad_served_id,
+        advertiser_id,
+        ip                          AS redirect_ip,
+        is_cross_device,
+        first_touch_ad_served_id,
+        time                        AS cp_time,
+        (first_touch_ad_served_id IS NULL) AS ft_null
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE advertiser_id IN (31357, 31276, 32058, 37775, 34611, 38710, 35457, 30857, 32404, 34835)
+      AND DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+el AS (
+    SELECT
+        ad_served_id,
+        bid_ip,
+        ip                          AS vast_playback_ip,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE advertiser_id IN (31357, 31276, 32058, 37775, 34611, 38710, 35457, 30857, 32404, 34835)
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2026-01-05' AND '2026-02-10'
+),
+joined AS (
+    SELECT
+        cp.*,
+        el.bid_ip,
+        el.vast_playback_ip,
+        (el.ad_served_id IS NOT NULL) AS el_matched,
+        (el.bid_ip = el.vast_playback_ip AND el.vast_playback_ip != cp.redirect_ip) AS mutated_at_redirect,
+        (el.bid_ip != cp.redirect_ip) AS any_mutation
+    FROM cp
+    LEFT JOIN el ON el.ad_served_id = cp.ad_served_id AND el.rn = 1
+)
+SELECT
+    advertiser_id,
+    COUNT(*)                                                    AS total_vvs,
+    COUNTIF(el_matched)                                         AS ctv_vvs,
+    COUNTIF(ft_null)                                            AS ft_null_total,
+    ROUND(100.0 * COUNTIF(ft_null) / COUNT(*), 2)              AS ft_null_pct,
+
+    -- ft_null rate when mutated vs not (CTV only)
+    ROUND(100.0 * COUNTIF(el_matched AND ft_null AND mutated_at_redirect)
+        / NULLIF(COUNTIF(el_matched AND mutated_at_redirect), 0), 2)
+        AS ft_null_pct_when_mutated,
+    ROUND(100.0 * COUNTIF(el_matched AND ft_null AND NOT mutated_at_redirect)
+        / NULLIF(COUNTIF(el_matched AND NOT mutated_at_redirect), 0), 2)
+        AS ft_null_pct_when_not_mutated,
+
+    -- ft_null rate when cross-device vs same-device
+    ROUND(100.0 * COUNTIF(ft_null AND is_cross_device)
+        / NULLIF(COUNTIF(is_cross_device), 0), 2)
+        AS ft_null_pct_cross_device,
+    ROUND(100.0 * COUNTIF(ft_null AND NOT is_cross_device)
+        / NULLIF(COUNTIF(NOT is_cross_device), 0), 2)
+        AS ft_null_pct_same_device,
+
+    -- Mutation rate for reference
+    ROUND(100.0 * COUNTIF(el_matched AND mutated_at_redirect)
+        / NULLIF(COUNTIF(el_matched), 0), 2)                   AS mutation_pct
+FROM joined
+GROUP BY advertiser_id
+ORDER BY total_vvs DESC;
+
+
+--------------------------------------------------------------------------------
+-- A10: 100% end-to-end coverage proof
+-- Proves that for every VV with a non-NULL first_touch_ad_served_id, we can
+-- find the corresponding VAST impression in event_log.
+--
+-- Zach (2026-03-03): "that would be beautiful. that's one of the amazing things
+-- we want to be able to prove, is that we have 100% coverage from end to end."
+--
+-- PARAMETERS:
+--   37775            → advertiser_id (or remove filter for all advertisers)
+--   2026-02-04       → date range start
+--   2026-02-10       → date range end
+--   2026-01-05       → 30-day lookback start
+--------------------------------------------------------------------------------
+
+
+-- A10a: Coverage proof — single advertiser (fast)
+-- For every VV with first_touch_ad_served_id NOT NULL:
+--   1. Can we find the last-touch VAST impression? (el_matched)
+--   2. Can we find the first-touch VAST impression? (ft_matched)
+--   3. Do both exist? (full_chain)
+
+WITH cp AS (
+    SELECT
+        ad_served_id,
+        advertiser_id,
+        first_touch_ad_served_id,
+        time                        AS cp_time
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE advertiser_id = 37775
+      AND DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+-- Last-touch: event_log for cp.ad_served_id
+lt AS (
+    SELECT
+        ad_served_id,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE advertiser_id = 37775
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2026-01-05' AND '2026-02-10'
+),
+-- First-touch: event_log for cp.first_touch_ad_served_id
+ft AS (
+    SELECT
+        ad_served_id,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE ad_served_id IN (
+        SELECT first_touch_ad_served_id
+        FROM cp
+        WHERE first_touch_ad_served_id IS NOT NULL
+    )
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2025-12-06' AND '2026-02-10'  -- 60-day lookback for first-touch (may be much older)
+),
+joined AS (
+    SELECT
+        cp.ad_served_id,
+        cp.first_touch_ad_served_id,
+        (cp.first_touch_ad_served_id IS NOT NULL)           AS has_ft_id,
+        (cp.first_touch_ad_served_id = cp.ad_served_id)     AS ft_eq_lt,    -- single-impression (ft = lt)
+        (lt.ad_served_id IS NOT NULL)                       AS lt_matched,  -- last-touch VAST found
+        (ft.ad_served_id IS NOT NULL)                       AS ft_matched   -- first-touch VAST found
+    FROM cp
+    LEFT JOIN lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
+    LEFT JOIN ft ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
+)
+SELECT
+    -- All VVs
+    COUNT(*)                                                    AS total_vvs,
+
+    -- VVs with first_touch_ad_served_id populated
+    COUNTIF(has_ft_id)                                          AS has_ft_id,
+    ROUND(100.0 * COUNTIF(has_ft_id) / COUNT(*), 2)            AS has_ft_id_pct,
+
+    -- Of those with ft_id: can we find the first-touch VAST?
+    COUNTIF(has_ft_id AND ft_matched)                           AS ft_id_and_ft_matched,
+    ROUND(100.0 * COUNTIF(has_ft_id AND ft_matched)
+        / NULLIF(COUNTIF(has_ft_id), 0), 2)                    AS ft_coverage_pct,  -- TARGET: 100%
+
+    -- Of those with ft_id: can we find the last-touch VAST?
+    COUNTIF(has_ft_id AND lt_matched)                           AS ft_id_and_lt_matched,
+    ROUND(100.0 * COUNTIF(has_ft_id AND lt_matched)
+        / NULLIF(COUNTIF(has_ft_id), 0), 2)                    AS lt_coverage_pct,
+
+    -- Full chain: both ft and lt VAST found
+    COUNTIF(has_ft_id AND ft_matched AND lt_matched)            AS full_chain,
+    ROUND(100.0 * COUNTIF(has_ft_id AND ft_matched AND lt_matched)
+        / NULLIF(COUNTIF(has_ft_id), 0), 2)                    AS full_chain_pct,  -- TARGET: 100%
+
+    -- Breakdown: ft=lt (single impression) vs ft!=lt (multi-impression)
+    COUNTIF(has_ft_id AND ft_eq_lt)                             AS single_impression,
+    COUNTIF(has_ft_id AND NOT ft_eq_lt)                         AS multi_impression,
+    ROUND(100.0 * COUNTIF(has_ft_id AND NOT ft_eq_lt AND ft_matched)
+        / NULLIF(COUNTIF(has_ft_id AND NOT ft_eq_lt), 0), 2)   AS multi_imp_ft_coverage_pct,  -- TARGET: 100%
+
+    -- VVs with ft_id NULL (the 40% — for reference)
+    COUNTIF(NOT has_ft_id)                                      AS ft_null,
+    ROUND(100.0 * COUNTIF(NOT has_ft_id) / COUNT(*), 2)        AS ft_null_pct
+FROM joined;
+
+
+-- A10b: Coverage proof — multi-advertiser
+-- Same as A10a across the original 10 advertisers, per-advertiser breakdown.
+
+WITH cp AS (
+    SELECT
+        ad_served_id,
+        advertiser_id,
+        first_touch_ad_served_id,
+        time                        AS cp_time
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE advertiser_id IN (31357, 31276, 32058, 37775, 34611, 38710, 35457, 30857, 32404, 34835)
+      AND DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+lt AS (
+    SELECT
+        ad_served_id,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE advertiser_id IN (31357, 31276, 32058, 37775, 34611, 38710, 35457, 30857, 32404, 34835)
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2026-01-05' AND '2026-02-10'
+),
+ft AS (
+    SELECT
+        ad_served_id,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE ad_served_id IN (
+        SELECT first_touch_ad_served_id
+        FROM cp
+        WHERE first_touch_ad_served_id IS NOT NULL
+    )
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2025-12-06' AND '2026-02-10'
+),
+joined AS (
+    SELECT
+        cp.advertiser_id,
+        cp.ad_served_id,
+        cp.first_touch_ad_served_id,
+        (cp.first_touch_ad_served_id IS NOT NULL)           AS has_ft_id,
+        (cp.first_touch_ad_served_id = cp.ad_served_id)     AS ft_eq_lt,
+        (lt.ad_served_id IS NOT NULL)                       AS lt_matched,
+        (ft.ad_served_id IS NOT NULL)                       AS ft_matched
+    FROM cp
+    LEFT JOIN lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
+    LEFT JOIN ft ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
+)
+SELECT
+    advertiser_id,
+    COUNT(*)                                                    AS total_vvs,
+    COUNTIF(has_ft_id)                                          AS has_ft_id,
+    ROUND(100.0 * COUNTIF(has_ft_id) / COUNT(*), 2)            AS has_ft_id_pct,
+
+    -- First-touch coverage (TARGET: 100%)
+    COUNTIF(has_ft_id AND ft_matched)                           AS ft_covered,
+    ROUND(100.0 * COUNTIF(has_ft_id AND ft_matched)
+        / NULLIF(COUNTIF(has_ft_id), 0), 2)                    AS ft_coverage_pct,
+
+    -- Full chain (both lt and ft found)
+    COUNTIF(has_ft_id AND ft_matched AND lt_matched)            AS full_chain,
+    ROUND(100.0 * COUNTIF(has_ft_id AND ft_matched AND lt_matched)
+        / NULLIF(COUNTIF(has_ft_id), 0), 2)                    AS full_chain_pct,
+
+    -- Multi-impression subset
+    COUNTIF(has_ft_id AND NOT ft_eq_lt)                         AS multi_impression,
+    ROUND(100.0 * COUNTIF(has_ft_id AND NOT ft_eq_lt AND ft_matched)
+        / NULLIF(COUNTIF(has_ft_id AND NOT ft_eq_lt), 0), 2)   AS multi_imp_ft_coverage_pct,
+
+    -- ft_null rate for reference
+    ROUND(100.0 * COUNTIF(NOT has_ft_id) / COUNT(*), 2)        AS ft_null_pct
+FROM joined
+GROUP BY advertiser_id
+ORDER BY total_vvs DESC;
+
+
+-- A10c: Coverage failures — row-level examples of any missed first-touch
+-- If A10a/b shows <100% coverage, run this to find the specific VVs that failed.
+-- Should return 0 rows if coverage is perfect.
+
+WITH cp AS (
+    SELECT
+        ad_served_id,
+        advertiser_id,
+        first_touch_ad_served_id,
+        time                        AS cp_time
+    FROM `dw-main-silver.logdata.clickpass_log`
+    WHERE advertiser_id = 37775
+      AND DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+      AND first_touch_ad_served_id IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+),
+ft AS (
+    SELECT
+        ad_served_id,
+        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE ad_served_id IN (SELECT first_touch_ad_served_id FROM cp)
+      AND event_type_raw = 'vast_impression'
+      AND DATE(time) BETWEEN '2025-12-06' AND '2026-02-10'
+)
+SELECT
+    cp.ad_served_id,
+    cp.advertiser_id,
+    cp.first_touch_ad_served_id,
+    cp.cp_time
+FROM cp
+LEFT JOIN ft ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
+WHERE ft.ad_served_id IS NULL  -- first-touch VAST NOT found
+ORDER BY cp.cp_time
+LIMIT 100;
 
 
 ================================================================================
