@@ -219,8 +219,29 @@ So mutation is a contributing factor (~15% of NULLs) but not the
 primary driver. Understanding OR vs AND would explain the mechanism.
 
 
-9. first_touch for Stage 1 CTV VVs
------------------------------------
+9. Which IP populates each stage's segment?
+---------------------------------------------
+
+Our data shows VAST playback IP (not bid IP) feeds into the
+next-stage targeting segment. Tiebreaker test on 7,546 VVs
+where ft_bid_ip != ft_vast_ip:
+  - 70.5% of subsequent bids came from the VAST IP
+  - 23.8% came from the bid IP
+  - 5.7% matched neither
+
+This confirms the MES diagram (green line = VAST IP → next stage).
+
+Questions:
+  a. Stage 2: confirms VAST IP feeds Stage 2 segment. But does the
+     system also add bid_ip, or just VAST IP?
+  b. Stage 3: after a VV, which IP gets added to Stage 3 segment?
+     The redirect IP (clickpass.ip)? The visit IP (ui_visits.ip)?
+     Or the VAST IP of the attributed impression?
+  c. Does this vary by inventory type (CTV vs non-CTV)?
+
+
+10. first_touch for Stage 1 CTV VVs
+-------------------------------------
 
 Zach said: "confirm with Sharad, but I do not believe they do this
 lookup for stage 1 CTV VV."
