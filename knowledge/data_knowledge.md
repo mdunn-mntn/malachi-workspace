@@ -505,7 +505,7 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 **Key rules:**
 - Stage 2 is populated ONLY from Stage 1 VAST IPs.
 - Stage 3 = any IP that had a VV. Two paths: (1) Stage 1 impression → VV → Stage 3, or (2) Stage 1 → Stage 2 impression → VV → Stage 3. Attribution doesn't follow the stage sequence — a VV can be attributed to any stage's impression.
-- The VAST Impression IP (not bid IP) feeds Stage 2. If mutation occurs, the mutated IP enters Stage 2.
+- The VAST Impression IP (not bid IP) feeds Stage 2. Empirically verified: when bid_ip ≠ vast_ip, 70.5% of subsequent bids match the VAST IP (3:1 over bid IP). Open question: which IP feeds Stage 3 after a VV (redirect IP? visit IP? VAST IP of attributed impression?).
 - `first_touch_ad_served_id` always points to a Stage 1 impression (by definition: `funnel_level=1, objective_id=1`). `ad_served_id` (last touch) can point to Stage 1, 2, or 3.
 - Stage 3 exists for retargeting — "last touch is king in ad tech" (Zach). Users who already visited are highest-intent, so we keep serving to maintain last-touch attribution credit.
 - Scale: Stage 1 ~8.5M IPs → ~10K get impressions → ~2K enter Stage 3 (Zach's example).
@@ -529,6 +529,9 @@ win_log → CIL → event_log without traversing all 5 checkpoints explicitly.
 - **Aggregate mutation rate:** ~21.2% (14.28% inter-impression bid IP mutation for multi-impression VVs)
 - **Cross-device is the primary driver:** 61.2% mutation when cross-device flag is set
 - **Mutation range:** 1.2–33.4% across 15 advertisers in the reference dataset
+- **Retargeting VV rate:** 59.8% of CTV VVs have a prior VV on the same bid_ip (= Stage 3 retargeting)
+- **first_touch_ad_served_id bridge:** verified — 99.4% of ft UUIDs resolve to a real vast_impression
+  in event_log. 30% of VVs with ft_id are multi-impression (ft ≠ lt).
 - **Phantom NTB estimate:** ~4,006 events/day for advertiser 37775 (caused by IP mutation making
   verified NTB visits look like they came from households already in the ad graph)
 - **Win → CIL join:** 100% reliable — always use `win_log.ad_served_id → CIL.ad_served_id`

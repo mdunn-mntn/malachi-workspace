@@ -125,12 +125,15 @@ When an ad is served, a UUID (`ad_served_id`) is assigned. This UUID follows the
 
 ### How we link between impressions
 
-Between separate impressions (Stage 1 impression → Stage 2 impression), there is NO ad_served_id link. Each impression gets its own UUID. The link between impressions goes through the **targeting system** (MemDB segments) which operates on IP:
+Between separate impressions (Stage 1 impression → Stage 2 impression), there is NO ad_served_id link. Each impression gets its own UUID. The link between impressions goes through the **targeting system** (MemDB segments) which operates on the **VAST playback IP** (not the bid IP):
 
 ```
-Impression 1 (Stage 1):  ad_served_id = "abc-123",  VAST IP = 73.162.50.100
+Impression 1 (Stage 1):  ad_served_id = "abc-123",  bid_ip = 97.71.251.154,  VAST IP = 73.162.50.100
     ↓
-    └─ VAST IP 73.162.50.100 added to Stage 2 segment (targeting system, via IP)
+    └─ VAST IP 73.162.50.100 added to Stage 2 segment (targeting system)
+        NOTE: it's the VAST IP that feeds the segment, not the bid IP.
+              Verified empirically: when bid_ip ≠ vast_ip, 70.5% of
+              subsequent bids match the VAST IP (3:1 over bid IP).
     ↓
 Impression 2 (Stage 2):  ad_served_id = "def-456",  bid on 73.162.50.100 from Stage 2 pool
     ↓
@@ -139,7 +142,9 @@ Impression 2 (Stage 2):  ad_served_id = "def-456",  bid on 73.162.50.100 from St
          first_touch_ad_served_id = "abc-123"    (first touch — Impression 1)
 ```
 
-**The only bridge between impressions that we can trace in SQL is `first_touch_ad_served_id`.** It gives us the first impression's UUID. Everything in between (2nd, 3rd, 4th impressions) is invisible from the clickpass record.
+**The only bridge between impressions that we can trace in SQL is `first_touch_ad_served_id`.** It gives us the first impression's UUID (verified: 99.4% resolve to a real vast_impression in event_log). Everything in between (2nd, 3rd, 4th impressions) is invisible from the clickpass record.
+
+**For Stage 3 retargeting VVs**, we added a `prior_vv` lookup: self-join clickpass_log to find if the last-touch impression's bid_ip had a previous VV. Result: 59.8% of CTV VVs are retargeting VVs (the impression targeted a Stage 3 IP).
 
 ### What our audit table captures vs. what it can't
 
