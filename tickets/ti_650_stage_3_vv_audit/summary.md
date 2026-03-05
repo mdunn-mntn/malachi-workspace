@@ -69,18 +69,18 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 ## 5. Files
 
 ### Queries
-- `queries/audit_trace_queries.sql` — v3 production queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: advertiser summary)
+- `queries/ti_650_audit_trace_queries.sql` — v3 production queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: advertiser summary)
 
 ### Artifacts
-- `artifacts/stage_3_vv_audit_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
-- `artifacts/stage_3_vv_pipeline_explained.md` — how the pipeline works (stages, targeting vs attribution, IP journey examples)
-- `artifacts/vv_ip_lineage_column_reference.md` — column-by-column schema reference for the production table
-- `artifacts/meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
-- `artifacts/meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
-- `artifacts/meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
+- `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
+- `artifacts/ti_650_pipeline_explained.md` — how the pipeline works (stages, targeting vs attribution, IP journey examples)
+- `artifacts/ti_650_column_reference.md` — column-by-column schema reference for the production table
+- `artifacts/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
+- `artifacts/ti_650_meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
+- `artifacts/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
 
 ### Outputs
-- `outputs/vv_ip_lineage_preview_37775_2026-02-07.json` — 100-row sample output from Q3 preview
+- `outputs/ti_650_preview_37775_2026-02-07.json` — 100-row sample output from Q3 preview
 
 ---
 
