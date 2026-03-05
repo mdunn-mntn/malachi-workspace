@@ -1,8 +1,8 @@
 # Stage 3 Verified Visit Audit
 
-**Targeting Infrastructure — v7**
+**Targeting Infrastructure**
 
-Updated 2026-03-03 | **ZACH REVIEW COMPLETE** | Gap analysis complete (2026-03-02) | Zach docx review incorporated (2026-03-03) | Full silver scale run COMPLETE — 3.25M rows, matches GP within 0.12pp | BQ silver = validated GP replacement | `is_new` = client-side pixel (no table lookup) | `impression_ip` = bid IP from impression\_log (95.8–100%) | Attribution model RESOLVED: `ad_served_id` = last-touch, `first_touch` = first impression (NULL 40% — permanent per Zach: "no post processing"), 14.28% inter-impression IP mutation | 8 row-level example types (A–H) | clickpass\_log = ALL VVs (CTV + display), not CTV-only (Zach confirmed) | Mutation range 1.2–33.4% across 15 advertisers | A4b dedup FIXED | **Next: deploy production audit table**
+Updated 2026-03-04 | **ZACH REVIEW COMPLETE** (3 meetings) | v3 stage-aware production table (`audit.vv_ip_lineage`) designed — ready for deployment | Gap analysis complete | Full silver scale run COMPLETE — 3.25M rows, matches GP within 0.12pp | BQ silver = validated GP replacement | Mutation range 1.2–33.4% across 15 advertisers | Stage-aware: vv_stage, max_historical_stage, ft_stage, pv_stage | 20% of S1 VVs on S3 IPs (attribution != journey stage)
 
 ---
 
@@ -944,62 +944,100 @@ One-line answers to every question resolved during the audit.
 
 ---
 
-## 15. Production Audit Table — Design Goals
+## 15. Production Audit Table — v3 Stage-Aware Design
 
 Per Zach (2026-02-25 call): "Getting an audit going and something that's actually generating the data on a consistent basis is definitely the end goal. Just being able to prove it for every single one in a very clean table representation would be so beneficial."
 
-**Requirements:**
-1. One row per Stage 3 verified visit (keyed on `ad_served_id`)
-2. Full IP lineage: `bid_ip`, `vast_playback_ip`, `redirect_ip`, `visit_ip`
-3. Mutation flags: `ip_mutated_at_redirect`, `ip_mutated_at_visit`
-4. NTB flags: `cp_is_new`, `vv_is_new`, `ntb_disagreement`
-5. Cross-device flag
-6. Campaign and advertiser metadata
-7. Populated on a recurring schedule (daily or per-LDS-refresh)
-8. Alerting on unresolvable lineage (no EL match)
+**Table:** `audit.vv_ip_lineage` (renamed from `stage3_vv_ip_lineage` — now covers all stages)
 
-**Proposed schema (BQ):**
+**Requirements (original + v3 additions):**
+1. One row per verified visit across ALL stages (keyed on `ad_served_id`)
+2. Full IP lineage: lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
+3. Stage classification: vv_stage, max_historical_stage, ft_stage, pv_stage
+4. First-touch attribution: ft_ad_served_id, ft_campaign_id, ft_bid_ip, ft_vast_ip
+5. Prior VV retargeting chain: prior_vv_ad_served_id, pv_campaign_id, pv_redirect_ip
+6. Prior VV impression IPs: pv_lt_bid_ip, pv_lt_vast_ip
+7. IP comparison flags: bid_eq_vast, vast_eq_redirect, redirect_eq_visit, ip_mutated, any_mutation
+8. NTB flags: clickpass_is_new, visit_is_new, ntb_agree
+9. Cross-device flag
+10. Trace quality: is_ctv, visit_matched, ft_matched, pv_lt_matched
+
+**v3 schema (BQ) — see `vv_ip_lineage_column_reference.md` for column-by-column documentation:**
 
 ```sql
-CREATE TABLE audit.stage3_vv_ip_lineage (
-    ad_served_id          STRING,       -- PK, UUID
-    advertiser_id         INT64,
+CREATE TABLE IF NOT EXISTS audit.vv_ip_lineage (
+    -- Identity
+    ad_served_id          STRING        NOT NULL,   -- PK: UUID from clickpass_log
+    advertiser_id         INT64         NOT NULL,
     campaign_id           INT64,
-    cp_time               TIMESTAMP,    -- verified visit time
-    -- IP lineage
-    bid_ip                STRING,       -- from event_log.bid_ip (= win IP)
-    vast_playback_ip      STRING,       -- from event_log.ip
-    redirect_ip           STRING,       -- from clickpass_log.ip
-    visit_ip              STRING,       -- from ui_visits.ip (if available)
-    impression_ip         STRING,       -- from ui_visits.impression_ip (all-inventory bid IP)
-    -- Mutation
-    bid_eq_vast           BOOL,         -- bid_ip = vast_playback_ip
-    vast_eq_redirect      BOOL,         -- vast_playback_ip = redirect_ip
-    redirect_eq_visit     BOOL,         -- redirect_ip = visit_ip
-    mutated_at_redirect   BOOL,         -- bid=vast but vast!=redirect
+    vv_stage              INT64,                    -- campaigns.funnel_level (1=S1, 2=S2, 3=S3)
+    max_historical_stage  INT64,                    -- deepest stage this IP has reached
+    vv_time               TIMESTAMP     NOT NULL,
+    -- Last-touch IP lineage
+    lt_bid_ip             STRING,       -- event_log.bid_ip
+    lt_vast_ip            STRING,       -- event_log.ip (VAST playback)
+    redirect_ip           STRING,       -- clickpass_log.ip
+    visit_ip              STRING,       -- ui_visits.ip
+    impression_ip         STRING,       -- ui_visits.impression_ip
+    -- First-touch attribution
+    ft_ad_served_id       STRING,
+    ft_campaign_id        INT64,
+    ft_stage              INT64,
+    ft_bid_ip             STRING,
+    ft_vast_ip            STRING,
+    ft_time               TIMESTAMP,
+    -- Prior VV (retargeting chain)
+    prior_vv_ad_served_id STRING,
+    prior_vv_time         TIMESTAMP,
+    pv_campaign_id        INT64,
+    pv_stage              INT64,
+    pv_redirect_ip        STRING,
+    is_retargeting_vv     BOOL,
+    -- Prior VV's impression IPs
+    pv_lt_bid_ip          STRING,
+    pv_lt_vast_ip         STRING,
+    pv_lt_time            TIMESTAMP,
+    -- IP comparison flags
+    bid_eq_vast           BOOL,
+    vast_eq_redirect      BOOL,
+    redirect_eq_visit     BOOL,
+    ip_mutated            BOOL,
+    any_mutation          BOOL,
+    lt_bid_eq_ft_bid      BOOL,
     -- Classification
-    cp_is_new             BOOL,
-    vv_is_new             BOOL,
-    ntb_agree             BOOL,         -- cp_is_new = vv_is_new
+    clickpass_is_new      BOOL,
+    visit_is_new          BOOL,
+    ntb_agree             BOOL,
     is_cross_device       BOOL,
     -- Trace quality
-    el_matched            BOOL,         -- event_log join succeeded
-    vv_matched            BOOL,         -- ui_visits join succeeded
-    -- Partition/metadata
-    trace_date            DATE,         -- DATE(cp_time)
-    trace_run_timestamp   TIMESTAMP     -- when this row was generated
+    is_ctv                BOOL,
+    visit_matched         BOOL,
+    ft_matched            BOOL,
+    pv_lt_matched         BOOL,
+    -- Partition & metadata
+    trace_date            DATE          NOT NULL,
+    trace_run_timestamp   TIMESTAMP     NOT NULL
 )
-PARTITION BY trace_date;
+PARTITION BY trace_date
+CLUSTER BY advertiser_id, vv_stage;
 ```
 
+**Key design decisions (v3):**
+- **Single event_log CTE** (`el_all`): one 90-day scan joined 3x by different ad_served_id (last-touch, first-touch, prior VV impression). Saves ~8% vs 3 separate scans.
+- **max_historical_stage**: `MAX(c_pv.stage) OVER (PARTITION BY cp.ad_served_id)` computed BEFORE prior_vv dedup, then `GREATEST(vv_stage, COALESCE(_max_prior_stage, 0))` in outer SELECT. Captures the deepest funnel penetration across ALL prior VVs, not just the most recent.
+- **Stage classification via campaigns.funnel_level**: 100% populated, maps campaign_id -> stage directly.
+- **Prior VV match**: redirect_ip = bid_ip (~94% accurate). Targeting actually uses VAST IP (70.5% tiebreaker confirmed), but getting VAST IP would require pre-joining event_log.
+
 **Implementation approach:**
-- Source: `dw-main-silver.logdata.clickpass_log` → `dw-main-silver.logdata.event_log`
-- VV enrichment: `dw-main-silver.summarydata.ui_visits` (visit\_ip, vv\_is\_new, impression\_ip) — confirmed available
-- Scheduled via dbt / SQL mesh / Airflow on the silver layer
-- 30-day EL lookback for each day's clickpass events
-- Backfill: Feb 4–10 already validated. Extend as needed.
-- A4b INSERT query has QUALIFY dedup on both clickpass_log and ui_visits (fixed 2026-03-02, confirmed needed by Zach 2026-03-03).
-- Uses `SPLIT(ip, '/')[OFFSET(0)]` for /32 handling (BQ equivalent of PostgreSQL's `host()` per Zach's recommendation).
+- Source: clickpass_log (anchor) -> event_log (single 90-day scan) -> ui_visits (+-7 day) -> clickpass_log (90-day self-join for prior VV) -> campaigns (stage lookup x3)
+- Scheduled via SQLMesh (per Zach)
+- DELETE+INSERT idempotent pattern by trace_date range
+- 90-day rolling retention
+- Backfill: 1 batch query for 60 days, ~4.6 TB, ~$29 (97% savings vs 60 daily queries)
+- Daily incremental: ~2.8 TB/day, ~$17/day on-demand, ~$520/month
+- Future optimization: self-referencing prior_vv from the materialized table (reduces daily scan to ~0.5 TB)
+
+**Queries:** `queries/audit_trace_queries.sql` — Q1 (CREATE), Q2 (INSERT), Q3 (preview), Q4 (advertiser summary)
 
 ---
 
