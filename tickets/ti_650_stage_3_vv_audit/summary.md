@@ -79,6 +79,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `artifacts/ti_650_meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
 - `artifacts/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
 - `artifacts/ti_650_dplat_dustin_conversation.txt` — dplat guidance on deployment (2026-03-05)
+- `artifacts/ti_650_meeting_ryan_1.txt` — SQLMesh implementation walkthrough with Ryan (2026-03-05)
 
 ### Outputs
 - `outputs/ti_650_preview_37775_2026-02-07.json` — 100-row sample output from Q3 preview

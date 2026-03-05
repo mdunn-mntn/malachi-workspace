@@ -1,0 +1,184 @@
+Unknown Speaker  0:00  
+All right, you're good. So see, like all of your SQL, basically, you can pretty much probably copy and paste in right here and then,
+
+Unknown Speaker  0:11  
+but then up at the top, you got to tell it what kind of model this is. And so incremental by time range. I'm pretty sure you'll do incremental by time range.
+
+Unknown Speaker  0:21  
+And let let me,
+
+Unknown Speaker  0:23  
+let me. SQL mesh, incremental by
+
+Unknown Speaker  0:31  
+there's like specific properties, if you read the documents here, or
+
+Unknown Speaker  0:37  
+maybe you should watch that video too. But
+
+Unknown Speaker  0:42  
+we but here, here they have, like, kind of, yeah, some, some,
+
+Unknown Speaker  0:47  
+some stuff about it anyway.
+
+Unknown Speaker  0:50  
+So going back to this, um, you know, so this is so Time column,
+
+Unknown Speaker  0:57  
+I guess I don't know a lot about this, the sequel mesh is like,
+
+Unknown Speaker  1:02  
+this is an hourly job, though, CSI has crown hourly,
+
+Unknown Speaker  1:06  
+yeah. So what's executing? This is like BigQuery pointed to this repo, and then it does Team D plat team has it's similar to airflow, but a D flat team, they just run on a Cron. Basically, you just think it was like a cron that runs and then it'll pick up things that need to run. So this runs hourly. So I to answer your question, I don't really know what runs it 100% but D flat team handles that, which is nice, because you don't have to worry about it if you develop it in this. Yeah. And the only reason I want to ask the D flat team is, like, they're like, oh, that's fine. You can do whatever. I'm like, but this is, like, a lot of data, like, it's not a small amount. Like, well, that's up to them if they if, if it's you are, you know, if, if budget's an issue or whatever, then that's up to them to scale it up. Or that's up to the business to decide this is something we want, you know, yeah, that's kind of what they're saying, I think, like,
+
+Unknown Speaker  2:08  
+so, so this, I would kind of maybe start copying this, and then so cron hourly. This runs every hour start. So if you backfill it, this is where it's going to start at,
+
+Unknown Speaker  2:21  
+look look back. I know look back is like, how many so it's gonna so every time this runs, it's gonna look back 48 hours.
+
+Unknown Speaker  2:33  
+And so you would want
+
+Unknown Speaker  2:36  
+her, Oh, man, yeah. I mean, I don't know what your look back would be necessarily.
+
+Unknown Speaker  2:43  
+So wait 60 days. So 60 days isn't the look back you want. 60
+
+Unknown Speaker  2:49  
+days isn't your look back. I mean, this is like when you run this exact model, this is how many hours is going to look back? Yeah. So no, my look back. I don't know what the look back would mean in this case, like, basically all I need to do,
+
+Unknown Speaker  3:05  
+well, I don't know how that would look. I think it's a 30 day maximum time frame where you can Upsert so it's going to be like 30 days look back, but we want to keep a historical record of like 60 days. So basically, the reason I did that, I mean, it's, I think what's important is, how long do campaigns typically run, and how much do we want to be in the table, right? Because, yeah, if a campaign runs for five months, we're not going to be able to do this for all five months. But if a campaign runs for two weeks to two months, then we'll be able to do that at least for the most recent one. But I don't know, it just kind of depends how we plan on using it. So
+
+Unknown Speaker  3:45  
+okay, so looking at your code, I mean, this, this, you would
+
+Unknown Speaker  3:50  
+hard code
+
+Unknown Speaker  3:53  
+or not? Yeah, you would just hard code this, this 90 day look back into you, don't that's not part of the model,
+
+Unknown Speaker  4:01  
+yeah. So, so wait. So when you run this for just one advertiser, let's say, like, how many hours of time do you run it for? You know that that's, that's kind of what the look back is, oh,
+
+Unknown Speaker  4:15  
+how many hours of data do you produce? Where's your I can share my screen. I have an example for one advertiser, but
+
+Unknown Speaker  4:26  
+it is or
+
+Unknown Speaker  4:31  
+see, do you partition this output or by hour and date? Or
+
+Unknown Speaker  4:39  
+it's partitioned by AD served ID
+
+Unknown Speaker  4:44  
+on one.
+
+Unknown Speaker  4:47  
+I see
+
+Unknown Speaker  4:51  
+this example here, so
+
+Unknown Speaker  4:55  
+let me or I can stop sharing. If you want to share your I.
+
+Unknown Speaker  5:00  
+This is gonna get a little tricky because,
+
+Unknown Speaker  5:08  
+so, yeah, I mean, just for this one, I only grabbed a seven day or, well, not that's not true.
+
+Unknown Speaker  5:15  
+I grabbed seven days for the click pass log,
+
+Unknown Speaker  5:20  
+but you need more time for the event log, yeah,
+
+Unknown Speaker  5:25  
+because you gotta go back. That's, that's your like, 90 day or 60 day. You do 60 day look back, yeah. So that's how it has to be for the event log. So I think each time you do the Well, well,
+
+Unknown Speaker  5:37  
+I want to say this, the look back that you define in the model is like, how many hours are, you know, or, let's say this outputs, or this needs, okay, this needs to be incremental by time range. It needs to output partitions with dt and our or whatever. Yep.
+
+Unknown Speaker  5:59  
+So I don't know if you're partitioning by AD served ID, if that's going to work, so you're gonna have to maybe think about that. Okay, but then the look back, you know. So, so that thing I was showing you runs every hour, you know, and it'll go back 48 hours and overwrite 48 hours, you know, are actually incremental. It'll,
+
+Unknown Speaker  6:24  
+it'll add new things, or whatever it is. I think there might be a mode to overwrite, or whatever, 48 hours every time, every time it runs.
+
+Unknown Speaker  6:34  
+So that's, that's what that incremental thing is. Or is that
+
+Unknown Speaker  6:39  
+okay? That makes sense. The look, the look back that you have for like this, oh, look back, you know, 60 days and click pass log and this and that, that would all just be part of your sequel. You wouldn't even, that's not even, like, SQL mesh stuff.
+
+Unknown Speaker  6:52  
+Okay, that sounds good. So yeah. And the only thing I'm going to do on top of this, so this has to be a row level table, but I'll probably create a view too, that will just be, like, aggravated, aggregated by advertiser, you know, with some counts on there or something like that, right? Yeah, I'll probably partition by multiple things too. I'm thinking, probably partitioned by advertiser and campaign.
+
+Unknown Speaker  7:16  
+ID, I wouldn't tell I wouldn't do that, but,
+
+Unknown Speaker  7:22  
+yeah, see, that's, that's my knowledge of SQL. Mesh is not that good. So, yeah, I mean, isn't, but isn't there, like, a there's a trade off, right? Like, when you partition, doesn't it make it better? It
+
+Unknown Speaker  7:34  
+depends on how
+
+Unknown Speaker  7:38  
+it partition. I feel like advertiser partition might be good, just because
+
+Unknown Speaker  7:46  
+I normally, most partitions, I see your dates and hours. I mean, because, well, you can do both. I'm not saying like that you can partition by date, but I'm just thinking like, if a lot of times it's going to be running where you're going to be querying against the advertiser, and if you can, if you can partition by advertiser, then you've limited how much you're scanning in the table significantly. Yeah, 1000s of advertisers. I wouldn't worry about how people are going to read the data. I would worry about how you're going to write it, you know. So, so if you practition by advertiser ID, you are going to overwrite each if you re if you rerun it, you're going to overwrite each advertiser ID partition, which is maybe okay, but usually,
+
+Unknown Speaker  8:30  
+usually, you know, just a date or a date partition is sufficient. Oh, I you know, sorry, I didn't realize that. So as far as writing partition. So I'm thinking reading, right? I didn't really realize it had implications on the writing. So, like, because, like, when you're thinking reading, if I'm making a query and I say, hey, where you know advertiser, you do is this blah blah, it's nice to have multiple partitions. It makes it super quick. But when it comes to writing, how does that make a difference? I actually didn't know that. Yeah, it does. Yeah. So writing and, like, there's also, like, you know, or, I don't know if there's a thing of BigQuery, but with Spark, there's, like, the small file problem, you know. So if you, if you're partitioning by advertiser ID, you know, or if you, if you're rolling something up by advertiser ID, then writing it out, just probably very tiny files. So, like, it probably doesn't even matter, you know, most people, most people, most people, if they're going to use your table, are probably what they're going to do is, like, I need to get the verified visits
+
+Unknown Speaker  9:28  
+as of,
+
+Unknown Speaker  9:30  
+you know, as of a certain date, and then they're going to group by advertiser like, you know, do something with advertiser ID, with all the advertiser IDs. So,
+
+Unknown Speaker  9:39  
+yeah, I wouldn't worry about necessarily, how people are going to read it. You could always, you could always have a second job. Anyways, if to like, do that partition by advertiser ID,
+
+Unknown Speaker  9:51  
+okay, but let me try to, we gotta go here, see. Let me try to find
+
+Unknown Speaker  9:57  
+one, maybe a nastier one that has some.
+
+Unknown Speaker  10:00  
+Crazy partitions,
+
+Unknown Speaker  10:02  
+but, but the other thing you need to keep in mind is that where clause is very important, because let me just paste that in, because the start date and end date are like variables that that
+
+Unknown Speaker  10:21  
+SQL mesh is going to throw into your query for you, you know, okay, so like you, you wanted to just like in your query, or, let me, I know we gotta go, but
+
+Unknown Speaker  10:33  
+like the first thing, let me see what
+
+Unknown Speaker  10:37  
+your base table basically like,
+
+Unknown Speaker  10:40  
+what would be your base table,
+
+Unknown Speaker  10:44  
+but it's probably like, click pass log, I assume, yeah, where you say we're date time between, because everything comes from the click pass log first, and then kind of joins from it. So, yeah, we're date time between, blah, blah, that's, that's where you would say we're date time between, you know, at start date and less than end date and let little bit SQL mesh throw those variables in. But okay,
+
+Unknown Speaker  11:07  
+anyway, yeah, there's a lot to it, dude. Dude, Dustin is pretty smart with it, so he's he's probably better to ask. But okay, yeah, sounds good. Hey, we'll jump in the next meeting. Thanks, Ryan. All right. Dude, later.
+
+Transcribed by https://otter.ai
