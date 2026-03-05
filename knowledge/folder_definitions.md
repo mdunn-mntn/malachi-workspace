@@ -32,6 +32,7 @@ ti_xxx_name/
 ├── summary.md     ← the written record of the ticket (use _template/summary_template.md)
 ├── queries/       ← SQL files only
 ├── outputs/       ← query result exports (CSVs, JSONs) and intermediate data files
+├── meetings/      ← meeting transcripts and notes
 └── artifacts/     ← everything else: notebooks, PDFs, Python scripts, Word docs, PNGs
 ```
 
@@ -51,6 +52,13 @@ The single written record of the ticket. Covers: what the problem was, what was 
 - Subdirectories allowed (e.g., `outputs/by_campaign/`) for large result sets
 
 **Not** raw source data delivered by a third party — that goes in `artifacts/`.
+
+### `meetings/`
+**Meeting transcripts and notes related to this ticket.**
+- Otter.ai transcripts (`.txt`)
+- Manual meeting notes
+- Zoom transcript files (`.vtt`)
+- Named with ticket prefix: `ti_xxx_meeting_person_n.txt`
 
 ### `artifacts/`
 **Everything else that isn't a SQL query or a query result.** This is the catch-all for deliverables and supporting files.

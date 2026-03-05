@@ -50,6 +50,7 @@ tickets/ti_xxx/
 ├── summary.md        ← you write this throughout
 ├── queries/          ← SQL lives here, not in notebooks
 ├── outputs/          ← query results, CSVs
+├── meetings/         ← meeting transcripts, notes
 └── artifacts/        ← notebooks, scripts, deliverables
      │
      ▼
@@ -92,6 +93,7 @@ workspace/
 │       ├── summary.md
 │       ├── queries/
 │       ├── outputs/
+│       ├── meetings/
 │       └── artifacts/
 ├── documentation/
 │   ├── architecture/            ← system diagrams, pipeline overviews
@@ -163,10 +165,11 @@ ti_xxx_name/
 ├── summary.md     ← the written record
 ├── queries/       ← SQL files only
 ├── outputs/       ← query results: CSVs, JSONs, intermediate data
+├── meetings/      ← meeting transcripts and notes
 └── artifacts/     ← everything else: notebooks, PDFs, scripts, context files
 ```
 
-All four items must exist before a ticket is considered complete. Missing folders get created immediately — there is no "I'll add it later."
+All five items must exist before a ticket is considered complete. Missing folders get created immediately — there is no "I'll add it later."
 
 ### `summary.md`
 
@@ -203,6 +206,10 @@ Keeping SQL in `.sql` files (not embedded in notebooks or Slack messages) means:
 The results of queries and intermediate data files produced during the investigation. CSVs from BigQuery exports, JSON result files, computed datasets that feed into further analysis. Subdirectories are allowed for large result sets (`outputs/by_campaign/`, etc.).
 
 These files are gitignored (no raw data in GitHub) but live on disk and are referenced from `summary.md`.
+
+### `meetings/`
+
+Meeting transcripts and notes related to the ticket. Otter.ai transcripts, manual notes, Zoom transcript files. Named with the ticket prefix: `ti_xxx_meeting_person_n.txt`.
 
 ### `artifacts/`
 

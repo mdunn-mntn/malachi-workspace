@@ -16,6 +16,7 @@ workspace/
 │       ├── summary.md    ← required
 │       ├── queries/      ← .sql files
 │       ├── outputs/      ← csvs, jsons, query results
+│       ├── meetings/     ← meeting transcripts, notes
 │       └── artifacts/    ← notebooks, pdfs, scripts, deliverables
 ├── documentation/        ← reference docs, architecture diagrams, code snippets
 └── claude-prompts/       ← planning files and prompt templates
