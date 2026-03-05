@@ -1,218 +1,128 @@
-# TI-650: Stage 3 VV Audit — IP Mutation & NTB Disagreement
+# TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** Complete
-**Date Started:** ~2026-02-10 (estimate)
-**Date Completed:** ~2026-02-24
+**Status:** In Progress — v3 production table ready for deployment
+**Date Started:** 2026-02-10
 **Assignee:** Malachi
 
 ---
 
 ## 1. Introduction
 
-Investigation into the MNTN verified visit (VV) pipeline to understand IP address mutation between pipeline stages and the NTB (new-to-brand) classification disagreement between `clickpass_log` and `ui_visits`. The audit was scoped to advertiser 37775 as a representative mid-size advertiser.
+Investigation into the MNTN verified visit (VV) pipeline to trace IP address mutation across the funnel and build a production-grade audit table. Started as an IP mutation + NTB disagreement analysis, evolved into a full stage-aware VV IP lineage system.
 
-The broader goal: determine where in the pipeline IP addresses change, how much they change, and how that change drives NTB misclassification — with quantified, campaign-level granularity.
+Three Zach review meetings informed the final design. The deliverable is `audit.vv_ip_lineage` — one row per verified visit across all advertisers and all stages, tracing IP through bid -> VAST -> redirect -> visit, with first-touch attribution and prior VV retargeting chain.
 
 ---
 
 ## 2. The Problem
 
-- **IP mutation:** IP addresses observed at ad-serving (win_log) often differ from IPs observed at visit (ui_visits). The aggregate mutation rate was known to be ~21%, but the cause and pipeline location were unknown.
-- **NTB disagreement:** `clickpass_log.is_new` and `ui_visits.is_new` frequently disagree for the same event — estimated at ~42% disagreement rate for NTB=TRUE population.
-- **Impact:** IP mutation driving NTB misclassification means returning visitors are counted as new-to-brand, affecting campaign targeting accuracy, ROAS reporting, and advertiser trust.
+- **IP mutation:** 5.9-33.4% of VVs show IP change between VAST playback and redirect (cross-device, VPN, CGNAT). 100% of mutation occurs at the VAST -> redirect boundary.
+- **NTB disagreement:** `clickpass_log.is_new` and `ui_visits.is_new` disagree 41-56% of the time. Both are client-side JavaScript pixels — not auditable via SQL.
+- **No stage-aware audit:** No existing table traces a VV back through its funnel stage, prior VV, or first-touch impression with IP lineage at each checkpoint.
+- **Attribution vs journey confusion:** 20% of Stage 1-attributed VVs are on IPs that have already reached Stage 3 — because IPs stay in all segments and S1 has 75-80% of budget.
 
 ---
 
-## 3. Plan of Action
+## 3. Solution
 
-1. Build IP trace query: join clickpass_log → ui_visits to observe IP at each hop
-2. Extend trace to win_log to capture IP at ad-serving (v2: 4-checkpoint trace)
-3. Pivot to clickpass_log as starting point when it proved a better anchor than ui_visits (v3: 5-checkpoint trace)
-4. Quantify mutation rate at each hop
-5. Decompose by campaign, device type, and cross-device flag
-6. Build NTB disagreement × mutation cross-tabulation
-7. Document findings and propose remediation
+### Production table: `audit.vv_ip_lineage`
 
----
+One row per VV. 41 columns across 7 groups:
+- **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, max_historical_stage
+- **Last-touch IP lineage:** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
+- **First-touch attribution:** ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time
+- **Prior VV chain:** prior_vv_ad_served_id, pv_campaign_id, pv_stage, pv_redirect_ip, is_retargeting_vv
+- **IP comparison flags:** bid_eq_vast, vast_eq_redirect, redirect_eq_visit, ip_mutated, any_mutation
+- **Classification:** clickpass_is_new, visit_is_new, ntb_agree, is_cross_device
+- **Trace quality:** is_ctv, visit_matched, ft_matched, pv_lt_matched
 
-## 4. Investigation & Findings
+Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
-### IP Trace Methodology
+### Key design decisions
+- **Single event_log CTE** joined 3x (last-touch, first-touch, prior VV impression) — saves ~8% vs 3 separate scans
+- **max_historical_stage** = `GREATEST(vv_stage, max prior VV stage)` — distinguishes attribution stage from journey stage
+- **Prior VV match** on redirect_ip = bid_ip (~94% accurate; targeting uses VAST IP but redirect_ip ~= VAST IP 94% of the time)
+- **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
-Three query versions were developed:
-- **v1:** 3-checkpoint trace (clickpass → ui_visits → conversion)
-- **v2:** 4-checkpoint trace (win → redirect → clickpass → ui_visits)
-- **v3:** 5-checkpoint trace, starting from clickpass_log as the anchor (better than ui_visits as starting point)
-
-**Queries:**
-- `queries/audit_trace_queries.sql` — full 5-checkpoint IP trace (v1/v2/v3 versions)
-- `queries/questions_summary.sql` — questions for Zach / schema investigation queries
-
-**Outputs:**
-- `outputs/` — BQ result JSON files (gitignored); `outputs/readme.md` describes contents
-- `outputs/column_definitions.tsv` — column definitions reference (gitignored)
-
-**Artifacts:**
-- `artifacts/stage_3_vv_audit_consolidated_v5.md` — comprehensive audit document (v5)
-- `artifacts/stage_3_vv_pipeline_explained.md` — pipeline architecture explanation
-- `artifacts/stage_3_vv_audit.docx` — Word version of audit report (gitignored)
-- `artifacts/zach_review.md` — review notes with Zach
-- `artifacts/meeting_zach_1.txt` — meeting notes
-- `artifacts/questions_for_zach.txt` — open questions for Zach
-- `artifacts/questions_for_zach.docx` — formatted questions doc (gitignored)
-- `artifacts/membership_updates_proto_generate.py` — protobuf generation script
-- `artifacts/mes_pipeline.pdf` / `mes_pipeline.png` — MES pipeline diagrams (gitignored)
-
-### Key Findings
-
-**1. Aggregate mutation rate: ~21.2%**
-For advertiser 37775, ~21.2% of events show a different IP between win_log and clickpass_log.
-
-**2. ALL mutation occurs at the redirect hop**
-Zero meaningful mutation occurs between clickpass_log and ui_visits. The visit hop is essentially stable. All 21.2% of mutation happens between the ad win and the clickpass (the redirect step).
-
-**3. Per-campaign variance: 0.6% to 20.6%**
-The aggregate 21.2% masks large campaign-level differences. Some campaigns are near-clean (0.6%) while others are severely affected (20.6%). Targeted fixes should start with worst-offending campaigns.
-
-**4. Cross-device is the primary driver**
-`is_cross_device = TRUE` events show 61.2% IP mutation vs ~10-15% for non-cross-device events. Cross-device tracking drives the NTB misclassification problem.
-
-**5. Phantom NTB events: ~4,006/day for advertiser 37775**
-Intersection of IP mutation + NTB disagreement: ~4,006 events/day where both `clickpass.is_new=TRUE` AND `ui_visits.is_new=TRUE` AND IP mutation is present. These are returning visitors misclassified as new-to-brand.
-
-**10. `first_touch_ad_served_id` NULL (~40%) — targeting issue linked to IP mutation (Sharad, 2026-03-03 & 2026-03-04)**
-
-Sharad confirmed the lookup for `first_touch_ad_served_id` requires a Stage 1 CTV impression (`funnel_level=1`, `objective_id=1`, same campaign group). Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."*
-
-**First_touch lookup mechanism (Sharad, 2026-03-04):**
-- The system searches on **both bid_ip AND ip of the attributable impression** (i.e., both event_log.bid_ip and event_log.ip for the Stage 3 impression)
-- VV attribution itself (finding which impression to credit) uses **page view IP + guid + other identifiers** — not purely IP-based
-- *"the search for first touch is done using the Bid IP + IP of the attributable impression"*
-
-**Open question:** Does "search on both" mean OR (either match = found) or AND (both must match)? This determines how resilient the lookup is to partial mutation. If OR: mutation at only one hop wouldn't break the lookup. If AND: any mutation breaks it.
-
-**Quantified via A9/A10 queries (run 2026-03-04):**
-
-*A9a — ft_null × mutation cross-tab (advertiser 37775, Feb 4-10, 219,527 VVs):*
-- ft_null rate when mutated: **54.85%** vs when not mutated: **38.19%** (+16.66pp delta)
-- However, 74,452 of 87,917 ft_null VVs had NO mutation — mutation explains only ~15% of NULLs
-- Cross-device delta is smaller: 42.2% vs 38.16% (+4.04pp)
-- Conclusion: mutation is a **contributing factor** but not the primary driver of ft_null
-
-*A9b — recency breakdown:*
-- Clear gradient: <1hr gap → 54.39% ft_null, 27.1% mutation; 14-21 day gap → 17.89% ft_null, 1.99% mutation
-- Both rates increase together as impression-to-visit gap shrinks, consistent with redirect-boundary mutation disrupting lookup
-
-*A10a — 100% coverage proof (advertiser 37775, Feb 4-10):*
-- ft_coverage: **99.78%** (131,314 of 131,610 VVs with ft_id have matching VAST event)
-- lt_coverage: **99.96%**; full_chain: **99.77%**
-- 296 VVs (0.22%) have ft_id but no matching VAST — likely outside lookback window
-- ft_null remains at 40.05% (87,917 VVs with no ft_id at all)
-
-**6. clickpass_log is a 99.6% proxy for ui_visits VVs**
-For audit purposes, starting from clickpass_log is nearly equivalent to starting from ui_visits but provides richer IP audit columns.
-
-**7. BQ data gap discovered**
-`raw.visits` and `cost_impression_log` stopped ingesting in BQ after 2026-01-31. Pivoted to Greenplum for post-Jan analysis.
-
-**8. win_log.device_ip is NULL in Greenplum; populated in BQ Silver**
-Cannot use Greenplum win_log for device-level IP trace. BQ Silver win_log has device_ip populated, but the Beeswax ID mismatch (Finding #9) makes the join invalid regardless.
-
-**9. win_log uses Beeswax IDs, not MNTN ad_served_id**
-Direct join on `ad_served_id` between win_log and clickpass_log is invalid — different ID systems.
+### Cost
+- Daily incremental: ~$17/day on-demand (~2.8 TB scan)
+- 60-day batch backfill: ~$29 (97% savings vs naive approach)
+- Monthly: ~$520/month on-demand (slot-based pricing may differ)
 
 ---
 
-## 5. Solution
+## 4. Key Findings
 
-- Delivered quantified analysis: mutation rate, hop breakdown, campaign decomposition, cross-device breakdown, NTB phantom event count
-- Documented methodology as reusable 5-checkpoint IP trace pattern
-- Produced per-campaign mutation table (BQ result JSON files in `outputs/`; gitignored)
-- Documented BQ pipeline gap and Greenplum workaround
-- Provided remediation recommendations (targeted campaign fixes, cross-device infrastructure)
+1. **100% of IP mutation at VAST -> redirect boundary.** Zero at visit. Confirmed across 15 advertisers.
+2. **Mutation range: 1.2-33.4%** across advertisers (driven by cross-device rate).
+3. **Cross-device = 61% of mutation.** Same-device network switching = 39%.
+4. **NTB disagreement: 41-56%.** Two independent client-side pixels. Not a bug — architectural reality.
+5. **Phantom NTB: ~4,006/day** for advertiser 37775 (~28,200/day across 10 advertisers).
+6. **first_touch_ad_served_id NULL 40%.** Permanent at write time. Mutation is a contributing factor (~15% of NULLs) but not the primary driver.
+7. **20% of S1 VVs are on S3 IPs.** Attribution stage != journey stage. `max_historical_stage` captures this.
+8. **30-day EL lookback is exact.** 100% of VVs have impression within 30 days. Zero exceptions across 3.25M rows.
+9. **BQ Silver validated vs Greenplum** within 0.12pp on all metrics across 10 advertisers.
 
 ---
 
-## 6. Questions Answered
+## 5. Files
 
-- **Q:** Where in the pipeline does IP mutation occur?
-  **A:** 100% at the redirect hop (win → clickpass). The visit hop (clickpass → ui_visits) is stable.
+### Queries
+- `queries/audit_trace_queries.sql` — v3 production queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: advertiser summary)
 
-- **Q:** How much IP mutation occurs in aggregate?
-  **A:** ~21.2% for advertiser 37775.
+### Artifacts
+- `artifacts/stage_3_vv_audit_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
+- `artifacts/stage_3_vv_pipeline_explained.md` — how the pipeline works (stages, targeting vs attribution, IP journey examples)
+- `artifacts/vv_ip_lineage_column_reference.md` — column-by-column schema reference for the production table
+- `artifacts/meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
+- `artifacts/meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
+- `artifacts/meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
 
-- **Q:** What drives IP mutation?
-  **A:** Primarily cross-device events (61.2% mutation rate vs ~10-15% non-cross-device).
+### Outputs
+- `outputs/vv_ip_lineage_preview_37775_2026-02-07.json` — 100-row sample output from Q3 preview
 
-- **Q:** How many NTB events are phantom (returning visitors misclassified)?
-  **A:** ~4,006/day for advertiser 37775.
+---
 
-- **Q:** Is clickpass_log a reliable VV proxy?
-  **A:** Yes — 99.6% overlap with ui_visits VVs, with better IP audit columns.
+## 6. Open Items
 
-- **Q:** Why does win_log join fail?
-  **A:** win_log uses Beeswax IDs, not MNTN ad_served_id. device_ip is also always NULL in win_log.
+- **Deploy production table:** Zach/data platform sign-off on dataset location, SQLMesh scheduling, backfill range
+- **Non-CTV coverage:** Display VVs have NULL lt_ columns (use impression_log instead of event_log — future enhancement)
+- **Prior VV match refinement:** Currently uses redirect_ip = bid_ip; could match on pv_lt_vast_ip for higher accuracy
+- **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
 
 ---
 
 ## 7. Data Documentation Updates
 
-Added to `data_catalog.md` (2026-03-03):
-- clickpass_log entry with join keys, gotchas, and BQ tips
-- ui_visits entry with UUID type caveat
-- win_log entry with Beeswax ID and NULL device_ip warnings
-- cost_impression_log entry with BQ data gap note
+Added to `knowledge/data_catalog.md`:
+- clickpass_log, event_log, ui_visits, win_log, cost_impression_log entries with join keys, gotchas, TTLs
+- audit.vv_ip_lineage schema documentation
 
-Added to `data_catalog.md` (2026-03-03, session 2):
-- clickpass_log: corrected description (VV log for ALL VV types, not CTV-only); added missing user_agent column; TTL confirmed no expiry; annotated ip, ad_served_id, is_new, first_touch_ad_served_id with audit findings; added 30-day lookback note
-- event_log: corrected description; added 5 missing columns (is_mobile_device, browser, operating_system, device_type, browser_version); TTL confirmed no expiry; bid_ip documented as gold column; original_ip vs ip distinction explained
-
-Added to `data_knowledge.md` (2026-03-03):
-- Visits table disambiguation
-- IP address columns per-table guide (expanded in session 2: full taxonomy table — ip, ip_raw, original_ip, bid_ip, impression_ip — with source, enrichment status, and audit match rates)
-- NTB disagreement between tables
-- ID types (Beeswax vs MNTN)
-- BQ data gaps
+Added to `knowledge/data_knowledge.md`:
+- IP address column taxonomy across all tables
+- Stage definitions and targeting vs attribution distinction
+- NTB disagreement explanation
+- VV attribution model (last-touch stack, first-touch lookup)
 - Pipeline flow documentation
-- Cross-device IP mutation stats
-- Per-campaign mutation variance
-- clickpass_log as VV proxy guidance
-- TTL confirmations for clickpass_log (no expiry) and event_log (no expiry) — verified 2026-03-03 via bq show
+- Cross-device mutation stats
 
 ---
 
-## 8. Open Items / Follow-ups
+## 8. Performance Review Tags
 
-- Schema crawl: run `bq show --schema` for key tables to fill in complete column lists in data_catalog.md
-- ext_visits table: unknown purpose, needs schema check (may need special permissions)
-- mntn-coredw-prod: key tables not yet documented
-- Remediation: no code changes were part of this audit ticket — follow-up ticket needed for fixes
-- Greenplum port: BQ versions of post-Jan queries need to be ported when data resumes
-- **[NEW] Quantify mutation's contribution to first_touch NULLs:** Build a query against `audit.stage3_vv_ip_lineage` comparing `ft_matched=false` vs mutation flags (`mutated_at_redirect`, `bid_eq_vast`) to measure what fraction of the 40% NULL rate is directly attributable to IP mutation. The hypothesis: NULLs are highest for recent impressions (54% for <1hr gap) and cross-device VVs — both patterns consistent with mutation-driven lookup failure.
-- **[NEW] Deploy `audit.stage3_vv_ip_lineage` production table:** Schema finalized, A4b query ready. Needs: (a) Zach/Sharad sign-off on destination dataset and table name, (b) scheduling (dbt/SQLMesh/Airflow), (c) backfill range decision.
+**Speed:** Built v1 -> v2 -> v3 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
 
----
+**Craft:** Designed stage-aware IP lineage table with `max_historical_stage` to distinguish attribution from journey stage. Identified 20% of S1 VVs on S3 IPs — a novel finding. Optimized event_log scans from 3 CTEs to 1 (8% savings). Built cost justification doc quantifying $17/day ongoing cost.
 
-## Performance Review Tags
+**Adaptability:** Pivoted from v1 (simple mutation audit) to v3 (full stage-aware lineage) across 3 Zach review meetings. Incorporated Sharad's first_touch lookup clarification. Adapted from Greenplum to BQ Silver when pipeline gap was discovered.
 
-**Speed:** Built v1→v2→v3 trace pipeline iteratively within weeks. Independently resolved 5+ blockers (IP type mismatch, win_log Beeswax ID, NULL device_ip, BQ data gap, clickpass/ui_visits VV overlap) without escalation. Managed parallel BQ and Greenplum investigation simultaneously.
-
-**Craft:** Designed novel 5-checkpoint IP trace methodology. Decomposed 21.2% aggregate mutation into hop-level precision — discovered 100% occurs at redirect hop, correcting a prior assumption that mutation was distributed. Built NTB disagreement × mutation cross-tab revealing 4,006 phantom NTB events/day. Documented 18 discrete findings with quantified results. Created reusable methodology documented as a template.
-
-**Adaptability:** When BQ pipeline gap was discovered (raw.visits/CIL stopped ingesting Jan 31), pivoted to Greenplum-first approach and documented BQ port requirements for when data resumes. Reframed v2 findings when v3 revealed mutation at visit was actually at redirect. Switched starting anchor from ui_visits to clickpass_log when the latter proved to be a better analytical starting point.
-
-**Revenue Impact:** 4,006 phantom NTB events/day for one advertiser directly impacts revenue retention — returning visitors misclassified as new-to-brand degrades campaign targeting accuracy and advertiser trust. Per-campaign variance (0.6% to 20.6%) enables targeted fixes. Cross-device mutation insight (61.2%) informs infrastructure investment decisions.
+**Revenue Impact:** 4,006 phantom NTB events/day for one advertiser directly impacts revenue retention. Stage-aware lineage enables first-ever quantification of cross-stage IP attribution patterns. Production table provides ongoing auditability for all advertisers.
 
 ---
 
 ## Drive Files
 
-📁 `Tickets/TI-650 Stage 3 Audit/`
-- `Advertiser creates a campaign.gdoc`
-- `Stage_3_VV_Audit_Consolidated_v4.docx`
+`Tickets/TI-650 Stage 3 Audit/`
 - `Stage_3_VV_Audit_Consolidated_v5.docx`
-- `Stage_3_VV_Audit_Consolidated_v5.md`
-- `Stage_3_VV_Audit_Summary.docx`
-- `Stage_3_VV_Audit_Summary.md`
-- `Untitled spreadsheet.gsheet`
+- `Advertiser creates a campaign.gdoc`
