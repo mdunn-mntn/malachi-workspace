@@ -40,7 +40,7 @@ The very first impression this IP ever saw (from `clickpass_log.first_touch_ad_s
 |--------|------|-------------|
 | `ft_ad_served_id` | STRING | UUID of the first-touch impression. |
 | `ft_campaign_id` | INT64 | Campaign of the first-touch impression. |
-| `ft_stage` | INT64 | Stage of the first-touch campaign. Should typically = 1. |
+| `ft_stage` | INT64 | Stage of the first-touch campaign. Always = 1 (funnel is sequential — an IP must receive an S1 impression before it can enter S2/S3). |
 | `ft_bid_ip` | STRING | Bid IP of the first-touch impression. |
 | `ft_vast_ip` | STRING | VAST IP of the first-touch impression. |
 | `ft_time` | TIMESTAMP | When the first-touch impression happened. |
