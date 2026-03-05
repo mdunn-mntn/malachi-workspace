@@ -78,6 +78,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `artifacts/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
 - `artifacts/ti_650_meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
 - `artifacts/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
+- `artifacts/ti_650_dplat_dustin_conversation.txt` — dplat guidance on deployment (2026-03-05)
 
 ### Outputs
 - `outputs/ti_650_preview_37775_2026-02-07.json` — 100-row sample output from Q3 preview
@@ -86,7 +87,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ## 6. Open Items
 
-- **Deploy production table:** Zach/data platform sign-off on dataset location, SQLMesh scheduling, backfill range
+- **Deploy production table:** Silver layer confirmed (Dustin/dplat). SQLMesh recommended. Next: learn SQLMesh, write model, plan hourly materialization strategy, set retention, backfill 60 days
 - **Non-CTV coverage:** Display VVs have NULL lt_ columns (use impression_log instead of event_log — future enhancement)
 - **Prior VV match refinement:** Currently uses redirect_ip = bid_ip; could match on pv_lt_vast_ip for higher accuracy
 - **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
