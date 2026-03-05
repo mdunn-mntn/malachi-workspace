@@ -32,10 +32,10 @@ Beyond the simple pre/post (TI-270), needed a rigorous analysis of Jaguar's caus
 ## 4. Investigation & Findings
 
 **Local artifacts:**
-- `artifacts/causal_impact_jaguar.ipynb` — causal impact analysis notebook
-- `artifacts/jaguar_kpi_by_score.ipynb` — KPI breakdown by score tier
-- `artifacts/jaguar_score_analysis.ipynb` — score distribution analysis
-- `queries/kpis_ip_level_jaguar.sql` — SQL for IP-level KPIs
+- `artifacts/ti_501_causal_impact.ipynb` — causal impact analysis notebook
+- `artifacts/ti_501_kpi_by_score.ipynb` — KPI breakdown by score tier
+- `artifacts/ti_501_score_analysis.ipynb` — score distribution analysis
+- `queries/ti_501_kpis_ip_level.sql` — SQL for IP-level KPIs
 
 **Drive:**
 - `TI-452 Jaguar Analysis.gdoc` — written analysis (note: labeled TI-452 but stored in TI-501 Drive folder)
@@ -55,7 +55,7 @@ Delivered full Jaguar KPI analysis with causal impact modeling. Score-tier break
   **A:** Yes — see causal impact notebook for quantified lift.
 
 - **Q:** Which score tiers are most valuable?
-  **A:** See `jaguar_kpi_by_score.ipynb`.
+  **A:** See `ti_501_kpi_by_score.ipynb`.
 
 ---
 

@@ -31,13 +31,13 @@ After a vertical classification update (likely tied to TI-033), needed to quanti
 
 ## 4. Investigation & Findings
 
-**SQL queries:** `queries/pre_post_analysis_queries.sql`
+**SQL queries:** `queries/ti_221_pre_post_analysis.sql`
 
 **Exported results** (gitignored, see Drive or `outputs/`):
-- `outputs/campaign_analysis.csv`
-- `outputs/daily_analysis.csv`
-- `outputs/full_daily.xlsx`
-- `outputs/metrics_comparison.csv`
+- `outputs/ti_221_campaign_analysis.csv`
+- `outputs/ti_221_daily_analysis.csv`
+- `outputs/ti_221_full_daily.xlsx`
+- `outputs/ti_221_metrics_comparison.csv`
 
 ---
 

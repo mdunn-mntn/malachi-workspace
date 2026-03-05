@@ -33,7 +33,7 @@ After vertical classification rules were updated, needed to quantify how many do
 
 - Top churning domains exported: `top_churners.csv` (gitignored — see Drive)
 - Vertical size comparison: `vertical_changes_comparison.xlsx` (gitignored — see Drive)
-- Analysis notebooks: `artifacts/vertical_sizes.ipynb` (initial), `artifacts/vertical_sizes_final.ipynb` (final)
+- Analysis notebooks: `artifacts/ti_033_vertical_sizes.ipynb` (initial), `artifacts/ti_033_vertical_sizes_final.ipynb` (final)
 
 ---
 
@@ -49,7 +49,7 @@ Delivered vertical size comparison and top churner analysis to assess classifica
   **A:** See `vertical_changes_comparison.xlsx` on Drive.
 
 - **Q:** Which verticals were most affected?
-  **A:** See `vertical_sizes_final.ipynb`.
+  **A:** See `ti_033_vertical_sizes_final.ipynb`.
 
 ---
 

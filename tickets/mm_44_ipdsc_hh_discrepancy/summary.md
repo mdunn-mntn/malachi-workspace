@@ -31,19 +31,17 @@ Household counts from IPDSC did not match expected values. Needed to trace the d
 
 ## 4. Investigation & Findings
 
-**Queries:** `queries/audit_trace_queries.sql` — audit trace through the pipeline
-
 **Artifacts:**
-- `artifacts/mm_44_ipdsc_hh_discrepancy_investigation.md` — written investigation
-- `artifacts/mm_44_ipdsc_hh_discrepancy_investigation.docx` — full doc version
-- `artifacts/household_discrepancy.doc` — discrepancy details
-- `artifacts/mes_pipeline.png` — MES pipeline diagram
+- `artifacts/mm_44_investigation.md` — written investigation
+- `artifacts/mm_44_investigation.docx` — full doc version
+- `artifacts/mm_44_household_discrepancy.doc` — discrepancy details
+- `artifacts/mm_44_mes_pipeline.png` — MES pipeline diagram
 
 ---
 
 ## 5. Solution
 
-TBD — review `artifacts/mm_44_ipdsc_hh_discrepancy_investigation.md` for findings.
+TBD — review `artifacts/mm_44_investigation.md` for findings.
 
 ---
 

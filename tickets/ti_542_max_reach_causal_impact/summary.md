@@ -32,8 +32,8 @@ Max Reach was available to advertisers but its incremental impact was unknown. D
 ## 4. Investigation & Findings
 
 **Local artifacts:**
-- `artifacts/max_reach_causal_impact_analysis_clean.ipynb` — main causal impact notebook
-- `artifacts/mullet_performance_report.pdf` — performance report (gitignored)
+- `artifacts/ti_542_causal_impact_analysis.ipynb` — main causal impact notebook
+- `artifacts/ti_542_mullet_performance_report.pdf` — performance report (gitignored)
 
 ---
 

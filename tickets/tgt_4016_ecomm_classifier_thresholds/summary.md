@@ -31,10 +31,10 @@ The ecommerce classifier's threshold settings needed evaluation — too permissi
 
 ## 4. Investigation & Findings
 
-- Product lookup CSV used as ground truth: `data/product_lookup.csv`
+- Product lookup CSV used as ground truth: `data/tgt_4016_product_lookup.csv`
 - Analysis implemented in both Python script and Jupyter notebook
-- See `artifacts/ecomm_classifier_thresholds.ipynb` for full analysis
-- Companion Python script: `artifacts/ecomm_classifier_thresholds.py`
+- See `artifacts/tgt_4016_thresholds.ipynb` for full analysis
+- Companion Python script: `artifacts/tgt_4016_thresholds.py`
 
 ---
 

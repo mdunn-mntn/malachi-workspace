@@ -38,7 +38,7 @@ Some IPs expected to be in IPDSC (`dw-main-bronze.external.ipdsc__v1`) are absen
 Work in progress. See `queries/`, `outputs/`, and `artifacts/` for investigation files.
 
 Relevant prior work:
-- TI-644 established `ipdsc__v1` schema and query patterns — see TI-644 `artifacts/complete_context.md`
+- TI-644 established `ipdsc__v1` schema and query patterns — see TI-644 `artifacts/ti_644_complete_context.md`
 - TI-34 investigated identity sync freshness — stale syncs could cause missing IPs
 
 ---

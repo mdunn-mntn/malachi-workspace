@@ -32,7 +32,7 @@ After Jaguar's GA launch, needed to confirm that scored IPs outperformed unscore
 ## 4. Investigation & Findings
 
 Two SQL files:
-- `queries/pre_post_analysis_ga.sql` — main pre/post query (also labeled `[TI-270]` in Drive)
+- `queries/ti_270_pre_post_analysis_ga.sql` — main pre/post query (also labeled `[TI-270]` in Drive)
 - `queries/ti_254_post_analysis_ga.sql` — note: filename references ti_254, likely a carry-over from NTB investigation work that fed into this analysis
 
 Results in Drive: `[TI-452] - Pre Post Analysis Jaguar Release.gsheet`

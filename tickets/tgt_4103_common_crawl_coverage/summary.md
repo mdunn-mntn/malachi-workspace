@@ -30,7 +30,7 @@ Needed to understand coverage gaps in Common Crawl data — which domains are co
 
 ## 4. Investigation & Findings
 
-Full analysis in `artifacts/common_crawl_coverage.ipynb`.
+Full analysis in `artifacts/tgt_4103_coverage.ipynb`.
 
 ---
 

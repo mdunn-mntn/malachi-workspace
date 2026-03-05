@@ -35,10 +35,10 @@ The IP scoring pipeline was not well-documented. Stakeholders needed a clear und
 ## 4. Investigation & Findings
 
 **Local artifacts:**
-- `artifacts/ip_scoring_pipeline.html` — pipeline HTML document
-- `artifacts/ip_scoring_pipeline_overview.docx` — overview document (gitignored)
-- `artifacts/ip_scoring_walkthrough.docx` — step-by-step walkthrough (gitignored)
-- `artifacts/unscored_ips_investigation.docx` — investigation of unscored IPs (gitignored)
+- `artifacts/ti_541_pipeline.html` — pipeline HTML document
+- `artifacts/ti_541_pipeline_overview.docx` — overview document (gitignored)
+- `artifacts/ti_541_walkthrough.docx` — step-by-step walkthrough (gitignored)
+- `artifacts/ti_541_unscored_ips_investigation.docx` — investigation of unscored IPs (gitignored)
 
 **Architecture diagrams** (in `documentation/architecture/`):
 - `audience_intent_graph.png`
@@ -65,10 +65,10 @@ Full pipeline documented. Unscored IP investigation completed.
 ## 6. Questions Answered
 
 - **Q:** How does the IP scoring pipeline work end-to-end?
-  **A:** See `ip_scoring_pipeline.html` and architecture diagrams in `documentation/architecture/`.
+  **A:** See `ti_541_pipeline.html` and architecture diagrams in `documentation/architecture/`.
 
 - **Q:** Why are some IPs unscored?
-  **A:** See `unscored_ips_investigation.docx` on Drive.
+  **A:** See `ti_541_unscored_ips_investigation.docx` on Drive.
 
 ---
 
