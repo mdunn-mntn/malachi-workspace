@@ -112,7 +112,14 @@ These flags tell you how complete the trace is for each VV.
 
 ## Key Insight: Attribution Stage vs Journey Stage
 
-Because IPs stay in all retargeting segments and Stage 1 has 75-80% of budget, **20% of S1-attributed VVs are on IPs that have already reached Stage 3.** The `vv_stage` tells you which campaign got credit; `max_historical_stage` tells you how deep the IP actually is in the funnel.
+Because IPs stay in all retargeting segments and Stage 1 has 75-80% of budget, **20% of S1-attributed VVs are on IPs that have already reached Stage 3.**
+
+| Column | Answers | Example |
+|--------|---------|---------|
+| `vv_stage` | Which campaign's budget paid for this impression? | `1` — S1 Prospecting campaign got credit |
+| `max_historical_stage` | How deep is this IP actually in the funnel? | `3` — IP was already retargeted through S3 |
+
+A VV with `vv_stage=1, max_historical_stage=3` means an S1 campaign got credit, but the IP had already been through the full funnel.
 
 ## Known Limitations
 
