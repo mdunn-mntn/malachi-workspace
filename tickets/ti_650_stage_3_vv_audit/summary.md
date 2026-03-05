@@ -69,7 +69,8 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 ## 5. Files
 
 ### Queries
-- `queries/ti_650_audit_trace_queries.sql` — v3 production queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: advertiser summary)
+- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (ready to PR into SteelHouse/sqlmesh repo)
+- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: advertiser summary)
 
 ### Artifacts
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
@@ -88,7 +89,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ## 6. Open Items
 
-- **Deploy production table:** Silver layer confirmed (Dustin/dplat). SQLMesh recommended. Next: learn SQLMesh, write model, plan hourly materialization strategy, set retention, backfill 60 days
+- **Deploy production table:** SQLMesh model drafted (`queries/ti_650_sqlmesh_model.sql`). Silver layer, `targeting-infrastructure` owner. Next: confirm dataset name with Dustin (e.g. `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`), PR into `SteelHouse/sqlmesh` repo, backfill from 2026-01-01
 - **Non-CTV coverage:** Display VVs have NULL lt_ columns (use impression_log instead of event_log — future enhancement)
 - **Prior VV match refinement:** Currently uses redirect_ip = bid_ip; could match on pv_lt_vast_ip for higher accuracy
 - **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)

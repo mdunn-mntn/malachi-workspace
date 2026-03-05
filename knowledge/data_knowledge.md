@@ -15,6 +15,34 @@ silver.logdata / summarydata / aggregates  (VIEWs)  ← Clean view aliases (quer
 silver.core  (VIEWs)   ← Direct views over bronze.integrationprod.core_* (no SQLMesh)
 ```
 
+### SQLMesh Repo & Model Conventions
+
+**Repo:** `git@github.com:SteelHouse/sqlmesh.git`
+
+**Directory structure mirrors medallion layers:**
+```
+models/
+├── dw-main-bronze/raw/              ← bronze ingestion (hourly incremental)
+├── dw-main-bronze/integrationprod/  ← CDC dimension tables
+├── dw-main-silver/logdata/          ← VIEWs reshaping bronze → silver
+├── dw-main-silver/ber_stg/          ← heavy incremental models (visits, conversions)
+├── dw-main-silver/aggregates/       ← rollups
+└── dw-main-gold/                    ← end-product tables
+```
+
+**Config:** `config.py` (not YAML). Gateways: `bronze`, `silver`, `gold`. Each maps to `dw-main-{layer}` project. State DB: GCP Postgres (`dw-main-bronze:us-central1:data-platform-state`). Dialect: `bigquery`.
+
+**Common INCREMENTAL_BY_TIME_RANGE patterns (from existing models):**
+- `cron '@hourly'` — standard for event-level tables
+- `lookback 48` — reprocess 48 hours for late-arriving data
+- `batch_size 168` (7 days) or `49` — chunks for backfill
+- `forward_only TRUE` — no automatic rebackfill on schema changes
+- `partition_expiration_days` — set in `physical_properties`
+- Date filter: `time >= @start_dt AND time < @end_dt` (TIMESTAMP macros)
+- Hardcoded lookbacks (e.g., 90-day event_log scan) go in the SQL, not the MODEL config
+
+**Registered owners** (`owners.py`): `targeting-infrastructure`, `ber`, `RPLAT`, `bae`, `test`. Each has a Slack channel for audit/failure alerts.
+
 ### SQLMesh Table Tags (Supported vs. Unsupported)
 SQLMesh model definitions can carry `tags` that link a table to a topic in the internal data
 documentation app. A table is considered **supported** if it appears under a topic via a tag;
