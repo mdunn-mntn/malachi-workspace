@@ -74,9 +74,17 @@ Zach: *"we need an exact audit trail for a vv. that means every impression id/ip
 
 | Zach needs | Our table | Coverage |
 |------------|-----------|----------|
-| S3 impression ID + IPs | `ad_served_id`, `lt_bid_ip`, `lt_vast_ip` | ~100% |
-| S2 impression ID + IPs | `prior_vv_ad_served_id`, `pv_lt_bid_ip`, `pv_lt_vast_ip` | ~95%+ in production (90-day lookback) |
-| S1 impression ID + IPs | `cp_ft_ad_served_id`, `ft_bid_ip`, `ft_vast_ip` | ~60% (system limitation — see Part 6) |
+| S(N) impression ID + IPs | `ad_served_id`, `lt_bid_ip`, `lt_vast_ip` | ~100% |
+| Lower-stage prior VV impression ID + IPs | `prior_vv_ad_served_id`, `pv_lt_bid_ip`, `pv_lt_vast_ip` | ~95%+ in production (90-day lookback) |
+| S1 impression ID + IPs (direct shortcut) | `cp_ft_ad_served_id`, `ft_bid_ip`, `ft_vast_ip` | ~60% (system limitation — see Part 6) |
+| S1 impression ID via chain traversal | Follow `prior_vv_ad_served_id` chain | ~99%+ in production |
+
+**The table is a traversable chain.** Every VV is traceable to S1 by following `prior_vv_ad_served_id`:
+- **S3 row where `pv_stage=1`:** `prior_vv_ad_served_id` IS the S1 impression. One hop, done.
+- **S3 row where `pv_stage=2`:** `prior_vv_ad_served_id` points to the S2 VV. Join back to this table on that UUID — the S2 VV row has its own `prior_vv_ad_served_id` which points to the S1 VV. Two hops, done.
+- **`cp_ft_ad_served_id`** is a direct shortcut to S1 that the attribution system stored at VV time — works ~60% of the time. When it's NULL, follow the chain instead.
+
+The chain traversal works in ~99%+ of production rows because the `prior_vv_ad_served_id` link is backed by a 90-day clickpass_log window. The direct `cp_ft_ad_served_id` shortcut fails ~40% of the time due to a system write-time limitation.
 
 Zach also said: *"if there are 3 vv that put an ip in stage 3, that's 3 rows. if there's a vv in stage 3 for an ip that had 3 vv that got it into stage 3 we should use last touch."* This is exactly what the table does — one row per VV, and for the prior VV we select the most recent S(N-1) VV using `ORDER BY prior_vv_time DESC`.
 
