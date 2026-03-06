@@ -1,1692 +1,348 @@
-# How the Stage 3 Verified Visit Pipeline Works
+# VV IP Lineage — Plain English Guide
 
-A ground-up explanation of the MNTN ad-serving pipeline, how IPs move through it, and how we trace a verified visit back to its original bid.
-
----
-
-## Part 1: Definitions
-
-**IP Address** — The network address of the device (or household router) viewing the ad or visiting the site. This is the core identity signal in the pipeline. It can change between events if the user switches networks, uses a VPN, or visits from a different device.
-
-**Verified Visit (VV)** — A page view on an advertiser's website that MNTN can attribute to a prior ad impression. The user saw an MNTN ad, and later visited the advertiser's site. This is the end goal — proof that the ad worked.
-
-**New-to-Brand (NTB)** — A verified visit from a household that hasn't previously purchased from or visited the advertiser. MNTN's NTB targeting delivers ads only to these new households. NTB accuracy at bid time is 99.99%.
-
-**`is_new`** — A boolean flag that says "this visitor is new to the brand." It's determined by a JavaScript tracking pixel in the browser — a client-side check, not a database lookup. This means it's not auditable via SQL.
-
-**`ad_served_id`** — A UUID assigned when an ad is served. This is the single most important identifier in the pipeline. It follows the ad from serve through VAST playback through redirect through page view. It's the thread that ties everything together.
-
-**`impression_id`** — A steelhouse-format ID (e.g., `1770684616749257.3333240021.92.steelhouse`) assigned at the impression/serve level. Used to link impressions to win notifications.
-
-**VAST** — Video Ad Serving Template. An IAB standard for how video ads (especially on CTV/connected TV) are delivered. When a CTV device plays an ad, it fires VAST events: `vast_impression` (ad loaded), `vast_start` (playback began), `vast_firstQuartile`, etc. Non-video ads (display, mobile web) do NOT fire VAST events.
-
-**CTV** — Connected TV. A TV connected to the internet (Roku, Fire TV, Apple TV, smart TVs). CTV ads are video ads delivered via VAST. CTV inventory has near-perfect traceability because VAST events are always fired.
-
-**Cross-device** — When the ad is served on one device (e.g., the living room TV) but the verified visit happens on another device (e.g., a phone or laptop). The IP can change because the devices may be on different networks.
+Everything you need to understand `audit.vv_ip_lineage`, explain it to anyone, and answer every skeptical question about it.
 
 ---
 
-## Part 2: What Stages Actually Are
+## Part 1: What Actually Happens (5 events, 5 tables)
 
-**Stages are a temporal state machine for each IP.** What determines the stage of an impression is the IP's event history at the time it's served:
+When MNTN serves an ad and a user later visits the advertiser's site, five things happen in sequence. Each event writes to a different table.
 
-| IP's history when impression is served | Stage of that impression |
-|---------------------------------------|------------------------|
-| IP is in campaign audience, no prior impressions | Stage 1 |
-| IP had a VAST impression (entered Stage 2 pool), no VV yet | Stage 2 |
-| IP had a verified visit (entered Stage 3 pool) | Stage 3 |
+| # | Event | Table | Key field written |
+|---|-------|-------|-------------------|
+| 1 | **Bid wins** | `win_logs` | `auction_id`, `ip` (the bid IP) |
+| 2 | **Ad is served / displayed** | `cost_impression_log` (CIL) | `ad_served_id`, `ip` (= bid IP) |
+| 3 | **VAST fires** (CTV only) | `event_log` | `ad_served_id`, `bid_ip` (carried from bid), `ip` (CTV playback IP) |
+| 4 | **User visits the site** | `clickpass_log` | `ad_served_id`, `ip` (redirect IP — the site visit IP) |
+| 5 | **Page view recorded** | `ui_visits` | `ad_served_id`, `ip` (visit IP), `impression_ip` (bid IP carried forward) |
 
-### The three campaign stages
+**The critical thread:** `ad_served_id` is the UUID that flows through every table. One ad serve = one `ad_served_id` that appears identically in CIL, event_log, clickpass_log, and ui_visits. This is how we trace one impression end-to-end.
 
-| Stage | What Populates the Segment | Source event | Signal in data |
-|-------|---------------------------|--------------|----------------|
-| Stage 1 | Initial audience (customer data, lookalike, etc.) | Campaign setup | — |
-| Stage 2 | **Stage 1 VAST Impression IPs** (any IP that was served an ad) | `event_log.ip` where Stage 1 impression fired VAST | Green line in MES diagram |
-| Stage 3 | **IPs that had a verified visit** (from any stage's impression) | IP enters Stage 3 when a VV occurs | Green line in MES diagram |
+**Display vs CTV:** Display ads do not fire VAST events. For display, step 3 uses `impression_log` (not `event_log`). The `event_log` columns (`vast_impression`, `bid_ip`) are CTV-only. The query handles this with `COALESCE(event_log value, impression_log value)` — CTV preferred, display as fallback.
 
-**Stage membership is sequential but attribution is not.**
-
-Segment membership follows the funnel: an IP must be in Stage 1 to get an impression, and that impression's VAST IP enters Stage 2. An IP must have had an impression (and thus be in Stage 2) to get a VV, and having a VV puts the IP into Stage 3. But the VV can be attributed to an impression from **any** stage — Stage 1, Stage 2, or Stage 3.
-
-**Stage 2 is populated ONLY from Stage 1 VAST IPs.** Zach (2026-03-03): *"it's not the IPs from the vast impression from stage two or stage three. It's just stage one."*
-
-**Stage 3 = IPs that had a verified visit.** Zach (2026-03-04): *"that is literally the definition of stage 3"* and *"last touch is king in ad tech — more likely to get attribution."* Stage 3 is a retargeting audience — users with demonstrated intent who keep receiving impressions to maintain last-touch attribution credit.
-
-**Two paths to Stage 3:**
-1. **Stage 1 → VV → Stage 3:** A Stage 1 impression produces a VV directly. The IP entered Stage 2 automatically (via VAST), and enters Stage 3 because of the VV. No Stage 2 impression was needed.
-2. **Stage 1 → Stage 2 → VV → Stage 3:** A Stage 1 impression puts the IP in Stage 2. A Stage 2 impression later produces a VV. The IP enters Stage 3.
-
-Once in Stage 3, the retargeting loop begins: Stage 3 impression → VV → Stage 3 impression → VV (each refreshing last-touch attribution).
-
-### IPs accumulate stages, never removed (Zach, meeting 3)
-
-When an IP qualifies for Stage 2 or 3, it is **NOT removed from prior stages**. Frequency capping (14-day window) prevents duplicate serving, not targeting removal. Zach: *"Trying to move it between the stages just adds a level of complexity that gets us nothing."* Each stage has a separate campaign with its own budget: Stage 1 ~75-80%, Stage 2 ~5-10%, Stage 3 = remainder. The **bidder has no concept of stages** — it treats each campaign as an independent entity.
-
-**Key implication — attribution stage ≠ user journey stage.** Because IPs stay in all stages and S1 has 75-80% of budget, a VV can be attributed to a Stage 1 impression even if the IP has already progressed to Stage 3. Data confirms: **20% of Stage 1 VVs are on IPs that have reached Stage 3.** The v3 production table includes `max_historical_stage` to distinguish attribution stage (`vv_stage`) from the deepest funnel penetration for that IP.
-
-### Campaign ID = Stage (one-to-one)
-
-Each campaign maps to exactly one stage. To determine the stage of any impression or VV:
-- Join `campaign_id` → `campaigns` table → `funnel_id` or `campaign_template_id`
-- Objective ID rough mapping: 1 = Stage 1, 5 = Stage 2, 6 = Stage 3
-- Zach recommends `campaign_template_id` over objective_id
-
-### VV attribution = stack model
-
-Zach (meeting 3): *"Verified visits acts on a stack. We put impressions on the stack. When a page view comes in, we check the top of the stack to see what the most recent impression was."* Anything behind the top impression on the stack is not eligible. This is why last-touch always wins.
-
-### Non-CTV inventory
-
-Display ads don't fire VAST events. For display, use `impression_log` instead of `event_log`. Zach: *"you can really just use the impression log for display instead of the event log."* The display equivalent of `vast_start` is "viewed" but IP drift is less likely.
-
-**The green lines (MES diagram) = targeting.** VAST Impression IP feeds the next stage's segment. Bid, Serve, Win, and Vast Start are beige ("Not Really Used Directly For Targeting").
-
-**The blue lines (MES diagram) = attribution.** They point **backward in time** from a VV to the impressions that get credit. Zach (2026-03-03): *"blue lines are vv."* Three attribution paths exist:
-
-| Blue line | What it represents | Field on clickpass_log |
-|-----------|-------------------|----------------------|
-| Stage 1 → VV | First-touch attribution (always Stage 1) | `first_touch_ad_served_id` |
-| Stage 2 → VV | Last-touch was a Stage 2 impression | `ad_served_id` |
-| Stage 3 → VV | Last-touch was a Stage 3 impression (retargeting) | `ad_served_id` |
-
-`first_touch_ad_served_id` always points to a Stage 1 impression (by definition — `funnel_level=1, objective_id=1`). If you're in Stage 2 or 3, you already had a Stage 1 impression before that. The first ad is always from Stage 1.
-
-The diagram shows **two systems simultaneously**: the green side (targeting — how segments get built from VAST IPs) and the blue side (attribution — how the audit traces from the VV back through ad_served_id to the original bid).
-
-### The mutation consequence for Stage 2 targeting
-
-Because Stage 2 is built from Stage 1 VAST IPs, mutation at Stage 1 determines who ends up in Stage 2. If a Stage 1 impression bids on IP_a and VAST fires at IP_b (mutation), it is **IP_b** that gets added to Stage 2 — not IP_a. The segment is keyed on the VAST playback IP, not the bid IP.
-
-When Stage 2 then serves an impression to IP_b and VAST fires at IP_c (another mutation), IP_c is NOT added to Stage 2. Stage 2 was already locked from Stage 1 VAST events. Zach: *"IP_c would not actually show up in the targetable audience of stage two at that point."* IP_c does not enter any targeting pool from that Stage 2 impression — it's simply lost.
-
-### How the segment system works internally
-
-**Important nuance from Zach (2026-03-03):** "there is no SQL being run" in the actual segment store — the data is stored as a key-value structure: for every (ip, datasource) key there is a value list of (category, timestamp). Events are upserts. The Spark job (`membership_updates_proto_generate.py`) generates the protobuf update payloads that get applied to this KV store:
-
-```python
-.groupBy('ip', 'data_source_id').agg(F.max(F.col('epoch')).alias('epoch'), ...)
-```
-
-**Zach's correction (2026-03-03):** "these events add the datasource/category data to the ip state. the segment expression then can evaluate to true. there is a difference between that and directly adding the ip to the segment." The system doesn't "add IPs to segments" directly — it updates IP state, and segment membership is derived. The `ad_served_id` is completely absent from segment membership.
-
-From Zach (Slack, 2026-03-02):
-> "stage 2 is as simple as it sounds: whatever ip we see in the vast_start/vast_impression event, we add it to that segment and target it. nothing else"
+**Where IP mutation happens:** 100% of IP changes happen between step 3 (VAST) and step 4 (clickpass redirect). The bid IP = VAST bid_ip = impression_log IP in 100% of cases. If the IP changed, it changed at the VAST→redirect boundary. Cross-device and VPN switching cause this.
 
 ---
 
-## Part 2.5: How We Link Everything Despite IP Mutation
+## Part 2: The Three Stages
 
-**The core problem:** IP can change at every step. So how do we trace a verified visit back to the original bid?
+Stages are about **which targeting segment served this impression**, determined by the IP's event history at the time of the bid.
 
-**The answer:** We use `ad_served_id` (a UUID), not IP, as the linking thread.
+| Stage | What it means | What puts an IP into this segment |
+|-------|---------------|----------------------------------|
+| **S1** | First time this IP is in-audience for this advertiser | Campaign audience setup (customer data, lookalike, etc.) |
+| **S2** | IP had a prior VAST impression (from an S1 impression) | IP's VAST event in event_log |
+| **S3** | IP had a prior verified visit | IP had a clickpass_log entry (any stage) |
 
-### How ad_served_id works within a single impression
+**Key rules from Zach:**
+- S2 is populated ONLY from Stage 1 VAST IPs — not S2 or S3 impressions. S1 impression → VAST fires → IP enters S2.
+- Stage 3 = "IPs that had a verified visit." That is literally the definition of Stage 3. The VV can be from any stage impression. Any VV puts the IP into S3.
+- IPs are NEVER removed from prior stages. An IP in S3 is also still in S1 and S2. All three campaigns can serve it; frequency capping prevents duplicate delivery.
+- Each stage is a separate campaign with separate budget. S1 = ~75-80% of budget. The bidder has no concept of stages — it just sees three independent campaigns.
+- VV attribution uses the last-touch stack model: *"We put impressions on the stack. When a page view comes in, we check the top of the stack."* The most recent impression gets credit.
 
-When an ad is served, a UUID (`ad_served_id`) is assigned. This UUID follows the ad through every downstream event. Every table records the same UUID for the same ad serve:
-
-```
-                        ad_served_id = "abc-123"
-                               ↓
-  ┌──────────────────────────────────────────────────────────┐
-  │                                                          │
-  │   event_log      bid_ip = 73.162.50.100                  │
-  │   (bid/VAST)     vast_ip = 73.162.50.100                 │
-  │                  ad_served_id = "abc-123"  ───────┐      │
-  │                                                   │      │
-  │   clickpass_log  redirect_ip = 76.39.91.55        │ SAME │
-  │   (VV redirect)  ad_served_id = "abc-123"  ───────┤ UUID │
-  │                                                   │      │
-  │   ui_visits      visit_ip = 76.39.91.55           │      │
-  │   (visit record)  ad_served_id = "abc-123"  ──────┘      │
-  │                                                          │
-  └──────────────────────────────────────────────────────────┘
-```
-
-**IP changed from 73.162.50.100 to 76.39.91.55 — but ad_served_id stayed "abc-123".** That's how we join the tables despite mutation. We join on `ad_served_id`, not on IP.
-
-### How we link between impressions
-
-Between separate impressions (Stage 1 impression → Stage 2 impression), there is NO ad_served_id link. Each impression gets its own UUID. The link between impressions goes through the **targeting system** (MemDB segments) which operates on the **VAST playback IP** (not the bid IP):
-
-```
-Impression 1 (Stage 1):  ad_served_id = "abc-123",  bid_ip = 97.71.251.154,  VAST IP = 73.162.50.100
-    ↓
-    └─ VAST IP 73.162.50.100 added to Stage 2 segment (targeting system)
-        NOTE: it's the VAST IP that feeds the segment, not the bid IP.
-              Verified empirically: when bid_ip ≠ vast_ip, 70.5% of
-              subsequent bids match the VAST IP (3:1 over bid IP).
-    ↓
-Impression 2 (Stage 2):  ad_served_id = "def-456",  bid on 73.162.50.100 from Stage 2 pool
-    ↓
-    └─ VV happens → clickpass_log records:
-         ad_served_id = "def-456"               (last touch — Impression 2)
-         first_touch_ad_served_id = "abc-123"    (first touch — Impression 1)
-```
-
-**The only bridge between impressions that we can trace in SQL is `first_touch_ad_served_id`.** It gives us the first impression's UUID (verified: 99.4% resolve to a real vast_impression in event_log). Everything in between (2nd, 3rd, 4th impressions) is invisible from the clickpass record.
-
-**For Stage 3 retargeting VVs**, we added a `prior_vv` lookup: self-join clickpass_log to find if the last-touch impression's bid_ip had a previous VV. Result: 59.8% of CTV VVs are retargeting VVs (the impression targeted a Stage 3 IP).
-
-### What our audit table captures vs. what it can't
-
-| What | How we trace it | Available? |
-|------|----------------|------------|
-| Last-touch bid IP | `event_log.bid_ip` via `ad_served_id` | Yes — always |
-| Last-touch VAST IP | `event_log.ip` via `ad_served_id` | Yes (CTV only) |
-| Redirect/visit IP | `clickpass_log.ip` / `ui_visits.ip` | Yes — always |
-| First-touch bid IP | `event_log.bid_ip` via `first_touch_ad_served_id` | Yes (when ft not NULL, 60%) |
-| Intermediate impression IPs | No link on clickpass record | **No** — would need Zach's IP-based traversal |
-| Which stage an impression was served in | Not stored on clickpass_log | **No** — would need campaign_id → stage lookup |
+**Attribution stage vs journey stage:** Because S1 has 75-80% of budget, a VV can be attributed to an S1 impression even if the IP has already reached S3. The `vv_stage` column records attribution stage, not the IP's deepest stage. 20% of S1-attributed VVs are on IPs that have already reached S3.
 
 ---
 
-## Part 2.6: Complete IP Journey Examples
+## Part 3: What the Audit Table Is
 
-### Scale context
+**One row per verified visit. All advertisers. All stages.**
 
-Zach's example from the 2026-03-03 review meeting:
+The table provides the complete IP and impression ID trace for every VV:
+- The impression that triggered this VV (last touch, Stage N)
+- The prior VV that advanced this IP into the current stage (e.g., the S2 VV that put the IP into S3 targeting)
+- The original first-touch S1 impression that started this IP's funnel
 
-- Stage 1 audience: **8.5 million IPs** (from customer data, lookalike, etc.)
-- Of those, ~10,000 get a Stage 1 impression served
-- Those 10,000 are now in the **Stage 2 targeting audience** (via their VAST playback IPs)
-- Of those 10,000, ~2,000 get a Stage 2 impression served
-- VVs from any of those impressions put the IP into Stage 3
+For a Stage 3 VV, this means three impression IDs and their associated IPs:
 
-### Journey A: Stage 1 → VV (simplest path, no mutation)
+| Slot | Impression ID column | What it is |
+|------|---------------------|------------|
+| **This VV** | `ad_served_id` | The S3 impression that triggered this VV |
+| **Prior VV** | `prior_vv_ad_served_id` | The S2 VV that advanced this IP into S3 targeting (last-touch rule) |
+| **First touch** | `cp_ft_ad_served_id` | The S1 impression that started this IP's funnel |
 
-One impression, one visit, no IP change. The VV is attributed directly to the Stage 1 impression.
+Each impression slot also has its IPs in columns (bid IP, VAST IP, redirect IP, visit IP).
 
-```
-STAGE 1 IMPRESSION  (Day 1)
-  ad_served_id = "aaa-111"
-  Bid IP            = 73.162.50.100   ← event_log.bid_ip
-  Vast Impression   = 73.162.50.100   ← event_log.ip
-  ↓
-  GREEN LINE: 73.162.50.100 enters Stage 2 pool
+**Does this answer Zach's exact audit request?**
 
-VERIFIED VISIT  (Day 3)
-  User visits site from laptop, same home Wi-Fi.
-  redirect_ip       = 73.162.50.100   ← clickpass_log.ip
-  ↓
-  IP enters Stage 3 (had a VV)
+Zach: *"we need an exact audit trail for a vv. that means every impression id/ip for each stage that lead to that vv."*
 
-  clickpass_log records:
-    ad_served_id             = "aaa-111"   (last touch = Stage 1 impression)
-    first_touch_ad_served_id = "aaa-111"   (same — only one impression)
+| Zach needs | Our table | Coverage |
+|------------|-----------|----------|
+| S3 impression ID + IPs | `ad_served_id`, `lt_bid_ip`, `lt_vast_ip` | ~100% |
+| S2 impression ID + IPs | `prior_vv_ad_served_id`, `pv_lt_bid_ip`, `pv_lt_vast_ip` | ~95%+ in production (90-day lookback) |
+| S1 impression ID + IPs | `cp_ft_ad_served_id`, `ft_bid_ip`, `ft_vast_ip` | ~60% (system limitation — see Part 6) |
 
-  AUDIT TABLE ROW:
-    lt_bid_ip = 73.162.50.100    ft_bid_ip = 73.162.50.100
-    lt_vast_ip = 73.162.50.100   redirect_ip = 73.162.50.100
-    bid_eq_vast = true | vast_eq_redirect = true | ip_mutated = false
-    any_mutation = false | lt_bid_eq_ft_bid = true
-    is_ctv = true | is_cross_device = false
-```
-
-**Linking:** One `ad_served_id` ("aaa-111") threads through event_log → clickpass_log → ui_visits. No mutation, no complexity.
-
-
-### Journey B: Stage 1 → Stage 2 → VV (two impressions, mutation at redirect)
-
-Two impressions before the VV. The first impression doesn't produce a VV. The second impression (Stage 2) does.
-
-```
-STAGE 1 IMPRESSION  (Day 1)
-  ad_served_id = "aaa-111"
-  Bid IP            = 172.58.44.200   ← event_log.bid_ip
-  Vast Impression   = 172.58.44.200   ← event_log.ip
-  ↓
-  GREEN LINE: 172.58.44.200 enters Stage 2 pool
-  No VV follows. User saw the ad but didn't visit the site.
-
-STAGE 2 IMPRESSION  (Day 15)
-  ad_served_id = "bbb-222"           ← NEW UUID, different impression
-  Bid IP            = 172.58.44.200   ← event_log.bid_ip (same household IP)
-  Vast Impression   = 172.58.44.200   ← event_log.ip
-  ↓
-  User watches ad on CTV. Next day, visits site on phone (cellular).
-
-VERIFIED VISIT  (Day 16)
-  redirect_ip       = 76.39.91.55    ← clickpass_log.ip (MUTATION — cellular)
-  ↓
-  IP enters Stage 3
-
-  clickpass_log records:
-    ad_served_id             = "bbb-222"   (last touch = Stage 2 impression)
-    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1 impression)
-
-  AUDIT TABLE ROW:
-    lt_bid_ip = 172.58.44.200    ft_bid_ip = 172.58.44.200
-    lt_vast_ip = 172.58.44.200   redirect_ip = 76.39.91.55  ← MUTATION
-    bid_eq_vast = true | vast_eq_redirect = false | ip_mutated = true
-    any_mutation = true | lt_bid_eq_ft_bid = true
-    is_ctv = true | is_cross_device = true
-```
-
-**Linking:** Two separate `ad_served_id`s ("aaa-111" and "bbb-222"). The clickpass record stores both: `ad_served_id` = last touch, `first_touch_ad_served_id` = first touch. We join event_log TWICE — once on each UUID — to get both impressions' IPs. The link between the two impressions went through the targeting system (MemDB), not through ad_served_id.
-
-
-### Journey C: Stage 1 → multiple Stage 2 impressions → VV (many ads before first visit)
-
-Three Stage 2 impressions before the VV. Only the first and last are traceable.
-
-```
-STAGE 1 IMPRESSION  (Day 1)
-  ad_served_id = "aaa-111"
-  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
-  ↓
-  GREEN LINE: enters Stage 2 pool. No VV.
-
-STAGE 2 IMPRESSION #1  (Day 8)
-  ad_served_id = "bbb-222"
-  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
-  No VV.
-
-STAGE 2 IMPRESSION #2  (Day 15)
-  ad_served_id = "ccc-333"
-  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
-  No VV.
-
-STAGE 2 IMPRESSION #3  (Day 22)
-  ad_served_id = "ddd-444"
-  Bid IP = 172.58.44.200 | Vast IP = 172.58.44.200
-  ↓
-  User finally visits the site.
-
-VERIFIED VISIT  (Day 23)
-  redirect_ip = 172.58.44.200   (no mutation — same Wi-Fi)
-
-  clickpass_log records:
-    ad_served_id             = "ddd-444"   (last touch = Stage 2 impression #3)
-    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1 impression)
-
-  AUDIT TABLE ROW:
-    lt_bid_ip = 172.58.44.200    ft_bid_ip = 172.58.44.200
-    redirect_ip = 172.58.44.200
-    bid_eq_vast = true | ip_mutated = false | any_mutation = false
-    lt_bid_eq_ft_bid = true
-```
-
-**What's invisible:** Impressions "bbb-222" and "ccc-333" (Stage 2 #1 and #2) are NOT traceable from the clickpass record. We only see the first touch ("aaa-111") and the last touch ("ddd-444"). The intermediate impressions exist in event_log but have no link from this VV. This is a known limitation — we trace endpoints, not the full chain.
-
-
-### Journey D: Stage 1 → Stage 2 → VV → Stage 3 retargeting → VV (full cycle with bid IP mutation)
-
-The complete path including retargeting. The bid IP changes between impressions.
-
-```
-STAGE 1 IMPRESSION  (Day 1)
-  ad_served_id = "aaa-111"
-  Bid IP = 172.59.190.73   ← T-Mobile cellular
-  Vast IP = 172.59.190.73
-  ↓
-  GREEN LINE: enters Stage 2 pool. No VV.
-
-STAGE 2 IMPRESSION  (Day 12)
-  ad_served_id = "bbb-222"
-  Bid IP = 172.56.16.39    ← DIFFERENT T-Mobile IP (cellular reassignment)
-  Vast IP = 172.56.16.39
-  ↓
-  User visits site on home broadband.
-
-FIRST VERIFIED VISIT  (Day 13)
-  redirect_ip = 73.168.42.52    ← home broadband (MUTATION from cellular)
-  ↓
-  IP enters Stage 3
-
-  clickpass_log records:
-    ad_served_id             = "bbb-222"   (last touch = Stage 2)
-    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1)
-
-  AUDIT TABLE ROW (VV #1):
-    lt_bid_ip = 172.56.16.39     ft_bid_ip = 172.59.190.73
-    redirect_ip = 73.168.42.52
-    ip_mutated = true | any_mutation = true
-    lt_bid_eq_ft_bid = false  ← BID IP CHANGED between impressions
-    is_cross_device = true
-
-  ─── NOW IN STAGE 3 — RETARGETING BEGINS ───
-
-STAGE 3 IMPRESSION  (Day 20)
-  ad_served_id = "eee-555"
-  Bid IP = 73.168.42.52    ← now targeting the home broadband IP
-  Vast IP = 73.168.42.52
-  ↓
-  User visits site again, same network this time.
-
-SECOND VERIFIED VISIT  (Day 21)
-  redirect_ip = 73.168.42.52    (no mutation — same network)
-
-  clickpass_log records:
-    ad_served_id             = "eee-555"   (last touch = Stage 3 impression)
-    first_touch_ad_served_id = "aaa-111"   (first touch = STILL Stage 1)
-
-  AUDIT TABLE ROW (VV #2):
-    lt_bid_ip = 73.168.42.52     ft_bid_ip = 172.59.190.73
-    redirect_ip = 73.168.42.52
-    ip_mutated = false | any_mutation = false
-    lt_bid_eq_ft_bid = false  ← ft bid IP is the original T-Mobile IP
-    is_cross_device = false
-```
-
-**Key observations:**
-1. **Two VVs = two rows in the audit table.** Each VV gets its own row. VV #1 is attributed to the Stage 2 impression. VV #2 is attributed to the Stage 3 impression.
-2. **`first_touch_ad_served_id` is the same on both VVs** — it always points back to the Stage 1 impression ("aaa-111"). This never changes regardless of how many VVs follow.
-3. **`lt_bid_eq_ft_bid = false`** on both VVs because the bid IP changed between the Stage 1 impression (T-Mobile 172.59.x) and the later impressions. This is the 14.28% of multi-impression VVs where bid IPs differ.
-4. **The Stage 3 impression bid IP (73.168.42.52)** is the home broadband IP — because the targeting system picked up the VV IP, not the original Stage 1 bid IP. This is how mutation propagates through stages.
-
-
-### Journey E: Stage 1 → VV → multiple Stage 3 impressions → VV (extended retargeting)
-
-Multiple retargeting impressions before the second VV.
-
-```
-STAGE 1 IMPRESSION  (Day 1)
-  ad_served_id = "aaa-111"
-  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
-
-FIRST VERIFIED VISIT  (Day 3)
-  redirect_ip = 73.162.50.100 (no mutation)
-  ad_served_id = "aaa-111" | first_touch = "aaa-111"
-  ↓
-  IP enters Stage 3
-
-  ─── RETARGETING ───
-
-STAGE 3 IMPRESSION #1  (Day 10)
-  ad_served_id = "fff-666"
-  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
-  No VV.
-
-STAGE 3 IMPRESSION #2  (Day 17)
-  ad_served_id = "ggg-777"
-  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
-  No VV.
-
-STAGE 3 IMPRESSION #3  (Day 24)
-  ad_served_id = "hhh-888"
-  Bid IP = 73.162.50.100 | Vast IP = 73.162.50.100
-  ↓
-  User visits site again.
-
-SECOND VERIFIED VISIT  (Day 25)
-  redirect_ip = 73.162.50.100 (no mutation)
-
-  clickpass_log records:
-    ad_served_id             = "hhh-888"   (last touch = Stage 3 impression #3)
-    first_touch_ad_served_id = "aaa-111"   (first touch = Stage 1, 24 days ago)
-
-  AUDIT TABLE ROW (VV #2):
-    lt_bid_ip = 73.162.50.100    ft_bid_ip = 73.162.50.100
-    redirect_ip = 73.162.50.100
-    ip_mutated = false | lt_bid_eq_ft_bid = true
-```
-
-**What's invisible:** Stage 3 impressions #1 and #2 ("fff-666" and "ggg-777") are not traceable from VV #2's clickpass record. Only the last touch ("hhh-888") and first touch ("aaa-111") are linked. The user saw 4 total impressions, but the VV only records the first and last.
-
-
-### Summary: all journey types
-
-| Journey | Path | Impressions | VV attributed to | first_touch | Mutation? |
-|---------|------|-------------|-----------------|-------------|-----------|
-| A | Stage 1 → VV | 1 | Stage 1 | = ad_served_id | No |
-| B | Stage 1 → Stage 2 → VV | 2 | Stage 2 (last touch) | Stage 1 | Yes (redirect) |
-| C | Stage 1 → 3× Stage 2 → VV | 4 | Stage 2 #3 (last touch) | Stage 1 | No |
-| D | Stage 1 → Stage 2 → VV → Stage 3 → VV | 3 (2 VVs) | VV1: Stage 2, VV2: Stage 3 | Stage 1 (both) | Yes (bid IP + redirect) |
-| E | Stage 1 → VV → 3× Stage 3 → VV | 4 (2 VVs) | VV1: Stage 1, VV2: Stage 3 #3 | Stage 1 (both) | No |
-
-**The constant:** `first_touch_ad_served_id` always points to Stage 1. `ad_served_id` always points to the most recent impression before the VV. Everything in between is invisible from the clickpass record.
-
-
-### What mutation at Stage 1 means for Stage 2 targeting
-
-```
-Stage 1 impression: Segment IP = 1.1.1.1, Bid IP = 1.1.1.1
-  VAST fires at:    1.1.1.4  (mutation — VAST IP differs from bid IP)
-  → 1.1.1.4 added to Stage 2 targeting (the VAST IP, not the bid IP)
-
-Stage 2 impression: MNTN targets 1.1.1.4
-  Bid fires at 1.1.1.4, VAST fires at:  1.1.1.8  (another mutation)
-  → 1.1.1.8 does NOT go back into Stage 2 (Stage 2 is locked from Stage 1 VAST)
-  → 1.1.1.4 stays in Stage 2
-
-If Stage 2 VAST had fired at the same IP as Stage 1 bid (1.1.1.1), the Stage 3 segment
-would eventually contain 1.1.1.1 again. In practice, mutation means Stage 3 often contains
-IPs that differ from what was originally bid at Stage 1.
-```
+Zach also said: *"if there are 3 vv that put an ip in stage 3, that's 3 rows. if there's a vv in stage 3 for an ip that had 3 vv that got it into stage 3 we should use last touch."* This is exactly what the table does — one row per VV, and for the prior VV we select the most recent S(N-1) VV using `ORDER BY prior_vv_time DESC`.
 
 ---
 
-## Part 3: Two Separate Systems — Targeting vs. Attribution
+## Part 4: Reading a Single Row
 
-This is the most important distinction in the pipeline, and the source of most confusion.
+**Concrete example: a Stage 3 VV**
 
-### System 1: Targeting (segment membership)
+```
+ad_served_id           = "003a01cf-5e87-40f6-..."    # S3 impression UUID
+vv_stage               = 3
+vv_time                = 2026-02-04 04:58:54
 
-**Question it answers:** "Which IPs should we bid on next?"
+lt_bid_ip              = 172.59.192.138    # IP at auction
+lt_vast_ip             = 172.59.192.138    # IP at CTV playback (same — no mutation here)
+redirect_ip            = 172.59.192.138    # IP at site visit redirect (same — no mutation)
+visit_ip               = 172.59.192.138    # IP at page view (same)
+impression_ip          = 172.59.192.138    # IP the visit was attributed to (same)
 
-This is the membership update system described above. It reads logs, groups by IP, and populates targeting segments. It operates at the **IP level** — no `ad_served_id`, no impression-level tracking. It just knows "this IP has had these types of events."
+prior_vv_ad_served_id  = "a4074373-..."    # The S2 VV's impression UUID
+pv_stage               = 2                # Confirmed: this IS the S2 VV (vv_stage-1)
+pv_redirect_ip         = 172.59.192.138    # Prior VV's redirect IP (how we matched it)
+pv_lt_bid_ip           = 172.59.192.138    # Prior VV's impression bid IP (audit lookup)
+pv_lt_vast_ip          = 172.59.192.138    # Prior VV's VAST IP (audit lookup)
+prior_vv_time          = 2026-01-25 11:32:00
 
-### System 2: Attribution (VV trace)
+cp_ft_ad_served_id     = NULL              # System did not record first touch (40% of VVs)
+ft_bid_ip              = NULL              # NULL because cp_ft_ad_served_id is NULL
+ft_vast_ip             = NULL              # NULL because cp_ft_ad_served_id is NULL
+```
 
-**Question it answers:** "This verified visit happened — which ad impressions get credit?"
-
-**Clarification (confirmed):** Zach said "visits will include clicks if that matters." He then clarified on the call: "The click pass log is the log of verified visits" and "we don't put clicks into the stage three." The clickpass_log schema has `click_elapsed`, `click_url`, and `destination_click_url` as columns on every row — click metadata is embedded in the visit record. `ui_visits` has a `click` boolean column that distinguishes click visits from non-click visits. `ui_visits` is the superset that includes display clicks; `clickpass_log` does not include clicks. **Zach also confirmed (2026-03-03):** clickpass_log contains ALL verified visits — CTV and display — not just CTV. "VV can happen for display as well and would be here." Adding clicks to Stage 3 is a future improvement Zach identified.
-
-When a verified visit occurs, the system records it in `clickpass_log` with two key fields:
-
-| Field | What it stores | What it means |
-|-------|---------------|--------------|
-| `ad_served_id` | UUID of the **most recent** ad serve before the visit | Last-touch attribution — always the newest impression (confirmed: 0 exceptions in 38,360 rows) |
-| `first_touch_ad_served_id` | UUID of a **Stage 1 CTV impression** for this IP in the same campaign group | First-touch attribution — may be NULL for 40% of VVs |
-
-**What `first_touch_ad_served_id` actually means (Sharad, 2026-03-03 & 2026-03-04):** It is specifically a CTV impression where `funnel_level = 1` and `objective_id = 1`, from the **same campaign group** as the last-touch impression. The first_touch lookup searches on **both bid_ip AND ip of the attributable impression** (Sharad: *"the search for first touch is done using the Bid IP + IP of the attributable impression"*). VV attribution itself (which impression gets credit) uses page view IP + guid + other identifiers — not purely IP-based. **Open question:** does "both" mean OR (either match = found) or AND (both required)?
-
-These are the **only** impression-level links stored on the VV record. Everything in between (the 2nd, 3rd, 4th impressions if they exist) is not individually traceable from the clickpass record.
-
-### Attribution coverage breakdown (advertiser 37775, Feb 4–10, n = 219,613 VVs)
-
-| Scenario | Count | % | What it means |
-|----------|-------|---|---------------|
-| Same ID (ad_served_id = first_touch) | 93,297 | 42.48% | Single-impression attribution — the VV's impression was also the first Stage 1 touch |
-| Different IDs | 38,360 | 17.47% | Multi-impression attribution — distinct Stage 1 first-touch found |
-| `first_touch_ad_served_id` is NULL | 87,956 | 40.05% | No matching Stage 1 impression found for this IP — see below |
-
-**The 40% NULL rate is a targeting issue, not a design choice (Sharad, 2026-03-03 & 2026-03-04):** Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The lookup searches on both bid_ip and impression ip of the attributable Stage 3 impression. If IP mutation between Stage 1 and Stage 3 caused both IPs to differ from Stage 1, the lookup fails. **How much mutation contributes depends on whether the search is OR (either IP matching) or AND (both required)** — this is an open question for Sharad. Regardless, inter-stage IP mutation is a likely contributor to the 40% NULL rate, connecting the mutation finding to a concrete downstream data quality impact.
-
-**Confirmed (Zach, 2026-03-03):** Populated at write time — no batch backfill. NULLs are permanent.
-
-### How the audit uses both
-
-Our audit works entirely within the **attribution system**. We start from `clickpass_log` (a VV happened) and trace backward using the `ad_served_id` values to find the IPs at each point. We don't interact with the targeting/segment system at all — we just use the log tables that both systems write to.
+How to read it: This S3 VV was triggered by impression `003a01cf` on 2026-02-04. The IP `172.59.192.138` was already in S3 targeting because it had the prior S2 VV (`a4074373`) on 2026-01-25. The original S1 first touch is unknown — system did not record it.
 
 ---
 
-## Part 4: The Internal Pipeline (What We're Tracing)
+## Part 5: Every Column Explained
 
-For any single ad serve (identified by one `ad_served_id`), these events happen in order:
+### Identity group — from `clickpass_log` (anchor)
 
-```
-1. BID        The auction happens. MNTN bids on this IP.
-      ↓
-2. SERVE      MNTN wins. The ad creative is served to the device.
-      ↓
-3. WIN        The win notification is recorded.
-      ↓
-4. VAST IMP   The video ad loads on the CTV device. VAST fires.
-      ↓
-5. VAST START The video begins playing.
-      ↓
-      ... time passes (seconds to days) ...
-      ↓
-6. REDIRECT   The user visits the advertiser's site.
-               This is the "clickpass" — the verified visit redirect.
-      ↓
-7. PAGE VIEW  The advertiser's page loads. The visit is recorded.
-```
+**`ad_served_id`**
+- Source: `clickpass_log.ad_served_id`
+- What it is: The UUID of the impression that triggered this VV. The same UUID appears in `event_log`, `impression_log`, `cost_impression_log`, and `ui_visits`.
+- Skeptical Q: *"How do I know this is the impression ID and not just an arbitrary VV ID?"* Look at event_log WHERE `ad_served_id = this value` AND `event_type_raw = 'vast_impression'` — you will find the exact impression that triggered this VV.
+- Skeptical Q: *"Is this the primary key?"* Yes. `clickpass_log` is QUALIFY deduped: one row per `ad_served_id`, most recent by time.
 
-Each step records an IP address. The IP *should* be the same throughout, but it can change — especially between step 5 (VAST playback on the TV) and step 6 (redirect on a phone/laptop), because those might be different devices on different networks.
+**`advertiser_id`**
+- Source: `clickpass_log.advertiser_id`
 
-**Steps 1–5 share one `ad_served_id`.** Step 6 (clickpass) references that same `ad_served_id`, linking the VV to its originating impression. Step 7 (ui_visits) also carries the `ad_served_id`.
+**`campaign_id`**
+- Source: `clickpass_log.campaign_id`
+- What it is: The campaign that received last-touch attribution for this VV.
 
-### Step-by-step: table, IP column, and join key
+**`vv_stage`**
+- Source: `campaigns.funnel_level` joined on `campaign_id`
+- What it is: The stage of the campaign that served the impression. 1 = S1, 2 = S2, 3 = S3.
+- Skeptical Q: *"How is stage determined?"* Every campaign has `funnel_level` in `bronze.integrationprod.campaigns`. This is set at campaign creation. It does not change.
+- Skeptical Q: *"Why is this in cp_dedup and not joined in the final SELECT?"* We moved it into `cp_dedup` so it's available for the prior VV join condition (`pv.pv_stage = cp.vv_stage - 1`), ensuring we always match the correct prior VV stage.
 
-| Step | Event | Table | IP Column | What IP It Is | Join to Next Step |
-|------|-------|-------|-----------|---------------|-------------------|
-| 1 | BID | `win_logs` | `ip`, `device_ip` | The IP MNTN bid on | `auction_id` = CIL's `impression_id` |
-| 2 | SERVE | `cost_impression_log` (CIL) | `ip` | Serve-time IP (= bid IP at 100%) | `ad_served_id` (shared with EL, CP) |
-| 3 | WIN | `win_logs` | (same row as BID) | (same as BID) | (same as BID) |
-| 4 | VAST IMP | `event_log` | `bid_ip`, `ip` | `bid_ip` = bid IP carried forward (= win_logs.ip at 100%). `ip` = CTV playback IP. | `ad_served_id` (shared with CP) |
-| 5 | VAST START | `event_log` | (same `ad_served_id`, different `event_type_raw` row) | Same IPs as step 4 | — |
-| 6 | REDIRECT | `clickpass_log` | `ip` | User's IP when visiting the site | `ad_served_id` = `CAST(ui_visits.ad_served_id AS STRING)` |
-| 7 | PAGE VIEW | `ui_visits` | `ip`, `impression_ip` | `ip` = visit IP (= redirect IP at 99.93%). `impression_ip` = bid IP carried forward from impression_log. | (terminal) |
-
-### Why steps 1–3 collapse into one IP
-
-`win_logs.ip`, `cost_impression_log.ip`, and `event_log.bid_ip` all record the same value — the bid IP. Validated at 100% across 30,502 rows with zero mismatches. Three tables, one IP. CIL and win_logs are redundant for the audit trace.
-
-### The 3 distinct IP checkpoints
-
-```
-bid_ip (steps 1-4)  →  vast_playback_ip (step 4-5)  →  redirect_ip (step 6)  ≈  visit_ip (step 7)
-event_log.bid_ip       event_log.ip                    clickpass_log.ip          ui_visits.ip
-     ↑                      ↑                               ↑                       ↑
- = win/serve IP         CTV device IP                  user's browser IP       same session (99.93%)
- (always equal)         (≈96.5% = bid_ip)              (MUTATION POINT)
-```
-
-The only meaningful IP change is at the **VAST → redirect** boundary (steps 5→6). This is where cross-device visits, VPN switches, and network changes show up. Everything before that is the same IP; everything after is the same IP.
+**`vv_time`**
+- Source: `clickpass_log.time`
 
 ---
 
-## Part 5: How the Audit Traces a VV Back to Its Bid IP
+### Last-touch impression IPs — from `event_log` (CTV) / `impression_log` (display) / `clickpass_log` / `ui_visits`
 
-### What `clickpass_log` gives us
+These are the IPs at each hop for the impression that directly triggered THIS VV.
 
-Each VV record has two attribution pointers:
+**`lt_bid_ip`**
+- Source: `event_log.bid_ip` (CTV, preferred) or `impression_log.bid_ip` (display, fallback)
+- What it is: The IP that MNTN bid on at auction. This is the household/device IP as known to the DSP at bid time.
+- How joined: `el_all.ad_served_id = cp.ad_served_id`, rn=1 (first VAST event)
+- Skeptical Q: *"What if there's no event_log row?"* Display ads don't fire VAST events. In that case `event_log` returns NULL and `COALESCE(el.bid_ip, il.bid_ip)` falls back to `impression_log.bid_ip`.
 
-| Field | Points to | What we get by joining to event_log |
-|-------|----------|-------------------------------------|
-| `ad_served_id` | The ad serve associated with this VV | bid_ip and vast_playback_ip for that impression |
-| `first_touch_ad_served_id` | The very first impression | bid_ip and vast_playback_ip for the first touch |
+**`lt_vast_ip`**
+- Source: `event_log.ip` (CTV) or `impression_log.ip` (display)
+- What it is: The IP at the time the ad played (VAST impression). For CTV this is the TV's IP at playback. For display this is the device IP at impression render.
+- Note: This is where IP mutation is measured. If `lt_vast_ip ≠ redirect_ip`, the IP changed between ad playback and site visit.
 
-**There are no fields for intermediate impressions.** If the user saw 5 ads before visiting, we can trace the first one and the VV-associated one. The 2nd, 3rd, and 4th are invisible from the clickpass record.
+**`redirect_ip`**
+- Source: `clickpass_log.ip`
+- What it is: The IP at the clickpass redirect — when the user's site visit was intercepted by the MNTN tracking pixel. This is what the site visit server recorded.
 
-### RESOLVED: `ad_served_id` = the most recent impression before the visit
+**`visit_ip`**
+- Source: `ui_visits.ip`
+- What it is: The IP recorded by the page view pixel on the advertiser's site.
+- Note: Validated as 99.93% equal to `redirect_ip`. Near-identical because both are recorded during the same site visit session.
 
-Empirically confirmed on 38,360 VVs where `ad_served_id != first_touch_ad_served_id` (advertiser 37775, Feb 4–10):
-
-| Pattern | Count | % |
-|---------|-------|---|
-| `ad_served_id` VAST time is MORE RECENT than `first_touch` | 35,198 | 91.76% |
-| `first_touch` has no VAST event (NULL) — can't compare | 3,149 | 8.21% |
-| `ad_served_id` has no VAST event (NULL) — can't compare | 12 | 0.03% |
-| `ad_served_id` VAST time is OLDER than `first_touch` | 0 | **0%** |
-
-**Zero exceptions.** When both timestamps are available, `ad_served_id` is always the more recent impression. The 8.21% with NULL first-touch VAST times are cases where the first-touch impression didn't fire a VAST event (non-CTV inventory).
-
-Time gaps between first touch and VV-associated impression range from 2 hours to 815 hours (~34 days). This confirms the 30-day attribution window.
-
-### The simplified trace
-
-```
-clickpass_log  ──ad_served_id──▶  event_log
-      │                              │
-  redirect_ip                   bid_ip (= win IP at 100%)
-  visit_ip (via ui_visits)      vast_playback_ip (= VAST IP)
-```
-
-Join `clickpass_log` to `event_log` on `ad_served_id`. The event_log row gives us:
-- `bid_ip` — the IP at auction time for that specific ad serve
-- `ip` — the IP during VAST playback
-
-The clickpass row gives us:
-- `ip` — the IP at redirect time (when the user visited the site)
-
-Two tables, one join, full IP lineage for one ad serve.
-
-### First-touch trace
-
-Same mechanics, different join key:
-
-```
-clickpass_log  ──first_touch_ad_served_id──▶  event_log
-```
-
-This gives us the bid_ip and vast_playback_ip for the very first impression, which may be days or weeks earlier and may have a completely different IP.
+**`impression_ip`**
+- Source: `ui_visits.impression_ip`
+- What it is: The IP that `ui_visits` attributed the visit to — carried forward from `impression_log` at attribution time.
 
 ---
 
-## Part 6: Table Summary
+### First-touch impression — from `clickpass_log` (ID) and `event_log`/`impression_log` (IPs)
 
-| Table | BQ Silver Path | Key Columns | What It Records |
-|-------|---------------|-------------|-----------------|
-| `clickpass_log` | `dw-main-silver.logdata.clickpass_log` | `ad_served_id`, `first_touch_ad_served_id`, `ip`, `is_new`, `is_cross_device`, `campaign_id`, `advertiser_id`, `time` | One row per verified visit redirect. **Starting point of every trace.** |
-| `event_log` | `dw-main-silver.logdata.event_log` | `ad_served_id`, `bid_ip`, `ip`, `event_type_raw`, `time` | VAST playback events. Has bid IP AND playback IP. Filter: `event_type_raw = 'vast_impression'`. Dedup: first row per `ad_served_id` by time. |
-| `ui_visits` | `dw-main-silver.summarydata.ui_visits` | `ad_served_id` (needs CAST), `ip`, `is_new`, `impression_ip`, `from_verified_impression`, `time` | Page view records. Superset of clickpass (includes display clicks). Filter: `from_verified_impression = true`. |
-| `cost_impression_log` | `dw-main-silver.logdata.cost_impression_log` | `ad_served_id`, `impression_id`, `ip` | Ad serve/impression records. Bridge to win_logs via `impression_id`. Optional — not needed for simplified trace. |
-| `win_logs` | `dw-main-silver.logdata.win_logs` | `auction_id`, `ip`, `device_ip` | Auction win records. Join via CIL's `impression_id = auction_id`. Optional — independent validation only. |
-| `conversion_log` | `dw-main-silver.logdata.conversion_log` | `guid`, `ip`, `original_ip`, `time` | Raw conversion events. Join via `clickpass.page_view_guid = guid`. NTB validation only — not part of IP trace. |
+**Why there are TWO types of first-touch columns:**
 
-### Key IP columns across tables
+The `cp_ft_` prefix means it comes directly from `clickpass_log.first_touch_ad_served_id` — the value the MNTN attribution SYSTEM stored when the VV was written. This is the system's recorded answer.
 
-| Column | Table | What IP it captures |
-|--------|-------|-------------------|
-| `bid_ip` | event_log | IP at bid/auction time for that ad serve |
-| `ip` | event_log | IP during VAST playback (CTV device IP) |
-| `ip` | clickpass_log | IP at redirect time (visit IP) |
-| `ip` | ui_visits | IP at page load time (= clickpass IP at 99.93%) |
-| `impression_ip` | ui_visits | Bid IP carried forward from impression_log (independent source; matches event_log.bid_ip at 95.8–100% depending on advertiser) |
-| `ip` | cost_impression_log | IP at serve time (= bid IP at 100%) |
-| `ip` | win_logs | IP at win time (= bid IP at 100%) |
-| `original_ip` | event_log | Pre-iCloud Private Relay IP (raw connection IP) |
+The `ft_` columns (without `cp_` prefix) are what we get by JOINing `event_log`/`impression_log` on that ID — our independent audit-trail lookup. They should agree; when `cp_ft_ad_served_id` is not NULL, the `ft_` columns look up the impression data FOR that ID.
 
-### Key join paths
+These are not two competing answers to "what is the first touch" — they are the same impression viewed from two angles: the system's label vs. our raw log lookup.
 
-| From → To | Join Key | Notes |
-|-----------|---------|-------|
-| clickpass → event_log | `cp.ad_served_id = el.ad_served_id` | VV-associated impression trace |
-| clickpass → event_log | `cp.first_touch_ad_served_id = el.ad_served_id` | First-touch impression trace |
-| clickpass → ui_visits | `cp.ad_served_id = CAST(v.ad_served_id AS STRING)` | Visit enrichment. Filter: `from_verified_impression = true` |
-| clickpass → CIL | `cp.ad_served_id = cil.ad_served_id` | Optional bridge to win_logs |
-| CIL → win_logs | `cil.impression_id = w.auction_id` | Steelhouse format IDs |
-| clickpass → conversion_log | `cp.page_view_guid = cl.guid` | NTB validation only |
+**`cp_ft_ad_served_id`**
+- Source: `clickpass_log.first_touch_ad_served_id`
+- What it is: The impression UUID the attribution system recorded as "the first time this IP was ever served an ad for this advertiser." Written when the VV fires. Cannot be updated retroactively.
+- Skeptical Q: *"How does the system know this?"* At VV time, the attribution stack contains all prior impressions for this IP. The system writes the bottom of the stack (first impression) into `first_touch_ad_served_id`.
+- Skeptical Q: *"Why is it NULL 40% of the time?"* The system only writes it when the stack has a clear first touch. High-traffic IPs, IPs that had impressions before the field was introduced, and IPs with attribution stack resets all result in NULL. This is written at VV time and cannot be backfilled. It is a system limitation, not a query bug.
 
----
+**`ft_campaign_id`**
+- Source: `event_log.campaign_id` (CTV) or `impression_log.campaign_id` (display), retrieved by JOINing on `cp_ft_ad_served_id`
 
-## Part 7: The Tables — Detailed
+**`ft_stage`**
+- Source: `campaigns.funnel_level`, joined on `ft_campaign_id`
+- What it is: Should always be 1. The first-touch impression is by definition from a Stage 1 campaign (the IP had no prior impressions, so it could only have been in an S1 segment).
 
-Each step in the pipeline has a corresponding database table. Here's what each one holds and what IP it captures.
+**`ft_bid_ip`**
+- Source: `event_log.bid_ip` (CTV) or `impression_log.bid_ip` (display)
+- Audit-trail lookup. Only populated when `cp_ft_ad_served_id` is not NULL.
 
-### `clickpass_log` — The Redirect (Step 6)
+**`ft_vast_ip`**
+- Source: `event_log.ip` (CTV) or `impression_log.ip` (display)
+- Audit-trail lookup. The IP at the time the S1 ad played.
 
-**This is our starting point.** Every row is one verified visit redirect event. When a user visits the advertiser's site after seeing an ad, this table records it.
-
-| Column | What it is |
-|--------|-----------|
-| `ad_served_id` | UUID — the thread connecting this VV to its associated ad serve |
-| `first_touch_ad_served_id` | UUID — the very first impression in the attribution chain |
-| `ip` | The IP at redirect time — the user's IP when they visited |
-| `is_new` | Client-side pixel's opinion: is this a new visitor? |
-| `is_cross_device` | Was the ad on one device and the visit on another? |
-| `campaign_id` | Which campaign this VV belongs to |
-| `time` | When the redirect happened |
-| `advertiser_id` | Which advertiser's site was visited |
-
-**Why we start here:** This is the definitive VV record. One row = one verified visit. Everything else is traced backward from here.
-
-**BQ Silver location:** `dw-main-silver.logdata.clickpass_log`
+**`ft_time`**
+- Source: `event_log.time` or `impression_log.time`
+- When the S1 impression was served.
 
 ---
 
-### `event_log` — VAST Playback (Steps 4-5)
+### Prior VV — from `clickpass_log` (self-join) and `event_log`/`impression_log` (IPs)
 
-When a video ad plays on a CTV device, the VAST protocol fires events. Each event is a row in `event_log`. The most important event type is `vast_impression` — the moment the ad loaded and was viewable.
+The prior VV is the most recent VV that advanced this IP into the current targeting stage. For a S3 VV, this is the S2 VV that put the IP into S3 targeting. For a S2 VV, this is the S1 VV that put the IP into S2 targeting.
 
-| Column | What it is |
-|--------|-----------|
-| `ad_served_id` | UUID — same as clickpass, this is how we join |
-| `ip` | The IP of the device playing the ad (the CTV's IP) |
-| `bid_ip` | **The IP at original bid time.** This is the gold column. |
-| `event_type_raw` | Which VAST event: `vast_impression`, `vast_start`, etc. |
-| `time` | When the VAST event fired |
+**How we find the prior VV:**
+1. `prior_vv_pool` scans `clickpass_log` for a 90-day lookback. Every VV in that window is a candidate.
+2. We match where `prior_vv_pool.ip = lt_bid_ip` (the prior VV's redirect IP matches this VV's bid IP — ~94% accurate)
+3. We require `prior_vv_time < vv_time` (must be before this VV)
+4. We require `pv.pv_stage = cp.vv_stage - 1` (the prior VV must be stage N-1 — for S3, we need the S2 VV; not just any prior VV)
+5. If multiple S(N-1) VVs exist, we take the most recent (last-touch rule per Zach)
 
-**Why this table matters:** It has TWO IP columns:
-- `ip` = the VAST playback IP (the CTV's current IP when the ad played)
-- `bid_ip` = the original bid IP (the IP MNTN bid on)
+**`prior_vv_ad_served_id`**
+- Source: `clickpass_log.ad_served_id` (the prior VV row's impression UUID)
+- What it is: The impression ID of the S2 VV (for S3 rows). This is the same UUID that would be `ad_served_id` on THAT VV's row in this table.
+- Skeptical Q: *"What if the prior VV isn't in the 90-day window?"* NULL. S3 VVs more than 90 days old won't have prior VV data. For production, incremental runs always have a 90-day lookback — this affects only historical rows at the very start of the table.
+- Skeptical Q: *"What if pv_stage = 3 for an S3 row?"* That was a design bug (fixed). The `pv.pv_stage = cp.vv_stage - 1` condition ensures the prior VV is always the stage-advancement VV, not another same-stage VV. A S3 VV's prior_vv must have pv_stage=2.
 
-The `bid_ip` column is the key discovery that simplified our entire trace. It gives us the bid IP for that specific ad serve directly, without needing to join through cost_impression_log and win_logs.
+**`prior_vv_time`**
+- Source: `clickpass_log.time` for the prior VV row
 
-**Why we filter `event_type_raw = 'vast_impression'`:** A single ad playback fires multiple VAST events (impression, start, firstQuartile, midpoint, thirdQuartile, complete). They all share the same `ad_served_id` and the same IPs. We only need one row per ad serve, so we take the first `vast_impression`.
+**`pv_campaign_id`**
+- Source: `clickpass_log.campaign_id` for the prior VV row
 
-**Why we dedup:** Occasionally a publisher replays the VAST file, creating duplicate `vast_impression` events for the same `ad_served_id`. We use `ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time)` and take `rn = 1` to get the first one.
+**`pv_stage`**
+- Source: `campaigns.funnel_level` joined on `pv_campaign_id` (inside `prior_vv_pool` CTE)
+- Should always equal `vv_stage - 1`.
 
-**Why non-CTV inventory has no event_log row:** Display and mobile web ads don't use VAST. No VAST = no `event_log` row = no `bid_ip` to trace. This is why `el_matched` varies from 21.7% to 99.97% across advertisers — it reflects the CTV percentage of their verified visits. **Note (Zach, 2026-03-03):** clickpass_log contains ALL verified visits — CTV and display — not just CTV. "VV can happen for display as well." The EL match rate measures what percentage of those VVs had a VAST event to trace through.
+**`pv_redirect_ip`**
+- Source: `clickpass_log.ip` for the prior VV
+- What it is: The IP that was recorded at the prior VV's site visit redirect. This is the IP that entered the S(N) targeting segment — the IP that made this VV possible.
+- Important: This is the primary IP the targeting system used to promote the IP to the next stage. In 94% of cases `pv_redirect_ip = pv_lt_bid_ip`. When `pv_lt_bid_ip` is NULL (impression outside lookback), `pv_redirect_ip` is the reliable fallback.
 
-**Dual role in targeting:** The VAST event IP (`event_log.ip`) is also what the membership update system uses to populate Stage 2 segments. When this IP fires, it gets added to the targeting pool for the next campaign cycle.
+**`pv_lt_bid_ip`**
+- Source: `event_log.bid_ip` (CTV) or `impression_log.bid_ip` (display), JOINed on `prior_vv_ad_served_id`
+- Audit-trail lookup for the prior VV's impression bid IP.
+- Skeptical Q: *"Why is this NULL for some rows?"* The prior VV's impression may predate the `el_all`/`il_all` window. In production (90-day window), this is ~1-2% NULL. In ad-hoc testing with shorter windows, NULL rate is higher. When NULL, use `pv_redirect_ip` — it's ~94% equivalent.
 
-**BQ Silver location:** `dw-main-silver.logdata.event_log`
+**`pv_lt_vast_ip`**
+- Source: `event_log.ip` (CTV) or `impression_log.ip` (display), JOINed on `prior_vv_ad_served_id`
 
----
-
-### `ui_visits` — The Verified Visit Record (Step 7)
-
-**Terminology note (Zach, 2026-03-03):** `ui_visits` is NOT a "page view." Zach explicitly: *"Page View is something different. That's the Google blog."* `ui_visits` is the verified visit record — a visit that MNTN has confirmed is attributable to an ad impression. Page views (Google Analytics) are a superset; `ui_visits` is a subset filtered to attribution-confirmed visits.
-
-When the advertiser's page loads in the user's browser following a verified visit redirect, this table records it. It's a superset of clickpass — it includes display clicks and other visit types, not just CTV verified visits.
-
-| Column | What it is |
-|--------|-----------|
-| `ad_served_id` | UUID (note: stored as a different type, needs CAST to join) |
-| `ip` | The IP when the page loaded — the "visit IP" |
-| `is_new` | A second, independent client-side pixel's opinion on new vs returning |
-| `impression_ip` | The bid IP carried forward onto the visit record from impression_log |
-| `click` | Boolean — distinguishes click visits from non-click visits (Zach: "there is a column 'click' that defines if it was a click") |
-| `from_verified_impression` | Boolean — filter to `true` to get only VV-related visits |
-| `time` | When the page view happened |
-
-**Why this table is optional enrichment:** The clickpass redirect (step 6) and the page view (step 7) happen in the same browser session, milliseconds apart. Their IPs match 99.93%+ of the time. The main value of ui_visits is:
-- A second `is_new` flag (to compare with clickpass's)
-- `impression_ip` (an independent source of the bid IP)
-- Confirmation that the visit actually completed
-
-**BQ Silver location:** `dw-main-silver.summarydata.ui_visits` (note: `summarydata` schema, not `logdata`)
+**`pv_lt_time`**
+- Source: `event_log.time` or `impression_log.time` for the prior VV's impression
 
 ---
 
-### `cost_impression_log` (CIL) — The Ad Serve (Step 2)
+### Classification — from `clickpass_log` and `ui_visits`
 
-Records the impression/serve event. One row per ad served.
+**`clickpass_is_new`**
+- Source: `clickpass_log.is_new`
+- What it is: Whether the clickpass JavaScript pixel classified this visit as new-to-brand at visit time.
 
-| Column | What it is |
-|--------|-----------|
-| `ad_served_id` | UUID — joins to clickpass and event_log |
-| `impression_id` | Steelhouse-format ID — joins to win_logs |
-| `ip` | The IP at serve time |
+**`visit_is_new`**
+- Source: `ui_visits.is_new`
+- What it is: Whether the ui_visits JavaScript pixel classified this visit as new-to-brand.
 
-**Role in our trace:** Bridge table between `ad_served_id` (used by clickpass/event_log) and `impression_id` (used by win_logs). With the `bid_ip` discovery, this table is no longer needed for the simplified trace — but it's available for independent validation.
+**Critical note on both:** Both are client-side JavaScript determinations. They check the browser's local storage/cookies to see if this user has been to the advertiser's site before. They disagree 41-56% of the time — this is not a bug. They are two independent pixels with different implementations. Neither is auditable via SQL. The disagreement is an architectural reality of how NTB detection works.
 
-**BQ Silver location:** `dw-main-silver.logdata.cost_impression_log`
-
----
-
-### `win_logs` — The Auction Win (Step 3)
-
-Records that MNTN won the auction for this ad placement.
-
-| Column | What it is |
-|--------|-----------|
-| `auction_id` | Steelhouse-format ID — joins to CIL's `impression_id` |
-| `ip` | The IP at bid/win time — the original bid IP |
-| `device_ip` | On BQ (BWN), this is 100% populated and = bid_ip. On GP, always NULL. |
-
-**Role in our trace:** Independent validation only. We already have the bid IP from `event_log.bid_ip`, and they match at 100% (30,502 rows, zero mismatches). Win_logs confirms it but isn't required.
-
-**BQ Silver location:** `dw-main-silver.logdata.win_logs`
+**`is_cross_device`**
+- Source: `clickpass_log.is_cross_device`
+- What it is: The attribution system detected that the ad was served on one device and the site visit came from a different device.
 
 ---
 
-## Part 8: Why `event_log.bid_ip` Is the Key
+### Metadata
 
-Before we discovered `bid_ip`, the trace required 4 joins:
+**`trace_date`**
+- Source: `DATE(clickpass_log.time)`
+- Partition key. Query must include this column for partition pruning.
 
-```
-clickpass → CIL → win_logs → event_log
-              ↑        ↑
-         ad_served_id  impression_id/auction_id
-```
-
-The `bid_ip` column on event_log stores the original bid IP directly. We validated that `event_log.bid_ip` = `win_logs.ip` at **100%** across 30,502 rows with zero mismatches. Three independent sources all confirm the same value:
-
-1. `event_log.bid_ip` — the primary trace column
-2. `cost_impression_log.ip` — serve-time IP (= bid IP at 100%)
-3. `bidder_win_notifications.device_ip` — win notification IP (= bid IP at 100%)
-
-Since `event_log` already has both the bid IP and the VAST playback IP, and we can join to it directly from clickpass via `ad_served_id`, the trace collapses to:
-
-```
-clickpass_log  ──ad_served_id──▶  event_log
-      │                              │
-  redirect_ip                   bid_ip (= win IP)
-  visit_ip (via ui_visits)      vast_playback_ip (= VAST IP)
-```
-
-Two joins instead of four. Same result.
+**`trace_run_timestamp`**
+- Source: `current_timestamp()` at write time
 
 ---
 
-## Part 9: Examples (Real Data from BQ Silver)
+## Part 6: Known Limitations — What the Table Cannot Do
 
-All examples below use real data from advertiser 37775, Feb 4–10, 2026 (BQ Silver). See `bqresults/example_vvs_by_impression_count.json`, `timeline_type_a_1_impression.json` through `timeline_type_e_369_impressions_outlier.json`.
+**1. S1 traceability is ~60%, not 100%**
 
-### Example A: Single impression, no mutation (Type A — real data)
+`cp_ft_ad_served_id` is NULL in ~40% of VVs overall, and higher (~60-74%) for S3 VVs specifically. When it's NULL, there is no S1 impression ID anywhere in the system. It was not written at VV time and cannot be backfilled. This is a system limitation, not a query limitation.
 
-**Source:** `bqresults/timeline_type_a_1_impression.json` — bid_ip `173.184.150.62`, 1 impression
+For the rows where it IS NULL: Zach's traversal algorithm (scan event_log for the first occurrence of `lt_bid_ip` in any S1 campaign within 30 days) can partially recover S1 IP information, but not the exact `ad_served_id`. This would be a separate lookup query, not a stored column.
 
-A user sees exactly one MNTN ad. Two days later, they visit the advertiser's site from the same network.
+**2. Prior VV match is ~94% accurate, not 100%**
 
-```
-Impression 1:  ad_served_id = c00f6066-5f0e-45e7-9cbb-64453676a8b3
-               bid_ip  = 173.184.150.62
-               vast_ip = 173.184.150.62
-               time    = 2026-02-01 23:16:30 UTC
+We match `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV's bid IP). The targeting system uses VAST IP to populate segments, but `redirect_ip ≈ lt_vast_ip` in 94% of cases. The 6% miss rate is due to IP mutation between VAST and redirect — the same phenomenon we're measuring.
 
-Verified Visit: redirect_ip = 173.184.150.62
-                time        = 2026-02-04 00:00:11 UTC  (~2.5 days later)
-```
+**3. pv_lt_bid_ip is ~99%+ in production, ~67% in ad-hoc testing**
 
-**What our trace produces:**
+In production with a 90-day event_log/impression_log window, almost all prior VV impressions are in range. In short-window ad-hoc queries, ~33% of prior VV impressions fall outside the window. When NULL, `pv_redirect_ip` is the reliable fallback (~94% equivalent).
 
-```
-bid_ip           = 173.184.150.62  (from event_log.bid_ip)
-vast_playback_ip = 173.184.150.62  (from event_log.ip)
-redirect_ip      = 173.184.150.62  (from clickpass_log.ip)
+**4. NTB is not auditable via SQL**
 
-bid_eq_vast          = true     (same IP on the TV)
-vast_eq_redirect     = true     (same IP for visit)
-mutated_at_redirect  = false    (no mutation)
-is_cross_device      = false    (same device)
-cp_is_new            = true     (NTB)
-```
+`clickpass_is_new` and `visit_is_new` are JavaScript-determined and cannot be independently verified through log analysis. The 41-56% disagreement rate is expected and real.
 
-**No mutation.** Same IP at every checkpoint. ad_served_id = first_touch_ad_served_id (single-impression attribution). This is the simplest case — one ad, one visit, one IP.
+**5. Display IPs vs CTV IPs**
+
+CTV impressions: sourced from `event_log` (`vast_impression` event). Display impressions: sourced from `impression_log`. Non-viewable display impressions appear ONLY in `impression_log` — they never generate a VAST event. The `COALESCE(el, il)` pattern handles this correctly.
 
 ---
 
-### Example B: Two impressions, stable IP, cross-device (Type B — real data)
+## Part 7: The Join Architecture
 
-**Source:** `bqresults/timeline_type_b_2_impressions.json` — bid_ip `16.98.111.49`, 2 impressions
-
-A user sees two MNTN ads 20 days apart. Both have the same bid IP despite the gap. The visit is from a different device but the same network.
+How the query builds one row from five sources:
 
 ```
-Impression 1:  ad_served_id = 62ea154b-ef6f-4fe8-851e-17f7db7dd0b5
-               bid_ip  = 16.98.111.49
-               vast_ip = 16.98.111.49
-               time    = 2026-01-10 06:29:57 UTC
-
-Impression 2:  ad_served_id = 4bfeeb10-b950-48c3-87a9-118c86f75431
-               bid_ip  = 16.98.111.49
-               vast_ip = 16.98.111.49
-               time    = 2026-01-30 19:26:58 UTC
-
-Verified Visit: redirect_ip = 16.98.111.49
-                time        = 2026-02-04 00:00:19 UTC  (~5 days after last impression)
+clickpass_log (anchor — one VV per row)
+  ├── event_log (CTV, joined 3x as: lt, ft, pv_lt — via ad_served_id)
+  ├── impression_log (display, joined 3x as: lt_d, ft_d, pv_lt_d — display fallback)
+  ├── ui_visits (visit IP — via ad_served_id, CAST as STRING)
+  ├── clickpass_log (self-join via prior_vv_pool — prior VV row)
+  └── campaigns (stage lookup — joined inside CTEs)
 ```
 
-**What our trace produces:**
+**One scan, joined multiple times:** `event_log` is scanned once into `el_all`, then used three times (last-touch, first-touch, prior VV impression). Same for `impression_log` → `il_all`. This is an 8% cost saving vs three separate scans.
 
-```
-bid_ip           = 16.98.111.49    (from event_log.bid_ip — impression 2, the VV-associated one)
-vast_playback_ip = 16.98.111.49    (from event_log.ip)
-redirect_ip      = 16.98.111.49    (from clickpass_log.ip)
-
-bid_eq_vast          = true     (same IP on the TV)
-vast_eq_redirect     = true     (same IP for visit)
-mutated_at_redirect  = false    (no mutation)
-is_cross_device      = true     (different device — TV ad, phone/laptop visit)
-cp_is_new            = false    (returning visitor)
-first_touch_ad_served_id = NULL (40% NULL rate — batch processing hasn't caught up)
-bid_ip_stable        = true     (both impressions share the same bid_ip)
-```
-
-**No mutation despite cross-device.** Cross-device doesn't guarantee mutation — the household has the same external IP on both devices (they're on the same home Wi-Fi). The first_touch_ad_served_id is NULL, consistent with the ~40% NULL rate we see globally.
+**COALESCE pattern:** For every IP column, the pattern is `COALESCE(el.ip, il.ip)`. CTV (`event_log`) is preferred; display (`impression_log`) fills in NULLs. If both are NULL, the impression was not found in either log (rare, typically a timing edge case or data gap).
 
 ---
 
-### Example C: Five impressions over 21 days, perfectly stable (Type C — real data)
+## Part 8: Does It Answer Zach's Question?
 
-**Source:** `bqresults/timeline_type_c_5_impressions.json` — bid_ip `71.206.63.109`, 5 impressions
+Zach's request: *"exact audit trail for a vv — every impression id/ip for each stage that led to that vv."*
 
-A user sees five MNTN ads over three weeks, all from the same IP. The bid IP is completely stable across all impressions.
+**What we have:**
 
-```
-Impression 1:  ad_served_id = eb387e84-d2e6-45f3-a152-b0731580b5be
-               bid_ip = 71.206.63.109, vast_ip = 71.206.63.109
-               time   = 2026-01-13 13:04:33 UTC
+For every VV row:
+- S(N) impression ID: `ad_served_id` — always populated
+- S(N) impression IPs: `lt_bid_ip`, `lt_vast_ip`, `redirect_ip`, `visit_ip` — ~99%+ in production
+- S(N-1) impression ID: `prior_vv_ad_served_id` — populated when prior VV in 90-day window (~95%+)
+- S(N-1) impression IPs: `pv_lt_bid_ip`, `pv_lt_vast_ip`, `pv_redirect_ip` — mostly populated, `pv_redirect_ip` always available
+- S1 impression ID: `cp_ft_ad_served_id` — populated ~60% of the time (system-recorded, not audit lookup)
+- S1 impression IPs: `ft_bid_ip`, `ft_vast_ip` — populated when S1 ID is not NULL
 
-Impression 2:  bid_ip = 71.206.63.109, vast_ip = 71.206.63.109
-               time   = 2026-01-14 00:24:12 UTC  (next day)
+**What is NOT achievable (honest answer):**
 
-Impression 3:  bid_ip = 71.206.63.109, vast_ip = 71.206.63.109
-               time   = 2026-01-27 22:34:28 UTC  (13 days later)
+Complete S3→S1 chain for every row is not possible. The `first_touch_ad_served_id` field in `clickpass_log` has a structural NULL rate of ~40% (higher for S3 VVs). This data was never written — it cannot be reconstructed.
 
-Impression 4:  bid_ip = 71.206.63.109, vast_ip = 71.206.63.109
-               time   = 2026-01-29 19:52:29 UTC
+**Zach's specific clarification point:** *"its not super clear which ft values are coming from the table traversal vs what is coming from the clickpass logs attempt to look that data up."*
 
-Impression 5:  ad_served_id = 7905c7a9-1e4c-4404-ac19-1f7e9ead6b56
-               bid_ip = 71.206.63.109, vast_ip = 71.206.63.109
-               time   = 2026-02-03 23:15:04 UTC
-
-Verified Visit: redirect_ip = 71.206.63.109
-                time        = 2026-02-04 00:00:43 UTC  (~45 minutes after last impression)
-```
-
-**What our trace produces:**
-
-```
-bid_ip           = 71.206.63.109   (from impression 5 — the VV-associated one)
-vast_playback_ip = 71.206.63.109
-redirect_ip      = 71.206.63.109
-
-bid_eq_vast          = true
-vast_eq_redirect     = true
-mutated_at_redirect  = false
-is_cross_device      = false
-cp_is_new            = true     (NTB)
-ad_served_id = first_touch_ad_served_id  (single-impression attribution)
-```
-
-**Perfect stability over 21 days.** All 5 impressions have the same bid_ip and vast_ip. The ISP assigned a static IP to this household. Note: `ad_served_id = first_touch_ad_served_id` even though there are 5 impressions — the attribution system considers impression 5 both the "most recent" and the "first touch" for this VV. The other 4 impressions exist in event_log but aren't linked from the clickpass record.
-
----
-
-### Example D: Mutation at redirect (Type D — real data)
-
-**Source:** `bqresults/mutation.json` — UUID `a12c9b22-6ddc-475a-a494-528af5ee83a9`
-
-This is the core finding of the audit. The bid IP and VAST IP match (the CTV device is consistent), but the redirect IP is different — the user visited the advertiser's site from a different network or device.
-
-```
-bid_ip           = 188.213.202.24    (from event_log — IP at auction)
-vast_playback_ip = 188.213.202.24    (from event_log — IP at CTV playback)
-redirect_ip      = 188.213.202.47    (from clickpass_log — IP at site visit)
-
-bid_eq_vast          = true     (CTV device consistent)
-vast_eq_redirect     = false    (IP changed between ad and visit)
-mutated_at_redirect  = true     ← THIS IS THE MUTATION
-el_matched           = true
-```
-
-**This is the pattern that drives 5.9–20.8% mutation across advertisers.** The IP changed between VAST playback (on the TV) and redirect (site visit, likely on phone/laptop). Note bid=VAST — the CTV device is stable. The mutation happens when the user switches to another device or network to visit the site. In this case the IPs are in the same /24 block (188.213.202.x), suggesting same ISP but different NAT assignment or device.
-
----
-
-### Example E: Mutation + first-touch IP divergence (Type E — real data)
-
-**Source:** `bqresults/mutation_first_touch.json` — UUID `34ca16b4-ce5f-4d13-9666-f7ce7f238e4c`
-
-Like Example D, the redirect IP differs from the bid IP. But here, the first-touch impression also has a different bid IP than the last-touch — meaning the user's IP changed between their first ad exposure and their most recent one.
-
-```
-Last-touch bid_ip     = 172.56.16.39    (event_log, ad_served_id)
-First-touch bid_ip    = 172.59.190.73   (event_log, first_touch_ad_served_id)
-redirect_ip           = 73.168.42.52    (clickpass_log)
-
-bid_eq_vast           = [from query]
-mutated_at_redirect   = true
-ft_bid_eq_lt_bid      = false    ← IP changed across impressions
-```
-
-**Three distinct IPs across the user's journey.** First touch was on 172.59.x, last touch on 172.56.x (both T-Mobile ranges — likely mobile IP reassignment), and the site visit on 73.168.x (likely home ISP). This illustrates why we trace both first-touch and last-touch: the user's IP changed even between ad exposures, not just at redirect.
-
----
-
-### Example F: NTB disagree + mutation (Type F — real data)
-
-**Source:** `bqresults/ntb_disagree.json` — UUID `4af3a55b-c1e7-42ec-bf3e-58f8e6095fe4`
-
-This combines two phenomena: IP mutation at redirect AND disagreement between the two independent NTB (new-to-brand) signals.
-
-```
-bid_ip           = 72.128.72.212     (from event_log)
-redirect_ip      = 76.39.91.199     (from clickpass_log)
-
-mutated_at_redirect  = true
-cp_is_new            = false    (clickpass pixel says: returning visitor)
-vv_is_new            = true     (ui_visits pixel says: new visitor)
-ntb_agree            = false    ← TWO INDEPENDENT PIXELS DISAGREE
-```
-
-**Why does `is_new` disagree?** Both `cp_is_new` and `vv_is_new` come from independent client-side JavaScript pixels — separate tracking calls on the advertiser's page. They can disagree because they use different cookie stores, different timing windows, or different device fingerprinting. This is NOT a data bug; it's the architectural reality of client-side NTB detection. Across the 10 audited advertisers, `is_new` disagrees 41–56% of the time. The mutation here is incidental — it doesn't cause the NTB disagreement.
-
----
-
-### Example G: Non-CTV ad (no VAST — el_matched = false) (Type G — real data)
-
-**Source:** `bqresults/non_ctv.json` — UUID `0755dd40-d480-4cb6-82cb-14437efcf54e` (advertiser 31357)
-
-When an ad is display/mobile web (not CTV video), there's no VAST playback, and thus no event_log entry. This represents the ~78% of advertiser 31357's VVs that have no event_log row.
-
-```
-bid_ip           = NULL              (no event_log row)
-vast_playback_ip = NULL              (no event_log row)
-redirect_ip      = 16.98.11.206     (from clickpass_log)
-is_cross_device  = true
-
-bid_eq_vast          = NULL
-vast_eq_redirect     = NULL
-mutated_at_redirect  = NULL
-el_matched           = false    (event_log join failed — no VAST event)
-```
-
-**We can't trace this one back to bid via event_log.** No VAST event means no event_log row, which means no bid_ip. The `impression_ip` from ui_visits may partially fill this gap (it carries the bid IP forward independently from impression_log), but through the event_log path, the lineage is broken. This is why EL match rates vary from 21.7% (31357, mostly non-CTV) to 99.97% (37775, nearly all CTV).
-
----
-
-### Example H: Redirect ≠ visit IP (Type H — real data, rare)
-
-**Source:** `bqresults/final_full.json` — UUID `cf7659de-81e9-450b-83f2-4894b6f323a6` (advertiser 37775, campaign 450301)
-
-In 99.93%+ of VVs, the clickpass redirect IP equals the ui_visits page-load IP. This is one of the 0.07% where they differ — the user's IP changed between the redirect firing and the browser page fully loading.
-
-```
-bid_ip           = 172.58.135.22    (from event_log.bid_ip — IP at bid)
-vast_ip          = 172.58.135.22    (from event_log.ip — VAST playback)
-redirect_ip      = 172.58.131.114   (from clickpass_log — IP at redirect)
-visit_ip         = 66.176.148.243   (from ui_visits — IP at page load)
-impression_ip    = 172.58.135.22    (from ui_visits.impression_ip — confirms bid IP)
-is_cross_device  = true
-
-bid_eq_vast          = true    (same CTV session)
-vast_eq_redirect     = false   (mutated at redirect — the usual place)
-redirect_eq_visit    = false   ← RARE — IP changed AGAIN at page load
-mutated_at_redirect  = true
-
-ft_bid_ip        = 172.58.135.22    (first-touch bid IP — same as last-touch)
-lt_bid_eq_ft_bid = true             (bid IP stable across impressions)
-ft_matched       = true
-```
-
-**Full IP chain:**
-
-```
-172.58.135.22 → 172.58.135.22 → 172.58.131.114 → 66.176.148.243
-   (bid)           (VAST)          (redirect)        (visit)
-    ✓ match         ✗ mutated       ✗ mutated again
-```
-
-**What causes this?** The redirect and page load are nearly simultaneous but technically two separate HTTP requests. If the user's network changes between them — VPN toggling, mobile handoff, NAT reassignment — the IPs can diverge. The redirect IP is `172.58.x` (T-Mobile mobile range) while the visit IP is `66.176.x` (likely home ISP), consistent with a mobile-to-WiFi handoff as the page loaded.
-
-**Additional finding — multi-device attribution (resolved):** This UUID has *multiple* clickpass and ui_visits rows (2 each). Investigation of the full clickpass detail revealed these are two separate verified visits from two different devices in the same household: one from iPhone Safari (`is_cross_device = false`, GA client `2043036188`) and one from Android Chrome (`is_cross_device = true`, GA client `40715985`), approximately 4 hours apart. This is expected multi-device attribution behavior — the same CTV ad generated visits from two different phones. At scale, only 84 out of 219,527 ad_served_ids (0.038%) have multiple rows. The production table deduplicates to 1 row using `QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1`.
-
-**Why it doesn't matter for the audit:** This 0.07% rate confirms that clickpass and ui_visits are recording the same event from essentially the same network position. The redirect-to-visit leg is not where mutation happens — the VAST-to-redirect boundary is.
-
----
-
-### Outlier: Extreme case — 369 impressions, datacenter/proxy pattern (real data)
-
-**Source:** `bqresults/timeline_type_e_369_impressions_outlier.json` — bid_ip `104.171.65.16`, 369 impressions
-
-This is an anomalous case. A single bid_ip receives 369 impressions over 8 days, but the VAST playback IP **never** matches the bid IP. 98 distinct VAST IPs rotate across the impressions.
-
-```
-bid_ip = 104.171.65.16 (CONSTANT across all 369 impressions)
-
-Impression 1:   vast_ip = 85.237.194.150,  time = 2026-02-02 16:44:31 UTC
-Impression 2:   vast_ip = 85.237.194.150,  time = 2026-02-02 16:50:52 UTC
-Impression 3:   vast_ip = 85.237.194.150,  time = 2026-02-02 16:58:32 UTC
-...
-Impression 367: vast_ip = 104.234.32.158,  time = 2026-02-10 11:03:57 UTC
-Impression 368: vast_ip = 104.234.32.189,  time = 2026-02-10 14:15:04 UTC
-Impression 369: vast_ip = 85.237.194.246,  time = 2026-02-10 15:53:01 UTC
-
-Summary:
-  total_impressions  = 369
-  distinct_vast_ips  = 98
-  bid_eq_vast_count  = 0   (bid IP NEVER equals VAST IP)
-  bid_ne_vast_count  = 369
-
-Verified Visit: redirect_ip = 85.237.194.211
-                time        = 2026-02-10 16:30:52 UTC
-                is_cross_device = true
-                cp_is_new       = false (returning)
-```
-
-**What this pattern means:**
-
-- The bid IP (`104.171.65.16`) is stable — the auction always targets the same address
-- The VAST playback IPs rotate across 98 distinct addresses in datacenter-like ranges (`85.237.194.x`, `104.234.32.x`)
-- 369 impressions in 8 days = ~46/day — extremely high frequency
-- bid_ip never equals vast_ip — **100% bid-to-VAST mutation**
-
-This is consistent with a proxy/VPN scenario: the household's VPN exit node is `104.171.65.16` at bid time, but CTV playback resolves through different endpoints. Or it could be ad-tech infrastructure / verification traffic. Either way, this is an outlier — the vast majority of VVs look like Examples A–G above with far simpler patterns.
-
----
-
-### What we CAN and CANNOT trace (multiple impressions)
-
-From the Q10c example (5 impressions), the clickpass record stores:
-
-```
-first_touch_ad_served_id = 7905c7a9-...   (= ad_served_id — single-attribution)
-ad_served_id             = 7905c7a9-...   (Impression 5 — the most recent, CONFIRMED)
-ip                       = 71.206.63.109
-```
-
-**`ad_served_id` = most recent impression** is empirically confirmed with zero exceptions across 38,360 multi-impression VVs.
-
-**What we CAN trace:**
-- First touch bid IP: join event_log on `first_touch_ad_served_id` (when not NULL)
-- Last-touch bid IP: join event_log on `ad_served_id`
-- Visit IP: from clickpass_log
-- Whether first-touch and last-touch bid IPs differ (**14.28% of multi-impression VVs have different bid IPs**)
-
-**What we CANNOT trace:**
-- Which impressions happened between first touch and last touch
-- The IPs at each intermediate impression
-- Whether the IP changed at a specific intermediate impression
-
-**For the audit, this is fine.** We care about the endpoints: "what IP did we originally bid on?" (first touch) and "what IP visited the site?" (redirect). The intermediate impressions don't change the mutation measurement.
-
-**Real-world scale:** Even VVs where `ad_served_id = first_touch_ad_served_id` (the 42.48% "single-impression" group) often have many other impressions to the same IP that just aren't linked to this VV. In the data, these IPs show 6–30 distinct `ad_served_id`s in event_log within the 30-day window. The attribution system picks the most recent one and records the first one — everything else is invisible from the clickpass record.
-
----
-
-## Part 10: The Joins — Why These Columns
-
-### Join 1: clickpass_log → event_log
-
-```sql
-ON el.ad_served_id = cp.ad_served_id
-```
-
-**Why `ad_served_id`:** This UUID is assigned at serve time and follows the ad through every downstream event. It's present in both clickpass_log and event_log as a text/STRING column. It's a 1:1 relationship — one ad serve produces one clickpass redirect and one set of VAST events.
-
-**Why not `impression_id`:** Event_log doesn't have `impression_id`. Only CIL and win_logs use that format.
-
-**Why not join on IP:** IPs can change (that's the whole point of this audit). Joining on IP would miss every mutated row.
-
-**Why not join on `advertiser_id` + time range:** Too loose. Multiple ads are served to the same advertiser in the same time window. `ad_served_id` is precise — one row to one row.
-
-### Join 2: clickpass_log → ui_visits
-
-```sql
-ON CAST(v.ad_served_id AS STRING) = cp.ad_served_id
-AND v.from_verified_impression = true
-```
-
-**Why the CAST:** In the underlying data, clickpass stores `ad_served_id` as STRING while ui_visits stores it as a UUID/INT type. The CAST ensures they compare correctly.
-
-**Why `from_verified_impression = true`:** ui_visits is a superset — it includes display clicks, organic visits, and other non-VV traffic. This filter restricts to only visits that came from a verified impression, matching the clickpass population.
-
-### Join 3 (optional): CIL → win_logs
-
-```sql
-ON cil.impression_id = w.auction_id
-```
-
-**Why `impression_id` to `auction_id`:** These are both steelhouse-format IDs (e.g., `1770684616749257.3333240021.92.steelhouse`). CIL calls it `impression_id`, win_logs calls it `auction_id`, but they're the same value — the auction/impression identifier from the Beeswax ad exchange.
-
-**Why not join win_logs directly to clickpass:** Win_logs doesn't have `ad_served_id`. The only path is clickpass → CIL (via `ad_served_id`) → win_logs (via `impression_id`/`auction_id`). This is why the simplified trace that uses `event_log.bid_ip` is so valuable — it skips this two-hop bridge entirely.
-
----
-
-## Part 11: Where Mutation Happens and Why
-
-From tracing 3.25 million verified visits across 10 advertisers over 7 days:
-
-| Hop | Mutation Rate | Why |
-|-----|--------------|-----|
-| Bid → VAST Playback | ~3.5% | Minor — same device, slight network drift |
-| **VAST Playback → Redirect** | **1.2%-33.4%** | **This is where all meaningful mutation occurs** |
-| Redirect → Page View | <0.07% | Same browser session, milliseconds apart |
-
-The original 10-advertiser sample (Feb 4–10, 3.25M VVs) showed 5.9%–20.8%. Gap analysis on 5 additional advertisers (Feb 17–23) found a wider range of 1.2%–33.4%. The upper bound is driven by advertisers with high cross-device rates — advertiser 36743 has 55% cross-device traffic and 50.93% cross-device mutation rate.
-
-The redirect hop is where the user transitions from "watching the ad" to "visiting the site." If they watched the ad on their TV but visit the site on their phone (cross-device), the IP changes. Even on the same device, Wi-Fi to cellular switching, VPN toggling, or ISP-level IP rotation (CGNAT) can cause a change.
-
-**Cross-device accounts for 61% of mutation.** Same-device network switching accounts for the remaining 39%.
-
----
-
-## Part 12: The 30-Day Lookback Requirement
-
-When we join clickpass_log to event_log, the VAST event might have happened days or weeks before the redirect. The MES pipeline allows up to 30 days between stages. So if a clickpass event is from February 10th, the corresponding VAST event could be from as far back as January 11th.
-
-If we only look back 20 days in the event_log, we miss the older VAST events. Those missed rows show up as `el_matched = false` and inflate the apparent mutation rate (because the surviving matched rows are biased toward recent, same-session events). Using a 20-day lookback caused a +3-5 percentage point mutation offset. Extending to 30 days eliminated it entirely and matched Greenplum's results within 0.12pp.
-
-**Always use a 30-day EL lookback.**
-
-### Gap analysis confirmation (2026-03-02)
-
-Verified definitively: across all 10 original advertisers (3.25M VVs, Feb 4–10), the `impression_time` to `time` gap on clickpass_log falls within 30 days for **100%** of rows:
-
-| Gap | VVs | % |
-|-----|-----|---|
-| < 1 day | 1,873,498 | 57.65% |
-| 1–7 days | 1,064,208 | 32.75% |
-| 7–14 days | 257,865 | 7.94% |
-| 14–21 days | 36,068 | 1.11% |
-| 21–30 days | 18,039 | 0.56% |
-| 30+ days | **0** | **0%** |
-
-Zero VVs have an impression_time more than 30 days before the visit. The 30-day lookback is not just sufficient — it's exact. impression_time is also 100% populated (zero NULLs across 3.25M rows).
-
----
-
-## Part 13: Putting It All Together — The Production Query
-
-The audit query does this:
-
-1. **Start with clickpass_log** — one row per verified visit in the date range
-2. **LEFT JOIN event_log** (deduped to first `vast_impression` per `ad_served_id`, 30-day lookback) — gives us `bid_ip` and `vast_playback_ip`
-3. **LEFT JOIN ui_visits** (filtered to `from_verified_impression = true`) — gives us `visit_ip`, `vv_is_new`, and `impression_ip`
-4. **Compute flags** — compare IPs at each hop, check NTB agreement, flag mutation
-
-The result is one row per verified visit with every IP at every step, NULL where a join didn't resolve, and boolean flags telling you exactly what happened.
-
-```
-┌─────────────────┐     ad_served_id      ┌─────────────────┐
-│  clickpass_log   │─────────────────────▶ │   event_log     │
-│                  │                       │                  │
-│  redirect_ip ●   │                       │  ● bid_ip        │
-│  cp_is_new   ●   │                       │  ● vast_ip       │
-│  is_cross_dev ●  │                       └─────────────────┘
-└────────┬─────────┘
-         │
-         │  ad_served_id (CAST)
-         ▼
-┌─────────────────┐
-│   ui_visits      │
-│                  │
-│  visit_ip    ●   │
-│  vv_is_new   ●   │
-│  impression_ip ● │
-└─────────────────┘
-```
-
----
-
-## Part 14: Resolved Questions — Attribution Model (Empirical, Q1-Q5)
-
-These questions were answered empirically using BQ Silver data (advertiser 37775, Feb 4–10, n = 219,613 VVs). See `bqresults/attribution_breakdown.json` through `bqresults/inter_impression_bid_ip_mutation.json`.
-
-### RESOLVED: Which impression does `clickpass_log.ad_served_id` point to?
-
-**The most recent impression before the visit.** Confirmed with zero exceptions across 35,198 resolvable rows. When both `ad_served_id` and `first_touch_ad_served_id` have VAST timestamps, the `ad_served_id` impression is always more recent. Never older. This is last-touch attribution.
-
-### RESOLVED: What is `first_touch_ad_served_id`?
-
-**It is specifically a Stage 1 CTV impression (Sharad, 2026-03-03).** Not just "the first impression" — it is the first impression where `funnel_level = 1` and `objective_id = 1`, from the same campaign group, served to the **same IP/Bid IP** as the VV. The IP-matching requirement is critical: the lookup searches for a Stage 1 impression against the IP recorded on the VV. When both fields are populated and different, the first-touch VAST timestamp is always older. `first_touch_ad_served_id` is NULL for **40.05%** of VVs (87,956 of 219,613).
-
-### RESOLVED: How often are the two fields the same?
-
-**42.48%** of VVs have `ad_served_id = first_touch_ad_served_id`. This means the VV's most recent impression was also the first touch — single-impression attribution. But this does NOT mean the IP only had one impression. Q4 shows these IPs still had 6–30 distinct impressions in the 30-day window; they just aren't linked to the clickpass record.
-
-### RESOLVED: Does first-touch tracing reveal additional IP information?
-
-**Yes.** Among the 38,360 VVs where the two IDs differ (multi-impression attribution):
-
-| bid IP comparison | Count | % |
-|-------------------|-------|---|
-| Same bid IP at both impressions | 30,172 | 85.72% |
-| **Different bid IP** | **5,026** | **14.28%** |
-| One or both NULL | 3,162 | — |
-
-**14.28% of multi-impression VVs have different bid IPs between first touch and last touch.** This means first-touch tracing adds genuine IP lineage information that last-touch tracing alone cannot provide. However, this only applies to the 17.47% of VVs with different IDs — and only when the first-touch VAST event is resolvable.
-
-### RESOLVED: Why is `first_touch_ad_served_id` NULL for 40% of VVs?
-
-**Root cause (Sharad, 2026-03-03):** The lookup requires a Stage 1 CTV impression (`funnel_level=1`, `objective_id=1`, same campaign group) served to the **same IP/Bid IP**. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."*
-
-**The mutation connection:** Because the lookup matches on IP, IP mutation directly causes NULLs. If the bid IP changed between Stage 1 and Stage 3 (due to CGNAT, cross-device, VPN, etc.), the system searches for a Stage 1 impression for the Stage 3 IP — and finds nothing. The Stage 1 impression existed, but it was for a different IP. This links the 40% NULL rate directly to the mutation phenomenon this audit measures.
-
-**Confirmed (Zach, 2026-03-03):** Populated at write time, no post-processing. NULLs are permanent.
-
-**Disproven hypothesis: non-CTV inventory.** All three groups (same_id, different_id, ft_null) have identical EL match (~99.97%) for advertiser 37775. The NULL group is fully CTV. The inventory type doesn't explain the NULLs.
-
-| ft_group | total | el_match_pct |
-|----------|-------|--------------|
-| different_id | 38,360 | 99.97% |
-| ft_null | 87,956 | 99.98% |
-| same_id | 93,297 | 99.96% |
-
-**Disproven hypothesis: lookback window.** NULL rate is highest for recent impressions (54% for < 1 hour gap vs 18% for 14–21 days) — the opposite of what a lookback limit would produce. NULLs are not caused by the event_log window being too short.
-
-| Impression → visit gap | Total | ft_null_pct |
-|---|---|---|
-| < 1 hour | 10,890 | **54.38%** |
-| 1-24 hours | 85,375 | **49.43%** |
-| 1-7 days | 82,573 | **37.16%** |
-| 7-14 days | 24,405 | **25.45%** |
-| 14-21 days | 16,299 | **17.89%** |
-| 21+ days | 1 | **0.0%** |
-
-The recency pattern is consistent with the mutation hypothesis: recent impressions are more likely to involve mobile/cross-device scenarios (where IP changes more) and less likely to have a matching Stage 1 impression at the same IP.
-
-**Impact on the audit:** Low. The production table uses `ad_served_id` (last-touch) as the primary trace, which is always populated. `first_touch_ad_served_id` is optional enrichment — nice to have, not required.
-
----
-
-## Part 15: Zach's Independent Traversal Method
-
-Zach described a different trace method from our `ad_served_id`-based approach. His method traverses backward through the **targeting system** using IP as the join key, not the attribution fields on the clickpass record:
-
-```
-1. Start with VV's ad_served_id and ip
-2. Find the bid_ip for that ad_served_id's impression
-3. Search stage 1/2 campaign segments for the FIRST occurrence
-   of that bid_ip within the 30-day window
-4. If stage 1 → done (that's the original bid)
-5. If stage 2 → find the ad_served_id for that IP's VAST event,
-   get ITS bid_ip, look back another 30 days in VAST events
-```
-
-From Zach (Slack):
-> "so say you wanted to go from a stage 3 vv back to the first ctv impression. it would look something like: find the ad_served_id and ip of the vv, find the bid ip of the impression for the ad_served_id, find the first occurrence of that bid ip in the stage 1 or 2 campaign for that campaign group within the 30 day window"
-
-### How this differs from our trace
-
-| | Our audit trace | Zach's traversal |
-|---|---|---|
-| **Join key** | `ad_served_id` (deterministic) | IP (fuzzy — can mutate) |
-| **Starting point** | `clickpass_log.ad_served_id` | `clickpass_log.ad_served_id` + `ip` |
-| **First-touch method** | Follow `first_touch_ad_served_id` pointer | Search event_log by IP within 30-day window |
-| **Handles IP mutation** | No — relies on stored pointers | Yes — but "can be a bit painful because of the ip switching" |
-| **Non-CTV coverage** | Only if they have VAST events | Only CTV — explicitly says "first ctv impression" |
-| **Complexity** | 1-2 joins | Multi-step, potentially recursive |
-
-### Implications for the production audit table
-
-Our `ad_served_id` trace is correct and sufficient for the core audit (last-touch bid IP → visit IP mutation). Zach's method would be needed if we want to:
-- Trace first-touch for the 40% where `first_touch_ad_served_id` is NULL
-- Independently reconstruct the full impression chain without relying on stored attribution fields
-- Validate that `first_touch_ad_served_id` actually points to the true first impression
-
-We've already demonstrated the full backward traversal is technically feasible — the Q9/Q10 queries in `audit_trace_queries.sql` do exactly this for Types A through E (1 to 369 impressions). The segment system itself (from `membership_updates_proto_generate.py`) only stores `MAX(epoch)` per (ip, data_source_id, category_id) — there is no segment history to traverse. So Zach's backward trace goes through `event_log` data, not the segment store.
-
-**Scope decision — ANSWERED (Zach, 2026-03-03): "never assume only CTV. always assume all."** The A4 production table already traces all VV types (CTV + display). CTV VVs get full 4-checkpoint tracing via event_log; non-CTV VVs get 2-checkpoint tracing via impression_ip. Zach also noted that adding clicks to Stage 3 is "one thing we could improve" — future work. The table provides one row per VV with the last-touch bid IP. The full impression chain is available via the Q9/Q10 queries if a deeper audit is ever needed.
-
----
-
-## Part 16: MES Trace Permutations — Every Possible Output from `audit.vv_ip_lineage`
-
-The production table (`audit.vv_ip_lineage`) produces one row per verified visit. Each row has three impression lookup slots — last-touch (lt_), first-touch (ft_), and prior VV impression (pv_lt_) — and each slot can be populated from CTV (`event_log` via `el_all`), display (`impression_log` via `il_all`), or NULL. This section documents every meaningful permutation and what the resulting MES row looks like.
-
-### How the COALESCE lookup works
-
-For each impression slot, the query tries `event_log` first, then falls back to `impression_log`:
-
-```
-COALESCE(el.bid_ip, il.bid_ip) AS [slot]_bid_ip
-COALESCE(el.vast_ip, il.vast_ip) AS [slot]_vast_ip
-```
-
-- If `event_log` has a row for that `ad_served_id` → CTV trace. `el` wins. `il` is ignored.
-- If `event_log` has no row but `impression_log` does → Display trace. `il` fills in.
-- If neither has a row → NULLs. Either the `ad_served_id` itself is NULL (ft_ case) or the prior VV isn't found.
-
-The `il.vast_ip` column comes from `impression_log.ip` — the IP at impression render time, which is the display equivalent of the CTV VAST playback IP.
-
----
-
-### Permutation matrix
-
-| # | VV type | First-touch | Prior VV found | Prior VV type | lt_bid_ip | ft_bid_ip | pv_lt_bid_ip | Frequency |
-|---|---------|-------------|----------------|---------------|-----------|-----------|--------------|-----------|
-| P1 | CTV | CTV ft | No prior VV | — | populated | populated | NULL | ~40% of VVs (S1 or no chain) |
-| P2 | CTV | CTV ft | Yes | CTV | populated | populated | populated | Common for S2/S3 CTV chains |
-| P3 | CTV | NULL | No prior VV | — | populated | NULL | NULL | ~17% (ft NULL + no pv) |
-| P4 | CTV | NULL | Yes | CTV | populated | NULL | populated | ~23% (ft NULL + pv found) |
-| P5 | CTV | CTV ft | Yes | Display | populated | populated | populated | Less common; real example below |
-| P6 | CTV | NULL | Yes | Display | populated | NULL | populated | Same as P5 but ft NULL |
-| P7 | Display | CTV ft | No prior VV | — | populated* | populated | NULL | Non-CTV VV with CTV first-touch |
-| P8 | Display | NULL | No prior VV | — | populated* | NULL | NULL | Pure display, no prior history |
-| P9 | Display | Display ft | Yes | Display | populated* | populated* | populated* | Fully display chain |
-
-*For display VVs, lt_bid_ip comes from il_all (impression_log) not el_all (event_log).
-
----
-
-### Following an IP through the funnel — S1 → S2 → S3
-
-This example shows one IP (`172.59.192.138`) progressing through all three funnel stages. The MES table produces three rows — one VV per stage. The `prior_vv_ad_served_id` chain links them together.
-
-```
-Timeline:
-
-  [2026-01-03]  S1 impression → S1 VV
-  ad_served_id = "s1-vv-uuid"
-  vv_stage     = 1
-  IP enters S2 segment (redirect_ip = 172.59.192.138 recorded)
-
-  [2026-01-15]  S2 impression → S2 VV
-  ad_served_id = "s2-vv-uuid"
-  vv_stage     = 2
-  IP enters S3 segment
-
-  [2026-02-02]  S3 impression → S3 VV
-  ad_served_id = "s3-vv-uuid"
-  vv_stage     = 3
-```
-
-**MES Row for S1 VV:**
-```
-ad_served_id          = "s1-vv-uuid"
-vv_stage              = 1
-lt_bid_ip             = 172.59.192.138   ← S1 impression bid IP
-lt_vast_ip            = 172.59.192.138
-redirect_ip           = 172.59.192.138   ← same IP (no mutation)
-cp_ft_ad_served_id    = "s1-vv-uuid"     ← same as vv (this IS the first touch)
-ft_stage              = 1
-ft_bid_ip             = 172.59.192.138   ← same join, same row
-prior_vv_ad_served_id = NULL             ← no prior VV (this is the first entry)
-pv_stage              = NULL
-pv_lt_bid_ip          = NULL
-```
-
-**MES Row for S2 VV:**
-```
-ad_served_id          = "s2-vv-uuid"
-vv_stage              = 2
-lt_bid_ip             = 172.59.192.138   ← S2 impression bid IP
-lt_vast_ip            = 172.59.192.138
-redirect_ip           = 172.59.192.138
-cp_ft_ad_served_id    = "s1-vv-uuid"     ← system recorded S1 impression
-ft_stage              = 1
-ft_bid_ip             = 172.59.192.138   ← S1 impression IP (same in this example)
-prior_vv_ad_served_id = "s1-vv-uuid"     ← the S1 VV that advanced IP to S2
-pv_stage              = 1
-pv_redirect_ip        = 172.59.192.138   ← redirect IP from the S1 VV
-pv_lt_bid_ip          = 172.59.192.138   ← S1 impression bid IP (from el_all or il_all)
-```
-
-**MES Row for S3 VV:**
-```
-ad_served_id          = "s3-vv-uuid"
-vv_stage              = 3
-lt_bid_ip             = 172.59.192.138   ← S3 impression bid IP
-lt_vast_ip            = 172.59.192.138
-redirect_ip           = 172.59.192.138
-cp_ft_ad_served_id    = "s1-vv-uuid"     ← still pointing back to original S1
-ft_stage              = 1
-ft_bid_ip             = 172.59.192.138
-prior_vv_ad_served_id = "s2-vv-uuid"     ← the MOST RECENT prior VV (S2)
-pv_stage              = 2
-pv_redirect_ip        = 172.59.192.138
-pv_lt_bid_ip          = 172.59.192.138   ← S2 impression bid IP
-```
-
-The three rows form a chain: S3 → S2 → S1 via `prior_vv_ad_served_id`. The `cp_ft_ad_served_id` shortcut points straight to S1 from all rows (system-recorded at write time). Note that `prior_vv_ad_served_id` always points to the most recent prior VV — not necessarily S1. A direct S3 VV only links to its S2 parent; you'd need to follow the S2 row to find S1.
-
-**Reading the S3 VV row — every impression ID and IP in one glance:**
-
-| Stage | Impression ID | Bid IP | VAST IP | Source |
-|-------|--------------|--------|---------|--------|
-| S3 (this VV) | `ad_served_id` = "s3-vv-uuid" | `lt_bid_ip` = 172.59.192.138 | `lt_vast_ip` = 172.59.192.138 | event_log or impression_log |
-| S2 (prior VV) | `prior_vv_ad_served_id` = "s2-vv-uuid" | `pv_lt_bid_ip` = 172.59.192.138 | `pv_lt_vast_ip` = 172.59.192.138 | event_log or impression_log |
-| S1 (first touch) | `cp_ft_ad_served_id` = "s1-vv-uuid" | `ft_bid_ip` = 172.59.192.138 | `ft_vast_ip` = 172.59.192.138 | event_log or impression_log |
-
-`cp_ft_ad_served_id` — **system-recorded:** written into `clickpass_log` at the moment the S3 VV was processed. This is what the attribution system believes is S1.
-`ft_bid_ip` / `ft_vast_ip` / `ft_time` — **audit lookup:** retrieved by our independent JOIN into `event_log`/`impression_log`. These verify the system's stored value.
-
-If `cp_ft_ad_served_id` is NULL (~40% of VVs), the system failed to record a first touch. The `ft_*` columns will also be NULL. The prior VV chain (`prior_vv_ad_served_id`) is unaffected — it's found independently via IP match.
-
----
-
-### P1: Standard S1 CTV VV — first funnel entry, no prior VV
-
-The most common case. This IP has never had a VV before, so there's no prior VV chain.
-
-```
-vv_stage              = 1
-lt_bid_ip             = 98.207.141.55    ← from event_log (CTV)
-lt_vast_ip            = 98.207.141.55    ← same (no bid/VAST mutation)
-redirect_ip           = 98.207.141.55    ← same (no mutation)
-visit_ip              = 98.207.141.55
-
-cp_ft_ad_served_id    = <same as ad_served_id>   ← S1 IS the first touch
-ft_stage              = 1
-ft_bid_ip             = 98.207.141.55    ← same join resolves same row
-
-prior_vv_ad_served_id = NULL             ← no prior VV found
-pv_stage              = NULL
-pv_lt_bid_ip          = NULL
-pv_lt_vast_ip         = NULL
-pv_lt_time            = NULL
-```
-
-**All pv_ columns are NULL.** This is correct — no prior VV means no chain. The lt_ and ft_ IPs often match for S1 VVs (same impression serves as both last-touch and first-touch).
-
----
-
-### P2: S3 CTV VV, CTV first-touch, CTV prior VV — fully CTV chain
-
-The "ideal" fully populated trace. All three impression lookups resolve via event_log.
-
-```
-vv_stage              = 3
-lt_bid_ip             = 98.207.141.55    ← S3 impression (event_log)
-lt_vast_ip            = 98.207.141.55
-redirect_ip           = 98.207.141.55
-
-cp_ft_ad_served_id    = <S1 ad_served_id>
-ft_stage              = 1
-ft_bid_ip             = 98.207.141.55    ← S1 impression (event_log, same IP)
-ft_vast_ip            = 98.207.141.55
-
-prior_vv_ad_served_id = <S2 VV ad_served_id>
-pv_stage              = 2
-pv_redirect_ip        = 98.207.141.55    ← redirect IP from prior S2 VV
-pv_lt_bid_ip          = 98.207.141.55    ← S2 impression bid IP (event_log)
-pv_lt_vast_ip         = 98.207.141.55
-```
-
-**All 9 IP columns populated. All from event_log.** This is the cleanest possible trace — stable IP, CTV throughout. Every IP matches, confirming no cross-device and no mutation.
-
----
-
-### P3: S3 CTV VV, NULL first-touch, CTV prior VV
-
-`cp_ft_ad_served_id` is NULL (system couldn't find a S1 impression for this IP at write time). But the prior VV chain still works because we find it via IP match.
-
-```
-vv_stage              = 3
-lt_bid_ip             = 172.56.16.39     ← S3 impression (event_log)
-lt_vast_ip            = 172.56.16.39
-redirect_ip           = 172.56.16.39
-
-cp_ft_ad_served_id    = NULL             ← system never stored a first-touch pointer
-ft_stage              = NULL             ← can't derive without the pointer
-ft_bid_ip             = NULL             ← NULL because join key is NULL
-ft_vast_ip            = NULL
-ft_time               = NULL
-
-prior_vv_ad_served_id = <prior VV uuid>  ← found via lt_bid_ip match in clickpass_log
-pv_stage              = 2
-pv_redirect_ip        = 172.56.16.39
-pv_lt_bid_ip          = 172.56.16.39    ← prior VV impression (event_log)
-```
-
-**ft_ group is entirely NULL — this is expected for 40% of VVs.** The `cp_ft_ad_served_id` NULL is a system limitation (targeting IP mismatch at write time), not a data error. The prior VV chain is independent and still resolves correctly.
-
----
-
-### P4: S3 CTV VV, CTV first-touch, display prior VV — real example from Zach's audit
-
-This is the exact permutation discovered during Zach's review of S3 VV `003a01cf` (advertiser 37775, 2026-02-09). The VV itself was CTV. The prior VV's impression was display — it had no `event_log` row and was only found via `impression_log`.
-
-**Without `il_all`:** `pv_lt_bid_ip` would be NULL.
-**With `il_all` COALESCE fallback:** `pv_lt_bid_ip` resolves correctly.
-
-```
-vv_stage              = 3
-ad_served_id          = 003a01cf-...    (advertiser 37775)
-
-lt_bid_ip             = 172.59.192.138  ← S3 impression (event_log, CTV)
-lt_vast_ip            = 172.59.192.138
-redirect_ip           = 172.59.192.138
-
-cp_ft_ad_served_id    = <S1 uuid>
-ft_stage              = 1
-ft_bid_ip             = 172.59.192.138  ← S1 impression (event_log, CTV)
-
-prior_vv_ad_served_id = a4074373-6767-4795-9d6e-5b167c2881f1
-                        ← advertiser 31464, campaign 278920
-pv_stage              = <stage for campaign 278920>
-pv_redirect_ip        = 172.59.192.138  ← redirect IP from that prior VV
-pv_lt_bid_ip          = 172.59.192.138  ← *** from impression_log (il_all), NOT event_log ***
-pv_lt_vast_ip         = 172.59.192.138  ← impression_log.ip (display render IP)
-pv_lt_time            = 2026-02-02 05:46:30 UTC
-```
-
-**Key point:** `pv_lt_bid_ip` is sourced from `il_all` (impression_log) because the prior VV `a4074373` was a display impression — it has ZERO rows in `event_log` across the entire 90-day window. Without the `COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)` fallback, this column would be NULL.
-
-**Also notable:** The prior VV belongs to a different advertiser (31464 vs 37775). The prior VV pool is cross-advertiser — any VV on the same IP can be the prior VV, regardless of advertiser. This is correct because IPs are bid on across campaigns.
-
----
-
-### P5: S3 CTV VV, NULL first-touch, display prior VV
-
-Like P4 but with ft NULL. The S3 VV is CTV but both the first-touch pointer and prior VV impression are display.
-
-```
-vv_stage              = 3
-lt_bid_ip             = 10.100.5.22     ← S3 impression (event_log, CTV)
-lt_vast_ip            = 10.100.5.22
-redirect_ip           = 10.100.5.22
-
-cp_ft_ad_served_id    = NULL            ← system miss
-ft_bid_ip             = NULL
-ft_vast_ip            = NULL
-
-prior_vv_ad_served_id = <display VV uuid>
-pv_stage              = 2
-pv_lt_bid_ip          = 10.100.5.22    ← from impression_log (il_all)
-pv_lt_vast_ip         = 10.100.5.22    ← impression_log.ip
-```
-
----
-
-### P6: Display VV, CTV first-touch, CTV prior VV
-
-The VV is a display impression (no VAST, `event_log` has no row for this `ad_served_id`). `il_all` fills in the last-touch columns. The first-touch and prior VV are CTV.
-
-```
-vv_stage              = 2
-lt_bid_ip             = 16.98.11.206    ← from impression_log (il_all), NOT event_log
-lt_vast_ip            = 16.98.11.206    ← impression_log.ip (display render IP)
-redirect_ip           = 16.98.11.206    ← clickpass_log.ip (same)
-visit_ip              = 16.98.11.206
-
-cp_ft_ad_served_id    = <S1 uuid>
-ft_stage              = 1
-ft_bid_ip             = 16.98.11.206    ← S1 impression (event_log, CTV)
-
-prior_vv_ad_served_id = <S1 VV uuid>
-pv_lt_bid_ip          = 16.98.11.206    ← prior VV impression (event_log, CTV)
-```
-
-**Note how to distinguish display vs CTV for lt_:** There's no explicit `lt_source` column in the table. To determine the source, you would check: if `el_all` has a row for that `ad_served_id` (i.e., join `event_log` separately), then it's CTV. If not, it's display. In practice, the audit table's purpose is the IP lineage — the source distinction matters for interpretation but not for the IP values themselves.
-
----
-
-### P7: Display VV, display first-touch, display prior VV — fully display chain
-
-All three impression lookups come from `impression_log`. No `event_log` involvement at all. Common for advertisers with high display/mobile inventory.
-
-```
-vv_stage              = 3
-lt_bid_ip             = 74.12.0.99      ← impression_log (il_all)
-lt_vast_ip            = 74.12.0.99      ← impression_log.ip (display)
-redirect_ip           = 74.12.0.99
-
-cp_ft_ad_served_id    = <display S1 uuid>
-ft_stage              = 1
-ft_bid_ip             = 74.12.0.99      ← impression_log (il_all)
-
-prior_vv_ad_served_id = <display S2 VV uuid>
-pv_lt_bid_ip          = 74.12.0.99      ← impression_log (il_all)
-pv_lt_vast_ip         = 74.12.0.99
-```
-
-Structurally identical to a CTV chain — all 9 IP columns populated, prior VV chain intact. The only difference is the data source (impression_log vs event_log), which is invisible in the output.
-
----
-
-### P8: S3 CTV VV with IP mutation at redirect
-
-The IP changed between VAST playback (on the TV) and the redirect (user's phone/laptop). This is the core mutation pattern. The prior VV chain still works because we match on `lt_bid_ip` (not redirect_ip).
-
-```
-vv_stage              = 3
-lt_bid_ip             = 188.213.202.24  ← S3 impression bid IP (event_log)
-lt_vast_ip            = 188.213.202.24  ← same on CTV device
-redirect_ip           = 188.213.202.47  ← *** DIFFERENT — mutation at VAST→redirect ***
-visit_ip              = 188.213.202.47  ← same as redirect (99.93% of the time)
-is_cross_device       = true
-
-cp_ft_ad_served_id    = <S1 uuid>
-ft_bid_ip             = 188.213.202.24  ← S1 bid IP (may or may not match lt)
-
-prior_vv_ad_served_id = <prior VV uuid>
-pv_redirect_ip        = 188.213.202.24  ← prior VV's redirect IP (= our lt_bid_ip)
-pv_lt_bid_ip          = 188.213.202.24  ← prior VV's impression bid IP
-```
-
-The mutation is visible by comparing `lt_bid_ip` (188.213.202.24) vs `redirect_ip` (188.213.202.47). The prior VV chain uses `lt_bid_ip` as the match key — so even when the redirect mutates, the prior VV is still found correctly (assuming the prior VV's redirect IP matches this VV's bid IP, which is ~94% accurate).
-
----
-
-### P9: Prior VV NOT FOUND despite being S3 (match failure)
-
-Even for a confirmed S3 VV, `prior_vv_ad_served_id` can be NULL if the IP match fails. Causes:
-
-1. **IP mutation at the prior VV's redirect:** If the prior VV's redirect_ip ≠ the current VV's bid_ip, the `pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)` join won't match.
-2. **Prior VV > 90 days ago:** The `prior_vv_pool` window is 90 days. If the advancing VV happened longer ago, it's outside the pool.
-3. **Cross-device at prior VV:** If the prior VV was done from a different device (different IP), the IP from that VV doesn't match.
-
-```
-vv_stage              = 3
-lt_bid_ip             = 172.56.16.39    ← S3 impression bid IP
-redirect_ip           = 73.168.42.52    ← mutated at redirect
-
-prior_vv_ad_served_id = NULL            ← match failure: no prior VV had redirect_ip = 172.56.16.39
-pv_stage              = NULL
-pv_redirect_ip        = NULL
-pv_lt_bid_ip          = NULL
-```
-
-**This does NOT mean the VV is invalid or not really S3.** It means the specific prior VV that advanced this IP into S3 can't be identified from the data. The IP is still in the S3 segment — we just can't find the exact VV that put it there. This is expected and documented in Open Items (prior VV match accuracy ~94%).
-
----
-
-### NULL summary — when to expect NULLs in each column group
-
-| Column group | NULL when... | Expected rate |
-|---|---|---|
-| `lt_bid_ip`, `lt_vast_ip` | Neither event_log nor impression_log has a row for `ad_served_id`. Very rare — means the ad served but no impression log captured. | <1% |
-| `visit_ip`, `impression_ip` | `ui_visits` join missed (from_verified_impression = false, or timing gap). | ~5% |
-| `cp_ft_ad_served_id` | System couldn't find S1 impression at write time (IP mutation, targeting issue). Permanent — cannot be backfilled. | ~40% |
-| `ft_bid_ip`, `ft_vast_ip`, `ft_time`, `ft_stage`, `ft_campaign_id` | Always NULL when `cp_ft_ad_served_id` is NULL. | ~40% |
-| `prior_vv_ad_served_id` and all `pv_*` columns | No prior VV found in 90-day window via IP match. Common for S1 VVs (correct) and some S2/S3 VVs (match failure). | ~50-60% (higher for lower stages) |
+This is addressed by the naming convention:
+- `cp_ft_ad_served_id` → the `cp_` prefix means this came directly from `clickpass_log.first_touch_ad_served_id` (what the system stored)
+- `ft_bid_ip`, `ft_vast_ip`, `ft_time` → no `cp_` prefix = these are our audit lookup from `event_log`/`impression_log` based on that ID
