@@ -221,7 +221,7 @@ with_all_joins AS (
         ON pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
         AND pv.prior_vv_time < cp.time
         AND pv.prior_vv_ad_served_id != cp.ad_served_id
-        AND pv.pv_stage < cp.vv_stage
+        AND pv.pv_stage <= cp.vv_stage
     LEFT JOIN el_all pv_lt
         ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
     LEFT JOIN il_all pv_lt_d
@@ -320,7 +320,7 @@ with_all_joins AS (
         ON pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
         AND pv.prior_vv_time < cp.time
         AND pv.prior_vv_ad_served_id != cp.ad_served_id
-        AND pv.pv_stage < cp.vv_stage
+        AND pv.pv_stage <= cp.vv_stage
     LEFT JOIN el_all pv_lt ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
     LEFT JOIN il_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
     LEFT JOIN campaigns_stage c_ft ON c_ft.campaign_id = COALESCE(ft.campaign_id, ft_d.campaign_id)

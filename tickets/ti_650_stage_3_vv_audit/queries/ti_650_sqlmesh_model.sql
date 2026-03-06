@@ -119,12 +119,13 @@ WITH campaigns_stage AS (
   /* All VVs in 90-day lookback for prior VV chain identification.
      Match on redirect_ip (clickpass.ip) = this VV's bid_ip (~94% accurate;
      targeting uses VAST IP but redirect_ip ≈ VAST IP in 94% of cases).
-     pv_stage < vv_stage ensures we find the lower-stage VV that advanced this IP.
-     For S3 rows: pv_stage can be 1 OR 2. An IP can enter S3 via an S1 VV directly
-     (S1 impression → S1 VV → enters S3 targeting) without ever having an S2 VV.
-     Per Zach's last-touch rule: if multiple lower-stage VVs exist, use most recent
-     (ORDER BY prior_vv_time DESC). Note: cp_ft_ad_served_id and prior_vv_ad_served_id
-     can be the same UUID when the first-touch S1 impression was also the prior VV. */
+     pv_stage <= vv_stage supports full chain traversal: the prior VV can be the same
+     stage or lower. This enables S3 VV → S3 VV → S2 VV → S1 VV chains, where an IP
+     has had multiple S3 VVs and each one points to its most recent predecessor.
+     Stage 3 is the terminal stage (no S4), so this is the longest possible path.
+     Per Zach's last-touch rule: use most recent prior VV (ORDER BY prior_vv_time DESC).
+     Note: cp_ft_ad_served_id and prior_vv_ad_served_id can be the same UUID when
+     pv_stage=1 (the S1 VV is both the stage-advancement trigger and the first touch). */
   SELECT
     cp.ip
     , cp.ad_served_id AS prior_vv_ad_served_id
@@ -202,7 +203,7 @@ WITH campaigns_stage AS (
     ON pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
     AND pv.prior_vv_time < cp.time
     AND pv.prior_vv_ad_served_id != cp.ad_served_id
-    AND pv.pv_stage < cp.vv_stage
+    AND pv.pv_stage <= cp.vv_stage
   LEFT JOIN el_all AS pv_lt
     ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
   LEFT JOIN il_all AS pv_lt_d

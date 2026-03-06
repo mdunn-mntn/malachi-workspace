@@ -42,7 +42,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 ### Key design decisions
 - **Single event_log CTE** joined 3x (last-touch, first-touch, prior VV impression) — saves ~8% vs 3 separate scans
 - **Prior VV match** on redirect_ip = bid_ip (~94% accurate; targeting uses VAST IP but redirect_ip ~= VAST IP 94% of the time)
-- **Prior VV stage logic:** `pv_stage < vv_stage` (not `= vv_stage - 1`). S3 rows can have pv_stage=1 OR pv_stage=2 — an IP can enter S3 directly from an S1 VV without ever having an S2 VV (31-34% of S3 rows in validation data)
+- **Prior VV stage logic:** `pv_stage <= vv_stage` — supports full chain traversal. Same-stage prior VVs allowed (e.g. S3 VV → S3 VV → S2 VV → S1 VV). Stage 3 is terminal, so this is the longest possible chain.
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
 ### Cost
@@ -63,7 +63,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 7. **20% of S1 VVs are on S3 IPs.** Attribution stage != journey stage. `max_historical_stage` captures this.
 8. **30-day EL lookback is exact.** 100% of VVs have impression within 30 days. Zero exceptions across 3.25M rows.
 9. **BQ Silver validated vs Greenplum** within 0.12pp on all metrics across 10 advertisers.
-10. **pv_stage logic validated:** `pv_stage < vv_stage` correct (not `= vv_stage - 1`). Confirmed zero pv_stage=3 rows. For S3: 31-34% have pv_stage=1 (direct S1→S3 path), 65-68% have pv_stage=2. For S3/pv_stage=1: 32% have cp_ft_ad_served_id = prior_vv_ad_served_id (first-touch IS the prior VV). el/il join success: 85% for pv_stage=1 prior VVs, 93% for pv_stage=2 prior VVs. (30-day validation, advertiser 37775)
+10. **pv_stage logic:** `pv_stage <= vv_stage` — full chain traversal including same-stage prior VVs (S3 VV → S3 VV → S2 VV → S1 VV). Stage 3 is terminal. Validation with `< vv_stage`: zero pv_stage=3 rows, S3 distribution 31-34% pv_stage=1 / 65-68% pv_stage=2, el/il join success 85-93%. The `<=` change expands prior VV eligibility but doesn't change the stage distribution for non-S3 prior VV cases.
 
 ---
 
