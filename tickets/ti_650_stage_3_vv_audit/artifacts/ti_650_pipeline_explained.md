@@ -37,11 +37,13 @@ Stages are about **which targeting segment served this impression**, determined 
 **Key rules from Zach:**
 - S2 is populated ONLY from Stage 1 VAST IPs — not S2 or S3 impressions. S1 impression → VAST fires → IP enters S2.
 - Stage 3 = "IPs that had a verified visit." That is literally the definition of Stage 3. The VV can be from any stage impression. Any VV puts the IP into S3.
-- IPs are NEVER removed from prior stages. An IP in S3 is also still in S1 and S2. All three campaigns can serve it; frequency capping prevents duplicate delivery.
+- IPs are NEVER removed from prior stages. An IP in S3 is also in S2 AND S1. An IP in S2 is also in S1 but NOT necessarily S3. An IP can be in S1 without being in S2 at all — it just means it hasn't had a VAST impression yet. Stages only accumulate forward.
 - Each stage is a separate campaign with separate budget. S1 = ~75-80% of budget. The bidder has no concept of stages — it just sees three independent campaigns.
 - VV attribution uses the last-touch stack model: *"We put impressions on the stack. When a page view comes in, we check the top of the stack."* The most recent impression gets credit.
 
-**Attribution stage vs journey stage:** Because S1 has 75-80% of budget, a VV can be attributed to an S1 impression even if the IP has already reached S3. The `vv_stage` column records attribution stage, not the IP's deepest stage. 20% of S1-attributed VVs are on IPs that have already reached S3.
+**Eligibility vs actual impression:** An IP being eligible for S3 (because it had a prior VV) does NOT mean it will receive an S3 impression. The bidder only knows `campaign_id`. At bid time, an IP eligible for all three stages is a candidate for all three campaigns. Which one actually wins depends on pacing, budget, and bidding factors. An IP that has reached S3 can still get served from an S1 campaign — and we can tell this happened by looking at `cost_impression_log.campaign_id` and joining to `campaigns.funnel_level`. The `vv_stage` column in the audit table reflects which campaign's impression got last-touch credit — not the IP's maximum stage.
+
+**Attribution stage vs journey stage:** Because S1 has 75-80% of budget, a VV is frequently attributed to an S1 impression even when the IP has already progressed to S3. 20% of S1-attributed VVs are on IPs that have already reached S3.
 
 ---
 
