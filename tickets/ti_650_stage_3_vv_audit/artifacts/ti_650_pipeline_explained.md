@@ -1326,3 +1326,354 @@ Our `ad_served_id` trace is correct and sufficient for the core audit (last-touc
 We've already demonstrated the full backward traversal is technically feasible — the Q9/Q10 queries in `audit_trace_queries.sql` do exactly this for Types A through E (1 to 369 impressions). The segment system itself (from `membership_updates_proto_generate.py`) only stores `MAX(epoch)` per (ip, data_source_id, category_id) — there is no segment history to traverse. So Zach's backward trace goes through `event_log` data, not the segment store.
 
 **Scope decision — ANSWERED (Zach, 2026-03-03): "never assume only CTV. always assume all."** The A4 production table already traces all VV types (CTV + display). CTV VVs get full 4-checkpoint tracing via event_log; non-CTV VVs get 2-checkpoint tracing via impression_ip. Zach also noted that adding clicks to Stage 3 is "one thing we could improve" — future work. The table provides one row per VV with the last-touch bid IP. The full impression chain is available via the Q9/Q10 queries if a deeper audit is ever needed.
+
+---
+
+## Part 16: MES Trace Permutations — Every Possible Output from `audit.vv_ip_lineage`
+
+The production table (`audit.vv_ip_lineage`) produces one row per verified visit. Each row has three impression lookup slots — last-touch (lt_), first-touch (ft_), and prior VV impression (pv_lt_) — and each slot can be populated from CTV (`event_log` via `el_all`), display (`impression_log` via `il_all`), or NULL. This section documents every meaningful permutation and what the resulting MES row looks like.
+
+### How the COALESCE lookup works
+
+For each impression slot, the query tries `event_log` first, then falls back to `impression_log`:
+
+```
+COALESCE(el.bid_ip, il.bid_ip) AS [slot]_bid_ip
+COALESCE(el.vast_ip, il.vast_ip) AS [slot]_vast_ip
+```
+
+- If `event_log` has a row for that `ad_served_id` → CTV trace. `el` wins. `il` is ignored.
+- If `event_log` has no row but `impression_log` does → Display trace. `il` fills in.
+- If neither has a row → NULLs. Either the `ad_served_id` itself is NULL (ft_ case) or the prior VV isn't found.
+
+The `il.vast_ip` column comes from `impression_log.ip` — the IP at impression render time, which is the display equivalent of the CTV VAST playback IP.
+
+---
+
+### Permutation matrix
+
+| # | VV type | First-touch | Prior VV found | Prior VV type | lt_bid_ip | ft_bid_ip | pv_lt_bid_ip | Frequency |
+|---|---------|-------------|----------------|---------------|-----------|-----------|--------------|-----------|
+| P1 | CTV | CTV ft | No prior VV | — | populated | populated | NULL | ~40% of VVs (S1 or no chain) |
+| P2 | CTV | CTV ft | Yes | CTV | populated | populated | populated | Common for S2/S3 CTV chains |
+| P3 | CTV | NULL | No prior VV | — | populated | NULL | NULL | ~17% (ft NULL + no pv) |
+| P4 | CTV | NULL | Yes | CTV | populated | NULL | populated | ~23% (ft NULL + pv found) |
+| P5 | CTV | CTV ft | Yes | Display | populated | populated | populated | Less common; real example below |
+| P6 | CTV | NULL | Yes | Display | populated | NULL | populated | Same as P5 but ft NULL |
+| P7 | Display | CTV ft | No prior VV | — | populated* | populated | NULL | Non-CTV VV with CTV first-touch |
+| P8 | Display | NULL | No prior VV | — | populated* | NULL | NULL | Pure display, no prior history |
+| P9 | Display | Display ft | Yes | Display | populated* | populated* | populated* | Fully display chain |
+
+*For display VVs, lt_bid_ip comes from il_all (impression_log) not el_all (event_log).
+
+---
+
+### Following an IP through the funnel — S1 → S2 → S3
+
+This example shows one IP (`172.59.192.138`) progressing through all three funnel stages. The MES table produces three rows — one VV per stage. The `prior_vv_ad_served_id` chain links them together.
+
+```
+Timeline:
+
+  [2026-01-03]  S1 impression → S1 VV
+  ad_served_id = "s1-vv-uuid"
+  vv_stage     = 1
+  IP enters S2 segment (redirect_ip = 172.59.192.138 recorded)
+
+  [2026-01-15]  S2 impression → S2 VV
+  ad_served_id = "s2-vv-uuid"
+  vv_stage     = 2
+  IP enters S3 segment
+
+  [2026-02-02]  S3 impression → S3 VV
+  ad_served_id = "s3-vv-uuid"
+  vv_stage     = 3
+```
+
+**MES Row for S1 VV:**
+```
+ad_served_id          = "s1-vv-uuid"
+vv_stage              = 1
+lt_bid_ip             = 172.59.192.138   ← S1 impression bid IP
+lt_vast_ip            = 172.59.192.138
+redirect_ip           = 172.59.192.138   ← same IP (no mutation)
+cp_ft_ad_served_id    = "s1-vv-uuid"     ← same as vv (this IS the first touch)
+ft_stage              = 1
+ft_bid_ip             = 172.59.192.138   ← same join, same row
+prior_vv_ad_served_id = NULL             ← no prior VV (this is the first entry)
+pv_stage              = NULL
+pv_lt_bid_ip          = NULL
+```
+
+**MES Row for S2 VV:**
+```
+ad_served_id          = "s2-vv-uuid"
+vv_stage              = 2
+lt_bid_ip             = 172.59.192.138   ← S2 impression bid IP
+lt_vast_ip            = 172.59.192.138
+redirect_ip           = 172.59.192.138
+cp_ft_ad_served_id    = "s1-vv-uuid"     ← system recorded S1 impression
+ft_stage              = 1
+ft_bid_ip             = 172.59.192.138   ← S1 impression IP (same in this example)
+prior_vv_ad_served_id = "s1-vv-uuid"     ← the S1 VV that advanced IP to S2
+pv_stage              = 1
+pv_redirect_ip        = 172.59.192.138   ← redirect IP from the S1 VV
+pv_lt_bid_ip          = 172.59.192.138   ← S1 impression bid IP (from el_all or il_all)
+```
+
+**MES Row for S3 VV:**
+```
+ad_served_id          = "s3-vv-uuid"
+vv_stage              = 3
+lt_bid_ip             = 172.59.192.138   ← S3 impression bid IP
+lt_vast_ip            = 172.59.192.138
+redirect_ip           = 172.59.192.138
+cp_ft_ad_served_id    = "s1-vv-uuid"     ← still pointing back to original S1
+ft_stage              = 1
+ft_bid_ip             = 172.59.192.138
+prior_vv_ad_served_id = "s2-vv-uuid"     ← the MOST RECENT prior VV (S2)
+pv_stage              = 2
+pv_redirect_ip        = 172.59.192.138
+pv_lt_bid_ip          = 172.59.192.138   ← S2 impression bid IP
+```
+
+The three rows form a chain: S3 → S2 → S1 via `prior_vv_ad_served_id`. The `cp_ft_ad_served_id` shortcut points straight to S1 from all rows (system-recorded at write time). Note that `prior_vv_ad_served_id` always points to the most recent prior VV — not necessarily S1. A direct S3 VV only links to its S2 parent; you'd need to follow the S2 row to find S1.
+
+---
+
+### P1: Standard S1 CTV VV — first funnel entry, no prior VV
+
+The most common case. This IP has never had a VV before, so there's no prior VV chain.
+
+```
+vv_stage              = 1
+lt_bid_ip             = 98.207.141.55    ← from event_log (CTV)
+lt_vast_ip            = 98.207.141.55    ← same (no bid/VAST mutation)
+redirect_ip           = 98.207.141.55    ← same (no mutation)
+visit_ip              = 98.207.141.55
+
+cp_ft_ad_served_id    = <same as ad_served_id>   ← S1 IS the first touch
+ft_stage              = 1
+ft_bid_ip             = 98.207.141.55    ← same join resolves same row
+
+prior_vv_ad_served_id = NULL             ← no prior VV found
+pv_stage              = NULL
+pv_lt_bid_ip          = NULL
+pv_lt_vast_ip         = NULL
+pv_lt_time            = NULL
+```
+
+**All pv_ columns are NULL.** This is correct — no prior VV means no chain. The lt_ and ft_ IPs often match for S1 VVs (same impression serves as both last-touch and first-touch).
+
+---
+
+### P2: S3 CTV VV, CTV first-touch, CTV prior VV — fully CTV chain
+
+The "ideal" fully populated trace. All three impression lookups resolve via event_log.
+
+```
+vv_stage              = 3
+lt_bid_ip             = 98.207.141.55    ← S3 impression (event_log)
+lt_vast_ip            = 98.207.141.55
+redirect_ip           = 98.207.141.55
+
+cp_ft_ad_served_id    = <S1 ad_served_id>
+ft_stage              = 1
+ft_bid_ip             = 98.207.141.55    ← S1 impression (event_log, same IP)
+ft_vast_ip            = 98.207.141.55
+
+prior_vv_ad_served_id = <S2 VV ad_served_id>
+pv_stage              = 2
+pv_redirect_ip        = 98.207.141.55    ← redirect IP from prior S2 VV
+pv_lt_bid_ip          = 98.207.141.55    ← S2 impression bid IP (event_log)
+pv_lt_vast_ip         = 98.207.141.55
+```
+
+**All 9 IP columns populated. All from event_log.** This is the cleanest possible trace — stable IP, CTV throughout. Every IP matches, confirming no cross-device and no mutation.
+
+---
+
+### P3: S3 CTV VV, NULL first-touch, CTV prior VV
+
+`cp_ft_ad_served_id` is NULL (system couldn't find a S1 impression for this IP at write time). But the prior VV chain still works because we find it via IP match.
+
+```
+vv_stage              = 3
+lt_bid_ip             = 172.56.16.39     ← S3 impression (event_log)
+lt_vast_ip            = 172.56.16.39
+redirect_ip           = 172.56.16.39
+
+cp_ft_ad_served_id    = NULL             ← system never stored a first-touch pointer
+ft_stage              = NULL             ← can't derive without the pointer
+ft_bid_ip             = NULL             ← NULL because join key is NULL
+ft_vast_ip            = NULL
+ft_time               = NULL
+
+prior_vv_ad_served_id = <prior VV uuid>  ← found via lt_bid_ip match in clickpass_log
+pv_stage              = 2
+pv_redirect_ip        = 172.56.16.39
+pv_lt_bid_ip          = 172.56.16.39    ← prior VV impression (event_log)
+```
+
+**ft_ group is entirely NULL — this is expected for 40% of VVs.** The `cp_ft_ad_served_id` NULL is a system limitation (targeting IP mismatch at write time), not a data error. The prior VV chain is independent and still resolves correctly.
+
+---
+
+### P4: S3 CTV VV, CTV first-touch, display prior VV — real example from Zach's audit
+
+This is the exact permutation discovered during Zach's review of S3 VV `003a01cf` (advertiser 37775, 2026-02-09). The VV itself was CTV. The prior VV's impression was display — it had no `event_log` row and was only found via `impression_log`.
+
+**Without `il_all`:** `pv_lt_bid_ip` would be NULL.
+**With `il_all` COALESCE fallback:** `pv_lt_bid_ip` resolves correctly.
+
+```
+vv_stage              = 3
+ad_served_id          = 003a01cf-...    (advertiser 37775)
+
+lt_bid_ip             = 172.59.192.138  ← S3 impression (event_log, CTV)
+lt_vast_ip            = 172.59.192.138
+redirect_ip           = 172.59.192.138
+
+cp_ft_ad_served_id    = <S1 uuid>
+ft_stage              = 1
+ft_bid_ip             = 172.59.192.138  ← S1 impression (event_log, CTV)
+
+prior_vv_ad_served_id = a4074373-6767-4795-9d6e-5b167c2881f1
+                        ← advertiser 31464, campaign 278920
+pv_stage              = <stage for campaign 278920>
+pv_redirect_ip        = 172.59.192.138  ← redirect IP from that prior VV
+pv_lt_bid_ip          = 172.59.192.138  ← *** from impression_log (il_all), NOT event_log ***
+pv_lt_vast_ip         = 172.59.192.138  ← impression_log.ip (display render IP)
+pv_lt_time            = 2026-02-02 05:46:30 UTC
+```
+
+**Key point:** `pv_lt_bid_ip` is sourced from `il_all` (impression_log) because the prior VV `a4074373` was a display impression — it has ZERO rows in `event_log` across the entire 90-day window. Without the `COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)` fallback, this column would be NULL.
+
+**Also notable:** The prior VV belongs to a different advertiser (31464 vs 37775). The prior VV pool is cross-advertiser — any VV on the same IP can be the prior VV, regardless of advertiser. This is correct because IPs are bid on across campaigns.
+
+---
+
+### P5: S3 CTV VV, NULL first-touch, display prior VV
+
+Like P4 but with ft NULL. The S3 VV is CTV but both the first-touch pointer and prior VV impression are display.
+
+```
+vv_stage              = 3
+lt_bid_ip             = 10.100.5.22     ← S3 impression (event_log, CTV)
+lt_vast_ip            = 10.100.5.22
+redirect_ip           = 10.100.5.22
+
+cp_ft_ad_served_id    = NULL            ← system miss
+ft_bid_ip             = NULL
+ft_vast_ip            = NULL
+
+prior_vv_ad_served_id = <display VV uuid>
+pv_stage              = 2
+pv_lt_bid_ip          = 10.100.5.22    ← from impression_log (il_all)
+pv_lt_vast_ip         = 10.100.5.22    ← impression_log.ip
+```
+
+---
+
+### P6: Display VV, CTV first-touch, CTV prior VV
+
+The VV is a display impression (no VAST, `event_log` has no row for this `ad_served_id`). `il_all` fills in the last-touch columns. The first-touch and prior VV are CTV.
+
+```
+vv_stage              = 2
+lt_bid_ip             = 16.98.11.206    ← from impression_log (il_all), NOT event_log
+lt_vast_ip            = 16.98.11.206    ← impression_log.ip (display render IP)
+redirect_ip           = 16.98.11.206    ← clickpass_log.ip (same)
+visit_ip              = 16.98.11.206
+
+cp_ft_ad_served_id    = <S1 uuid>
+ft_stage              = 1
+ft_bid_ip             = 16.98.11.206    ← S1 impression (event_log, CTV)
+
+prior_vv_ad_served_id = <S1 VV uuid>
+pv_lt_bid_ip          = 16.98.11.206    ← prior VV impression (event_log, CTV)
+```
+
+**Note how to distinguish display vs CTV for lt_:** There's no explicit `lt_source` column in the table. To determine the source, you would check: if `el_all` has a row for that `ad_served_id` (i.e., join `event_log` separately), then it's CTV. If not, it's display. In practice, the audit table's purpose is the IP lineage — the source distinction matters for interpretation but not for the IP values themselves.
+
+---
+
+### P7: Display VV, display first-touch, display prior VV — fully display chain
+
+All three impression lookups come from `impression_log`. No `event_log` involvement at all. Common for advertisers with high display/mobile inventory.
+
+```
+vv_stage              = 3
+lt_bid_ip             = 74.12.0.99      ← impression_log (il_all)
+lt_vast_ip            = 74.12.0.99      ← impression_log.ip (display)
+redirect_ip           = 74.12.0.99
+
+cp_ft_ad_served_id    = <display S1 uuid>
+ft_stage              = 1
+ft_bid_ip             = 74.12.0.99      ← impression_log (il_all)
+
+prior_vv_ad_served_id = <display S2 VV uuid>
+pv_lt_bid_ip          = 74.12.0.99      ← impression_log (il_all)
+pv_lt_vast_ip         = 74.12.0.99
+```
+
+Structurally identical to a CTV chain — all 9 IP columns populated, prior VV chain intact. The only difference is the data source (impression_log vs event_log), which is invisible in the output.
+
+---
+
+### P8: S3 CTV VV with IP mutation at redirect
+
+The IP changed between VAST playback (on the TV) and the redirect (user's phone/laptop). This is the core mutation pattern. The prior VV chain still works because we match on `lt_bid_ip` (not redirect_ip).
+
+```
+vv_stage              = 3
+lt_bid_ip             = 188.213.202.24  ← S3 impression bid IP (event_log)
+lt_vast_ip            = 188.213.202.24  ← same on CTV device
+redirect_ip           = 188.213.202.47  ← *** DIFFERENT — mutation at VAST→redirect ***
+visit_ip              = 188.213.202.47  ← same as redirect (99.93% of the time)
+is_cross_device       = true
+
+cp_ft_ad_served_id    = <S1 uuid>
+ft_bid_ip             = 188.213.202.24  ← S1 bid IP (may or may not match lt)
+
+prior_vv_ad_served_id = <prior VV uuid>
+pv_redirect_ip        = 188.213.202.24  ← prior VV's redirect IP (= our lt_bid_ip)
+pv_lt_bid_ip          = 188.213.202.24  ← prior VV's impression bid IP
+```
+
+The mutation is visible by comparing `lt_bid_ip` (188.213.202.24) vs `redirect_ip` (188.213.202.47). The prior VV chain uses `lt_bid_ip` as the match key — so even when the redirect mutates, the prior VV is still found correctly (assuming the prior VV's redirect IP matches this VV's bid IP, which is ~94% accurate).
+
+---
+
+### P9: Prior VV NOT FOUND despite being S3 (match failure)
+
+Even for a confirmed S3 VV, `prior_vv_ad_served_id` can be NULL if the IP match fails. Causes:
+
+1. **IP mutation at the prior VV's redirect:** If the prior VV's redirect_ip ≠ the current VV's bid_ip, the `pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)` join won't match.
+2. **Prior VV > 90 days ago:** The `prior_vv_pool` window is 90 days. If the advancing VV happened longer ago, it's outside the pool.
+3. **Cross-device at prior VV:** If the prior VV was done from a different device (different IP), the IP from that VV doesn't match.
+
+```
+vv_stage              = 3
+lt_bid_ip             = 172.56.16.39    ← S3 impression bid IP
+redirect_ip           = 73.168.42.52    ← mutated at redirect
+
+prior_vv_ad_served_id = NULL            ← match failure: no prior VV had redirect_ip = 172.56.16.39
+pv_stage              = NULL
+pv_redirect_ip        = NULL
+pv_lt_bid_ip          = NULL
+```
+
+**This does NOT mean the VV is invalid or not really S3.** It means the specific prior VV that advanced this IP into S3 can't be identified from the data. The IP is still in the S3 segment — we just can't find the exact VV that put it there. This is expected and documented in Open Items (prior VV match accuracy ~94%).
+
+---
+
+### NULL summary — when to expect NULLs in each column group
+
+| Column group | NULL when... | Expected rate |
+|---|---|---|
+| `lt_bid_ip`, `lt_vast_ip` | Neither event_log nor impression_log has a row for `ad_served_id`. Very rare — means the ad served but no impression log captured. | <1% |
+| `visit_ip`, `impression_ip` | `ui_visits` join missed (from_verified_impression = false, or timing gap). | ~5% |
+| `cp_ft_ad_served_id` | System couldn't find S1 impression at write time (IP mutation, targeting issue). Permanent — cannot be backfilled. | ~40% |
+| `ft_bid_ip`, `ft_vast_ip`, `ft_time`, `ft_stage`, `ft_campaign_id` | Always NULL when `cp_ft_ad_served_id` is NULL. | ~40% |
+| `prior_vv_ad_served_id` and all `pv_*` columns | No prior VV found in 90-day window via IP match. Common for S1 VVs (correct) and some S2/S3 VVs (match failure). | ~50-60% (higher for lower stages) |
