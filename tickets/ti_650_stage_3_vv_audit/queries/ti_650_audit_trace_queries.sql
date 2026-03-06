@@ -45,15 +45,16 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     visit_ip              STRING,                   -- ui_visits.ip
     impression_ip         STRING,                   -- ui_visits.impression_ip
 
-    -- First-touch impression — Stage 1
-    -- cp_ft_ad_served_id: system-recorded (clickpass_log.first_touch_ad_served_id)
-    -- ft_bid_ip / ft_vast_ip / ft_time: audit lookup (event_log CTV, else impression_log display)
-    cp_ft_ad_served_id       STRING,
-    ft_campaign_id        INT64,
-    ft_stage              INT64,                    -- always 1 (funnel is sequential)
-    ft_bid_ip             STRING,
-    ft_vast_ip            STRING,
-    ft_time               TIMESTAMP,
+    -- S1 impression — chain traversal resolved (~99%+ populated)
+    -- cp_ft_ad_served_id: system-stored comparison reference only (~60% populated)
+    -- s1_ad_served_id / s1_bid_ip / s1_vast_ip: our audit-trail S1 via chain traversal CASE:
+    --   vv_stage=1  -> current VV IS S1 (lt_ columns)
+    --   pv_stage=1  -> prior VV IS S1 (pv_lt_ columns)
+    --   pv_stage>1  -> second-level IP match via s1_pv join (s1_lt_ columns)
+    cp_ft_ad_served_id    STRING,
+    s1_ad_served_id       STRING,
+    s1_bid_ip             STRING,
+    s1_vast_ip            STRING,
 
     -- Prior VV — most recent VV that advanced this IP into the current stage
     -- (e.g. for S3 VV: the S2 VV whose redirect IP matches this VV's bid IP)
@@ -113,7 +114,7 @@ cp_dedup AS (
         c.stage AS vv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE DATE(cp.time) BETWEEN '2026-02-04' AND '2026-02-10'
+    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 el_all AS (
@@ -127,7 +128,7 @@ el_all AS (
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_impression'
-      AND DATE(time) BETWEEN '2025-11-06' AND '2026-02-10'
+      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
 ),
 il_all AS (
     -- Display impression IPs from impression_log. Fallback for non-CTV inventory.
@@ -140,7 +141,7 @@ il_all AS (
         time,
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE DATE(time) BETWEEN '2025-11-06' AND '2026-02-10'
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
 ),
 v_dedup AS (
     SELECT
@@ -150,7 +151,7 @@ v_dedup AS (
         impression_ip
     FROM `dw-main-silver.summarydata.ui_visits`
     WHERE from_verified_impression = TRUE
-      AND DATE(time) BETWEEN '2026-01-28' AND '2026-02-17'
+      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
 ),
 prior_vv_pool AS (
@@ -162,7 +163,7 @@ prior_vv_pool AS (
         c.stage         AS pv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE DATE(cp.time) BETWEEN '2025-11-06' AND '2026-02-10'
+    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 with_all_joins AS (
@@ -180,11 +181,21 @@ with_all_joins AS (
         v.impression_ip,
 
         cp.first_touch_ad_served_id                 AS cp_ft_ad_served_id,
-        COALESCE(ft.campaign_id, ft_d.campaign_id)  AS ft_campaign_id,
-        c_ft.stage                                  AS ft_stage,
-        COALESCE(ft.bid_ip, ft_d.bid_ip)            AS ft_bid_ip,
-        COALESCE(ft.vast_ip, ft_d.vast_ip)          AS ft_vast_ip,
-        COALESCE(ft.time, ft_d.time)                AS ft_time,
+        CASE
+            WHEN cp.vv_stage = 1 THEN cp.ad_served_id
+            WHEN pv.pv_stage = 1 THEN pv.prior_vv_ad_served_id
+            ELSE s1_pv.prior_vv_ad_served_id
+        END                                         AS s1_ad_served_id,
+        CASE
+            WHEN cp.vv_stage = 1 THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
+            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+            ELSE COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+        END                                         AS s1_bid_ip,
+        CASE
+            WHEN cp.vv_stage = 1 THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
+            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
+            ELSE COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+        END                                         AS s1_vast_ip,
 
         pv.prior_vv_ad_served_id,
         pv.prior_vv_time,
@@ -204,17 +215,13 @@ with_all_joins AS (
 
         ROW_NUMBER() OVER (
             PARTITION BY cp.ad_served_id
-            ORDER BY pv.prior_vv_time DESC
+            ORDER BY pv.prior_vv_time DESC NULLS LAST, s1_pv.prior_vv_time DESC NULLS LAST
         )                                           AS _pv_rn
     FROM cp_dedup cp
     LEFT JOIN el_all lt
         ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
     LEFT JOIN il_all lt_d
         ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
-    LEFT JOIN el_all ft
-        ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
-    LEFT JOIN il_all ft_d
-        ON ft_d.ad_served_id = cp.first_touch_ad_served_id AND ft_d.rn = 1
     LEFT JOIN v_dedup v
         ON v.ad_served_id = cp.ad_served_id
     LEFT JOIN prior_vv_pool pv
@@ -226,12 +233,20 @@ with_all_joins AS (
         ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
     LEFT JOIN il_all pv_lt_d
         ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
-    LEFT JOIN campaigns_stage c_ft ON c_ft.campaign_id = COALESCE(ft.campaign_id, ft_d.campaign_id)
+    LEFT JOIN prior_vv_pool s1_pv
+        ON s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+        AND s1_pv.pv_stage = 1
+        AND s1_pv.prior_vv_time < pv.prior_vv_time
+        AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
+    LEFT JOIN el_all s1_lt
+        ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
+    LEFT JOIN il_all s1_lt_d
+        ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
     lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip,
-    cp_ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
+    cp_ft_ad_served_id, s1_ad_served_id, s1_bid_ip, s1_vast_ip,
     prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage,
     pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time,
     clickpass_is_new, visit_is_new, is_cross_device,
@@ -255,7 +270,7 @@ cp_dedup AS (
         cp.first_touch_ad_served_id, cp.time, c.stage AS vv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE DATE(cp.time) BETWEEN '2026-02-04' AND '2026-02-10'
+    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
       AND cp.advertiser_id = 37775
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
@@ -264,19 +279,19 @@ el_all AS (
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_impression'
-      AND DATE(time) BETWEEN '2025-11-06' AND '2026-02-10'
+      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
 ),
 il_all AS (
     SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time,
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE DATE(time) BETWEEN '2025-11-06' AND '2026-02-10'
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
 ),
 v_dedup AS (
     SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip, is_new, impression_ip
     FROM `dw-main-silver.summarydata.ui_visits`
     WHERE from_verified_impression = TRUE
-      AND DATE(time) BETWEEN '2026-01-28' AND '2026-02-17'
+      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
 ),
 prior_vv_pool AS (
@@ -284,7 +299,7 @@ prior_vv_pool AS (
         cp.time AS prior_vv_time, c.stage AS pv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE DATE(cp.time) BETWEEN '2025-11-06' AND '2026-02-10'
+    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 with_all_joins AS (
@@ -295,11 +310,21 @@ with_all_joins AS (
         COALESCE(lt.vast_ip, lt_d.vast_ip) AS lt_vast_ip,
         cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
         cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
-        COALESCE(ft.campaign_id, ft_d.campaign_id) AS ft_campaign_id,
-        c_ft.stage AS ft_stage,
-        COALESCE(ft.bid_ip, ft_d.bid_ip) AS ft_bid_ip,
-        COALESCE(ft.vast_ip, ft_d.vast_ip) AS ft_vast_ip,
-        COALESCE(ft.time, ft_d.time) AS ft_time,
+        CASE
+            WHEN cp.vv_stage = 1 THEN cp.ad_served_id
+            WHEN pv.pv_stage = 1 THEN pv.prior_vv_ad_served_id
+            ELSE s1_pv.prior_vv_ad_served_id
+        END AS s1_ad_served_id,
+        CASE
+            WHEN cp.vv_stage = 1 THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
+            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+            ELSE COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+        END AS s1_bid_ip,
+        CASE
+            WHEN cp.vv_stage = 1 THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
+            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
+            ELSE COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+        END AS s1_vast_ip,
         pv.prior_vv_ad_served_id, pv.prior_vv_time,
         pv.pv_campaign_id, pv.pv_stage,
         pv.ip AS pv_redirect_ip,
@@ -309,12 +334,13 @@ with_all_joins AS (
         cp.is_new AS clickpass_is_new, v.is_new AS visit_is_new, cp.is_cross_device,
         DATE(cp.time) AS trace_date,
         CURRENT_TIMESTAMP() AS trace_run_timestamp,
-        ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY pv.prior_vv_time DESC) AS _pv_rn
+        ROW_NUMBER() OVER (
+            PARTITION BY cp.ad_served_id
+            ORDER BY pv.prior_vv_time DESC NULLS LAST, s1_pv.prior_vv_time DESC NULLS LAST
+        ) AS _pv_rn
     FROM cp_dedup cp
     LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
     LEFT JOIN il_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
-    LEFT JOIN el_all ft ON ft.ad_served_id = cp.first_touch_ad_served_id AND ft.rn = 1
-    LEFT JOIN il_all ft_d ON ft_d.ad_served_id = cp.first_touch_ad_served_id AND ft_d.rn = 1
     LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
     LEFT JOIN prior_vv_pool pv
         ON pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
@@ -323,12 +349,18 @@ with_all_joins AS (
         AND pv.pv_stage <= cp.vv_stage
     LEFT JOIN el_all pv_lt ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
     LEFT JOIN il_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
-    LEFT JOIN campaigns_stage c_ft ON c_ft.campaign_id = COALESCE(ft.campaign_id, ft_d.campaign_id)
+    LEFT JOIN prior_vv_pool s1_pv
+        ON s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+        AND s1_pv.pv_stage = 1
+        AND s1_pv.prior_vv_time < pv.prior_vv_time
+        AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
+    LEFT JOIN el_all s1_lt ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
+    LEFT JOIN il_all s1_lt_d ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
     lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip,
-    cp_ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
+    cp_ft_ad_served_id, s1_ad_served_id, s1_bid_ip, s1_vast_ip,
     prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage,
     pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time,
     clickpass_is_new, visit_is_new, is_cross_device,

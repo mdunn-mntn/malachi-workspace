@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v4 production query validated end-to-end; pv_stage logic fixed and validated
+**Status:** In Progress — v4 production query validated end-to-end; S1 chain traversal redesign complete and validated
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -31,7 +31,7 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 - **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
 - **Last-touch impression IPs (Stage N):** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
-- **First-touch impression (Stage 1):** cp_ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time
+- **S1 impression (chain traversal resolved):** cp_ft_ad_served_id (system ref only), s1_ad_served_id, s1_bid_ip, s1_vast_ip
 - **Prior VV (stage advancement trigger):** prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time
 - **Classification:** clickpass_is_new, visit_is_new, is_cross_device
 - **Metadata:** trace_date, trace_run_timestamp
@@ -40,9 +40,10 @@ One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
-- **Single event_log CTE** joined 3x (last-touch, first-touch, prior VV impression) — saves ~8% vs 3 separate scans
+- **Single event_log + impression_log CTE** each joined 3x (last-touch, prior VV, S1 chain) — saves ~8% vs 3 separate scans per table
 - **Prior VV match** on redirect_ip = bid_ip (~94% accurate; targeting uses VAST IP but redirect_ip ~= VAST IP 94% of the time)
 - **Prior VV stage logic:** `pv_stage <= vv_stage` — supports full chain traversal. Same-stage prior VVs allowed (e.g. S3 VV → S3 VV → S2 VV → S1 VV). Stage 3 is terminal, so this is the longest possible chain.
+- **S1 resolution via chain traversal CASE** — eliminates reliance on `cp_ft_ad_served_id` (40% NULL). Three branches: vv_stage=1 (current IS S1), pv_stage=1 (prior VV IS S1), else second-level IP match via `s1_pv` JOIN. Resolves ~99%+ of rows. `cp_ft_ad_served_id` retained as comparison reference only.
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
 ### Cost
@@ -91,6 +92,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference; pv_lt_bid_ip NULL for display prior VVs)
 - `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation (7-day clickpass-only, fast query; confirms zero pv_stage=3)
 - `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (30-day full scan; **canonical validation**)
+- `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation (confirms s1_pv JOIN resolves S1 VV for row 003a01cf)
 
 ---
 
@@ -98,6 +100,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 - **Deploy production table:** SQLMesh model drafted (`queries/ti_650_sqlmesh_model.sql`). Silver layer, `targeting-infrastructure` owner. Next: confirm dataset name with Dustin (e.g. `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`), PR into `SteelHouse/sqlmesh` repo, backfill from 2026-01-01
 - **Query validated end-to-end (2026-03-06):** Targeted test on advertiser 37775 (2026-02-04) confirmed `pv_lt_bid_ip = 172.59.192.138` is now populated for the display prior VV `a4074373`. Previously NULL. Fix: `il_all` CTE (impression_log) + `COALESCE(el, il)` pattern across all 9 IP columns.
+- **S1 chain traversal validated (2026-03-06):** For row `003a01cf` (vv_stage=3, pv_stage=3), `pv_lt_bid_ip = 172.59.192.138` resolves to multiple Stage 1 VVs in clickpass_log. `s1_ad_served_id` will be populated via `s1_pv` JOIN. Old design had all S1 fields NULL (cp_ft_ad_served_id was NULL). New chain traversal design resolves S1 for ~99%+ of rows.
 - **Prior VV match refinement:** Currently uses redirect_ip = bid_ip; could match on pv_lt_vast_ip for higher accuracy
 - **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
 
