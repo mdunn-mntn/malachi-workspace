@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v4 production query validated end-to-end (display impression fix confirmed)
+**Status:** In Progress — v4 production query validated end-to-end; pv_stage logic fixed and validated
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -42,6 +42,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 ### Key design decisions
 - **Single event_log CTE** joined 3x (last-touch, first-touch, prior VV impression) — saves ~8% vs 3 separate scans
 - **Prior VV match** on redirect_ip = bid_ip (~94% accurate; targeting uses VAST IP but redirect_ip ~= VAST IP 94% of the time)
+- **Prior VV stage logic:** `pv_stage < vv_stage` (not `= vv_stage - 1`). S3 rows can have pv_stage=1 OR pv_stage=2 — an IP can enter S3 directly from an S1 VV without ever having an S2 VV (31-34% of S3 rows in validation data)
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
 ### Cost
@@ -62,6 +63,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 7. **20% of S1 VVs are on S3 IPs.** Attribution stage != journey stage. `max_historical_stage` captures this.
 8. **30-day EL lookback is exact.** 100% of VVs have impression within 30 days. Zero exceptions across 3.25M rows.
 9. **BQ Silver validated vs Greenplum** within 0.12pp on all metrics across 10 advertisers.
+10. **pv_stage logic validated:** `pv_stage < vv_stage` correct (not `= vv_stage - 1`). Confirmed zero pv_stage=3 rows. For S3: 31-34% have pv_stage=1 (direct S1→S3 path), 65-68% have pv_stage=2. For S3/pv_stage=1: 32% have cp_ft_ad_served_id = prior_vv_ad_served_id (first-touch IS the prior VV). el/il join success: 85% for pv_stage=1 prior VVs, 93% for pv_stage=2 prior VVs. (30-day validation, advertiser 37775)
 
 ---
 
@@ -75,16 +77,20 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
 - `artifacts/ti_650_pipeline_explained.md` — how the pipeline works (stages, targeting vs attribution, IP journey examples)
 - `artifacts/ti_650_column_reference.md` — column-by-column schema reference for the production table
-- `artifacts/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
-- `artifacts/ti_650_meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
-- `artifacts/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
-- `artifacts/ti_650_meeting_ryan_1.txt` — SQLMesh implementation walkthrough with Ryan (2026-03-05)
-- `artifacts/ti_650_pipeline_explained.md` — now includes Part 16: full MES trace permutation examples (CTV/display combinations, following an IP through funnel, NULL tables, display prior VV case)
+- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (completely rewritten 2026-03-06; covers stages, targeting vs attribution, Zach audit answer, chain traversal, all columns)
+
+### Meetings
+- `meetings/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
+- `meetings/ti_650_meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
+- `meetings/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
+- `meetings/ti_650_meeting_ryan_1.txt` — SQLMesh implementation walkthrough with Ryan (2026-03-05)
 
 ### Outputs
-- `outputs/ti_650_preview_37775_2026-02-04.json` — **current** 100-row sample (2026-03-06, with display impression fix; all S3 VVs, 67/100 with pv_lt_bid_ip populated)
+- `outputs/ti_650_preview_37775_2026-02-04.json` — 100-row S3 VV sample (advertiser 37775, 2026-02-04, display fix applied)
 - `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference; pv_lt_bid_ip NULL for display prior VVs)
+- `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation (7-day clickpass-only, fast query; confirms zero pv_stage=3)
+- `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (30-day full scan; **canonical validation**)
 
 ---
 

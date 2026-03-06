@@ -1,0 +1,44 @@
+[
+  {
+    "cnt": "102581", 
+    "ft_equals_prior_vv": "0", 
+    "pv_lt_bid_ip_populated": "0", 
+    "pv_stage": null, 
+    "vv_stage": "1"
+  }, 
+  {
+    "cnt": "39647", 
+    "ft_equals_prior_vv": "0", 
+    "pv_lt_bid_ip_populated": "0", 
+    "pv_stage": null, 
+    "vv_stage": "2"
+  }, 
+  {
+    "cnt": "32347", 
+    "ft_equals_prior_vv": "4668", 
+    "pv_lt_bid_ip_populated": "27145", 
+    "pv_stage": "1", 
+    "vv_stage": "2"
+  }, 
+  {
+    "cnt": "14922", 
+    "ft_equals_prior_vv": "0", 
+    "pv_lt_bid_ip_populated": "0", 
+    "pv_stage": null, 
+    "vv_stage": "3"
+  }, 
+  {
+    "cnt": "40512", 
+    "ft_equals_prior_vv": "12805", 
+    "pv_lt_bid_ip_populated": "34368", 
+    "pv_stage": "1", 
+    "vv_stage": "3"
+  }, 
+  {
+    "cnt": "76276", 
+    "ft_equals_prior_vv": "0", 
+    "pv_lt_bid_ip_populated": "71230", 
+    "pv_stage": "2", 
+    "vv_stage": "3"
+  }
+]
