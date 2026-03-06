@@ -30,8 +30,8 @@ The impression that directly triggered this VV. IPs traced through each hop.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| `lt_bid_ip` | STRING | `event_log.bid_ip` | IP at auction (RTB bid). |
-| `lt_vast_ip` | STRING | `event_log.ip` | IP at VAST playback. **Mutation occurs here** — when `lt_vast_ip ≠ redirect_ip`, the IP changed between ad playback and site visit. |
+| `lt_bid_ip` | STRING | `event_log.bid_ip` (CTV) or `impression_log.bid_ip` (display) | IP at auction (RTB bid). |
+| `lt_vast_ip` | STRING | `event_log.ip` (CTV) or `impression_log.ip` (display) | IP at ad playback. **Mutation occurs here** — when `lt_vast_ip ≠ redirect_ip`, the IP changed between ad playback and site visit. |
 | `redirect_ip` | STRING | `clickpass_log.ip` | IP at the redirect (clickpass pixel). |
 | `visit_ip` | STRING | `ui_visits.ip` | IP recorded at site visit. |
 | `impression_ip` | STRING | `ui_visits.impression_ip` | IP the visit system attributed to the impression. |
@@ -52,11 +52,11 @@ Because the funnel is sequential (an IP cannot enter S2 until it has a VV from S
 | `cp_ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | The first-touch impression ID as recorded by the MNTN attribution system at VV time. |
 | `ft_campaign_id` | INT64 | `event_log` (audit join) | Campaign ID of the first-touch impression. |
 | `ft_stage` | INT64 | `campaigns.funnel_level` | Always 1. |
-| `ft_bid_ip` | STRING | `event_log` (audit join) | IP at auction for the S1 impression — **our audit trail lookup**, not the clickpass-stored value. |
-| `ft_vast_ip` | STRING | `event_log` (audit join) | IP at VAST playback for the S1 impression — **our audit trail lookup**. |
-| `ft_time` | TIMESTAMP | `event_log` (audit join) | When the S1 impression was served. |
+| `ft_bid_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | IP at auction for the S1 impression — **our audit trail lookup**, not the clickpass-stored value. |
+| `ft_vast_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | IP at ad playback for the S1 impression — **our audit trail lookup**. |
+| `ft_time` | TIMESTAMP | `event_log` or `impression_log` | When the S1 impression was served. |
 
-**Source distinction:** `cp_ft_ad_served_id` is the system's stored value (written to `clickpass_log` at VV time). `ft_bid_ip`, `ft_vast_ip`, and `ft_time` are retrieved by joining `event_log` on that ID — our independent audit of the impression. When `cp_ft_ad_served_id` is NULL, the system did not record a first-touch (~40% of VVs; see Known Limitations).
+**Source distinction:** `cp_ft_ad_served_id` is the system's stored value (written to `clickpass_log` at VV time). `ft_bid_ip`, `ft_vast_ip`, and `ft_time` are retrieved by joining `event_log` (CTV) or `impression_log` (display) on that ID — our independent audit of the impression. When `cp_ft_ad_served_id` is NULL, the system did not record a first-touch (~40% of VVs; see Known Limitations).
 
 ---
 
@@ -71,9 +71,9 @@ The most recent prior VV whose redirect IP matches this VV's bid IP. This is the
 | `pv_campaign_id` | INT64 | `clickpass_log` | Campaign ID of the prior VV. |
 | `pv_stage` | INT64 | `campaigns.funnel_level` | Stage of the prior VV. |
 | `pv_redirect_ip` | STRING | `clickpass_log.ip` | Redirect IP of the prior VV (the IP that was added to the next-stage targeting segment). |
-| `pv_lt_bid_ip` | STRING | `event_log` (audit join) | Bid IP of the prior VV's impression — **our audit trail lookup**. |
-| `pv_lt_vast_ip` | STRING | `event_log` (audit join) | VAST IP of the prior VV's impression — **our audit trail lookup**. |
-| `pv_lt_time` | TIMESTAMP | `event_log` (audit join) | When the prior VV's impression was served. |
+| `pv_lt_bid_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | Bid IP of the prior VV's impression — **our audit trail lookup**. |
+| `pv_lt_vast_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | IP at ad playback for the prior VV's impression — **our audit trail lookup**. |
+| `pv_lt_time` | TIMESTAMP | `event_log` or `impression_log` | When the prior VV's impression was served. |
 
 **Prior VV match logic:** We match on `prior_vv_pool.ip = lt_bid_ip` — the prior VV's redirect IP against this VV's bid IP. ~94% accurate. The targeting system uses VAST IP to populate segments, but `redirect_ip ≈ lt_vast_ip` in 94% of cases.
 
@@ -119,6 +119,6 @@ For a complete journey trace on a single IP, query all rows for that `lt_bid_ip`
 
 - **`cp_ft_ad_served_id` NULL (~40% of VVs):** The system did not record a first-touch impression. Written at VV time and cannot be backfilled. IP mutation is a contributing factor (~15% of NULLs) but not the primary driver.
 - **Prior VV match uses `redirect_ip = bid_ip` (~94% accurate):** Targeting uses VAST IP to populate segments. `redirect_ip ≈ lt_vast_ip` in 94% of cases, so this is a close proxy.
-- **Non-CTV VVs:** `lt_bid_ip` and `lt_vast_ip` will be NULL for display inventory (uses `impression_log`, not `event_log`).
+- **Display vs CTV sources:** CTV impressions are sourced from `event_log` (vast_impression); display impressions from `impression_log`. The query joins both and prefers `event_log` via `COALESCE(el, il)`. `lt_bid_ip` and `lt_vast_ip` should be populated for both inventory types. If both are NULL, the impression was not found in either log (rare edge case).
 - **`clickpass_is_new` / `visit_is_new`:** Client-side JavaScript. Not auditable via SQL.
 - **90-day retention:** Partitions older than 90 days are automatically dropped.

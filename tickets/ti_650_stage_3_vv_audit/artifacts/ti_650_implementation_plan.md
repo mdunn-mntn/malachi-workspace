@@ -21,12 +21,13 @@ Full schema: see `ti_650_column_reference.md`.
 | Table | Role | Filter | Scan Size |
 |-------|------|--------|-----------|
 | `silver.logdata.clickpass_log` | Anchor — one row per VV | `time >= @start_dt AND time < @end_dt` | Target interval only |
-| `silver.logdata.event_log` | VAST impression IPs (joined 3x: last-touch, first-touch, prior VV) | `event_type_raw = 'vast_impression'` + 90-day lookback from `@start_dt` | ~90 days (single scan) |
+| `silver.logdata.event_log` | CTV impression IPs (joined 3x: last-touch, first-touch, prior VV) | `event_type_raw = 'vast_impression'` + 90-day lookback from `@start_dt` | ~90 days (single scan, ~3 TB) |
+| `silver.logdata.impression_log` | Display impression IPs (joined 3x: same slots — fallback) | 90-day lookback from `@start_dt` | ~90 days (single scan, ~1.9 TB) |
 | `silver.summarydata.ui_visits` | Independent visit record (visit IP, impression IP, is_new) | `from_verified_impression = true` + +/- 7 day buffer | ~14 days |
 | `silver.logdata.clickpass_log` (self) | Prior VV pool for retargeting chain | 90-day lookback from `@start_dt` | ~90 days |
 | `bronze.integrationprod.campaigns` | Stage classification (`funnel_level`) | `deleted = FALSE` | Small dimension table |
 
-**Optimization:** The event_log is scanned once (single CTE) and joined 3 times by different `ad_served_id` values — last-touch, first-touch, and prior VV impression. This saves ~8% vs 3 separate scans.
+**Optimization:** Each log table (event_log, impression_log) is scanned once and joined 3 times. `COALESCE(el, il)` in the SELECT prefers CTV (event_log); impression_log fills in NULLs for display inventory. Full inventory coverage without double-scanning.
 
 ---
 
@@ -107,9 +108,11 @@ Each hour, SQLMesh:
 
 | Scenario | Scan | Cost |
 |----------|------|------|
-| Daily incremental (1 day, all advertisers) | ~2.8 TB | ~$17 |
-| 60-day backfill (batched 7 days at a time) | ~5.8 TB total | ~$29 |
-| Monthly ongoing | ~84 TB | ~$520 |
+| Daily incremental (1 day, all advertisers) | ~4.7 TB | ~$29 |
+| 60-day backfill (batched 7 days at a time) | ~9.4 TB total | ~$47 |
+| Monthly ongoing | ~141 TB | ~$870 |
+
+Note: impression_log adds ~1.9 TB per 90-day scan vs ~3 TB for event_log.
 
 Note: MNTN uses reserved slots (`dw-main-bronze:us-central1:reservations/background-jobs`), not on-demand pricing. Actual cost depends on slot allocation.
 

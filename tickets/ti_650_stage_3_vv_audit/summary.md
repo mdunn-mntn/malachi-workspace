@@ -45,9 +45,9 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
 ### Cost
-- Daily incremental: ~$17/day on-demand (~2.8 TB scan)
-- 60-day batch backfill: ~$29 (97% savings vs naive approach)
-- Monthly: ~$520/month on-demand (slot-based pricing may differ)
+- Daily incremental: ~$29/day on-demand (~4.7 TB scan — event_log + impression_log)
+- 60-day batch backfill: ~$47 (97% savings vs naive approach)
+- Monthly: ~$870/month on-demand (slot-based pricing may differ)
 
 ---
 
