@@ -82,6 +82,26 @@ The numeric hash suffix (e.g. `__4185451957`) is the SQLMesh model version. The 
 always points to the current production version. Do NOT query hashed tables directly — always
 use the clean alias in `logdata.*`.
 
+### Partition Filter Best Practice — Silver Log Tables
+
+**Critical:** Silver layer views (`logdata.*`, `summarydata.*`) are UNION ALL views of two underlying tables:
+- **Recent table**: `dw-main-bronze.sqlmesh__raw.raw__*` — partitioned by `time` (TIMESTAMP, DAY partition)
+- **History table**: `dw-main-bronze.sqlmesh__history.history__*` — partitioned by `date_column`
+
+BQ can push down filters to the underlying `time`-partitioned raw tables only with **direct TIMESTAMP comparisons**. Wrapping the column in `DATE()` defeats partition pruning.
+
+**Correct (enables partition pruning):**
+```sql
+WHERE time >= TIMESTAMP('2026-02-04') AND time < TIMESTAMP('2026-02-11')
+```
+
+**Wrong (prevents partition pruning — scans all partitions):**
+```sql
+WHERE DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
+```
+
+SQLMesh model date parameters (`@start_dt`, `@end_dt`) are already TIMESTAMP type — use them directly without wrapping. Confirmed 2026-03-06 (queries using `DATE()` ran 9+ minutes vs near-instant with `TIMESTAMP()`).
+
 Some `sqlmesh__logdata` tables are themselves VIEWs referencing other datasets:
 - `bid_attempted_log` and `bid_events_log` → both reference `bidder_bid_events` (same data, different filters)
 - `bid_logs` → references Beeswax bid_logs upstream
