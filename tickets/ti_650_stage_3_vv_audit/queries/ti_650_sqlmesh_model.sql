@@ -54,18 +54,20 @@ WITH campaigns_stage AS (
 )
 , cp_dedup AS (
   SELECT
-    ad_served_id
-    , advertiser_id
-    , campaign_id
-    , ip
-    , is_new
-    , is_cross_device
-    , first_touch_ad_served_id
-    , time
-  FROM dw-main-silver.logdata.clickpass_log
+    cp.ad_served_id
+    , cp.advertiser_id
+    , cp.campaign_id
+    , cp.ip
+    , cp.is_new
+    , cp.is_cross_device
+    , cp.first_touch_ad_served_id
+    , cp.time
+    , c.stage AS vv_stage
+  FROM dw-main-silver.logdata.clickpass_log AS cp
+  LEFT JOIN campaigns_stage AS c ON c.campaign_id = cp.campaign_id
   WHERE
-    time >= @start_dt AND time < @end_dt
-  QUALIFY row_number() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+    cp.time >= @start_dt AND cp.time < @end_dt
+  QUALIFY row_number() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 )
 , el_all AS (
   /* CTV impression IPs from event_log (vast_impression).
@@ -116,17 +118,25 @@ WITH campaigns_stage AS (
 , prior_vv_pool AS (
   /* All VVs in 90-day lookback for prior VV chain identification.
      Match on redirect_ip (clickpass.ip) = this VV's bid_ip (~94% accurate;
-     targeting uses VAST IP but redirect_ip ≈ VAST IP in 94% of cases). */
+     targeting uses VAST IP but redirect_ip ≈ VAST IP in 94% of cases).
+     pv_stage < vv_stage ensures we find the lower-stage VV that advanced this IP.
+     For S3 rows: pv_stage can be 1 OR 2. An IP can enter S3 via an S1 VV directly
+     (S1 impression → S1 VV → enters S3 targeting) without ever having an S2 VV.
+     Per Zach's last-touch rule: if multiple lower-stage VVs exist, use most recent
+     (ORDER BY prior_vv_time DESC). Note: cp_ft_ad_served_id and prior_vv_ad_served_id
+     can be the same UUID when the first-touch S1 impression was also the prior VV. */
   SELECT
-    ip
-    , ad_served_id AS prior_vv_ad_served_id
-    , campaign_id AS pv_campaign_id
-    , time AS prior_vv_time
-  FROM dw-main-silver.logdata.clickpass_log
+    cp.ip
+    , cp.ad_served_id AS prior_vv_ad_served_id
+    , cp.campaign_id AS pv_campaign_id
+    , cp.time AS prior_vv_time
+    , c.stage AS pv_stage
+  FROM dw-main-silver.logdata.clickpass_log AS cp
+  LEFT JOIN campaigns_stage AS c ON c.campaign_id = cp.campaign_id
   WHERE
-    time >= TIMESTAMP_SUB(@start_dt, INTERVAL 90 DAY)
-    AND time < @end_dt
-  QUALIFY row_number() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
+    cp.time >= TIMESTAMP_SUB(@start_dt, INTERVAL 90 DAY)
+    AND cp.time < @end_dt
+  QUALIFY row_number() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 )
 , with_all_joins AS (
   SELECT
@@ -134,7 +144,7 @@ WITH campaigns_stage AS (
     cp.ad_served_id
     , cp.advertiser_id
     , cp.campaign_id
-    , c_vv.stage AS vv_stage
+    , cp.vv_stage
     , cp.time AS vv_time
 
     /* Last-touch impression IPs — the impression that triggered this VV (Stage N)
@@ -160,7 +170,7 @@ WITH campaigns_stage AS (
     , pv.prior_vv_ad_served_id
     , pv.prior_vv_time
     , pv.pv_campaign_id
-    , c_pv.stage AS pv_stage
+    , pv.pv_stage
     , pv.ip AS pv_redirect_ip
     , COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) AS pv_lt_bid_ip
     , COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip) AS pv_lt_vast_ip
@@ -192,16 +202,13 @@ WITH campaigns_stage AS (
     ON pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
     AND pv.prior_vv_time < cp.time
     AND pv.prior_vv_ad_served_id != cp.ad_served_id
+    AND pv.pv_stage < cp.vv_stage
   LEFT JOIN el_all AS pv_lt
     ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
   LEFT JOIN il_all AS pv_lt_d
     ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
-  LEFT JOIN campaigns_stage AS c_vv
-    ON c_vv.campaign_id = cp.campaign_id
   LEFT JOIN campaigns_stage AS c_ft
     ON c_ft.campaign_id = COALESCE(ft.campaign_id, ft_d.campaign_id)
-  LEFT JOIN campaigns_stage AS c_pv
-    ON c_pv.campaign_id = pv.pv_campaign_id
 )
 SELECT
   /* Identity */

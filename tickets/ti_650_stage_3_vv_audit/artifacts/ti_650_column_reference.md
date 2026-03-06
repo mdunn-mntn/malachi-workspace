@@ -91,7 +91,7 @@ The most recent prior VV whose redirect IP matches this VV's bid IP. This is the
 | `pv_lt_vast_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | IP at ad playback for the prior VV's impression — **our audit trail lookup**. |
 | `pv_lt_time` | TIMESTAMP | `event_log` or `impression_log` | When the prior VV's impression was served. |
 
-**Prior VV match logic:** We match on `prior_vv_pool.ip = lt_bid_ip` — the prior VV's redirect IP against this VV's bid IP. ~94% accurate. The targeting system uses VAST IP to populate segments, but `redirect_ip ≈ lt_vast_ip` in 94% of cases.
+**Prior VV match logic:** We match on `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV's bid IP, ~94% accurate) and `pv_stage < vv_stage` (lower-stage VV only — not a same-stage VV). For S3 rows, `pv_stage` can be 1 or 2: an IP can enter S3 via an S1 VV (S1 impression → S1 VV → S3 targeting) without ever having had an S2 VV. When pv_stage=1 for a S3 row, `prior_vv_ad_served_id` and `cp_ft_ad_served_id` may point to the same impression UUID.
 
 **3 VVs → 3 rows:** If an IP had 3 VVs that advanced it through the funnel, each VV is its own row. The prior VV column on each row points to the most recent VV that came before it on the same IP.
 

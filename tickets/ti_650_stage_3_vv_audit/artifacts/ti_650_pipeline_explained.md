@@ -61,8 +61,10 @@ For a Stage 3 VV, this means three impression IDs and their associated IPs:
 | Slot | Impression ID column | What it is |
 |------|---------------------|------------|
 | **This VV** | `ad_served_id` | The S3 impression that triggered this VV |
-| **Prior VV** | `prior_vv_ad_served_id` | The S2 VV that advanced this IP into S3 targeting (last-touch rule) |
+| **Prior VV** | `prior_vv_ad_served_id` | The most recent lower-stage VV that advanced this IP into S3 targeting — pv_stage can be 1 OR 2 |
 | **First touch** | `cp_ft_ad_served_id` | The S1 impression that started this IP's funnel |
+
+> **Important:** The prior VV does not have to be S2. An IP can enter S3 directly from an S1 VV (S1 impression → user visits site → S1 VV fires → IP enters S3 targeting). In that case pv_stage=1, and `cp_ft_ad_served_id` and `prior_vv_ad_served_id` will point to the same impression UUID — the first-touch S1 impression was also the prior VV.
 
 Each impression slot also has its IPs in columns (bid IP, VAST IP, redirect IP, visit IP).
 
@@ -214,14 +216,15 @@ The prior VV is the most recent VV that advanced this IP into the current target
 1. `prior_vv_pool` scans `clickpass_log` for a 90-day lookback. Every VV in that window is a candidate.
 2. We match where `prior_vv_pool.ip = lt_bid_ip` (the prior VV's redirect IP matches this VV's bid IP — ~94% accurate)
 3. We require `prior_vv_time < vv_time` (must be before this VV)
-4. We require `pv.pv_stage = cp.vv_stage - 1` (the prior VV must be stage N-1 — for S3, we need the S2 VV; not just any prior VV)
-5. If multiple S(N-1) VVs exist, we take the most recent (last-touch rule per Zach)
+4. We require `pv.pv_stage < cp.vv_stage` (the prior VV must be a lower stage — not a same-stage VV)
+5. If multiple lower-stage VVs exist, we take the most recent (last-touch rule per Zach)
 
 **`prior_vv_ad_served_id`**
 - Source: `clickpass_log.ad_served_id` (the prior VV row's impression UUID)
 - What it is: The impression ID of the S2 VV (for S3 rows). This is the same UUID that would be `ad_served_id` on THAT VV's row in this table.
 - Skeptical Q: *"What if the prior VV isn't in the 90-day window?"* NULL. S3 VVs more than 90 days old won't have prior VV data. For production, incremental runs always have a 90-day lookback — this affects only historical rows at the very start of the table.
-- Skeptical Q: *"What if pv_stage = 3 for an S3 row?"* That was a design bug (fixed). The `pv.pv_stage = cp.vv_stage - 1` condition ensures the prior VV is always the stage-advancement VV, not another same-stage VV. A S3 VV's prior_vv must have pv_stage=2.
+- Skeptical Q: *"Can pv_stage = 3 for an S3 row?"* No. The `pv.pv_stage < cp.vv_stage` condition filters that out. A S3 VV's prior VV must be pv_stage=1 or pv_stage=2 — whichever lower-stage VV was most recent.
+- Skeptical Q: *"Why allow pv_stage=1 for S3 rows, not just pv_stage=2?"* Because an IP can enter S3 from an S1 VV directly (S1 impression → S1 VV → IP enters S3 targeting). There doesn't need to be an S2 VV in the chain. If the prior VV is a S1 VV, then `pv_stage=1` and `prior_vv_ad_served_id` may equal `cp_ft_ad_served_id`.
 
 **`prior_vv_time`**
 - Source: `clickpass_log.time` for the prior VV row
