@@ -12,11 +12,27 @@ Each row provides a complete audit trail for one VV, linking three impressions:
 
 ---
 
+## Quick Reference: Reading a S3 VV Row
+
+For a Stage 3 VV, the three impression IDs and their IPs are:
+
+| Stage | Impression ID column | Impression IP columns | Notes |
+|-------|---------------------|-----------------------|-------|
+| **S3** (this VV) | `ad_served_id` | `lt_bid_ip`, `lt_vast_ip` | The impression that directly triggered this VV |
+| **S2** (prior VV) | `prior_vv_ad_served_id` | `pv_lt_bid_ip`, `pv_lt_vast_ip` | The S2 VV's impression — what advanced this IP into S3 |
+| **S1** (first touch) | `cp_ft_ad_served_id` | `ft_bid_ip`, `ft_vast_ip` | The original S1 impression — stored by clickpass at VV time |
+
+> **Source clarity:** `cp_ft_ad_served_id` is what the MNTN attribution system stored in `clickpass_log` at the moment this VV was written — it is the system's recorded value, not an audit lookup. `ft_bid_ip`, `ft_vast_ip`, and `ft_time` are retrieved by our independent JOIN into `event_log`/`impression_log` — these are the audit trail values. They should agree; when they don't, it indicates attribution ambiguity.
+
+> `ad_served_id` in `clickpass_log` is the same UUID that appears in `event_log` and `impression_log` — it is the impression ID. One ad serve = one `ad_served_id` flowing through every downstream log.
+
+---
+
 ## 1. Identity
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `ad_served_id` | STRING | UUID of the verified visit. Primary key. From `clickpass_log`. |
+| `ad_served_id` | STRING | UUID of the verified visit **and** the impression that triggered it. Same UUID appears in `clickpass_log`, `event_log`, and `impression_log`. Primary key. |
 | `advertiser_id` | INT64 | Advertiser. |
 | `campaign_id` | INT64 | Campaign that received credit for this VV (last-touch). |
 | `vv_stage` | INT64 | Stage of `campaign_id` per `campaigns.funnel_level`. 1=S1, 2=S2, 3=S3. |
@@ -66,7 +82,7 @@ The most recent prior VV whose redirect IP matches this VV's bid IP. This is the
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| `prior_vv_ad_served_id` | STRING | `clickpass_log` (self-join) | ad_served_id of the prior VV. NULL if no prior VV found in the 90-day lookback. |
+| `prior_vv_ad_served_id` | STRING | `clickpass_log` (self-join) | Impression ID of the prior VV's last-touch impression (same UUID as `ad_served_id` on that row). NULL if no prior VV found in the 90-day lookback. |
 | `prior_vv_time` | TIMESTAMP | `clickpass_log` | When the prior VV occurred. |
 | `pv_campaign_id` | INT64 | `clickpass_log` | Campaign ID of the prior VV. |
 | `pv_stage` | INT64 | `campaigns.funnel_level` | Stage of the prior VV. |

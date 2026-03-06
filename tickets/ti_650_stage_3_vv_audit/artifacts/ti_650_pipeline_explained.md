@@ -1439,6 +1439,19 @@ pv_lt_bid_ip          = 172.59.192.138   ← S2 impression bid IP
 
 The three rows form a chain: S3 → S2 → S1 via `prior_vv_ad_served_id`. The `cp_ft_ad_served_id` shortcut points straight to S1 from all rows (system-recorded at write time). Note that `prior_vv_ad_served_id` always points to the most recent prior VV — not necessarily S1. A direct S3 VV only links to its S2 parent; you'd need to follow the S2 row to find S1.
 
+**Reading the S3 VV row — every impression ID and IP in one glance:**
+
+| Stage | Impression ID | Bid IP | VAST IP | Source |
+|-------|--------------|--------|---------|--------|
+| S3 (this VV) | `ad_served_id` = "s3-vv-uuid" | `lt_bid_ip` = 172.59.192.138 | `lt_vast_ip` = 172.59.192.138 | event_log or impression_log |
+| S2 (prior VV) | `prior_vv_ad_served_id` = "s2-vv-uuid" | `pv_lt_bid_ip` = 172.59.192.138 | `pv_lt_vast_ip` = 172.59.192.138 | event_log or impression_log |
+| S1 (first touch) | `cp_ft_ad_served_id` = "s1-vv-uuid" | `ft_bid_ip` = 172.59.192.138 | `ft_vast_ip` = 172.59.192.138 | event_log or impression_log |
+
+`cp_ft_ad_served_id` — **system-recorded:** written into `clickpass_log` at the moment the S3 VV was processed. This is what the attribution system believes is S1.
+`ft_bid_ip` / `ft_vast_ip` / `ft_time` — **audit lookup:** retrieved by our independent JOIN into `event_log`/`impression_log`. These verify the system's stored value.
+
+If `cp_ft_ad_served_id` is NULL (~40% of VVs), the system failed to record a first touch. The `ft_*` columns will also be NULL. The prior VV chain (`prior_vv_ad_served_id`) is unaffected — it's found independently via IP match.
+
 ---
 
 ### P1: Standard S1 CTV VV — first funnel entry, no prior VV
