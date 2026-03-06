@@ -1,0 +1,55 @@
+Can't we also just have a S2->S1 without S3 at all, if an IP has not had a verified visit yet?
+
+Zach and Ray said this, so please dont forget it, even if we need to create an artifact for it:
+
+malachi  [2:37 PM]
+What about times where an IP has no verified visit yet, just Stage 2 -> stage 1 or just stage 1, do we want those in there as well
+zach.schoenberger  [2:38 PM]
+if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv
+
+ray said this:
+
+malachi  [2:18 PM]
+Hey Ray
+[2:19 PM]for that mes trace from stage 3 -> stage 1 bid ip, how long does the historical data need to go back? I can do 60 days in the table or longer, but curious what about historical data that we can save in buckets, do we need to be able to go back a year, or what's the suggestion for that?
+ray  [2:35 PM]
+thinking...
+[2:36 PM]can you see this? https://lucid.app/lucidchart/5550f688-6848-4da1-8b67-b45cc5867a5b/edit?viewport_l[…]1357%2C0_0&invitationId=inv_f3e21286-7b86-4703-a357-3ee69ae6592c
+[2:36 PM]i guess i'm not sure if the question is how far back you need to go to do the link
+or how far back we want to store this data once you have the linkmalachi  [2:37 PM]
+I CAN SEE THAT!
+[2:37 PM]oops caps lol
+ray  [2:38 PM]
+the example in that lucid chart is somewhat of an exaggeration, but the TTLs are what to focus on and depending on when they visit, the elapsed times can vary (edited)
+malachi  [2:42 PM]
+I see that its last_tv_touch visit, but I have it so it also incorporates the display touches as well...
+ray  [2:46 PM]
+that's fine, a verified visit can happen on both
+malachi  [2:51 PM]
+ok thank you
+
+zach.schoenberger  [3:30 PM]
+theres a lot of columns but it isnt giving the necessary information. we need an exact audit trail for a vv. that means every impression id/ip for each stage that lead to that vv. the data’s there its just not being shown.
+[3:31 PM]and its not super clear which ft values are coming from the table traversal vs what is coming from the clickpass logs attempt to look that data up. showing the clickpass values is fine, but they are just there to compare against what this audit trail is checking. they aren’t always going to be the same
+[3:33 PM]ideally instead of boolean values its better to just make the values that were being compared available
+[3:34 PM]looking at this row: https://docs.google.com/spreadsheets/d/1NKu90bPxT6hYKSvtA8vhgEozRA4lRZlmOKCIlteMxNA/edit?gid=342270999#gid=342270999
+i read it as a stage 3 vv, but its not clear where to find the stage 1/2 impressionmalachi  [3:35 PM]
+I’m not right in front of my laptop right now.
+[3:36 PM]But it sounds like you can make it really simple, and row level just connect the vv ip to the first touch ad id and get its ip.
+
+What do you do in the case where somebody has like three or four verified visits? 
+[3:37 PM]If you want that all in one row, it starts to get pretty big, unless you want to store those values like an array or some structure
+zach.schoenberger  [3:37 PM]
+every vv should be traceable to the stage 1 impression
+malachi  [3:37 PM]
+Well every verified visit already has the first touch ad served id which is the first impression
+[3:38 PM]Or it’s connected to the first that way
+zach.schoenberger  [3:38 PM]
+if there are 3 vv that put an ip in stage 3, thats 3 rows. if theres a vv in stage 3 for an ip that had 3 vv that got it into stage 3 we should use last touch
+malachi  [3:39 PM]
+Ok
+
+/Users/malachi/Developer/work/mntn/workspace/documentation/architecture/Last TV Touch.png
+
+Make sure all artifacts for this ticket are up-to-date, we've learned a lot.
+

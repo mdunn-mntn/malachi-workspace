@@ -182,19 +182,22 @@ with_all_joins AS (
 
         cp.first_touch_ad_served_id                 AS cp_ft_ad_served_id,
         CASE
-            WHEN cp.vv_stage = 1 THEN cp.ad_served_id
-            WHEN pv.pv_stage = 1 THEN pv.prior_vv_ad_served_id
-            ELSE s1_pv.prior_vv_ad_served_id
+            WHEN cp.vv_stage = 1        THEN cp.ad_served_id
+            WHEN pv.pv_stage = 1        THEN pv.prior_vv_ad_served_id
+            WHEN s1_pv.pv_stage = 1     THEN s1_pv.prior_vv_ad_served_id
+            ELSE                             s2_pv.prior_vv_ad_served_id
         END                                         AS s1_ad_served_id,
         CASE
-            WHEN cp.vv_stage = 1 THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
-            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-            ELSE COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+            WHEN cp.vv_stage = 1        THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
+            WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+            WHEN s1_pv.pv_stage = 1     THEN COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+            ELSE                             COALESCE(s2_lt.bid_ip, s2_lt_d.bid_ip)
         END                                         AS s1_bid_ip,
         CASE
-            WHEN cp.vv_stage = 1 THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
-            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
-            ELSE COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+            WHEN cp.vv_stage = 1        THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
+            WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
+            WHEN s1_pv.pv_stage = 1     THEN COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+            ELSE                             COALESCE(s2_lt.vast_ip, s2_lt_d.vast_ip)
         END                                         AS s1_vast_ip,
 
         pv.prior_vv_ad_served_id,
@@ -215,7 +218,7 @@ with_all_joins AS (
 
         ROW_NUMBER() OVER (
             PARTITION BY cp.ad_served_id
-            ORDER BY pv.prior_vv_time DESC NULLS LAST, s1_pv.prior_vv_time DESC NULLS LAST
+            ORDER BY pv.prior_vv_time DESC NULLS LAST, s1_pv.prior_vv_time DESC NULLS LAST, s2_pv.prior_vv_time DESC NULLS LAST
         )                                           AS _pv_rn
     FROM cp_dedup cp
     LEFT JOIN el_all lt
@@ -235,13 +238,22 @@ with_all_joins AS (
         ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
     LEFT JOIN prior_vv_pool s1_pv
         ON s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-        AND s1_pv.pv_stage = 1
+        AND s1_pv.pv_stage <= pv.pv_stage
         AND s1_pv.prior_vv_time < pv.prior_vv_time
         AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
     LEFT JOIN el_all s1_lt
         ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
     LEFT JOIN il_all s1_lt_d
         ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
+    LEFT JOIN prior_vv_pool s2_pv
+        ON s2_pv.ip = COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+        AND s2_pv.pv_stage = 1
+        AND s2_pv.prior_vv_time < s1_pv.prior_vv_time
+        AND s2_pv.prior_vv_ad_served_id != s1_pv.prior_vv_ad_served_id
+    LEFT JOIN el_all s2_lt
+        ON s2_lt.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt.rn = 1
+    LEFT JOIN il_all s2_lt_d
+        ON s2_lt_d.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt_d.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
@@ -311,19 +323,22 @@ with_all_joins AS (
         cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
         cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
         CASE
-            WHEN cp.vv_stage = 1 THEN cp.ad_served_id
-            WHEN pv.pv_stage = 1 THEN pv.prior_vv_ad_served_id
-            ELSE s1_pv.prior_vv_ad_served_id
+            WHEN cp.vv_stage = 1        THEN cp.ad_served_id
+            WHEN pv.pv_stage = 1        THEN pv.prior_vv_ad_served_id
+            WHEN s1_pv.pv_stage = 1     THEN s1_pv.prior_vv_ad_served_id
+            ELSE                             s2_pv.prior_vv_ad_served_id
         END AS s1_ad_served_id,
         CASE
-            WHEN cp.vv_stage = 1 THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
-            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-            ELSE COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+            WHEN cp.vv_stage = 1        THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
+            WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+            WHEN s1_pv.pv_stage = 1     THEN COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+            ELSE                             COALESCE(s2_lt.bid_ip, s2_lt_d.bid_ip)
         END AS s1_bid_ip,
         CASE
-            WHEN cp.vv_stage = 1 THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
-            WHEN pv.pv_stage = 1 THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
-            ELSE COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+            WHEN cp.vv_stage = 1        THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
+            WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
+            WHEN s1_pv.pv_stage = 1     THEN COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+            ELSE                             COALESCE(s2_lt.vast_ip, s2_lt_d.vast_ip)
         END AS s1_vast_ip,
         pv.prior_vv_ad_served_id, pv.prior_vv_time,
         pv.pv_campaign_id, pv.pv_stage,
@@ -336,7 +351,7 @@ with_all_joins AS (
         CURRENT_TIMESTAMP() AS trace_run_timestamp,
         ROW_NUMBER() OVER (
             PARTITION BY cp.ad_served_id
-            ORDER BY pv.prior_vv_time DESC NULLS LAST, s1_pv.prior_vv_time DESC NULLS LAST
+            ORDER BY pv.prior_vv_time DESC NULLS LAST, s1_pv.prior_vv_time DESC NULLS LAST, s2_pv.prior_vv_time DESC NULLS LAST
         ) AS _pv_rn
     FROM cp_dedup cp
     LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
@@ -351,11 +366,18 @@ with_all_joins AS (
     LEFT JOIN il_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
     LEFT JOIN prior_vv_pool s1_pv
         ON s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-        AND s1_pv.pv_stage = 1
+        AND s1_pv.pv_stage <= pv.pv_stage
         AND s1_pv.prior_vv_time < pv.prior_vv_time
         AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
     LEFT JOIN el_all s1_lt ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
     LEFT JOIN il_all s1_lt_d ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
+    LEFT JOIN prior_vv_pool s2_pv
+        ON s2_pv.ip = COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+        AND s2_pv.pv_stage = 1
+        AND s2_pv.prior_vv_time < s1_pv.prior_vv_time
+        AND s2_pv.prior_vv_ad_served_id != s1_pv.prior_vv_ad_served_id
+    LEFT JOIN el_all s2_lt ON s2_lt.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt.rn = 1
+    LEFT JOIN il_all s2_lt_d ON s2_lt_d.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt_d.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
