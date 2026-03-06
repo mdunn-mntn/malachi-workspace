@@ -190,7 +190,7 @@ How to read it: This S3 VV was triggered by impression `003a01cf` on 2026-02-04.
 - Source: `campaigns.funnel_level` joined on `campaign_id`
 - What it is: The stage of the campaign that served the impression. 1 = S1, 2 = S2, 3 = S3.
 - Skeptical Q: *"How is stage determined?"* Every campaign has `funnel_level` in `bronze.integrationprod.campaigns`. This is set at campaign creation. It does not change.
-- Skeptical Q: *"Why is this in cp_dedup and not joined in the final SELECT?"* We moved it into `cp_dedup` so it's available for the prior VV join condition (`pv.pv_stage = cp.vv_stage - 1`), ensuring we always match the correct prior VV stage.
+- Skeptical Q: *"Why is this in cp_dedup and not joined in the final SELECT?"* We need it in `cp_dedup` so it's available as `cp.vv_stage` in the prior VV join condition (`pv.pv_stage <= cp.vv_stage`). The prior VV pool join happens in `with_all_joins`, which references `cp.vv_stage` before campaigns is joined there.
 
 **`vv_time`**
 - Source: `clickpass_log.time`
@@ -277,7 +277,7 @@ The prior VV is the most recent VV that advanced this IP into the current target
 
 **`pv_stage`**
 - Source: `campaigns.funnel_level` joined on `pv_campaign_id` (inside `prior_vv_pool` CTE)
-- Should always equal `vv_stage - 1`.
+- `pv_stage <= vv_stage`. Can equal vv_stage (same-stage prior VV, e.g. S3→S3 chain). Can be 1, 2, or 3 for S3 rows.
 
 **`pv_redirect_ip`**
 - Source: `clickpass_log.ip` for the prior VV

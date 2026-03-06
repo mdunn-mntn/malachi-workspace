@@ -10,9 +10,9 @@
 
 One row per verified visit across all advertisers and all stages. Traces the IP address through every stage of the ad funnel: bid (auction) -> VAST (ad playback) -> redirect (clickpass) -> visit (site landing). Links each VV to its first-touch impression (Stage 1) and most recent prior VV (retargeting chain).
 
-41 columns. Partitioned by `trace_date` (DATE), clustered by `advertiser_id` + `vv_stage`.
+29 columns (v4). Partitioned by `trace_date` (DATE), clustered by `advertiser_id` + `vv_stage`.
 
-Full schema: see `ti_650_column_reference.md`.
+Full schema: see `ti_650_column_reference.md`. V4 replaces `ft_*` columns with `s1_*` (chain traversal), removes boolean flags and `max_historical_stage`.
 
 ---
 
