@@ -80,6 +80,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `artifacts/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
 - `artifacts/ti_650_meeting_ryan_1.txt` — SQLMesh implementation walkthrough with Ryan (2026-03-05)
+- `artifacts/ti_650_pipeline_explained.md` — now includes Part 16: full MES trace permutation examples (CTV/display combinations, following an IP through funnel, NULL tables, display prior VV case)
 
 ### Outputs
 - `outputs/ti_650_preview_37775_2026-02-07.json` — 100-row sample output from Q3 preview
@@ -89,7 +90,6 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 ## 6. Open Items
 
 - **Deploy production table:** SQLMesh model drafted (`queries/ti_650_sqlmesh_model.sql`). Silver layer, `targeting-infrastructure` owner. Next: confirm dataset name with Dustin (e.g. `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`), PR into `SteelHouse/sqlmesh` repo, backfill from 2026-01-01
-- **Non-CTV coverage:** Display VVs have NULL lt_ columns (use impression_log instead of event_log — future enhancement)
 - **Prior VV match refinement:** Currently uses redirect_ip = bid_ip; could match on pv_lt_vast_ip for higher accuracy
 - **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
 
