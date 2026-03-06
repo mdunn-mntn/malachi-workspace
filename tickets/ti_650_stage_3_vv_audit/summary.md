@@ -83,7 +83,8 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `artifacts/ti_650_pipeline_explained.md` — now includes Part 16: full MES trace permutation examples (CTV/display combinations, following an IP through funnel, NULL tables, display prior VV case)
 
 ### Outputs
-- `outputs/ti_650_preview_37775_2026-02-07.json` — 100-row sample output from Q3 preview
+- `outputs/ti_650_preview_37775_2026-02-04.json` — **current** 100-row sample (2026-03-06, with display impression fix; all S3 VVs, 67/100 with pv_lt_bid_ip populated)
+- `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference; pv_lt_bid_ip NULL for display prior VVs)
 
 ---
 
