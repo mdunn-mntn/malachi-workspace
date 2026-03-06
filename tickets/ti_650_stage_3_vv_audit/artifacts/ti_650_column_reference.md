@@ -119,6 +119,6 @@ For a complete journey trace on a single IP, query all rows for that `lt_bid_ip`
 
 - **`cp_ft_ad_served_id` NULL (~40% of VVs):** The system did not record a first-touch impression. Written at VV time and cannot be backfilled. IP mutation is a contributing factor (~15% of NULLs) but not the primary driver.
 - **Prior VV match uses `redirect_ip = bid_ip` (~94% accurate):** Targeting uses VAST IP to populate segments. `redirect_ip ≈ lt_vast_ip` in 94% of cases, so this is a close proxy.
-- **Display vs CTV sources:** CTV impressions are sourced from `event_log` (vast_impression); display impressions from `impression_log`. The query joins both and prefers `event_log` via `COALESCE(el, il)`. `lt_bid_ip` and `lt_vast_ip` should be populated for both inventory types. If both are NULL, the impression was not found in either log (rare edge case).
+- **Display vs CTV sources:** CTV impressions are sourced from `event_log` (`event_type_raw = 'vast_impression'`). Non-viewable display impressions appear **only** in `impression_log` — they never generate a VAST event. The query joins both and prefers `event_log` via `COALESCE(el, il)`. CTV and display have no attribution preference — treated identically in the last-touch stack. (Confirmed with Sharad/ATT, 2026-03-06.) If both are NULL, the impression was not found in either log (rare edge case).
 - **`clickpass_is_new` / `visit_is_new`:** Client-side JavaScript. Not auditable via SQL.
 - **90-day retention:** Partitions older than 90 days are automatically dropped.

@@ -541,7 +541,8 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 - **IPs accumulate stages within a campaign_group, never removed.** Frequency capping (14-day) handles dedup, not targeting removal. Budget: S1 ~75-80%, S2 ~5-10%, S3 = remainder.
 - **Campaign ID = Stage (1:1).** Determine via campaigns.funnel_id or campaign_template_id. Objective ID: 1=S1, 5=S2, 6=S3. Bidder has no concept of stages.
 - **VV attribution = stack model.** Impressions stacked; page view checks top (most recent). Everything behind is ineligible.
-- **Non-CTV:** use impression_log instead of event_log for display inventory.
+- **CTV vs display attribution:** No preference between media types — treated identically in last-touch attribution. (Sharad, ATT, 2026-03-06)
+- **Non-viewable display impressions:** Appear ONLY in `impression_log`, never in `event_log`. `event_log` only contains viewable CTV impressions (`vast_impression` events). For IP lineage tracing, `COALESCE(event_log.bid_ip, impression_log.bid_ip)` is required — `event_log` preferred; `impression_log` fallback for non-viewable display. (Sharad, ATT, 2026-03-06)
 - **Table design:** must support ALL stages per VV row. Stage 1 VV = S2/S3 cols NULL. Stage 3 VV = entire row full. Pipeline via SQLMesh. 90-day retention.
 - **Deployment guidance (Dustin/dplat, 2026-03-05):** Silver layer is the correct location. SQLMesh recommended — handles orchestration and idempotency. Consider hourly materialization of source data first, then run the larger model over the reduced dataset. Set retention in the SQLMesh model or at table creation. Tag the table with the owning team. For very large batch processes, Spark + Airflow may be better.
 
