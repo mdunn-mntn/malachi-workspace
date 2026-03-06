@@ -31,7 +31,7 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 - **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
 - **Last-touch impression IPs (Stage N):** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
-- **First-touch impression (Stage 1):** ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time
+- **First-touch impression (Stage 1):** cp_ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time
 - **Prior VV (stage advancement trigger):** prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time
 - **Classification:** clickpass_is_new, visit_is_new, is_cross_device
 - **Metadata:** trace_date, trace_run_timestamp

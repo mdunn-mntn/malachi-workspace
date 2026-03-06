@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     impression_ip         STRING,                   -- ui_visits.impression_ip
 
     -- First-touch impression — Stage 1
-    -- ft_ad_served_id: system-recorded (clickpass_log.first_touch_ad_served_id)
+    -- cp_ft_ad_served_id: system-recorded (clickpass_log.first_touch_ad_served_id)
     -- ft_bid_ip / ft_vast_ip / ft_time: our event_log audit of that impression
-    ft_ad_served_id       STRING,
+    cp_ft_ad_served_id       STRING,
     ft_campaign_id        INT64,
     ft_stage              INT64,                    -- always 1 (funnel is sequential)
     ft_bid_ip             STRING,
@@ -161,7 +161,7 @@ with_all_joins AS (
         v.ip                                        AS visit_ip,
         v.impression_ip,
 
-        cp.first_touch_ad_served_id                 AS ft_ad_served_id,
+        cp.first_touch_ad_served_id                 AS cp_ft_ad_served_id,
         ft.campaign_id                              AS ft_campaign_id,
         c_ft.stage                                  AS ft_stage,
         ft.bid_ip                                   AS ft_bid_ip,
@@ -208,7 +208,7 @@ with_all_joins AS (
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
     lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip,
-    ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
+    cp_ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
     prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage,
     pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time,
     clickpass_is_new, visit_is_new, is_cross_device,
@@ -262,7 +262,7 @@ with_all_joins AS (
         c_vv.stage AS vv_stage, cp.time AS vv_time,
         lt.bid_ip AS lt_bid_ip, lt.vast_ip AS lt_vast_ip,
         cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
-        cp.first_touch_ad_served_id AS ft_ad_served_id,
+        cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
         ft.campaign_id AS ft_campaign_id, c_ft.stage AS ft_stage,
         ft.bid_ip AS ft_bid_ip, ft.vast_ip AS ft_vast_ip, ft.time AS ft_time,
         pv.prior_vv_ad_served_id, pv.prior_vv_time,
@@ -289,7 +289,7 @@ with_all_joins AS (
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
     lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip,
-    ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
+    cp_ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time,
     prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage,
     pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time,
     clickpass_is_new, visit_is_new, is_cross_device,
@@ -312,8 +312,8 @@ SELECT
     COUNTIF(prior_vv_ad_served_id IS NOT NULL)                      AS retargeting_cnt,
     ROUND(100.0 * COUNTIF(prior_vv_ad_served_id IS NOT NULL)
         / COUNT(*), 2)                                              AS retargeting_pct,
-    COUNTIF(ft_ad_served_id IS NOT NULL)                            AS ft_found_cnt,
-    ROUND(100.0 * COUNTIF(ft_ad_served_id IS NOT NULL)
+    COUNTIF(cp_ft_ad_served_id IS NOT NULL)                            AS ft_found_cnt,
+    ROUND(100.0 * COUNTIF(cp_ft_ad_served_id IS NOT NULL)
         / COUNT(*), 2)                                              AS ft_found_pct,
     COUNTIF(clickpass_is_new)                                       AS ntb_clickpass,
     ROUND(100.0 * COUNTIF(clickpass_is_new) / COUNT(*), 2)         AS ntb_clickpass_pct,

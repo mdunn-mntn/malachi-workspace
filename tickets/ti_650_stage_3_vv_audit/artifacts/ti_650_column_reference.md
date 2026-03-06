@@ -49,14 +49,14 @@ Because the funnel is sequential (an IP cannot enter S2 until it has a VV from S
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| `ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | The first-touch impression ID as recorded by the MNTN attribution system at VV time. |
+| `cp_ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | The first-touch impression ID as recorded by the MNTN attribution system at VV time. |
 | `ft_campaign_id` | INT64 | `event_log` (audit join) | Campaign ID of the first-touch impression. |
 | `ft_stage` | INT64 | `campaigns.funnel_level` | Always 1. |
 | `ft_bid_ip` | STRING | `event_log` (audit join) | IP at auction for the S1 impression — **our audit trail lookup**, not the clickpass-stored value. |
 | `ft_vast_ip` | STRING | `event_log` (audit join) | IP at VAST playback for the S1 impression — **our audit trail lookup**. |
 | `ft_time` | TIMESTAMP | `event_log` (audit join) | When the S1 impression was served. |
 
-**Source distinction:** `ft_ad_served_id` is the system's stored value (written to `clickpass_log` at VV time). `ft_bid_ip`, `ft_vast_ip`, and `ft_time` are retrieved by joining `event_log` on that ID — our independent audit of the impression. When `ft_ad_served_id` is NULL, the system did not record a first-touch (~40% of VVs; see Known Limitations).
+**Source distinction:** `cp_ft_ad_served_id` is the system's stored value (written to `clickpass_log` at VV time). `ft_bid_ip`, `ft_vast_ip`, and `ft_time` are retrieved by joining `event_log` on that ID — our independent audit of the impression. When `cp_ft_ad_served_id` is NULL, the system did not record a first-touch (~40% of VVs; see Known Limitations).
 
 ---
 
@@ -117,7 +117,7 @@ For a complete journey trace on a single IP, query all rows for that `lt_bid_ip`
 
 ## Known Limitations
 
-- **`ft_ad_served_id` NULL (~40% of VVs):** The system did not record a first-touch impression. Written at VV time and cannot be backfilled. IP mutation is a contributing factor (~15% of NULLs) but not the primary driver.
+- **`cp_ft_ad_served_id` NULL (~40% of VVs):** The system did not record a first-touch impression. Written at VV time and cannot be backfilled. IP mutation is a contributing factor (~15% of NULLs) but not the primary driver.
 - **Prior VV match uses `redirect_ip = bid_ip` (~94% accurate):** Targeting uses VAST IP to populate segments. `redirect_ip ≈ lt_vast_ip` in 94% of cases, so this is a close proxy.
 - **Non-CTV VVs:** `lt_bid_ip` and `lt_vast_ip` will be NULL for display inventory (uses `impression_log`, not `event_log`).
 - **`clickpass_is_new` / `visit_is_new`:** Client-side JavaScript. Not auditable via SQL.

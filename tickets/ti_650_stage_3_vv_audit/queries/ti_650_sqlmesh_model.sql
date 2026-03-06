@@ -126,9 +126,9 @@ WITH campaigns_stage AS (
     , v.impression_ip           /* ui_visits.impression_ip — IP the visit was attributed to */
 
     /* First-touch impression — Stage 1 (the impression that started this IP's funnel)
-       ft_ad_served_id: system-recorded value from clickpass_log.first_touch_ad_served_id
+       cp_ft_ad_served_id: system-recorded value from clickpass_log.first_touch_ad_served_id
        ft_bid_ip / ft_vast_ip / ft_time: our event_log audit of that ad_served_id */
-    , cp.first_touch_ad_served_id AS ft_ad_served_id
+    , cp.first_touch_ad_served_id AS cp_ft_ad_served_id
     , ft.campaign_id AS ft_campaign_id
     , c_ft.stage AS ft_stage    /* always 1 — funnel is sequential, first touch must be S1 */
     , ft.bid_ip AS ft_bid_ip
@@ -195,7 +195,7 @@ SELECT
   , impression_ip
 
   /* First-touch impression (Stage 1) */
-  , ft_ad_served_id
+  , cp_ft_ad_served_id
   , ft_campaign_id
   , ft_stage
   , ft_bid_ip
