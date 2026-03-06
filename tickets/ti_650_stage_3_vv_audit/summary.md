@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v3 production table ready for deployment
+**Status:** In Progress — v4 production query validated end-to-end (display impression fix confirmed)
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -90,6 +90,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 ## 6. Open Items
 
 - **Deploy production table:** SQLMesh model drafted (`queries/ti_650_sqlmesh_model.sql`). Silver layer, `targeting-infrastructure` owner. Next: confirm dataset name with Dustin (e.g. `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`), PR into `SteelHouse/sqlmesh` repo, backfill from 2026-01-01
+- **Query validated end-to-end (2026-03-06):** Targeted test on advertiser 37775 (2026-02-04) confirmed `pv_lt_bid_ip = 172.59.192.138` is now populated for the display prior VV `a4074373`. Previously NULL. Fix: `il_all` CTE (impression_log) + `COALESCE(el, il)` pattern across all 9 IP columns.
 - **Prior VV match refinement:** Currently uses redirect_ip = bid_ip; could match on pv_lt_vast_ip for higher accuracy
 - **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
 
