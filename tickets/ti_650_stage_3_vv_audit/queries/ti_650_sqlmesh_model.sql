@@ -1,5 +1,5 @@
 MODEL (
-  description 'One row per verified visit. Traces IP through bid -> VAST -> redirect -> visit. Links first-touch attribution and prior VV retargeting chain. Classifies by funnel stage.',
+  description 'One row per verified visit. Full IP audit trail through bid -> VAST -> redirect -> visit, linked to first-touch (S1) impression and most recent prior VV (stage advancement trigger).',
   owner 'targeting-infrastructure',
   tags ['ti', 'vv_lineage', 'mes'],
   kind INCREMENTAL_BY_TIME_RANGE (
@@ -24,14 +24,22 @@ MODEL (
 /* =============================================================================
    VV IP Lineage — Stage-Aware Attribution Trace
 
-   JOINS (8 LEFT JOINs, 4 source tables):
+   One row per verified visit. Audit trail links 3 impressions per VV:
+     1. Last-touch (Stage N) — the impression that triggered this VV
+     2. First-touch (Stage 1) — the S1 impression that started the funnel
+        Source: clickpass_log.first_touch_ad_served_id (system-recorded),
+                then event_log join for IPs (our audit)
+     3. Prior VV impression — the impression from the VV that advanced this
+        IP into the current stage (e.g. the S2 VV that put IP into S3)
+
+   JOINS (7 LEFT JOINs, 4 source tables):
      clickpass_log (anchor)
        -> el_all (single event_log CTE, joined 3x: last-touch, first-touch, prior VV impression)
-       -> ui_visits on ad_served_id (verified visit record)
-       -> clickpass_log (self) on redirect_ip = bid_ip for prior VV
+       -> ui_visits on ad_served_id (visit IP + impression IP)
+       -> clickpass_log (self) on redirect_ip = bid_ip for prior VV chain
        -> campaigns x 3 (vv stage, ft stage, pv stage)
 
-   OPTIMIZATION: 3 event_log scans merged into 1 CTE. Saves ~8% per run.
+   OPTIMIZATION: event_log scanned once, joined 3x. Saves ~8% vs 3 separate scans.
    ============================================================================= */
 
 WITH campaigns_stage AS (
@@ -58,7 +66,7 @@ WITH campaigns_stage AS (
   QUALIFY row_number() OVER (PARTITION BY ad_served_id ORDER BY time DESC) = 1
 )
 , el_all AS (
-  /* Single event_log scan for ALL impression lookups (last-touch, first-touch, prior VV).
+  /* Single event_log scan for all impression lookups (last-touch, first-touch, prior VV).
      90-day window covers all lookback needs. Joined 3 times by different ad_served_id. */
   SELECT
     ad_served_id
@@ -87,9 +95,9 @@ WITH campaigns_stage AS (
   QUALIFY row_number() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
 )
 , prior_vv_pool AS (
-  /* All VVs in 90-day lookback for retargeting chain identification.
-     Match: if this VV's bid_ip had an earlier VV, this is a retargeting VV.
-     Uses redirect_ip = bid_ip (~94% accurate; targeting uses VAST IP). */
+  /* All VVs in 90-day lookback for prior VV chain identification.
+     Match on redirect_ip (clickpass.ip) = this VV's bid_ip (~94% accurate;
+     targeting uses VAST IP but redirect_ip ≈ VAST IP in 94% of cases). */
   SELECT
     ip
     , ad_served_id AS prior_vv_ad_served_id
@@ -110,67 +118,47 @@ WITH campaigns_stage AS (
     , c_vv.stage AS vv_stage
     , cp.time AS vv_time
 
-    /* Last-touch IP lineage */
+    /* Last-touch impression IPs — the impression that triggered this VV (Stage N) */
     , lt.bid_ip AS lt_bid_ip
     , lt.vast_ip AS lt_vast_ip
-    , cp.ip AS redirect_ip
-    , v.ip AS visit_ip
-    , v.impression_ip
+    , cp.ip AS redirect_ip      /* clickpass_log.ip — mutation occurs at VAST->redirect */
+    , v.ip AS visit_ip          /* ui_visits.ip */
+    , v.impression_ip           /* ui_visits.impression_ip — IP the visit was attributed to */
 
-    /* First-touch attribution */
+    /* First-touch impression — Stage 1 (the impression that started this IP's funnel)
+       ft_ad_served_id: system-recorded value from clickpass_log.first_touch_ad_served_id
+       ft_bid_ip / ft_vast_ip / ft_time: our event_log audit of that ad_served_id */
     , cp.first_touch_ad_served_id AS ft_ad_served_id
     , ft.campaign_id AS ft_campaign_id
-    , c_ft.stage AS ft_stage
+    , c_ft.stage AS ft_stage    /* always 1 — funnel is sequential, first touch must be S1 */
     , ft.bid_ip AS ft_bid_ip
     , ft.vast_ip AS ft_vast_ip
     , ft.time AS ft_time
 
-    /* Prior VV */
+    /* Prior VV — the most recent VV that advanced this IP into the current stage
+       (e.g. for a S3 VV: the S2 VV whose redirect IP matches this VV's bid IP)
+       pv_redirect_ip: prior VV's clickpass.ip
+       pv_lt_bid_ip / pv_lt_vast_ip: our event_log audit of the prior VV's impression */
     , pv.prior_vv_ad_served_id
     , pv.prior_vv_time
     , pv.pv_campaign_id
     , c_pv.stage AS pv_stage
     , pv.ip AS pv_redirect_ip
-    , (pv.prior_vv_ad_served_id IS NOT NULL) AS is_retargeting_vv
-
-    /* Prior VV's impression IP lineage */
     , pv_lt.bid_ip AS pv_lt_bid_ip
     , pv_lt.vast_ip AS pv_lt_vast_ip
     , pv_lt.time AS pv_lt_time
 
-    /* IP comparison flags */
-    , (lt.bid_ip = lt.vast_ip) AS bid_eq_vast
-    , (lt.vast_ip = cp.ip) AS vast_eq_redirect
-    , (cp.ip = v.ip) AS redirect_eq_visit
-    , (lt.bid_ip = lt.vast_ip AND lt.vast_ip != cp.ip) AS ip_mutated
-    , (lt.bid_ip != cp.ip) AS any_mutation
-    , (lt.bid_ip = ft.bid_ip) AS lt_bid_eq_ft_bid
-
-    /* Classification */
+    /* Classification — raw values, not derived comparisons */
     , cp.is_new AS clickpass_is_new
     , v.is_new AS visit_is_new
-    , (cp.is_new = v.is_new) AS ntb_agree
     , cp.is_cross_device
-
-    /* Trace quality */
-    , (lt.ad_served_id IS NOT NULL) AS is_ctv
-    , (v.ad_served_id IS NOT NULL) AS visit_matched
-    , CASE
-      WHEN cp.first_touch_ad_served_id IS NULL THEN NULL
-      ELSE (ft.ad_served_id IS NOT NULL)
-    END AS ft_matched
-    , CASE
-      WHEN pv.prior_vv_ad_served_id IS NULL THEN NULL
-      ELSE (pv_lt.ad_served_id IS NOT NULL)
-    END AS pv_lt_matched
 
     /* Metadata */
     , DATE(cp.time) AS trace_date
     , current_timestamp() AS trace_run_timestamp
 
-    /* Dedup + max historical stage (computed before dedup, across ALL prior VVs) */
+    /* Internal: dedup to single prior VV row per VV */
     , row_number() OVER (PARTITION BY cp.ad_served_id ORDER BY pv.prior_vv_time DESC) AS _pv_rn
-    , max(c_pv.stage) OVER (PARTITION BY cp.ad_served_id) AS _max_prior_stage
   FROM cp_dedup AS cp
   LEFT JOIN el_all AS lt
     ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
@@ -192,46 +180,44 @@ WITH campaigns_stage AS (
     ON c_pv.campaign_id = pv.pv_campaign_id
 )
 SELECT
+  /* Identity */
   ad_served_id
   , advertiser_id
   , campaign_id
   , vv_stage
-  , greatest(vv_stage, coalesce(_max_prior_stage, 0)) AS max_historical_stage
   , vv_time
+
+  /* Last-touch impression IPs (Stage N) */
   , lt_bid_ip
   , lt_vast_ip
   , redirect_ip
   , visit_ip
   , impression_ip
+
+  /* First-touch impression (Stage 1) */
   , ft_ad_served_id
   , ft_campaign_id
   , ft_stage
   , ft_bid_ip
   , ft_vast_ip
   , ft_time
+
+  /* Prior VV impression (stage advancement trigger) */
   , prior_vv_ad_served_id
   , prior_vv_time
   , pv_campaign_id
   , pv_stage
   , pv_redirect_ip
-  , is_retargeting_vv
   , pv_lt_bid_ip
   , pv_lt_vast_ip
   , pv_lt_time
-  , bid_eq_vast
-  , vast_eq_redirect
-  , redirect_eq_visit
-  , ip_mutated
-  , any_mutation
-  , lt_bid_eq_ft_bid
+
+  /* Classification */
   , clickpass_is_new
   , visit_is_new
-  , ntb_agree
   , is_cross_device
-  , is_ctv
-  , visit_matched
-  , ft_matched
-  , pv_lt_matched
+
+  /* Metadata */
   , trace_date
   , trace_run_timestamp
 FROM with_all_joins

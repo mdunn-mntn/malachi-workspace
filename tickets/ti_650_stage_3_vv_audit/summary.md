@@ -28,20 +28,19 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 
 ### Production table: `audit.vv_ip_lineage`
 
-One row per VV. 41 columns across 7 groups:
-- **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, max_historical_stage
-- **Last-touch IP lineage:** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
-- **First-touch attribution:** ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time
-- **Prior VV chain:** prior_vv_ad_served_id, pv_campaign_id, pv_stage, pv_redirect_ip, is_retargeting_vv
-- **IP comparison flags:** bid_eq_vast, vast_eq_redirect, redirect_eq_visit, ip_mutated, any_mutation
-- **Classification:** clickpass_is_new, visit_is_new, ntb_agree, is_cross_device
-- **Trace quality:** is_ctv, visit_matched, ft_matched, pv_lt_matched
+One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
+- **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
+- **Last-touch impression IPs (Stage N):** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
+- **First-touch impression (Stage 1):** ft_ad_served_id, ft_campaign_id, ft_stage, ft_bid_ip, ft_vast_ip, ft_time
+- **Prior VV (stage advancement trigger):** prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time
+- **Classification:** clickpass_is_new, visit_is_new, is_cross_device
+- **Metadata:** trace_date, trace_run_timestamp
+
 
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
 - **Single event_log CTE** joined 3x (last-touch, first-touch, prior VV impression) — saves ~8% vs 3 separate scans
-- **max_historical_stage** = `GREATEST(vv_stage, max prior VV stage)` — distinguishes attribution stage from journey stage
 - **Prior VV match** on redirect_ip = bid_ip (~94% accurate; targeting uses VAST IP but redirect_ip ~= VAST IP 94% of the time)
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
@@ -116,7 +115,7 @@ Added to `knowledge/data_knowledge.md`:
 
 **Speed:** Built v1 -> v2 -> v3 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
 
-**Craft:** Designed stage-aware IP lineage table with `max_historical_stage` to distinguish attribution from journey stage. Identified 20% of S1 VVs on S3 IPs — a novel finding. Optimized event_log scans from 3 CTEs to 1 (8% savings). Built cost justification doc quantifying $17/day ongoing cost.
+**Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3. Identified 20% of S1 VVs on S3 IPs — a novel finding. Simplified 42-column design to 29-column raw-values-only audit trail on stakeholder feedback. Optimized event_log scans from 3 CTEs to 1 (8% savings). Built cost justification doc quantifying $17/day ongoing cost.
 
 **Adaptability:** Pivoted from v1 (simple mutation audit) to v3 (full stage-aware lineage) across 3 Zach review meetings. Incorporated Sharad's first_touch lookup clarification. Adapted from Greenplum to BQ Silver when pipeline gap was discovered.
 
