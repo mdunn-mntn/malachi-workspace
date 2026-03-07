@@ -1005,7 +1005,7 @@ CLUSTER BY advertiser_id, vv_stage;
 **Key design decisions (v4):**
 - **v3→v4 simplification:** Removed `max_historical_stage`, `ft_stage`, `ft_campaign_id`, `ft_time`, all boolean comparison flags (`bid_eq_vast`, `vast_eq_redirect`, etc.), and trace quality flags (`is_ctv`, `visit_matched`, etc.). Raw IP values enable any derived metric downstream.
 - **S1 chain traversal replaces `ft_*` columns:** 4-branch CASE resolves the originating S1 VV via `prior_vv_pool` self-joins (pv → s1_pv → s2_pv). Branch 1: vv_stage=1 (current IS S1). Branch 2: pv_stage=1 (prior VV IS S1). Branch 3: s1_pv.pv_stage=1 (second-level). Branch 4: ELSE s2_pv (third-level, terminal). Resolves ~99%+ of rows. Replaces unreliable `cp_ft_ad_served_id` (40% NULL).
-- **Single event_log + impression_log CTE** each scanned once, joined 3x (last-touch, prior VV, S1 chain). COALESCE(el, il) prefers CTV; impression_log fills display fallback. Saves ~8% vs separate scans.
+- **Single event_log + impression_log CTE** each scanned once, joined 4x (last-touch, prior VV LT, S1 chain LT, s2_pv LT). COALESCE(el, il) prefers CTV; impression_log fills display fallback. Full inventory coverage without double-scanning.
 - **`pv_stage <= vv_stage`:** Enables same-stage prior VVs (S3→S3 chains). All 10 chain permutations validated with real data.
 - **Stage classification via campaigns.funnel_level**: 100% populated, maps campaign_id → stage directly.
 - **Prior VV match**: redirect_ip = bid_ip (~94% accurate). Cross-device cases (~6%) where bid_ip ≠ redirect_ip may not resolve chain traversal.
