@@ -257,10 +257,12 @@ The prior VV is the most recent VV that advanced this IP into the current target
 
 **How we find the prior VV:**
 1. `prior_vv_pool` scans `clickpass_log` for a 90-day lookback. Every VV in that window is a candidate.
-2. We match where `prior_vv_pool.ip = lt_bid_ip` (the prior VV's redirect IP matches this VV's bid IP — ~94% accurate)
-3. We require `prior_vv_time < vv_time` (must be before this VV)
-4. We require `pv.pv_stage <= cp.vv_stage` (prior VV can be same stage OR lower — enables S3→S3→S2→S1 chain traversal)
-5. If multiple prior VVs exist, we take the most recent (last-touch rule per Zach)
+2. **Primary match:** `prior_vv_pool.ip = lt_bid_ip` (the prior VV's redirect IP matches this VV's bid IP — direct targeting chain)
+3. **Fallback match:** `prior_vv_pool.ip = cp.ip` (the prior VV's redirect IP matches this VV's redirect IP — household identity). This covers cross-device cases (~16-20% of S2/S3 VVs) where bid_ip ≠ redirect_ip due to mutation.
+4. We require `prior_vv_time < vv_time` (must be before this VV)
+5. We require `pv.pv_stage <= cp.vv_stage` (prior VV can be same stage OR lower — enables S3→S3→S2→S1 chain traversal)
+6. We require `pv.advertiser_id = cp.advertiser_id` (prevents cross-advertiser matching on shared IPs / CGNAT)
+7. If multiple prior VVs exist, we take the most recent **bid_ip match** first; if none, the most recent redirect_ip fallback (last-touch rule per Zach, with bid_ip preference)
 
 **`prior_vv_ad_served_id`**
 - Source: `clickpass_log.ad_served_id` (the prior VV row's impression UUID)
@@ -336,9 +338,9 @@ The `s1_ad_served_id` column was built specifically to work around this: it uses
 
 **`cp_ft_ad_served_id` is retained in the table as a comparison reference only.** Users can validate the chain traversal by checking `s1_ad_served_id = cp_ft_ad_served_id` where both are non-NULL (should agree in the vast majority of cases).
 
-**2. Prior VV match is ~94% accurate, not 100%**
+**2. Prior VV match uses bid_ip (primary) + redirect_ip (fallback)**
 
-We match `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV's bid IP). The targeting system uses VAST IP to populate segments, but `redirect_ip ≈ lt_vast_ip` in 94% of cases. The 6% miss rate is due to IP mutation between VAST and redirect — the same phenomenon we're measuring.
+Primary match: `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV's bid IP — direct targeting chain). Fallback: `prior_vv_pool.ip = cp.ip` (prior VV's redirect IP = this VV's redirect IP — household identity). The fallback covers the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip due to cross-device mutation. Without the fallback, these VVs would have NULL prior_vv/s1 chains. Dedup prefers bid_ip matches. Same fallback logic applies at all chain levels (pv, s1_pv, s2_pv). Advertiser_id constraint on all joins prevents CGNAT false positives.
 
 **3. pv_lt_bid_ip is ~99%+ in production, ~67% in ad-hoc testing**
 

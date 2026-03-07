@@ -51,6 +51,12 @@ MODEL (
    Stage 3 is terminal (no S4). Chains deeper than 3 hops (e.g. S3->S3->S3->S2->S1)
    are theoretically possible but extremely rare; s1_ad_served_id will be NULL for those.
 
+   PRIOR VV MATCHING (cross-device fix):
+     Each chain level matches on (bid_ip OR redirect_ip) with bid_ip preferred in dedup.
+     This handles the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip (cross-device
+     mutation). Without the fallback, these VVs would have NULL prior_vv/s1 chains.
+     Advertiser_id constraint on all prior_vv joins prevents CGNAT false positives.
+
    JOINS (13 LEFT JOINs, 5 source tables):
      clickpass_log (anchor)
        -> el_all (event_log CTE, joined 4x: lt, pv, s1, s2 — CTV)
@@ -136,17 +142,21 @@ WITH campaigns_stage AS (
 )
 , prior_vv_pool AS (
   /* All VVs in 90-day lookback for prior VV chain identification.
-     Match on redirect_ip (clickpass.ip) = this VV's bid_ip (~94% accurate;
-     targeting uses VAST IP but redirect_ip ≈ VAST IP in 94% of cases).
+     PRIMARY match: redirect_ip (clickpass.ip) = this VV's bid_ip (direct targeting chain).
+     FALLBACK match: redirect_ip = this VV's redirect_ip (household identity — covers
+     cross-device cases where bid_ip ≠ redirect_ip, ~16-20% of S2/S3 VVs).
+     Dedup prefers bid_ip matches; redirect_ip fallback only used when no bid_ip match exists.
      pv_stage <= vv_stage supports full chain traversal: the prior VV can be the same
      stage or lower. This enables S3 VV → S3 VV → S2 VV → S1 VV chains, where an IP
      has had multiple S3 VVs and each one points to its most recent predecessor.
      Stage 3 is the terminal stage (no S4), so this is the longest possible path.
      Per Zach's last-touch rule: use most recent prior VV (ORDER BY prior_vv_time DESC).
      Note: cp_ft_ad_served_id and prior_vv_ad_served_id can be the same UUID when
-     pv_stage=1 (the S1 VV is both the stage-advancement trigger and the first touch). */
+     pv_stage=1 (the S1 VV is both the stage-advancement trigger and the first touch).
+     Advertiser_id constraint prevents cross-advertiser matching on shared IPs (CGNAT). */
   SELECT
     cp.ip
+    , cp.advertiser_id
     , cp.ad_served_id AS prior_vv_ad_served_id
     , cp.campaign_id AS pv_campaign_id
     , cp.time AS prior_vv_time
@@ -221,10 +231,14 @@ WITH campaigns_stage AS (
     , DATE(cp.time) AS trace_date
     , current_timestamp() AS trace_run_timestamp
 
-    /* Internal: dedup — most recent prior VV, then most recent S1 VV within that */
+    /* Internal: dedup — prefer bid_ip match over redirect_ip fallback, then most recent */
     , row_number() OVER (
         PARTITION BY cp.ad_served_id
-        ORDER BY pv.prior_vv_time DESC NULLS LAST, s1_pv.prior_vv_time DESC NULLS LAST, s2_pv.prior_vv_time DESC NULLS LAST
+        ORDER BY
+          CASE WHEN pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip) THEN 0 ELSE 1 END,
+          pv.prior_vv_time DESC NULLS LAST,
+          s1_pv.prior_vv_time DESC NULLS LAST,
+          s2_pv.prior_vv_time DESC NULLS LAST
       ) AS _pv_rn
   FROM cp_dedup AS cp
   LEFT JOIN el_all AS lt
@@ -234,7 +248,8 @@ WITH campaigns_stage AS (
   LEFT JOIN v_dedup AS v
     ON v.ad_served_id = cp.ad_served_id
   LEFT JOIN prior_vv_pool AS pv
-    ON pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
+    ON pv.advertiser_id = cp.advertiser_id
+    AND (pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip) OR pv.ip = cp.ip)
     AND pv.prior_vv_time < cp.time
     AND pv.prior_vv_ad_served_id != cp.ad_served_id
     AND pv.pv_stage <= cp.vv_stage
@@ -243,13 +258,15 @@ WITH campaigns_stage AS (
   LEFT JOIN il_all AS pv_lt_d
     ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
   /* S1 chain traversal — second-level match when pv_stage > 1.
-     s1_pv: finds the VV whose redirect IP = prior VV's bid IP (any stage).
+     s1_pv: finds the VV whose redirect IP = prior VV's bid IP OR redirect IP (fallback).
        - If s1_pv.pv_stage = 1 -> found S1 directly (2 hops). CASE branch 3 fires.
        - If s1_pv.pv_stage > 1 -> found S2/S3; need one more hop. CASE branch 4 fires.
      s2_pv: third-level match, only active when s1_pv found a non-S1 (S3->S3->S2->S1).
-       Requires pv_stage = 1 — this IS the S1 VV. */
+       Requires pv_stage = 1 — this IS the S1 VV.
+     All chain levels use bid_ip primary + redirect_ip fallback for cross-device coverage. */
   LEFT JOIN prior_vv_pool AS s1_pv
-    ON s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+    ON s1_pv.advertiser_id = cp.advertiser_id
+    AND (s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) OR s1_pv.ip = pv.ip)
     AND s1_pv.pv_stage <= pv.pv_stage
     AND s1_pv.prior_vv_time < pv.prior_vv_time
     AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
@@ -258,7 +275,8 @@ WITH campaigns_stage AS (
   LEFT JOIN il_all AS s1_lt_d
     ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
   LEFT JOIN prior_vv_pool AS s2_pv
-    ON s2_pv.ip = COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+    ON s2_pv.advertiser_id = cp.advertiser_id
+    AND (s2_pv.ip = COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip) OR s2_pv.ip = s1_pv.ip)
     AND s2_pv.pv_stage = 1
     AND s2_pv.prior_vv_time < s1_pv.prior_vv_time
     AND s2_pv.prior_vv_ad_served_id != s1_pv.prior_vv_ad_served_id

@@ -1008,7 +1008,7 @@ CLUSTER BY advertiser_id, vv_stage;
 - **Single event_log + impression_log CTE** each scanned once, joined 4x (last-touch, prior VV LT, S1 chain LT, s2_pv LT). COALESCE(el, il) prefers CTV; impression_log fills display fallback. Full inventory coverage without double-scanning.
 - **`pv_stage <= vv_stage`:** Enables same-stage prior VVs (S3→S3 chains). All 10 chain permutations validated with real data.
 - **Stage classification via campaigns.funnel_level**: 100% populated, maps campaign_id → stage directly.
-- **Prior VV match**: redirect_ip = bid_ip (~94% accurate). Cross-device cases (~6%) where bid_ip ≠ redirect_ip may not resolve chain traversal.
+- **Prior VV match**: bid_ip primary + redirect_ip fallback. Dedup prefers bid_ip matches. Fallback covers ~16-20% of S2/S3 VVs with cross-device mutation (bid_ip ≠ redirect_ip). Advertiser_id constraint on all joins prevents CGNAT false positives.
 
 **Implementation approach:**
 - Source: clickpass_log (anchor) → event_log + impression_log (single 90-day scan each) → ui_visits (±7 day) → clickpass_log (90-day self-join for prior VV, joined 3x for chain traversal) → campaigns (stage lookup)
