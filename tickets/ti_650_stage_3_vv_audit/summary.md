@@ -107,7 +107,6 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - **Cross-device chain fix (2026-03-06):** Prior VV match expanded from bid_ip-only to bid_ip OR redirect_ip (fallback). 16-20% of S2/S3 VVs have bid_ip ≠ redirect_ip (cross-device mutation) — without fallback, chain traversal would return NULL for these. Validated on VV `77ddff0c`: bid_ip match finds 5 prior VVs (T-Mobile, all S3/S2), redirect_ip fallback finds 9 more (home network, including 4 S1 VVs). Dedup prefers bid_ip matches. Advertiser_id constraint added to all prior_vv joins.
 - **All-stage design confirmed (Zach, 2026-03-06):** `cp_dedup` pulls all clickpass_log stages — not just S3. Zach: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
 - **Ray's TTL context (2026-03-06):** Architecture diagram shows S1 impression → S3 VV can span ~83 days in representative examples. 90-day lookback is correctly sized. Display touches confirmed fine: "a verified visit can happen on both."
-- **Prior VV match refinement:** Currently uses redirect_ip = bid_ip; could match on pv_lt_vast_ip for higher accuracy
 - **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
 
 ---
