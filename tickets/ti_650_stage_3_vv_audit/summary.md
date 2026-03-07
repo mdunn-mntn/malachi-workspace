@@ -63,7 +63,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 4. **NTB disagreement: 41-56%.** Two independent client-side pixels. Not a bug — architectural reality.
 5. **Phantom NTB: ~4,006/day** for advertiser 37775 (~28,200/day across 10 advertisers).
 6. **first_touch_ad_served_id NULL 40%.** Permanent at write time. Mutation is a contributing factor (~15% of NULLs) but not the primary driver.
-7. **20% of S1 VVs are on S3 IPs.** Attribution stage != journey stage. `max_historical_stage` captures this.
+7. **20% of S1 VVs are on S3 IPs.** Attribution stage != journey stage. Prior VV chain traversal reveals the IP's true funnel history.
 8. **30-day EL lookback is exact.** 100% of VVs have impression within 30 days. Zero exceptions across 3.25M rows.
 9. **BQ Silver validated vs Greenplum** within 0.12pp on all metrics across 10 advertisers.
 10. **pv_stage logic:** `pv_stage <= vv_stage` — full chain traversal including same-stage prior VVs (S3 VV → S3 VV → S2 VV → S1 VV). Stage 3 is terminal. Validation with `< vv_stage`: zero pv_stage=3 rows, S3 distribution 31-34% pv_stage=1 / 65-68% pv_stage=2, el/il join success 85-93%. The `<=` change expands prior VV eligibility but doesn't change the stage distribution for non-S3 prior VV cases.
@@ -95,6 +95,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation (7-day clickpass-only, fast query; confirms zero pv_stage=3)
 - `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (30-day full scan; **canonical validation**)
 - `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation (confirms s1_pv JOIN resolves S1 VV for row 003a01cf)
+- `outputs/ti_650_permutation_validation.json` — all 10 chain traversal permutations validated with concrete ad_served_ids and traces
 
 ---
 
@@ -128,11 +129,11 @@ Added to `knowledge/data_knowledge.md`:
 
 ## 8. Performance Review Tags
 
-**Speed:** Built v1 -> v2 -> v3 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
+**Speed:** Built v1 -> v2 -> v3 -> v4 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
 
 **Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3. Identified 20% of S1 VVs on S3 IPs — a novel finding. Simplified 42-column design to 29-column raw-values-only audit trail on stakeholder feedback. Optimized event_log scans from 3 CTEs to 1 (8% savings). Built cost justification doc quantifying $17/day ongoing cost.
 
-**Adaptability:** Pivoted from v1 (simple mutation audit) to v3 (full stage-aware lineage) across 3 Zach review meetings. Incorporated Sharad's first_touch lookup clarification. Adapted from Greenplum to BQ Silver when pipeline gap was discovered.
+**Adaptability:** Pivoted from v1 (simple mutation audit) to v4 (full stage-aware lineage with chain traversal) across 3 Zach review meetings. Incorporated Sharad's first_touch lookup clarification. Adapted from Greenplum to BQ Silver when pipeline gap was discovered.
 
 **Revenue Impact:** 4,006 phantom NTB events/day for one advertiser directly impacts revenue retention. Stage-aware lineage enables first-ever quantification of cross-stage IP attribution patterns. Production table provides ongoing auditability for all advertisers.
 

@@ -2,7 +2,7 @@
 
 **Targeting Infrastructure**
 
-Updated 2026-03-04 | **ZACH REVIEW COMPLETE** (3 meetings) | v3 stage-aware production table (`audit.vv_ip_lineage`) designed — ready for deployment | Gap analysis complete | Full silver scale run COMPLETE — 3.25M rows, matches GP within 0.12pp | BQ silver = validated GP replacement | Mutation range 1.2–33.4% across 15 advertisers | Stage-aware: vv_stage, max_historical_stage, ft_stage, pv_stage | 20% of S1 VVs on S3 IPs (attribution != journey stage)
+Updated 2026-03-06 | **ZACH REVIEW COMPLETE** (3 meetings) | v4 stage-aware production table (`audit.vv_ip_lineage`) designed — ready for deployment | Gap analysis complete | Full silver scale run COMPLETE — 3.25M rows, matches GP within 0.12pp | BQ silver = validated GP replacement | Mutation range 1.2–33.4% across 15 advertisers | Stage-aware: vv_stage, pv_stage, s1 chain traversal | 20% of S1 VVs on S3 IPs (attribution != journey stage) | All 10 chain traversal permutations validated
 
 ---
 
@@ -96,7 +96,7 @@ MES PIPELINE: 3-STAGE VERIFIED VISIT MODEL
 
 ## 3. Pipeline Overview: How IPs Mutate
 
-Within a single ad serve, the IP address can change at each event in the pipeline. The v3 trace uses 5 IP checkpoints:
+Within a single ad serve, the IP address can change at each event in the pipeline. The trace uses 5 IP checkpoints:
 
 | # | Checkpoint | Table | IP Column | Event |
 |---|------------|-------|-----------|-------|
@@ -123,7 +123,7 @@ IP stability between checkpoints (single-advertiser reference: advertiser 37775,
 
 IP mutation across the pipeline creates three distinct issues:
 
-**NTB Bleed:** When a verified visit is generated, the IP may differ from the bid IP. If the new IP had a prior purchase, it appears MNTN targeted a non-NTB household. The v3 analysis revealed 4,006 phantom NTB events in a single day for one advertiser — returning visitors whose IP changed, causing new-to-brand misclassification. At scale (10 advertisers, 7 days), phantom NTB totals ~28,200/day.
+**NTB Bleed:** When a verified visit is generated, the IP may differ from the bid IP. If the new IP had a prior purchase, it appears MNTN targeted a non-NTB household. The analysis revealed 4,006 phantom NTB events in a single day for one advertiser — returning visitors whose IP changed, causing new-to-brand misclassification. At scale (10 advertisers, 7 days), phantom NTB totals ~28,200/day.
 
 **NTB Classification Instability:** clickpass\_log.is\_new and ui\_visits.is\_new disagree 41–56% of the time across advertisers. NTB classification depends on when in the pipeline it is evaluated and against which reference data. This is a systemic issue, not edge-case noise. NTB validation via conversion\_log confirms 97.8% of VVs flagged NTB have zero prior conversions within 30 days — meaning conversion\_log is NOT the reference source for is\_new, and the disagreement is driven by a different (as yet unidentified) lookup table.
 
@@ -413,7 +413,7 @@ Notes: win\_log uses Beeswax advertiser IDs (not MNTN). clickpass ad\_served\_id
 
 ## 8. Results
 
-### 8.1 Main Aggregation — Advertiser 37775, Feb 10 (v3)
+### 8.1 Main Aggregation — Advertiser 37775, Feb 10
 
 32,364 clickpass events | 32,233 with VV (99.6%) | 28,838 full chain (89.1%)
 
@@ -944,25 +944,23 @@ One-line answers to every question resolved during the audit.
 
 ---
 
-## 15. Production Audit Table — v3 Stage-Aware Design
+## 15. Production Audit Table — v4 Stage-Aware Design
 
 Per Zach (2026-02-25 call): "Getting an audit going and something that's actually generating the data on a consistent basis is definitely the end goal. Just being able to prove it for every single one in a very clean table representation would be so beneficial."
 
 **Table:** `audit.vv_ip_lineage` (renamed from `stage3_vv_ip_lineage` — now covers all stages)
 
-**Requirements (original + v3 additions):**
+**Requirements (v4 — raw values only, no derived boolean flags):**
 1. One row per verified visit across ALL stages (keyed on `ad_served_id`)
 2. Full IP lineage: lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
-3. Stage classification: vv_stage, max_historical_stage, ft_stage, pv_stage
-4. First-touch attribution: ft_ad_served_id, ft_campaign_id, ft_bid_ip, ft_vast_ip
-5. Prior VV retargeting chain: prior_vv_ad_served_id, pv_campaign_id, pv_redirect_ip
-6. Prior VV impression IPs: pv_lt_bid_ip, pv_lt_vast_ip
-7. IP comparison flags: bid_eq_vast, vast_eq_redirect, redirect_eq_visit, ip_mutated, any_mutation
-8. NTB flags: clickpass_is_new, visit_is_new, ntb_agree
-9. Cross-device flag
-10. Trace quality: is_ctv, visit_matched, ft_matched, pv_lt_matched
+3. Stage classification: vv_stage, pv_stage
+4. S1 chain traversal: s1_ad_served_id, s1_bid_ip, s1_vast_ip (resolved via 4-branch CASE + prior_vv_pool self-joins)
+5. System first-touch reference: cp_ft_ad_served_id (comparison only — 40% NULL)
+6. Prior VV retargeting chain: prior_vv_ad_served_id, pv_campaign_id, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip
+7. Classification: clickpass_is_new, visit_is_new, is_cross_device
+8. Metadata: trace_date, trace_run_timestamp
 
-**v3 schema (BQ) — see `vv_ip_lineage_column_reference.md` for column-by-column documentation:**
+**v4 schema (29 columns) — see `ti_650_column_reference.md` for column-by-column documentation:**
 
 ```sql
 CREATE TABLE IF NOT EXISTS audit.vv_ip_lineage (
@@ -971,49 +969,31 @@ CREATE TABLE IF NOT EXISTS audit.vv_ip_lineage (
     advertiser_id         INT64         NOT NULL,
     campaign_id           INT64,
     vv_stage              INT64,                    -- campaigns.funnel_level (1=S1, 2=S2, 3=S3)
-    max_historical_stage  INT64,                    -- deepest stage this IP has reached
     vv_time               TIMESTAMP     NOT NULL,
-    -- Last-touch IP lineage
-    lt_bid_ip             STRING,       -- event_log.bid_ip
-    lt_vast_ip            STRING,       -- event_log.ip (VAST playback)
+    -- Last-touch IP lineage (Stage N impression)
+    lt_bid_ip             STRING,       -- event_log.bid_ip / impression_log.bid_ip
+    lt_vast_ip            STRING,       -- event_log.ip / impression_log.ip
     redirect_ip           STRING,       -- clickpass_log.ip
     visit_ip              STRING,       -- ui_visits.ip
     impression_ip         STRING,       -- ui_visits.impression_ip
-    -- First-touch attribution
-    ft_ad_served_id       STRING,
-    ft_campaign_id        INT64,
-    ft_stage              INT64,
-    ft_bid_ip             STRING,
-    ft_vast_ip            STRING,
-    ft_time               TIMESTAMP,
-    -- Prior VV (retargeting chain)
+    -- S1 chain traversal (resolved via 4-branch CASE)
+    cp_ft_ad_served_id    STRING,       -- clickpass_log.first_touch_ad_served_id (system ref, 40% NULL)
+    s1_ad_served_id       STRING,       -- resolved S1 VV ad_served_id (chain traversal)
+    s1_bid_ip             STRING,       -- bid IP of the resolved S1 impression
+    s1_vast_ip            STRING,       -- VAST IP of the resolved S1 impression
+    -- Prior VV (retargeting chain — most recent prior VV where pv_stage <= vv_stage)
     prior_vv_ad_served_id STRING,
     prior_vv_time         TIMESTAMP,
     pv_campaign_id        INT64,
     pv_stage              INT64,
     pv_redirect_ip        STRING,
-    is_retargeting_vv     BOOL,
-    -- Prior VV's impression IPs
     pv_lt_bid_ip          STRING,
     pv_lt_vast_ip         STRING,
     pv_lt_time            TIMESTAMP,
-    -- IP comparison flags
-    bid_eq_vast           BOOL,
-    vast_eq_redirect      BOOL,
-    redirect_eq_visit     BOOL,
-    ip_mutated            BOOL,
-    any_mutation          BOOL,
-    lt_bid_eq_ft_bid      BOOL,
     -- Classification
     clickpass_is_new      BOOL,
     visit_is_new          BOOL,
-    ntb_agree             BOOL,
     is_cross_device       BOOL,
-    -- Trace quality
-    is_ctv                BOOL,
-    visit_matched         BOOL,
-    ft_matched            BOOL,
-    pv_lt_matched         BOOL,
     -- Partition & metadata
     trace_date            DATE          NOT NULL,
     trace_run_timestamp   TIMESTAMP     NOT NULL
@@ -1022,22 +1002,25 @@ PARTITION BY trace_date
 CLUSTER BY advertiser_id, vv_stage;
 ```
 
-**Key design decisions (v3):**
-- **Single event_log CTE** (`el_all`): one 90-day scan joined 3x by different ad_served_id (last-touch, first-touch, prior VV impression). Saves ~8% vs 3 separate scans.
-- **max_historical_stage**: `MAX(c_pv.stage) OVER (PARTITION BY cp.ad_served_id)` computed BEFORE prior_vv dedup, then `GREATEST(vv_stage, COALESCE(_max_prior_stage, 0))` in outer SELECT. Captures the deepest funnel penetration across ALL prior VVs, not just the most recent.
-- **Stage classification via campaigns.funnel_level**: 100% populated, maps campaign_id -> stage directly.
-- **Prior VV match**: redirect_ip = bid_ip (~94% accurate). Targeting actually uses VAST IP (70.5% tiebreaker confirmed), but getting VAST IP would require pre-joining event_log.
+**Key design decisions (v4):**
+- **v3→v4 simplification:** Removed `max_historical_stage`, `ft_stage`, `ft_campaign_id`, `ft_time`, all boolean comparison flags (`bid_eq_vast`, `vast_eq_redirect`, etc.), and trace quality flags (`is_ctv`, `visit_matched`, etc.). Raw IP values enable any derived metric downstream.
+- **S1 chain traversal replaces `ft_*` columns:** 4-branch CASE resolves the originating S1 VV via `prior_vv_pool` self-joins (pv → s1_pv → s2_pv). Branch 1: vv_stage=1 (current IS S1). Branch 2: pv_stage=1 (prior VV IS S1). Branch 3: s1_pv.pv_stage=1 (second-level). Branch 4: ELSE s2_pv (third-level, terminal). Resolves ~99%+ of rows. Replaces unreliable `cp_ft_ad_served_id` (40% NULL).
+- **Single event_log + impression_log CTE** each scanned once, joined 3x (last-touch, prior VV, S1 chain). COALESCE(el, il) prefers CTV; impression_log fills display fallback. Saves ~8% vs separate scans.
+- **`pv_stage <= vv_stage`:** Enables same-stage prior VVs (S3→S3 chains). All 10 chain permutations validated with real data.
+- **Stage classification via campaigns.funnel_level**: 100% populated, maps campaign_id → stage directly.
+- **Prior VV match**: redirect_ip = bid_ip (~94% accurate). Cross-device cases (~6%) where bid_ip ≠ redirect_ip may not resolve chain traversal.
 
 **Implementation approach:**
-- Source: clickpass_log (anchor) -> event_log (single 90-day scan) -> ui_visits (+-7 day) -> clickpass_log (90-day self-join for prior VV) -> campaigns (stage lookup x3)
-- Scheduled via SQLMesh (per Zach)
+- Source: clickpass_log (anchor) → event_log + impression_log (single 90-day scan each) → ui_visits (±7 day) → clickpass_log (90-day self-join for prior VV, joined 3x for chain traversal) → campaigns (stage lookup)
+- Scheduled via SQLMesh INCREMENTAL_BY_TIME_RANGE (hourly, 48-hour lookback, 7-day batch size)
 - DELETE+INSERT idempotent pattern by trace_date range
-- 90-day rolling retention
-- Backfill: 1 batch query for 60 days, ~4.6 TB, ~$29 (97% savings vs 60 daily queries)
-- Daily incremental: ~2.8 TB/day, ~$17/day on-demand, ~$520/month
+- 90-day rolling retention (`partition_expiration_days = 90`)
+- Daily incremental: ~4.7 TB scan, ~$29/day on-demand
+- 60-day backfill: ~$47 total (batched 7 days at a time)
+- Monthly ongoing: ~$870/month on-demand (MNTN uses reserved slots)
 - Future optimization: self-referencing prior_vv from the materialized table (reduces daily scan to ~0.5 TB)
 
-**Queries:** `queries/audit_trace_queries.sql` — Q1 (CREATE), Q2 (INSERT), Q3 (preview), Q4 (advertiser summary)
+**Queries:** `queries/ti_650_audit_trace_queries.sql` — Q1 (CREATE), Q2 (INSERT), Q3 (preview), Q4 (advertiser summary). SQLMesh model: `queries/ti_650_sqlmesh_model.sql`.
 
 ---
 
