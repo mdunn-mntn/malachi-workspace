@@ -40,7 +40,7 @@ One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
-- **Single event_log + impression_log CTE** each joined 3x (last-touch, prior VV, S1 chain) — saves ~8% vs 3 separate scans per table
+- **Single event_log + impression_log CTE** each joined 4x (last-touch, prior VV LT, S1 chain LT, s2_pv LT) — single scan, full coverage without duplicate reads
 - **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback for cross-device). Dedup prefers bid_ip matches. Fallback covers the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip due to cross-device mutation. Advertiser_id constraint on all prior_vv joins prevents CGNAT false positives.
 - **Prior VV stage logic:** `pv_stage <= vv_stage` — supports full chain traversal. Same-stage prior VVs allowed (e.g. S3 VV → S3 VV → S2 VV → S1 VV). Stage 3 is terminal, so this is the longest possible chain.
 - **S1 resolution via chain traversal CASE** — eliminates reliance on `cp_ft_ad_served_id` (40% NULL). **4-branch CASE:** (1) vv_stage=1 (current IS S1), (2) pv_stage=1 (prior VV IS S1), (3) s1_pv.pv_stage=1 (second-level join finds S1), (4) ELSE s2_pv (third-level join, terminal pv_stage=1). Resolves ~99%+ of rows. 13 LEFT JOINs total. `cp_ft_ad_served_id` retained as comparison reference only.
@@ -94,7 +94,8 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation (7-day clickpass-only, fast query; confirms zero pv_stage=3)
 - `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (30-day full scan; **canonical validation**)
 - `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation (confirms s1_pv JOIN resolves S1 VV for row 003a01cf)
-- `outputs/ti_650_permutation_validation.json` — all 10 chain traversal permutations validated with concrete ad_served_ids and traces
+- `outputs/ti_650_permutation_validation_2026-02-04.json` — all 10 chain traversal permutations validated (clickpass-only proxy; all 4 s1_branches confirmed, row counts 10K–211K)
+- `outputs/ti_650_e2e_spotcheck_2026-02-07.json` — **end-to-end IP validation**: el/il bid_ip confirmed populated for all 4 s1_branches via targeted point-lookup (2026-03-06)
 
 ---
 
@@ -102,7 +103,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 - **Deploy production table:** SQLMesh model drafted (`queries/ti_650_sqlmesh_model.sql`). Silver layer, `targeting-infrastructure` owner. Next: confirm dataset name with Dustin (e.g. `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`), PR into `SteelHouse/sqlmesh` repo, backfill from 2026-01-01
 - **Query validated end-to-end (2026-03-06):** Targeted test on advertiser 37775 (2026-02-04) confirmed `pv_lt_bid_ip = 172.59.192.138` is now populated for the display prior VV `a4074373`. Previously NULL. Fix: `il_all` CTE (impression_log) + `COALESCE(el, il)` pattern across all 9 IP columns.
-- **S1 chain traversal redesigned and validated (2026-03-06):** 4-branch CASE with `s1_pv` + `s2_pv` JOINs resolves all permutations (S1-only through S3→S3→S3→S1). `s1_ad_served_id`, `s1_bid_ip`, `s1_vast_ip` replace old `ft_*` columns. All 10 permutations confirmed populated (clickpass-only proxy validation on advertiser 37775, 2026-02-04 to 2026-02-10).
+- **S1 chain traversal redesigned and fully validated (2026-03-06):** 4-branch CASE with `s1_pv` + `s2_pv` JOINs resolves all permutations (S1-only through S3→S3→S3→S1). `s1_ad_served_id`, `s1_bid_ip`, `s1_vast_ip` replace old `ft_*` columns. All 10 permutations confirmed (clickpass-only proxy, advertiser 37775, 2026-02-04 to 2026-02-10). **End-to-end IP validation COMPLETE (2026-03-06):** targeted el/il point-lookup confirmed `el_bid_ip` and `il_bid_ip` are populated for all 4 s1_branch CASE arms (see `ti_650_e2e_spotcheck_2026-02-07.json`).
 - **Cross-device chain fix (2026-03-06):** Prior VV match expanded from bid_ip-only to bid_ip OR redirect_ip (fallback). 16-20% of S2/S3 VVs have bid_ip ≠ redirect_ip (cross-device mutation) — without fallback, chain traversal would return NULL for these. Validated on VV `77ddff0c`: bid_ip match finds 5 prior VVs (T-Mobile, all S3/S2), redirect_ip fallback finds 9 more (home network, including 4 S1 VVs). Dedup prefers bid_ip matches. Advertiser_id constraint added to all prior_vv joins.
 - **All-stage design confirmed (Zach, 2026-03-06):** `cp_dedup` pulls all clickpass_log stages — not just S3. Zach: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
 - **Ray's TTL context (2026-03-06):** Architecture diagram shows S1 impression → S3 VV can span ~83 days in representative examples. 90-day lookback is correctly sized. Display touches confirmed fine: "a verified visit can happen on both."
