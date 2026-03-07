@@ -78,10 +78,9 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Artifacts
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
-- `artifacts/ti_650_pipeline_explained.md` — how the pipeline works (stages, targeting vs attribution, IP journey examples)
+- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (rewritten 2026-03-06; covers stages, targeting vs attribution, chain traversal, NTB verification use case with query examples, cross-device walkthrough, coverage summary)
 - `artifacts/ti_650_column_reference.md` — column-by-column schema reference for the production table
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
-- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (completely rewritten 2026-03-06; covers stages, targeting vs attribution, Zach audit answer, chain traversal, all columns)
 
 ### Meetings
 - `meetings/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
