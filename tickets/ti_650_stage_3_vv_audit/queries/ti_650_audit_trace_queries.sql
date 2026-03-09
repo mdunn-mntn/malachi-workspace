@@ -12,7 +12,7 @@
 -- QUERIES IN THIS FILE:
 --   Q1: CREATE TABLE (reference — SQLMesh creates the table automatically)
 --   Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
---   Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + campaign_id filter)
+--   Q3b: SELECT preview — FULLY OPTIMIZED (7 TEMP TABLEs + split OR + materialized pv/s1)
 --   Q4: Advertiser summary (stage-aware, runs on populated table)
 --
 -- STAGE LOGIC:
@@ -270,11 +270,10 @@ FROM with_all_joins
 WHERE _pv_rn = 1;
 
 ================================================================================
-== Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + campaign_id filter)
+== Q3b: SELECT preview — FULLY OPTIMIZED (all optimizations combined)
 ================================================================================
--- Same logic as Q3, but uses TEMP TABLEs to eliminate CTE re-scanning.
--- BQ does NOT materialize CTEs — Q3 scans event_log 4x (52 slot-hrs).
--- Q3b scans event_log ONCE into a TEMP TABLE, then references it 4x for free.
+-- Same logic as Q2, but uses TEMP TABLEs to eliminate CTE re-scanning
+-- and materializes pv/s1 matches upfront so the main SELECT does simple hash joins.
 --
 -- OPTIMIZATIONS APPLIED:
 --   1. TEMP TABLE el_all — single event_log scan, filtered by advertiser's campaign_ids.
@@ -283,21 +282,32 @@ WHERE _pv_rn = 1;
 --      partition scan regardless — campaign_id IN (...) is cheaper to evaluate than a semi-join
 --      against millions of ad_served_ids from clickpass_log.
 --   2. TEMP TABLE cil_all — single cost_impression_log scan (already advertiser-filtered)
---   3. TEMP TABLE prior_vv_pool — single clickpass_log scan (referenced 2x: pv, s1_pv)
---   4. prior_vv_pool IP dedup — keeps only the most recent prior VV per (ip, pv_stage).
+--   3. TEMP TABLE prior_vv_pool — single clickpass_log scan for prior VV candidates
+--   4. TEMP TABLE s1_pool — prior_vv_pool filtered to stage 1 only (s1 always seeks stage 1)
+--   5. TEMP TABLE cp_anchor — materializes anchor VVs (needed by pv_matched step)
+--   6. TEMP TABLE pv_matched — resolves prior VV match upfront using UNION ALL (split OR).
+--      Main query does simple ad_served_id lookup instead of OR-based nested loop.
+--   7. TEMP TABLE s1_matched — resolves S1 chain match upfront using UNION ALL (split OR).
+--   8. prior_vv_pool IP dedup — keeps only the most recent prior VV per (ip, pv_stage).
 --      Caps join fan-out from hundreds-to-one down to max 3-to-1 per IP.
---      Eliminates 245x compute skew on popular IPs (CGNAT/corporate/VPN).
---      Tradeoff: loses older same-IP same-stage prior VV candidates (edge case — final
---      dedup already prefers most recent, so results are equivalent in >99% of cases).
+--   9. Split OR → UNION ALL + dedup — original (ip = bid_ip OR ip = redirect_ip) forces BQ
+--      into nested-loop join (8,593 slot-sec). UNION ALL of two INNER JOINs (one per IP type)
+--      with ROW_NUMBER dedup enables hash joins (525 slot-sec, 94% reduction).
 --
 -- PERF NOTE: event_log dominates cost (~668 GB / 30 days, 98.8% of total scan).
 --   Underlying table: bronze.sqlmesh__raw.raw__event_log (9.6 TB, DAY partition, no clustering).
 --   Reducing lookback window is the most effective optimization lever.
 --
--- TO TEST: Same 3 changes as Q3:
---   1. ADVERTISER_ID: replace 37775 (appears 4x: cp_dedup, el_all campaign filter, cil_all, prior_vv_pool)
---   2. TRACE_DATE: replace '2026-02-04' (cp_dedup WHERE, v_dedup buffer)
---   3. LOOKBACK_START: replace '2025-11-06' (el_all, cil_all, prior_vv_pool)
+-- BENCHMARK (advertiser 37775, 30-day lookback, 1-day trace):
+--   Q3c (OR joins, inline):       main SELECT 95s / 9,159 slot-sec, total 143s
+--   Q3e (split OR, inline):       main SELECT  8s /   759 slot-sec, total  66s
+--   Q3f (split OR, materialized): main SELECT  5s /   525 slot-sec, total 100s  ← this version
+--   Trade-off: Q3f has lowest slot cost but more wall time due to 7 TEMP TABLE job starts.
+--
+-- TO TEST:
+--   1. ADVERTISER_ID: replace 37775 (appears in el_all, cil_all, prior_vv_pool, cp_anchor, s1_matched)
+--   2. TRACE_DATE: replace '2026-02-04' (cp_anchor WHERE, v_dedup buffer)
+--   3. LOOKBACK_START: replace '2026-01-05' (el_all, cil_all, prior_vv_pool)
 --
 -- RUN AS: BQ multi-statement query (paste entire block). TEMP TABLEs auto-drop at session end.
 
@@ -309,21 +319,21 @@ SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time,
     ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
 FROM `dw-main-silver.logdata.event_log`
 WHERE event_type_raw = 'vast_impression'
-  AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
+  AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
   AND campaign_id IN (
       SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
       WHERE advertiser_id = 37775 AND deleted = FALSE
   );
 
--- Step 2: Materialize cost_impression_log — already advertiser-filtered, prevents 4x CTE re-scan
+-- Step 2: Materialize cost_impression_log — already advertiser-filtered, prevents CTE re-scan
 CREATE TEMP TABLE cil_all AS
 SELECT ad_served_id, ip AS vast_ip, ip AS bid_ip, campaign_id, time,
     ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
 FROM `dw-main-silver.logdata.cost_impression_log`
-WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
+WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
   AND advertiser_id = 37775;
 
--- Step 3: Materialize prior_vv_pool — referenced 2x (pv, s1_pv), prevents re-scan
+-- Step 3: Materialize prior_vv_pool — referenced by pv_matched and s1_matched
 -- Two-level dedup: (1) one row per ad_served_id, then (2) one row per IP per stage.
 -- Level 2 caps join fan-out from hundreds-to-one to max 3-to-1 per IP.
 CREATE TEMP TABLE prior_vv_pool AS
@@ -335,110 +345,165 @@ FROM (
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
-    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-05')
+    WHERE cp.time >= TIMESTAMP('2026-01-05') AND cp.time < TIMESTAMP('2026-02-05')
       AND cp.advertiser_id = 37775
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 )
 QUALIFY ROW_NUMBER() OVER (PARTITION BY ip, pv_stage ORDER BY prior_vv_time DESC) = 1;
 
--- Step 4: Main query — references TEMP TABLEs (no re-scanning)
-WITH campaigns_stage AS (
-    SELECT campaign_id, funnel_level AS stage
-    FROM `dw-main-bronze.integrationprod.campaigns`
-    WHERE deleted = FALSE
-),
-cp_dedup AS (
-    SELECT cp.ad_served_id, cp.advertiser_id, cp.campaign_id, cp.ip, cp.is_new, cp.is_cross_device,
-        cp.first_touch_ad_served_id, cp.time, c.stage AS vv_stage
-    FROM `dw-main-silver.logdata.clickpass_log` cp
-    LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-05')
-      AND cp.advertiser_id = 37775
-    QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
-),
-v_dedup AS (
+-- Step 3b: s1_pool — prior_vv_pool filtered to stage 1 ONLY
+-- S1 chain lookup always seeks pv_stage=1. Pre-filtering shrinks the join input.
+CREATE TEMP TABLE s1_pool AS
+SELECT ip, advertiser_id, prior_vv_ad_served_id, pv_campaign_id, prior_vv_time, pv_stage
+FROM prior_vv_pool
+WHERE pv_stage = 1;
+
+-- Step 4: Materialize cp_anchor — anchor VVs for the trace date range
+-- Needed by pv_matched and s1_matched steps (avoids re-scanning clickpass_log)
+CREATE TEMP TABLE cp_anchor AS
+SELECT cp.ad_served_id, cp.advertiser_id, cp.campaign_id, cp.ip, cp.is_new, cp.is_cross_device,
+    cp.first_touch_ad_served_id, cp.time, c.funnel_level AS vv_stage
+FROM `dw-main-silver.logdata.clickpass_log` cp
+LEFT JOIN `dw-main-bronze.integrationprod.campaigns` c
+    ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
+WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-05')
+  AND cp.advertiser_id = 37775
+QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1;
+
+-- Step 5: Materialize pv match (split OR → UNION ALL, deduped)
+-- Resolves prior VV match upfront — main query does simple ad_served_id lookup.
+-- Priority: bid_ip match (0) preferred over redirect_ip match (1).
+CREATE TEMP TABLE pv_matched AS
+SELECT ad_served_id, prior_vv_ad_served_id, pv_campaign_id, prior_vv_time, pv_stage, pv_redirect_ip
+FROM (
+    -- Priority 1: match on bid_ip
+    SELECT cp.ad_served_id, pvp.prior_vv_ad_served_id, pvp.pv_campaign_id,
+        pvp.prior_vv_time, pvp.pv_stage, pvp.ip AS pv_redirect_ip, 0 AS match_priority
+    FROM cp_anchor cp
+    LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
+    LEFT JOIN cil_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
+    INNER JOIN prior_vv_pool pvp
+        ON pvp.advertiser_id = cp.advertiser_id
+        AND pvp.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
+        AND pvp.prior_vv_time < cp.time
+        AND pvp.prior_vv_ad_served_id != cp.ad_served_id
+        AND pvp.pv_stage < cp.vv_stage
+    WHERE COALESCE(lt.bid_ip, lt_d.bid_ip) IS NOT NULL
+
+    UNION ALL
+
+    -- Priority 2: match on redirect_ip
+    SELECT cp.ad_served_id, pvp.prior_vv_ad_served_id, pvp.pv_campaign_id,
+        pvp.prior_vv_time, pvp.pv_stage, pvp.ip AS pv_redirect_ip, 1 AS match_priority
+    FROM cp_anchor cp
+    INNER JOIN prior_vv_pool pvp
+        ON pvp.advertiser_id = cp.advertiser_id
+        AND pvp.ip = cp.ip
+        AND pvp.prior_vv_time < cp.time
+        AND pvp.prior_vv_ad_served_id != cp.ad_served_id
+        AND pvp.pv_stage < cp.vv_stage
+)
+QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY match_priority, prior_vv_time DESC) = 1;
+
+-- Step 6: Materialize s1 match (split OR → UNION ALL, deduped)
+-- Only needed when pv_stage > 1 (if pv is already S1, no further chain lookup needed).
+CREATE TEMP TABLE s1_matched AS
+SELECT ad_served_id, s1_ad_served_id
+FROM (
+    -- Priority 1: match on bid_ip of prior VV's impression
+    SELECT pv.ad_served_id, s1.prior_vv_ad_served_id AS s1_ad_served_id, 0 AS match_priority
+    FROM pv_matched pv
+    LEFT JOIN el_all pv_lt ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
+    LEFT JOIN cil_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
+    INNER JOIN s1_pool s1
+        ON s1.advertiser_id = 37775
+        AND s1.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+        AND s1.pv_stage < pv.pv_stage
+        AND s1.prior_vv_time < pv.prior_vv_time
+        AND s1.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
+    WHERE pv.pv_stage > 1
+      AND COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) IS NOT NULL
+
+    UNION ALL
+
+    -- Priority 2: match on redirect_ip of prior VV
+    SELECT pv.ad_served_id, s1.prior_vv_ad_served_id AS s1_ad_served_id, 1 AS match_priority
+    FROM pv_matched pv
+    INNER JOIN s1_pool s1
+        ON s1.advertiser_id = 37775
+        AND s1.ip = pv.pv_redirect_ip
+        AND s1.pv_stage < pv.pv_stage
+        AND s1.prior_vv_time < pv.prior_vv_time
+        AND s1.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
+    WHERE pv.pv_stage > 1
+)
+QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY match_priority, s1_ad_served_id) = 1;
+
+-- Step 7: Main query — simple hash joins by ad_served_id everywhere
+-- All OR-based matching resolved in pv_matched/s1_matched TEMP TABLEs above.
+WITH v_dedup AS (
     SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip, is_new, impression_ip
     FROM `dw-main-silver.summarydata.ui_visits`
     WHERE from_verified_impression = TRUE
       AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-12')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
-),
-with_all_joins AS (
-    SELECT
-        cp.ad_served_id, cp.advertiser_id, cp.campaign_id,
-        cp.vv_stage, cp.time AS vv_time,
-        COALESCE(lt.bid_ip, lt_d.bid_ip) AS lt_bid_ip,
-        COALESCE(lt.vast_ip, lt_d.vast_ip) AS lt_vast_ip,
-        cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
-        cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
-        CASE
-            WHEN cp.vv_stage = 1        THEN cp.ad_served_id
-            WHEN pv.pv_stage = 1        THEN pv.prior_vv_ad_served_id
-            ELSE                             s1_pv.prior_vv_ad_served_id
-        END AS s1_ad_served_id,
-        CASE
-            WHEN cp.vv_stage = 1        THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
-            WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-            ELSE                             COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
-        END AS s1_bid_ip,
-        CASE
-            WHEN cp.vv_stage = 1        THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
-            WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
-            ELSE                             COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
-        END AS s1_vast_ip,
-        pv.prior_vv_ad_served_id, pv.prior_vv_time,
-        pv.pv_campaign_id, pv.pv_stage,
-        pv.ip AS pv_redirect_ip,
-        COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) AS pv_lt_bid_ip,
-        COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip) AS pv_lt_vast_ip,
-        COALESCE(pv_lt.time, pv_lt_d.time) AS pv_lt_time,
-        cp.is_new AS clickpass_is_new, v.is_new AS visit_is_new, cp.is_cross_device,
-        DATE(cp.time) AS trace_date,
-        CURRENT_TIMESTAMP() AS trace_run_timestamp,
-        ROW_NUMBER() OVER (
-            PARTITION BY cp.ad_served_id
-            ORDER BY
-                CASE WHEN pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip) THEN 0 ELSE 1 END,
-                pv.prior_vv_time DESC NULLS LAST,
-                s1_pv.prior_vv_time DESC NULLS LAST
-        ) AS _pv_rn
-    FROM cp_dedup cp
-    LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
-    LEFT JOIN cil_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
-    LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
-    LEFT JOIN prior_vv_pool pv
-        ON pv.advertiser_id = cp.advertiser_id
-        AND (pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip) OR pv.ip = cp.ip)
-        AND pv.prior_vv_time < cp.time
-        AND pv.prior_vv_ad_served_id != cp.ad_served_id
-        AND pv.pv_stage < cp.vv_stage
-    LEFT JOIN el_all pv_lt ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
-    LEFT JOIN cil_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
-    LEFT JOIN prior_vv_pool s1_pv
-        ON s1_pv.advertiser_id = cp.advertiser_id
-        AND (s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) OR s1_pv.ip = pv.ip)
-        AND s1_pv.pv_stage < pv.pv_stage
-        AND s1_pv.prior_vv_time < pv.prior_vv_time
-        AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
-    LEFT JOIN el_all s1_lt ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
-    LEFT JOIN cil_all s1_lt_d ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
 )
 SELECT
-    ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
-    lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip,
-    cp_ft_ad_served_id, s1_ad_served_id, s1_bid_ip, s1_vast_ip,
-    prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage,
-    pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time,
-    clickpass_is_new, visit_is_new, is_cross_device,
-    trace_date, trace_run_timestamp
-FROM with_all_joins
-WHERE _pv_rn = 1
+    cp.ad_served_id, cp.advertiser_id, cp.campaign_id,
+    cp.vv_stage, cp.time AS vv_time,
+    COALESCE(lt.bid_ip, lt_d.bid_ip) AS lt_bid_ip,
+    COALESCE(lt.vast_ip, lt_d.vast_ip) AS lt_vast_ip,
+    cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
+    cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
+
+    -- S1 resolution
+    CASE
+        WHEN cp.vv_stage = 1     THEN cp.ad_served_id
+        WHEN pv.pv_stage = 1    THEN pv.prior_vv_ad_served_id
+        ELSE                          s1.s1_ad_served_id
+    END AS s1_ad_served_id,
+    CASE
+        WHEN cp.vv_stage = 1     THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
+        WHEN pv.pv_stage = 1    THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+        ELSE                          COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+    END AS s1_bid_ip,
+    CASE
+        WHEN cp.vv_stage = 1     THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
+        WHEN pv.pv_stage = 1    THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
+        ELSE                          COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+    END AS s1_vast_ip,
+
+    pv.prior_vv_ad_served_id, pv.prior_vv_time,
+    pv.pv_campaign_id, pv.pv_stage,
+    pv.pv_redirect_ip,
+    COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) AS pv_lt_bid_ip,
+    COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip) AS pv_lt_vast_ip,
+    COALESCE(pv_lt.time, pv_lt_d.time) AS pv_lt_time,
+
+    cp.is_new AS clickpass_is_new, v.is_new AS visit_is_new, cp.is_cross_device,
+    DATE(cp.time) AS trace_date,
+    CURRENT_TIMESTAMP() AS trace_run_timestamp
+
+FROM cp_anchor cp
+LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
+LEFT JOIN cil_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
+LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
+LEFT JOIN pv_matched pv ON pv.ad_served_id = cp.ad_served_id
+LEFT JOIN el_all pv_lt ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
+LEFT JOIN cil_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
+LEFT JOIN s1_matched s1 ON s1.ad_served_id = cp.ad_served_id
+LEFT JOIN el_all s1_lt ON s1_lt.ad_served_id = s1.s1_ad_served_id AND s1_lt.rn = 1
+LEFT JOIN cil_all s1_lt_d ON s1_lt_d.ad_served_id = s1.s1_ad_served_id AND s1_lt_d.rn = 1
 LIMIT 100;
 
 -- Clean up (optional — TEMP TABLEs auto-drop at session end)
 DROP TABLE IF EXISTS el_all;
 DROP TABLE IF EXISTS cil_all;
 DROP TABLE IF EXISTS prior_vv_pool;
+DROP TABLE IF EXISTS s1_pool;
+DROP TABLE IF EXISTS cp_anchor;
+DROP TABLE IF EXISTS pv_matched;
+DROP TABLE IF EXISTS s1_matched;
 
 
 ================================================================================
