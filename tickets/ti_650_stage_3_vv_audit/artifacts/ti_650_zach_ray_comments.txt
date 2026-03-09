@@ -49,6 +49,15 @@ if there are 3 vv that put an ip in stage 3, thats 3 rows. if theres a vv in sta
 malachi  [3:39 PM]
 Ok
 
+malachi  [9:12 AM]
+When a VAST impression happens on one device and then the visit / page_view happens on another device, how are we linking those devices together, in a table such as the clickpass_log?
+3 repliesSharad  [9:25 AM]
+that is the primary logic inside VVS. it's mainly IP, so we try to find devices that we've served impression to, that have the same IP as the page view IP. The next layer is - using GA Client ID of the page view, we find all IPs that the GA Client ID has been seen with in the previous few days, and look for impressions we've served to any of those IPs. There are validations and filtering over each of these layers, but that's the overall idea
+[9:25 AM]If you want to learn more about it - @Nish has a really helpful document here
+Verified Visit Service (VVS) Business LogicOwned by: Nimeshi Fernando | 3 comments | 63 people viewedAdded by Confluence Cloudmalachi  [9:28 AM]
+Thank you, exactly what I was looking for.
+
+
 /Users/malachi/Developer/work/mntn/workspace/documentation/architecture/Last TV Touch.png
 
 Make sure all artifacts for this ticket are up-to-date, we've learned a lot.

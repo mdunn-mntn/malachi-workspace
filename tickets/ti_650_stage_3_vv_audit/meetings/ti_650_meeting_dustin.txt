@@ -1,0 +1,106 @@
+Speaker 1  0:00  
+Reference it later. So, yeah, won't be anything else, yeah. The big thing, though, is that it sounds right like, well, let me pull up the query. I don't know why. It's not here. I didn't catch the right one. So where is it? Here? Queries on a trace model, do
+
+Speaker 1  0:23  
+Yeah, I have different different queries for different things. Q3 I think, is just the one that has my Yeah, okay. I mean, this is the creating the table. This is the insert the data in the table. But I don't need those for this example. So this would be like, this is an example with, like, one advertiser. Yeah. I mean, I'm querying the click pass log in, the event, log and stuff. But my idea is that this would go directly into the silver table. So I guess that's the one thing I want to talk about. Is for one when we want, like, I guess number one, when we want to backfill this data. Do 60 days? Do you recommend just running the query and setting that 60 day timer and just letting it run forever, as long as it needs to run? Or is there a different way that we should?
+
+Speaker 2  1:20  
+I mean, it really depends on data. So when you so if you're, if you make a SQL mesh job, you actually can set those parameters. You set a you set a look back. That's one thing you said. So that's for, like, reprocessing data to handle late arriving values. I don't know if you're going to need that with IP DSC. IP DSC is there, it's not there's no later editing
+
+Unknown Speaker  1:43  
+values. The other thing is batch size,
+
+Speaker 2  1:46  
+which lets you say, I want to if you do things daily, right? You set a batch size to the number of days you want to process at once. And so when you do a backfill, it'll process that many days. So you what you want to do is you want to do experimentation on, on how much is too much and how much is too little, too little. So if your batch size is one, which is the default, right? I'm sorry, no batch size. Batch size all is the default. If you set your batch size to one, that's almost always going to be too little, because what then you end up with a ton of overhead for processing the query before it even starts running batch size of all of them, especially in a case like this, is probably also not going to work, because it just will, you know, saturate your slots and then just sit there and spin in the slots and just take forever. So you probably want to do is see how many days you can run it once, experiment a little bit that, then, then set your batch size to that. And then when you do a backfill SQL mesh will handle that chunking of data for you without you having to do anything other than plan. So that's how I would suggest doing that. You know, you're also going to want to, like, try to optimize your query as much as possible, in not as much as possible. You want to optimize. You want to get the low hanging fruit, right. You want to get that, like, big chunk of optimization not you don't really have to optimize all the way, just enough to like, that you're not like, so, yeah, so like, that's the other thing you want to do, obviously. Because in the end, when you do a backfill, like, you're going to be trying to process big chunks of data at once over multiple intervals. But, and what you're talking about is incremental materialization, even if it's not hourly, like I had mentioned, this is you're talking about a daily materialization, right? So every day you're gonna, you're gonna run it, and it's gonna create an interval for that day with the data that you have incremental materialization. That's what that is. And so, like, I forgot where I was going with that, but basically you, so I got pinged a bunch there. Well, I don't really know where I was going with that, but that's sort of the strategy that you would you would have with SQL mesh, is through every time you would materialize only that bit of time and and if you re materialize that bit of time, it would overwrite that whole partition. So that's, yeah. And so for for this stuff, if this is the query we'd have, we can look at it if you want. But for this stuff, usually what you're going to want to do unless it's reading ipdsc directly, which I don't think it is, because I remember you saying that this is not the this is a totally different query that, yeah. So like, these logs are continuous, right? Yeah, pretty much UI visits is a view, but whatever,
+
+Unknown Speaker  4:51  
+these logs are continuous, and since they're continuous,
+
+Unknown Speaker  4:55  
+so you see how you're only selecting a few you.
+
+Speaker 2  5:01  
+Columns in each of them. Yeah, like, you're probably just going to want to materialize those columns into an hourly table as a sort of staging table. And so every hour you'd process click pass Log and Event Log. Or maybe you might even join them together to create a staging table. And then when you your daily run happens, when you get that daily materialization, it's going to be your final result. You would just query that materialized table that you have created for this purpose, and it ends up running so much faster. And because you're doing the aerial materialization on the bigger tables you you don't scan as much data, and so those run pretty fast as well, and you've got all this data ready and available for you in this quick and small table, and that is usually sufficient. So in this case, you would probably materialize this like chunk that's on the screen here. I don't know what else is there, but this chunk that's on the screen hourly, right? And then if you go down the final stuff you'd materialize would be the daily stuff, like that very final bit. Okay, that makes sense.
+
+Speaker 1  6:19  
+Yeah, I don't think in the same so what do we do with historical data then? So what do you mean? So just in the case, like, let's say this table only holds 60 days, and then that's all that we retain. Do we want to save historical data and buckets or something? That's where it's cheap.
+
+Speaker 2  6:37  
+I mean, that's up to you, right? Like, that's, that's, that is, that's, that's a decision that the data owner would know, right? Which is, you so do you need to have that ability? Do you need to have the ability to restate prior information? In this case, it doesn't sound like you do, but if you do sure, like, dump it to a GCS bucket in an airflow job, or something like, or, I don't think you can't really write external you can't write external tables in BigQuery, but, yeah, most of the bare stuff that needs a lot of historical data, we've just been storing entirely in BigQuery. There. Are ways to optimize storage costs.
+
+Speaker 1  7:25  
+Okay, well, because I just know that bucket storage is like, way cheaper than like,
+
+Unknown Speaker  7:30  
+kind of bucket storage
+
+Speaker 2  7:33  
+can be way cheaper. It's actually the same exact price if you are taking logical byte storage in BigQuery and physical byte storage in GCS, it's about double the price in BigQuery if you, if you switch to to physical, right? But honestly, these tables aren't going to be very big. I know, I know you say it's a lot of data, but I think it's just, it's just that you're processing, like, a bunch of data at once, and then it materializes into something quite small. Yeah, that's true. So, like, I mean, I don't know you can see a lot of data though.
+
+Speaker 1  8:14  
+I mean, this is visit level, this is row level visit. So it's just the amount of visits on all the advertisers, which I guess, is not a ton. Like, it's just,
+
+Speaker 2  8:22  
+yeah, exactly. So, like, go, go, go to click, pass log, right? For one, just go to the go to the definition of it, if you Yeah, yeah, sure it works, because I know you're using click, pass, log, right? Yep, yep, yeah. Go. This is the view, yeah. Go to the actual raw table, which is 184, so if you look here in the query there, so this, so this is how SQL mesh works, by the way. No, don't you don't want to do this. Let me. Let me. I'm going to, I actually want to get a size. I want to show you something. So if this is how, this is how SQL mesh works, this is the table that you are using, right? This is the table that you that everyone will actually access, and it is what it is what you I don't know how familiar you are with software engineering, but it can be thought of as a pointer to a physical table. And what that means is it's a thin view over in that physical table, which you see in the query, right? So the physical table is what actually gets updated with real data, and then this view is what people access. And the reason SQL mesh does that is that lets you switch the underlying tables when you do dev work. So if you if you say, Oh man, click pass log actually needs this field All right, well, okay, I'm going to do the dev work for that. I'm going to backfill all the data in my dev environment, not touching prod. And then finally, when you get to the prod deployment, all it does is it changes this view to point to the new table that you've already prepared in your dev environment. I'm. Um, so that's what SQL mesh does. I don't know if you need to know this implementation details, but when you if you want to go and look at details about the physical table, it's important to know that you actually there is one level of abstraction to go so if you instead go click on the raw click, pass, log, 184, it's the bot, one of the bottom two tables on the left there. So 184, is what it starts at, yeah. So the top one, all right. So if you open that one up and you go to details, boom, you'll see the entirety of this table is less than 100 gigabytes. That is tiny. Like, we don't, like, I don't even know we, I mean, we're keeping 365, days, but we could probably just kept all of it. So think about how, like, since your stuff requires click pass, log, right? Like, how much data are you really going
+
+Speaker 1  10:55  
+to be storing? Well, it's kind of interesting, because we only, we only need a few things. So if the thing is weird about it is there's not a lot of data that we're storing, but you need to get data from a lot of large tables. That's pretty much what the situation is. So yeah, exactly, yeah, that's all that's going on. It's not a lot.
+
+Speaker 2  11:13  
+Think about the just the incremental addition. So as far as cost goes, we would, we will. We do pay for storage, right? We pay for BigQuery storage, but since we're using slots, we don't pay any extra for Big Query compute. We have that all allocated already, right? So don't worry. You don't have to worry about Compute only storage. And in this case, storage is incrementally more. It's not we're not even going to notice it on the on the on the bill, right?
+
+Speaker 1  11:44  
+If that makes sense. Yeah, that does make sense. You know what? The side note, I've never seen this, so when it says slot time consumed, always thought like I have no idea what that means, because obviously it doesn't take three days and 17 hours to query it. So I'm just super confused
+
+Speaker 2  11:58  
+with that. So basically, what you do is you divide that time by the number of slots that were used to do the computation, and you get roughly the elapsed time on the left there. So basically, it's just this. It's like, it's like, CPU time, right? You know the difference between between wall clock and CPU clock, right? I actually don't. Okay, so wall clock is what you the clock you see on the wall, like, right? The like, steady, increasing the state, the stable clock, right? CPU. The CPU clock is, so you've got eight cores and a CPU or something, right? The CPU clock can, can be operating eight times as fast, right? Because it's got eight different cores as the wall clock. So, like, it's like, it's like, it's like, think about it like, man hours, right? Yeah. But instead, it's slot hours. You just so you're consuming multiple slots. It doesn't tell you how many slots, because BigQuery likes to keep that a secret, or Google likes to keep that a secret, but you can kind of guess here. So you're consuming multiple slots. Since you're consuming multiple slots, you use, like it multiplies, compounds the time. So over the wall clock is on the left, so over 12 and a half minutes, you've used four days and two hours of slot time, which is just multiple slots being used over 12 and a half minutes.
+
+Unknown Speaker  13:19  
+Okay, that makes sense.
+
+Speaker 1  13:23  
+All right. So as far as just out of curiosity, so as far as the SQL mesh like project is concerned, like, when it Do we need to do anything? Or can I just, you know, make a branch, make my changes and submit a PR. Like, is it any more than that? Like, once you do a PR, it's pretty good. Like, from what I understand, it's just a repo that we use, and if you just create a new file in that repo, then it'll start to be targeted. Is that correct?
+
+Unknown Speaker  13:54  
+I'm sorry, say it again. I said so, yeah.
+
+Speaker 1  13:57  
+Like, if you So, if you as far as the SQL mesh. Do we just need to create a file in there and then once it's in there?
+
+Unknown Speaker  14:05  
+Yeah, it's a mono repo. And that was a very specific choice.
+
+Speaker 1  14:09  
+Yeah, that's I like. That makes it super
+
+Speaker 2  14:12  
+I'm more of a fan of the mono repo. I'm a little sad that the airflow stuff went he broke that down into different repos, because I really feel like airflow should be a mono repo as well. Yeah, it's okay. It's, it's still like, it's a semi mono repo, I guess.
+
+Speaker 1  14:29  
+Yeah. So in this scripts thing, I think it's scripts, right?
+
+Speaker 2  14:33  
+Or I can't remember, no, it is models that you're there you go, yeah.
+
+Speaker 1  14:37  
+And then I remember, and then there's the silver, yeah, because I was looking at the click pass log is like. So basically it's just going to be like, something like this. So once, basically what you're saying is that once I put this in here, in one of these, I think I was looking at click pass log. So if I throw in another SQL file and. You guys do a PR, then it'll start executing that. Once it's in here, correct
+
+Speaker 2  15:04  
+kind of there is, there is actually one extra step, and we're trying to get get away from that step, but it's, hasn't we haven't solved that yet, because we're worried more about getting models from core DW into BigQuery first. But yeah, we will take care of that bit. So once it's in there and we execute that secondary step, then it will then it will start executing automatically.
+
+Speaker 1  15:30  
+Okay, that makes sense. Well, I think that I have all the questions answered. I actually have to edit it because
+
+Unknown Speaker  15:38  
+it's not exactly what was wanted.
+
+Speaker 1  15:42  
+I think, what's that term for when somebody wants something and you need to provide some sort of, like, oh, example, like, especially when you're building a table, someone wants you to build a table for them, proof of concept. Yeah, that's okay. That's what I was thinking, the proof of concept. I didn't get a proof of concept for this, so I've been doing a lot of like, Hey, this is what you want. No, I kind of want it like this. And like, Okay, here's what you want. Okay, so I just got some information yesterday. I needed edit it, but I think I'll probably be done by the end of the day. And, yeah, I'll probably submit a PR or do something like that, because it didn't seem too difficult. I'll have to ask Zach, though, because Zach's the one. I was like, I'm not really the one building it for myself and building it for Zach so I'll just have to ask him.
+
+Speaker 2  16:25  
+Well, yeah, that's what data engineers do. We build for other people.
+
+Unknown Speaker  16:28  
+It's kind of weird. I was saying, like, totally unrelated to this whole call. I.
+
+Transcribed by https://otter.ai

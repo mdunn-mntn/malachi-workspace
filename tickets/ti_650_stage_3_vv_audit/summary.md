@@ -78,15 +78,18 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Artifacts
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
-- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (rewritten 2026-03-06; covers stages, targeting vs attribution, chain traversal, NTB verification use case with query examples, cross-device walkthrough, coverage summary)
+- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (rewritten 2026-03-06; covers stages, targeting vs attribution, chain traversal, NTB verification use case with query examples, cross-device walkthrough, coverage summary, VVS determination logic)
 - `artifacts/ti_650_column_reference.md` — column-by-column schema reference for the production table
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
+- `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad (design decisions, VVS attribution logic, all-stage confirmation)
+- `artifacts/ti_650_verified_visit_business_logic.txt` — Nimeshi Fernando's VVS Business Logic doc (Confluence MIME/HTML export; contains full VVS determination logic, attribution model IDs, TRPX flow, PV_GUID_LOCK)
 
 ### Meetings
 - `meetings/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
 - `meetings/ti_650_meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
 - `meetings/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
 - `meetings/ti_650_meeting_ryan_1.txt` — SQLMesh implementation walkthrough with Ryan (2026-03-05)
+- `meetings/ti_650_meeting_dustin.txt` — SQLMesh deployment strategy with Dustin (batch sizing, staging tables, slot-based pricing, mono repo PR workflow)
 
 ### Outputs
 - `outputs/ti_650_preview_37775_2026-02-04.json` — 100-row S3 VV sample (advertiser 37775, 2026-02-04, display fix applied)

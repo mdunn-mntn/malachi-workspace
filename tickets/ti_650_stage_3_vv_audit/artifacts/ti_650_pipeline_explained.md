@@ -22,6 +22,12 @@ When MNTN serves an ad and a user later visits the advertiser's site, five thing
 
 **Where IP mutation happens:** 100% of IP changes happen between step 3 (VAST) and step 4 (clickpass redirect). The bid IP = VAST bid_ip = impression_log IP in 100% of cases. If the IP changed, it changed at the VAST→redirect boundary. Cross-device and VPN switching cause this.
 
+**How VVS links the visit to the impression (Sharad, confirmed):** The Verified Visit Service (VVS) does the attribution in two layers:
+1. **Primary: IP match.** When a page view comes in, VVS looks for impressions served to the same IP as the page view IP. This is the main mechanism.
+2. **Secondary: GA Client ID expansion.** Using the GA Client ID from the page view, VVS finds all IPs that Client ID has been seen with in the previous few days, then looks for impressions served to any of those IPs.
+
+There are validations and filtering on each layer, but this is how a CTV ad served to one device gets linked to a site visit from another device — either they share the same IP (e.g. both on home WiFi), or the GA Client ID bridges across IPs. The `is_cross_device` flag in `clickpass_log` indicates when VVS detected the ad was served on a different device type than the visit. See: Nimeshi Fernando's "Verified Visit Service (VVS) Business Logic" Confluence doc.
+
 ---
 
 ## Part 2: The Three Stages
@@ -579,3 +585,123 @@ VV 77ddff0c (S3, 2026-02-01 22:35:17)
 S1, S2→S1, S3→S1, S2→S2→S1, S3→S2→S1, S3→S3→S1, S2→S2→S2→S1, S3→S2→S2→S1, S3→S3→S2→S1, S3→S3→S3→S1. Every permutation resolves `s1_bid_ip`.
 
 **The bottom line:** For any VV at any stage, `s1_bid_ip` tells you the IP we originally bid on. If the visit IP differs, it's mutation. The table proves targeting correctness.
+
+---
+
+## Part 12: VVS Determination Logic (How a Visit Becomes a Verified Visit)
+
+Source: Nimeshi Fernando, "Verified Visit Service (VVS) Business Logic" (Confluence). This is the internal service that decides whether a page view on an advertiser's site gets attributed to an MNTN ad.
+
+### The Flow: Ad Serve → Page View → VVS Decision
+
+**Part 1 — Impression ingestion:**
+1. Client calls ad service with a serve request
+2. Ad service posts impression to Kafka (impression topic)
+3. Ad service also sends VVS the impression → logged in `users.click_pass` (Scylla) where `viewable = false`
+4. Ad service serves the ad to the client with an adcode
+5. Client notifies event service that it received a viewable ad
+6. Event service calls VVS → logs impression in `users.click_pass` where `viewable = true`
+7. Event service also logs the impression to Kafka (impression topic)
+
+**Part 2 — TRPX fires → VVS decides:**
+1. User sees ad on TV, opens browser on a device, navigates to advertiser's site (which has TRPX tracking pixel installed)
+2. TRPX fires on the page → record logged in `guidv2`
+3. TRPX sends an HTTP POST request to VVS every time it fires (includes `ip`, `guid`, `gaid` (GA Client ID), `advertiserId`, UTM params, referrer, etc.)
+4. VVS responds `true` or `false`:
+   - `isSuccessful=true` + impression details = **Last Touch VV** (non-tamp, `attribution_model_id` 1-3)
+   - `isSuccessful=false` = **Competing/First Touch VV** (tamp, `attribution_model_id` 9-11) or rejection
+5. TRPX sends GA tracking data to attribution-consumer → attribution-consumer fires Measurement Protocol to advertiser's GA property → logged in `analytics_request_log`
+
+### VVS Determination Logic (step-by-step)
+
+This is the exact decision tree VVS runs on every TRPX POST request:
+
+1. **Advertiser validation:** Is `advertiser_id` valid? If not → VV false.
+2. **IP blocklist check** (`segmentation.ip_blocklist`): Is the page view IP on the blocklist?
+   - Not on blocklist → proceed to cross-device check
+   - On blocklist → proceed to guid whitelisting (stage 1)
+   - *Blocklist populated from Oracle-Audience-Service, stored in Scylla*
+3. **GUID blocklist check** (`segmentation.guid_blocklist`): Is the page view GUID on the blocklist?
+   - On blocklist → VV false
+   - Not on blocklist → proceed to cross-device check
+4. **Cross-device config check:** Does advertiser have `crossdevice.config` and `advertisers.clickpass_enabled`?
+   - `clickpass_enabled = false` → VV false
+   - No cross-device config → same-device attribution only
+   - Cross-device config enabled → same-device AND cross-device attribution
+   - *Lookup table: `vvs.cross_device_config` in Aurora DB*
+5. **GUID match (attribution_model_id = 1):** Does the page view GUID match a GUID that was served an impression within the VV window (14-45 days)?
+   - Match found → GUID blocklist check (2nd stage) → eligibility check → **attribution_model_id = 1** (Last Touch - guid)
+   - No match → proceed to IP match
+6. **IP match (attribution_model_id = 2):** Does the page view IP match an IP served an impression?
+   - Match found → was the IP served a CTV impression? (check `household_whitelist` in Scylla)
+     - CTV impression → eligibility check → **attribution_model_id = 2** (Last Touch - ip)
+     - No CTV impression → 2nd stage IP whitelisting (filter against `icloud_ipv4`)
+       - Whitelisted → eligibility check
+       - Not whitelisted → check GUID-to-IP count (if count > max → VV false; otherwise → eligibility check)
+   - No match → proceed to GA Client ID match
+7. **Viewable = false repeat:** Both GUID and IP matching are repeated with impressions where `viewable = false`
+8. **GA Client ID match (attribution_model_id = 3):** Do any IPs associated with the GA Client ID (`cookie.gaid_ip_mapping`) match an impression IP?
+   - Match found → eligibility check → **attribution_model_id = 3** (Last Touch - ga_client_id)
+   - No match → **VV false** (final rejection)
+
+### Eligibility Checks (run after a match is found)
+
+9. **Duplicate check:** Was a VV already logged for the same user in this session? (TRPX fires on every page view, but only the first is eligible)
+   - Already logged → VV false
+10. **TTL / VV window check:** Is the user eligible for the next VV based on the impression's `clickpass_acquisition_ttl`? (Has this user/ip/guid/ga_client_id already been attributed in a prior visit — even a tampered one?)
+    - Already attributed → VV false
+11. **Advertiser TTL check:** Is the request within the advertiser's TTL window (45-day max, from `core-cache-service`)?
+    - Within window → proceed to referral blocking
+    - Outside window → VV false
+12. **Referral blocking / tamp detection:** Does the referrer contain any substrings from the general tamp values list (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `gclid`, `cid`, `cmmmc`)?
+    - Tamp substrings found → **VV false** (this is a paid search / competing channel visit)
+    - No tamp substrings → **VV true** (`isSuccessful=true`)
+
+### Attribution Model IDs (clickpass_log.attribution_model_id)
+
+| ID | Model | Type |
+|----|-------|------|
+| 1 | Last Touch - guid | Non-competing |
+| 2 | Last Touch - ip | Non-competing |
+| 3 | Last Touch - ga_client_id | Non-competing |
+| 4 | Last TV Touch - guid | Non-competing |
+| 5 | Last TV Touch - ip | Non-competing |
+| 6 | Last TV Touch - ga_client_id | Non-competing |
+| 7 | Last TV Touch - Offline Attribution | Non-competing |
+| 8 | Last Touch - Offline Attribution | Non-competing |
+| 9 | Last Touch Competing - guid | Competing |
+| 10 | Last Touch Competing - ip | Competing |
+| 11 | Last Touch Competing - ga_client_id | Competing |
+| 12 | Last TV Touch Competing - guid | Competing |
+| 13 | Last TV Touch Competing - ip | Competing |
+| 14 | Last TV Touch Competing - ga_client_id | Competing |
+| 15 | Last Touch Impression - ip | Impression-based |
+| 16 | Last TV Touch Impression - ip | Impression-based |
+
+- **Non-competing** (1-8): `clickpass_log` rows where the visit passed tamp detection — genuine MNTN-driven visits
+- **Competing** (9-14): Visit detected as coming from a competing channel (paid search, etc.) but still logged for reporting. Stored in `competing_vv` Kafka topic. Industry Standard visits skip tamp detection (step 12) and go directly to competing_vv
+- **Impression-based** (15-16): Attribution based on impression alone (no direct visit linkage)
+
+### PV_GUID_LOCK (Misattribution Prevention)
+
+Handles the case where a user's IP changes during a single site visit:
+- VVS stores both impression GUID and page view (PV) GUID
+- **Impression GUID TTL:** unchanged (standard TTL)
+- **PV GUID TTL:** 30 minutes of **inactivity** (resets every time TRPX fires with same PV GUID)
+- This ensures the PV GUID remains eligible for VV consideration even if the IP changes mid-session
+- Accounts for site visits longer than 30 minutes (TTL resets on each page view)
+- Advertisers with this logic have `pv_guid_lock = true` in `advertiser_configs`
+
+### Custom Attribution Settings
+
+Advertisers can customize their referral blocking blocklist values. Stored in `vvs.blacklist_query_params`:
+- `active = true` → substring is on the blocklist (will trigger tamp rejection)
+- `active = false` → substring is off the blocklist (will not trigger rejection)
+
+### Why This Matters for the Audit Table
+
+The VVS determination logic explains several things visible in `audit.vv_ip_lineage`:
+- **`is_cross_device` flag:** Set when VVS detects the ad was served on a different device than the visit (step 4-6 in the flow above)
+- **IP mutation at VAST→redirect boundary:** VVS matches visits to impressions via IP/GUID/GA Client ID. The IP at match time (step 6) may differ from the IP at bid time because the user is on a different network
+- **`clickpass_is_new` / `visit_is_new` disagreement:** Two independent client-side pixels with different implementations. VVS doesn't determine NTB — the TRPX pixel does, separately from VVS's attribution logic
+- **`attribution_model_id` priority:** GUID match (1) → IP match (2) → GA Client ID match (3). The table's chain traversal uses IP matching (like VVS model 2), which is the most common match type for CTV attribution
