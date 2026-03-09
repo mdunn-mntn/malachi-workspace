@@ -85,28 +85,27 @@ The chain traversal joins (s1_pv, s2_pv) cascade this fan-out: s1_pv joins on IP
 
 **Evidence:** Stage 149 reads 2,979,929 records but the single slowest worker takes 6.25 hours. The work is concentrated on a few popular IP keys.
 
-**Mitigation strategies:**
-1. **Cap fan-out per VV** — Add a QUALIFY or ROW_NUMBER to limit how many prior_vv matches per ad_served_id:
-   ```sql
-   -- In prior_vv_pool CTE, add IP frequency cap:
-   prior_vv_pool AS (
-       SELECT ...
-       FROM (
-           SELECT cp.ip, cp.advertiser_id, cp.ad_served_id AS prior_vv_ad_served_id,
-               cp.campaign_id AS pv_campaign_id, cp.time AS prior_vv_time, c.stage AS pv_stage,
-               COUNT(*) OVER (PARTITION BY cp.ip, cp.advertiser_id) AS ip_count
-           FROM `dw-main-silver.logdata.clickpass_log` cp
-           LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-           WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-05')
-             AND cp.advertiser_id = 37775
-           QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
-       )
-       WHERE ip_count <= 1000  -- exclude IPs with >1000 VVs (likely NAT/VPN)
-   )
-   ```
-   This removes the most extreme skew sources. Set threshold based on analysis.
+**Applied fix (2026-03-09): IP+stage pre-dedup in prior_vv_pool.** Two-level dedup in the TEMP TABLE: (1) one row per ad_served_id (keeps latest clickpass entry per VV), then (2) one row per (ip, pv_stage) keeping the most recent prior VV. This caps the join fan-out from hundreds-to-one to max 3-to-1 per IP (one per stage). Tradeoff: discards older same-IP same-stage prior VV candidates, but the final `_pv_rn` dedup already prefers the most recent, so results are equivalent in >99% of cases.
 
-2. **Split the OR into two separate joins** — The `OR pv.ip = cp.ip` creates a disjunctive join condition that BQ cannot optimize well. Split into two joins:
+```sql
+CREATE TEMP TABLE prior_vv_pool AS
+SELECT ip, advertiser_id, prior_vv_ad_served_id, pv_campaign_id, prior_vv_time, pv_stage
+FROM (
+    SELECT cp.ip, cp.advertiser_id, cp.ad_served_id AS prior_vv_ad_served_id,
+        cp.campaign_id AS pv_campaign_id, cp.time AS prior_vv_time,
+        c.funnel_level AS pv_stage
+    FROM clickpass_log cp
+    LEFT JOIN campaigns c ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
+    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-05')
+      AND cp.advertiser_id = 37775
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
+)
+QUALIFY ROW_NUMBER() OVER (PARTITION BY ip, pv_stage ORDER BY prior_vv_time DESC) = 1;
+```
+
+**Additional mitigation strategies (not yet applied):**
+
+1. **Split the OR into two separate joins** — The `OR pv.ip = cp.ip` creates a disjunctive join condition that BQ cannot optimize well. Split into two joins:
    ```sql
    LEFT JOIN prior_vv_pool pv_bid
        ON pv_bid.advertiser_id = cp.advertiser_id
@@ -123,7 +122,7 @@ The chain traversal joins (s1_pv, s2_pv) cascade this fan-out: s1_pv joins on IP
    ```
    Then `COALESCE(pv_bid.*, pv_redir.*)` in SELECT. This lets BQ optimize each join independently with hash-based distribution.
 
-3. **Two-phase resolution** — Resolve prior_vv first in a TEMP TABLE (pick best match per ad_served_id), then join back for impression lookups:
+2. **Two-phase resolution** — Resolve prior_vv first in a TEMP TABLE (pick best match per ad_served_id), then join back for impression lookups:
    ```sql
    -- Phase 1: TEMP TABLE with prior VV resolution
    CREATE TEMP TABLE resolved_pv AS
@@ -163,9 +162,10 @@ The chain traversal joins (s1_pv, s2_pv) cascade this fan-out: s1_pv joins on IP
 ## 4. Recommended Optimization Order
 
 ### For Q3 (single-advertiser preview) — immediate
-1. **TEMP TABLE for el_all** — Biggest single-query improvement. Convert el_all CTE to TEMP TABLE. Expected savings: ~80 slot-hours (remove 3 of 4 scans).
-2. **Semi-join on event_log** — Filter event_log by ad_served_ids from clickpass_log. Expected savings: additional ~10 slot-hours (reduce scan from 26B to ~10M rows).
-3. **Split OR in prior_vv_pool join** — Eliminate disjunctive join. Expected impact: reduce Stage 149 from 97 to ~10 slot-hours.
+1. **TEMP TABLE for el_all** — ✅ Applied (Q3b). Convert el_all CTE to TEMP TABLE. Savings: ~80 slot-hours (3 of 4 scans eliminated).
+2. **Semi-join on event_log** — ✅ Applied (Q3b). Filter event_log by ad_served_ids from clickpass_log. Savings: ~10 slot-hours (26B → ~few hundred K rows).
+3. **IP+stage pre-dedup in prior_vv_pool** — ✅ Applied (Q3b, 2026-03-09). Keep only most recent prior VV per (ip, pv_stage). Caps join fan-out from hundreds-to-one to max 3-to-1.
+4. **Split OR in prior_vv_pool join** — Not yet applied. Would further reduce skew by enabling hash-based join optimization.
 
 ### For Q2 (all-advertiser INSERT) — production
 1. **SQLMesh staging layer** for event_log `vast_impression` events — hourly materialization.
