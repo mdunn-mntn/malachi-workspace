@@ -278,7 +278,17 @@ WHERE _pv_rn = 1;
 ================================================================================
 == Q3: SELECT preview (row-level, scoped to one advertiser for validation)
 ================================================================================
--- Same logic as Q2, scoped to advertiser 37775 for one week. LIMIT 100.
+-- Same logic as Q2, scoped to one advertiser + one day. Fast enough for ad-hoc testing.
+--
+-- TO TEST: Change these 3 things:
+--   1. ADVERTISER_ID: replace 37775 with your advertiser (appears 3x: cp_dedup, prior_vv_pool, prior_vv_pool)
+--   2. TRACE_DATE: replace '2026-02-04' with your target date (cp_dedup WHERE)
+--   3. LOOKBACK_START: replace '2025-11-06' with trace_date - 90 days (el_all, il_all, prior_vv_pool WHERE)
+--
+-- NOTE: el_all and il_all intentionally do NOT filter by advertiser_id because
+-- event_log/impression_log don't have that column. They scan the full 90-day
+-- window but only join to rows matching the advertiser's ad_served_ids.
+-- The prior_vv_pool DOES filter by advertiser_id for efficiency.
 
 WITH campaigns_stage AS (
     SELECT campaign_id, funnel_level AS stage
@@ -290,7 +300,7 @@ cp_dedup AS (
         cp.first_touch_ad_served_id, cp.time, c.stage AS vv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
+    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-05')  -- single day
       AND cp.advertiser_id = 37775
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
@@ -299,19 +309,19 @@ el_all AS (
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_impression'
-      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
 ),
 il_all AS (
     SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time,
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
 ),
 v_dedup AS (
     SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip, is_new, impression_ip
     FROM `dw-main-silver.summarydata.ui_visits`
     WHERE from_verified_impression = TRUE
-      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
+      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-12')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
 ),
 prior_vv_pool AS (
@@ -319,7 +329,8 @@ prior_vv_pool AS (
         cp.time AS prior_vv_time, c.stage AS pv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
+    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-05')
+      AND cp.advertiser_id = 37775
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 with_all_joins AS (
