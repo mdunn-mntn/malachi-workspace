@@ -59,7 +59,7 @@ Stages are about **which targeting segment served this impression**, determined 
 
 The table provides the complete IP and impression ID trace for every VV:
 - The impression that triggered this VV (last touch, Stage N)
-- The prior VV that advanced this IP into the current stage (e.g., the S2 VV that put the IP into S3 targeting)
+- The prior VV that advanced this IP into the current stage (any stage VV can trigger advancement — an S1, S2, or S3 VV can all put an IP into S3 targeting)
 - The original first-touch S1 impression that started this IP's funnel
 
 For a Stage 3 VV, this means three impression IDs and their associated IPs:
@@ -67,7 +67,7 @@ For a Stage 3 VV, this means three impression IDs and their associated IPs:
 | Slot | Impression ID column | What it is |
 |------|---------------------|------------|
 | **This VV** | `ad_served_id` | The S(N) impression that triggered this VV |
-| **Prior VV** | `prior_vv_ad_served_id` | The most recent prior VV that advanced this IP into S(N) targeting — pv_stage <= vv_stage |
+| **Prior VV** | `prior_vv_ad_served_id` | The most recent prior VV for this IP — any stage VV qualifies (pv_stage <= vv_stage) |
 | **S1 first touch** | `s1_ad_served_id` | The S1 impression that started this IP's funnel — resolved via 4-branch chain traversal, ~99%+ populated |
 
 > **Important:** The prior VV does not have to be exactly one stage lower. `pv_stage <= vv_stage` — same-stage prior VVs are allowed. An S3 VV's prior VV can be another S3 VV (e.g. S3→S3→S2→S1 chain). An IP can also enter S3 from an S1 VV directly, in which case pv_stage=1 and `s1_ad_served_id` may equal `prior_vv_ad_served_id`.
@@ -138,7 +138,7 @@ s2_pv = prior VV of s1_pv with pv_stage=1 (ip = s1_lt_bid_ip)
 | 3 | 3 | 2 | 4 | 141K |
 | 3 | 3 | 3 | 4 | 211K |
 
-Zach also said: *"if there are 3 vv that put an ip in stage 3, that's 3 rows. if there's a vv in stage 3 for an ip that had 3 vv that got it into stage 3 we should use last touch."* This is exactly what the table does — one row per VV, and for the prior VV we select the most recent S(N-1) VV using `ORDER BY prior_vv_time DESC`.
+Zach also said: *"if there are 3 vv that put an ip in stage 3, that's 3 rows. if there's a vv in stage 3 for an ip that had 3 vv that got it into stage 3 we should use last touch."* This is exactly what the table does — one row per VV, and for the prior VV we select the most recent prior VV (any stage ≤ current) using `ORDER BY prior_vv_time DESC`.
 
 ---
 
@@ -259,7 +259,7 @@ These are the IPs at each hop for the impression that directly triggered THIS VV
 
 ### Prior VV — from `clickpass_log` (self-join) and `event_log`/`impression_log` (IPs)
 
-The prior VV is the most recent VV that advanced this IP into the current targeting stage. For a S3 VV, this is the S2 VV that put the IP into S3 targeting. For a S2 VV, this is the S1 VV that put the IP into S2 targeting.
+The prior VV is the most recent VV for this IP before the current VV, where `pv_stage <= vv_stage`. **Any stage VV can be the prior VV.** For an S3 VV, the prior VV can be an S1, S2, or S3 VV — whichever is most recent. Any VV (regardless of stage) puts the IP into S3 targeting.
 
 **How we find the prior VV:**
 1. `prior_vv_pool` scans `clickpass_log` for a 90-day lookback. Every VV in that window is a candidate.
@@ -272,7 +272,7 @@ The prior VV is the most recent VV that advanced this IP into the current target
 
 **`prior_vv_ad_served_id`**
 - Source: `clickpass_log.ad_served_id` (the prior VV row's impression UUID)
-- What it is: The impression ID of the S2 VV (for S3 rows). This is the same UUID that would be `ad_served_id` on THAT VV's row in this table.
+- What it is: The impression ID of the prior VV (can be any stage ≤ current — S1, S2, or S3 for an S3 row). This is the same UUID that would be `ad_served_id` on THAT VV's row in this table.
 - Skeptical Q: *"What if the prior VV isn't in the 90-day window?"* NULL. S3 VVs more than 90 days old won't have prior VV data. For production, incremental runs always have a 90-day lookback — this affects only historical rows at the very start of the table.
 - Skeptical Q: *"Can pv_stage = 3 for an S3 row?"* Yes. The `pv.pv_stage <= cp.vv_stage` condition allows same-stage prior VVs. An S3 VV's prior VV can be another S3 VV — this is the first hop in an S3→S3→S2→S1 chain. The S1 is then resolved via s1_pv/s2_pv JOINs (see Part 3b).
 - Skeptical Q: *"Why allow pv_stage=1 for S3 rows, not just pv_stage=2?"* Because an IP can enter S3 from an S1 VV directly (S1 impression → S1 VV → IP enters S3 targeting). There doesn't need to be an S2 VV in the chain. If the prior VV is a S1 VV, then `pv_stage=1` and `prior_vv_ad_served_id` may equal `cp_ft_ad_served_id`.
@@ -397,8 +397,8 @@ Zach's request: *"exact audit trail for a vv — every impression id/ip for each
 For every VV row:
 - S(N) impression ID: `ad_served_id` — always populated
 - S(N) impression IPs: `lt_bid_ip`, `lt_vast_ip`, `redirect_ip`, `visit_ip` — ~99%+ in production
-- S(N-1) impression ID: `prior_vv_ad_served_id` — populated when prior VV in 90-day window (~95%+)
-- S(N-1) impression IPs: `pv_lt_bid_ip`, `pv_lt_vast_ip`, `pv_redirect_ip` — mostly populated, `pv_redirect_ip` always available
+- Prior VV impression ID: `prior_vv_ad_served_id` — any stage ≤ current, populated when prior VV in 90-day window (~95%+)
+- Prior VV impression IPs: `pv_lt_bid_ip`, `pv_lt_vast_ip`, `pv_redirect_ip` — mostly populated, `pv_redirect_ip` always available
 - S1 impression ID (system-recorded): `cp_ft_ad_served_id` — ~60%, retained as comparison reference
 - S1 impression ID (chain traversal): `s1_ad_served_id` — ~99%+, the primary audit-trail S1 field
 - S1 impression IPs: `s1_bid_ip`, `s1_vast_ip` — populated when S1 chain resolves (~99%+)

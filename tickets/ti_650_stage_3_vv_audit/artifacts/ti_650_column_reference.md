@@ -86,7 +86,7 @@ The Stage 1 impression that started this IP's funnel. Resolved via 4-branch CASE
 
 ## 4. Prior VV (Stage Advancement Trigger)
 
-The most recent prior VV whose redirect IP matches this VV's bid IP. This is the VV that advanced this IP into the current stage — e.g. for a Stage 3 VV, this is the Stage 2 VV that triggered S3 targeting.
+The most recent prior VV whose redirect IP matches this VV's bid IP (or redirect IP as fallback). **Any stage VV can be the prior VV** — for an S3 VV, the prior VV can be S1, S2, or S3. Any VV (regardless of stage) puts the IP into S3 targeting. The constraint is `pv_stage <= vv_stage`, not `pv_stage = vv_stage - 1`.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
