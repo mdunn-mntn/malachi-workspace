@@ -12,7 +12,7 @@
 -- QUERIES IN THIS FILE:
 --   Q1: CREATE TABLE (reference — SQLMesh creates the table automatically)
 --   Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
---   Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + semi-join)
+--   Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + campaign_id filter)
 --   Q4: Advertiser summary (stage-aware, runs on populated table)
 --
 -- STAGE LOGIC:
@@ -126,7 +126,7 @@ cp_dedup AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 el_all AS (
-    -- CTV impression IPs from event_log. Joined 3x. Display fallback: see cil_all.
+    -- CTV impression IPs from event_log. Referenced 3x (lt, pv_lt, s1_lt). Display fallback: see cil_all.
     SELECT
         ad_served_id,
         ip          AS vast_ip,
@@ -270,15 +270,18 @@ FROM with_all_joins
 WHERE _pv_rn = 1;
 
 ================================================================================
-== Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + semi-join)
+== Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + campaign_id filter)
 ================================================================================
 -- Same logic as Q3, but uses TEMP TABLEs to eliminate CTE re-scanning.
 -- BQ does NOT materialize CTEs — Q3 scans event_log 4x (52 slot-hrs).
 -- Q3b scans event_log ONCE into a TEMP TABLE, then references it 4x for free.
 --
 -- OPTIMIZATIONS APPLIED:
---   1. TEMP TABLE el_all — single event_log scan + semi-join by advertiser's ad_served_ids
---      (26B rows → ~few hundred K rows; eliminates 3 of 4 scans = ~80 slot-hr savings)
+--   1. TEMP TABLE el_all — single event_log scan, filtered by advertiser's campaign_ids.
+--      campaign_id filter is more selective than ad_served_id semi-join at the storage layer
+--      because event_log (9.6 TB, partitioned by day only, no clustering) requires a full
+--      partition scan regardless — campaign_id IN (...) is cheaper to evaluate than a semi-join
+--      against millions of ad_served_ids from clickpass_log.
 --   2. TEMP TABLE cil_all — single cost_impression_log scan (already advertiser-filtered)
 --   3. TEMP TABLE prior_vv_pool — single clickpass_log scan (referenced 2x: pv, s1_pv)
 --   4. prior_vv_pool IP dedup — keeps only the most recent prior VV per (ip, pv_stage).
@@ -287,25 +290,29 @@ WHERE _pv_rn = 1;
 --      Tradeoff: loses older same-IP same-stage prior VV candidates (edge case — final
 --      dedup already prefers most recent, so results are equivalent in >99% of cases).
 --
+-- PERF NOTE: event_log dominates cost (~668 GB / 30 days, 98.8% of total scan).
+--   Underlying table: bronze.sqlmesh__raw.raw__event_log (9.6 TB, DAY partition, no clustering).
+--   Reducing lookback window is the most effective optimization lever.
+--
 -- TO TEST: Same 3 changes as Q3:
---   1. ADVERTISER_ID: replace 37775 (appears 4x: cp_dedup, el_all semi-join, cil_all, prior_vv_pool)
+--   1. ADVERTISER_ID: replace 37775 (appears 4x: cp_dedup, el_all campaign filter, cil_all, prior_vv_pool)
 --   2. TRACE_DATE: replace '2026-02-04' (cp_dedup WHERE, v_dedup buffer)
---   3. LOOKBACK_START: replace '2025-11-06' (el_all, cil_all, prior_vv_pool, el_all semi-join)
+--   3. LOOKBACK_START: replace '2025-11-06' (el_all, cil_all, prior_vv_pool)
 --
 -- RUN AS: BQ multi-statement query (paste entire block). TEMP TABLEs auto-drop at session end.
 
--- Step 1: Materialize event_log — semi-join reduces 26B rows to only this advertiser's ad_served_ids
+-- Step 1: Materialize event_log — campaign_id filter narrows to this advertiser's impressions
+-- event_log: 9.6 TB, partitioned by DAY, no clustering. ~22 GB/day scanned.
+-- campaign_id IN (...) is faster than ad_served_id semi-join (fewer distinct values to match).
 CREATE TEMP TABLE el_all AS
 SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time,
     ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
 FROM `dw-main-silver.logdata.event_log`
 WHERE event_type_raw = 'vast_impression'
   AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
-  AND ad_served_id IN (
-      SELECT ad_served_id
-      FROM `dw-main-silver.logdata.clickpass_log`
-      WHERE advertiser_id = 37775
-        AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
+  AND campaign_id IN (
+      SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
+      WHERE advertiser_id = 37775 AND deleted = FALSE
   );
 
 -- Step 2: Materialize cost_impression_log — already advertiser-filtered, prevents 4x CTE re-scan
