@@ -67,12 +67,12 @@ For a Stage 3 VV, this means three impression IDs and their associated IPs:
 | Slot | Impression ID column | What it is |
 |------|---------------------|------------|
 | **This VV** | `ad_served_id` | The S(N) impression that triggered this VV |
-| **Prior VV** | `prior_vv_ad_served_id` | The most recent prior VV for this IP — any stage VV qualifies (pv_stage <= vv_stage) |
-| **S1 first touch** | `s1_ad_served_id` | The S1 impression that started this IP's funnel — resolved via 4-branch chain traversal, ~99%+ populated |
+| **Prior VV** | `prior_vv_ad_served_id` | The most recent prior VV for this IP — must be strictly lower stage (pv_stage < vv_stage) |
+| **S1 first touch** | `s1_ad_served_id` | The S1 impression that started this IP's funnel — resolved via 3-branch chain traversal, ~99%+ populated |
 
-> **Important:** The prior VV does not have to be exactly one stage lower. `pv_stage <= vv_stage` — same-stage prior VVs are allowed. An S3 VV's prior VV can be another S3 VV (e.g. S3→S3→S2→S1 chain). An IP can also enter S3 from an S1 VV directly, in which case pv_stage=1 and `s1_ad_served_id` may equal `prior_vv_ad_served_id`.
+> **Important:** The prior VV must be a **strictly lower stage** than the current VV. `pv_stage < vv_stage` — an IP can only be advanced INTO a stage by a lower-stage impression. You can't enter S3 via S3 (already there). Max chain: S3 → S2 → S1 (2 hops). An IP can also enter S3 from an S1 VV directly, in which case pv_stage=1 and `s1_ad_served_id` may equal `prior_vv_ad_served_id`.
 
-> **All stages are anchor rows.** The table is not limited to S3 VVs. `cp_dedup` pulls ALL stages from `clickpass_log`. Zach confirmed: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv." A S1-only VV, a S2→S1 chain, or a S3→S3→S2→S1 chain are all present as anchor rows.
+> **All stages are anchor rows.** The table is not limited to S3 VVs. `cp_dedup` pulls ALL stages from `clickpass_log`. Zach confirmed: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv." A S1-only VV, a S2→S1 chain, or a S3→S2→S1 chain are all present as anchor rows.
 
 Each impression slot also has its IPs in columns (bid IP, VAST IP, redirect IP, visit IP).
 
@@ -85,7 +85,7 @@ Zach: *"we need an exact audit trail for a vv. that means every impression id/ip
 | S(N) impression ID + IPs | `ad_served_id`, `lt_bid_ip`, `lt_vast_ip` | ~100% |
 | Lower-stage prior VV impression ID + IPs | `prior_vv_ad_served_id`, `pv_lt_bid_ip`, `pv_lt_vast_ip` | ~95%+ in production (90-day lookback) |
 | S1 impression ID (system-recorded shortcut) | `cp_ft_ad_served_id` | ~60% (system limitation — retained as comparison reference) |
-| S1 impression ID via chain traversal | `s1_ad_served_id` | ~99%+ in production (4-branch CASE, see Part 3b) |
+| S1 impression ID via chain traversal | `s1_ad_served_id` | ~99%+ in production (3-branch CASE, see Part 3b) |
 | S1 bid IP + VAST IP | `s1_bid_ip`, `s1_vast_ip` | ~99%+ (same chain traversal) |
 
 **The table is a traversable chain.** Every VV is traceable to S1 by following `prior_vv_ad_served_id`:
@@ -97,31 +97,27 @@ The chain traversal works in ~99%+ of production rows because the `prior_vv_ad_s
 
 ---
 
-## Part 3b: S1 Chain Traversal — 4-Branch CASE
+## Part 3b: S1 Chain Traversal — 3-Branch CASE
 
-The `s1_ad_served_id`, `s1_bid_ip`, and `s1_vast_ip` columns are resolved in-query using a 4-branch CASE expression, backed by up to 3 additional JOINs (s1_pv, s2_pv, and their impression lookups).
+The `s1_ad_served_id`, `s1_bid_ip`, and `s1_vast_ip` columns are resolved in-query using a 3-branch CASE expression, backed by 1 additional chain JOIN (`s1_pv` and its impression lookups). 9 LEFT JOINs total.
 
 **Why not just use `cp_ft_ad_served_id`?** It's NULL 40% of the time and cannot be backfilled. Chain traversal resolves ~99%+.
 
-**The 4 branches:**
+**The 3 branches:**
 
 | Branch | Condition | Resolution | Chain pattern |
 |--------|-----------|-----------|---------------|
 | 1 | `vv_stage = 1` | Current VV IS the S1 impression | S1 (no prior VV) |
 | 2 | `pv.pv_stage = 1` | Prior VV IS the S1 impression | S2→S1 or S3→S1 |
-| 3 | `s1_pv.pv_stage = 1` | Second-hop finds S1 | S2→S2→S1 or S3→S2→S1 or S3→S3→S1 |
-| 4 | ELSE | Third-hop (`s2_pv`) finds S1 | S3→S3→S2→S1 or S3→S2→S2→S1 |
+| 3 | ELSE | Second-hop (`s1_pv`) finds S1 | S3→S2→S1 |
 
 **The JOIN chain that powers this:**
 ```
-pv    = prior VV of the current VV (redirect_ip = lt_bid_ip)
-s1_pv = prior VV of pv (ip = pv_lt_bid_ip, pv_stage <= pv.pv_stage)
-s2_pv = prior VV of s1_pv with pv_stage=1 (ip = s1_lt_bid_ip)
+pv    = prior VV of the current VV (redirect_ip = lt_bid_ip, pv_stage < vv_stage)
+s1_pv = prior VV of pv (ip = pv_lt_bid_ip, pv_stage < pv.pv_stage)
 ```
 
-`s1_pv.pv_stage <= pv.pv_stage` keeps the chain monotonically non-increasing in stage, preventing spurious high-stage matches as intermediate hops. `s2_pv.pv_stage = 1` terminates the chain — it MUST be S1.
-
-**S3→S3→S3→S1 (4+ hops) are theoretically possible but extremely rare.** `s1_ad_served_id` will be NULL for those — they fall through all branches. The 90-day lookback and `<= pv_stage` constraint reduce but do not eliminate this case.
+`pv_stage < vv_stage` (strict): an IP can only be advanced INTO a stage by a strictly lower stage — you can't enter S3 via S3 (already there). Max chain depth: 2 (S3 → S2 → S1). The `s2_pv` third-level join was removed as unnecessary.
 
 **All permutations validated (advertiser 37775, 2026-02-04):**
 
@@ -132,13 +128,10 @@ s2_pv = prior VV of s1_pv with pv_stage=1 (ip = s1_lt_bid_ip)
 | 3 | 1 | — | 2 | 125K+ |
 | 2 | 2 | 1 | 3 | 57K |
 | 3 | 2 | 1 | 3 | 115K |
-| 3 | 3 | 1 | 3 | 151K |
-| 2 | 2 | 2 | 4 | 56K |
-| 3 | 2 | 2 | 4 | 108K |
-| 3 | 3 | 2 | 4 | 141K |
-| 3 | 3 | 3 | 4 | 211K |
 
-Zach also said: *"if there are 3 vv that put an ip in stage 3, that's 3 rows. if there's a vv in stage 3 for an ip that had 3 vv that got it into stage 3 we should use last touch."* This is exactly what the table does — one row per VV, and for the prior VV we select the most recent prior VV (any stage ≤ current) using `ORDER BY prior_vv_time DESC`.
+With strict `<` stage logic, same-stage prior VVs (pv_stage=3 for S3 VV) are impossible — an IP can't enter S3 via S3. The old permutations with pv_stage=vv_stage (branches 3 and 4 with same-stage hops) no longer apply.
+
+Zach also said: *"if there are 3 vv that put an ip in stage 3, that's 3 rows. if there's a vv in stage 3 for an ip that had 3 vv that got it into stage 3 we should use last touch."* This is exactly what the table does — one row per VV, and for the prior VV we select the most recent prior VV (strictly lower stage) using `ORDER BY prior_vv_time DESC`.
 
 ---
 
@@ -157,8 +150,8 @@ redirect_ip            = 172.59.192.138    # IP at site visit redirect (same —
 visit_ip               = 172.59.192.138    # IP at page view (same)
 impression_ip          = 172.59.192.138    # IP the visit was attributed to (same)
 
-prior_vv_ad_served_id  = "a4074373-..."    # The prior VV's impression UUID (pv_stage=3 here)
-pv_stage               = 3                # Prior VV is same stage (S3→S3 chain)
+prior_vv_ad_served_id  = "a4074373-..."    # The prior VV's impression UUID (pv_stage=2 here)
+pv_stage               = 2                # Prior VV is S2 (strictly lower — S3→S2 chain)
 pv_redirect_ip         = 172.59.192.138    # Prior VV's redirect IP (how we matched it)
 pv_lt_bid_ip           = 172.59.192.138    # Prior VV's impression bid IP (audit lookup)
 pv_lt_vast_ip          = 172.59.192.138    # Prior VV's VAST IP (audit lookup)
@@ -171,7 +164,7 @@ s1_bid_ip              = 172.59.192.138    # S1 impression's bid IP
 s1_vast_ip             = 172.59.192.138    # S1 impression's VAST IP
 ```
 
-How to read it: This S3 VV was triggered by impression `003a01cf` on 2026-02-04. The IP `172.59.192.138` had a prior S3 VV (`a4074373`) on 2026-01-25. The 4-branch CASE resolved the S1 VV to `a12e289d` via the s1_pv JOIN (branch 3 or 4 — s1_pv found an S1 entry in `prior_vv_pool` for this IP). The system's `cp_ft_ad_served_id` was NULL, but chain traversal recovered the S1 impression.
+How to read it: This S3 VV was triggered by impression `003a01cf` on 2026-02-04. The IP `172.59.192.138` had a prior S2 VV (`a4074373`) on 2026-01-25. The 3-branch CASE resolved the S1 VV to `a12e289d` via the s1_pv JOIN (branch 3 — s1_pv found an S1 entry in `prior_vv_pool` for this IP). The system's `cp_ft_ad_served_id` was NULL, but chain traversal recovered the S1 impression.
 
 ---
 
@@ -196,7 +189,7 @@ How to read it: This S3 VV was triggered by impression `003a01cf` on 2026-02-04.
 - Source: `campaigns.funnel_level` joined on `campaign_id`
 - What it is: The stage of the campaign that served the impression. 1 = S1, 2 = S2, 3 = S3.
 - Skeptical Q: *"How is stage determined?"* Every campaign has `funnel_level` in `bronze.integrationprod.campaigns`. This is set at campaign creation. It does not change.
-- Skeptical Q: *"Why is this in cp_dedup and not joined in the final SELECT?"* We need it in `cp_dedup` so it's available as `cp.vv_stage` in the prior VV join condition (`pv.pv_stage <= cp.vv_stage`). The prior VV pool join happens in `with_all_joins`, which references `cp.vv_stage` before campaigns is joined there.
+- Skeptical Q: *"Why is this in cp_dedup and not joined in the final SELECT?"* We need it in `cp_dedup` so it's available as `cp.vv_stage` in the prior VV join condition (`pv.pv_stage < cp.vv_stage`). The prior VV pool join happens in `with_all_joins`, which references `cp.vv_stage` before campaigns is joined there.
 
 **`vv_time`**
 - Source: `clickpass_log.time`
@@ -242,7 +235,7 @@ These are the IPs at each hop for the impression that directly triggered THIS VV
 - **This column is retained as a comparison reference only.** Use `s1_ad_served_id` for audit work.
 
 **`s1_ad_served_id`**
-- Source: Resolved via 4-branch CASE in the `with_all_joins` CTE (see Part 3b).
+- Source: Resolved via 3-branch CASE in the `with_all_joins` CTE (see Part 3b).
 - What it is: The ad_served_id of the S1 VV that started this IP's funnel. Unlike `cp_ft_ad_served_id`, this is computed by traversing the `prior_vv_pool` chain — no dependency on the write-time system field.
 - Coverage: ~99%+ in production with 90-day lookback. NULL only for chains deeper than 3 hops or impressions outside the lookback window.
 - Skeptical Q: *"Why is this better than cp_ft_ad_served_id?"* `cp_ft_ad_served_id` is NULL 40% of the time and cannot be recovered. `s1_ad_served_id` uses the same source data (clickpass_log IP matching) to traverse the chain and fills in ~59 of those 60 missing points.
@@ -259,14 +252,14 @@ These are the IPs at each hop for the impression that directly triggered THIS VV
 
 ### Prior VV — from `clickpass_log` (self-join) and `event_log`/`cost_impression_log` (IPs)
 
-The prior VV is the most recent VV for this IP before the current VV, where `pv_stage <= vv_stage`. **Any stage VV can be the prior VV.** For an S3 VV, the prior VV can be an S1, S2, or S3 VV — whichever is most recent. Any VV (regardless of stage) puts the IP into S3 targeting.
+The prior VV is the most recent VV for this IP before the current VV, where `pv_stage < vv_stage` (strictly lower). For an S3 VV, the prior VV can be an S1 or S2 VV — whichever is most recent. An IP can only be advanced INTO a stage by a lower-stage impression.
 
 **How we find the prior VV:**
 1. `prior_vv_pool` scans `clickpass_log` for a 90-day lookback. Every VV in that window is a candidate.
 2. **Primary match:** `prior_vv_pool.ip = lt_bid_ip` (the prior VV's redirect IP matches this VV's bid IP — direct targeting chain)
 3. **Fallback match:** `prior_vv_pool.ip = cp.ip` (the prior VV's redirect IP matches this VV's redirect IP — household identity). This covers cross-device cases (~16-20% of S2/S3 VVs) where bid_ip ≠ redirect_ip due to mutation.
 4. We require `prior_vv_time < vv_time` (must be before this VV)
-5. We require `pv.pv_stage <= cp.vv_stage` (prior VV can be same stage OR lower — enables S3→S3→S2→S1 chain traversal)
+5. We require `pv.pv_stage < cp.vv_stage` (prior VV must be strictly lower stage — max chain S3→S2→S1)
 6. We require `pv.advertiser_id = cp.advertiser_id` (prevents cross-advertiser matching on shared IPs / CGNAT)
 7. If multiple prior VVs exist, we take the most recent **bid_ip match** first; if none, the most recent redirect_ip fallback (last-touch rule per Zach, with bid_ip preference)
 
@@ -274,7 +267,7 @@ The prior VV is the most recent VV for this IP before the current VV, where `pv_
 - Source: `clickpass_log.ad_served_id` (the prior VV row's impression UUID)
 - What it is: The impression ID of the prior VV (can be any stage ≤ current — S1, S2, or S3 for an S3 row). This is the same UUID that would be `ad_served_id` on THAT VV's row in this table.
 - Skeptical Q: *"What if the prior VV isn't in the 90-day window?"* NULL. S3 VVs more than 90 days old won't have prior VV data. For production, incremental runs always have a 90-day lookback — this affects only historical rows at the very start of the table.
-- Skeptical Q: *"Can pv_stage = 3 for an S3 row?"* Yes. The `pv.pv_stage <= cp.vv_stage` condition allows same-stage prior VVs. An S3 VV's prior VV can be another S3 VV — this is the first hop in an S3→S3→S2→S1 chain. The S1 is then resolved via s1_pv/s2_pv JOINs (see Part 3b).
+- Skeptical Q: *"Can pv_stage = 3 for an S3 row?"* No. The `pv.pv_stage < cp.vv_stage` condition requires strictly lower stage. An IP can't enter S3 via S3 — it's already there. For an S3 VV, pv_stage can be 1 or 2. The S1 is resolved via the s1_pv JOIN when pv_stage=2 (see Part 3b).
 - Skeptical Q: *"Why allow pv_stage=1 for S3 rows, not just pv_stage=2?"* Because an IP can enter S3 from an S1 VV directly (S1 impression → S1 VV → IP enters S3 targeting). There doesn't need to be an S2 VV in the chain. If the prior VV is a S1 VV, then `pv_stage=1` and `prior_vv_ad_served_id` may equal `cp_ft_ad_served_id`.
 
 **`prior_vv_time`**
@@ -285,7 +278,7 @@ The prior VV is the most recent VV for this IP before the current VV, where `pv_
 
 **`pv_stage`**
 - Source: `campaigns.funnel_level` joined on `pv_campaign_id` (inside `prior_vv_pool` CTE)
-- `pv_stage <= vv_stage`. Can equal vv_stage (same-stage prior VV, e.g. S3→S3 chain). Can be 1, 2, or 3 for S3 rows.
+- `pv_stage < vv_stage` (strictly lower). For S3 rows, pv_stage can be 1 or 2. For S2 rows, pv_stage can be 1.
 
 **`pv_redirect_ip`**
 - Source: `clickpass_log.ip` for the prior VV
@@ -340,13 +333,13 @@ The prior VV is the most recent VV for this IP before the current VV, where `pv_
 
 `cp_ft_ad_served_id` (the system-written first-touch field) is NULL in ~40% of VVs overall, and higher (~60-74%) for S3 VVs specifically. It was not written at VV time and cannot be backfilled. This is a system limitation.
 
-The `s1_ad_served_id` column was built specifically to work around this: it uses chain traversal (4-branch CASE, backed by `prior_vv_pool` JOINs) to resolve S1 for ~99%+ of rows. `s1_ad_served_id` is NULL only for chains deeper than 3 hops (extremely rare) or for VVs whose S1 impression predates the 90-day lookback window.
+The `s1_ad_served_id` column was built specifically to work around this: it uses chain traversal (3-branch CASE, backed by `prior_vv_pool` JOINs) to resolve S1 for ~99%+ of rows. `s1_ad_served_id` is NULL only for VVs whose S1 impression predates the 90-day lookback window.
 
 **`cp_ft_ad_served_id` is retained in the table as a comparison reference only.** Users can validate the chain traversal by checking `s1_ad_served_id = cp_ft_ad_served_id` where both are non-NULL (should agree in the vast majority of cases).
 
 **2. Prior VV match uses bid_ip (primary) + redirect_ip (fallback)**
 
-Primary match: `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV's bid IP — direct targeting chain). Fallback: `prior_vv_pool.ip = cp.ip` (prior VV's redirect IP = this VV's redirect IP — household identity). The fallback covers the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip due to cross-device mutation. Without the fallback, these VVs would have NULL prior_vv/s1 chains. Dedup prefers bid_ip matches. Same fallback logic applies at all chain levels (pv, s1_pv, s2_pv). Advertiser_id constraint on all joins prevents CGNAT false positives.
+Primary match: `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV's bid IP — direct targeting chain). Fallback: `prior_vv_pool.ip = cp.ip` (prior VV's redirect IP = this VV's redirect IP — household identity). The fallback covers the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip due to cross-device mutation. Without the fallback, these VVs would have NULL prior_vv/s1 chains. Dedup prefers bid_ip matches. Same fallback logic applies at all chain levels (pv, s1_pv). Advertiser_id constraint on all joins prevents CGNAT false positives.
 
 **3. pv_lt_bid_ip is ~99%+ in production, ~67% in ad-hoc testing**
 
@@ -364,25 +357,25 @@ CTV impressions: sourced from `event_log` (`vast_impression` event). Display imp
 
 ## Part 7: The Join Architecture
 
-How the query builds one row from five sources (13 LEFT JOINs total):
+How the query builds one row from five sources (9 LEFT JOINs total):
 
 ```
 clickpass_log (anchor — one VV per row, all stages)
-  ├── event_log  (CTV, scanned once → el_all, joined 4x: lt, pv_lt, s1_lt, s2_lt)
-  ├── cost_impression_log (display, scanned once → cil_all, joined 4x: same slots as el_all)
+  ├── event_log  (CTV, scanned once → el_all, joined 3x: lt, pv_lt, s1_lt)
+  ├── cost_impression_log (display, scanned once → cil_all, joined 3x: same slots as el_all)
   ├── ui_visits  (visit IP — via ad_served_id, CAST as STRING)
-  ├── clickpass_log (self via prior_vv_pool, joined 4x: pv, s1_pv, s2_pv + campaigns inside pool)
+  ├── clickpass_log (self via prior_vv_pool, joined 2x: pv, s1_pv + campaigns inside pool)
   └── campaigns  (stage lookup — joined inside cp_dedup and prior_vv_pool CTEs)
 ```
 
-**One scan, joined multiple times:** `event_log` is scanned once into `el_all`, then used four times (lt = last touch, pv_lt = prior VV impression, s1_lt = s1_pv impression, s2_lt = s2_pv impression). Same for `cost_impression_log` → `cil_all`. **Important caveat:** BQ does NOT materialize CTEs — each reference re-scans the underlying table. For event_log, this means 4 × 26B row scans (52 slot-hours). See `ti_650_query_optimization_guide.md` for TEMP TABLE mitigation.
+**One scan, joined multiple times:** `event_log` is scanned once into `el_all`, then used three times (lt = last touch, pv_lt = prior VV impression, s1_lt = s1_pv impression). Same for `cost_impression_log` → `cil_all`. **Important caveat:** BQ does NOT materialize CTEs — each reference re-scans the underlying table. See `ti_650_query_optimization_guide.md` for TEMP TABLE mitigation.
 
 **COALESCE pattern:** For every IP column, the pattern is `COALESCE(el.ip, cil.ip)`. CTV (`event_log`) is preferred; display (`cost_impression_log`) fills in NULLs. If both are NULL, the impression was not found in either log (rare, typically a timing edge case or data gap).
 
-**S1 chain traversal JOINs (s1_pv, s2_pv):**
-- `s1_pv` = second-level prior VV pool JOIN. Finds the VV whose redirect IP = `pv_lt_bid_ip`. `s1_pv.pv_stage <= pv.pv_stage` keeps the chain monotonically non-increasing.
-- `s2_pv` = third-level prior VV pool JOIN. Only active when `s1_pv` found a non-S1 intermediate VV. `s2_pv.pv_stage = 1` — this terminates the chain.
-- `s1_lt`, `s1_lt_d`, `s2_lt`, `s2_lt_d` = impression log lookups for the IPs at each traversal hop.
+**S1 chain traversal JOIN (s1_pv):**
+- `s1_pv` = second-level prior VV pool JOIN. Finds the VV whose redirect IP = `pv_lt_bid_ip`. `s1_pv.pv_stage < pv.pv_stage` keeps the chain strictly decreasing in stage.
+- `s2_pv` removed — unnecessary with strict `<` stage logic (max chain depth is 2).
+- `s1_lt`, `s1_lt_d` = impression log lookups for the IPs at the second traversal hop.
 
 **Ray's TTL context (from architecture diagram):** The longest real-world chain (S1 impression → S3 VV) spans ~83 days in representative examples. S2 and S3 audience TTLs are 30 days each. The 90-day lookback window is conservatively sized to cover virtually all chains with room to spare.
 
@@ -405,7 +398,7 @@ For every VV row:
 
 **What is NOT achievable (honest answer):**
 
-S1 chains deeper than 3 hops (e.g. S3→S3→S3→S3→S1) will have `s1_ad_served_id = NULL`. These are extremely rare. The 4-branch CASE covers all realistic chains. `cp_ft_ad_served_id` remains as an independent cross-check.
+With strict `<` stage logic, the maximum chain depth is 2 (S3→S2→S1). The 3-branch CASE covers all possible chains. `s1_ad_served_id` is NULL only when the S1 impression predates the 90-day lookback. `cp_ft_ad_served_id` remains as an independent cross-check.
 
 **Zach's specific clarification point:** *"its not super clear which ft values are coming from the table traversal vs what is coming from the clickpass logs attempt to look that data up."*
 
@@ -443,8 +436,8 @@ Result: One row. `s1_bid_ip` = the IP we originally bid on at S1. `redirect_ip` 
 
 **Works for every stage:**
 - **S1 VV:** `s1_bid_ip` = `lt_bid_ip` (current impression IS the S1 impression)
-- **S2 VV:** `s1_bid_ip` = the bid IP from the S1 impression that started this IP's funnel, resolved via chain traversal (1-3 hops)
-- **S3 VV:** `s1_bid_ip` = same, resolved via chain traversal through S3→S3→S2→S1 or any other permutation
+- **S2 VV:** `s1_bid_ip` = the bid IP from the S1 impression that started this IP's funnel, resolved via chain traversal (1-2 hops)
+- **S3 VV:** `s1_bid_ip` = same, resolved via chain traversal through S3→S2→S1 (max 2 hops)
 
 ### "Was this IP new-to-brand when we originally bid on it?"
 
@@ -575,14 +568,14 @@ VV 77ddff0c (S3, 2026-02-01 22:35:17)
 |--------|--------|--------|--------|-----|
 | `lt_bid_ip` | ~100% | ~100% | ~100% | Every VV has its impression within 30-day EL/IL window |
 | `redirect_ip` | 100% | 100% | 100% | Directly from clickpass_log (anchor) |
-| `s1_ad_served_id` | 100% | ~85-93%+ | ~85-93%+ | Chain traversal (4-branch CASE). Higher with cross-device fix. |
+| `s1_ad_served_id` | 100% | ~85-93%+ | ~85-93%+ | Chain traversal (3-branch CASE). Higher with cross-device fix. |
 | `s1_bid_ip` | 100% | ~85-93%+ | ~85-93%+ | Same as s1_ad_served_id — populated when chain resolves |
 | `prior_vv_ad_served_id` | NULL (S1 has no prior) | ~55-85%+ | ~85-93%+ | 90-day clickpass_log window + redirect_ip fallback |
 
-**NULL s1_bid_ip means:** The chain couldn't be fully traversed — either the S1 VV is >90 days old, or the chain is >3 hops deep (extremely rare). Not a data quality issue — just a lookback limitation. In production with daily incremental runs and 90-day lookback, this is expected to be <1%.
+**NULL s1_bid_ip means:** The chain couldn't be fully traversed — the S1 VV is >90 days old. Not a data quality issue — just a lookback limitation. In production with daily incremental runs and 90-day lookback, this is expected to be <1%.
 
-**All 10 chain traversal permutations validated** with concrete ad_served_ids:
-S1, S2→S1, S3→S1, S2→S2→S1, S3→S2→S1, S3→S3→S1, S2→S2→S2→S1, S3→S2→S2→S1, S3→S3→S2→S1, S3→S3→S3→S1. Every permutation resolves `s1_bid_ip`.
+**All chain traversal permutations validated** with strict `<` stage logic:
+S1, S2→S1, S3→S1, S3→S2→S1. Every permutation resolves `s1_bid_ip`. Max chain depth: 2.
 
 **The bottom line:** For any VV at any stage, `s1_bid_ip` tells you the IP we originally bid on. If the visit IP differs, it's mutation. The table proves targeting correctness.
 

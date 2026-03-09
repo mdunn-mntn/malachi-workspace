@@ -21,7 +21,7 @@ Full schema: see `ti_650_column_reference.md`. V4 replaces `ft_*` columns with `
 | Table | Role | Filter | Scan Size |
 |-------|------|--------|-----------|
 | `silver.logdata.clickpass_log` | Anchor — one row per VV | `time >= @start_dt AND time < @end_dt` | Target interval only |
-| `silver.logdata.event_log` | CTV impression IPs (joined 4x: last-touch, prior VV LT, S1 chain LT, s2_pv LT) | `event_type_raw = 'vast_impression'` + 90-day lookback from `@start_dt` | ~90 days (single scan, ~3 TB) |
+| `silver.logdata.event_log` | CTV impression IPs (joined 3x: last-touch, prior VV LT, S1 chain LT) | `event_type_raw = 'vast_impression'` + 90-day lookback from `@start_dt` | ~90 days (single scan, ~3 TB) |
 | `silver.logdata.cost_impression_log` | Display impression bid_ip (CIL.ip = bid_ip, 100% validated; replaces impression_log — has advertiser_id, ~20,000x smaller) | 90-day lookback from `@start_dt` | ~90 days (~800K rows/day/advertiser vs ~16B for impression_log) |
 | `silver.summarydata.ui_visits` | Independent visit record (visit IP, impression IP, is_new) | `from_verified_impression = true` + +/- 7 day buffer | ~14 days |
 | `silver.logdata.clickpass_log` (self) | Prior VV pool for retargeting chain | 90-day lookback from `@start_dt` | ~90 days |

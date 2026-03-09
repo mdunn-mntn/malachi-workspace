@@ -954,7 +954,7 @@ Per Zach (2026-02-25 call): "Getting an audit going and something that's actuall
 1. One row per verified visit across ALL stages (keyed on `ad_served_id`)
 2. Full IP lineage: lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
 3. Stage classification: vv_stage, pv_stage
-4. S1 chain traversal: s1_ad_served_id, s1_bid_ip, s1_vast_ip (resolved via 4-branch CASE + prior_vv_pool self-joins)
+4. S1 chain traversal: s1_ad_served_id, s1_bid_ip, s1_vast_ip (resolved via 3-branch CASE + prior_vv_pool self-joins)
 5. System first-touch reference: cp_ft_ad_served_id (comparison only — 40% NULL)
 6. Prior VV retargeting chain: prior_vv_ad_served_id, pv_campaign_id, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip
 7. Classification: clickpass_is_new, visit_is_new, is_cross_device
@@ -976,12 +976,12 @@ CREATE TABLE IF NOT EXISTS audit.vv_ip_lineage (
     redirect_ip           STRING,       -- clickpass_log.ip
     visit_ip              STRING,       -- ui_visits.ip
     impression_ip         STRING,       -- ui_visits.impression_ip
-    -- S1 chain traversal (resolved via 4-branch CASE)
+    -- S1 chain traversal (resolved via 3-branch CASE)
     cp_ft_ad_served_id    STRING,       -- clickpass_log.first_touch_ad_served_id (system ref, 40% NULL)
     s1_ad_served_id       STRING,       -- resolved S1 VV ad_served_id (chain traversal)
     s1_bid_ip             STRING,       -- bid IP of the resolved S1 impression
     s1_vast_ip            STRING,       -- VAST IP of the resolved S1 impression
-    -- Prior VV (retargeting chain — most recent prior VV where pv_stage <= vv_stage)
+    -- Prior VV (retargeting chain — most recent prior VV where pv_stage < vv_stage)
     prior_vv_ad_served_id STRING,
     prior_vv_time         TIMESTAMP,
     pv_campaign_id        INT64,
@@ -1004,14 +1004,14 @@ CLUSTER BY advertiser_id, vv_stage;
 
 **Key design decisions (v4):**
 - **v3→v4 simplification:** Removed `max_historical_stage`, `ft_stage`, `ft_campaign_id`, `ft_time`, all boolean comparison flags (`bid_eq_vast`, `vast_eq_redirect`, etc.), and trace quality flags (`is_ctv`, `visit_matched`, etc.). Raw IP values enable any derived metric downstream.
-- **S1 chain traversal replaces `ft_*` columns:** 4-branch CASE resolves the originating S1 VV via `prior_vv_pool` self-joins (pv → s1_pv → s2_pv). Branch 1: vv_stage=1 (current IS S1). Branch 2: pv_stage=1 (prior VV IS S1). Branch 3: s1_pv.pv_stage=1 (second-level). Branch 4: ELSE s2_pv (third-level, terminal). Resolves ~99%+ of rows. Replaces unreliable `cp_ft_ad_served_id` (40% NULL).
-- **Single event_log + impression_log CTE** each scanned once, joined 4x (last-touch, prior VV LT, S1 chain LT, s2_pv LT). COALESCE(el, il) prefers CTV; impression_log fills display fallback. Full inventory coverage without double-scanning.
-- **`pv_stage <= vv_stage`:** Enables same-stage prior VVs (S3→S3 chains). All 10 chain permutations validated with real data.
+- **S1 chain traversal replaces `ft_*` columns:** 3-branch CASE resolves the originating S1 VV via `prior_vv_pool` self-joins (pv → s1_pv). Branch 1: vv_stage=1 (current IS S1). Branch 2: pv_stage=1 (prior VV IS S1). Branch 3: ELSE s1_pv (second-level finds S1). Max chain depth: 2 (S3→S2→S1). 9 LEFT JOINs total. Resolves ~99%+ of rows. Replaces unreliable `cp_ft_ad_served_id` (40% NULL).
+- **Single event_log + cost_impression_log CTE** each scanned once, joined 3x (last-touch, prior VV LT, S1 chain LT). COALESCE(el, cil) prefers CTV; cost_impression_log fills display fallback. CIL has advertiser_id for ~20,000x scan reduction vs impression_log.
+- **`pv_stage < vv_stage` (strict):** An IP can only be advanced INTO a stage by a strictly lower stage — you can't enter S3 via S3 (already there). Max chain: S3→S2→S1. `s2_pv` third-level join removed as unnecessary.
 - **Stage classification via campaigns.funnel_level**: 100% populated, maps campaign_id → stage directly.
 - **Prior VV match**: bid_ip primary + redirect_ip fallback. Dedup prefers bid_ip matches. Fallback covers ~16-20% of S2/S3 VVs with cross-device mutation (bid_ip ≠ redirect_ip). Advertiser_id constraint on all joins prevents CGNAT false positives.
 
 **Implementation approach:**
-- Source: clickpass_log (anchor) → event_log + impression_log (single 90-day scan each) → ui_visits (±7 day) → clickpass_log (90-day self-join for prior VV, joined 3x for chain traversal) → campaigns (stage lookup)
+- Source: clickpass_log (anchor) → event_log + cost_impression_log (single 90-day scan each) → ui_visits (±7 day) → clickpass_log (90-day self-join for prior VV, joined 2x for chain traversal) → campaigns (stage lookup)
 - Scheduled via SQLMesh INCREMENTAL_BY_TIME_RANGE (hourly, 48-hour lookback, 7-day batch size)
 - DELETE+INSERT idempotent pattern by trace_date range
 - 90-day rolling retention (`partition_expiration_days = 90`)

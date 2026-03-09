@@ -40,12 +40,11 @@ One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
-- **Single event_log + cost_impression_log CTE** each joined 4x (last-touch, prior VV LT, S1 chain LT, s2_pv LT). **Note:** BQ does NOT materialize CTEs — each reference re-scans the table (4 × 26B rows for event_log = 52 slot-hrs). CIL replaces impression_log (CIL.ip = bid_ip, 100% validated; has advertiser_id for ~20,000x scan reduction). See `ti_650_query_optimization_guide.md` for TEMP TABLE and semi-join mitigation strategies.
+- **Single event_log + cost_impression_log CTE** each joined 3x (last-touch, prior VV LT, S1 chain LT). **Note:** BQ does NOT materialize CTEs — each reference re-scans the table. CIL replaces impression_log (CIL.ip = bid_ip, 100% validated; has advertiser_id for ~20,000x scan reduction). See `ti_650_query_optimization_guide.md` for TEMP TABLE and semi-join mitigation strategies.
 - **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback for cross-device). Dedup prefers bid_ip matches. Fallback covers the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip due to cross-device mutation. Advertiser_id constraint on all prior_vv joins prevents CGNAT false positives.
 - **Prior VV stage logic:** `pv_stage < vv_stage` (strict). An IP can only be advanced INTO a stage by a lower stage — e.g. S3 VV must have been preceded by S2 or S1 (not S3, since IP was already in S3). Max chain: S3 → S2 → S1 (3 levels, 2 chain joins). `s2_pv` third-level join removed as unnecessary.
 - **S1 resolution via chain traversal CASE** — eliminates reliance on `cp_ft_ad_served_id` (40% NULL). **3-branch CASE:** (1) vv_stage=1 (current IS S1), (2) pv_stage=1 (prior VV IS S1), (3) ELSE s1_pv (second-level join finds S1). Max chain depth 2 (S3→S2→S1). 9 LEFT JOINs total. `cp_ft_ad_served_id` retained as comparison reference only.
-- **All VV stages as anchor rows** — `cp_dedup` does not filter by stage. S1-only, S2→S1, S3→S3→S2→S1 chains are all present. Zach confirmed: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
-- **`pv_stage <= vv_stage`** — same-stage prior VVs allowed (enables S3→S3 chain steps). Prior version used `< vv_stage` which blocked same-stage traversal.
+- **All VV stages as anchor rows** — `cp_dedup` does not filter by stage. S1-only, S2→S1, S3→S2→S1 chains are all present. Zach confirmed: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
 ### Cost

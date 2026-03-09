@@ -12,13 +12,17 @@
 -- QUERIES IN THIS FILE:
 --   Q1: CREATE TABLE (reference — SQLMesh creates the table automatically)
 --   Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
---   Q3: SELECT preview (row-level, scoped to one advertiser for validation)
---   Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + semi-join; ~80% faster than Q3)
+--   Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + semi-join)
 --   Q4: Advertiser summary (stage-aware, runs on populated table)
+--
+-- STAGE LOGIC:
+--   Prior VV stage must be STRICTLY LESS than current VV stage (pv_stage < vv_stage).
+--   An IP can only be advanced INTO a stage by a lower stage — you can't enter S3 via S3.
+--   Max chain depth: 2 (S3 → S2 → S1). 9 LEFT JOINs total.
 --
 -- DATA SOURCES:
 --   clickpass_log    — anchor VVs (target interval) + prior VV pool (90-day)
---   event_log        — CTV impression IPs (single 90-day scan, joined 3x)
+--   event_log        — CTV impression IPs (single 90-day scan, joined 2x)
 --   cost_impression_log — display impression bid_ip (CIL.ip = bid_ip, confirmed empirically;
 --                        has advertiser_id for filtering — ~20,000x fewer rows than impression_log)
 --   ui_visits        — visit IP + impression IP (+/- 7 day buffer)
@@ -190,20 +194,17 @@ with_all_joins AS (
         CASE
             WHEN cp.vv_stage = 1        THEN cp.ad_served_id
             WHEN pv.pv_stage = 1        THEN pv.prior_vv_ad_served_id
-            WHEN s1_pv.pv_stage = 1     THEN s1_pv.prior_vv_ad_served_id
-            ELSE                             s2_pv.prior_vv_ad_served_id
+            ELSE                             s1_pv.prior_vv_ad_served_id
         END                                         AS s1_ad_served_id,
         CASE
             WHEN cp.vv_stage = 1        THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
             WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-            WHEN s1_pv.pv_stage = 1     THEN COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
-            ELSE                             COALESCE(s2_lt.bid_ip, s2_lt_d.bid_ip)
+            ELSE                             COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
         END                                         AS s1_bid_ip,
         CASE
             WHEN cp.vv_stage = 1        THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
             WHEN pv.pv_stage = 1        THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
-            WHEN s1_pv.pv_stage = 1     THEN COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
-            ELSE                             COALESCE(s2_lt.vast_ip, s2_lt_d.vast_ip)
+            ELSE                             COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
         END                                         AS s1_vast_ip,
 
         pv.prior_vv_ad_served_id,
@@ -227,8 +228,7 @@ with_all_joins AS (
             ORDER BY
                 CASE WHEN pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip) THEN 0 ELSE 1 END,
                 pv.prior_vv_time DESC NULLS LAST,
-                s1_pv.prior_vv_time DESC NULLS LAST,
-                s2_pv.prior_vv_time DESC NULLS LAST
+                s1_pv.prior_vv_time DESC NULLS LAST
         )                                           AS _pv_rn
     FROM cp_dedup cp
     LEFT JOIN el_all lt
@@ -242,7 +242,7 @@ with_all_joins AS (
         AND (pv.ip = COALESCE(lt.bid_ip, lt_d.bid_ip) OR pv.ip = cp.ip)
         AND pv.prior_vv_time < cp.time
         AND pv.prior_vv_ad_served_id != cp.ad_served_id
-        AND pv.pv_stage <= cp.vv_stage
+        AND pv.pv_stage < cp.vv_stage
     LEFT JOIN el_all pv_lt
         ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
     LEFT JOIN cil_all pv_lt_d
@@ -250,23 +250,13 @@ with_all_joins AS (
     LEFT JOIN prior_vv_pool s1_pv
         ON s1_pv.advertiser_id = cp.advertiser_id
         AND (s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) OR s1_pv.ip = pv.ip)
-        AND s1_pv.pv_stage <= pv.pv_stage
+        AND s1_pv.pv_stage < pv.pv_stage
         AND s1_pv.prior_vv_time < pv.prior_vv_time
         AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
     LEFT JOIN el_all s1_lt
         ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
     LEFT JOIN cil_all s1_lt_d
         ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
-    LEFT JOIN prior_vv_pool s2_pv
-        ON s2_pv.advertiser_id = cp.advertiser_id
-        AND (s2_pv.ip = COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip) OR s2_pv.ip = s1_pv.ip)
-        AND s2_pv.pv_stage = 1
-        AND s2_pv.prior_vv_time < s1_pv.prior_vv_time
-        AND s2_pv.prior_vv_ad_served_id != s1_pv.prior_vv_ad_served_id
-    LEFT JOIN el_all s2_lt
-        ON s2_lt.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt.rn = 1
-    LEFT JOIN cil_all s2_lt_d
-        ON s2_lt_d.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt_d.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
@@ -290,7 +280,7 @@ WHERE _pv_rn = 1;
 --   1. TEMP TABLE el_all — single event_log scan + semi-join by advertiser's ad_served_ids
 --      (26B rows → ~few hundred K rows; eliminates 3 of 4 scans = ~80 slot-hr savings)
 --   2. TEMP TABLE cil_all — single cost_impression_log scan (already advertiser-filtered)
---   3. TEMP TABLE prior_vv_pool — single clickpass_log scan (referenced 3x: pv, s1_pv, s2_pv)
+--   3. TEMP TABLE prior_vv_pool — single clickpass_log scan (referenced 2x: pv, s1_pv)
 --   4. prior_vv_pool IP dedup — keeps only the most recent prior VV per (ip, pv_stage).
 --      Caps join fan-out from hundreds-to-one down to max 3-to-1 per IP.
 --      Eliminates 245x compute skew on popular IPs (CGNAT/corporate/VPN).
@@ -326,7 +316,7 @@ FROM `dw-main-silver.logdata.cost_impression_log`
 WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
   AND advertiser_id = 37775;
 
--- Step 3: Materialize prior_vv_pool — referenced 3x (pv, s1_pv, s2_pv), prevents re-scan
+-- Step 3: Materialize prior_vv_pool — referenced 2x (pv, s1_pv), prevents re-scan
 -- Two-level dedup: (1) one row per ad_served_id, then (2) one row per IP per stage.
 -- Level 2 caps join fan-out from hundreds-to-one to max 3-to-1 per IP.
 CREATE TEMP TABLE prior_vv_pool AS
