@@ -40,7 +40,7 @@ One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
-- **Single event_log + impression_log CTE** each joined 4x (last-touch, prior VV LT, S1 chain LT, s2_pv LT) — single scan, full coverage without duplicate reads
+- **Single event_log + cost_impression_log CTE** each joined 4x (last-touch, prior VV LT, S1 chain LT, s2_pv LT). **Note:** BQ does NOT materialize CTEs — each reference re-scans the table (4 × 26B rows for event_log = 52 slot-hrs). CIL replaces impression_log (CIL.ip = bid_ip, 100% validated; has advertiser_id for ~20,000x scan reduction). See `ti_650_query_optimization_guide.md` for TEMP TABLE and semi-join mitigation strategies.
 - **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback for cross-device). Dedup prefers bid_ip matches. Fallback covers the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip due to cross-device mutation. Advertiser_id constraint on all prior_vv joins prevents CGNAT false positives.
 - **Prior VV stage logic:** `pv_stage <= vv_stage` — supports full chain traversal. Same-stage prior VVs allowed (e.g. S3 VV → S3 VV → S2 VV → S1 VV). Stage 3 is terminal, so this is the longest possible chain.
 - **S1 resolution via chain traversal CASE** — eliminates reliance on `cp_ft_ad_served_id` (40% NULL). **4-branch CASE:** (1) vv_stage=1 (current IS S1), (2) pv_stage=1 (prior VV IS S1), (3) s1_pv.pv_stage=1 (second-level join finds S1), (4) ELSE s2_pv (third-level join, terminal pv_stage=1). Resolves ~99%+ of rows. 13 LEFT JOINs total. `cp_ft_ad_served_id` retained as comparison reference only.
@@ -49,7 +49,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
 ### Cost
-- Daily incremental: ~$29/day on-demand (~4.7 TB scan — event_log + impression_log)
+- Daily incremental: ~$29/day on-demand (~4.7 TB scan — event_log + cost_impression_log)
 - 60-day batch backfill: ~$47 (97% savings vs naive approach)
 - Monthly: ~$870/month on-demand (slot-based pricing may differ)
 
@@ -67,6 +67,9 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 8. **30-day EL lookback is exact.** 100% of VVs have impression within 30 days. Zero exceptions across 3.25M rows.
 9. **BQ Silver validated vs Greenplum** within 0.12pp on all metrics across 10 advertisers.
 10. **pv_stage logic:** `pv_stage <= vv_stage` — full chain traversal including same-stage prior VVs (S3 VV → S3 VV → S2 VV → S1 VV). Stage 3 is terminal. Validation with `< vv_stage`: zero pv_stage=3 rows, S3 distribution 31-34% pv_stage=1 / 65-68% pv_stage=2, el/il join success 85-93%. The `<=` change expands prior VV eligibility but doesn't change the stage distribution for non-S3 prior VV cases.
+11. **CIL.ip = bid_ip (100% validated, 2026-03-09).** Joined cost_impression_log to impression_log on `impression_id = ttd_impression_id`: 794,050/794,050 rows match bid_ip; only 745,169 (93.8%) match render_ip. When they differ, render_ip is internal 10.x.x.x (NAT/proxy). CIL has `advertiser_id` — impression_log does not. CIL replaces impression_log in all queries.
+12. **BQ CTE re-scanning: event_log is 42% of total query cost.** Q3 execution analysis (254.6 slot-hrs total): event_log scanned 4x (52 slot-hrs) + dedup 4x (54 slot-hrs) = 106 slot-hrs. BQ does NOT materialize CTEs — each reference re-scans 26B rows from 90K partitions. event_log has no advertiser_id, preventing early filtering.
+13. **Prior VV IP join data skew: 245x compute skew.** Stage 149 consumed 97 slot-hrs (38% of total). One worker took 6.25 hours vs 1.5 min average. Caused by popular IPs (shared NAT, corporate, VPN) creating massive fan-out on the `prior_vv_pool` IP match. The `OR pv.ip = cp.ip` disjunctive condition compounds the problem. See `ti_650_query_optimization_guide.md`.
 
 ---
 
@@ -81,6 +84,7 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (rewritten 2026-03-06; covers stages, targeting vs attribution, chain traversal, NTB verification use case with query examples, cross-device walkthrough, coverage summary, VVS determination logic)
 - `artifacts/ti_650_column_reference.md` — column-by-column schema reference for the production table
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
+- `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies (CTE re-scan, IP join skew, TEMP TABLE mitigation)
 - `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad (design decisions, VVS attribution logic, all-stage confirmation)
 - `artifacts/ti_650_verified_visit_business_logic.txt` — Nimeshi Fernando's VVS Business Logic doc (Confluence MIME/HTML export; contains full VVS determination logic, attribution model IDs, TRPX flow, PV_GUID_LOCK)
 
@@ -111,6 +115,8 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - **All-stage design confirmed (Zach, 2026-03-06):** `cp_dedup` pulls all clickpass_log stages — not just S3. Zach: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
 - **Ray's TTL context (2026-03-06):** Architecture diagram shows S1 impression → S3 VV can span ~83 days in representative examples. 90-day lookback is correctly sized. Display touches confirmed fine: "a verified visit can happen on both."
 - **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
+- **CIL optimization applied (2026-03-09):** All queries updated to use `cost_impression_log` instead of `impression_log`. CIL.ip = bid_ip (100% validated, 794K rows). CIL has advertiser_id for massive scan reduction. Render IP lost — acceptable tradeoff (only internal 10.x.x.x NAT, 6.2%).
+- **Query performance optimization needed (2026-03-09):** Q3 single-advertiser preview runs 80+ minutes (254.6 slot-hours). Two bottlenecks identified: (1) event_log CTE re-scanning (42% of cost — BQ doesn't materialize CTEs), (2) prior_vv_pool IP join skew (38% of cost — 245x compute skew on popular IPs). Mitigation strategies documented in `ti_650_query_optimization_guide.md`: TEMP TABLE materialization, semi-join pre-filter, split OR condition, IP frequency cap.
 
 ---
 
@@ -134,7 +140,7 @@ Added to `knowledge/data_knowledge.md`:
 
 **Speed:** Built v1 -> v2 -> v3 -> v4 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
 
-**Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3. Identified 20% of S1 VVs on S3 IPs — a novel finding. Simplified 42-column design to 29-column raw-values-only audit trail on stakeholder feedback. Optimized event_log scans from 3 CTEs to 1 (8% savings). Built cost justification doc quantifying $17/day ongoing cost.
+**Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3. Identified 20% of S1 VVs on S3 IPs — a novel finding. Simplified 42-column design to 29-column raw-values-only audit trail on stakeholder feedback. Discovered CIL.ip = bid_ip (100% validated), replacing impression_log with cost_impression_log (~20,000x scan reduction via advertiser_id). Performed deep BQ execution plan analysis (254.6 slot-hours, 159 stages) identifying two bottlenecks: CTE re-scanning (42%) and IP join data skew (38%, 245x compute skew). Documented optimization strategies in reusable guide. Built cost justification doc quantifying $17/day ongoing cost.
 
 **Adaptability:** Pivoted from v1 (simple mutation audit) to v4 (full stage-aware lineage with chain traversal) across 3 Zach review meetings. Incorporated Sharad's first_touch lookup clarification. Adapted from Greenplum to BQ Silver when pipeline gap was discovered.
 

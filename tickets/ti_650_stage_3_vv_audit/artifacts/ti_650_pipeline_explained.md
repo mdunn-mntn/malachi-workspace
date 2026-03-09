@@ -18,9 +18,9 @@ When MNTN serves an ad and a user later visits the advertiser's site, five thing
 
 **The critical thread:** `ad_served_id` is the UUID that flows through every table. One ad serve = one `ad_served_id` that appears identically in CIL, event_log, clickpass_log, and ui_visits. This is how we trace one impression end-to-end.
 
-**Display vs CTV:** Display ads do not fire VAST events. For display, step 3 uses `impression_log` (not `event_log`). The `event_log` columns (`vast_impression`, `bid_ip`) are CTV-only. The query handles this with `COALESCE(event_log value, impression_log value)` — CTV preferred, display as fallback.
+**Display vs CTV:** Display ads do not fire VAST events. For display, step 3 uses `cost_impression_log` (CIL) instead of `event_log`. CIL.ip = bid_ip (100% validated). The query handles this with `COALESCE(event_log value, CIL value)` — CTV preferred, display (CIL) as fallback. CIL replaces `impression_log` — it has `advertiser_id` (impression_log does not), making it ~20,000x smaller for single-advertiser queries. Render IP (impression_log.ip) is lost — only differs from bid_ip 6.2% of the time (internal 10.x.x.x NAT).
 
-**Where IP mutation happens:** 100% of IP changes happen between step 3 (VAST) and step 4 (clickpass redirect). The bid IP = VAST bid_ip = impression_log IP in 100% of cases. If the IP changed, it changed at the VAST→redirect boundary. Cross-device and VPN switching cause this.
+**Where IP mutation happens:** 100% of IP changes happen between step 3 (VAST) and step 4 (clickpass redirect). The bid IP = VAST bid_ip = CIL IP in 100% of cases. If the IP changed, it changed at the VAST→redirect boundary. Cross-device and VPN switching cause this.
 
 **How VVS links the visit to the impression (Sharad, confirmed):** The Verified Visit Service (VVS) does the attribution in two layers:
 1. **Primary: IP match.** When a page view comes in, VVS looks for impressions served to the same IP as the page view IP. This is the main mechanism.
@@ -203,19 +203,19 @@ How to read it: This S3 VV was triggered by impression `003a01cf` on 2026-02-04.
 
 ---
 
-### Last-touch impression IPs — from `event_log` (CTV) / `impression_log` (display) / `clickpass_log` / `ui_visits`
+### Last-touch impression IPs — from `event_log` (CTV) / `cost_impression_log` (display) / `clickpass_log` / `ui_visits`
 
 These are the IPs at each hop for the impression that directly triggered THIS VV.
 
 **`lt_bid_ip`**
-- Source: `event_log.bid_ip` (CTV, preferred) or `impression_log.bid_ip` (display, fallback)
+- Source: `event_log.bid_ip` (CTV, preferred) or `cost_impression_log.ip` (display, fallback — CIL.ip = bid_ip, 100% validated)
 - What it is: The IP that MNTN bid on at auction. This is the household/device IP as known to the DSP at bid time.
 - How joined: `el_all.ad_served_id = cp.ad_served_id`, rn=1 (first VAST event)
-- Skeptical Q: *"What if there's no event_log row?"* Display ads don't fire VAST events. In that case `event_log` returns NULL and `COALESCE(el.bid_ip, il.bid_ip)` falls back to `impression_log.bid_ip`.
+- Skeptical Q: *"What if there's no event_log row?"* Display ads don't fire VAST events. In that case `event_log` returns NULL and `COALESCE(el.bid_ip, cil.bid_ip)` falls back to `cost_impression_log.ip` (which IS the bid_ip).
 
 **`lt_vast_ip`**
-- Source: `event_log.ip` (CTV) or `impression_log.ip` (display)
-- What it is: The IP at the time the ad played (VAST impression). For CTV this is the TV's IP at playback. For display this is the device IP at impression render.
+- Source: `event_log.ip` (CTV) or `cost_impression_log.ip` (display — same as bid_ip; render IP not available from CIL)
+- What it is: For CTV, the IP at the time the ad played (VAST impression — the TV's IP at playback). For display, this equals bid_ip (CIL does not have render_ip; render_ip differs from bid_ip only 6.2% of the time, always internal 10.x.x.x NAT).
 - Note: This is where IP mutation is measured. If `lt_vast_ip ≠ redirect_ip`, the IP changed between ad playback and site visit.
 
 **`redirect_ip`**
@@ -229,7 +229,7 @@ These are the IPs at each hop for the impression that directly triggered THIS VV
 
 **`impression_ip`**
 - Source: `ui_visits.impression_ip`
-- What it is: The IP that `ui_visits` attributed the visit to — carried forward from `impression_log` at attribution time.
+- What it is: The IP that `ui_visits` attributed the visit to — carried forward from the impression at attribution time.
 
 ---
 
@@ -248,16 +248,16 @@ These are the IPs at each hop for the impression that directly triggered THIS VV
 - Skeptical Q: *"Why is this better than cp_ft_ad_served_id?"* `cp_ft_ad_served_id` is NULL 40% of the time and cannot be recovered. `s1_ad_served_id` uses the same source data (clickpass_log IP matching) to traverse the chain and fills in ~59 of those 60 missing points.
 
 **`s1_bid_ip`**
-- Source: `event_log.bid_ip` (CTV) or `impression_log.bid_ip` (display), JOINed on the resolved S1 ad_served_id.
+- Source: `event_log.bid_ip` (CTV) or `cost_impression_log.ip` (display, = bid_ip), JOINed on the resolved S1 ad_served_id.
 - What it is: The IP at auction time for the S1 impression. The "original bid IP" that started this IP's funnel.
 
 **`s1_vast_ip`**
-- Source: `event_log.ip` (CTV) or `impression_log.ip` (display), JOINed on the resolved S1 ad_served_id.
+- Source: `event_log.ip` (CTV) or `cost_impression_log.ip` (display, = bid_ip), JOINed on the resolved S1 ad_served_id.
 - What it is: The IP at the time the S1 ad played (VAST or display render).
 
 ---
 
-### Prior VV — from `clickpass_log` (self-join) and `event_log`/`impression_log` (IPs)
+### Prior VV — from `clickpass_log` (self-join) and `event_log`/`cost_impression_log` (IPs)
 
 The prior VV is the most recent VV for this IP before the current VV, where `pv_stage <= vv_stage`. **Any stage VV can be the prior VV.** For an S3 VV, the prior VV can be an S1, S2, or S3 VV — whichever is most recent. Any VV (regardless of stage) puts the IP into S3 targeting.
 
@@ -293,15 +293,15 @@ The prior VV is the most recent VV for this IP before the current VV, where `pv_
 - Important: This is the primary IP the targeting system used to promote the IP to the next stage. In 94% of cases `pv_redirect_ip = pv_lt_bid_ip`. When `pv_lt_bid_ip` is NULL (impression outside lookback), `pv_redirect_ip` is the reliable fallback.
 
 **`pv_lt_bid_ip`**
-- Source: `event_log.bid_ip` (CTV) or `impression_log.bid_ip` (display), JOINed on `prior_vv_ad_served_id`
+- Source: `event_log.bid_ip` (CTV) or `cost_impression_log.ip` (display, = bid_ip), JOINed on `prior_vv_ad_served_id`
 - Audit-trail lookup for the prior VV's impression bid IP.
-- Skeptical Q: *"Why is this NULL for some rows?"* The prior VV's impression may predate the `el_all`/`il_all` window. In production (90-day window), this is ~1-2% NULL. In ad-hoc testing with shorter windows, NULL rate is higher. When NULL, use `pv_redirect_ip` — it's ~94% equivalent.
+- Skeptical Q: *"Why is this NULL for some rows?"* The prior VV's impression may predate the `el_all`/`cil_all` window. In production (90-day window), this is ~1-2% NULL. In ad-hoc testing with shorter windows, NULL rate is higher. When NULL, use `pv_redirect_ip` — it's ~94% equivalent.
 
 **`pv_lt_vast_ip`**
-- Source: `event_log.ip` (CTV) or `impression_log.ip` (display), JOINed on `prior_vv_ad_served_id`
+- Source: `event_log.ip` (CTV) or `cost_impression_log.ip` (display, = bid_ip), JOINed on `prior_vv_ad_served_id`
 
 **`pv_lt_time`**
-- Source: `event_log.time` or `impression_log.time` for the prior VV's impression
+- Source: `event_log.time` or `cost_impression_log.time` for the prior VV's impression
 
 ---
 
@@ -350,7 +350,7 @@ Primary match: `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV'
 
 **3. pv_lt_bid_ip is ~99%+ in production, ~67% in ad-hoc testing**
 
-In production with a 90-day event_log/impression_log window, almost all prior VV impressions are in range. In short-window ad-hoc queries, ~33% of prior VV impressions fall outside the window. When NULL, `pv_redirect_ip` is the reliable fallback (~94% equivalent).
+In production with a 90-day event_log/cost_impression_log window, almost all prior VV impressions are in range. In short-window ad-hoc queries, ~33% of prior VV impressions fall outside the window. When NULL, `pv_redirect_ip` is the reliable fallback (~94% equivalent).
 
 **4. NTB is not auditable via SQL**
 
@@ -358,7 +358,7 @@ In production with a 90-day event_log/impression_log window, almost all prior VV
 
 **5. Display IPs vs CTV IPs**
 
-CTV impressions: sourced from `event_log` (`vast_impression` event). Display impressions: sourced from `impression_log`. Non-viewable display impressions appear ONLY in `impression_log` — they never generate a VAST event. The `COALESCE(el, il)` pattern handles this correctly.
+CTV impressions: sourced from `event_log` (`vast_impression` event). Display impressions: sourced from `cost_impression_log` (CIL). CIL replaces `impression_log` — CIL.ip = bid_ip (100% validated), and CIL has `advertiser_id` for massive scan reduction. Render IP is not available from CIL (differs from bid_ip only 6.2%, always internal 10.x.x.x NAT). Non-viewable display impressions appear in CIL — they never generate a VAST event. The `COALESCE(el, cil)` pattern handles this correctly.
 
 ---
 
@@ -369,15 +369,15 @@ How the query builds one row from five sources (13 LEFT JOINs total):
 ```
 clickpass_log (anchor — one VV per row, all stages)
   ├── event_log  (CTV, scanned once → el_all, joined 4x: lt, pv_lt, s1_lt, s2_lt)
-  ├── impression_log (display, scanned once → il_all, joined 4x: same slots as el_all)
+  ├── cost_impression_log (display, scanned once → cil_all, joined 4x: same slots as el_all)
   ├── ui_visits  (visit IP — via ad_served_id, CAST as STRING)
   ├── clickpass_log (self via prior_vv_pool, joined 4x: pv, s1_pv, s2_pv + campaigns inside pool)
   └── campaigns  (stage lookup — joined inside cp_dedup and prior_vv_pool CTEs)
 ```
 
-**One scan, joined multiple times:** `event_log` is scanned once into `el_all`, then used four times (lt = last touch, pv_lt = prior VV impression, s1_lt = s1_pv impression, s2_lt = s2_pv impression). Same for `impression_log` → `il_all`. This is significant cost savings vs four separate scans.
+**One scan, joined multiple times:** `event_log` is scanned once into `el_all`, then used four times (lt = last touch, pv_lt = prior VV impression, s1_lt = s1_pv impression, s2_lt = s2_pv impression). Same for `cost_impression_log` → `cil_all`. **Important caveat:** BQ does NOT materialize CTEs — each reference re-scans the underlying table. For event_log, this means 4 × 26B row scans (52 slot-hours). See `ti_650_query_optimization_guide.md` for TEMP TABLE mitigation.
 
-**COALESCE pattern:** For every IP column, the pattern is `COALESCE(el.ip, il.ip)`. CTV (`event_log`) is preferred; display (`impression_log`) fills in NULLs. If both are NULL, the impression was not found in either log (rare, typically a timing edge case or data gap).
+**COALESCE pattern:** For every IP column, the pattern is `COALESCE(el.ip, cil.ip)`. CTV (`event_log`) is preferred; display (`cost_impression_log`) fills in NULLs. If both are NULL, the impression was not found in either log (rare, typically a timing edge case or data gap).
 
 **S1 chain traversal JOINs (s1_pv, s2_pv):**
 - `s1_pv` = second-level prior VV pool JOIN. Finds the VV whose redirect IP = `pv_lt_bid_ip`. `s1_pv.pv_stage <= pv.pv_stage` keeps the chain monotonically non-increasing.
@@ -432,7 +432,7 @@ SELECT
   redirect_ip,          -- IP at site visit (what you see today)
   lt_bid_ip,            -- IP we bid on for THIS impression
   s1_bid_ip,            -- IP we ORIGINALLY bid on at S1 (the start of the funnel)
-  s1_ad_served_id       -- the S1 impression ID (trace it in event_log/impression_log)
+  s1_ad_served_id       -- the S1 impression ID (trace it in event_log/cost_impression_log)
 FROM audit.vv_ip_lineage
 WHERE trace_date = '2026-02-04'
   AND advertiser_id = 37775

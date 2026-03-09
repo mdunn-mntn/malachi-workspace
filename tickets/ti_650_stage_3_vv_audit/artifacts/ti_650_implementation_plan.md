@@ -22,12 +22,14 @@ Full schema: see `ti_650_column_reference.md`. V4 replaces `ft_*` columns with `
 |-------|------|--------|-----------|
 | `silver.logdata.clickpass_log` | Anchor — one row per VV | `time >= @start_dt AND time < @end_dt` | Target interval only |
 | `silver.logdata.event_log` | CTV impression IPs (joined 4x: last-touch, prior VV LT, S1 chain LT, s2_pv LT) | `event_type_raw = 'vast_impression'` + 90-day lookback from `@start_dt` | ~90 days (single scan, ~3 TB) |
-| `silver.logdata.impression_log` | Display impression IPs (joined 4x: same slots — fallback) | 90-day lookback from `@start_dt` | ~90 days (single scan, ~1.9 TB) |
+| `silver.logdata.cost_impression_log` | Display impression bid_ip (CIL.ip = bid_ip, 100% validated; replaces impression_log — has advertiser_id, ~20,000x smaller) | 90-day lookback from `@start_dt` | ~90 days (~800K rows/day/advertiser vs ~16B for impression_log) |
 | `silver.summarydata.ui_visits` | Independent visit record (visit IP, impression IP, is_new) | `from_verified_impression = true` + +/- 7 day buffer | ~14 days |
 | `silver.logdata.clickpass_log` (self) | Prior VV pool for retargeting chain | 90-day lookback from `@start_dt` | ~90 days |
 | `bronze.integrationprod.campaigns` | Stage classification (`funnel_level`) | `deleted = FALSE` | Small dimension table |
 
-**Optimization:** Each log table (event_log, impression_log) is scanned once and joined 4 times (last-touch, prior VV last-touch, S1 chain last-touch, s2_pv last-touch). `COALESCE(el, il)` in the SELECT prefers CTV (event_log); impression_log fills in NULLs for display inventory. Full inventory coverage without double-scanning.
+**Optimization:** impression_log replaced by cost_impression_log (CIL) — CIL.ip IS bid_ip (100% validated, 794K rows). CIL has `advertiser_id` (impression_log does not), enabling ~20,000x row reduction for single-advertiser queries. Render IP lost — only differs from bid_ip 6.2% of the time (internal 10.x.x.x NAT). Each log table (event_log, CIL) is scanned once and joined 4 times. `COALESCE(el, cil)` in SELECT prefers CTV (event_log); CIL fills in NULLs for display inventory.
+
+**Known performance issue:** BQ does not materialize CTEs — el_all is scanned 4 times (52 slot-hrs). See `ti_650_query_optimization_guide.md` for mitigation strategies (TEMP TABLE, semi-join, staging layer).
 
 ---
 
@@ -112,7 +114,7 @@ Each hour, SQLMesh:
 | 60-day backfill (batched 7 days at a time) | ~9.4 TB total | ~$47 |
 | Monthly ongoing | ~141 TB | ~$870 |
 
-Note: impression_log adds ~1.9 TB per 90-day scan vs ~3 TB for event_log.
+Note: cost_impression_log replaces impression_log (~negligible scan vs ~1.9 TB). event_log remains ~3 TB per 90-day scan (scanned 4x = ~12 TB effective). See `ti_650_query_optimization_guide.md` for TEMP TABLE strategy to reduce to single scan.
 
 Note: MNTN uses reserved slots (`dw-main-bronze:us-central1:reservations/background-jobs`), not on-demand pricing. Actual cost depends on slot allocation.
 
