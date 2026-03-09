@@ -18,11 +18,14 @@
 -- DATA SOURCES:
 --   clickpass_log    — anchor VVs (target interval) + prior VV pool (90-day)
 --   event_log        — CTV impression IPs (single 90-day scan, joined 3x)
---   impression_log   — display impression IPs (single 90-day scan, joined 3x; fallback)
+--   cost_impression_log — display impression bid_ip (CIL.ip = bid_ip, confirmed empirically;
+--                        has advertiser_id for filtering — ~20,000x fewer rows than impression_log)
 --   ui_visits        — visit IP + impression IP (+/- 7 day buffer)
 --   campaigns        — funnel_level -> stage classification
 --
--- OPTIMIZATION: each log table scanned once, joined 3x. COALESCE(el, il) prefers CTV.
+-- OPTIMIZATION: CIL replaces impression_log — CIL.ip IS bid_ip (100% match, validated 794K rows).
+--   CIL has advertiser_id, impression_log does not. ~800K rows/day vs ~16B.
+--   Render IP (impression_log.ip) lost — only differs from bid_ip 6.2% of the time (internal 10.x.x.x).
 --------------------------------------------------------------------------------
 
 
@@ -39,8 +42,8 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     vv_time               TIMESTAMP     NOT NULL,
 
     -- Last-touch impression IPs — the impression that triggered this VV (Stage N)
-    lt_bid_ip             STRING,                   -- event_log.bid_ip (CTV) or impression_log.bid_ip (display)
-    lt_vast_ip            STRING,                   -- event_log.ip (CTV VAST) or impression_log.ip (display render)
+    lt_bid_ip             STRING,                   -- event_log.bid_ip (CTV) or cost_impression_log.ip (display; = bid_ip)
+    lt_vast_ip            STRING,                   -- event_log.ip (CTV VAST) or cost_impression_log.ip (display; = bid_ip)
     redirect_ip           STRING,                   -- clickpass_log.ip (mutation occurs here)
     visit_ip              STRING,                   -- ui_visits.ip
     impression_ip         STRING,                   -- ui_visits.impression_ip
@@ -59,7 +62,7 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     -- Prior VV — most recent VV that advanced this IP into the current stage
     -- (e.g. for S3 VV: the S2 VV whose redirect IP matches this VV's bid IP)
     -- pv_redirect_ip: prior VV's clickpass.ip
-    -- pv_lt_bid_ip / pv_lt_vast_ip: audit lookup (event_log CTV, else impression_log display)
+    -- pv_lt_bid_ip / pv_lt_vast_ip: audit lookup (event_log CTV, else cost_impression_log display)
     prior_vv_ad_served_id STRING,
     prior_vv_time         TIMESTAMP,
     pv_campaign_id        INT64,
@@ -118,7 +121,7 @@ cp_dedup AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 el_all AS (
-    -- CTV impression IPs from event_log. Joined 3x. Display fallback: see il_all.
+    -- CTV impression IPs from event_log. Joined 3x. Display fallback: see cil_all.
     SELECT
         ad_served_id,
         ip          AS vast_ip,
@@ -130,17 +133,18 @@ el_all AS (
     WHERE event_type_raw = 'vast_impression'
       AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
 ),
-il_all AS (
-    -- Display impression IPs from impression_log. Fallback for non-CTV inventory.
-    -- Joined 3x in parallel with el_all. COALESCE(el, il) used in SELECT — el preferred.
+cil_all AS (
+    -- Display impression bid_ip from cost_impression_log. CIL.ip = bid_ip (100% validated).
+    -- Replaces impression_log: CIL has advertiser_id, impression_log does not.
+    -- Render IP (impression_log.ip) not available — differs from bid_ip only 6.2% (internal NAT).
     SELECT
         ad_served_id,
-        ip          AS vast_ip,
-        bid_ip,
+        ip          AS vast_ip,   -- CIL.ip = bid_ip; used as fallback when no CTV impression
+        ip          AS bid_ip,
         campaign_id,
         time,
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
-    FROM `dw-main-silver.logdata.impression_log`
+    FROM `dw-main-silver.logdata.cost_impression_log`
     WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
 ),
 v_dedup AS (
@@ -228,7 +232,7 @@ with_all_joins AS (
     FROM cp_dedup cp
     LEFT JOIN el_all lt
         ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
-    LEFT JOIN il_all lt_d
+    LEFT JOIN cil_all lt_d
         ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
     LEFT JOIN v_dedup v
         ON v.ad_served_id = cp.ad_served_id
@@ -240,7 +244,7 @@ with_all_joins AS (
         AND pv.pv_stage <= cp.vv_stage
     LEFT JOIN el_all pv_lt
         ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
-    LEFT JOIN il_all pv_lt_d
+    LEFT JOIN cil_all pv_lt_d
         ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
     LEFT JOIN prior_vv_pool s1_pv
         ON s1_pv.advertiser_id = cp.advertiser_id
@@ -250,7 +254,7 @@ with_all_joins AS (
         AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
     LEFT JOIN el_all s1_lt
         ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
-    LEFT JOIN il_all s1_lt_d
+    LEFT JOIN cil_all s1_lt_d
         ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
     LEFT JOIN prior_vv_pool s2_pv
         ON s2_pv.advertiser_id = cp.advertiser_id
@@ -260,7 +264,7 @@ with_all_joins AS (
         AND s2_pv.prior_vv_ad_served_id != s1_pv.prior_vv_ad_served_id
     LEFT JOIN el_all s2_lt
         ON s2_lt.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt.rn = 1
-    LEFT JOIN il_all s2_lt_d
+    LEFT JOIN cil_all s2_lt_d
         ON s2_lt_d.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt_d.rn = 1
 )
 SELECT
@@ -281,14 +285,13 @@ WHERE _pv_rn = 1;
 -- Same logic as Q2, scoped to one advertiser + one day. Fast enough for ad-hoc testing.
 --
 -- TO TEST: Change these 3 things:
---   1. ADVERTISER_ID: replace 37775 with your advertiser (appears 3x: cp_dedup, prior_vv_pool, prior_vv_pool)
+--   1. ADVERTISER_ID: replace 37775 with your advertiser (appears 4x: cp_dedup, cil_all, prior_vv_pool x2)
 --   2. TRACE_DATE: replace '2026-02-04' with your target date (cp_dedup WHERE)
---   3. LOOKBACK_START: replace '2025-11-06' with trace_date - 90 days (el_all, il_all, prior_vv_pool WHERE)
+--   3. LOOKBACK_START: replace '2025-11-06' with trace_date - 90 days (el_all, cil_all, prior_vv_pool WHERE)
 --
--- NOTE: el_all and il_all intentionally do NOT filter by advertiser_id because
--- event_log/impression_log don't have that column. They scan the full 90-day
--- window but only join to rows matching the advertiser's ad_served_ids.
--- The prior_vv_pool DOES filter by advertiser_id for efficiency.
+-- NOTE: el_all does NOT filter by advertiser_id (event_log lacks that column).
+-- cil_all DOES filter by advertiser_id (cost_impression_log has it — ~20,000x fewer rows than impression_log).
+-- prior_vv_pool also filters by advertiser_id.
 
 WITH campaigns_stage AS (
     SELECT campaign_id, funnel_level AS stage
@@ -311,11 +314,13 @@ el_all AS (
     WHERE event_type_raw = 'vast_impression'
       AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
 ),
-il_all AS (
-    SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time,
+cil_all AS (
+    -- CIL.ip = bid_ip (100% validated). Has advertiser_id — massive scan reduction.
+    SELECT ad_served_id, ip AS vast_ip, ip AS bid_ip, campaign_id, time,
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
-    FROM `dw-main-silver.logdata.impression_log`
+    FROM `dw-main-silver.logdata.cost_impression_log`
     WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-05')
+      AND advertiser_id = 37775
 ),
 v_dedup AS (
     SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip, is_new, impression_ip
@@ -378,7 +383,7 @@ with_all_joins AS (
         ) AS _pv_rn
     FROM cp_dedup cp
     LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
-    LEFT JOIN il_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
+    LEFT JOIN cil_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
     LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
     LEFT JOIN prior_vv_pool pv
         ON pv.advertiser_id = cp.advertiser_id
@@ -387,7 +392,7 @@ with_all_joins AS (
         AND pv.prior_vv_ad_served_id != cp.ad_served_id
         AND pv.pv_stage <= cp.vv_stage
     LEFT JOIN el_all pv_lt ON pv_lt.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt.rn = 1
-    LEFT JOIN il_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
+    LEFT JOIN cil_all pv_lt_d ON pv_lt_d.ad_served_id = pv.prior_vv_ad_served_id AND pv_lt_d.rn = 1
     LEFT JOIN prior_vv_pool s1_pv
         ON s1_pv.advertiser_id = cp.advertiser_id
         AND (s1_pv.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) OR s1_pv.ip = pv.ip)
@@ -395,7 +400,7 @@ with_all_joins AS (
         AND s1_pv.prior_vv_time < pv.prior_vv_time
         AND s1_pv.prior_vv_ad_served_id != pv.prior_vv_ad_served_id
     LEFT JOIN el_all s1_lt ON s1_lt.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt.rn = 1
-    LEFT JOIN il_all s1_lt_d ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
+    LEFT JOIN cil_all s1_lt_d ON s1_lt_d.ad_served_id = s1_pv.prior_vv_ad_served_id AND s1_lt_d.rn = 1
     LEFT JOIN prior_vv_pool s2_pv
         ON s2_pv.advertiser_id = cp.advertiser_id
         AND (s2_pv.ip = COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip) OR s2_pv.ip = s1_pv.ip)
@@ -403,7 +408,7 @@ with_all_joins AS (
         AND s2_pv.prior_vv_time < s1_pv.prior_vv_time
         AND s2_pv.prior_vv_ad_served_id != s1_pv.prior_vv_ad_served_id
     LEFT JOIN el_all s2_lt ON s2_lt.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt.rn = 1
-    LEFT JOIN il_all s2_lt_d ON s2_lt_d.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt_d.rn = 1
+    LEFT JOIN cil_all s2_lt_d ON s2_lt_d.ad_served_id = s2_pv.prior_vv_ad_served_id AND s2_lt_d.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
