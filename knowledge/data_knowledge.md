@@ -597,6 +597,60 @@ win_log → CIL → event_log without traversing all 5 checkpoints explicitly.
   verified NTB visits look like they came from households already in the ad graph)
 - **Win → CIL join:** 100% reliable — always use `win_log.ad_served_id → CIL.ad_served_id`
 
+### Cross-Stage VV Linking Research (TI-650, 2026-03-09)
+
+The current audit table joins prior_vv_pool on IP (bid_ip or redirect_ip match), but IPs change
+between stages, so ~60% of S2/S3 VVs cannot find their S1 origin via IP alone. Research into
+alternative cross-stage identifiers:
+
+**first_touch_ad_served_id** — the best available cross-stage link:
+- Population rate: 44.2% globally (all advertisers, Feb 4-11 2026)
+- For adv 37775: S1=91% populated, S2=32%, S3=34%
+- When populated AND found in clickpass_log, 100% point to Stage 1 impressions (0% S2, 0% S3)
+- However, ~40% of ft_populated S2/S3 rows cannot find their ft_asid in the 90-day CP lookback
+  (these may reference impressions older than 90 days or from pre-BQ era)
+- IP match rate (S2/S3 VV IP vs S1 ft VV IP): S2=64.5%, S3=71.9%
+- GUID match rate (S2/S3 VV guid vs S1 ft VV guid): S2=25.2%, S3=42.9%
+  (lower than IP because GUIDs are browser-specific — cross-device VVs get different GUIDs)
+
+**guid (browser cookie)** — limited cross-stage utility:
+- 607 GUIDs appear in all 3 stages (S1+S2+S3) within same campaign_group (1 week, adv 37775)
+- 8,348 GUIDs appear in 2 stages (1,805 S1+S2; 2,382 S1+S3; 4,161 S2+S3)
+- 185,265 GUIDs appear in only 1 stage (94% of all GUIDs)
+- Problem: GUIDs are browser-level, CTV impressions use device GUIDs, visits use browser GUIDs.
+  Cross-device attribution (CTV ad → mobile/desktop visit) always yields different GUIDs.
+
+**ga_client_ids (Google Analytics Client ID)** — even more limited:
+- 159 GA Client IDs span all 3 stages; 2,852 span 2 stages; 152,697 span only 1 stage
+- GA Client ID is browser-specific AND requires GA to be installed — not available for all visits.
+- Population rate: ~74-77% across stages for adv 37775.
+
+**For S2/S3 VVs where first_touch IS NULL (the hard cases):**
+- S2: 35,832 ft-NULL VVs — only 878 (2.5%) have a GUID match to any S1 VV in same campaign_group,
+  571 (1.6%) have an IP match, 150 (0.4%) have a GA match. 34,702 (96.8%) have NO match at all.
+- S3: 42,778 ft-NULL VVs — only 1,370 (3.2%) GUID match, 1,502 (3.5%) IP match, 245 (0.6%) GA
+  match. 40,396 (94.4%) have NO match at all.
+- **Conclusion:** For ft-NULL VVs, none of the available identifiers can reliably trace back to S1.
+  These VVs are fundamentally unlinkable with current data — the S1 impression that triggered the
+  funnel progression is either too old, or the VVS determined the VV without an S1 match
+  (e.g., via GA Client ID cross-device expansion to an IP with no S1 clickpass record).
+
+**event_log.td_impression_id = cost_impression_log.impression_id** — confirmed join:
+- 100% populated in event_log (38.7M/38.7M on 1 day)
+- Joins reliably to CIL.impression_id (ad_served_id matches at near-100%)
+- Useful for enriching impression-level data but does NOT help cross-stage linking
+  (it links within a single impression event, not across funnel stages)
+
+**cost_impression_log.model_params** — no audience/segment identifiers:
+- Contains: geo_version, device_type_group, flight_id, campaign_id, campaign_group_id,
+  advertiser_id, pmp_deal_id, household_score, advertiser_household_score, realtime_conquest_score
+- Does NOT contain: segment_id, audience_id, audience_upload_id, or any targeting segment reference
+- Cannot determine which audience segment was targeted for a given impression
+
+**Bottom line:** `first_touch_ad_served_id` is the ONLY reliable cross-stage link, and it is NULL
+for ~56-68% of S2/S3 VVs. No other field in clickpass_log, event_log, or cost_impression_log can
+bridge the gap. The ~40% cross-stage coverage from cp_ft is the ceiling with current data.
+
 ### attribution_model_id Clarification (from TI-650)
 - `ad_served_id` = **last-touch** attribution — the most recent impression that led to the VV
 - `first_touch` = the first impression in the multi-impression sequence (NULL ~40% — permanent,
