@@ -137,7 +137,7 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
     - 45 S2 bid_ips match S1 bid_ip ONLY (not vast_ip) — likely alternate entry paths
     - 48,558 match both (because bid_ip = vast_ip 99% of the time)
     - This confirms the MES pipeline diagram: the green arrow goes from VAST Impression IP → next stage's Segment.
-17. **bid_ip = win_ip at 99.9999% (validated 38.2M rows, 2026-03-10).** Joined event_log to win_logs via `td_impression_id = auction_id`. Only 47/38,204,354 differ. bid_ip = win_ip = serve_ip = segment_ip — all the same targeting identity, set at auction time.
+17. **bid_ip = win_ip at 100% (validated 38.2M rows, 2026-03-10).** Joined event_log to win_logs via `td_impression_id = auction_id`. 47/38,204,354 appeared to differ but ALL 47 have `win_ip = 0.0.0.0` (null sentinel in Beeswax win notification — data quality issue, not a real IP difference). When win_logs has a real IP, it matches bid_ip 100% of the time.
 18. **vast_ip ≠ win_ip in 1.35% (515,586/38.2M, 2026-03-10).** vast_ip is a genuinely different IP — observed at VAST callback time. When bid_ip ≠ vast_ip, they're in the same /24 (CGNAT rotation within the carrier's NAT pool, not a network switch).
 19. **vast_impression_ip ≈ vast_start_ip (99.95%, 2026-03-10).** 374/812,609 differ. Both from event_log, different event_type_raw. Close enough to treat as one value; vast_impression used as canonical.
 20. **win_logs.impression_ip_address = infrastructure IP, NOT user (2026-03-10).** When it differs from win_ip, it's 68.67.x.x (MNTN infra), 204.13.x.x (MNTN infra), or AWS IPs (18.x, 3.x, 44.x). Not useful for user IP tracking.
