@@ -171,7 +171,7 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
 27. **vast_start_ip vs vast_impression_ip: interchangeable as cross-stage key (2026-03-10).** Empirically tested both within-impression (252.9M) and cross-stage (487K S3→S2 pairs):
     - **Within-impression (bid_ip vs same impression's vast IPs):** vast_impression matches 248,966,877 (98.434%), vast_start matches 248,959,636 (98.431%). vast_impression marginally better by 7,241 (+0.003%).
     - **Cross-stage (S3 bid_ip vs prior S2 VV's vast IPs):** vast_start matches 486,998 (99.937%), vast_impression matches 486,741 (99.884%). vast_start marginally better by 257 (+0.053%).
-    - **Either/or fallback gains +869 cross-stage matches (0.18%).** Essentially free — use `OR` in the join. Adopted for v9.
+    - **Either/or fallback gains +351 cross-stage coverage (0.05%).** Coverage query (679K S3 VVs): start-only finds 487,208, imp-only finds 486,952, either/or finds 487,303. Essentially free — use `OR` in the join. Adopted for v9.
     - **Neither matches: 1.558%** (3,941,738/252.9M within-impression). These are the structural mismatches (CGNAT/SSAI/IPv6/VPN) — unaffected by choice of vast_start vs vast_impression.
     - **VAST event order correction:** vast_impression fires FIRST (creative loaded), vast_start fires SECOND (playback begins). So vast_start is the last VAST callback — the most recent IP observation before VV.
     - **Recommendation:** Use either/or in cross-stage join: `vast_start_ip = bid_ip OR vast_impression_ip = bid_ip`. Prefer vast_start for dedup (last in chain).
@@ -196,15 +196,16 @@ Serve IP           impression_log.ip             ip                  ad_served_i
                     but not always")                                                   3.1% AWS infra (3.145.x, 18.97.x)
                                                                                        = ad server IP, never user IP
 
-VAST Imp IP   ─┐   event_log.ip                  ip (=vast_ip)       ad_served_id     imp≈start: 288.7M rows
-VAST Start IP ─┘   event_log.ip (vast_start)     ip                  ad_served_id     442K differ (0.153%) — SSAI proxies
+VAST Start IP ─┐   event_log.ip (vast_start)     ip                  ad_served_id     VAST start fires AFTER impression
+VAST Imp IP   ─┘   event_log.ip (vast_impression) ip                 ad_served_id     imp≈start: 288.7M rows, 442K differ (0.153%)
 
 Redirect IP        clickpass_log.ip              ip                  ad_served_id
 Visit IP           ui_visits.ip                  ip                  ad_served_id
 Impression IP      ui_visits.impression_ip       impression_ip       ad_served_id
 
-Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_ip
-                   Differs ~1.2%: CGNAT 66%, SSAI 6%, IPv6 12%, other 16%
+Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_ip OR vast_impression_ip
+                   Either/or join adopted. Differs ~1.2%: CGNAT 66%, SSAI 6%, IPv6 12%, other 16%
+                   Coverage: 71.72% of S3 VVs find prior VV (28.28% unresolved — CRM/cross-device entry)
 ```
 
 ---
@@ -212,12 +213,12 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_ip
 ## 5. What Needs to Be Done (v9)
 
 ### 5.1 Schema redesign
-1. **Change cross-stage join key from bid_ip to vast_ip.** In `s1_imp_pool`, dedup by `vast_ip` instead of `bid_ip`. In prior_vv_pool joins, match on vast_ip. In s1_pool joins, match on vast_ip.
+1. **Cross-stage join uses either/or:** `vast_start_ip = bid_ip OR vast_impression_ip = bid_ip`. Both vast IPs kept per stage. vast_start fires last (most recent IP observation).
 2. **Stage-based naming:** s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip (4 per stage). NULLs for stages above VV's own stage.
 3. **Reorder columns left-to-right:** VV identity → VV visit IPs → S3 impression IPs → S2 impression IPs → S1 impression IPs → classification → metadata.
 4. **Add serve_ip columns** sourced from impression_log.ip via ad_served_id for each stage.
-5. **Add vast_start_ip + vast_impression_ip** as separate columns per stage (or collapse to single vast_ip — pending decision, see Finding #25).
-6. **Re-run coverage numbers** after vast_ip correction to see if the ~11% unresolved improves (expect marginal improvement — ~0.3% based on 309/97,655 vast_only count).
+5. **first_touch_ad_served_id retained as validation:** Deterministic S1 link (S3=51%, S2=25%). Compare against chain-traversed S1 to validate IP-based chain.
+6. **Ambiguity rules:** Multiple prior VV matches → last touch (most recent). Zero matches → unresolved (structural). Same advertiser_id required (CGNAT mitigation).
 
 ### 5.2 Deployment (unchanged from v8)
 - **Confirm dataset name with Dustin** — `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`
@@ -237,19 +238,23 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_ip
 - **CIL optimization applied (2026-03-09):** All queries use `cost_impression_log` instead of `impression_log`. CIL.ip = bid_ip (100% validated). CIL has advertiser_id.
 - **Query performance optimization (2026-03-09):** TEMP TABLE materialization + split OR → two hash joins + IP+stage pre-dedup. See `ti_650_query_optimization_guide.md`.
 - **IP pipeline empirical validation (2026-03-10):** Full IP validation across event_log, win_logs, cost_impression_log. Findings #16-22 above.
+- **v9 SQLMesh model rewritten (2026-03-10):** Stage-based naming (s3/s2/s1), 4 IPs per stage, either/or cross-stage join (vast_start primary, vast_impression fallback, redirect_ip cross-device fallback). Three hash joins replace single OR. Prior VV pool now joins to impression_pool for vast IPs instead of using redirect_ip. Findings #25-28.
 
 ---
 
 ## 7. Files
 
 ### Queries
-- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (needs v9 update)
-- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3b: preview, Q4: summary). **Currently v8 — needs v9 redesign.**
+- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model **(v9 — stage-based naming, either/or cross-stage, 4 IPs per stage)**
+- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3b: preview, Q4: summary). **Still v8 — needs v9 redesign to match SQLMesh model.**
+- `queries/ti_650_vast_start_vs_impression_comparison.sql` — within-impression: bid_ip vs vast_start vs vast_impression (252.9M rows)
+- `queries/ti_650_cross_stage_ip_comparison.sql` — cross-stage: S3 bid_ip vs prior S2 VV's vast IPs (487K pairs)
+- `queries/ti_650_cross_stage_coverage.sql` — coverage: how many S3 VVs find a prior VV by join key choice (679K VVs)
 
 ### Artifacts
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
 - `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (stages, targeting vs attribution, chain traversal, NTB verification, VVS logic)
-- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **Needs v9 update for new column layout.**
+- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **(v9 — stage-based naming, either/or cross-stage, VAST event order corrected)**
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
 - `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies
 - `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad

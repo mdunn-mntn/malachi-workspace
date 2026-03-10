@@ -553,7 +553,7 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 **Key rules:**
 - Stage 2 is populated ONLY from Stage 1 VAST IPs.
 - Stage 3 = any IP that had a VV. Two paths: (1) Stage 1 impression → VV → Stage 3, or (2) Stage 1 → Stage 2 impression → VV → Stage 3. Attribution doesn't follow the stage sequence — a VV can be attributed to any stage's impression.
-- **Cross-stage key is vast_ip (event_log.ip), NOT bid_ip (empirically proven, 2026-03-10).** Tested 97,655 distinct S2 bid_ips against S1 impression IPs: 309 match S1 vast_ip ONLY, 45 match S1 bid_ip ONLY, 48,558 match both (because bid_ip = vast_ip ~99% of the time). The MES diagram green arrows are correct: VAST Impression IP → next stage's Segment IP.
+- **Cross-stage key is vast_ip (event_log.ip), NOT bid_ip (empirically proven, 2026-03-10).** Either/or join: `prev.vast_start_ip = next.bid_ip OR prev.vast_impression_ip = next.bid_ip`. VAST event order: impression fires FIRST (creative loaded), start fires SECOND (playback begins). vast_start marginally better cross-stage (+256 matches on 487K pairs) but difference is noise. Either/or gains +351 matches (0.05%) — adopted in v9. 1.558% match neither (structural — CGNAT/SSAI/IPv6/VPN). No deterministic cross-stage ID exists besides IP (Finding #28).
 - **bid_ip ≠ vast_ip in ~1.2% of impressions (3.54M/288.7M).** Five mechanisms cause the difference: CGNAT /24 rotation (35%), CGNAT wider /16 pool (25%), carrier /8 reallocation (6%), SSAI proxy — VAST callback from AWS server not user device (6%), dual-stack IPv4→IPv6 (12%), other — VPN/CDN/genuine network switch (16%).
 - **4 IPs per stage in audit table (collapsed from 6):** vast_start_ip, vast_impression_ip (both event_log.ip, different event_type_raw, 99.85% identical), serve_ip (impression_log.ip, 93.6% = bid_ip), bid_ip (= win_ip = segment_ip, 100%). Dropped: win_ip (=bid_ip 100%) and segment_ip (=bid_ip 100%, Zach confirmed). win_logs.impression_ip_address is infrastructure/CDN IP, not user.
 - `first_touch_ad_served_id` always points to a Stage 1 impression (by definition: `funnel_level=1, objective_id=1`). `ad_served_id` (last touch) can point to Stage 1, 2, or 3.
@@ -590,7 +590,7 @@ Additional validations:
 - win_logs.impression_ip_address: infrastructure/CDN IP (68.67.x.x MNTN infra, AWS IPs), NOT user IP
 - win_logs uses Beeswax IDs (not MNTN IDs). Join to event_log via `win_logs.auction_id = event_log.td_impression_id`.
 
-**Cross-stage link:** `next_stage.bid_ip ≈ prev_stage.vast_ip` (CGNAT may cause /24 variation in ~1%).
+**Cross-stage link:** `next_stage.bid_ip ≈ prev_stage.vast_start_ip OR prev_stage.vast_impression_ip` (either/or join, ~1.2% differ — CGNAT/SSAI/IPv6/VPN). IP is the ONLY cross-stage link. first_touch_ad_served_id links S3/S2→S1 directly (skips S2) but only 25-51% available.
 
 ### IP Mutation Key Findings (TI-650)
 - **100% of mutation occurs at the VAST→redirect boundary** (Stage 3, CIL→EL or EL→redirect)
