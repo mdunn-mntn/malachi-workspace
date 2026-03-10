@@ -663,11 +663,15 @@ bridge the gap. The ~40% cross-stage coverage from cp_ft is the ceiling with cur
 Each stage can be up to 30 days apart. IP mutation BETWEEN stages is expected.
 IP mutation WITHIN a stage (Stage 3's internal Bid→CIL→EL→Redirect→Visit chain) is the audit subject.
 
-Stage 3 VV production audit table: `audit.stage3_vv_ip_lineage`
-- Partitioned by `trace_date`, clustered by `advertiser_id`
-- Requires 30-day event_log lookback for reliable join coverage
+Stage 3 VV production audit table: `audit.vv_ip_lineage` (renamed from stage3_vv_ip_lineage)
+- All stages (S1/S2/S3), partitioned by `trace_date`, clustered by `advertiser_id` + `vv_stage`
+- v8 architecture: 7-tier S1 resolution (VV chain → impression chain → visit IP → cp_ft fallback)
+- 180-day event_log lookback (was 30/90 — S3→S1 chains can span 104+ days)
+- s1_imp_pool: earliest S1 impression per bid_ip (ORDER BY time ASC, not DESC — temporal bug fix)
+- **S1 coverage: S1 100%, S2 87.2%, S3 89.1%** (adv 37775, 7-day trace)
+- **~11% ceiling is structural**: unresolved VVs entered S3 segment via non-IP identity resolution (CRM/ipdsc, cross-device graph). No IP breadcrumbs in event logs.
+- impression_ip (from ui_visits) differs from bid_ip for 5.3% of S3 VVs. Does NOT rescue new cases — re-attributes from cp_ft fallback.
 - A4b dedup: fixed (dedup bug found and corrected during audit)
-- BQ silver data gap: 2026-01-31+ has incomplete data (coreDW deprecation transition)
 
 ---
 
