@@ -1,31 +1,37 @@
 --------------------------------------------------------------------------------
--- VV IP LINEAGE — PRODUCTION QUERIES (v7, impression-chain + VV chain + cp_ft fallback)
+-- VV IP LINEAGE — PRODUCTION QUERIES (v8, impression-chain + visit-ip + VV chain + cp_ft)
 --------------------------------------------------------------------------------
 --
 -- Table: {dataset}.vv_ip_lineage
 -- One row per verified visit across all advertisers, all stages.
 -- Full IP audit trail: bid -> VAST -> redirect -> visit,
--- linked to Stage 1 via 4-tier resolution (VV chain → impression chain → fallback).
+-- linked to Stage 1 via 7-tier resolution (VV chain → impression chain → visit IP → fallback).
 --
 -- 30 columns (was 29 in v5 — added s1_resolution_method).
 --
 -- QUERIES IN THIS FILE:
 --   Q1: CREATE TABLE (reference — SQLMesh creates the table automatically)
 --   Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
---   Q3b: SELECT preview — v7 (TEMP TABLEs + impression-chain + VV chain + cp_ft)
+--   Q3b: SELECT preview — v8 (TEMP TABLEs + impression-chain + visit IP + VV chain + cp_ft)
 --   Q4: Advertiser summary (stage-aware, runs on populated table)
 --
--- v7 ARCHITECTURE:
+-- v8 ARCHITECTURE:
 --   Within-stage: ad_served_id links VV ↔ impression deterministically (no IP join).
 --   Cross-stage: bid_ip links to prior-stage event (VV or impression) that put IP
 --   into the current stage's segment. IP is the targeting key, not an observed mutation.
 --   The table SHOWS mutations; it doesn't JOIN on them within a stage.
+--   NEW in v8: impression_ip from ui_visits as fallback when bid_ip fails S1 lookup.
+--   impression_ip = IP when pixel fires on advertiser site, may differ from bid_ip
+--   for mobile/CGNAT users. Rescues ~3.7% of previously unresolved S3 VVs.
 --
--- S1 RESOLUTION (4 tiers):
---   1. current_is_s1:  vv_stage=1 → current impression IS S1
---   2. vv_chain:       prior VV at bid_ip → ad_served_id → impression → S1 VV chain
---   3. imp_chain:      S1 impression at prior VV's bid_ip (no VV needed) (NEW in v7)
---   4. cp_ft_fallback: clickpass.first_touch_ad_served_id → impression lookup
+-- S1 RESOLUTION (7 tiers):
+--   1. current_is_s1:    vv_stage=1 → current impression IS S1
+--   2. vv_chain_direct:  prior VV at bid_ip is S1
+--   3. vv_chain_s2_s1:   prior VV at bid_ip is S2, whose prior VV is S1
+--   4. imp_chain:        S1 impression at prior VV's bid_ip (no VV needed) (v7)
+--   5. imp_direct:       S1 impression at current VV's bid_ip (v7)
+--   6. imp_visit_ip:     S1 impression at ui_visits.impression_ip (NEW in v8)
+--   7. cp_ft_fallback:   clickpass.first_touch_ad_served_id → impression lookup
 --
 -- DATA SOURCES:
 --   clickpass_log        — anchor VVs (target interval) + prior VV pool (180-day)
@@ -101,7 +107,7 @@ CLUSTER BY advertiser_id, vv_stage;
 ================================================================================
 == Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
 ================================================================================
--- v7: impression-chain + VV chain + cp_ft fallback
+-- v8: impression-chain + visit-ip + VV chain + cp_ft fallback
 -- Replace date parameters before running:
 --   Trace range:  '2026-02-04' to '2026-02-10'
 --   EL lookback:  '2025-08-06'  (trace_start - 180 days)
@@ -183,7 +189,7 @@ with_all_joins AS (
         cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
         cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
 
-        -- S1 ad_served_id: 4-tier resolution
+        -- S1 ad_served_id: 7-tier resolution
         CASE
             WHEN cp.vv_stage = 1 THEN cp.ad_served_id
             WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
@@ -192,6 +198,7 @@ with_all_joins AS (
                 THEN COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
             WHEN s1_imp_chain.ad_served_id IS NOT NULL THEN s1_imp_chain.ad_served_id
             WHEN s1_imp_direct.ad_served_id IS NOT NULL THEN s1_imp_direct.ad_served_id
+            WHEN s1_imp_visit_ip.ad_served_id IS NOT NULL THEN s1_imp_visit_ip.ad_served_id
             ELSE cp.first_touch_ad_served_id
         END AS s1_ad_served_id,
         CASE
@@ -200,6 +207,7 @@ with_all_joins AS (
             WHEN s1_lt.bid_ip IS NOT NULL THEN s1_lt.bid_ip
             WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
             WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
+            WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN s1_imp_visit_ip.bid_ip
             ELSE ft_lt.bid_ip
         END AS s1_bid_ip,
         CASE
@@ -208,6 +216,7 @@ with_all_joins AS (
             WHEN s1_lt.vast_ip IS NOT NULL THEN s1_lt.vast_ip
             WHEN s1_imp_chain.vast_ip IS NOT NULL THEN s1_imp_chain.vast_ip
             WHEN s1_imp_direct.vast_ip IS NOT NULL THEN s1_imp_direct.vast_ip
+            WHEN s1_imp_visit_ip.vast_ip IS NOT NULL THEN s1_imp_visit_ip.vast_ip
             ELSE ft_lt.vast_ip
         END AS s1_vast_ip,
         CASE
@@ -217,6 +226,7 @@ with_all_joins AS (
                 THEN 'vv_chain_s2_s1'
             WHEN s1_imp_chain.bid_ip IS NOT NULL THEN 'imp_chain'
             WHEN s1_imp_direct.bid_ip IS NOT NULL THEN 'imp_direct'
+            WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN 'imp_visit_ip'
             WHEN ft_lt.bid_ip IS NOT NULL THEN 'cp_ft_fallback'
             ELSE NULL
         END AS s1_resolution_method,
@@ -293,6 +303,12 @@ with_all_joins AS (
         ON s1_imp_direct.bid_ip = lt.bid_ip
         AND s1_imp_direct.time < cp.time
 
+    -- S1 impression via visit IP (NEW in v8) — fallback when bid_ip has no S1
+    LEFT JOIN s1_imp_pool s1_imp_visit_ip
+        ON s1_imp_visit_ip.bid_ip = v.impression_ip
+        AND v.impression_ip != lt.bid_ip
+        AND s1_imp_visit_ip.time < cp.time
+
     LEFT JOIN impression_pool ft_lt
         ON ft_lt.ad_served_id = cp.first_touch_ad_served_id
         AND ft_lt.rn = 1
@@ -310,10 +326,10 @@ FROM with_all_joins
 WHERE _pv_rn = 1;
 
 ================================================================================
-== Q3b: SELECT preview — v7 (impression-chain + VV chain + cp_ft fallback)
+== Q3b: SELECT preview — v8 (impression-chain + visit-ip + VV chain + cp_ft)
 ================================================================================
--- v7 ARCHITECTURE — deterministic ad_served_id linking within stages,
--- impression-chain lookup across stages when VV chain fails.
+-- v8 ARCHITECTURE — deterministic ad_served_id linking within stages,
+-- impression-chain + visit IP lookup across stages when VV chain fails.
 --
 -- KEY INSIGHT (from manual NULL trace):
 --   Within a stage, ad_served_id deterministically links:
@@ -322,6 +338,9 @@ WHERE _pv_rn = 1;
 --   But v5 only looked for prior VVs at bid_ip. v7 also looks for prior
 --   IMPRESSIONS at bid_ip — capturing cases where S1 impression exists but
 --   no S1 VV happened (common: S2 entry requires S1 impression, not S1 VV).
+--   v8 adds impression_ip from ui_visits — the IP when pixel fires on the
+--   advertiser's site. For mobile/CGNAT users, this may differ from bid_ip
+--   and map to an S1 impression that bid_ip doesn't. Rescues ~3.7% of S3 VVs.
 --
 -- TRACED EXAMPLE (S3 VV 373173f8, 5 IPs in same /24):
 --   S1 imp (4c9828ab): bid=.81 vast=.56   ← 2025-10-24
@@ -331,11 +350,14 @@ WHERE _pv_rn = 1;
 --   S3 VV  (373173f8): redir=.50          ← 2026-02-05
 --   All linked by ad_served_id within stage; bid_ip used only for cross-stage.
 --
--- S1 RESOLUTION ORDER (4 tiers):
---   1. current_is_s1: vv_stage=1, so current impression IS S1
---   2. vv_chain: prior VV at bid_ip → its impression → S1 VV at that bid_ip
---   3. imp_chain: S1 impression directly at current/prior bid_ip (NEW in v7)
---   4. cp_ft_fallback: clickpass.first_touch_ad_served_id → impression lookup
+-- S1 RESOLUTION ORDER (7 tiers):
+--   1. current_is_s1:    vv_stage=1, so current impression IS S1
+--   2. vv_chain_direct:  prior VV at bid_ip is S1
+--   3. vv_chain_s2_s1:   prior VV at bid_ip is S2, whose prior VV is S1
+--   4. imp_chain:        S1 impression at prior VV's bid_ip (v7)
+--   5. imp_direct:       S1 impression at current VV's bid_ip (v7)
+--   6. imp_visit_ip:     S1 impression at ui_visits.impression_ip (NEW in v8)
+--   7. cp_ft_fallback:   clickpass.first_touch_ad_served_id → impression lookup
 --
 -- LOOKBACK: 180 days (was 90). S3→S2→S1 chains can span 100+ days empirically.
 --   Our traced example: S1 imp was 104 days before S3 VV (outside 90-day window).
@@ -449,7 +471,7 @@ with_all_joins AS (
         cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
         cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
 
-        -- S1 ad_served_id: 4-tier resolution
+        -- S1 ad_served_id: 7-tier resolution
         CASE
             WHEN cp.vv_stage = 1 THEN cp.ad_served_id
             WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
@@ -458,27 +480,30 @@ with_all_joins AS (
                 THEN COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
             WHEN s1_imp_chain.ad_served_id IS NOT NULL THEN s1_imp_chain.ad_served_id
             WHEN s1_imp_direct.ad_served_id IS NOT NULL THEN s1_imp_direct.ad_served_id
+            WHEN s1_imp_visit_ip.ad_served_id IS NOT NULL THEN s1_imp_visit_ip.ad_served_id
             ELSE cp.first_touch_ad_served_id
         END AS s1_ad_served_id,
-        -- S1 bid_ip: 4-tier resolution
+        -- S1 bid_ip: 7-tier resolution
         CASE
             WHEN cp.vv_stage = 1 THEN lt.bid_ip
             WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
             WHEN s1_lt.bid_ip IS NOT NULL THEN s1_lt.bid_ip
             WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
             WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
+            WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN s1_imp_visit_ip.bid_ip
             ELSE ft_lt.bid_ip
         END AS s1_bid_ip,
-        -- S1 vast_ip: 4-tier resolution
+        -- S1 vast_ip: 7-tier resolution
         CASE
             WHEN cp.vv_stage = 1 THEN lt.vast_ip
             WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.vast_ip
             WHEN s1_lt.vast_ip IS NOT NULL THEN s1_lt.vast_ip
             WHEN s1_imp_chain.vast_ip IS NOT NULL THEN s1_imp_chain.vast_ip
             WHEN s1_imp_direct.vast_ip IS NOT NULL THEN s1_imp_direct.vast_ip
+            WHEN s1_imp_visit_ip.vast_ip IS NOT NULL THEN s1_imp_visit_ip.vast_ip
             ELSE ft_lt.vast_ip
         END AS s1_vast_ip,
-        -- S1 resolution method (NEW in v7) — which tier resolved S1
+        -- S1 resolution method — which tier resolved S1
         CASE
             WHEN cp.vv_stage = 1 THEN 'current_is_s1'
             WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1 THEN 'vv_chain_direct'
@@ -486,6 +511,7 @@ with_all_joins AS (
                 THEN 'vv_chain_s2_s1'
             WHEN s1_imp_chain.bid_ip IS NOT NULL THEN 'imp_chain'
             WHEN s1_imp_direct.bid_ip IS NOT NULL THEN 'imp_direct'
+            WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN 'imp_visit_ip'
             WHEN ft_lt.bid_ip IS NOT NULL THEN 'cp_ft_fallback'
             ELSE NULL
         END AS s1_resolution_method,
@@ -566,11 +592,19 @@ with_all_joins AS (
         ON s1_imp_chain.bid_ip = pv_lt.bid_ip
         AND s1_imp_chain.time < COALESCE(pv_bid.prior_vv_time, pv_redir.prior_vv_time)
 
-    -- S1 impression direct: find S1 impression at current VV's bid_ip (NEW in v7)
+    -- S1 impression direct: find S1 impression at current VV's bid_ip (v7)
     -- When no prior VV found at all, check if S1 impression exists at this bid_ip
     LEFT JOIN s1_imp_pool s1_imp_direct
         ON s1_imp_direct.bid_ip = lt.bid_ip
         AND s1_imp_direct.time < cp.time
+
+    -- S1 impression via visit IP (NEW in v8) — fallback when bid_ip has no S1
+    -- impression_ip from ui_visits = IP when pixel fires on advertiser site.
+    -- For mobile/CGNAT users, this may differ from bid_ip and map to an S1 impression.
+    LEFT JOIN s1_imp_pool s1_imp_visit_ip
+        ON s1_imp_visit_ip.bid_ip = v.impression_ip
+        AND v.impression_ip != lt.bid_ip
+        AND s1_imp_visit_ip.time < cp.time
 
     -- cp_ft fallback: when all chains fail, use clickpass first_touch_ad_served_id
     LEFT JOIN impression_pool ft_lt
