@@ -165,6 +165,12 @@ deterministic last-touch or last-tv-touch attribution.
 - clickpass_log.guid matches event_log.guid ~60% (different context — impression vs visit).
 - `original_guid` (clickpass_log only) = pre-reattribution guid. Differs from guid in ~16% of VVs.
 - `page_view_guid` (clickpass_log only) = GUID from page view signal.
+- **guid as S1 resolution key (v11):** ~18-23% of previously unresolved S2/S3 VVs can be linked to an S1 VV via matching guid (same user at different IP). Additional ~7-9% can be linked to an S1 impression via guid. guid-based tiers are the highest-impact new resolution paths after IP-based methods.
+
+### viewability_log and VV IP lineage
+- viewability_log has ad_served_id, ip, bid_ip, guid, campaign_id, time — same schema as CIL for IP purposes.
+- **Not useful for S1 resolution:** For advertiser 37775, zero S1 impressions exist in viewability_log. CIL already covers display impressions comprehensively.
+- Zach suggested investigating it for display viewable inventory IPs, but empirical check shows no incremental coverage.
 
 ### pa_model_id
 Probabilistic attribution model ID. Present in visit_facts, conversion_facts, visits, ui_visits.

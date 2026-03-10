@@ -76,11 +76,11 @@ trace_date, trace_run_timestamp
 
 **NULL semantics:** Stage-based NULLs: S1 VVs have s2 and s3 columns NULL. S2 VVs have s3 columns NULL. S3 VVs have all stages populated. NULLs in the cross-stage link when the chain DOES exist = structural (~11% unresolved — no IP lineage path exists).
 
-### Current state: v10 (validated 2026-03-10)
+### Current state: v11 (validated 2026-03-10)
 
-v10 Q3 validated against BQ (advertiser 37775, 7-day trace): 100 rows, stage distribution 52/27/21 (S1/S2/S3). All new columns (win_ip, impression_time) populated correctly. win_ip = bid_ip 100% as expected. S1 resolution working across all 7 tiers.
+v11 extends v10 with 3 new S1 resolution tiers (guid_vv_match, guid_imp_match, s1_imp_redirect). Validated against BQ for advertiser 37775, 7-day trace. New tiers collectively rescue ~6pp of previously unresolved S2/S3 VVs.
 
-### S1 resolution via 7-tier CASE (v10 — current)
+### S1 resolution via 10-tier CASE (v11 — current)
 1. `current_is_s1`: vv_stage=1, current impression IS S1
 2. `vv_chain_direct`: prior VV IS S1 (merged vast pool match_ip)
 3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain
@@ -88,31 +88,39 @@ v10 Q3 validated against BQ (advertiser 37775, 7-day trace): 100 rows, stage dis
 5. `imp_direct`: S1 impression at current VV's bid_ip
 6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip
 7. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
+8. `guid_vv_match`: S1 VV with same guid (same user, different IP)
+9. `guid_imp_match`: S1 impression with same guid (same user, different IP)
+10. `s1_imp_redirect`: S1 impression at current VV's redirect_ip (cross-device)
 
 ### Key design decisions
 - **90-day lookback:** Zach confirmed max window = 88 days (14-day VV window per stage + 30-day segment TTL: 14+30+14+30). Was 180 in v8.
 - **s1_imp_pool** uses earliest S1 impression per bid_ip (ORDER BY time ASC).
 - **impression_ip investigation:** 5.3% of S3 VVs have impression_ip != bid_ip. For unresolved cases (no S1 at bid_ip), impression_ip rescues 22.9% (348/1,522 in 1-day CIL-only test = +3.7% of total).
-- **S1 coverage (adv 37775, 7-day trace, v8):**
-  - S1: 100.0% | S2: 87.2% (was 38.5%) | S3: 89.1% (was 41.0%)
-  - imp_visit_ip tier adds 0 incremental coverage — re-attributes ~175 cases from cp_ft to a cleaner path (pixel IP → S1 impression). Kept for audit trail clarity.
-- **Remaining unresolved (~11% ceiling — structural, not a bug):**
-  - 91% of unresolved have NO S1 impression at bid_ip at any time in 180 days.
-  - Root causes: non-IP identity resolution put the IP into the S3 segment (CRM email→IP via ipdsc, cross-device graph, segment update paths not observable in impression logs).
-  - These VVs are **fundamentally untraceable via IP lineage** — the entry path doesn't leave IP breadcrumbs.
+- **S1 coverage (adv 37775, 7-day trace, v11):**
+  - S1: 100.0% | S2: 76.6% | S3: 80.3%
+  - New tiers 8-10 (guid_vv, guid_imp, s1_imp_redirect) rescue ~6pp of previously unresolved.
+  - Base tier regression from v10 merged vast pool refactor needs investigation.
+- **Remaining unresolved (~20%):**
+  - Root causes: non-IP identity resolution put the IP into the segment (CRM email→IP via ipdsc, cross-device graph, segment update paths not observable in impression logs).
+  - guid-based tiers capture cross-device cases where same user had S1 on a different IP.
+  - Remaining unresolved likely have no S1 impression or VV at ANY related key (bid_ip, guid, redirect_ip).
 - **Prior VV match** on vast_ip (primary) OR redirect_ip (fallback). Split OR → two hash joins (92% slot reduction).
 - **Prior VV stage logic:** `pv_stage < vv_stage` (strict). Max chain: S3 → S2 → S1.
 - **All VV stages as anchor rows.** S1-only, S2→S1, S3→S2→S1 chains all present.
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
 
-### S1 chain coverage (v8, advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10)
-| Stage | Total | Resolved | % | vv_direct | vv_s2_s1 | imp_chain | imp_direct | imp_visit_ip | cp_ft | unresolved |
-|-------|-------|----------|---|-----------|----------|-----------|------------|-------------|-------|------------|
-| S1 | 102,581 | 102,581 | 100.0% | — | — | — | — | — | — | 0 |
-| S2 | 52,575 | 45,868 | 87.2% | 12,021 | 0 | 0 | 33,743 | 102 | 2 | 6,707 |
-| S3 | 64,371 | 57,353 | 89.1% | 16,470 | 4,414 | 21,714 | 14,679 | 75 | 1 | 7,018 |
+### S1 chain coverage (v11, advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10)
+| Stage | Total | Resolved | % | vv_direct | vv_s2_s1 | imp_chain | imp_direct | imp_visit | cp_ft | guid_vv | guid_imp | imp_redir | unresolved |
+|-------|-------|----------|---|-----------|----------|-----------|------------|-----------|-------|---------|----------|-----------|------------|
+| S1 | 102,581 | 102,581 | 100.0% | — | — | — | — | — | — | — | — | — | 0 |
+| S2 | 52,575 | 40,248 | 76.6% | 26,445 | 0 | 0 | 10,498 | 332 | 4 | 2,292 | 353 | 324 | 12,327 |
+| S3 | 64,371 | 51,689 | 80.3% | 22,558 | 17,354 | 4,958 | 2,003 | 516 | 4 | 3,357 | 479 | 489 | 12,653 |
 
-Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP identity resolution (CRM/ipdsc, cross-device graph). No IP-based lineage path exists.
+New tiers (8-10) rescued: S2=2,969 (+5.6pp), S3=4,325 (+6.7pp).
+
+**Note:** v11 base tiers (1-7) show regression vs earlier v8 run (S2: 87.2% → 70.9% before new tiers, S3: 89.1% → 73.6%). Root cause: v10 merged vast pool refactor redistributed resolution — vv_direct gained ~14k while imp_direct lost ~23k. Data is all available (CIL data confirmed from 2025-11-06). Needs investigation in a future session.
+
+Remaining ~20% unresolved are likely CRM/cross-device graph entries where the IP entered the segment via non-IP identity resolution — no IP-based lineage path exists.
 
 ### Cost
 - Daily incremental: ~$29/day on-demand (~4.7 TB scan — event_log + cost_impression_log)
@@ -207,8 +215,8 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ### 5.1 Remaining TODOs (from Zach meeting 4)
 1. ~~**attribution_id**~~ — DONE (v10.1). Added `vv_attribution_model_id` (clickpass_log.attribution_model_id) and `s2_attribution_model_id` (prior VV's model). No `attribution_id` column exists — `attribution_model_id` is the correct field. 6 distinct values (1,2,3,9,10,11).
 2. ~~**GUID**~~ — DONE (v10.1). Added `vv_guid`, `vv_original_guid` (clickpass), `s3_guid`, `s2_guid`, `s1_guid` (impression-side guid from event_log/CIL). guid = user/device cookie persisting across VVs. original_guid differs in 16% (reattributed).
-3. **0% unresolved target** — Zach: "there is absolutely no reason why we cannot trace it all the way back." Currently ~11%. Need new resolution tiers.
-4. **Display viewability_log IPs** — Zach mentioned viewability_log for viewable display inventory. Need to investigate.
+3. ~~**0% unresolved target**~~ — PARTIALLY DONE (v11). Added 3 new tiers: `guid_vv_match` (S1 VV via same guid), `guid_imp_match` (S1 impression via same guid), `s1_imp_redirect` (S1 impression at redirect_ip). Rescues ~6pp of unresolved. Remaining ~20% still unresolved — likely CRM/cross-device graph entries with no IP-based lineage. Zach: "there should be a 0% where we don't know what happened." **Open:** v10 merged vast pool regression needs investigation (base tiers dropped from v8: S2 87.2%→70.9%, S3 89.1%→73.6%).
+4. ~~**Display viewability_log IPs**~~ — INVESTIGATED (v11). viewability_log has zero S1 impressions for advertiser 37775 — no incremental coverage from this source. Schema has ad_served_id, ip, bid_ip, guid, campaign_id, time. Not useful for S1 resolution for this advertiser.
 
 ### 5.2 Deployment (unchanged from v8)
 - **Confirm dataset name with Dustin** — `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`

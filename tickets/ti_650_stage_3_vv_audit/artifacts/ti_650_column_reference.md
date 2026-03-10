@@ -133,11 +133,26 @@ For S2/S3 VVs: resolved via chain traversal (~89% populated; ~11% structural cei
 | `s1_serve_ip` | STRING | `impression_log.ip` via S1 `ad_served_id` | S1 impression serve request IP. |
 | `s1_bid_ip` | STRING | `event_log.bid_ip` or `CIL.ip` | S1 impression bid IP — the original targeting identity. **End of the chain.** |
 | `s1_win_ip` | STRING | `event_log.bid_ip` | = bid_ip today. Future-proofing for Mountain Bidder SSP. |
-| `s1_ad_served_id` | STRING | 7-tier chain traversal | S1 impression ID. ~89% populated for S2/S3 (structural ceiling). For S1 VVs: = ad_served_id. |
+| `s1_ad_served_id` | STRING | 10-tier chain traversal | S1 impression ID. For S1 VVs: = ad_served_id. |
 | `s1_impression_time` | TIMESTAMP | `impression_pool.time` | When the S1 impression was served. |
-| `s1_guid` | STRING | `event_log.guid` or `CIL.guid` | Impression-side guid for the S1 impression. Resolved via same 7-tier chain as s1_bid_ip. |
-| `s1_resolution_method` | STRING | CASE expression | Which tier resolved S1: `current_is_s1`, `vv_chain_direct`, `vv_chain_s2_s1`, `imp_chain`, `imp_direct`, `imp_visit_ip`, `cp_ft_fallback`. NULL = unresolved. |
+| `s1_guid` | STRING | `event_log.guid` or `CIL.guid` | Impression-side guid for the S1 impression. Resolved via same 10-tier chain as s1_bid_ip. |
+| `s1_resolution_method` | STRING | CASE expression | Which tier resolved S1. 10 tiers: `current_is_s1`, `vv_chain_direct`, `vv_chain_s2_s1`, `imp_chain`, `imp_direct`, `imp_visit_ip`, `cp_ft_fallback`, `guid_vv_match`, `guid_imp_match`, `s1_imp_redirect`. NULL = unresolved. See tier definitions below. |
 | `cp_ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | System-recorded S1 shortcut. NULL ~40%. Retained as comparison reference. |
+
+### S1 Resolution Tier Definitions (v11)
+
+| Tier | Value | Join Logic | Description |
+|------|-------|-----------|-------------|
+| 1 | `current_is_s1` | `vv_stage = 1` | VV itself is S1. Impression IS the S1 impression. |
+| 2 | `vv_chain_direct` | `pv_pool_vast/redir.pv_stage = 1` | Prior VV (via IP match) is S1. One hop. |
+| 3 | `vv_chain_s2_s1` | Two-hop: prior VV is S2, whose prior VV is S1 | S3 → S2 → S1 VV chain. Two hops. |
+| 4 | `imp_chain` | `s1_imp_pool.bid_ip = pv_lt.bid_ip` | S1 impression at prior VV's bid_ip (no S1 VV, but S1 ad served). |
+| 5 | `imp_direct` | `s1_imp_pool.bid_ip = lt.bid_ip` | S1 impression at current VV's bid_ip. |
+| 6 | `imp_visit_ip` | `s1_imp_pool.bid_ip = v.impression_ip` | S1 impression at ui_visits.impression_ip (pixel-side). |
+| 7 | `cp_ft_fallback` | `impression_pool ON cp.first_touch_ad_served_id` | Clickpass first_touch_ad_served_id → impression lookup. |
+| 8 | `guid_vv_match` | `s1_vv_guid.guid = cp.guid` | S1 VV with same guid (same user, different IP). |
+| 9 | `guid_imp_match` | `s1_imp_guid.guid = cp.guid` | S1 impression with same guid (same user, different IP). |
+| 10 | `s1_imp_redirect` | `s1_imp_pool.bid_ip = cp.redirect_ip` | S1 impression at current VV's redirect_ip (cross-device). |
 
 ---
 
