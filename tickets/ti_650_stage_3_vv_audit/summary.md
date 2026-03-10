@@ -44,18 +44,24 @@ ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
 -- VV visit IPs (this VV's visit event)
 visit_ip, impression_ip, redirect_ip
 
--- S3 impression IPs (this VV's impression, linked via ad_served_id)
-s3_vast_ip, s3_bid_ip
+-- This VV's impression IPs (linked via ad_served_id — within-stage, deterministic)
+lt_vast_ip,                     -- event_log.ip (VAST playback IP — enters next segment)
+lt_serve_ip,                    -- impression_log.ip (serve request IP — 93.6% = bid_ip, 6.4% infra)
+lt_bid_ip,                      -- event_log.bid_ip (targeting identity = segment = win)
 
--- Cross-stage link: s3_bid_ip should ≈ s2_vast_ip (CGNAT may cause /24 variation)
--- S2 impression IPs (prior VV's impression, linked via ad_served_id)
-s2_vast_ip, s2_bid_ip
+-- Cross-stage link: lt_bid_ip should ≈ pv_vast_ip (CGNAT may cause /24 variation)
+-- Prior VV impression IPs (linked via ad_served_id on prior VV)
+pv_vast_ip,                     -- prior VV's VAST IP
+pv_serve_ip,                    -- prior VV's serve IP
+pv_bid_ip,                      -- prior VV's bid IP
 -- Prior VV metadata
-prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage
+prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip
 
--- Cross-stage link: s2_bid_ip should ≈ s1_vast_ip (CGNAT may cause /24 variation)
+-- Cross-stage link: pv_bid_ip should ≈ s1_vast_ip (CGNAT may cause /24 variation)
 -- S1 impression IPs (chain-traversed or cp_ft fallback)
-s1_vast_ip, s1_bid_ip
+s1_vast_ip,                     -- S1 VAST IP
+s1_serve_ip,                    -- S1 serve IP
+s1_bid_ip,                      -- S1 bid IP — the original targeting identity
 s1_ad_served_id, s1_resolution_method, cp_ft_ad_served_id
 
 -- Classification
@@ -64,6 +70,8 @@ clickpass_is_new, visit_is_new, is_cross_device
 -- Metadata
 trace_date, trace_run_timestamp
 ```
+
+**Per-stage IPs (3 each):** vast_ip (VAST playback, cross-stage key), serve_ip (impression_log.ip, ad serve request), bid_ip (targeting identity = segment = win). Source: event_log via ad_served_id for vast_ip + bid_ip, impression_log via ad_served_id for serve_ip.
 
 **NULL semantics:** For S1 VVs, s2 and s3 columns are NULL (chain doesn't extend). For S2 VVs, s3 columns are NULL but s2 = this VV's impression, s1 = resolved. What is NOT okay: NULL in the cross-stage link when the chain exists. If the chain resolves, every link (s3_bid_ip → s2_vast_ip → s2_bid_ip → s1_vast_ip → s1_bid_ip) must be populated.
 
