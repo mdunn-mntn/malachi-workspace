@@ -1,5 +1,5 @@
 MODEL (
-  description 'One row per verified visit. Full IP audit trail with 5 IPs per stage + timestamps. Stage-based naming (s3/s2/s1). Cross-stage linking via merged vast_ip pool with redirect_ip fallback. S1 resolved via 7-tier chain traversal.',
+  description 'One row per verified visit. Full IP audit trail with 5 IPs per stage + timestamps. Stage-based naming (s3/s2/s1). Cross-stage linking via merged vast_ip pool with redirect_ip fallback. S1 resolved via 10-tier chain traversal.',
   owner 'targeting-infrastructure',
   tags ['ti', 'vv_lineage', 'mes'],
   kind INCREMENTAL_BY_TIME_RANGE (
@@ -22,7 +22,7 @@ MODEL (
 );
 
 /* =============================================================================
-   VV IP Lineage — Stage-Aware Attribution Trace (v10)
+   VV IP Lineage — Stage-Aware Attribution Trace (v11)
 
    One row per verified visit. Audit trail with 5 IPs per stage + timestamp:
      vast_start_ip      — event_log.ip (vast_start, fires AFTER vast_impression)
@@ -38,16 +38,10 @@ MODEL (
                     dedup'd by match_ip. Single hash join per cross-stage hop.
                     Redirect_ip separate pool for cross-device fallback.
 
-   PERFORMANCE (v10 vs v9):
-     - Merged pv_pool_vast replaces pv_pool_vs + pv_pool_vi (2 joins → 1, 8x → 4x fan-out)
-     - Eliminated s1_pool_vs/vi/redir (inline pv_stage=1 filter, -3 CTEs)
-     - CTE count: 9 (was 13). LEFT JOINs: 10 (was 14).
-     - Worst-case impression_pool CTE re-evaluations: ~6 (was ~9).
-
    LOOKBACK: 90 days. Zach confirmed max window = 88 days (14-day VV window per stage
      + 30-day segment TTL: 14+30+14+30 = 88).
 
-   S1 RESOLUTION (7 tiers):
+   S1 RESOLUTION (10 tiers):
      1. current_is_s1:    vv_stage=1 → current impression IS S1
      2. vv_chain_direct:  prior VV is S1
      3. vv_chain_s2_s1:   prior VV is S2, whose prior VV is S1
@@ -55,6 +49,9 @@ MODEL (
      5. imp_direct:       S1 impression at current VV's bid_ip
      6. imp_visit_ip:     S1 impression at ui_visits.impression_ip
      7. cp_ft_fallback:   clickpass.first_touch_ad_served_id → impression lookup
+     8. guid_vv_match:    S1 VV with same guid (same user, different IP)
+     9. guid_imp_match:   S1 impression with same guid (same user, different IP)
+    10. s1_imp_redirect:  S1 impression at current VV's redirect_ip (cross-device)
    ============================================================================= */
 
 WITH campaigns_stage AS (
@@ -207,6 +204,32 @@ WITH campaigns_stage AS (
   QUALIFY row_number() OVER (PARTITION BY ip.bid_ip ORDER BY ip.time) = 1
 )
 
+/* S1 impression pool dedup'd by guid — for guid_imp_match tier.
+   Same user/device cookie on a different IP → S1 impression exists but at another IP. */
+, s1_imp_guid AS (
+  SELECT ip.guid, ip.vast_start_ip, ip.vast_impression_ip, ip.bid_ip, ip.ad_served_id, ip.campaign_id, ip.time
+  FROM impression_pool ip
+  JOIN campaigns_stage cs ON cs.campaign_id = ip.campaign_id
+  WHERE cs.stage = 1 AND ip.rn = 1 AND ip.guid IS NOT NULL
+  QUALIFY row_number() OVER (PARTITION BY ip.guid ORDER BY ip.time) = 1
+)
+
+/* S1 VV pool dedup'd by guid — for guid_vv_match tier.
+   Same user had an S1 VV on a different IP → link to that VV's impression. */
+, s1_vv_guid AS (
+  SELECT cp.guid, cp.ad_served_id AS s1_vv_ad_served_id, cp.time AS s1_vv_time,
+         imp.vast_start_ip, imp.vast_impression_ip, imp.bid_ip, imp.ad_served_id AS s1_imp_ad_served_id,
+         imp.time AS s1_imp_time, imp.guid AS s1_imp_guid
+  FROM dw-main-silver.logdata.clickpass_log AS cp
+  JOIN campaigns_stage AS c ON c.campaign_id = cp.campaign_id AND c.stage = 1
+  LEFT JOIN impression_pool AS imp
+    ON imp.ad_served_id = cp.ad_served_id AND imp.rn = 1
+  WHERE
+    cp.time >= TIMESTAMP_SUB(@start_dt, INTERVAL 90 DAY)
+    AND cp.time < @end_dt
+  QUALIFY row_number() OVER (PARTITION BY cp.guid ORDER BY cp.time DESC) = 1
+)
+
 , with_all_joins AS (
   SELECT
     /* ── 1. VV Identity ── */
@@ -305,6 +328,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.ad_served_id IS NOT NULL THEN s1_imp_chain.ad_served_id
         WHEN s1_imp_direct.ad_served_id IS NOT NULL THEN s1_imp_direct.ad_served_id
         WHEN s1_imp_visit_ip.ad_served_id IS NOT NULL THEN s1_imp_visit_ip.ad_served_id
+        WHEN ft_lt.ad_served_id IS NOT NULL THEN cp.first_touch_ad_served_id
+        WHEN s1_guid_vv.s1_imp_ad_served_id IS NOT NULL THEN s1_guid_vv.s1_imp_ad_served_id
+        WHEN s1_guid_imp.ad_served_id IS NOT NULL THEN s1_guid_imp.ad_served_id
+        WHEN s1_imp_redir.ad_served_id IS NOT NULL THEN s1_imp_redir.ad_served_id
         ELSE cp.first_touch_ad_served_id
       END AS s1_ad_served_id
     , CASE
@@ -314,7 +341,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.vast_start_ip IS NOT NULL THEN s1_imp_chain.vast_start_ip
         WHEN s1_imp_direct.vast_start_ip IS NOT NULL THEN s1_imp_direct.vast_start_ip
         WHEN s1_imp_visit_ip.vast_start_ip IS NOT NULL THEN s1_imp_visit_ip.vast_start_ip
-        ELSE ft_lt.vast_start_ip
+        WHEN ft_lt.vast_start_ip IS NOT NULL THEN ft_lt.vast_start_ip
+        WHEN s1_guid_vv.vast_start_ip IS NOT NULL THEN s1_guid_vv.vast_start_ip
+        WHEN s1_guid_imp.vast_start_ip IS NOT NULL THEN s1_guid_imp.vast_start_ip
+        ELSE s1_imp_redir.vast_start_ip
       END AS s1_vast_start_ip
     , CASE
         WHEN cp.vv_stage = 1 THEN lt.vast_impression_ip
@@ -323,7 +353,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.vast_impression_ip IS NOT NULL THEN s1_imp_chain.vast_impression_ip
         WHEN s1_imp_direct.vast_impression_ip IS NOT NULL THEN s1_imp_direct.vast_impression_ip
         WHEN s1_imp_visit_ip.vast_impression_ip IS NOT NULL THEN s1_imp_visit_ip.vast_impression_ip
-        ELSE ft_lt.vast_impression_ip
+        WHEN ft_lt.vast_impression_ip IS NOT NULL THEN ft_lt.vast_impression_ip
+        WHEN s1_guid_vv.vast_impression_ip IS NOT NULL THEN s1_guid_vv.vast_impression_ip
+        WHEN s1_guid_imp.vast_impression_ip IS NOT NULL THEN s1_guid_imp.vast_impression_ip
+        ELSE s1_imp_redir.vast_impression_ip
       END AS s1_vast_impression_ip
     , CASE
         WHEN cp.vv_stage = 1 THEN lt.bid_ip
@@ -332,7 +365,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
         WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
         WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN s1_imp_visit_ip.bid_ip
-        ELSE ft_lt.bid_ip
+        WHEN ft_lt.bid_ip IS NOT NULL THEN ft_lt.bid_ip
+        WHEN s1_guid_vv.bid_ip IS NOT NULL THEN s1_guid_vv.bid_ip
+        WHEN s1_guid_imp.bid_ip IS NOT NULL THEN s1_guid_imp.bid_ip
+        ELSE s1_imp_redir.bid_ip
       END AS s1_serve_ip
     , CASE
         WHEN cp.vv_stage = 1 THEN lt.bid_ip
@@ -341,7 +377,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
         WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
         WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN s1_imp_visit_ip.bid_ip
-        ELSE ft_lt.bid_ip
+        WHEN ft_lt.bid_ip IS NOT NULL THEN ft_lt.bid_ip
+        WHEN s1_guid_vv.bid_ip IS NOT NULL THEN s1_guid_vv.bid_ip
+        WHEN s1_guid_imp.bid_ip IS NOT NULL THEN s1_guid_imp.bid_ip
+        ELSE s1_imp_redir.bid_ip
       END AS s1_bid_ip
     , CASE
         WHEN cp.vv_stage = 1 THEN lt.bid_ip
@@ -350,7 +389,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
         WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
         WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN s1_imp_visit_ip.bid_ip
-        ELSE ft_lt.bid_ip
+        WHEN ft_lt.bid_ip IS NOT NULL THEN ft_lt.bid_ip
+        WHEN s1_guid_vv.bid_ip IS NOT NULL THEN s1_guid_vv.bid_ip
+        WHEN s1_guid_imp.bid_ip IS NOT NULL THEN s1_guid_imp.bid_ip
+        ELSE s1_imp_redir.bid_ip
       END AS s1_win_ip
     , CASE
         WHEN cp.vv_stage = 1 THEN lt.time
@@ -359,7 +401,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.time IS NOT NULL THEN s1_imp_chain.time
         WHEN s1_imp_direct.time IS NOT NULL THEN s1_imp_direct.time
         WHEN s1_imp_visit_ip.time IS NOT NULL THEN s1_imp_visit_ip.time
-        ELSE ft_lt.time
+        WHEN ft_lt.time IS NOT NULL THEN ft_lt.time
+        WHEN s1_guid_vv.s1_imp_time IS NOT NULL THEN s1_guid_vv.s1_imp_time
+        WHEN s1_guid_imp.time IS NOT NULL THEN s1_guid_imp.time
+        ELSE s1_imp_redir.time
       END AS s1_impression_time
     , CASE
         WHEN cp.vv_stage = 1 THEN lt.guid
@@ -369,7 +414,10 @@ WITH campaigns_stage AS (
         WHEN s1_imp_chain.guid IS NOT NULL THEN s1_imp_chain.guid
         WHEN s1_imp_direct.guid IS NOT NULL THEN s1_imp_direct.guid
         WHEN s1_imp_visit_ip.guid IS NOT NULL THEN s1_imp_visit_ip.guid
-        ELSE ft_lt.guid
+        WHEN ft_lt.guid IS NOT NULL THEN ft_lt.guid
+        WHEN s1_guid_vv.s1_imp_guid IS NOT NULL THEN s1_guid_vv.s1_imp_guid
+        WHEN s1_guid_imp.guid IS NOT NULL THEN s1_guid_imp.guid
+        ELSE s1_imp_redir.guid
       END AS s1_guid
     , CASE
         WHEN cp.vv_stage = 1 THEN 'current_is_s1'
@@ -380,6 +428,9 @@ WITH campaigns_stage AS (
         WHEN s1_imp_direct.bid_ip IS NOT NULL THEN 'imp_direct'
         WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN 'imp_visit_ip'
         WHEN ft_lt.bid_ip IS NOT NULL THEN 'cp_ft_fallback'
+        WHEN s1_guid_vv.bid_ip IS NOT NULL THEN 'guid_vv_match'
+        WHEN s1_guid_imp.bid_ip IS NOT NULL THEN 'guid_imp_match'
+        WHEN s1_imp_redir.bid_ip IS NOT NULL THEN 's1_imp_redirect'
         ELSE NULL
       END AS s1_resolution_method
     , cp.first_touch_ad_served_id AS cp_ft_ad_served_id
@@ -480,6 +531,24 @@ WITH campaigns_stage AS (
   LEFT JOIN impression_pool AS ft_lt
     ON ft_lt.ad_served_id = cp.first_touch_ad_served_id
     AND ft_lt.rn = 1
+
+  /* ── guid_vv_match: S1 VV with same guid → its impression ── */
+  LEFT JOIN s1_vv_guid AS s1_guid_vv
+    ON s1_guid_vv.guid = cp.guid
+    AND s1_guid_vv.s1_vv_ad_served_id != cp.ad_served_id
+    AND s1_guid_vv.s1_vv_time < cp.time
+
+  /* ── guid_imp_match: S1 impression with same guid ── */
+  LEFT JOIN s1_imp_guid AS s1_guid_imp
+    ON s1_guid_imp.guid = cp.guid
+    AND s1_guid_imp.ad_served_id != cp.ad_served_id
+    AND s1_guid_imp.time < cp.time
+
+  /* ── s1_imp_redirect: S1 impression at redirect_ip ── */
+  LEFT JOIN s1_imp_pool AS s1_imp_redir
+    ON s1_imp_redir.bid_ip = cp.redirect_ip
+    AND cp.redirect_ip != lt.bid_ip
+    AND s1_imp_redir.time < cp.time
 )
 SELECT
   /* 1. Identity */
