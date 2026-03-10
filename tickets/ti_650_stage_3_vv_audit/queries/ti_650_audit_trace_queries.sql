@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     campaign_id           INT64,
     vv_stage              INT64,                    -- campaigns.funnel_level (1=S1, 2=S2, 3=S3)
     vv_time               TIMESTAMP     NOT NULL,
+    vv_guid               STRING,                   -- clickpass_log.guid (user/device cookie ID)
+    vv_original_guid      STRING,                   -- clickpass_log.original_guid (pre-reattribution guid)
+    vv_attribution_model_id INT64,                  -- clickpass_log.attribution_model_id
 
     -- 2. VV Visit IPs
     visit_ip              STRING,                   -- ui_visits.ip
@@ -75,6 +78,7 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     s3_bid_ip             STRING,                   -- event_log.bid_ip (= win_ip = segment_ip, 100%)
     s3_win_ip             STRING,                   -- = bid_ip today; Mountain Bidder SSP may differ
     s3_impression_time    TIMESTAMP,                -- when S3 impression was served
+    s3_guid               STRING,                   -- event_log.guid or CIL.guid for S3 impression
 
     -- 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs that skipped S2)
     s2_vast_start_ip      STRING,
@@ -87,6 +91,8 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     s2_impression_time    TIMESTAMP,
     s2_campaign_id        INT64,
     s2_redirect_ip        STRING,
+    s2_guid               STRING,                   -- impression-side guid for S2 impression
+    s2_attribution_model_id INT64,                  -- attribution model for S2 VV
 
     -- 5. S1 Impression IPs (always attempted — chain-traversed or self)
     s1_vast_start_ip      STRING,
@@ -96,6 +102,7 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     s1_win_ip             STRING,
     s1_ad_served_id       STRING,
     s1_impression_time    TIMESTAMP,
+    s1_guid               STRING,                   -- impression-side guid for S1 impression
     s1_resolution_method  STRING,                   -- current_is_s1 | vv_chain_direct | vv_chain_s2_s1 | imp_chain | imp_direct | imp_visit_ip | cp_ft_fallback
     cp_ft_ad_served_id    STRING,                   -- clickpass.first_touch_ad_served_id (comparison reference)
 
