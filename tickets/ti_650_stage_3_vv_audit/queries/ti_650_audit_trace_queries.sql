@@ -167,6 +167,7 @@ WITH el AS (
         , MAX(bid_ip) AS bid_ip
         , MAX(campaign_id) AS campaign_id
         , MIN(time) AS time
+        , MAX(guid) AS guid
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
       AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
@@ -184,11 +185,12 @@ cil AS (
         , ip AS bid_ip
         , campaign_id
         , time
+        , guid
     FROM `dw-main-silver.logdata.cost_impression_log`
     WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 37775
 )
-SELECT ad_served_id, vast_start_ip, vast_impression_ip, bid_ip, campaign_id, time,
+SELECT ad_served_id, vast_start_ip, vast_impression_ip, bid_ip, campaign_id, time, guid,
     ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) AS rn
 FROM (
     SELECT * FROM el
@@ -206,10 +208,13 @@ SELECT
     , cp.time AS prior_vv_time
     , c.funnel_level AS pv_stage
     , cp.ip AS pv_redirect_ip
+    , cp.guid AS pv_guid
+    , cp.attribution_model_id AS pv_attribution_model_id
     , imp.vast_start_ip AS pv_vast_start_ip
     , imp.vast_impression_ip AS pv_vast_impression_ip
     , imp.bid_ip AS pv_bid_ip
     , imp.time AS pv_imp_time
+    , imp.guid AS pv_imp_guid
 FROM `dw-main-silver.logdata.clickpass_log` cp
 LEFT JOIN `dw-main-bronze.integrationprod.campaigns` c
     ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
@@ -243,7 +248,7 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY pv_redirect_ip, pv_stage ORDER BY prior_
 
 -- Step 2d: S1 impression pool — S1 impressions dedup'd by bid_ip
 CREATE TEMP TABLE s1_imp_pool AS
-SELECT ip.vast_start_ip, ip.vast_impression_ip, ip.bid_ip, ip.ad_served_id, ip.campaign_id, ip.time
+SELECT ip.vast_start_ip, ip.vast_impression_ip, ip.bid_ip, ip.ad_served_id, ip.campaign_id, ip.time, ip.guid
 FROM impression_pool ip
 JOIN `dw-main-bronze.integrationprod.campaigns` c
     ON c.campaign_id = ip.campaign_id AND c.deleted = FALSE
@@ -260,7 +265,8 @@ WITH campaigns_stage AS (
 cp_dedup AS (
     SELECT cp.ad_served_id, cp.advertiser_id, cp.campaign_id,
         cp.ip AS redirect_ip, cp.is_new, cp.is_cross_device,
-        cp.first_touch_ad_served_id, cp.time, c.stage AS vv_stage
+        cp.first_touch_ad_served_id, cp.guid, cp.original_guid,
+        cp.attribution_model_id, cp.time, c.stage AS vv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
     WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
@@ -279,6 +285,8 @@ with_all_joins AS (
         /* ── 1. VV Identity ── */
         cp.ad_served_id, cp.advertiser_id, cp.campaign_id,
         cp.vv_stage, cp.time AS vv_time,
+        cp.guid AS vv_guid, cp.original_guid AS vv_original_guid,
+        cp.attribution_model_id AS vv_attribution_model_id,
 
         /* ── 2. VV Visit IPs ── */
         v.visit_ip, v.impression_ip, cp.redirect_ip,
@@ -290,6 +298,7 @@ with_all_joins AS (
         CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_bid_ip,
         CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_win_ip,  /* = bid_ip today; Mountain Bidder may differ */
         CASE WHEN cp.vv_stage = 3 THEN lt.time END AS s3_impression_time,
+        CASE WHEN cp.vv_stage = 3 THEN lt.guid END AS s3_guid,
 
         /* ── 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs with pv_stage=1) ── */
         CASE
@@ -342,6 +351,16 @@ with_all_joins AS (
             WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
               THEN COALESCE(pv_vast.pv_redirect_ip, pv_redir.pv_redirect_ip)
         END AS s2_redirect_ip,
+        CASE
+            WHEN cp.vv_stage = 2 THEN lt.guid
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN pv_lt.guid
+        END AS s2_guid,
+        CASE
+            WHEN cp.vv_stage = 2 THEN cp.attribution_model_id
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN COALESCE(pv_vast.pv_attribution_model_id, pv_redir.pv_attribution_model_id)
+        END AS s2_attribution_model_id,
 
         /* ── 5. S1 Impression IPs (chain-traversed, always attempted) ── */
         CASE
@@ -409,6 +428,16 @@ with_all_joins AS (
             WHEN s1_imp_visit_ip.time IS NOT NULL THEN s1_imp_visit_ip.time
             ELSE ft_lt.time
         END AS s1_impression_time,
+        CASE
+            WHEN cp.vv_stage = 1 THEN lt.guid
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1
+              THEN COALESCE(pv_vast.pv_imp_guid, pv_redir.pv_imp_guid)
+            WHEN s1_lt.guid IS NOT NULL THEN s1_lt.guid
+            WHEN s1_imp_chain.guid IS NOT NULL THEN s1_imp_chain.guid
+            WHEN s1_imp_direct.guid IS NOT NULL THEN s1_imp_direct.guid
+            WHEN s1_imp_visit_ip.guid IS NOT NULL THEN s1_imp_visit_ip.guid
+            ELSE ft_lt.guid
+        END AS s1_guid,
         CASE
             WHEN cp.vv_stage = 1 THEN 'current_is_s1'
             WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN 'vv_chain_direct'
@@ -518,22 +547,23 @@ with_all_joins AS (
 SELECT
     /* 1. Identity */
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
+    vv_guid, vv_original_guid, vv_attribution_model_id,
 
     /* 2. VV Visit IPs */
     visit_ip, impression_ip, redirect_ip,
 
     /* 3. S3 Impression (NULL for S1/S2 VVs) */
     s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip,
-    s3_win_ip, s3_impression_time,
+    s3_win_ip, s3_impression_time, s3_guid,
 
     /* 4. S2 Impression (NULL for S1 VVs, NULL for S3 VVs that skipped S2) */
     s2_vast_start_ip, s2_vast_impression_ip, s2_serve_ip, s2_bid_ip,
     s2_win_ip, s2_ad_served_id, s2_vv_time, s2_impression_time,
-    s2_campaign_id, s2_redirect_ip,
+    s2_campaign_id, s2_redirect_ip, s2_guid, s2_attribution_model_id,
 
     /* 5. S1 Impression (always attempted) */
     s1_vast_start_ip, s1_vast_impression_ip, s1_serve_ip, s1_bid_ip,
-    s1_win_ip, s1_ad_served_id, s1_impression_time,
+    s1_win_ip, s1_ad_served_id, s1_impression_time, s1_guid,
     s1_resolution_method, cp_ft_ad_served_id,
 
     /* 6. Classification */

@@ -76,6 +76,9 @@ WITH campaigns_stage AS (
     , cp.is_new
     , cp.is_cross_device
     , cp.first_touch_ad_served_id
+    , cp.guid
+    , cp.original_guid
+    , cp.attribution_model_id
     , cp.time
     , c.stage AS vv_stage
   FROM dw-main-silver.logdata.clickpass_log AS cp
@@ -90,7 +93,7 @@ WITH campaigns_stage AS (
    Display (CIL only): all IPs = CIL.ip (100% validated).
    serve_ip stubbed as bid_ip — 93.6% match, when differs = infrastructure 10.x.x.x. */
 , impression_pool AS (
-  SELECT ad_served_id, vast_start_ip, vast_impression_ip, bid_ip, campaign_id, time,
+  SELECT ad_served_id, vast_start_ip, vast_impression_ip, bid_ip, campaign_id, time, guid,
     ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) AS rn
   FROM (
     /* CTV: pivot vast_start + vast_impression into one row per ad_served_id */
@@ -101,6 +104,7 @@ WITH campaigns_stage AS (
       , MAX(bid_ip) AS bid_ip
       , MAX(campaign_id) AS campaign_id
       , MIN(time) AS time
+      , MAX(guid) AS guid
     FROM dw-main-silver.logdata.event_log
     WHERE
       event_type_raw IN ('vast_start', 'vast_impression')
@@ -116,6 +120,7 @@ WITH campaigns_stage AS (
       , ip AS bid_ip
       , campaign_id
       , time
+      , guid
     FROM dw-main-silver.logdata.cost_impression_log
     WHERE
       time >= TIMESTAMP_SUB(@start_dt, INTERVAL 90 DAY)
@@ -150,10 +155,13 @@ WITH campaigns_stage AS (
     , cp.time AS prior_vv_time
     , c.stage AS pv_stage
     , cp.ip AS pv_redirect_ip
+    , cp.guid AS pv_guid
+    , cp.attribution_model_id AS pv_attribution_model_id
     , imp.vast_start_ip AS pv_vast_start_ip
     , imp.vast_impression_ip AS pv_vast_impression_ip
     , imp.bid_ip AS pv_bid_ip
     , imp.time AS pv_imp_time
+    , imp.guid AS pv_imp_guid
   FROM dw-main-silver.logdata.clickpass_log AS cp
   LEFT JOIN campaigns_stage AS c ON c.campaign_id = cp.campaign_id
   LEFT JOIN impression_pool AS imp
@@ -192,7 +200,7 @@ WITH campaigns_stage AS (
 /* S1 impression pool — S1 impressions dedup'd by bid_ip.
    Covers cases where S1 impression exists but no S1 VV happened. */
 , s1_imp_pool AS (
-  SELECT ip.vast_start_ip, ip.vast_impression_ip, ip.bid_ip, ip.ad_served_id, ip.campaign_id, ip.time
+  SELECT ip.vast_start_ip, ip.vast_impression_ip, ip.bid_ip, ip.ad_served_id, ip.campaign_id, ip.time, ip.guid
   FROM impression_pool ip
   JOIN campaigns_stage cs ON cs.campaign_id = ip.campaign_id
   WHERE cs.stage = 1 AND ip.rn = 1
@@ -207,6 +215,9 @@ WITH campaigns_stage AS (
     , cp.campaign_id
     , cp.vv_stage
     , cp.time AS vv_time
+    , cp.guid AS vv_guid
+    , cp.original_guid AS vv_original_guid
+    , cp.attribution_model_id AS vv_attribution_model_id
 
     /* ── 2. VV Visit IPs ── */
     , v.visit_ip
@@ -220,6 +231,7 @@ WITH campaigns_stage AS (
     , CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_bid_ip
     , CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_win_ip  /* = bid_ip today; Mountain Bidder may differ */
     , CASE WHEN cp.vv_stage = 3 THEN lt.time END AS s3_impression_time
+    , CASE WHEN cp.vv_stage = 3 THEN lt.guid END AS s3_guid
 
     /* ── 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs with pv_stage=1) ── */
     , CASE
@@ -272,6 +284,16 @@ WITH campaigns_stage AS (
         WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
           THEN COALESCE(pv_vast.pv_redirect_ip, pv_redir.pv_redirect_ip)
       END AS s2_redirect_ip
+    , CASE
+        WHEN cp.vv_stage = 2 THEN lt.guid
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+          THEN pv_lt.guid
+      END AS s2_guid
+    , CASE
+        WHEN cp.vv_stage = 2 THEN cp.attribution_model_id
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+          THEN COALESCE(pv_vast.pv_attribution_model_id, pv_redir.pv_attribution_model_id)
+      END AS s2_attribution_model_id
 
     /* ── 5. S1 Impression IPs (chain-traversed, always attempted) ── */
     , CASE
@@ -339,6 +361,16 @@ WITH campaigns_stage AS (
         WHEN s1_imp_visit_ip.time IS NOT NULL THEN s1_imp_visit_ip.time
         ELSE ft_lt.time
       END AS s1_impression_time
+    , CASE
+        WHEN cp.vv_stage = 1 THEN lt.guid
+        WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1
+          THEN COALESCE(pv_vast.pv_imp_guid, pv_redir.pv_imp_guid)
+        WHEN s1_lt.guid IS NOT NULL THEN s1_lt.guid
+        WHEN s1_imp_chain.guid IS NOT NULL THEN s1_imp_chain.guid
+        WHEN s1_imp_direct.guid IS NOT NULL THEN s1_imp_direct.guid
+        WHEN s1_imp_visit_ip.guid IS NOT NULL THEN s1_imp_visit_ip.guid
+        ELSE ft_lt.guid
+      END AS s1_guid
     , CASE
         WHEN cp.vv_stage = 1 THEN 'current_is_s1'
         WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN 'vv_chain_direct'
@@ -456,6 +488,9 @@ SELECT
   , campaign_id
   , vv_stage
   , vv_time
+  , vv_guid
+  , vv_original_guid
+  , vv_attribution_model_id
 
   /* 2. VV Visit IPs */
   , visit_ip
@@ -469,6 +504,7 @@ SELECT
   , s3_bid_ip
   , s3_win_ip
   , s3_impression_time
+  , s3_guid
 
   /* 4. S2 Impression (NULL for S1 VVs, NULL for S3 VVs that skipped S2) */
   , s2_vast_start_ip
@@ -481,6 +517,8 @@ SELECT
   , s2_impression_time
   , s2_campaign_id
   , s2_redirect_ip
+  , s2_guid
+  , s2_attribution_model_id
 
   /* 5. S1 Impression (always attempted — chain-traversed or self) */
   , s1_vast_start_ip
@@ -490,6 +528,7 @@ SELECT
   , s1_win_ip
   , s1_ad_served_id
   , s1_impression_time
+  , s1_guid
   , s1_resolution_method
   , cp_ft_ad_served_id
 
