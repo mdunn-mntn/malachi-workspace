@@ -172,7 +172,7 @@ s1_imp_pool AS (
     FROM impression_pool ip
     JOIN campaigns_stage cs ON cs.campaign_id = ip.campaign_id
     WHERE cs.stage = 1 AND ip.rn = 1
-    QUALIFY ROW_NUMBER() OVER (PARTITION BY ip.bid_ip ORDER BY ip.time DESC) = 1
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ip.bid_ip ORDER BY ip.time) = 1
 ),
 with_all_joins AS (
     SELECT
