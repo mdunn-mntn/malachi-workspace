@@ -1,4 +1,4 @@
-# VV IP Lineage — Column Reference (v10)
+# VV IP Lineage — Column Reference (v10.1)
 
 **Table:** `{dataset}.vv_ip_lineage`
 **Rows:** One per verified visit (VV), all advertisers, all stages
@@ -57,6 +57,9 @@ Stage 1 VV:
 | `campaign_id` | INT64 | Campaign that received last-touch credit for this VV. |
 | `vv_stage` | INT64 | Stage of `campaign_id` per `campaigns.funnel_level`. 1=S1, 2=S2, 3=S3. |
 | `vv_time` | TIMESTAMP | When the verified visit was recorded (`clickpass_log.time`). |
+| `vv_guid` | STRING | User/device cookie ID from `clickpass_log.guid`. Persists across multiple VVs (same user). Matches ui_visits.guid 99.99%. |
+| `vv_original_guid` | STRING | Pre-reattribution guid from `clickpass_log.original_guid`. Differs from vv_guid in 16% of VVs (those that were reattributed). NULL when no reattribution occurred. |
+| `vv_attribution_model_id` | INT64 | Attribution model used for this VV from `clickpass_log.attribution_model_id`. Values: 1, 2, 3, 9, 10, 11. |
 
 ---
 
@@ -84,6 +87,7 @@ The S3 impression that triggered this VV. Linked via `ad_served_id` (determinist
 | `s3_bid_ip` | STRING | `event_log.bid_ip` or `CIL.ip` (display) | IP at auction/bid time. = win_ip = segment_ip (100% validated). The targeting identity. **Cross-stage link: should ≈ s2 match_ip.** |
 | `s3_win_ip` | STRING | `event_log.bid_ip` | = bid_ip today (100% validated). Kept for Mountain Bidder SSP future-proofing where win callback may return a different IP. |
 | `s3_impression_time` | TIMESTAMP | `impression_pool.time` | When the S3 impression was served (`MIN(event_log.time)` for CTV, `cost_impression_log.time` for display). |
+| `s3_guid` | STRING | `event_log.guid` or `CIL.guid` | Impression-side guid for the S3 impression. |
 
 ---
 
@@ -105,6 +109,8 @@ The S2 impression in this IP's funnel. **NULL for S1 VVs.** Also NULL for S3 VVs
 | `s2_impression_time` | TIMESTAMP | `impression_pool.time` | When the S2 impression was served. |
 | `s2_campaign_id` | INT64 | `clickpass_log` | S2 campaign. For S2 VVs: = campaign_id. For S3 VVs: prior VV's campaign when pv_stage=2. |
 | `s2_redirect_ip` | STRING | `clickpass_log.ip` | S2 VV's redirect IP. Fallback match key for cross-device cases. |
+| `s2_guid` | STRING | `event_log.guid` or `CIL.guid` | Impression-side guid for the S2 impression. |
+| `s2_attribution_model_id` | INT64 | `clickpass_log.attribution_model_id` | Attribution model used for the S2 VV. For S2 VVs: this VV's model. For S3 VVs: prior VV's model. |
 
 **Prior VV match logic:** Primary: `pv_pool_vast.match_ip = current.bid_ip` (merged pool: vast_start preferred, vast_impression fallback, dedup'd by `(match_ip, pv_stage)`). Fallback: `pv_pool_redir.redirect_ip = current.redirect_ip` (household identity, covers cross-device). Dedup prefers vast match, then last touch (most recent). Advertiser_id constraint prevents CGNAT false positives.
 
@@ -129,6 +135,7 @@ For S2/S3 VVs: resolved via chain traversal (~89% populated; ~11% structural cei
 | `s1_win_ip` | STRING | `event_log.bid_ip` | = bid_ip today. Future-proofing for Mountain Bidder SSP. |
 | `s1_ad_served_id` | STRING | 7-tier chain traversal | S1 impression ID. ~89% populated for S2/S3 (structural ceiling). For S1 VVs: = ad_served_id. |
 | `s1_impression_time` | TIMESTAMP | `impression_pool.time` | When the S1 impression was served. |
+| `s1_guid` | STRING | `event_log.guid` or `CIL.guid` | Impression-side guid for the S1 impression. Resolved via same 7-tier chain as s1_bid_ip. |
 | `s1_resolution_method` | STRING | CASE expression | Which tier resolved S1: `current_is_s1`, `vv_chain_direct`, `vv_chain_s2_s1`, `imp_chain`, `imp_direct`, `imp_visit_ip`, `cp_ft_fallback`. NULL = unresolved. |
 | `cp_ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | System-recorded S1 shortcut. NULL ~40%. Retained as comparison reference. |
 
