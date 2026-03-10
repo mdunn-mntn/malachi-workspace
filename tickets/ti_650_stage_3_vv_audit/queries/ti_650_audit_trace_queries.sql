@@ -32,14 +32,14 @@
 --   7. cp_ft_fallback:   clickpass.first_touch_ad_served_id → impression lookup
 --
 -- DATA SOURCES:
---   clickpass_log        — anchor VVs (target interval) + prior VV pool (180-day)
---   event_log            — CTV impression IPs (single 180-day scan)
+--   clickpass_log        — anchor VVs (target interval) + prior VV pool (30-day)
+--   event_log            — CTV impression IPs (single 30-day scan)
 --   cost_impression_log  — display impression bid_ip (CIL.ip = bid_ip, confirmed)
 --   ui_visits            — visit IP + impression IP (+/- 7 day buffer)
 --   campaigns            — funnel_level -> stage classification
 --
--- LOOKBACK: 180 days. Empirically confirmed chains spanning 100+ days.
--- CIL: 90-day rolling (no 180-day data). CIL.ip IS bid_ip (100% validated).
+-- LOOKBACK: 30 days (configurable — increase to 90 if segment TTL requires it).
+-- CIL: 90-day rolling. CIL.ip IS bid_ip (100% validated).
 --------------------------------------------------------------------------------
 
 
@@ -104,8 +104,8 @@ CLUSTER BY advertiser_id, vv_stage;
 -- v9: stage-based columns, either/or cross-stage, pv_stage=2 guard.
 -- Replace date parameters before running:
 --   Trace range:  '2026-02-04' to '2026-02-10'
---   EL lookback:  '2025-08-06'  (trace_start - 180 days)
---   CIL lookback: '2025-11-06'  (trace_start - 90 days)
+--   EL lookback:  '2026-01-05'  (trace_start - 30 days)
+--   CIL lookback: '2026-01-05'  (trace_start - 30 days)
 --   VV buffer:    +/- 7 days on ui_visits partition filter
 --
 -- Note: Q2 uses CTEs (no TEMP TABLEs) for SQLMesh compatibility.
@@ -139,11 +139,11 @@ CLUSTER BY advertiser_id, vv_stage;
 -- TO TEST:
 --   1. ADVERTISER_ID: replace 37775 (appears in impression_pool, prior_vv_raw, cp_dedup)
 --   2. TRACE_START/END: replace '2026-02-04'/'2026-02-11'
---   3. LOOKBACK_START: replace '2025-08-06' (180 days before trace_start)
---   4. CIL_LOOKBACK: replace '2025-11-06' (90 days before trace_start)
+--   3. LOOKBACK_START: replace '2026-01-05' (30 days before trace_start)
+--   4. CIL_LOOKBACK: replace '2026-01-05' (same as lookback start)
 
 -- Step 1: Merged impression pool — event_log pivoted + cost_impression_log
--- 180-day lookback to catch long S3→S2→S1 chains
+-- 30-day lookback (increase to 90 if segment TTL requires longer chains)
 CREATE TEMP TABLE impression_pool AS
 WITH el AS (
     SELECT
@@ -155,7 +155,7 @@ WITH el AS (
         , MIN(time) AS time
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= TIMESTAMP('2025-08-06') AND time < TIMESTAMP('2026-02-11')
+      AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-11')
       AND campaign_id IN (
           SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
           WHERE advertiser_id = 37775 AND deleted = FALSE
@@ -171,7 +171,7 @@ cil AS (
         , campaign_id
         , time
     FROM `dw-main-silver.logdata.cost_impression_log`
-    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+    WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 37775
 )
 SELECT ad_served_id, vast_start_ip, vast_impression_ip, bid_ip, campaign_id, time,
@@ -200,7 +200,7 @@ LEFT JOIN `dw-main-bronze.integrationprod.campaigns` c
     ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
 LEFT JOIN impression_pool imp
     ON imp.ad_served_id = cp.ad_served_id AND imp.rn = 1
-WHERE cp.time >= TIMESTAMP('2025-08-06') AND cp.time < TIMESTAMP('2026-02-11')
+WHERE cp.time >= TIMESTAMP('2026-01-05') AND cp.time < TIMESTAMP('2026-02-11')
   AND cp.advertiser_id = 37775
 QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1;
 

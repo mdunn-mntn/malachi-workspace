@@ -121,7 +121,7 @@ WITH campaigns_stage AS (
     FROM dw-main-silver.logdata.event_log
     WHERE
       event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= TIMESTAMP_SUB(@start_dt, INTERVAL 180 DAY)
+      AND time >= TIMESTAMP_SUB(@start_dt, INTERVAL 30 DAY)
       AND time < @end_dt
     GROUP BY ad_served_id
     UNION ALL
@@ -135,7 +135,7 @@ WITH campaigns_stage AS (
       , time
     FROM dw-main-silver.logdata.cost_impression_log
     WHERE
-      time >= TIMESTAMP_SUB(@start_dt, INTERVAL 90 DAY)
+      time >= TIMESTAMP_SUB(@start_dt, INTERVAL 30 DAY)
       AND time < @end_dt
   )
 )
@@ -180,7 +180,7 @@ WITH campaigns_stage AS (
   LEFT JOIN impression_pool AS imp
     ON imp.ad_served_id = cp.ad_served_id AND imp.rn = 1
   WHERE
-    cp.time >= TIMESTAMP_SUB(@start_dt, INTERVAL 180 DAY)
+    cp.time >= TIMESTAMP_SUB(@start_dt, INTERVAL 30 DAY)
     AND cp.time < @end_dt
   QUALIFY row_number() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 )
