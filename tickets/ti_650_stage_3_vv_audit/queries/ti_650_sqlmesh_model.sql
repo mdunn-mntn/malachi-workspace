@@ -251,29 +251,50 @@ WITH campaigns_stage AS (
     , CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_serve_ip  /* TODO: replace with impression_log.ip */
     , CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_bid_ip
 
-    /* ── 4. S2 Impression IPs (prior VV's impression, NULL for S1 VVs) ── */
-    /* For S2 VVs: their own impression. For S3 VVs: the prior VV's impression. */
+    /* ── 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs with pv_stage=1) ── */
+    /* For S2 VVs: their own impression.
+       For S3 VVs: the prior VV's impression ONLY if pv_stage=2.
+       If S3 VV's prior VV is S1 (IP went S1→S3, skipping S2): S2 columns are NULL. */
     , CASE
         WHEN cp.vv_stage = 2 THEN lt.vast_start_ip
-        WHEN cp.vv_stage = 3 THEN pv_lt.vast_start_ip
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN pv_lt.vast_start_ip
       END AS s2_vast_start_ip
     , CASE
         WHEN cp.vv_stage = 2 THEN lt.vast_impression_ip
-        WHEN cp.vv_stage = 3 THEN pv_lt.vast_impression_ip
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN pv_lt.vast_impression_ip
       END AS s2_vast_impression_ip
     , CASE
         WHEN cp.vv_stage = 2 THEN lt.bid_ip  /* TODO: impression_log.ip */
-        WHEN cp.vv_stage = 3 THEN pv_lt.bid_ip  /* TODO: impression_log.ip */
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN pv_lt.bid_ip  /* TODO: impression_log.ip */
       END AS s2_serve_ip
     , CASE
         WHEN cp.vv_stage = 2 THEN lt.bid_ip
-        WHEN cp.vv_stage = 3 THEN pv_lt.bid_ip
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN pv_lt.bid_ip
       END AS s2_bid_ip
-    , COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id) AS prior_vv_ad_served_id
-    , COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time) AS prior_vv_time
-    , COALESCE(pv_vs.pv_campaign_id, pv_vi.pv_campaign_id, pv_redir.pv_campaign_id) AS pv_campaign_id
-    , COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) AS pv_stage
-    , COALESCE(pv_vs.pv_redirect_ip, pv_vi.pv_redirect_ip, pv_redir.pv_redirect_ip) AS pv_redirect_ip
+    , CASE
+        WHEN cp.vv_stage = 2 THEN cp.ad_served_id
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
+      END AS s2_ad_served_id
+    , CASE
+        WHEN cp.vv_stage = 2 THEN cp.time
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time)
+      END AS s2_vv_time
+    , CASE
+        WHEN cp.vv_stage = 2 THEN cp.campaign_id
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN COALESCE(pv_vs.pv_campaign_id, pv_vi.pv_campaign_id, pv_redir.pv_campaign_id)
+      END AS s2_campaign_id
+    , CASE
+        WHEN cp.vv_stage = 2 THEN cp.redirect_ip
+        WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+          THEN COALESCE(pv_vs.pv_redirect_ip, pv_vi.pv_redirect_ip, pv_redir.pv_redirect_ip)
+      END AS s2_redirect_ip
 
     /* ── 5. S1 Impression IPs (chain-traversed, always populated) ── */
     /* For S1 VVs: their own impression. For S2/S3: resolved via 7-tier CASE. */
@@ -469,16 +490,15 @@ SELECT
   , s3_serve_ip
   , s3_bid_ip
 
-  /* 4. S2 Impression IPs (NULL for S1 VVs) */
+  /* 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs that skipped S2) */
   , s2_vast_start_ip
   , s2_vast_impression_ip
   , s2_serve_ip
   , s2_bid_ip
-  , prior_vv_ad_served_id
-  , prior_vv_time
-  , pv_campaign_id
-  , pv_stage
-  , pv_redirect_ip
+  , s2_ad_served_id
+  , s2_vv_time
+  , s2_campaign_id
+  , s2_redirect_ip
 
   /* 5. S1 Impression IPs (always populated — chain-traversed or self) */
   , s1_vast_start_ip

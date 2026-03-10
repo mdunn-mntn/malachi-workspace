@@ -11,19 +11,35 @@ Columns are ordered **left-to-right to trace backward from VV to S1**. For a S3 
 ## Quick Reference: Reading a Row
 
 ```
-Stage 3 VV: visit_ip | s3_vast_start  s3_vast_imp  s3_serve  s3_bid | s2_vast_start  s2_vast_imp  s2_serve  s2_bid | s1_vast_start  s1_vast_imp  s1_serve  s1_bid
-                                                              ↓ cross-stage                                   ↓ cross-stage
-                                                     s3_bid ≈ s2_vast_start OR s2_vast_imp       s2_bid ≈ s1_vast_start OR s1_vast_imp
+                      |  S3 impression IPs            |  S2 impression IPs                           |  S1 impression IPs
+                      |  (this VV's impression)       |  (prior VV at S2)                            |  (chain-traversed to S1)
+                      |  s3_vast_start  s3_vast_imp   |  s2_vast_start  s2_vast_imp                  |  s1_vast_start  s1_vast_imp
+                      |  s3_serve       s3_bid        |  s2_serve       s2_bid                       |  s1_serve       s1_bid
+                      |                               |  s2_ad_served_id  s2_vv_time                 |  s1_ad_served_id  s1_resolution_method
+                      |                               |  s2_campaign_id   s2_redirect_ip             |
 
-Stage 2 VV: visit_ip | NULL NULL NULL NULL           | s2_vast_start  s2_vast_imp  s2_serve  s2_bid | s1_vast_start  s1_vast_imp  s1_serve  s1_bid
-Stage 1 VV: visit_ip | NULL NULL NULL NULL           | NULL NULL NULL NULL                          | s1_vast_start  s1_vast_imp  s1_serve  s1_bid
+Stage 3 VV (S3→S2→S1):
+  visit_ip            |  ✓ populated                  |  ✓ populated (prior VV is S2)                |  ✓ populated (chain to S1)
+                                                ↓ cross-stage                                  ↓ cross-stage
+                                       s3_bid ≈ s2_vast_start OR s2_vast_imp        s2_bid ≈ s1_vast_start OR s1_vast_imp
+
+Stage 3 VV (S3→S1 skip — no S2 step):
+  visit_ip            |  ✓ populated                  |  NULL (no S2 impression exists)              |  ✓ populated (prior VV is S1)
+
+Stage 2 VV:
+  visit_ip            |  NULL                         |  ✓ populated (this VV's impression)          |  ✓ populated (chain to S1)
+                                                                                               ↓ cross-stage
+                                                                                    s2_bid ≈ s1_vast_start OR s1_vast_imp
+
+Stage 1 VV:
+  visit_ip            |  NULL                         |  NULL                                        |  ✓ populated (this VV's impression)
 ```
 
 **Column naming:** Stage-based (s3/s2/s1). Columns always refer to the same funnel stage regardless of VV type. S1 VVs have s3 and s2 columns NULL.
 
 **VAST event order:** vast_impression fires FIRST (creative loaded), vast_start fires SECOND (playback begins). vast_start is the last VAST callback — the most recent IP observation before VV.
 
-**NULL rules:** NULLs in s2/s3 columns are expected when the VV's stage doesn't extend that far. NULLs in the cross-stage link when the chain DOES exist = structural (~28% of S3 VVs find no prior VV — IP entered segment via CRM/cross-device graph, no IP breadcrumbs).
+**NULL rules:** S3 columns NULL for S1/S2 VVs. S2 columns NULL for S1 VVs AND for S3 VVs whose prior VV is S1 (IP went S1→S3 directly, skipping S2 — no S2 impression exists). S1 columns are always attempted (~89% populated for S2/S3 VVs; ~11% structural ceiling from CRM/cross-device entry with no IP breadcrumbs). NULLs in the cross-stage link when the chain DOES exist = structural (~28% of S3 VVs find no prior VV).
 
 **Cross-stage link:** `s3_bid_ip ≈ s2_vast_start_ip OR s2_vast_impression_ip` and `s2_bid_ip ≈ s1_vast_start_ip OR s1_vast_impression_ip`. Either/or join adopted — vast_start marginally better (+256 matches) but both tried. Differs ~1.2% of the time due to 5 mechanisms: CGNAT rotation (66%), SSAI proxies (6%), dual-stack IPv4→IPv6 (12%), VPN/CDN/network switches (16%). See Finding #26-27.
 
@@ -70,7 +86,7 @@ The S3 impression that triggered this VV. Linked via `ad_served_id` (determinist
 
 ## 4. S2 Impression IPs (Prior VV's S2 Impression)
 
-The most recent prior VV that advanced this IP into S3. Must be strictly lower stage (`pv_stage < vv_stage`). **NULL for S1 VVs.**
+The S2 impression in this IP's funnel. **NULL for S1 VVs.** Also NULL for S3 VVs whose prior VV is S1 (IP went S1→S3 directly, skipping S2 — no S2 impression exists).
 
 **Cross-stage link:** `s3_bid_ip` should approximately equal `s2_vast_start_ip OR s2_vast_impression_ip` (the S2 VV's VAST IP entered the S3 segment, which the S3 bidder targeted). Either/or join adopted — vast_start marginally better (later callback) but both tried.
 
@@ -80,11 +96,10 @@ The most recent prior VV that advanced this IP into S3. Must be strictly lower s
 | `s2_vast_impression_ip` | STRING | `event_log.ip` (vast_impression) | S2 impression VAST impression IP. **Cross-stage link: should ≈ s3_bid_ip (either/or with vast_start).** |
 | `s2_serve_ip` | STRING | `impression_log.ip` via prior VV's `ad_served_id` | S2 impression serve request IP. |
 | `s2_bid_ip` | STRING | `event_log.bid_ip` or `CIL.ip` | S2 impression bid/auction IP. **Cross-stage link to S1: should ≈ s1_vast_start_ip OR s1_vast_impression_ip.** |
-| `prior_vv_ad_served_id` | STRING | `clickpass_log` (self-join) | Impression ID of the prior VV. NULL if no prior VV in 180-day lookback. |
-| `prior_vv_time` | TIMESTAMP | `clickpass_log` | When the prior VV occurred. |
-| `pv_campaign_id` | INT64 | `clickpass_log` | Campaign of the prior VV. |
-| `pv_stage` | INT64 | `campaigns.funnel_level` | Stage of the prior VV. Must be < vv_stage. |
-| `pv_redirect_ip` | STRING | `clickpass_log.ip` (prior VV) | Prior VV's redirect IP. Fallback match key for cross-device cases. |
+| `s2_ad_served_id` | STRING | `clickpass_log` (self-join) | S2 impression ID. For S2 VVs: = ad_served_id (self). For S3 VVs: prior VV's ad_served_id when pv_stage=2. NULL when no S2 step. |
+| `s2_vv_time` | TIMESTAMP | `clickpass_log` | When the S2 VV occurred. For S2 VVs: = vv_time. For S3 VVs: prior VV's time when pv_stage=2. |
+| `s2_campaign_id` | INT64 | `clickpass_log` | S2 campaign. For S2 VVs: = campaign_id. For S3 VVs: prior VV's campaign when pv_stage=2. |
+| `s2_redirect_ip` | STRING | `clickpass_log.ip` | S2 VV's redirect IP. Fallback match key for cross-device cases. |
 
 **Prior VV match logic:** Primary: `prior_vv_pool.vast_start_ip = current.bid_ip OR prior_vv_pool.vast_impression_ip = current.bid_ip` (either/or — the vast_ip that entered the segment = the bid_ip targeted). Fallback: `prior_vv_pool.redirect_ip = current.redirect_ip` (household identity, covers cross-device). Dedup prefers vast_ip matches, then last touch (most recent). Advertiser_id constraint prevents CGNAT false positives. No deterministic cross-stage ID exists (Finding #28).
 
