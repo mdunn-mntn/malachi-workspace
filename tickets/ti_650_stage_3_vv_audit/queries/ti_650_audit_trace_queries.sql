@@ -1,26 +1,33 @@
 --------------------------------------------------------------------------------
--- VV IP LINEAGE — PRODUCTION QUERIES (v9, stage-based columns, either/or cross-stage)
+-- VV IP LINEAGE — PRODUCTION QUERIES (v10, merged vast pool, win_ip + timestamps)
 --------------------------------------------------------------------------------
 --
 -- Table: {dataset}.vv_ip_lineage
 -- One row per verified visit across all advertisers, all stages.
--- Full IP audit trail: 4 IPs per stage (vast_start, vast_impression, serve, bid).
--- Stage-based naming (s3/s2/s1). Cross-stage linking via vast_ip either/or.
+-- Full IP audit trail: 5 IPs per stage + impression timestamp.
+-- Stage-based naming (s3/s2/s1). Cross-stage linking via merged vast pool.
 -- S1 resolved via 7-tier chain traversal.
 --
 -- QUERIES IN THIS FILE:
 --   Q1: CREATE TABLE (reference — SQLMesh creates the table automatically)
 --   Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
---   Q3: SELECT preview — v9 (TEMP TABLEs, single-advertiser test)
+--   Q3: SELECT preview — v10 (TEMP TABLEs, single-advertiser test)
 --   Q4: Advertiser summary (stage-aware, runs on populated table)
 --
--- v9 ARCHITECTURE:
+-- v10 ARCHITECTURE:
 --   Within-stage: ad_served_id links VV ↔ impression deterministically.
---   Cross-stage: prev.vast_start_ip = next.bid_ip OR prev.vast_impression_ip = next.bid_ip.
---     Three separate hash joins (vast_start, vast_impression, redirect_ip) — no OR in join.
---   Stage-based naming: s3_/s2_/s1_ prefix. 4 IPs per stage.
+--   Cross-stage: Merged vast pool (vast_start preferred, vast_impression fallback)
+--     dedup'd by match_ip. Single hash join per cross-stage hop.
+--     Redirect_ip separate pool for cross-device fallback.
+--   Stage-based naming: s3_/s2_/s1_ prefix. 5 IPs + timestamp per stage.
 --   S2 columns guarded by pv_stage=2: NULL for S1 VVs AND S3 VVs that skipped S2.
 --   serve_ip stubbed as bid_ip (93.6% match; when differs = infrastructure IP).
+--   win_ip = bid_ip today. Kept for Mountain Bidder SSP future-proofing.
+--
+-- v10 PERFORMANCE (vs v9):
+--   - Merged pv_pool_vast replaces pv_pool_vs + pv_pool_vi (2 joins → 1, 8x → 4x fan-out)
+--   - Eliminated s1_pool_vs/vi/redir (inline pv_stage=1 filter, -3 CTEs)
+--   - CTE count: 9 (was 13). LEFT JOINs: 10 (was 14).
 --
 -- S1 RESOLUTION (7 tiers):
 --   1. current_is_s1:    vv_stage=1 → current impression IS S1
@@ -32,13 +39,14 @@
 --   7. cp_ft_fallback:   clickpass.first_touch_ad_served_id → impression lookup
 --
 -- DATA SOURCES:
---   clickpass_log        — anchor VVs (target interval) + prior VV pool (30-day)
---   event_log            — CTV impression IPs (single 30-day scan)
+--   clickpass_log        — anchor VVs (target interval) + prior VV pool (90-day)
+--   event_log            — CTV impression IPs (single 90-day scan)
 --   cost_impression_log  — display impression bid_ip (CIL.ip = bid_ip, confirmed)
 --   ui_visits            — visit IP + impression IP (+/- 7 day buffer)
 --   campaigns            — funnel_level -> stage classification
 --
--- LOOKBACK: 30 days (configurable — increase to 90 if segment TTL requires it).
+-- LOOKBACK: 90 days. Zach confirmed max window = 88 days
+--   (14-day VV window per stage + 30-day segment TTL: 14+30+14+30 = 88).
 -- CIL: 90-day rolling. CIL.ip IS bid_ip (100% validated).
 --------------------------------------------------------------------------------
 
@@ -65,14 +73,18 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     s3_vast_impression_ip STRING,                   -- event_log.ip (vast_impression, fires FIRST)
     s3_serve_ip           STRING,                   -- impression_log.ip (93.6% = bid_ip; stubbed as bid_ip)
     s3_bid_ip             STRING,                   -- event_log.bid_ip (= win_ip = segment_ip, 100%)
+    s3_win_ip             STRING,                   -- = bid_ip today; Mountain Bidder SSP may differ
+    s3_impression_time    TIMESTAMP,                -- when S3 impression was served
 
     -- 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs that skipped S2)
     s2_vast_start_ip      STRING,
     s2_vast_impression_ip STRING,
     s2_serve_ip           STRING,
     s2_bid_ip             STRING,
+    s2_win_ip             STRING,
     s2_ad_served_id       STRING,
     s2_vv_time            TIMESTAMP,
+    s2_impression_time    TIMESTAMP,
     s2_campaign_id        INT64,
     s2_redirect_ip        STRING,
 
@@ -81,7 +93,9 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     s1_vast_impression_ip STRING,
     s1_serve_ip           STRING,
     s1_bid_ip             STRING,
+    s1_win_ip             STRING,
     s1_ad_served_id       STRING,
+    s1_impression_time    TIMESTAMP,
     s1_resolution_method  STRING,                   -- current_is_s1 | vv_chain_direct | vv_chain_s2_s1 | imp_chain | imp_direct | imp_visit_ip | cp_ft_fallback
     cp_ft_ad_served_id    STRING,                   -- clickpass.first_touch_ad_served_id (comparison reference)
 
@@ -101,11 +115,11 @@ CLUSTER BY advertiser_id, vv_stage;
 ================================================================================
 == Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
 ================================================================================
--- v9: stage-based columns, either/or cross-stage, pv_stage=2 guard.
+-- v10: merged vast pool, win_ip + impression timestamps, 90-day lookback.
 -- Replace date parameters before running:
 --   Trace range:  '2026-02-04' to '2026-02-10'
---   EL lookback:  '2026-01-05'  (trace_start - 30 days)
---   CIL lookback: '2026-01-05'  (trace_start - 30 days)
+--   EL lookback:  '2025-11-06'  (trace_start - 90 days)
+--   CIL lookback: '2025-11-06'  (trace_start - 90 days)
 --   VV buffer:    +/- 7 days on ui_visits partition filter
 --
 -- Note: Q2 uses CTEs (no TEMP TABLEs) for SQLMesh compatibility.
@@ -117,33 +131,33 @@ CLUSTER BY advertiser_id, vv_stage;
 
 
 ================================================================================
-== Q3: SELECT preview — v9 (TEMP TABLEs, single-advertiser test)
+== Q3: SELECT preview — v10 (TEMP TABLEs, single-advertiser test)
 ================================================================================
--- v9 ARCHITECTURE — 4 IPs per stage, either/or cross-stage, pv_stage=2 guard.
+-- v10 ARCHITECTURE — 5 IPs + timestamp per stage, merged vast pool, inline S1 filter.
 --
--- KEY CHANGES FROM v8:
---   - impression_pool pivots event_log to get BOTH vast_start_ip and vast_impression_ip
---   - Three prior VV pools (vast_start, vast_impression, redirect_ip) instead of two
---   - Stage-based column naming: s3_/s2_/s1_ prefix (was lt_/pv_/s1_)
---   - S2 columns guarded by pv_stage=2 (S3 VVs that skip S2 get NULL)
---   - s2_ metadata columns (was prior_vv_*)
+-- KEY CHANGES FROM v9:
+--   - Merged pv_pool_vast replaces pv_pool_vs + pv_pool_vi (match_ip key)
+--   - Eliminated s1_pool_vs/vi/redir (inline pv_stage=1 on join condition)
+--   - Added win_ip per stage (= bid_ip today, future-proofing)
+--   - Added impression_time per stage (from impression_pool.time)
+--   - Added pv_imp_time to prior_vv_raw (impression timestamp for prior VV)
+--   - 90-day lookback (was 30 in v9)
 --
--- TEMP TABLES (6 total):
+-- TEMP TABLES (5 total — was 9 in v9):
 --   1. impression_pool — event_log pivoted (vast_start + vast_impression per ad_served_id) + CIL
---   2. prior_vv_raw — clickpass + impression_pool join (VAST IPs for each prior VV)
---   3. pv_pool_vs — prior_vv_raw dedup'd by vast_start_ip (primary cross-stage)
---   4. pv_pool_vi — prior_vv_raw dedup'd by vast_impression_ip (fallback)
---   5. pv_pool_redir — prior_vv_raw dedup'd by redirect_ip (cross-device fallback)
---   6. s1_imp_pool — S1 impressions dedup'd by bid_ip
+--   2. prior_vv_raw — clickpass + impression_pool join (VAST IPs + imp_time for each prior VV)
+--   3. pv_pool_vast — merged vast_start+vast_impression dedup'd by match_ip (primary cross-stage)
+--   4. pv_pool_redir — prior_vv_raw dedup'd by redirect_ip (cross-device fallback)
+--   5. s1_imp_pool — S1 impressions dedup'd by bid_ip
 --
 -- TO TEST:
 --   1. ADVERTISER_ID: replace 37775 (appears in impression_pool, prior_vv_raw, cp_dedup)
 --   2. TRACE_START/END: replace '2026-02-04'/'2026-02-11'
---   3. LOOKBACK_START: replace '2026-01-05' (30 days before trace_start)
---   4. CIL_LOOKBACK: replace '2026-01-05' (same as lookback start)
+--   3. LOOKBACK_START: replace '2025-11-06' (90 days before trace_start)
+--   4. CIL_LOOKBACK: replace '2025-11-06' (same as lookback start)
 
 -- Step 1: Merged impression pool — event_log pivoted + cost_impression_log
--- 30-day lookback (increase to 90 if segment TTL requires longer chains)
+-- 90-day lookback (covers max 88-day window: 14+30+14+30)
 CREATE TEMP TABLE impression_pool AS
 WITH el AS (
     SELECT
@@ -155,7 +169,7 @@ WITH el AS (
         , MIN(time) AS time
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-11')
+      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
       AND campaign_id IN (
           SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
           WHERE advertiser_id = 37775 AND deleted = FALSE
@@ -171,7 +185,7 @@ cil AS (
         , campaign_id
         , time
     FROM `dw-main-silver.logdata.cost_impression_log`
-    WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-11')
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 37775
 )
 SELECT ad_served_id, vast_start_ip, vast_impression_ip, bid_ip, campaign_id, time,
@@ -182,8 +196,8 @@ FROM (
     SELECT * FROM cil
 );
 
--- Step 2: Prior VV pool — clickpass joined to impression_pool for VAST IPs
--- Two-level dedup: (1) one row per ad_served_id, (2) one row per vast_ip per stage.
+-- Step 2: Prior VV pool — clickpass joined to impression_pool for VAST IPs + imp_time
+-- Two-level dedup: (1) one row per ad_served_id, (2) downstream pools by match_ip per stage.
 CREATE TEMP TABLE prior_vv_raw AS
 SELECT
     cp.advertiser_id
@@ -195,44 +209,39 @@ SELECT
     , imp.vast_start_ip AS pv_vast_start_ip
     , imp.vast_impression_ip AS pv_vast_impression_ip
     , imp.bid_ip AS pv_bid_ip
+    , imp.time AS pv_imp_time
 FROM `dw-main-silver.logdata.clickpass_log` cp
 LEFT JOIN `dw-main-bronze.integrationprod.campaigns` c
     ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
 LEFT JOIN impression_pool imp
     ON imp.ad_served_id = cp.ad_served_id AND imp.rn = 1
-WHERE cp.time >= TIMESTAMP('2026-01-05') AND cp.time < TIMESTAMP('2026-02-11')
+WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
   AND cp.advertiser_id = 37775
 QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1;
 
--- Step 2b: Prior VV pool dedup'd by vast_start_ip (primary cross-stage key)
-CREATE TEMP TABLE pv_pool_vs AS
-SELECT * FROM prior_vv_raw
-WHERE pv_vast_start_ip IS NOT NULL
-QUALIFY ROW_NUMBER() OVER (PARTITION BY pv_vast_start_ip, pv_stage ORDER BY prior_vv_time DESC) = 1;
+-- Step 2b: Merged VAST pool — vast_start preferred, vast_impression fallback.
+-- Combines pv_pool_vs + pv_pool_vi from v9 into single pool with match_ip key.
+-- Reduces cross-product fan-out from 8x to 4x and eliminates 1 CTE + 1 LEFT JOIN.
+CREATE TEMP TABLE pv_pool_vast AS
+SELECT * EXCEPT(prio)
+FROM (
+    SELECT pv_vast_start_ip AS match_ip, 1 AS prio, pvr.*
+    FROM prior_vv_raw pvr WHERE pv_vast_start_ip IS NOT NULL
+    UNION ALL
+    SELECT pv_vast_impression_ip AS match_ip, 2 AS prio, pvr.*
+    FROM prior_vv_raw pvr WHERE pv_vast_impression_ip IS NOT NULL
+)
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY match_ip, pv_stage ORDER BY prio, prior_vv_time DESC
+) = 1;
 
--- Step 2c: Prior VV pool dedup'd by vast_impression_ip (fallback)
-CREATE TEMP TABLE pv_pool_vi AS
-SELECT * FROM prior_vv_raw
-WHERE pv_vast_impression_ip IS NOT NULL
-QUALIFY ROW_NUMBER() OVER (PARTITION BY pv_vast_impression_ip, pv_stage ORDER BY prior_vv_time DESC) = 1;
-
--- Step 2d: Prior VV pool dedup'd by redirect_ip (cross-device fallback)
+-- Step 2c: Prior VV pool dedup'd by redirect_ip (cross-device fallback)
 CREATE TEMP TABLE pv_pool_redir AS
 SELECT * FROM prior_vv_raw
 WHERE pv_redirect_ip IS NOT NULL
 QUALIFY ROW_NUMBER() OVER (PARTITION BY pv_redirect_ip, pv_stage ORDER BY prior_vv_time DESC) = 1;
 
--- Step 2e: S1 pools — same three pools filtered to stage 1
-CREATE TEMP TABLE s1_pool_vs AS
-SELECT * FROM pv_pool_vs WHERE pv_stage = 1;
-
-CREATE TEMP TABLE s1_pool_vi AS
-SELECT * FROM pv_pool_vi WHERE pv_stage = 1;
-
-CREATE TEMP TABLE s1_pool_redir AS
-SELECT * FROM pv_pool_redir WHERE pv_stage = 1;
-
--- Step 2f: S1 impression pool — S1 impressions dedup'd by bid_ip
+-- Step 2d: S1 impression pool — S1 impressions dedup'd by bid_ip
 CREATE TEMP TABLE s1_imp_pool AS
 SELECT ip.vast_start_ip, ip.vast_impression_ip, ip.bid_ip, ip.ad_served_id, ip.campaign_id, ip.time
 FROM impression_pool ip
@@ -242,7 +251,7 @@ WHERE c.funnel_level = 1
   AND ip.rn = 1
 QUALIFY ROW_NUMBER() OVER (PARTITION BY ip.bid_ip ORDER BY ip.time) = 1;
 
--- Step 3: Main query — stage-based columns, either/or cross-stage, 7-tier S1 resolution
+-- Step 3: Main query — v10: 5 IPs + timestamp per stage, merged vast pool, 7-tier S1 resolution
 WITH campaigns_stage AS (
     SELECT campaign_id, funnel_level AS stage
     FROM `dw-main-bronze.integrationprod.campaigns`
@@ -279,56 +288,68 @@ with_all_joins AS (
         CASE WHEN cp.vv_stage = 3 THEN lt.vast_impression_ip END AS s3_vast_impression_ip,
         CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_serve_ip,  /* TODO: impression_log.ip */
         CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_bid_ip,
+        CASE WHEN cp.vv_stage = 3 THEN lt.bid_ip END AS s3_win_ip,  /* = bid_ip today; Mountain Bidder may differ */
+        CASE WHEN cp.vv_stage = 3 THEN lt.time END AS s3_impression_time,
 
         /* ── 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs with pv_stage=1) ── */
         CASE
             WHEN cp.vv_stage = 2 THEN lt.vast_start_ip
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
               THEN pv_lt.vast_start_ip
         END AS s2_vast_start_ip,
         CASE
             WHEN cp.vv_stage = 2 THEN lt.vast_impression_ip
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
               THEN pv_lt.vast_impression_ip
         END AS s2_vast_impression_ip,
         CASE
-            WHEN cp.vv_stage = 2 THEN lt.bid_ip  /* TODO: impression_log.ip */
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+            WHEN cp.vv_stage = 2 THEN lt.bid_ip
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
               THEN pv_lt.bid_ip
         END AS s2_serve_ip,
         CASE
             WHEN cp.vv_stage = 2 THEN lt.bid_ip
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
               THEN pv_lt.bid_ip
         END AS s2_bid_ip,
         CASE
+            WHEN cp.vv_stage = 2 THEN lt.bid_ip
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN pv_lt.bid_ip
+        END AS s2_win_ip,
+        CASE
             WHEN cp.vv_stage = 2 THEN cp.ad_served_id
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
-              THEN COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN COALESCE(pv_vast.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
         END AS s2_ad_served_id,
         CASE
             WHEN cp.vv_stage = 2 THEN cp.time
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
-              THEN COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time)
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN COALESCE(pv_vast.prior_vv_time, pv_redir.prior_vv_time)
         END AS s2_vv_time,
         CASE
+            WHEN cp.vv_stage = 2 THEN lt.time
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN pv_lt.time
+        END AS s2_impression_time,
+        CASE
             WHEN cp.vv_stage = 2 THEN cp.campaign_id
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
-              THEN COALESCE(pv_vs.pv_campaign_id, pv_vi.pv_campaign_id, pv_redir.pv_campaign_id)
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN COALESCE(pv_vast.pv_campaign_id, pv_redir.pv_campaign_id)
         END AS s2_campaign_id,
         CASE
             WHEN cp.vv_stage = 2 THEN cp.redirect_ip
-            WHEN cp.vv_stage = 3 AND COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 2
-              THEN COALESCE(pv_vs.pv_redirect_ip, pv_vi.pv_redirect_ip, pv_redir.pv_redirect_ip)
+            WHEN cp.vv_stage = 3 AND COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 2
+              THEN COALESCE(pv_vast.pv_redirect_ip, pv_redir.pv_redirect_ip)
         END AS s2_redirect_ip,
 
         /* ── 5. S1 Impression IPs (chain-traversed, always attempted) ── */
         CASE
             WHEN cp.vv_stage = 1 THEN cp.ad_served_id
-            WHEN COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 1
-              THEN COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
-            WHEN COALESCE(s1_vs.prior_vv_ad_served_id, s1_vi.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id) IS NOT NULL
-              THEN COALESCE(s1_vs.prior_vv_ad_served_id, s1_vi.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1
+              THEN COALESCE(pv_vast.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
+            WHEN COALESCE(s1_vast.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id) IS NOT NULL
+              THEN COALESCE(s1_vast.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
             WHEN s1_imp_chain.ad_served_id IS NOT NULL THEN s1_imp_chain.ad_served_id
             WHEN s1_imp_direct.ad_served_id IS NOT NULL THEN s1_imp_direct.ad_served_id
             WHEN s1_imp_visit_ip.ad_served_id IS NOT NULL THEN s1_imp_visit_ip.ad_served_id
@@ -336,7 +357,7 @@ with_all_joins AS (
         END AS s1_ad_served_id,
         CASE
             WHEN cp.vv_stage = 1 THEN lt.vast_start_ip
-            WHEN COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.vast_start_ip
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.vast_start_ip
             WHEN s1_lt.vast_start_ip IS NOT NULL THEN s1_lt.vast_start_ip
             WHEN s1_imp_chain.vast_start_ip IS NOT NULL THEN s1_imp_chain.vast_start_ip
             WHEN s1_imp_direct.vast_start_ip IS NOT NULL THEN s1_imp_direct.vast_start_ip
@@ -345,7 +366,7 @@ with_all_joins AS (
         END AS s1_vast_start_ip,
         CASE
             WHEN cp.vv_stage = 1 THEN lt.vast_impression_ip
-            WHEN COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.vast_impression_ip
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.vast_impression_ip
             WHEN s1_lt.vast_impression_ip IS NOT NULL THEN s1_lt.vast_impression_ip
             WHEN s1_imp_chain.vast_impression_ip IS NOT NULL THEN s1_imp_chain.vast_impression_ip
             WHEN s1_imp_direct.vast_impression_ip IS NOT NULL THEN s1_imp_direct.vast_impression_ip
@@ -354,7 +375,7 @@ with_all_joins AS (
         END AS s1_vast_impression_ip,
         CASE
             WHEN cp.vv_stage = 1 THEN lt.bid_ip  /* TODO: impression_log.ip */
-            WHEN COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
             WHEN s1_lt.bid_ip IS NOT NULL THEN s1_lt.bid_ip
             WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
             WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
@@ -363,7 +384,7 @@ with_all_joins AS (
         END AS s1_serve_ip,
         CASE
             WHEN cp.vv_stage = 1 THEN lt.bid_ip
-            WHEN COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
             WHEN s1_lt.bid_ip IS NOT NULL THEN s1_lt.bid_ip
             WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
             WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
@@ -371,9 +392,27 @@ with_all_joins AS (
             ELSE ft_lt.bid_ip
         END AS s1_bid_ip,
         CASE
+            WHEN cp.vv_stage = 1 THEN lt.bid_ip
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
+            WHEN s1_lt.bid_ip IS NOT NULL THEN s1_lt.bid_ip
+            WHEN s1_imp_chain.bid_ip IS NOT NULL THEN s1_imp_chain.bid_ip
+            WHEN s1_imp_direct.bid_ip IS NOT NULL THEN s1_imp_direct.bid_ip
+            WHEN s1_imp_visit_ip.bid_ip IS NOT NULL THEN s1_imp_visit_ip.bid_ip
+            ELSE ft_lt.bid_ip
+        END AS s1_win_ip,
+        CASE
+            WHEN cp.vv_stage = 1 THEN lt.time
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.time
+            WHEN s1_lt.time IS NOT NULL THEN s1_lt.time
+            WHEN s1_imp_chain.time IS NOT NULL THEN s1_imp_chain.time
+            WHEN s1_imp_direct.time IS NOT NULL THEN s1_imp_direct.time
+            WHEN s1_imp_visit_ip.time IS NOT NULL THEN s1_imp_visit_ip.time
+            ELSE ft_lt.time
+        END AS s1_impression_time,
+        CASE
             WHEN cp.vv_stage = 1 THEN 'current_is_s1'
-            WHEN COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage) = 1 THEN 'vv_chain_direct'
-            WHEN COALESCE(s1_vs.prior_vv_ad_served_id, s1_vi.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id) IS NOT NULL
+            WHEN COALESCE(pv_vast.pv_stage, pv_redir.pv_stage) = 1 THEN 'vv_chain_direct'
+            WHEN COALESCE(s1_vast.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id) IS NOT NULL
               THEN 'vv_chain_s2_s1'
             WHEN s1_imp_chain.bid_ip IS NOT NULL THEN 'imp_chain'
             WHEN s1_imp_direct.bid_ip IS NOT NULL THEN 'imp_direct'
@@ -390,21 +429,19 @@ with_all_joins AS (
         DATE(cp.time) AS trace_date,
         CURRENT_TIMESTAMP() AS trace_run_timestamp,
 
-        /* Dedup: prefer vast_start match, then vast_impression, then redirect.
-           Within match type: most recent prior VV (last touch). */
+        /* Dedup: prefer vast match over redirect.
+           Within match type: most recent prior VV (last touch per Zach). */
         ROW_NUMBER() OVER (
             PARTITION BY cp.ad_served_id
             ORDER BY
-                CASE WHEN pv_vs.prior_vv_ad_served_id IS NOT NULL THEN 0
-                     WHEN pv_vi.prior_vv_ad_served_id IS NOT NULL THEN 1
-                     WHEN pv_redir.prior_vv_ad_served_id IS NOT NULL THEN 2
-                     ELSE 3 END,
-                COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time) DESC NULLS LAST,
-                CASE WHEN s1_vs.prior_vv_ad_served_id IS NOT NULL THEN 0
-                     WHEN s1_vi.prior_vv_ad_served_id IS NOT NULL THEN 1
-                     WHEN s1_redir.prior_vv_ad_served_id IS NOT NULL THEN 2
-                     ELSE 3 END,
-                COALESCE(s1_vs.prior_vv_time, s1_vi.prior_vv_time, s1_redir.prior_vv_time) DESC NULLS LAST
+                CASE WHEN pv_vast.prior_vv_ad_served_id IS NOT NULL THEN 0
+                     WHEN pv_redir.prior_vv_ad_served_id IS NOT NULL THEN 1
+                     ELSE 2 END,
+                COALESCE(pv_vast.prior_vv_time, pv_redir.prior_vv_time) DESC NULLS LAST,
+                CASE WHEN s1_vast.prior_vv_ad_served_id IS NOT NULL THEN 0
+                     WHEN s1_redir.prior_vv_ad_served_id IS NOT NULL THEN 1
+                     ELSE 2 END,
+                COALESCE(s1_vast.prior_vv_time, s1_redir.prior_vv_time) DESC NULLS LAST
         ) AS _pv_rn
 
     FROM cp_dedup cp
@@ -413,21 +450,13 @@ with_all_joins AS (
     LEFT JOIN impression_pool lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
     LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
 
-    /* ── Prior VV: vast_start_ip match (primary cross-stage) ── */
-    LEFT JOIN pv_pool_vs pv_vs
-        ON pv_vs.advertiser_id = cp.advertiser_id
-        AND pv_vs.pv_vast_start_ip = lt.bid_ip
-        AND pv_vs.prior_vv_time < cp.time
-        AND pv_vs.prior_vv_ad_served_id != cp.ad_served_id
-        AND pv_vs.pv_stage < cp.vv_stage
-
-    /* ── Prior VV: vast_impression_ip match (fallback, 0.15% differ) ── */
-    LEFT JOIN pv_pool_vi pv_vi
-        ON pv_vi.advertiser_id = cp.advertiser_id
-        AND pv_vi.pv_vast_impression_ip = lt.bid_ip
-        AND pv_vi.prior_vv_time < cp.time
-        AND pv_vi.prior_vv_ad_served_id != cp.ad_served_id
-        AND pv_vi.pv_stage < cp.vv_stage
+    /* ── Prior VV: merged vast pool (vast_start preferred, vast_impression fallback) ── */
+    LEFT JOIN pv_pool_vast pv_vast
+        ON pv_vast.advertiser_id = cp.advertiser_id
+        AND pv_vast.match_ip = lt.bid_ip
+        AND pv_vast.prior_vv_time < cp.time
+        AND pv_vast.prior_vv_ad_served_id != cp.ad_served_id
+        AND pv_vast.pv_stage < cp.vv_stage
 
     /* ── Prior VV: redirect_ip match (cross-device fallback) ── */
     LEFT JOIN pv_pool_redir pv_redir
@@ -439,42 +468,36 @@ with_all_joins AS (
 
     /* ── Prior VV impression lookup (deterministic: ad_served_id) ── */
     LEFT JOIN impression_pool pv_lt
-        ON pv_lt.ad_served_id = COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
+        ON pv_lt.ad_served_id = COALESCE(pv_vast.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
         AND pv_lt.rn = 1
 
-    /* ── S1 VV chain: vast_start_ip match on prior VV's bid_ip ── */
-    LEFT JOIN s1_pool_vs s1_vs
-        ON s1_vs.advertiser_id = cp.advertiser_id
-        AND s1_vs.pv_vast_start_ip = pv_lt.bid_ip
-        AND s1_vs.pv_stage < COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage)
-        AND s1_vs.prior_vv_time < COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time)
-        AND s1_vs.prior_vv_ad_served_id != COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
+    /* ── S1 VV chain: merged vast pool with pv_stage=1 (inline filter, no separate CTE) ── */
+    LEFT JOIN pv_pool_vast s1_vast
+        ON s1_vast.advertiser_id = cp.advertiser_id
+        AND s1_vast.match_ip = pv_lt.bid_ip
+        AND s1_vast.pv_stage = 1
+        AND s1_vast.pv_stage < COALESCE(pv_vast.pv_stage, pv_redir.pv_stage)
+        AND s1_vast.prior_vv_time < COALESCE(pv_vast.prior_vv_time, pv_redir.prior_vv_time)
+        AND s1_vast.prior_vv_ad_served_id != COALESCE(pv_vast.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
 
-    /* ── S1 VV chain: vast_impression_ip match (fallback) ── */
-    LEFT JOIN s1_pool_vi s1_vi
-        ON s1_vi.advertiser_id = cp.advertiser_id
-        AND s1_vi.pv_vast_impression_ip = pv_lt.bid_ip
-        AND s1_vi.pv_stage < COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage)
-        AND s1_vi.prior_vv_time < COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time)
-        AND s1_vi.prior_vv_ad_served_id != COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
-
-    /* ── S1 VV chain: redirect_ip match (cross-device fallback) ── */
-    LEFT JOIN s1_pool_redir s1_redir
+    /* ── S1 VV chain: redirect_ip match with pv_stage=1 (inline filter) ── */
+    LEFT JOIN pv_pool_redir s1_redir
         ON s1_redir.advertiser_id = cp.advertiser_id
-        AND s1_redir.pv_redirect_ip = COALESCE(pv_vs.pv_redirect_ip, pv_vi.pv_redirect_ip, pv_redir.pv_redirect_ip)
-        AND s1_redir.pv_stage < COALESCE(pv_vs.pv_stage, pv_vi.pv_stage, pv_redir.pv_stage)
-        AND s1_redir.prior_vv_time < COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time)
-        AND s1_redir.prior_vv_ad_served_id != COALESCE(pv_vs.prior_vv_ad_served_id, pv_vi.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
+        AND s1_redir.pv_redirect_ip = COALESCE(pv_vast.pv_redirect_ip, pv_redir.pv_redirect_ip)
+        AND s1_redir.pv_stage = 1
+        AND s1_redir.pv_stage < COALESCE(pv_vast.pv_stage, pv_redir.pv_stage)
+        AND s1_redir.prior_vv_time < COALESCE(pv_vast.prior_vv_time, pv_redir.prior_vv_time)
+        AND s1_redir.prior_vv_ad_served_id != COALESCE(pv_vast.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
 
     /* ── S1 VV impression lookup (deterministic: ad_served_id) ── */
     LEFT JOIN impression_pool s1_lt
-        ON s1_lt.ad_served_id = COALESCE(s1_vs.prior_vv_ad_served_id, s1_vi.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
+        ON s1_lt.ad_served_id = COALESCE(s1_vast.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
         AND s1_lt.rn = 1
 
     /* ── S1 impression chain: S1 impression at prior VV's bid_ip ── */
     LEFT JOIN s1_imp_pool s1_imp_chain
         ON s1_imp_chain.bid_ip = pv_lt.bid_ip
-        AND s1_imp_chain.time < COALESCE(pv_vs.prior_vv_time, pv_vi.prior_vv_time, pv_redir.prior_vv_time)
+        AND s1_imp_chain.time < COALESCE(pv_vast.prior_vv_time, pv_redir.prior_vv_time)
 
     /* ── S1 impression direct: S1 impression at current VV's bid_ip ── */
     LEFT JOIN s1_imp_pool s1_imp_direct
@@ -499,16 +522,19 @@ SELECT
     /* 2. VV Visit IPs */
     visit_ip, impression_ip, redirect_ip,
 
-    /* 3. S3 Impression IPs (NULL for S1/S2 VVs) */
+    /* 3. S3 Impression (NULL for S1/S2 VVs) */
     s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip,
+    s3_win_ip, s3_impression_time,
 
-    /* 4. S2 Impression IPs (NULL for S1 VVs, NULL for S3 VVs that skipped S2) */
+    /* 4. S2 Impression (NULL for S1 VVs, NULL for S3 VVs that skipped S2) */
     s2_vast_start_ip, s2_vast_impression_ip, s2_serve_ip, s2_bid_ip,
-    s2_ad_served_id, s2_vv_time, s2_campaign_id, s2_redirect_ip,
+    s2_win_ip, s2_ad_served_id, s2_vv_time, s2_impression_time,
+    s2_campaign_id, s2_redirect_ip,
 
-    /* 5. S1 Impression IPs (always attempted) */
+    /* 5. S1 Impression (always attempted) */
     s1_vast_start_ip, s1_vast_impression_ip, s1_serve_ip, s1_bid_ip,
-    s1_ad_served_id, s1_resolution_method, cp_ft_ad_served_id,
+    s1_win_ip, s1_ad_served_id, s1_impression_time,
+    s1_resolution_method, cp_ft_ad_served_id,
 
     /* 6. Classification */
     clickpass_is_new, visit_is_new, is_cross_device,
@@ -522,12 +548,8 @@ LIMIT 100;
 -- Clean up (optional — TEMP TABLEs auto-drop at session end)
 DROP TABLE IF EXISTS impression_pool;
 DROP TABLE IF EXISTS prior_vv_raw;
-DROP TABLE IF EXISTS pv_pool_vs;
-DROP TABLE IF EXISTS pv_pool_vi;
+DROP TABLE IF EXISTS pv_pool_vast;
 DROP TABLE IF EXISTS pv_pool_redir;
-DROP TABLE IF EXISTS s1_pool_vs;
-DROP TABLE IF EXISTS s1_pool_vi;
-DROP TABLE IF EXISTS s1_pool_redir;
 DROP TABLE IF EXISTS s1_imp_pool;
 
 
