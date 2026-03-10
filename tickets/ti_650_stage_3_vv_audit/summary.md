@@ -80,13 +80,13 @@ trace_date, trace_run_timestamp
 
 v10 Q3 validated against BQ (advertiser 37775, 7-day trace): 100 rows, stage distribution 52/27/21 (S1/S2/S3). All new columns (win_ip, impression_time) populated correctly. win_ip = bid_ip 100% as expected. S1 resolution working across all 7 tiers.
 
-### S1 resolution via 7-tier CASE (v8, will carry forward to v9)
+### S1 resolution via 7-tier CASE (v10 — current)
 1. `current_is_s1`: vv_stage=1, current impression IS S1
-2. `vv_chain_direct`: prior VV IS S1 (vast_ip match — was bid_ip in v8, needs correction)
+2. `vv_chain_direct`: prior VV IS S1 (merged vast pool match_ip)
 3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain
-4. `imp_chain`: S1 impression at prior VV's vast_ip (was bid_ip in v7, needs correction)
-5. `imp_direct`: S1 impression at current VV's vast_ip (was bid_ip in v7, needs correction)
-6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip (v8)
+4. `imp_chain`: S1 impression at prior VV's bid_ip
+5. `imp_direct`: S1 impression at current VV's bid_ip
+6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip
 7. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
 
 ### Key design decisions
@@ -237,8 +237,8 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ## 7. Files
 
 ### Queries
-- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model **(v10 — merged vast pool, 5 IPs + timestamp per stage, 90-day lookback)**
-- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: summary). **(v10 — synced with SQLMesh model)**
+- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model **(v10.1 — merged vast pool, 5 IPs + timestamp + guid per stage, 90-day lookback)**
+- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: summary). **(v10.1 — synced with SQLMesh model)**
 - `queries/ti_650_vast_start_vs_impression_comparison.sql` — within-impression: bid_ip vs vast_start vs vast_impression (252.9M rows)
 - `queries/ti_650_cross_stage_ip_comparison.sql` — cross-stage: S3 bid_ip vs prior S2 VV's vast IPs (487K pairs)
 - `queries/ti_650_cross_stage_coverage.sql` — coverage: how many S3 VVs find a prior VV by join key choice (679K VVs)
@@ -246,7 +246,7 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ### Artifacts
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
 - `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (stages, targeting vs attribution, chain traversal, NTB verification, VVS logic)
-- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **(v10 — 5 IPs + timestamp per stage, merged vast pool architecture)**
+- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **(v10.1 — 5 IPs + timestamp + guid per stage, merged vast pool architecture)**
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
 - `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies
 - `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad
@@ -259,14 +259,17 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 - `meetings/ti_650_meeting_ryan_1.txt` — SQLMesh implementation walkthrough with Ryan (2026-03-05)
 - `meetings/ti_650_meeting_dustin.txt` — SQLMesh deployment strategy with Dustin (batch sizing, staging tables, slot-based pricing, mono repo PR workflow)
 
-### Outputs
-- `outputs/ti_650_preview_37775_2026-02-04.json` — 100-row S3 VV sample (v8, advertiser 37775)
-- `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference)
+### Outputs (tracked in git)
 - `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation
 - `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (canonical validation)
-- `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation
 - `outputs/ti_650_permutation_validation_2026-02-04.json` — all 10 chain traversal permutations validated
 - `outputs/ti_650_e2e_spotcheck_2026-02-07.json` — end-to-end IP validation (2026-03-06)
+
+### Outputs (local only, gitignored)
+- `outputs/ti_650_preview_37775_2026-02-04.json` — 100-row S3 VV sample (v8, advertiser 37775)
+- `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference)
+- `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation
+- `outputs/ti_650_zach_reference_table.xlsx` — Zach's reference spreadsheet
 
 ---
 
@@ -288,11 +291,11 @@ Added to `knowledge/data_knowledge.md`:
 
 ## 9. Performance Review Tags
 
-**Speed:** Built v1 -> v8 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
+**Speed:** Built v1 → v10.1 trace pipeline iteratively across 10 major versions. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039). v10 reduced CTE count 13→9 and LEFT JOINs 14→10 while adding more columns.
 
-**Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3. Identified 20% of S1 VVs on S3 IPs — a novel finding. Simplified 42-column design to 29-column raw-values-only audit trail on stakeholder feedback. Discovered CIL.ip = bid_ip (100% validated), replacing impression_log with cost_impression_log (~20,000x scan reduction via advertiser_id). Performed deep BQ execution plan analysis (254.6 slot-hours, 159 stages). Empirically validated full IP pipeline across event_log, win_logs, cost_impression_log (38.2M rows) — proved cross-stage key is vast_ip (not bid_ip), correcting a fundamental assumption.
+**Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3 with 54 columns (5 IPs + timestamp + guid per stage). Identified 20% of S1 VVs on S3 IPs — a novel finding. Discovered CIL.ip = bid_ip (100% validated), replacing impression_log with cost_impression_log (~20,000x scan reduction). Empirically validated full IP pipeline across event_log, win_logs, cost_impression_log (38.2M rows) — proved cross-stage key is vast_ip (not bid_ip), correcting a fundamental assumption. Merged vast pool (v10) halved cross-product fan-out from 8x to 4x.
 
-**Adaptability:** Pivoted from v1 (simple mutation audit) to v8 (full stage-aware lineage with 7-tier chain traversal) across 3 Zach review meetings. v9 redesign corrects cross-stage join key based on empirical evidence, even though v8 worked at 87-89% coverage.
+**Adaptability:** Pivoted from v1 (simple mutation audit) to v10.1 (full stage-aware lineage with 7-tier chain traversal, guid + attribution tracking) across 4 Zach review meetings. v9 redesign corrected cross-stage join key based on empirical evidence. v10 simplified architecture while adding functionality. v10.1 added guid + attribution_model_id per Zach meeting 4 requirements.
 
 **Revenue Impact:** 4,006 phantom NTB events/day for one advertiser directly impacts revenue retention. Stage-aware lineage enables first-ever quantification of cross-stage IP attribution patterns. Production table provides ongoing auditability for all advertisers.
 
