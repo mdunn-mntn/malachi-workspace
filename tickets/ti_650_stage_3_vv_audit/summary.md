@@ -43,24 +43,27 @@ One row per VV. Columns ordered left-to-right to trace backward from VV → S1.
 - Eliminated s1_pool_vs/vi/redir (inline pv_stage=1 filter, -3 CTEs)
 - CTE count: 9 (was 13). LEFT JOINs: 10 (was 14).
 
-**v10 column layout (5 IPs + timestamp per stage, 44 columns total):**
+**v10.1 column layout (5 IPs + timestamp + guid per stage, 54 columns total):**
 ```
 -- VV identity
 ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
+vv_guid, vv_original_guid, vv_attribution_model_id
 
 -- VV visit IPs
 visit_ip, impression_ip, redirect_ip
 
 -- S3 impression (NULL for S1/S2 VVs)
-s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip, s3_win_ip, s3_impression_time
+s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip, s3_win_ip
+s3_impression_time, s3_guid
 
 -- S2 impression (NULL for S1 VVs, NULL for S3→S1 skips)
 s2_vast_start_ip, s2_vast_impression_ip, s2_serve_ip, s2_bid_ip, s2_win_ip
 s2_ad_served_id, s2_vv_time, s2_impression_time, s2_campaign_id, s2_redirect_ip
+s2_guid, s2_attribution_model_id
 
 -- S1 impression (always attempted — chain-traversed or self)
 s1_vast_start_ip, s1_vast_impression_ip, s1_serve_ip, s1_bid_ip, s1_win_ip
-s1_ad_served_id, s1_impression_time, s1_resolution_method, cp_ft_ad_served_id
+s1_ad_served_id, s1_impression_time, s1_guid, s1_resolution_method, cp_ft_ad_served_id
 
 -- Classification
 clickpass_is_new, visit_is_new, is_cross_device
@@ -202,8 +205,8 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ## 5. What Needs to Be Done
 
 ### 5.1 Remaining TODOs (from Zach meeting 4)
-1. **attribution_id** — Zach requested per step. Need to find which table/column.
-2. **GUID** — Zach requested per step. Need to find which table/column.
+1. ~~**attribution_id**~~ — DONE (v10.1). Added `vv_attribution_model_id` (clickpass_log.attribution_model_id) and `s2_attribution_model_id` (prior VV's model). No `attribution_id` column exists — `attribution_model_id` is the correct field. 6 distinct values (1,2,3,9,10,11).
+2. ~~**GUID**~~ — DONE (v10.1). Added `vv_guid`, `vv_original_guid` (clickpass), `s3_guid`, `s2_guid`, `s1_guid` (impression-side guid from event_log/CIL). guid = user/device cookie persisting across VVs. original_guid differs in 16% (reattributed).
 3. **0% unresolved target** — Zach: "there is absolutely no reason why we cannot trace it all the way back." Currently ~11%. Need new resolution tiers.
 4. **Display viewability_log IPs** — Zach mentioned viewability_log for viewable display inventory. Need to investigate.
 
@@ -227,6 +230,7 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 - **IP pipeline empirical validation (2026-03-10):** Full IP validation across event_log, win_logs, cost_impression_log. Findings #16-22 above.
 - **v9 SQLMesh model rewritten (2026-03-10):** Stage-based naming (s3/s2/s1), 4 IPs per stage, either/or cross-stage join (vast_start primary, vast_impression fallback, redirect_ip cross-device fallback). Three hash joins replace single OR. Prior VV pool now joins to impression_pool for vast IPs instead of using redirect_ip. Findings #25-28.
 - **v10 implemented and validated (2026-03-10):** Merged vast pool (pv_pool_vs + pv_pool_vi → single pv_pool_vast with match_ip key), eliminated s1_pool_vs/vi/redir (inline pv_stage=1), added win_ip per stage (= bid_ip today, Mountain Bidder future-proofing), added impression_time per stage, 90-day lookback (Zach confirmed max=88 days). CTEs: 13→9. LEFT JOINs: 14→10. Fan-out: 8x→4x. Q3 validated: 100 rows, win_ip=bid_ip 100%, all timestamps populated.
+- **v10.1 guid + attribution_model_id (2026-03-10):** Added vv_guid, vv_original_guid, vv_attribution_model_id, s3_guid, s2_guid, s2_attribution_model_id, s1_guid. guid = user/device cookie (persists across VVs, top user: 123 VVs in 7 days). attribution_model_id has 6 distinct values (1,2,3,9,10,11). guid consistent across stages for same user but attribution_model_id changes between stages. Q3 validated.
 
 ---
 
