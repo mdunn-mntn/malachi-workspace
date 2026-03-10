@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v7 production query: impression-chain + VV chain + cp_ft fallback. S1 coverage: S2 87.2%, S3 89.1% (was 38.5%/41.0% in v5)
+**Status:** In Progress — v8 production query: 7-tier S1 resolution. S1 coverage: S2 87.2%, S3 89.1%
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -31,7 +31,7 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 One row per VV. 30 columns (was 29 — added s1_resolution_method). Raw IP values only.
 - **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
 - **Last-touch impression IPs (Stage N):** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
-- **S1 impression (4-tier resolution):** cp_ft_ad_served_id, s1_ad_served_id, s1_bid_ip, s1_vast_ip, s1_resolution_method
+- **S1 impression (7-tier resolution):** cp_ft_ad_served_id, s1_ad_served_id, s1_bid_ip, s1_vast_ip, s1_resolution_method
 - **Prior VV (stage advancement trigger):** prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time
 - **Classification:** clickpass_is_new, visit_is_new, is_cross_device
 - **Metadata:** trace_date, trace_run_timestamp
@@ -40,22 +40,26 @@ One row per VV. 30 columns (was 29 — added s1_resolution_method). Raw IP value
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
-- **v7 architecture — impression-chain + VV chain + cp_ft fallback:**
+- **v8 architecture — impression-chain + visit-ip + VV chain + cp_ft fallback:**
   - Within-stage: ad_served_id links VV ↔ impression deterministically (zero IP joining)
   - Cross-stage: bid_ip links to prior-stage event (VV or impression) that put IP into segment
   - 4 TEMP TABLEs in Q3b: impression_pool, prior_vv_pool, s1_pool, s1_imp_pool
-- **S1 resolution via 6-tier CASE (v7):**
+  - NEW in v8: `impression_ip` from `ui_visits` as additional S1 lookup key. For mobile/CGNAT users, impression_ip (pixel-side IP) may differ from bid_ip and map to an S1 impression.
+- **S1 resolution via 7-tier CASE (v8):**
   1. `current_is_s1`: vv_stage=1, current impression IS S1
   2. `vv_chain_direct`: prior VV IS S1 (bid_ip match)
   3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain
-  4. `imp_chain`: S1 impression at prior VV's bid_ip (NEW in v7)
-  5. `imp_direct`: S1 impression at current VV's bid_ip (NEW in v7)
-  6. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
+  4. `imp_chain`: S1 impression at prior VV's bid_ip (v7)
+  5. `imp_direct`: S1 impression at current VV's bid_ip (v7)
+  6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip (NEW in v8)
+  7. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
 - **180-day lookback (was 90):** Empirically confirmed S3→S1 chains spanning 104+ days.
 - **s1_imp_pool** uses earliest S1 impression per bid_ip (ORDER BY time ASC) to avoid temporal mismatch where most recent S1 impression post-dates the VV.
-- **S1 coverage (adv 37775, 7-day trace):**
+- **impression_ip investigation:** 5.3% of S3 VVs have impression_ip != bid_ip. For unresolved cases (no S1 at bid_ip), impression_ip rescues 22.9% (348/1,522 in 1-day CIL-only test = +3.7% of total).
+- **S1 coverage (adv 37775, 7-day trace, v8):**
   - S1: 100.0% | S2: 87.2% (was 38.5%) | S3: 89.1% (was 41.0%)
-- **Remaining ~11% unresolved:** 91% have NO S1 impression at this bid_ip at any time in 180 days. Root causes: IP mutation at segment level (VVS GA Client ID matching across IPs), CRM/ipdsc entry, or S1 impression outside lookback.
+  - imp_visit_ip tier adds 0 incremental coverage — re-attributes ~175 cases from cp_ft to a cleaner path (pixel IP → S1 impression). Kept for audit trail clarity.
+- **Remaining unresolved:** After v7, 91% of unresolved have NO S1 impression at bid_ip at any time in 180 days. Root causes: IP mutation at segment level (VVS GA Client ID matching across IPs), CRM/ipdsc entry, or S1 impression outside lookback.
 - **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback). Split OR → two hash joins (92% slot reduction).
 - **Prior VV stage logic:** `pv_stage < vv_stage` (strict). Max chain: S3 → S2 → S1.
 - **All VV stages as anchor rows.** S1-only, S2→S1, S3→S2→S1 chains all present.
