@@ -155,6 +155,16 @@ deterministic last-touch or last-tv-touch attribution.
 ### attribution_model_id
 - `attribution_model_type_id = 0` should be treated as `1` (last-touch) — known business rule.
   See `ui_visits` column description comment.
+- Present in clickpass_log, ui_visits, ui_conversions, conversions, visits.
+- Distinct values for advertiser 37775 (7-day sample): 1, 2, 3, 9, 10, 11. Model 9 most common (49%).
+
+### guid (user/device cookie ID)
+- Present in every log table: clickpass_log, event_log, cost_impression_log, impression_log, ui_visits, viewability_log, etc.
+- Persists across multiple VVs — same user/device across visits. Top user: 123 VVs in 7 days (advertiser 37775).
+- clickpass_log.guid matches ui_visits.guid 99.99% (same session context).
+- clickpass_log.guid matches event_log.guid ~60% (different context — impression vs visit).
+- `original_guid` (clickpass_log only) = pre-reattribution guid. Differs from guid in ~16% of VVs.
+- `page_view_guid` (clickpass_log only) = GUID from page view signal.
 
 ### pa_model_id
 Probabilistic attribution model ID. Present in visit_facts, conversion_facts, visits, ui_visits.
