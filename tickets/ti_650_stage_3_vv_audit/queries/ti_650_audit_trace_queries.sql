@@ -416,7 +416,7 @@ JOIN `dw-main-bronze.integrationprod.campaigns` c
     ON c.campaign_id = ip.campaign_id AND c.deleted = FALSE
 WHERE c.funnel_level = 1
   AND ip.rn = 1
-QUALIFY ROW_NUMBER() OVER (PARTITION BY ip.bid_ip ORDER BY ip.time DESC) = 1;
+QUALIFY ROW_NUMBER() OVER (PARTITION BY ip.bid_ip ORDER BY ip.time) = 1;
 
 -- Step 3: Main query — VV chain + impression chain + cp_ft fallback
 WITH campaigns_stage AS (
