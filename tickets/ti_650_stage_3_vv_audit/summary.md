@@ -143,7 +143,8 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
 20. **win_logs.impression_ip_address = infrastructure IP, NOT user (2026-03-10).** When it differs from win_ip, it's 68.67.x.x (MNTN infra), 204.13.x.x (MNTN infra), or AWS IPs (18.x, 3.x, 44.x). Not useful for user IP tracking.
 21. **win_logs uses Beeswax IDs, not MNTN IDs (2026-03-10).** win_logs.advertiser_id and campaign_id are Beeswax-internal IDs, not MNTN integrationprod IDs. Join to event_log via `win_logs.auction_id = event_log.td_impression_id`. No direct advertiser_id mapping in integrationprod.advertisers or campaigns tables.
 22. **Only 2 meaningful user IPs per stage for cross-stage linking (2026-03-10).** `bid_ip` (event_log.bid_ip) = targeting identity, and `vast_ip` (event_log.ip) = observed at VAST playback, enters next segment. Win and segment IPs = bid_ip. Serve IP (impression_log.ip) differs 6.2% but only internal 10.x.x.x NAT — not meaningful for linking.
-23. **Zach confirmation (2026-03-10):** "segment_ip and the bid request bid_ip are the only 2 100% the same." Serve_ip = impression_log.ip, "almost always the bid ip, but not always." This validates our 3-IP model: bid_ip (=segment=win), serve_ip (impression_log.ip, 93.8% match), vast_ip (event_log.ip, 99% match, cross-stage key).
+23. **Zach confirmation (2026-03-10):** "segment_ip and the bid request bid_ip are the only 2 100% the same." Serve_ip = impression_log.ip, "almost always the bid ip, but not always." This validates our 3-IP model: bid_ip (=segment=win), serve_ip (impression_log.ip, 93.6% match), vast_ip (event_log.ip, 99% match, cross-stage key).
+24. **serve_ip (impression_log.ip) when it differs = infrastructure IP, NOT user (2026-03-10).** 6.4% of CTV impressions have serve_ip ≠ bid_ip. Of those: 96.9% = internal 10.x.x.x (NAT), 3.1% = AWS IPs (3.145.229.x, 18.97.x, 3.231.x, 34.223.x, 44.203.x). The serve_ip is the IP of the ad server that handled the serve request, not the user's device. When it equals bid_ip (93.6%), the request passed through without proxying. Never the user's real IP when it differs.
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 
@@ -154,8 +155,10 @@ Segment IP    ─┐   (not stored separately)                                  
 Bid IP        ─┤   event_log.bid_ip              bid_ip              ad_served_id     bid=win: 38.2M rows, 47 differ
 Win IP        ─┘   win_logs.ip                   ip                  auction_id
 
-Serve IP           impression_log.ip             ip                  ad_served_id     93.8% = bid_ip (6.2% = internal 10.x.x.x NAT)
-                   (Zach: "almost always bid_ip, but not always")
+Serve IP           impression_log.ip             ip                  ad_served_id     93.6% = bid_ip. 6.4% differ:
+                   (Zach: "almost always bid_ip,                                      96.9% internal 10.x.x.x NAT
+                    but not always")                                                   3.1% AWS infra (3.145.x, 18.97.x)
+                                                                                       = ad server IP, never user IP
 
 VAST Imp IP   ─┐   event_log.ip                  ip (=vast_ip)       ad_served_id     imp≈start: 812K rows
 VAST Start IP ─┘   event_log.ip (vast_start)     ip                  ad_served_id     374 differ (0.046%)
