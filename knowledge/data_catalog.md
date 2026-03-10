@@ -612,6 +612,8 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__win_logs__1170758268` (VIEW → Beeswax win_logs)
 - **Use for:** Beeswax win notification log (external DSP perspective on wins)
 - **Note:** Very wide table (130+ columns). Beeswax-native schema. Use `spend_log` for MNTN-native billing.
+- **CRITICAL: Uses Beeswax IDs, not MNTN IDs (2026-03-10).** `advertiser_id` and `campaign_id` in win_logs are Beeswax-internal IDs, NOT MNTN integrationprod IDs. No direct mapping table found. Join to event_log via `win_logs.auction_id = event_log.td_impression_id`.
+- **IP columns (validated 2026-03-10, 38.2M rows):** `ip` = bid/win IP (= event_log.bid_ip at 99.9999%). `impression_ip_address` = infrastructure/CDN IP (68.67.x.x MNTN infra, AWS IPs) — NOT user IP. 8 IP-related columns total: ip, ip_raw, ip_range, ipv6_address, ip_address_hashed, ipv6_address_hashed, clicks_ip_address, impression_ip_address.
 - **Key columns:** account_id, campaign_id, advertiser_id, creative_id, auction_id, time, epoch,
   win_cost_micros_usd, bid_price_micros_usd, clearing_price_micros_usd, placement_type,
   environment_type, inventory_source, is_test, flight_id

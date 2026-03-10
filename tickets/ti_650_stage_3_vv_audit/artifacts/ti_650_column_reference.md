@@ -1,33 +1,28 @@
-# VV IP Lineage — Column Reference
+# VV IP Lineage — Column Reference (v9)
 
 **Table:** `{dataset}.vv_ip_lineage`
 **Rows:** One per verified visit (VV), all advertisers, all stages
 **Partitioned by:** `trace_date` | **Clustered by:** `advertiser_id`, `vv_stage`
-**Retention:** 90 days
 
-Each row provides a complete audit trail for one VV, linking three impressions:
-1. **Last-touch (Stage N)** — the impression that triggered this VV
-2. **First-touch (Stage 1)** — the S1 impression that started the funnel for this IP
-3. **Prior VV** — the most recent prior VV that advanced this IP into the current stage
+Columns are ordered **left-to-right to trace backward from VV to S1**. For a S3 VV, read left to right: VV identity → visit IPs → S3 impression → S2 impression → S1 impression.
 
 ---
 
-## Quick Reference: Reading a S3 VV Row
+## Quick Reference: Reading a Row
 
-For a Stage 3 VV, the three impression IDs and their IPs are:
+For a Stage 3 VV, every column group is populated:
 
-| Slot | Impression ID column | Impression IP columns | Coverage |
-|------|---------------------|-----------------------|---------|
-| **S(N)** (this VV) | `ad_served_id` | `lt_bid_ip`, `lt_vast_ip` | ~100% |
-| **Prior VV** | `prior_vv_ad_served_id` | `pv_lt_bid_ip`, `pv_lt_vast_ip` | ~95%+ (90-day window) |
-| **S1 (chain traversal)** | `s1_ad_served_id` | `s1_bid_ip`, `s1_vast_ip` | ~99%+ (3-branch CASE) |
-| **S1 (system shortcut)** | `cp_ft_ad_served_id` | — | ~60% (comparison ref only) |
+```
+VV identity → visit/redirect IPs → S3 (vast_ip, bid_ip) → S2 (vast_ip, bid_ip) → S1 (vast_ip, bid_ip)
+                                         ↑ ad_served_id        ↑ cross-stage         ↑ cross-stage
+                                         (deterministic)       s3_bid_ip ≈ s2_vast_ip s2_bid_ip ≈ s1_vast_ip
+```
 
-> **Source clarity:** `cp_ft_ad_served_id` is what the MNTN attribution system stored in `clickpass_log` at VV time — retained as a comparison reference only (NULL ~40% of the time). `s1_ad_served_id` is resolved via in-query chain traversal (`prior_vv_pool` JOINs) — this is the primary audit-trail S1 field (~99%+ populated).
+For S2 VVs: s3 columns = this VV's impression, s2 columns = NULL. For S1 VVs: only s1 populated.
 
-> `ad_served_id` in `clickpass_log` is the same UUID that appears in `event_log` and `impression_log` — it is the impression ID. One ad serve = one `ad_served_id` flowing through every downstream log.
+**NULL rules:** NULLs in s2/s3 columns are expected when the chain doesn't extend (S1 VV has no S2/S3). NULLs in the cross-stage link when the chain DOES exist = a bug (the ~11% unresolved are structural — no IP lineage path exists).
 
-> **All VV stages are anchor rows.** `cp_dedup` does not filter by stage. S1-only, S2→S1, S3→S2→S1 chains are all present as rows.
+**Cross-stage link validation:** `s3_bid_ip ≈ s2_vast_ip` and `s2_bid_ip ≈ s1_vast_ip`. When they differ, it's CGNAT rotation within the same /24 (empirically validated, 2026-03-10).
 
 ---
 
@@ -35,116 +30,108 @@ For a Stage 3 VV, the three impression IDs and their IPs are:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `ad_served_id` | STRING | UUID of the verified visit **and** the impression that triggered it. Same UUID appears in `clickpass_log`, `event_log`, and `impression_log`. Primary key. |
-| `advertiser_id` | INT64 | Advertiser. |
-| `campaign_id` | INT64 | Campaign that received credit for this VV (last-touch). |
+| `ad_served_id` | STRING | UUID of the VV and its triggering impression. Same UUID in clickpass_log, event_log, CIL. Primary key. |
+| `advertiser_id` | INT64 | MNTN advertiser ID (integrationprod.advertisers). |
+| `campaign_id` | INT64 | Campaign that received last-touch credit for this VV. |
 | `vv_stage` | INT64 | Stage of `campaign_id` per `campaigns.funnel_level`. 1=S1, 2=S2, 3=S3. |
 | `vv_time` | TIMESTAMP | When the verified visit was recorded (`clickpass_log.time`). |
 
 ---
 
-## 2. Last-Touch Impression IPs (Stage N)
+## 2. VV Visit IPs
 
-The impression that directly triggered this VV. IPs traced through each hop.
+IPs recorded when the user visited the advertiser's site after seeing the ad.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| `lt_bid_ip` | STRING | `event_log.bid_ip` (CTV) or `impression_log.bid_ip` (display) | IP at auction (RTB bid). |
-| `lt_vast_ip` | STRING | `event_log.ip` (CTV) or `impression_log.ip` (display) | IP at ad playback. **Mutation occurs here** — when `lt_vast_ip ≠ redirect_ip`, the IP changed between ad playback and site visit. |
-| `redirect_ip` | STRING | `clickpass_log.ip` | IP at the redirect (clickpass pixel). |
-| `visit_ip` | STRING | `ui_visits.ip` | IP recorded at site visit. |
-| `impression_ip` | STRING | `ui_visits.impression_ip` | IP the visit system attributed to the impression. |
-
-**Reading the IP chain:** `lt_bid_ip → lt_vast_ip → redirect_ip → visit_ip`
-All four should match for a clean, same-device non-mutated visit. Any difference indicates cross-device, VPN switch, or CGNAT.
+| `visit_ip` | STRING | `ui_visits.ip` | Page view IP. |
+| `impression_ip` | STRING | `ui_visits.impression_ip` | Pixel-side IP — may differ from bid_ip for mobile/CGNAT. Used as S1 fallback (tier 6). |
+| `redirect_ip` | STRING | `clickpass_log.ip` | Redirect/clickpass IP. This is where IP mutation from VAST is observed. |
 
 ---
 
-## 3. S1 (First-Touch) Impression — Chain Traversal Resolved
+## 3. S3 Impression IPs (This VV's Impression)
 
-The Stage 1 impression that started this IP's funnel. Resolved via 3-branch CASE backed by `prior_vv_pool` chain traversal — NOT dependent on the system-written `cp_ft_ad_served_id` field.
-
-**Resolution logic (3-branch CASE):**
-
-| Branch | Condition | Source |
-|--------|-----------|--------|
-| 1 | `vv_stage = 1` | Current VV IS the S1 impression — use `ad_served_id` and `lt_*` |
-| 2 | `pv.pv_stage = 1` | Prior VV IS S1 — use `prior_vv_ad_served_id` and `pv_lt_*` |
-| 3 | ELSE | 2nd-hop join (`s1_pv`) finds S1 — use `s1_pv.prior_vv_ad_served_id` |
-
-Max chain depth is 2 (S3 → S2 → S1). An IP can only be advanced INTO a stage by a strictly lower stage — you can't enter S3 via S3 (already there). Same-stage prior VVs are impossible.
+The impression that triggered this VV. Linked via `ad_served_id` (deterministic, zero IP joining).
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| `cp_ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | System-recorded S1 impression ID at VV write time. NULL ~40% of VVs. **Retained as comparison reference only** — use `s1_ad_served_id` for analysis. |
-| `s1_ad_served_id` | STRING | 3-branch chain traversal | S1 impression ID resolved via `prior_vv_pool` chain traversal. ~99%+ populated. NULL only for impressions outside 90-day lookback. |
-| `s1_bid_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | IP at auction for the S1 impression — audit trail lookup on the resolved `s1_ad_served_id`. |
-| `s1_vast_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | IP at ad playback for the S1 impression. |
+| `s3_vast_ip` | STRING | `event_log.ip` (CTV) or `CIL.ip` (display) | IP at VAST playback. **This is the IP that enters the next stage's segment.** For display, vast_ip = bid_ip (CIL.ip = bid_ip, validated). |
+| `s3_bid_ip` | STRING | `event_log.bid_ip` (CTV) or `CIL.ip` (display) | IP at auction/bid time. = win_ip = serve_ip = segment_ip (validated 38.2M rows, 47 differ). The targeting identity. |
 
-**Validation:** Where both `cp_ft_ad_served_id` and `s1_ad_served_id` are non-NULL, they should agree. Use this as a spot-check. The `s1_*` columns work independently of the system-recorded value.
+> **For S1/S2 VVs:** These columns hold this VV's own impression IPs (not S3 specifically). The column names use "s3" because they are the highest-stage position in the layout. An S1 VV uses these columns for its S1 impression IPs, with s2 and s1 columns NULL.
+
+**Wait — actually, for S1/S2 VVs the naming needs to reflect "this VV's impression" not "s3".** This is a design decision to resolve in v9 implementation. Options:
+- (A) Name columns by stage position: `s3_vast_ip`, `s2_vast_ip`, `s1_vast_ip` — NULLs for lower VV stages
+- (B) Name columns by role: `lt_vast_ip` (last-touch = this VV), `pv_vast_ip` (prior VV), `s1_vast_ip` (S1 chain)
+- Current leaning: **(B)** — role-based names are clearer since an S1 VV's impression goes in `lt_vast_ip`, not `s3_vast_ip`.
 
 ---
 
-## 4. Prior VV (Stage Advancement Trigger)
+## 4. S2 Impression IPs (Prior VV's Impression)
 
-The most recent prior VV whose redirect IP matches this VV's bid IP (or redirect IP as fallback). The prior VV must be a **strictly lower stage** — for an S3 VV, the prior VV can be S1 or S2 (not S3, since the IP is already in S3). The constraint is `pv_stage < vv_stage`.
+The most recent prior VV that advanced this IP into the current stage. Must be strictly lower stage (`pv_stage < vv_stage`).
+
+**Cross-stage link:** `s3_bid_ip` should approximately equal `s2_vast_ip` (the prior VV's VAST IP entered the S3 segment, which is what the S3 bidder targeted).
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| `prior_vv_ad_served_id` | STRING | `clickpass_log` (self-join) | Impression ID of the prior VV's last-touch impression (same UUID as `ad_served_id` on that row). NULL if no prior VV found in the 90-day lookback. |
+| `s2_vast_ip` | STRING | `event_log.ip` or `CIL.ip` | Prior VV's VAST playback IP. Cross-stage link: should ≈ `s3_bid_ip`. |
+| `s2_bid_ip` | STRING | `event_log.bid_ip` or `CIL.ip` | Prior VV's bid/auction IP. |
+| `prior_vv_ad_served_id` | STRING | `clickpass_log` (self-join) | Impression ID of the prior VV. NULL if no prior VV in 180-day lookback. |
 | `prior_vv_time` | TIMESTAMP | `clickpass_log` | When the prior VV occurred. |
-| `pv_campaign_id` | INT64 | `clickpass_log` | Campaign ID of the prior VV. |
-| `pv_stage` | INT64 | `campaigns.funnel_level` | Stage of the prior VV. |
-| `pv_redirect_ip` | STRING | `clickpass_log.ip` | Redirect IP of the prior VV (the IP that was added to the next-stage targeting segment). |
-| `pv_lt_bid_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | Bid IP of the prior VV's impression — **our audit trail lookup**. |
-| `pv_lt_vast_ip` | STRING | `event_log` (CTV) or `impression_log` (display) | IP at ad playback for the prior VV's impression — **our audit trail lookup**. |
-| `pv_lt_time` | TIMESTAMP | `event_log` or `impression_log` | When the prior VV's impression was served. |
+| `pv_campaign_id` | INT64 | `clickpass_log` | Campaign of the prior VV. |
+| `pv_stage` | INT64 | `campaigns.funnel_level` | Stage of the prior VV. Must be < vv_stage. |
 
-**Prior VV match logic:** Primary match: `prior_vv_pool.ip = lt_bid_ip` (prior VV's redirect IP = this VV's bid IP — direct targeting chain). Fallback: `prior_vv_pool.ip = cp.ip` (prior VV's redirect IP = this VV's redirect IP — household identity, covers ~16-20% cross-device cases). Dedup prefers bid_ip matches. Advertiser_id constraint prevents CGNAT false positives. Stage constraint: `pv_stage < vv_stage` (strictly lower stage only). An IP can only be advanced INTO a stage by a lower-stage impression — you can't enter S3 via S3 (already there). Max chain: S3 → S2 → S1 (2 hops). `pv_stage` on each row tells you the stage of that prior VV. When pv_stage=1 for a S3 row, `prior_vv_ad_served_id` and `cp_ft_ad_served_id` may point to the same impression UUID.
-
-**Every VV is a row, chain is traversable:** Each VV for an IP is its own row. Following `prior_vv_ad_served_id` hops traces the full sequence of VVs for that IP backward in time, terminating at the S1 VV.
+**Prior VV match logic:** Primary: `prior_vv_pool.vast_ip = current_impression.bid_ip` (the vast_ip that entered the segment = the bid_ip targeted). Fallback: `prior_vv_pool.redirect_ip = current.redirect_ip` (household identity, covers cross-device). Dedup prefers vast_ip matches. Advertiser_id constraint prevents CGNAT false positives.
 
 ---
 
-## 5. Classification
+## 5. S1 Impression IPs (Chain-Traversed)
 
-Raw values. No derived comparisons.
+The Stage 1 impression that started this IP's funnel. Resolved via 7-tier CASE.
+
+**Cross-stage link:** `s2_bid_ip` should approximately equal `s1_vast_ip`.
 
 | Column | Type | Source | Description |
 |--------|------|--------|-------------|
-| `clickpass_is_new` | BOOL | `clickpass_log.is_new` | NTB flag per the clickpass pixel (client-side JavaScript). |
-| `visit_is_new` | BOOL | `ui_visits.is_new` | NTB flag per the ui_visits pixel (independent client-side JavaScript). |
-| `is_cross_device` | BOOL | `clickpass_log.is_cross_device` | Ad was served on one device, visit recorded on another. |
-
-**NTB note:** Both `clickpass_is_new` and `visit_is_new` are client-side JavaScript determinations. They are not auditable via SQL and disagree 41–56% of the time. This is architectural, not a data quality issue.
+| `s1_vast_ip` | STRING | `event_log.ip` or `CIL.ip` | S1 impression VAST playback IP. |
+| `s1_bid_ip` | STRING | `event_log.bid_ip` or `CIL.ip` | S1 impression bid IP — the original targeting identity. **This is the end of the chain.** |
+| `s1_ad_served_id` | STRING | 7-tier chain traversal | S1 impression ID. ~89% populated for S2/S3 (structural ceiling). |
+| `s1_resolution_method` | STRING | CASE expression | Which tier resolved S1: `current_is_s1`, `vv_chain_direct`, `vv_chain_s2_s1`, `imp_chain`, `imp_direct`, `imp_visit_ip`, `cp_ft_fallback`. NULL = unresolved. |
+| `cp_ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | System-recorded S1 shortcut. NULL ~40%. Retained as comparison reference. |
 
 ---
 
-## 6. Metadata
+## 6. Classification
+
+| Column | Type | Source | Description |
+|--------|------|--------|-------------|
+| `clickpass_is_new` | BOOL | `clickpass_log.is_new` | NTB flag (client-side JS). |
+| `visit_is_new` | BOOL | `ui_visits.is_new` | NTB flag (independent client-side JS). Disagrees with clickpass 41-56% — architectural, not a bug. |
+| `is_cross_device` | BOOL | `clickpass_log.is_cross_device` | Ad served on one device, visit on another. |
+
+---
+
+## 7. Metadata
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `trace_date` | DATE | Partition key. Date of the VV (`DATE(vv_time)`). |
+| `trace_date` | DATE | Partition key. `DATE(vv_time)`. |
 | `trace_run_timestamp` | TIMESTAMP | When this row was written. |
 
 ---
 
-## Key Insight: Attribution Stage vs Journey Stage
+## Empirical IP Validation (2026-03-10)
 
-| Column | Answers |
-|--------|---------|
-| `vv_stage` | Which campaign's budget paid for this impression? |
-| `pv_stage` | What stage was the prior VV that advanced this IP here? |
+These findings inform the column design:
 
-For a complete journey trace on a single IP, query all rows for that `lt_bid_ip` ordered by `vv_time`.
+| Claim | Result | Sample Size |
+|-------|--------|-------------|
+| bid_ip = win_ip | 99.9999% match (47 differ) | 38,204,354 rows |
+| vast_impression_ip = vast_start_ip | 99.95% match (374 differ) | 812,609 rows |
+| bid_ip = vast_ip | 98.98% match (8,353 differ — CGNAT /24 rotation) | 815,433 rows |
+| Cross-stage: S2 bid_ip in S1 vast_ip | 309 vast_only matches (vs 45 bid_only) | 97,655 distinct S2 bid_ips |
+| win_logs.impression_ip_address | Infrastructure/CDN IP, not user | 661,987 differ from win_ip |
 
----
-
-## Known Limitations
-
-- **`cp_ft_ad_served_id` NULL (~40% of VVs):** The system did not record a first-touch impression. Written at VV time and cannot be backfilled. IP mutation is a contributing factor (~15% of NULLs) but not the primary driver. **Use `s1_ad_served_id` instead** — chain traversal resolves S1 for ~99%+ of rows regardless.
-- **`s1_ad_served_id` NULL (rare, <1%):** Only occurs when the S1 impression is outside the 90-day lookback window. The 3-branch CASE covers all possible chain permutations (max depth 2: S3→S2→S1).
-- **Prior VV match uses bid_ip (primary) + redirect_ip (fallback):** Primary match links on the targeting chain (bid_ip). Fallback links on household identity (redirect_ip) for the ~16-20% of S2/S3 VVs with cross-device mutation. Dedup prefers bid_ip matches. Advertiser_id constraint prevents cross-advertiser CGNAT false positives.
-- **Display vs CTV sources:** CTV impressions are sourced from `event_log` (`event_type_raw = 'vast_impression'`). Non-viewable display impressions appear **only** in `impression_log` — they never generate a VAST event. The query joins both and prefers `event_log` via `COALESCE(el, il)`. CTV and display have no attribution preference — treated identically in the last-touch stack. (Confirmed with Sharad/ATT, 2026-03-06.) If both are NULL, the impression was not found in either log (rare edge case).
-- **`clickpass_is_new` / `visit_is_new`:** Client-side JavaScript. Not auditable via SQL.
-- **90-day retention:** Partitions older than 90 days are automatically dropped.
+**Conclusion:** Only 2 user IPs per stage: `bid_ip` (targeting identity) and `vast_ip` (VAST playback, enters next segment). win_ip = bid_ip. vast_start_ip ≈ vast_impression_ip. win_impression_ip = server infra.

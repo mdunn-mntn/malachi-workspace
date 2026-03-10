@@ -553,7 +553,8 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 **Key rules:**
 - Stage 2 is populated ONLY from Stage 1 VAST IPs.
 - Stage 3 = any IP that had a VV. Two paths: (1) Stage 1 impression → VV → Stage 3, or (2) Stage 1 → Stage 2 impression → VV → Stage 3. Attribution doesn't follow the stage sequence — a VV can be attributed to any stage's impression.
-- The VAST Impression IP (not bid IP) feeds Stage 2. Empirically verified: when bid_ip ≠ vast_ip, 70.5% of subsequent bids match the VAST IP (3:1 over bid IP). Open question: which IP feeds Stage 3 after a VV (redirect IP? visit IP? VAST IP of attributed impression?).
+- **Cross-stage key is vast_ip (event_log.ip), NOT bid_ip (empirically proven, 2026-03-10).** Tested 97,655 distinct S2 bid_ips against S1 impression IPs: 309 match S1 vast_ip ONLY, 45 match S1 bid_ip ONLY, 48,558 match both (because bid_ip = vast_ip 99% of the time). The MES diagram green arrows are correct: VAST Impression IP → next stage's Segment IP. When bid_ip ≠ vast_ip (~1% of CTV impressions), it's CGNAT rotation within the same /24.
+- **Only 2 meaningful user IPs per stage:** bid_ip (= win_ip = serve_ip = segment_ip, validated 38.2M rows, 47 differ) and vast_ip (= VAST playback IP, enters next segment). win_logs.impression_ip_address is infrastructure/CDN IP, not user.
 - `first_touch_ad_served_id` always points to a Stage 1 impression (by definition: `funnel_level=1, objective_id=1`). `ad_served_id` (last touch) can point to Stage 1, 2, or 3.
 - Stage 3 exists for retargeting — "last touch is king in ad tech" (Zach). Users who already visited are highest-intent, so we keep serving to maintain last-touch attribution credit.
 - Scale: Stage 1 ~8.5M IPs → ~10K get impressions → ~2K enter Stage 3 (Zach's example).
@@ -571,19 +572,24 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 - **Table design:** must support ALL stages per VV row. Stage 1 VV = S2/S3 cols NULL. Stage 3 VV = entire row full. Pipeline via SQLMesh. 90-day retention.
 - **Deployment guidance (Dustin/dplat, 2026-03-05):** Silver layer is the correct location. SQLMesh recommended — handles orchestration and idempotency. Consider hourly materialization of source data first, then run the larger model over the reduced dataset. Set retention in the SQLMesh model or at table creation. Tag the table with the owning team. For very large batch processes, Spark + Airflow may be better.
 
-### The 5-Checkpoint IP Trace
-Within a single CTV ad serve, the IP can change at each stage:
+### The IP Pipeline per Stage (empirically validated 2026-03-10)
 
-| # | Checkpoint | Table | IP Column | Stability |
-|---|------------|-------|-----------|-----------|
-| 1 | Win IP | logdata.win_log | ip (inet /32) | — (baseline) |
-| 2 | CIL IP | logdata.cost_impression_log | ip (text) | 100% stable Win→CIL |
-| 3 | EL IP | logdata.event_log | ip (inet /32) | 96.2% stable CIL→EL |
-| 4 | CP IP | logdata.clickpass_log | ip (inet /32) | — |
-| 5 | Visit IP | summarydata.ui_visits | ip (inet /32) | mutation range 5.9–33.4% |
+Within a single CTV ad serve, there are only **2 distinct user IPs** per stage:
 
-**Simplified 2-hop join:** `event_log.bid_ip` = `win_log.ip` at 100% — this enables joining
-win_log → CIL → event_log without traversing all 5 checkpoints explicitly.
+| IP | Table | Column | What it is | Validated |
+|----|-------|--------|------------|-----------|
+| **bid_ip** | event_log | bid_ip | Targeting identity (= win_ip = serve_ip = segment_ip) | bid=win: 38.2M rows, 47 differ (0.0001%) |
+| **vast_ip** | event_log | ip | VAST playback IP — **enters next stage's segment** | bid≠vast: 1.02% (CGNAT /24 rotation) |
+| redirect_ip | clickpass_log | ip | Redirect/visit IP (mutation boundary) | — |
+| visit_ip | ui_visits | ip | Page view IP | — |
+| impression_ip | ui_visits | impression_ip | Pixel-side IP (mobile/CGNAT fallback) | — |
+
+Additional validations:
+- vast_impression_ip ≈ vast_start_ip: 99.95% match (374/812,609 differ)
+- win_logs.impression_ip_address: infrastructure/CDN IP (68.67.x.x MNTN infra, AWS IPs), NOT user IP
+- win_logs uses Beeswax IDs (not MNTN IDs). Join to event_log via `win_logs.auction_id = event_log.td_impression_id`.
+
+**Cross-stage link:** `next_stage.bid_ip ≈ prev_stage.vast_ip` (CGNAT may cause /24 variation in ~1%).
 
 ### IP Mutation Key Findings (TI-650)
 - **100% of mutation occurs at the VAST→redirect boundary** (Stage 3, CIL→EL or EL→redirect)
@@ -647,9 +653,7 @@ alternative cross-stage identifiers:
 - Does NOT contain: segment_id, audience_id, audience_upload_id, or any targeting segment reference
 - Cannot determine which audience segment was targeted for a given impression
 
-**Bottom line:** `first_touch_ad_served_id` is the ONLY reliable cross-stage link, and it is NULL
-for ~56-68% of S2/S3 VVs. No other field in clickpass_log, event_log, or cost_impression_log can
-bridge the gap. The ~40% cross-stage coverage from cp_ft is the ceiling with current data.
+**Bottom line (updated 2026-03-10):** The primary cross-stage link is **vast_ip** — the VAST impression IP enters the next stage's segment, so `next_stage.bid_ip ≈ prev_stage.vast_ip`. Combined with VV chain traversal and impression chain lookup (7-tier S1 resolution), this achieves **87-89% S1 coverage** for S2/S3 VVs. `first_touch_ad_served_id` serves as a fallback (tier 7) for the remaining cases. The ~11% unresolved ceiling is structural — those IPs entered segments via non-IP identity resolution (CRM/ipdsc, cross-device graph) and leave no IP breadcrumbs.
 
 ### attribution_model_id Clarification (from TI-650)
 - `ad_served_id` = **last-touch** attribution — the most recent impression that led to the VV

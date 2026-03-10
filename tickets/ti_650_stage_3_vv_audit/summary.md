@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v8 production query: 7-tier S1 resolution. S1 coverage: S2 87.2%, S3 89.1%
+**Status:** In Progress — v9 schema redesign: correct cross-stage key (vast_ip, not bid_ip) + column reorder + per-stage IP layout
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -28,48 +28,76 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 
 ### Production table: `audit.vv_ip_lineage`
 
-One row per VV. 30 columns (was 29 — added s1_resolution_method). Raw IP values only.
-- **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
-- **Last-touch impression IPs (Stage N):** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
-- **S1 impression (7-tier resolution):** cp_ft_ad_served_id, s1_ad_served_id, s1_bid_ip, s1_vast_ip, s1_resolution_method
-- **Prior VV (stage advancement trigger):** prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time
-- **Classification:** clickpass_is_new, visit_is_new, is_cross_device
-- **Metadata:** trace_date, trace_run_timestamp
+One row per VV. Columns ordered left-to-right to trace backward from VV → S1.
 
+**v9 architecture (PENDING — not yet implemented):**
+- Within-stage: `ad_served_id` links VV ↔ impression deterministically (zero IP joining)
+- Cross-stage: `vast_ip` (event_log.ip) is the IP that enters the next stage's segment (empirically proven 2026-03-10)
+- Per stage: 2 IPs — `bid_ip` and `vast_ip`. All other pipeline IPs (win, serve) = bid_ip (validated 38.2M rows).
+- Column layout: left-to-right traces the journey backward. Cross-stage links are explicitly visible.
 
-Partitioned by trace_date, clustered by advertiser_id + vv_stage.
+**v9 column layout (PENDING):**
+```
+-- VV identity
+ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
+
+-- VV visit IPs (this VV's visit event)
+visit_ip, impression_ip, redirect_ip
+
+-- S3 impression IPs (this VV's impression, linked via ad_served_id)
+s3_vast_ip, s3_bid_ip
+
+-- Cross-stage link: s3_bid_ip should ≈ s2_vast_ip (CGNAT may cause /24 variation)
+-- S2 impression IPs (prior VV's impression, linked via ad_served_id)
+s2_vast_ip, s2_bid_ip
+-- Prior VV metadata
+prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage
+
+-- Cross-stage link: s2_bid_ip should ≈ s1_vast_ip (CGNAT may cause /24 variation)
+-- S1 impression IPs (chain-traversed or cp_ft fallback)
+s1_vast_ip, s1_bid_ip
+s1_ad_served_id, s1_resolution_method, cp_ft_ad_served_id
+
+-- Classification
+clickpass_is_new, visit_is_new, is_cross_device
+
+-- Metadata
+trace_date, trace_run_timestamp
+```
+
+**NULL semantics:** For S1 VVs, s2 and s3 columns are NULL (chain doesn't extend). For S2 VVs, s3 columns are NULL but s2 = this VV's impression, s1 = resolved. What is NOT okay: NULL in the cross-stage link when the chain exists. If the chain resolves, every link (s3_bid_ip → s2_vast_ip → s2_bid_ip → s1_vast_ip → s1_bid_ip) must be populated.
+
+### Current state: v8 (working, needs v9 redesign)
+
+The v8 query works and achieves 87-89% S1 coverage, but:
+1. **Cross-stage key is wrong:** v8 joins on `bid_ip` across stages. Empirically, `vast_ip` is the correct cross-stage key (see Finding #16 below).
+2. **Column order is confusing:** v8 mixes S1/prior-VV/last-touch columns without clear left-to-right traceability.
+3. **Per-stage IP layout missing:** v8 has flat columns (lt_bid_ip, lt_vast_ip, pv_lt_bid_ip, etc.) instead of per-stage columns (s3_bid_ip, s3_vast_ip, s2_bid_ip, s2_vast_ip, s1_bid_ip, s1_vast_ip).
+
+### S1 resolution via 7-tier CASE (v8, will carry forward to v9)
+1. `current_is_s1`: vv_stage=1, current impression IS S1
+2. `vv_chain_direct`: prior VV IS S1 (vast_ip match — was bid_ip in v8, needs correction)
+3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain
+4. `imp_chain`: S1 impression at prior VV's vast_ip (was bid_ip in v7, needs correction)
+5. `imp_direct`: S1 impression at current VV's vast_ip (was bid_ip in v7, needs correction)
+6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip (v8)
+7. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
 
 ### Key design decisions
-- **v8 architecture — impression-chain + visit-ip + VV chain + cp_ft fallback:**
-  - Within-stage: ad_served_id links VV ↔ impression deterministically (zero IP joining)
-  - Cross-stage: bid_ip links to prior-stage event (VV or impression) that put IP into segment
-  - 4 TEMP TABLEs in Q3b: impression_pool, prior_vv_pool, s1_pool, s1_imp_pool
-  - NEW in v8: `impression_ip` from `ui_visits` as additional S1 lookup key. For mobile/CGNAT users, impression_ip (pixel-side IP) may differ from bid_ip and map to an S1 impression.
-- **S1 resolution via 7-tier CASE (v8):**
-  1. `current_is_s1`: vv_stage=1, current impression IS S1
-  2. `vv_chain_direct`: prior VV IS S1 (bid_ip match)
-  3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain
-  4. `imp_chain`: S1 impression at prior VV's bid_ip (v7)
-  5. `imp_direct`: S1 impression at current VV's bid_ip (v7)
-  6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip (NEW in v8)
-  7. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
 - **180-day lookback (was 90):** Empirically confirmed S3→S1 chains spanning 104+ days.
-- **s1_imp_pool** uses earliest S1 impression per bid_ip (ORDER BY time ASC) to avoid temporal mismatch where most recent S1 impression post-dates the VV.
+- **s1_imp_pool** uses earliest S1 impression per vast_ip (ORDER BY time ASC). v8 used bid_ip — v9 will use vast_ip.
 - **impression_ip investigation:** 5.3% of S3 VVs have impression_ip != bid_ip. For unresolved cases (no S1 at bid_ip), impression_ip rescues 22.9% (348/1,522 in 1-day CIL-only test = +3.7% of total).
 - **S1 coverage (adv 37775, 7-day trace, v8):**
   - S1: 100.0% | S2: 87.2% (was 38.5%) | S3: 89.1% (was 41.0%)
   - imp_visit_ip tier adds 0 incremental coverage — re-attributes ~175 cases from cp_ft to a cleaner path (pixel IP → S1 impression). Kept for audit trail clarity.
 - **Remaining unresolved (~11% ceiling — structural, not a bug):**
   - 91% of unresolved have NO S1 impression at bid_ip at any time in 180 days.
-  - Traced sample (f1eff35a): only S3 impressions exist at this IP. No S1 or S2 at all. GA Client ID empty. Cross-device flag set but no observable link.
   - Root causes: non-IP identity resolution put the IP into the S3 segment (CRM email→IP via ipdsc, cross-device graph, segment update paths not observable in impression logs).
-  - These VVs are **fundamentally untraceable via IP lineage** — the entry path doesn't leave IP breadcrumbs in the event chain.
-- **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback). Split OR → two hash joins (92% slot reduction).
+  - These VVs are **fundamentally untraceable via IP lineage** — the entry path doesn't leave IP breadcrumbs.
+- **Prior VV match** on vast_ip (primary) OR redirect_ip (fallback). Split OR → two hash joins (92% slot reduction).
 - **Prior VV stage logic:** `pv_stage < vv_stage` (strict). Max chain: S3 → S2 → S1.
 - **All VV stages as anchor rows.** S1-only, S2→S1, S3→S2→S1 chains all present.
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
-- **Traced example (S3 VV 373173f8):** 5 distinct IPs in same /24, all linked deterministically by ad_served_id:
-  - S1 bid: .81 → S1 vast: .56 → S2 bid: .81 → S2 vast: .65 → S2 VV: .43 → S3 bid: .43 → S3 vast: .50 → S3 VV: .50
 
 ### S1 chain coverage (v8, advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10)
 | Stage | Total | Resolved | % | vv_direct | vv_s2_s1 | imp_chain | imp_direct | imp_visit_ip | cp_ft | unresolved |
@@ -98,29 +126,90 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
 7. **20% of S1 VVs are on S3 IPs.** Attribution stage != journey stage. Prior VV chain traversal reveals the IP's true funnel history.
 8. **30-day EL lookback is exact.** 100% of VVs have impression within 30 days. Zero exceptions across 3.25M rows.
 9. **BQ Silver validated vs Greenplum** within 0.12pp on all metrics across 10 advertisers.
-10. **pv_stage logic (corrected 2026-03-09):** `pv_stage < vv_stage` (strict). An IP is advanced INTO a stage by a lower-stage impression — you can't enter S3 via S3 (already there). Max chain: S3→S2→S1 (2 chain joins). Prior version used `<=` which incorrectly allowed same-stage prior VVs (e.g. S3→S3), but this is logically impossible since the IP was already in that stage. `s2_pv` third-level join removed as unnecessary.
+10. **pv_stage logic (corrected 2026-03-09):** `pv_stage < vv_stage` (strict). An IP is advanced INTO a stage by a lower-stage impression — you can't enter S3 via S3 (already there). Max chain: S3→S2→S1 (2 chain joins).
 11. **CIL.ip = bid_ip (100% validated, 2026-03-09).** Joined cost_impression_log to impression_log on `impression_id = ttd_impression_id`: 794,050/794,050 rows match bid_ip; only 745,169 (93.8%) match render_ip. When they differ, render_ip is internal 10.x.x.x (NAT/proxy). CIL has `advertiser_id` — impression_log does not. CIL replaces impression_log in all queries.
-12. **BQ CTE re-scanning: event_log is 42% of total query cost.** Q3 execution analysis (254.6 slot-hrs total): event_log scanned 4x (52 slot-hrs) + dedup 4x (54 slot-hrs) = 106 slot-hrs. BQ does NOT materialize CTEs — each reference re-scans 26B rows from 90K partitions. event_log has no advertiser_id, preventing early filtering.
-13. **Prior VV IP join data skew: 245x compute skew.** Stage 149 consumed 97 slot-hrs (38% of total). One worker took 6.25 hours vs 1.5 min average. Caused by popular IPs (shared NAT, corporate, VPN) creating massive fan-out on the `prior_vv_pool` IP match. The `OR pv.ip = cp.ip` disjunctive condition compounds the problem. See `ti_650_query_optimization_guide.md`.
-14. **cp_ft_ad_served_id fallback rescues 10,549 S1 chain gaps (2026-03-09).** When IP-based chain traversal fails (IP changed between stages), clickpass's `first_touch_ad_served_id` can resolve S1 for ~60% of those cases. S2: 21.6% → 37.0% (+6,342 rows), S3: 28.2% → 36.1% (+4,207 rows). Zero performance overhead — the ft_lt LEFT JOIN on TEMP TABLE is free.
-15. **Merged impression_pool: 3 TEMP TABLEs instead of 4, same 66s wall time (2026-03-09).** UNION ALL of event_log + cost_impression_log into one pool eliminates 4 duplicate LEFT JOINs (lt_d, pv_lt_d, s1_lt_d, ft_lt_d). Simplifies all COALESCE patterns. Child job breakdown: impression_pool 39s, prior_vv_pool 6s, s1_pool 3s, main SELECT 8s.
+12. **BQ CTE re-scanning: event_log is 42% of total query cost.** Q3 execution analysis (254.6 slot-hrs total): event_log scanned 4x (52 slot-hrs) + dedup 4x (54 slot-hrs) = 106 slot-hrs. BQ does NOT materialize CTEs — each reference re-scans 26B rows from 90K partitions.
+13. **Prior VV IP join data skew: 245x compute skew.** Stage 149 consumed 97 slot-hrs (38% of total). Caused by popular IPs (shared NAT, corporate, VPN). Split OR → two hash joins (92% reduction). See `ti_650_query_optimization_guide.md`.
+14. **cp_ft_ad_served_id fallback rescues 10,549 S1 chain gaps (2026-03-09).** S2: 21.6% → 37.0% (+6,342 rows), S3: 28.2% → 36.1% (+4,207 rows). Zero performance overhead.
+15. **Merged impression_pool: 3 TEMP TABLEs instead of 4, same 66s wall time (2026-03-09).** UNION ALL of event_log + cost_impression_log into one pool.
+16. **Cross-stage key is vast_ip, NOT bid_ip (empirically proven, 2026-03-10).** Tested S2 bid_ips against S1 bid_ip vs S1 vast_ip (97,655 distinct S2 bid_ips, 7-day window):
+    - 309 S2 bid_ips match S1 vast_ip ONLY (not bid_ip) — **vast_ip enters next stage's segment**
+    - 45 S2 bid_ips match S1 bid_ip ONLY (not vast_ip) — likely alternate entry paths
+    - 48,558 match both (because bid_ip = vast_ip 99% of the time)
+    - This confirms the MES pipeline diagram: the green arrow goes from VAST Impression IP → next stage's Segment.
+17. **bid_ip = win_ip at 99.9999% (validated 38.2M rows, 2026-03-10).** Joined event_log to win_logs via `td_impression_id = auction_id`. Only 47/38,204,354 differ. bid_ip = win_ip = serve_ip = segment_ip — all the same targeting identity, set at auction time.
+18. **vast_ip ≠ win_ip in 1.35% (515,586/38.2M, 2026-03-10).** vast_ip is a genuinely different IP — observed at VAST callback time. When bid_ip ≠ vast_ip, they're in the same /24 (CGNAT rotation within the carrier's NAT pool, not a network switch).
+19. **vast_impression_ip ≈ vast_start_ip (99.95%, 2026-03-10).** 374/812,609 differ. Both from event_log, different event_type_raw. Close enough to treat as one value; vast_impression used as canonical.
+20. **win_logs.impression_ip_address = infrastructure IP, NOT user (2026-03-10).** When it differs from win_ip, it's 68.67.x.x (MNTN infra), 204.13.x.x (MNTN infra), or AWS IPs (18.x, 3.x, 44.x). Not useful for user IP tracking.
+21. **win_logs uses Beeswax IDs, not MNTN IDs (2026-03-10).** win_logs.advertiser_id and campaign_id are Beeswax-internal IDs, not MNTN integrationprod IDs. Join to event_log via `win_logs.auction_id = event_log.td_impression_id`. No direct advertiser_id mapping in integrationprod.advertisers or campaigns tables.
+22. **Only 2 meaningful user IPs per stage (2026-03-10).** `bid_ip` (event_log.bid_ip) = targeting identity, and `vast_ip` (event_log.ip) = observed at VAST playback, enters next segment. All other pipeline IPs (win, serve, segment) = bid_ip.
+
+### MES Pipeline IP Map (empirically validated 2026-03-10)
+
+```
+Event              Table                          IP Column           Join Key         Validated
+─────              ─────                          ─────────           ────────         ─────────
+Segment IP    ─┐
+Bid IP        ─┤   event_log.bid_ip              bid_ip              ad_served_id     bid=win: 38.2M rows
+Serve IP      ─┤   (all the same IP)                                                  47 differ (0.0001%)
+Win IP        ─┘   win_logs.ip                   ip                  auction_id
+
+VAST Imp IP   ─┐   event_log.ip                  ip (=vast_ip)       ad_served_id     imp≈start: 812K rows
+VAST Start IP ─┘   event_log.ip (vast_start)     ip                  ad_served_id     374 differ (0.046%)
+
+Redirect IP        clickpass_log.ip              ip                  ad_served_id
+Visit IP           ui_visits.ip                  ip                  ad_served_id
+Impression IP      ui_visits.impression_ip       impression_ip       ad_served_id
+
+Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_ip
+                   (CGNAT may cause /24 variation in ~1% of cases)
+```
 
 ---
 
-## 5. Files
+## 5. What Needs to Be Done (v9)
+
+### 5.1 Schema redesign
+1. **Change cross-stage join key from bid_ip to vast_ip.** In `s1_imp_pool`, dedup by `vast_ip` instead of `bid_ip`. In prior_vv_pool joins, match on vast_ip. In s1_pool joins, match on vast_ip.
+2. **Reorder columns left-to-right:** VV identity → VV visit IPs → S3 impression IPs → S2 impression IPs → S1 impression IPs → classification → metadata.
+3. **Per-stage IP columns:** Replace flat `lt_bid_ip`/`lt_vast_ip`/`pv_lt_bid_ip`/`pv_lt_vast_ip` with explicit `s3_vast_ip`, `s3_bid_ip`, `s2_vast_ip`, `s2_bid_ip`, `s1_vast_ip`, `s1_bid_ip`.
+4. **Re-run coverage numbers** after vast_ip correction to see if the ~11% unresolved improves (expect marginal improvement — ~0.3% based on 309/97,655 vast_only count).
+
+### 5.2 Deployment (unchanged from v8)
+- **Confirm dataset name with Dustin** — `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`
+- **PR the SQLMesh model** into `SteelHouse/sqlmesh` repo
+- **Backfill from 2026-01-01**
+- **Self-referencing optimization:** Once populated, daily runs look up prior VVs from table itself (reduces daily scan from ~2.8 TB to ~0.5 TB)
+
+---
+
+## 6. Completed Items (Historical)
+
+- **Query validated end-to-end (2026-03-06):** Targeted test on advertiser 37775 (2026-02-04) confirmed `pv_lt_bid_ip = 172.59.192.138` is now populated for the display prior VV `a4074373`. Previously NULL. Fix: `il_all` CTE (impression_log) + `COALESCE(el, il)` pattern across all 9 IP columns.
+- **S1 chain traversal redesigned and fully validated (2026-03-06):** 4-branch CASE with `s1_pv` + `s2_pv` JOINs resolves all permutations. All 10 permutations confirmed. End-to-end IP validation COMPLETE.
+- **Cross-device chain fix (2026-03-06):** Prior VV match expanded from bid_ip-only to bid_ip OR redirect_ip (fallback). 16-20% of S2/S3 VVs have bid_ip ≠ redirect_ip.
+- **All-stage design confirmed (Zach, 2026-03-06):** `cp_dedup` pulls all clickpass_log stages. Zach: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
+- **Ray's TTL context (2026-03-06):** S1 impression → S3 VV can span ~83 days. 180-day lookback correctly sized.
+- **CIL optimization applied (2026-03-09):** All queries use `cost_impression_log` instead of `impression_log`. CIL.ip = bid_ip (100% validated). CIL has advertiser_id.
+- **Query performance optimization (2026-03-09):** TEMP TABLE materialization + split OR → two hash joins + IP+stage pre-dedup. See `ti_650_query_optimization_guide.md`.
+- **IP pipeline empirical validation (2026-03-10):** Full IP validation across event_log, win_logs, cost_impression_log. Findings #16-22 above.
+
+---
+
+## 7. Files
 
 ### Queries
-- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (ready to PR into SteelHouse/sqlmesh repo)
-- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: advertiser summary)
+- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (needs v9 update)
+- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3b: preview, Q4: summary). **Currently v8 — needs v9 redesign.**
 
 ### Artifacts
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
-- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (rewritten 2026-03-06; covers stages, targeting vs attribution, chain traversal, NTB verification use case with query examples, cross-device walkthrough, coverage summary, VVS determination logic)
-- `artifacts/ti_650_column_reference.md` — column-by-column schema reference for the production table
+- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (stages, targeting vs attribution, chain traversal, NTB verification, VVS logic)
+- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **Needs v9 update for new column layout.**
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
-- `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies (CTE re-scan, IP join skew, TEMP TABLE mitigation)
-- `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad (design decisions, VVS attribution logic, all-stage confirmation)
-- `artifacts/ti_650_verified_visit_business_logic.txt` — Nimeshi Fernando's VVS Business Logic doc (Confluence MIME/HTML export; contains full VVS determination logic, attribution model IDs, TRPX flow, PV_GUID_LOCK)
+- `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies
+- `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad
+- `artifacts/ti_650_verified_visit_business_logic.txt` — Nimeshi Fernando's VVS Business Logic doc
 
 ### Meetings
 - `meetings/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
@@ -130,31 +219,17 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
 - `meetings/ti_650_meeting_dustin.txt` — SQLMesh deployment strategy with Dustin (batch sizing, staging tables, slot-based pricing, mono repo PR workflow)
 
 ### Outputs
-- `outputs/ti_650_preview_37775_2026-02-04.json` — 100-row S3 VV sample (advertiser 37775, 2026-02-04, display fix applied)
-- `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference; pv_lt_bid_ip NULL for display prior VVs)
-- `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation (7-day clickpass-only, fast query; confirms zero pv_stage=3)
-- `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (30-day full scan; **canonical validation**)
-- `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation (confirms s1_pv JOIN resolves S1 VV for row 003a01cf)
-- `outputs/ti_650_permutation_validation_2026-02-04.json` — all 10 chain traversal permutations validated (clickpass-only proxy; all 4 s1_branches confirmed, row counts 10K–211K)
-- `outputs/ti_650_e2e_spotcheck_2026-02-07.json` — **end-to-end IP validation**: el/il bid_ip confirmed populated for all 4 s1_branches via targeted point-lookup (2026-03-06)
+- `outputs/ti_650_preview_37775_2026-02-04.json` — 100-row S3 VV sample (v8, advertiser 37775)
+- `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference)
+- `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation
+- `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (canonical validation)
+- `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation
+- `outputs/ti_650_permutation_validation_2026-02-04.json` — all 10 chain traversal permutations validated
+- `outputs/ti_650_e2e_spotcheck_2026-02-07.json` — end-to-end IP validation (2026-03-06)
 
 ---
 
-## 6. Open Items
-
-- **Deploy production table:** SQLMesh model drafted (`queries/ti_650_sqlmesh_model.sql`). Silver layer, `targeting-infrastructure` owner. Next: confirm dataset name with Dustin (e.g. `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`), PR into `SteelHouse/sqlmesh` repo, backfill from 2026-01-01
-- **Query validated end-to-end (2026-03-06):** Targeted test on advertiser 37775 (2026-02-04) confirmed `pv_lt_bid_ip = 172.59.192.138` is now populated for the display prior VV `a4074373`. Previously NULL. Fix: `il_all` CTE (impression_log) + `COALESCE(el, il)` pattern across all 9 IP columns.
-- **S1 chain traversal redesigned and fully validated (2026-03-06):** 4-branch CASE with `s1_pv` + `s2_pv` JOINs resolves all permutations (S1-only through S3→S3→S3→S1). `s1_ad_served_id`, `s1_bid_ip`, `s1_vast_ip` replace old `ft_*` columns. All 10 permutations confirmed (clickpass-only proxy, advertiser 37775, 2026-02-04 to 2026-02-10). **End-to-end IP validation COMPLETE (2026-03-06):** targeted el/il point-lookup confirmed `el_bid_ip` and `il_bid_ip` are populated for all 4 s1_branch CASE arms (see `ti_650_e2e_spotcheck_2026-02-07.json`).
-- **Cross-device chain fix (2026-03-06):** Prior VV match expanded from bid_ip-only to bid_ip OR redirect_ip (fallback). 16-20% of S2/S3 VVs have bid_ip ≠ redirect_ip (cross-device mutation) — without fallback, chain traversal would return NULL for these. Validated on VV `77ddff0c`: bid_ip match finds 5 prior VVs (T-Mobile, all S3/S2), redirect_ip fallback finds 9 more (home network, including 4 S1 VVs). Dedup prefers bid_ip matches. Advertiser_id constraint added to all prior_vv joins.
-- **All-stage design confirmed (Zach, 2026-03-06):** `cp_dedup` pulls all clickpass_log stages — not just S3. Zach: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
-- **Ray's TTL context (2026-03-06):** Architecture diagram shows S1 impression → S3 VV can span ~83 days in representative examples. 90-day lookback is correctly sized. Display touches confirmed fine: "a verified visit can happen on both."
-- **Self-referencing optimization:** Once table is populated, daily runs can look up prior VVs from the table itself instead of re-scanning clickpass_log (reduces daily scan from ~2.8 TB to ~0.5 TB)
-- **CIL optimization applied (2026-03-09):** All queries updated to use `cost_impression_log` instead of `impression_log`. CIL.ip = bid_ip (100% validated, 794K rows). CIL has advertiser_id for massive scan reduction. Render IP lost — acceptable tradeoff (only internal 10.x.x.x NAT, 6.2%).
-- **Query performance optimization (2026-03-09):** Q3 single-advertiser preview runs 80+ minutes (254.6 slot-hours). Two bottlenecks: (1) event_log CTE re-scanning (42%), (2) prior_vv_pool IP join skew (38%, 245x compute skew). Q3b applies three mitigations: TEMP TABLE materialization (eliminates 3 of 4 event_log scans), semi-join pre-filter (26B → ~few hundred K rows), and **IP+stage pre-dedup in prior_vv_pool** (caps join fan-out from hundreds-to-one to max 3-to-1 by keeping only the most recent prior VV per ip+stage). Pending validation run. See `ti_650_query_optimization_guide.md`.
-
----
-
-## 7. Data Documentation Updates
+## 8. Data Documentation Updates
 
 Added to `knowledge/data_catalog.md`:
 - clickpass_log, event_log, ui_visits, win_log, cost_impression_log entries with join keys, gotchas, TTLs
@@ -170,13 +245,13 @@ Added to `knowledge/data_knowledge.md`:
 
 ---
 
-## 8. Performance Review Tags
+## 9. Performance Review Tags
 
-**Speed:** Built v1 -> v2 -> v3 -> v4 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
+**Speed:** Built v1 -> v8 trace pipeline iteratively. Independently resolved 5+ blockers. Designed batch backfill strategy saving 97% vs naive approach ($29 vs $1,039).
 
-**Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3. Identified 20% of S1 VVs on S3 IPs — a novel finding. Simplified 42-column design to 29-column raw-values-only audit trail on stakeholder feedback. Discovered CIL.ip = bid_ip (100% validated), replacing impression_log with cost_impression_log (~20,000x scan reduction via advertiser_id). Performed deep BQ execution plan analysis (254.6 slot-hours, 159 stages) identifying two bottlenecks: CTE re-scanning (42%) and IP join data skew (38%, 245x compute skew). Documented optimization strategies in reusable guide. Built cost justification doc quantifying $17/day ongoing cost.
+**Craft:** Designed stage-aware IP lineage table tracing full IP chain per VV across S1/S2/S3. Identified 20% of S1 VVs on S3 IPs — a novel finding. Simplified 42-column design to 29-column raw-values-only audit trail on stakeholder feedback. Discovered CIL.ip = bid_ip (100% validated), replacing impression_log with cost_impression_log (~20,000x scan reduction via advertiser_id). Performed deep BQ execution plan analysis (254.6 slot-hours, 159 stages). Empirically validated full IP pipeline across event_log, win_logs, cost_impression_log (38.2M rows) — proved cross-stage key is vast_ip (not bid_ip), correcting a fundamental assumption.
 
-**Adaptability:** Pivoted from v1 (simple mutation audit) to v4 (full stage-aware lineage with chain traversal) across 3 Zach review meetings. Incorporated Sharad's first_touch lookup clarification. Adapted from Greenplum to BQ Silver when pipeline gap was discovered.
+**Adaptability:** Pivoted from v1 (simple mutation audit) to v8 (full stage-aware lineage with 7-tier chain traversal) across 3 Zach review meetings. v9 redesign corrects cross-stage join key based on empirical evidence, even though v8 worked at 87-89% coverage.
 
 **Revenue Impact:** 4,006 phantom NTB events/day for one advertiser directly impacts revenue retention. Stage-aware lineage enables first-ever quantification of cross-stage IP attribution patterns. Production table provides ongoing auditability for all advertisers.
 
