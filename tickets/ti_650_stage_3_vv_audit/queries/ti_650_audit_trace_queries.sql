@@ -320,25 +320,27 @@ WHERE _pv_rn = 1;
 --   Underlying table: bronze.sqlmesh__raw.raw__event_log (9.6 TB, DAY partition, no clustering).
 --   Reducing lookback window is the most effective optimization lever.
 --
--- BENCHMARK (advertiser 37775, 30-day lookback):
---   v4 Q3e (4 TEMP, split OR, no fallback):    1-day total 66s, main SELECT 8s
---   v5 Q3b (3 TEMP, merged pool + fallback):    7-day total 66s, main SELECT 8s  ← this version
---   v4 Q3c (4 TEMP, OR joins, no fallback):     1-day total 143s, main SELECT 95s
+-- BENCHMARK (advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10):
+--   v5 Q3b (3 TEMP, merged pool + fallback, 90-day):  total 136s  ← this version (production match)
+--   v5 Q3b (3 TEMP, merged pool + fallback, 30-day):  total  66s  (faster but misses S1 chains >30 days)
+--   v4 Q3e (4 TEMP, split OR, no fallback, 30-day):   total  66s
+--   v4 Q3c (4 TEMP, OR joins, no fallback, 30-day):   total 143s
 --
--- Child job breakdown (v5, 7-day trace, advertiser 37775):
---   impression_pool:  39s  (event_log + CIL scan, 55% of total)
---   prior_vv_pool:     6s
---   s1_pool:           3s
---   main SELECT:       8s
---   DROP cleanup:     <1s
+-- S1 COVERAGE (90-day lookback, 7-day trace):
+--   S1: 100.0% (102,578/102,581)
+--   S2:  38.5% (20,266/52,575) — up from 21.6% baseline
+--   S3:  41.0% (26,371/64,371) — up from 28.2% baseline
+--
+-- LOOKBACK NOTE: 90 days required. S3→S2→S1 chain can span 60 days (30d per stage).
+--   30-day lookback misses 3,150 S3 chains. Q3b default matches Q2 production (90 days).
 --
 -- PRODUCTION NOTE: SQLMesh models are single SELECT — no TEMP TABLEs. The merged pool
 --   becomes a CTE with UNION ALL. Split OR pattern ships as inline pv_bid/pv_redir LEFT JOINs.
 --
 -- TO TEST:
 --   1. ADVERTISER_ID: replace 37775 (appears 3x: impression_pool, prior_vv_pool, cp_dedup)
---   2. TRACE_DATE: replace '2026-02-04' (cp_dedup WHERE, v_dedup buffer)
---   3. LOOKBACK_START: replace '2026-01-05' (impression_pool, prior_vv_pool)
+--   2. TRACE_START/END: replace '2026-02-04'/'2026-02-11' (cp_dedup WHERE, v_dedup buffer)
+--   3. LOOKBACK_START: replace '2025-11-06' (impression_pool, prior_vv_pool) — trace_start - 90 days
 --
 -- RUN AS: BQ multi-statement query (paste entire block). TEMP TABLEs auto-drop at session end.
 
@@ -350,7 +352,7 @@ WITH el AS (
     SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_impression'
-      AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
+      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
       AND campaign_id IN (
           SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
           WHERE advertiser_id = 37775 AND deleted = FALSE
@@ -359,7 +361,7 @@ WITH el AS (
 cil AS (
     SELECT ad_served_id, ip AS vast_ip, ip AS bid_ip, campaign_id, time
     FROM `dw-main-silver.logdata.cost_impression_log`
-    WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 37775
 )
 SELECT ad_served_id, vast_ip, bid_ip, campaign_id, time,
@@ -382,7 +384,7 @@ FROM (
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
-    WHERE cp.time >= TIMESTAMP('2026-01-05') AND cp.time < TIMESTAMP('2026-02-05')
+    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
       AND cp.advertiser_id = 37775
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 )
@@ -406,7 +408,7 @@ cp_dedup AS (
         cp.first_touch_ad_served_id, cp.time, c.stage AS vv_stage
     FROM `dw-main-silver.logdata.clickpass_log` cp
     LEFT JOIN campaigns_stage c ON c.campaign_id = cp.campaign_id
-    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-05')
+    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
       AND cp.advertiser_id = 37775
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
@@ -414,7 +416,7 @@ v_dedup AS (
     SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip, is_new, impression_ip
     FROM `dw-main-silver.summarydata.ui_visits`
     WHERE from_verified_impression = TRUE
-      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-12')
+      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
 ),
 with_all_joins AS (
