@@ -152,7 +152,7 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
     - 48,558 match both (because bid_ip = vast_ip 99% of the time)
     - This confirms the MES pipeline diagram: the green arrow goes from VAST Impression IP → next stage's Segment.
 17. **bid_ip = win_ip at 100% (validated 38.2M rows, 2026-03-10).** Joined event_log to win_logs via `td_impression_id = auction_id`. 47/38,204,354 appeared to differ but ALL 47 have `win_ip = 0.0.0.0` (null sentinel in Beeswax win notification — data quality issue, not a real IP difference). When win_logs has a real IP, it matches bid_ip 100% of the time.
-18. **vast_ip ≠ win_ip in 1.35% (515,586/38.2M, 2026-03-10).** vast_ip is a genuinely different IP — observed at VAST callback time. When bid_ip ≠ vast_ip, they're in the same /24 (CGNAT rotation within the carrier's NAT pool, not a network switch).
+18. **bid_ip ≠ vast_ip in ~1.2% of impressions (3.54M/288.7M, 2026-03-10).** vast_ip is a genuinely different IP — observed at VAST callback time. See Finding #26 for full 5-mechanism breakdown (CGNAT, SSAI, dual-stack IPv6, VPN, network switch).
 19. **vast_impression_ip ≈ vast_start_ip (99.847%, 2026-03-10).** 442,617/288.7M differ (deduped 1:1 per ad_served_id). Earlier stat of 374/812K was a smaller sample. Both from event_log.ip, different event_type_raw. See Finding #25 for full breakdown of why they differ.
 20. **win_logs.impression_ip_address = infrastructure IP, NOT user (2026-03-10).** When it differs from win_ip, it's 68.67.x.x (MNTN infra), 204.13.x.x (MNTN infra), or AWS IPs (18.x, 3.x, 44.x). Not useful for user IP tracking.
 21. **win_logs uses Beeswax IDs, not MNTN IDs (2026-03-10).** win_logs.advertiser_id and campaign_id are Beeswax-internal IDs, not MNTN integrationprod IDs. Join to event_log via `win_logs.auction_id = event_log.td_impression_id`. No direct advertiser_id mapping in integrationprod.advertisers or campaigns tables.
@@ -160,6 +160,14 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
 23. **Zach confirmation (2026-03-10):** "segment_ip and the bid request bid_ip are the only 2 100% the same." Serve_ip = impression_log.ip, "almost always the bid ip, but not always." This validates our 3-IP model: bid_ip (=segment=win), serve_ip (impression_log.ip, 93.6% match), vast_ip (event_log.ip, 99% match, cross-stage key).
 24. **serve_ip (impression_log.ip) when it differs = infrastructure IP, NOT user (2026-03-10).** 6.4% of CTV impressions have serve_ip ≠ bid_ip. Of those: 96.9% = internal 10.x.x.x (NAT), 3.1% = AWS IPs (3.145.229.x, 18.97.x, 3.231.x, 34.223.x, 44.203.x). The serve_ip is the IP of the ad server that handled the serve request, not the user's device. When it equals bid_ip (93.6%), the request passed through without proxying. Never the user's real IP when it differs.
 25. **vast_start_ip vs vast_impression_ip: 99.847% identical, differ = SSAI proxies (2026-03-10).** 288.7M paired (deduped 1:1 per ad_served_id), 442,617 differ (0.153%). When they differ: 58% = **neither matches bid_ip** (both are SSAI infrastructure — AWS proxy pool, round-robin ~1,600 impressions each); 26.5% = same /24 CGNAT rotation; 15.5% = one matches bid_ip, other is proxy. Top differing IPs: 54.175.x, 18.212.x, 100.31.x, 52.204.x (all AWS). **Implication:** Both columns are defensible for SSAI detection, but for cross-stage linking both are equally unreliable in the SSAI cases. Collapsing to single `vast_ip` per stage loses only 0.153% granularity.
+26. **bid_ip ≠ vast_ip deep-dive: 5 distinct mechanisms (2026-03-10).** 3.54M diffs across 288.7M impressions (~1.2%). Full breakdown:
+    - **35.2% — CGNAT /24 rotation (1.25M):** Last octet changed, same /24 subnet. Same carrier NAT pool, same household.
+    - **24.5% — CGNAT wider /16 pool (867K):** Same carrier (same /16), different /24 block. NAT device allocated from neighboring subnet.
+    - **6.5% — Carrier /8 reallocation (230K):** Same ISP (same first octet), different /16. Load balancing across NAT devices.
+    - **5.7% — SSAI proxy (200K):** Bid from real user IPv4, VAST callback from AWS SSAI server (18.x, 54.x, 52.x, 34.x, 3.x, 44.x). ~196 proxy IPs each appearing ~1,200 times.
+    - **11.7% — Dual-stack IPv4→IPv6 (415K):** Bid request over IPv4, VAST callback over IPv6. Same device, two protocol stacks. 208K distinct IPv6 addresses.
+    - **16.4% — Other different network (580K):** Mix of smaller SSAI/CDN proxies, VPN exit nodes, and genuine network switches (WiFi→mobile). 88K singleton IPs suggest real user network changes.
+    - **Correction to Finding #18:** Previously said "same /24" for all diffs — actually only 35.2% are same /24. The remaining 64.8% span wider subnets, SSAI, IPv6, and genuine network changes.
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 
@@ -183,7 +191,7 @@ Visit IP           ui_visits.ip                  ip                  ad_served_i
 Impression IP      ui_visits.impression_ip       impression_ip       ad_served_id
 
 Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_ip
-                   (CGNAT may cause /24 variation in ~1% of cases)
+                   Differs ~1.2%: CGNAT 66%, SSAI 6%, IPv6 12%, other 16%
 ```
 
 ---

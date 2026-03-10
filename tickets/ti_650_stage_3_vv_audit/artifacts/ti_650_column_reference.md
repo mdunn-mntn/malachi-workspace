@@ -23,7 +23,7 @@ Stage 1 VV: visit_ip | NULL NULL NULL NULL           | NULL NULL NULL NULL      
 
 **NULL rules:** NULLs in s2/s3 columns are expected when the VV's stage doesn't extend that far. NULLs in the cross-stage link when the chain DOES exist = structural (~11% unresolved — IP entered segment via CRM/cross-device graph, no IP breadcrumbs).
 
-**Cross-stage link validation:** `s3_bid_ip ≈ s2_vast_impression_ip` and `s2_bid_ip ≈ s1_vast_impression_ip`. When they differ, it's CGNAT rotation within the same /24 (empirically validated, 2026-03-10).
+**Cross-stage link validation:** `s3_bid_ip ≈ s2_vast_impression_ip` and `s2_bid_ip ≈ s1_vast_impression_ip`. Differs ~1.2% of the time due to 5 mechanisms: CGNAT rotation (66% of diffs — /24, /16, or /8 rotation), SSAI proxies (6%), dual-stack IPv4→IPv6 (12%), VPN/CDN/network switches (16%). See Finding #26.
 
 ---
 
@@ -151,7 +151,13 @@ For display impressions (CIL only, no event_log): `CIL.ip = bid_ip` (100% valida
 | vast_impression_ip = vast_start_ip | 99.847% (442,617 differ) | 288,693,500 rows |
 | vast_impression ≠ vast_start: neither matches bid | 58% of diffs = both SSAI proxy IPs | 256,794 rows |
 | vast_impression ≠ vast_start: same /24 | 26.5% of diffs = CGNAT rotation | 117,207 rows |
-| bid_ip = vast_ip | 98.98% (8,353 differ — CGNAT /24) | 815,433 rows |
+| bid_ip = vast_ip | ~98.8% match (~3.54M differ) | 288,693,500 rows |
+| bid_ip ≠ vast_ip: CGNAT /24 | 35.2% of diffs (1.25M) — last octet rotation | Same carrier NAT pool |
+| bid_ip ≠ vast_ip: CGNAT /16 | 24.5% of diffs (867K) — wider pool rotation | Same carrier, adjacent /24 |
+| bid_ip ≠ vast_ip: carrier /8 | 6.5% of diffs (230K) — ISP reallocation | Same ISP, different subnet |
+| bid_ip ≠ vast_ip: SSAI proxy | 5.7% of diffs (200K) — AWS SSAI servers | ~196 proxy IPs, ~1,200 each |
+| bid_ip ≠ vast_ip: IPv4→IPv6 | 11.7% of diffs (415K) — dual-stack devices | 208K distinct IPv6 addrs |
+| bid_ip ≠ vast_ip: other | 16.4% of diffs (580K) — VPN, CDN, network switch | 88K singleton IPs |
 | serve_ip = bid_ip | 93.6% | CTV impressions |
 | serve_ip when differs | 96.9% internal 10.x.x.x, 3.1% AWS | 6.4% of CTV |
 | win_logs.impression_ip_address | Infrastructure/CDN IP, not user | 661,987 differ from win_ip |
