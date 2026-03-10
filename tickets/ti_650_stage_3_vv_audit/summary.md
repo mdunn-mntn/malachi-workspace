@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v4 production query validated end-to-end; S1 chain traversal redesign complete and validated
+**Status:** In Progress — v5 production query: merged impression pool + cp_ft fallback. S1 coverage improved +56% (S2) / +23% (S3)
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -40,12 +40,22 @@ One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
-- **Single event_log + cost_impression_log CTE** each joined 3x (last-touch, prior VV LT, S1 chain LT). **Note:** BQ does NOT materialize CTEs — each reference re-scans the table. CIL replaces impression_log (CIL.ip = bid_ip, 100% validated; has advertiser_id for ~20,000x scan reduction). See `ti_650_query_optimization_guide.md` for TEMP TABLE and semi-join mitigation strategies.
-- **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback for cross-device). Dedup prefers bid_ip matches. Fallback covers the ~16-20% of S2/S3 VVs where bid_ip ≠ redirect_ip due to cross-device mutation. Advertiser_id constraint on all prior_vv joins prevents CGNAT false positives.
-- **Prior VV stage logic:** `pv_stage < vv_stage` (strict). An IP can only be advanced INTO a stage by a lower stage — e.g. S3 VV must have been preceded by S2 or S1 (not S3, since IP was already in S3). Max chain: S3 → S2 → S1 (3 levels, 2 chain joins). `s2_pv` third-level join removed as unnecessary.
-- **S1 resolution via chain traversal CASE** — eliminates reliance on `cp_ft_ad_served_id` (40% NULL). **3-branch CASE:** (1) vv_stage=1 (current IS S1), (2) pv_stage=1 (prior VV IS S1), (3) ELSE s1_pv (second-level join finds S1). Max chain depth 2 (S3→S2→S1). 9 LEFT JOINs total. `cp_ft_ad_served_id` retained as comparison reference only.
+- **Merged impression_pool (v5):** event_log + cost_impression_log UNION ALL into one CTE/TEMP TABLE. Eliminates 4 duplicate LEFT JOINs and all COALESCE(el.x, il.x) patterns. CIL replaces impression_log (CIL.ip = bid_ip, 100% validated; has advertiser_id for ~20,000x scan reduction). 3 TEMP TABLEs in Q3b (was 4).
+- **cp_ft_ad_served_id fallback (v5):** When IP-based S1 chain traversal fails, falls back to clickpass's `first_touch_ad_served_id` to resolve S1 bid_ip via impression_pool lookup. Rescues ~10,500 rows with zero performance overhead. S2: 21.6% → 37.0% (+56% relative), S3: 28.2% → 36.1% (+23% relative).
+- **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback for cross-device). Split into two hash-joinable LEFT JOINs (pv_bid + pv_redir) — 92% slot reduction vs OR join. Advertiser_id constraint prevents CGNAT false positives.
+- **Prior VV stage logic:** `pv_stage < vv_stage` (strict). An IP can only be advanced INTO a stage by a lower stage. Max chain: S3 → S2 → S1 (2 chain joins).
+- **S1 resolution via 4-branch CASE:** (1) vv_stage=1 (current IS S1), (2) pv_stage=1 (prior VV IS S1), (3) s1_pool IP chain match, (4) ELSE cp_ft fallback. 11 LEFT JOINs total (was 16 in v4).
 - **All VV stages as anchor rows** — `cp_dedup` does not filter by stage. S1-only, S2→S1, S3→S2→S1 chains are all present. Zach confirmed: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
+
+### S1 chain coverage (v5, advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10)
+| Stage | Total | s1_bid_ip populated | % | prior_vv populated | % |
+|-------|-------|--------------------|----|-------------------|----|
+| S1 | 102,581 | 102,578 | 100.0% | 0 (self) | 0% |
+| S2 | 52,575 | 19,467 | 37.0% | 11,400 | 21.7% |
+| S3 | 64,371 | 23,221 | 36.1% | 44,862 | 69.7% |
+
+Remaining S1 gaps (63% S2, 64% S3) are IPs where the user's IP changed between stages (mobile NAT, carrier-grade NAT) and clickpass has no first_touch_ad_served_id. These require GA Client ID → IP mapping (not currently available in the data model).
 
 ### Cost
 - Daily incremental: ~$29/day on-demand (~4.7 TB scan — event_log + cost_impression_log)
@@ -69,6 +79,8 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 11. **CIL.ip = bid_ip (100% validated, 2026-03-09).** Joined cost_impression_log to impression_log on `impression_id = ttd_impression_id`: 794,050/794,050 rows match bid_ip; only 745,169 (93.8%) match render_ip. When they differ, render_ip is internal 10.x.x.x (NAT/proxy). CIL has `advertiser_id` — impression_log does not. CIL replaces impression_log in all queries.
 12. **BQ CTE re-scanning: event_log is 42% of total query cost.** Q3 execution analysis (254.6 slot-hrs total): event_log scanned 4x (52 slot-hrs) + dedup 4x (54 slot-hrs) = 106 slot-hrs. BQ does NOT materialize CTEs — each reference re-scans 26B rows from 90K partitions. event_log has no advertiser_id, preventing early filtering.
 13. **Prior VV IP join data skew: 245x compute skew.** Stage 149 consumed 97 slot-hrs (38% of total). One worker took 6.25 hours vs 1.5 min average. Caused by popular IPs (shared NAT, corporate, VPN) creating massive fan-out on the `prior_vv_pool` IP match. The `OR pv.ip = cp.ip` disjunctive condition compounds the problem. See `ti_650_query_optimization_guide.md`.
+14. **cp_ft_ad_served_id fallback rescues 10,549 S1 chain gaps (2026-03-09).** When IP-based chain traversal fails (IP changed between stages), clickpass's `first_touch_ad_served_id` can resolve S1 for ~60% of those cases. S2: 21.6% → 37.0% (+6,342 rows), S3: 28.2% → 36.1% (+4,207 rows). Zero performance overhead — the ft_lt LEFT JOIN on TEMP TABLE is free.
+15. **Merged impression_pool: 3 TEMP TABLEs instead of 4, same 66s wall time (2026-03-09).** UNION ALL of event_log + cost_impression_log into one pool eliminates 4 duplicate LEFT JOINs (lt_d, pv_lt_d, s1_lt_d, ft_lt_d). Simplifies all COALESCE patterns. Child job breakdown: impression_pool 39s, prior_vv_pool 6s, s1_pool 3s, main SELECT 8s.
 
 ---
 

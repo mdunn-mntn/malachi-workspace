@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- VV IP LINEAGE — PRODUCTION QUERIES (v4, simplified audit trail)
+-- VV IP LINEAGE — PRODUCTION QUERIES (v5, merged impression pool + cp_ft fallback)
 --------------------------------------------------------------------------------
 --
 -- Table: {dataset}.vv_ip_lineage
@@ -12,23 +12,34 @@
 -- QUERIES IN THIS FILE:
 --   Q1: CREATE TABLE (reference — SQLMesh creates the table automatically)
 --   Q2: INSERT (daily idempotent load — DELETE+INSERT by date range)
---   Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + split OR + s1_pool)
+--   Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + split OR + merged pool + cp_ft fallback)
 --   Q4: Advertiser summary (stage-aware, runs on populated table)
 --
 -- STAGE LOGIC:
 --   Prior VV stage must be STRICTLY LESS than current VV stage (pv_stage < vv_stage).
 --   An IP can only be advanced INTO a stage by a lower stage — you can't enter S3 via S3.
---   Max chain depth: 2 (S3 → S2 → S1). 9 LEFT JOINs total.
+--   Max chain depth: 2 (S3 → S2 → S1). 11 LEFT JOINs total (was 16, reduced by merged pool).
 --
 -- DATA SOURCES:
---   clickpass_log    — anchor VVs (target interval) + prior VV pool (90-day)
---   event_log        — CTV impression IPs (single 90-day scan, joined 2x)
---   cost_impression_log — display impression bid_ip (CIL.ip = bid_ip, confirmed empirically;
---                        has advertiser_id for filtering — ~20,000x fewer rows than impression_log)
---   ui_visits        — visit IP + impression IP (+/- 7 day buffer)
---   campaigns        — funnel_level -> stage classification
+--   clickpass_log        — anchor VVs (target interval) + prior VV pool (90-day)
+--   event_log            — CTV impression IPs (single 90-day scan)
+--   cost_impression_log  — display impression bid_ip (CIL.ip = bid_ip, confirmed empirically;
+--                          has advertiser_id for filtering — ~20,000x fewer rows than impression_log)
+--   ui_visits            — visit IP + impression IP (+/- 7 day buffer)
+--   campaigns            — funnel_level -> stage classification
 --
--- OPTIMIZATION: CIL replaces impression_log — CIL.ip IS bid_ip (100% match, validated 794K rows).
+-- OPTIMIZATIONS (v5):
+--   1. Merged impression_pool — event_log + cost_impression_log UNION ALL into one pool.
+--      Eliminates 4 duplicate LEFT JOINs (lt_d, pv_lt_d, s1_lt_d, ft_lt_d).
+--      Simplifies COALESCE(lt.x, lt_d.x) → lt.x throughout.
+--   2. cp_ft_ad_served_id fallback — when IP-based S1 chain fails, falls back to
+--      clickpass's first_touch_ad_served_id to resolve S1 bid_ip.
+--      Rescues ~10,500 rows (S2: +56%, S3: +23% relative improvement).
+--   3. Split OR → two hash joins (pv_bid/pv_redir, s1_bid/s1_redir). 92% slot reduction.
+--   4. s1_pool pre-filtered to stage 1 only.
+--   5. prior_vv_pool IP dedup — one row per (ip, pv_stage).
+--
+-- CIL OPTIMIZATION: CIL replaces impression_log — CIL.ip IS bid_ip (100% match, validated 794K rows).
 --   CIL has advertiser_id, impression_log does not. ~800K rows/day vs ~16B.
 --   Render IP (impression_log.ip) lost — only differs from bid_ip 6.2% of the time (internal 10.x.x.x).
 --------------------------------------------------------------------------------
@@ -53,12 +64,12 @@ CREATE TABLE IF NOT EXISTS {dataset}.vv_ip_lineage (
     visit_ip              STRING,                   -- ui_visits.ip
     impression_ip         STRING,                   -- ui_visits.impression_ip
 
-    -- S1 impression — chain traversal resolved (~99%+ populated)
-    -- cp_ft_ad_served_id: system-stored comparison reference only (~60% populated)
-    -- s1_ad_served_id / s1_bid_ip / s1_vast_ip: our audit-trail S1 via chain traversal CASE:
+    -- S1 impression — chain traversal resolved, with cp_ft fallback
+    -- Resolution order: IP chain → cp_ft_ad_served_id fallback
     --   vv_stage=1  -> current VV IS S1 (lt_ columns)
     --   pv_stage=1  -> prior VV IS S1 (pv_lt_ columns)
-    --   pv_stage>1  -> second-level IP match via s1_pv join (s1_lt_ columns)
+    --   pv_stage>1  -> second-level IP match via s1_pool (s1_lt_ columns)
+    --   all above NULL -> fallback to cp_ft_ad_served_id impression lookup
     cp_ft_ad_served_id    STRING,
     s1_ad_served_id       STRING,
     s1_bid_ip             STRING,
@@ -99,6 +110,8 @@ CLUSTER BY advertiser_id, vv_stage;
 --   VV buffer:    +/- 7 days on ui_visits partition filter
 --
 -- OPTIMIZATIONS (same as Q3b):
+--   Merged impression_pool (event_log + cost_impression_log UNION ALL)
+--   cp_ft_ad_served_id fallback for S1 resolution
 --   Split OR → two hash joins (pv_bid/pv_redir, s1_bid/s1_redir)
 --   s1_pool CTE filtered to stage 1 only
 --   prior_vv_pool IP dedup (one row per ip, pv_stage)
@@ -120,18 +133,20 @@ cp_dedup AS (
     WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
-el_all AS (
-    SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time,
+-- Merged impression pool: event_log + cost_impression_log in one CTE
+impression_pool AS (
+    SELECT ad_served_id, vast_ip, bid_ip, campaign_id, time,
         ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
-    FROM `dw-main-silver.logdata.event_log`
-    WHERE event_type_raw = 'vast_impression'
-      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
-),
-cil_all AS (
-    SELECT ad_served_id, ip AS vast_ip, ip AS bid_ip, campaign_id, time,
-        ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
-    FROM `dw-main-silver.logdata.cost_impression_log`
-    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+    FROM (
+        SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time
+        FROM `dw-main-silver.logdata.event_log`
+        WHERE event_type_raw = 'vast_impression'
+          AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+        UNION ALL
+        SELECT ad_served_id, ip AS vast_ip, ip AS bid_ip, campaign_id, time
+        FROM `dw-main-silver.logdata.cost_impression_log`
+        WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+    )
 ),
 v_dedup AS (
     SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip, is_new, impression_ip
@@ -154,7 +169,6 @@ prior_vv_pool AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ip, pv_stage ORDER BY prior_vv_time DESC) = 1
 ),
 s1_pool AS (
-    -- S1 chain lookup always seeks pv_stage=1. Pre-filtering shrinks the join input.
     SELECT ip, advertiser_id, prior_vv_ad_served_id, pv_campaign_id, prior_vv_time, pv_stage
     FROM prior_vv_pool
     WHERE pv_stage = 1
@@ -163,31 +177,33 @@ with_all_joins AS (
     SELECT
         cp.ad_served_id, cp.advertiser_id, cp.campaign_id,
         cp.vv_stage, cp.time AS vv_time,
-        COALESCE(lt.bid_ip, lt_d.bid_ip) AS lt_bid_ip,
-        COALESCE(lt.vast_ip, lt_d.vast_ip) AS lt_vast_ip,
+        lt.bid_ip AS lt_bid_ip,
+        lt.vast_ip AS lt_vast_ip,
         cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
         cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
 
+        -- S1 ad_served_id: IP chain → cp_ft fallback
         CASE
-            WHEN cp.vv_stage = 1
-                THEN cp.ad_served_id
+            WHEN cp.vv_stage = 1 THEN cp.ad_served_id
             WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
                 THEN COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
-            ELSE COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
+            WHEN COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id) IS NOT NULL
+                THEN COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
+            ELSE cp.first_touch_ad_served_id
         END AS s1_ad_served_id,
+        -- S1 bid_ip: IP chain → cp_ft fallback
         CASE
-            WHEN cp.vv_stage = 1
-                THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
-            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
-                THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-            ELSE COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+            WHEN cp.vv_stage = 1 THEN lt.bid_ip
+            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
+            WHEN s1_lt.bid_ip IS NOT NULL THEN s1_lt.bid_ip
+            ELSE ft_lt.bid_ip
         END AS s1_bid_ip,
+        -- S1 vast_ip: IP chain → cp_ft fallback
         CASE
-            WHEN cp.vv_stage = 1
-                THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
-            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
-                THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
-            ELSE COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+            WHEN cp.vv_stage = 1 THEN lt.vast_ip
+            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.vast_ip
+            WHEN s1_lt.vast_ip IS NOT NULL THEN s1_lt.vast_ip
+            ELSE ft_lt.vast_ip
         END AS s1_vast_ip,
 
         COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id) AS prior_vv_ad_served_id,
@@ -195,9 +211,9 @@ with_all_joins AS (
         COALESCE(pv_bid.pv_campaign_id, pv_redir.pv_campaign_id) AS pv_campaign_id,
         COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) AS pv_stage,
         COALESCE(pv_bid.ip, pv_redir.ip) AS pv_redirect_ip,
-        COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) AS pv_lt_bid_ip,
-        COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip) AS pv_lt_vast_ip,
-        COALESCE(pv_lt.time, pv_lt_d.time) AS pv_lt_time,
+        pv_lt.bid_ip AS pv_lt_bid_ip,
+        pv_lt.vast_ip AS pv_lt_vast_ip,
+        pv_lt.time AS pv_lt_time,
 
         cp.is_new AS clickpass_is_new, v.is_new AS visit_is_new, cp.is_cross_device,
         DATE(cp.time) AS trace_date,
@@ -213,14 +229,15 @@ with_all_joins AS (
         ) AS _pv_rn
 
     FROM cp_dedup cp
-    LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
-    LEFT JOIN cil_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
+
+    -- THIS VV's impression (single join — merged pool)
+    LEFT JOIN impression_pool lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
     LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
 
     -- Prior VV: bid_ip match (preferred, hash-joinable)
     LEFT JOIN prior_vv_pool pv_bid
         ON pv_bid.advertiser_id = cp.advertiser_id
-        AND pv_bid.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
+        AND pv_bid.ip = lt.bid_ip
         AND pv_bid.prior_vv_time < cp.time
         AND pv_bid.prior_vv_ad_served_id != cp.ad_served_id
         AND pv_bid.pv_stage < cp.vv_stage
@@ -233,23 +250,20 @@ with_all_joins AS (
         AND pv_redir.prior_vv_ad_served_id != cp.ad_served_id
         AND pv_redir.pv_stage < cp.vv_stage
 
-    -- Prior VV impression IP lookup
-    LEFT JOIN el_all pv_lt
+    -- Prior VV impression lookup (single join — merged pool)
+    LEFT JOIN impression_pool pv_lt
         ON pv_lt.ad_served_id = COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
         AND pv_lt.rn = 1
-    LEFT JOIN cil_all pv_lt_d
-        ON pv_lt_d.ad_served_id = COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
-        AND pv_lt_d.rn = 1
 
-    -- S1 chain: bid_ip match (uses s1_pool — stage 1 only)
+    -- S1 chain: bid_ip match on prior VV's impression IP (uses s1_pool — stage 1 only)
     LEFT JOIN s1_pool s1_bid
         ON s1_bid.advertiser_id = cp.advertiser_id
-        AND s1_bid.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+        AND s1_bid.ip = pv_lt.bid_ip
         AND s1_bid.pv_stage < COALESCE(pv_bid.pv_stage, pv_redir.pv_stage)
         AND s1_bid.prior_vv_time < COALESCE(pv_bid.prior_vv_time, pv_redir.prior_vv_time)
         AND s1_bid.prior_vv_ad_served_id != COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
 
-    -- S1 chain: redirect_ip match (uses s1_pool)
+    -- S1 chain: redirect_ip match on prior VV's redirect IP (uses s1_pool)
     LEFT JOIN s1_pool s1_redir
         ON s1_redir.advertiser_id = cp.advertiser_id
         AND s1_redir.ip = COALESCE(pv_bid.ip, pv_redir.ip)
@@ -257,13 +271,15 @@ with_all_joins AS (
         AND s1_redir.prior_vv_time < COALESCE(pv_bid.prior_vv_time, pv_redir.prior_vv_time)
         AND s1_redir.prior_vv_ad_served_id != COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
 
-    -- S1 impression IP lookup
-    LEFT JOIN el_all s1_lt
+    -- S1 impression lookup (single join — merged pool)
+    LEFT JOIN impression_pool s1_lt
         ON s1_lt.ad_served_id = COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
         AND s1_lt.rn = 1
-    LEFT JOIN cil_all s1_lt_d
-        ON s1_lt_d.ad_served_id = COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
-        AND s1_lt_d.rn = 1
+
+    -- cp_ft fallback: when IP chain fails, use clickpass first_touch_ad_served_id
+    LEFT JOIN impression_pool ft_lt
+        ON ft_lt.ad_served_id = cp.first_touch_ad_served_id
+        AND ft_lt.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
@@ -277,71 +293,84 @@ FROM with_all_joins
 WHERE _pv_rn = 1;
 
 ================================================================================
-== Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + split OR + s1_pool)
+== Q3b: SELECT preview — OPTIMIZED (TEMP TABLEs + merged pool + cp_ft fallback)
 ================================================================================
 -- Same logic as Q2, but uses TEMP TABLEs to eliminate CTE re-scanning.
--- BQ does NOT materialize CTEs — without TEMP TABLEs, event_log scans 3x.
--- Q3b scans event_log ONCE into a TEMP TABLE, then references it 3x for free.
+-- BQ does NOT materialize CTEs — without TEMP TABLEs, event_log scans 4x.
+-- Q3b scans event_log ONCE into a TEMP TABLE, then references it 4x for free.
 --
 -- OPTIMIZATIONS APPLIED:
---   1. TEMP TABLE el_all — single event_log scan, filtered by advertiser's campaign_ids.
+--   1. TEMP TABLE impression_pool — single merged scan of event_log + cost_impression_log.
+--      UNION ALL with dedup by ad_served_id. Eliminates 4 duplicate LEFT JOINs (lt_d, pv_lt_d,
+--      s1_lt_d, ft_lt_d) and all COALESCE(lt.x, lt_d.x) patterns.
 --      campaign_id filter is more selective than ad_served_id semi-join at the storage layer
 --      because event_log (9.6 TB, partitioned by day only, no clustering) requires a full
---      partition scan regardless — campaign_id IN (...) is cheaper to evaluate than a semi-join
---      against millions of ad_served_ids from clickpass_log.
---   2. TEMP TABLE cil_all — single cost_impression_log scan (already advertiser-filtered)
---   3. TEMP TABLE prior_vv_pool — single clickpass_log scan (referenced 2x: pv_bid, pv_redir)
---   4. TEMP TABLE s1_pool — prior_vv_pool filtered to stage 1 only (s1 always seeks stage 1)
---   5. prior_vv_pool IP dedup — keeps only the most recent prior VV per (ip, pv_stage).
---      Caps join fan-out from hundreds-to-one down to max 3-to-1 per IP.
---   6. Split OR → two hash joins — original (ip = bid_ip OR ip = redirect_ip) forces BQ
+--      partition scan regardless — campaign_id IN (...) is cheaper to evaluate.
+--   2. cp_ft_ad_served_id fallback — when IP-based S1 chain returns NULL but clickpass knows
+--      the first_touch_ad_served_id, look it up in impression_pool. Rescues ~10,500 rows:
+--      S2: 21.6% → 37.0% (+56% relative), S3: 28.2% → 36.1% (+23% relative).
+--   3. TEMP TABLE prior_vv_pool — single clickpass_log scan (referenced 2x: pv_bid, pv_redir).
+--      Two-level IP dedup caps join fan-out to max 3-to-1 per IP.
+--   4. TEMP TABLE s1_pool — prior_vv_pool filtered to stage 1 only.
+--   5. Split OR → two hash joins — original (ip = bid_ip OR ip = redirect_ip) forces BQ
 --      into nested-loop join (8,593 slot-sec). Split into two separate LEFT JOINs
 --      (pv_bid on bid_ip, pv_redir on redirect_ip) enables hash joins (759 slot-sec, 92% reduction).
---      Same pattern for s1_bid/s1_redir.
 --
 -- PERF NOTE: event_log dominates cost (~668 GB / 30 days, 98.8% of total scan).
 --   Underlying table: bronze.sqlmesh__raw.raw__event_log (9.6 TB, DAY partition, no clustering).
 --   Reducing lookback window is the most effective optimization lever.
 --
--- BENCHMARK (advertiser 37775, 30-day lookback, 1-day trace):
---   Q3c (OR joins):     main SELECT 95s / 9,159 slot-sec, total 143s
---   Q3e (split OR):     main SELECT  8s /   759 slot-sec, total  66s  ← this version (fastest wall time)
---   Q3f (materialized): main SELECT  5s /   525 slot-sec, total 100s  (lowest slots, but +34s overhead)
+-- BENCHMARK (advertiser 37775, 30-day lookback):
+--   v4 Q3e (4 TEMP, split OR, no fallback):    1-day total 66s, main SELECT 8s
+--   v5 Q3b (3 TEMP, merged pool + fallback):    7-day total 66s, main SELECT 8s  ← this version
+--   v4 Q3c (4 TEMP, OR joins, no fallback):     1-day total 143s, main SELECT 95s
 --
--- PRODUCTION NOTE: SQLMesh models are single SELECT — no TEMP TABLEs. The split OR pattern
---   (inline pv_bid/pv_redir LEFT JOINs) is what ships to production. This preview query uses
---   TEMP TABLEs only to avoid re-scanning event_log 3x (BQ doesn't materialize CTEs).
+-- Child job breakdown (v5, 7-day trace, advertiser 37775):
+--   impression_pool:  39s  (event_log + CIL scan, 55% of total)
+--   prior_vv_pool:     6s
+--   s1_pool:           3s
+--   main SELECT:       8s
+--   DROP cleanup:     <1s
+--
+-- PRODUCTION NOTE: SQLMesh models are single SELECT — no TEMP TABLEs. The merged pool
+--   becomes a CTE with UNION ALL. Split OR pattern ships as inline pv_bid/pv_redir LEFT JOINs.
 --
 -- TO TEST:
---   1. ADVERTISER_ID: replace 37775 (appears 5x: cp_dedup, el_all, cil_all, prior_vv_pool, s1_pool filter)
+--   1. ADVERTISER_ID: replace 37775 (appears 3x: impression_pool, prior_vv_pool, cp_dedup)
 --   2. TRACE_DATE: replace '2026-02-04' (cp_dedup WHERE, v_dedup buffer)
---   3. LOOKBACK_START: replace '2026-01-05' (el_all, cil_all, prior_vv_pool)
+--   3. LOOKBACK_START: replace '2026-01-05' (impression_pool, prior_vv_pool)
 --
 -- RUN AS: BQ multi-statement query (paste entire block). TEMP TABLEs auto-drop at session end.
 
--- Step 1: Materialize event_log — campaign_id filter narrows to this advertiser's impressions
+-- Step 1: Merged impression pool — event_log + cost_impression_log in one table
 -- event_log: 9.6 TB, partitioned by DAY, no clustering. ~22 GB/day scanned.
 -- campaign_id IN (...) is faster than ad_served_id semi-join (fewer distinct values to match).
-CREATE TEMP TABLE el_all AS
-SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time,
+CREATE TEMP TABLE impression_pool AS
+WITH el AS (
+    SELECT ad_served_id, ip AS vast_ip, bid_ip, campaign_id, time
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE event_type_raw = 'vast_impression'
+      AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
+      AND campaign_id IN (
+          SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
+          WHERE advertiser_id = 37775 AND deleted = FALSE
+      )
+),
+cil AS (
+    SELECT ad_served_id, ip AS vast_ip, ip AS bid_ip, campaign_id, time
+    FROM `dw-main-silver.logdata.cost_impression_log`
+    WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
+      AND advertiser_id = 37775
+)
+SELECT ad_served_id, vast_ip, bid_ip, campaign_id, time,
     ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
-FROM `dw-main-silver.logdata.event_log`
-WHERE event_type_raw = 'vast_impression'
-  AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
-  AND campaign_id IN (
-      SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
-      WHERE advertiser_id = 37775 AND deleted = FALSE
-  );
+FROM (
+    SELECT * FROM el
+    UNION ALL
+    SELECT * FROM cil
+);
 
--- Step 2: Materialize cost_impression_log — already advertiser-filtered, prevents CTE re-scan
-CREATE TEMP TABLE cil_all AS
-SELECT ad_served_id, ip AS vast_ip, ip AS bid_ip, campaign_id, time,
-    ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
-FROM `dw-main-silver.logdata.cost_impression_log`
-WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-02-05')
-  AND advertiser_id = 37775;
-
--- Step 3: Materialize prior_vv_pool — referenced 4x (pv_bid, pv_redir, s1_bid, s1_redir)
+-- Step 2: Materialize prior_vv_pool — referenced 4x (pv_bid, pv_redir, s1_bid, s1_redir)
 -- Two-level dedup: (1) one row per ad_served_id, then (2) one row per IP per stage.
 -- Level 2 caps join fan-out from hundreds-to-one to max 3-to-1 per IP.
 CREATE TEMP TABLE prior_vv_pool AS
@@ -359,17 +388,14 @@ FROM (
 )
 QUALIFY ROW_NUMBER() OVER (PARTITION BY ip, pv_stage ORDER BY prior_vv_time DESC) = 1;
 
--- Step 3b: s1_pool — prior_vv_pool filtered to stage 1 ONLY
+-- Step 2b: s1_pool — prior_vv_pool filtered to stage 1 ONLY
 -- S1 chain lookup always seeks pv_stage=1. Pre-filtering shrinks the join input.
 CREATE TEMP TABLE s1_pool AS
 SELECT ip, advertiser_id, prior_vv_ad_served_id, pv_campaign_id, prior_vv_time, pv_stage
 FROM prior_vv_pool
 WHERE pv_stage = 1;
 
--- Step 4: Main query — split OR joins for hash join optimization
--- Original: pv ON (ip = bid_ip OR ip = redirect_ip) → nested loop (9,159 slot-sec)
--- Split:    pv_bid ON ip = bid_ip + pv_redir ON ip = redirect_ip → two hash joins (759 slot-sec)
--- Same pattern for s1: s1_bid + s1_redir using s1_pool (stage 1 only)
+-- Step 3: Main query — merged pool + cp_ft fallback + split OR hash joins
 WITH campaigns_stage AS (
     SELECT campaign_id, funnel_level AS stage
     FROM `dw-main-bronze.integrationprod.campaigns`
@@ -395,31 +421,33 @@ with_all_joins AS (
     SELECT
         cp.ad_served_id, cp.advertiser_id, cp.campaign_id,
         cp.vv_stage, cp.time AS vv_time,
-        COALESCE(lt.bid_ip, lt_d.bid_ip) AS lt_bid_ip,
-        COALESCE(lt.vast_ip, lt_d.vast_ip) AS lt_vast_ip,
+        lt.bid_ip AS lt_bid_ip,
+        lt.vast_ip AS lt_vast_ip,
         cp.ip AS redirect_ip, v.ip AS visit_ip, v.impression_ip,
         cp.first_touch_ad_served_id AS cp_ft_ad_served_id,
 
+        -- S1 ad_served_id: IP chain → cp_ft fallback
         CASE
-            WHEN cp.vv_stage = 1
-                THEN cp.ad_served_id
+            WHEN cp.vv_stage = 1 THEN cp.ad_served_id
             WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
                 THEN COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
-            ELSE COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
+            WHEN COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id) IS NOT NULL
+                THEN COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
+            ELSE cp.first_touch_ad_served_id
         END AS s1_ad_served_id,
+        -- S1 bid_ip: IP chain → cp_ft fallback
         CASE
-            WHEN cp.vv_stage = 1
-                THEN COALESCE(lt.bid_ip, lt_d.bid_ip)
-            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
-                THEN COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
-            ELSE COALESCE(s1_lt.bid_ip, s1_lt_d.bid_ip)
+            WHEN cp.vv_stage = 1 THEN lt.bid_ip
+            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.bid_ip
+            WHEN s1_lt.bid_ip IS NOT NULL THEN s1_lt.bid_ip
+            ELSE ft_lt.bid_ip
         END AS s1_bid_ip,
+        -- S1 vast_ip: IP chain → cp_ft fallback
         CASE
-            WHEN cp.vv_stage = 1
-                THEN COALESCE(lt.vast_ip, lt_d.vast_ip)
-            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1
-                THEN COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip)
-            ELSE COALESCE(s1_lt.vast_ip, s1_lt_d.vast_ip)
+            WHEN cp.vv_stage = 1 THEN lt.vast_ip
+            WHEN COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) = 1 THEN pv_lt.vast_ip
+            WHEN s1_lt.vast_ip IS NOT NULL THEN s1_lt.vast_ip
+            ELSE ft_lt.vast_ip
         END AS s1_vast_ip,
 
         COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id) AS prior_vv_ad_served_id,
@@ -427,9 +455,9 @@ with_all_joins AS (
         COALESCE(pv_bid.pv_campaign_id, pv_redir.pv_campaign_id) AS pv_campaign_id,
         COALESCE(pv_bid.pv_stage, pv_redir.pv_stage) AS pv_stage,
         COALESCE(pv_bid.ip, pv_redir.ip) AS pv_redirect_ip,
-        COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip) AS pv_lt_bid_ip,
-        COALESCE(pv_lt.vast_ip, pv_lt_d.vast_ip) AS pv_lt_vast_ip,
-        COALESCE(pv_lt.time, pv_lt_d.time) AS pv_lt_time,
+        pv_lt.bid_ip AS pv_lt_bid_ip,
+        pv_lt.vast_ip AS pv_lt_vast_ip,
+        pv_lt.time AS pv_lt_time,
 
         cp.is_new AS clickpass_is_new, v.is_new AS visit_is_new, cp.is_cross_device,
         DATE(cp.time) AS trace_date,
@@ -445,14 +473,15 @@ with_all_joins AS (
         ) AS _pv_rn
 
     FROM cp_dedup cp
-    LEFT JOIN el_all lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
-    LEFT JOIN cil_all lt_d ON lt_d.ad_served_id = cp.ad_served_id AND lt_d.rn = 1
+
+    -- THIS VV's impression (single join — merged pool)
+    LEFT JOIN impression_pool lt ON lt.ad_served_id = cp.ad_served_id AND lt.rn = 1
     LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
 
     -- Prior VV: bid_ip match (preferred, hash-joinable)
     LEFT JOIN prior_vv_pool pv_bid
         ON pv_bid.advertiser_id = cp.advertiser_id
-        AND pv_bid.ip = COALESCE(lt.bid_ip, lt_d.bid_ip)
+        AND pv_bid.ip = lt.bid_ip
         AND pv_bid.prior_vv_time < cp.time
         AND pv_bid.prior_vv_ad_served_id != cp.ad_served_id
         AND pv_bid.pv_stage < cp.vv_stage
@@ -465,18 +494,15 @@ with_all_joins AS (
         AND pv_redir.prior_vv_ad_served_id != cp.ad_served_id
         AND pv_redir.pv_stage < cp.vv_stage
 
-    -- Prior VV impression IP lookup (uses coalesced pv ad_served_id)
-    LEFT JOIN el_all pv_lt
+    -- Prior VV impression lookup (single join — merged pool)
+    LEFT JOIN impression_pool pv_lt
         ON pv_lt.ad_served_id = COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
         AND pv_lt.rn = 1
-    LEFT JOIN cil_all pv_lt_d
-        ON pv_lt_d.ad_served_id = COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
-        AND pv_lt_d.rn = 1
 
     -- S1 chain: bid_ip match on prior VV's impression IP (uses s1_pool — stage 1 only)
     LEFT JOIN s1_pool s1_bid
         ON s1_bid.advertiser_id = cp.advertiser_id
-        AND s1_bid.ip = COALESCE(pv_lt.bid_ip, pv_lt_d.bid_ip)
+        AND s1_bid.ip = pv_lt.bid_ip
         AND s1_bid.pv_stage < COALESCE(pv_bid.pv_stage, pv_redir.pv_stage)
         AND s1_bid.prior_vv_time < COALESCE(pv_bid.prior_vv_time, pv_redir.prior_vv_time)
         AND s1_bid.prior_vv_ad_served_id != COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
@@ -489,13 +515,15 @@ with_all_joins AS (
         AND s1_redir.prior_vv_time < COALESCE(pv_bid.prior_vv_time, pv_redir.prior_vv_time)
         AND s1_redir.prior_vv_ad_served_id != COALESCE(pv_bid.prior_vv_ad_served_id, pv_redir.prior_vv_ad_served_id)
 
-    -- S1 impression IP lookup
-    LEFT JOIN el_all s1_lt
+    -- S1 impression lookup (single join — merged pool)
+    LEFT JOIN impression_pool s1_lt
         ON s1_lt.ad_served_id = COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
         AND s1_lt.rn = 1
-    LEFT JOIN cil_all s1_lt_d
-        ON s1_lt_d.ad_served_id = COALESCE(s1_bid.prior_vv_ad_served_id, s1_redir.prior_vv_ad_served_id)
-        AND s1_lt_d.rn = 1
+
+    -- cp_ft fallback: when IP chain fails, use clickpass first_touch_ad_served_id
+    LEFT JOIN impression_pool ft_lt
+        ON ft_lt.ad_served_id = cp.first_touch_ad_served_id
+        AND ft_lt.rn = 1
 )
 SELECT
     ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time,
@@ -510,8 +538,7 @@ WHERE _pv_rn = 1
 LIMIT 100;
 
 -- Clean up (optional — TEMP TABLEs auto-drop at session end)
-DROP TABLE IF EXISTS el_all;
-DROP TABLE IF EXISTS cil_all;
+DROP TABLE IF EXISTS impression_pool;
 DROP TABLE IF EXISTS prior_vv_pool;
 DROP TABLE IF EXISTS s1_pool;
 
@@ -526,10 +553,12 @@ SELECT
     COUNT(*)                                                        AS total_vvs,
     COUNTIF(lt_bid_ip IS NOT NULL)                                  AS ctv_matched,
     ROUND(100.0 * COUNTIF(lt_bid_ip IS NOT NULL) / COUNT(*), 2)    AS ctv_match_pct,
+    COUNTIF(s1_bid_ip IS NOT NULL)                                  AS s1_resolved,
+    ROUND(100.0 * COUNTIF(s1_bid_ip IS NOT NULL) / COUNT(*), 2)    AS s1_resolved_pct,
     COUNTIF(prior_vv_ad_served_id IS NOT NULL)                      AS retargeting_cnt,
     ROUND(100.0 * COUNTIF(prior_vv_ad_served_id IS NOT NULL)
         / COUNT(*), 2)                                              AS retargeting_pct,
-    COUNTIF(cp_ft_ad_served_id IS NOT NULL)                            AS ft_found_cnt,
+    COUNTIF(cp_ft_ad_served_id IS NOT NULL)                         AS ft_found_cnt,
     ROUND(100.0 * COUNTIF(cp_ft_ad_served_id IS NOT NULL)
         / COUNT(*), 2)                                              AS ft_found_pct,
     COUNTIF(clickpass_is_new)                                       AS ntb_clickpass,
