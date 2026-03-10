@@ -90,3 +90,23 @@ Thank you, exactly what I was looking for.
 
 Make sure all artifacts for this ticket are up-to-date, we've learned a lot.
 
+
+--- 2026-03-10 Slack: serve_ip vs bid_ip vs segment_ip confirmation ---
+
+malachi  [11:17 AM]
+QQ Zach
+
+1. What is a "serve_ip"? Where is the distinction between the serve_ip and the bid_ip in the cost_impression_log / impression_log if it exists? My guess is that the bid_ip is sufficient.
+2. The MES graph shows there is/may be a distinction between segment_ip and the bid_ip. If so, is the expectation to join IPDSC to this to verify? On what identifier would we join these two tables to compare between bid_ip and the segment_ip in these two tables aside from the IP itself.
+
+zach.schoenberger  [11:19 AM]
+serve_ip is what we see when the adservice gets a serve request. it is almost always the bid ip, but not always. it is the ip column in logdata.impression_log
+segment_ip and the bid request bid_ip are the only 2 100% the same
+
+malachi  [11:20 AM]
+That's what I figured, but I wanted to make sure. Thanks for this confirmation.
+
+--- Context: This confirms the 3-IP model validated empirically on 2026-03-10:
+--- bid_ip = segment_ip = win_ip (100% same, Zach + 38.2M row validation)
+--- serve_ip = impression_log.ip (~93.8% = bid_ip, 6.2% internal 10.x.x.x NAT)
+--- vast_ip = event_log.ip (~99% = bid_ip, 1.02% CGNAT /24 rotation, cross-stage key)
