@@ -1,0 +1,223 @@
+Speaker 1  0:16  
+Going on? Zach, Hey, what's up? Nothing much. Hey, just had a couple questions for you. Wanted to look at the table real quick. I went back and just kind of did a lot of it myself. I mean, not that I wasn't doing that before, but if you try to use any sort of like script or AI or something to do it, it just makes too many
+
+Speaker 2  0:39  
+assumptions. So it does make a lot of assumptions.
+
+Speaker 1  0:43  
+It's just super annoying. Like, what I did at first, as I was trying to I was like, oh, there's a lot of data. Let's just like, I want to get a summary of it. And then every single time I try to do anything with it, it would just make a stupid assumption. And then I was like, this is just a big stupid waste of time. So anyways, that being said, I think that this is pretty much all buttoned up. I've done a lot of stuff to speed it up, but I kind of wanted to just go over the table with you and then ask, yeah, that Yeah. Okay. So first off, well, let's just go through the table real quick. So here's the answer. This is what's in here. So we have the ad cert ID, advertiser campaign and verified visits page. So basically, this tells you, for this verified visit. What is the attributed impression like? What stage is the impression for? Okay, so then there's three things in here, so there's the times stamp, and I can double check. I can't sometimes I don't remember exactly which time I use from here, but it's, it's referenced up here.
+
+Speaker 2  1:38  
+Yep, I was gonna say, I'm hoping it's the verified visit time there should be.
+
+Speaker 1  1:43  
+I just wanted just so anyways, there's three different IPs are in there. One's from the click pass log, and two is from the summary UI visits. I didn't know which IP we wanted to use to represent the verified visit IP.
+
+Speaker 2  1:56  
+Just having all available, it helps out, right? Because that's part of the problem. We know that things change through the life cycle, right? So as long as we, like, can see it all, we can understand what's happening, okay? And, you know, create other metrics based off of whether or not the values in the row match or not, right? Like, that's easy enough to do. Okay?
+
+Speaker 1  2:21  
+I actually think this might be a little bit easier to go through real quick. Just wanted to kind of explain, I mean, I think you understand this, but I just, you know, so if you were to do a full trace, like assuming that none of the columns match at all, right? So if you have a stage three attributed you, basically you have your verified visit IP, which I just said, there's three here, but then you have the stage three, vast start IP, the stage three, vast impression IP, the win IP, the serve IP, whatever bit IP, the segment IP, and then you there's a link between the stage three, bit IP and the stage two, vast start IP, right. Okay. So if you are attributed to a stage three, you're you're going to have the whole path, right? If you're attributed to stage two, you're not going to have the stage three stuff. Of course, you're going to start here at stage two, start vast IP, and then go work your way back. And then, if it's attributed to stage one, it's going to be, you know,
+
+Speaker 2  3:18  
+yeah, I mean, only one, only slight nitpick, right? Is if you have a stage three vv, like, technically you could have not, you might not have anything in stage two. Yep, correct, but, but, yes. Okay.
+
+Speaker 1  3:31  
+So that being said, there is some stuff that's interesting here that I just wanted to point out, bid IP is equal to win IP 100% of the time. Okay, they only differed in like 47 cases. And every single time it was just a null IP, it was like 0000, so I think it's just an issue with the system. I don't think it had anything to do with it actually being different. And that's like 100% we're talking 38 million. I checked there was 47 so I think we can skip those steps there. The second thing is, I
+
+Unknown Speaker  4:00  
+Oh, what's, what's the other one too.
+
+Unknown Speaker  4:09  
+I thought I put it in here.
+
+Speaker 1  4:14  
+Okay, that's, I think that's, that's fine. So as far as everything is concerned, this is what's coming from the table. So if you were to, like, follow the join key between all these and you're just going to kind of explain so you got the stage one attributed path, right? It's the same. It's basically what I just showed you up there. I just wanted to point out that the join key on this is the, yeah, the ad served ID within the same one, right? Now, here's the point that I actually wanted to make known, and I didn't know exactly. So when you're trying to join it, like, link it across stages, right? Obviously, the impression is different. And so you can't use like, an ad served ID, right? Correct? You have to use. Use an IP, at least. Guess what I think. And so I'm trying to join the bid IP from the verified visit IP to the previous, and I shouldn't say verified visit, because there's also a link between stage two
+
+Speaker 2  5:12  
+impression, right? You're taking an impression bid IP, so the generated verified visit?
+
+Speaker 1  5:17  
+Yeah, I didn't really. So I'm joining on bid IP to the vast IP. Is that?
+
+Speaker 2  5:22  
+Like, that's right, like, because, well, yes, okay, roughly speaking, yes.
+
+Speaker 1  5:27  
+So I broke those down, and this is, like, what is like, kind of the summary there. And it looks like, I mean, this is the count. So, I mean, this is, there was a lot. It was only 1% of the time, but they there was like, I wasn't able to find a matching one sometimes, and I don't know if there's any thing we can do about that. So for example, these are just, like, kind of the differences here. I don't really know what all this stuff is. I just kind of had it analyze the IPS without me going too much into it. But yeah, I just wanted to verify. I mean, is there anything else we can do besides the old IP versus the vast IP?
+
+Speaker 2  6:04  
+Or, I think we at that point, you need to take a look at the individual examples of where you're not able to trace it all the way back through and just look at them and see what is causing it right? Because there is absolutely no reason why we cannot trace it back at the end of the day, because, by definition, the bid IP has to have been targeted in some way, shape or form, right? So at least when we're talking about stage two and three for all these or even stage one for the impressions, right? Like, like, for it to be in stage two, it had to have had a vast event, right, right? And that, that's an impression that had to have had a bitty IP, right? That had to have been targeted in some way, shape or form, right? So, like, there's, we just got to figure out where the, what last detail needs to be added in to make sure that we can account
+
+Speaker 1  7:00  
+for 100% okay, yeah, I will go more into this too, but I'd still started to break it up. I think the majority of the issues and, like, again, I'm still learning this stuff, but I think it has to do a lot with, like, Amazon, like, I don't know, it has to do something with, like, servers, or, I don't know, like, some sort of, like cycling of IPs, depending on, I don't know when it goes into that circumstance or not. So, like, I'd like to provide you some more information, but I think that I can narrow it down to, like, one circumstance in which it happens. So we can, we can go more into that. So basically, what I wanted to kind of point out, is that obviously this long chain doesn't really need to be this long chain. Oh, and then the other thing, right we which we confirmed, is that the segment IP and the bid IP should be the same, right? Yeah, okay. So that being said, if we're doing the longest trace, we'll have the verified visit IP, which I said there's the three different IPs that I pulled from the two tables, the UI visits table, and then the click pass log. So we have the vast start IP, which comes from the impression log, the vast impression IP, the serve IP and the bid IP, sorry, I said that wrong. The the serve IP would come from the impression log, yes, IP, and then the vast start and these are, this is going to come from the event log. Okay, so basically, you don't, you can kind of skip the win log and all that stuff. So really, this tells you the whole trace. I mean, I take, technically, it's a little bit weird because it's out of order, because the win log, the win IP and the bid IP are the same 100% of the time. So you have this in between serve IP. So I guess it does do you. Would you like me to repopulate and just say win IP, even though it's equivalent to the bid IP each time. So just so the trace makes a little bit more sense.
+
+Speaker 2  8:46  
+Or So you're saying, put the serve IP inside of there instead of win. No, what I'm saying? You're saying, call it bid.
+
+Speaker 1  8:53  
+Yeah, I just here, okay, because I was just gonna say the the win IP is 100% equivalent to the bid IP. So it's just seems weird like that the survey can p can be different, I think, but the bid IP is always equal to the win IP. So it just seems weird because you're just duplicating the data, essentially, okay, and calling one the win IP. So I don't know its preference to you. I didn't know if you wanted to do the full
+
+Speaker 2  9:15  
+we can just call a bid IP at that point then, and the only main different like to understand why, typically, I'm referring to those ones, because it's literally a different log, right? We get it from different callbacks. We get it from beeswax in a real time capacity of batch capacity that we've been populating to win, like in the new bitter SSP integration. Like, that's literally going to be another HTTP call that's coming back right which, at that point it is not guaranteed to be the same as the bid IP. So like I've I would almost saying that out loud in relation to what we expect to happen in mountain bitter world, especially with like magnet like. Like it probably makes sense to have both in there, because while, yes, today in the beeswax world, you're seeing it that way, that does not mean that in the future, it will always be that way, okay and rather not deal with trying to reverse engineer,
+
+Unknown Speaker  10:20  
+I don't know, debug that whole thing all over again.
+
+Speaker 1  10:22  
+Gotcha, that makes sense to me. So we can keep the wind log in there, or the wind IP, even though they're equivalent right now, but the leaving out the segment IP and just using the bid IP, because, yeah, that's fine, okay. Well, at least it limits the amount of columns too, because you can kind of see it, I mean, I mean, it is, yeah, okay, that's fine. I'll go ahead and add the win IP back in, just in, just because of that. So that being said, it looks like, I mean, this is basically the full trace, right? So those, those visit IPS start impression will do win serve, bid, vast. Start again for the previous one, if it does exist, of course, obviously, because stage three can go straight to stage one. So if it doesn't have it, we'll leave it null. If it does have it, we'll populate it, of course. And then, of course, then there's a stage one. So basically, we shouldn't this should always be the case. We should always have a stage one populated across the board every time, because that's just like, by definition, if it's in stage three, it has to be in stage one, same thing with stage two, right? So there would have to be some sort of trace back, but it's possible that there would be nulls for all these columns, which is fine, but that's just Okay, cool. Anything else you'd like to add to the table, because I think this is pretty much it. I just need to button up some of those last things. Those last things, looking to, you know, research it, time
+
+Speaker 2  11:44  
+stamps for every step, okay, right? Like, that's other key things, right, understanding the exact time of the each impression and the verified visit, all right.
+
+Unknown Speaker  12:00  
+Um, that that will help out a lot,
+
+Speaker 2  12:03  
+and making sure that each step has its ad served ID available as well, right? Because you have the, you know, yeah, just ad certified for each step as well. Okay, I can do that,
+
+Unknown Speaker  12:17  
+and I just didn't include it, but obviously I'm joining, yeah,
+
+Speaker 2  12:20  
+like you got the data. It's just adding it, making sure it's visible. No worries. Something to throw out, just to consider, I'm not saying to do this, because I don't know. I go back and forth like you said, this table is wide, right? I'm hoping that we get away from this campaign group structure and that we can retire it, and then most things going forward likely won't have this. But that's not guaranteed, and who knows. So one suggestion to consider is to take you have basically three groups of columns, right, that are all identical, roughly speaking, yep, if you were to just group them and give each like group of them a unique ID, or some in some form or fashion, just link them together as individual rows, so that way, it's a trace log instead of an individual like, you know, instead of having all data in one row, have it spread out across three type deal that would allow for us to have different stage setups in the future and still be able to use the same too. Gotcha. So basically what, what would happen is that once you got to the last part of the stage three, there would be one identifier column that, basically you would just stack this here underneath. Yeah, I mean, like in the most like in the most hand wavy ideal that I'm not even sure how reasonable this is, right because, like, just looking at this right now, I can't really 100% verify that all the columns line up that way. But like, you could, like, ideally, there's, like, a column where you're just able to select on this specific ID, and you get all of the rows for that path, right? I don't know how to generate that ID. I don't know if that even makes sense, but it's something to consider. Like, you could just use the random UU ID for each of the groupings and then just like, you know, yeah, group it that way. So that way you can also understand, like, how many of these groups exist? Ideal and all that other fun stuff. But, like, again, nitpick, not even sure if that truly makes sense to do, because, again, ideally, we're moving away from the system. But something consider,
+
+Speaker 1  14:55  
+okay, that sounds totally reasonable. I get that. Or Okay, so I think we cleared up the whole the fact that there's a difference between the only way to link between stages is going to be the bid IP to the best start. I just wanted to very that was it. And I wasn't missing something, because obviously this is, we're trying to see mutation. If there's mutation, more joining on IP, it's kind of, you know, yes,
+
+Speaker 2  15:17  
+that all sounds correct. The one thing that the other thing that we need to make sure that we're accounting for is like it's sounding like this is structured in CTV only land, right? Are you bringing in and accounting for the display inventory in addition to this?
+
+Speaker 1  15:38  
+So I originally had display in there. But what I was trying to do is, is rebuild it, because, like I said, I it just was, there's too many columns. It was getting confusing. So I do plan on that. That's actually pretty much what I was going to ask you next is in the case where one of the previous links, it doesn't have a vast start IP or the bid IP, or so it should have the bid it, but like, there's not a vast start, right? In that case, the only thing I think you could do would be skip stage two, because it seems like every
+
+Speaker 2  16:13  
+verified visit, like there is no difference between display and CTV in terms of the overall data model, right? Like, CTV has the best start, right? That's what we're target on stage two, type deal, right? And, you know, that's what you're using for the linking right, stage two, when you're talking about display, like, yes, it's coming from the vast IP from stage one. But like we you can still generate a verified visit on stage two. You can still generate a visit on stage three in relation to display inventory for the campaigns that are running CTV and display it's just the IP is not coming from fast under Source start. It's coming from the impression log
+
+Unknown Speaker  17:02  
+or display, yeah.
+
+Speaker 2  17:04  
+So like it's the exact same flow, the exact same concept. It's just the source of the IP is different.
+
+Speaker 1  17:11  
+That makes sense. Okay, so you're okay. I will say that's
+
+Speaker 2  17:16  
+actually, it's actually two sources. Sorry, it's impression log for the non viewable, and it is viewability log for the viewable. But if you go to the visits, forget which table has them aggregated. I think there's a table that has the viewability events aggregated because the vast underscore start and impression are considered viewability events. But, like, I don't know, okay, but yeah, just go pull in the viewability events. There's IPs in there. Those are, what are the ones that are being used for the viewable select pass for display.
+
+Speaker 1  18:05  
+Okay, if that makes any sort of sense, yeah, I think Nish, you know, it's interesting. I was going to throw it in there, but Nish had some documentation about how they do attribution, and there's a ton of information in that document. So it was one of the things I plan on on throwing in there. Okay, I will link the CTV, I'll add the timestamps. And actually, you reminded me. I'm glad you brought that up. I totally forgot here. So when I'm looking back right on each of these, so like, for example, like in the event log right, how far back should I be looking in each because, like, I can go back a long period of time, but I'm thinking, if I'm grabbing I'm just trying to think about how long, like, it wouldn't be any longer than 90 days, right? Because the TTL for each stage would be, what 3030, and then 15? Is that? Right? So we're,
+
+Speaker 2  19:01  
+you're getting the right lines. So each time an impression is served, it has a window of 14 days to generate verified visit, right? So if we start at the end of stage three, you have a serve an impression, you're a verified visit the very last second in stage three, right? You have to go back 14 days to find the vast start event, or vast impression event that put that, or, I should say, the verified visit to put it in there, right? And then you can go back
+
+Unknown Speaker  19:39  
+14 days from there,
+
+Speaker 2  19:43  
+and then an additional 30 from there, right? Because, you know, it got put in, got served, generated, verified, visit the very end, right? So you have, at that point, you have, what is it?
+
+Unknown Speaker  19:58  
+44, times two. So.
+
+Speaker 2  20:00  
+And then you can go and look for the impression to put in stage two type deal. So, like, it's, it's a very long look back, is the shitty part?
+
+Speaker 1  20:16  
+Yeah, so I didn't follow exactly how I did that, because I saw 1414, 30, I was adding those together. So I got, like, what, 58 days, but
+
+Speaker 2  20:26  
+we're doing, yeah, it's a little bit more than that, unfortunately.
+
+Speaker 1  20:29  
+Yeah, okay, well, I could do 90 days. I mean, I ran this on 90 days. It's not too long. It's when you go, like, 180 it starts to get pretty long. I did it for one advertiser. I Luckily though, what's really cool is this is what it is nice to use when I'm doing AI is that I actually have connection to your GCP here, but you get output of the the execution details, which I can optimize it. Yeah. So that's what I use to optimize it. So it's crazy that one of the reasons it took me so long, one of those when I was trying to run it at all, I mean, I couldn't get in under like, an hour runtime. And I was like, Well, this is never gonna work, because I'm doing an advertiser ID, so made a lot of changes. Now it takes, like, Yeah, six minutes to run it. So it's, like, awesome, but that's literally from just how I decided to do the joins. Learn some stuff about BigQuery too. So, like, it's kind
+
+Speaker 2  21:19  
+of interesting. Yeah, moral story 90 days is probably close, but I think it might actually be a little bit longer to get like the full extent. Well, I know it's obscene, great, yeah, technically, let me I'd have to write it out. I think it through, but it's, I have a feeling it's like shit, 14, 3014,
+
+Speaker 1  21:50  
+and I did see a different 30. That's why I was like, Well, how long should it be back? Because I went from like 30 to 60 to 90 to 180
+
+Speaker 2  21:59  
+actually, I think it's, I think the max window is 8888
+
+Unknown Speaker  22:05  
+so 90 does just cover it.
+
+Speaker 1  22:07  
+Okay, that makes sense, because I did run this. I don't think I did run it for 180 but I saw no, I did run it for 180 but I went from 30 to 60 to 180 and it increased every time. And I was like, okay, goodness. I'm like, Well, how far is it? So that makes sense, because if I went from 60 to one 180 it would obviously have captured the max of it there. Okay, that sounds good. I don't know if I have any other questions, so I'm gonna finish up. I'm finished up buttoning the CTV side of it, which I'm super close. I'll just add those columns that we talked about. I verified that the I'll look a little bit more into the difference between vid IP and vast start as to why there's a disconnect. I'll throw the timestamps, and then once that's all good to go, I guess I also did throw in some of this stuff into I threw in the is new, the cross device information. I thought maybe that might
+
+Speaker 2  23:03  
+be, yeah. I mean, the cross device for the verified visit, like, if it's information specific to the verified visit, that helps visit is new. I don't know that one's kind of Yeah, but is cross device does help? Actually, the other thing to throw in there,
+
+Unknown Speaker  23:22  
+add the attribution ID.
+
+Speaker 2  23:24  
+Okay, I can do that. I want actually, like that will be pretty useful, because then we'll know, like, why it generated verified visit. Oh, and the other thing to add in, also, this is not as relevant right now, but like, it could be add in the good for each of those steps.
+
+Speaker 1  23:46  
+So when you say each of those steps, you mean, like, the good for stage, the
+
+Speaker 2  23:50  
+impression or the verified visit, right? Because each impression or verified visit has a good like, what's that do?
+
+Unknown Speaker  24:03  
+So for all three stages, then
+
+Unknown Speaker  24:07  
+possibly four, actually, because the verified visit stage,
+
+Unknown Speaker  24:13  
+okay, all right,
+
+Unknown Speaker  24:16  
+I think that is all just trying to think.
+
+Speaker 1  24:24  
+That should be it did i Oh, I noticed. Okay, so vast star and vast impression IP are not always the same. So which one should we use, since both of them appeared, okay? So I decided to, like when I was trying to make the link between a bit IP and the vast star and vast impression, it didn't really change too much. Honestly, I think the vast impression actually had slightly more IP links. But I have a fallback where it's like, if you can't find the vast impression, do the vast start and then it literally add less than 1%
+
+Speaker 2  24:53  
+but I just, you know, yeah, that's, that's, it's weird, right? Literally, both events are coming from the media players. Supposedly So, but it they are sometimes different.
+
+Speaker 1  25:04  
+Yeah, most, and I think it's pretty obvious, but most of the mutation, like, I think, like, almost all of it, is coming between the the
+
+Unknown Speaker  25:17  
+what steps here, the
+
+Speaker 1  25:20  
+between the serve and the vast impression step,
+
+Unknown Speaker  25:25  
+sorry, say that again, I think the big difference,
+
+Speaker 1  25:27  
+yeah, yeah, because it's like the redirect, right? When you when you go between that, so that's where the majority of it's coming, which makes sense, right? You see it, and then you go visit on some other device, or you visit on a different IP or something like that. So that's where the disconnect is happening. So cool, all right. Well, I think that's it. I'll, I'll update you when I get those things added in. So I think we're pretty close to being done here.
+
+Speaker 2  25:55  
+Awesome, sweet. Can't wait for it. Just to make sure, like, before we can call it done, we just need to, like the the base requirement for us to be able to call it done is that we can trace every impression through the entire pipeline like it should be a 0% where we don't know, like, what happened, type deal, right?
+
+Speaker 1  26:15  
+Except in the cases where we're joining from the vast to the well, no, I mean, no, no doubt, but 100% Yeah, okay, even there, yeah, okay, all right, I'll look into that. I think that's the only step, honestly, that there's anything that's unsure.
+
+Speaker 2  26:31  
+So yeah, it's where the the errors are likely to show, or like, it can be where, like, we start running into issues, but like, there should be absolutely no reason why we can't go the entire length.
+
+Speaker 1  26:44  
+So, okay, do you have any direction just, I mean, I have some ideas, but you have any ideas, like, about exactly what that's
+
+Speaker 2  26:52  
+usually just timing. It's usually just figuring out the correct time range for it. But I've never not been able to go the entire length. Okay? Basically, I'll
+
+Speaker 1  27:05  
+just look at a bunch of examples where we don't have it, and then just try to see exactly, wait, okay, work
+
+Speaker 2  27:11  
+with the negative case. Find the ones where you're not able to go the entire length. Look at their individual events. Tease out what it takes for you to actually get the data that you're looking for and then accordingly.
+
+Speaker 1  27:25  
+Okay, sounds good. All right, that's that's it. Thanks. Zach later, yep.
+
+Transcribed by https://otter.ai

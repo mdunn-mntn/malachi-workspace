@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v9 schema redesign: correct cross-stage key (vast_ip, not bid_ip) + column reorder + per-stage IP layout
+**Status:** In Progress — v10 implemented: merged vast pool, win_ip + impression timestamps, 90-day lookback. Q3 validated against BQ.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -30,43 +30,37 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 
 One row per VV. Columns ordered left-to-right to trace backward from VV → S1.
 
-**v9 architecture (PENDING — not yet implemented):**
+**v10 architecture (current — validated 2026-03-10):**
 - Within-stage: `ad_served_id` links VV ↔ impression deterministically (zero IP joining)
-- Cross-stage: `vast_ip` (event_log.ip) is the IP that enters the next stage's segment (empirically proven 2026-03-10)
-- Per stage: 4 IPs — `vast_start_ip`, `vast_impression_ip`, `serve_ip`, `bid_ip`. Collapsed from 6 because win_ip = bid_ip (100%) and segment_ip = bid_ip (100%). vast_start ≈ vast_impression (99.85%) — could collapse further to 3 per stage (see Finding #25).
-- Column naming: **stage-based** (s3/s2/s1), not role-based (lt/pv/s1). Columns always refer to the same funnel stage regardless of VV type. NULLs for stages above the VV's own stage.
-- Column layout: left-to-right traces the journey backward. Cross-stage links are explicitly visible.
+- Cross-stage: merged vast pool (`pv_pool_vast`) — vast_start_ip preferred (priority 1), vast_impression_ip fallback (priority 2), dedup'd by `(match_ip, pv_stage)`. Single hash join per cross-stage hop. Redirect_ip separate pool for cross-device.
+- Per stage: 5 IPs + timestamp — `vast_start_ip`, `vast_impression_ip`, `serve_ip`, `bid_ip`, `win_ip`, `impression_time`
+- win_ip = bid_ip today (100%). Kept for Mountain Bidder SSP future-proofing (win callback may return different IP).
+- Column naming: **stage-based** (s3/s2/s1). NULLs for stages above VV's own stage.
+- 90-day lookback (Zach confirmed max=88 days: 14+30+14+30)
 
-**v9 column layout (PENDING — 4 IPs per stage):**
+**v10 performance (vs v9):**
+- Merged pv_pool_vast replaces pv_pool_vs + pv_pool_vi (2 joins → 1, 8x → 4x fan-out)
+- Eliminated s1_pool_vs/vi/redir (inline pv_stage=1 filter, -3 CTEs)
+- CTE count: 9 (was 13). LEFT JOINs: 10 (was 14).
+
+**v10 column layout (5 IPs + timestamp per stage, 44 columns total):**
 ```
 -- VV identity
 ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
 
--- VV visit IPs (this VV's visit event)
+-- VV visit IPs
 visit_ip, impression_ip, redirect_ip
 
--- S3 impression IPs (NULL for S1/S2 VVs)
-s3_vast_start_ip,              -- event_log.ip (vast_start event)
-s3_vast_impression_ip,         -- event_log.ip (vast_impression event) — cross-stage key
-s3_serve_ip,                   -- impression_log.ip (ad serve request)
-s3_bid_ip,                     -- event_log.bid_ip (targeting identity = segment = win)
+-- S3 impression (NULL for S1/S2 VVs)
+s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip, s3_win_ip, s3_impression_time
 
--- Cross-stage link: s3_bid_ip should ≈ s2_vast_impression_ip (CGNAT may cause /24 variation)
--- S2 impression IPs (NULL for S1 VVs)
-s2_vast_start_ip,
-s2_vast_impression_ip,
-s2_serve_ip,
-s2_bid_ip,
--- Prior VV metadata (the VV that advanced the IP into the current stage)
-prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip
+-- S2 impression (NULL for S1 VVs, NULL for S3→S1 skips)
+s2_vast_start_ip, s2_vast_impression_ip, s2_serve_ip, s2_bid_ip, s2_win_ip
+s2_ad_served_id, s2_vv_time, s2_impression_time, s2_campaign_id, s2_redirect_ip
 
--- Cross-stage link: s2_bid_ip should ≈ s1_vast_impression_ip (CGNAT may cause /24 variation)
--- S1 impression IPs (chain-traversed or cp_ft fallback)
-s1_vast_start_ip,
-s1_vast_impression_ip,
-s1_serve_ip,
-s1_bid_ip,                     -- the original targeting identity — end of the chain
-s1_ad_served_id, s1_resolution_method, cp_ft_ad_served_id
+-- S1 impression (always attempted — chain-traversed or self)
+s1_vast_start_ip, s1_vast_impression_ip, s1_serve_ip, s1_bid_ip, s1_win_ip
+s1_ad_served_id, s1_impression_time, s1_resolution_method, cp_ft_ad_served_id
 
 -- Classification
 clickpass_is_new, visit_is_new, is_cross_device
@@ -75,18 +69,13 @@ clickpass_is_new, visit_is_new, is_cross_device
 trace_date, trace_run_timestamp
 ```
 
-**Per-stage IPs (4 each):** vast_start_ip + vast_impression_ip (both event_log.ip, different event_type_raw — 99.85% identical), serve_ip (impression_log.ip), bid_ip (event_log.bid_ip = segment = win). Source: event_log via ad_served_id for vast + bid, impression_log via ad_served_id for serve_ip.
-
-**Alternative (3 IPs per stage):** Collapse vast_start_ip + vast_impression_ip into single `vast_ip`. Loses SSAI detection (see Finding #25) but saves 3 columns and they're 99.85% identical.
+**Per-stage IPs (5 each + timestamp):** vast_start_ip + vast_impression_ip (event_log.ip, 99.85% identical), serve_ip (impression_log.ip, stubbed as bid_ip), bid_ip (event_log.bid_ip = segment = win), win_ip (= bid_ip today, future-proofing), impression_time.
 
 **NULL semantics:** Stage-based NULLs: S1 VVs have s2 and s3 columns NULL. S2 VVs have s3 columns NULL. S3 VVs have all stages populated. NULLs in the cross-stage link when the chain DOES exist = structural (~11% unresolved — no IP lineage path exists).
 
-### Current state: v8 (working, needs v9 redesign)
+### Current state: v10 (validated 2026-03-10)
 
-The v8 query works and achieves 87-89% S1 coverage, but:
-1. **Cross-stage key is wrong:** v8 joins on `bid_ip` across stages. Empirically, `vast_ip` is the correct cross-stage key (see Finding #16 below).
-2. **Column order is confusing:** v8 mixes S1/prior-VV/last-touch columns without clear left-to-right traceability.
-3. **Column naming wrong:** v8 uses role-based flat names (lt_bid_ip, pv_lt_bid_ip). v9 uses stage-based names (s3_bid_ip, s2_bid_ip, s1_bid_ip) with explicit NULLs for stages above the VV's own stage.
+v10 Q3 validated against BQ (advertiser 37775, 7-day trace): 100 rows, stage distribution 52/27/21 (S1/S2/S3). All new columns (win_ip, impression_time) populated correctly. win_ip = bid_ip 100% as expected. S1 resolution working across all 7 tiers.
 
 ### S1 resolution via 7-tier CASE (v8, will carry forward to v9)
 1. `current_is_s1`: vv_stage=1, current impression IS S1
@@ -98,8 +87,8 @@ The v8 query works and achieves 87-89% S1 coverage, but:
 7. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
 
 ### Key design decisions
-- **180-day lookback (was 90):** Empirically confirmed S3→S1 chains spanning 104+ days.
-- **s1_imp_pool** uses earliest S1 impression per vast_ip (ORDER BY time ASC). v8 used bid_ip — v9 will use vast_ip.
+- **90-day lookback:** Zach confirmed max window = 88 days (14-day VV window per stage + 30-day segment TTL: 14+30+14+30). Was 180 in v8.
+- **s1_imp_pool** uses earliest S1 impression per bid_ip (ORDER BY time ASC).
 - **impression_ip investigation:** 5.3% of S3 VVs have impression_ip != bid_ip. For unresolved cases (no S1 at bid_ip), impression_ip rescues 22.9% (348/1,522 in 1-day CIL-only test = +3.7% of total).
 - **S1 coverage (adv 37775, 7-day trace, v8):**
   - S1: 100.0% | S2: 87.2% (was 38.5%) | S3: 89.1% (was 41.0%)
@@ -210,15 +199,13 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 
 ---
 
-## 5. What Needs to Be Done (v9)
+## 5. What Needs to Be Done
 
-### 5.1 Schema redesign
-1. **Cross-stage join uses either/or:** `vast_start_ip = bid_ip OR vast_impression_ip = bid_ip`. Both vast IPs kept per stage. vast_start fires last (most recent IP observation).
-2. **Stage-based naming:** s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip (4 per stage). NULLs for stages above VV's own stage.
-3. **Reorder columns left-to-right:** VV identity → VV visit IPs → S3 impression IPs → S2 impression IPs → S1 impression IPs → classification → metadata.
-4. **Add serve_ip columns** sourced from impression_log.ip via ad_served_id for each stage.
-5. **first_touch_ad_served_id retained as validation:** Deterministic S1 link (S3=51%, S2=25%). Compare against chain-traversed S1 to validate IP-based chain.
-6. **Ambiguity rules:** Multiple prior VV matches → last touch (most recent). Zero matches → unresolved (structural). Same advertiser_id required (CGNAT mitigation).
+### 5.1 Remaining TODOs (from Zach meeting 4)
+1. **attribution_id** — Zach requested per step. Need to find which table/column.
+2. **GUID** — Zach requested per step. Need to find which table/column.
+3. **0% unresolved target** — Zach: "there is absolutely no reason why we cannot trace it all the way back." Currently ~11%. Need new resolution tiers.
+4. **Display viewability_log IPs** — Zach mentioned viewability_log for viewable display inventory. Need to investigate.
 
 ### 5.2 Deployment (unchanged from v8)
 - **Confirm dataset name with Dustin** — `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`
@@ -239,14 +226,15 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 - **Query performance optimization (2026-03-09):** TEMP TABLE materialization + split OR → two hash joins + IP+stage pre-dedup. See `ti_650_query_optimization_guide.md`.
 - **IP pipeline empirical validation (2026-03-10):** Full IP validation across event_log, win_logs, cost_impression_log. Findings #16-22 above.
 - **v9 SQLMesh model rewritten (2026-03-10):** Stage-based naming (s3/s2/s1), 4 IPs per stage, either/or cross-stage join (vast_start primary, vast_impression fallback, redirect_ip cross-device fallback). Three hash joins replace single OR. Prior VV pool now joins to impression_pool for vast IPs instead of using redirect_ip. Findings #25-28.
+- **v10 implemented and validated (2026-03-10):** Merged vast pool (pv_pool_vs + pv_pool_vi → single pv_pool_vast with match_ip key), eliminated s1_pool_vs/vi/redir (inline pv_stage=1), added win_ip per stage (= bid_ip today, Mountain Bidder future-proofing), added impression_time per stage, 90-day lookback (Zach confirmed max=88 days). CTEs: 13→9. LEFT JOINs: 14→10. Fan-out: 8x→4x. Q3 validated: 100 rows, win_ip=bid_ip 100%, all timestamps populated.
 
 ---
 
 ## 7. Files
 
 ### Queries
-- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model **(v9 — stage-based naming, either/or cross-stage, 4 IPs per stage)**
-- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3b: preview, Q4: summary). **Still v8 — needs v9 redesign to match SQLMesh model.**
+- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model **(v10 — merged vast pool, 5 IPs + timestamp per stage, 90-day lookback)**
+- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: summary). **(v10 — synced with SQLMesh model)**
 - `queries/ti_650_vast_start_vs_impression_comparison.sql` — within-impression: bid_ip vs vast_start vs vast_impression (252.9M rows)
 - `queries/ti_650_cross_stage_ip_comparison.sql` — cross-stage: S3 bid_ip vs prior S2 VV's vast IPs (487K pairs)
 - `queries/ti_650_cross_stage_coverage.sql` — coverage: how many S3 VVs find a prior VV by join key choice (679K VVs)
@@ -254,7 +242,7 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ### Artifacts
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
 - `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (stages, targeting vs attribution, chain traversal, NTB verification, VVS logic)
-- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **(v9 — stage-based naming, either/or cross-stage, VAST event order corrected)**
+- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **(v10 — 5 IPs + timestamp per stage, merged vast pool architecture)**
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
 - `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies
 - `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad
