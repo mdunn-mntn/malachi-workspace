@@ -171,9 +171,16 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
 27. **vast_start_ip vs vast_impression_ip: interchangeable as cross-stage key (2026-03-10).** Empirically tested both within-impression (252.9M) and cross-stage (487K S3→S2 pairs):
     - **Within-impression (bid_ip vs same impression's vast IPs):** vast_impression matches 248,966,877 (98.434%), vast_start matches 248,959,636 (98.431%). vast_impression marginally better by 7,241 (+0.003%).
     - **Cross-stage (S3 bid_ip vs prior S2 VV's vast IPs):** vast_start matches 486,998 (99.937%), vast_impression matches 486,741 (99.884%). vast_start marginally better by 257 (+0.053%).
-    - **Either/or fallback gains almost nothing:** within-impression +48K extra matches (0.019%), cross-stage +869 (0.18%). Not worth the complexity.
+    - **Either/or fallback gains +869 cross-stage matches (0.18%).** Essentially free — use `OR` in the join. Adopted for v9.
     - **Neither matches: 1.558%** (3,941,738/252.9M within-impression). These are the structural mismatches (CGNAT/SSAI/IPv6/VPN) — unaffected by choice of vast_start vs vast_impression.
-    - **Recommendation:** Use `vast_impression_ip` as the cross-stage key. It's the later callback (confirms ad rendered), and differences are statistically noise. No fallback needed.
+    - **VAST event order correction:** vast_impression fires FIRST (creative loaded), vast_start fires SECOND (playback begins). So vast_start is the last VAST callback — the most recent IP observation before VV.
+    - **Recommendation:** Use either/or in cross-stage join: `vast_start_ip = bid_ip OR vast_impression_ip = bid_ip`. Prefer vast_start for dedup (last in chain).
+28. **No deterministic cross-stage link exists besides IP (2026-03-10).** Exhaustive check:
+    - **first_touch_ad_served_id:** Deterministic link to S1, but skips S2 entirely. Available: S3=51%, S2=25%, S1=54% (trivially = self). Useful for S1 validation, not S3→S2 linking.
+    - **original_guid:** Mostly same-stage dedup (74% → another S3 VV). Not a cross-stage link.
+    - **tpa_membership_update_log:** Tracks IP entering segments but has no ad_served_id — only IP + segment_id. Can't trace to which VV caused the entry.
+    - **Conclusion:** IP is the ONLY cross-stage link. This matches the production system — the bidder targets IPs in segments, no impression-level provenance exists across stages.
+    - **Ambiguity handling:** Multiple matches → last touch (Zach confirmed). Zero matches → structural ceiling (~11%, CRM/cross-device entry). False positives → mitigated by same advertiser_id constraint (same mechanism the live bidder uses).
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 
