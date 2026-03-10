@@ -59,7 +59,11 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - **S1 coverage (adv 37775, 7-day trace, v8):**
   - S1: 100.0% | S2: 87.2% (was 38.5%) | S3: 89.1% (was 41.0%)
   - imp_visit_ip tier adds 0 incremental coverage — re-attributes ~175 cases from cp_ft to a cleaner path (pixel IP → S1 impression). Kept for audit trail clarity.
-- **Remaining unresolved:** After v7, 91% of unresolved have NO S1 impression at bid_ip at any time in 180 days. Root causes: IP mutation at segment level (VVS GA Client ID matching across IPs), CRM/ipdsc entry, or S1 impression outside lookback.
+- **Remaining unresolved (~11% ceiling — structural, not a bug):**
+  - 91% of unresolved have NO S1 impression at bid_ip at any time in 180 days.
+  - Traced sample (f1eff35a): only S3 impressions exist at this IP. No S1 or S2 at all. GA Client ID empty. Cross-device flag set but no observable link.
+  - Root causes: non-IP identity resolution put the IP into the S3 segment (CRM email→IP via ipdsc, cross-device graph, segment update paths not observable in impression logs).
+  - These VVs are **fundamentally untraceable via IP lineage** — the entry path doesn't leave IP breadcrumbs in the event chain.
 - **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback). Split OR → two hash joins (92% slot reduction).
 - **Prior VV stage logic:** `pv_stage < vv_stage` (strict). Max chain: S3 → S2 → S1.
 - **All VV stages as anchor rows.** S1-only, S2→S1, S3→S2→S1 chains all present.
@@ -67,14 +71,14 @@ Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 - **Traced example (S3 VV 373173f8):** 5 distinct IPs in same /24, all linked deterministically by ad_served_id:
   - S1 bid: .81 → S1 vast: .56 → S2 bid: .81 → S2 vast: .65 → S2 VV: .43 → S3 bid: .43 → S3 vast: .50 → S3 VV: .50
 
-### S1 chain coverage (v5, advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10)
-| Stage | Total | s1_bid_ip populated | % | prior_vv populated | % |
-|-------|-------|--------------------|----|-------------------|----|
-| S1 | 102,581 | 102,578 | 100.0% | 0 (self) | 0% |
-| S2 | 52,575 | 19,467 | 37.0% | 11,400 | 21.7% |
-| S3 | 64,371 | 23,221 | 36.1% | 44,862 | 69.7% |
+### S1 chain coverage (v8, advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10)
+| Stage | Total | Resolved | % | vv_direct | vv_s2_s1 | imp_chain | imp_direct | imp_visit_ip | cp_ft | unresolved |
+|-------|-------|----------|---|-----------|----------|-----------|------------|-------------|-------|------------|
+| S1 | 102,581 | 102,581 | 100.0% | — | — | — | — | — | — | 0 |
+| S2 | 52,575 | 45,868 | 87.2% | 12,021 | 0 | 0 | 33,743 | 102 | 2 | 6,707 |
+| S3 | 64,371 | 57,353 | 89.1% | 16,470 | 4,414 | 21,714 | 14,679 | 75 | 1 | 7,018 |
 
-Remaining S1 gaps (63% S2, 64% S3) are IPs where the user's IP changed between stages (mobile NAT, carrier-grade NAT) and clickpass has no first_touch_ad_served_id. These require GA Client ID → IP mapping (not currently available in the data model).
+Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP identity resolution (CRM/ipdsc, cross-device graph). No IP-based lineage path exists.
 
 ### Cost
 - Daily incremental: ~$29/day on-demand (~4.7 TB scan — event_log + cost_impression_log)
