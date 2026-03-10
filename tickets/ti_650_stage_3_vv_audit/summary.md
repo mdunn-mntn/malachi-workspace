@@ -33,10 +33,11 @@ One row per VV. Columns ordered left-to-right to trace backward from VV → S1.
 **v9 architecture (PENDING — not yet implemented):**
 - Within-stage: `ad_served_id` links VV ↔ impression deterministically (zero IP joining)
 - Cross-stage: `vast_ip` (event_log.ip) is the IP that enters the next stage's segment (empirically proven 2026-03-10)
-- Per stage: 2 IPs — `bid_ip` and `vast_ip`. All other pipeline IPs (win, serve) = bid_ip (validated 38.2M rows).
+- Per stage: 4 IPs — `vast_start_ip`, `vast_impression_ip`, `serve_ip`, `bid_ip`. Collapsed from 6 because win_ip = bid_ip (100%) and segment_ip = bid_ip (100%). vast_start ≈ vast_impression (99.85%) — could collapse further to 3 per stage (see Finding #25).
+- Column naming: **stage-based** (s3/s2/s1), not role-based (lt/pv/s1). Columns always refer to the same funnel stage regardless of VV type. NULLs for stages above the VV's own stage.
 - Column layout: left-to-right traces the journey backward. Cross-stage links are explicitly visible.
 
-**v9 column layout (PENDING):**
+**v9 column layout (PENDING — 4 IPs per stage):**
 ```
 -- VV identity
 ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
@@ -44,24 +45,27 @@ ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
 -- VV visit IPs (this VV's visit event)
 visit_ip, impression_ip, redirect_ip
 
--- This VV's impression IPs (linked via ad_served_id — within-stage, deterministic)
-lt_vast_ip,                     -- event_log.ip (VAST playback IP — enters next segment)
-lt_serve_ip,                    -- impression_log.ip (serve request IP — 93.6% = bid_ip, 6.4% infra)
-lt_bid_ip,                      -- event_log.bid_ip (targeting identity = segment = win)
+-- S3 impression IPs (NULL for S1/S2 VVs)
+s3_vast_start_ip,              -- event_log.ip (vast_start event)
+s3_vast_impression_ip,         -- event_log.ip (vast_impression event) — cross-stage key
+s3_serve_ip,                   -- impression_log.ip (ad serve request)
+s3_bid_ip,                     -- event_log.bid_ip (targeting identity = segment = win)
 
--- Cross-stage link: lt_bid_ip should ≈ pv_vast_ip (CGNAT may cause /24 variation)
--- Prior VV impression IPs (linked via ad_served_id on prior VV)
-pv_vast_ip,                     -- prior VV's VAST IP
-pv_serve_ip,                    -- prior VV's serve IP
-pv_bid_ip,                      -- prior VV's bid IP
--- Prior VV metadata
+-- Cross-stage link: s3_bid_ip should ≈ s2_vast_impression_ip (CGNAT may cause /24 variation)
+-- S2 impression IPs (NULL for S1 VVs)
+s2_vast_start_ip,
+s2_vast_impression_ip,
+s2_serve_ip,
+s2_bid_ip,
+-- Prior VV metadata (the VV that advanced the IP into the current stage)
 prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip
 
--- Cross-stage link: pv_bid_ip should ≈ s1_vast_ip (CGNAT may cause /24 variation)
+-- Cross-stage link: s2_bid_ip should ≈ s1_vast_impression_ip (CGNAT may cause /24 variation)
 -- S1 impression IPs (chain-traversed or cp_ft fallback)
-s1_vast_ip,                     -- S1 VAST IP
-s1_serve_ip,                    -- S1 serve IP
-s1_bid_ip,                      -- S1 bid IP — the original targeting identity
+s1_vast_start_ip,
+s1_vast_impression_ip,
+s1_serve_ip,
+s1_bid_ip,                     -- the original targeting identity — end of the chain
 s1_ad_served_id, s1_resolution_method, cp_ft_ad_served_id
 
 -- Classification
@@ -71,16 +75,18 @@ clickpass_is_new, visit_is_new, is_cross_device
 trace_date, trace_run_timestamp
 ```
 
-**Per-stage IPs (3 each):** vast_ip (VAST playback, cross-stage key), serve_ip (impression_log.ip, ad serve request), bid_ip (targeting identity = segment = win). Source: event_log via ad_served_id for vast_ip + bid_ip, impression_log via ad_served_id for serve_ip.
+**Per-stage IPs (4 each):** vast_start_ip + vast_impression_ip (both event_log.ip, different event_type_raw — 99.85% identical), serve_ip (impression_log.ip), bid_ip (event_log.bid_ip = segment = win). Source: event_log via ad_served_id for vast + bid, impression_log via ad_served_id for serve_ip.
 
-**NULL semantics:** For S1 VVs, s2 and s3 columns are NULL (chain doesn't extend). For S2 VVs, s3 columns are NULL but s2 = this VV's impression, s1 = resolved. What is NOT okay: NULL in the cross-stage link when the chain exists. If the chain resolves, every link (s3_bid_ip → s2_vast_ip → s2_bid_ip → s1_vast_ip → s1_bid_ip) must be populated.
+**Alternative (3 IPs per stage):** Collapse vast_start_ip + vast_impression_ip into single `vast_ip`. Loses SSAI detection (see Finding #25) but saves 3 columns and they're 99.85% identical.
+
+**NULL semantics:** Stage-based NULLs: S1 VVs have s2 and s3 columns NULL. S2 VVs have s3 columns NULL. S3 VVs have all stages populated. NULLs in the cross-stage link when the chain DOES exist = structural (~11% unresolved — no IP lineage path exists).
 
 ### Current state: v8 (working, needs v9 redesign)
 
 The v8 query works and achieves 87-89% S1 coverage, but:
 1. **Cross-stage key is wrong:** v8 joins on `bid_ip` across stages. Empirically, `vast_ip` is the correct cross-stage key (see Finding #16 below).
 2. **Column order is confusing:** v8 mixes S1/prior-VV/last-touch columns without clear left-to-right traceability.
-3. **Per-stage IP layout missing:** v8 has flat columns (lt_bid_ip, lt_vast_ip, pv_lt_bid_ip, etc.) instead of per-stage columns (s3_bid_ip, s3_vast_ip, s2_bid_ip, s2_vast_ip, s1_bid_ip, s1_vast_ip).
+3. **Column naming wrong:** v8 uses role-based flat names (lt_bid_ip, pv_lt_bid_ip). v9 uses stage-based names (s3_bid_ip, s2_bid_ip, s1_bid_ip) with explicit NULLs for stages above the VV's own stage.
 
 ### S1 resolution via 7-tier CASE (v8, will carry forward to v9)
 1. `current_is_s1`: vv_stage=1, current impression IS S1
@@ -147,12 +153,13 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
     - This confirms the MES pipeline diagram: the green arrow goes from VAST Impression IP → next stage's Segment.
 17. **bid_ip = win_ip at 100% (validated 38.2M rows, 2026-03-10).** Joined event_log to win_logs via `td_impression_id = auction_id`. 47/38,204,354 appeared to differ but ALL 47 have `win_ip = 0.0.0.0` (null sentinel in Beeswax win notification — data quality issue, not a real IP difference). When win_logs has a real IP, it matches bid_ip 100% of the time.
 18. **vast_ip ≠ win_ip in 1.35% (515,586/38.2M, 2026-03-10).** vast_ip is a genuinely different IP — observed at VAST callback time. When bid_ip ≠ vast_ip, they're in the same /24 (CGNAT rotation within the carrier's NAT pool, not a network switch).
-19. **vast_impression_ip ≈ vast_start_ip (99.95%, 2026-03-10).** 374/812,609 differ. Both from event_log, different event_type_raw. Close enough to treat as one value; vast_impression used as canonical.
+19. **vast_impression_ip ≈ vast_start_ip (99.847%, 2026-03-10).** 442,617/288.7M differ (deduped 1:1 per ad_served_id). Earlier stat of 374/812K was a smaller sample. Both from event_log.ip, different event_type_raw. See Finding #25 for full breakdown of why they differ.
 20. **win_logs.impression_ip_address = infrastructure IP, NOT user (2026-03-10).** When it differs from win_ip, it's 68.67.x.x (MNTN infra), 204.13.x.x (MNTN infra), or AWS IPs (18.x, 3.x, 44.x). Not useful for user IP tracking.
 21. **win_logs uses Beeswax IDs, not MNTN IDs (2026-03-10).** win_logs.advertiser_id and campaign_id are Beeswax-internal IDs, not MNTN integrationprod IDs. Join to event_log via `win_logs.auction_id = event_log.td_impression_id`. No direct advertiser_id mapping in integrationprod.advertisers or campaigns tables.
-22. **Only 2 meaningful user IPs per stage for cross-stage linking (2026-03-10).** `bid_ip` (event_log.bid_ip) = targeting identity, and `vast_ip` (event_log.ip) = observed at VAST playback, enters next segment. Win and segment IPs = bid_ip. Serve IP (impression_log.ip) differs 6.2% but only internal 10.x.x.x NAT — not meaningful for linking.
+22. **Full pipeline has 6 IPs per stage, collapsible to 4 (2026-03-10).** Original 6: segment_ip, bid_ip, win_ip, serve_ip, vast_impression_ip, vast_start_ip. Drop win_ip (=bid_ip 100%) and segment_ip (=bid_ip 100%, Zach confirmed). Remaining 4: vast_start_ip, vast_impression_ip, serve_ip, bid_ip. Could further collapse vast_start + vast_impression to single vast_ip (99.85% identical, see #25).
 23. **Zach confirmation (2026-03-10):** "segment_ip and the bid request bid_ip are the only 2 100% the same." Serve_ip = impression_log.ip, "almost always the bid ip, but not always." This validates our 3-IP model: bid_ip (=segment=win), serve_ip (impression_log.ip, 93.6% match), vast_ip (event_log.ip, 99% match, cross-stage key).
 24. **serve_ip (impression_log.ip) when it differs = infrastructure IP, NOT user (2026-03-10).** 6.4% of CTV impressions have serve_ip ≠ bid_ip. Of those: 96.9% = internal 10.x.x.x (NAT), 3.1% = AWS IPs (3.145.229.x, 18.97.x, 3.231.x, 34.223.x, 44.203.x). The serve_ip is the IP of the ad server that handled the serve request, not the user's device. When it equals bid_ip (93.6%), the request passed through without proxying. Never the user's real IP when it differs.
+25. **vast_start_ip vs vast_impression_ip: 99.847% identical, differ = SSAI proxies (2026-03-10).** 288.7M paired (deduped 1:1 per ad_served_id), 442,617 differ (0.153%). When they differ: 58% = **neither matches bid_ip** (both are SSAI infrastructure — AWS proxy pool, round-robin ~1,600 impressions each); 26.5% = same /24 CGNAT rotation; 15.5% = one matches bid_ip, other is proxy. Top differing IPs: 54.175.x, 18.212.x, 100.31.x, 52.204.x (all AWS). **Implication:** Both columns are defensible for SSAI detection, but for cross-stage linking both are equally unreliable in the SSAI cases. Collapsing to single `vast_ip` per stage loses only 0.153% granularity.
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 
@@ -168,8 +175,8 @@ Serve IP           impression_log.ip             ip                  ad_served_i
                     but not always")                                                   3.1% AWS infra (3.145.x, 18.97.x)
                                                                                        = ad server IP, never user IP
 
-VAST Imp IP   ─┐   event_log.ip                  ip (=vast_ip)       ad_served_id     imp≈start: 812K rows
-VAST Start IP ─┘   event_log.ip (vast_start)     ip                  ad_served_id     374 differ (0.046%)
+VAST Imp IP   ─┐   event_log.ip                  ip (=vast_ip)       ad_served_id     imp≈start: 288.7M rows
+VAST Start IP ─┘   event_log.ip (vast_start)     ip                  ad_served_id     442K differ (0.153%) — SSAI proxies
 
 Redirect IP        clickpass_log.ip              ip                  ad_served_id
 Visit IP           ui_visits.ip                  ip                  ad_served_id
@@ -185,9 +192,11 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_ip
 
 ### 5.1 Schema redesign
 1. **Change cross-stage join key from bid_ip to vast_ip.** In `s1_imp_pool`, dedup by `vast_ip` instead of `bid_ip`. In prior_vv_pool joins, match on vast_ip. In s1_pool joins, match on vast_ip.
-2. **Reorder columns left-to-right:** VV identity → VV visit IPs → S3 impression IPs → S2 impression IPs → S1 impression IPs → classification → metadata.
-3. **Per-stage IP columns:** Replace flat `lt_bid_ip`/`lt_vast_ip`/`pv_lt_bid_ip`/`pv_lt_vast_ip` with explicit `s3_vast_ip`, `s3_bid_ip`, `s2_vast_ip`, `s2_bid_ip`, `s1_vast_ip`, `s1_bid_ip`.
-4. **Re-run coverage numbers** after vast_ip correction to see if the ~11% unresolved improves (expect marginal improvement — ~0.3% based on 309/97,655 vast_only count).
+2. **Stage-based naming:** s3_vast_start_ip, s3_vast_impression_ip, s3_serve_ip, s3_bid_ip (4 per stage). NULLs for stages above VV's own stage.
+3. **Reorder columns left-to-right:** VV identity → VV visit IPs → S3 impression IPs → S2 impression IPs → S1 impression IPs → classification → metadata.
+4. **Add serve_ip columns** sourced from impression_log.ip via ad_served_id for each stage.
+5. **Add vast_start_ip + vast_impression_ip** as separate columns per stage (or collapse to single vast_ip — pending decision, see Finding #25).
+6. **Re-run coverage numbers** after vast_ip correction to see if the ~11% unresolved improves (expect marginal improvement — ~0.3% based on 309/97,655 vast_only count).
 
 ### 5.2 Deployment (unchanged from v8)
 - **Confirm dataset name with Dustin** — `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`
