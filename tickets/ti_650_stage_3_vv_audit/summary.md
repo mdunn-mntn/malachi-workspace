@@ -168,6 +168,12 @@ Remaining ~11% S3 gaps are structural — IP entered S3 segment via non-IP ident
     - **11.7% — Dual-stack IPv4→IPv6 (415K):** Bid request over IPv4, VAST callback over IPv6. Same device, two protocol stacks. 208K distinct IPv6 addresses.
     - **16.4% — Other different network (580K):** Mix of smaller SSAI/CDN proxies, VPN exit nodes, and genuine network switches (WiFi→mobile). 88K singleton IPs suggest real user network changes.
     - **Correction to Finding #18:** Previously said "same /24" for all diffs — actually only 35.2% are same /24. The remaining 64.8% span wider subnets, SSAI, IPv6, and genuine network changes.
+27. **vast_start_ip vs vast_impression_ip: interchangeable as cross-stage key (2026-03-10).** Empirically tested both within-impression (252.9M) and cross-stage (487K S3→S2 pairs):
+    - **Within-impression (bid_ip vs same impression's vast IPs):** vast_impression matches 248,966,877 (98.434%), vast_start matches 248,959,636 (98.431%). vast_impression marginally better by 7,241 (+0.003%).
+    - **Cross-stage (S3 bid_ip vs prior S2 VV's vast IPs):** vast_start matches 486,998 (99.937%), vast_impression matches 486,741 (99.884%). vast_start marginally better by 257 (+0.053%).
+    - **Either/or fallback gains almost nothing:** within-impression +48K extra matches (0.019%), cross-stage +869 (0.18%). Not worth the complexity.
+    - **Neither matches: 1.558%** (3,941,738/252.9M within-impression). These are the structural mismatches (CGNAT/SSAI/IPv6/VPN) — unaffected by choice of vast_start vs vast_impression.
+    - **Recommendation:** Use `vast_impression_ip` as the cross-stage key. It's the later callback (confirms ad rendered), and differences are statistically noise. No fallback needed.
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 

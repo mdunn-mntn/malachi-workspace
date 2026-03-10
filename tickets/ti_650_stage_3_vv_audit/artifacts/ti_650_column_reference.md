@@ -161,3 +161,9 @@ For display impressions (CIL only, no event_log): `CIL.ip = bid_ip` (100% valida
 | serve_ip = bid_ip | 93.6% | CTV impressions |
 | serve_ip when differs | 96.9% internal 10.x.x.x, 3.1% AWS | 6.4% of CTV |
 | win_logs.impression_ip_address | Infrastructure/CDN IP, not user | 661,987 differ from win_ip |
+| vast_impression as cross-stage key | 98.434% match (bid_ip=vast_imp within-impression) | 252,929,133 rows |
+| vast_start as cross-stage key | 98.431% match (bid_ip=vast_start within-impression) | 252,929,133 rows |
+| Either/or fallback vs impression-only | +48,277 extra matches (0.019%) | 252,929,133 rows |
+| Neither vast matches bid_ip | 1.558% (structural — CGNAT/SSAI/IPv6/VPN) | 3,941,738 rows |
+| Cross-stage: vast_start matches S3 bid | 99.937% (start marginally better cross-stage) | 487,304 pairs |
+| Cross-stage: vast_impression matches S3 bid | 99.884% (start wins by 257 out of 487K) | 487,304 pairs |
