@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v5 production query: merged impression pool + cp_ft fallback. S1 coverage improved +56% (S2) / +23% (S3)
+**Status:** In Progress — v7 production query: impression-chain + VV chain + cp_ft fallback. S1 coverage: S2 87.2%, S3 89.1% (was 38.5%/41.0% in v5)
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -28,10 +28,10 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 
 ### Production table: `audit.vv_ip_lineage`
 
-One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
+One row per VV. 30 columns (was 29 — added s1_resolution_method). Raw IP values only.
 - **Identity:** ad_served_id, advertiser_id, campaign_id, vv_stage, vv_time
 - **Last-touch impression IPs (Stage N):** lt_bid_ip, lt_vast_ip, redirect_ip, visit_ip, impression_ip
-- **S1 impression (chain traversal resolved):** cp_ft_ad_served_id (system ref only), s1_ad_served_id, s1_bid_ip, s1_vast_ip
+- **S1 impression (4-tier resolution):** cp_ft_ad_served_id, s1_ad_served_id, s1_bid_ip, s1_vast_ip, s1_resolution_method
 - **Prior VV (stage advancement trigger):** prior_vv_ad_served_id, prior_vv_time, pv_campaign_id, pv_stage, pv_redirect_ip, pv_lt_bid_ip, pv_lt_vast_ip, pv_lt_time
 - **Classification:** clickpass_is_new, visit_is_new, is_cross_device
 - **Metadata:** trace_date, trace_run_timestamp
@@ -40,13 +40,28 @@ One row per VV. 29 columns. Raw IP values only — no derived boolean flags.
 Partitioned by trace_date, clustered by advertiser_id + vv_stage.
 
 ### Key design decisions
-- **Merged impression_pool (v5):** event_log + cost_impression_log UNION ALL into one CTE/TEMP TABLE. Eliminates 4 duplicate LEFT JOINs and all COALESCE(el.x, il.x) patterns. CIL replaces impression_log (CIL.ip = bid_ip, 100% validated; has advertiser_id for ~20,000x scan reduction). 3 TEMP TABLEs in Q3b (was 4).
-- **cp_ft_ad_served_id fallback (v5):** When IP-based S1 chain traversal fails, falls back to clickpass's `first_touch_ad_served_id` to resolve S1 bid_ip via impression_pool lookup. Rescues ~10,500 rows with zero performance overhead. S2: 21.6% → 37.0% (+56% relative), S3: 28.2% → 36.1% (+23% relative).
-- **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback for cross-device). Split into two hash-joinable LEFT JOINs (pv_bid + pv_redir) — 92% slot reduction vs OR join. Advertiser_id constraint prevents CGNAT false positives.
-- **Prior VV stage logic:** `pv_stage < vv_stage` (strict). An IP can only be advanced INTO a stage by a lower stage. Max chain: S3 → S2 → S1 (2 chain joins).
-- **S1 resolution via 4-branch CASE:** (1) vv_stage=1 (current IS S1), (2) pv_stage=1 (prior VV IS S1), (3) s1_pool IP chain match, (4) ELSE cp_ft fallback. 11 LEFT JOINs total (was 16 in v4).
-- **All VV stages as anchor rows** — `cp_dedup` does not filter by stage. S1-only, S2→S1, S3→S2→S1 chains are all present. Zach confirmed: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv."
+- **v7 architecture — impression-chain + VV chain + cp_ft fallback:**
+  - Within-stage: ad_served_id links VV ↔ impression deterministically (zero IP joining)
+  - Cross-stage: bid_ip links to prior-stage event (VV or impression) that put IP into segment
+  - 4 TEMP TABLEs in Q3b: impression_pool, prior_vv_pool, s1_pool, s1_imp_pool
+- **S1 resolution via 6-tier CASE (v7):**
+  1. `current_is_s1`: vv_stage=1, current impression IS S1
+  2. `vv_chain_direct`: prior VV IS S1 (bid_ip match)
+  3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain
+  4. `imp_chain`: S1 impression at prior VV's bid_ip (NEW in v7)
+  5. `imp_direct`: S1 impression at current VV's bid_ip (NEW in v7)
+  6. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
+- **180-day lookback (was 90):** Empirically confirmed S3→S1 chains spanning 104+ days.
+- **s1_imp_pool** uses earliest S1 impression per bid_ip (ORDER BY time ASC) to avoid temporal mismatch where most recent S1 impression post-dates the VV.
+- **S1 coverage (adv 37775, 7-day trace):**
+  - S1: 100.0% | S2: 87.2% (was 38.5%) | S3: 89.1% (was 41.0%)
+- **Remaining ~11% unresolved:** 91% have NO S1 impression at this bid_ip at any time in 180 days. Root causes: IP mutation at segment level (VVS GA Client ID matching across IPs), CRM/ipdsc entry, or S1 impression outside lookback.
+- **Prior VV match** on bid_ip (primary) OR redirect_ip (fallback). Split OR → two hash joins (92% slot reduction).
+- **Prior VV stage logic:** `pv_stage < vv_stage` (strict). Max chain: S3 → S2 → S1.
+- **All VV stages as anchor rows.** S1-only, S2→S1, S3→S2→S1 chains all present.
 - **Stage classification** via `campaigns.funnel_level` (1=S1, 2=S2, 3=S3)
+- **Traced example (S3 VV 373173f8):** 5 distinct IPs in same /24, all linked deterministically by ad_served_id:
+  - S1 bid: .81 → S1 vast: .56 → S2 bid: .81 → S2 vast: .65 → S2 VV: .43 → S3 bid: .43 → S3 vast: .50 → S3 VV: .50
 
 ### S1 chain coverage (v5, advertiser 37775, 7-day trace 2026-02-04 to 2026-02-10)
 | Stage | Total | s1_bid_ip populated | % | prior_vv populated | % |
