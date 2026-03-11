@@ -1,11 +1,13 @@
--- TI-650: List distinct unresolved S3 IPs
--- Self-contained query. Returns the 616 IPs that cannot resolve to S1.
+-- TI-650: Unresolved S3 VVs with all available IPs
+-- Self-contained query. Returns every unresolved S3 VV with all IP columns.
+-- These cannot resolve to S1 — structural ceiling (identity graph entry).
 -- Advertiser: 37775 | Trace: Feb 4-11 | Lookback: 90 days | Prospecting only
 
 WITH el AS (
     SELECT
         ad_served_id,
         MAX(CASE WHEN event_type_raw = 'vast_start' THEN ip END) AS vast_start_ip,
+        MAX(CASE WHEN event_type_raw = 'vast_impression' THEN ip END) AS vast_impression_ip,
         MAX(bid_ip) AS bid_ip,
         MAX(campaign_id) AS campaign_id,
         MIN(time) AS impression_time
@@ -23,6 +25,7 @@ cil AS (
     SELECT
         ad_served_id,
         ip AS vast_start_ip,
+        ip AS vast_impression_ip,
         ip AS bid_ip,
         campaign_id,
         time AS impression_time
@@ -48,14 +51,15 @@ s1_by_vast_start AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ip.vast_start_ip ORDER BY ip.impression_time) = 1
 ),
 v_dedup AS (
-    SELECT CAST(ad_served_id AS STRING) AS ad_served_id, impression_ip
+    SELECT CAST(ad_served_id AS STRING) AS ad_served_id, impression_ip, ip AS visit_ip
     FROM `dw-main-silver.summarydata.ui_visits`
     WHERE from_verified_impression = TRUE
       AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
 ),
 cp_s3 AS (
-    SELECT cp.ad_served_id, cp.time AS vv_time
+    SELECT cp.ad_served_id, cp.time AS vv_time, cp.ip AS redirect_ip,
+           cp.campaign_id, cp.attribution_model_id, cp.is_cross_device
     FROM `dw-main-silver.logdata.clickpass_log` cp
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE
@@ -65,7 +69,21 @@ cp_s3 AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 unresolved AS (
-    SELECT imp.bid_ip AS s3_bid_ip
+    SELECT
+        cp.ad_served_id,
+        cp.vv_time,
+        cp.campaign_id,
+        cp.attribution_model_id,
+        cp.is_cross_device,
+        -- S3 impression IPs
+        imp.bid_ip        AS s3_bid_ip,
+        imp.vast_start_ip AS s3_vast_start_ip,
+        imp.vast_impression_ip AS s3_vast_impression_ip,
+        imp.impression_time AS s3_impression_time,
+        -- VV IPs
+        cp.redirect_ip,
+        v.impression_ip   AS visit_impression_ip,
+        v.visit_ip
     FROM cp_s3 cp
     LEFT JOIN impression_pool imp ON imp.ad_served_id = cp.ad_served_id AND imp.rn = 1
     LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
@@ -77,6 +95,6 @@ unresolved AS (
     WHERE s1d.vast_start_ip IS NULL AND s1v.vast_start_ip IS NULL
       AND imp.bid_ip IS NOT NULL
 )
-SELECT DISTINCT s3_bid_ip AS unresolved_ip
+SELECT *
 FROM unresolved
-ORDER BY unresolved_ip;
+ORDER BY vv_time;
