@@ -28,7 +28,11 @@
 --   - 3 new S1 resolution tiers: guid_vv_match, guid_imp_match, s1_imp_redirect
 --   - 2 new TEMP TABLEs: s1_vv_guid, s1_imp_guid
 --   - 3 new LEFT JOINs (10 → 13)
---   - Coverage improvement: ~23-30% of previously unresolved VVs rescued
+--   - Coverage: prospecting CTV S2 resolution 98.56% (5-tier cascade)
+--     Primary VV unresolved rate: 0.34% (54/16,112)
+--     Remaining 232 unresolved: 76.7% are competing VVs (models 9-11), T-Mobile CGNAT IPs
+--   - IMPORTANT: retargeting campaigns (objective_id=4) exist at every funnel_level.
+--     Must filter objective_id NOT IN (4, 7) for prospecting-only analysis.
 --
 -- v10 PERFORMANCE (vs v9):
 --   - Merged pv_pool_vast replaces pv_pool_vs + pv_pool_vi (2 joins → 1, 8x → 4x fan-out)
