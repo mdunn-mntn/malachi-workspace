@@ -76,17 +76,41 @@ trace_date, trace_run_timestamp
 
 **NULL semantics:** Stage-based NULLs: S1 VVs have s2 and s3 columns NULL. S2 VVs have s3 columns NULL. S3 VVs have all stages populated. NULLs in the cross-stage link when the chain DOES exist = structural (~11% unresolved — no IP lineage path exists).
 
-### Current state: v11 (validated 2026-03-10)
+### Current state: v12 systematic rebuild (2026-03-11)
 
-v11 extends v10 with 3 new S1 resolution tiers (guid_vv_match, guid_imp_match, s1_imp_redirect). Validated against BQ for advertiser 37775, 7-day trace. New tiers collectively rescue ~6pp of previously unresolved S2/S3 VVs.
+v12 replaces the v11 10-tier CASE cascade with a minimal, empirically validated approach. Each tier was tested **independently** (not waterfall) to determine unique contribution. Result: 10 tiers + 13 LEFT JOINs collapse to **2 LEFT JOINs**.
 
-### S1 resolution via 10-tier CASE (v11 — current)
+**v12 architecture (2 cross-stage links):**
+1. **imp_direct:** S1 impression vast_start_ip = current VV's bid_ip (primary)
+2. **imp_visit:** S1 impression vast_start_ip = ui_visits.impression_ip (fallback — 574 unique S2 + 900 unique S3 contributions)
+
+**Within-stage:** 100% at all levels via ad_served_id (deterministic, no IP matching)
+
+**Cross-stage results (adv 37775, Feb 4–11, 90-day lookback, obj IN 1,5,6):**
+| Stage | Total | Resolved | % | Unresolved |
+|-------|-------|----------|---|------------|
+| S1 | 93,274 | 93,274 | 100% | 0 |
+| S2 | 16,753 | 16,745 | 99.95% | 8 |
+| S3 | 23,844 | 23,092 | 96.85% | 752 |
+
+**Dropped tiers (empirically proven redundant):**
+- `vv_chain_direct`: 0 unique contribution — pure subset of imp_direct
+- `vv_chain_s2_s1`: 2 unique — chain is redundant when direct works
+- `imp_redirect`: 2 unique S2 — not worth extra JOIN
+- `guid_vv_match`, `guid_imp_match`, `s1_imp_redirect`, `cp_ft_fallback`, `imp_chain`: not tested independently in v12 but covered by imp_visit (which gets 99.67% alone for S2)
+
+**752 unresolved S3 VVs — root cause:** 727/752 (96.7%) have a bid_ip that has NEVER appeared as an S1 vast_start_ip. These entered S3 via identity graph (LiveRamp/CRM) — the household had an S1 impression on a different IP, but CGNAT rotation means the S3 IP was never associated with S1. 512 competing (68%), 240 primary (32%). Primary unresolved: 1.01%.
+
+Full tier analysis: `outputs/ti_650_s2_tier_analysis.md`, `outputs/ti_650_s3_tier_analysis.md`
+Unresolved list: `outputs/ti_650_s3_unresolved.json`
+
+### Historical: v11 10-tier CASE (superseded by v12)
 1. `current_is_s1`: vv_stage=1, current impression IS S1
-2. `vv_chain_direct`: prior VV IS S1 (merged vast pool match_ip)
-3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain
+2. `vv_chain_direct`: prior VV IS S1 (merged vast pool match_ip) — **REDUNDANT (0 unique)**
+3. `vv_chain_s2_s1`: S3→S2 VV→S1 VV chain — **REDUNDANT (2 unique)**
 4. `imp_chain`: S1 impression at prior VV's bid_ip
-5. `imp_direct`: S1 impression at current VV's bid_ip
-6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip
+5. `imp_direct`: S1 impression at current VV's bid_ip — **KEPT (primary link)**
+6. `imp_visit_ip`: S1 impression at ui_visits.impression_ip — **KEPT (fallback link)**
 7. `cp_ft_fallback`: clickpass first_touch_ad_served_id → impression
 8. `guid_vv_match`: S1 VV with same guid (same user, different IP)
 9. `guid_imp_match`: S1 impression with same guid (same user, different IP)
@@ -377,44 +401,36 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 
 ## 7. Files
 
-### Queries
-- `queries/ti_650_systematic_trace.sql` — **v12 systematic rebuild: 3 self-contained queries (S1/S2/S3), minimal fallbacks, tested from scratch**
-- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model **(v10.1 — merged vast pool, 5 IPs + timestamp + guid per stage, 90-day lookback)**
-- `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: summary). **(v10.1 — synced with SQLMesh model)**
-- `queries/ti_650_vast_start_vs_impression_comparison.sql` — within-impression: bid_ip vs vast_start vs vast_impression (252.9M rows)
-- `queries/ti_650_cross_stage_ip_comparison.sql` — cross-stage: S3 bid_ip vs prior S2 VV's vast IPs (487K pairs)
-- `queries/ti_650_cross_stage_coverage.sql` — coverage: how many S3 VVs find a prior VV by join key choice (679K VVs)
+### Queries (current)
+- `queries/ti_650_systematic_trace.sql` — **v12 systematic rebuild: 3 self-contained queries (S1/S2/S3), minimal fallbacks, tested from scratch. THIS IS THE ACTIVE QUERY FILE.**
+- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs update to v12 architecture before deployment)
 
-### Artifacts
-- `artifacts/ti_650_consolidated.md` — comprehensive audit report (all findings, methodology, gap analysis)
-- `artifacts/ti_650_pipeline_explained.md` — comprehensive pipeline reference (stages, targeting vs attribution, chain traversal, NTB verification, VVS logic)
-- `artifacts/ti_650_column_reference.md` — column-by-column schema reference. **(v10.1 — 5 IPs + timestamp + guid per stage, merged vast pool architecture)**
+### Outputs (current)
+- `outputs/ti_650_s2_tier_analysis.md` — S2 independent tier analysis: each tier tested alone, unique contributions, minimum set (2026-03-11)
+- `outputs/ti_650_s3_tier_analysis.md` — S3 independent path analysis: S3→S1 direct vs chain, within-stage self-resolution (2026-03-11)
+- `outputs/ti_650_s3_unresolved.json` — **752 unresolved S3 VVs with diagnostic columns — NEXT TASK: investigate and resolve these (2026-03-11)**
+
+### Artifacts (reference)
+- `artifacts/ti_650_consolidated.md` — comprehensive audit report (all 38 findings, methodology, gap analysis)
+- `artifacts/ti_650_pipeline_explained.md` — pipeline reference (stages, targeting vs attribution, VVS logic)
+- `artifacts/ti_650_column_reference.md` — column-by-column schema reference (v10.1 — needs update to v12)
 - `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
 - `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies
 - `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad
+- `artifacts/ti_650_zach_summary.md` — Zach meeting summary (all-device negative case analysis)
 - `artifacts/ti_650_verified_visit_business_logic.txt` — Nimeshi Fernando's VVS Business Logic doc
 
 ### Meetings
-- `meetings/ti_650_meeting_zach_1.txt` — meeting 1 transcript (2026-02-25)
-- `meetings/ti_650_meeting_zach_2.txt` — meeting 2 transcript (2026-03-03)
-- `meetings/ti_650_meeting_zach_3.txt` — meeting 3 transcript (2026-03-04)
+- `meetings/ti_650_meeting_zach_1.txt` — transcript (2026-02-25)
+- `meetings/ti_650_meeting_zach_2.txt` — transcript (2026-03-03)
+- `meetings/ti_650_meeting_zach_3.txt` — transcript (2026-03-04)
+- `meetings/ti_650_meeting_zach_4.txt` — transcript (column requirements, final review)
 - `meetings/ti_650_meeting_ryan_1.txt` — SQLMesh implementation walkthrough with Ryan (2026-03-05)
-- `meetings/ti_650_meeting_dustin.txt` — SQLMesh deployment strategy with Dustin (batch sizing, staging tables, slot-based pricing, mono repo PR workflow)
+- `meetings/ti_650_meeting_dustin.txt` — SQLMesh deployment strategy with Dustin
 
-### Outputs (tracked in git)
-- `outputs/ti_650_s2_tier_analysis.md` — **S2 independent tier analysis: each tier tested alone, unique contributions, minimum set determination (2026-03-11)**
-- `outputs/ti_650_s3_tier_analysis.md` — **S3 independent path analysis: S3→S1 direct vs S3→S2→S1 chain, within-stage self-resolution (2026-03-11)**
-- `outputs/ti_650_s3_unresolved.json` — **752 unresolved S3 VVs with diagnostic columns (2026-03-11)**
-- `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation
-- `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (canonical validation)
-- `outputs/ti_650_permutation_validation_2026-02-04.json` — all 10 chain traversal permutations validated
-- `outputs/ti_650_e2e_spotcheck_2026-02-07.json` — end-to-end IP validation (2026-03-06)
-
-### Outputs (local only, gitignored)
-- `outputs/ti_650_preview_37775_2026-02-04.json` — 100-row S3 VV sample (v8, advertiser 37775)
-- `outputs/ti_650_preview_37775_2026-02-07.json` — pre-fix sample (historical reference)
-- `outputs/ti_650_s1_chain_validation_2026-02-04.json` — S1 chain traversal validation
-- `outputs/ti_650_zach_reference_table.xlsx` — Zach's reference spreadsheet
+### Archived (superseded by v12 systematic rebuild)
+- `queries/_archive/` — v10/v11 queries, investigation queries, negative case analysis (7 files)
+- `outputs/_archive/` — v8-v11 validation outputs, previews, csv exports (13 files)
 
 ---
 
