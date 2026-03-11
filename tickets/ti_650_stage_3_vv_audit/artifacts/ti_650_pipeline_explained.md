@@ -622,7 +622,18 @@ S1, S2→S1, S3→S1, S3→S2→S1. Every permutation resolves `s1_bid_ip`. Max 
 
 40 unresolved: 32 competing, 8 primary. Primary VV unresolved: 0.34% — identical to CTV.
 
-**Combined all device types:** 18,178/18,450 resolved (98.53%). Primary VV unresolved: 62/18,450 = 0.34%. Root cause consistent: LiveRamp CGNAT IP rotation.
+**Combined all device types (bid_ip only):** 18,178/18,450 resolved (98.53%). 272 unresolved — corrected below.
+
+### CORRECTION: 100% Resolved with S1 VAST IPs (2026-03-11)
+
+The bid_ip-only analysis above missed S1 VAST IPs from event_log. Adding S1 VAST IPs (vast_start/vast_impression):
+
+- S1 bid IPs (CIL): 13.7M distinct
+- S1 VAST IPs (event_log): 14.9M distinct
+- VAST not in bid: **6.0M** additional IPs
+- Combined: 19.7M distinct
+
+**Result: 18,450/18,450 = 100% resolved. 0 unresolved.** 747 VVs resolved by VAST IPs with no matching bid IP. The VAST callback IP (TV's IP at ad playback) differs from bid_ip ~6% of the time due to CGNAT/SSAI. This is the IP that enters the S2 targeting segment. The production model's `impression_pool` CTE already combines both sources correctly.
 
 ---
 

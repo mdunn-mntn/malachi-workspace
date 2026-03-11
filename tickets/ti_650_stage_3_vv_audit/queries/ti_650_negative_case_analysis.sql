@@ -454,7 +454,112 @@ ORDER BY tier;
 --
 -- Primary VV unresolved: 8/2,338 = 0.34%
 --
--- COMBINED ALL DEVICE TYPES:
+-- COMBINED ALL DEVICE TYPES (bid_ip only):
 --   Total S2 VVs: 18,450 → 18,178 resolved (98.53%), 272 unresolved
 --   Primary VV unresolved: 62/18,450 = 0.34%
 --   Competing VVs dominate unresolved: 210/272 (77.2%)
+--
+-- *** CORRECTION (2026-03-11): bid_ip-only analysis was incomplete ***
+-- S1 VAST IPs (event_log.ip for vast_start/vast_impression) differ from bid_ip ~6%
+-- of the time (CGNAT/SSAI). The VAST IP is the IP that enters the S2 targeting
+-- segment, not the bid_ip. Including VAST IPs: 18,450/18,450 = 100% resolved.
+-- See Phase 7 below.
+
+
+---------------------------------------------------------------------------------
+-- PHASE 7: Corrected resolution with S1 VAST IPs (2026-03-11)
+-- CRITICAL FIX: Previous phases used S1 CIL.ip (bid_ip) only.
+-- Production model uses event_log VAST IPs + CIL bid_ip (impression_pool CTE).
+-- S1 VAST IPs add 6M IPs not in S1 bid_ip pool.
+-- Result: 18,450/18,450 = 100% resolved (0 unresolved).
+---------------------------------------------------------------------------------
+
+-- P7-Q1: All-device resolution with S1 bid + VAST IPs
+-- Results: 18,450 total → 18,448 at IP tier, 2 at guid_vv tier, 0 unresolved
+
+WITH s1_campaigns AS (
+  SELECT campaign_id
+  FROM `dw-main-bronze.integrationprod.campaigns`
+  WHERE advertiser_id = 37775
+    AND funnel_level = 1
+    AND objective_id NOT IN (4, 7)
+    AND deleted = FALSE AND is_test = FALSE
+),
+s2_campaigns AS (
+  SELECT campaign_id
+  FROM `dw-main-bronze.integrationprod.campaigns`
+  WHERE advertiser_id = 37775
+    AND funnel_level = 2
+    AND objective_id NOT IN (4, 7)
+    AND deleted = FALSE AND is_test = FALSE
+),
+s2_vvs AS (
+  SELECT cp.ad_served_id, cp.ip AS redirect_ip, cp.guid,
+    cp.attribution_model_id,
+    cil.ip AS bid_ip, cil.device_type
+  FROM `dw-main-silver.logdata.clickpass_log` cp
+  JOIN s2_campaigns s2c ON cp.campaign_id = s2c.campaign_id
+  JOIN `dw-main-silver.logdata.cost_impression_log` cil
+    ON cp.ad_served_id = cil.ad_served_id
+  WHERE DATE(cp.time) BETWEEN '2026-02-04' AND '2026-02-11'
+    AND cp.advertiser_id = 37775
+),
+-- S1 ALL IPs: bid (CIL) + VAST (event_log)
+s1_all_ips AS (
+  SELECT DISTINCT cil.ip AS ip
+  FROM `dw-main-silver.logdata.cost_impression_log` cil
+  JOIN s1_campaigns s1c ON cil.campaign_id = s1c.campaign_id
+  WHERE DATE(cil.time) BETWEEN '2025-11-06' AND '2026-02-11'
+    AND cil.advertiser_id = 37775
+  UNION DISTINCT
+  SELECT DISTINCT el.ip AS ip
+  FROM `dw-main-silver.logdata.event_log` el
+  JOIN s1_campaigns s1c ON el.campaign_id = s1c.campaign_id
+  WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
+    AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+),
+s1_vv_guids AS (
+  SELECT DISTINCT cp.guid
+  FROM `dw-main-silver.logdata.clickpass_log` cp
+  JOIN s1_campaigns s1c ON cp.campaign_id = s1c.campaign_id
+  WHERE DATE(cp.time) BETWEEN '2025-11-06' AND '2026-02-11'
+    AND cp.advertiser_id = 37775 AND cp.guid IS NOT NULL
+),
+resolved AS (
+  SELECT v.ad_served_id, v.attribution_model_id, v.device_type,
+    CASE
+      WHEN s1a.ip IS NOT NULL THEN '1_all_ip'
+      WHEN s1vg.guid IS NOT NULL THEN '2_guid_vv'
+      ELSE 'UNRESOLVED'
+    END AS tier
+  FROM s2_vvs v
+  LEFT JOIN s1_all_ips s1a ON v.bid_ip = s1a.ip
+  LEFT JOIN s1_vv_guids s1vg ON v.guid = s1vg.guid AND s1a.ip IS NULL
+)
+SELECT
+  tier,
+  COUNT(*) AS vv_count,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 2) AS pct
+FROM resolved
+GROUP BY tier
+ORDER BY tier;
+
+-- P7-Q1 RESULTS:
+--   tier      | vv_count | pct
+--   1_all_ip  | 18,448   | 99.99%
+--   2_guid_vv | 2        | 0.01%
+--   TOTAL     | 18,450   | 100%
+--   UNRESOLVED| 0        | 0%
+--
+-- 747 VVs resolved by S1 VAST IPs that had NO matching S1 bid IP:
+--   SET_TOP_BOX: 476, CONNECTED_TV: 169, MOBILE: 66, TABLET: 26, GAMES_CONSOLE: 10
+--
+-- WHY: S1 VAST callback IP (event_log.ip) differs from S1 bid_ip ~6% of the time
+-- (CGNAT rotation, SSAI proxy, IPv6 dual-stack). The VAST IP is the IP that
+-- enters the S2 targeting segment. bid_ip alone misses 6M S1 IPs.
+--
+-- S1 IP pool comparison:
+--   S1 bid IPs (CIL only): 13.7M distinct
+--   S1 VAST IPs (event_log): 14.9M distinct
+--   VAST not in bid: 6.0M
+--   Combined: 19.7M distinct

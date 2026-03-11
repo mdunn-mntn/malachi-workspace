@@ -1,6 +1,6 @@
 # TI-650: Negative Case Analysis — Summary for Zach
 
-**Date:** 2026-03-10
+**Date:** 2026-03-11 (corrected from 2026-03-10)
 **Advertiser:** 37775
 **Trace window:** 2026-02-04 to 2026-02-11 (7 days)
 **Lookback:** 90 days (from 2025-11-06)
@@ -10,67 +10,57 @@
 
 ## Bottom Line
 
-**We can explain 100% of S2 VVs.** Every unresolved VV has a known root cause — LiveRamp identity graph entry via CGNAT IPs where the S1 impression was served to a different IP in the same household.
+**100% of prospecting S2 VVs resolve to an S1 impression. 0 unresolved.**
 
 | Metric | Value |
 |--------|-------|
 | Total prospecting S2 VVs | 18,450 |
-| Resolved to S1 impression | 18,178 (98.53%) |
-| Unresolved | 272 (1.47%) |
-| Competing VVs in unresolved | 210 (77.2%) |
-| **Primary VV unresolved** | **62 (0.34%)** |
+| Resolved to S1 impression | **18,450 (100%)** |
+| Unresolved | **0 (0%)** |
+
+Resolution uses S1 bid IPs (from cost_impression_log) + S1 VAST IPs (from event_log vast_start/vast_impression). Both are combined in the production model's `impression_pool` CTE.
 
 ---
 
-## Resolution by Device Type
+## How It Works
 
-| Category | Total | Resolved | % | Primary Unresolved |
-|---|---|---|---|---|
-| CTV (SET_TOP_BOX + CONNECTED_TV) | 16,112 | 15,880 | 98.56% | 54 (0.34%) |
-| Display (MOBILE + TABLET + GAMES_CONSOLE) | 2,338 | 2,298 | 98.29% | 8 (0.34%) |
-| **ALL** | **18,450** | **18,178** | **98.53%** | **62 (0.34%)** |
+For every S2 VV, check if the S2 VV's bid_ip exists in the S1 IP pool. The S1 IP pool has two sources:
 
-Primary VV unresolved rate is identical (0.34%) across CTV and display.
+1. **S1 bid IPs** (cost_impression_log.ip) — the IP the S1 ad was bid on
+2. **S1 VAST IPs** (event_log.ip for vast_start/vast_impression) — the IP when the S1 ad played on the TV
 
----
+These differ ~6% of the time due to CGNAT rotation, SSAI proxies, and IPv4→IPv6 dual-stack. The VAST IP is the IP that enters the S2 targeting segment (the TV's IP at ad playback time, not the IP at bid time).
 
-## CTV Resolution Cascade (5 tiers)
+| S1 IP Pool | Distinct IPs |
+|------------|-------------|
+| Bid IPs only (CIL) | 13.7M |
+| VAST IPs only (event_log) | 14.9M |
+| VAST not in bid | 6.0M |
+| **Combined** | **19.7M** |
 
-| Tier | How it works | VVs | Cumulative |
-|------|-------------|-----|-----------|
-| 1. bid_ip match | S1 impression at same bid IP | 15,465 | 95.98% |
-| 2. guid_vv_match | S1 VV with same guid (same user, different IP) | 353 | 98.17% |
-| 3. guid_imp_match | S1 impression with same guid | 5 | 98.20% |
-| 4. s1_imp_redirect | S1 impression at VV's redirect IP | 11 | 98.27% |
-| 5. household_graph | S1 impression at household-linked IP | 46 | 98.56% |
-| Unresolved | | 232 | 1.44% |
+**Result:** 18,448 VVs resolve at the IP tier, 2 resolve at the guid tier. **0 unresolved.**
 
-## Display Resolution Cascade (3 tiers)
-
-| Tier | VVs | Cumulative |
-|------|-----|-----------|
-| 1. bid_ip match | 2,236 | 95.64% |
-| 2. guid_vv_match | 61 | 98.25% |
-| 4. s1_imp_redirect | 1 | 98.29% |
-| Unresolved | 40 | 1.71% |
+747 VVs were resolved by VAST IPs that had no matching bid IP — these were the CGNAT/SSAI cases where the TV's IP changed between bid and playback.
 
 ---
 
-## What Happened to the 272 Unresolved
+## Why Previous Analysis Showed 272 Unresolved (1.47%)
 
-**All 272 are LiveRamp identity graph entries.** The user's IP entered the S2 targeting segment via LiveRamp (data_source_id=3), not via an S1 impression at that same IP. The S1 impression exists — it was served to a different IP in the same household/identity graph.
+The initial negative case analysis (2026-03-10) only checked S1 **bid IPs** (CIL.ip), missing 6M S1 VAST IPs from event_log. With bid_ip only:
 
-**Why we can't trace further:** Most unresolved IPs are T-Mobile CGNAT addresses (172.5x.x.x). CGNAT rotates IPs across users, so the household graph snapshot (point-in-time) may not include the IP that was active when the S1 ad was served. A time-series IP→household mapping would close this gap, but none exists in BQ.
+| Category | Total | Resolved | Unresolved |
+|---|---|---|---|
+| CTV | 16,112 | 15,880 (98.56%) | 232 |
+| Display | 2,338 | 2,298 (98.29%) | 40 |
+| **ALL** | **18,450** | **18,178 (98.53%)** | **272** |
 
-**Attribution model breakdown of 272 unresolved:**
-- **210 (77.2%) are competing VVs** (models 9-11) — secondary/industry-standard attribution where VVS responded "false" to TRPX
-- **62 (22.8%) are primary VVs** (models 1-3) — actual last-touch attribution
+Adding VAST IPs closes the remaining 272 completely. The production model already handles this correctly via the `impression_pool` CTE (combines CIL + event_log).
 
 ---
 
 ## Key Discovery: Retargeting Scoping
 
-Previous analysis showed ~20% unresolved. This was inflated because **retargeting campaigns (objective_id=4) exist at every funnel_level** (1, 2, 3). Retargeting VVs enter segments via LiveRamp/audience data by design — they never had an S1 impression. Once excluded, the unresolved rate drops from ~20% to 1.47%.
+Previous analysis showed ~20% unresolved. This was inflated because **retargeting campaigns (objective_id=4) exist at every funnel_level** (1, 2, 3). Retargeting VVs enter segments via LiveRamp/audience data by design — they never had an S1 impression. Once excluded, the unresolved rate drops from ~20% to 0%.
 
 **Objective ID reference:**
 
@@ -86,18 +76,12 @@ Previous analysis showed ~20% unresolved. This was inflated because **retargetin
 
 ---
 
-## Household Graph — Potential New Tier
-
-`bronze.tpa.graph_ips_aa_100pct_ip` maps IPs to household IDs. We used it as tier 5 in the negative case analysis and it resolved 46 additional CTV VVs. This could be added as tier 11 in the production SQLMesh model if desired. Coverage is limited by CGNAT IP rotation — only resolves cases where the household graph's current snapshot includes both the S1 and S2 IPs.
-
----
-
 ## Files
 
 | File | Contents |
 |------|----------|
-| `queries/ti_650_negative_case_analysis.sql` | Phase 5 (CTV cascade) + Phase 6 (display cascade) |
-| `queries/ti_650_audit_trace_queries.sql` | v11 production query (10 tiers, household_graph not yet added) |
-| `summary.md` | Full findings with combined results |
-| `artifacts/ti_650_consolidated.md` | All findings numbered 1-30 |
+| `queries/ti_650_negative_case_analysis.sql` | Phase 5-7: CTV cascade, display cascade, corrected VAST IP resolution |
+| `queries/ti_650_audit_trace_queries.sql` | v11 production query (10 tiers, uses impression_pool with both CIL + EL) |
+| `summary.md` | Full findings with corrected results |
+| `artifacts/ti_650_consolidated.md` | All findings numbered 1-34 |
 | `artifacts/ti_650_pipeline_explained.md` | Full pipeline documentation with resolution tables |
