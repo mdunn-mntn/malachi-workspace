@@ -1,5 +1,7 @@
 # Stage 3 Verified Visit Audit
 
+> **SUPERSEDED (2026-03-11):** This document reflects v4–v10 era findings. The authoritative source is now `summary.md` (39 findings, v12 architecture). This file is retained as historical reference only. Key changes since this doc was last updated: v12 replaced the 10-tier CASE cascade with 2 cross-stage links (imp_direct + imp_visit), proving all other tiers redundant. 752 unresolved S3 VVs confirmed as structural ceiling.
+
 **Targeting Infrastructure**
 
 Updated 2026-03-06 | **ZACH REVIEW COMPLETE** (3 meetings) | v4 stage-aware production table (`audit.vv_ip_lineage`) designed — ready for deployment | Gap analysis complete | Full silver scale run COMPLETE — 3.25M rows, matches GP within 0.12pp | BQ silver = validated GP replacement | Mutation range 1.2–33.4% across 15 advertisers | Stage-aware: vv_stage, pv_stage, s1 chain traversal | 20% of S1 VVs on S3 IPs (attribution != journey stage) | All 10 chain traversal permutations validated

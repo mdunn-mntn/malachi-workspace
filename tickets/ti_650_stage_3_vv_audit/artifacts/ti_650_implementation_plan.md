@@ -12,7 +12,7 @@ One row per verified visit across all advertisers and all stages. Traces the IP 
 
 29 columns (v4). Partitioned by `trace_date` (DATE), clustered by `advertiser_id` + `vv_stage`.
 
-Full schema: see `ti_650_column_reference.md`. V4 replaces `ft_*` columns with `s1_*` (chain traversal), removes boolean flags and `max_historical_stage`.
+Full schema: see `ti_650_column_reference.md` (v12). Cross-stage resolution uses 2 links (`imp_direct` + `imp_visit`) replacing v11's 10-tier CASE cascade.
 
 ---
 
@@ -37,7 +37,7 @@ Full schema: see `ti_650_column_reference.md`. V4 replaces `ft_*` columns with `
 
 ```sql
 MODEL (
-  description 'One row per verified visit. Traces IP through bid -> VAST -> redirect -> visit.',
+  description 'One row per verified visit. IP audit trail: bid -> VAST -> redirect -> visit. Cross-stage S1 resolution via imp_direct + imp_visit (v12).',
   owner 'targeting-infrastructure',
   tags ['ti', 'vv_lineage', 'mes'],
   kind INCREMENTAL_BY_TIME_RANGE (

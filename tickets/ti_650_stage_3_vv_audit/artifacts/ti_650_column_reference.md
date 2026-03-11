@@ -1,8 +1,10 @@
-# VV IP Lineage — Column Reference (v10.1)
+# VV IP Lineage — Column Reference (v12)
 
 **Table:** `{dataset}.vv_ip_lineage`
 **Rows:** One per verified visit (VV), all advertisers, all stages
 **Partitioned by:** `trace_date` | **Clustered by:** `advertiser_id`, `vv_stage`
+
+> **v12 update (2026-03-11):** Cross-stage S1 resolution simplified from 10-tier CASE to 2 LEFT JOINs (`imp_direct` + `imp_visit`). All other tiers empirically proven redundant. Column layout unchanged from v10.1. See `s1_resolution_method` in Section 5.
 
 Columns are ordered **left-to-right to trace backward from VV to S1**. For a S3 VV, read left to right: VV identity → visit IPs → S3 impression → S2 impression → S1 impression.
 
@@ -116,13 +118,13 @@ The S2 impression in this IP's funnel. **NULL for S1 VVs.** Also NULL for S3 VVs
 
 ---
 
-## 5. S1 Impression IPs (Chain-Traversed)
+## 5. S1 Impression IPs (Cross-Stage Linked)
 
-The Stage 1 impression that started this IP's funnel. Resolved via 7-tier CASE.
+The Stage 1 impression that started this IP's funnel. Resolved via 2 cross-stage links (v12).
 
 For S1 VVs: s1 columns are populated directly from `ad_served_id` (the VV's own impression IS S1). s3 and s2 columns are NULL.
 
-For S2/S3 VVs: resolved via chain traversal (~89% populated; ~11% structural ceiling).
+For S2/S3 VVs: resolved via `imp_direct` (bid_ip → S1 vast_start_ip) or `imp_visit` (impression_ip → S1 vast_start_ip). S2: 99.95% resolved. S3: 96.85% resolved (752 unresolved = structural ceiling — identity graph entry, no IP path exists).
 
 **Cross-stage link:** `s2_bid_ip` should approximately equal the S1 impression's vast IP (matched via `pv_pool_vast.match_ip = pv_lt.bid_ip` with inline `pv_stage=1` filter).
 
@@ -133,26 +135,24 @@ For S2/S3 VVs: resolved via chain traversal (~89% populated; ~11% structural cei
 | `s1_serve_ip` | STRING | `impression_log.ip` via S1 `ad_served_id` | S1 impression serve request IP. |
 | `s1_bid_ip` | STRING | `event_log.bid_ip` or `CIL.ip` | S1 impression bid IP — the original targeting identity. **End of the chain.** |
 | `s1_win_ip` | STRING | `event_log.bid_ip` | = bid_ip today. Future-proofing for Mountain Bidder SSP. |
-| `s1_ad_served_id` | STRING | 10-tier chain traversal | S1 impression ID. For S1 VVs: = ad_served_id. |
+| `s1_ad_served_id` | STRING | 2-link cross-stage resolution | S1 impression ID. For S1 VVs: = ad_served_id. |
 | `s1_impression_time` | TIMESTAMP | `impression_pool.time` | When the S1 impression was served. |
-| `s1_guid` | STRING | `event_log.guid` or `CIL.guid` | Impression-side guid for the S1 impression. Resolved via same 10-tier chain as s1_bid_ip. |
-| `s1_resolution_method` | STRING | CASE expression | Which tier resolved S1. 10 tiers: `current_is_s1`, `vv_chain_direct`, `vv_chain_s2_s1`, `imp_chain`, `imp_direct`, `imp_visit_ip`, `cp_ft_fallback`, `guid_vv_match`, `guid_imp_match`, `s1_imp_redirect`. NULL = unresolved. See tier definitions below. |
+| `s1_guid` | STRING | `event_log.guid` or `CIL.guid` | Impression-side guid for the S1 impression. |
+| `s1_resolution_method` | STRING | CASE expression | Which link resolved S1. v12 values: `current_is_s1`, `imp_direct`, `imp_visit`. NULL = unresolved (structural ceiling). See tier definitions below. |
 | `cp_ft_ad_served_id` | STRING | `clickpass_log.first_touch_ad_served_id` | System-recorded S1 shortcut. NULL ~40%. Retained as comparison reference. |
 
-### S1 Resolution Tier Definitions (v11)
+### S1 Resolution Method Definitions (v12)
 
-| Tier | Value | Join Logic | Description |
-|------|-------|-----------|-------------|
-| 1 | `current_is_s1` | `vv_stage = 1` | VV itself is S1. Impression IS the S1 impression. |
-| 2 | `vv_chain_direct` | `pv_pool_vast/redir.pv_stage = 1` | Prior VV (via IP match) is S1. One hop. |
-| 3 | `vv_chain_s2_s1` | Two-hop: prior VV is S2, whose prior VV is S1 | S3 → S2 → S1 VV chain. Two hops. |
-| 4 | `imp_chain` | `s1_imp_pool.bid_ip = pv_lt.bid_ip` | S1 impression at prior VV's bid_ip (no S1 VV, but S1 ad served). |
-| 5 | `imp_direct` | `s1_imp_pool.bid_ip = lt.bid_ip` | S1 impression at current VV's bid_ip. |
-| 6 | `imp_visit_ip` | `s1_imp_pool.bid_ip = v.impression_ip` | S1 impression at ui_visits.impression_ip (pixel-side). |
-| 7 | `cp_ft_fallback` | `impression_pool ON cp.first_touch_ad_served_id` | Clickpass first_touch_ad_served_id → impression lookup. |
-| 8 | `guid_vv_match` | `s1_vv_guid.guid = cp.guid` | S1 VV with same guid (same user, different IP). |
-| 9 | `guid_imp_match` | `s1_imp_guid.guid = cp.guid` | S1 impression with same guid (same user, different IP). |
-| 10 | `s1_imp_redirect` | `s1_imp_pool.bid_ip = cp.redirect_ip` | S1 impression at current VV's redirect_ip (cross-device). |
+v12 replaced the v11 10-tier CASE cascade with 2 empirically validated links. All other tiers were proven redundant (0 unique contributions).
+
+| Value | Join Logic | Description |
+|-------|-----------|-------------|
+| `current_is_s1` | `vv_stage = 1` | VV itself is S1. Impression IS the S1 impression. |
+| `imp_direct` | `s1_by_vast_start.vast_start_ip = bid_ip` | S1 impression vast_start_ip matches current VV's bid_ip. Primary cross-stage link. |
+| `imp_visit` | `s1_by_vast_start.vast_start_ip = impression_ip` | S1 impression vast_start_ip matches ui_visits.impression_ip. Fallback — rescues 574 unique S2 + 900 unique S3. |
+| NULL | — | Unresolved. Structural ceiling: 3.15% of S3 (identity graph entry, no IP path). |
+
+**v11 tiers dropped (empirically redundant):** `vv_chain_direct` (0 unique), `vv_chain_s2_s1` (2 unique), `imp_chain`, `imp_redirect`, `cp_ft_fallback`, `guid_vv_match`, `guid_imp_match`, `s1_imp_redirect`. Full analysis: `outputs/ti_650_s2_tier_analysis.md`, `outputs/ti_650_s3_tier_analysis.md`.
 
 ---
 
@@ -190,31 +190,21 @@ For display impressions (CIL only, no event_log): `CIL.ip = bid_ip` (100% valida
 
 ---
 
-## v10 Architecture Summary
+## v12 Architecture Summary
 
-**CTEs (9 total, was 13 in v9):**
-1. `campaigns_stage` — campaign → stage classification
-2. `cp_dedup` — anchor VVs in target date range
-3. `impression_pool` — pivoted event_log + CIL (all IPs + timestamp per ad_served_id)
-4. `v_dedup` — ui_visits (visit_ip, impression_ip)
-5. `prior_vv_raw` — clickpass + impression_pool join (prior VVs with IPs + imp_time)
-6. `pv_pool_vast` — merged vast pool (vast_start priority 1, vast_impression priority 2, dedup by match_ip+pv_stage)
-7. `pv_pool_redir` — redirect_ip pool (cross-device fallback)
-8. `s1_imp_pool` — S1 impressions by bid_ip (for imp_chain/imp_direct/imp_visit_ip tiers)
-9. `with_all_joins` — main assembly with 10 LEFT JOINs
+v12 replaces the v10/v11 10-tier CASE cascade with 2 empirically validated cross-stage links.
 
-**LEFT JOINs (10 total, was 14 in v9):**
-1. `lt` — this VV's impression (ad_served_id)
-2. `v` — ui_visits (ad_served_id)
-3. `pv_vast` — prior VV via merged vast pool (match_ip = bid_ip)
-4. `pv_redir` — prior VV via redirect_ip (cross-device)
-5. `pv_lt` — prior VV's impression (ad_served_id)
-6. `s1_vast` — S1 VV chain via merged vast pool (pv_stage=1 inline)
-7. `s1_redir` — S1 VV chain via redirect_ip (pv_stage=1 inline)
-8. `s1_lt` — S1 VV's impression (ad_served_id)
-9-10. `s1_imp_chain`, `s1_imp_direct` — S1 impression at prior/current bid_ip
-11. `s1_imp_visit_ip` — S1 impression at visit's impression_ip
-12. `ft_lt` — first_touch fallback impression
+**CTEs (6 total, was 9 in v10):**
+1. `el` — event_log (VAST events, pivoted to 1 row per ad_served_id)
+2. `cil` — cost_impression_log (display impressions)
+3. `impression_pool` — UNION ALL of el + cil, dedup'd by ad_served_id
+4. `s1_by_vast_start` — S1 impressions dedup'd by vast_start_ip (earliest per IP)
+5. `v_dedup` — ui_visits (visit_ip, impression_ip)
+6. `cp_dedup` — anchor VVs in target date range
+
+**Cross-stage links (2 LEFT JOINs, was 10):**
+1. `imp_direct` — S1 vast_start_ip = VV's bid_ip (primary)
+2. `imp_visit` — S1 vast_start_ip = ui_visits.impression_ip (fallback)
 
 **Lookback:** 90 days (Zach confirmed max = 88 days: 14+30+14+30).
 

@@ -30,7 +30,7 @@ Three Zach review meetings informed the final design. The deliverable is `audit.
 
 One row per VV. Columns ordered left-to-right to trace backward from VV → S1.
 
-**v10 architecture (current — validated 2026-03-10):**
+**v10 column layout (current — validated 2026-03-10, cross-stage resolution updated to v12):**
 - Within-stage: `ad_served_id` links VV ↔ impression deterministically (zero IP joining)
 - Cross-stage: merged vast pool (`pv_pool_vast`) — vast_start_ip preferred (priority 1), vast_impression_ip fallback (priority 2), dedup'd by `(match_ip, pv_stage)`. Single hash join per cross-stage hop. Redirect_ip separate pool for cross-device.
 - Per stage: 5 IPs + timestamp — `vast_start_ip`, `vast_impression_ip`, `serve_ip`, `bid_ip`, `win_ip`, `impression_time`
@@ -419,24 +419,24 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ## 7. Files
 
 ### Queries (current)
-- `queries/ti_650_systematic_trace.sql` — **v12 systematic rebuild: 3 self-contained queries (S1/S2/S3), minimal fallbacks, tested from scratch. THIS IS THE ACTIVE QUERY FILE.**
+- `queries/ti_650_systematic_trace.sql` — **v12 systematic rebuild: 3 self-contained queries (S1/S2/S3), 2 cross-stage links. THIS IS THE ACTIVE QUERY FILE.**
+- `queries/ti_650_s3_unresolved_ips.sql` — Standalone query returning 616 distinct unresolved S3 IPs
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs update to v12 architecture before deployment)
 
 ### Outputs (current)
 - `outputs/ti_650_s2_tier_analysis.md` — S2 independent tier analysis: each tier tested alone, unique contributions, minimum set (2026-03-11)
 - `outputs/ti_650_s3_tier_analysis.md` — S3 independent path analysis: S3→S1 direct vs chain, within-stage self-resolution (2026-03-11)
-- `outputs/ti_650_s3_unresolved.json` — 752 unresolved S3 VVs with diagnostic columns (2026-03-11)
 - `outputs/ti_650_s3_resolution_ceiling.md` — **Structural ceiling analysis: all 4 resolution approaches tested and ruled out (2026-03-11)**
 
 ### Artifacts (reference)
-- `artifacts/ti_650_consolidated.md` — comprehensive audit report (all 38 findings, methodology, gap analysis)
+- `artifacts/ti_650_column_reference.md` — column-by-column schema reference (updated to v12)
+- `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review (updated to v12)
 - `artifacts/ti_650_pipeline_explained.md` — pipeline reference (stages, targeting vs attribution, VVS logic)
-- `artifacts/ti_650_column_reference.md` — column-by-column schema reference (v10.1 — needs update to v12)
-- `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan for dplat review
 - `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis and optimization strategies
+- `artifacts/ti_650_consolidated.md` — historical audit report (v4–v10 era, superseded by summary.md)
 - `artifacts/ti_650_zach_ray_comments.txt` — Slack messages from Zach, Ray, and Sharad
-- `artifacts/ti_650_zach_summary.md` — Zach meeting summary (all-device negative case analysis)
 - `artifacts/ti_650_verified_visit_business_logic.txt` — Nimeshi Fernando's VVS Business Logic doc
+- `artifacts/ATTR-Verified Visit Service (VVS) Business Logic-090326-213624.pdf` — VVS Confluence export
 
 ### Meetings
 - `meetings/ti_650_meeting_zach_1.txt` — transcript (2026-02-25)
@@ -447,8 +447,8 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 - `meetings/ti_650_meeting_dustin.txt` — SQLMesh deployment strategy with Dustin
 
 ### Archived (superseded by v12 systematic rebuild)
-- `queries/_archive/` — v10/v11 queries, investigation queries, negative case analysis (7 files)
-- `outputs/_archive/` — v8-v11 validation outputs, previews, csv exports (13 files)
+- `queries/_archive/` — v10/v11 queries, ruled-out resolution queries (10 files)
+- `outputs/_archive/` — v8-v11 validation outputs, previews, unresolved JSON dump (14 files)
 
 ---
 
