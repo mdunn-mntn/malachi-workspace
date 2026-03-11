@@ -4,6 +4,7 @@
 #
 # Assigns a unique job ID, runs the query, fetches job stats, and appends
 # a one-line JSON record to knowledge/bq_perf_log.jsonl.
+# Includes full execution plan, timeline, optimizations, and index usage.
 
 set -euo pipefail
 
@@ -53,77 +54,112 @@ for LOCATION in us-central1 US; do
 done
 
 if [[ -n "$JOB_JSON" ]]; then
-    # Extract key metrics (handle missing fields gracefully)
-    BYTES_PROCESSED=$(echo "$JOB_JSON" | jq -r '.statistics.totalBytesProcessed // "0"')
-    BYTES_BILLED=$(echo "$JOB_JSON" | jq -r '.statistics.query.totalBytesBilled // "0"')
-    SLOT_MS=$(echo "$JOB_JSON" | jq -r '.statistics.totalSlotMs // "0"')
-    START_TIME=$(echo "$JOB_JSON" | jq -r '.statistics.startTime // "0"')
-    END_TIME=$(echo "$JOB_JSON" | jq -r '.statistics.endTime // "0"')
-    ELAPSED_MS=$(( END_TIME - START_TIME ))
-    CACHE_HIT=$(echo "$JOB_JSON" | jq -r '.statistics.query.cacheHit // "false"')
-    STATEMENT_TYPE=$(echo "$JOB_JSON" | jq -r '.statistics.query.statementType // "unknown"')
-
-    # Referenced tables (may be empty for cached queries)
-    REFERENCED_TABLES=$(echo "$JOB_JSON" | jq -c '[.statistics.query.referencedTables[]? | "\(.datasetId).\(.tableId)"]' 2>/dev/null || echo "[]")
-
-    # Query plan stages (may not exist for cached queries)
-    QUERY_PLAN_STAGES=$(echo "$JOB_JSON" | jq -r '(.statistics.query.queryPlan | length) // 0' 2>/dev/null || echo "0")
-
-    # Convert bytes to human-readable
-    GB_PROCESSED=$(echo "scale=3; ${BYTES_PROCESSED:-0} / 1073741824" | bc 2>/dev/null || echo "0")
-    GB_BILLED=$(echo "scale=3; ${BYTES_BILLED:-0} / 1073741824" | bc 2>/dev/null || echo "0")
-    SLOT_SEC=$(echo "scale=1; ${SLOT_MS:-0} / 1000" | bc 2>/dev/null || echo "0")
-    ELAPSED_SEC=$(echo "scale=1; ${ELAPSED_MS:-0} / 1000" | bc 2>/dev/null || echo "0")
-
-    # Build and append log entry
-    LOG_ENTRY=$(jq -nc \
+    # Use a single jq invocation to extract everything from the job JSON
+    LOG_ENTRY=$(echo "$JOB_JSON" | jq -c \
         --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         --arg ticket "$TICKET" \
         --arg label "$LABEL" \
-        --arg job_id "${PROJECT_ID}:${JOB_ID}" \
-        --arg bytes_processed "$BYTES_PROCESSED" \
-        --arg bytes_billed "$BYTES_BILLED" \
-        --arg gb_processed "$GB_PROCESSED" \
-        --arg gb_billed "$GB_BILLED" \
-        --arg slot_ms "$SLOT_MS" \
-        --arg slot_sec "$SLOT_SEC" \
-        --arg elapsed_ms "$ELAPSED_MS" \
-        --arg elapsed_sec "$ELAPSED_SEC" \
-        --arg cache_hit "$CACHE_HIT" \
-        --arg stages "$QUERY_PLAN_STAGES" \
-        --argjson tables "$REFERENCED_TABLES" \
-        --arg exit_code "$EXIT_CODE" \
-        --arg statement_type "$STATEMENT_TYPE" \
-        '{
-            timestamp: $ts,
-            ticket: $ticket,
-            label: $label,
-            job_id: $job_id,
-            bytes_processed: ($bytes_processed | tonumber),
-            bytes_billed: ($bytes_billed | tonumber),
-            gb_processed: ($gb_processed | tonumber),
-            gb_billed: ($gb_billed | tonumber),
-            slot_ms: ($slot_ms | tonumber),
-            slot_sec: ($slot_sec | tonumber),
-            elapsed_sec: ($elapsed_sec | tonumber),
-            cache_hit: ($cache_hit == "true"),
-            query_plan_stages: ($stages | tonumber),
-            referenced_tables: $tables,
-            statement_type: $statement_type,
-            exit_code: ($exit_code | tonumber)
-        }'
-    )
+        --arg full_job_id "${PROJECT_ID}:${JOB_ID}" \
+        --argjson exit_code "$EXIT_CODE" \
+    '{
+        # --- identity ---
+        timestamp: $ts,
+        ticket: $ticket,
+        label: $label,
+        job_id: $full_job_id,
+        exit_code: $exit_code,
+
+        # --- cost ---
+        bytes_processed:  (.statistics.totalBytesProcessed  // "0" | tonumber),
+        bytes_billed:     (.statistics.query.totalBytesBilled // "0" | tonumber),
+        gb_processed:     ((.statistics.totalBytesProcessed   // "0" | tonumber) / 1073741824 | . * 1000 | round / 1000),
+        gb_billed:        ((.statistics.query.totalBytesBilled // "0" | tonumber) / 1073741824 | . * 1000 | round / 1000),
+        billing_tier:     (.statistics.query.billingTier // null),
+
+        # --- time ---
+        slot_ms:          (.statistics.totalSlotMs // "0" | tonumber),
+        slot_sec:         ((.statistics.totalSlotMs // "0" | tonumber) / 1000 | . * 10 | round / 10),
+        elapsed_ms:       (((.statistics.endTime // "0" | tonumber) - (.statistics.startTime // "0" | tonumber))),
+        elapsed_sec:      (((.statistics.endTime // "0" | tonumber) - (.statistics.startTime // "0" | tonumber)) / 1000 | . * 10 | round / 10),
+        final_exec_ms:    (.statistics.finalExecutionDurationMs // null | if . then tonumber else null end),
+
+        # --- cache & partitions ---
+        cache_hit:        (.statistics.query.cacheHit // false),
+        statement_type:   (.statistics.query.statementType // "unknown"),
+        partitions_processed: (.statistics.query.totalPartitionsProcessed // null | if . then tonumber else null end),
+
+        # --- reservation ---
+        reservation:      (.statistics.reservation_id // null),
+        edition:          (.statistics.edition // null),
+
+        # --- referenced tables (resolved through views to underlying SQLMesh tables) ---
+        referenced_tables: [.statistics.query.referencedTables[]? | "\(.datasetId).\(.tableId)"],
+
+        # --- query plan stages (compact: per-stage performance) ---
+        query_plan: [.statistics.query.queryPlan[]? | {
+            stage:              .name,
+            status:             .status,
+            records_read:       (.recordsRead // "0" | tonumber),
+            records_written:    (.recordsWritten // "0" | tonumber),
+            parallel_inputs:    (.parallelInputs // "0" | tonumber),
+            completed_inputs:   (.completedParallelInputs // "0" | tonumber),
+            slot_ms:            (.slotMs // "0" | tonumber),
+            compute_mode:       (.computeMode // null),
+            read_ms_max:        (.readMsMax // "0" | tonumber),
+            compute_ms_max:     (.computeMsMax // "0" | tonumber),
+            write_ms_max:       (.writeMsMax // "0" | tonumber),
+            wait_ms_max:        (.waitMsMax // "0" | tonumber),
+            shuffle_bytes:      (.shuffleOutputBytes // "0" | tonumber),
+            shuffle_spill:      (.shuffleOutputBytesSpilled // "0" | tonumber),
+            steps:              [.steps[]? | {kind, substeps}]
+        }],
+
+        # --- timeline (slot utilization over time) ---
+        timeline: [.statistics.query.timeline[]? | {
+            elapsed_ms:     (.elapsedMs // "0" | tonumber),
+            total_slot_ms:  (.totalSlotMs // "0" | tonumber),
+            active_units:   (.activeUnits // 0),
+            pending_units:  (.pendingUnits // 0),
+            completed_units: (.completedUnits // 0)
+        }],
+
+        # --- optimizations applied ---
+        optimizations: [.statistics.query.queryInfo.optimizationDetails.optimizations[]? | to_entries[] | "\(.key)=\(.value)"],
+
+        # --- search index usage ---
+        index_usage: (.statistics.query.searchStatistics.indexUsageMode // null),
+        index_unused_reasons: [.statistics.query.searchStatistics.indexUnusedReasons[]? | {
+            table: "\(.baseTable.datasetId // "").\(.baseTable.tableId // "")",
+            code: .code,
+            message: .message
+        }],
+
+        # --- metadata cache ---
+        metadata_cache: [.statistics.query.metadataCacheStatistics.tableMetadataCacheUsage[]? | {
+            table: "\(.tableReference.datasetId // "").\(.tableReference.tableId // "")",
+            staleness: .staleness
+        }]
+    }')
 
     echo "$LOG_ENTRY" >> "$LOG_FILE"
 
-    # Print summary to stderr so it's visible but doesn't pollute results
+    # Print human-readable summary to stderr
+    SUMMARY=$(echo "$LOG_ENTRY" | jq -r '
+        "--- BQ Performance ---",
+        "Bytes: \(.gb_processed) GB processed / \(.gb_billed) GB billed" + (if .billing_tier then " (tier \(.billing_tier))" else "" end),
+        "Time: \(.slot_sec)s slot / \(.elapsed_sec)s wall" + (if .final_exec_ms then " / \(.final_exec_ms)ms exec" else "" end),
+        "Cache: \(.cache_hit) | Partitions: \(.partitions_processed // "n/a") | Stages: \(.query_plan | length)",
+        (if .reservation then "Reservation: \(.reservation)" else empty end),
+        (if (.optimizations | length) > 0 then "Optimizations: \(.optimizations | join(", "))" else empty end),
+        (if (.query_plan | length) > 0 then
+            (.query_plan[] | "  \(.stage): \(.records_read) rows read → \(.records_written) written | \(.parallel_inputs) workers | slot \(.slot_ms)ms | shuffle \(.shuffle_bytes)B" + (if .shuffle_spill > 0 then " (SPILL: \(.shuffle_spill)B)" else "" end))
+        else empty end),
+        (if .index_usage == "UNUSED" then "Index: UNUSED — \(.index_unused_reasons | map(.table) | join(", "))" else empty end),
+        "Logged to: knowledge/bq_perf_log.jsonl",
+        "----------------------"
+    ')
     >&2 echo ""
-    >&2 echo "--- BQ Performance ---"
-    >&2 echo "Bytes processed: ${GB_PROCESSED} GB (billed: ${GB_BILLED} GB)"
-    >&2 echo "Slot time: ${SLOT_SEC}s | Wall time: ${ELAPSED_SEC}s"
-    >&2 echo "Cache hit: ${CACHE_HIT} | Stages: ${QUERY_PLAN_STAGES}"
-    >&2 echo "Logged to: knowledge/bq_perf_log.jsonl"
-    >&2 echo "----------------------"
+    >&2 echo "$SUMMARY"
 else
     >&2 echo "[bq_run] Warning: could not fetch job stats for ${PROJECT_ID}:${JOB_ID}"
 fi
