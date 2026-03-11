@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v12 systematic rebuild. Rebuilding trace queries from scratch, one funnel level at a time, simplest link first. S1: 100% across all 1,425 advertisers (1,922,761/1,922,762). S2: 96.27% with single link (s2_bid_ip → s1_vast_start_ip), 625 unresolved — adding fallbacks incrementally.
+**Status:** In Progress — v12 systematic rebuild. S1: 100% (1,922,761/1,922,762). S2: 99.95% with 2 links (imp_direct + imp_visit), 8 unresolved out of 16,753. Independent tier analysis eliminated vv_chain_direct (pure subset) and imp_redirect (2 unique — not worth the JOIN). Moving to S3.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -298,6 +298,15 @@ By device: MOBILE 24, TABLET 12, GAMES_CONSOLE 4.
     - **S3: 23,844 VVs — 99.43%** (136 unresolved, 0.57%). Top tiers: vv_chain_direct 59.78%, vv_chain_s2_s1 20.41%, imp_chain 14.02%, imp_direct 2.78%
     - Previous all-campaign Q3 showed 23% unresolved — retargeting (obj 4) was the entire gap
     - Cross-stage link working: vv_chain_direct (bid_ip → prior VV VAST IP) is the #1 resolution method for both S2 and S3
+
+36. **Independent tier analysis: vv_chain_direct is redundant (2026-03-11).** Tested each S2 resolution tier independently (not waterfall). Results for adv 37775, 16,753 S2 VVs:
+    - **imp_visit (ui_visits.impression_ip):** 99.67% independent, **574 unique** (only tier for those VVs)
+    - **imp_direct (bid_ip → vast_start_ip):** 96.27% independent, **6 unique**
+    - **imp_redir (redirect_ip):** 87.70% independent, **2 unique**
+    - **vv_chain_direct (prior S1 VV):** 52.04% independent, **0 unique** — pure subset of imp_direct
+    - vv_chain was #1 in v11 waterfall (56.72%) only because it was checked first — it never resolves anything imp_direct can't
+    - **Minimum set: imp_direct + imp_visit = 99.95%** (16,745/16,753), 8 unresolved (6 truly unresolvable, 2 imp_redir-only)
+    - This replaces the 10-tier CASE cascade with 2 LEFT JOINs for S2
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 

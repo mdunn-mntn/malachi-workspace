@@ -153,9 +153,14 @@ LIMIT 100;
 ================================================================================
 == S2 TRACE: funnel_level = 2
 ================================================================================
--- S2 VV → own impression (ad_served_id) → s2_bid_ip → S1 impression
--- Single link: s1_vast_start_ip = s2_bid_ip
--- This is the simplest possible cross-stage trace. No fallbacks.
+-- S2 VV → own impression (ad_served_id) → cross-stage link to S1 impression
+-- Two links (minimal set — each has unique contribution):
+--   1. imp_direct: S1 impression vast_start_ip = S2 bid_ip (96.27%, 6 unique)
+--   2. imp_visit:  S1 impression vast_start_ip = ui_visits.impression_ip (99.67%, 574 unique)
+-- Dropped tiers (zero unique contribution):
+--   - vv_chain_direct: pure subset of imp_direct (0 unique)
+--   - imp_redirect: only 2 unique — not worth the extra JOIN
+-- Result: 99.95% (16,745/16,753), 8 unresolved (6 truly unresolvable + 2 imp_redir-only)
 -- impression_pool scoped to funnel_level IN (1,2), objective_id IN (1,5,6).
 
 WITH el AS (
@@ -210,6 +215,14 @@ s1_by_vast_start AS (
     WHERE ip.rn = 1 AND ip.vast_start_ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ip.vast_start_ip ORDER BY ip.impression_time) = 1
 ),
+-- S2 VV visit info (for imp_visit fallback)
+v_dedup AS (
+    SELECT CAST(ad_served_id AS STRING) AS ad_served_id, ip AS visit_ip, impression_ip
+    FROM `dw-main-silver.summarydata.ui_visits`
+    WHERE from_verified_impression = TRUE
+      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(ad_served_id AS STRING) ORDER BY time DESC) = 1
+),
 -- S2 anchor VVs
 cp_dedup AS (
     SELECT cp.ad_served_id, cp.advertiser_id, cp.campaign_id,
@@ -225,16 +238,27 @@ cp_dedup AS (
 SELECT
     COUNT(*) AS total_vvs,
     COUNTIF(s2_imp.bid_ip IS NOT NULL) AS has_s2_impression,
-    COUNTIF(s1.bid_ip IS NOT NULL) AS s1_resolved,
-    ROUND(100.0 * COUNTIF(s1.bid_ip IS NOT NULL) / COUNT(*), 2) AS s1_resolved_pct,
-    COUNTIF(s1.bid_ip IS NULL) AS s1_unresolved
+    -- Primary: s2_bid_ip → s1_vast_start_ip
+    COUNTIF(s1_direct.bid_ip IS NOT NULL) AS s1_via_bid_ip,
+    -- Fallback: ui_visits.impression_ip → s1_vast_start_ip
+    COUNTIF(s1_direct.bid_ip IS NULL AND s1_visit.bid_ip IS NOT NULL) AS s1_via_visit_ip,
+    -- Combined
+    COUNTIF(COALESCE(s1_direct.bid_ip, s1_visit.bid_ip) IS NOT NULL) AS s1_resolved,
+    ROUND(100.0 * COUNTIF(COALESCE(s1_direct.bid_ip, s1_visit.bid_ip) IS NOT NULL) / COUNT(*), 2) AS s1_resolved_pct,
+    COUNTIF(COALESCE(s1_direct.bid_ip, s1_visit.bid_ip) IS NULL) AS s1_unresolved
 FROM cp_dedup cp
 -- S2 VV's own impression
 LEFT JOIN impression_pool s2_imp ON s2_imp.ad_served_id = cp.ad_served_id AND s2_imp.rn = 1
--- Single link: s2_bid_ip → s1_vast_start_ip
-LEFT JOIN s1_by_vast_start s1
-    ON s1.vast_start_ip = s2_imp.bid_ip
-    AND s1.impression_time < cp.vv_time;
+-- Link 1: s2_bid_ip → s1_vast_start_ip
+LEFT JOIN s1_by_vast_start s1_direct
+    ON s1_direct.vast_start_ip = s2_imp.bid_ip
+    AND s1_direct.impression_time < cp.vv_time
+-- Link 2: ui_visits.impression_ip → s1_vast_start_ip (fallback)
+LEFT JOIN v_dedup v ON v.ad_served_id = cp.ad_served_id
+LEFT JOIN s1_by_vast_start s1_visit
+    ON s1_visit.vast_start_ip = v.impression_ip
+    AND s1_visit.impression_time < cp.vv_time
+    AND s1_direct.bid_ip IS NULL;
 
 
 ================================================================================
