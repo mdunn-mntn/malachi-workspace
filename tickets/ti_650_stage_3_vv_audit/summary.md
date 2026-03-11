@@ -371,6 +371,7 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ## 7. Files
 
 ### Queries
+- `queries/ti_650_systematic_trace.sql` — **v12 systematic rebuild: 3 self-contained queries (S1/S2/S3), minimal fallbacks, tested from scratch**
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model **(v10.1 — merged vast pool, 5 IPs + timestamp + guid per stage, 90-day lookback)**
 - `queries/ti_650_audit_trace_queries.sql` — standalone BQ queries (Q1: CREATE, Q2: INSERT, Q3: preview, Q4: summary). **(v10.1 — synced with SQLMesh model)**
 - `queries/ti_650_vast_start_vs_impression_comparison.sql` — within-impression: bid_ip vs vast_start vs vast_impression (252.9M rows)
@@ -394,6 +395,7 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 - `meetings/ti_650_meeting_dustin.txt` — SQLMesh deployment strategy with Dustin (batch sizing, staging tables, slot-based pricing, mono repo PR workflow)
 
 ### Outputs (tracked in git)
+- `outputs/ti_650_s2_tier_analysis.md` — **S2 independent tier analysis: each tier tested alone, unique contributions, minimum set determination (2026-03-11)**
 - `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation
 - `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (canonical validation)
 - `outputs/ti_650_permutation_validation_2026-02-04.json` — all 10 chain traversal permutations validated

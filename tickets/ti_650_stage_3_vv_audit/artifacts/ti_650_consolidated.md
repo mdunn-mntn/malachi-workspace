@@ -768,6 +768,15 @@ BWN matched 84.03% of CIL-matched rows (25,611/30,477). The 16% gap may be BWN d
     - **S3:** 23,844 VVs, **99.43% resolved** (136 unresolved). Top tiers: vv_chain_direct 59.78%, imp_direct 19.72%, current_is_s1 12.33%, imp_visit_ip 3.62%
     - **Query:** `queries/ti_650_q3_test.sql` — full 10-tier cascade (current_is_s1, vv_chain_direct, vv_chain_s2_s1, imp_chain, imp_direct, imp_visit_ip, cp_ft_fallback, guid_vv_match, guid_imp_match, s1_imp_redirect)
     - **Key insight:** Prospecting filter (1,5,6) is the single biggest driver of resolution rate — drops unresolved from ~20% to <1%. vv_chain_direct (prior VV VAST IP → current bid_ip) is the dominant resolution method across all stages.
+33. **CORRECTION: Independent tier analysis disproves waterfall ranking (2026-03-11).** Tested each S2 resolution tier independently (not as a waterfall). Results for 16,753 S2 VVs:
+    - **imp_visit (ui_visits.impression_ip → S1 vast_start_ip):** 99.67% independent, **574 unique** (only tier for those VVs)
+    - **imp_direct (S2 bid_ip → S1 vast_start_ip):** 96.27% independent, **6 unique**
+    - **imp_redir (S2 redirect_ip → S1 vast_start_ip):** 87.70% independent, **2 unique**
+    - **vv_chain_direct (prior S1 VV vast_start_ip → S2 bid_ip):** 52.04% independent, **0 unique — pure subset of imp_direct**
+    - vv_chain appeared #1 in v11 waterfall (56.72%) only because it was checked first — it never resolves anything imp_direct can't
+    - **Minimum set: imp_direct + imp_visit = 99.95%** (16,745/16,753). 8 unresolved (6 truly unresolvable, 2 imp_redir-only)
+    - **10-tier CASE cascade with 13 LEFT JOINs collapses to 2 LEFT JOINs for S2**
+    - Full analysis: `outputs/ti_650_s2_tier_analysis.md`
 
 ---
 

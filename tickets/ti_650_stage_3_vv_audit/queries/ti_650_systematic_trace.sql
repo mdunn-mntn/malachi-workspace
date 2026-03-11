@@ -6,6 +6,11 @@
 -- Advertiser: 37775
 -- Trace window: 2026-02-04 to 2026-02-11
 -- Lookback: 90 days from trace_start (2025-11-06)
+--
+-- Tier analysis: outputs/ti_650_s2_tier_analysis.md
+-- S1: 100% via ad_served_id (self-resolve)
+-- S2: 99.95% via 2 links (imp_direct + imp_visit)
+-- S3: TBD — systematic rebuild in progress
 --------------------------------------------------------------------------------
 
 
