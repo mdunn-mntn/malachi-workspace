@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v11 implemented. Production Q3 tested with objective_id IN (1,5,6) per Ray: S2 99.99% resolved (2 unresolved), S3 99.43% (136 unresolved). Negative case analysis confirmed 100% S2 resolved via IP pool check.
+**Status:** In Progress — v12 systematic rebuild. Rebuilding trace queries from scratch, one funnel level at a time, simplest link first. S1: 100% across all 1,425 advertisers (1,922,761/1,922,762). S2: 96.27% with single link (s2_bid_ip → s1_vast_start_ip), 625 unresolved — adding fallbacks incrementally.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
