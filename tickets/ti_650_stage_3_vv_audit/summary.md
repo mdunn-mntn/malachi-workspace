@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v10 implemented: merged vast pool, win_ip + impression timestamps, 90-day lookback. Q3 validated against BQ.
+**Status:** In Progress — v11 implemented. Negative case analysis complete: prospecting CTV S2 98.56% resolved, primary VV 0.34% unresolved. Display analysis pending.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 

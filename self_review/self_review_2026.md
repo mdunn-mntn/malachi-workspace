@@ -69,6 +69,27 @@ Adaptability: Pivoted from checking `cp_ft_ad_served_id` to chain traversal when
 the system limitation is permanent. Incorporated Zach's "all stages" and Ray's TTL context
 from stakeholder Slack without prompting.
 
+Negative case analysis (2026-03-10): Zach directive: "work with the negative case — find the ones
+where you can't go the full length." Independently identified that retargeting campaigns exist at
+every funnel_level (objective_id=4 at S1/S2/S3) — previous "~20% unresolved" was inflated by
+retargeting VVs that lack S1 impressions by design. After scoping to prospecting-only CTV:
+- S2 resolution: 98.56% (15,880/16,112) via 5 tiers
+- Discovered and implemented household_graph tier using graph_ips_aa_100pct_ip (46 additional VVs)
+- Primary VV unresolved: 0.34% (54/16,112) — effectively zero
+- Remaining 232 are LiveRamp identity graph entries on CGNAT IPs — can explain all of them
+- Documented objective_id reference, VVS attribution model logic, campaign naming patterns
+
+Speed: Independently discovered the retargeting scoping issue by empirically checking campaign
+data — eliminated a false 20% ceiling without escalation. Found household_graph as a resolution
+tier nobody had suggested.
+
+Craft: 5-tier resolution cascade (bid_ip → guid_vv → guid_imp → redirect → household_graph)
+achieves 98.56% CTV S2 resolution. Attribution model analysis (178/232 are competing VVs) shows
+primary VV resolution is 99.66%. VVS Business Logic PDF integrated into analysis.
+
+Adaptability: Pivoted entire analysis when Zach clarified retargeting isn't relevant. Re-ran all
+queries with correct scope in same session. Updated 5 artifacts + data_knowledge.md + queries.
+
 [2026-02/03] MM-44 IPDSC HH Discrepancy — Investigated 66.2% household drop (17,589 → 5,944 HHs)
 across 2,302 campaign groups. Identified 3 root causes: MES inner join block list [2,14,42], DS
 type contamination in campaign_segment_history, 35-day lookback behavior. Documented IPDSC pipeline
