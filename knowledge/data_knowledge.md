@@ -594,15 +594,15 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 - **Campaign groups are exclusive.** A VV in campaign_group 1 for an advertiser does NOT allow another campaign_group 2 for the same advertiser to target that IP at a higher stage. Each campaign_group's funnel is independent. Concurrent or previous campaign_groups have zero bearing on each other's stage progression. (Zach, 2026-03-05)
 - **IPs accumulate stages within a campaign_group, never removed.** Frequency capping (14-day) handles dedup, not targeting removal. Budget: S1 ~75-80%, S2 ~5-10%, S3 = remainder.
 - **Campaign ID = Stage (1:1).** Determine via campaigns.funnel_level (1=S1, 2=S2, 3=S3, 4=Ego). Bidder has no concept of stages.
-- **objective_id reference (from `core.objectives` + Ray):**
+- **objective_id reference (from `core.objectives` + Ray). Prospecting filter = IN (1, 5, 6):**
   - 1 = Prospecting (CTV Prospecting)
   - 2 = Onsite (ads on customer's own website)
-  - 3 = Prospecting (duplicate of 1)
+  - 3 = Prospecting (duplicate of 1, not actively used)
   - 4 = Retargeting
   - 5 = Multi-Touch (S2 prospecting, newer naming convention)
   - 6 = Multi-Touch Full Funnel (MT+ = Stage 3, newer naming convention)
   - 7 = Ego (employee targeting — targeting advertiser's own employees)
-- **CRITICAL: funnel_level ≠ prospecting.** Retargeting campaigns (objective_id=4) exist at every funnel_level (1/2/3). Must filter `objective_id NOT IN (4, 7)` for prospecting-only analysis.
+- **CRITICAL: funnel_level ≠ prospecting.** Retargeting campaigns (objective_id=4) exist at every funnel_level (1/2/3). For prospecting-only analysis, use `objective_id IN (1, 5, 6)` per Ray — includes Prospecting (1), Multi-Touch/S2 (5), MT Full Funnel/S3 (6). Excludes Retargeting (4), Ego (7), Onsite (2), and unused dup (3).
 - **VV attribution = stack model.** Impressions stacked; page view checks top (most recent). Everything behind is ineligible.
 - **VVS cross-device linking (Sharad, confirmed):** The Verified Visit Service links visits to impressions in two layers: (1) **IP match** — find impressions served to the same IP as the page view IP (primary), (2) **GA Client ID expansion** — using the page view's GA Client ID, find all IPs that Client ID has been seen with in the previous few days, then look for impressions on any of those IPs. Validations and filtering applied at each layer. See: Nimeshi Fernando's "Verified Visit Service (VVS) Business Logic" Confluence doc.
 - **VVS determination logic (Nimeshi Fernando, Confluence):** Full decision tree: (1) advertiser_id valid? → (2) IP blocklist check (`segmentation.ip_blocklist`) → (3) GUID blocklist check (`segmentation.guid_blocklist`) → (4) cross-device config check (`vvs.cross_device_config` in Aurora DB) → (5) GUID match (`attribution_model_id=1`) → (6) IP match (`attribution_model_id=2`, includes CTV household_whitelist + iCloud IPv4 filter + GUID-to-IP count check) → (7) repeat with `viewable=false` impressions → (8) GA Client ID match (`attribution_model_id=3`, via `cookie.gaid_ip_mapping`) → eligibility checks (duplicate visit, TTL/acquisition window, advertiser TTL 45-day max) → (12) referral blocking / tamp detection (utm_source, utm_medium, utm_campaign, utm_content, gclid, cid, cmmmc). TRPX fires every page view; only first in session is eligible. VV window = 14-45 days per advertiser.

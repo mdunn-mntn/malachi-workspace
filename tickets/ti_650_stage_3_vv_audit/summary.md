@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v11 implemented. Negative case analysis complete: **100% S2 VVs resolved** (18,450/18,450) when using S1 VAST IPs + bid IPs. 0 unresolved.
+**Status:** In Progress — v11 implemented. Production Q3 tested with objective_id IN (1,5,6) per Ray: S2 99.99% resolved (2 unresolved), S3 99.43% (136 unresolved). Negative case analysis confirmed 100% S2 resolved via IP pool check.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -292,6 +292,12 @@ By device: MOBILE 24, TABLET 12, GAMES_CONSOLE 4.
 32. **Display S2 resolution: 98.29% via 3 tiers (2026-03-10).** Non-CTV devices (MOBILE/TABLET/GAMES_CONSOLE): 2,298/2,338 resolved. Three tiers: S1 imp at bid_ip (95.64%), guid_vv_match (2.61%), s1_imp_redirect (0.04%). 40 unresolved: 32 competing, 8 primary. **Primary VV unresolved: 0.34% — identical to CTV.**
 33. **Combined all-device resolution: 98.53% with bid_ip only (2026-03-10).** 18,178/18,450 prospecting S2 VVs resolved across all device types using S1 bid_ip only. 272 unresolved — but see #34.
 34. **CORRECTION: 100% resolved with S1 VAST IPs (2026-03-11).** Previous analysis used S1 bid_ip (CIL.ip) only — missed 6M S1 VAST IPs from event_log (vast_start/vast_impression) that differ from bid_ip ~6% of the time (CGNAT/SSAI/IPv6). Adding VAST IPs: **18,450/18,450 = 100% resolved, 0 unresolved.** 747 VVs resolved by VAST IPs with no matching bid IP. The production model's `impression_pool` CTE already combines both sources correctly.
+35. **Production Q3 with objective_id IN (1,5,6) — per Ray (2026-03-11).** Correct prospecting filter: 1=Prospecting, 5=Multi-Touch (S2), 6=Multi-Touch Full Funnel (S3). Results for adv 37775:
+    - **S1: 93,274 VVs — 100%** (current_is_s1)
+    - **S2: 16,753 VVs — 99.99%** (2 unresolved). Top tiers: vv_chain_direct 56.72%, imp_direct 41.01%, imp_visit_ip 2.23%
+    - **S3: 23,844 VVs — 99.43%** (136 unresolved, 0.57%). Top tiers: vv_chain_direct 59.78%, vv_chain_s2_s1 20.41%, imp_chain 14.02%, imp_direct 2.78%
+    - Previous all-campaign Q3 showed 23% unresolved — retargeting (obj 4) was the entire gap
+    - Cross-stage link working: vv_chain_direct (bid_ip → prior VV VAST IP) is the #1 resolution method for both S2 and S3
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 

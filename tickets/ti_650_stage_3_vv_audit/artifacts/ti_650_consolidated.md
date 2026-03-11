@@ -762,6 +762,12 @@ BWN matched 84.03% of CIL-matched rows (25,611/30,477). The 16% gap may be BWN d
     - Unresolved: 40 (1.71%) — 32 competing, 8 primary. **Primary VV unresolved: 0.34% — identical to CTV**
 30. **Combined all-device resolution: 98.53% with bid_ip only (2026-03-10).** 18,178/18,450 prospecting S2 VVs resolved using S1 bid_ip only. 272 unresolved — corrected in #31.
 31. **CORRECTION: 100% resolved with S1 VAST IPs (2026-03-11).** Previous analysis used S1 bid_ip (CIL.ip) only. Adding S1 VAST IPs from event_log (vast_start/vast_impression): **18,450/18,450 = 100% resolved, 0 unresolved.** S1 VAST IPs add 6M IPs not in S1 bid_ip pool (CGNAT/SSAI causes ~6% bid↔VAST IP mismatch). 747 VVs resolved by VAST IPs with no matching bid IP. The production model's `impression_pool` CTE already combines both sources.
+32. **Production Q3 10-tier cascade tested with prospecting filter (2026-03-11).** objective_id IN (1,5,6) per Ray — excludes retargeting (4) and Ego (7). Advertiser 37775, 7-day trace (Feb 4–11), 90-day lookback:
+    - **S1:** 93,274 VVs, 100% current_is_s1 (by definition)
+    - **S2:** 16,753 VVs, **99.99% resolved** (2 unresolved). Top tiers: vv_chain_direct 56.72%, imp_direct 24.31%, current_is_s1 10.52%, imp_visit_ip 4.01%
+    - **S3:** 23,844 VVs, **99.43% resolved** (136 unresolved). Top tiers: vv_chain_direct 59.78%, imp_direct 19.72%, current_is_s1 12.33%, imp_visit_ip 3.62%
+    - **Query:** `queries/ti_650_q3_test.sql` — full 10-tier cascade (current_is_s1, vv_chain_direct, vv_chain_s2_s1, imp_chain, imp_direct, imp_visit_ip, cp_ft_fallback, guid_vv_match, guid_imp_match, s1_imp_redirect)
+    - **Key insight:** Prospecting filter (1,5,6) is the single biggest driver of resolution rate — drops unresolved from ~20% to <1%. vv_chain_direct (prior VV VAST IP → current bid_ip) is the dominant resolution method across all stages.
 
 ---
 

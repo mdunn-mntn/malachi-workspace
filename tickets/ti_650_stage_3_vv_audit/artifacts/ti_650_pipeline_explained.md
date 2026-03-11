@@ -635,6 +635,38 @@ The bid_ip-only analysis above missed S1 VAST IPs from event_log. Adding S1 VAST
 
 **Result: 18,450/18,450 = 100% resolved. 0 unresolved.** 747 VVs resolved by VAST IPs with no matching bid IP. The VAST callback IP (TV's IP at ad playback) differs from bid_ip ~6% of the time due to CGNAT/SSAI. This is the IP that enters the S2 targeting segment. The production model's `impression_pool` CTE already combines both sources correctly.
 
+### Production Q3 10-Tier Cascade — Prospecting Only (2026-03-11)
+
+Tested the full production Q3 query (`queries/ti_650_q3_test.sql`) with **objective_id IN (1,5,6)** per Ray — excludes retargeting (4) and Ego (7). Advertiser 37775, 7-day trace (Feb 4–11), 90-day lookback.
+
+| Stage | Total VVs | Resolved | Unresolved | Resolution % |
+|-------|-----------|----------|------------|-------------|
+| S1 | 93,274 | 93,274 | 0 | 100% |
+| S2 | 16,753 | 16,751 | 2 | 99.99% |
+| S3 | 23,844 | 23,708 | 136 | 99.43% |
+
+**S2 resolution breakdown:**
+
+| Tier | Count | % of S2 |
+|------|-------|---------|
+| vv_chain_direct | 9,502 | 56.72% |
+| imp_direct | 4,073 | 24.31% |
+| current_is_s1 | 1,762 | 10.52% |
+| imp_visit_ip | 671 | 4.01% |
+| guid_vv_match | 363 | 2.17% |
+| cp_ft_fallback | 217 | 1.30% |
+| guid_imp_match | 79 | 0.47% |
+| vv_chain_s2_s1 | 47 | 0.28% |
+| imp_chain | 24 | 0.14% |
+| s1_imp_redirect | 13 | 0.08% |
+| UNRESOLVED | 2 | 0.01% |
+
+**Key findings:**
+- **Prospecting filter is the single biggest driver.** Drops unresolved from ~20% to <1%. Retargeting VVs (objective_id=4) have no S1 impression by design.
+- **vv_chain_direct dominates** — 56.72% of S2 and 59.78% of S3 resolve via prior VV VAST IP → current bid_ip match.
+- **imp_direct is second** — 24.31% of S2 resolve via direct S1 impression IP → current bid_ip match.
+- **136 S3 unresolved** — likely CGNAT/LiveRamp edge cases where IP rotated between all available matching points.
+
 ---
 
 ## Part 12: VVS Determination Logic (How a Visit Becomes a Verified Visit)

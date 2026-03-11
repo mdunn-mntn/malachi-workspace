@@ -76,12 +76,45 @@ Previous analysis showed ~20% unresolved. This was inflated because **retargetin
 
 ---
 
+## Production Q3 Test — 10-Tier Cascade (2026-03-11)
+
+Tested the full production Q3 query with **objective_id IN (1, 5, 6)** per Ray — excludes retargeting (4) and Ego (7).
+
+| Stage | Total VVs | Resolved | Unresolved | Resolution % |
+|-------|-----------|----------|------------|-------------|
+| S1 | 93,274 | 93,274 | 0 | 100% |
+| S2 | 16,753 | 16,751 | 2 | **99.99%** |
+| S3 | 23,844 | 23,708 | 136 | **99.43%** |
+
+**Top resolution methods (S2):** vv_chain_direct 56.72%, imp_direct 24.31%, current_is_s1 10.52%, imp_visit_ip 4.01%
+
+The 10-tier cascade: current_is_s1, vv_chain_direct, vv_chain_s2_s1, imp_chain, imp_direct, imp_visit_ip, cp_ft_fallback, guid_vv_match, guid_imp_match, s1_imp_redirect.
+
+The 2 S2 unresolved and 136 S3 unresolved are likely CGNAT/LiveRamp edge cases where IP rotated between all matching points.
+
+---
+
+## Objective ID Reference (per Ray)
+
+| ID | Name | Filter |
+|----|------|--------|
+| 1 | Prospecting | **Included** |
+| 5 | Multi-Touch (S2) | **Included** |
+| 6 | Multi-Touch Full Funnel (S3) | **Included** |
+| 2 | Onsite | Excluded |
+| 3 | Prospecting (dup) | Excluded (not used by this advertiser) |
+| 4 | Retargeting | **Excluded** — VVs have no S1 impression by design |
+| 7 | Ego | **Excluded** — employee targeting |
+
+---
+
 ## Files
 
 | File | Contents |
 |------|----------|
 | `queries/ti_650_negative_case_analysis.sql` | Phase 5-7: CTV cascade, display cascade, corrected VAST IP resolution |
+| `queries/ti_650_q3_test.sql` | Full 10-tier production cascade test with objective_id IN (1,5,6) |
 | `queries/ti_650_audit_trace_queries.sql` | v11 production query (10 tiers, uses impression_pool with both CIL + EL) |
 | `summary.md` | Full findings with corrected results |
-| `artifacts/ti_650_consolidated.md` | All findings numbered 1-34 |
+| `artifacts/ti_650_consolidated.md` | All findings numbered 1-32 |
 | `artifacts/ti_650_pipeline_explained.md` | Full pipeline documentation with resolution tables |
