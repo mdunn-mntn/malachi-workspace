@@ -138,3 +138,47 @@ WHERE pv_vast_asid IS NULL          -- no prior VV via vast
   AND s1_imp_redir_asid IS NULL     -- no S1 impression at redirect_ip
 ORDER BY vv_time
 LIMIT 5;
+
+
+--------------------------------------------------------------------------------
+-- PHASE 2: Deep-dive queries for individual unresolved VVs
+-- Replace IP and guid values for each VV being investigated
+--------------------------------------------------------------------------------
+
+-- P2-Q1: All impressions at target IP for adv 37775 (any stage, event_log)
+-- Replace '208.97.32.204' with the VV's bid_ip
+-- SELECT c.funnel_level AS stage, c.advertiser_id, el.ad_served_id, el.campaign_id,
+--        el.bid_ip, el.ip AS vast_ip, el.time, el.guid
+-- FROM `dw-main-silver.logdata.event_log` el
+-- JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = el.campaign_id AND c.deleted = FALSE
+-- WHERE el.bid_ip = '208.97.32.204'
+--   AND el.event_type_raw IN ('vast_start', 'vast_impression')
+--   AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+-- ORDER BY el.time DESC LIMIT 20;
+
+-- P2-Q2: TMUL segment entry (tpa_membership_update_log)
+-- Partition filter: dt (STRING 'YYYY-MM-DD'). Column = id (not ip).
+-- Narrow date range to reduce scan cost.
+-- SELECT td.time, td.id AS ip, td.data_source_id, isl.segment_id
+-- FROM `dw-main-bronze.raw.tpa_membership_update_log` td,
+--      UNNEST(td.in_segments.segments) AS isl
+-- WHERE td.id = '208.97.32.204'
+--   AND td.dt >= '2026-02-01' AND td.dt < '2026-02-11'
+-- ORDER BY td.time DESC LIMIT 10;
+
+-- P2-Q3: IPDSC identity resolution (CRM HEM→IP)
+-- Partition filter: dt (STRING 'YYYY-MM-DD'). Column = ip.
+-- SELECT dt, ip, data_source_id
+-- FROM `dw-main-bronze.external.ipdsc__v1`
+-- WHERE ip = '208.97.32.204'
+--   AND dt >= '2026-02-01' AND dt < '2026-02-11'
+-- ORDER BY dt DESC LIMIT 10;
+
+
+--------------------------------------------------------------------------------
+-- PHASE 3: Batch classification of ALL unresolved S2 VVs
+-- Result: 18,047 of 37,090 S2 VVs (without S1 VV at IP) have zero S1 footprint
+-- at any key (bid_ip, guid, redirect_ip). Structurally unresolvable.
+--------------------------------------------------------------------------------
+-- [See batch query in session — creates impression_pool, s1_imp_ips, s1_imp_guids,
+--  s1_vv_guids, prior_vv_vast_ips TEMP TABLEs then classifies failure patterns]
