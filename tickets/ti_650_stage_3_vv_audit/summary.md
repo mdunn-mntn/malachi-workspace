@@ -120,7 +120,41 @@ New tiers (8-10) rescued: S2=2,969 (+5.6pp), S3=4,325 (+6.7pp).
 
 **Note:** v11 base tiers (1-7) show regression vs earlier v8 run (S2: 87.2% → 70.9% before new tiers, S3: 89.1% → 73.6%). Root cause: v10 merged vast pool refactor redistributed resolution — vv_direct gained ~14k while imp_direct lost ~23k. Data is all available (CIL data confirmed from 2025-11-06). Needs investigation in a future session.
 
-Remaining ~20% unresolved are likely CRM/cross-device graph entries where the IP entered the segment via non-IP identity resolution — no IP-based lineage path exists.
+Remaining ~20% unresolved are cross-device identity graph entries — **empirically confirmed (2026-03-10).**
+
+### Negative Case Analysis (v11, 2026-03-10)
+
+**Methodology:** Picked individual unresolved S2 VVs, traced all 10 tiers step-by-step.
+
+**VV #1 trace: `0eae4990-8334-4916-acda-135d344035de`**
+- IP: 208.97.32.204, guid: b6a8c5f4-..., campaign 443862 (S2), is_cross_device=false
+- ALL IPs identical (zero mutation), first_touch_ad_served_id=NULL
+- **event_log:** ZERO S1 impressions at this IP for adv 37775. All impressions are S2 (campaigns 443815, 443844, 443862).
+- **CIL:** ZERO S1 impressions. 20 S2 impressions from 2026-02-01 to 2026-02-14.
+- **clickpass:** Only 1 VV = this VV itself. No prior VVs at this IP.
+- **ui_visits:** Only 1 visit = this VV.
+- **guid matches:** ZERO S1 impressions or VVs with this guid.
+- **Other advertisers:** IP HAS S1 impressions from other advertisers (31357, 30506, etc.) — IP is not new to CTV.
+- **TMUL:** data_source_id=3 (LiveRamp) across all 10 segments. IP entered segments via third-party identity graph.
+- **IPDSC:** data_source_id=4 (CRM), 13, 14, 18, 42, 43 (multiple resolution sources).
+
+**Root cause:** S1 impression and VV occurred on a DIFFERENT IP (IP_A) for the same user. LiveRamp identity graph linked IP_A and IP_B (208.97.32.204), propagating S2 segment membership to IP_B. The S1 chain is broken because:
+1. Different IP (bid_ip mismatch)
+2. Different guid (different device = different cookie)
+3. No shared MNTN key — the IP_A ↔ IP_B link exists only in LiveRamp's graph
+
+**Batch validation (all S2 VVs):**
+| Category | Count | Description |
+|----------|-------|-------------|
+| Total S2 without S1 VV at IP | 37,090 | No S1 VV with vast_ip = S2's bid_ip |
+| Has S1 impression at IP | 11,000 | S1 imp exists (resolved by imp_direct tier) |
+| No S1 impression at IP | 26,090 | No S1 imp at same bid_ip |
+| Has S1 imp via guid | 8,918 | Same user, different IP (resolved by guid_imp_match) |
+| Has S1 VV via guid | 8,435 | Same user, different IP (resolved by guid_vv_match) |
+| **Truly no S1 footprint** | **18,047** | No S1 at IP, guid, or redirect_ip |
+| Has any prior VV at IP | 37,062 | Most IPs DO have prior VVs (just not S1) |
+
+**Conclusion:** The ~18K "truly no S1 footprint" VVs are structurally unresolvable via any MNTN key. The S1 impression exists but on a different IP+guid linked only through the external identity graph (LiveRamp/CRM). This is the hard ceiling for IP+guid-based S1 resolution.
 
 ### Cost
 - Daily incremental: ~$29/day on-demand (~4.7 TB scan — event_log + cost_impression_log)
