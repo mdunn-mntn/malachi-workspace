@@ -83,9 +83,12 @@ unresolved AS (
       AND imp.bid_ip IS NOT NULL
 )
 SELECT
-    a.name AS advertiser_name,
+    a.company_name AS advertiser_name,
     u.campaign_id,
     c.name AS campaign_name,
+    c.objective_id,
+    o.name AS objective_name,
+    c.funnel_level,
     u.attribution_model_id,
     CASE
         WHEN u.attribution_model_id IN (1,2,3) THEN 'primary'
@@ -99,6 +102,8 @@ FROM unresolved u
 JOIN `dw-main-bronze.integrationprod.campaigns` c
     ON c.campaign_id = u.campaign_id AND c.deleted = FALSE
 JOIN `dw-main-bronze.integrationprod.advertisers` a
-    ON a.id = 37775
-GROUP BY a.name, u.campaign_id, c.name, u.attribution_model_id
-ORDER BY vv_count DESC;
+    ON a.advertiser_id = 37775
+LEFT JOIN `dw-main-silver.core.objectives` o
+    ON o.objective_id = c.objective_id
+GROUP BY a.company_name, u.campaign_id, c.name, c.objective_id, o.name, c.funnel_level, u.attribution_model_id
+ORDER BY c.objective_id, vv_count DESC;

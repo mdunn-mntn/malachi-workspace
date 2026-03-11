@@ -100,11 +100,11 @@ unresolved AS (
 )
 SELECT
     u.*,
-    c.name AS campaign_name,
-    a.name AS advertiser_name
+    c.name AS campaign_name
+    a.company_name AS advertiser_name
 FROM unresolved u
 JOIN `dw-main-bronze.integrationprod.campaigns` c
     ON c.campaign_id = u.campaign_id AND c.deleted = FALSE
 JOIN `dw-main-bronze.integrationprod.advertisers` a
-    ON a.id = 37775
+    ON a.advertiser_id = 37775
 ORDER BY u.attribution_model_id, u.is_cross_device, u.vv_time;
