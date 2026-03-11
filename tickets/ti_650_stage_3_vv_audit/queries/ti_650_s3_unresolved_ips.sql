@@ -100,7 +100,7 @@ unresolved AS (
 )
 SELECT
     u.*,
-    c.name AS campaign_name
+    c.name AS campaign_name,
     a.company_name AS advertiser_name
 FROM unresolved u
 JOIN `dw-main-bronze.integrationprod.campaigns` c
