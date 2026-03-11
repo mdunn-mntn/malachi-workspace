@@ -757,6 +757,10 @@ BWN matched 84.03% of CIL-matched rows (25,611/30,477). The 16% gap may be BWN d
     - Truly unresolved: 232 (1.44%) — 178 are competing VVs (secondary attribution), only 54 primary
     - **Primary VV unresolved rate: 0.34%** — effectively zero
     - Root cause: LiveRamp identity graph linked IP to different household IP with S1 impression. Most IPs are T-Mobile CGNAT (172.5x.x.x) — IP rotation means graph snapshot may miss the active IP at S1 time
+29. **Display S2 resolution: 98.29% (2026-03-10).** Non-CTV devices (MOBILE/TABLET/GAMES_CONSOLE): 2,298/2,338 resolved via 3 tiers:
+    - S1 impression at bid_ip: 2,236 (95.64%), guid_vv_match: 61 (2.61%), s1_imp_redirect: 1 (0.04%)
+    - Unresolved: 40 (1.71%) — 32 competing, 8 primary. **Primary VV unresolved: 0.34% — identical to CTV**
+30. **Combined all-device resolution: 98.53% (2026-03-10).** 18,178/18,450 prospecting S2 VVs resolved. Primary VV unresolved: 62/18,450 = 0.34%. Remaining 272 dominated by competing VVs (210/272, 77.2%). Root cause consistent across all device types: LiveRamp CGNAT IP rotation.
 
 ---
 

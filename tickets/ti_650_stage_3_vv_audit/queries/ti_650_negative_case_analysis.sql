@@ -353,3 +353,108 @@ ORDER BY cnt DESC;
 --
 -- 178/232 (76.7%) are competing VVs (secondary attribution)
 -- Primary VV unresolved: 54/16,112 = 0.34%
+
+
+---------------------------------------------------------------------------------
+-- PHASE 6: Display S2 resolution (2026-03-10)
+-- Non-CTV devices: MOBILE, TABLET, GAMES_CONSOLE
+-- Same prospecting filter: objective_id NOT IN (4, 7)
+---------------------------------------------------------------------------------
+
+-- P6-Q1: Display prospecting S2 resolution cascade (4 tiers)
+-- Results: 2,338 total → 2,298 resolved (98.29%), 40 unresolved (1.71%)
+-- Primary VV unresolved: 8/2,338 = 0.34% (identical to CTV)
+
+WITH s1_campaigns AS (
+  SELECT campaign_id
+  FROM `dw-main-bronze.integrationprod.campaigns`
+  WHERE advertiser_id = 37775
+    AND funnel_level = 1
+    AND objective_id NOT IN (4, 7)
+    AND deleted = FALSE AND is_test = FALSE
+),
+s2_campaigns AS (
+  SELECT campaign_id
+  FROM `dw-main-bronze.integrationprod.campaigns`
+  WHERE advertiser_id = 37775
+    AND funnel_level = 2
+    AND objective_id NOT IN (4, 7)
+    AND deleted = FALSE AND is_test = FALSE
+),
+s2_vvs AS (
+  SELECT cp.ad_served_id, cp.ip AS redirect_ip, cp.guid,
+    cp.attribution_model_id,
+    cil.ip AS bid_ip, cil.device_type
+  FROM `dw-main-silver.logdata.clickpass_log` cp
+  JOIN s2_campaigns s2c ON cp.campaign_id = s2c.campaign_id
+  JOIN `dw-main-silver.logdata.cost_impression_log` cil
+    ON cp.ad_served_id = cil.ad_served_id
+  WHERE DATE(cp.time) BETWEEN '2026-02-04' AND '2026-02-11'
+    AND cp.advertiser_id = 37775
+    AND cil.device_type NOT IN ('SET_TOP_BOX', 'CONNECTED_TV')
+),
+s1_ips AS (
+  SELECT DISTINCT cil.ip AS bid_ip
+  FROM `dw-main-silver.logdata.cost_impression_log` cil
+  JOIN s1_campaigns s1c ON cil.campaign_id = s1c.campaign_id
+  WHERE DATE(cil.time) BETWEEN '2025-11-06' AND '2026-02-11'
+    AND cil.advertiser_id = 37775
+),
+s1_vv_guids AS (
+  SELECT DISTINCT cp.guid
+  FROM `dw-main-silver.logdata.clickpass_log` cp
+  JOIN s1_campaigns s1c ON cp.campaign_id = s1c.campaign_id
+  WHERE DATE(cp.time) BETWEEN '2025-11-06' AND '2026-02-11'
+    AND cp.advertiser_id = 37775
+    AND cp.guid IS NOT NULL
+),
+s1_imp_guids AS (
+  SELECT DISTINCT cil.guid
+  FROM `dw-main-silver.logdata.cost_impression_log` cil
+  JOIN s1_campaigns s1c ON cil.campaign_id = s1c.campaign_id
+  WHERE DATE(cil.time) BETWEEN '2025-11-06' AND '2026-02-11'
+    AND cil.advertiser_id = 37775
+    AND cil.guid IS NOT NULL
+),
+resolved AS (
+  SELECT v.ad_served_id, v.attribution_model_id, v.device_type,
+    CASE
+      WHEN s1i.bid_ip IS NOT NULL THEN '1_bid_ip'
+      WHEN s1vg.guid IS NOT NULL THEN '2_guid_vv'
+      WHEN s1ig.guid IS NOT NULL THEN '3_guid_imp'
+      WHEN s1r.bid_ip IS NOT NULL THEN '4_redirect_ip'
+      ELSE 'UNRESOLVED'
+    END AS tier
+  FROM s2_vvs v
+  LEFT JOIN s1_ips s1i ON v.bid_ip = s1i.bid_ip
+  LEFT JOIN s1_vv_guids s1vg ON v.guid = s1vg.guid AND s1i.bid_ip IS NULL
+  LEFT JOIN s1_imp_guids s1ig ON v.guid = s1ig.guid AND s1i.bid_ip IS NULL AND s1vg.guid IS NULL
+  LEFT JOIN s1_ips s1r ON v.redirect_ip = s1r.bid_ip AND s1i.bid_ip IS NULL AND s1vg.guid IS NULL AND s1ig.guid IS NULL
+)
+SELECT
+  tier,
+  COUNT(*) AS vv_count,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 2) AS pct
+FROM resolved
+GROUP BY tier
+ORDER BY tier;
+
+-- P6-Q1 RESULTS:
+--   tier           | vv_count | pct
+--   1_bid_ip       | 2,236    | 95.64%
+--   2_guid_vv      | 61       | 2.61%
+--   4_redirect_ip  | 1        | 0.04%
+--   UNRESOLVED     | 40       | 1.71%
+--
+-- 40 unresolved breakdown by attribution model:
+--   Competing (models 9-11): 32 (80%)
+--     MOBILE: 19, TABLET: 10, GAMES_CONSOLE: 3
+--   Primary (models 1-2): 8 (20%)
+--     MOBILE: 5, TABLET: 2, GAMES_CONSOLE: 1
+--
+-- Primary VV unresolved: 8/2,338 = 0.34%
+--
+-- COMBINED ALL DEVICE TYPES:
+--   Total S2 VVs: 18,450 → 18,178 resolved (98.53%), 272 unresolved
+--   Primary VV unresolved: 62/18,450 = 0.34%
+--   Competing VVs dominate unresolved: 210/272 (77.2%)

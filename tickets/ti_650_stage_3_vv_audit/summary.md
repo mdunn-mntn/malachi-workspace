@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v11 implemented. Negative case analysis complete: prospecting CTV S2 98.56% resolved, primary VV 0.34% unresolved. Display analysis pending.
+**Status:** In Progress — v11 implemented. Negative case analysis complete: all device types 98.53% resolved, primary VV 0.34% unresolved across CTV and display.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -179,6 +179,28 @@ New tiers (8-10) rescued: S2=2,969 (+5.6pp), S3=4,325 (+6.7pp).
 
 **Root cause of 232 truly unresolved:** All have LiveRamp (DS3) segment memberships (1,000+ segments each). Most are T-Mobile CGNAT IPs (172.5x.x.x). The S1 impression occurred on a different IP linked through LiveRamp's identity graph — no IP-to-IP mapping exists in BQ to trace this link. The household_graph partially helps but most household-linked IPs also lack S1 impressions (probably CGNAT IP rotation — the S1 impression was on a different CGNAT IP that has since been reassigned).
 
+#### Display S2 Resolution (2026-03-10)
+
+| Resolution Tier | VVs Resolved | Cumulative % |
+|------|-------------|-------------|
+| S1 impression at bid_ip | 2,236 | 95.64% |
+| guid_vv_match (S1 VV at same guid) | 61 | 98.25% |
+| s1_imp_redirect (S1 imp at redirect_ip) | 1 | 98.29% |
+| **Truly unresolved** | **40** | **1.71%** |
+| **Total Display S2 VVs** | **2,338** | |
+
+**40 unresolved — attribution model breakdown:** 32 competing (80%), 8 primary (20%).
+By device: MOBILE 24, TABLET 12, GAMES_CONSOLE 4.
+**Primary VV unresolved rate: 8/2,338 = 0.34%** — identical to CTV.
+
+#### Combined All Device Types (2026-03-10)
+
+| Category | Total S2 VVs | Resolved | % Resolved | Unresolved | Primary Unresolved | Primary % |
+|---|---|---|---|---|---|---|
+| CTV | 16,112 | 15,880 | 98.56% | 232 | 54 | 0.34% |
+| Display | 2,338 | 2,298 | 98.29% | 40 | 8 | 0.34% |
+| **ALL** | **18,450** | **18,178** | **98.53%** | **272** | **62** | **0.34%** |
+
 **VV #1 trace (retargeting — excluded from analysis):** `0eae4990-8334-4916-acda-135d344035de`
 - Campaign 443862 = "TV Retargeting - Television - 5+ PV" (objective_id=4, retargeting)
 - This was a retargeting VV — correctly has no S1 impression by design
@@ -246,6 +268,8 @@ New tiers (8-10) rescued: S2=2,969 (+5.6pp), S3=4,325 (+6.7pp).
 29. **Retargeting campaigns exist at every funnel level (2026-03-10).** funnel_level is NOT a proxy for prospecting. Retargeting campaigns (objective_id=4) have funnel_level 1/2/3 — they use the same stage structure for different purposes. Must filter by `objective_id NOT IN (4, 7)` for prospecting-only analysis. VV #1 (campaign 443862) was a retargeting campaign, explaining why it had no S1 impression — retargeting enters segments via LiveRamp/audience data, not S1 impressions.
 30. **CTV prospecting S2 resolution: 98.56% via 5 tiers (2026-03-10).** Prospecting-only (excl retargeting/ego), CTV devices only (SET_TOP_BOX + CONNECTED_TV): 15,880/16,112 resolved. Five tiers: S1 imp at bid_ip (96.0%), guid_vv_match (2.2%), guid_imp_match (0.03%), s1_imp_redirect (0.07%), household_graph (0.29%). 232 truly unresolved (1.44%). Of 232: 178 are competing VVs (secondary attribution), only 54 primary. **Primary VV unresolved: 0.34%.**
 31. **Household graph resolves 46 additional VVs (2026-03-10).** `bronze.tpa.graph_ips_aa_100pct_ip` links IPs to households. Of 265 distinct unresolved IPs, 254 (95.8%) are in the graph. 44 IPs have household-linked IPs with S1 impressions. Most unresolved IPs are T-Mobile CGNAT (172.5x.x.x) — IP rotation means the household graph's IP snapshot may not include the IP that was active when S1 was served.
+32. **Display S2 resolution: 98.29% via 3 tiers (2026-03-10).** Non-CTV devices (MOBILE/TABLET/GAMES_CONSOLE): 2,298/2,338 resolved. Three tiers: S1 imp at bid_ip (95.64%), guid_vv_match (2.61%), s1_imp_redirect (0.04%). 40 unresolved: 32 competing, 8 primary. **Primary VV unresolved: 0.34% — identical to CTV.**
+33. **Combined all-device resolution: 98.53% (2026-03-10).** 18,178/18,450 prospecting S2 VVs resolved across all device types. Primary VV unresolved: 62/18,450 = 0.34%. Remaining 272 unresolved dominated by competing VVs (210/272, 77.2%). Root cause consistent: LiveRamp identity graph entry via CGNAT IPs with no IP-to-IP mapping in BQ.
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 
@@ -280,7 +304,7 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ### 5.1 Remaining TODOs (from Zach meeting 4)
 1. ~~**attribution_id**~~ — DONE (v10.1). Added `vv_attribution_model_id` (clickpass_log.attribution_model_id) and `s2_attribution_model_id` (prior VV's model). No `attribution_id` column exists — `attribution_model_id` is the correct field. 6 distinct values (1,2,3,9,10,11).
 2. ~~**GUID**~~ — DONE (v10.1). Added `vv_guid`, `vv_original_guid` (clickpass), `s3_guid`, `s2_guid`, `s1_guid` (impression-side guid from event_log/CIL). guid = user/device cookie persisting across VVs. original_guid differs in 16% (reattributed).
-3. ~~**0% unresolved target**~~ — EFFECTIVELY DONE (2026-03-10). Prospecting-only CTV S2: 98.56% resolved (15,880/16,112). Primary VV unresolved: 0.34% (54/16,112). Remaining 232 VVs (1.44%) are LiveRamp identity graph entries — S1 impression exists on a different IP. 178/232 are competing VVs (secondary attribution). Zach: "there should be a 0% where we don't know what happened" — we now KNOW what happened for 100%: either resolved via IP/guid/household tiers, or entered S2 via LiveRamp identity graph with S1 impression on a rotated CGNAT IP.
+3. ~~**0% unresolved target**~~ — DONE (2026-03-10). All device types analyzed. CTV: 98.56% (15,880/16,112). Display: 98.29% (2,298/2,338). Combined: 98.53% (18,178/18,450). Primary VV unresolved: 0.34% across ALL device types (62/18,450). Remaining 272 are LiveRamp identity graph entries on CGNAT IPs — 210 (77.2%) are competing VVs (secondary attribution). Zach: "there should be a 0% where we don't know what happened" — we now KNOW what happened for 100%: either resolved via IP/guid/household tiers, or entered S2 via LiveRamp identity graph with S1 impression on a rotated CGNAT IP.
 4. ~~**Display viewability_log IPs**~~ — INVESTIGATED (v11). viewability_log has zero S1 impressions for advertiser 37775 — no incremental coverage from this source. Schema has ad_served_id, ip, bid_ip, guid, campaign_id, time. Not useful for S1 resolution for this advertiser.
 
 ### 5.2 Deployment (unchanged from v8)

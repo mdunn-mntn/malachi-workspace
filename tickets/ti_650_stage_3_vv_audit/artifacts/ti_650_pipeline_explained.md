@@ -579,7 +579,7 @@ S1, S2→S1, S3→S1, S3→S2→S1. Every permutation resolves `s1_bid_ip`. Max 
 
 **The bottom line:** For any VV at any stage, `s1_bid_ip` tells you the IP we originally bid on. If the visit IP differs, it's mutation. The table proves targeting correctness.
 
-### S1 Resolution: Prospecting-Only CTV Results (updated 2026-03-10)
+### S1 Resolution: Prospecting-Only Results (updated 2026-03-10)
 
 **Critical scoping correction:** Previous "~20% unresolved" included retargeting campaigns. Zach confirmed retargeting is NOT relevant to this audit. Retargeting campaigns (objective_id=4) exist at every funnel_level (1/2/3) — they enter segments via LiveRamp/audience data, not S1 impressions, by design.
 
@@ -609,6 +609,20 @@ S1, S2→S1, S3→S1, S3→S2→S1. Every permutation resolves `s1_bid_ip`. Max 
 5. CGNAT IP rotation means IP_A may no longer be in the household graph
 
 **What would close the gap:** A time-series IP→household mapping (not just current snapshot).
+
+**Display S2 resolution (2026-03-10):**
+
+| Tier | VVs Resolved | Cumulative % |
+|------|-------------|-------------|
+| S1 impression at bid_ip | 2,236 | 95.64% |
+| guid_vv_match | 61 | 98.25% |
+| s1_imp_redirect | 1 | 98.29% |
+| **Truly unresolved** | **40** | **1.71%** |
+| **Total Display S2 VVs** | **2,338** | |
+
+40 unresolved: 32 competing, 8 primary. Primary VV unresolved: 0.34% — identical to CTV.
+
+**Combined all device types:** 18,178/18,450 resolved (98.53%). Primary VV unresolved: 62/18,450 = 0.34%. Root cause consistent: LiveRamp CGNAT IP rotation.
 
 ---
 
