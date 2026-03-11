@@ -182,3 +182,79 @@ LIMIT 5;
 --------------------------------------------------------------------------------
 -- [See batch query in session — creates impression_pool, s1_imp_ips, s1_imp_guids,
 --  s1_vv_guids, prior_vv_vast_ips TEMP TABLEs then classifies failure patterns]
+
+
+--------------------------------------------------------------------------------
+-- PHASE 4: Identity graph trace — find the ACTUAL S1 impression via LiveRamp
+-- Proven for VV #1 (208.97.32.204): S1 impression exists at linked IP 35.145.60.7
+-- Method: TMUL shared-segment-same-timestamp → candidate IPs → event_log S1 check
+--------------------------------------------------------------------------------
+
+-- P4-Q1: Get all DS3 segments for unresolved VV's IP
+-- (Use TMUL results to establish segment fingerprint)
+-- SELECT td.id AS ip, td.data_source_id, td.time, isl.segment_id
+-- FROM `dw-main-bronze.raw.tpa_membership_update_log` td,
+--      UNNEST(td.in_segments.segments) AS isl
+-- WHERE td.id = '208.97.32.204'
+--   AND td.dt >= '2026-02-09' AND td.dt < '2026-02-11'
+--   AND td.data_source_id = 3
+-- ORDER BY td.time DESC LIMIT 50;
+
+-- P4-Q2: Find identity-linked IPs (same DS3 segments, same timestamp ±1 min)
+-- Replace segment_ids with actual values from P4-Q1
+-- Replace timestamp window to match the VV IP's entry time
+-- SELECT td.id AS linked_ip, td.data_source_id, td.time,
+--        COUNT(DISTINCT isl.segment_id) AS shared_segments
+-- FROM `dw-main-bronze.raw.tpa_membership_update_log` td,
+--      UNNEST(td.in_segments.segments) AS isl
+-- WHERE td.dt >= '2026-02-09' AND td.dt < '2026-02-11'
+--   AND td.data_source_id = 3
+--   AND isl.segment_id IN (338198,528861,493738,516900,385587)  -- sample 5 segments from P4-Q1
+--   AND td.id != '208.97.32.204'
+--   AND td.time BETWEEN TIMESTAMP('2026-02-10 08:03:00') AND TIMESTAMP('2026-02-10 08:04:00')
+-- GROUP BY td.id, td.data_source_id, td.time
+-- HAVING shared_segments >= 3
+-- ORDER BY shared_segments DESC LIMIT 20;
+
+-- P4-Q3: Check linked IPs for S1 impressions (adv 37775)
+-- Replace IP list with candidates from P4-Q2
+-- SELECT c.funnel_level AS stage, el.bid_ip, el.campaign_id, el.ad_served_id,
+--        el.time, el.event_type_raw
+-- FROM `dw-main-silver.logdata.event_log` el
+-- JOIN `dw-main-bronze.integrationprod.campaigns` c
+--   ON c.campaign_id = el.campaign_id AND c.deleted = FALSE
+-- WHERE el.bid_ip IN ('35.145.60.7','35.151.179.5','73.124.39.182')  -- from P4-Q2
+--   AND c.advertiser_id = 37775
+--   AND c.funnel_level = 1
+--   AND el.event_type_raw IN ('vast_start','vast_impression')
+--   AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+-- ORDER BY el.time DESC LIMIT 20;
+
+-- P4-Q4: Quantify segment overlap to validate identity linkage strength
+-- (VV #1 result: 96/140 segments shared = 68.6% overlap with 35.145.60.7)
+-- WITH ip1_segs AS (
+--   SELECT DISTINCT isl.segment_id
+--   FROM `dw-main-bronze.raw.tpa_membership_update_log` td,
+--        UNNEST(td.in_segments.segments) AS isl
+--   WHERE td.id = '208.97.32.204' AND td.dt >= '2026-02-09' AND td.dt < '2026-02-11' AND td.data_source_id = 3
+-- ),
+-- ip2_segs AS (
+--   SELECT DISTINCT isl.segment_id
+--   FROM `dw-main-bronze.raw.tpa_membership_update_log` td,
+--        UNNEST(td.in_segments.segments) AS isl
+--   WHERE td.id = '35.145.60.7' AND td.dt >= '2026-02-09' AND td.dt < '2026-02-11' AND td.data_source_id = 3
+-- )
+-- SELECT
+--   (SELECT COUNT(*) FROM ip1_segs) AS ip1_total,
+--   (SELECT COUNT(*) FROM ip2_segs) AS ip2_total,
+--   (SELECT COUNT(*) FROM ip1_segs a JOIN ip2_segs b ON a.segment_id = b.segment_id) AS shared,
+--   ROUND((SELECT COUNT(*) FROM ip1_segs a JOIN ip2_segs b ON a.segment_id = b.segment_id) * 100.0 /
+--         GREATEST((SELECT COUNT(*) FROM ip1_segs), 1), 1) AS pct_overlap;
+
+-- P4 RESULTS (VV #1):
+-- S1 impressions confirmed at 3 linked IPs:
+--   35.145.60.7    — 4 S1 imps (Feb 2-9), campaign 311974
+--   35.151.179.5   — 2 S1 imps (Feb 4, 9), campaign 311974
+--   73.124.39.182  — 4 S1 imps (Feb 2-9), campaigns 311968/450323
+-- Segment overlap: 96/140 (68.6%) with 35.145.60.7
+-- Conclusion: S1 impression EXISTS — data access gap (no IP→IP linkage table), not logic gap
