@@ -579,28 +579,36 @@ S1, S2→S1, S3→S1, S3→S2→S1. Every permutation resolves `s1_bid_ip`. Max 
 
 **The bottom line:** For any VV at any stage, `s1_bid_ip` tells you the IP we originally bid on. If the visit IP differs, it's mutation. The table proves targeting correctness.
 
-### Structural Ceiling: LiveRamp Identity Graph Gap (~20% unresolved)
+### S1 Resolution: Prospecting-Only CTV Results (updated 2026-03-10)
 
-v11's 10-tier S1 resolution chain resolves ~80% of S2/S3 VVs back to an S1 impression. The remaining ~20% are **structurally unresolvable** with current data — not a logic gap, but a data access gap.
+**Critical scoping correction:** Previous "~20% unresolved" included retargeting campaigns. Zach confirmed retargeting is NOT relevant to this audit. Retargeting campaigns (objective_id=4) exist at every funnel_level (1/2/3) — they enter segments via LiveRamp/audience data, not S1 impressions, by design.
 
-**Root cause (empirically proven, 2026-03-10):** The S1 impression exists, but at a DIFFERENT IP linked through LiveRamp's (DS3) external identity graph. The audit correctly identifies these as unresolvable because MNTN has no BQ table mapping IP↔IP via the identity graph.
+**Prospecting-only CTV S2 resolution (adv 37775, 7-day trace, 90-day lookback):**
+
+| Tier | VVs Resolved | Cumulative % |
+|------|-------------|-------------|
+| S1 impression at bid_ip | 15,465 | 95.98% |
+| guid_vv_match | 353 | 98.17% |
+| guid_imp_match | 5 | 98.20% |
+| s1_imp_redirect | 11 | 98.27% |
+| household_graph | 46 | 98.56% |
+| **Truly unresolved** | **232** | **1.44%** |
+| **Total CTV S2 VVs** | **16,112** | |
+
+**Household graph tier:** Uses `bronze.tpa.graph_ips_aa_100pct_ip` to find IPs in the same household. Of 265 distinct unresolved IPs, 254 (95.8%) exist in the graph. 44 IPs have household-linked IPs with S1 impressions.
+
+**232 truly unresolved breakdown:** 178 (76.7%) are "competing" VVs (models 9-11, secondary attribution). Only 54 are primary VVs (models 1-3). **Primary VV unresolved: 0.34%.**
+
+**Root cause of remaining 232:** LiveRamp identity graph linked the IP to a different household IP with the S1 impression. Most are T-Mobile CGNAT IPs (172.5x.x.x) — IPs rotate, so the household graph snapshot may not include the IP that was active at S1 time.
 
 **How the gap happens:**
-1. S1 impression served to IP_A (e.g., `35.145.60.7`) via S1 campaign
-2. LiveRamp identity graph links IP_A ↔ IP_B (e.g., `208.97.32.204`) as same household/user
+1. S1 impression served to IP_A via S1 prospecting campaign
+2. LiveRamp identity graph links IP_A ↔ IP_B as same household/user
 3. IP_B enters S2 targeting segment via LiveRamp (DS3) — gets S2 impression → VV
 4. Audit tries to trace S2 VV at IP_B back to S1 at IP_B → finds nothing (S1 was at IP_A)
-5. No shared MNTN key (bid_ip, guid, redirect_ip) connects IP_A and IP_B
+5. CGNAT IP rotation means IP_A may no longer be in the household graph
 
-**Evidence (VV #1 trace):**
-- IP `208.97.32.204`: 140 DS3 (LiveRamp) segments, zero S1 impressions for adv 37775
-- Identity-linked IP `35.145.60.7`: 4 S1 impressions (campaign 311974, Feb 2-9)
-- Segment overlap: 96/140 (68.6%) — identity-level linkage confirmed
-- Pattern universal across all 5 sampled unresolved VVs (all have DS3 entries, zero DS4/CRM)
-
-**Batch scale:** 18,047 of 37,090 S2 VVs without S1 VV at their IP have zero S1 footprint at any MNTN key. These are the LiveRamp cross-IP cases.
-
-**What would close the gap:** Access to LiveRamp's IP→IP or HEM→IP linkage mappings. Currently not available in BQ.
+**What would close the gap:** A time-series IP→household mapping (not just current snapshot).
 
 ---
 

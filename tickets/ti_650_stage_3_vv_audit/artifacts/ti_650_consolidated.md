@@ -748,13 +748,15 @@ BWN matched 84.03% of CIL-matched rows (25,611/30,477). The 16% gap may be BWN d
 
 26. **14.28% inter-impression bid IP mutation.** Among the 38,360 multi-impression VVs, 5,026 have different bid IPs between first-touch and last-touch impressions. First-touch tracing adds genuine IP lineage information that last-touch alone cannot provide.
 
-27. **~18K unresolved S2 VVs = data access gap, not logic gap (2026-03-10).** Batch classification of all S2 VVs for adv 37775 (7-day window): 37,090 lack an S1 VV at their bid_ip. Of those, 18,047 have zero S1 footprint at ANY MNTN key (bid_ip, guid, redirect_ip). Identity graph trace on VV #1 (IP `208.97.32.204`) proved the S1 impression EXISTS at a different IP linked via LiveRamp:
-    - IP entered 140 DS3 (LiveRamp) segments
-    - Found 3 identity-linked IPs with S1 impressions for adv 37775 (e.g., `35.145.60.7`: 4 S1 impressions, campaign 311974, Feb 2-9)
-    - Segment overlap = 96/140 (68.6%) confirming identity-level linkage
-    - All 4 other sampled unresolved VV IPs show the same pattern: DS3 segment entries, zero DS4 (CRM)
-    - No IP↔IP linkage table exists in BQ — resolution would require access to LiveRamp's identity graph mappings
-    - This is the structural ceiling for IP+guid-based S1 resolution (~20% unresolved rate)
+27. **Retargeting campaigns exist at every funnel level — must exclude for prospecting analysis (2026-03-10).** Zach: "retargeting isn't relevant" to this audit. Retargeting campaigns (objective_id=4) have funnel_level 1/2/3 — the previous "~20% unresolved" included retargeting VVs that lack S1 impressions by design. VV #1 trace (IP 208.97.32.204) was campaign 443862 = "TV Retargeting - Television - 5+ PV" — correctly had no S1.
+
+28. **Prospecting-only CTV S2 resolution: 98.56% (2026-03-10).** Excluding retargeting (objective_id=4) and Ego (objective_id=7), CTV devices only (SET_TOP_BOX + CONNECTED_TV): 15,880/16,112 resolved via 5 tiers:
+    - S1 impression at bid_ip: 15,465 (96.0%)
+    - guid_vv_match: 353 (2.2%), guid_imp_match: 5 (0.03%), s1_imp_redirect: 11 (0.07%)
+    - **household_graph (NEW tier):** 46 (0.29%) — uses `bronze.tpa.graph_ips_aa_100pct_ip` to find IPs in same household
+    - Truly unresolved: 232 (1.44%) — 178 are competing VVs (secondary attribution), only 54 primary
+    - **Primary VV unresolved rate: 0.34%** — effectively zero
+    - Root cause: LiveRamp identity graph linked IP to different household IP with S1 impression. Most IPs are T-Mobile CGNAT (172.5x.x.x) — IP rotation means graph snapshot may miss the active IP at S1 time
 
 ---
 

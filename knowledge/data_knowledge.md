@@ -593,7 +593,16 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 - Scale: Stage 1 ~8.5M IPs → ~10K get impressions → ~2K enter Stage 3 (Zach's example).
 - **Campaign groups are exclusive.** A VV in campaign_group 1 for an advertiser does NOT allow another campaign_group 2 for the same advertiser to target that IP at a higher stage. Each campaign_group's funnel is independent. Concurrent or previous campaign_groups have zero bearing on each other's stage progression. (Zach, 2026-03-05)
 - **IPs accumulate stages within a campaign_group, never removed.** Frequency capping (14-day) handles dedup, not targeting removal. Budget: S1 ~75-80%, S2 ~5-10%, S3 = remainder.
-- **Campaign ID = Stage (1:1).** Determine via campaigns.funnel_id or campaign_template_id. Objective ID: 1=S1, 5=S2, 6=S3. Bidder has no concept of stages.
+- **Campaign ID = Stage (1:1).** Determine via campaigns.funnel_level (1=S1, 2=S2, 3=S3, 4=Ego). Bidder has no concept of stages.
+- **objective_id reference (from `core.objectives` + Ray):**
+  - 1 = Prospecting (CTV Prospecting)
+  - 2 = Onsite (ads on customer's own website)
+  - 3 = Prospecting (duplicate of 1)
+  - 4 = Retargeting
+  - 5 = Multi-Touch (S2 prospecting, newer naming convention)
+  - 6 = Multi-Touch Full Funnel (MT+ = Stage 3, newer naming convention)
+  - 7 = Ego (employee targeting — targeting advertiser's own employees)
+- **CRITICAL: funnel_level ≠ prospecting.** Retargeting campaigns (objective_id=4) exist at every funnel_level (1/2/3). Must filter `objective_id NOT IN (4, 7)` for prospecting-only analysis.
 - **VV attribution = stack model.** Impressions stacked; page view checks top (most recent). Everything behind is ineligible.
 - **VVS cross-device linking (Sharad, confirmed):** The Verified Visit Service links visits to impressions in two layers: (1) **IP match** — find impressions served to the same IP as the page view IP (primary), (2) **GA Client ID expansion** — using the page view's GA Client ID, find all IPs that Client ID has been seen with in the previous few days, then look for impressions on any of those IPs. Validations and filtering applied at each layer. See: Nimeshi Fernando's "Verified Visit Service (VVS) Business Logic" Confluence doc.
 - **VVS determination logic (Nimeshi Fernando, Confluence):** Full decision tree: (1) advertiser_id valid? → (2) IP blocklist check (`segmentation.ip_blocklist`) → (3) GUID blocklist check (`segmentation.guid_blocklist`) → (4) cross-device config check (`vvs.cross_device_config` in Aurora DB) → (5) GUID match (`attribution_model_id=1`) → (6) IP match (`attribution_model_id=2`, includes CTV household_whitelist + iCloud IPv4 filter + GUID-to-IP count check) → (7) repeat with `viewable=false` impressions → (8) GA Client ID match (`attribution_model_id=3`, via `cookie.gaid_ip_mapping`) → eligibility checks (duplicate visit, TTL/acquisition window, advertiser TTL 45-day max) → (12) referral blocking / tamp detection (utm_source, utm_medium, utm_campaign, utm_content, gclid, cid, cmmmc). TRPX fires every page view; only first in session is eligible. VV window = 14-45 days per advertiser.
@@ -686,7 +695,7 @@ alternative cross-stage identifiers:
 - Does NOT contain: segment_id, audience_id, audience_upload_id, or any targeting segment reference
 - Cannot determine which audience segment was targeted for a given impression
 
-**Bottom line (updated 2026-03-10):** The primary cross-stage link is **vast_ip** — the VAST impression IP enters the next stage's segment, so `next_stage.bid_ip ≈ prev_stage.vast_ip`. Combined with VV chain traversal and impression chain lookup (7-tier S1 resolution), this achieves **87-89% S1 coverage** for S2/S3 VVs. `first_touch_ad_served_id` serves as a fallback (tier 7) for the remaining cases. The ~11% unresolved ceiling is structural — those IPs entered segments via non-IP identity resolution (CRM/ipdsc, cross-device graph) and leave no IP breadcrumbs.
+**Bottom line (updated 2026-03-10):** The primary cross-stage link is **vast_ip** — the VAST impression IP enters the next stage's segment, so `next_stage.bid_ip ≈ prev_stage.vast_ip`. Combined with VV chain traversal, impression chain lookup, guid matching, and household graph lookup (10-tier S1 resolution in v11), **prospecting-only CTV S2 resolution reaches 98.56%** (15,880/16,112). Primary VV unresolved rate: 0.34%. The previous "~11% unresolved" ceiling included retargeting campaigns — Zach confirmed retargeting is NOT relevant to this audit. The remaining 1.44% entered S2 via LiveRamp identity graph with S1 impression on a different (rotated CGNAT) IP.
 
 ### attribution_model_id Clarification (from TI-650)
 - `ad_served_id` = **last-touch** attribution — the most recent impression that led to the VV
@@ -705,8 +714,10 @@ Stage 3 VV production audit table: `audit.vv_ip_lineage` (renamed from stage3_vv
 - v8 architecture: 7-tier S1 resolution (VV chain → impression chain → visit IP → cp_ft fallback)
 - 180-day event_log lookback (was 30/90 — S3→S1 chains can span 104+ days)
 - s1_imp_pool: earliest S1 impression per bid_ip (ORDER BY time ASC, not DESC — temporal bug fix)
-- **S1 coverage: S1 100%, S2 87.2%, S3 89.1%** (adv 37775, 7-day trace)
-- **~11% ceiling is structural**: unresolved VVs entered S3 segment via non-IP identity resolution (CRM/ipdsc, cross-device graph). No IP breadcrumbs in event logs.
+- **S1 coverage (all campaigns): S1 100%, S2 76.6%, S3 80.3%** (adv 37775, v11, 7-day trace)
+- **S1 coverage (prospecting CTV only): 98.56%** (S2, adv 37775). Primary VV unresolved: 0.34%.
+- Previous "~11% ceiling" was inflated by retargeting campaigns. Zach: retargeting not relevant.
+- Remaining 1.44% = LiveRamp identity graph entries (S1 impression on different CGNAT IP).
 - impression_ip (from ui_visits) differs from bid_ip for 5.3% of S3 VVs. Does NOT rescue new cases — re-attributes from cp_ft fallback.
 - A4b dedup: fixed (dedup bug found and corrected during audit)
 

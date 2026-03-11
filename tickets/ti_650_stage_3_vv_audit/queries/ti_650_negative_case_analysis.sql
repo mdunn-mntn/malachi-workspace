@@ -251,10 +251,105 @@ LIMIT 5;
 --   ROUND((SELECT COUNT(*) FROM ip1_segs a JOIN ip2_segs b ON a.segment_id = b.segment_id) * 100.0 /
 --         GREATEST((SELECT COUNT(*) FROM ip1_segs), 1), 1) AS pct_overlap;
 
--- P4 RESULTS (VV #1):
--- S1 impressions confirmed at 3 linked IPs:
+-- P4 RESULTS (VV #1 — RETARGETING, excluded from analysis):
+-- VV #1 campaign 443862 = "TV Retargeting - Television - 5+ PV" (objective_id=4)
+-- Zach confirmed retargeting is NOT relevant to this audit. This VV correctly has no S1.
+-- S1 impressions confirmed at 3 linked IPs (identity graph trace still valid as methodology):
 --   35.145.60.7    — 4 S1 imps (Feb 2-9), campaign 311974
 --   35.151.179.5   — 2 S1 imps (Feb 4, 9), campaign 311974
 --   73.124.39.182  — 4 S1 imps (Feb 2-9), campaigns 311968/450323
 -- Segment overlap: 96/140 (68.6%) with 35.145.60.7
--- Conclusion: S1 impression EXISTS — data access gap (no IP→IP linkage table), not logic gap
+
+--------------------------------------------------------------------------------
+-- PHASE 5: Prospecting-only CTV S2 resolution (2026-03-10)
+-- Zach: retargeting not relevant. Filter to prospecting (objective_id NOT IN (4,7))
+-- CTV only (SET_TOP_BOX + CONNECTED_TV) per user directive
+--------------------------------------------------------------------------------
+
+-- P5-Q1: Full CTV prospecting S2 resolution cascade
+-- Results: 16,112 total → 15,880 resolved (98.56%), 232 truly unresolved (1.44%)
+-- Primary VV unresolved: 54 (0.34%)
+WITH s1_campaigns AS (
+  SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
+  WHERE advertiser_id = 37775 AND deleted = FALSE AND is_test = FALSE
+    AND funnel_level = 1 AND objective_id NOT IN (4, 7)
+),
+s2_campaigns AS (
+  SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
+  WHERE advertiser_id = 37775 AND deleted = FALSE AND is_test = FALSE
+    AND funnel_level = 2 AND objective_id NOT IN (4, 7)
+),
+s2_vvs AS (
+  SELECT cp.ad_served_id, cp.ip AS redirect_ip, cp.guid,
+    cp.attribution_model_id,
+    cil.ip AS bid_ip, cil.device_type
+  FROM `dw-main-silver.logdata.clickpass_log` cp
+  JOIN s2_campaigns s2c ON cp.campaign_id = s2c.campaign_id
+  LEFT JOIN `dw-main-silver.logdata.cost_impression_log` cil
+    ON cp.ad_served_id = cil.ad_served_id AND cil.advertiser_id = 37775
+    AND DATE(cil.time) BETWEEN '2025-11-06' AND '2026-02-11'
+  WHERE DATE(cp.time) BETWEEN '2026-02-04' AND '2026-02-11'
+    AND cp.advertiser_id = 37775
+    AND cil.device_type IN ('SET_TOP_BOX', 'CONNECTED_TV')
+),
+s1_ips AS (
+  SELECT DISTINCT ip FROM `dw-main-silver.logdata.cost_impression_log` s1
+  JOIN s1_campaigns s1c ON s1.campaign_id = s1c.campaign_id
+  WHERE s1.advertiser_id = 37775 AND DATE(s1.time) BETWEEN '2025-11-06' AND '2026-02-11'
+),
+s1_vv_guids AS (
+  SELECT DISTINCT guid FROM `dw-main-silver.logdata.clickpass_log` cp
+  JOIN s1_campaigns s1c ON cp.campaign_id = s1c.campaign_id
+  WHERE cp.advertiser_id = 37775 AND DATE(cp.time) BETWEEN '2025-11-06' AND '2026-02-11'
+),
+s1_imp_guids AS (
+  SELECT DISTINCT guid FROM `dw-main-silver.logdata.cost_impression_log` cil
+  JOIN s1_campaigns s1c ON cil.campaign_id = s1c.campaign_id
+  WHERE cil.advertiser_id = 37775 AND DATE(cil.time) BETWEEN '2025-11-06' AND '2026-02-11'
+),
+hh_s1_ips AS (
+  SELECT DISTINCT g1.ip AS bid_ip
+  FROM s2_vvs u
+  JOIN `dw-main-bronze.tpa.graph_ips_aa_100pct_ip` g1 ON u.bid_ip = g1.ip
+  JOIN `dw-main-bronze.tpa.graph_ips_aa_100pct_ip` g2
+    ON g1.householdid = g2.householdid AND g2.ip != g1.ip
+  JOIN s1_ips s1 ON g2.ip = s1.ip
+)
+SELECT
+  CASE
+    WHEN ip1.ip IS NOT NULL THEN 's1_at_bid_ip'
+    WHEN g1.guid IS NOT NULL THEN 'guid_vv_match'
+    WHEN g2.guid IS NOT NULL THEN 'guid_imp_match'
+    WHEN r.ip IS NOT NULL THEN 's1_at_redirect_ip'
+    WHEN hh.bid_ip IS NOT NULL THEN 'household_graph'
+    ELSE 'truly_unresolved'
+  END AS resolution_tier,
+  COUNT(*) AS cnt
+FROM s2_vvs s2
+LEFT JOIN s1_ips ip1 ON s2.bid_ip = ip1.ip
+LEFT JOIN s1_vv_guids g1 ON s2.guid = g1.guid AND ip1.ip IS NULL
+LEFT JOIN s1_imp_guids g2 ON s2.guid = g2.guid AND ip1.ip IS NULL AND g1.guid IS NULL
+LEFT JOIN s1_ips r ON s2.redirect_ip = r.ip AND ip1.ip IS NULL AND g1.guid IS NULL AND g2.guid IS NULL
+LEFT JOIN hh_s1_ips hh ON s2.bid_ip = hh.bid_ip AND ip1.ip IS NULL AND g1.guid IS NULL AND g2.guid IS NULL AND r.ip IS NULL
+GROUP BY 1
+ORDER BY cnt DESC;
+
+-- P5 RESULTS:
+-- s1_at_bid_ip:      15,465 (95.98%)
+-- guid_vv_match:        353 (2.19%)
+-- guid_imp_match:          5 (0.03%)
+-- s1_at_redirect_ip:      11 (0.07%)
+-- household_graph:        46 (0.29%)
+-- truly_unresolved:      232 (1.44%)
+-- Total:              16,112
+--
+-- Attribution model breakdown of 232 truly unresolved:
+--   Model 10 (Competing-ip):          106
+--   Model 9  (Competing-guid):         72
+--   Model 2  (Last Touch-ip):          26
+--   Model 1  (Last Touch-guid):        11
+--   Model 11 (Competing-ga_client_id): 10
+--   Model 3  (Last Touch-ga_client_id): 7
+--
+-- 178/232 (76.7%) are competing VVs (secondary attribution)
+-- Primary VV unresolved: 54/16,112 = 0.34%
