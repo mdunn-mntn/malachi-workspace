@@ -19,7 +19,8 @@ workspace/
 │       ├── meetings/     ← meeting transcripts, notes
 │       └── artifacts/    ← notebooks, pdfs, scripts, deliverables
 ├── documentation/        ← reference docs, architecture diagrams, code snippets
-└── claude-prompts/       ← planning files and prompt templates
+├── claude-prompts/       ← planning files and prompt templates
+└── .claude/scripts/      ← Claude tooling scripts (bq_run.sh, etc.)
 ```
 
 ## Key Paths
@@ -31,6 +32,8 @@ workspace/
 | `knowledge/data_knowledge.md` | Business logic and gotchas — read at session start, update immediately when new knowledge found |
 | `knowledge/folder_definitions.md` | **Exact definition of what goes in every folder** — check here before placing any file |
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
+| `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
+| `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
 
 ## Ticket Work Protocol
 
