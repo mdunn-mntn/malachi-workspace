@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v12 systematic rebuild. S1: 100% (1,922,761/1,922,762). S2: 99.95% with 2 links (imp_direct + imp_visit), 8 unresolved out of 16,753. Independent tier analysis eliminated vv_chain_direct (pure subset) and imp_redirect (2 unique — not worth the JOIN). Moving to S3.
+**Status:** In Progress — v12 systematic rebuild. Within-stage: 100% at all levels (ad_served_id deterministic). Cross-stage: S1 100%, S2 99.95% (8 unresolved), S3 96.85% (752 unresolved — 727 are identity graph IPs with no S1 IP path). Same 2 links (imp_direct + imp_visit) work for both S2 and S3. Chain paths (S3→S2→S1) are redundant. Investigating 752 unresolved S3 VVs.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -307,6 +307,13 @@ By device: MOBILE 24, TABLET 12, GAMES_CONSOLE 4.
     - vv_chain was #1 in v11 waterfall (56.72%) only because it was checked first — it never resolves anything imp_direct can't
     - **Minimum set: imp_direct + imp_visit = 99.95%** (16,745/16,753), 8 unresolved (6 truly unresolvable, 2 imp_redir-only)
     - This replaces the 10-tier CASE cascade with 2 LEFT JOINs for S2
+37. **Within-stage self-resolution: 100% at all funnel levels (2026-03-11).** Every VV at S1/S2/S3 has a matching impression in the impression_pool via ad_served_id. No IP matching needed for within-stage linking — it's deterministic. IP matching is only needed for CROSS-STAGE linking (S2→S1, S3→S1).
+38. **S3 independent path analysis (2026-03-11).** Tested S3→S1 direct, S3→S2, S2→S1, and S3→S2→S1 chain independently:
+    - **S3→S1 direct (imp_direct + imp_visit):** 96.85% (23,092/23,844)
+    - **S3→S2→S1 chain:** 43.23% (10,307/23,844), only **2 unique** — pure subset of direct
+    - **Minimum set: same 2 links as S2** (imp_direct + imp_visit), chain is redundant
+    - **752 unresolved (3.15%):** 727/752 (96.7%) have bid_ip that NEVER appeared as S1 vast_start_ip — entered S3 via identity graph (LiveRamp/CRM), not S1 IP path. 512 competing (68%), 240 primary (32%). Primary unresolved: 240/23,844 = 1.01%.
+    - Full analysis: `outputs/ti_650_s3_tier_analysis.md`, unresolved list: `outputs/ti_650_s3_unresolved.json`
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 
@@ -396,6 +403,8 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 
 ### Outputs (tracked in git)
 - `outputs/ti_650_s2_tier_analysis.md` — **S2 independent tier analysis: each tier tested alone, unique contributions, minimum set determination (2026-03-11)**
+- `outputs/ti_650_s3_tier_analysis.md` — **S3 independent path analysis: S3→S1 direct vs S3→S2→S1 chain, within-stage self-resolution (2026-03-11)**
+- `outputs/ti_650_s3_unresolved.json` — **752 unresolved S3 VVs with diagnostic columns (2026-03-11)**
 - `outputs/ti_650_pv_stage_validation_2026-02-04.json` — pv_stage distribution validation
 - `outputs/ti_650_pv_stage_validation_30day_2026-02-04.json` — pv_stage distribution + el/il join success (canonical validation)
 - `outputs/ti_650_permutation_validation_2026-02-04.json` — all 10 chain traversal permutations validated

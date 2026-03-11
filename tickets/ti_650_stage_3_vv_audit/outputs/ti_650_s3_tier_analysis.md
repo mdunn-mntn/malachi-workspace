@@ -52,7 +52,47 @@
 | imp_visit (impression_ip → S1 vast_start) | Fallback | +900 incremental |
 | **Combined** | | **23,092 (96.85%)** |
 
-## Unresolved: 750 VVs (3.15%)
+## Within-Stage Self-Resolution: 100% at all levels
 
-Investigation needed — 750 S3 VVs where no path finds an S1 impression.
-See `outputs/ti_650_s3_unresolved.json` for full list.
+Every VV at every funnel level has a matching impression via ad_served_id in the impression_pool.
+No IP matching needed for within-stage linking — it's deterministic.
+
+| Stage | Total VVs | Has Impression | Self-Resolve % |
+|-------|----------|---------------|---------------|
+| S1 | 93,274 | 93,274 | 100% |
+| S2 | 16,753 | 16,753 | 100% |
+| S3 | 23,844 | 23,844 | 100% |
+
+This means the only place IP matching is needed is for CROSS-STAGE linking (S2→S1, S3→S1).
+
+## Unresolved: 752 VVs (3.15%)
+
+Full list: `outputs/ti_650_s3_unresolved.json` (752 rows with diagnostic columns)
+
+### Profile of unresolved S3 VVs
+
+| Dimension | Breakdown |
+|-----------|-----------|
+| **Diagnosis** | All 752 have S3 impression — just no S1 IP match |
+| **Attribution model** | 512 competing (68%: models 9,10,11), 240 primary (32%: models 1,2,3) |
+| **is_cross_device** | 415 true (55%), 337 false (45%) |
+| **S1 IP exists (any time)** | **727 = false (96.7%)** — bid_ip has NEVER been an S1 vast_start_ip |
+| **Has S2 VV** | 526 no (70%), 226 yes (30%) |
+| **first_touch_ad_served_id** | Only 14 have one (1.9%) |
+| **visit_impression_ip** | 740 have it (98.4%) — also doesn't match S1 |
+| **bid_ip = vast_start_ip** | 750/752 identical — no VAST divergence to exploit |
+| **Top subnets** | 172.5x.x.x (T-Mobile CGNAT), 40.138.x (Verizon) |
+
+### Root cause
+
+**727/752 (96.7%) have a bid_ip that has NEVER appeared as an S1 vast_start_ip.** These IPs entered the S3 segment through identity graph resolution (LiveRamp/CRM), not through an S1 impression on the same IP. The household was served an S1 impression on a different IP — but CGNAT rotation means the current IP was never associated with S1.
+
+Same root cause as the S2 unresolved (8 VVs) — just a larger population at S3 because S3 is further from S1 in time (more opportunity for IP rotation).
+
+### Primary vs competing VV impact
+
+| Type | Count | % |
+|------|-------|---|
+| Competing (models 9,10,11) | 512 | 68% |
+| **Primary (models 1,2,3)** | **240** | **32%** |
+| **Primary unresolved rate** | **240/23,844** | **1.01%** |

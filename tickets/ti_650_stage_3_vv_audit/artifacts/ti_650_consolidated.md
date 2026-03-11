@@ -777,6 +777,13 @@ BWN matched 84.03% of CIL-matched rows (25,611/30,477). The 16% gap may be BWN d
     - **Minimum set: imp_direct + imp_visit = 99.95%** (16,745/16,753). 8 unresolved (6 truly unresolvable, 2 imp_redir-only)
     - **10-tier CASE cascade with 13 LEFT JOINs collapses to 2 LEFT JOINs for S2**
     - Full analysis: `outputs/ti_650_s2_tier_analysis.md`
+34. **Within-stage self-resolution: 100% at all funnel levels (2026-03-11).** Every VV at S1 (93,274), S2 (16,753), S3 (23,844) has a matching impression via ad_served_id in the impression_pool. Within-stage linking is deterministic — IP matching is ONLY needed for cross-stage linking.
+35. **S3 independent path analysis: same 2 links, 96.85% (2026-03-11).** Tested 4 paths independently for 23,844 S3 VVs:
+    - **S3→S1 direct (imp_direct):** 93.07% | **S3→S1 via impression_ip (imp_visit):** 96.57% | **Either:** 96.85%
+    - **S3→S2 (first hop):** 47.81% found S2 VV | **S2→S1 (of those):** 90.41% | **Full chain:** 43.23%
+    - **Chain unique contribution: 2.** Same pattern as S2 — chain is pure subset of direct.
+    - **752 unresolved (3.15%):** 727/752 (96.7%) have bid_ip NEVER seen as S1 vast_start_ip — entered S3 via identity graph (LiveRamp/CRM). 512 competing (68%), 240 primary (32%). Primary unresolved: 1.01%.
+    - Full analysis: `outputs/ti_650_s3_tier_analysis.md`, unresolved: `outputs/ti_650_s3_unresolved.json`
 
 ---
 

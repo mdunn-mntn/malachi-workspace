@@ -59,6 +59,19 @@ The v11 production query used a CASE cascade that checked `vv_chain_direct` FIRS
 | **guid_imp_match** | Not tested. v11 showed 0 for S2 prospecting. |
 | **cp_ft_fallback** | Not tested. v11 showed minimal contribution. first_touch_ad_served_id skips S2 entirely. |
 
+## Within-Stage Self-Resolution: 100% at all levels
+
+Every VV at every funnel level has a matching impression via ad_served_id in the impression_pool.
+No IP matching needed for within-stage linking — it's deterministic.
+
+| Stage | Total VVs | Has Impression | Self-Resolve % |
+|-------|----------|---------------|---------------|
+| S1 | 93,274 | 93,274 | 100% |
+| S2 | 16,753 | 16,753 | 100% |
+| S3 | 23,844 | 23,844 | 100% |
+
+This means the only place IP matching is needed is for CROSS-STAGE linking (S2→S1, S3→S1).
+
 ## Implication for Production Query
 
 The v11 10-tier CASE cascade with 13 LEFT JOINs collapses to **2 LEFT JOINs** for S2:
