@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v12 systematic rebuild. Within-stage: 100% at all levels (ad_served_id deterministic). Cross-stage: S1 100%, S2 99.95% (8 unresolved), S3 96.85% (752 unresolved — 727 are identity graph IPs with no S1 IP path). Same 2 links (imp_direct + imp_visit) work for both S2 and S3. Chain paths (S3→S2→S1) are redundant. Investigating 752 unresolved S3 VVs.
+**Status:** In Progress — v12 systematic rebuild complete. Within-stage: 100% at all levels (ad_served_id deterministic). Cross-stage: S1 100%, S2 99.95% (8 unresolved), S3 96.85% (752 unresolved = structural ceiling). Same 2 links (imp_direct + imp_visit) work for both S2 and S3. 752 S3 unresolved confirmed as structural ceiling — all 4 additional resolution approaches tested and ruled out. Primary unresolved: 1.01%. Ready for SQLMesh model update and deployment.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -99,9 +99,18 @@ v12 replaces the v11 10-tier CASE cascade with a minimal, empirically validated 
 - `imp_redirect`: 2 unique S2 — not worth extra JOIN
 - `guid_vv_match`, `guid_imp_match`, `s1_imp_redirect`, `cp_ft_fallback`, `imp_chain`: not tested independently in v12 but covered by imp_visit (which gets 99.67% alone for S2)
 
-**752 unresolved S3 VVs — root cause:** 727/752 (96.7%) have a bid_ip that has NEVER appeared as an S1 vast_start_ip. These entered S3 via identity graph (LiveRamp/CRM) — the household had an S1 impression on a different IP, but CGNAT rotation means the S3 IP was never associated with S1. 512 competing (68%), 240 primary (32%). Primary unresolved: 1.01%.
+**752 unresolved S3 VVs — STRUCTURAL CEILING (confirmed 2026-03-11):** 727/752 (96.7%) have a bid_ip that has NEVER appeared as an S1 vast_start_ip. These entered S3 via identity graph (LiveRamp/CRM) — the household had an S1 impression on a different IP, but CGNAT rotation means the S3 IP was never associated with S1. 512 competing (68%), 240 primary (32%). Primary unresolved: 240/23,844 = 1.01%.
 
-Full tier analysis: `outputs/ti_650_s2_tier_analysis.md`, `outputs/ti_650_s3_tier_analysis.md`
+**Approaches tested and ruled out:**
+- **Household IP graph** (`graph_ips_aa_100pct_ip`): self-join too expensive (10+ min, killed). Even if runnable, CGNAT IP rotation means graph snapshot may not include S1-era IP.
+- **/24 subnet relaxation**: 610/616 IPs match — but coincidental (S1 pool covers 753K subnets). Creates false positives for CGNAT pools.
+- **ipdsc CRM** (`ipdsc__v1`): schema has no HEM column — cannot bridge IPs via shared identity. Identity link exists only in LiveRamp's external graph.
+- **Extended lookback**: all 752 S3 impressions are within 17 days of trace start. 0 are >30 days old. 90-day lookback is far more than sufficient.
+
+**25 reverse-temporal VVs:** 25/752 have IPs that DO appear as S1 vast_start_ips, but the S1 impression was served AFTER the S3 VV — proving CGNAT IP recycling (different user on recycled IP, not same household going backwards in funnel).
+
+Full analysis: `outputs/ti_650_s3_resolution_ceiling.md`
+Tier analysis: `outputs/ti_650_s2_tier_analysis.md`, `outputs/ti_650_s3_tier_analysis.md`
 Unresolved list: `outputs/ti_650_s3_unresolved.json`
 
 ### Historical: v11 10-tier CASE (superseded by v12)
@@ -338,6 +347,14 @@ By device: MOBILE 24, TABLET 12, GAMES_CONSOLE 4.
     - **Minimum set: same 2 links as S2** (imp_direct + imp_visit), chain is redundant
     - **752 unresolved (3.15%):** 727/752 (96.7%) have bid_ip that NEVER appeared as S1 vast_start_ip — entered S3 via identity graph (LiveRamp/CRM), not S1 IP path. 512 competing (68%), 240 primary (32%). Primary unresolved: 240/23,844 = 1.01%.
     - Full analysis: `outputs/ti_650_s3_tier_analysis.md`, unresolved list: `outputs/ti_650_s3_unresolved.json`
+39. **752 unresolved S3 VVs = structural ceiling, empirically proven (2026-03-11).** Tested 4 additional resolution approaches — all ruled out:
+    - **Household IP graph** (`graph_ips_aa_100pct_ip`): self-join too expensive (killed after 10+ min). CGNAT IP rotation means graph snapshot may not include S1-era IP.
+    - **/24 subnet relaxation**: 610/616 IPs match a /24 subnet in S1 pool — but coincidental (S1 pool covers 753K subnets, 19.5M IPs). Creates unacceptable false positives for CGNAT.
+    - **ipdsc CRM** (`ipdsc__v1`): no HEM column in schema — cannot bridge IPs via shared identity. Identity link exists only in LiveRamp's external graph.
+    - **Extended lookback**: all 752 S3 impressions are within 17 days of trace start. 0 are >30 days old. 90-day window is far more than sufficient.
+    - **25 reverse-temporal VVs**: 25/752 have IPs that appear as S1 vast_start_ips but the S1 impression was served AFTER the S3 VV. Proves CGNAT IP recycling — different user on recycled IP, not same household going backwards. All T-Mobile CGNAT (172.5x).
+    - **Conclusion**: 752/23,844 = 3.15% total, 240/23,844 = 1.01% primary is the structural ceiling of IP-based cross-stage linking. These VVs entered S3 via LiveRamp identity graph resolution on a different IP. No BQ table stores the underlying identity bridge.
+    - Full analysis: `outputs/ti_650_s3_resolution_ceiling.md`
 
 ### MES Pipeline IP Map (empirically validated 2026-03-10)
 
@@ -408,7 +425,8 @@ Cross-stage link:  next_stage.bid_ip  ←should match→  prev_stage.vast_start_
 ### Outputs (current)
 - `outputs/ti_650_s2_tier_analysis.md` — S2 independent tier analysis: each tier tested alone, unique contributions, minimum set (2026-03-11)
 - `outputs/ti_650_s3_tier_analysis.md` — S3 independent path analysis: S3→S1 direct vs chain, within-stage self-resolution (2026-03-11)
-- `outputs/ti_650_s3_unresolved.json` — **752 unresolved S3 VVs with diagnostic columns — NEXT TASK: investigate and resolve these (2026-03-11)**
+- `outputs/ti_650_s3_unresolved.json` — 752 unresolved S3 VVs with diagnostic columns (2026-03-11)
+- `outputs/ti_650_s3_resolution_ceiling.md` — **Structural ceiling analysis: all 4 resolution approaches tested and ruled out (2026-03-11)**
 
 ### Artifacts (reference)
 - `artifacts/ti_650_consolidated.md` — comprehensive audit report (all 38 findings, methodology, gap analysis)
