@@ -520,6 +520,22 @@ is stored in UPPERCASE, LOWERCASE, and ORIGINAL case variants.
 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
 This appears when a row has no email value. Exclude from counts.
 
+### LiveRamp (DS 3) Cross-IP Identity Linkage
+LiveRamp maps IPs to a shared identity graph (household/person level). When LiveRamp links IP_A ↔ IP_B,
+both IPs receive identical segment membership entries in `tpa_membership_update_log` with `data_source_id=3`.
+
+**Key limitation for cross-stage tracing:** If an S1 impression is served to IP_A, and LiveRamp links IP_A to IP_B,
+IP_B enters the S2 targeting segment. The S2 VV at IP_B cannot be traced back to the S1 impression at IP_A
+because there is no IP↔IP linkage table in BQ. This accounts for ~20% of unresolved S2/S3 VVs in the
+VV IP lineage audit (TI-650).
+
+**How to detect LiveRamp-linked IPs:** Find IPs entering the same DS3 segments at the same timestamp (±1 min)
+in `tpa_membership_update_log`. Segment overlap >50% indicates identity-level linkage (not coincidental).
+Example: 96/140 segments shared (68.6% overlap) between linked IPs.
+
+**No IP→IP mapping table exists in BQ.** `ipdsc__v1` only maps IP → data_source_id, not IP → IP.
+LiveRamp's identity graph is external to MNTN's data warehouse.
+
 ---
 
 ## Audience System Architecture

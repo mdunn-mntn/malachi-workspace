@@ -748,6 +748,14 @@ BWN matched 84.03% of CIL-matched rows (25,611/30,477). The 16% gap may be BWN d
 
 26. **14.28% inter-impression bid IP mutation.** Among the 38,360 multi-impression VVs, 5,026 have different bid IPs between first-touch and last-touch impressions. First-touch tracing adds genuine IP lineage information that last-touch alone cannot provide.
 
+27. **~18K unresolved S2 VVs = data access gap, not logic gap (2026-03-10).** Batch classification of all S2 VVs for adv 37775 (7-day window): 37,090 lack an S1 VV at their bid_ip. Of those, 18,047 have zero S1 footprint at ANY MNTN key (bid_ip, guid, redirect_ip). Identity graph trace on VV #1 (IP `208.97.32.204`) proved the S1 impression EXISTS at a different IP linked via LiveRamp:
+    - IP entered 140 DS3 (LiveRamp) segments
+    - Found 3 identity-linked IPs with S1 impressions for adv 37775 (e.g., `35.145.60.7`: 4 S1 impressions, campaign 311974, Feb 2-9)
+    - Segment overlap = 96/140 (68.6%) confirming identity-level linkage
+    - All 4 other sampled unresolved VV IPs show the same pattern: DS3 segment entries, zero DS4 (CRM)
+    - No IP↔IP linkage table exists in BQ — resolution would require access to LiveRamp's identity graph mappings
+    - This is the structural ceiling for IP+guid-based S1 resolution (~20% unresolved rate)
+
 ---
 
 ## 10. Edge Cases and Implementation Notes

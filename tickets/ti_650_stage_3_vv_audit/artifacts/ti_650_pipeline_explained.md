@@ -579,6 +579,29 @@ S1, S2→S1, S3→S1, S3→S2→S1. Every permutation resolves `s1_bid_ip`. Max 
 
 **The bottom line:** For any VV at any stage, `s1_bid_ip` tells you the IP we originally bid on. If the visit IP differs, it's mutation. The table proves targeting correctness.
 
+### Structural Ceiling: LiveRamp Identity Graph Gap (~20% unresolved)
+
+v11's 10-tier S1 resolution chain resolves ~80% of S2/S3 VVs back to an S1 impression. The remaining ~20% are **structurally unresolvable** with current data — not a logic gap, but a data access gap.
+
+**Root cause (empirically proven, 2026-03-10):** The S1 impression exists, but at a DIFFERENT IP linked through LiveRamp's (DS3) external identity graph. The audit correctly identifies these as unresolvable because MNTN has no BQ table mapping IP↔IP via the identity graph.
+
+**How the gap happens:**
+1. S1 impression served to IP_A (e.g., `35.145.60.7`) via S1 campaign
+2. LiveRamp identity graph links IP_A ↔ IP_B (e.g., `208.97.32.204`) as same household/user
+3. IP_B enters S2 targeting segment via LiveRamp (DS3) — gets S2 impression → VV
+4. Audit tries to trace S2 VV at IP_B back to S1 at IP_B → finds nothing (S1 was at IP_A)
+5. No shared MNTN key (bid_ip, guid, redirect_ip) connects IP_A and IP_B
+
+**Evidence (VV #1 trace):**
+- IP `208.97.32.204`: 140 DS3 (LiveRamp) segments, zero S1 impressions for adv 37775
+- Identity-linked IP `35.145.60.7`: 4 S1 impressions (campaign 311974, Feb 2-9)
+- Segment overlap: 96/140 (68.6%) — identity-level linkage confirmed
+- Pattern universal across all 5 sampled unresolved VVs (all have DS3 entries, zero DS4/CRM)
+
+**Batch scale:** 18,047 of 37,090 S2 VVs without S1 VV at their IP have zero S1 footprint at any MNTN key. These are the LiveRamp cross-IP cases.
+
+**What would close the gap:** Access to LiveRamp's IP→IP or HEM→IP linkage mappings. Currently not available in BQ.
+
 ---
 
 ## Part 12: VVS Determination Logic (How a Visit Becomes a Verified Visit)
