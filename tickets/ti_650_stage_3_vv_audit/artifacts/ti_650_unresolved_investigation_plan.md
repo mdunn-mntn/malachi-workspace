@@ -98,12 +98,12 @@ May be a documentation step (combining results from Q1-Q3) rather than a separat
 
 ---
 
-## Execution Order
+## Execution Order — ALL COMPLETE (2026-03-12)
 
-1. Query 1 (profile 567) — most informative, run first
-2. Query 2 (GUID bridge on 567) — depends on Q1 cohort
-3. Query 3 (1,074 no-CIL) — independent, can run parallel with Q2
-4. Query 4 (waterfall) — documentation, compile after Q1-Q3
+1. ✅ Query 1 (profile 567) — 113s, 1,469 GB. **567 confirmed. 95.1% IP never in S1, 100% GUID potential, 69.8% CGNAT.**
+2. ✅ Query 2 (GUID bridge on 567) — 3,057s (51 min), 1,485 GB. **484/567 resolved (85.4%). Only 83 truly irreducible (10 primary).**
+3. ✅ Query 3 (1,074 no-CIL) — 143s, 2,966 GB. **CIL TTL disproven. 100% have event_log records, 100% < 30d old. Pipeline gap.**
+4. ✅ Query 4 (waterfall) — compiled from Q1-Q3. See `outputs/ti_650_resolution_waterfall.md`.
 
 ---
 
@@ -120,20 +120,21 @@ May be a documentation step (combining results from Q1-Q3) rather than a separat
 
 ---
 
-## Verification Checks
+## Verification Checks — ALL PASSED
 
-- 567 count from Q1 should match retargeting pool test (`still_unresolved = 567`)
-- 1,074 count from Q3 should match retargeting pool test (`no_impression = 1,074`)
-- GUID bridge results should be roughly consistent with prior ~82% rate
-- Waterfall should sum to 23,844 total S3 VVs
-- Cross-device rate should be ~50-55% (consistent with prior analysis)
+- ✅ 567 count from Q1 matches retargeting pool test (`still_unresolved = 567`)
+- ✅ 1,074 count from Q3 matches retargeting pool test (`no_impression = 1,074`)
+- ✅ GUID bridge: 85.4% (higher than prior 82.7% — all-campaigns pool gives more S1 targets)
+- ✅ Waterfall sums correctly: 22,770 CIL + 1,074 no-CIL = 23,844
+- ✅ Cross-device rate: 54.7% (consistent with prior 55%)
 
 ---
 
-## Presentation Talking Points for Zach
+## Presentation Talking Points for Zach (UPDATED with results)
 
-1. **97.36% of S3 prospecting VVs fully traceable** to S1 via IP chain (v13 architecture)
-2. **The ~2.6% unresolved is structural** — identity graph entries where IP changed via CGNAT rotation
-3. **GUID bridge recovers ~82% of those** — true irreducible is ~0.4-0.5%
+1. **99.64% of S3 VVs with CIL records are fully traceable** — IP chain + GUID bridge
+2. **True irreducible = 83 VVs (0.36%)** — only **10 primary attribution** (0.04%). These are structural: identity graph entries where neither IP nor GUID bridge can link across stages.
+3. **GUID bridge recovers 85.4% of IP-unresolved** — 484/567 resolved. Higher than prior estimate.
 4. **Retargeting pool scope is a business decision** — adds 110 VVs (0.46pp) if we expand to "any MNTN touch"
-5. **1,074 no-CIL VVs need separate explanation** — likely CIL TTL expiration or display-only impressions
+5. **1,074 no-CIL VVs are a pipeline gap, NOT TTL expiration** — all have event_log records with impressions < 30 days old. Recoverable via event_log bid_ip fallback.
+6. **campaign_group_id scoping must be enforced** — Zach directive: cross-stage linking must be within the same campaign group

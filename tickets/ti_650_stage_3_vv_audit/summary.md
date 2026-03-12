@@ -175,10 +175,13 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - ~~Run `ti_650_resolution_rate_fast.sql` across more advertisers to confirm rates hold~~
 - ✓ v13 validated across 10 advertisers. Chain matters for 6/10. See `outputs/ti_650_v13_resolution_rates.md`.
 
-### Unresolved investigation
-- Deep-dive the 567 irreducible unresolved (adv 37775) — characterize by cross-device, IP origin, impression age
-- Decide with Zach: include retargeting in pools? (adds 110, scoping question)
-- Characterize the 1,074 "no impression" VVs — why no CIL record?
+### Unresolved investigation — COMPLETE (2026-03-12)
+- ✅ Deep-dive 567 unresolved: 95.1% IP never in S1, 69.8% CGNAT, 100% GUID bridge potential
+- ✅ GUID bridge: 484/567 resolved (85.4%), 83 truly irreducible (10 primary = 0.04%)
+- ✅ 1,074 no-CIL: pipeline gap (NOT TTL), all impressions < 30d old, recoverable via event_log bid_ip
+- ✅ Full waterfall compiled: `outputs/ti_650_resolution_waterfall.md`
+- ⏳ Decide with Zach: include retargeting in pools? (adds 110, scoping question)
+- ⏳ Enforce campaign_group_id scoping in production model (Zach directive)
 
 ---
 

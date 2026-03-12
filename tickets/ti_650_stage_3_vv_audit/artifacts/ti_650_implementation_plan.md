@@ -14,6 +14,12 @@ One row per verified visit across all advertisers and all stages. Traces the IP 
 
 Full schema: see `ti_650_column_reference.md` (v12). Cross-stage resolution uses 2 links (`imp_direct` + `imp_visit`) replacing v11's 10-tier CASE cascade.
 
+**Updates needed for production (2026-03-12):**
+1. **campaign_group_id scoping** — Zach directive: cross-stage linking MUST be within the same `campaign_group_id`. Current model scopes by advertiser_id — must add campaign_group_id constraint.
+2. **event_log bid_ip fallback** — 1,074 VVs (4.5%) have event_log records but no CIL record. Add event_log as fallback bid_ip source when CIL is missing.
+3. **GUID bridge** — Consider adding `guid_identity_daily` as secondary resolution for IP-unresolved VVs (recovers 85.4% of remaining). May be too expensive for hourly runs (~51 min for single advertiser).
+4. **v13 chain** — Update from v10.1 to v13 architecture (S3→S2→S1 chain + S3→S1 direct).
+
 ---
 
 ## 2. Source Tables
