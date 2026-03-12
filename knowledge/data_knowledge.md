@@ -709,7 +709,9 @@ alternative cross-stage identifiers:
 
 **Retargeting pool impact (tested 2026-03-12):** Adding retargeting campaigns (obj=4) to the S1 pool resolves 110 additional S3 VVs for adv 37775 — IPs whose first MNTN impression was retargeting, not prospecting. Business decision: audit scope = "first prospecting touch" vs "first MNTN touch."
 
-**Irreducible floor:** 567 S3 VVs (2.4%) remain unresolved even with ALL campaigns in ALL pools. These are cross-device + identity-graph-only entries where IP matching cannot work. Plus 1,074 VVs with no CIL record at all. 100% IP-based resolution is not achievable.
+**Irreducible floor (updated 2026-03-12):** 567 IP-unresolved → 484 resolved via GUID bridge (85.4%) → **83 truly irreducible** (0.36% of CIL cohort, only 10 primary attribution = 0.04%). Plus 1,074 VVs with no CIL record — NOT TTL expiration (all < 30 days old), pipeline gap recoverable via event_log bid_ip fallback.
+
+**campaign_group_id scoping (Zach directive, 2026-03-12):** Cross-stage IP linking MUST be scoped within the same `campaign_group_id`. A VV in one campaign group cannot be linked to an impression in a different campaign group — that would be a coincidental IP match, not a real funnel trace. `campaign_group_id` is unique across advertisers. This constraint must be enforced in the production `vv_ip_lineage` model.
 
 **Zero-chain advertisers:** 4/10 had zero S3→S2→S1 chain resolution. Cause: no active S2 prospecting impressions in the 90-day lookback (S2 campaigns exist but serve only retargeting).
 
