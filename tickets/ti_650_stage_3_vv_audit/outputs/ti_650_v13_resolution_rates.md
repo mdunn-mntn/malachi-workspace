@@ -69,6 +69,45 @@ These two advertisers have very low S3 resolution. Prior analysis (v12) showed u
 
 Consistent with v12 findings. is_cross_device = TRUE strongly correlates with unresolvable — different device at S3 means different IP, no IP-based chain possible.
 
+### 5. Zero-chain advertisers explained (2026-03-12)
+
+The four zero-chain advertisers (31276, 31357, 34835, 42097) all have S2 campaigns in the campaigns
+table, but **three of four (31357, 34835, 42097) had zero S2 prospecting vast events** in the
+90-day lookback. Their S2 campaigns are retargeting-only (obj=4) — no prospecting impressions to
+chain through. Adv 31276 had S2 prospecting activity but it stopped Jan 1 2025 (too early).
+
+### 6. Retargeting pool impact (2026-03-12)
+
+Tested adding retargeting campaigns (obj=4) to the S1 pool for adv 37775 S3 VVs:
+
+| Pool scope | S3 Resolved | Unresolved | Delta |
+|---|---|---|---|
+| Prosp-only S1 (v12 direct) | 23,080 | 654 | baseline |
+| All-campaigns S1 (incl retargeting) | 23,190 | 567 | +110 |
+| v13 chain (prosp-only) | 23,214 | 540 | +134 |
+| **Theoretical max: chain + all-campaigns** | **~23,280** | **~470** | — |
+
+**110 VVs resolved by adding retargeting to S1 pool.** These IPs had a retargeting S1 impression
+but no prospecting S1 impression. The v13 chain (prosp-only) resolves MORE than adding retargeting
+to direct — 23,214 vs 23,190.
+
+**567 remain unresolved even with all campaigns** — the irreducible IP-matching floor (~2.4%).
+Plus 1,074 VVs with no CIL record (cannot resolve via IP regardless).
+
+See `outputs/ti_650_retargeting_pool_impact.md` for full analysis.
+
+### 7. objective_id × funnel_level distribution (2026-03-12)
+
+| funnel_level | obj=1 (prosp, broken) | obj=4 (retarget) | obj=5 (MT S2) | obj=6 (MT+ S3) |
+|---|---|---|---|---|
+| 1 (S1) | 52,035 | 19,877 | — | — |
+| 2 (S2) | 42,846 | 19,136 | 63,941 | — |
+| 3 (S3) | 42,831 | 19,136 | — | 60,205 |
+
+The 42,846 S2 and 42,831 S3 campaigns with obj=1 are the broken ones from the TV Only UI migration
+(Ray confirmed 2026-03-11). `funnel_level` is authoritative for stage. `objective_id IN (1,5,6)`
+correctly captures all prospecting campaigns because the broken ones have obj=1.
+
 ## Performance
 
 - **Wall time:** 173s (target <300s) ✓

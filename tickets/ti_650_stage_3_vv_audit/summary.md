@@ -64,7 +64,21 @@ Deduped per `match_ip` per `advertiser_id`, earliest impression wins.
 - Two outliers (31357 at 70.48%, 42097 at 62.51%) — identity-graph origin, correctly unresolvable via IP
 - Full results: `outputs/ti_650_v13_resolution_rates.md`
 
-**540 unresolved S3 VVs (2.26%, adv 37775):** Identity graph origin (LiveRamp/CRM). GUID bridge resolves ~82%. Truly unresolved after GUID bridge: ~0.41% of S3.
+### Unresolved S3 VVs — resolution ceiling (adv 37775)
+
+| Pool scope | Resolved | Unresolved | No Impression | Notes |
+|---|---|---|---|---|
+| v12: direct, prosp-only | 23,080 | 674 | 1,074 | S3→S1 only |
+| v13: chain, prosp-only | 23,214 | 540 | 1,074 | S3→S2→S1 chain |
+| Direct, all-campaigns (incl retargeting) | 23,190 | 567 | 1,074 | +110 from retargeting S1 pool |
+| **Theoretical max: chain + all-campaigns** | **~23,280** | **~470** | **1,074** | — |
+| GUID bridge (tested on prior cohort) | ~82% of unresolved | — | — | guid_identity_daily |
+
+**Key finding (2026-03-12):** Adding retargeting campaigns (obj=4) to the S1 pool resolves 110 additional S3 VVs (14.4% of previously unresolved). These are IPs whose first MNTN impression was retargeting, not prospecting. However, 567 remain unresolved even with ALL campaigns in the pool — the irreducible IP-matching floor (~2.4%). See `outputs/ti_650_retargeting_pool_impact.md`.
+
+**Scoping decision needed for Zach:** Should the audit trace to "first prospecting touch" (current) or "first MNTN touch of any kind" (includes retargeting)? The 110 retargeting-resolved VVs had a real MNTN ad — just not a prospecting one.
+
+**1,074 "no impression" VVs:** ad_served_id has no CIL record in the 90-day lookback. Cannot resolve via IP matching regardless of pool scope. Separate investigation needed.
 
 ### Scoping rules
 
@@ -118,6 +132,9 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 8. **Retargeting campaigns exist at every funnel_level.** Must filter by objective_id, not funnel_level alone.
 9. **NTB disagreement: 41-56%.** Two independent client-side pixels. Architectural reality, not a bug.
 10. **BQ Silver validated vs Greenplum** within 0.12pp across 10 advertisers.
+11. **Retargeting in S1 pool adds 110 net new S3 resolutions (adv 37775).** Unresolved IPs' first MNTN touch was retargeting (obj=4), not prospecting. Pool scope is a business decision.
+12. **Irreducible unresolved floor = ~2.4% (567/23,844).** Even with all campaigns in all pools. Cross-device + identity-graph-only entries.
+13. **objective_id by funnel_level distribution:** S2 has obj=1 (broken, 42,846), obj=5 (correct prosp, 63,941), obj=4 (retargeting, 19,136). S3 has obj=1 (broken, 42,831), obj=6 (correct prosp, 60,205), obj=4 (retargeting, 19,136). Zero-chain advertisers had no active S2 prospecting impressions — only S2 retargeting.
 
 ### MES Pipeline IP Map
 
@@ -145,8 +162,13 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - Backfill from 2026-01-01
 
 ### Multi-advertiser validation
-- Run `ti_650_resolution_rate_fast.sql` across more advertisers to confirm rates hold
-- Current: adv 37775 only. Need top 10-40 advertisers.
+- ~~Run `ti_650_resolution_rate_fast.sql` across more advertisers to confirm rates hold~~
+- ✓ v13 validated across 10 advertisers. Chain matters for 6/10. See `outputs/ti_650_v13_resolution_rates.md`.
+
+### Unresolved investigation
+- Deep-dive the 567 irreducible unresolved (adv 37775) — characterize by cross-device, IP origin, impression age
+- Decide with Zach: include retargeting in pools? (adds 110, scoping question)
+- Characterize the 1,074 "no impression" VVs — why no CIL record?
 
 ---
 
@@ -157,6 +179,7 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `queries/ti_650_resolution_rate_fast.sql` — Fast resolution rate test. Both vast IPs + imp_visit. Single advertiser, ~110s runtime.
 - `queries/ti_650_resolution_rate_v13.sql` — **v13: Full S3→S2→S1 chain.** Multi-advertiser, ~173s for 10 advs.
 - `queries/ti_650_s3_guid_bridge.sql` — GUID bridge for IP-unresolved S3 VVs via `guid_identity_daily`.
+- `queries/ti_650_retargeting_pool_test.sql` — Retargeting pool impact test. Prosp-only vs all-campaigns S1 pool. Single advertiser.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v12 update).
 
 ### Outputs
@@ -165,6 +188,7 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `outputs/ti_650_s3_resolution_ceiling.md` — IP-only ceiling: 4 approaches tested and ruled out
 - `outputs/ti_650_s3_guid_bridge_results.json` — GUID bridge: 622/752 resolved, 130 truly unresolved
 - `outputs/ti_650_v13_resolution_rates.md` — **v13 results:** 10 advertisers, chain vs direct breakdown
+- `outputs/ti_650_retargeting_pool_impact.md` — **Retargeting pool test:** +110 net new, 567 irreducible floor
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
