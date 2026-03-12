@@ -1,7 +1,16 @@
--- TI-650: Unresolved S3 VVs — ALL advertisers, grouped by campaign name/objective/funnel/attribution
+-- TI-650: Unresolved S3 VVs — 20 random advertisers, grouped by campaign name/objective/funnel/attribution
 -- Self-contained script using TEMP TABLEs to avoid re-scanning event_log/CIL.
 -- Trace: Feb 4-11 | Lookback: 90 days | Prospecting only (obj 1,5,6)
 -- NOTE: Must run as a SCRIPT in BQ (not single statement). Paste entire block.
+
+-- Step 0: Pick 20 random advertisers that have S3 prospecting campaigns
+CREATE TEMP TABLE sampled_advertisers AS
+SELECT DISTINCT advertiser_id
+FROM `dw-main-bronze.integrationprod.campaigns`
+WHERE deleted = FALSE AND is_test = FALSE
+  AND funnel_level = 3 AND objective_id IN (1, 5, 6)
+ORDER BY FARM_FINGERPRINT(CAST(advertiser_id AS STRING))
+LIMIT 20;
 
 -- Step 1: Impression pool — materialized once, used 3x downstream
 CREATE TEMP TABLE impression_pool AS
@@ -11,6 +20,7 @@ WITH campaigns_in_scope AS (
     WHERE deleted = FALSE AND is_test = FALSE
       AND funnel_level IN (1, 2, 3)
       AND objective_id IN (1, 5, 6)
+      AND advertiser_id IN (SELECT advertiser_id FROM sampled_advertisers)
 ),
 el AS (
     SELECT
@@ -34,6 +44,7 @@ cil AS (
         c.time AS impression_time
     FROM `dw-main-silver.logdata.cost_impression_log` c
     WHERE c.time >= TIMESTAMP('2025-11-06') AND c.time < TIMESTAMP('2026-02-11')
+      AND c.advertiser_id IN (SELECT advertiser_id FROM sampled_advertisers)
       AND c.campaign_id IN (SELECT campaign_id FROM campaigns_in_scope)
 ),
 ranked AS (
@@ -71,6 +82,7 @@ SELECT
     cp.campaign_id, cp.advertiser_id, cp.attribution_model_id, cp.is_cross_device
 FROM `dw-main-silver.logdata.clickpass_log` cp
 WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
+  AND cp.advertiser_id IN (SELECT advertiser_id FROM sampled_advertisers)
   AND cp.campaign_id IN (
       SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
       WHERE deleted = FALSE AND is_test = FALSE
