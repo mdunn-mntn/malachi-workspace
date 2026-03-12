@@ -30,6 +30,32 @@ And we want every ip along the way for each step.
 
 Zach and Ray said this, so please dont forget it, even if we need to create an artifact for it:
 
+campaign_group_id should link all the campaign_ids that should be linked together, i.e. part of the same campaign. On the back-end, we separate into campaign_id, but that's for us. When we do the cross-stage linking, we need to check within the campaign_group_id instead of looking back to any campaign_id for that advertiser.
+
+Does that make sense? We have to form the trace within the same campaign_group_id across stages. You shouldn't have to join on advertiser since I think campaign_group_id is unique across all advertisers.
+
+If you link an ip across stage to a campaign_id that is not in the same campaign_group_id as our prior stage ip it literally doesn't make any sense.
+malachi  [9:40 AM]
+So as straight-forward as I can make it, I checked all the unresolved IPS on a random set of advertisers and all of the unresolved IPs that I can find in CIL come from retargeting campaigns. There is no S1/S2 prospecting campaign to link it back for these.
+
+SO I can limit only VV that are linked to a prospecting campaign, but I'm not finding a prospecting-only trace back to S1. I can see some of these IPs in retargeting campaigns, but I think that's defeating the purpose.
+[9:44 AM]It gets us a little better, still not 100%
+[9:45 AM]do we care that the IP's first ad was retargeting? (edited)
+zach.schoenberger  [10:42 AM]
+sort of… thats kind of odd
+[10:42 AM]also not sure how retargeting is getting pulled in. since all linking should be by explicit ips/campaign ids
+malachi  [10:45 AM]
+I'm filtering the VV attributed impressions from campaigns that are only in objective id (1,5,6). But that doesn't mean that when we're linking back that I applied that same filter. I mean, I DID, but I found no IPs. I just decided to check all campaigns and I did find those IPs in the same advertiser for different campaigns. I guess cross-link we should use campaign_group_id. I hadn't thought of that.
+zach.schoenberger  [10:47 AM]
+yeah… all of this should be within the campaign group.
+[10:47 AM]we can’t link a vv from stage 3 to another campaign group
+malachi  [10:47 AM]
+I'm aware, but when I was trying to find any link, I just decided to open it up to all campaigns just to see if I could find it at all
+zach.schoenberger  [10:47 AM]
+i see
+malachi  [10:49 AM]
+should there even be re-used campaign_ids/campaign_group_ids across advertisers? 6 digits long is sorta small seems like
+
 malachi  [2:37 PM]
 What about times where an IP has no verified visit yet, just Stage 2 -> stage 1 or just stage 1, do we want those in there as well
 zach.schoenberger  [2:38 PM]
