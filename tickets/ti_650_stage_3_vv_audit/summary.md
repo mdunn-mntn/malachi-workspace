@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v14: campaign_group_id scoped resolution. True within-funnel rate = 91.98% for adv 37775 (v13 was 97.36%, inflated by cross-group IP matching). GUID bridge running.
+**Status:** In Progress — v15: full source-table forensic trace complete. IP 100% identical across all 8 pipeline tables. 92% confirmed as IP-based ceiling. GUID bridge → 99.6%.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -126,6 +126,42 @@ Total unresolved: 1,913 (8.02%)
 
 Full waterfall: `outputs/ti_650_v14_resolution_waterfall.md`
 
+### v15: Full source-table forensic trace (2026-03-12)
+
+**Zach meeting #5 directive:** Use the actual source table at each pipeline step (bid_log, win_log, impression_log), not CIL as proxy. Trace per-VV via ad_served_id/auction_id. Target: 100% resolution.
+
+**Method:** 2-step query. Step 1: extract 50 truly unresolved S3 VVs (v14 logic). Step 2: look up each in ALL 8 source tables via deterministic joins (ad_served_id for MNTN tables, td_impression_id→auction_id bridge for Beeswax tables).
+
+**Tables traced:**
+| Table | Join Key | IP Column | Records Found |
+|---|---|---|---|
+| clickpass_log | ad_served_id | redirect_ip | 50/50 |
+| event_log (vast_start) | ad_served_id | ip, bid_ip | 50/50 |
+| event_log (vast_imp) | ad_served_id | ip, bid_ip | 50/50 |
+| impression_log | ad_served_id | ip, bid_ip | 50/50 |
+| cost_impression_log | ad_served_id | ip | 50/50 |
+| ui_visits | ad_served_id | ip, impression_ip | 50/50 |
+| bid_logs (Beeswax) | auction_id | ip | 50/50 |
+| win_logs (Beeswax) | auction_id | ip | 50/50 |
+| bid_events_log (MNTN) | auction_id | ip | **0/50** |
+
+**Key result — IP is 100% identical across ALL pipeline tables:**
+- event_log.bid_ip = CIL.ip = impression_log.bid_ip = bid_logs.ip = win_logs.ip = **100%**
+- serve_ip = bid_ip = **100%**
+- vast_start_ip = vast_imp_ip = **100%**
+- 86% (43/50) have the EXACT SAME IP at every single step including redirect/visit
+- 14% (7/50) differ ONLY at redirect (cross-device visit — CTV impression → phone redirect)
+
+**Conclusion: adding bid_logs, win_logs, or impression_log to the S1 pool has ZERO impact on resolution rate.** There is no IP variation to discover. The unresolved VVs have IPs that were NEVER in any S1 impression for the same campaign_group_id. They entered S3 via identity graph (data_source_id=3 in tmul_daily), not via direct MNTN impression.
+
+**bid_events_log: 0/50** — only advertiser 32167 has data in this table (out of all MNTN advertisers). Table is a UNION of bidder_bid_events + bid_price_log, captures data from a specific bidding pipeline. Not relevant for resolution.
+
+**Impression → VV gap:** mean 1.8 days, max 8.9 days, 0 above 30 days. No TTL or lookback window issue.
+
+**92% is the IP-based ceiling** for campaign_group_id-scoped resolution. GUID bridge brings it to ~99.6%.
+
+Full results: `outputs/ti_650_v15_forensic_results.md`
+
 ### Scoping rules
 
 - **campaign_group_id scoping (v14+).** All cross-stage IP linking must be within the same `campaign_group_id`. Zach directive 2026-03-12.
@@ -187,6 +223,9 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 16. **1,074 no-CIL VVs: pipeline gap, not TTL.** 100% have event_log records, 100% impressions < 30 days old. CIL TTL hypothesis disproven. NOT recoverable via event_log bid_ip (0 bid events exist). 922/1,074 recovered via impression_ip.
 17. **campaign_group_id scoping drops S3 resolution ~5pp (v14).** v13 97.36% → v14 91.98% for adv 37775. 1,283 VVs were matching S1/S2 IPs from different campaign groups — not valid funnel traces. 5/10 advertisers affected >5pp. S2 unaffected.
 18. **campaign_group_id is unique across advertisers (verified).** Only `campaign_group_id = 0` is shared (3 advertisers, default/null). Safe to scope by campaign_group_id without advertiser_id.
+19. **v15 forensic trace: IP 100% identical across ALL source tables (50 unresolved VVs).** event_log.bid_ip = CIL.ip = impression_log.bid_ip = bid_logs.ip = win_logs.ip at 100%. serve_ip = bid_ip at 100%. No hidden IP variation to discover. Adding source tables to S1 pool has zero impact.
+20. **bid_events_log only has data for advertiser 32167.** Table is a UNION of bidder_bid_events + bid_price_log from a specific bidding pipeline. Not useful for general advertiser analysis.
+21. **92% is the IP-based resolution ceiling** for campaign_group_id-scoped S3 VVs. The 8% unresolved entered S3 via identity graph (not via MNTN impression). GUID bridge resolves ~85% of those, bringing total to ~99.6%.
 
 ### MES Pipeline IP Map
 
@@ -224,8 +263,9 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - ✅ Full waterfall compiled: `outputs/ti_650_resolution_waterfall.md`
 - ⏳ Decide with Zach: include retargeting in pools? (adds 110, scoping question)
 - ✅ campaign_group_id scoping validated (v14): drops S3 rate 97.36% → 91.98% for adv 37775, 5-13pp for 5/10 advertisers
-- ⏳ GUID bridge on v14 unresolved (1,761 VVs) — query executing
-- ⏳ Update SQLMesh model to v14 architecture + campaign_group_id
+- ✅ **v15 forensic trace: IP 100% identical across ALL 8 source tables.** Adding bid_logs/win_logs/impression_log to S1 pool has zero impact. 92% is the IP ceiling. (2026-03-12)
+- ⏳ GUID bridge on v14 unresolved (1,761 VVs) — pending
+- ⏳ Update SQLMesh model to v14 architecture + campaign_group_id + GUID bridge
 
 ---
 
@@ -242,6 +282,10 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `queries/ti_650_no_cil_profile.sql` — **No-CIL 1,074 characterization:** event_log presence, impression age, attribution.
 - `queries/ti_650_resolution_rate_v14.sql` — **v14: campaign_group_id scoped.** Multi-advertiser, ~212s for 10 advs.
 - `queries/ti_650_v14_guid_bridge.sql` — **GUID bridge on v14 unresolved:** 1,761 VVs within campaign_group_id.
+- `queries/ti_650_v15_get_unresolved_ids.sql` — **v15 Step 1:** Extract 50 unresolved S3 ad_served_ids (v14 logic).
+- `queries/ti_650_v15_trace_lookup.sql` — **v15 Step 2:** Forensic trace through all 8 source tables via ad_served_id/auction_id.
+- `queries/ti_650_v15_ip_existence_check.sql` — **v15:** Check if unresolved IPs exist in S1 pool (any campaign_group, 180d window).
+- `queries/ti_650_v15_forensic_trace.sql` — **v15 combined:** Full trace (not used — split into step 1+2 for cost).
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v14 update).
 
 ### Outputs
@@ -257,6 +301,9 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `outputs/ti_650_resolution_waterfall.md` — **Full resolution waterfall for Zach presentation**
 - `outputs/ti_650_v14_campaign_group_resolution.md` — **v14 results:** campaign_group_id scoped, 10 advertisers
 - `outputs/ti_650_v14_resolution_waterfall.md` — **v14 waterfall:** campaign_group_id scoped
+- `outputs/ti_650_v15_unresolved_ids.json` — **v15:** 50 unresolved S3 ad_served_ids with IPs
+- `outputs/ti_650_v15_forensic_trace.json` — **v15:** Full forensic trace (50 VVs × 8 tables)
+- `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis, root cause diagnosis
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference

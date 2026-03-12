@@ -635,6 +635,8 @@ Additional validations:
 - vast_impression_ip ≈ vast_start_ip: 99.95% match (374/812,609 differ)
 - win_logs.impression_ip_address: infrastructure/CDN IP (68.67.x.x MNTN infra, AWS IPs), NOT user IP
 - win_logs uses Beeswax IDs (not MNTN IDs). Join to event_log via `win_logs.auction_id = event_log.td_impression_id`.
+- **v15 forensic trace (2026-03-12, 50 VVs):** IP is 100% identical across ALL 8 source tables (event_log, impression_log, CIL, bid_logs, win_logs, clickpass_log, ui_visits). serve_ip = bid_ip at 100%. Adding any source table to S1 pool has zero impact on resolution. The 8% unresolved S3 VVs entered via identity graph, not via MNTN impression.
+- **bid_events_log is nearly empty** — only advertiser 32167 has data. Not useful for general IP lookups. Use bid_logs (Beeswax-native) instead.
 
 **Cross-stage link:** `next_stage.bid_ip ≈ prev_stage.vast_start_ip OR prev_stage.vast_impression_ip` (either/or join, ~1.2% differ — CGNAT/SSAI/IPv6/VPN). IP is the ONLY cross-stage link. first_touch_ad_served_id links S3/S2→S1 directly (skips S2) but only 25-51% available.
 

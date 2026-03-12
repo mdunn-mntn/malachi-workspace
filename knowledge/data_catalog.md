@@ -513,8 +513,10 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 - **Note:** `bid_events_log` is the same underlying view.
 
 ## silver.logdata.bid_events_log
-- **Type:** VIEW → `sqlmesh__logdata.logdata__bid_events_log__772626469` (VIEW → bidder_bid_events)
+- **Type:** VIEW → `sqlmesh__logdata.logdata__bid_events_log__772626469` (VIEW → bidder_bid_events UNION ALL bid_price_log)
 - **Note:** Same as `bid_attempted_log` — both reference `bidder_bid_events`.
+- **CRITICAL: Very sparse data (2026-03-12).** Only advertiser 32167 found in this table (checked Feb 2026). Most advertisers have NO records. Not useful for general advertiser analysis. Use `bid_logs` (Beeswax-native) instead for bid IP lookups.
+- **Columns:** Has `auction_id`, `advertiser_id` (MNTN), `campaign_group_id`, `ip`, `time`. Despite having `auction_id`, the format may differ from `event_log.td_impression_id` — 0/50 matched in v15 forensic trace for adv 37775.
 
 ---
 
