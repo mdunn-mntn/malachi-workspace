@@ -23,11 +23,12 @@ campaigns AS (
       AND c.deleted = FALSE AND c.is_test = FALSE
       AND c.funnel_level IN (1, 2, 3) AND c.objective_id IN (1, 5, 6)
 ),
--- S1 impression pool: both vast IPs as match keys, per advertiser
+-- S1 impression pool: both vast IPs + CIL bid IPs as match keys, per advertiser
+-- Direct GROUP BY ip is optimal — pivot-first tested and was 2x slower (BQ re-scans CTE per reference)
 s1_pool AS (
     SELECT advertiser_id, match_ip, MIN(impression_time) AS impression_time
     FROM (
-        -- event_log vast IPs
+        -- event_log vast IPs (vast_start + vast_impression)
         SELECT c.advertiser_id, el.ip AS match_ip, MIN(el.time) AS impression_time
         FROM `dw-main-silver.logdata.event_log` el
         JOIN campaigns c ON c.campaign_id = el.campaign_id AND c.funnel_level = 1
@@ -36,7 +37,7 @@ s1_pool AS (
           AND el.ip IS NOT NULL
         GROUP BY c.advertiser_id, el.ip
         UNION ALL
-        -- CIL bid IPs
+        -- CIL bid IPs (covers display + failed vast events)
         SELECT c.advertiser_id, cil.ip AS match_ip, MIN(cil.time) AS impression_time
         FROM `dw-main-silver.logdata.cost_impression_log` cil
         JOIN campaigns c ON c.campaign_id = cil.campaign_id AND c.funnel_level = 1
