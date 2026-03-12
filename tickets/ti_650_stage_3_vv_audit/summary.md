@@ -318,6 +318,7 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 
 ### Meetings
 - `meetings/ti_650_meeting_zach_1.txt` through `zach_4.txt` — Zach review meetings
+- `meetings/ti_650_meeting_zach_5.txt` — Zach meeting #5 (2026-03-12): source-of-truth tables, 100% target, forensic trace directive
 - `meetings/ti_650_meeting_ryan_1.txt` — SQLMesh walkthrough with Ryan
 - `meetings/ti_650_meeting_dustin.txt` — Deployment strategy with Dustin
 
