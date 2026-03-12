@@ -110,3 +110,32 @@ That's what I figured, but I wanted to make sure. Thanks for this confirmation.
 --- bid_ip = segment_ip = win_ip (100% same, Zach + 38.2M row validation)
 --- serve_ip = impression_log.ip (~93.8% = bid_ip, 6.2% internal 10.x.x.x NAT)
 --- vast_ip = event_log.ip (~99% = bid_ip, 1.02% CGNAT /24 rotation, cross-stage key)
+
+malachi  [4:35 PM]
+Can you clarify something for me, why would a campaign_name be called 'Beeswax Television Multi-Touch Plus' but be objective_id =1 for prospecting. Shouldn't that be for the objective_id of 5 or 6?
+ray  [4:38 PM]
+oh god i forgot about this
+[4:38 PM]the short of it, i think, is that when the UI team did the "TV Only" conversion, they screwed up the objectives, i think
+[4:40 PM]way way back, we had 2 campaign groups representing Stages 1 through 3
+the "parent" campaign group had
+
+1 campaign
+objective = 1
+channel_id = 8
+The "child" campaign group had
+
+2 campaigns
+objectives 5 and 6
+channel_id = 1
+
+
+I think this funnel_level didn't even exist at this point
+[4:40 PM]then there was a push for us to stop doing MT campaigns, and we abandoned the parent/child group relationship along the way
+which yielded a singular campaign group with 3 campaigns
+i think it was during this time that they stopped setting objective_id correctly and pivoted to using funnel_level[4:44 PM]i think i missed the bit explaining the funnel_level
+select channel_id, objective_id, funnel_level, count(1) from campaigns where name = 'Beeswax Television Multi-Touch Plus' group by 1,2,3;
+ channel_id | objective_id | funnel_level | count
+------------+--------------+--------------+-------
+          8 |            1 |            3 | 48934(edited)
+malachi  [5:35 PM]
+Okay well of all the ips I can't trace, they appear to be entirely named beeswax multi-touch plus, lol i'll double check
