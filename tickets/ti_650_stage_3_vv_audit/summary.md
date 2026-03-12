@@ -72,13 +72,20 @@ Deduped per `match_ip` per `advertiser_id`, earliest impression wins.
 | v13: chain, prosp-only | 23,214 | 540 | 1,074 | S3→S2→S1 chain |
 | Direct, all-campaigns (incl retargeting) | 23,190 | 567 | 1,074 | +110 from retargeting S1 pool |
 | **Theoretical max: chain + all-campaigns** | **~23,280** | **~470** | **1,074** | — |
-| GUID bridge (tested on prior cohort) | ~82% of unresolved | — | — | guid_identity_daily |
+| GUID bridge on 567 (all-campaigns pool) | 484/567 resolved | 83 | 1,074 | 85.4% GUID recovery |
+| **Final: IP + GUID bridge** | **22,687** | **83** | **1,074** | **99.64% of CIL cohort** |
 
 **Key finding (2026-03-12):** Adding retargeting campaigns (obj=4) to the S1 pool resolves 110 additional S3 VVs (14.4% of previously unresolved). These are IPs whose first MNTN impression was retargeting, not prospecting. However, 567 remain unresolved even with ALL campaigns in the pool — the irreducible IP-matching floor (~2.4%). See `outputs/ti_650_retargeting_pool_impact.md`.
 
+**GUID bridge (2026-03-12):** Resolves 484/567 IP-unresolved (85.4%). Only **83 truly irreducible** — 10 primary (0.04% of total), 73 competing. 100% of 567 had GUIDs in `guid_identity_daily`. See `outputs/ti_650_unresolved_567_guid_bridge.md`.
+
+**567 profile (2026-03-12):** 95.1% IP never in S1, 69.8% T-Mobile CGNAT, 54.7% cross-device, 67.7% competing. Structurally identical to prior 752 cohort but more concentrated in CGNAT. See `outputs/ti_650_unresolved_567_profile.md`.
+
+**1,074 "no CIL" VVs (2026-03-12):** CIL TTL hypothesis **disproven** — 100% have event_log records, 100% impressions < 30 days old. This is a pipeline gap (impression in event_log but not CIL), not data expiration. Recoverable via event_log bid_ip fallback. See `outputs/ti_650_no_cil_profile.md`.
+
 **Scoping decision needed for Zach:** Should the audit trace to "first prospecting touch" (current) or "first MNTN touch of any kind" (includes retargeting)? The 110 retargeting-resolved VVs had a real MNTN ad — just not a prospecting one.
 
-**1,074 "no impression" VVs:** ad_served_id has no CIL record in the 90-day lookback. Cannot resolve via IP matching regardless of pool scope. Separate investigation needed.
+**Full waterfall:** See `outputs/ti_650_resolution_waterfall.md`.
 
 ### Scoping rules
 
@@ -133,8 +140,11 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 9. **NTB disagreement: 41-56%.** Two independent client-side pixels. Architectural reality, not a bug.
 10. **BQ Silver validated vs Greenplum** within 0.12pp across 10 advertisers.
 11. **Retargeting in S1 pool adds 110 net new S3 resolutions (adv 37775).** Unresolved IPs' first MNTN touch was retargeting (obj=4), not prospecting. Pool scope is a business decision.
-12. **Irreducible unresolved floor = ~2.4% (567/23,844).** Even with all campaigns in all pools. Cross-device + identity-graph-only entries.
+12. **Irreducible unresolved floor = ~2.4% (567/23,844) via IP only.** Even with all campaigns in all pools. Cross-device + identity-graph-only entries.
 13. **objective_id by funnel_level distribution:** S2 has obj=1 (broken, 42,846), obj=5 (correct prosp, 63,941), obj=4 (retargeting, 19,136). S3 has obj=1 (broken, 42,831), obj=6 (correct prosp, 60,205), obj=4 (retargeting, 19,136). Zero-chain advertisers had no active S2 prospecting impressions — only S2 retargeting.
+14. **GUID bridge resolves 484/567 IP-unresolved (85.4%).** True irreducible = 83 (0.36% of CIL cohort). Only 10 primary attribution VVs unresolvable (0.04%).
+15. **567 unresolved profile:** 95.1% IP never in S1 (identity graph), 69.8% T-Mobile CGNAT, 100% have GUID in guid_identity_daily.
+16. **1,074 no-CIL VVs: pipeline gap, not TTL.** 100% have event_log records, 100% impressions < 30 days old. CIL TTL hypothesis disproven. Recoverable via event_log bid_ip fallback.
 
 ### MES Pipeline IP Map
 
@@ -180,6 +190,9 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `queries/ti_650_resolution_rate_v13.sql` — **v13: Full S3→S2→S1 chain.** Multi-advertiser, ~173s for 10 advs.
 - `queries/ti_650_s3_guid_bridge.sql` — GUID bridge for IP-unresolved S3 VVs via `guid_identity_daily`.
 - `queries/ti_650_retargeting_pool_test.sql` — Retargeting pool impact test. Prosp-only vs all-campaigns S1 pool. Single advertiser.
+- `queries/ti_650_unresolved_567_profile.sql` — **Profile 567 irreducible unresolved:** cross-device, CGNAT, GUID potential, attribution model.
+- `queries/ti_650_unresolved_567_guid_bridge.sql` — **GUID bridge on 567:** guid_identity_daily → linked IP → S1 match. 484/567 resolved.
+- `queries/ti_650_no_cil_profile.sql` — **No-CIL 1,074 characterization:** event_log presence, impression age, attribution.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v12 update).
 
 ### Outputs
@@ -189,6 +202,10 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `outputs/ti_650_s3_guid_bridge_results.json` — GUID bridge: 622/752 resolved, 130 truly unresolved
 - `outputs/ti_650_v13_resolution_rates.md` — **v13 results:** 10 advertisers, chain vs direct breakdown
 - `outputs/ti_650_retargeting_pool_impact.md` — **Retargeting pool test:** +110 net new, 567 irreducible floor
+- `outputs/ti_650_unresolved_567_profile.md` — **567 unresolved profile:** 95.1% IP never in S1, 100% GUID potential, 69.8% CGNAT
+- `outputs/ti_650_unresolved_567_guid_bridge.md` — **GUID bridge results:** 484/567 resolved (85.4%), 83 truly irreducible
+- `outputs/ti_650_no_cil_profile.md` — **No-CIL 1,074 profile:** CIL TTL disproven, all impressions < 30d old
+- `outputs/ti_650_resolution_waterfall.md` — **Full resolution waterfall for Zach presentation**
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
