@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v13 validated: full S3→S2→S1 chain across 10 advertisers. Chain adds 134 net new S3 resolutions for adv 37775 (96.80→97.36%).
+**Status:** In Progress — v14: campaign_group_id scoped resolution. True within-funnel rate = 91.98% for adv 37775 (v13 was 97.36%, inflated by cross-group IP matching). GUID bridge running.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -44,7 +44,7 @@ UNION ALL of:
 - `event_log` vast_start + vast_impression IPs (by `ad_served_id`)
 - `cost_impression_log` bid IPs (= bid_ip, 100% validated)
 
-Deduped per `match_ip` per `advertiser_id`, earliest impression wins.
+Deduped per `match_ip` per `campaign_group_id` (v14+), earliest impression wins.
 
 ### Resolution results (adv 37775, Feb 4–11, 90-day lookback, prospecting obj 1,5,6)
 
@@ -85,10 +85,50 @@ Deduped per `match_ip` per `advertiser_id`, earliest impression wins.
 
 **Scoping decision needed for Zach:** Should the audit trace to "first prospecting touch" (current) or "first MNTN touch of any kind" (includes retargeting)? The 110 retargeting-resolved VVs had a real MNTN ad — just not a prospecting one.
 
-**Full waterfall:** See `outputs/ti_650_resolution_waterfall.md`.
+**Full waterfall (v13):** See `outputs/ti_650_resolution_waterfall.md`.
+
+### v14: campaign_group_id scoped (2026-03-12)
+
+**Zach directive:** Cross-stage IP linking MUST be within the same `campaign_group_id`. Linking a VV to an impression in a different campaign group is invalid — coincidental IP match, not funnel trace. `campaign_group_id` is unique across advertisers (verified, only `0` is shared).
+
+**v14 results (adv 37775 S3):**
+
+| Metric | v13 (advertiser_id) | v14 (campaign_group_id) | Delta |
+|---|---|---|---|
+| S3 Resolved | 23,214 (97.36%) | 21,931 (91.98%) | **-1,283 (-5.38pp)** |
+| via S2→S1 chain | 14,182 | 13,172 | -1,010 |
+| Direct S1 | 9,032 | 8,759 | -273 |
+| Unresolved (with CIL) | 540 | 1,761 | +1,221 |
+
+**Multi-advertiser v14 impact (S3 only):**
+- Large drop (>5pp): 31357 (-11.92), 34835 (-13.47), 36743 (-5.06), 37775 (-5.38), 38710 (-6.38)
+- Minimal drop (<1pp): 31276, 32766, 35237, 42097, 46104
+- S2: virtually no change (all still 97.95–99.87%)
+- Full results: `outputs/ti_650_v14_campaign_group_resolution.md`
+
+**v14 waterfall (adv 37775 S3):**
+```
+23,844 total S3 VVs
+  → 22,770 have CIL (95.5%)     | 1,074 no CIL (4.5%)
+  → 21,009 IP-resolved (92.3%)  |   922 impression_ip resolved (85.8%)
+  →  1,761 unresolved (7.7%)    |   152 no resolution path
+
+Total resolved: 21,931 (91.98%)
+Total unresolved: 1,913 (8.02%)
+  - 1,761 have CIL, no IP match within campaign_group
+  - 980/1,761 cross-device (55.6%)
+  - GUID bridge: [pending — query executing]
+```
+
+**Key finding:** v13 rates were inflated ~5pp by coincidental IP matches across campaign groups. 1,283 S3 VVs previously resolving were matching S1/S2 IPs from different campaign groups — not valid funnel traces.
+
+**event_log bid_ip fallback:** 0/1,074 no-CIL VVs have bid events in event_log. Only vast events exist for these ad_served_ids — bid_ip not recoverable via event_log. The 922/1,074 recovered via impression_ip is the ceiling.
+
+Full waterfall: `outputs/ti_650_v14_resolution_waterfall.md`
 
 ### Scoping rules
 
+- **campaign_group_id scoping (v14+).** All cross-stage IP linking must be within the same `campaign_group_id`. Zach directive 2026-03-12.
 - **Prospecting only:** `objective_id IN (1, 5, 6)`. Exclude retargeting (4) and ego (7).
 - **funnel_level is authoritative for stage.** objective_id is UNRELIABLE — 48,934 S3 campaigns have obj=1 instead of 6 (UI migration bug, Ray confirmed 2026-03-11).
 - **90-day lookback.** Zach confirmed max window = 88 days (14+30+14+30).
@@ -144,7 +184,9 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 13. **objective_id by funnel_level distribution:** S2 has obj=1 (broken, 42,846), obj=5 (correct prosp, 63,941), obj=4 (retargeting, 19,136). S3 has obj=1 (broken, 42,831), obj=6 (correct prosp, 60,205), obj=4 (retargeting, 19,136). Zero-chain advertisers had no active S2 prospecting impressions — only S2 retargeting.
 14. **GUID bridge resolves 484/567 IP-unresolved (85.4%).** True irreducible = 83 (0.36% of CIL cohort). Only 10 primary attribution VVs unresolvable (0.04%).
 15. **567 unresolved profile:** 95.1% IP never in S1 (identity graph), 69.8% T-Mobile CGNAT, 100% have GUID in guid_identity_daily.
-16. **1,074 no-CIL VVs: pipeline gap, not TTL.** 100% have event_log records, 100% impressions < 30 days old. CIL TTL hypothesis disproven. Recoverable via event_log bid_ip fallback.
+16. **1,074 no-CIL VVs: pipeline gap, not TTL.** 100% have event_log records, 100% impressions < 30 days old. CIL TTL hypothesis disproven. NOT recoverable via event_log bid_ip (0 bid events exist). 922/1,074 recovered via impression_ip.
+17. **campaign_group_id scoping drops S3 resolution ~5pp (v14).** v13 97.36% → v14 91.98% for adv 37775. 1,283 VVs were matching S1/S2 IPs from different campaign groups — not valid funnel traces. 5/10 advertisers affected >5pp. S2 unaffected.
+18. **campaign_group_id is unique across advertisers (verified).** Only `campaign_group_id = 0` is shared (3 advertisers, default/null). Safe to scope by campaign_group_id without advertiser_id.
 
 ### MES Pipeline IP Map
 
@@ -181,7 +223,9 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - ✅ 1,074 no-CIL: pipeline gap (NOT TTL), all impressions < 30d old, recoverable via event_log bid_ip
 - ✅ Full waterfall compiled: `outputs/ti_650_resolution_waterfall.md`
 - ⏳ Decide with Zach: include retargeting in pools? (adds 110, scoping question)
-- ⏳ Enforce campaign_group_id scoping in production model (Zach directive)
+- ✅ campaign_group_id scoping validated (v14): drops S3 rate 97.36% → 91.98% for adv 37775, 5-13pp for 5/10 advertisers
+- ⏳ GUID bridge on v14 unresolved (1,761 VVs) — query executing
+- ⏳ Update SQLMesh model to v14 architecture + campaign_group_id
 
 ---
 
@@ -196,7 +240,9 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `queries/ti_650_unresolved_567_profile.sql` — **Profile 567 irreducible unresolved:** cross-device, CGNAT, GUID potential, attribution model.
 - `queries/ti_650_unresolved_567_guid_bridge.sql` — **GUID bridge on 567:** guid_identity_daily → linked IP → S1 match. 484/567 resolved.
 - `queries/ti_650_no_cil_profile.sql` — **No-CIL 1,074 characterization:** event_log presence, impression age, attribution.
-- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v12 update).
+- `queries/ti_650_resolution_rate_v14.sql` — **v14: campaign_group_id scoped.** Multi-advertiser, ~212s for 10 advs.
+- `queries/ti_650_v14_guid_bridge.sql` — **GUID bridge on v14 unresolved:** 1,761 VVs within campaign_group_id.
+- `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v14 update).
 
 ### Outputs
 - `outputs/ti_650_s2_tier_analysis.md` — S2 independent tier analysis: minimum set = imp_direct + imp_visit
@@ -209,6 +255,8 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `outputs/ti_650_unresolved_567_guid_bridge.md` — **GUID bridge results:** 484/567 resolved (85.4%), 83 truly irreducible
 - `outputs/ti_650_no_cil_profile.md` — **No-CIL 1,074 profile:** CIL TTL disproven, all impressions < 30d old
 - `outputs/ti_650_resolution_waterfall.md` — **Full resolution waterfall for Zach presentation**
+- `outputs/ti_650_v14_campaign_group_resolution.md` — **v14 results:** campaign_group_id scoped, 10 advertisers
+- `outputs/ti_650_v14_resolution_waterfall.md` — **v14 waterfall:** campaign_group_id scoped
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
