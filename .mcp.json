@@ -1,20 +1,5 @@
 {
   "mcpServers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
-    },
-    "bigquery": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@ergut/mcp-bigquery-server"
-      ],
-      "env": {
-        "GOOGLE_CLOUD_PROJECT": "dw-main-silver"
-      }
-    },
     "jira": {
       "type": "stdio",
       "command": "npx",
@@ -24,12 +9,22 @@
       ],
       "env": {}
     },
-    "google-drive": {
+    "github": {
+      "command": "gh",
+      "args": [
+        "mcp"
+      ]
+    },
+    "bigquery": {
       "type": "stdio",
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-gdrive"
+        "@ergut/mcp-bigquery-server",
+        "--project-id",
+        "dw-main-silver",
+        "--location",
+        "US"
       ],
       "env": {}
     }
