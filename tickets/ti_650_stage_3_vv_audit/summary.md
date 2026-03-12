@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v12 validated for adv 37775. Multi-advertiser resolution rate testing underway.
+**Status:** In Progress — v13 validated: full S3→S2→S1 chain across 10 advertisers. Chain adds 134 net new S3 resolutions for adv 37775 (96.80→97.36%).
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -48,13 +48,23 @@ Deduped per `match_ip` per `advertiser_id`, earliest impression wins.
 
 ### Resolution results (adv 37775, Feb 4–11, 90-day lookback, prospecting obj 1,5,6)
 
-| Stage | Total VVs | imp_direct | imp_visit | Resolved | % | Unresolved |
-|-------|-----------|------------|-----------|----------|---|------------|
-| S1 | 93,274 | — | — | 93,274 | 100% | 0 |
-| S2 | 16,753 | 15,983 | 16,703 | 16,707 | 99.73% | 0 |
-| S3 | 23,844 | 21,966 | 23,060 | 23,080 | 96.80% | 674 |
+**v13 (full S3→S2→S1 chain):**
 
-**674 unresolved S3 VVs (2.83%):** 96.7% have bid_ip that NEVER appeared as any S1 vast IP — entered S3 via identity graph (LiveRamp/CRM). GUID bridge via `guid_identity_daily` resolves ~82% of these (tested on prior 752-unresolved cohort). Truly unresolved after GUID bridge: ~0.55% of S3, ~0.12% primary.
+| Stage | Total VVs | imp_direct | imp_visit | Resolved | % | Unresolved | S3 via S2→S1 | S3 Direct S1 |
+|-------|-----------|------------|-----------|----------|---|------------|--------------|--------------|
+| S1 | 93,274 | — | — | 93,274 | 100% | 0 | — | — |
+| S2 | 16,753 | 15,983 | 16,703 | 16,707 | 99.73% | 0 | — | — |
+| S3 | 23,844 | 21,966 | 23,060 | 23,214 | 97.36% | 540 | 14,182 | 9,032 |
+
+**v13 vs v12:** Chain added 134 net new S3 resolutions (96.80% → 97.36%). 59.5% of S3 VVs resolve through S2 chain, 37.9% direct to S1. Unresolved dropped from 674 → 540.
+
+**Multi-advertiser v13 (10 advertisers):**
+- S2: 97.95–99.87% across all 10 (near-perfect, unchanged from v12)
+- S3: 62.51–97.83% — chain matters for 6/10 advertisers. 4 with zero chain (no S2 campaigns in prospecting)
+- Two outliers (31357 at 70.48%, 42097 at 62.51%) — identity-graph origin, correctly unresolvable via IP
+- Full results: `outputs/ti_650_v13_resolution_rates.md`
+
+**540 unresolved S3 VVs (2.26%, adv 37775):** Identity graph origin (LiveRamp/CRM). GUID bridge resolves ~82%. Truly unresolved after GUID bridge: ~0.41% of S3.
 
 ### Scoping rules
 
@@ -145,6 +155,7 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 ### Queries
 - `queries/ti_650_systematic_trace.sql` — **Production linkage query.** v12: 3 self-contained traces (S1/S2/S3), 2 cross-stage links (imp_direct + imp_visit). Adv 37775.
 - `queries/ti_650_resolution_rate_fast.sql` — Fast resolution rate test. Both vast IPs + imp_visit. Single advertiser, ~110s runtime.
+- `queries/ti_650_resolution_rate_v13.sql` — **v13: Full S3→S2→S1 chain.** Multi-advertiser, ~173s for 10 advs.
 - `queries/ti_650_s3_guid_bridge.sql` — GUID bridge for IP-unresolved S3 VVs via `guid_identity_daily`.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v12 update).
 
@@ -153,6 +164,7 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `outputs/ti_650_s3_tier_analysis.md` — S3 path analysis: direct vs chain, chain is redundant
 - `outputs/ti_650_s3_resolution_ceiling.md` — IP-only ceiling: 4 approaches tested and ruled out
 - `outputs/ti_650_s3_guid_bridge_results.json` — GUID bridge: 622/752 resolved, 130 truly unresolved
+- `outputs/ti_650_v13_resolution_rates.md` — **v13 results:** 10 advertisers, chain vs direct breakdown
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
