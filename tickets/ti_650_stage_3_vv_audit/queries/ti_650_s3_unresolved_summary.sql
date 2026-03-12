@@ -1,13 +1,18 @@
--- TI-650: Unresolved S3 VVs — 20 random advertisers, grouped by campaign name/objective/funnel/attribution
+-- TI-650: Unresolved S3 VVs — top 20 advertisers by S3 VV volume
 -- Single query (no TEMP TABLEs). S1 pool scoped to funnel_level=1 only.
 -- Trace: Feb 4-11 | Lookback: 90 days | Prospecting only (obj 1,5,6)
 
 WITH sampled_advertisers AS (
-    SELECT DISTINCT advertiser_id
-    FROM `dw-main-bronze.integrationprod.campaigns`
-    WHERE deleted = FALSE AND is_test = FALSE
-      AND funnel_level = 3 AND objective_id IN (1, 5, 6)
-    ORDER BY FARM_FINGERPRINT(CAST(advertiser_id AS STRING))
+    SELECT cp.advertiser_id
+    FROM `dw-main-silver.logdata.clickpass_log` cp
+    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
+      AND cp.campaign_id IN (
+          SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
+          WHERE deleted = FALSE AND is_test = FALSE
+            AND funnel_level = 3 AND objective_id IN (1, 5, 6)
+      )
+    GROUP BY cp.advertiser_id
+    ORDER BY COUNT(*) DESC
     LIMIT 20
 ),
 s1_campaigns AS (
