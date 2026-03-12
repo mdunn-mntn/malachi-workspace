@@ -197,6 +197,7 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis
 - `artifacts/ti_650_consolidated.md` — Historical audit report (v4–v10 era)
 - `artifacts/ti_650_zach_ray_comments.txt` — Stakeholder Slack messages
+- `artifacts/ti_650_unresolved_investigation_plan.md` — **Plan: deep-dive 567 unresolved + 1,074 no-CIL VVs**
 - `artifacts/ti_650_verified_visit_business_logic.txt` — VVS Business Logic doc
 - `artifacts/ATTR-Verified Visit Service (VVS) Business Logic-090326-213624.pdf` — VVS Confluence export
 
