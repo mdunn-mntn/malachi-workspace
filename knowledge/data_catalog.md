@@ -1,5 +1,5 @@
 # Data Catalog — MNTN BigQuery
-Last updated: 2026-03-03 | Phase 2 complete + Phase 3 additions (bronze.external, bronze.tpa, audit, Greenplum tables)
+Last updated: 2026-03-12 | Phase 2 complete + Phase 3 additions + silver.fpa (TI-737)
 
 ## Catalog Index
 - [silver.logdata](#silver-logdata)
@@ -12,6 +12,7 @@ Last updated: 2026-03-03 | Phase 2 complete + Phase 3 additions (bronze.external
 - [bronze.external](#bronze-external) — ipdsc__v1 (CRM IP resolution)
 - [bronze.tpa](#bronze-tpa) — audience_upload_hashed_emails, audience_upload_ips
 - [audit](#audit-bq-dataset) — stage3_vv_ip_lineage
+- [silver.fpa](#silver-fpa) — advertiser_verticals, categories
 - [Greenplum Tables Reference](#greenplum-coredw-tables-reference)
 
 ---
@@ -1884,6 +1885,70 @@ Key columns (see audit_trace_queries.sql in mm_44_ipdsc_hh_discrepancy/queries/ 
 - `ip_mutated` — boolean: win_ip ≠ visit_ip
 - `cross_device` — from ui_visits
 - `trace_date` — partition
+
+---
+
+# silver.fpa
+
+**Project:** dw-main-silver | **Dataset:** fpa
+Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream CDC from Postgres).
+
+---
+
+## silver.fpa.advertiser_verticals
+- **Type:** VIEW → `bronze.integrationprod.fpa_advertiser_verticals`
+- **Clustering:** id
+- **Rows:** ~39,946 (as of 2026-03-12)
+- **Use for:** Mapping advertisers to vertical categories (industry classification)
+- **Validated:** TI-737 (2026-03-12) — full parity with CoreDW confirmed
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | PK (clustered) |
+| advertiser_id | INTEGER | FK to advertisers |
+| advertiser_name | STRING | Denormalized name (empty for ~8k new advertisers) |
+| vertical_id | INTEGER | Vertical category ID |
+| vertical_name | STRING | Denormalized vertical name |
+| type | INTEGER | 0 = parent vertical, 1 = sub-vertical |
+| created_time | TIMESTAMP | Row creation time |
+| updated_time | TIMESTAMP | Last update (nearly all NULL) |
+| datastream_metadata | RECORD | CDC metadata (uuid, source_timestamp) |
+
+**Key facts:**
+- Every advertiser has exactly 2 rows: type=0 (parent) + type=1 (sub-vertical)
+- 185 distinct verticals, 184 distinct names (3 parent/child pairs share names)
+- 49 advertiser_ids are orphans (not in advertisers table) — pre-existing source issue
+- Join to advertisers: `advertiser_id = advertisers.advertiser_id`
+
+---
+
+## silver.fpa.categories
+- **Type:** VIEW → `bronze.integrationprod.fpa_categories`
+- **Use for:** FPA category taxonomy (NOT the verticals lookup — different domain)
+
+| Column | Type |
+|--------|------|
+| data_source_id | INTEGER |
+| data_source_category_id | INTEGER |
+| parent_id | INTEGER |
+| partner_id | INTEGER |
+| name | STRING |
+| description | STRING |
+| path | STRING |
+| names | STRING |
+| path_from_root | STRING |
+| is_leaf_node | BOOLEAN |
+| navigation_only | BOOLEAN |
+| advertiser_id | INTEGER |
+| deprecated | BOOLEAN |
+| public | BOOLEAN |
+| sort_order | INTEGER |
+| created_date | DATE |
+| updated_date | DATE |
+| mntn_id | INTEGER |
+| mntn_id_type | INTEGER |
+| path_from_root_types | STRING |
+| datastream_metadata | RECORD |
 
 ---
 

@@ -13,6 +13,7 @@ bronze.raw.*  (VIEWs)  ← View aliases to bronze.sqlmesh__raw
 silver.sqlmesh__logdata / summarydata / aggregates  ← Silver SQLMesh models (versioned)
 silver.logdata / summarydata / aggregates  (VIEWs)  ← Clean view aliases (query these!)
 silver.core  (VIEWs)   ← Direct views over bronze.integrationprod.core_* (no SQLMesh)
+silver.fpa   (VIEWs)   ← Direct views over bronze.integrationprod.fpa_* (no SQLMesh)
 ```
 
 ### SQLMesh Repo & Model Conventions
