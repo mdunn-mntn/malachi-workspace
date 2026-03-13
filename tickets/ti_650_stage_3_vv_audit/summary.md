@@ -228,6 +228,8 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 21. **92% is the IP-based resolution ceiling** for campaign_group_id-scoped S3 VVs. The 8% unresolved entered S3 via identity graph (not via MNTN impression). GUID bridge resolves ~85% of those, bringing total to ~99.6%.
 22. **Unresolved IPs are heavily served across the MNTN platform — just not for their own campaign group.** IP `216.126.34.185` (unresolved for cg 93957/adv 37775) had 1,200+ VAST events across 10+ other advertisers in 35 days of data. Dominated by retargeting campaigns. Confirms identity-graph-driven S3 entry, not prior impression.
 23. **CIDR fix (v17) has minimal impact on resolution rates.** event_log.ip has /32 CIDR suffix on all pre-2026 data, but CIL.ip (bare) in the S1 pool already covers the same impressions. Net gain: +45 VVs for adv 37775 S3 (+0.19pp), +5,113 for adv 31357 (+0.87pp). Fix is correct for data hygiene but does NOT explain the unresolved gap. The ~92% ceiling is structural, not a CIDR artifact.
+24. **3 cross-stage connecting tables, not just event_log.** The cross-stage IP link depends on impression type: CTV → `event_log.ip` (vast_start/vast_impression); viewable display → `viewability_log.ip`; non-viewable display → `impression_log.ip`. Prior analysis only checked event_log (CTV path). Display S1/S2 impressions would be invisible to event_log-only searches.
+25. **v18 exhaustive trace: IP `216.126.34.185` has zero S1/S2 impressions in cg 93957 across ALL 3 connecting tables, 2+ years, CIDR-safe.** Checked event_log, viewability_log, impression_log from Jan 2024 – Feb 2026. The IP had S1 prospecting CTV exposure in 3 different campaign groups (78893, 78903, 78904) for the same advertiser — all Feb 24, 2025. Genuinely unresolvable under campaign_group_id scoping. VV campaign (450300) is NOT retargeting (obj=1, funnel_level=3).
 
 ### MES Pipeline IP Map
 
@@ -261,7 +263,10 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 
 **Key linking architecture:**
 - Within-stage: `ad_served_id` (MNTN tables) + `ttd_impression_id = auction_id` (Beeswax tables)
-- Cross-stage: `S3.bid_ip = S1/S2.event_log.ip` (vast_impression or vast_start) within same `campaign_group_id`
+- Cross-stage (3 paths by impression type, within same `campaign_group_id`):
+  - CTV: `next_stage.bid_ip → event_log.ip` (vast_start / vast_impression)
+  - Viewable display: `next_stage.bid_ip → viewability_log.ip`
+  - Non-viewable display: `next_stage.bid_ip → impression_log.ip`
 
 ### Deployment
 - Update `ti_650_sqlmesh_model.sql` to v12 architecture (currently v10.1)
@@ -282,6 +287,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - ✅ campaign_group_id scoping validated (v14): drops S3 rate 97.36% → 91.98% for adv 37775, 5-13pp for 5/10 advertisers
 - ✅ **v15 forensic trace: IP 100% identical across ALL 8 source tables.** Adding bid_logs/win_logs/impression_log to S1 pool has zero impact. 92% is the IP ceiling. (2026-03-12)
 - ✅ **v17 CIDR fix: minimal impact (+0.19pp for adv 37775 S3, +45 VVs).** CIL bare IPs already compensated for broken event_log CIDR IPs. Fix is correct but not material. (2026-03-13)
+- ✅ **v18 exhaustive IP trace (2026-03-13):** All 3 cross-stage connecting tables (event_log, viewability_log, impression_log) checked for IP `216.126.34.185` within cg 93957, 2+ years lookback, CIDR-safe. Zero S1/S2 records. IP had S1 exposure in 3 other campaign groups for same advertiser. Genuinely identity-graph-only. Query: `queries/ti_650_v18_exhaustive_ip_trace.sql`.
 - ⏳ GUID bridge on v14 unresolved (1,761 → 1,716 after CIDR fix) — pending
 - ⏳ Update SQLMesh model to v14 architecture + campaign_group_id + GUID bridge
 
@@ -291,44 +297,26 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 
 ### Queries
 - `queries/ti_650_systematic_trace.sql` — **Production linkage query.** v12: 3 self-contained traces (S1/S2/S3), 2 cross-stage links (imp_direct + imp_visit). Adv 37775.
-- `queries/ti_650_resolution_rate_fast.sql` — Fast resolution rate test. Both vast IPs + imp_visit. Single advertiser, ~110s runtime.
-- `queries/ti_650_resolution_rate_v13.sql` — **v13: Full S3→S2→S1 chain.** Multi-advertiser, ~173s for 10 advs.
-- `queries/ti_650_s3_guid_bridge.sql` — GUID bridge for IP-unresolved S3 VVs via `guid_identity_daily`.
-- `queries/ti_650_retargeting_pool_test.sql` — Retargeting pool impact test. Prosp-only vs all-campaigns S1 pool. Single advertiser.
-- `queries/ti_650_unresolved_567_profile.sql` — **Profile 567 irreducible unresolved:** cross-device, CGNAT, GUID potential, attribution model.
-- `queries/ti_650_unresolved_567_guid_bridge.sql` — **GUID bridge on 567:** guid_identity_daily → linked IP → S1 match. 484/567 resolved.
-- `queries/ti_650_no_cil_profile.sql` — **No-CIL 1,074 characterization:** event_log presence, impression age, attribution.
 - `queries/ti_650_resolution_rate_v14.sql` — **v14: campaign_group_id scoped.** Multi-advertiser, ~212s for 10 advs.
+- `queries/ti_650_resolution_rate_v17.sql` — **v17: CIDR-corrected v14.** Minimal impact (+0.19pp for adv 37775 S3).
 - `queries/ti_650_v14_guid_bridge.sql` — **GUID bridge on v14 unresolved:** 1,761 VVs within campaign_group_id.
 - `queries/ti_650_v15_get_unresolved_ids.sql` — **v15 Step 1:** Extract 50 unresolved S3 ad_served_ids (v14 logic).
 - `queries/ti_650_v15_trace_lookup.sql` — **v15 Step 2:** Forensic trace through all 8 source tables via ad_served_id/auction_id.
-- `queries/ti_650_v15_ip_existence_check.sql` — **v15:** Check if unresolved IPs exist in S1 pool (any campaign_group, 180d window).
-- `queries/ti_650_v15_forensic_trace.sql` — **v15 combined:** Full trace (not used — split into step 1+2 for cost).
-- `queries/ti_650_resolution_rate_v17.sql` — **v17: CIDR-corrected v14.** SPLIT(el.ip, '/')[OFFSET(0)] on event_log.ip in s1_pool + s2_chain. Minimal impact (+0.19pp for adv 37775 S3).
-- `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id traced across all 5 source tables with IP + timestamp at each stage. Campaign context joined.
-- `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking. S3 bid_ip → S1/S2 vast events within same campaign_group_id. Confirms cross-stage provenance. (±10 day window fix applied 2026-03-13)
-- `queries/ti_650_365d_ip_lookup.sql` — **v16 Step 3:** 365-day IP lookup across ALL campaigns for unresolved VV bid_ip. Parameterized.
+- `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id within-stage trace across 5 source tables.
+- `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking (CTV path only — event_log vast events).
+- `queries/ti_650_365d_ip_lookup.sql` — **v16 Step 3:** 365-day IP lookup for unresolved VV bid_ip. Parameterized.
+- `queries/ti_650_v18_exhaustive_ip_trace.sql` — **v18: Exhaustive IP trace** across all 3 cross-stage tables (event_log, viewability_log, impression_log) for IP `216.126.34.185`, cg 93957 + full advertiser. CIDR-safe. For Zach.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v14 update).
 
 ### Outputs
-- `outputs/ti_650_s2_tier_analysis.md` — S2 independent tier analysis: minimum set = imp_direct + imp_visit
-- `outputs/ti_650_s3_tier_analysis.md` — S3 path analysis: direct vs chain, chain is redundant
-- `outputs/ti_650_s3_resolution_ceiling.md` — IP-only ceiling: 4 approaches tested and ruled out
-- `outputs/ti_650_s3_guid_bridge_results.json` — GUID bridge: 622/752 resolved, 130 truly unresolved
-- `outputs/ti_650_v13_resolution_rates.md` — **v13 results:** 10 advertisers, chain vs direct breakdown
-- `outputs/ti_650_retargeting_pool_impact.md` — **Retargeting pool test:** +110 net new, 567 irreducible floor
-- `outputs/ti_650_unresolved_567_profile.md` — **567 unresolved profile:** 95.1% IP never in S1, 100% GUID potential, 69.8% CGNAT
-- `outputs/ti_650_unresolved_567_guid_bridge.md` — **GUID bridge results:** 484/567 resolved (85.4%), 83 truly irreducible
-- `outputs/ti_650_no_cil_profile.md` — **No-CIL 1,074 profile:** CIL TTL disproven, all impressions < 30d old
 - `outputs/ti_650_resolution_waterfall.md` — **Full resolution waterfall for Zach presentation**
 - `outputs/ti_650_v14_campaign_group_resolution.md` — **v14 results:** campaign_group_id scoped, 10 advertisers
 - `outputs/ti_650_v14_resolution_waterfall.md` — **v14 waterfall:** campaign_group_id scoped
-- `outputs/ti_650_v15_unresolved_ids.json` — **v15:** 50 unresolved S3 ad_served_ids with IPs
-- `outputs/ti_650_v15_forensic_trace.json` — **v15:** Full forensic trace (50 VVs × 8 tables)
 - `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis, root cause diagnosis
 - `outputs/ti_650_v16_cross_stage_trace.md` — **v16 Step 2 results:** Cross-stage IP link confirmed (S3→S1, 0.9d gap, same campaign_group_id)
 - `outputs/ti_650_v16_365d_ip_lookup.md` — **v16 Step 3 results:** Unresolved VV IP has 1,200+ events across 10+ advertisers but zero for its own campaign group
-- `outputs/ti_650_v17_cidr_impact.md` — **v17 results:** CIDR fix comparison vs v14. Minimal impact — CIL bare IPs already covered pre-2026 impressions.
+- `outputs/ti_650_v17_cidr_impact.md` — **v17 results:** CIDR fix comparison vs v14. Minimal impact.
+- `outputs/ti_650_v18_exhaustive_ip_trace.md` — **v18 results:** 3-table exhaustive trace, 2yr lookback, identity-graph confirmation. For Zach.
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
@@ -348,8 +336,8 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `meetings/ti_650_meeting_dustin.txt` — Deployment strategy with Dustin
 
 ### Archived
-- `queries/_archive/` — 13 superseded queries (v10/v11, one-time diagnostics)
-- `outputs/_archive/` — 16 superseded outputs (v8-v11 validations, intermediate results)
+- `queries/_archive/` — 26 superseded queries (v10-v15 one-time diagnostics, superseded resolution rates)
+- `outputs/_archive/` — 29 superseded outputs (v8-v13 validations, intermediate results, one-time profiles)
 
 ---
 

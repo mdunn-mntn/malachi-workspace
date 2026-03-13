@@ -30,6 +30,27 @@ And we want every ip along the way for each step.
 
 Zach and Ray said this, so please dont forget it, even if we need to create an artifact for it:
 
+zach.schoenberger  [2:26 PM]
+CTV: clickpass.ip -> event_log.ip -> win_log.ip -> impression_log.ip -> bid_log.ip
+Viewable Display: clickpass.ip -> viewability_log.ip ->  impression_log.ip -> win_log.ip -> bid_log.ip
+Non-Viewable Display: clickpass.ip ->  impression_log.ip -> win_log.ip -> bid_log.ip
+[2:26 PM]for display, impression comes after the win. for ctv, it comes before
+malachi  [2:27 PM]
+ok bingo thats all i need.
+
+So with CTV: bid_log.ip -> event_log.ip 100% of the time
+
+For display its EITHER: bid_log.ip -> viewability_log.ip OR impression_log.ip and how you trace back determines if its viewable or not. I got it. THis is perfect.
+zach.schoenberger  [2:27 PM]
+or to simplify it:
+CTV: clickpass.ip -> event_log.ip -> win_log.ip -> impression_log.ip -> bid_log.ip
+Viewable Display: clickpass.ip -> viewability_log.ip -> win_log.ip -> bid_log.ip
+Non-Viewable Display: clickpass.ip ->  impression_log.ip -> win_log.ip -> bid_log.ip
+malachi  [2:28 PM]
+So you don't need to go from viewability_log.ip -> impression_log.ip -> win_log for viewable, you can skip that one part of the chain
+zach.schoenberger  [2:29 PM]
+since you have the auction id and ad-served-id, you can use those to go straight to win_log
+
 campaign_group_id should link all the campaign_ids that should be linked together, i.e. part of the same campaign. On the back-end, we separate into campaign_id, but that's for us. When we do the cross-stage linking, we need to check within the campaign_group_id instead of looking back to any campaign_id for that advertiser.
 
 Does that make sense? We have to form the trace within the same campaign_group_id across stages. You shouldn't have to join on advertiser since I think campaign_group_id is unique across all advertisers.
