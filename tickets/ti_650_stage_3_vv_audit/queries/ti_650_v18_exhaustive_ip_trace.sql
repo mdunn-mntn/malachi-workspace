@@ -52,7 +52,7 @@ FROM `dw-main-silver.logdata.event_log` ev
 JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_id = ev.campaign_id
   AND c.campaign_group_id = 93957
-WHERE (SPLIT(ev.ip, '/')[OFFSET(0)] = '216.126.34.185' OR ev.bid_ip = '216.126.34.185')
+WHERE (SPLIT(ev.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(ev.bid_ip, '/')[OFFSET(0)] = '216.126.34.185')
   AND DATE(ev.time) BETWEEN '2024-01-01' AND '2026-02-04'
 ORDER BY ev.time;
 
@@ -74,7 +74,7 @@ FROM `dw-main-silver.logdata.viewability_log` vl
 JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_id = vl.campaign_id
   AND c.campaign_group_id = 93957
-WHERE (SPLIT(vl.ip, '/')[OFFSET(0)] = '216.126.34.185' OR vl.bid_ip = '216.126.34.185')
+WHERE (SPLIT(vl.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(vl.bid_ip, '/')[OFFSET(0)] = '216.126.34.185')
   AND DATE(vl.time) BETWEEN '2024-01-01' AND '2026-02-04'
 ORDER BY vl.time;
 
@@ -96,7 +96,7 @@ FROM `dw-main-silver.logdata.impression_log` il
 JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_id = il.campaign_id
   AND c.campaign_group_id = 93957
-WHERE (SPLIT(il.ip, '/')[OFFSET(0)] = '216.126.34.185' OR il.bid_ip = '216.126.34.185')
+WHERE (SPLIT(il.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(il.bid_ip, '/')[OFFSET(0)] = '216.126.34.185')
   AND DATE(il.time) BETWEEN '2024-01-01' AND '2026-02-04'
 ORDER BY il.time;
 
@@ -118,7 +118,7 @@ FROM `dw-main-silver.logdata.event_log` ev
 JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_id = ev.campaign_id
   AND c.advertiser_id = 37775
-WHERE (SPLIT(ev.ip, '/')[OFFSET(0)] = '216.126.34.185' OR ev.bid_ip = '216.126.34.185')
+WHERE (SPLIT(ev.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(ev.bid_ip, '/')[OFFSET(0)] = '216.126.34.185')
   AND DATE(ev.time) BETWEEN '2024-01-01' AND '2026-02-04'
 ORDER BY ev.time
 LIMIT 100;
