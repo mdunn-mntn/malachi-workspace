@@ -3,6 +3,10 @@
 --   bid → win → impression → VAST start → VAST impression → clickpass (VV)
 -- Plus campaign dimensions (campaign_group_id, funnel_level, objective_id).
 --
+-- CIDR handling (v17): event_log.ip has /32 or /128 suffix on data before 2026-01-01.
+-- All event_log.ip references use SPLIT(ip, '/')[OFFSET(0)] to strip the CIDR notation.
+-- bid_ip, CIL.ip, impression_log.ip are NOT affected (always bare IPs).
+--
 -- Usage: Replace the ad_served_id and date ranges below.
 --   - serve/event_log/win/bid dates: the impression date (narrow, 1-2 days)
 --   - clickpass date: impression date + up to 30 days (VV attribution window)
@@ -36,14 +40,14 @@ SELECT
   w.time                             AS win_timestamp,
   s.impression_ip,
   s.impression_timestamp,
-  ev_imp.ip                          AS event_impression_ip,
+  SPLIT(ev_imp.ip, '/')[OFFSET(0)]   AS event_impression_ip,
   ev_imp.time                        AS event_impression_timestamp,
-  ev_start.ip                        AS event_start_ip,
+  SPLIT(ev_start.ip, '/')[OFFSET(0)] AS event_start_ip,
   ev_start.time                      AS event_start_timestamp,
   cl.ip                              AS clickpass_ip,
   cl.time                            AS clickpass_timestamp,
   cl.impression_time                 AS clickpass_impression_time,
-  (ev_imp.ip != cl.ip)              AS ip_mutated
+  (SPLIT(ev_imp.ip, '/')[OFFSET(0)] != cl.ip) AS ip_mutated
 FROM serve s
 LEFT JOIN `dw-main-silver.logdata.clickpass_log` cl
   ON cl.ad_served_id = s.ad_served_id
