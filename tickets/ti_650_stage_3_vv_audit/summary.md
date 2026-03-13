@@ -246,6 +246,16 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 
 ## 5. What Needs to Be Done
 
+### v16: Step-by-step IP funnel trace (2026-03-12)
+
+Building a clean, reproducible single-VV trace that walks through the entire IP funnel:
+- **Step 1 (DONE):** Within-stage trace. Single ad_served_id traced across all 5 source tables (bid_logs → win_logs → impression_log → event_log → clickpass_log) with IP and timestamp at each stage. Campaign context (campaign_group_id, campaign_id, objective_id, funnel_level) joined from `bronze.integrationprod.campaigns`. Query: `queries/ti_650_ip_funnel_trace.sql`.
+- **Step 2 (NEXT):** Cross-stage linking. Take the S3 VV's `bid_ip` and find a matching `vast_impression` or `vast_start` IP in `event_log` from a funnel_level 1 or 2 campaign within the same `campaign_group_id`. This is the cross-stage provenance link.
+
+**Key linking architecture:**
+- Within-stage: `ad_served_id` (MNTN tables) + `ttd_impression_id = auction_id` (Beeswax tables)
+- Cross-stage: `S3.bid_ip = S1/S2.event_log.ip` (vast_impression or vast_start) within same `campaign_group_id`
+
 ### Deployment
 - Update `ti_650_sqlmesh_model.sql` to v12 architecture (currently v10.1)
 - Confirm dataset name with Dustin — `mes.vv_ip_lineage` or `logdata.vv_ip_lineage`
@@ -286,6 +296,7 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 - `queries/ti_650_v15_trace_lookup.sql` — **v15 Step 2:** Forensic trace through all 8 source tables via ad_served_id/auction_id.
 - `queries/ti_650_v15_ip_existence_check.sql` — **v15:** Check if unresolved IPs exist in S1 pool (any campaign_group, 180d window).
 - `queries/ti_650_v15_forensic_trace.sql` — **v15 combined:** Full trace (not used — split into step 1+2 for cost).
+- `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id traced across all 5 source tables with IP + timestamp at each stage. Campaign context joined.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v14 update).
 
 ### Outputs
