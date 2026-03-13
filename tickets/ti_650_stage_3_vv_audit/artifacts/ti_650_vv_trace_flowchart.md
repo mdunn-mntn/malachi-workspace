@@ -25,14 +25,14 @@ flowchart TD
     S1_DISP_VIEW -->|Yes| S1_DV
     S1_DISP_VIEW -->|No| S1_DNV
 
-    subgraph S1_DV_PATH ["S1 — Display Viewable"]
+    subgraph S1_DV_PATH ["S1 — Viewable"]
         S1_DV[clickpass.ip] --> S1_DV_2[viewability_log.ip]
         S1_DV_2 --> S1_DV_2b[impression_log.ip]
         S1_DV_2b --> S1_DV_3[win_log.ip]
         S1_DV_3 --> S1_DV_4[bid_log.ip]
     end
 
-    subgraph S1_DNV_PATH ["S1 — Display Non-Viewable"]
+    subgraph S1_DNV_PATH ["S1 — Non-Viewable"]
         S1_DNV[clickpass.ip] --> S1_DNV_2[impression_log.ip]
         S1_DNV_2 --> S1_DNV_3[win_log.ip]
         S1_DNV_3 --> S1_DNV_4[bid_log.ip]
@@ -59,14 +59,14 @@ flowchart TD
     S2_DISP_VIEW -->|Yes| S2_DV
     S2_DISP_VIEW -->|No| S2_DNV
 
-    subgraph S2_DV_PATH ["S2 — Display Viewable"]
+    subgraph S2_DV_PATH ["S2 — Viewable"]
         S2_DV[clickpass.ip] --> S2_DV_2[viewability_log.ip]
         S2_DV_2 --> S2_DV_2b[impression_log.ip]
         S2_DV_2b --> S2_DV_3[win_log.ip]
         S2_DV_3 --> S2_DV_4[bid_log.ip]
     end
 
-    subgraph S2_DNV_PATH ["S2 — Display Non-Viewable"]
+    subgraph S2_DNV_PATH ["S2 — Non-Viewable"]
         S2_DNV[clickpass.ip] --> S2_DNV_2[impression_log.ip]
         S2_DNV_2 --> S2_DNV_3[win_log.ip]
         S2_DNV_3 --> S2_DNV_4[bid_log.ip]
@@ -103,14 +103,14 @@ flowchart TD
     S3_DISP_VIEW -->|Yes| S3_DV
     S3_DISP_VIEW -->|No| S3_DNV
 
-    subgraph S3_DV_PATH ["S3 — Display Viewable"]
+    subgraph S3_DV_PATH ["S3 — Viewable"]
         S3_DV[clickpass.ip] --> S3_DV_2[viewability_log.ip]
         S3_DV_2 --> S3_DV_2b[impression_log.ip]
         S3_DV_2b --> S3_DV_3[win_log.ip]
         S3_DV_3 --> S3_DV_4[bid_log.ip]
     end
 
-    subgraph S3_DNV_PATH ["S3 — Display Non-Viewable"]
+    subgraph S3_DNV_PATH ["S3 — Non-Viewable"]
         S3_DNV[clickpass.ip] --> S3_DNV_2[impression_log.ip]
         S3_DNV_2 --> S3_DNV_3[win_log.ip]
         S3_DNV_3 --> S3_DNV_4[bid_log.ip]
@@ -126,7 +126,7 @@ flowchart TD
     S3_PREV -->|Display| S3P_DISP_TYPE
 
     %% --- S3 Previous: CTV path ---
-    subgraph S3_PREV_CTV ["S3 → Prev: CTV"]
+    subgraph S3_PREV_CTV ["S3 Prev — CTV"]
         S3P_CTV_2["event_log.ip (vast_start)"] --> S3P_CTV_2b["event_log.ip (vast_impression)"]
         S3P_CTV_2b --> S3P_CTV_3[win_log.ip]
         S3P_CTV_3 --> S3P_CTV_4[impression_log.ip]
@@ -139,13 +139,13 @@ flowchart TD
     S3P_DISP_TYPE -->|Yes| S3P_DV_2
     S3P_DISP_TYPE -->|No| S3P_DNV_2
 
-    subgraph S3P_DV_PATH ["S3 → Prev: Display Viewable"]
+    subgraph S3P_DV_PATH ["S3 Prev — Viewable"]
         S3P_DV_2[viewability_log.ip] --> S3P_DV_2b[impression_log.ip]
         S3P_DV_2b --> S3P_DV_3[win_log.ip]
         S3P_DV_3 --> S3P_DV_4[bid_log.ip]
     end
 
-    subgraph S3P_DNV_PATH ["S3 → Prev: Display Non-Viewable"]
+    subgraph S3P_DNV_PATH ["S3 Prev — Non-Viewable"]
         S3P_DNV_2[impression_log.ip] --> S3P_DNV_3[win_log.ip]
         S3P_DNV_3 --> S3P_DNV_4[bid_log.ip]
     end
