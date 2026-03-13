@@ -68,12 +68,25 @@ All 3 cross-stage connecting tables checked. CIDR-safe (SPLIT on `/`). Lookback:
 
 When searching event_log across **all campaigns** for advertiser 37775 (no campaign_group filter):
 
+**event_log (CTV VAST events):**
+
 | Campaign | campaign_group_id | funnel_level | channel | Events Found | Date Range |
 |---|---|---|---|---|---|
 | 311968 | **78903** | **1 (S1)** | CTV | ~6 events | Feb 24, 2025 |
 | 311966 | **78903** | 3 (S3) | CTV | ~40+ events | Mar 31 – Apr 3, 2025 |
 
-**Key finding:** The IP received S1 prospecting CTV ads in campaign_group **78903** (Feb 2025) — 11 months before the VV in campaign_group **93957** (Jan 2026). The IP was a real MNTN viewer, just for a different campaign group.
+**impression_log (serve records):**
+
+| Campaign | campaign_group_id | funnel_level | channel | Date Range |
+|---|---|---|---|---|
+| 311900 | **78893** | **1 (S1)** | CTV | Feb 24, 2025 |
+| 311968 | **78903** | **1 (S1)** | CTV | Feb 24, 2025 |
+| 311974 | **78904** | **1 (S1)** | CTV | Feb 24, 2025 |
+| 311966 | **78903** | 3 (S3) | CTV | Mar 31+, 2025 |
+
+**viewability_log:** 0 records across all advertiser 37775 campaigns.
+
+**Key finding:** The IP received S1 prospecting CTV ads across **3 different campaign groups** (78893, 78903, 78904) for the same advertiser — all on the same day (Feb 24, 2025), 11 months before the VV in campaign_group **93957** (Jan 2026). The IP was a real, heavily-served MNTN viewer. But it was never served a single impression in campaign_group 93957 prior to the S3 VV.
 
 ## Conclusion
 
