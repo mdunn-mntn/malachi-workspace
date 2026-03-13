@@ -580,7 +580,7 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 ## silver.logdata.viewability_log
 - **Type:** VIEW → `sqlmesh__logdata.logdata__viewability_log__702576036` (VIEW → upstream)
-- **Use for:** Impression viewability measurement events
+- **Use for:** Display impression viewability events. **Display equivalent of event_log** — use for tracing viewable display VVs back to their impression. For non-viewable display VVs, use impression_log instead. CTV does not use this table (CTV uses event_log with vast_start/vast_impression).
 
 | Column | Type | Notes |
 |--------|------|-------|

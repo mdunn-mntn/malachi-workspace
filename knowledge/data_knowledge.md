@@ -638,6 +638,10 @@ Additional validations:
 - win_logs.impression_ip_address: infrastructure/CDN IP (68.67.x.x MNTN infra, AWS IPs), NOT user IP
 - **win_logs Beeswax→MNTN ID mapping (validated 2026-03-13):** `campaign_alt_id` = MNTN campaign_group_id; `line_item_alt_id` (STRING→INT64) = MNTN campaign_id; `creative_alt_id` = MNTN creative_id (unverified). Join: `CAST(w.line_item_alt_id AS INT64) = c.campaign_id`. Also join to event_log via `win_logs.auction_id = event_log.td_impression_id`.
 - **CTV vs display identification:** At campaign level: `campaigns.channel_id = 8` = Television/CTV, `= 1` = Multi-Touch/display. At impression level: `win_logs.placement_type` (`VIDEO`/`BANNER`), `cost_impression_log.partner_ad_format` (`VIDEO`/`BANNER`). A single campaign_group can contain both CTV and display campaigns.
+- **Impression trace paths by type (2026-03-13):**
+  - CTV: clickpass_log → event_log (vast_start/vast_impression) → win_logs → impression_log → bid_logs. CTV always has viewable impressions (no non-viewable VVs).
+  - Display (viewable VV): clickpass_log → viewability_log → win_logs → impression_log → bid_logs. **viewability_log is the display equivalent of event_log.**
+  - Display (non-viewable VV): clickpass_log → impression_log → win_logs → bid_logs. Many display VVs are non-viewable — must check both viewability_log and impression_log.
 - **channels reference table:** `bronze.integrationprod.channels` — 10 rows. 1=Multi-Touch, 2=Email, 3=In-App, 4=Mobile Web, 5=Platform Fee, 6=Real Time Offers, 7=Social, 8=Television, 9=Ad Serving, 10=Onsite Offers.
 - **v15 forensic trace (2026-03-12, 50 VVs):** IP is 100% identical across ALL 8 source tables (event_log, impression_log, CIL, bid_logs, win_logs, clickpass_log, ui_visits). serve_ip = bid_ip at 100%. Adding any source table to S1 pool has zero impact on resolution. The 8% unresolved S3 VVs entered via identity graph, not via MNTN impression.
 - **bid_events_log is nearly empty** — only advertiser 32167 has data. Not useful for general IP lookups. Use bid_logs (Beeswax-native) instead.
