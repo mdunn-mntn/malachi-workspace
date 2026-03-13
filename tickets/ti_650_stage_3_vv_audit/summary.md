@@ -226,6 +226,7 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 19. **v15 forensic trace: IP 100% identical across ALL source tables (50 unresolved VVs).** event_log.bid_ip = CIL.ip = impression_log.bid_ip = bid_logs.ip = win_logs.ip at 100%. serve_ip = bid_ip at 100%. No hidden IP variation to discover. Adding source tables to S1 pool has zero impact.
 20. **bid_events_log only has data for advertiser 32167.** Table is a UNION of bidder_bid_events + bid_price_log from a specific bidding pipeline. Not useful for general advertiser analysis.
 21. **92% is the IP-based resolution ceiling** for campaign_group_id-scoped S3 VVs. The 8% unresolved entered S3 via identity graph (not via MNTN impression). GUID bridge resolves ~85% of those, bringing total to ~99.6%.
+22. **Unresolved IPs are heavily served across the MNTN platform — just not for their own campaign group.** IP `216.126.34.185` (unresolved for cg 93957/adv 37775) had 1,200+ VAST events across 10+ other advertisers in 35 days of data. Dominated by retargeting campaigns. Confirms identity-graph-driven S3 entry, not prior impression.
 
 ### MES Pipeline IP Map
 
@@ -252,6 +253,10 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - **Step 1 (DONE):** Within-stage trace. Single ad_served_id traced across all 5 source tables (bid_logs → win_logs → impression_log → event_log → clickpass_log) with IP and timestamp at each stage. Campaign context (campaign_group_id, campaign_id, objective_id, funnel_level) joined from `bronze.integrationprod.campaigns`. Query: `queries/ti_650_ip_funnel_trace.sql`.
 - **Step 2 (DONE):** Cross-stage linking. Takes the S3 VV's `bid_ip` and finds matching `vast_impression`/`vast_start` IP in `event_log` from funnel_level 1 or 2 within the same `campaign_group_id`. Query: `queries/ti_650_ip_funnel_trace_cross_stage.sql`. Results: `outputs/ti_650_v16_cross_stage_trace.md`.
   - **Result:** S3 bid_ip `172.59.153.228` matched S1 vast_start/vast_impression from "Beeswax Television Prospecting" (funnel_level=1), same campaign_group_id=113222, 0.9 days prior to S3 bid. Cross-stage IP provenance confirmed.
+- **Step 3 (DONE):** 365-day IP lookup for unresolved VV. Searched IP `216.126.34.185` (unresolved VV `80207c6e`) across ALL campaigns in event_log for 365 days prior.
+  - **Result:** IP appeared in **hundreds of VAST events across 10+ different advertisers** (120 events for adv 31276, 109 for 31357, 54 for 38710, etc.) but **ZERO events for campaign_group_id 93957** (the VV's own group). Confirms this IP entered S3 via identity graph, not via any prior MNTN impression within its own campaign group.
+  - **Cross-stage query fix:** Widened serve CTE date window from ±1 day to ±10 days (impression→VV gap can be up to 8.9 days per v15).
+  - Query: `queries/ti_650_365d_ip_lookup.sql`. Results: `outputs/ti_650_v16_365d_ip_lookup.md`.
 
 **Key linking architecture:**
 - Within-stage: `ad_served_id` (MNTN tables) + `ttd_impression_id = auction_id` (Beeswax tables)
@@ -298,7 +303,8 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `queries/ti_650_v15_ip_existence_check.sql` — **v15:** Check if unresolved IPs exist in S1 pool (any campaign_group, 180d window).
 - `queries/ti_650_v15_forensic_trace.sql` — **v15 combined:** Full trace (not used — split into step 1+2 for cost).
 - `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id traced across all 5 source tables with IP + timestamp at each stage. Campaign context joined.
-- `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking. S3 bid_ip → S1/S2 vast events within same campaign_group_id. Confirms cross-stage provenance.
+- `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking. S3 bid_ip → S1/S2 vast events within same campaign_group_id. Confirms cross-stage provenance. (±10 day window fix applied 2026-03-13)
+- `queries/ti_650_365d_ip_lookup.sql` — **v16 Step 3:** 365-day IP lookup across ALL campaigns for unresolved VV bid_ip. Parameterized.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v14 update).
 
 ### Outputs
@@ -318,6 +324,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_v15_forensic_trace.json` — **v15:** Full forensic trace (50 VVs × 8 tables)
 - `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis, root cause diagnosis
 - `outputs/ti_650_v16_cross_stage_trace.md` — **v16 Step 2 results:** Cross-stage IP link confirmed (S3→S1, 0.9d gap, same campaign_group_id)
+- `outputs/ti_650_v16_365d_ip_lookup.md` — **v16 Step 3 results:** Unresolved VV IP has 1,200+ events across 10+ advertisers but zero for its own campaign group
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference

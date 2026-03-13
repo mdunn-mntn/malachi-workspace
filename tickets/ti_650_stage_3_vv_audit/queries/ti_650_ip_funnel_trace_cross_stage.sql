@@ -33,7 +33,7 @@ WITH params AS (
 serve AS (
   SELECT il.ad_served_id, il.ttd_impression_id, il.ip AS impression_ip, il.time AS impression_timestamp
   FROM `dw-main-silver.logdata.impression_log` il, params p
-  WHERE DATE(il.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
+  WHERE DATE(il.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 10 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
     AND il.ad_served_id = p.target_ad_served_id
   LIMIT 1
 ),
@@ -64,24 +64,24 @@ s3_trace AS (
   CROSS JOIN params p
   LEFT JOIN `dw-main-silver.logdata.clickpass_log` cl
     ON cl.ad_served_id = s.ad_served_id
-    AND DATE(cl.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
+    AND DATE(cl.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 10 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-bronze.integrationprod.campaigns` camp
     ON camp.campaign_id = CAST(cl.campaign_id AS INT64)
     AND camp.deleted = FALSE
   LEFT JOIN `dw-main-silver.logdata.event_log` ev_start
     ON ev_start.ad_served_id = s.ad_served_id
     AND ev_start.event_type_raw = "vast_start"
-    AND DATE(ev_start.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
+    AND DATE(ev_start.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 10 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-silver.logdata.event_log` ev_imp
     ON ev_imp.ad_served_id = s.ad_served_id
     AND ev_imp.event_type_raw = "vast_impression"
-    AND DATE(ev_imp.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
+    AND DATE(ev_imp.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 10 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-silver.logdata.win_logs` w
     ON w.auction_id = s.ttd_impression_id
-    AND DATE(w.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
+    AND DATE(w.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 10 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-silver.logdata.bid_logs` b
     ON b.auction_id = s.ttd_impression_id
-    AND DATE(b.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
+    AND DATE(b.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 10 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
 ),
 
 -- ═══════════════════════════════════════════════════════════════
