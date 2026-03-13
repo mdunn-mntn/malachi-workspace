@@ -560,12 +560,12 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 | operating_system | STRING | |
 | browser | STRING | |
 | user_agent | STRING | |
-| device_type | STRING | |
-| sh_device | STRING | |
-| ott_device | STRING | |
-| publisher_type_id | INTEGER | |
+| device_type | STRING | Beeswax device type: SET_TOP_BOX, CONNECTED_TV, MOBILE, PC, TABLET, GAMES_CONSOLE |
+| sh_device | STRING | MNTN device classification (often NULL for Beeswax impressions) |
+| ott_device | STRING | `bw_batch` (Beeswax batch) or `mb_rt` (real-time) |
+| publisher_type_id | INTEGER | 1=CTV/OTT, 2=premium, 3=web/display |
 | unlinked | BOOLEAN | Impression not linked to a guid |
-| partner_ad_format | STRING | |
+| partner_ad_format | STRING | **CTV vs display indicator:** `VIDEO`=CTV, `BANNER`=display, `BANNER_AND_VIDEO`=mixed |
 | partner_site | STRING | |
 | is_new | BOOLEAN | |
 | geo_version | INTEGER | |
@@ -615,11 +615,23 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__win_logs__1170758268` (VIEW → Beeswax win_logs)
 - **Use for:** Beeswax win notification log (external DSP perspective on wins)
 - **Note:** Very wide table (130+ columns). Beeswax-native schema. Use `spend_log` for MNTN-native billing.
-- **CRITICAL: Uses Beeswax IDs, not MNTN IDs (2026-03-10).** `advertiser_id` and `campaign_id` in win_logs are Beeswax-internal IDs, NOT MNTN integrationprod IDs. No direct mapping table found. Join to event_log via `win_logs.auction_id = event_log.td_impression_id`.
+- **CRITICAL: Uses Beeswax IDs, not MNTN IDs.** `advertiser_id`, `campaign_id`, `line_item_id`, `creative_id` are Beeswax-internal IDs. However, `_alt_id` columns map back to MNTN:
+  - `campaign_alt_id` (INT64) = MNTN `campaign_group_id`
+  - `line_item_alt_id` (STRING, cast to INT64) = MNTN `campaign_id`
+  - `creative_alt_id` (STRING) = MNTN `creative_id` (from integrationprod.creatives? — unverified)
+  - `creative_name` (STRING) = also contains MNTN `campaign_id` (as string) — appears redundant with line_item_alt_id
+  - Join to MNTN campaigns: `CAST(w.line_item_alt_id AS INT64) = c.campaign_id`
+  - Join to event_log: `win_logs.auction_id = event_log.td_impression_id`
+- **Impression type indicators (validated 2026-03-13):**
+  - `placement_type`: `VIDEO` = CTV, `BANNER` = display
+  - `environment_type`: `APP` = CTV, `WEB` = display
+  - `platform_device_type`: `SET_TOP_BOX`/`CONNECTED_TV` = CTV, `PC`/`MOBILE`/`TABLET` = display
+  - `banner_width`/`banner_height`: `-1` = CTV (no banner), actual sizes (300x250, 728x90, etc.) = display
 - **IP columns (validated 2026-03-10, 38.2M rows):** `ip` = bid/win IP (= event_log.bid_ip at 99.9999%). `impression_ip_address` = infrastructure/CDN IP (68.67.x.x MNTN infra, AWS IPs) — NOT user IP. 8 IP-related columns total: ip, ip_raw, ip_range, ipv6_address, ip_address_hashed, ipv6_address_hashed, clicks_ip_address, impression_ip_address.
-- **Key columns:** account_id, campaign_id, advertiser_id, creative_id, auction_id, time, epoch,
+- **Key columns:** account_id, campaign_id, campaign_alt_id, advertiser_id, creative_id, creative_alt_id,
+  line_item_id, line_item_alt_id, auction_id, time, epoch,
   win_cost_micros_usd, bid_price_micros_usd, clearing_price_micros_usd, placement_type,
-  environment_type, inventory_source, is_test, flight_id
+  environment_type, platform_device_type, inventory_source, is_test, flight_id
 
 ---
 
@@ -1481,7 +1493,8 @@ the `core_*` tables here.
 | is_test | BOOLEAN | |
 | campaign_status_id | INTEGER | Join → core_campaign_statuses |
 | objective_id | INTEGER | Join → core_objectives |
-| channel_id | INTEGER | Join → channels |
+| channel_id | INTEGER | FK → channels. **Authoritative for CTV vs display.** 8=Television(CTV), 1=Multi-Touch(display). See channels table. |
+| funnel_level | INTEGER | Stage indicator (1=S1 Prospecting, 2=S2 Multi-Touch, 3=S3 MT Plus, 4=Ego). **More reliable than objective_id.** |
 | partner_id | INTEGER | Join → core_partners |
 | start_time / end_time | TIMESTAMP | |
 | create_time / update_time | TIMESTAMP | |
@@ -1520,6 +1533,45 @@ the `core_*` tables here.
 | has_audience | BOOLEAN | |
 | testing_type | STRING | A/B testing type |
 | parent_campaign_group_id | INTEGER | For nested campaign groups |
+
+---
+
+## bronze.integrationprod.channels
+- **Type:** TABLE (Postgres replica)
+- **Primary key:** channel_id
+- **Use for:** Reference table for campaign channel types. Join to `campaigns.channel_id`.
+- **Row count:** 10
+
+| channel_id | name |
+|---|---|
+| 1 | Multi-Touch (display/web) |
+| 2 | Email |
+| 3 | In-App |
+| 4 | Mobile Web |
+| 5 | Platform Fee |
+| 6 | Real Time Offers |
+| 7 | Social |
+| 8 | Television (CTV) |
+| 9 | Ad Serving |
+| 10 | Onsite Offers |
+
+---
+
+## bronze.integrationprod.creative_sizes
+- **Type:** TABLE (Postgres replica) — exposed as silver.core.creative_sizes
+- **Primary key:** creative_size_id
+- **Use for:** Reference table for creative dimensions and type flags.
+- **Key columns:**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| creative_size_id | INTEGER | PK. Join to creatives.creative_size_id |
+| width / height | INTEGER | Pixel dimensions |
+| description | STRING | Human-readable name (e.g. "HD Video", "Medium Rectangle") |
+| video | BOOLEAN | TRUE for video creatives |
+| ctv | BOOLEAN | TRUE for CTV-eligible sizes (only creative_size_id 39=Vertical HD 1080x1920, 93=HD Video 1920x1080) |
+| web | BOOLEAN | TRUE for web display sizes |
+| mobile | BOOLEAN | TRUE for mobile display sizes |
 
 ---
 
