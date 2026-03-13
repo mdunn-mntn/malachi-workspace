@@ -72,7 +72,7 @@ flowchart TD
         S2_DNV_3 --> S2_DNV_4[bid_log.ip]
     end
 
-    S2_CTV_5 --> S2_PREV[/"Now trace Stage 1: previous impression<br/>MUST be CTV (S2 requires a VAST event)"/]
+    S2_CTV_5 --> S2_PREV[/"Now trace Stage 1: next impression<br/>MUST be CTV (S2 requires a VAST event)"/]
     S2_DV_4 --> S2_PREV
     S2_DNV_4 --> S2_PREV
 
