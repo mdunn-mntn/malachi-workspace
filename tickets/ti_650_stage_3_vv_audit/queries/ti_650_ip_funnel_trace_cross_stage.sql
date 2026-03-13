@@ -14,17 +14,27 @@
 --
 --   Step 2 (cross-stage):
 --     S3.bid_ip → S1/S2.event_log.ip (vast events)
---     Scoped by campaign_group_id, before S3 bid timestamp, 30-day lookback
---     (mean impression→VV gap = 1.8 days; increase to 90 for production)
+--     Scoped by campaign_group_id, before S3 bid timestamp
+--
+-- USAGE: Change the two values in the params CTE below. Everything else derives from them.
+
+-- ═══════════════════════════════════════════════════════════════
+-- Parameters — change these to trace a different VV
+-- ═══════════════════════════════════════════════════════════════
+WITH params AS (
+  SELECT
+    "80207c6e-1fb9-427b-b019-29e15fb3323c" AS target_ad_served_id,
+    DATE("2026-02-04")                      AS vv_date
+),
 
 -- ═══════════════════════════════════════════════════════════════
 -- Step 1: Within-stage S3 VV trace
 -- ═══════════════════════════════════════════════════════════════
-WITH serve AS (
-  SELECT ad_served_id, ttd_impression_id, ip AS impression_ip, time AS impression_timestamp
-  FROM `dw-main-silver.logdata.impression_log`
-  WHERE DATE(time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
-    AND ad_served_id = "13cc841f-7dd4-4e88-a649-ea37c4b6ab93"
+serve AS (
+  SELECT il.ad_served_id, il.ttd_impression_id, il.ip AS impression_ip, il.time AS impression_timestamp
+  FROM `dw-main-silver.logdata.impression_log` il, params p
+  WHERE DATE(il.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
+    AND il.ad_served_id = p.target_ad_served_id
   LIMIT 1
 ),
 
@@ -51,26 +61,27 @@ s3_trace AS (
     cl.ip                              AS clickpass_ip,
     cl.time                            AS clickpass_timestamp
   FROM serve s
+  CROSS JOIN params p
   LEFT JOIN `dw-main-silver.logdata.clickpass_log` cl
     ON cl.ad_served_id = s.ad_served_id
-    AND DATE(cl.time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
+    AND DATE(cl.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-bronze.integrationprod.campaigns` camp
     ON camp.campaign_id = CAST(cl.campaign_id AS INT64)
     AND camp.deleted = FALSE
   LEFT JOIN `dw-main-silver.logdata.event_log` ev_start
     ON ev_start.ad_served_id = s.ad_served_id
     AND ev_start.event_type_raw = "vast_start"
-    AND DATE(ev_start.time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
+    AND DATE(ev_start.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-silver.logdata.event_log` ev_imp
     ON ev_imp.ad_served_id = s.ad_served_id
     AND ev_imp.event_type_raw = "vast_impression"
-    AND DATE(ev_imp.time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
+    AND DATE(ev_imp.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-silver.logdata.win_logs` w
     ON w.auction_id = s.ttd_impression_id
-    AND DATE(w.time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
+    AND DATE(w.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
   LEFT JOIN `dw-main-silver.logdata.bid_logs` b
     ON b.auction_id = s.ttd_impression_id
-    AND DATE(b.time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
+    AND DATE(b.time) BETWEEN DATE_SUB(p.vv_date, INTERVAL 1 DAY) AND DATE_ADD(p.vv_date, INTERVAL 1 DAY)
 ),
 
 -- ═══════════════════════════════════════════════════════════════
@@ -89,6 +100,7 @@ prior_campaigns AS (
 -- ═══════════════════════════════════════════════════════════════
 -- Step 2: Prior-funnel (S1/S2) vast events matching S3 bid_ip
 -- within same campaign_group_id, before S3 bid timestamp
+-- 90-day lookback (Zach confirmed max window = 88 days)
 -- ═══════════════════════════════════════════════════════════════
 prior_funnel AS (
   SELECT
@@ -104,11 +116,12 @@ prior_funnel AS (
     MAX(CASE WHEN ev.event_type_raw = 'vast_start' THEN ev.time END)     AS prior_vast_start_timestamp,
     MIN(ev.time)                       AS prior_earliest_timestamp
   FROM `dw-main-silver.logdata.event_log` ev
+  CROSS JOIN params p
   JOIN prior_campaigns pc
     ON pc.campaign_id = ev.campaign_id
   WHERE ev.ip = (SELECT bid_ip FROM s3_trace LIMIT 1)
     AND ev.event_type_raw IN ('vast_impression', 'vast_start')
-    AND DATE(ev.time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+    AND DATE(ev.time) >= DATE_SUB(p.vv_date, INTERVAL 90 DAY)
     AND ev.time < (SELECT bid_timestamp FROM s3_trace LIMIT 1)
   GROUP BY ev.ad_served_id, ev.campaign_id, pc.name, pc.campaign_group_id, pc.objective_id, pc.funnel_level
   ORDER BY prior_earliest_timestamp DESC
@@ -117,6 +130,7 @@ prior_funnel AS (
 
 -- ═══════════════════════════════════════════════════════════════
 -- Final: S3 trace + prior-funnel cross-stage matches
+-- Always shows the within-stage trace; prior columns are NULL if no match
 -- ═══════════════════════════════════════════════════════════════
 SELECT
   -- S3 within-stage trace
@@ -141,7 +155,7 @@ SELECT
   t.clickpass_ip              AS s3_clickpass_ip,
   t.clickpass_timestamp       AS s3_clickpass_timestamp,
 
-  -- Cross-stage link: prior-funnel match (one row per prior impression)
+  -- Cross-stage link: prior-funnel match (one row per prior impression, NULL if no match)
   p.prior_ad_served_id,
   p.prior_campaign_id,
   p.prior_campaign_name,
