@@ -14,7 +14,7 @@ flowchart TD
     S1_TYPE -->|CTV| S1_CTV
     S1_TYPE -->|Display| S1_DISP_VIEW{Viewable?}
 
-    subgraph S1_CTV_PATH ["Stage 1 — CTV Trace"]
+    subgraph S1_CTV_PATH ["S1 — CTV"]
         S1_CTV[clickpass.ip] --> S1_CTV_2["event_log.ip (vast_start)"]
         S1_CTV_2 --> S1_CTV_2b["event_log.ip (vast_impression)"]
         S1_CTV_2b --> S1_CTV_3[win_log.ip]
@@ -25,14 +25,14 @@ flowchart TD
     S1_DISP_VIEW -->|Yes| S1_DV
     S1_DISP_VIEW -->|No| S1_DNV
 
-    subgraph S1_DV_PATH ["Stage 1 — Display Viewable Trace"]
+    subgraph S1_DV_PATH ["S1 — Display Viewable"]
         S1_DV[clickpass.ip] --> S1_DV_2[viewability_log.ip]
         S1_DV_2 --> S1_DV_2b[impression_log.ip]
         S1_DV_2b --> S1_DV_3[win_log.ip]
         S1_DV_3 --> S1_DV_4[bid_log.ip]
     end
 
-    subgraph S1_DNV_PATH ["Stage 1 — Display Non-Viewable Trace"]
+    subgraph S1_DNV_PATH ["S1 — Display Non-Viewable"]
         S1_DNV[clickpass.ip] --> S1_DNV_2[impression_log.ip]
         S1_DNV_2 --> S1_DNV_3[win_log.ip]
         S1_DNV_3 --> S1_DNV_4[bid_log.ip]
@@ -48,7 +48,7 @@ flowchart TD
     S2_TYPE -->|CTV| S2_CTV
     S2_TYPE -->|Display| S2_DISP_VIEW{Viewable?}
 
-    subgraph S2_CTV_PATH ["Stage 2 — CTV Trace (current impression)"]
+    subgraph S2_CTV_PATH ["S2 — CTV"]
         S2_CTV[clickpass.ip] --> S2_CTV_2["event_log.ip (vast_start)"]
         S2_CTV_2 --> S2_CTV_2b["event_log.ip (vast_impression)"]
         S2_CTV_2b --> S2_CTV_3[win_log.ip]
@@ -59,14 +59,14 @@ flowchart TD
     S2_DISP_VIEW -->|Yes| S2_DV
     S2_DISP_VIEW -->|No| S2_DNV
 
-    subgraph S2_DV_PATH ["Stage 2 — Display Viewable Trace (current impression)"]
+    subgraph S2_DV_PATH ["S2 — Display Viewable"]
         S2_DV[clickpass.ip] --> S2_DV_2[viewability_log.ip]
         S2_DV_2 --> S2_DV_2b[impression_log.ip]
         S2_DV_2b --> S2_DV_3[win_log.ip]
         S2_DV_3 --> S2_DV_4[bid_log.ip]
     end
 
-    subgraph S2_DNV_PATH ["Stage 2 — Display Non-Viewable Trace (current impression)"]
+    subgraph S2_DNV_PATH ["S2 — Display Non-Viewable"]
         S2_DNV[clickpass.ip] --> S2_DNV_2[impression_log.ip]
         S2_DNV_2 --> S2_DNV_3[win_log.ip]
         S2_DNV_3 --> S2_DNV_4[bid_log.ip]
@@ -76,7 +76,7 @@ flowchart TD
     S2_DV_4 --> S2_PREV
     S2_DNV_4 --> S2_PREV
 
-    subgraph S2_S1_PATH ["S2 → S1: CTV Trace (previous impression)"]
+    subgraph S2_S1_PATH ["S2 → S1: CTV"]
         S2P_CTV_2["event_log.ip (vast_start)"] --> S2P_CTV_2b["event_log.ip (vast_impression)"]
         S2P_CTV_2b --> S2P_CTV_3[win_log.ip]
         S2P_CTV_3 --> S2P_CTV_4[impression_log.ip]
@@ -92,7 +92,7 @@ flowchart TD
     S3_TYPE -->|CTV| S3_CTV
     S3_TYPE -->|Display| S3_DISP_VIEW{Viewable?}
 
-    subgraph S3_CTV_PATH ["Stage 3 — CTV Trace (current impression)"]
+    subgraph S3_CTV_PATH ["S3 — CTV"]
         S3_CTV[clickpass.ip] --> S3_CTV_2["event_log.ip (vast_start)"]
         S3_CTV_2 --> S3_CTV_2b["event_log.ip (vast_impression)"]
         S3_CTV_2b --> S3_CTV_3[win_log.ip]
@@ -103,14 +103,14 @@ flowchart TD
     S3_DISP_VIEW -->|Yes| S3_DV
     S3_DISP_VIEW -->|No| S3_DNV
 
-    subgraph S3_DV_PATH ["Stage 3 — Display Viewable Trace (current impression)"]
+    subgraph S3_DV_PATH ["S3 — Display Viewable"]
         S3_DV[clickpass.ip] --> S3_DV_2[viewability_log.ip]
         S3_DV_2 --> S3_DV_2b[impression_log.ip]
         S3_DV_2b --> S3_DV_3[win_log.ip]
         S3_DV_3 --> S3_DV_4[bid_log.ip]
     end
 
-    subgraph S3_DNV_PATH ["Stage 3 — Display Non-Viewable Trace (current impression)"]
+    subgraph S3_DNV_PATH ["S3 — Display Non-Viewable"]
         S3_DNV[clickpass.ip] --> S3_DNV_2[impression_log.ip]
         S3_DNV_2 --> S3_DNV_3[win_log.ip]
         S3_DNV_3 --> S3_DNV_4[bid_log.ip]
@@ -126,7 +126,7 @@ flowchart TD
     S3_PREV -->|Display| S3P_DISP_TYPE
 
     %% --- S3 Previous: CTV path ---
-    subgraph S3_PREV_CTV ["Stage 3 → Previous CTV Trace"]
+    subgraph S3_PREV_CTV ["S3 → Prev: CTV"]
         S3P_CTV_2["event_log.ip (vast_start)"] --> S3P_CTV_2b["event_log.ip (vast_impression)"]
         S3P_CTV_2b --> S3P_CTV_3[win_log.ip]
         S3P_CTV_3 --> S3P_CTV_4[impression_log.ip]
@@ -139,13 +139,13 @@ flowchart TD
     S3P_DISP_TYPE -->|Yes| S3P_DV_2
     S3P_DISP_TYPE -->|No| S3P_DNV_2
 
-    subgraph S3P_DV_PATH ["Stage 3 → Previous Display Viewable Trace"]
+    subgraph S3P_DV_PATH ["S3 → Prev: Display Viewable"]
         S3P_DV_2[viewability_log.ip] --> S3P_DV_2b[impression_log.ip]
         S3P_DV_2b --> S3P_DV_3[win_log.ip]
         S3P_DV_3 --> S3P_DV_4[bid_log.ip]
     end
 
-    subgraph S3P_DNV_PATH ["Stage 3 → Previous Display Non-Viewable Trace"]
+    subgraph S3P_DNV_PATH ["S3 → Prev: Display Non-Viewable"]
         S3P_DNV_2[impression_log.ip] --> S3P_DNV_3[win_log.ip]
         S3P_DNV_3 --> S3P_DNV_4[bid_log.ip]
     end
@@ -161,7 +161,7 @@ flowchart TD
 
     S3_S2_PREV[/"Previous-previous impression MUST be CTV<br/>(S2 requires a VAST event to enter)"/]
 
-    subgraph S3_S2_PREV_CTV ["Stage 3 → Stage 2 → Stage 1 CTV Trace"]
+    subgraph S3_S2_PREV_CTV ["S3 → S2 → S1: CTV"]
         S3S2_CTV_2["event_log.ip (vast_start)"] --> S3S2_CTV_2b["event_log.ip (vast_impression)"]
         S3S2_CTV_2b --> S3S2_CTV_3[win_log.ip]
         S3S2_CTV_3 --> S3S2_CTV_4[impression_log.ip]
