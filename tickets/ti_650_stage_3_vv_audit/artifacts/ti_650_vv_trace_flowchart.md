@@ -123,7 +123,7 @@ flowchart TD
     S3_PREV_STAGE{What stage is the<br/>NEXT impression?}
 
     %% --- S3 → S1: full type branching ---
-    S3_PREV_STAGE -->|Stage 1| S3S1_TYPE{What type?}
+    S3_PREV_STAGE -->|Stage 1| S3S1_TYPE{What type of<br/>impression?}
 
     S3S1_TYPE -->|CTV| S3S1_CTV_2
     S3S1_TYPE -->|Display| S3S1_DISP{Viewable?}
@@ -154,7 +154,7 @@ flowchart TD
     S3S1_DNV_4 --> DONE3A
 
     %% --- S3 → S2: full type branching ---
-    S3_PREV_STAGE -->|Stage 2| S3S2_TYPE{What type?}
+    S3_PREV_STAGE -->|Stage 2| S3S2_TYPE{What type of<br/>impression?}
 
     S3S2_TYPE -->|CTV| S3S2_CTV_2
     S3S2_TYPE -->|Display| S3S2_DISP{Viewable?}
