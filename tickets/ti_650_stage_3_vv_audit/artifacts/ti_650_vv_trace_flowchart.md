@@ -68,21 +68,29 @@ flowchart TD
         S2_DNV_3 --> S2_DNV_4[bid_log.ip]
     end
 
-    S2_CTV_5 --> S2_PREV
-    S2_DV_4 --> S2_PREV
-    S2_DNV_4 --> S2_PREV
+    S2_CTV_5 --> S2_CTV_PREV[/"Previous impression MUST be CTV<br/>(S2 requires a VAST event to enter)"/]
+    S2_DV_4 --> S2_DISP_PREV[/"Previous impression MUST be CTV<br/>(S2 requires a VAST event to enter)"/]
+    S2_DNV_4 --> S2_DISP_PREV
 
-    S2_PREV[/"Previous impression MUST be CTV<br/>(S2 requires a VAST event to enter)"/]
-
-    subgraph S2_PREV_CTV ["Stage 2 → Stage 1 CTV Trace (previous impression)"]
-        S2P_CTV[clickpass.ip] --> S2P_CTV_2[event_log.ip]
-        S2P_CTV_2 --> S2P_CTV_3[win_log.ip]
-        S2P_CTV_3 --> S2P_CTV_4[impression_log.ip]
-        S2P_CTV_4 --> S2P_CTV_5[bid_log.ip]
+    subgraph S2_CTV_PREV_PATH ["S2 CTV → Stage 1 CTV Trace (previous impression)"]
+        S2P_CTV_A[clickpass.ip] --> S2P_CTV_A2[event_log.ip]
+        S2P_CTV_A2 --> S2P_CTV_A3[win_log.ip]
+        S2P_CTV_A3 --> S2P_CTV_A4[impression_log.ip]
+        S2P_CTV_A4 --> S2P_CTV_A5[bid_log.ip]
     end
 
-    S2_PREV --> S2P_CTV
-    S2P_CTV_5 --> DONE2([✅ Done — Stage 2 fully traced])
+    S2_CTV_PREV --> S2P_CTV_A
+    S2P_CTV_A5 --> DONE2A([✅ Done — S2 CTV fully traced])
+
+    subgraph S2_DISP_PREV_PATH ["S2 Display → Stage 1 CTV Trace (previous impression)"]
+        S2P_CTV_B[clickpass.ip] --> S2P_CTV_B2[event_log.ip]
+        S2P_CTV_B2 --> S2P_CTV_B3[win_log.ip]
+        S2P_CTV_B3 --> S2P_CTV_B4[impression_log.ip]
+        S2P_CTV_B4 --> S2P_CTV_B5[bid_log.ip]
+    end
+
+    S2_DISP_PREV --> S2P_CTV_B
+    S2P_CTV_B5 --> DONE2B([✅ Done — S2 Display fully traced])
 
     %% ============================================================
     %% STAGE 3 TRACES
@@ -180,6 +188,6 @@ flowchart TD
 
     class START startEnd
     class STAGE,S1_TYPE,S2_TYPE,S3_TYPE,S1_DISP_VIEW,S2_DISP_VIEW,S3_DISP_VIEW,S3_PREV,S3P_DISP_TYPE,S3_PREV_STAGE decision
-    class DONE1,DONE2,DONE3A,DONE3B doneNode
-    class S2_PREV,S3_S2_PREV ruleNode
+    class DONE1,DONE2A,DONE2B,DONE3A,DONE3B doneNode
+    class S2_CTV_PREV,S2_DISP_PREV,S3_S2_PREV ruleNode
 ```
