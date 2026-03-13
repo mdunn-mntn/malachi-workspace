@@ -116,60 +116,83 @@ flowchart TD
         S3_DNV_3 --> S3_DNV_4[bid_log.ip]
     end
 
-    S3_CTV_5 --> S3_PREV
-    S3_DV_4 --> S3_PREV
-    S3_DNV_4 --> S3_PREV
-
-    S3_PREV{What type was the<br/>PREVIOUS impression?}
-
-    S3_PREV -->|CTV| S3P_CTV_2
-    S3_PREV -->|Display| S3P_DISP_TYPE
-
-    %% --- S3 Previous: CTV path ---
-    subgraph S3_PREV_CTV ["S3 Prev — CTV"]
-        S3P_CTV_2["event_log.ip (vast_start)"] --> S3P_CTV_2b["event_log.ip (vast_impression)"]
-        S3P_CTV_2b --> S3P_CTV_3[win_log.ip]
-        S3P_CTV_3 --> S3P_CTV_4[impression_log.ip]
-        S3P_CTV_4 --> S3P_CTV_5[bid_log.ip]
-    end
-
-    %% --- S3 Previous: Display path ---
-    S3P_DISP_TYPE{Viewable?}
-
-    S3P_DISP_TYPE -->|Yes| S3P_DV_2
-    S3P_DISP_TYPE -->|No| S3P_DNV_2
-
-    subgraph S3P_DV_PATH ["S3 Prev — Viewable"]
-        S3P_DV_2[viewability_log.ip] --> S3P_DV_2b[impression_log.ip]
-        S3P_DV_2b --> S3P_DV_3[win_log.ip]
-        S3P_DV_3 --> S3P_DV_4[bid_log.ip]
-    end
-
-    subgraph S3P_DNV_PATH ["S3 Prev — Non-Viewable"]
-        S3P_DNV_2[impression_log.ip] --> S3P_DNV_3[win_log.ip]
-        S3P_DNV_3 --> S3P_DNV_4[bid_log.ip]
-    end
-
-    S3P_CTV_5 --> S3_PREV_STAGE
-    S3P_DV_4 --> S3_PREV_STAGE
-    S3P_DNV_4 --> S3_PREV_STAGE
+    S3_CTV_5 --> S3_PREV_STAGE
+    S3_DV_4 --> S3_PREV_STAGE
+    S3_DNV_4 --> S3_PREV_STAGE
 
     S3_PREV_STAGE{What stage was the<br/>previous impression?}
 
-    S3_PREV_STAGE -->|Stage 1| DONE3A([✅ Done — S3 → S1 fully traced])
-    S3_PREV_STAGE -->|Stage 2| S3_S2_PREV
+    %% --- S3 → S1: full type branching ---
+    S3_PREV_STAGE -->|Stage 1| S3S1_TYPE{What type?}
 
-    S3_S2_PREV[/"Previous-previous impression MUST be CTV<br/>(S2 requires a VAST event to enter)"/]
+    S3S1_TYPE -->|CTV| S3S1_CTV_2
+    S3S1_TYPE -->|Display| S3S1_DISP{Viewable?}
 
-    subgraph S3_S2_PREV_CTV ["S3 → S2 → S1: CTV"]
+    subgraph S3S1_CTV_PATH ["S3 → S1: CTV"]
+        S3S1_CTV_2["event_log.ip (vast_start)"] --> S3S1_CTV_2b["event_log.ip (vast_impression)"]
+        S3S1_CTV_2b --> S3S1_CTV_3[win_log.ip]
+        S3S1_CTV_3 --> S3S1_CTV_4[impression_log.ip]
+        S3S1_CTV_4 --> S3S1_CTV_5[bid_log.ip]
+    end
+
+    S3S1_DISP -->|Yes| S3S1_DV_2
+    S3S1_DISP -->|No| S3S1_DNV_2
+
+    subgraph S3S1_DV_PATH ["S3 → S1: Viewable"]
+        S3S1_DV_2[viewability_log.ip] --> S3S1_DV_2b[impression_log.ip]
+        S3S1_DV_2b --> S3S1_DV_3[win_log.ip]
+        S3S1_DV_3 --> S3S1_DV_4[bid_log.ip]
+    end
+
+    subgraph S3S1_DNV_PATH ["S3 → S1: Non-Viewable"]
+        S3S1_DNV_2[impression_log.ip] --> S3S1_DNV_3[win_log.ip]
+        S3S1_DNV_3 --> S3S1_DNV_4[bid_log.ip]
+    end
+
+    S3S1_CTV_5 --> DONE3A([✅ Done — S3 → S1])
+    S3S1_DV_4 --> DONE3A
+    S3S1_DNV_4 --> DONE3A
+
+    %% --- S3 → S2: full type branching ---
+    S3_PREV_STAGE -->|Stage 2| S3S2_TYPE{What type?}
+
+    S3S2_TYPE -->|CTV| S3S2_CTV_2
+    S3S2_TYPE -->|Display| S3S2_DISP{Viewable?}
+
+    subgraph S3S2_CTV_PATH ["S3 → S2: CTV"]
         S3S2_CTV_2["event_log.ip (vast_start)"] --> S3S2_CTV_2b["event_log.ip (vast_impression)"]
         S3S2_CTV_2b --> S3S2_CTV_3[win_log.ip]
         S3S2_CTV_3 --> S3S2_CTV_4[impression_log.ip]
         S3S2_CTV_4 --> S3S2_CTV_5[bid_log.ip]
     end
 
-    S3_S2_PREV --> S3S2_CTV_2
-    S3S2_CTV_5 --> DONE3B([✅ Done — S3 → S2 → S1 fully traced])
+    S3S2_DISP -->|Yes| S3S2_DV_2
+    S3S2_DISP -->|No| S3S2_DNV_2
+
+    subgraph S3S2_DV_PATH ["S3 → S2: Viewable"]
+        S3S2_DV_2[viewability_log.ip] --> S3S2_DV_2b[impression_log.ip]
+        S3S2_DV_2b --> S3S2_DV_3[win_log.ip]
+        S3S2_DV_3 --> S3S2_DV_4[bid_log.ip]
+    end
+
+    subgraph S3S2_DNV_PATH ["S3 → S2: Non-Viewable"]
+        S3S2_DNV_2[impression_log.ip] --> S3S2_DNV_3[win_log.ip]
+        S3S2_DNV_3 --> S3S2_DNV_4[bid_log.ip]
+    end
+
+    S3S2_CTV_5 --> S3S2_S1[/"Now trace S1:<br/>MUST be CTV"/]
+    S3S2_DV_4 --> S3S2_S1
+    S3S2_DNV_4 --> S3S2_S1
+
+    subgraph S3S2S1_PATH ["S3 → S2 → S1: CTV"]
+        S3S2S1_2["event_log.ip (vast_start)"] --> S3S2S1_2b["event_log.ip (vast_impression)"]
+        S3S2S1_2b --> S3S2S1_3[win_log.ip]
+        S3S2S1_3 --> S3S2S1_4[impression_log.ip]
+        S3S2S1_4 --> S3S2S1_5[bid_log.ip]
+    end
+
+    S3S2_S1 --> S3S2S1_2
+    S3S2S1_5 --> DONE3B([✅ Done — S3 → S2 → S1])
 
     %% ============================================================
     %% STYLING
@@ -182,7 +205,7 @@ flowchart TD
     classDef ruleNode fill:#ff6b6b,stroke:#c94444,color:#fff,font-weight:bold,font-style:italic
 
     class START startEnd
-    class STAGE,S1_TYPE,S2_TYPE,S3_TYPE,S1_DISP_VIEW,S2_DISP_VIEW,S3_DISP_VIEW,S3_PREV,S3P_DISP_TYPE,S3_PREV_STAGE decision
+    class STAGE,S1_TYPE,S2_TYPE,S3_TYPE,S1_DISP_VIEW,S2_DISP_VIEW,S3_DISP_VIEW,S3_PREV_STAGE,S3S1_TYPE,S3S1_DISP,S3S2_TYPE,S3S2_DISP decision
     class DONE1,DONE2,DONE3A,DONE3B doneNode
-    class S2_PREV,S3_S2_PREV ruleNode
+    class S2_PREV,S3S2_S1 ruleNode
 ```
