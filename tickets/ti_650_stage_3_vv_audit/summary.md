@@ -227,6 +227,7 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 20. **bid_events_log only has data for advertiser 32167.** Table is a UNION of bidder_bid_events + bid_price_log from a specific bidding pipeline. Not useful for general advertiser analysis.
 21. **92% is the IP-based resolution ceiling** for campaign_group_id-scoped S3 VVs. The 8% unresolved entered S3 via identity graph (not via MNTN impression). GUID bridge resolves ~85% of those, bringing total to ~99.6%.
 22. **Unresolved IPs are heavily served across the MNTN platform — just not for their own campaign group.** IP `216.126.34.185` (unresolved for cg 93957/adv 37775) had 1,200+ VAST events across 10+ other advertisers in 35 days of data. Dominated by retargeting campaigns. Confirms identity-graph-driven S3 entry, not prior impression.
+23. **CIDR fix (v17) has minimal impact on resolution rates.** event_log.ip has /32 CIDR suffix on all pre-2026 data, but CIL.ip (bare) in the S1 pool already covers the same impressions. Net gain: +45 VVs for adv 37775 S3 (+0.19pp), +5,113 for adv 31357 (+0.87pp). Fix is correct for data hygiene but does NOT explain the unresolved gap. The ~92% ceiling is structural, not a CIDR artifact.
 
 ### MES Pipeline IP Map
 
@@ -280,7 +281,8 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - ⏳ Decide with Zach: include retargeting in pools? (adds 110, scoping question)
 - ✅ campaign_group_id scoping validated (v14): drops S3 rate 97.36% → 91.98% for adv 37775, 5-13pp for 5/10 advertisers
 - ✅ **v15 forensic trace: IP 100% identical across ALL 8 source tables.** Adding bid_logs/win_logs/impression_log to S1 pool has zero impact. 92% is the IP ceiling. (2026-03-12)
-- ⏳ GUID bridge on v14 unresolved (1,761 VVs) — pending
+- ✅ **v17 CIDR fix: minimal impact (+0.19pp for adv 37775 S3, +45 VVs).** CIL bare IPs already compensated for broken event_log CIDR IPs. Fix is correct but not material. (2026-03-13)
+- ⏳ GUID bridge on v14 unresolved (1,761 → 1,716 after CIDR fix) — pending
 - ⏳ Update SQLMesh model to v14 architecture + campaign_group_id + GUID bridge
 
 ---
@@ -302,6 +304,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `queries/ti_650_v15_trace_lookup.sql` — **v15 Step 2:** Forensic trace through all 8 source tables via ad_served_id/auction_id.
 - `queries/ti_650_v15_ip_existence_check.sql` — **v15:** Check if unresolved IPs exist in S1 pool (any campaign_group, 180d window).
 - `queries/ti_650_v15_forensic_trace.sql` — **v15 combined:** Full trace (not used — split into step 1+2 for cost).
+- `queries/ti_650_resolution_rate_v17.sql` — **v17: CIDR-corrected v14.** SPLIT(el.ip, '/')[OFFSET(0)] on event_log.ip in s1_pool + s2_chain. Minimal impact (+0.19pp for adv 37775 S3).
 - `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id traced across all 5 source tables with IP + timestamp at each stage. Campaign context joined.
 - `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking. S3 bid_ip → S1/S2 vast events within same campaign_group_id. Confirms cross-stage provenance. (±10 day window fix applied 2026-03-13)
 - `queries/ti_650_365d_ip_lookup.sql` — **v16 Step 3:** 365-day IP lookup across ALL campaigns for unresolved VV bid_ip. Parameterized.
@@ -325,6 +328,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis, root cause diagnosis
 - `outputs/ti_650_v16_cross_stage_trace.md` — **v16 Step 2 results:** Cross-stage IP link confirmed (S3→S1, 0.9d gap, same campaign_group_id)
 - `outputs/ti_650_v16_365d_ip_lookup.md` — **v16 Step 3 results:** Unresolved VV IP has 1,200+ events across 10+ advertisers but zero for its own campaign group
+- `outputs/ti_650_v17_cidr_impact.md` — **v17 results:** CIDR fix comparison vs v14. Minimal impact — CIL bare IPs already covered pre-2026 impressions.
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
