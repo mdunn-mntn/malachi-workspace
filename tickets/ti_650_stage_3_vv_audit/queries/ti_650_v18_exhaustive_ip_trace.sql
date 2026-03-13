@@ -16,9 +16,12 @@
 --   Viewable display:   bid_ip → viewability_log.ip
 --   Non-viewable display: bid_ip → impression_log.ip
 --
--- This query searches ALL 3 connecting tables for this IP within
--- campaign_group_id 93957, across ALL campaigns (all funnel levels),
--- going back to Jan 2024 (~2 years). CIDR-safe via SPLIT().
+-- Structure:
+--   Part A (queries 1-3): Scoped to campaign_group_id 93957 — proves zero S1/S2 match
+--   Part B (queries 4-6): Scoped to advertiser 37775 — shows where the IP WAS served
+--
+-- All queries are CIDR-safe via SPLIT() on both ip and bid_ip columns.
+-- Lookback: Jan 2024 – Feb 2026 (~2 years).
 --
 -- USAGE: Run as-is. No parameters to change.
 
@@ -33,6 +36,11 @@
 -- 450304      | 3 (S3)       | Disp (1) | Multi-Touch - Plus
 -- 450302      | 4 (Ego)      | CTV (8)  | Beeswax Television Prospecting - Ego
 
+
+-- ═════════════════════════════════════════════════════════════════════
+-- PART A: Within campaign_group_id 93957 (zero S1/S2 expected)
+-- ═════════════════════════════════════════════════════════════════════
+
 -- ═══════════════════════════════════════════════════════════════
 -- Query 1: event_log (CTV path — vast_start / vast_impression)
 -- ═══════════════════════════════════════════════════════════════
@@ -40,12 +48,13 @@ SELECT
   'event_log' AS source_table,
   ev.campaign_id,
   c.name AS campaign_name,
+  c.campaign_group_id,
   c.funnel_level,
   c.channel_id,
   ev.event_type_raw,
   SPLIT(ev.ip, '/')[OFFSET(0)] AS ip_clean,
   ev.ip AS ip_raw,
-  ev.bid_ip,
+  SPLIT(ev.bid_ip, '/')[OFFSET(0)] AS bid_ip_clean,
   ev.ad_served_id,
   ev.time
 FROM `dw-main-silver.logdata.event_log` ev
@@ -63,11 +72,12 @@ SELECT
   'viewability_log' AS source_table,
   vl.campaign_id,
   c.name AS campaign_name,
+  c.campaign_group_id,
   c.funnel_level,
   c.channel_id,
   SPLIT(vl.ip, '/')[OFFSET(0)] AS ip_clean,
   vl.ip AS ip_raw,
-  vl.bid_ip,
+  SPLIT(vl.bid_ip, '/')[OFFSET(0)] AS bid_ip_clean,
   vl.ad_served_id,
   vl.time
 FROM `dw-main-silver.logdata.viewability_log` vl
@@ -85,11 +95,12 @@ SELECT
   'impression_log' AS source_table,
   il.campaign_id,
   c.name AS campaign_name,
+  c.campaign_group_id,
   c.funnel_level,
   c.channel_id,
   SPLIT(il.ip, '/')[OFFSET(0)] AS serve_ip_clean,
   il.ip AS serve_ip_raw,
-  il.bid_ip,
+  SPLIT(il.bid_ip, '/')[OFFSET(0)] AS bid_ip_clean,
   il.ad_served_id,
   il.time
 FROM `dw-main-silver.logdata.impression_log` il
@@ -100,11 +111,17 @@ WHERE (SPLIT(il.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(il.bid_ip, '/')[
   AND DATE(il.time) BETWEEN '2024-01-01' AND '2026-02-04'
 ORDER BY il.time;
 
+
+-- ═════════════════════════════════════════════════════════════════════
+-- PART B: Across ALL campaigns for advertiser 37775
+-- Shows where the IP WAS served (different campaign groups)
+-- ═════════════════════════════════════════════════════════════════════
+
 -- ═══════════════════════════════════════════════════════════════
--- Bonus: Check the same IP across ALL campaigns for advertiser 37775
--- (regardless of campaign_group_id) to see where it WAS served
+-- Query 4: event_log — all advertiser 37775 campaigns
 -- ═══════════════════════════════════════════════════════════════
 SELECT
+  'event_log' AS source_table,
   ev.campaign_id,
   c.name AS campaign_name,
   c.campaign_group_id,
@@ -113,6 +130,8 @@ SELECT
   c.objective_id,
   ev.event_type_raw,
   SPLIT(ev.ip, '/')[OFFSET(0)] AS ip_clean,
+  SPLIT(ev.bid_ip, '/')[OFFSET(0)] AS bid_ip_clean,
+  ev.ad_served_id,
   ev.time
 FROM `dw-main-silver.logdata.event_log` ev
 JOIN `dw-main-bronze.integrationprod.campaigns` c
@@ -121,4 +140,52 @@ JOIN `dw-main-bronze.integrationprod.campaigns` c
 WHERE (SPLIT(ev.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(ev.bid_ip, '/')[OFFSET(0)] = '216.126.34.185')
   AND DATE(ev.time) BETWEEN '2024-01-01' AND '2026-02-04'
 ORDER BY ev.time
+LIMIT 100;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Query 5: viewability_log — all advertiser 37775 campaigns
+-- ═══════════════════════════════════════════════════════════════
+SELECT
+  'viewability_log' AS source_table,
+  vl.campaign_id,
+  c.name AS campaign_name,
+  c.campaign_group_id,
+  c.funnel_level,
+  c.channel_id,
+  c.objective_id,
+  SPLIT(vl.ip, '/')[OFFSET(0)] AS ip_clean,
+  SPLIT(vl.bid_ip, '/')[OFFSET(0)] AS bid_ip_clean,
+  vl.ad_served_id,
+  vl.time
+FROM `dw-main-silver.logdata.viewability_log` vl
+JOIN `dw-main-bronze.integrationprod.campaigns` c
+  ON c.campaign_id = vl.campaign_id
+  AND c.advertiser_id = 37775
+WHERE (SPLIT(vl.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(vl.bid_ip, '/')[OFFSET(0)] = '216.126.34.185')
+  AND DATE(vl.time) BETWEEN '2024-01-01' AND '2026-02-04'
+ORDER BY vl.time
+LIMIT 100;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Query 6: impression_log — all advertiser 37775 campaigns
+-- ═══════════════════════════════════════════════════════════════
+SELECT
+  'impression_log' AS source_table,
+  il.campaign_id,
+  c.name AS campaign_name,
+  c.campaign_group_id,
+  c.funnel_level,
+  c.channel_id,
+  c.objective_id,
+  SPLIT(il.ip, '/')[OFFSET(0)] AS serve_ip_clean,
+  SPLIT(il.bid_ip, '/')[OFFSET(0)] AS bid_ip_clean,
+  il.ad_served_id,
+  il.time
+FROM `dw-main-silver.logdata.impression_log` il
+JOIN `dw-main-bronze.integrationprod.campaigns` c
+  ON c.campaign_id = il.campaign_id
+  AND c.advertiser_id = 37775
+WHERE (SPLIT(il.ip, '/')[OFFSET(0)] = '216.126.34.185' OR SPLIT(il.bid_ip, '/')[OFFSET(0)] = '216.126.34.185')
+  AND DATE(il.time) BETWEEN '2024-01-01' AND '2026-02-04'
+ORDER BY il.time
 LIMIT 100;
