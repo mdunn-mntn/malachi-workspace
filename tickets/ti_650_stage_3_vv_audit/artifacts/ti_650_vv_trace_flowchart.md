@@ -27,7 +27,8 @@ flowchart TD
 
     subgraph S1_DV_PATH ["S1 — Viewable Display"]
         S1_DV[clickpass.ip] --> S1_DV_2[viewability_log.ip]
-        S1_DV_2 --> S1_DV_3[win_log.ip]
+        S1_DV_2 --> S1_DV_2b[impression_log.ip]
+        S1_DV_2b --> S1_DV_3[win_log.ip]
         S1_DV_3 --> S1_DV_4[bid_log.ip]
     end
 
@@ -60,7 +61,8 @@ flowchart TD
 
     subgraph S2_DV_PATH ["S2 — Viewable Display"]
         S2_DV[clickpass.ip] --> S2_DV_2[viewability_log.ip]
-        S2_DV_2 --> S2_DV_3[win_log.ip]
+        S2_DV_2 --> S2_DV_2b[impression_log.ip]
+        S2_DV_2b --> S2_DV_3[win_log.ip]
         S2_DV_3 --> S2_DV_4[bid_log.ip]
     end
 
@@ -103,7 +105,8 @@ flowchart TD
 
     subgraph S3_DV_PATH ["S3 — Viewable Display"]
         S3_DV[clickpass.ip] --> S3_DV_2[viewability_log.ip]
-        S3_DV_2 --> S3_DV_3[win_log.ip]
+        S3_DV_2 --> S3_DV_2b[impression_log.ip]
+        S3_DV_2b --> S3_DV_3[win_log.ip]
         S3_DV_3 --> S3_DV_4[bid_log.ip]
     end
 
@@ -136,7 +139,8 @@ flowchart TD
     S3S1_DISP -->|No| S3S1_DNV_2
 
     subgraph S3S1_DV_PATH ["S3 → S1: Viewable Display"]
-        S3S1_DV_2[viewability_log.ip] --> S3S1_DV_3[win_log.ip]
+        S3S1_DV_2[viewability_log.ip] --> S3S1_DV_2b[impression_log.ip]
+        S3S1_DV_2b --> S3S1_DV_3[win_log.ip]
         S3S1_DV_3 --> S3S1_DV_4[bid_log.ip]
     end
 
@@ -166,7 +170,8 @@ flowchart TD
     S3S2_DISP -->|No| S3S2_DNV_2
 
     subgraph S3S2_DV_PATH ["S3 → S2: Viewable Display"]
-        S3S2_DV_2[viewability_log.ip] --> S3S2_DV_3[win_log.ip]
+        S3S2_DV_2[viewability_log.ip] --> S3S2_DV_2b[impression_log.ip]
+        S3S2_DV_2b --> S3S2_DV_3[win_log.ip]
         S3S2_DV_3 --> S3S2_DV_4[bid_log.ip]
     end
 
