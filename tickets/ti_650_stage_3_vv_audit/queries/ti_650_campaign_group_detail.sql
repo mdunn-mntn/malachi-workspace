@@ -9,15 +9,7 @@ SELECT
   c.campaign_id,
   c.name AS campaign_name,
   c.channel_id,
-  CASE c.channel_id
-    WHEN 8 THEN 'CTV'
-    WHEN 1 THEN 'Display/Web'
-    WHEN 7 THEN 'Display (legacy)'
-    WHEN 4 THEN 'Mobile'
-    WHEN 3 THEN 'Dynamic Retargeting'
-    WHEN 10 THEN 'Onsite Offers'
-    ELSE 'Unknown'
-  END AS channel_type,
+  ch.name AS channel_name,
   c.funnel_level,
   c.objective_id AS campaign_objective_id,
   c.partner_id,
@@ -35,6 +27,8 @@ FROM `dw-main-bronze.integrationprod.campaign_groups` cg
 JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_group_id = cg.campaign_group_id
   AND c.deleted = FALSE
+LEFT JOIN `dw-main-bronze.integrationprod.channels` ch
+  ON ch.channel_id = c.channel_id
 LEFT JOIN `dw-main-silver.core.creative_groups` crg
   ON crg.campaign_id = c.campaign_id
 LEFT JOIN `dw-main-silver.core.creative_groups_x_creatives` cgxc
