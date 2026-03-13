@@ -120,7 +120,7 @@ flowchart TD
     S3_DV_4 --> S3_PREV_STAGE
     S3_DNV_4 --> S3_PREV_STAGE
 
-    S3_PREV_STAGE{What stage was the<br/>previous impression?}
+    S3_PREV_STAGE{What stage is the<br/>NEXT impression?}
 
     %% --- S3 → S1: full type branching ---
     S3_PREV_STAGE -->|Stage 1| S3S1_TYPE{What type?}
