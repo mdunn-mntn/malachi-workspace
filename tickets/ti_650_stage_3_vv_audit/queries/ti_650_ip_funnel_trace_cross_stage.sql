@@ -98,9 +98,11 @@ prior_funnel AS (
     pc.campaign_group_id               AS prior_campaign_group_id,
     pc.objective_id                    AS prior_objective_id,
     pc.funnel_level                    AS prior_funnel_level,
-    ev.event_type_raw                  AS prior_event_type,
-    ev.ip                              AS prior_ip,
-    ev.time                            AS prior_timestamp
+    MAX(CASE WHEN ev.event_type_raw = 'vast_impression' THEN ev.ip END)   AS prior_vast_impression_ip,
+    MAX(CASE WHEN ev.event_type_raw = 'vast_impression' THEN ev.time END) AS prior_vast_impression_timestamp,
+    MAX(CASE WHEN ev.event_type_raw = 'vast_start' THEN ev.ip END)       AS prior_vast_start_ip,
+    MAX(CASE WHEN ev.event_type_raw = 'vast_start' THEN ev.time END)     AS prior_vast_start_timestamp,
+    MIN(ev.time)                       AS prior_earliest_timestamp
   FROM `dw-main-silver.logdata.event_log` ev
   JOIN prior_campaigns pc
     ON pc.campaign_id = ev.campaign_id
@@ -108,7 +110,8 @@ prior_funnel AS (
     AND ev.event_type_raw IN ('vast_impression', 'vast_start')
     AND DATE(ev.time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
     AND ev.time < (SELECT bid_timestamp FROM s3_trace LIMIT 1)
-  ORDER BY ev.time DESC
+  GROUP BY ev.ad_served_id, ev.campaign_id, pc.name, pc.campaign_group_id, pc.objective_id, pc.funnel_level
+  ORDER BY prior_earliest_timestamp DESC
   LIMIT 10
 )
 
@@ -138,19 +141,21 @@ SELECT
   t.clickpass_ip              AS s3_clickpass_ip,
   t.clickpass_timestamp       AS s3_clickpass_timestamp,
 
-  -- Cross-stage link: prior-funnel match
+  -- Cross-stage link: prior-funnel match (one row per prior impression)
   p.prior_ad_served_id,
   p.prior_campaign_id,
   p.prior_campaign_name,
   p.prior_campaign_group_id,
   p.prior_objective_id,
   p.prior_funnel_level,
-  p.prior_event_type,
-  p.prior_ip,
-  p.prior_timestamp,
-  TIMESTAMP_DIFF(t.bid_timestamp, p.prior_timestamp, SECOND) AS seconds_prior_to_s3_bid,
-  ROUND(TIMESTAMP_DIFF(t.bid_timestamp, p.prior_timestamp, SECOND) / 86400.0, 1) AS days_prior_to_s3_bid
+  p.prior_vast_impression_ip,
+  p.prior_vast_impression_timestamp,
+  p.prior_vast_start_ip,
+  p.prior_vast_start_timestamp,
+  p.prior_earliest_timestamp,
+  TIMESTAMP_DIFF(t.bid_timestamp, p.prior_earliest_timestamp, SECOND) AS seconds_prior_to_s3_bid,
+  ROUND(TIMESTAMP_DIFF(t.bid_timestamp, p.prior_earliest_timestamp, SECOND) / 86400.0, 1) AS days_prior_to_s3_bid
 FROM s3_trace t
 LEFT JOIN prior_funnel p ON TRUE
-ORDER BY p.prior_timestamp ASC
+ORDER BY p.prior_earliest_timestamp ASC
 ;
