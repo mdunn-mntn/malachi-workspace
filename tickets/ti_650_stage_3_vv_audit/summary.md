@@ -250,7 +250,8 @@ Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_
 
 Building a clean, reproducible single-VV trace that walks through the entire IP funnel:
 - **Step 1 (DONE):** Within-stage trace. Single ad_served_id traced across all 5 source tables (bid_logs → win_logs → impression_log → event_log → clickpass_log) with IP and timestamp at each stage. Campaign context (campaign_group_id, campaign_id, objective_id, funnel_level) joined from `bronze.integrationprod.campaigns`. Query: `queries/ti_650_ip_funnel_trace.sql`.
-- **Step 2 (NEXT):** Cross-stage linking. Take the S3 VV's `bid_ip` and find a matching `vast_impression` or `vast_start` IP in `event_log` from a funnel_level 1 or 2 campaign within the same `campaign_group_id`. This is the cross-stage provenance link.
+- **Step 2 (DONE):** Cross-stage linking. Takes the S3 VV's `bid_ip` and finds matching `vast_impression`/`vast_start` IP in `event_log` from funnel_level 1 or 2 within the same `campaign_group_id`. Query: `queries/ti_650_ip_funnel_trace_cross_stage.sql`. Results: `outputs/ti_650_v16_cross_stage_trace.md`.
+  - **Result:** S3 bid_ip `172.59.153.228` matched S1 vast_start/vast_impression from "Beeswax Television Prospecting" (funnel_level=1), same campaign_group_id=113222, 0.9 days prior to S3 bid. Cross-stage IP provenance confirmed.
 
 **Key linking architecture:**
 - Within-stage: `ad_served_id` (MNTN tables) + `ttd_impression_id = auction_id` (Beeswax tables)
@@ -297,6 +298,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `queries/ti_650_v15_ip_existence_check.sql` — **v15:** Check if unresolved IPs exist in S1 pool (any campaign_group, 180d window).
 - `queries/ti_650_v15_forensic_trace.sql` — **v15 combined:** Full trace (not used — split into step 1+2 for cost).
 - `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id traced across all 5 source tables with IP + timestamp at each stage. Campaign context joined.
+- `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking. S3 bid_ip → S1/S2 vast events within same campaign_group_id. Confirms cross-stage provenance.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v14 update).
 
 ### Outputs
@@ -315,6 +317,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_v15_unresolved_ids.json` — **v15:** 50 unresolved S3 ad_served_ids with IPs
 - `outputs/ti_650_v15_forensic_trace.json` — **v15:** Full forensic trace (50 VVs × 8 tables)
 - `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis, root cause diagnosis
+- `outputs/ti_650_v16_cross_stage_trace.md` — **v16 Step 2 results:** Cross-stage IP link confirmed (S3→S1, 0.9d gap, same campaign_group_id)
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
