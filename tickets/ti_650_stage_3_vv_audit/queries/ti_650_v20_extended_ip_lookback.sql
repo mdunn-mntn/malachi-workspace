@@ -29,6 +29,12 @@
 --   The v18 2024-01-01 lower bound already covered the full available history.
 --   Conclusion: Cannot extend lookback further in BQ. Pre-2025 data only exists
 --   in Greenplum coreDW (deprecated April 30, 2026).
+--
+--   Bronze.raw retention even shorter (90-day TTL / expirationMs):
+--     raw.event_log:       earliest = 2026-01-01
+--     raw.impression_log:  earliest = 2025-08-25
+--     raw.viewability_log: earliest = 2025-12-31
+--   No BQ layer has data before 2025-01-01. v18 already covered full BQ history.
 
 SELECT
   'event_log' AS source_table,
