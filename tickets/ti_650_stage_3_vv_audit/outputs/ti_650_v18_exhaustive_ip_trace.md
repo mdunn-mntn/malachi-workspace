@@ -68,25 +68,25 @@ All 3 cross-stage connecting tables checked. CIDR-safe (SPLIT on `/`). Lookback:
 
 When searching event_log across **all campaigns** for advertiser 37775 (no campaign_group filter):
 
-**event_log (CTV VAST events):**
+**event_log (CTV VAST events — vast_impression/vast_start only, 578 total events, 100 returned):**
 
-| Campaign | campaign_group_id | funnel_level | channel | Events Found | Date Range |
+| Campaign | campaign_group_id | funnel_level | channel | Type | Date Range |
 |---|---|---|---|---|---|
-| 311968 | **78903** | **1 (S1)** | CTV | ~6 events | Feb 24, 2025 |
-| 311966 | **78903** | 3 (S3) | CTV | ~40+ events | Mar 31 – Apr 3, 2025 |
-
-**impression_log (serve records):**
-
-| Campaign | campaign_group_id | funnel_level | channel | Date Range |
-|---|---|---|---|---|
-| 311900 | **78893** | **1 (S1)** | CTV | Feb 24, 2025 |
-| 311968 | **78903** | **1 (S1)** | CTV | Feb 24, 2025 |
-| 311974 | **78904** | **1 (S1)** | CTV | Feb 24, 2025 |
-| 311966 | **78903** | 3 (S3) | CTV | Mar 31+, 2025 |
+| 311974 | **78904** | **1 (S1)** | CTV | Prospecting | Feb 24, 2025 |
+| 311968 | **78903** | **1 (S1)** | CTV | Prospecting | Feb 24, 2025 |
+| 311900 | **78893** | **1 (S1)** | CTV | Prospecting | Apr 20, 2025 (bid_ip=173.31.9.17) |
+| 311966 | **78903** | 3 (S3) | CTV | Multi-Touch Plus | Mar 31 – Jun 5, 2025 (many events) |
+| 394578 | **84697** | 3 (S3) | CTV | TV Retargeting - Cart | May 20, 2025 |
+| 394577 | **84697** | **2 (S2)** | CTV | TV Retargeting - 5+ PV | Jul 7, 2025 |
+| 260986 | **69778** | **2 (S2)** | CTV | TV Retargeting - 5+ PV | Jul 9–22, 2025 |
+| 443844 | **92881** | **2 (S2)** | CTV | TV Retargeting - 5+ PV | Jul 21, 2025 |
+| 450300 | **93957** | 3 (S3) | CTV | Multi-Touch Plus | Jan 27, 2026 (the VV) |
 
 **viewability_log:** 0 records across all advertiser 37775 campaigns.
 
-**Key finding:** The IP received S1 prospecting CTV ads across **3 different campaign groups** (78893, 78903, 78904) for the same advertiser — all on the same day (Feb 24, 2025), 11 months before the VV in campaign_group **93957** (Jan 2026). The IP was a real, heavily-served MNTN viewer. But it was never served a single impression in campaign_group 93957 prior to the S3 VV.
+**impression_log:** Not included in optimized Part B (event_log covers CTV path, viewability_log covers display — impression_log would show same IPs).
+
+**Key finding:** The IP received S1 prospecting CTV ads across **3 different campaign groups** (78893, 78903, 78904) for the same advertiser and S2 retargeting ads in **3 more** (84697, 69778, 92881). It was a real, heavily-served MNTN viewer with 578+ events across the advertiser. But it was never served a single impression in campaign_group 93957 prior to the S3 VV.
 
 ## Conclusion
 
@@ -99,4 +99,6 @@ This VV is correctly unresolvable under campaign_group_id scoping:
 
 ## Queries
 
-`queries/ti_650_v18_exhaustive_ip_trace.sql` — all 4 queries (3 within cg + 1 cross-advertiser)
+`queries/ti_650_v18_exhaustive_ip_trace.sql` — Part A (cg 93957, 3 tables UNION ALL) + Part B (advertiser 37775, 3 tables UNION ALL)
+`queries/ti_650_v19_vv_full_trace.sql` — Full pipeline trace (2-stage: core + win/bid by auction_id)
+`outputs/ti_650_v19_zach_summary.md` — Zach-ready summary with complete proof and cross-advertiser context

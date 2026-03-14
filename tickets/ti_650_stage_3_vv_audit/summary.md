@@ -305,7 +305,8 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id within-stage trace across 5 source tables.
 - `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking (CTV path only — event_log vast events).
 - `queries/ti_650_365d_ip_lookup.sql` — **v16 Step 3:** 365-day IP lookup for unresolved VV bid_ip. Parameterized.
-- `queries/ti_650_v18_exhaustive_ip_trace.sql` — **v18: Exhaustive IP trace** across all 3 cross-stage tables (event_log, viewability_log, impression_log) for IP `216.126.34.185`, cg 93957 + full advertiser. CIDR-safe. For Zach.
+- `queries/ti_650_v18_exhaustive_ip_trace.sql` — **v18: Exhaustive IP trace** across all 3 cross-stage tables (event_log, viewability_log, impression_log) for IP `216.126.34.185`, cg 93957 + full advertiser. CIDR-safe. Optimized: UNION ALL, LIKE, event_type filter.
+- `queries/ti_650_v19_vv_full_trace.sql` — **v19: Full VV pipeline trace.** 2-stage query: core (impression_log, clickpass, event_log) + win/bid by literal auction_id. IP 100% identical across all stages.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v14 update).
 
 ### Outputs
@@ -316,7 +317,8 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_v16_cross_stage_trace.md` — **v16 Step 2 results:** Cross-stage IP link confirmed (S3→S1, 0.9d gap, same campaign_group_id)
 - `outputs/ti_650_v16_365d_ip_lookup.md` — **v16 Step 3 results:** Unresolved VV IP has 1,200+ events across 10+ advertisers but zero for its own campaign group
 - `outputs/ti_650_v17_cidr_impact.md` — **v17 results:** CIDR fix comparison vs v14. Minimal impact.
-- `outputs/ti_650_v18_exhaustive_ip_trace.md` — **v18 results:** 3-table exhaustive trace, 2yr lookback, identity-graph confirmation. For Zach.
+- `outputs/ti_650_v18_exhaustive_ip_trace.md` — **v18 results:** 3-table exhaustive trace, 2yr lookback, identity-graph confirmation.
+- `outputs/ti_650_v19_zach_summary.md` — **v19 Zach-ready summary:** Complete proof that IP has zero S1/S2 impressions in cg 93957, full pipeline trace, cross-advertiser context.
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
