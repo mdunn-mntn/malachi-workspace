@@ -294,58 +294,35 @@ ORDER BY source, time;
 
 Show that the VV's ad_served_id exists in the tables it SHOULD be in, and confirm the IP at every stage.
 
-**Q4.1 — ad_served_id in clickpass_log (VV origin)**
+**Q4 — Combined pipeline trace (corrected column names per table)**
 ```sql
-SELECT 'clickpass_log' AS stage, ad_served_id, ip, bid_ip, campaign_id, time, guid
-FROM `dw-main-silver.logdata.clickpass_log`
-WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
-LIMIT 10;
-```
-
-**Q4.2 — ad_served_id in event_log (VAST events)**
-```sql
-SELECT 'event_log' AS stage, ad_served_id, event_type_raw, ip, bid_ip, campaign_id, time
+SELECT 'event_log' AS stage, ad_served_id, event_type_raw AS detail, ip, bid_ip AS bid_or_partner_ip, campaign_id, time
 FROM `dw-main-silver.logdata.event_log`
 WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
   AND DATE(time) BETWEEN '2026-01-25' AND '2026-01-29'
-LIMIT 10;
-```
-
-**Q4.3 — ad_served_id in impression_log**
-```sql
-SELECT 'impression_log' AS stage, ad_served_id, ip, bid_ip, campaign_id, time
+UNION ALL
+SELECT 'impression_log', ad_served_id, CAST(NULL AS STRING), ip, bid_ip, campaign_id, time
 FROM `dw-main-silver.logdata.impression_log`
 WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
   AND DATE(time) BETWEEN '2026-01-25' AND '2026-01-29'
-LIMIT 10;
-```
-
-**Q4.4 — ad_served_id in viewability_log**
-```sql
-SELECT 'viewability_log' AS stage, ad_served_id, ip, bid_ip, campaign_id, time
+UNION ALL
+SELECT 'viewability_log', ad_served_id, CAST(NULL AS STRING), ip, bid_ip, campaign_id, time
 FROM `dw-main-silver.logdata.viewability_log`
 WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
   AND DATE(time) BETWEEN '2026-01-25' AND '2026-01-29'
-LIMIT 10;
-```
-
-**Q4.5 — ad_served_id in win_logs**
-```sql
-SELECT 'win_logs' AS stage, ad_served_id, ip, bid_ip, campaign_id, auction_id, time
-FROM `dw-main-silver.logdata.win_logs`
-WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
-  AND DATE(time) BETWEEN '2026-01-25' AND '2026-01-29'
-LIMIT 10;
-```
-
-**Q4.6 — ad_served_id in cost_impression_log**
-```sql
-SELECT 'cost_impression_log' AS stage, ad_served_id, ip, bid_ip, campaign_id, auction_id, time
+UNION ALL
+SELECT 'cost_impression_log', ad_served_id, CAST(NULL AS STRING), ip, partner_ip, campaign_id, time
 FROM `dw-main-silver.logdata.cost_impression_log`
 WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
   AND DATE(time) BETWEEN '2026-01-25' AND '2026-01-29'
-LIMIT 10;
+UNION ALL
+SELECT 'clickpass_log', ad_served_id, CAST(NULL AS STRING), ip, CAST(NULL AS STRING), campaign_id, time
+FROM `dw-main-silver.logdata.clickpass_log`
+WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
+ORDER BY stage, time
+LIMIT 50;
 ```
+*Note: clickpass_log has ip/ip_raw (no bid_ip). cost_impression_log has ip/partner_ip (no bid_ip, no auction_id). win_logs has no ad_served_id — must join via auction_id from cost_impression_log.*
 
 *These should all show ip = 216.126.34.185 and campaign_id = 450300 (S3). The point: the ad_served_id is a VALID, traceable impression — it just entered S3 via the identity graph, not via a prior S1/S2 impression.*
 
