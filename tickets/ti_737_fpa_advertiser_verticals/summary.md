@@ -130,6 +130,46 @@ Summary for DPLAT:
 - Added `silver.fpa.advertiser_verticals` and `silver.fpa.categories` to data_catalog.md
 - Added fpa dataset architecture note to data_knowledge.md
 
-## 8. Open Items / Follow-ups
+## 8. Empty advertiser_name Investigation (2026-03-16)
+
+**Trigger:** Alex reported 77 advertisers with empty `advertiser_name` breaking BUK pipelines.
+
+### Root Cause
+A **regression starting 2025-12-23** broke `advertiser_name` population in `fpa_advertiser_verticals`. The column is denormalized (written at INSERT time, never updated — only 2 of 40,730 rows have ever been updated). Something changed in the application code around that date that stopped populating the name.
+
+### Impact Timeline
+| Period | Total Advertisers | Empty Name | Empty % |
+|--------|------------------|------------|---------|
+| Jan 2024 – Nov 2025 | ~11,600 | 0 | 0% |
+| Dec 2025 | 715 | 133 | 18.6% |
+| Jan 2026 | 1,934 | 1,324 | 68.5% |
+| Feb 2026 | 2,302 | 1,877 | 81.5% |
+| Mar 2026 (to date) | 1,306 | 1,032 | 79.0% |
+
+**Total affected: 4,366 distinct advertisers (8,732 rows).**
+
+### Cross-Check Against Advertisers Dimension
+| Status | Count | Notes |
+|--------|-------|-------|
+| Has name in `integrationprod.advertisers` but empty in FPA | 1,886 | Name exists but wasn't captured at FPA insert time |
+| Also empty in `integrationprod.advertisers` | 2,480 | All active, not deleted — likely incomplete signups |
+| Not in advertisers table at all | 27 | Orphaned records |
+
+### Timing Evidence
+The FPA row is created 2–8 seconds after the advertiser row, yet the name is still empty. This suggests the application reads/writes the name before it's populated, or the name population step was removed/broken.
+
+Example (advertiser 57759 — Alex's test case):
+- `integrationprod.advertisers`: company_name = "Mtn View Nissan of Chattanooga" (created 2026-02-17 13:53:01)
+- `fpa.advertiser_verticals`: advertiser_name = "" (created 2026-02-17 13:53:05, 4 seconds later)
+
+### Recommendation
+1. **BUK fix (immediate):** Do not rely on `advertiser_name` from `fpa.advertiser_verticals`. JOIN to `integrationprod.advertisers.company_name` instead — it's the authoritative source and reliably populated.
+2. **Source fix (longer term):** The application code that inserts into `fpa_advertiser_verticals` needs to be investigated — something changed around 2025-12-23 that broke name population. This is an application-layer bug, not a BQ/pipeline issue.
+
+### Query File
+`queries/ti_737_empty_name_investigation.sql`
+
+## 9. Open Items / Follow-ups
 - The 49 orphan advertiser_ids could be flagged to DPLAT as a source data quality issue if desired (not blocking)
 - `fpa.categories` table also exists in the fpa dataset — may need separate validation if it's also part of the CoreDW migration
+- **Empty advertiser_name regression** — needs application-side investigation (see Section 8)
