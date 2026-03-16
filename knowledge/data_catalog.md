@@ -1961,7 +1961,7 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 |--------|------|-------------|
 | id | INTEGER | PK (clustered) |
 | advertiser_id | INTEGER | FK to advertisers |
-| advertiser_name | STRING | Denormalized name (empty for ~8k new advertisers) |
+| advertiser_name | STRING | **UNRELIABLE — do not use.** Denormalized, write-once, never updated. See gotchas. |
 | vertical_id | INTEGER | Vertical category ID |
 | vertical_name | STRING | Denormalized vertical name |
 | type | INTEGER | 0 = parent vertical, 1 = sub-vertical |
@@ -1974,6 +1974,12 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 - 185 distinct verticals, 184 distinct names (3 parent/child pairs share names)
 - 49 advertiser_ids are orphans (not in advertisers table) — pre-existing source issue
 - Join to advertisers: `advertiser_id = advertisers.advertiser_id`
+
+**GOTCHA — `advertiser_name` is unreliable (TI-737, 2026-03-16):**
+- Write-once, never updated (only 2 of ~40k rows have ever been updated)
+- **Empty name regression:** Starting 2025-12-23, 79–82% of new advertisers inserted with empty string. 4,366 advertisers affected.
+- **Stale names:** Even when populated, 1,114 of 16,000 (7%) differ from current `advertisers.company_name` because customers edited their name after the FPA row was created.
+- **Always JOIN to `integrationprod.advertisers.company_name`** (or `public_advertisers.company_name`) for the authoritative, current advertiser name.
 
 ---
 

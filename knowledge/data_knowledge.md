@@ -444,9 +444,13 @@ Domain-level ecommerce classifier that assigns an `ecommerce_score` to each doma
 - Downstream work: TI-200 whitelist/blocklist uses these thresholds
 
 ### Vertical Classification
-`fpa.advertiser_verticals` (Greenplum) stores the advertiser→vertical mapping.
+`fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)
 - Vertical IDs: 101001, 119001, 120002 referenced in TI-221/TI-270 analyses
+- **`advertiser_name` column is UNRELIABLE** — it's a denormalized, write-once field that is never updated. Two known issues:
+  1. **Empty name regression (since 2025-12-23):** 79–82% of new advertisers have empty string. 4,366+ advertisers affected.
+  2. **Stale names:** 7% of populated names differ from current `advertisers.company_name` (customers renamed after FPA row was created).
+  - **Always JOIN to `advertisers.company_name`** for the current name — never use `fpa_advertiser_verticals.advertiser_name`.
 
 ---
 
