@@ -89,6 +89,19 @@ use the clean alias in `logdata.*`.
 - **Recent table**: `dw-main-bronze.sqlmesh__raw.raw__*` — partitioned by `time` (TIMESTAMP, DAY partition)
 - **History table**: `dw-main-bronze.sqlmesh__history.history__*` — partitioned by `date_column`
 
+**Physical table retention (verified 2026-03-16):**
+
+| Physical Table | Dataset | Earliest Data | TTL | Size (approx) |
+|---|---|---|---|---|
+| `history__event_log__1601996237` | `sqlmesh__history` | 2025-01-01 | none | ~12 TB |
+| `history__impression_log__2959498407` | `sqlmesh__history` | 2025-01-01 | none | ~10 TB |
+| `history__viewability_log__3987498553` | `sqlmesh__history` | 2025-04-08 | none | ~1.2 TB |
+| `raw__event_log__2961306213` | `sqlmesh__raw` | 2026-01-01 | 365d | ~1.6 TB |
+| `raw__impression_log__1553762165` | `sqlmesh__raw` | 2025-08-25 | 90d | — |
+| `raw__viewability_log__4234484773` | `sqlmesh__raw` | 2025-12-31 | 90d | ~216 GB |
+
+**No BQ table at any layer has data before 2025-01-01.** Pre-2025 data only exists in Greenplum coreDW (deprecated April 30, 2026). When searching for historical IP/impression data, querying the physical tables directly (bypassing the silver VIEW) does NOT extend coverage — it only avoids the UNION overhead.
+
 BQ can push down filters to the underlying `time`-partitioned raw tables only with **direct TIMESTAMP comparisons**. Wrapping the column in `DATE()` defeats partition pruning.
 
 **Correct (enables partition pruning):**
