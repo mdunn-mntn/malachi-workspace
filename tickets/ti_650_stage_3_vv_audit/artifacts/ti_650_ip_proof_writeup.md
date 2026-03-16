@@ -15,6 +15,8 @@ The match between `bid_logs.ip` and one of these three tables should be 100%. Za
 Start in `clickpass_log` — that's where verified visits land. We're tracing `ad_served_id`: `80207c6e-1fb9-427b-b019-29e15fb3323c`.
 
 ```sql
+-- Always add a date filter to clickpass_log even with ad_served_id —
+-- without it, BQ scans all 2,238+ partitions (110 GB).
 SELECT
   ad_served_id,
   campaign_id,
@@ -31,6 +33,7 @@ SELECT
   impression_time
 FROM `dw-main-silver.logdata.clickpass_log`
 WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
+  AND time >= TIMESTAMP('2026-02-04') AND time < TIMESTAMP('2026-02-05')
 ;
 ```
 
@@ -55,11 +58,13 @@ Key detail: the VV happened on **2026-02-04**, but the original impression was o
 Using `ad_served_id` to join across tables, and `impression_log.ttd_impression_id` to bridge to `win_logs`/`bid_logs` via `auction_id`:
 
 ```sql
+-- Use TIMESTAMP filters (not DATE()) to enable partition pruning.
+-- clickpass_date = 2026-02-04, impression_date = 2026-01-27
 WITH cl AS (
   SELECT ad_served_id, ip, advertiser_id, campaign_id, time, impression_time,
          attribution_model_id, guid, is_new, first_touch_ad_served_id
   FROM `dw-main-silver.logdata.clickpass_log`
-  WHERE DATE(time) = '2026-02-04'
+  WHERE time >= TIMESTAMP('2026-02-04') AND time < TIMESTAMP('2026-02-05')
     AND ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
   LIMIT 1
 )
@@ -97,20 +102,20 @@ LEFT JOIN `dw-main-bronze.integrationprod.campaigns` camp
 LEFT JOIN `dw-main-silver.logdata.event_log` ev_imp
   ON ev_imp.ad_served_id = cl.ad_served_id
   AND ev_imp.event_type_raw = 'vast_impression'
-  AND DATE(ev_imp.time) = '2026-01-27'
+  AND ev_imp.time >= TIMESTAMP('2026-01-27') AND ev_imp.time < TIMESTAMP('2026-01-28')
 LEFT JOIN `dw-main-silver.logdata.event_log` ev_start
   ON ev_start.ad_served_id = cl.ad_served_id
   AND ev_start.event_type_raw = 'vast_start'
-  AND DATE(ev_start.time) = '2026-01-27'
+  AND ev_start.time >= TIMESTAMP('2026-01-27') AND ev_start.time < TIMESTAMP('2026-01-28')
 LEFT JOIN `dw-main-silver.logdata.impression_log` imp
   ON imp.ad_served_id = cl.ad_served_id
-  AND DATE(imp.time) = '2026-01-27'
+  AND imp.time >= TIMESTAMP('2026-01-27') AND imp.time < TIMESTAMP('2026-01-28')
 LEFT JOIN `dw-main-silver.logdata.win_logs` w
   ON w.auction_id = imp.ttd_impression_id
-  AND DATE(w.time) = '2026-01-27'
+  AND w.time >= TIMESTAMP('2026-01-27') AND w.time < TIMESTAMP('2026-01-28')
 LEFT JOIN `dw-main-silver.logdata.bid_logs` b
   ON b.auction_id = imp.ttd_impression_id
-  AND DATE(b.time) = '2026-01-27'
+  AND b.time >= TIMESTAMP('2026-01-27') AND b.time < TIMESTAMP('2026-01-28')
 ;
 ```
 
@@ -255,7 +260,7 @@ This means the IP entered S3 targeting via the identity graph (LiveRamp/CRM), no
 
 ## Verification Query — Cross-Table Search
 
-This query searches all three upstream impression tables for the IP across all campaigns for advertiser 37775. Run each part separately or as a UNION ALL:
+Run each table separately for better slot allocation. Use TIMESTAMP filters (not DATE()) to enable partition pruning, and exact IP match (no LIKE wildcards — IPs in silver log tables do not carry CIDR suffixes):
 
 ```sql
 -- Part 1: event_log (CTV impressions — vast_impression, vast_start)
@@ -277,11 +282,11 @@ JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_id = ev.campaign_id
   AND c.advertiser_id = 37775
 WHERE ev.event_type_raw IN ('vast_impression', 'vast_start')
-  AND (ev.ip = '216.126.34.185' OR ev.ip LIKE '216.126.34.185%'
-       OR ev.bid_ip = '216.126.34.185' OR ev.bid_ip LIKE '216.126.34.185%')
-  AND DATE(ev.time) BETWEEN '2025-01-01' AND '2026-12-31'
-
-UNION ALL
+  AND (ev.ip = '216.126.34.185' OR ev.bid_ip = '216.126.34.185')
+  AND ev.time >= TIMESTAMP('2025-07-11')
+  AND ev.time <  TIMESTAMP('2026-02-05')
+ORDER BY time
+;
 
 -- Part 2: viewability_log (viewable display impressions)
 SELECT
@@ -301,11 +306,11 @@ FROM `dw-main-silver.logdata.viewability_log` vl
 JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_id = vl.campaign_id
   AND c.advertiser_id = 37775
-WHERE (vl.ip = '216.126.34.185' OR vl.ip LIKE '216.126.34.185%'
-       OR vl.bid_ip = '216.126.34.185' OR vl.bid_ip LIKE '216.126.34.185%')
-  AND DATE(vl.time) BETWEEN '2025-01-01' AND '2026-12-31'
-
-UNION ALL
+WHERE (vl.ip = '216.126.34.185' OR vl.bid_ip = '216.126.34.185')
+  AND vl.time >= TIMESTAMP('2025-07-11')
+  AND vl.time <  TIMESTAMP('2026-02-05')
+ORDER BY time
+;
 
 -- Part 3: impression_log (non-viewable display + CTV serve records)
 SELECT
@@ -325,9 +330,9 @@ FROM `dw-main-silver.logdata.impression_log` il
 JOIN `dw-main-bronze.integrationprod.campaigns` c
   ON c.campaign_id = il.campaign_id
   AND c.advertiser_id = 37775
-WHERE (il.ip = '216.126.34.185' OR il.ip LIKE '216.126.34.185%'
-       OR il.bid_ip = '216.126.34.185' OR il.bid_ip LIKE '216.126.34.185%')
-  AND DATE(il.time) BETWEEN '2025-01-01' AND '2026-12-31'
-ORDER BY source_table, time
+WHERE (il.ip = '216.126.34.185' OR il.bid_ip = '216.126.34.185')
+  AND il.time >= TIMESTAMP('2025-07-11')
+  AND il.time <  TIMESTAMP('2026-02-05')
+ORDER BY time
 ;
 ```
