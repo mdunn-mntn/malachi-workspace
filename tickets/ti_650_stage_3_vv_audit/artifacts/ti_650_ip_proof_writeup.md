@@ -10,24 +10,49 @@ However when going from S3 → S1 or S3 → S2 or S2 → S1, we need to link the
 
 The match between `bid_logs.ip` and one of these three tables should be 100%. Zach says it MUST be there.
 
-## Example
+## Step 1: Find the Verified Visit
 
-In `clickpass_log`, there's an `ad_served_id`: `80207c6e-1fb9-427b-b019-29e15fb3323c`.
+Start in `clickpass_log` — that's where verified visits land. We're tracing `ad_served_id`: `80207c6e-1fb9-427b-b019-29e15fb3323c`.
 
-If you trace this ad_served_id back through the full pipeline, the IP is `216.126.34.185` at every single stage — zero mutation:
-
+```sql
+SELECT
+  ad_served_id,
+  campaign_id,
+  ip,
+  ip_raw,
+  guid,
+  time,
+  epoch,
+  advertiser_id,
+  creative_id,
+  is_new,
+  attribution_model_id,
+  first_touch_ad_served_id,
+  impression_time
+FROM `dw-main-silver.logdata.clickpass_log`
+WHERE ad_served_id = '80207c6e-1fb9-427b-b019-29e15fb3323c'
+;
 ```
-Stage                          IP                Timestamp
-bid (bid_logs)                 216.126.34.185    2026-01-27 14:52:20
-win (win_logs)                 216.126.34.185    2026-01-27 14:52:20
-serve (impression_log)         216.126.34.185    2026-01-27 14:52:20
-vast_impression (event_log)    216.126.34.185    2026-01-27 14:53:39
-vast_start (event_log)         216.126.34.185    2026-01-27 14:53:39
-vast_firstQuartile → complete  216.126.34.185    14:53:47 → 14:54:08
-verified visit (clickpass)     216.126.34.185    2026-02-04 00:06:14
+
+Result (1 row):
+```
+ip:                        216.126.34.185
+campaign_id:               450300
+advertiser_id:             37775
+creative_id:               6196122
+attribution_model_id:      9
+guid:                      80f0805e-6153-3fbc-810a-9f9bd2e718c4
+is_new:                    true
+first_touch_ad_served_id:  null
+time:                      2026-02-04 00:06:14 UTC
+impression_time:           2026-01-27 14:53:39 UTC
 ```
 
-You can verify that with this query:
+Key detail: the VV happened on **2026-02-04**, but the original impression was on **2026-01-27** (8 days earlier). The upstream tables (bid, win, serve, event_log) need to be queried on the impression date, not the clickpass date.
+
+## Step 2: Trace the IP Through Every Pipeline Stage
+
+Using `ad_served_id` to join across tables, and `impression_log.ttd_impression_id` to bridge to `win_logs`/`bid_logs` via `auction_id`:
 
 ```sql
 WITH cl AS (
@@ -89,21 +114,42 @@ LEFT JOIN `dw-main-silver.logdata.bid_logs` b
 ;
 ```
 
-## Campaign Group Context
+Result — the IP is `216.126.34.185` at every single stage, zero mutation:
 
-The `campaign_id` for this impression is **450300** — "Beeswax Television Multi-Touch Plus". Its `campaign_group_id` is **93957**, `funnel_level = 3` (S3), `objective_id = 1` (prospecting).
-
-If you look up that campaign_group:
-
-```sql
-SELECT *
-FROM `dw-main-bronze.integrationprod.campaigns`
-WHERE campaign_group_id = 93957
-ORDER BY campaign_id
-LIMIT 10;
+```
+Stage                          IP                Timestamp
+bid (bid_logs)                 216.126.34.185    2026-01-27 14:52:20
+win (win_logs)                 216.126.34.185    2026-01-27 14:52:20
+serve (impression_log)         216.126.34.185    2026-01-27 14:52:20
+vast_impression (event_log)    216.126.34.185    2026-01-27 14:53:39
+vast_start (event_log)         216.126.34.185    2026-01-27 14:53:39
+verified visit (clickpass)     216.126.34.185    2026-02-04 00:06:14
+ip_mutated:                    false
 ```
 
-You get 6 campaigns, all created 2025-07-11, none are test campaigns:
+This confirms the within-stage trace is clean. The IP never changes from bid through to verified visit.
+
+## Step 3: Identify the Campaign Group
+
+The `campaign_id` for this impression is **450300** — "Beeswax Television Multi-Touch Plus". Its `campaign_group_id` is **93957**, `funnel_level = 3` (S3), `objective_id = 1`.
+
+```sql
+SELECT campaign_group_id, name, advertiser_id, create_time, first_launch_time
+FROM `dw-main-bronze.integrationprod.campaign_groups`
+WHERE campaign_group_id = 93957;
+```
+
+Result: campaign group **"7 2025 Wedding CRM"**, advertiser 37775, created **2025-07-11 16:38:43**, first launched **2025-07-11 16:42:58**.
+
+All campaigns in this group:
+
+```sql
+SELECT campaign_id, name, campaign_group_id, funnel_level, channel_id, objective_id,
+       create_time, deleted, is_test
+FROM `dw-main-bronze.integrationprod.campaigns`
+WHERE campaign_group_id = 93957
+ORDER BY campaign_id;
+```
 
 ```
 campaign_id  name                                    funnel  stage  channel
@@ -115,30 +161,76 @@ campaign_id  name                                    funnel  stage  channel
 450305       Beeswax Television Prospecting           1       S1     CTV
 ```
 
-The S1/S2 campaigns we need to find a prior impression in: **450305** (S1), **450301** (S2 CTV), **450303** (S2 Display).
+6 campaigns, all created 2025-07-11, none deleted, none test. The S1/S2 campaigns we need to find a prior impression in: **450305** (S1 CTV), **450301** (S2 CTV), **450303** (S2 Display).
 
-## Cross-Stage IP Search
+## Step 4: Cross-Stage IP Search
 
-The `bid_ip` for this verified visit is `216.126.34.185`. To find the cross-stage link, I searched all three upstream impression tables (`event_log`, `viewability_log`, `impression_log`) for this IP across **all** campaigns for advertiser 37775 — not just cg 93957. I checked both `ip` and `bid_ip` columns and added a `%` wildcard in case a CIDR suffix like `/32` or `/24` was appended. I went all the way back to **2025-01-01**, which is as far as GCP tables go (~14 months of history). The campaign group was created 2025-07-11 so no impression should be earlier than that, but I searched the full range to be thorough.
+This is the critical step. The verified visit was attributed to an S3 campaign (450300). For this to be legitimate, IP `216.126.34.185` must have a prior S1 or S2 impression within the same campaign group (93957) that got it into S3 targeting.
 
-I did NOT filter by `campaign_group_id` because I wanted to see if this IP linked back to **any** campaign. Here's what came back:
+I searched all three upstream impression tables (`event_log`, `viewability_log`, `impression_log`) for this IP across **all** campaigns for advertiser 37775 — not just cg 93957. I checked both `ip` and `bid_ip` columns and added a `%` wildcard in case a CIDR suffix like `/32` or `/24` was appended. I went all the way back to **2025-01-01**, which is as far as BQ silver tables go. The campaign group was created 2025-07-11 so no impression should be earlier than that, but I searched the full range to be thorough.
 
-**event_log — 173 rows found.** The IP shows up in S1/S2 impressions for other campaign groups:
-- cg 78903: 311966 (S3, 102 rows), 311968 (S1, 8 rows), 311965 (S2, 2 rows)
-- cg 78893: 311900 (S1, 9 rows)
-- cg 78904: 311974 (S1, 2 rows)
-- cg 69778: 260986 (S2, 12 rows)
-- cg 92881: 443844 (S2, 4 rows), 443848 (S2, 2 rows)
-- cg 92876: 443816 (S2, 4 rows), 443815 (S2, 2 rows)
-- cg 92884: 443866 (S2, 2 rows), 443862 (S2, 2 rows)
-- cg 96071: 462967 (S1, 2 rows), 462965 (S3, 2 rows)
-- cg 84697: 394578 (S3, 2 rows), 394577 (S2, 2 rows)
-- cg 93961: 450324 (S3, 14 rows)
-- **cg 93957: ZERO rows**
+I did NOT filter by `campaign_group_id` because I wanted to see if this IP linked back to **any** campaign — proving the methodology works when S1/S2 records exist.
 
-**impression_log — 200+ rows found.** Same pattern — IP shows up across multiple campaign groups. **cg 93957: only campaign 450300 (S3, 7 rows) — zero S1/S2.**
+### event_log — 207 rows found
 
-**viewability_log — 0 rows.** IP never appeared in viewability_log for any campaign.
+The IP appears across 11 campaign groups. For **cg 93957**, it has **10 rows — all S3** (campaign 450300 only). **Zero S1/S2.**
+
+Breakdown by campaign group:
+
+```
+cg       campaign  funnel  rows   note
+78903    311966    S3      102    ← same IP, different campaign group
+78903    311968    S1       8     ← S1 EXISTS in other cg
+78903    311965    S2       2     ← S2 EXISTS in other cg
+78893    311900    S1       9     ← S1 EXISTS in other cg
+78904    311974    S1       2
+69778    260986    S2      12
+92884    443862    S2      20
+92884    443866    S3       2
+92881    443844    S2       6
+92881    443848    S3       2
+92876    443815    S2       6
+92876    443816    S3       4
+93961    450324    S3      14
+93957    450300    S3      10     ← OUR CG — S3 only, ZERO S1/S2
+96071    462967    S1       2
+96071    462965    S3       2
+84697    394577    S2       2
+84697    394578    S3       2
+```
+
+### impression_log — 384 rows found
+
+Same pattern. For **cg 93957: only campaign 450300 (S3, 7 rows) — zero S1/S2.**
+
+```
+cg       campaign  funnel  rows
+78903    311966    S3      207
+78903    311968    S1       6
+78903    311965    S2       2
+78893    311900    S1      21
+78904    311974    S1       8
+69778    260986    S2      19
+69778    260988    S3       3
+92884    443862    S2      31
+92884    443866    S3       6
+92881    443844    S2      23
+92881    443848    S3       3
+92876    443815    S2       6
+92876    443816    S3      15
+93961    450324    S3      19
+93957    450300    S3       7    ← OUR CG — S3 only, ZERO S1/S2
+96071    462965    S3       1
+96071    462967    S1       1
+84697    394577    S2       2
+84697    394578    S3       4
+```
+
+### viewability_log — 0 rows
+
+IP never appeared in viewability_log for any campaign for this advertiser.
+
+### Physical table verification
 
 I also searched the raw physical tables directly (not just the silver views), across all 6 physical tables (history + raw for each of event_log, impression_log, viewability_log):
 
@@ -153,6 +245,8 @@ raw__viewability_log        0                0
 TOTAL                       17 (all S3)      0
 ```
 
+### Key observation
+
 The IP has S1/S2 records in **10 other campaign groups** for this same advertiser — so the join logic works and the IP is findable when it exists. But it has **zero** S1 or S2 records within cg 93957, despite being credited with an S3 verified visit.
 
 ## Conclusion
@@ -161,7 +255,10 @@ This means the IP entered S3 targeting via the identity graph (LiveRamp/CRM), no
 
 ## Verification Query — Cross-Table Search
 
+This query searches all three upstream impression tables for the IP across all campaigns for advertiser 37775. Run each part separately or as a UNION ALL:
+
 ```sql
+-- Part 1: event_log (CTV impressions — vast_impression, vast_start)
 SELECT
   'event_log' AS source_table,
   ev.campaign_id,
@@ -186,6 +283,7 @@ WHERE ev.event_type_raw IN ('vast_impression', 'vast_start')
 
 UNION ALL
 
+-- Part 2: viewability_log (viewable display impressions)
 SELECT
   'viewability_log' AS source_table,
   vl.campaign_id,
@@ -209,6 +307,7 @@ WHERE (vl.ip = '216.126.34.185' OR vl.ip LIKE '216.126.34.185%'
 
 UNION ALL
 
+-- Part 3: impression_log (non-viewable display + CTV serve records)
 SELECT
   'impression_log' AS source_table,
   il.campaign_id,
@@ -230,6 +329,5 @@ WHERE (il.ip = '216.126.34.185' OR il.ip LIKE '216.126.34.185%'
        OR il.bid_ip = '216.126.34.185' OR il.bid_ip LIKE '216.126.34.185%')
   AND DATE(il.time) BETWEEN '2025-01-01' AND '2026-12-31'
 ORDER BY source_table, time
-LIMIT 200
 ;
 ```
