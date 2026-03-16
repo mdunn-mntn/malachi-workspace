@@ -167,7 +167,7 @@ campaign_id  name                                    funnel  stage  channel
 
 This is the critical step. The verified visit was attributed to an S3 campaign (450300). For this to be legitimate, IP `216.126.34.185` must have a prior S1 or S2 impression within the same campaign group (93957) that got it into S3 targeting.
 
-I searched all three upstream impression tables (`event_log`, `viewability_log`, `impression_log`) for this IP across **all** campaigns for advertiser 37775 — not just cg 93957. I checked both `ip` and `bid_ip` columns and added a `%` wildcard in case a CIDR suffix like `/32` or `/24` was appended. I went all the way back to **2025-01-01**, which is as far as BQ silver tables go. The campaign group was created 2025-07-11 so no impression should be earlier than that, but I searched the full range to be thorough.
+I searched all three upstream impression tables (`event_log`, `viewability_log`, `impression_log`) for this IP across **all** campaigns for advertiser 37775 — not just cg 93957. I checked both `ip` and `bid_ip` columns using exact match. The search window is **2025-07-11** (campaign group creation) through **2026-02-04** (VV date) — no impression for this campaign group can exist outside that range. BQ silver tables go back to 2025-01-01 at earliest, so this covers the full available history.
 
 I did NOT filter by `campaign_group_id` because I wanted to see if this IP linked back to **any** campaign — proving the methodology works when S1/S2 records exist.
 

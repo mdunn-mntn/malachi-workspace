@@ -116,6 +116,34 @@ WHERE DATE(time) BETWEEN '2026-02-04' AND '2026-02-10'
 
 SQLMesh model date parameters (`@start_dt`, `@end_dt`) are already TIMESTAMP type — use them directly without wrapping. Confirmed 2026-03-06 (queries using `DATE()` ran 9+ minutes vs near-instant with `TIMESTAMP()`).
 
+### IP Search Optimization — Cross-Stage/Cross-Table Queries
+
+Searching for a single IP across full table history (event_log, impression_log, viewability_log) is extremely expensive because these tables are partitioned by time, not IP. There is no IP index.
+
+**Measured costs (TI-650, 2026-03-16):**
+
+| Query Pattern | GB Billed | Wall Time | Partitions |
+|---|---|---|---|
+| event_log full scan (`DATE(time)`) | 14,677 GB | 35 min | 440 |
+| impression_log full scan (`DATE(time)`) | 11,829 GB | 23 min | 440 |
+| viewability_log full scan (`DATE(time)`) | 1,563 GB | 5 min | 343 |
+| clickpass_log no date filter | 110 GB | 29s | 2,238 |
+| IP funnel trace (single-day, TIMESTAMP) | 1,136 GB | 39s | 18 |
+
+**Optimization rules for IP searches:**
+
+1. **Use TIMESTAMP(), not DATE()** — `DATE(time)` defeats partition pruning on every table (documented above). Use `time >= TIMESTAMP('2025-07-01') AND time < TIMESTAMP('2026-03-01')` instead of `DATE(time) BETWEEN '2025-07-01' AND '2026-02-28'`.
+
+2. **Narrow the date range** — If you know the campaign group creation date (e.g. 2025-07-11) and the VV date (e.g. 2026-02-04), search only that window. Don't scan from 2025-01-01 "to be thorough" — it adds months of unnecessary partitions.
+
+3. **Drop LIKE wildcards for IP matching** — `ip LIKE '216.126.34.185%'` is unnecessary. IPs in silver log tables do not carry CIDR suffixes (`/32`, `/24`). Use exact match: `ip = '216.126.34.185'`. The LIKE adds string comparison overhead on billions of rows.
+
+4. **Always add a date filter to clickpass_log** — Even when filtering by `ad_served_id`, clickpass_log has 2,238+ partitions. Without a date filter, BQ scans all of them (110 GB). Add `AND time >= TIMESTAMP('2026-02-04') AND time < TIMESTAMP('2026-02-05')` to scan 1 partition instead.
+
+5. **Use aggregation for verification** — If you only need to confirm zero S1/S2 rows exist, use `GROUP BY campaign_group_id, campaign_id, funnel_level` with `COUNT(*)` instead of returning raw rows. Same bytes scanned but less output shuffling.
+
+6. **Query tables individually, not UNION ALL** — The cross-stage UNION ALL query (event_log + viewability_log + impression_log) forces BQ to process all three in one job. Running them as three separate queries lets you skip tables early (e.g., if viewability_log returns 0 rows, you save time on interpretation, and individual queries may get better slot allocation).
+
 Some `sqlmesh__logdata` tables are themselves VIEWs referencing other datasets:
 - `bid_attempted_log` and `bid_events_log` → both reference `bidder_bid_events` (same data, different filters)
 - `bid_logs` → references Beeswax bid_logs upstream
