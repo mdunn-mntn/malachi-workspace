@@ -230,6 +230,7 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 23. **CIDR fix (v17) has minimal impact on resolution rates.** event_log.ip has /32 CIDR suffix on all pre-2026 data, but CIL.ip (bare) in the S1 pool already covers the same impressions. Net gain: +45 VVs for adv 37775 S3 (+0.19pp), +5,113 for adv 31357 (+0.87pp). Fix is correct for data hygiene but does NOT explain the unresolved gap. The ~92% ceiling is structural, not a CIDR artifact.
 24. **3 cross-stage connecting tables, not just event_log.** The cross-stage IP link depends on impression type: CTV → `event_log.ip` (vast_start/vast_impression); viewable display → `viewability_log.ip`; non-viewable display → `impression_log.ip`. Prior analysis only checked event_log (CTV path). Display S1/S2 impressions would be invisible to event_log-only searches.
 25. **v18 exhaustive trace: IP `216.126.34.185` has zero S1/S2 impressions in cg 93957 across ALL 3 connecting tables, 2+ years, CIDR-safe.** Checked event_log, viewability_log, impression_log from Jan 2024 – Feb 2026. The IP had S1 prospecting CTV exposure in 3 different campaign groups (78893, 78903, 78904) for the same advertiser — all Feb 24, 2025. Genuinely unresolvable under campaign_group_id scoping. VV campaign (450300) is NOT retargeting (obj=1, funnel_level=3).
+26. **Bid IP divergence analysis: all 7 S3 ad_served_ids for IP `216.126.34.185` in cg 93957 have identical IP at every pipeline stage.** Full trace through bid_logs, win_logs, impression_log, event_log, clickpass_log — all `216.126.34.185`, zero divergence. 2 of 7 became VVs (80207c6e on Feb 4, c890f55a on Feb 26). No alternative IP exists to search for S1/S2 history. Hypothesis disproven — confirms identity-graph-only entry. See `outputs/ti_650_bid_ip_divergence_results.md`.
 
 ### MES Pipeline IP Map
 
@@ -319,6 +320,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_v17_cidr_impact.md` — **v17 results:** CIDR fix comparison vs v14. Minimal impact.
 - `outputs/ti_650_v18_exhaustive_ip_trace.md` — **v18 results:** 3-table exhaustive trace, 2yr lookback, identity-graph confirmation.
 - `outputs/ti_650_v19_zach_summary.md` — **v19 Zach-ready summary:** Complete proof that IP has zero S1/S2 impressions in cg 93957, full pipeline trace, cross-advertiser context.
+- `outputs/ti_650_bid_ip_divergence_results.md` — **Bid IP divergence analysis:** All 7 S3 ad_served_ids traced through full pipeline. Zero IP divergence. Hypothesis disproven.
 
 ### Artifacts
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
