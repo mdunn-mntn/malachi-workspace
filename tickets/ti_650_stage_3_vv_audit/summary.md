@@ -221,17 +221,19 @@ Two issues found and fixed that caused 442 unresolved S2 VVs:
 | resolved_with_vv_bridge | 68,056 (99.35%) | 68,498 (100%) |
 | unresolved | 442 | **0** |
 
-**Lookback age distribution (S2→S1 matches):**
-- Max: 186 days, Median: 105 days, P95: 181 days, P99: 184 days
-- 30,186/56,665 (53%) matches older than 90 days
-- 90-day Zach estimate was too conservative for long-running campaign groups
+**Lookback age distribution (S2→S1 matches, CORRECTED):**
+- Using EARLIEST match (biased): Max 186d, Median 136d, P95 183d — misleading, selects oldest of many
+- Using MOST RECENT match (correct): **Max 69d, Median 6d, P95 29d, P99 35d**
+- `latest_beyond_90d = 0` — every resolvable IP has at least one S1 match within 90 days
+- 10,227/68,492 (15%) IPs are still actively getting S1 impressions after the S2 VV
+- **90-day lookback is sufficient** when combined with CIDR fix + clickpass_log in S1 pool
 
 ### Scoping rules
 
 - **campaign_group_id scoping (v14+).** All cross-stage IP linking must be within the same `campaign_group_id`. Zach directive 2026-03-12.
 - **Prospecting only:** `objective_id IN (1, 5, 6)`. Exclude retargeting (4) and ego (7).
 - **funnel_level is authoritative for stage.** objective_id is UNRELIABLE — 48,934 S3 campaigns have obj=1 instead of 6 (UI migration bug, Ray confirmed 2026-03-11).
-- **180-day lookback (CORRECTED v21, was 90d).** Zach estimated max window = 88 days (14+30+14+30), but empirically 53% of S2→S1 matches for adv 31357 were >90 days old (max 186d). Long-running campaign groups accumulate S1 impressions far older than the theoretical max.
+- **90-day lookback is sufficient (RE-CORRECTED v21b).** Earliest-match analysis showed 186d max, but that's biased — selecting oldest of multiple matches. Using MOST RECENT prior S1 match: max 69d, P99 35d, median 6d. Zero IPs have their latest S1 match >90d before the VV. Zach's 88-day estimate (14+30+14+30) was actually close. **180d lookback in queries is safe but unnecessary for resolution — 90d covers 100%.**
 
 ### Production table schema (v10.1 — 54 columns)
 
