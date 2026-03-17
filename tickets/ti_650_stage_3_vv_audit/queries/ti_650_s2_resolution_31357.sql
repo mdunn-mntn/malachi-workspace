@@ -1,6 +1,6 @@
 -- TI-650: S2 VV resolution test - advertiser 31357
 -- Step 1: S2 VV -> IPs at each pipeline step via ad_served_id / auction_id
--- Step 2: bid_ip -> S1 pool (event_log, viewability_log, impression_log) on IP match
+-- Step 2: bid_ip -> S1 pool (event_log, viewability_log, impression_log, clickpass_log) on IP match
 -- Scoped to same campaign_group_id
 --
 -- Impression paths (source tables):
@@ -11,7 +11,7 @@
 --
 -- Join keys:
 --   MNTN tables: ad_served_id
---   Beeswax tables (bid_logs, win_logs): auction_id (bridged via impression_log.auction_id)
+--   Beeswax tables (bid_logs, win_logs): auction_id (bridged via impression_log.ttd_impression_id)
 
 DECLARE p_advertiser_id INT64 DEFAULT 31357;
 DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
@@ -61,7 +61,7 @@ ip_viewability AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
--- impression_log: non-viewable display path (also gives us ttd_impression_id for Beeswax bridge)
+-- impression_log: all display paths (also gives us ttd_impression_id for Beeswax bridge)
 ip_impression AS (
     SELECT ad_served_id, ip AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
@@ -90,7 +90,7 @@ ip_bid AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
--- Coalesce to get best available bid_ip
+-- Coalesce to get best available IP
 all_ips AS (
     SELECT
         v.ad_served_id,
@@ -108,7 +108,9 @@ all_ips AS (
     LEFT JOIN ip_event_log el ON el.ad_served_id = v.ad_served_id
 ),
 
--- Step 2: S1 impression pool (all 3 paths, kept separate for diagnostics)
+-- Step 2: S1 pool (all paths, kept separate for diagnostics)
+
+-- S1 event_log: CTV VAST events
 s1_pool_el AS (
     SELECT c.campaign_group_id, el.ip AS match_ip, MIN(el.time) AS impression_time
     FROM `dw-main-silver.logdata.event_log` el
@@ -123,6 +125,7 @@ s1_pool_el AS (
     GROUP BY c.campaign_group_id, el.ip
 ),
 
+-- S1 viewability_log: viewable display
 s1_pool_vl AS (
     SELECT c.campaign_group_id, vl.ip AS match_ip, MIN(vl.time) AS impression_time
     FROM `dw-main-silver.logdata.viewability_log` vl
@@ -136,6 +139,7 @@ s1_pool_vl AS (
     GROUP BY c.campaign_group_id, vl.ip
 ),
 
+-- S1 impression_log: non-viewable display
 s1_pool_il AS (
     SELECT c.campaign_group_id, il.ip AS match_ip, MIN(il.time) AS impression_time
     FROM `dw-main-silver.logdata.impression_log` il
@@ -147,6 +151,20 @@ s1_pool_il AS (
       AND il.advertiser_id = p_advertiser_id
       AND il.ip IS NOT NULL
     GROUP BY c.campaign_group_id, il.ip
+),
+
+-- S1 clickpass_log: S1 VV IPs (VV bridge - tests if prior S1 VV resolves remaining)
+s1_pool_cp AS (
+    SELECT c.campaign_group_id, cp.ip AS match_ip, MIN(cp.time) AS impression_time
+    FROM `dw-main-silver.logdata.clickpass_log` cp
+    JOIN `dw-main-bronze.integrationprod.campaigns` c
+        ON c.campaign_id = cp.campaign_id
+        AND c.deleted = FALSE AND c.is_test = FALSE
+        AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
+    WHERE cp.time >= p_lookback_start AND cp.time < p_vv_end
+      AND cp.advertiser_id = p_advertiser_id
+      AND cp.ip IS NOT NULL
+    GROUP BY c.campaign_group_id, cp.ip
 )
 
 SELECT
@@ -161,23 +179,33 @@ SELECT
     COUNTIF(a.resolved_ip IS NOT NULL) AS has_any_ip,
     COUNTIF(a.resolved_ip IS NULL) AS no_ip,
 
-    -- Step 2: S1 pool resolution by source table (using resolved_ip = best available)
+    -- Step 2: S1 pool resolution by source table
     COUNTIF(s1el.match_ip IS NOT NULL) AS s1_via_event_log,
     COUNTIF(s1vl.match_ip IS NOT NULL) AS s1_via_viewability_log,
     COUNTIF(s1il.match_ip IS NOT NULL) AS s1_via_impression_log,
+    COUNTIF(s1cp.match_ip IS NOT NULL) AS s1_via_clickpass_log,
 
-    -- Overall resolution
-    COUNTIF(s1el.match_ip IS NOT NULL OR s1vl.match_ip IS NOT NULL OR s1il.match_ip IS NOT NULL) AS resolved,
+    -- Overall resolution (impression tables only - no VV bridge)
+    COUNTIF(s1el.match_ip IS NOT NULL OR s1vl.match_ip IS NOT NULL OR s1il.match_ip IS NOT NULL) AS resolved_imp_only,
     ROUND(100.0 * COUNTIF(s1el.match_ip IS NOT NULL OR s1vl.match_ip IS NOT NULL OR s1il.match_ip IS NOT NULL)
-        / NULLIF(COUNT(*), 0), 2) AS resolved_pct,
+        / NULLIF(COUNT(*), 0), 2) AS resolved_imp_only_pct,
+
+    -- Overall resolution (with VV bridge)
+    COUNTIF(s1el.match_ip IS NOT NULL OR s1vl.match_ip IS NOT NULL OR s1il.match_ip IS NOT NULL
+        OR s1cp.match_ip IS NOT NULL) AS resolved_with_vv_bridge,
+    ROUND(100.0 * COUNTIF(s1el.match_ip IS NOT NULL OR s1vl.match_ip IS NOT NULL OR s1il.match_ip IS NOT NULL
+        OR s1cp.match_ip IS NOT NULL)
+        / NULLIF(COUNT(*), 0), 2) AS resolved_with_vv_bridge_pct,
+
+    -- Unresolved
     COUNTIF(s1el.match_ip IS NULL AND s1vl.match_ip IS NULL AND s1il.match_ip IS NULL
-        AND a.resolved_ip IS NOT NULL) AS unresolved_with_ip,
-    COUNTIF(s1el.match_ip IS NULL AND s1vl.match_ip IS NULL AND s1il.match_ip IS NULL) AS unresolved_total
+        AND s1cp.match_ip IS NULL AND a.resolved_ip IS NOT NULL) AS unresolved_with_ip,
+    COUNTIF(s1el.match_ip IS NULL AND s1vl.match_ip IS NULL AND s1il.match_ip IS NULL
+        AND s1cp.match_ip IS NULL) AS unresolved_total
 
 FROM s2_vvs v
 LEFT JOIN all_ips a ON a.ad_served_id = v.ad_served_id
 
--- S1 pool: separate joins for per-table diagnostics (using resolved_ip)
 LEFT JOIN s1_pool_el s1el
     ON s1el.campaign_group_id = v.campaign_group_id
     AND s1el.match_ip = a.resolved_ip
@@ -191,4 +219,9 @@ LEFT JOIN s1_pool_vl s1vl
 LEFT JOIN s1_pool_il s1il
     ON s1il.campaign_group_id = v.campaign_group_id
     AND s1il.match_ip = a.resolved_ip
-    AND s1il.impression_time < v.vv_time;
+    AND s1il.impression_time < v.vv_time
+
+LEFT JOIN s1_pool_cp s1cp
+    ON s1cp.campaign_group_id = v.campaign_group_id
+    AND s1cp.match_ip = a.resolved_ip
+    AND s1cp.impression_time < v.vv_time;
