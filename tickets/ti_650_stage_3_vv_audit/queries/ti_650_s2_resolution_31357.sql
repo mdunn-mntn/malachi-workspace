@@ -3,8 +3,8 @@
 -- Step 2: bid_ip -> S1 pool (event_log, viewability_log, impression_log, clickpass_log) on IP match
 -- Scoped to same campaign_group_id
 --
--- v7 changes from v5:
---   - Lookback extended from 90 to 180 days
+-- v8 changes from v7:
+--   - Split lookback: 90 days for Step 1 (within-S2, bid_logs TTL = 90d), 180 days for S1 pool
 --   - CIDR-safe matching: strip_cidr() on all IPs (event_log pre-2026 has /32 suffix)
 --
 -- Impression paths (source tables):
@@ -20,7 +20,10 @@
 DECLARE p_advertiser_id INT64 DEFAULT 31357;
 DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
 DECLARE p_vv_end TIMESTAMP DEFAULT TIMESTAMP('2026-02-11');
-DECLARE p_lookback_start TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 180 DAY);
+-- Step 1 lookback: 90 days (bid_logs TTL = 90 days, within-stage already 100%)
+DECLARE p_step1_lookback TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 90 DAY);
+-- S1 pool lookback: 180 days (test if older S1 impressions resolve the 442 unresolved)
+DECLARE p_s1_lookback TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 180 DAY);
 
 CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)]);
 
@@ -49,7 +52,7 @@ ip_event_log AS (
     SELECT ad_served_id, strip_cidr(ip) AS event_log_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= p_lookback_start AND time < p_vv_end
+      AND time >= p_step1_lookback AND time < p_vv_end
       AND advertiser_id = p_advertiser_id
       AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
       AND ip IS NOT NULL
@@ -60,7 +63,7 @@ ip_event_log AS (
 ip_viewability AS (
     SELECT ad_served_id, strip_cidr(ip) AS viewability_ip
     FROM `dw-main-silver.logdata.viewability_log`
-    WHERE time >= p_lookback_start AND time < p_vv_end
+    WHERE time >= p_step1_lookback AND time < p_vv_end
       AND advertiser_id = p_advertiser_id
       AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
       AND ip IS NOT NULL
@@ -71,7 +74,7 @@ ip_viewability AS (
 ip_impression AS (
     SELECT ad_served_id, strip_cidr(ip) AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= p_lookback_start AND time < p_vv_end
+    WHERE time >= p_step1_lookback AND time < p_vv_end
       AND advertiser_id = p_advertiser_id
       AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
       AND ip IS NOT NULL
@@ -83,7 +86,7 @@ ip_win AS (
     SELECT il.ad_served_id, strip_cidr(w.ip) AS win_ip
     FROM `dw-main-silver.logdata.win_logs` w
     JOIN ip_impression il ON w.auction_id = il.ttd_impression_id
-    WHERE w.time >= p_lookback_start AND w.time < p_vv_end
+    WHERE w.time >= p_step1_lookback AND w.time < p_vv_end
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
 ),
 
@@ -92,7 +95,7 @@ ip_bid AS (
     SELECT il.ad_served_id, strip_cidr(b.ip) AS bid_ip
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
-    WHERE b.time >= p_lookback_start AND b.time < p_vv_end
+    WHERE b.time >= p_step1_lookback AND b.time < p_vv_end
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
@@ -125,7 +128,7 @@ s1_pool_el AS (
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
     WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
-      AND el.time >= p_lookback_start AND el.time < p_vv_end
+      AND el.time >= p_s1_lookback AND el.time < p_vv_end
       AND el.advertiser_id = p_advertiser_id
       AND el.ip IS NOT NULL
     GROUP BY c.campaign_group_id, strip_cidr(el.ip)
@@ -139,7 +142,7 @@ s1_pool_vl AS (
         ON c.campaign_id = vl.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE vl.time >= p_lookback_start AND vl.time < p_vv_end
+    WHERE vl.time >= p_s1_lookback AND vl.time < p_vv_end
       AND vl.advertiser_id = p_advertiser_id
       AND vl.ip IS NOT NULL
     GROUP BY c.campaign_group_id, strip_cidr(vl.ip)
@@ -153,7 +156,7 @@ s1_pool_il AS (
         ON c.campaign_id = il.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE il.time >= p_lookback_start AND il.time < p_vv_end
+    WHERE il.time >= p_s1_lookback AND il.time < p_vv_end
       AND il.advertiser_id = p_advertiser_id
       AND il.ip IS NOT NULL
     GROUP BY c.campaign_group_id, strip_cidr(il.ip)
@@ -167,7 +170,7 @@ s1_pool_cp AS (
         ON c.campaign_id = cp.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE cp.time >= p_lookback_start AND cp.time < p_vv_end
+    WHERE cp.time >= p_s1_lookback AND cp.time < p_vv_end
       AND cp.advertiser_id = p_advertiser_id
       AND cp.ip IS NOT NULL
     GROUP BY c.campaign_group_id, strip_cidr(cp.ip)
