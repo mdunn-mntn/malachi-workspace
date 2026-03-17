@@ -1,13 +1,17 @@
 -- TI-650: S2 VV resolution test - advertiser 31357
--- Step 1: S2 VV -> bid_ip via ad_served_id (deterministic, should be 100%)
+-- Step 1: S2 VV -> IPs at each pipeline step via ad_served_id / auction_id
 -- Step 2: bid_ip -> S1 pool (event_log, viewability_log, impression_log) on IP match
 -- Scoped to same campaign_group_id
 --
--- Impression paths:
---   CTV:                clickpass -> event_log -> win_log -> impression_log -> bid_log
---   Viewable Display:   clickpass -> viewability_log -> impression_log -> win_log -> bid_log
---   Non-Viewable Disp:  clickpass -> impression_log -> win_log -> bid_log
+-- Impression paths (source tables):
+--   CTV:                clickpass -> event_log(vast) -> win_logs -> impression_log -> bid_logs
+--   Viewable Display:   clickpass -> viewability_log -> impression_log -> win_logs -> bid_logs
+--   Non-Viewable Disp:  clickpass -> impression_log -> win_logs -> bid_logs
 -- Note: for display, impression comes AFTER the win (opposite of CTV)
+--
+-- Join keys:
+--   MNTN tables: ad_served_id
+--   Beeswax tables (bid_logs, win_logs): auction_id (bridged via impression_log.auction_id)
 
 DECLARE p_advertiser_id INT64 DEFAULT 31357;
 DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
@@ -32,43 +36,23 @@ WITH s2_vvs AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 
--- Step 1: Get bid_ip via ad_served_id from ALL impression tables (should be 100%)
--- CIL
-bid_ip_cil AS (
-    SELECT ad_served_id, ip AS bid_ip
-    FROM `dw-main-silver.logdata.cost_impression_log`
-    WHERE time >= p_lookback_start AND time < p_vv_end
-      AND advertiser_id = p_advertiser_id
-      AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
-    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
-),
+-- Step 1: Get IP at each pipeline step via ad_served_id
 
--- impression_log (all paths)
-bid_ip_il AS (
-    SELECT ad_served_id, bid_ip
-    FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= p_lookback_start AND time < p_vv_end
-      AND advertiser_id = p_advertiser_id
-      AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
-      AND bid_ip IS NOT NULL
-    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
-),
-
--- event_log (CTV path)
-bid_ip_el AS (
-    SELECT ad_served_id, bid_ip
+-- event_log: CTV path (vast_start / vast_impression)
+ip_event_log AS (
+    SELECT ad_served_id, ip AS event_log_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
       AND time >= p_lookback_start AND time < p_vv_end
       AND advertiser_id = p_advertiser_id
       AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
-      AND bid_ip IS NOT NULL
+      AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
--- viewability_log (viewable display path)
-bid_ip_vl AS (
-    SELECT ad_served_id, ip AS bid_ip
+-- viewability_log: viewable display path
+ip_viewability AS (
+    SELECT ad_served_id, ip AS viewability_ip
     FROM `dw-main-silver.logdata.viewability_log`
     WHERE time >= p_lookback_start AND time < p_vv_end
       AND advertiser_id = p_advertiser_id
@@ -77,20 +61,51 @@ bid_ip_vl AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
--- Coalesce bid_ip from all sources
-bid_ips AS (
+-- impression_log: non-viewable display path (also gives us ttd_impression_id for Beeswax bridge)
+ip_impression AS (
+    SELECT ad_served_id, ip AS impression_ip, ttd_impression_id
+    FROM `dw-main-silver.logdata.impression_log`
+    WHERE time >= p_lookback_start AND time < p_vv_end
+      AND advertiser_id = p_advertiser_id
+      AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
+      AND ip IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
+),
+
+-- win_logs: via auction_id bridge from impression_log
+ip_win AS (
+    SELECT il.ad_served_id, w.ip AS win_ip
+    FROM `dw-main-silver.logdata.win_logs` w
+    JOIN ip_impression il ON w.auction_id = il.ttd_impression_id
+    WHERE w.time >= p_lookback_start AND w.time < p_vv_end
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
+),
+
+-- bid_logs: via auction_id bridge from impression_log
+ip_bid AS (
+    SELECT il.ad_served_id, b.ip AS bid_ip
+    FROM `dw-main-silver.logdata.bid_logs` b
+    JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
+    WHERE b.time >= p_lookback_start AND b.time < p_vv_end
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+-- Coalesce to get best available bid_ip
+all_ips AS (
     SELECT
         v.ad_served_id,
-        COALESCE(cil.bid_ip, il.bid_ip, el.bid_ip, vl.bid_ip) AS bid_ip,
-        cil.bid_ip AS cil_bid_ip,
-        il.bid_ip AS il_bid_ip,
-        el.bid_ip AS el_bid_ip,
-        vl.bid_ip AS vl_bid_ip
+        COALESCE(bid.bid_ip, win.win_ip, imp.impression_ip, vw.viewability_ip, el.event_log_ip) AS resolved_ip,
+        bid.bid_ip,
+        win.win_ip,
+        imp.impression_ip,
+        vw.viewability_ip,
+        el.event_log_ip
     FROM s2_vvs v
-    LEFT JOIN bid_ip_cil cil ON cil.ad_served_id = v.ad_served_id
-    LEFT JOIN bid_ip_il il ON il.ad_served_id = v.ad_served_id
-    LEFT JOIN bid_ip_el el ON el.ad_served_id = v.ad_served_id
-    LEFT JOIN bid_ip_vl vl ON vl.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_bid bid ON bid.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_win win ON win.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_impression imp ON imp.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_viewability vw ON vw.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_event_log el ON el.ad_served_id = v.ad_served_id
 ),
 
 -- Step 2: S1 impression pool (all 3 paths, kept separate for diagnostics)
@@ -137,15 +152,16 @@ s1_pool_il AS (
 SELECT
     COUNT(*) AS total_s2_vvs,
 
-    -- Step 1: bid_ip coverage by source
-    COUNTIF(b.bid_ip IS NOT NULL) AS has_bid_ip,
-    COUNTIF(b.cil_bid_ip IS NOT NULL) AS bid_from_cil,
-    COUNTIF(b.il_bid_ip IS NOT NULL) AS bid_from_impression_log,
-    COUNTIF(b.el_bid_ip IS NOT NULL) AS bid_from_event_log,
-    COUNTIF(b.vl_bid_ip IS NOT NULL) AS bid_from_viewability_log,
-    COUNTIF(b.bid_ip IS NULL) AS no_bid_ip,
+    -- Step 1: IP coverage at each pipeline step
+    COUNTIF(a.bid_ip IS NOT NULL) AS has_bid_logs_ip,
+    COUNTIF(a.win_ip IS NOT NULL) AS has_win_logs_ip,
+    COUNTIF(a.impression_ip IS NOT NULL) AS has_impression_log_ip,
+    COUNTIF(a.viewability_ip IS NOT NULL) AS has_viewability_log_ip,
+    COUNTIF(a.event_log_ip IS NOT NULL) AS has_event_log_ip,
+    COUNTIF(a.resolved_ip IS NOT NULL) AS has_any_ip,
+    COUNTIF(a.resolved_ip IS NULL) AS no_ip,
 
-    -- Step 2: S1 pool resolution by source table
+    -- Step 2: S1 pool resolution by source table (using resolved_ip = best available)
     COUNTIF(s1el.match_ip IS NOT NULL) AS s1_via_event_log,
     COUNTIF(s1vl.match_ip IS NOT NULL) AS s1_via_viewability_log,
     COUNTIF(s1il.match_ip IS NOT NULL) AS s1_via_impression_log,
@@ -155,24 +171,24 @@ SELECT
     ROUND(100.0 * COUNTIF(s1el.match_ip IS NOT NULL OR s1vl.match_ip IS NOT NULL OR s1il.match_ip IS NOT NULL)
         / NULLIF(COUNT(*), 0), 2) AS resolved_pct,
     COUNTIF(s1el.match_ip IS NULL AND s1vl.match_ip IS NULL AND s1il.match_ip IS NULL
-        AND b.bid_ip IS NOT NULL) AS unresolved_with_bid_ip,
+        AND a.resolved_ip IS NOT NULL) AS unresolved_with_ip,
     COUNTIF(s1el.match_ip IS NULL AND s1vl.match_ip IS NULL AND s1il.match_ip IS NULL) AS unresolved_total
 
 FROM s2_vvs v
-LEFT JOIN bid_ips b ON b.ad_served_id = v.ad_served_id
+LEFT JOIN all_ips a ON a.ad_served_id = v.ad_served_id
 
--- S1 pool: separate joins for per-table diagnostics
+-- S1 pool: separate joins for per-table diagnostics (using resolved_ip)
 LEFT JOIN s1_pool_el s1el
     ON s1el.campaign_group_id = v.campaign_group_id
-    AND s1el.match_ip = b.bid_ip
+    AND s1el.match_ip = a.resolved_ip
     AND s1el.impression_time < v.vv_time
 
 LEFT JOIN s1_pool_vl s1vl
     ON s1vl.campaign_group_id = v.campaign_group_id
-    AND s1vl.match_ip = b.bid_ip
+    AND s1vl.match_ip = a.resolved_ip
     AND s1vl.impression_time < v.vv_time
 
 LEFT JOIN s1_pool_il s1il
     ON s1il.campaign_group_id = v.campaign_group_id
-    AND s1il.match_ip = b.bid_ip
+    AND s1il.match_ip = a.resolved_ip
     AND s1il.impression_time < v.vv_time;
