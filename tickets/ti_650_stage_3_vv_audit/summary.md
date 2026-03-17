@@ -221,19 +221,20 @@ Two issues found and fixed that caused 442 unresolved S2 VVs:
 | resolved_with_vv_bridge | 68,056 (99.35%) | 68,498 (100%) |
 | unresolved | 442 | **0** |
 
-**Lookback age distribution (S2→S1 matches, CORRECTED):**
+**Lookback age distribution (S2→S1 matches, CORRECTED v21c):**
 - Using EARLIEST match (biased): Max 186d, Median 136d, P95 183d — misleading, selects oldest of many
 - Using MOST RECENT match (correct): **Max 69d, Median 6d, P95 29d, P99 35d**
-- `latest_beyond_90d = 0` — every resolvable IP has at least one S1 match within 90 days
+- **Verification: 90d = 68,492/68,498 (99.99%), 180d = 68,498 (100%)**
+- 6 edge cases (0.009%): IPs with only pre-VV S1 matches >90d, masked by post-VV S1 events
 - 10,227/68,492 (15%) IPs are still actively getting S1 impressions after the S2 VV
-- **90-day lookback is sufficient** when combined with CIDR fix + clickpass_log in S1 pool
+- **90d lookback recommended for production** — 0.009% loss negligible, halves scan cost
 
 ### Scoping rules
 
 - **campaign_group_id scoping (v14+).** All cross-stage IP linking must be within the same `campaign_group_id`. Zach directive 2026-03-12.
 - **Prospecting only:** `objective_id IN (1, 5, 6)`. Exclude retargeting (4) and ego (7).
 - **funnel_level is authoritative for stage.** objective_id is UNRELIABLE — 48,934 S3 campaigns have obj=1 instead of 6 (UI migration bug, Ray confirmed 2026-03-11).
-- **90-day lookback is sufficient (RE-CORRECTED v21b).** Earliest-match analysis showed 186d max, but that's biased — selecting oldest of multiple matches. Using MOST RECENT prior S1 match: max 69d, P99 35d, median 6d. Zero IPs have their latest S1 match >90d before the VV. Zach's 88-day estimate (14+30+14+30) was actually close. **180d lookback in queries is safe but unnecessary for resolution — 90d covers 100%.**
+- **90-day lookback covers 99.99% (RE-CORRECTED v21c).** Earliest-match analysis showed 186d max, but that's biased — selecting oldest of multiple matches. Using MOST RECENT prior S1 match: max 69d, P99 35d, median 6d. Verification: 90d = 68,492/68,498 resolved (99.99%), 180d = 68,498 (100%). The 6 edge cases (0.009%) are IPs whose only pre-VV S1 impressions are >90d old but also have post-VV S1 events — masked in gap analysis by MAX(all time) vs MAX(pre-VV). Zach's 88-day estimate (14+30+14+30) was close. **Production: use 90d** — 0.009% loss is negligible, saves 2x scan cost.
 
 ### Production table schema (v10.1 — 54 columns)
 
@@ -298,7 +299,7 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 25. **3 cross-stage connecting tables, not just event_log.** The cross-stage IP link depends on impression type: CTV → `event_log.ip` (vast_start/vast_impression); viewable display → `viewability_log.ip`; non-viewable display → `impression_log.ip`. Prior analysis only checked event_log (CTV path). Display S1/S2 impressions would be invisible to event_log-only searches.
 25. **v18 exhaustive trace: IP `216.126.34.185` has zero S1/S2 impressions in cg 93957 across ALL 3 connecting tables, 2+ years, CIDR-safe.** Checked event_log, viewability_log, impression_log from Jan 2024 – Feb 2026. The IP had S1 prospecting CTV exposure in 3 different campaign groups (78893, 78903, 78904) for the same advertiser — all Feb 24, 2025. Genuinely unresolvable under campaign_group_id scoping. VV campaign (450300) is NOT retargeting (obj=1, funnel_level=3).
 26. **Bid IP divergence analysis: all 7 S3 ad_served_ids for IP `216.126.34.185` in cg 93957 have identical IP at every pipeline stage.** Full trace through bid_logs, win_logs, impression_log, event_log, clickpass_log — all `216.126.34.185`, zero divergence. 2 of 7 became VVs (80207c6e on Feb 4, c890f55a on Feb 26). No alternative IP exists to search for S1/S2 history. Hypothesis disproven — confirms identity-graph-only entry. See `outputs/ti_650_bid_ip_divergence_results.md`.
-28. **S2→S1 lookback gap CORRECTED (v21b): max 69d, not 186d.** Initial MIN(impression_time) analysis was biased — selecting oldest of multiple matches. Using MAX (most recent match): max 69d, median 6d, P95 29d, P99 35d. Zero IPs have latest S1 match >90d before VV. 90d lookback is sufficient when combined with CIDR fix + all 4 source tables + clickpass_log.
+28. **S2→S1 lookback gap CORRECTED (v21b→v21c): max 69d, not 186d. 90d = 99.99%, not 100%.** Initial MIN analysis was biased (oldest of many matches). Using MAX (most recent match): max 69d, median 6d, P95 29d. Verification: 90d = 68,492/68,498 (99.99%, 6 unresolved), 180d = 68,498 (100%). The 6 edge cases are IPs with only pre-VV S1 matches >90d old + post-VV S1 events that masked this in the gap analysis (MAX(all time) ≠ MAX(pre-VV)). **Production: 90d recommended** — 0.009% loss negligible vs 2x scan cost savings.
 29. **Advertiser 31357 = WGU (Western Governors University), ~30% MNTN monthly spend.** Abnormally long S3 lookback window per Zach. Largest single advertiser. Online degree program. Extreme outlier in spend and funnel depth — results from this advertiser should not be treated as representative. (Zach confirmed 2026-03-17)
 30. **BREAKTHROUGH (v20, Zach 2026-03-16): S3 cross-stage link is VV-based, not impression-based.** Prior analysis searched impression tables (event_log, viewability_log, impression_log) for the S3 bid_ip in S1/S2 campaigns — **wrong table.** S3 targeting requires a prior **verified visit** (S1 or S2), not just an impression. The cross-stage link is `S3.bid_ip → clickpass_log.ip` (prior S1/S2 VV), NOT `S3.bid_ip → event_log.ip`. Zach's traced IP guide proved this for IP `216.126.34.185`: the IP had an S2 VV (campaign 450301, clickpass 2026-01-24), where the S2 impression was on a completely different IP (`172.59.117.71`, Tubi CTV Roku) — cross-device. The S2 VV's clickpass IP (`216.126.34.185`, iPhone) is what entered S3 targeting, not the S2 impression VAST IP. This means the 92% resolution ceiling (finding #21) was artificially low — cross-device S2 VVs were invisible to impression-table searches. v20 rewrites the chain CTE to use clickpass_log. See `artifacts/ti_650_v20_vv_bridge_prompt.md`, `queries/ti_650_zach_traced_ip_guide`.
 

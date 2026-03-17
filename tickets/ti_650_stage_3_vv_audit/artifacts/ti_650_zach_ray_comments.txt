@@ -186,3 +186,51 @@ select channel_id, objective_id, funnel_level, count(1) from campaigns where nam
           8 |            1 |            3 | 48934(edited)
 malachi  [5:35 PM]
 Okay well of all the ips I can't trace, they appear to be entirely named beeswax multi-touch plus, lol i'll double check
+
+malachi  [9:15 AM]
+last meeting ended early if you want to start/end earlier
+malachi  [9:50 AM]
+If we are looking at all verified visits and we see the impression they're attributed to is connected to a retargeting campaign, we should still be able to trace that, right? Or should I just filter all retargeting-attributed VV at the start?
+zach.schoenberger  [9:51 AM]
+for retargeting campaigns the structure is entirely different. plus there is no “stage 3”. so its outside the scope of this
+malachi  [12:18 PM]
+That advertiser with low trace had display-only stage 2, which was odd, but I found nearly 100% of the records from S2->S1. I'm testing on these last unresolved but I'm almost certain its just a lookback issue. S1 done, S2->S1 nearly done, then I'll do S3 -> S2 & S3 -> S1 after. I'll call it good when we get 100% on all steps.
+malachi  [2:01 PM]
+100% resolution from S2->S1
+[2:01 PM]was a lookback issue
+malachi  [3:32 PM]
+Lil bit of summary info you might find interesting
+[3:33 PM]Lookback age distribution (within the same category_group_id)
+
+Max: 186 days (6+ months!)
+Median: 105 days
+P95: 181 days, P99: 184 days
+30,186 (53%) of matches were older than 90 days
+19,963 (35%) older than 150 days
+
+
+Idk why this is, but for this one advertiser that was the issue. Super long matches lookback time.
+zach.schoenberger  [3:33 PM]
+man that seems a bit wild
+[3:33 PM]is it wgu
+malachi  [3:36 PM]
+I wanna preface this that I didn't set a preference to the most recent impression or whatever, idk its advertiser 31357 I can check. I don't think that's the norm, this is just for that wonky advertiser. So I guess if you can link back to S1 from S2 and there's multiple s1 then its looking at the oldest one, so its a bit biased lol
+[3:37 PM]its actually looking at the oldest in each campaign_group_id, so that's why its so high, I'll have to check it on most recent, i had it at MIN(impression_time)
+zach.schoenberger  [3:41 PM]
+yeah 31357 is wgu
+malachi  [3:41 PM]
+what is that
+zach.schoenberger  [3:41 PM]
+western governers univesity
+[3:41 PM]they’re ~30% our monthly spend
+[3:42 PM]and have a long lookback window for stage 3
+[3:42 PM]abnormally so
+malachi  [3:42 PM]
+what. like 30% of MNTN revenue for this part of the business is from wgu?
+zach.schoenberger  [3:42 PM]
+for mntn as a business
+malachi  [3:43 PM]
+??? a single university is responsible for 30% of our income
+zach.schoenberger  [3:43 PM]
+they’re a big spender
+[3:44 PM]yeah
