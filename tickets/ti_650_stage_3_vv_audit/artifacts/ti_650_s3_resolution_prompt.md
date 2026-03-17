@@ -74,9 +74,20 @@ unresolved_total
 - **strip_cidr()** — on all event_log.ip references: `CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)])`
 - **Temporal ordering** — S1/S2 pool event must be BEFORE S3 VV time
 
+### Step 4: Measure full chain depth (critical for lookback tuning)
+For every resolved S3 VV, compute `S3_vv_time - MIN(earliest_matching_event_time)` across the full chain. This answers: "for a given week/month of S3 VVs, how far back do we need to look within the same campaign_group_id to catch 100% of traces?"
+
+The chain can stack multiple gaps:
+```
+S3 VV (Feb 4-11) → prior S2 VV (day -A) → S2 impression (day -B) → S1 impression (day -C)
+                                                                      C = total lookback
+```
+
+For S2→S1 we found max 186 days. S3 adds another hop, so total depth could be longer. Measure the distribution (median, P95, P99, max) to determine the minimum lookback. The question is NOT "what's the earliest impression for this advertiser" — it's "within the same campaign_group_id, what's the earliest S1/S2 event in the chain that led to this specific S3 VV?"
+
 ### Hypothesis
 S3 should be resolvable near-100% via `clickpass_log.ip` since you can't enter S3 without a prior VV. The 74.54% rate for adv 31357 in v20 may be low due to:
-1. Insufficient lookback (same issue as S2 — campaign groups can be very long-lived)
+1. Insufficient lookback (same issue as S2 — campaign groups can be very long-lived, and S3 stacks an additional hop)
 2. CIDR mismatch on event_log.ip in the impression fallback
 3. Possibly some S3 VVs entered via identity graph paths not traceable through clickpass_log
 
