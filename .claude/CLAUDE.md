@@ -52,6 +52,9 @@ Pattern: `ti_xxx_short_name.ext` — the ticket number is the anchor, the filena
 
 Exception: `summary.md` at the ticket root can remain just `summary.md` (it's the standard template file).
 
+## Codex Review
+Codex will review your code after you're done. Write with that in mind — keep code clean, well-structured, and ready for automated review.
+
 ## Google Drive
 
 Mounted at `~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/`.
