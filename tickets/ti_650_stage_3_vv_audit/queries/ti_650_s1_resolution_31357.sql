@@ -1,6 +1,12 @@
 -- TI-650: S1 VV resolution test - advertiser 31357
 -- Verify every S1 VV resolves to its impression via ad_served_id
 -- Expected: 100% (within-stage is deterministic)
+--
+-- Impression paths:
+--   CTV:                clickpass -> event_log -> win_log -> impression_log -> bid_log
+--   Viewable Display:   clickpass -> viewability_log -> impression_log -> win_log -> bid_log
+--   Non-Viewable Disp:  clickpass -> impression_log -> win_log -> bid_log
+-- Note: for display, impression comes AFTER the win (opposite of CTV)
 
 DECLARE p_advertiser_id INT64 DEFAULT 31357;
 DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
@@ -43,7 +49,7 @@ cil_match AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
--- viewability_log (display viewable path)
+-- viewability_log (viewable display: clickpass -> viewability_log -> impression_log -> win_log -> bid_log)
 vl_match AS (
     SELECT ad_served_id, ip AS vl_ip
     FROM `dw-main-silver.logdata.viewability_log`
@@ -53,7 +59,7 @@ vl_match AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
--- impression_log (display non-viewable path)
+-- impression_log (all paths - CTV + display; for non-viewable display this is the first table after clickpass)
 il_match AS (
     SELECT ad_served_id, ip AS il_ip
     FROM `dw-main-silver.logdata.impression_log`
