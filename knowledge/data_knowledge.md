@@ -691,7 +691,11 @@ Additional validations:
 - **v15 forensic trace (2026-03-12, 50 VVs):** IP is 100% identical across ALL 8 source tables (event_log, impression_log, CIL, bid_logs, win_logs, clickpass_log, ui_visits). serve_ip = bid_ip at 100%. Adding any source table to S1 pool has zero impact on resolution. The 8% unresolved S3 VVs entered via identity graph, not via MNTN impression.
 - **bid_events_log is nearly empty** — only advertiser 32167 has data. Not useful for general IP lookups. Use bid_logs (Beeswax-native) instead.
 
-**Cross-stage link:** `next_stage.bid_ip ≈ prev_stage.vast_start_ip OR prev_stage.vast_impression_ip` (either/or join, ~1.2% differ — CGNAT/SSAI/IPv6/VPN). IP is the ONLY cross-stage link. first_touch_ad_served_id links S3/S2→S1 directly (skips S2) but only 25-51% available.
+**Cross-stage link (CORRECTED v20, 2026-03-16):**
+- **S1 → S2 (impression-based):** `S2.bid_ip ≈ S1.vast_start_ip OR S1.vast_impression_ip`. S2 targeting = "had an S1 impression." Search event_log/viewability_log/impression_log for the S1 impression IP.
+- **S1/S2 → S3 (VV-based):** `S3.bid_ip = prior_S1_or_S2.clickpass_log.ip`. S3 targeting = "had a prior S1 or S2 **verified visit**." Search `clickpass_log` for prior S1/S2 VV, NOT impression tables. Then: `prior_VV.ad_served_id → CIL.ip` to get the prior impression's bid_ip (may differ from VV ip due to cross-device!). For S2 VV → S1 chain: use the S2 impression's bid_ip to search S1 event_log.
+- **Key insight:** In cross-device scenarios (CTV ad → phone visit), the VV clickpass IP ≠ the impression bid IP. The VV's clickpass IP is what enters the next stage's targeting segment. Prior analysis (v14-v18) searched impression tables and found zero — because the IP never had an S1/S2 impression, only an S2 VV. This was the ~8% "unresolved ceiling" — many are now traceable via the clickpass_log VV bridge.
+- `first_touch_ad_served_id` links S3/S2→S1 directly (skips S2) but only 25-51% available.
 
 ### IP Mutation Key Findings (TI-650)
 - **100% of mutation occurs at the VAST→redirect boundary** (Stage 3, CIL→EL or EL→redirect)
@@ -755,7 +759,7 @@ alternative cross-stage identifiers:
 - Does NOT contain: segment_id, audience_id, audience_upload_id, or any targeting segment reference
 - Cannot determine which audience segment was targeted for a given impression
 
-**Bottom line (updated 2026-03-12):** The primary cross-stage link is **vast_ip** — the VAST impression IP enters the next stage's segment, so `next_stage.bid_ip ≈ prev_stage.vast_ip`.
+**Bottom line (CORRECTED 2026-03-16):** Cross-stage linking depends on which stage you're entering. S1→S2 uses **vast_ip** (impression-based). S1/S2→S3 uses **clickpass_log.ip** (VV-based). The prior analysis that found a ~92% IP ceiling for S3 was searching the wrong table — impression tables instead of clickpass_log. The VV's clickpass IP is what enters S3 targeting, and in cross-device cases it differs from the impression bid IP entirely.
 
 **v13 resolution rates (10 advertisers, Feb 4–11, 90-day lookback, prospecting obj 1,5,6):**
 - S2: 97.95–99.87% (single hop to S1, near-perfect)
