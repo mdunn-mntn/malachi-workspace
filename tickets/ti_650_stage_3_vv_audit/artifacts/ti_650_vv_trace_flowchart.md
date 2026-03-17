@@ -88,11 +88,16 @@ flowchart TD
 
     %% ============================================================
     %% STAGE 3 TRACES
+    %% Key insight: S3 targeting is VV-BASED, not impression-based.
+    %% To enter S3, the IP must have had an S2 VERIFIED VISIT.
+    %% The cross-stage link is: S3.bid_ip → S2.clickpass_log.ip
+    %% NOT S3.bid_ip → S2.event_log.ip (which was the old, wrong path).
+    %% In cross-device scenarios, S2 VV ip ≠ S2 impression ip.
     %% ============================================================
     S3_TYPE -->|CTV| S3_CTV
     S3_TYPE -->|Display| S3_DISP_VIEW{Viewable?}
 
-    subgraph S3_CTV_PATH ["S3 — CTV"]
+    subgraph S3_CTV_PATH ["S3 — CTV (within-stage)"]
         S3_CTV[clickpass.ip] --> S3_CTV_2["event_log.ip (vast_start)"]
         S3_CTV_2 --> S3_CTV_2b["event_log.ip (vast_impression)"]
         S3_CTV_2b --> S3_CTV_3[win_log.ip]
@@ -103,63 +108,47 @@ flowchart TD
     S3_DISP_VIEW -->|Yes| S3_DV
     S3_DISP_VIEW -->|No| S3_DNV
 
-    subgraph S3_DV_PATH ["S3 — Viewable Display"]
+    subgraph S3_DV_PATH ["S3 — Viewable Display (within-stage)"]
         S3_DV[clickpass.ip] --> S3_DV_2[viewability_log.ip]
         S3_DV_2 --> S3_DV_2b[impression_log.ip]
         S3_DV_2b --> S3_DV_3[win_log.ip]
         S3_DV_3 --> S3_DV_4[bid_log.ip]
     end
 
-    subgraph S3_DNV_PATH ["S3 — Non-Viewable"]
+    subgraph S3_DNV_PATH ["S3 — Non-Viewable (within-stage)"]
         S3_DNV[clickpass.ip] --> S3_DNV_2[impression_log.ip]
         S3_DNV_2 --> S3_DNV_3[win_log.ip]
         S3_DNV_3 --> S3_DNV_4[bid_log.ip]
     end
 
-    S3_CTV_5 --> S3_PREV_STAGE
-    S3_DV_4 --> S3_PREV_STAGE
-    S3_DNV_4 --> S3_PREV_STAGE
+    %% ---- CROSS-STAGE: S3 → prior VV via clickpass_log ----
+    %% S3 targeting is VV-BASED: the IP entered S3 because it had a
+    %% prior verified visit on an S1 OR S2 campaign in the same
+    %% campaign_group. Search clickpass_log for that prior VV.
+    S3_CTV_5 --> S3_CROSS[/"CROSS-STAGE: Search clickpass_log<br/>for prior S1 or S2 VV where ip = S3.bid_ip<br/>same campaign_group_id, time < S3.impression_time<br/>(S3 targeting requires a prior verified visit)"/]
+    S3_DV_4 --> S3_CROSS
+    S3_DNV_4 --> S3_CROSS
 
-    S3_PREV_STAGE{What stage is the<br/>NEXT impression?}
+    S3_CROSS --> S3_VV_FOUND{Found prior VV<br/>in clickpass_log?}
 
-    %% --- S3 → S1: full type branching ---
-    S3_PREV_STAGE -->|Stage 1| S3S1_TYPE{What type of<br/>impression?}
+    S3_VV_FOUND -->|No| UNRESOLVED([Unresolved — IP entered S3<br/>via identity graph, not traceable<br/>through MNTN pipeline])
 
-    S3S1_TYPE -->|CTV| S3S1_CTV_2
-    S3S1_TYPE -->|Display| S3S1_DISP{Viewable?}
+    S3_VV_FOUND -->|Yes| S3_VV_STAGE{What stage was<br/>the prior VV?}
 
-    subgraph S3S1_CTV_PATH ["S3 → S1: CTV"]
-        S3S1_CTV_2["event_log.ip (vast_start)"] --> S3S1_CTV_2b["event_log.ip (vast_impression)"]
-        S3S1_CTV_2b --> S3S1_CTV_3[win_log.ip]
-        S3S1_CTV_3 --> S3S1_CTV_4[impression_log.ip]
-        S3S1_CTV_4 --> S3S1_CTV_5[bid_log.ip]
+    %% ---- PATH A: Prior VV was S2 → trace S2 impression → then S1 ----
+    S3_VV_STAGE -->|S2 VV| S3_S2_VV
+
+    subgraph S3_S2_BRIDGE ["S3 → S2: VV Bridge (cross-device possible!)"]
+        S3_S2_VV["S2 VV in clickpass_log<br/>clickpass.ip = S3.bid_ip<br/>Get S2 ad_served_id + impression_time"]
+        --> S3_S2_TRACE["Trace S2 impression via ad_served_id<br/>CIL or impression_log → get S2.bid_ip<br/>⚠ S2.bid_ip MAY DIFFER (cross-device!)"]
     end
 
-    S3S1_DISP -->|Yes| S3S1_DV_2
-    S3S1_DISP -->|No| S3S1_DNV_2
+    S3_S2_TRACE --> S3_S2_IMP_TYPE{S2 impression<br/>type?}
 
-    subgraph S3S1_DV_PATH ["S3 → S1: Viewable Display"]
-        S3S1_DV_2[viewability_log.ip] --> S3S1_DV_2b[impression_log.ip]
-        S3S1_DV_2b --> S3S1_DV_3[win_log.ip]
-        S3S1_DV_3 --> S3S1_DV_4[bid_log.ip]
-    end
+    S3_S2_IMP_TYPE -->|CTV| S3S2_CTV_2
+    S3_S2_IMP_TYPE -->|Display| S3S2_DISP{Viewable?}
 
-    subgraph S3S1_DNV_PATH ["S3 → S1: Non-Viewable"]
-        S3S1_DNV_2[impression_log.ip] --> S3S1_DNV_3[win_log.ip]
-        S3S1_DNV_3 --> S3S1_DNV_4[bid_log.ip]
-    end
-
-    S3S1_CTV_5 --> DONE3A([✅ Done — S3 → S1])
-    S3S1_DV_4 --> DONE3A
-    S3S1_DNV_4 --> DONE3A
-
-    %% --- S3 → S2: full type branching ---
-    S3_PREV_STAGE -->|Stage 2| S3S2_TYPE{What type of<br/>impression?}
-
-    S3S2_TYPE -->|CTV| S3S2_CTV_2
-    S3S2_TYPE -->|Display| S3S2_DISP{Viewable?}
-
-    subgraph S3S2_CTV_PATH ["S3 → S2: CTV"]
+    subgraph S3S2_CTV_PATH ["S2 impression — CTV"]
         S3S2_CTV_2["event_log.ip (vast_start)"] --> S3S2_CTV_2b["event_log.ip (vast_impression)"]
         S3S2_CTV_2b --> S3S2_CTV_3[win_log.ip]
         S3S2_CTV_3 --> S3S2_CTV_4[impression_log.ip]
@@ -169,30 +158,73 @@ flowchart TD
     S3S2_DISP -->|Yes| S3S2_DV_2
     S3S2_DISP -->|No| S3S2_DNV_2
 
-    subgraph S3S2_DV_PATH ["S3 → S2: Viewable Display"]
+    subgraph S3S2_DV_PATH ["S2 impression — Viewable Display"]
         S3S2_DV_2[viewability_log.ip] --> S3S2_DV_2b[impression_log.ip]
         S3S2_DV_2b --> S3S2_DV_3[win_log.ip]
         S3S2_DV_3 --> S3S2_DV_4[bid_log.ip]
     end
 
-    subgraph S3S2_DNV_PATH ["S3 → S2: Non-Viewable"]
+    subgraph S3S2_DNV_PATH ["S2 impression — Non-Viewable"]
         S3S2_DNV_2[impression_log.ip] --> S3S2_DNV_3[win_log.ip]
         S3S2_DNV_3 --> S3S2_DNV_4[bid_log.ip]
     end
 
-    S3S2_CTV_5 --> S3S2_S1[/"Now trace Stage 1: next impression<br/>MUST be CTV (S2 requires a VAST event)"/]
+    %% S2 → S1: use S2.bid_ip (may differ from S3.bid_ip!) to find S1
+    S3S2_CTV_5 --> S3S2_S1[/"CROSS-STAGE: Search event_log for<br/>S1 VAST where ip = S2.bid_ip<br/>same campaign_group_id<br/>(S2 targeting requires S1 impression)<br/>⚠ S2.bid_ip may differ from S3.bid_ip!"/]
     S3S2_DV_4 --> S3S2_S1
-    S3S2_DNV_4 --> S3S2_S1
+    S3S2_DNV_3 --> S3S2_S1
 
-    subgraph S3S2S1_PATH ["S3 → S2 → S1: CTV"]
+    S3S2_S1 --> S3_S1_IMP_FOUND{Found S1<br/>impression?}
+
+    S3_S1_IMP_FOUND -->|No| UNRESOLVED_S2S1([Unresolved at S1 — S2 VV found<br/>but no S1 impression for S2.bid_ip])
+    S3_S1_IMP_FOUND -->|Yes| S3S2S1_2
+
+    subgraph S3S2S1_PATH ["S1 impression trace"]
         S3S2S1_2["event_log.ip (vast_start)"] --> S3S2S1_2b["event_log.ip (vast_impression)"]
         S3S2S1_2b --> S3S2S1_3[win_log.ip]
         S3S2S1_3 --> S3S2S1_4[impression_log.ip]
         S3S2S1_4 --> S3S2S1_5[bid_log.ip]
     end
 
-    S3S2_S1 --> S3S2S1_2
-    S3S2S1_5 --> DONE3B([✅ Done — S3 → S2 → S1])
+    S3S2S1_5 --> DONE3A([✅ Done — S3 VV → S2 VV → S1 impression])
+
+    %% ---- PATH B: Prior VV was S1 → trace S1 impression directly ----
+    S3_VV_STAGE -->|S1 VV| S3_S1_VV
+
+    subgraph S3_S1_BRIDGE ["S3 → S1: VV Bridge (cross-device possible!)"]
+        S3_S1_VV["S1 VV in clickpass_log<br/>clickpass.ip = S3.bid_ip<br/>Get S1 ad_served_id + impression_time"]
+        --> S3_S1_TRACE["Trace S1 impression via ad_served_id<br/>S1.bid_ip MAY DIFFER (cross-device!)"]
+    end
+
+    S3_S1_TRACE --> S3S1_IMP_TYPE{S1 impression<br/>type?}
+
+    S3S1_IMP_TYPE -->|CTV| S3S1_CTV_2
+    S3S1_IMP_TYPE -->|Display| S3S1_DISP{Viewable?}
+
+    subgraph S3S1_CTV_PATH ["S1 impression — CTV"]
+        S3S1_CTV_2["event_log.ip (vast_start)"] --> S3S1_CTV_2b["event_log.ip (vast_impression)"]
+        S3S1_CTV_2b --> S3S1_CTV_3[win_log.ip]
+        S3S1_CTV_3 --> S3S1_CTV_4[impression_log.ip]
+        S3S1_CTV_4 --> S3S1_CTV_5[bid_log.ip]
+    end
+
+    S3S1_DISP -->|Yes| S3S1_DV_2
+    S3S1_DISP -->|No| S3S1_DNV_2
+
+    subgraph S3S1_DV_PATH ["S1 impression — Viewable Display"]
+        S3S1_DV_2[viewability_log.ip] --> S3S1_DV_2b[impression_log.ip]
+        S3S1_DV_2b --> S3S1_DV_3[win_log.ip]
+        S3S1_DV_3 --> S3S1_DV_4[bid_log.ip]
+    end
+
+    subgraph S3S1_DNV_PATH ["S1 impression — Non-Viewable"]
+        S3S1_DNV_2[impression_log.ip] --> S3S1_DNV_3[win_log.ip]
+        S3S1_DNV_3 --> S3S1_DNV_4[bid_log.ip]
+    end
+
+    S3S1_CTV_5 --> DONE3B([✅ Done — S3 VV → S1 impression])
+    S3S1_DV_4 --> DONE3B
+    S3S1_DNV_4 --> DONE3B
 
     %% ============================================================
     %% STYLING
@@ -204,8 +236,11 @@ flowchart TD
     classDef doneNode fill:#50e3c2,stroke:#2db89e,color:#000,font-weight:bold
     classDef ruleNode fill:#ff6b6b,stroke:#c94444,color:#fff,font-weight:bold,font-style:italic
 
+    classDef vvBridge fill:#e74c3c,stroke:#c0392b,color:#fff,font-weight:bold
+
     class START startEnd
-    class STAGE,S1_TYPE,S2_TYPE,S3_TYPE,S1_DISP_VIEW,S2_DISP_VIEW,S3_DISP_VIEW,S3_PREV_STAGE,S3S1_TYPE,S3S1_DISP,S3S2_TYPE,S3S2_DISP decision
+    class STAGE,S1_TYPE,S2_TYPE,S3_TYPE,S1_DISP_VIEW,S2_DISP_VIEW,S3_DISP_VIEW,S3_VV_FOUND,S3_VV_STAGE,S3_S2_IMP_TYPE,S3S2_DISP,S3_S1_IMP_FOUND,S3S1_IMP_TYPE,S3S1_DISP decision
     class DONE1,DONE2,DONE3A,DONE3B doneNode
-    class S2_PREV,S3S2_S1 ruleNode
+    class S2_PREV,S3_CROSS,S3S2_S1 ruleNode
+    class UNRESOLVED,UNRESOLVED_S2S1 ruleNode
 ```
