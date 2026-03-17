@@ -229,7 +229,7 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 | subdomain | STRING | |
 | group_id | INTEGER | |
 | user_agent | STRING | |
-| ip | STRING | **VAST playback IP** — IP of the CTV device during VAST ad playback. ≠ bid_ip ~3.5% of the time. |
+| ip | STRING | **VAST playback IP** — IP of the CTV device during VAST ad playback. ≠ bid_ip ~3.5% of the time. **CIDR suffix on pre-2026 data:** ALL rows before 2026-01-01 have `/32` (IPv4) or `/128` (IPv6) suffix (526M rows confirmed). Post-2026 = bare IP. Use `SPLIT(ip, '/')[SAFE_OFFSET(0)]` when matching across time periods. Other log tables do NOT have this issue. |
 | ip_raw | STRING | Raw IP before enrichment |
 | is_mobile_device | BOOLEAN | |
 | browser | STRING | |
