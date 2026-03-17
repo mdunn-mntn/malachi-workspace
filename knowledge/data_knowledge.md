@@ -782,6 +782,9 @@ alternative cross-stage identifiers:
 
 **S1 pool lookback: 90 days is sufficient (TI-650 v21b, 2026-03-17).** Initial analysis using MIN(impression_time) showed 186-day max gap, but this was biased — selecting the oldest of multiple matches. Using MOST RECENT prior S1 match: max 69 days, median 6 days, P95 29 days, P99 35 days. Zero IPs have their latest S1 match >90d before the S2 VV (latest_beyond_90d = 0). 180-day lookback works but is unnecessary for resolution — 90 days covers 100% when combined with CIDR fix + clickpass_log in S1 pool.
 
+### Notable Advertisers
+- **31357 = WGU (Western Governors University).** ~30% of MNTN monthly spend (entire business). Largest single advertiser. Has abnormally long S3 lookback window per Zach. Online degree program. Any analysis using this advertiser as test case should note it's an extreme outlier in spend and funnel depth. (Zach confirmed 2026-03-17)
+
 ### attribution_model_id Clarification (from TI-650)
 - `ad_served_id` = **last-touch** attribution — the most recent impression that led to the VV
 - `first_touch` = the first impression in the multi-impression sequence (NULL ~40% — permanent,

@@ -14,7 +14,8 @@ All S1 VVs resolve via `ad_served_id` — deterministic, no IP matching needed.
 ### S2: 100% resolved (cross-stage, adv 31357)
 S2 VVs trace back to S1 impressions via IP matching within `campaign_group_id`:
 - **Method:** S2 VV → get bid_ip from source tables (bid_logs/win_logs/impression_log via ad_served_id + auction_id bridge) → match against S1 pool (event_log, viewability_log, impression_log, clickpass_log)
-- **Two fixes needed for 100%:** (1) `strip_cidr()` on event_log.ip (pre-2026 has /32 suffix), (2) 180-day S1 pool lookback (53% of matches >90d old, max 186d)
+- **Two fixes needed for 100%:** (1) `strip_cidr()` on event_log.ip (pre-2026 has /32 suffix), (2) expanded S1 pool (all 4 source tables + clickpass_log)
+- **Lookback CORRECTED:** Initial MIN-based analysis showed 186d max, but using MOST RECENT match: max 69d, median 6d, P95 29d. 90d lookback is sufficient (zero IPs have latest S1 match >90d before VV).
 - Query: `queries/ti_650_s2_resolution_31357.sql` (v8)
 
 ### S3 architecture (Zach breakthrough, v20)
@@ -41,14 +42,14 @@ Same bottom-up pattern as the S2 investigation. Single-advertiser deep dive, sam
 This is the PRIMARY resolver. S3 targeting requires a prior VV.
 - Source: `clickpass_log` WHERE `funnel_level IN (1, 2)` AND `objective_id IN (1, 5, 6)` AND same `campaign_group_id`
 - Match: `S3_bid_ip = S1_or_S2_clickpass_ip` WHERE `S1/S2 VV time < S3 VV time`
-- **Lookback: 180 days minimum** from VV start date
+- **Lookback: 90 days** from VV start date (sufficient per corrected analysis; 180d safe but wasteful)
 
 ### Step 3: Build S1+S2 impression pool (fallback)
 Only check this for VVs that DON'T resolve via clickpass_log:
 - event_log (CTV VAST): `strip_cidr(el.ip)`, `event_type_raw IN ('vast_start', 'vast_impression')`
 - viewability_log (viewable display)
 - impression_log (non-viewable display)
-- All scoped to same `campaign_group_id`, `funnel_level IN (1, 2)`, 180d lookback
+- All scoped to same `campaign_group_id`, `funnel_level IN (1, 2)`, 90d lookback
 
 ### Expected Output
 ```
@@ -70,7 +71,7 @@ unresolved_total
 - **campaign_group_id scoping** — all matches within same campaign_group_id (Zach directive)
 - **Prospecting only** — `objective_id IN (1, 5, 6)` (NOT retargeting obj=4 or ego obj=7)
 - **funnel_level is authoritative for stage** — don't rely on objective_id for stage identification (48,934 S3 campaigns have obj=1 instead of 6, UI migration bug)
-- **180-day lookback** — from VV start date for S1/S2 pools
+- **90-day lookback** — from VV start date for S1/S2 pools (corrected: 90d covers 100% using most recent match; 180d is safe but unnecessary)
 - **strip_cidr()** — on all event_log.ip references: `CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)])`
 - **Temporal ordering** — S1/S2 pool event must be BEFORE S3 VV time
 
@@ -83,11 +84,11 @@ S3 VV (Feb 4-11) → prior S2 VV (day -A) → S2 impression (day -B) → S1 impr
                                                                       C = total lookback
 ```
 
-For S2→S1 we found max 186 days. S3 adds another hop, so total depth could be longer. Measure the distribution (median, P95, P99, max) to determine the minimum lookback. The question is NOT "what's the earliest impression for this advertiser" — it's "within the same campaign_group_id, what's the earliest S1/S2 event in the chain that led to this specific S3 VV?"
+For S2→S1, corrected analysis shows max 69 days (median 6d) using most recent match. The initial 186-day figure was biased by MIN(impression_time). S3 adds another hop via the VV bridge, but the most recent match principle applies here too. Measure the distribution (median, P95, P99, max) to determine the minimum lookback. **IMPORTANT:** Always use MAX(impression_time) WHERE time < vv_time, not MIN. The question is: "what's the MOST RECENT prior S1/S2 event that matches this S3 VV's bid_ip within the same campaign_group_id?"
 
 ### Hypothesis
 S3 should be resolvable near-100% via `clickpass_log.ip` since you can't enter S3 without a prior VV. The 74.54% rate for adv 31357 in v20 may be low due to:
-1. Insufficient lookback (same issue as S2 — campaign groups can be very long-lived, and S3 stacks an additional hop)
+1. Insufficient lookback (less likely after S2 correction — 90d covers S2→S1; but S3 may have different patterns)
 2. CIDR mismatch on event_log.ip in the impression fallback
 3. Possibly some S3 VVs entered via identity graph paths not traceable through clickpass_log
 
