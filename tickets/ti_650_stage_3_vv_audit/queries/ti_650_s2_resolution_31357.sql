@@ -1,7 +1,11 @@
--- TI-650: S2 VV resolution test - advertiser 31357
+-- TI-650: S2 VV resolution test - advertiser 31357 (v7)
 -- Step 1: S2 VV -> IPs at each pipeline step via ad_served_id / auction_id
 -- Step 2: bid_ip -> S1 pool (event_log, viewability_log, impression_log, clickpass_log) on IP match
 -- Scoped to same campaign_group_id
+--
+-- v7 changes from v5:
+--   - Lookback extended from 90 to 180 days
+--   - CIDR-safe matching: strip_cidr() on all IPs (event_log pre-2026 has /32 suffix)
 --
 -- Impression paths (source tables):
 --   CTV:                clickpass -> event_log(vast) -> win_logs -> impression_log -> bid_logs
@@ -16,13 +20,15 @@
 DECLARE p_advertiser_id INT64 DEFAULT 31357;
 DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
 DECLARE p_vv_end TIMESTAMP DEFAULT TIMESTAMP('2026-02-11');
-DECLARE p_lookback_start TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 90 DAY);
+DECLARE p_lookback_start TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 180 DAY);
+
+CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)]);
 
 -- S2 VVs
 WITH s2_vvs AS (
     SELECT
         cp.ad_served_id,
-        cp.ip AS clickpass_ip,
+        strip_cidr(cp.ip) AS clickpass_ip,
         cp.time AS vv_time,
         cp.campaign_id,
         c.campaign_group_id
@@ -40,7 +46,7 @@ WITH s2_vvs AS (
 
 -- event_log: CTV path (vast_start / vast_impression)
 ip_event_log AS (
-    SELECT ad_served_id, ip AS event_log_ip
+    SELECT ad_served_id, strip_cidr(ip) AS event_log_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
       AND time >= p_lookback_start AND time < p_vv_end
@@ -52,7 +58,7 @@ ip_event_log AS (
 
 -- viewability_log: viewable display path
 ip_viewability AS (
-    SELECT ad_served_id, ip AS viewability_ip
+    SELECT ad_served_id, strip_cidr(ip) AS viewability_ip
     FROM `dw-main-silver.logdata.viewability_log`
     WHERE time >= p_lookback_start AND time < p_vv_end
       AND advertiser_id = p_advertiser_id
@@ -63,7 +69,7 @@ ip_viewability AS (
 
 -- impression_log: all display paths (also gives us ttd_impression_id for Beeswax bridge)
 ip_impression AS (
-    SELECT ad_served_id, ip AS impression_ip, ttd_impression_id
+    SELECT ad_served_id, strip_cidr(ip) AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
     WHERE time >= p_lookback_start AND time < p_vv_end
       AND advertiser_id = p_advertiser_id
@@ -74,7 +80,7 @@ ip_impression AS (
 
 -- win_logs: via auction_id bridge from impression_log
 ip_win AS (
-    SELECT il.ad_served_id, w.ip AS win_ip
+    SELECT il.ad_served_id, strip_cidr(w.ip) AS win_ip
     FROM `dw-main-silver.logdata.win_logs` w
     JOIN ip_impression il ON w.auction_id = il.ttd_impression_id
     WHERE w.time >= p_lookback_start AND w.time < p_vv_end
@@ -83,7 +89,7 @@ ip_win AS (
 
 -- bid_logs: via auction_id bridge from impression_log
 ip_bid AS (
-    SELECT il.ad_served_id, b.ip AS bid_ip
+    SELECT il.ad_served_id, strip_cidr(b.ip) AS bid_ip
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
     WHERE b.time >= p_lookback_start AND b.time < p_vv_end
@@ -112,7 +118,7 @@ all_ips AS (
 
 -- S1 event_log: CTV VAST events
 s1_pool_el AS (
-    SELECT c.campaign_group_id, el.ip AS match_ip, MIN(el.time) AS impression_time
+    SELECT c.campaign_group_id, strip_cidr(el.ip) AS match_ip, MIN(el.time) AS impression_time
     FROM `dw-main-silver.logdata.event_log` el
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = el.campaign_id
@@ -122,12 +128,12 @@ s1_pool_el AS (
       AND el.time >= p_lookback_start AND el.time < p_vv_end
       AND el.advertiser_id = p_advertiser_id
       AND el.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, el.ip
+    GROUP BY c.campaign_group_id, strip_cidr(el.ip)
 ),
 
 -- S1 viewability_log: viewable display
 s1_pool_vl AS (
-    SELECT c.campaign_group_id, vl.ip AS match_ip, MIN(vl.time) AS impression_time
+    SELECT c.campaign_group_id, strip_cidr(vl.ip) AS match_ip, MIN(vl.time) AS impression_time
     FROM `dw-main-silver.logdata.viewability_log` vl
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = vl.campaign_id
@@ -136,12 +142,12 @@ s1_pool_vl AS (
     WHERE vl.time >= p_lookback_start AND vl.time < p_vv_end
       AND vl.advertiser_id = p_advertiser_id
       AND vl.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, vl.ip
+    GROUP BY c.campaign_group_id, strip_cidr(vl.ip)
 ),
 
 -- S1 impression_log: non-viewable display
 s1_pool_il AS (
-    SELECT c.campaign_group_id, il.ip AS match_ip, MIN(il.time) AS impression_time
+    SELECT c.campaign_group_id, strip_cidr(il.ip) AS match_ip, MIN(il.time) AS impression_time
     FROM `dw-main-silver.logdata.impression_log` il
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = il.campaign_id
@@ -150,12 +156,12 @@ s1_pool_il AS (
     WHERE il.time >= p_lookback_start AND il.time < p_vv_end
       AND il.advertiser_id = p_advertiser_id
       AND il.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, il.ip
+    GROUP BY c.campaign_group_id, strip_cidr(il.ip)
 ),
 
 -- S1 clickpass_log: S1 VV IPs (VV bridge - tests if prior S1 VV resolves remaining)
 s1_pool_cp AS (
-    SELECT c.campaign_group_id, cp.ip AS match_ip, MIN(cp.time) AS impression_time
+    SELECT c.campaign_group_id, strip_cidr(cp.ip) AS match_ip, MIN(cp.time) AS impression_time
     FROM `dw-main-silver.logdata.clickpass_log` cp
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = cp.campaign_id
@@ -164,7 +170,7 @@ s1_pool_cp AS (
     WHERE cp.time >= p_lookback_start AND cp.time < p_vv_end
       AND cp.advertiser_id = p_advertiser_id
       AND cp.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, cp.ip
+    GROUP BY c.campaign_group_id, strip_cidr(cp.ip)
 )
 
 SELECT
