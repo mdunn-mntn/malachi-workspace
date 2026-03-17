@@ -2,11 +2,10 @@
 -- Verify every S1 VV resolves to its impression via ad_served_id
 -- Expected: 100% (within-stage is deterministic)
 
--- Parameters
-DECLARE ADVERTISER_ID INT64 DEFAULT 31357;
-DECLARE VV_START TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
-DECLARE VV_END TIMESTAMP DEFAULT TIMESTAMP('2026-02-11');
-DECLARE LOOKBACK_START TIMESTAMP DEFAULT TIMESTAMP('2025-11-06');  -- 90-day lookback from VV_END
+DECLARE p_advertiser_id INT64 DEFAULT 31357;
+DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
+DECLARE p_vv_end TIMESTAMP DEFAULT TIMESTAMP('2026-02-11');
+DECLARE p_lookback_start TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 90 DAY);
 
 WITH s1_vvs AS (
     SELECT
@@ -20,8 +19,8 @@ WITH s1_vvs AS (
         ON c.campaign_id = cp.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE cp.time >= VV_START AND cp.time < VV_END
-      AND cp.advertiser_id = ADVERTISER_ID
+    WHERE cp.time >= p_vv_start AND cp.time < p_vv_end
+      AND cp.advertiser_id = p_advertiser_id
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 
@@ -30,8 +29,8 @@ el_match AS (
     SELECT ad_served_id, ip AS el_ip, bid_ip AS el_bid_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= LOOKBACK_START AND time < VV_END
-      AND advertiser_id = ADVERTISER_ID
+      AND time >= p_lookback_start AND time < p_vv_end
+      AND advertiser_id = p_advertiser_id
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) = 1
 ),
 
@@ -39,8 +38,8 @@ el_match AS (
 cil_match AS (
     SELECT ad_served_id, ip AS cil_ip
     FROM `dw-main-silver.logdata.cost_impression_log`
-    WHERE time >= LOOKBACK_START AND time < VV_END
-      AND advertiser_id = ADVERTISER_ID
+    WHERE time >= p_lookback_start AND time < p_vv_end
+      AND advertiser_id = p_advertiser_id
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
@@ -48,8 +47,8 @@ cil_match AS (
 vl_match AS (
     SELECT ad_served_id, ip AS vl_ip
     FROM `dw-main-silver.logdata.viewability_log`
-    WHERE time >= LOOKBACK_START AND time < VV_END
-      AND advertiser_id = ADVERTISER_ID
+    WHERE time >= p_lookback_start AND time < p_vv_end
+      AND advertiser_id = p_advertiser_id
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
@@ -58,8 +57,8 @@ vl_match AS (
 il_match AS (
     SELECT ad_served_id, ip AS il_ip
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= LOOKBACK_START AND time < VV_END
-      AND advertiser_id = ADVERTISER_ID
+    WHERE time >= p_lookback_start AND time < p_vv_end
+      AND advertiser_id = p_advertiser_id
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 )
