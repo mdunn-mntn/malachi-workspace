@@ -231,6 +231,7 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 24. **3 cross-stage connecting tables, not just event_log.** The cross-stage IP link depends on impression type: CTV → `event_log.ip` (vast_start/vast_impression); viewable display → `viewability_log.ip`; non-viewable display → `impression_log.ip`. Prior analysis only checked event_log (CTV path). Display S1/S2 impressions would be invisible to event_log-only searches.
 25. **v18 exhaustive trace: IP `216.126.34.185` has zero S1/S2 impressions in cg 93957 across ALL 3 connecting tables, 2+ years, CIDR-safe.** Checked event_log, viewability_log, impression_log from Jan 2024 – Feb 2026. The IP had S1 prospecting CTV exposure in 3 different campaign groups (78893, 78903, 78904) for the same advertiser — all Feb 24, 2025. Genuinely unresolvable under campaign_group_id scoping. VV campaign (450300) is NOT retargeting (obj=1, funnel_level=3).
 26. **Bid IP divergence analysis: all 7 S3 ad_served_ids for IP `216.126.34.185` in cg 93957 have identical IP at every pipeline stage.** Full trace through bid_logs, win_logs, impression_log, event_log, clickpass_log — all `216.126.34.185`, zero divergence. 2 of 7 became VVs (80207c6e on Feb 4, c890f55a on Feb 26). No alternative IP exists to search for S1/S2 history. Hypothesis disproven — confirms identity-graph-only entry. See `outputs/ti_650_bid_ip_divergence_results.md`.
+27. **BREAKTHROUGH (v20, Zach 2026-03-16): S3 cross-stage link is VV-based, not impression-based.** Prior analysis searched impression tables (event_log, viewability_log, impression_log) for the S3 bid_ip in S1/S2 campaigns — **wrong table.** S3 targeting requires a prior **verified visit** (S1 or S2), not just an impression. The cross-stage link is `S3.bid_ip → clickpass_log.ip` (prior S1/S2 VV), NOT `S3.bid_ip → event_log.ip`. Zach's traced IP guide proved this for IP `216.126.34.185`: the IP had an S2 VV (campaign 450301, clickpass 2026-01-24), where the S2 impression was on a completely different IP (`172.59.117.71`, Tubi CTV Roku) — cross-device. The S2 VV's clickpass IP (`216.126.34.185`, iPhone) is what entered S3 targeting, not the S2 impression VAST IP. This means the 92% resolution ceiling (finding #21) was artificially low — cross-device S2 VVs were invisible to impression-table searches. v20 rewrites the chain CTE to use clickpass_log. See `artifacts/ti_650_v20_vv_bridge_prompt.md`, `queries/ti_650_zach_traced_ip_guide`.
 
 ### MES Pipeline IP Map
 
@@ -244,7 +245,12 @@ Redirect           clickpass_log.ip         ip
 Visit              ui_visits.ip             ip
 Impression         ui_visits.impression_ip  impression_ip
 
-Cross-stage:  next_stage.bid_ip → prev_stage.vast_start_ip OR vast_impression_ip
+Cross-stage (CORRECTED v20):
+  S1 → S2:    S2.bid_ip → S1.event_log.ip (VAST) — impression-based
+  S1/S2 → S3: S3.bid_ip → S1_or_S2.clickpass_log.ip (prior VV!) — VV-based
+              Then: prior_VV.ad_served_id → CIL.ip (prior impression bid_ip, may differ!)
+              Then: prior_bid_ip → S1.event_log.ip (for S2 VV → S1 chain)
+  NOTE: In cross-device, VV clickpass IP ≠ impression bid IP
 ```
 
 ---
