@@ -95,6 +95,32 @@ Adaptability: Pivoted entire analysis when Zach clarified retargeting isn't rele
 queries with correct scope in same session. Updated 5 artifacts + data_knowledge.md + queries.
 Extended to display per user directive without needing further guidance.
 
+VV Bridge breakthrough (2026-03-16): Zach's traced IP guide revealed S3 cross-stage linking uses
+clickpass_log (VV-based), NOT event_log (impression-based). The prior ~92% S3 resolution ceiling
+was an artifact of searching the wrong table. In cross-device scenarios, VV clickpass IP is
+completely different from impression bid_ip (e.g., iPhone clickpass 216.126.34.185 vs Tubi CTV
+bid_ip 172.59.117.71). Built v20 resolution rate query with corrected VV bridge methodology:
+- Independently verified Zach's full chain via 4 BQ queries (3 different IPs per S2 VV confirmed)
+- Rewrote cross-stage trace query (v2) with clickpass_log-based VV bridge
+- Rewrote resolution rate query (v14→v20) with corrected S3 chain + new S1 VV direct path
+- Results across 10 advertisers: S3 resolution jumped from 58-96% (v14) to 74-99%+ (v20)
+- Adv 37775: 91.98% → 99.05% (+7.07pp), unresolved dropped 1,761 → 75 (96% reduction)
+- Adv 42097: 61.59% → 98.48% (+36.89pp) — biggest mover
+- 4 "zero chain" advertisers (0 S2→S1 chain in v14) now all have substantial VV-based chains
+- Weighted avg across 10 advertisers: ~79.5% → ~89.6% (+10pp)
+
+Speed: Executed full 5-task prompt (verify → rewrite trace → rewrite resolution → run & compare →
+update docs) in single session. Independently debugged BQ flag parsing issue (SQL comments parsed
+as CLI flags) without escalation.
+
+Craft: Corrected a fundamental architectural misunderstanding in the cross-stage linking model.
+The VV bridge pattern (clickpass_log.ip as the S3 targeting key) is the correct generalization
+that explains all prior anomalies. v20 query design cleanly separates 3 S3 resolution paths
+(S2 VV chain, S1 VV direct, S1 impression direct) with accurate overlap counting.
+
+Adaptability: Pivoted entire S3 methodology when Zach's traced IP proved the impression-based
+approach was wrong. Rewrote 2 major queries and updated all documentation in same session.
+
 [2026-02/03] MM-44 IPDSC HH Discrepancy — Investigated 66.2% household drop (17,589 → 5,944 HHs)
 across 2,302 campaign groups. Identified 3 root causes: MES inner join block list [2,14,42], DS
 type contamination in campaign_segment_history, 35-day lookback behavior. Documented IPDSC pipeline
