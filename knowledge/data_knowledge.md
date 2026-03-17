@@ -761,21 +761,24 @@ alternative cross-stage identifiers:
 
 **Bottom line (CORRECTED 2026-03-16):** Cross-stage linking depends on which stage you're entering. S1→S2 uses **vast_ip** (impression-based). S1/S2→S3 uses **clickpass_log.ip** (VV-based). The prior analysis that found a ~92% IP ceiling for S3 was searching the wrong table — impression tables instead of clickpass_log. The VV's clickpass IP is what enters S3 targeting, and in cross-device cases it differs from the impression bid IP entirely.
 
-**v13 resolution rates (10 advertisers, Feb 4–11, 90-day lookback, prospecting obj 1,5,6):**
-- S2: 97.95–99.87% (single hop to S1, near-perfect)
-- S3: 62.51–97.83% (full S3→S2→S1 chain + S3→S1 direct fallback)
-- S3→S2→S1 chain matters for 6/10 advertisers (up to 74% of S3 VVs resolve through chain)
-- Chain added 134 net new S3 resolutions for adv 37775 (96.80→97.36%)
+**v20 resolution rates (10 advertisers, Feb 4–11, 90-day lookback, prospecting obj 1,5,6, campaign_group_id scoped, VV bridge):**
+- S2: 97.95–99.87% (unchanged — S2→S1 impression-based link was already correct)
+- S3: 74.54–99.47% (massive improvement from v14's 58.56–96.56%)
+- VV bridge resolves most cross-device S3 VVs that were previously unresolvable
+- adv 37775: 91.98% → **99.05%** (+7.07pp, unresolved dropped 1,761 → 75)
+- adv 42097: 61.59% → **98.48%** (+36.89pp — was the worst, now nearly resolved)
+- adv 34835: 81.45% → **99.34%** (+17.89pp)
+- adv 31357: 58.56% → **74.54%** (+15.98pp, still lowest — heavy identity-graph population)
+
+**The "92% ceiling" was wrong (corrected 2026-03-16).** Prior analysis (v14-v18) found ~92% S3 resolution via impression tables. This was an artifact of searching the wrong table. With the VV bridge (clickpass_log), the true ceiling is **~99%** for most advertisers. The remaining ~1% are IPs with no prior MNTN VV or impression in the same campaign group (true identity-graph-only entries).
 
 **Retargeting pool impact (tested 2026-03-12):** Adding retargeting campaigns (obj=4) to the S1 pool resolves 110 additional S3 VVs for adv 37775 — IPs whose first MNTN impression was retargeting, not prospecting. Business decision: audit scope = "first prospecting touch" vs "first MNTN touch."
 
-**Irreducible floor (updated 2026-03-12):** 567 IP-unresolved → 484 resolved via GUID bridge (85.4%) → **83 truly irreducible** (0.36% of CIL cohort, only 10 primary attribution = 0.04%). Plus 1,074 VVs with no CIL record — NOT TTL expiration (all < 30 days old), pipeline gap recoverable via event_log bid_ip fallback.
+**Irreducible floor (updated 2026-03-16):** With VV bridge, only 75 S3 VVs unresolved for adv 37775 (0.33% of CIL cohort). These have no prior S1/S2 VV or impression IP match within the campaign group. Plus 1,074 VVs with no CIL record (pipeline gap, not TTL). Prior 567-unresolved GUID bridge analysis used the wrong cross-stage methodology — most of those 567 are now resolved via VV bridge.
 
 **campaign_group_id scoping (Zach directive, 2026-03-12):** Cross-stage IP linking MUST be scoped within the same `campaign_group_id`. A VV in one campaign group cannot be linked to an impression in a different campaign group — that would be a coincidental IP match, not a real funnel trace. `campaign_group_id` is unique across advertisers. This constraint must be enforced in the production `vv_ip_lineage` model.
 
-**Zero-chain advertisers:** 4/10 had zero S3→S2→S1 chain resolution. Cause: no active S2 prospecting impressions in the 90-day lookback (S2 campaigns exist but serve only retargeting).
-
-The previous "~11% unresolved" ceiling included retargeting campaigns — Zach confirmed retargeting is NOT relevant to this audit. GUID bridge via `guid_identity_daily` resolves ~82% of the remaining IP-unresolvable VVs.
+**Former "zero-chain" advertisers now resolved:** 4/10 advertisers (31276, 31357, 34835, 42097) had zero S3→S2→S1 chain in v14 because no S2 VAST event matched S3 bid_ip. v20 reveals they all had substantial VV-based chains — the old query was searching event_log instead of clickpass_log. Example: adv 42097 went from 0 chain resolutions to 11,399 via S2 VV chain.
 
 ### attribution_model_id Clarification (from TI-650)
 - `ad_served_id` = **last-touch** attribution — the most recent impression that led to the VV
