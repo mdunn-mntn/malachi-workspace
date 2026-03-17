@@ -340,54 +340,39 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 ## 6. Files
 
 ### Queries
-- `queries/ti_650_systematic_trace.sql` — **Production linkage query.** v12: 3 self-contained traces (S1/S2/S3), 2 cross-stage links (imp_direct + imp_visit). Adv 37775.
-- `queries/ti_650_resolution_rate_v14.sql` — **v14: campaign_group_id scoped.** Multi-advertiser, ~212s for 10 advs.
-- `queries/ti_650_resolution_rate_v17.sql` — **v17: CIDR-corrected v14.** Minimal impact (+0.19pp for adv 37775 S3).
-- `queries/ti_650_v14_guid_bridge.sql` — **GUID bridge on v14 unresolved:** 1,761 VVs within campaign_group_id.
-- `queries/ti_650_v15_get_unresolved_ids.sql` — **v15 Step 1:** Extract 50 unresolved S3 ad_served_ids (v14 logic).
-- `queries/ti_650_v15_trace_lookup.sql` — **v15 Step 2:** Forensic trace through all 8 source tables via ad_served_id/auction_id.
-- `queries/ti_650_ip_funnel_trace.sql` — **v16 Step 1:** Single ad_served_id within-stage trace across 5 source tables.
-- `queries/ti_650_ip_funnel_trace_cross_stage.sql` — **v16 Step 2:** Cross-stage IP linking (CTV path only — event_log vast events).
-- `queries/ti_650_365d_ip_lookup.sql` — **v16 Step 3:** 365-day IP lookup for unresolved VV bid_ip. Parameterized.
-- `queries/ti_650_v18_exhaustive_ip_trace.sql` — **v18: Exhaustive IP trace** across all 3 cross-stage tables (event_log, viewability_log, impression_log) for IP `216.126.34.185`, cg 93957 + full advertiser. CIDR-safe. Optimized: UNION ALL, LIKE, event_type filter.
-- `queries/ti_650_v19_vv_full_trace.sql` — **v19: Full VV pipeline trace.** 2-stage query: core (impression_log, clickpass, event_log) + win/bid by literal auction_id. IP 100% identical across all stages.
-- `queries/ti_650_ip_funnel_trace_cross_stage_v2.sql` — **v20: Cross-stage trace with VV bridge.** Corrected methodology — searches clickpass_log for prior VVs, then CIL for impression bid_ip, then event_log for S1 chain.
-- `queries/ti_650_resolution_rate_v20.sql` — **v20: VV bridge resolution rates.** Corrected S3 cross-stage link via clickpass_log. S2 unchanged. 10 advertisers, ~435s.
+- `queries/ti_650_resolution_rate_v21.sql` — **v21: Current resolution rates.** VV bridge + impression fallback, 10 advertisers.
+- `queries/ti_650_s1_resolution_31357.sql` — **S1 resolution test** for adv 31357. 100% via ad_served_id.
+- `queries/ti_650_s2_resolution_31357.sql` — **S2 resolution test** for adv 31357. Cross-stage bid_ip → S1 pool.
+- `queries/ti_650_ip_funnel_trace_cross_stage_v2.sql` — **v20: Cross-stage trace with VV bridge.** Methodology reference.
 - `queries/ti_650_sqlmesh_model.sql` — SQLMesh INCREMENTAL_BY_TIME_RANGE model (v10.1 — needs v20 update).
+- `queries/ti_650_zach_traced_ip_guide` — Zach's traced IP reference for VV bridge methodology.
 
 ### Outputs
+- `outputs/ti_650_v20_vv_bridge_impact.md` — **v20 results:** VV bridge impact, all 10 advertisers.
 - `outputs/ti_650_resolution_waterfall.md` — **Full resolution waterfall for Zach presentation**
-- `outputs/ti_650_v14_campaign_group_resolution.md` — **v14 results:** campaign_group_id scoped, 10 advertisers
-- `outputs/ti_650_v14_resolution_waterfall.md` — **v14 waterfall:** campaign_group_id scoped
-- `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis, root cause diagnosis
-- `outputs/ti_650_v16_cross_stage_trace.md` — **v16 Step 2 results:** Cross-stage IP link confirmed (S3→S1, 0.9d gap, same campaign_group_id)
-- `outputs/ti_650_v16_365d_ip_lookup.md` — **v16 Step 3 results:** Unresolved VV IP has 1,200+ events across 10+ advertisers but zero for its own campaign group
-- `outputs/ti_650_v17_cidr_impact.md` — **v17 results:** CIDR fix comparison vs v14. Minimal impact.
-- `outputs/ti_650_v18_exhaustive_ip_trace.md` — **v18 results:** 3-table exhaustive trace, 2yr lookback, identity-graph confirmation.
-- `outputs/ti_650_v19_zach_summary.md` — **v19 Zach-ready summary:** Complete proof that IP has zero S1/S2 impressions in cg 93957, full pipeline trace, cross-advertiser context.
-- `outputs/ti_650_bid_ip_divergence_results.md` — **Bid IP divergence analysis:** All 7 S3 ad_served_ids traced through full pipeline. Zero IP divergence. Hypothesis disproven.
-- `outputs/ti_650_v20_vv_bridge_impact.md` — **v20 results:** VV bridge impact comparison vs v14. Resolution rates dramatically improved across all 10 advertisers.
+- `outputs/ti_650_v14_campaign_group_resolution.md` — **v14 results:** campaign_group_id scoped
+- `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis
+- `outputs/ti_650_bid_ip_divergence_results.md` — **Bid IP divergence:** Zero divergence across pipeline.
 
 ### Artifacts
+- `artifacts/ti_650_vv_trace_flowchart.md` — **VV IP trace flowchart** (Mermaid source)
+- `artifacts/ti_650_vv_trace_flowchart.pdf` / `.png` — Flowchart exports
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference
-- `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan
 - `artifacts/ti_650_pipeline_explained.md` — Pipeline reference (stages, targeting, VVS logic)
-- `artifacts/ti_650_query_optimization_guide.md` — BQ execution analysis
-- `artifacts/ti_650_consolidated.md` — Historical audit report (v4–v10 era)
-- `artifacts/ti_650_zach_ray_comments.txt` — Stakeholder Slack messages
-- `artifacts/ti_650_unresolved_investigation_plan.md` — **Plan: deep-dive 567 unresolved + 1,074 no-CIL VVs**
+- `artifacts/ti_650_implementation_plan.md` — SQLMesh deployment plan
 - `artifacts/ti_650_verified_visit_business_logic.txt` — VVS Business Logic doc
 - `artifacts/ATTR-Verified Visit Service (VVS) Business Logic-090326-213624.pdf` — VVS Confluence export
+- `artifacts/ti_650_zach_ray_comments.txt` — Stakeholder Slack messages
 
 ### Meetings
-- `meetings/ti_650_meeting_zach_1.txt` through `zach_4.txt` — Zach review meetings
-- `meetings/ti_650_meeting_zach_5.txt` — Zach meeting #5 (2026-03-12): source-of-truth tables, 100% target, forensic trace directive
+- `meetings/ti_650_meeting_zach_1.txt` through `zach_5.txt` — Zach review meetings
 - `meetings/ti_650_meeting_ryan_1.txt` — SQLMesh walkthrough with Ryan
 - `meetings/ti_650_meeting_dustin.txt` — Deployment strategy with Dustin
 
 ### Archived
-- `queries/_archive/` — 26 superseded queries (v10-v15 one-time diagnostics, superseded resolution rates)
-- `outputs/_archive/` — 29 superseded outputs (v8-v13 validations, intermediate results, one-time profiles)
+- `queries/_archive/` — 40 superseded queries (v10-v20 diagnostics, one-time traces, superseded resolution rates)
+- `outputs/_archive/` — 29 superseded outputs (v8-v19 validations, intermediate results, one-time profiles)
+- `artifacts/_archive/` — 13 superseded artifacts (session prompts, old plans, historical reports)
 
 ---
 
