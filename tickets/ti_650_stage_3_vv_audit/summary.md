@@ -199,12 +199,39 @@ Full results: `outputs/ti_650_v15_forensic_results.md`
 - S2 rates UNCHANGED (all 99.45–99.87%) — S2→S1 impression-based link was already correct
 - Full comparison: `outputs/ti_650_v20_vv_bridge_impact.md`
 
+### v21: S2 100% resolved + CIDR fix + 180d lookback (2026-03-17)
+
+**Bottom-up S2 validation (advertiser 31357):**
+Two issues found and fixed that caused 442 unresolved S2 VVs:
+
+1. **CIDR suffix mismatch in event_log.ip:** ALL pre-2026 event_log rows have `/32` (IPv4) or `/128` (IPv6) suffix. Other tables (impression_log, viewability_log, clickpass_log, bid_logs, win_logs) have bare IPs. Cross-table IP matching failed silently. Fix: `CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)])` on all event_log IPs.
+
+2. **S1 pool lookback too short (90d → 180d):** 53% of S2→S1 matches had S1 impressions older than 90 days. Max gap: 186 days, P95: 181 days, median: 105 days. 90-day lookback missed 30,186/56,665 (53%) of matches for adv 31357.
+
+**v8 result (adv 31357 S2):** 68,498/68,498 = **100% resolved** (was 99.35% with 90d lookback, 442 unresolved). Zero unresolved.
+
+**v21 multi-advertiser query updated** with both fixes — 180d lookback + CIDR-safe matching on event_log.ip.
+
+| Metric | v5 (90d, no CIDR fix) | v8 (180d + CIDR fix) |
+|---|---|---|
+| s1_via_event_log | 67,891 | 68,498 (+607) |
+| s1_via_impression_log | 64,484 | 66,524 (+2,040) |
+| s1_via_clickpass_log | 12,858 | 21,370 (+8,512) |
+| resolved_imp_only | 68,048 (99.34%) | 68,498 (100%) |
+| resolved_with_vv_bridge | 68,056 (99.35%) | 68,498 (100%) |
+| unresolved | 442 | **0** |
+
+**Lookback age distribution (S2→S1 matches):**
+- Max: 186 days, Median: 105 days, P95: 181 days, P99: 184 days
+- 30,186/56,665 (53%) matches older than 90 days
+- 90-day Zach estimate was too conservative for long-running campaign groups
+
 ### Scoping rules
 
 - **campaign_group_id scoping (v14+).** All cross-stage IP linking must be within the same `campaign_group_id`. Zach directive 2026-03-12.
 - **Prospecting only:** `objective_id IN (1, 5, 6)`. Exclude retargeting (4) and ego (7).
 - **funnel_level is authoritative for stage.** objective_id is UNRELIABLE — 48,934 S3 campaigns have obj=1 instead of 6 (UI migration bug, Ray confirmed 2026-03-11).
-- **90-day lookback.** Zach confirmed max window = 88 days (14+30+14+30).
+- **180-day lookback (CORRECTED v21, was 90d).** Zach estimated max window = 88 days (14+30+14+30), but empirically 53% of S2→S1 matches for adv 31357 were >90 days old (max 186d). Long-running campaign groups accumulate S1 impressions far older than the theoretical max.
 
 ### Production table schema (v10.1 — 54 columns)
 
@@ -264,8 +291,9 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 20. **bid_events_log only has data for advertiser 32167.** Table is a UNION of bidder_bid_events + bid_price_log from a specific bidding pipeline. Not useful for general advertiser analysis.
 21. **92% is the IP-based resolution ceiling** for campaign_group_id-scoped S3 VVs. The 8% unresolved entered S3 via identity graph (not via MNTN impression). GUID bridge resolves ~85% of those, bringing total to ~99.6%.
 22. **Unresolved IPs are heavily served across the MNTN platform — just not for their own campaign group.** IP `216.126.34.185` (unresolved for cg 93957/adv 37775) had 1,200+ VAST events across 10+ other advertisers in 35 days of data. Dominated by retargeting campaigns. Confirms identity-graph-driven S3 entry, not prior impression.
-23. **CIDR fix (v17) has minimal impact on resolution rates.** event_log.ip has /32 CIDR suffix on all pre-2026 data, but CIL.ip (bare) in the S1 pool already covers the same impressions. Net gain: +45 VVs for adv 37775 S3 (+0.19pp), +5,113 for adv 31357 (+0.87pp). Fix is correct for data hygiene but does NOT explain the unresolved gap. The ~92% ceiling is structural, not a CIDR artifact.
-24. **3 cross-stage connecting tables, not just event_log.** The cross-stage IP link depends on impression type: CTV → `event_log.ip` (vast_start/vast_impression); viewable display → `viewability_log.ip`; non-viewable display → `impression_log.ip`. Prior analysis only checked event_log (CTV path). Display S1/S2 impressions would be invisible to event_log-only searches.
+23. **CIDR fix (v17/v21) — minimal S3 impact alone, but critical for S2 cross-stage resolution.** event_log.ip has /32 CIDR suffix on all pre-2026 data. For S3 (v17): +45 VVs for adv 37775 (+0.19pp) — CIL.ip (bare) already covers most. For S2 cross-stage (v21): combined with 180d lookback, CIDR fix + extended lookback resolved ALL 442 remaining unresolved S2 VVs for adv 31357 (99.35% → 100%). The CIDR mismatch matters most when matching event_log IPs from 2025 against post-2025 table IPs.
+24. **S2→S1 resolution = 100% with 180d lookback + CIDR fix (v21).** Two fixes resolved 442 remaining S2 VVs for adv 31357: (a) `strip_cidr()` on event_log.ip (pre-2026 `/32` suffix), (b) 180-day S1 pool lookback (53% of matches >90d old, max 186d, P95 181d). Applied to multi-advertiser v21 query.
+25. **3 cross-stage connecting tables, not just event_log.** The cross-stage IP link depends on impression type: CTV → `event_log.ip` (vast_start/vast_impression); viewable display → `viewability_log.ip`; non-viewable display → `impression_log.ip`. Prior analysis only checked event_log (CTV path). Display S1/S2 impressions would be invisible to event_log-only searches.
 25. **v18 exhaustive trace: IP `216.126.34.185` has zero S1/S2 impressions in cg 93957 across ALL 3 connecting tables, 2+ years, CIDR-safe.** Checked event_log, viewability_log, impression_log from Jan 2024 – Feb 2026. The IP had S1 prospecting CTV exposure in 3 different campaign groups (78893, 78903, 78904) for the same advertiser — all Feb 24, 2025. Genuinely unresolvable under campaign_group_id scoping. VV campaign (450300) is NOT retargeting (obj=1, funnel_level=3).
 26. **Bid IP divergence analysis: all 7 S3 ad_served_ids for IP `216.126.34.185` in cg 93957 have identical IP at every pipeline stage.** Full trace through bid_logs, win_logs, impression_log, event_log, clickpass_log — all `216.126.34.185`, zero divergence. 2 of 7 became VVs (80207c6e on Feb 4, c890f55a on Feb 26). No alternative IP exists to search for S1/S2 history. Hypothesis disproven — confirms identity-graph-only entry. See `outputs/ti_650_bid_ip_divergence_results.md`.
 27. **BREAKTHROUGH (v20, Zach 2026-03-16): S3 cross-stage link is VV-based, not impression-based.** Prior analysis searched impression tables (event_log, viewability_log, impression_log) for the S3 bid_ip in S1/S2 campaigns — **wrong table.** S3 targeting requires a prior **verified visit** (S1 or S2), not just an impression. The cross-stage link is `S3.bid_ip → clickpass_log.ip` (prior S1/S2 VV), NOT `S3.bid_ip → event_log.ip`. Zach's traced IP guide proved this for IP `216.126.34.185`: the IP had an S2 VV (campaign 450301, clickpass 2026-01-24), where the S2 impression was on a completely different IP (`172.59.117.71`, Tubi CTV Roku) — cross-device. The S2 VV's clickpass IP (`216.126.34.185`, iPhone) is what entered S3 targeting, not the S2 impression VAST IP. This means the 92% resolution ceiling (finding #21) was artificially low — cross-device S2 VVs were invisible to impression-table searches. v20 rewrites the chain CTE to use clickpass_log. See `artifacts/ti_650_v20_vv_bridge_prompt.md`, `queries/ti_650_zach_traced_ip_guide`.
@@ -355,6 +383,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_bid_ip_divergence_results.md` — **Bid IP divergence:** Zero divergence across pipeline.
 
 ### Artifacts
+- `artifacts/ti_650_s3_resolution_prompt.md` — **S3 resolution prompt** for next LLM session (bottom-up S3 validation)
 - `artifacts/ti_650_vv_trace_flowchart.md` — **VV IP trace flowchart** (Mermaid source)
 - `artifacts/ti_650_vv_trace_flowchart.pdf` / `.png` — Flowchart exports
 - `artifacts/ti_650_column_reference.md` — Column-by-column schema reference

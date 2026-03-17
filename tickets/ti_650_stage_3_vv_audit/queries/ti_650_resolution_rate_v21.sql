@@ -7,6 +7,10 @@
 --      added back as additional tier when VV bridge doesn't match
 --   3. s2_vv_bid_ips renamed to s2_bid_ips (shared between VV bridge + impression chain)
 --
+-- v21b changes (2026-03-17):
+--   4. 180-day lookback (was 90d) — 53% of S2→S1 matches for adv 31357 were >90d old (max 186d)
+--   5. CIDR-safe matching: strip_cidr() on event_log.ip (pre-2026 data has /32 suffix)
+--
 -- S3 resolution tiers (priority order):
 --   T1: VV bridge — S3.bid_ip → S2 VV clickpass_ip → S2 bid_ip → S1 pool
 --   T2: S1 VV direct — S3.bid_ip → S1 VV clickpass_ip
@@ -14,6 +18,8 @@
 --                              → S2 bid_ip → S1 pool
 --   T4: S1 impression direct — S3.bid_ip → S1 pool (event_log/CIL/viewability_log/impression_log)
 --   T5: S1 visit direct — S3.impression_ip (ui_visits) → S1 pool
+
+CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)]);
 
 WITH top_advertisers AS (
     SELECT cp.advertiser_id, COUNT(*) AS vv_count
@@ -40,31 +46,31 @@ campaigns AS (
 s1_pool AS (
     SELECT campaign_group_id, match_ip, MIN(impression_time) AS impression_time
     FROM (
-        SELECT c.campaign_group_id, el.ip AS match_ip, MIN(el.time) AS impression_time
+        SELECT c.campaign_group_id, strip_cidr(el.ip) AS match_ip, MIN(el.time) AS impression_time
         FROM `dw-main-silver.logdata.event_log` el
         JOIN campaigns c ON c.campaign_id = el.campaign_id AND c.funnel_level = 1
         WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
-          AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+          AND el.time >= TIMESTAMP('2025-08-08') AND el.time < TIMESTAMP('2026-02-11')
           AND el.ip IS NOT NULL
-        GROUP BY c.campaign_group_id, el.ip
+        GROUP BY c.campaign_group_id, strip_cidr(el.ip)
         UNION ALL
         SELECT c.campaign_group_id, cil.ip AS match_ip, MIN(cil.time) AS impression_time
         FROM `dw-main-silver.logdata.cost_impression_log` cil
         JOIN campaigns c ON c.campaign_id = cil.campaign_id AND c.funnel_level = 1
-        WHERE cil.time >= TIMESTAMP('2025-11-06') AND cil.time < TIMESTAMP('2026-02-11')
+        WHERE cil.time >= TIMESTAMP('2025-08-08') AND cil.time < TIMESTAMP('2026-02-11')
         GROUP BY c.campaign_group_id, cil.ip
         UNION ALL
         SELECT c.campaign_group_id, vl.ip AS match_ip, MIN(vl.time) AS impression_time
         FROM `dw-main-silver.logdata.viewability_log` vl
         JOIN campaigns c ON c.campaign_id = vl.campaign_id AND c.funnel_level = 1
-        WHERE vl.time >= TIMESTAMP('2025-11-06') AND vl.time < TIMESTAMP('2026-02-11')
+        WHERE vl.time >= TIMESTAMP('2025-08-08') AND vl.time < TIMESTAMP('2026-02-11')
           AND vl.ip IS NOT NULL
         GROUP BY c.campaign_group_id, vl.ip
         UNION ALL
         SELECT c.campaign_group_id, il.ip AS match_ip, MIN(il.time) AS impression_time
         FROM `dw-main-silver.logdata.impression_log` il
         JOIN campaigns c ON c.campaign_id = il.campaign_id AND c.funnel_level = 1
-        WHERE il.time >= TIMESTAMP('2025-11-06') AND il.time < TIMESTAMP('2026-02-11')
+        WHERE il.time >= TIMESTAMP('2025-08-08') AND il.time < TIMESTAMP('2026-02-11')
           AND il.ip IS NOT NULL
         GROUP BY c.campaign_group_id, il.ip
     )
@@ -80,7 +86,7 @@ s2_vvs AS (
         cl.time AS vv_time
     FROM `dw-main-silver.logdata.clickpass_log` cl
     JOIN campaigns c ON c.campaign_id = cl.campaign_id AND c.funnel_level = 2
-    WHERE cl.time >= TIMESTAMP('2025-11-06') AND cl.time < TIMESTAMP('2026-02-11')
+    WHERE cl.time >= TIMESTAMP('2025-08-08') AND cl.time < TIMESTAMP('2026-02-11')
       AND cl.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cl.ad_served_id ORDER BY cl.time) = 1
 ),
@@ -89,7 +95,7 @@ s2_bid_ips AS (
     SELECT cil.ad_served_id, cil.ip AS bid_ip
     FROM `dw-main-silver.logdata.cost_impression_log` cil
     JOIN campaigns c ON c.campaign_id = cil.campaign_id AND c.funnel_level = 2
-    WHERE cil.time >= TIMESTAMP('2025-11-06') AND cil.time < TIMESTAMP('2026-02-11')
+    WHERE cil.time >= TIMESTAMP('2025-08-08') AND cil.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cil.ad_served_id ORDER BY cil.time ASC) = 1
 ),
 
@@ -114,7 +120,7 @@ s1_vv_pool AS (
         MIN(cl.time) AS s1_vv_time
     FROM `dw-main-silver.logdata.clickpass_log` cl
     JOIN campaigns c ON c.campaign_id = cl.campaign_id AND c.funnel_level = 1
-    WHERE cl.time >= TIMESTAMP('2025-11-06') AND cl.time < TIMESTAMP('2026-02-11')
+    WHERE cl.time >= TIMESTAMP('2025-08-08') AND cl.time < TIMESTAMP('2026-02-11')
       AND cl.ip IS NOT NULL
     GROUP BY c.campaign_group_id, cl.ip
 ),
@@ -124,25 +130,25 @@ s1_vv_pool AS (
 s2_imp_ips AS (
     SELECT campaign_group_id, imp_ip, ad_served_id, MIN(imp_time) AS imp_time
     FROM (
-        SELECT c.campaign_group_id, el.ip AS imp_ip, el.ad_served_id, MIN(el.time) AS imp_time
+        SELECT c.campaign_group_id, strip_cidr(el.ip) AS imp_ip, el.ad_served_id, MIN(el.time) AS imp_time
         FROM `dw-main-silver.logdata.event_log` el
         JOIN campaigns c ON c.campaign_id = el.campaign_id AND c.funnel_level = 2
         WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
-          AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+          AND el.time >= TIMESTAMP('2025-08-08') AND el.time < TIMESTAMP('2026-02-11')
           AND el.ip IS NOT NULL
-        GROUP BY c.campaign_group_id, el.ip, el.ad_served_id
+        GROUP BY c.campaign_group_id, strip_cidr(el.ip), el.ad_served_id
         UNION ALL
         SELECT c.campaign_group_id, vl.ip AS imp_ip, vl.ad_served_id, MIN(vl.time) AS imp_time
         FROM `dw-main-silver.logdata.viewability_log` vl
         JOIN campaigns c ON c.campaign_id = vl.campaign_id AND c.funnel_level = 2
-        WHERE vl.time >= TIMESTAMP('2025-11-06') AND vl.time < TIMESTAMP('2026-02-11')
+        WHERE vl.time >= TIMESTAMP('2025-08-08') AND vl.time < TIMESTAMP('2026-02-11')
           AND vl.ip IS NOT NULL
         GROUP BY c.campaign_group_id, vl.ip, vl.ad_served_id
         UNION ALL
         SELECT c.campaign_group_id, il.ip AS imp_ip, il.ad_served_id, MIN(il.time) AS imp_time
         FROM `dw-main-silver.logdata.impression_log` il
         JOIN campaigns c ON c.campaign_id = il.campaign_id AND c.funnel_level = 2
-        WHERE il.time >= TIMESTAMP('2025-11-06') AND il.time < TIMESTAMP('2026-02-11')
+        WHERE il.time >= TIMESTAMP('2025-08-08') AND il.time < TIMESTAMP('2026-02-11')
           AND il.ip IS NOT NULL
         GROUP BY c.campaign_group_id, il.ip, il.ad_served_id
     )
@@ -176,7 +182,7 @@ cp AS (
 bid_ips AS (
     SELECT cil.ad_served_id, cil.ip AS bid_ip
     FROM `dw-main-silver.logdata.cost_impression_log` cil
-    WHERE cil.time >= TIMESTAMP('2025-11-06') AND cil.time < TIMESTAMP('2026-02-11')
+    WHERE cil.time >= TIMESTAMP('2025-08-08') AND cil.time < TIMESTAMP('2026-02-11')
       AND cil.advertiser_id IN (SELECT advertiser_id FROM top_advertisers)
       AND cil.ad_served_id IN (SELECT ad_served_id FROM cp WHERE funnel_level IN (2, 3))
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cil.ad_served_id ORDER BY cil.time ASC) = 1
