@@ -1,46 +1,28 @@
 -- TI-650: S3 VV resolution — advertiser 31357 (WGU) — T1-T4 tier structure
--- Bottom-up validation: S1 (100% ✅), S2 (100% ✅), now S3 (74.54% in v20 — worst of 10)
+-- Bottom-up validation: S1 (100%), S2 (100%), now S3 (74.54% in v20 — worst of 10)
 --
 -- S3 architecture (Zach breakthrough, v20):
---   S3 targeting is VV-based: S3.bid_ip → prior S1/S2 clickpass_log.ip (VV IP)
---   Different from S2→S1 (impression-based). In cross-device, VV clickpass IP ≠ impression bid IP.
+--   S3 targeting is VV-based: S3.bid_ip -> prior S1/S2 clickpass_log.ip (VV IP)
+--   Different from S2->S1 (impression-based). In cross-device, VV clickpass IP != impression bid IP.
 --
 -- Tier structure (priority order):
---   T1: S2 VV bridge chain — S3.bid_ip = S2.clickpass_ip → S2.bid_ip in S1 pool (validated chain)
+--   T1: S2 VV bridge chain — S3.bid_ip = S2.clickpass_ip -> S2.bid_ip in S1 pool
 --   T2: S1 VV direct — S3.bid_ip = S1.clickpass_ip
 --   T3: S1 impression direct — S3.bid_ip in S1 impression pool (event_log + viewability_log + impression_log)
 --   T4: Net-new from impression fallback (resolved by T3 but NOT T1+T2)
 --
--- S3 bid_ip: Full 5-source trace (bid_logs > win_logs > impression_log > viewability_log > event_log)
--- S2 bid_ip for T1 chain: Same 5-source trace via ad_served_id → impression_log → bid_logs bridge
---   (No CIL — use actual pipeline tables only)
+-- No CIL — use actual pipeline tables only
 --
--- Impression paths:
---   CTV:                clickpass → event_log(vast) → win_logs → impression_log → bid_logs
---   Viewable Display:   clickpass → viewability_log → win_logs → bid_logs
---   Non-Viewable Disp:  clickpass → impression_log → win_logs → bid_logs
---
--- Join keys:
---   MNTN tables: ad_served_id
---   Beeswax tables (bid_logs, win_logs): auction_id (bridged via impression_log.ttd_impression_id)
+-- Parameters (inlined to avoid scripted query failures):
+--   advertiser_id = 31357
+--   vv_start = 2026-02-04, vv_end = 2026-02-11
+--   step1_lookback = 2025-11-06 (90d before vv_start)
+--   pool_lookback = 2025-11-06 (90d before vv_start; v21c confirmed 90d = 100%)
 
-DECLARE p_advertiser_id INT64 DEFAULT 31357;
-DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
-DECLARE p_vv_end TIMESTAMP DEFAULT TIMESTAMP('2026-02-11');
--- Step 1 lookback: 90 days (within-stage bid_ip extraction, bid_logs TTL = 90d)
-DECLARE p_step1_lookback TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 90 DAY);
--- Pool lookback: 180 days (pending lookback analysis results — may narrow to 90d)
-DECLARE p_pool_lookback TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 180 DAY);
-
-CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)]);
-
--- ============================================================================
--- S3 VVs (the VVs we're trying to resolve)
--- ============================================================================
 WITH s3_vvs AS (
     SELECT
         cp.ad_served_id,
-        strip_cidr(cp.ip) AS clickpass_ip,
+        SPLIT(cp.ip, '/')[SAFE_OFFSET(0)] AS clickpass_ip,
         cp.time AS vv_time,
         cp.campaign_id,
         c.campaign_group_id
@@ -49,59 +31,57 @@ WITH s3_vvs AS (
         ON c.campaign_id = cp.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 3 AND c.objective_id IN (1, 5, 6)
-    WHERE cp.time >= p_vv_start AND cp.time < p_vv_end
-      AND cp.advertiser_id = p_advertiser_id
+    WHERE cp.time >= TIMESTAMP('2026-02-04') AND cp.time < TIMESTAMP('2026-02-11')
+      AND cp.advertiser_id = 31357
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 
--- ============================================================================
 -- S3 bid_ip extraction: 5-source trace via ad_served_id / auction_id bridge
--- ============================================================================
 
 ip_event_log AS (
-    SELECT ad_served_id, strip_cidr(ip) AS event_log_ip
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS event_log_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= p_step1_lookback AND time < p_vv_end
-      AND advertiser_id = p_advertiser_id
+      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+      AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
 ip_viewability AS (
-    SELECT ad_served_id, strip_cidr(ip) AS viewability_ip
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS viewability_ip
     FROM `dw-main-silver.logdata.viewability_log`
-    WHERE time >= p_step1_lookback AND time < p_vv_end
-      AND advertiser_id = p_advertiser_id
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+      AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
 ip_impression AS (
-    SELECT ad_served_id, strip_cidr(ip) AS impression_ip, ttd_impression_id
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= p_step1_lookback AND time < p_vv_end
-      AND advertiser_id = p_advertiser_id
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+      AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
 ip_win AS (
-    SELECT il.ad_served_id, strip_cidr(w.ip) AS win_ip
+    SELECT il.ad_served_id, SPLIT(w.ip, '/')[SAFE_OFFSET(0)] AS win_ip
     FROM `dw-main-silver.logdata.win_logs` w
     JOIN ip_impression il ON w.auction_id = il.ttd_impression_id
-    WHERE w.time >= p_step1_lookback AND w.time < p_vv_end
+    WHERE w.time >= TIMESTAMP('2025-11-06') AND w.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
 ),
 
 ip_bid AS (
-    SELECT il.ad_served_id, strip_cidr(b.ip) AS bid_ip
+    SELECT il.ad_served_id, SPLIT(b.ip, '/')[SAFE_OFFSET(0)] AS bid_ip
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
-    WHERE b.time >= p_step1_lookback AND b.time < p_vv_end
+    WHERE b.time >= TIMESTAMP('2025-11-06') AND b.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
@@ -122,18 +102,13 @@ all_ips AS (
     LEFT JOIN ip_event_log el ON el.ad_served_id = v.ad_served_id
 ),
 
--- ============================================================================
 -- T1: S2 VV BRIDGE CHAIN
--- S3.bid_ip → S2.clickpass_ip → (trace S2 bid_ip) → S1 pool
--- If S3 targeted a household that had an S2 VV, AND that S2 VV's bid_ip
--- traces back to S1, the chain is validated.
--- ============================================================================
+-- S3.bid_ip -> S2.clickpass_ip -> (trace S2 bid_ip) -> S1 pool
 
--- S2 VVs within lookback window
 s2_vvs AS (
     SELECT
         cp.ad_served_id,
-        strip_cidr(cp.ip) AS vv_clickpass_ip,
+        SPLIT(cp.ip, '/')[SAFE_OFFSET(0)] AS vv_clickpass_ip,
         cp.time AS vv_time,
         c.campaign_group_id
     FROM `dw-main-silver.logdata.clickpass_log` cp
@@ -141,28 +116,27 @@ s2_vvs AS (
         ON c.campaign_id = cp.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 2 AND c.objective_id IN (1, 5, 6)
-    WHERE cp.time >= p_pool_lookback AND cp.time < p_vv_end
-      AND cp.advertiser_id = p_advertiser_id
+    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
+      AND cp.advertiser_id = 31357
       AND cp.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 
--- S2 bid_ip via impression_log → bid_logs bridge (same 5-source pattern, no CIL)
 s2_ip_impression AS (
-    SELECT ad_served_id, strip_cidr(ip) AS impression_ip, ttd_impression_id
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= p_pool_lookback AND time < p_vv_end
-      AND advertiser_id = p_advertiser_id
+    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+      AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
 s2_ip_bid AS (
-    SELECT il.ad_served_id, strip_cidr(b.ip) AS bid_ip
+    SELECT il.ad_served_id, SPLIT(b.ip, '/')[SAFE_OFFSET(0)] AS bid_ip
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN s2_ip_impression il ON b.auction_id = il.ttd_impression_id
-    WHERE b.time >= p_pool_lookback AND b.time < p_vv_end
+    WHERE b.time >= TIMESTAMP('2025-11-06') AND b.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
@@ -176,43 +150,41 @@ s2_bid_ips AS (
 ),
 
 -- S1 impression pool (used for T1 chain validation AND T3 direct matching)
--- event_log + viewability_log + impression_log, funnel_level=1, same campaign_group_id
 s1_pool AS (
     SELECT campaign_group_id, match_ip, MIN(impression_time) AS impression_time
     FROM (
-        SELECT c.campaign_group_id, strip_cidr(el.ip) AS match_ip, el.time AS impression_time
+        SELECT c.campaign_group_id, SPLIT(el.ip, '/')[SAFE_OFFSET(0)] AS match_ip, el.time AS impression_time
         FROM `dw-main-silver.logdata.event_log` el
         JOIN `dw-main-bronze.integrationprod.campaigns` c
             ON c.campaign_id = el.campaign_id
             AND c.deleted = FALSE AND c.is_test = FALSE
             AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
         WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
-          AND el.time >= p_pool_lookback AND el.time < p_vv_end
-          AND el.advertiser_id = p_advertiser_id AND el.ip IS NOT NULL
+          AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+          AND el.advertiser_id = 31357 AND el.ip IS NOT NULL
         UNION ALL
-        SELECT c.campaign_group_id, strip_cidr(vl.ip) AS match_ip, vl.time AS impression_time
+        SELECT c.campaign_group_id, SPLIT(vl.ip, '/')[SAFE_OFFSET(0)] AS match_ip, vl.time AS impression_time
         FROM `dw-main-silver.logdata.viewability_log` vl
         JOIN `dw-main-bronze.integrationprod.campaigns` c
             ON c.campaign_id = vl.campaign_id
             AND c.deleted = FALSE AND c.is_test = FALSE
             AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-        WHERE vl.time >= p_pool_lookback AND vl.time < p_vv_end
-          AND vl.advertiser_id = p_advertiser_id AND vl.ip IS NOT NULL
+        WHERE vl.time >= TIMESTAMP('2025-11-06') AND vl.time < TIMESTAMP('2026-02-11')
+          AND vl.advertiser_id = 31357 AND vl.ip IS NOT NULL
         UNION ALL
-        SELECT c.campaign_group_id, strip_cidr(il.ip) AS match_ip, il.time AS impression_time
+        SELECT c.campaign_group_id, SPLIT(il.ip, '/')[SAFE_OFFSET(0)] AS match_ip, il.time AS impression_time
         FROM `dw-main-silver.logdata.impression_log` il
         JOIN `dw-main-bronze.integrationprod.campaigns` c
             ON c.campaign_id = il.campaign_id
             AND c.deleted = FALSE AND c.is_test = FALSE
             AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-        WHERE il.time >= p_pool_lookback AND il.time < p_vv_end
-          AND il.advertiser_id = p_advertiser_id AND il.ip IS NOT NULL
+        WHERE il.time >= TIMESTAMP('2025-11-06') AND il.time < TIMESTAMP('2026-02-11')
+          AND il.advertiser_id = 31357 AND il.ip IS NOT NULL
     )
     GROUP BY campaign_group_id, match_ip
 ),
 
--- T1 chain: S2 VVs whose bid_ip appears in S1 pool (validated S2→S1 chain)
--- Result: (campaign_group_id, s2_clickpass_ip) pairs reachable through the chain
+-- T1 chain: S2 VVs whose bid_ip appears in S1 pool (validated S2->S1 chain)
 s2_vv_chain_reachable AS (
     SELECT
         s2v.campaign_group_id,
@@ -227,70 +199,62 @@ s2_vv_chain_reachable AS (
     GROUP BY s2v.campaign_group_id, s2v.vv_clickpass_ip
 ),
 
--- ============================================================================
 -- T2: S1 VV DIRECT
--- S3.bid_ip → S1.clickpass_ip (direct match to prior S1 VV)
--- ============================================================================
 s1_vv_pool AS (
     SELECT
         c.campaign_group_id,
-        strip_cidr(cp.ip) AS vv_clickpass_ip,
+        SPLIT(cp.ip, '/')[SAFE_OFFSET(0)] AS vv_clickpass_ip,
         MIN(cp.time) AS s1_vv_time
     FROM `dw-main-silver.logdata.clickpass_log` cp
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = cp.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE cp.time >= p_pool_lookback AND cp.time < p_vv_end
-      AND cp.advertiser_id = p_advertiser_id
+    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
+      AND cp.advertiser_id = 31357
       AND cp.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, strip_cidr(cp.ip)
+    GROUP BY c.campaign_group_id, SPLIT(cp.ip, '/')[SAFE_OFFSET(0)]
 ),
 
--- ============================================================================
 -- T3: S1 IMPRESSION DIRECT (split by source for diagnostics)
--- S3.bid_ip → S1 impression pool (event_log, viewability_log, impression_log)
--- ============================================================================
 imp_pool_el AS (
-    SELECT c.campaign_group_id, strip_cidr(el.ip) AS match_ip, MIN(el.time) AS impression_time
+    SELECT c.campaign_group_id, SPLIT(el.ip, '/')[SAFE_OFFSET(0)] AS match_ip, MIN(el.time) AS impression_time
     FROM `dw-main-silver.logdata.event_log` el
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = el.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
     WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
-      AND el.time >= p_pool_lookback AND el.time < p_vv_end
-      AND el.advertiser_id = p_advertiser_id AND el.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, strip_cidr(el.ip)
+      AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+      AND el.advertiser_id = 31357 AND el.ip IS NOT NULL
+    GROUP BY c.campaign_group_id, SPLIT(el.ip, '/')[SAFE_OFFSET(0)]
 ),
 
 imp_pool_vl AS (
-    SELECT c.campaign_group_id, strip_cidr(vl.ip) AS match_ip, MIN(vl.time) AS impression_time
+    SELECT c.campaign_group_id, SPLIT(vl.ip, '/')[SAFE_OFFSET(0)] AS match_ip, MIN(vl.time) AS impression_time
     FROM `dw-main-silver.logdata.viewability_log` vl
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = vl.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE vl.time >= p_pool_lookback AND vl.time < p_vv_end
-      AND vl.advertiser_id = p_advertiser_id AND vl.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, strip_cidr(vl.ip)
+    WHERE vl.time >= TIMESTAMP('2025-11-06') AND vl.time < TIMESTAMP('2026-02-11')
+      AND vl.advertiser_id = 31357 AND vl.ip IS NOT NULL
+    GROUP BY c.campaign_group_id, SPLIT(vl.ip, '/')[SAFE_OFFSET(0)]
 ),
 
 imp_pool_il AS (
-    SELECT c.campaign_group_id, strip_cidr(il.ip) AS match_ip, MIN(il.time) AS impression_time
+    SELECT c.campaign_group_id, SPLIT(il.ip, '/')[SAFE_OFFSET(0)] AS match_ip, MIN(il.time) AS impression_time
     FROM `dw-main-silver.logdata.impression_log` il
     JOIN `dw-main-bronze.integrationprod.campaigns` c
         ON c.campaign_id = il.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE il.time >= p_pool_lookback AND il.time < p_vv_end
-      AND il.advertiser_id = p_advertiser_id AND il.ip IS NOT NULL
-    GROUP BY c.campaign_group_id, strip_cidr(il.ip)
+    WHERE il.time >= TIMESTAMP('2025-11-06') AND il.time < TIMESTAMP('2026-02-11')
+      AND il.advertiser_id = 31357 AND il.ip IS NOT NULL
+    GROUP BY c.campaign_group_id, SPLIT(il.ip, '/')[SAFE_OFFSET(0)]
 )
 
--- ============================================================================
 -- OUTPUT: T1-T4 tier breakdown
--- ============================================================================
 SELECT
     COUNT(*) AS total_s3_vvs,
 
