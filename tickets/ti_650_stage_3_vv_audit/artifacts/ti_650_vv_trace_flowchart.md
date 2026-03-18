@@ -89,9 +89,9 @@ flowchart TD
     %% ============================================================
     %% STAGE 3 TRACES
     %% Key insight: S3 targeting is VV-BASED, not impression-based.
-    %% To enter S3, the IP must have had an S2 VERIFIED VISIT.
-    %% The cross-stage link is: S3.bid_ip → S2.clickpass_log.ip
-    %% NOT S3.bid_ip → S2.event_log.ip (which was the old, wrong path).
+    %% To enter S3, the IP must have had a prior S1 or S2 VERIFIED VISIT.
+    %% The cross-stage link is: S3.bid_ip → clickpass_log.ip (prior S1/S2 VV)
+    %% NOT S3.bid_ip → event_log.ip (which was the old, wrong path).
     %% In cross-device scenarios, S2 VV ip ≠ S2 impression ip.
     %% ============================================================
     S3_TYPE -->|CTV| S3_CTV
@@ -131,7 +131,7 @@ flowchart TD
 
     S3_CROSS --> S3_VV_FOUND{Found prior VV<br/>in clickpass_log?}
 
-    S3_VV_FOUND -->|No| UNRESOLVED([Unresolved — IP entered S3<br/>via identity graph, not traceable<br/>through MNTN pipeline])
+    S3_VV_FOUND -->|No| UNRESOLVED([Unresolved — prior VV exists<br/>but IP untraceable within lookback<br/>cross-device or IP rotation])
 
     S3_VV_FOUND -->|Yes| S3_VV_STAGE{What stage was<br/>the prior VV?}
 
