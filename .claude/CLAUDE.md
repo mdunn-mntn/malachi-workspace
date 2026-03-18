@@ -35,8 +35,9 @@ workspace/
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
-| `self_review/summary.md` | Self-review folder guide — explains files and workflow |
-| `self_review/self_review_2026.md` | **Presentable self-review** — update after every ticket (gitignored) |
+| `self_review/summary.md` | Self-review folder guide — explains files, workflow, and review cycle convention |
+| `self_review/self_review_2027.md` | **Active self-review** — update after every ticket (gitignored) |
+| `self_review/self_review_2026.md` | Submitted 2026 review (archived, do not modify) |
 | `self_review/review_rubric.md` | Rubric, manager goals, evidence checklists, Kale feedback (gitignored) |
 
 ## Ticket Work Protocol
