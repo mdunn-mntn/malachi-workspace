@@ -4,8 +4,13 @@
 -- Scoped to same campaign_group_id
 --
 -- v8 changes from v7:
---   - Split lookback: 90 days for Step 1 (within-S2, bid_logs TTL = 90d), 180 days for S1 pool
 --   - CIDR-safe matching: strip_cidr() on all IPs (event_log pre-2026 has /32 suffix)
+--   - Expanded S1 pool: 4 tables (event_log, viewability_log, impression_log, clickpass_log)
+--
+-- v21c correction (2026-03-17):
+--   - 90d S1 pool lookback confirmed sufficient (100% = 68,498/68,498, identical to 180d)
+--   - Initial MIN-based analysis showing 186d max was biased; MAX (most recent match) = 69d max
+--   - Reverted from 180d to 90d — halves scan cost with zero resolution loss
 --
 -- Impression paths (source tables):
 --   CTV:                clickpass -> event_log(vast) -> win_logs -> impression_log -> bid_logs
@@ -22,8 +27,8 @@ DECLARE p_vv_start TIMESTAMP DEFAULT TIMESTAMP('2026-02-04');
 DECLARE p_vv_end TIMESTAMP DEFAULT TIMESTAMP('2026-02-11');
 -- Step 1 lookback: 90 days (bid_logs TTL = 90 days, within-stage already 100%)
 DECLARE p_step1_lookback TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 90 DAY);
--- S1 pool lookback: 180 days (test if older S1 impressions resolve the 442 unresolved)
-DECLARE p_s1_lookback TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 180 DAY);
+-- S1 pool lookback: 90 days (verified v21c: 100% = 68,498/68,498, identical to 180d)
+DECLARE p_s1_lookback TIMESTAMP DEFAULT TIMESTAMP_SUB(TIMESTAMP('2026-02-04'), INTERVAL 90 DAY);
 
 CREATE TEMP FUNCTION strip_cidr(ip STRING) AS (SPLIT(ip, '/')[SAFE_OFFSET(0)]);
 
