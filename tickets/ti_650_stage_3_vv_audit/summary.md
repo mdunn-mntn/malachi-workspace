@@ -128,7 +128,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s2_resolution_31357.sql` | S2 cross-stage + S1 pool match | 100% (68,498/68,498) | ~5 TB |
 | `ti_650_s2_lookback_analysis.sql` | S2->S1 gap distribution (180d pool) | Max 69d, P99 35d | ~8 TB |
 | `ti_650_s3_lookback_analysis_31357.sql` | S3 VV pool gap distribution (180d pool) | Max 152d, P99 89d | 8.8 TB |
-| `ti_650_s3_resolution_31357.sql` | S3 T1-T4 resolution (90d + 180d) | 96.47% / 100% | 9.2 / 18.2 TB |
+| `ti_650_s3_resolution_31357.sql` | S3 T1-T4 resolution (optimized: single-scan CTEs) | 96.47% / 100% | 18.2 TB (180d) |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
