@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v20: VV bridge correction. S3 cross-stage link uses clickpass_log (VVs), not event_log (impressions). Resolution 91.98% → 99.05% for adv 37775. "92% ceiling" was wrong table — true ceiling ~99%.
+**Status:** In Progress — v22: S3 resolution for adv 31357 (WGU). T1-T4 tier structure: 96.47% total resolution (589,630 VVs). VV pools (T1+T2) carry 95.88%, impression fallback adds 0.59%. S3 lookback analysis (180d) running.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -230,6 +230,48 @@ The primary fix that resolved 442 unresolved S2 VVs:
 - 10,227/68,492 (15%) IPs are still actively getting S1 impressions after the S2 VV
 - **90d lookback confirmed sufficient for production** — halves scan cost vs 180d with zero resolution loss
 
+### v22: S3 resolution — adv 31357 / WGU (2026-03-17)
+
+**Bottom-up S3 validation (advertiser 31357, Feb 4–11, 90d lookback, T1-T4 tier structure):**
+
+| Metric | Value | % |
+|---|---|---|
+| **total_s3_vvs** | 589,630 | — |
+| has_bid_ip | 589,340 | 99.95% |
+| has_win_ip | 588,461 | 99.80% |
+| has_impression_ip | 589,630 | 100.00% |
+| has_viewability_ip | 589,209 | 99.93% |
+| has_event_log_ip | 0 | 0.00% |
+| has_any_ip | 589,630 | 100.00% |
+| no_ip | 0 | 0% |
+| **T1: S2 VV bridge chain** | 388,165 | 65.83% |
+| **T2: S1 VV direct** | 289,711 | 49.13% |
+| T3 via event_log | 343,869 | 58.32% |
+| T3 via viewability_log | 0 | 0.00% |
+| T3 via impression_log | 291,799 | 49.49% |
+| **T3: S1 imp direct (any)** | 348,387 | 59.08% |
+| **Resolved VV-only (T1+T2)** | 565,365 | **95.88%** |
+| **Resolved all (T1+T2+T3)** | 568,839 | **96.47%** |
+| T4: Impression fallback net-new | 3,474 | 0.59% |
+| Unresolved (with IP) | 20,791 | 3.53% |
+
+**Key findings:**
+- **96.47% total resolution** (up from 74.54% in v20 for same advertiser — +21.93pp)
+- VV pools (T1+T2) carry 95.88% — impression fallback adds only 0.59% (3,474 VVs)
+- T1 S2 VV bridge chain is dominant resolver (65.83%)
+- T2 S1 VV direct provides 49.13% (significant overlap with T1)
+- event_log_ip = 0 confirms S3 is CTV-only (no vast_start/vast_impression for S3 campaigns)
+- impression_log is universal IP source (100%) — first step in CTV trace chain
+- 3.53% unresolved (20,791) — all have IPs, no match in any S1/S2 pool within 90d
+- **v20 used a different query structure** (non-tiered) — v22 tier structure separates VV and impression contributions cleanly
+- **BQ performance:** 9.2 TB processed, 3:09 runtime, 1,057M slot-ms
+
+**v20 → v22 improvement for adv 31357:** 74.54% → 96.47% (+21.93pp). The v22 query uses a cleaner T1-T4 tier structure with 5-source IP trace (bid_logs > win_logs > impression_log > viewability_log > event_log) instead of CIL as IP source. No CIL dependency anywhere.
+
+**Lookback analysis (Query 1):** Running — 180d pool to determine if 90d is sufficient for S3.
+
+Results: `outputs/ti_650_s3_resolution_31357_results.json`
+
 ### Scoping rules
 
 - **campaign_group_id scoping (v14+).** All cross-stage IP linking must be within the same `campaign_group_id`. Zach directive 2026-03-12.
@@ -303,6 +345,8 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 28. **S2→S1 lookback gap CORRECTED (v21c): max 69d, not 186d. 90d = 100%.** Initial MIN analysis was biased (oldest of many matches). Using MAX (most recent match): max 69d, median 6d, P95 29d. Verified: full v8 query (5-source IP trace + 4-table S1 pool + CIDR fix) with 90d S1 pool = 68,498/68,498 = **100% resolved**, identical to 180d. **Production: use 90d** — confirmed sufficient, halves scan cost.
 29. **Advertiser 31357 = WGU (Western Governors University), ~30% MNTN monthly spend.** Abnormally long S3 lookback window per Zach. Largest single advertiser. Online degree program. Extreme outlier in spend and funnel depth — results from this advertiser should not be treated as representative. (Zach confirmed 2026-03-17)
 30. **BREAKTHROUGH (v20, Zach 2026-03-16): S3 cross-stage link is VV-based, not impression-based.** Prior analysis searched impression tables (event_log, viewability_log, impression_log) for the S3 bid_ip in S1/S2 campaigns — **wrong table.** S3 targeting requires a prior **verified visit** (S1 or S2), not just an impression. The cross-stage link is `S3.bid_ip → clickpass_log.ip` (prior S1/S2 VV), NOT `S3.bid_ip → event_log.ip`. Zach's traced IP guide proved this for IP `216.126.34.185`: the IP had an S2 VV (campaign 450301, clickpass 2026-01-24), where the S2 impression was on a completely different IP (`172.59.117.71`, Tubi CTV Roku) — cross-device. The S2 VV's clickpass IP (`216.126.34.185`, iPhone) is what entered S3 targeting, not the S2 impression VAST IP. This means the 92% resolution ceiling (finding #21) was artificially low — cross-device S2 VVs were invisible to impression-table searches. v20 rewrites the chain CTE to use clickpass_log. See `artifacts/ti_650_v20_vv_bridge_prompt.md`, `queries/ti_650_zach_traced_ip_guide`.
+
+31. **v22 S3 resolution for adv 31357 (WGU): 96.47% via T1-T4 tier structure (2026-03-18).** 589,630 S3 VVs, 90d lookback, 5-source IP trace (bid_logs > win_logs > impression_log > viewability_log > event_log), no CIL. VV pools (T1 S2 bridge chain + T2 S1 VV direct) resolve 95.88%; impression fallback (T3) adds only 0.59% (3,474 VVs). 20,791 unresolved (3.53%) — all have IPs but no S1/S2 pool match within 90d. event_log_ip = 0 for all S3 VVs (CTV-only, no VAST events). impression_log is universal IP source (100%). v20 reported 74.54% for this advertiser — the +21.93pp gain comes from (1) correct 5-source IP trace replacing CIL, (2) T1 S2 bridge chain tracing S2 VV IPs back to their bid IPs, (3) proper campaign_group_id scoping. 9.2 TB, 3:09 runtime.
 
 ### MES Pipeline IP Map
 
@@ -382,6 +426,8 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `queries/ti_650_zach_traced_ip_guide` — Zach's traced IP reference for VV bridge methodology.
 - `queries/ti_650_s3_resolution_31357.sql` — **S3 resolution test** for adv 31357. VV bridge primary + impression fallback.
 - `queries/ti_650_s2_lookback_analysis.sql` — **S2→S1 lookback gap: earliest vs latest match.** Proves 90d sufficient.
+- `queries/ti_650_s3_lookback_analysis_31357.sql` — **S3 lookback gap analysis (VV pool only).** 180d pool, 5-source IP trace. Measures gap distribution for S3→S1/S2 VV pool matches.
+- `queries/ti_650_s3_resolution_31357.sql` — **S3 T1-T4 resolution query.** 90d lookback, 5-source IP trace, no CIL. Full tier breakdown.
 
 ### Outputs
 - `outputs/ti_650_v20_vv_bridge_impact.md` — **v20 results:** VV bridge impact, all 10 advertisers.
@@ -390,6 +436,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_v15_forensic_results.md` — **v15 results:** IP consistency analysis
 - `outputs/ti_650_bid_ip_divergence_results.md` — **Bid IP divergence:** Zero divergence across pipeline.
 - `outputs/ti_650_s2_lookback_analysis.md` — **Lookback gap analysis:** Earliest vs latest S1 match (max 69d not 186d).
+- `outputs/ti_650_s3_resolution_31357_results.json` — **v22 S3 resolution results (adv 31357).** T1-T4 tier breakdown, 96.47% total resolution.
 
 ### Artifacts
 - `artifacts/ti_650_s3_resolution_prompt.md` — **S3 resolution prompt** for next LLM session (bottom-up S3 validation)

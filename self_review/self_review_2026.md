@@ -1,31 +1,18 @@
-# 2026 Performance Evidence Log
-
-Format: [date] [ticket] — [what was done] [metric or outcome if known]
-This file is gitignored. Never commit. Update after every meaningful ticket or project.
-
----
-
-## Manager Goals (2026)
-
-**Kale:** Revenue growth, revenue retention, cost reduction — tie analysis to dollar impact.
-**Alyson:** Knowledge sharing across teams. Active goal: causal impact analysis for next experiment
-→ present at Engineering All-Hands.
-
----
+# 2026 Self-Review — Malachi Dunn
 
 ## Q1 2026
 
 ### Completed tickets
 
-[2026-02] TI-644 Root Insurance — Investigated 92% CRM audience match miss rate for Root Insurance
-($10M+ CTV campaign). Traced full CRM pipeline (HEM → ipdsc__v1 → bidder). Confirmed 23.3M
-include HEMs, ~18.2M resolved IPs (~15M net after exclusions). Identified dead ends in tmul_daily
-(14-day TTL, no DS4) and audience_upload_ips (empty for email uploads). Documented complete table
-schemas for ipdsc__v1, audience_upload_hashed_emails, audience_uploads. Produced CSV exports for
-stakeholder (Kale) deliverable.
+[2026-02] TI-644 Root Insurance (Unsure # days end-to-end) — Investigated 92% CRM audience match miss rate
+for Root Insurance ($10M+ CTV campaign). Traced full CRM pipeline (HEM → ipdsc__v1 → bidder).
+Confirmed 23.3M include HEMs, ~18.2M resolved IPs (~15M net after exclusions). Identified dead ends
+in tmul_daily (14-day TTL, no DS4) and audience_upload_ips (empty for email uploads). Documented
+complete table schemas for ipdsc__v1, audience_upload_hashed_emails, audience_uploads. Produced CSV
+exports for stakeholder (Kale) deliverable.
 
-[2026-02/03] TI-650 Stage 3 VV Audit — Led full end-to-end audit of the IP mutation problem in
-MNTN's verified visit pipeline. Built BQ silver-based trace covering 3.25M VVs, matched Greenplum
+[2026-02/03] TI-650 Stage 3 VV Audit (~3 weeks end-to-end, 2026-02-18 → 2026-03-10) — Led full
+end-to-end audit of the IP mutation problem in MNTN's verified visit pipeline. Built BQ silver-based trace covering 3.25M VVs, matched Greenplum
 within 0.12pp (validated BQ as GP replacement). Identified 100% of mutation occurs at VAST→redirect
 boundary. Quantified mutation range 1.2–33.4% across 15 advertisers. Confirmed 4,006 phantom NTB
 events/day for reference advertiser. Fixed A4b dedup bug. Designed production audit table
@@ -95,43 +82,14 @@ Adaptability: Pivoted entire analysis when Zach clarified retargeting isn't rele
 queries with correct scope in same session. Updated 5 artifacts + data_knowledge.md + queries.
 Extended to display per user directive without needing further guidance.
 
-VV Bridge breakthrough (2026-03-16): Zach's traced IP guide revealed S3 cross-stage linking uses
-clickpass_log (VV-based), NOT event_log (impression-based). The prior ~92% S3 resolution ceiling
-was an artifact of searching the wrong table. In cross-device scenarios, VV clickpass IP is
-completely different from impression bid_ip (e.g., iPhone clickpass 216.126.34.185 vs Tubi CTV
-bid_ip 172.59.117.71). Built v20 resolution rate query with corrected VV bridge methodology:
-- Independently verified Zach's full chain via 4 BQ queries (3 different IPs per S2 VV confirmed)
-- Rewrote cross-stage trace query (v2) with clickpass_log-based VV bridge
-- Rewrote resolution rate query (v14→v20) with corrected S3 chain + new S1 VV direct path
-- Results across 10 advertisers: S3 resolution jumped from 58-96% (v14) to 74-99%+ (v20)
-- Adv 37775: 91.98% → 99.05% (+7.07pp), unresolved dropped 1,761 → 75 (96% reduction)
-- Adv 42097: 61.59% → 98.48% (+36.89pp) — biggest mover
-- 4 "zero chain" advertisers (0 S2→S1 chain in v14) now all have substantial VV-based chains
-- Weighted avg across 10 advertisers: ~79.5% → ~89.6% (+10pp)
-
-Speed: Executed full 5-task prompt (verify → rewrite trace → rewrite resolution → run & compare →
-update docs) in single session. Independently debugged BQ flag parsing issue (SQL comments parsed
-as CLI flags) without escalation.
-
-Craft: Corrected a fundamental architectural misunderstanding in the cross-stage linking model.
-The VV bridge pattern (clickpass_log.ip as the S3 targeting key) is the correct generalization
-that explains all prior anomalies. v20 query design cleanly separates 3 S3 resolution paths
-(S2 VV chain, S1 VV direct, S1 impression direct) with accurate overlap counting.
-
-Adaptability: Pivoted entire S3 methodology when Zach's traced IP proved the impression-based
-approach was wrong. Rewrote 2 major queries and updated all documentation in same session.
-
-[2026-02/03] MM-44 IPDSC HH Discrepancy — Investigated 66.2% household drop (17,589 → 5,944 HHs)
-across 2,302 campaign groups. Identified 3 root causes: MES inner join block list [2,14,42], DS
-type contamination in campaign_segment_history, 35-day lookback behavior. Documented IPDSC pipeline
-architecture in full.
-
-[2026-03] TI-684 Missing IPs from IPDSC — In progress. Investigation into IPs absent from
-ipdsc__v1. Prior work from TI-644 established schema and query patterns now documented in catalog.
+[2026-02/03] MM-44 IPDSC HH Discrepancy (Unsure # days end-to-end) — Investigated 66.2% household drop
+(17,589 → 5,944 HHs) across 2,302 campaign groups. Identified 3 root causes: MES inner join block
+list [2,14,42], DS type contamination in campaign_segment_history, 35-day lookback behavior.
+Documented IPDSC pipeline architecture in full.
 
 ### Infrastructure / knowledge work
 
-[2026-03-03] Workspace audit — Completed comprehensive audit of all 22 ticket folders. Enforced
+[2026-03-03] Workspace audit (1 day) — Completed comprehensive audit of all 22 ticket folders. Enforced
 lowercase_underscore naming convention across entire workspace (git mv for all tracked files).
 Extracted and documented ~500 lines of new knowledge across data_catalog.md (Phase 3: ipdsc__v1,
 bronze.tpa tables, Greenplum tables reference, audit table) and data_knowledge.md (RTC, IPDSC/MES
@@ -190,3 +148,110 @@ comparison data export.
 
 [~2025] TI-34 Identity Sync Freshness — Established freshness monitoring for IP identity graph
 and blocklist pipeline.
+
+---
+
+## Areas for Improvement
+
+### Speed
+
+**Estimating work and communicating timelines**
+I don't consistently estimate how long work will take before starting, and I rarely communicate
+expected timelines to stakeholders upfront. This means others can't plan around my deliverables.
+
+- Before starting a ticket, write an estimate (even rough) in summary.md. Compare actual vs
+  estimated at completion to calibrate over time.
+- When an estimate is clearly wrong mid-work, flag it early rather than letting it silently slip.
+
+**Tracking start/stop dates on long-running work**
+TI-650 ran ~4 weeks across multiple rounds. The dates and scope of each phase blurred together
+because I didn't rigorously track when rounds started and ended, or break emerging sub-problems
+into their own tickets.
+
+- For any ticket that extends beyond one week, log explicit start/stop dates for each phase in
+  summary.md (e.g., "Round 2: 2026-03-05 → 2026-03-06, scope: display fallback").
+- When a sub-problem emerges that's distinct from the original scope, create a new ticket for it
+  rather than letting the parent ticket balloon. Smaller tickets are easier to estimate, track,
+  and close.
+- At the end of each week on an active ticket, write a 2-sentence status update in summary.md:
+  what got done, what's next.
+
+**Meeting preparation**
+I sometimes come into meetings having done the minimum prep — I know the topic but haven't
+thought ahead about what questions will come up or what context others need.
+
+- Before every stakeholder meeting, spend 15 min reviewing the ticket state, open questions, and
+  likely follow-ups. Write 3 bullet points of what I want to communicate and what I need from others.
+- For review sessions (e.g., Zach's VV audit reviews), pre-run the queries I expect to be asked
+  about so I have fresh numbers, not stale references.
+- Target: zero "let me get back to you on that" responses in meetings by end of Q2.
+
+### Craft
+
+**Organizing what type of work I do and when**
+I don't have a deliberate structure for how I allocate time across investigation, documentation,
+code/query work, and communication. Days can become reactive — jumping between Slack, queries, and
+docs without a clear plan.
+
+- Block time by work type: mornings for deep analysis/queries, afternoons for documentation and
+  communication. Protect focus blocks.
+- At the start of each day, write down the top 1-2 things that need to get done. At the end,
+  check whether they did.
+- Track how much time goes to each category over a sprint and adjust if the ratio is off.
+
+**Knowledge sharing and teaching**
+I build deep expertise in data pipelines and analysis methodology but don't proactively share it
+beyond ticket deliverables. The knowledge lives in my workspace and docs but doesn't reach other
+engineers who could benefit. I'm supposed to be a knowledge-oriented person on the team — that
+means teaching, not just documenting.
+
+- Present at least once per quarter at Engineering All-Hands or team meetings. Next up: causal
+  impact analysis methodology (Alyson's active goal).
+- When completing a ticket that reveals non-obvious pipeline behavior (e.g., VV bridge using
+  clickpass_log not event_log), write a short Confluence/Slack post for the broader team — not
+  just update my local docs.
+- Offer to walk other engineers through BQ pipeline tracing when they're working on related
+  investigations. Be the person people come to for data pipeline questions.
+- Target: 2+ knowledge-sharing presentations and 4+ written shareable artifacts by end of H1.
+
+**Creating leverage from strengths**
+My strongest areas (deep pipeline knowledge, empirical analysis methodology, documentation
+discipline) create value for individual tickets but don't yet scale beyond my own work. The
+question is: how do I turn personal expertise into team capability?
+
+- Formalize the empirical analysis protocol into a shareable team guide — not just my CLAUDE.md
+  instructions, but a "how to investigate data questions at MNTN" doc that any analyst or engineer
+  can follow.
+- Build reusable query templates for common investigation patterns (VV tracing, audience pipeline
+  debugging, impression chain traversal) and publish them where the team can find them.
+- When onboarding new engineers touches data pipeline topics, offer to be the walkthrough resource.
+  Turn tribal knowledge into institutional knowledge.
+
+### Adaptability
+
+**Task selection and OKR alignment**
+I tend to pick up whatever's next in the queue or follow what's technically interesting rather than
+deliberately choosing work that maps to team/org OKRs. This means some high-impact work gets done
+by accident rather than by design.
+
+- At the start of each sprint, review the current team OKRs and explicitly map my ticket queue to
+  them. If a ticket doesn't connect, ask Kale whether it should be prioritized over one that does.
+- When starting a new ticket, write the OKR connection in summary.md upfront — forces me to think
+  about "why this matters" before diving into the technical work.
+- Build a habit of asking: "Is this the highest-leverage thing I could be working on right now?"
+  before picking up the next task.
+
+**Awareness of teammates' work and company direction**
+I can get tunnel-visioned on my own tickets and miss what others on the team are working on, what
+the broader org priorities are, and where the company is headed. This limits my ability to
+contribute context in discussions and to align my work with what matters most.
+
+- Pay closer attention in standups and team syncs — not just for my own updates, but to understand
+  what others are blocked on or working toward. Look for places where my data knowledge could help
+  unblock someone else.
+- Read company-wide updates (All-Hands notes, OKR updates, product roadmap) regularly, not just
+  when referenced in a meeting. Understand where the business is going so that my analysis work
+  maps to real priorities.
+- When starting a new ticket, check: does anyone else on the team have related or overlapping work?
+  Could this be done in a way that helps them too?
+
