@@ -125,19 +125,24 @@ flowchart TD
     %% S3 targeting is VV-BASED: the IP entered S3 because it had a
     %% prior verified visit on an S1 OR S2 campaign in the same
     %% campaign_group. Search clickpass_log for that prior VV.
-    S3_CTV_5 --> S3_CROSS[/"CROSS-STAGE: Search clickpass_log<br/>for prior S1 or S2 VV where ip = S3.bid_ip<br/>same campaign_group_id, time < S3.impression_time<br/>(S3 targeting requires a prior verified visit)"/]
-    S3_DV_4 --> S3_CROSS
-    S3_DNV_4 --> S3_CROSS
+    %% PRIORITY: Try S2 VV first (full chain). Fall back to S1 VV only if no S2 VV found.
+    S3_CTV_5 --> S3_T1[/"T1: Search clickpass_log for prior S2 VV<br/>where ip = S3.bid_ip<br/>same campaign_group_id, time < S3.impression_time<br/>(preferred — traces the full S3 -> S2 -> S1 chain)"/]
+    S3_DV_4 --> S3_T1
+    S3_DNV_4 --> S3_T1
 
-    S3_CROSS --> S3_VV_FOUND{Found prior VV<br/>in clickpass_log?}
+    S3_T1 --> S3_S2_FOUND{Found prior<br/>S2 VV?}
 
-    S3_VV_FOUND -->|No| UNRESOLVED([Unresolved — prior VV exists<br/>but IP untraceable within lookback<br/>cross-device or IP rotation])
+    S3_S2_FOUND -->|Yes| S3_S2_VV
 
-    S3_VV_FOUND -->|Yes| S3_VV_STAGE{What stage was<br/>the prior VV?}
+    %% ---- FALLBACK: No S2 VV -> try S1 VV directly ----
+    S3_S2_FOUND -->|No| S3_T2[/"T2 fallback: Search clickpass_log for prior S1 VV<br/>where ip = S3.bid_ip<br/>same campaign_group_id, time < S3.impression_time"/]
+
+    S3_T2 --> S3_S1_FOUND{Found prior<br/>S1 VV?}
+
+    S3_S1_FOUND -->|Yes| S3_S1_VV
+    S3_S1_FOUND -->|No| UNRESOLVED([Unresolved — prior VV exists<br/>but IP untraceable within lookback<br/>cross-device or IP rotation])
 
     %% ---- PATH A: Prior VV was S2 -> trace S2 impression -> then S1 ----
-    S3_VV_STAGE -->|S2 VV| S3_S2_VV
-
     subgraph S3_S2_BRIDGE ["S3 -> S2: VV Bridge (cross-device possible!)"]
         S3_S2_VV["S2 VV in clickpass_log<br/>clickpass.ip = S3.bid_ip<br/>Get S2 ad_served_id + impression_time"]
         --> S3_S2_TRACE["Trace S2 impression via ad_served_id<br/>impression_log -> get S2.bid_ip<br/>S2.bid_ip MAY DIFFER (cross-device!)"]
@@ -188,8 +193,7 @@ flowchart TD
 
     S3S2S1_5 --> DONE3A([Done — S3 VV -> S2 VV -> S1 impression])
 
-    %% ---- PATH B: Prior VV was S1 -> trace S1 impression directly ----
-    S3_VV_STAGE -->|S1 VV| S3_S1_VV
+    %% ---- PATH B: No S2 VV found -> prior VV was S1 -> trace S1 impression directly ----
 
     subgraph S3_S1_BRIDGE ["S3 -> S1: VV Bridge (cross-device possible!)"]
         S3_S1_VV["S1 VV in clickpass_log<br/>clickpass.ip = S3.bid_ip<br/>Get S1 ad_served_id + impression_time"]
@@ -236,8 +240,8 @@ flowchart TD
     classDef warn fill:#b91c1c,stroke:#991b1b,color:#fff,font-weight:bold
 
     class START start
-    class STAGE,S1_TYPE,S2_TYPE,S3_TYPE,S1_DISP_VIEW,S2_DISP_VIEW,S3_DISP_VIEW,S3_VV_FOUND,S3_VV_STAGE,S3_S2_IMP_TYPE,S3S2_DISP,S3_S1_IMP_FOUND,S3S1_IMP_TYPE,S3S1_DISP decision
+    class STAGE,S1_TYPE,S2_TYPE,S3_TYPE,S1_DISP_VIEW,S2_DISP_VIEW,S3_DISP_VIEW,S3_S2_FOUND,S3_S1_FOUND,S3_S2_IMP_TYPE,S3S2_DISP,S3_S1_IMP_FOUND,S3S1_IMP_TYPE,S3S1_DISP decision
     class DONE1,DONE2,DONE3A,DONE3B done
-    class S2_PREV,S3_CROSS,S3S2_S1 rule
+    class S2_PREV,S3_T1,S3_T2,S3S2_S1 rule
     class UNRESOLVED,UNRESOLVED_S2S1 warn
 ```
