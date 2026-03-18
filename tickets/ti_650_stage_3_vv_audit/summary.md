@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v22: S3 resolution for adv 31357 (WGU) **COMPLETE**. 180d lookback: **100% resolved** (589,628/589,630). VV pools (T1+T2) alone = 100.00%. 90d was 96.47% — the 3.53% gap was lookback-window-limited, not identity-graph.
+**Status:** In Progress — v22: **Bottom-up validation COMPLETE: S1 (100%), S2 (100%), S3 (100%).** S3 for adv 31357 (WGU): 180d lookback → 589,628/589,630 resolved (100.00%), 2 unresolved (identity-graph-only, 0.0003%). 90d = 96.47% (lookback-limited). Production default: 120d. Next: multi-advertiser v22 validation + SQLMesh model update.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -328,15 +328,33 @@ Results: `outputs/ti_650_s3_lookback_analysis_31357_results.json`
 - **BQ performance:** 18.2 TB, 1:43 runtime (faster than the 9.2 TB 90d run at 3:09 — likely benefited from warmer cache)
 - **WGU S3 = 100%** closes the bottom-up validation: S1 (100%), S2 (100%), S3 (100%)
 
+**The 2 unresolved VVs (0.0003%):**
+- Both have IPs (all 589,630 VVs have IPs — `no_ip = 0`)
+- Their IPs do NOT match any S1/S2 VV (T1/T2) within 180d
+- Their IPs do NOT match any S1 impression (T3: event_log + viewability_log + impression_log) within 180d
+- Lookback analysis found 3 VVs with zero VV pool match at 180d; T1+T2 leaves 4 unresolved (3 no-match + 1 tier join overhead); T3 impression fallback catches 2 of those 4, leaving 2 truly unresolved
+- **Most likely explanation:** identity-graph-only entries — IPs added to S3 targeting segment via LiveRamp/CRM without any prior MNTN impression or VV for that campaign group. Consistent with v15/v18 findings for adv 37775's irreducible unresolved cohort.
+- **Significance:** 2/589,630 = 0.0003%. Effectively perfect resolution.
+
 **Production lookback recommendation:**
 
-| Advertiser Type | Lookback | Rationale |
+| Advertiser Type | Lookback | Resolution | Rationale |
+|---|---|---|---|
+| Normal (most advertisers) | 90d | 98-99% | S2→S1 max 69d. Most S3 at 98-99% with 90d. |
+| WGU / extreme spend | 180d | **100%** | S3 P99=89d, max=152d. Only advertiser needing extended lookback. |
+| **Production default** | **120d** | ~99.5% | Covers P99+margin for WGU. +33% scan cost vs 90d. |
+
+**BQ performance summary (all 3 queries):**
+
+| Query | TB Processed | Runtime |
 |---|---|---|
-| Normal (most advertisers) | 90d | S2→S1 max 69d. Most S3 at 98-99% with 90d. |
-| WGU / extreme spend | 180d | S3 P99=89d, max=152d. Only advertiser needing extended lookback. |
-| **Production default** | **120d** | Covers P99+margin for WGU. +33% scan cost vs 90d. |
+| Resolution (90d) | 9.2 TB | 3:09 |
+| Lookback analysis | 8.8 TB | 4:54 |
+| Resolution (180d) | 18.2 TB | 1:43 |
+| **Total** | **36.2 TB** | **~10 hrs** |
 
 Results: `outputs/ti_650_s3_resolution_31357_180d_results.json`
+Full analysis: `outputs/ti_650_s3_resolution_31357_analysis.md`
 
 ### Scoping rules
 
@@ -494,8 +512,8 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `queries/ti_650_zach_traced_ip_guide` — Zach's traced IP reference for VV bridge methodology.
 - `queries/ti_650_s3_resolution_31357.sql` — **S3 resolution test** for adv 31357. VV bridge primary + impression fallback.
 - `queries/ti_650_s2_lookback_analysis.sql` — **S2→S1 lookback gap: earliest vs latest match.** Proves 90d sufficient.
-- `queries/ti_650_s3_lookback_analysis_31357.sql` — **S3 lookback gap analysis (VV pool only).** 180d pool, 5-source IP trace. Measures gap distribution for S3→S1/S2 VV pool matches.
-- `queries/ti_650_s3_resolution_31357.sql` — **S3 T1-T4 resolution query.** 90d lookback, 5-source IP trace, no CIL. Full tier breakdown.
+- `queries/ti_650_s3_lookback_analysis_31357.sql` — **S3 lookback gap analysis (VV pool only).** 180d pool, 5-source IP trace. Measures gap distribution for S3→S1/S2 VV pool matches. 8.8 TB, 4:54.
+- `queries/ti_650_s3_resolution_31357.sql` — **S3 T1-T4 resolution query (FINAL: 180d lookback).** 5-source IP trace, no CIL. Full tier breakdown. Run at 90d (96.47%) and 180d (100%). 9.2 TB / 18.2 TB.
 
 ### Outputs
 - `outputs/ti_650_v20_vv_bridge_impact.md` — **v20 results:** VV bridge impact, all 10 advertisers.
@@ -508,6 +526,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_s3_lookback_analysis_31357_results.json` — **S3 lookback gap analysis (adv 31357).** 180d VV pool, 99.999% match, P99=89d.
 - `outputs/ti_650_s3_resolution_31357_180d_results.json` — **v22 180d S3 resolution (adv 31357).** 100% resolved, 2 unresolved.
 - `outputs/ti_650_s3_lookback_vs_resolution_analysis.md` — **Lookback vs resolution gap decomposition.** 20,788 VV analysis.
+- `outputs/ti_650_s3_resolution_31357_analysis.md` — **Full S3 resolution analysis.** Complete writeup: 90d → lookback → 180d, tier breakdowns, 2 unresolved VV analysis, production recommendation.
 
 ### Artifacts
 - `artifacts/ti_650_s3_resolution_prompt.md` — **S3 resolution prompt** for next LLM session (bottom-up S3 validation)

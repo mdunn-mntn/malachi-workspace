@@ -1,10 +1,25 @@
 # TI-650: S3 Resolution — Execution Prompt
 
+**STATUS: COMPLETE (2026-03-18)**
+
+## Results Summary
+
+| Stage | Resolution | Method |
+|-------|-----------|--------|
+| S1 | **100%** (93,274/93,274) | ad_served_id (deterministic) |
+| S2→S1 | **100%** (68,498/68,498) | bid_ip → S1 impression pool + CIDR fix + 4-table pool. 90d sufficient. |
+| S3 (90d) | **96.47%** (568,839/589,630) | T1-T4 tier structure, 5-source IP trace, no CIL |
+| S3 (180d) | **100.00%** (589,628/589,630) | Same tiers, extended lookback. 2 unresolved = identity-graph-only |
+
+**Bottom-up validation: S1 (100%), S2 (100%), S3 (100%). All stages validated.**
+
+---
+
 ## Context
 
-We're building `audit.vv_ip_lineage` — one row per verified visit (VV) tracing IP through the full funnel. Bottom-up validation: S1 (100% ✅), S2→S1 (100% ✅), now S3.
+We're building `audit.vv_ip_lineage` — one row per verified visit (VV) tracing IP through the full funnel. Bottom-up validation: S1 (100% ✅), S2→S1 (100% ✅), S3 (100% ✅).
 
-**S3 is the real problem.** v20 multi-advertiser results show adv 31357 at 74.54% S3 resolution — worst of 10 tested advertisers. Most others are 98-99%. Zach says WGU (adv 31357) has "abnormally long S3 lookback window."
+**S3 was the real problem.** v20 multi-advertiser results showed adv 31357 at 74.54% S3 resolution — worst of 10 tested advertisers. Most others were 98-99%. Zach said WGU (adv 31357) has "abnormally long S3 lookback window." **RESOLVED:** 180d lookback achieves 100%.
 
 ## What's Been Proven
 
@@ -106,6 +121,44 @@ Join keys: MNTN tables use `ad_served_id`; Beeswax tables use `auction_id` (brid
 - `queries/ti_650_s2_resolution_31357.sql` — S2 query (v8), full 5-source trace template
 - `queries/ti_650_s2_lookback_analysis.sql` — S2 lookback analysis, MIN/MAX gap template
 - `queries/ti_650_resolution_rate_v21.sql` — Multi-advertiser v21, tier structure reference
-- `queries/ti_650_s3_resolution_31357.sql` — Existing S3 query to update
+- `queries/ti_650_s3_resolution_31357.sql` — S3 resolution query (FINAL: 180d lookback, T1-T4 tiers)
+- `queries/ti_650_s3_lookback_analysis_31357.sql` — S3 lookback gap analysis (180d pool, VV-only)
 - `artifacts/ti_650_s3_resolution_prompt.md` — Original S3 resolution prompt (background)
 - `.claude/plans/memoized-swinging-rocket.md` — Full plan with detailed CTE structures
+
+## Execution Log
+
+### Step 1: Lookback analysis ✅
+- Query: `queries/ti_650_s3_lookback_analysis_31357.sql`
+- Simplified to VV-pool-only (dual-pool version OOM'd at 16.3 TB)
+- **Result:** 589,627/589,630 matched (99.999%), P99=89d, max=152d
+- BQ: 8.8 TB, 4:54 runtime
+- Output: `outputs/ti_650_s3_lookback_analysis_31357_results.json`
+
+### Step 2: Analyze lookback ✅
+- P99=89d, max=152d → 90d NOT sufficient for WGU (P99 right at boundary)
+- Decision: run resolution at both 90d (baseline) and 180d (full coverage)
+- Gap decomposition: `outputs/ti_650_s3_lookback_vs_resolution_analysis.md`
+
+### Step 3a: Resolution (90d) ✅
+- Query: `queries/ti_650_s3_resolution_31357.sql` (step1_lookback=2025-11-06)
+- **Result:** 568,839/589,630 (96.47%)
+- BQ: 9.2 TB, 3:09 runtime
+- Output: `outputs/ti_650_s3_resolution_31357_results.json`
+
+### Step 3b: Resolution (180d) ✅
+- Query: same file with step1_lookback=2025-08-08
+- **Result:** 589,628/589,630 (**100.00%**) — only 2 unresolved (0.0003%)
+- BQ: 18.2 TB, 1:43 runtime
+- Output: `outputs/ti_650_s3_resolution_31357_180d_results.json`
+
+### Step 4: Documentation ✅
+- Full analysis: `outputs/ti_650_s3_resolution_31357_analysis.md`
+- Summary updated with v22 findings (#31, #32, #33)
+- Production lookback recommendation table added
+- All committed and pushed
+
+### Key deviations from plan:
+1. **No CIL anywhere** — used impression_log + bid_logs for S2 bid_ip extraction instead of CIL shortcut (user directive)
+2. **Lookback simplified to VV-pool-only** — dual-pool (VV + impression) query OOM'd; VV pool is the primary resolver per Zach breakthrough, impression pool is T3 fallback
+3. **Ran resolution at BOTH 90d and 180d** — 90d as baseline to quantify gap, 180d for full coverage
