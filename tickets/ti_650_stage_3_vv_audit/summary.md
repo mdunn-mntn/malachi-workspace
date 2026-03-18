@@ -268,9 +268,44 @@ The primary fix that resolved 442 unresolved S2 VVs:
 
 **v20 → v22 improvement for adv 31357:** 74.54% → 96.47% (+21.93pp). The v22 query uses a cleaner T1-T4 tier structure with 5-source IP trace (bid_logs > win_logs > impression_log > viewability_log > event_log) instead of CIL as IP source. No CIL dependency anywhere.
 
-**Lookback analysis (Query 1):** Running — 180d pool to determine if 90d is sufficient for S3.
-
 Results: `outputs/ti_650_s3_resolution_31357_results.json`
+
+**S3 lookback analysis (180d VV pool, adv 31357):**
+
+| Metric | Value |
+|---|---|
+| vv_pool_matched | 589,627 / 589,630 (**99.999%**) |
+| Only 3 VVs unmatched at 180d | |
+| **Using MAX (most recent match):** | |
+| Max gap | **152 days** |
+| Median gap | 30 days |
+| P95 gap | 83 days |
+| P99 gap | **89 days** |
+| **Using MIN (earliest match, biased):** | |
+| Max gap | 186 days |
+| Median gap | 80 days |
+| P95 gap | 177 days |
+| P99 gap | 182 days |
+| **Bucket counts (latest match):** | |
+| within_90d | 569,224 (96.54%) |
+| beyond_90d | 1,858 (0.32%) |
+| after_vv (negative gap) | 18,545 (3.15%) |
+
+**Key findings:**
+- **99.999% of S3 VVs match a prior S1/S2 VV within 180d** — only 3 have zero match
+- **P99 = 89d** (right at 90d boundary) — 90d just barely captures 99th percentile
+- **1,858 VVs (0.32%) have most recent S1/S2 VV >90d ago** — these are the gap between 96.47% (90d resolution) and ~99%
+- **18,545 "after VV"** = IPs with S1/S2 VV AFTER the S3 VV (IP still active in lower funnel)
+- **MIN is biased**: 186d max, 80d median vs MAX: 152d max, 30d median (MIN selects oldest of many matches)
+- **For WGU specifically: 120d would cover P99 + margin. 180d captures 99.68%**
+- **90d lookback is NOT sufficient for 100% S3 resolution of WGU** — unlike S2→S1 where 90d = 100%, S3→S1/S2 VV pool matches extend to 152d for this extreme-spend advertiser
+
+**Comparison: resolution (90d) vs lookback (180d):**
+- Resolution (90d, T1-T4): 568,839 (96.47%)
+- Lookback (180d, VV pool): 589,627 (99.999%)
+- Delta: ~20,788 VVs potentially recoverable with extended lookback + adjusted temporal logic
+
+Results: `outputs/ti_650_s3_lookback_analysis_31357_results.json`
 
 ### Scoping rules
 
@@ -346,6 +381,7 @@ NULL semantics: S1 VVs have s2/s3 columns NULL. S2 VVs have s3 columns NULL.
 29. **Advertiser 31357 = WGU (Western Governors University), ~30% MNTN monthly spend.** Abnormally long S3 lookback window per Zach. Largest single advertiser. Online degree program. Extreme outlier in spend and funnel depth — results from this advertiser should not be treated as representative. (Zach confirmed 2026-03-17)
 30. **BREAKTHROUGH (v20, Zach 2026-03-16): S3 cross-stage link is VV-based, not impression-based.** Prior analysis searched impression tables (event_log, viewability_log, impression_log) for the S3 bid_ip in S1/S2 campaigns — **wrong table.** S3 targeting requires a prior **verified visit** (S1 or S2), not just an impression. The cross-stage link is `S3.bid_ip → clickpass_log.ip` (prior S1/S2 VV), NOT `S3.bid_ip → event_log.ip`. Zach's traced IP guide proved this for IP `216.126.34.185`: the IP had an S2 VV (campaign 450301, clickpass 2026-01-24), where the S2 impression was on a completely different IP (`172.59.117.71`, Tubi CTV Roku) — cross-device. The S2 VV's clickpass IP (`216.126.34.185`, iPhone) is what entered S3 targeting, not the S2 impression VAST IP. This means the 92% resolution ceiling (finding #21) was artificially low — cross-device S2 VVs were invisible to impression-table searches. v20 rewrites the chain CTE to use clickpass_log. See `artifacts/ti_650_v20_vv_bridge_prompt.md`, `queries/ti_650_zach_traced_ip_guide`.
 
+32. **S3 lookback gap for adv 31357 (WGU): P99=89d, max=152d, 99.999% match at 180d (2026-03-18).** 589,627/589,630 S3 VVs match a prior S1/S2 VV within 180d. Only 3 have zero match. 90d captures 96.54% (569,224), 0.32% (1,858) beyond 90d, 3.15% (18,545) have pool match AFTER S3 VV. This means 90d is NOT sufficient for 100% S3 resolution of WGU (unlike S2→S1 where 90d=100%). For WGU specifically, 120d covers P99+margin, 180d covers 99.68%. The 20,791 unresolved from the 90d resolution query (3.53%) are almost entirely recoverable with extended lookback. MIN analysis is biased (186d max) — always use MAX (most recent match).
 31. **v22 S3 resolution for adv 31357 (WGU): 96.47% via T1-T4 tier structure (2026-03-18).** 589,630 S3 VVs, 90d lookback, 5-source IP trace (bid_logs > win_logs > impression_log > viewability_log > event_log), no CIL. VV pools (T1 S2 bridge chain + T2 S1 VV direct) resolve 95.88%; impression fallback (T3) adds only 0.59% (3,474 VVs). 20,791 unresolved (3.53%) — all have IPs but no S1/S2 pool match within 90d. event_log_ip = 0 for all S3 VVs (CTV-only, no VAST events). impression_log is universal IP source (100%). v20 reported 74.54% for this advertiser — the +21.93pp gain comes from (1) correct 5-source IP trace replacing CIL, (2) T1 S2 bridge chain tracing S2 VV IPs back to their bid IPs, (3) proper campaign_group_id scoping. 9.2 TB, 3:09 runtime.
 
 ### MES Pipeline IP Map
@@ -437,6 +473,7 @@ Building a clean, reproducible single-VV trace that walks through the entire IP 
 - `outputs/ti_650_bid_ip_divergence_results.md` — **Bid IP divergence:** Zero divergence across pipeline.
 - `outputs/ti_650_s2_lookback_analysis.md` — **Lookback gap analysis:** Earliest vs latest S1 match (max 69d not 186d).
 - `outputs/ti_650_s3_resolution_31357_results.json` — **v22 S3 resolution results (adv 31357).** T1-T4 tier breakdown, 96.47% total resolution.
+- `outputs/ti_650_s3_lookback_analysis_31357_results.json` — **S3 lookback gap analysis (adv 31357).** 180d VV pool, 99.999% match, P99=89d.
 
 ### Artifacts
 - `artifacts/ti_650_s3_resolution_prompt.md` — **S3 resolution prompt** for next LLM session (bottom-up S3 validation)
