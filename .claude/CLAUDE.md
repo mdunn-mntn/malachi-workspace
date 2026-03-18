@@ -19,6 +19,7 @@ workspace/
 │       ├── meetings/     ← meeting transcripts, notes
 │       └── artifacts/    ← notebooks, pdfs, scripts, deliverables
 ├── documentation/        ← reference docs, architecture diagrams, code snippets
+├── self_review/          ← performance self-assessment (gitignored, never committed)
 ├── claude-prompts/       ← planning files and prompt templates
 └── .claude/scripts/      ← Claude tooling scripts (bq_run.sh, etc.)
 ```
@@ -34,6 +35,9 @@ workspace/
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
+| `self_review/summary.md` | Self-review folder guide — explains files and workflow |
+| `self_review/self_review_2026.md` | **Presentable self-review** — update after every ticket (gitignored) |
+| `self_review/review_rubric.md` | Rubric, manager goals, evidence checklists, Kale feedback (gitignored) |
 
 ## Ticket Work Protocol
 
