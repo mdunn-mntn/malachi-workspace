@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV Audit — IP Lineage & Stage-Aware Attribution
 
 **Jira:** TI-650
-**Status:** In Progress — v22: **Bottom-up validation COMPLETE: S1 (100%), S2 (100%), S3 (100%).** S3 for adv 31357 (WGU): 180d lookback → 589,628/589,630 resolved (100.00%), 2 unresolved (identity-graph-only, 0.0003%). 90d = 96.47% (lookback-limited). Production default: 120d. Next: multi-advertiser v22 validation + SQLMesh model update.
+**Status:** In Progress — v22: **Bottom-up validation COMPLETE: S1 (100%), S2 (100%), S3 (100%).** S3 for adv 31357 (WGU): 180d lookback → 589,628/589,630 resolved (100.00%), 2 unresolved (IP untraceable within 180d, 0.0003%). 90d = 96.47% (lookback-limited). Production default: 120d. Next: multi-advertiser v22 validation + SQLMesh model update.
 **Date Started:** 2026-02-10
 **Assignee:** Malachi
 
@@ -333,7 +333,7 @@ Results: `outputs/ti_650_s3_lookback_analysis_31357_results.json`
 - Their IPs do NOT match any S1/S2 VV (T1/T2) within 180d
 - Their IPs do NOT match any S1 impression (T3: event_log + viewability_log + impression_log) within 180d
 - Lookback analysis found 3 VVs with zero VV pool match at 180d; T1+T2 leaves 4 unresolved (3 no-match + 1 tier join overhead); T3 impression fallback catches 2 of those 4, leaving 2 truly unresolved
-- **Most likely explanation:** identity-graph-only entries — IPs added to S3 targeting segment via LiveRamp/CRM without any prior MNTN impression or VV for that campaign group. Consistent with v15/v18 findings for adv 37775's irreducible unresolved cohort.
+- **Most likely explanation:** These users had prior MNTN ad exposure and a VV (S3 targeting requires a prior VV). Their S3 bid IP is untraceable to the prior VV IP within 180d — either the prior VV was >180d ago, or the S3 bid IP differs from the prior VV IP (cross-device, CGNAT rotation). The IP connection exists but is outside our lookback or IP-matching methodology.
 - **Significance:** 2/589,630 = 0.0003%. Effectively perfect resolution.
 
 **Production lookback recommendation:**

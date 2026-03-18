@@ -168,7 +168,7 @@ Out of 589,630 S3 VVs, exactly **2 remain unresolved** at 180d lookback (0.0003%
 - The 2 remaining are VVs whose IPs have zero S1/S2 activity of any kind within 180d for their campaign_group_id
 
 ### Most likely explanation:
-These 2 VVs entered S3 via the identity graph (LiveRamp/CRM targeting) — their IPs were added to the S3 targeting segment without any prior MNTN impression or VV for that campaign group. This is consistent with the finding from v15/v18 that identity-graph-only entries are genuinely unresolvable via IP.
+These 2 users had prior MNTN ad exposure and a VV — S3 targeting requires a prior S1/S2 verified visit. Their S3 bid IP is untraceable to the prior VV IP within 180d. Either the prior VV was >180d ago, or the S3 bid IP differs from the prior VV IP (cross-device, CGNAT rotation). The IP connection exists but falls outside our lookback window or IP-matching methodology.
 
 ### Significance:
 **2 out of 589,630 = 0.0003%.** This is effectively perfect resolution. For the hardest advertiser in the portfolio (WGU), the VV bridge + impression fallback with 180d lookback resolves everything.

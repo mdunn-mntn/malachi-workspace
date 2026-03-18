@@ -9,7 +9,7 @@
 | S1 | **100%** (93,274/93,274) | ad_served_id (deterministic) |
 | S2→S1 | **100%** (68,498/68,498) | bid_ip → S1 impression pool + CIDR fix + 4-table pool. 90d sufficient. |
 | S3 (90d) | **96.47%** (568,839/589,630) | T1-T4 tier structure, 5-source IP trace, no CIL |
-| S3 (180d) | **100.00%** (589,628/589,630) | Same tiers, extended lookback. 2 unresolved = identity-graph-only |
+| S3 (180d) | **100.00%** (589,628/589,630) | Same tiers, extended lookback. 2 unresolved = IP untraceable within 180d |
 
 **Bottom-up validation: S1 (100%), S2 (100%), S3 (100%). All stages validated.**
 
