@@ -16,8 +16,8 @@
 -- Parameters (inlined to avoid scripted query failures):
 --   advertiser_id = 31357
 --   vv_start = 2026-02-04, vv_end = 2026-02-11
---   step1_lookback = 2025-11-06 (90d before vv_start)
---   pool_lookback = 2025-11-06 (90d before vv_start; v21c confirmed 90d = 100%)
+--   step1_lookback = 2025-08-08 (180d before vv_start)
+--   pool_lookback = 2025-08-08 (180d before vv_start; v22 lookback analysis: P99=89d, max=152d for WGU)
 
 WITH s3_vvs AS (
     SELECT
@@ -42,7 +42,7 @@ ip_event_log AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS event_log_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+      AND time >= TIMESTAMP('2025-08-08') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
@@ -52,7 +52,7 @@ ip_event_log AS (
 ip_viewability AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS viewability_ip
     FROM `dw-main-silver.logdata.viewability_log`
-    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+    WHERE time >= TIMESTAMP('2025-08-08') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
@@ -62,7 +62,7 @@ ip_viewability AS (
 ip_impression AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+    WHERE time >= TIMESTAMP('2025-08-08') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
@@ -73,7 +73,7 @@ ip_win AS (
     SELECT il.ad_served_id, SPLIT(w.ip, '/')[SAFE_OFFSET(0)] AS win_ip
     FROM `dw-main-silver.logdata.win_logs` w
     JOIN ip_impression il ON w.auction_id = il.ttd_impression_id
-    WHERE w.time >= TIMESTAMP('2025-11-06') AND w.time < TIMESTAMP('2026-02-11')
+    WHERE w.time >= TIMESTAMP('2025-08-08') AND w.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
 ),
 
@@ -81,7 +81,7 @@ ip_bid AS (
     SELECT il.ad_served_id, SPLIT(b.ip, '/')[SAFE_OFFSET(0)] AS bid_ip
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
-    WHERE b.time >= TIMESTAMP('2025-11-06') AND b.time < TIMESTAMP('2026-02-11')
+    WHERE b.time >= TIMESTAMP('2025-08-08') AND b.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
@@ -116,7 +116,7 @@ s2_vvs AS (
         ON c.campaign_id = cp.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 2 AND c.objective_id IN (1, 5, 6)
-    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
+    WHERE cp.time >= TIMESTAMP('2025-08-08') AND cp.time < TIMESTAMP('2026-02-11')
       AND cp.advertiser_id = 31357
       AND cp.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
@@ -125,7 +125,7 @@ s2_vvs AS (
 s2_ip_impression AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= TIMESTAMP('2025-11-06') AND time < TIMESTAMP('2026-02-11')
+    WHERE time >= TIMESTAMP('2025-08-08') AND time < TIMESTAMP('2026-02-11')
       AND advertiser_id = 31357
       AND ad_served_id IN (SELECT ad_served_id FROM s2_vvs)
       AND ip IS NOT NULL
@@ -136,7 +136,7 @@ s2_ip_bid AS (
     SELECT il.ad_served_id, SPLIT(b.ip, '/')[SAFE_OFFSET(0)] AS bid_ip
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN s2_ip_impression il ON b.auction_id = il.ttd_impression_id
-    WHERE b.time >= TIMESTAMP('2025-11-06') AND b.time < TIMESTAMP('2026-02-11')
+    WHERE b.time >= TIMESTAMP('2025-08-08') AND b.time < TIMESTAMP('2026-02-11')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
@@ -160,7 +160,7 @@ s1_pool AS (
             AND c.deleted = FALSE AND c.is_test = FALSE
             AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
         WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
-          AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+          AND el.time >= TIMESTAMP('2025-08-08') AND el.time < TIMESTAMP('2026-02-11')
           AND el.advertiser_id = 31357 AND el.ip IS NOT NULL
         UNION ALL
         SELECT c.campaign_group_id, SPLIT(vl.ip, '/')[SAFE_OFFSET(0)] AS match_ip, vl.time AS impression_time
@@ -169,7 +169,7 @@ s1_pool AS (
             ON c.campaign_id = vl.campaign_id
             AND c.deleted = FALSE AND c.is_test = FALSE
             AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-        WHERE vl.time >= TIMESTAMP('2025-11-06') AND vl.time < TIMESTAMP('2026-02-11')
+        WHERE vl.time >= TIMESTAMP('2025-08-08') AND vl.time < TIMESTAMP('2026-02-11')
           AND vl.advertiser_id = 31357 AND vl.ip IS NOT NULL
         UNION ALL
         SELECT c.campaign_group_id, SPLIT(il.ip, '/')[SAFE_OFFSET(0)] AS match_ip, il.time AS impression_time
@@ -178,7 +178,7 @@ s1_pool AS (
             ON c.campaign_id = il.campaign_id
             AND c.deleted = FALSE AND c.is_test = FALSE
             AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-        WHERE il.time >= TIMESTAMP('2025-11-06') AND il.time < TIMESTAMP('2026-02-11')
+        WHERE il.time >= TIMESTAMP('2025-08-08') AND il.time < TIMESTAMP('2026-02-11')
           AND il.advertiser_id = 31357 AND il.ip IS NOT NULL
     )
     GROUP BY campaign_group_id, match_ip
@@ -210,7 +210,7 @@ s1_vv_pool AS (
         ON c.campaign_id = cp.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE cp.time >= TIMESTAMP('2025-11-06') AND cp.time < TIMESTAMP('2026-02-11')
+    WHERE cp.time >= TIMESTAMP('2025-08-08') AND cp.time < TIMESTAMP('2026-02-11')
       AND cp.advertiser_id = 31357
       AND cp.ip IS NOT NULL
     GROUP BY c.campaign_group_id, SPLIT(cp.ip, '/')[SAFE_OFFSET(0)]
@@ -225,7 +225,7 @@ imp_pool_el AS (
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
     WHERE el.event_type_raw IN ('vast_start', 'vast_impression')
-      AND el.time >= TIMESTAMP('2025-11-06') AND el.time < TIMESTAMP('2026-02-11')
+      AND el.time >= TIMESTAMP('2025-08-08') AND el.time < TIMESTAMP('2026-02-11')
       AND el.advertiser_id = 31357 AND el.ip IS NOT NULL
     GROUP BY c.campaign_group_id, SPLIT(el.ip, '/')[SAFE_OFFSET(0)]
 ),
@@ -237,7 +237,7 @@ imp_pool_vl AS (
         ON c.campaign_id = vl.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE vl.time >= TIMESTAMP('2025-11-06') AND vl.time < TIMESTAMP('2026-02-11')
+    WHERE vl.time >= TIMESTAMP('2025-08-08') AND vl.time < TIMESTAMP('2026-02-11')
       AND vl.advertiser_id = 31357 AND vl.ip IS NOT NULL
     GROUP BY c.campaign_group_id, SPLIT(vl.ip, '/')[SAFE_OFFSET(0)]
 ),
@@ -249,7 +249,7 @@ imp_pool_il AS (
         ON c.campaign_id = il.campaign_id
         AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level = 1 AND c.objective_id IN (1, 5, 6)
-    WHERE il.time >= TIMESTAMP('2025-11-06') AND il.time < TIMESTAMP('2026-02-11')
+    WHERE il.time >= TIMESTAMP('2025-08-08') AND il.time < TIMESTAMP('2026-02-11')
       AND il.advertiser_id = 31357 AND il.ip IS NOT NULL
     GROUP BY c.campaign_group_id, SPLIT(il.ip, '/')[SAFE_OFFSET(0)]
 )
