@@ -15,7 +15,11 @@
 | **S2** | 68,498 | 68,498 (100%) | `bid_ip -> S1 impression pool` — CIDR fix, 4-table pool | 90d |
 | **S3** | 589,630 | 589,628 (100%) | T1/T2 VV bridge — 5-source IP trace, no CIL | 180d (WGU) |
 
-**4 S3 VVs unresolved via VV path (T1+T2)** — 2 recovered by T3 impression fallback, leaving **2 truly unresolved** (0.0003%). All have IPs. Diagnostic query running to determine root cause (most likely: prior VV >180d ago). See `outputs/ti_650_s3_unresolved_analysis.md` for full analysis.
+**4 S3 VVs unresolved via VV path (T1+T2)** — 2 recovered by T3 impression fallback, leaving **2 truly unresolved** (0.0003%). Root cause analysis complete — see `outputs/ti_650_s3_unresolved_analysis.md`:
+- **1 lookback boundary** (64.60.221.62, 207d gap — would need 210d)
+- **1 temporal ordering** (57.138.133.212, S2 VV happened after S3 VV)
+- **1 CGNAT rotation** (172.59.169.152, no S1/S2 trail — IP-only S3 history)
+- Only the lookback VV is recoverable (by extending to 210d). Not recommended — 1 VV out of 589,630.
 
 ---
 
@@ -129,8 +133,8 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s2_lookback_analysis.sql` | S2->S1 gap distribution (180d pool) | Max 69d, P99 35d | ~8 TB |
 | `ti_650_s3_lookback_analysis_31357.sql` | S3 VV pool gap distribution (180d pool) | Max 152d, P99 89d | 8.8 TB |
 | `ti_650_s3_resolution_31357.sql` | S3 T1-T4 resolution (optimized: single-scan CTEs) | 96.47% / 100% | 18.2 TB (180d) |
-| `ti_650_s3_unresolved_simple.sql` | Diagnostic: extract unresolved S3 VV rows | Running | ~18 TB |
-| `ti_650_s3_unresolved_diagnostic.sql` | Diagnostic with correlated lookback checks | Running | ~18 TB |
+| `ti_650_s3_unresolved_simple.sql` | Diagnostic: extract unresolved S3 VV rows | 8 rows (data drift) | ~18 TB |
+| `ti_650_s3_unresolved_diagnostic.sql` | Diagnostic with correlated lookback checks | Not needed (simple was sufficient) | ~18 TB |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
@@ -140,8 +144,8 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | S3 resolution (180d) | 180d | `bqjob_r3eaa2fec2525504c_0000019d017dd2d0_1` | 1:43 |
 | S3 resolution optimized (180d) | 180d | `perf_20260318_161548_26940` | 1:17 |
 | S3 diagnostic correlated (180d) | 180d | `perf_20260318_185039_54664` | 3:56 |
-| S3 unresolved simple | 180d | `bqjob_r22e11fde7493b786_0000019d04be3247_1` | Running |
-| S3 unresolved correlated re-run | 180d | `bqjob_r22c2706a0e6cc80f_0000019d04aaef66_1` | Running |
+| S3 unresolved simple | 180d | `bqjob_r22e11fde7493b786_0000019d04be3247_1` | 2:32:56 |
+| S3 unresolved correlated re-run | 180d | `bqjob_r22c2706a0e6cc80f_0000019d04aaef66_1` | Superseded |
 
 ### Deployment artifacts
 | File | Purpose |
@@ -161,7 +165,8 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_lookback_analysis_31357_results.json` | S3 lookback gap distribution |
 | `ti_650_s3_lookback_vs_resolution_analysis.md` | Gap decomposition: why 90d misses 20,791 VVs |
 | `ti_650_s2_lookback_analysis.md` | S2->S1 lookback: max 69d, 90d sufficient |
-| `ti_650_s3_unresolved_analysis.md` | Analysis of 4 VV-path unresolved + 2 truly unresolved S3 VVs |
+| `ti_650_s3_unresolved_analysis.md` | **Complete** root cause analysis: 8 unresolved VVs across 4 categories |
+| `ti_650_s3_unresolved_rows.json` | Raw diagnostic output: 8 unresolved S3 VV rows with IP details |
 
 ---
 
@@ -191,7 +196,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 - Backfill from 2026-01-01
 
 ### Open items
-- **Unresolved VV root cause**: diagnostic queries running to identify the 4 VVs unresolved via VV path. Most likely lookback boundary (prior VV >180d). See `outputs/ti_650_s3_unresolved_analysis.md`.
+- ~~**Unresolved VV root cause**: COMPLETE. See `outputs/ti_650_s3_unresolved_analysis.md`. 4 root causes: lookback (1), temporal ordering (1), CGNAT (1), data drift (5). Only lookback is recoverable (210d for 1 VV). Not worth extending.~~
 - Retargeting in pools? (Zach decision — currently prospecting only)
 - Multi-advertiser v22 validation at 180d (optional — v20 at 90d already shows 98-99% for non-WGU)
 
