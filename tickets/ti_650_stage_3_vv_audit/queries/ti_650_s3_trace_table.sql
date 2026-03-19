@@ -156,7 +156,14 @@ s3_s1_match AS (
 -- ============================================================
 s3_classified AS (
     SELECT
-        GENERATE_UUID() AS trace_uuid,
+        -- Deterministic UUID from ad_served_id (GENERATE_UUID is non-deterministic across CTE refs)
+        FORMAT('%s-%s-%s-%s-%s',
+            SUBSTR(TO_HEX(MD5(v.ad_served_id)), 1, 8),
+            SUBSTR(TO_HEX(MD5(v.ad_served_id)), 9, 4),
+            SUBSTR(TO_HEX(MD5(v.ad_served_id)), 13, 4),
+            SUBSTR(TO_HEX(MD5(v.ad_served_id)), 17, 4),
+            SUBSTR(TO_HEX(MD5(v.ad_served_id)), 21, 12)
+        ) AS trace_uuid,
         v.ad_served_id,
         v.advertiser_id,
         v.campaign_group_id,
