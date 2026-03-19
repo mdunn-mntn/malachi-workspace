@@ -689,6 +689,7 @@ Additional validations:
   - CTV: clickpass → event_log → win_logs → impression_log → bid_logs
   - Display viewable: clickpass → viewability_log → win_logs → bid_logs
   - Display non-viewable: clickpass → impression_log → win_logs → bid_logs
+- **Display impression timing gap (TI-650, 2026-03-19):** Display impressions can be served 2-4 weeks before the user visits the site and triggers the VV. When tracing S3 VVs back to their impression via `ad_served_id`, a ±7d window around the VV time misses 35% of display impressions (Kindred Bravely: 768/2203 = 35% no_ip at ±7d, 0% at ±30d). CTV is same-day. **Use ±30d for the 5-source trace when display campaigns are in scope.** Verified on 3 advertisers: ±30d recovers 100% of impressions.
 - **channels reference table:** `bronze.integrationprod.channels` — 10 rows. 1=Multi-Touch, 2=Email, 3=In-App, 4=Mobile Web, 5=Platform Fee, 6=Real Time Offers, 7=Social, 8=Television, 9=Ad Serving, 10=Onsite Offers.
 - **v15 forensic trace (2026-03-12, 50 VVs):** IP is 100% identical across ALL 8 source tables (event_log, impression_log, CIL, bid_logs, win_logs, clickpass_log, ui_visits). serve_ip = bid_ip at 100%. Adding any source table to S1 pool has zero impact on resolution. The 8% unresolved S3 VVs entered via identity graph, not via MNTN impression.
 - **bid_events_log is nearly empty** — only advertiser 32167 has data. Not useful for general IP lookups. Use bid_logs (Beeswax-native) instead.
