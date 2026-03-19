@@ -98,7 +98,7 @@ ORDER BY cp.time;
 -- ============================================================================
 -- Traces each VV through: bid_logs → win_logs → impression_log → viewability_log → clickpass_log
 -- Includes campaign, campaign_group, and advertiser metadata.
--- Viewability is deduped (MIN time) to avoid fan-out from multiple viewability events.
+-- Viewability kept as-is (multiple rows per VV: type 1=measurable, 2=viewable). Display only.
 -- Linked by auction_id (Beeswax tables) and ad_served_id (MNTN tables).
 -- Cost: ~1.4 TB (~66s)
 
@@ -128,16 +128,15 @@ il AS (
   WHERE DATE(il.time) >= '2026-02-01' AND DATE(il.time) <= '2026-02-12'
 ),
 vl AS (
-  -- Dedup: viewability_log has multiple rows per ad_served_id (viewable + measurable).
-  -- Take earliest time and any IP (they're always the same).
+  -- Multiple rows per ad_served_id: viewability_type_id 1=measurable, 2=viewable (display only).
   SELECT
     vl.ad_served_id,
-    MIN(vl.time) AS viewability_time,
-    ANY_VALUE(SPLIT(vl.ip, '/')[SAFE_OFFSET(0)]) AS viewability_ip
+    vl.time AS viewability_time,
+    SPLIT(vl.ip, '/')[SAFE_OFFSET(0)] AS viewability_ip,
+    vl.viewability_type_id
   FROM cp
   JOIN `dw-main-silver.logdata.viewability_log` vl ON vl.ad_served_id = cp.ad_served_id
   WHERE DATE(vl.time) >= '2026-02-01' AND DATE(vl.time) <= '2026-02-12'
-  GROUP BY vl.ad_served_id
 ),
 wl AS (
   SELECT
@@ -180,6 +179,7 @@ SELECT
   il.impression_ip,
   vl.viewability_time,
   vl.viewability_ip,
+  vl.viewability_type_id,  -- 1=measurable, 2=viewable (display only)
   cp.clickpass_time AS vv_time,
   cp.clickpass_ip AS vv_ip,
 
