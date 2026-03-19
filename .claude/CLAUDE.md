@@ -35,10 +35,19 @@ workspace/
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
-| `self_review/summary.md` | Self-review folder guide — explains files, workflow, and review cycle convention |
-| `self_review/self_review_2027.md` | **Active self-review** — update after every ticket (gitignored) |
-| `self_review/self_review_2026.md` | Submitted 2026 review (archived, do not modify) |
-| `self_review/review_rubric.md` | Rubric, manager goals, evidence checklists, Kale feedback (gitignored) |
+| `self_review/summary.md` | Self-review guide — workflow, rubric, leadership direction (Paulo/Kale/Alyson), how to write rationales |
+| `self_review/self_review_2.md` | **Active self-review** — update after every ticket (gitignored) |
+| `self_review/self_review_1.html` | Submitted review #1 (archived, do not modify) |
+
+## Self-Review Entry Guide
+
+When adding entries to the active self-review, consider these for every piece of work:
+- **Rubric criteria for a 4**: Speed (no oversight, independent blocker resolution, balancing tasks), Craft (quality, standards, technology understanding, credibility), Adaptability (adapting to change, ambiguous problems, supporting peers)
+- **Business impact**: tie work to Kale's focus areas — revenue growth, revenue retention, cost reduction
+- **Paulo's framing**: frame work as "explaining why the system behaves this way" and "being the go-to person for ecosystem questions." Use verbs like "explained why," "gave the team a clear picture of," "go-to reference"
+- **At review time**: argue the rubric not a ticket list, 3-5 high-impact tasks per section, ~9 different tasks across all three sections, format for scannability, one improvement per section
+
+Full guide in `self_review/summary.md`.
 
 ## Ticket Work Protocol
 

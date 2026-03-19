@@ -15,7 +15,7 @@
 | **S2** | 68,498 | 68,498 (100%) | `bid_ip -> S1 impression pool` — CIDR fix, 4-table pool | 90d |
 | **S3** | 589,630 | 589,628 (100%) | T1/T2 VV bridge — 5-source IP trace, no CIL | 180d (WGU) |
 
-**2 unresolved S3 VVs** (0.0003%): both have IPs, but untraceable within 180d. S3 targeting requires a prior VV, so these users had MNTN exposure — the IP connection is just outside our lookback window or changed (cross-device, CGNAT rotation).
+**4 S3 VVs unresolved via VV path (T1+T2)** — 2 recovered by T3 impression fallback, leaving **2 truly unresolved** (0.0003%). All have IPs. Diagnostic query running to determine root cause (most likely: prior VV >180d ago). See `outputs/ti_650_s3_unresolved_analysis.md` for full analysis.
 
 ---
 
@@ -129,6 +129,8 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s2_lookback_analysis.sql` | S2->S1 gap distribution (180d pool) | Max 69d, P99 35d | ~8 TB |
 | `ti_650_s3_lookback_analysis_31357.sql` | S3 VV pool gap distribution (180d pool) | Max 152d, P99 89d | 8.8 TB |
 | `ti_650_s3_resolution_31357.sql` | S3 T1-T4 resolution (optimized: single-scan CTEs) | 96.47% / 100% | 18.2 TB (180d) |
+| `ti_650_s3_unresolved_simple.sql` | Diagnostic: extract unresolved S3 VV rows | Running | ~18 TB |
+| `ti_650_s3_unresolved_diagnostic.sql` | Diagnostic with correlated lookback checks | Running | ~18 TB |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
@@ -136,6 +138,10 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | S3 resolution (90d) | 90d | `bqjob_r6b1aeef885dc842a_0000019cff95e5b1_1` | 3:09 |
 | S3 lookback analysis | 180d pool | `bqjob_r27421adde5d35864_0000019d000ccee5_1` | 4:54 |
 | S3 resolution (180d) | 180d | `bqjob_r3eaa2fec2525504c_0000019d017dd2d0_1` | 1:43 |
+| S3 resolution optimized (180d) | 180d | `perf_20260318_161548_26940` | 1:17 |
+| S3 diagnostic correlated (180d) | 180d | `perf_20260318_185039_54664` | 3:56 |
+| S3 unresolved simple | 180d | `bqjob_r22e11fde7493b786_0000019d04be3247_1` | Running |
+| S3 unresolved correlated re-run | 180d | `bqjob_r22c2706a0e6cc80f_0000019d04aaef66_1` | Running |
 
 ### Deployment artifacts
 | File | Purpose |
@@ -155,6 +161,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_lookback_analysis_31357_results.json` | S3 lookback gap distribution |
 | `ti_650_s3_lookback_vs_resolution_analysis.md` | Gap decomposition: why 90d misses 20,791 VVs |
 | `ti_650_s2_lookback_analysis.md` | S2->S1 lookback: max 69d, 90d sufficient |
+| `ti_650_s3_unresolved_analysis.md` | Analysis of 4 VV-path unresolved + 2 truly unresolved S3 VVs |
 
 ---
 
@@ -184,8 +191,12 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 - Backfill from 2026-01-01
 
 ### Open items
+- **Unresolved VV root cause**: diagnostic queries running to identify the 4 VVs unresolved via VV path. Most likely lookback boundary (prior VV >180d). See `outputs/ti_650_s3_unresolved_analysis.md`.
 - Retargeting in pools? (Zach decision — currently prospecting only)
 - Multi-advertiser v22 validation at 180d (optional — v20 at 90d already shows 98-99% for non-WGU)
+
+### Lesson learned: concurrent BQ queries
+Never run two 18TB queries simultaneously on the adhoc reservation. Slot contention caused 3-5x runtime inflation (queries that take 1-2h solo are taking 12h+ concurrent). Always run sequentially.
 
 ---
 
