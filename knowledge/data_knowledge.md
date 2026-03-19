@@ -282,6 +282,10 @@ traffic handling. IPs from iCloud relay require special treatment for geo-target
 4. **cost_impression_log.recency_elapsed_time**: INTERVAL type — BQ doesn't support INTERVAL in all contexts.
 5. **clickpass_log.first_touch_ad_served_id NULL (~40%)**: The lookup for `first_touch_ad_served_id` requires a CTV impression with `funnel_level=1` and `objective_id=1` from the same campaign group. The system searches on **both bid_ip AND ip of the attributable impression** (Sharad, 2026-03-04). Open question: does "both" mean OR (either match) or AND (both must match)? A9a results show ft_null is 54.85% when mutated vs 38.19% when not (+16.66pp delta), but mutation explains only ~15% of NULLs. Sharad: *"The fact that we are not able to find such records for a high number of VVs points to some issue in the targeting."* The 40% NULL rate is a known problem, not a design choice.
 
+### BigQuery Behavioral Gotchas
+- **GENERATE_UUID() is non-deterministic across CTE references (TI-650, 2026-03-19):** BQ CTEs are NOT guaranteed to be materialized. If a CTE uses `GENERATE_UUID()` and is referenced in multiple places (e.g., 3 UNION ALL blocks), each reference re-evaluates the function and gets a DIFFERENT UUID. Fix: use a deterministic hash like `TO_HEX(MD5(key_column))` or `FORMAT('%s-...', SUBSTR(TO_HEX(MD5(key)), ...))` when the UUID must be stable across references.
+- **Display impression timing gap (TI-650, 2026-03-19):** Display impressions can be served 2-4 weeks before the user visits the site and triggers the VV. When tracing S3 VVs back to their impression via `ad_served_id`, a ±7d window around the VV time misses 35% of display impressions. CTV is same-day. **Use ±30d for the 5-source trace when display campaigns are in scope.** Verified on 24+ advertisers.
+
 ### Retention / TTL
 | Table | Retention |
 |-------|-----------|
