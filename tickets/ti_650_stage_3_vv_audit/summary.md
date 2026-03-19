@@ -56,6 +56,25 @@ Multi-advertiser v20 results (10 advertisers, 90d lookback, S3):
 
 WGU is the clear outlier. The 74.54% in v20 was at 90d lookback with the VV bridge methodology — extending to 180d achieves 100%.
 
+### Multi-advertiser deep trace (210d lookback, Feb 4-11 window)
+
+Full T1-T4 trace on 4 non-WGU advertisers (37,227 S3 VVs):
+
+| Advertiser | S3 VVs | VV-Resolved (T1+T2) | All Tiers | Unresolved |
+|---|---|---|---|---|
+| Casper (35573) | 11,104 | 99.82% | 99.91% | 10 |
+| FICO (37056) | 10,649 | 99.89% | 99.92% | 8 |
+| Talkspace (34094) | 7,389 | 100% | 100% | 0 |
+| Birdy Grey (32230) | 8,085 | 100% | 100% | 0 |
+
+**32 VV-unresolved deep dive (20 Casper + 12 FICO):**
+- **No prior VV in campaign group (~20)**: IP qualified via cross-group targeting but has zero S1/S2 VVs within-group
+- **T-Mobile CGNAT (12 FICO)**: All FICO unresolved are 172.56.x/172.59.x — IP rotation between CTV ad serve and site visit
+- **Google proxy (6 Casper)**: 172.253.x/173.194.x/74.125.x — rotating Google infrastructure IPs
+- **Lookback boundary (~3-6)**: Prior VVs exist but predate 210d window
+
+Root causes are structural and match WGU findings. See `outputs/ti_650_multi_advertiser_unresolved_analysis.md`.
+
 ---
 
 ## How Each Trace Works
@@ -136,6 +155,11 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_unresolved_simple.sql` | Diagnostic: extract unresolved S3 VV rows | 8 rows (data drift) | ~18 TB |
 | `ti_650_s3_unresolved_diagnostic.sql` | Diagnostic with correlated lookback checks | Not needed (simple was sufficient) | ~18 TB |
 | `ti_650_3_unresolved_investigation.sql` | 4 queries: campaign metadata, VV history, cross-group, full pipeline trace | 3 structural VVs fully traced | ~1.4 TB (Q4) |
+| `ti_650_s3_resolution_multi_advertiser.sql` | Full T1-T4 trace, 4 advertisers (FICO, Casper, Talkspace, Birdy Grey) | 99.95% resolution (37,227 VVs, 18 unresolved) | 20.96 TB |
+| `ti_650_s3_min_lookback.sql` | MIN lookback per advertiser via clickpass-only VV matching | 40-89% (misleading — uses clickpass_ip not bid_ip) | ~33 GB |
+| `ti_650_s3_vv_unresolved_identification.sql` | Identify individual VV-unresolved S3 VVs (Casper + FICO) | 32 rows (20 Casper + 12 FICO) | 20.96 TB |
+| `ti_650_unresolved_clickpass_history.sql` | VV history for 28 unresolved IPs in their campaign groups | 70 rows, 25 unique IP/cg pairs | ~50 GB |
+| `ti_650_unresolved_full_trace.sql` | 5-source trace for 32 unresolved ad_served_ids | 96 rows, full pipeline for all 32 | ~1.4 TB |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
@@ -170,6 +194,10 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_unresolved_rows.json` | Raw diagnostic output: 8 unresolved S3 VV rows with IP details |
 | `ti_650_3_unresolved_full_trace.md` | **Full trace** for 3 structural VVs: campaign metadata, 5-source pipeline, complete VV history |
 | `ti_650_deep_dive_57138_172159.md` | **Deep dive** for 57.138 & 172.59: all table evidence (impression_log, event_log, viewability_log), T3 resolution proof |
+| `ti_650_multi_advertiser_unresolved_analysis.md` | **Deep dive** 32 VV-unresolved across Casper+FICO: CGNAT, Google proxy, cross-group, lookback boundary |
+| `ti_650_vv_unresolved_rows.json` | 32 individual unresolved VV rows with full IP trace details |
+| `ti_650_unresolved_clickpass_history.json` | 70 clickpass history rows for 28 unresolved IPs |
+| `ti_650_unresolved_full_trace.json` | 96 5-source trace rows for 32 unresolved ad_served_ids |
 
 ---
 
