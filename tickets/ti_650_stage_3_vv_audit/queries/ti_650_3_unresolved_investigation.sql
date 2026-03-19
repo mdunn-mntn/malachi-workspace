@@ -94,11 +94,12 @@ ORDER BY cp.time;
 
 
 -- ============================================================================
--- QUERY 4: 5-source pipeline trace (within-stage) for all 3 unresolved VVs
+-- QUERY 4: Full pipeline trace + campaign/advertiser data — one row per VV
 -- ============================================================================
 -- Traces each VV through: bid_logs → win_logs → impression_log → viewability_log → clickpass_log
+-- Includes campaign, campaign_group, and advertiser metadata.
+-- Viewability is deduped (MIN time) to avoid fan-out from multiple viewability events.
 -- Linked by auction_id (Beeswax tables) and ad_served_id (MNTN tables).
--- Confirms IP is consistent across all pipeline steps for each VV.
 -- Cost: ~1.4 TB (~66s)
 
 WITH target_vvs AS (
@@ -127,13 +128,16 @@ il AS (
   WHERE DATE(il.time) >= '2026-02-01' AND DATE(il.time) <= '2026-02-12'
 ),
 vl AS (
+  -- Dedup: viewability_log has multiple rows per ad_served_id (viewable + measurable).
+  -- Take earliest time and any IP (they're always the same).
   SELECT
     vl.ad_served_id,
-    vl.time AS viewability_time,
-    SPLIT(vl.ip, '/')[SAFE_OFFSET(0)] AS viewability_ip
+    MIN(vl.time) AS viewability_time,
+    ANY_VALUE(SPLIT(vl.ip, '/')[SAFE_OFFSET(0)]) AS viewability_ip
   FROM cp
   JOIN `dw-main-silver.logdata.viewability_log` vl ON vl.ad_served_id = cp.ad_served_id
   WHERE DATE(vl.time) >= '2026-02-01' AND DATE(vl.time) <= '2026-02-12'
+  GROUP BY vl.ad_served_id
 ),
 wl AS (
   SELECT
@@ -154,22 +158,49 @@ bl AS (
   WHERE DATE(b.time) >= '2026-02-01' AND DATE(b.time) <= '2026-02-12'
 )
 SELECT
-  cp.ad_served_id,
+  -- Campaign & advertiser context
+  a.company_name AS advertiser_name,
+  cg.campaign_group_id,
+  cg.name AS campaign_group_name,
   cp.campaign_id,
+  c.name AS campaign_name,
+  c.funnel_level,
+  CASE c.funnel_level WHEN 1 THEN 'S1' WHEN 2 THEN 'S2' WHEN 3 THEN 'S3' END AS stage,
+  c.objective_id,
+  CASE c.channel_id WHEN 8 THEN 'CTV' WHEN 1 THEN 'Display' END AS channel,
+
+  -- Pipeline trace: bid → win → impression → viewability → clickpass (VV)
+  cp.ad_served_id,
+  il.ttd_impression_id AS auction_id,
   bl.bid_time,
   bl.bid_ip,
   wl.win_time,
   wl.win_ip,
   il.impression_time,
   il.impression_ip,
-  il.ttd_impression_id AS auction_id,
   vl.viewability_time,
   vl.viewability_ip,
-  cp.clickpass_time,
-  cp.clickpass_ip
+  cp.clickpass_time AS vv_time,
+  cp.clickpass_ip AS vv_ip,
+
+  -- IP consistency check
+  (bl.bid_ip = wl.win_ip
+    AND wl.win_ip = il.impression_ip
+    AND il.impression_ip = vl.viewability_ip
+    AND vl.viewability_ip = cp.clickpass_ip) AS ip_consistent_all_sources
+
 FROM cp
 LEFT JOIN il ON il.ad_served_id = cp.ad_served_id
 LEFT JOIN vl ON vl.ad_served_id = cp.ad_served_id
 LEFT JOIN wl ON wl.auction_id = il.ttd_impression_id
 LEFT JOIN bl ON bl.auction_id = il.ttd_impression_id
+JOIN `dw-main-bronze.integrationprod.campaigns` c
+  ON cp.campaign_id = c.campaign_id
+  AND c.deleted = FALSE AND c.is_test = FALSE
+JOIN `dw-main-bronze.integrationprod.campaign_groups` cg
+  ON c.campaign_group_id = cg.campaign_group_id
+  AND cg.deleted = FALSE
+JOIN `dw-main-bronze.integrationprod.advertisers` a
+  ON cg.advertiser_id = a.advertiser_id
+  AND a.deleted = FALSE
 ORDER BY cp.clickpass_ip, cp.clickpass_time;
