@@ -75,6 +75,28 @@ Full T1-T4 trace on 4 non-WGU advertisers (37,227 S3 VVs):
 
 Root causes are structural and match WGU findings. See `outputs/ti_650_multi_advertiser_unresolved_analysis.md`.
 
+### Broad sample validation (365d lookback, ±30d 5-source, Feb 4-11 window)
+
+**24 NEW advertisers** (800-2,700 VVs each, diverse industries, no overlap with prior tests):
+
+| Metric | Value |
+|---|---|
+| Total S3 VVs | 36,388 |
+| Resolved (T1+T2) | 36,303 (99.77%) |
+| Unresolved | 85 (0.23%) — all have IP |
+| Advertisers at 100% | 13/24 |
+| Lowest | Colorado Avalanche 97.8% (18 unresolved) |
+| Cost | 4.25 TB per query, ~5 min wall time |
+
+**Key findings:**
+- **±30d 5-source window required for display**: ±7d missed 35% of display impressions (served weeks before VV). ±30d recovers 100%. no_ip = 0 for all 24 advertisers.
+- **T1 (S2 VV bridge) is critical**: T2-only resolves 82.8% overall. Adding T1 brings it to 99.77%. Kindred Bravely: 45.9% → 100%.
+- **Combined T1+T2 query costs same as T2-only**: ~4.25 TB. The S2 VV matching comes free from the same clickpass_log scan.
+- **Consistent with 4-advertiser deep trace**: 99.77% vs 99.85% VV-only. Structural unresolved (~0.2%) = CGNAT, cross-group, proxy IPs.
+- **365d lookback is conservative**: Most matches are within 90d. WGU's max gap (207d) drives the longer lookback.
+
+See `outputs/ti_650_broad_sample_combined_t1t2.json` for per-advertiser breakdown.
+
 ---
 
 ## How Each Trace Works
@@ -160,6 +182,8 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_vv_unresolved_identification.sql` | Identify individual VV-unresolved S3 VVs (Casper + FICO) | 32 rows (20 Casper + 12 FICO) | 20.96 TB |
 | `ti_650_unresolved_clickpass_history.sql` | VV history for 28 unresolved IPs in their campaign groups | 70 rows, 25 unique IP/cg pairs | ~50 GB |
 | `ti_650_unresolved_full_trace.sql` | 5-source trace for 32 unresolved ad_served_ids | 96 rows, full pipeline for all 32 | ~1.4 TB |
+| `ti_650_s3_broad_sample_pass1.sql` | Broad T2-only, 24 advertisers, ±30d 5-source, 365d clickpass | 82.8% T2-only, no_ip=0 | 4.25 TB |
+| `ti_650_s3_broad_sample_combined.sql` | Broad T1+T2, 24 advertisers, ±30d 5-source, 365d clickpass | **99.77% (36,303/36,388), 85 unresolved** | 4.25 TB |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
@@ -198,6 +222,8 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_vv_unresolved_rows.json` | 32 individual unresolved VV rows with full IP trace details |
 | `ti_650_unresolved_clickpass_history.json` | 70 clickpass history rows for 28 unresolved IPs |
 | `ti_650_unresolved_full_trace.json` | 96 5-source trace rows for 32 unresolved ad_served_ids |
+| `ti_650_broad_sample_pass1_30d.json` | 24 advertisers T2-only results (±30d 5-source, no_ip=0) |
+| `ti_650_broad_sample_combined_t1t2.json` | **24 advertisers T1+T2 results: 99.77% resolution, 85 unresolved** |
 
 ---
 
@@ -208,6 +234,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_vv_trace_flowchart.md` | Mermaid flowchart: full VV IP trace across all stages |
 | `ti_650_s3_resolution_execution_prompt.md` | S3 execution prompt + completion log |
 | `ti_650_column_reference.md` | Column-by-column schema reference |
+| `ti_650_trace_table_design.md` | Row-per-stage trace table schema (UUID-linked, impression type) |
 | `ti_650_pipeline_explained.md` | Pipeline reference (stages, targeting, VVS logic) |
 | `ti_650_implementation_plan.md` | SQLMesh deployment plan |
 
