@@ -57,11 +57,11 @@ The diagnostic query (`ti_650_s3_unresolved_simple.sql`) extracted the actual un
 | S3 VV | 2026-02-14 04:34 | 3 | After S2 VV (resolves) |
 | S2 VV | 2026-02-14 21:29 | 2 | Second S2 VV |
 
-**Root cause:** The user's S2 VV happened 5 days AFTER the S3 VV. There are no S1 VVs for this IP in cg 24081 at any time. The S3 ad was served based on VV-segment targeting, but the prior VV that qualified this IP was either:
-- From a **different IP** on the same household/device (cross-device scenario)
-- From a **different campaign group** (S3 targeting may not be strictly scoped to campaign_group_id in the segment builder)
+**Root cause:** The user's S2 VV happened 5 days AFTER the S3 VV. There are **zero S1 or S2 VVs** for this IP in cg 24081 before 2026-02-09 — verified with a full-history query (no date limit) on 2026-03-19. The S3 VV at 2026-02-09 is literally the first event for this IP in cg 24081.
 
-T1 fails (no prior S2 VV), T2 fails (no S1 VV), T3 unknown. **Cannot be solved by extending lookback.**
+**Cross-group context:** This IP has 66 VVs across 30+ campaign groups going back to Feb 2025 — many S1/S2 VVs exist in other campaign groups. The segment builder that qualified this IP for S3 targeting in cg 24081 almost certainly used cross-group VV history, but our attribution is scoped to `campaign_group_id`, so we cannot trace through it.
+
+T1 fails (no prior S2 VV in cg), T2 fails (no S1 VV in cg), T3 unknown. **Cannot be solved by extending lookback — no prior VV exists in this campaign group at any lookback.**
 
 ---
 
