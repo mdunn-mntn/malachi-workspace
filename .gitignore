@@ -49,3 +49,5 @@ __pycache__/
 
 # Personal notes — not for remote
 self_review/
+tickets/ti_650_stage_3_vv_audit/outputs/ti_650_trace_table_24adv.json
+tickets/ti_650_stage_3_vv_audit/outputs/ti_650_trace_table_amsoil.json

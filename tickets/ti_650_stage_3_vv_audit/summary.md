@@ -97,6 +97,30 @@ Root causes are structural and match WGU findings. See `outputs/ti_650_multi_adv
 
 See `outputs/ti_650_broad_sample_combined_t1t2.json` for per-advertiser breakdown.
 
+### Full trace table (row-per-stage, UUID-linked)
+
+**Design:** Each S3 VV gets a deterministic UUID (MD5 of ad_served_id). Each trace produces 1-2 rows linked by that UUID:
+- **T1 (2 rows):** S3 origin_vv + S2 s2_bridge_vv
+- **T2 (2 rows):** S3 origin_vv + S1 s1_direct_vv
+- **Unresolved (1 row):** S3 origin_vv only
+
+S3 rows include full 5-source IPs + impression type classification (CTV / Viewable Display / Non-Viewable Display).
+S2/S1 rows include clickpass details only (5-source for older VVs would be 20+ TB).
+
+**Validated on 24 advertisers (36,388 S3 VVs):**
+| Metric | Value |
+|---|---|
+| Total rows | 72,691 |
+| Unique trace UUIDs | 36,388 |
+| Orphan UUIDs | 0 |
+| IP link mismatches | 0 |
+| Resolution | 99.77% (36,303 / 36,388) |
+| Impression types | CTV 18,769 (51.6%), Viewable Display 17,551 (48.2%), Non-Viewable Display 68 (0.2%) |
+
+**Bug caught and fixed:** `GENERATE_UUID()` is non-deterministic — BQ re-evaluates it each time a CTE is referenced. Produced 4238 unique UUIDs for 4238 rows (should be 2119). Fixed by using `MD5(ad_served_id)` formatted as UUID.
+
+See `queries/ti_650_s3_trace_table.sql` and `artifacts/ti_650_trace_table_design.md`.
+
 ---
 
 ## How Each Trace Works
@@ -184,6 +208,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_unresolved_full_trace.sql` | 5-source trace for 32 unresolved ad_served_ids | 96 rows, full pipeline for all 32 | ~1.4 TB |
 | `ti_650_s3_broad_sample_pass1.sql` | Broad T2-only, 24 advertisers, ±30d 5-source, 365d clickpass | 82.8% T2-only, no_ip=0 | 4.25 TB |
 | `ti_650_s3_broad_sample_combined.sql` | Broad T1+T2, 24 advertisers, ±30d 5-source, 365d clickpass | **99.77% (36,303/36,388), 85 unresolved** | 4.25 TB |
+| `ti_650_s3_trace_table.sql` | Full trace table: UUID-linked rows, impression type, 24 advertisers | 72,691 rows, 36,388 traces, 0 mismatches | 4.25 TB |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
@@ -224,6 +249,8 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_unresolved_full_trace.json` | 96 5-source trace rows for 32 unresolved ad_served_ids |
 | `ti_650_broad_sample_pass1_30d.json` | 24 advertisers T2-only results (±30d 5-source, no_ip=0) |
 | `ti_650_broad_sample_combined_t1t2.json` | **24 advertisers T1+T2 results: 99.77% resolution, 85 unresolved** |
+| `ti_650_trace_table_amsoil.json` | AMSOIL trace table (2,119 VVs, 4,238 rows, 100% resolved) — gitignored |
+| `ti_650_trace_table_24adv.json` | **Full 24-advertiser trace table (36,388 VVs, 72,691 rows)** — gitignored (47 MB) |
 
 ---
 
