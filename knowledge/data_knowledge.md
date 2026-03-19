@@ -213,6 +213,8 @@ deterministic last-touch or last-tv-touch attribution.
 - viewability_log has ad_served_id, ip, bid_ip, guid, campaign_id, time — same schema as CIL for IP purposes.
 - **Not useful for S1 resolution:** For advertiser 37775, zero S1 impressions exist in viewability_log. CIL already covers display impressions comprehensively.
 - Zach suggested investigating it for display viewable inventory IPs, but empirical check shows no incremental coverage.
+- **Multiple rows per ad_served_id (display only):** `viewability_type_id` 1=measurable, 2=viewable. Each display impression produces two viewability events. CTV does NOT go through viewability_log — uses event_log VAST events instead. When joining, either GROUP BY to dedup or keep both rows if you need the type breakdown.
+- **viewability_log is the display equivalent of event_log:** Use it to trace viewable display impressions in the pipeline (clickpass → viewability_log → win_logs → bid_logs).
 
 ### pa_model_id
 Probabilistic attribution model ID. Present in visit_facts, conversion_facts, visits, ui_visits.

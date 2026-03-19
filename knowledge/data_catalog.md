@@ -596,7 +596,7 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 | group_id | INTEGER | |
 | domain | STRING | |
 | subdomain | STRING | |
-| viewability_type_id | INTEGER | |
+| viewability_type_id | INTEGER | 1=measurable, 2=viewable. Multiple rows per ad_served_id (one per type). Display only — CTV uses event_log VAST events instead. |
 | ip | STRING | |
 | ip_raw | STRING | |
 | bid_ip | STRING | |

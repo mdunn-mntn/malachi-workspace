@@ -135,6 +135,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_resolution_31357.sql` | S3 T1-T4 resolution (optimized: single-scan CTEs) | 96.47% / 100% | 18.2 TB (180d) |
 | `ti_650_s3_unresolved_simple.sql` | Diagnostic: extract unresolved S3 VV rows | 8 rows (data drift) | ~18 TB |
 | `ti_650_s3_unresolved_diagnostic.sql` | Diagnostic with correlated lookback checks | Not needed (simple was sufficient) | ~18 TB |
+| `ti_650_3_unresolved_investigation.sql` | 4 queries: campaign metadata, VV history, cross-group, full pipeline trace | 3 structural VVs fully traced | ~1.4 TB (Q4) |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
@@ -167,6 +168,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s2_lookback_analysis.md` | S2->S1 lookback: max 69d, 90d sufficient |
 | `ti_650_s3_unresolved_analysis.md` | **Complete** root cause analysis: 8 unresolved VVs across 4 categories |
 | `ti_650_s3_unresolved_rows.json` | Raw diagnostic output: 8 unresolved S3 VV rows with IP details |
+| `ti_650_3_unresolved_full_trace.md` | **Full trace** for 3 structural VVs: campaign metadata, 5-source pipeline, complete VV history |
 
 ---
 
