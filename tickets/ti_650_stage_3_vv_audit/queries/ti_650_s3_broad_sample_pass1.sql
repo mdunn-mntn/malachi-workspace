@@ -2,17 +2,17 @@
 -- 24 advertisers, ~36.5K VVs, 365d lookback, Feb 4-11 2026 audit window
 --
 -- 2-pass approach:
---   Pass 1 (THIS QUERY): Get S3 VVs + bid_ip via 5-source trace (tight ±7d window)
+--   Pass 1 (THIS QUERY): Get S3 VVs + bid_ip via 5-source trace (±30d window)
 --          + check T2 (S3.bid_ip matches prior S1 VV clickpass_ip in same cg)
---          Cost: ~1-3 TB (tight 5-source window avoids event_log full scan)
+--          Cost: ~3-5 TB (±30d covers display impressions served weeks before VV)
 --   Pass 2 (separate): For T2-unresolved superset, check T1 (S2 VV chain → S1 impression pool)
 --
 -- Advertiser selection: 24 advertisers in 800-2700 VV range, diverse industries,
 -- excluding all previously tested (WGU, FICO, Casper, Talkspace, Birdy Grey, v20 set)
 --
--- Key optimization: 5-source trace uses Jan 28 – Feb 18 (±7d around audit window)
--- because the impression was served close to the VV time. The 365d lookback is
--- ONLY for clickpass_log (finding prior S1/S2 VVs going back a year).
+-- Key optimization: 5-source trace uses Jan 5 – Mar 13 (±30d around audit window).
+-- Display impressions can be served 2-4 weeks before VV (±7d missed 35% of display).
+-- The 365d lookback is ONLY for clickpass_log (finding prior S1/S2 VVs going back a year).
 
 WITH all_clickpass AS (
     SELECT
@@ -59,15 +59,16 @@ s1_vv_pool AS (
 ),
 
 -- ============================================================
--- 5-source S3 bid_ip extraction (TIGHT WINDOW: ±7d around audit window)
--- The impression was served close to the VV time, not 365d ago.
+-- 5-source S3 bid_ip extraction (±30d around audit window)
+-- Display impressions can be served 2-4 weeks before the VV fires.
+-- CTV is same-day but ±30d is safe for both channels.
 -- ============================================================
 
 ip_event_log AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS event_log_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
-      AND time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
+      AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-03-13')
       AND advertiser_id IN (
         32153, 40341, 36537, 35094, 35672, 34671, 39225, 32352,
         33804, 31932, 36507, 38034, 31577, 33023, 30181, 36390,
@@ -81,7 +82,7 @@ ip_event_log AS (
 ip_viewability AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS viewability_ip
     FROM `dw-main-silver.logdata.viewability_log`
-    WHERE time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
+    WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-03-13')
       AND advertiser_id IN (
         32153, 40341, 36537, 35094, 35672, 34671, 39225, 32352,
         33804, 31932, 36507, 38034, 31577, 33023, 30181, 36390,
@@ -95,7 +96,7 @@ ip_viewability AS (
 ip_impression AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
-    WHERE time >= TIMESTAMP('2026-01-28') AND time < TIMESTAMP('2026-02-18')
+    WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-03-13')
       AND advertiser_id IN (
         32153, 40341, 36537, 35094, 35672, 34671, 39225, 32352,
         33804, 31932, 36507, 38034, 31577, 33023, 30181, 36390,
@@ -110,7 +111,7 @@ ip_win AS (
     SELECT il.ad_served_id, SPLIT(w.ip, '/')[SAFE_OFFSET(0)] AS win_ip
     FROM `dw-main-silver.logdata.win_logs` w
     JOIN ip_impression il ON w.auction_id = il.ttd_impression_id
-    WHERE w.time >= TIMESTAMP('2026-01-28') AND w.time < TIMESTAMP('2026-02-18')
+    WHERE w.time >= TIMESTAMP('2026-01-05') AND w.time < TIMESTAMP('2026-03-13')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
 ),
 
@@ -118,7 +119,7 @@ ip_bid AS (
     SELECT il.ad_served_id, SPLIT(b.ip, '/')[SAFE_OFFSET(0)] AS bid_ip
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
-    WHERE b.time >= TIMESTAMP('2026-01-28') AND b.time < TIMESTAMP('2026-02-18')
+    WHERE b.time >= TIMESTAMP('2026-01-05') AND b.time < TIMESTAMP('2026-03-13')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
@@ -147,7 +148,7 @@ SELECT
     adv.company_name AS advertiser_name,
     COUNT(*) AS total_s3_vvs,
 
-    -- IP pipeline coverage (verifies ±7d window is sufficient)
+    -- IP pipeline coverage (verifies ±30d window recovers display impressions)
     COUNTIF(a.bid_ip IS NOT NULL) AS has_bid_ip,
     COUNTIF(a.win_ip IS NOT NULL) AS has_win_ip,
     COUNTIF(a.impression_ip IS NOT NULL) AS has_impression_ip,
