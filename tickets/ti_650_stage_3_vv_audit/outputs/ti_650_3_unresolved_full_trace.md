@@ -62,12 +62,13 @@ All 3 campaign groups share the same structure — WGU prospecting groups create
 
 ---
 
-## VV 2: 57.138.133.212 — Temporal Ordering (No Prior VV in CG)
+## VV 2: 57.138.133.212 — No Prior VV, Extensive Impressions (T3 Resolvable)
 
 **Campaign Group:** 24081 (GETop)
 **Campaign:** 361039 — "Multi-Touch - Plus" (Display, S3, obj=6)
 **ad_served_id:** f9c4acd8-fa90-4793-a358-180e436fcc52
-**Root cause:** Zero S1/S2 VVs exist in cg 24081 before the S3 VV. First S2 VV came 5d after.
+**Root cause (VV path):** Zero S1/S2 VVs exist in cg 24081 before the S3 VV. First S2 VV came 5d after.
+**Resolution:** T3 (impression fallback) — 623 S1 impressions, latest 20d before S3 VV. See `ti_650_deep_dive_57138_172159.md`.
 
 ### 5-Source Pipeline Trace (within-stage)
 
@@ -99,16 +100,17 @@ All 3 campaign groups share the same structure — WGU prospecting groups create
 
 **Cross-group context:** This IP has 66 VVs across 30+ different campaign groups (other WGU groups and other advertisers). Many S1/S2 VVs exist in other groups. The segment builder qualified this IP for S3 targeting in cg 24081 using cross-group VV history, but our attribution is scoped to `campaign_group_id`.
 
-**Cannot be solved by any lookback extension.**
+**T3 resolves at any lookback ≥20d.** See `ti_650_deep_dive_57138_172159.md` for full table evidence.
 
 ---
 
-## VV 3: 172.59.169.152 — CGNAT / No Prior VV
+## VV 3: 172.59.169.152 — No Prior VV, Has S1/S2 Impressions (T3 Resolvable)
 
 **Campaign Group:** 24083 (HPTop)
 **Campaign:** 361171 — "Multi-Touch - Plus" (Display, S3, obj=6)
 **ad_served_id:** 2c037d9d-26e1-4a6c-9dd3-e1f9e217a185
-**Root cause:** T-Mobile CGNAT IP. Only S3 VVs exist — no S1/S2 trail at any time.
+**Root cause (VV path):** T-Mobile CGNAT IP. Only S3 VVs in clickpass_log — no S1/S2 VVs at any time.
+**Resolution:** T3 (impression fallback) — 2 S1 CTV impressions at 80d + 14 S2 display impressions. See `ti_650_deep_dive_57138_172159.md`.
 
 ### 5-Source Pipeline Trace (within-stage)
 
@@ -139,22 +141,22 @@ All 3 campaign groups share the same structure — WGU prospecting groups create
 | 11 | 2026-03-01 02:59 | 361171 (S3 Display) | S3 | After window |
 | 12-20 | 2026-03-01 to 03-13 | 361171 (S3 Display) | S3 | After window (9 more) |
 
-**20 S3 VVs spanning 10 months. Zero S1 or S2 VVs for this IP in cg 24083 at any time.** All on the same campaign (361171, Display S3). This is a T-Mobile CGNAT IP (172.59.x.x) that rotates across subscribers. The original S1/S2 VV that qualified this IP for S3 targeting came from a different IP assignment on the same user/household.
+**20 S3 VVs spanning 10 months. Zero S1 or S2 VVs in clickpass_log.** But deep dive revealed 2 S1 CTV impressions (event_log, Nov 2025, campaign 147578) and 14 S2 display impressions (viewability_log, Jun 2025–Feb 2026, campaign 361172). The same IP was served S1/S2 ads — it didn't rotate for impressions. The user never converted to a VV for S1/S2.
 
-**Cannot be solved by any lookback extension.** Fundamental limitation of IP-based attribution for CGNAT addresses.
+**T3 resolves at any lookback ≥80d** (latest S1 CTV impression at 2025-11-21, 80d before S3 VV). See `ti_650_deep_dive_57138_172159.md` for full table evidence.
 
 ---
 
 ## Summary
 
-| # | IP | CG | Root Cause | Stage of VV | Channel | Prior S1/S2? | Solvable? |
-|---|----|----|-----------|-------------|---------|-------------|-----------|
-| 1 | 64.60.221.62 | 24087 (TCTop) | 207d lookback gap | S3 Display | Display | Yes — 207d ago | Yes (210d+) |
-| 2 | 57.138.133.212 | 24081 (GETop) | No prior VV in cg | S3 Display | Display | No (zero in cg) | No |
-| 3 | 172.59.169.152 | 24083 (HPTop) | CGNAT — only S3 trail | S3 Display | Display | No (zero in cg) | No |
+| # | IP | CG | Root Cause (VV path) | Resolution | S1 Impressions | Lookback |
+|---|----|----|---------------------|-----------|---------------|----------|
+| 1 | 64.60.221.62 | 24087 (TCTop) | 207d lookback gap | VV path at 210d | N/A (has VVs) | 210d |
+| 2 | 57.138.133.212 | 24081 (GETop) | No prior VV in cg | **T3 (impression fallback)** | 623 S1, 20d gap | 90d+ |
+| 3 | 172.59.169.152 | 24083 (HPTop) | No prior VV in cg | **T3 (impression fallback)** | 2 S1 CTV, 80d gap | 90d+ |
 
-**All 3 are display S3 VVs** (campaign names "Multi-Touch - Plus", objective_id=6). The S1 campaigns in each group are CTV ("Trade Desk Television"). This means the cross-stage path for these would be: display S3 VV → prior S2 VV → S1 CTV impression.
+**All 3 are display S3 VVs** (campaign names "Multi-Touch - Plus", objective_id=6). The S1 campaigns in each group are CTV ("Trade Desk Television").
 
 **All 3 have consistent IPs across all 5 pipeline tables** — no cross-device or IP mismatch within the S3 VV itself.
 
-**Only 1 of 3 is recoverable** (64.60.221.62 with 210d lookback), and at 1 VV out of 589,630, it's not worth the cost.
+**All 3 resolve at 210d lookback.** 64.60 needs VV path at 210d. 57.138 and 172.59 resolve via T3 impression fallback (confirmed by deep-dive analysis 2026-03-19 — see `ti_650_deep_dive_57138_172159.md`).

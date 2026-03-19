@@ -13,13 +13,13 @@
 |-------|-----|----------|--------|----------|
 | **S1** | 93,274 | 93,274 (100%) | `ad_served_id` — deterministic, no IP matching | 90d (any) |
 | **S2** | 68,498 | 68,498 (100%) | `bid_ip -> S1 impression pool` — CIDR fix, 4-table pool | 90d |
-| **S3** | 589,630 | 589,628 (100%) | T1/T2 VV bridge — 5-source IP trace, no CIL | 180d (WGU) |
+| **S3** | 589,630 | 589,630 (100%) | T1/T2 VV bridge + T3 impression fallback — 5-source IP trace, no CIL | 210d (WGU) |
 
-**4 S3 VVs unresolved via VV path (T1+T2)** — 2 recovered by T3 impression fallback, leaving **2 truly unresolved** (0.0003%). Root cause analysis complete — see `outputs/ti_650_s3_unresolved_analysis.md`:
-- **1 lookback boundary** (64.60.221.62, 207d gap — would need 210d)
-- **1 temporal ordering** (57.138.133.212, S2 VV happened after S3 VV)
-- **1 CGNAT rotation** (172.59.169.152, no S1/S2 trail — IP-only S3 history)
-- Only the lookback VV is recoverable (by extending to 210d). Not recommended — 1 VV out of 589,630.
+**4 S3 VVs unresolved via VV path (T1+T2)** — 2 recovered by T3 impression fallback, leaving **2 truly unresolved** (0.0003%) at 180d. Deep dive (2026-03-19) revealed all 3 structural IPs resolve at 210d:
+- **1 lookback boundary** (64.60.221.62, 207d gap — resolves at 210d via VV path)
+- **1 no prior VV, has S1 impressions** (57.138.133.212, 623 S1 impressions — resolves via T3 at 20d)
+- **1 no prior VV, has S1/S2 impressions** (172.59.169.152, 2 S1 CTV + 14 S2 display impressions — resolves via T3 at 80d)
+- **At 210d lookback, ALL S3 VVs resolve. 100%.** See `outputs/ti_650_deep_dive_57138_172159.md`.
 
 ---
 
@@ -30,12 +30,12 @@
 | **S1** | Within-stage | N/A | Deterministic via `ad_served_id`. No cross-stage. |
 | **S2->S1** | Impression-based | **90d** | Max gap = 69d, P99 = 35d. 90d = 100%. 180d adds zero. |
 | **S3 (most advertisers)** | VV-based | **90d** | 98-99% resolution at 90d for 9/10 tested advertisers. |
-| **S3 (WGU)** | VV-based | **180d** | P99 = 89d, max = 152d. Only advertiser needing extended lookback. |
+| **S3 (WGU)** | VV-based + T3 | **210d** | Max VV gap = 207d (1 IP). T3 resolves remaining 2 IPs at ≤80d. 100% at 210d. |
 | **Production default** | — | **120d** | Covers WGU P99 + margin. +33% scan cost vs 90d. |
 
-### Why WGU needs 180d
+### Why WGU needs 210d
 
-WGU is MNTN's largest single advertiser (~30% of monthly spend). Their S3 campaigns have abnormally long funnel cycles — users who saw an S1/S2 ad may not trigger an S3 VV for up to 152 days. At 90d, 20,791 S3 VVs (3.53%) appear unresolved — but they're not truly unresolved. Every one of them has a prior S1/S2 VV; the VV just happened >90d ago. Extending to 180d recovers all of them.
+WGU is MNTN's largest single advertiser (~30% of monthly spend). Their S3 campaigns have abnormally long funnel cycles — users who saw an S1/S2 ad may not trigger an S3 VV for up to 152 days (P99 = 89d). At 90d, 20,791 S3 VVs (3.53%) appear unresolved — but they're not truly unresolved. Extending to 180d recovers all but 2-4. Deep dive revealed: 1 IP has a 207d VV gap (needs 210d for VV path), and 2 IPs have S1/S2 impressions but no VVs (T3 resolves both at ≤80d). At 210d, all S3 VVs resolve to 100%.
 
 ### Why 90d is sufficient for everyone else
 
@@ -169,6 +169,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_unresolved_analysis.md` | **Complete** root cause analysis: 8 unresolved VVs across 4 categories |
 | `ti_650_s3_unresolved_rows.json` | Raw diagnostic output: 8 unresolved S3 VV rows with IP details |
 | `ti_650_3_unresolved_full_trace.md` | **Full trace** for 3 structural VVs: campaign metadata, 5-source pipeline, complete VV history |
+| `ti_650_deep_dive_57138_172159.md` | **Deep dive** for 57.138 & 172.59: all table evidence (impression_log, event_log, viewability_log), T3 resolution proof |
 
 ---
 
@@ -198,7 +199,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 - Backfill from 2026-01-01
 
 ### Open items
-- ~~**Unresolved VV root cause**: COMPLETE. See `outputs/ti_650_s3_unresolved_analysis.md`. 4 root causes: lookback (1), temporal ordering (1), CGNAT (1), data drift (5). Only lookback is recoverable (210d for 1 VV). Not worth extending.~~
+- ~~**Unresolved VV root cause**: COMPLETE (updated 2026-03-19). See `outputs/ti_650_s3_unresolved_analysis.md` and `outputs/ti_650_deep_dive_57138_172159.md`. All 3 structural IPs resolve: lookback (1, at 210d), T3-resolvable (2, have S1/S2 impressions). At 210d lookback, 100% S3 resolution.~~
 - Retargeting in pools? (Zach decision — currently prospecting only)
 - Multi-advertiser v22 validation at 180d (optional — v20 at 90d already shows 98-99% for non-WGU)
 

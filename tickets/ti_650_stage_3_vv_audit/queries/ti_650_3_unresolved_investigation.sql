@@ -204,3 +204,90 @@ JOIN `dw-main-bronze.integrationprod.advertisers` a
   ON cg.advertiser_id = a.advertiser_id
   AND a.deleted = FALSE
 ORDER BY cp.clickpass_ip, cp.clickpass_time;
+
+
+-- ============================================================================
+-- QUERY 5: Deep dive — impression_log summary by stage for both IPs
+-- ============================================================================
+-- Counts impressions per (IP, campaign_group, stage) with date ranges.
+-- Revealed: 57.138 has 623 S1 + 46 S2 impressions; 172.59 has 12 S2 + 0 S1.
+-- Cost: ~1.4 TB (~30s)
+
+SELECT
+  SPLIT(il.ip, '/')[SAFE_OFFSET(0)] AS ip,
+  c.campaign_group_id,
+  c.funnel_level,
+  CASE c.funnel_level WHEN 1 THEN 'S1' WHEN 2 THEN 'S2' WHEN 3 THEN 'S3' END AS stage,
+  COUNT(*) AS impression_count,
+  MIN(il.time) AS earliest,
+  MAX(il.time) AS latest
+FROM `dw-main-silver.logdata.impression_log` il
+JOIN `dw-main-bronze.integrationprod.campaigns` c
+  ON il.campaign_id = c.campaign_id
+  AND c.deleted = FALSE AND c.is_test = FALSE
+WHERE (
+  (SPLIT(il.ip, '/')[SAFE_OFFSET(0)] = '57.138.133.212' AND c.campaign_group_id = 24081)
+  OR (SPLIT(il.ip, '/')[SAFE_OFFSET(0)] = '172.59.169.152' AND c.campaign_group_id = 24083)
+)
+  AND c.objective_id IN (1, 5, 6)
+GROUP BY 1, 2, 3, 4
+ORDER BY ip, funnel_level;
+
+
+-- ============================================================================
+-- QUERY 6: Deep dive — event_log (S1 CTV VAST events) for both IPs
+-- ============================================================================
+-- All CTV VAST events (impression, start, quartiles, complete) in the campaign group.
+-- Revealed: 57.138 has ~98 S1 CTV ad views (590 events); 172.59 has 2 (12 events).
+-- Cost: ~13.7 TB (~5 min) — full event_log scan, runs sequentially!
+
+SELECT
+  SPLIT(el.ip, '/')[SAFE_OFFSET(0)] AS event_ip,
+  el.ad_served_id,
+  c.campaign_id,
+  c.name AS campaign_name,
+  CASE WHEN ch.channel_id = 8 THEN 'CTV' ELSE 'Display' END AS channel,
+  c.funnel_level,
+  CAST(el.time AS STRING) AS event_time,
+  el.event_type_id,
+  el.event_type_raw
+FROM `dw-main-silver.logdata.event_log` el
+JOIN `dw-main-bronze.integrationprod.campaigns` c
+  ON el.campaign_id = c.campaign_id
+  AND c.deleted = FALSE AND c.is_test = FALSE
+JOIN `dw-main-bronze.integrationprod.channels` ch
+  ON c.channel_id = ch.channel_id
+WHERE SPLIT(el.ip, '/')[SAFE_OFFSET(0)] IN ('57.138.133.212', '172.59.169.152')
+  AND c.campaign_group_id IN (24081, 24083)
+  AND c.objective_id IN (1, 5, 6)
+ORDER BY event_ip, el.time
+LIMIT 500;
+
+
+-- ============================================================================
+-- QUERY 7: Deep dive — viewability_log summary by stage for both IPs
+-- ============================================================================
+-- Display viewability entries (type 1=measurable, 2=viewable) in the campaign group.
+-- Revealed: 57.138 has 84 S2 display + 122 S3; 172.59 has 14 S2 + 213 S3.
+-- Cost: ~1.5 TB (~40s)
+
+SELECT
+  SPLIT(v.ip, '/')[SAFE_OFFSET(0)] AS ip,
+  c.campaign_group_id,
+  c.funnel_level,
+  CASE c.funnel_level WHEN 1 THEN 'S1' WHEN 2 THEN 'S2' WHEN 3 THEN 'S3' END AS stage,
+  COUNT(DISTINCT v.ad_served_id) AS unique_ad_served_ids,
+  COUNT(*) AS total_rows,
+  MIN(v.time) AS earliest,
+  MAX(v.time) AS latest
+FROM `dw-main-silver.logdata.viewability_log` v
+JOIN `dw-main-bronze.integrationprod.campaigns` c
+  ON v.campaign_id = c.campaign_id
+  AND c.deleted = FALSE AND c.is_test = FALSE
+WHERE (
+  (SPLIT(v.ip, '/')[SAFE_OFFSET(0)] = '57.138.133.212' AND c.campaign_group_id = 24081)
+  OR (SPLIT(v.ip, '/')[SAFE_OFFSET(0)] = '172.59.169.152' AND c.campaign_group_id = 24083)
+)
+  AND c.objective_id IN (1, 5, 6)
+GROUP BY 1, 2, 3, 4
+ORDER BY ip, funnel_level;
