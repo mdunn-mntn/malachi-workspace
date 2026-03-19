@@ -12,7 +12,7 @@
 -- Impression type per S3 stage: CTV / Viewable Display / Non-Viewable Display
 -- determined by which 5-source tables have data for that ad_served_id
 --
--- Test: AMSOIL (34671), 2046 VVs, 100% T1+T2 resolution
+-- 24 advertisers, ~36.5K VVs, 365d clickpass lookback, Feb 4-11 2026 audit window
 
 WITH all_clickpass AS (
     SELECT
@@ -30,7 +30,11 @@ WITH all_clickpass AS (
         AND c.funnel_level IN (1, 2, 3) AND c.objective_id IN (1, 5, 6)
     WHERE cp.time >= TIMESTAMP('2025-02-04')   -- 365d lookback
       AND cp.time < TIMESTAMP('2026-02-11')
-      AND cp.advertiser_id = 34671  -- AMSOIL test
+      AND cp.advertiser_id IN (
+        32153, 40341, 36537, 35094, 35672, 34671, 39225, 32352,
+        33804, 31932, 36507, 38034, 31577, 33023, 30181, 36390,
+        38323, 39397, 38884, 40563, 36702, 32987, 39445, 34104
+      )
       AND cp.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
@@ -51,7 +55,11 @@ ip_event_log AS (
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw IN ('vast_start', 'vast_impression')
       AND time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-03-13')
-      AND advertiser_id = 34671
+      AND advertiser_id IN (
+        32153, 40341, 36537, 35094, 35672, 34671, 39225, 32352,
+        33804, 31932, 36507, 38034, 31577, 33023, 30181, 36390,
+        38323, 39397, 38884, 40563, 36702, 32987, 39445, 34104
+      )
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
@@ -61,7 +69,11 @@ ip_viewability AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS viewability_ip
     FROM `dw-main-silver.logdata.viewability_log`
     WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-03-13')
-      AND advertiser_id = 34671
+      AND advertiser_id IN (
+        32153, 40341, 36537, 35094, 35672, 34671, 39225, 32352,
+        33804, 31932, 36507, 38034, 31577, 33023, 30181, 36390,
+        38323, 39397, 38884, 40563, 36702, 32987, 39445, 34104
+      )
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
@@ -71,7 +83,11 @@ ip_impression AS (
     SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id
     FROM `dw-main-silver.logdata.impression_log`
     WHERE time >= TIMESTAMP('2026-01-05') AND time < TIMESTAMP('2026-03-13')
-      AND advertiser_id = 34671
+      AND advertiser_id IN (
+        32153, 40341, 36537, 35094, 35672, 34671, 39225, 32352,
+        33804, 31932, 36507, 38034, 31577, 33023, 30181, 36390,
+        38323, 39397, 38884, 40563, 36702, 32987, 39445, 34104
+      )
       AND ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
