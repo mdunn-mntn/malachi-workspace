@@ -121,6 +121,29 @@ S2/S1 rows include clickpass details only (5-source for older VVs would be 20+ T
 
 See `queries/ti_650_s3_trace_table.sql` and `artifacts/ti_650_trace_table_design.md`.
 
+### 85 unresolved diagnostic (all-time + impression pool)
+
+Deep dive into the 85 unresolved S3 VVs from the 24-advertiser broad sample. Three checks:
+1. **All-time VV search** (clickpass_log back to 2022) for prior S1/S2 VVs matching resolved_ip + campaign_group_id
+2. **S1 impression pool** (event_log + viewability_log + impression_log, 180d before audit window)
+3. **Full campaign metadata** for each unresolved VV
+
+| Category | Count | Description |
+|---|---|---|
+| **HAS_S2_VV** | 1 | Petal and Pup — S2 VV found 384d before S3 VV (beyond 365d lookback) |
+| **IMP_ONLY** | 23 | S1 impressions exist in campaign group but no prior VVs — resolvable via T3 impression fallback |
+| **TRULY_UNRESOLVED** | 61 | No VVs and no impressions matching resolved_ip in same campaign group |
+
+**Root causes (61 truly unresolved):**
+- Google proxy IPs (74.125.x, 172.253.x, 173.194.x) — rotating infrastructure IPs
+- Enterprise NAT (68.67.x) — shared corporate egress
+- T-Mobile CGNAT (172.56.x) — IP rotation between CTV ad serve and site visit
+- Private IPs (10.x) — non-routable, can't match across stages
+
+**Implication:** Extending lookback beyond 365d recovers exactly 1 VV. T3 impression fallback would recover 23 more. The remaining 61 (0.17% of 36,388) are structurally unresolvable — same root causes seen in WGU and Casper/FICO deep dives.
+
+See `queries/ti_650_unresolved_85_diagnostic.sql` and `outputs/ti_650_unresolved_85_diagnostic.json`.
+
 ---
 
 ## How Each Trace Works
@@ -209,6 +232,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_s3_broad_sample_pass1.sql` | Broad T2-only, 24 advertisers, ±30d 5-source, 365d clickpass | 82.8% T2-only, no_ip=0 | 4.25 TB |
 | `ti_650_s3_broad_sample_combined.sql` | Broad T1+T2, 24 advertisers, ±30d 5-source, 365d clickpass | **99.77% (36,303/36,388), 85 unresolved** | 4.25 TB |
 | `ti_650_s3_trace_table.sql` | Full trace table: UUID-linked rows, impression type, 24 advertisers | 72,691 rows, 36,388 traces, 0 mismatches | 4.25 TB |
+| `ti_650_unresolved_85_diagnostic.sql` | All-time VV search + impression pool for 85 unresolved S3 VVs | 1 HAS_S2_VV, 23 IMP_ONLY, 61 TRULY_UNRESOLVED | 12.5 TB |
 
 ### BQ job IDs
 | Query | Lookback | Job ID | Runtime |
@@ -251,6 +275,7 @@ All queries tested on advertiser 31357 (WGU), VV window 2026-02-04 to 2026-02-11
 | `ti_650_broad_sample_combined_t1t2.json` | **24 advertisers T1+T2 results: 99.77% resolution, 85 unresolved** |
 | `ti_650_trace_table_amsoil.json` | AMSOIL trace table (2,119 VVs, 4,238 rows, 100% resolved) — gitignored |
 | `ti_650_trace_table_24adv.json` | **Full 24-advertiser trace table (36,388 VVs, 72,691 rows)** — gitignored (47 MB) |
+| `ti_650_unresolved_85_diagnostic.json` | All-time diagnostic for 85 unresolved: VV search, impression pool, campaign metadata |
 
 ---
 
