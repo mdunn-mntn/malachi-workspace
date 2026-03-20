@@ -151,6 +151,14 @@ Some `sqlmesh__logdata` tables are themselves VIEWs referencing other datasets:
 - `win_logs` → references Beeswax win_logs upstream
 - `icloud_vv_log` → references icloud_vv table upstream
 
+### Slot Contention — Never Run Large Queries Simultaneously
+
+The adhoc BQ reservation has limited slots. Running two 4+ TB queries concurrently causes 3-5x runtime inflation (queries that take 2-5 min solo take 12+ hours concurrent). Always run large queries sequentially.
+
+**Learned from TI-650 (2026-03-18):** Two 18 TB queries run simultaneously took 12+ hours each instead of ~2 hours solo. The adhoc reservation does not auto-scale — concurrent jobs compete for the same fixed slot pool.
+
+**Rule:** One large query at a time. Queue the next after the previous completes. For small queries (<1 TB), concurrent execution is fine.
+
 ### Upstream Source Systems
 - **Postgres (coredw)**: impression_log, click_log, clickpass_log, event_log, conversion_log,
   guid_log, viewability_log come from Postgres. Evidence: `conversion_log` has `inet` fields
