@@ -121,7 +121,25 @@ event_log_ip = NULL, viewability_ip = NULL
 
 Same 4 parameters as the resolution check (ADVERTISER_IDS, AUDIT_WINDOW, LOOKBACK_START, SOURCE_WINDOW). See Section 2 for details.
 
-### Validated results (24 advertisers, Feb 4-11)
+### Validated results
+
+**v2 validation (20 advertisers, Mar 10-17, 2026):**
+
+| Metric | Value |
+|--------|-------|
+| Total S3 VVs | 225,872 |
+| Total rows | 451,361 |
+| Unique trace UUIDs | 225,872 |
+| Orphan UUIDs | 0 |
+| IP link mismatches | 0 |
+| Resolution rate | 99.83% |
+| CTV | 80,506 (35.6%) |
+| Viewable Display | 145,105 (64.2%) |
+| Non-Viewable Display | 259 (0.1%) |
+
+Full validation report: `outputs/ti_650_v2_validation_findings.md`
+
+**v1 validation (24 advertisers, Feb 4-11):**
 
 | Metric | Value |
 |--------|-------|
@@ -232,8 +250,10 @@ Historical investigation queries are in `queries/` and `queries/_archive/`.
 
 | File | Description |
 |------|-------------|
-| `outputs/ti_650_broad_sample_combined_t1t2.json` | 24-advertiser per-advertiser resolution breakdown |
-| `outputs/ti_650_trace_table_24adv.json` | Full trace table (36,388 VVs, 72,691 rows) — gitignored (47 MB) |
+| `outputs/ti_650_v2_validation_findings.md` | **v2 validation report** — 20 advertisers, 225,872 VVs, 36 checks |
+| `outputs/ti_650_v2_resolution_check_20adv.json` | v2 per-advertiser resolution breakdown (20 advertisers, Mar 10-17) |
+| `outputs/ti_650_broad_sample_combined_t1t2.json` | v1 24-advertiser per-advertiser resolution breakdown |
+| `outputs/ti_650_trace_table_24adv.json` | v1 full trace table (36,388 VVs, 72,691 rows) — gitignored (47 MB) |
 | `outputs/ti_650_unresolved_85_diagnostic.json` | Diagnostic: 1 beyond-365d, 23 IMP_ONLY, 61 truly unresolved |
 
 ### Artifacts
@@ -243,6 +263,7 @@ Historical investigation queries are in `queries/` and `queries/_archive/`.
 | `artifacts/ti_650_trace_table_design.md` | Trace table schema documentation |
 | `artifacts/ti_650_column_reference.md` | Column-by-column schema reference |
 | `artifacts/ti_650_pipeline_explained.md` | Pipeline reference (stages, targeting, VVS logic) |
+| `artifacts/ti_650_v2_validation_plan.md` | v2 validation plan (6 phases, 36 checks) |
 
 ---
 
