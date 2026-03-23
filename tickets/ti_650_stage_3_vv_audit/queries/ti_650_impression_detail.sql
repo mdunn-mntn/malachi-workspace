@@ -12,7 +12,7 @@
 -- ╚══════════════════════════════════════════════════════════════════╝
 --
 -- Output: campaign metadata, impression_type (CTV / Viewable Display / Non-Viewable Display),
---         all pipeline IPs with timestamps, resolved_ip
+--         bid_ip (THE targeting IP) + all pipeline IPs with timestamps
 
 WITH target_ids AS (
     -- ── AD_SERVED_IDS: replace with your list ──
@@ -117,13 +117,13 @@ SELECT
     cp.vv_time,
     cp.clickpass_ip,
     cp.clickpass_impression_time,
-    -- Pipeline IPs with timestamps (trace-back order: VV → bid)
+    -- bid_ip: THE targeting IP (the IP that entered the S3 segment via tmul_daily)
+    b.bid_ip,              b.bid_time,
+    -- Supplemental pipeline IPs with timestamps (for context/debugging)
     el.event_log_ip,       el.event_log_time,
     vw.viewability_ip,     vw.viewability_time,
     imp.impression_ip,     imp.impression_log_time,
-    w.win_ip,              w.win_time,
-    b.bid_ip,              b.bid_time,
-    COALESCE(b.bid_ip, w.win_ip, imp.impression_ip, vw.viewability_ip, el.event_log_ip) AS resolved_ip
+    w.win_ip,              w.win_time
 FROM clickpass cp
 LEFT JOIN ip_event_log el ON el.ad_served_id = cp.ad_served_id
 LEFT JOIN ip_viewability vw ON vw.ad_served_id = cp.ad_served_id
