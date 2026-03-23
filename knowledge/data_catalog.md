@@ -11,7 +11,7 @@ Last updated: 2026-03-12 | Phase 2 complete + Phase 3 additions + silver.fpa (TI
 - [bronze.coredw](#bronze-coredw)
 - [bronze.external](#bronze-external) — ipdsc__v1 (CRM IP resolution)
 - [bronze.tpa](#bronze-tpa) — audience_upload_hashed_emails, audience_upload_ips
-- [audit](#audit-bq-dataset) — stage3_vv_ip_lineage
+- [audit](#audit-bq-dataset) — vv_ip_lineage
 - [silver.fpa](#silver-fpa) — advertiser_verticals, categories
 - [Greenplum Tables Reference](#greenplum-coredw-tables-reference)
 
@@ -1926,20 +1926,23 @@ UNNEST(td.in_segments.list) AS isl → isl.element.segment_id
 
 # audit (BQ dataset)
 
-## audit.stage3_vv_ip_lineage
-- **Type:** TABLE (production audit table, created TI-650)
+## audit.vv_ip_lineage
+- **Type:** TABLE (production audit table, TI-650)
 - **Partition:** `trace_date` (DATE)
-- **Clustering:** `advertiser_id`
-- **Use for:** IP lineage trace for Stage 3 verified visits — maps VV back to its originating
-  bid IP. Enables NTB validation and general VV auditability.
-- **Requires:** 30-day event_log lookback for full coverage
+- **Clustering:** `advertiser_id`, `vv_stage`
+- **Use for:** IP lineage trace for ALL verified visits (S1/S2/S3) — maps each VV back to its S1 originating bid IP through the full S3→S2→S1 funnel chain. Enables NTB validation and general VV auditability.
+- **Architecture:** v12 target — one row per VV. Stage-based column naming (`s3_*`/`s2_*`/`s1_*`). 2-link S1 resolution (`imp_direct` + `imp_visit`). 90-day lookback (120d production default for WGU outlier).
+- **Resolution rate:** 99.83% (validated on 20 advertisers / 225,872 VVs and 10 advertisers / 138,557 VVs)
 
-Key columns (see audit_trace_queries.sql in mm_44_ipdsc_hh_discrepancy/queries/ for full CREATE):
-- `ad_served_id` — join key (win_log → CIL → event_log → clickpass_log → ui_visits)
-- `win_ip`, `cil_ip`, `el_ip`, `cp_ip`, `visit_ip` — IP at each pipeline checkpoint
-- `ip_mutated` — boolean: win_ip ≠ visit_ip
-- `cross_device` — from ui_visits
-- `trace_date` — partition
+Key column groups (full schema: `tickets/ti_650_stage_3_vv_audit/artifacts/ti_650_column_reference.md`):
+- `ad_served_id` — PK. UUID linking clickpass_log, event_log, CIL, ui_visits.
+- `vv_stage` — 1/2/3 (from `campaigns.funnel_level`)
+- `s3_bid_ip`, `s3_vast_start_ip`, `s3_vast_impression_ip`, `s3_serve_ip`, `s3_win_ip` — S3 impression IPs (NULL for S1/S2 VVs)
+- `s2_bid_ip`, `s2_vast_start_ip`, `s2_ad_served_id`, `s2_vv_time` — S2 impression IPs + VV details (NULL for S1 VVs)
+- `s1_bid_ip`, `s1_vast_start_ip`, `s1_ad_served_id`, `s1_resolution_method` — S1 impression IPs + resolution method
+- `visit_ip`, `impression_ip`, `redirect_ip` — VV visit IPs
+- `clickpass_is_new`, `visit_is_new`, `is_cross_device` — classification
+- `trace_date` — partition key (`DATE(vv_time)`)
 
 ---
 

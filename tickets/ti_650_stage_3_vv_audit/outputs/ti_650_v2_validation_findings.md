@@ -41,7 +41,7 @@ Notable: Uber Rides has T1=0 (no S2 VV bridge — all resolution via S1 direct).
 
 ---
 
-## Query 1: resolution_check.sql
+## Query 1: ti_650_resolution_rate.sql (was resolution_rate.sql at validation time)
 
 - **Status: PASS** (7/9 checks pass, 2 soft fail)
 - **Performance:** 2,942 GB processed / 270s wall / 124K slot-sec
@@ -62,7 +62,7 @@ Notable: Uber Rides has T1=0 (no S2 VV bridge — all resolution via S1 direct).
 
 ---
 
-## Query 2: full_trace.sql
+## Query 2: ti_650_trace_table.sql (was trace_table.sql at validation time)
 
 - **Status: PASS** (18/21 checks pass, 2 soft fail, 1 investigate)
 - **Timestamps: PASS** (with ordering correction)
@@ -76,7 +76,7 @@ Notable: Uber Rides has T1=0 (no S2 VV bridge — all resolution via S1 direct).
 | 3.2 T1 row count | PASS | 129,301 T1 UUIDs → 129,301 S2 bridge rows |
 | 3.3 T2 row count | SOFT FAIL | 96,190 T2 UUIDs → 96,188 S1 rows (2 deleted campaigns) |
 | 3.4 Unresolved count | PASS | 381 unresolved UUIDs |
-| 3.5 Total UUIDs | PASS | 225,872 = SUM(total_s3_vvs) from resolution_check |
+| 3.5 Total UUIDs | PASS | 225,872 = SUM(total_s3_vvs) from resolution_rate |
 | 3.6 Total rows | PASS | 451,361 (expected 451,363 — 2 missing S1 rows) |
 | **Timestamps** | | |
 | 3.7 S3 all-NULL timestamps | PASS | 0 (every resolved S3 row has ≥1 timestamp) |
@@ -93,10 +93,10 @@ Notable: Uber Rides has T1=0 (no S2 VV bridge — all resolution via S1 direct).
 | 3.16 T1 IP match | PASS | 0 mismatches |
 | 3.17 T2 IP match | PASS | 0 mismatches |
 | **Cross-Validation** | | |
-| 3.18 Total UUIDs | PASS | 225,872 = resolution_check total |
+| 3.18 Total UUIDs | PASS | 225,872 = resolution_rate total |
 | 3.19 T1 count | PASS | 129,301 = SUM(t1_s2_vv_bridge) |
-| 3.20 T2 count | PASS | 96,190 = resolution_check (resolved - T1) |
-| 3.21 Unresolved | PASS | 381 = resolution_check unresolved |
+| 3.20 T2 count | PASS | 96,190 = resolution_rate (resolved - T1) |
+| 3.21 Unresolved | PASS | 381 = resolution_rate unresolved |
 
 **Check 3.3 root cause:** 2 T2 UUIDs have S3 rows classified as T2 (s3_s1_match found a match), but the S1 linked row is dropped in the UNION ALL because `campaigns.deleted = TRUE` on the S1 campaign. Not a query bug — data quality edge case. The resolution classification is correct; only the linked row output is affected.
 
@@ -104,7 +104,7 @@ Notable: Uber Rides has T1=0 (no S2 VV bridge — all resolution via S1 direct).
 
 ---
 
-## Query 3: impression_detail.sql
+## Query 3: ti_650_impression_detail.sql
 
 - **Status: PASS** (all checks pass)
 - **Performance:** 2,766 GB processed / 294s wall / 95K slot-sec
@@ -128,11 +128,11 @@ Notable findings:
 
 | Comparison | Result |
 |---|---|
-| resolution_check vs full_trace total VVs | **MATCH** (225,872) |
-| resolution_check vs full_trace T1 counts | **MATCH** (129,301) |
-| resolution_check vs full_trace T2 counts | **MATCH** (96,190) |
-| resolution_check vs full_trace unresolved | **MATCH** (381) |
-| full_trace vs impression_detail IP values | **MATCH** (verified on 15 samples) |
+| resolution_rate vs trace_table total VVs | **MATCH** (225,872) |
+| resolution_rate vs trace_table T1 counts | **MATCH** (129,301) |
+| resolution_rate vs trace_table T2 counts | **MATCH** (96,190) |
+| resolution_rate vs trace_table unresolved | **MATCH** (381) |
+| trace_table vs impression_detail IP values | **MATCH** (verified on 15 samples) |
 
 ---
 
@@ -140,17 +140,17 @@ Notable findings:
 
 | Query | GB Processed | Wall Time | Slot Seconds | Stages |
 |---|---:|---:|---:|---:|
-| resolution_check | 2,942 | 270s | 124K | 63 |
-| full_trace validation | 2,944 | 2,962s | 1,245K | 553 |
+| resolution_rate | 2,942 | 270s | 124K | 63 |
+| trace_table validation | 2,944 | 2,962s | 1,245K | 553 |
 | impression_detail | 2,766 | 294s | 95K | 29 |
 | **Total** | **8,652** | **3,526s** | **1,464K** | |
 
-**full_trace validation note:** The 49-min wall time is inflated because the validation wrapper query duplicated the CTEs multiple times (for the UNION ALL + 2 subquery checks). A normal full_trace run would be ~5-10 min. Additionally, this ran sequentially after resolution_check (no slot contention between them, but the validation wrapper's internal parallelism was expensive).
+**trace_table validation note:** The 49-min wall time is inflated because the validation wrapper query duplicated the CTEs multiple times (for the UNION ALL + 2 subquery checks). A normal trace_table run would be ~5-10 min. Additionally, this ran sequentially after resolution_rate (no slot contention between them, but the validation wrapper's internal parallelism was expensive).
 
 **Comparison to v1 original run:**
 | Metric | v1 (24 adv, 36K VVs) | v2 (20 adv, 226K VVs) | Scale Factor |
 |---|---|---|---|
-| resolution_check | ~4.25 TB, ~5 min | 2.94 TB, ~5 min | 0.69x TB (shorter lookback?) |
+| resolution_rate | ~4.25 TB, ~5 min | 2.94 TB, ~5 min | 0.69x TB (shorter lookback?) |
 | Total VVs | 36,388 | 225,872 | 6.2x |
 | Resolution rate | 99.77% | 99.83% | comparable |
 
@@ -160,7 +160,7 @@ Notable findings:
 
 1. **CTV timestamp ordering in plan:** The validation plan (check 3.8) had the wrong expected CTV time ordering. Correct order is bid≤win≤imp≤event≤vv. Update the plan if re-run.
 
-2. **Deleted campaign edge case:** 2 T2-resolved VVs lose their S1 linked row because the S1 campaign was deleted. The full_trace query could use LEFT JOIN instead of JOIN on the S1/S2 UNION ALL sections to preserve linked rows even when campaigns are deleted. Low priority — affects 2 of 225,872 VVs.
+2. **Deleted campaign edge case:** 2 T2-resolved VVs lose their S1 linked row because the S1 campaign was deleted. The trace_table query could use LEFT JOIN instead of JOIN on the S1/S2 UNION ALL sections to preserve linked rows even when campaigns are deleted. Low priority — affects 2 of 225,872 VVs.
 
 3. **No-IP VVs (Avon):** 2 VVs have clickpass_ip but no pipeline record in any source table. One is CGNAT, one is a regular IP. The ±30d source window may be insufficient for rare edge cases where impression→VV gap exceeds 30d. Consider expanding to ±45d for the source window if this recurs.
 

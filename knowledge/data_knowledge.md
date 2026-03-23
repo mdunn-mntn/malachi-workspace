@@ -816,15 +816,14 @@ IP mutation WITHIN a stage (Stage 3's internal Bid→CIL→EL→Redirect→Visit
 
 Stage 3 VV production audit table: `audit.vv_ip_lineage` (renamed from stage3_vv_ip_lineage)
 - All stages (S1/S2/S3), partitioned by `trace_date`, clustered by `advertiser_id` + `vv_stage`
-- v8 architecture: 7-tier S1 resolution (VV chain → impression chain → visit IP → cp_ft fallback)
-- 180-day event_log lookback (was 30/90 — S3→S1 chains can span 104+ days)
-- s1_imp_pool: earliest S1 impression per bid_ip (ORDER BY time ASC, not DESC — temporal bug fix)
-- **S1 coverage (all campaigns): S1 100%, S2 76.6%, S3 80.3%** (adv 37775, v11, 7-day trace)
-- **S1 coverage (prospecting CTV only): 98.56%** (S2, adv 37775). Primary VV unresolved: 0.34%.
-- Previous "~11% ceiling" was inflated by retargeting campaigns. Zach: retargeting not relevant.
-- Remaining 1.44% = LiveRamp identity graph entries (S1 impression on different CGNAT IP).
-- impression_ip (from ui_visits) differs from bid_ip for 5.3% of S3 VVs. Does NOT rescue new cases — re-attributes from cp_ft fallback.
-- A4b dedup: fixed (dedup bug found and corrected during audit)
+- **v12 architecture (target):** 2-link S1 resolution (`imp_direct`: S1 vast_start_ip = bid_ip; `imp_visit`: S1 vast_start_ip = impression_ip). Replaces v11's 10-tier cascade — all other tiers empirically proven redundant.
+- Stage-based column naming: `s3_*`/`s2_*`/`s1_*` (each stage has 5 IPs + impression_time + guid)
+- 90-day lookback (Zach confirmed max chain = 88 days: 14+30+14+30). Production default 120d for WGU outlier.
+- **S3 resolution (v3, 10 advertisers, bid_ip only): 99.83%** (138,317/138,557 resolved, 44 unresolved)
+- **S3 resolution (v2, 20 advertisers, 5-source): 99.83%** (225,491/225,872 resolved, 381 unresolved)
+- Previous "~11% ceiling" was inflated by retargeting campaigns. Zach: retargeting not relevant. Filter with `objective_id IN (1, 5, 6)`.
+- Remaining unresolved = LiveRamp identity graph entries (S1 impression on different CGNAT IP) — structural, no IP path exists.
+- Full schema reference: `tickets/ti_650_stage_3_vv_audit/artifacts/ti_650_column_reference.md`
 
 ---
 

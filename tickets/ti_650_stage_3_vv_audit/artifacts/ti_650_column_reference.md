@@ -4,7 +4,7 @@
 **Rows:** One per verified visit (VV), all advertisers, all stages
 **Partitioned by:** `trace_date` | **Clustered by:** `advertiser_id`, `vv_stage`
 
-> **v12 update (2026-03-11):** Cross-stage S1 resolution simplified from 10-tier CASE to 2 LEFT JOINs (`imp_direct` + `imp_visit`). All other tiers empirically proven redundant. Column layout unchanged from v10.1. See `s1_resolution_method` in Section 5.
+> **v12 update (2026-03-11):** Cross-stage S1 resolution simplified from v11's 10-tier CASE to 2 LEFT JOINs (`imp_direct` + `imp_visit`). All other tiers empirically proven redundant. Column layout unchanged from v11. See `s1_resolution_method` in Section 5.
 
 Columns are ordered **left-to-right to trace backward from VV to S1**. For a S3 VV, read left to right: VV identity → visit IPs → S3 impression → S2 impression → S1 impression.
 
