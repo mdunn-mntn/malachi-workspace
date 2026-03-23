@@ -1,0 +1,122 @@
+[
+  {
+    "advertiser_id": "34835",
+    "advertiser_name": "LongHorn Steakhouse",
+    "has_bid_ip": "36335",
+    "matched_to_s1": "6094",
+    "matched_to_s2": "30241",
+    "no_bid_ip": "48",
+    "resolved": "36335",
+    "resolved_pct": "99.87",
+    "total_s3_vvs": "36383",
+    "unresolved": "0"
+  },
+  {
+    "advertiser_id": "37775",
+    "advertiser_name": "Zazzle",
+    "has_bid_ip": "30356",
+    "matched_to_s1": "14826",
+    "matched_to_s2": "15519",
+    "no_bid_ip": "30",
+    "resolved": "30345",
+    "resolved_pct": "99.87",
+    "total_s3_vvs": "30386",
+    "unresolved": "11"
+  },
+  {
+    "advertiser_id": "42097",
+    "advertiser_name": "Gruns",
+    "has_bid_ip": "22967",
+    "matched_to_s1": "5056",
+    "matched_to_s2": "17903",
+    "no_bid_ip": "56",
+    "resolved": "22959",
+    "resolved_pct": "99.72",
+    "total_s3_vvs": "23023",
+    "unresolved": "8"
+  },
+  {
+    "advertiser_id": "37056",
+    "advertiser_name": "FICO",
+    "has_bid_ip": "14910",
+    "matched_to_s1": "11352",
+    "matched_to_s2": "3551",
+    "no_bid_ip": "8",
+    "resolved": "14903",
+    "resolved_pct": "99.9",
+    "total_s3_vvs": "14918",
+    "unresolved": "7"
+  },
+  {
+    "advertiser_id": "48866",
+    "advertiser_name": "Uber Rides",
+    "has_bid_ip": "11354",
+    "matched_to_s1": "11338",
+    "matched_to_s2": "0",
+    "no_bid_ip": "5",
+    "resolved": "11338",
+    "resolved_pct": "99.82",
+    "total_s3_vvs": "11359",
+    "unresolved": "16"
+  },
+  {
+    "advertiser_id": "41057",
+    "advertiser_name": "Brooklinen",
+    "has_bid_ip": "10852",
+    "matched_to_s1": "1867",
+    "matched_to_s2": "8983",
+    "no_bid_ip": "24",
+    "resolved": "10850",
+    "resolved_pct": "99.76",
+    "total_s3_vvs": "10876",
+    "unresolved": "2"
+  },
+  {
+    "advertiser_id": "34838",
+    "advertiser_name": "Clayton Homes",
+    "has_bid_ip": "4699",
+    "matched_to_s1": "1170",
+    "matched_to_s2": "3529",
+    "no_bid_ip": "10",
+    "resolved": "4699",
+    "resolved_pct": "99.79",
+    "total_s3_vvs": "4709",
+    "unresolved": "0"
+  },
+  {
+    "advertiser_id": "31297",
+    "advertiser_name": "Mountain Mike's Pizza",
+    "has_bid_ip": "2885",
+    "matched_to_s1": "613",
+    "matched_to_s2": "2272",
+    "no_bid_ip": "13",
+    "resolved": "2885",
+    "resolved_pct": "99.55",
+    "total_s3_vvs": "2898",
+    "unresolved": "0"
+  },
+  {
+    "advertiser_id": "34468",
+    "advertiser_name": "Suncoast Credit Union",
+    "has_bid_ip": "2823",
+    "matched_to_s1": "1288",
+    "matched_to_s2": "1535",
+    "no_bid_ip": "2",
+    "resolved": "2823",
+    "resolved_pct": "99.93",
+    "total_s3_vvs": "2825",
+    "unresolved": "0"
+  },
+  {
+    "advertiser_id": "44714",
+    "advertiser_name": "EPB",
+    "has_bid_ip": "1180",
+    "matched_to_s1": "357",
+    "matched_to_s2": "823",
+    "no_bid_ip": "0",
+    "resolved": "1180",
+    "resolved_pct": "100.0",
+    "total_s3_vvs": "1180",
+    "unresolved": "0"
+  }
+]
