@@ -21,9 +21,10 @@ We're auditing S3 (Stage 3 / Full Funnel) Verified Visits. Every S3 VV should be
 | Classification | Chain status | What broke | Can we investigate? |
 |---|---|---|---|
 | **RESOLVED** | Complete | Nothing — traced successfully | N/A |
-| **NO_BID_IP** | Breaks at step 2-3 | `bid_logs` record purged (TTL). We have `impression_log` but it only has internal NAT IP (10.105.x.x). Can't get the external bid_ip. | **No** — dead end, data is gone |
-| **RESOLVED_EXTENDED** | Complete | Nothing — but the prior VV was found beyond our 365-day lookback. Our window was too short. | N/A — it resolved |
-| **TRULY_UNRESOLVED** | Complete through step 3 | We have bid_ip, but step 4 finds no prior VV in clickpass_log matching that IP + campaign_group, even scanning all time | **Yes** — give to Zach |
+| **NO_BID_IP** | Breaks at step 2-3 | `bid_logs` record purged (TTL). `impression_log` exists but IP is internal NAT (10.105.x.x). Can't get external bid_ip. | **No** — dead end, data is gone |
+| **RESOLVED_EXTENDED** | Complete | Prior VV found beyond 365-day lookback. Window was too short. | N/A — it resolved |
+| **LOOKBACK_TOO_SHORT** | Complete through step 3 | bid_ip exists, no prior VV found, but campaign existed >365d — lookback may not have reached far enough | Not a bug — increase lookback |
+| **GENUINELY_UNRESOLVED** | Complete through step 3 | bid_ip exists, no prior VV found, campaign <365d old — impossible to be a lookback issue | **Yes** — give to Zach |
 
 ---
 

@@ -48,11 +48,12 @@ Full report: `outputs/validation_run/00_summary.md`
 
 - **No bid_ip** (60 of 146,900 in v4): bid_logs 90-day TTL expired — `ad_served_id → impression_log → bid_logs` chain broken. Without bid_ip, can't search for prior VV.
 - **Resolved extended** (13): prior VV found beyond 365-day lookback window but within all-time clickpass_log scan (0–370 days back).
-- **Truly unresolved** (4, refined to 2):
-  - 2 likely lookback-window issues — campaign_group existed >365d (Ferguson 85144: 396d, Zazzle 78903: 518d)
-  - **2 genuinely unresolved** — campaign <100d old, bid_ip has no prior VV match in clickpass_log all-time:
-    - Ferguson Home (106777): bid_ip 174.202.4.80, campaign 95d old
-    - FICO (107447): bid_ip 172.56.154.242 (T-Mobile CGNAT), campaign 80d old
+- **Lookback too short** (2): bid_ip exists, no match found, but campaign_group existed >365d — lookback insufficient, not a bug:
+  - Ferguson Home (85144): 396d since S1 campaign created
+  - Zazzle (78903): 518d since S1 campaign created
+- **Genuinely unresolved** (2): bid_ip exists, no match found, campaign <100d old — these are the real mysteries:
+  - Ferguson Home (106777): bid_ip 174.202.4.80, campaign 95d old
+  - FICO (107447): bid_ip 172.56.154.242 (T-Mobile CGNAT), campaign 80d old
 
 ---
 
