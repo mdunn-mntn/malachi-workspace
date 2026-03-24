@@ -44,6 +44,12 @@
 
 ---
 
+## Google Sheets data
+
+`outputs/validation_run/06_truly_unresolved_for_zach.csv` — 2 rows with all pipeline IPs, timestamps, campaign metadata, S1 campaign creation date. Paste directly into Sheets.
+
+---
+
 ## Query to reproduce
 
 `queries/validation_run/05_unresolved_s3.sql` — runs the full resolution logic and then does an all-time clickpass_log scan for these VVs. The two genuinely unresolved are classified as `TRULY_UNRESOLVED` in the output.
