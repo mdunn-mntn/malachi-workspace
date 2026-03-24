@@ -300,6 +300,7 @@ traffic handling. IPs from iCloud relay require special treatment for geo-target
 | silver.logdata.clickpass_log | **No TTL** — confirmed 2026-03-03 (expirationTime: none, no partition expiry) |
 | silver.logdata.event_log | **No TTL** — confirmed 2026-03-03 (expirationTime: none, no partition expiry) |
 | bidder_bid_events | 90 days (expirationMs on partition) |
+| bid_logs (silver.logdata) | **TTL confirmed empirically (TI-650, 2026-03-23):** 10/10 tested ad_served_ids had impression_log records but bid_logs records gone (no time filter). impression_log.ip for display is internal NAT (10.105.x.x) — useless without bid_logs join. |
 | bid_logs_enriched | 90 days |
 | event_log_filtered | 60 days |
 | conversions | 60 days |

@@ -239,25 +239,28 @@ vast_start_ip = NULL, vast_impression_ip = NULL, viewability_ip = NULL
 | `queries/validation_run/03_trace_table.sql` | Full trace table |
 | `queries/validation_run/04_validation.sql` | 10 integrity checks |
 | `queries/validation_run/05_unresolved_s3.sql` | All-time unresolved investigation |
+| `queries/validation_run/06_truly_unresolved_detail.sql` | Full detail for specific VVs (Zach sheet) |
 
 ### Active Outputs
 
 | File | Description |
 |------|-------------|
-| `outputs/validation_run/00_summary.md` | **v4 validation run summary + runbook** (2026-03-23) |
+| `outputs/validation_run/00_summary.md` | **v4 validation run summary + runbook + Zach questions** (2026-03-23) |
 | `outputs/validation_run/01_discovery.json` | 10 selected advertisers |
 | `outputs/validation_run/02_resolution_rate.json` | Per-advertiser resolution rates |
 | `outputs/validation_run/03_trace_table_sample.json` | Sample rows from trace table (5 rows) |
 | `outputs/validation_run/04_validation.json` | Validation check results (all 10 PASS) |
 | `outputs/validation_run/05_unresolved_s3.json` | 77 unresolved VV diagnostics |
+| `outputs/validation_run/06_truly_unresolved_for_zach.csv` | Genuinely unresolved + NO_BID_IP examples for Zach |
 | `outputs/ti_650_v2_validation_findings.md` | v2 validation — 20 advertisers, 225,872 VVs, 36 checks, 99.83% |
 | `outputs/ti_650_v3_resolution_rate_10adv.json` | v3 per-advertiser resolution (10 advertisers, 138,557 VVs, 99.83%) |
 
-### Active Artifacts (4 + 2 PDFs)
+### Active Artifacts (5 + 2 PDFs)
 
 | File | Description |
 |------|-------------|
 | `artifacts/ti_650_column_reference.md` | v12 column schema reference (source of truth) |
+| `artifacts/ti_650_validation_run_guide.md` | **Complete guide** — every file explained, decision tree, classifications |
 | `artifacts/ti_650_pipeline_explained.md` | Plain-English pipeline guide (v12, stages, VVS logic) |
 | `artifacts/ti_650_zach_ray_comments.txt` | Stakeholder Slack transcripts (Zach, Ray, Sharad) |
 | `artifacts/ti_650_vv_trace_flowchart.pdf` | Visual flowchart of trace paths |

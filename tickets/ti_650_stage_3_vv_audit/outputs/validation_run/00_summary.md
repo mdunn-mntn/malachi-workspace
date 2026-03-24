@@ -155,6 +155,27 @@ All 10 checks **PASSED**:
 
 The 2 genuinely unresolved VVs (Ferguson 106777, FICO 107447) should be reviewed with Zach. No systematic data bugs found. The IP path traces correctly for effectively all S3 VVs.
 
+### Genuinely unresolved detail
+
+**Ferguson Home — campaign_group 106777:**
+`ad_served_id: 8ae132b0-8566-406b-aaf3-e3a0b73423e6` | bid_ip: 174.202.4.80 | Viewable Display
+S1 campaign created 2025-12-18 (95d before VV). Searched clickpass_log all-time — no prior S1/S2 VV with this IP in this campaign_group.
+
+**FICO — campaign_group 107447:**
+`ad_served_id: e87853c7-6e1c-4313-982b-6507cc2c539b` | bid_ip: 172.56.154.242 (T-Mobile CGNAT) | CTV
+S1 campaign created 2026-01-02 (76d before VV). Same — no prior VV found. CGNAT IP rotation may explain this.
+
+Full pipeline detail for both + NO_BID_IP examples: `outputs/validation_run/06_truly_unresolved_for_zach.csv`
+
+### Questions for Zach
+
+1. **VV without prior site visit?** Ferguson's bid_ip was in the S3 targeting segment but has no prior VV in clickpass_log. Could an IP have an S1 VAST impression that never resulted in a site visit?
+2. **CGNAT IP rotation?** FICO's bid_ip is T-Mobile CGNAT (172.56.x). Could the IP have rotated between the S1 impression and the S3 bid?
+3. **bid_logs retention?** We confirmed bid_logs records are purged (tested 10 ad_served_ids — impression_log exists, bid_logs gone). What is the actual Beeswax retention policy?
+4. **Alternative path to bid_ip?** Since bid_logs purges, is there another table with the external IP for a given auction_id?
+5. **Non-VV targeting path?** Is there any path into the S3 segment that doesn't go through a prior site visit (e.g., direct segment upload, CRM match)?
+6. **Campaign creation date as max lookback?** Can an impression exist before the campaign's `create_time`?
+
 ---
 
 ## Runbook — How to Run a Validation
@@ -190,7 +211,9 @@ The 2 genuinely unresolved VVs (Ferguson 106777, FICO 107447) should be reviewed
 **For Zach:** Share the TRULY_UNRESOLVED rows — ad_served_id, bid_ip, campaign_group, campaign name.
 
 ### 6. Deep dive truly unresolved — only if Step 5 has TRULY_UNRESOLVED
-**No separate query yet** — Step 5 output has the detail. Additionally check campaign creation dates to determine if lookback was sufficient.
+**Query:** `queries/validation_run/06_truly_unresolved_detail.sql`
+**Why:** Full pipeline dump for specific ad_served_ids with campaign creation dates and attribution model. Produces CSV for Google Sheets / Zach.
+**Output:** `outputs/validation_run/06_truly_unresolved_for_zach.csv`
 
 ### Conditional steps (not needed this run)
 - **Step 4a:** S2→S1 event investigation — only if Step 4 check 4.4 fails
@@ -207,10 +230,13 @@ The 2 genuinely unresolved VVs (Ferguson 106777, FICO 107447) should be reviewed
 | `queries/validation_run/03_trace_table.sql` | Full trace table (main deliverable) |
 | `queries/validation_run/04_validation.sql` | Validation checks |
 | `queries/validation_run/05_unresolved_s3.sql` | Unresolved investigation |
+| `queries/validation_run/06_truly_unresolved_detail.sql` | Full detail for specific VVs (Zach sheet) |
 | `outputs/validation_run/01_discovery.json` | 10 selected advertisers |
 | `outputs/validation_run/02_resolution_rate.json` | Resolution rates |
+| `outputs/validation_run/03_trace_table_sample.json` | 5-row sample of trace table |
 | `outputs/validation_run/04_validation.json` | Validation check results |
 | `outputs/validation_run/05_unresolved_s3.json` | 77 unresolved VV diagnostics |
+| `outputs/validation_run/06_truly_unresolved_for_zach.csv` | Genuinely unresolved + NO_BID_IP examples for Zach |
 
 ## Relationship to Original Queries
 
