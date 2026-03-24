@@ -85,19 +85,22 @@ Six active queries in `queries/`. All v3 (bid_ip only, no COALESCE). Parameters 
 
 ### ti_650_trace_table.sql
 
-**Purpose:** The main deliverable. UUID-linked rows showing full S3 VV traces with cross-stage matching. **Cost:** ~3-4 TB.
-**Parameters:** ADVERTISER_IDS (5 places), AUDIT_WINDOW, LOOKBACK_START (365d), SOURCE_WINDOW (±30d)
+**Purpose:** The main deliverable. One row per VV with full 7-IP trace from clickpass back to bid_ip, plus cross-stage linking. **Cost:** ~3-5 TB.
+**Parameters:** ADVERTISER_IDS (multiple places), AUDIT_WINDOW, LOOKBACK_START (365d), SOURCE_WINDOW (±30d)
 
-**Row-per-stage design:** Each S3 VV gets a deterministic UUID (`MD5(ad_served_id)`). The trace produces 1-2 rows linked by that UUID:
+**One-row-per-VV design:** Each VV gets a deterministic `trace_uuid` (`MD5(ad_served_id)`). The row contains:
 
-| Resolution | Rows | Stage roles |
-|------------|------|-------------|
-| T1 (S3→S2 VV) | 2 | S3 `origin_vv` + S2 `s2_bridge_vv` |
-| T2 (S3→S1 VV) | 2 | S3 `origin_vv` + S1 `s1_direct_vv` |
-| Unresolved | 1 | S3 `origin_vv` only |
+| Section | Columns | Description |
+|---------|---------|-------------|
+| Identity | trace_uuid, ad_served_id, campaign info, advertiser info, impression_type | Who/what/when |
+| VV details | clickpass_ip/time, guid, is_new, is_cross_device | The site visit |
+| This VV's trace (7 IPs) | vast_start_ip, vast_impression_ip, viewability_ip, impression_ip, win_ip, bid_ip (+ times) | Full trace from clickpass back to bid. No tables skipped. |
+| Prior VV (S3 only) | prior_vv_ad_served_id, prior_vv_funnel_level, prior_vv_clickpass_ip, prior_vv_time | The S2/S1 VV that matched bid_ip |
+| Prior VV's trace (S3 only) | prior_vv_vast_start_ip, ..., prior_vv_bid_ip (+ times) | Prior VV's full 7-IP trace |
+| S1 event (S2 + S3-with-S2) | s1_event_ad_served_id, s1_event_vast_start_ip, s1_event_time | S2 bid_ip → S1 event_log match |
+| Resolution | resolution_status, resolution_method | resolved / unresolved / no_bid_ip |
 
-S3 rows have full pipeline IPs with timestamps + impression type classification.
-S2/S1 linked rows have clickpass details + channel only (use `ti_650_impression_detail.sql` to drill into specific linked VVs).
+Full schema: `artifacts/ti_650_column_reference.md`
 
 ### ti_650_sqlmesh_model.sql
 
@@ -107,46 +110,48 @@ S2/S1 linked rows have clickpass details + channel only (use `ti_650_impression_
 
 ## 3. Cross-Stage Resolution Logic
 
-**bid_ip only (v3).** No COALESCE, no 5-source IP fallback chain. `bid_ip` is THE targeting identity — the IP that entered the targeting segment via `tmul_daily`.
+**bid_ip only.** No COALESCE, no fallback chain. `bid_ip` is THE targeting identity — the IP that entered the targeting segment. Every IP comes from its actual source table (`bid_logs.ip`, not a stored proxy).
 
 **S1 — within-stage (deterministic):** `ad_served_id` joins clickpass_log directly to the impression. No IP matching needed.
 
-**S3→S2 (T1, preferred):** S3 VV's `bid_ip` (via `ad_served_id` → `impression_log.ttd_impression_id` → `bid_logs.auction_id`) matched against prior S2 VV `clickpass_ip`, same `campaign_group_id`, prior in time.
+**S2→S1 (event-based):** S2 VV's `bid_ip` matched against S1 `event_log.ip` (vast_start preferred). To get into S2, you must have had a VAST impression from S1 — this MUST resolve.
 
-**S3→S1 (T2, fallback):** Same as T1, but matched against prior S1 VV `clickpass_ip` when no S2 match exists.
+**S3→S2 (preferred):** S3 VV's `bid_ip` matched against prior S2 VV `clickpass_ip`, same `campaign_group_id`, prior in time. Then S2's `bid_ip` → S1 event_log to complete the chain.
 
-**Resolution rate consistency:** 99.83% across both v2 (225,872 VVs, 20 advertisers) and v3 (138,557 VVs, 10 advertisers).
+**S3→S1 (fallback):** When no S2 VV match exists, S3 VV's `bid_ip` matched against prior S1 VV `clickpass_ip`.
+
+**100% resolution should be achievable** with sufficient lookback. Unresolved = lookback too short, table TTL truncation, or data bug. Current rate: 99.83% with 365-day lookback (v3: 138,557 VVs, 10 advertisers).
 
 ---
 
 ## 4. Trace Paths by Impression Type
 
-The `impression_type` column tells you which IP columns are populated. NULL IP columns are expected — they indicate the type, not missing data.
+The `impression_type` column tells you which IP columns are populated. NULL IP columns indicate the impression type, not missing data. Every IP comes from its actual source table — no tables skipped, no proxy columns.
 
 **CTV** (trace-back: VV → bid):
 ```
-clickpass_ip → event_log_ip → win_ip → impression_ip → bid_ip
+clickpass_ip → vast_start_ip → vast_impression_ip → win_ip → impression_ip → bid_ip
 viewability_ip = NULL (CTV has no viewability events)
 ```
 
 **Viewable Display** (trace-back: VV → bid):
 ```
-clickpass_ip → viewability_ip → win_ip → bid_ip
-event_log_ip = NULL (display has no VAST events)
-Note: for display, impression_log comes AFTER win_logs (opposite of CTV)
+clickpass_ip → viewability_ip → impression_ip → win_ip → bid_ip
+vast_start_ip = NULL, vast_impression_ip = NULL (display has no VAST events)
+Note: for display, impression_log comes BEFORE win_logs in the pipeline (opposite of CTV)
 ```
 
 **Non-Viewable Display** (trace-back: VV → bid):
 ```
 clickpass_ip → impression_ip → win_ip → bid_ip
-event_log_ip = NULL, viewability_ip = NULL
+vast_start_ip = NULL, vast_impression_ip = NULL, viewability_ip = NULL
 ```
 
 | Condition | Type |
 |-----------|------|
-| `event_log_ip IS NOT NULL` | CTV |
-| `viewability_ip IS NOT NULL` (event_log NULL) | Viewable Display |
-| `impression_ip IS NOT NULL` (both above NULL) | Non-Viewable Display |
+| `vast_start_ip IS NOT NULL` | CTV |
+| `viewability_ip IS NOT NULL` (vast columns NULL) | Viewable Display |
+| `impression_ip IS NOT NULL` (vast + viewability NULL) | Non-Viewable Display |
 
 ---
 
