@@ -35,7 +35,8 @@ WITH anchor_vvs AS (
 ip_vast_start AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS vast_start_ip,
-           time AS vast_start_time
+           time AS vast_start_time,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS vast_start_bid_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_start'
       AND time >= TIMESTAMP('2026-02-14') AND time < TIMESTAMP('2026-04-22')
@@ -48,7 +49,8 @@ ip_vast_start AS (
 ip_vast_impression AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS vast_impression_ip,
-           time AS vast_impression_time
+           time AS vast_impression_time,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS vast_impression_bid_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_impression'
       AND time >= TIMESTAMP('2026-02-14') AND time < TIMESTAMP('2026-04-22')
@@ -61,7 +63,8 @@ ip_vast_impression AS (
 ip_viewability AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS viewability_ip,
-           time AS viewability_time
+           time AS viewability_time,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS viewability_bid_ip
     FROM `dw-main-silver.logdata.viewability_log`
     WHERE time >= TIMESTAMP('2026-02-14') AND time < TIMESTAMP('2026-04-22')
       AND advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
@@ -74,7 +77,8 @@ ip_impression AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip,
            time AS impression_time,
-           ttd_impression_id
+           ttd_impression_id,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS impression_bid_ip
     FROM `dw-main-silver.logdata.impression_log`
     WHERE time >= TIMESTAMP('2026-02-14') AND time < TIMESTAMP('2026-04-22')
       AND advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
@@ -93,14 +97,42 @@ ip_win AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
 ),
 
-ip_bid AS (
+-- bid_ip from bid_logs (primary source, may be purged by TTL)
+ip_bid_direct AS (
     SELECT il.ad_served_id,
-           NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip,
+           NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip_direct,
            b.time AS bid_time
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
     WHERE b.time >= TIMESTAMP('2026-02-14') AND b.time < TIMESTAMP('2026-04-22')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+-- bid_ip COALESCE: bid_logs (primary) → impression_log → event_log → viewability_log (fallbacks)
+ip_bid AS (
+    SELECT
+        imp.ad_served_id,
+        COALESCE(
+            bd.bid_ip_direct,
+            imp.impression_bid_ip,
+            vs.vast_start_bid_ip,
+            vi.vast_impression_bid_ip,
+            vw.viewability_bid_ip
+        ) AS bid_ip,
+        bd.bid_time,
+        CASE
+            WHEN bd.bid_ip_direct IS NOT NULL THEN 'bid_logs'
+            WHEN imp.impression_bid_ip IS NOT NULL THEN 'impression_log.bid_ip'
+            WHEN vs.vast_start_bid_ip IS NOT NULL THEN 'event_log.bid_ip(vast_start)'
+            WHEN vi.vast_impression_bid_ip IS NOT NULL THEN 'event_log.bid_ip(vast_impression)'
+            WHEN vw.viewability_bid_ip IS NOT NULL THEN 'viewability_log.bid_ip'
+            ELSE NULL
+        END AS bid_ip_source
+    FROM ip_impression imp
+    LEFT JOIN ip_bid_direct bd ON bd.ad_served_id = imp.ad_served_id
+    LEFT JOIN ip_vast_start vs ON vs.ad_served_id = imp.ad_served_id
+    LEFT JOIN ip_vast_impression vi ON vi.ad_served_id = imp.ad_served_id
+    LEFT JOIN ip_viewability vw ON vw.ad_served_id = imp.ad_served_id
 ),
 
 -- Prior VV pool for cross-stage matching (S3 VVs)
@@ -176,7 +208,8 @@ prior_vv_matched AS (
 pv_ip_vast_start AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS prior_vv_vast_start_ip,
-           time AS prior_vv_vast_start_time
+           time AS prior_vv_vast_start_time,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS pv_vast_start_bid_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_start'
       AND time >= TIMESTAMP('2025-03-16') AND time < TIMESTAMP('2026-04-22')
@@ -188,7 +221,8 @@ pv_ip_vast_start AS (
 pv_ip_vast_impression AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS prior_vv_vast_impression_ip,
-           time AS prior_vv_vast_impression_time
+           time AS prior_vv_vast_impression_time,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS pv_vast_impression_bid_ip
     FROM `dw-main-silver.logdata.event_log`
     WHERE event_type_raw = 'vast_impression'
       AND time >= TIMESTAMP('2025-03-16') AND time < TIMESTAMP('2026-04-22')
@@ -200,7 +234,8 @@ pv_ip_vast_impression AS (
 pv_ip_viewability AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS prior_vv_viewability_ip,
-           time AS prior_vv_viewability_time
+           time AS prior_vv_viewability_time,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS pv_viewability_bid_ip
     FROM `dw-main-silver.logdata.viewability_log`
     WHERE time >= TIMESTAMP('2025-03-16') AND time < TIMESTAMP('2026-04-22')
       AND ad_served_id IN (SELECT prior_vv_ad_served_id FROM prior_vv_matched)
@@ -212,7 +247,8 @@ pv_ip_impression AS (
     SELECT ad_served_id,
            SPLIT(ip, '/')[SAFE_OFFSET(0)] AS prior_vv_impression_ip,
            time AS prior_vv_impression_time,
-           ttd_impression_id
+           ttd_impression_id,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS pv_impression_bid_ip
     FROM `dw-main-silver.logdata.impression_log`
     WHERE time >= TIMESTAMP('2025-03-16') AND time < TIMESTAMP('2026-04-22')
       AND ad_served_id IN (SELECT prior_vv_ad_served_id FROM prior_vv_matched)
@@ -230,14 +266,33 @@ pv_ip_win AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
 ),
 
-pv_ip_bid AS (
+-- Prior VV bid_ip: bid_logs (primary) → COALESCE from pipeline tables
+pv_ip_bid_direct AS (
     SELECT il.ad_served_id,
-           NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS prior_vv_bid_ip,
+           NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS pv_bid_ip_direct,
            b.time AS prior_vv_bid_time
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN pv_ip_impression il ON b.auction_id = il.ttd_impression_id
     WHERE b.time >= TIMESTAMP('2025-03-16') AND b.time < TIMESTAMP('2026-04-22')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+pv_ip_bid AS (
+    SELECT
+        pvimp.ad_served_id,
+        COALESCE(
+            pvbd.pv_bid_ip_direct,
+            pvimp.pv_impression_bid_ip,
+            pvvs.pv_vast_start_bid_ip,
+            pvvi.pv_vast_impression_bid_ip,
+            pvvw.pv_viewability_bid_ip
+        ) AS prior_vv_bid_ip,
+        pvbd.prior_vv_bid_time
+    FROM pv_ip_impression pvimp
+    LEFT JOIN pv_ip_bid_direct pvbd ON pvbd.ad_served_id = pvimp.ad_served_id
+    LEFT JOIN pv_ip_vast_start pvvs ON pvvs.ad_served_id = pvimp.ad_served_id
+    LEFT JOIN pv_ip_vast_impression pvvi ON pvvi.ad_served_id = pvimp.ad_served_id
+    LEFT JOIN pv_ip_viewability pvvw ON pvvw.ad_served_id = pvimp.ad_served_id
 ),
 
 -- S1 event resolution (S2 bid_ip → S1 event_log.ip)
@@ -310,6 +365,7 @@ SELECT
     imp.impression_ip,          imp.impression_time,
     w.win_ip,                   w.win_time,
     b.bid_ip,                   b.bid_time,
+    b.bid_ip_source,
 
     -- 4. Cross-Stage: Prior VV (S3 only)
     pvm.prior_vv_ad_served_id,
