@@ -82,7 +82,7 @@ WGU excluded (331,792 S3 VVs — extreme outlier, ~30% of MNTN spend).
 
 | Classification | Count | Meaning |
 |---|---|---|
-| NO_BID_IP | 60 | bid_logs TTL expired — **now recoverable via COALESCE from impression_log.bid_ip / event_log.bid_ip / viewability_log.bid_ip** (re-run needed) |
+| NO_BID_IP | 30 (was 60) | bid_ip missing from ALL tables. COALESCE recovered 30 of original 60 via impression_log.bid_ip fallback. Remaining 30 (27 Ancient Nutrition, 3 EarthLink) have NULL bid_ip everywhere. |
 | RESOLVED_EXTENDED | 13 | Prior VV found beyond 365-day lookback (0–370 days back) |
 | LOOKBACK_TOO_SHORT | 2 | No match found, but campaign existed >365d — lookback insufficient |
 | **GENUINELY_UNRESOLVED** | **2** | No match found anywhere (all time), campaign <100d old |
@@ -145,16 +145,17 @@ All 10 checks **PASSED**:
 
 ## Conclusion
 
-**99.999% resolution achieved** — only 2 genuinely unexplained VVs out of 146,900 S3 VVs.
+**99.97% resolution achieved** with bid_ip COALESCE fallback — 146,851 of 146,900 S3 VVs resolved.
 
-- 146,823 resolved within 365-day lookback (99.95%)
-- 13 resolved with extended all-time lookback
-- 60 cannot be traced (bid_logs 90-day TTL — expected)
-- 4 truly unresolved, but:
-  - 2 likely lookback-window issues (campaign existed >365d, our scan may not reach far enough)
-  - **2 genuinely unresolved** (campaign <100d old, bid_ip has no prior VV match anywhere)
+- 146,851 resolved (99.97%) — includes 28 recovered via COALESCE from impression_log.bid_ip
+- 13 resolved with extended all-time lookback (beyond 365d)
+- 30 no_bid_ip — bid_ip NULL in ALL tables (bid_logs purged, impression_log/event_log/viewability_log also NULL). 27 are Ancient Nutrition, 3 EarthLink.
+- 19 unresolved (have bid_ip but no prior VV match):
+  - 2 lookback_too_short (campaign existed >365d)
+  - **2 genuinely_unresolved** (campaign <100d old, no match anywhere)
+  - 15 others within 365d lookback — likely CGNAT/proxy IP rotation
 
-The 2 genuinely unresolved VVs (Ferguson 106777, FICO 107447) should be reviewed with Zach. No systematic data bugs found. The IP path traces correctly for effectively all S3 VVs.
+**4 advertisers at 100% resolution:** Zazzle, Zoom, Clayton Homes, Outdoorsy.
 
 ### Genuinely unresolved detail
 

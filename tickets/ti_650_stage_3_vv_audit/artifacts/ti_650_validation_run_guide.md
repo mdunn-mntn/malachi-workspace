@@ -21,7 +21,7 @@ We're auditing S3 (Stage 3 / Full Funnel) Verified Visits. Every S3 VV should be
 | Classification | Chain status | What broke | Can we investigate? |
 |---|---|---|---|
 | **RESOLVED** | Complete | Nothing — traced successfully | N/A |
-| **NO_BID_IP** | Breaks at step 2-3 | `bid_logs` record purged (TTL). **UPDATE:** queries now COALESCE from `impression_log.bid_ip`, `event_log.bid_ip`, `viewability_log.bid_ip` as fallback. Most of these 60 should now resolve. | **Re-run needed** to confirm |
+| **NO_BID_IP** | Breaks at step 2-3 | `bid_logs` purged AND `impression_log.bid_ip` / `event_log.bid_ip` / `viewability_log.bid_ip` all NULL. COALESCE recovered 30 of original 60. Remaining 30 have no bid_ip in any table. | **No** — dead end |
 | **RESOLVED_EXTENDED** | Complete | Prior VV found beyond 365-day lookback. Window was too short. | N/A — it resolved |
 | **LOOKBACK_TOO_SHORT** | Complete through step 3 | bid_ip exists, no prior VV found, but campaign existed >365d — lookback may not have reached far enough | Not a bug — increase lookback |
 | **GENUINELY_UNRESOLVED** | Complete through step 3 | bid_ip exists, no prior VV found, campaign <365d old — impossible to be a lookback issue | **Yes** — give to Zach |

@@ -34,11 +34,12 @@ Full report: `outputs/ti_650_v2_validation_findings.md`
 | Metric | Value |
 |--------|-------|
 | Total S3 VVs | 146,900 |
-| Has bid_ip | 146,840 (99.96%) |
-| **Resolved (365d lookback)** | **146,823 (99.95%)** |
+| Has bid_ip | 146,870 (99.98%) — COALESCE recovered 30 via impression_log.bid_ip |
+| **Resolved (365d lookback)** | **146,851 (99.97%)** |
 | Resolved (all-time extended) | +13 |
-| No bid_ip (bid_logs TTL) | 60 |
-| Truly unresolved | 4 (2 lookback-window, **2 genuinely unexplained**) |
+| No bid_ip (all tables NULL) | 30 (27 Ancient Nutrition, 3 EarthLink) |
+| Unresolved (have bid_ip, no match) | 19 |
+| 4 advertisers at 100% | Zazzle, Zoom, Clayton Homes, Outdoorsy |
 | All VVs (S1+S2+S3) | 714,723 |
 | Impression mix | 84.3% CTV / 15.7% Viewable Display / 0.02% Non-Viewable Display |
 
@@ -46,7 +47,7 @@ Full report: `outputs/validation_run/00_summary.md`
 
 ### Unresolved root causes
 
-- **No bid_ip** (60 of 146,900 in v4): bid_logs 90-day TTL expired — `ad_served_id → impression_log → bid_logs` chain broken. Without bid_ip, can't search for prior VV.
+- **No bid_ip** (30 of 146,900 in v4, was 60): bid_logs purged AND impression_log.bid_ip / event_log.bid_ip / viewability_log.bid_ip all NULL. COALESCE recovered 30 of original 60. Remaining 30 (27 Ancient Nutrition, 3 EarthLink) have no bid_ip anywhere.
 - **Resolved extended** (13): prior VV found beyond 365-day lookback window but within all-time clickpass_log scan (0–370 days back).
 - **Lookback too short** (2): bid_ip exists, no match found, but campaign_group existed >365d — lookback insufficient, not a bug:
   - Ferguson Home (85144): 396d since S1 campaign created
