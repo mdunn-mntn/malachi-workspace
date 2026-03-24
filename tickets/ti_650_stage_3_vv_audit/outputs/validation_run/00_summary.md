@@ -82,7 +82,7 @@ WGU excluded (331,792 S3 VVs — extreme outlier, ~30% of MNTN spend).
 
 | Classification | Count | Meaning |
 |---|---|---|
-| NO_BID_IP | 60 | bid_logs TTL expired — cannot extract bid_ip |
+| NO_BID_IP | 60 | bid_logs TTL expired — **now recoverable via COALESCE from impression_log.bid_ip / event_log.bid_ip / viewability_log.bid_ip** (re-run needed) |
 | RESOLVED_EXTENDED | 13 | Prior VV found beyond 365-day lookback (0–370 days back) |
 | LOOKBACK_TOO_SHORT | 2 | No match found, but campaign existed >365d — lookback insufficient |
 | **GENUINELY_UNRESOLVED** | **2** | No match found anywhere (all time), campaign <100d old |

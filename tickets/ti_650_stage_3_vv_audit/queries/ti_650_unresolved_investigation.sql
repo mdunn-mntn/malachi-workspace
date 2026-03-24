@@ -42,11 +42,12 @@ s3_vvs AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 
--- Get bid_ip for each unresolved VV
-bid_ip_trace AS (
+-- Get bid_ip for each unresolved VV (primary: bid_logs.ip)
+bid_ip_trace_direct AS (
     SELECT
         il.ad_served_id,
         NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip,
+        NULLIF(SPLIT(il.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS impression_bid_ip,
         b.time AS bid_time,
         SPLIT(il.ip, '/')[SAFE_OFFSET(0)] AS impression_ip,
         il.time AS impression_time,
@@ -57,6 +58,18 @@ bid_ip_trace AS (
     WHERE il.ad_served_id IN (SELECT ad_served_id FROM unresolved_ids)
       AND il.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+-- bid_ip with COALESCE fallback: bid_logs.ip → impression_log.bid_ip
+bid_ip_trace AS (
+    SELECT
+        ad_served_id,
+        COALESCE(bid_ip, impression_bid_ip) AS bid_ip,
+        bid_time,
+        impression_ip,
+        impression_time,
+        ttd_impression_id
+    FROM bid_ip_trace_direct
 ),
 
 -- Supplemental pipeline IPs for context

@@ -167,7 +167,7 @@ vast_start_ip = NULL, vast_impression_ip = NULL, viewability_ip = NULL
 | Detail | Notes |
 |--------|-------|
 | CIDR stripping | `SPLIT(ip, '/')[SAFE_OFFSET(0)]` on ALL IPs. event_log pre-2026 has `/32` suffix. |
-| bid_ip extraction | `ad_served_id` → `impression_log.ttd_impression_id` → `bid_logs.auction_id` → `bid_logs.ip` |
+| bid_ip extraction | Primary: `ad_served_id` → `impression_log.ttd_impression_id` → `bid_logs.auction_id` → `bid_logs.ip`. Fallback: COALESCE from `impression_log.bid_ip`, `event_log.bid_ip`, `viewability_log.bid_ip` (stored copies survive bid_logs TTL). |
 | Prospecting only | `objective_id IN (1, 5, 6)`. Excludes retargeting (4) and ego (7). |
 | funnel_level > objective_id | funnel_level is authoritative for stage. 48,934 S3 campaigns have wrong objective_id (Ray). |
 | campaign_group_id scoping | All cross-stage matches within same campaign_group_id (Zach directive). |

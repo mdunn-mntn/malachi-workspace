@@ -1,5 +1,5 @@
--- TI-650: S3 VV Resolution Rate (bid_ip only)
--- Check trace rate for any set of advertisers. Uses bid_ip directly — no COALESCE.
+-- TI-650: S3 VV Resolution Rate (bid_ip with COALESCE fallback)
+-- Check trace rate for any set of advertisers. bid_logs.ip primary, impression_log.bid_ip fallback.
 -- bid_ip IS the targeting IP: the IP that entered the S3 targeting segment via tmul_daily.
 -- Cost: ~2-3 TB per run
 --
@@ -69,11 +69,12 @@ s1_vv_pool AS (
     GROUP BY campaign_group_id, clickpass_ip
 ),
 
--- bid_ip extraction: ad_served_id → impression_log → bid_logs
-bid_ip_trace AS (
+-- bid_ip extraction: ad_served_id → impression_log → bid_logs (primary)
+bid_ip_trace_direct AS (
     SELECT
         il.ad_served_id,
-        NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip
+        NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip,
+        NULLIF(SPLIT(il.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS impression_bid_ip
     FROM `dw-main-silver.logdata.impression_log` il
     JOIN `dw-main-silver.logdata.bid_logs` b
         ON b.auction_id = il.ttd_impression_id
@@ -88,8 +89,15 @@ bid_ip_trace AS (
       )
       AND il.ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND il.ip IS NOT NULL
-      AND b.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+-- bid_ip with COALESCE fallback: bid_logs.ip → impression_log.bid_ip
+bid_ip_trace AS (
+    SELECT
+        ad_served_id,
+        COALESCE(bid_ip, impression_bid_ip) AS bid_ip
+    FROM bid_ip_trace_direct
 )
 
 SELECT

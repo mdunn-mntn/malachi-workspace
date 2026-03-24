@@ -95,10 +95,13 @@ Every IP comes from its actual source table. No proxies, no skipping.
 | `impression_time` | TIMESTAMP | `impression_log.time` | — | When impression was served. |
 | `win_ip` | STRING | `win_logs.ip` | — | Auction win IP. Joined via `impression_log.ttd_impression_id = win_logs.auction_id`. |
 | `win_time` | TIMESTAMP | `win_logs.time` | — | When win notification was received. |
-| `bid_ip` | STRING | `bid_logs.ip` | — | **THE targeting identity.** The IP we bid on at auction. Joined via `impression_log.ttd_impression_id = bid_logs.auction_id`. `NULLIF('0.0.0.0')` applied. |
-| `bid_time` | TIMESTAMP | `bid_logs.time` | — | When the bid was placed. |
+| `bid_ip` | STRING | COALESCE (see below) | — | **THE targeting identity.** The IP we bid on at auction. Primary: `bid_logs.ip` via join. Fallback: `impression_log.bid_ip`, `event_log.bid_ip`, `viewability_log.bid_ip`. `NULLIF('0.0.0.0')` applied. |
+| `bid_time` | TIMESTAMP | `bid_logs.time` | — | When the bid was placed. NULL when bid_ip came from fallback source. |
+| `bid_ip_source` | STRING | Derived | — | Which table provided bid_ip: `bid_logs`, `impression_log.bid_ip`, `event_log.bid_ip(vast_start)`, `event_log.bid_ip(vast_impression)`, `viewability_log.bid_ip`. |
 
-**Join chain for bid_ip:** `ad_served_id` → `impression_log.ttd_impression_id` → `bid_logs.auction_id` → `bid_logs.ip`
+**Join chain for bid_ip (primary):** `ad_served_id` → `impression_log.ttd_impression_id` → `bid_logs.auction_id` → `bid_logs.ip`
+
+**bid_ip COALESCE fallback:** When `bid_logs` record is missing (TTL purged) or IP is `0.0.0.0`, falls back to the denormalized `bid_ip` column stored in `impression_log`, `event_log`, and `viewability_log`. These tables store a copy of the bid IP at write time and have longer retention than `bid_logs`. The `bid_ip_source` column tracks which table provided the value.
 
 **CIDR stripping:** `SPLIT(ip, '/')[SAFE_OFFSET(0)]` on ALL IPs. event_log pre-2026 has `/32` suffix.
 
@@ -245,13 +248,13 @@ VVs that cannot be resolved within the standard lookback window should be invest
 | Detail | Notes |
 |--------|-------|
 | CIDR stripping | `SPLIT(ip, '/')[SAFE_OFFSET(0)]` on ALL IPs. event_log pre-2026 has `/32` suffix. |
-| bid_ip extraction | `ad_served_id` → `impression_log.ttd_impression_id` → `bid_logs.auction_id` → `bid_logs.ip` |
-| 0.0.0.0 sentinel | `NULLIF(bid_ip, '0.0.0.0')` — bid_logs uses 0.0.0.0 as null sentinel. |
+| bid_ip extraction | Primary: `ad_served_id` → `impression_log.ttd_impression_id` → `bid_logs.auction_id` → `bid_logs.ip`. Fallback: COALESCE from `impression_log.bid_ip`, `event_log.bid_ip`, `viewability_log.bid_ip` when bid_logs is missing (TTL). |
+| 0.0.0.0 sentinel | `NULLIF(bid_ip, '0.0.0.0')` — bid_logs uses 0.0.0.0 as null sentinel. Applied to all sources in COALESCE. |
 | Prospecting only | `objective_id IN (1, 5, 6)`. Excludes retargeting (4) and ego (7). |
 | funnel_level > objective_id | funnel_level is authoritative for stage. 48,934 S3 campaigns have wrong objective_id (Ray). |
 | campaign_group_id scoping | All cross-stage matches within same campaign_group_id (Zach directive). |
 | GENERATE_UUID() bug | Non-deterministic across CTE refs in BQ. Use `MD5(ad_served_id)` formatted as UUID. |
-| No table skipping | Each IP must come from its actual source table. bid_ip from bid_logs, not event_log.bid_ip. |
+| No table skipping | Each IP comes from its actual source table. Exception: bid_ip uses COALESCE fallback when bid_logs record is purged (TTL). `bid_ip_source` column tracks provenance. |
 | ROW_NUMBER dedup | One row per ad_served_id per source table. `QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1` |
 
 ---
