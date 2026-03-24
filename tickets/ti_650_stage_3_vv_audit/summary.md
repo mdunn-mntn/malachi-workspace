@@ -32,7 +32,7 @@ Full report: `outputs/ti_650_v2_validation_findings.md`
 ### Unresolved root causes
 
 - **No bid_ip** (196 of 138,557 in v3): bid_logs TTL expired or impression_log gap
-- **Truly unresolved** (44 in v3): structural IP rotation — Google proxy (74.125.x, 172.253.x), enterprise NAT (68.67.x), T-Mobile CGNAT (172.56.x, 172.58.x), private IPs (10.x)
+- **Truly unresolved** (44 in v3): lookback window insufficient, source table TTL truncation, or data bug. Common IPs in unresolved: Google proxy (74.125.x, 172.253.x), enterprise NAT (68.67.x), T-Mobile CGNAT (172.56.x, 172.58.x). 100% resolution should be achievable with sufficient lookback — investigate with `ti_650_unresolved_investigation.sql`.
 
 ---
 

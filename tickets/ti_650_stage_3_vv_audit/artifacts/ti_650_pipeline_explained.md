@@ -76,7 +76,7 @@ For a Stage 3 VV, this means three impression slots:
 
 > **All stages are anchor rows.** The table is not limited to S3 VVs. `cp_dedup` pulls ALL stages from `clickpass_log`. Zach confirmed: "if the dataset is still reasonable in size i think it would be good to have the info for all impressions/vv." A S1-only VV, a S2→S1 chain, or a S3→S2→S1 chain are all present as anchor rows.
 
-> **Stage columns are stage-fixed, not VV-relative.** S3 columns are always NULL for S1/S2 VVs. S2 columns are always NULL for S1 VVs AND for S3 VVs whose prior VV is S1 (IP went S1→S3 directly, skipping S2). S1 columns are always attempted (~97%+ populated for S2/S3 VVs; structural ceiling from CRM/cross-device entry with no IP breadcrumbs).
+> **Stage columns are stage-fixed, not VV-relative.** S3 columns are always NULL for S1/S2 VVs. S2 columns are always NULL for S1 VVs AND for S3 VVs whose prior VV is S1 (IP went S1→S3 directly, skipping S2). S1 columns are always attempted. Any unresolved rows indicate insufficient lookback, table TTL truncation, or a data bug — not a structural limitation.
 
 **Does this answer Zach's exact audit request?**
 
@@ -107,7 +107,7 @@ The `s1_ad_served_id`, `s1_bid_ip`, `s1_vast_start_ip`, `s1_vast_impression_ip`,
 | `current_is_s1` | `vv_stage = 1` | VV itself is S1 — its impression IS the S1 impression. Trivial. | 100% of S1 VVs |
 | `imp_direct` | `s1_by_vast_start.vast_start_ip = bid_ip` | S1 impression whose `vast_start_ip` matches the current VV's `bid_ip`. Primary cross-stage link. | Resolves ~95%+ of S2/S3 |
 | `imp_visit` | `s1_by_vast_start.vast_start_ip = impression_ip` | S1 impression whose `vast_start_ip` matches `ui_visits.impression_ip`. Fallback — rescues 574 unique S2 + 900 unique S3. | Rescues ~4-5% |
-| NULL | — | Unresolved. Structural ceiling: ~3.15% of S3 VVs (identity graph entry, no IP path exists). | — |
+| NULL | — | Unresolved. Cause: lookback window too short, table TTL truncated, or data bug. NOT identity graph entry — the system MUST follow the IP path. | — |
 
 **Why only 2 links?** v11 had a 10-tier CASE cascade (`vv_chain_direct`, `vv_chain_s2_s1`, `imp_chain`, `imp_direct`, `imp_visit_ip`, `cp_ft_fallback`, `guid_vv_match`, `guid_imp_match`, `s1_imp_redirect`). Empirical analysis proved only `imp_direct` and `imp_visit` contribute unique resolutions — all other tiers were redundant (0 unique contributions). See `_archive/` for full tier analysis.
 
@@ -277,7 +277,7 @@ For S2/S3 VVs: resolved via `imp_direct` (bid_ip → S1 vast_start_ip) or `imp_v
 
 **`s1_guid`** — Impression-side guid for the S1 impression.
 
-**`s1_resolution_method`** — Which link resolved S1. Values: `current_is_s1`, `imp_direct`, `imp_visit`, or NULL (unresolved — structural ceiling). See Part 3b for definitions.
+**`s1_resolution_method`** — Which link resolved S1. Values: `current_is_s1`, `imp_direct`, `imp_visit`, or NULL (unresolved — insufficient lookback or table TTL). See Part 3b for definitions.
 
 **`cp_ft_ad_served_id`** — System-recorded S1 shortcut from `clickpass_log.first_touch_ad_served_id`. NULL ~40%. **Retained as comparison reference only** — use `s1_ad_served_id` for audit work.
 
@@ -309,7 +309,7 @@ For S2/S3 VVs: resolved via `imp_direct` (bid_ip → S1 vast_start_ip) or `imp_v
 
 `cp_ft_ad_served_id` (the system-written first-touch field) is NULL in ~40% of VVs overall, and higher (~60-74%) for S3 VVs specifically. It was not written at VV time and cannot be backfilled. This is a system limitation.
 
-The `s1_ad_served_id` column was built to work around this: it uses the 2-link model (`imp_direct` + `imp_visit`) to resolve S1 for S2: 99.95%, S3: 96.85% of rows. `s1_ad_served_id` is NULL only when no IP path exists (structural ceiling — identity graph entry, CRM/cross-device cases with no IP breadcrumbs).
+The `s1_ad_served_id` column was built to work around this: it uses the 2-link model (`imp_direct` + `imp_visit`) to resolve S1 for S2: 99.95%, S3: 96.85% of rows. `s1_ad_served_id` is NULL when the lookback window is insufficient, the source table data has been truncated by TTL, or there is a data bug. The system MUST follow the IP path — 100% resolution should be achievable with sufficient lookback.
 
 **`cp_ft_ad_served_id` is retained as a comparison reference only.** Users can validate by checking `s1_ad_served_id = cp_ft_ad_served_id` where both are non-NULL.
 
@@ -385,7 +385,7 @@ For every VV row:
 
 **What is NOT achievable (honest answer):**
 
-~3.15% of S3 VVs have NULL S1 columns. These are structural — the IP entered the targeting segment via the identity graph (CRM/LiveRamp), not via an IP path. No IP-based resolution can recover them. `cp_ft_ad_served_id` remains as an independent cross-check.
+Some S3 VVs may have NULL S1 columns. This is NOT because the IP entered via an alternative path — every VV MUST follow the IP-based system. Unresolved means: lookback window too short, historical table data truncated by TTL, or a data bug. Investigate with `ti_650_unresolved_investigation.sql` (all-time scan). `cp_ft_ad_served_id` remains as an independent cross-check.
 
 **Zach's specific clarification point:** *"its not super clear which ft values are coming from the table traversal vs what is coming from the clickpass logs attempt to look that data up."*
 
@@ -571,7 +571,7 @@ VV 77ddff0c (S3, 2026-02-01 22:35:17)
 | `s1_bid_ip` | 100% | 99.95% | 96.85% | Same — populated when S1 resolves |
 | `s2_ad_served_id` | NULL | = self | ~95%+ | 90-day merged VAST pool + redirect_ip fallback |
 
-**NULL `s1_bid_ip` means:** No IP path exists to S1 — the IP entered the segment via the identity graph (CRM/LiveRamp), not via an impression IP. This is a structural ceiling, not a data quality issue. The 2-link model resolves everything that CAN be resolved via IP.
+**NULL `s1_bid_ip` means:** The lookback window was insufficient, the source table data was truncated by TTL, or there is a data bug. Every VV MUST follow the IP path — 100% resolution should be achievable with sufficient lookback. Investigate unresolved VVs with `ti_650_unresolved_investigation.sql` (all-time scan).
 
 **The bottom line:** For any VV at any stage, `s1_bid_ip` tells you the IP we originally bid on. If the visit IP differs, it's mutation. The table proves targeting correctness.
 
@@ -579,7 +579,7 @@ VV 77ddff0c (S3, 2026-02-01 22:35:17)
 
 The v12 2-link model replaced a 10-tier CASE cascade after empirical validation showed only 2 tiers (`imp_direct` + `imp_visit`) contributed unique resolutions. Key findings that drove the simplification:
 
-**Critical scoping correction:** Previous "~20% unresolved" included retargeting campaigns. Zach confirmed retargeting is NOT relevant. Retargeting campaigns (objective_id=4) enter segments via LiveRamp/audience data, not S1 impressions.
+**Critical scoping correction:** Previous "~20% unresolved" included retargeting campaigns. Zach confirmed retargeting is NOT relevant to this audit. Retargeting campaigns (objective_id=4) have a different targeting structure — filter with `objective_id IN (1, 5, 6)` for prospecting only.
 
 **v11 10-tier cascade results (adv 37775, Feb 4-11, prospecting only):**
 
@@ -591,7 +591,7 @@ The v12 2-link model replaced a 10-tier CASE cascade after empirical validation 
 
 Of the 10 tiers, `vv_chain_direct` (56.7%) and `imp_direct` (24.3%) dominated. All other tiers combined contributed <20%, and most were redundant once VAST IPs were added to the S1 pool. Adding S1 VAST IPs (vast_start/vast_impression from event_log) resolved 100% of S2 VVs — 747 VVs were recovered by VAST IPs alone.
 
-**Root cause of truly unresolved VVs:** LiveRamp identity graph entry (IP_A → IP_B bridging via CRM), CGNAT IP rotation making IP_A no longer discoverable. A time-series IP→household mapping would close the gap.
+**Root cause of truly unresolved VVs:** Lookback window too short (prior VV occurred before the lookback start), source table TTL truncation (bid_logs 90-day, event_log_filtered 60-day), or data pipeline bugs. CGNAT IP rotation does NOT prevent resolution — it only affects which IP is in the table, and the system traces through deterministic ID joins (ad_served_id → impression_log → bid_logs), not IP matching, for within-stage tracing.
 
 Full v10/v11 tier analysis data is archived in `outputs/_archive/`.
 

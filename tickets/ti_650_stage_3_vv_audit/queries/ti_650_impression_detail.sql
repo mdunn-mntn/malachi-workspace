@@ -40,11 +40,22 @@ clickpass AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY cp.ad_served_id ORDER BY cp.time DESC) = 1
 ),
 
--- 5-source IP extraction with timestamps
-ip_event_log AS (
-    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS event_log_ip, time AS event_log_time
+-- 7-source IP extraction with timestamps (vast_start and vast_impression split)
+ip_vast_start AS (
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS vast_start_ip, time AS vast_start_time
     FROM `dw-main-silver.logdata.event_log`
-    WHERE event_type_raw IN ('vast_start', 'vast_impression')
+    WHERE event_type_raw = 'vast_start'
+      -- ── SOURCE_WINDOW ──
+      AND time >= TIMESTAMP('2025-12-01') AND time < TIMESTAMP('2026-04-01')
+      AND ad_served_id IN (SELECT ad_served_id FROM target_ids)
+      AND ip IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
+),
+
+ip_vast_impression AS (
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS vast_impression_ip, time AS vast_impression_time
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE event_type_raw = 'vast_impression'
       -- ── SOURCE_WINDOW ──
       AND time >= TIMESTAMP('2025-12-01') AND time < TIMESTAMP('2026-04-01')
       AND ad_served_id IN (SELECT ad_served_id FROM target_ids)
@@ -104,7 +115,7 @@ SELECT
     CASE c.channel_id WHEN 8 THEN 'CTV' WHEN 1 THEN 'Display' END AS channel,
     -- Impression type: which pipeline path this VV took
     CASE
-        WHEN el.event_log_ip IS NOT NULL THEN 'CTV'
+        WHEN vs.vast_start_ip IS NOT NULL THEN 'CTV'
         WHEN vw.viewability_ip IS NOT NULL THEN 'Viewable Display'
         WHEN imp.impression_ip IS NOT NULL THEN 'Non-Viewable Display'
         ELSE 'No Impression Found'
@@ -119,13 +130,15 @@ SELECT
     cp.clickpass_impression_time,
     -- bid_ip: THE targeting IP (the IP that entered the S3 segment via tmul_daily)
     b.bid_ip,              b.bid_time,
-    -- Supplemental pipeline IPs with timestamps (for context/debugging)
-    el.event_log_ip,       el.event_log_time,
+    -- Full pipeline IPs with timestamps (7-source, no tables skipped)
+    vs.vast_start_ip,      vs.vast_start_time,
+    vi.vast_impression_ip, vi.vast_impression_time,
     vw.viewability_ip,     vw.viewability_time,
     imp.impression_ip,     imp.impression_log_time,
     w.win_ip,              w.win_time
 FROM clickpass cp
-LEFT JOIN ip_event_log el ON el.ad_served_id = cp.ad_served_id
+LEFT JOIN ip_vast_start vs ON vs.ad_served_id = cp.ad_served_id
+LEFT JOIN ip_vast_impression vi ON vi.ad_served_id = cp.ad_served_id
 LEFT JOIN ip_viewability vw ON vw.ad_served_id = cp.ad_served_id
 LEFT JOIN ip_impression imp ON imp.ad_served_id = cp.ad_served_id
 LEFT JOIN ip_win w ON w.ad_served_id = cp.ad_served_id
