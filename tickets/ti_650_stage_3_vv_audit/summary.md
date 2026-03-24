@@ -1,7 +1,7 @@
 # TI-650: Stage 3 VV IP Lineage Audit
 
 **Jira:** [TI-650](https://mntn.atlassian.net/browse/TI-650) — Create Stage 3 Audit Script
-**Status:** Audit complete. SQLMesh model update (v11 → v12) pending.
+**Status:** Audit complete (v4 validation run 2026-03-23). SQLMesh model update (v11 → v12) pending.
 
 ---
 
@@ -29,66 +29,78 @@
 
 Full report: `outputs/ti_650_v2_validation_findings.md`
 
+### v4 — full validation run (10 advertisers, Mar 16-22, 2026)
+
+| Metric | Value |
+|--------|-------|
+| Total S3 VVs | 146,900 |
+| Has bid_ip | 146,840 (99.96%) |
+| **Resolved (365d lookback)** | **146,823 (99.95%)** |
+| Resolved (all-time extended) | +13 |
+| No bid_ip (bid_logs TTL) | 60 |
+| Truly unresolved | 4 (2 lookback-window, **2 genuinely unexplained**) |
+| All VVs (S1+S2+S3) | 714,723 |
+| Impression mix | 84.3% CTV / 15.7% Viewable Display / 0.02% Non-Viewable Display |
+
+Full report: `outputs/validation_run/00_summary.md`
+
 ### Unresolved root causes
 
-- **No bid_ip** (196 of 138,557 in v3): bid_logs TTL expired or impression_log gap
-- **Truly unresolved** (44 in v3): lookback window insufficient, source table TTL truncation, or data bug. Common IPs in unresolved: Google proxy (74.125.x, 172.253.x), enterprise NAT (68.67.x), T-Mobile CGNAT (172.56.x, 172.58.x). 100% resolution should be achievable with sufficient lookback — investigate with `ti_650_unresolved_investigation.sql`.
+- **No bid_ip** (60 of 146,900 in v4): bid_logs 90-day TTL expired — `ad_served_id → impression_log → bid_logs` chain broken. Without bid_ip, can't search for prior VV.
+- **Resolved extended** (13): prior VV found beyond 365-day lookback window but within all-time clickpass_log scan (0–370 days back).
+- **Truly unresolved** (4, refined to 2):
+  - 2 likely lookback-window issues — campaign_group existed >365d (Ferguson 85144: 396d, Zazzle 78903: 518d)
+  - **2 genuinely unresolved** — campaign <100d old, bid_ip has no prior VV match in clickpass_log all-time:
+    - Ferguson Home (106777): bid_ip 174.202.4.80, campaign 95d old
+    - FICO (107447): bid_ip 172.56.154.242 (T-Mobile CGNAT), campaign 80d old
 
 ---
 
-## 2. Query Suite
+## 2. Query Suite & Validation Runbook
 
-Six active queries in `queries/`. All v3 (bid_ip only, no COALESCE). Parameters are marked with `── PARAM ──` in the SQL.
+### Queries
 
-### Workflow
+Two sets exist. The **template queries** in `queries/` have `── PARAM ──` markers for copy/paste into BQ console. The **validation_run queries** in `queries/validation_run/` are parameterized instances from the Mar 16-22 run with advertiser IDs baked in.
 
-```
-1. Discovery    → pick advertisers with S3 VV volume
-2. Resolution   → measure trace success per advertiser
-3. Investigation → diagnose any unresolved VVs
-4. Detail       → drill into specific ad_served_ids
-5. Trace table  → the deliverable (UUID-linked rows)
-```
+| # | Template (queries/) | Validation Instance (queries/validation_run/) | Purpose | Cost |
+|---|---|---|---|---|
+| 1 | `ti_650_advertiser_discovery.sql` | `01_discovery.sql` | Find S3 advertisers with VV volume | ~0.3 GB |
+| 2 | `ti_650_resolution_rate.sql` | `02_resolution_rate.sql` | Per-advertiser resolution rate — quick sanity check | ~2 TB |
+| 3 | `ti_650_trace_table.sql` | `03_trace_table.sql` | **Full trace table — THE deliverable** (one row per VV, all stages, 7-IP trace, cross-stage) | ~3-5 TB |
+| 4 | — | `04_validation.sql` | 10 integrity checks on the trace table | ~3-5 TB |
+| 5 | `ti_650_unresolved_investigation.sql` | `05_unresolved_s3.sql` | All-time investigation of unresolved VVs | ~2 TB |
+| — | `ti_650_impression_detail.sql` | — | Drill into specific ad_served_ids (ad-hoc) | ~0.5-2 TB |
+| — | `ti_650_sqlmesh_model.sql` | — | Production SQLMesh model (v11, reference) | — |
 
-### ti_650_advertiser_discovery.sql
+### Runbook: How to Run a Validation
 
-**Purpose:** Find S3 advertisers with VV volume in a date range. Cheapest query (~0.5 GB).
-**Parameters:** AUDIT_WINDOW, MIN_VVS
+**Step 1: Pick advertisers** → Run `01_discovery.sql`
+Pick a 7-day window. Find advertisers with ≥100 S3 VVs. Select 10 (mix of large/small, exclude WGU).
 
-### ti_650_resolution_rate.sql
+**Step 2: Resolution rate** → Run `02_resolution_rate.sql`
+Plug in 10 advertiser IDs. Check that `resolved_pct ≥ 99%` for each. If not, stop — something is wrong with the data or query. Note `no_bid_ip` count (expected ~0 for recent data, higher if audit window is near bid_logs 90d TTL edge).
 
-**Purpose:** Per-advertiser resolution rate — what % of S3 VVs can be traced back to a prior S2 or S1 VV via bid_ip. **Cost:** ~2-3 TB.
-**Parameters:** ADVERTISER_IDS (3 places), AUDIT_WINDOW, LOOKBACK_START (365d), SOURCE_WINDOW (±30d)
+**Step 3: Trace table** → Run `03_trace_table.sql`
+Same 10 advertiser IDs. This produces the row-level deliverable — one row per VV with full 7-IP trace and resolution status. In production, this materializes to a BQ table.
 
-**Output columns:**
+**Step 4: Validate** → Run `04_validation.sql`
+Confirms the trace table logic is correct. All 10 checks must pass:
+- **4.2 FAIL (S1 not all resolved):** STOP — this is a query bug. S1 resolution is deterministic.
+- **4.4 FAIL (S3 w/ S2 prior missing S1 event):** Run Step 4a to investigate.
+- Any other FAIL: debug before proceeding.
 
-| Column | Meaning |
-|--------|---------|
-| `total_s3_vvs` | S3 VVs in audit window |
-| `has_bid_ip` / `no_bid_ip` | bid_ip trace coverage. `no_bid_ip` should be ~0. |
-| `matched_to_s2` | Resolved via prior S2 VV (T1 — preferred path) |
-| `matched_to_s1` | Resolved via prior S1 VV (T2 — fallback, no S2 match) |
-| `resolved` / `resolved_pct` | Total resolved (T1 + T2) |
-| `unresolved` | Has bid_ip but no prior VV match |
+**Step 5: Investigate unresolved** → Run `05_unresolved_s3.sql` (only if Step 2 shows unresolved > 0)
+All-time clickpass_log scan. Classifies each unresolved VV:
+- `NO_BID_IP` — bid_logs 90d TTL expired, can't extract bid_ip from `ad_served_id → impression_log → bid_logs` chain. No further investigation possible.
+- `RESOLVED_EXTENDED` — prior VV found beyond 365d lookback.
+- `TRULY_UNRESOLVED` — no match anywhere, all time. Share with Zach.
 
-### ti_650_unresolved_investigation.sql
+**Step 6: Campaign creation date check** (for truly unresolved)
+For each truly unresolved VV, check `MIN(create_time)` from `campaigns` for the S1 campaign in that `campaign_group_id`. If the campaign is older than the lookback window, the lookback may have been insufficient. If the campaign is younger than the lookback, it's genuinely unresolved.
 
-**Purpose:** Diagnostic for unresolved VVs. Takes specific ad_served_ids, does an all-time clickpass scan. **Cost:** ~1-2 TB.
-**Parameters:** UNRESOLVED_IDS (UNNEST list), ADVERTISER_IDS (for partition pruning)
+### Trace table schema
 
-**Diagnostic classifications:** `NO_BID_IP` (bid_logs expired), `HAS_PRIOR_VV` (match found beyond 365d lookback), `TRULY_UNRESOLVED` (no match found anywhere, all time).
-
-### ti_650_impression_detail.sql
-
-**Purpose:** Full detail for specific ad_served_ids — campaign metadata + all 5 pipeline IPs with timestamps + impression type. **Cost:** ~0.5-2 TB.
-**Parameters:** AD_SERVED_IDS (UNNEST list), VV_WINDOW, SOURCE_WINDOW (±30d)
-
-### ti_650_trace_table.sql
-
-**Purpose:** The main deliverable. One row per VV with full 7-IP trace from clickpass back to bid_ip, plus cross-stage linking. **Cost:** ~3-5 TB.
-**Parameters:** ADVERTISER_IDS (multiple places), AUDIT_WINDOW, LOOKBACK_START (365d), SOURCE_WINDOW (±30d)
-
-**One-row-per-VV design:** Each VV gets a deterministic `trace_uuid` (`MD5(ad_served_id)`). The row contains:
+Each VV gets a deterministic `trace_uuid` (`MD5(ad_served_id)`). Full schema in `artifacts/ti_650_column_reference.md`. Summary:
 
 | Section | Columns | Description |
 |---------|---------|-------------|
@@ -99,12 +111,6 @@ Six active queries in `queries/`. All v3 (bid_ip only, no COALESCE). Parameters 
 | Prior VV's trace (S3 only) | prior_vv_vast_start_ip, ..., prior_vv_bid_ip (+ times) | Prior VV's full 7-IP trace |
 | S1 event (S2 + S3-with-S2) | s1_event_ad_served_id, s1_event_vast_start_ip, s1_event_time | S2 bid_ip → S1 event_log match |
 | Resolution | resolution_status, resolution_method | resolved / unresolved / no_bid_ip |
-
-Full schema: `artifacts/ti_650_column_reference.md`
-
-### ti_650_sqlmesh_model.sql
-
-**Purpose:** Production SQLMesh model (v11). One row per VV, all stages, full IP audit trail. **Status:** Reference — needs v12 update (2-link S1 resolution replacing 10-tier cascade). See `artifacts/ti_650_column_reference.md` for v12 target schema.
 
 ---
 
@@ -120,7 +126,7 @@ Full schema: `artifacts/ti_650_column_reference.md`
 
 **S3→S1 (fallback):** When no S2 VV match exists, S3 VV's `bid_ip` matched against prior S1 VV `clickpass_ip`.
 
-**100% resolution should be achievable** with sufficient lookback. Unresolved = lookback too short, table TTL truncation, or data bug. Current rate: 99.83% with 365-day lookback (v3: 138,557 VVs, 10 advertisers).
+**100% resolution should be achievable** with sufficient lookback. Unresolved = lookback too short, table TTL truncation, or data bug. Current rate: **99.95%** with 365-day lookback (v4: 146,900 S3 VVs, 10 advertisers). With all-time scan: **99.999%** (2 genuinely unexplained of 146,900).
 
 ---
 
@@ -213,7 +219,7 @@ vast_start_ip = NULL, vast_impression_ip = NULL, viewability_ip = NULL
 
 ## 9. File Index
 
-### Active Queries (6)
+### Template Queries (queries/) — copy/paste with `── PARAM ──` markers
 
 | File | Purpose |
 |------|---------|
@@ -221,13 +227,29 @@ vast_start_ip = NULL, vast_impression_ip = NULL, viewability_ip = NULL
 | `queries/ti_650_resolution_rate.sql` | Per-advertiser resolution rate (~2-3 TB) |
 | `queries/ti_650_unresolved_investigation.sql` | Diagnostic for unresolved VVs (~1-2 TB) |
 | `queries/ti_650_impression_detail.sql` | Full detail for specific ad_served_ids (~0.5-2 TB) |
-| `queries/ti_650_trace_table.sql` | UUID-linked trace table deliverable (~3-4 TB) |
+| `queries/ti_650_trace_table.sql` | UUID-linked trace table deliverable (~3-5 TB) |
 | `queries/ti_650_sqlmesh_model.sql` | Production SQLMesh model (v11, reference) |
 
-### Active Outputs (2)
+### Validation Run Queries (queries/validation_run/) — parameterized for Mar 16-22, 10 advertisers
+
+| File | Purpose |
+|------|---------|
+| `queries/validation_run/01_discovery.sql` | Advertiser discovery |
+| `queries/validation_run/02_resolution_rate.sql` | Resolution rate check |
+| `queries/validation_run/03_trace_table.sql` | Full trace table |
+| `queries/validation_run/04_validation.sql` | 10 integrity checks |
+| `queries/validation_run/05_unresolved_s3.sql` | All-time unresolved investigation |
+
+### Active Outputs
 
 | File | Description |
 |------|-------------|
+| `outputs/validation_run/00_summary.md` | **v4 validation run summary + runbook** (2026-03-23) |
+| `outputs/validation_run/01_discovery.json` | 10 selected advertisers |
+| `outputs/validation_run/02_resolution_rate.json` | Per-advertiser resolution rates |
+| `outputs/validation_run/03_trace_table_sample.json` | Sample rows from trace table (5 rows) |
+| `outputs/validation_run/04_validation.json` | Validation check results (all 10 PASS) |
+| `outputs/validation_run/05_unresolved_s3.json` | 77 unresolved VV diagnostics |
 | `outputs/ti_650_v2_validation_findings.md` | v2 validation — 20 advertisers, 225,872 VVs, 36 checks, 99.83% |
 | `outputs/ti_650_v3_resolution_rate_10adv.json` | v3 per-advertiser resolution (10 advertisers, 138,557 VVs, 99.83%) |
 
