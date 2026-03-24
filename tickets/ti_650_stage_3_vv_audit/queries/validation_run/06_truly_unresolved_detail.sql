@@ -64,13 +64,45 @@ ip_win AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY w.time ASC) = 1
 ),
 
-ip_bid AS (
+ip_bid_direct AS (
     SELECT il.ad_served_id,
-           NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip,
+           NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip_direct,
            b.time AS bid_time
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+-- bid_ip COALESCE: bid_logs (primary) → impression_log.bid_ip → event_log.bid_ip → viewability_log.bid_ip
+ip_bid AS (
+    SELECT
+        imp.ad_served_id,
+        COALESCE(
+            bd.bid_ip_direct,
+            NULLIF(SPLIT(imp.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0'),
+            NULLIF(SPLIT(vs.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0'),
+            NULLIF(SPLIT(vi.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0'),
+            NULLIF(SPLIT(vw.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0')
+        ) AS bid_ip,
+        bd.bid_time,
+        CASE
+            WHEN bd.bid_ip_direct IS NOT NULL THEN 'bid_logs'
+            WHEN imp.bid_ip IS NOT NULL THEN 'impression_log.bid_ip'
+            WHEN vs.bid_ip IS NOT NULL THEN 'event_log.bid_ip'
+            WHEN vi.bid_ip IS NOT NULL THEN 'event_log.bid_ip'
+            WHEN vw.bid_ip IS NOT NULL THEN 'viewability_log.bid_ip'
+            ELSE NULL
+        END AS bid_ip_source
+    FROM `dw-main-silver.logdata.impression_log` imp
+    LEFT JOIN ip_bid_direct bd ON bd.ad_served_id = imp.ad_served_id
+    LEFT JOIN `dw-main-silver.logdata.event_log` vs
+        ON vs.ad_served_id = imp.ad_served_id AND vs.event_type_raw = 'vast_start'
+    LEFT JOIN `dw-main-silver.logdata.event_log` vi
+        ON vi.ad_served_id = imp.ad_served_id AND vi.event_type_raw = 'vast_impression'
+    LEFT JOIN `dw-main-silver.logdata.viewability_log` vw
+        ON vw.ad_served_id = imp.ad_served_id
+    WHERE imp.ad_served_id IN (SELECT ad_served_id FROM target_ids)
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY imp.ad_served_id ORDER BY imp.time ASC) = 1
 ),
 
 s1_creation AS (

@@ -30,16 +30,33 @@ s1_vv_pool AS (
     FROM all_clickpass WHERE funnel_level = 1 GROUP BY campaign_group_id, clickpass_ip
 ),
 
-bid_ip_trace AS (
-    SELECT il.ad_served_id, NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip
+-- bid_ip: primary from bid_logs, fallback from impression_log.bid_ip
+bid_ip_from_bid_logs AS (
+    SELECT il.ad_served_id, NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip_direct
     FROM `dw-main-silver.logdata.impression_log` il
     JOIN `dw-main-silver.logdata.bid_logs` b ON b.auction_id = il.ttd_impression_id
     WHERE il.time >= TIMESTAMP('2026-02-14') AND il.time < TIMESTAMP('2026-04-22')
       AND b.time >= TIMESTAMP('2026-02-14') AND b.time < TIMESTAMP('2026-04-22')
       AND il.advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
       AND il.ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
-      AND il.ip IS NOT NULL AND b.ip IS NOT NULL
+      AND il.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+bid_ip_trace AS (
+    SELECT
+        il.ad_served_id,
+        COALESCE(
+            bd.bid_ip_direct,
+            NULLIF(SPLIT(il.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0')
+        ) AS bid_ip
+    FROM `dw-main-silver.logdata.impression_log` il
+    LEFT JOIN bid_ip_from_bid_logs bd ON bd.ad_served_id = il.ad_served_id
+    WHERE il.time >= TIMESTAMP('2026-02-14') AND il.time < TIMESTAMP('2026-04-22')
+      AND il.advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
+      AND il.ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
+      AND il.ip IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY il.time ASC) = 1
 ),
 
 unresolved_s3 AS (

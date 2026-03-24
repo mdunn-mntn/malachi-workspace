@@ -51,12 +51,24 @@ ip_impression AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
-ip_bid AS (
-    SELECT il.ad_served_id, NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip
+ip_bid_direct AS (
+    SELECT il.ad_served_id, NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS bid_ip_direct
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN ip_impression il ON b.auction_id = il.ttd_impression_id
     WHERE b.time >= TIMESTAMP('2026-02-14') AND b.time < TIMESTAMP('2026-04-22')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+-- bid_ip COALESCE: bid_logs (primary) → impression_log.bid_ip (fallback)
+ip_bid AS (
+    SELECT
+        il.ad_served_id,
+        COALESCE(
+            bd.bid_ip_direct,
+            NULLIF(SPLIT(il.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0')
+        ) AS bid_ip
+    FROM ip_impression il
+    LEFT JOIN ip_bid_direct bd ON bd.ad_served_id = il.ad_served_id
 ),
 
 prior_vv_pool AS (
@@ -105,19 +117,28 @@ prior_vv_matched AS (
 ),
 
 pv_ip_impression AS (
-    SELECT ad_served_id, ttd_impression_id
+    SELECT ad_served_id, ttd_impression_id,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS pv_impression_bid_ip
     FROM `dw-main-silver.logdata.impression_log`
     WHERE time >= TIMESTAMP('2025-03-16') AND time < TIMESTAMP('2026-04-22')
       AND ad_served_id IN (SELECT prior_vv_ad_served_id FROM prior_vv_matched) AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
-pv_ip_bid AS (
-    SELECT il.ad_served_id, NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS prior_vv_bid_ip
+pv_ip_bid_direct AS (
+    SELECT il.ad_served_id, NULLIF(SPLIT(b.ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS pv_bid_ip_direct
     FROM `dw-main-silver.logdata.bid_logs` b
     JOIN pv_ip_impression il ON b.auction_id = il.ttd_impression_id
     WHERE b.time >= TIMESTAMP('2025-03-16') AND b.time < TIMESTAMP('2026-04-22')
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
+),
+
+pv_ip_bid AS (
+    SELECT
+        pvimp.ad_served_id,
+        COALESCE(pvbd.pv_bid_ip_direct, pvimp.pv_impression_bid_ip) AS prior_vv_bid_ip
+    FROM pv_ip_impression pvimp
+    LEFT JOIN pv_ip_bid_direct pvbd ON pvbd.ad_served_id = pvimp.ad_served_id
 ),
 
 s1_event_pool AS (
