@@ -66,10 +66,17 @@ ip_win AS (
     JOIN bid_ip_trace bt ON w.auction_id = bt.ttd_impression_id
     QUALIFY ROW_NUMBER() OVER (PARTITION BY bt.ad_served_id ORDER BY w.time ASC) = 1
 ),
-ip_event_log AS (
-    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS event_log_ip, time AS event_log_time
+ip_vast_start AS (
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS vast_start_ip, time AS vast_start_time
     FROM `dw-main-silver.logdata.event_log`
-    WHERE event_type_raw IN ('vast_start', 'vast_impression')
+    WHERE event_type_raw = 'vast_start'
+      AND ad_served_id IN (SELECT ad_served_id FROM unresolved_ids) AND ip IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
+),
+ip_vast_impression AS (
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS vast_impression_ip, time AS vast_impression_time
+    FROM `dw-main-silver.logdata.event_log`
+    WHERE event_type_raw = 'vast_impression'
       AND ad_served_id IN (SELECT ad_served_id FROM unresolved_ids) AND ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
@@ -121,12 +128,13 @@ SELECT
     bt.bid_ip, bt.bid_time,
     bt.impression_ip, bt.impression_time,
     w.win_ip, w.win_time,
-    el.event_log_ip, el.event_log_time,
+    vs.vast_start_ip, vs.vast_start_time,
+    vi.vast_impression_ip, vi.vast_impression_time,
     vw.viewability_ip, vw.viewability_time,
 
     -- Impression type
     CASE
-        WHEN el.event_log_ip IS NOT NULL THEN 'CTV'
+        WHEN vs.vast_start_ip IS NOT NULL THEN 'CTV'
         WHEN vw.viewability_ip IS NOT NULL THEN 'Viewable Display'
         WHEN bt.impression_ip IS NOT NULL THEN 'Non-Viewable Display'
         ELSE 'No Impression Found'
@@ -147,7 +155,8 @@ SELECT
 FROM s3_vvs v
 LEFT JOIN bid_ip_trace bt ON bt.ad_served_id = v.ad_served_id
 LEFT JOIN ip_win w ON w.ad_served_id = v.ad_served_id
-LEFT JOIN ip_event_log el ON el.ad_served_id = v.ad_served_id
+LEFT JOIN ip_vast_start vs ON vs.ad_served_id = v.ad_served_id
+LEFT JOIN ip_vast_impression vi ON vi.ad_served_id = v.ad_served_id
 LEFT JOIN ip_viewability vw ON vw.ad_served_id = v.ad_served_id
 LEFT JOIN all_time_vv_search m ON m.s3_ad_served_id = v.ad_served_id
 JOIN `dw-main-bronze.integrationprod.advertisers` adv
