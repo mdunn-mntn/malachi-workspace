@@ -44,6 +44,25 @@
 
 ---
 
+## Questions for Zach
+
+### On the 2 genuinely unresolved VVs:
+1. **Ferguson (174.202.4.80, campaign_group 106777):** This IP was bid on for S3, so it was in the targeting segment. The S1 campaign in this group was created 2025-12-18 (95 days before the VV). We searched clickpass_log all-time for any prior S1/S2 VV with this IP in this campaign_group — nothing. **Is it possible this IP had an S1 VAST impression that never resulted in a site visit (VV)?** If the user saw the ad but never visited the site at S1/S2, they'd be in the targeting segment but have no clickpass_log record.
+
+2. **FICO (172.56.154.242, campaign_group 107447):** T-Mobile CGNAT IP. Same situation — bid_ip exists but no prior VV in clickpass_log. **Could CGNAT IP rotation explain this?** The IP that entered the S3 segment (via tmul_daily) might have been a different 172.56.x.x at the time of the S1/S2 VV.
+
+### On NO_BID_IP (60 VVs):
+3. **bid_logs TTL confirmed:** We tested 10 NO_BID_IP ad_served_ids — all have impression_log records but bid_logs records are gone (even with no time filter). impression_log.ip for these is internal 10.105.x.x NAT. **What is the actual bid_logs retention policy in Beeswax?** We documented 90 days but want to confirm.
+
+4. **Is there another path to bid_ip?** Since bid_logs purges, is there any other table that stores the external IP for a given auction_id / ttd_impression_id? (win_logs.ip perhaps — but for these NO_BID_IP cases, do win_logs also get purged?)
+
+### On the audit approach:
+5. **The S3 targeting path assumption:** We assume every S3 VV's bid_ip must match a prior VV's clickpass_ip in the same campaign_group. **Is there any path into the S3 targeting segment that doesn't go through a prior site visit?** (e.g., direct segment upload, CRM match without a VV)
+
+6. **Campaign creation date as max lookback:** We used `MIN(create_time)` from the S1 campaign in each campaign_group as the maximum possible lookback. **Is this correct — can an impression exist before the campaign was created?** (e.g., if a campaign was duplicated/migrated from another group)
+
+---
+
 ## Google Sheets data
 
 `outputs/validation_run/06_truly_unresolved_for_zach.csv` — 2 rows with all pipeline IPs, timestamps, campaign metadata, S1 campaign creation date. Paste directly into Sheets.
