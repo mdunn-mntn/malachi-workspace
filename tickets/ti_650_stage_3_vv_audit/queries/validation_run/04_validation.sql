@@ -1,6 +1,5 @@
--- TI-650 Validation Run: Step 4 — Validate Trace Table
--- Runs the same trace logic as Step 3 but outputs validation checks only
--- Checks: row counts, resolution integrity, dedup, impression type coverage
+-- TI-650 Validation Run: Step 4 — Validate Trace Table (simplified)
+-- Single-pass aggregation over the trace logic
 
 WITH anchor_vvs AS (
     SELECT
@@ -61,17 +60,14 @@ ip_bid AS (
 ),
 
 prior_vv_pool AS (
-    SELECT
-        cp.ad_served_id AS prior_vv_ad_served_id,
+    SELECT cp.ad_served_id AS prior_vv_ad_served_id,
         SPLIT(cp.ip, '/')[SAFE_OFFSET(0)] AS prior_vv_clickpass_ip,
         cp.time AS prior_vv_time,
-        cp.campaign_id AS prior_vv_campaign_id,
         c.campaign_group_id AS prior_vv_campaign_group_id,
         c.funnel_level AS prior_vv_funnel_level
     FROM `dw-main-silver.logdata.clickpass_log` cp
     JOIN `dw-main-bronze.integrationprod.campaigns` c
-        ON c.campaign_id = cp.campaign_id
-        AND c.deleted = FALSE AND c.is_test = FALSE
+        ON c.campaign_id = cp.campaign_id AND c.deleted = FALSE AND c.is_test = FALSE
         AND c.funnel_level IN (1, 2) AND c.objective_id IN (1, 5, 6)
     WHERE cp.time >= TIMESTAMP('2025-03-16') AND cp.time < TIMESTAMP('2026-03-23')
       AND cp.advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
@@ -80,8 +76,7 @@ prior_vv_pool AS (
 ),
 
 s3_s2_match AS (
-    SELECT v.ad_served_id AS s3_ad_served_id, pv.prior_vv_ad_served_id,
-           pv.prior_vv_funnel_level, pv.prior_vv_clickpass_ip
+    SELECT v.ad_served_id AS s3_ad_served_id, pv.prior_vv_ad_served_id, pv.prior_vv_funnel_level
     FROM anchor_vvs v
     JOIN ip_bid b ON b.ad_served_id = v.ad_served_id
     JOIN prior_vv_pool pv
@@ -93,8 +88,7 @@ s3_s2_match AS (
 ),
 
 s3_s1_match AS (
-    SELECT v.ad_served_id AS s3_ad_served_id, pv.prior_vv_ad_served_id,
-           pv.prior_vv_funnel_level, pv.prior_vv_clickpass_ip
+    SELECT v.ad_served_id AS s3_ad_served_id, pv.prior_vv_ad_served_id, pv.prior_vv_funnel_level
     FROM anchor_vvs v
     JOIN ip_bid b ON b.ad_served_id = v.ad_served_id
     JOIN prior_vv_pool pv
@@ -146,7 +140,6 @@ s1_by_vast_start AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY s1_event_vast_start_ip ORDER BY s1_event_time ASC) = 1
 ),
 
--- Build the trace with resolution status
 trace AS (
     SELECT
         v.ad_served_id,
@@ -193,110 +186,27 @@ trace AS (
 )
 
 SELECT
-    -- 4.1: Total VVs
-    'total_vvs' AS check_name,
-    COUNT(*) AS value,
-    CAST(NULL AS STRING) AS detail
-FROM trace
-
-UNION ALL
-
--- 4.2: S1 VVs all resolved
-SELECT
-    's1_all_resolved',
-    COUNTIF(funnel_level = 1 AND resolution_status != 'resolved'),
-    FORMAT('S1 total: %d, not resolved: %d',
-        COUNTIF(funnel_level = 1),
-        COUNTIF(funnel_level = 1 AND resolution_status != 'resolved'))
-FROM trace
-
-UNION ALL
-
--- 4.3: Resolved S3 VVs have prior_vv_ad_served_id
-SELECT
-    's3_resolved_has_prior_vv',
-    COUNTIF(funnel_level = 3 AND resolution_status = 'resolved' AND prior_vv_ad_served_id IS NULL),
-    FORMAT('S3 resolved: %d, missing prior_vv: %d',
-        COUNTIF(funnel_level = 3 AND resolution_status = 'resolved'),
-        COUNTIF(funnel_level = 3 AND resolution_status = 'resolved' AND prior_vv_ad_served_id IS NULL))
-FROM trace
-
-UNION ALL
-
--- 4.4: S3 with S2 prior has S1 event
-SELECT
-    's3_s2_prior_has_s1_event',
-    COUNTIF(funnel_level = 3 AND prior_vv_funnel_level = 2 AND s1_via_s2 IS NULL AND resolution_status = 'resolved'),
-    FORMAT('S3 with S2 prior (resolved): %d, missing S1 event: %d',
-        COUNTIF(funnel_level = 3 AND prior_vv_funnel_level = 2 AND resolution_status = 'resolved'),
-        COUNTIF(funnel_level = 3 AND prior_vv_funnel_level = 2 AND s1_via_s2 IS NULL AND resolution_status = 'resolved'))
-FROM trace
-
-UNION ALL
-
--- 4.5: No duplicate ad_served_ids
-SELECT
-    'duplicate_ad_served_ids',
-    COUNT(*) - COUNT(DISTINCT ad_served_id),
-    FORMAT('total rows: %d, distinct ad_served_ids: %d', COUNT(*), COUNT(DISTINCT ad_served_id))
-FROM trace
-
-UNION ALL
-
--- 4.6: impression_type not NULL for resolved
-SELECT
-    'resolved_missing_impression_type',
-    COUNTIF(resolution_status = 'resolved' AND impression_type = 'No Impression Found'),
-    FORMAT('resolved: %d, no impression: %d',
-        COUNTIF(resolution_status = 'resolved'),
-        COUNTIF(resolution_status = 'resolved' AND impression_type = 'No Impression Found'))
-FROM trace
-
-UNION ALL
-
--- 4.7: bid_ip not NULL for resolved
-SELECT
-    'resolved_missing_bid_ip',
-    COUNTIF(resolution_status = 'resolved' AND bid_ip IS NULL AND funnel_level != 1),
-    FORMAT('resolved non-S1: %d, bid_ip NULL: %d',
-        COUNTIF(resolution_status = 'resolved' AND funnel_level != 1),
-        COUNTIF(resolution_status = 'resolved' AND bid_ip IS NULL AND funnel_level != 1))
-FROM trace
-
-UNION ALL
-
--- 4.8: Count by resolution_status
-SELECT
-    'count_by_resolution_status',
-    0,
-    STRING_AGG(FORMAT('%s: %d', resolution_status, cnt), ' | ' ORDER BY resolution_status)
-FROM (SELECT resolution_status, COUNT(*) AS cnt FROM trace GROUP BY resolution_status)
-
-UNION ALL
-
--- 4.9: Count by resolution_method
-SELECT
-    'count_by_resolution_method',
-    0,
-    STRING_AGG(FORMAT('%s: %d', IFNULL(resolution_method, 'NULL'), cnt), ' | ' ORDER BY resolution_method)
-FROM (SELECT resolution_method, COUNT(*) AS cnt FROM trace GROUP BY resolution_method)
-
-UNION ALL
-
--- 4.10: Count by impression_type
-SELECT
-    'count_by_impression_type',
-    0,
-    STRING_AGG(FORMAT('%s: %d', impression_type, cnt), ' | ' ORDER BY impression_type)
-FROM (SELECT impression_type, COUNT(*) AS cnt FROM trace GROUP BY impression_type)
-
-UNION ALL
-
--- Bonus: Count by funnel_level
-SELECT
-    'count_by_funnel_level',
-    0,
-    STRING_AGG(FORMAT('S%d: %d', funnel_level, cnt), ' | ' ORDER BY funnel_level)
-FROM (SELECT funnel_level, COUNT(*) AS cnt FROM trace GROUP BY funnel_level)
-
-ORDER BY check_name;
+    COUNT(*) AS total_vvs,
+    COUNT(DISTINCT ad_served_id) AS distinct_ad_served_ids,
+    COUNT(*) - COUNT(DISTINCT ad_served_id) AS duplicates,
+    COUNTIF(funnel_level = 1) AS s1_vvs,
+    COUNTIF(funnel_level = 2) AS s2_vvs,
+    COUNTIF(funnel_level = 3) AS s3_vvs,
+    COUNTIF(funnel_level = 1 AND resolution_status != 'resolved') AS s1_not_resolved,
+    COUNTIF(funnel_level = 3 AND resolution_status = 'resolved' AND prior_vv_ad_served_id IS NULL) AS s3_resolved_no_prior,
+    COUNTIF(funnel_level = 3 AND prior_vv_funnel_level = 2 AND s1_via_s2 IS NULL AND resolution_status = 'resolved') AS s3_s2_prior_no_s1,
+    COUNTIF(resolution_status = 'resolved' AND impression_type = 'No Impression Found') AS resolved_no_impression,
+    COUNTIF(resolution_status = 'resolved' AND bid_ip IS NULL AND funnel_level != 1) AS resolved_no_bid_ip,
+    COUNTIF(resolution_status = 'resolved') AS status_resolved,
+    COUNTIF(resolution_status = 'unresolved') AS status_unresolved,
+    COUNTIF(resolution_status = 'no_bid_ip') AS status_no_bid_ip,
+    COUNTIF(resolution_method = 'current_is_s1') AS method_current_is_s1,
+    COUNTIF(resolution_method = 's1_event_match') AS method_s1_event_match,
+    COUNTIF(resolution_method = 's2_vv_bridge') AS method_s2_vv_bridge,
+    COUNTIF(resolution_method = 's1_vv_bridge') AS method_s1_vv_bridge,
+    COUNTIF(resolution_method IS NULL) AS method_null,
+    COUNTIF(impression_type = 'CTV') AS type_ctv,
+    COUNTIF(impression_type = 'Viewable Display') AS type_viewable_display,
+    COUNTIF(impression_type = 'Non-Viewable Display') AS type_nonviewable_display,
+    COUNTIF(impression_type = 'No Impression Found') AS type_no_impression
+FROM trace;
