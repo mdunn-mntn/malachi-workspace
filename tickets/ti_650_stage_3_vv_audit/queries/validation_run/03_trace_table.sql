@@ -108,16 +108,28 @@ ip_bid_direct AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
--- bid_ip COALESCE: bid_logs (primary) → impression_log → event_log → viewability_log (fallbacks)
+-- Fallback: impression_log.bid_ip with NO time filter (catches cases outside source_window)
+ip_impression_bid_fallback AS (
+    SELECT ad_served_id,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS fallback_bid_ip
+    FROM `dw-main-silver.logdata.impression_log`
+    WHERE advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
+      AND ad_served_id IN (SELECT ad_served_id FROM anchor_vvs)
+      AND bid_ip IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
+),
+
+-- bid_ip COALESCE: bid_logs → impression_log.bid_ip (source_window) → event_log → viewability_log → impression_log.bid_ip (no time filter)
 ip_bid AS (
     SELECT
-        imp.ad_served_id,
+        v.ad_served_id,
         COALESCE(
             bd.bid_ip_direct,
             imp.impression_bid_ip,
             vs.vast_start_bid_ip,
             vi.vast_impression_bid_ip,
-            vw.viewability_bid_ip
+            vw.viewability_bid_ip,
+            fb.fallback_bid_ip
         ) AS bid_ip,
         bd.bid_time,
         CASE
@@ -126,13 +138,16 @@ ip_bid AS (
             WHEN vs.vast_start_bid_ip IS NOT NULL THEN 'event_log.bid_ip(vast_start)'
             WHEN vi.vast_impression_bid_ip IS NOT NULL THEN 'event_log.bid_ip(vast_impression)'
             WHEN vw.viewability_bid_ip IS NOT NULL THEN 'viewability_log.bid_ip'
+            WHEN fb.fallback_bid_ip IS NOT NULL THEN 'impression_log.bid_ip(no_time_filter)'
             ELSE NULL
         END AS bid_ip_source
-    FROM ip_impression imp
-    LEFT JOIN ip_bid_direct bd ON bd.ad_served_id = imp.ad_served_id
-    LEFT JOIN ip_vast_start vs ON vs.ad_served_id = imp.ad_served_id
-    LEFT JOIN ip_vast_impression vi ON vi.ad_served_id = imp.ad_served_id
-    LEFT JOIN ip_viewability vw ON vw.ad_served_id = imp.ad_served_id
+    FROM anchor_vvs v
+    LEFT JOIN ip_impression imp ON imp.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_bid_direct bd ON bd.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_vast_start vs ON vs.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_vast_impression vi ON vi.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_viewability vw ON vw.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_impression_bid_fallback fb ON fb.ad_served_id = v.ad_served_id
 ),
 
 -- Prior VV pool for cross-stage matching (S3 VVs)

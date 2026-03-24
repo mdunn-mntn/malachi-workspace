@@ -58,13 +58,14 @@ bid_ip_from_bid_logs AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
+-- Fallback: impression_log.bid_ip (NO time filter — ad_served_id filter is sufficient, and
+-- display impressions can be served weeks before the VV, outside the ±30d source window)
 bid_ip_fallback AS (
     SELECT
         il.ad_served_id,
         NULLIF(SPLIT(il.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS impression_bid_ip
     FROM `dw-main-silver.logdata.impression_log` il
-    WHERE il.time >= TIMESTAMP('2026-02-14') AND il.time < TIMESTAMP('2026-04-22')
-      AND il.advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
+    WHERE il.advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
       AND il.ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND il.bid_ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY il.time ASC) = 1
@@ -72,10 +73,11 @@ bid_ip_fallback AS (
 
 bid_ip_trace AS (
     SELECT
-        COALESCE(bd.ad_served_id, fb.ad_served_id) AS ad_served_id,
+        v.ad_served_id,
         COALESCE(bd.bid_ip_direct, fb.impression_bid_ip) AS bid_ip
-    FROM bid_ip_fallback fb
-    LEFT JOIN bid_ip_from_bid_logs bd ON bd.ad_served_id = fb.ad_served_id
+    FROM s3_vvs v
+    LEFT JOIN bid_ip_from_bid_logs bd ON bd.ad_served_id = v.ad_served_id
+    LEFT JOIN bid_ip_fallback fb ON fb.ad_served_id = v.ad_served_id
 )
 
 SELECT

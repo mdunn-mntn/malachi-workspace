@@ -43,11 +43,23 @@ ip_viewability AS (
 ),
 
 ip_impression AS (
-    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id
+    SELECT ad_served_id, SPLIT(ip, '/')[SAFE_OFFSET(0)] AS impression_ip, ttd_impression_id,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS impression_bid_ip
     FROM `dw-main-silver.logdata.impression_log`
     WHERE time >= TIMESTAMP('2026-02-14') AND time < TIMESTAMP('2026-04-22')
       AND advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
       AND ad_served_id IN (SELECT ad_served_id FROM anchor_vvs) AND ip IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
+),
+
+-- Fallback: no time filter for impression_log.bid_ip (catches cases outside source_window)
+ip_impression_bid_fallback AS (
+    SELECT ad_served_id,
+           NULLIF(SPLIT(bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0') AS fallback_bid_ip
+    FROM `dw-main-silver.logdata.impression_log`
+    WHERE advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
+      AND ad_served_id IN (SELECT ad_served_id FROM anchor_vvs)
+      AND bid_ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time ASC) = 1
 ),
 
@@ -59,16 +71,19 @@ ip_bid_direct AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
--- bid_ip COALESCE: bid_logs (primary) → impression_log.bid_ip (fallback)
+-- bid_ip COALESCE: bid_logs → impression_log.bid_ip (source_window) → impression_log.bid_ip (no time filter)
 ip_bid AS (
     SELECT
-        il.ad_served_id,
+        v.ad_served_id,
         COALESCE(
             bd.bid_ip_direct,
-            NULLIF(SPLIT(il.bid_ip, '/')[SAFE_OFFSET(0)], '0.0.0.0')
+            imp.impression_bid_ip,
+            fb.fallback_bid_ip
         ) AS bid_ip
-    FROM ip_impression il
-    LEFT JOIN ip_bid_direct bd ON bd.ad_served_id = il.ad_served_id
+    FROM anchor_vvs v
+    LEFT JOIN ip_bid_direct bd ON bd.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_impression imp ON imp.ad_served_id = v.ad_served_id
+    LEFT JOIN ip_impression_bid_fallback fb ON fb.ad_served_id = v.ad_served_id
 ),
 
 prior_vv_pool AS (

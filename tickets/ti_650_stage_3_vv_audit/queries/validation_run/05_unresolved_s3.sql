@@ -43,6 +43,7 @@ bid_ip_from_bid_logs AS (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY b.time ASC) = 1
 ),
 
+-- Fallback: no time filter on impression_log (ad_served_id filter is sufficient)
 bid_ip_trace AS (
     SELECT
         il.ad_served_id,
@@ -52,8 +53,7 @@ bid_ip_trace AS (
         ) AS bid_ip
     FROM `dw-main-silver.logdata.impression_log` il
     LEFT JOIN bid_ip_from_bid_logs bd ON bd.ad_served_id = il.ad_served_id
-    WHERE il.time >= TIMESTAMP('2026-02-14') AND il.time < TIMESTAMP('2026-04-22')
-      AND il.advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
+    WHERE il.advertiser_id IN (31276, 53308, 37775, 37056, 46104, 31455, 48866, 34838, 38101, 40236)
       AND il.ad_served_id IN (SELECT ad_served_id FROM s3_vvs)
       AND il.ip IS NOT NULL
     QUALIFY ROW_NUMBER() OVER (PARTITION BY il.ad_served_id ORDER BY il.time ASC) = 1
