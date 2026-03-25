@@ -1,0 +1,463 @@
+Unknown Speaker  0:00  
+To this short notice. I just saw it
+
+Unknown Speaker  0:03  
+open moment on the calendar. Figured it'd be easier to get it started than later. Sure, cool. So I got some some pretty great updates. So I randomly tested on a bunch of different series of advertisers just to make sure that I wasn't getting any missing, any edge cases. And
+
+Unknown Speaker  0:20  
+so pretty, pretty complete check. But basically, here's the results. So we're getting like 99 point like five at the lowest. Some of them are 100% resolved. For the unresolved ones, there are three reasons why it's unresolved. So one of them is they are resolvable. They just have an extremely long look back like we're talking one of the most 518 days, right? It's very rare, but it does happen. I have a couple examples of those. Yeah, let's take a look at those guys. Okay, well, because, like it should only my understanding is there's only one advertiser where that should be
+
+Unknown Speaker  0:58  
+applicable, which is W, G, U, the other ones that doesn't make sense fully but that doesn't mean I might not remember their exact configurations. So we can double check to see if they've had the same issue as WGU type situation the the other so there's two other ones I wanted to bring up. So there's this other one called no bid IP. And basically what's happening is that when you're joining to because the impression log is the only table that has both the auction ID and the ad served ID right,
+
+Unknown Speaker  1:29  
+is that when it joins to both win IP and bid IP, they're non existent, which I know that those are both
+
+Unknown Speaker  1:36  
+beeswax tables, if I understand
+
+Unknown Speaker  1:40  
+correctly. So the win IP is zero, and then the big IP just doesn't exist. And that's interesting, that actually happens the majority of time. So if I gave you, like the total one of these, I have a summary that I will share with you.
+
+Unknown Speaker  1:54  
+I
+
+Unknown Speaker  1:56  
+It's not this one. I think it's this one here. It's got a summary here where I can give you the numbers. But the majority of our unresolved actually come from that. It's where you've got a zero for the win IP and then,
+
+Unknown Speaker  2:12  
+yeah, no bid. So out of all these, like, for example, there's quite a few there.
+
+Unknown Speaker  2:18  
+There's not that many that are unresolved out of here. There are 7760
+
+Unknown Speaker  2:22  
+of them were because of that win logs being zero, and then the bid logs just not existing, if you join it on that ID,
+
+Unknown Speaker  2:30  
+interesting, yep. And so there were, I don't know what the difference. This is AI slot, but basically these two here are just the look back window was really long, and then there's, there's only two. So it's, like, very, very low that I couldn't neither Those situations are the case. Like, literally, I looked all back all time, could not find them at all. So let's, let's take an example. Let's, I have a couple here, so I
+
+Unknown Speaker  2:56  
+don't know which one you you'd rather go in first, but I've got a couple reasons. I don't know we could do the no bid IP, no bit. No bid IP, let's okay. There's a few. I mean, I've got all the information here. I also shared the sheet with you, if you want to take a look at it yourself. But, yeah, haven't had a chance to dig into it, but I was trying to today.
+
+Unknown Speaker  3:18  
+Okay, so we got what all do we have?
+
+Unknown Speaker  3:25  
+So I guess, you know, let's just scroll to the right. And if you want to talk me through what you're saying, we can
+
+Unknown Speaker  3:32  
+just start there. So, I mean, that's basically it here. So if you look here, I mean, we've got a CTV impression, final level three, objective ID one, you know? So, yeah, correct. And so we've looked at the click pass. You see the verified visit times 316,
+
+Unknown Speaker  3:47  
+here's the IP, here,
+
+Unknown Speaker  3:50  
+whatever. I have a lot of all this interesting so it's got event logs. So event like vast start, vast impression, doesn't have viewability, obviously, because it's CTB, here's the impression timestamp, and then that's it. I mean, basically it joins to win IP. And this the IP that's stored and went in the win logs table for this is zero. And then it just can't join to bid IP like this. Auction ID does not exist in bit IP. That's really odd. Okay, one thing I'm curious about in the vast i For the vast events, since you're able to pull that up, there is a bid IP logged there. That should be what you would see in that bid IP column, if it was working properly, right,
+
+Unknown Speaker  4:40  
+for like, one of those ads, can we pull up the database and see, like, what we have logged for the bit IP in there for that? Or do you have it in this table? I don't have that in the table, but I could look that up. I was just, you know, trying to pull from the the base tables, but yeah, I could definitely, no, you're right. You're You're 100% right to do that. Don't get me wrong.
+
+Unknown Speaker  5:00  
+So there's a lot of places to pull information. So it's like, you know, trying to consolidate down
+
+Unknown Speaker  5:09  
+so as few sources possible. But it's like it,
+
+Unknown Speaker  5:12  
+since it is in the click pass table, it is still a base table that you can, you know, you're not going too far out of your way. No, I should be totally fine.
+
+Unknown Speaker  5:25  
+So the event log, and it's like, like I said, I mean, this is on the scale of, like, really small. I mean, most, yeah, no, no, this is great. Like, I mean, we're talking about
+
+Unknown Speaker  5:35  
+your first iteration, where you were seeing 10% to 40% is essentially what reporting was saying,
+
+Unknown Speaker  5:43  
+roughly speaking, right, or at least the current variation, or one of the very early variations of it, right? I think they got it better. But,
+
+Unknown Speaker  5:51  
+you know, we're we've gotten to the point of where we just need to
+
+Unknown Speaker  5:57  
+see if we can get to 100%
+
+Unknown Speaker  5:59  
+because we still technically should be able to get to 100% right, like we're pretty much, that we're almost, we're basically there. It's just figuring out these last few weird edge cases that will kind of fix it.
+
+Unknown Speaker  6:16  
+Yeah, and I'll see what's in here.
+
+Unknown Speaker  6:19  
+And BigQuery is kind of slow, yeah, um, you should have the timestamp. Can't you just add a filter by daytime as well? That might help? Oh, it already came. Yeah. I figured, okay. So wait, this is the ad served ID. Is here?
+
+Unknown Speaker  6:38  
+Okay, so ad server ID, this is makes sense, because we're going to have all the vast events. So let's we got the IP beautiful. Then we should have a bit IP in here somewhere. Deal ID, good bid IP. There we go. Okay, so we do have a bid IP in here.
+
+Unknown Speaker  6:57  
+So in that case, I bet you, if we just fill in the bid IP, like, in a weird coalesce, like, if it doesn't exist, we can fill it in with another table. Do you want to do that? Or
+
+Unknown Speaker  7:10  
+so the bid IP
+
+Unknown Speaker  7:14  
+is, when we put that in, it was supposed to be as close to, if, like, our absolute best effort to being what you would see in that bid block table, like, if you're able to join back to that guy, right? You're still able to join back to bids based off of the TD impression ID inside of here, right? Because that's the auction ID.
+
+Unknown Speaker  7:36  
+It's just that an auction
+
+Unknown Speaker  7:39  
+it gets weird to do it. No reason why I didn't mention it before is because an auction technically will have like, multiple logs in that one for different campaigns, because technically, an auction is being is eligible for multiple campaigns at that point. So it's just a weird one. You kind of have to have a lot of other background knowledge to use it, right?
+
+Unknown Speaker  8:03  
+But all of that rambling just to say that it's actually pretty safe to use bid IP here for that bit blog tables IP, right?
+
+Unknown Speaker  8:15  
+It's just that it only works for this situation, for the for the verify for the vast one. I don't remember if we added it for the viewability event. One right for the for the display, one type deal.
+
+Unknown Speaker  8:32  
+Does that make sense? Right? Like, yeah, if we wanted a generic pattern to be able to make sure that we work for everything, right? Like
+
+Unknown Speaker  8:43  
+this that source for bid IP might not exist
+
+Unknown Speaker  8:48  
+for display, okay, so I'm just gonna put it here as like, when bid IP doesn't exist, coalesce from the CO Event Log bit IP, right? Yeah, that works. Is there another like? I mean, I don't know if. I guess I guess I could check to see if that resolves all of them. I don't see why it wouldn't. It's such a rare circumstance. It would be super rare. I think I don't, I don't even think it would exist where it doesn't exist in the event, right? It Exactly, exactly, um, I would do it just so that way you can go to kale and say, I got 100% match,
+
+Unknown Speaker  9:20  
+right? It is. It is a bit of a brag to be able to say that you have literally 100% match rate for everything going all the way through right or at least, like, get it to the point where, like, we're now, like, talking single single digits total that we're not able to account for right now, it's just single digit per advertiser. Well, it pretty much is single digit after this, because if you look here, the majority of them are that. So it's just these Exactly. So I don't know what we want to do, though, here's like, I thought of a couple things. And so if I go back to this table, you'll see I threw in all the details. I mean, I don't know if we want to keep all these in the table, but I figured more the better. And then you tell me, if you think it's overkill.
+
+Unknown Speaker  10:00  
+But if I look here, one of the things I was thinking about was like, well, we don't have to necessarily go back any further than our oldest campaign. However, it does seem like a lot of people have some extremely old campaigns. Yeah, I saw that mention of your optimization. Thought like it. The thought is good, right? But yeah, you you've kind of come into the data, and we do have some really long running campaigns, I don't think it'd be very viable in a lot of cases. What do we want to do, though? Because, like, my question is, like some 90 for most advertisers, in most situations, 90 days is even overkill. You hit 99% like at 60 days for most part, and the it's so much faster. It's just for these edge cases where you've got to go back, like, an extremely long amount of time when I'm optimizing, if, when I'm doing this, it's like, do we want? Because this is how the this is how the funnel works, and this is how I did it, yeah, basically I could do it to where it goes 90 days back. So it's very fast. Then all the ones that could there were unresolved. I can just take a sample of that, put those into another query, and then query those all times. So like you separate out the, you know,
+
+Unknown Speaker  11:13  
+computation. So it's not so big, because the biggest here is, is everything's partitioned on date. And so that's the best way that I can get the scan. So w g u is the only one that I know of that should be breaking that 90 day rule. Okay, so we can put w g u in its own special little category everyone else should follow in that 90 days. So let's take a look at we should understand which advertisers are not at 100% after your change within the 90 days,
+
+Unknown Speaker  11:48  
+right? And then that probably,
+
+Unknown Speaker  11:51  
+that is probably another, yet another really small edge case that we need to address in terms of methodology to make sure that we're counting for 100% I had to bring up my other results. I think it's a little bit like I I actually think it's closer to 120 but you're right on that, that it's a few educations. It's more than this. So for example, okay, so this one, I have looked back too short, right? Zazzle and Ferguson home. One's wedding, which
+
+Unknown Speaker  12:20  
+maybe makes sense that they would want verified visits to be attributed super long ago. I
+
+Unknown Speaker  12:26  
+don't know, Ferguson home is like,
+
+Unknown Speaker  12:29  
+I don't know something Well, it's, it's more that they're neon pixel accounts, more than likely, and
+
+Unknown Speaker  12:37  
+if they are in the same bucket, as you just know, if they're in the same bucket as wg, you and that they have this special setup that allows for verified business to be targeted longer than
+
+Unknown Speaker  12:54  
+30 days, right? Because that's the main problem right now, as they all fall in that bucket, that's still great, because we know exactly which accounts are going to have potential issues with this thing, right? But we're still know that we have 100% coverage for the general account, and we can go back and fix, try to address the outlier accounts to, you know, make them fall into the correct window.
+
+Unknown Speaker  13:22  
+Let me show you this, because this one is an example of the look back window being really far.
+
+Unknown Speaker  13:30  
+This should be
+
+Unknown Speaker  13:33  
+which advertiser is going to be for. This is going to be for
+
+Unknown Speaker  13:39  
+Zazzle and Ferguson home, and I want to look at those two examples. This is an old example, but if I go this is campaign group, 7890,
+
+Unknown Speaker  13:50  
+and 85144,
+
+Unknown Speaker  13:52  
+okay, can you ping me? Let's do Zazzle because that one's been coming up every once in a while in other areas. So can you send me dazzles advertiser ID, and let's look at that guy. Yeah, it's
+
+Unknown Speaker  14:09  
+just easier if you're paying it. Thanks.
+
+Unknown Speaker  14:14  
+Sometimes you be a little lazy and copy pasting. I was
+
+Unknown Speaker  14:19  
+talking about
+
+Unknown Speaker  14:22  
+myself there. All
+
+Unknown Speaker  14:25  
+right, so we got a block first. It is not blocking conversions.
+
+Unknown Speaker  14:34  
+I'm
+
+Unknown Speaker  14:46  
+Oh, you know, it'd be easier. I'm just gonna have it do it all right? It is using taxonomy block. That's good. So this guy should be
+
+Unknown Speaker  14:55  
+limited
+
+Unknown Speaker  14:59  
+to its.
+
+Unknown Speaker  15:00  
+The normal window. So if for Zazzle, if we're seeing that, we need to go farther back, then we have a small methodology thing that we need to address. Okay, let me see here. Here are two examples of
+
+Unknown Speaker  15:27  
+easier to do this.
+
+Unknown Speaker  15:36  
+So this is the query
+
+Unknown Speaker  15:41  
+to find all the special advertisers
+
+Unknown Speaker  15:47  
+that are potentially not going to fall in that 120 day look back window. Okay, gotcha, I forgot about advertiser configurations. I actually should throw that into the query, because they would actually make it. I could
+
+Unknown Speaker  16:02  
+probably throw in some pretty valuable information into our
+
+Unknown Speaker  16:09  
+just like for our outliers and stuff and see, because I didn't have the advertiser, I had the advertiser information, like the name and stuff, but no, you're fine. Like, this is only since how they can we configure the the
+
+Unknown Speaker  16:21  
+the audiences, right? It's not always relevant for the table that you're building, but in this specific scenario, it definitely is, because you'll see that. Wg, you should be on there. I don't know what these other two are off the top my head. Okay, so here's the Zazzle one. Here's the specific one that had a really long look back window. And so this query should be grabbing every single
+
+Unknown Speaker  16:44  
+verified visit.
+
+Unknown Speaker  16:48  
+Oh,
+
+Unknown Speaker  16:50  
+this is the event log
+
+Unknown Speaker  16:54  
+you're doing funnel level one, so you're pulling out all the stage one, vv,
+
+Unknown Speaker  17:02  
+or the stage one.
+
+Unknown Speaker  17:06  
+This is grab me, not the campaigns you're joining on that. Sorry, okay, yeah, you're pulling out all the stage one, CTV view, ability events, right?
+
+Unknown Speaker  17:17  
+Yeah, I think this is the one
+
+Unknown Speaker  17:21  
+check if bit IP had a vast impression in stage one campaign of the same campaign group, I think I grabbed the wrong query here. Yeah, I'm not sure if that's the one here. No, it's not. There's, sorry, there's one I had where I
+
+Unknown Speaker  17:33  
+think it's up here. Oh, I copy the wrong one. This is the right one. I was like, I didn't double check wrong query, wrong query. I meant this one there,
+
+Unknown Speaker  17:43  
+we're pretty close to each other. I was like, doesn't make sense. I'm like, I need to look at the click pass log, not the event log. I don't remember what this one was for. Okay, cool. That should fix it. Let's try this. Cancel.
+
+Unknown Speaker  18:01  
+Okay,
+
+Unknown Speaker  18:04  
+and let me double check that that's the right one. These are 156625225205,
+
+Unknown Speaker  18:18  
+yeah. This is it, okay?
+
+Unknown Speaker  18:21  
+Um,
+
+Unknown Speaker  18:24  
+yeah,
+
+Unknown Speaker  18:26  
+these are
+
+Unknown Speaker  18:29  
+the IPS on.
+
+Unknown Speaker  18:37  
+This is the verified visit here for this ad server ID
+
+Unknown Speaker  18:42  
+for these impressions. So it's basically looking for where the IP is this. What are all the verified visits that are under the IP?
+
+Unknown Speaker  18:59  
+Yeah, I think I had to run a much larger query to be able to see the whole trace on these two.
+
+Unknown Speaker  19:11  
+I mean, that's that's okay,
+
+Unknown Speaker  19:14  
+if,
+
+Unknown Speaker  19:16  
+I guess one way to put it is, there is a potential that the change that we talked about earlier, that fixes the dot zeros will also fix this, right if you leverage the bid IP that you see here on the click pass event instead of the one that you pull from the bid or like the one that is, for some reason, different. That would be interesting to know.
+
+Unknown Speaker  19:40  
+It could be, it could be one of those things where it fixes Dazzle, or some of these other ones, right? Well, why? Because, if there is,
+
+Unknown Speaker  19:48  
+because, have you looked at because, like, I'm just saying, like, the problem, like, what's the, what's the bit IP that we're pulling out for the Zazzle guy, the, this is the bit IP i.
+
+Unknown Speaker  20:00  
+So we actually have the bid IPs for these. Okay, can we pull see what the click pass bit IP is for these guys? Yeah, that's, that's why I just pulled this is a click pass, oh, sorry. Look at what the click pass bit IP, yeah,
+
+Unknown Speaker  20:17  
+yeah. Hold on, let me.
+
+Unknown Speaker  20:20  
+Let me copy these quick, just so I can see it.
+
+Unknown Speaker  20:31  
+Yeah, so here's the difference here. This is 153662252050,
+
+Unknown Speaker  20:38  
+wait,
+
+Unknown Speaker  20:41  
+hold on. That's the IP. Let me double check that bit IP. I'm not grabbing the bid IP from this one.
+
+Unknown Speaker  20:47  
+Okay, hold on here. I
+
+Unknown Speaker  21:04  
+a
+
+Unknown Speaker  21:10  
+bit IP, not fine. It's at a click pass. Isn't that called bid IP?
+
+Unknown Speaker  21:20  
+I don't know. I need to double check. It should be something very close to that, if not exactly that.
+
+Unknown Speaker  21:33  
+I mean literally, oh, it's not in,
+
+Unknown Speaker  21:36  
+it's not in. Click pass, sorry, that's the that is a field that is a field that is available on the event right? Yeah. Do you want to check your event log? Yeah? Sorry, no, you're on my bad. I was like, star,
+
+Unknown Speaker  21:53  
+well, it's technically click pass. Should have had that in there too. Um, but that's a whole other thing. I
+
+Unknown Speaker  22:13  
+i need to double check what the actual,
+
+Unknown Speaker  22:17  
+oh, I should be able to do this on the ad served ID, actually, yes, yeah, and
+
+Unknown Speaker  22:24  
+All right, Hold on
+
+Unknown Speaker  22:27  
+the ad server. These are here.
+
+Unknown Speaker  22:31  
+Okay, do
+
+Unknown Speaker  22:45  
+Okay,
+
+Unknown Speaker  22:49  
+so, yeah, we'll see if they're different. So because we have, these are the bid IPs that we have from the bid logs, yeah, yeah, we just want to see if they're different, because that's what you're using to go back to go back to next step, right? So yeah, if they different, that can be interesting.
+
+Unknown Speaker  23:09  
+But 219216,
+
+Unknown Speaker  23:12  
+that one looks Oh, one of them is not in a CTV, I realized too.
+
+Unknown Speaker  23:17  
+So this bid is, is the same, it looks like as we have the other one is a what
+
+Unknown Speaker  23:26  
+type of impression is? It must be display viewable, so I could check the viewability log for bid. IP, should that be there? Yeah, yeah, okay,
+
+Unknown Speaker  23:39  
+just try this.
+
+Unknown Speaker  23:42  
+I'm Not sure which one it is. I'm
+
+Unknown Speaker  24:13  
+it's the D
+
+Unknown Speaker  24:22  
+Oh is It silver? Must be silver. I
+
+Unknown Speaker  24:44  
+It's table,
+
+Unknown Speaker  24:47  
+calm, oh, it's got the raw schema in there, okay, makes sense.
+
+Unknown Speaker  25:00  
+172, 44, yeah, now they're the same
+
+Unknown Speaker  25:05  
+between those. So
+
+Unknown Speaker  25:09  
+is there something that would help, like, I don't know. Okay, so we've confirmed that the bid IP that we were looking for is what was on the vast events. And as best we can tell, is fully accurate, right? And so you said you were not able to find this IP in
+
+Unknown Speaker  25:34  
+Well, sorry, I'm confusing myself already. So this IP is in relation to the
+
+Unknown Speaker  25:42  
+vast event already that we're trying to go back one more step. Yeah, I went back all time, and I was able to find one for these specific verified visits. But like I said, I think one was 360 I have a summary somewhere here. I think one is 364 days, and the other one was like 500 something. Was pretty crazy. Well, I'm just trying to honor because I missed the part where I'm just all over the place. The IP that we just looked up, and we just looked up the vast event for this IP, right? That is the
+
+Unknown Speaker  26:15  
+impression that generated the verified visit for stage three, or it's the generated the visit, verified visit that put it in stage three or like, what event is that actually for? That's the verified visit that was attributed to stage three. Okay, so that was the verified visit that was attributed to stage three. We found the CTV event that put it,
+
+Unknown Speaker  26:37  
+that made it eligible, those served in stage three. But we can't go back to stage two or stage one for that,
+
+Unknown Speaker  26:48  
+for that impression, is that roughly, right? Well, we can for those two. It's just that it's not within it's like this one was
+
+Unknown Speaker  26:58  
+396 days back, and then this one was 518 which is the soonest I could find in the and it is looking for the most recent one. And they can share. I believe that
+
+Unknown Speaker  27:10  
+would make sense, right? It has to be able to share, because it only takes one event to get you into stage three, and then you could have 10 of them. But, yes, but that being said, I this is the closest one I can look back. So I am looking at the more recent so like, let's say there were 10 stage two verified visits, or something like that. That got you into stage three. I would choose the most recent one. And so this is saying recent one for these two, 396, the other one is 518,
+
+Unknown Speaker  27:37  
+at least, and you and so for this one, it's going to be one for is going to be in the click pass log, and the other one is going to be in the viewability log. So basically, when you, when you look back all time, and you order them by time, you those are the soonest stage two or stage ones that you see. And actually think, I think these are going directly back to stage one two. I don't think it's like a
+
+Unknown Speaker  28:04  
+you're not seeing too much of the stage. Yeah, I don't yeah most of the time, when you have these super long look back ones, which makes sense, it's you're going straight from stage three to stage one. There's
+
+Unknown Speaker  28:16  
+Yeah, stage three to stage one. You're not doing Stage Three to stage two in most of the circumstances,
+
+Unknown Speaker  28:23  
+interesting.
+
+Unknown Speaker  28:29  
+All right, I'll take a look at this as well, because I feel like there's just something that we're just being dumb about and missing. Um, it's just not popping out at me right now. Okay, two other things too, that. So I will fix the no bid IP one. I will just coalesce it if we don't see it. That's an easy fix. These are genuinely unresolved. So, for example, these ones I just extended. I did it all time, just on those IPs that can I find it? And I did find it was just really large long ago. However, it's another Ferguson home one. So there is some sort of correlation here. I think
+
+Unknown Speaker  29:06  
+I look back all time, I can't even find one. There's not one existing verified visit that is prior.
+
+Unknown Speaker  29:13  
+And I can, for example, pull all the verified visits. So basically, this is what I do. I grab the bid IP from the stage three, and then I do,
+
+Unknown Speaker  29:22  
+I do filtering on it. I check any IP column in any of the event or the sorry, the click pass log, right? And I look for any prior stage three and stage or, sorry, stage two and stage one at all. Some of them, they're stage three. They're literally doesn't even exist as stage two or stage one at all at any point in time, at least that we currently have in GCP, which only goes back to 2025
+
+Unknown Speaker  29:47  
+January 1, 2025
+
+Unknown Speaker  29:50  
+Okay, so that's another one, and those are in here. So we could probably just delete this cell, because it has everything that the next cell has. If you go in here.
+
+Unknown Speaker  30:00  
+Here's an example. Here's the full trace. You should be able to have every single one of these, all the details that you could possibly need
+
+Unknown Speaker  30:07  
+for those, and then I'll go ahead and fix the rest of these here. Okay, well, I mean, the good news is we were already at three nines or two nines. This should take us much closer to three nines, and now we're just trying to
+
+Unknown Speaker  30:22  
+clean up some really corner cases, so, or hopefully really corner cases. So, yeah, I'm excited about that. It would be pretty cool to go to Zach or not Zach to kale and tell him, Hey, this is 100%
+
+Unknown Speaker  30:34  
+which would probably look pretty good to execs. Yeah, because this has been a pain point for a while, so it just makes it so more people understand what all is going on. Cool, all right, anything else? Zach, nope, that's it. Thank you. Later. Thank you, bye, bye.
+
+Transcribed by https://otter.ai

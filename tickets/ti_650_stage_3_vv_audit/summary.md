@@ -36,7 +36,7 @@ Full report: `outputs/ti_650_v2_validation_findings.md`
 | Total S3 VVs | 146,900 |
 | Has bid_ip | 146,870 (99.98%) — COALESCE recovered 30 via impression_log.bid_ip |
 | **Resolved (365d lookback)** | **146,851 (99.97%)** |
-| Resolved (all-time extended) | +13 |
+| Resolved (all-time extended) | +17 |
 | No bid_ip (all tables NULL) | 30 (27 Ancient Nutrition, 3 EarthLink) |
 | Unresolved (have bid_ip, no match) | 19 |
 | 4 advertisers at 100% | Zazzle, Zoom, Clayton Homes, Outdoorsy |
@@ -48,13 +48,23 @@ Full report: `outputs/validation_run/00_summary.md`
 ### Unresolved root causes
 
 - **No bid_ip** (30 of 146,900 in v4, was 60): bid_logs purged AND impression_log.bid_ip / event_log.bid_ip / viewability_log.bid_ip all NULL. COALESCE recovered 30 of original 60. Remaining 30 (27 Ancient Nutrition, 3 EarthLink) have no bid_ip anywhere.
-- **Resolved extended** (13): prior VV found beyond 365-day lookback window but within all-time clickpass_log scan (0–370 days back).
+- **Resolved extended** (17): prior VV found beyond 365-day lookback window but within all-time clickpass_log scan (0–370 days back). Includes 4 newly recovered by COALESCE.
 - **Lookback too short** (2): bid_ip exists, no match found, but campaign_group existed >365d — lookback insufficient, not a bug:
   - Ferguson Home (85144): 396d since S1 campaign created
   - Zazzle (78903): 518d since S1 campaign created
 - **Genuinely unresolved** (2): bid_ip exists, no match found, campaign <100d old — these are the real mysteries:
   - Ferguson Home (106777): bid_ip 174.202.4.80, campaign 95d old
   - FICO (107447): bid_ip 172.56.154.242 (T-Mobile CGNAT), campaign 80d old
+
+### Zach meeting #6 findings (2026-03-24)
+
+- **event_log.bid_ip confirmed safe as fallback** — intentionally designed to match bid_logs.ip
+- **bid_logs has multiple rows per auction_id** — one per eligible campaign. Always dedup with ROW_NUMBER.
+- **clickpass_log has no bid_ip column** — Zach acknowledged this as a gap
+- **GCP data floor: 2025-01-01** — no BQ data before this. All-time = Jan 1, 2025 to present.
+- **90d lookback sufficient for 99%+ of advertisers** — WGU only known exception. Zazzle/Ferguson may be "neon pixel accounts" with special configs.
+- **Advertiser configurations** — `advertiser_configs` table has per-advertiser VV attribution windows. Check for extended lookback accounts.
+- **Remaining 30 no_bid_ip** — Zach found this interesting, event_log.bid_ip should always be populated. May be a pipeline gap. Investigating.
 
 ---
 

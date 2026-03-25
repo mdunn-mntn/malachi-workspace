@@ -78,14 +78,16 @@ WGU excluded (331,792 S3 VVs — extreme outlier, ~30% of MNTN spend).
 
 ## Unresolved Investigation (Step 5)
 
-77 VVs investigated (60 no_bid_ip + 17 with bid_ip but no match).
+51 VVs investigated after COALESCE (30 no_bid_ip + 17 original unresolved + 4 newly recovered).
 
 | Classification | Count | Meaning |
 |---|---|---|
-| NO_BID_IP | 30 (was 60) | bid_ip missing from ALL tables. COALESCE recovered 30 of original 60 via impression_log.bid_ip fallback. Remaining 30 (27 Ancient Nutrition, 3 EarthLink) have NULL bid_ip everywhere. |
-| RESOLVED_EXTENDED | 13 | Prior VV found beyond 365-day lookback (0–370 days back) |
+| NO_BID_IP | 30 | bid_ip NULL in ALL tables (bid_logs purged, impression_log/event_log/viewability_log also NULL). 27 Ancient Nutrition, 3 EarthLink. |
+| RESOLVED_EXTENDED | 17 | Prior VV found beyond 365-day lookback (0–370 days back). Includes 4 newly recovered by COALESCE. |
 | LOOKBACK_TOO_SHORT | 2 | No match found, but campaign existed >365d — lookback insufficient |
 | **GENUINELY_UNRESOLVED** | **2** | No match found anywhere (all time), campaign <100d old |
+
+**COALESCE impact:** Recovered 30 of original 60 NO_BID_IP VVs via `impression_log.bid_ip` fallback. Of those 30: 28 resolved within 365d lookback, 2 became unresolved (bid_ip recovered but no prior VV match). 17 total resolved via extended all-time scan (up from 13).
 
 ### Extended resolution details
 
@@ -169,14 +171,16 @@ S1 campaign created 2026-01-02 (76d before VV). Same — no prior VV found. CGNA
 
 Full pipeline detail for both + NO_BID_IP examples: `outputs/validation_run/06_truly_unresolved_for_zach.csv`
 
-### Questions for Zach
+### Questions for Zach — Status after Meeting #6 (2026-03-24)
 
-1. **VV without prior site visit?** Ferguson's bid_ip was in the S3 targeting segment but has no prior VV in clickpass_log. Could an IP have an S1 VAST impression that never resulted in a site visit?
-2. **CGNAT IP rotation?** FICO's bid_ip is T-Mobile CGNAT (172.56.x). Could the IP have rotated between the S1 impression and the S3 bid?
-3. **bid_logs retention?** We confirmed bid_logs records are purged (tested 10 ad_served_ids — impression_log exists, bid_logs gone). What is the actual Beeswax retention policy?
-4. **Alternative path to bid_ip?** Since bid_logs purges, is there another table with the external IP for a given auction_id?
-5. **Non-VV targeting path?** Is there any path into the S3 segment that doesn't go through a prior site visit (e.g., direct segment upload, CRM match)?
-6. **Campaign creation date as max lookback?** Can an impression exist before the campaign's `create_time`?
+1. **VV without prior site visit?** OPEN — Ferguson's bid_ip in S3 targeting but no prior VV. Could be IP rotation or edge case.
+2. **CGNAT IP rotation?** Acknowledged by Zach as a plausible cause for FICO 172.56.x. No definitive answer.
+3. **bid_logs retention?** ANSWERED — bid_logs purges records (90d TTL confirmed empirically). Zach agreed this is expected Beeswax behavior.
+4. **Alternative path to bid_ip?** ANSWERED — `event_log.bid_ip` is intentionally designed to match bid_logs.ip and is safe to use as fallback. Zach confirmed: "it's actually pretty safe to use bid IP here for that bid blog table's IP." Also: `impression_log.bid_ip` and `viewability_log.bid_ip` store copies. Zach unsure if viewability_log.bid_ip is populated for all display events. COALESCE recovers 30 of 60.
+5. **Non-VV targeting path?** Still open — not discussed in this meeting.
+6. **Campaign creation date as max lookback?** PARTIALLY ANSWERED — Zach says WGU is the only known advertiser requiring >90d lookback. Others (Zazzle, Ferguson) may be "neon pixel accounts" with special configs. Check `advertiser_configs` table. Zach will investigate Zazzle specifically.
+7. **NEW — clickpass_log missing bid_ip column?** Zach confirmed clickpass_log does NOT have bid_ip ("that's a whole other thing"). It should have been added.
+8. **NEW — Remaining 30 no_bid_ip (bid_ip NULL everywhere)?** Zach found this interesting — event_log.bid_ip should always be populated. May be a pipeline gap for certain impression types. Zach investigating.
 
 ---
 
