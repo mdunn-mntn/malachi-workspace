@@ -1,9 +1,9 @@
 # TI-748: Causal Impact — Media Plan Feature
 
 **Jira:** https://mntn.atlassian.net/browse/TI-748
-**Status:** In Progress
+**Status:** Complete
 **Date Started:** 2026-03-26
-**Date Completed:**
+**Date Completed:** 2026-03-27
 **Assignee:** Malachi
 
 ---
@@ -12,7 +12,9 @@
 
 Media Plan is a beta feature giving advertisers control over network allocation (% of spend per publisher like ABC, CBS, ESPN). MNTN auto-recommends allocations based on audience and goals; advertisers can accept or customize. Only applies to new prospecting campaigns.
 
-Kirsa asked for a causal impact analysis to determine whether advertisers who adopted the Media Plan feature (using MNTN's recommended settings) saw improved prospecting performance. Kept quiet from broader team — Kirsa wants to surprise with data.
+Kirsa requested a causal impact analysis to determine whether advertisers who adopted the Media Plan feature (using MNTN's recommended settings) saw improved prospecting performance.
+
+**Stakeholder-facing findings doc:** `artifacts/ti_748_media_plan_findings.md` — clean summary for Kirsa, Daniella, and media team. This `summary.md` is the internal working record with full detail.
 
 ## 2. The Problem
 
@@ -128,15 +130,9 @@ Each media plan allocates the campaign's total budget as percentages across publ
 1. **Long-tail pruning:** The old config (max_networks=25) kept many low-scoring publishers that barely cleared the 0.5% minimum allocation threshold. The new config (max_networks=15) forces the softmax to drop the bottom ~10 networks, removing the long tail of poor performers. Combined with the spend capacity filter ($0.50/hr minimum added in the same Feb 3 release), low-inventory networks are also eliminated.
 2. **Budget concentration via softmax:** With alpha=5.0 softmax temperature and only 15 networks, the top-scoring publishers get meaningfully larger budget shares (12-15% vs 3-5%). The bidder has enough budget per network to optimize delivery effectively.
 
-**Note on frequency hypothesis:** We initially hypothesized that concentration enables household-level frequency building per network. Kirsa pushed back on this — historically at MNTN, *lower* frequency → more unique households → better overall performance. The benefit is more likely from eliminating waste on low-quality networks than from frequency accumulation.
+**Frequency hypothesis rejected:** Benefit is from long-tail pruning, not frequency accumulation (lower frequency → more unique households → better performance historically at MNTN).
 
-**What pre-adoption baseline IVR tells us (nothing):**
-- CWRV had the highest pre-IVR (0.058) and benefited the most
-- Boll & Branch had the second-highest (0.024) and was hurt the most
-- Tempo had the lowest (0.005) and was also hurt
-- Baseline performance does NOT predict who benefits — allocation strategy does
-
-**Implication for the product team:** The recommendation algorithm may perform significantly better when it produces **more concentrated allocations** (fewer networks, stronger convictions) rather than defaulting to a broad spread. This could be tuned — if the algorithm doesn't have strong signal for differentiation, it should still concentrate rather than dilute. Worth a focused investigation into the algorithm's concentration logic.
+**Baseline IVR does NOT predict who benefits** — CWRV (highest pre-IVR) benefited most, Boll & Branch (second-highest) was hurt most. Allocation strategy (config era) is the differentiator.
 
 **WHICH publishers also matters — not just how many:**
 
@@ -161,97 +157,39 @@ Every single advertiser was delivering impressions across **131-183 publishers**
 | **Tempo** | **-26.2%*** | 157 | **26** | **83%** | 10.6x |
 | **Boll & Branch** | **-31.5%*** | 131 | **26** | **80%** | 10.5x |
 
-**How this was calculated:**
-- "Pre-Adoption Publishers" = count of distinct `domain` values in `sum_by_ctv_network_by_day` for each advertiser's prospecting campaigns, between 2025-01-01 and their first media plan create date, with ≥5,000 impressions per publisher
-- "Plan Publishers" = count of distinct publishers in `media_plan_publishers` for their recommended plans
-- "Best/Worst IVR Ratio" = the best-performing publisher's IVR divided by the worst (pre-adoption), showing how much IVR variance existed across publishers before optimization
+**Data sources:** Pre-Adoption Publishers = distinct domains in `sum_by_ctv_network_by_day` (≥5K impressions, pre-adoption period). Plan Publishers = distinct publishers in `media_plan_publishers`.
 
-**The pattern is unambiguous:**
-- **90% publisher reduction** (168 → 16 publishers) → positive IVR effect (+10 to +17%)
-- **80% publisher reduction** (131 → 26 publishers) → negative IVR effect (-26 to -31%)
-- The threshold appears to be around **~88% reduction** (roughly 16-19 target publishers)
-
-**Why more concentration works — the frequency mechanism:**
-Every advertiser had 10-15x IVR variance between their best and worst publishers. When budget is spread across 160+ publishers, most of the spend goes to the long tail of low-IVR networks. Concentrating to 16 publishers eliminates that long tail and lets the bidder build meaningful household frequency on its best channels.
+**The pattern:** 90% reduction (→16 publishers) = positive IVR. 80% reduction (→26 publishers) = negative IVR. Threshold ~88% / ~16-19 target publishers. All advertisers had 10-15x IVR variance between best and worst publishers pre-adoption.
 
 **Did the algorithm pick the RIGHT publishers?**
 Tested for Lighting New York: The algorithm recommended Samsung TV+ (12%), Bravo (12%), CNN (10%) — these rank #37-59 by actual pre-adoption IVR. The true best IVR publishers (Spectrum News 1.09%, sports networks 0.7-0.9%) have low inventory (17K-30K impressions vs Samsung's 627K). **The algorithm optimized for deliverability/reach, not IVR.** The benefit came from removing the worst publishers, not finding the best ones.
 
-**Allocation Compliance Check: Are the recommended percentages being followed?**
+**Allocation Compliance:** Plans are followed within ±3%. Validated on CWRV Sales across multiple campaign groups. ~5-6% going to un-recommended publishers (e.g., Tubi) comes from Flex budget (10% reserve). Cross-validated `sum_by_ctv_network_by_day` against `cost_impression_log` — same publishers, same ranking. IMPORTANT: must filter to media plan campaign groups only (not all advertiser campaigns).
 
-IMPORTANT: Initial analysis showed massive deviations — but that was because we were counting ALL campaigns, not just media plan campaign groups. After correcting to ONLY count impressions from campaign groups that have a recommended media plan:
+**Open issue:** Some campaign groups (e.g., ThirdLove 115424) show ALL publishers as "NOT In Plan" — possible name mapping issue.
 
-CWRV Sales (benefited, +16.8%) — campaign group 103569:
-| Publisher | Recommended | Actual | Diff |
-|---|---|---|---|
-| Fox News | 7% | 7.8% | +0.8% |
-| A&E | 5% | 7.2% | +2.2% |
-| NBC | 7% | 6.5% | -0.5% |
-| AMC | 5% | 5.4% | +0.4% |
-| HBO Max | 5% | 4.5% | -0.5% |
+**Actionable insights:** (1) Refresh Boll & Branch/Tempo plans under current config — zero-risk quick win. (2) ML model has feature skew (41/52 features zeroed at inference, per olympus `specs/backlog/ml-primary-scoring-mode.md`) — fixing improves publisher selection. (3) Mechanism is long-tail pruning + spend capacity filtering from Feb 3 release.
 
-CWRV CG 111504: NBC recommended 12% → actual 15.2%, Peacock recommended 12% → actual 15.0%. Close.
-CWRV CG 111505: NBC recommended 12% → actual 11.9%. Nearly exact.
-
-**The plans ARE being largely followed for media plan campaign groups**, with deviations mostly within ±3%. The "Flex" allocation (7-10%) accounts for most remaining variance — some un-recommended publishers (Tubi Entertainment) receive 5-6% which likely comes from the Flex budget.
-
-**Methodology note:** Matched `media_plan_publishers.name` to `sum_by_ctv_network_by_day.domain` (exact name matches confirmed). Only counted impressions from campaigns belonging to campaign groups that have a recommended media plan (`media_plan.campaign_group_id`), filtered to post-plan-creation dates.
-
-**Data source validation:** Cross-validated `sum_by_ctv_network_by_day` against `cost_impression_log` (the authoritative impression-level source — one row per won/paid impression). For CWRV Sales in Feb 2026, both tables show the same top-5 publishers in the same rank order (Peacock, NBC, Tubi Entertainment, HBO Max, Paramount Streaming - Comedy). Counts differ slightly due to campaign filtering, but the publisher distribution is consistent. `sum_by_ctv_network_by_day` is a valid proxy for publisher-level analysis. Note: `impression_log` was NOT used because it contains all bids (won + not won), not just delivered impressions.
-
-**Still needs investigation:** Some campaign groups (e.g., ThirdLove 115424) show ALL publishers as "NOT In Plan" despite being linked to a media plan — may be a join issue with how publisher names map for that specific plan, or the plan publishers may use different naming.
-
-**Three actionable product insights:**
-1. **Refresh old-config plans immediately.** Boll & Branch and Tempo are still running 26-publisher plans from Oct-Nov 2025. Regenerating their plans under the current config (max_networks=15, spend capacity filter) would likely improve their IVR. This is a zero-risk quick win.
-2. **The ML model is the next performance lever.** Performance scoring is 25% of the combined score, but the ML model has a critical feature skew issue — 41/52 features receive zero values at inference (documented in olympus `specs/backlog/ml-primary-scoring-mode.md`). Fixing this would meaningfully improve publisher selection quality.
-3. **The mechanism is long-tail pruning + spend capacity filtering.** The Feb 3 release added both max_networks=15 AND $0.50/hr spend capacity filtering. Together, they eliminate networks that can't deliver meaningful budget AND cap total network count. This forces the softmax to concentrate budget on the highest-scoring publishers.
-
-**Caveat:** N=8 is too small to confirm statistically. But the pattern is unambiguous, the mechanism is plausible, and it's directly actionable.
+**Caveat:** N=8 — pattern is clear and mechanism is plausible, but not statistically confirmable at this sample size.
 
 ### Aggregate Assessment
 
-The overall IVR effect is near zero (spend-weighted -0.23%, panel model +2.06% not significant). **This is because the analysis mixes two algorithm versions.** Plans under the old config (max_networks=25, pre-Feb 2026) produced diluted allocations that hurt performance; plans under the new config (max_networks=15, post-Feb 2026) produced concentrated allocations that helped. Averaging across both washes out the effect.
-
-**Config era within-advertiser comparison (CWRV Sales):**
-| Config Era | # Publishers | IVR | Impressions | Spend |
-|---|---|---|---|---|
-| Old config (26-pub) | 26 | 2.52% | 75K | $2.2K |
-| New config (16-pub) | 16 | 2.91% | 1.7M | $136K |
-
-CWRV's 16-publisher plans (new config) show **15.5% higher IVR** than their 26-publisher plan (old config), with 22x more impressions. Am College of Education shows a similar pattern: old config IVR 0.250% → new config IVR 0.298% (+19%).
-
-**Implication:** If all advertisers were on the current config, the aggregate effect would likely be positive. The two large negative outliers (Boll & Branch, Tempo) are on the old config and drag down the average. Refreshing their plans is the highest-priority action.
+Overall IVR near zero (spend-weighted -0.23%, panel +2.06% n.s.) — **because the analysis mixes two algorithm versions.** CWRV within-advertiser: old-config IVR 2.52% → new-config IVR 2.91% (+15.5%, 22x more impressions). Am College similar: 0.250% → 0.298% (+19%). If all advertisers were on current config, aggregate would likely be positive.
 
 ### Model Validation Results
 
-**Placebo tests:** Placebo FPR = **24%** (down from 86% in v2, 30% in v3).
-- **Why it improved further:** v5 adds the 4-week ramp-up exclusion, which removes the noisiest post-intervention weeks where new campaign dynamics (not media plan effects) dominate. Combined with BIC per-advertiser covariate selection, the model better separates real effects from noise.
-- **Why it's still 24%:** Advertiser time series have natural structural breaks — budget shifts, campaign launches/pauses, seasonal pivots — that happened organically during the pre-period. The model correctly identifies these as "something changed here," which counts as a false positive in a placebo test even though it's detecting real (non-intervention) changes. This is inherent to per-advertiser time series analysis with small N.
+| Validation | Result | Notes |
+|---|---|---|
+| Placebo FPR | 24% (down from 86% v2, 30% v3) | Residual FPR from natural structural breaks in advertiser time series |
+| Sensitivity | 5/6 directionally consistent | Across pre-period lengths 26-78 weeks. FICO inconsistent (near-zero effect, noise flips sign) |
+| VIF cleanup | 14 candidates → 3-7 per advertiser | platform_spend/platform_impressions had VIF >300 (removed) |
+| BIC selection | 3-7 → 2-4 per advertiser | `spend_change_pct` in ALL models, `metric_lag1/2` in most |
 
-**Sensitivity analysis:** 5/6 advertisers showed **directionally consistent** results across pre-period lengths (26, 39, 52, 65, 78 weeks).
-- **Why this matters:** If changing how much history we use flips the result from positive to negative, we can't trust it — the finding is an artifact of an arbitrary choice. 5/6 being consistent means the results are robust to this choice.
-- **Why FICO was inconsistent:** Its effect is essentially zero (-3.97%), so random noise can flip the sign. This is actually reassuring — it means the methodology correctly identifies a near-zero effect as unstable, rather than artificially declaring it significant.
-
-**VIF multicollinearity:** Starting from 14 candidate covariates, VIF iteratively removed the worst collinear ones.
-- **Why this matters:** Collinear covariates make coefficient estimates unstable — the model can't distinguish which covariate is driving the prediction. For example, platform_spend and platform_impressions had VIF > 300, meaning >99% of their variance was shared. Including both is like counting the same information twice, which inflates uncertainty and produces unreliable counterfactuals.
-- **What survived:** After VIF cleanup, 3-7 covariates remained per advertiser, then BIC narrowed to 2-4.
-
-**Key covariate finding:** `spend_change_pct` appeared in ALL models. `metric_lag1/2` appeared in most.
-- **Why spend_change_pct universally matters:** When an advertiser increases/decreases their budget week-over-week, their metrics shift regardless of media plan. This is the primary confound we need to control for. Raw spend levels (e.g., "this advertiser spends $50K/week") were NOT selected because they're mechanically correlated with the outcome — more spend → more impressions → different IVR. The *change* in spend captures budget decisions without that mechanical correlation.
-- **Why metric_lag matters:** Advertiser IVR is autocorrelated — this week's IVR is partly predicted by last week's. Without the lag, the model attributes this momentum to the intervention. With it, the model says "this advertiser was already trending up/down before adoption."
-- **Why platform metrics were mostly rejected:** Platform-wide IVR, spend, and impressions are all measuring roughly the same thing ("is the market hot or cold this week") and are highly collinear. BIC prefers the simpler path: use the advertiser's own dynamics rather than noisy platform-wide proxies. `platform_ivr` is occasionally selected when an advertiser's IVR tracks the market closely.
+**Key covariate insight:** `spend_change_pct` (week-over-week budget changes) is the primary confound — captures budget decisions without mechanical correlation to IVR. `metric_lag` controls for IVR autocorrelation. Platform-wide metrics mostly rejected by BIC as collinear and noisy.
 
 ### Within-Advertiser Comparison (Recommended vs Non-Recommended)
 
-7 advertisers have both recommended and non-recommended campaigns in post-period.
-**Average IVR difference (rec - non_rec): -0.027** — recommended campaigns have lower IVR on average.
-
-**Why this does NOT mean the recommendation is bad:** Recommended campaigns are NEW (created with media plan), while non-recommended campaigns are typically OLDER with established audience patterns. New campaigns always underperform during ramp-up because:
-- Audience targeting hasn't optimized yet (the bidder needs time to learn which IPs convert)
-- Frequency hasn't built up (first impressions are less effective than repeated exposure)
-- The campaign is still exploring its delivery footprint
-
-This comparison is **confounded by campaign maturity** and cannot be interpreted at face value. TI-780 (campaign ramp-up research) confirmed a ~4-week ramp-up period, which v5 excludes from the CausalImpact analysis.
+7 advertisers have both recommended and non-recommended campaigns in post-period. Average IVR difference (rec - non_rec): -0.027. **Confounded by campaign maturity** — recommended campaigns are new (still ramping), non-recommended are established. Not interpretable at face value. TI-780 confirmed ~4-week ramp-up period, which v5 excludes from CausalImpact.
 
 ## 5. Solution
 
@@ -306,26 +244,21 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 - Created `knowledge/experimentation.md` — experiment methodology knowledge base
 - Updated global and project CLAUDE.md to auto-update experimentation.md
 
-## 8. Meeting 2 with Kirsa (2026-03-27)
+## 8. Meeting Notes & Product Context
 
-**Presented:** v5 results (ramp-up charts, CausalImpact results, concentration finding)
+### Meeting 2 with Kirsa (2026-03-27)
 
-### Kirsa's Reactions & Feedback
+**Key feedback:**
+- Network is "mid to low" on the optimization lever hierarchy. Top: audience quality/recency → frequency → device type → networks. Feature's value may be more about customer control than pure performance.
+- Frequency hypothesis rejected: historically at MNTN, *lower* frequency → more unique households → better performance. Frequency caps applied at household level, not network level. Benefit is from long-tail pruning, not frequency accumulation.
+- Deliverability prioritized because (a) budget must be spent, (b) performance has diminishing returns as spend scales on a single network.
 
-- **On aggregate results:** Kirsa looks at % of advertisers with positive impact rather than spend-weighted averages. She reads 3/5 significant positive vs 2/5 negative as "generally good but inconclusive." This is how she'd frame it as a product owner.
-- **On concentration finding:** "It's definitely interesting" — wants to see if it repeats with a larger group. Agrees Pareto distribution for allocation makes sense (one dominant network, tapering down). Current equal-spread is suboptimal.
-- **On network as optimization lever:** From her experience doing manual campaign optimizations, network was "mid to low" on her list. Top was audience quality/recency, then frequency, then device type, then networks. Important context — the feature's value may be more about customer control than performance optimization.
-- **Frequency hypothesis pushback:** Kirsa challenges our frequency-per-network hypothesis. Historically at MNTN, *lower* frequency → more unique households → better performance. The "wasted impressions" on non-converting households at 3+ frequency offset the benefit of repeated exposure. Our frequency caps are applied at household level, not network level.
-- **Deliverability trade-off:** Two reasons deliverability is prioritized: (a) must ensure budget can be spent, (b) performance degrades as you scale on a network — diminishing returns per conversion/visit as spend increases on a single network.
-
-### Key Product Context Learned
-
-- **Beta selection is NOT random:** PEX/CS identify candidates based on past interest, Toph (production ops) validates they won't have pacing issues. This is confirmed selection bias — adopters are hand-picked, not randomized.
-- **No new beta additions planned:** Chicken-and-egg — they want to validate performance before adding more. Our analysis or experiment results could unlock more additions.
-- **Dynamic media plan coming (blocks experiment):** New requirement — media plan should regenerate on a recurring cadence (frequency TBD — Daniella said hourly, Mark said too often, may be weekly). Experiment can't launch until dynamic version ships because static results don't apply to the dynamic version.
-- **Share with Daniella (TPM for media plan):** Kirsa will share our PDFs with Daniella as a precursor to future data pulls. Malachi to send the methodology explainer and summary as PDFs.
-- **Contact for algorithm questions:** Chris Addy (technical lead). Ping Kirsa and Addy for follow-ups about media plan experimentation.
-- **UI experiment coming:** First UI-based experiment — feature flag to 50% of advertisers, changing how goals are entered on new campaigns. Hypothesis: realistic goals → more campaigns at goal. Malachi may be looped in for methodology.
+**Product context:**
+- Beta selection is NOT random — PEX/CS hand-pick candidates, Toph validates pacing. Confirmed selection bias.
+- No new beta additions planned until performance is validated.
+- Dynamic media plan coming (recurring regeneration during flight). Blocks randomized experiment — can't test static version if dynamic is imminent.
+- Daniella is TPM for media plan. Chris Addy is algorithm technical lead.
+- UI experiment upcoming — feature flag to 50% of advertisers, changing goal entry. May involve TAR for methodology.
 
 ### Algorithm Details (from Release Brief + Requirements Doc + Chris Addy 2026-03-27)
 
@@ -343,9 +276,7 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 | Scale | 4% | |
 | Accessibility | 2% | |
 
-**IMPORTANT CORRECTION:** Per Chris Addy, spendability is only 8% of the score, not the primary driver as the Release Brief implied. Performance (25%) + quality (25%) + semantic (20%) dominate. However, the spend capacity filter (≥$0.50/hr) acts as a hard gate BEFORE scoring, which explains why the algorithm picks deliverable publishers — low-inventory networks get filtered out before scoring even happens.
-
-**Per-publisher score data:** The API response from the mediaplan service includes all component scores (score_semantic, score_performance_advertiser, score_performance_vertical, score_spendability, etc.) in the Budget model. Chris checking if the full score breakdown is persisted to BigQuery or just final allocations.
+**Note:** Spendability is only 8% of the score (not primary driver as Release Brief implied). The spend capacity filter (≥$0.50/hr) acts as a hard gate BEFORE scoring — explains why algorithm picks deliverable publishers. Per-publisher score data exists in API response (Budget model); Chris checking if persisted to BQ.
 
 **Config parameters controlling concentration:**
 | Parameter | Default | Effect |
@@ -383,29 +314,15 @@ The `max_networks` was changed from 25 to 15 on **Feb 3, 2026** (olympus commit 
 
 **Implication for Kirsa:** The "concentration predicts who benefits" finding is actually **"new config vs old config predicts who benefits."** The algorithm was improved between Oct 2025 and Feb 2026 to produce more concentrated plans. Advertisers running under the new config see positive results. The two worst performers (Boll & Branch, Tempo) are on the old config and never got refreshed plans. **This is actionable: refresh their plans under the current config and re-measure.**
 
-**`deliverability_classification`:** Categorical prediction of delivery risk: "high" (expect full spend), "medium" (moderate underspend risk), "low" (high underspend risk). Computed by guardrail model evaluating per-network daily spend thresholds, audience size, blocked networks, budget constraints. Final classification = worst individual guardrail. For in-flight campaigns: if >3 days in and spending at >90% pace, gets upgraded to "high" regardless. **HHI (Herfindahl index) tracking exists in metrics but is NOT a classification factor yet** — could be added.
+**`deliverability_classification`:** Categorical delivery risk (high/medium/low). Worst individual guardrail wins. HHI tracking exists in metrics but is NOT a classification factor yet.
 
-**Flex Targeting:** Plan reserves typically 10% of budget as flex allocation not assigned to specific networks. Bidder uses this pool for real-time optimization — impressions on un-recommended publishers (like Tubi Entertainment) come entirely from this flex pool. Confirms our ±3% deviation observation.
+**Flex Targeting:** 10% budget reserved as flex pool. Un-recommended publisher impressions come from this pool. Confirms ±3% deviation.
 
-**Without media plan:** The bidder does NOT optimize network allocation. It buys from a huge bucket of inventory, with allocation driven by inventory team deal commitments (e.g., "told HBO we'd spend $1M in Q1") and manual adjustments when customers complain about concentration. This explains the 131-183 pre-adoption publisher spread — it's pure auction-based allocation.
+**Without media plan:** No network optimization — pure auction-based allocation from inventory team deal commitments. Explains 131-183 pre-adoption publisher spread.
 
-**M1 (current, beta released 2025-10-20):**
-- TV-Only Prospecting only (Retargeting generated on backend but not surfaced to customer)
-- No opt-in — media plan required for all AIDs in beta
-- Changes before campaign launch only (mid-flight not supported)
-- Auto-managed (MNTN optimizes) vs Manual modes
-- Deliverability Confidence widget with real-time feedback
-- "Why this?" links explaining each network recommendation
-
-**M2 (UI reskin, EOM January 2026):**
-- Media plan auto-applied when user clicks the media plan step in campaign creation
-- Design makes clear: happy path = don't make manual edits
-- Secret bypass: skip media plan step → plan not applied
-- Disabling media plan for Multi-Touch (MT) campaigns in future
-
-**Upcoming (not yet released):**
-- Dynamic media plan — recurring regeneration/rebalancing during campaign flight
-- This blocks the planned experiment (can't test static version if dynamic is coming)
+**M1** (beta released 2025-10-20): TV-Only Prospecting only, pre-launch changes only, auto-managed vs manual modes.
+**M2** (UI reskin, EOM Jan 2026): Auto-applied on campaign creation, happy path = accept recommendations.
+**Upcoming:** Dynamic media plan (recurring regeneration during flight) — blocks planned experiment.
 
 ### Questions for Data Team — Status
 
@@ -440,6 +357,7 @@ The `max_networks` was changed from 25 to 15 on **Feb 3, 2026** (olympus commit 
 
 | File | Description |
 |---|---|
+| `artifacts/ti_748_media_plan_findings.md` | **Stakeholder-facing findings doc** — What/Why/What's Next for Kirsa, Daniella, media team |
 | `artifacts/ti_748_causal_impact.py` | Main analysis script v5 (CLI-runnable) |
 | `artifacts/ti_748_causal_impact.ipynb` | Presentation notebook v5 (with glossary + methodology appendix) |
 | `artifacts/ti_748_methodology_explainer.md` | Technical + non-technical methodology explanation |
