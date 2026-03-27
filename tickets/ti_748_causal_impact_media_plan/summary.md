@@ -174,6 +174,32 @@ Every advertiser had 10-15x IVR variance between their best and worst publishers
 **Did the algorithm pick the RIGHT publishers?**
 Tested for Lighting New York: The algorithm recommended Samsung TV+ (12%), Bravo (12%), CNN (10%) — these rank #37-59 by actual pre-adoption IVR. The true best IVR publishers (Spectrum News 1.09%, sports networks 0.7-0.9%) have low inventory (17K-30K impressions vs Samsung's 627K). **The algorithm optimized for deliverability/reach, not IVR.** The benefit came from removing the worst publishers, not finding the best ones.
 
+**CRITICAL FINDING: The recommended allocations are NOT being followed by the delivery system.**
+
+Matched `media_plan_publishers.name` to `sum_by_ctv_network_by_day.domain` (exact name matches confirmed). Compared recommended % to actual post-adoption delivery %:
+
+Lighting New York (benefited, +10.5%):
+| Publisher | Recommended | Actual Delivery | Difference |
+|---|---|---|---|
+| Samsung TV+ Entertainment | 12% | 1.0% | -11% |
+| Bravo | 12% | 0.4% | -11.6% |
+| NBC News | 12% | 0.9% | -11.1% |
+| CNN | 10% | 1.6% | -8.4% |
+| **NBC** | **5%** | **20.4%** | **+15.4%** |
+
+Boll & Branch (hurt, -31.5%): Same pattern — recommended publishers got far less than planned, and publishers NOT in the plan (Roku Entertainment, Disney+, Tubi, Telly) received 2-6% of actual delivery each.
+
+**What this means:**
+- The bidder is NOT following the media plan's specific publisher percentages
+- The top-3 recommended publishers got ~1% each despite 12% recommendations
+- NBC got 20% despite only a 5% recommendation
+- Many un-recommended publishers received significant delivery
+- Every plan includes a 7-10% "Flex" allocation — but the actual deviation is far larger than Flex alone
+
+**This fundamentally changes what we're measuring.** We are NOT measuring "did the recommended publisher allocation improve performance." We ARE measuring "did enabling media plan (which may just constrain the publisher SET, not the exact allocation) improve performance." The benefit appears to come from the publisher list acting as a **constraint/filter** on which networks the bidder can buy, not from the specific percentage allocation.
+
+**Question for Kirsa/product team: Is this by design?** Does the media plan set a soft constraint (bidder can deviate freely) or a hard constraint (bidder should follow the percentages)? If it's supposed to be a hard constraint, this is a delivery bug.
+
 **Three actionable product insights:**
 1. More aggressive concentration (16 publishers) outperforms moderate concentration (26 publishers) — the algorithm should default to fewer, higher-conviction picks
 2. The algorithm could produce EVEN BETTER results if it incorporated per-publisher IVR, not just deliverability
