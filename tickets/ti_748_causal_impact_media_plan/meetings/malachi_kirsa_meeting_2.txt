@@ -1,0 +1,595 @@
+Unknown Speaker  0:00  
+A little shorter, but, yeah, like, what is this showing talk? So basically this says that. So this is like a percentage, and like 100% would be, like the average after it's it's IVR has, has
+
+Unknown Speaker  0:13  
+mellowed out, like it's not really changing week over week. And it kind of shows that about four weeks in, it takes about four weeks for us to see that, which means that we could be like Miss, if we start something where we check immediately after we've rolled something out for experiments, it's possible we could just be
+
+Unknown Speaker  0:33  
+negligently thinking that things are positive because we're at least when we're optimizing against IVR,
+
+Unknown Speaker  0:40  
+because of this ramp up period where it looks like, oh, wow, these are, these are doing, well, yeah, just on the it looks like, though, around like, obviously, the vast majority of ramp up is in the first two weeks. It looks like, that is correct. And then like, there's like, a little bit more, potentially, two weeks following, which could just be like optimizations, whereas, like the first two weeks is
+
+Unknown Speaker  1:07  
+truly a ramp up, because that's how long it takes to get all of the visits accounted for because of our 14 day attribution window, that is correct. And also, you see here there's three different lines. I split it up by the campaign size. And this is everything. This is not just media plan or no, this is everything. Yeah. So I will go back to media plan, but I just wanted to kind of show this part here. There's not really much of a difference between how much spend either. It looks pretty consistent. This is just another way to show it. So here's the performance milestone. So like, for example, week zero, where, like 87%
+
+Unknown Speaker  1:40  
+of our achieved one. Sometimes we actually there. Of an over correction. So it looks like they start to hit this overspend, and then they dial it back. So it almost seems like the process, how they do it is they ramp it up, ramp it up, ramp it up, accidentally go over what their pacing targets are, and then they bring the pacing targets down,
+
+Unknown Speaker  1:56  
+or what. Yeah, this is, no, I mean, it's directly connected to spend. So this is going to be IVR, but my assumption here is that there, there's a, I don't know how they exactly do it, but they adjust pacing, which I mean, is directly connected to spend. So what I'm assuming is that they probably spend more and more and more until they get to a certain like IVR or whatever that they think they're going to spend, they're going to be able to be able to spend the budget within that allocated time. And then they then they dial it back. So because pretty much every single time you see a new campaign, you see it go above what our typical IBR is going to like, mellow out on within the first two weeks, and then it goes back down to the steady state that kind of stays throughout the remainder of the campaigns, and I'm confused how that relates to the last slide, because that was showing that the IVR was lower in the first two weeks than at 100%
+
+Unknown Speaker  2:50  
+So this is,
+
+Unknown Speaker  2:56  
+oh, let me show you here. I
+
+Unknown Speaker  3:03  
+because I was showing around 85 to 90% on week two. So that's what I'm confused. Oh yeah. So this is, I believe
+
+Unknown Speaker  3:12  
+it's relative to,
+
+Unknown Speaker  3:17  
+it's the rate at which it's changing, not just the pure percentage of what it's going to
+
+Unknown Speaker  3:24  
+see. Yeah. So this here, this graph might help or not. This one, this one might help. So this is just the percent change week over week, and so you can see that the changes get smaller and smaller. I mean, there are some changes, but this would be the 5% threshold. So right here, what you're seeing is that, like, you're seeing a 25 or 22% difference. And that first better,
+
+Unknown Speaker  3:49  
+it's just, it's not better or worse. The red here that you're seeing is just, is how volatile it is. So it's red. I mean, like above the bars that go up are positive changes. That's correct. Yeah, it's a little bit,
+
+Unknown Speaker  4:03  
+I think it looks like a, like, kind of runs you at Christmas. It's like a red, green,
+
+Unknown Speaker  4:08  
+but green here is just showing that, like, it's steady, because it's not so volatile. But, you know, and this is arbitrary, I chose 5% but there's no real reason we should say that. But you can kind of see that there's, like, a huge change in the first week. Volatility, yep, but you are correct. So it does. I mean, this is across everything, and it might change based on the period of time. To look back the specific advertisers, I grabbed, all of advertisers for all the time that we had. But it does appear like, I think the reason that the four weeks looks better is that you don't really see any more of those like, you know, this is almost 15% change in week four, but then afterwards, you don't really see it too much. I mean, I guess there's a couple one offs here, but,
+
+Unknown Speaker  4:55  
+yeah, and then it's just some other stuff too. So anyway, data is.
+
+Unknown Speaker  5:00  
+Relevant because for media plan, in order to use the media plan, they had to start a new campaign, and so you needed to take this ramp up data into account when doing causal impact, to make sure that we weren't just seeing you know that it's way worse because it was only the first two weeks, or whatever the case is, it needs to be part of the equation is that, am I understanding that correctly? That is correct. And I think to some of the what's what's happening here, I think there's something wrong with the x axis, actually, because I think this is correct. What I wanted to point out here is that sometimes you see this percentage of the steady state IVR actually go over the 100% mark, and so on average, it's above. But I think there's something wrong with the x axis there, so you are correct to mark that. But let's go into the actual Yeah. Are this stuff? Because you're like, that's not what I asked you
+
+Unknown Speaker  5:55  
+to do. I mean, I'm glad that it aligns with my understanding of our ramp up period. So yeah, and I didn't really know what it was either like, to be honest, like I was
+
+Unknown Speaker  6:08  
+quite interesting. So I have some methodology, if you ever want to, like, see exactly how or why it works. There's some high level overview and some stuff. Don't worry, I didn't generate all this. This is a lot of this was aI generated, but the
+
+Unknown Speaker  6:24  
+let me pull up to the actual summary, and
+
+Unknown Speaker  6:28  
+this is why those questions are important. So I haven't had too much time to, like, really deep dive into this, because I finished it last night. But okay, so you already know this, but the media plan, so it's basic, basically, it's a feature that gives advertisers control over their network allocation, right?
+
+Unknown Speaker  6:50  
+We only care about the prospect and campaigns, and then
+
+Unknown Speaker  6:55  
+we want to see those who adopted the media plan feature, if they saw improved prospecting performance. Yeah, I
+
+Unknown Speaker  7:02  
+think that's pretty straightforward. So there's two analyzes here. We have the causal impact that time series. So,
+
+Unknown Speaker  7:09  
+and then I did some within advertiser comparisons, which I'll explain a little bit later. But here's one of the issues. So there's very low adoption. We have a pretty small sample size, which makes it really hard to measure it,
+
+Unknown Speaker  7:21  
+and even of the people that did adopt, we couldn't really use all their data. There just wasn't enough information for them. So I think there's only, like six advertisers we could actually use, and that's because we don't have enough historical data of prospecting campaigns running, or they adopted your plan and paused, or adopted two recently, some of them adopted pretty recently, and then they just don't have enough data. That's like, it's so noisy, it's just not valuable information. Yeah,
+
+Unknown Speaker  7:49  
+so just to, just to call out, I think you already know this, but like, when we, I think we choose, we're not choosing at random, right? These people are, like, saying, hey, we'd like to be part of these. Like, I think it's kind of mixed. So I'm not fully in the loop on that, but I think it's PEX identifying that a customer has, like, mentioned something like this in the past. We're not like, sending out an email to them, being like, do you want to sign up for this? It's more like, pecs and CS being like, this is a good candidate. And then Toph, on the production op side, says, yeah, they should be fine. I think what he's looking at is like, are they already having a really hard time spending or, you know, different factors that would make it a risk factor for them to be in the beta?
+
+Unknown Speaker  8:39  
+Okay.
+
+Unknown Speaker  8:42  
+Oh, anyone did ask? Because we are going to run an experiment for this coming up. I did ask if they had plans to add more to the beta, so that I would have, because I only had seven advertisers that were eligible for the experiment
+
+Unknown Speaker  8:58  
+based on that same list I gave you, I couldn't use anyone that was in the first experiment. I couldn't use anyone with, like, really low mevs. And so I really only had six, I think, six or seven options, and I wanted five. So, like, I have to use almost all of them for the experiment. So I asked that they were going to add more to the beta, and they, they said no, because it's kind of a chicken or the egg situation where, like they want to wait to add more advertisers to the beta until we validate, validate that the performance is going to be better via the experiment. So,
+
+Unknown Speaker  9:33  
+or we could do that with this analysis, so maybe we can add more soon, but for now, yeah, it is a very small list. Yeah. So that's our biggest limitation here. Okay, so everything with the grain of salt, but also whether or not they use the recommended plan, because some people adopt it, adopted and are like, Nah, we're just going to do it the way we want, right? Yep, which is not exactly what we care about, necessarily, yeah, like, literally anything. And like, we can't we're.
+
+Unknown Speaker  10:00  
+You can't be like, it's definitely going to perform if you say you want to spend 100% on ESPN or whatever. Yeah. So I did a lot of different things. I'm just going to kind of explain here, but you can vary the look back period and test basically the changes between how long a look back period to see if it's really highly dependent. And that can tell you a lot of different stuff, but typically, the longer amount of period, the better, right? Google actually suggests, like, a year, so to get the full seasonality, at least,
+
+Unknown Speaker  10:31  
+but any here, you can see the number of pre weeks that we had, so quite a few for a lot of them, certainly enough for everything. And then the number of posts weeks, like, how many since they we, you know, could roll it out.
+
+Unknown Speaker  10:44  
+And then here's the percent effect on their P value. So just kind of a high level overview, some of them did seem to be positive task, rabbit, lightning, New York, did pretty well
+
+Unknown Speaker  10:57  
+some of these, but then they were heavily affected by some negative ones, so it's overall positive for the majority, but then we have a couple really negative ones, and it's pretty significant, right? So I wanted to bring up how I'm testing this. So without going into all the weeds, right? You have to choose a series of factors on which, you know, to to pick your prediction. And I could choose a bunch of stuff, like, I, you know, impressions and span and all these different things, and that's all great. Those are good ideas, but there's a few problems with that. So number one, you don't want to just throw 1000 covariates at it and just say, Hey, this is awesome, because you get, like, overfitting, you know, where it just doesn't so what you want to do is choose a variety of things with low
+
+Unknown Speaker  11:47  
+what's, what's the term low similarity between them, correlation between them, and high variance. And so there's actually a method which I, you know, won't go into the weeds here, but it's BIC, which is basically Bayesian method to choose which covariates based on those factors, and so there's no like personal bias here. I can't, you know, I'm introducing it. So these don't necessarily have all the same biases, but you can kind of see the names for some of them, and that doesn't really change much. It just helps improve our
+
+Unknown Speaker  12:17  
+it helps improve our decision making. When we're like, hey, is this 100% like, causal? Is this not just by random chances? It takes away most of those factors when, yeah, like, if we're choosing our own things. So anyways, cool, cool little thing. I won't go too much into it. I do want to make sure I'm understanding the overall methodology a bit more. And forgive me, this is going to be like, the explain it like I'm five version? No, that's fine. So if I'm understanding correctly, we're looking at the historical data for the pre weeks, and we're looking across all of these different variables and how they relate to one another, and then we're using that to kind of project what we would have expected the performance to be in the post weeks based on that historical data, and we're looking at the difference in the reality compared to that. That's correct. Okay, okay, because it's not just like, what was the performance post compared to the performance pre? It's no more, okay. And I don't remember the exact math here, but in a in layman's terms, basically what it does is it tweaks those variables a bunch of times and makes so what you see is it's kind of like what would happen if we just plugged in these random variables. I'm not going to get into the weeds there, but yeah,
+
+Unknown Speaker  13:40  
+if our observed results were outside the norm, for those you know, prior tests, I guess you'd say so. So like, for example, if it did it 100 times and only two of the times
+
+Unknown Speaker  13:56  
+the graph would
+
+Unknown Speaker  14:00  
+like the line that they drew match something that we would have seen, like it wasn't above or beyond a certain level. We would say that that P value would be like, for example, there's two. It would be like a p value of point, oh, two, right? So only two of the lines that they had drawn matched it, and so it's very unlikely that that happened by by that's how they're calculating. It's Bayesian statistics. I'm not super up to date with it, but that's essentially what they're doing. It's a version of a p value where they have all these imaginary lines that they draw based on the inputs you give it. And then you see, you know if yours falls within line of those, gotcha. And then for the ones so and then I want to make sure I'm understanding. This is essentially at the at the channel level. So like for prospecting as a whole, what is the projected performance based on all these variables? Because it's different campaigns. Obviously, this is prospecting as a whole within the advertiser. So this is not all like, for example, when you're looking at this effect, you're looking at the fact.
+
+Unknown Speaker  15:00  
+Just this advertiser, yep, for for their prospect, for their prospecting. Yes, that's correct. Okay, yep, cool. And how does the ramp up come into play here? Um, how is that accounted for? Because I'm seeing like, bowl and branch, oh, 15 weeks. So I thought that was days, just kidding,
+
+Unknown Speaker  15:23  
+but those first two or three weeks were probably lower. Is that kind of accounted for here? I believe so I actually don't know the answer to that. I'll figure it out. I believe that when I was putting this together, I skipped the first four weeks in the post period. I'm almost positive, yeah, because I think this does say, yep, this says four week post ramp up exclusion. So, yeah, this should be excluding the first four weeks. So this is the percentages excluding the first four weeks. Okay, so I could throw those in and just see, I could do it to two weeks, you'd probably get better results. They'd look a little bit nicer, but,
+
+Unknown Speaker  15:58  
+yeah, okay, cool. So here's some cool stuff. Five of the eight were significant. Five of the eight were positive. The median effect is 4.65
+
+Unknown Speaker  16:10  
+however, which is, sounds good. However, the spend weighted effect. And so that's basically like, if a really large brand, like who's spending a ton
+
+Unknown Speaker  16:22  
+is like, really negative, but then you have a bunch of tiny little brands that are positive, and it looks awesome, but it like looks, oh, great, all their advertisers, by the way, you roll it out, and then we have negative, like, you know, company wide change. That's what the spend weighted effect actually does. And so this is because, so this is what's really weird about it's pretty inconclusive, the results. There were large negative outliers, and then there are really positive outliers, and there are actually more positive outliers, or more positive ones. And so I started to try to go into
+
+Unknown Speaker  16:54  
+why that is. I can pause there, but I do have some things there. I don't know if you have any questions about that, no questions. I tend to for for these types of like, experiments or analyzes, I tend to look at like the
+
+Unknown Speaker  17:11  
+overall, summarized data on like the advertiser level. So what I mean by that is like, instead of looking at like, at least when I'm like, describing, you know, the learnings. Instead of looking at like the overall average, especially when we have this scenario where some are really positive and some are really negative, like the average typically ends up to be very minimal, I look at like the percent of campaigns or advertisers that had a positive impact versus the percent that had lower so that's kind of how I was looking at the data above. I was like, oh, of the five that were statistically significant, three were positive, and two were negative. So to me, that's kind of how I'm like thinking about it is, like, if I'm the product owner here, I'm like, well, that's
+
+Unknown Speaker  17:59  
+generally good, but also a bit inconclusive, if that makes sense.
+
+Unknown Speaker  18:05  
+So just sharing, it's not a question. I'm just kind of sharing how I'm thinking about it.
+
+Unknown Speaker  18:11  
+So there's this other thing here that was suggested to me. I was, I was going back and forth with, like, asking questions and stuff, but the panel data model I look into this, this is like a way of,
+
+Unknown Speaker  18:23  
+I need to, I need
+
+Unknown Speaker  18:25  
+to read a little bit more, but I think it's essentially to a test that shows
+
+Unknown Speaker  18:32  
+if our
+
+Unknown Speaker  18:35  
+treatment effect is
+
+Unknown Speaker  18:39  
+likely to be what's the like, skewed like, where there's going to be too much noise to really
+
+Unknown Speaker  18:47  
+be able to measure it effectively,
+
+Unknown Speaker  18:51  
+and so
+
+Unknown Speaker  18:54  
+it's a good secondary thing to test against what you're doing. And so I like, I would like to be able to explain it more, but I don't really understand it super well, but I'll be able I'll be able to give you a better
+
+Unknown Speaker  19:05  
+answer. But it showed that, like, there was a decent amount of like, there's a decent amount of noise, and there's also this. It's just because the sample size is so small that, like, we can't, like, deterministically say, like, if these things are very positive or negative in general, it pretty much seems like the aggregate IVR effect is just like, zero, right?
+
+Unknown Speaker  19:27  
+However, this is what I thought was kind of quite interesting. So I started trying to see, I'm like, Well, what was being this is where it goes into those questions. I wanna understand what was being recommended and why? Like, I don't really know why, right? So here's something that's quite interesting. So each of these plans had a lot of publishers before, so I checked all their impression stuff, I think, like it was an average between 120
+
+Unknown Speaker  19:50  
+and 140 different places that they could publish their ads, mostly due to display. But still, now, when these get consolidated, it looks like.
+
+Unknown Speaker  20:00  
+Is a variation there's in this example, there's 26 different publishers to 16. And now what publishers they are and what allocation for each one would probably matter, right? Yeah. And so what I'm noticing here is that there's not really necessarily, like, a really strong correlation, but you can kind of see that, like, some of the bad ones had higher amounts of publishers,
+
+Unknown Speaker  20:24  
+and their spread between their publishers was a lot different. So let me, let me explain what I'm saying here.
+
+Unknown Speaker  20:34  
+In cases where brands had fewer publishers and their allocated spend was stronger at their top publishers, rather than being uniformly distributed, performed
+
+Unknown Speaker  20:50  
+better than those who had more publishers, even though they're a lot less than they did before, but they were distributed evenly so. In other words, if CBS was my top publisher and I spent 15%
+
+Unknown Speaker  21:03  
+and then I had like 10 other publishers, you know, and then it kind of like tapered down from that. It appears that those perform better than if I had about the same amount, but they all got an equal spend of 3% and my so, I'll pause there. Does that make sense?
+
+Unknown Speaker  21:19  
+It does. Um,
+
+Unknown Speaker  21:23  
+yeah, it's interesting. I
+
+Unknown Speaker  21:27  
+I think it's something to consider. But I yeah, I would love to see if we can repeat this with a larger group, to see if we see the same thing. So here's, here's some things that came out of that? Yeah, I told you to have a ton of information today. So a lot
+
+Unknown Speaker  21:47  
+of times we had to do repeated exposure to drive site visits. I've seen it a lot. I just did an mes trace where, I mean literally, we'll get lots of lots of exposure, on average, to people. So when budget is spread across 26 networks, at three to, you know, three to, you know, three to 5% each no single network accumulates enough impressions on a given household to cross the frequency thresholds needed to generate a visit.
+
+Unknown Speaker  22:09  
+That's just a hypothesis. It doesn't mean it's true, but I would be we could test that to see what the frequency is per network and overall. But I'm pretty sure, because our frequency caps are so strict and they're applied at the household level, not at the at the network level,
+
+Unknown Speaker  22:35  
+I don't know if that will show to be true. And the other thing is, like in theory, I agree with this hypothesis that, like, yeah, you need to show somebody multiple ads to generate a visit. But the the mathematical reality from what we've seen is that on the campaign level, the lower the frequency we can achieve. Across the board, we've done so many experiments about this over the years, the lower the frequency is, the more unique households we've reached, the better performances. And I think it's because the quote, unquote wasted impressions on households that are never going to convert if we're aiming for like, a three frequency
+
+Unknown Speaker  23:18  
+offset, the benefit you get from showing the household that might convert
+
+Unknown Speaker  23:24  
+to plus three plus ads. So that's just something to consider. So I'm not sure if that's playing into it, but it is interesting to think about.
+
+Unknown Speaker  23:38  
+Okay, that's a good thing. I will consider that the second thing is bidder optimization, so the delivery system optimizes within its allocation. So with 16 networks and 12 to 15% of the top ones, the bidder has enough budget per network to find and serve the best IPS per household. And I don't know this is why I need to know a little bit more about how this stuff works. But with 26 networks, three to 5% each, the bidder is starved in every network. And I don't know if that really plays a role. It's just a hypothesis, again, but it's possible that be if we need to have a like, if we're going to do this, we need to have a minimum,
+
+Unknown Speaker  24:11  
+I don't know. I think that there is some merit. And again, it's really hard to say with a sample size of like six, yeah, but I think there is some merit to if we are going to consolidate publishers, we need to also tier that
+
+Unknown Speaker  24:29  
+allocation differently. Like, I think that's probably where the optimization is going to be, is how we tier it? Because I don't think a balanced because nothing works like that. Like, I don't know if you've seen a lot of stuff, but in data, it's, you have a Pareto distribution all the time. And typically you have one, like one network that dominates you spend most of your money with, and then, you know, again, the Pareto distribution, where you just, you know, and I think that's probably what we need to do. And we
+
+Unknown Speaker  24:58  
+even have it here at Mountain, like, just.
+
+Unknown Speaker  25:00  
+Think about like you could see a Pareto distribution of how much people spend here, right? Our number one is, wg, you it's way above everybody else, right? And then the next one's considerably less, and the next one's less, but less less than the previous one, and it follows the distribution, right? I think it's the same way with the bidding is that we're probably going to optimize against one top network and then,
+
+Unknown Speaker  25:25  
+and then follow that distribution. But that's just speculation.
+
+Unknown Speaker  25:30  
+Yeah, it's interesting. Um,
+
+Unknown Speaker  25:35  
+because,
+
+Unknown Speaker  25:38  
+yeah, I so, like, I used to make all these optimizations manually. Like I would get a request from a CSM and saying, this campaign isn't performing well, can you fix it? And I would say the
+
+Unknown Speaker  25:56  
+network as the lever, as an optimization lever,
+
+Unknown Speaker  26:01  
+was pretty
+
+Unknown Speaker  26:06  
+mid to low on my list,
+
+Unknown Speaker  26:13  
+I never would, like, make an optimization to networks and then be like, wow, we really turned performance.
+
+Unknown Speaker  26:20  
+Like top of my list is like audience. The second thing was probably like frequency, and then maybe then we get into like device type, networks, all of that.
+
+Unknown Speaker  26:32  
+But like audience meaning like recency as well as like the quality of the segments, things like that.
+
+Unknown Speaker  26:39  
+So
+
+Unknown Speaker  26:42  
+really like the goal here, I think the main goal of this is to give customers control, but also, like, we just need to make sure it's not
+
+Unknown Speaker  26:54  
+worsening performance consistently because, because we're making the recommended networks, and so if we're recommending them, they should understand the things will work. I actually think it makes it better. And I think that that if we fix some of the allocation things that we're doing, that it would be across the board better. That's my estimate. The other thing I need to figure out is they've made improvements to the feature
+
+Unknown Speaker  27:22  
+time.
+
+Unknown Speaker  27:24  
+So I want to understand when those were made.
+
+Unknown Speaker  27:32  
+So
+
+Unknown Speaker  27:33  
+the performance pacing, team performance pacing, is that related to the better team? Are they like hand in hand? Are they separate? Because I'm wondering, they work together a lot. If I this is a performance pacing initiative, okay, so if I those questions I asked you, I should maybe put in the performance pacing channel, or I'll all, um, so I want to walk through like, what?
+
+Unknown Speaker  27:57  
+Because I think this is really great, and I want to share it with them
+
+Unknown Speaker  28:02  
+as we start ramping up for this next phase of experimentation, but I want to understand, like, what
+
+Unknown Speaker  28:08  
+those questions
+
+Unknown Speaker  28:11  
+like,
+
+Unknown Speaker  28:12  
+what the outcome is of like, Is there additional analysis to be done with the answers to those questions, or what? Yeah, can we walk through those? Maybe, yeah, here I might be able to answer some. I have a few more things I just wanted, pre adoption, baseline, IVR tells us nothing. So basically saying, like, if somebody was really performative with their visits, that didn't have any correlation between their performance. So we had really low, like IBR that actually went down, and we had really high IVR that went up. So that's pretty cool. I thought,
+
+Unknown Speaker  28:45  
+Oh, let's see which publishers also matter, not just how many. So there were certain publishers that did really well. It seemed to be correlated. So CBS, NBC, ABC, NBC, news, things like that. Peacock, Roku, drama, ion TV, HBO, Max, AMC, they had worse,
+
+Unknown Speaker  29:04  
+you know, so these, there's probably some analysis to do about publisher specific
+
+Unknown Speaker  29:12  
+value,
+
+Unknown Speaker  29:14  
+but just kind of show you this. I already kind of mentioned this too. I did it all the way at the top, but if you look at we had between 131 and 183 publishers per and then this shows what they change. And so this is their percent reduction.
+
+Unknown Speaker  29:30  
+So yeah,
+
+Unknown Speaker  29:31  
+just some interesting things there.
+
+Unknown Speaker  29:36  
+I think this is, is there any do you have any notes on, like, the statistical significance of this data. Because, like, to me, like,
+
+Unknown Speaker  29:44  
+you know, we're looking rough numbers. 16
+
+Unknown Speaker  29:49  
+is only on two advertisers. 26 is on, you know, three, four.
+
+Unknown Speaker  29:55  
+Is that enough data to know that? Like, yes, this is cause.
+
+Unknown Speaker  30:00  
+All,
+
+Unknown Speaker  30:01  
+Oh, no. I'm not trying to say that this stuff is causal. I'm just, yeah, no, the only stuff that's causal that we know for sure is what I put up here, this. These are causal. This. Those are showing the P values and the significance. Okay, the rest of them, like the spend weighted effects, is a pretty good one. And then these are this, the rest after pretty much here
+
+Unknown Speaker  30:24  
+and these results. The rest of it is just trying to figure out if we can find a why. And I thought that this was pretty like, good. This the spread between, yeah, it's definitely interesting. And I would say, like, when we do have more advertisers, we should repeat this and see if we can get some significance to this.
+
+Unknown Speaker  30:45  
+Yeah. And what I was gonna say too is it almost looks very correlative too, even if, just like eyeballing these, the highest percentage up, the spread goes down, not necessarily perfectly linear, but it's almost, and that's the sample size, like, again, super small. But
+
+Unknown Speaker  31:01  
+Okay, last thing,
+
+Unknown Speaker  31:04  
+some explanations that we don't need to go through you could read later. Oh, and then the last thing I did, some within advertiser comparisons of the recommended versus non recommended seven advertisers had it again. It's just a super small sample size. It's it was a slightly different, like, negative between our recommended campaigns versus them. I It's literally it has no significance. I wouldn't even take it like it doesn't really matter. But I just wanted to show you, I did compare it, but I didn't have enough stuff so it could be extremely positive, and we just have no way of knowing. But
+
+Unknown Speaker  31:38  
+yeah, there's some questions here.
+
+Unknown Speaker  31:42  
+Okay, yeah, let's look at the questions you ask, because I might be able to answer some of them, and then I'm curious to know,
+
+Unknown Speaker  31:49  
+sorry, I'm
+
+Unknown Speaker  31:57  
+just getting a slack. No, you're all good.
+
+Unknown Speaker  32:01  
+Hold.
+
+Unknown Speaker  32:19  
+On one second I got someone at the door. I need to go get my dog. No, you're all good.
+
+Unknown Speaker  32:45  
+I'm sorry I have a plumber here, and so my dog is freaking out, so I have him in the room with me, but Roscoe, calm down. Come here. You're okay.
+
+Unknown Speaker  32:59  
+Okay, so let's go through the questions, and if I can't answer them,
+
+Unknown Speaker  33:04  
+I would love to know, you know what the answer is needed for, and then we can ask what, whoever we need to
+
+Unknown Speaker  33:12  
+Well, the first one is like, how does the bitter allocate impressions across publishers without the media plan? I'm just, I guess I'm trying to understand. It doesn't. It doesn't. So we have, like, a huge bucket of inventory. This
+
+Unknown Speaker  33:28  
+is my understanding, at least, we have a huge bucket of inventory that we are targeting across all TV campaigns, and
+
+Unknown Speaker  33:38  
+it's kind of based on the availability. I think we have different
+
+Unknown Speaker  33:45  
+like deal lists, but that's kind of managed by the inventory team, so, like, they have minimums they need to hit. But we're not optimizing the network allocation based on performance or anything like that. It's more based on,
+
+Unknown Speaker  34:01  
+you know, the inventory team told HBO we'd spend a million dollars in q1
+
+Unknown Speaker  34:07  
+so let's prioritize those deals, or customers are noticing that peacock is getting 40% of spend. That's not good. Let's pull that one back. So there's like, other factors and how we're like adjusting those, but it's not like something that we're like consistently optimizing towards on a performance basis. Okay, that makes sense. So what determines how many publishers the algorithm recommends? Because this is, I was trying to figure out the media plan, yeah, for the media plan, so it looks like there's like a spend allocation. Some of them were high. Some of them are even the number of publishers. Yeah, it just seems I don't want to know. Let me get the RFD
+
+Unknown Speaker  34:50  
+that'll probably answer, or PRD. I don't know which one it is. I can't keep track
+
+Unknown Speaker  34:58  
+deliverability and media plan.
+
+Unknown Speaker  35:00  
+Plan,
+
+Unknown Speaker  35:02  
+media plan, requirements, featured, brief, PRD, this is probably going to answer all of our questions. Okay,
+
+Unknown Speaker  35:12  
+if you could share that too, that
+
+Unknown Speaker  35:16  
+would be great. Love it. Okay. I'm going to send these to you. I feel like this, these will answer your questions.
+
+Unknown Speaker  35:24  
+Black, these over,
+
+Unknown Speaker  35:36  
+okay,
+
+Unknown Speaker  35:41  
+I think this is it. RFD, media plan, delivery. Okay,
+
+Unknown Speaker  35:46  
+there's our Slack.
+
+Unknown Speaker  35:49  
+So this first one media plan, release, one requirements and scope
+
+Unknown Speaker  35:56  
+that looks old,
+
+Unknown Speaker  35:59  
+August 13, 2025, I'm
+
+Unknown Speaker  36:02  
+going to ignore that one. I'm
+
+Unknown Speaker  36:11  
+just validating that this is what we need.
+
+Unknown Speaker  36:17  
+Okay, so this one's more high level. This is the release brief. I think this is kind of intended for like,
+
+Unknown Speaker  36:25  
+like, company wide,
+
+Unknown Speaker  36:28  
+pecs,
+
+Unknown Speaker  36:31  
+high level. And then this one is the requirements documentation,
+
+Unknown Speaker  36:40  
+which should give us a bit more detail. But
+
+Unknown Speaker  36:47  
+also, this is all in comp. This one's in Confluence, so I think there's going to be some,
+
+Unknown Speaker  36:53  
+like child pages and stuff in this same folder that we can probably dig around in.
+
+Unknown Speaker  37:01  
+Okay, media plan,
+
+Unknown Speaker  37:08  
+milestones,
+
+Unknown Speaker  37:13  
+okay, yeah, dig around
+
+Unknown Speaker  37:16  
+and let me know if you if this answers that question, but, but basically, super high level, like they have a system for reviewing the historical data for a given advertiser and using their historical performance on these networks to recommend the allocation. So I'm assuming it's based on, you know, the number of networks that achieved, you know, whatever performance thresholds we're looking at. Okay, that makes sense.
+
+Unknown Speaker  37:53  
+I think, then my other question, because I think question
+
+Unknown Speaker  37:59  
+or has already
+
+Unknown Speaker  38:02  
+kind of been answered. Because I asked, is there a deliverability score, a publisher capacity table, because it seems to optimize for deliverability over IVR. I said, if there's data on how much inventory each publisher has available, we could test whether the algorithms publisher selection correlates with inventory availability rather than performance. So,
+
+Unknown Speaker  38:22  
+yeah, deliverability is definitely in the mix. Because, yeah, if we just optimize for performance, we would get, like, an allocation that would say we should spend,
+
+Unknown Speaker  38:32  
+you know, 50% on, I don't know, some super small network that, like no one watches.
+
+Unknown Speaker  38:39  
+And so that's the other thing. I think there's two reasons why deliverability is in the mix. Like one is because we need to make sure we can spend on them. But two,
+
+Unknown Speaker  38:50  
+the amount we spend on a given network is highly correlated to the performance of that network. So what I mean by that is, like, the same reason, if you spend $100 in the platform, you're going to have a lower CPA than if you spend $100,000
+
+Unknown Speaker  39:07  
+in the platform, like there is a degradation of performance as you scale, because each conversion or each visit has less of an impact.
+
+Unknown Speaker  39:19  
+So I think it's accounting for that in addition to the performance. Okay, I have one more question, yeah, does the deliverability Classification field? So it's actually in the table. On that media plan table, it has values like medium high, etc. I assume that indicates the algorithms confidence. Where has that?
+
+Unknown Speaker  39:43  
+Yes, if I look at per advertiser, or I believe, I think it's just per network, let me I can pull up the table. I can't remember, yeah, I think that's going to be like, how much inventory we have based on Yeah, but that's a guess, yeah. And then, because the follow up question was like, do higher confidence plan?
+
+Unknown Speaker  40:00  
+Produce more concentrated allocations, that's what I was wondering. But I don't know if who would know that answer. I mean, I'll look through these documents, and then Addie would know.
+
+Unknown Speaker  40:13  
+Chris Addy, okay,
+
+Unknown Speaker  40:16  
+yeah, dig through the documentation. Yeah, that's the right one. And then if you have follow up questions, just ping me and Addie
+
+Unknown Speaker  40:28  
+and just say we're you're working on an analysis for media plan experimentation.
+
+Unknown Speaker  40:36  
+Okay, so at least as far as things going forward. I think we need to get more conclusive results. I can still keep this and check it later, but honestly, I think we need a number of weeks more to be super conclusive. Four to six probably, yeah, I would love more advertisers. So here's what, here's where things stand currently. Um, so we are getting ready to launch a next phase of experimentation,
+
+Unknown Speaker  41:03  
+which I think, like what I said before, like, ideally we have like experiment results and causal impact to like pair together to help the team make a decision.
+
+Unknown Speaker  41:14  
+So the experiment was planning to launch this week, but as is common,
+
+Unknown Speaker  41:22  
+we met earlier, and there was an additional requirement thrown
+
+Unknown Speaker  41:26  
+so the additional requirement is that the media plan right now, we generate a media plan, and that is the plan, and we stick to it. We need it to be dynamic. So what that means is, and I don't know what cadence there,
+
+Unknown Speaker  41:43  
+I think Daniella said hourly on the call, and Mark was like, That's too often. And then somebody said daily, and they were like, that's still too often. So I don't know if it's like, a weekly thing or what,
+
+Unknown Speaker  41:54  
+but they want to, like, essentially regenerate a media plan on a recurring cadence that we're optimizing to, and that changes over time. And then there's some sort of notification to the customer, so that they go, Oh, they're like, doing this often and automatically, and I don't have to touch it, versus, like, set it and forget it. Vibes. Gotcha. So I have to wait until that change is released before I can launch an experiment. Because if I do an experiment with the static version, that only tells us how the static version is performing, not the newer version.
+
+Unknown Speaker  42:31  
+So once that change is released, I will launch an experiment.
+
+Unknown Speaker  42:35  
+Once we have some initial results from the experiment, I think we will have a good presuming they are positive, which I'm hoping they are, we will have
+
+Unknown Speaker  42:48  
+a push for probably adding more customers to the beta, which would give us more data to rerun this analysis. That being said, I kind of do want to share this in its current form, with Daniella, who's the TPM for media plan as
+
+Unknown Speaker  43:08  
+like a precursor to future data we can pull for this feature, if that makes sense, yeah, I can send a I can send both of these as a PDF, where you guys could just read through it, and if you had questions, I'd follow up on that. There's also the like, other one I didn't go through, but it's like, explains in depth, like, some how this stuff works and why I used it. So it's not just like, hey, this is what happened. But so there's two of those, and I can symbol those files to you awesome. And then the other thing, like, selfishly, for me, the goal of this is like, kind of a proof of concept for doing causal impact, because it was, like a somewhat simple change that we made across a set of advertisers. So let me review the the PDF. But I think, like, truly like that main table of like
+
+Unknown Speaker  44:01  
+the impact across advertisers is, like, the main output that I think will be really useful, and obviously, I would love it if we could do this for
+
+Unknown Speaker  44:14  
+brought, like, more changes across a larger set of advertisers. That's not like, six,
+
+Unknown Speaker  44:22  
+yeah. So, yeah, I think you mentioned trying to, like, automate it somehow. So it's not like you manually doing this every time. So curious what your thoughts are on on that piece, it's really simple to set up. Like, I mean, the complicated part is it's not complicated. It's just depending on the experiment. It's like, what is our control, what campaigns, what advertisers are eligible? That's the that's the complicated part, because it's not as simple as just saying, Here's a list of campaigns, because, like, for example, I had to go out there and search which campaigns were recommended, and, you know, things like that, right? Yeah. So that's parts always.
+
+Unknown Speaker  45:00  
+Going to be different. But as far as the rest of the analysis, it's pretty straightforward. And, like, all this stuff is set up. So I mean, I still think there's some tweaking to do and stuff, but like, I don't know, I don't mind doing it actually didn't take me. Okay, well, this setup took me a while. I worked on the first one. This is the first one, but the next one, I think, will be easier, and the next one will be easier. So I don't think it's actually that hard to now run causal impact on stuff. Yeah, so I don't really mind doing it. I like being on the experimentation team. So, so another one that we're we're gonna be running is our first UI based experiment. What
+
+Unknown Speaker  45:38  
+I mean by UI based is like we're making a change in the UI,
+
+Unknown Speaker  45:42  
+and we don't, we don't expect it to have any material impact on campaign performance, because we're not changing anything in the actual campaign. We're just doing the customer experience,
+
+Unknown Speaker  45:54  
+and we assigned, we're sending a feature flag to it, so we'll only release to 50% of advertisers.
+
+Unknown Speaker  46:02  
+Okay,
+
+Unknown Speaker  46:03  
+so that one will be interesting, because we won't have to do causal impact over time. We're just going to be comparing these two, you know, advertiser groups. But I'm wondering if there's anything we should borrow from this
+
+Unknown Speaker  46:17  
+to do that sort of analysis, but we're just planning on keeping it super simple and like just looking at the rates of, you know, campaigns that goal across the two groups over time. Well, the cool thing about it is causal impact doesn't necessarily. You don't have to do synthetic control. You can do a legit, like real control. And so I can make the control be the ones who didn't get the change, and synthetic be are not the synthetic, but the test be the ones we did test be the ones we did test it. And I can also do it the other way, where I do the the controls, the synthetic of all the people who are getting tested prior to the change, and I could compare those against each other too. Yeah, so it would be like, because it'll only be available, it'll only the change. The change is when they're entering their goal on a new camp. It only be new campaigns. It'll basically alert them if their goal is crazy.
+
+Unknown Speaker  47:07  
+I think it will be that would be really easy to implement. I don't think the hypothesis is, if they set more realistic goals, more campaigns will reach their goals. It's like super simple. And so it'd only be new campaigns, and we would just split it into two groups. So we're going to have a meeting probably next week with
+
+Unknown Speaker  47:29  
+some people from the MLT per ml team that implemented this, that did, like, a baseline of, like, what is our percent of campaigns at goal now? And so we want to make sure we account for like the KPI that they're looking at. And we want to create like a mode dash to like easily look at this. It's going to take time. The feature is just getting released now, so it's going to take us, you know, weeks to get enough data to really do the analysis. So we have time, but I can definitely loop you in on that, because I want to make sure we're not just doing like percent diff like, Let's actually put a bit more methodology behind this. Yeah, no, I think yeah, that that sounds like
+
+Unknown Speaker  48:18  
+lot of fun. Cool, cool, awesome. Well, thank you so much. I will keep an eye out if you have any follow up questions with Addie. And then,
+
+Unknown Speaker  48:30  
+yeah, I think for now I will, once you have the PDFs, I can share those with Daniella and see if there's any additional takeaways that she has, and then we'll go from there. Sounds good, awesome. Well, thank you so much. This is really awesome. Yeah, I love it. Sweet. Yeah, I'll send that stuff later today. Love it. I'm excited. Well, have a great weekend. Yeah, you too. Thanks.
+
+Transcribed by https://otter.ai

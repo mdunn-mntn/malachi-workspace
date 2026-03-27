@@ -289,32 +289,78 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 - Created `knowledge/experimentation.md` — experiment methodology knowledge base
 - Updated global and project CLAUDE.md to auto-update experimentation.md
 
-## 8. Open Items / Follow-ups
+## 8. Meeting 2 with Kirsa (2026-03-27)
 
-- **Share with Kirsa** — present v5 results, concentration finding, and product insights
+**Presented:** v5 results (ramp-up charts, CausalImpact results, concentration finding)
 
-### Questions for Data Team
+### Kirsa's Reactions & Feedback
 
-To deepen the publisher concentration analysis, we need help finding:
+- **On aggregate results:** Kirsa looks at % of advertisers with positive impact rather than spend-weighted averages. She reads 3/5 significant positive vs 2/5 negative as "generally good but inconclusive." This is how she'd frame it as a product owner.
+- **On concentration finding:** "It's definitely interesting" — wants to see if it repeats with a larger group. Agrees Pareto distribution for allocation makes sense (one dominant network, tapering down). Current equal-spread is suboptimal.
+- **On network as optimization lever:** From her experience doing manual campaign optimizations, network was "mid to low" on her list. Top was audience quality/recency, then frequency, then device type, then networks. Important context — the feature's value may be more about customer control than performance optimization.
+- **Frequency hypothesis pushback:** Kirsa challenges our frequency-per-network hypothesis. Historically at MNTN, *lower* frequency → more unique households → better performance. The "wasted impressions" on non-converting households at 3+ frequency offset the benefit of repeated exposure. Our frequency caps are applied at household level, not network level.
+- **Deliverability trade-off:** Two reasons deliverability is prioritized: (a) must ensure budget can be spent, (b) performance degrades as you scale on a network — diminishing returns per conversion/visit as spend increases on a single network.
 
-1. **How does the bidder allocate impressions across publishers WITHOUT media plan?** Is it purely auction-based (Beeswax buys wherever it can), or is there an existing allocation logic? Understanding the "default" allocation explains why pre-adoption spread was 131-183 publishers.
+### Key Product Context Learned
 
-2. **Is there a table that tracks actual vs planned publisher allocation?** We have what media plan RECOMMENDED (media_plan_publishers.percentage), but we need the actual delivery by publisher post-adoption to confirm the plan was followed. `sum_by_ctv_network_by_day` has post-adoption delivery, but we'd need to map publisher names in media_plan_publishers to `domain` values in sum_by_ctv_network_by_day (are they the same naming convention?).
+- **Beta selection is NOT random:** PEX/CS identify candidates based on past interest, Toph (production ops) validates they won't have pacing issues. This is confirmed selection bias — adopters are hand-picked, not randomized.
+- **No new beta additions planned:** Chicken-and-egg — they want to validate performance before adding more. Our analysis or experiment results could unlock more additions.
+- **Dynamic media plan coming (blocks experiment):** New requirement — media plan should regenerate on a recurring cadence (frequency TBD — Daniella said hourly, Mark said too often, may be weekly). Experiment can't launch until dynamic version ships because static results don't apply to the dynamic version.
+- **Share with Daniella (TPM for media plan):** Kirsa will share our PDFs with Daniella as a precursor to future data pulls. Malachi to send the methodology explainer and summary as PDFs.
+- **Contact for algorithm questions:** Chris Addy (technical lead). Ping Kirsa and Addy for follow-ups about media plan experimentation.
+- **UI experiment coming:** First UI-based experiment — feature flag to 50% of advertisers, changing how goals are entered on new campaigns. Hypothesis: realistic goals → more campaigns at goal. Malachi may be looped in for methodology.
 
-3. **What determines how many publishers the algorithm recommends?** CWRV got 16, Boll & Branch got 26. Is this based on budget size, vertical, deliverability constraints, or something else? Understanding this helps explain why concentration varies.
+### Algorithm Details (from Release Brief + Requirements Doc)
 
-4. **Is there a `deliverability_score` or `publisher_capacity` table?** The algorithm seems to optimize for deliverability over IVR. If there's data on how much inventory each publisher has available, we could test whether the algorithm's publisher selection correlates with inventory availability rather than performance.
+**Three signals power media plan recommendations:**
+1. **Semantic Relevance** — industry/vertical match (e.g., travel advertiser → networks with travel content)
+2. **Historical Performance** — past campaign data across similar verticals, VVR-based
+3. **Spendability** — inventory availability and scalability per network
 
-5. **Does the `deliverability_classification` field on `media_plan` (values like "medium") indicate the algorithm's confidence?** If so, do higher-confidence plans produce more concentrated allocations?
+**Priority order: spendability FIRST, then performance (VVR).** This confirms our finding that the algorithm optimizes for deliverability over IVR.
 
-### Next Steps (Priority Order)
+**Flex Targeting:** 5-15% of total budget reserved outside specific network allocations. This is the fallback spend for opportunistic buying, emerging inventory, real-time optimization. Explains the ±3% deviation we observed — some un-recommended publishers (e.g., Tubi Entertainment at 5-6%) receive spend from the Flex budget.
 
-1. **Share concentration finding with Kirsa + product team** — the most actionable insight: 16-publisher concentrated plans outperform 26-publisher diluted plans. Product team should investigate whether the algorithm can be tuned to default to more concentrated allocations.
-2. **Get data team answers** (see questions above) — understanding the algorithm's concentration logic and publisher mapping is critical to confirming the finding.
-3. **Map media_plan_publishers names to sum_by_ctv_network_by_day domains** — confirm whether the recommended publishers match the actual delivery, and test whether the algorithm's concentration was actually followed.
-4. **Re-run in 6-8 weeks** — 5+ more advertisers will have enough post-period data. With N=12-15 instead of N=8, we'll have enough power to statistically confirm the concentration pattern.
-5. **Test concentration as a covariate** — add "number of plan publishers" or "plan concentration (std of %)" as a covariate in the CausalImpact model to formally test whether concentration moderates the treatment effect.
-6. **For future feature rollouts: use waitlist control design** — randomly order rollout waves to eliminate selection bias and ensure adequate N (documented in experimentation.md).
+**Without media plan:** The bidder does NOT optimize network allocation. It buys from a huge bucket of inventory, with allocation driven by inventory team deal commitments (e.g., "told HBO we'd spend $1M in Q1") and manual adjustments when customers complain about concentration. This explains the 131-183 pre-adoption publisher spread — it's pure auction-based allocation.
+
+**M1 (current, beta released 2025-10-20):**
+- TV-Only Prospecting only (Retargeting generated on backend but not surfaced to customer)
+- No opt-in — media plan required for all AIDs in beta
+- Changes before campaign launch only (mid-flight not supported)
+- Auto-managed (MNTN optimizes) vs Manual modes
+- Deliverability Confidence widget with real-time feedback
+- "Why this?" links explaining each network recommendation
+
+**M2 (UI reskin, EOM January 2026):**
+- Media plan auto-applied when user clicks the media plan step in campaign creation
+- Design makes clear: happy path = don't make manual edits
+- Secret bypass: skip media plan step → plan not applied
+- Disabling media plan for Multi-Touch (MT) campaigns in future
+
+**Upcoming (not yet released):**
+- Dynamic media plan — recurring regeneration/rebalancing during campaign flight
+- This blocks the planned experiment (can't test static version if dynamic is coming)
+
+### Questions for Data Team — Status
+
+| # | Question | Status | Answer |
+|---|---|---|---|
+| 1 | How does bidder allocate without media plan? | ✅ Answered (Kirsa) | No network optimization — pure auction-based from inventory team deal buckets. Manual adjustments only when customers complain. |
+| 2 | Table tracking actual vs planned allocation? | ✅ Resolved | `sum_by_ctv_network_by_day` confirmed as valid proxy, cross-validated against `cost_impression_log`. Plans followed within ±3%. |
+| 3 | What determines # of publishers recommended? | 🔶 Partially | Algorithm uses semantic relevance + historical performance + spendability. But specific logic for 16 vs 26 unclear — ask Chris Addy. |
+| 4 | Deliverability score / publisher capacity table? | 🔶 Partially | Deliverability is in the mix (confirmed). Forecasting uses historical impression/bid data. No specific table identified yet — check with Chris Addy. |
+| 5 | Does `deliverability_classification` indicate confidence? | ⬜ Open | Kirsa guesses it's per-network inventory level. Ask Chris Addy for confirmation. |
+
+### Next Steps (Updated Priority Order)
+
+1. ✅ **Shared v5 results with Kirsa** (meeting 2, 2026-03-27) — she'll forward to Daniella (TPM)
+2. **Send PDFs to Kirsa** — methodology explainer and summary for Daniella to review
+3. **Ask Chris Addy** — remaining questions about publisher count logic, deliverability_classification, and whether concentration can be tuned
+4. **Wait for dynamic media plan release** — experiment blocked until then
+5. **Re-run CausalImpact in 6-8 weeks** — more post-period data for existing adopters. If beta expands, more advertisers too.
+6. **Test concentration as a covariate** — add "number of plan publishers" or "plan concentration (std of %)" to formally test whether concentration moderates the treatment effect
+7. **Get looped in on UI experiment** — Kirsa will connect Malachi with ML team for goal-setting experiment methodology
+8. **For future feature rollouts: use waitlist control design** — randomly order rollout waves to eliminate selection bias (documented in experimentation.md)
 
 ---
 
@@ -324,9 +370,13 @@ To deepen the publisher concentration analysis, we need help finding:
 |---|---|
 | `artifacts/ti_748_causal_impact.py` | Main analysis script v5 (CLI-runnable) |
 | `artifacts/ti_748_causal_impact.ipynb` | Presentation notebook v5 (with glossary + methodology appendix) |
+| `artifacts/ti_748_methodology_explainer.md` | Technical + non-technical methodology explanation |
 | `artifacts/datagrip_causal_impact.py` | Original Jaguar experiment notebook (reference only) |
 | `artifacts/potential_media_plan_advertiser_adopters.xlsx` | Beta list from product team |
-| `meetings/malachi_kirsa_meeting_1.txt` | Meeting transcript with Kirsa |
+| `artifacts/Media Plan Feature Release Brief.pdf` | Feature release brief (M1 + M2) from Kirsa |
+| `artifacts/BP-Requirements Documentation \| MNTN Matched Media Plan-270326-174121.pdf` | Requirements doc (algorithm details, outstanding questions) |
+| `meetings/malachi_kirsa_meeting_1.txt` | Meeting transcript with Kirsa (#1) |
+| `meetings/malachi_kirsa_meeting_2.txt` | Meeting transcript with Kirsa (#2 — v5 results review) |
 | `outputs/ci_*_results.csv` | Per-metric CSV exports |
 | `outputs/within_advertiser_comparison.csv` | Recommended vs non-recommended comparison |
 | `outputs/ci_*_*.png` | Per-advertiser and summary plots |

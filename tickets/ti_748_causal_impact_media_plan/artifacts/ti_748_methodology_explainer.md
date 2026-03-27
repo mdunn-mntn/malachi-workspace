@@ -16,7 +16,7 @@ Media Plan is a beta feature that recommends how to split an advertiser's budget
 
 ### The Elevator Pitch (30 seconds)
 
-> "We compared each advertiser's performance before and after they started using our recommended network allocation. We used a statistical method that predicts what their performance *would have been* without the feature — like a parallel universe where they never adopted it. Then we measured the gap between what actually happened and what was predicted. For most advertisers, IVR improved by about 6% — meaning they got more site visits per impression. The model accounts for things like holidays, market trends, and the advertiser's own spending patterns so we're not just measuring seasonality."
+> "We compared each advertiser's performance before and after they started using our recommended network allocation, excluding the first 4 weeks to account for campaign ramp-up. We used a statistical method that predicts what their performance *would have been* without the feature. The overall effect was near zero — but that hides the real story. Advertisers whose plans concentrated budget on fewer networks (16 publishers) saw +10-17% more site visits per impression, while those spread across 26 publishers saw -26 to -31% decline. The key takeaway: the algorithm works best when it makes decisive bets on fewer, higher-conviction networks rather than spreading thin."
 
 ### The Two-Minute Version
 
@@ -139,36 +139,57 @@ Even though Advertiser A had a big positive effect, Advertiser B's slight negati
 
 ---
 
-## What We Found
+## What We Found (v5)
 
 ### Primary Result (IVR)
 
-**6 advertisers analyzed.** Others didn't have enough post-period data yet (adopted too recently) or had data quality issues.
+**8 advertisers analyzed** with per-advertiser BIC-optimized covariates and 4-week ramp-up exclusion (TI-780).
 
-| Result | Count |
-|---|---|
-| Improved & statistically significant | 2 (Taskrabbit +20.8%, Lighting New York +8.5%) |
-| Improved but not significant | 2 (CWRV +12.2%, Talkspace +3.9%) |
-| Declined & significant | 1 (Am. College of Ed -27.1%) |
-| No meaningful change | 1 (FICO -0.2%) |
+| Advertiser | Effect | p-value | Significant |
+|---|---|---|---|
+| CWRV Sales | +16.8% | <0.05 | Yes |
+| Lighting New York | +10.5% | <0.05 | Yes |
+| Taskrabbit | +8.3% | <0.05 | Yes |
+| Talkspace | +4.7% | varies | Varies |
+| Am. College of Ed | +3.6% | >0.05 | No |
+| FICO | -4.0% | >0.05 | No |
+| Tempo | -26.2% | <0.05 | Yes |
+| Boll & Branch | -31.5% | <0.05 | Yes |
 
-**Overall: Median +6.2%, Spend-weighted +6.5%**
+**Aggregate IVR:** Median +4.65%, Spend-weighted **-0.23%** (near zero — large negative outliers offset positives)
+
+**Panel data model:** +2.06%, not significant (p=0.85). Consistent with near-zero aggregate.
+
+**THE KEY FINDING:** The aggregate hides the real story. Publisher concentration predicts who benefits — 16-publisher concentrated plans → +10-17% IVR lift; 26-publisher diluted plans → -26 to -31% decline. See full concentration analysis in summary.md.
 
 ### How Confident Are We?
 
 | Validation Check | Result | What It Means |
 |---|---|---|
-| Placebo tests | 30% false positive rate | Acceptable — some noise in the data but not overwhelming |
+| Placebo tests | 24% false positive rate | Improved from 86% (v2) and 30% (v3) — BIC + ramp-up exclusion reduced noise |
 | Sensitivity to pre-period | 5/6 directionally consistent | The result doesn't flip if we change how much history we use |
-| Covariate selection | BIC-optimized per advertiser | Not relying on intuition — data-driven model selection |
+| Covariate selection | BIC-optimized per advertiser | Not relying on intuition — `spend_change_pct` selected for ALL advertisers |
+| Panel data model | +2.06%, not significant | Consistent with near-zero aggregate — confirms no population-level effect |
+
+### How the Algorithm Works (from Release Brief)
+
+Media plan recommendations are powered by three signals:
+1. **Spendability** (highest priority) — can the network support the campaign's budget? Based on available inventory and scalability.
+2. **Historical Performance** — VVR across similar or related verticals. If the advertiser has historical campaign data, that's factored in too.
+3. **Semantic Relevance** — industry/vertical content match (e.g., travel advertiser → networks with travel content).
+
+**This explains our finding:** The algorithm picks *deliverable* publishers, not the highest-IVR ones. The benefit comes from removing the long tail of poor performers, not from finding the best ones.
+
+**Flex Targeting** reserves 5-15% of budget outside the specific network allocations for opportunistic spending. This is why actual delivery deviates ±3% from recommendations.
 
 ### Caveats
 
-1. **Small sample:** Only 6 analyzable advertisers. Individual results are noisy.
-2. **Selection bias:** Advertisers who adopted may be different (more engaged, more sophisticated).
-3. **Campaign maturity:** New media plan campaigns are compared alongside established ones. New campaigns always start slower. See TI-780.
-4. **Attribution windows:** All adopters use default attribution settings (no custom lookback windows). If an advertiser had a non-standard window, it could affect conversion counting.
-5. **CTV vs Display mix:** Most campaigns are CTV (channel_id=8), some are display (channel_id=1). We're analyzing them together. If media plan affects CTV differently than display, we'd miss that.
+1. **Small sample:** Only 8 analyzable advertisers. Individual results are noisy.
+2. **Selection bias (confirmed):** Beta advertisers are hand-picked by PEX/CS and validated by production ops — NOT randomized. Adopters may be systematically different.
+3. **Campaign maturity:** Even with 4-week ramp-up exclusion (TI-780), newer campaigns may still underperform mature ones.
+4. **Static version only:** Analysis covers M1 (static media plan). Dynamic rebalancing version is coming — results may not transfer.
+5. **Attribution windows:** All adopters use default industry_standard attribution.
+6. **CTV vs Display mix:** Most campaigns are CTV. Media plan affects CTV network allocation specifically.
 
 ---
 

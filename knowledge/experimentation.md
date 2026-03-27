@@ -116,7 +116,9 @@ Advertisers who adopt a new feature may be systematically different:
 - Growing faster (or struggling — looking for improvements)
 - Managed by specific account teams
 
-Mitigation: Use pre-period trends as covariates, document the bias explicitly.
+**TI-748 confirmed:** Media Plan beta advertisers are hand-picked by PEX/CS (identified candidates with prior interest) and validated by production ops (Toph) for pacing risk. NOT randomized. This is the strongest form of selection bias short of self-selection.
+
+Mitigation: Use pre-period trends as covariates, document the bias explicitly. For future rollouts, use waitlist control design with randomized wave ordering.
 
 ### Staggered Adoption
 When units adopt at different times:
