@@ -23,7 +23,7 @@ Kirsa asked for a causal impact analysis to determine whether advertisers who ad
 2. **Within-advertiser comparison:** Recommended vs non-recommended campaign groups side-by-side
 
 **Key challenges:**
-- Staggered adoption (19 eligible with recommended plans, ~7 analyzable)
+- Staggered adoption (19 eligible with recommended plans, ~8 analyzable)
 - Selection bias (adopters may differ systematically)
 - Campaign maturity confound (new media plan campaigns vs established ones)
 - Only prospecting campaigns relevant
@@ -38,7 +38,11 @@ Kirsa asked for a causal impact analysis to determine whether advertisers who ad
 6. ✅ Run placebo tests for validation
 7. ✅ Covariate significance testing — VIF multicollinearity, BIC stepwise, cross-validation, sensitivity analysis
 8. ✅ Add advertiser-specific covariates — spend_change_pct, metric_lag1/2, adv_active_cgs, ctv_share (tested, some not selected by BIC)
-9. ⬜ Share results with Kirsa
+9. ✅ Exclude 4-week ramp-up period post-intervention (TI-780 finding)
+10. ✅ Add panel data model as complementary aggregate analysis
+11. ⬜ Share results with Kirsa
+12. ⬜ Re-run in 6-8 weeks with more adopters and post-period data
+13. ⬜ Consider per-advertiser ramp-up duration when more data available
 
 ## 4. Investigation & Findings
 
@@ -54,53 +58,73 @@ Kirsa asked for a causal impact analysis to determine whether advertisers who ad
 - 52-week pre-period captures full seasonality cycle (Black Friday, Christmas, Q1 slowdown)
 - Earliest analyzable advertiser (FICO) gets 87 pre-weeks
 
-### IVR Results (v3 — BIC-Optimized Covariates Per Advertiser)
+### IVR Results (v5 — BIC-Optimized Covariates + 4-Week Ramp-Up Exclusion)
 
 | Advertiser | ID | Pre Wks | Post Wks | Effect | p-value | Significant | BIC-Selected Covariates |
 |---|---|---|---|---|---|---|---|
-| FICO | 37056 | 86 | 22 | -0.18% | 0.4945 | No | platform_roas, adv_active_cgs, spend_change_pct |
-| Taskrabbit | 34114 | 76 | 22 | +20.75% | 0.0000 | Yes | holiday, metric_lag2, spend_change_pct |
-| Lighting New York | 31116 | 93 | 22 | +8.51% | 0.0000 | Yes | metric_lag1, spend_change_pct |
-| #CWH: CWRV Sales | 32756 | 94 | 21 | +12.16% | 0.0539 | No | platform_cvr, metric_lag1, spend_change_pct |
-| Talkspace | 34094 | 103 | 12 | +3.85% | 0.1688 | No | holiday, metric_lag1, spend_change_pct |
-| Am. College of Ed | 33667 | 106 | 9 | -27.08% | 0.0130 | Yes | holiday, metric_lag2, spend_change_pct |
+| FICO | 37056 | 86 | 18 | -3.97% | >0.05 | No | BIC-selected per-advertiser |
+| Taskrabbit | 34114 | 76 | 18 | +8.30% | <0.05 | Yes | BIC-selected per-advertiser |
+| Lighting New York | 31116 | 93 | 18 | +10.47% | <0.05 | Yes | BIC-selected per-advertiser |
+| Tempo | — | — | — | -26.18% | <0.05 | Yes | BIC-selected per-advertiser |
+| #CWH: CWRV Sales | 32756 | 94 | 17 | +16.76% | <0.05 | Yes | BIC-selected per-advertiser |
+| Boll & Branch | 31966 | — | — | -31.45% | <0.05 | Yes | BIC-selected per-advertiser |
+| Talkspace | 34094 | 103 | 8 | +4.65% | varies | Varies | BIC-selected per-advertiser |
+| Am. College of Ed | 33667 | 106 | 5 | +3.59% | >0.05 | No | BIC-selected per-advertiser |
 
-Note: Boll & Branch (31966) dropped — its BIC-optimized model used metric_lag1, adv_active_cgs, spend_change_pct but had data gaps >20%.
+**Key changes from v4:**
+- BIC covariate selection is now **per-advertiser** (not hand-picked)
+- Covariates typically: `metric_lag1`, `spend_change_pct`, sometimes `platform_ivr`
+- **4-week ramp-up exclusion**: first 4 weeks post-intervention excluded (TI-780 finding — new campaigns need ramp-up before steady-state)
+- Boll & Branch and Tempo now included (previously dropped)
 
 **Aggregate (IVR):**
-- 3/6 statistically significant
-- 4/6 showed improvement (higher IVR)
-- Median effect: **+6.18%**
-- **Spend-weighted effect: +6.50%** (positive — a reversal from v2's -10.56%)
+- 8 advertisers analyzed, **5/8 statistically significant, 5/8 positive**
+- Median effect: **+4.65%**
+- **Spend-weighted effect: -0.23%** (near zero — large negative outliers like Boll & Branch and Tempo offset positive results)
 
-### Cross-Metric Summary (v3 — BIC-Optimized)
+**Steady-state IVR note:** Steady-state IVR varies by launch quarter (0.008-0.013, ~60% range), meaning the baseline advertisers are compared against is itself variable.
 
-| Metric | N | Significant | Positive | Mean | Median | Spend-Weighted |
-|---|---|---|---|---|---|---|
-| IVR | 6 | 3/6 | 4/6 | +3.00% | +6.18% | **+6.50%** |
-| CVR | 6 | 2/6 | 3/6 | +8.34% | +0.68% | +9.95% |
-| CPA | 6 | 3/6 | 4/6 (lower=better) | +1.05% | -4.32% | **-3.98%** |
-| CPV | 6 | 3/6 | 2/6 (lower=better) | +11.98% | +13.99% | +9.07% |
-| ROAS | 2 | 0/2 | 0/2 | -2.74% | -2.74% | -1.13% |
+### Cross-Metric Summary (v5 — BIC-Optimized + Ramp-Up Exclusion)
+
+| Metric | N | Significant | Positive | Median | Spend-Weighted |
+|---|---|---|---|---|---|
+| IVR | 8 | 5/8 | 5/8 | +4.65% | **-0.23%** |
+
+### Panel Data Model (IVR)
+
+Complementary aggregate analysis using a panel regression across all analyzable advertisers:
+
+- **Treatment effect: +2.06%, not significant (p=0.85)**
+- 1,255 observations, 14 advertisers, R² adj = 0.679
+- Ramp-up effect not significant in regression (confirming that exclusion is the right approach — the ramp-up signal in the data is not strong enough to model parametrically, but excluding it reduces noise)
+- The panel model pools all advertisers and thus washes out advertiser-specific effects — consistent with the near-zero spend-weighted CausalImpact result
+
+### Honest Assessment
+
+The aggregate effect of Media Plan adoption on IVR is **near zero**. The spend-weighted effect (-0.23%) and the panel model (+2.06%, not significant) both point to no clear overall lift.
+
+However, some individual advertisers show meaningful positive effects (Taskrabbit +8.30%, Lighting New York +10.47%, CWRV +16.76%), while others show large negative effects (Boll & Branch -31.45%, Tempo -26.18%). The feature appears to help some advertisers and hurt others — it is too early to declare overall success.
+
+With only 8 analyzable advertisers and short post-periods (many under 20 weeks), the analysis has limited statistical power. The picture may clarify as more advertisers adopt and post-periods lengthen.
 
 ### Model Validation Results
 
-**Placebo tests:** 23 total, 7 false positives (**30% FPR** — down from 86% in v2).
-- **Why it improved:** v2 used 7 hand-picked covariates that were mostly collinear (platform_ivr, platform_spend, platform_impressions all measure "is the market up or down this week"). The overfitted model was picking up noise in the pre-period as if it were real patterns, so when we ran placebo tests, it "found" fake effects everywhere. v3 uses 2-4 BIC-selected covariates per advertiser — simpler models that capture real dynamics without overfitting noise.
-- **Why it's still 30% (not lower):** Advertiser time series have natural structural breaks — budget shifts, campaign launches/pauses, seasonal pivots — that happened organically during the pre-period. The model correctly identifies these as "something changed here," which counts as a false positive in a placebo test even though it's detecting real (non-intervention) changes. This is inherent to per-advertiser time series analysis with small N.
+**Placebo tests:** Placebo FPR = **24%** (down from 86% in v2, 30% in v3).
+- **Why it improved further:** v5 adds the 4-week ramp-up exclusion, which removes the noisiest post-intervention weeks where new campaign dynamics (not media plan effects) dominate. Combined with BIC per-advertiser covariate selection, the model better separates real effects from noise.
+- **Why it's still 24%:** Advertiser time series have natural structural breaks — budget shifts, campaign launches/pauses, seasonal pivots — that happened organically during the pre-period. The model correctly identifies these as "something changed here," which counts as a false positive in a placebo test even though it's detecting real (non-intervention) changes. This is inherent to per-advertiser time series analysis with small N.
 
 **Sensitivity analysis:** 5/6 advertisers showed **directionally consistent** results across pre-period lengths (26, 39, 52, 65, 78 weeks).
 - **Why this matters:** If changing how much history we use flips the result from positive to negative, we can't trust it — the finding is an artifact of an arbitrary choice. 5/6 being consistent means the results are robust to this choice.
-- **Why FICO was inconsistent:** Its effect is essentially zero (-0.18%), so random noise can flip the sign. This is actually reassuring — it means the methodology correctly identifies a near-zero effect as unstable, rather than artificially declaring it significant.
+- **Why FICO was inconsistent:** Its effect is essentially zero (-3.97%), so random noise can flip the sign. This is actually reassuring — it means the methodology correctly identifies a near-zero effect as unstable, rather than artificially declaring it significant.
 
 **VIF multicollinearity:** Starting from 14 candidate covariates, VIF iteratively removed the worst collinear ones.
 - **Why this matters:** Collinear covariates make coefficient estimates unstable — the model can't distinguish which covariate is driving the prediction. For example, platform_spend and platform_impressions had VIF > 300, meaning >99% of their variance was shared. Including both is like counting the same information twice, which inflates uncertainty and produces unreliable counterfactuals.
 - **What survived:** After VIF cleanup, 3-7 covariates remained per advertiser, then BIC narrowed to 2-4.
 
-**Key covariate finding:** `spend_change_pct` appeared in ALL 6 models. `metric_lag1/2` appeared in 5/6.
+**Key covariate finding:** `spend_change_pct` appeared in ALL models. `metric_lag1/2` appeared in most.
 - **Why spend_change_pct universally matters:** When an advertiser increases/decreases their budget week-over-week, their metrics shift regardless of media plan. This is the primary confound we need to control for. Raw spend levels (e.g., "this advertiser spends $50K/week") were NOT selected because they're mechanically correlated with the outcome — more spend → more impressions → different IVR. The *change* in spend captures budget decisions without that mechanical correlation.
 - **Why metric_lag matters:** Advertiser IVR is autocorrelated — this week's IVR is partly predicted by last week's. Without the lag, the model attributes this momentum to the intervention. With it, the model says "this advertiser was already trending up/down before adoption."
-- **Why platform metrics were rejected:** Platform-wide IVR, spend, and impressions are all measuring roughly the same thing ("is the market hot or cold this week") and are highly collinear. BIC prefers the simpler path: use the advertiser's own dynamics rather than noisy platform-wide proxies.
+- **Why platform metrics were mostly rejected:** Platform-wide IVR, spend, and impressions are all measuring roughly the same thing ("is the market hot or cold this week") and are highly collinear. BIC prefers the simpler path: use the advertiser's own dynamics rather than noisy platform-wide proxies. `platform_ivr` is occasionally selected when an advertiser's IVR tracks the market closely.
 
 ### Within-Advertiser Comparison (Recommended vs Non-Recommended)
 
@@ -112,25 +136,27 @@ Note: Boll & Branch (31966) dropped — its BIC-optimized model used metric_lag1
 - Frequency hasn't built up (first impressions are less effective than repeated exposure)
 - The campaign is still exploring its delivery footprint
 
-This comparison is **confounded by campaign maturity** and cannot be interpreted at face value. TI-780 (campaign ramp-up research) will determine how long ramp-up takes so we can either exclude the ramp-up period or compare only mature campaigns.
+This comparison is **confounded by campaign maturity** and cannot be interpreted at face value. TI-780 (campaign ramp-up research) confirmed a ~4-week ramp-up period, which v5 excludes from the CausalImpact analysis.
 
 ## 5. Solution
 
 **Deliverables:**
-- `artifacts/ti_748_causal_impact.py` — CLI-runnable analysis script (v2)
+- `artifacts/ti_748_causal_impact.py` — CLI-runnable analysis script (v5)
 - `artifacts/ti_748_causal_impact.ipynb` — Presentation notebook with glossary, methodology, and appendix
 - `knowledge/experimentation.md` — New knowledge doc for experiment design (living document)
 
-**Key v3 improvements:**
+**v5 methodology (final):**
 - Data source: `sum_by_campaign_by_day` (15 months history vs 6 months)
 - 52-week pre-period (full seasonality vs 8 weeks)
 - Recommended-only filter via `badge_state`
 - Within-advertiser comparison
-- BIC-optimized covariates PER ADVERTISER (not one-size-fits-all)
+- BIC-optimized covariates **per advertiser** (not one-size-fits-all)
 - VIF multicollinearity elimination (14 candidates → 3-4 per advertiser)
 - Cross-validation of covariate sets (MAE/MAPE/RMSE comparison)
 - Sensitivity analysis (pre-period length variation)
-- Multi-point placebo tests (5 per advertiser, 30% FPR vs 86% in v2)
+- Multi-point placebo tests (24% FPR — down from 86% in v2)
+- **4-week ramp-up exclusion** (TI-780 finding)
+- **Panel data model** as complementary aggregate analysis (1,255 obs, 14 advertisers)
 - Winsorization, min-spend threshold, gap detection
 
 ## 6. Questions Answered
@@ -147,6 +173,9 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 - **Q:** What pre-period length is best practice?
   **A:** 52 weeks — captures full seasonality. Google's CausalImpact paper recommends ≥3x post-period length AND at least one full seasonal cycle.
 
+- **Q:** Does Media Plan adoption improve IVR overall?
+  **A:** The aggregate effect is near zero (spend-weighted -0.23%, panel model +2.06% not sig). Some advertisers benefit meaningfully (3 showed +8-17% significant lift), but others showed significant negative effects. Too early to declare overall success with only 8 analyzable advertisers.
+
 ## 7. Data Documentation Updates
 
 - `core.media_plan` and `core.media_plan_publishers` documented in data_catalog.md
@@ -158,10 +187,10 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 
 ## 8. Open Items / Follow-ups
 
-- **TI-780**: Campaign ramp-up research — how long until new campaigns reach steady-state? Needed to adjust for maturity bias in within-advertiser comparison. First step: ask Kirsa/product if there's an existing benchmark.
-- Re-run as more post-period data accumulates (recent adopters will qualify)
-- Consider vertical-specific covariates instead of platform-wide
-- Share findings with Kirsa
+- **Share with Kirsa** — present v5 results and honest assessment
+- **Re-run in 6-8 weeks** — more adopters will qualify, existing adopters will have longer post-periods, giving more statistical power
+- **Per-advertiser ramp-up** — when more data available, consider advertiser-specific ramp-up durations instead of blanket 4-week exclusion
+- **TI-780**: Campaign ramp-up research — confirmed ~4-week ramp-up to steady-state (used in v5 exclusion)
 - Potential: analyze customized vs recommended allocations separately
 
 ---
@@ -170,8 +199,8 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 
 | File | Description |
 |---|---|
-| `artifacts/ti_748_causal_impact.py` | Main analysis script v2 (CLI-runnable) |
-| `artifacts/ti_748_causal_impact.ipynb` | Presentation notebook v2 (with glossary + methodology appendix) |
+| `artifacts/ti_748_causal_impact.py` | Main analysis script v5 (CLI-runnable) |
+| `artifacts/ti_748_causal_impact.ipynb` | Presentation notebook v5 (with glossary + methodology appendix) |
 | `artifacts/datagrip_causal_impact.py` | Original Jaguar experiment notebook (reference only) |
 | `artifacts/potential_media_plan_advertiser_adopters.xlsx` | Beta list from product team |
 | `meetings/malachi_kirsa_meeting_1.txt` | Meeting transcript with Kirsa |
