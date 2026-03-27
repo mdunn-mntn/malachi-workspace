@@ -1,0 +1,1570 @@
+
+Zoom Logo
+Kirsa Haenebalcke's Personal Meeting Room
+Mar 24, 2026 02:29 PM
+Download (8 files)
+
+
+00:05:57/00:54:59
+
+Speed
+
+
+
+
+Audio Transcript
+Chat Messages
+
+Michelle Cervantes
+Michelle Cervantes
+00:01
+Thank you.
+Nick Martin
+Nick Martin
+00:03
+Perfect. Okay. It's all recording, it's all good?
+Okay, cool.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+00:10
+I see it, right?
+Yeah.
+Nick Martin
+Nick Martin
+00:13
+I don't see it on my screen… oh, okay, now I see it.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+00:16
+Upper right-hand corner, it should be.
+Nick Martin
+Nick Martin
+00:18
+Yeah, the screen share tab, it moved it into that weird, like.
+widget button thing for me. I see it now.
+Okay, so… let's start with the performance. I will zoom in a little bit.
+There we go. This is looking at the IVR breakdown, for all of the campaigns. The comparison is what type of campaign it is, so in this case, it's the treatment high intent to the control high intent for this row.
+And each of the advertisers in the experiments is a new column, so we can look at one comparison, and then look across the line to see how it's performing for each of the different advertisers.
+The color means it's an improvement, green is good, red is bad, and the emojis are for statistical significance, checkmark is above.
+0.95, the warning is above 0.9, but not quite 0.95, and the red, no crossing sign is for, below 0.9.
+So really, absolutely there, quite close.
+Not there yet.
+Mike Dolt
+Mike Dolt
+01:22
+I'm sorry, sorry, what is, what is 0.9 for the.
+Nick Martin
+Nick Martin
+01:25
+Oh, p-value, like, statistical significance, 0.9 value. Gotcha. 0.95 being statistically significant.
+Mike Dolt
+Mike Dolt
+01:35
+Makes sense.
+Nick Martin
+Nick Martin
+01:36
+Yeah, so the warning sign is it's above 0.9, but not quite at .95, so it is just close, but not quite there.
+I just wanted to have that as a… it's not just a complete, you know, yes or no.
+So…
+The main takeaways, all… there's a lot of rows, we don't need to go through all of them. I will highlight some of the key line-for-line comparisons. The first one is High Intent, which shows we saw two pretty significant improvements for both Collector Store and for Edward Martin.
+Two not statistically significant improvements on G-Shock and Readsy, and a statistically significant decline on Zuba.
+the, I…
+I will say, backing up onto the overall message, I think it might be worthwhile for me to bring up the overall, is… I think that you'll see a pattern here that a lot of the improvements that we're seeing for these comparisons has a lot stronger of an upside. Like, in this case, we're seeing, you know, 20% or 30% lifts.
+to… when we do see any form of significant declines, it's usually… it's less than 13% for all these. It's usually in the 10% range, nothing more than that.
+So, like, Zumba is a good example. Like, it's a dip, but I think the…
+what I'm generally feeling like is the potential upside of sending this live is a lot greater than any of the downsides of moving forward with this.
+Based on experiment results.
+That's first so, the treatment high intent, two really big improvements. Two…
+Kind of similar, one significant decline.
+For treatment mid-intent to mid- treatment mid-intent to control mid-intent, we have a significant improvement again for collector store. Edward Martin was not particularly significant. G-shock was a significant decrease at only 12%.
+Read Z is a non-significant increase at 9, and Zuba saw a significant increase at a 6% increase. So, it's a bit of a mixed bag, but we did see some advertisers, like Collector Store, that did see, like, really big improvements, from going live with us.
+For the treatment mid-intent and control mid-intent with peak performance, the mid-intent with peak performance comparison on row 10, we see, again, Collector Store and Edward Martin have huge performance improvements, that are very significant.
+G-Shock, not anything particularly changing, and READC was very close to statistical significance, and Zumba had a significant decline.
+So it's kind of a slight mixed bag, but again, I think in terms of the magnitude of improvement, the mid-intent with peak performance shows a lot more upside for a lot of advertisers.
+And the final big win, the best for last, is the peak performance comparison. The very bottom row, I think that this is one of the best testaments to assess
+the Fangorn model, because there is no bias of what is in the keywords. It is purely just how is Fangorn scoring the users compared to the entire vertical.
+This, so any of the keywords that are subsampling, you know, is not there as much.
+That's where we saw the biggest lifts. We saw 4 significant improvements, you know, collector store was 65% better, Edward Martin was nearly twice as high of a visit rate. G-shock, 24%.
+And reads you was plus 25%. Zumba, once again, was the one advertiser here who has had a consistent general decline of sitting around 10%.
+So, I think that's… again, in conclusion, I think the upsides that we're seeing here are a lot more, beneficial to anything that would be downsides for it. I don't think I'm seeing anything that seems like a performance fire, from any of these immediate advertisers that we have from this, so…
+So, yeah.
+Mike Dolt
+Mike Dolt
+05:39
+11% decrease for Zumba in high intent is… concerning.
+To me, I'd say.
+But I do agree, like, we need to figure out why Zumba has a decline, right?
+Nick Martin
+Nick Martin
+Yes, there… there is, Matt, I don't know if you happen to have your, poll that you have on the Fangorn scores. It's actually pretty interesting because Fangorn, I believe, did predict
+you could look at the Fangorn score comparisons and see that the control was predicted by Fangorn to do better. And by that, I mean, if you look at what was Fangorn's score of those households that it served ads to.
+the control campaign, on average, the median score, I guess, was served a higher Fangorne score households than the treatment did.
+Likely, this is a… some form of…
+how the, keywords we're selecting, like, they happen to have really good keyword alignment, it selects really good users for their keywords. But I mean, we do also see it for the peak performance as well. So I do think that there is still, like, more investigation that, like, is worthwhile to look into.
+Matt Brorby
+Matt Brorby
+07:00
+Yep.
+Yeah, so I have, like, the pre-experiment numbers that show…
+For Zumba Fitness, the control high intent audience had a…
+Slightly, not significantly higher, median score, which is predict… has been predictive.
+And now, I've actually ran the post-analysis.
+And in the peak performance for Zumba Fitness.
+The control peak performance group for Zumba Fitness had a median score of… 0.876. 876.
+And the treatment group was 863, so it was lower median scoring.
+And if you look at the distribution scores, you can kind of see it's,
+There was just a peak of scores closer to 0.8, but peak performance was pulling in that…
+Nick Martin
+Nick Martin
+07:58
+You wanna…
+Matt Brorby
+Matt Brorby
+07:58
+That vertical kind of just filtered them out.
+Nick Martin
+Nick Martin
+08:01
+Do you want to share your screen?
+Matt Brorby
+Matt Brorby
+08:02
+Yeah, I'm happy to share.
+No. Yep.
+Mike Dolt
+Mike Dolt
+08:06
+Yeah, you.
+Matt Brorby
+Matt Brorby
+08:06
+Let's see… here we go.
+Nope.
+Yeah, so is it big enough?
+Nick Martin
+Nick Martin
+08:14
+Yeah. Okay.
+Matt Brorby
+Matt Brorby
+08:16
+So this last row, these last two rows, is Zumba Fitness, Peak Performance Group, number of IPs, median scores.
+rough visit rates that I'm calculating.
+should correspond mostly to the experiment. Number of impressions, and then which group control our treatment. And so, almost always, we see the higher median score is the winner.
+Mike Dolt
+Mike Dolt
+08:39
+Say it again, the higher median score is…
+Matt Brorby
+Matt Brorby
+08:42
+The one that has the higher… the group that has the higher median score, so this median score column.
+The group that has the higher, if you're comparing two, that's the one that generally wins.
+Mike Dolt
+Mike Dolt
+08:56
+Got it.
+Matt Brorby
+Matt Brorby
+08:57
+And that's what happened in this case.
+And if I go up, I plotted all of this stuff, and
+The plot on the left here is the difference between the treatment and the control medium scores.
+And then on here, it's the difference between the treatment and control visit rates. So, most are either in this lower quadrant here, or this upper quadrant here, which means…
+If you're posi… if you have a higher median score, you win. If you have a lower median score, you lose.
+That's basically it.
+Ryan Kleck
+Ryan Kleck
+09:32
+So you could… you could predict the results of the experiment with your model.
+Matt Brorby
+Matt Brorby
+09:37
+Right, the next step that I'm running now is to sample out A bunch of advertisers.
+and look at their current audiences, and see what the current median scores are, that tells us the opportunity that we have.
+Right? If they have lower median scores currently, that means Fangord would improve the performance. If they already have very high scores.
+then Bangorne's likely… Gonna do not much different.
+Than what's already there.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+10:13
+That'll be very useful for you guys to figure out how to release this, yeah.
+Nick Martin
+Nick Martin
+10:18
+That's why I was talking about this range in nutrition, that if we could look at what the Fangorn scores is of the Ancient Nutrition's, like, current campaign on, like, the median score is, like, only .6 or something, it's likely.
+to improve.
+Matt Brorby
+Matt Brorby
+10:32
+Yup.
+Ryan Kleck
+Ryan Kleck
+10:35
+Well, so how are we gonna release this? How… what's… what's the idea? What's…
+Mike Dolt
+Mike Dolt
+10:40
+Before, before, before we get, before we get to the release, do we know…
+Matt, do you know what causes…
+This difference in median scores for some advertisers?
+Matt Brorby
+Matt Brorby
+10:56
+So, if you just look at, like, the distribution, say, for one of them, like, distributions look like this for, say, Edward Martin or a collector store.
+It's just basically that… They tend to have…
+So this is basically looking at their vertical, in a sense.
+If you take the existing vertical for an advertiser.
+and you put in the calculated Fangorne scores for those IPs, what does that distribution look like? It looks like this. This is the control group. This is the treatment group.
+And so… It's just seeing that. It's basically…
+How well-defined is the vertical is one, and then how… Well selected are the keywords.
+that's, like, the two interactions here, right? So if that narrows… if those two selection processes narrow the…
+Target population sufficiently to the higher scores, it's gonna be hard to beat.
+So, collector score, we had some big peaks here at the lower scores, which we tend to filter out.
+I still don't know why there's lower scores here on the treatment side, because nothing below .7 should be popping up, but I'm trying to figure out that. It's a little tricky.
+But then in some of the other ones, like Zumba Fitness, it just has a lot in these upper buckets, where we tend to see the best performance.
+So that's basically the reason.
+Is just the selection process.
+That we have right now.
+Ryan Kleck
+Ryan Kleck
+12:37
+Like, they're better at picking keywords, or that's one of the reasons?
+Matt Brorby
+Matt Brorby
+12:41
+That's one reason, and then the other is, like, the vertical is,
+Maybe more well-defined than other verticals.
+Nick Martin
+Nick Martin
+12:52
+Like, if there's a very clear-cut vertical that is very specific, and we have a lot of first-party data on it, then it's like…
+Generally, the current system worked well for them.
+Ryan Kleck
+Ryan Kleck
+13:05
+I see.
+Mike Dolt
+Mike Dolt
+13:10
+Can we?
+So basically.
+I think the approach we need to take here is to make sure that we don't hurt anyone actively.
+If we don't improve their performance.
+That's not the end of the world, but if we decide to roll this out, and we actually tank someone's performance, that's gonna be a problem.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+13:36
+I do want to call out…
+I think the experiment data supports that so far. Granted, it is only 5 advertisers, so we don't have the full range. However, the worst case scenario was a statistically significant decline, but by 10% or less.
+So… I don't know if there's…
+you know, I don't think there's a high likelihood we're gonna see, like, a huge decline in performance for some advertisers. We might see slight declines, sure.
+But I think the upside, specifically for the peak performance, is so large. I was telling Nick earlier, like, one of the PEX team members, I was suggesting to add in peak performance to help with scale on one of our experiments, and she was like, well, I would never suggest that to a customer, because it worsens performance.
+So, if we can fix that problem, like, that is gonna be huge.
+I also had a question, though, on the mid-intent with peak performance enabled, because I know, Matt, you were looking into that, because we saw some weird stuff there. So, I don't know if we want to dive into that, or if anyone had any other thoughts first.
+Mike Dolt
+Mike Dolt
+14:54
+Before we dive into that, I agree with you, Kirsten, that, like, obviously for…
+Cases when it's beneficial, we definitely want to do that.
+I'm wondering if there is a mixed approach here, that we can say that for cases where it improves, we do Fangborne, and for cases where it can potentially be bad.
+which we can predict, according to Matt, by the median scores, right?
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+15:22
+Yep.
+Mike Dolt
+Mike Dolt
+15:23
+maybe don't use Fangor for them.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+15:26
+Yeah.
+Mike Dolt
+Mike Dolt
+15:28
+But yeah, that's just a thought.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+15:29
+It's also…
+Michelle Cervantes
+Michelle Cervantes
+15:31
+Well… Aren't we also saying, like, we would apply this to new audiences?
+So, I mean, I think, like.
+It's not like we're gonna roll this out
+like, retroactively, and all of a sudden, like, current campaigns in flight are all of a sudden gonna get rescored and dropped, right? It would be for new audiences. So, I wonder if that's sort of our…
+Buffer of, like, well, it's a new audience, And, you know…
+Mike Dolt
+Mike Dolt
+16:00
+Can you say that again? New audience or new campaign?
+Michelle Cervantes
+Michelle Cervantes
+16:05
+I mean, either or both, right? So, so, so maybe not, maybe both. Maybe it's, it's new audience and new campaign.
+Right? Like… like, if you create a new audience, you may… maybe wouldn't want to apply that to an existing campaign, if that's already in flight.
+Right? We may not want to disrupt that, but…
+I think, in general… what? Go ahead.
+Mike Dolt
+Mike Dolt
+16:28
+What if you want to grab an existing audience and add it to a new campaign? Why won't we…
+use Fangor in there, if it's better.
+Michelle Cervantes
+Michelle Cervantes
+16:38
+I don't know. Initially, we were saying that we wouldn't apply this to existing audiences, I thought.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+16:44
+I think the goal of running the experiment is to allow us to apply it to existing audiences with the,
+understanding that it should improve. So I think as long as you're doing an analysis on maybe excluding the advertisers that have low median scores that we think might have issues with it, I think there's a ton of value to be added by rolling this out to existing customers, just with the example I gave. If we can
+Roll this out and say, we just made this really great improvement, and now peak performance
+Is way better than it was, and, like.
+Get people toggling that on, like, it's gonna help.
+Mike Dolt
+Mike Dolt
+17:28
+Yeah, for sure.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+17:30
+But I will say, too, the other thing we've talked about a lot in the past, and I want to make sure it doesn't…
+fall off the radar here when you guys are making this decision, is the audience sizes are going to be different. So for this experiment, we locked them, so they're the same.
+So, you know, it's really relevant to understand, you know, if we're decreasing the audience size by 20%,
+what does that do? And that's why we set it up this way. Can you pull up the results again, Nick? Because if you're decreasing the audience size, and you go from high intent to peak performance.
+You can see, okay, how does treatment peak performance compare to control high intent?
+And so for that, which is where.
+Nick Martin
+Nick Martin
+18:23
+Treatment peak performance to control high intent.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+18:26
+Yeah, so, like, for some advertisers, it does better, but for others, it does worse. So if going from…
+High intent to peak performance.
+Is a common thing that's gonna happen, because the audience sizes are smaller, or high intent to mid-intent.
+That is where… That, you know, it might become an issue.
+So that's all relevant.
+Parts of the decision-making, I guess.
+Mike Dolt
+Mike Dolt
+18:55
+Something we've been discussing on our side is to…
+Basically, hide the audience size changes.
+from the user, so the audience, like, the audience size people see in the UI would still be connected to the vertical.
+Whereas what's happening behind the scenes with high intent, mid-intent, pic performance, and stuff like that.
+will not be signaled to them in any way. That will be all hidden. Yeah.
+But you do bring a good point.
+What I think we need to figure out is basically if there is a way for users
+to find out that we are doing something behind the scenes, right? If they… if they can say that, hey, you're telling me…
+That you have 400,000 high intent available.
+And I've…
+I've put in a budget for it, and I can clearly see that I've reached 200,000 people, and then my performance suddenly dropped.
+then this is… this is a problem that we need to solve. If there… if there will be no… and I… my understanding is there should be no, like, drop like that anymore, because we should be…
+Kind of sliding across the scores more gradually now.
+If there will be no… Sudden drop in performance that can be correlated to the audience size.
+then I think we should be fine.
+Michelle Cervantes
+Michelle Cervantes
+20:29
+Do we still get that smoothness with Fangorn without continuous scoring?
+I mean, we should to some degree, right?
+Nick Martin
+Nick Martin
+20:36
+No, I think…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+20:39
+Oh, sorry.
+Nick Martin
+Nick Martin
+20:40
+I will… I'll say that it's still, like…
+The line drop might, like, look more similar, but, like, there still isn't gonna be a stair step, because it is just… you're at 10,000, or you're at 8,000, you know.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+20:54
+There will be a stair step, but I will say with the control, what we were seeing is that it wasn't a stair step. It was high intent, peak performance, mid-intent.
+So, at least with the treatment, it was 3 steps down, but it is… In pieces, not… smooth.
+Michelle Cervantes
+Michelle Cervantes
+21:16
+So, a mitigation could be that we go after the safe bets.
+like, similar to what we did with… with DAR, right? We go after the ones who we know can benefit from this, and if there's a way we can estimate if sizes, change significantly, we go after the ones with… who can benefit, plus the ones where the audience sizes are… are, you know.
+stable.
+And those are our safe bets that we roll out with. And then, for everyone else where, either they maybe won't benefit as much, or their sizes change significantly, we'd have to wait for continuous scoring to roll out for those guys.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+21:59
+Matt, you were working on audience size estimates, right? Or…
+Matt Brorby
+Matt Brorby
+22:03
+Yeah, we have them, and… well, we also have them. Ryan produces them, like, every day.
+In a monitor.
+So we have them.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+22:13
+What's the… do you happen to know the average? Like, how much are we decreasing the high intent buy across all advertisers if we were to release it?
+Matt Brorby
+Matt Brorby
+22:22
+It's a mix, right? Where is that? Daily?
+Audience, Delta Monitoring. So, for some of them, like Zumba, they're very close, the high intent, so they're almost equal in size.
+But for others, we do see, like, a 50% decrease, so let me see the high intent.
+Nick Martin
+Nick Martin
+22:42
+I remember for some of them that had the big ones, it was because they had, like, an audience of, like, 48 million, like, 24 million, like, it was.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+22:50
+But also, like, it getting smaller is only an issue if they're spending a ton of budget in comparison to that audience. Like, it's not inherently a problem to have a smaller audience, unless they're maxing it out.
+Matt Brorby
+Matt Brorby
+23:03
+Right, and this leads to something that I wanted to share. I don't know what we do with this information.
+Not to… scare you.
+Nick Martin
+Nick Martin
+23:13
+Do you want to share screen?
+Matt Brorby
+Matt Brorby
+23:14
+Yeah. So, what I did here was…
+For the experiment, for all the different groups, I just said, at what score threshold? For all the IPs that we served impressions to.
+Which ones did we get a verified visit from?
+And at what Fangorne score threshold?
+Do we account for 95% of all verified visits?
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+23:41
+Hmm.
+Matt Brorby
+Matt Brorby
+23:41
+And these are the scores, they're very high.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+23:44
+Hmm.
+Matt Brorby
+Matt Brorby
+23:44
+So once you hit, like, for Zumba or for Readsy, like.9.88, anything below that.
+Is 5% of your total visits.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+23:54
+Pretty much.
+Matt Brorby
+Matt Brorby
+23:55
+95% of the visits are coming from What we call high intent.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+23:59
+But we can't score it that low, because the audience sizes would be so much smaller.
+Matt Brorby
+Matt Brorby
+24:05
+Exactly. So, like, the thing that I was learning from all this in the previous experiment is you can cut the audience sizes in half, and basically you won't lose any of the visits.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+24:15
+Mike's like, don't do it.
+Matt Brorby
+Matt Brorby
+24:18
+So, this is what I'm saying.
+Mike Dolt
+Mike Dolt
+24:20
+Lovely.
+Matt Brorby
+Matt Brorby
+24:20
+It's like, I don't know when we do this.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+24:24
+But… but maybe…
+Matt Brorby
+Matt Brorby
+24:26
+There's a selection bias there, right?
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+24:28
+Yeah.
+Matt Brorby
+Matt Brorby
+24:28
+room, so…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+24:30
+would… I don't wanna, like…
+I don't know, is that problem go away if and when we're not on beeswax, and we're not, like, the availability to spend is higher, so our audiences can be smaller?
+Mike Dolt
+Mike Dolt
+24:51
+Precen… so…
+business will never go for it, right? If we have a way to make people spend $10 million with us, nobody will ever say, hey, let's make them spend $1 million with us, right?
+I think… I mean, this is definitely a valuable information to consider. I think because…
+the way we can use it is as an input to that whole thing we were talking about with different campaign objectives, right? Because if people's… if the campaign objective is visits, then
+maybe that's where we show the smaller audience. If the campaign objective is reach, then we don't care about this as much, right?
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+25:44
+Also, continuous scoring, kind of.
+Mike Dolt
+Mike Dolt
+25:47
+Yeah, yeah, it…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+25:48
+Solve for this problem.
+Mike Dolt
+Mike Dolt
+25:50
+They spend $10,000, they get the crop of the crop, they spend $100,000, they get less results, but more, kind of, overall volume, you know.
+So there, there are definitely ways we can work around this.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+26:09
+So, I do want to come back to the issue we called out with the fourth treatment.
+Matt, did you have any… were you able to discover anything there?
+Matt Brorby
+Matt Brorby
+26:20
+Wait, say that again, what am I…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+26:23
+So.
+Mike Dolt
+Mike Dolt
+26:24
+moments.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+Where I saw it the most obvious was looking at the performance by…
+intent group for control and performance by intent group for treatment. I had sent a screenshot at one point, but basically what we saw was
+That the worst performer in both the control and the treatment was the mid-intent with peak performance toggled on.
+Matt Brorby
+Matt Brorby
+26:49
+Yes, yes.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+26:51
+And it was worse than both mid-intent and peak performance.
+Yep. Which… Doesn't necessarily make sense to me, since it's just the combination of both, right?
+Matt Brorby
+Matt Brorby
+27:02
+Yes.
+Nick Martin
+Nick Martin
+27:04
+Like, it's at least… It should at least perform as bad as the worst one of the two.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+27:09
+Yeah, Malachi, did you have a thought on that?
+Malachi Dunn
+Malachi Dunn
+27:12
+Well, I just… I wanted to go back just for a second to what Matt said about the why. I don't know if you exactly gave…
+what your answer was for that, but I just wanted to bring up that we're kind of deciding who to roll this out to, because we don't want to affect certain people, and now I have a limited set of things that I use for the clustering analysis I did, but if Matt helped me come up with some other factors that we could…
+put in there, like, for example, that graph that you just showed, Matt, where it kind of showed that Zumba was in the bottom
+you know, left quadrant, the top right quadrant, things like that, right?
+What we could do is, when we have circumstances where we have a lot of positive, advertisers, is we could try to find other ones that are similar in that cluster.
+and as well as the ones that are bad, and then roll it out to just those select advertisers, and see if we see the same results. So, for example, if we see it with Zoom… What was it, Zumba?
+If we find another one that is very similar, we could just roll it out to that one and say, well, are we seeing the same results, or is this just a Zumba-specific thing? Because a lot of times, like what I've seen when I've done marketing campaigns before.
+is there are things outside our control that also happen a lot. Like, you know, sometimes advertisers can just have really crappy campaigns, you know, and things like that. And so we don't want to, like, necessarily not roll out something because it's very apparent in one advertiser, so I think that that's one way that we could
+circumnavigate that issue where we, you know, roll it out to something similar, and just see, like, you know, and then if we rolled it out to, for example, something close to Zumba, and we also saw the negative 12%, then we'd say, okay, we got a real problem here, but if we roll it out to another similar one, and we're not really seeing the same things, it might be just a single advertiser problem, and we don't need to necessarily work about that.
+Work on a big fix, and more kind of think about why is this affecting this one advertiser?
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+29:01
+Yeah, that's a great point, and…
+obviously, ideally, we could do another experiment across, like, 10 advertisers and get 4 that look like Zumba, but I think…
+budget-wise, it would probably be more effective to, do, like, a causal
+Impact analysis, or something like that.
+Malachi Dunn
+Malachi Dunn
+29:23
+like, before we do the experiment, like, this is obviously retroactive, but, before the experiment, when we select those, you know, depending on how much the budget is, I understand that's the limiting control here. If it's possible to pick two within that same cluster, that's also something that could help, but .
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+29:40
+But it also depends, like, if we think continuous scoring is going to be the next step for those, maybe we just…
+roll that into that experiment. Like, we make sure, for the continuous scoring experiment, we're gonna have at least 3 advertisers that look like Zumba, and 3 that look like Collector Store, and 3 that look like whatever the in-between ones.
+And we make sure that we're accounting for all these different, you know, median score.
+bucket advertisers, and then we see how continuous scoring, when paired with Fangorn, behaves for all of those.
+Mike Dolt
+Mike Dolt
+30:20
+I'm all about doing experiments.
+But we would want to roll it out in April.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+30:26
+Continuous scoring.
+Mike Dolt
+Mike Dolt
+30:28
+Pangorn, closely followed up by continuous scoring in the beginning of April.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+30:34
+Yeah, so I think, like, the… what you guys were talking about…
+with… I mean, it's up to you at the end of the day, but, like, what you guys were talking about with releasing this to the customers were that…
+are similar to Collector Store, or, like, that we see that has upside. That sounds great. I'm just thinking, like, we're gonna run an experiment for continuous scoring, right? So we might as well, like…
+spread it across these different types of advertisers to maybe solve for the Zumba problem with continuous scoring. Like you said earlier, Michelle, it's like, we just hold on those until we're doing continuous scoring.
+So I'm not suggesting another Fangorn experiment and a continuous scoring experiment. I'm just saying, do what you will with this, and then let's do an experiment for continuous scoring.
+Matt Brorby
+Matt Brorby
+31:22
+Neal.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+31:24
+Maybe we even put Zumba in it again, just to, like, and then, like, a couple others that are similar.
+Matt Brorby
+Matt Brorby
+31:30
+that vertical. So, like, the thing that I'm thinking about is, verticals are…
+Like, the finest grain right now for…
+Reduce the scores.
+All the Fangorne scores are unique down to the vertical, so any advertiser in the same vertical is going to have the same scores.
+So then the only performance difference can really come from how they select their keywords. But… so there, we just look…
+As we scale this up, we produce scores for all the verticals.
+And we can just go to the DS13,
+and see what the median score is within those verticals. And then we just say.
+Like, that's the… we choose a cutoff, and we say, verticals of where we have bigger opportunity, we can roll it out to those first. Ones where we don't, maybe we hold off until we figure out a little bit more. It's an option.
+Nick Martin
+Nick Martin
+32:26
+bet.
+Matt Brorby
+Matt Brorby
+32:27
+We want to be super safe.
+Nick Martin
+Nick Martin
+32:29
+That would work for measuring peak performance, but not necessarily keyword, like, high intent or mid-intent.
+Matt Brorby
+Matt Brorby
+32:35
+True. It's the gen… it's, like, the easiest, solution, if we need to do something that is feasible, because I don't think it's feasible to…
+Calculate the median score for every audience.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+32:49
+Hmm.
+Yeah.
+Matt Brorby
+Matt Brorby
+32:53
+For every… like, I just don't know that that's feasible.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+32:58
+Yeah. Push back.
+Matt Brorby
+Matt Brorby
+32:59
+that if they want to do it, but I think calculating it at the vertical level is much easier, because we'll already have, like, that kind of ready to go.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+33:06
+Could you narrow the list of advertisers down based on which ones don't have a significant change in audience size, and which ones…
+You know, like, any other factors that you would need to account for in eligibility,
+And then use that smaller list to pull the median scores.
+Mike Dolt
+Mike Dolt
+33:29
+We also don't… I don't think we need…
+scores for every audience. I think grabbing a score for the most recently created audience that has keywords
+Can be sufficient as an approximation of what it would look like for
+The advertiser as a whole, because that's most likely the audience they are currently actively using in the campaign.
+Nick Martin
+Nick Martin
+33:57
+Or…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+33:58
+Can you just poll the audience that's currently actively used in the campaign?
+Nick Martin
+Nick Martin
+34:02
+I… what if you just pulled the households that are being served ads to?
+Like, you can just go through impression log and say the campaign chose to vote on spending on them.
+Matt Brorby
+Matt Brorby
+34:12
+That's basically what I'm doing right now.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+34:14
+Oh, okay.
+Matt Brorby
+Matt Brorby
+34:15
+that. Like, I'm just looking at the impression law.
+To see who's actually getting served to, instead of going in and pulling every single IP.
+In the vertical.
+Or not.
+Nick Martin
+Nick Martin
+34:29
+Because that accounts for, like, everything already, like, that's the live production environment of, you know, who's being filtered, who's not.
+Matt Brorby
+Matt Brorby
+34:36
+I don'.
+Nick Martin
+Nick Martin
+34:37
+Household score thresholds, everything.
+Matt Brorby
+Matt Brorby
+34:39
+Yeah, because we are likely producing scores for non-US IPs. Well, we are. We are producing Vanguard scores for non-US IPs, just because they're in the…
+Because they are in there, they're in the vertical.
+Nick Martin
+Nick Martin
+34:53
+Yeah, this makes sense.
+Mike Dolt
+Mike Dolt
+34:54
+Say that again? We have non-USAPs in the vertical.
+Matt Brorby
+Matt Brorby
+34:58
+In verticals, yes, but when it comes to actual targeting, they get filtered out.
+Mike Dolt
+Mike Dolt
+35:05
+Do they show up in the audience size estimations on the UI?
+Matt Brorby
+Matt Brorby
+35:10
+I don't think so, because that goes through the audience exclusion.
+Mike Dolt
+Mike Dolt
+35:14
+Gotcha, gotcha, okay, okay.
+Nick Martin
+Nick Martin
+35:15
+I… yeah, I was like, I know that it… the number on the audience tab is down to the segment expression, which filters for US.
+Matt Brorby
+Matt Brorby
+35:23
+We produce scores for everything, right? So…
+We already produce the scores for those non-US.
+Yeah, we…
+Ryan Kleck
+Ryan Kleck
+35:31
+We overscore stuff, yeah. We already do that, yeah.
+Matt Brorby
+Matt Brorby
+35:35
+Okay, and then for the…
+Kirsa, getting back to you, mid and 10 plus peak performance, I think I've seen now, in the final results that
+Even in the control group, it's lower than either.
+So I don't know what's going on there, and it's really hard to pull the data out, so I don't… we need… may need to lean on someone. Or there's some, like, mathematical reason that makes sense.
+But I don't get it.
+Doesn't make sense to me.
+Nick Martin
+Nick Martin
+36:05
+It's using the mid-intent threshold score of 3333.
+Matt Brorby
+Matt Brorby
+36:12
+Yeah.
+Nick Martin
+Nick Martin
+36:12
+And allows all of the vertical to fit in as well.
+Matt Brorby
+Matt Brorby
+36:16
+Like, the only way that can happen is if we are targeting IPs that are… In the bucket.
+But not in the keywords.
+that's, like, the only way… not the only way, but it's, like, the way that makes the most sense to me, but I just don't see how it's half… how that would happen. I can't find it.
+Ryan Kleck
+Ryan Kleck
+36:38
+Let me take a look at that.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+36:40
+Let me think, yeah.
+I'm… and Matt, you know, like, the bucket ball analogy?
+Matt Brorby
+Matt Brorby
+36:47
+Yes.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+36:50
+I'm wondering if, even though the audience sizes were technically the same, because it's larger.
+if… But I have to think about it more.
+Matt Brorby
+Matt Brorby
+37:02
+So that's the thing, like… Maybe it makes sense. Yeah, that's what I'm trying to think, like, when we target mid-intent in these campaigns, that means mid-intent plus high intent.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+37:12
+Yeah, I need to, like…
+Matt Brorby
+Matt Brorby
+37:14
+So when we target peak performance, that means peak performance, which is peak performance plus high intent.
+Ryan Kleck
+Ryan Kleck
+37:19
+Give me one of those campaigns. I, I, you know what, I was thinking about this. I bet what's happening, or I wonder what's what's happening, is because we OR that… that… we OR DS46 in.
+Matt Brorby
+Matt Brorby
+37:30
+Yeah.
+Ryan Kleck
+Ryan Kleck
+37:30
+a TS46.
+Or, you know, so you're saying keywords?
+Matt Brorby
+Matt Brorby
+37:34
+Yes, yes.
+Ryan Kleck
+Ryan Kleck
+37:35
+Or it's a DS-46, you know.
+Matt Brorby
+Matt Brorby
+37:37
+That's what I.
+Ryan Kleck
+Ryan Kleck
+37:38
+advertiser ID. On the control side, you know, we… or the 6-digit vertical ID.
+Matt Brorby
+Matt Brorby
+37:44
+Yes.
+Ryan Kleck
+Ryan Kleck
+37:44
+So, mid-intent from the control side.
+Is… is… that has to… it has to adhere to the keywords still.
+Matt Brorby
+Matt Brorby
+37:52
+Yeah.
+Ryan Kleck
+Ryan Kleck
+37:53
+But on the treatment side, I'm better saying it doesn't… it doesn't.
+Matt Brorby
+Matt Brorby
+37:57
+Anything above .7.
+Ryan Kleck
+Ryan Kleck
+37:59
+Yeah.
+Matt Brorby
+Matt Brorby
+38:00
+Got it.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+38:02
+But I think that it is relevant.
+Matt Brorby
+Matt Brorby
+38:05
+Yes.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+38:06
+that…
+When we're looking at the, okay, your high intent, you increase your budget, you go into peak performance, performance goes down, you increase your budget further, you're now into mid-intent with peak performance.
+The people who have peak performance toggled on who take those steps.
+Are gonna see a much bigger decline in performance than someone who has peak performance toggled off.
+Matt Brorby
+Matt Brorby
+38:36
+You know.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+38:36
+So even though we're improving the performance of peak performance.
+like, if they're going into mid-intent, it's worse than it would have been. However, the audience is larger, so they're going into mid-intent less often, so I think I just talked myself out of it. I think it might be okay.
+Ryan Kleck
+Ryan Kleck
+38:56
+a group, whether it's just mid-intent, without.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+38:58
+Yes.
+Nick Martin
+Nick Martin
+38:59
+Yes.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+38:59
+And it performs worse than peak performance, but better than mid-intent with peak performance toggled on.
+Ryan Kleck
+Ryan Kleck
+39:06
+Okay, I… I'm… I'm betting it's that OR condition.
+Cause…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+39:11
+But it doesn't make sense for it to be an AND, because then it would be smaller than peak performance.
+Nick Martin
+Nick Martin
+39:16
+Could it be… so are you suggesting it could actually be targeting the entire bucket, or something?
+Ryan Kleck
+Ryan Kleck
+39:21
+Yeah, start getting the entire bucket and disregarding… it's disregarding their keywords.
+Matt Brorby
+Matt Brorby
+39:25
+We've thrown out.
+Nick Martin
+Nick Martin
+39:27
+Peak performance mid the bucket, essentially.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+39:30
+Oh…
+Matt Brorby
+Matt Brorby
+39:33
+Keywords are basically getting thrown out.
+Ryan Kleck
+Ryan Kleck
+39:35
+For the control side, it ORs in the 6-digit vertical ID. Everything still has to be…
+Within a keyword, or the peak performance doesn't have to be, but it has to be in the vertical, but very, very much stricter vertical.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+39:48
+Do we not want to do that?
+Oops.
+Nick Martin
+Nick Martin
+39:51
+I don't think that…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+39:52
+I think we…
+Nick Martin
+Nick Martin
+39:53
+I love that.
+Ryan Kleck
+Ryan Kleck
+39:54
+But yeah, we shouldn't have done that. But the way we implemented it, is…
+Yeah, it's hard to get around that.
+Nick Martin
+Nick Martin
+40:03
+I can…
+Mike Dolt
+Mike Dolt
+40:05
+Can I get an explain like I'm 5, please?
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+40:07
+Can we bring back the VIN diagrams?
+Matt Brorby
+Matt Brorby
+40:12
+Why not? Where is…
+Nick Martin
+Nick Martin
+40:13
+Dude.
+Yeah, where's your…
+Alex Knorr
+Alex Knorr
+40:15
+Do you need the audience intent scoring one? I was just looking at that as well, if you need me to link it.
+Ryan Kleck
+Ryan Kleck
+40:19
+Yeah.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+40:21
+We need definitely a visual here.
+Ryan Kleck
+Ryan Kleck
+40:23
+Yeah, pull up that VIN diagram, Alex, yeah.
+Nick Martin
+Nick Martin
+40:29
+The Lucid.
+Alex Knorr
+Alex Knorr
+40:30
+Pop bookmarked page.
+Nick Martin
+Nick Martin
+40:31
+the famous…
+Ryan Kleck
+Ryan Kleck
+40:32
+It has to do with how we use the 6-digit vertical ID in DS13.
+Versus how we're doing DS46. DS46 reads in the advertiser ID. There is no 3-digit bucket ID or anything.
+Matt Brorby
+Matt Brorby
+40:48
+Oh, sure.
+Yep.
+Ryan Kleck
+Ryan Kleck
+40:52
+Yeah.
+Matt Brorby
+Matt Brorby
+40:54
+So we start here.
+Then we move into here.
+Then we move into here. So it's all of this. But what might be happening is all of this.
+Ryan Kleck
+Ryan Kleck
+41:06
+Yeah, on the treatment side, we're… I remember saying, or…
+Matt Brorby
+Matt Brorby
+41:09
+Yep.
+Ryan Kleck
+Ryan Kleck
+41:10
+DS46 equals the advertiser ID, which would… which would ignore their keywords. It would just be whatever we put in there.
+Mike Dolt
+Mike Dolt
+41:20
+Got it. Okay, so that was just a miss with how we set up the audience expression, right?
+Ryan Kleck
+Ryan Kleck
+41:27
+Yeah, how we… well, how we designed this whole thing, yes. Because, yeah.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+41:32
+So is what it's supposed to be is…
+Yes, high intent, and then it goes to… let's say they have peak performance enabled, then it goes to the entire circle, right?
+Matt Brorby
+Matt Brorby
+41:44
+Yup.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+41:44
+And then if it goes into mid and 10, it adds in that little sliver.
+Matt Brorby
+Matt Brorby
+41:49
+Yep, and then down to here for Max Reach.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+41:51
+Yep.
+Nick Martin
+Nick Martin
+41:52
+That was the design.
+Matt Brorby
+Matt Brorby
+41:54
+Well, now it's actually just everything, right? Yeah.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+41:58
+But… but what's happening is…
+Matt Brorby
+Matt Brorby
+42:01
+We don't know, but we're worried that it's the whole bucket. It goes into the whole bucket.
+Just to see.
+Nick Martin
+Nick Martin
+42:06
+I can… I can send… Ryan, I can send over the audience expressions of all the campaigns.
+Ryan Kleck
+Ryan Kleck
+42:14
+Yeah, just give me one… the treatment control for the… mid-intent plus PPE.
+I guess maybe we could have fixed it with an expression…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+42:29
+Because that… Could explain, then.
+Nick Martin
+Nick Martin
+42:33
+That would explain it.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+42:34
+Part of the current concerns that
+Especially when they have peak performance toggled on, they're seeing a huge decline once they go into mid-intent.
+Nick Martin
+Nick Martin
+42:45
+Because… The addressable audience of the bucket is, like, really big without keywords.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+42:50
+Because if they don't have peak performance toggled on, it's just going from high intent to mid intent to keyword, like, right?
+Ryan Kleck
+Ryan Kleck
+43:00
+Yeah, keywords… the keywords still have to be… yeah, the keywords are still in the expression.
+Nick Martin
+Nick Martin
+43:04
+That would explain why maybe the 10 performed better.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+43:07
+Yeah, so, like, That… would solve a lot of performance concerns, presumably, without really seeing Pamcorn.
+If what we're suspecting is true.
+Ryan Kleck
+Ryan Kleck
+43:21
+I'm pretty sure it is.
+Mike Dolt
+Mike Dolt
+43:26
+So that makes sense to me. So what… which… which parts… of the experiment.
+Results that we've seen are… potentially incorrect.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+43:39
+it's just… I mean, it's not incorrect, it's… it's…
+it's correct based on how it's currently built.
+Matt Brorby
+Matt Brorby
+43:47
+The way we will be…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+43:49
+It's just the fourth one, the mid-intent with peak performance.
+Matt Brorby
+Matt Brorby
+43:53
+Which is the worst performing across everyone, because it's, like, the biggest bucket of.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+43:57
+So if this were fixed pre-experiment, we would have seen higher performance for those campaigns across both the control and the treatment.
+Groups. Got it.
+Mike Dolt
+Mike Dolt
+44:09
+I'm on board. Yeah.
+Matt Brorby
+Matt Brorby
+44:12
+You.
+Ryan Kleck
+Ryan Kleck
+44:12
+If we had to.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+44:13
+And how many customers are in mid-intent with peak performance toggled on? Didn't we look at that, and it's like…
+almost.
+Matt Brorby
+Matt Brorby
+44:21
+Single-digit percentages, yeah.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+44:23
+Yeah.
+Matt Brorby
+Matt Brorby
+44:24
+Of campaigns. Percentages of campaigns, not… Yeah.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+44:28
+So…
+Matt Brorby
+Matt Brorby
+44:29
+Yep.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+44:29
+But, for those advertisers, it probably matters.
+Matt Brorby
+Matt Brorby
+44:34
+Dude.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+44:36
+Okay, I do want to be aware of time,
+Nick and I and Jen were chatting earlier, we need to have a official review of findings and recommendations from this experiment.
+So I think what, we should aim to have that booked for… well, one, Unless…
+Speak now or forever hold your peace. We will pause Fangorn, effective today, because I think we've gathered enough data. And then, we'll aim to have a final review of all findings and recommendations the week after Mountain Meet.
+That is not the best case scenario in terms of timing. Obviously, best case would be 30 to 45 days after the experiment ends, but I think it's good enough.
+And so Nick and I… well, Nick, probably, I'll be there to support. We'll present our findings and recommendations from the experiment, but I would definitely recommend on your side, maybe we do, like, a two-phase
+review, like, we present the experiment findings, and then maybe, Michelle, you could take the second half and, like, have a…
+Rough presentation of, like, what we're gonna… what you're gonna do with this information.
+Mike Dolt
+Mike Dolt
+45:56
+Mitchell, didn't we have already something scheduled for this? No?
+We definitely talked about it.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+46:03
+Richard asked about it, and I mentioned on the call, I was like, well, we typically wait 30 days, we'll do it a bit sooner, but we'll have it in a couple of weeks. But I don't think we booked anything yet.
+But Jen… Jen, and I'll work with Jen to get something scheduled. We'll just include, I guess, everyone on this call, unless you tell me otherwise.
+Michelle Cervantes
+Michelle Cervantes
+46:26
+Can we make sure that we sort of… Emphasize the bigger picture of… like, Fangorn is able to predict…
+performance, and the higher, like, the higher the… I want to have that sort of…
+you know, TLDR, like, set at the forefront.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+46:50
+Yeah. So we have a template for findings and recommendations, and it really simplifies things. Like, it's like, here are the three key takeaways. Awesome, okay. So, we'll share that with you before we have that call, just to make sure we're totally aligned. Okay. And…
+But I think from our side, like, Nick and I are gonna try to be, like, very agnostic on, like, here's what the data is showing, and then let you run with, like.
+the audience size analysis, the advertiser analysis of, like, who's a good candidate for this, like, how are we gonna release this to some and not others? Like, all those other questions I'll defer to you guys on, because I just want to stay focused on, like.
+what is the statistically significant results that we can take away from this? And what does it show… what does it tell us?
+Michelle Cervantes
+Michelle Cervantes
+47:42
+Yep. Yeah, so I think between now and then, internally we work on, right, the analysis around who's our safe set of candidates.
+Who's our non-safe set of candidates, and then what our mitigation strategy is, potentially, for the non-safe set of candidates, right? I think we can also cover things around
+you know, like, if we have this turned on by default for all new accounts, right? Like, that's probably the best bet, because none of those are gonna have a comparison point, so…
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+48:17
+Hmm.
+Michelle Cervantes
+Michelle Cervantes
+48:17
+You know, like, we don't want to, like, let them…
+flounder between two, right? So, I would say, like, that's maybe the default to, like, get… get maybe everyone on this eventually.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+48:29
+Yeah, I think there's, like, no risk for that. And then, at least for the ones that are good candidates, I say go all in. I mean, I think…
+Improving peak performance by that much is… Gonna be a huge… improvement.
+Mike Dolt
+Mike Dolt
+48:47
+Can you repeat one more time, please, about the new advertisers?
+Michelle Cervantes
+Michelle Cervantes
+48:51
+Like, any new account should automatically have Fangorne as… the default.
+Scoring.
+Matt Brorby
+Matt Brorby
+48:58
+baseline.
+Mike Dolt
+Mike Dolt
+49:01
+Even if we know it would be bad for them?
+Matt Brorby
+Matt Brorby
+49:06
+We don't… yeah, it depends, like, I mean, it's like…
+Michelle Cervantes
+Michelle Cervantes
+49:09
+You know, they're brand new.
+Matt Brorby
+Matt Brorby
+49:10
+If we know it's, like.
+Michelle Cervantes
+Michelle Cervantes
+49:11
+But based on the vertical?
+Matt Brorby
+Matt Brorby
+49:12
+Yeah, 50% worse if we somehow knew that it was going to be 50% worse.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+49:16
+But do we have any data to suggest that there would be a significant decline in performance? Like, the only… the worst one was 10% less in some buckets. So, like…
+To me, I think the upside is so much bigger that, like, yeah, I agree. Anyone new.
+Michelle Cervantes
+Michelle Cervantes
+49:37
+Even for the peak performance gains alone.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+49:39
+Yeah, for sure.
+Mike Dolt
+Mike Dolt
+49:41
+It may, it may…
+Matt Brorby
+Matt Brorby
+49:42
+That's the other thing, how can we push peak performance for the people that are on Fancourt?
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+49:47
+Yeah.
+Nick Martin
+Nick Martin
+49:48
+It's gonna be a… it's gonna be a marketing campaign internally, I think.
+Mike Dolt
+Mike Dolt
+49:52
+It makes sense to me, but if we… if we're saying that, for example, there is a vertical
+For which Pengorn just doesn't work.
+Period.
+Why would we want to put people in that vertical on Pangor?
+Matt Brorby
+Matt Brorby
+50:07
+So here's the thing, it's… we're kinda…
+We've handcuffed ourself with this terminology.
+Because the vertical is arbitrary.
+chose.
+It's .8 and above.
+We can make it higher, and then it will be better.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+50:24
+Yeah.
+Matt Brorby
+Matt Brorby
+50:26
+So for them, we just say, oh, this is your current one? Okay, we'll just select a threshold that's higher, and it'll be better.
+Nick Martin
+Nick Martin
+50:32
+You… yeah, you can make dynamic thresholds.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+50:35
+I think we'll be sweet.
+Matt Brorby
+Matt Brorby
+50:36
+Smaller, but it's better.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+50:38
+I think it's potentially a non-issue, because continuous scoring…
+Matt Brorby
+Matt Brorby
+50:42
+And that's exactly what continuous scoring does.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+50:44
+once layered on there is, like, it solves for that. So, like, even if…
+for these brand new advertisers, if they get fangorn without continuous scoring for, like, 3 months.
+And that maybe their performance is 10% less than what it would have been. One, they have no way of knowing, and two, they'll get the release that gets them even better than what it would have been
+You know, 3 months, 4 months later.
+Matt Brorby
+Matt Brorby
+51:10
+Okay.
+Mike Dolt
+Mike Dolt
+51:13
+I'm still not 100% sold, but you guys make very compelling arguments, generally.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+51:20
+At the end of the day, it'll be, you know, whoever has the loudest voice on the DPL would decide.
+Ryan Kleck
+Ryan Kleck
+51:27
+Mike's the one that gets all the complaints, I'm sure, so…
+Michelle Cervantes
+Michelle Cervantes
+51:33
+Okay, so in terms of next steps, should I schedule a follow-up to just kind of…
+as a next checkpoint, like, Matt, do you have a good sense of, like.
+all the different analysis that we want to do, because, like, ultimately, I would love to see, like, a list
+of…
+and I don't know how possible this is, but, like, I don't know, like, Alex, similar to, like, what you and I did with,
+bottom of keywords, like, we were able to, like, take
+all active advertisers with good log data, and, like, estimate, like, the size of their audiences, and then see, you know, who is good candidates versus not. I don't know if that's possible, but, like, something similar to that could help us, you know, whittle that down.
+Alex Knorr
+Alex Knorr
+52:14
+I was gonna say it's a little harder for this, but maybe it's easier for you, Matt, because it basically just ends up evaluating the vertical size differences, right?
+Matt Brorby
+Matt Brorby
+52:24
+Maybe… I have to produce the Fangorn scores, that's the tricky part.
+Alex Knorr
+Alex Knorr
+52:29
+rate.
+Matt Brorby
+Matt Brorby
+52:30
+So that's the only blocker right now, is we're not producing the Fangoran scores for everyone. We're only producing it for 26 advertisers right now, on a regular basis.
+So…
+And I don't know that we're ready to do it for every single advertiser at this moment, so my approach is to try and
+But an ad hoc notebook together that… Pulls in the model, Gets some random samples.
+From impression logs, and… We look at what it is.
+Alex Knorr
+Alex Knorr
+53:02
+For context, when we did this for bottom-up keywords.
+there is an audience API service where you can pass a list of keywords and get a size back.
+Matt Brorby
+Matt Brorby
+53:12
+Lucky, because you still have, like, set logic.
+Alex Knorr
+Alex Knorr
+53:14
+Yeah.
+Matt Brorby
+Matt Brorby
+53:15
+Stuff that you can do. Yeah.
+Okay. But yeah, I'm run… I'm kind of running some of that now, I'm trying to run that analysis, it's just there's memory issues, so I'm trying to tweak the random sampling so that I don't…
+Crash everything here.
+But that's what I'm working on this week, is to get across all the verticals that I can.
+See which ones have the biggest opportunities, and which ones are gonna be hard.
+Like the fitness one.
+Nick Martin
+Nick Martin
+53:46
+Okay. Awesome.
+Matt Brorby
+Matt Brorby
+53:47
+Yep.
+Michelle Cervantes
+Michelle Cervantes
+53:48
+Alright, I'll schedule some time… follow-up time, maybe, for next week as a check-in.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+53:53
+Okay, I'll defer to you guys on the… these additional analyses piece, but feel free to loop Nick and I in, and we can help as needed. But it sounds like you guys got a good grasp on things.
+Michelle Cervantes
+Michelle Cervantes
+54:06
+I'll let you as optional, and if you want to join, you can, and if not, no worries.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+54:11
+That sounds good.
+Michelle Cervantes
+Michelle Cervantes
+54:12
+Cool.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+54:13
+And then Nick, just confirm once we're paused.
+Nick Martin
+Nick Martin
+54:17
+Yes, yeah, I'll let you all know once we pause them all down.
+Matt Brorby
+Matt Brorby
+54:20
+But I've been liking the, like, refresh every day, just to see what happened.
+Nick Martin
+Nick Martin
+54:25
+The old… I think you might still see some performance, come.
+Matt Brorby
+Matt Brorby
+54:29
+I'm kind of coming in.
+Nick Martin
+Nick Martin
+54:31
+It still will have the downwind visits, so the absolute performance will start to look better for everyone.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+54:37
+Yeah.
+But the differences usually don't change too much, sadly.
+Nick Martin
+Nick Martin
+54:43
+Nope.
+Yeah, not gonna change.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+54:45
+It's crazy that Eva just turned a corner and changed, it'd be awesome.
+Nick Martin
+Nick Martin
+54:50
+be super cool.
+Yeah.
+Kirsa Haenebalcke
+Kirsa Haenebalcke
+54:54
+Great. Well, thanks, everybody!
+Michelle Cervantes
+Michelle Cervantes
+54:56
+Thanks, everyone.
+Nick Martin
+Nick Martin
+54:57
+Thanks to you all. Bye.

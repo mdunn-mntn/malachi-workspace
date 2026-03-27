@@ -9,6 +9,7 @@ workspace/
 ├── knowledge/            ← shared data docs — source of truth, in git, org-accessible
 │   ├── data_catalog.md   ← table schemas, partitions, join keys, query tips
 │   ├── data_knowledge.md ← business logic, gotchas, tribal knowledge
+│   ├── experimentation.md ← experiment methodology, covariate selection, test design lessons
 │   └── README.md
 ├── tickets/
 │   ├── _template/        ← copy summary_template.md when starting a new ticket
@@ -31,6 +32,7 @@ workspace/
 | `README.md` | Workspace structure, philosophy, and how-to — read at session start, update when workspace conventions change |
 | `knowledge/data_catalog.md` | Table schemas and join keys — read at session start, update immediately when new schema learned |
 | `knowledge/data_knowledge.md` | Business logic and gotchas — read at session start, update immediately when new knowledge found |
+| `knowledge/experimentation.md` | Experiment methodology, covariate selection, test design lessons — update when working on any experiment/analysis ticket |
 | `knowledge/folder_definitions.md` | **Exact definition of what goes in every folder** — check here before placing any file |
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
