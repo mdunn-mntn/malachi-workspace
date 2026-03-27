@@ -194,6 +194,8 @@ CWRV CG 111505: NBC recommended 12% → actual 11.9%. Nearly exact.
 
 **Methodology note:** Matched `media_plan_publishers.name` to `sum_by_ctv_network_by_day.domain` (exact name matches confirmed). Only counted impressions from campaigns belonging to campaign groups that have a recommended media plan (`media_plan.campaign_group_id`), filtered to post-plan-creation dates.
 
+**Data source validation:** Cross-validated `sum_by_ctv_network_by_day` against `cost_impression_log` (the authoritative impression-level source — one row per won/paid impression). For CWRV Sales in Feb 2026, both tables show the same top-5 publishers in the same rank order (Peacock, NBC, Tubi Entertainment, HBO Max, Paramount Streaming - Comedy). Counts differ slightly due to campaign filtering, but the publisher distribution is consistent. `sum_by_ctv_network_by_day` is a valid proxy for publisher-level analysis. Note: `impression_log` was NOT used because it contains all bids (won + not won), not just delivered impressions.
+
 **Still needs investigation:** Some campaign groups (e.g., ThirdLove 115424) show ALL publishers as "NOT In Plan" despite being linked to a media plan — may be a join issue with how publisher names map for that specific plan, or the plan publishers may use different naming.
 
 **Three actionable product insights:**
