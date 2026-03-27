@@ -1044,6 +1044,63 @@ See entries above.
 - **Type:** VIEWs → sqlmesh__summarydata
 - **Use for:** Apple iCloud Private Relay identity resolution tables.
 
+## silver.summarydata.sum_by_campaign_by_day
+- **Type:** VIEW → `sqlmesh__summarydata`
+- **Partition:** DAY on `day`
+- **Date range:** 2024-01-01 to present (15+ months — longer than agg__daily_sum_by_campaign which starts Sep 2025)
+- **Use for:** Daily campaign-level KPI aggregation. **Best table for experiments needing long pre-periods** (52-week pre-period for CausalImpact).
+
+| Column | Type | Notes |
+|---|---|---|
+| advertiser_id | INT64 | |
+| campaign_id | INT64 | Join to `campaigns` for campaign_group_id, funnel_level |
+| day | DATE | Partition key |
+| impressions | INT64 | |
+| clicks | INT64 | VV component (click-through visits) |
+| views | INT64 | VV component (view-through visits) |
+| click_conversions | INT64 | |
+| view_conversions | INT64 | |
+| competing_views | INT64 | For industry_standard attribution |
+| competing_view_conversions | INT64 | For industry_standard attribution |
+| click_order_value | NUMERIC | |
+| view_order_value | NUMERIC | |
+| competing_view_order_value | NUMERIC | |
+| media_spend, data_spend, platform_spend | NUMERIC | Total spend = sum of all three |
+| vast_start, vast_complete | INT64 | Video completion tracking (VCR = complete/start) |
+| video_impressions, display_impressions | INT64 | CTV vs display split |
+| uniques | BYTES | HLL sketch — NOT usable as integer count at campaign level |
+
+**Also available at other granularities:**
+- `sum_by_campaign_group_by_day` — same columns, grouped by campaign_group_id instead of campaign_id
+- `sum_by_advertiser_by_day` — advertiser-level daily
+- `sum_by_creative_by_day` — creative-level daily
+- `sum_by_region_by_day` — geographic daily
+- All go back to 2024-01-01.
+
+## silver.summarydata.sum_by_ctv_network_by_day
+- **Type:** VIEW → `sqlmesh__summarydata`
+- **Partition:** DAY on `day`
+- **Date range:** 2025-01-01 to present
+- **Use for:** Publisher/network-level performance. One row per advertiser × campaign × publisher × day.
+
+| Column | Type | Notes |
+|---|---|---|
+| advertiser_id | INT64 | |
+| campaign_id | INT64 | |
+| domain | STRING | Publisher/network name (e.g., "CBS", "NBC", "HBO Max"). **Matches `media_plan_publishers.name` exactly** (cross-validated TI-748). |
+| day | DATE | Partition key |
+| impressions | INT64 | |
+| clicks | INT64 | |
+| views | INT64 | |
+| click_conversions, view_conversions | INT64 | |
+| click_order_value, view_order_value | NUMERIC | |
+
+**Cross-validation:** Publisher distribution matches `cost_impression_log` (same top-5 publishers in same rank order, validated for CWRV Sales Feb 2026). Counts differ slightly due to campaign filtering but proportions are consistent.
+
+**Gotchas:**
+- Does NOT have competing_views/conversions columns — use industry_standard attribution from sum_by_campaign_by_day instead for total VV/conversions
+- `domain` naming is the human-readable publisher name, not a URL domain
+
 ---
 
 # silver.core
@@ -1127,6 +1184,28 @@ v_campaign_group_channel_margins, v_channel_margins, v_icloud_blacklist
 - Being on the beta list doesn't mean active — must check `media_plan_status_id=3`
 - One advertiser can have many plans (one per campaign_group)
 - `original_recommendations` contains JSON with publisher names, budget percentages, and rationale
+
+## silver.core.media_plan_publishers
+
+**Source:** `bronze.integrationprod.core_media_plan_publishers` (CDC from Postgres)
+
+| Column | Type | Description |
+|---|---|---|
+| media_plan_id | INT64 | FK to media_plan |
+| name | STRING | Publisher/network name (e.g., "CBS", "NBC", "HBO Max") — matches `domain` in `sum_by_ctv_network_by_day` exactly |
+| percentage | STRING (cast to INT) | Budget allocation % for this publisher within the plan |
+| badge_state | STRING | `RECOMMENDED` (user accepted), `USER_MODIFIED` (user changed), `USER_ADDED` (user added) |
+| rank | STRING (cast to INT) | Priority rank within the plan |
+| rationale | STRING | Algorithm's reasoning for this publisher selection |
+
+**Key queries:**
+- Recommended-only plans: `WHERE badge_state = 'RECOMMENDED'` on all publishers for a plan
+- Publisher concentration: `COUNT(DISTINCT name)` per plan — 16 publishers outperforms 26 (TI-748 finding)
+
+**Gotchas:**
+- `percentage` and `rank` are STRING type, cast to INT for math
+- Publisher names match `sum_by_ctv_network_by_day.domain` exactly (cross-validated TI-748)
+- Every plan includes a "Flex" publisher (7-10%) for bidder flexibility
 
 ## bronze.integrationprod.r2_advertiser_settings
 
