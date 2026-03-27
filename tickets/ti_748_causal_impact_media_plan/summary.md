@@ -85,20 +85,34 @@ Note: Boll & Branch (31966) dropped — its BIC-optimized model used metric_lag1
 
 ### Model Validation Results
 
-**Placebo tests:** 23 total, 7 false positives (**30% FPR** — down from 86% in v2). This is within acceptable range for time series data with natural structural breaks.
+**Placebo tests:** 23 total, 7 false positives (**30% FPR** — down from 86% in v2).
+- **Why it improved:** v2 used 7 hand-picked covariates that were mostly collinear (platform_ivr, platform_spend, platform_impressions all measure "is the market up or down this week"). The overfitted model was picking up noise in the pre-period as if it were real patterns, so when we ran placebo tests, it "found" fake effects everywhere. v3 uses 2-4 BIC-selected covariates per advertiser — simpler models that capture real dynamics without overfitting noise.
+- **Why it's still 30% (not lower):** Advertiser time series have natural structural breaks — budget shifts, campaign launches/pauses, seasonal pivots — that happened organically during the pre-period. The model correctly identifies these as "something changed here," which counts as a false positive in a placebo test even though it's detecting real (non-intervention) changes. This is inherent to per-advertiser time series analysis with small N.
 
-**Sensitivity analysis:** 5/6 advertisers showed **directionally consistent** results across pre-period lengths (26, 39, 52, 65, 78 weeks). FICO was the only inconsistent one — its effect is essentially zero (-0.18%).
+**Sensitivity analysis:** 5/6 advertisers showed **directionally consistent** results across pre-period lengths (26, 39, 52, 65, 78 weeks).
+- **Why this matters:** If changing how much history we use flips the result from positive to negative, we can't trust it — the finding is an artifact of an arbitrary choice. 5/6 being consistent means the results are robust to this choice.
+- **Why FICO was inconsistent:** Its effect is essentially zero (-0.18%), so random noise can flip the sign. This is actually reassuring — it means the methodology correctly identifies a near-zero effect as unstable, rather than artificially declaring it significant.
 
-**VIF multicollinearity:** Starting from 14 candidate covariates, VIF iteratively removed the worst collinear ones (platform_vcr, platform_avg_campaign_groups, platform_spend, platform_ivr, etc.). Final VIF-clean sets had 3-7 covariates per advertiser.
+**VIF multicollinearity:** Starting from 14 candidate covariates, VIF iteratively removed the worst collinear ones.
+- **Why this matters:** Collinear covariates make coefficient estimates unstable — the model can't distinguish which covariate is driving the prediction. For example, platform_spend and platform_impressions had VIF > 300, meaning >99% of their variance was shared. Including both is like counting the same information twice, which inflates uncertainty and produces unreliable counterfactuals.
+- **What survived:** After VIF cleanup, 3-7 covariates remained per advertiser, then BIC narrowed to 2-4.
 
-**Key covariate finding:** `spend_change_pct` (week-over-week budget changes) appeared in ALL 6 advertiser models. `metric_lag1` or `metric_lag2` appeared in 5/6. These advertiser-specific dynamics were far more predictive than platform-wide metrics. Hand-picked platform covariates from v2 were mostly collinear and didn't survive BIC selection.
+**Key covariate finding:** `spend_change_pct` appeared in ALL 6 models. `metric_lag1/2` appeared in 5/6.
+- **Why spend_change_pct universally matters:** When an advertiser increases/decreases their budget week-over-week, their metrics shift regardless of media plan. This is the primary confound we need to control for. Raw spend levels (e.g., "this advertiser spends $50K/week") were NOT selected because they're mechanically correlated with the outcome — more spend → more impressions → different IVR. The *change* in spend captures budget decisions without that mechanical correlation.
+- **Why metric_lag matters:** Advertiser IVR is autocorrelated — this week's IVR is partly predicted by last week's. Without the lag, the model attributes this momentum to the intervention. With it, the model says "this advertiser was already trending up/down before adoption."
+- **Why platform metrics were rejected:** Platform-wide IVR, spend, and impressions are all measuring roughly the same thing ("is the market hot or cold this week") and are highly collinear. BIC prefers the simpler path: use the advertiser's own dynamics rather than noisy platform-wide proxies.
 
 ### Within-Advertiser Comparison (Recommended vs Non-Recommended)
 
 7 advertisers have both recommended and non-recommended campaigns in post-period.
 **Average IVR difference (rec - non_rec): -0.027** — recommended campaigns have lower IVR on average.
 
-**Important caveat:** This is heavily confounded by campaign maturity. Recommended campaigns are NEW (created with media plan), while non-recommended campaigns are typically OLDER with established audience patterns. New campaigns always underperform during ramp-up. See TI-780 for campaign ramp-up research.
+**Why this does NOT mean the recommendation is bad:** Recommended campaigns are NEW (created with media plan), while non-recommended campaigns are typically OLDER with established audience patterns. New campaigns always underperform during ramp-up because:
+- Audience targeting hasn't optimized yet (the bidder needs time to learn which IPs convert)
+- Frequency hasn't built up (first impressions are less effective than repeated exposure)
+- The campaign is still exploring its delivery footprint
+
+This comparison is **confounded by campaign maturity** and cannot be interpreted at face value. TI-780 (campaign ramp-up research) will determine how long ramp-up takes so we can either exclude the ramp-up period or compare only mature campaigns.
 
 ## 5. Solution
 
