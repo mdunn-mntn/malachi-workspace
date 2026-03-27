@@ -43,7 +43,50 @@ This matters for ANY experiment that compares new campaigns to existing ones (li
 
 ## 4. Investigation & Findings
 
-TBD
+### IVR Stabilization Curve (N = 6,917 prospecting campaigns, $10K+ spend, since June 2024)
+
+| Week | Median IVR | WoW Change | % of Steady State |
+|---|---|---|---|
+| 0 | 0.0041 | — | 38% |
+| 1 | 0.0072 | +75% | 67% |
+| 2 | 0.0090 | +25% | 84% |
+| 3 | 0.0095 | +6% | 88% |
+| **4** | **0.0095** | **+0.3%** | **89%** |
+| 5 | 0.0098 | +3% | 91% |
+| 6 | 0.0099 | +1% | 92% |
+| 7 | 0.0102 | +2% | 94% |
+| 8+ | 0.0103-0.0113 | <5% | 96-105% (steady state) |
+
+**Steady-state IVR (weeks 8-20 average): 0.0108**
+
+**Week 4 is the inflection point:** First week where WoW change drops below 5% AND IVR reaches >85% of steady state. By week 4, the rapid ramp-up phase is over and the campaign oscillates around its steady-state level.
+
+### Segmentation by Spend Tier (CTV only — most campaigns are CTV)
+
+| Week | High (>$100K) | Mid ($30-100K) | Low ($10-30K) |
+|---|---|---|---|
+| 0 | 52% of steady | 41% | 43% |
+| 2 | 90% | 81% | 73% |
+| 4 | 87% | 97% | 85% |
+| 7 | 98% | 100% | 97% |
+
+**All spend tiers converge by week 4-5.** High-spend campaigns ramp slightly faster (more data for the bidder to learn from), but the 4-week window works universally.
+
+### Why Campaigns Ramp Up
+
+Based on data patterns and platform knowledge:
+1. **Bidder learning:** The delivery system needs time to learn which IPs/households respond to this advertiser's ads. More impressions → better targeting → higher visit rate.
+2. **Frequency buildup:** First impressions are less effective than repeated exposures. It takes time to build frequency across a household.
+3. **Delivery footprint exploration:** New campaigns start broad, then narrow to high-performing placements/networks.
+
+### Recommendation
+
+**Exclude first 4 weeks of any new campaign from causal impact analysis.**
+
+This applies to:
+- TI-748: CausalImpact post-period should start 4 weeks after the first media plan campaign begins delivering
+- TI-748: Within-advertiser comparison should only include campaign groups with 4+ weeks of delivery
+- Any future experiment comparing new vs existing campaigns
 
 ## 5. Solution
 
