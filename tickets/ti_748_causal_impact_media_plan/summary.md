@@ -65,9 +65,9 @@ Kirsa asked for a causal impact analysis to determine whether advertisers who ad
 | FICO | 37056 | 86 | 18 | -3.97% | >0.05 | No | BIC-selected per-advertiser |
 | Taskrabbit | 34114 | 76 | 18 | +8.30% | <0.05 | Yes | BIC-selected per-advertiser |
 | Lighting New York | 31116 | 93 | 18 | +10.47% | <0.05 | Yes | BIC-selected per-advertiser |
-| Tempo | — | — | — | -26.18% | <0.05 | Yes | BIC-selected per-advertiser |
-| #CWH: CWRV Sales | 32756 | 94 | 17 | +16.76% | <0.05 | Yes | BIC-selected per-advertiser |
-| Boll & Branch | 31966 | — | — | -31.45% | <0.05 | Yes | BIC-selected per-advertiser |
+| Tempo | 41545 | 29 | 18 | -26.18% | <0.05 | Yes | metric_lag1, spend_change_pct |
+| #CWH: CWRV Sales | 32756 | 95 | 17 | +16.76% | <0.05 | Yes | platform_ivr, platform_impressions, metric_lag1, spend_change_pct |
+| Boll & Branch | 31966 | 97 | 15 | -31.45% | <0.05 | Yes | platform_ivr, platform_spend, platform_impressions, metric_lag1, spend_change_pct |
 | Talkspace | 34094 | 103 | 8 | +4.65% | varies | Varies | BIC-selected per-advertiser |
 | Am. College of Ed | 33667 | 106 | 5 | +3.59% | >0.05 | No | BIC-selected per-advertiser |
 
