@@ -36,8 +36,8 @@ Kirsa asked for a causal impact analysis to determine whether advertisers who ad
 4. ✅ Run per-advertiser CausalImpact for all metrics
 5. ✅ Run within-advertiser comparison (recommended vs non-recommended campaign groups)
 6. ✅ Run placebo tests for validation
-7. ⬜ Covariate significance testing (stepwise selection, VIF, AIC/BIC)
-8. ⬜ Add advertiser-specific covariates (active campaign count, budget changes)
+7. ✅ Covariate significance testing — VIF multicollinearity, BIC stepwise, cross-validation, sensitivity analysis
+8. ✅ Add advertiser-specific covariates — spend_change_pct, metric_lag1/2, adv_active_cgs, ctv_share (tested, some not selected by BIC)
 9. ⬜ Share results with Kirsa
 
 ## 4. Investigation & Findings
@@ -145,8 +145,6 @@ Note: Boll & Branch (31966) dropped — its BIC-optimized model used metric_lag1
 ## 8. Open Items / Follow-ups
 
 - **TI-780**: Campaign ramp-up research — how long until new campaigns reach steady-state? Needed to adjust for maturity bias in within-advertiser comparison. First step: ask Kirsa/product if there's an existing benchmark.
-- Formal covariate selection (stepwise, VIF, AIC/BIC)
-- Add advertiser-specific covariates (campaign count, budget changes)
 - Re-run as more post-period data accumulates (recent adopters will qualify)
 - Consider vertical-specific covariates instead of platform-wide
 - Share findings with Kirsa
