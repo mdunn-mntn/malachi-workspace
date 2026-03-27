@@ -14,6 +14,7 @@ This is a living document. Add to it every time we learn something new about exp
 | Staggered rollout, no control group | **Per-unit CausalImpact** | Feature adopted at different times by different units | Very small N (<5 units) |
 | Need to test for lift on a specific metric | **t-test / Mann-Whitney** | Comparing two distributions | Time-dependent data (use time series methods) |
 | Multiple features changed simultaneously | **Regression with interaction terms** | Need to isolate each feature's effect | Multicollinearity between features |
+| Staggered adoption, small N per unit, need one aggregate estimate | **Panel data model (two-way FE)** | Units adopt at different times, want a single population-level treatment effect | Want per-unit effects, or units have enough data for individual time series models |
 | Want to understand feature importance | **SHAP / permutation importance** | Post-hoc explanation of what drove results | Not for causal claims |
 
 ---
@@ -98,6 +99,8 @@ New prospecting campaigns reach steady-state IVR in approximately **4 weeks** (N
 - **Week 8+:** Fully stabilized
 
 This pattern is consistent across spend tiers (high/mid/low) and is driven by bidder learning, frequency buildup, and delivery footprint exploration.
+
+**Steady-state IVR varies by launch quarter** (0.008–0.013). Campaigns launched in different quarters converge to different baselines. Future analyses should consider cohort-specific baselines (by launch quarter) rather than assuming a single global steady-state value.
 
 **Rule: Exclude the first 4 weeks of any new campaign from causal analysis.**
 
@@ -215,10 +218,36 @@ This is a general principle: **use rate-of-change covariates over level covariat
 - `core.media_plan_publishers` — `badge_state` tracks RECOMMENDED vs USER_MODIFIED vs USER_ADDED
 - Join on `media_plan_id` to determine per-plan recommendation status
 
+### Panel Data Model vs Per-Unit CausalImpact
+
+Two approaches for staggered adoption experiments:
+
+| | Panel Data Model (Two-Way FE) | Per-Unit CausalImpact |
+|---|---|---|
+| **Use when** | Staggered adoption, small N per unit, need one aggregate treatment estimate | Want per-unit treatment effects, have enough data per unit (20+ pre-period obs) |
+| **Output** | Single population-level ATT with one p-value | Per-unit effect sizes, can see heterogeneity |
+| **Strengths** | Pools data across units for power; handles short per-unit series; one clean estimate | Transparent per-unit results; can identify which units drove effects; individual placebos |
+| **Weaknesses** | Loses per-unit granularity; assumes homogeneous treatment effect; harder to diagnose issues | Requires sufficient pre-period per unit; aggregation choices (spend-weighted vs median) matter |
+| **Covariates** | Time FE absorbs common shocks; unit FE absorbs level differences; add unit-varying covariates | Per-unit BIC selection from candidate set |
+
+**Lesson from TI-748:** Panel model (v5) gave +2.06% not significant. Per-unit CausalImpact (v3) showed 3/6 significant with +6.5% spend-weighted. The panel model's homogeneity assumption may wash out real heterogeneous effects. When treatment effects vary across units, per-unit analysis can be more informative despite lower power per unit.
+
+---
+
+## Jira Practices
+
+When creating Jira tickets, always include:
+- **Story points** (`customfield_10012`) — required for sprint planning
+- **PMO Rep** — assign the appropriate PMO representative
+- **Release type** — specify the release type for the ticket
+
+These fields are frequently missed but are required by PMO for sprint tracking and release management.
+
 ---
 
 ## Experiment Log
 
 | Ticket | Experiment | Method | Outcome | Key Learning |
 |---|---|---|---|---|
-| TI-748 | Media Plan Causal Impact (v3) | Per-advertiser CausalImpact, BIC-optimized covariates | IVR: 3/6 sig, median +6.2%, spend-weighted +6.5%. Placebo FPR 30%. | BIC covariate selection >> hand-picking. spend_change_pct + metric_lag are universal. Platform metrics are collinear — get eliminated by VIF. Campaign maturity confounds within-advertiser comparison (see TI-780). |
+| TI-748 | Media Plan Causal Impact (v5) | Panel data model (two-way FE), BIC covariate selection + ramp-up exclusion | IVR: +2.06% (not statistically significant). Placebo FPR 24%. BIC + ramp-up integrated. | Panel model gives one aggregate estimate but lost per-unit granularity. BIC covariate selection + 4-week ramp-up exclusion improved placebo FPR from 30% to 24%. Not significant — media plan effect is small or nonexistent at population level. |
+| TI-780 | Ramp-up window research | Empirical analysis of campaign maturity curves | 4-week ramp-up window identified (N=6,917 campaigns, $10K+ spend). Week 4 = first week with <5% WoW change. | Consistent across spend tiers. Steady-state IVR varies by launch quarter (0.008–0.013) — future analyses should use cohort-specific baselines rather than a single global baseline. |
