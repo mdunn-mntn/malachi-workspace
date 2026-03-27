@@ -157,6 +157,27 @@ These behave VERY differently. Always analyze separately:
 - Placebo FPR: 86% → 30% (from 7 hand-picked to BIC-selected per advertiser)
 - IVR spend-weighted: -10.56% → +6.50% (FICO went from -14.79% to -0.18% — hand-picked covariates were distorting its prediction)
 
+### Covariates That Were Tested But Not Selected
+
+| Candidate | Why It Was Rejected | Lesson |
+|---|---|---|
+| `platform_ivr` | Eliminated by VIF (collinear with other platform metrics) | Platform rate metrics are all measuring "market is up/down" — redundant |
+| `platform_spend` | Eliminated by VIF | Same as above |
+| `platform_vcr` | Highest VIF (3,191) — first to be removed | VCR, IVR, CVR at platform level are all proxies for "market engagement" |
+| `platform_impressions` | Eliminated by VIF | Collinear with platform_spend |
+| `platform_active_advertisers` | Eliminated by VIF in most advertisers | Correlated with platform_spend |
+| `ctv_share` (CTV/display mix) | 3/6 advertisers are 100% CTV (no variance). For the 3 with variance, BIC didn't select it. | Only useful for mixed CTV/display advertisers, and even then not predictive enough |
+| `retargeting_cg_count` | Near-zero weekly variance for all advertisers | Static values don't help time series prediction |
+
+### Why Raw Spend Isn't a Direct Covariate
+
+Raw spend (`platform_spend`, `adv_spend`) was eliminated by VIF or not selected by BIC. BUT `spend_change_pct` (week-over-week % change) was selected for ALL 6 advertisers. This makes sense:
+
+- **Raw spend** is collinear with impressions, conversions, and everything else (more spend → more of everything). Including it as a covariate would "explain away" the volume effects we're trying to measure.
+- **Spend CHANGE** captures *budget shifts* — "did the advertiser increase/decrease their budget this week?" This is a genuine confound (budget changes affect metrics regardless of media plan) without being mechanically correlated with the outcome.
+
+This is a general principle: **use rate-of-change covariates over level covariates** when the level is mechanically related to the outcome.
+
 ---
 
 ## MNTN-Specific Experimental Design Notes
