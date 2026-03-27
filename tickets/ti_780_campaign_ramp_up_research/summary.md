@@ -1,9 +1,9 @@
 # TI-780: Campaign Ramp-Up Research — How Long Until New Campaigns Reach Steady State?
 
 **Jira:** https://mntn.atlassian.net/browse/TI-780
-**Status:** In Progress
+**Status:** Complete
 **Date Started:** 2026-03-26
-**Date Completed:**
+**Date Completed:** 2026-03-27
 **Assignee:** Malachi
 **Story Points:** 3 (1-2 days)
 **Related:** TI-748 (Media Plan Causal Impact — this research unblocks the within-advertiser comparison)
@@ -30,13 +30,13 @@ This matters for ANY experiment that compares new campaigns to existing ones (li
 
 ## 3. Plan of Action
 
-1. ⬜ Ask Kirsa/product team if there's an existing benchmark for campaign maturity
-2. ⬜ Pull cohorts of new prospecting campaigns (2024-2025) and track weekly IVR from launch
-3. ⬜ Compute IVR stabilization curves — when does week-over-week change drop below 5%?
-4. ⬜ Segment by advertiser spend tier, channel (CTV/display), and vertical
-5. ⬜ Produce a recommended exclusion window (first N weeks) for future experiments
-6. ⬜ Apply finding to TI-748 — re-run CausalImpact excluding ramp-up period
-7. ⬜ Update experimentation.md with ramp-up knowledge
+1. ✅ Ask Kirsa/product team if there's an existing benchmark for campaign maturity — no formal benchmark exists
+2. ✅ Pull cohorts of new prospecting campaigns (2024-2025) and track weekly IVR from launch
+3. ✅ Compute IVR stabilization curves — week 4 is inflection (WoW <5%, >85% steady state)
+4. ✅ Segment by advertiser spend tier, channel (CTV/display), and vertical — all tiers converge by week 4-5
+5. ✅ Produce a recommended exclusion window — **4 weeks**
+6. ✅ Apply finding to TI-748 — v5 CausalImpact excludes first 4 weeks post-intervention
+7. ✅ Update experimentation.md with ramp-up knowledge
 
 **Also planned (from TI-748 roadmap):**
 - Build panel data model (pooled regression with advertiser fixed effects) as a methodological upgrade alongside the ramp-up adjustment
@@ -90,16 +90,32 @@ This applies to:
 
 ## 5. Solution
 
-TBD
+**Deliverables:**
+- `artifacts/ti_780_ramp_up_visualizations.py` — 5 presentation-ready ramp-up charts
+- 4-week exclusion window applied to TI-748 v5 CausalImpact analysis
+- Ramp-up knowledge documented in `knowledge/experimentation.md`
+
+**Key result:** New prospecting campaigns take ~4 weeks to reach steady-state IVR. Week 0 starts at 38% of steady state, climbs rapidly through weeks 1-3, and stabilizes at 89%+ by week 4. All spend tiers converge by week 4-5. This is now a standard exclusion for any pre/post experiment involving new campaigns.
 
 ## 6. Questions Answered
 
-TBD
+- **Q:** How long until new campaigns reach steady-state IVR?
+  **A:** 4 weeks. WoW change drops below 5% and IVR reaches >85% of steady state.
+
+- **Q:** Does ramp-up vary by spend tier?
+  **A:** Slightly — high-spend campaigns ramp faster (52% at week 0 vs 43% for low-spend), but all converge by week 4-5. The 4-week window is universal.
+
+- **Q:** Is there an existing benchmark for campaign maturity?
+  **A:** No formal benchmark existed. Kirsa confirmed this is new research (meeting 2, 2026-03-27).
+
+- **Q:** Does ramp-up affect CausalImpact results?
+  **A:** Yes — excluding the first 4 weeks reduced placebo FPR from 30% to 24% in TI-748 v5.
 
 ## 7. Data Documentation Updates
 
-TBD
+- Added ramp-up exclusion guidance to `knowledge/experimentation.md`
+- Documented `sum_by_campaign_by_day` as source for longitudinal campaign analysis (back to 2024-01-01)
 
 ## 8. Open Items / Follow-ups
 
-- First step: ask Kirsa if product team has an existing definition of campaign maturity
+- None — research complete. Finding applied to TI-748 and documented in experimentation.md.
