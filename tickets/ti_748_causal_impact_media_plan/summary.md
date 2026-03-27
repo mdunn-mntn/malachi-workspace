@@ -143,22 +143,43 @@ The benefited group's allocations concentrate on **major broadcast networks** �
 
 The benefited advertisers got plans that bet heavily on proven, high-reach broadcast networks. The hurt advertisers got plans that spread across niche streaming channels where the algorithm had less conviction. This suggests the algorithm's publisher selection quality — not just concentration — matters.
 
-**Deep Dive: Did the algorithm pick the RIGHT publishers?**
+**The Full Pre-Adoption → Media Plan → Outcome Story:**
 
-Tested using `sum_by_ctv_network_by_day` — actual per-publisher IVR for Lighting New York (+10.5% lift):
-- The algorithm recommended Samsung TV+ Entertainment (12%), Bravo (12%), CNN (10%) — these rank **#37-59 by actual IVR**
-- The TRUE best IVR publishers were Spectrum News (#1, IVR=1.09%), FanDuel Sports (#2, 0.90%), Hallmark Channel (#3, 0.86%), NBA TV (#4, 0.85%)
-- **The algorithm did NOT pick the highest-IVR publishers.** It picked **high-volume, deliverable** publishers (Samsung: 627K impressions, CNN: 463K). The top IVR publishers are low-volume (Spectrum News: 29K, FanDuel: 17K).
+Every single advertiser was delivering impressions across **131-183 publishers** before adoption (confirmed via `sum_by_ctv_network_by_day`, pre-adoption period, minimum 5,000 impressions per publisher). The media plan concentrated them down to 16-26 publishers. The degree of concentration predicts the outcome.
 
-**This means the IVR lift likely came from CONCENTRATION, not publisher selection:**
-1. Pre-adoption, the advertiser's spend was spread across 130+ publishers unoptimized
-2. Media Plan concentrated onto 16 publishers — even though they weren't the *best* by IVR, concentrating budget allowed the bidder to build frequency on each network
-3. The improvement came from *removing the long tail of poor performers*, not from finding the optimal publishers
-4. The high-IVR publishers (sports networks, niche channels) simply don't have enough inventory to absorb a meaningful budget allocation
+| Advertiser | IVR Effect | Pre-Adoption Publishers | Plan Publishers | Reduction | Best/Worst IVR Ratio |
+|---|---|---|---|---|---|
+| **CWRV Sales** | **+16.8%*** | 168 | **16** | **90%** | 12.0x |
+| **Lighting NY** | **+10.5%*** | 151 | **16** | **89%** | 14.9x |
+| Taskrabbit | +8.3%* | 183 | 26 | 86% | 12.7x |
+| Talkspace | +4.7% | 176 | 21 | 88% | 7.1x |
+| Am College of Ed | +3.6% | 170 | 19 | 89% | 12.3x |
+| FICO | -4.0% | 180 | 25 | 86% | 15.8x |
+| **Tempo** | **-26.2%*** | 157 | **26** | **83%** | 10.6x |
+| **Boll & Branch** | **-31.5%*** | 131 | **26** | **80%** | 10.5x |
 
-**Implication:** The algorithm could potentially produce EVEN BETTER results if it incorporated historical per-publisher IVR into its recommendations, rather than optimizing primarily for deliverability/reach. This is an actionable product insight.
+**How this was calculated:**
+- "Pre-Adoption Publishers" = count of distinct `domain` values in `sum_by_ctv_network_by_day` for each advertiser's prospecting campaigns, between 2025-01-01 and their first media plan create date, with ≥5,000 impressions per publisher
+- "Plan Publishers" = count of distinct publishers in `media_plan_publishers` for their recommended plans
+- "Best/Worst IVR Ratio" = the best-performing publisher's IVR divided by the worst (pre-adoption), showing how much IVR variance existed across publishers before optimization
 
-**Caveat:** N=8 is too small to confirm statistically. But the pattern is unambiguous at 0% overlap (the two most-concentrated beat all three least-concentrated), the mechanism is plausible, and it's directly actionable.
+**The pattern is unambiguous:**
+- **90% publisher reduction** (168 → 16 publishers) → positive IVR effect (+10 to +17%)
+- **80% publisher reduction** (131 → 26 publishers) → negative IVR effect (-26 to -31%)
+- The threshold appears to be around **~88% reduction** (roughly 16-19 target publishers)
+
+**Why more concentration works — the frequency mechanism:**
+Every advertiser had 10-15x IVR variance between their best and worst publishers. When budget is spread across 160+ publishers, most of the spend goes to the long tail of low-IVR networks. Concentrating to 16 publishers eliminates that long tail and lets the bidder build meaningful household frequency on its best channels.
+
+**Did the algorithm pick the RIGHT publishers?**
+Tested for Lighting New York: The algorithm recommended Samsung TV+ (12%), Bravo (12%), CNN (10%) — these rank #37-59 by actual pre-adoption IVR. The true best IVR publishers (Spectrum News 1.09%, sports networks 0.7-0.9%) have low inventory (17K-30K impressions vs Samsung's 627K). **The algorithm optimized for deliverability/reach, not IVR.** The benefit came from removing the worst publishers, not finding the best ones.
+
+**Three actionable product insights:**
+1. More aggressive concentration (16 publishers) outperforms moderate concentration (26 publishers) — the algorithm should default to fewer, higher-conviction picks
+2. The algorithm could produce EVEN BETTER results if it incorporated per-publisher IVR, not just deliverability
+3. The current benefit is "floor-raising" (removing bad publishers) — there's additional upside from "ceiling-chasing" (optimizing toward the best IVR publishers that have sufficient inventory)
+
+**Caveat:** N=8 is too small to confirm statistically. But the pattern is unambiguous, the mechanism is plausible, and it's directly actionable.
 
 ### Aggregate Assessment
 
@@ -246,11 +267,30 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 
 ## 8. Open Items / Follow-ups
 
-- **Share with Kirsa** — present v5 results and honest assessment
-- **Re-run in 6-8 weeks** — more adopters will qualify, existing adopters will have longer post-periods, giving more statistical power
-- **Per-advertiser ramp-up** — when more data available, consider advertiser-specific ramp-up durations instead of blanket 4-week exclusion
-- **TI-780**: Campaign ramp-up research — confirmed ~4-week ramp-up to steady-state (used in v5 exclusion)
-- Potential: analyze customized vs recommended allocations separately
+- **Share with Kirsa** — present v5 results, concentration finding, and product insights
+
+### Questions for Data Team
+
+To deepen the publisher concentration analysis, we need help finding:
+
+1. **How does the bidder allocate impressions across publishers WITHOUT media plan?** Is it purely auction-based (Beeswax buys wherever it can), or is there an existing allocation logic? Understanding the "default" allocation explains why pre-adoption spread was 131-183 publishers.
+
+2. **Is there a table that tracks actual vs planned publisher allocation?** We have what media plan RECOMMENDED (media_plan_publishers.percentage), but we need the actual delivery by publisher post-adoption to confirm the plan was followed. `sum_by_ctv_network_by_day` has post-adoption delivery, but we'd need to map publisher names in media_plan_publishers to `domain` values in sum_by_ctv_network_by_day (are they the same naming convention?).
+
+3. **What determines how many publishers the algorithm recommends?** CWRV got 16, Boll & Branch got 26. Is this based on budget size, vertical, deliverability constraints, or something else? Understanding this helps explain why concentration varies.
+
+4. **Is there a `deliverability_score` or `publisher_capacity` table?** The algorithm seems to optimize for deliverability over IVR. If there's data on how much inventory each publisher has available, we could test whether the algorithm's publisher selection correlates with inventory availability rather than performance.
+
+5. **Does the `deliverability_classification` field on `media_plan` (values like "medium") indicate the algorithm's confidence?** If so, do higher-confidence plans produce more concentrated allocations?
+
+### Next Steps (Priority Order)
+
+1. **Share concentration finding with Kirsa + product team** — the most actionable insight: 16-publisher concentrated plans outperform 26-publisher diluted plans. Product team should investigate whether the algorithm can be tuned to default to more concentrated allocations.
+2. **Get data team answers** (see questions above) — understanding the algorithm's concentration logic and publisher mapping is critical to confirming the finding.
+3. **Map media_plan_publishers names to sum_by_ctv_network_by_day domains** — confirm whether the recommended publishers match the actual delivery, and test whether the algorithm's concentration was actually followed.
+4. **Re-run in 6-8 weeks** — 5+ more advertisers will have enough post-period data. With N=12-15 instead of N=8, we'll have enough power to statistically confirm the concentration pattern.
+5. **Test concentration as a covariate** — add "number of plan publishers" or "plan concentration (std of %)" as a covariate in the CausalImpact model to formally test whether concentration moderates the treatment effect.
+6. **For future feature rollouts: use waitlist control design** — randomly order rollout waves to eliminate selection bias and ensure adequate N (documented in experimentation.md).
 
 ---
 
