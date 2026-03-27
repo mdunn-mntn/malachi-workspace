@@ -140,6 +140,16 @@ These behave VERY differently. Always analyze separately:
 - Retargeting: known audience, higher conversion rates, smaller pool
 - Mixing them in one analysis will confound results
 
+### Algorithm Version as Confound (TI-748 Lesson)
+When analyzing a feature's impact over time, **check for algorithm/config changes during the observation window.** In TI-748, a config change on Feb 3, 2026 (`max_networks` 25→15) split our 8 advertisers into two groups — pre-change plans hurt IVR, post-change plans helped. The "concentration predicts who benefits" finding was actually "config version predicts who benefits."
+
+**Rule:** Before attributing results to a feature, check:
+1. Were there algorithm updates during the treatment period? (git log the relevant service repo)
+2. Did all treated units receive the same version? (query plan metadata for config snapshots)
+3. If versions differ, split the analysis by version era.
+
+This is especially important for staggered adoption designs where early adopters may be on a different algorithm version than later adopters.
+
 ### Data Quality Issues Found (TI-748)
 - Weeks with <1,000 impressions can produce absurd rate metrics (IVR=366x) due to VV attribution lag after campaign pauses. Always filter.
 - `uniques` column in agg tables is unreliable at campaign level.
@@ -309,5 +319,5 @@ When analyzing features that affect publisher/network allocation:
 
 | Ticket | Experiment | Method | Outcome | Key Learning |
 |---|---|---|---|---|
-| TI-748 | Media Plan Causal Impact (v5) | Panel data model (two-way FE), BIC covariate selection + ramp-up exclusion | IVR: +2.06% (not statistically significant). Placebo FPR 24%. BIC + ramp-up integrated. | Panel model gives one aggregate estimate but lost per-unit granularity. BIC covariate selection + 4-week ramp-up exclusion improved placebo FPR from 30% to 24%. Not significant — media plan effect is small or nonexistent at population level. |
+| TI-748 | Media Plan Causal Impact (v6) | Per-advertiser CausalImpact (BIC covariates, ramp-up exclusion) + panel model | Aggregate IVR near zero (-0.23% spend-weighted). BUT: config change on Feb 3, 2026 (max_networks 25→15) explains the split — new-config plans show +10-17% IVR lift, old-config plans show -26 to -31% decline. | **Primary lesson:** Algorithm version confound. The analysis spanned two configs — pre-change plans diluted across 25-26 publishers, post-change concentrated to 16. Config era, not inherent concentration, is the differentiator. Also: BIC covariate selection beats hand-picking; 4-week ramp-up exclusion needed for new campaigns; selection bias confirmed (hand-picked beta). |
 | TI-780 | Ramp-up window research | Empirical analysis of campaign maturity curves | 4-week ramp-up window identified (N=6,917 campaigns, $10K+ spend). Week 4 = first week with <5% WoW change. | Consistent across spend tiers. Steady-state IVR varies by launch quarter (0.008–0.013) — future analyses should use cohort-specific baselines rather than a single global baseline. |

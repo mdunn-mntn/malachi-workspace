@@ -171,25 +171,41 @@ Even though Advertiser A had a big positive effect, Advertiser B's slight negati
 | Covariate selection | BIC-optimized per advertiser | Not relying on intuition — `spend_change_pct` selected for ALL advertisers |
 | Panel data model | +2.06%, not significant | Consistent with near-zero aggregate — confirms no population-level effect |
 
-### How the Algorithm Works (from Release Brief)
+### How the Algorithm Works (from olympus repo, confirmed by Chris Addy)
 
-Media plan recommendations are powered by three signals:
-1. **Spendability** (highest priority) — can the network support the campaign's budget? Based on available inventory and scalability.
-2. **Historical Performance** — VVR across similar or related verticals. If the advertiser has historical campaign data, that's factored in too.
-3. **Semantic Relevance** — industry/vertical content match (e.g., travel advertiser → networks with travel content).
+**Full pipeline** (source: `apps/mediaplan/` in olympus):
+1. **Semantic search** — FAISS vector store + Google Gemini embeddings. Returns top 40 candidate networks matched to advertiser vertical/description.
+2. **Spend capacity filter** — hard gate: networks must sustain ≥$0.50/hr in historical spend. Removes networks that can't deliver meaningful budget. *(Added Feb 3, 2026)*
+3. **Multi-signal scoring** — 8 weighted components combined per network:
+   - Performance composite: 25% (blends advertiser 50%, vertical 30%, network 20%)
+   - Quality: 25% (from GCS quality parquet)
+   - Semantic relevance: 20%
+   - ML prediction: 10% (has feature skew issue — 41/52 features zeroed at inference)
+   - Spendability: 8%
+   - CPM efficiency: 6%
+   - Scale: 4%
+   - Accessibility: 2%
+4. **Softmax allocation** — `exp(score × alpha) / Σexp(scores × alpha)` with alpha=5.0. Higher alpha = more concentrated on top-scoring networks.
+5. **Bounds enforcement** — drop networks below 0.5% allocation, enforce min=10/max=15 networks, cap at 12% per network. *(max_networks changed from 25→15 on Feb 3, 2026)*
+6. **LLM rationale** — Google Gemini 2.0 Flash generates per-network "why this?" explanations.
+7. **Deliverability enrichment** — optional flight-level prediction (not per-network yet).
 
-**This explains our finding:** The algorithm picks *deliverable* publishers, not the highest-IVR ones. The benefit comes from removing the long tail of poor performers, not from finding the best ones.
+**Key insight:** Performance IS the largest single scoring component (25%), but the spend capacity filter acts as a hard gate BEFORE scoring — low-inventory networks are eliminated before their performance is even evaluated. The benefit comes from this pre-filter + the max_networks cap forcing the softmax to drop the long tail.
 
-**Flex Targeting** reserves 5-15% of budget outside the specific network allocations for opportunistic spending. This is why actual delivery deviates ±3% from recommendations.
+**Critical config change (Feb 3, 2026):** `max_networks` reduced from 25→15 AND spend capacity filtering added. This single release explains the performance split in our analysis — plans before this date have 25-26 publishers, plans after have 16.
+
+**Flex Targeting** reserves 10% of budget (configurable 5-30%) outside specific network allocations. Un-recommended publisher impressions come entirely from this pool.
 
 ### Caveats
 
 1. **Small sample:** Only 8 analyzable advertisers. Individual results are noisy.
 2. **Selection bias (confirmed):** Beta advertisers are hand-picked by PEX/CS and validated by production ops — NOT randomized. Adopters may be systematically different.
 3. **Campaign maturity:** Even with 4-week ramp-up exclusion (TI-780), newer campaigns may still underperform mature ones.
-4. **Static version only:** Analysis covers M1 (static media plan). Dynamic rebalancing version is coming — results may not transfer.
-5. **Attribution windows:** All adopters use default industry_standard attribution.
-6. **CTV vs Display mix:** Most campaigns are CTV. Media plan affects CTV network allocation specifically.
+4. **Analysis spans two algorithm config versions.** A config change on Feb 3, 2026 reduced max_networks from 25→15 and added spend capacity filtering. Plans before this date have 25-26 publishers; after have 16. The two worst performers (Boll & Branch, Tempo) are on the old config and were never refreshed. This confound is the primary driver of the results.
+5. **ML model has feature skew.** 41 of 52 input features receive zero values at inference (missing time-series data). The ML prediction weight is 10% but is effectively degraded. Documented in olympus `specs/backlog/ml-primary-scoring-mode.md`.
+6. **Static version only.** Analysis covers M1 (static media plan). Dynamic rebalancing version is coming — results may not transfer.
+7. **Attribution windows:** All adopters use default industry_standard attribution.
+8. **CTV vs Display mix:** Most campaigns are CTV. Media plan affects CTV network allocation specifically.
 
 ---
 

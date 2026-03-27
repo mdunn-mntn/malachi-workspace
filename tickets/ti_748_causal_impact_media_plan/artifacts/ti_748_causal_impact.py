@@ -57,6 +57,11 @@ WINSORIZE_PCTILE = (1, 99)     # winsorize rate metrics at 1st/99th percentile
 RAMP_UP_WEEKS = 4              # exclude first 4 weeks post-intervention (TI-780: campaigns reach
                                # 89% of steady-state IVR by week 4, confirmed across 6,917 campaigns)
 
+# Algorithm config change: max_networks reduced from 25→15 on Feb 3, 2026
+# (olympus commit 555234f, PERML-412). Plans before this date have 25-26 publishers;
+# plans after have 16. This explains the performance split in our results.
+CONFIG_CHANGE_DATE = pd.Timestamp("2026-02-03")
+
 # Pre-period: 52 weeks captures full seasonality. CausalImpact best practice is
 # ≥3x post-period length (Google's paper) and ≥1 full seasonal cycle. 52 weeks
 # satisfies both. Data available from 2024-01-01.
@@ -941,6 +946,9 @@ def main():
             if result:
                 result["company_name"] = adv_name
                 result["covariates_used"] = ", ".join(best_covs)
+                # Tag config era based on first plan date vs Feb 3, 2026 config change
+                config_era = "new" if intervention_ts >= CONFIG_CHANGE_DATE else "old"
+                result["config_era"] = config_era
                 all_results.append(result)
                 log.info(
                     f"  -> Effect: {result['relative_effect']:+.2%} "
