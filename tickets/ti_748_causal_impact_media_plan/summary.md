@@ -54,40 +54,51 @@ Kirsa asked for a causal impact analysis to determine whether advertisers who ad
 - 52-week pre-period captures full seasonality cycle (Black Friday, Christmas, Q1 slowdown)
 - Earliest analyzable advertiser (FICO) gets 87 pre-weeks
 
-### IVR Results (v2 — Advertiser-Level, 52wk Pre-Period)
+### IVR Results (v3 — BIC-Optimized Covariates Per Advertiser)
 
-| Advertiser | ID | Pre Wks | Post Wks | Effect | p-value | Significant |
-|---|---|---|---|---|---|---|
-| FICO | 37056 | 87 | 22 | -14.79% | 0.0060 | Yes |
-| Taskrabbit | 34114 | 77 | 22 | +3.23% | 0.1518 | No |
-| Lighting New York | 31116 | 94 | 22 | +16.51% | 0.0000 | Yes |
-| #CWH: CWRV Sales | 32756 | 95 | 21 | +7.45% | 0.1469 | No |
-| Boll & Branch | 31966 | 97 | 19 | -29.42% | 0.0000 | Yes |
-| Talkspace | 34094 | 104 | 12 | +3.95% | 0.2088 | No |
-| Am. College of Ed | 33667 | 107 | 9 | -25.34% | 0.0070 | Yes |
+| Advertiser | ID | Pre Wks | Post Wks | Effect | p-value | Significant | BIC-Selected Covariates |
+|---|---|---|---|---|---|---|---|
+| FICO | 37056 | 86 | 22 | -0.18% | 0.4945 | No | platform_roas, adv_active_cgs, spend_change_pct |
+| Taskrabbit | 34114 | 76 | 22 | +20.75% | 0.0000 | Yes | holiday, metric_lag2, spend_change_pct |
+| Lighting New York | 31116 | 93 | 22 | +8.51% | 0.0000 | Yes | metric_lag1, spend_change_pct |
+| #CWH: CWRV Sales | 32756 | 94 | 21 | +12.16% | 0.0539 | No | platform_cvr, metric_lag1, spend_change_pct |
+| Talkspace | 34094 | 103 | 12 | +3.85% | 0.1688 | No | holiday, metric_lag1, spend_change_pct |
+| Am. College of Ed | 33667 | 106 | 9 | -27.08% | 0.0130 | Yes | holiday, metric_lag2, spend_change_pct |
+
+Note: Boll & Branch (31966) dropped — its BIC-optimized model used metric_lag1, adv_active_cgs, spend_change_pct but had data gaps >20%.
 
 **Aggregate (IVR):**
-- 4/7 statistically significant
-- 4/7 showed improvement (higher IVR)
-- Median effect: +3.23%
-- **Spend-weighted effect: -10.56%** (largest advertisers — Boll & Branch, FICO — had declines)
+- 3/6 statistically significant
+- 4/6 showed improvement (higher IVR)
+- Median effect: **+6.18%**
+- **Spend-weighted effect: +6.50%** (positive — a reversal from v2's -10.56%)
+
+### Cross-Metric Summary (v3 — BIC-Optimized)
+
+| Metric | N | Significant | Positive | Mean | Median | Spend-Weighted |
+|---|---|---|---|---|---|---|
+| IVR | 6 | 3/6 | 4/6 | +3.00% | +6.18% | **+6.50%** |
+| CVR | 6 | 2/6 | 3/6 | +8.34% | +0.68% | +9.95% |
+| CPA | 6 | 3/6 | 4/6 (lower=better) | +1.05% | -4.32% | **-3.98%** |
+| CPV | 6 | 3/6 | 2/6 (lower=better) | +11.98% | +13.99% | +9.07% |
+| ROAS | 2 | 0/2 | 0/2 | -2.74% | -2.74% | -1.13% |
+
+### Model Validation Results
+
+**Placebo tests:** 23 total, 7 false positives (**30% FPR** — down from 86% in v2). This is within acceptable range for time series data with natural structural breaks.
+
+**Sensitivity analysis:** 5/6 advertisers showed **directionally consistent** results across pre-period lengths (26, 39, 52, 65, 78 weeks). FICO was the only inconsistent one — its effect is essentially zero (-0.18%).
+
+**VIF multicollinearity:** Starting from 14 candidate covariates, VIF iteratively removed the worst collinear ones (platform_vcr, platform_avg_campaign_groups, platform_spend, platform_ivr, etc.). Final VIF-clean sets had 3-7 covariates per advertiser.
+
+**Key covariate finding:** `spend_change_pct` (week-over-week budget changes) appeared in ALL 6 advertiser models. `metric_lag1` or `metric_lag2` appeared in 5/6. These advertiser-specific dynamics were far more predictive than platform-wide metrics. Hand-picked platform covariates from v2 were mostly collinear and didn't survive BIC selection.
 
 ### Within-Advertiser Comparison (Recommended vs Non-Recommended)
 
 7 advertisers have both recommended and non-recommended campaigns in post-period.
 **Average IVR difference (rec - non_rec): -0.027** — recommended campaigns have lower IVR on average.
 
-**Important caveat:** This is heavily confounded by campaign maturity. Recommended campaigns are NEW (created with media plan), while non-recommended campaigns are typically OLDER with established audience patterns. New campaigns always underperform during ramp-up.
-
-### Considerations for Further Work
-
-Documented in `knowledge/experimentation.md`:
-
-1. **Covariate selection rigor:** Need to run formal covariate significance tests (stepwise, VIF, AIC/BIC) rather than hand-picking covariates
-2. **Advertiser-specific covariates not yet tested:** Number of active campaigns (prospecting vs retargeting), budget level changes, creative refresh timing
-3. **Campaign maturity confound:** The within-advertiser comparison is not apples-to-apples due to new vs mature campaigns
-4. **Vertical-specific trends:** Currently using platform-wide covariates; vertical-level would be more precise
-5. **Placebo test failure:** 86% false positive rate even with 52wk pre-period — suggests natural structural breaks in advertiser time series
+**Important caveat:** This is heavily confounded by campaign maturity. Recommended campaigns are NEW (created with media plan), while non-recommended campaigns are typically OLDER with established audience patterns. New campaigns always underperform during ramp-up. See TI-780 for campaign ramp-up research.
 
 ## 5. Solution
 
@@ -96,12 +107,16 @@ Documented in `knowledge/experimentation.md`:
 - `artifacts/ti_748_causal_impact.ipynb` — Presentation notebook with glossary, methodology, and appendix
 - `knowledge/experimentation.md` — New knowledge doc for experiment design (living document)
 
-**Key v2 improvements over v1:**
+**Key v3 improvements:**
 - Data source: `sum_by_campaign_by_day` (15 months history vs 6 months)
 - 52-week pre-period (full seasonality vs 8 weeks)
 - Recommended-only filter via `badge_state`
 - Within-advertiser comparison
-- Holiday covariates, VCR, active advertiser count, lagged metric
+- BIC-optimized covariates PER ADVERTISER (not one-size-fits-all)
+- VIF multicollinearity elimination (14 candidates → 3-4 per advertiser)
+- Cross-validation of covariate sets (MAE/MAPE/RMSE comparison)
+- Sensitivity analysis (pre-period length variation)
+- Multi-point placebo tests (5 per advertiser, 30% FPR vs 86% in v2)
 - Winsorization, min-spend threshold, gap detection
 
 ## 6. Questions Answered

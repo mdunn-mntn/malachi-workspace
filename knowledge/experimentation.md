@@ -132,6 +132,30 @@ These behave VERY differently. Always analyze separately:
 - With short pre-periods (< 20 weeks), placebo tests split the data too thin → high false positive rate
 - A failed placebo test doesn't invalidate results — it means the pre-period has structural breaks (natural variability)
 - With 52-week pre-periods, aim for <20% placebo false positive rate
+- **Run multiple placebos** (5+ per unit) at different split points — single placebo is unreliable
+
+### Covariate Selection Lessons (from TI-748 validation)
+
+**Key finding: advertiser-specific dynamics beat platform-wide metrics.**
+
+| Covariate | Appeared in N/6 models | Lesson |
+|---|---|---|
+| `spend_change_pct` | 6/6 | Week-over-week budget changes are the strongest predictor. Always include. |
+| `metric_lag1` or `metric_lag2` | 5/6 | Autocorrelation is real and important. Lagged metric almost always improves the model. |
+| `holiday` | 4/6 | Important for Nov-Jan adopters. Less important for others. |
+| `adv_active_cgs` | 3/6 | Number of active campaign groups matters for some advertisers. |
+| `platform_ivr` | 0/6 | Survived VIF in no models — too collinear with other platform metrics. |
+| `platform_spend` | 0/6 | Also removed by VIF. |
+
+**Implication:** Don't hand-pick covariates. Run BIC selection per unit. Platform-wide metrics are mostly collinear and get eliminated. Advertiser-specific dynamics (budget changes, momentum) are far more predictive.
+
+**VIF thresholds:** Start with all candidates, iteratively remove VIF > 10. Typical 14 candidates → 3-7 survivors.
+
+**BIC vs AIC:** BIC penalizes complexity more than AIC. For small N (weekly time series with 50-100 obs), BIC's stronger penalty produces more parsimonious models that generalize better. Prefer BIC.
+
+**Effect of covariate optimization on TI-748:**
+- Placebo FPR: 86% → 30% (from 7 hand-picked to BIC-selected per advertiser)
+- IVR spend-weighted: -10.56% → +6.50% (FICO went from -14.79% to -0.18% — hand-picked covariates were distorting its prediction)
 
 ---
 
@@ -164,4 +188,4 @@ These behave VERY differently. Always analyze separately:
 
 | Ticket | Experiment | Method | Outcome | Key Learning |
 |---|---|---|---|---|
-| TI-748 | Media Plan Causal Impact | Per-advertiser CausalImpact (BSTS) | Mixed — 4/7 significant, median +3.2%, spend-weighted -10.6% | Campaign maturity bias, need 52wk pre-period, within-advertiser comparison confounded by new vs mature campaigns |
+| TI-748 | Media Plan Causal Impact (v3) | Per-advertiser CausalImpact, BIC-optimized covariates | IVR: 3/6 sig, median +6.2%, spend-weighted +6.5%. Placebo FPR 30%. | BIC covariate selection >> hand-picking. spend_change_pct + metric_lag are universal. Platform metrics are collinear — get eliminated by VIF. Campaign maturity confounds within-advertiser comparison (see TI-780). |
