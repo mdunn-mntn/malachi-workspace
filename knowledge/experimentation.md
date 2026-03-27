@@ -89,10 +89,22 @@ This is a living document. Add to it every time we learn something new about exp
 
 ## Considerations & Gotchas
 
-### Campaign Maturity Bias
-New campaigns (including media plan campaigns) always underperform mature ones during ramp-up. When comparing new media plan campaigns to established campaigns, account for maturity:
-- Use advertiser-level analysis (pre/post ALL campaigns) rather than campaign-level comparison
-- If doing within-advertiser comparison, note the maturity confound explicitly
+### Campaign Maturity Bias (TI-780 — Empirically Determined)
+
+New prospecting campaigns reach steady-state IVR in approximately **4 weeks** (N=6,917 campaigns, $10K+ spend):
+- **Week 0:** 38% of steady state (just launched)
+- **Week 2:** 84% (rapid improvement as bidder learns)
+- **Week 4:** 89% — first week with <5% WoW change (ramp-up over)
+- **Week 8+:** Fully stabilized
+
+This pattern is consistent across spend tiers (high/mid/low) and is driven by bidder learning, frequency buildup, and delivery footprint exploration.
+
+**Rule: Exclude the first 4 weeks of any new campaign from causal analysis.**
+
+This applies to:
+- CausalImpact post-period start (shift 4 weeks after first delivery)
+- Within-advertiser comparisons (only include campaigns with 4+ weeks of delivery)
+- Any future experiment comparing new vs existing campaigns
 
 ### Selection Bias
 Advertisers who adopt a new feature may be systematically different:

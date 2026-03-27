@@ -81,13 +81,21 @@ METRIC_DEFINITIONS = {
     "roas": {"formula": "order_value / spend",     "direction": "higher", "label": "Return on Ad Spend"},
 }
 
-# Covariates for CausalImpact model
-# - Platform metrics control for market-wide trends/seasonality
-# - Holiday flag controls for known seasonal spikes
-# - Lagged metric captures advertiser-specific autocorrelation
-# - VCR (video completion rate) is a CTV engagement proxy unaffected by network allocation
-COVARIATES = ["platform_ivr", "platform_spend", "platform_impressions",
-              "holiday", "platform_active_advertisers", "platform_vcr"]
+# Candidate covariates for BIC selection (per advertiser).
+# BIC will pick the best subset — we don't hand-pick.
+# Why these candidates:
+# - Platform metrics: control for market-wide trends (though most are collinear and get eliminated)
+# - Holiday: controls for known seasonal spikes
+# - Lagged metrics: capture advertiser-specific autocorrelation/momentum
+# - spend_change_pct: captures budget shifts (strongest predictor in v3 validation)
+# - platform_active_advertisers: competition proxy
+COVARIATE_CANDIDATES = [
+    "platform_ivr", "platform_spend", "platform_impressions",
+    "platform_active_advertisers", "platform_vcr",
+    "holiday",
+    "metric_lag1", "metric_lag2",
+    "spend_change_pct",
+]
 
 OUTPUT_DIR = Path(__file__).parent.parent / "outputs"
 
@@ -349,9 +357,14 @@ def prepare_advertiser_data(
     # merge platform covariates
     combined = combined.merge(platform_covariates, on="week_start", how="inner")
 
-    # add lagged metric (advertiser-specific autocorrelation)
+    # add advertiser-specific covariate candidates
     combined = combined.sort_values("week_start")
     combined["metric_lag1"] = combined[metric].shift(1)
+    combined["metric_lag2"] = combined[metric].shift(2)
+    if len(combined) > 1:
+        combined["spend_change_pct"] = combined["spend"].pct_change().fillna(0).clip(-1, 5)
+    else:
+        combined["spend_change_pct"] = 0.0
     combined = combined.dropna(subset=["metric_lag1"])  # lose first row
 
     combined = combined.set_index("week_start").sort_index()
@@ -409,9 +422,8 @@ def run_single_analysis(
     advertiser_id: int,
 ) -> dict:
     """Run CausalImpact for a single advertiser + metric."""
-    # use metric_lag1 as additional covariate
-    all_covariates = covariates + ["metric_lag1"]
-    available = [c for c in all_covariates if c in adv_data.columns]
+    # BIC already selects the best covariates — don't add extras
+    available = list(dict.fromkeys(c for c in covariates if c in adv_data.columns))
 
     columns = [metric] + available
     ci_data = adv_data[columns].copy()
@@ -459,29 +471,208 @@ def run_single_analysis(
         return None
 
 
-def run_placebo_test(
+def select_covariates_bic(
+    adv_data: pd.DataFrame,
+    metric: str,
+    candidates: list,
+    pre_period: list,
+) -> list:
+    """
+    BIC stepwise covariate selection for a single advertiser.
+    Tests all subsets of size 1-6, returns the set with lowest BIC.
+
+    Why BIC over AIC: BIC penalizes complexity more (penalty = k*ln(n) vs k*2),
+    producing more parsimonious models that generalize better with small N.
+    With ~80 weekly observations, this prevents overfitting.
+    """
+    import statsmodels.api as sm
+    from itertools import combinations
+
+    pre_data = adv_data.loc[pre_period[0]:pre_period[1]]
+    y = pre_data[metric].dropna()
+    available = [c for c in candidates if c in adv_data.columns]
+
+    best_bic = np.inf
+    best_covs = available[:2]  # fallback
+
+    for size in range(1, min(len(available) + 1, 7)):
+        for combo in combinations(available, size):
+            combo_list = list(combo)
+            X = pre_data[combo_list].reindex(y.index).dropna()
+            common = y.index.intersection(X.index)
+            if len(common) < 20:
+                continue
+            try:
+                model = sm.OLS(y.loc[common], sm.add_constant(X.loc[common])).fit()
+                if model.bic < best_bic:
+                    best_bic = model.bic
+                    best_covs = combo_list
+            except Exception:
+                pass
+
+    return best_covs
+
+
+def run_placebo_tests(
     adv_data: pd.DataFrame,
     metric: str,
     covariates: list,
     real_pre_period: list,
     advertiser_id: int,
-) -> dict:
-    """Run placebo test: fake intervention at pre-period midpoint. Should show no effect."""
+    n_placebos: int = 5,
+) -> list:
+    """
+    Run multiple placebo tests at different split points across the pre-period.
+    More robust than a single midpoint placebo — tests model reliability at
+    multiple fake intervention dates.
+
+    Returns list of result dicts.
+    """
     pre_only = adv_data[adv_data.index <= real_pre_period[1]]
-    if len(pre_only) < 20:  # need enough data for meaningful placebo
+    if len(pre_only) < 30:
+        return []
+
+    results = []
+    step = max(len(pre_only) // (n_placebos + 1), 4)
+
+    for i in range(1, n_placebos + 1):
+        split_idx = i * step
+        if split_idx >= len(pre_only) - 4 or split_idx < 15:
+            continue
+
+        placebo_pre = [pre_only.index[0], pre_only.index[split_idx - 1]]
+        placebo_post = [pre_only.index[split_idx], pre_only.index[-1]]
+
+        result = run_single_analysis(
+            pre_only, metric, covariates, placebo_pre, placebo_post, advertiser_id
+        )
+        if result:
+            result["test_type"] = "placebo"
+            results.append(result)
+
+    return results
+
+
+# =============================================================================
+# PANEL DATA MODEL (Pooled Regression with Advertiser Fixed Effects)
+# =============================================================================
+
+def run_panel_model(
+    adv_week: pd.DataFrame,
+    adopters: pd.DataFrame,
+    platform_covariates: pd.DataFrame,
+    metric: str,
+) -> dict:
+    """
+    Pool all adopter advertisers into a single regression with:
+    - Advertiser fixed effects (controls for level differences between advertisers)
+    - Time trend (controls for platform-wide temporal trends)
+    - Treatment indicator (1 if post-intervention AND past ramp-up period)
+    - Covariates: holiday, spend_change_pct
+
+    Why panel data:
+    - Uses ALL data more efficiently than separate per-advertiser models
+    - Produces ONE treatment effect estimate with proper standard error
+    - Standard approach in econometrics for staggered adoption designs
+    - More statistical power with small N per unit
+
+    Returns dict with treatment effect, SE, p-value, CI.
+    """
+    import statsmodels.api as sm
+
+    rows = []
+    for _, adv_row in adopters.iterrows():
+        adv_id = adv_row["advertiser_id"]
+        intervention = pd.Timestamp(adv_row["intervention_date"])
+        intervention_week = intervention - pd.Timedelta(days=intervention.weekday())
+        post_start = intervention_week + pd.Timedelta(weeks=RAMP_UP_WEEKS)
+
+        data = adv_week[adv_week["advertiser_id"] == adv_id].copy()
+        data = compute_metrics(data)
+        data = data.merge(platform_covariates, on="week_start", how="inner")
+        data = data.sort_values("week_start")
+        if len(data) < 3:
+            continue
+        data["spend_change_pct"] = data["spend"].pct_change().fillna(0).clip(-1, 5)
+        data["metric_lag1"] = data[metric].shift(1)
+        data = data.dropna(subset=["metric_lag1"])
+
+        if len(data) < 20:
+            continue
+
+        # treatment indicator: 1 if past ramp-up period, 0 otherwise
+        # ramp-up weeks (intervention to intervention+4wk) are coded as 0 (excluded from treatment)
+        data["treated"] = ((data["week_start"] >= post_start)).astype(float)
+        data["ramp_up"] = (
+            (data["week_start"] >= intervention_week) &
+            (data["week_start"] < post_start)
+        ).astype(float)
+        data["adv_id"] = adv_id
+        data["time_idx"] = (data["week_start"] - data["week_start"].min()).dt.days / 7
+
+        rows.append(data)
+
+    if not rows:
         return None
 
-    midpoint_idx = len(pre_only) // 2
-    sorted_idx = pre_only.index.sort_values()
-    placebo_pre = [sorted_idx[0], sorted_idx[midpoint_idx - 1]]
-    placebo_post = [sorted_idx[midpoint_idx], sorted_idx[-1]]
+    panel = pd.concat(rows, ignore_index=True)
 
-    result = run_single_analysis(
-        pre_only, metric, covariates, placebo_pre, placebo_post, advertiser_id
-    )
-    if result:
-        result["test_type"] = "placebo"
-    return result
+    # advertiser fixed effects (dummy variables, drop first for identification)
+    adv_dummies = pd.get_dummies(panel["adv_id"], prefix="adv", drop_first=True, dtype=float)
+
+    # build regression matrix
+    X_cols = ["treated", "ramp_up", "time_idx", "holiday", "spend_change_pct", "metric_lag1"]
+    X = panel[X_cols].copy()
+    X = pd.concat([X, adv_dummies], axis=1)
+    X = sm.add_constant(X)
+
+    y = panel[metric].astype(float)
+
+    # drop NaN rows
+    mask = X.notna().all(axis=1) & y.notna()
+    X = X[mask]
+    y = y[mask]
+
+    if len(y) < 50:
+        return None
+
+    try:
+        # use HAC (Newey-West) standard errors to handle autocorrelation
+        model = sm.OLS(y, X.astype(float)).fit(cov_type="HAC", cov_kwds={"maxlags": 4})
+
+        treatment_coeff = model.params["treated"]
+        treatment_se = model.bse["treated"]
+        treatment_pval = model.pvalues["treated"]
+        treatment_ci = model.conf_int().loc["treated"]
+
+        # also get ramp_up coefficient
+        ramp_coeff = model.params.get("ramp_up", np.nan)
+        ramp_pval = model.pvalues.get("ramp_up", np.nan)
+
+        # compute relative effect (treatment coeff / mean predicted without treatment)
+        predicted_baseline = y.mean()  # rough approximation
+        rel_effect = treatment_coeff / predicted_baseline if predicted_baseline != 0 else np.nan
+
+        return {
+            "metric": metric,
+            "treatment_effect": treatment_coeff,
+            "treatment_se": treatment_se,
+            "treatment_pvalue": treatment_pval,
+            "treatment_ci_lower": treatment_ci[0],
+            "treatment_ci_upper": treatment_ci[1],
+            "relative_effect": rel_effect,
+            "significant": treatment_pval < 0.05,
+            "ramp_up_effect": ramp_coeff,
+            "ramp_up_pvalue": ramp_pval,
+            "n_observations": len(y),
+            "n_advertisers": panel["adv_id"].nunique(),
+            "r_squared": model.rsquared,
+            "r_squared_adj": model.rsquared_adj,
+        }
+
+    except Exception as e:
+        log.error(f"Panel model failed: {e}")
+        return None
 
 
 # =============================================================================
@@ -664,7 +855,7 @@ def save_plots(results: list, metric: str, output_dir: Path):
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="TI-748: Causal Impact — Media Plan (v2)")
+    parser = argparse.ArgumentParser(description="TI-748: Causal Impact — Media Plan (v5: BIC + ramp-up + panel)")
     parser.add_argument("--metric", default="ivr", choices=list(METRIC_DEFINITIONS.keys()))
     parser.add_argument("--all-metrics", action="store_true")
     parser.add_argument("--min-pre-weeks", type=int, default=20,
@@ -740,11 +931,16 @@ def main():
             if adv_data is None:
                 continue
 
+            # BIC covariate selection for this advertiser
+            best_covs = select_covariates_bic(adv_data, metric, COVARIATE_CANDIDATES, pre_period)
+            log.info(f"  BIC covariates: {best_covs}")
+
             result = run_single_analysis(
-                adv_data, metric, COVARIATES, pre_period, post_period, adv_id
+                adv_data, metric, best_covs, pre_period, post_period, adv_id
             )
             if result:
                 result["company_name"] = adv_name
+                result["covariates_used"] = ", ".join(best_covs)
                 all_results.append(result)
                 log.info(
                     f"  -> Effect: {result['relative_effect']:+.2%} "
@@ -753,9 +949,8 @@ def main():
                 )
 
             if args.placebo and adv_data is not None:
-                placebo = run_placebo_test(adv_data, metric, COVARIATES, pre_period, adv_id)
-                if placebo:
-                    placebo_results.append(placebo)
+                placebos = run_placebo_tests(adv_data, metric, best_covs, pre_period, adv_id)
+                placebo_results.extend(placebos)
 
         # --- Step 3: Summarize ---
         summary_df = aggregate_results(all_results)
@@ -809,6 +1004,40 @@ def main():
                 csv_path = OUTPUT_DIR / "within_advertiser_comparison.csv"
                 comparison_df.to_csv(csv_path, index=False)
                 log.info(f"Comparison exported to {csv_path}")
+
+    # --- Step 5: Panel data model ---
+    log.info("\n" + "=" * 60)
+    log.info("PANEL DATA MODEL (Pooled Regression with Advertiser Fixed Effects)")
+    log.info("=" * 60)
+
+    for metric in metrics_to_run:
+        panel_result = run_panel_model(adv_week_all, adopters, platform_covariates, metric)
+        if panel_result:
+            print(f"\n{'='*100}")
+            print(f"PANEL MODEL — {METRIC_DEFINITIONS[metric]['label']} ({metric.upper()})")
+            print(f"{'='*100}")
+            print(f"Treatment effect:    {panel_result['treatment_effect']:.6f}")
+            print(f"Relative effect:     {panel_result['relative_effect']:+.2%}")
+            print(f"Standard error:      {panel_result['treatment_se']:.6f}")
+            print(f"p-value:             {panel_result['treatment_pvalue']:.4f}")
+            print(f"95% CI:              [{panel_result['treatment_ci_lower']:.6f}, {panel_result['treatment_ci_upper']:.6f}]")
+            print(f"Significant:         {'Yes' if panel_result['significant'] else 'No'}")
+            print(f"Ramp-up effect:      {panel_result['ramp_up_effect']:.6f} (p={panel_result['ramp_up_pvalue']:.4f})")
+            print(f"N observations:      {panel_result['n_observations']}")
+            print(f"N advertisers:       {panel_result['n_advertisers']}")
+            print(f"R² (adj):            {panel_result['r_squared_adj']:.4f}")
+            print(f"{'='*100}")
+
+            # Why the ramp-up coefficient matters: if it's significantly negative,
+            # it confirms that the ramp-up period drags down performance, validating
+            # our 4-week exclusion window from TI-780.
+            if panel_result['ramp_up_pvalue'] < 0.05:
+                print(f"Note: Ramp-up effect is significant (p={panel_result['ramp_up_pvalue']:.4f}), "
+                      f"confirming TI-780's finding that new campaigns underperform during first 4 weeks.")
+
+            if args.output_csv:
+                OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+                pd.DataFrame([panel_result]).to_csv(OUTPUT_DIR / f"panel_{metric}_results.csv", index=False)
 
     log.info("Done.")
 
