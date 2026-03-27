@@ -95,14 +95,21 @@ def load_ramp_up_data():
 
 def plot_main_ramp_up_curve(df):
     """Plot 1: The hero chart — median IVR ramp-up with confidence band."""
-    # aggregate across all channels and spend tiers
-    agg = df.groupby("weeks_since_launch").agg(
-        median_ivr=("median_ivr", "mean"),
-        p25_ivr=("p25_ivr", "mean"),
-        p75_ivr=("p75_ivr", "mean"),
-        p10_ivr=("p10_ivr", "mean"),
-        p90_ivr=("p90_ivr", "mean"),
-        n_campaigns=("n_campaigns", "sum"),
+    # aggregate across all channels and spend tiers, weighted by n_campaigns
+    # (mean-of-medians is biased when groups have different sizes)
+    def weighted_mean(group, value_col):
+        weights = group["n_campaigns"]
+        return (group[value_col] * weights).sum() / weights.sum()
+
+    agg = df.groupby("weeks_since_launch").apply(
+        lambda g: pd.Series({
+            "median_ivr": weighted_mean(g, "median_ivr"),
+            "p25_ivr": weighted_mean(g, "p25_ivr"),
+            "p75_ivr": weighted_mean(g, "p75_ivr"),
+            "p10_ivr": weighted_mean(g, "p10_ivr"),
+            "p90_ivr": weighted_mean(g, "p90_ivr"),
+            "n_campaigns": g["n_campaigns"].sum(),
+        })
     ).reset_index()
 
     # compute steady state (weeks 8-19 average)
@@ -173,7 +180,11 @@ def plot_main_ramp_up_curve(df):
 
 def plot_pct_of_steady_state(df):
     """Plot 2: % of steady state by week — the 'when do we stop caring' chart."""
-    agg = df.groupby("weeks_since_launch").agg(median_ivr=("median_ivr", "mean")).reset_index()
+    agg = df.groupby("weeks_since_launch").apply(
+        lambda g: pd.Series({
+            "median_ivr": (g["median_ivr"] * g["n_campaigns"]).sum() / g["n_campaigns"].sum(),
+        })
+    ).reset_index()
     steady = agg[agg["weeks_since_launch"] >= 8]["median_ivr"].mean()
     agg["pct_steady"] = agg["median_ivr"] / steady * 100
 
@@ -268,7 +279,11 @@ def plot_spend_tier_comparison(df):
 
 def plot_week_over_week_change(df):
     """Plot 4: Week-over-week IVR change — when does volatility die down?"""
-    agg = df.groupby("weeks_since_launch").agg(median_ivr=("median_ivr", "mean")).reset_index()
+    agg = df.groupby("weeks_since_launch").apply(
+        lambda g: pd.Series({
+            "median_ivr": (g["median_ivr"] * g["n_campaigns"]).sum() / g["n_campaigns"].sum(),
+        })
+    ).reset_index()
     agg["wow_change"] = agg["median_ivr"].pct_change() * 100
 
     fig, ax = plt.subplots(figsize=(14, 6))
@@ -309,9 +324,11 @@ def plot_week_over_week_change(df):
 
 def plot_key_takeaway(df):
     """Plot 5: Executive summary — the one-slide version."""
-    agg = df.groupby("weeks_since_launch").agg(
-        median_ivr=("median_ivr", "mean"),
-        n_campaigns=("n_campaigns", "sum"),
+    agg = df.groupby("weeks_since_launch").apply(
+        lambda g: pd.Series({
+            "median_ivr": (g["median_ivr"] * g["n_campaigns"]).sum() / g["n_campaigns"].sum(),
+            "n_campaigns": g["n_campaigns"].sum(),
+        })
     ).reset_index()
     steady = agg[agg["weeks_since_launch"] >= 8]["median_ivr"].mean()
 
