@@ -245,6 +245,64 @@ These fields are frequently missed but are required by PMO for sprint tracking a
 
 ---
 
+## Experimental Design for Feature Rollouts — Balancing Risk and Statistical Power
+
+### The Core Tension
+We need high N for reliable results, but can't roll out risky changes to all advertisers at once. Methods to balance this:
+
+### 1. Staggered Rollout (What We Did for Media Plan)
+- Roll out to a small beta group first, expand over time
+- **Pros:** Low risk — can stop if early results are bad
+- **Cons:** Small N reduces statistical power. Selection bias — early adopters are volunteers who may differ systematically. Staggered dates complicate analysis.
+- **When to use:** Opt-in features, low-risk changes, exploratory analysis
+- **TI-748 lesson:** N=8 was too small for conclusive results. The analysis was methodologically sound but statistically underpowered.
+
+### 2. Randomized Controlled Trial (Gold Standard)
+- Randomly assign advertisers to treatment (feature on) vs control (feature off)
+- **Pros:** Eliminates selection bias. Clean comparison. Highest statistical credibility.
+- **Cons:** Requires engineering support to randomize. Some advertisers may notice and complain. Can't "unsee" the results if negative.
+- **When to use:** High-stakes features, need definitive answer, have engineering support
+- **How to size it:** Standard power analysis. For detecting a 5% IVR lift with 80% power and 5% significance: need ~200 advertisers per group (rough estimate — depends on IVR variance).
+
+### 3. Matched Pairs Design
+- For each treatment advertiser, find a similar control advertiser (same vertical, spend tier, campaign count)
+- **Pros:** Controls for selection bias without full randomization. Smaller N needed than population-level RCT.
+- **Cons:** Matching quality depends on observable characteristics — unobservable differences remain. Hard to find good matches with small advertiser pool.
+- **When to use:** Can't randomize, but can identify comparable non-adopters
+
+### 4. Waitlist Control
+- All advertisers get the feature eventually, but rollout is randomized in waves
+- **Pros:** Everyone gets the feature (no ethical concerns). Early waves act as treatment, later waves act as control. Staggered adoption by design.
+- **Cons:** Requires coordinated rollout schedule. Late-wave advertisers may learn about the feature from early adopters (contamination).
+- **When to use:** Features that will eventually go to everyone. Best balance of risk and power.
+- **How it works:** Wave 1 gets it in week 1, Wave 2 in week 5, Wave 3 in week 9. At week 4, compare Wave 1 (treated) to Waves 2+3 (not yet treated).
+
+### 5. Synthetic Control (What CausalImpact Does)
+- Each treated unit builds its own counterfactual from covariates
+- **Pros:** No explicit control group needed. Works with staggered adoption. Per-unit effects.
+- **Cons:** Relies on covariate quality. Short pre-periods reduce reliability. Placebo FPR can be high.
+- **When to use:** Observational data, can't randomize, need per-unit effects
+
+### Recommendation for MNTN
+For future feature evaluations, **waitlist control** is the ideal approach:
+1. Product decides the feature will eventually go to all eligible advertisers
+2. Randomly order the rollout (not by request, not by account team preference)
+3. First wave is treatment, remaining waves are control
+4. After sufficient post-period (4 weeks + ramp-up), analyze treatment vs not-yet-treated
+5. Expand to next wave, repeat
+
+This gives us: randomization (no selection bias), adequate N (entire eligible population), ethical soundness (everyone gets it), and clean analysis (DiD with randomized treatment timing).
+
+### Publisher-Level Analysis Lesson (TI-748)
+When analyzing features that affect publisher/network allocation:
+- `sum_by_ctv_network_by_day` has per-publisher, per-campaign, per-day performance data
+- Publisher IVR varies dramatically (Spectrum News 1.09% vs Samsung TV+ 0.48% for Lighting New York)
+- High-IVR publishers are often low-volume — the algorithm may optimize for deliverability/reach over IVR
+- The benefit of media plan may come from CONCENTRATION (removing the long tail of poor performers) rather than SELECTION (picking the best publishers)
+- This distinction matters for product team: should the algorithm optimize for IVR, reach, or some combination?
+
+---
+
 ## Experiment Log
 
 | Ticket | Experiment | Method | Outcome | Key Learning |
