@@ -1,0 +1,118 @@
+Speaker 1  0:00  
+I keep the transcripts and stuff, and sometimes I use them as context when I'm rolling out things with AI and stuff. So, yeah, so this media plan, okay, so these all had a feature rolled out at this time. Can you just explain the project a little bit to me, because I know the implementation is like, here's the list of,
+
+Speaker 2  0:25  
+yeah, let me pull one I can just show you. So the idea with media plan is, wait lighting New York was that one of them?
+
+Unknown Speaker  0:44  
+I can double check, yeah,
+
+Unknown Speaker  0:48  
+lightning New York, yeah.
+
+Speaker 2  0:55  
+I forget who was always calling it lightning New York. It really wants to be lightning, but it's not Um, okay. So the idea of media plan is to give customers more control. So like, especially agencies, or advertisers used to working with agencies, they would get, like, a literal Excel doc that's like a media plan of like, where am I buying? And so that's kind of the concept is like giving them that illusion of control, but also recommending where we think they should be spending. So here's what it looks like. Oh, they don't even have it active. Let's see if I can Okay,
+
+Unknown Speaker  1:45  
+give me another one, because they don't have it active. Okay,
+
+Unknown Speaker  1:48  
+ball and branch. BOL, oh, so
+
+Speaker 2  1:54  
+this is actually going to be the challenge with this is like it's in a beta, so every customer on this list has access to it if they decide to use it. So is
+
+Unknown Speaker  2:09  
+it something that's set up at the campaign level or
+
+Unknown Speaker  2:13  
+yes, okay,
+
+Speaker 2  2:20  
+there is a identifier for, like, whether or not they have it on. I believe bull and branch is bad example. Let's let me just scroll through here and see if I can remember, you know what I'm doing, an experiment for them. So I'm going to use one of the ones that has an experiment, because I know it's going to show up there. Okay? I can share my screen.
+
+Speaker 2  2:50  
+Okay, so here's what it looks like. It's basically an additional row here in their campaign setup. Okay, are you sharing?
+
+Unknown Speaker  3:00  
+Yep, can you see it?
+
+Speaker 2  3:01  
+Yeah, I was just sharing ice cream. Okay, we're automatically created a custom meeting plan for your campaign based on your audience and goals. So mount is automatically finding an updating network allocations for your campaign over time to support the best pacing possible, so that it'll say the current network mix here. And then if you look in here,
+
+Unknown Speaker  3:29  
+which I can't do,
+
+Speaker 2  3:32  
+well, you know what? This is my campaign. I can do whatever the heck I want.
+
+Unknown Speaker  3:38  
+Can I not switch back?
+
+Speaker 2  3:48  
+Like, I'm gonna see, yeah, switch back. Okay, so this is what that looks like. Is like, we're deciding the percentage of spend that goes to each network. And then if I change it, it becomes no longer recommended.
+
+Unknown Speaker  4:06  
+So the question is,
+
+Speaker 2  4:10  
+did the campaigns that
+
+Unknown Speaker  4:16  
+turned on this media plan feature,
+
+Speaker 2  4:20  
+or rather, probably the customers who started using a campaign with a media plan see improved performance, and this is only for prospecting. So like excluded retargeting completely. But we want to know, like, did the advertisers that had access to this feature and used it since they were added to the beta. See better performance, worse performance, the same performance, etc. But it seems like to me that, like they only get access to this if they are launching a new campaign. Do. Yeah, okay, so, and they would have to be at the channel level for that reason. What do you mean by channel level? Like, prospecting versus retargeting, is the channel so, like, it would have to be like across all of their prospecting campaigns, what was their performance and what was the
+
+Speaker 1  5:18  
+impact of this? Why would we want to do all of them when we'd be just be interested? Well, okay, that, I guess that does make sense.
+
+Speaker 2  5:26  
+There has to be a new campaign that's using media plan, yeah?
+
+Unknown Speaker  5:32  
+And you want to group all their campaigns together?
+
+Speaker 1  5:36  
+Well, yeah, see, this is the only thing that makes this hard. Well, it doesn't make it hard. It's just like when I think about what I'm going to compare, I'm going to compare it to, one of the things I think of, it would just be nice to just compare it to a similar campaign within the advertiser but I think this, this should probably be all advertiser level,
+
+Speaker 2  5:56  
+yeah, because they don't have it on this prospecting.
+
+Unknown Speaker  6:00  
+Yeah? And it also depends, yeah,
+
+Speaker 2  6:02  
+that's have it. A lot of them aren't even using it. That's the crazy thing. So, like, if they're not using it, like, I don't even think we care. So, so that's the other thing is, like, this is a pretty short list, and if most of them aren't using it, then it's an even shorter list of customers that are actually using it that we can do causal impact for.
+
+Speaker 1  6:25  
+Yeah, I mean, it's going to be limited I can see. So what is the way to identify it, though, is it some information that's on the campaigns table?
+
+Unknown Speaker  6:33  
+Or that's a great question. I
+
+Unknown Speaker  6:54  
+I think I kind of don't want
+
+Speaker 2  7:01  
+to tell the larger team that you're doing this, because I want to, like, surprise them with data. So I'm just going to ping Tom okay, because if we tell them, then they're gonna be like, Is this done yet? And I don't want them to do that. Hey, quick question. Actually, I'm going to start a chat with you and Tom, that way you can follow up with any questions you have.
+
+Unknown Speaker  7:29  
+Okay, hey, Tom,
+
+Speaker 1  7:37  
+so like the big thing I need to do is figure out which advertisers used it and which campaigns I'm just writing down. And then I need to figure out how exactly I'm going to create my control. Yeah, it's crazy. So I ran into this issue before, when I worked for Etsy. What's really interesting we tried to do is we tried to make like templates for experiments. And the problem with it is that experiments are so different every time that it's like, no way to make a standard, because I was just thinking about like, calls to impact. I'm like, This is really great when you roll things out to campaigns, and it affects the campaigns, like, all together. But this is totally different, because this is like, No, we have to see a brand new campaign and see how that campaign performs to other ones. So I'm just trying to think about how that looks like either. I'm just going to look at the advertiser as a whole and see if it if it did better as a whole, and that's going to be largely impacted by like, spend in the new campaign. What is their campaign? Things like that. But my other thought is like, well, maybe there's a similar campaign which you could compare it to as the baseline. So I don't know. There's a few ways to look at it, but, yeah, I think from
+
+Speaker 2  9:05  
+Mom's gonna share the query, so we should be good there, okay? But yeah, no, I totally agree. Like, I was just having this conversation with Jen, because we were, like, talking about alerts that are going off because of our experiments. She was like, well, can't we just have them exclude experiment campaigns from setting off alerts? And I was like, no, no. Like, for this specific alert, that's fine. We know it's it was intentional, but like, there might be another experiment that's testing something completely different in two weeks that we needed that alert to go off for, you know? So, yeah, everyone is different, and that keeps things interesting.
+
+Speaker 1  9:44  
+Okay, well, that is enough information, I think, for me to do this, I will set this up, and then what based on what he says, I just I need to figure out a way to identify it, but if he's gonna send the query, that's fine. So that gets rid of all my blockers, and then I will let you know. Yeah, what I do with it? I might my goal here too, is like, I want to start simple and just like, take log information. You know, some of the things that I mentioned last time were, like, you know, the impress, the basically, rate, most, most rate metrics, because that helps balance it. But, like, total spend things like that, blah, blah. But I think eventually it'd be nice to add some more things to it, which I'd talk to Matt about, like, you know, little features we could probably add to make the predictions a little bit better. Yeah, but cool, well, I'm excited about this. Cool.
+
+Speaker 2  10:36  
+Me too. Thank you so much. Yeah, looking forward to hearing more.
+
+Speaker 1  10:40  
+All right, sounds good. Thank you. Cursive. All right, bye, bye.
+
+Transcribed by https://otter.ai
