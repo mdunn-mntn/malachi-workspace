@@ -129,10 +129,10 @@ Documented in `knowledge/experimentation.md`:
 
 ## 8. Open Items / Follow-ups
 
+- **TI-780**: Campaign ramp-up research — how long until new campaigns reach steady-state? Needed to adjust for maturity bias in within-advertiser comparison. First step: ask Kirsa/product if there's an existing benchmark.
 - Formal covariate selection (stepwise, VIF, AIC/BIC)
 - Add advertiser-specific covariates (campaign count, budget changes)
 - Re-run as more post-period data accumulates (recent adopters will qualify)
-- Address campaign maturity confound in within-advertiser comparison
 - Consider vertical-specific covariates instead of platform-wide
 - Share findings with Kirsa
 - Potential: analyze customized vs recommended allocations separately
