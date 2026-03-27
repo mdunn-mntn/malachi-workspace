@@ -310,16 +310,40 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 - **Contact for algorithm questions:** Chris Addy (technical lead). Ping Kirsa and Addy for follow-ups about media plan experimentation.
 - **UI experiment coming:** First UI-based experiment — feature flag to 50% of advertisers, changing how goals are entered on new campaigns. Hypothesis: realistic goals → more campaigns at goal. Malachi may be looped in for methodology.
 
-### Algorithm Details (from Release Brief + Requirements Doc)
+### Algorithm Details (from Release Brief + Requirements Doc + Chris Addy 2026-03-27)
 
-**Three signals power media plan recommendations:**
-1. **Semantic Relevance** — industry/vertical match (e.g., travel advertiser → networks with travel content)
-2. **Historical Performance** — past campaign data across similar verticals, VVR-based
-3. **Spendability** — inventory availability and scalability per network
+**Pipeline:** semantic search (top 300 candidates) → spend capacity filter (must sustain ≥$0.50/hr) → scoring & softmax allocation → drop networks below 0.5% → enforce min/max bounds.
 
-**Priority order: spendability FIRST, then performance (VVR).** This confirms our finding that the algorithm optimizes for deliverability over IVR.
+**Scoring weights (final combined score):**
+| Component | Weight | Notes |
+|---|---|---|
+| Performance composite | 25% | Blends advertiser-level (50%), vertical (30%), network-level (20%) when advertiser data exists |
+| Quality | 25% | |
+| Semantic relevance | 20% | |
+| ML prediction | 10% | `score_performance_ml_predicted_normalized` |
+| Spendability | 8% | Inventory availability and scalability |
+| CPM efficiency | 6% | |
+| Scale | 4% | |
+| Accessibility | 2% | |
 
-**Flex Targeting:** 5-15% of total budget reserved outside specific network allocations. This is the fallback spend for opportunistic buying, emerging inventory, real-time optimization. Explains the ±3% deviation we observed — some un-recommended publishers (e.g., Tubi Entertainment at 5-6%) receive spend from the Flex budget.
+**IMPORTANT CORRECTION:** Per Chris Addy, spendability is only 8% of the score, not the primary driver as the Release Brief implied. Performance (25%) + quality (25%) + semantic (20%) dominate. However, the spend capacity filter (≥$0.50/hr) acts as a hard gate BEFORE scoring, which explains why the algorithm picks deliverable publishers — low-inventory networks get filtered out before scoring even happens.
+
+**Per-publisher score data:** The API response from the mediaplan service includes all component scores (score_semantic, score_performance_advertiser, score_performance_vertical, score_spendability, etc.) in the Budget model. Chris checking if the full score breakdown is persisted to BigQuery or just final allocations.
+
+**Config parameters controlling concentration:**
+| Parameter | Default | Effect |
+|---|---|---|
+| `alpha` (softmax temperature) | 5.0 | **The big lever.** Higher = more concentrated on top-scoring networks. Lower = more uniform spread. |
+| `max_networks` | 15 | Hard upper bound on plan size |
+| `min_networks` | 10 | Hard lower bound on plan size |
+| `max_allocation` | 12% | Hard cap per network (prevents single-network dominance) |
+| `min_allocation` | 0.5% | Networks scoring below this get dropped |
+
+**CRITICAL FINDING:** Default `max_networks = 15`. Our 26-publisher plans (Boll & Branch, Tempo) are ABOVE this default, meaning they were generated under a different/older config version or with overrides. This may explain why they performed poorly — they weren't generated with the current algorithm's intended concentration. Need to check `media_plan` table for config snapshot on those specific plans.
+
+**`deliverability_classification`:** Categorical prediction of delivery risk: "high" (expect full spend), "medium" (moderate underspend risk), "low" (high underspend risk). Computed by guardrail model evaluating per-network daily spend thresholds, audience size, blocked networks, budget constraints. Final classification = worst individual guardrail. For in-flight campaigns: if >3 days in and spending at >90% pace, gets upgraded to "high" regardless. **HHI (Herfindahl index) tracking exists in metrics but is NOT a classification factor yet** — could be added.
+
+**Flex Targeting:** Plan reserves typically 10% of budget as flex allocation not assigned to specific networks. Bidder uses this pool for real-time optimization — impressions on un-recommended publishers (like Tubi Entertainment) come entirely from this flex pool. Confirms our ±3% deviation observation.
 
 **Without media plan:** The bidder does NOT optimize network allocation. It buys from a huge bucket of inventory, with allocation driven by inventory team deal commitments (e.g., "told HBO we'd spend $1M in Q1") and manual adjustments when customers complain about concentration. This explains the 131-183 pre-adoption publisher spread — it's pure auction-based allocation.
 
@@ -347,20 +371,24 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 |---|---|---|---|
 | 1 | How does bidder allocate without media plan? | ✅ Answered (Kirsa) | No network optimization — pure auction-based from inventory team deal buckets. Manual adjustments only when customers complain. |
 | 2 | Table tracking actual vs planned allocation? | ✅ Resolved | `sum_by_ctv_network_by_day` confirmed as valid proxy, cross-validated against `cost_impression_log`. Plans followed within ±3%. |
-| 3 | What determines # of publishers recommended? | 🔶 Partially | Algorithm uses semantic relevance + historical performance + spendability. But specific logic for 16 vs 26 unclear — ask Chris Addy. |
-| 4 | Deliverability score / publisher capacity table? | 🔶 Partially | Deliverability is in the mix (confirmed). Forecasting uses historical impression/bid data. No specific table identified yet — check with Chris Addy. |
-| 5 | Does `deliverability_classification` indicate confidence? | ⬜ Open | Kirsa guesses it's per-network inventory level. Ask Chris Addy for confirmation. |
+| 3 | What determines # of publishers recommended? | ✅ Answered (Chris Addy) | Pipeline: semantic search (300) → spend filter (≥$0.50/hr) → softmax scoring → drop <0.5% → enforce min=10/max=15 bounds. **26-publisher plans exceed default max=15 — likely old config or override.** |
+| 4 | Deliverability score / publisher capacity table? | ✅ Answered (Chris Addy) | API response includes full score breakdown per network (score_semantic, score_performance_*, score_spendability, etc.). Chris checking if persisted to BQ. |
+| 5 | Does `deliverability_classification` indicate confidence? | ✅ Answered (Chris Addy) | Categorical delivery risk: high/medium/low. Computed by guardrail model (per-network spend caps, audience size, blocked networks). Worst guardrail wins. HHI tracking exists but not a factor yet. |
+| 6 | Can concentration be tuned? | ✅ Answered (Chris Addy) | Yes — `alpha` (softmax temp, default 5.0) is the main lever. Higher = more concentrated. Also `max_allocation` (12%), `min_allocation` (0.5%). Config change, not code change. Chris can set up exposure. |
+| 7 | How does Flex Targeting interact? | ✅ Answered (Chris Addy) | 10% budget reserved as flex pool. Un-recommended publisher impressions (e.g., Tubi) come entirely from this pool. Confirms our ±3% deviation. |
 
 ### Next Steps (Updated Priority Order)
 
 1. ✅ **Shared v5 results with Kirsa** (meeting 2, 2026-03-27) — she'll forward to Daniella (TPM)
-2. **Send PDFs to Kirsa** — methodology explainer and summary for Daniella to review
-3. **Ask Chris Addy** — remaining questions about publisher count logic, deliverability_classification, and whether concentration can be tuned
-4. **Wait for dynamic media plan release** — experiment blocked until then
-5. **Re-run CausalImpact in 6-8 weeks** — more post-period data for existing adopters. If beta expands, more advertisers too.
-6. **Test concentration as a covariate** — add "number of plan publishers" or "plan concentration (std of %)" to formally test whether concentration moderates the treatment effect
-7. **Get looped in on UI experiment** — Kirsa will connect Malachi with ML team for goal-setting experiment methodology
-8. **For future feature rollouts: use waitlist control design** — randomly order rollout waves to eliminate selection bias (documented in experimentation.md)
+2. ✅ **Asked Chris Addy** — all 5 questions answered (2026-03-27). Key finding: 26-publisher plans exceed default max_networks=15.
+3. **Check config versions on 26-publisher plans** — query `media_plan` for Boll & Branch/Tempo plans to see if they were generated under old config with higher max_networks. This could explain why they performed poorly.
+4. **Follow up with Chris Addy** — confirm if per-publisher score breakdown is persisted to BQ (would enable testing whether score distribution predicts IVR outcomes)
+5. **Send PDFs to Kirsa** — methodology explainer and summary for Daniella to review
+6. **Wait for dynamic media plan release** — experiment blocked until then
+7. **Propose alpha tuning test to Chris/Kirsa** — our data suggests higher concentration works; Chris confirmed alpha is tunable via config. A/B test with alpha=7 vs alpha=5 would be high-value.
+8. **Re-run CausalImpact in 6-8 weeks** — more post-period data. If beta expands, more advertisers too.
+9. **Test concentration as a covariate** — add "number of plan publishers" or HHI as a covariate to formally test moderation
+10. **Get looped in on UI experiment** — Kirsa will connect Malachi with ML team for goal-setting experiment methodology
 
 ---
 
