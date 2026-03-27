@@ -99,6 +99,28 @@ Complementary aggregate analysis using a panel regression across all analyzable 
 - Ramp-up effect not significant in regression (confirming that exclusion is the right approach — the ramp-up signal in the data is not strong enough to model parametrically, but excluding it reduces noise)
 - The panel model pools all advertisers and thus washes out advertiser-specific effects — consistent with the near-zero spend-weighted CausalImpact result
 
+### Who Benefits and Why — Publisher Allocation Pattern Analysis
+
+Investigated whether benefited vs non-benefited advertisers differ in their media plan characteristics:
+
+| Advertiser | Effect | Publishers | Max Alloc | Spread (std) | Vertical |
+|---|---|---|---|---|---|
+| **CWRV Sales** | **+16.8%** | **16** | **12.5%** | **2.96** | RVs |
+| **Lighting NY** | **+10.5%** | **16** | **12.0%** | **3.42** | Home Improvement |
+| Taskrabbit | +8.3% | 26 | 10.0% | 2.24 | Home Services |
+| Boll & Branch | -31.5% | 26 | 10.0% | 1.62 | Mattresses |
+| Tempo | -26.2% | 26 | 8.0% | 1.22 | Meal Subscriptions |
+
+**Key finding: Allocation concentration predicts benefit, not vertical.**
+- Benefited advertisers had **fewer publishers (16) with more decisive allocation** — higher max % and higher spread between top/bottom publishers
+- Hurt advertisers had **26 publishers with near-equal ~3-5% allocation** — budget spread too thin for any network to build frequency
+- **Why this matters:** When budget is diluted across 26 publishers, no single network gets enough impressions to build meaningful household frequency. Concentrated allocation on 16 networks lets the bidder optimize delivery on its strongest channels.
+- The "vertical" pattern was a coincidence — physical product advertisers happened to get more concentrated allocations.
+
+**Caveat:** N=8 is too small to confirm this statistically. But the direction is clear and the mechanism is plausible. This should be validated when more adopters accumulate.
+
+**Implication for product team:** The recommendation algorithm may perform better when it produces more concentrated allocations (fewer networks, stronger convictions) rather than spreading thin. Worth investigating whether the algorithm's concentration varies by advertiser characteristics and whether this can be tuned.
+
 ### Honest Assessment
 
 The aggregate effect of Media Plan adoption on IVR is **near zero**. The spend-weighted effect (-0.23%) and the panel model (+2.06%, not significant) both point to no clear overall lift.
