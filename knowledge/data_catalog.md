@@ -1104,6 +1104,41 @@ v_campaign_group_channel_margins, v_channel_margins, v_icloud_blacklist
 
 **For schemas of all silver.core tables, see [bronze.integrationprod](#bronze-integrationprod) — the actual source tables are prefixed `core_*`.**
 
+## silver.core.media_plan
+
+**Source:** `bronze.integrationprod.core_media_plan` (CDC from Postgres)
+
+| Column | Type | Description |
+|---|---|---|
+| media_plan_id | INT64 | PK |
+| advertiser_id | INT64 | FK to advertisers |
+| campaign_group_id | INT64 | FK to campaign_groups — which campaign group uses this plan |
+| media_plan_status_id | INT64 | 1=draft(?), 3=active, 8=inactive(?) |
+| create_time | TIMESTAMP | When the plan was created |
+| update_time | TIMESTAMP | Last update |
+| original_recommendations | JSON | Publisher recommendations with budget %s and rationale |
+| deliverability_classification | STRING | e.g. "medium" |
+| is_manual | BOOL | Whether the plan was manually created vs auto-generated |
+| datastream_metadata | RECORD | CDC metadata |
+
+**Key query:** `SELECT DISTINCT advertiser_id FROM core.media_plan WHERE media_plan_status_id=3` — active media plan users.
+
+**Gotchas:**
+- Being on the beta list doesn't mean active — must check `media_plan_status_id=3`
+- One advertiser can have many plans (one per campaign_group)
+- `original_recommendations` contains JSON with publisher names, budget percentages, and rationale
+
+## bronze.integrationprod.r2_advertiser_settings
+
+| Column | Type | Description |
+|---|---|---|
+| advertiser_id | INT64 | FK to advertisers |
+| reporting_style | STRING | `industry_standard` or `last_touch` — determines attribution model |
+
+**Key query:** Check attribution model: `SELECT advertiser_id, reporting_style FROM integrationprod.r2_advertiser_settings WHERE advertiser_id = X`
+
+**Note:** No `deleted` column on this table (unlike most integrationprod tables).
+
 ---
 
 # silver.aggregates
