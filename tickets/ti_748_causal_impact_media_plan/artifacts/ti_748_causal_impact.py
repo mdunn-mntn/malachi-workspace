@@ -54,6 +54,8 @@ BQ_PROJECT = "dw-main-silver"
 MIN_WEEKLY_IMPRESSIONS = 1000
 MIN_TOTAL_POST_SPEND = 10_000  # exclude advertisers with <$10K post-period spend
 WINSORIZE_PCTILE = (1, 99)     # winsorize rate metrics at 1st/99th percentile
+RAMP_UP_WEEKS = 4              # exclude first 4 weeks post-intervention (TI-780: campaigns reach
+                               # 89% of steady-state IVR by week 4, confirmed across 6,917 campaigns)
 
 # Pre-period: 52 weeks captures full seasonality. CausalImpact best practice is
 # ≥3x post-period length (Google's paper) and ≥1 full seasonal cycle. 52 weeks
@@ -354,12 +356,19 @@ def prepare_advertiser_data(
 
     combined = combined.set_index("week_start").sort_index()
 
-    # determine periods
+    # determine periods (with ramp-up exclusion)
     intervention_ts = pd.Timestamp(intervention_date)
     intervention_week = intervention_ts - pd.Timedelta(days=intervention_ts.weekday())
+    post_start = intervention_week + pd.Timedelta(weeks=RAMP_UP_WEEKS)
 
+    # pre-period ends at intervention; post-period starts AFTER ramp-up window
+    # the ramp-up weeks (intervention to intervention+4wk) are excluded from both periods
     pre = combined[combined.index < intervention_week]
-    post = combined[combined.index >= intervention_week]
+    post = combined[combined.index >= post_start]
+
+    if len(post) == 0:
+        log.warning(f"  {advertiser_id}: no post-period data after {RAMP_UP_WEEKS}-week ramp-up exclusion, skipping")
+        return None, None, None
 
     if len(pre) < min_pre_weeks:
         log.warning(f"  {advertiser_id}: only {len(pre)} pre-weeks (need {min_pre_weeks}), skipping")
@@ -493,11 +502,12 @@ def run_within_advertiser_comparison(
         adv_id = row["advertiser_id"]
         intervention = pd.Timestamp(row["intervention_date"])
         intervention_week = intervention - pd.Timedelta(days=intervention.weekday())
+        post_start = intervention_week + pd.Timedelta(weeks=RAMP_UP_WEEKS)
 
-        # post-period data for this advertiser
+        # post-period data AFTER ramp-up window for this advertiser
         adv = weekly_kpis[
             (weekly_kpis["advertiser_id"] == adv_id) &
-            (weekly_kpis["week_start"] >= intervention_week)
+            (weekly_kpis["week_start"] >= post_start)
         ]
 
         rec = adv[adv["campaign_group_id"].isin(recommended_cg_ids)]
