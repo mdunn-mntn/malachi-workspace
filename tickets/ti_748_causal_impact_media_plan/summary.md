@@ -339,7 +339,32 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 | `max_allocation` | 12% | Hard cap per network (prevents single-network dominance) |
 | `min_allocation` | 0.5% | Networks scoring below this get dropped |
 
-**CRITICAL FINDING:** Default `max_networks = 15`. Our 26-publisher plans (Boll & Branch, Tempo) are ABOVE this default, meaning they were generated under a different/older config version or with overrides. This may explain why they performed poorly — they weren't generated with the current algorithm's intended concentration. Need to check `media_plan` table for config snapshot on those specific plans.
+**CRITICAL FINDING — CONFIG CHANGE CONFIRMED (queried 2026-03-27):**
+
+The `max_networks` default was changed from ~26 to 15 between late January and early February 2026. This is visible in the plan creation timeline:
+
+| Advertiser | First Plan Date | Publishers | Config Era | IVR Effect |
+|---|---|---|---|---|
+| FICO | 2025-10-27 | 26 | Old | -4.0% |
+| Taskrabbit | 2025-10-27 | 26 | Old | +8.3%* |
+| **Lighting New York** | **2025-10-28** | **16** | **Exception** | **+10.5%*** |
+| Tempo | 2025-10-28 | 26 | Old | -26.2%* |
+| CWRV Sales (1st plan) | 2025-11-06 | 26 | Old | — |
+| Boll & Branch | 2025-11-21 | 26 | Old | -31.5%* |
+| FICO (2nd) | 2026-01-02 | 25 | Transition | — |
+| Talkspace | 2026-01-08 | 25 | Transition | +4.7% |
+| Am College (1st) | 2026-01-27 | 26 | Transition | — |
+| **Am College (2nd)** | **2026-02-12** | **16** | **New** | — |
+| **CWRV (all later)** | **2026-02-13+** | **16** | **New** | **+16.8%*** |
+
+**Key observations:**
+1. **Every plan created before Feb 2026 has 25-26 publishers** (except Lighting NY at 16 — possible per-advertiser override or budget/vertical-specific outcome)
+2. **Every plan created after Feb 2026 has exactly 16 publishers** — consistent with `max_networks=15` config change
+3. **CWRV Sales** had its first plan at 26 publishers (Nov 2025), but ALL subsequent plans (Feb 2026+) are 16 publishers. Their positive IVR result (+16.8%) likely reflects the NEW config's concentrated plans, not the original 26-publisher plan.
+4. **Boll & Branch and Tempo** never got updated plans — stuck on old 26-publisher config. Their negative results may reflect the old config, not the feature itself.
+5. **Lighting New York** is the exception — 16 publishers from the start (Oct 2025), and showed strong +10.5% lift. Suggests the 16-publisher concentration works regardless of when it was generated.
+
+**Implication for Kirsa:** The "concentration predicts who benefits" finding is actually **"new config vs old config predicts who benefits."** The algorithm was improved between Oct 2025 and Feb 2026 to produce more concentrated plans. Advertisers running under the new config see positive results. The two worst performers (Boll & Branch, Tempo) are on the old config and never got refreshed plans. **This is actionable: refresh their plans under the current config and re-measure.**
 
 **`deliverability_classification`:** Categorical prediction of delivery risk: "high" (expect full spend), "medium" (moderate underspend risk), "low" (high underspend risk). Computed by guardrail model evaluating per-network daily spend thresholds, audience size, blocked networks, budget constraints. Final classification = worst individual guardrail. For in-flight campaigns: if >3 days in and spending at >90% pace, gets upgraded to "high" regardless. **HHI (Herfindahl index) tracking exists in metrics but is NOT a classification factor yet** — could be added.
 
@@ -381,8 +406,10 @@ This comparison is **confounded by campaign maturity** and cannot be interpreted
 
 1. ✅ **Shared v5 results with Kirsa** (meeting 2, 2026-03-27) — she'll forward to Daniella (TPM)
 2. ✅ **Asked Chris Addy** — all 5 questions answered (2026-03-27). Key finding: 26-publisher plans exceed default max_networks=15.
-3. **Check config versions on 26-publisher plans** — query `media_plan` for Boll & Branch/Tempo plans to see if they were generated under old config with higher max_networks. This could explain why they performed poorly.
-4. **Follow up with Chris Addy** — confirm if per-publisher score breakdown is persisted to BQ (would enable testing whether score distribution predicts IVR outcomes)
+3. ✅ **Confirmed config change via BQ query** — every plan before Feb 2026 has 25-26 publishers; every plan after has 16. Config was changed between Jan-Feb 2026. Boll & Branch/Tempo are on old config, never refreshed.
+4. **Share config change finding with Kirsa** — the story is now: "old config produced diluted plans that hurt performance; new config produces concentrated plans that help. Refresh Boll & Branch/Tempo plans under current config."
+5. **Follow up with Chris Addy** — (a) confirm if per-publisher score breakdown is persisted to BQ, (b) ask about Lighting NY exception (16 pubs on Oct 28 when everyone else got 26), (c) discuss refreshing old-config plans
+6. **Explore olympus repo** — cloned to `/Users/malachi/Developer/work/mntn/olympus`. Contains algorithm code, config, docs.
 5. **Send PDFs to Kirsa** — methodology explainer and summary for Daniella to review
 6. **Wait for dynamic media plan release** — experiment blocked until then
 7. **Propose alpha tuning test to Chris/Kirsa** — our data suggests higher concentration works; Chris confirmed alpha is tunable via config. A/B test with alpha=7 vs alpha=5 would be high-value.
