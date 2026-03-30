@@ -14,10 +14,13 @@ Primary metric: IVR (impression-to-visit rate = VV / impressions)
 
 import warnings
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 
 warnings.filterwarnings("ignore")
 
@@ -425,6 +428,239 @@ def run_synthetic_control(experiment_df):
 
 
 # =============================================================================
+# VISUALIZATIONS
+# =============================================================================
+
+OUTPUT_DIR = Path("outputs")
+
+def plot_daily_ivr_by_advertiser(df):
+    """Daily IVR time series for control vs treatment, one subplot per advertiser."""
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10), sharey=False)
+    axes = axes.flatten()
+
+    for idx, (adv_id, adv_name) in enumerate(sorted(ADVERTISER_NAMES.items(), key=lambda x: x[1])):
+        ax = axes[idx]
+        adv_data = df[df["advertiser_id"] == adv_id]
+
+        for arm, color, ls in [("control", "#2196F3", "-"), ("treatment", "#FF5722", "-")]:
+            arm_data = adv_data[adv_data["arm"] == arm].groupby("day").agg(
+                impressions=("impressions", "sum"), vv=("vv", "sum")
+            )
+            arm_data["ivr"] = arm_data["vv"] / arm_data["impressions"]
+            ax.plot(arm_data.index, arm_data["ivr"] * 100, color=color, ls=ls,
+                    marker="o", markersize=3, linewidth=1.5, label=arm.title(), alpha=0.85)
+
+        ax.set_title(adv_name, fontsize=12, fontweight="bold")
+        ax.set_ylabel("IVR (%)")
+        ax.legend(fontsize=9)
+        ax.tick_params(axis="x", rotation=45, labelsize=8)
+        ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("%.2f"))
+        ax.grid(axis="y", alpha=0.3)
+
+    axes[5].set_visible(False)  # hide 6th subplot
+    fig.suptitle("Daily IVR: Control vs Treatment by Advertiser", fontsize=14, fontweight="bold")
+    plt.tight_layout()
+    fig.savefig(OUTPUT_DIR / "ti_504_daily_ivr_by_advertiser.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {OUTPUT_DIR / 'ti_504_daily_ivr_by_advertiser.png'}")
+
+
+def plot_daily_ivr_by_intent_group(df):
+    """Daily IVR time series, one subplot per intent group, all advertisers overlaid."""
+    intent_groups = ["PP", "HI", "MI", "MI_PP"]
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    axes = axes.flatten()
+
+    colors = {"Collector Store": "#E91E63", "Edward Martin": "#9C27B0",
+              "G-Shock": "#00BCD4", "Reedsy": "#4CAF50", "Zumba Fitness": "#FF9800"}
+
+    for idx, ig in enumerate(intent_groups):
+        ax = axes[idx]
+        ig_data = df[df["intent_group"] == ig]
+
+        for adv_id, adv_name in sorted(ADVERTISER_NAMES.items(), key=lambda x: x[1]):
+            adv_ig = ig_data[ig_data["advertiser_id"] == adv_id]
+            for arm, ls in [("control", "--"), ("treatment", "-")]:
+                arm_data = adv_ig[adv_ig["arm"] == arm]
+                if arm_data.empty:
+                    continue
+                label = f"{adv_name} ({arm[0].upper()})" if arm == "treatment" else None
+                ax.plot(arm_data["day"], arm_data["ivr"] * 100,
+                        color=colors[adv_name], ls=ls, linewidth=1.2,
+                        marker="o" if arm == "treatment" else None, markersize=2,
+                        alpha=0.7 if arm == "control" else 0.9, label=label)
+
+        ig_labels = {"PP": "Peak Performance", "HI": "High Intent",
+                     "MI": "Mid Intent", "MI_PP": "Mid Intent + Peak Performance"}
+        ax.set_title(ig_labels[ig], fontsize=12, fontweight="bold")
+        ax.set_ylabel("IVR (%)")
+        ax.tick_params(axis="x", rotation=45, labelsize=8)
+        ax.grid(axis="y", alpha=0.3)
+        if idx == 0:
+            ax.legend(fontsize=7, loc="upper right")
+
+    fig.suptitle("Daily IVR by Intent Group (solid=treatment, dashed=control)", fontsize=14, fontweight="bold")
+    plt.tight_layout()
+    fig.savefig(OUTPUT_DIR / "ti_504_daily_ivr_by_intent_group.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {OUTPUT_DIR / 'ti_504_daily_ivr_by_intent_group.png'}")
+
+
+def plot_lift_heatmap(rct_ig_results):
+    """Heatmap of IVR lift (%) by advertiser × intent group. Stars for significance."""
+    pivot_lift = rct_ig_results.pivot_table(
+        index="group", columns="intent_group", values="ivr_lift", aggfunc="first"
+    )
+    pivot_sig = rct_ig_results.pivot_table(
+        index="group", columns="intent_group", values="significant_t", aggfunc="first"
+    )
+
+    # Rebuild with advertiser names as index
+    adv_names = [ADVERTISER_NAMES[aid] for aid in sorted(ADVERTISER_NAMES.keys(), key=lambda x: ADVERTISER_NAMES[x])]
+    intent_order = ["PP", "HI", "MI", "MI_PP"]
+
+    lift_matrix = np.zeros((len(adv_names), len(intent_order)))
+    sig_matrix = np.zeros((len(adv_names), len(intent_order)), dtype=bool)
+
+    for i, adv_name in enumerate(adv_names):
+        for j, ig in enumerate(intent_order):
+            row = rct_ig_results[
+                (rct_ig_results["group"] == f"{adv_name} — {ig}")
+            ]
+            if not row.empty:
+                lift_matrix[i, j] = row["ivr_lift"].values[0] * 100
+                sig_matrix[i, j] = row["significant_t"].values[0]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(lift_matrix, cmap="RdYlGn", aspect="auto",
+                   vmin=-30, vmax=130)
+
+    ax.set_xticks(range(len(intent_order)))
+    ax.set_xticklabels(["Peak Perf", "High Intent", "Mid Intent", "MI + PP"], fontsize=11)
+    ax.set_yticks(range(len(adv_names)))
+    ax.set_yticklabels(adv_names, fontsize=11)
+
+    for i in range(len(adv_names)):
+        for j in range(len(intent_order)):
+            val = lift_matrix[i, j]
+            sig = "**" if sig_matrix[i, j] else ""
+            color = "white" if abs(val) > 60 else "black"
+            ax.text(j, i, f"{val:+.1f}%{sig}", ha="center", va="center",
+                    fontsize=10, fontweight="bold", color=color)
+
+    plt.colorbar(im, ax=ax, label="IVR Lift (%)", shrink=0.8)
+    ax.set_title("Fangorn Treatment Effect: IVR Lift by Advertiser × Intent Group\n(** = p < 0.05)",
+                 fontsize=13, fontweight="bold")
+    plt.tight_layout()
+    fig.savefig(OUTPUT_DIR / "ti_504_lift_heatmap.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {OUTPUT_DIR / 'ti_504_lift_heatmap.png'}")
+
+
+def plot_advertiser_level_bars(rct_adv_results):
+    """Bar chart of advertiser-level IVR with control vs treatment side by side."""
+    rct_adv_results = rct_adv_results.sort_values("ivr_lift", ascending=True)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), gridspec_kw={"width_ratios": [2, 1]})
+
+    # Left: grouped bar chart
+    advs = [g.replace("Zumba Fitness", "Zumba").replace("Collector Store", "Collector St.")
+            for g in rct_adv_results["group"].values]
+    x = np.arange(len(advs))
+    width = 0.35
+
+    c_ivr = rct_adv_results["control_ivr"].values * 100
+    t_ivr = rct_adv_results["treatment_ivr"].values * 100
+
+    bars_c = ax1.barh(x - width / 2, c_ivr, width, label="Control", color="#2196F3", alpha=0.85)
+    bars_t = ax1.barh(x + width / 2, t_ivr, width, label="Treatment", color="#FF5722", alpha=0.85)
+
+    for i, (sig, lift) in enumerate(zip(rct_adv_results["significant_t"].values, rct_adv_results["ivr_lift"].values)):
+        marker = f"  {lift:+.0%} **" if sig else f"  {lift:+.0%}"
+        ax1.text(max(c_ivr[i], t_ivr[i]) + 0.02, x[i], marker, va="center", fontsize=10,
+                 fontweight="bold" if sig else "normal")
+
+    ax1.set_yticks(x)
+    ax1.set_yticklabels(advs, fontsize=11)
+    ax1.set_xlabel("IVR (%)", fontsize=11)
+    ax1.set_title("IVR by Advertiser", fontsize=13, fontweight="bold")
+    ax1.legend(fontsize=10)
+    ax1.grid(axis="x", alpha=0.3)
+
+    # Right: lift bar chart
+    lifts = rct_adv_results["ivr_lift"].values * 100
+    colors = ["#4CAF50" if l > 0 else "#F44336" for l in lifts]
+    sig_flags = rct_adv_results["significant_t"].values
+    edge_colors = ["black" if s else "none" for s in sig_flags]
+
+    ax2.barh(x, lifts, color=colors, alpha=0.85, edgecolor=edge_colors, linewidth=2)
+    ax2.axvline(0, color="black", linewidth=0.8)
+    ax2.set_yticks(x)
+    ax2.set_yticklabels([])
+    ax2.set_xlabel("IVR Lift (%)", fontsize=11)
+    ax2.set_title("Treatment Lift (** = sig)", fontsize=13, fontweight="bold")
+    ax2.grid(axis="x", alpha=0.3)
+
+    for i, (l, s) in enumerate(zip(lifts, sig_flags)):
+        label = f"{l:+.1f}%**" if s else f"{l:+.1f}%"
+        ax2.text(l + (2 if l > 0 else -2), i, label, va="center", ha="left" if l > 0 else "right",
+                 fontsize=10, fontweight="bold" if s else "normal")
+
+    plt.tight_layout()
+    fig.savefig(OUTPUT_DIR / "ti_504_advertiser_bars.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {OUTPUT_DIR / 'ti_504_advertiser_bars.png'}")
+
+
+def plot_pooled_intent_bars(df):
+    """Pooled control vs treatment IVR by intent group across all advertisers."""
+    intent_groups = ["PP", "HI", "MI", "MI_PP"]
+    ig_labels = ["Peak Perf", "High Intent", "Mid Intent", "MI + PP"]
+
+    c_ivrs, t_ivrs, lifts, p_vals = [], [], [], []
+    for ig in intent_groups:
+        subset = df[df["intent_group"] == ig]
+        c = subset[subset["arm"] == "control"]
+        t = subset[subset["arm"] == "treatment"]
+        c_ivr = c["vv"].sum() / c["impressions"].sum()
+        t_ivr = t["vv"].sum() / t["impressions"].sum()
+        c_ivrs.append(c_ivr * 100)
+        t_ivrs.append(t_ivr * 100)
+        lifts.append((t_ivr - c_ivr) / c_ivr * 100)
+
+        c_daily = c.groupby("day").agg(impressions=("impressions", "sum"), vv=("vv", "sum"))
+        t_daily = t.groupby("day").agg(impressions=("impressions", "sum"), vv=("vv", "sum"))
+        c_daily["ivr"] = c_daily["vv"] / c_daily["impressions"]
+        t_daily["ivr"] = t_daily["vv"] / t_daily["impressions"]
+        _, p = stats.ttest_ind(t_daily["ivr"].values, c_daily["ivr"].values, equal_var=False)
+        p_vals.append(p)
+
+    x = np.arange(len(ig_labels))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.bar(x - width / 2, c_ivrs, width, label="Control", color="#2196F3", alpha=0.85)
+    ax.bar(x + width / 2, t_ivrs, width, label="Treatment", color="#FF5722", alpha=0.85)
+
+    for i, (lift, p) in enumerate(zip(lifts, p_vals)):
+        sig = "**" if p < 0.05 else ""
+        ax.text(i, max(c_ivrs[i], t_ivrs[i]) + 0.02, f"{lift:+.1f}%{sig}",
+                ha="center", fontsize=10, fontweight="bold")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(ig_labels, fontsize=11)
+    ax.set_ylabel("IVR (%)", fontsize=11)
+    ax.set_title("Pooled IVR: Control vs Treatment by Intent Group\n(all 5 advertisers combined)",
+                 fontsize=13, fontweight="bold")
+    ax.legend(fontsize=10)
+    ax.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    fig.savefig(OUTPUT_DIR / "ti_504_pooled_intent_bars.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Saved: {OUTPUT_DIR / 'ti_504_pooled_intent_bars.png'}")
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -458,6 +694,17 @@ def main():
     rct_ig.to_csv("outputs/ti_504_rct_intent_group_results.csv", index=False)
     rct_adv.to_csv("outputs/ti_504_rct_advertiser_results.csv", index=False)
     print("\nResults saved to outputs/")
+
+    # Visualizations
+    print("\n" + "=" * 90)
+    print("GENERATING VISUALIZATIONS")
+    print("=" * 90)
+
+    plot_daily_ivr_by_advertiser(df)
+    plot_daily_ivr_by_intent_group(df)
+    plot_lift_heatmap(rct_ig)
+    plot_advertiser_level_bars(rct_adv)
+    plot_pooled_intent_bars(df)
 
     print("\n" + "=" * 90)
     print("ANALYSIS COMPLETE")
