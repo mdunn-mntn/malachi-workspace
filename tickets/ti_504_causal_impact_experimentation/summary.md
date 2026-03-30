@@ -77,9 +77,73 @@ The experimentation team needs a rigorous causal inference framework to measure 
 - Some verticals are poorly targeted (Fangorn helps a lot), some are well-targeted (Fangorn adds little)
 - Estimated impact by vertical should guide rollout priority
 
+### RCT Analysis Results (2026-03-30)
+
+**Data:** All 40 experiment campaigns have data in `cost_impression_log` (not in summary tables due to `is_test = true`). Run period: 2026-03-04 to 2026-03-24 (21 days). Total: 3.2M impressions, 38.6K VVs. VVs from `clickpass_log`.
+
+**Track 1: Direct RCT — Intent-Group Level (head-to-head, primary analysis)**
+
+| Advertiser | Intent | Control IVR | Treatment IVR | Lift | p-value | Sig? |
+|---|---|---|---|---|---|---|
+| Edward Martin | PP | 0.005176 | 0.011544 | +123.0% | 0.0000 | YES |
+| Edward Martin | MI_PP | 0.005424 | 0.009207 | +69.8% | 0.0021 | YES |
+| Collector Store | PP | 0.003987 | 0.006360 | +59.5% | 0.0134 | YES |
+| Collector Store | MI | 0.003930 | 0.005631 | +43.3% | 0.0252 | YES |
+| Edward Martin | HI | 0.013173 | 0.016705 | +26.8% | 0.1068 | no |
+| Reedsy | PP | 0.004739 | 0.005946 | +25.5% | 0.0903 | no |
+| Collector Store | HI | 0.006006 | 0.008173 | +36.1% | 0.0841 | no |
+| G-Shock | PP | 0.014968 | 0.018433 | +23.2% | 0.1382 | no |
+| Reedsy | MI | 0.005760 | 0.007038 | +22.2% | 0.1311 | no |
+| Zumba | MI | 0.010197 | 0.011312 | +10.9% | 0.4175 | no |
+| G-Shock | HI | 0.034458 | 0.034301 | -0.5% | 0.9742 | no |
+| G-Shock | MI_PP | 0.014226 | 0.013955 | -1.9% | 0.9002 | no |
+| Zumba | MI_PP | 0.007806 | 0.007256 | -7.1% | 0.6202 | no |
+| Zumba | HI | 0.022569 | 0.019876 | -11.9% | 0.3531 | no |
+| G-Shock | MI | 0.029283 | 0.025826 | -11.8% | 0.3748 | no |
+| Zumba | PP | 0.013209 | 0.011275 | -14.6% | 0.1918 | no |
+| Reedsy | MI_PP | 0.003959 | 0.003297 | -16.7% | 0.1485 | no |
+| Collector Store | MI_PP | 0.003644 | 0.004493 | +23.3% | 0.1961 | no |
+| Edward Martin | MI | 0.011485 | 0.012326 | +7.3% | 0.6100 | no |
+| Zumba | MI_PP | 0.007806 | 0.007256 | -7.1% | 0.6202 | no |
+
+Summary: **4/20 significant** (all positive). 12/20 show positive lift.
+
+**Track 1: Advertiser-Level Summary**
+
+| Advertiser | Control IVR | Treatment IVR | Lift | p-value | Sig? |
+|---|---|---|---|---|---|
+| Edward Martin | 0.008813 | 0.012446 | +41.2% | 0.0153 | YES |
+| Collector Store | 0.004392 | 0.006164 | +40.3% | 0.0272 | YES |
+| Reedsy | 0.006096 | 0.006492 | +6.5% | 0.6027 | no |
+| G-Shock | 0.023239 | 0.023141 | -0.4% | 0.9766 | no |
+| Zumba | 0.013421 | 0.012416 | -7.5% | 0.5548 | no |
+
+**Pooled (all advertisers):** Overall +3.4% lift, p=0.78 — not significant.
+
+**Track 2: Synthetic Control (CausalImpact) — Secondary validation**
+
+Used parent campaign pre-period IVR as baseline, compared to treatment arm IVR during experiment.
+
+| Advertiser | Pre-Weeks | Predicted IVR | Actual IVR | Effect | p-value |
+|---|---|---|---|---|---|
+| Collector Store | 32 | 0.042594 | 0.006724 | -84.2% | 0.005 |
+| Reedsy | 41 | 0.031328 | 0.007228 | -76.9% | 0.001 |
+| G-Shock | 21 | 0.123730 | 0.024269 | -80.4% | 0.093 |
+| Edward Martin | 19 | 0.035262 | 0.012494 | -64.6% | 0.026 |
+| Zumba | 41 | 0.039938 | 0.014177 | -64.5% | 0.052 |
+
+**IMPORTANT caveat:** These massive negative effects are NOT a treatment signal — they reflect that experiment campaigns target IP bucket subsets (600-999) vs parent campaigns targeting the full audience. The IVR drop is expected from audience fragmentation + fresh campaigns without optimization history. Synthetic control is not valid for this comparison because the experiment campaigns are structurally different from parent campaigns.
+
+**Key takeaways:**
+1. The RCT is the valid analysis here — treatment vs control with matched audiences
+2. Fangorn shows strong, significant improvement for Edward Martin (+41%) and Collector Store (+40%)
+3. No effect for G-Shock (-0.4%), Reedsy (+6.5%), or Zumba (-7.5%)
+4. This aligns with Matt's observation: some verticals are well-targeted already (Fangorn adds little), while others benefit significantly
+5. The PP (Peak Performance) intent group shows the most consistent treatment effect across advertisers
+
 ## 5. Solution
 
-TBD — awaiting campaign data from Nick's spreadsheet. Malachi to run causal impact analysis.
+Analysis complete — see Track 1 results above. Script: `artifacts/ti_504_fangorn_rct_analysis.py`. Data: `outputs/ti_504_experiment_daily_metrics.csv`.
 
 ## 6. Questions Answered
 
@@ -89,18 +153,23 @@ TBD — awaiting campaign data from Nick's spreadsheet. Malachi to run causal im
 | Who set up the experiment? | Nick |
 | How were audiences equalized? | IP hashing for holdout group bucket ranges |
 | Were campaigns modified mid-flight? | No — all started fresh as new campaigns |
-| What's the primary metric? | IVR (conversions) |
-| What's the immediate goal? | Validate RCT results with causal impact, then use framework for broader Fangorn rollout |
-| How to select features for clustering? | XGBoost importance → iterative paring → group-by for categoricals → SHAP for fine-tuning |
+| What's the primary metric? | IVR (impression-to-visit rate) |
+| Does Fangorn improve IVR? | Mixed — strong improvement for Edward Martin (+41%) and Collector Store (+40%), no effect for G-Shock/Reedsy/Zumba |
+| Which intent group benefits most? | PP (Peak Performance) shows the most consistent treatment effect |
+| Are test campaigns in summary tables? | No — `is_test = true` excludes them. Must query `cost_impression_log` and `clickpass_log` directly |
+| When did campaigns run? | 2026-03-04 to 2026-03-24 (21 days) |
+| Is synthetic control valid here? | Not for this comparison — audience fragmentation makes parent vs experiment comparison invalid |
 
 ## 7. Data Documentation Updates
 
-TBD
+- Test campaigns (`is_test = true`) are excluded from all silver summary/aggregate tables. Must query log-level tables directly.
 
 ## 8. Open Items / Follow-ups
 
-- ⬜ Get Nick's spreadsheet with campaign_group_ids for all 5 advertisers and their control/treatment arms
-- ⬜ Malachi to run causal impact analysis once campaign data is gathered
+- ✅ Get Nick's spreadsheet with campaign_group_ids
+- ✅ Run causal impact / RCT analysis
+- ⬜ Review results with Matt — discuss why some advertisers show strong effect and others don't
+- ⬜ Add conversion/revenue metrics (CVR, ROAS) if needed — currently IVR only
 - ⬜ Review TI-457 for current AIS Phase 2 state
-- ⬜ When Fangorn rollout begins (few weeks): have causal impact framework ready for broader measurement
+- ⬜ When Fangorn rollout begins: have causal impact framework ready for broader measurement
 - ⬜ Clustering methodology for systematic advertiser selection during rollout
