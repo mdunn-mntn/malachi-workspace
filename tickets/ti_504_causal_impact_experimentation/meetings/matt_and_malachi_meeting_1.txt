@@ -1,0 +1,238 @@
+Speaker 1  0:00  
+I just had back to back meetings here. So yeah, thanks for for meeting. So I wanted to give you kind of a quick update with the causal impact, so I'll share some of that stuff it's related to. But essentially, with the causal impact, I was able to get some pretty definitive results and set it up in such a way that's really easy to pass off to other people. All the tables are now being based off of GCP. There's no data grip requirement on it at all, which is pretty great, because it means that people can just pull it into the local repo, and as long as they have their Google creds, they can run it. So it's pretty simple, but basically the gist of what I did there is, I don't think I have enough variables and such in it, but I did implement a few methods to try and get more consistent results. So, I mean, I know you know all this about being a data scientist, but there are, I think there are a lot of features that I was choosing that were just like biased or weren't really helpful. So I use a couple of sampling methods to basically choose which variables they should choose based on which advertiser, whether or not I had enough data, and then whether or not, you know, I mean, obviously there's the P values and stuff. But there's also other ways to just kind of, I mean, some of the tests, I think I forget the name of the test was, but beyond the point that I essentially got some pretty valuable results from causal impact for stuff. So anyways, I'm ready to roll it out for yours. So I just to be quite frank with you, I forgot which experiment we're doing it for, and what are the important things there? So really, what I'm trying to gather from this is like, let's talk about the experiment. What are the you know, what's the null hypothesis, stuff like that. And then I think that I honestly should probably be able to finish it end of day. So we'll have something for you tomorrow.
+
+Unknown Speaker  1:59  
+Pull up something here, and
+
+Speaker 1  2:00  
+then we could talk about that Slack message I have, because that's unrelated to this. It was more of connected to our, my other discussion
+
+Speaker 2  2:07  
+that was going on. So, yeah, the experiment here. I mean, we ran an experiment, and it was like
+
+Unknown Speaker  2:13  
+it was a control treatment type of experiment, so
+
+Unknown Speaker  2:19  
+the results should be good, but
+
+Unknown Speaker  2:24  
+let's see here. Let me
+
+Unknown Speaker  2:29  
+put in the chat.
+
+Speaker 3  2:33  
+It's like this would be the quickest way to kind of get the audience's
+
+Speaker 1  2:41  
+ticket associated with this too, besides the one that obviously
+
+Speaker 3  2:47  
+is, for me, was there we find, I'm sure there is multiple tickets.
+
+Unknown Speaker  2:51  
+There's many, many tickets related to this. Let's see.
+
+Unknown Speaker  3:05  
+I'm trying to see if there's one
+
+Unknown Speaker  3:08  
+in here that would have been assigned to Nick, but I don't see it.
+
+Speaker 2  3:17  
+What's the best thing for you to have, like a list of campaign Yeah.
+
+Speaker 1  3:21  
+So essentially, what it comes down to, I mean, it depends, it depends on how this experiment ran, right? So, like, did it just implement to a lot of advertisers in the middle of their campaign and apply their campaigns? Was it only for new starting campaigns? But generally, I need a list of advertisers and campaigns and a start date when it those are the primary ones. And then, you know, also understanding the objective is important. And then, like I said, I don't really quite remember the experiment, so,
+
+Unknown Speaker  3:49  
+yeah, let me find.
+
+Speaker 3  3:56  
+Nick has a good setup here. Here we go. Okay, do okay,
+
+Unknown Speaker  4:05  
+and I'll just share my screen as well
+
+Unknown Speaker  4:09  
+so that it's captured
+
+Unknown Speaker  4:16  
+here. Oh, shoot, I didn't see that
+
+Unknown Speaker  4:19  
+Michelle is gone.
+
+Unknown Speaker  4:23  
+Sorry, Mike, just a message.
+
+Speaker 2  4:32  
+So this spreadsheet here you can see this is created by Nick, and it is basically everyone we targeted. And the way that this was set up was Nick found a candidate, set of advertisers. There's five of them here, so you see them here, collector store, Edward Martin, G shock reads izumba. What he did. Was took one of their prospecting campaigns, and he cloned it and created a control group and a treatment group. So this was actually like a full randomized ad test, and here we have all the campaign group IDs associated with them. And the way that he set it up was, for each advertiser, we should see four groups within each A and B. So like, within the control arm, there should be four groups which correspond to our intent groupings. So there's a control peak performance, a control high intent, control mid intent, and then a control mid intent with peak performance. So that's like, and then same on the treatment side. So there it's our standard definitions for the control for peak performance. Just means in the vertical. High intent means in the vertical, and you match the selected keywords from DS 19. Mid intent is you're in the bucket. So it's all the Venn diagram stuff. And then mid intent with peak performance, is basically
+
+Unknown Speaker  6:29  
+the peak performance group plus the mid intent group.
+
+Speaker 1  6:35  
+So they basically all those campaigns started with these things. It wasn't something that was rolled out in the middle
+
+Speaker 2  6:44  
+and it's all, yeah, they were just cloned from existing campaigns and started as new campaigns, and he did some selection like this bucket range here is, I don't know if you've ever seen like, the holdout group selection process where they like hash IP addresses. But this was basically this bucket range is basically a method by which to try to make the control peak performance size the same as the treatment peak performance size, so that the size of the audiences were the
+
+Speaker 1  7:24  
+same, okay? And so what I'm understanding here from fan Gorn is that this, we have the control and treatment groups already, and what we want to do with causal impact is just see if we can measure that same that, I mean, guess get the same results that we saw in our actual experiment.
+
+Speaker 2  7:46  
+Probably yes. And like, the way that I see it is like, then it proves it out. And what's going to be super helpful is in a few weeks, when we do roll this out, that's when it's going to be important to have this set up and ready to go, because then we can actually do that right, because we'll do a rollout, I'm guessing, for certain advertisers or certain verticals, kind of like we did for Jaguar. So then, like that similar process you did for Jaguar, we can do for Fangorn, where we only rolled it out to a subset. So then that makes sense to have the causal impact a lot more, because it's truly the only thing. It's like, the best tool we have, yep.
+
+Speaker 1  8:33  
+And it also makes sense too, because I could also run the clustering, so I could figure out which one should we systematically roll it out to probably choose one advertiser per cluster. I mean, you know, that makes sense too.
+
+Speaker 2  8:45  
+That's a good decision. What I've been doing is looking for places where it makes sense to do it based on, like, estimated impact, based on like, how much we think we can improve. Because, like, the main thing that we saw was some verticals are poorly targeted. Some verticals are like targeted really well. So depending on which vertical you're in, fangor may help a lot or may not help at all.
+
+Speaker 1  9:13  
+Okay, so this is actually, so this, this is great. You know, I don't want to ask stupid questions. I'll ask those later. Give me, but I have some interesting questions now. So number one, what I would wondering, I mean, you don't have to necessarily help me, but what would be nice to have your guidance here is that when I'm doing the clustering right, I'm obviously basing it off a set of variables, and I'm trying to find similar advertisers based on those criteria. And so there's the obvious ones, and I can go through them, but like, it's, you know, spend and a number of impressions, they had things like that, right? And there's 1000 ways to skin the cat, and you're aware of that too. So like, it might not be valuable just to say spend. It might be valuable to say, what was their, I don't know, spend. Increase or decrease by percentage over the last three weeks. You know, there's so many different ways you can add particular things to it. When I'm coming up, I basically have a two fold thing is and because this kind of actually goes into my other question I asked on slack when I'm clustering advertisers. I want to try to think about what is probably the best way to cluster those advertisers, and what is the initial set of, you know, features, right? And so I have a, you know, I have an idea, and what I could do, essentially, is grab a ton of different features and do kind of the BIS stuff, which I'll talk a little bit more about. There might be a better way. You know, you might have some certain things to suggest. So that's like, one thing I want to do. So I guess let's, let's stop there. Like, I mean, we don't talk into in depth, but our, I guess this is, this only really matters for causal impact so this is going to be linear regression. So are there any particular methods that you think that we should use for this? I mean, I have ideas, but I like to hear what people think so.
+
+Speaker 2  11:15  
+So you're talking about what to use in the causal impact analysis, as far as features that would help you cluster advertisers together, help you do the like, find the most similar advertisers that you would use for the causal part.
+
+Speaker 1  11:34  
+Yeah, because the ultimate goal is that we want to systematically choose advertisers, and now we can randomize once they're in those clusters, but the idea is to systematically choose a broad enough range of advertisers without being completely random, right? Like, you know, being a little bit specific. So that's the goal here. Is that we get we fairly represent as many advertisers as possible in this as few advertisers as possible. That's the kind of the goal.
+
+Speaker 2  12:01  
+Yeah, that makes sense. Um, yeah. I mean the so let me think you're gonna like the clustering methodology kind of makes sense to a degree. But the I'm more concerned about making sure the features that you choose are correct. So that's, if you're on the feature selection side,
+
+Unknown Speaker  12:28  
+that's the main question that you're asking. Yeah, that's,
+
+Speaker 1  12:31  
+that's really where I'm thinking of like, well, I could choose arbitrary features, but maybe there's a good, systematic way to choose it for that particular reason, which is,
+
+Unknown Speaker  12:40  
+you know, right?
+
+Unknown Speaker  12:45  
+Yeah, let me think there like the the
+
+Speaker 2  12:49  
+regression approach did make sense, but I'm trying to figure if you
+
+Unknown Speaker  12:58  
+are doing clustering then, because
+
+Speaker 1  13:01  
+causal impact is based on Bayesian statistics, and it's doing time series data. So there's, like that, I mean, it's inherently linear regression, because it's time series. So that's why,
+
+Speaker 2  13:13  
+yeah, like with the features, I would say, Okay, so first, the classes, like the different types of features that you're selecting from what I already recall in the causal impact analysis stuff, they made sense, like, what you said, like, the spendability, all of those things I wouldn't have, like, the historical Do you have, like, historical performance in there as well, or as, like, some baseline of, like, what their typical?
+
+Speaker 1  13:39  
+Yeah, it was taking a year's worth of data on their stuff. And, like, the only drawback I see from that is that, obviously we're making tons of changes, so what we did a year ago might be totally different from now, but it still, you know, gives an idea of like, you know. And of course, that's depending on the advertiser. Some advertiser may have started 30 days ago, but you know, as much information as I can get about the advertisers what I do up to a year.
+
+Unknown Speaker  14:03  
+Okay, so then,
+
+Speaker 2  14:07  
+yeah, I mean, there's kind of like, interesting things you could do where you you almost like, train another model to predict the like cluster assignment, like which class of advertisers they would fall into. And then you can kind of use that, in a sense, to figure out which features are actually the most important, you know, and like a non linear way even. But that might be a little too far. That's what I was thinking. That was like, Well, I
+
+Speaker 1  14:44  
+wonder if the juice is worth the squeeze. And the only reason I'm saying this is because we're moving away from like, this whole arbitrary, like, categorization, right? Especially with fan Gore, and we're going to be adding more features and stuff. And it's like, it almost seems like, now the only limitation is not. Limitation. But it's like, well, now we have advertisers, right? Which, you can't make it more granular than that. And so it's like, well, what, how do we sample these advertisers, besides randomly too, you know? I mean, I guess you can't randomly sample them, but,
+
+Speaker 2  15:14  
+yeah, I mean, with the the way that you're so, with the causal impacts of you're doing synthetic control, is that right?
+
+Speaker 1  15:20  
+Or is it something else you can Yes, it's synthetic control. But just you don't have to use synthetic control, you can use a real treat, like real control.
+
+Speaker 2  15:27  
+So because, like with that, as long as you are selecting, even randomly selecting a set of advertisers, should make it perform well, like, you don't have to do too much. You don't have to do too much. Feature selection to, like, narrow it down.
+
+Speaker 3  15:52  
+But yeah, so let's see. Oh, yeah. So there is, like, variance decomposition analyzes that I've done before
+
+Speaker 2  16:09  
+that can sometimes help where you have like, different levels of features, and then you can do something that's called variance. Variance, decomposition analysis. And it allows you to say, like, how much variance is coming from, like features that are at this level versus features that are at this level. So like what you talk about, if you have features that are at the advertiser level, you can see how much variance is there features that are at, like, the vertical level, if you have such a thing, or features that are at like a time kind of level as well, like, Oh, if it's like a 30 day look back, You can kind of see, like, how how much variance each is controlling for, and then that kind of tells you which are actually important to use and which ones are just like you. They're not important. I'm trying to think of things that maybe aren't like the most commonly use like the most, like the ones you don't already have, like, just like a straight feature.
+
+Speaker 1  17:27  
+This is what I did before, too. So that's what's called Bayesian information criterion, so it balances two things, so how well the model fits the data, and then how complex the model, so it's got, it tries to do the least covariates right, which I think is valuable, though, because this is connected to and we can talk about it in our remaining few minutes. But when you with this feature store, right, there's 1000 different features we can choose from. And I think that one of the issues that we have is that the way that we think, like as humans, is not necessarily valuable for what we put in. And so it might like make intrinsic sense to go, oh, let's add this feature, but it might not be adding any value to, like, our prediction stuff. And so what I want to do a systematic way of doing it, because, like, literally, there's an unlimited amount of things we could add, and each one of those things we add is going to add cost of computation, right? So Well, my thought process is, is to sample, and this is actually what I'm doing. It was to sample a set of data, base it on IVR, being the predictive thing, and then putting in as many features as possible and seeing which ones have, which ones were correlated with, with were most predictive of that feature, without being like, related, right? Like, so obviously, I don't want to use visits to predict IVR, right? So anything that's not related, that's my plan. And so I know that these models choose a lot of things based on like, they drop things based on collinearity, and it and then having high variance, right? Which is important. But Alex was bringing up to me that you're like you said, the Twin Towers method with, you know, neural nets. And I'm thinking, well, maybe that doesn't matter, like, I guess I don't know enough about neural nets to kind of make that approach. Is that a bad approach for neural nets, or is this still a good systematic approach that if it works for linear regression, that if we choose those based on that criteria, and then go, Okay, well, let's add this first to the neural net. As far as like features, I guess I'll leave it there.
+
+Speaker 2  19:29  
+Yeah, so I guess what's I'm trying to understand the goal, because it feels like your goal here is a little different. So, like, we don't have to even look at the same set of features, because here you're Are you? You're discussing just like, what would make the causal impact analysis as good as it
+
+Unknown Speaker  19:50  
+can be? Yep, that's correct.
+
+Speaker 2  19:54  
+Whereas we're building a model that's trying to predict something, so the model. Model can like, the prediction model can be much more complex than this analysis needs to be like. Here you only need, I would say, the most important features, which I think, I guess that's kind of what you're looking for. Like, what are the most important features? So with a neural net, then the most important features likely will still be the ones that you would get from any kind of, like, a linear analysis, most likely you would miss out on, like, why? Like, maybe some of the finer details. But I don't think it's super important because, like, doing an analysis is different than, like, building a model. And so I think with this, you don't need to to necessarily do that. I'm trying to think through it though, because, like with a synthetic control approach, you just need a sample of candidates that you would be able to make like, a constrained, linear combination of them that approximates your like treatment, your your treatment.
+
+Speaker 1  21:19  
+So I guess that that's really, that's really great information to know. So I guess in this situation, let's say there's 100 features we have to choose from to add to, you know, the Fangorn stuff that we want to add to. Yeah, how do we, how do we empirically choose features rather than, like, Okay, here's something I know is a low hanging fruit, and it almost 100% I'm sure will have a great impact. Which phone somebody uses is actually really valuable, iPhone versus Android. Inherently, iPhone users convert way more than Android. I mean, that's like, pretty conclusive data, right? And there's a lot of reasons why. So we could throw that feature in there, and I think that'd be valuable. But then after we start losing that type of stuff, like, how do we systematically say, let's choose this feature over this one? Because, you know, I don't think that we do have a limitation there. So I guess, how would you choose the top 20 out of the 100? In your case, what would you suggest?
+
+Speaker 2  22:13  
+Well, how I, how I actually do it is kind of what I described there. I You kind of have to train a model. And you can, you have to, like, fully train a model. You can sample it down to a candidate, like random selected set of IPs, right? Just pick a million IPS randomly, and I just train on that small set with, like, an XG boost type model and most models, you can get feature importances out. So you just get the ranked list of feature importances. Now there's like three main ways to calculate feature importance, and so there's, like an information one, just like how often the feature appears, and then there's some other weighted one. And so I typically look at the three of those together and come up with, like, a composite score that combines the three of them. And I'll just rank order that and select maybe, if I have 100 maybe I'll pare that down, cut it in half to the top 50. Take that and rerun the models again.
+
+Speaker 1  23:24  
+Are you talking like shap values? I think similar shop
+
+Speaker 2  23:29  
+value is like a different thing, yes,
+
+Unknown Speaker  23:32  
+but Okay, so this is
+
+Unknown Speaker  23:34  
+values are a little more expensive to compute.
+
+Speaker 1  23:37  
+Okay, I've done this in the past before. I just, I remember because you said x, g, boost, I I can't. I have this
+
+Unknown Speaker  23:43  
+for for Fangorn, I have this.
+
+Speaker 1  23:45  
+Oh, you do, yeah. So this would tell you that, like, okay, and it depends on what's more popular. And so in this case, we want, we care about, well, what would be negative in our case, I guess weird, we only care about conversions. I wonder if there's a negative correlation in here. That'd be funny. We find out some feature just, like, terrible, like, about negative conversion. Anyways, that being said. So what you're saying is, like, different than shop values, but shop values are still important.
+
+Speaker 2  24:15  
+That values are important, I would use I use them when it gets down to the end, because a lot of the feature importance calculations are gonna if there's colonic co linearity, it will kind of mess that up, because they will share, like, if two features are co linear, they will Share importance, which means like their importance will be split. Okay, so they may be lower down on the list, but if you slowly pare down the features and you eliminate something that's important, you'll see it in the evaluation metrics drop off. So that's kind of what I do there, is iteratively. Pare down features while maintaining performance at a certain level. So I feel like started with like 20,000 feature model. It's 20,000 features feeding in, and then you pare it down in the end to like
+
+Speaker 1  25:16  
+80 features. Okay, so let's just break this down really quickly. I I've done, you know, it's funny. I took an Analytics course at Georgia. I only took one Master's course. I got to finish it at some point in time. But what I was actually kind of surprised by is I had done some formal ml stuff. But what I didn't realize is my thought process is, I mean, okay, there's an asterisk on everything. I understand, that's okay. But the when you add, your idea is that when you add more features, you're going to get better performance. But like, that's not the case. Like, a lot of times, you know, like, you end up with, like, an overfit Model A lot of times, most of the time, and things look great, and you're like, oh, wow, it's like, 90% performance. So there's a lot of systematic approaches to figuring out which ones to include, but it sounds like when we're doing, I don't know. I guess we're just optimizing to really one thing, yeah, and it's the conversion. It doesn't really,
+
+Speaker 2  26:10  
+yeah, okay, yep. And so the other thing is, if you have, like, a class of features that you're kind of looking at, you're like, Well, is this going to be valuable? Like a linear regression, a simple linear regression off and will help you figure that out right away. Or some like, group level analysis. Like it gives you like the most conservative estimate of like, what you could possibly do. Like it gives you like the first pass like, even if it's worth exploring, for example, like, if we are looking at a set of advertisers and we have the the iPhone usage, iPhone versus Android, all you have to do is collect the data group by iPhone versus Android, just like group those two, look at the visit rate that comes out by advertiser, and see if there's a significant difference, if there is, you should include that feature and see if it helps the model. Like, that's the simplest way to do it, especially if there's like, two classes like that, or if there's like, a handful of categories, I would just do a group level analysis. So like, This feature has five categories in it. Okay, group by that feature, see the five categories, see how the performance, like the the metric that we care about, differs across those five within an advertiser, and see if it's significantly different.
+
+Speaker 1  27:33  
+I didn't even think about that, but we pretty much only mostly going to have categorical data. I guess we do have some non I mean, like, like, obviously our conversion metrics, I'm just thinking, like, when we're adding new features, a lot of these features are going to be like, just, yeah, like, iPhone versus Android, yeah, yeah.
+
+Speaker 2  27:54  
+And I would just do the linear regression like that, where you even, because the linear regression will have the same answer so often, often, we'll just do that. I just have like a linear regression set up, and you can just, like, in the Python way, when you're using it is, like the linear models, you can just put like a C in front of it, and put it inside of parentheses, and that tells it if it's categorical, yep. So then it just figures it out, and it gives you the same answer as doing like a group by if that's the old teacher you care about.
+
+Speaker 1  28:28  
+Okay, so, like, one of the I guess, sorry, we're time. I want to be cognizant of that you're the so the last thing, so when you said two different models, you're Can you give me example of, like, the smaller model to the larger model? So how would you use this, the one model, to do the other like? So are you say, essentially saying, do a smaller model subset with all the features, see which one is most predictive, then the answers from that. So basically, just you could visually check it out, right? Then take those and then use that to build your larger model. Is that what?
+
+Speaker 2  28:59  
+Okay, yeah, a lot of the like, iterative feature selection process is done on a smaller training set, like a randomly and then when you feel like you have a good set of features, you scale it up to like, how you would actually want to use it in production and train it on a larger data set that gets you more robust.
+
+Speaker 1  29:20  
+Fitting, right? Is this set up right now to be run once and then perform? Or is it set up to be like, forget the cause? What it's called
+
+Speaker 2  29:30  
+Fangorn is only set up to be trained like intermittently. So it's not like, run every day, bottoms up. Keywords is like, retrained every day, basically,
+
+Speaker 1  29:41  
+what is it called? When, like, as as new information comes in, it's like, it tweaks everything, every single continuous learning, continuous, yeah, are we gonna that's the idea for
+
+Speaker 2  29:53  
+like, the the neural net based one gotcha to look to see if we can do that, to, like, update its knowledge on a. Like weekly basis, say, or even more, but because features will be coming in, so it's mainly there. Is not necessarily continuous learning, but it's just real time inference, I would say, where maybe the model is already trained, but the features are getting updated and fed into the model as fast as we can. Okay, yeah, that's just a couple of things there we have to explore, like, what's actually feasible?
+
+Speaker 1  30:30  
+Yeah, okay. Well, hey, Matt, I really appreciate your time. This helps a lot, considerably.
+
+Unknown Speaker  30:35  
+So I'm happy to sync up later this afternoon. I do have to run.
+
+Speaker 1  30:40  
+Yeah, no, that's totally fine. This gives me enough information. I have quite a few tickets, so I'm going to put together, but I'll reach out to you sync if I need something. And yeah, sense of something else, but thank you. Yep, take care. See ya. Bye. Bye.
+
+Transcribed by https://otter.ai
