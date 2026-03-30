@@ -81,7 +81,10 @@ Another ticket completes. More knowledge added. Cycle continues.
 workspace/
 ├── README.md                    ← you are here
 ├── .claude/
-│   └── CLAUDE.md                ← persistent instructions for Claude (read every session)
+│   ├── CLAUDE.md                ← persistent instructions for Claude (read every session)
+│   └── scripts/
+│       ├── bq_run.sh            ← BQ query wrapper with perf logging
+│       └── transcribe.sh        ← local Whisper transcription (mlx-whisper, Apple Silicon)
 ├── knowledge/
 │   ├── data_catalog.md          ← table-level reference: schemas, join keys, TTLs, gotchas
 │   ├── data_knowledge.md        ← business logic, architecture, tribal knowledge
@@ -215,7 +218,18 @@ These files are gitignored (no raw data in GitHub) but live on disk and are refe
 
 ### `meetings/`
 
-Meeting transcripts and notes related to the ticket. Otter.ai transcripts, manual notes, Zoom transcript files. Named with the ticket prefix: `ti_xxx_meeting_person_n.txt`.
+Meeting transcripts and notes related to the ticket. Transcripts are generated locally using Whisper (mlx-whisper on Apple Silicon). Named descriptively: `teach_me_everything_meeting.txt`, `discuss_experiment_causal_impact_meeting.txt`.
+
+**Transcribing a Zoom recording:**
+```bash
+# Best quality (large-v3, ~6 min per 30 min meeting on M4 Pro)
+bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504
+
+# Faster (medium model, ~1.5 min per 30 min meeting)
+bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504 --model medium
+```
+
+Zoom recordings live at `~/Documents/Zoom/`. The script auto-finds the audio file (.m4a preferred) and saves the transcript to the ticket's `meetings/` folder.
 
 ### `artifacts/`
 
