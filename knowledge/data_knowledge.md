@@ -261,6 +261,16 @@ Appears in spend_log, bidder_bid_events, bidder_auction_events:
 `is_test = TRUE` in spend_log and bidder_auction_events means test/QA auctions — **exclude from
 production analysis**.
 
+**GOTCHA (TI-504):** `is_test` campaigns have structurally lower IVR — **8-53% of production campaigns even within the same intent tier**. Cannot compare test vs non-test campaign performance directly. Use within-test-group comparisons (control vs treatment) for experiments. The cause is unknown but likely involves delivery priority, creative/budget differences, or bidder behavior differences for test campaigns.
+
+### advertiser_household_score (HHST)
+Available on `cost_impression_log`. Segments impressions by intent tier:
+- **HI (High Intent):** HHST >= 6666
+- **MI (Mid Intent):** HHST 3333-6665
+- **Max Reach / PP:** HHST 1-3332
+
+Old prospecting campaigns serve **89-99% HI tier** traffic. Virtually no MI/PP historical baseline exists for prospecting campaigns.
+
 ### ip vs ip_raw vs original_ip vs bid_ip vs impression_ip
 
 Zach explained the full IP column taxonomy on 2026-02-25 call and confirmed in docx review 2026-03-03:
