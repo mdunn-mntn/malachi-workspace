@@ -181,6 +181,11 @@ This is especially important for staggered adoption designs where early adopters
 
 **Self-referencing covariate trap:** In TI-504, setting `control_ivr = response_variable` during the pre-period (because the control arm didn't exist yet) produced artificially perfect pre-period fit. The model looked great but was cheating — the "covariate" was the answer. When removed, the model collapsed to -70% effects with massive uncertainty. Always verify covariates are genuinely external to the response.
 
+**Why TI-748 worked but TI-504 didn't — what's actually different:**
+In TI-748, new media plan campaigns REPLACED the old campaigns and targeted the **same full audience**. The pre/post IVR levels were comparable (same order of magnitude). In TI-504, experiment campaigns ran at **8-40% of the advertiser's normal prospecting IVR** (tested with both parent-only AND all-prospecting baselines — same result). The gap is far too large for random IP bucketing to explain. Contributing factors likely include: `is_test = true` flag affecting delivery priority, creative removal ("Only One Creative" / creatives removed), lower budgets, and fresh campaign optimization history. When pre/post IVR differs by 3-10x, no covariate can bridge the gap — the model just measures the structural difference, not the treatment.
+
+**Lesson:** Before running CausalImpact, check the **IVR ratio** between pre-period and post-period. If it's less than ~0.5x or more than ~2x, the structural gap is too large for synthetic control — something fundamental changed beyond the treatment.
+
 ### Data Quality Issues Found (TI-748)
 - Weeks with <1,000 impressions can produce absurd rate metrics (IVR=366x) due to VV attribution lag after campaign pauses. Always filter.
 - `uniques` column in agg tables is unreliable at campaign level.
@@ -235,6 +240,80 @@ Raw spend (`platform_spend`, `adv_spend`) was eliminated by VIF or not selected 
 - **Spend CHANGE** captures *budget shifts* — "did the advertiser increase/decrease their budget this week?" This is a genuine confound (budget changes affect metrics regardless of media plan) without being mechanically correlated with the outcome.
 
 This is a general principle: **use rate-of-change covariates over level covariates** when the level is mechanically related to the outcome.
+
+---
+
+## Key Findings from MNTN Experiments (Institutional Knowledge)
+
+*Source: Kirsa (Experimentation Lead), meeting 2026-03-30*
+
+### Frequency — Most Counterintuitive and Consistent Result
+
+Lower frequency = better performance. This has been validated across multiple experiments over several years:
+
+- Capping frequency at very low levels (1 per 14 days, 1 per 30 days) achieved comparable performance to multi-touch campaigns
+- The more unique households reached (lower frequency), the better performance is overall
+- **Why "ideal frequency" from converter data doesn't work:** Data analysts identified the average frequency of converters and applied it to campaigns — performance got WORSE. Reason: that frequency is optimal for getting an individual household to convert, but all the non-converters also get that same frequency. The wasted impressions/spend on people who never would have converted has more negative impact than the incremental conversions from borderline prospects.
+- **Principle:** Reach (unique households) matters more than repetition. Optimize for breadth, not depth.
+- Frequency experiments haven't been run in a while — should be re-run every couple of years because platform changes may shift optimal frequency.
+
+### Targeting — Most Impactful Lever (Not Even Close)
+
+Every targeting-based experiment has been the most impactful lever for performance improvement:
+
+- **Mountain Match V1 vs Interest Audiences:** ~500% performance improvement — "insane" by experiment standards where 10-15% is considered a win
+- **Fangorn (bottoms-up keywords):** 50-100% peak performance improvements
+- **Frequency/other optimizations:** Much more likely to have a very slight change
+- Targeting improvements dwarf all other optimization levers
+
+### Experiment Shelf Life — ~6 Months
+
+Experiments have roughly a 6-month expiration date because the platform, feature set, and environment change so often. What was true 6 months ago may no longer hold because the "starting line" has moved.
+
+**Example:** Multi-touch was disabled for new customers after experiments showed TV-only with low frequency performed comparably. But the control baseline was a 2021 multi-touch campaign. By 2024-2025, the platform had changed enough that TV-only no longer outperformed multi-touch against current baselines → multi-touch is being encouraged again.
+
+### Performance vs Scale Tension
+
+The most important tension in experimentation: **it's very easy to improve performance, but not so easy to do it without negatively impacting ability to spend.** Tighter targeting, lower frequency, better audience quality all improve performance metrics — but they shrink the addressable audience, reducing ability to deliver impressions and spend budget.
+
+This is especially acute for retargeting, where audiences are already small. TV-only retargeting showed comparable performance but couldn't deliver at scale. The fix would require a massive increase in scale (more inventory, more targetable IPs, etc.) to offset the audience reduction.
+
+### Metrics Philosophy (from Mark/Leadership)
+
+- **IVR (impression-to-visit rate) is the primary metric** — Mark's rationale: MNTN can only drive visits; conversions depend on the advertiser's site experience. So the metric MNTN should optimize is visit generation.
+- **CPA and ROAS are guardrail/supporting metrics** — always reviewed alongside IVR. If IVR improves but CPA gets worse or ROAS declines, that's flagged and caveated.
+- **Visit quality matters** — not just visit volume. Visit conversion rate (conversions/visits) and effective conversion rate (conversions/impressions) are also tracked.
+- **All metrics are reviewed for every experiment** — the more information the better. Looking for potential negative impacts beyond the primary metric.
+
+### Experiment Budget & Structure
+
+**Two types of experiments:**
+
+| Type | Description | Who Pays | Budget Split |
+|---|---|---|---|
+| **Customer-facing** | Advertiser agrees to participate, visible in their campaign/reporting | MNTN typically covers 50% to incentivize participation | Shared |
+| **Non-customer-facing (hidden)** | Behind-the-scenes experiments (e.g., Fangorn). Hidden campaigns, not visible to advertiser in UI/reporting | MNTN covers 100% | From Kirsa's monthly experiment budget |
+
+**Current constraints:**
+- 5 advertisers per experiment (limited by budget and manual setup)
+- Budget is a set monthly amount
+
+### Campaign Splits — Key Future Improvement
+
+The ability to split out a portion of a live campaign and experiment with it (e.g., 10% of a campaign's audience gets a different frequency):
+
+- **Eliminates budget constraint** — uses the advertiser's existing budget, no additional MNTN spend
+- **Scales to 50+ advertisers per experiment** instead of 5
+- **Enables much larger sample sizes** → more definitive causal impact results
+- This is a near-term initiative Kirsa and team are planning
+
+### Methodology Improvement (Needed Once Campaign Splits Land)
+
+Once the 5-advertiser constraint is removed, the team needs:
+- Power analyses for sample sizing
+- Formal methodology for advertiser selection to avoid bias
+- Documentation of selection criteria and randomization
+- More rigorous statistical approaches that are feasible with larger N
 
 ---
 
