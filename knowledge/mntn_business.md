@@ -106,7 +106,18 @@ General knowledge about MNTN as a business — products, strategy, org structure
 
 ## Internal Terminology & Acronyms
 
-*Add MNTN-specific jargon, acronyms, and terminology that isn't obvious from the codebase.*
+| Term | Definition |
+|------|------------|
+| **Multi-touch** | Display ad campaigns that complement CTV campaigns (retargeting via display) |
+| **Mountain Match** | MNTN's proprietary targeting system (replaced interest audiences) |
+| **Fangorn** | Bottoms-up keyword targeting system (current generation) |
+| **Campaign splits** | (Planned) Ability to split a live campaign's audience for experimentation |
+| **IVR** | Impression-to-Visit Rate (primary performance metric) |
+| **VCR** | Video Completion Rate |
+| **Lift Lab** | External geo-based lift measurement partner |
+| **PEX** | Team involved in identifying beta candidates for features |
+| **CS** | Customer Success team |
+| **Hidden campaigns** | Non-customer-facing experiment campaigns invisible to advertisers in UI/reporting |
 
 ---
 
@@ -115,3 +126,4 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | Date | Source | What was added |
 |------|--------|----------------|
 | 2026-03-30 | Initial creation | Template structure |
+| 2026-03-30 | Kirsa meeting (TI-504) | Multi-touch history, Mountain Match, attribution defaults, org/people, metrics philosophy, industry context, terminology |
