@@ -203,6 +203,14 @@ def run_rct_comparison(df, level="intent_group"):
         z_stat = (t_ivr - c_ivr) / se_prop if se_prop and se_prop > 0 else np.nan
         z_pvalue = 2 * (1 - stats.norm.cdf(abs(z_stat))) if not np.isnan(z_stat) else np.nan
 
+        # Chi-squared test on 2x2 contingency table (equivalent to z-test squared)
+        # [[control_visits, control_non_visits], [treatment_visits, treatment_non_visits]]
+        contingency = np.array([
+            [int(c_vv), int(c_imps - c_vv)],
+            [int(t_vv), int(t_imps - t_vv)]
+        ])
+        chi2_stat, chi2_pvalue, _, _ = stats.chi2_contingency(contingency, correction=False)
+
         # Bootstrap CI for difference
         boot_ci = bootstrap_ci(c_daily_ivr["ivr"].values, t_daily_ivr["ivr"].values)
 
@@ -223,11 +231,14 @@ def run_rct_comparison(df, level="intent_group"):
             "u_pvalue": u_pvalue,
             "z_stat": z_stat,
             "z_pvalue": z_pvalue,
+            "chi2_stat": chi2_stat,
+            "chi2_pvalue": chi2_pvalue,
             "boot_ci_lower": boot_ci[0],
             "boot_ci_upper": boot_ci[1],
             "significant_t": p_value < 0.05,
             "significant_u": u_pvalue < 0.05,
             "significant_z": z_pvalue < 0.05 if not np.isnan(z_pvalue) else False,
+            "significant_chi2": chi2_pvalue < 0.05,
         })
 
     results_df = pd.DataFrame(results)
@@ -236,13 +247,15 @@ def run_rct_comparison(df, level="intent_group"):
     for _, r in results_df.iterrows():
         sig_t = " *" if r["significant_t"] else ""
         sig_z = " *" if r["significant_z"] else ""
+        sig_chi2 = " *" if r["significant_chi2"] else ""
         print(f"\n  {r['group']}")
         print(f"    Control IVR:   {r['control_ivr']:.6f}  ({r['control_impressions']:>10,} imps)")
         print(f"    Treatment IVR: {r['treatment_ivr']:.6f}  ({r['treatment_impressions']:>10,} imps)")
         print(f"    Lift: {r['ivr_lift']:+.2%}")
-        print(f"    Welch t-test (daily IVR, N≈21):  p={r['t_pvalue']:.4f}{sig_t}")
-        print(f"    Proportion z-test (impression-level): p={r['z_pvalue']:.4f}{sig_z}" if not np.isnan(r['z_pvalue']) else "    Proportion z-test: N/A")
-        print(f"    Mann-Whitney U: p={r['u_pvalue']:.4f}")
+        print(f"    Welch t-test (daily IVR, N≈21):       p={r['t_pvalue']:.4f}{sig_t}")
+        print(f"    Proportion z-test (impression-level):  p={r['z_pvalue']:.4f}{sig_z}" if not np.isnan(r['z_pvalue']) else "    Proportion z-test: N/A")
+        print(f"    Chi-squared (2x2 contingency):         p={r['chi2_pvalue']:.4f}{sig_chi2}")
+        print(f"    Mann-Whitney U (non-parametric):        p={r['u_pvalue']:.4f}")
         print(f"    Bootstrap 95% CI for diff: [{r['boot_ci_lower']:.6f}, {r['boot_ci_upper']:.6f}]")
 
     # Summary table
