@@ -38,13 +38,13 @@ The experimentation team needs a rigorous causal inference framework to measure 
 
 ### Matt Meeting (2026-03-30) — Key Takeaways
 
-**Matt's causal impact framework status:**
+**Malachi's causal impact framework status:**
 - Working framework, fully based on GCP/BigQuery — no DataGrip dependency
 - Uses Bayesian structural time series (synthetic control) with BIC-optimized covariate selection
 - Portable — anyone with Google creds can clone repo and run it
-- Matt expects to have initial results by 2026-03-31
+- Malachi expects to have initial results by 2026-03-31
 
-**Fangorn experiment design (set up by Nick):**
+**Fangorn experiment design (described by Matt, set up by Nick):**
 - 5 advertisers: Collector Store, Edward Martin, G-Shock, Reads, Izumba
 - Each advertiser: one prospecting campaign cloned into control + treatment arms
 - Each arm has 4 intent groupings (8 campaign groups per advertiser):
@@ -60,13 +60,13 @@ The experimentation team needs a rigorous causal inference framework to measure 
 1. **Immediate:** Validate the RCT results — use causal impact to see if we measure the same treatment effect the actual experiment showed
 2. **Near-term (few weeks):** When Fangorn rolls out to broader set of advertisers/verticals, use causal impact as the primary measurement tool (like Jaguar rollout pattern)
 
-**Feature selection methodology (for clustering & future model work):**
+**Feature selection methodology (Matt's guidance for clustering & future model work):**
 - XGBoost feature importance: train on small random sample, get ranked importances via 3 methods (information gain, frequency, weighted), create composite score
 - Iterative paring: start with all features → pare down to top 50 → retrain → repeat while maintaining eval metrics
 - Simple group-by / linear regression for categorical features (e.g., iPhone vs Android → group by, check if metric differs significantly)
 - Variance decomposition analysis: quantify variance at different feature levels (advertiser, vertical, time) to identify which levels matter
 - SHAP values: use at the end for fine-tuning, more expensive to compute
-- BIC (Bayesian Information Criterion): balances model fit vs complexity, minimizes covariates
+- BIC (Bayesian Information Criterion): Malachi already uses this — balances model fit vs complexity, minimizes covariates
 
 **Fangorn model architecture notes:**
 - Current Fangorn: trained intermittently (not daily). Bottoms-up keywords retrained daily.
@@ -79,7 +79,7 @@ The experimentation team needs a rigorous causal inference framework to measure 
 
 ## 5. Solution
 
-TBD — awaiting Matt's initial causal impact results and campaign data from Nick's spreadsheet.
+TBD — awaiting campaign data from Nick's spreadsheet. Malachi to run causal impact analysis.
 
 ## 6. Questions Answered
 
@@ -100,7 +100,7 @@ TBD
 ## 8. Open Items / Follow-ups
 
 - ⬜ Get Nick's spreadsheet with campaign_group_ids for all 5 advertisers and their control/treatment arms
-- ⬜ Matt delivering initial causal impact results ~2026-03-31
+- ⬜ Malachi to run causal impact analysis once campaign data is gathered
 - ⬜ Review TI-457 for current AIS Phase 2 state
 - ⬜ When Fangorn rollout begins (few weeks): have causal impact framework ready for broader measurement
 - ⬜ Clustering methodology for systematic advertiser selection during rollout
