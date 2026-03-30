@@ -10,7 +10,8 @@ This is a living document. Add to it every time we learn something new about exp
 | Situation | Method | When to Use | When NOT to Use |
 |---|---|---|---|
 | Single intervention date, good covariates available | **CausalImpact (BSTS)** | Feature rollout affecting time series metrics | Very short pre-period (<20 weeks) |
-| Treatment vs control group exists | **Difference-in-Differences (DiD)** | A/B test with comparable groups | Groups not parallel in pre-period |
+| True RCT with control/treatment arms | **Direct comparison (t-test, bootstrap CI)** | Randomized A/B test with matched audiences (e.g., IP bucket split) | Groups not properly randomized |
+| Treatment vs control group exists (not randomized) | **Difference-in-Differences (DiD)** | A/B test with comparable groups | Groups not parallel in pre-period |
 | Staggered rollout, no control group | **Per-unit CausalImpact** | Feature adopted at different times by different units | Very small N (<5 units) |
 | Need to test for lift on a specific metric | **t-test / Mann-Whitney** | Comparing two distributions | Time-dependent data (use time series methods) |
 | Multiple features changed simultaneously | **Regression with interaction terms** | Need to isolate each feature's effect | Multicollinearity between features |
@@ -149,6 +150,36 @@ When analyzing a feature's impact over time, **check for algorithm/config change
 3. If versions differ, split the analysis by version era.
 
 This is especially important for staggered adoption designs where early adopters may be on a different algorithm version than later adopters.
+
+### Population Continuity — When Synthetic Control Fails (TI-504 Lesson)
+
+**Synthetic control / CausalImpact requires that the pre-period and post-period measure the SAME population.** If the experiment creates new campaigns targeting a different audience subset, you cannot use the parent campaign's history as a pre-period baseline.
+
+**TI-504 example (Fangorn AIS experiment):**
+- Nick cloned 5 advertisers' prospecting campaigns into control/treatment arms
+- Each arm targeted a specific IP bucket range (e.g., 600-713 for control PP, 714-768 for treatment PP)
+- The parent campaigns targeted the FULL audience (buckets 0-599)
+- Parent campaign IVR: 0.03-0.12. Experiment campaign IVR: 0.005-0.024. That's a 3-10x gap.
+- This gap is NOT a treatment effect — it's a different population (different IP buckets = different people)
+- CausalImpact showed -37% to -79% effects with 69% avg placebo FPR. The model was measuring the population difference, not Fangorn's impact.
+
+**When to use CausalImpact vs direct RCT comparison:**
+
+| Scenario | Right Method | Why |
+|---|---|---|
+| Feature enabled on existing campaigns (same audience, same targeting) | CausalImpact with pre/post | Same entity, same population — pre-period baseline is valid |
+| New campaigns created with split audiences (A/B test) | Direct RCT comparison (t-test, bootstrap CI) | Different populations — no valid pre-period exists for the experiment campaigns |
+| Staggered rollout to existing campaigns | Per-unit CausalImpact | Same entity across time, different intervention dates |
+| Cloned campaigns with holdout groups | Direct comparison of control vs treatment arms | The control group IS the counterfactual — no need to synthesize one |
+
+**The rule:** If you have a real control group, use it directly. CausalImpact is a tool for when you DON'T have a control group and need to build a synthetic one. Using synthetic control when a real control exists is both unnecessary and prone to error.
+
+**How to check:** Before running CausalImpact, verify:
+1. Is the pre-period entity the same as the post-period entity? (Same campaign_id, same audience definition, same targeting)
+2. If new campaigns were created for the experiment, do they target the same population as the baseline campaigns?
+3. If audiences were split (IP hashing, holdout groups), the pre-period campaigns targeted the full audience — you CANNOT use their IVR as a baseline for the subset.
+
+**Self-referencing covariate trap:** In TI-504, setting `control_ivr = response_variable` during the pre-period (because the control arm didn't exist yet) produced artificially perfect pre-period fit. The model looked great but was cheating — the "covariate" was the answer. When removed, the model collapsed to -70% effects with massive uncertainty. Always verify covariates are genuinely external to the response.
 
 ### Data Quality Issues Found (TI-748)
 - Weeks with <1,000 impressions can produce absurd rate metrics (IVR=366x) due to VV attribution lag after campaign pauses. Always filter.
@@ -294,6 +325,7 @@ We need high N for reliable results, but can't roll out risky changes to all adv
 - **Pros:** No explicit control group needed. Works with staggered adoption. Per-unit effects.
 - **Cons:** Relies on covariate quality. Short pre-periods reduce reliability. Placebo FPR can be high.
 - **When to use:** Observational data, can't randomize, need per-unit effects
+- **CRITICAL REQUIREMENT:** The pre-period and post-period must measure the **same entity** (same campaign, same audience, same targeting). If the experiment creates new campaigns with different audience definitions, the pre/post comparison is invalid — you're comparing different populations, not measuring a treatment effect. See "Population Continuity" gotcha below.
 
 ### Recommendation for MNTN
 For future feature evaluations, **waitlist control** is the ideal approach:
@@ -321,3 +353,4 @@ When analyzing features that affect publisher/network allocation:
 |---|---|---|---|---|
 | TI-748 | Media Plan Causal Impact (v6) | Per-advertiser CausalImpact (BIC covariates, ramp-up exclusion) + panel model | Aggregate IVR near zero (-0.23% spend-weighted). BUT: config change on Feb 3, 2026 (max_networks 25→15) explains the split — new-config plans show +10-17% IVR lift, old-config plans show -26 to -31% decline. | **Primary lesson:** Algorithm version confound. The analysis spanned two configs — pre-change plans diluted across 25-26 publishers, post-change concentrated to 16. Config era, not inherent concentration, is the differentiator. Also: BIC covariate selection beats hand-picking; 4-week ramp-up exclusion needed for new campaigns; selection bias confirmed (hand-picked beta). |
 | TI-780 | Ramp-up window research | Empirical analysis of campaign maturity curves | 4-week ramp-up window identified (N=6,917 campaigns, $10K+ spend). Week 4 = first week with <5% WoW change. | Consistent across spend tiers. Steady-state IVR varies by launch quarter (0.008–0.013) — future analyses should use cohort-specific baselines rather than a single global baseline. |
+| TI-504 | Fangorn AIS experiment (RCT) | Direct RCT comparison (t-test, bootstrap CI) + CausalImpact validation | Edward Martin +41% IVR (p=0.015), Collector Store +40% (p=0.027) — significant. G-Shock/Reedsy/Zumba no effect. CausalImpact with proper covariates showed -37% to -79% (invalid — population discontinuity). | **Primary lesson:** Synthetic control fails when experiment creates new campaigns with split audiences. Parent campaign IVR (full audience) ≠ experiment campaign IVR (IP bucket subset). Direct RCT comparison is the correct method when real control/treatment groups exist. Also: self-referencing covariates (control_ivr = y in pre-period) produce artificially perfect fits — always verify covariates are external. Test campaigns (is_test=true) excluded from all summary tables — must query log tables directly. |

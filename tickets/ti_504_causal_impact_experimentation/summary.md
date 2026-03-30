@@ -120,26 +120,35 @@ Summary: **4/20 significant** (all positive). 12/20 show positive lift.
 
 **Pooled (all advertisers):** Overall +3.4% lift, p=0.78 — not significant.
 
-**Track 2: CausalImpact (Synthetic Control) — Validation**
+**Track 2: CausalImpact (Synthetic Control) — INVALID for this experiment design**
 
-Used parent campaign pre-period IVR as baseline with platform covariates (platform IVR, platform spend) and experiment control arm as covariate. Pre-period ends before experiment start (March 2), post-period is experiment duration.
+Applied full TI-748 methodology (VIF → BIC selection → cross-validation → sensitivity → placebo tests) using parent campaign pre-period IVR as baseline. Three iterations:
 
-| Advertiser | Pre-Weeks | Predicted IVR | Actual IVR | Effect | p-value | Sig? |
-|---|---|---|---|---|---|---|
-| Edward Martin | 18 | 0.008616 | 0.012170 | +41.3% | <0.001 | YES |
-| Collector Store | 31 | 0.004795 | 0.006549 | +36.6% | <0.001 | YES |
-| Reedsy | 40 | 0.006158 | 0.006813 | +10.6% | <0.001 | YES |
-| G-Shock | 20 | 0.023982 | 0.023653 | -1.4% | 0.378 | no |
-| Zumba | 40 | 0.014254 | 0.013253 | -7.0% | 0.002 | YES |
+1. **First attempt (no covariates):** Compared parent IVR directly to experiment IVR → -64% to -84% effects. Obviously wrong — audience fragmentation, not treatment effect.
+2. **Second attempt (self-referencing covariate):** Added `control_ivr = y` during pre-period → +37% to +41% effects with perfect pre-period fit. Looked great but was cheating — the covariate WAS the answer.
+3. **Third attempt (proper BIC-optimized covariates):** Used only external covariates (platform_impressions, metric_lag, spend_change_pct). Results:
 
-CausalImpact 3-panel plots (observed vs predicted, pointwise effect, cumulative effect) saved to `outputs/ti_504_causal_impact_*.png`.
+| Advertiser | Pre-Weeks | BIC Covariates | Effect | p-value | Placebo FPR |
+|---|---|---|---|---|---|
+| Collector Store | 29 | platform_impressions, metric_lag1 | -36.9% | 0.332 | 33% |
+| Edward Martin | 16 | spend_change_pct | -70.4% | 0.005 | N/A (too short) |
+| G-Shock | 18 | metric_lag1, spend_change_pct | -79.0% | 0.044 | N/A |
+| Reedsy | 44 | metric_lag2, spend_change_pct | -76.7% | 0.002 | 100% |
+| Zumba | 59 | platform_impressions, metric_lag1 | -67.2% | <0.001 | 75% |
+
+**Average placebo FPR: 69%** (should be <20%). Sensitivity: directionally consistent (all negative) but this is measuring the population gap, not treatment.
+
+**Why synthetic control fails here — population discontinuity:**
+The parent campaigns target the FULL audience (IP buckets 0-599). The experiment campaigns target a SUBSET (buckets 600-999, split further into control/treatment). The 3-10x IVR gap between parent and experiment campaigns reflects different populations, not a treatment effect. No covariate can bridge this gap because it's structural, not temporal.
 
 **Key takeaways:**
-1. Both methodologies converge — CausalImpact validates the direct RCT findings
-2. Fangorn shows strong, significant improvement for Edward Martin (+41%) and Collector Store (+37-40%)
-3. Reedsy shows a small positive effect (+10.6%) that's significant in CausalImpact but not in the direct RCT (p=0.60) — likely due to CausalImpact leveraging the longer pre-period for tighter estimates
-4. G-Shock: no effect in both analyses (-0.4% RCT, -1.4% CausalImpact)
-5. Zumba: slight negative in both (-7.5% RCT, -7.0% CausalImpact)
+1. **The direct RCT is the only valid analysis for this experiment** — treatment vs control with matched audiences
+2. CausalImpact is a tool for when you DON'T have a control group. Here we have a real control — use it directly.
+3. Fangorn shows strong, significant improvement for Edward Martin (+41%) and Collector Store (+40%)
+4. No effect for G-Shock (-0.4%), Reedsy (+6.5%), or Zumba (-7.5%)
+5. This aligns with Matt's observation: some verticals are well-targeted already (Fangorn adds little), while others benefit significantly
+6. The PP (Peak Performance) intent group shows the most consistent treatment effect across advertisers
+7. CausalImpact WILL be the right tool for the broader Fangorn rollout — same campaigns before/after enablement, same audience, valid pre/post comparison
 6. This aligns with Matt's observation: some verticals are well-targeted already (Fangorn adds little), while others benefit significantly
 7. The PP (Peak Performance) intent group shows the most consistent treatment effect across advertisers
 8. CausalImpact framework is validated and ready for the broader Fangorn rollout
