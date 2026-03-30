@@ -106,7 +106,7 @@ echo "Output: $OUTPUT_FILE"
 echo ""
 echo "Transcribing..."
 
-# Run transcription
+# Run transcription using mlx-whisper (Apple Silicon native)
 /opt/homebrew/opt/python@3.11/bin/python3.11 << 'PYTHON_SCRIPT' - "$AUDIO_FILE" "$OUTPUT_FILE" "$MODEL"
 import sys
 import time
@@ -115,25 +115,37 @@ audio_file = sys.argv[1]
 output_file = sys.argv[2]
 model_size = sys.argv[3]
 
-from faster_whisper import WhisperModel
+import mlx_whisper
+
+# Map model size to HF model path
+MODEL_MAP = {
+    "tiny": "mlx-community/whisper-tiny-mlx",
+    "base": "mlx-community/whisper-base-mlx-q4",
+    "small": "mlx-community/whisper-small-mlx",
+    "medium": "mlx-community/whisper-medium-mlx",
+    "large-v3": "mlx-community/whisper-large-v3-mlx",
+}
+model_path = MODEL_MAP.get(model_size, model_size)
 
 start = time.time()
-print(f"Loading {model_size} model...")
-model = WhisperModel(model_size, device="cpu", compute_type="int8")
-
+print(f"Loading {model_size} model ({model_path})...")
 print(f"Transcribing {audio_file}...")
-segments, info = model.transcribe(audio_file, beam_size=5, language="en", vad_filter=True)
 
-print(f"Detected language: {info.language} (probability {info.language_probability:.2f})")
-print(f"Duration: {info.duration:.0f}s ({info.duration/60:.1f} min)")
+result = mlx_whisper.transcribe(
+    audio_file,
+    path_or_hf_repo=model_path,
+    language="en",
+    verbose=False,
+)
+
+duration = result["segments"][-1]["end"] if result["segments"] else 0
+print(f"Duration: {duration:.0f}s ({duration/60:.1f} min)")
 
 lines = []
-for segment in segments:
-    timestamp = f"[{int(segment.start//60):02d}:{int(segment.start%60):02d}]"
-    lines.append(f"{timestamp} {segment.text.strip()}")
-    # Print progress every ~60 seconds of audio
-    if int(segment.start) % 60 == 0:
-        print(f"  {timestamp} processed...")
+for segment in result["segments"]:
+    t = segment["start"]
+    timestamp = f"[{int(t//60):02d}:{int(t%60):02d}]"
+    lines.append(f"{timestamp} {segment['text'].strip()}")
 
 transcript = "\n".join(lines)
 
@@ -143,7 +155,7 @@ with open(output_file, "w") as f:
 elapsed = time.time() - start
 print(f"\nDone in {elapsed:.1f}s ({elapsed/60:.1f} min)")
 print(f"Saved to {output_file}")
-print(f"Speed: {info.duration/elapsed:.1f}x realtime")
+print(f"Speed: {duration/elapsed:.1f}x realtime")
 PYTHON_SCRIPT
 
 echo ""
