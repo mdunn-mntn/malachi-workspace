@@ -195,6 +195,14 @@ def run_rct_comparison(df, level="intent_group"):
             t_daily_ivr["ivr"].values, c_daily_ivr["ivr"].values, alternative="two-sided"
         )
 
+        # Proportion z-test on raw impression counts
+        # H0: control visit rate = treatment visit rate
+        # Uses pooled proportion as the null estimate
+        p_pooled = (c_vv + t_vv) / (c_imps + t_imps) if (c_imps + t_imps) > 0 else 0
+        se_prop = np.sqrt(p_pooled * (1 - p_pooled) * (1/c_imps + 1/t_imps)) if p_pooled > 0 else np.nan
+        z_stat = (t_ivr - c_ivr) / se_prop if se_prop and se_prop > 0 else np.nan
+        z_pvalue = 2 * (1 - stats.norm.cdf(abs(z_stat))) if not np.isnan(z_stat) else np.nan
+
         # Bootstrap CI for difference
         boot_ci = bootstrap_ci(c_daily_ivr["ivr"].values, t_daily_ivr["ivr"].values)
 
@@ -213,22 +221,28 @@ def run_rct_comparison(df, level="intent_group"):
             "t_stat": t_stat,
             "t_pvalue": p_value,
             "u_pvalue": u_pvalue,
+            "z_stat": z_stat,
+            "z_pvalue": z_pvalue,
             "boot_ci_lower": boot_ci[0],
             "boot_ci_upper": boot_ci[1],
             "significant_t": p_value < 0.05,
             "significant_u": u_pvalue < 0.05,
+            "significant_z": z_pvalue < 0.05 if not np.isnan(z_pvalue) else False,
         })
 
     results_df = pd.DataFrame(results)
 
     # Print results
     for _, r in results_df.iterrows():
-        sig_marker = " ***" if r["significant_t"] else ""
+        sig_t = " *" if r["significant_t"] else ""
+        sig_z = " *" if r["significant_z"] else ""
         print(f"\n  {r['group']}")
         print(f"    Control IVR:   {r['control_ivr']:.6f}  ({r['control_impressions']:>10,} imps)")
         print(f"    Treatment IVR: {r['treatment_ivr']:.6f}  ({r['treatment_impressions']:>10,} imps)")
-        print(f"    Lift: {r['ivr_lift']:+.2%}{sig_marker}")
-        print(f"    t-test p={r['t_pvalue']:.4f}, Mann-Whitney p={r['u_pvalue']:.4f}")
+        print(f"    Lift: {r['ivr_lift']:+.2%}")
+        print(f"    Welch t-test (daily IVR, N≈21):  p={r['t_pvalue']:.4f}{sig_t}")
+        print(f"    Proportion z-test (impression-level): p={r['z_pvalue']:.4f}{sig_z}" if not np.isnan(r['z_pvalue']) else "    Proportion z-test: N/A")
+        print(f"    Mann-Whitney U: p={r['u_pvalue']:.4f}")
         print(f"    Bootstrap 95% CI for diff: [{r['boot_ci_lower']:.6f}, {r['boot_ci_upper']:.6f}]")
 
     # Summary table
