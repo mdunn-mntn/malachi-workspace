@@ -12,6 +12,7 @@ Every folder has an explicit definition. When in doubt about where something goe
 |------|---------|
 | `data_catalog.md` | One entry per BigQuery/Greenplum table: schema, partition keys, clustering, join keys, TTL, known gotchas, and query tips. Updated every time a new table is touched in any ticket. |
 | `data_knowledge.md` | Business logic, architecture patterns, disambiguation, tribal knowledge. Things that are true across multiple tickets — not specific to one investigation. |
+| `mntn_business.md` | General MNTN business knowledge — products, strategy, org structure, industry context, terminology, institutional knowledge sourced from docs, meetings, and conversations. |
 | `folder_definitions.md` | This file. |
 
 **What does NOT go here:** Ticket-specific findings, one-time query results, raw data exports, meeting notes.

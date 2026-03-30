@@ -9,6 +9,7 @@ workspace/
 ├── knowledge/            ← shared data docs — source of truth, in git, org-accessible
 │   ├── data_catalog.md   ← table schemas, partitions, join keys, query tips
 │   ├── data_knowledge.md ← business logic, gotchas, tribal knowledge
+│   ├── mntn_business.md  ← general MNTN business knowledge, products, org, industry
 │   ├── experimentation.md ← experiment methodology, covariate selection, test design lessons
 │   └── README.md
 ├── tickets/
@@ -32,6 +33,7 @@ workspace/
 | `README.md` | Workspace structure, philosophy, and how-to — read at session start, update when workspace conventions change |
 | `knowledge/data_catalog.md` | Table schemas and join keys — read at session start, update immediately when new schema learned |
 | `knowledge/data_knowledge.md` | Business logic and gotchas — read at session start, update immediately when new knowledge found |
+| `knowledge/mntn_business.md` | General MNTN business knowledge — products, strategy, org, industry, terminology. Update when learning business context from docs, meetings, or conversations |
 | `knowledge/experimentation.md` | Experiment methodology, covariate selection, test design lessons — update when working on any experiment/analysis ticket |
 | `knowledge/folder_definitions.md` | **Exact definition of what goes in every folder** — check here before placing any file |
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |

@@ -59,6 +59,7 @@ Investigation reveals new schema knowledge, join key, gotcha, or business logic
      ▼
 knowledge/data_catalog.md        ← updated immediately
 knowledge/data_knowledge.md      ← updated immediately
+knowledge/mntn_business.md       ← updated when business context learned
      │
      ▼
 Next ticket starts
@@ -84,6 +85,7 @@ workspace/
 ├── knowledge/
 │   ├── data_catalog.md          ← table-level reference: schemas, join keys, TTLs, gotchas
 │   ├── data_knowledge.md        ← business logic, architecture, tribal knowledge
+│   ├── mntn_business.md         ← general MNTN business knowledge, products, org, industry
 │   ├── folder_definitions.md    ← authoritative definition of every folder
 │   └── README.md
 ├── tickets/
@@ -122,6 +124,10 @@ The table-level reference. One entry per BigQuery (or Greenplum) table that has 
 - **Known gotchas** — data quality issues, behavioral quirks, things that will burn you if you don't know
 
 The catalog is authoritative because it is empirically verified. Every entry was confirmed with a query, not assumed from documentation. If something is in the catalog, it was tested.
+
+### `mntn_business.md`
+
+General business knowledge about MNTN — products, strategy, org structure, industry context, terminology, and institutional knowledge. Sourced from shared docs, meetings, messages, and conversations. This is the place for business context that isn't data-stack-specific but is valuable for understanding the "why" behind the work.
 
 ### `data_knowledge.md`
 

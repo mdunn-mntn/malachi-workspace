@@ -8,6 +8,7 @@ This folder is the **shared, org-accessible** data documentation layer. It lives
 |------|---------|
 | `data_catalog.md` | Table-level reference: schemas, partitions, clustering, join keys, query tips, known gotchas per table |
 | `data_knowledge.md` | Tribal knowledge, business logic, architecture patterns, disambiguation, and cross-ticket insights |
+| `mntn_business.md` | General MNTN business knowledge — products, strategy, org structure, industry context, terminology |
 
 ## Rules
 
