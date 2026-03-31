@@ -1,5 +1,5 @@
 # Experimentation & Causal Inference — Knowledge Base
-Last updated: 2026-03-26 | Started from TI-748 (Media Plan Causal Impact)
+Last updated: 2026-03-31 | Started from TI-748 (Media Plan Causal Impact)
 
 This is a living document. Add to it every time we learn something new about experimental design, covariate selection, test methodology, or edge cases at MNTN.
 
@@ -14,6 +14,7 @@ This is a living document. Add to it every time we learn something new about exp
 | Treatment vs control group exists (not randomized) | **Difference-in-Differences (DiD)** | A/B test with comparable groups | Groups not parallel in pre-period |
 | Staggered rollout, no control group | **Per-unit CausalImpact** | Feature adopted at different times by different units | Very small N (<5 units) |
 | Need to test for lift on a specific metric | **t-test / Mann-Whitney** | Comparing two distributions | Time-dependent data (use time series methods) |
+| RCT with skewed metrics or small N, need interpretable probabilistic results | **BEST (Bayesian t-test)** | CPA/ROAS comparison, small advertiser experiments, stakeholder-friendly reporting | Large-N rate metrics where z-test suffices |
 | Multiple features changed simultaneously | **Regression with interaction terms** | Need to isolate each feature's effect | Multicollinearity between features |
 | Staggered adoption, small N per unit, need one aggregate estimate | **Panel data model (two-way FE)** | Units adopt at different times, want a single population-level treatment effect | Want per-unit effects, or units have enough data for individual time series models |
 | Want to understand feature importance | **SHAP / permutation importance** | Post-hoc explanation of what drove results | Not for causal claims |
@@ -118,6 +119,39 @@ This is a living document. Add to it every time we learn something new about exp
 - **t-test on daily rates is a useful secondary check** — if z-test is significant but t-test isn't, the effect may be driven by a few high-volume days rather than being consistent.
 - **Chi-squared and z-test are interchangeable** for 2×2 contingency tables (z² = χ²). No need to run both.
 - **Statistical significance ≠ practical significance** — with 170K impressions, even a -0.5% IVR difference is "significant" by z-test. Always report effect size alongside p-values.
+
+### Bayesian Alternative: BEST (Bayesian Estimation Supersedes the t-test)
+
+*Source: Kruschke (2013), J. Experimental Psychology: General 142(2), pp.573-603. Python package: `pip install best` (requires PyMC3).*
+
+**What it is:** A Bayesian replacement for the t-test that models data with Student's t-distribution (not Gaussian), giving it built-in robustness to outliers. Instead of a binary significant/not-significant answer, it produces full posterior distributions for group means, standard deviations, effect size, and their differences.
+
+**Key outputs:**
+- **Posterior probability** of any hypothesis — e.g., "87% probability that treatment mean exceeds control by ≥0.5" — far more interpretable than p-values
+- **Highest Posterior Density Interval (HDI)** — Bayesian credible interval (e.g., 95% HDI = the narrowest interval containing 95% of the posterior). Unlike frequentist CIs, this IS the probability that the parameter lies in the interval.
+- **Effect size** — built-in: (μ₁ - μ₂) / √[(sd₁² + sd₂²) / 2]
+- **Normality parameter (ν)** — controls outlier tolerance. ν < 10 = heavy tails (outlier-robust), ν > 30 ≈ normal distribution. Logarithmic scale because shape changes rapidly near ν=3 but stabilizes above 30.
+
+**When to use at MNTN:**
+- **Ratio metrics (CPA, ROAS)** where distributions are heavily skewed — BEST's t-distribution handles outliers that break normal-theory tests
+- **Small N experiments** (5 advertisers) where p-values are underpowered but posterior probability and HDI still give useful information
+- **Stakeholder communication** — "82% probability of improvement" is more intuitive than "p=0.07, not significant"
+- As a **complement to (not replacement for)** the proportion z-test for rate metrics — z-test remains primary for IVR given the experimentation team's standard
+
+**When NOT to use:**
+- Rate metrics with large N (IVR with 170K impressions) — proportion z-test is standard and sufficient
+- When the audience needs traditional frequentist reporting (some stakeholders expect p-values)
+
+**Usage:**
+```python
+import best
+result = best.analyze_two(control_data, treatment_data)
+fig = best.plot_all(result)  # generates posterior plots for all parameters
+result.posterior_prob('Difference of means', low=0)  # P(treatment > control)
+result.hdi('Difference of means', 0.95)  # 95% credible interval
+```
+
+**Reporting note:** BEST displays the posterior **mean** for symmetric distributions (group means) and the **mode** for skewed distributions (standard deviations). Always report the HDI alongside either measure.
 
 ---
 
@@ -496,6 +530,22 @@ When analyzing features that affect publisher/network allocation:
 - **Old A/B split method (audience isolation) has contamination**: IP gets impression from one campaign → added to block list for other campaign. But processing delay means IPs can appear in both groups. New method: MD5 hash on IP → deterministic split into hash buckets → no bleed by design. All future experiments should use this.
 - **Optimal cutoff exists between include-all and exclude-bad**: (Malachi's Etsy experience) Removing the worst items/keywords always decreased total ROI past a certain point — there's an optimal threshold, not a binary decision. Directly applicable to BUK keyword count thresholding.
 - **Cost vs. performance differential is negligible between intent tiers**: Cost difference between high/mid/low intent is only a few percent, but visit rate difference is 10-50x. Should always bid on highest-value IPs first — continuous scoring enables this without sacrificing audience size.
+
+### Exploitation vs Exploration in Optimization (Kale, 2026-03-31)
+
+Purely exploitative optimization — targeting only the highest-intent users — is "somewhat dangerous" (Kale's words). Two risks:
+1. **Incrementality problem:** Highest-intent users are also targeted by Google/Meta. When MNTN only bids on these users, incrementality reports look bad because the conversions would have happened anyway via other channels.
+2. **Local maximum trap:** Without exploration, the system never discovers potentially better audience segments. Multi-armed bandit framing: 100% exploit means 0% discovery.
+
+**Kale's direction:** Media plan budget allocation, Fangorn scoring, and any future optimization should eventually bake in exploration — allocate a slice of budget to test alternative paths, not just exploit the current best guess. Not prescriptive on shape yet, but conceptually: the system needs to explore.
+
+**Implication for experiments:** When measuring a targeting change, consider both:
+- The standard KPI (IVR, ROAS, etc.) — the "exploitation" metric
+- An "opposing" metric (Malachi referenced Andy Grove's management principle) — e.g., reach vs performance, incrementality vs conversion rate
+
+### Retargeting Frequency Diminishing Returns (Kirsten, reported 2026-03-31)
+
+Kirsten's observation from past experiments: retargeting the same people repeatedly → performance always went down. More unique people targeted → better. Aligns with the frequency experiments documented above (lower frequency = better). Kirsten caveat: "things change all the time" — worth re-validating.
 
 ### Feature Importance Methodology Lessons (TI-790, 2026-03-31)
 
