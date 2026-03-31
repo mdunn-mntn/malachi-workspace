@@ -60,6 +60,26 @@ This ticket captures a full knowledge transfer from Alex Knorr (BUK lead) on 202
 
 **Cold start problem**: ALS cannot recommend for advertisers/keywords not in training data. Current fallback = vertical averages (generic, poor quality). Planned fix = fall back to MM V2 keywords.
 
+### Continuous Scoring Methodology
+
+Combines Fangorn intent score (s) with BUK keyword evidence score (K) into a single 0-1 score per (advertiser, IP). [Full RFD](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3414917161).
+
+**Step A — Keyword evidence (K):** Sum DCG discount weights of matched keywords: `W = Σ 1/log2(rank+1)`. Saturate: `K = 1 - exp(-β * W)`. β = 1.863 (p90 DCG → 0.9 adjusted).
+
+**Step B — Intent score (s):** Fangorn model, 0-1 per (advertiser, IP).
+
+**Step C — Blend:** Two options:
+- Geometric: `F = s^(1-γ) · K^γ` — rewards only when BOTH are strong
+- Linear: `F = (1-γ)·s + γ·K` — simpler (Matt's preferred). γ = 0.25 (intent-dominant)
+- Missing scores: `COALESCE(fangorn_score, keywords_score, 0)`
+
+**Score → bidder mapping:** F ∈ [0,1] → [0, 10000]: <0.6 = Max Reach, 0.6-0.8 = Mid Intent, 0.8+ = High Intent.
+
+**Proposed rollout** (Alex, 2026-03-31):
+1. Fangorn release (backbone)
+2. Continuous scoring with Fangorn + existing MM V2 (all keywords equal rank — needed for cold-start)
+3. Wire in BUK keyword rankings to continuous scoring framework
+
 ---
 
 ## 2. The Problem
@@ -68,7 +88,7 @@ BUK has shown promise but lacks a clean performance signal to drive organization
 
 - **Experiment 1** (Sep 2025): Fixed 200 keywords per advertiser blew up audience to 80-88% vertical coverage → control outperformed treatment across all advertisers
 - **Experiment 2** (Nov-Dec 2025): Percentile threshold + score adjustments → +27% avg visit rate lift, but results confounded by audience size differences between treatment and control
-- **Richard's feedback**: "numbers are bullshit" — inconsistent per-advertiser results make it hard to tell a clear story
+- **Internal feedback**: Results viewed as inconsistent — per-advertiser performance varied widely due to audience size confounding
 - **Beta** (ongoing): 3 live campaigns all outperforming comparables, but anecdotal
 
 The initiative is **Paused** pending a clearer performance story.
@@ -79,16 +99,16 @@ The initiative is **Paused** pending a clearer performance story.
 
 ### Prioritized Roadmap (highest to lowest leverage)
 
-#### Priority 1: Design and Execute Size-Controlled BUK vs MM V2 Experiment
-**Why highest leverage**: The #1 blocker to BUK adoption is lack of clean performance signal. Every experiment so far has been confounded by audience size differences. Until resolved, no amount of model improvement will get organizational buy-in.
+#### Priority 1: Design Offline BUK Performance Evaluation
+**Why highest leverage**: The #1 blocker to BUK adoption is lack of clean performance signal. Audience size confounding makes online A/B experiments ambiguous. Experiment team pushback on size-controlled experiment: "we want to validate how things will work in production." Need an **offline** approach that sidesteps this.
 
-**Approach**:
-- Find advertisers where BUK and MM V2 audience sizes are within 5% of each other, OR adjust BUK keyword count to force size alignment
-- Use the new IP-level MD5 hash A/B split (no bleed)
-- Run for minimum 4 weeks (account for ~1 month campaign ramp-up period)
-- Pre-register metrics and analysis plan
+**Approach** (explore alternatives to online A/B):
+- Offline counterfactual: for existing advertisers, compare BUK vs MM V2 keyword overlap with observed visit patterns
+- Matched-pair analysis: find advertisers where BUK and MM V2 happen to produce similar audience sizes, compare visit rates retrospectively
+- DCG score validation (already done — see Section 4) provides strong evidence that rankings are predictive
+- Per-advertiser keyword-level visit rate comparison: for overlapping keywords, compare BUK rank ordering vs actual visit rate ordering
 
-**Draft Jira ticket**: "Design and Execute Size-Controlled BUK vs MM V2 Experiment" — 5 SP
+**Draft Jira ticket**: "Design Offline BUK Performance Evaluation Methodology" — 5 SP
 
 #### Priority 2: Continuous Scoring Validation (DCG)
 **Why**: Sidesteps the size problem entirely. If we can show that DCG-scored IPs have monotonically increasing visit rates by score bucket, that's a compelling story independent of audience size. This is how BUK and Fangorn converge.
@@ -131,12 +151,8 @@ The initiative is **Paused** pending a clearer performance story.
 
 **Draft Jira ticket**: "Improve BUK Parent Keyword LLM Prompts Based on Beta Feedback" — 2 SP
 
-#### Priority 6: Incorporate DDP Site Visit Signals
-**Why**: Future improvement — add external site visit data to model training for advertisers with sparse on-site data.
-
-**Approach**: Already map external visits into DS19 keyword universe. Add these signals to ALS training data.
-
-**Draft Jira ticket**: "Add DDP External Site Visit Signals to BUK Training Data" — 5 SP
+#### ~~Priority 6: Incorporate DDP Site Visit Signals~~ — COMPLETE
+Per Alex (2026-03-31): DDP site visit signals are already incorporated into the BUK model training data. Not discussed in meeting but confirmed afterward.
 
 #### Priority 7: Threshold Logic Refinement
 **Why**: Further refinement based on experiment results.
@@ -206,8 +222,18 @@ The initiative is **Paused** pending a clearer performance story.
 - **Shopper Graph API**: Returns both MM V2 (19 LLM keywords like "Durable Dog Toys") and BUK (20 parent groups with child keyword IDs + model version hash)
 
 ### Beta Release (ongoing)
-- Feature flag enabled, ~8 customer conversations completed
-- 3 live campaigns, all outperforming best comparable campaign (anecdotal, per Michelle)
+- Feature flag enabled, customer conversations completed with 7 advertisers
+- Beta customers talked to (per Alex 2026-03-31):
+  - **40279 West Bend Insurance** — campaign live with beta audience
+  - **45594 Samy's Camera** — campaign live with beta audience
+  - **33129 Apollo.io** — talked, status TBD
+  - **37336 Global Rescue** — planned to use soon, not yet live
+  - **33610 Amsterdam Printing** — talked
+  - **48687 Apolla** — talked
+  - **35374 Experience Scottsdale** — talked
+- Live campaigns outperforming best comparable campaign (anecdotal, per Michelle)
+- [AI feedback tracking doc](https://docs.google.com/document/d/1KB2A5kEOb2ms7J47sxdlXOEKmw0N6GshHeuboUaqODQ/edit?tab=t.0)
+- [Customer tracking sheet](https://docs.google.com/spreadsheets/d/1QFgjrn3L7u1ciZy2PzrVepS198-Oca826MGP2xh1e1A/edit?gid=0#gid=0)
 
 ### Continuous Scoring — DCG Implementation (from Databricks notebooks)
 
@@ -324,11 +350,16 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 7. **Meet with Alex again** — schedule follow-up for deeper technical dive + local Airflow demo
 8. **Review Alex's code** — he expressed desire for code review on the BUK pipeline
 
-### Questions for Alex
-1. We see minor visit-rate dips at score bins 0.45 and 0.60 in our 50-advertiser sample — did you see similar patterns, or does the full advertiser set smooth those out?
-2. TI-538 (RFD on BUK + Fangorn) is Done — can you share the RFD doc or notebook for the blended keyword + Fangorn score weighting?
-3. What's the status of getting continuous scoring into the bidder/pacing system? Is there an API or pipeline that would consume these scores?
-4. Can you share the advertiser IDs for the beta customers with live BUK campaigns so we can do independent performance analysis?
+### Questions for Alex — Answered (2026-03-31)
+1. ~~Visit-rate dips at 0.45/0.60~~ → Alex shared TI-688 investigation write-up with his score distributions. Need to compare our dip bins against his distribution charts.
+2. ~~Blending methodology~~ → **Answered.** RFD shared: geometric (`s^(1-γ)·K^γ`) or linear (`(1-γ)s + γK`), γ=0.25. See Continuous Scoring Methodology section above.
+3. ~~Path to bidder/pacing~~ → **Answered.** Depends on Fangorn release first. Rollout: (1) Fangorn, (2) continuous scoring with Fangorn + MM V2 equal-rank keywords, (3) wire in BUK rankings.
+4. ~~Beta customer IDs~~ → **Answered.** 7 advertisers shared, 2 confirmed live (West Bend Insurance 40279, Samy's Camera 45594).
+
+### Remaining Questions
+1. For the beta live campaigns (West Bend 40279, Samy's Camera 45594) — what are the campaign IDs for the BUK-based audiences vs. their best comparable campaigns? Would like to pull performance data independently.
+2. The experiment team pushback on size-controlled experiments ("want to validate how things will work in production") — is there an existing offline evaluation framework we could propose instead? Or should we design one from scratch?
+3. In the continuous scoring rollout, Step 2 uses MM V2 with equal-rank keywords — does this mean ALL keywords get discount=1.0 (rank=1), making K just a count of matched keywords (saturated)?
 
 ---
 
@@ -381,6 +412,10 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 | Local Airflow guide | `https://mntn.atlassian.net/wiki/spaces/DP/pages/3032645677/Guide+Spark+on+Google+Dataproc+with+local+Astronomer` |
 | Local Airflow commands | `astro dev start` / `astro dev stop`, uv venv with python 3.11 |
 | DCG notebooks (Databricks) | `https://1262887251702944.4.gcp.databricks.com/editor/notebooks/3415949300800788` (Alex shared full folder access) |
+| Continuous Scoring RFD | `https://mntn.atlassian.net/wiki/spaces/TAR/pages/3414917161/Fangorn+Keywords+Continuous+Scoring+Methodology` |
+| TI-688 Scoring Investigation | `https://mntn.atlassian.net/wiki/spaces/TAR/pages/3503948693/Keyword+Continuous+Scoring+Investigation+TI-688` |
+| Beta feedback doc (Google Doc) | `https://docs.google.com/document/d/1KB2A5kEOb2ms7J47sxdlXOEKmw0N6GshHeuboUaqODQ/edit` |
+| Beta customer tracker (Google Sheet) | `https://docs.google.com/spreadsheets/d/1QFgjrn3L7u1ciZy2PzrVepS198-Oca826MGP2xh1e1A/edit` |
 | BUK predictions GCS | `gs://targeting-infra-vertex-pipelines-prod/bottom-up-keywords/batch-predictions/dt={date}/` |
 | DCG scores GCS (dev) | `gs://mntn-data-archive-dev/alex.knorr/test_keyword_ip_scoring` |
 | IPDSC GCS archive | `gs://mntn-data-archive-prod/ipdsc/dt={date}/data_source_id={id}/` |
@@ -401,4 +436,7 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 | `artifacts/ti_620_dcg_logic.py` | DCG scoring notebook — builds DCG scores per IP/advertiser from BUK predictions + ipdsc DS19 |
 | `artifacts/ti_620_beta_eval.py` | Beta calibration notebook — solves optimal exponential scaling factor, visualizes score distributions |
 | `artifacts/ti_688_ip_score_eval.py` | Visit rate validation notebook — joins DCG scores with Greenplum visits, plots visit propensity by score bucket |
+| `artifacts/buk_continuous_scoring_methodology.pdf` | Fangorn + Keywords Continuous Scoring RFD — blending formula, score-to-bidder mapping, rollout plan |
+| `artifacts/buk_ti688_scoring_investigation.pdf` | TI-688 write-up — beta calibration, distribution diagnostics, visit propensity validation results |
+| `artifacts/buk_beta_feedback_tracking.docx` | ML model beta feedback tracking from customer conversations (Michelle) |
 | `meetings/2026-03-31_100808_malachi_alex_-_project_discussion.txt` | Full meeting transcript |
