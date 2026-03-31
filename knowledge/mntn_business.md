@@ -52,6 +52,15 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - **Kirsa** — Experimentation Lead / Product Manager. Owns experiment design, execution, and analysis. Previously PM for data monitoring, then product PM for targeting (Mountain Match). Has a set monthly budget for experiments.
 - **Nick** — Works with Kirsa on experimentation methodology and statistical approach. Involved in power analysis and methodology improvement planning.
 - **Toph** — Production ops. Validates campaign changes for pacing risk (e.g., media plan beta rollout).
+- **Jack** — Engineering manager for identity team (took over role ~March 2026).
+- **Alex Floor** — Covering product leadership for targeting during GPM search (alongside Mike Dole and Kale).
+- **Mike Dole** — Covering product leadership for targeting during GPM search (alongside Alex Floor and Kale).
+
+### Strategic Direction Shift (Kale, 2026-03-31)
+- **Incrementality is the new north star for targeting.** Kale is sharpening the TI team focus: Fangorn and prediction models will narrow toward incrementality, not just intent/ROAS optimization.
+- **Rationale:** Purely exploitative optimization (targeting highest-intent users) hurts incrementality — those users are already targeted by Google/Meta, so MNTN's incremental lift looks weak. The system needs exploration (multi-armed bandit thinking) alongside exploitation.
+- **Practical implication:** Media plan budget allocation, Fangorn scoring, and feature development will all be evaluated through an incrementality lens. Plan forthcoming from Kale.
+- **BUK (Bottoms Up Keywords) is NOT dead** — deprioritized due to low beta adoption, but Kale sees keywords as a valid feature in the predictive model. The interface (exposing keywords as a separate audience mechanism) is the bigger concern, not the underlying signal.
 
 ### Three Main Experimentation Focus Areas (as of March 2026)
 1. **Targeting** — Fangorn, bottoms-up keywords, audience optimization. Most impactful lever.
@@ -139,6 +148,7 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | 2026-03-30 | Initial creation | Template structure |
 | 2026-03-30 | Kirsa meeting (TI-504) | Multi-touch history, Mountain Match, attribution defaults, org/people, metrics philosophy, industry context, terminology |
 | 2026-03-31 | Alex Knorr meeting (BUK) | BUK/ALS/DAR/DS19/Fangorn/DCG/Continuous Scoring terminology, Shopper Graph API, Feature Store, parent/child keywords |
+| 2026-03-31 | Malachi/Kale 1x1 | Strategic direction shift to incrementality, Michelle departure, Jack → identity EM, product leadership gap coverage, BUK not dead |
 
 ---
 
@@ -150,7 +160,7 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | **Brian** | Also involved in BUK development |
 | **Victor** | Infrastructure/compute for BUK pipeline (Databricks budget, DAG management) |
 | **Matt** | Working on Fangorn continuous scoring; proposed DCG-based IP-level scoring approach |
-| **Michelle** | Presented beta BUK campaign performance results |
+| **Michelle** | Former GPM for targeting. Departed ~March 2026. Presented beta BUK campaign performance results |
 | **Richard** | Provided critical feedback on BUK experiment results ("numbers are bullshit" — size confounding) |
 | **Mike** | Sees value in BUK but needs clearer performance signal |
 | **Allison** | Sees value in BUK, involved in prioritization decisions |

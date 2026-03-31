@@ -1,0 +1,589 @@
+[00:00] so a comment and a thought on purely exploitative optimization so like you're looking into this
+[00:09] media plan uh budget allocation by publisher and you've discovered that like if you find a
+[00:17] publisher that has particularly good performance uh as measured by i don't know roas or whatever
+[00:23] it is that you use to as an objective objective function for performance in your analysis
+[00:27] that's great like we should know which publishers perform the best and how to allocate budget
+[00:33] we should also know that purely exploitative optimization is somewhat dangerous because
+[00:40] you can be stuck in local maximums uh we run into this with audience intent scoring and the way we
+[00:47] bid all the time we call a group of ip addresses or households we call them like high intent right
+[00:54] and from an increment
+[00:57] point of view we're not going to be able to do that we're not going to be able to do that
+[00:57] 
+[00:57] from an increment point of view we're not going to be able to do that we're not going to be able to do that
+[00:57] perspective that incrementality is the thing you're trying to optimize toward
+[01:01] purely buying the highest intense audiences is actually damaging because all the other platforms
+[01:08] um like that we're competing against like more down funnel platforms like google and meta
+[01:13] they're going to be a probably better at their intent scoring than we are
+[01:20] um but we're not going to look very incremental because
+[01:26] they're targeting
+[01:27] in the audience that we are and so when you look at like which of the channels is driving the
+[01:36] performance it's going to be hard to see mountains incremental benefit and so um that's like if
+[01:45] that's you know that's blind exploitative performance optimization where you just say
+[01:50] here are the people who most likely to convert let's just spend all our money on those people
+[01:54] um it works
+[01:56] well most of the time uh it may not work well in certain circumstances like incrementality
+[02:01] but it also will fail to reach like the true maximum because there's no exploration so
+[02:09] uh the multi-armed bandit general class of problems is about balancing exploitation versus
+[02:18] exploration and if you're 100 exploit you miss out on opportunities to discover things that may
+[02:25] have performed better than you did in the past so that's a good thing to do but it's not going to
+[02:26] better and so we just need to be careful as a company that we include some amount of exploration
+[02:33] and like trying like if the media plan says 15 percent of budget should go to this publisher
+[02:39] 10 should be that publisher etc etc down the waterfall till you get to 100 of budget
+[02:43] that's like our best guess at the most optimal path but we should also bake in at some point
+[02:52] i'm not saying straight away i'm just offering a thought right not like an action it's just
+[02:56] conceptually we need to bake into our systems some way for the system to explore alternative
+[03:02] paths with a with a slice or some slices of budgets in some ways and i'm purposely not being
+[03:08] too prescriptive because i don't exactly know what shape this takes but i wanted your feedback
+[03:13] and thoughts on like there's this general predisposition we have to like purely exploit
+[03:22] the the thing we think at the moment is the most optimal path and we're not going to be able to
+[03:26] and like that's always kind of changing you know yeah no i think that's a great um to to give you
+[03:33] my to say i mean my involvement in this was very low it was more the experimentation team has
+[03:40] already been working on this and they just asked to test it with my causal impact stuff because
+[03:45] they just didn't have any great way to test it um but i would agree with you that yeah i mean
+[03:50] i don't know how you think about this but um i remember reading this this book again about
+[03:56] the intel ceo x intel ceo wrote it he says that whenever you create um he doesn't use kpi or
+[04:04] whatever or okrs but whenever you're optimizing against one it's always very good to optimize or
+[04:09] to also choose one that is like almost opposing to it and try to optimize at the same time so
+[04:16] like an example great example is reach versus performance right and uh in this case it would
+[04:21] be like what the two things you just said so yeah i definitely think that um you don't want
+[04:26] to over go into one particular you know kpi because then you're going to fail in other
+[04:35] departments right um so yeah i mean 100 on your onboard there oh cool all right so that's just
+[04:43] more of the that's just more side work so in regards to what you were talking about before
+[04:48] um i did want to get more involved with direct ti work um just because it's like hey like i want to
+[04:55] start working
+[04:56] on more team stuff so i've met with alex i've met with matt and i've met with ryan um some of them
+[05:01] together um so there's a couple things that i was that i'm working on so number one um ryan
+[05:07] we're trying to get more information from the bid stream um essentially create a feature store
+[05:13] right which is to add more features to matt's model um but really just a general feature location
+[05:20] where we can everybody is using the same features if they need to test things right so that's kind
+[05:26] of the idea of the team stuff so i've met with alex i've met with matt and i've met with ryan
+[05:26] for that is that we're not all good gathering data independently that we are kind of creating
+[05:33] this so i'm right now grabbing a very similar to the work i did with identity where i was looking
+[05:38] for um identifiers except instead i'm looking for all unique um features that would be indicative
+[05:45] of like visits right um i'm working on that um very great stuff i've looked a lot into the log
+[05:52] table so i'm putting that together we're going to be meeting tomorrow about that um nice
+[05:56] some very high value stuff there um so kind of adjacent here the other one is also bottom-ups
+[06:03] keywords that i talked with uh alex i know that there's been initiative to turn away from this
+[06:08] but i just wanted to give you my perspective so i haven't been super involved with it but i do
+[06:12] understand the bottom-ups keywords wasn't super promising and so as a result they've kind of like
+[06:17] deprioritized it at least it was like and we want to move away from it i think that's how
+[06:21] allison and mike uh were looking at it um i'm
+[06:26] looking at it with fresh eyes and i checked it out today and in gist the bottom-ups keyword
+[06:31] approach basically it's hard to explain simply but it's essentially building keywords from
+[06:41] visit signal as opposed to just scraping it from site visits and there's a lot of reasons that it's
+[06:50] not beneficial that way but uh it wouldn't really be worth it for our time but essentially when i
+[06:55] wanted to do it i was like i'm going to do it i'm going to do it i'm going to do it i'm going to do it
+[06:56] i'm going to do it i'm going to do it i'm going to do it i'm going to do it i'm going to do it i'm going to do it
+[06:56] tell you about that is there's it's very very hard to show in samples and and especially with
+[07:04] just how it's implemented that these keywords the optimizing keywords is valuable we get pretty
+[07:12] messy signal it's really hard to prove it and so as a result it just seems like a poor initiative
+[07:16] however i don't think it is because we can actually show that keywords are highly highly
+[07:23] correlated to visits
+[07:26] and there's a lot of generic keywords that are connected that aren't and so using these keywords
+[07:33] as basically ways to target higher value users is extremely valuable and um i think really the
+[07:42] issue here is showing like figuring out a way to show how it's valuable and a great example is just
+[07:47] with one particular uh advertiser we can rank all their keywords in the ivr that they've had
+[07:53] historically just based on that
+[07:56] um you know we're not targeting against it and we'll literally get like 40x times their top
+[08:03] keyword versus their bottom keyword right so i do think that there's a lot of merit there um
+[08:08] so yeah i'll pause there i do have some other stuff but just you know my thought process is
+[08:14] that i don't think it's something we should trash i absolutely think it's keywords as a
+[08:18] it's it's indicative of intent right because if you've done anything with search related ads
+[08:23] if somebody types in your brand
+[08:26] they're going to your brand with intent right and more or less when we're scraping websites
+[08:30] yes we're getting keywords from the websites and yes that's not necessarily what the brand
+[08:36] or what the person was looking for but chances are the person got to that website by looking up
+[08:40] those keywords right and so we're literally doing a an indirect intent it's almost like an indirect
+[08:49] search term kind of uh i don't know what you would call effects that we're getting from the
+[08:56] way that we're researching into which i think is incredibly valuable so um but yeah i'll pause
+[09:02] there what you what your thoughts are and stuff so yeah i think my first thought is like who sent
+[09:08] the signal that we're trashing this project because that wasn't the signal i heard um sounds
+[09:13] like maybe you got that somehow from allison or mike maybe it was communicated uh in the
+[09:26] a confusing way.
+[09:29] I don't think we're trashing the project,
+[09:31] but if that's the prevailing sentiment,
+[09:34] then maybe we do need to have a conversation
+[09:36] as a team about that.
+[09:37] So yeah, that's my first reaction.
+[09:42] And I guess question is like,
+[09:44] maybe it's not a question.
+[09:45] It's just like, huh, interesting.
+[09:47] Malachi and maybe others think
+[09:48] we're trashing this project.
+[09:52] I could be misunderstanding,
+[09:54] but I think we had a meeting
+[09:55] where they said it was deprioritized
+[09:57] or that it just was kind of a waste of time.
+[09:59] I don't know as much.
+[10:01] Alex would probably be the better person to do,
+[10:03] to ask that question.
+[10:04] But it did sound like it's certainly,
+[10:06] because before I created tickets,
+[10:07] I think Alex was like,
+[10:08] hey, before we create tickets,
+[10:09] we need to probably get some support.
+[10:12] Because I do think the general consensus was
+[10:14] the bottoms up keyword wasn't valuable.
+[10:18] But like I said, I don't think it's not valuable.
+[10:20] I think that it's just an issue
+[10:21] with showing that it's valuable
+[10:24] because of the complications.
+[10:25] Of how it's implemented currently.
+[10:28] Got it.
+[10:29] Yep.
+[10:32] Yeah, I think for sure,
+[10:33] we wanted to communicate
+[10:34] that we were deprioritizing additional work.
+[10:37] It's in beta.
+[10:39] We didn't at the time that we deprioritize it.
+[10:41] I think we had zero active users.
+[10:45] Since then, I think it's moved
+[10:47] from zero to something non-zero,
+[10:49] but I still think the number is small enough
+[10:52] that it's like kind of a proceed with caution
+[10:55] kind of thing.
+[10:55] Yeah.
+[10:55] Yeah.
+[10:55] We don't know.
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] 
+[10:56] We don't know.
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] 
+[10:58] And the one thing that I think is wrong, personally, about bottoms-up keywords has nothing to do with the model.
+[11:08] I actually think the model's kind of interesting.
+[11:11] And I think there is probably some signal in there that tells us there's some value here that we have to figure out how to bottle.
+[11:19] It's actually the interface.
+[11:24] And this is just his upper topic.
+[11:26] Yeah, I think we were like, hey, can we get some signal from advertisers?
+[11:32] And can we get some performance signals that tell us something about what we learned around bottoms-up keywords?
+[11:38] And to this day, I think we still have some work to do to communicate whatever results we found.
+[11:46] Because I don't know that I ever heard the summary of what happened and how do we like it and what's working and not working.
+[11:53] And then separately, there's this like...
+[11:56] There's this question about the interface.
+[12:00] Bottoms-up keywords is great, in my opinion, because it's like smaller grains of sand that you can compose into an audience.
+[12:08] Like you can take tons of tiny little grains of sand and the system can like assemble them into the audience sandcastle that makes sense for you.
+[12:17] Whereas top-down keywords were just much coarser, right?
+[12:20] It was like, here's a boulder.
+[12:22] Does this boulder work for you?
+[12:23] And it's like, if the boulder doesn't work, you got to pick up a different boulder.
+[12:26] And so it was like the coarse versus fine grain of the atomic unit is much finer in bottoms-up keywords, which allows you to do more composition.
+[12:38] Which I think probably has some significant merit.
+[12:44] But when I think about keywords in general, I'm still not sure...
+[12:51] You know, keywords are a feature.
+[12:54] Right?
+[12:54] Just like you're talking about this feature store that Ryan...
+[12:56] Keywords to me are just a feature of a model.
+[13:01] They're like part of the feature space, if you will.
+[13:07] All of the different...
+[13:08] Like in my opinion, when an advertiser comes to us, they should like kind of tell us, here's the kind of people I want to reach.
+[13:14] Here's my budget.
+[13:15] And then however the system composes that audience should actually be fairly opaque to the user.
+[13:21] It doesn't need to be hyper granular.
+[13:24] So if we want to use top-down...
+[13:26] Or bottom-up keywords or interest segments or like whatever.
+[13:30] Why does the advertiser need to care about all the different component parts that make up an audience?
+[13:38] You need to give them enough control that they can feel like they're fine-tuning the audience.
+[13:43] And you need to tell them how many households you expect to reach and what your expected ROAS is going to look like and all that.
+[13:50] But I feel like our audience building interface is like...
+[13:55] I don't know.
+[13:56] It's a little clunky.
+[13:58] It's like I can do mountain matched or I can do interest segments or blah, blah, blah, blah.
+[14:03] Like why does all that...
+[14:05] That's kind of like an engineer's view of the system.
+[14:09] But like a user doesn't necessarily care about the distinction between an interest segment and a keyword.
+[14:17] In fact, I think that level of...
+[14:20] Like we haven't abstracted that complexity away and we probably want to.
+[14:25] I don't know that...
+[14:26] I think advertisers care how the thing is constructed just as long as they feel like they're reaching the right people.
+[14:33] You know what I'm saying?
+[14:34] Mm-hmm.
+[14:35] So when I think of keywords, they're a feature in the linguistic space of intent prediction.
+[14:43] And I don't have a strong grasp on why we think of keywords as something other than a feature in a predictive model.
+[14:54] And I think that feature...
+[14:56] Has some efficacy.
+[14:59] And we have to figure out what efficacy that is compared to, say, other kinds of features that may exist in different dimensional spaces.
+[15:09] Mm-hmm.
+[15:10] I'll yield.
+[15:10] I said a lot.
+[15:11] I don't think the project's dead.
+[15:13] I don't think we have a strong point of view.
+[15:15] How's it going?
+[15:16] And what do we want to do with it?
+[15:19] Yeah.
+[15:19] Well, this is what I want to do.
+[15:21] I think I can bridge that gap, especially because Alex was kind of working on a...
+[15:26] Silo a little bit on it, too.
+[15:28] I think I could help a lot immensely with it, which I already think that I am.
+[15:33] I was able to get some solid work done today regarding that and the bid stream stuff.
+[15:38] So it wasn't just one or the other.
+[15:39] But following that, something I brought up in the chat, you may have not seen it.
+[15:45] I don't know if it was in the TGT chat.
+[15:47] I'm not sure if you're directly in that one.
+[15:49] But right now, in my opinion, when we're optimizing against the visit, there are three main things, right?
+[15:56] Number one.
+[15:56] Number one is visits.
+[15:57] So past visits are obviously indicative of future visits.
+[16:01] That's a no-brainer, right?
+[16:04] The second one, which...
+[16:06] And we've already done that with site visits, right?
+[16:08] Calculating site visits and stuff.
+[16:09] The second one that we've done is keywords, right?
+[16:14] And I think keywords are super valuable.
+[16:15] Number one, it is a feature.
+[16:16] I would agree with you.
+[16:17] I think it's a little bit more of a valuable feature because keywords are directly correlated to intent, in my opinion, right?
+[16:25] It's very similar to...
+[16:26] Search, in my opinion.
+[16:27] Because it's like saying...
+[16:29] I mean, even though we are scraping from the website, most of the time, people get to the website via search.
+[16:35] And very seldomly...
+[16:37] Well, I wouldn't say seldomly.
+[16:39] If they did get there through an advertisement, then we're logging that through visits.
+[16:43] So we're already getting the signal for that.
+[16:45] But right here, the third thing we're working on is like, well, what additional features can we add, right?
+[16:51] And there's lots of additional features.
+[16:53] But I think that the third biggest thing that we can do...
+[16:56] Is connect income to visit intent.
+[17:00] I think income is probably one of the strongest indicators of someone's visit signal.
+[17:07] And there are some...
+[17:08] Obviously, there's some variables here.
+[17:09] And I give an example, right?
+[17:11] If you advertise to kids, you got a bunch of Mr. Beast videos, right?
+[17:14] You might get thousands of visits from kids, okay?
+[17:17] But those aren't necessarily valuable.
+[17:19] And we don't necessarily care, right?
+[17:21] But that doesn't mean that necessarily all visits are the same.
+[17:24] However, when connecting to income...
+[17:26] People who have higher incomes have higher...
+[17:30] Anybody can window shop.
+[17:31] But people who have higher incomes can and do spend more often.
+[17:37] And therefore, they are going to spend more time visiting things that they want, right?
+[17:42] And so I think income is one of the strongest features that we can leverage in order to predict visits.
+[17:50] And a great example and a very low-level example of this is that on any sort of comparison I've ever done...
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] 
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:55] Right?
+[17:56] Right?
+[17:56] Right?
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] 
+[17:57] Right?
+[18:10] 
+[18:10] 
+[18:10] 
+[18:10] 
+[18:10] 
+[18:10] 
+[18:10] 
+[18:10] 
+[18:10] You almost always across the board get much better performance on Apple.
+[18:15] And it's like, are Apple users inherently different?
+[18:18] Do they behave different?
+[18:20] And the answer is yes.
+[18:21] And I think that the easiest way to explain that is that you've kind of indirectly created
+[18:26] income brackets, right?
+[18:28] Now, again, it's a generalization, but generally people who can afford the newest iPhone are
+[18:35] going to be in a higher income bracket or be more willing to convert than someone who's
+[18:40] buying a mid-tier Android phone.
+[18:41] And it's just, I mean, just how it is.
+[18:43] And so anyways, that's one level.
+[18:46] But I think that focusing on maybe trying to connect income as predictive of visits
+[18:53] would be really, really valuable in my opinion.
+[18:57] So I don't think that we should go away from tweaking our site visit signal and our keywords
+[19:03] and those other things.
+[19:04] But if we are going to talk about a third major initiative,
+[19:08] I think the income is extremely valuable.
+[19:12] I know what your thoughts are on that.
+[19:15] Yeah, I think I love the hypothesis.
+[19:20] I think I don't know the answer.
+[19:25] I think in general, what I want to understand is which features of all the features we could
+[19:31] use and bake into the model, which are actually predictive, right?
+[19:37] That's the question we should be answering.
+[19:38] We shouldn't necessarily be biasing toward a particular feature and saying like,
+[19:42] is this the Holy Grail?
+[19:44] Because that's not the question.
+[19:46] The question is which features have the most predictive power?
+[19:52] And you kind of need to go into this experience trying to put your biases at bay of what you
+[20:02] think is going to be predictive.
+[20:03] Because just as you highlighted, if the model is trained on,
+[20:08] let's say, a user agent, right?
+[20:10] Which includes which iPhone are you on?
+[20:13] Is it the latest one?
+[20:16] And you train a model on user agent.
+[20:21] And you realize that the model based on the presence of the user agent feature is highly predictive.
+[20:29] And it tells you that iPhone users, particularly the newest iPhone users, are the most likely to visit and convert.
+[20:36] And then you add.
+[20:38] So if you add income to the model as a feature, you may not gain any predictive power.
+[20:45] You may realize that user agent actually captures all of the predictive power of the income signal.
+[20:55] And so it's just not obvious.
+[20:58] And this is hypothetical.
+[20:59] I don't know that that's necessarily true.
+[21:00] But there is a technique called feature ablation.
+[21:03] Have you heard of it?
+[21:04] I actually just did this.
+[21:07] It's Bayesian something scoring.
+[21:12] But yeah, I did the exact thing where you base it on the variance of each feature.
+[21:17] And then you rank them and stuff.
+[21:18] And a lot of them are very similar.
+[21:20] So you don't want to put similar features together.
+[21:22] Because it's like if you already get the signal from one, you don't need the other one, right?
+[21:27] Yeah.
+[21:27] And you can do stuff where you train the model.
+[21:30] And then you remove features one by one.
+[21:32] And you see, like, did the predictive, you know, did the confusion matrix change?
+[21:37] Did it change dramatically as a result of removing or adding a feature?
+[21:40] So you can do all these, like, data science-y techniques to try and discover the predictive power of each feature.
+[21:46] And then you keep the features that have the most predictive power.
+[21:49] And you subtract the ones that don't matter so much.
+[21:52] And you come up with a set of features that drive predictive power.
+[21:56] And that's what we should always be on the hunt for.
+[21:59] And we need techniques to be able to, like, evaluate which features are the most predictive at scale.
+[22:04] So we can't get too bogged.
+[22:07] We can't get too down with, like, believing any one feature is, like, the one feature that's going to change the world.
+[22:12] Because the reality is that it's probably, like, a stew with, like, 100 ingredients, right?
+[22:19] That actually creates the predictive power that matters for us.
+[22:23] So I love the spirit.
+[22:25] I just want to shape your thinking a little bit more broadly.
+[22:29] Because I don't want you to get too tunnel-visioned around, like, a particular feature.
+[22:33] Because that's not what we're after.
+[22:35] We're after which features are.
+[22:37] Which features are the most predictive.
+[22:38] And I think, like, you have this belief in the keywords.
+[22:43] Okay.
+[22:43] If keywords are predictive, put them in the model and tell me how predictive they are.
+[22:48] The fact that we have two different models going on, one for keywords and one for intent, is, like, weird to me.
+[22:54] It's, like, keywords, I think, may...
+[22:58] And, you know, we should pressure test this without Alex and Matt.
+[23:02] But, like, my intuition is that keywords are a feature of our prediction.
+[23:07] And if people visited a page that have these keywords and those keywords are predictive, then if you jam them into the model's feature set, it should make the model more predictive.
+[23:16] I think the solution there, because adding keywords would add a ton of features and it might be very difficult to do so, is there's this model where you default to keywords.
+[23:28] And then once you get to a certain score or a certain threshold, right, you switch over into the other predictive model.
+[23:36] So.
+[23:37] Like, for example, you go from keywords to Fangorn.
+[23:40] And I think that that's the solution that's being implemented is basically figuring out where that is.
+[23:49] They have a whole RFDA that explains it and how it's supposed to work.
+[23:52] I actually just skimmed through it a little bit.
+[23:54] But, yeah.
+[23:57] And also, I am answering that question, too.
+[23:59] In fact, I just got some values back from this model I just ran about which features.
+[24:04] I scraped all the log tables for all their unique features.
+[24:06] And then...
+[24:06] And used IVR as the thing that we were modeling against.
+[24:13] And then tried to see...
+[24:14] XGBoost has something called chat values.
+[24:16] There's certain things you can use to basically measure that.
+[24:19] But, yeah.
+[24:20] I'll have an answer for that soon.
+[24:22] So...
+[24:23] Cool.
+[24:24] Yeah.
+[24:24] I just think we always need to be asking ourselves that question about, like, hey, of all the data we have, which features are the most predictive?
+[24:33] You know, because it's like what we want is a...
+[24:36] It's a model that can tell us this person who has never visited is likely to visit.
+[24:42] Right?
+[24:42] Like, it's great if the model can tell us that, oh, this person visited.
+[24:46] They're likely to visit again.
+[24:47] Like, that's interesting.
+[24:49] But what's more interesting is, like, who are the people who are, if you influence them with an ad, more likely to then visit?
+[24:58] Because that's the audience of, like, persuasive advertising that you want to reach in order to get them to be a new visitor.
+[25:06] Right?
+[25:07] Mm-hmm.
+[25:07] There's, like, prospecting and there's retargeting.
+[25:11] And they're both important.
+[25:12] But when you think purely on prospecting, which is, like, trying to drive new visitors, the prediction we're trying to make is, like, hey, look at all these people who have visited.
+[25:22] Look at their characteristics.
+[25:23] Train the model on their characteristics.
+[25:25] Now, basically, find me people who are likely to visit who haven't yet, who have, you know, based on similar characteristics.
+[25:33] Those are the features that matter.
+[25:35] Yeah.
+[25:36] Yeah.
+[25:36] Yeah.
+[25:36] The features that tell you about, like, the likelihood of someone to visit who probably hasn't yet.
+[25:43] Yeah.
+[25:44] Kirsten gave me some good ‑‑ I asked her, tell me everything you know about experimentation that you've learned.
+[25:50] And she said that retargeting the same people, it seemed like the performance always went down.
+[25:56] It seemed like the more unique people that you could target, the better.
+[26:02] That was just kind of a general thing that she did.
+[26:05] But she goes, things change all the time.
+[26:06] And I'm like, okay, I'm going to revisit that.
+[26:08] But, okay, well, we're pretty much out of time.
+[26:11] The only other thing I was going to bring up was, oh, two things.
+[26:19] Or one thing, I guess.
+[26:21] I did talk to Mike already about it.
+[26:24] But I was just ‑‑ I was curious about kind of what the ‑‑ what was going on with the recent departure.
+[26:31] But he answered my question pretty well about it.
+[26:34] Yeah.
+[26:34] Yeah.
+[26:34] Yeah.
+[26:34] Yeah.
+[26:34] Yeah.
+[26:34] Yeah.
+[26:34] Yeah.
+[26:34] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] Yeah.
+[26:35] 
+[26:35] Yeah.
+[26:35] Yeah.
+[26:36] Yeah.
+[26:37] 
+[26:37] 
+[26:37] 
+[26:37] 
+[26:37] 
+[26:37] 
+[26:37] 
+[26:37] 
+[26:37] Netflix model too.
+[26:39] You know, where it's like, if someone's not performing and doesn't turn around really
+[26:44] quick, we, you know, we want to turn users quickly on stuff like that, at least, you
+[26:52] know, because we want.
+[26:55] Yeah.
+[26:55] I mean, that's it.
+[26:56] I'm kind of rambling here.
+[26:58] So.
+[26:59] But I already kind of got an answer for that.
+[27:00] So there's not really much to say in regards to that.
+[27:03] so yeah i don't know that i have much to add that you haven't already heard
+[27:09] it's never a fun part of the gig to have to part ways with someone and uh really did appreciate
+[27:18] michelle as a person as a colleague and appreciate all our contributions i think we're we need to go
+[27:24] in a different direction um we need more product leadership and strong points of view around how
+[27:34] to shape the targeting uh ecosystem predictive modeling all these things so we're on the lookout
+[27:40] for someone that can help us do that and um in the in the messy middle that will exist while we
+[27:46] don't have a product leader gpm you know program manager uh alex floor mike dole and myself
+[27:54] will be helping cover off on how to drive the product forward um and i have all the confidence
+[28:00] in the world that we'll be able to bridge but really eager and to find someone who can be that
+[28:06] leader that we need um from that dimension so i'm confident we'll figure that out cool um two things
+[28:14] i think they should be um identity team are you guys going to do an engineering manager for that
+[28:19] not that it really matters i just noticed that it's the only team like this yeah jack
+[28:24] jack
+[28:24] just took over the role oh sweet congratulations jack um and then the last thing is um i want to
+[28:35] i want to get relative feedback about stuff and this is not necessarily your job i'm just letting
+[28:40] you know this that there are lots of times objectives and things that you know being you
+[28:46] know my skip manager um about what's important and i know that they do the engineering all hands
+[28:50] with okrs and stuff like that um but regularly i'm going to try to
+[28:54] sync with you um just to get an idea of like are we always working on what's highest leverage
+[29:01] type of stuff in relation to like the most sorry i'm getting like 30 calls um the most close um
+[29:10] that's most closely related to our okrs that's most you know that people care about um i just
+[29:16] that's a great case so that's a great question and and the answer is we are gonna have some tweaks
+[29:24] to what we're working on currently that are they're not going to be dramatic departures from
+[29:28] what we're doing still you know we're still focusing on predictive modeling all those things
+[29:33] are important we're gonna help sharpen the focus you know fangorn is like such a broad mandate it's
+[29:39] like hey matt and crew go build a better predictive model that like you know kind of can work for
+[29:45] everybody for a handful of objectives ro as cpcv um we actually have a finer point we want to put
+[29:53] on that right we want to focus on the objective model and we're going to focus on the objective
+[29:54] model and we're going to focus in on how we can shape the prediction model to do something very
+[29:59] specific that doesn't mean we're going to stop fangorn entirely but it may mean that we like
+[30:03] narrow the focus to try and drive more outcomes in a particular dimension and it's particularly
+[30:10] around incrementality it's kind of kind of what i was mentioning before about how like we kind of
+[30:15] just focus on the most intentful users and like for that reason our incrementality reports don't
+[30:22] look great um
+[30:24] anyway i know you gotta you gotta hop we're at time but we'll be coming with a plan that helps
+[30:30] sharpen up the focus for ti and i think it'll be very obvious how you can jump in and and be a
+[30:36] participant in that um i have all the confidence in the world that there's plenty of opportunities
+[30:41] for you to just like be right up snug against the team and like help them produce value sweet sweet
+[30:47] well i appreciate it kale you have a good rest of your day and uh um if we don't talk till mountain
+[30:51] meet um i'll see you then man yeah
+[30:54] can't wait man
+[30:55] all right take care
+[30:58] later bye
