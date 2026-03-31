@@ -4,17 +4,19 @@
 -- Net-new signals not available in bidstream tables:
 --   device/browser/OS mix, product browsing, cart activity, traffic source, visit frequency
 --
--- Usage: parameterize @snapshot_date or replace with target date
--- Cost: ~2.5 GB per day, runs in <30s
+-- Usage: replace snapshot_date with target date (DECLARE won't work in bq CLI)
+-- Cost: ~75 GB per day, ~4 min wall time
+-- Tested: 2026-03-31, produces ~287M IP-day rows
+-- Note: product field is JSON in silver (use JSON_VALUE, not dot notation)
 
-DECLARE snapshot_date DATE DEFAULT '2026-03-30';
+-- DECLARE snapshot_date DATE DEFAULT '2026-03-30';
+-- For bq CLI, replace snapshot_date references with literal date string
 
 WITH guid_events AS (
   SELECT
     ip,
     DATE(time) AS event_date,
     -- Device classification
-    LOWER(device_type) AS device_type,
     CASE
       WHEN LOWER(device_type) = 'desktop' THEN 'desktop'
       WHEN LOWER(device_type) IN ('mobile', 'phone') THEN 'mobile'
@@ -47,9 +49,10 @@ WITH guid_events AS (
     is_mobile_device,
     advertiser_id,
     -- Product interaction (net-new: not in any bidstream table)
-    product.CATEGORY AS product_category,
-    product.BRAND AS product_brand,
-    SAFE_CAST(product.AMOUNT AS FLOAT64) AS product_amount,
+    -- product field is JSON in silver view, use JSON_VALUE
+    JSON_VALUE(product, '$.CATEGORY') AS product_category,
+    JSON_VALUE(product, '$.BRAND') AS product_brand,
+    SAFE_CAST(JSON_VALUE(product, '$.AMOUNT') AS FLOAT64) AS product_amount,
     -- Traffic source (net-new: GA params)
     ga_utm_source,
     ga_utm_medium,
@@ -57,7 +60,7 @@ WITH guid_events AS (
     -- IP stability
     CASE WHEN ip = original_ip THEN 1 ELSE 0 END AS ip_eq_original_ip
   FROM `dw-main-silver.logdata.guid_log`
-  WHERE DATE(time) = snapshot_date
+  WHERE DATE(time) = '2026-03-30'  -- replace with target date
     AND ip IS NOT NULL AND ip != ''
 )
 
