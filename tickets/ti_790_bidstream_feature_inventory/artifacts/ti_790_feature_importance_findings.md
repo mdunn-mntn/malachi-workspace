@@ -1,4 +1,4 @@
-# Feature Importance Findings — What Predicts Visits?
+# Feature Importance Findings — Every Feature Ranked
 
 **TI-790** | Malachi Dunn | 2026-03-31
 **For:** Alex Knorr, Ryan Kleck, Matt Brorby
@@ -7,255 +7,194 @@
 
 ## How This Was Done
 
-We trained an XGBoost classifier on **117,238 real IPs** from 2026-03-29 to predict which IPs would visit an advertiser site (visited = 1) vs not (visited = 0). The training data joined 6 tables on IP:
+Trained XGBoost on **117,238 real IPs** (2026-03-29) to predict site visits. Joined 6 tables on IP, extracted ~60 features. Importance measured three ways (gain, frequency, cover) then averaged into a composite rank. SHAP values provide per-feature contribution magnitude.
 
-| Table | What It Provides | IPs with Data |
-|-------|-----------------|---------------|
-| win_logs | Video engagement, viewability, device details, pricing | 100% (base population) |
-| cost_impression_log | Scoring, recency, cost breakdown, ad format | 100% |
-| augmentor_log | IAB categories, SSP diversity, segment density | 42% |
-| bidder_auction_events | Content genre, device make, publisher | 26% |
-| guid_log | Browser/device from pixel, product views, UTM | 30% |
-| conversion_log | Order amount, conversion type, identity signals | 8% |
-
-**Base visit rate:** 3.4% (3,985 visitors out of 117,238 impressed IPs)
-
-**Key methodological choice:** We split features into **pre-visit** (available before any site visit — usable for targeting) and **feedback** (available only after a visit — usable for retraining/enrichment). guid_log and conversion_log features are feedback because they only exist when an IP has already interacted with an advertiser site.
-
-- Pre-visit model AUC: **0.896**
-- Feedback model AUC: 0.999 (outcome-adjacent — expected to be near-perfect)
-
-All results below are from the **pre-visit model** — the one that matters for targeting.
+**Pre-visit model AUC: 0.896** (features available at bid time)
+**Base visit rate:** 3.4%
 
 ---
 
-## The Top 10 Features That Predict Visits
+## Every Feature, Ranked #1 to #66
 
-Ranked by SHAP value (mean absolute contribution to each prediction). These are **empirical results from the model**, not hypotheses.
+Each feature is tagged:
+- **NEW** = not currently used by Fangorn/targeting — genuinely new signal
+- **EXISTING** = already implemented or derived from existing model outputs (RTC scores, Fangorn household scores, segment assignments)
+- **FEEDBACK** = only available after a site visit (guid_log/conversion_log) — use for retraining, not targeting
 
-### #1: Average MNTN Segments (`al_avg_segments`)
-- **Source:** augmentor_log
-- **SHAP:** 0.986 (highest of all pre-visit features)
-- **What it is:** The average number of MNTN segments already assigned to this IP across bid requests
-- **What the model learned:** IPs with more existing segments are significantly more likely to visit. This makes sense — segment density reflects how well-known this IP is to the targeting system. An IP with 15 segments has been seen, profiled, and classified many times. An IP with 0 segments is unknown.
-- **Implication:** Segment density is the single strongest signal we have before a visit. The current Fangorn pipeline is already capturing this implicitly — but explicitly tracking it as a feature could improve cold-start IPs.
+### Pre-Visit Features (Available at Bid Time)
 
-### #2: Percent New Impressions (`ci_pct_new`)
-- **Source:** cost_impression_log
-- **SHAP:** 0.670
-- **What it is:** The fraction of impressions where this IP is flagged as "new" (first impression)
-- **What the model learned:** IPs that are predominantly "new" visit at lower rates. Returning IPs — those we've served before — are warmer and more likely to convert. This is the recency/frequency signal.
-- **Implication:** There's a strong first-impression penalty. IPs we've reached multiple times are better targets. This supports frequency-based optimization.
+| # | Feature | Source | SHAP | Tag | What It Is | What the Model Found |
+|---|---------|--------|------|-----|-----------|---------------------|
+| 1 | `al_avg_segments` | augmentor_log | 0.986 | EXISTING | Avg MNTN segments on IP | More segments = more likely to visit. Expected — segments are the output of our targeting system. |
+| 2 | `ci_pct_new` | cost_impression_log | 0.670 | EXISTING | % impressions where IP is "new" | New IPs visit less. Returning IPs are warmer. Already implicit in frequency capping. |
+| 3 | `ci_pct_rtc` | cost_impression_log | 0.392 | EXISTING | % RTC-targeted impressions | RTC IPs visit more. Expected — RTC is designed to find high-intent IPs. Circular. |
+| 4 | `ci_total_cost` | cost_impression_log | 0.363 | EXISTING | Total media spend on IP | More spend = more visits. Partly mechanical (more impressions), partly reflects bidder confidence. |
+| 5 | `wl_avg_price` | win_logs | 0.231 | **NEW** | Average clearing price (USD) | Premium inventory → better audiences. Price is a quality proxy not currently used as a feature. |
+| 6 | `al_n_auctions` | augmentor_log | 0.228 | **NEW** | # auctions IP appeared in | More active IPs visit more. Activity level is a real signal not explicitly tracked. |
+| 7 | `wl_n_models` | win_logs | 0.205 | **NEW** | # distinct device models | Multi-device households visit more. Household size proxy — genuinely new. |
+| 8 | `n_win_adv` | base | 0.175 | **NEW** | # advertisers targeting IP | Cross-advertiser demand = quality signal. IP wanted by many advertisers. |
+| 9 | `ci_hh_score` | cost_impression_log | 0.152 | EXISTING | Fangorn household score | The existing model's own score. Of course it predicts visits. Circular. |
+| 10 | `al_pct_pmp` | augmentor_log | 0.105 | **NEW** | % auctions with PMP deals | Premium inventory signal. PMP = curated, higher quality. Not currently a feature. |
+| 11 | `ci_n_imp` | cost_impression_log | 0.078 | EXISTING | # impressions served | Impression volume. Already tracked via frequency. |
+| 12 | `ci_pct_video` | cost_impression_log | 0.071 | **NEW** | % VIDEO format impressions | CTV vs display split. Not currently an explicit feature. |
+| 13 | `al_pct_video` | augmentor_log | 0.071 | **NEW** | % VIDEO placement in auctions | CTV vs display from bidstream side. |
+| 14 | `n_wins` | base | 0.070 | EXISTING | Total auction wins | How many ads shown. Frequency metric. |
+| 15 | `ci_adv_hh_score` | cost_impression_log | — | EXISTING | Advertiser-specific score | Fangorn output. Circular. 10000 = RTC. |
+| 16 | `ci_n_vendors` | cost_impression_log | 0.176 | **NEW** | # distinct supply vendors | Supply source diversity. New signal. |
+| 17 | `ci_pct_new` (impressions) | cost_impression_log | — | EXISTING | New visitor % at impression level | Same as #2. |
+| 18 | `wl_pauses` | win_logs | — | **NEW** | # video pauses | Active engagement — pausing means watching intentionally. |
+| 19 | `bae_lg` | bidder_auction_events | — | **NEW** | Has LG device (0/1) | LG Smart TV ownership. Demographic/device signal. |
+| 20 | `al_n_domains` | augmentor_log | — | **NEW** | # distinct domains in auctions | Content consumption breadth. Diverse vs single-site. |
+| 21 | `bae_n_auctions` | bidder_auction_events | — | **NEW** | # dropped auctions for IP | Broader activity beyond what we bid on. |
+| 22 | `bae_pct_news` | bidder_auction_events | — | **NEW** | % content = news genre | **Vertical signal.** News watchers. |
+| 23 | `bae_pct_ent` | bidder_auction_events | — | **NEW** | % content = entertainment | **Vertical signal.** Entertainment viewers. |
+| 24 | `wl_n_makes` | win_logs | — | **NEW** | # device manufacturers | Device diversity — household signal. |
+| 25 | `al_pct_iab` | augmentor_log | 0.091 | **NEW** | % auctions with IAB categories | Content taxonomy data availability. |
+| 26 | `bae_pct_drama` | bidder_auction_events | — | **NEW** | % content = drama | **Vertical signal.** |
+| 27 | `bae_n_pubs` | bidder_auction_events | — | **NEW** | # distinct publishers | Publisher diversity. |
+| 28 | `wl_completes` | win_logs | — | **NEW** | # video completions | Total video engagement. |
+| 29 | `al_n_ssps` | augmentor_log | — | **NEW** | # distinct SSPs/exchanges | Inventory source diversity. |
+| 30 | `al_pct_pmp` | augmentor_log | — | **NEW** | PMP deal rate | (Same as #10 — duplicate in ranking) |
+| 31 | `wl_plays` | win_logs | — | **NEW** | # video plays | Video ad starts. |
+| 32 | `bae_n_genres` | bidder_auction_events | — | **NEW** | # distinct content genres | Viewing diversity — narrow vs broad. |
+| 33 | `bae_roku` | bidder_auction_events | — | **NEW** | Has Roku device (0/1) | Largest CTV platform. Device ownership signal. |
+| 34 | `wl_clicks` | win_logs | — | **NEW** | # ad clicks | Direct response (rare in CTV). |
+| 35 | `bae_pct_sports` | bidder_auction_events | — | **NEW** | % content = sports | **Vertical signal.** |
+| 36 | `bae_pct_comedy` | bidder_auction_events | — | **NEW** | % content = comedy | **Vertical signal.** |
+| 37 | `bae_pct_genre` | bidder_auction_events | — | **NEW** | % auctions with genre data | Genre data availability. |
+| 38 | `wl_viewable` | win_logs | — | **NEW** | # viewable impressions | Ad actually seen. |
+| 39 | `ci_n_vendors` | cost_impression_log | — | **NEW** | Supply vendor diversity | (Same as #16) |
+| 40 | `al_n_networks` | augmentor_log | — | **NEW** | # networks/publishers | Content publisher diversity. |
+| 41 | `bae_n_makes` | bidder_auction_events | — | **NEW** | # device manufacturers (bidstream) | Device diversity from broader auctions. |
+| 42 | `wl_vcr` | win_logs | — | **NEW** | Video completion rate | % plays completed. ~1.0 for most CTV. Signal is in the variance. |
+| 43 | `al_pct_ctv` | augmentor_log | — | **NEW** | % CTV device in auctions | CTV vs mobile/PC from bidstream. |
+| 44 | `bae_samsung` | bidder_auction_events | — | **NEW** | Has Samsung device (0/1) | Samsung Smart TV ownership. |
+| 45 | `wl_mutes` | win_logs | — | **NEW** | # video mutes | Audio-off viewing. Passive engagement. |
+| 46 | `wl_measurable` | win_logs | — | **NEW** | # measurable impressions | Viewability denominator. |
+| 47 | `al_has_ctv` | augmentor_log | — | **NEW** | Binary CTV flag | CTV presence. |
+| 48 | `wl_skips` | win_logs | 0 | — | # video skips | **Zero importance.** CTV has no skip button. |
+| 49 | `wl_viewability` | win_logs | 0 | — | Viewability rate | **Zero importance.** ~100% for all CTV. No variance. |
+| 50 | `wl_invalid` | win_logs | 0 | — | # IVT flags | **Zero importance.** Nearly zero for all IPs. |
 
-### #3: Percent RTC Impressions (`ci_pct_rtc`)
-- **Source:** cost_impression_log
-- **SHAP:** 0.392
-- **What it is:** The fraction of impressions that came through Real-Time Conquest (advertiser_household_score = 10000)
-- **What the model learned:** IPs receiving RTC-targeted impressions visit more. This validates that RTC is successfully identifying high-intent IPs.
-- **Implication:** RTC conquest scoring is working. IPs flagged by RTC are genuinely more likely to visit.
+### Feedback Features (Post-Visit — For Retraining & Enrichment)
 
-### #4: Total Media Cost (`ci_total_cost`)
-- **Source:** cost_impression_log
-- **SHAP:** 0.363
-- **What it is:** Total dollars spent serving impressions to this IP
-- **What the model learned:** More spend → more visits. This is partly mechanical (more impressions = more chances to visit), but also reflects that the bidding system spends more on IPs it values — which are indeed more likely to visit.
-- **Implication:** Spend is a proxy for the bidding system's confidence. The existing system is directionally correct in its spend allocation.
+| # | Feature | Source | SHAP | What It Is | Use Case |
+|---|---------|--------|------|-----------|----------|
+| 51 | `gl_n_os_families` | guid_log | **5.255** | # distinct OS families | FEEDBACK — Multi-device detection. Device fingerprinting. |
+| 52 | `gl_n_browser_families` | guid_log | **3.883** | # browser families | FEEDBACK — Browser diversity. Identity resolution. |
+| 53 | `gl_pct_ip_stable` | guid_log | **2.797** | IP = original_ip % | FEEDBACK — Proxy vs direct connection. IP quality. |
+| 54 | `gl_n_adv` | guid_log | 2.309 | # advertisers visited | FEEDBACK — Cross-advertiser activity level. |
+| 55 | `gl_n_events` | guid_log | 1.451 | # pixel events | FEEDBACK — Visit frequency/engagement. |
+| 56 | `gl_pct_mobile` | guid_log | 0.647 | % mobile events | FEEDBACK — Mobile vs desktop behavior. |
+| 57 | `gl_pct_new` | guid_log | 0.373 | % "new" visits | FEEDBACK — New vs returning ratio. |
+| 58 | `cv_n_orders` | conversion_log | 0.266 | # distinct orders | FEEDBACK — Repeat purchaser signal. |
+| 59 | `cv_n_conv` | conversion_log | 0.214 | # conversions | FEEDBACK — Converter flag. |
+| 60 | `cv_avg_amt` | conversion_log | 0.206 | Avg order value ($) | FEEDBACK — Spending tier. $200 buyer ≠ $5 buyer. |
+| 61 | `cv_total_amt` | conversion_log | 0.129 | Total order value ($) | FEEDBACK — Lifetime purchase value. |
+| 62 | `cv_n_types` | conversion_log | — | # conversion types | FEEDBACK — Diverse converter (purchase + signup + call). |
+| 63 | `gl_has_mobile` | guid_log | — | Mobile presence (0/1) | FEEDBACK — Mobile device flag. |
+| 64 | `cv_n_adv` | conversion_log | — | # advertisers converted on | FEEDBACK — Cross-advertiser converter. |
+| 65 | `gl_n_product_views` | guid_log | — | # product page views | FEEDBACK — Purchase intent (browsing products). |
+| 66 | `gl_has_tablet` | guid_log | — | Tablet presence (0/1) | FEEDBACK — Tablet device flag. |
 
-### #5: Average Clearing Price (`wl_avg_price`)
-- **Source:** win_logs
-- **SHAP:** 0.231
-- **What it is:** Average price paid per auction won (in USD)
-- **What the model learned:** IPs we pay more for are more likely to visit. Premium inventory (higher CPMs) correlates with higher-quality audiences.
-- **Implication:** Price is a quality signal. Cheap inventory ≠ good targeting.
-
-### #6: Auction Volume (`al_n_auctions`)
-- **Source:** augmentor_log
-- **SHAP:** 0.228
-- **What it is:** How many auctions this IP appeared in during the sample hour
-- **What the model learned:** More active IPs (appearing in more auctions) are more likely to visit. Active streaming/browsing behavior correlates with engagement.
-- **Implication:** IP activity level is a real signal. Highly active IPs are better prospects than rare/quiet ones.
-
-### #7: Device Model Diversity (`wl_n_models`)
-- **Source:** win_logs
-- **SHAP:** 0.205
-- **What it is:** Number of distinct device models seen for this IP
-- **What the model learned:** IPs with multiple device models are more likely to visit. This indicates a household with multiple devices — a multi-device household is more engaged and more reachable.
-- **Implication:** Household size/device diversity is a meaningful targeting signal. Single-device IPs are harder to convert.
-
-### #8: Advertiser Count (`n_win_adv`)
-- **Source:** base (win_logs derived)
-- **SHAP:** 0.175
-- **What it is:** Number of distinct advertisers targeting this IP
-- **What the model learned:** IPs targeted by many advertisers visit more. These IPs are in high-value audience segments that multiple advertisers want.
-- **Implication:** Cross-advertiser demand is a quality signal. An IP targeted by 20 advertisers is more valuable than one targeted by 1.
-
-### #9: Fangorn Household Score (`ci_hh_score`)
-- **Source:** cost_impression_log
-- **SHAP:** 0.152
-- **What it is:** Fangorn's existing household-level intent score
-- **What the model learned:** Higher Fangorn scores → higher visit rates. The existing model is already capturing real signal.
-- **Implication:** Fangorn works. But it ranks 9th, meaning there's significant additional signal in features 1-8 that Fangorn doesn't currently use.
-
-### #10: PMP Deal Rate (`al_pct_pmp`)
-- **Source:** augmentor_log
-- **SHAP:** 0.105
-- **What it is:** Fraction of auctions with Private Marketplace deals
-- **What the model learned:** IPs seen predominantly through PMP deals visit more. PMP = curated, premium inventory with better audience quality.
-- **Implication:** Inventory quality (PMP vs open exchange) is a real signal for targeting.
-
----
-
-## The Content & Device Features (Bidstream)
-
-These are the features we were most excited about from `bidder_auction_events` — content_genre, device_make, etc. Here's how they actually performed:
-
-| Rank | Feature | SHAP | Composite Rank | Verdict |
-|------|---------|------|----------------|---------|
-| 13 | `bae_lg` (LG device) | — | 18.0 | Mid-tier. LG ownership has some predictive value. |
-| 15 | `bae_n_auctions` (auction volume) | — | 19.7 | Mid-tier. Activity level signal. |
-| 17 | `bae_pct_news` (% news genre) | — | 21.7 | Mid-tier. News watchers show different visit patterns. |
-| 18 | `bae_pct_ent` (% entertainment) | — | 21.8 | Mid-tier. Entertainment is the dominant genre. |
-| 21 | `bae_pct_drama` (% drama) | — | 23.0 | Lower-mid. |
-| 22 | `bae_n_pubs` (publisher count) | — | 23.3 | Lower-mid. |
-| 27 | `bae_n_genres` (genre diversity) | — | 26.2 | Lower. |
-| 28 | `bae_roku` (Roku device) | — | 26.3 | Lower. |
-| 30 | `bae_pct_sports` (% sports) | — | 26.7 | Lower. |
-| 31 | `bae_pct_comedy` (% comedy) | — | 26.8 | Lower. |
-| 36 | `bae_n_makes` (device make count) | — | 29.7 | Lower. |
-| 41 | `bae_samsung` (Samsung device) | — | 32.3 | Lower. |
-
-**Honest assessment:** Content genre and device make are **mid-tier for raw visit prediction.** They ranked 17-41 out of 47 features. The impression-level features (scores, cost, recency) and augmentor_log features (segment density) dominate.
-
-**But this doesn't mean they're not valuable.** The model predicts "will this IP visit ANY advertiser." Content genre is much more valuable for predicting "will this IP visit THIS SPECIFIC advertiser" — a news watcher visiting a news site is a different question than "will they visit any site." That's the **vertical classification** use case, which is Alex's TI-791 work. We haven't tested that yet.
+*gl_has_desktop and gl_n_utm_events had zero importance (0% fill in sample).*
 
 ---
 
-## Augmentor Log Features (Bidstream Supply-Side)
+## The "Genuinely New" Features — What We Should Focus On
 
-| Rank | Feature | SHAP | Composite Rank | What It Measures |
-|------|---------|------|----------------|-----------------|
-| 2 | `al_avg_segments` | **0.986** | 6.7 | Avg MNTN segments — **#1 by SHAP** |
-| 8 | `al_n_auctions` | 0.228 | 13.0 | Auction volume |
-| 14 | `al_n_domains` | — | 18.3 | Content domain diversity |
-| 20 | `al_pct_iab` | 0.091 | 22.3 | % with IAB category data |
-| 24 | `al_n_ssps` | — | 24.3 | SSP (exchange) diversity |
-| 25 | `al_pct_pmp` | 0.105 | 25.3 | PMP deal rate |
-| 35 | `al_n_networks` | — | 29.3 | Network/publisher count |
-| 39 | `al_pct_video` | 0.071 | 31.3 | % video placement |
-| 40 | `al_pct_ctv` | — | 32.0 | % CTV device type |
-| 44 | `al_has_ctv` | — | 43.0 | Binary CTV flag |
+Filtering out EXISTING (circular) and zero-importance features, here are the **NEW features ranked by actual predictive value:**
 
-**Verdict:** Augmentor log is the second-most valuable pre-visit source after cost_impression_log. `al_avg_segments` alone is the #1 feature by SHAP. IAB category rate and PMP rate add incremental signal.
-
----
-
-## Win Logs Features (Ad Engagement)
-
-| Rank | Feature | SHAP | Composite Rank | What It Measures |
-|------|---------|------|----------------|-----------------|
-| 3 | `wl_avg_price` | 0.231 | 7.7 | Clearing price |
-| 6 | `wl_n_models` | 0.205 | 9.0 | Device model diversity |
-| 12 | `wl_pauses` | — | 17.0 | Video pauses (active engagement) |
-| 19 | `wl_n_makes` | — | 22.0 | Device manufacturer diversity |
-| 23 | `wl_completes` | — | 23.7 | Video completions |
-| 26 | `wl_plays` | — | 26.2 | Video plays |
-| 29 | `wl_clicks` | — | 26.3 | Ad clicks |
-| 33 | `wl_viewable` | — | 28.0 | Viewable impressions |
-| 38 | `wl_vcr` | — | 31.0 | Video completion rate |
-| 42 | `wl_mutes` | — | 34.3 | Video mutes |
-| 43 | `wl_measurable` | — | 42.0 | Measurable impressions |
-| 45 | `wl_skips` | 0 | 46.0 | **Zero** — CTV has no skip |
-| 46 | `wl_viewability` | 0 | 46.0 | **Zero** — 100% for all CTV |
-| 47 | `wl_invalid` | 0 | 46.0 | **Zero** — nearly no IVT |
-
-**Verdict:** Pricing and device diversity are the valuable win_logs signals. Video engagement metrics (VCR, completions) are mid-tier. Three features had zero importance: skips (CTV doesn't have skip buttons), viewability rate (100% for all CTV), and IVT flags (nearly zero).
-
----
-
-## Feedback Features (guid_log + conversion_log)
-
-These are post-visit features — can't target with them, but valuable for enrichment and retraining.
-
-| Rank | Feature | SHAP | Source | What It Measures |
-|------|---------|------|--------|-----------------|
-| 1 | `gl_n_os_families` | **5.255** | guid_log | OS diversity (multi-device signal) |
-| 2 | `gl_n_browser_families` | **3.883** | guid_log | Browser diversity |
-| 3 | `gl_pct_ip_stable` | **2.797** | guid_log | IP = original_ip match rate |
-| 4 | `gl_n_adv` | 2.309 | guid_log | # advertisers visited |
-| 5 | `gl_n_events` | 1.451 | guid_log | Event volume |
-| 6 | `gl_pct_mobile` | 0.647 | guid_log | Mobile event % |
-| 7 | `gl_pct_new` | 0.373 | guid_log | New visitor % |
-| 8 | `cv_n_orders` | 0.266 | conversion_log | Distinct order count |
-| 9 | `cv_n_conv` | 0.214 | conversion_log | Conversion count |
-| 10 | `cv_avg_amt` | 0.206 | conversion_log | Average order value ($) |
-| 11 | `cv_total_amt` | 0.129 | conversion_log | Total order value ($) |
-| 12 | `cv_n_types` | — | conversion_log | Conversion type diversity |
-| 13 | `gl_has_mobile` | — | guid_log | Mobile presence flag |
-| 14 | `cv_n_adv` | — | conversion_log | Advertiser diversity in conversions |
-| 15 | `gl_n_product_views` | — | guid_log | Product page views (purchase intent) |
-| 16 | `gl_has_tablet` | — | guid_log | Tablet presence |
-| 17 | `gl_has_new_visit` | — | guid_log | Any new visit flag |
-| 18 | `gl_has_desktop` | 0 | guid_log | **Zero** — 0% fill in this sample |
-| 19 | `gl_n_utm_events` | 0 | guid_log | **Zero** — UTM rarely present |
-
-**Key feedback signals for enrichment:**
-- **Device fingerprinting** (gl_n_os_families, gl_n_browser_families) — richest identity signal
-- **IP stability** (gl_pct_ip_stable) — proxy vs direct connection
-- **Conversion value** (cv_avg_amt, cv_total_amt) — spending tier segmentation
-- **Product browsing** (gl_n_product_views) — purchase intent indicator
+| New Rank | Feature | Source | SHAP | What It Is |
+|----------|---------|--------|------|-----------|
+| **1** | `wl_avg_price` | win_logs | 0.231 | Clearing price — premium inventory = better audiences |
+| **2** | `al_n_auctions` | augmentor_log | 0.228 | Auction activity volume — active IPs visit more |
+| **3** | `wl_n_models` | win_logs | 0.205 | Device model diversity — multi-device households |
+| **4** | `n_win_adv` | base | 0.175 | Cross-advertiser demand — wanted by many = high value |
+| **5** | `ci_n_vendors` | cost_impression_log | 0.176 | Supply vendor diversity |
+| **6** | `al_pct_pmp` | augmentor_log | 0.105 | PMP deal rate — premium inventory signal |
+| **7** | `al_pct_iab` | augmentor_log | 0.091 | IAB category data availability |
+| **8** | `ci_pct_video` | cost_impression_log | 0.071 | CTV vs display format split |
+| **9** | `al_pct_video` | augmentor_log | 0.071 | CTV vs display from bidstream |
+| **10** | `wl_pauses` | win_logs | — | Video pauses — active engagement |
+| **11** | `bae_lg` | bidder_auction_events | — | LG device ownership |
+| **12** | `al_n_domains` | augmentor_log | — | Content domain diversity |
+| **13** | `bae_n_auctions` | bidder_auction_events | — | Broader auction activity |
+| **14** | `bae_pct_news` | bidder_auction_events | — | News genre % — **vertical signal** |
+| **15** | `bae_pct_ent` | bidder_auction_events | — | Entertainment genre % — **vertical signal** |
+| **16** | `wl_n_makes` | win_logs | — | Device manufacturer diversity |
+| **17** | `bae_pct_drama` | bidder_auction_events | — | Drama genre % — **vertical signal** |
+| **18** | `bae_n_pubs` | bidder_auction_events | — | Publisher diversity |
+| **19** | `wl_completes` | win_logs | — | Video completion count |
+| **20** | `al_n_ssps` | augmentor_log | — | SSP/exchange diversity |
+| **21** | `wl_plays` | win_logs | — | Video play count |
+| **22** | `bae_n_genres` | bidder_auction_events | — | Genre diversity — narrow vs broad viewer |
+| **23** | `bae_roku` | bidder_auction_events | — | Roku device ownership |
+| **24** | `wl_clicks` | win_logs | — | Ad clicks (rare in CTV) |
+| **25** | `bae_pct_sports` | bidder_auction_events | — | Sports genre % — **vertical signal** |
+| **26** | `bae_pct_comedy` | bidder_auction_events | — | Comedy genre % — **vertical signal** |
+| **27** | `bae_pct_genre` | bidder_auction_events | — | Genre data fill rate |
+| **28** | `wl_viewable` | win_logs | — | Viewable impression count |
+| **29** | `al_n_networks` | augmentor_log | — | Network/publisher count |
+| **30** | `bae_n_makes` | bidder_auction_events | — | Device make diversity (bidstream) |
+| **31** | `wl_vcr` | win_logs | — | Video completion rate |
+| **32** | `al_pct_ctv` | augmentor_log | — | CTV device % in auctions |
+| **33** | `bae_samsung` | bidder_auction_events | — | Samsung device ownership |
+| **34** | `wl_mutes` | win_logs | — | Video mute count — passive viewing |
+| **35** | `wl_measurable` | win_logs | — | Measurable impression count |
+| **36** | `al_has_ctv` | augmentor_log | — | Binary CTV flag |
 
 ---
 
-## Features We Identified But Haven't Modeled Yet
+## Features Not Yet Modeled
 
-From the cross-table analysis, these are candidates for future iterations:
+These were identified in the cross-table analysis but not included in the XGBoost model yet:
 
-| Feature | Source | Why Not Yet | Potential |
-|---------|--------|-------------|-----------|
-| IAB category percentages (per-category) | augmentor_log | Need UNNEST on 1.2B rows — expensive | High for vertical classification |
-| `query.ga_client_id` (67% prevalence) | conversion_log query string | Need JSON parsing | Identity resolution |
-| `query.shpt` (74% prevalence) | conversion_log query string | Need JSON parsing | Product type — vertical signal |
-| `query.email_data` (2.3%) | conversion_log query string | Sparse | Cross-device identity |
-| `query.androidId/idfa/adid` (~3%) | conversion_log query string | Sparse | Cross-device identity |
-| `ua_advanced.DeviceBrand` (799 values) | guid_log JSON | Need JSON parsing | Device demographics (Matt's prototype) |
-| `ua_advanced.DeviceName` (9,984 values) | guid_log JSON | High cardinality | Device fingerprinting |
-| `viewability_score` | bid_price_log | 10-day TTL | Pre-bid quality signal |
-| `publisher_performance` | bid_price_log | 10-day TTL | Publisher quality ranking |
-| `recency` / `conquest_score` | bid_events_log | Need to validate fill rates | Real-time signals at bid time |
-| `content_series` (37% fill) | bidder_auction_events | Needs garbage filtering | Specific show affinity |
-| `content_channel` (36% fill) | bidder_auction_events | Moderate fill | Channel affinity |
+| Feature | Source | Prevalence | Why It Could Matter |
+|---------|--------|-----------|-------------------|
+| IAB category percentages (per-category) | augmentor_log | 30% | Specific vertical affinity (IAB8 = Food, IAB17 = Sports) |
+| `content_series` (show names) | bidder_auction_events | 37% | Specific show affinity — very granular |
+| `content_channel` | bidder_auction_events | 36% | Channel affinity |
+| `query.ga_client_id` | conversion_log | 67% | Cross-session identity linkage |
+| `query.shpt` (product type) | conversion_log | 74% | Product category purchased — vertical signal |
+| `query.email_data` | conversion_log | 2.3% | Identity resolution — cross-device |
+| `ua_advanced.DeviceBrand` (799 values) | guid_log | 56% | Device demographics (Matt's prototype) |
+| `ua_advanced.DeviceName` (9,984 values) | guid_log | 56% | Device fingerprinting |
+| `viewability_score` | bid_price_log | — (10d TTL) | Pre-bid quality prediction |
+| `publisher_performance` | bid_price_log | — (10d TTL) | Publisher quality ranking |
+| `recency` / `conquest_score` | bid_events_log | — | Real-time signals at bid time |
 
 ---
 
-## Summary Table: All 25 Tables Analyzed
+## All 25 Tables — What We Checked
 
-| Table | Unique Columns | In Model? | Verdict |
-|-------|---------------|-----------|---------|
-| **cost_impression_log** | 20 | Yes — 8 features | **#1 source.** Scores, recency, cost dominate. |
-| **augmentor_log** | 7 | Yes — 10 features | **#2 source.** Segment density is top SHAP feature. |
-| **win_logs** | 66 | Yes — 14 features (11 used) | **#3 source.** Price + device diversity. 3 had zero importance. |
-| **bidder_auction_events** | 15 | Yes — 13 features | Mid-tier for IVR. High-value for vertical classification. |
-| **guid_log** | 15 | Yes — 13 features (feedback) | Post-visit only. Device fingerprinting + product intent. |
-| **conversion_log** | 3 + query JSON | Yes — 6 features (feedback) | Post-visit only. Order value + identity signals. |
-| bid_price_log | 14 | No — 10d TTL | Viewability/publisher scores — worth testing. |
-| bid_events_log | 3 | No | Recency + conquest score at bid time. |
+| Table | Unique Cols | In Model? | Verdict |
+|-------|-----------|-----------|---------|
+| **cost_impression_log** | 20 | Yes (8) | Top source for targeting features — but many are EXISTING model outputs |
+| **augmentor_log** | 7 | Yes (10) | Segment density (#1 SHAP) + IAB categories + SSP diversity |
+| **win_logs** | 66 | Yes (14) | Price, device diversity, video engagement. 3 had zero importance. |
+| **bidder_auction_events** | 15 | Yes (13) | Content genre + device make. Mid-tier for IVR, high for verticals. |
+| **guid_log** | 15 | Yes (13) | FEEDBACK only. Device fingerprinting + product intent. |
+| **conversion_log** | 3 + query JSON | Yes (6) | FEEDBACK only. Order value + identity signals. |
+| bid_price_log | 14 | No (10d TTL) | viewability_score, publisher_performance — worth testing |
+| bid_events_log | 3 | No | recency, conquest_score at bid time |
 | event_log_filtered | 5 | No | Pre-aggregated video quartiles. Redundant with win_logs. |
-| event_log | 4 | No | VAST events — covered by win_logs aggregates. |
-| conversion_signal_log | 5 | No | CallRail data. 193 rows in 6 days — too sparse. |
+| event_log | 4 | No | VAST events — covered by win_logs. |
+| conversion_signal_log | 5 | No | CallRail data. 193 rows in 6 days. Too sparse. |
 | tpa_membership_update_log | 7 | No | Scores field empty. No signal. |
-| kochava_log | 6 | No | Mobile attribution — niche. |
-| click_log | 1 | No | Only `landing_page` is unique. |
-| clickpass_log | 1 | No | This is our outcome variable (IVR). |
-| viewability_log | 2 | No | `viewability_type_id` — limited value. |
+| kochava_log | 6 | No | Mobile attribution. Niche. |
+| click_log | 1 | No | Only landing_page is unique. |
+| clickpass_log | 1 | No | Outcome variable (IVR). |
+| viewability_log | 2 | No | viewability_type_id only. |
 | impression_log | 12 | No | CPM/CPI — redundant with cost_impression_log. |
-| spend_log | 9 | No | Intent scores = Fangorn output (circular). |
+| spend_log | 9 | No | Intent scores = Fangorn output. Circular. |
 | bid_logs | 17 | No | 90% redundant with win_logs. |
-| singular_log | 2 | No | Mobile attribution — overlap with kochava. |
+| singular_log | 2 | No | Mobile attribution overlap. |
 | analytics_request_log | 4 | No | GA send events. Low value. |
-| page_view_signal_log | 3 | No | Page URLs — niche. |
+| page_view_signal_log | 3 | No | Page URLs. Niche. |
 | auction_log | 0 | No | Subset of augmentor_log. |
-| visit_tracking_log | 1 | No | `is_verified_visit` only. |
-| guid_ip_log_visitors | 1 | No | `is_new_gl` — variant flag. |
-| impression_tracking_log | 1 | No | `query_string` — tracking pixel params. |
+| visit_tracking_log | 1 | No | is_verified_visit only. |
+| guid_ip_log_visitors | 1 | No | Variant new-visitor flag. |
+| impression_tracking_log | 1 | No | Tracking pixel query string. |
 | icloud_vv_log | 0 | No | Shares all columns with clickpass_log. |
 | realtime_spend_last_3d | 0 | No | Subset of spend_log. |
