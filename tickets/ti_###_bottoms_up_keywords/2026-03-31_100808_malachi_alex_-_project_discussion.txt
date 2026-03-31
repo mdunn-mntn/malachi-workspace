@@ -1,0 +1,1242 @@
+[00:00] That was it. So you have to hit record again after you approve it.
+[00:04] Yeah. And hold on. If I hit here, I see recording now.
+[00:09] Yeah. I thought I saw it before, but okay. Hopefully this works. It's not a huge deal,
+[00:13] but yeah, let's, let's chit chat. Cool. Okay. So there's a couple of different
+[00:18] directions we can go with this meeting. I'll kind of give you an idea of maybe
+[00:21] what I was thinking. And then really what I want to do is like, what is interesting
+[00:26] or most valuable for you? So I can talk through bottom up keywords, like depending on how much
+[00:33] context you have of where that's at and what we're, what's going on with that project.
+[00:37] I can talk through kind of the interest segment scoring a little bit more.
+[00:41] And I was thinking like just some discussion technical side for like half ish of the meeting.
+[00:47] And then the other part, and we talked about this before, I want to make sure that you're all set up
+[00:51] for local airflow testing, like your repos are.
+[00:56] And we don't have to do that all live here, but I can like share a bunch of documentation
+[01:00] and a bunch of steps and then kind of give you a demo on my side of how to do all that.
+[01:05] And like what the purpose is. So that's kind of the things I was thinking about.
+[01:10] What do you care about most or want to like start with?
+[01:14] Well, let's start with the bottom up keywords just from the beginning. We're at, let's go into
+[01:17] the technical stuff, the airflow stuff we can definitely do, but I've done it a few times
+[01:21] because I've had to set up a few DAGs. So I've had to do it before the GCP changes and after.
+[01:26] So I've only done it like once. So it's not something that's like on the top of my head,
+[01:29] but it's not like something I'm completely unfamiliar with. So excellent.
+[01:33] This is a new setup that Victor put together. Basically what it does is in our previous setups,
+[01:41] airflow dev, everyone had access to, but then anytime you upload something to dev,
+[01:46] since everyone's using the same environment, it like overwrites other people's tests
+[01:50] because it's like the single environment. So this version is,
+[01:55] it's running airflow locally on your machine. And so what it's helpful for is with the feature store,
+[02:03] you can build out your own set of features. They get uploaded into the dev GCS bucket,
+[02:09] but you can like run the full airflow pipelines yourself to kind of like test out what that would
+[02:13] look like before you merge all your code without stepping on anyone else's toes and vice versa.
+[02:20] So that's what I was thinking for what we would go through and it's not super hard.
+[02:25] So that's, that's a good point.
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] 
+[02:25] But just so you're kind of like up to date on that kind of development cycle.
+[02:31] Yeah, that sounds good. Okay, cool. Let's yeah, let's, let's get started on that.
+[02:36] Okay. Well, we'll, we'll start, let's talk through bottom of keywords first.
+[02:40] Okay.
+[02:42] And what do you want me to like start from the beginning of,
+[02:47] of things or do you have like kind of a high level idea of what we want to do?
+[02:50] I mean, you can start from the beginning. It's just because I, like, I, I kind of understand,
+[02:54] right? Bottom ups, keywords,
+[02:55] is the process of, you know, getting more or more accurate keywords based on people's,
+[03:03] is it based on the DDP data that we get still like scraping it from the websites? I assume.
+[03:09] I will. Let's see here. A few different things. Let me share my screen and I'm going to like flip
+[03:16] back and forth between a bunch of stuff. Not all of it like decks. So hopefully, but you know,
+[03:21] just keep it conversational. So just interrupt me whenever. Yeah.
+[03:25] Okay. So the first thing is like, how does our mountain match V2, as we call it,
+[03:30] like the current approach today work.
+[03:32] And are you able to share that deck with me?
+[03:35] Uh, absolutely.
+[03:38] Would it help in Slack or in the zoom meeting?
+[03:41] Oh, Slack is perfect.
+[03:42] Okay. I was gonna say if it, if your AI is going to like add it in, then it might be more
+[03:46] helpful there, but either way. Okay. Perfect. So let's talk through just the flow of our current
+[03:51] approach today. So this is mountain match V2, how we do things.
+[03:55] So the crux of it, right. Is crawling or scraping the advertiser's website and being able to pass
+[04:02] that HTML of their homepage to an LL. So the w this is where we get the kind of like brand
+[04:07] description. What are customers that are a good fit? And I'm going to ignore this flow for now,
+[04:12] but you know, there are problems where like, if we can't scrape their site, we still have to build
+[04:16] something. And it usually doesn't sound great.
+[04:19] We're scraping the sites. We're not basing it off of, um,
+[04:23] might be common crawl is how we're doing it.
+[04:25] Okay. Okay.
+[04:25] Yeah. So that's like a scrape of their site. So we pass the HTML. We say like, okay, here's this
+[04:31] company. Here's their HTML describe the products and services that they sell. That's where we get
+[04:36] kind of the brand description in the audience page, uh, in the kind of setup. The next thing
+[04:42] we do is we ask them, okay, describe the customers who would be interested in these products.
+[04:47] Then we say, great. Now generate 20 keywords that a customer would use as search terms.
+[04:53] So based on their homepage,
+[04:55] this step is the parent keywords. So these are the 20 keywords that a customer sees
+[05:01] when they come into the audience tab. Uh, and again, based on their homepage that we could
+[05:06] scrape then under the hood, uh, and, and this concept is parent keywords. Then under the hood,
+[05:11] we say, okay, for every one of those 20 keywords, generate 10 products or services
+[05:18] for those search terms based on the descriptions. So we go from 20 parent keywords to 200
+[05:25] AI keywords. So we go from 20 parent keywords to 200 AI keywords. So we go from 20 parent keywords
+[05:25] to 30 AI generated keyword, like search terms, products or services.
+[05:33] Once we have that, we use embeddings to align whatever the LLM generated to our data source
+[05:40] 19 keyword universe. So what's important here is those 200 will all collapse into some subset
+[05:50] of data source 19 keywords. So, you know, if there's a lot of repetition, maybe those 200 go
+[05:55] to like 68 or something, right? Like some number under 200 or less, but we don't have any control
+[06:02] over that. It's just kind of where they fit best. Okay. So those data source 19 keywords,
+[06:09] those are the targetable keywords that go into the audience expression.
+[06:14] So a customer sees 20 parent keywords, which are, you know, these AI generated things. And then
+[06:19] from those, we generate, we go down into the targetable universe. So the concept for bottom
+[06:26] up keywords, bottoms up, why don't we start from these data source 19 keywords, use the LLM to
+[06:33] generate the user facing pieces after that. And then these, how we generate these should be more
+[06:40] data driven than just their homepage. And the reason we want to do that one, and this is,
+[06:47] this is an old deck. So like the,
+[06:49] the original problem for bottom up keywords was to like make audiences larger, but the real answer
+[06:54] is make them perform better and make them larger, which as we know is a, is a hard problem to solve
+[07:02] both. So one like small audiences, but two difficult to make changes in, in this current
+[07:09] version, right? Like, let's say I generate 20 parent keywords for a customer and there are six,
+[07:15] 70 child keywords that are assigned to each of those, right.
+[07:19] Based on.
+[07:19] This process, how do I add more? You don't really have a clean way besides like regenerating the
+[07:25] LLM ones and hope they map to other data source 19 keywords or customer ads keywords that are
+[07:31] unique. Right. So like in this process, it's hard to expand. The other pieces on the flip side,
+[07:38] if you wanted less keywords, which of those 70 do you pick to get rid of? Well, you don't really
+[07:43] have a concept of like before the campaign runs, which ones are best or worst. So a lot of our
+[07:48] customers say, like, I don't know, I don't know, I don't know. I don't know. I don't know. I don't
+[07:49] know. I don't know. I don't know. I don't know. I don't know. I don't know. I don't know. I don't
+[07:49] know. I don't know. I don't know. I don't know. I don't know. I don't know. I don't know. I don't
+[07:50] know.
+[07:50] I run this and then I evaluate keyword level performance and I like trim and add things over
+[07:56] time based on how well they perform. So it takes time for them to run that and kind of figure out.
+[08:02] Oh, go ahead.
+[08:03] No, that was fine. When I was at Coachava, there was a product that we offered called
+[08:08] Search Ads Maven, which was essentially that. So this was based on search terms,
+[08:14] but this is more or less connected right um as we got data on those specific search terms there was
+[08:21] a feedback loop that would basically help them choose which keywords and um then they would like
+[08:27] each each advertiser would have a portfolio of their top keywords based on conversion rates and
+[08:31] all these different things right um so yeah i very very uh valuable information um yeah that makes
+[08:38] sense i think i think uh we have the keyword level reporting for customers which they're using for
+[08:45] this but a lot of that feedback loop and iteration i think customers are doing themselves but sounds
+[08:51] like you have some good context of like maybe there are some tweaks we can do to how this is
+[08:55] presented or how they use that going forward yeah yeah no i'm just you know i'm thinking long term
+[09:00] like as in performance increases is that if at some point in time we had some sort of feedback
+[09:06] to tell us which keywords they're most valuable
+[09:08] we could help that be the ranking system right where as far as like you know like you just said
+[09:14] there's 10 or 20 keywords we want to choose certain ones how do we order those and like you
+[09:19] know if that we got 100 ips which ips do we want to target based on which keywords that they were
+[09:25] triggered on one or all perfect yeah so anyways continue with this as well hold hold that thought
+[09:30] we will absolutely i will absolutely show you that because that is important okay cool and then the
+[09:36] last part about our current system
+[09:37] we don't use
+[09:38] any pixel data we have conversion log we have good log we have a ton of really good information
+[09:43] that our recommendations are not based on so because we're just scraping their home page right
+[09:49] so in comes bottom up keywords and the the key here is we're going to use a modeling framework
+[09:55] called alternating least squares which is a matrix factorization model so from my reading
+[10:02] basically these types of models these als models are like the best recommendation systems
+[10:08] out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out
+[10:38] users, and then like the products or items they interact with, and then some sort of score,
+[10:46] rating, confidence around those things. So in our context, what we said is, well, the users are
+[10:52] customers, advertisers, and they don't have products necessarily. But what they do have
+[10:58] is they have these data source 19 keywords, which we've classified different parts of their website.
+[11:05] And then how do we add in a rating, or a confidence or a score at that level? Well,
+[11:15] we don't really have a like, user feedback on that. But what we do have are how many IPs are
+[11:22] visiting these different keywords, how many are converting on those different keywords,
+[11:26] and other information like cart volume as well, how many items do they have in these carts from
+[11:29] these different pages. So we're using something called implicit ALS. And we're
+[11:35] taking all of those signals, conversions, number of IPs that visit their cart volumes,
+[11:40] we're blending that all into this confidence score. So then, just like when you would see
+[11:46] recommendations for similar items on Amazon, when you go shop for like a keyboard, it's going to
+[11:51] show you like mouse and accessories and things. We're treating the keywords on your website,
+[11:57] based on the visits and conversions that we see, here are other keywords that we would recommend
+[12:02] to you. So the model is, we're using the same keywords that we would recommend to you.
+[12:05] out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out out
+[12:35] This is not a beta customer, but this is a customer I use all the time because I like
+[12:38] dogs.
+[12:40] Here is their training data.
+[12:42] Now, obviously, it's more than just this like IP count over 30 days, but we can see based
+[12:48] on a 30 day window of their good log and conversion log activity for this customer.
+[12:54] Here are the different data source 19 keywords that we've classified across URLs that we've
+[12:59] seen.
+[12:59] Then based on this set of training data, what we've applied, the model can then recommend
+[13:07] other keywords, provide them with a score and a ranking.
+[13:12] So back to your point of what do I get rid of first?
+[13:17] Well, you get rid of the lowest ranked one, right?
+[13:19] Right.
+[13:20] Gotcha.
+[13:21] So, okay, just pause here.
+[13:22] So updated model comparisons, each sheet here represents a different advertiser that you
+[13:27] ran this on.
+[13:28] And score and score adjacent, how are those being generated?
+[13:32] Okay.
+[13:32] So the way a matrix factorization model works in the quick and dirty version, and I have
+[13:39] another deck.
+[13:40] Let me just send this to you now.
+[13:41] Oh, is it?
+[13:42] Sorry, we don't have to go necessarily to the math.
+[13:45] But is it going to be something like-
+[13:46] I'll give you the high level.
+[13:49] Oh, why can't I never remember?
+[13:50] Like, is it like version of Euclidean distance or something like that, except multidimensional?
+[13:56] Is that-
+[13:57] Yeah.
+[13:57] So the idea is-
+[13:58] The idea behind matrix factorization is if we built a model like a logistic regression
+[14:03] or an XGBoost, and we said like, build the matrix of advertiser and like products that
+[14:09] they are keywords they interacted with.
+[14:11] We'd have this ridiculously large and like sparse model.
+[14:16] So ALS has some tricks to kind of reduce that space where instead of making predictions
+[14:22] against all advertisers and all keywords all at once, we can do it stepwise.
+[14:28] And that makes the problem much smaller, a less sparse universe.
+[14:33] And then what we get out of it, and I don't know why I said here, here we go.
+[14:42] I will just send this to you.
+[14:43] We're not going to talk through this, but this is all the math.
+[14:45] Yeah.
+[14:46] Can you send me the also your sheet?
+[14:48] I know I'm asking you for all the different-
+[14:50] Yeah, yeah, of course.
+[14:51] I want you to, I'm happy to have you review any of this stuff.
+[14:53] Yeah.
+[14:54] It just, it will help.
+[14:55] Yes.
+[14:56] Side note.
+[14:57] I plan on sharing this with the team just because it's been such a, like literally productivity
+[15:02] has skyrocketed for me, but I set up local repo with all my tickets and break out all
+[15:08] my tickets and I have a certain structure of those tickets.
+[15:11] So like what are the queries, what are the artifacts, things like that.
+[15:14] Right.
+[15:15] And so every ticket follows that structure.
+[15:16] And in my cloud input, right, I have a list of instructions about like what to do and
+[15:24] update knowledge documents.
+[15:25] So as I work on TI.
+[15:27] I'm updating that knowledge doc.
+[15:32] So I get more and more information.
+[15:33] So for example, in the ticket that I'm working on right now with your guys' you know, to
+[15:40] go through all the tables and look at the variables and stuff, I actually already have
+[15:43] a record of all the, all the tables in there.
+[15:46] And I also have like interesting information about them because as I've worked on tickets,
+[15:52] I've like learned more information like, oh, this column was generated this way.
+[15:56] This column is generated this way.
+[15:57] So anyways, all that being said, when I what's really awesome is the reason I record these
+[16:02] meetings is that as I pull in these transcripts, I actually update knowledge documents.
+[16:07] And so they gets more and more informed as I go along, which is, it's just, it's super,
+[16:13] super great.
+[16:14] No, I would love to see if you share that and like share your setup, that would be really
+[16:18] helpful because we don't really have like a clear, like, this is the way to kind of
+[16:22] have your workflow work.
+[16:24] And I'm, I'm, I'm not on cloud code yet.
+[16:26] Like I just have.
+[16:27] Cursor and chat GPT.
+[16:28] So Claude seems to be the way that everyone is already going with their workflows.
+[16:33] So I should try to jump on the train there.
+[16:35] So that would be helpful.
+[16:36] Yeah, for sure.
+[16:37] But anyways, I didn't want to cut you off.
+[16:38] No, no, no, no.
+[16:39] This is totally conversational.
+[16:40] So yeah, it's been so beneficial.
+[16:44] Like I'm just saying that for me, because where it really came from is that I had some,
+[16:49] like I said, I was having tons of different requests from people.
+[16:53] And so like I was having a hard time keeping track of a lot of stuff.
+[16:56] And then like what would happen too, is that a lot of this stuff was like knowledge based,
+[16:59] right?
+[17:00] And I'm like, this is being lost with me.
+[17:03] And I also might forget something that somebody says, and then they have to repeat it.
+[17:07] Right.
+[17:08] So like when I get the meeting transcripts, I'm able to retain that information.
+[17:12] And then like, if I forget it and I'm querying something like I get reminded by the model.
+[17:16] And the cool thing about it is that if you set up, if you said there's two different
+[17:22] parts, but there's a cloud, Claude markdown file, which is kind of like it reads every
+[17:26] time.
+[17:27] So you can just point it to where to get the information, but it's not necessarily filling
+[17:31] up the context with all the information right at once.
+[17:34] So it's really smart because what it can do is that every time you start a new chat, it
+[17:37] knows I can go get this information if I need it, but it doesn't necessarily immediately
+[17:41] when you start the chat, fill it up with a hundred K context tokens, and then it starts
+[17:45] performing badly.
+[17:46] So that's, what's really cool about it is that you kind of do a combination and then
+[17:50] what you can do, which is really nice is that all the work that I've been doing, I have
+[17:53] my own personal repo on mountain.
+[17:54] Yeah.
+[17:55] And I commit all those changes there periodically and it may, it does it automatically.
+[18:00] I've set it up to where it makes commits automatically.
+[18:02] So the cool it's cool because as you do those commits to, this is like a small little piece.
+[18:08] It actually helps the LLM to remember to do some of those tasks.
+[18:11] And so it's, it's, it's just a really cool feedback loop, which has made work a lot faster,
+[18:15] but
+[18:16] nice.
+[18:17] No, I would, I would love to see that.
+[18:18] Okay.
+[18:19] So the, the scores here, the idea is and this is kind of the nice things versus like traditional
+[18:25] Emma ML, and there's some trade-offs, but the input into this model is this kind of structure
+[18:32] for all advertisers.
+[18:34] And then the, the model then provides recommendations for all advertisers and all keywords.
+[18:40] So we have a 6,000 advertisers with like pixel data that I have in here over a 30 day window
+[18:46] and like 20,000 keywords.
+[18:48] So we're not storing the full universe, but I'm getting 6,000 advertisers by 20,000 keyword
+[18:54] rankings.
+[18:55] Yeah.
+[18:56] Yeah.
+[18:57] Yeah.
+[18:58] Yeah.
+[18:59] Yeah.
+[19:00] Yeah.
+[19:01] Yeah.
+[19:02] Yeah.
+[19:03] Yeah.
+[19:04] Yeah.
+[18:58] Yeah.
+[19:03] Yeah.
+[19:04] Yeah.
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] 
+[18:58] Essentially what it's doing is the model is building keyword level and advertiser level embeddings.
+[19:07] So like numeric representations of the advertiser and then across advertisers, numeric representations of the keywords.
+[19:14] Then when you do the dot product, that's where these scores come from.
+[19:20] I'm making some adjustments after the fact, which are these score adjustments.
+[19:26] One is a popularity penalty. So let's see a good example.
+[19:33] Accessories, ridiculously broad and generic. So I wanted to like suppress some of that stuff.
+[19:39] Another example that we have, like these are some good ones, too, right? Like apparel, consumer goods.
+[19:45] So we have a lot of like very high level, high generic keywords that go with a lot of customers.
+[19:51] Another great example, and Victor has started fixing this, but web services.
+[19:56] Anytime we get like Google Tag Manager URLs with an advertiser, our LLM assigns that to web services.
+[20:04] So then web services is associated with every advertiser.
+[20:07] And then when the model looks for similar keyword recommendations, every advertiser is associated with every advertiser.
+[20:14] So it's harder to get the distinctions of what they do. Right. So suppressing some of that.
+[20:19] And then I have another multiplier effect for how much.
+[20:25] How much.
+[20:26] So if you're looking at like a keyword that's like a little bit more of a lift above kind of the baseline for that keyword, this advertiser has.
+[20:35] Right. So like you can imagine pet accessories and dog accessories for canine ballistics.
+[20:39] We want that to have like a nice boost because that's something they see a lot.
+[20:43] So what's nice about this is now we have an ordering of keywords of their importance.
+[20:48] The other thing is it recommends not just from their universe of keywords, but outside of it.
+[20:55] So here's a good example.
+[20:56] So let me finish this thought and then.
+[20:59] Oh, no, you're okay.
+[21:00] So pet apparel is not a keyword that we have data on canine ballistics for.
+[21:06] So for whatever reason, this none of their URLs have been classified into pet apparel.
+[21:13] However, the model says based on these relationships and the relationships of other similar advertisers, pet apparel would be a good recommendation for you.
+[21:23] And it is a good one.
+[21:24] So it can go.
+[21:26] Outside of the like known universe for these recommendations to call it explore versus like exploit.
+[21:33] So we get this good mix of where did you actually did we classify what you have?
+[21:39] And then based on the model, all the interactions across all of our advertisers, what would other good fits be for your company?
+[21:47] Apollo is an interesting one.
+[21:49] They sell socks, various like high performance socks, but things like sports footwear.
+[21:55] Sure.
+[21:56] They don't sell sell sports footwear, but people looking for sports fit with footwear might be a good fit for like sock advertisements.
+[22:04] Right.
+[22:05] Same with like dance where they sell dance socks that are really good for dancing, that kind of thing.
+[22:12] So there's a lot of like cowboy boots, right?
+[22:16] Like specialty kind of shoes that you have these.
+[22:20] You don't sell cowboy boots, but people who are looking for cowboy boots might be a good fit for your ads kind of thing.
+[22:25] So that's like the intuition of what's happening from training to prediction.
+[22:29] So I'll pause there and then we'll get into the parent keyword, which is like the last step of this that I'll show you next.
+[22:34] Oh, you are muted.
+[22:39] I had to mute myself so I don't cut you off.
+[22:43] I, uh, I, uh, um, can I show you something real quick?
+[22:49] Yeah, absolutely.
+[22:49] This is, I think, connected in this, but just something I'm thinking about.
+[22:54] So if I go.
+[22:55] On Google and I just type in mountain select, um, or actually how about this mountain quick frame AI.
+[23:06] Okay.
+[23:07] So I've searched this mountain quick frame AI, which is very specific right now.
+[23:12] The sponsored results are app 11 corporation and vibe.co and then we have quick frame.
+[23:17] Okay.
+[23:18] So these are the normal ones.
+[23:20] Um, so we have sponsored events.
+[23:23] Well, what these people are doing is that when.
+[23:25] I type in mountain quick frame AI or maybe something they're bidding on that because they're trying to poach me, you know?
+[23:32] Um, but I might be able to see an example if I type in McDonald's.
+[23:37] Um, well, I guess I'm not now.
+[23:42] Um, it looks like McDonald's is maybe not doing that, but you can get my, my drift is that when, when I search for a specific keyword.
+[23:51] Um, I get ads on that keyword.
+[23:54] Right.
+[23:55] Yeah.
+[23:56] Yeah.
+[23:57] Yeah.
+[23:58] Yeah.
+[23:59] Yeah.
+[24:00] Yeah.
+[24:01] Yeah.
+[24:02] Yeah.
+[24:03] Yeah.
+[24:04] Yeah.
+[24:05] Yeah.
+[24:06] Yeah.
+[24:07] Yeah.
+[24:08] Yeah.
+[24:09] Yeah.
+[24:10] Yeah.
+[24:11] Yeah.
+[24:12] Yeah.
+[24:13] Yeah.
+[24:14] Yeah.
+[24:15] Yeah.
+[24:16] Yeah.
+[24:17] Yeah.
+[24:18] Yeah.
+[24:19] Yeah.
+[24:20] Yeah.
+[24:21] Yeah.
+[24:22] Yeah.
+[24:23] Yeah.
+[24:24] Yeah.
+[24:23] 
+[24:23] 
+[24:23] Yeah.
+[24:23] 
+[24:23] 
+[24:23] Yeah.
+[24:23] 
+[24:23] 
+[24:23] Yeah.
+[24:23] 
+[24:23] Yeah.
+[24:23] 
+[24:23] 
+[24:23] Yeah.
+[24:23] Yeah.
+[24:24] 
+[24:24] 
+[24:24] Yeah.
+[24:24] 
+[24:24] Yeah.
+[24:25] 
+[24:25] Yeah.
+[24:25] 
+[24:25] 
+[24:25] Yeah.
+[24:22] applies near me. And then they go and they visit Petco, right? Because they got an ad for Petco,
+[24:27] right? And then we're scraping this and then we find, oh, pet, whatever. But what we're essentially
+[24:33] doing is we're taking a causal user, right? Someone who is intending to buy a specific product.
+[24:42] And we are then assigning keywords based on that. I think they're very highly correlated.
+[24:47] So I guess it doesn't matter because all we care about the visits here.
+[24:50] Um, but this is where, like, I did a lot of research in causality is that there is a distinction
+[24:56] between users who were already going to buy the pet supplies and users who weren't, but they got
+[25:04] an ad and they said, oh, that's interesting. And then they went to a website, did pet supplies.
+[25:07] So I, not that I would change anything about what you're doing. I just, it's just interesting to
+[25:11] talk about is that at some point in time, it might be very interesting or valuable for us to try to
+[25:20] track.
+[25:20] The earliest record of somebody's site visit and see if that correlates, like, I don't know,
+[25:30] even know how we do that, but it there, there's a lot of connection there. And I think it's super
+[25:34] valuable because you know, if we're, we are trying to get credit for visits. So whether or not someone
+[25:40] was searching for it and they were going to buy it anyways, and we happened to say, Hey, go to this
+[25:45] other person's website. And we stole them just like how I looked in that, that, um, I looked up
+[25:49] that keyword.
+[25:50] Um, you know, Instacart, you know, these sponsors results, right. Um, yeah, I mean, I don't know what
+[25:58] was going with that, but, um, no, I think I see, I think I see we're seeing, and maybe I can, I can
+[26:03] add a little more like concreteness for bottom of keywords for that. Um, go back to your web search.
+[26:07] Actually, I think it'll be helpful to go through this. Okay. Will you go to the canine ballistics
+[26:11] website? Yeah. Whatever. Yeah. Search to get there. So I think the key distinction with the way it
+[26:18] works today from the way you're saying it.
+[26:20] Because it is slightly different and then like, just pick on whatever product, right.
+[26:24] Arbitrary, whatever you like. Cool. So you click on this URL, we get pixel data that your IP went
+[26:33] here. We classify this as dog beds. So then what the model sees is over 30 days, how many other
+[26:42] people like you went to dog beds related URLs. And that's like the total IP count, those IP counts.
+[26:49] Let's say you buy something, those
+[26:50] conversions, those are all come in as a confidence signal of how important that keyword is to this
+[26:56] advertiser. So if dog beds is like the most important thing and it has the highest confidence,
+[27:02] it's going to look for other, uh, keywords that like align very highly with that. So the, my point
+[27:09] here is there's with this model, there's like a level of abstraction away from the individual IP.
+[27:15] It's like at the customer level, if that makes sense. Yeah, that makes sense. Cause this is
+[27:20] actually,
+[27:20] pretty valuable too. And I think the most valuable part of your thing is having that correlation
+[27:25] matrix between the keywords, because this is really valuable. So like in this example, okay,
+[27:32] I typed in canine ballistics. I did not type in dog beds. I went to canine ballistics. I found
+[27:37] the dog bed. And so we are now connecting and saying dog beds is really closely related to
+[27:44] canine ballistics. And that is not necessarily something that we get just from the homepage.
+[27:49] Cause there's nothing, there's nothing that we can do about it. So we're just going to go ahead and
+[27:50] see what happens.
+[27:50] I wonder there might be, but let's see.
+[27:52] It depends on the customer, right? But like,
+[27:55] generally homepages are probably insufficient for how we want to like do that.
+[27:59] Agreed. Agreed. That's, that's actually super, that's great.
+[28:02] Um, and this part's hard, you know, we haven't really implemented this. However,
+[28:05] the other interesting thing here, um, we're doing like a 30 day snapshot,
+[28:11] which is like how mountain match today works. However, what do we do with mountain match?
+[28:14] We take like a, we, we, sorry. How does mountain match work today? We scrape your website, your,
+[28:16] homepage, we generate keywords and like, that's it. Those are your parent keywords forever.
+[28:26] Uh, then the people associated with those keywords, that's going to change with these
+[28:30] 30 day windows, right? The IPs associated to those keywords. That's what we're depending on.
+[28:35] However, you can imagine very easily that the structure of your website pages, your sales
+[28:42] change, you have seasonality where how people.
+[28:21] It's like, you're going to be able to do this. You're going to be able to do this. You're going
+[28:46] to be able to do this. You're going to be able to do this. You're going to be able to do this. You're going to be able to do this.
+[28:47] And maybe the keywords that are relevant to you changes over time
+[28:52] with bottom up keywords. If we're taking 30 day snapshots of the visiting and that behavior,
+[28:58] the important keywords might change and the recommendations might change. So like your winter
+[29:03] clothing probably has different keywords than your summer line. We can now adjust our keywords
+[29:09] dynamically based on the behaviors of your customers. That's interesting. Now the hard
+[29:15] part is that you can't just go and do it. You can't just go and do it. You can't just go and do it.
+[29:16] So the hard part is how we present that. And we haven't exactly figured that out yet,
+[29:19] but that's the hard part. Is this sorry, just to reiterate,
+[29:22] is this at the advertiser level or you said this is at the household level, right?
+[29:26] This is at the advertiser data source 19 keyword level, but the recommendations are per
+[29:31] advertiser. Per advertiser. Okay. You know, what's interesting. It's just funny how the,
+[29:35] all the, a lot of this stuff is correlated because I was just watching a video on LLMs. And what's
+[29:40] quite interesting is that when you take the, you know, the number of parameters that they had,
+[29:44] there was actually just.
+[29:45] Just a publication by MIT about how LLMs work. And what's really interesting is that they thought
+[29:51] that as more, it's basically this what's going on between the words is it's drawing similarities
+[30:02] between them. So at maps, you could think about a giant web of similarities between the keywords
+[30:08] and that's where all the training comes from. But what's really interesting about it is that
+[30:14] sometimes the,
+[30:15] things didn't change. So for example, they might have 4,000 spots in this,
+[30:20] the number of dimensions, but they have a billion words and they're like, well,
+[30:23] what's happening to these words? Well, they used to think that each of the words would
+[30:26] get their own spot, but that's actually not what's happening. They're actually sharing the same spot
+[30:30] because they find that these words are highly correlated to the same exact thing. So in a very
+[30:35] much smaller, less complex, less compute scale that we're dealing with, we're essentially doing
+[30:39] the same thing where we're saying these keywords are highly correlated. And, um, there we all, we
+[30:45] often see them together. And so we're going to base our recommendations on that. So yeah, I mean,
+[30:49] this is, this is pretty, pretty great information. So, um,
+[30:52] All right. And then the last part of this bottom of keywords flow,
+[30:56] uh, is the parent keywords. So data source 19 recommended keywords. Like when you load the
+[31:03] model object and say like, give me recommendations, this is what you get back. This is what goes into
+[31:09] the audience expression. We do not. And, and my understanding is don't plan on ever doing,
+[31:15] uh, surfacing these child keywords to customers. So instead of showing canine ballistics, 65
+[31:22] recommended keywords, we need to aggregate those into parents with the description that they see.
+[31:28] So the way we're doing that today is we are taking, you know, N number of recommendations,
+[31:33] this number of recommendations changes per advertiser, and that's a whole other can of worms.
+[31:39] Um, we're going to cluster these based on their semantic similarity. They cluster them
+[31:43] based on their embeddings.
+[31:45] Then we're going to pass those clustered keywords to an LLM and say, okay, now build, you know, a parent keyword and a description for everything under that.
+[31:53] So if we open like dog training equipment buyers, dog training equipment, training equipment were semantically similar.
+[32:01] So the LLM gets this and we say, okay, based on canine ballistics and their description, you know, make a parent keyword for this grouping.
+[32:10] And then it comes up with dog training equipment buyers and training focused buyers purchase gear.
+[32:15] So then this is what canine ballistics sees on their UI.
+[32:19] And they're like, oh yeah, that does fit.
+[32:20] I will check that into my audience.
+[32:22] And when they check that, these underlying child keywords are what get added into their audience expression.
+[32:31] So that's kind of the flow of how this works today from a, like how things are going.
+[32:39] I can talk through very quickly the two experiments we ran.
+[32:43] The first one we said, let's do 200.
+[32:45] We did 200 recommendations for every advertiser, which like totally blows up the size of almost everyone's audience to like cover 80% of the vertical.
+[32:57] So then when you compare it to mountain match today, performance was much worse, right?
+[33:02] Given everything, you know, the entire vertical is high intent.
+[33:05] We already know that doesn't look very good.
+[33:06] So the original thinking was in our current process, right?
+[33:11] We do 200 keywords.
+[33:13] Then we align them to data source 19.
+[33:15] So let's do 200.
+[33:15] Let's do 200 recommendations for bottom of keywords.
+[33:18] Well, there's this like translation piece of, yeah, the LLM made like 15 variants of dog bed and they all just aligned to dog bed.
+[33:27] So there's not really 200.
+[33:29] So that was like the first experiment.
+[33:30] The second one, I made some adjustments.
+[33:33] I tried to do some sizing changes.
+[33:35] We got more varied performance, but then there's still this relationship.
+[33:39] And, you know, Fangorn showed this as well, right?
+[33:42] With our current scoring, there is this relationship.
+[33:45] Between audience size and performance where, you know, a 30 million IP high intent group will perform worse than a 3 million equivalent.
+[33:56] Even if those same 3 million IPs are all contained in the 30 million, because now you're, if they're all 10,000, you're kind of like randomly sampling from a much more diluted pool, right?
+[34:07] So dealing with this, like, how do we measure performance when there's this like size trade off?
+[34:14] And I can't really systematically say, well, just pick the same size as mountain matched because the way that that is being built is so arbitrary, right?
+[34:25] How does our mountain match audience number of keywords happen?
+[34:29] Well, it's 200 AI generated keywords that become some number of data source 19 keywords based on their semantic similarity.
+[34:37] There's no like consistent logic there that I could align to without SSL.
+[34:44] So I think that's calculating their mountain match audience every time first, right?
+[34:47] So I tried to do some like vertical level alignments to choose how we do the sizing to like best fit that.
+[34:56] But basically bottom of keywords suffers because of the way we do sizing today and saying the sizes have to match how mountain match V2 works today is very hard to do.
+[35:09] So that's kind of where it's at.
+[35:11] So we did two experiments.
+[35:12] Didn't have super consistent results.
+[35:14] So we've done a beta where customers can choose to sign up.
+[35:18] And I think I've had like eight conversations with customers and they've kind of walked through the flow and built audiences, gotten a lot of good feedback.
+[35:25] And I think we have like three customers that have live campaigns.
+[35:29] And on last Friday, Michelle showed me numbers where all of those bottom of keywords based audiences were performing better than the best other campaign we had to compare against for those.
+[35:43] So, you know, nice.
+[35:44] Yeah.
+[35:44] Yeah.
+[35:44] !
+[35:44] Yeah.
+[35:45] 
+[35:45] 
+[35:45] 
+[35:45] 
+[35:45] 
+[35:45] 
+[35:45] 
+[35:45] Yeah.
+[35:46] 
+[35:46] 
+[35:46] Yeah.
+[35:46] 
+[35:46] 
+[35:46] Yeah.
+[35:46] 
+[35:46] Yeah.
+[35:46] Yeah.
+[35:46] 
+[35:46] Yeah.
+[35:46] Yeah.
+[35:46] Yeah.
+[35:46] Yeah.
+[35:47] Yeah.
+[35:47] Yeah.
+[35:47] Yeah.
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] 
+[35:47] uh anecdotal comparisons so far okay so let let me ask you this then
+[35:55] what do you think are the biggest things that we need to tackle right now
+[36:02] and where are their drawbacks and then follow-up question to that is when we eventually do move
+[36:09] away from this current structure of mountain match v2 and we go into more of a you know
+[36:15] exactly the fangorn stuff that matt is working on where every single person has its own vector
+[36:20] space and we're not really bound to the verticals and keywords necessarily how do you think we might
+[36:26] tackle that you might not have an answer for it but i'll just leave you with those two questions
+[36:30] yeah so uh let's talk about the first one because i have i have a lot of ideas there uh and we have
+[36:36] some kind of like stories already in place i think it's just a matter of you know when these
+[36:41] get prioritized right um i think it makes sense given the performance we're seeing
+[36:45] like pushing fangorn fish pushing continuous scoring first uh is kind of i think the direction
+[36:51] we're going so uh als and the model we're doing for bottom of keywords is not like a traditional
+[36:57] machine learning model so like fangorn you could take a new ip that the model didn't train on but
+[37:03] if you had all of the features you could generate a prediction alternating least squares doesn't
+[37:08] work that way if a keyword or an advertiser was not in the training data for the model you can't
+[37:15] get recommendations for it this is called the cold start problem so right now the way we're dealing
+[37:21] with that is if you are missing from our data set you get an average of the vertical that you're in
+[37:28] basically of your recommendations which could be very generic so uh pex's request and i think it
+[37:36] makes sense was instead of doing vertical kind of averages for your recommendations use mountain
+[37:44] match v2
+[37:45] for those recommendations so until we get enough pixel data for you you get what we have today
+[37:52] essentially so that's part one and that kind of helps us solve the cold start problem of new
+[37:59] customer the second one is the way that the logic and the api is set up today and you can and let me
+[38:07] share my screen you can see this too um for both which is really nice we have the shopper graph api
+[38:13] and i'll send you this link you can see that the api is set up for both of these and then you can
+[38:15] you can see that the api is set up for both of these and then you can see that the api is set up for both of these
+[38:15] and then you can see that the api is set up for both of these and then you can see that the api is set up for both of these
+[38:17] our VPN, I believe.
+[38:22] Put in any advertiser ID up here.
+[38:26] And get back these results.
+[38:28] And this is keywords.
+[38:30] This is Mountain Match V2.
+[38:32] Uh-huh.
+[38:33] And then keywords.
+[38:34] Yes.
+[38:36] Keywords.
+[38:38] Bottoms up object.
+[38:40] And then this is the description on their UI.
+[38:42] Keyword bottom up.
+[38:43] This is the keywords we just saw on that Google sheet
+[38:45] that came from the latest version of the model.
+[38:47] Uh-huh.
+[38:49] So right now, the way that works,
+[38:53] every time we run the DAG that trains this whole process
+[38:56] that we just talked through,
+[38:58] every advertiser's keywords get replaced in this API.
+[39:02] And then they're replaced in the front end.
+[39:03] But kind of for phase one, what we really want,
+[39:07] once an advertiser has keywords generated from a model,
+[39:12] we want to keep those.
+[39:13] And then every time we train,
+[39:15] we want to keep those keywords.
+[39:17] So every time we train a new model,
+[39:18] which should be every day as we get new customers with new data,
+[39:22] we only want to update the net new ones.
+[39:24] Uh, that logic is not in place right now for the flow.
+[39:28] Basically every time we run the model,
+[39:31] everyone gets new recommendations and everything changes.
+[39:33] So we want to like, just like Mountain Match V2,
+[39:37] once you get keywords, those are your keywords.
+[39:39] And then every day we keep retraining the model and everything,
+[39:42] and only the net new customers get it.
+[39:43] And then the longer term one is that dynamic model.
+[39:45] So we want to keep that dynamic updating piece, right?
+[39:48] Every, you know, arbitrary, but like every three months,
+[39:51] we should update the keyword recommendations for a customer
+[39:54] because seasonal chains, buying patterns change, et cetera.
+[39:57] There might be new keywords that are good for them.
+[39:59] The hard part, the easy part is what are the differences here?
+[40:04] Right?
+[40:05] We can just see how the rankings change,
+[40:07] but this level of abstraction that parent keywords adds
+[40:12] makes that really hard because these are the keywords that are going to change.
+[40:13] And then the next step is to update the model.
+[40:14] So we want to keep the same recommendations,
+[40:15] but we want to keep the same recommendations.
+[40:16] And then we're going to keep the same recommendations
+[40:17] because these are all LLM generated.
+[40:18] So even if you had the same list of recommendations,
+[40:19] they're like guaranteed to change.
+[40:20] And then what do you do if like only a few keywords were changing underneath, right?
+[40:27] So that part's hard.
+[40:28] And then I'll pause there.
+[40:32] I can talk about continuous scoring and how bottom keywords fits into this,
+[40:36] but let's pause there on like kind of next biggest things to do.
+[40:41] And then maybe the last one, feedback from beta customers of like,
+[40:44] there's some prompting improvements to do here to like make these sound better
+[40:49] and do some kind of better context on these words.
+[40:53] Can, so what would be most beneficial to you for me to work on that you think?
+[41:01] Like let's, what's the highest leverage thing that I could provide for you?
+[41:05] Here's the hard part.
+[41:07] I want to push on this.
+[41:09] I would like you to work on some of this.
+[41:11] I don't know where this priority is for our team going forward.
+[41:13] Right now.
+[41:15] Gotcha.
+[41:16] So like, even I am like,
+[41:17] I don't know what I'm going to be working on for bottom of keywords.
+[41:20] I think it's important.
+[41:21] I think there's just not enough concrete signal that this is like there's too many unknowns still.
+[41:29] And performance like ambiguity because of sizing.
+[41:34] So like from a perspective of what is a ticket I could give you tomorrow to work on,
+[41:41] probably not something like that.
+[41:43] However, I think any of those three areas that are interesting for you of like there's prompting improvements to do like solving the cold start problem of like adjusting the shopper graph API so that we use keywords instead of these.
+[41:57] And then the other piece of our logic right now has a bunch of in the predict in the generating these clusters has like a table overwrite every time but we want to add in some like timing and, you know, keeping keywords fixed for certain customers as we go through the process.
+[42:11] 
+[42:11] 
+[42:11] 
+[42:11] Yeah.
+[42:11] Yeah.
+[42:12] Yeah.
+[42:12] 
+[42:12] Yeah.
+[42:12] Yeah.
+[42:12] 
+[42:12] Yeah.
+[42:12] Yeah.
+[42:12] 
+[42:12] Yeah.
+[42:12] Yeah.
+[42:12] Yeah.
+[42:12] 
+[42:12] Yeah.
+[42:12] 
+[42:12] Yeah.
+[42:13] 
+[42:13] Yeah.
+[42:13] 
+[42:13] 
+[42:13] Yeah.
+[42:13] 
+[42:13] Yeah.
+[42:13] 
+[42:13] Yeah.
+[42:13] Yeah.
+[42:14] Yeah.
+[42:14] Yeah.
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] 
+[42:15] that I was I'm not able to go to that um are you on tail scale yeah I am I might be blocking it I
+[42:22] like I said yesterday hold on I'll turn oh yeah it's totally possible I shouldn't be blocking it
+[42:27] but I'm going to change to use tail scale dns settings hopefully that works oh it does work
+[42:33] nice well so um the other thing too is like another set of eyes just like reviewing what
+[42:44] I've done would be helpful too okay you know me and me and the AI off in our own little corner
+[42:49] kind of building this end-to-end process with obviously with Brian's help as well and that
+[42:53] would get you good exposure to vertex well to give you my feedback I think this is not I think
+[42:59] this is very high value stuff I don't think it's low value I think that this is actually extremely
+[43:03] important so I appreciate it it's hard to see sometimes you know uh we are very like experiment
+[43:09] and dpl driven which is awesome but then it's hard to push changes
+[43:14] if they you know if there's not a clear performance signal let's say well what's really hard about
+[43:21] this and I'll tell you this my nothing really works super well in the real world it just doesn't ever
+[43:28] I mean I know you know this with experimentation but like like just with something that has so
+[43:32] many controls there's always like I can never ever this is not I don't think this happened to me one
+[43:37] time I've never ran an experiment loaded it in data as is and was like oh look they looks great you
+[43:44] know they have some tweaks to it and that's part of like why um I think you I think companies can be
+[43:51] a little bit too like okay I'm saying like if you do an experiment and it shows sig fig that like you
+[43:57] had 30 decrease on like 10 okay it's like okay like don't do that right but like when there's
+[44:02] like slight different signals and I'll give you an example in the experiment that we just did with
+[44:07] Nick right it's overwhelmingly positive however there was one advertiser Zumba which was slightly
+[44:13] negative and it was significant
+[44:14] and they're like whoa don't know if we want to roll this out to Zumba right well I ran a couple
+[44:18] other tests and it wasn't significant for any of those other statistical tests but the ones that
+[44:22] were positive and so sometimes it's like a good rule of thumb to just like I don't know like you
+[44:29] can you use it as a guide rather than a rule I think that usually works a little bit better and
+[44:34] I think that we'll probably have to make some sort of like I don't know I I sometimes have a hard
+[44:42] time believing
+[44:44] that like when it really comes down to it how causal are the things that we are
+[44:50] um using to to make these predictions like are not causals the right term but like how correlated are
+[44:58] they like obviously like site visits are correlated to other site visits so that makes logical sense
+[45:03] because it's literally a one-on-one comparison right but when you start getting into these other
+[45:06] details sometimes I think that we see noise because there's just inherent noise
+[45:14] um and signal generally and also when you make changes so I was actually going to share this
+[45:18] with the the team I think it's really valuable I just started with the experimentation team but
+[45:22] there's actually a ramp up period with campaigns that I didn't think existed because we used bees
+[45:27] wax I thought it was pretty immediate it's not it's not it's like a month so you can't even compare
+[45:33] experiments reliably for a month after so if like you we roll out these changes we say like even for
+[45:40] Nick's experiment we roll out these changes and we say hey all right let's see how these compare
+[45:44] as long as you're doing apples to apples where you're creating test and treatment and control
+[45:47] then you can start those campaigns at the same time and then they have like they're similar
+[45:51] right but when we're rolling out features as a whole to all the campaigns like which
+[45:55] keywords will be like um it's really hard to say even when you're using causal impact
+[46:01] where you're like filtering all your covariance and stuff it's really hard to say this was 100
+[46:06] caused by like our changes there's just inherently because like there's just inherent change like I
+[46:13] Like, I mean, you're literally introducing change.
+[46:15] And so it's just impossible to.
+[46:17] So that being said, I think just it makes logical sense that your keywords and their
+[46:24] correlation coefficients is extremely important.
+[46:26] And I actually think that keywords is probably, in my opinion, the most valuable information
+[46:33] we can get from searching that stuff besides other demographic information that's directly
+[46:38] connected to household income, which is like we don't have the household incomes.
+[46:43] But we can have correlations like if somebody has the newest iPhone, they obviously have
+[46:51] more disposable income than somebody who has an Android that's like a mid-level Android,
+[46:56] right?
+[46:56] Those are just inherently.
+[46:58] Obviously, there's exceptions to the rule.
+[47:00] But generally, people who have the money to spend $1,100 on an iPhone are going to be
+[47:04] in a higher household income than someone who's maybe buying a mid-level Android phone.
+[47:11] So yeah, I guess my last comments is just the I think that the most important things
+[47:20] that we should be focusing on, number one is keywords.
+[47:23] And then number two is variables connected to estimating household income.
+[47:29] And that makes sense because how much people spend is connected to how much they can spend.
+[47:33] And what people buy is directly connected to what they're looking for.
+[47:38] Right.
+[47:38] So that being said, I don't.
+[47:41] People push in my head.
+[47:43] They push back in keywords.
+[47:44] I will definitely be in your corner saying, hey, I think that just because it's been a
+[47:48] little bit iffy, I think it's more we need to refine how we're going to test this rather
+[47:53] than just say, oh, well, this is not worth it.
+[47:55] Because in my opinion, it's it's.
+[47:58] Yeah, probably really about.
+[47:59] I think and I'll just share this quickly.
+[48:01] I don't want to go too far into it.
+[48:02] But like, here's the results from the last experiment in the DPL.
+[48:05] And you can see why, you know, if you're Richard, his answer was like, your numbers
+[48:09] are bullshit, which is fair.
+[48:11] It's it's inconsistent performance rate from a visit rate percent change.
+[48:18] And it is super correlated with audience size and how those change between mountain matched
+[48:24] and bottom of keywords.
+[48:25] So like, hello, Molly, great performance because we reduce the high intent size significantly
+[48:32] by our keyword choice.
+[48:35] But it's really hard because of the way, right.
+[48:38] These are generated.
+[48:39] I can't just align these things together.
+[48:41] Exactly.
+[48:42] Because the flow is because the flow is like generate a mountain match V2 audience.
+[48:49] Find the keywords, find the size for those keywords, generate recommendations, find how
+[48:56] the sizes change with every incremental keyword that I add and then recommend the number of
+[49:01] keywords that matches the size of this other process.
+[49:04] Right.
+[49:05] Like and there's no because we're kind of like we've kind of shoehorned ourselves.
+[49:09] Right.
+[49:10] Like, oh, I'm going to add V2.
+[49:11] Sizing is like relatively arbitrary.
+[49:15] So then having that be a constraint for like a new version makes it hard to make those
+[49:20] things align.
+[49:22] Did you send me this one?
+[49:23] This would be interesting.
+[49:24] No, but I will share this.
+[49:25] Sorry.
+[49:26] I'm just asking all this stuff.
+[49:27] No, no, no.
+[49:28] I'm going to add these.
+[49:29] I'm happy to give you all this stuff.
+[49:30] Cool.
+[49:31] I'm going to add these as artifacts.
+[49:32] Well, this and then one more.
+[49:34] Keep going.
+[49:35] Keep going.
+[49:36] Sorry.
+[49:37] Sorry.
+[49:38] No, no, you're fine.
+[49:39] Keep going.
+[49:40] Yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah,
+[49:41] yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah,
+[49:43] yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah,
+[49:44] yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah,
+[49:45] yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah,
+[49:46] yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah,
+[49:47] I will figure out a way to make it to where we can prove that the keywords are going to be better because it just makes my my kind of logical step of how to do this.
+[49:59] Right. What is the feedback we've gotten around bottom of keywords?
+[50:02] The project started as make audiences bigger, which we did.
+[50:08] But then the feedback was like, no, not bigger, bigger, but also performing better.
+[50:13] And that is like that's impossible. Right.
+[50:16] So how do we do that? Continuous scoring is my is my thought.
+[50:21] And so the brainstorm that I had for this and kind of what Matt's taken and run with is we have a rank ordering of IP inclusion, IP level inclusion from Fangorn.
+[50:32] Right. We also have a rank ordering of keywords and their importance.
+[50:37] So why would we score everyone at ten thousand within high intent?
+[50:42] We have a scale to do that. Right.
+[50:45] So, you know.
+[50:46] Point nine to point one from Fangorn gives you a logical ranking of IP.
+[50:51] So then the question is, how do you do how do you go from advertiser level keyword rankings to like per IP?
+[50:59] I will send you this as well.
+[51:01] This is Matt's idea for how to do this.
+[51:03] And it works very nicely.
+[51:04] This is what I showed you the other day in that notebook.
+[51:06] So discounted cumulative gain is a way to score ranked lists based on where the rank is.
+[51:15] So.
+[51:16] Basically, if you're rank one, you get a score of one.
+[51:20] And then as you go down, that value gets lower.
+[51:23] So what we can do is we can sum up the IP level visit information per advertiser recommendation list.
+[51:31] So, like, if you're an IP and you visited pet accessories, which is rank one for canine ballistics, pet health and pet safety, you've you visited three high ranked keywords.
+[51:45] You will have a higher score than someone who visited home and garden here.
+[51:50] So you could both be high intense.
+[51:53] But now we have a way of ordering within high intense.
+[51:56] And so that notebook I showed you the other day.
+[51:59] Is basically that.
+[52:03] And for context on this, why I'm doing this job compute in Databricks is a fourth the cost.
+[52:11] So something runs and takes like six hours.
+[52:14] And I run it.
+[52:14] I run it on job compute.
+[52:15] Then, you know, there's Victor doesn't get any budget alerts of me overspending money on Databricks compute.
+[52:21] So job compute is a way to kind of run it in the background.
+[52:24] But it can just like trigger a notebook.
+[52:26] That's basically how I use it.
+[52:30] And so this chart that I showed the other day, this says.
+[52:35] What if for every advertiser, we took their list of recommendations, went in a 30 day window, scored every IP based on these keywords?
+[52:43] And then we took their list of recommendations, went in a 30 day window, scored every IP based on these keywords.
+[52:44] And then we took their list of recommendations, went in a 30 day window, scored every IP based on these keywords.
+[52:44] That they visited and the associated ranks gave them a zero to one score based on this.
+[52:51] And then plotted over a 15 day window after that.
+[52:55] The visit rates by this bucket.
+[52:58] How do they look?
+[52:59] Okay.
+[52:59] Quick question on that.
+[53:00] Yeah.
+[53:01] Since keywords.
+[53:03] There can be multiple per site visit.
+[53:04] Does that mean that each one will get counted at the same time?
+[53:10] That's a great question for now.
+[53:12] What you're thinking of like a 30 day window.
+[53:13] 
+[53:13] 
+[53:13] 
+[53:13] 
+[53:13] Yeah.
+[53:13] Yeah.
+[53:13] 
+[53:13] Yeah.
+[53:13] Yeah.
+[53:13] Yeah.
+[53:13] Yeah.
+[53:13] Yeah.
+[53:13] Yeah.
+[53:14] 
+[53:14] 
+[53:14] Yeah.
+[53:14] Yeah.
+[53:14] 
+[53:14] Yeah.
+[53:14] sense of like frequency or weight. Yeah. I'm not accounting for that in this scoring.
+[53:20] So visiting the rank one keyword once is the same as visiting the rank 50th keyword 600 times.
+[53:28] So that is probably important. But for this first exploration, I just said distinct keywords
+[53:35] visited. Gotcha. Okay. That makes sense. But, but you're right. I think there is,
+[53:40] there is a nuance or another improvement to this around frequency. Okay. In some way.
+[53:48] All right. So what this is telling us is here's our adjusted score, which is based on all of the
+[53:55] keywords in these recommendations and the discounted cumulative gain based on their ranks,
+[54:00] where do you score as an IP? And this RFD that I sent you kind of walks you through how to do
+[54:06] discounted cumulative gain, how we would sum these weights per IP.
+[54:10] And then convert them into a zero to one kind of normalized score.
+[54:14] Yeah. So this is perfect. Cause it was funny when you were talking, I was thinking about this.
+[54:17] So just what I did for Etsy, for example. So I'll, I'll share just kind of a little bit. It's
+[54:24] not necessarily connected, but the, we ran a bunch of experiments at Etsy. Etsy's got like 50 million
+[54:29] different products. Right. And so one of the logic thing, logical things we want to do is like, well,
+[54:34] what if we could just get rid of the really crappy ones? Like let's stop advertising the crappy ones.
+[54:38] Right. So, I mean, we talked, we're talking like for a specific category, we removed stuff that
+[54:43] had nothing but one-star reviews returned 50% of the time, terrible, terrible stuff. Right. They
+[54:48] had to meet all the criteria. And what we found is every single time we removed those products,
+[54:51] our ROI went down. And basically what we found time and time again is that while it's true,
+[54:59] these products suck. We probably shouldn't be spending the money on advertising
+[55:02] because there's so many products. Those products really do serve a very niche person, right? There's
+[55:07] a person specifically.
+[55:08] Wanted to buy that specific product. So when you remove it, you remove, you just remove
+[55:12] revenue, right? When you remove it from advertising, but there's, there's more argument to say about
+[55:18] lifetime value. Like if somebody has a poor experience on Etsy, their first time, they're
+[55:21] never going to buy again, things like that. Right. And those are super hard to compute. But that being
+[55:25] said, what I was thinking about as I was like, well, it's not that our hypothesis is wrong.
+[55:30] Cause we can see things like we could see like IVRs and different things like that, like, you
+[55:35] know, increasing, right. Um, when we removed them.
+[55:38] But my thought process is there's a balance, right? There's a certain amount of things that
+[55:44] we can remove that's net positive, but then there's a point in which it becomes net negative,
+[55:49] which is what we did because we'd rolled out to the whole category. So that being said,
+[55:53] this is exactly, I think solving that one issue is that based on your score, where you flip between
+[55:58] the two, like you were just saying that equation, what is the point where one becomes net positive?
+[56:03] The other one becomes net negative. That I think is extremely valuable. And so not necessarily
+[56:08] removing the old system, but saying at what point is this better? Right. Um, that's super, I totally
+[56:14] agree with that. That's a, that's great. I actually haven't seen, um, those equations before, so I'll
+[56:17] have to look into that and see, but it looks very interesting. So yeah, the way, a way to think
+[56:22] about this, the, the bars are like IP count and then the blue line is any visit rate. So like,
+[56:30] did they visit for the advertiser we'd scored them for, right. Um, for that side of the bar.
+[56:35] So one thing to think about is,
+[56:38] this entire set of IPS would in the current system are all scored at 10,000. Yep. But it is very clear
+[56:47] that there are different visit rates based on this signal. Yep. And this signal does not exist today
+[56:54] with the LLM generated keywords. So what, what this gives us is we can have a larger audiences,
+[57:01] go ahead and take all of these guys, but let's give a better signal to our pacing and bidding team,
+[57:08] where they can say, yeah, we're going to churn through these guys first. And if budgets allow,
+[57:13] then we'll start going down here. Right. Like it give, give them the control to decide,
+[57:17] you know, how far along this spectrum we go. You want to know something crazy. So I did a
+[57:23] small analysis on the difference in cost by the bid team between our mid intent and our higher
+[57:28] intent and our lowest intent. You know what the difference was? Uh, imagine small, right? It's
+[57:34] super small. It in almost no circumstance, do we run into a bid team that's like, Oh,
+[57:38] we're going to have to, we're going to have to, we're going to have to, we're going to have to,
+[57:39] we're going to have to, we're going to have to, we're going to have to, we're going to have to
+[57:40] do this. And then we run into a situation where when we need to stop bidding on high intent,
+[57:42] because the cost per performance is worse. It just doesn't, I mean, it might occur at some point in
+[57:48] time, but it's so negligible that it's almost always valuable. Like it's, it literally, we're
+[57:53] talking a few percentage difference in cost overall on average, but then we literally get 10 to 50 X.
+[58:01] Right. Like visits. So it's so well, I don't think that that really matters. I think we should
+[58:05] always in every circumstance bid on the highest value. And then we're like, Oh, we're going to
+[58:08] So we'll never hit a situation. I mean, that might be publisher dependent. I don't know if
+[58:13] that's going to necessarily be the same on like select or something, but at least for display
+[58:17] combined with CTV and what we have in our, you know just kind of interesting information on
+[58:22] average, our campaigns target between 130 and 170 different publishers. Wow. And we have another
+[58:29] initiative that's trying to shrink it down to about 16. But anyways, that being said, this is
+[58:35] great.
+[58:35] So yeah, I think this, this is my interpretation of how do you make audiences larger and have them
+[58:43] perform better with continuous scoring like this, where not everyone is 10,000. Go ahead and make
+[58:48] your high intent audience, 30 million IPS. You're going to target those 3 million IPS that are the
+[58:54] most performant first anyways. So now we don't have to limit ourselves to 65 keywords. You know,
+[59:02] let's go back to everyone gets 200 keywords. Like,
+[59:05] Yeah.
+[59:05] Yeah.
+[59:05] So we're going to cover 80% of the vertical when we're able to more accurately score them. And this
+[59:10] score reflects their kind of visit rate performance. We can have bigger audiences that also
+[59:16] perform better. That's kind of, and then the last layer and you'll see this in the RFD, right? Okay.
+[59:22] Keyword says 0.9. Fangorn says 0.8. Let's blend those scores together. And that's like an IP level
+[59:28] score across the board. Right. Then we're accounting for both systems.
+[59:32] Hey, Alex, this has been really great meeting. I have to use restroom.
+[59:40] Do you want me to set up a part two or do you want me to just send you kind of some
+[59:45] docs to do async for the local stuff?
+[59:47] Let's do some async stuff. And then we, I do definitely want to set up a part two.
+[59:51] I just don't know if I'm going to have time between now and maybe Friday. I'd have time
+[59:55] on Friday for sure. Probably. If you want to do that, but I want to make sure I have time to
+[60:00] really go through this and have a good plan of action because I'm going to have to do a lot of
+[60:02] out out out out out out out out out out out out out out out out out out out out out out out out
+[60:06] 
+[60:06] 
+[60:06] 
+[60:06] 
+[60:06] 
+[60:06] 
+[60:06] 
+[60:06] 
+[60:06] I do have some ideas and stuff and like what the best low hanging fruit is.
+[60:10] And yeah, I thought.
+[60:12] That would be great.
+[60:13] And like the more like your involvement and advocating to like push this forward,
+[60:18] better, more voices are better, right?
+[60:20] So, you know, obviously I don't define priority for our team.
+[60:24] So, but as bottom up keywords comes up, because I think there is still value here.
+[60:30] I think Mike and, you know, Allison in particular see value here.
+[60:33] It's just, there's some more work to be done.
+[60:34] You know, I will advocate for you being involved in all of this too.
+[60:38] Yeah.
+[60:38] So here's the, here's the thing I just, just thinking about it's super valuable.
+[60:42] These soft skills are really, really valuable.
+[60:44] I used to focus totally on like technical skills and stuff, but recently I've been thinking
+[60:48] it's super important to be able to communicate value to like execs and stuff.
+[60:54] And like, honestly, what sucks is a lot of times like good work gets thrown away
+[60:59] because it's hard to bridge that gap.
+[61:01] And like inherently, like that's like super difficult.
+[61:04] And these types of things and stuff.
+[61:05] And so I will, one of the things I'm going to try to do is look at our current OKRs and
+[61:12] just try to see if I could figure out a plan.
+[61:16] Like, obviously I need actual data, figure out a way that we could showcase this information
+[61:21] to where we can actually get solid results on sample data so that we can get the initiative
+[61:28] to be like, Hey, let's actually roll this out.
+[61:30] Because I really, I really do think that this is probably a big task.
+[61:34] And just trying to figure out like, how can we get good results rather than like, because
+[61:39] I mean, the value is there.
+[61:40] I mean, we're literally looking at the chart right there.
+[61:42] It has to be, I mean, there's no, there's no way around it.
+[61:44] It's just, how do we, how do we explain that to, you know, management type of thing?
+[61:50] Yeah, I think you're, you're absolutely right.
+[61:52] I think the other thing too, and basically like I posi, I proposed to our experiment
+[61:59] team, the next experiment we should do is aligning audience sizes.
+[62:03] So pick.
+[62:00] Yeah.
+[62:01] Yeah.
+[62:02] Yeah.
+[62:03] 
+[62:03] 
+[62:03] 
+[62:03] 
+[62:03] Yeah.
+[62:03] Yeah.
+[62:03] Yeah.
+[62:03] 
+[62:03] Yeah.
+[62:03] Yeah.
+[62:03] 
+[62:03] Yeah.
+[62:03] 
+[62:03] Yeah.
+[62:03] 
+[62:03] It doesn't have to be centric.
+[62:05] You know, I can look at the sizes of recommended audiences compared to mountain match and find
+[62:09] customers where they're within 5% of each other, right?
+[62:12] For high intent.
+[62:13] Then we can run experiments on a subset, or I can adjust the number of keywords to
+[62:17] make them align for, for purely testing.
+[62:20] So then we can say, let's extract the audience size kind of confounder in our results and
+[62:27] measure it.
+[62:28] Instead, we did this kind of like beta approach.
+[62:31] So customers right now, we have recommendations.
+[62:33] and they're behind a feature flag,
+[62:35] customers can opt in
+[62:36] and they will see our recommendations.
+[62:38] And then we have a meeting
+[62:39] where we like talk through their audience process
+[62:41] and get their feedback
+[62:42] and then can kind of like pseudo measure performance
+[62:45] in a less structured way.
+[62:46] So I think that's fine.
+[62:49] I think, like you said,
+[62:50] we need a more structured story.
+[62:53] And I think it's hard
+[62:54] because at least you probably know better than I do.
+[62:57] My understanding was when we released
+[62:58] what is in production today for Mountain Matched,
+[63:01] the experiments were like,
+[63:02] oh yeah, everything is like 6X better
+[63:04] than everything else.
+[63:06] I don't know if we're ever going to get
+[63:08] those kind of like clear signals
+[63:09] on any of the models we're working on anymore.
+[63:11] No, I don't think so.
+[63:12] But yeah.
+[63:14] How do we make progress when that's unlikely, right?
+[63:17] Yeah.
+[63:19] We're, yeah.
+[63:20] So this is great, Alex.
+[63:22] I'm going to hopefully the record,
+[63:23] like it says it's been recording the whole time.
+[63:25] So I'm really hoping.
+[63:26] I will send you the link.
+[63:28] It should tell me that it's like
+[63:30] processing the recording afterwards.
+[63:31] Yeah.
+[63:32] Okay.
+[63:32] All right.
+[63:33] I'm going to review that.
+[63:34] And then, yeah, we'll meet.
+[63:35] Let's just, we'll just wait to schedule
+[63:37] that meeting on Friday.
+[63:39] Yeah.
+[63:39] If I get time to actually like delve into it
+[63:42] and work on it,
+[63:43] then we'll do Friday.
+[63:45] If not, you know.
+[63:46] Yeah, we can push.
+[63:47] Even if it's after Mountain Meet,
+[63:48] that's like totally fine.
+[63:49] Cool.
+[63:50] All right.
+[63:50] Sweet.
+[63:51] Great chat, dude.
+[63:52] See you.
+[63:52] Bye.

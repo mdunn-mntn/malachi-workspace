@@ -1184,6 +1184,9 @@ v_campaign_group_channel_margins, v_channel_margins, v_icloud_blacklist
 - Being on the beta list doesn't mean active — must check `media_plan_status_id=3`
 - One advertiser can have many plans (one per campaign_group)
 - `original_recommendations` contains JSON with publisher names, budget percentages, and rationale
+- `deliverability_classification`: categorical delivery risk (high/medium/low). Worst individual guardrail wins. In-flight override: >3 days and >90% target pace → upgraded to "high".
+- **Per-publisher scores NOT in BQ** — computed transiently in memory. Stored as JSON in GCS: `media-plan-artifacts` bucket, path `media-plan/{version}/{advertiser_id}/{plan_id}/response.json`. Scores include: score_semantic, score_performance_advertiser/vertical/network, score_quality, score_spendability, score_cpm_efficiency, score_scale, score_combined (all with normalized variants).
+- **Config history:** `max_networks` was 18 initially (Oct 2025), bumped to 25, then reduced to 15 on Feb 3 2026 (olympus commit 555234f, PERML-412). `min_allocation` was 1% (old) → 0.5% (current). Plans created before Feb 2026 have 25-26 publishers; after have 16.
 
 ## silver.core.media_plan_publishers
 
