@@ -356,10 +356,17 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 3. ~~Path to bidder/pacing~~ → **Answered.** Depends on Fangorn release first. Rollout: (1) Fangorn, (2) continuous scoring with Fangorn + MM V2 equal-rank keywords, (3) wire in BUK rankings.
 4. ~~Beta customer IDs~~ → **Answered.** 7 advertisers shared, 2 confirmed live (West Bend Insurance 40279, Samy's Camera 45594).
 
-### Remaining Questions
-1. For the beta live campaigns (West Bend 40279, Samy's Camera 45594) — what are the campaign IDs for the BUK-based audiences vs. their best comparable campaigns? Would like to pull performance data independently.
-2. The experiment team pushback on size-controlled experiments ("want to validate how things will work in production") — is there an existing offline evaluation framework we could propose instead? Or should we design one from scratch?
-3. In the continuous scoring rollout, Step 2 uses MM V2 with equal-rank keywords — does this mean ALL keywords get discount=1.0 (rank=1), making K just a count of matched keywords (saturated)?
+### Remaining Questions — Answered (2026-03-31, round 2)
+1. ~~Beta campaign IDs~~ → Alex doesn't have them directly; Michelle was tracking. Alex will find them.
+2. ~~Offline evaluation approach~~ → **TI-704** (backlog) does similar analysis: score treatment and control IPs from the current Fangorn experiment with BUK, then evaluate against impressions/visits from the experiment. This is the offline path.
+3. ~~Equal-rank discount for MM V2~~ → **Answered.** All keywords get discount=1.0 BUT there would still be logic differentiating "visited a keyword" vs "just visited the vertical." See [Continuous Scoring PRD](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3398828035/Continuous+Scoring+PRD) for details.
+
+### Open Items for Next Session
+1. Get beta campaign IDs from Michelle (via Alex) for West Bend 40279 and Samy's Camera 45594
+2. Review TI-704 ticket — offline BUK evaluation using Fangorn experiment data
+3. Review the [Continuous Scoring PRD](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3398828035/Continuous+Scoring+PRD) for keyword vs vertical visit distinction
+4. Run full-scale DCG validation (all 5,699 advertisers) to confirm mid-range dips smooth out
+5. Schedule follow-up meeting with Alex
 
 ---
 
@@ -416,6 +423,7 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 | TI-688 Scoring Investigation | `https://mntn.atlassian.net/wiki/spaces/TAR/pages/3503948693/Keyword+Continuous+Scoring+Investigation+TI-688` |
 | Beta feedback doc (Google Doc) | `https://docs.google.com/document/d/1KB2A5kEOb2ms7J47sxdlXOEKmw0N6GshHeuboUaqODQ/edit` |
 | Beta customer tracker (Google Sheet) | `https://docs.google.com/spreadsheets/d/1QFgjrn3L7u1ciZy2PzrVepS198-Oca826MGP2xh1e1A/edit` |
+| Continuous Scoring PRD | `https://mntn.atlassian.net/wiki/spaces/TAR/pages/3398828035/Continuous+Scoring+PRD` |
 | BUK predictions GCS | `gs://targeting-infra-vertex-pipelines-prod/bottom-up-keywords/batch-predictions/dt={date}/` |
 | DCG scores GCS (dev) | `gs://mntn-data-archive-dev/alex.knorr/test_keyword_ip_scoring` |
 | IPDSC GCS archive | `gs://mntn-data-archive-prod/ipdsc/dt={date}/data_source_id={id}/` |
