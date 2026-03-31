@@ -987,3 +987,40 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - **M2 (EOM January 2026)**: UI reskin — media plan auto-applied when user clicks the step. Happy path = don't edit. Secret bypass: skip media plan step entirely.
 - **Dynamic media plan coming (TBD release)**: Recurring regeneration/rebalancing during campaign flight. Blocks planned experiment — can't test static version if dynamic is imminent.
 - **`advertiser_configurations.conversion_lookback_window`**: NULL for most advertisers (use system default of 30 days). Only ~620 advertisers have non-null values (mostly 30, some 33/35/45/60 days).
+
+---
+
+## Keyword Targeting & BUK (Bottoms Up Keywords)
+
+### Mountain Match V2 (Current Production)
+- Flow: Scrape advertiser homepage (Common Crawl) → LLM describes products/services → LLM generates 20 parent keywords → LLM expands each to 10 search terms (200 total) → Embedding alignment maps to closest DS19 `data_source_category_id` → collapses to <200 unique DS19 keywords → audience expression
+- Autopilot endpoint handles the LLM steps; Search Term endpoint handles DS19 alignment
+- Parent keywords = user-facing labels in UI. Child keywords = DS19 IDs in the audience expression (not shown to customers)
+- Once generated, keywords are static — no dynamic updates based on customer behavior or seasonality
+- If homepage scrape fails, falls back to URL-based description (usually poor quality)
+
+### BUK (Bottoms Up Keywords) — ALS Model
+- Flow: `good_log` + `conversion_log` (30-day window) → build advertiser × DS19 keyword interaction matrix → Train implicit ALS model → Generate ranked DS19 recommendations per advertiser → k-means cluster by embedding into ~20 groups → LLM generates parent keyword labels/descriptions → audience expression
+- **Confidence signal**: Weighted blend of distinct IP count, conversion count, cart volume, avg daily IPs, avg daily conversions (log1p transformed, configurable weights per signal)
+- **Score adjustments**: (1) Popularity penalty — log odds ratio of keyword rarity, suppresses generic keywords like "accessories", "web services". (2) Advertiser lift — how popular keyword is for this advertiser vs. global average
+- **Threshold**: Single percentile-based cutoff on model scores (~top 42%). Replaces fixed 200-keyword rule. Stronger-signal advertisers naturally get more keywords
+- **Cold start**: Advertisers not in training data can't get ALS recommendations. Current fallback = vertical averages. Planned = MM V2 fallback
+- **"Web services" pollution**: Google Tag Manager URLs get classified as web services by the LLM, associating this keyword with nearly every advertiser. Popularity penalty suppresses it
+
+### DS19 (Data Source 19)
+- The targetable keyword universe — ~20,000 keywords, each identified by `data_source_category_id`
+- Used in audience expressions for both MM V2 and BUK
+- Keywords represent product categories (e.g., "Dog Beds", "Pet Accessories", "Outdoor Kitchen Appliances")
+- Advertiser website URLs are classified into DS19 keywords by the system
+
+### Shopper Graph API
+- Internal API at `shopper-graph.in.mountain.com/autopilot?advertiser_id={id}` (Tailscale VPN required)
+- Returns both MM V2 keywords and BUK keywords per advertiser in a single response
+- BUK payload includes parent keyword groups with child keyword IDs and model version hash
+- Currently: every DAG retrain overwrites ALL advertiser keywords (not idempotent — planned fix)
+
+### BUK Pipeline
+- Runs as Airflow DAG in `airflow-ti` repo (SteelHouse/airflow-ti)
+- Training and prediction on Databricks (job compute = 1/4 cost of interactive)
+- Feature store: recently migrated from Databricks-only to Airflow VS (Vertex/Spark)
+- Local dev: Astronomer (`astro dev start/stop`), uv venv with python 3.11
