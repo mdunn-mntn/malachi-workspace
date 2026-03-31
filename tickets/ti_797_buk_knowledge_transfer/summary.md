@@ -209,12 +209,34 @@ The initiative is **Paused** pending a clearer performance story.
 - Feature flag enabled, ~8 customer conversations completed
 - 3 live campaigns, all outperforming best comparable campaign (anecdotal, per Michelle)
 
-### Continuous Scoring Concept (DCG)
-- Discounted Cumulative Gain applied to BUK keyword ranks per IP
-- IP visits rank-1 keyword → higher score than IP visiting rank-50 keyword
-- Chart shows clear visit rate differentiation by score bucket, even though all IPs currently scored at flat 10,000
-- Enables: larger audiences (200+ keywords) that still perform because bidding/pacing prioritizes highest-scored IPs
-- Current exploration does NOT account for visit frequency (visiting rank-1 once = visiting rank-50 600 times) — frequency weighting is a future improvement
+### Continuous Scoring — DCG Implementation (from Databricks notebooks)
+
+**Step 1: DCG per IP** (`ti_620_dcg_logic.py`)
+- Read BUK model predictions (ranked DS19 keywords per advertiser) from GCS: `gs://targeting-infra-vertex-pipelines-prod/bottom-up-keywords/batch-predictions/dt={date}/`
+- Read ipdsc DS19 data (30-day window) from GCS: `gs://mntn-data-archive-prod/ipdsc/`
+- For each keyword the IP visited that's in the advertiser's recommendation list, compute discount: `1 / log2(rank + 1)`
+- Sum discounts per (advertiser, IP) → raw DCG score. Also count `n_hit_cats` (number of matched keywords)
+- **Normalize via exponential transform**: `adjusted_keyword_score = 1 - exp(-beta * dcg)`
+  - Beta calibrated so 90th percentile of DCG → 0.9 adjusted score
+  - Current beta = 1.863 (derived from DCG distribution: p50=0.30, p75=0.63, p90=1.24, p95=1.86, p99=3.99)
+- Output written to: `gs://mntn-data-archive-dev/alex.knorr/test_keyword_ip_scoring`
+
+**Step 2: Beta calibration** (`ti_620_beta_eval.py`)
+- Solve: `beta = -ln(1 - target_score) / dcg_at_percentile`
+- For target=0.9 at p90: `beta = -ln(0.1) / 1.2357 = 1.863`
+- Visualizes: DCG→adjusted score mapping curve, DCG distribution, adjusted score distribution, binned density heatmap
+
+**Step 3: Visit rate validation** (`ti_688_ip_score_eval.py`)
+- Sample 1,000 advertisers, join scores with visits from Greenplum (`ui_visits`) over 10-day post-period
+- Also joins impressions from `cost_impression_log` (30-day window before reference date)
+- Bin IPs by adjusted_keyword_score (0.05 bins), compute visit rate per bin
+- **Key output**: Plot showing visit propensity vs. adjusted score with 95% CIs — monotonically increasing, confirming score is predictive
+- Note: queries Greenplum directly via JDBC (not BQ) for visits and impressions
+
+**Key details from code:**
+- Does NOT account for visit frequency (distinct keyword visits only, not count)
+- Score range: 0-1 (exponential saturation). Most mass at low scores; ~p50 maps to ~0.43 adjusted
+- The validation joins to Greenplum `summarydata.ui_visits` and `logdata.cost_impression_log` — could be replicated in BQ with our tables
 
 ---
 
@@ -263,13 +285,13 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 ## 8. Open Items / Follow-ups
 
 1. **Size-controlled experiment** — #1 priority, needs to be designed and proposed to experiment team
-2. **Continuous scoring validation** — reproduce DCG chart with fresh data (TI-607 in Development)
+2. **Continuous scoring validation** — reproduce DCG chart in BQ (have Alex's notebooks now, need to port Greenplum queries to BQ equivalents). TI-607 in Development
 3. **Cold start fallback** — API logic change needed (TI-557 in Backlog)
 4. **DAG idempotency** — stop overwriting existing advertiser keywords on retrain
 5. **Parent keyword prompting** — improve LLM quality based on beta feedback
 6. **Meet with Alex again** — schedule follow-up for deeper technical dive + local Airflow demo
-7. **Investigate DS13 and DS19** — understand data source contents, keyword universe details
-8. **Review Alex's code** — he expressed desire for code review on the BUK pipeline
+7. **Review Alex's code** — he expressed desire for code review on the BUK pipeline
+8. **Port DCG validation to BQ** — Alex's notebooks query Greenplum for visits/impressions; we can replicate with `silver.summarydata` and `silver.logdata` in BQ
 
 ---
 
@@ -321,6 +343,10 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 | Feature store code template | `https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_1_source/guid_log_advertiser_id_dsc_id.py` |
 | Local Airflow guide | `https://mntn.atlassian.net/wiki/spaces/DP/pages/3032645677/Guide+Spark+on+Google+Dataproc+with+local+Astronomer` |
 | Local Airflow commands | `astro dev start` / `astro dev stop`, uv venv with python 3.11 |
+| DCG notebooks (Databricks) | `https://1262887251702944.4.gcp.databricks.com/editor/notebooks/3415949300800788` (Alex shared full folder access) |
+| BUK predictions GCS | `gs://targeting-infra-vertex-pipelines-prod/bottom-up-keywords/batch-predictions/dt={date}/` |
+| DCG scores GCS (dev) | `gs://mntn-data-archive-dev/alex.knorr/test_keyword_ip_scoring` |
+| IPDSC GCS archive | `gs://mntn-data-archive-prod/ipdsc/dt={date}/data_source_id={id}/` |
 
 ---
 
@@ -335,4 +361,7 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 | `artifacts/buk_model_comparisons_k9_ballistics.csv` | K9 Ballistics: training data, predictions, 20 clustered parent keywords |
 | `artifacts/buk_shopper_graph_example.json` | Shopper Graph API response for K9 Ballistics (32434) — MM V2 + BUK payloads |
 | `artifacts/buk_local_airflow_setup.txt` | Steps for local Airflow/Astronomer dev environment |
+| `artifacts/ti_620_dcg_logic.py` | DCG scoring notebook — builds DCG scores per IP/advertiser from BUK predictions + ipdsc DS19 |
+| `artifacts/ti_620_beta_eval.py` | Beta calibration notebook — solves optimal exponential scaling factor, visualizes score distributions |
+| `artifacts/ti_688_ip_score_eval.py` | Visit rate validation notebook — joins DCG scores with Greenplum visits, plots visit propensity by score bucket |
 | `meetings/2026-03-31_100808_malachi_alex_-_project_discussion.txt` | Full meeting transcript |
