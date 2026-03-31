@@ -1007,11 +1007,31 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - **Cold start**: Advertisers not in training data can't get ALS recommendations. Current fallback = vertical averages. Planned = MM V2 fallback
 - **"Web services" pollution**: Google Tag Manager URLs get classified as web services by the LLM, associating this keyword with nearly every advertiser. Popularity penalty suppresses it
 
-### DS19 (Data Source 19)
-- The targetable keyword universe — ~20,000 keywords, each identified by `data_source_category_id`
+### Data Sources Overview
+- **`bronze.integrationprod.data_sources`**: Master dimension table for all data sources
+- **`bronze.integrationprod.categories`**: Category names/descriptions per data source (hierarchical)
+- **`bronze.integrationprod.keyword_categories`**: Keyword strings for DS38 (MNTN UI Audience Keywords, ~40M rows)
+- **`bronze.external.ipdsc__v1`**: IP-to-data-source-category mapping. Columns: `ip`, `data_source_id`, `data_source_category_ids` (ARRAY), `dt`. Filter by `dt` and `data_source_id`
+
+### DS13: "MNTN Vertical Categorization"
+- Manually curated vertical buckets used to classify advertisers into industry categories
+- 37 top-level verticals (Apparel, Electronics, Pets, Real Estate, etc.) with 148 leaf categories
+- Lookup: `categories WHERE data_source_id = 13`
+- The `data_source_category_id` values ARE the vertical identifiers
+
+### DS19: "MNTN Matched" (Keyword Matching)
+- The keyword matching data source — `data_source_category_id` values are linked to targetable keywords
+- `visible = false` in `data_sources` table (internal only)
+- ~20,000 keywords representing product categories (e.g., "Dog Beds" = 905072, "Pet Accessories" = 922262)
 - Used in audience expressions for both MM V2 and BUK
-- Keywords represent product categories (e.g., "Dog Beds", "Pet Accessories", "Outdoor Kitchen Appliances")
-- Advertiser website URLs are classified into DS19 keywords by the system
+- In `ipdsc__v1`: each IP has an array of DS19 `data_source_category_ids` it's been matched to
+- NOTE: DS19 category IDs do NOT have rows in the `categories` table with `data_source_id = 19`. They share IDs with DS16 ("MNTN Taxonomy Data") in the `categories` table, where they map to the per-advertiser taxonomy tree (AdvertiserID → event type → funnel stage → campaign). The human-readable product category names (e.g., "Dog Beds") come from the URL classification pipeline, not the `categories` table
+- DS38 ("MNTN UI Audience Keywords") in `keyword_categories` contains the user-facing keyword strings but uses different `data_source_category_id` values than DS19
+
+### DS16: "MNTN Taxonomy Data"
+- Per-advertiser taxonomy tree with hierarchy: ROOT → AdvertiserID → {PageViews, Conversions, Impressions, VV, Wins} → {Prospecting, MultiTouch, Retargeting} → CampaignGroupID → CampaignID
+- 1.6M+ categories in `categories WHERE data_source_id = 16`
+- Shares `data_source_category_id` values with DS19 (same IDs appear in both contexts)
 
 ### Shopper Graph API
 - Internal API at `shopper-graph.in.mountain.com/autopilot?advertiser_id={id}` (Tailscale VPN required)
