@@ -76,9 +76,23 @@ Combines Fangorn intent score (s) with BUK keyword evidence score (K) into a sin
 **Score → bidder mapping:** F ∈ [0,1] → [0, 10000]: <0.6 = Max Reach, 0.6-0.8 = Mid Intent, 0.8+ = High Intent.
 
 **Proposed rollout** (Alex, 2026-03-31):
-1. Fangorn release (backbone)
+1. Fangorn release (backbone) — released end Feb 2026
 2. Continuous scoring with Fangorn + existing MM V2 (all keywords equal rank — needed for cold-start)
 3. Wire in BUK keyword rankings to continuous scoring framework
+
+**Key PRD details** ([Continuous Scoring PRD](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3398828035)):
+- Keywords are **supporting evidence, NOT hard filters** — contribute to score but don't gate inclusion
+- When ranked keywords unavailable, fallback to "any match" (yes/no keyword match) — this is the Step 2 equal-rank approach
+- **New audiences only** — doesn't retroactively change existing
+- **Offline evaluation required before rollout** (FR-12): compare Fangorn-only, keywords-only, current production, and unified scoring
+- Timeline: Fangorn released end Feb → 3-4 week pause → continuous scoring experimentation end Q1 → launch Q2
+- Dependencies: PER squad (pacing/thresholding), Experimentation squad (A/B design)
+
+**TI-704 — Offline Evaluation with Fangorn Experiment** (Backlog):
+- Score treatment and control IPs from the current Fangorn experiment with BUK DCG
+- Evaluate against impressions/visits from the experiment
+- Also validate two assumptions: (1) diminishing returns to additional keywords, (2) frequency doesn't matter
+- This maps directly to PRD FR-12 (offline evaluation required before rollout)
 
 ---
 

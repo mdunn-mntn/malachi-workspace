@@ -1059,3 +1059,68 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - 40279 West Bend Insurance — live campaign
 - 45594 Samy's Camera — live campaign
 - 33129 Apollo.io, 37336 Global Rescue, 33610 Amsterdam Printing, 48687 Apolla, 35374 Experience Scottsdale — talked, not all live yet
+
+## Feature Store & Bidstream Feature Analysis (TI-789/790)
+
+### Key Finding: Pre-Visit vs Feedback Features
+When building IP-level feature vectors to predict visits (IVR), features split into two categories:
+- **Pre-visit features** (available at bid time): bidstream, impression, and win data. AUC ~0.896.
+- **Feedback features** (available after site visit): guid_log pixel events, conversion_log purchase data. AUC ~0.999 but leaky — presence of guid_log data implies a visit already happened.
+
+**Do NOT mix pre-visit and feedback features in a single targeting model** — guid_log/conversion_log features will dominate and mask the real predictive signal from bidstream features. Use feedback features for retraining, scoring returning visitors, and identity resolution.
+
+### Top Pre-Visit Features for Targeting (by SHAP)
+1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP
+2. `ci_pct_new` (cost_impression_log) — % impressions where IP is "new"
+3. `ci_pct_rtc` (cost_impression_log) — % RTC-targeted impressions
+4. `ci_total_cost` (cost_impression_log) — total media spend on IP
+5. `wl_avg_price` (win_logs) — average clearing price
+6. `al_n_auctions` (augmentor_log) — auction volume for this IP
+7. `wl_n_models` (win_logs) — device model diversity
+
+### Bronze-Only Fields in augmentor_log
+The silver view (`v_augmentor_log`) drops several fields present in bronze (`raw.augmentor_log`):
+- `iab_categories` — IAB content taxonomy (30% fill). Key for vertical classification.
+- `categories` — additional content categories (13% fill)
+- `isp` — ISP name (10% fill)
+- `page`, `referrer` — page URL and referrer (15%, 4%)
+- `is_blocked`, `blocking_site` — brand safety (0% — no signal)
+
+Must use `bronze.raw.augmentor_log` for iab_categories, NOT the silver view.
+
+### content_genre in bidder_auction_events
+- 87% fill, 37K+ distinct raw values
+- Case-inconsistent: "Entertainment" vs "entertainment" vs "GENRE_COMEDY"
+- Comma-delimited multi-genre: "sitcom,comedy"
+- Normalize: `LOWER(SPLIT(content_genre, ',')[SAFE_OFFSET(0)])`, strip `genre_` prefix
+- After normalization: ~50-100 clean genres
+- Strong IP-level differentiation: residential IPs show 99%+ concentration in single genres
+
+### guid_log product Field is JSON in Silver
+In silver.logdata.guid_log, `product` is JSON type (not RECORD like bronze):
+- Use `JSON_VALUE(product, '$.CATEGORY')`, not `product.CATEGORY`
+- Fields: CATEGORY, BRAND, NAME, AMOUNT, SKU, INVENTORY_COUNT, CURRENCY, IMG_URL, REFERRER, AVAILABLE_UNTIL
+
+### conversion_log query Field is JSON with key_value Array
+Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
+- Use `TO_JSON_STRING(query)` with `REGEXP_CONTAINS` for searching
+- Key fields inside: `shoamt` (75%), `shpt` (74%), `ga_client_id` (67%), `email_data` (2.3%), `androidId/idfa/adid` (~3%)
+
+### cost_impression_log Gotchas
+- `recency_elapsed_time` is INTERVAL type — extract with `EXTRACT(SECOND FROM ...) + EXTRACT(MINUTE FROM ...)*60 + ...`
+- `household_score = -1` means unscored
+- `advertiser_household_score = 10000` means RTC conquest
+- `partner_ad_format` is authoritative for VIDEO vs BANNER
+
+### Scale Reference (per day, 2026-03-29)
+| Table | Distinct IPs | Rows |
+|-------|-------------|------|
+| guid_log | 31.2M | ~340M |
+| win_logs | 11.7M | ~68M |
+| cost_impression_log | 11.7M | ~68M |
+| conversion_log | 10.7M | ~63M |
+| clickpass_log (visits) | 563K | ~1M |
+| augmentor_log | 23.6M (1hr) | 1.2B/hr |
+| bidder_auction_events | — | 112M/hr |
+
+Daily IVR base rate: ~4.8% (563K visitors / 11.7M impressed IPs).

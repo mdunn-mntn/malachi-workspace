@@ -207,6 +207,9 @@ After dedup and removing overlapping fields: **~60 unique features** in the comb
 | [ti_790_exhaustive_feature_sources.md](artifacts/ti_790_exhaustive_feature_sources.md) | All 8 candidate tables with unique signals and aggregatable features |
 | [ti_790_cross_table_unique_columns.md](artifacts/ti_790_cross_table_unique_columns.md) | Programmatic cross-table dedup of all 25 log tables |
 | [ti_790_project_plan.md](artifacts/ti_790_project_plan.md) | Full project plan with phases and timeline |
+| [ti_790_xgboost_split_analysis.py](artifacts/ti_790_xgboost_split_analysis.py) | XGBoost feature importance script (pre-visit vs feedback split) |
+| [ti_790_importance_pre_visit.csv](outputs/ti_790_importance_pre_visit.csv) | Pre-visit feature importance rankings |
+| [ti_790_shap_pre_visit.png](outputs/ti_790_shap_pre_visit.png) | SHAP summary plot for pre-visit features |
 
 ## 5. Key Takeaways for Alex & Ryan
 
@@ -222,11 +225,46 @@ After dedup and removing overlapping fields: **~60 unique features** in the comb
 3. **`content_genre/series/channel/network`** in bidder_auction_events align with OpenRTB `content` object fields. Check if they map to the Magnite spec.
 4. **`device_make`** (90% fill, 457 values) maps to OpenRTB `device.make`.
 
+### XGBoost Results — What Actually Predicts Visits?
+
+We split features into **pre-visit** (available at bid time) and **feedback** (available after site visit):
+
+| Model | Features | AUC | Use Case |
+|-------|----------|-----|----------|
+| **Pre-visit only** | 47 (bidstream + impression) | **0.896** | Targeting decisions |
+| Feedback only | 19 (guid_log + conversion_log) | 0.999 | Post-visit enrichment, retraining |
+| All combined | 66 | 0.999 | Full picture (leaky for targeting) |
+
+**Top 10 pre-visit features by SHAP (for targeting):**
+
+| Rank | Feature | Source | SHAP | What It Means |
+|------|---------|--------|------|---------------|
+| 1 | `al_avg_segments` | augmentor_log | 0.986 | More existing MNTN segments → more likely to visit |
+| 2 | `ci_pct_new` | cost_impression_log | 0.670 | New IPs visit less |
+| 3 | `ci_pct_rtc` | cost_impression_log | 0.392 | RTC-targeted IPs visit more |
+| 4 | `ci_total_cost` | cost_impression_log | 0.363 | More spend → more exposure → more visits |
+| 5 | `wl_avg_price` | win_logs | 0.231 | Premium inventory → better audiences |
+| 6 | `al_n_auctions` | augmentor_log | 0.228 | More active IP → more likely to visit |
+| 7 | `wl_n_models` | win_logs | 0.205 | Multi-device households visit more |
+| 8 | `n_win_adv` | base | 0.175 | More advertisers targeting → popular IP |
+| 9 | `ci_hh_score` | cost_impression_log | 0.152 | Existing Fangorn score (already predictive) |
+| 10 | `al_pct_pmp` | augmentor_log | 0.105 | Premium inventory signal |
+
+**Source table ranking (pre-visit):**
+1. **cost_impression_log** — best avg rank (13.9), dominates with recency, scoring, cost features
+2. **augmentor_log** — segment density and auction volume
+3. **bidder_auction_events** — content_genre, device_make (mid-tier for IVR, high-value for vertical segmentation)
+4. **win_logs** — video engagement, device details, pricing
+
+**Iterative paring:** AUC holds at ~0.896 even with only 5-11 features. The top 5 features carry most of the signal.
+
+**Key insight:** Bidstream content features (content_genre, device_make) are mid-tier for raw IVR prediction but high-value for **vertical classification** — different use case than visit prediction. Both are valuable for the feature store.
+
 ### For Everyone — Next Steps:
-1. **Export training dataset** to CSV/parquet for Python modeling
-2. **XGBoost feature importance** (Matt's methodology): train model predicting IVR, extract info gain + frequency + weighted importance
-3. **Iterative paring**: start with ~60 features → drop least important → retrain
-4. **Present results**: which features actually predict visits?
+1. **Wednesday sync**: Walk through these results with Alex and Ryan
+2. **Vertical classification model**: Use content_genre + iab_categories to map IPs to advertiser verticals (Alex's focus)
+3. **Cold-start analysis**: Test bidstream features specifically on IPs with NO existing Fangorn scores
+4. **Production integration planning**: Top 5-10 features → Fangorn feature store
 
 ## 6. Questions Answered
 
