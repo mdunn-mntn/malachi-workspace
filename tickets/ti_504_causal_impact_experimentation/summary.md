@@ -162,9 +162,9 @@ Key findings:
 - Old prospecting campaigns were **89-99% HI tier** traffic — virtually no MI/PP historical baseline exists
 - Even within HI tier only, the IVR gap persists: experiment campaigns run at **0.08-0.53x** of historical HI-tier IVR
 - Historical HI-tier IVR: 0.025-0.117. Experiment HI-tier IVR: 0.008-0.034
-- The issue is NOT intent tier mixing — it is structural: `is_test = true` campaigns deliver fundamentally lower IVR
+- The issue is NOT intent tier mixing — it is structural to the experiment campaign setup
 
-This confirms the population discontinuity is driven by the `is_test` flag (or associated delivery differences), not by audience quality differences.
+**Note:** `is_test = true` is just a flag marking the campaign as experimental — it does NOT affect delivery priority or bidder behavior. The IVR gap is likely driven by: (1) audience splitting (buckets 600-999 = ~40% of original audience), (2) creative removal ("Only One Creative" for most experiment campaigns), (3) lower budgets (experiment budget vs advertiser's full spend), and (4) fresh campaigns with no optimization history.
 
 **Key takeaways:**
 1. **The direct RCT is the only valid analysis for this experiment** — treatment vs control with matched audiences
@@ -177,8 +177,8 @@ This confirms the population discontinuity is driven by the `is_test` flag (or a
 8. CausalImpact framework is validated and ready for the broader Fangorn rollout
 9. HHST scores (`advertiser_household_score`) available on `cost_impression_log` for intent tier segmentation (HI >= 6666, MI 3333-6665, Max Reach 1-3332)
 10. Old prospecting campaigns were 89-99% HI tier — virtually no MI/PP historical baseline exists
-11. Even within HI tier, test campaigns run at 8-53% of normal IVR — suggests `is_test` flag or creative/budget differences affect delivery
-12. Open question for future: investigate why `is_test` campaigns have structurally lower IVR
+11. Even within HI tier, test campaigns run at 8-53% of normal IVR — driven by audience splitting, creative removal, lower budgets, and fresh campaign optimization (NOT `is_test` flag affecting delivery — `is_test` is just a reporting flag)
+12. Open question for future: quantify which factor (audience split, creative, budget, or maturity) contributes most to the IVR gap
 
 ## 5. Solution
 
