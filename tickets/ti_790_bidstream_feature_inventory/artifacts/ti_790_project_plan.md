@@ -1,52 +1,80 @@
-# TI-789: Bidstream Feature Store — Project Plan
+# TI-789: Feature Store Expansion — Project Plan
 
 **Epic:** [TI-789](https://mntn.atlassian.net/browse/TI-789) — Bidstream Feature Extraction & Audience Augmentation
 **Team:** Malachi Dunn, Alex Knorr, Ryan Kleck | **PMO:** Bryce Wagg
-**Created:** 2026-03-30
+**Created:** 2026-03-30 | **Updated:** 2026-03-31
 
 ---
 
 ## Objective
 
-Extract high-value features from MNTN's bidstream data and test them against IVR (Impression-to-Visit Rate) to identify which signals improve targeting performance. Winning features get integrated into Fangorn's feature store. Secondary goal: use bidstream signals to expand DS13/DS19 audience pools.
+Catalog every IP-level feature available across MNTN's log tables, build rolling-window aggregations per IP, and test them against IVR to identify which signals improve targeting performance. Winning features get integrated into Fangorn's feature store. Secondary goal: use bidstream signals to expand DS13/DS19 audience pools.
 
-## Data Sources
+## Data Sources (Exhaustive)
 
-| Table | What It Contains | Scale | TTL | Key Unique Fields |
+Full field-level inventory in [ti_790_exhaustive_feature_sources.md](ti_790_exhaustive_feature_sources.md).
+
+### Primary Sources (build first — per Matt + Ryan)
+| Table | What It Contains | Scale | TTL | Key Unique Signals |
 |-------|-----------------|-------|-----|-------------------|
-| `bronze.raw.augmentor_log` | Auctions we participated in | 1.2B rows/hr, ~241 GB/day | 10d BQ, ~30d parquet | `iab_categories` (30%), 40 inventory sources, `mntn_segments` |
-| `bronze.raw.bidder_auction_events` | Auctions we saw but didn't bid on | 112M rows/hr, ~17 GB/hr | 90d BQ | `content_genre` (87%), `device_make` (90%), `content_series` (37%), `publisher_name` (100%) |
-| Parquet archive | Both tables, longer retention | Same | ~30d+ | Same fields, accessible via `gs://mntn-data-archive-prod/` |
+| **guid_log** | Website pixel fires — visitor behavior | — | VIEW (long) | Browser, OS, device from pixel. Product/cart data. GA params. |
+| **augmentor_log** | Bidstream — auctions we participated in | 1.2B rows/hr | 10d BQ, ~30d parquet | `iab_categories` (30%), 40 SSPs, `mntn_segments` (86%) |
 
-Full field profiling in [ti_790_feature_inventory.md](ti_790_feature_inventory.md).
+### Secondary Sources (build second — rich content + engagement)
+| Table | What It Contains | Scale | TTL | Key Unique Signals |
+|-------|-----------------|-------|-----|-------------------|
+| **bidder_auction_events** | Bidstream — auctions we didn't bid on | 112M rows/hr | 90d BQ | `content_genre` (87%), `device_make` (90%), `content_series` (37%) |
+| **win_logs** | Beeswax win events | — | 90d | Device model, video completion/skip rate, viewability time |
 
-## Feature Candidates (Tiered)
+### Tertiary Sources (build third — enrichment)
+| Table | What It Contains | Key Unique Signals |
+|-------|-----------------|-------------------|
+| **cost_impression_log** | Enriched impressions served | household_score, recency_elapsed_time, cost breakdown |
+| **clickpass_log** | Attributed visits | Attribution timing (click/view elapsed), cross-device flag |
 
-### Tier 1 — Test First
-| Feature | Source | Fill % | Signal |
-|---------|--------|--------|--------|
-| content_genre | bidder_auction_events | 87% | What content they watch — strongest vertical signal. Not in Fangorn today. |
-| device_type / device_type_group | both | 100% | CTV vs mobile vs desktop behavior profiles |
-| device_make | bidder_auction_events | 90% | Roku vs Samsung vs LG — demographic proxy |
-| inventory_source | augmentor_log | 100% | SSP identity (40 sources) — inventory quality signal |
-| iab_categories | augmentor_log (bronze) | 30% | IAB content taxonomy — direct vertical mapping |
-| network / publisher_name | both | 71-100% | Premium vs long-tail content consumption |
-| placement_type | both | 100% | VIDEO vs BANNER |
-| os | both | 97-99% | Platform signal (needs LOWER() normalization) |
+### Skip
+| Table | Why |
+|-------|-----|
+| **bid_logs** | Mostly redundant with win_logs + augmentor_log |
+| **spend_log** | Intent scores are Fangorn output (circular). Only bid_floor useful. |
+| **conversion_log** | Double-counts with guid_log (Matt + Ryan confirmed) |
 
-### Tier 2 — Test Second
-| Feature | Source | Fill % | Signal |
-|---------|--------|--------|--------|
-| content_series | bidder_auction_events | 37% | Specific show — granular. Needs cleanup. |
-| content_channel | bidder_auction_events | 36% | Channel identity |
-| content_network | bidder_auction_events | 38% | Network identity (structured) |
-| app_name / app_bundle | both | 85-99% | App identity. High cardinality — needs bucketing. |
-| pmp_deal_ids | both | 98% | Premium deal signal |
-| geo_zip | bidder_auction_events | 95% | Geographic signal |
-| domain | augmentor_log | 100% | Site identity. High cardinality. |
+## Feature Architecture
 
-### Tier 3 — Skip
-device_os_version (0% fill), site_domain/site_page (<1%), ifa (privacy-limited), referrer (4%), isp (10%), is_blocked (0% true).
+Per Matt's prototype, features are **rolling-window aggregations per IP**:
+
+```
+IP → {
+  // guid_log (demand-side: what they do on advertiser sites)
+  has_desktop, has_mobile, has_tablet,
+  pct_mobile_events, pct_desktop_events,
+  n_distinct_browsers, n_distinct_os_family, n_distinct_device_fingerprints,
+  has_chrome, has_safari, has_ios, has_android,
+
+  // augmentor_log (supply-side: what content they consume)
+  top_iab_category, n_distinct_iab_categories,
+  n_distinct_ssps, pct_ctv_device, pct_video_placements,
+  top_network, n_distinct_networks, pct_premium_pmp,
+
+  // bidder_auction_events (broader content signals)
+  top_genre, genre_entropy,
+  pct_entertainment, pct_news, pct_sports, ...
+  device_make, n_distinct_publishers,
+
+  // win_logs (engagement signals)
+  avg_video_completion_rate, avg_viewability, avg_in_view_time_ms,
+  pct_video_skips, n_wins,
+
+  // cost_impression_log (enrichment)
+  avg_household_score, avg_recency, total_media_cost,
+
+  // clickpass_log (attribution features)
+  avg_view_elapsed, pct_cross_device,
+
+  // Label
+  ivr: visits / impressions
+}
+```
 
 ## Known Data Quality Issues
 
@@ -59,101 +87,70 @@ device_os_version (0% fill), site_domain/site_page (<1%), ifa (privacy-limited),
 | Duplicate publisher names | network ("NBC Universal" x3 variants) | Mapping table |
 | geo format varies | augmentor_log.geo (raw string) vs bidder_auction_events.geo_country (structured) | Parse or use structured |
 
-## Evaluation Methodology
+## Evaluation Methodology (Matt Brorby)
 
-Per Matt Brorby's guidance — same approach used for Fangorn's existing feature selection:
-
-### Step 1: Build Training Dataset
-- Sample random IPs from bidstream (0.1% sample = ~1.2M rows/hr from augmentor_log)
-- Aggregate features per IP (e.g., "this IP: 60% entertainment, 30% news, Roku, Magnite")
-- Join to visit/conversion outcomes from `clickpass_log` + `impression_log` to compute IVR per IP
-- Label: visited (1) or not (0) within attribution window
-
-### Step 2: XGBoost Feature Importance
-- Train XGBoost model with all Tier 1 + Tier 2 features predicting IVR
-- Extract 3 importance metrics:
-  - Information gain (how much each feature reduces loss)
-  - Frequency (how often each feature is used in splits)
-  - Weighted (gain weighted by coverage)
-- Composite rank = average rank across all 3 methods
-
-### Step 3: Iterative Paring
-- Start with all features (~20-25)
-- Drop lowest-ranked features
-- Retrain and verify performance holds (AUC, precision/recall)
-- Repeat until performance degrades
-- Target: identify top 8-12 features that drive most of the signal
-
-### Step 4: Fine-Tuning
-- SHAP values on the trimmed model to understand feature interactions
-- BIC (Bayesian Information Criterion) to balance fit vs complexity
-- Simple group-by / linear regression for categorical features to validate direction of effect
-
-### Step 5: Validation
-- Holdout test set (time-split, not random, to avoid leakage)
-- Compare IVR across feature-defined segments (e.g., "entertainment genre watchers" vs baseline)
-- Verify lift is meaningful and stable across multiple days
-
-## Workstream 2: DS13/DS19 Audience Augmentation
-
-Runs in parallel once Tier 1 feature quality is understood:
-
-1. **Incrementality check**: For a chosen vertical, pull IPs from bidstream with matching `content_genre` or `iab_categories`. Check how many are already tagged with the corresponding DS13 segment (`mntn_segments`).
-2. **Predictiveness check**: Do the new (untagged) IPs visit the advertiser's site in the future? Compare visit rates of bidstream-tagged vs random IPs.
-3. **Holdout experiment**: Use existing holdout logic — tag only a subset of IPs with the bidstream-derived segment. Measure IVR lift.
-4. **Production integration**: If validated, union bidstream IPs into existing DS13/DS19 staging jobs.
-5. **RTC exploration**: Can this logic run in real-time conquest (DS13 only)?
+1. **Sample**: Pull random IPs with rolling-window features attached
+2. **Join to IVR outcome**: Match IPs to visit data from clickpass_log + impression_log
+3. **XGBoost feature importance**: Train model, extract 3 importance metrics (info gain, frequency, weighted)
+4. **Iterative paring**: All features → drop least important → retrain → verify performance holds
+5. **SHAP values**: Fine-tune on final feature set
+6. **BIC**: Balance fit vs complexity
 
 ## Execution Plan
 
-### Phase 1: Discovery & Normalization (Week of 3/30)
-
+### Phase 1: Discovery (Week of 3/30) — DONE
 | Task | Owner | Ticket | Status |
 |------|-------|--------|--------|
-| Feature inventory & quality assessment | Malachi | [TI-790](https://mntn.atlassian.net/browse/TI-790) | Done |
+| Feature inventory & quality assessment (both bidstream tables) | Malachi | [TI-790](https://mntn.atlassian.net/browse/TI-790) | **Done** |
+| Exhaustive feature source map (all 8 log tables) | Malachi | TI-790 | **Done** |
 | Vertical classification signals from bidstream | Alex | [TI-791](https://mntn.atlassian.net/browse/TI-791) | In Progress |
 | OpenRTB spec investigation & test vertical selection | Ryan | [TI-792](https://mntn.atlassian.net/browse/TI-792) | In Progress |
-| Find exchange reference table (`core.exchanges` or equivalent) | Ryan | TI-792 | Open |
+
+### Phase 2: Feature Extraction & Training Dataset (Week of 4/1) — NEXT
+| Task | Owner | Ticket | Status |
+|------|-------|--------|--------|
+| Build guid_log daily snapshot (Matt's prototype pattern) | Malachi | [TI-790](https://mntn.atlassian.net/browse/TI-790) | **Next** |
+| Build augmentor_log rolling-window aggregation per IP | Malachi | TI-790 | Open |
+| Build bidder_auction_events rolling-window aggregation per IP | Malachi | TI-790 | Open |
 | Build normalization mappings (genre, os, device_make, publisher) | Malachi | TI-790 | Open |
+| Find exchange reference table | Ryan | TI-792 | Open |
+| Construct training dataset: IP features + IVR labels | Malachi | [TI-793](https://mntn.atlassian.net/browse/TI-793) | Blocked on feature extraction |
 
-**Wednesday 4/2 deliverables:**
-- Malachi: Feature list with quality metrics (done) + normalization mappings
-- Alex: Signals valuable for vertical classification
-- Ryan: OpenRTB field mapping + recommended test vertical + exchange reference table
+**Wednesday 4/2 sync deliverables:**
+- Malachi: guid_log snapshot + augmentor_log aggregation + normalization mappings
+- Alex: Vertical classification signal assessment
+- Ryan: OpenRTB field mapping + exchange reference table + test vertical
 
-### Phase 2: Training Dataset & Modeling (Week of 4/7)
+### Phase 3: Modeling & Feature Ranking (Week of 4/7)
+| Task | Owner | Ticket | Status |
+|------|-------|--------|--------|
+| XGBoost feature importance + iterative paring | Malachi | [TI-793](https://mntn.atlassian.net/browse/TI-793) | Blocked on Phase 2 |
+| SHAP analysis + final feature ranking | Malachi | TI-793 | Blocked on XGBoost |
 
-| Task | Owner | Ticket | Dependencies |
-|------|-------|--------|-------------|
-| Build sampled training dataset (IPs + features + IVR labels) | Malachi | [TI-793](https://mntn.atlassian.net/browse/TI-793) | Phase 1 normalization |
-| XGBoost feature importance + iterative paring | Malachi | TI-793 | Training dataset |
-| SHAP analysis + final feature ranking | Malachi | TI-793 | XGBoost results |
+### Phase 4: Audience Augmentation Validation (Week of 4/14)
+| Task | Owner | Ticket | Status |
+|------|-------|--------|--------|
+| DS13 incrementality & predictiveness validation | TBD | [TI-794](https://mntn.atlassian.net/browse/TI-794) | Blocked on Phase 3 |
+| Holdout experiment design & execution | TBD | [TI-795](https://mntn.atlassian.net/browse/TI-795) | Blocked on TI-794 |
 
-### Phase 3: Audience Augmentation Validation (Week of 4/14)
-
-| Task | Owner | Ticket | Dependencies |
-|------|-------|--------|-------------|
-| DS13 incrementality & predictiveness validation | TBD | [TI-794](https://mntn.atlassian.net/browse/TI-794) | Phase 2 feature ranking + Alex's vertical mapping |
-| Holdout experiment design & execution | TBD | [TI-795](https://mntn.atlassian.net/browse/TI-795) | TI-794 results |
-
-### Phase 4: Integration (Week of 4/21+)
-
-| Task | Owner | Ticket | Dependencies |
-|------|-------|--------|-------------|
-| Integrate into DS13/DS19 staging + RTC exploration | TBD | [TI-796](https://mntn.atlassian.net/browse/TI-796) | TI-795 experiment success |
+### Phase 5: Integration (Week of 4/21+)
+| Task | Owner | Ticket | Status |
+|------|-------|--------|--------|
+| Integrate into DS13/DS19 staging + RTC exploration | TBD | [TI-796](https://mntn.atlassian.net/browse/TI-796) | Blocked on TI-795 |
 
 ## Open Questions
 
 1. **Exchange reference table**: Where does `inventory_source` map to exchange metadata? Ryan investigating.
-2. **Parquet vs BQ for modeling**: augmentor_log's 10-day BQ TTL may be too short for training dataset construction. May need to read from parquet archive. Alex is already using PySpark on parquet — may be the right path for large-scale feature extraction.
-3. **IP join key between tables**: Can we join augmentor_log and bidder_auction_events on IP to get the union of all features per IP? Need to verify IP overlap.
-4. **Attribution window for IVR labels**: What lookback window should we use when joining to clickpass_log? Standard is 30 days, but should align with Fangorn's existing window.
-5. **Segment ID mapping**: `mntn_segments` in augmentor_log contains integer segment IDs. Need a reference table to map these to DS13/DS19/etc. segment definitions for the incrementality check.
-6. **content_genre normalization**: Who builds the master genre mapping? ~37K raw values → ~50-100 clean categories. Could be a shared artifact.
+2. **Parquet vs BQ for feature extraction**: augmentor_log's 10-day BQ TTL may be too short. Alex is using PySpark on parquet — may be the right path.
+3. **Rolling window duration**: 7 days? 14 days? 30 days? Need to align with Fangorn's existing feature cadence. Matt's prototype uses daily snapshots.
+4. **IP overlap between tables**: Can we join augmentor_log and bidder_auction_events on IP? Need to verify overlap.
+5. **Attribution window for IVR labels**: What lookback window for clickpass_log join? Align with Fangorn's existing window.
+6. **Segment ID mapping**: `mntn_segments` integer IDs → DS13/DS19 segment definitions.
+7. **guid_log TTL**: What's the underlying table's retention? Need sufficient history for rolling windows.
 
 ## Success Criteria
 
-- Identify 5-10 bidstream features that show statistically significant predictive power for IVR
+- Identify 5-10 features across all sources that show statistically significant predictive power for IVR
 - At least one feature shows >5% relative IVR lift when used for targeting
-- DS13 audience pool expanded by >10% with incremental IPs that show comparable or better visit rates
+- DS13 audience pool expanded by >10% with incremental IPs showing comparable or better visit rates
 - Features integrated into Fangorn feature store for production use
