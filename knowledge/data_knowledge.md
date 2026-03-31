@@ -1039,8 +1039,23 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - BUK payload includes parent keyword groups with child keyword IDs and model version hash
 - Currently: every DAG retrain overwrites ALL advertiser keywords (not idempotent — planned fix)
 
+### Continuous Scoring (Fangorn + Keywords)
+- Combines Fangorn intent score (s, 0-1) with BUK keyword evidence score (K, 0-1)
+- Keyword score: `K = 1 - exp(-β * Σ 1/log2(rank+1))` where sum is over matched keywords
+- Blending options: geometric `F = s^(1-γ) · K^γ` or linear `F = (1-γ)s + γK`. γ=0.25 (intent-dominant)
+- Missing score fallback: `COALESCE(fangorn_score, keywords_score, 0)`
+- Final score mapped to bidder scale: <0.6 = Max Reach (0-3333), 0.6-0.8 = Mid Intent (3333-6666), 0.8+ = High Intent (6666-10000)
+- Rollout: (1) Fangorn release, (2) continuous scoring with Fangorn + MM V2 equal-rank keywords, (3) wire in BUK rankings
+- DDP site visit signals already incorporated into BUK model training (confirmed Alex 2026-03-31)
+
 ### BUK Pipeline
 - Runs as Airflow DAG in `airflow-ti` repo (SteelHouse/airflow-ti)
 - Training and prediction on Databricks (job compute = 1/4 cost of interactive)
+- Predictions output to GCS: `gs://targeting-infra-vertex-pipelines-prod/bottom-up-keywords/batch-predictions/dt={date}/` (parquet, ~18MB, includes advertiser_name, vertical_name, product_category, rank, score_adj)
 - Feature store: recently migrated from Databricks-only to Airflow VS (Vertex/Spark)
 - Local dev: Astronomer (`astro dev start/stop`), uv venv with python 3.11
+
+### BUK Beta Customers (as of 2026-03-31)
+- 40279 West Bend Insurance — live campaign
+- 45594 Samy's Camera — live campaign
+- 33129 Apollo.io, 37336 Global Rescue, 33610 Amsterdam Printing, 48687 Apolla, 35374 Experience Scottsdale — talked, not all live yet
