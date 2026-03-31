@@ -8,7 +8,7 @@
 
 We measured whether MNTN's recommended Media Plan improves prospecting IVR using per-advertiser CausalImpact analysis (Bayesian structural time series). The aggregate effect is near zero — but that headline masks a critical finding: **a config change on Feb 3, 2026 is the real differentiator.** Plans generated under the new config (max_networks=15) show positive IVR effects; plans under the old config (max_networks=25) show negative effects.
 
-**Bottom line:** The Media Plan feature works — when the algorithm produces concentrated allocations. The two large negative outliers are running stale plans from the old config and were never refreshed.
+**Bottom line:** The Media Plan feature works when the algorithm produces concentrated allocations. The mechanism is publisher concentration itself — pruning the long tail of poor performers — not the config version per se. Lighting New York achieved concentration naturally under the old config and saw the same positive result. The two large negative outliers are running diluted plans that were never refreshed.
 
 ---
 

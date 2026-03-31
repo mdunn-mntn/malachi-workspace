@@ -174,14 +174,25 @@ These behave VERY differently. Always analyze separately:
 - Mixing them in one analysis will confound results
 
 ### Algorithm Version as Confound (TI-748 Lesson)
-When analyzing a feature's impact over time, **check for algorithm/config changes during the observation window.** In TI-748, a config change on Feb 3, 2026 (`max_networks` 25→15) split our 8 advertisers into two groups — pre-change plans hurt IVR, post-change plans helped. The "concentration predicts who benefits" finding was actually "config version predicts who benefits."
+When analyzing a feature's impact over time, **check for algorithm/config changes during the observation window.** In TI-748, a config change on Feb 3, 2026 (`max_networks` 18→25→15, `min_allocation` 1%→0.5%, spend capacity filter added — PERML-412) split our 8 advertisers into two groups — pre-change plans hurt IVR, post-change plans helped.
+
+**Refined understanding (Chris Addy, 2026-03-31):** The initial framing was "config version predicts who benefits." The corrected framing is **"concentration is the mechanism, and the config change made concentration the default."** Lighting New York proves this: they got 16 publishers under the *old* config (Oct 2025) — not from an override, but because natural pruning from their budget/vertical dropped networks below the old 1% `min_allocation` floor. Same concentration, same positive result, different config era. The mechanism is publisher concentration itself, regardless of how it was achieved.
 
 **Rule:** Before attributing results to a feature, check:
 1. Were there algorithm updates during the treatment period? (git log the relevant service repo)
 2. Did all treated units receive the same version? (query plan metadata for config snapshots)
 3. If versions differ, split the analysis by version era.
+4. **If the mechanism is identified, test whether it operates independently of version** — as with Lighting NY proving concentration works under any config.
 
 This is especially important for staggered adoption designs where early adopters may be on a different algorithm version than later adopters.
+
+### Runtime Config as Experiment Prerequisite (TI-748 Lesson)
+Per-advertiser config overrides are NOT natively supported for the media plan algorithm today. The only advertiser-level control is blacklisted networks. To run a clean A/B test on algorithm parameters (e.g., alpha=7 vs alpha=5), the `MediaPlanConfig` must be made runtime-updateable (Chris Addy is planning this). Without it, the only option is a time-based rollout (change the config globally), which confounds treatment with time.
+
+**Lesson for experiment design:** Before proposing a parameter A/B test, verify:
+1. Can the parameter be varied per-unit (per-advertiser, per-campaign)? If not, time-based rollout is the only option.
+2. Is there an API-level override available, or does it require a deploy?
+3. Who owns the config and can trigger changes? (For media plan: Chris Addy / olympus team)
 
 ### Population Continuity — When Synthetic Control Fails (TI-504 Lesson)
 
@@ -458,9 +469,11 @@ This gives us: randomization (no selection bias), adequate N (entire eligible po
 When analyzing features that affect publisher/network allocation:
 - `sum_by_ctv_network_by_day` has per-publisher, per-campaign, per-day performance data
 - Publisher IVR varies dramatically (Spectrum News 1.09% vs Samsung TV+ 0.48% for Lighting New York)
-- High-IVR publishers are often low-volume — the algorithm may optimize for deliverability/reach over IVR
-- The benefit of media plan may come from CONCENTRATION (removing the long tail of poor performers) rather than SELECTION (picking the best publishers)
-- This distinction matters for product team: should the algorithm optimize for IVR, reach, or some combination?
+- High-IVR publishers are often low-volume — the algorithm optimizes for deliverability/reach, not IVR
+- **The benefit comes from CONCENTRATION (removing the long tail of poor performers) rather than SELECTION (picking the best publishers)**
+- Lighting NY confirms: natural pruning from budget/vertical constraints produced the same 16-publisher concentration and the same positive result as the explicit config change did for later adopters
+- Per-publisher scores (score_semantic, score_performance, score_spendability, etc.) are NOT in BQ — stored as JSON in GCS (`media-plan-artifacts` bucket, path `media-plan/{version}/{advertiser_id}/{plan_id}/response.json`). Would need BQ sink or GCS parsing for score-level analysis.
+- This distinction matters for product team: the algorithm doesn't need to pick the *best* publishers — it needs to prune the *worst* ones. HHI as a guardrail input would operationalize this.
 
 ---
 
@@ -468,6 +481,6 @@ When analyzing features that affect publisher/network allocation:
 
 | Ticket | Experiment | Method | Outcome | Key Learning |
 |---|---|---|---|---|
-| TI-748 | Media Plan Causal Impact (v6) | Per-advertiser CausalImpact (BIC covariates, ramp-up exclusion) + panel model | Aggregate IVR near zero (-0.23% spend-weighted). BUT: config change on Feb 3, 2026 (max_networks 25→15) explains the split — new-config plans show +10-17% IVR lift, old-config plans show -26 to -31% decline. | **Primary lesson:** Algorithm version confound. The analysis spanned two configs — pre-change plans diluted across 25-26 publishers, post-change concentrated to 16. Config era, not inherent concentration, is the differentiator. Also: BIC covariate selection beats hand-picking; 4-week ramp-up exclusion needed for new campaigns; selection bias confirmed (hand-picked beta). |
+| TI-748 | Media Plan Causal Impact (v5) | Per-advertiser CausalImpact (BIC covariates, ramp-up exclusion) + panel model | Aggregate IVR near zero (-0.23% spend-weighted). BUT: config change on Feb 3, 2026 (max_networks 18→25→15, PERML-412) explains the split — new-config plans show +10-17% IVR lift, old-config plans show -26 to -31% decline. | **Primary lesson:** Concentration is the mechanism, config change made it the default. Lighting NY (16 pubs under old config from natural budget/vertical pruning) proves concentration works regardless of config era. Also: BIC covariate selection beats hand-picking; 4-week ramp-up exclusion needed for new campaigns; selection bias confirmed (hand-picked beta); per-publisher scores only in GCS (not BQ); runtime config needed for clean A/B tests. |
 | TI-780 | Ramp-up window research | Empirical analysis of campaign maturity curves | 4-week ramp-up window identified (N=6,917 campaigns, $10K+ spend). Week 4 = first week with <5% WoW change. | Consistent across spend tiers. Steady-state IVR varies by launch quarter (0.008–0.013) — future analyses should use cohort-specific baselines rather than a single global baseline. |
 | TI-504 | Fangorn AIS experiment (RCT) | Direct RCT (proportion z-test, Welch t-test, chi², Mann-Whitney, bootstrap CI) + CausalImpact validation + HI-tier segmentation | Edward Martin PP +123%, MI_PP +70%, Collector Store PP +60%, MI +43% — significant across ALL tests. G-Shock/Reedsy/Zumba no effect by t-test; z-test detects small effects at scale. CausalImpact invalid due to population discontinuity (audience split, creative removal, budget, maturity — NOT `is_test` flag which is just a reporting flag). | **Primary lesson:** (1) Synthetic control fails when experiment creates new campaigns with split audiences — use direct RCT comparison instead. (2) Proportion z-test is the standard for IVR in RCTs (confirmed by Nick Martin, experiment owner). (3) t-test on daily rates is a useful secondary consistency check — if z-test is significant but t-test isn't, effect may not be day-over-day reliable. (4) Bootstrap at household level for ratio metrics (CPA/ROAS). (5) Self-referencing covariates produce artificially perfect fits. (6) `is_test = true` excludes from summary tables but does NOT affect delivery. |
