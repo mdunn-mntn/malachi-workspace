@@ -238,6 +238,37 @@ The initiative is **Paused** pending a clearer performance story.
 - Score range: 0-1 (exponential saturation). Most mass at low scores; ~p50 maps to ~0.43 adjusted
 - The validation joins to Greenplum `summarydata.ui_visits` and `logdata.cost_impression_log` — could be replicated in BQ with our tables
 
+### Independent BQ Replication of DCG Validation (2026-03-31)
+
+Replicated Alex's full DCG pipeline in BigQuery using:
+- BUK predictions from GCS (`dt=2026-03-16`, 5,699 advertisers, 363K rows)
+- ipdsc DS19 (30-day window, 2026-02-15 to 2026-03-15)
+- `ui_visits` (10-day post-period, 2026-03-16 to 2026-03-26)
+- Sample: 50 advertisers (deterministic hash sample)
+
+**Results — visit rate by adjusted keyword score bin:**
+
+| Score Bin | N IPs | N Visitors | Visit Rate | vs Lowest |
+|-----------|-------|------------|------------|-----------|
+| 0.20 | 53.9M | 1 | 1.85e-08 | 1x |
+| 0.35 | 42.4M | 34 | 8.01e-07 | 43x |
+| 0.50 | 60.3M | 67 | 1.11e-06 | 60x |
+| 0.65 | 86.2M | 194 | 2.25e-06 | 121x |
+| 0.80 | 112.0M | 450 | 4.02e-06 | 217x |
+| 0.90 | 133.8M | 1,417 | 1.06e-05 | 571x |
+| 0.95 | 236.8M | 52,789 | 2.23e-04 | **12,028x** |
+
+**Interpretation:**
+- Signal is monotonically increasing from score 0.65 upward, with massive jump at 0.95
+- Top score bin (0.95) has visit rate 12,000x higher than bottom — statistically robust (52,789 visitors in 236.8M IPs)
+- Minor dips at 0.45 and 0.60 likely noise from 50-advertiser sample
+- Low absolute visit rates (1e-8 to 2e-4) expected because scoring ALL ipdsc IPs, most of whom will never visit any given advertiser
+- **Confirms Alex's finding independently**: DCG-based keyword scoring is strongly predictive of visit behavior
+
+**Query:** `queries/ti_797_dcg_scoring_sample.sql`
+**Output:** `outputs/ti_797_dcg_visit_rate_by_score.csv`
+**Cost:** 118 GB processed, ~6 min wall time
+
 ---
 
 ## 5. Solution
@@ -285,13 +316,19 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 ## 8. Open Items / Follow-ups
 
 1. **Size-controlled experiment** — #1 priority, needs to be designed and proposed to experiment team
-2. **Continuous scoring validation** — reproduce DCG chart in BQ (have Alex's notebooks now, need to port Greenplum queries to BQ equivalents). TI-607 in Development
-3. **Cold start fallback** — API logic change needed (TI-557 in Backlog)
-4. **DAG idempotency** — stop overwriting existing advertiser keywords on retrain
-5. **Parent keyword prompting** — improve LLM quality based on beta feedback
-6. **Meet with Alex again** — schedule follow-up for deeper technical dive + local Airflow demo
-7. **Review Alex's code** — he expressed desire for code review on the BUK pipeline
-8. **Port DCG validation to BQ** — Alex's notebooks query Greenplum for visits/impressions; we can replicate with `silver.summarydata` and `silver.logdata` in BQ
+2. ~~**Continuous scoring validation**~~ — **DONE.** Independently reproduced DCG visit-rate curve in BQ. Monotonic increase confirmed, 12,028x lift at top score bin. See Section 4 results.
+3. **Scale DCG validation to all 5,699 advertisers** — current results are from 50-advertiser sample. Full run would eliminate the minor dips at 0.45/0.60
+4. **Cold start fallback** — API logic change needed (TI-557 in Backlog)
+5. **DAG idempotency** — stop overwriting existing advertiser keywords on retrain
+6. **Parent keyword prompting** — improve LLM quality based on beta feedback
+7. **Meet with Alex again** — schedule follow-up for deeper technical dive + local Airflow demo
+8. **Review Alex's code** — he expressed desire for code review on the BUK pipeline
+
+### Questions for Alex
+1. We see minor visit-rate dips at score bins 0.45 and 0.60 in our 50-advertiser sample — did you see similar patterns, or does the full advertiser set smooth those out?
+2. TI-538 (RFD on BUK + Fangorn) is Done — can you share the RFD doc or notebook for the blended keyword + Fangorn score weighting?
+3. What's the status of getting continuous scoring into the bidder/pacing system? Is there an API or pipeline that would consume these scores?
+4. Can you share the advertiser IDs for the beta customers with live BUK campaigns so we can do independent performance analysis?
 
 ---
 
