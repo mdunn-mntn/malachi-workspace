@@ -186,13 +186,18 @@ Even though Advertiser A had a big positive effect, Advertiser B's slight negati
    - Scale: 4%
    - Accessibility: 2%
 4. **Softmax allocation** — `exp(score × alpha) / Σexp(scores × alpha)` with alpha=5.0. Higher alpha = more concentrated on top-scoring networks.
-5. **Bounds enforcement** — drop networks below 0.5% allocation, enforce min=10/max=15 networks, cap at 12% per network. *(max_networks changed from 25→15 on Feb 3, 2026)*
+5. **Bounds enforcement** — drop networks below min_allocation, enforce min/max network bounds, cap at 12% per network. *(Config history: max_networks 18→25→15, min_allocation 1%→0.5%, spend capacity filter added — all changed Feb 3, 2026, PERML-412)*
 6. **LLM rationale** — Google Gemini 2.0 Flash generates per-network "why this?" explanations.
 7. **Deliverability enrichment** — optional flight-level prediction (not per-network yet).
 
 **Key insight:** Performance IS the largest single scoring component (25%), but the spend capacity filter acts as a hard gate BEFORE scoring — low-inventory networks are eliminated before their performance is even evaluated. The benefit comes from this pre-filter + the max_networks cap forcing the softmax to drop the long tail.
 
-**Critical config change (Feb 3, 2026):** `max_networks` reduced from 25→15 AND spend capacity filtering added. This single release explains the performance split in our analysis — plans before this date have 25-26 publishers, plans after have 16.
+**Config evolution (confirmed by Chris Addy 2026-03-31):**
+- **Oct 2025 (launch):** `max_networks=18`, `min_allocation=1%`, no spend capacity filter
+- **Mid-period:** `max_networks` bumped to 25
+- **Feb 3, 2026 (PERML-412):** `max_networks=15`, `min_allocation=0.5%`, spend capacity filter added ($0.50/hr minimum)
+
+This config evolution explains the performance split — plans before Feb 3 have 25-26 publishers, plans after have 16. Lighting New York got 16 publishers under the old config because natural pruning from their budget/vertical dropped networks below the higher 1% min_allocation floor, not because of an override.
 
 **Flex Targeting** reserves 10% of budget (configurable 5-30%) outside specific network allocations. Un-recommended publisher impressions come entirely from this pool.
 

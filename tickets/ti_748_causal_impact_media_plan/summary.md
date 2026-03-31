@@ -112,7 +112,7 @@ Each media plan allocates the campaign's total budget as percentages across publ
 | Advertiser | IVR Effect | # Publishers | Config Era | First Plan Date | Top Publisher % | Spread (std) |
 |---|---|---|---|---|---|---|
 | **CWRV Sales** | **+16.8%*** | **16** | **New (Feb 2026+)** | 2025-11-06 (26-pub), **2026-02-13 (16-pub)** | **15% (CBS)** | **2.96** |
-| **Lighting NY** | **+10.5%*** | **16** | **Exception** | **2025-10-28** | **12%** | **3.42** |
+| **Lighting NY** | **+10.5%*** | **16** | **Natural pruning (old config)** | **2025-10-28** | **12%** | **3.42** |
 | Taskrabbit | +8.3%* | 26 | Old (Oct 2025) | 2025-10-27 | 10% | 2.24 |
 | Talkspace | +4.7% | 25 | Old→New | 2026-01-08 (25-pub), 2026-03-23 (16-pub) | 11% | 2.45 |
 | Am College of Ed | +3.6% | 26→16 | Old→New | 2026-01-27 (26-pub), 2026-02-12 (16-pub) | 11% | 2.21 |
@@ -310,7 +310,7 @@ The `max_networks` was changed from 25 to 15 on **Feb 3, 2026** (olympus commit 
 2. **Every plan created after Feb 2026 has exactly 16 publishers** — consistent with `max_networks=15` config change
 3. **CWRV Sales** had its first plan at 26 publishers (Nov 2025), but ALL subsequent plans (Feb 2026+) are 16 publishers. Their positive IVR result (+16.8%) likely reflects the NEW config's concentrated plans, not the original 26-publisher plan.
 4. **Boll & Branch and Tempo** never got updated plans — stuck on old 26-publisher config. Their negative results may reflect the old config, not the feature itself.
-5. **Lighting New York** is the exception — 16 publishers from the start (Oct 2025), and showed strong +10.5% lift. Suggests the 16-publisher concentration works regardless of when it was generated.
+5. **Lighting New York** is NOT an exception — 16 publishers from natural pruning (lower budget/vertical had fewer networks clearing $0.50/hr spend capacity + old 1% min_allocation floor). Confirmed by Chris Addy 2026-03-31: no per-advertiser override. Showed strong +10.5% lift. **Confirms the mechanism: concentration works regardless of how it was achieved.**
 
 **Implication for Kirsa:** The "concentration predicts who benefits" finding is actually **"new config vs old config predicts who benefits."** The algorithm was improved between Oct 2025 and Feb 2026 to produce more concentrated plans. Advertisers running under the new config see positive results. The two worst performers (Boll & Branch, Tempo) are on the old config and never got refreshed plans. **This is actionable: refresh their plans under the current config and re-measure.**
 

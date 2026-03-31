@@ -1,0 +1,27 @@
+https://mntn.atlassian.net/wiki/spaces/DP/pages/3032645677/Guide+Spark+on+Google+Dataproc+with+local+Astronomer
+
+Need setup virtual env
+
+uv venv --python 3.11
+install pyproject.toml to get all dependencies
+
+** to active venv: source .venv/bin/activate **
+
+gcloud auth application-default login
+
+1. make the venv with uv
+2. install these packages pyproject.toml
+3. make a new branch edit away
+4. to test locally use python model_run.py -- model_name or python model_upload.py and run it locally from astro
+	- model_run.py == testing a single run and will upload data + file to gcs
+	- model_upload.py == using airflow local dev
+
+This is the file you'll probably replicate a lot of logic https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_1_source/guid_log_advertiser_id_dsc_id.py
+
+to start local airflow
+
+astro dev start
+
+to stop
+
+astro dev stop
