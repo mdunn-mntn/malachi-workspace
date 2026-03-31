@@ -85,26 +85,26 @@ The experimentation team needs a rigorous causal inference framework to measure 
 
 Five statistical tests applied to each comparison. Nick Martin (experiment owner) confirmed proportion z-test is the team standard for IVR.
 
-| Advertiser | Intent | Ctrl IVR | Treat IVR | Lift | t-test p | z-test p | chi² p | M-W p | Sig by |
+| Advertiser | Intent | Ctrl IVR | Treat IVR | Lift | t-test p | z-test p | chi² p | M-W U p | Significant by |
 |---|---|---|---|---|---|---|---|---|---|
-| Edward Martin | PP | 0.005176 | 0.011544 | +123.0% | 0.0000 | <.0001 | <.0001 | 0.0001 | z,t,u |
-| Edward Martin | MI_PP | 0.005424 | 0.009207 | +69.7% | 0.0021 | <.0001 | <.0001 | 0.0071 | z,t,u |
-| Collector Store | PP | 0.003987 | 0.006360 | +59.5% | 0.0134 | <.0001 | <.0001 | 0.0157 | z,t,u |
-| Collector Store | MI | 0.003930 | 0.005631 | +43.3% | 0.0252 | <.0001 | <.0001 | 0.0368 | z,t,u |
-| Collector Store | HI | 0.006006 | 0.008173 | +36.1% | 0.0841 | <.0001 | <.0001 | 0.1188 | z |
-| Edward Martin | HI | 0.013173 | 0.016705 | +26.8% | 0.1068 | <.0001 | <.0001 | 0.0826 | z |
-| Reedsy | PP | 0.004739 | 0.005946 | +25.5% | 0.0903 | 0.0046 | 0.0046 | 0.0826 | z |
-| Collector Store | MI_PP | 0.003644 | 0.004493 | +23.3% | 0.1961 | 0.0247 | 0.0247 | 0.2272 | z |
-| G-Shock | PP | 0.014968 | 0.018433 | +23.1% | 0.1382 | <.0001 | <.0001 | 0.0872 | z |
-| Reedsy | MI | 0.005760 | 0.007038 | +22.2% | 0.1311 | 0.0061 | 0.0061 | 0.1824 | z |
-| Zumba | MI | 0.010197 | 0.011312 | +10.9% | 0.4175 | 0.0017 | 0.0017 | 0.3786 | z |
+| Edward Martin | PP | 0.005176 | 0.011544 | +123.0% | 0.0000 | <.0001 | <.0001 | 0.0001 | z-test, t-test, M-W U |
+| Edward Martin | MI_PP | 0.005424 | 0.009207 | +69.7% | 0.0021 | <.0001 | <.0001 | 0.0071 | z-test, t-test, M-W U |
+| Collector Store | PP | 0.003987 | 0.006360 | +59.5% | 0.0134 | <.0001 | <.0001 | 0.0157 | z-test, t-test, M-W U |
+| Collector Store | MI | 0.003930 | 0.005631 | +43.3% | 0.0252 | <.0001 | <.0001 | 0.0368 | z-test, t-test, M-W U |
+| Collector Store | HI | 0.006006 | 0.008173 | +36.1% | 0.0841 | <.0001 | <.0001 | 0.1188 | z-test only |
+| Edward Martin | HI | 0.013173 | 0.016705 | +26.8% | 0.1068 | <.0001 | <.0001 | 0.0826 | z-test only |
+| Reedsy | PP | 0.004739 | 0.005946 | +25.5% | 0.0903 | 0.0046 | 0.0046 | 0.0826 | z-test only |
+| Collector Store | MI_PP | 0.003644 | 0.004493 | +23.3% | 0.1961 | 0.0247 | 0.0247 | 0.2272 | z-test only |
+| G-Shock | PP | 0.014968 | 0.018433 | +23.1% | 0.1382 | <.0001 | <.0001 | 0.0872 | z-test only |
+| Reedsy | MI | 0.005760 | 0.007038 | +22.2% | 0.1311 | 0.0061 | 0.0061 | 0.1824 | z-test only |
+| Zumba | MI | 0.010197 | 0.011312 | +10.9% | 0.4175 | 0.0017 | 0.0017 | 0.3786 | z-test only |
 | Edward Martin | MI | 0.011485 | 0.012326 | +7.3% | 0.6100 | 0.1807 | 0.1807 | 0.6149 | — |
 | G-Shock | HI | 0.034458 | 0.034301 | -0.5% | 0.9742 | 0.8829 | 0.8829 | 1.0000 | — |
 | G-Shock | MI_PP | 0.014226 | 0.013955 | -1.9% | 0.9002 | 0.6954 | 0.6954 | 1.0000 | — |
 | Zumba | MI_PP | 0.007806 | 0.007256 | -7.0% | 0.6202 | 0.0646 | 0.0646 | 0.6873 | — |
-| G-Shock | MI | 0.029283 | 0.025826 | -11.8% | 0.3748 | 0.0003 | 0.0003 | 0.3651 | z (neg) |
-| Zumba | HI | 0.022569 | 0.019876 | -11.9% | 0.3531 | <.0001 | <.0001 | 0.2576 | z (neg) |
-| Zumba | PP | 0.013209 | 0.011275 | -14.6% | 0.1918 | <.0001 | <.0001 | 0.1446 | z (neg) |
+| G-Shock | MI | 0.029283 | 0.025826 | -11.8% | 0.3748 | 0.0003 | 0.0003 | 0.3651 | z-test only (negative) |
+| Zumba | HI | 0.022569 | 0.019876 | -11.9% | 0.3531 | <.0001 | <.0001 | 0.2576 | z-test only (negative) |
+| Zumba | PP | 0.013209 | 0.011275 | -14.6% | 0.1918 | <.0001 | <.0001 | 0.1446 | z-test only (negative) |
 | Reedsy | MI_PP | 0.003959 | 0.003297 | -16.7% | 0.1485 | 0.0601 | 0.0601 | 0.2371 | — |
 
 **Significance summary across tests:**
