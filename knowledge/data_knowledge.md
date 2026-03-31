@@ -1025,8 +1025,8 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - ~20,000 keywords representing product categories (e.g., "Dog Beds" = 905072, "Pet Accessories" = 922262)
 - Used in audience expressions for both MM V2 and BUK
 - In `ipdsc__v1`: each IP has an array of DS19 `data_source_category_ids` it's been matched to
-- NOTE: DS19 category IDs do NOT have rows in the `categories` table with `data_source_id = 19`. They share IDs with DS16 ("MNTN Taxonomy Data") in the `categories` table, where they map to the per-advertiser taxonomy tree (AdvertiserID → event type → funnel stage → campaign). The human-readable product category names (e.g., "Dog Beds") come from the URL classification pipeline, not the `categories` table
-- DS38 ("MNTN UI Audience Keywords") in `keyword_categories` contains the user-facing keyword strings but uses different `data_source_category_id` values than DS19
+- NOTE: DS19 category IDs do NOT have rows in the `categories` table with `data_source_id = 19`. They share IDs with DS16 ("MNTN Taxonomy Data") in the `categories` table. The human-readable product category names (e.g., "Dog Beds" for ID 905072) come from the URL classification pipeline: advertiser URLs are classified via LLM/embedding into a product category name + DS19 `data_source_category_id`. These name mappings live in the BUK feature store (Databricks/Airflow pipeline output), not in a BQ dimension table
+- DS38 ("MNTN UI Audience Keywords") in `keyword_categories` contains user-facing keyword strings (~40M rows) but uses different `data_source_category_id` values than DS19
 
 ### DS16: "MNTN Taxonomy Data"
 - Per-advertiser taxonomy tree with hierarchy: ROOT → AdvertiserID → {PageViews, Conversions, Impressions, VV, Wins} → {Prospecting, MultiTouch, Retargeting} → CampaignGroupID → CampaignID
