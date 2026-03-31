@@ -1,6 +1,7 @@
-# TI-###: Bottoms Up Keywords (BUK) — Knowledge Transfer & Action Plan
+# TI-797: Bottoms Up Keywords (BUK) — Knowledge Transfer & Action Plan
 
-**Jira:** https://mntn.atlassian.net/browse/TI-273 (parent initiative)
+**Jira:** https://mntn.atlassian.net/browse/TI-797
+**Parent Initiative:** https://mntn.atlassian.net/browse/TI-273
 **Status:** In Progress
 **Date Started:** 2026-03-31
 **Date Completed:**
