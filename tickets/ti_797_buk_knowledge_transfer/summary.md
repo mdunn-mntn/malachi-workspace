@@ -382,12 +382,24 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 
 ### Next Phase — What We Can Do
 
-**Phase A: Beta Advertiser Performance Analysis** (blocked on campaign IDs from Michelle)
-- Once we have campaign IDs for West Bend (40279) and Samy's Camera (45594), pull:
-  - BUK campaign vs best comparable campaign: IVR, CPA, audience size, keyword overlap
-  - Per-keyword visit rates within BUK campaigns
-  - Score distribution of IPs who actually visited vs didn't
-- This gives concrete per-advertiser performance evidence beyond the aggregate DCG curve
+**Phase A: Beta Advertiser Performance Analysis** (partially done — campaign IDs still needed from Michelle)
+
+DCG scoring completed for all 7 beta advertisers. Visit rate lift for IPs scored >= 0.9 vs below:
+
+| Advertiser | ID | Scored IPs | Visitors | Score>=0.9 Lift |
+|---|---|---|---|---|
+| Experience Scottsdale | 35374 | 36.0M | 16,338 | **129x** |
+| Global Rescue | 37336 | 37.5M | 5,488 | **73x** |
+| Samy's Camera | 45594 | 14.2M | 2,145 | **50x** |
+| West Bend Insurance | 40279 | 81.3M | 1,890 | **65x** |
+| Amsterdam Printing | 33610 | 37.1M | 713 | **101x** |
+| Apollo.io | 33129 | 66.7M | 369 | **1,152x** |
+| Apolla | 48687 | 73.9M | 78 | **inf** (0 visits below 0.9) |
+
+**Every beta advertiser shows massive lift.** Signal holds per-advertiser, not just in aggregate.
+**Output:** `outputs/ti_797_dcg_beta_advertisers.csv`
+
+Still needed: campaign IDs from Michelle to compare BUK campaign performance vs comparable non-BUK campaigns for West Bend and Samy's Camera
 
 **Phase B: TI-704 — Offline BUK Evaluation via Fangorn Experiment** (actionable now)
 - Score treatment and control IPs from the current Fangorn experiment with BUK DCG
