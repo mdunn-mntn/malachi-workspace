@@ -127,13 +127,26 @@ FEEDBACK features (guid_log, conversion_log) occupy the top 5 ranks by SHAP. The
 
 ---
 
+## Known Limitation: Not Scoped to Campaign Group
+
+This model predicts "will this IP visit ANY advertiser site" — not "will this IP visit THIS SPECIFIC advertiser after seeing THIS campaign's ad." The training data joins all impressions across all advertisers to all visits across all advertisers for each IP.
+
+**Why this matters:** Features correlated with volume (segment count, impression count, advertiser count) get artificially boosted. An IP in many segments gets targeted by many campaigns and has more chances to visit *someone* — that's a volume effect, not a feature quality signal.
+
+**What changes with campaign_group scoping:** Each row becomes (IP, campaign_group). Label = did this IP visit THIS advertiser? Volume-correlated EXISTING features should become less dominant. IP-characteristic features (content genre, device make, activity patterns) should become relatively more important — because they're the signal that helps match a specific IP to a specific advertiser.
+
+**Bottom line:** The current rankings correctly identify what data exists and which features carry signal. The relative ranking between EXISTING and NEW features will likely shift when we scope to campaign_group — NEW features should rise. This is the next analysis to run.
+
+---
+
 ## Next Steps
 
-1. **Vertical classification model** — Test content genre features for per-advertiser IVR prediction. This is where genre should shine.
-2. **Cold-start analysis** — Test new features on IPs with no existing Fangorn score.
-3. **1P vs 3P segment split** — DS3 interest segments cover 1.3B IPs with ~20 segments each. Isolating 3P count could be a strong new feature.
-4. **Production integration** — Top new features → Fangorn feature store.
-5. **Features not yet modeled** — IAB category percentages, content_series (show names), parsed identity signals from conversion_log (ga_client_id 67%, device IDs 3%).
+1. **Campaign-group-scoped model** — Rebuild training data as (IP, campaign_group) pairs. Label = visited THIS advertiser. This gives the real answer for the feature store.
+2. **Vertical classification model** — Test content genre features for per-advertiser IVR prediction.
+3. **Cold-start analysis** — Test new features on IPs with no existing Fangorn score.
+4. **1P vs 3P segment split** — DS3 interest segments cover 1.3B IPs with ~20 segments each. Isolating 3P count could be a strong new feature.
+5. **Production integration** — Top new features → Fangorn feature store.
+6. **Features not yet modeled** — IAB category percentages, content_series (show names), parsed identity signals from conversion_log (ga_client_id 67%, device IDs 3%).
 
 ---
 
