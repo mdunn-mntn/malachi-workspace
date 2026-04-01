@@ -2,8 +2,9 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-790
 **Epic:** [TI-789](https://mntn.atlassian.net/browse/TI-789) — Bidstream Feature Extraction & Audience Augmentation
-**Status:** In Progress
+**Status:** Done
 **Date Started:** 2026-03-30
+**Date Completed:** 2026-04-01
 **Assignee:** Malachi
 
 ---
@@ -54,22 +55,47 @@ Presentation-format version: [ti_790_presentation_new.md](artifacts/ti_790_prese
 | [ti_790_shap_pre_visit.png](outputs/ti_790_shap_pre_visit.png) | SHAP summary plot |
 | [ti_790_all_features_ranked.csv](outputs/ti_790_all_features_ranked.csv) | Raw feature rankings CSV |
 
-## 6. For Alex & Ryan
+## 6. Meeting Outcomes (2026-04-01 Sync)
 
-**Alex (TI-791):** `iab_categories` (augmentor_log, bronze only, 30% fill) and `content_genre` (bidder_auction_events, 87% fill) are the vertical classification signals. Both need normalization (case, commas, prefixes). Genre ranked mid-tier for general IVR but should rank high for per-advertiser prediction.
+**Attendees:** Malachi, Alex Knorr, Ryan Kleck
 
-**Ryan (TI-792):** `inventory_source` has 40 values in augmentor_log vs 3 in bidder_auction_events. Still need the exchange reference table. Content fields map to OpenRTB `content` object. `device_make` maps to `device.make`.
+**Alex's findings (TI-791):**
+- IAB categories are too generic alone ("arts and entertainment, television" dominate). Insufficient semantic info for embeddings.
+- Domain field has more signal — mix of cleaned site name + app bundle. Can parse for genre/vertical clues.
+- CTV vs non-CTV is the primary delimiter — classification logic should split on device_type first.
+- Approach: parse domains, build simple rules mapping to verticals rather than embeddings.
+
+**Ryan's contributions:**
+- Shared existing feature store pipeline: `aug_log_ip_vertical_id_hourly.py` — reads augmentor_log hourly from parquet, maps domains to vertical IDs via tldextract. Already in production.
+- Page URL (full URL) already added to augmentor_log for banner placements — implemented in Matt's feature store.
+- PMP deal analysis: NBA (3K IPs) vs HGTV (55K IPs) overlap with fast food — 6.5% vs 5.8%. Small sample, directional.
+- `private_marketplace_deals` table has PMP deal names/IDs. DS42 converts string PMP IDs to integer category IDs.
+- IPv6 often populated when IP field is blank in augmentor_log → can link to household ID.
+- OpenRTB spec is standardized — MNTN Bidder will have same fields. Rogus is the contact.
+- New features can flow to DS13/DS19 via site_visits signal table.
+
+**Action items:**
+- Malachi: Adapt Ryan's pipeline for new features ([TI-799](https://mntn.atlassian.net/browse/TI-799))
+- Malachi: Multi-day validation ([TI-800](https://mntn.atlassian.net/browse/TI-800))
+- Malachi: Add advertiser-side features to model ([TI-801](https://mntn.atlassian.net/browse/TI-801))
+- Alex: Continue vertical classification via domain parsing (TI-791)
+- Ryan: Engineering lift assessment for pipeline capture
+- Send presentation PDF to Kale
 
 ## 7. Documentation Updates
 
 - `knowledge/data_knowledge.md` — Added Feature Store section: pre-visit vs feedback leakage, bronze-only fields, content_genre normalization, cost_impression_log gotchas, scale reference
-- `knowledge/experimentation.md` — Added Feature Importance Methodology Lessons section. Updated 2026-04-01: temporal leakage lesson, sample selection bias in targeting-system evaluation, content genre sampling sensitivity, fillna(0) vs NaN for ratios, corrected AUC numbers to v2.
+- `knowledge/experimentation.md` — Added Feature Importance Methodology Lessons section. Updated 2026-04-01: temporal leakage lesson, sample selection bias, content genre sampling sensitivity, fillna(0) vs NaN.
+- `knowledge/data_knowledge.md` — Added: augmentor_log 10d BQ TTL / ~30d parquet, private_marketplace_deals reference table, IPv6 when IP blank, DS42 PMP integer conversion
 
-## 8. Open Items
+## 8. Follow-up Tickets
 
-- [ ] Vertical classification model — test genre features for per-advertiser IVR (Alex)
-- [ ] Cold-start analysis — test new features on IPs with no Fangorn score
-- [ ] 1P vs 3P segment split — isolate DS3 interest segments as a genuinely-new feature
-- [ ] Ryan: find exchange reference table
-- [ ] Features not yet modeled: IAB category percentages, content_series, parsed identity signals from conversion_log query string
-- [ ] Wednesday 4/2 sync: present findings to Alex and Ryan
+| Ticket | Summary | Owner | Status |
+|--------|---------|-------|--------|
+| [TI-791](https://mntn.atlassian.net/browse/TI-791) | Vertical classification from bidstream | Alex | In Progress |
+| [TI-794](https://mntn.atlassian.net/browse/TI-794) | DS13 audience augmentation validation | TBD | Backlog |
+| [TI-795](https://mntn.atlassian.net/browse/TI-795) | Holdout experiment for augmented audiences | TBD | Backlog |
+| [TI-796](https://mntn.atlassian.net/browse/TI-796) | Integrate into DS13/DS19 staging + RTC | TBD | Backlog |
+| [TI-799](https://mntn.atlassian.net/browse/TI-799) | Adapt feature store pipeline for new features | Malachi | Next |
+| [TI-800](https://mntn.atlassian.net/browse/TI-800) | Multi-day validation of feature rankings | Malachi | Next |
+| [TI-801](https://mntn.atlassian.net/browse/TI-801) | Add advertiser-side features to model | Malachi | Next |

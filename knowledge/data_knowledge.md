@@ -1112,6 +1112,30 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 - `advertiser_household_score = 10000` means RTC conquest
 - `partner_ad_format` is authoritative for VIDEO vs BANNER
 
+### augmentor_log TTL and Archives
+- BQ TTL: 10 days. Parquet archive: ~30 days at `gs://mntn-data-archive-prod/augmentor_log/region={east,west}/dt=YYYY-MM-DD/hh=HH`
+- Ryan's pipeline (`aug_log_ip_vertical_id_hourly.py`) reads from parquet, runs hourly, maps domains to vertical IDs via tldextract
+- Output: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/` partitioned by dt/hh
+- Pipeline code: `steelhouse/airflow-ti` repo, `models/feature_store/feature_group_1_source/`
+
+### private_marketplace_deals Table
+- Reference table for PMP deal names and IDs — not built by us, comes from Beeswax/exchanges
+- DS42 (select team) converts PMP string IDs to integer `data_source_category_id` values
+- Has `name`, `floor_price`, `channel_id` columns
+- Example: `SELECT * FROM private_marketplace_deals WHERE lower(name) LIKE '%nba%'` for sports deals
+
+### IPv6 in augmentor_log
+- When IP field is blank, IPv6 field is often populated
+- IPv6 can link to household ID via identity graph
+- Consider as fallback for blank-IP rows when building IP-level features
+
+### IAB Categories — Practical Limitations (from Alex's TI-791 analysis)
+- Top categories are too generic: "Arts & Entertainment", "Television" dominate across all device types
+- Only ~20% of CTV rows have any IAB categories
+- IAB alone is insufficient for vertical classification — need domain parsing too
+- Simple rules mapping (not embeddings) is more practical given the generic taxonomy
+- CTV vs non-CTV is the primary delimiter — classification logic should split on device_type first
+
 ### Scale Reference (per day, 2026-03-29)
 | Table | Distinct IPs | Rows |
 |-------|-------------|------|

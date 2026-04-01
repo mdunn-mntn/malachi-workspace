@@ -73,7 +73,7 @@ When we remove existing features, content genre percentages (entertainment, come
 
 ### 3. This data is ephemeral.
 
-augmentor_log has a **10-day TTL**. bidder_auction_events has **90 days**. The richest content signal in our system expires every day. Without a feature store pipeline capturing it, we lose this data permanently.
+augmentor_log has a **10-day TTL in BigQuery** (parquet archive retains ~30 days). bidder_auction_events has **90 days**. Ryan's existing pipeline (`aug_log_ip_vertical_id_hourly.py`) already captures domain-to-vertical mappings hourly from the parquet archive. The new features need to follow the same pattern — hourly extraction before data expires.
 
 ---
 
