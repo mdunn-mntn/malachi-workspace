@@ -373,32 +373,53 @@ Work in progress. See Plan of Action (Section 3) for prioritized roadmap and dra
 
 ## 8. Open Items / Follow-ups
 
-1. **Size-controlled experiment** — #1 priority, needs to be designed and proposed to experiment team
-2. ~~**Continuous scoring validation**~~ — **DONE.** Independently reproduced DCG visit-rate curve in BQ. Monotonic increase confirmed, 12,028x lift at top score bin. See Section 4 results.
-3. **Scale DCG validation to all 5,699 advertisers** — current results are from 50-advertiser sample. Full run would eliminate the minor dips at 0.45/0.60
-4. **Cold start fallback** — API logic change needed (TI-557 in Backlog)
-5. **DAG idempotency** — stop overwriting existing advertiser keywords on retrain
-6. **Parent keyword prompting** — improve LLM quality based on beta feedback
-7. **Meet with Alex again** — schedule follow-up for deeper technical dive + local Airflow demo
-8. **Review Alex's code** — he expressed desire for code review on the BUK pipeline
+### Completed This Session (2026-03-31)
+1. ~~**Continuous scoring validation**~~ — **DONE.** Independently reproduced DCG visit-rate curve in BQ. Perfectly monotonic at 500 advertisers. 771x lift at top score bin.
+2. ~~**Scale DCG validation**~~ — **DONE.** 500 advertisers confirmed perfectly monotonic. Full-scale (5,699) exceeds BQ resource limits (need Databricks). 500 is sufficient — 575K visitors in top bin.
+3. ~~**Review TI-704**~~ — **DONE.** Offline eval using Fangorn experiment data. Maps to PRD FR-12.
+4. ~~**Review Continuous Scoring PRD**~~ — **DONE.** Keywords as supporting evidence (not filters), "any match" fallback, new audiences only, Q2 launch target.
+5. ~~**All Alex questions answered**~~ — dips (sample noise, confirmed), blending methodology, rollout sequence, beta customers, campaign IDs (pending Michelle), equal-rank logic.
 
-### Questions for Alex — Answered (2026-03-31)
-1. ~~Visit-rate dips at 0.45/0.60~~ → Alex shared TI-688 investigation write-up with his score distributions. Need to compare our dip bins against his distribution charts.
-2. ~~Blending methodology~~ → **Answered.** RFD shared: geometric (`s^(1-γ)·K^γ`) or linear (`(1-γ)s + γK`), γ=0.25. See Continuous Scoring Methodology section above.
-3. ~~Path to bidder/pacing~~ → **Answered.** Depends on Fangorn release first. Rollout: (1) Fangorn, (2) continuous scoring with Fangorn + MM V2 equal-rank keywords, (3) wire in BUK rankings.
-4. ~~Beta customer IDs~~ → **Answered.** 7 advertisers shared, 2 confirmed live (West Bend Insurance 40279, Samy's Camera 45594).
+### Next Phase — What We Can Do
 
-### Remaining Questions — Answered (2026-03-31, round 2)
-1. ~~Beta campaign IDs~~ → Alex doesn't have them directly; Michelle was tracking. Alex will find them.
-2. ~~Offline evaluation approach~~ → **TI-704** (backlog) does similar analysis: score treatment and control IPs from the current Fangorn experiment with BUK, then evaluate against impressions/visits from the experiment. This is the offline path.
-3. ~~Equal-rank discount for MM V2~~ → **Answered.** All keywords get discount=1.0 BUT there would still be logic differentiating "visited a keyword" vs "just visited the vertical." See [Continuous Scoring PRD](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3398828035/Continuous+Scoring+PRD) for details.
+**Phase A: Beta Advertiser Performance Analysis** (blocked on campaign IDs from Michelle)
+- Once we have campaign IDs for West Bend (40279) and Samy's Camera (45594), pull:
+  - BUK campaign vs best comparable campaign: IVR, CPA, audience size, keyword overlap
+  - Per-keyword visit rates within BUK campaigns
+  - Score distribution of IPs who actually visited vs didn't
+- This gives concrete per-advertiser performance evidence beyond the aggregate DCG curve
 
-### Open Items for Next Session
-1. Get beta campaign IDs from Michelle (via Alex) for West Bend 40279 and Samy's Camera 45594
-2. Review TI-704 ticket — offline BUK evaluation using Fangorn experiment data
-3. Review the [Continuous Scoring PRD](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3398828035/Continuous+Scoring+PRD) for keyword vs vertical visit distinction
-4. Run full-scale DCG validation (all 5,699 advertisers) to confirm mid-range dips smooth out
-5. Schedule follow-up meeting with Alex
+**Phase B: TI-704 — Offline BUK Evaluation via Fangorn Experiment** (actionable now)
+- Score treatment and control IPs from the current Fangorn experiment with BUK DCG
+- Evaluate whether BUK keyword scores predict visit behavior within the controlled experiment context
+- Test the two open assumptions: (1) diminishing returns to keywords, (2) frequency doesn't matter
+- Need from Alex: which Fangorn experiment advertisers to use, experiment date range, treatment/control split definition
+
+**Phase C: Code Review of BUK Pipeline** (actionable now)
+- Alex requested a second set of eyes on the pipeline code
+- Review the Airflow DAG, ALS model training, prediction generation, clustering, LLM parent keyword generation
+- Identify opportunities for the idempotency fix (Priority 4) and cold-start fallback (Priority 3)
+
+**Phase D: Incrementality Integration** (future — depends on Kale's plan)
+- Kale is pivoting TI team focus toward incrementality prediction (2026-03-31 1x1)
+- BUK keywords are NOT dead — Kale sees them as a valid feature in the predictive model
+- The interface (exposing keywords as a separate audience mechanism) is the bigger concern, not the underlying signal
+- Continuous scoring blending (Fangorn + keywords) aligns with this direction — keywords contribute to unified intent score, not as separate UI mechanism
+
+### Blocked — Waiting On Others
+- **Beta campaign IDs** — Alex finding from Michelle's tracking (Phase A)
+- **Fangorn experiment details** — need advertiser list, date range, split definition from Alex (Phase B)
+- **Kale's incrementality plan** — forthcoming, will inform how BUK fits into the broader strategy (Phase D)
+- **Continuous scoring implementation** — depends on Fangorn release + PER squad pacing compatibility (PRD dependencies)
+
+### Questions for Alex — All Answered
+1. ~~Visit-rate dips at 0.45/0.60~~ → Confirmed as sample noise. 500-advertiser run is perfectly monotonic.
+2. ~~Blending methodology~~ → Geometric (`s^(1-γ)·K^γ`) or linear (`(1-γ)s + γK`), γ=0.25.
+3. ~~Path to bidder/pacing~~ → Fangorn first → Fangorn + MM V2 equal-rank → wire in BUK.
+4. ~~Beta customer IDs~~ → 7 advertisers, 2 confirmed live.
+5. ~~Beta campaign IDs~~ → Michelle tracked. Alex will find.
+6. ~~Offline eval approach~~ → TI-704, also see Continuous Scoring PRD FR-12.
+7. ~~Equal-rank logic~~ → All keywords discount=1.0, but still differentiate "visited keyword" vs "just vertical." See PRD.
 
 ---
 
