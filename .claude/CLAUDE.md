@@ -43,6 +43,7 @@ workspace/
 | `self_review/summary.md` | Self-review guide — workflow, rubric, leadership direction (Paulo/Kale/Alyson), how to write rationales |
 | `self_review/self_review_2.md` | **Active self-review** — update after every ticket (gitignored) |
 | `self_review/self_review_1.html` | Submitted review #1 (archived, do not modify) |
+| `documentation/docs/presentation_playbook.md` | **Presentation standards** — read before creating any presentation. Power Line, structure, storytelling, persuasion, delivery, checklists |
 
 ## Self-Review Entry Guide
 
@@ -70,6 +71,29 @@ Full guide in `self_review/summary.md`.
 Pattern: `ti_xxx_short_name.ext` — the ticket number is the anchor, the filename is descriptive of the file's purpose.
 
 Exception: `summary.md` at the ticket root can remain just `summary.md` (it's the standard template file).
+
+## Presentation Standards
+
+When creating or editing any presentation file (slides, decks, `*_presentation.md`, or any artifact intended for an audience):
+
+1. **Read `documentation/docs/presentation_playbook.md` first** — it is the authoritative guide for all presentation work.
+2. **Every presentation must have a Power Line** — one sentence (10 words or fewer) the audience will remember. Write it before building anything else.
+3. **Structure:** Three-act (Disruption → Revelation → Resolution). Never present findings in discovery order — lead with the insight.
+4. **Opening:** Use one of the five proven openers (Startling Stat, Question, Story, Bold Claim, Contrast). Never start with "So today I'm going to talk about..."
+5. **Data slides:** One number per slide. Anchor before reveal. Use contrast over absolutes. Round for business audiences.
+6. **Rule of Three:** Three takeaways, three categories, three next steps. Not four.
+7. **Story requirement:** At least one story per presentation using the Hall framework (character + emotion + moment + specific detail).
+8. **Close:** End on the Power Line or a clear call to action. Never end with "that's all I have" or "any questions?"
+9. **Audience adaptation:** Technical = show rigor + methodology. Business = lead with implication + round numbers. Mixed = headline up front, detail in appendix.
+10. **Billboard Test:** Every slide must be graspable at a glance. One idea per slide. Kill bullet points where possible.
+
+**Cialdini checklist for persuasive presentations:**
+- Social proof (who else validates this?)
+- Authority (methodology rigor, scale)
+- Scarcity (why now?)
+- Commitment ladder (small yes before big ask)
+- Reciprocity (give insight freely)
+- Unity ("we" not "I")
 
 ## Codex Review
 Codex will review your code after you're done. Write with that in mind — keep code clean, well-structured, and ready for automated review.
