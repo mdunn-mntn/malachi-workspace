@@ -8,7 +8,7 @@
 
 The top 3 predictors of site visits are features we built — Fangorn scores, RTC conquest, impression frequency. That's the validation.
 
-But we scanned all 25 log tables in the system. Only 6 had unique signal. Inside those 6, we found **37 features we've never used for targeting** — content genres, device diversity, publisher breadth, clearing prices — all from the bidstream. They predict visits at **10x lift** over baseline.
+But we scanned all 25 log tables in the system. Only 6 had unique signal. Inside those 6, we found **37 features we've never used for targeting** — content genres, device diversity, publisher breadth, clearing prices — all from the bidstream. Combined with existing features, they predict visits at **10x lift**. Using *only* the new features: **7x lift**.
 
 The richest new signal isn't demographics. It's what people watch.
 
@@ -50,8 +50,8 @@ These are the features we've never used for targeting, ranked by standalone impo
 | **2** | **Video vs display format** | Display converts better per-impression than CTV |
 | **3** | **Content domain breadth** | IPs consuming diverse content are more predictable |
 | **4** | **Video placement rate** | Strong CTV engagement signal |
-| **5** | **Clearing price** | Cheaper inventory converts better — counterintuitive |
-| **6** | **Entertainment genre %** | Entertainment-heavy IPs visit less — content type matters |
+| **5** | **Clearing price** | Lower clearing price correlates with more visits — within Fangorn-selected IPs |
+| **6** | **Entertainment genre %** | Entertainment-heavy IPs visit less — likely passive viewers less inclined to act |
 | **7** | **Total auction wins** | Market activity — active IPs convert more |
 | **8** | **PMP deal rate** | Premium curated inventory = better audiences |
 | **9** | **Auction count** | Bidstream breadth — more auctions = more signal |
@@ -190,6 +190,32 @@ NEW-only AUC: 0.777 | Top 1% precision: 5.7% = 6.8x lift
 | 35 | `wl_mutes` | win_logs | 0.009 | 0.004 | ↑ more visits | Video mutes |
 | 36 | `wl_pauses` | win_logs | 0.004 | 0.004 | ↑ more visits | Video pauses |
 | 37 | `wl_clicks` | win_logs | 0.003 | 0.003 | ↑ more visits | Ad clicks |
+
+## Feedback Features (Post-Visit — For Retraining Only)
+
+These features come from guid_log (website pixel) and conversion_log (purchase events). They only exist after an IP has already visited — can't be used for targeting. A model using only these features produces AUC 0.999, but this is tautological: guid_log fires on site visits, so `gl_n_events > 0` perfectly identifies visitors by definition. These are valuable for retraining and scoring returning visitors, not for prediction.
+
+| # | Feature | Source | SHAP | Description |
+|---|---------|--------|------|-------------|
+| 1 | `gl_n_os_families` | guid_log | 5.255 | # distinct OS families on advertiser sites |
+| 2 | `gl_n_browser_families` | guid_log | 3.883 | # distinct browser families |
+| 3 | `gl_pct_ip_stable` | guid_log | 2.797 | % events where IP matches original_ip |
+| 4 | `gl_n_adv` | guid_log | 2.309 | # distinct advertisers visited |
+| 5 | `gl_n_events` | guid_log | 1.451 | # pixel events on advertiser sites |
+| 6 | `gl_pct_mobile` | guid_log | 0.647 | % events from mobile devices |
+| 7 | `gl_pct_new` | guid_log | 0.373 | % events flagged as "new" visit |
+| 8 | `cv_n_orders` | conversion_log | 0.266 | # distinct purchase orders |
+| 9 | `cv_n_conv` | conversion_log | 0.214 | # conversion events |
+| 10 | `cv_avg_amt` | conversion_log | 0.206 | Average order value ($) |
+| 11 | `cv_total_amt` | conversion_log | 0.129 | Total order value ($) |
+| 12 | `cv_n_types` | conversion_log | 0.102 | # distinct conversion types |
+| 13 | `gl_has_mobile` | guid_log | 0.094 | Has mobile device events (0/1) |
+| 14 | `gl_n_product_views` | guid_log | 0.088 | # product page views (purchase intent) |
+| 15 | `cv_n_adv` | conversion_log | 0.054 | # advertisers converted on |
+| 16 | `gl_has_new_visit` | guid_log | 0.015 | Has any "new" visit flag |
+| 17 | `gl_has_tablet` | guid_log | 0.003 | Has tablet events (0/1) |
+
+*Zero importance: gl_has_desktop (0% fill), gl_n_utm_events (0% fill), wl_skips (no skip in CTV), wl_viewability (100% for CTV), wl_invalid (near zero).*
 
 ---
 
