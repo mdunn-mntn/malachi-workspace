@@ -2,9 +2,9 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-797
 **Parent Initiative:** https://mntn.atlassian.net/browse/TI-273
-**Status:** In Progress
+**Status:** Complete
 **Date Started:** 2026-03-31
-**Date Completed:**
+**Date Completed:** 2026-04-01
 **Assignee:** Malachi
 
 ---
