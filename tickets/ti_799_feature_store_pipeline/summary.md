@@ -116,14 +116,14 @@ class MyModel(FileStorageBaseModel):
 - Group by IP in Layer 1 with `CASE WHEN` flags for binary features, `COUNT(*)` for volume
 
 ### Confirmed Parquet Archives
-| Table | Parquet Path | Status |
-|-------|-------------|--------|
-| augmentor_log | `gs://mntn-data-archive-prod/augmentor_log/` | Confirmed (Ryan) |
-| guid_log | `gs://mntn-data-archive-prod/guid_log/` | Confirmed (existing pipeline reads it) |
-| conversion_log | `gs://mntn-data-archive-prod/conversion_log/` | Confirmed (existing pipeline reads it) |
-| win_logs | TBD | Need to check |
-| bidder_auction_events | TBD | Need to check |
-| cost_impression_log | TBD | Need to check |
+| Table | Parquet Path | Partition | Status |
+|-------|-------------|-----------|--------|
+| augmentor_log | `gs://mntn-data-archive-prod/augmentor_log/` | `region={east,west}/dt=YYYY-MM-DD/hh=HH` | Confirmed (Ryan's pipeline) |
+| guid_log | `gs://mntn-data-archive-prod/guid_log/` | `dt=YYYY-MM-DD/hh=HH` | Confirmed (existing pipeline) |
+| conversion_log | `gs://mntn-data-archive-prod/conversion_log/` | `dt=YYYY-MM-DD` | Confirmed (existing pipeline) |
+| win_logs | `gs://mntn-data-archive-prod/win_logs/` | `dt=YYYY-MM-DD/hh=HH` | Confirmed (gsutil ls) |
+| bidder_auction_events | `gs://mntn-data-archive-prod/bidder_auction_events/` | `region={east,west}/dt=YYYY-MM-DD` | Confirmed (gsutil ls) |
+| cost_impression_log | **NO PARQUET ARCHIVE** | — | Not in bucket. Must read from BQ via Spark connector or skip. |
 
 ### Scope Update: All Features for Model Training
 
@@ -278,7 +278,7 @@ _(To be filled)_
 
 ## 8. Open Items / Follow-ups
 
-- [ ] Check parquet archives for win_logs, bidder_auction_events, cost_impression_log (`gsutil ls gs://mntn-data-archive-prod/`)
+- [x] ~~Check parquet archives~~ → win_logs ✅, bidder_auction_events ✅, cost_impression_log ❌ (no parquet — must use BQ Spark connector or skip)
 - [ ] Confirm naming convention with Ryan (e.g., `aug_log_ip_features` vs `aug_log_ip_bidstream_features`)
 - [ ] HLL sketch implementation for distinct counts — review existing usage in guid_log pipeline
 - [ ] Determine Layer 2 rolling window sizes (7d/14d/30d — follow Matt's convention)
