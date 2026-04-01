@@ -127,24 +127,43 @@ FEEDBACK features (guid_log, conversion_log) occupy the top 5 ranks by SHAP. The
 
 ---
 
-## Known Limitation: Not Scoped to Campaign Group
+## Scoped Model: Per-Advertiser Results
 
-This model predicts "will this IP visit ANY advertiser site" — not "will this IP visit THIS SPECIFIC advertiser after seeing THIS campaign's ad." The training data joins all impressions across all advertisers to all visits across all advertisers for each IP.
+We re-ran with each row = (IP, advertiser). Label = visited THIS advertiser. 363K rows, 0.95% visit rate.
 
-**Why this matters:** Features correlated with volume (segment count, impression count, advertiser count) get artificially boosted. An IP in many segments gets targeted by many campaigns and has more chances to visit *someone* — that's a volume effect, not a feature quality signal.
+**Scoped AUC: 0.842** (vs 0.896 unscoped). Harder problem — predicting per-advertiser visits.
 
-**What changes with campaign_group scoping:** Each row becomes (IP, campaign_group). Label = did this IP visit THIS advertiser? Volume-correlated EXISTING features should become less dominant. IP-characteristic features (content genre, device make, activity patterns) should become relatively more important — because they're the signal that helps match a specific IP to a specific advertiser.
+**Features that gained importance (rose in rank):**
 
-**Bottom line:** The current rankings correctly identify what data exists and which features carry signal. The relative ranking between EXISTING and NEW features will likely shift when we scope to campaign_group — NEW features should rise. This is the next analysis to run.
+| Feature | Unscoped → Scoped | Change | Why |
+|---------|-------------------|--------|-----|
+| `al_pct_ctv` (CTV %) | 26 → 13 | **+13** | CTV-ness matters for per-advertiser matching |
+| `bae_pct_comedy` (comedy %) | 36 → 28 | **+8** | Genre helps match IP to advertiser type |
+| `bae_n_genres` (genre diversity) | 30 → 23 | **+7** | Content variety helps differentiate |
+| `bae_pct_ent` (entertainment %) | 33 → 26 | **+7** | Content signal rises |
+| `bae_pct_genre` (genre fill rate) | 18 → 12 | **+6** | Genre data availability rises |
+| `bae_pct_news` (news %) | 34 → 30 | **+4** | Content signal rises |
+
+**Features that lost importance (dropped in rank):**
+
+| Feature | Unscoped → Scoped | Change | Why |
+|---------|-------------------|--------|-----|
+| `wl_n_models` (device diversity) | 7 → 22 | **-15** | Was measuring household activity, not advertiser match |
+| `ci_n_imp` (impression count) | 12 → 27 | **-15** | Volume effect removed by scoping |
+| `bae_roku` (Roku device) | 25 → 40 | **-15** | Device ownership less relevant per-advertiser |
+| `wl_n_makes` (device makes) | 20 → 33 | **-13** | Same — household proxy, not advertiser match |
+
+**Bottom line:** Content features (genre, CTV %) gain importance when scoped. Volume/device-diversity features drop. This confirms content signals are the most valuable NEW features for the feature store.
+
+**Data gotcha found:** `win_logs.advertiser_id` is Beeswax ID, `clickpass_log.advertiser_id` is MNTN ID. Must join through `bronze.integrationprod.campaigns` to map between them.
 
 ---
 
 ## Next Steps
 
-1. **Campaign-group-scoped model** — Rebuild training data as (IP, campaign_group) pairs. Label = visited THIS advertiser. This gives the real answer for the feature store.
-2. **Vertical classification model** — Test content genre features for per-advertiser IVR prediction.
-3. **Cold-start analysis** — Test new features on IPs with no existing Fangorn score.
-4. **1P vs 3P segment split** — DS3 interest segments cover 1.3B IPs with ~20 segments each. Isolating 3P count could be a strong new feature.
+1. **Vertical classification model** — Test content genre features for per-advertiser IVR prediction.
+2. **Cold-start analysis** — Test new features on IPs with no existing Fangorn score.
+3. **1P vs 3P segment split** — DS3 interest segments cover 1.3B IPs with ~20 segments each. Isolating 3P count could be a strong new feature.
 5. **Production integration** — Top new features → Fangorn feature store.
 6. **Features not yet modeled** — IAB category percentages, content_series (show names), parsed identity signals from conversion_log (ga_client_id 67%, device IDs 3%).
 
