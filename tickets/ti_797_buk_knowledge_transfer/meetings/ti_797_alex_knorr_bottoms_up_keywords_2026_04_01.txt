@@ -1,0 +1,176 @@
+[00:00] Hey, sir. How's it going?
+[00:03] Good. How are you?
+[00:05] Good, good.
+[00:06] We can keep it brief.
+[00:10] I just want to go through from what you sent versus what I'm seeing here.
+[00:15] So slightly different numbers.
+[00:17] I think the story is the same.
+[00:20] The one question I had for you is,
+[00:24] are your results based on these queries or something else?
+[00:27] I did not even see those queries, so they're not based on those queries.
+[00:32] Okay.
+[00:32] I would have to validate that for you.
+[00:36] Okay.
+[00:36] You don't have to do it now.
+[00:38] Can you send me?
+[00:39] Is there a way for you to send me the queries that were used to generate the numbers that you showed?
+[00:42] Absolutely, yeah.
+[00:43] That would be great, and then I can look.
+[00:46] On the volume thing,
+[00:49] I've normally thought of it from the size of the high intent,
+[00:53] not necessarily the impression served.
+[00:56] Though there is,
+[00:57] like, a big difference.
+[00:59] So these guys, 227 is when we move the audience.
+[01:04] And then Sammy's camera, less of a change.
+[01:06] I think theirs was 34 here.
+[01:08] Why is that?
+[01:10] Why would you choose that?
+[01:13] That's when the advertiser chose to switch the audiences.
+[01:17] Sorry.
+[01:21] This is impressions.
+[01:22] So then your comment or the comment from your results saying, like,
+[01:26] the size,
+[01:27] volume trade-off.
+[01:28] Yep.
+[01:29] Okay.
+[01:29] This one's unusual.
+[01:30] I'm wondering if this is a seasonality thing.
+[01:32] I'm excluding this trailing part of the thing,
+[01:34] because there's no impressions there.
+[01:35] There's just, like, extra visits with their attribution window, I assume.
+[01:37] Uh-huh.
+[01:38] So I'm evaluating to here, basically.
+[01:39] Yeah, so to...
+[01:40] Basically.
+[01:41] Okay.
+[01:42] So under the West Bend data, and then...
+[01:43] Yeah.
+[01:43] Okay.
+[01:44] I'll analyze the queries that you use, the West Bend data, and then I'll send you the queries for that.
+[01:45] So in the...
+[01:45] Cool.
+[01:46] So I'm going to send you the queries for that.
+[01:46] So in the...
+[01:47] Yeah.
+[01:47] So in the...
+[01:48] Yeah.
+[01:48] So in the...
+[01:49] 
+[01:49] So in the...
+[01:49] Yeah.
+[01:50] So in the...
+[01:50] Yeah.
+[01:51] Okay.
+[01:51] I'll analyze the queries that you use, the West Bend data, and then I'll send you the queries for that.
+[01:56] Cool.
+[01:56] So in these two, you said slightly different stuff.
+[02:01] Where's your stuff versus mine?
+[02:03] What do you say your stuff versus...
+[02:06] Oh, is this all your stuff that's in there?
+[02:07] Correct.
+[02:08] Are you just saying...
+[02:08] Okay, okay.
+[02:09] Sorry.
+[02:09] I thought you...
+[02:10] I was just looking compared to this.
+[02:11] No, I see what you're saying.
+[02:12] So, yes.
+[02:13] That makes sense.
+[02:14] So that is your stuff.
+[02:15] I thought for some reason that you'd copied my stuff and put them in there next year.
+[02:19] Yeah.
+[02:19] So I was like, look at this.
+[02:20] I was just looking for the comparison, but I see this is just your data.
+[02:23] I added spend as well.
+[02:26] Sammy's camera actually spending more on average per day.
+[02:29] And then West Bend, interestingly, is spending the same amount, but getting like way less impressions.
+[02:36] Mm-hmm.
+[02:37] So I don't know exactly what to make of that, but...
+[02:40] There's a lot of different things.
+[02:42] This is where causal impact is really awesome too.
+[02:44] Yeah, exactly.
+[02:45] Okay, cool.
+[02:46] Cool.
+[02:46] So yeah, these are my asterisks.
+[02:49] Not done with causal impact, not approved by our experiment team type results to say.
+[02:55] Yeah.
+[02:56] You know, directionally interesting.
+[02:57] Okay.
+[02:58] So going from here, I will look at my queries that I use.
+[03:01] I'll see if I can change mine with queries used compared to yours.
+[03:07] And then the other thing is two things.
+[03:10] Okay.
+[03:11] So you said I based mine on our impressions.
+[03:17] The results you have had a question about size performance trade-off.
+[03:25] Oh, I didn't even notice that.
+[03:26] Did it ask a question?
+[03:27] I didn't even see.
+[03:29] No, and it's not wrong, I don't think, but it's like there's probably a lot of factors that decide on how many impressions were served versus not.
+[03:37] Oh, yeah.
+[03:38] That makes sense.
+[03:39] Okay.
+[03:39] Maybe outside of this.
+[03:40] So I don't know if it's necessarily a wrong question.
+[03:43] I just think there's maybe a lot of confounding things there.
+[03:46] Okay.
+[03:47] So I don't know if there's any things for that, but I would love your thought on that as well.
+[03:50] Okay.
+[03:50] So let's talk about the actionable things.
+[03:54] So I will send you those queries.
+[03:56] I will make sure that mine's lined up with yours and just compare our results.
+[04:00] And then afterwards, would you say that maybe I wonder if I could get causal impact like a certain amount of data on unaffected prospecting campaigns for these advertisers for like a certain period of time, see if we can get the same results there.
+[04:16] Okay.
+[04:16] We got one.
+[04:17] We got one.
+[04:18] We got one.
+[04:18] We got one.
+[04:19] We got one.
+[04:19] We got one.
+[04:20] We got one.
+[04:20] We got one.
+[04:21] We got one.
+[04:21] We got one.
+[04:22] We got one.
+[04:22] We got one.
+[04:23] We got one.
+[04:23] We got one.
+[04:23] We got one.
+[04:24] We got one.
+[04:24] We got one.
+[04:25] We got one.
+[04:25] We got one.
+[04:26] We got one.
+[04:26] We got one.
+[04:27] We got one.
+[04:27] We got one.
+[04:28] We got one.
+[04:28] We got one.
+[04:29] We got one.
+[04:29] We got one.
+[04:30] We got one.
+[04:30] We got one.
+[04:31] We got one.
+[04:31] We got one.
+[04:32] We got one.
+[04:32] We got one.
+[04:33] We got one.
+[04:33] We got one.
+[04:34] We got one.
+[04:34] We got one.
+[04:46] dropped completely. It just seems like maybe you and I should come up with some strong
+[04:53] ways to support that. And like with some good data, like maybe with causal impact to show like,
+[05:00] hey, we've actually adjusted this. We can show that these are positive. And then maybe run our
+[05:05] own, I don't know, like present something that where we think like, hey, here's the highest
+[05:09] leverage things. It's only going to take this long. Let's try and like, I don't know. Can we
+[05:15] get the approval to go work on this type of thing? Yeah, exactly. Okay. That makes sense.
+[05:18] And I think I will share these results on our like channel with like PECS basically,
+[05:25] who's asking for this information. I will caveat with everything we've kind of just talked about.
+[05:33] Having more campaign data would be nice because two is insufficient, but we should have one more
+[05:39] soon-ish since they just changed it. We probably need a couple of weeks to get data.
+[05:45] I think that'll make sense. I'm going to download a copy of your customer audience tracking now
+[05:51] and go through each of the sheets too. And then yeah, we'll go from there.
+[05:55] Cool. Thank you for the validation and review on these things. Super helpful.
+[05:59] Yeah, absolutely. Sounds good. All right. Hey, we'll talk soon.
+[06:02] See you.
+[06:03] Bye.
