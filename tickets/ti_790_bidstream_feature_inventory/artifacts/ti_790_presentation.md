@@ -6,18 +6,18 @@
 
 ## The Question
 
-What IP-level features exist across MNTN's data, and which ones actually predict site visits?
+For a given advertiser's campaign, which IP-level features predict whether that IP will visit that advertiser's site?
 
 ## What We Did
 
 1. **Scanned all 25 log tables** in the system. Identified unique columns per table programmatically.
 2. **6 tables have unique signal** — the rest are redundant. Built daily snapshot queries for each.
-3. **Joined into a training dataset** — 117,238 IPs from 2026-03-29, labeled: visited (1) or not (0).
-4. **Trained XGBoost** (300 trees, max_depth 6) to predict visits.
-5. **Ranked features by SHAP** — mean absolute Shapley value per feature on 5,000-IP test sample. SHAP measures the average contribution of each feature to each individual prediction — the most interpretable importance metric.
+3. **Joined into a training dataset** — 363,749 (IP, advertiser) pairs from 2026-03-29. Each row = one IP served impressions by one advertiser. Label = did this IP visit THIS advertiser's site.
+4. **Trained XGBoost** (300 trees, max_depth 6) to predict per-advertiser visits.
+5. **Ranked features by SHAP** — mean absolute Shapley value per feature on 5,000-sample test set.
 6. **Split pre-visit vs post-visit features** to avoid leakage from guid_log/conversion_log.
 
-**Pre-visit model AUC: 0.896** | Base visit rate: 3.4% | Test set: 23,448 IPs
+**Model AUC: 0.842** | Visit rate: 0.95% (3,472 visits out of 363K pairs) | Test set: 72,750 pairs
 
 ---
 
@@ -29,80 +29,86 @@ Three categories of features emerged:
 
 - **NEW:** External data from exchanges, bidstream, and user behavior. These are the **feature store candidates** — genuinely new signal not currently in Fangorn.
 
-- **FEEDBACK:** guid_log and conversion_log features. Only available after a site visit — can't target with them, but valuable for retraining models and scoring returning visitors.
+- **FEEDBACK:** guid_log and conversion_log features. Only available after a site visit — can't target with them, but valuable for retraining models and scoring returning visitors. Ranked separately below.
 
 ---
 
-## All 66 Features, Ranked by SHAP (Most to Least Important)
+## Pre-Visit Features, Ranked by SHAP (Scoped to Advertiser)
+
+44 features from win_logs, cost_impression_log, augmentor_log, bidder_auction_events + base metrics.
 
 | # | Feature | Source | Tag | SHAP | Gain | Description |
 |---|---------|--------|-----|------|------|-------------|
-| 1 | `gl_n_os_families` | guid_log | FEEDBACK | 5.255 | 1627.5 | # distinct OS families on advertiser sites |
-| 2 | `gl_n_browser_families` | guid_log | FEEDBACK | 3.883 | 734.0 | # distinct browser families on advertiser sites |
-| 3 | `gl_pct_ip_stable` | guid_log | FEEDBACK | 2.797 | 45.8 | % events where IP matches original_ip |
-| 4 | `gl_n_adv` | guid_log | FEEDBACK | 2.309 | 9.7 | # distinct advertisers visited |
-| 5 | `gl_n_events` | guid_log | FEEDBACK | 1.451 | 7.4 | # pixel events on advertiser sites |
-| 6 | `al_avg_segments` | augmentor_log | EXISTING | 0.986 | 312.6 | Avg MNTN segments on IP (97% are 1P RTC+retargeting) |
-| 7 | `ci_pct_new` | cost_impression_log | EXISTING | 0.670 | 123.9 | % impressions where IP is "new" (first impression) |
-| 8 | `gl_pct_mobile` | guid_log | FEEDBACK | 0.647 | 26.7 | % events from mobile devices |
-| 9 | `ci_pct_rtc` | cost_impression_log | EXISTING | 0.392 | 47.1 | % impressions via RTC conquest targeting |
-| 10 | `gl_pct_new` | guid_log | FEEDBACK | 0.373 | 4.9 | % events flagged as "new" visit |
-| 11 | `ci_total_cost` | cost_impression_log | EXISTING | 0.363 | 33.4 | Total media $ spent on this IP |
-| 12 | `cv_n_orders` | conversion_log | FEEDBACK | 0.266 | 10.7 | # distinct purchase orders |
-| **13** | **`wl_avg_price`** | **win_logs** | **NEW** | **0.231** | **31.9** | **Clearing price per auction (USD, set by market)** |
-| **14** | **`al_n_auctions`** | **augmentor_log** | **NEW** | **0.228** | **33.1** | **# auctions this IP appeared in (market activity)** |
-| 15 | `cv_n_conv` | conversion_log | FEEDBACK | 0.214 | 7.9 | # conversion events |
-| 16 | `cv_avg_amt` | conversion_log | FEEDBACK | 0.206 | 4.5 | Average order value ($) |
-| **17** | **`wl_n_models`** | **win_logs** | **NEW** | **0.205** | **307.7** | **# distinct device models (household diversity)** |
-| 18 | `n_win_adv` | base | EXISTING | 0.175 | 39.5 | # of our advertisers targeting this IP |
-| 19 | `ci_hh_score` | cost_impression_log | EXISTING | 0.152 | 35.5 | Fangorn household score (-1 = unscored) |
-| 20 | `cv_total_amt` | conversion_log | FEEDBACK | 0.129 | 6.2 | Total order value ($) |
-| **21** | **`al_pct_pmp`** | **augmentor_log** | **NEW** | **0.105** | **28.2** | **% auctions with Private Marketplace deals** |
-| 22 | `cv_n_types` | conversion_log | FEEDBACK | 0.102 | 38.9 | # distinct conversion types (purchase, signup, call) |
-| 23 | `gl_has_mobile` | guid_log | FEEDBACK | 0.094 | 40.3 | Has mobile device events (0/1) |
-| **24** | **`al_pct_iab`** | **augmentor_log** | **NEW** | **0.091** | **27.9** | **% auctions with IAB content category data** |
-| 25 | `gl_n_product_views` | guid_log | FEEDBACK | 0.088 | 3.8 | # product page views (purchase intent) |
-| 26 | `ci_n_imp` | cost_impression_log | EXISTING | 0.078 | 61.3 | # impressions served to this IP |
-| **27** | **`ci_pct_video`** | **cost_impression_log** | **NEW** | **0.071** | **30.6** | **% VIDEO format impressions (CTV vs display)** |
-| **28** | **`al_pct_video`** | **augmentor_log** | **NEW** | **0.071** | **25.4** | **% VIDEO placement in auctions** |
-| 29 | `n_wins` | base | EXISTING | 0.070 | 23.6 | Total auction wins for this IP |
-| **30** | **`al_n_networks`** | **augmentor_log** | **NEW** | **0.065** | **26.3** | **# distinct networks/publishers in bidstream** |
-| **31** | **`bae_n_auctions`** | **bidder_auction_events** | **NEW** | **0.056** | **27.8** | **# dropped auctions (broader activity signal)** |
-| **32** | **`bae_pct_genre`** | **bidder_auction_events** | **NEW** | **0.055** | **27.1** | **% auctions with any genre data** |
-| **33** | **`ci_n_vendors`** | **cost_impression_log** | **NEW** | **0.054** | **25.6** | **# distinct supply vendors** |
-| 34 | `cv_n_adv` | conversion_log | FEEDBACK | 0.054 | 5.8 | # advertisers converted on |
-| **35** | **`wl_n_makes`** | **win_logs** | **NEW** | **0.053** | **47.8** | **# distinct device manufacturers** |
-| **36** | **`wl_plays`** | **win_logs** | **NEW** | **0.052** | **27.9** | **# video ad plays (starts)** |
-| **37** | **`al_n_domains`** | **augmentor_log** | **NEW** | **0.051** | **31.7** | **# distinct content domains consumed** |
-| **38** | **`wl_completes`** | **win_logs** | **NEW** | **0.048** | **30.2** | **# video ad completions** |
-| **39** | **`al_n_ssps`** | **augmentor_log** | **NEW** | **0.048** | **28.5** | **# distinct SSPs/exchanges seeing this IP** |
-| **40** | **`bae_roku`** | **bidder_auction_events** | **NEW** | **0.042** | **30.7** | **Has Roku device (0/1)** |
-| **41** | **`al_pct_ctv`** | **augmentor_log** | **NEW** | **0.038** | **20.7** | **% CTV device type in auctions** |
-| 42 | `ci_adv_hh_score` | cost_impression_log | EXISTING | 0.036 | 29.2 | Fangorn advertiser-specific score (10000 = RTC) |
-| **43** | **`bae_n_pubs`** | **bidder_auction_events** | **NEW** | **0.036** | **29.3** | **# distinct publishers consumed** |
-| **44** | **`wl_viewable`** | **win_logs** | **NEW** | **0.033** | **31.1** | **# viewable impressions** |
-| **45** | **`bae_n_genres`** | **bidder_auction_events** | **NEW** | **0.032** | **30.9** | **# distinct content genres watched** |
-| **46** | **`bae_n_makes`** | **bidder_auction_events** | **NEW** | **0.032** | **26.2** | **# distinct device manufacturers (bidstream)** |
-| **47** | **`wl_vcr`** | **win_logs** | **NEW** | **0.031** | **26.5** | **Video completion rate (completes/plays)** |
-| **48** | **`bae_pct_ent`** | **bidder_auction_events** | **NEW** | **0.031** | **27.3** | **% content = entertainment genre** |
-| **49** | **`bae_pct_news`** | **bidder_auction_events** | **NEW** | **0.023** | **29.9** | **% content = news genre** |
-| **50** | **`bae_pct_drama`** | **bidder_auction_events** | **NEW** | **0.018** | **26.9** | **% content = drama genre** |
-| 51 | `gl_has_new_visit` | guid_log | FEEDBACK | 0.015 | 2.8 | Has any "new" visit flag |
-| **52** | **`bae_pct_comedy`** | **bidder_auction_events** | **NEW** | **0.015** | **24.8** | **% content = comedy genre** |
-| **53** | **`bae_pct_sports`** | **bidder_auction_events** | **NEW** | **0.008** | **23.7** | **% content = sports genre** |
-| **54** | **`bae_lg`** | **bidder_auction_events** | **NEW** | **0.007** | **34.1** | **Has LG Smart TV (0/1)** |
-| **55** | **`bae_samsung`** | **bidder_auction_events** | **NEW** | **0.006** | **31.5** | **Has Samsung Smart TV (0/1)** |
-| **56** | **`wl_measurable`** | **win_logs** | **NEW** | **0.004** | **19.8** | **# measurable impressions** |
-| **57** | **`al_has_ctv`** | **augmentor_log** | **NEW** | **0.004** | **19.7** | **Has CTV device in bidstream (0/1)** |
-| **58** | **`wl_clicks`** | **win_logs** | **NEW** | **0.004** | **24.0** | **# ad clicks (rare in CTV)** |
-| 59 | `gl_has_tablet` | guid_log | FEEDBACK | 0.003 | 3.8 | Has tablet events (0/1) |
-| **60** | **`wl_pauses`** | **win_logs** | **NEW** | **0.003** | **35.8** | **# times viewer paused the video ad** |
-| **61** | **`wl_mutes`** | **win_logs** | **NEW** | **0.001** | **16.2** | **# times viewer muted the video ad** |
-| 62 | `gl_has_desktop` | guid_log | ZERO | 0.000 | 0.0 | Has desktop events — 0% fill in sample |
-| 63 | `gl_n_utm_events` | guid_log | ZERO | 0.000 | 0.0 | # events with GA UTM params — rarely present |
-| 64 | `wl_skips` | win_logs | ZERO | 0.000 | 0.0 | # video skips — CTV has no skip button |
-| 65 | `wl_viewability` | win_logs | ZERO | 0.000 | 0.0 | Viewability rate — 100% for all CTV, no variance |
-| 66 | `wl_invalid` | win_logs | ZERO | 0.000 | 0.0 | # IVT flags — nearly zero in sample |
+| 1 | `ci_pct_new` | cost_impression_log | EXISTING | 1.710 | 1021.9 | % impressions where IP is "new" (first impression) |
+| 2 | `al_avg_segments` | augmentor_log | EXISTING | 0.411 | 321.4 | Avg MNTN segments on IP (97% are 1P RTC+retargeting) |
+| 3 | `n_wins_this_adv` | base | EXISTING | 0.333 | 149.5 | # wins for THIS advertiser (impression frequency to this IP) |
+| **4** | **`wl_avg_price`** | **win_logs** | **NEW** | **0.273** | **132.8** | **Clearing price per auction (USD, set by market)** |
+| 5 | `ci_total_cost` | cost_impression_log | EXISTING | 0.260 | 146.4 | Total media $ spent on this IP |
+| 6 | `ci_pct_rtc` | cost_impression_log | EXISTING | 0.243 | 175.4 | % impressions via RTC conquest targeting |
+| **7** | **`wl_n_adv`** | **win_logs** | **NEW** | **0.213** | **112.2** | **# distinct advertisers serving this IP** |
+| **8** | **`wl_n_wins`** | **win_logs** | **NEW** | **0.204** | **92.2** | **Total auction wins across all advertisers** |
+| 9 | `ci_hh_score` | cost_impression_log | EXISTING | 0.174 | 138.3 | Fangorn household score (-1 = unscored) |
+| **10** | **`al_pct_pmp`** | **augmentor_log** | **NEW** | **0.133** | **104.6** | **% auctions with Private Marketplace deals** |
+| **11** | **`al_n_auctions`** | **augmentor_log** | **NEW** | **0.127** | **117.4** | **# auctions this IP appeared in (market activity)** |
+| **12** | **`bae_pct_genre`** | **bidder_auction_events** | **NEW** | **0.119** | **111.8** | **% auctions with any genre data** |
+| **13** | **`al_pct_ctv`** | **augmentor_log** | **NEW** | **0.111** | **110.0** | **% CTV device type in auctions** |
+| **14** | **`ci_pct_video`** | **cost_impression_log** | **NEW** | **0.107** | **124.0** | **% VIDEO format impressions (CTV vs display)** |
+| **15** | **`al_pct_iab`** | **augmentor_log** | **NEW** | **0.104** | **115.4** | **% auctions with IAB content category data** |
+| **16** | **`al_pct_video`** | **augmentor_log** | **NEW** | **0.100** | **124.9** | **% VIDEO placement in auctions** |
+| **17** | **`wl_plays`** | **win_logs** | **NEW** | **0.100** | **103.5** | **# video ad plays (starts)** |
+| **18** | **`al_n_domains`** | **augmentor_log** | **NEW** | **0.095** | **116.8** | **# distinct content domains consumed** |
+| **19** | **`al_n_networks`** | **augmentor_log** | **NEW** | **0.093** | **115.8** | **# distinct networks/publishers in bidstream** |
+| 20 | `n_cgs_this_adv` | base | EXISTING | 0.088 | 98.5 | # campaign groups for THIS advertiser targeting this IP |
+| **21** | **`al_n_ssps`** | **augmentor_log** | **NEW** | **0.083** | **128.6** | **# distinct SSPs/exchanges seeing this IP** |
+| **22** | **`wl_n_models`** | **win_logs** | **NEW** | **0.081** | **141.9** | **# distinct device models (household diversity)** |
+| **23** | **`bae_n_genres`** | **bidder_auction_events** | **NEW** | **0.077** | **100.5** | **# distinct content genres watched** |
+| **24** | **`bae_n_auctions`** | **bidder_auction_events** | **NEW** | **0.071** | **134.7** | **# dropped auctions (broader activity signal)** |
+| **25** | **`bae_n_pubs`** | **bidder_auction_events** | **NEW** | **0.069** | **134.4** | **# distinct publishers consumed** |
+| **26** | **`bae_pct_ent`** | **bidder_auction_events** | **NEW** | **0.068** | **120.0** | **% content = entertainment genre** |
+| 27 | `ci_n_imp` | cost_impression_log | EXISTING | 0.067 | 127.8 | # impressions served to this IP |
+| **28** | **`bae_pct_comedy`** | **bidder_auction_events** | **NEW** | **0.063** | **106.0** | **% content = comedy genre** |
+| **29** | **`wl_viewable`** | **win_logs** | **NEW** | **0.060** | **108.0** | **# viewable impressions** |
+| **30** | **`bae_pct_news`** | **bidder_auction_events** | **NEW** | **0.056** | **115.1** | **% content = news genre** |
+| **31** | **`ci_n_vendors`** | **cost_impression_log** | **NEW** | **0.056** | **99.7** | **# distinct supply vendors** |
+| **32** | **`wl_completes`** | **win_logs** | **NEW** | **0.051** | **137.8** | **# video ad completions** |
+| **33** | **`wl_n_makes`** | **win_logs** | **NEW** | **0.049** | **91.3** | **# distinct device manufacturers** |
+| **34** | **`bae_pct_drama`** | **bidder_auction_events** | **NEW** | **0.045** | **104.7** | **% content = drama genre** |
+| **35** | **`bae_n_makes`** | **bidder_auction_events** | **NEW** | **0.038** | **101.3** | **# distinct device manufacturers (bidstream)** |
+| **36** | **`wl_vcr`** | **win_logs** | **NEW** | **0.033** | **101.4** | **Video completion rate (completes/plays)** |
+| **37** | **`bae_pct_sports`** | **bidder_auction_events** | **NEW** | **0.021** | **103.0** | **% content = sports genre** |
+| **38** | **`bae_samsung`** | **bidder_auction_events** | **NEW** | **0.018** | **122.0** | **Has Samsung Smart TV (0/1)** |
+| **39** | **`al_has_ctv`** | **augmentor_log** | **NEW** | **0.013** | **117.4** | **Has CTV device in bidstream (0/1)** |
+| **40** | **`bae_roku`** | **bidder_auction_events** | **NEW** | **0.011** | **135.1** | **Has Roku device (0/1)** |
+| **41** | **`bae_lg`** | **bidder_auction_events** | **NEW** | **0.011** | **138.5** | **Has LG Smart TV (0/1)** |
+| **42** | **`wl_mutes`** | **win_logs** | **NEW** | **0.006** | **75.5** | **# times viewer muted the video ad** |
+| **43** | **`wl_pauses`** | **win_logs** | **NEW** | **0.006** | **95.2** | **# times viewer paused the video ad** |
+| **44** | **`wl_clicks`** | **win_logs** | **NEW** | **0.005** | **75.6** | **# ad clicks (rare in CTV)** |
+
+## Feedback Features (Post-Visit — For Retraining)
+
+These only exist after a site visit. Can't use for targeting. Ranked from the feedback-only model (AUC 0.999).
+
+| # | Feature | Source | SHAP | Gain | Description |
+|---|---------|--------|------|------|-------------|
+| 1 | `gl_n_os_families` | guid_log | 5.255 | 1627.5 | # distinct OS families on advertiser sites |
+| 2 | `gl_n_browser_families` | guid_log | 3.883 | 734.0 | # distinct browser families on advertiser sites |
+| 3 | `gl_pct_ip_stable` | guid_log | 2.797 | 45.8 | % events where IP matches original_ip |
+| 4 | `gl_n_adv` | guid_log | 2.309 | 9.7 | # distinct advertisers visited |
+| 5 | `gl_n_events` | guid_log | 1.451 | 7.4 | # pixel events on advertiser sites |
+| 6 | `gl_pct_mobile` | guid_log | 0.647 | 26.7 | % events from mobile devices |
+| 7 | `gl_pct_new` | guid_log | 0.373 | 4.9 | % events flagged as "new" visit |
+| 8 | `cv_n_orders` | conversion_log | 0.266 | 10.7 | # distinct purchase orders |
+| 9 | `cv_n_conv` | conversion_log | 0.214 | 7.9 | # conversion events |
+| 10 | `cv_avg_amt` | conversion_log | 0.206 | 4.5 | Average order value ($) |
+| 11 | `cv_total_amt` | conversion_log | 0.129 | 6.2 | Total order value ($) |
+| 12 | `cv_n_types` | conversion_log | 0.102 | 38.9 | # distinct conversion types |
+| 13 | `gl_has_mobile` | guid_log | 0.094 | 40.3 | Has mobile device events (0/1) |
+| 14 | `cv_n_adv` | conversion_log | 0.054 | 5.8 | # advertisers converted on |
+| 15 | `gl_n_product_views` | guid_log | 0.088 | 3.8 | # product page views (purchase intent) |
+| 16 | `gl_has_tablet` | guid_log | 0.003 | 3.8 | Has tablet events (0/1) |
+| 17 | `gl_has_new_visit` | guid_log | 0.015 | 2.8 | Has any "new" visit flag |
+
+*Zero importance: gl_has_desktop (0% fill), gl_n_utm_events (0% fill), wl_skips (no skip in CTV), wl_viewability (100% for CTV), wl_invalid (near zero).*
 
 ---
 
@@ -110,52 +116,22 @@ Three categories of features emerged:
 
 ### 1. Our targeting system works.
 
-The top EXISTING features (ranks 6-7, 9, 11) include Fangorn scores, RTC targeting, and segment density. They're strong predictors — empirical validation that the system is directionally correct.
+EXISTING features (ranks 1-3, 5-6, 9, 20, 27) include Fangorn scores, RTC targeting, and segment density. They're the strongest predictors — validates the current system.
 
-### 2. There are 35 genuinely new features we're not using yet.
+### 2. Content and CTV features are the most valuable new signal.
 
-The top NEW features (ranks 13-14, 17) are:
-- **Clearing price** (SHAP 0.231) — premium inventory correlates with higher-quality audiences
-- **Auction activity** (SHAP 0.228) — IPs that appear in more auctions are more reachable
-- **Device model diversity** (SHAP 0.205) — multi-device households are more engaged
+The top NEW features in the scoped model:
+- **Clearing price** (SHAP 0.273) — premium inventory = better audiences
+- **PMP deal rate** (SHAP 0.133) — curated premium inventory
+- **Genre data availability** (SHAP 0.119) — IPs with richer content data are more predictable
+- **CTV percentage** (SHAP 0.111) — rose 13 ranks vs unscoped model
+- **Content genre percentages** (entertainment, comedy, news, drama, sports) — all rose 4-8 ranks vs unscoped
 
-Content genre features (news, entertainment, drama, sports, comedy) rank 48-53 by SHAP. They're lower for predicting "will this IP visit ANY site" but likely much higher for "will this IP visit THIS SPECIFIC advertiser's site" — the vertical classification question.
+Content features gained the most importance when we scoped to per-advertiser visits. This confirms they help match IPs to specific advertisers — exactly what the feature store needs.
 
-### 3. Post-visit features are gold for retraining, not targeting.
+### 3. Volume features are less important than they appeared.
 
-FEEDBACK features (guid_log, conversion_log) occupy the top 5 ranks by SHAP. They're extremely predictive but only exist after a visit happens. Use for retraining Fangorn, scoring returning visitors, identity resolution (device fingerprinting), and conversion value segmentation.
-
----
-
-## Scoped Model: Per-Advertiser Results
-
-We re-ran with each row = (IP, advertiser). Label = visited THIS advertiser. 363K rows, 0.95% visit rate.
-
-**Scoped AUC: 0.842** (vs 0.896 unscoped). Harder problem — predicting per-advertiser visits.
-
-**Features that gained importance (rose in rank):**
-
-| Feature | Unscoped → Scoped | Change | Why |
-|---------|-------------------|--------|-----|
-| `al_pct_ctv` (CTV %) | 26 → 13 | **+13** | CTV-ness matters for per-advertiser matching |
-| `bae_pct_comedy` (comedy %) | 36 → 28 | **+8** | Genre helps match IP to advertiser type |
-| `bae_n_genres` (genre diversity) | 30 → 23 | **+7** | Content variety helps differentiate |
-| `bae_pct_ent` (entertainment %) | 33 → 26 | **+7** | Content signal rises |
-| `bae_pct_genre` (genre fill rate) | 18 → 12 | **+6** | Genre data availability rises |
-| `bae_pct_news` (news %) | 34 → 30 | **+4** | Content signal rises |
-
-**Features that lost importance (dropped in rank):**
-
-| Feature | Unscoped → Scoped | Change | Why |
-|---------|-------------------|--------|-----|
-| `wl_n_models` (device diversity) | 7 → 22 | **-15** | Was measuring household activity, not advertiser match |
-| `ci_n_imp` (impression count) | 12 → 27 | **-15** | Volume effect removed by scoping |
-| `bae_roku` (Roku device) | 25 → 40 | **-15** | Device ownership less relevant per-advertiser |
-| `wl_n_makes` (device makes) | 20 → 33 | **-13** | Same — household proxy, not advertiser match |
-
-**Bottom line:** Content features (genre, CTV %) gain importance when scoped. Volume/device-diversity features drop. This confirms content signals are the most valuable NEW features for the feature store.
-
-**Data gotcha found:** `win_logs.advertiser_id` is Beeswax ID, `clickpass_log.advertiser_id` is MNTN ID. Must join through `bronze.integrationprod.campaigns` to map between them.
+Features that dropped when scoped: device model diversity (-15 ranks), impression count (-15), Roku ownership (-15), device make count (-13). These were measuring "how active is this IP" rather than "will this IP visit this specific advertiser."
 
 ---
 
@@ -164,8 +140,8 @@ We re-ran with each row = (IP, advertiser). Label = visited THIS advertiser. 363
 1. **Vertical classification model** — Test content genre features for per-advertiser IVR prediction.
 2. **Cold-start analysis** — Test new features on IPs with no existing Fangorn score.
 3. **1P vs 3P segment split** — DS3 interest segments cover 1.3B IPs with ~20 segments each. Isolating 3P count could be a strong new feature.
-5. **Production integration** — Top new features → Fangorn feature store.
-6. **Features not yet modeled** — IAB category percentages, content_series (show names), parsed identity signals from conversion_log (ga_client_id 67%, device IDs 3%).
+4. **Production integration** — Top new features → Fangorn feature store.
+5. **Features not yet modeled** — IAB category percentages, content_series (show names), parsed identity signals from conversion_log (ga_client_id 67%, device IDs 3%).
 
 ---
 
@@ -174,20 +150,16 @@ We re-ran with each row = (IP, advertiser). Label = visited THIS advertiser. 363
 | Parameter | Value |
 |-----------|-------|
 | Model | XGBoost classifier |
-| Trees | 300 |
-| Max depth | 6 |
-| Learning rate | 0.1 |
-| Subsample | 0.8 |
-| Column sample per tree | 0.8 |
+| Trees / Max depth / LR | 300 / 6 / 0.1 |
+| Subsample / Col sample | 0.8 / 0.8 |
 | Class weight | Balanced (scale_pos_weight) |
 | Train/test split | 80/20, stratified |
-| Training IPs | 93,790 |
-| Test IPs | 23,448 |
-| Sample method | 1% deterministic (FARM_FINGERPRINT MOD 100) of IPs served impressions on 2026-03-29 |
+| **Training rows** | **290,999 (IP, advertiser) pairs** |
+| **Test rows** | **72,750 (IP, advertiser) pairs** |
+| Sample method | 1% of IPs (FARM_FINGERPRINT MOD 100), expanded to all advertiser pairs |
 | IP filtering | Excluded 0.0.0.0, 127.0.0.1, >10K wins (proxy/CDN) |
-| Feature sources | 6 tables joined on IP (win_logs, cost_impression_log, augmentor_log, bidder_auction_events, guid_log, conversion_log) |
-| Label | Visited advertiser site (clickpass_log) on same day = 1, else 0 |
-| **Ranking metric** | **SHAP — mean absolute Shapley value per feature on 5,000-IP test sample** |
-| Supporting metrics | XGBoost Gain (avg loss reduction per split), Weight (# times used in trees), Cover (avg samples per split) |
-| Iterative paring | Tested 5 to 58 features — AUC stable at 0.896 ± 0.005 |
+| **Scoping** | **Each row = (IP, advertiser). Label = visited THIS advertiser's site on same day.** |
+| Advertiser ID mapping | win_logs uses Beeswax IDs; mapped to MNTN IDs via `campaigns` table |
+| Feature sources | 6 tables joined on IP |
+| **Ranking metric** | **SHAP — mean absolute Shapley value per feature** |
 | Tables scanned | 25 total, 6 used (19 redundant or insufficient) |
