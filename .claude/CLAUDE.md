@@ -38,7 +38,7 @@ workspace/
 | `knowledge/folder_definitions.md` | **Exact definition of what goes in every folder** — check here before placing any file |
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
-| `.claude/scripts/transcribe.sh` | Meeting transcription — local mlx-whisper (default) or GPT-4o Transcribe (`--provider openai`). Use `openai` for best accuracy. |
+| `.claude/scripts/transcribe.sh` | Meeting transcription — GPT-4o Transcribe (default) or local mlx-whisper (`--provider local`). OpenAI is faster, more accurate, and hallucination-free. |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
 | `self_review/summary.md` | Self-review guide — workflow, rubric, leadership direction (Paulo/Kale/Alyson), how to write rationales |
 | `self_review/self_review_2.md` | **Active self-review** — update after every ticket (gitignored) |
