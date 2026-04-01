@@ -309,6 +309,24 @@ Replicated Alex's full DCG pipeline in BigQuery using:
 **Output:** `outputs/ti_797_dcg_visit_rate_by_score.csv`
 **Cost:** 118 GB processed, ~6 min wall time
 
+### Scaled-Up Validation: 500 Advertisers (2026-03-31)
+
+Ran the same query with 500 advertisers (10x the original sample). Full-scale (5,699) exceeded BQ resource limits — this is why Alex uses Databricks.
+
+**Result: PERFECTLY MONOTONIC across all 16 bins.** The dips at 0.45 and 0.60 from the 50-advertiser sample were confirmed as sample noise.
+
+| Score Bin | N IPs | N Visitors | Visit Rate | vs Lowest |
+|-----------|-------|------------|------------|-----------|
+| 0.20 | 541M | 169 | 3.14e-07 | 1x |
+| 0.35 | 426M | 360 | 8.46e-07 | 3x |
+| 0.50 | 606M | 1,180 | 1.95e-06 | 6x |
+| 0.65 | 866M | 3,009 | 3.47e-06 | 11x |
+| 0.80 | 1.1B | 8,589 | 7.64e-06 | 24x |
+| 0.90 | 1.3B | 24,213 | 1.80e-05 | 57x |
+| 0.95 | 2.4B | 575,134 | 2.42e-04 | **771x** |
+
+**Output:** `outputs/ti_797_dcg_visit_rate_500advs.csv`
+
 ---
 
 ## 5. Solution
