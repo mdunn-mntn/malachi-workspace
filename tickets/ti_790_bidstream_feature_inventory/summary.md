@@ -75,9 +75,9 @@ Presentation-format version: [ti_790_presentation_new.md](artifacts/ti_790_prese
 - New features can flow to DS13/DS19 via site_visits signal table.
 
 **Action items:**
-- Malachi: Adapt Ryan's pipeline for new features ([TI-799](https://mntn.atlassian.net/browse/TI-799))
-- Malachi: Multi-day validation ([TI-800](https://mntn.atlassian.net/browse/TI-800))
-- Malachi: Add advertiser-side features to model ([TI-801](https://mntn.atlassian.net/browse/TI-801))
+- Malachi: Adapt Ryan's pipeline for new features ([TI-810](https://mntn.atlassian.net/browse/TI-810))
+- Malachi: Multi-day validation ([TI-809](https://mntn.atlassian.net/browse/TI-809))
+- Malachi: Add advertiser-side features to model ([TI-811](https://mntn.atlassian.net/browse/TI-811))
 - Alex: Continue vertical classification via domain parsing (TI-791)
 - Ryan: Engineering lift assessment for pipeline capture
 - Send presentation PDF to Kale

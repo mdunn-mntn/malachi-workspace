@@ -1,6 +1,6 @@
-# TI-799: Adapt Feature Store Pipeline for New Bidstream Features
+# TI-810: Adapt Feature Store Pipeline for New Bidstream Features
 
-**Jira:** https://mntn.atlassian.net/browse/TI-799
+**Jira:** https://mntn.atlassian.net/browse/TI-810
 **Epic:** [TI-789](https://mntn.atlassian.net/browse/TI-789) — Bidstream Feature Extraction & Audience Augmentation
 **Status:** In Progress
 **Date Started:** 2026-04-01
