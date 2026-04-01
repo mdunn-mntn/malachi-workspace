@@ -399,7 +399,24 @@ DCG scoring completed for all 7 beta advertisers. Visit rate lift for IPs scored
 **Every beta advertiser shows massive lift.** Signal holds per-advertiser, not just in aggregate.
 **Output:** `outputs/ti_797_dcg_beta_advertisers.csv`
 
-Still needed: campaign IDs from Michelle to compare BUK campaign performance vs comparable non-BUK campaigns for West Bend and Samy's Camera
+### Beta Pre/Post Performance Analysis (2026-04-01)
+
+Used `audience_segment_archives` to find the previous audience on the **same campaign group** before the BUK swap. This gives a clean pre/post comparison on identical campaigns with only the audience changed.
+
+| Advertiser | CG | Switch Date | Period | Days | Impressions | Visits | IVR | IVR Change |
+|---|---|---|---|---|---|---|---|---|
+| Samy's Camera | 104020 | 2026-03-04 | Pre-BUK | 35 | 209,504 | 3,615 | 1.73% | |
+| | | | Post-BUK | 27 | 90,323 | 2,419 | 2.68% | **+55.2%** |
+| West Bend Insurance | 107024 | 2026-02-27 | Pre-BUK | 30 | 246,376 | 1,366 | 0.55% | |
+| | | | Post-BUK | 31 | 71,431 | 939 | 1.32% | **+137.4%** |
+
+**Same pattern as DPL experiments**: IVR up significantly, but impressions/audience size down (57-71% drop). The size-performance tradeoff from the formal experiments is confirmed in live beta data.
+
+**Other 5 beta advertisers**: Dropped from analysis — Global Rescue, Amsterdam Printing, Apollo.io, Apolla have no BUK audience attached. Experience Scottsdale switched only 2 days ago (insufficient post data).
+
+**Open question for Alex**: Is the impression drop purely from smaller BUK audience, or were there other confounding factors (budget changes, pacing, seasonality)?
+
+**Output:** `artifacts/buk_customer_audience_tracking.csv`
 
 **Phase B: TI-704 — Offline BUK Evaluation via Fangorn Experiment** (actionable now)
 - Score treatment and control IPs from the current Fangorn experiment with BUK DCG
