@@ -35,54 +35,54 @@ Three categories of features emerged:
 
 ## Pre-Visit Features, Ranked by SHAP (Scoped to Advertiser)
 
-44 features from win_logs, cost_impression_log, augmentor_log, bidder_auction_events + base metrics.
+44 features from win_logs, cost_impression_log, augmentor_log, bidder_auction_events + base metrics. Sorted by SHAP descending. See [Glossary](#glossary) at the bottom for metric definitions.
 
-| # | Feature | Source | Tag | SHAP | Gain | Description |
-|---|---------|--------|-----|------|------|-------------|
-| 1 | `ci_pct_new` | cost_impression_log | EXISTING | 1.710 | 1021.9 | % impressions where IP is "new" (first impression) |
-| 2 | `al_avg_segments` | augmentor_log | EXISTING | 0.411 | 321.4 | Avg MNTN segments on IP (97% are 1P RTC+retargeting) |
-| 3 | `n_wins_this_adv` | base | EXISTING | 0.333 | 149.5 | # wins for THIS advertiser (impression frequency to this IP) |
-| **4** | **`wl_avg_price`** | **win_logs** | **NEW** | **0.273** | **132.8** | **Clearing price per auction (USD, set by market)** |
-| 5 | `ci_total_cost` | cost_impression_log | EXISTING | 0.260 | 146.4 | Total media $ spent on this IP |
-| 6 | `ci_pct_rtc` | cost_impression_log | EXISTING | 0.243 | 175.4 | % impressions via RTC conquest targeting |
-| **7** | **`wl_n_adv`** | **win_logs** | **NEW** | **0.213** | **112.2** | **# distinct advertisers serving this IP** |
-| **8** | **`wl_n_wins`** | **win_logs** | **NEW** | **0.204** | **92.2** | **Total auction wins across all advertisers** |
-| 9 | `ci_hh_score` | cost_impression_log | EXISTING | 0.174 | 138.3 | Fangorn household score (-1 = unscored) |
-| **10** | **`al_pct_pmp`** | **augmentor_log** | **NEW** | **0.133** | **104.6** | **% auctions with Private Marketplace deals** |
-| **11** | **`al_n_auctions`** | **augmentor_log** | **NEW** | **0.127** | **117.4** | **# auctions this IP appeared in (market activity)** |
-| **12** | **`bae_pct_genre`** | **bidder_auction_events** | **NEW** | **0.119** | **111.8** | **% auctions with any genre data** |
-| **13** | **`al_pct_ctv`** | **augmentor_log** | **NEW** | **0.111** | **110.0** | **% CTV device type in auctions** |
-| **14** | **`ci_pct_video`** | **cost_impression_log** | **NEW** | **0.107** | **124.0** | **% VIDEO format impressions (CTV vs display)** |
-| **15** | **`al_pct_iab`** | **augmentor_log** | **NEW** | **0.104** | **115.4** | **% auctions with IAB content category data** |
-| **16** | **`al_pct_video`** | **augmentor_log** | **NEW** | **0.100** | **124.9** | **% VIDEO placement in auctions** |
-| **17** | **`wl_plays`** | **win_logs** | **NEW** | **0.100** | **103.5** | **# video ad plays (starts)** |
-| **18** | **`al_n_domains`** | **augmentor_log** | **NEW** | **0.095** | **116.8** | **# distinct content domains consumed** |
-| **19** | **`al_n_networks`** | **augmentor_log** | **NEW** | **0.093** | **115.8** | **# distinct networks/publishers in bidstream** |
-| 20 | `n_cgs_this_adv` | base | EXISTING | 0.088 | 98.5 | # campaign groups for THIS advertiser targeting this IP |
-| **21** | **`al_n_ssps`** | **augmentor_log** | **NEW** | **0.083** | **128.6** | **# distinct SSPs/exchanges seeing this IP** |
-| **22** | **`wl_n_models`** | **win_logs** | **NEW** | **0.081** | **141.9** | **# distinct device models (household diversity)** |
-| **23** | **`bae_n_genres`** | **bidder_auction_events** | **NEW** | **0.077** | **100.5** | **# distinct content genres watched** |
-| **24** | **`bae_n_auctions`** | **bidder_auction_events** | **NEW** | **0.071** | **134.7** | **# dropped auctions (broader activity signal)** |
-| **25** | **`bae_n_pubs`** | **bidder_auction_events** | **NEW** | **0.069** | **134.4** | **# distinct publishers consumed** |
-| **26** | **`bae_pct_ent`** | **bidder_auction_events** | **NEW** | **0.068** | **120.0** | **% content = entertainment genre** |
-| 27 | `ci_n_imp` | cost_impression_log | EXISTING | 0.067 | 127.8 | # impressions served to this IP |
-| **28** | **`bae_pct_comedy`** | **bidder_auction_events** | **NEW** | **0.063** | **106.0** | **% content = comedy genre** |
-| **29** | **`wl_viewable`** | **win_logs** | **NEW** | **0.060** | **108.0** | **# viewable impressions** |
-| **30** | **`bae_pct_news`** | **bidder_auction_events** | **NEW** | **0.056** | **115.1** | **% content = news genre** |
-| **31** | **`ci_n_vendors`** | **cost_impression_log** | **NEW** | **0.056** | **99.7** | **# distinct supply vendors** |
-| **32** | **`wl_completes`** | **win_logs** | **NEW** | **0.051** | **137.8** | **# video ad completions** |
-| **33** | **`wl_n_makes`** | **win_logs** | **NEW** | **0.049** | **91.3** | **# distinct device manufacturers** |
-| **34** | **`bae_pct_drama`** | **bidder_auction_events** | **NEW** | **0.045** | **104.7** | **% content = drama genre** |
-| **35** | **`bae_n_makes`** | **bidder_auction_events** | **NEW** | **0.038** | **101.3** | **# distinct device manufacturers (bidstream)** |
-| **36** | **`wl_vcr`** | **win_logs** | **NEW** | **0.033** | **101.4** | **Video completion rate (completes/plays)** |
-| **37** | **`bae_pct_sports`** | **bidder_auction_events** | **NEW** | **0.021** | **103.0** | **% content = sports genre** |
-| **38** | **`bae_samsung`** | **bidder_auction_events** | **NEW** | **0.018** | **122.0** | **Has Samsung Smart TV (0/1)** |
-| **39** | **`al_has_ctv`** | **augmentor_log** | **NEW** | **0.013** | **117.4** | **Has CTV device in bidstream (0/1)** |
-| **40** | **`bae_roku`** | **bidder_auction_events** | **NEW** | **0.011** | **135.1** | **Has Roku device (0/1)** |
-| **41** | **`bae_lg`** | **bidder_auction_events** | **NEW** | **0.011** | **138.5** | **Has LG Smart TV (0/1)** |
-| **42** | **`wl_mutes`** | **win_logs** | **NEW** | **0.006** | **75.5** | **# times viewer muted the video ad** |
-| **43** | **`wl_pauses`** | **win_logs** | **NEW** | **0.006** | **95.2** | **# times viewer paused the video ad** |
-| **44** | **`wl_clicks`** | **win_logs** | **NEW** | **0.005** | **75.6** | **# ad clicks (rare in CTV)** |
+| # | Feature | Source | Tag | SHAP | Direction | Description |
+|---|---------|--------|-----|------|-----------|-------------|
+| 1 | `ci_pct_new` | cost_impression_log | EXISTING | 1.710 | ↓ fewer visits | % impressions where IP is "new" (first impression) |
+| 2 | `al_avg_segments` | augmentor_log | EXISTING | 0.411 | ↑ more visits | Avg MNTN segments on IP (97% are 1P RTC+retargeting) |
+| 3 | `n_wins_this_adv` | base | EXISTING | 0.333 | ↑ more visits | # wins for THIS advertiser (impression frequency to this IP) |
+| **4** | **`wl_avg_price`** | **win_logs** | **NEW** | **0.273** | **↓ fewer visits** | **Clearing price per auction (USD, set by market)** |
+| 5 | `ci_total_cost` | cost_impression_log | EXISTING | 0.260 | ↑ more visits | Total media $ spent on this IP |
+| 6 | `ci_pct_rtc` | cost_impression_log | EXISTING | 0.243 | ↑ more visits | % impressions via RTC conquest targeting |
+| **7** | **`wl_n_adv`** | **win_logs** | **NEW** | **0.213** | **↑ more visits** | **# distinct advertisers serving this IP** |
+| **8** | **`wl_n_wins`** | **win_logs** | **NEW** | **0.204** | **↑ more visits** | **Total auction wins across all advertisers** |
+| 9 | `ci_hh_score` | cost_impression_log | EXISTING | 0.174 | ↑ more visits | Fangorn household score (-1 = unscored) |
+| **10** | **`al_pct_pmp`** | **augmentor_log** | **NEW** | **0.133** | **↑ more visits** | **% auctions with Private Marketplace deals** |
+| **11** | **`al_n_auctions`** | **augmentor_log** | **NEW** | **0.127** | **↑ more visits** | **# auctions this IP appeared in (market activity)** |
+| **12** | **`bae_pct_genre`** | **bidder_auction_events** | **NEW** | **0.119** | **↑ more visits** | **% auctions with any genre data** |
+| **13** | **`al_pct_ctv`** | **augmentor_log** | **NEW** | **0.111** | **↑ more visits** | **% CTV device type in auctions** |
+| **14** | **`ci_pct_video`** | **cost_impression_log** | **NEW** | **0.107** | **↓ fewer visits** | **% VIDEO format impressions (CTV vs display)** |
+| **15** | **`al_pct_iab`** | **augmentor_log** | **NEW** | **0.104** | **↑ more visits** | **% auctions with IAB content category data** |
+| **16** | **`al_pct_video`** | **augmentor_log** | **NEW** | **0.100** | **↑ more visits** | **% VIDEO placement in auctions** |
+| **17** | **`wl_plays`** | **win_logs** | **NEW** | **0.100** | **↑ more visits** | **# video ad plays (starts)** |
+| **18** | **`al_n_domains`** | **augmentor_log** | **NEW** | **0.095** | **↑ more visits** | **# distinct content domains consumed** |
+| **19** | **`al_n_networks`** | **augmentor_log** | **NEW** | **0.093** | **↑ more visits** | **# distinct networks/publishers in bidstream** |
+| 20 | `n_cgs_this_adv` | base | EXISTING | 0.088 | ↑ more visits | # campaign groups for THIS advertiser targeting this IP |
+| **21** | **`al_n_ssps`** | **augmentor_log** | **NEW** | **0.083** | **↑ more visits** | **# distinct SSPs/exchanges seeing this IP** |
+| **22** | **`wl_n_models`** | **win_logs** | **NEW** | **0.081** | **↑ more visits** | **# distinct device models (household diversity)** |
+| **23** | **`bae_n_genres`** | **bidder_auction_events** | **NEW** | **0.077** | **↑ more visits** | **# distinct content genres watched** |
+| **24** | **`bae_n_auctions`** | **bidder_auction_events** | **NEW** | **0.071** | **↑ more visits** | **# dropped auctions (broader activity signal)** |
+| **25** | **`bae_n_pubs`** | **bidder_auction_events** | **NEW** | **0.069** | **↑ more visits** | **# distinct publishers consumed** |
+| **26** | **`bae_pct_ent`** | **bidder_auction_events** | **NEW** | **0.068** | **↑ more visits** | **% content = entertainment genre** |
+| 27 | `ci_n_imp` | cost_impression_log | EXISTING | 0.067 | ↑ more visits | # impressions served to this IP |
+| **28** | **`bae_pct_comedy`** | **bidder_auction_events** | **NEW** | **0.063** | **↑ more visits** | **% content = comedy genre** |
+| **29** | **`wl_viewable`** | **win_logs** | **NEW** | **0.060** | **↑ more visits** | **# viewable impressions** |
+| **30** | **`bae_pct_news`** | **bidder_auction_events** | **NEW** | **0.056** | **↑ more visits** | **% content = news genre** |
+| **31** | **`ci_n_vendors`** | **cost_impression_log** | **NEW** | **0.056** | **↑ more visits** | **# distinct supply vendors** |
+| **32** | **`wl_completes`** | **win_logs** | **NEW** | **0.051** | **↑ more visits** | **# video ad completions** |
+| **33** | **`wl_n_makes`** | **win_logs** | **NEW** | **0.049** | **↑ more visits** | **# distinct device manufacturers** |
+| **34** | **`bae_pct_drama`** | **bidder_auction_events** | **NEW** | **0.045** | **↑ more visits** | **% content = drama genre** |
+| **35** | **`bae_n_makes`** | **bidder_auction_events** | **NEW** | **0.038** | **↑ more visits** | **# distinct device manufacturers (bidstream)** |
+| **36** | **`wl_vcr`** | **win_logs** | **NEW** | **0.033** | **— neutral** | **Video completion rate (completes/plays)** |
+| **37** | **`bae_pct_sports`** | **bidder_auction_events** | **NEW** | **0.021** | **↑ more visits** | **% content = sports genre** |
+| **38** | **`bae_samsung`** | **bidder_auction_events** | **NEW** | **0.018** | **↑ more visits** | **Has Samsung Smart TV (0/1)** |
+| **39** | **`al_has_ctv`** | **augmentor_log** | **NEW** | **0.013** | **↑ more visits** | **Has CTV device in bidstream (0/1)** |
+| **40** | **`bae_roku`** | **bidder_auction_events** | **NEW** | **0.011** | **↑ more visits** | **Has Roku device (0/1)** |
+| **41** | **`bae_lg`** | **bidder_auction_events** | **NEW** | **0.011** | **↑ more visits** | **Has LG Smart TV (0/1)** |
+| **42** | **`wl_mutes`** | **win_logs** | **NEW** | **0.006** | **↑ more visits** | **# times viewer muted the video ad** |
+| **43** | **`wl_pauses`** | **win_logs** | **NEW** | **0.006** | **↑ more visits** | **# times viewer paused the video ad** |
+| **44** | **`wl_clicks`** | **win_logs** | **NEW** | **0.005** | **↑ more visits** | **# ad clicks (rare in CTV)** |
 
 ## Feedback Features (Post-Visit — For Retraining)
 
@@ -163,3 +163,35 @@ Features that dropped when scoped: device model diversity (-15 ranks), impressio
 | Feature sources | 6 tables joined on IP |
 | **Ranking metric** | **SHAP — mean absolute Shapley value per feature** |
 | Tables scanned | 25 total, 6 used (19 redundant or insufficient) |
+
+---
+
+## Glossary
+
+### SHAP (SHapley Additive exPlanations)
+
+From game theory. For each individual prediction, SHAP calculates how much each feature pushed that prediction up or down from the baseline. It does this by considering every possible combination of features and measuring each feature's marginal contribution. The number we report ("mean absolute SHAP") is the average magnitude of those contributions across all test IPs.
+
+A SHAP of 0.273 for `wl_avg_price` means that feature shifts the average prediction by 0.273 on the log-odds scale. Higher SHAP = the feature matters more to individual predictions. SHAP also captures direction — it can show that a high value pushes toward "visit" while a low value pushes toward "no visit." The Direction column in the table above comes from comparing feature means between visitors and non-visitors.
+
+### Gain
+
+Average reduction in the model's loss function (how wrong it is) each time a feature is used to make a split in a tree. High gain = the feature produces big improvements in prediction accuracy when the model splits on it. The difference from SHAP: Gain tells you how useful a feature is to the *tree structure*, while SHAP tells you how much a feature contributes to each *individual prediction*. A feature can have high gain but low SHAP if it's used in deep tree branches that affect few predictions.
+
+### Direction
+
+Computed by comparing the average feature value for IPs that visited (visited=1) vs IPs that did not (visited=0). "↑ more visits" means visitors have higher values for this feature on average. "↓ fewer visits" means visitors have lower values. This is a population-level signal — XGBoost can learn non-linear relationships (e.g., medium values predict visits but very high values don't).
+
+### Why 300 Trees, Max Depth 6
+
+Standard XGBoost configuration for tabular data. 300 trees with learning_rate=0.1 means each tree makes a small correction — more conservative than fewer trees with a higher rate. Max depth 6 means each tree can learn interactions between up to 6 features (e.g., "high clearing price AND CTV AND PMP AND entertainment genre"). Deeper = more complex but more overfitting risk. We didn't tune hyperparameters because the goal was feature ranking, not maximizing AUC — importance rankings are stable across reasonable configurations.
+
+### Where `ci_pct_new` Comes From
+
+`is_new` is a boolean column on `cost_impression_log` (the enriched impression table). It's set by the MNTN impression pipeline — `TRUE` when this is the first impression ever served to this IP. `ci_pct_new` = the fraction of impressions for this IP where `is_new = TRUE`. A high value means most/all impressions were first impressions (cold IP). A low value means the IP has been served many times before (warm IP). It's tagged EXISTING because the `is_new` flag is set by our own system, not by external data.
+
+### Tag Definitions
+
+- **EXISTING** — Feature derived from our own targeting/scoring system. Fangorn scores, RTC flags, segment counts, impression frequency. These are circular: they predict visits because we designed them to. Valid as confirmation that the system works, but not new signal for the feature store.
+- **NEW** — Feature from external sources: exchange clearing prices, bidstream content/device data, user behavior (video engagement). Not currently in Fangorn. These are the feature store candidates.
+- **FEEDBACK** — Feature from guid_log or conversion_log. Only available after a site visit has already happened. Can't use for targeting new IPs. Valuable for retraining models and scoring returning visitors.
