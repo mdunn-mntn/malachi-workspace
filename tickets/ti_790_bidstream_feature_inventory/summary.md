@@ -227,36 +227,26 @@ After dedup and removing overlapping fields: **~60 unique features** in the comb
 
 ### XGBoost Results — What Actually Predicts Visits?
 
-We split features into **pre-visit** (available at bid time) and **feedback** (available after site visit):
+Pre-visit model AUC: **0.896** | Feedback model AUC: 0.999 (leaky) | Base visit rate: 3.4%
 
-| Model | Features | AUC | Use Case |
-|-------|----------|-----|----------|
-| **Pre-visit only** | 47 (bidstream + impression) | **0.896** | Targeting decisions |
-| Feedback only | 19 (guid_log + conversion_log) | 0.999 | Post-visit enrichment, retraining |
-| All combined | 66 | 0.999 | Full picture (leaky for targeting) |
+**Critical finding:** 9 of the top pre-visit features are **our own model outputs** (Fangorn scores, RTC targeting, segment density, impression frequency). These dominate raw importance but are circular — not new signal. We investigated `al_avg_segments` specifically: 97% of mntn_segments are 1P (197K RTC + 39K retargeting). Only DS3 interest segments are 3P external.
 
-**Top 10 pre-visit features by SHAP (for targeting):**
+**Top 10 genuinely NEW features (not our own outputs):**
 
-| Rank | Feature | Source | SHAP | What It Means |
-|------|---------|--------|------|---------------|
-| 1 | `al_avg_segments` | augmentor_log | 0.986 | More existing MNTN segments → more likely to visit |
-| 2 | `ci_pct_new` | cost_impression_log | 0.670 | New IPs visit less |
-| 3 | `ci_pct_rtc` | cost_impression_log | 0.392 | RTC-targeted IPs visit more |
-| 4 | `ci_total_cost` | cost_impression_log | 0.363 | More spend → more exposure → more visits |
-| 5 | `wl_avg_price` | win_logs | 0.231 | Premium inventory → better audiences |
-| 6 | `al_n_auctions` | augmentor_log | 0.228 | More active IP → more likely to visit |
-| 7 | `wl_n_models` | win_logs | 0.205 | Multi-device households visit more |
-| 8 | `n_win_adv` | base | 0.175 | More advertisers targeting → popular IP |
-| 9 | `ci_hh_score` | cost_impression_log | 0.152 | Existing Fangorn score (already predictive) |
-| 10 | `al_pct_pmp` | augmentor_log | 0.105 | Premium inventory signal |
+| Rank | Feature | Source | Gain | What It Is |
+|------|---------|--------|------|-----------|
+| 1 | `wl_avg_price` | win_logs | 31.9 | Clearing price — premium inventory = better audiences |
+| 2 | `wl_n_models` | win_logs | 307.7 | Device model diversity — multi-device households |
+| 3 | `al_n_auctions` | augmentor_log | 33.1 | Auction activity — how active the IP is |
+| 4 | `wl_pauses` | win_logs | 35.8 | Video pauses — active engagement signal |
+| 5 | `bae_lg` | bidder_auction_events | 34.1 | LG device ownership — demographic proxy |
+| 6 | `al_n_domains` | augmentor_log | 31.7 | Content domain diversity |
+| 7 | `bae_n_auctions` | bidder_auction_events | 27.8 | Broader auction activity |
+| 8 | `ci_pct_video` | cost_impression_log | 30.6 | CTV vs display format split |
+| 9 | `bae_pct_news` | bidder_auction_events | 29.9 | News genre % — highest-ranked content signal |
+| 10 | `bae_pct_ent` | bidder_auction_events | 27.3 | Entertainment genre % |
 
-**Source table ranking (pre-visit):**
-1. **cost_impression_log** — best avg rank (13.9), dominates with recency, scoring, cost features
-2. **augmentor_log** — segment density and auction volume
-3. **bidder_auction_events** — content_genre, device_make (mid-tier for IVR, high-value for vertical segmentation)
-4. **win_logs** — video engagement, device details, pricing
-
-**Iterative paring:** AUC holds at ~0.896 even with only 5-11 features. The top 5 features carry most of the signal.
+Full ranked list of all 66 features (35 new + 9 existing + 3 zero + 19 feedback): [ti_790_feature_importance_findings.md](artifacts/ti_790_feature_importance_findings.md)
 
 **Key insight:** Bidstream content features (content_genre, device_make) are mid-tier for raw IVR prediction but high-value for **vertical classification** — different use case than visit prediction. Both are valuable for the feature store.
 
