@@ -190,8 +190,31 @@ Standard XGBoost configuration for tabular data. 300 trees with learning_rate=0.
 
 `is_new` is a boolean column on `cost_impression_log` (the enriched impression table). It's set by the MNTN impression pipeline — `TRUE` when this is the first impression ever served to this IP. `ci_pct_new` = the fraction of impressions for this IP where `is_new = TRUE`. A high value means most/all impressions were first impressions (cold IP). A low value means the IP has been served many times before (warm IP). It's tagged EXISTING because the `is_new` flag is set by our own system, not by external data.
 
-### Tag Definitions
+### How We Decided NEW vs EXISTING
 
-- **EXISTING** — Feature derived from our own targeting/scoring system. Fangorn scores, RTC flags, segment counts, impression frequency. These are circular: they predict visits because we designed them to. Valid as confirmation that the system works, but not new signal for the feature store.
-- **NEW** — Feature from external sources: exchange clearing prices, bidstream content/device data, user behavior (video engagement). Not currently in Fangorn. These are the feature store candidates.
-- **FEEDBACK** — Feature from guid_log or conversion_log. Only available after a site visit has already happened. Can't use for targeting new IPs. Valuable for retraining models and scoring returning visitors.
+The test: **"Would this feature's value change if we turned off our targeting system?"**
+
+- If **no** — the value comes from an external source (the exchange, the user's device, the content they watch, market pricing). Tagged **NEW**.
+- If **yes** — the value is produced by or depends on our own bidding, scoring, or segmentation logic. Tagged **EXISTING**.
+
+| Feature | Tag | Reasoning |
+|---------|-----|-----------|
+| `ci_pct_new` | EXISTING | Our impression pipeline sets the `is_new` flag. It's our system deciding what counts as "new." |
+| `al_avg_segments` | EXISTING | MNTN segments are assigned by our RTC, retargeting, and DS3 pipelines. 97% are 1P. If we turned off targeting, this would be 0. |
+| `ci_pct_rtc` | EXISTING | RTC conquest is our model. `advertiser_household_score = 10000` is a flag our system writes. |
+| `ci_total_cost` | EXISTING | How much we chose to spend. Our bidder sets the price. |
+| `ci_hh_score` | EXISTING | Fangorn's own household-level score. |
+| `ci_adv_hh_score` | EXISTING | Fangorn's advertiser-specific score. |
+| `n_wins` / `n_wins_this_adv` | EXISTING | How many auctions we won = our bidding decisions. |
+| `n_win_adv` / `n_cgs_this_adv` | EXISTING | How many of our advertisers/campaigns target this IP = our targeting config. |
+| `ci_n_imp` | EXISTING | Impression count = how many times we chose to serve. |
+| `wl_avg_price` | **NEW** | Clearing price is set by the exchange auction, not by us. We submit a bid; the exchange determines the clearing price based on all bidders. |
+| `al_pct_pmp` | **NEW** | Whether an auction has a PMP deal is determined by the publisher/exchange, not our system. |
+| `al_n_auctions` | **NEW** | How many auctions this IP appears in is driven by the IP's browsing/streaming behavior, not our targeting. |
+| `bae_pct_news` | **NEW** | What content the IP watches (news, entertainment, etc.) comes from the exchange's content metadata. Our system doesn't set this. |
+| `bae_roku` | **NEW** | Device manufacturer is reported by the exchange from the device itself. |
+| `wl_plays` / `wl_completes` | **NEW** | Whether the viewer watches or completes the ad is user behavior — we can't control it. |
+| `al_pct_iab` | **NEW** | IAB content categories come from the publisher/exchange taxonomy. |
+| `ci_pct_video` | **NEW** | Whether the impression slot is VIDEO or BANNER is the publisher's inventory type, not our choice. |
+
+**FEEDBACK** features don't need this test — they're simply features that only exist in `guid_log` (website pixel) or `conversion_log` (purchase events), both of which only fire when an IP has already visited an advertiser site. They can't be used for targeting because the visit has already happened.
