@@ -112,6 +112,59 @@ These only exist after a site visit. Can't use for targeting. Ranked from the fe
 
 ---
 
+## NEW Features Only — Without EXISTING Features in the Model
+
+The table above includes EXISTING features, which can absorb signal from NEW features. If the model leans heavily on `ci_pct_new` (SHAP 1.71) first, it doesn't need `al_pct_pmp` as much. To see the true standalone importance of NEW features, we retrained the model with all 9 EXISTING features removed.
+
+**NEW-only AUC: 0.784** (vs 0.842 with all features). Removing EXISTING features costs 0.058 AUC — meaningful but the NEW features still carry substantial signal on their own.
+
+| # | Feature | Source | SHAP | SHAP (all) | Change | Direction | Description |
+|---|---------|--------|------|------------|--------|-----------|-------------|
+| **1** | **`wl_n_models`** | **win_logs** | **0.598** | 0.081 | **+639%** | ↑ more visits | # distinct device models (household diversity) |
+| **2** | **`wl_n_wins`** | **win_logs** | **0.390** | 0.204 | +91% | ↑ more visits | Total auction wins across all advertisers |
+| **3** | **`wl_avg_price`** | **win_logs** | **0.337** | 0.273 | +23% | ↓ fewer visits | Clearing price per auction (USD, set by market) |
+| **4** | **`wl_n_adv`** | **win_logs** | **0.259** | 0.213 | +22% | ↑ more visits | # distinct advertisers serving this IP |
+| **5** | **`al_n_domains`** | **augmentor_log** | **0.258** | 0.095 | **+172%** | ↑ more visits | # distinct content domains consumed |
+| **6** | **`al_pct_ctv`** | **augmentor_log** | **0.225** | 0.111 | +103% | ↑ more visits | % CTV device type in auctions |
+| **7** | **`ci_pct_video`** | **cost_impression_log** | **0.224** | 0.107 | +109% | ↓ fewer visits | % VIDEO format impressions (CTV vs display) |
+| **8** | **`al_pct_video`** | **augmentor_log** | **0.220** | 0.100 | +120% | ↑ more visits | % VIDEO placement in auctions |
+| **9** | **`al_pct_iab`** | **augmentor_log** | **0.189** | 0.104 | +82% | ↑ more visits | % auctions with IAB content category data |
+| **10** | **`al_n_auctions`** | **augmentor_log** | **0.184** | 0.127 | +45% | ↑ more visits | # auctions this IP appeared in |
+| **11** | **`al_pct_pmp`** | **augmentor_log** | **0.137** | 0.133 | +3% | ↑ more visits | % auctions with PMP deals |
+| **12** | **`bae_n_auctions`** | **bidder_auction_events** | **0.128** | 0.071 | +80% | ↑ more visits | # dropped auctions |
+| **13** | **`bae_pct_genre`** | **bidder_auction_events** | **0.114** | 0.119 | -4% | ↑ more visits | % auctions with genre data |
+| **14** | **`wl_plays`** | **win_logs** | **0.113** | 0.100 | +13% | ↑ more visits | # video ad plays |
+| **15** | **`al_n_networks`** | **augmentor_log** | **0.101** | 0.093 | +9% | ↑ more visits | # distinct networks/publishers |
+| **16** | **`wl_viewable`** | **win_logs** | **0.096** | 0.060 | +60% | ↑ more visits | # viewable impressions |
+| **17** | **`al_n_ssps`** | **augmentor_log** | **0.094** | 0.083 | +13% | ↑ more visits | # distinct SSPs/exchanges |
+| **18** | **`bae_pct_news`** | **bidder_auction_events** | **0.091** | 0.056 | **+63%** | ↑ more visits | % content = news genre |
+| **19** | **`ci_n_vendors`** | **cost_impression_log** | **0.091** | 0.056 | +63% | ↑ more visits | # distinct supply vendors |
+| **20** | **`bae_n_pubs`** | **bidder_auction_events** | **0.088** | 0.069 | +28% | ↑ more visits | # distinct publishers consumed |
+| **21** | **`wl_completes`** | **win_logs** | **0.083** | 0.051 | +63% | ↑ more visits | # video completions |
+| **22** | **`bae_pct_ent`** | **bidder_auction_events** | **0.075** | 0.068 | +10% | ↑ more visits | % entertainment genre |
+| **23** | **`bae_n_genres`** | **bidder_auction_events** | **0.075** | 0.077 | -3% | ↑ more visits | # distinct genres watched |
+| **24** | **`wl_n_makes`** | **win_logs** | **0.057** | 0.049 | +16% | ↑ more visits | # distinct device manufacturers |
+| **25** | **`bae_pct_comedy`** | **bidder_auction_events** | **0.057** | 0.063 | -10% | ↑ more visits | % comedy genre |
+| 26 | `wl_vcr` | win_logs | 0.046 | 0.033 | +39% | — neutral | Video completion rate |
+| 27 | `bae_pct_drama` | bidder_auction_events | 0.043 | 0.045 | -4% | ↑ more visits | % drama genre |
+| 28 | `bae_samsung` | bidder_auction_events | 0.035 | 0.018 | +94% | ↑ more visits | Has Samsung Smart TV |
+| 29 | `bae_n_makes` | bidder_auction_events | 0.030 | 0.038 | -21% | ↑ more visits | # device manufacturers (bidstream) |
+| 30 | `bae_pct_sports` | bidder_auction_events | 0.027 | 0.021 | +29% | ↑ more visits | % sports genre |
+| 31 | `bae_roku` | bidder_auction_events | 0.020 | 0.011 | +82% | ↑ more visits | Has Roku device |
+| 32 | `bae_lg` | bidder_auction_events | 0.013 | 0.011 | +18% | ↑ more visits | Has LG Smart TV |
+| 33 | `al_has_ctv` | augmentor_log | 0.010 | 0.013 | -23% | ↑ more visits | Has CTV device |
+| 34 | `wl_mutes` | win_logs | 0.007 | 0.006 | +17% | ↑ more visits | # video mutes |
+| 35 | `wl_clicks` | win_logs | 0.006 | 0.005 | +20% | ↑ more visits | # ad clicks |
+| 36 | `wl_pauses` | win_logs | 0.005 | 0.006 | -17% | ↑ more visits | # video pauses |
+
+**Biggest movers when EXISTING removed:**
+- `wl_n_models` (device diversity): SHAP 0.081 → **0.598** (+639%). Was heavily suppressed by segment count and frequency features.
+- `al_n_domains` (content breadth): SHAP 0.095 → **0.258** (+172%). Content diversity is a much stronger standalone signal than it appeared.
+- `al_pct_video` / `al_pct_ctv` / `ci_pct_video`: All roughly doubled. CTV/video format signals were absorbed by the EXISTING features.
+- `bae_pct_news` (news genre): SHAP 0.056 → **0.091** (+63%). Content genre signal rises significantly.
+
+---
+
 ## Three Takeaways
 
 ### 1. Our targeting system works.
