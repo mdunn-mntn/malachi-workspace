@@ -72,6 +72,47 @@ Pattern: `ti_xxx_short_name.ext` — the ticket number is the anchor, the filena
 
 Exception: `summary.md` at the ticket root can remain just `summary.md` (it's the standard template file).
 
+## Ticket Deliverables: summary.md vs presentation.md
+
+Every ticket has a `summary.md`. Some tickets also get a `*_presentation.md` in `artifacts/`. These are fundamentally different documents with different audiences, standards, and purposes.
+
+### summary.md — The Analytical Record
+
+- **Audience:** You (future you), collaborators who need full context
+- **Purpose:** Complete, honest, evolving record of the work — findings, dead ends, open questions, methodology, gotchas
+- **Tone:** Precise, thorough, technical. Include everything someone would need to pick up where you left off.
+- **Structure:** Follows the summary template. Sections filled as work progresses. Updated continuously.
+- **Data:** Full tables, exact numbers, all caveats, all limitations. Nothing rounded or simplified.
+- **What belongs here:** Every finding, every failed approach, every assumption, every open question. SQL column names are fine. Technical jargon is fine. Length is fine.
+- **Standards:** Accuracy and completeness. No playbook rules apply.
+
+### *_presentation.md — The Persuasion Artifact
+
+- **Audience:** The room — leadership, cross-functional stakeholders, the team. People who need to decide or act.
+- **Purpose:** Move the audience to a specific belief or action. Not to document — to persuade.
+- **Tone:** Bold, concise, narrative. Says less than the summary, but says it better.
+- **Structure:** Three-act (Disruption → Revelation → Resolution). NOT the summary reordered — a different document built from scratch using the summary as raw material.
+- **Data:** One number per point. Rounded for business audiences. Anchored with context. Contrast over absolutes. Full tables in appendix only.
+- **What belongs here:** Only what serves the Power Line. Kill everything else. If it doesn't help the audience believe your one thing, it goes in the appendix or stays in the summary.
+- **Standards:** Full Presentation Playbook applies (see below).
+
+### The Workflow
+
+1. **Do the work** → update `summary.md` continuously (findings, queries, iterations)
+2. **When it's time to present** → create `artifacts/ti_xxx_presentation.md` as a NEW document
+3. **Mine the summary** for insights, but rewrite them as narrative — don't copy-paste sections
+4. **The summary is the source of truth.** The presentation is the highlight reel. They should never contradict each other, but the presentation will intentionally omit most of what's in the summary.
+
+### When to Create a Presentation
+
+Not every ticket needs one. Create `*_presentation.md` when:
+- You're presenting findings to a group (team meeting, stakeholder review, cross-functional share-out)
+- Leadership needs a digestible version of complex analysis
+- The work produces a recommendation that requires buy-in
+- Someone asks "can you walk us through what you found?"
+
+If the ticket is internal housekeeping, a quick investigation, or a simple bug fix — `summary.md` is sufficient.
+
 ## Presentation Standards
 
 When creating or editing any presentation file (slides, decks, `*_presentation.md`, or any artifact intended for an audience):
