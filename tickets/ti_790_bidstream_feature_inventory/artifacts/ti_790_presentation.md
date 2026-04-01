@@ -171,30 +171,57 @@ The table above includes EXISTING features, which can absorb signal from NEW fea
 
 EXISTING features (ranks 1-3, 5-6, 9, 20, 27) include Fangorn scores, RTC targeting, and segment density. They're the strongest predictors — validates the current system.
 
-### 2. Content and CTV features are the most valuable new signal.
+### 2. Device diversity and content signals are the most promising new features.
 
-The top NEW features in the scoped model:
-- **Clearing price** (SHAP 0.273) — premium inventory = better audiences
-- **PMP deal rate** (SHAP 0.133) — curated premium inventory
-- **Genre data availability** (SHAP 0.119) — IPs with richer content data are more predictable
-- **CTV percentage** (SHAP 0.111) — rose 13 ranks vs unscoped model
-- **Content genre percentages** (entertainment, comedy, news, drama, sports) — all rose 4-8 ranks vs unscoped
+In the NEW-only model (EXISTING removed):
+- **Device model diversity** (`wl_n_models`, SHAP 0.598) is the #1 new feature. It's likely a household size proxy — more device models = more devices in the household = more people = higher chance someone visits. This is a genuinely novel signal not in Fangorn today.
+- **Content domain breadth** (`al_n_domains`, SHAP 0.258) — IPs that consume more diverse content are more likely to visit. Content consumption patterns carry real signal.
+- **CTV/video format signals** (`al_pct_ctv`, `ci_pct_video`, `al_pct_video`) all roughly doubled in importance when EXISTING features were removed.
+- **Content genre** (news, entertainment, comedy, drama, sports) — all carry signal but are lower-ranked. These may become more important in a model that includes advertiser-side features (see Known Limitations).
 
-Content features gained the most importance when we scoped to per-advertiser visits. This confirms they help match IPs to specific advertisers — exactly what the feature store needs.
+### 3. `ci_pct_new` dominates but may be a data-availability confound.
 
-### 3. Volume features are less important than they appeared.
+`ci_pct_new` has the highest SHAP (1.71) and direction is ↓ (higher = fewer visits). IPs with pct_new=1 are by definition IPs we've barely seen — they have thin data everywhere. The model may partly be learning "IPs with thin data don't visit" rather than "new IPs don't visit." Both are true, but only one is actionable for the feature store.
 
-Features that dropped when scoped: device model diversity (-15 ranks), impression count (-15), Roku ownership (-15), device make count (-13). These were measuring "how active is this IP" rather than "will this IP visit this specific advertiser."
+---
+
+## Known Limitations
+
+### 1. Same-day temporal leakage (critical)
+Features and labels are both from 2026-03-29. An IP that visited at 8am and received impressions at 9pm has those post-visit impressions counted as "pre-visit features." This inflates AUC. **Fix:** Re-run with features from day N-1 and labels from day N. This is the next model to build.
+
+### 2. augmentor_log and bidder_auction_events use 1-hour samples
+augmentor_log uses 12:00-13:00, bidder_auction_events uses the 13:00 partition hour. All other tables use the full 24-hour day. This means:
+- `al_n_auctions`, `al_n_domains`, `bae_n_auctions`, etc. are ~1/24th of true daily values
+- Ratio features (`al_pct_*`, `bae_pct_*`) are approximately correct (proportions are stable hour to hour)
+- The relative importance of count features from these tables is likely understated
+
+### 3. Features are IP-level, not (IP, advertiser)-level
+The label is scoped to (IP, advertiser) — did this IP visit THIS advertiser. But all features are IP-level aggregates across all advertisers. The only advertiser-specific features are `n_wins_this_adv` and `n_cgs_this_adv`. The model cannot learn "this IP likes this advertiser's vertical" because the same content features are identical across all advertiser rows for a given IP. To test advertiser-specificity, we'd need advertiser-side features (vertical, category, campaign type) interacted with IP-side features.
+
+### 4. Single day, no confidence intervals
+All results are from 2026-03-29. No cross-validation, no bootstrap CIs on SHAP values, no multi-day validation. A feature with SHAP 0.081 vs 0.077 could flip on a different day. Rankings should be treated as directional, not precise.
+
+### 5. Feedback model AUC of 0.999 is tautological
+guid_log only fires when an IP visits an advertiser site. So `gl_n_events > 0` perfectly identifies visitors by definition. The 0.999 AUC doesn't mean feedback features "predict" visits — it means they indicate a visit already happened. They're still valuable for retraining and scoring returning visitors, but the AUC number is meaningless.
+
+### 6. fillna(0) conflates "missing" with "zero"
+The Python script fills all NaN with 0. For count features this is appropriate (no data = zero events). For ratio/percentage features (`pct_*`, `vcr`, `avg_price`, `avg_amt`), zero is a real value with different meaning than "missing." XGBoost handles NaN natively — a re-run should preserve NaN for ratio features.
+
+### 7. IP-level granularity
+All analysis is at IP level. Shared IPs (households, offices, CGNAT) conflate multiple users. Features like device model diversity actually benefit from this — they're measuring household size, which is a valid signal. But precision/recall at the individual user level would be lower than reported.
 
 ---
 
 ## Next Steps
 
-1. **Vertical classification model** — Test content genre features for per-advertiser IVR prediction.
-2. **Cold-start analysis** — Test new features on IPs with no existing Fangorn score.
-3. **1P vs 3P segment split** — DS3 interest segments cover 1.3B IPs with ~20 segments each. Isolating 3P count could be a strong new feature.
-4. **Production integration** — Top new features → Fangorn feature store.
-5. **Features not yet modeled** — IAB category percentages, content_series (show names), parsed identity signals from conversion_log (ga_client_id 67%, device IDs 3%).
+1. **Fix temporal leakage** — Re-run with features from day N-1, labels from day N. This is the most important methodological fix and may change rankings.
+2. **Add advertiser-side features** — Include advertiser vertical, campaign type, and funnel level. Interact with IP-level content features to test whether content genre actually helps match IPs to specific advertisers.
+3. **Full-day augmentor_log / bidder_auction_events** — Re-run with 24-hour data (or larger sample) to get accurate count features.
+4. **Precision/recall at thresholds** — At 0.95% base rate, AUC alone isn't actionable. Show: if the model selects the top 10% of IPs, what's their visit rate vs baseline?
+5. **Multi-day validation** — Run on 3+ days to get confidence intervals on SHAP rankings.
+6. **Cold-start analysis** — Test new features specifically on IPs with no existing Fangorn score.
+7. **Features not yet modeled** — IAB category percentages (per-category), content_series, parsed identity signals from conversion_log.
 
 ---
 

@@ -28,10 +28,11 @@ Fangorn's feature store needs more signals. We have 25+ log tables but don't kno
 ## 4. Key Findings
 
 - **66 features identified** across 6 tables. 9 are our own system outputs (EXISTING), 35 are genuinely new (NEW), 17 are post-visit feedback, 5 have zero importance.
-- **Pre-visit model AUC: 0.896.** EXISTING features dominate raw rankings — validates that Fangorn/RTC works.
-- **Top 3 genuinely new features:** clearing price (win_logs), device model diversity (win_logs), auction activity (augmentor_log).
-- **Content genre features** rank mid-tier for general IVR but are highest value for vertical classification (Alex's TI-791).
-- **guid_log/conversion_log features** are near-perfect predictors (AUC 0.999) but are leaky — post-visit only. Use for retraining.
+- **Scoped model AUC: 0.842** (all features) / **0.784** (NEW features only). Label = visited THIS advertiser. 363K (IP, advertiser) pairs, 0.95% visit rate.
+- **Top 3 genuinely new features (NEW-only model):** device model diversity (win_logs, SHAP 0.598), total wins (win_logs, 0.390), clearing price (win_logs, 0.337).
+- **Content genre features** carry signal but are lower-ranked. To test advertiser-specificity, need advertiser-side features (vertical, category) interacted with IP content data.
+- **guid_log/conversion_log features** produce AUC 0.999 but this is tautological — guid_log only fires on site visits. Use for retraining, not prediction.
+- **Known limitations:** same-day temporal leakage, 1-hour augmentor/BAE samples, features are IP-level not (IP, advertiser)-level, single day with no CIs. See presentation for full details.
 
 Full ranked table of all 66 features with methodology: [ti_790_presentation.md](artifacts/ti_790_presentation.md)
 
