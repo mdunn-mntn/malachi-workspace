@@ -16,7 +16,7 @@ The richest new signal isn't demographics. It's what people watch.
 
 ## How much is this worth?
 
-We trained a model on 372K (IP, advertiser) pairs — features from one day, labels from the next, no leakage — and measured precision at every threshold.
+We trained a model on 372K (IP, advertiser) pairs — features measured on Day 1, visits measured on Day 2 — so the model only uses information available before the visit happened. Then we measured precision at every threshold.
 
 | Targeting threshold | Visit rate | Lift over baseline |
 |---------------------|-----------|-------------------|
