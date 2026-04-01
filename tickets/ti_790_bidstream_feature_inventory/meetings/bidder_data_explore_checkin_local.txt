@@ -1,0 +1,1265 @@
+[00:00] I need to get in a better habit about pushing the record button.
+[00:05] Should I start Malachi and Ryan?
+[00:09] Yeah, you go ahead.
+[00:10] Yes.
+[00:11] All right.
+[00:12] So we talked about this in the meeting before, kind of do like three different work streams,
+[00:16] use this week to kind of investigate this data in ways that we could use this.
+[00:20] My first pass is to look at the data we have in Augmentor log, kind of evaluate some quality
+[00:28] around that, and then maybe some ideas around how we could incorporate this into our vertical
+[00:35] data source classification.
+[00:36] So data source 13, and then thinking about keywords as well.
+[00:46] Okay.
+[00:48] I'm going to talk through some numbers here, but this data is Augmentor log.
+[00:55] I pulled a two-day window.
+[00:57] And then I did a 1% sample, which is still 250 million rows.
+[01:02] So we are at sufficient scale to have some idea of what's going on here.
+[01:07] This data is huge.
+[01:08] So I think that's the first thing.
+[01:10] When we think about how we want to leverage this, I would love to find ways to like not
+[01:17] have to pass rows or have a subset that we pass to like an LLM, right?
+[01:23] Because then this is going to get super expensive.
+[01:24] So if we think about...
+[01:27] Classification and kind of the way we do product classification or vertical classification
+[01:31] today, we need to think in like distinct signals and then apply them at the IP level
+[01:37] later, just given the scale.
+[01:39] A couple other small things in here to note, mostly for like Ryan and Malachi as they move
+[01:45] forward.
+[01:46] There are empty IPs that come through.
+[01:49] There are non-US geos as well.
+[01:54] So I'm filtering the USA, US and lower-division.
+[01:57] I'm going to use the case US from the geo info field as there's a bunch of other stuff in
+[02:01] there.
+[02:01] So just a little bit of cleanup.
+[02:04] And then what are we working with here?
+[02:06] So these are the signals for now in Augmentor log.
+[02:10] This is what we get from beeswax.
+[02:12] So they're saying like, yo, here's this IP.
+[02:14] Here's some information about it.
+[02:16] Do you want to bid on it?
+[02:19] And let's see.
+[02:20] And then what we get, like I said, we have this geo info field, which provides a bunch
+[02:25] of information.
+[02:27] We get the segments they're associated with.
+[02:30] So I think this is data that we enrich.
+[02:32] We augment onto this.
+[02:33] The network that they're on, if this is TV, then a bunch of information on like the user
+[02:38] agent, the operating system, what the device type is, what type of placement this is, if
+[02:44] there's a PMP deal, the source, and then the app bundles, site names, domains, the placement
+[02:52] types, and then IAB categories.
+[02:54] So what I'm going to talk about, I'm going to focus.
+[02:57] IAB categories because these are actual like taxonomy classifications, IAB, some nonprofit
+[03:09] advertising system that everyone kind of follows their research.
+[03:13] And so they have a taxonomy for content that they use.
+[03:16] So we can get some signals of, you know, this is the genre or whatever for this piece of
+[03:22] content where we got a bid signal.
+[03:24] In addition to that, I'm going to talk about domain.
+[03:27] Because what I've seen, this seems to be a mix of like cleaned up site name along with
+[03:32] app bundle.
+[03:33] So pretty much anytime we have app bundle, it's like one-to-one there.
+[03:38] And then it is like a cleaned up or slightly different like site name.
+[03:41] So this is another field that I kind of evaluated and consider there.
+[03:47] What's app bundle?
+[03:48] App bundle, I think is if it's like some sort of connected TV or connected device, like
+[03:55] where, what they were using.
+[03:57] What they were on or what they were doing.
+[03:59] So like if it's a display or banner ad, this is, you know, fox59.com.
+[04:05] Whereas if they were watching like a streaming or CTV show, you know, they're on a Samsung
+[04:09] TV plus, or this is Peacock or Pluto TV news, that kind of thing.
+[04:14] And I'll show you this.
+[04:15] There are some, maybe some better signals in here.
+[04:18] And so kind of before looking at the data, the idea is, are there, is there enough like
+[04:24] semantic information in things like this?
+[04:27] And then the other thing is, is there enough data to allow us to make like a vertical determination?
+[04:33] So one, the first thing to start with, and I'm not going to go through every like cell
+[04:38] in this notebook.
+[04:39] I just want to like talk through a few kind of high level important things first, and
+[04:42] then we'll get to it.
+[04:43] But you know, the way Ryan's kind of talked about this and we think about it is like CTV
+[04:49] ads and banner ads, but there isn't like a distinct, like binary split that you can do
+[04:55] on this data.
+[04:56] At least as far as I know.
+[04:56] 
+[04:56] Yeah.
+[04:57] That version version version version version version version version version version
+[04:58] version version version version version version version version version version version
+[04:59] version version version version version version version version version version version
+[05:00] version version version version version version version version version version version
+[05:01] version version version version version version version version version version version version
+[05:02] version version version version version version version version version version version
+[05:03] version version version version version version version version version version version
+[05:04] version version version version version version version version version version version
+[05:05] version version version version version version version version version version version
+[05:06] version version version version version version version version version
+[05:07] version version version version version version version version version
+[05:08] version version version version version version version version
+[05:09] version version version version version version version version
+[05:10] version version version version version version version
+[05:11] version version version version version version
+[05:12] version version version version version
+[05:13] version version version version version
+[05:14] version version version version
+[05:15] version version version
+[05:16] version version version
+[05:17] version version
+[05:18] version
+[05:19] version
+[05:20] version
+[05:21] web pages and videos and that kind of stuff.
+[05:24] So when we...
+[05:26] I just saw there was a chat.
+[05:28] Okay.
+[05:30] Commenting on games console.
+[05:32] That's interesting.
+[05:34] Very small amount of data, but it exists.
+[05:38] So when we think about how we're going to classify this,
+[05:41] I think this is like the first important delimiter
+[05:44] is the logic is going to look very different
+[05:46] for connected CTV devices
+[05:49] and for PCs, mobile, that kind of thing.
+[05:54] Again, on placement types,
+[05:56] there isn't just banner and video.
+[05:58] There is banner, video, banner and video.
+[06:00] And then I filtered out unknown placements,
+[06:02] but it's a small number.
+[06:04] So the first thing to talk about,
+[06:07] I think with these two columns that are of interest
+[06:10] is coverage.
+[06:13] So IAB categories is the first one.
+[06:17] And it is...
+[06:19] inconsistent coverage in our data.
+[06:22] So CTV is obviously the biggest number of rows
+[06:26] and 20% of them have IAB categories of some type.
+[06:30] So a row can have multiple IAB categories within that array.
+[06:34] So the signal is somewhat sparse.
+[06:37] And then if we go down and look at the popular ones,
+[06:40] I think the other problem with this signal is...
+[06:45] it is super...
+[06:49] generic.
+[06:50] So if we look at kind of these top categories
+[06:52] across our different types of devices,
+[06:55] arts and entertainment, television.
+[06:58] So IAB category alone,
+[07:02] I don't think is sufficient.
+[07:04] You know, maybe we can get some things right,
+[07:06] like sports is maybe easy that we can put into a vertical.
+[07:09] But I think the other ones are just too broad.
+[07:13] And there's like insufficient semantic information
+[07:17] for embeddings to be...
+[07:19] useful here.
+[07:20] That was kind of the thing that my thinking here of like,
+[07:22] well, we could do some embedding on this information
+[07:24] and kind of align it to our existing verticals.
+[07:27] So this tells me and we'll get into domains,
+[07:30] but like IAB categories alone are insufficient, I think.
+[07:34] And embedding is probably overkill
+[07:37] when there's maybe some like simple rules we can do
+[07:42] around these things to assign them to verticals
+[07:44] if these align with kind of verticals we're interested in.
+[07:48] So...
+[07:49] the next thing I'll talk about is on like the domain side,
+[07:51] but I'll pause there for like IAB categories.
+[07:54] There are more categories.
+[07:56] Go ahead.
+[07:57] I was just curious with the IAB categories,
+[08:01] this is a categorization of the IPs,
+[08:06] like attributed ad?
+[08:10] This is the IAB category of the content the IP was watching
+[08:17] when they received a bid request.
+[08:19] Yeah, that's what I was trying to figure out
+[08:20] if it was a categorization of the advertisement
+[08:23] or the categorization of the like the viewer itself.
+[08:28] Right.
+[08:29] So then I pulled this.
+[08:30] There are three, I think three different versions
+[08:34] of IAB categorization.
+[08:36] This is the oldest, but it is the only one that had this kind
+[08:40] of like IAB ID structure that I saw.
+[08:43] So there are some that I looked for that are missing.
+[08:47] So like IAB 8 and IAB 9.
+[08:48] IAB 11 are in our data,
+[08:51] but they are not in this version one of categories I pulled from IAB.
+[08:56] But this is kind of like the best I could find.
+[08:59] And most of what we're getting are these tier one super generic ones.
+[09:02] So I don't know if that's a that's how beeswax does it.
+[09:06] I'm missing something.
+[09:08] I kind of doubt it's like an updated version
+[09:10] and I'm just seeing the wrong thing, just given what we're getting back.
+[09:14] But that's what you consider here.
+[09:15] This is a dumb question as well.
+[09:17] Is this?
+[09:18] This bit stream data is it's it's pre bid, right?
+[09:22] Correct.
+[09:22] So this is what beeswax sends us and says, like, you want to bid on these guys.
+[09:27] Yes or no.
+[09:27] Okay.
+[09:29] So it's not it's not these are the ones that we did bid on.
+[09:33] This is everything.
+[09:34] Mm hmm.
+[09:36] Correct.
+[09:36] Yeah.
+[09:39] So that's kind of the first part
+[09:42] with IAB, where I think there's kind of insufficient information on here
+[09:46] for us to move forward.
+[09:47] Domain.
+[09:48] Domains, I think, are a little more interesting.
+[09:50] And you can kind of see this here, right?
+[09:51] There's this combination of like genres and sites that are related to them.
+[09:58] So this is Chicago News Network, for example.
+[10:03] So our sports network, excuse me, Chicago Sports Network.
+[10:06] So, you know, documentary entertainment reality.
+[10:10] Some of these are Bali Live is a live streaming sports.
+[10:13] So there's a little bit more signal that we can parse in here around like the genre.
+[10:17] So there's a little bit more signal that we can parse in here around like the genre.
+[10:18] Of the content in some of these cases.
+[10:21] And then with mobile and these things, right, it's more like the URLs
+[10:25] or domains obviously associated with them.
+[10:28] So no surprising, right?
+[10:30] Just like we see in like site visit signals, a ton of just like mail
+[10:35] Yahoo things that are probably not valuable from this information alone.
+[10:39] So kind of the idea, I think, of how we might try and use this is to
+[10:47] let's say,
+[10:47] let's say we have a site visit signal.
+[10:49] And then we can kind of like parse these things out, kind of split up and normalize this text
+[10:54] and look for like a genre from that information
+[10:58] and then potentially build some rules of how to map these things into verticals.
+[11:04] That's kind of my first pass thinking of what we could maybe do here
+[11:09] with the information we have right now.
+[11:11] And then I will get into I think there's kind of some more valuable things we can see
+[11:15] in the OpenRTB spec, which I'll talk about in a minute.
+[11:17] But this is kind of my thought of like, if we were going to use just what we have right now,
+[11:24] this is kind of a sparse signal where in both cases embeddings are overkill
+[11:30] because there's not a ton of like semantic information here outside of something like this, right?
+[11:33] That we could use.
+[11:38] So I'll pause there if there's any questions or feedback.
+[11:42] Yeah, that's cool.
+[11:43] I mean, how many?
+[11:45] Oh, yeah.
+[11:46] I think that'd be interesting.
+[11:47] Like add to the feature store.
+[11:49] And then.
+[11:52] Like how many different like genres or whatever do you think you could rip out of there?
+[11:59] It depends.
+[12:00] We can go back to this.
+[12:01] These are the kind of the high volume things, right?
+[12:05] So like these top genres, when you go into these devices will be there.
+[12:09] So you could build out, you know, genre arrays at the IP level over like the last 30 days
+[12:15] or something like that, right?
+[12:16] Of like, or how many events related to this type of viewing did they see?
+[12:22] Something like that.
+[12:26] So on the OpenRGB spec, this is the other piece that Ryan explained to us is this is,
+[12:33] you know, standardized set of fields that we can request from beeswax.
+[12:38] And Ryan has already worked with Rogus to get some of these get things added from this.
+[12:43] So I think what we want is like, if we want to add more,
+[12:45] we want a comprehensive list before we go back and ask for more things.
+[12:50] The piece that I've found that I think is interesting from a vertical or keyword perspective
+[12:55] is this content object, which has the title of what they are watching.
+[13:01] If the series, the episode and the season, the genre of that content, the network,
+[13:09] if we have that, the channel, and then also very interesting.
+[13:13] Again, the IB category.
+[13:14] Yeah.
+[13:15] So this is the first thing that we're going to be looking at.
+[13:16] So we're going to be looking at the keywords, which is probably what we're already getting.
+[13:18] And then they also provide keywords, which I'm also very interested in.
+[13:21] So from this could help, I think, for verticals, but also obviously for data source 19.
+[13:27] My hope would be given, depending on the coverage and the quality of these things,
+[13:32] we might be able to kind of bypass the LLM step and go straight from what are the embedding similarities
+[13:39] between the keywords beeswax provides for this content and our like data source 19 universe.
+[13:44] Yeah.
+[13:45] So this information, I think, gives us and there's other things like where is it?
+[13:53] I think there's duration of the content as well.
+[13:56] So now you're getting into instead of like binary flags, you know, you can make some assumption.
+[14:01] Remember, like how much are people watching like the total total seconds in a 30 day window that they're watching these different genres?
+[14:08] So maybe a more interesting and nuanced signal from that.
+[14:11] So we don't have these fields right now.
+[14:14] Obviously, this is just me looking at these and saying this would be interesting.
+[14:18] But I think this is a richer semantic signal for us to align our data sources or build features from based on content.
+[14:28] So.
+[14:30] I'll stop there and now we can discuss context field, which would be at least good for filtering things down to what exactly what we're looking for.
+[14:42] And I will paste both of these in the chat.
+[14:43] Formality as we're talking about this.
+[14:47] So.
+[14:48] That's cool.
+[14:49] I like those ideas.
+[14:50] I like the idea of the duration or seeing how long.
+[14:54] There's a little bit of an asterisk on that of it is the duration of the content, which I think is different than the duration they watch.
+[15:03] So it's kind of like a proxy, right?
+[15:05] Yeah.
+[15:06] Yeah.
+[15:07] But area like everything.
+[15:09] Can we just.
+[15:10] I mean, we can almost have like.
+[15:11] A few.
+[15:12] Features where it's like, oh, this IP watches TV between these hours, you know, and or just just even looking at like the bid.
+[15:22] Yeah.
+[15:23] Well, even even just like the number of the episode that they're on, if it's a show, you know.
+[15:30] Yeah.
+[15:31] Yeah.
+[15:34] But I do like.
+[15:35] Yeah, because.
+[15:37] Maybe.
+[15:38] Yeah.
+[15:39] There might be shows where we.
+[15:41] Are short.
+[15:42] You know, we don't have a lot of time to.
+[15:43] Get this in or, you know, but there might be long shows where we can like take our time and get a better.
+[15:49] Bid in or something.
+[15:51] So that's cool.
+[15:52] There's probably some more complex logic to do of like.
+[15:57] And I've tried to do this in the past and my last job of like sessionization.
+[16:02] So if we see like 10 bid requests over a three hour period for the same IP, then we can make better inferences about like, oh, yeah, so we can do this.
+[16:10] Yeah.
+[16:11] So we can make better inferences about like, oh, yes, they did watch the full extended edition of Lord of the Rings.
+[16:16] Right.
+[16:17] The you know, the ad events the whole time.
+[16:19] Yeah.
+[16:20] You can also.
+[16:21] That might get kind of nasty, though.
+[16:24] Yeah.
+[16:25] You can also do something like.
+[16:28] Just the amount of like content blocks, whether that's movies, episodes, shorts within a given genre.
+[16:38] Right.
+[16:39] They.
+[16:40] That would be.
+[16:43] Definitive features.
+[16:46] Yeah.
+[16:49] That's cool.
+[16:50] Okay, cool.
+[16:51] Yeah.
+[16:52] I'm trying to parse through this and be like, okay, there's.
+[16:55] We didn't get all of it.
+[16:56] Get all the.
+[16:57] Just get all the features.
+[16:58] I know.
+[16:59] That's the problem we've been having in the past that we have way too much data.
+[17:02] We have no idea what to do with it.
+[17:04] I mean, we could turn it into features, though.
+[17:06] And I know.
+[17:08] Rely on Matlab.
+[17:09] But like, just.
+[17:10] You know, give it to Matt.
+[17:11] He can tell us which ones are interesting.
+[17:13] Maybe.
+[17:14] But.
+[17:15] I feel like with some of this.
+[17:16] You're like almost getting to the point where you're like.
+[17:19] I'm going to recreate mountain select.
+[17:22] Yeah.
+[17:23] It's like, I want to target people who are watching the office.
+[17:27] Okay.
+[17:28] Well, that's what mountain select does, but.
+[17:30] Yeah.
+[17:31] Different way.
+[17:32] Yeah.
+[17:33] So.
+[17:34] Now that's just a keyword that we've put in there.
+[17:35] People who watch the office.
+[17:37] People.
+[17:38] Who are watching the office.
+[17:39] The only thing I'm thinking from a verticals and keywords perspective.
+[17:44] These are like genres and keywords related to content.
+[17:48] And I feel like our verticals and keywords are very like product focused.
+[17:52] So while there is more like semantic information, I don't know how.
+[17:56] Like this would align.
+[17:57] So maybe that's not the best first way to take this of like augmenting our existing data sources.
+[18:03] But I think it helps with like advertisers in.
+[18:07] This vertical.
+[18:09] Get better performance on this type of content.
+[18:13] Ryan's classic example of HT TV.
+[18:17] Yeah.
+[18:18] And the home improvement vertical.
+[18:20] Yeah.
+[18:21] I would assume they're somewhat aligned.
+[18:23] That's fair.
+[18:24] So there, there might be an extra layer of like, I don't know.
+[18:28] A little tinkering to kind of like get these things to fit within kind of like a product.
+[18:34] Facing space.
+[18:36] Yeah.
+[18:37] And we don't.
+[18:38] Might have to.
+[18:39] Might not have to like boil the whole.
+[18:41] Whole ocean or whatever.
+[18:44] Yeah.
+[18:45] I'm thinking, can we just pick one thing?
+[18:48] Maybe I know we'd have to gather the data and prove it out, but like just.
+[18:53] I mean, your initial example, you want sports betting.
+[18:56] Let's just assign every one of these fricking sports vertical.
+[19:00] Yeah.
+[19:02] Sports network.
+[19:04] Bali live.
+[19:05] Like.
+[19:06] Yeah.
+[19:07] like that we don't no modeling just you know yeah um i mean we could check it against
+[19:18] yeah we gotta do we could do the work to check it to see if if we put them in that vertical if they
+[19:24] visit the sports betting later or whatever but yeah yeah i think i think those are interesting
+[19:31] or important things we should do next that we talked about is if we can pick if we pick like
+[19:36] one of these like a vertical to evaluate then it's how often are these like net new signals
+[19:42] for these ips like are we already getting this information from somewhere else and then if they
+[19:47] are what's the like marginal performance on those net new like if we assign them to the sports
+[19:52] betting vertical what's their visit rate look like you know seven days later kind of thing yeah
+[19:57] i wanted to mention one thing just real quick um that i didn't tell you about um
+[20:03] last meeting is that there there is that placement
+[20:06] type what is a banner and banner video yes where domain that is um domain is the domain of the
+[20:15] publisher and then there's also the url so so that's that's why i had rogus add the full url
+[20:22] and but it only comes through on banner and banner video i think i see so those domain
+[20:29] things you saw on the pc when you're when you look at the pc thing the mail.yahoo.com that
+[20:34] that is stuff
+[20:36] i've kind of already implemented and trying to um yeah we got it into matt's feature store so
+[20:44] we're trying to see how that looks got it okay so page would be the the like more complete
+[20:50] uh yeah i have coverage on that as well yeah page that's right yeah um let me share my screen again
+[21:00] and then it also has referral url which was kind of interesting
+[21:06] to as you might expect or refer the very high coverage of page existing for pc
+[21:13] not as many people are looking at websites from their tv so uh but again right like uh
+[21:22] maybe this is something else that would be good for us to add as a signal for our categorization
+[21:27] yeah so what the other part of this this is the documentation you've provided
+[21:36] it from magnet like what's the future look like here and what's like the current state
+[21:43] of the future because that's my other concern is if we're having mountain bitter is it just
+[21:47] like leaning on this like i think this open like 10 different providers that all provide
+[21:54] different types of data my understanding is this openrtb spec is like pretty standardized
+[22:00] so like the mountain bitter would have access to the same things okay yeah
+[22:05] that's my understanding too and openrc makes sense in this world so that's good
+[22:10] yeah openrtb is that link he had or you could share it in chat maybe it is from magnet and so i know
+[22:18] yeah this this for sure is going to be in the new mountain bitter okay okay and because this this is
+[22:25] how i found um oh that we could get the full url i was looking through this yeah i'm like oh rogus
+[22:32] can you give me the full url in the mountain bitter
+[22:35] version version version version version version version version version version version version
+[22:42] version version version version version version version version version version version
+[22:47] version version version version version version version version version version
+[22:54] version version version version version version version version version version
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] 
+[22:59] url uh our best use for that would be like pc based devices so uh probably couldn't take
+[23:08] advantage of like ctv type signals from the url but then app bundle is like ctv focus so there's
+[23:15] a couple different options there but also like in a like the other thing that we kind of
+[23:21] just show the advertisers now is um you know the channel or network breakdown where it's like
+[23:30] here's where you here's your performance by the content basically now we would just like optimize
+[23:36] that for them instead of making like having them do it that like part of built into the or there's
+[23:41] a possibility of that i think uh brian and addy have some of that already in their performance
+[23:49] pacing they're like media
+[23:50] oh
+[23:51] okay i thought it was like a media plan thing where that's right media planning uh i would be
+[23:56] curious i i think it makes sense from our perspective too of like ip level signals of
+[24:03] of network you're looking at and then etc okay all right ryan do you want to go next or
+[24:10] did you go for it because i got i i was pretty busy i got like one little thing and that's okay
+[24:17] yeah no no problem here i'll share my screen here um
+[24:20] um
+[24:21] all right let me know if you guys can see this all right
+[24:23] okay so uh i'm gonna tell you guys the results and then i'll tell you how i got there after
+[24:29] how's that sound okay so basically what people watch predicts whether they'll visit
+[24:35] so the top three predictors of site visits are features we built and so i did split them out
+[24:41] but i just thought that this was really interesting so fangorn scores rtc conquest
+[24:45] and impression frequency uh they had the highest chat values when i did xg boost prediction on the
+[24:51] visits um but anyways when i was looking for features i scanned all 25 log tables that we had
+[24:59] looked for all the unique signals that we got from each of the tables
+[25:03] and so combined with the existing features if you take the top um ips they predict visits 10 times
+[25:10] but if i remove all those features the top ones are seven times lift so basically from the pool
+[25:16] that we're grabbing from if we remove all the fangorn and those different scores
+[25:20] these are the features that we're grabbing from and so if we remove all the features that we're
+[25:21] actually all these features um results in like way better lift so basically they're very
+[25:26] predictive of visits right so how much is this worth this is kind of just an i trained the model
+[25:31] on 372 000 ip and advertiser pairs one of the mistakes i made before is i grabbed a series of
+[25:39] advertisers and i did not filter whether or not they got the visit on the same campaign that they
+[25:45] were delivered so i did fix that this morning um because i was getting some weird things like
+[25:50] saying oh if i'm not able to get a visit i'm not able to get a visit i'm not able to get a visit
+[25:51] and ip was a part of a lot of different segments it resulted in uh higher visits rates but i think
+[25:56] that was just because of the cross uh visit um issue there which is it's fixed now so every ip
+[26:03] in this data set was pretty much already selected by fangorn or like mountain match v2 um and
+[26:10] yeah i mean that's that's pretty much it here so i think i already covered here um
+[26:17] so when i first ran the model the new features were
+[26:20] after the first model i was like oh my god i'm gonna have to do this again and i'm gonna have to do this
+[26:21] again and i'm gonna have to do this again and i'm gonna have to do this again and i'm gonna have to do this
+[26:21] so basically like i had device model count for example and it was pretty low ranking in the
+[26:26] values um but when i removed our existing features and re-ran the model the device model count
+[26:32] actually jumped to first so it's important score important score went up uh considerably um and so
+[26:38] in this case device model count means like it's i think it's a household size proxy a lot of these
+[26:42] i assumed um because there's no like clear definitions on all the tables but i believe
+[26:47] that's what it is and so like this would be somebody having a roku samsung q10 and a samsung
+[26:51] tv phones things like that right um so i'm gonna summarize these but they're actually i do have a
+[26:57] list of all the different features their shop values and their scores and then we can go through
+[27:01] them individually but the kind of top 10 things that i pointed out here um so device model diversity
+[27:07] is extremely important so more devices is more likely to visit video versus display so display
+[27:13] converts better per impression than ctv which i thought was interesting um it also makes sense
+[27:19] too because if you're on display you can just click on it and it'll show you the screen and
+[27:21] it'll show you the screen and it'll show you the screen and it'll show you the screen and it'll show you
+[27:21] the screen and it'll show you the screen and it'll show you the screen and it'll show you the screen
+[27:21] right the the barrier of lift is super easy um content domain brep so ip's consuming diverse
+[27:27] content are more predictable uh video placement rate so strong ctv engagement signal um i'm gonna
+[27:34] get more into that i know it's a little vague um the clearing price so lower clearing price
+[27:39] correlates with more visits um so i believe this is the price that we pay for these on the demand
+[27:47] side i think that's what it is but um which i thought was weird
+[27:51] it seems like the price a higher price would be higher value but it looks like lower lower price
+[27:56] is actually better um the genre so entertainment heavy ips visit less which is interesting so as a
+[28:03] percentage of the total content that they watch um the total number of auction wins so market
+[28:09] activity so active ips they convert more um pmp deal rate so curated inventory if i'm understanding
+[28:17] pmp deals correctly um
+[28:21] it just results in in better visit um
+[28:25] auction count so we have big stream breath so more auctions is more signal i mean i think that's
+[28:30] kind of straightforward and then the iib category availability so ips with richer metadata are more
+[28:34] predictable so kind of connected what you're talking about alex um so i'll leave it on that
+[28:41] but there's basically three things that i pulled out here okay so the current system is validated
+[28:46] i thought that just super interesting it's cool fangorn rtc that type of those types of features
+[28:51] they're indicative of uh of success um but not super helpful for additional features um
+[28:59] the content device data is the most important stuff that we could probably start adding to it
+[29:04] so um content genre percentages entertainment comedy news things like that and device diversity
+[29:10] are probably the strongest new predictors and they all come from the bid stream so the exchanges are
+[29:14] already sending us this data and then i just wanted to point this out the augmenter log appears to have
+[29:19] a 10-day ttl and then i just wanted to point this out the augmenter log appears to have a 10-day ttl
+[29:21] um so we're losing a lot of this content so we probably need to store longer term which i think
+[29:26] this is what we're trying to solve but this is just an important thing that's only 10 days um
+[29:31] i do have some three things that i could ask here but i'd like to actually just go to this appendix
+[29:35] here so here is a table i ranked every single feature that it went through this is a mixture
+[29:40] of the existing ones and i might be wrong about these two i just want to make this clear so i can
+[29:45] tell you my definition is what i consider existing versus new um but essentially this is going to be
+[29:51] the version version version version version version version version version version version version
+[29:58] version version version version version version version version version version version version
+[30:03] version version version version version version version version version version version version
+[30:05] version version version version version version version version version version version version
+[30:10] version version version version version version version version version version version
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] 
+[30:15] If the feature has a higher score, this is telling you how it affects the visit rate.
+[30:21] So I actually shared this PDF in the chat that we were just talking about now.
+[30:26] So you guys can bring it up in your own browser.
+[30:29] It might be a little bit easier than me just showing you guys here.
+[30:31] But I want to actually scroll down here to the new only features because I think it's a little bit more valuable.
+[30:37] And yeah, I mean, here's just kind of a list of all those.
+[30:40] And yeah, I mean, that's kind of it.
+[30:46] There's some more methodology stuff that we could go through exactly.
+[30:49] Actually, let's talk about this just for a second.
+[30:52] So when I marked it new versus existing, so like would this feature's value change if we turned off our targeting system?
+[30:58] I don't think this is 100% correct, but bear with me.
+[31:02] So if no, it comes from the actual external source.
+[31:05] And then if yes, it's produced by our bidding, scoring, or segmentation logic.
+[31:09] So like, for example.
+[31:10] Like our CI percent new, it's existing because we set that after the fact.
+[31:19] And then we also have the, but then like compared to something like our win logs average price, which is the clearing price set by the exchange.
+[31:28] So that's not something that we set ourselves.
+[31:35] Not that these things aren't valuable.
+[31:36] They absolutely are.
+[31:37] And so after the fact, we can definitely use these features to help us.
+[31:40] But yeah, that's kind of the pitch.
+[31:47] So not sure if we have any questions here.
+[31:50] There's a lot to go through.
+[31:53] Yeah, that's awesome.
+[31:55] How many?
+[31:56] So yeah, Augmenter log.
+[31:58] Augmenter log has a 30-day TTL.
+[32:02] But yeah, that's why it's important.
+[32:03] If we're going to make these features, we should get on it right away so we can let them build up.
+[32:10] But yeah, would you be able to add all those features that have the Augmenter log?
+[32:18] Like get them into the feature store?
+[32:21] Yeah, I don't see why not.
+[32:22] I mean, I don't see why we couldn't add all 66.
+[32:25] I think that was total how many I had here.
+[32:28] Yeah.
+[32:30] Cool.
+[32:31] Conversion log, I think, sticks around a little bit longer.
+[32:34] So those aren't.
+[32:36] But yeah, Augmenter log or bidder auction events, those are.
+[32:39] They don't stick around as long.
+[32:40] Because they're massive files.
+[32:44] Let me look at bidder auction events.
+[32:46] Bidder auction events goes back to 122.
+[32:50] Augmenter log is 228.
+[32:53] So it looks like they're storing bidder auction events a little bit longer.
+[32:58] And then cost impression log.
+[33:03] That one should go back a long ways.
+[33:04] I think cost impression log is like a year.
+[33:07] Yeah.
+[33:07] And then they store all the historical data.
+[33:10] So you can always go back further too.
+[33:12] So yeah, actually, that's not true.
+[33:16] On GCP, it's back to 2025, January 1st.
+[33:19] So you don't have anything beyond that.
+[33:23] Okay.
+[33:24] But yeah, dude, I would say just make a ticket to make all these features in the feature store.
+[33:30] And then we can see what they do.
+[33:33] Yeah.
+[33:35] I think that makes sense.
+[33:37] Yeah.
+[33:38] And I'm not sure how we're actually going to.
+[33:39] So there's some interesting stuff here too.
+[33:42] Like, so some of these like good logs and stuff, they only come out after we have a visit.
+[33:46] Right.
+[33:48] But it doesn't mean that it's not good feedback.
+[33:51] So for example, like this is an interesting feature.
+[33:53] Again, just double check the features.
+[33:55] I'm pretty sure they're correct.
+[33:56] But, you know, if you're like, actually, that's not what that is.
+[33:59] So this one looks like this is the good log number of OS families on iOS.
+[34:07] Per IP or per app?
+[34:09] Appvertiser.
+[34:11] That's.
+[34:12] I that should be per IP or not IP household.
+[34:18] I can't remember.
+[34:19] I think it should be IP.
+[34:20] I think I did everything at the IP level.
+[34:23] Oh, okay.
+[34:23] Okay.
+[34:25] Yeah, that's fine.
+[34:26] Okay.
+[34:28] Yeah, dude.
+[34:28] So I would treat or yeah, I would maybe do two tickets, one for the bit stream or however many, you know, one for each store, preach source.
+[34:38] And then.
+[34:39] I would just add them in, dude.
+[34:41] Start start.
+[34:42] Yeah, get them in quick.
+[34:43] And then that way we could let them build up.
+[34:47] So how are we using the feature store?
+[34:49] Like, is this going to be like a direct connection to how we, how fan Gorn works?
+[34:54] Or is it something that you borrow from Matt and then you move over to your model?
+[35:00] And I'm kind of curious how we're planning.
+[35:02] Yeah.
+[35:02] He says that a feature store is the input to the model.
+[35:08] Yeah.
+[35:08] So anyone can.
+[35:09] Can aggregate, you know, these sources and the way we're doing it right now is aggregating by day.
+[35:16] You know, a lot of times Matt looks back 30 days, but that's a very, that's very hard to calculate going back 30 days and augmenter log.
+[35:25] It's terror tons of terabytes.
+[35:28] It might even be, yeah, whatever it is, petabytes, whatever it is.
+[35:31] So that that's why we need to get it in.
+[35:35] If you think something's important, get it in quick, aggregate it up by day.
+[35:38] And I think augmenter log, I think I have something that does it hourly too.
+[35:42] So you kind of follow that pattern.
+[35:44] Okay.
+[35:45] Cause I've been logged by day even as there's a lot, a little too much.
+[35:50] Yeah.
+[35:52] So you would just write a PI spark or, you know, write a dag in the feature store folder that rolls up augmenter log by hour.
+[36:04] If you need like unique counts and stuff like that, we have ways to do that with the H.I.
+[36:08] H.I.
+[36:08] L.
+[36:09] sketches or whatever.
+[36:11] But basically you see, then you would just, you know, sum up the segments or whatever you have, like average segments.
+[36:19] I'm not, I'm not quite sure.
+[36:20] I mean, I guess to do an average, you have a summit account, so whatever, however you're doing that average, you know, you'd have to think about it, but then, you know, sum up, sum it up, count, do whatever.
+[36:31] And then, and, uh, the second layer is where you do like your average and all that.
+[36:38] And, and, and you go back like 30 days.
+[36:41] Do whatever.
+[36:43] Do we do a distinct or we just have a way to do it?
+[36:48] We have a way to do it.
+[36:50] Um, there is, I'm just wondering if we actually do it because if we don't actually do it now, we may not have a use case really to do it.
+[37:00] Like it might not be not worth.
+[37:02] It's like the H H L L sketch or whatever, right?
+[37:06] Right.
+[37:06] Cause you're doing it on one.
+[37:07] On.
+[37:07] 
+[37:07] On.
+[37:07] On.
+[37:08] On.
+[37:08] On.
+[37:08] On.
+[37:08] On.
+[37:08] On.
+[37:09] So, so it's an approximation still.
+[37:11] Yeah.
+[37:12] Victor looked up a way we could do it exact and spark.
+[37:19] It's a little involved, but if you need it, but they tell sketches are, are, are, uh, approximation still, but it's, it's pretty good.
+[37:29] They use it in reporting at least.
+[37:31] So, I mean, that's good enough in my opinion, but yeah, that there's new, there's three new features.
+[37:38] That version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version
+[38:08] Matt needs to get them all in one data set, you know, so we could join together in the second layer.
+[38:13] You know, if you're like, I want to add a bunch of IP features, we can join together or whatever we want to do and make just one massive table, you know, or however.
+[38:23] Is it the upstart, though?
+[38:24] The idea is that we basically are we just going to just keep appending the same IP data?
+[38:31] It's like every day it's a new, you know, we go back 30 days.
+[38:35] So I guess it's yeah, like, I mean, it's just a new data set.
+[38:39] We're not doing like an incremental.
+[38:41] Gotcha.
+[38:41] So like every 30 days, you just scan it and then what IPs that we have and what data we have on that.
+[38:48] And just it has layers.
+[38:50] It has layers.
+[38:51] So the first layer is like daily snapshots.
+[38:55] Right.
+[38:56] And then once you get to the third layer, it's aggregates of those daily snapshots across all the data sets.
+[39:03] Gotcha.
+[39:03] Yeah.
+[39:04] So it runs daily.
+[39:05] So if we have days of data stacked up, then we can do a 30 day aggregate across the daily snapshots.
+[39:12] And that gets updated every day where it just takes the new day.
+[39:15] Like today, it'll take today's data and the 29 previous days and aggregate it together.
+[39:23] Does anybody only need to calculate one day every day instead of 30 days every day?
+[39:31] Do.
+[39:34] Ryan, you said that.
+[39:35] You or Matt, you guys have a script that's already doing this on at least one of your feature store tables.
+[39:42] Do you have a link to that or something that can go so I can just model that?
+[39:46] Because if this all looks good to everybody, then I'll go ahead and create that table and we can get this going in there.
+[39:53] Yeah.
+[39:54] I can give you.
+[39:55] Yeah, I'll give you.
+[39:57] Let me sit with you, actually, and I'll show you because if that's OK.
+[40:01] Because I'll give you the hourly log stuff that I do.
+[40:05] And then you would basically take that and do the same thing.
+[40:11] But I think I'm grouped by.
+[40:13] I don't even know what I'm grouped by.
+[40:15] I forget what I pull out of there.
+[40:17] Oh, yeah.
+[40:18] I do domain to vertical ID.
+[40:20] So I group by IP and vertical ID.
+[40:23] But so then you would have to add one that does group by IP and does whatever you're doing, you know.
+[40:30] OK.
+[40:31] Cool.
+[40:31] However.
+[40:35] I'll send you that link here.
+[40:40] OK.
+[40:41] So it sounds like.
+[40:42] OK.
+[40:42] So it sounds like.
+[40:46] For you guys new to this.
+[40:48] Yeah, we were discussing two approaches.
+[40:51] One where we just build new features off of.
+[40:54] The bid stream stuff, which just sounds like Malika, you got a good handle on that, actually.
+[41:04] And Alex was kind of.
+[41:05] Talking about.
+[41:09] And then the other.
+[41:10] Yeah, the other thing that we were looking at is can we increase audience size?
+[41:14] You know, like improving our models with new features is good.
+[41:19] You know, that'll get us more accurate scores, we think.
+[41:22] But it might not increase the audience size per se.
+[41:28] So that was the other side of it where we wanted to, like.
+[41:32] Look at if we can, like, add more things to DS 13 or DS.
+[41:35] 19.
+[41:37] We can just add it to Cybersignal table.
+[41:40] I think we talked about this, right?
+[41:42] Yeah.
+[41:43] That will flow to.
+[41:45] Yes.
+[41:46] 13, 19.
+[41:47] Yeah.
+[41:48] Yeah.
+[41:48] And that that'll work.
+[41:49] I will do that for the.
+[41:52] That covers the display ads.
+[41:56] So I was kind of hoping as I was kind of when this would be.
+[41:59] We would talk more about like non display things, you know, like.
+[42:04] Like if we could.
+[42:05] Rip features out of like the connected TV stuff, like what what Alex was talking about.
+[42:13] Let me.
+[42:18] Malachi sent you.
+[42:21] The Python script that that does all corner log by hour.
+[42:27] Oh, yeah.
+[42:27] So.
+[42:30] Let me, I guess I have something very brief that I just threw together.
+[42:35] Today and.
+[42:36] I could share it, but it's not.
+[42:39] Too impressive.
+[42:40] I'd say.
+[42:44] I was just going back to the.
+[42:48] The NBA stuff.
+[42:51] You know, or there's PMP deals, you know, where we know somebody's watching an NBA game.
+[42:57] And also HGTV ones.
+[43:00] So I kind of grabbed both of those.
+[43:03] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:04] And.
+[43:05] And the way the way I kind of took this.
+[43:10] That's trying to look at look at see if somebody is watching the NBA game.
+[43:16] There there's a bunch of the NBA games on last night.
+[43:19] I know the the sons play the Rolando magic yourself.
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:23] 
+[43:35] IPs that visited like a fast food
+[43:38] restaurant. Like I know one of our advertisers is a pizza
+[43:42] place I go to every now and then. Rosati's Pizza here.
+[43:47] So I was just kind of seeing if you're watching the NBA
+[43:50] game, if you're more likely to visit fast
+[43:55] food place versus somebody that's just watching HGTV
+[43:58] during the same time. Where do you get the PMP deal
+[44:02] definitions? That's a good question. It's
+[44:06] this table in
+[44:09] So those are our PMP IDs, not like
+[44:13] from the auction? Yeah.
+[44:19] Actually, I think this is from the partner.
+[44:21] They build it. This is a beeswax thing.
+[44:25] But in Augment or Log, that's how they come in.
+[44:30] Which is different.
+[44:32] Yeah, just some more background and data source 42 that the select
+[44:36] team uses. And by the way, the select team only uses it to get the audience
+[44:40] size. They use these
+[44:44] integers here. So we have to convert to populate
+[44:48] data source 42. We convert this PMP thing to this
+[44:52] integer because to be a data source category ID, you have to be an integer.
+[44:56] You can't be a string. So I'll give you this
+[45:00] this.
+[45:02] I should look at PMP as well.
+[45:05] Yeah. And you know, they have a name. This table isn't made by us.
+[45:11] Floor price might be interesting, but I don't know what else is interesting here.
+[45:15] Channel ID. Maybe that is interesting. I have no idea.
+[45:18] I don't know what a lot of this means. So whatever.
+[45:24] So yeah. Okay. Let me
+[45:26] go there.
+[45:30] So is that.
+[45:32] And so then I
+[45:32] looked at I actually looked at the bucket 129, which is
+[45:36] a bunch of fast fares, whatever it's Uber Eats is in there and everything I know
+[45:41] I'm not gonna go through the code. I'll just show you the results.
+[45:45] Actually, it's maybe kind of interesting.
+[45:49] So the number of
+[45:52] people that that landed on a fast food
+[45:56] vertical ID, the number of distinct IPs
+[46:01] that land on a fast food.
+[46:02] Yeah. Vertical ID or whatever.
+[46:05] In Google log was like 2.8 million during that time window that I'm looking at like this five hour window.
+[46:11] I think the NBA game was on
+[46:15] the NBA PMPs have way less IPs though.
+[46:19] So this is why kind of not very happy with this result.
+[46:23] You know, 3000 IPs are watching an NBA game during that window, which doesn't seem like a lot to me.
+[46:30] So anyway, and then 55.
+[46:32] 5,000 are watching HGTV.
+[46:36] These are the overlaps, basically.
+[46:39] So basically, 6.5% of the people watching the NBA game
+[46:50] also landed on a fast food website in the Google blog,
+[46:58] compared to 5.8% in HGTV.
+[47:01] So there's maybe a slight lift there,
+[47:03] but again, I'm only looking at five hours,
+[47:05] and we don't have a lot of IPs here.
+[47:10] So that's about all I came up with,
+[47:13] just seeing if we implemented a rule like,
+[47:17] oh, if you're watching an NBA deal,
+[47:19] put them in the fast food vertical or whatever.
+[47:22] I don't think it would do much,
+[47:26] just because of how few of these there are.
+[47:27] Is part of it because of that issue
+[47:30] with the IPs?
+[47:31] IPs and live sports?
+[47:33] That could be, yeah.
+[47:35] And how we're handling that,
+[47:38] or we're handling that, I don't know.
+[47:40] Yeah, that could be,
+[47:42] because a lot of these could be the .0 ones,
+[47:49] although this should be higher than,
+[47:51] because this, yeah, that could be.
+[47:55] Oh, and actually, one other thing,
+[47:56] that made me think,
+[47:57] one other thing, Alex,
+[47:58] if you see a blank IP field in Office,
+[48:01] Augment or Log,
+[48:01] if you look at IPv6 field,
+[48:04] it's probably populated.
+[48:07] And so that goes back to the identity graph.
+[48:10] We should be able to take those IPv6s
+[48:13] and get a household ID,
+[48:15] if there's a blank IP field.
+[48:20] So, yeah, so I think,
+[48:23] in my opinion,
+[48:23] this is kind of a bust
+[48:25] for what I was thinking of doing,
+[48:27] but I might check,
+[48:29] since I know there's more HGTVs,
+[48:30] 
+[48:30] and there's more HGTVs,
+[48:30] and there's more HGTVs,
+[48:31] and there's more HGTV watchers,
+[48:32] and maybe I'll look and see
+[48:33] if more of those visit,
+[48:34] like, the home improvement verticals.
+[48:39] But, yeah,
+[48:40] that's kind of all I have to share.
+[48:43] I was just looking for,
+[48:47] like, I think it'd be cool
+[48:48] if we just found one specific,
+[48:50] it could even be just a business rule.
+[48:51] It doesn't have to be a model, you know,
+[48:52] where it's like, oh,
+[48:54] like I keep saying, yeah,
+[48:57] oh, people that watch HGTV,
+[48:58] they will visit home improvements,
+[49:00] so let's do,
+[49:00] let's do an experiment
+[49:01] where people that watch HGTV,
+[49:04] we put them in home improvement
+[49:05] and see if it performs better.
+[49:08] Yep.
+[49:08] So,
+[49:09] but I haven't found a good,
+[49:13] still haven't found a good use case for that, so.
+[49:15] I think that makes sense.
+[49:18] And then later on,
+[49:18] we can model it, you know,
+[49:20] or something, or,
+[49:22] but,
+[49:23] so, yep,
+[49:24] that's
+[49:26] all I got.
+[49:28] So I think,
+[49:29] I wonder if there's a good way
+[49:30] to do this,
+[49:30] like to do that at a larger scale,
+[49:34] to be like, okay,
+[49:35] you know,
+[49:36] like these genres
+[49:38] have the highest affinity
+[49:41] for these verticals,
+[49:43] higher than baseline,
+[49:44] at least.
+[49:45] So then it gives you a good argument
+[49:47] to bump them up
+[49:49] or something,
+[49:51] like something to learn from that,
+[49:53] for sure.
+[49:55] And that's another thing we were talking about,
+[49:57] because it'd be cool,
+[49:58] you know,
+[49:59] because Bitstream is like,
+[50:00] real time,
+[50:02] it should be cool
+[50:02] if there was a rule like that,
+[50:04] we could add it into our real-time conquesting.
+[50:07] And like immediately,
+[50:09] and that's kind of why I chose NBA,
+[50:11] because it's like,
+[50:11] oh, you're going to be sitting there
+[50:12] three hours watching an NBA game.
+[50:15] And I know like a lot of,
+[50:17] a lot of our stuff runs hourly,
+[50:19] you know?
+[50:20] So I might not be able to catch you
+[50:22] like right when you're watching,
+[50:24] started to watch the NBA game,
+[50:25] but I might be able to catch you at halftime,
+[50:27] like, oh, here,
+[50:28] here's a pizza place,
+[50:29] you know?
+[50:30] Go,
+[50:31] go order your pizza at halftime.
+[50:35] You know,
+[50:36] that might give us enough time
+[50:38] to serve up that ad,
+[50:40] but.
+[50:42] It's a total aside,
+[50:44] but I was in the thing
+[50:46] that I was playing around with,
+[50:47] where you get the creative,
+[50:49] like the actual video file,
+[50:51] and like try to pull out keywords from that.
+[50:56] I happened upon one that was NBA related,
+[51:00] where,
+[51:01] the advertiser,
+[51:02] their product that they sold was like a
+[51:06] vaporizer,
+[51:09] like scent machine.
+[51:11] Like it,
+[51:12] it gives you a scent and it's branded by the NBA team.
+[51:17] So like you would have a Phoenix suns branded,
+[51:20] like air freshener,
+[51:23] basically.
+[51:24] And it has the scent chosen by the suns.
+[51:28] So it's like,
+[51:29] oh,
+[51:29] it's associated,
+[51:30] with your team.
+[51:32] This smell is associated.
+[51:34] I was like,
+[51:35] are they like trying to say like,
+[51:36] it's the smell of the arena?
+[51:41] I don't really understand the point of this,
+[51:44] but,
+[51:45] and it's like,
+[51:45] it's activated during the game.
+[51:47] So then during the game,
+[51:48] you get the smell.
+[51:50] Thought that was weird.
+[51:51] Like when I was driving to Denver,
+[51:53] uh,
+[51:54] you see the like mattress,
+[51:56] the official mattress of the Denver nuggets.
+[51:59] And you're like,
+[51:59] what does that even mean?
+[52:00] Like,
+[52:01] yeah,
+[52:01] this was like the,
+[52:02] it was NBA associated.
+[52:05] It was like the official sent of like the NBA or something.
+[52:10] Yeah.
+[52:10] That's hilarious.
+[52:11] Like I found a table that is,
+[52:15] that does do that gets metrics at a creative level,
+[52:19] by the way,
+[52:20] they have some by creative by day.
+[52:23] That makes sense.
+[52:24] So if you need features for creatives,
+[52:26] you know,
+[52:26] we,
+[52:27] we could do that.
+[52:30] So,
+[52:30] yeah.
+[52:31] Okay.
+[52:31] So,
+[52:31] Oh man.
+[52:32] Yeah.
+[52:32] So,
+[52:32] I don't want to keep you guys over time,
+[52:33] 
+[52:33] 
+[52:33] sounds like we got,
+[52:34] we're still pursuing two things.
+[52:35] 
+[52:35] so I think,
+[52:36] yeah,
+[52:36] Malachi,
+[52:37] I'll help you get those features going.
+[52:38] So if you could build the,
+[52:39] like take that as an action item.
+[52:40] Yep.
+[52:41] 
+[52:41] I don't know.
+[52:42] You should make tickets for him.
+[52:43] You know,
+[52:44] I don't know if you're busy for this sprint,
+[52:45] but I could kind of walk you through it and then you get an idea for
+[52:47] like,
+[52:48] you know,
+[52:49] like,
+[52:50] you know,
+[52:51] like,
+[52:52] like,
+[52:53] like,
+[52:54] like,
+[52:55] like,
+[52:56] like,
+[52:57] like,
+[53:00] like how to do it.
+[53:02] That Alex,
+[53:03] do you want to keep going down the route of DS 13 DS 19?
+[53:06] Yeah.
+[53:07] I think there's like two things here.
+[53:09] I think one,
+[53:10] I will do a similar analysis on PMPs now that I have like the name that
+[53:15] they represent that might be valuable.
+[53:17] Yeah.
+[53:18] And then do you want me to just like pick a vertical that might fit
+[53:23] and then just try and do some analysis of like how many of these IPS
+[53:27] would be net new for this vertical?
+[53:29] And like,
+[53:30] rate look like that seems maybe we're checking for one vertical yeah i think so because that would be
+[53:37] a good way to experiment just you know pick one advertiser in this one vertical and see if we could
+[53:42] boost them yeah okay yeah even as business logic for now or you know like i said i don't think
+[53:51] like uh given the signals that we have probably overkill doing anything outside of like some
+[53:58] reasonable business rules yeah yeah coming out all this bitter stuff there's a lot of stuff here
+[54:06] yeah giving you many ideas like of what we could do like there was an example that i had before
+[54:12] where it's kind of like the super bowl thing like it's expensive to advertise on the super bowl
+[54:19] but if you can but everyone watches the super bowl so it's not a very good example
+[54:23] or be like advertise to the we can target everyone who watched the super bowl
+[54:29] because the version version version version version version version version version version
+[54:35] version version version version version version version version version version version version
+[54:42] version version version version version version version version version version version version
+[54:47] version version version version version version version version version version version
+[54:52] version version version version version version version version version version version version
+[54:56] oh, I want to advertise to everyone who watched March Madness over the weekend.
+[55:01] I want to target that audience.
+[55:03] What would we say right now if someone said that,
+[55:07] if an advertiser said that to us?
+[55:09] Yeah.
+[55:09] Another way to do that Super Bowl targeting that I've seen in the past is
+[55:15] here are all the people who did watch the Super Bowl that we see,
+[55:20] but like a day later.
+[55:21] And now you can hit them in a much cheaper content.
+[55:24] Totally.
+[55:25] Same idea.
+[55:26] Yeah.
+[55:27] We should have like a feature for that, but.
+[55:34] Okay.
+[55:35] One other thing I wanted to point out,
+[55:37] I'll ask Rogas for the new things, but I still owe him.
+[55:42] I don't want to put pressure on you, Matt,
+[55:43] but I owe him like some sort of analysis for the things he gave us already
+[55:49] where, where we say, oh, these, these are great.
+[55:54] You know,
+[55:54] the version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version version
+[56:24] the DDP people
+[56:26] are, you know,
+[56:28] there's a lot of crossover
+[56:30] between what we get from Augment or Log
+[56:32] and DDP, so I'll have to analyze
+[56:34] that.
+[56:36] And I have a ticket, yeah, Sean, like
+[56:38] Sean mentioned, I do have a ticket to add
+[56:40] them to SiteVisit Signal anyway,
+[56:42] so, yeah.
+[56:46] I see.
+[56:46] But I can do that.
+[56:49] After seeing what
+[56:50] Malachi did, I'm trying to figure out
+[56:52] how different is it from what Malachi
+[56:54] did that I need to do?
+[56:56] More specific on just what he added?
+[57:02] Or, sorry,
+[57:03] the stuff Malachi
+[57:04] talked about, everything
+[57:06] has already been in Augment or Log.
+[57:08] Yes.
+[57:09] The stuff
+[57:11] or what I owe Rogus is like
+[57:14] I had him add those three fields
+[57:16] for the page.
+[57:17] Is that what you're...
+[57:18] That's what I'm asking.
+[57:20] I don't
+[57:22] know that Malachi used that, so I didn't
+[57:24] know.
+[57:26] Is there anything that I already showed, Ryan,
+[57:28] that can be helpful there?
+[57:31] The main thing is
+[57:32] the coverage of just like, yeah, we have
+[57:34] this for all these PC things and
+[57:37] CTV,
+[57:38] obviously less coverage, that kind of thing.
+[57:41] I'll take whatever I can get.
+[57:42] Whatever
+[57:42] you could analyze
+[57:46] where, yeah, you're looking at
+[57:48] the page field specifically,
+[57:51] the referring URL,
+[57:52] and he gave us the IAB categories.
+[57:55] Anything you give me
+[57:56] that's like, hey, this is a huge win that I could give
+[57:58] to him and we could communicate it out
+[58:00] like it's a huge win,
+[58:02] I'll take. Then I feel
+[58:04] he'll be more willing to add
+[58:06] all the other things we want.
+[58:09] So, yeah.
+[58:10] Makes sense.
+[58:12] Like you said, let's hold off on
+[58:14] adding any of the stuff that I mentioned now
+[58:16] just because I think there's probably
+[58:18] still some analysis on
+[58:19] like, okay, this is all net new.
+[58:22] And it increases the size of the vertical
+[58:24] and they visit highly. So now we want to
+[58:26] like, you know, build on that.
+[58:28] Yeah, but I do.
+[58:30] I do want to do all. I do want to add all those.
+[58:32] I could see the end.
+[58:34] But Rogas also knows that they're empty
+[58:36] a lot because a lot of those fields, I guess, are empty.
+[58:39] In fact, I was in a meeting.
+[58:40] I don't want to keep you guys too long, but where they
+[58:42] were wanting to know,
+[58:44] I guess certain advertisers
+[58:46] block certain, or certain
+[58:48] networks block certain
+[58:50] categories of advertisers.
+[58:52] They were saying like NBC right now
+[58:54] blocks
+[58:55] political ads and
+[58:58] vitamin and health supplements because they're
+[59:00] getting sued for some reason.
+[59:03] And so somebody was asking
+[59:04] Rogas if he could
+[59:06] add like this blocked category
+[59:08] field, but he said a lot of times
+[59:10] it was just empty.
+[59:12] It didn't give a lot of value.
+[59:14] I wonder if like
+[59:16] the extra content that I
+[59:17] showed from the RTV spec is going to have
+[59:20] the same kind of coverage as the IAB
+[59:22] categories.
+[59:23] But still like 20%
+[59:25] of Augmenter log is
+[59:27] pretty good.
+[59:29] But anyway, yeah, we'll get all the requests into one
+[59:32] and I'll, if we give
+[59:33] Rogas a big win with like what he already
+[59:36] added for us, and then I think he'd be more likely
+[59:38] to help us out.
+[59:41] Cool.
+[59:43] All right.
+[59:45] Take it easy, guys.
+[59:46] Thanks, everybody.
+[59:48] Take care.
+[59:48] Thanks.

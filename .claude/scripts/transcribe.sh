@@ -134,9 +134,9 @@ if [[ "$PROVIDER" == "openai" ]]; then
         TEMP_DIR=$(mktemp -d)
         trap 'rm -rf "$TEMP_DIR"' EXIT
 
-        # Split into 24-minute chunks (well under 25MB for most audio)
+        # Split into 20-minute chunks (under 25MB and 1400s model limit)
         # Use ffmpeg to split without re-encoding
-        ffmpeg -i "$AUDIO_FILE" -f segment -segment_time 1440 -c copy \
+        ffmpeg -i "$AUDIO_FILE" -f segment -segment_time 1200 -c copy \
             -reset_timestamps 1 "$TEMP_DIR/chunk_%03d.m4a" 2>/dev/null
 
         CHUNK_FILES=("$TEMP_DIR"/chunk_*.m4a)
@@ -158,8 +158,7 @@ if [[ "$PROVIDER" == "openai" ]]; then
                 -H "Authorization: Bearer $OPENAI_API_KEY" \
                 -F "file=@$CHUNK" \
                 -F "model=gpt-4o-transcribe" \
-                -F "response_format=verbose_json" \
-                -F "timestamp_granularities[]=segment" \
+                -F "response_format=json" \
                 -F "language=en")
 
             # Check for API errors
@@ -169,17 +168,14 @@ if [[ "$PROVIDER" == "openai" ]]; then
                 exit 1
             fi
 
-            # Extract segments with timestamps, applying offset
+            # Extract text from JSON response, applying offset timestamp
             CHUNK_TEXT=$(python3 -c "
 import sys, json
 data = json.loads(sys.stdin.read())
 offset = $OFFSET_SECONDS
-lines = []
-for seg in data.get('segments', []):
-    t = seg['start'] + offset
-    ts = f'[{int(t//60):02d}:{int(t%60):02d}]'
-    lines.append(f'{ts} {seg[\"text\"].strip()}')
-print('\n'.join(lines))
+text = data.get('text', '').strip()
+ts = f'[{int(offset//60):02d}:{int(offset%60):02d}]'
+print(f'{ts} {text}')
 " <<< "$RESPONSE")
 
             if [[ -n "$FULL_TRANSCRIPT" ]]; then
@@ -203,8 +199,7 @@ print('\n'.join(lines))
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -F "file=@$AUDIO_FILE" \
             -F "model=gpt-4o-transcribe" \
-            -F "response_format=verbose_json" \
-            -F "timestamp_granularities[]=segment" \
+            -F "response_format=json" \
             -F "language=en")
 
         # Check for API errors
@@ -214,16 +209,13 @@ print('\n'.join(lines))
             exit 1
         fi
 
-        # Extract segments with timestamps
+        # Extract text from JSON response
         python3 -c "
 import sys, json
 data = json.loads(sys.stdin.read())
-lines = []
-for seg in data.get('segments', []):
-    t = seg['start']
-    ts = f'[{int(t//60):02d}:{int(t%60):02d}]'
-    lines.append(f'{ts} {seg[\"text\"].strip()}')
-print('\n'.join(lines))
+text = data.get('text', '').strip()
+# Split into paragraphs for readability
+print(text)
 " <<< "$RESPONSE" > "$OUTPUT_FILE"
 
         END_TIME=$(date +%s)
