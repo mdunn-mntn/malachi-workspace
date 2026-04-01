@@ -1,0 +1,22 @@
+Test it.
+Do you have your Astro set up locally?
+Astro dev?
+I did at some point in time, but I'd have to check.
+I think so.
+I think it is because I did it before.
+Well, here, I'll just give you this to run in Astro dev locally.
+Do this.
+Model upload.
+So once you have all your code written, do model upload and then you can just do Astro dev restart or whatever.
+And then you can just run the Airflow DAG and it'll output everything correctly.
+Like I was showing you the different get paths or file paths or whatever.
+But if you want to run one model only, you can use this.
+Just model run.
+If you don't want to run it with Airflow, you just want to run one model, just one file at a time and use that.
+Okay.
+Perfect, man.
+Well, I'm going to go give this a shot.
+I'll throw it in as a ticket and then we'll go from there.
+Yeah, so what's up?
+What else did you want to talk about?
+Oh.
