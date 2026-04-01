@@ -414,9 +414,19 @@ Used `audience_segment_archives` to find the previous audience on the **same cam
 
 **Other 5 beta advertisers**: Dropped from analysis — Global Rescue, Amsterdam Printing, Apollo.io, Apolla have no BUK audience attached. Experience Scottsdale switched only 2 days ago (insufficient post data).
 
-**Open question for Alex**: Is the impression drop purely from smaller BUK audience, or were there other confounding factors (budget changes, pacing, seasonality)?
+**Alex meeting (2026-04-01)**: Alex's numbers differ slightly — he uses `sum_by_campaign_group_by_day` from Greenplum with `clicks + views + competing_views` as visits. We used `sum_by_campaign_by_day` in BQ with `views` only. Updated analysis with both definitions:
 
-**Output:** `artifacts/buk_customer_audience_tracking.csv`
+| Advertiser | Period | IVR (views only) | IVR (Alex def) | IVR Change (Alex def) |
+|---|---|---|---|---|
+| West Bend | Pre-BUK | 0.40% | 0.73% | |
+| West Bend | Post-BUK | 1.32% | 2.77% | **+278%** |
+| Samy's Camera | Pre-BUK | 1.54% | 3.70% | |
+| Samy's Camera | Post-BUK | 2.68% | 6.05% | **+64%** |
+
+Alex noted the impression drop may have many confounding factors beyond just audience size — not necessarily a clean size-performance signal.
+
+**Queries:** `queries/ti_797_beta_pre_post_performance.sql` (BQ equivalent of Alex's Greenplum query)
+**Output:** `artifacts/buk_customer_audience_tracking.csv` / `artifacts/buk_customer_audience_tracking.xlsx`
 
 **Phase B: TI-704 — Offline BUK Evaluation via Fangorn Experiment** (actionable now)
 - Score treatment and control IPs from the current Fangorn experiment with BUK DCG
