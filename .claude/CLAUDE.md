@@ -136,6 +136,8 @@ When creating or editing any presentation file (slides, decks, `*_presentation.m
 - Reciprocity (give insight freely)
 - Unity ("we" not "I")
 
+**Default critique process:** After finishing or substantially revising any `*_presentation.md`, run the critique prompt at `claude-prompts/presentation_critique.md` against it. This is the default — do not skip it. The critique scores 10 areas (Power Line, Opening, Narrative, Story, Data Persuasion, Cialdini, Billboard Test, Close, Audience Adaptation, Boldness) on a 1-5 scale and produces a prioritized fix list. Apply the fixes before considering the presentation done.
+
 ## Codex Review
 Codex will review your code after you're done. Write with that in mind — keep code clean, well-structured, and ready for automated review.
 
