@@ -20,27 +20,33 @@ Fangorn's feature store needs more signals. We have 25+ log tables but don't kno
 
 1. Scanned all 25 log tables. Identified unique columns per table programmatically.
 2. 6 tables have unique signal — built and tested daily snapshot queries for each.
-3. Joined into a training dataset (117K IPs, 2026-03-29) with IVR labels from clickpass_log.
-4. Trained XGBoost. Measured importance via gain, weight, cover, composite rank, and SHAP.
+3. Joined into a training dataset — 372K (IP, advertiser) pairs. Features from 2026-03-28, labels from 2026-03-29. No temporal leakage.
+4. Trained XGBoost. Ranked features by SHAP (mean absolute Shapley value).
 5. Split pre-visit (targeting) vs feedback (retraining) features to avoid leakage.
-6. Investigated 1P vs 3P segment composition — 97% of mntn_segments are our own outputs.
+6. Ran two models: all features (EXISTING + NEW) and NEW-only (EXISTING removed).
+7. Investigated 1P vs 3P segment composition — 97% of mntn_segments are our own outputs.
+8. Rebuilt presentation using Presentation Playbook framework — restructured from report to persuasion format.
 
 ## 4. Key Findings
 
-- **66 features identified** across 6 tables. 9 are our own system outputs (EXISTING), 35 are genuinely new (NEW), 17 are post-visit feedback, 5 have zero importance.
-- **Scoped model AUC: 0.842** (all features) / **0.784** (NEW features only). Label = visited THIS advertiser. 363K (IP, advertiser) pairs, 0.95% visit rate.
-- **Top 3 genuinely new features (NEW-only model):** device model diversity (win_logs, SHAP 0.598), total wins (win_logs, 0.390), clearing price (win_logs, 0.337).
-- **Content genre features** carry signal but are lower-ranked. To test advertiser-specificity, need advertiser-side features (vertical, category) interacted with IP content data.
+- **46 pre-visit features identified** across 6 tables. 9 are our own system outputs (EXISTING), 37 are genuinely new (NEW). 17 additional post-visit feedback features ranked separately.
+- **Temporally-correct model AUC: 0.831** (all features) / **0.777** (NEW features only). Label = visited THIS advertiser. 372K (IP, advertiser) pairs, 0.84% visit rate. Features from day N-1, labels from day N.
+- **Lift at actionable thresholds:** Top 1% of IPs = 8.2% visit rate = 10x lift. NEW-only: top 1% = 5.7% = 7x lift. Note: all IPs were pre-selected by Fangorn targeting, so lift is *within the Fangorn-selected pool*, not vs random population.
+- **Top NEW features (NEW-only model):** device model diversity (win_logs, SHAP 0.413 — household size proxy), video format (ci, 0.341), content domain breadth (augmentor_log, 0.320), video placement (augmentor_log, 0.253), clearing price (win_logs, 0.245).
+- **Content genre features rose significantly** with full-day BAE data — `bae_pct_ent` jumped from #26 to #8. Entertainment-heavy IPs visit less (↓ direction). Comedy, news, drama, sports all carry signal.
+- **Temporal leakage was real but small:** V1 (same-day) AUC 0.842 → V2 (day N-1/N) AUC 0.831. Rankings stable across correction.
 - **guid_log/conversion_log features** produce AUC 0.999 but this is tautological — guid_log only fires on site visits. Use for retraining, not prediction.
-- **Known limitations:** same-day temporal leakage, 1-hour augmentor/BAE samples, features are IP-level not (IP, advertiser)-level, single day with no CIs. See presentation for full details.
+- **Known limitations:** features are IP-level not (IP, advertiser)-level, 4-hour augmentor_log sample, single day with no CIs, ci_pct_new may be data-availability confound. See presentation for full details.
 
-Full ranked table of all 66 features with methodology: [ti_790_presentation.md](artifacts/ti_790_presentation.md)
+Full ranked table with methodology: [ti_790_presentation.md](artifacts/ti_790_presentation.md)
+Presentation-format version: [ti_790_presentation_new.md](artifacts/ti_790_presentation_new.md)
 
 ## 5. Deliverables
 
 | File | Purpose |
 |------|---------|
-| [ti_790_presentation.md](artifacts/ti_790_presentation.md) | **The shareable doc.** All 66 features ranked, takeaways, next steps, methodology. |
+| [ti_790_presentation.md](artifacts/ti_790_presentation.md) | **Reference doc.** All 46 pre-visit features ranked, methodology, glossary, known limitations. |
+| [ti_790_presentation_new.md](artifacts/ti_790_presentation_new.md) | **The shareable presentation.** Playbook-structured: Power Line, lift table, top 10 features, story, call to action. Full tables in appendix. |
 | [ti_790_project_plan.md](artifacts/ti_790_project_plan.md) | Phased execution plan for the TI-789 epic |
 | [ti_790_cross_table_unique_columns.md](artifacts/ti_790_cross_table_unique_columns.md) | Supporting: programmatic unique-column analysis of all 25 tables |
 | [ti_790_xgboost_split_analysis.py](artifacts/ti_790_xgboost_split_analysis.py) | Python script that produced all results |
@@ -57,7 +63,7 @@ Full ranked table of all 66 features with methodology: [ti_790_presentation.md](
 ## 7. Documentation Updates
 
 - `knowledge/data_knowledge.md` — Added Feature Store section: pre-visit vs feedback leakage, bronze-only fields, content_genre normalization, cost_impression_log gotchas, scale reference
-- `knowledge/experimentation.md` — Added Feature Importance Methodology Lessons section
+- `knowledge/experimentation.md` — Added Feature Importance Methodology Lessons section. Updated 2026-04-01: temporal leakage lesson, sample selection bias in targeting-system evaluation, content genre sampling sensitivity, fillna(0) vs NaN for ratios, corrected AUC numbers to v2.
 
 ## 8. Open Items
 
