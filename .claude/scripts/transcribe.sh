@@ -1,16 +1,16 @@
 #!/bin/bash
-# transcribe.sh — Transcribe Zoom meeting recordings using faster-whisper (local)
+# transcribe.sh — Transcribe Zoom meeting recordings using local Whisper or GPT-4o Transcribe
 #
 # Usage:
 #   bash .claude/scripts/transcribe.sh "2026-03-30 11.33.01 Discuss Experiment with Causal Impact Meeting"
-#   bash .claude/scripts/transcribe.sh "2026-03-30 11.33.01 Discuss Experiment with Causal Impact Meeting" --ticket ti_504
-#   bash .claude/scripts/transcribe.sh /path/to/audio.m4a
+#   bash .claude/scripts/transcribe.sh /path/to/audio.m4a --provider openai
 #   bash .claude/scripts/transcribe.sh /path/to/audio.m4a --ticket ti_504
 #
 # Options:
-#   --ticket TI_XXX   Save output to tickets/TI_XXX/meetings/ instead of current directory
-#   --model MODEL     Whisper model size (default: large-v3). Options: tiny, base, small, medium, large-v3
-#   --output FILE     Custom output filename (without extension)
+#   --ticket TI_XXX       Save output to tickets/TI_XXX/meetings/ instead of current directory
+#   --model MODEL         Whisper model size (default: large-v3). Options: tiny, base, small, medium, large-v3
+#   --provider PROVIDER   Transcription provider: local (default) or openai (GPT-4o Transcribe)
+#   --output FILE         Custom output filename (without extension)
 #
 # Output: .txt transcript with timestamps and speaker segments
 
@@ -19,6 +19,7 @@ set -euo pipefail
 ZOOM_DIR="$HOME/Documents/Zoom"
 WORKSPACE="/Users/malachi/Developer/work/mntn/workspace"
 MODEL="large-v3"
+PROVIDER="local"
 TICKET=""
 OUTPUT_NAME=""
 
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
             MODEL="$2"
             shift 2
             ;;
+        --provider)
+            PROVIDER="$2"
+            shift 2
+            ;;
         --output)
             OUTPUT_NAME="$2"
             shift 2
@@ -46,7 +51,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$POSITIONAL" ]]; then
-    echo "Usage: bash transcribe.sh <zoom-folder-name|audio-file> [--ticket ti_xxx] [--model large-v3]"
+    echo "Usage: bash transcribe.sh <zoom-folder-name|audio-file> [--ticket ti_xxx] [--provider local|openai]"
+    echo ""
+    echo "Providers:"
+    echo "  local   — mlx-whisper large-v3 on Apple Silicon (free, 7.2% WER)"
+    echo "  openai  — GPT-4o Transcribe via API (\$0.36/hr, 5.4% WER)"
     echo ""
     echo "Available Zoom recordings:"
     ls "$ZOOM_DIR" 2>/dev/null || echo "  No Zoom folder found at $ZOOM_DIR"
@@ -78,7 +87,8 @@ else
 fi
 
 echo "Audio file: $AUDIO_FILE"
-echo "Model: $MODEL"
+echo "Provider: $PROVIDER"
+[[ "$PROVIDER" == "local" ]] && echo "Model: $MODEL"
 
 # Determine output path
 if [[ -n "$TICKET" ]]; then
@@ -106,8 +116,128 @@ echo "Output: $OUTPUT_FILE"
 echo ""
 echo "Transcribing..."
 
-# Run transcription using mlx-whisper (Apple Silicon native)
-/opt/homebrew/opt/python@3.11/bin/python3.11 << 'PYTHON_SCRIPT' - "$AUDIO_FILE" "$OUTPUT_FILE" "$MODEL"
+if [[ "$PROVIDER" == "openai" ]]; then
+    # GPT-4o Transcribe via OpenAI API
+    if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+        echo "Error: OPENAI_API_KEY not set. Add it to ~/.zshrc"
+        exit 1
+    fi
+
+    FILE_SIZE=$(stat -f%z "$AUDIO_FILE" 2>/dev/null || stat -c%s "$AUDIO_FILE" 2>/dev/null)
+    FILE_SIZE_MB=$((FILE_SIZE / 1048576))
+
+    # OpenAI has a 25MB file size limit per request
+    if [[ $FILE_SIZE_MB -gt 25 ]]; then
+        echo "File is ${FILE_SIZE_MB}MB (>25MB limit). Splitting into chunks..."
+
+        # Create temp directory for chunks
+        TEMP_DIR=$(mktemp -d)
+        trap 'rm -rf "$TEMP_DIR"' EXIT
+
+        # Split into 24-minute chunks (well under 25MB for most audio)
+        # Use ffmpeg to split without re-encoding
+        ffmpeg -i "$AUDIO_FILE" -f segment -segment_time 1440 -c copy \
+            -reset_timestamps 1 "$TEMP_DIR/chunk_%03d.m4a" 2>/dev/null
+
+        CHUNK_FILES=("$TEMP_DIR"/chunk_*.m4a)
+        echo "Split into ${#CHUNK_FILES[@]} chunks"
+
+        FULL_TRANSCRIPT=""
+        CHUNK_NUM=0
+        OFFSET_SECONDS=0
+
+        for CHUNK in "${CHUNK_FILES[@]}"; do
+            CHUNK_NUM=$((CHUNK_NUM + 1))
+            echo "Transcribing chunk $CHUNK_NUM/${#CHUNK_FILES[@]}..."
+
+            # Get chunk duration for offset calculation
+            CHUNK_DURATION=$(ffprobe -v error -show_entries format=duration \
+                -of default=noprint_wrappers=1:nokey=1 "$CHUNK" 2>/dev/null | cut -d. -f1)
+
+            RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
+                -H "Authorization: Bearer $OPENAI_API_KEY" \
+                -F "file=@$CHUNK" \
+                -F "model=gpt-4o-transcribe" \
+                -F "response_format=verbose_json" \
+                -F "timestamp_granularities[]=segment" \
+                -F "language=en")
+
+            # Check for API errors
+            ERROR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
+            if [[ -n "$ERROR" ]]; then
+                echo "Error from OpenAI API: $ERROR"
+                exit 1
+            fi
+
+            # Extract segments with timestamps, applying offset
+            CHUNK_TEXT=$(python3 -c "
+import sys, json
+data = json.loads(sys.stdin.read())
+offset = $OFFSET_SECONDS
+lines = []
+for seg in data.get('segments', []):
+    t = seg['start'] + offset
+    ts = f'[{int(t//60):02d}:{int(t%60):02d}]'
+    lines.append(f'{ts} {seg[\"text\"].strip()}')
+print('\n'.join(lines))
+" <<< "$RESPONSE")
+
+            if [[ -n "$FULL_TRANSCRIPT" ]]; then
+                FULL_TRANSCRIPT="$FULL_TRANSCRIPT"$'\n'"$CHUNK_TEXT"
+            else
+                FULL_TRANSCRIPT="$CHUNK_TEXT"
+            fi
+
+            OFFSET_SECONDS=$((OFFSET_SECONDS + CHUNK_DURATION))
+        done
+
+        echo "$FULL_TRANSCRIPT" > "$OUTPUT_FILE"
+        echo ""
+        echo "Done. Total duration: ~$((OFFSET_SECONDS / 60)) min"
+    else
+        echo "File is ${FILE_SIZE_MB}MB — sending directly to API..."
+
+        START_TIME=$(date +%s)
+
+        RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -F "file=@$AUDIO_FILE" \
+            -F "model=gpt-4o-transcribe" \
+            -F "response_format=verbose_json" \
+            -F "timestamp_granularities[]=segment" \
+            -F "language=en")
+
+        # Check for API errors
+        ERROR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
+        if [[ -n "$ERROR" ]]; then
+            echo "Error from OpenAI API: $ERROR"
+            exit 1
+        fi
+
+        # Extract segments with timestamps
+        python3 -c "
+import sys, json
+data = json.loads(sys.stdin.read())
+lines = []
+for seg in data.get('segments', []):
+    t = seg['start']
+    ts = f'[{int(t//60):02d}:{int(t%60):02d}]'
+    lines.append(f'{ts} {seg[\"text\"].strip()}')
+print('\n'.join(lines))
+" <<< "$RESPONSE" > "$OUTPUT_FILE"
+
+        END_TIME=$(date +%s)
+        ELAPSED=$((END_TIME - START_TIME))
+        echo ""
+        echo "Done in ${ELAPSED}s"
+    fi
+
+    LINES=$(wc -l < "$OUTPUT_FILE" | tr -d ' ')
+    echo "Saved to $OUTPUT_FILE ($LINES segments)"
+
+else
+    # Local mlx-whisper transcription (Apple Silicon native)
+    /opt/homebrew/opt/python@3.11/bin/python3.11 << 'PYTHON_SCRIPT' - "$AUDIO_FILE" "$OUTPUT_FILE" "$MODEL"
 import sys
 import time
 
@@ -157,6 +287,7 @@ print(f"\nDone in {elapsed:.1f}s ({elapsed/60:.1f} min)")
 print(f"Saved to {output_file}")
 print(f"Speed: {duration/elapsed:.1f}x realtime")
 PYTHON_SCRIPT
+fi
 
 echo ""
 echo "Transcription complete: $OUTPUT_FILE"
