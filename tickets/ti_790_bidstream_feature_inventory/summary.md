@@ -51,9 +51,17 @@ Presentation-format version: [ti_790_presentation_new.md](artifacts/ti_790_prese
 | [ti_790_project_plan.md](artifacts/ti_790_project_plan.md) | Phased execution plan for the TI-789 epic |
 | [ti_790_cross_table_unique_columns.md](artifacts/ti_790_cross_table_unique_columns.md) | Supporting: programmatic unique-column analysis of all 25 tables |
 | [ti_790_xgboost_split_analysis.py](artifacts/ti_790_xgboost_split_analysis.py) | Python script that produced all results |
+| [ti_790_xgboost_scoped.py](artifacts/ti_790_xgboost_scoped.py) | Scoped XGBoost variant |
+| [ti_790_nba_fast_food_pmp_analysis.py](artifacts/ti_790_nba_fast_food_pmp_analysis.py) | Ryan's PMP deal overlap analysis (NBA vs HGTV vs fast food) |
+| [ti_791_bidstream_investigation_alex.py](artifacts/ti_791_bidstream_investigation_alex.py) | Alex Knorr's bidstream domain/IAB investigation script |
+| [ti_797_customer_audience_tracking.xlsx](artifacts/ti_797_customer_audience_tracking.xlsx) | Alex's BUK customer audience tracking spreadsheet |
+| [aug_log_ip_vertical_id_hourly.py](artifacts/aug_log_ip_vertical_id_hourly.py) | Ryan's template pipeline (local reference copy) |
 | [queries/](queries/) | 6 daily snapshot queries + combined training dataset query |
 | [ti_790_shap_pre_visit.png](outputs/ti_790_shap_pre_visit.png) | SHAP summary plot |
 | [ti_790_all_features_ranked.csv](outputs/ti_790_all_features_ranked.csv) | Raw feature rankings CSV |
+| [feature_store_naming_conventions.pdf](../../documentation/docs/feature_store_naming_conventions.pdf) | Team-wide naming standards (moved to documentation/) |
+| [feature_store_rfd.pdf](../../documentation/docs/feature_store_rfd.pdf) | Feature store RFD — architecture decision doc (moved to documentation/) |
+| [dataproc_local_astronomer_guide.pdf](../../documentation/docs/dataproc_local_astronomer_guide.pdf) | Dataproc + Astronomer local setup guide (moved to documentation/) |
 
 ## 6. Meeting Outcomes (2026-04-01 Sync)
 
