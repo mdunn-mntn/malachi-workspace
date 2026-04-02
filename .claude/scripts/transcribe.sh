@@ -55,11 +55,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$POSITIONAL" ]]; then
-    echo "Usage: bash transcribe.sh <zoom-folder-name|audio-file> [--ticket ti_xxx] [--provider local|openai]"
+    echo "Usage: bash transcribe.sh <zoom-folder-name|audio-file> [--ticket ti_xxx] [--provider both|openai|local]"
     echo ""
     echo "Providers:"
-    echo "  openai  — GPT-4o Transcribe via API (default, \$0.36/hr, 5.4% WER, no hallucinations)"
-    echo "  local   — mlx-whisper large-v3 on Apple Silicon (free, 7.2% WER, may hallucinate)"
+    echo "  both    — Run both, pick the one with less repetition (default)"
+    echo "  openai  — GPT-4o Transcribe via API only (\$0.36/hr)"
+    echo "  local   — mlx-whisper large-v3 on Apple Silicon only (free)"
     echo ""
     echo "Available Zoom recordings:"
     ls "$ZOOM_DIR" 2>/dev/null || echo "  No Zoom folder found at $ZOOM_DIR"
@@ -109,93 +110,78 @@ fi
 
 # Determine output filename
 if [[ -z "$OUTPUT_NAME" ]]; then
-    # Extract meeting name from Zoom folder or filename
     BASENAME=$(basename "$(dirname "$AUDIO_FILE")" 2>/dev/null || basename "$AUDIO_FILE")
-    # Clean up: lowercase, underscores, remove date prefix for readability
     OUTPUT_NAME=$(echo "$BASENAME" | sed 's/[^a-zA-Z0-9 _-]//g' | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | sed 's/__*/_/g' | sed 's/^_//;s/_$//')
 fi
 
 OUTPUT_FILE="$OUTPUT_DIR/${OUTPUT_NAME}.txt"
 echo "Output: $OUTPUT_FILE"
-echo ""
-echo "Transcribing..."
 
-if [[ "$PROVIDER" == "openai" ]]; then
-    # GPT-4o Transcribe via OpenAI API
-    # Chunks files >25MB or >1400s to stay within API limits
+# Get audio metadata once
+FILE_SIZE=$(stat -f%z "$AUDIO_FILE" 2>/dev/null || stat -c%s "$AUDIO_FILE" 2>/dev/null)
+FILE_SIZE_MB=$((FILE_SIZE / 1048576))
+TOTAL_DURATION=$(ffprobe -v error -show_entries format=duration \
+    -of default=noprint_wrappers=1:nokey=1 "$AUDIO_FILE" 2>/dev/null | cut -d. -f1)
+DURATION_MIN=$((${TOTAL_DURATION:-0} / 60))
+
+# Temp dir for candidate transcripts
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+
+# ── OpenAI transcription ──────────────────────────────────────
+transcribe_openai() {
+    local out_file="$1"
     if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-        echo "Error: OPENAI_API_KEY not set. Add it to ~/.zshrc"
-        exit 1
+        echo "[openai] OPENAI_API_KEY not set — skipping"
+        return 1
     fi
 
-    START_TIME=$(date +%s)
+    local start_time=$(date +%s)
 
-    FILE_SIZE=$(stat -f%z "$AUDIO_FILE" 2>/dev/null || stat -c%s "$AUDIO_FILE" 2>/dev/null)
-    FILE_SIZE_MB=$((FILE_SIZE / 1048576))
-
-    # Get total duration
-    TOTAL_DURATION=$(ffprobe -v error -show_entries format=duration \
-        -of default=noprint_wrappers=1:nokey=1 "$AUDIO_FILE" 2>/dev/null | cut -d. -f1)
-
-    # Chunk if file exceeds API limits (25MB or 1400s)
     if [[ $FILE_SIZE_MB -gt 24 ]] || [[ ${TOTAL_DURATION:-0} -gt 1300 ]]; then
-        TEMP_DIR=$(mktemp -d)
-        trap 'rm -rf "$TEMP_DIR"' EXIT
-
-        # 20-min chunks: well under both 25MB and 1400s limits
+        local chunk_dir="$WORK_DIR/chunks"
+        mkdir -p "$chunk_dir"
         ffmpeg -i "$AUDIO_FILE" -f segment -segment_time 1200 -c copy \
-            -reset_timestamps 1 "$TEMP_DIR/chunk_%03d.m4a" 2>/dev/null
+            -reset_timestamps 1 "$chunk_dir/chunk_%03d.m4a" 2>/dev/null
 
-        CHUNK_FILES=("$TEMP_DIR"/chunk_*.m4a)
-        echo "Split into ${#CHUNK_FILES[@]} chunks (file is ${FILE_SIZE_MB}MB, ${TOTAL_DURATION}s)"
+        local chunk_files=("$chunk_dir"/chunk_*.m4a)
+        echo "[openai] Split into ${#chunk_files[@]} chunks (${FILE_SIZE_MB}MB, ${TOTAL_DURATION}s)"
 
-        FULL_TEXT=""
-        CHUNK_NUM=0
-
-        for CHUNK in "${CHUNK_FILES[@]}"; do
-            CHUNK_NUM=$((CHUNK_NUM + 1))
-            echo "Transcribing chunk $CHUNK_NUM/${#CHUNK_FILES[@]}..."
-
-            RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
+        local full_text="" chunk_num=0
+        for chunk in "${chunk_files[@]}"; do
+            chunk_num=$((chunk_num + 1))
+            echo "[openai] Transcribing chunk $chunk_num/${#chunk_files[@]}..."
+            local response=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
                 -H "Authorization: Bearer $OPENAI_API_KEY" \
-                -F "file=@$CHUNK" \
+                -F "file=@$chunk" \
                 -F "model=gpt-4o-transcribe" \
                 -F "response_format=json" \
                 -F "language=en")
-
-            ERROR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
-            if [[ -n "$ERROR" ]]; then
-                echo "Error from OpenAI API on chunk $CHUNK_NUM: $ERROR"
-                exit 1
+            local error=$(echo "$response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
+            if [[ -n "$error" ]]; then
+                echo "[openai] API error on chunk $chunk_num: $error"
+                return 1
             fi
-
-            CHUNK_TEXT=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('text','').strip())" <<< "$RESPONSE")
-            if [[ -n "$CHUNK_TEXT" ]]; then
-                FULL_TEXT="${FULL_TEXT:+$FULL_TEXT }$CHUNK_TEXT"
-            fi
+            local chunk_text=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('text','').strip())" <<< "$response")
+            [[ -n "$chunk_text" ]] && full_text="${full_text:+$full_text }$chunk_text"
         done
-
-        RAW_TEXT="$FULL_TEXT"
+        local raw_text="$full_text"
     else
-        echo "Sending ${FILE_SIZE_MB}MB file directly to API..."
-
-        RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
+        echo "[openai] Sending ${FILE_SIZE_MB}MB file to API..."
+        local response=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -F "file=@$AUDIO_FILE" \
             -F "model=gpt-4o-transcribe" \
             -F "response_format=json" \
             -F "language=en")
-
-        ERROR=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
-        if [[ -n "$ERROR" ]]; then
-            echo "Error from OpenAI API: $ERROR"
-            exit 1
+        local error=$(echo "$response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
+        if [[ -n "$error" ]]; then
+            echo "[openai] API error: $error"
+            return 1
         fi
-
-        RAW_TEXT=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('text','').strip())" <<< "$RESPONSE")
+        local raw_text=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('text','').strip())" <<< "$response")
     fi
 
-    # Split into one sentence per line for readability
     python3 -c "
 import sys, re
 text = sys.stdin.read().strip()
@@ -204,19 +190,18 @@ for s in sentences:
     s = s.strip()
     if s:
         print(s)
-" <<< "$RAW_TEXT" > "$OUTPUT_FILE"
+" <<< "$raw_text" > "$out_file"
 
-    END_TIME=$(date +%s)
-    ELAPSED=$((END_TIME - START_TIME))
-    LINES=$(wc -l < "$OUTPUT_FILE" | tr -d ' ')
-    DURATION_MIN=$((${TOTAL_DURATION:-0} / 60))
-    echo ""
-    echo "Done in ${ELAPSED}s. Duration: ~${DURATION_MIN} min"
-    echo "Saved to $OUTPUT_FILE ($LINES lines)"
+    local end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    local lines=$(wc -l < "$out_file" | tr -d ' ')
+    echo "[openai] Done in ${elapsed}s — $lines lines"
+}
 
-else
-    # Local mlx-whisper transcription (Apple Silicon native)
-    /opt/homebrew/opt/python@3.11/bin/python3.11 << 'PYTHON_SCRIPT' - "$AUDIO_FILE" "$OUTPUT_FILE" "$MODEL"
+# ── Local mlx-whisper transcription ───────────────────────────
+transcribe_local() {
+    local out_file="$1"
+    /opt/homebrew/opt/python@3.11/bin/python3.11 << PYTHON_SCRIPT - "$AUDIO_FILE" "$out_file" "$MODEL"
 import sys
 import time
 
@@ -226,7 +211,6 @@ model_size = sys.argv[3]
 
 import mlx_whisper
 
-# Map model size to HF model path
 MODEL_MAP = {
     "tiny": "mlx-community/whisper-tiny-mlx",
     "base": "mlx-community/whisper-base-mlx-q4",
@@ -237,8 +221,8 @@ MODEL_MAP = {
 model_path = MODEL_MAP.get(model_size, model_size)
 
 start = time.time()
-print(f"Loading {model_size} model ({model_path})...")
-print(f"Transcribing {audio_file}...")
+print(f"[local] Loading {model_size} model ({model_path})...")
+print(f"[local] Transcribing {audio_file}...")
 
 result = mlx_whisper.transcribe(
     audio_file,
@@ -248,7 +232,6 @@ result = mlx_whisper.transcribe(
 )
 
 duration = result["segments"][-1]["end"] if result["segments"] else 0
-print(f"Duration: {duration:.0f}s ({duration/60:.1f} min)")
 
 lines = []
 for segment in result["segments"]:
@@ -256,17 +239,124 @@ for segment in result["segments"]:
     timestamp = f"[{int(t//60):02d}:{int(t%60):02d}]"
     lines.append(f"{timestamp} {segment['text'].strip()}")
 
-transcript = "\n".join(lines)
-
 with open(output_file, "w") as f:
-    f.write(transcript)
+    f.write("\n".join(lines))
 
 elapsed = time.time() - start
-print(f"\nDone in {elapsed:.1f}s ({elapsed/60:.1f} min)")
-print(f"Saved to {output_file}")
-print(f"Speed: {duration/elapsed:.1f}x realtime")
+print(f"[local] Done in {elapsed:.1f}s — {len(lines)} lines ({duration/elapsed:.1f}x realtime)")
 PYTHON_SCRIPT
+}
+
+# ── Repetition scorer ─────────────────────────────────────────
+# Returns a repetition score (0 = clean, higher = worse).
+# Detects repeated multi-line blocks — the hallucination pattern.
+score_repetition() {
+    local file="$1"
+    python3 << 'PYSCRIPT' - "$file"
+import sys
+
+file_path = sys.argv[1]
+with open(file_path) as f:
+    lines = [l.rstrip() for l in f if l.strip()]
+
+if len(lines) < 5:
+    print("0.0")
+    sys.exit(0)
+
+# Strip timestamps for comparison (local has [MM:SS] prefix)
+import re
+clean = [re.sub(r'^\[\d{2}:\d{2}\]\s*', '', l) for l in lines]
+
+# Check for repeated N-line blocks (N=3..10)
+total_repeated = 0
+for block_size in range(3, min(11, len(clean) // 2 + 1)):
+    seen = {}
+    for i in range(len(clean) - block_size + 1):
+        block = tuple(clean[i:i+block_size])
+        if block in seen:
+            total_repeated += block_size
+        else:
+            seen[block] = i
+
+# Score = fraction of lines that are in repeated blocks
+score = total_repeated / len(clean) if clean else 0.0
+print(f"{score:.4f}")
+PYSCRIPT
+}
+
+# ── Run transcription(s) ─────────────────────────────────────
+echo ""
+
+OPENAI_FILE="$WORK_DIR/openai.txt"
+LOCAL_FILE="$WORK_DIR/local.txt"
+OPENAI_OK=false
+LOCAL_OK=false
+
+if [[ "$PROVIDER" == "openai" ]]; then
+    echo "Transcribing with OpenAI only..."
+    if transcribe_openai "$OPENAI_FILE"; then
+        OPENAI_OK=true
+        cp "$OPENAI_FILE" "$OUTPUT_FILE"
+    else
+        echo "OpenAI transcription failed"
+        exit 1
+    fi
+elif [[ "$PROVIDER" == "local" ]]; then
+    echo "Transcribing with local mlx-whisper only..."
+    if transcribe_local "$LOCAL_FILE"; then
+        LOCAL_OK=true
+        cp "$LOCAL_FILE" "$OUTPUT_FILE"
+    else
+        echo "Local transcription failed"
+        exit 1
+    fi
+else
+    # Both providers
+    echo "Transcribing with both providers..."
+    echo ""
+
+    # Run OpenAI (fast, ~30s via API)
+    if transcribe_openai "$OPENAI_FILE" 2>&1; then
+        OPENAI_OK=true
+    fi
+    echo ""
+
+    # Run local (fast on Apple Silicon, ~30s for short files)
+    if transcribe_local "$LOCAL_FILE" 2>&1; then
+        LOCAL_OK=true
+    fi
+    echo ""
+
+    # Pick the better one
+    if $OPENAI_OK && $LOCAL_OK; then
+        OPENAI_SCORE=$(score_repetition "$OPENAI_FILE")
+        LOCAL_SCORE=$(score_repetition "$LOCAL_FILE")
+        echo "Repetition scores — openai: $OPENAI_SCORE, local: $LOCAL_SCORE"
+
+        # Pick the one with lower repetition. Tie goes to openai (generally higher accuracy).
+        WINNER=$(python3 -c "
+o, l = $OPENAI_SCORE, $LOCAL_SCORE
+print('openai' if o <= l else 'local')
+")
+        echo "Winner: $WINNER"
+        if [[ "$WINNER" == "openai" ]]; then
+            cp "$OPENAI_FILE" "$OUTPUT_FILE"
+        else
+            cp "$LOCAL_FILE" "$OUTPUT_FILE"
+        fi
+    elif $OPENAI_OK; then
+        echo "Only OpenAI succeeded — using it"
+        cp "$OPENAI_FILE" "$OUTPUT_FILE"
+    elif $LOCAL_OK; then
+        echo "Only local succeeded — using it"
+        cp "$LOCAL_FILE" "$OUTPUT_FILE"
+    else
+        echo "Both providers failed"
+        exit 1
+    fi
 fi
 
+LINES=$(wc -l < "$OUTPUT_FILE" | tr -d ' ')
 echo ""
+echo "Saved to $OUTPUT_FILE ($LINES lines, ~${DURATION_MIN} min audio)"
 echo "Transcription complete: $OUTPUT_FILE"
