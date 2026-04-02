@@ -1,16 +1,20 @@
 #!/bin/bash
-# transcribe.sh — Transcribe Zoom meeting recordings using local Whisper or GPT-4o Transcribe
+# transcribe.sh — Transcribe Zoom meeting recordings using both providers, pick the best
 #
 # Usage:
 #   bash .claude/scripts/transcribe.sh "2026-03-30 11.33.01 Discuss Experiment with Causal Impact Meeting"
-#   bash .claude/scripts/transcribe.sh /path/to/audio.m4a --provider local
 #   bash .claude/scripts/transcribe.sh /path/to/audio.m4a --ticket ti_504
+#   bash .claude/scripts/transcribe.sh /path/to/audio.m4a --provider local   # force single provider
+#   bash .claude/scripts/transcribe.sh /path/to/audio.m4a --provider openai  # force single provider
 #
 # Options:
 #   --ticket TI_XXX       Save output to tickets/TI_XXX/meetings/ instead of current directory
 #   --model MODEL         Whisper model size (default: large-v3). Options: tiny, base, small, medium, large-v3
-#   --provider PROVIDER   Transcription provider: openai (default) or local (mlx-whisper)
+#   --provider PROVIDER   Force a single provider: openai, local, or both (default: both)
 #   --output FILE         Custom output filename (without extension)
+#
+# Default behavior: runs both OpenAI and local mlx-whisper, picks the one with
+# less repetition/hallucination. Logs which provider won.
 #
 # Output: .txt transcript with timestamps and speaker segments
 
@@ -19,7 +23,7 @@ set -euo pipefail
 ZOOM_DIR="$HOME/Documents/Zoom"
 WORKSPACE="/Users/malachi/Developer/work/mntn/workspace"
 MODEL="large-v3"
-PROVIDER="openai"
+PROVIDER="both"
 TICKET=""
 OUTPUT_NAME=""
 
