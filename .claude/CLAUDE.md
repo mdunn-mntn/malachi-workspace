@@ -102,7 +102,8 @@ Every ticket has a `summary.md`. Some tickets also get a `*_presentation.md` in 
 1. **Do the work** → update `summary.md` continuously (findings, queries, iterations)
 2. **When it's time to present** → create `artifacts/ti_xxx_presentation.md` as a NEW document
 3. **Mine the summary** for insights, but rewrite them as narrative — don't copy-paste sections
-4. **The summary is the source of truth.** The presentation is the highlight reel. They should never contradict each other, but the presentation will intentionally omit most of what's in the summary.
+4. **Build visualizations** → generate exec-quality charts following Tufte principles (see Visualization Standards below). Every presentation with quantitative findings must have accompanying charts.
+5. **The summary is the source of truth.** The presentation is the highlight reel. They should never contradict each other, but the presentation will intentionally omit most of what's in the summary.
 
 ### When to Create a Presentation
 
@@ -138,6 +139,43 @@ When creating or editing any presentation file (slides, decks, `*_presentation.m
 - Unity ("we" not "I")
 
 **Default critique process:** After finishing or substantially revising any `*_presentation.md`, run the critique prompt at `claude-prompts/presentation_critique.md` against it. This is the default — do not skip it. The critique scores 10 areas (Power Line, Opening, Narrative, Story, Data Persuasion, Cialdini, Billboard Test, Close, Audience Adaptation, Boldness) on a 1-5 scale and produces a prioritized fix list. Apply the fixes before considering the presentation done.
+
+## Visualization Standards
+
+Every presentation with quantitative findings must include accompanying data visualizations. Follow these standards (full details in Part 8 of `documentation/docs/presentation_playbook.md`).
+
+### Tufte Principles (Non-Negotiable)
+
+1. **Maximize data-ink ratio.** Remove gridlines, borders, background fills, legends (use direct labels), 3D effects, shadows. Every pixel should encode data.
+2. **Color encodes meaning, never decoration.** One accent color for the key insight (red), supporting data (navy), context (gray). Never decorative gradients.
+3. **Lie factor = 1.** Linear scales for exec audiences. If the effect is 184x, show 184x visually. No log scales that compress dramatic differences.
+4. **Annotate, don't decorate.** Every chart gets a one-line interpretation stating the business implication. The audience should never have to decode what the chart means.
+5. **Small multiples > complex single charts.** When comparing across 5+ categories, use a grid of simple charts rather than one overloaded chart.
+6. **Direct label data points.** Put the number on or next to the bar/dot. Don't make the audience cross-reference to an axis.
+
+### Chart Generation Standards
+
+- **Font:** Helvetica Neue (or system equivalent). Never matplotlib defaults.
+- **Background:** Light off-white (#FAFAFA), not pure white.
+- **Resolution:** 200 DPI minimum for PNGs.
+- **Script:** Every chart set must have a `generate_charts.py` script in `artifacts/` for reproducibility. Data comes from CSVs in `outputs/`, not hardcoded.
+- **Titles:** State the finding, not the metric. "Top-Ranked Keywords Drive 184x More Visits" not "Visit Rate by Keyword Rank Bucket."
+- **Subtitles:** One line of context/methodology in gray below the title.
+
+### Dual Output: Static + Interactive
+
+- **Static PNGs** (`artifacts/ti_xxx_chart_*.png`): For Jira, Slack, email, documentation, async review. Always generated.
+- **Interactive RevealJS HTML** (`artifacts/ti_xxx_presentation_deck.html`): For live team presentations. Progressive reveal, hover tooltips, animated transitions. Generated when presenting to a live audience.
+
+RevealJS approach: write content in markdown, convert to a self-contained HTML file using RevealJS CDN. Charts embedded as inline SVG or base64 PNG. The team (Jason Mills, Mike Dolt) uses this format.
+
+### Chart Workflow
+
+1. **Run analysis** → save results to `outputs/*.csv`
+2. **Write `generate_charts.py`** in `artifacts/` — reads CSVs, produces PNGs following Tufte principles
+3. **Review charts** against the Chartjunk Checklist (playbook Part 8): Can I remove this element? Does this color encode data? Could a table replace this chart?
+4. **If presenting live** → also generate RevealJS HTML deck with progressive reveal
+5. **Reference charts** in both `presentation.md` and `summary.md`
 
 ## Codex Review
 Codex will review your code after you're done. Write with that in mind — keep code clean, well-structured, and ready for automated review.

@@ -120,12 +120,19 @@ This is why MM V2's LLM-based approach (generic keywords from homepage scrape) c
 - **TI-806:** Causal impact analysis on beta pre/post data — did BUK cause the IVR improvement?
 - **TI-808:** Compile all findings for management presentation
 
-## Charts
+## Charts & Visualizations
 
-1. `artifacts/ti_804_chart_rank_bucket_visit_rates.png` — Hero chart: visit rate by rank bucket (log scale) with IP volume bars
-2. `artifacts/ti_804_chart_per_advertiser_lift.png` — Horizontal bar: per-advertiser lift sorted descending
-3. `artifacts/ti_804_chart_per_vertical_lift.png` — Horizontal bar: per-vertical lift sorted descending
-4. **NEW NEEDED:** Global vs per-advertiser contrast chart — side-by-side showing 3x vs 184x
+**Static PNGs** (for Jira, Slack, async review):
+1. `artifacts/ti_804_chart_rank_bucket_visit_rates.png` — Hero chart: visit rate cliff by rank bucket
+2. `artifacts/ti_804_chart_per_advertiser_lift.png` — Per-advertiser lift sorted descending, color-coded by magnitude
+3. `artifacts/ti_804_chart_per_vertical_lift.png` — Lollipop chart: per-vertical lift with median line
+4. `artifacts/ti_804_chart_global_vs_per_advertiser.png` — Contrast chart: 3x global vs 184x per-advertiser
+
+**Interactive RevealJS deck** (for live presentations):
+- `artifacts/ti_804_presentation_deck.html` — 14-slide deck with progressive reveal, animated bars, fragment-based storytelling. Open in any browser.
+
+**Reproducibility:**
+- `artifacts/generate_charts.py` — regenerates all static PNGs from CSV data in `outputs/`
 
 ## Appendix
 

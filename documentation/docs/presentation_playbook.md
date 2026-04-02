@@ -313,7 +313,96 @@ Use before every presentation.
 
 ---
 
-## Part 8: Applying This to Data Presentations at MNTN
+## Part 8: Data Visualization — Tufte Principles
+
+Edward Tufte's work is the gold standard for data visualization at MNTN (team-endorsed by Alex Knorr, Andrew Samaha, and others). These principles govern how every chart, graph, and data visual should be constructed.
+
+### The Core Doctrine: Data-Ink Ratio
+
+> "Above all else, show the data." — Edward Tufte
+
+**Data-ink ratio** = (ink used to display data) / (total ink used in the graphic). Maximize it. Every pixel that doesn't encode data is visual noise that competes with your message.
+
+**Remove by default:**
+- Gridlines (or make them nearly invisible — #F0F0F0 at most)
+- Axis borders / box frames around charts
+- Background fills and shading that don't encode values
+- Legends when direct labeling is possible
+- 3D effects, shadows, gradients used for decoration
+- Redundant labels (if the bar says "184x", the axis doesn't need to say it too)
+
+**Keep only what encodes data:**
+- The data marks themselves (bars, dots, lines)
+- Labels that identify data points
+- One accent color for the key insight, muted tones for context
+- Axis labels only when the scale isn't obvious from the data labels
+
+### Small Multiples
+
+Instead of one complex chart trying to show everything, repeat a simple chart across categories. The reader's eye learns the pattern once and then scans for differences.
+
+**When to use:** Comparing the same metric across 5+ categories (e.g., per-advertiser lift, per-vertical performance). Instead of one 15-bar horizontal chart, consider a grid of 15 mini-bar charts.
+
+**Rules:**
+- Same scale across all panels (the whole point is visual comparison)
+- Minimal labels — label only the first panel's axes, let the others inherit
+- Sort by the insight (highest to lowest, or most surprising to least)
+
+### Sparklines
+
+Tiny, word-sized graphics embedded in text or tables. Show trend without taking up a slide.
+
+**When to use:** Dense comparison tables, trend summaries, anywhere a full chart would be overkill but a number alone loses the shape of the data.
+
+### Layering and Separation
+
+Tufte uses visual layers to create depth without clutter:
+- **Foreground:** The data you're highlighting (bold color, larger marks)
+- **Midground:** Context data (muted, smaller, thinner lines)
+- **Background:** Reference lines, grids — nearly invisible but structurally useful
+
+This is the Tufte version of "one accent color for the insight."
+
+### The Lie Factor
+
+Lie Factor = (size of effect shown in graphic) / (size of effect in data). Should be 1.0. Never stretch or compress axes to exaggerate effects. If the data has a 184x effect, you don't need to cheat — just show it.
+
+### Chartjunk Checklist
+
+Before finalizing any visualization, ask:
+1. Can I remove this element without losing information? → Remove it
+2. Does this color encode data or is it decorative? → If decorative, make it gray or remove
+3. Am I using 3D, shadows, or gradients? → Remove them
+4. Could I replace this chart with a table and lose nothing? → The chart isn't earning its space
+5. Would Tufte's Napoleon's March chart be proud of this? → Encode more variables, use less ink
+
+### Interactive Visualizations (RevealJS)
+
+For team presentations, consider generating interactive HTML using RevealJS alongside static PNGs:
+- **RevealJS** renders markdown as polished, animated slide decks
+- Allows progressive reveal (show baseline, then the change — creates drama)
+- Hover tooltips can provide detail-on-demand without cluttering the visual
+- Team members (Jason Mills, Mike Dolt) are already using this approach via Claude
+- Static PNGs remain the fallback for Jira, email, and async review
+
+**When to build interactive:** Any presentation to a live audience (team meeting, stakeholder review). The animation and progressive reveal make the narrative more compelling than static images.
+
+**When static PNGs suffice:** Jira comments, async Slack sharing, documentation, appendices.
+
+### Tufte Principles Applied to MNTN Data Charts
+
+| Principle | Application |
+|-----------|-------------|
+| **Data-ink ratio** | No gridlines, no borders, direct-label bars instead of using axis + legend |
+| **Small multiples** | Per-advertiser or per-vertical breakdowns as a grid, not a single overloaded chart |
+| **Color = data** | Red = key insight, navy = supporting, gray = context. Never decorative gradients |
+| **Lie factor = 1** | Linear scales. If 184x, show 184x. No log scales that compress dramatic effects for exec audiences |
+| **Annotation > decoration** | One-line interpretation on every chart ("Top-5 keywords carry the vast majority of signal") |
+| **Progressive disclosure** | Lead with the hero number, detail in appendix. Or use RevealJS animation to build up |
+
+---
+
+## Part 9: Applying This to Data Presentations at MNTN
 
 You present analytical findings to technical and non-technical stakeholders. Here's how these principles map to your specific context:
 
