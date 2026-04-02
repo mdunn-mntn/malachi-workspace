@@ -36,7 +36,8 @@ workspace/
 | `knowledge/mntn_business.md` | General MNTN business knowledge — products, strategy, org, industry, terminology. Update when learning business context from docs, meetings, or conversations |
 | `knowledge/experimentation.md` | Experiment methodology, covariate selection, test design lessons — update when working on any experiment/analysis ticket |
 | `knowledge/folder_definitions.md` | **Exact definition of what goes in every folder** — check here before placing any file |
-| `tickets/_template/summary_template.md` | Copy this when starting a new ticket |
+| `tickets/_template/summary_template.md` | Copy this when starting a new ticket — internal working doc |
+| `tickets/_template/presentation_template.md` | Copy this when starting a new ticket — external-facing narrative for sharing |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
 | `.claude/scripts/transcribe.sh` | Meeting transcription — runs both OpenAI and local mlx-whisper by default, picks the one with less repetition. Use `--provider openai` or `--provider local` to force one. |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |

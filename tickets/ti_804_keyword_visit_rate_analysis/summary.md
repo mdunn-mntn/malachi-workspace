@@ -41,6 +41,8 @@ IPs bucketed by their best-matched BUK keyword rank. Higher rank = BUK model say
 
 **Key finding:** IPs whose best matched keyword is rank 1-5 visit at **184x** the rate of IPs whose best keyword is rank 51+. The drop-off is steep and monotonic. Picking the right 5 keywords is worth 184x more than the bottom of the list.
 
+**Methodology note:** Visits are ANY visit to the advertiser (not scoped to campaign-group impressions). This is intentional — we're measuring "does the keyword signal predict future visit propensity?" not "did our ads cause the visit." The temporal separation (keywords 3/1-3/15, visits 3/16-3/26) prevents circularity. ipdsc DS19 keywords are populated from the IP's prior browsing behavior on the advertiser's site, so we're measuring: "which IPs are most likely to come back?" Campaign-scoped attribution analysis is in TI-806 (causal impact).
+
 ### Per-Advertiser Breakdown (15 advertisers with >10 visitors)
 
 | Advertiser | Vertical | VR Top-10 | VR Bottom-31+ | Lift |
