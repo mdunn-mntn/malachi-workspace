@@ -348,19 +348,19 @@ def chart_per_vertical():
     ax.text(0.0, 1.04, 'Signal works across every industry — not limited to specific verticals',
             transform=ax.transAxes, fontsize=13, color='#666666')
 
-    # Annotation at bottom
-    ax.text(0.98, 0.02, 'Strongest in product verticals · Weakest in local services · All positive',
-            transform=ax.transAxes, ha='right', fontsize=11, color='#888888', style='italic')
-
-    # Legend
+    # Legend — upper right to avoid bottom annotation overlap
     from matplotlib.lines import Line2D
     legend_elements = [
         Line2D([0], [0], marker='o', color=RED, markerfacecolor=RED, markersize=8, label='>100x', linewidth=0),
         Line2D([0], [0], marker='o', color=NAVY, markerfacecolor=NAVY, markersize=8, label='10–100x', linewidth=0),
         Line2D([0], [0], marker='o', color=MUTED, markerfacecolor=MUTED, markersize=8, label='<10x', linewidth=0),
     ]
-    ax.legend(handles=legend_elements, loc='lower right', fontsize=11,
+    ax.legend(handles=legend_elements, loc='center right', fontsize=11,
               frameon=True, facecolor=BG, edgecolor='#CCCCCC')
+
+    # Annotation at bottom
+    ax.text(0.98, 0.02, 'Strongest in product verticals · Weakest in local services · All positive',
+            transform=ax.transAxes, ha='right', fontsize=11, color='#888888', style='italic')
 
     fig.subplots_adjust(top=0.88, bottom=0.06, left=0.25, right=0.95)
     fig.savefig(os.path.join(OUT_DIR, 'ti_804_chart_per_vertical_lift.png'),
