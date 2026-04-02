@@ -227,10 +227,10 @@ def chart_contrast():
     ax_global.spines['left'].set_visible(False)
     ax_global.spines['bottom'].set_color('#DDDDDD')
 
-    # Panel label
-    ax_global.text(0.5, 1.06, 'Global Ranking', transform=ax_global.transAxes,
+    # Panel label — inside the axes area to avoid crowding the supertitle
+    ax_global.text(0.5, 0.97, 'Global Ranking', transform=ax_global.transAxes,
                    ha='center', fontsize=16, fontweight='medium', color='#999999')
-    ax_global.text(0.5, 0.95, '3x range', transform=ax_global.transAxes,
+    ax_global.text(0.5, 0.85, '3x range', transform=ax_global.transAxes,
                    ha='center', fontsize=28, fontweight='bold', color='#AAAAAA')
 
     # ── Right panel: Per-Advertiser (bold, dramatic) ──
@@ -258,10 +258,10 @@ def chart_contrast():
     ax_per.spines['left'].set_visible(False)
     ax_per.spines['bottom'].set_color('#CCCCCC')
 
-    # Panel label
-    ax_per.text(0.5, 1.06, 'Per-Advertiser Ranking', transform=ax_per.transAxes,
+    # Panel label — inside the axes area to avoid crowding the supertitle
+    ax_per.text(0.5, 0.97, 'Per-Advertiser Ranking', transform=ax_per.transAxes,
                 ha='center', fontsize=16, fontweight='bold', color=NAVY)
-    ax_per.text(0.5, 0.95, '184x range', transform=ax_per.transAxes,
+    ax_per.text(0.5, 0.85, '184x range', transform=ax_per.transAxes,
                 ha='center', fontsize=28, fontweight='bold', color=RED)
 
     # Reference lines on right panel
@@ -269,9 +269,9 @@ def chart_contrast():
         ax_per.axhline(y=y, color='#E0E0E0', linewidth=0.5, zorder=1)
 
     # ── Supertitle ──
-    fig.text(0.5, 0.97, 'Keyword Value is Advertiser-Specific, Not Universal',
+    fig.text(0.5, 0.96, 'Keyword Value is Advertiser-Specific, Not Universal',
              ha='center', fontsize=26, fontweight='bold', color='#111111')
-    fig.text(0.5, 0.915, 'Global keyword ranking captures 3x differentiation. Per-advertiser ranking captures 184x — a 60x improvement.',
+    fig.text(0.5, 0.91, 'Global keyword ranking captures 3x differentiation. Per-advertiser ranking captures 184x.',
              ha='center', fontsize=13, color='#666666')
 
     # Separator line between panels
