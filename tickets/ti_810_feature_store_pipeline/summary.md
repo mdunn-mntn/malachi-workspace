@@ -28,17 +28,17 @@ TI-790 identified 46 pre-visit + 17 feedback features across 6 source tables tha
 
 ## 3. Plan of Action
 
-1. ~~Inventory parquet archives~~ → Confirmed: augmentor_log, guid_log, conversion_log all have parquet at `gs://mntn-data-archive-prod/`
-2. Check parquet archives for: win_logs, bidder_auction_events, cost_impression_log
-3. Write Layer 1 models (one per source table, following `FileStorageBaseModel` pattern):
-   - `aug_log_ip_features_hourly.py` → hourly IP rollup from augmentor_log parquet
-   - `aug_log_ip_features.py` → daily rollup from hourly (reads upstream via `read_model`)
-   - `guid_log_ip_features.py` → daily IP rollup from guid_log parquet
-   - `conv_log_ip_features.py` → daily IP rollup from conversion_log parquet
-   - `win_logs_ip_features.py` → daily IP rollup (parquet or BQ TBD)
-   - `bae_ip_features.py` → daily IP rollup (parquet or BQ TBD)
-   - `cil_ip_features.py` → daily IP rollup (parquet or BQ TBD)
-4. Write Layer 2 derived model: join all Layer 1 IP rollups, compute rolling windows (7d/14d/30d)
+1. ~~Inventory parquet archives~~ → All confirmed (win_logs, BAE have parquet; CIL uses BQ read_model)
+2. ~~Read naming conventions + RFD docs~~ → Naming pattern: `{source}_{dimensions}`, Layer 1 uses `dt`, Layer 2 uses `effective_date`
+3. Write Layer 1 models (following naming conventions):
+   - `aug_log_ip_hourly.py` → hourly IP rollup from augmentor_log parquet (bidstream features)
+   - `aug_log_ip.py` → daily rollup from hourly (reads upstream via `read_model`)
+   - `win_logs_ip.py` → daily IP rollup from win_logs parquet
+   - `bae_ip.py` → daily IP rollup from bidder_auction_events parquet
+   - `cil_ip.py` → daily IP rollup from cost_impression_log via BQ `read_model` (must use partition date)
+   - `guid_log_ip.py` → daily IP rollup from guid_log parquet (device mix, browser, product views)
+   - `conv_log_ip.py` → daily IP rollup from conversion_log parquet (order amounts, conversion types)
+4. Write Layer 2 derived model: `bidstream_derived_ip.py` — join all Layer 1 IP rollups, compute 7d/14d/30d rolling windows, ratios, transformations
 5. Update DAGs (`feature_store_hourly.py`, `feature_store_setup_model.py`) to include new tasks
 6. Test locally via `model_run.py` → Astro dev
 7. Submit PR to `SteelHouse/airflow-ti` for Ryan's review
@@ -105,6 +105,31 @@ class MyModel(FileStorageBaseModel):
 - `feature_store_hourly` — runs at :15 past each hour, currently only `aug_log_ip_vertical_id_hourly`
 - `feature_store_setup_model` — daily at 01:03 UTC, runs all Layer 1 → Layer 2 → Layer 3 with deps
 - `feature_store_snapshot` — monthly snapshots on specific days of month
+
+**Naming Conventions (from TAR-Feature Store Naming Conventions doc):**
+
+Table pattern: `{source_dataset}_{suffix}_{dimensions}`
+- Layer 1 (source): no suffix. E.g. `aug_log_ip`, `win_logs_ip`
+- Layer 1 hourly: `_hourly` suffix. E.g. `aug_log_ip_hourly`
+- Layer 2 (derived): `_derived_`. E.g. `bidstream_derived_ip`
+- Layer 3 (pivoted): `_pivot_`. E.g. `bidstream_pivot_ip`
+- Multi-source Layer 2: combine source names. E.g. `guid_and_conv_log_derived_advertiser_id_dsc_id`
+
+Official source prefixes: `aug_log`, `guid_log`, `conversion_log`/`conv_log`, `site_visit_signal`, `ipdsc`
+New prefixes needed for: `win_logs`, `bae` (bidder_auction_events), `cil` (cost_impression_log)
+
+Column naming:
+- snake_case, metric names include lookback: `visit_count_7d`, `distinct_site_count_30d`
+- Dimensions use `_id` suffix: `advertiser_id`, `vertical_id`
+- Outcome variables include `_outcome`: `visits_forward_7d_outcome`
+
+Partitioning:
+- Layer 1: `dt=YYYY-MM-DD` (event date), optionally `dt=YYYY-MM-DD/hh=HH`
+- Layer 2/3: `effective_date=YYYY-MM-DD` (midnight after lookback window)
+
+GCS paths:
+- Prod: `gs://mntn-data-archive-prod/feature_store/feature_group_{N}_{type}/`
+- Dev: `gs://mntn-data-archive-dev/feature_store/feature_group_{N}_{type}/`
 
 **Key patterns from existing code:**
 - `read_model("module.ClassName")` resolves upstream dependencies — Victor's framework knows to read from prod if upstream unchanged, dev if changed
