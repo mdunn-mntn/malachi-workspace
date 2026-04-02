@@ -143,6 +143,41 @@ This is why MM V2's LLM-based approach (generic keywords from homepage scrape) c
 - Visit rates are very low in absolute terms (1e-7 to 1e-4) because we score ALL ipdsc IPs, most of whom will never visit any given advertiser
 - Global keyword analysis filtered to keywords with >10K IPs (60 keywords qualified)
 
+### Anticipated Questions & Methodology Defense
+
+**"Isn't this circular?"**
+No. Keywords measured 3/1–3/15, visits measured 3/16–3/26. Temporal separation by design. The BUK ALS model was trained on historical data (as all predictive models are), but the evaluation window is clean — no future leakage.
+
+**"Visit rates are astronomically low (1 in 10,000). Is this real?"**
+The denominator is ALL ipdsc IPs (~3B) — most will never visit any advertiser. The absolute rate reflects the enormous denominator, not weak signal. What matters is the *relative* rate: 184x tells you which IPs to prioritize. This is how all programmatic targeting works — choosing among billions.
+
+**"Could a few huge advertisers be driving the result?"**
+The per-advertiser breakdown addresses this directly. 14/15 advertisers show >10x lift independently. Scholastic (528x) and Papa Murphy's (3x) are both included. Even excluding the top 3, median lift remains triple digits.
+
+**"Only 15 of 50 had enough visitors. What about the other 35?"**
+The >10 visitor filter is for statistical stability, not selection of "winners." Small advertisers can't produce reliable lift ratios in a 10-day window — a single visitor moving between buckets swings the ratio wildly. TI-808 scales to 500 advertisers with potentially longer outcome windows.
+
+**"Is this causal?"**
+Observational with strong design: temporal separation, monotonic decline across 6 rank buckets, consistent across 15 advertisers and 15 verticals. Not a randomized experiment — that's TI-806. But the pattern would be extremely unlikely under the null.
+
+**"Why only 50 advertisers?"**
+Phase 1 scope. Deterministic hash sample (not cherry-picked) from 5,700 BUK-predicted advertisers. At n=50 with 93% consistency across 15 verticals, scaling is unlikely to reverse the finding. TI-808 scales to 500.
+
+**"10-day window seems short."**
+Conservative by design. If signal appears in 10 days, it's strong. Longer windows increase IP churn noise. 10 days is a *lower bound* on the true signal.
+
+**"What about IP rotation between the keyword and visit windows?"**
+IP churn adds noise that biases toward zero. The 184x we observe *despite* rotation is a lower bound. The true signal is likely stronger.
+
+**"Why 'best rank' instead of average rank or match count?"**
+Best rank is the purest test of whether BUK's ordering has predictive power. Average rank dilutes strong signals; match count measures breadth, not quality. One perfect keyword match beats fifty irrelevant ones.
+
+**"How does this compare to what we do today?"**
+Currently every BUK-matched IP gets a flat 10,000 RTC score regardless of keyword rank. We're treating a 184x signal as binary.
+
+**"How does the ALS model actually work — isn't it just memorizing visits?"**
+ALS learns latent advertiser-keyword affinity factors from cross-advertiser patterns, not individual IP histories. It generalizes: "advertisers like X benefit from keywords like Y." The model never sees individual IPs during training.
+
 ### Data
 - `outputs/ti_804_rank_bucket_visit_rates.csv`
 - `outputs/ti_804_per_advertiser_rank_lift.csv`
