@@ -34,25 +34,83 @@ TI-790 identified 46 pre-visit + 17 feedback features across 6 source tables tha
 4. Write Layer 2 derived model: `bidstream_derived_ip.py` — join all Layer 1 IP rollups, compute 7d/14d/30d rolling windows, ratios, transformations
 5. ~~Submit PR~~ → Draft PR #962: https://github.com/SteelHouse/airflow-ti/pull/962
 
-### Remaining deployment steps (need Ryan sign-off before proceeding)
+### Deployment Plan (aligned with Ryan's process, 2026-04-02)
 
-**Step 1: Upload models to dev GCS**
+Ryan's recommended sequence:
+1. Test code on 1 day to make sure it works, inspect the data
+2. Once that works, backfill for ALL of augmentor_log (will take a while)
+3. Once done, copy data from dev to prod
+4. Get PR approved (keep backfill up to date while PR is being approved, copy new data to prod)
+5. Once approved, monitor a few prod runs
+
+---
+
+**What I'm planning to do, step by step:**
+
+**Step 1: Upload compiled models to dev GCS**
+
+I will run `model_upload.py` from my feature branch. This compiles all models (existing + my 7 new ones) and uploads the code artifacts to the dev GCS bucket. It does NOT deploy to prod — it only stages code in `gs://mntn-data-archive-dev/`.
+
 ```bash
-cd ~/Developer/work/mntn/airflow-ti
-uv run python model_upload.py   # compiles + uploads to gs://mntn-data-archive-dev/
+cd ~/Developer/work/mntn/airflow-ti   # on branch feature/ti-810-bidstream-ip-features
+uv run python model_upload.py
 ```
 
-**Step 2: Test one model on Dataproc Serverless**
+**What this does:** Compiles Python model files + utils into deployable artifacts and uploads them to `gs://mntn-data-archive-dev/ti_resources/` (or similar dev path). This is what `model_run.py` picks up when it submits Dataproc jobs.
+
+**What this does NOT do:** Touch prod. Touch DAGs. Change anything in Airflow.
+
+---
+
+**Step 2: Test ONE model on ONE day — inspect output**
+
+I will run `win_logs_ip` for a single day (2026-03-31) to verify it works end-to-end on Dataproc Serverless.
+
 ```bash
 uv run python model_run.py win_logs_ip -a '{"run_date": "2026-03-31"}'
 ```
-This submits to Dataproc Serverless (not local Spark). Reads prod parquet, writes to dev with branch suffix. Verify output at:
-`gs://mntn-data-archive-dev/feature_store/feature_group_1_source/win_logs_ip*/dt=2026-03-31/`
 
-**Step 3: Backfill all 7 models (~30 days each)**
-Run each model for dates 2026-03-01 through 2026-03-31 (or whatever range Ryan recommends):
+**What this does:** Submits a PySpark job to **Dataproc Serverless** (cloud, not local). The job:
+- Reads from `gs://mntn-data-archive-prod/win_logs/dt=2026-03-31/hh=*` (prod parquet — read only)
+- Aggregates by IP: win count, device model diversity, clearing price, video engagement, viewability
+- Writes output to `gs://mntn-data-archive-dev/feature_store/feature_group_1_source/win_logs_ip/dt=2026-03-31/` (dev only)
+
+**What I'll verify:**
+- Job completes without errors
+- Output parquet exists at expected path
+- Schema looks right: `dt, ip, win_count, distinct_device_model_count, avg_clearing_price_usd, ...`
+- Row count is reasonable (should be millions of unique IPs per day)
+- Spot-check a few IPs to make sure values are sane
+
+**What this does NOT do:** Write to prod. Affect any existing pipeline.
+
+---
+
+**Step 3: If Step 2 passes, test ALL 7 models on ONE day**
+
+Run each model for the same day (2026-03-31) to verify they all work:
+
 ```bash
-for DATE in 2026-03-{01..31}; do
+uv run python model_run.py aug_log_ip_hourly -a '{"run_date": "2026-03-31 12:00:00"}'
+uv run python model_run.py aug_log_ip -a '{"run_date": "2026-03-31"}'
+uv run python model_run.py win_logs_ip -a '{"run_date": "2026-03-31"}'
+uv run python model_run.py bae_ip -a '{"run_date": "2026-03-31"}'
+uv run python model_run.py cil_ip -a '{"run_date": "2026-03-31"}'
+uv run python model_run.py guid_log_ip -a '{"run_date": "2026-03-31"}'
+uv run python model_run.py conv_log_ip -a '{"run_date": "2026-03-31"}'
+```
+
+**Same verification as Step 2** for each model. All output goes to dev.
+
+---
+
+**Step 4: Backfill — run all 7 models for the full augmentor_log parquet range**
+
+Augmentor_log parquet goes back ~30 days. I'll backfill all 7 models for the available date range. This will take a while since each model × each date = one Dataproc job.
+
+```bash
+# For each date in the backfill range:
+for DATE in 2026-03-{03..31} 2026-04-01; do
   uv run python model_run.py aug_log_ip_hourly -a "{\"run_date\": \"$DATE 12:00:00\"}"
   uv run python model_run.py aug_log_ip -a "{\"run_date\": \"$DATE\"}"
   uv run python model_run.py win_logs_ip -a "{\"run_date\": \"$DATE\"}"
@@ -63,37 +121,79 @@ for DATE in 2026-03-{01..31}; do
 done
 ```
 
-**Step 4: Verify backfilled data in dev**
+**Note on aug_log_ip_hourly:** The hourly model processes 2 hours per run (same pattern as Ryan's `aug_log_ip_vertical_id_hourly`). To backfill a full day, I may need to run it for each hour — OR just run the daily `aug_log_ip` which reads from the hourly output. **Need to confirm with Ryan: should I backfill hourly or just daily?**
+
+**All output goes to dev bucket only.**
+
+---
+
+**Step 5: Verify backfilled data in dev**
+
 ```bash
-gsutil ls gs://mntn-data-archive-dev/feature_store/feature_group_1_source/win_logs_ip*/
-# Spot-check row counts and schema
+# Check all models have partitions
+for MODEL in aug_log_ip_hourly aug_log_ip win_logs_ip bae_ip cil_ip guid_log_ip conv_log_ip; do
+  echo "=== $MODEL ==="
+  gsutil ls gs://mntn-data-archive-dev/feature_store/feature_group_1_source/${MODEL}*/
+done
+
+# Spot-check row counts
+gsutil cat gs://mntn-data-archive-dev/feature_store/feature_group_1_source/win_logs_ip*/dt=2026-03-31/*.parquet | wc -c
 ```
 
-**Step 5: Get PR #962 approved by Ryan**
+---
 
 **Step 6: Copy backfilled data from dev to prod**
+
+After verifying dev data looks good, copy to prod:
+
 ```bash
-# After PR merge — exact command TBD with Ryan
-gsutil -m cp -r gs://mntn-data-archive-dev/feature_store/feature_group_1_source/{model}*/ \
-  gs://mntn-data-archive-prod/feature_store/feature_group_1_source/{model}/
+for MODEL in aug_log_ip_hourly aug_log_ip win_logs_ip bae_ip cil_ip guid_log_ip conv_log_ip; do
+  gsutil -m cp -r \
+    gs://mntn-data-archive-dev/feature_store/feature_group_1_source/${MODEL}*/ \
+    gs://mntn-data-archive-prod/feature_store/feature_group_1_source/${MODEL}/
+done
 ```
 
-**Step 7: Ryan wires DAG dependencies**
-- Add new tasks to `feature_store_hourly.py` (aug_log_ip_hourly)
-- Add new tasks to `feature_store_setup_model.py` (all daily models)
-- Set dependency: `aug_log_ip_hourly >> aug_log_ip` (daily reads hourly)
+**This is the scariest step — writing to prod GCS.** The data goes into new folders that don't exist yet (e.g., `win_logs_ip/`), so it won't overwrite anything. But I want Ryan's explicit OK before doing this.
 
-**Step 8: Deploy to prod via merge**
-- Merge triggers GitHub Actions deploy to prod GCS
-- Daily DAG picks up new models on next run (01:03 UTC)
+---
 
-### Questions for Ryan before starting backfill
-- [ ] Is the upload + backfill approach correct?
-- [ ] How many days should we backfill? (30? 90?)
-- [ ] For `aug_log_ip_hourly`, do we backfill every hour or just run the daily rollup?
-- [ ] Any concerns about Dataproc compute costs for 7 models × 30 days?
-- [ ] Should `aug_log_ip_hourly` go in the hourly DAG alongside his `aug_log_ip_vertical_id_hourly`?
-- [ ] Is the `gsutil cp` approach correct for dev→prod, or is there a better process?
+**Step 7: Get PR #962 approved**
+
+PR: https://github.com/SteelHouse/airflow-ti/pull/962
+
+While PR is in review, keep backfill up to date — run new days as they become available and copy to prod.
+
+---
+
+**Step 8: Ryan wires DAG dependencies + merge**
+
+After PR approval, Ryan adds tasks to the DAG files:
+- `feature_store_hourly.py`: add `aug_log_ip_hourly` task
+- `feature_store_setup_model.py`: add all 6 daily model tasks, set dependency `aug_log_ip_hourly >> aug_log_ip`
+
+Merge triggers GitHub Actions deploy. Daily DAG picks up new models on next run (01:03 UTC).
+
+---
+
+**Step 9: Monitor first few prod runs**
+
+Watch the first 2-3 prod runs to confirm:
+- All 7 models complete successfully
+- Output data matches what we saw in dev
+- No impact on existing pipeline tasks
+- Dataproc costs are within expectations
+
+---
+
+### Questions for Ryan before I start
+
+- [ ] Does this plan look right?
+- [ ] For the backfill range: should I go back as far as the parquet archives allow (~30d for augmentor_log, ~90d for win_logs/BAE), or just 30 days for all?
+- [ ] For `aug_log_ip_hourly` backfill: do I need to run every hour, or can I just backfill the daily `aug_log_ip` directly from raw parquet?
+- [ ] The `gsutil cp` from dev→prod for Step 6 — is that the right approach, or is there a different process?
+- [ ] Any concerns about Dataproc compute costs for the backfill (~7 models × ~30 days = ~210 Dataproc jobs)?
+- [ ] Should I add the DAG changes to the PR or leave that to you?
 
 ## 4. Investigation & Findings
 
