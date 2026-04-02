@@ -95,10 +95,13 @@ def chart_rank_buckets():
                 label, ha='center', va='bottom', fontsize=size, fontweight=weight, color=color)
 
     # Title and subtitle
-    ax.text(0.0, 1.15, 'Top-Ranked Keywords Drive 184x More Visits',
+    ax.text(0.0, 1.18, 'Top-Ranked Keywords Drive 184x More Visits',
             transform=ax.transAxes, fontsize=26, fontweight='bold', color='#111111')
-    ax.text(0.0, 1.07, 'IPs matched to an advertiser\'s top-5 BUK keywords visit at 184x the rate of those matched to rank 51+',
+    ax.text(0.0, 1.10, 'IPs matched to an advertiser\'s top-5 BUK keywords visit at 184x the rate of those matched to rank 51+',
             transform=ax.transAxes, fontsize=13, color='#666666')
+    # Temporal separation callout
+    ax.text(1.0, 1.10, 'Keywords: Mar 1–15  |  Visits: Mar 16–26  (no overlap)',
+            transform=ax.transAxes, fontsize=11, color=RED, fontweight='medium', ha='right')
 
     # Annotation — positioned to the right of the first bar, not overlapping
     ax.annotate('Top-5 keywords carry\nthe vast majority of signal',
@@ -118,7 +121,7 @@ def chart_rank_buckets():
     for y in [50, 100, 150]:
         ax.axhline(y=y, color='#E0E0E0', linewidth=0.5, zorder=1)
 
-    fig.subplots_adjust(top=0.82, bottom=0.12, left=0.05, right=0.95)
+    fig.subplots_adjust(top=0.80, bottom=0.12, left=0.05, right=0.95)
     fig.savefig(os.path.join(OUT_DIR, 'ti_804_chart_rank_bucket_visit_rates.png'),
                 dpi=200, facecolor=BG)
     plt.close(fig)
@@ -281,8 +284,11 @@ def chart_contrast():
     fig.add_artist(line)
 
     # "60x more signal" as a bottom-center callout below both charts
-    fig.text(0.5, 0.04, 'Per-advertiser ranking captures 60x more signal than global ranking',
+    fig.text(0.5, 0.05, 'Per-advertiser ranking captures 60x more signal than global ranking',
              ha='center', fontsize=13, color=RED, fontweight='bold')
+    # Temporal separation
+    fig.text(0.5, 0.01, 'Keywords: Mar 1–15  |  Visits: Mar 16–26  (non-overlapping windows, no target leakage)',
+             ha='center', fontsize=10, color='#999999')
 
     fig.subplots_adjust(top=0.85, bottom=0.14, left=0.04, right=0.96, wspace=0.22)
     fig.savefig(os.path.join(OUT_DIR, 'ti_804_chart_global_vs_per_advertiser.png'),

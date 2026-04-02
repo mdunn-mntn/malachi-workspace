@@ -610,12 +610,16 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
 
     <!-- SLIDE 3: The Number -->
     <section>
-        <div style="margin-top: 1em;">
+        <div style="margin-top: 0.5em;">
             <p class="big-number-context">IPs matched to an advertiser's top-5 keywords visit at</p>
             <div class="big-number">184x</div>
             <p class="big-number-context">the rate of those matched to rank 51+</p>
         </div>
-        <div class="footer-note">50 advertisers · 3.1B scored IPs · 10-day outcome window</div>
+        <div class="insight-box fragment" style="margin-top: 1.5em; font-size: 0.7em;">
+            <strong>No target leakage:</strong> Keywords scored from browsing behavior <strong>March 1–15</strong>.
+            Visits measured <strong>March 16–26</strong>. The keyword window closes before the outcome window opens.
+        </div>
+        <div class="footer-note">50 advertisers · 3.1B scored IPs · Temporal separation by design</div>
     </section>
 
     <!-- SLIDE 4: The Cliff — Bar Chart -->
@@ -661,19 +665,7 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
         </p>
     </section>
 
-    <!-- SLIDE 5: But Wait — Global Is Flat -->
-    <section>
-        <h2 style="text-align: center;">But aren't some keywords just<br>universally better?</h2>
-        <div style="margin-top: 2em; text-align: center;">
-            <div class="muted-number">3x</div>
-            <p class="big-number-context" style="margin-top: 0.5em;">
-                Global keyword ranking produces only a 3x range<br>
-                <span style="font-size: 0.8em;">All keywords are roughly equal when averaged across advertisers</span>
-            </p>
-        </div>
-    </section>
-
-    <!-- SLIDE 6: The Contrast — Punchline -->
+    <!-- SLIDE 5: The Contrast — Punchline -->
     <section>
         <h2 style="text-align: center;">The Signal Is Advertiser-Specific</h2>
 
@@ -760,7 +752,7 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
         </div>
 
         <p style="text-align: center; font-size: 0.7em; color: var(--text-light); margin-top: 0.8em;">
-            Median lift: <strong style="color: var(--red);">148x</strong> · 15 verticals · All positive
+            Median lift: <strong style="color: var(--red);">148x</strong> · All 15 verticals positive (auto, books, golf, legal, travel, fitness, B2B...) · Not limited to specific industries
         </p>
     </section>
 
@@ -813,20 +805,38 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
         <h1 style="text-align: center; margin-top: 3em; color: var(--text-light);">Appendix</h1>
     </section>
 
-    <!-- SLIDE 12: Methodology -->
+    <!-- SLIDE 12: Methodology — Temporal Separation -->
     <section>
-        <h2>Methodology</h2>
-        <table>
+        <h2>Methodology: No Target Leakage</h2>
+        <div class="subtitle">Keywords and visits are measured in non-overlapping time windows</div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5em; margin: 1.5em 0; font-size: 0.85em;">
+            <div style="background: var(--navy); color: white; padding: 0.8em 1.5em; border-radius: 6px; text-align: center;">
+                <strong>Keyword Window</strong><br>
+                <span style="font-size: 1.3em;">Mar 1–15</span><br>
+                <span style="font-size: 0.8em; opacity: 0.8;">ipdsc DS19 browsing</span>
+            </div>
+            <div style="font-size: 2em; color: var(--muted);">|</div>
+            <div style="background: var(--red); color: white; padding: 0.8em 1.5em; border-radius: 6px; text-align: center;">
+                <strong>Outcome Window</strong><br>
+                <span style="font-size: 1.3em;">Mar 16–26</span><br>
+                <span style="font-size: 0.8em; opacity: 0.8;">ui_visits to advertiser</span>
+            </div>
+        </div>
+
+        <table style="font-size: 0.6em; margin-top: 1em;">
             <tr><th style="width: 30%;">Parameter</th><th>Value</th></tr>
             <tr><td>Sample</td><td>50 advertisers (deterministic hash from 5,699 BUK-predicted)</td></tr>
-            <tr><td>Keyword window</td><td>2026-03-01 to 2026-03-15 (ipdsc DS19)</td></tr>
-            <tr><td>Outcome window</td><td>2026-03-16 to 2026-03-26 (ui_visits)</td></tr>
             <tr><td>Metric</td><td>Best-matched keyword rank per IP per advertiser</td></tr>
             <tr><td>Visit definition</td><td>Any visit to advertiser (not campaign-scoped)</td></tr>
-            <tr><td>Temporal separation</td><td>Keywords precede outcomes by design — no leakage</td></tr>
             <tr><td>IPs scored</td><td>3.1 billion</td></tr>
-            <tr><td>Total visitors</td><td>58,202</td></tr>
+            <tr><td>Total visitors</td><td>58,202 across 15 verticals</td></tr>
         </table>
+
+        <div class="insight-box" style="font-size: 0.65em; margin-top: 0.8em;">
+            The keyword window <strong>closes</strong> before the outcome window <strong>opens</strong>.
+            No IP's visit can influence its keyword score. This is temporal separation by design.
+        </div>
     </section>
 
     <!-- SLIDE 13: Full Per-Advertiser Table -->
