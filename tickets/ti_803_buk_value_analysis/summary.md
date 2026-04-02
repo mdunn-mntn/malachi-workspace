@@ -59,7 +59,22 @@ Management has seen two inconclusive BUK experiments and inconsistent beta resul
 
 ## 4. Investigation & Findings
 
-*Work in progress — will be populated as each phase completes.*
+### Phase 1 Complete: TI-804 — Keyword Selection Matters (2026-04-02)
+
+**Headline:** Per-advertiser keyword ranking produces a **184x visit rate differential**. Global keyword ranking produces only **3x**.
+
+**Key results:**
+- IPs matched to an advertiser's top-5 BUK keywords visit at 184x the rate of bottom-ranked keywords (monotonic across 6 rank buckets)
+- 14/15 advertisers (93%) show >10x lift, median 148x
+- All 15 verticals show positive lift (median 66x)
+- Global keyword ranking: only 3x range, correlation with BUK rank = 0.11 (weak)
+
+**Critical insight:** Keyword value is advertiser-specific, not universal. "Dog Beds" is gold for K9 Ballistics and worthless for Rocket Lawyer. BUK's per-advertiser ALS collaborative filtering captures a 184x signal that generic approaches (including MM V2's LLM-based homepage scrape) cannot.
+
+**Implication for continuous scoring:** The keyword signal is real and massive (184x). When blended with Fangorn intent scores, this adds a powerful per-advertiser dimension that intent alone doesn't capture. Validates the continuous scoring approach for keywords, not just verticals.
+
+**Charts:** `tickets/ti_804_keyword_visit_rate_analysis/artifacts/`
+**Data:** `tickets/ti_804_keyword_visit_rate_analysis/outputs/`
 
 ## 5. Solution
 

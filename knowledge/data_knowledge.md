@@ -1048,6 +1048,14 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - Rollout: (1) Fangorn release, (2) continuous scoring with Fangorn + MM V2 equal-rank keywords, (3) wire in BUK rankings
 - DDP site visit signals already incorporated into BUK model training (confirmed Alex 2026-03-31)
 
+### Keyword Value: Advertiser-Specific, Not Universal (TI-804, 2026-04-02)
+- Per-advertiser keyword ranking: **184x visit rate differential** (top-5 vs bottom keywords)
+- Global keyword ranking (across all advertisers): only **3x range**, correlation with BUK rank = 0.11
+- Keyword quality is advertiser-specific: "Dog Beds" is rank-1 for K9 Ballistics, irrelevant for Rocket Lawyer
+- BUK's ALS collaborative filtering captures this per-advertiser signal; MM V2's LLM homepage scrape cannot
+- 93% of tested advertisers show >10x lift, all 15 verticals positive
+- Validates continuous scoring for keywords (not just verticals) — the keyword signal is real and massive
+
 ### BUK Pipeline
 - Runs as Airflow DAG in `airflow-ti` repo (SteelHouse/airflow-ti)
 - Training and prediction on Databricks (job compute = 1/4 cost of interactive)

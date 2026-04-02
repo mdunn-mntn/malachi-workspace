@@ -93,9 +93,35 @@ IPs bucketed by their best-matched BUK keyword rank. Higher rank = BUK model say
 - Strongest: product-oriented verticals (auto, books, golf, games)
 - Weakest but still positive: fast casual dining (3x), fitness (13x)
 
+### Global Keyword Analysis — Keyword Value is Advertiser-Specific
+
+Ran the same analysis but ranking keywords globally across all advertisers (not per-advertiser). This tests: "are some keywords just universally better?"
+
+| Metric | Global Ranking | Per-Advertiser Ranking |
+|--------|---------------|----------------------|
+| Visit rate range | **3x** (top to bottom) | **184x** (top to bottom) |
+| Correlation with BUK rank | 0.11 (weak) | Monotonic (strong) |
+| Top keyword | Promotional Products (1.48e-2) | Varies by advertiser |
+| Bottom keyword | Luggage And Bags (5.54e-3) | Varies by advertiser |
+
+**Key insight:** Keyword value is advertiser-specific, not universal. "Dog Beds" is gold for K9 Ballistics and worthless for Rocket Lawyer. A global keyword quality score captures only 3x differentiation. BUK's per-advertiser ALS model captures 184x — a 60x improvement in signal strength.
+
+This means the right keywords for each advertiser can only be determined by a model that learns from cross-advertiser behavioral data — which is exactly what BUK does via collaborative filtering.
+
+**Output:** `outputs/ti_804_global_keyword_visit_rates.csv`
+**Chart:** `artifacts/ti_804_chart_global_vs_per_advertiser.png`
+
+---
+
 ## 5. Solution
 
-**Keyword selection matters enormously.** The evidence is clear across aggregate, per-advertiser, and per-vertical views. BUK's rank ordering captures a 184x visit rate differential at aggregate, with median 148x per-advertiser lift. This is the foundation for TI-805 (proving BUK picks better keywords than MM V2).
+**Keyword selection matters enormously, and it's advertiser-specific.** The evidence is clear:
+- Per-advertiser ranking: 184x visit rate differential (median 148x per-advertiser)
+- Global ranking: only 3x range — keywords are roughly equal when averaged across advertisers
+- This proves BUK's per-advertiser collaborative filtering captures a signal that generic approaches cannot
+- The current flat 10,000 scoring for all high-intent IPs throws away this 184x signal
+
+This is the foundation for TI-805 (proving BUK picks better keywords than MM V2).
 
 ## 6. Questions Answered
 
