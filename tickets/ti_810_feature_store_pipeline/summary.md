@@ -30,18 +30,70 @@ TI-790 identified 46 pre-visit + 17 feedback features across 6 source tables tha
 
 1. ~~Inventory parquet archives~~ → All confirmed (win_logs, BAE have parquet; CIL uses BQ read_model)
 2. ~~Read naming conventions + RFD docs~~ → Naming pattern: `{source}_{dimensions}`, Layer 1 uses `dt`, Layer 2 uses `effective_date`
-3. Write Layer 1 models (following naming conventions):
-   - `aug_log_ip_hourly.py` → hourly IP rollup from augmentor_log parquet (bidstream features)
-   - `aug_log_ip.py` → daily rollup from hourly (reads upstream via `read_model`)
-   - `win_logs_ip.py` → daily IP rollup from win_logs parquet
-   - `bae_ip.py` → daily IP rollup from bidder_auction_events parquet
-   - `cil_ip.py` → daily IP rollup from cost_impression_log via BQ `read_model` (must use partition date)
-   - `guid_log_ip.py` → daily IP rollup from guid_log parquet (device mix, browser, product views)
-   - `conv_log_ip.py` → daily IP rollup from conversion_log parquet (order amounts, conversion types)
+3. ~~Write Layer 1 models~~ → 7 models written, compile passes. PR #962 open (draft).
 4. Write Layer 2 derived model: `bidstream_derived_ip.py` — join all Layer 1 IP rollups, compute 7d/14d/30d rolling windows, ratios, transformations
-5. Update DAGs (`feature_store_hourly.py`, `feature_store_setup_model.py`) to include new tasks
-6. Test locally via `model_run.py` → Astro dev
-7. Submit PR to `SteelHouse/airflow-ti` for Ryan's review
+5. ~~Submit PR~~ → Draft PR #962: https://github.com/SteelHouse/airflow-ti/pull/962
+
+### Remaining deployment steps (need Ryan sign-off before proceeding)
+
+**Step 1: Upload models to dev GCS**
+```bash
+cd ~/Developer/work/mntn/airflow-ti
+uv run python model_upload.py   # compiles + uploads to gs://mntn-data-archive-dev/
+```
+
+**Step 2: Test one model on Dataproc Serverless**
+```bash
+uv run python model_run.py win_logs_ip -a '{"run_date": "2026-03-31"}'
+```
+This submits to Dataproc Serverless (not local Spark). Reads prod parquet, writes to dev with branch suffix. Verify output at:
+`gs://mntn-data-archive-dev/feature_store/feature_group_1_source/win_logs_ip*/dt=2026-03-31/`
+
+**Step 3: Backfill all 7 models (~30 days each)**
+Run each model for dates 2026-03-01 through 2026-03-31 (or whatever range Ryan recommends):
+```bash
+for DATE in 2026-03-{01..31}; do
+  uv run python model_run.py aug_log_ip_hourly -a "{\"run_date\": \"$DATE 12:00:00\"}"
+  uv run python model_run.py aug_log_ip -a "{\"run_date\": \"$DATE\"}"
+  uv run python model_run.py win_logs_ip -a "{\"run_date\": \"$DATE\"}"
+  uv run python model_run.py bae_ip -a "{\"run_date\": \"$DATE\"}"
+  uv run python model_run.py cil_ip -a "{\"run_date\": \"$DATE\"}"
+  uv run python model_run.py guid_log_ip -a "{\"run_date\": \"$DATE\"}"
+  uv run python model_run.py conv_log_ip -a "{\"run_date\": \"$DATE\"}"
+done
+```
+
+**Step 4: Verify backfilled data in dev**
+```bash
+gsutil ls gs://mntn-data-archive-dev/feature_store/feature_group_1_source/win_logs_ip*/
+# Spot-check row counts and schema
+```
+
+**Step 5: Get PR #962 approved by Ryan**
+
+**Step 6: Copy backfilled data from dev to prod**
+```bash
+# After PR merge — exact command TBD with Ryan
+gsutil -m cp -r gs://mntn-data-archive-dev/feature_store/feature_group_1_source/{model}*/ \
+  gs://mntn-data-archive-prod/feature_store/feature_group_1_source/{model}/
+```
+
+**Step 7: Ryan wires DAG dependencies**
+- Add new tasks to `feature_store_hourly.py` (aug_log_ip_hourly)
+- Add new tasks to `feature_store_setup_model.py` (all daily models)
+- Set dependency: `aug_log_ip_hourly >> aug_log_ip` (daily reads hourly)
+
+**Step 8: Deploy to prod via merge**
+- Merge triggers GitHub Actions deploy to prod GCS
+- Daily DAG picks up new models on next run (01:03 UTC)
+
+### Questions for Ryan before starting backfill
+- [ ] Is the upload + backfill approach correct?
+- [ ] How many days should we backfill? (30? 90?)
+- [ ] For `aug_log_ip_hourly`, do we backfill every hour or just run the daily rollup?
+- [ ] Any concerns about Dataproc compute costs for 7 models × 30 days?
+- [ ] Should `aug_log_ip_hourly` go in the hourly DAG alongside his `aug_log_ip_vertical_id_hourly`?
+- [ ] Is the `gsutil cp` approach correct for dev→prod, or is there a better process?
 
 ## 4. Investigation & Findings
 
