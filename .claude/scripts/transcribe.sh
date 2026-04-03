@@ -406,12 +406,39 @@ else
         LOCAL_WORDS=$(wc -w < "$LOCAL_FILE" | tr -d ' ')
         echo "Repetition scores — openai: $OPENAI_SCORE ($OPENAI_LINES lines, $OPENAI_WORDS words), local: $LOCAL_SCORE ($LOCAL_LINES lines, $LOCAL_WORDS words)"
 
-        # Pick the one with lower repetition. Tie goes to openai (generally higher accuracy).
+        # Pick winner using composite score: repetition penalty + word coverage.
+        # - If one has significantly more repetition (>0.05 difference), it loses.
+        # - If repetition is similar, the one with more words wins (more coverage).
+        # - If both repetition and words are close, openai wins (higher per-word accuracy).
         WINNER=$(python3 -c "
-o, l = $OPENAI_SCORE, $LOCAL_SCORE
-print('openai' if o <= l else 'local')
+o_rep, l_rep = $OPENAI_SCORE, $LOCAL_SCORE
+o_words, l_words = $OPENAI_WORDS, $LOCAL_WORDS
+
+rep_diff = abs(o_rep - l_rep)
+word_ratio = o_words / l_words if l_words > 0 else 1.0
+
+# Clear repetition winner (>0.05 difference)
+if rep_diff > 0.05:
+    winner = 'openai' if o_rep < l_rep else 'local'
+    reason = f'less repetition ({o_rep:.4f} vs {l_rep:.4f})'
+# Similar repetition — check word coverage gap (>20% difference)
+elif word_ratio < 0.8:
+    winner = 'local'
+    reason = f'more words ({l_words} vs {o_words}, {1/word_ratio:.1f}x more)'
+elif word_ratio > 1.25:
+    winner = 'openai'
+    reason = f'more words ({o_words} vs {l_words}, {word_ratio:.1f}x more)'
+# Both similar — default to openai for per-word accuracy
+else:
+    winner = 'openai'
+    reason = f'similar quality, openai default (rep {o_rep:.4f}/{l_rep:.4f}, words {o_words}/{l_words})'
+
+print(f'{winner}|{reason}')
 ")
-        echo "Winner: $WINNER"
+        WINNER_NAME="${WINNER%%|*}"
+        WINNER_REASON="${WINNER#*|}"
+        echo "Winner: $WINNER_NAME ($WINNER_REASON)"
+        WINNER="$WINNER_NAME"
         if [[ "$WINNER" == "openai" ]]; then
             cp "$OPENAI_FILE" "$OUTPUT_FILE"
         else
