@@ -12,6 +12,7 @@
 #   --model MODEL         Whisper model size (default: large-v3). Options: tiny, base, small, medium, large-v3
 #   --provider PROVIDER   Force a single provider: openai, local, or both (default: both)
 #   --output FILE         Custom output filename (without extension)
+#   --keep-both           When using both providers, save each as _openai.txt / _local.txt
 #
 # Default behavior: runs both OpenAI and local mlx-whisper, picks the one with
 # less repetition/hallucination. Logs which provider won.
@@ -26,6 +27,7 @@ MODEL="large-v3"
 PROVIDER="both"
 TICKET=""
 OUTPUT_NAME=""
+KEEP_BOTH=false
 
 # Parse arguments
 POSITIONAL=""
@@ -46,6 +48,10 @@ while [[ $# -gt 0 ]]; do
         --output)
             OUTPUT_NAME="$2"
             shift 2
+            ;;
+        --keep-both)
+            KEEP_BOTH=true
+            shift
             ;;
         *)
             POSITIONAL="$1"
@@ -136,7 +142,11 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 transcribe_openai() {
     local out_file="$1"
     if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-        echo "[openai] OPENAI_API_KEY not set — skipping"
+        # Try sourcing zshrc as fallback
+        source ~/.zshrc 2>/dev/null || true
+    fi
+    if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+        echo "[openai] ERROR: OPENAI_API_KEY not set (checked env and ~/.zshrc)"
         return 1
     fi
 
@@ -325,6 +335,24 @@ print(f"{score:.4f}")
 PYSCRIPT
 }
 
+# ── Output validation ────────────────────────────────────────
+# Minimum 10 lines per 10 minutes of audio. Catches empty/near-empty outputs.
+validate_output() {
+    local file="$1"
+    local provider="$2"
+    if [[ ! -f "$file" ]]; then
+        echo "[validate] $provider: output file missing"
+        return 1
+    fi
+    local lines=$(wc -l < "$file" | tr -d ' ')
+    local min_lines=$(( DURATION_MIN > 0 ? DURATION_MIN : 1 ))  # at least 1 line per minute
+    if [[ $lines -lt $min_lines ]]; then
+        echo "[validate] $provider: only $lines lines for ~${DURATION_MIN} min audio (expected >=$min_lines) — treating as failed"
+        return 1
+    fi
+    return 0
+}
+
 # ── Run transcription(s) ─────────────────────────────────────
 echo ""
 
@@ -335,7 +363,7 @@ LOCAL_OK=false
 
 if [[ "$PROVIDER" == "openai" ]]; then
     echo "Transcribing with OpenAI only..."
-    if transcribe_openai "$OPENAI_FILE"; then
+    if transcribe_openai "$OPENAI_FILE" && validate_output "$OPENAI_FILE" "openai"; then
         OPENAI_OK=true
         cp "$OPENAI_FILE" "$OUTPUT_FILE"
     else
@@ -344,7 +372,7 @@ if [[ "$PROVIDER" == "openai" ]]; then
     fi
 elif [[ "$PROVIDER" == "local" ]]; then
     echo "Transcribing with local mlx-whisper only..."
-    if transcribe_local "$LOCAL_FILE"; then
+    if transcribe_local "$LOCAL_FILE" && validate_output "$LOCAL_FILE" "local"; then
         LOCAL_OK=true
         cp "$LOCAL_FILE" "$OUTPUT_FILE"
     else
@@ -357,13 +385,13 @@ else
     echo ""
 
     # Run OpenAI (fast, ~30s via API)
-    if transcribe_openai "$OPENAI_FILE" 2>&1; then
+    if transcribe_openai "$OPENAI_FILE" 2>&1 && validate_output "$OPENAI_FILE" "openai"; then
         OPENAI_OK=true
     fi
     echo ""
 
     # Run local (fast on Apple Silicon, ~30s for short files)
-    if transcribe_local "$LOCAL_FILE" 2>&1; then
+    if transcribe_local "$LOCAL_FILE" 2>&1 && validate_output "$LOCAL_FILE" "local"; then
         LOCAL_OK=true
     fi
     echo ""
@@ -372,7 +400,11 @@ else
     if $OPENAI_OK && $LOCAL_OK; then
         OPENAI_SCORE=$(score_repetition "$OPENAI_FILE")
         LOCAL_SCORE=$(score_repetition "$LOCAL_FILE")
-        echo "Repetition scores — openai: $OPENAI_SCORE, local: $LOCAL_SCORE"
+        OPENAI_LINES=$(wc -l < "$OPENAI_FILE" | tr -d ' ')
+        LOCAL_LINES=$(wc -l < "$LOCAL_FILE" | tr -d ' ')
+        OPENAI_WORDS=$(wc -w < "$OPENAI_FILE" | tr -d ' ')
+        LOCAL_WORDS=$(wc -w < "$LOCAL_FILE" | tr -d ' ')
+        echo "Repetition scores — openai: $OPENAI_SCORE ($OPENAI_LINES lines, $OPENAI_WORDS words), local: $LOCAL_SCORE ($LOCAL_LINES lines, $LOCAL_WORDS words)"
 
         # Pick the one with lower repetition. Tie goes to openai (generally higher accuracy).
         WINNER=$(python3 -c "
@@ -384,6 +416,15 @@ print('openai' if o <= l else 'local')
             cp "$OPENAI_FILE" "$OUTPUT_FILE"
         else
             cp "$LOCAL_FILE" "$OUTPUT_FILE"
+        fi
+
+        # Save both if requested
+        if $KEEP_BOTH; then
+            OPENAI_KEPT="${OUTPUT_FILE%.txt}_openai.txt"
+            LOCAL_KEPT="${OUTPUT_FILE%.txt}_local.txt"
+            cp "$OPENAI_FILE" "$OPENAI_KEPT"
+            cp "$LOCAL_FILE" "$LOCAL_KEPT"
+            echo "Kept both: $(basename "$OPENAI_KEPT"), $(basename "$LOCAL_KEPT")"
         fi
     elif $OPENAI_OK; then
         echo "Only OpenAI succeeded — using it"
@@ -398,6 +439,7 @@ print('openai' if o <= l else 'local')
 fi
 
 LINES=$(wc -l < "$OUTPUT_FILE" | tr -d ' ')
+WORDS=$(wc -w < "$OUTPUT_FILE" | tr -d ' ')
 echo ""
-echo "Saved to $OUTPUT_FILE ($LINES lines, ~${DURATION_MIN} min audio)"
+echo "Saved to $OUTPUT_FILE ($LINES lines, $WORDS words, ~${DURATION_MIN} min audio)"
 echo "Transcription complete: $OUTPUT_FILE"
