@@ -46,8 +46,13 @@ If a slide has more than ~6 lines of content, it will overflow. Split into multi
 - **List slides:** 5 items max
 - **Chart slides:** Chart + 1 line annotation max
 
-### 3. Remove `margin-top` when using `center: true`
-RevealJS `center: true` handles vertical centering automatically. Adding `margin-top: 2em` or `3em` on elements will push content below center, making it look "low" on the page. Let center do its job.
+### 3. Zero out heading margins globally, remove `margin-top` from inline styles
+RevealJS themes add default `margin-top` to h1/h2/h3 elements. When `center: true` is on, these margins push content below the vertical midpoint. Fix globally in CSS:
+```css
+.reveal h1 { margin-top: 0; }
+.reveal h2 { margin-top: 0; }
+```
+Also avoid inline `margin-top` on any elements inside slides — let `center: true` handle vertical positioning. If you need spacing between elements, use small values (0.5em max) or `margin-bottom` on the element above.
 
 ### 4. Size guidelines for elements
 
