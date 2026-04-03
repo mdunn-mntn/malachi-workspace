@@ -102,18 +102,26 @@ with open('deck_standalone.html', 'w') as f:
     f.write(html)
 ```
 
-## Color Palette
+## Color Palette & Meaning
 
 ```css
---navy: #1B2A4A;    /* headings, emphasis */
---blue: #2E5090;    /* secondary bars */
+--navy: #1B2A4A;    /* headings, emphasis, authority — use for bold statements */
+--blue: #2E5090;    /* secondary bars, supporting data */
 --mid: #5A7DB5;     /* mid-range data */
 --light: #A8BDD9;   /* light data */
---muted: #C8CDD4;   /* lowest/baseline data */
---red: #D63B2F;     /* key insight, hero number, accent */
+--muted: #C8CDD4;   /* lowest/baseline data, de-emphasized text */
+--red: #D63B2F;     /* hero numbers ONLY (72x, 184x) — the one punchline per slide */
 --text: #222222;    /* body text */
---text-light: #666666; /* secondary text */
+--text-light: #666666; /* secondary text, descriptions */
 ```
+
+### Color Meaning Rules
+
+1. **Red = hero number / punchline only.** Red reads as "warning/bad" to most people. Reserve it for the one number you want seared into memory (72x, 184x). Never use red for emphasis text or status lines — it signals danger.
+2. **Navy = emphasis text, bold statements, authority.** When you need a line to pop without negative connotation (e.g., "All High Intent IPs scored identically at 10,000"), use bold navy. It carries weight without emotion.
+3. **Gray (#999) = de-emphasized context.** Supporting details, footnotes, the "current state" side of a comparison.
+4. **One accent color per slide.** If the slide has a red 72x, everything else is navy/gray. Don't compete for attention.
+5. **Color encodes data in charts, never decoration.** Red bar = top bucket, navy = second, gradient to gray = baseline. The color IS the data — don't add color for aesthetics.
 
 ## Slide Templates
 
