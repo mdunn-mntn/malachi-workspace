@@ -235,6 +235,12 @@ bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504 --provider
 
 Zoom recordings live at `~/Documents/Zoom/`. The script auto-finds the audio file (.m4a preferred) and saves the transcript to the ticket's `meetings/` folder. Default `--provider both` merges OpenAI (accuracy: proper nouns, punctuation) with local mlx-whisper (coverage: captures speech OpenAI misses) per 15-second time window.
 
+**Quick prompt for Claude (copy-paste):**
+```
+Transcribe this meeting: '~/Documents/zoom/FOLDER_NAME/audioXXX.m4a' for ticket TI-XXX, this is meeting #N
+```
+That's all you need. Claude reads the CLAUDE.md instructions and handles the rest — dual provider, merge, naming convention, commit and push.
+
 ### `artifacts/`
 
 Everything else. Jupyter notebooks, Python scripts, PDFs, Word docs, architecture images specific to this ticket, context files for LLM sessions, third-party source data delivered for this ticket, presentations, talk tracks.
