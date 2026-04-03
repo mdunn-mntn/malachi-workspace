@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TI-813: Keyword Selection Matters — 500 Advertisers</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+    <style>
+        :root {
+            --navy: #1B2A4A;
+            --blue: #2E5090;
+            --mid: #5A7DB5;
+            --light: #A8BDD9;
+            --muted: #C8CDD4;
+            --red: #D63B2F;
+            --red-soft: #E8685A;
+            --bg: #FAFAFA;
+            --text: #222222;
+            --text-light: #666666;
+        }
+        .reveal { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--text); }
+        .reveal .slides { text-align: left; }
+        .reveal h1, .reveal h2, .reveal h3 { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--navy); text-transform: none; font-weight: 700; letter-spacing: -0.02em; }
+        .reveal h1 { font-size: 2.4em; line-height: 1.1; }
+        .reveal h2 { font-size: 1.6em; }
+        .reveal h3 { font-size: 1.2em; }
+        .reveal .subtitle { color: var(--text-light); font-size: 0.55em; font-weight: 400; margin-top: 0.3em; }
+        .reveal .power-line { color: var(--red); font-size: 1.4em; font-weight: 700; text-align: center; padding: 0.5em 0; }
+        .reveal .big-number { font-size: 5em; font-weight: 800; color: var(--red); text-align: center; line-height: 1; margin: 0.2em 0; }
+        .reveal .big-number-context { font-size: 1.2em; color: var(--text-light); text-align: center; }
+        .reveal .muted-number { font-size: 5em; font-weight: 800; color: var(--muted); text-align: center; line-height: 1; margin: 0.2em 0; }
+        .reveal table { width: 100%; border-collapse: collapse; font-size: 0.65em; margin: 1em 0; }
+        .reveal table th { background: var(--navy); color: white; padding: 0.6em 0.8em; text-align: left; font-weight: 600; }
+        .reveal table td { padding: 0.5em 0.8em; border-bottom: 1px solid #E8E8E8; }
+        .reveal table tr:nth-child(even) { background: #F5F5F5; }
+        .reveal .highlight-row td { background: rgba(214, 59, 47, 0.08) !important; font-weight: 600; }
+        .reveal .bar-chart { display: flex; align-items: flex-end; justify-content: center; gap: 1.5em; height: 350px; padding: 2em 0 0 0; }
+        .reveal .bar-col { display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+        .reveal .bar { width: 80px; border-radius: 4px 4px 0 0; transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .reveal .bar-label { font-size: 0.7em; color: var(--text-light); text-align: center; }
+        .reveal .bar-value { font-weight: 700; font-size: 0.85em; }
+        .reveal .contrast-grid { display: grid; grid-template-columns: 1fr auto 2fr; gap: 1em; align-items: center; }
+        .reveal .contrast-panel { text-align: center; }
+        .reveal .contrast-divider { width: 2px; height: 300px; background: #E0E0E0; }
+        .reveal .insight-box { background: rgba(214, 59, 47, 0.06); border-left: 4px solid var(--red); padding: 1em 1.5em; margin: 1em 0; font-size: 0.85em; }
+        .reveal .footer-note { position: absolute; bottom: 2em; left: 2em; font-size: 0.45em; color: #AAAAAA; }
+        .reveal .lollipop-row { display: flex; align-items: center; margin: 0.25em 0; font-size: 0.65em; }
+        .reveal .lollipop-label { width: 220px; text-align: right; padding-right: 1em; color: var(--text); }
+        .reveal .lollipop-stem { height: 3px; border-radius: 2px; }
+        .reveal .lollipop-dot { width: 12px; height: 12px; border-radius: 50%; margin-left: -2px; flex-shrink: 0; }
+        .reveal .lollipop-value { padding-left: 0.5em; font-weight: 600; }
+        .reveal .scale-badge { display: inline-block; background: var(--navy); color: white; padding: 0.2em 0.6em; border-radius: 4px; font-size: 0.7em; font-weight: 600; margin-left: 0.5em; }
+    </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+    <!-- SLIDE 1: Title -->
+    <section>
+        <h1 style="text-align: center; margin-top: 1.5em;">
+            Keyword Selection<br>Matters
+            <div class="subtitle">BUK Value Analysis — 500 Advertisers <span class="scale-badge">SCALED</span></div>
+        </h1>
+        <div class="power-line" style="margin-top: 1.5em;">
+            Keyword value is advertiser-specific, not universal.
+        </div>
+        <div class="footer-note">Malachi Dunn · April 2026 · 500 advertisers · 30.9B IPs · BUK Production Model (March 2026)</div>
+    </section>
+
+    <!-- SLIDE 2: The Question -->
+    <section>
+        <h2 style="text-align: center; margin-top: 2em; font-size: 1.8em;">
+            Does keyword selection<br>actually matter?
+        </h2>
+        <p style="text-align: center; color: var(--text-light); font-size: 0.85em; margin-top: 1.5em;">
+            BUK has been deprioritized because prior experiments were confounded.<br>
+            We need to prove that picking the <strong>right</strong> keywords matters at all —<br>
+            at scale, across hundreds of advertisers.
+        </p>
+    </section>
+
+    <!-- SLIDE 3: The Number -->
+    <section>
+        <div style="margin-top: 0.5em;">
+            <p class="big-number-context">IPs matched to an advertiser's top-5 keywords visit at</p>
+            <div class="big-number">72x</div>
+            <p class="big-number-context">the rate of those matched to rank 51+</p>
+        </div>
+        <div class="insight-box fragment" style="margin-top: 1.5em; font-size: 0.7em;">
+            <strong>No target leakage:</strong> Keywords scored from browsing behavior <strong>March 1–15</strong>.
+            Visits measured <strong>March 16–26</strong>. The keyword window closes before the outcome window opens.
+        </div>
+        <div class="footer-note">500 advertisers · 30.9B scored IPs · 754K visitors · Temporal separation by design</div>
+    </section>
+
+    <!-- SLIDE 4: The Cliff — Bar Chart -->
+    <section>
+        <h2>The Signal Drops Off a Cliff</h2>
+        <div class="subtitle">Visit rate by best-matched BUK keyword rank · 500 advertisers · 30.9B IPs</div>
+
+        <div class="bar-chart">
+            <div class="bar-col">
+                <div class="bar-value" style="color: var(--red); font-size: 1.1em;">72x</div>
+                <div class="bar fragment" data-fragment-index="1" style="height: 300px; background: var(--red);"></div>
+                <div class="bar-label">1–5</div>
+            </div>
+            <div class="bar-col">
+                <div class="bar-value">14x</div>
+                <div class="bar fragment" data-fragment-index="2" style="height: 58px; background: var(--navy);"></div>
+                <div class="bar-label">6–10</div>
+            </div>
+            <div class="bar-col">
+                <div class="bar-value">5.6x</div>
+                <div class="bar fragment" data-fragment-index="3" style="height: 23px; background: var(--blue);"></div>
+                <div class="bar-label">11–20</div>
+            </div>
+            <div class="bar-col">
+                <div class="bar-value">2.9x</div>
+                <div class="bar fragment" data-fragment-index="4" style="height: 12px; background: var(--mid);"></div>
+                <div class="bar-label">21–30</div>
+            </div>
+            <div class="bar-col">
+                <div class="bar-value">1.9x</div>
+                <div class="bar fragment" data-fragment-index="4" style="height: 8px; background: var(--light);"></div>
+                <div class="bar-label">31–50</div>
+            </div>
+            <div class="bar-col">
+                <div class="bar-value">1x</div>
+                <div class="bar fragment" data-fragment-index="4" style="height: 4px; background: var(--muted);"></div>
+                <div class="bar-label">51+</div>
+            </div>
+        </div>
+
+        <p class="fragment" data-fragment-index="5" style="text-align: center; font-size: 0.75em; color: var(--text-light); margin-top: 1em;">
+            Steep, monotonic drop-off preserved at 10x the scale
+        </p>
+    </section>
+
+    <!-- SLIDE 5: The Contrast — Punchline -->
+    <section>
+        <h2 style="text-align: center;">The Signal Is Advertiser-Specific</h2>
+
+        <div class="contrast-grid" style="margin-top: 1.5em;">
+            <div class="contrast-panel">
+                <p style="color: #999; font-size: 0.8em; margin-bottom: 0.5em;">Global Ranking</p>
+                <div class="muted-number" style="font-size: 3.5em;">3x</div>
+                <p style="color: #AAA; font-size: 0.7em;">range</p>
+            </div>
+            <div class="contrast-divider"></div>
+            <div class="contrast-panel">
+                <p style="color: var(--navy); font-size: 0.8em; font-weight: 600; margin-bottom: 0.5em;">Per-Advertiser Ranking</p>
+                <div class="big-number" style="font-size: 3.5em;">72x</div>
+                <p style="color: var(--red); font-size: 0.7em; font-weight: 600;">range (aggregate) · 82x median per-advertiser</p>
+            </div>
+        </div>
+
+        <div class="fragment insight-box" style="margin-top: 1.5em;">
+            <strong>Per-advertiser ranking captures 24x more signal than global ranking.</strong><br>
+            "Dog Beds" is gold for K9 Ballistics and worthless for Rocket Lawyer. A global keyword score misses this entirely.
+        </div>
+    </section>
+
+    <!-- SLIDE 6: Per-Advertiser Consistency -->
+    <section>
+        <h2>85% of Advertisers Show &gt;10x Lift</h2>
+        <div class="subtitle">106 of 125 advertisers above 10x across 67 verticals — top 10 shown</div>
+
+        <div style="margin-top: 1em;">
+            <div class="lollipop-row">
+                <span class="lollipop-label">ASRT</span>
+                <div class="lollipop-stem" style="width: 350px; background: var(--red);"></div>
+                <div class="lollipop-dot" style="background: var(--red);"></div>
+                <span class="lollipop-value" style="color: var(--red);">4,068x</span>
+            </div>
+            <div class="lollipop-row">
+                <span class="lollipop-label">Prompt Health</span>
+                <div class="lollipop-stem" style="width: 162px; background: var(--red);"></div>
+                <div class="lollipop-dot" style="background: var(--red);"></div>
+                <span class="lollipop-value" style="color: var(--red);">1,884x</span>
+            </div>
+            <div class="lollipop-row">
+                <span class="lollipop-label">Catholic Charities</span>
+                <div class="lollipop-stem" style="width: 149px; background: var(--red);"></div>
+                <div class="lollipop-dot" style="background: var(--red);"></div>
+                <span class="lollipop-value" style="color: var(--red);">1,731x</span>
+            </div>
+            <div class="lollipop-row">
+                <span class="lollipop-label">Le Creuset</span>
+                <div class="lollipop-stem" style="width: 104px; background: var(--red);"></div>
+                <div class="lollipop-dot" style="background: var(--red);"></div>
+                <span class="lollipop-value" style="color: var(--red);">1,213x</span>
+            </div>
+            <div class="lollipop-row">
+                <span class="lollipop-label">Yamaha WaveRunner</span>
+                <div class="lollipop-stem" style="width: 78px; background: var(--red);"></div>
+                <div class="lollipop-dot" style="background: var(--red);"></div>
+                <span class="lollipop-value" style="color: var(--red);">908x</span>
+            </div>
+            <div class="lollipop-row">
+                <span class="lollipop-label">LATAM Airlines</span>
+                <div class="lollipop-stem" style="width: 77px; background: var(--red);"></div>
+                <div class="lollipop-dot" style="background: var(--red);"></div>
+                <span class="lollipop-value" style="color: var(--red);">896x</span>
+            </div>
+            <div class="lollipop-row">
+                <span class="lollipop-label">Bugaboo</span>
+                <div class="lollipop-stem" style="width: 73px; background: var(--red);"></div>
+                <div class="lollipop-dot" style="background: var(--red);"></div>
+                <span class="lollipop-value" style="color: var(--red);">845x</span>
+            </div>
+            <div class="lollipop-row fragment">
+                <span class="lollipop-label" style="color: #999;">+ 99 more above 10x</span>
+                <div class="lollipop-stem" style="width: 35px; background: var(--navy);"></div>
+                <div class="lollipop-dot" style="background: var(--navy);"></div>
+                <span class="lollipop-value" style="color: var(--navy);">11–824x</span>
+            </div>
+            <div class="lollipop-row fragment">
+                <span class="lollipop-label" style="color: #BBB;">19 below 10x</span>
+                <div class="lollipop-stem" style="width: 3px; background: var(--muted);"></div>
+                <div class="lollipop-dot" style="background: var(--muted);"></div>
+                <span class="lollipop-value" style="color: var(--muted);">1–10x</span>
+            </div>
+        </div>
+
+        <p style="text-align: center; font-size: 0.7em; color: var(--text-light); margin-top: 0.8em;">
+            Median lift: <strong style="color: var(--red);">82x</strong> · All 67 verticals positive · Employment, apparel, travel, B2B, non-profit, sports...
+        </p>
+    </section>
+
+    <!-- SLIDE 7: Scale Comparison -->
+    <section>
+        <h2>Signal Holds at Scale</h2>
+        <div class="subtitle">TI-804 (50 advertisers) vs TI-813 (500 advertisers)</div>
+
+        <table style="margin-top: 1.5em; font-size: 0.75em;">
+            <tr><th>Metric</th><th>50 Advertisers</th><th>500 Advertisers</th></tr>
+            <tr><td>Aggregate lift (top-5 vs 51+)</td><td>184x</td><td class="highlight-row"><strong>72x</strong></td></tr>
+            <tr><td>Per-advertiser median lift</td><td>148x</td><td class="highlight-row"><strong>82x</strong></td></tr>
+            <tr><td>Advertisers with >10 visitors</td><td>15</td><td class="highlight-row"><strong>125</strong></td></tr>
+            <tr><td>Total visitors</td><td>58K</td><td class="highlight-row"><strong>754K</strong></td></tr>
+            <tr><td>% showing >10x lift</td><td>93%</td><td class="highlight-row"><strong>85%</strong></td></tr>
+            <tr><td>Verticals represented</td><td>15</td><td class="highlight-row"><strong>67</strong></td></tr>
+        </table>
+
+        <div class="fragment insight-box" style="margin-top: 1em; font-size: 0.75em;">
+            Aggregate lift attenuates with more advertisers (expected dilution). But 85% >10x across 125 advertisers and 67 verticals confirms this is not sample-dependent.
+        </div>
+    </section>
+
+    <!-- SLIDE 8: So What -->
+    <section>
+        <h2>So What?</h2>
+
+        <div style="margin-top: 1.5em;">
+            <div class="fragment" style="margin: 1.2em 0;">
+                <h3 style="color: var(--red); margin-bottom: 0.2em;">1. Keyword selection is the highest-leverage targeting lever we have.</h3>
+                <p style="font-size: 0.75em; color: var(--text-light);">72x aggregate, 82x median per-advertiser. Confirmed across 500 advertisers and 67 verticals.</p>
+            </div>
+
+            <div class="fragment" style="margin: 1.2em 0;">
+                <h3 style="color: var(--navy); margin-bottom: 0.2em;">2. The value is advertiser-specific.</h3>
+                <p style="font-size: 0.75em; color: var(--text-light);">Global ranking gives 3x. Per-advertiser gives 72x aggregate. Only a model that learns from cross-advertiser behavioral data can capture this.</p>
+            </div>
+
+            <div class="fragment" style="margin: 1.2em 0;">
+                <h3 style="color: var(--navy); margin-bottom: 0.2em;">3. We're currently throwing this signal away.</h3>
+                <p style="font-size: 0.75em; color: var(--text-light);">Every BUK-matched IP gets a flat 10,000 score regardless of rank. We treat a 72x signal as binary.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SLIDE 9: Next Steps -->
+    <section>
+        <h2>Next Steps</h2>
+        <div style="margin-top: 2em; font-size: 0.85em;">
+            <p style="margin: 1em 0;"><strong style="color: var(--navy);">TI-805:</strong> Head-to-head BUK vs MM V2 — does BUK actually pick <em>better</em> keywords?</p>
+            <p style="margin: 1em 0;"><strong style="color: var(--navy);">TI-806:</strong> Causal impact — did BUK cause the IVR improvement in beta?</p>
+        </div>
+    </section>
+
+    <!-- SLIDE 10: Close -->
+    <section>
+        <div style="margin-top: 3em;">
+            <div class="power-line" style="font-size: 1.8em;">
+                Keyword value is advertiser-specific,<br>not universal.
+            </div>
+            <p style="text-align: center; color: var(--text-light); font-size: 0.85em; margin-top: 2em;">
+                500 advertisers. 67 verticals. 754K visitors. 30.9B IPs.<br>
+                BUK's collaborative filtering captures signal that no global approach can.
+            </p>
+        </div>
+    </section>
+
+    <!-- SLIDE 11: Appendix Title -->
+    <section>
+        <h1 style="text-align: center; margin-top: 3em; color: var(--text-light);">Appendix</h1>
+    </section>
+
+    <!-- SLIDE 12: Methodology -->
+    <section>
+        <h2>Methodology: No Target Leakage</h2>
+        <div class="subtitle">Keywords and visits are measured in non-overlapping time windows</div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5em; margin: 1.5em 0; font-size: 0.85em;">
+            <div style="background: var(--navy); color: white; padding: 0.8em 1.5em; border-radius: 6px; text-align: center;">
+                <strong>Keyword Window</strong><br>
+                <span style="font-size: 1.3em;">Mar 1–15</span><br>
+                <span style="font-size: 0.8em; opacity: 0.8;">ipdsc DS19 browsing</span>
+            </div>
+            <div style="font-size: 2em; color: var(--muted);">|</div>
+            <div style="background: var(--red); color: white; padding: 0.8em 1.5em; border-radius: 6px; text-align: center;">
+                <strong>Outcome Window</strong><br>
+                <span style="font-size: 1.3em;">Mar 16–26</span><br>
+                <span style="font-size: 0.8em; opacity: 0.8;">ui_visits to advertiser</span>
+            </div>
+        </div>
+
+        <table style="font-size: 0.6em; margin-top: 1em;">
+            <tr><th style="width: 30%;">Parameter</th><th>Value</th></tr>
+            <tr><td>Sample</td><td>500 advertisers (deterministic hash from 5,699 BUK-predicted)</td></tr>
+            <tr><td>Metric</td><td>Best-matched keyword rank per IP per advertiser</td></tr>
+            <tr><td>Visit definition</td><td>Any visit to advertiser (not campaign-scoped)</td></tr>
+            <tr><td>IPs scored</td><td>30.9 billion</td></tr>
+            <tr><td>Total visitors</td><td>754,377 across 67 verticals</td></tr>
+        </table>
+
+        <div class="insight-box" style="font-size: 0.65em; margin-top: 0.8em;">
+            The keyword window <strong>closes</strong> before the outcome window <strong>opens</strong>.
+            No IP's visit can influence its keyword score. This is temporal separation by design.
+        </div>
+    </section>
+
+    <!-- SLIDE 13: Anticipated Questions -->
+    <section>
+        <h2>Anticipated Questions</h2>
+        <table style="font-size: 0.55em;">
+            <tr><th style="width: 35%;">Question</th><th>Answer</th></tr>
+            <tr><td>"Isn't this circular?"</td><td>Keywords 3/1–3/15, visits 3/16–3/26. Temporal separation by design. ALS model trained on history (standard), evaluation window is clean.</td></tr>
+            <tr><td>"Visit rates are tiny"</td><td>Denominator is 30.9B IPs. Absolute rate reflects enormous denominator, not weak signal. 72x relative rate is what matters for targeting.</td></tr>
+            <tr><td>"Driven by a few big advertisers?"</td><td>106/125 show >10x lift independently. Median 82x. Signal is consistent across 67 verticals.</td></tr>
+            <tr><td>"Why did the lift drop from 184x to 72x?"</td><td>Expected dilution — more advertisers in the pool. Per-advertiser median (82x) is the meaningful metric. 85% >10x confirms robustness.</td></tr>
+            <tr><td>"Is this causal?"</td><td>Observational with strong design. Monotonic across 6 buckets, 67 verticals, temporal separation. RCT is TI-806.</td></tr>
+            <tr><td>"What about IP rotation?"</td><td>Adds noise biasing toward zero. 72x is a lower bound on true signal.</td></tr>
+            <tr><td>"Comparison to current system?"</td><td>Flat 10,000 score for all BUK IPs. We treat a 72x signal as binary.</td></tr>
+        </table>
+    </section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+    Reveal.initialize({
+        hash: true,
+        slideNumber: true,
+        controls: true,
+        progress: true,
+        center: false,
+        transition: 'fade',
+        transitionSpeed: 'slow',
+        width: 1200,
+        height: 700,
+        margin: 0.08,
+    });
+</script>
+</body>
+</html>
