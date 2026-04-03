@@ -129,6 +129,10 @@ WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 # ── OpenAI transcription ──────────────────────────────────────
+# Uses whisper-1 with verbose_json for segment-level timestamps.
+# gpt-4o-transcribe doesn't support verbose_json, and its plain json mode
+# merges speech into a single blob that loses conversational detail.
+# Filler-word prompt hints preserve verbatim speech.
 transcribe_openai() {
     local out_file="$1"
     if [[ -z "${OPENAI_API_KEY:-}" ]]; then
@@ -137,6 +141,44 @@ transcribe_openai() {
     fi
 
     local start_time=$(date +%s)
+    local filler_prompt="Um, uh, like, you know, right, okay, yeah, so, I mean, kind of, sort of."
+
+    # Helper: call the API for one file, append segments JSON to $segments_file
+    _openai_transcribe_file() {
+        local input_file="$1"
+        local segments_file="$2"
+        local time_offset="$3"  # seconds to add to timestamps (for chunks)
+
+        local response=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -F "file=@$input_file" \
+            -F "model=whisper-1" \
+            -F "response_format=verbose_json" \
+            -F "timestamp_granularities[]=segment" \
+            -F "language=en" \
+            -F "prompt=$filler_prompt")
+
+        local error=$(echo "$response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
+        if [[ -n "$error" ]]; then
+            echo "$error"
+            return 1
+        fi
+
+        # Extract segments and apply time offset
+        python3 -c "
+import sys, json
+data = json.loads(sys.stdin.read())
+offset = float(sys.argv[1])
+segments = data.get('segments', [])
+for seg in segments:
+    seg['start'] = seg.get('start', 0) + offset
+    seg['end'] = seg.get('end', 0) + offset
+print(json.dumps(segments))
+" "$time_offset" <<< "$response" >> "$segments_file"
+    }
+
+    local segments_file="$WORK_DIR/openai_segments.jsonl"
+    > "$segments_file"
 
     if [[ $FILE_SIZE_MB -gt 24 ]] || [[ ${TOTAL_DURATION:-0} -gt 1300 ]]; then
         local chunk_dir="$WORK_DIR/chunks"
@@ -147,50 +189,49 @@ transcribe_openai() {
         local chunk_files=("$chunk_dir"/chunk_*.m4a)
         echo "[openai] Split into ${#chunk_files[@]} chunks (${FILE_SIZE_MB}MB, ${TOTAL_DURATION}s)"
 
-        local full_text="" chunk_num=0
+        local chunk_num=0
         for chunk in "${chunk_files[@]}"; do
             chunk_num=$((chunk_num + 1))
+            local chunk_offset=$(( (chunk_num - 1) * 1200 ))
             echo "[openai] Transcribing chunk $chunk_num/${#chunk_files[@]}..."
-            local response=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
-                -H "Authorization: Bearer $OPENAI_API_KEY" \
-                -F "file=@$chunk" \
-                -F "model=gpt-4o-transcribe" \
-                -F "response_format=json" \
-                -F "language=en")
-            local error=$(echo "$response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
-            if [[ -n "$error" ]]; then
-                echo "[openai] API error on chunk $chunk_num: $error"
+            local err=$(_openai_transcribe_file "$chunk" "$segments_file" "$chunk_offset")
+            if [[ $? -ne 0 ]]; then
+                echo "[openai] API error on chunk $chunk_num: $err"
                 return 1
             fi
-            local chunk_text=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('text','').strip())" <<< "$response")
-            [[ -n "$chunk_text" ]] && full_text="${full_text:+$full_text }$chunk_text"
         done
-        local raw_text="$full_text"
     else
         echo "[openai] Sending ${FILE_SIZE_MB}MB file to API..."
-        local response=$(curl -s -X POST "https://api.openai.com/v1/audio/transcriptions" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -F "file=@$AUDIO_FILE" \
-            -F "model=gpt-4o-transcribe" \
-            -F "response_format=json" \
-            -F "language=en")
-        local error=$(echo "$response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',{}).get('message',''))" 2>/dev/null || echo "")
-        if [[ -n "$error" ]]; then
-            echo "[openai] API error: $error"
+        local err=$(_openai_transcribe_file "$AUDIO_FILE" "$segments_file" "0")
+        if [[ $? -ne 0 ]]; then
+            echo "[openai] API error: $err"
             return 1
         fi
-        local raw_text=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('text','').strip())" <<< "$response")
     fi
 
+    # Convert segments to timestamped lines (same format as local)
     python3 -c "
-import sys, re
-text = sys.stdin.read().strip()
-sentences = re.split(r'(?<=[.!?])\s+', text)
-for s in sentences:
-    s = s.strip()
-    if s:
-        print(s)
-" <<< "$raw_text" > "$out_file"
+import sys, json
+
+segments = []
+for line in open(sys.argv[1]):
+    line = line.strip()
+    if line:
+        segments.extend(json.loads(line))
+
+lines = []
+for seg in segments:
+    t = seg.get('start', 0)
+    text = seg.get('text', '').strip()
+    if text:
+        timestamp = f'[{int(t//60):02d}:{int(t%60):02d}]'
+        lines.append(f'{timestamp} {text}')
+
+with open(sys.argv[2], 'w') as f:
+    f.write('\n'.join(lines) + '\n')
+
+print(len(lines))
+" "$segments_file" "$out_file"
 
     local end_time=$(date +%s)
     local elapsed=$((end_time - start_time))
