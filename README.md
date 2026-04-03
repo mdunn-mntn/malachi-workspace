@@ -84,7 +84,7 @@ workspace/
 │   ├── CLAUDE.md                ← persistent instructions for Claude (read every session)
 │   └── scripts/
 │       ├── bq_run.sh            ← BQ query wrapper with perf logging
-│       └── transcribe.sh        ← local Whisper transcription (mlx-whisper, Apple Silicon)
+│       └── transcribe.sh        ← meeting transcription (OpenAI whisper-1 + local mlx-whisper, merged)
 ├── knowledge/
 │   ├── data_catalog.md          ← table-level reference: schemas, join keys, TTLs, gotchas
 │   ├── data_knowledge.md        ← business logic, architecture, tribal knowledge
@@ -218,18 +218,22 @@ These files are gitignored (no raw data in GitHub) but live on disk and are refe
 
 ### `meetings/`
 
-Meeting transcripts and notes related to the ticket. Transcripts are generated locally using Whisper (mlx-whisper on Apple Silicon). Named descriptively: `teach_me_everything_meeting.txt`, `discuss_experiment_causal_impact_meeting.txt`.
+Meeting transcripts and notes related to the ticket. Transcripts use **sequence numbering** for chronological ordering: `ti_xxx_01_description_YYYY_MM_DD.txt`, `ti_xxx_02_...`. The number ensures sort order, especially with multiple meetings per day.
 
 **Transcribing a Zoom recording:**
 ```bash
-# Best quality (large-v3, ~6 min per 30 min meeting on M4 Pro)
-bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504
+# Default: runs both OpenAI + local, merges best of both
+bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504 --output ti_504_01_kickoff_2026_04_03
 
-# Faster (medium model, ~1.5 min per 30 min meeting)
-bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504 --model medium
+# Keep individual provider files for comparison
+bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504 --output ti_504_01_kickoff_2026_04_03 --keep-both
+
+# Force single provider
+bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504 --provider openai
+bash .claude/scripts/transcribe.sh "Zoom Folder Name" --ticket ti_504 --provider local
 ```
 
-Zoom recordings live at `~/Documents/Zoom/`. The script auto-finds the audio file (.m4a preferred) and saves the transcript to the ticket's `meetings/` folder.
+Zoom recordings live at `~/Documents/Zoom/`. The script auto-finds the audio file (.m4a preferred) and saves the transcript to the ticket's `meetings/` folder. Default `--provider both` merges OpenAI (accuracy: proper nouns, punctuation) with local mlx-whisper (coverage: captures speech OpenAI misses) per 15-second time window.
 
 ### `artifacts/`
 
