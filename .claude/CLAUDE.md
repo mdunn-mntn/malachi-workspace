@@ -39,7 +39,7 @@ workspace/
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket — internal working doc |
 | `tickets/_template/presentation_template.md` | Copy this when starting a new ticket — external-facing narrative for sharing |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
-| `.claude/scripts/transcribe.sh` | Meeting transcription — runs both OpenAI and local mlx-whisper by default, picks the one with less repetition. Use `--provider openai` or `--provider local` to force one. |
+| `.claude/scripts/transcribe.sh` | Meeting transcription — runs both OpenAI (whisper-1) and local mlx-whisper, merges best of both (OpenAI accuracy backbone + local coverage patches). Use `--provider openai` or `--provider local` to force one. `--keep-both` saves individual provider files. |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
 | `self_review/summary.md` | Self-review guide — workflow, rubric, leadership direction (Paulo/Kale/Alyson), how to write rationales |
 | `self_review/self_review_2.md` | **Active self-review** — update after every ticket (gitignored) |
