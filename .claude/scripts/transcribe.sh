@@ -14,8 +14,10 @@
 #   --output FILE         Custom output filename (without extension)
 #   --keep-both           When using both providers, save each as _openai.txt / _local.txt
 #
-# Default behavior: runs both OpenAI and local mlx-whisper, picks the one with
-# less repetition/hallucination. Logs which provider won.
+# Default behavior: runs both OpenAI (whisper-1) and local mlx-whisper, then
+# merges the best of both — OpenAI as accuracy backbone, local patched in where
+# it captured significantly more speech. Hallucination detection prevents bad
+# local segments from contaminating the merge.
 #
 # Output: .txt transcript with timestamps and speaker segments
 
@@ -64,8 +66,8 @@ if [[ -z "$POSITIONAL" ]]; then
     echo "Usage: bash transcribe.sh <zoom-folder-name|audio-file> [--ticket ti_xxx] [--provider both|openai|local]"
     echo ""
     echo "Providers:"
-    echo "  both    — Run both, pick the one with less repetition (default)"
-    echo "  openai  — GPT-4o Transcribe via API only (\$0.36/hr)"
+    echo "  both    — Run both, merge best of each (openai accuracy + local coverage) (default)"
+    echo "  openai  — whisper-1 via API only"
     echo "  local   — mlx-whisper large-v3 on Apple Silicon only (free)"
     echo ""
     echo "Available Zoom recordings:"
@@ -336,10 +338,12 @@ PYSCRIPT
 }
 
 # ── Segment merger ────────────────────────────────────────────
-# Aligns both transcripts by timestamp and picks the best segments from each.
-# OpenAI wins on accuracy (technical terms, proper nouns); local wins on coverage.
-# For each time bucket: if word counts are similar, prefer OpenAI; if one has
-# significantly more words, take that one (it captured speech the other missed).
+# OpenAI backbone + local coverage patches.
+# OpenAI wins on accuracy (proper nouns, punctuation, technical terms).
+# Local wins on coverage (captures speech in gaps OpenAI missed).
+# For each 15s window: use OpenAI unless local has >60% more substantive words
+# AND local isn't hallucinating. This avoids word-level mixing artifacts
+# (duplicate phrases at bucket boundaries) by switching whole segments.
 merge_transcripts() {
     local openai_file="$1"
     local local_file="$2"
@@ -347,91 +351,109 @@ merge_transcripts() {
 
     python3 << 'MERGESCRIPT' - "$openai_file" "$local_file" "$merged_file"
 import sys, re
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 openai_file, local_file, merged_file = sys.argv[1], sys.argv[2], sys.argv[3]
 
+filler = {'mm-hmm', 'mmhmm', 'mm', 'hmm', 'uh', 'um', 'uh-huh', 'yeah',
+          'okay', 'ok', 'right', 'sure', 'yep', 'mhm', 'huh', 'ah', 'oh',
+          'so', 'like'}
+
 def parse_segments(filepath):
-    """Parse [MM:SS] lines into list of (seconds, text) tuples."""
     segments = []
     with open(filepath) as f:
         for line in f:
-            line = line.rstrip()
-            m = re.match(r'\[(\d{2}):(\d{2})\]\s*(.*)', line)
+            m = re.match(r'\[(\d{2}):(\d{2})\]\s*(.*)', line.rstrip())
             if m:
                 t = int(m.group(1)) * 60 + int(m.group(2))
                 segments.append((t, m.group(3)))
     return segments
 
-def bucket_segments(segments, bucket_size=30):
-    """Group segments into time buckets (default 30s windows)."""
+def sub_count(text):
+    return sum(1 for w in text.lower().split()
+               if re.sub(r'[^\w]', '', w) not in filler and len(re.sub(r'[^\w]', '', w)) > 0)
+
+def has_repetition(lines, threshold=3):
+    """Detect hallucination loops (same text repeated 3+ times in a window)."""
+    texts = [text.strip().lower() for _, text in lines if text.strip()]
+    counts = Counter(texts)
+    return any(c >= threshold for c in counts.values())
+
+def bucket_segments(segments, bucket_size=15):
     buckets = defaultdict(list)
     for t, text in segments:
-        bucket_key = (t // bucket_size) * bucket_size
-        buckets[bucket_key].append((t, text))
+        key = (t // bucket_size) * bucket_size
+        buckets[key].append((t, text))
     return buckets
 
 openai_segs = parse_segments(openai_file)
 local_segs = parse_segments(local_file)
-
 openai_buckets = bucket_segments(openai_segs)
 local_buckets = bucket_segments(local_segs)
-
-# All bucket keys from both providers
 all_keys = sorted(set(openai_buckets.keys()) | set(local_buckets.keys()))
 
-merged_lines = []
-stats = {"openai": 0, "local": 0, "only_openai": 0, "only_local": 0}
+merged = []
+stats = {"openai": 0, "local_coverage": 0, "openai_only": 0, "local_only": 0, "local_halluc": 0}
 
 for key in all_keys:
-    o_segs = openai_buckets.get(key, [])
-    l_segs = local_buckets.get(key, [])
+    o = openai_buckets.get(key, [])
+    l = local_buckets.get(key, [])
 
-    o_words = sum(len(text.split()) for _, text in o_segs)
-    l_words = sum(len(text.split()) for _, text in l_segs)
+    if not o and not l:
+        continue
+    if not o:
+        if not has_repetition(l):
+            for t, text in l:
+                merged.append((t, text))
+        stats["local_only"] += 1
+        continue
+    if not l:
+        for t, text in o:
+            merged.append((t, text))
+        stats["openai_only"] += 1
+        continue
 
-    if o_segs and l_segs:
-        # Both have content — pick based on substantive word coverage.
-        # Filter out filler/back-channel to avoid inflated word counts.
-        filler = {'mm-hmm', 'mmhmm', 'mm', 'hmm', 'uh', 'um', 'uh-huh', 'yeah',
-                  'okay', 'ok', 'right', 'sure', 'yep', 'mhm', 'huh', 'ah'}
-        o_sub = sum(1 for _, t in o_segs for w in t.lower().split()
-                    if w.strip('.,!?') not in filler)
-        l_sub = sum(1 for _, t in l_segs for w in t.lower().split()
-                    if w.strip('.,!?') not in filler)
+    # Both have content
+    o_sub = sum(sub_count(text) for _, text in o)
+    l_sub = sum(sub_count(text) for _, text in l)
 
-        if l_sub > 0:
-            ratio = o_sub / l_sub
-        else:
-            ratio = 2.0  # openai wins if local has only filler
+    # Check local for hallucination in this window
+    if has_repetition(l):
+        for t, text in o:
+            merged.append((t, text))
+        stats["local_halluc"] += 1
+        stats["openai"] += 1
+        continue
 
-        if ratio < 0.6:
-            # Local has >65% more substantive words — it captured speech openai missed
-            chosen = l_segs
-            stats["local"] += 1
-        else:
-            # Similar or openai has more — prefer openai for accuracy
-            chosen = o_segs
-            stats["openai"] += 1
-    elif o_segs:
-        chosen = o_segs
-        stats["only_openai"] += 1
+    # Local wins only if it has >60% more substantive words (real coverage gap)
+    if l_sub > 0 and o_sub > 0 and o_sub / l_sub < 0.6:
+        for t, text in l:
+            merged.append((t, text))
+        stats["local_coverage"] += 1
     else:
-        chosen = l_segs
-        stats["only_local"] += 1
+        for t, text in o:
+            merged.append((t, text))
+        stats["openai"] += 1
 
-    for t, text in chosen:
-        timestamp = f"[{int(t//60):02d}:{int(t%60):02d}]"
-        merged_lines.append(f"{timestamp} {text}")
+# Sort by timestamp and write
+merged.sort(key=lambda x: x[0])
+lines = []
+for t, text in merged:
+    text = text.strip()
+    if text:
+        lines.append(f"[{int(t//60):02d}:{int(t%60):02d}] {text}")
 
 with open(merged_file, "w") as f:
-    f.write("\n".join(merged_lines) + "\n")
+    f.write("\n".join(lines) + "\n")
 
-total_buckets = stats["openai"] + stats["local"] + stats["only_openai"] + stats["only_local"]
-print(f"[merge] {len(merged_lines)} lines from {total_buckets} time windows")
-print(f"[merge] openai chosen: {stats['openai']}x (accuracy), local chosen: {stats['local']}x (coverage)")
-if stats["only_openai"] or stats["only_local"]:
-    print(f"[merge] exclusive: openai-only {stats['only_openai']}x, local-only {stats['only_local']}x")
+total_words = sum(len(text.split()) for _, text in merged)
+total_buckets = stats["openai"] + stats["local_coverage"] + stats["openai_only"] + stats["local_only"]
+print(f"[merge] {len(lines)} lines, {total_words} words from {total_buckets} time windows (15s each)")
+print(f"[merge] openai: {stats['openai']}x (accuracy), local: {stats['local_coverage']}x (coverage gap)")
+if stats["openai_only"] or stats["local_only"]:
+    print(f"[merge] exclusive: openai-only {stats['openai_only']}x, local-only {stats['local_only']}x")
+if stats["local_halluc"]:
+    print(f"[merge] local hallucination blocked: {stats['local_halluc']}x (used openai instead)")
 MERGESCRIPT
 }
 
