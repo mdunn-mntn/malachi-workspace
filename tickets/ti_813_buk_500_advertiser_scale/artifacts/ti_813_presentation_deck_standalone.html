@@ -429,51 +429,43 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
         <p style="text-align: center; color: #AAAAAA; font-size: 0.5em; margin-top: 2em;">Malachi Dunn & Alex Knorr · April 2026 · 500 advertisers · 30.9B IPs</p>
     </section>
 
-    <!-- SLIDE 2: How Keywords Work Today -->
+    <!-- SLIDE 2: MM V2 Today -->
     <section>
-        <h2>How Keywords Work Today</h2>
-        <div class="subtitle">Two approaches to selecting which keywords to target for each advertiser</div>
+        <h2>Mountain Match V2 <span style="color: #999; font-weight: 400;">(Current)</span></h2>
 
-        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1em; margin-top: 1em; font-size: 0.7em;">
-            <!-- MM V2 -->
-            <div style="padding: 1.2em; border: 2px solid #E0E0E0; border-radius: 8px;">
-                <h3 style="color: #999; font-size: 1em; margin-bottom: 0.8em;">Mountain Match V2 (Current)</h3>
-                <div style="color: var(--text-light); line-height: 1.8;">
-                    <span style="color: #BBB;">1.</span> Scrape advertiser homepage<br>
-                    <span style="color: #BBB;">2.</span> LLM describes products<br>
-                    <span style="color: #BBB;">3.</span> LLM generates 20 keywords<br>
-                    <span style="color: #BBB;">4.</span> LLM expands to 200 products/services<br>
-                    <span style="color: #BBB;">5.</span> Map to targetable keywords by embedding similarity
-                </div>
-            </div>
-
-            <!-- Divider -->
-            <div style="display: flex; align-items: center; font-size: 1.5em; color: var(--muted);">vs</div>
-
-            <!-- BUK -->
-            <div style="padding: 1.2em; border: 2px solid var(--red); border-radius: 8px;">
-                <h3 style="color: var(--red); font-size: 1em; margin-bottom: 0.8em;">Bottoms-Up Keywords (Proposed)</h3>
-                <div style="color: var(--text); line-height: 1.8;">
-                    <span style="color: var(--red);">1.</span> 30 days of behavioral data<br>
-                    <span style="color: var(--red);">2.</span> Which IPs visited and converted on which advertisers<br>
-                    <span style="color: var(--red);">3.</span> Train ALS collaborative filtering model<br>
-                    <span style="color: var(--red);">4.</span> Returns keywords <strong>ranked by recommendation</strong> per advertiser<br>
-                    <span style="color: var(--red);">5.</span> Importance scores learned from behavior
-                </div>
-            </div>
+        <div style="margin-top: 1.5em; font-size: 0.8em; color: var(--text-light); line-height: 2;">
+            <span style="color: #BBB;">1.</span> Scrape advertiser homepage<br>
+            <span style="color: #BBB;">2.</span> LLM describes products<br>
+            <span style="color: #BBB;">3.</span> LLM generates 20 keywords<br>
+            <span style="color: #BBB;">4.</span> LLM expands to 200 products/services<br>
+            <span style="color: #BBB;">5.</span> Map to targetable keywords by embedding similarity
         </div>
+
+        <p style="color: #999; font-size: 0.7em; margin-top: 1.5em;">All keyword-matched IPs scored identically at 10,000. No ranking.</p>
     </section>
 
-    <!-- SLIDE 3: The Framing -->
+    <!-- SLIDE 3: BUK Proposed -->
     <section>
-        <h2 style="text-align: center; margin-top: 1.5em; font-size: 1.8em;">
+        <h2>Bottoms-Up Keywords <span style="color: var(--red); font-weight: 400;">(Proposed)</span></h2>
+
+        <div style="margin-top: 1.5em; font-size: 0.8em; color: var(--text); line-height: 2;">
+            <span style="color: var(--red);">1.</span> 30 days of behavioral data<br>
+            <span style="color: var(--red);">2.</span> Which IPs visited and converted on which advertisers<br>
+            <span style="color: var(--red);">3.</span> Train ALS collaborative filtering model<br>
+            <span style="color: var(--red);">4.</span> Returns keywords <strong>ranked by recommendation</strong> per advertiser
+        </div>
+
+        <p style="color: var(--red); font-size: 0.7em; font-weight: 600; margin-top: 1.5em;">Learns from behavior across 6,000+ advertisers. Per-advertiser ranking.</p>
+    </section>
+
+    <!-- SLIDE 4: The Framing -->
+    <section>
+        <h2 style="text-align: center; margin-top: 2em; font-size: 1.6em;">
             Keywords are important.<br>
             <span style="color: var(--red);">But not all keywords are equally important.</span>
         </h2>
-        <p style="text-align: center; color: var(--text-light); font-size: 0.85em; margin-top: 1.5em;">
-            Keywords have different importance based on their alignment to an advertiser.<br>
-            Today, every keyword-matched IP is scored the same — 10,000.<br><br>
-            <strong style="color: var(--navy);">Scoring everything uniformly is leaving valuable signal on the table.</strong>
+        <p style="text-align: center; color: var(--navy); font-size: 0.8em; font-weight: 600; margin-top: 2em;">
+            Scoring everything uniformly is leaving valuable signal on the table.
         </p>
     </section>
 
@@ -498,8 +490,8 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
 
         <div class="bar-chart">
             <div class="bar-col">
-                <div class="bar-value" style="color: var(--red); font-size: 1.1em;">72x</div>
-                <div class="bar fragment" data-fragment-index="1" style="height: 210px; background: var(--red);"></div>
+                <div class="bar-value" style="color: var(--red); font-size: 1em;">72x</div>
+                <div class="bar fragment" data-fragment-index="1" style="height: 200px; background: var(--red);"></div>
                 <div class="bar-label">1–5</div>
             </div>
             <div class="bar-col">
