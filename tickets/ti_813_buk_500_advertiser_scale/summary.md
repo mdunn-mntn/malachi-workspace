@@ -148,6 +148,4 @@ None — findings are consistent with TI-804.
 | `artifacts/ti_813_chart_per_advertiser_lift.png` | Per-advertiser: top 15 of 125 |
 | `artifacts/ti_813_chart_global_vs_per_advertiser.png` | Contrast: 3x vs 72x |
 | `artifacts/ti_813_chart_per_vertical_lift.png` | Per-vertical: top 20 of 67 |
-| `meetings/ti_813_keyword_scoring_review_2026_04_03.txt` | Malachi + Alex Knorr keyword continuous scoring review (merged best-of-both transcript) |
-| `meetings/ti_813_keyword_scoring_review_2026_04_03_openai.txt` | OpenAI whisper-1 standalone transcript |
-| `meetings/ti_813_keyword_scoring_review_2026_04_03_local.txt` | Local mlx-whisper standalone transcript |
+| `meetings/ti_813_01_keyword_scoring_review_2026_04_03.txt` | #01: Malachi + Alex Knorr keyword continuous scoring review (merged best-of-both transcript) |
