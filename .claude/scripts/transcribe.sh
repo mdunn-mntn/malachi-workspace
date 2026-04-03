@@ -252,15 +252,25 @@ print(len(lines))
 }
 
 # ── Local mlx-whisper transcription ───────────────────────────
+# Anti-hallucination settings:
+#   temperature=0          — greedy decoding, no random sampling
+#   condition_on_previous_text=False — prevents hallucination loops from self-reinforcing
+#   no_speech_threshold=0.6 — aggressively suppresses silence hallucinations
+#   compression_ratio_threshold=1.8 — tighter threshold to detect repetition early
+# Long files (>20min) are chunked to match OpenAI's strategy for stability.
 transcribe_local() {
     local out_file="$1"
-    /opt/homebrew/opt/python@3.11/bin/python3.11 << PYTHON_SCRIPT - "$AUDIO_FILE" "$out_file" "$MODEL"
+    /opt/homebrew/opt/python@3.11/bin/python3.11 << PYTHON_SCRIPT - "$AUDIO_FILE" "$out_file" "$MODEL" "$TOTAL_DURATION"
 import sys
 import time
+import os
+import subprocess
+import tempfile
 
 audio_file = sys.argv[1]
 output_file = sys.argv[2]
 model_size = sys.argv[3]
+total_duration = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else 0
 
 import mlx_whisper
 
@@ -273,27 +283,68 @@ MODEL_MAP = {
 }
 model_path = MODEL_MAP.get(model_size, model_size)
 
-start = time.time()
-print(f"[local] Loading {model_size} model ({model_path})...")
-print(f"[local] Transcribing {audio_file}...")
-
-result = mlx_whisper.transcribe(
-    audio_file,
+TRANSCRIBE_OPTS = dict(
     path_or_hf_repo=model_path,
     language="en",
     verbose=False,
+    temperature=0,
+    condition_on_previous_text=False,
+    no_speech_threshold=0.6,
+    compression_ratio_threshold=1.8,
 )
 
-duration = result["segments"][-1]["end"] if result["segments"] else 0
+CHUNK_SECONDS = 1200  # 20 minutes — matches OpenAI chunking
+
+start = time.time()
+print(f"[local] Loading {model_size} model ({model_path})...")
+
+all_segments = []
+
+if total_duration > CHUNK_SECONDS:
+    # Chunk the audio to prevent long-range hallucination accumulation
+    chunk_dir = tempfile.mkdtemp()
+    subprocess.run([
+        "ffmpeg", "-i", audio_file, "-f", "segment",
+        "-segment_time", str(CHUNK_SECONDS), "-c", "copy",
+        "-reset_timestamps", "1",
+        os.path.join(chunk_dir, "chunk_%03d.m4a")
+    ], capture_output=True)
+
+    chunk_files = sorted(f for f in os.listdir(chunk_dir) if f.endswith(".m4a"))
+    print(f"[local] Split into {len(chunk_files)} chunks ({total_duration}s)")
+
+    for i, chunk_name in enumerate(chunk_files):
+        chunk_path = os.path.join(chunk_dir, chunk_name)
+        time_offset = i * CHUNK_SECONDS
+        print(f"[local] Transcribing chunk {i+1}/{len(chunk_files)}...")
+
+        result = mlx_whisper.transcribe(chunk_path, **TRANSCRIBE_OPTS)
+
+        for seg in result.get("segments", []):
+            seg["start"] += time_offset
+            seg["end"] += time_offset
+            all_segments.append(seg)
+
+    # Cleanup
+    import shutil
+    shutil.rmtree(chunk_dir, ignore_errors=True)
+else:
+    print(f"[local] Transcribing {audio_file}...")
+    result = mlx_whisper.transcribe(audio_file, **TRANSCRIBE_OPTS)
+    all_segments = result.get("segments", [])
+
+duration = all_segments[-1]["end"] if all_segments else 0
 
 lines = []
-for segment in result["segments"]:
+for segment in all_segments:
     t = segment["start"]
-    timestamp = f"[{int(t//60):02d}:{int(t%60):02d}]"
-    lines.append(f"{timestamp} {segment['text'].strip()}")
+    text = segment["text"].strip()
+    if text:
+        timestamp = f"[{int(t//60):02d}:{int(t%60):02d}]"
+        lines.append(f"{timestamp} {text}")
 
 with open(output_file, "w") as f:
-    f.write("\n".join(lines))
+    f.write("\n".join(lines) + "\n")
 
 elapsed = time.time() - start
 print(f"[local] Done in {elapsed:.1f}s — {len(lines)} lines ({duration/elapsed:.1f}x realtime)")
