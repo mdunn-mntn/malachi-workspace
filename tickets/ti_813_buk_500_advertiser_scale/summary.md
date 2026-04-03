@@ -2,9 +2,9 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-813
 **Parent Epic:** https://mntn.atlassian.net/browse/TI-803
-**Status:** In Progress
+**Status:** Complete
 **Date Started:** 2026-04-02
-**Date Completed:**
+**Date Completed:** 2026-04-02
 **Assignee:** Malachi
 
 ---
@@ -33,17 +33,90 @@ TI-804 proved the 184x signal with 50 advertisers, but only 15 had >10 visitors 
 
 ## 4. Investigation & Findings
 
-*(In progress)*
+### Aggregate: Rank Bucket Visit Rates (500 advertisers)
+
+| Rank Bucket | N IPs | Visitors | Visit Rate | Lift vs Worst |
+|-------------|-------|----------|------------|---------------|
+| Rank 1-5 | 4.45B | 555,973 | 1.25e-4 | **72x** |
+| Rank 6-10 | 3.49B | 85,765 | 2.46e-5 | **14x** |
+| Rank 11-20 | 5.44B | 52,826 | 9.71e-6 | **5.6x** |
+| Rank 21-30 | 5.15B | 25,846 | 5.02e-6 | **2.9x** |
+| Rank 31-50 | 7.91B | 26,200 | 3.31e-6 | **1.9x** |
+| Rank 51+ | 4.45B | 7,767 | 1.74e-6 | 1x |
+
+**Key finding:** 72x aggregate lift at 500 advertisers. Lower than TI-804's 184x (50 advs) because more advertisers dilute the pool, but still massive and monotonic. 30.9B IPs scored, 754K total visitors.
+
+### Per-Advertiser Breakdown (125 advertisers with >10 visitors)
+
+- **125 unique advertisers** qualified (vs 15 in TI-804)
+- **Median lift: 82x** (top-10 vs bottom-31+)
+- **85% (106/125)** show >10x lift
+- **61% (76/125)** show >50x lift
+- **42% (52/125)** show >100x lift
+- Top lifts: ASRT (4,068x), Prompt Health (1,884x), Catholic Charities (1,731x), Le Creuset (1,213x)
+- Lowest lift: 1.1x (still positive)
+
+### Per-Vertical Breakdown (67 verticals)
+
+- **67 verticals** represented (vs 15 in TI-804)
+- **33 verticals** have multiple advertisers (vs most having 1 in TI-804)
+- All 67 show positive lift
+- Top verticals by median lift: Employment (2,064x), Non-Profits (927x), Boating (908x), Kids & Family (845x)
+
+### Comparison: TI-804 (50 advs) vs TI-813 (500 advs)
+
+| Metric | TI-804 (50 adv) | TI-813 (500 adv) |
+|---|---|---|
+| Aggregate lift | 184x | **72x** |
+| Per-advertiser median | 148x | **82x** |
+| Advertisers >10 visitors | 15 | **125** |
+| Total visitors | 58K | **754K** |
+| % >10x lift | 93% | **85%** |
+| IPs scored | 3.1B | **30.9B** |
+| Verticals | 15 | **67** |
+
+The aggregate lift attenuation (184x → 72x) is expected: more advertisers = more dilution at the aggregate level. The per-advertiser median (82x) is the more meaningful metric — and 85% >10x across 125 advertisers is compelling at scale.
 
 ## 5. Solution
 
+Scaling to 500 advertisers confirmed all TI-804 findings at scale:
+- The monotonic decline is preserved (72x → 14x → 5.6x → 2.9x → 1.9x → 1x)
+- 85% of advertisers show >10x lift (not outlier-driven)
+- Signal works across all 67 verticals
+- 754K visitors provides strong statistical foundation
+
 ## 6. Questions Answered
+
+- **Q:** Does the 184x signal hold at larger sample sizes?
+  **A:** The aggregate attenuates to 72x (expected dilution), but per-advertiser median is 82x and 85% show >10x. Signal is robust.
+
+- **Q:** Was 15 advertisers enough in TI-804?
+  **A:** The direction was correct. Scaling to 125 qualifying advertisers across 67 verticals confirms the finding is not sample-dependent.
+
+- **Q:** How many advertisers qualify with >10 visitors?
+  **A:** 125 out of ~500 sampled. Sufficient for management-ready breakdowns.
 
 ## 7. Data Documentation Updates
 
+None — findings are consistent with TI-804.
+
 ## 8. Open Items / Follow-ups
+
+- Generate RevealJS standalone presentation deck (adapted from TI-804)
+- Update TI-804 presentation.md to reference TI-813 scaled results
+- TI-805: BUK vs MM V2 head-to-head
+- TI-806: Causal impact analysis
 
 ## Outputs
 
 | File | Description |
 |------|-------------|
+| `outputs/ti_813_rank_bucket_visit_rates.csv` | Aggregate: 6 rank buckets, 500 advertisers |
+| `outputs/ti_813_per_advertiser_rank_lift.csv` | Per-advertiser: 125 advertisers with >10 visitors |
+| `outputs/ti_813_per_vertical_rank_lift.csv` | Per-vertical: 67 verticals with median lift |
+| `queries/ti_813_rank_bucket_visit_rates.sql` | Rank bucket query (500 advs) |
+| `artifacts/generate_charts.py` | Chart generation script |
+| `artifacts/ti_813_chart_rank_bucket_visit_rates.png` | Hero chart: 72x cliff |
+| `artifacts/ti_813_chart_per_advertiser_lift.png` | Per-advertiser: top 15 of 125 |
+| `artifacts/ti_813_chart_global_vs_per_advertiser.png` | Contrast: 3x vs 72x |
+| `artifacts/ti_813_chart_per_vertical_lift.png` | Per-vertical: top 20 of 67 |
