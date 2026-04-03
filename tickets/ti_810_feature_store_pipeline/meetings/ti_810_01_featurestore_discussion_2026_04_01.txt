@@ -1,0 +1,466 @@
+[00:00] Good, good, cool. Thanks for going through this with me. Yep. Yeah, a lot of this is, um,
+[00:08] gonna use what Victor made, so it's kind of cool. Um, I don't know if he paid much attention to
+[00:15] what he made, but, um, I'll try to explain some of his stuff too, so. Okay. Uh, let me share my
+[00:26] screen, I guess we'll start with, okay, do the feature stores is nebulous, you know, it's,
+[00:33] it's really just like a series of DAGs that runs and it's, it's, it's nebulous thing. I mean,
+[00:40] eventually we might serve features up in, um, let me see. Uh, Vertex, have you seen Vertex in
+[00:57] Google cloud or whatever? Yeah, I've used it or whatever. Yeah. Okay. Hey, hey,
+[01:07] anyway, yeah, they have this feature store. This is kind of where the name came from.
+[01:16] Yeah, whatever. I'm not going to walk you through it necessarily, but
+[01:19] there we go. We, uh, eventually we could, um, make feature sets here, but the feature
+[01:31] or the feature stores here, but the feature store in order to get here, it has to be a big query.
+[01:36] And then you also, you could serve them up the features, you know, with like API requests.
+[01:42] Um, but in order to do that, they also have to be a big table. So there's like,
+[01:48] our data, you know, we, we output data to GCS. Then we have to put it into big query,
+[01:52] you get a fee is, is a feature store. Then we have to put it in a big table to get it to serve
+[01:57] up. So it's like copying our data three times. So for now we're not doing any of that. So
+[02:04] you kind of just forget about that, but that's eventually, you know, you make some cool features
+[02:11] that are predictive of something we could give them to a mountain select or whoever wants to
+[02:15] build a model. So, uh, anyway, so if you come to airflow, there's these three, we're mainly
+[02:25] going to be dealing with these three, um, DAGs to start with feature store. So feature store hourly,
+[02:34] this, this one you don't need unless you're like doing augment or log stuff, which you're,
+[02:40] you're kind of doing. So unfortunately you got to kind of understand this.
+[02:46] Um, and this right now is there's just one job running that like rolls up the augment or log to
+[02:54] does a group by IP and vertical ID. And this is how like, um, we're not actually using it yet,
+[03:04] but eventually bank horn, we might feed it features from the augment or log.
+[03:10] So, and you send me that link to the get hub, um, before, um,
+[03:20] yeah, the hourly and all that stuff should be there.
+[03:24] Yeah. So in get hub, if you go under, was it models feature store, this, this is the folder
+[03:32] you'll be working in mostly. Okay. That's perfect. And there's, there's three layers.
+[03:42] I call it three layers. It's, it's a little convoluted, but basically the first layer,
+[03:49] I call it a source layer. And this is where you're going to roll things up.
+[03:54] Like, you know, you're just gonna roll things up to like by hour by day,
+[03:57] there's only one by hour thing, the one I gave you. Um, and then the by day one
+[04:02] and then the by day one here depends on the hourly one,
+[04:08] just so you know, but, um, um, but yeah,
+[04:14] So this is where, this is where like, you're, you're not gonna like,
+[04:15] this is where like, you're, you're not gonna like, like when you build feature stores,
+[04:20] this came back. Cause like the data scientists, like, uh, Matt every day, he, he wants to score
+[04:26] IPs every day, but he, he's his last 30 days of visits, you know? And so he was saying like 30
+[04:33] day a good log and you know how long that takes. So, so this came about cause like, I just told,
+[04:42] you know, cause we just want to roll it up daily. It's like this, this one right here,
+[04:48] good log, IP advertiser ID. This, this is one that he uses for fanghorn and it just does a
+[04:54] group by an ear somewhere. Yeah. By IP and advertiser ID and date. Um, and it doesn't
+[05:02] take that long to run. And then, so this is all kind of like, so layer one is just like,
+[05:08] you're doing it by day and you should kind of consider.
+[05:14] Um, am I going to understand that every single one of those files is a different
+[05:18] Go ahead
+[05:19] Am I to understand that every single one of those files
+[05:22] Is a different aspect of like a different feature
+[05:24] That we're loading
+[05:25] Oh yeah it's multiple features
+[05:28] Yeah
+[05:28] Tons of features yeah
+[05:31] But it's more than just the OG log IP vertical ID hourly, right? There's all the Python scripts
+[05:36] that are doing different things. Yeah. Okay. Yeah. Like I have different,
+[05:41] like this is Salesforce by advertiser ID. So, you know, this is where we take Salesforce
+[05:49] cases and group by advertiser ID and, and you know, give it a date or whatever,
+[05:56] and then get a count of whatever these cases are.
+[06:00] Okay. So in my circumstance though, I guess I'm going to ask, so where is the current feature
+[06:08] store bucket? Um, do you, do we have a link for that or where is it in GCP?
+[06:14] In GCS? Okay. So, so what you're going to do, well, what you're going to do is you're going
+[06:18] to add like a file here and then I'll show you the GCS buckets, how they're arranged.
+[06:24] It's, they look pretty much like the, ah, I can get there. It looked pretty much like how those,
+[06:32] how the, um, yeah, GCS. Okay. Yeah. It looked pretty much exactly how that folder structure
+[06:39] looks in, in, um, in, in the, the repo, the get repo. So here, let me show you.
+[06:48] So everything goes into data archive prod, um, and then feature store right here.
+[06:59] So you say, see here, feature group one source, which matches the folder, you know,
+[07:04] which matches this folder here, feature group two derived and feature group three pivoted.
+[07:11] So those are all in here. Okay. Um, can you just give me that link
+[07:16] there? I'll, I'll grab the rest of them, but perfect. Thank you. Yeah.
+[07:24] Um, yeah, so now, now we're, we're starting to get into like the stuff that, that, um,
+[07:31] Victor made. So, or let, let me not go there yet. I'm not, I'm not gonna go there yet. But anyway,
+[07:38] so you see like all of these Ogglog IP vertical ID. So you'll see, you'll find here Ogglog IP
+[07:46] vertical ID, you know, um, Oh, here's an hourly Ogglog IP vertical ID hourly. So Ogglog IP vertical
+[07:55] ID hourly there. You know, so all of these are kind of in the bucket that, that the Python file
+[08:03] is named. Um, and so this is, this is layer, this is the layer one stuff. Layer two is where
+[08:12] you start going into, there's less things here, but this is where we start going like, okay,
+[08:21] now that we have our daily rollup, go back 30 days. You know, a lot of, a lot of math stuff
+[08:26] is like, go back 30 days and get visits, go back, do, you know, whatever. And, and then join it to,
+[08:36] you know, join GUID log and the conversion log. This is one of Alex's thing. And so he's rolling
+[08:44] GUID log and conversion log rolled up by advertiser ID and data source category ID.
+[08:50] And the C it's is writing out every day.
+[08:54] So, um, it's, if you look at the, you could probably look at the dag. If we look at the dag,
+[09:03] I'm sorry, I got stuff running too. So, or, Oh, this is a product, right? Features store hourly.
+[09:11] This, this is like where hourly things run, but feature store setup model. This is probably a bad
+[09:17] name for it. This is just what I started calling it. Um, or, or cause I originally, well, anyway,
+[09:24] I won't tell you why, but yeah, this, this is not a good name, but this is the stuff that runs daily.
+[09:29] So every day at one, what is it? One 30 or one Oh three or at one Oh three, one Oh three AM.
+[09:37] All this stuff runs. And, uh, let me show you kind of like this view.
+[09:43] So it runs everything in feature in the layer one, you know, so this is like all our daily
+[09:50] rollup stuff. And then layer two, you know, this, this one depends on these two things.
+[09:59] So it like joins these two or something, whatever it does. And it might also go back 30 days
+[10:06] and get like some metrics from this one.
+[10:09] So is this all executed in that airflow repo? Isn't there a mono repo for that now? Or is it?
+[10:15] Yeah. Okay. Yeah. It's all one. Yeah. Big mono repo. I mean, it's all the airflow stuff is in,
+[10:21] is in that one. Um, and then the, the third layer, there's really not much to the third layer.
+[10:31] there's really not much to the third layer.
+[10:33] the third layer
+[10:35] is
+[10:37] like if you have to pivot things
+[10:39] you know so
+[10:41] so
+[10:43] so when Matt
+[10:44] makes Fanghorn you know
+[10:45] makes Fanghorn, you know, he gets the count, he gets like the seven day count for, you know,
+[10:54] he does like a group by IP group by vert, you know, group by IP and vertical ID. And then he
+[11:00] gets the last seven day visits, 30 day visits, 14 day visits, seven day conversions, whatever,
+[11:06] blah, blah, blah. And so this, this, this table right here in the second layer is still like
+[11:12] really tall, you know, but when he builds his model, he needs it like long way, you know,
+[11:18] like the pivoted. So I'm sure you know what a pivot is. Um, I'm really just describing a pivot.
+[11:24] So, so what this is, is this is one row per IP and then each vertical ID inside here, you'll see
+[11:31] like, uh, I can show you the data, but you'll see last seven day visits for vertical one, one, zero,
+[11:37] zero, zero last 30 day visits for vertical one, one, zero, zero, zero last seven day visits for
+[11:43] the different vertical one, two, three, zero, zero, zero, right. You know, whatever. So it's,
+[11:48] it's wide. A couple of questions. Uh, number one, uh, this is an astronomer can,
+[11:54] I guess I can go to this link. Um, if you send me this link, it'd be great, but I know you can
+[11:59] zoom out on this. Um, there's probably a way to export a picture of that. Is there not? Like if
+[12:06] you hit that, I think if you hit that square button down there, that, that sets it to size.
+[12:12] Yeah. And then if you go to the options, I'm not sure if you can export.
+[12:16] Oh yeah. Maybe I could stick a screenshot. Yeah. Just do that. That's probably easier. Um, I mean,
+[12:21] I could do it too. I was just thinking that's nice to know what would be really beneficial though,
+[12:26] would be to have the, um, um, location of where these, where these DAGs are. Um,
+[12:34] that's an airflow you said? Yeah. So, or, okay. So the DAG itself, um,
+[12:40] so let me show you this. So the DAGs it's the DAGs are under, um, hang on, right here under
+[12:49] models. We, we kind of, the kind of the stuff that's that Victor's working on, we put under
+[12:58] DAGs models. Okay. So here you see the three feature store ones. Okay. So airflow TI DAGs
+[13:06] models, and then, oh, UK. So their feature store hourly. Okay. All that stuff here.
+[13:11] Yeah. Okay. So you, so you're going to add, so you'll probably add, or so what were,
+[13:17] what was one of the things, one of the features with Augmenter log number of what, what was it?
+[13:22] Just Augmenter log. I forget what number of rows or something.
+[13:30] Are you, you're asking what were some of the features I had in Augmenter log?
+[13:34] Yeah. The number of models. Yeah. Yeah. Some of that stuff. Yeah. Okay.
+[13:39] Okay. Yeah. Let's say, yeah, there's a number of PMP deals and IPs visited or whatever,
+[13:45] you know, so you would, you would write a query against Augmenter log and we could look at this
+[13:53] one. Aug log IP virtual ID. So the DAGs are in airflow TI DAGs models. The actual scripts
+[14:05] themselves are under models and then feature store. We don't use the regular airflow anymore,
+[14:16] right? We just use airflow dash or TI, correct? Yeah. Yeah. The regular airflow is for,
+[14:22] for AWS. Yeah. Yeah. This one's the one that's tied to, to Astro and all that. Yep.
+[14:30] So, okay. So inside here, what you could basically do, in fact, you could have AI do a lot of this
+[14:36] is my plan is tell it to copy this. Some of this stuff you don't need. I had to import
+[14:46] TLD extract. So just kind of, don't worry about this part unless, unless you have to import like
+[14:54] a specific Python module, then you'll have to do that, but whatever.
+[14:59] You're talking about copying dog log, IP, vertical ID hourly.
+[15:03] Yeah. Okay. Yeah. And so here, now here's where we're getting into Victor stuff. And so this is,
+[15:10] and so this is you know, AI could do this for you. So here we're going to give this thing a class,
+[15:20] a class name, log IP, vertical ID hourly. And you'll see why we need that later.
+[15:25] And it extends. This is something Victor made file storage base model.
+[15:31] And the reason we use this is really nice actually, because there's two decorators up here.
+[15:38] Let me go over to the model config. Cause that's the easiest one, probably.
+[15:44] So model config. Okay. So you're going to check out a branch and get, you're going to go to main,
+[15:50] check out a branch, get locally, and you're going to, you're going to name it, whatever TI
+[15:56] ad features. Then you're going to make a file like this, you know, give it a class name and all that.
+[16:00] Then you're going to make a file like this,
+[16:04] give it a class name and all that,
+[16:05] and you're going to set this
+[16:09] decorator up so that location root
+[16:13] is prod.
+[16:17] saying when you read this model, what we call this like a model, a data model, you know,
+[16:24] read it from here. And, and then when you're in dev though, read it from here.
+[16:32] Read it from here. Yep. So location and file format parquet is always,
+[16:37] almost always going to be parquet. So that's okay. So the reason this helps you is because
+[16:46] you're going to make changes or you're going to add files or make changes.
+[16:51] And you, you're, you're going to make changes to upstream models and you might like
+[16:58] join them into models downstream or something. You, but you don't want to like, you know,
+[17:05] we always have that problem, problem with airflow or like with jobs where it's like, Oh,
+[17:09] I want to make changes to like a downstream model, but I want to pull from prod upstream
+[17:16] and then see how that affects downstream stuff. Yep. Yep. So this handles it all for you. And
+[17:23] I'm, I'm, I've done a really bad job explaining it, but you'll see if you come and look at,
+[17:32] if you look at mountain data archive dev here and look at the feature store,
+[17:40] you'll kind of see what I'm talking about. So this, this model here,
+[17:47] you see how it has TI seven Oh seven appended to it. Yep. This is because someone created a
+[17:56] branch called TI seven Oh seven and modified this file. And it, uh, Victor's stuff knows to write
+[18:04] And Victor's stuff knows to write out when you modify it, when there's a difference between your branch and main,
+[18:14] it's going to write it out into dev with the branch.
+[18:15] it out into dev with the, with the branch. Um, yeah, that's actually, that's really smart.
+[18:25] Yeah. That's cool. And so then, and Victor does a better, way better job explaining this,
+[18:32] you know, so then if, so, so now if, so this is in layer one, now if I'm running something in
+[18:37] layer two, so let's go look at layer two, the derived layer, I call it derived is probably
+[18:43] a bad name. Um, Oh, glog, there's something in here maybe that has to do with Oglog or maybe not.
+[18:53] Hey, whatever, I don't know. Whatever. Maybe it's not whatever there's, this one has TI
+[18:58] seven Oh seven also that, that same branch. So this, this was changed to, um, or yeah,
+[19:06] this has changed too. Anyway, however it works, we're not going to get into the detail because
+[19:13] I don't want to, I know we don't have much time, but what's nice is you just set that decorator
+[19:18] and it'll handle it for you. It'll diff your file with main. And if it'll know whether to pull
+[19:24] things from prod, um, or, and when, where to write them out. So that's what this decorator does.
+[19:33] This model config and your AI will be able to figure it out because I think there's a cloud
+[19:39] code in here too. That'll tell it what to do. Um, so actually this, that's probably a more
+[19:45] confusing decorator. This next decorator is, um, is the compute engine you're going to use.
+[19:53] And so Victor, Victor set it up so you can use data proc.
+[20:00] batch, which this is, this is serverless Dataproc, um, or Dataproc cluster, where you, you know,
+[20:08] you create your own cluster and you submit the job. I forget what those are called. I think it's
+[20:12] Dataproc jobs, but just use Dataproc batch basically. And then he also set up to use
+[20:18] dbt or Databricks, I think, but long story short, just use Dataproc batch. And then this is where
+[20:26] you put in like the, the compute specific parameters, like how many executors you want,
+[20:34] you know, like these settings aren't good on, you can't set these on, on dbt or on Databricks or,
+[20:41] or whatever is different settings, you know, that, okay. So you're in a, I just want to make
+[20:47] sure this is Airflow TI feature store. Okay. It's separated. Oh, models. I thought it was
+[20:59] their feature store. Yeah. Models feature store, Airflow TI models. Okay. I see it. Yeah. I was,
+[21:05] I just didn't go to the feature store. Okay. I see it. It's, we're all good. We're, I just wanted
+[21:09] to make sure I could see it. Okay. And then, and then, um, okay. And I don't want to, okay. Yeah.
+[21:15] okay yeah i don't want to take up too much of your time um and then then we can go as long as we need
+[21:20] I'm totally it's fine. Okay, cool. Well, this might go on or I have a tendency to talk so long.
+[21:27] But and then your spark settings themselves, you know, you put you put here like the so these settings should work no matter where your compute is, you know, so like, if that makes sense, like, whether you're running on data proc batch or data proc server, whatever data or data bricks or whatever, these should just work.
+[21:33] like the, so these settings should work no matter where your compute is, you know? So like, if that
+[21:40] makes sense, so like whether you're running on Dataproc batch or Dataproc server, whatever
+[21:44] Dataproc or Databricks or whatever, these should just work. Um, your AI should be able to tell you
+[21:54] all that stuff. So, okay. So yeah. So then this is just a spark job from here on down.
+[22:00] This that's all it is. There's whatever static methods model. I think you, you might have to,
+[22:09] I think you do have to have this, I forget, whatever, but here, yeah, here's a Panda's UDF.
+[22:17] Your AI can help you with all that stuff. There's, you know, if name is main and yeah, whatever,
+[22:24] then run main or whatever, blah, blah, blah, blah. So that, that's all there is to it now.
+[22:32] Okay. So this is an upstream model. So now I'm going to show you why it's important that you
+[22:36] have a class name here. Um, and so let me go to a downstream model. So that's the hourly version.
+[22:45] So here's the daily one where I want to refer to that hourly version. Um,
+[22:54] oh wait, how does this work? Oh yeah, yeah. Sorry. All right. So, so this is a, so again,
+[23:01] you see the two decorators, um, you know, we tell it what compute settings to run with and
+[23:08] then where it's going to store itself. Um, should we adjust the compute settings based on probably
+[23:17] based on like how big the data is that we're dealing with? Yeah. Yeah. Like you can see here,
+[23:22] min executors, 10 max 50. I bet the, I think the, uh,
+[23:28] man, was it you that showed me? I forget. I do. My cursor sucks. Sometimes like closes,
+[23:34] like I click one file and it closes the other one. Anyway, the hourly one. Yeah. Max executors,
+[23:40] 200. Cause this is reading the raw augmenter log. Yeah. It's like, it's nasty. Yeah.
+[23:46] Then this one's reading the rolled up hourly version. And so I'll show you. Okay. So now
+[23:55] this is the important part that I want to show you hourly readers. So, so Victor implemented
+[24:02] this read model function and it just extends sparks read basically. And, and so what, what
+[24:15] you're passing here, what I'm passing here is the, uh, the file name, basically OG log IP vertical
+[24:22] ID hourly, and then the class name. So what this is going to do is basically refer to that hourly
+[24:30] version of the upstream model. And so, and that's how he figures out. That's how he figures out.
+[24:37] If you change something in this, uh, if I, if all I did is change something in this file,
+[24:43] he would read the hourly one from prod, you know, and he would write this one out to dev.
+[24:52] So that's how he figures it out. Cause you're, you're telling him, Oh, this depends on this file.
+[24:59] Um, so if that makes sense, then you pretty, you pretty much got it then. Um,
+[25:06] and, uh, so then this, this just reads it and this creates a data frame.
+[25:11] Uh, low and then, okay. Yeah. You load a date, uh, optional, whatever. This is all, this is all
+[25:21] spark load now. So, um, near a, I could tell you more about it. Vic Victor, I should have
+[25:29] Victor in here cause he's, he's a wiz at this stuff, dude. But anyway, so, so now this is a
+[25:36] data frame and then you just do your thing. And this, so this says group by IP vertical ID,
+[25:43] and I guess the date, whatever, get the, Oh yeah. Cause this is a daily level. Yeah.
+[25:50] Get the, uh, visits first visit time, last visit time. Oh yeah. Some visits
+[25:57] men, the first visit time backs, the last one, blah, blah, blah, blah, blah, blah. There's
+[26:02] actually not much to this and then write it out. So, so this is still in layer one.
+[26:09] So then in layer two, when I want to consume that one,
+[26:15] uh, I'm in a different branch of Maine, by the way, so that this might look slightly different.
+[26:23] So then in layer two, what I want to do is consume that daily one, go back 30 days,
+[26:28] get the visits by vertical ID, yada, yada, yada. Um, and so that's where,
+[26:39] um, so, Oh yeah. Right. Uh, good log,
+[26:43] og log derived vertical ID is not in Maine. Yeah. So, so I'm actually combining two of the
+[26:52] upstream sources here, good log and dog log. Um, so you'll see me read two different things,
+[26:59] two different saw to read models in here. Uh, if I could find them, that'd be great.
+[27:05] And I'll just search for it. Yeah. Okay. So read model right here. So I'm going to read
+[27:12] the GUID log IP advertiser ID model, um, load up, um, load up a prior dates,
+[27:24] um, load up like 30 days of past dates or whatever.
+[27:29] Uh, yeah. Anyway, I'm not, I'm not gonna go through all this code.
+[27:33] Um, and also read, uh, augmenter log one, um, and load up 30 days of dates there.
+[27:43] And then basically union them together. It checks to see if some, there's just like some
+[27:50] checks here or whatever. If, if, if, if they're both, if they both exist, basically just union
+[27:56] them up, you know, and then aggregate it by IP vertical ID visit date. So this is like a daily
+[28:05] roll-up and then somewhere in here, or here's a daily average, whatever, somewhere in here is
+[28:13] just going to be a group by IP vertical ID, which will be, it's a call. I don't know wherever it's
+[28:16] which will be,
+[28:19] I don't know, wherever it's at.
+[28:25] Yeah, where is that?
+[28:26] Whatever.
+[28:29] you get the gist i i can't remember i guess i can't look it up but well there are a few
+[28:34] You get the gist. I, I, I can't remember. I guess I can look it up, but
+[28:39] well, there are a few things I was thinking about. So there are like after, um, there's like feedback
+[28:46] features and what I mean, those are like good log, um, stuff. And then I have pre-visit features,
+[28:52] like stuff that comes directly from the better, like that the better team would get, like, for
+[28:56] example, from the Augmentor log, I could create new folder locations for each of those in the
+[29:02] feature store. Does that sound right? No, leave them or should I put them all in one? Put them
+[29:10] into one or I guess, yeah. Okay. Explain or like, what do you mean? There's like pre-visit or like,
+[29:18] well, I'm just saying like some of them, it's like, we could get this information before it's
+[29:22] bid on. Right. So it's like just information about that, that, you know, and then some of
+[29:29] it's information that we get after the visit occurs. Right. So the good log is going to be
+[29:33] information that comes after a visit occurs. Um, I mean, they're all valuable. I'm just saying that
+[29:40] just the, the, at what time they can be referenced, like if it was a real time thing where the bettering
+[29:44] team was going to be like, Hey, we need to go search for these features. Right. And like
+[29:50] prioritize based on that, you wouldn't be able to use the good log on the IP, but you would be
+[29:53] able to say like, if you're, they were looking through the beeswax, you know, data information
+[29:59] on the IP. I don't know if that makes much sense, but, uh, maybe you say you think there's like a
+[30:05] floating date then that you want to use or is there a floating date or something or is there?
+[30:10] No, I'm just saying that like in real, there's a difference. Like we can always get
+[30:14] previous data. I'm just saying that like in real time data, um, like for example, in real time,
+[30:21] before we even bid on an IP, we can get information about the IP from the bidder.
+[30:26] If I'm understanding that correctly, like before we've even bid on it, we can say, Hey, this,
+[30:32] here's some features that has been provided to us by beeswax. I don't know if that's the intention
+[30:37] for this or this, the intention is to just gather all the features we have from all our tables
+[30:42] and use it to train the model. And it's not going to be something that's used like actively
+[30:47] in real time, like the ladder. Yeah. There's no real time. It's not, yeah, it won't happen
+[30:53] for a long time. Okay. So I imagine that this is basically, we just, we don't need to worry
+[30:58] about splitting those out. We just need to go gather features from everywhere else and then
+[31:01] just put it together. And that's more to train Matt's model. Yeah, exactly. Okay. So just,
+[31:07] yeah, think about it. And he, you know, he only scores it daily, you know, so that's,
+[31:12] we don't score it more often than that. So even real time, like we don't even have to compute
+[31:17] power to what we're struggling right now, just getting his fangorn stuff scored for every
+[31:23] advertiser and every IP. It's not like a one and a half trillion things we have to score.
+[31:28] It's huge, which is ginormous. Yeah. So don't think of the use case for this is like,
+[31:30] ginormous. Yeah, so don't think of...
+[31:32] The use case for this is like
+[31:33] Matt's going to
+[31:36] use this
+[31:37] for two things. One, to train
+[31:40] his model, and two,
+[31:42] to score his model daily.
+[31:43] so you really just need to make sure
+[31:45] So you really just need to make sure your job finishes daily grain is good enough, you know?
+[31:54] Okay. Like you, an hourly grain doesn't do much good. Cause we're not going to,
+[32:01] we're not going to be able to score things hourly until we figure out the scale problem.
+[32:09] So I don't know if that throws a monkey wrench. So, so like what I would do is
+[32:14] like you have convert or, you know, I would just take good log or augmenter log and roll it up.
+[32:22] But you first of all, you have to roll it up hourly.
+[32:24] Oh yeah. Can you actually, let me, let me see. Where's those features at the two? I know you
+[32:30] put them. Yeah. I put the PDF in that sheet or not the sheet. Sorry. In the thread there. Yeah.
+[32:40] So let's look at one of these. Oh, how come I can't? Yeah.
+[32:47] Yeah. Let me download it.
+[32:53] Okay. So does the airflow DAG need separate tasks per source table
+[32:58] or is it, can we just do in one combined pipeline? It seems like it's
+[33:01] one combined pipeline. You can do a one combined one. Just be careful. You know, you don't,
+[33:07] that is something to consider. Like, yeah, it's like, we don't want to compute over the
+[33:12] same source over and over. But let me look at your, this is cut off a little, or I can't.
+[33:17] this is cut off a little or I can't
+[33:21] why is that cut off
+[33:25] the whole PDF
+[33:26] oh yeah hold on I can fix
+[33:31] I didn't realize that it did that. That's weird. It's actually not. Oh, it is cut off here.
+[33:38] Yeah. One second. I can, let me get you another one.
+[33:43] All right. Okay. Augmented log percent CTV. So I, so I assume this is like an IP level
+[33:50] or you're looking at like, what is, what's that field? The, not the placement type,
+[33:55] but like, I don't even know where you got to see TV from the what's the field called
+[34:01] or here's one where it's video placement type. So, so what you would do is, is make an hourly
+[34:10] job that reads augmented log groups by IP and placement type, you know, so you'll have one
+[34:22] row per IP and placement type, and maybe a CTV might be a placement type or something. Maybe not.
+[34:30] So that'd be the first thing you do. So every hour, you know, you'll get a count
+[34:38] and, you know, just do a count one or whatever, or row count, you know.
+[34:46] And so every hour, you know, so, so name it like placement type counter, I don't know what,
+[34:51] what you want to call it, you know, call it, call it placement type count and then do a daily
+[34:57] rollup of that. And then to get like percent of total, so I guess you'd need a, you would need
+[35:04] also like a total version, which you could either, you could either like, I would, I'd keep that all
+[35:15] in one script if you can, you know, or actually, sorry. Sorry. Yeah. You're going to roll it up
+[35:22] hourly, your count by placement type, and then drill up daily, sum that count by placement type.
+[35:33] And then, and so those will happen in layer one. And then in layer two, you're going to decide,
+[35:41] I don't know if this goes back like X days or what, but if all you care about is the previous
+[35:47] day and then layer two, you're going to say, okay, what percent of those rows were video?
+[35:54] So then you're going to, so you're going to, you know, you're going to get the total
+[36:00] count of rows per IP and then the, the total count that that was video placement.
+[36:07] And then, you know, divide one by the other. And then that's your fee. That's your feature.
+[36:11] That'll be in layer two. Okay. And you would call it something like, if it's just one day,
+[36:16] you would call it something like a, or, or I would drop the, the bronze layer is going to be
+[36:23] like at the IP level. And then the it's agged up afterwards. I just don't understand if it's based.
+[36:31] I don't get the benefit of agging it up. Oh, is it agged up at the IP level still?
+[36:39] Yeah, you should. I mean, cause that's what I assume these features are right.
+[36:47] Seattle. Yeah. I'm not quite sure. That's, I was, that's one thing I was asking you about
+[36:54] cause are you saying like more visits IPs that have more video placement bids get like visit
+[37:04] more often? Okay. Yeah. So you'd have group by IP. Yeah. It seems like everything's going to
+[37:10] be grouped by IP. So I was just trying to, okay. That makes sense to me. I think this is all clear.
+[37:15] Okay. And so what's your, what I would say you're building is you're building a feature set
+[37:20] or feature store, if you will, whatever at an IP level. So at the end of the very end of the day,
+[37:27] the very final output you should strive for is something that has one row per IP
+[37:34] and it changes daily, you know, like whether you go back 30 days, you know, you could have
+[37:41] a rolling window 30 days back or one day back. I don't know what, what's important here. Like
+[37:47] just one day back or seven days back. Usually Matt goes to seven days back, 14 days back at 30 days
+[37:54] back. Yeah. That's pretty standard for stuff too. Also it's kind of interesting too. Um,
+[38:01] if you start to wait value, like how valuable certain things are real-time
+[38:06] conquesting is actually extremely valuable. Like recency is super important. It's, it's, it's,
+[38:12] if I look at the, if you look at that PDF, um, I, I sent a new one, sorry, that it's not cut
+[38:18] off the new one I sent you. I was, I use one conversion there, but, um, if I go to the top
+[38:25] with the existing, yeah. So, okay. So the top one was the percent new. So percent impressions
+[38:32] where IP is new, um, was the most important. Let me, let me see. Is that, is that,
+[38:39] Oh, right, right here. Or wait. Yeah. So if you scroll up, it's in the full feature rankings.
+[38:45] Oh, right here. Yeah. I do. Okay. Full feature. Yeah. And you'll see like, um,
+[38:58] number of wins for this advertiser.
+[39:05] Feedback features, post-visit.
+[39:11] Or I'm sorry, am I going, is this, this is at the end?
+[39:21] I'm not looking at Rachel's, Sheldon. Sorry. I was looking at my own.
+[39:24] Yeah, no problem. Or you can share your screen. Why don't you share your screen?
+[39:28] Yeah, I can do that.
+[39:30] Yeah. Cause I mean, if you have features by advertiser ID, which is possible.
+[39:35] No, they're all at the campaign ID or not the campaign. Sorry. I keep the IP. They're all at
+[39:40] the IP. All of them are. Um, but I'm just saying that, yeah, I mean, all of these are all specific
+[39:46] to the IP, like, because this is how it was working. It was basing
+[39:51] basing, whether or not something would convert at the IP level. Cause it's checking each IP
+[39:58] and it's seeing.
+[40:00] Whether or not, and it got an impression within its campaign ID or campaign group
+[40:04] ID, um, if it had a visit within that campaign group ID.
+[40:06] So all of these are at the IP level.
+[40:08] They're not aggregated to like advertiser or anything like that.
+[40:11] So, okay.
+[40:12] Okay, cool.
+[40:12] Yep.
+[40:13] So some interesting stuff, but yeah, it seems like, I think I have enough, I
+[40:17] will, I can reach out to you if I don't.
+[40:20] Yeah.
+[40:21] So, so for augmenter log specific, you know, I, if somewhere in your code, I
+[40:25] would say there's going to be a group, but there's definitely going to be
+[40:27] group by IP comma placement type.
+[40:31] Cause I see a video CTV device type.
+[40:33] So, so, so, you know, I have a group by IP comma placement type comma device type.
+[40:39] And then what else do you have?
+[40:40] Distinct content domains consumed.
+[40:44] Uh, there's a lot of features that are not like specific.
+[40:48] So like distinct DNS is a little tricky.
+[40:52] So maybe just skip that for now.
+[40:54] And I can, I could show you how to do that later.
+[40:56] We do with sketches or, or if you want to ask your AI how to do with sketches
+[41:03] auctions, this IP appeared in, so I don't know how you got the count of
+[41:07] auctions, you know, but, or that's probably just count of rows, I assume.
+[41:12] So that, you know, so, so that's easy to get, I mean, you don't have to do that
+[41:17] layer one, you know, cause you'll, yeah, you don't have to do that layer one
+[41:20] auctions with IAB category data, you know, so you could group by IAB category
+[41:27] data, also throw that in your group by on layer one, uh, auctions of PMP deals.
+[41:35] Or you could just, what you probably want to do is make a column that says case
+[41:40] when IAB category data greater than, you know, is not an all than one L zero.
+[41:47] As I make it like has IAB data.
+[41:52] And for PMP deals do the same thing.
+[41:54] Case when PMP is not an all than, than one L zero.
+[42:05] And then distinct networks, publishers, distinctness is a little hard.
+[42:10] So maybe this distinct stuff.
+[42:12] Yeah.
+[42:13] Distinctiveness is a little hard.
+[42:16] Okay.
+[42:18] Well, let me, can I look into this and then like, yeah.
+[42:24] See if I have some questions about it.
+[42:25] I think it's actually, I think that I'll be able to figure it out, but I will reach
+[42:29] out and my goal is to get it done.
+[42:33] I don't know how long it'll take me, but I already made a ticket for it.
+[42:38] So yeah, that's a good question.
+[42:40] Made a ticket for it.
+[42:41] So yeah, if it's done by next sprint, then you're all good, dude.
+[42:45] Don't, don't, don't worry about it.
+[42:47] There's, there's going to be a lot to learn and yeah, just have your AI do it,
+[42:50] dude.
+[42:50] That's, that's all I do anymore.
+[42:51] I just, if I have code anymore, so well, the biggest thing that's been helping me
+[42:55] a lot, and I was telling Alex is the way to do it is like, I mean, there's lots of
+[43:00] different ways to do it, but honestly, I feel like cloud code is the best.
+[43:02] Um, uh, you can set up cloud files where it's like, it reads it every single time.
+[43:09] But the biggest thing is context.
+[43:11] I've found context is super important.
+[43:12] So what you do is you set your cloud, like input files to say, like, do things
+[43:21] like always commit this, or always do this structure or always, you know, um,
+[43:27] every time you learn new information about this, add it to knowledge docs.
+[43:30] Right.
+[43:31] And so what you basically get is that this feedback loop, where as you're
+[43:34] working on tickets, it adds more to the knowledge docs, you get more information,
+[43:38] more specific stuff.
+[43:39] And so like, it's gotten to the point now where like, for example, Alex just
+[43:42] asked me some questions about some like audience tables.
+[43:45] I have knowledge docs that has every single table that we have already.
+[43:49] And then like anytime I've had like specific gotchas, like where it's like,
+[43:53] Oh, don't use this table, use this in this circumstances, like those get
+[43:57] added to a different document.
+[43:58] And, and so like, I'm able to answer questions like super quick on this too.
+[44:03] So, I mean, the biggest, the biggest drawback is I haven't done it for
+[44:06] Airflow, but once I add the Airflow repos and I add exactly how it's going
+[44:09] to be used next time I need to do something like this, it's going to be
+[44:11] super simple.
+[44:12] So yeah, just give it my hourly thing.
+[44:16] Tell it you want something like that.
+[44:17] Give it the features you want, you know, give it the scheme of the
+[44:21] Augmenter log and I bet it'll figure it out for you and it'll write it all for
+[44:24] you.
+[44:25] So, yeah.
+[44:27] Cool.
+[44:27] Hey, I appreciate it, man.
+[44:29] Um, on a different note, um, Harold, let me stop.
+[44:35] We'll see y'all.
