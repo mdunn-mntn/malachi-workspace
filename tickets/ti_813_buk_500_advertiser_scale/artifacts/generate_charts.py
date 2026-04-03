@@ -184,7 +184,7 @@ def chart_per_advertiser():
     pct = n_above_10 / len(all_lifts) * 100
     ax.text(0.0, 1.10, f'{pct:.0f}% of Advertisers Show >10x Keyword Lift',
             transform=ax.transAxes, fontsize=24, fontweight='bold', color='#111111')
-    ax.text(0.0, 1.04, f'{n_above_10} of {len(all_lifts)} advertisers above 10x across 67 verticals — top 15 shown',
+    ax.text(0.0, 1.04, f'For {n_above_10} of {len(all_lifts)} advertisers, top-ranked keyword IPs visit at 10x+ the rate of bottom-ranked',
             transform=ax.transAxes, fontsize=13, color='#666666')
 
     # Legend
@@ -353,7 +353,7 @@ def chart_per_vertical():
     # Title and subtitle
     ax.text(0.0, 1.10, f'All {len(all_data)} Verticals Show Positive Keyword Lift',
             transform=ax.transAxes, fontsize=24, fontweight='bold', color='#111111')
-    ax.text(0.0, 1.04, f'Signal works across every industry — top 20 of {len(all_data)} verticals shown',
+    ax.text(0.0, 1.04, f'Keyword ranking predicts visits in every industry — top 20 of {len(all_data)} shown',
             transform=ax.transAxes, fontsize=13, color='#666666')
 
     # Legend — upper right to avoid bottom annotation overlap

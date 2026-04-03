@@ -15,6 +15,32 @@ Scale the TI-804 keyword visit rate analysis from 50 to 500 advertisers. Alex Kn
 
 ## 2. The Problem
 
+### Why keyword ranking matters (context for management)
+
+MNTN currently uses two approaches to select keywords for targeting:
+
+**Mountain Match V2 (MM V2) — Current Production System:**
+1. Scrape advertiser's homepage via Common Crawl
+2. LLM describes what the advertiser sells and who would buy it
+3. LLM generates 20 parent keywords a customer would search for
+4. LLM expands to ~200 child keywords
+5. Map each keyword to the closest DS19 `data_source_category_id` by embedding distance
+
+**Problem:** Every step is an LLM guessing from a single homepage. No behavioral data, no iteration, no per-advertiser importance ranking. Two travel advertisers with similar homepages get similar keywords with no way to differentiate which keywords matter more for which advertiser.
+
+**Bottoms-Up Keywords (BUK) — Proposed Replacement:**
+1. Collect 30 days of behavioral data: which IPs visited which advertisers (guid_logs, conversion_logs)
+2. Build an advertiser × keyword matrix from DS19 browsing categories of those IPs
+3. Train an ALS (Alternating Least Squares) collaborative filtering model — same algorithm Netflix uses for recommendations
+4. Output: ranked list of 200 keywords per advertiser, with importance scores learned from cross-advertiser behavioral patterns
+5. Cluster top keywords into 20 groups, LLM generates user-facing labels
+
+**Key difference:** MM V2 guesses from a homepage. BUK learns from 30 days of behavioral data across 6,000+ advertisers. BUK can say "Dog Beds is rank 2 for K9 Ballistics but rank 47 for Rocket Lawyer" — MM V2 cannot.
+
+**Reference:** Full pipeline diagrams in `tickets/ti_797_buk_knowledge_transfer/artifacts/buk_als_deep_dive.pdf` (slides 3 and 5).
+
+### Scale gap from TI-804
+
 TI-804 proved the 184x signal with 50 advertisers, but only 15 had >10 visitors in the 10-day outcome window. Many verticals had only 1 advertiser. Scaling to 500 will:
 - Get 100+ advertisers above the visitor threshold
 - Produce robust per-vertical breakdowns (multiple advertisers per vertical)

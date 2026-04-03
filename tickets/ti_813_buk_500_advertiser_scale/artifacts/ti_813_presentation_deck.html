@@ -69,7 +69,53 @@
         <div class="footer-note">Malachi Dunn · April 2026 · 500 advertisers · 30.9B IPs</div>
     </section>
 
-    <!-- SLIDE 2: The Question -->
+    <!-- SLIDE 2: How Keywords Work Today -->
+    <section>
+        <h2>How Keywords Work Today</h2>
+        <div class="subtitle">Two approaches to selecting which keywords to target for each advertiser</div>
+
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.5em; margin-top: 1.5em; font-size: 0.75em;">
+            <!-- MM V2 -->
+            <div style="padding: 1.2em; border: 2px solid #E0E0E0; border-radius: 8px;">
+                <h3 style="color: #999; font-size: 1em; margin-bottom: 0.8em;">MM V2 (Current)</h3>
+                <div style="color: var(--text-light); line-height: 1.8;">
+                    <span style="color: #BBB;">1.</span> Scrape advertiser homepage<br>
+                    <span style="color: #BBB;">2.</span> LLM describes products<br>
+                    <span style="color: #BBB;">3.</span> LLM generates 20 keywords<br>
+                    <span style="color: #BBB;">4.</span> LLM expands to 200<br>
+                    <span style="color: #BBB;">5.</span> Map to DS19 by embedding distance
+                </div>
+                <div style="margin-top: 1em; padding: 0.6em; background: #F5F5F5; border-radius: 4px; color: #999; font-size: 0.9em;">
+                    Guesses from a homepage.<br>No behavioral data. No ranking.
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div style="display: flex; align-items: center; font-size: 1.5em; color: var(--muted);">vs</div>
+
+            <!-- BUK -->
+            <div style="padding: 1.2em; border: 2px solid var(--red); border-radius: 8px;">
+                <h3 style="color: var(--red); font-size: 1em; margin-bottom: 0.8em;">BUK (Proposed)</h3>
+                <div style="color: var(--text); line-height: 1.8;">
+                    <span style="color: var(--red);">1.</span> 30 days of behavioral data<br>
+                    <span style="color: var(--red);">2.</span> Which IPs visited which advertisers<br>
+                    <span style="color: var(--red);">3.</span> Train ALS collaborative filtering<br>
+                    <span style="color: var(--red);">4.</span> <strong>Ranked</strong> 200 keywords per advertiser<br>
+                    <span style="color: var(--red);">5.</span> Importance scores from behavior
+                </div>
+                <div style="margin-top: 1em; padding: 0.6em; background: rgba(214,59,47,0.06); border-radius: 4px; color: var(--red); font-size: 0.9em; font-weight: 600;">
+                    Learns from 6,000+ advertisers.<br>Per-advertiser ranking.
+                </div>
+            </div>
+        </div>
+
+        <p class="fragment" style="text-align: center; font-size: 0.8em; color: var(--text-light); margin-top: 1.2em;">
+            Both systems might pick "Travel" for LATAM Airlines — but only BUK knows<br>
+            <strong style="color: var(--navy);">"Travel is rank 2 for LATAM and rank 40 for Visit Indiana."</strong>
+        </p>
+    </section>
+
+    <!-- SLIDE 3: The Question -->
     <section>
         <h2 style="text-align: center; margin-top: 2em; font-size: 1.8em;">
             Does keyword selection<br>actually matter?
