@@ -335,6 +335,106 @@ print(f"{score:.4f}")
 PYSCRIPT
 }
 
+# ── Segment merger ────────────────────────────────────────────
+# Aligns both transcripts by timestamp and picks the best segments from each.
+# OpenAI wins on accuracy (technical terms, proper nouns); local wins on coverage.
+# For each time bucket: if word counts are similar, prefer OpenAI; if one has
+# significantly more words, take that one (it captured speech the other missed).
+merge_transcripts() {
+    local openai_file="$1"
+    local local_file="$2"
+    local merged_file="$3"
+
+    python3 << 'MERGESCRIPT' - "$openai_file" "$local_file" "$merged_file"
+import sys, re
+from collections import defaultdict
+
+openai_file, local_file, merged_file = sys.argv[1], sys.argv[2], sys.argv[3]
+
+def parse_segments(filepath):
+    """Parse [MM:SS] lines into list of (seconds, text) tuples."""
+    segments = []
+    with open(filepath) as f:
+        for line in f:
+            line = line.rstrip()
+            m = re.match(r'\[(\d{2}):(\d{2})\]\s*(.*)', line)
+            if m:
+                t = int(m.group(1)) * 60 + int(m.group(2))
+                segments.append((t, m.group(3)))
+    return segments
+
+def bucket_segments(segments, bucket_size=30):
+    """Group segments into time buckets (default 30s windows)."""
+    buckets = defaultdict(list)
+    for t, text in segments:
+        bucket_key = (t // bucket_size) * bucket_size
+        buckets[bucket_key].append((t, text))
+    return buckets
+
+openai_segs = parse_segments(openai_file)
+local_segs = parse_segments(local_file)
+
+openai_buckets = bucket_segments(openai_segs)
+local_buckets = bucket_segments(local_segs)
+
+# All bucket keys from both providers
+all_keys = sorted(set(openai_buckets.keys()) | set(local_buckets.keys()))
+
+merged_lines = []
+stats = {"openai": 0, "local": 0, "only_openai": 0, "only_local": 0}
+
+for key in all_keys:
+    o_segs = openai_buckets.get(key, [])
+    l_segs = local_buckets.get(key, [])
+
+    o_words = sum(len(text.split()) for _, text in o_segs)
+    l_words = sum(len(text.split()) for _, text in l_segs)
+
+    if o_segs and l_segs:
+        # Both have content — pick based on substantive word coverage.
+        # Filter out filler/back-channel to avoid inflated word counts.
+        filler = {'mm-hmm', 'mmhmm', 'mm', 'hmm', 'uh', 'um', 'uh-huh', 'yeah',
+                  'okay', 'ok', 'right', 'sure', 'yep', 'mhm', 'huh', 'ah'}
+        o_sub = sum(1 for _, t in o_segs for w in t.lower().split()
+                    if w.strip('.,!?') not in filler)
+        l_sub = sum(1 for _, t in l_segs for w in t.lower().split()
+                    if w.strip('.,!?') not in filler)
+
+        if l_sub > 0:
+            ratio = o_sub / l_sub
+        else:
+            ratio = 2.0  # openai wins if local has only filler
+
+        if ratio < 0.6:
+            # Local has >65% more substantive words — it captured speech openai missed
+            chosen = l_segs
+            stats["local"] += 1
+        else:
+            # Similar or openai has more — prefer openai for accuracy
+            chosen = o_segs
+            stats["openai"] += 1
+    elif o_segs:
+        chosen = o_segs
+        stats["only_openai"] += 1
+    else:
+        chosen = l_segs
+        stats["only_local"] += 1
+
+    for t, text in chosen:
+        timestamp = f"[{int(t//60):02d}:{int(t%60):02d}]"
+        merged_lines.append(f"{timestamp} {text}")
+
+with open(merged_file, "w") as f:
+    f.write("\n".join(merged_lines) + "\n")
+
+total_buckets = stats["openai"] + stats["local"] + stats["only_openai"] + stats["only_local"]
+print(f"[merge] {len(merged_lines)} lines from {total_buckets} time windows")
+print(f"[merge] openai chosen: {stats['openai']}x (accuracy), local chosen: {stats['local']}x (coverage)")
+if stats["only_openai"] or stats["only_local"]:
+    print(f"[merge] exclusive: openai-only {stats['only_openai']}x, local-only {stats['only_local']}x")
+MERGESCRIPT
+}
+
 # ── Output validation ────────────────────────────────────────
 # Minimum 10 lines per 10 minutes of audio. Catches empty/near-empty outputs.
 validate_output() {
@@ -396,7 +496,7 @@ else
     fi
     echo ""
 
-    # Pick the better one
+    # Merge the best segments from both providers
     if $OPENAI_OK && $LOCAL_OK; then
         OPENAI_SCORE=$(score_repetition "$OPENAI_FILE")
         LOCAL_SCORE=$(score_repetition "$LOCAL_FILE")
@@ -404,48 +504,34 @@ else
         LOCAL_LINES=$(wc -l < "$LOCAL_FILE" | tr -d ' ')
         OPENAI_WORDS=$(wc -w < "$OPENAI_FILE" | tr -d ' ')
         LOCAL_WORDS=$(wc -w < "$LOCAL_FILE" | tr -d ' ')
-        echo "Repetition scores — openai: $OPENAI_SCORE ($OPENAI_LINES lines, $OPENAI_WORDS words), local: $LOCAL_SCORE ($LOCAL_LINES lines, $LOCAL_WORDS words)"
+        echo "Provider stats — openai: $OPENAI_SCORE rep ($OPENAI_LINES lines, $OPENAI_WORDS words), local: $LOCAL_SCORE rep ($LOCAL_LINES lines, $LOCAL_WORDS words)"
 
-        # Pick winner using composite score: repetition penalty + word coverage.
-        # - If one has significantly more repetition (>0.05 difference), it loses.
-        # - If repetition is similar, the one with more words wins (more coverage).
-        # - If both repetition and words are close, openai wins (higher per-word accuracy).
-        WINNER=$(python3 -c "
-o_rep, l_rep = $OPENAI_SCORE, $LOCAL_SCORE
-o_words, l_words = $OPENAI_WORDS, $LOCAL_WORDS
+        # Check if one provider has bad repetition — if so, don't merge, just use the clean one
+        OPENAI_REP_BAD=$(python3 -c "print('yes' if $OPENAI_SCORE > 0.1 else 'no')")
+        LOCAL_REP_BAD=$(python3 -c "print('yes' if $LOCAL_SCORE > 0.1 else 'no')")
 
-rep_diff = abs(o_rep - l_rep)
-word_ratio = o_words / l_words if l_words > 0 else 1.0
-
-# Clear repetition winner (>0.05 difference)
-if rep_diff > 0.05:
-    winner = 'openai' if o_rep < l_rep else 'local'
-    reason = f'less repetition ({o_rep:.4f} vs {l_rep:.4f})'
-# Similar repetition — check word coverage gap (>20% difference)
-elif word_ratio < 0.8:
-    winner = 'local'
-    reason = f'more words ({l_words} vs {o_words}, {1/word_ratio:.1f}x more)'
-elif word_ratio > 1.25:
-    winner = 'openai'
-    reason = f'more words ({o_words} vs {l_words}, {word_ratio:.1f}x more)'
-# Both similar — default to openai for per-word accuracy
-else:
-    winner = 'openai'
-    reason = f'similar quality, openai default (rep {o_rep:.4f}/{l_rep:.4f}, words {o_words}/{l_words})'
-
-print(f'{winner}|{reason}')
-")
-        WINNER_NAME="${WINNER%%|*}"
-        WINNER_REASON="${WINNER#*|}"
-        echo "Winner: $WINNER_NAME ($WINNER_REASON)"
-        WINNER="$WINNER_NAME"
-        if [[ "$WINNER" == "openai" ]]; then
+        if [[ "$OPENAI_REP_BAD" == "yes" && "$LOCAL_REP_BAD" == "yes" ]]; then
+            # Both have repetition — pick lesser evil, don't merge garbage
+            if python3 -c "exit(0 if $OPENAI_SCORE <= $LOCAL_SCORE else 1)"; then
+                echo "Both have repetition — using openai (less: $OPENAI_SCORE vs $LOCAL_SCORE)"
+                cp "$OPENAI_FILE" "$OUTPUT_FILE"
+            else
+                echo "Both have repetition — using local (less: $LOCAL_SCORE vs $OPENAI_SCORE)"
+                cp "$LOCAL_FILE" "$OUTPUT_FILE"
+            fi
+        elif [[ "$OPENAI_REP_BAD" == "yes" ]]; then
+            echo "OpenAI has repetition ($OPENAI_SCORE) — using local only"
+            cp "$LOCAL_FILE" "$OUTPUT_FILE"
+        elif [[ "$LOCAL_REP_BAD" == "yes" ]]; then
+            echo "Local has repetition ($LOCAL_SCORE) — using openai only"
             cp "$OPENAI_FILE" "$OUTPUT_FILE"
         else
-            cp "$LOCAL_FILE" "$OUTPUT_FILE"
+            # Both clean — merge best segments from each
+            echo ""
+            merge_transcripts "$OPENAI_FILE" "$LOCAL_FILE" "$OUTPUT_FILE"
         fi
 
-        # Save both if requested
+        # Save individual provider outputs if requested
         if $KEEP_BOTH; then
             OPENAI_KEPT="${OUTPUT_FILE%.txt}_openai.txt"
             LOCAL_KEPT="${OUTPUT_FILE%.txt}_local.txt"
