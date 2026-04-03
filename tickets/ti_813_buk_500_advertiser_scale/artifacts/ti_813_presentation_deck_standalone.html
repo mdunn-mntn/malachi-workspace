@@ -429,29 +429,65 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
         <div class="footer-note">Malachi Dunn & Alex Knorr · April 2026 · 500 advertisers · 30.9B IPs</div>
     </section>
 
-    <!-- SLIDE 2: The Framing -->
+    <!-- SLIDE 2: How Keywords Work Today -->
+    <section>
+        <h2>How Keywords Work Today</h2>
+        <div class="subtitle">Two approaches to selecting which keywords to target for each advertiser</div>
+
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.5em; margin-top: 1.5em; font-size: 0.75em;">
+            <!-- MM V2 -->
+            <div style="padding: 1.2em; border: 2px solid #E0E0E0; border-radius: 8px;">
+                <h3 style="color: #999; font-size: 1em; margin-bottom: 0.8em;">Mountain Match V2 (Current)</h3>
+                <div style="color: var(--text-light); line-height: 1.8;">
+                    <span style="color: #BBB;">1.</span> Scrape advertiser homepage<br>
+                    <span style="color: #BBB;">2.</span> LLM describes products<br>
+                    <span style="color: #BBB;">3.</span> LLM generates 20 keywords<br>
+                    <span style="color: #BBB;">4.</span> LLM expands to 200 products/services<br>
+                    <span style="color: #BBB;">5.</span> Map to targetable keywords by embedding similarity
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div style="display: flex; align-items: center; font-size: 1.5em; color: var(--muted);">vs</div>
+
+            <!-- BUK -->
+            <div style="padding: 1.2em; border: 2px solid var(--red); border-radius: 8px;">
+                <h3 style="color: var(--red); font-size: 1em; margin-bottom: 0.8em;">Bottoms-Up Keywords (Proposed)</h3>
+                <div style="color: var(--text); line-height: 1.8;">
+                    <span style="color: var(--red);">1.</span> 30 days of behavioral data<br>
+                    <span style="color: var(--red);">2.</span> Which IPs visited and converted on which advertisers<br>
+                    <span style="color: var(--red);">3.</span> Train ALS collaborative filtering model<br>
+                    <span style="color: var(--red);">4.</span> Returns keywords <strong>ranked by recommendation</strong> per advertiser<br>
+                    <span style="color: var(--red);">5.</span> Importance scores learned from behavior
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SLIDE 3: The Framing -->
     <section>
         <h2 style="text-align: center; margin-top: 1.5em; font-size: 1.8em;">
-            We know keywords are important.<br>
-            <span style="color: var(--red);">But are all keywords equal?</span>
+            Keywords are important.<br>
+            <span style="color: var(--red);">But not all keywords are equally important.</span>
         </h2>
         <p style="text-align: center; color: var(--text-light); font-size: 0.85em; margin-top: 1.5em;">
-            Today, every IP matched to any keyword is scored the same — 10,000.<br>
-            Rank 1 keyword and rank 200 keyword are treated identically.<br><br>
-            <strong style="color: var(--navy);">What if keyword ranking carries a massive signal we're not using?</strong>
+            Keywords have different importance based on their alignment to an advertiser.<br>
+            Today, every keyword-matched IP is scored the same — 10,000.<br><br>
+            <strong style="color: var(--navy);">Scoring everything uniformly is leaving valuable signal on the table.</strong>
         </p>
     </section>
 
-    <!-- SLIDE 3: The Number -->
+    <!-- SLIDE 4: The Number -->
     <section>
         <div style="margin-top: 1.5em;">
             <p class="big-number-context">IPs matched to an advertiser's top-5 keywords visit at</p>
             <div class="big-number">72x</div>
             <p class="big-number-context">the rate of those matched to the lowest-ranked keywords</p>
         </div>
-        <p class="fragment" style="text-align: center; font-size: 0.8em; color: var(--text-light); margin-top: 1.5em;">
-            Today, all of these IPs are scored 10,000. They're all treated the same.
-        </p>
+        <div class="fragment insight-box" style="margin-top: 1.5em; font-size: 0.75em; padding: 0.8em 1.2em;">
+            <strong>But in Mountain Match V2, they're all treated the same.</strong>
+            Every one of these IPs — from rank 1 to rank 200 — is scored 10,000 today.
+        </div>
         <div class="footer-note">500 advertisers · 30.9B scored IPs · 754K visitors</div>
     </section>
 
@@ -498,7 +534,33 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
         </p>
     </section>
 
-    <!-- SLIDE 5: Per-Advertiser Consistency -->
+    <!-- SLIDE 6: Advertiser-Specific Signal -->
+    <section>
+        <h2>Keyword Importance Is Advertiser-Specific</h2>
+
+        <div style="margin-top: 1.5em; font-size: 0.85em;">
+            <div style="margin: 1em 0;">
+                <p style="color: var(--text-light);">
+                    Some keywords are inherently valuable across the board — regardless of advertiser or vertical,
+                    certain keywords produce ~<strong>3x lift</strong> globally.
+                </p>
+            </div>
+
+            <div class="fragment" style="margin: 1em 0;">
+                <p style="color: var(--text);">
+                    But when we rank keywords <strong style="color: var(--red);">per advertiser</strong>,
+                    lift jumps to <strong style="color: var(--red);">72x</strong>.
+                </p>
+            </div>
+
+            <div class="fragment insight-box" style="margin-top: 1.5em;">
+                The value isn't just in having keywords — it's in knowing <strong>which keywords matter most for each advertiser</strong>.
+                That's the signal continuous scoring captures.
+            </div>
+        </div>
+    </section>
+
+    <!-- SLIDE 7: Per-Advertiser Consistency -->
     <section>
         <h2>85% of Advertisers Show &gt;10x Lift</h2>
         <div class="subtitle">For 106 of 125 advertisers, top-ranked keyword IPs visit at 10x+ the rate of bottom-ranked</div>
