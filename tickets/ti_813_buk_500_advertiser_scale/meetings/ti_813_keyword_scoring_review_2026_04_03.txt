@@ -1,0 +1,450 @@
+Okay.
+So I figured that this is probably top priority because of who it came from.
+But I did some analysis on the bottoms up keywords.
+And I mean, just to be frank, a lot of it I generated.
+I was just trying to get some quick results.
+So I need to go more into the scrutiny of our results.
+But ultimately, I replicated what you did.
+And I saw really promising results with it.
+So my goal here is that number one, I want to like pick this apart, make sure we're considering every circumstance, and we're not just like accidentally like flagging like really high results, and it's meaningless.
+See if we can package this in a really, really good way, and then kind of go from there.
+So I'm going to share my screen.
+Sure.
+And then we can just kind of go from there.
+So first off, I am going to...
+This is really cool.
+Cale actually showed this to me.
+And you can do this standalone like HTML, right?
+Which I was sending, but you still have to open it.
+But he sent me this link thing, and I built something off of it where it's like, I can now just send a link.
+Which is so cool.
+So it basically is like it uses GitHub to be like to host it.
+And yeah, it just makes it...
+I mean, I don't understand exactly how it works, but it basically uses it as its own server, and then you can just create a link from it.
+So it's pretty cool.
+But yeah, so let's go through this, and then we'll just kind of try to pick it apart.
+And I don't know if you have like a ton of stuff planned today, but I was trying to see if we could maybe get it to him before end of day, but if not by early Monday morning, so he can share this with Richard and them, that'd be great.
+Yeah, let's review.
+Let's see the feedback.
+I've gone through some of this.
+I have some feedback.
+I like the idea of being ambitious and getting this maybe by end of day.
+I just want to like you said, let's validate, make sure everything's buttoned up, and tweak some things.
+Yeah, that's what I want to...
+Okay.
+So I just created this.
+Keyword selection matters.
+I did 500 advertisers.
+So I said keyword value is advertiser specific, non-universal.
+I think everybody knew that, but it's just kind of part of the narrative here.
+So how the two keywords work today, Mountmatch V2 scrapes the advertiser homepage, LM describes the products, LM generates 20 keywords, LM expands to 200 keywords.
+I think that should be...
+You can say 200 search terms.
+I'm trying to think of a good way to say some more context on what the 200 is.
+Okay.
+I will note that, or I guess you could take a note too of that.
+Yeah.
+200 product services.
+So yeah, let me open some notes.
+I mean, they'll be in the recording, but I will take them as well.
+Yeah, that's good.
+And then just tell me when you're ready to go.
+Okay.
+Yep.
+Okay.
+Then we map to data source 19 by embedding distance.
+That's probably not the best way to say it.
+Maybe embedding similarity is like a cleaner way to say that.
+Yeah.
+I don't know if they're going to know- What that matters.
+Data source 19 is, so maybe to say- Sorry, go ahead.
+I cut you off.
+I was going to say, maybe we say map to targetable keywords by embedding similarity.
+Yeah.
+I include, this wasn't originally in it.
+I included it because I was like, well, maybe this would be valuable to certain people.
+This is not the exact one that I would put in here, but okay.
+That's a good point.
+Yeah.
+I'm thinking of it in that context now that that's the audience we're thinking of.
+Yeah.
+I totally understand why you didn't have that before.
+Yeah.
+Because I was just going to send this one to you, but then I, okay, sweet.
+I agree 100% with you.
+Then the bottom of the keyword takes 30 days of behavioral data.
+It checks which IPs visited which advertisers.
+We train an ALS collaborative filtering, right?
+Model.
+Model.
+Yeah.
+Then ranked 200 keywords per advertiser.
+Then we get, I don't know why it's cutting it off on this one.
+Yeah.
+I was going to ask.
+It looked cut off on my screen and I didn't know if that was a user error or something.
+Yeah.
+No, it doesn't do it on my other screen.
+I think it's modeled for portrait mode, which is weird.
+I don't know if that's the case.
+Hold on.
+Yeah.
+Okay.
+I know what the problem is.
+It's modeled for portrait mode and it's probably just a margins issue.
+Yeah.
+Okay.
+I'll add that as a note.
+I just have a general fixes.
+Yep.
+Okay.
+It might be easier just for this.
+I might just open it up on VS code here.
+I'm going to open up, this is what I'm going to do.
+I'm going to open it up directly from here.
+Okay.
+I think this should work better than the, hopefully.
+Let's see.
+No, it does the same thing.
+Okay.
+That's fine.
+We'll deal with it later.
+I'm going to have to see if there's a better way to do this.
+Hold on here.
+The standalone deck.
+This one might be better.
+Yeah.
+I'm going to move it.
+I would have to just regenerate the margins.
+Is that too small for you?
+No, this is sufficient for now.
+Okay.
+Let's do it for now.
+Okay.
+Because I'll have to change the margins.
+I'll have to prompt it to change the margins.
+Just wait.
+Okay.
+Right at the bottom, it says both systems might pick travel for Latin airlines, but only the bottoms up keyword knows travels rank two for Latin and rank 40 for visit Indiana or something like that, which are two different.
+Yep.
+Okay.
+I'm adding notes.
+I want to get rid of the rank 200 keywords per advertiser.
+That was our first DPL presentation where results were all bad because we had such a much larger vertical.
+We can just say returns keywords ranked by alignment, ranked by recommendation per advertiser.
+Just because then we don't have to get into, but I thought we changed it from 200 already.
+Mm-hmm.
+Okay.
+This next one, does keyword selection actually matter?
+Bottoms up keyword has been deprioritized because prior experience were confounded.
+We probably don't need to put this in there, but we need to prove.
+Yeah.
+This one I would like to remove.
+I don't want to call out deprioritizing or anything like that.
+Yeah.
+I would like to reframe it a little bit for continuous scoring.
+I think you've done analyses in the past.
+We know keywords are important, right?
+Mountain Match V2 today exists because of that.
+Targeting the vertical is not as good as using keywords.
+I think the piece, the story here is not only are keywords important, but they have different importance.
+That's where the continuous scoring gets in, right?
+Treating all keywords equally, something along those lines.
+It is more valuable to, I don't know how to say this.
+Fucking up your recording for AI.
+Keywords have different importance based on their alignment to an advertiser.
+Yes, absolutely.
+Scoring everything uniformly is leaving valuable signal on the table.
+Absolutely.
+Search terms are not all the same either, right?
+I think it's less like, maybe it's just a rephrasing.
+I like your idea of the question here, but I think the question isn't like keywords versus not.
+I think it is, we have more nuanced signals available to us now, and we should take advantage of those.
+Do you want me to take some notes on that?
+Yeah, absolutely.
+If you want.
+Question.
+Keywords matter to nuanced signal.
+Okay.
+I can explain to you.
+Here's maybe a question, and I don't know the answer.
+Do we need any explanation or detail of this methodology and continuous scoring?
+Do you think the story, the numbers don't change, but do you think there is a missing explanation of this piece, of continuous scoring?
+Does this, or is the focus of the story, you think, just saying keyword ranking is important for now?
+I think it's keyword ranking, and the big thing is, how much better?
+Let's think about that in application.
+What does this mean in application?
+There's twofold.
+In targeting, it's going to improve the signal of which advertiser, or sorry, which IPs are more valuable to target.
+If we have 20 to choose from, it's going to help the Van Goren model be better at choosing that.
+Another case, which I'm not sure how much it affects them, when the bidding team gets information, they also, well, I'm just wondering how that's going to work from the bidding.
+From a pacing perspective, I think it's more pacing than the bidding team.
+They set a threshold, and then they say, we're going to bid on everything above this threshold.
+Let's say you're just targeting high intent.
+Your budget is at a, the audience is big enough in high intent, and the budget is fine where you're not going to underspend if you only target high intent.
+They say, all right, target IPs that are 10,000, and then anytime an IP that we've scored of 10,000 comes up, they'll bid on it.
+What that means is in Mountain Match V2, where rankings don't exist, keyword rank one to keyword rank 200, any IPs associated with any of those, they're all 10,000, they're all high intent.
+What your results here are showing is, well, maybe we should discriminate a little bit more in the scoring of these things.
+Maybe the top five keywords are 10,000, and the top, the 50 to 200 keywords are categorically though.
+So 8,000 is peak performance and 10,000 is high intent, but we could have some sort of room where we say like after this we could create.
+I mean, this is mountain match V2.
+So this is like we're moving away from this if we go to Fangorn.
+But well, Fangorn will stay with mountain match V2 because so Fangorn is the vertical inclusion.
+So let me bring up our handy dandy.
+What's the vertical inclusion?
+But I thought the ultimate goal of Fangorn was to then just have the score associated with IP no matter what.
+Like literally not break it up into anything at all.
+Just what's the IP score per vertical.
+That is true.
+Per vertical.
+The scores from Fangorn are per vertical.
+So probability of visiting that vertical for every IP.
+So today, the way IPs are or the way verticals are defined is a visit to that vertical you get included.
+The maths model, you know, obviously visiting the vertical is a high signal.
+However, it's not the only thing that could drive you to be in a vertical now.
+Okay.
+Then for high intent, high intent is that overlap of keyword visit and vertical.
+Well, then this is what I'm saying here is that right now we're arbitrarily saying that we could mark everything as 8,001 and higher as high intent and then scale that high intent score based on where their keyword ranks.
+Exactly.
+That's exactly correct.
+That's exactly correct.
+That's the story.
+So if you take 2,000 divided by 200, let's just say we do 200 keywords, I mean, whatever.
+That means like every 10 points, you know?
+Well, there's a little bit different way that we methodology that we've done it, but we don't have to get into it in this slide.
+This is that discounted cumulative gain methodology in the RFD.
+Are you thinking like some sort of log like strength?
+So the idea I can get you to let me get you.
+I'll go to the confluence page and we'll talk through this because this is important.
+This is kind of the where am I?
+Continuous scoring bottom up keywords, maybe.
+Threshold methodology.
+No.
+This is under Fangorn.
+ML intent scoring, I think.
+Where did I put this?
+Let me look in our messages.
+Sorry, I'm trying to find this.
+No, you're fine.
+There we go.
+There it is.
+So what we can do with keyword rankings.
+There's something called discounted cumulative gain, which is this formula here.
+An R is the rank of the keyword.
+So if you're rank one, this weight becomes one.
+So then for every IP, we can look at how many of the recommended ranked bottom up keywords did you visit?
+Then we can sum your discounted cumulative gain across all keywords that you did.
+So like, did you visit rank one?
+Did you visit rank five?
+Did you visit rank 50?
+And then that will become like one number for each IP based on everything that they visited for that.
+That's the sum.
+And then we can saturate this into a zero to one score.
+Are you sharing the screen right now?
+Yes.
+Oh, sorry.
+I figured you were.
+It would be much harder to follow if I'm just talking at you without showing you formulas.
+Okay.
+Oh, yes, I saw this before.
+You sent this to me, right?
+Yeah, so each keyword gets this formula for the rank.
+So rank one, this weight is one.
+And then as you go down the ranks, this weight gets lower.
+So then for every IP, we can calculate the sum of the weights for all the keywords that they visited.
+So like if you visited rank one and rank two, you're probably like a weight of two, right?
+And then we can saturate this into a zero to one space, map it to zero to one with this formula.
+So what that looks like is something like this.
+So if your discounted cumulative gain is like 1.55, then you end up with an adjusted score of 0.9.
+So then your keyword would be at 0.9 score.
+Now that we have a zero to one score, you know, we can map that to whatever range we want.
+But like these would be within high intent, right?
+So before, all of these IPs that are all scored 10,000, they would have all been scored 10,000.
+Now we can discriminate them a little more and say like, well, maybe 0.9 and above should be 10,000.
+And then these should scale down linearly from like, you know, 9999 to like 8,000.
+So they're all still high intent, but you focus on this group, which is associated with higher ranked visits first.
+There's a few things I think about when you say that.
+So number one, is it also taking in fact how different the lift is between the two?
+Because rank one and rank two, even though the rank one and rank two, we could do this whole log all the way back to the...
+That doesn't necessarily say that every vertical, every keyword is going to have the same difference in lift.
+Like for example, like take one vertical, right?
+It's rank one and rank two have lift over the bottom, like 50 plus, right?
+Let's say it's 200 times lift.
+And then the next one's 150.
+Whereas we have another one where it's like 200 times lift and next one's 10, right?
+And then also taking in fact, what is the IVR for that vertical too?
+Because we're also have to, I think we also would have to take into, like if we want this to be as...
+So remember these keyword rankings are advertiser specific.
+So these are going to be score, IP scored for every advertiser.
+Right.
+So per advertiser though, still the IVR, because like on average, we have wildly different IVR for each advertiser.
+So we would probably, I don't know how, like if the difference in IVR between like what the baseline IVR is, what's the max IVR between them, right?
+And then what's the scale between those IVRs would probably also matter too, because we apply a blanket ranking system.
+I mean, this might be sufficient.
+I'm just trying to think of like, do those other factors matter and would they make enough a margin of difference too?
+I think the argument we're making and what you've made in your presentation as well, if you go back to the per like keyword bucket, like ranking is already accounting for this, right?
+So if we score things based on their ranks, that's like a proxy for visit rate and performance.
+This slide is saying the things that we rank higher in the keywords are going to perform better.
+So we don't necessarily need to account for performance, but we do need to account for the rankings because we know about rankings.
+We don't know about visit rate kind of before the campaigns run, right?
+Right, but so this is what I'm saying though, okay?
+So let's say, well, it depends.
+I think that they have a very simple list.
+It just is this number bigger or not, right?
+So I'm just saying that like, let's say in that 2000 score range that we have to work with and we have a hundred keywords, depending on how much more valuable one keyword is, it probably is not going to make any, how it probably won't make any difference because their system is really simple.
+I'm just thinking like, okay, let's say that the rank one keyword is way better than the rank two keyword and then rank two to 50 are right next to each other in IVR, right?
+Is there any way to like much greater, like to weight that rank one opposed to rank two, depending on how different they are and does that really matter?
+Because like in my circumstance, let's just say you're applying a score.
+Let's say the rank one is so good.
+You put it at 10,000, right?
+But the rank two and 50 are really, really bad.
+So maybe you don't want to put the next keyword at rank, like at score 9999, right?
+Maybe you want to put it at like 8,200, right?
+And then scale the keywords that way.
+Does it make much of a difference in the score the way that the bidder works?
+And I don't think that's the case.
+I don't think that's the case.
+My understanding is the threshold that they're willing to like go to, like bidding or not, is based on pacing.
+And they also have to do, these operations have to be extremely fast because...
+Yeah, so there's no like model or logic in the bidder, but there's this idea of like, okay, an IP has a score of 10,000.
+My campaign right now has a threshold of 10,000.
+Yes, yes or no?
+Evaluate, bid, bid or not.
+So then in your case, you know, in my mind, it's like this monotonic drop-off that you're showing, you know, our keyword IP level scoring should reflect that.
+And it does with the continuous scores.
+So now instead of bidder saying, okay, 10,000, everything in high intent is 10,000.
+They can make the same pacing decisions.
+We've just given them a finer grain control.
+So they don't have to go from 10,000 to 8,000.
+They can go from 10,000 to 9,500 and then 900.
+And then they could go one iterative score step at a time if they want, right?
+Okay, on a completely separate note that we could talk about later, it does seem important to me that when we go away from this whole vertical classification at all, we might want to...
+Because I'm just thinking about Fangorn applied to just, I mean, it's like at the advertiser level, you know?
+So the keyword piece for high intent can still be integrated with continuous scoring without bottom-up keywords.
+That's kind of Would a true randomized sample of this be the only way you could measure that correctly if we were grabbing from our pool of advertisers?
+Because this is something that I saw and I had in the past.
+So what's really interesting is a lot of stats doesn't apply when you start to do these types of things because it's weird.
+But the type of people who advertise on CTV are not random.
+Like businesses in the population, there's something inherently different about them.
+So a lot of times I've realized that sometimes randomized sampling in certain things is not the best.
+It depends on what population you're comparing to.
+So if you were making statements about the broader business performance, then I think you're right because there is selection bias into the companies that serve ads on TV.
+However, for us, that is our population.
+So then that selection bias issue doesn't necessarily happen.
+Though I think kind of what you're saying is there is like a stratification thing that could be considered here, right?
+So a random sample of our advertisers versus randomly sample based on budget buckets or size of campaigns, that kind of thing would be another way to do that.
+So you're not saying I grabbed a thousand random advertisers, you're like, I grabbed 200 advertisers across an equal number across all of our different budget ranges from the top end to the bottom.
+Yeah, and when I was doing the clustering by was just a bunch of rate metrics.
+So you could do that combined with spend.
+And I don't know, you could have some sort of weight associated with how many visits or how many things they're like the total impact they have and then sample from there.
+Anyways, we can talk about that later.
+That's more of the other stuff.
+But this slide doesn't necessarily need to be in there.
+This is for us.
+So I think we could just probably take this out.
+I agree with that.
+Yeah, okay.
+So don't worry.
+So what keyword selection is the highest leverage targeting lever we have?
+That's pretty bold.
+I think I like number three.
+I think the way we say this is not necessarily keyword selection.
+Keyword ranking is really important here, right?
+Yeah.
+So how about one and three we call that and we just take out two.
+We can take out two.
+I think one needs a little wordsmithing, but yeah, I think it's the not just the selection, but like the ranking within keywords is important.
+Yeah, because this applies that keywords is the best thing in targeting, which it's not.
+Site visits is probably the answer there.
+Oh yeah, this okay.
+So this is just some follow up stuff we don't need to throw in there.
+Yeah, I was gonna say we can change that.
+So this might be if you go back to that real quick for us.
+I am actually right now working on TI 704.
+And maybe you can approach that with 806 in a similar way.
+So since we have kind of like beta evaluation and I'm working through that and getting some results there.
+I don't know if we'll be able to push for a full experiment.
+However, I think we can leverage experiments we've already run.
+So the way we've done this today and like the metrics you've shown already and the metrics I've shown, they're like score on today, get someone go to that site, yes or no in the post period.
+That's different from serving an ad and then a visit and a visit rate based on impressions, right?
+So with Fangorn, we can say score all the IPs before the experiment started using bottom up keywords.
+Then for all the treatment and control groups, we have the IP level impressions and visits.
+We can do this same analysis, but based on impressions and visits from the IPs in the campaign.
+And then you can say, well, here's what would have happened with bottom up keywords in this experiment.
+Okay.
+Now maybe causal impact fits in that.
+I'm not sure, but I'm starting to go through the same thing of like basically what you've done, but instead of just like pure visits at the end, look at impressions and visits specific to these experiment campaigns.
+Causal impact is best used when you change nothing about somebody's campaigns and you just make a blanketed change to them.
+That's the best way to use causal impact.
+So like someone's already running like a series of campaigns and then you say, hey, for this whole advertiser or for this subset of campaigns, it's better when it's the whole advertiser, but for the subset of campaigns within the advertiser, we're going to make this change, right?
+And just see how it starts performing after, right?
+That's the easiest way to do it.
+When you actually start doing true, like for example, what Nick just did with his experiment with, oh, what was that?
+I can't remember.
+But they just made some changes where they did a true control treatment, split exact campaigns, different audience sizes, randomized trial, things like that.
+That's like a perfect experiment.
+That's great.
+I mean, I can use causal impact to validate that, but I'm using the same tests.
+I'm not actually using a test.
+So it's not using Bayesian, any sort of Bayesian statistics for that.
+So that's usually what it's best.
+So like, I wonder though, like just from a stand, like, I wonder why we have to pay for it.
+And the reason I'm asking is like, maybe we could just reach out to advertisers and say, hey, we're running, we'd like to run an experiment for you.
+We can give them, I don't know, I guess.
+I just wonder if some advertisers would be willing to run for experiments and, you know.
+Some of them are, and that's kind of what the beta has been.
+It's just lower adoption and slower process.
+Yeah, because I don't know why we couldn't just be like, hey, Cursor, can we just ask them if they're interested in just implementing this on their campaigns and tell them that there's a prompt, you know, there's...
+I think the way I interpret it is like, we've done two experiments and obviously they were different, things have changed, but we've done two experiments related to bottom-up keywords with like inconclusive results.
+So there's low appetite to run another experiment if we're gonna get similar results.
+So then, you know, the evaluation that we're doing and the justification of like, this is different now is part of it.
+And then two, like I'm with you, I think it's important to show this kind of like head-to-head performance.
+However, there's also like, okay, if the best benefit of bottom-up keywords is with continuous scoring, then implementing or evaluating that part of it first is a better experiment to do.
+Okay.
+Why do you think that the previous experiment failed to show that?
+Do you think there was problems with how the experiment was run?
+Or do you think that it literally was just...
+There's a couple things.
+Okay.
+Look at that one.
+Just so you know, what I'm thinking is after we get to the end of this slide here, or like these slides, we could probably break for like just a couple minutes or so, and then we can actually start like working on...
+I have a meeting coming up that I have to go to.
+Okay, then we can break and I'll work on some of these things and then we can maybe touch base.
+But like, I agree with you.
+This is important.
+I want to make work on this.
+I just need like 45 minutes.
+No, you're all good.
+You're all good.
+Let's do it.
+Okay.
+Maybe I'll just say it this way.
+So the first experiment, everything was negative for the treatment group because we selected 200 keywords.
+Is it EX39?
+Maybe that's one.
+So what that means, right, is that's, you know, in Mountain Match today, we get 200 AI keywords, but then they become some subset.
+With bottom-up keywords, we're like, well, let's just take the top 200 recommendations for everyone.
+So we ended up covering like 80 to 85% of the vertical.
+So as you might expect, those audiences are huge and compared to a much tighter, smaller Mountain Match V2 performance is worse, right?
+Okay.
+And then after that, we said, okay, then sizing is important.
+We need to make changes to sizing.
+And I was like, okay, I can't really replicate sizes for Mountain Match in bottom-up keywords because that like doesn't exist, right?
+Here, yeah, like 40% decline in visit rates between the treatment and control.
+Yeah, and you think that's correlated to the...
+It's like sizing.
+Like if my audience is like 10x the size, it's going to be hard to have good performance, right?
+So then the second round was I said, okay, I will pick a threshold in our distribution of scores and only take scores above that.
+So sizes will be smaller than 200 because we'll select less keywords like this, right?
+We'll take the top, I think it's like 42%, yeah, top 42% of scores.
+Now here, the same pattern of in the cases where my methodology had a smaller high intent group, we perform better.
+And in the cases where the high intent audience was larger, we perform worse.
+And it is like linear scaling, not really, but like, you know, we're much smaller than the mountain match audience.
+We perform much better.
+So these are the numbers, AI don't add this into any presentations or notes, but this is the results where Richard is like, well, your numbers are bullshit.
+I can't, you know, this is so inconsistent.
+This isn't like a ship it result, you know?
+So again, sizing like playing a problem in this.
+So then that's where continuous scoring came from of like, okay, if the ask is to increase the size of audiences and maintain performance, well, we can't do it by treating everything within high intent uniformly, right?
+So we want to get to a point where, yeah, the audience is 30 million, but you know, they're not all scored 10,000.
+We're using the rankings of the keywords to like
