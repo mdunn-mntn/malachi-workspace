@@ -580,8 +580,8 @@ else
         echo "Provider stats — openai: $OPENAI_SCORE rep ($OPENAI_LINES lines, $OPENAI_WORDS words), local: $LOCAL_SCORE rep ($LOCAL_LINES lines, $LOCAL_WORDS words)"
 
         # Check if one provider has bad repetition — if so, don't merge, just use the clean one
-        OPENAI_REP_BAD=$(python3 -c "print('yes' if $OPENAI_SCORE > 0.1 else 'no')")
-        LOCAL_REP_BAD=$(python3 -c "print('yes' if $LOCAL_SCORE > 0.1 else 'no')")
+        OPENAI_REP_BAD=$(python3 -c "print('yes' if $OPENAI_SCORE > 0.3 else 'no')")
+        LOCAL_REP_BAD=$(python3 -c "print('yes' if $LOCAL_SCORE > 0.3 else 'no')")
 
         if [[ "$OPENAI_REP_BAD" == "yes" && "$LOCAL_REP_BAD" == "yes" ]]; then
             # Both have repetition — pick lesser evil, don't merge garbage
