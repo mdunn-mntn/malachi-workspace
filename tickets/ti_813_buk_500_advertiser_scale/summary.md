@@ -103,6 +103,51 @@ TI-804 proved the 184x signal with 50 advertisers, but only 15 had >10 visitors 
 
 The aggregate lift attenuation (184x → 72x) is expected: more advertisers = more dilution at the aggregate level. The per-advertiser median (82x) is the more meaningful metric — and 85% >10x across 125 advertisers is compelling at scale.
 
+### Fangorn Experiment Offline Evaluation (Alex Knorr, 2026-04-06)
+
+Alex independently validated the BUK signal using the Fangorn experiment (TI-704). This is a different data source and methodology that reaches the same conclusion.
+
+**Setup:**
+- BUK model trained as of March 1 (30-day behavioral window)
+- BUK DCG continuous scores computed for all IPs based on which ranked keywords they visited in the pre-period
+- Fangorn experiment ran March 4 – April 2 across 5 advertisers: Zumba Fitness (36420), Edward Martin (40956), G-Shock (46920), Reedsy (42273), Collector Store (42692)
+- Pulled all impressions, visits, spend, conversions from the experiment at IP level
+- Joined BUK scores to experiment IPs retroactively
+- Compared: do IPs with higher BUK scores show higher IVR (visits/impressions) in the experiment?
+
+**Key difference from TI-813:** TI-813 measures "did the IP visit the advertiser site at all?" (binary, observational). Fangorn eval measures "given we served this IP an impression, did they visit?" (IVR, experiment-based). This is closer to actual campaign performance.
+
+**Findings:**
+
+1. **Monotonic pattern confirmed in live experiment data.** Higher BUK-scored IPs have higher visit rates across all 5 advertisers and all experiment groups (control HI, treatment HI, control MI, etc.). Same cliff pattern as TI-813.
+
+2. **BUK scores predict which experiment group performs better.** Per-advertiser results:
+
+| Advertiser | Control HI Score | Control HI IVR | Treatment HI Score | Treatment HI IVR | BUK Predicts Winner? |
+|---|---|---|---|---|---|
+| Zumba Fitness | 0.93 | **3.46%** | 0.90 | 3.09% | Yes — higher score = higher IVR |
+| G-Shock | 0.93 | **5.25%** | 0.92 | 5.19% | Yes |
+| Edward Martin | 0.56 | 2.04% | **0.69** | **2.55%** | Yes |
+| Collector Store | 0.91 | 1.02% | **0.93** | **1.44%** | Yes |
+| Reedsy | ~1.0 | 1.71% | ~1.0 | 1.74% | Tied (both maxed out) |
+
+In every case where control vs treatment have meaningfully different median BUK scores, the group with the higher score has the higher visit rate. BUK would have predicted the winner correctly.
+
+3. **Scatter plot: median BUK score vs visit rate** shows clear positive correlation across all 5 advertisers × 8 experiment groups (40 data points). G-Shock clusters top-right (high scores, high IVR). HI groups consistently higher than MI/PP groups.
+
+4. **Zero-scored IPs are the investigation area.** IPs that were targeted via LLM/Fangorn keywords but didn't match any BUK recommendations. These have mixed visit rates — some perform well (keywords BUK might be missing), some don't (keywords LLM recommends that BUK correctly didn't).
+
+**Why this matters:**
+- TI-813 = observational evidence (keyword → visit, no impressions involved)
+- Fangorn eval = experiment-based evidence (impression → visit, actual campaign delivery)
+- Two independent methods, different data sources, same conclusion: **BUK keyword ranking predicts visit behavior**
+- This is the two-punch case for Paulo/Richard
+
+**Artifacts from Alex:**
+- `artifacts/TI_704_Fangorn_DCG_Eval.py` — Databricks notebook for Fangorn evaluation (joins BUK scores to experiment IPs, computes IVR by score bin)
+- `artifacts/TI_704_Fangorn_IP_DCG_Scoring.py` — Databricks notebook for IP-level DCG scoring (reads ipdsc, BUK predictions, computes continuous scores)
+- Charts shared in Slack (per-advertiser panels, overlay, scatter, aggregate)
+
 ## 5. Solution
 
 Scaling to 500 advertisers confirmed all TI-804 findings at scale:
@@ -110,6 +155,7 @@ Scaling to 500 advertisers confirmed all TI-804 findings at scale:
 - 85% of advertisers show >10x lift (not outlier-driven)
 - Signal works across all 67 verticals
 - 754K visitors provides strong statistical foundation
+- **Independently validated by Fangorn experiment offline evaluation** — BUK scores predict IVR in live experiment data across 5 advertisers
 
 ## 6. Questions Answered
 
@@ -129,11 +175,15 @@ None — findings are consistent with TI-804.
 ## 8. Open Items / Follow-ups
 
 - ~~Generate RevealJS standalone presentation deck (adapted from TI-804)~~ Done
-- Update TI-804 presentation.md to reference TI-813 scaled results
+- ~~Incorporate Alex Knorr feedback from 2026-04-03 review session~~ Done (MNTN Match V2, High Intent IPs, 82x median lift)
+- ~~Scale to 500 advertisers~~ Done
+- ~~Independent validation via Fangorn experiment~~ Done (Alex, 2026-04-06)
+- Waiting on Kale feedback on deck (sent 2026-04-03, Alex has meeting with Kale 2026-04-07)
+- Record ~5min Loom with Alex for Paulo (VP Eng) and Richard (CTO)
+- Investigate zero-scored IPs in Fangorn eval (keywords BUK is missing?)
+- Replicate Alex's Fangorn eval in BQ locally (5 advertisers, 30-day window — no sampling needed)
 - TI-805: BUK vs MM V2 head-to-head
 - TI-806: Causal impact analysis
-- Package deck for Richard/Paulo review (Kale wants by Monday 2026-04-07)
-- Incorporate Alex Knorr feedback from 2026-04-03 review session (see meeting transcript)
 
 ## Outputs
 
@@ -148,4 +198,7 @@ None — findings are consistent with TI-804.
 | `artifacts/ti_813_chart_per_advertiser_lift.png` | Per-advertiser: top 15 of 125 |
 | `artifacts/ti_813_chart_global_vs_per_advertiser.png` | Contrast: 3x vs 72x |
 | `artifacts/ti_813_chart_per_vertical_lift.png` | Per-vertical: top 20 of 67 |
-| `meetings/ti_813_01_keyword_scoring_review_2026_04_03.txt` | #01: Malachi + Alex Knorr keyword continuous scoring review (merged best-of-both transcript) |
+| `meetings/ti_813_keyword_scoring_review_2026_04_03.txt` | #01: Malachi + Alex Knorr keyword continuous scoring review (merged best-of-both transcript) |
+| `meetings/ti_813_02_zoom_meeting_2026_04_06.txt` | #02: Malachi + Alex Knorr — Fangorn offline eval review, DCG scoring walkthrough |
+| `artifacts/TI_704_Fangorn_DCG_Eval.py` | Alex's Databricks notebook: Fangorn experiment evaluation with BUK scores |
+| `artifacts/TI_704_Fangorn_IP_DCG_Scoring.py` | Alex's Databricks notebook: IP-level DCG continuous scoring |
