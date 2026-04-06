@@ -1,0 +1,408 @@
+[00:00] I'll wait for your request.
+[00:01] So my hope here, I can review this with you and Matt today, and then I would,
+[00:06] depending on the, uh, agenda can share this during our experiment meeting tomorrow.
+[00:13] That would be sweet.
+[00:16] And so the, the short answer here of like what this is, it is going to look
+[00:21] very similar to what you've already built and presented with kale, uh, but
+[00:25] it's like another data point using different data sources that come
+[00:29] to the same conclusion, so hooray, like we keep portraying the data and
+[00:33] using the model in different ways and getting the same results.
+[00:35] So we like that.
+[00:36] So this is a setup timeline view of what we're doing here to kind of get a context
+[00:43] of like how this offline evaluation works.
+[00:45] So our bottom keyword model is generated and trained as of March 1st.
+[00:52] So a 30 day window back in time, uh, to look at, you know, visits, conversions,
+[01:00] et cetera, for all of these advertisers.
+[01:02] And then over that same window, once we have recommendations generated for every
+[01:06] advertiser, their ranked keywords, we can then use that same window to look at
+[01:11] keyword level visits for IP and to score them with this continuous scoring method.
+[01:16] So, you know, if dog beds is ranked one for canine ballistics in this 30 day
+[01:21] window, then I can look back at that same 30 days and score all the IPs that
+[01:27] visited that keyword, and then that would be an, you know, a high advertiser
+[01:31] score for canine ballistics at the IP level.
+[01:34] Then, uh, the Fangorn experiment ran from March 4th to April 2nd.
+[01:41] So then I can pull all of the impressions, visits, spend, conversions
+[01:46] for all of the advertisers associated with the Fangorn experiment at the IP
+[01:50] level, then join in the bottom up keyword scores, and then we can do this
+[01:54] evaluation to say, just compare exactly.
+[01:58] So none of the experiments set up or targeting was focused on bottom up
+[02:03] keywords.
+[02:04] It was focused on kind of vertical inclusion from Fangorn scoring things at
+[02:08] the Fangorn level using mountain match V2 keywords.
+[02:12] Uh, but we can take those same IPs and just say like, okay, what are the visit
+[02:15] rates and impressions that were actually served, but now grouped at kind of the
+[02:19] bottom of keyword scored level.
+[02:22] So it gives us this like pseudo offline evaluation to understand like what would
+[02:27] happen in that case.
+[02:29] So you've already kind of seen that punchline chart.
+[02:31] I think the key important thing is we want to break it down by advertiser and
+[02:36] then experiment group, right?
+[02:38] So it's like high intent, peak performance, performance with whatever.
+[02:43] You know, what's something I was thinking about?
+[02:45] I'm not just off the top.
+[02:47] Do you know how we're ranking the keywords?
+[02:50] We should figure out at what point the keywords like, cause do you know how we
+[02:55] like throw something in high intent if it has a keyword?
+[02:58] What if the keyword that brings it into high intent is like a super low
+[03:01] performing keyword, right?
+[03:02] Right.
+[03:03] So that's some, yeah, the, the rankings are the dot products out of the ALS model.
+[03:10] So the outputs of the model are essentially embeddings.
+[03:15] So the model builds an embedding at the advertiser level.
+[03:19] That's like based on these ratings and the relationships with all of our
+[03:22] advertisers, here's an embedding of like advertiser-ness and then it also
+[03:27] builds a separate set of embeddings at the keyword level.
+[03:30] So across all advertisers visits conversions that we've seen here is
+[03:34] like a set of numbers that represents the keyword-ness of every keyword.
+[03:39] And then when you dot product, those two matrices together, you get a score
+[03:44] for every advertiser and every keyword.
+[03:47] And then the highest score is like the best fitting keyword for that advertiser.
+[03:52] Gotcha.
+[03:52] So the, the only, the reason I'm wondering is that we're treating all, do
+[03:55] you know how we're always doing the comparison between high intent, high
+[03:57] intent, things like that, right?
+[03:59] Um, if we're still following that model, I'm just wondering if there's a way to
+[04:03] like, maybe you're already describing this, but when we have that circumstance,
+[04:09] do we necessarily want to include something in high intent if it's in there
+[04:15] because of a keyword that it's low performing, you know what I'm saying?
+[04:19] Like, is it?
+[04:19] Yeah, I think what you're getting at in maybe a slightly different way, um, I
+[04:26] am making, so we're not storing this, but for every advertiser, we have a
+[04:31] keyword ranking for, or we have a ranking for every keyword, so you could
+[04:35] conceivably have a, every advertiser has a one to 20,000 list ranked
+[04:42] ordered list of keywords.
+[04:43] We're not using that in our high intent.
+[04:46] What I'm doing right now is I'm limiting the number of recommendations.
+[04:51] And that is based on trying to align the sizes based on like an
+[04:57] evaluation at the vertical level.
+[05:00] So I did some evaluations at the vertical and then said like, okay, for
+[05:03] every advertiser in that vertical, their number of keywords should approximate
+[05:07] the size of their mountain matched keywords if they contain this many.
+[05:11] So it's super approximate and, and there's other ways we can do it.
+[05:16] The thing that I would like to do once we have continuous scores is just
+[05:21] take the top 200 for every advertiser.
+[05:24] That's going to be a super large number that would fit in high intent, but now
+[05:28] there's this, you know, monotonic score going down that ranking list.
+[05:31] So even though it's a much bigger audience that bundles more into high
+[05:36] intent, we are discriminating better on those keywords.
+[05:41] So adding that kind of lower performance, if we're assigning performance to
+[05:45] rankings, which seems reasonable, it's okay because they're not going to be
+[05:49] targeted until we kind of like work our way down.
+[05:51] Does that mean that there's a variable number of keywords that's
+[05:54] going to happen per advertiser?
+[05:55] Correct.
+[05:56] Right now it is variable.
+[05:57] So like, you know, Apollo IO, they have 66.
+[06:01] Paula has a 97.
+[06:04] Sammy's camera had a 68.
+[06:06] So it varies.
+[06:07] Okay.
+[06:08] Gotcha.
+[06:08] That makes sense.
+[06:10] And it's all, it's an attempt to approximate mountain match audience
+[06:14] sizes, which is not my favorite, but kind of like a constraint we've, we've
+[06:18] like painted ourselves into that corner, right?
+[06:20] Where it like, if I just flipped the switch today and we moved everyone off
+[06:25] mountain match V2 and over to bottom up keywords, we would see like wild
+[06:30] swings in audience sizes, right?
+[06:32] We don't want that.
+[06:33] So this is an attempt, my best attempt to try and like reduce some of that.
+[06:37] Gotcha.
+[06:38] Okay.
+[06:39] So, um, I put, this is just like a summary chart that says like, what's
+[06:44] the median score along with the group for each advertiser?
+[06:48] So there's some interesting call outs.
+[06:50] I'm going to like cherry pick here.
+[06:51] They're not like perfect, but like, for example, Zumba fitness, where I
+[06:54] think we had trouble in the experiment.
+[06:57] Uh, the median bottom of keyword score for high intense.
+[07:01] Oops.
+[07:02] Let's do this.
+[07:05] There we go.
+[07:06] The medium score for high intense is 0.93 and it has the highest visit rate.
+[07:13] And it also has a higher visit rate than the treatment high intent,
+[07:17] which also has a lower medium score.
+[07:20] So, you know, cherry picking an example, but like, Hey, look, our
+[07:23] bottom up keyword scores, just like Fangorn with Matt was saying, would
+[07:27] have picked the control group to perform better than the treatment.
+[07:31] Well, you know, if we did this beforehand and that's what the shows.
+[07:37] Then, uh,
+[07:41] so this is like, if you took all the IPs that were in the control high
+[07:45] intent campaign and you took the median score from bottom up keywords,
+[07:50] that's what it would be.
+[07:52] Now there's a little bit of an asterisk, right.
+[07:54] Of like, we already served impressions to these people.
+[07:57] So it's not like I didn't know what this group would be ahead of time.
+[08:00] Right.
+[08:01] So, uh, and we'll get into read, read Z cause it's a little bit, their
+[08:05] results are a little weird because as you can see, all these are super high.
+[08:09] Um, okay.
+[08:10] So I put together the same charts, but now they're at the
+[08:15] per advertiser group level.
+[08:19] So we can focus on the high intent, but we'll just go through like one of these.
+[08:23] We have the same nice monotonic piece and I'll talk about this in a minute.
+[08:28] Uh, so this is high intent for control, high intent for treatment.
+[08:32] We see similar things, uh, control mid intense treatment, mid intent, and
+[08:38] then control peak performance and treatment peak performance where the
+[08:43] bars here are the number of impressions in the line is visit rates, uh, and
+[08:47] then control treatment.
+[08:49] And that's been on their different keywords, probably
+[08:52] the scores that the IPs would have had based on the keywords.
+[08:57] So somebody who scores very highly here means that the keyword recommendations
+[09:04] at the model had a high rank and the IPs visited those high ranked keywords.
+[09:09] Gotcha.
+[09:10] So we would have scored them highly in the pre period and in the post
+[09:14] period, they visit very highly.
+[09:17] Okay.
+[09:17] So this is just, yeah, exactly.
+[09:19] I mean, we're applying the bottoms up keywords without having actually seen it.
+[09:25] Yep.
+[09:25] And so what the expectation, which we're seeing generally here, um, is that
+[09:32] there's a correlation between, well, no, no, no.
+[09:37] Hold on.
+[09:37] So this is just saying how many impressions did we serve?
+[09:40] So like in the case of the visit rate, right?
+[09:43] Okay.
+[09:44] So this is visit rate.
+[09:45] This is IVR.
+[09:46] Okay.
+[09:46] So higher scored ones, we'd expect to have higher visit rates.
+[09:50] It looks like for higher.
+[09:52] Well, and, and remember in this case, cause of the Fangorn experiment ran, it
+[09:56] is not expect, but scores that we calculate in the pre period are associated
+[10:02] with actually higher visit rates because these are impressions and visits
+[10:06] served in the experiment IPs.
+[10:11] So bottom up keywords in the pre period said you're a 0.99 score for Zumba fitness.
+[10:19] You know, it's very likely that if we served you an impression, you would
+[10:23] visit in the post period, the unknown post period, that's kind of what this is saying.
+[10:28] The other, I think there's two other interpretations from this one.
+[10:32] You can see here, we're serving a ton of impressions in these high scoring
+[10:36] buckets, which probably indicates that Fangorn, you know, another example that
+[10:41] like Fangorn is doing a really good job, right?
+[10:43] Fangorn and our existing keywords in some combination, right.
+[10:46] Because we're already like this lines up very nicely with how bottom
+[10:51] up keywords would expect things to do.
+[10:52] So it's like reinforcing some things we've already seen.
+[10:55] Okay.
+[10:56] So correct me if I'm wrong, if we see places like, okay, so they see the
+[11:00] treatment high intent just below where you see a high, would that be indicative
+[11:05] of, for this advertiser that we are doing a poor job of targeting in those
+[11:14] specific circumstances, because we had a high rate of keywords that were scored
+[11:19] very lowly, or what, how would you interpret that graph?
+[11:23] That is a great call out.
+[11:24] So these bars on the far end, these are all scored zero, meaning the
+[11:31] keywords that we recommended, these IPs did not get a score because they
+[11:35] didn't visit the recommended keywords.
+[11:38] So these are IPs that were associated with the LLM recommended keywords and
+[11:46] were served impressions or Fangorn only right in this mid intent, but they didn't
+[11:52] visit the recommendations from the model.
+[11:54] So I think this is my indication of like, from these results, this is the biggest
+[11:59] group for me to investigate of what keywords did they visit to make them
+[12:03] targetable for these advertisers that we didn't recommend from bottom up keywords.
+[12:08] Okay.
+[12:09] Gotcha.
+[12:10] And so that, that makes sense.
+[12:12] So that's basically like, well, these obviously have high IBR.
+[12:16] We need to figure out.
+[12:17] Well, arguable, right?
+[12:18] It's kind of like the high scoring bottom of keywords still scored highly.
+[12:24] Right.
+[12:25] However, we did serve, you know, a nonzero amount of impressions.
+[12:29] Oh, okay.
+[12:30] Sorry.
+[12:30] Sorry.
+[12:31] Number of impressions.
+[12:32] The gray bars are representing the number of impressions.
+[12:36] The blue is representing the IVR.
+[12:38] Okay.
+[12:38] That makes sense.
+[12:39] So there's like two things that could come or a couple of things that come out of this.
+[12:42] Right.
+[12:42] Could be, could be like, yep, this is a keyword that LLM Jenner like recommends
+[12:48] very highly, but like doesn't perform very well.
+[12:51] So the ALS model did not recommend it very highly.
+[12:53] So we didn't select it, which is maybe a good thing.
+[12:56] Right.
+[12:56] So this is like impressions that would have been better served over here.
+[13:02] Or it could genuinely be like, yeah, this is good volume that we should be taking
+[13:07] advantage of.
+[13:08] And there's like something I'm missing in the bottom of keyword model.
+[13:10] Right.
+[13:11] So, well, and it depends, right?
+[13:15] Like these cases, they're much smaller, but the visit rates are high.
+[13:18] So it's worth investigating.
+[13:20] Right.
+[13:21] But what about in that case though, it maybe is not necessarily that valuable
+[13:26] because the IVR, I guess it's a little bit higher than some of the bins, but if
+[13:31] the control would have been better, if these were like here, right.
+[13:34] Right.
+[13:34] But what I was thinking about is if you go down to the, that one, right, that's not
+[13:40] necessarily, I mean, we did serve it a lot of impressions, but the IVRs weren't
+[13:44] necessarily better than the top of the line.
+[13:46] It was about the same.
+[13:47] So I don't think there's a conclusive signal here that says like, I'm missing
+[13:53] something structural, but I think this is an important evaluation.
+[13:57] You know what you should have done or not should have.
+[14:00] That sounds bad.
+[14:01] I mean, what you wouldn't, but additionally at done is, uh, correlated
+[14:06] this also, or not correlated, added some sort of way to measure the number of
+[14:10] visits in per bin, because I think that this might just be some noise
+[14:13] from low number of visits.
+[14:16] Yeah, I agree.
+[14:17] Like this is probably small volume.
+[14:18] This is like 5,000 impressions.
+[14:21] So that's, that's not a lot.
+[14:23] I think it depends what they are too.
+[14:26] This is, Oh, something totally.
+[14:27] I wanted to bring up to you too.
+[14:29] Um, when you're doing this, yes, we have different types of impressions, right?
+[14:35] So I don't know if you're doing this, making sure you're filtering
+[14:38] out only prospecting campaigns.
+[14:41] And the number two, um, there is a very easy way to separate out, um, display
+[14:49] versus CTV and they behave totally different.
+[14:52] So I am pulling, I'm using the exact query that Nick is using to, uh, get
+[15:00] experiment results.
+[15:02] Can I see where he's grabbing, like filtering the campaigns?
+[15:07] No, he's grabbing them from, uh, his experiment list.
+[15:13] So this is like all of the advertiser, right?
+[15:15] Campaign group.
+[15:15] Oh, Oh, that's right.
+[15:17] Okay.
+[15:17] Nevermind.
+[15:18] I mean, what I'm saying does apply, but not in this case, because you're
+[15:20] really grabbing the test and control campaigns and for impressions.
+[15:23] Yeah.
+[15:23] I'm coming from cost impression log, uh, unlinked equals false and
+[15:30] that they're showing up there.
+[15:31] So to your point, implicitly, none of these should all be prospecting IPs.
+[15:36] Yeah.
+[15:37] Let me ask Nick something though.
+[15:38] Cause I'm actually kind of curious.
+[15:40] Yeah, I can send you this query if that would help.
+[15:43] Yeah, that, that makes sense.
+[15:46] I just, here, I'm going to, where's the experiment team.
+[15:50] Um, and this is what all the Fangorn results were evaluated against
+[15:57] and what Nick set up in his dashboard.
+[16:05] Okay.
+[16:06] So we went through that.
+[16:07] I think this is good.
+[16:09] My interpretation is like, we're already doing a good job,
+[16:11] which we would expect, right?
+[16:12] Like it's been hard for bottom up keywords to beat LLM based things.
+[16:17] So kind of implicitly we're doing some of this.
+[16:21] Um, and there's some things I can investigate around these, like missing
+[16:27] a score buckets and like why, which is the next thing I'll kind of look at.
+[16:33] Um, we can kind of aggregate this across the different groups to kind of
+[16:38] visualize a little better in spaghetti.
+[16:40] But the idea is like this same kind of monotonic from here up and then
+[16:46] the asterisks of like, we know there are some things to look at in this.
+[16:49] Why are they missing scores group?
+[16:53] Uh, read Z has very low volume.
+[16:55] So I think that's a lot of what's happening here, but we kind of generally
+[16:58] see the idea of like the high scoring stuff is in the highest visit rate group.
+[17:05] Uh, collectors looks good.
+[17:07] G shock as well with a little bit of mix.
+[17:10] I'm like less concerned in mid intent or mid intent with peak
+[17:15] performance or peak performance because bottom of keyword scores or
+[17:19] keyword scores aren't in, in play in those areas anyways.
+[17:24] So if we go back to these other charts, right, it's like maybe less surprising
+[17:30] that there are a ton of IPS served impressions in mid intent that are outside
+[17:35] of our keyword recommendations, because that's like vertical only same with
+[17:41] mid intent with peak performance.
+[17:43] I think if I'm interpreting that right, um, this shows across advertisers,
+[17:51] they're different groups and then treatment and control comparison.
+[17:54] So I think the highlight here is like, uh, the high intent groups for every
+[18:00] advertiser are kind of like clustered near each other in, in as far as their
+[18:06] overall visit rate versus their median bottom of keyword score.
+[18:09] So like, uh, G shock, both of their high intents are very high in their score
+[18:16] and also high in visit rates.
+[18:17] It's just like another way to visualize this idea.
+[18:21] Read Z is really small.
+[18:22] And so everything's kind of clustered here and, and like less informative,
+[18:26] small in like the delivery, I think.
+[18:28] Yeah.
+[18:29] Like less we can make out from that.
+[18:31] I love these types of visualizations.
+[18:35] This one, I don't really know.
+[18:36] I think there's a lot of like missing scores.
+[18:39] I kind of removed zeros cause there's a lot of drops, but there's kind of
+[18:42] like spiky delivery along these things.
+[18:45] So there's a big drop here, but the idea is like, even across all
+[18:48] advertisers, we can aggregate it and see this kind of, you know, the chart
+[18:52] that I showed you, if we just like smooth it all out, this line, we can
+[18:57] kind of ignore because there isn't really this like zero to two, it's
+[19:00] kind of like scores are capped around this point two area, and then we have
+[19:03] a bunch of IPs that are like missing from the keyword recs.
+[19:09] Uh, okay.
+[19:11] That is this fangorn level evaluation.
+[19:15] That is really neat.
+[19:16] Um, I haven't got anything back from, um, kale.
+[19:22] I think it's probably just been busy, but I'm, I sent it to him.
+[19:25] So I'm sure he'll get back to us at some point in time.
+[19:27] If not, I do have a meeting with him tomorrow, um, as well
+[19:31] that we can talk about stuff.
+[19:33] Um, we'll see what he says, but cool.
+[19:36] Yeah.
+[19:37] My, my thinking here is like, and Matt had suggested this when I showed
+[19:40] him kind of the scores we started with before you started building the
+[19:43] presentation of like keyword scoring matters is, uh, doing a similar
+[19:49] evaluation to what we did, but based on the fangorn results.
+[19:52] So it's not like our version was pre period.
+[19:56] And then it was any visit binary versus the distinct.
+[20:00] Kind of ideas,  ничегоools, 좋 info video 일본Video onto video by  corner, dah,ah pie She went and this post period and now it's free period.
+[20:06] Okay, beautiful scoring, just like in the same version.
+[20:11] True visits and divided by impressions, serviced.
+[20:16] So there's.
+[20:17] Kind of that, like delivery campaign aspect to it, instead of just like it and you visit, which is more a correlated, I guess, when like, less direct um.
+[20:29] Okay, well, let me see what I'm doing today to, I'm kind of waiting for kills response to, but, um, can you send me this, um, you want the code?
+[20:41] Yes, please, I will send you both.
+[20:44] I'd like to see him, um, I've, you know, what I've been doing that's been nice is, um, it's been easier for me, but you don't have, like, the, I guess the, the only limitations that with data breaks.
+[20:46] i've you know what i've been doing that's been nice is um it's been easier for me but you don't
+[20:55] have like the guess the the only limitations that with databricks you can scale up um clusters and
+[21:02] Uh, I've been running all my notebooks, like locally, and then just doing the, um, big query, like connecting and stuff.
+[21:13] Um, I have been enjoying doing that.
+[21:17] This, this should be much easier to do in your local and in big query, since it's only five advertisers and like a 30 day IP window.
+[21:27] It's like pretty reasonable to execute.
+[21:29] So it's not, and it's not really like no sampling is needed.
+[21:30] no sampling is needed
+[21:32] okay
+[21:33] all right i'm just making sure i can log into this
+[21:43] sweet i have access to bolts couldn't
+[21:46] Sweet.
+[21:48] I have access to both couldn't.
+[21:53] I want to be like less dependent on stuff.
+[21:55] I was like working this morning.
+[21:57] Um, Claude has been down.
+[21:59] I'm like, Mike, what if, uh, what if just all the AI agents to stop working?
+[22:03] I'm like, man, I better, better stop being so dependent on it to do half this stuff.
+[22:10] Yeah.
+[22:10] I'm, I try, I'm trying to like, I don't know how to navigate it.
+[22:14] I'm trying to figure out that balance, right.
+[22:16] Where I'm like still learning and understanding what's happening while like moving a lot faster with AI.
+[22:23] Right.
+[22:24] So, um, I think it's a hard balance to strike.
+[22:28] I know.
+[22:28] That's what I was thinking.
+[22:29] I was like, I feel like I need to go like a week every once in a while.
+[22:32] Just raw dog, just totally a hundred percent.
+[22:35] My productivity is going to drop, but it's better for us in the long run.
+[22:39] I know.
+[22:40] Then just get into management.
+[22:42] Exactly.
+[22:43] Then you don't have to worry.
+[22:44] That's right.
+[22:45] Um, all right, cool.
+[22:46] Well, I'll, I'll, I'll take a look at these closer, but like, this is awesome, man.
+[22:50] Those are really, really cool.
+[22:52] Yeah, I think, I think it's, if like, you know, Matt kind of thinks this makes sense, then it's a great point to say like, yeah, we have this observational results that you put together.
+[23:03] Uh, and we also have like offline evaluation with an actual, with like a live experiment too.
+[23:10] Okay.
+[23:12] All right.
+[23:13] Well, uh, we'll let me know how that meeting goes with that.
+[23:15] And then, uh, we'll, we'll go from there.
+[23:17] Cool.
+[23:18] Thanks for, uh, thanks for your review.
+[23:21] Yeah, absolutely.
+[23:22] All right.
+[23:23] Take care.
+[23:23] Bye.
