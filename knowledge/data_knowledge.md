@@ -628,9 +628,10 @@ Every campaign has a **10% holdout group** — IPs that are never served impress
 - Literally has the name "holdout" in the JSON — can be identified by parsing the expression
 
 **How to get holdout IP lists:**
-- **Option 1 (Zach):** Use `external.tpa_membership_update_log__v2` (TMUL v2) — logs which IPs are in which segments. **Expensive for 30-day windows** — dry_run first.
-- **Option 2 (not yet built):** Nick wants Jordan/Zach to build a tool that takes an audience expression and returns matching IPs. Doesn't exist yet — would be ideal.
-- **Option 3:** Parse the JSON expression to extract the bucket hash and range, then apply the same hash function to IPs from TMUL to determine which bucket they fall into. Requires understanding the hash function used (ex46 prefix).
+- **Option 1 — DW bucketing function (PREFERRED, Zach 2026-04-07):** There is a **function in the DW** that can compute the bucket for any IP directly — no need to query TMUL. "That can be determined without querying tmul or the data." Find this function — it should take an IP and return which bucket (0-999) it falls into. Then: bucket 0-99 = holdout, 100-999 = targeted. **This is the cheapest approach by far.**
+- **Option 2 (Zach, expensive fallback):** Use `external.tpa_membership_update_log__v2` (TMUL v2) — logs which IPs are in which segments. **Expensive for 30-day windows** — dry_run first. Only use if the DW function doesn't work for your use case.
+- **Option 3 (not yet built):** Nick wants Jordan/Zach to build a tool that takes an audience expression and returns matching IPs. Doesn't exist yet.
+- **TODO:** Find the DW bucketing function. Ask Zach for the function name/location. Likely in `dw-main-silver` or a UDF.
 
 **Key tables for audience expressions:**
 - `audience_segment_campaigns` — the real table. Maps 1:1 with campaign_id. Contains the expression JSON. Filter: `expression_type = 2`.

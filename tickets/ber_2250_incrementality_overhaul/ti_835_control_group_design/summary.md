@@ -50,9 +50,9 @@ Use Intent to Treat: compare ALL IPs in the 90% targeted group (whether or not t
 - Literally has "holdout" in the JSON
 
 **How to identify holdout IPs:**
-- **TMUL v2** (`external.tpa_membership_update_log__v2`) — Zach's recommendation. Logs which IPs are in which segments. Expensive for 30-day windows.
-- **No direct "expression → IP list" tool exists yet** — Nick wants Jordan/Zach to build one. Would take an expression JSON and return matching IPs.
-- **Workaround:** Parse the JSON for the bucket hash and range, apply same hash to TMUL IPs to determine bucket assignment.
+- **DW bucketing function (PREFERRED):** Zach confirmed there's a **function in the DW** that can compute the bucket for any IP directly — no TMUL query needed. "That can be determined without querying tmul or the data." **TODO: Ask Zach for the function name/location.**
+- **TMUL v2 (expensive fallback):** `external.tpa_membership_update_log__v2` — logs which IPs are in which segments. Expensive for 30-day windows.
+- **No direct "expression → IP list" tool exists yet** — Nick wants Jordan/Zach to build one.
 
 **Key tables:**
 - `audience_segment_campaigns` — 1:1 with campaign_id, contains expression JSON (type 2 only)
