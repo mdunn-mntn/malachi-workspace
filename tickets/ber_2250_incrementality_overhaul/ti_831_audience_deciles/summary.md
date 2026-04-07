@@ -86,3 +86,4 @@ Bryce's Slack description sounds like **random deciles** (generic A/B testing to
 - [ ] Even/odd targeting — how does this integrate with the existing pipeline?
 - [ ] Balance check methodology
 - [ ] Timeline estimate for Bryce
+- [ ] Related: Zach confirmed `external.tpa_membership_update_log__v2` (TMUL v2) is the table for IP-level audience membership. Expensive for 30d windows. See holdout docs in `data_knowledge.md`.

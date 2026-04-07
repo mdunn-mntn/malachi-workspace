@@ -639,6 +639,8 @@ Every campaign has a **10% holdout group** — IPs that are never served impress
 
 **Important: Stage 1 campaigns only for holdout analysis.** S2/S3 campaigns target people already hit by S1 ads — they're downstream of the targeting decision. Use `funnel_level = 1`.
 
+**MemDB holdout hash (Ryan Kleck, 2026-04-07):** MemDB already hashes IPs for the existing 10% holdout mechanism. This same mechanism could potentially be extended/reused for decile-based audience splits (AUD-5221/TI-831). Investigate before building a new hashing system.
+
 **Use for incrementality analysis:**
 - Compare visit rates between 10% holdout (no impressions ever) vs 90% targeted group
 - Use ITT (Intent to Treat): compare ALL IPs in 90% group, not just those who actually received impressions
