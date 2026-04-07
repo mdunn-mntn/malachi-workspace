@@ -50,8 +50,14 @@ Use Intent to Treat: compare ALL IPs in the 90% targeted group (whether or not t
 - Literally has "holdout" in the JSON
 
 **How to identify holdout IPs:**
-- **DW bucketing function (PREFERRED):** Zach confirmed there's a **function in the DW** that can compute the bucket for any IP directly — no TMUL query needed. "That can be determined without querying tmul or the data." **TODO: Ask Zach for the function name/location.**
-- **TMUL v2 (expensive fallback):** `external.tpa_membership_update_log__v2` — logs which IPs are in which segments. Expensive for 30-day windows.
+- **MD5 bucket hash (PREFERRED, Zach 2026-04-07):** Compute the bucket for any IP directly — no TMUL needed:
+```sql
+-- Greenplum/Postgres (Zach's function):
+SELECT ('x' || substr(md5('100.17.100.240'), 3, 2) || substr(md5('100.17.100.240'), 1, 2))::bit(64)::bigint % 64;
+```
+- MD5 hash the IP, byte-swap first 4 hex chars, cast to bigint, mod by bucket count
+- **TODO:** Confirm bucket count (64 vs 1000) and hash key alignment with the audience expression holdout clause. Port to BigQuery equivalent.
+- **TMUL v2 (expensive fallback):** `external.tpa_membership_update_log__v2` — only if hash approach doesn't match.
 - **No direct "expression → IP list" tool exists yet** — Nick wants Jordan/Zach to build one.
 
 **Key tables:**
