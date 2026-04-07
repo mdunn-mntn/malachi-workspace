@@ -31,6 +31,7 @@ workspace/
 | Path | Purpose |
 |------|---------|
 | `README.md` | Workspace structure, philosophy, and how-to — read at session start, update when workspace conventions change |
+| `knowledge/strategic_north_star.md` | **Q2 OKR leverage filter** — read at session start, evaluate every task against it, flag low-leverage work |
 | `knowledge/data_catalog.md` | Table schemas and join keys — read at session start, update immediately when new schema learned |
 | `knowledge/data_knowledge.md` | Business logic and gotchas — read at session start, update immediately when new knowledge found |
 | `knowledge/mntn_business.md` | General MNTN business knowledge — products, strategy, org, industry, terminology. Update when learning business context from docs, meetings, or conversations |

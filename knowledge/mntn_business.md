@@ -1,5 +1,5 @@
 # MNTN Business Knowledge
-Last updated: 2026-03-30
+Last updated: 2026-04-06
 
 General knowledge about MNTN as a business — products, strategy, org structure, industry context, terminology, and institutional knowledge. Sourced from shared docs, meetings, messages, and conversations. Updated as new business context is learned.
 
@@ -62,10 +62,21 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - **Practical implication:** Media plan budget allocation, Fangorn scoring, and feature development will all be evaluated through an incrementality lens. Plan forthcoming from Kale.
 - **BUK (Bottoms Up Keywords) is NOT dead** — deprioritized due to low beta adoption, but Kale sees keywords as a valid feature in the predictive model. The interface (exposing keywords as a separate audience mechanism) is the bigger concern, not the underlying signal.
 
+### Q2 2026: Output-Driven Delivery (Rogus, 2026-04-06)
+- **Shift to output-driven delivery** — clearer scope, proactive risk identification, realistic timelines, defined deliverables per sprint
+- **Updated ceremonies:** Weekly project syncs, shorter daily standups (blockers/progress only), weekly backlog grooming, tighter sprint commitments
+- **Engineering Levels & Skills Rubric released** — specific per-level criteria for Speed (Delivery/Volume), Craft (Technical Quality), Adaptability (Responsiveness/Ownership). Next official review ~April 2027, manager feedback within ~1 month, mid-point ~November 2026.
+
+### Incrementality Initiative (BER-2250, Q2 2026)
+- **Intent Score Shuffling experiment** — shuffle IPs between intent tiers to measure whether intent scoring generates incremental lift or just buys audiences who'd convert anyway
+- **ITT (Intent to Treat) methodology** — measure by assigned tier, not actual conversion, to avoid selection bias
+- **Business stakes:** If low incrementality → retention risk (charging for outcomes that would've happened). If proven → competitive moat vs Meta/Google.
+- Product brief: [Confluence](https://mntn.atlassian.net/wiki/external/NTM1ZmViMzc1YzczNDQ0YjgzZDVlMjdkNTk2ZGY4NmY)
+
 ### Three Main Experimentation Focus Areas (as of March 2026)
 1. **Targeting** — Fangorn, bottoms-up keywords, audience optimization. Most impactful lever.
 2. **New ad formats** — Vertical video, pause ads
-3. **Lift and incrementality** — New-to-brand rates, lift test performance improvement, geo-based lift testing with partners (e.g., Lift Lab)
+3. **Lift and incrementality** — New-to-brand rates, lift test performance improvement, geo-based lift testing with partners (e.g., Lift Lab). **Elevated to top priority for Q2 2026 via BER-2250.**
 
 ---
 

@@ -1,5 +1,5 @@
 # Experimentation & Causal Inference — Knowledge Base
-Last updated: 2026-03-31 | Started from TI-748 (Media Plan Causal Impact)
+Last updated: 2026-04-06 | Started from TI-748 (Media Plan Causal Impact)
 
 This is a living document. Add to it every time we learn something new about experimental design, covariate selection, test methodology, or edge cases at MNTN.
 
@@ -564,3 +564,49 @@ Kirsten's observation from past experiments: retargeting the same people repeate
 - **Content genre is mid-tier for prediction but high-value for segmentation**: content_genre ranked ~8th for general visit prediction (up from ~25th with proper sampling), and is the best candidate for *vertical classification* (mapping IPs to advertiser categories). Different use case than IVR prediction — both valuable.
 - **Scale matters for feature extraction**: augmentor_log = 241 GB/day (~43 GB for 4-hour sample), bidder_auction_events = ~400 GB/day. Always dry-run first. guid_log and win_logs are cheap (~13-75 GB/day).
 - **fillna(0) vs NaN for ratio features**: XGBoost handles NaN natively. For ratio/percentage features, 0 is a real value (e.g., avg_price=0 means free inventory), while NaN means "no data." Preserving NaN for ratios and using fillna(0) only for counts is the correct approach.
+
+---
+
+## Intent Score Shuffling — Incrementality Experiment (BER-2250, Q2 2026)
+
+### The Core Question
+Is MNTN's intent tier targeting generating **incrementality**, or are we buying audiences who would have converted anyway?
+
+High-intent audiences are a shared targeting pool across CTV, Meta, and Google. Overlap reduces the probability that any single platform is driving marginal conversion. We have never tested whether the intent scoring methodology itself drives incremental lift.
+
+### Experiment Design: Intent Score Shuffling
+- **Treatment:** Reassign a defined cohort of mid-intent IPs into high-intent buckets, and corresponding high-intent IPs into mid-intent buckets
+- **Control:** Unshuffled IPs in both tiers
+- **Critical requirement:** Log original intent scores for ALL shuffled IPs *before* reassignment — this is required for clean ITT analysis
+- **Measurement:** Intent to Treat (ITT) methodology — compare results based on *assigned* intent tier at time of shuffle, regardless of actual conversion behavior. This avoids post-treatment selection bias.
+- **Reversibility:** Experiment is fully reversible. Shuffling can be stopped and scores restored without architectural change.
+
+### Why ITT (Intent to Treat)
+ITT is the established experimental design for intent-assignment questions. It compares outcomes based on the group an IP was *assigned* to, not what actually happened. This prevents the selection bias that would corrupt a naive comparison (e.g., if shuffled IPs self-select back to their original behavior).
+
+### Parameters to Define (TI-835)
+- What percentage of each tier is shuffled
+- How the cohort is selected (random vs stratified by vertical/spend)
+- Duration of the shuffle window
+- Minimum sample size for statistical power
+
+### Key Metrics
+- Incremental lift by original intent tier vs assigned tier
+- Baseline incrementality metric (benchmark for future scoring iterations)
+- Per-vertical breakdown
+
+### Business Stakes
+- If high-intent targeting → low incrementality → we're charging for outcomes that would have happened → **retention risk**
+- If we can prove incrementality → competitive moat vs Meta/Google → **revenue growth + retention**
+- First mover on incrementality proof = **differentiation play**
+
+### Product Brief
+Full brief: [Confluence](https://mntn.atlassian.net/wiki/external/NTM1ZmViMzc1YzczNDQ0YjgzZDVlMjdkNTk2ZGY4NmY)
+
+### Tickets
+- BER-2250: Incrementality Overhaul (parent initiative)
+- TI-831: Audience Deciles for Advertiser Experimentation
+- TI-835: Control group design and measurement methodology
+- TI-837: Implementation plan for intent score shuffling
+- TI-839: Measure incrementality results
+- TI-842: Present results to broader audience

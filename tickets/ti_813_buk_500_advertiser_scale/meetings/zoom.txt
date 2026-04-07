@@ -1,0 +1,1003 @@
+[00:00] you
+[00:00] yo how many cats do you got brian
+[00:27] I just have two
+[00:29] and then they're getting old
+[00:30] well
+[00:31] like 14
+[00:32] yeah it's up there
+[00:37] I'm moving a bunch of stuff
+[00:39] into my
+[00:39] storage unit
+[00:41] so it's a mess behind me
+[00:43] but
+[00:43] are you moving somewhere
+[00:45] like are you
+[00:46] getting ready to move
+[00:46] no no no
+[00:47] it's just
+[00:47] I have a bunch of stuff
+[00:50] that I don't use
+[00:51] so why keep it here
+[00:52] yeah
+[00:53] it
+[00:53] it all should just go
+[00:55] into storage
+[00:56] hello everyone
+[01:03] yep how's everybody doing today
+[01:09] or something good
+[01:13] who uh on this call is not going to new york sean you're not going
+[01:21] is that correct right yeah unfortunately i'm not not going this time
+[01:25] anyone else not going
+[01:27] not on the call yet but
+[01:31] I talked to Matt this morning he's also of course
+[01:34] not going to be there
+[01:35] he's not
+[01:36] Matt
+[01:38] isn't he going to Portugal
+[01:40] should be in New York
+[01:43] you go to Portugal instead
+[01:44] I think Brian you're going to
+[01:48] Portugal soon right
+[01:49] yeah I go to Portugal the week after
+[01:52] and
+[01:53] Wales going to Portugal
+[01:55] directly after New York.
+[01:59] We should just have a
+[02:00] mountain meet Portugal.
+[02:03] Just set it up.
+[02:06] Yeah.
+[02:06] Yeah, they ever had one
+[02:08] outside the US?
+[02:10] That's a question I don't,
+[02:12] I do not know.
+[02:13] I heard the first one,
+[02:14] they almost did Hawaii,
+[02:16] but they backed out or something.
+[02:19] Maybe it depends on our
+[02:20] collective winnings
+[02:21] winnings from the Vegas Mountain
+[02:23] Meet.
+[02:25] Put a little scratch on
+[02:27] it for next one.
+[02:29] That would be good. Have Mark go to the
+[02:31] roulette table and just...
+[02:33] All or nothing.
+[02:35] Let's put our Q3 earnings.
+[02:37] All or nothing.
+[02:39] Q2 earnings.
+[02:41] All on black. There we go.
+[02:44] Hey, oh, Bryce.
+[02:45] I saw Allison accepted
+[02:47] the Carmine's dinner. Do you know if she's
+[02:49] going to be there? She reached out to me and said
+[02:51] that she wanted to attend so i sent her the invite uh so she said yes and i so i assume that means
+[02:58] she'll be there that's awesome yeah i assume but you know what assume means so i sent her the invite
+[03:07] and we'll we'll go from there cool i think we have everybody uh for the most part i'm looking to see
+[03:15] i know mike is not here jordan's working on something for me so he might be here in a minute
+[03:20] for audience. We're going to do something a little bit different today as opposed to our
+[03:26] regular sprint meetings. And what I'm going to do, and I already gave Alex and Matt a little
+[03:32] preview of this because I use them as my guinea pigs, sorry, but not sorry, to try and vet some
+[03:40] things that we want to change. So in the project manager world, one of the obstacles in managing
+[03:47] projects is when you take over projects that are in flight, it's kind of like a merry-go-round.
+[03:53] To figure out when do I slow the merry-go-round? When do I jump on board the merry-go-round? When
+[03:58] do I let the merry-go-round continue as it stands? And what's the best way to manage
+[04:04] from a project management perspective? There's really only three things that we're really
+[04:09] focused on, and that's scope, timelines, and deliverables. There's an additional one in there,
+[04:14] risks, but really what we're trying to do is to be able to balance the outcomes and our progress
+[04:21] to those outcomes as a squad across all the projects that we're doing. And since Q2 is
+[04:27] kicking off, there is a little bit of an opportunity for us to slow the merry-go-round down
+[04:33] to figure out the best place to make sure that we're all rowing in the same boat and that we're
+[04:40] all rowing in the same direction. And it can feel like, and I've heard a little bit of this feedback
+[04:45] from some of the TI folks, it can feel at times that because you're all working on different
+[04:51] projects, there's not a clear sense of like we are all in the same boat or that we are all rowing
+[04:57] together. And so I wanted to take a little bit of time to show you all, especially with Michelle's
+[05:02] absence, show you what's being proposed for the TI's Q2 roadmap, and then spend a little bit of
+[05:09] time in this call going over some of those things to be able to ensure that we're all on the same
+[05:16] page. But also an extension of that is that we're going to make a couple changes headed into Q2.
+[05:23] And one of those is that we're going to have more regular project syncs. So the goal of this call
+[05:28] is threefold. One, talk about what's changing from Q1 to Q2. I'm going to give you a high level
+[05:34] diagram and more details will be coming because Mike is out. So I wish I could say rubber stamp
+[05:40] that we are done, but he's here. He's not here. And so I need him to also say, yes, this works
+[05:46] and there's nothing else that he wants to change. So that'll happen after Mountain Meet. Another is
+[05:50] that I want to get us ready for an actual Q2 roadmap review. That roadmap review started and
+[05:57] then was effectively paused in Michelle's absence. So that's something that will have to happen
+[06:03] And again, we will have to go back and revisit our Q2 roadmap and then get sign off from
+[06:09] the organization that, hey, these are all the things that we're going to do.
+[06:13] And a piece of that is ensuring that you all have the tickets and the opportunity to do
+[06:20] the brainstorming, ticketing, spiking, technical ideation, proof of concepting that you want
+[06:27] to have.
+[06:28] So I'm trying to kind of line those all up at the start of the quarter.
+[06:32] So what I'm going to do is I'm going to share my screen and I'm going to talk about kind
+[06:36] of what's going to change.
+[06:38] And then I'll go over the roadmap more explicitly.
+[06:42] So let me share my screen here.
+[06:44] So this is an image that tries to really highlight some of the things that we're going to focus
+[06:50] on.
+[06:51] And I'm going to talk through at a high level what this is and then give you a tactical
+[06:55] example.
+[06:56] And this is what I beat Matt and Alex over the head with on Friday to try and also sharpen the approach a little bit.
+[07:04] And the idea is we want to make sure that when we're going through that we're really focused on these four output areas.
+[07:11] So in Q2, we're really going to focus on scope, risks, timelines, and deliverables.
+[07:16] and the way that that's represented in our ticketing system is we want to be able to say
+[07:23] when a ticket is done right we know what the scope of that ticket is right so we've defined
+[07:29] in the ticket the scope of the ticket is a and b should be completed that leads to x y and z
+[07:35] and at the epic level that's really where we're setting the scope of the effort the initiative
+[07:42] is this is the big picture product direction
+[07:46] that we want to go.
+[07:47] And the scope is,
+[07:49] here's what we are going to deliver
+[07:50] within this set of bounds,
+[07:53] within these boundaries.
+[07:55] The timeline is,
+[07:56] we think we're going to deliver this thing
+[07:58] in this set of bounds within this date.
+[08:02] And those two are X and Y.
+[08:04] So we can cut scope to deliver sooner,
+[08:06] or we can increase scope and deliver faster.
+[08:09] One of the things that I've seen for TI
+[08:12] as an opportunity for us to grow is our scopes sort of roll. They never really increase or shrink.
+[08:19] They are always sort of an amalgamous blob and they're taking on a little bit more, a little bit
+[08:26] less. We think we did that. Oh, we actually didn't do that. And the scope is not really set. So what
+[08:32] we need to do is to start thinking in Q2 and really hampering down on this idea of we want
+[08:39] to deliver this thing in this time frame. And the way that we want to frame that is in deliverables.
+[08:46] And the deliverable should not just be, here's what we're going to deliver, but here are the
+[08:51] outputs that we expect to see. So an example of that, that I was using with Matt, and that we'll
+[08:56] look at a little bit more in depth, is for Fangorn as a model. If Fangorn is the goal,
+[09:03] if that is the big picture, deliver this model, what are the tangible outcomes, the deliverables
+[09:09] that we're trying to tackle? So one of the ones that we were able to discuss and align on on
+[09:14] Friday is that we expect to see a 10% lift. Great. 10% lift is a deliverable. That's an outcome that
+[09:21] we're looking to try and achieve. And so now we can take scope and timelines and deliverable,
+[09:27] and we can start to plot and say, how are we doing against those three things? And each of
+[09:32] those can change. There's a diagram I'm sure you all have seen about that you can have it fast,
+[09:37] you can have it good. And it's this Venn diagram, but you can't have all three. The third one
+[09:42] eludes me at this moment. And this is sort of what these are. We're talking about the interplay
+[09:47] between scope timelines and outcomes, the things that we expect to be able to deliver.
+[09:52] One of the examples of a technical deliverable could be, Chief Eska, thank you, Ryan.
+[09:57] One of the examples of a deliverable could be that we expect to deliver data monitoring tasks.
+[10:02] We expect to have data monitors that go alongside of it.
+[10:05] That's a deliverable.
+[10:06] Another one is that we could have monitoring and alerting.
+[10:09] We could have another deliverable.
+[10:11] Another outcome that we could have is we should be able to roll this out behind an experiment.
+[10:17] That's another example of an output or a deliverable.
+[10:20] There could also be product or customer-facing deliverables too.
+[10:25] So the 10% lift is an example of an output.
+[10:28] That's something that we're looking to be able to do.
+[10:30] And all three of those put together within these tickets should help us represent what it is that we're actually trying to accomplish and our progress to that outcome.
+[10:40] Then what happens is if we are really honing in on those three things, all we really have to do is manage risks.
+[10:47] And that is Matt got hit by a bus.
+[10:50] And so I'm sorry, Matt, you got hit by a bus.
+[10:52] I'm in Montana, so I'm more likely to get eaten by a bear.
+[10:56] But Matt got hit by a bus.
+[10:57] And so now the risk is all of that knowledge now has died with Matt, RIP, and now we have to figure out who's going to take over Matt's work.
+[11:06] A different risk could be we didn't expect that there would be technical complexity in the way that the wait points data was being written.
+[11:14] So now we need to manage that risk and figure out how to get unblocked to be able to either change scope, adjust timelines, or adjust the deliverables.
+[11:24] We thought that we could do this, but we ran into this technical complexity.
+[11:28] And so now we have to adjust the scope of what we're delivering because the outcome,
+[11:32] the goal has shifted.
+[11:34] So those are the four things that we're really going to focus on in Q2.
+[11:38] A couple of things that focusing on that is going to result in, and those are updated
+[11:43] ceremonies.
+[11:44] The biggest one is that we're going to implement starting in Q2 recurring project syncs.
+[11:50] What does that mean?
+[11:51] That means instead of talking about everything in a stand-up or a sprint planning meeting or a sprint refinement meeting, we're going to have probably weekly, for the time being, syncs similar to a hackathon.
+[12:04] We're going to have check-ins where every week or biweekly for some projects, we're
+[12:08] going to be saying, hey, where does this stand?
+[12:11] Are we still on track?
+[12:12] Are there any obstacles?
+[12:13] And we're going to be doing that to be able to focus in on these four output areas more
+[12:19] aggressively, more intently.
+[12:21] Another one is that we're going to have shorter stand-ups as a result of that because we're
+[12:26] going to be talking about all of these projects.
+[12:28] There's no need for us to have a full 30 minutes dedicated to a stand-up.
+[12:32] So it could likely be with these new project syncs that we could have a five-minute stand-up and everyone could go back about their business.
+[12:41] And the stand-up focus shifts because now we're talking in these projects about blocks that we're encountering.
+[12:48] We're having more collaboration.
+[12:50] We're doing more demos.
+[12:52] And so the focus of the stand-up is more what are you blocked on right now?
+[12:58] Is there anything that you're blocked on that's preventing you from accomplishing these goals
+[13:02] that the team needs to be able to pitch in?
+[13:05] And if the answer is no, we move on.
+[13:07] There doesn't need to be as much detail, as much information shared in a standup because
+[13:12] that information is being disseminated elsewhere.
+[13:14] Another one is that we are going to start moving to a dedicated backlog grooming session.
+[13:20] This is going to start with just Mike and I, and then it's going to expand most likely
+[13:24] to the leads in both audience and targeting.
+[13:27] And the goal for backlog grooming is we want to have as many tickets in the sprint that are prioritized that reflect our quarterly commitments, but also our priorities as they evolve over time.
+[13:39] They need to be ready so that they can easily be picked up.
+[13:43] And that's one of the things that we have talked about for TI is that it's very easy as we are learning and growing that the tickets take that blobulous shape and they begin to absorb additional tickets.
+[13:55] And we say we have this work, oh, but now we know we need to do this.
+[13:58] This is P3.
+[13:59] This is a lower priority.
+[14:00] We're going to add this in.
+[14:01] We're going to continue to roll the blob down the hill.
+[14:04] And there's not a sense of like these are our priorities.
+[14:08] And if we get nothing else done, these are the things that we need to do.
+[14:11] And that starts in backlog grooming.
+[14:14] So Mike and I are going to be driving that every week on Mondays for both AT, for audience
+[14:19] and for TI.
+[14:21] And then at a certain point, we'll have to loop in other folks to make sure that the
+[14:24] the backlog reflects the priorities.
+[14:27] This will also help the standups
+[14:28] because it's not so much a question of
+[14:30] what do we need to be working on?
+[14:31] We should have a lot of the sprint already set up
+[14:33] and we should be building in tickets early enough
+[14:36] so that we can say, hey, we've got this priority
+[14:39] that's coming down at the end of the month.
+[14:41] Do we have a ticket for that?
+[14:42] No, let's have someone make it.
+[14:44] Let's add that to the next sprint.
+[14:45] We'll be able to sequence the projects
+[14:47] a little bit more clearly.
+[14:49] The total outcome goal of these updated ceremonies
+[14:53] is really a tighter sprint rigor,
+[14:58] which is to say that what we wanna be able to do
+[15:00] is make sure that the sprints themselves,
+[15:02] as we move to focusing more on making sure
+[15:05] that we're looking at scope and timelines,
+[15:07] deliverables and risks,
+[15:08] that we're also ensuring that within the sprint itself,
+[15:12] there's more time for us to collaborate.
+[15:14] We have clear acceptance criteria.
+[15:16] So now there's more time,
+[15:18] there should be, excuse me, clear acceptance criteria.
+[15:22] So then we should be able to say,
+[15:23] hey, we don't have to spend time doing these other things.
+[15:25] So we can have more collaboration.
+[15:26] We can have more pair coding session.
+[15:28] We can have more tech debt tackling.
+[15:30] We can have more hackathon projects.
+[15:32] We have more space to be able to do these other things
+[15:35] because there'll be tighter Sprint commitments,
+[15:38] but also our ability to accommodate and absorb change
+[15:42] as it comes around should also be bolstered by these changes.
+[15:46] So before I go and I give you some tactical examples,
+[15:49] does anyone have any questions about things that are going to be changing in Q2 at a high level?
+[16:04] No. Okay. So what I'm going to do is I'm going to share this document. This is a live document.
+[16:10] And I'm going to continue to share my screen because I'm going to show you an example
+[16:14] at the very top of this of what the current roadmap looks like for TI for Q2. And I'm going
+[16:22] to switch to another tab. While you all are looking at this, this is a direct lift, a copy and paste
+[16:28] from this other spreadsheet. But I want you all to be aware of some planning that's happening for Q2.
+[16:35] This is the all-encompassing quarterly planning spreadsheet. I've mentioned this to a bunch of
+[16:42] people, I think it's ironic that as a software company, we still so heavily project managers,
+[16:48] product managers, so heavily rely on spreadsheets. I think that that's very ironic and comical,
+[16:53] but this is the spreadsheet. And so at a high level, all this describes is we have proposed
+[16:59] in columns E and F things that are the roadmap. This is what Michelle started.
+[17:04] And this is now where we're trying to take over and get this roadmap. You notice that it says
+[17:08] targeting infrastructure work in progress. So we are proposing this and trying to get alignment
+[17:13] across the organization. There's a bunch of inputs in this. It's not just about the initiative,
+[17:18] right? You'll notice that audience intense scoring is here. The Fangorn rollout is right here. So
+[17:23] that's listed as a P0 priority. Great. Dependent teams are also listed in here. So as we go week
+[17:31] by week, similarly to what we've done before, we have reports that we share out across the
+[17:36] organization about how we're doing for either dependencies on other teams or dependencies
+[17:41] for myself.
+[17:42] I don't know who gets access to this Malachi.
+[17:45] That's why I've copied and pasted it in this other document for your eyes.
+[17:49] Thank you for asking.
+[17:51] But I think it's important that you all see that this is happening so that there's an
+[17:54] awareness and context into what we're going to try and tackle.
+[17:59] So then the final thing that happens in this is that there's these columns I, J, and K.
+[18:04] And what that basically is, is we say from a customer perspective, we think that this is an impact of some score, right?
+[18:13] This is a nine.
+[18:14] We are confident that we can deliver this with the resourcing and with the knowledge that we have.
+[18:19] And this is how long we think it's going to take.
+[18:21] This is six.
+[18:23] And this is an existing project.
+[18:24] So think about six-person sprints as like six sprints to try and wrap up the project effectively.
+[18:33] and it comes out with a score.
+[18:36] And this is how we advocate for priorities.
+[18:39] We use this score to then say,
+[18:41] we think that this row here, row number three,
+[18:45] Mountain Match AI Continuous Audience Scoring,
+[18:47] that's the initiative.
+[18:49] And then here's the epic.
+[18:50] This is the highest, most impactful work that we should do.
+[18:53] So if you're asking,
+[18:54] what are our priorities for the quarter?
+[18:55] Here they are right here, number one and two.
+[18:58] Now, if you notice also down here at the bottom,
+[19:00] row 12, row 12 has a 20.
+[19:02] So that's really high, right?
+[19:04] So these are our three highest priorities.
+[19:06] And this doesn't have an initiative
+[19:07] because if we are really asking ourselves,
+[19:11] like what's the most impactful thing that we could do?
+[19:15] This is maybe it, but also maybe not it.
+[19:19] So that's why this is marked as a P3
+[19:21] because we think this is gonna be super highly impactful,
+[19:24] but at the same time, it's a lower priority.
+[19:27] And so there's some back and forth imbalance.
+[19:29] So here's the tactical ask. I have copied from this spreadsheet columns E and F into this live document.
+[19:38] And what I'm going to ask you to do is to spend 10 to 15 minutes looking through these initiatives and these subsequent epics.
+[19:47] These are parents and children to just get a sense of what's being proposed.
+[19:52] Some of these have absolutely no detail in them like this TI-825. This has no information in it.
+[19:59] because
+[20:00] because I made this earlier today.
+[20:02] This one for my graphic 785,
+[20:05] this is up in the air if we're actually going to do this.
+[20:08] This ticket was just changed into a TI ticket earlier today.
+[20:12] So there's some things that are happening on these tickets
+[20:15] that make them a little bit confusing.
+[20:17] What I really want us to focus on is as we look at these tickets,
+[20:21] I want you all to get a sense of what is being prioritized,
+[20:25] what's being discussed.
+[20:26] And then after about 12 minutes,
+[20:28] I'm going to see if anyone needs more time to review these tickets.
+[20:31] We're going to jump into actually polishing some of these tickets so we have more clarity
+[20:36] about next steps.
+[20:38] Do people have any questions about what I'm asking you to do with this table of data?
+[20:45] I'll restate it again just in case.
+[20:48] Click on these.
+[20:49] We're going to spend 10 to 15 minutes.
+[20:51] I'm going to set a timer in Zoom for 12 minutes to ask if anyone needs more time.
+[20:55] click on the parents, the initiatives, and the epics to get a sense of what's being prioritized
+[21:02] so that you have that context. And then we'll jump into actually building out some tickets
+[21:07] for some of these, identifying who the owners are, who should be driving ticket creation for
+[21:14] each one of these. And Victor, I realized earlier today that your work on the LLM
+[21:19] stuff is not in this list. I realize that that's not in this list.
+[21:24] So let's go ahead and add a new row for that to be able to represent that work that's happening in
+[21:29] here. Everyone ready? 12 minutes. I'm not going to turn on. Sorry. Where do we put our notes about
+[21:39] it? Sorry. You're going to put them in the tickets. Okay. Yep. So just right now, just spend some time
+[21:45] reviewing the things that are being proposed and prioritized for the quarter. And then after that,
+[21:50] we'll jump into each one of these and we'll ask people who should be the owner of it. And then
+[21:57] we'll start adding notes to the tickets themselves. Like let's just make up an example. TI 457,
+[22:03] we spent some time going over these two with Alex and Matt. If there's something that's not
+[22:08] included in these that you think needs to be done, we can add that as a comment or create a ticket
+[22:13] for that to make sure that the work is scoped out for these deliverables.
+[22:17] Right? And again, I'm not going to set music. I will set a timer. So if you want to
+[22:21] go off camera for 12 minutes, 15 minutes,
+[22:24] feel free to do so. I will set a timer and then I'll check in with everybody
+[22:29] at 12 minutes after.
+[22:43] you
+[23:13] you
+[23:43] you
+[24:13] you
+[24:43] you
+[25:13] you
+[25:43] you
+[26:13] you
+[26:43] you
+[27:13] you
+[27:43] you
+[28:13] you
+[28:43] you
+[29:13] you
+[29:43] you
+[30:13] you
+[30:43] you
+[31:13] you
+[31:43] you
+[32:13] you
+[32:43] you
+[33:13] you
+[33:43] you
+[34:13] you
+[34:43] Okay, that was 12 minutes by Zoom reaction.
+[35:04] Do folks need more time?
+[35:06] Thumbs up or thumbs down?
+[35:07] No?
+[35:13] Does anyone need more time?
+[35:16] Matt, Malachi, Brian, Victor?
+[35:19] Jordan, I can't remember when you joined.
+[35:21] We were reviewing the TI roadmap, spending a little bit of time familiarizing ourselves with the proposed roadmap.
+[35:35] Everyone's good to go?
+[35:40] Yep.
+[35:41] Okay.
+[35:41] I wasn't sure if thumbs up or thumbs down, which way I was supposed to indicate.
+[35:47] Sorry, I should have clarified.
+[35:49] My intention was that thumbs up meant you would like more time and thumbs down was that you did not need more time.
+[35:57] Apologies for not making that more clear.
+[36:00] Okay, so here's the first thing that we're going to do.
+[36:03] And then I'm going to walk you through an example based off of who ends up in the owner column.
+[36:08] Um, so the first one is I want to fill out all of the owners for this.
+[36:14] And this could be, I'm going to function as a tech lead, or I have the most subject matter
+[36:18] expertise, or this is something that I really give a whole lot of Fs about.
+[36:24] And I'd like to drive the direction of this.
+[36:27] Um, so I just want to fill this out, even though it does not mean that you are on the
+[36:30] hook for doing everything.
+[36:31] I just want to fill this out so that if I have a question, um, or if we're doing a project
+[36:37] sync that we have someone who's the go-to so matt i assume are you on the hook for continuous scoring
+[36:44] yeah i believe so okay i i didn't see incrementality stuff was that included in this
+[36:51] one yeah incrementality is there's one listed right here this row okay audience aud if i took
+[37:00] yes and this ticket um as i described before there's some flexibility um there's some flexing
+[37:06] in progress right now required because part of this is we still have to get some alignment around
+[37:14] what exactly this means. So for example, Jordan and I were going over some of the audience tickets
+[37:19] earlier today and he asked me, how do we define a decile for the purposes of this work? And I went,
+[37:24] I don't know. And then a couple of minutes later, the brief was posted by Alex B who is taking over
+[37:30] for Michelle. And it did not really describe any of that work. So it's like, okay, I assume that
+[37:37] the briefs are one in the same, but there's an opportunity for us to clarify exactly how this
+[37:43] work goes. So if there is a lack of clarity on something, that is exactly one of the things that
+[37:47] I will follow up with if we need to. So thank you for bringing that up. For the identity graph work,
+[37:54] who is that? Sean, I know that you've done some work. Yeah, I can be the owner. I've been the
+[38:00] liaison for the identity team.
+[38:02] Perfect. What about
+[38:03] waypoint targeting, the meeting that we just had
+[38:06] a little bit ago?
+[38:07] Take that one.
+[38:09] Okay.
+[38:12] And this one I believe is
+[38:14] you, Matt, as well, correct?
+[38:15] Yep.
+[38:17] Okay. And then this one,
+[38:20] we had talked about this one,
+[38:22] but I don't know who the owner of this would be.
+[38:24] I
+[38:25] would do that one too.
+[38:28] Yeah.
+[38:28] Okay. This one has no content in it because this is something that Select has asked us to spike and see if it's something that we can do.
+[38:39] Who would be the best person to spike and see if this is something we can do?
+[38:49] I had a question related to this, and maybe that can help.
+[38:53] TI-825, the other kind of epic related to this initiative.
+[38:59] Yep.
+[39:00] Are these both asks from Select that are like achieving different things,
+[39:07] or are they approaching the same problem from like two directions?
+[39:11] Yeah, that's a great question.
+[39:13] And I don't have the answer to that.
+[39:14] What I can describe is that in the Select dependency channel,
+[39:18] they have asked us to investigate if these are two outcomes, two deliverables that we think we
+[39:26] can deliver based off of the dependency management workshop that we had early March, like the second
+[39:34] week of March. So those are two ideas I believe that they threw out and they want to know the
+[39:39] feasibility of those first and then propose and partner with them about descoping, adjusting
+[39:45] deliverables timeline etc um i can take over those
+[39:54] i don't really know exactly what that'll look like but i don't mind looking into it okay
+[40:00] I think that that's fair to say that it's okay to not know what it looks like at this point, since it's just an ask.
+[40:07] And I'm still trying to figure out exactly if that's something we can even commit to on the roadmap, because again, the roadmap is still in flux.
+[40:16] Okay, what about this one?
+[40:20] There was discussion about the segment quality scores.
+[40:24] I think Alex we had talked about that a little bit in some of the interest segment work that
+[40:29] would piggyback off of what happened in DAR and for the interest segment UI work yeah I think this
+[40:37] one I think this one makes sense for me to to do uh the the end result from the work we did Q1
+[40:43] was an RFD with some options of how we could do this so I think there's some that's a good place
+[40:49] a start on this next initiative. Is this also yours, Alex? This DAR, if we do get approval to
+[40:56] pick this back up with Alex? Yes. Alex and Alex. Who would own this feature inventory and data
+[41:05] quality evaluations one? And this is something that we've, again, it has little information in it,
+[41:13] but we've talked about this, looking into the data, evaluating the data that goes in.
+[41:19] there's feature store overlap in this.
+[41:22] There's some,
+[41:23] we talked about looking for other additional vendors.
+[41:29] So there's some work that could be done,
+[41:31] but we hadn't really decided
+[41:33] if this is something we're going to work on
+[41:35] and who should drive this work.
+[41:39] I can take it.
+[41:42] Yeah.
+[41:43] Okay.
+[41:44] I can take it.
+[41:44] Yeah.
+[41:45] Okay, so before we move on to going through some of these and actually getting into the
+[41:52] nitty gritty details, is there anything that's not on this list that you all expected to
+[41:57] see for Q2?
+[42:03] Which one was the bottoms up keywords one?
+[42:12] This one, the second to last row right here.
+[42:14] Okay, I'm going to throw myself on there.
+[42:18] Okay.
+[42:19] And Malika, for some of your work,
+[42:21] you have some tickets that I've grouped related to them
+[42:25] because there's like an analysis component.
+[42:27] So you have some tickets in, I believe, this initiative
+[42:32] that have your name on them.
+[42:35] But what I'm thinking more about is
+[42:37] if there's a single person who I have a question for,
+[42:39] or if we want to reach out and say,
+[42:41] hey, you're on the hook for deciding which tickets are next,
+[42:44] even if you stub them out who would that be um that's really what i'm looking for so there can
+[42:50] be multiple owners but really i'm just trying i'm forcing us to pick one okay i see so like
+[42:57] just one owner per that's fine yeah what's up with the firmographic one why is that na
+[43:04] so this is na because uh this was proposed by michelle but from what i understand it's not
+[43:10] clear that this is a product priority. So I have proposed on the roadmap, the actual spreadsheet
+[43:17] that this is removed because it sounds like there's not a whole lot of alignment that this
+[43:22] is a priority we should be working on in Q2, but that does not mean that it will be removed. And
+[43:26] it doesn't mean that it's not a priority for future quarters either. So that's why this is
+[43:31] NA at this point in time. Anyone else have anything else that they were expecting to see
+[43:39] that they're not seeing. Okay. So with that, I just want to confirm before we jump into the
+[43:56] examples. One of the things that I'm going to ask each one of you to do is I'm going to ask you to
+[44:01] do a priority evaluation and I'm going to ask you to confirm the up too far to confirm the target
+[44:10] release date. So those are two things as owners I'm going to ask you to do. These are the dates
+[44:15] that are copied over from the spreadsheet. They could be totally wrong and I'm going to ask you
+[44:20] if your name is on here to help me get this date to be the correct one if this date is wrong. And
+[44:27] I will have a summary post about this as well in the Slack channel. The second one is rank. If you
+[44:32] feel like, let me just pick this one as an example. Do you feel like firmographic curation is a P0?
+[44:39] Like this is a must do for Q2. I expect you to put that in. So like P0. And it does not have to
+[44:48] necessarily reflect what the spreadsheet has, right? You notice that this has no priority here
+[44:54] for firmographic curation.
+[44:56] So if you feel like that this is an absolutely must do,
+[45:00] this must be delivered in this quarter
+[45:02] before we can move on to bigger, better, cooler things,
+[45:05] please put that priority in.
+[45:07] If you feel like there's some sequencing
+[45:09] that needs to happen,
+[45:10] there's also a chance for us to be able
+[45:12] to put in order of operations here for this as well.
+[45:18] So for example,
+[45:19] we have to get this sphagnum model out the door.
+[45:23] So in my mind, that's a zero.
+[45:24] next we've really talked about that continuous scoring can make a huge impact so i would say
+[45:30] that that's a one and if these are stack ranked there cannot be two ones there has to be a two
+[45:36] does that make sense how i'm approaching this priority malachi yeah that's correct um that
+[45:43] that seems fine um does that mean though like just out of curiosity does that mean that like
+[45:48] two would only get one two or that's correct okay i just didn't know if it may be scaled as in like
+[45:56] you'd have multiple twos more than more threes etc but that makes sense not for not for the
+[46:01] purposes of this exercise no okay in reality yes and we will get to that place but right now no
+[46:08] can i ask a high level question in regards to the engineering wide okrs is it are we viewing this as
+[46:17] just like a subset of what those are each time we adjust this. So like, this is not just a TI focus.
+[46:24] This is like, based on engineering as a whole, how is TI going to shape according to those
+[46:29] engineering wide initiatives? That's a good question. The high level answer to your high
+[46:34] level question is that this roadmap is was curated by Michelle in alignment with those OKRs to be
+[46:42] able to try and match those. And so I wouldn't spend too much time for us to be thinking about
+[46:48] whether or not we're in alignment with OKRs. And if that changes, if the OKR for some reason
+[46:54] changes that we should be delivering 1,000 pounds of coffee every minute, and that comes out of left
+[47:00] field, Mike and Kale and I will work to be able to reorient the roadmap and make sure that there's
+[47:07] and alignment across the organization. So we're trying to shield you all from that thrash. But I
+[47:13] think that there's a balance between sharing information, sharing too much information and
+[47:17] sharing too little information. Sounds good. Thank you. Great. Okay. So here's what the next step is
+[47:28] in this. And I thank you all for participating here thus far. So the next step in this is what
+[47:34] we really want to do is to be able to make sure that we have sequence for each one of these
+[47:40] as it stands represented in tickets. So because I beat audience intent scoring over the head
+[47:48] earlier, I'm going to use this one, these first two as examples. So just bear with me as I open
+[47:55] these up to talk about how I want us to think about them. What I'm going to ask you to do
+[48:00] for the things that have your name next to them
+[48:02] is to open up the epic itself and or the initiative
+[48:07] to make sure that it represents the work
+[48:10] that needs to be done in Q2.
+[48:12] That's the number one thing.
+[48:14] So if this continuous scoring POC MVP ticket
+[48:18] does not include everything
+[48:21] that needs to be delivered in Q2,
+[48:23] we should either add comments to this,
+[48:27] add comments to the description,
+[48:28] which is just, I saw that Ryan did this already on a ticket. We need to add blah, blah, blah
+[48:35] to this ticket to make sure whatever, right? We need monitors. We need additional data analysis.
+[48:47] We need to add time post-launch for evaluation. And so we need a ticket for that. Whatever needs
+[48:53] to be added into the ticket should be included to make sure that that scope is set, okay?
+[48:58] The next thing that you do is you want to put that scope into words.
+[49:03] And the way that I was doing this with Alex and Matt on Friday is I want you to think about it this way.
+[49:08] We will know that this work is completed when and whatever you decide to finish that sentence with should be typed out.
+[49:18] Okay.
+[49:19] So I worked with Matt and Alex on Friday.
+[49:23] And this is what we decided the outcome of a POC would be.
+[49:27] The scope of this as a first epic, a first release, effectively an alpha, is that we want to have Fangorn scores in MembershipDB.
+[49:39] Great.
+[49:39] Once we have that, we can move on from there.
+[49:42] Right?
+[49:42] If there's multiple things that are outcomes, we should put those in as well.
+[49:45] Like, do we need a data monitor?
+[49:47] There's a ticket right here for data monitoring.
+[49:49] So maybe we need to add that as a scope.
+[49:51] We will know that this work is completed once we have Fangorn scores in MembershipDB.
+[49:56] B, we have data monitor that represents the accuracy of, I'm making this up because we
+[50:04] didn't talk about this on Friday, the accuracy of that model and should the model fail for
+[50:09] any reason, I should get alerted.
+[50:11] Great.
+[50:11] That's our acceptance criteria.
+[50:13] The next thing that's really helpful is if we zoom out and we think about that in context,
+[50:18] we spent some time on Friday trying to organize this so that we have a clear scope set for
+[50:24] Q2. So we, in discussion, aligned that with a little bit of reworking, we're going to deliver
+[50:32] these three epics as our Q2 priorities. And as stretch goals, we will move past this P1 into
+[50:41] these two P2 epics. That's the way we're thinking about this delivery. So what we did, if we scroll
+[50:51] up here. We have a problem statement, opportunity approach, success metrics, our acceptance criteria,
+[50:56] dependencies, and anything else that we might need to consider. So all of the notes that represent
+[51:01] this ticket are available for anyone who wants to look at it. And my communication back to the
+[51:08] organization is saying, hey, our Q2 commitment for continuous scoring is we're going to deliver
+[51:13] a POC slash MVP that's going to include our Fangorn scores and membership DB.
+[51:20] And then we're going to have some per support for this. And if we get anything else done,
+[51:28] that's a double bonus. That's a double rainbow across the sky right there for any of my other
+[51:33] millennials. So this is the focus. This is how we're trying to structure the initiatives and
+[51:39] epics with a couple of thoughts in mind. One is we want to make sure that any of the scope is both
+[51:45] documented in ticket form and it's documented in the description, as well as that we have the clear
+[51:51] sense of the relationship between the scope that we're proposing and the due date that's on these
+[51:58] tickets. So if we're thinking about due date, the due date for this initiative is June 1st.
+[52:03] If that's not realistic based off of the scope that we have, we need to change scope.
+[52:07] If the timeline is not realistic, but we still think that all of these things must be delivered for Q2, then we need to change the timeline.
+[52:17] If we think that there's some deliverables that we can adjust, right, like we did here, we have these are must-haves, these are nice-to-haves.
+[52:25] We think that this work needs to get done, but if we're thinking about Q2 commitments, we're going to commit to doing this in Q2, throwing all of our energy and effort behind it.
+[52:33] And then if we surprise ourselves and we deliver it quickly, then we can move on to actually doing these other two parts.
+[52:41] Does that make sense how I'm thinking about these initiatives and epics?
+[52:49] And what I'm asking you all to do?
+[52:52] Again, at a high level, to reiterate, I'm asking you to look at the parents, the initiatives and the epics.
+[52:58] Confirm that the details in the written description are accurate.
+[53:02] that the outcomes and deliverables are documented.
+[53:06] Think about it in the context of,
+[53:07] we will know that this ticket is completed when,
+[53:10] fill in the blank,
+[53:11] and ensure that there are tickets
+[53:13] that represent that outcome that you just described,
+[53:16] or you can work the other way.
+[53:16] You can start with tickets
+[53:17] and work back into the description,
+[53:19] and then make sure that timeline makes sense
+[53:21] based off of the deliverables that you've outlined.
+[53:27] I'm going to set a timer for 15 minutes
+[53:30] to give you all a chance to do it.
+[53:32] When you are done with your initiative and epic, I'm going to add a column here for status.
+[53:40] And I'm going to ask that you just put done in the status column when you've reviewed your parent initiative and epic.
+[53:49] So when you were, go ahead, Victor.
+[53:51] I have a question.
+[53:53] Sure.
+[53:53] So I understand the positive case scenario and everything is
+[54:02] the plant is doable and there is no end where good right. We
+[54:10] have a clear path to achieving the goal. Instead of if there
+[54:15] are for example, unexpected circumstances or issues
+[54:20] experienced in the process, which we didn't foresee or just
+[54:24] just arise, right? In the middle of the journey.
+[54:29] What will be fallback scenario? How it will work
+[54:32] if something doesn't work as expected?
+[54:36] Fantastic question. I think that goes back to this diagram down here,
+[54:40] that what we're really going to be managing once we have sort of this initial
+[54:44] outlay of work and a timeline for it, is just managing
+[54:48] those risks, right? Something is always going to come up that's unexpected. But if we have a clear
+[54:53] sense of the order of operations, if something comes up for audience intent scoring, as an
+[54:59] example, Victor, and that is our absolute must deliver highest priority, what I would advocate
+[55:06] for, and this would be Mike's responsibility to bring it to the squad, is that we effectively
+[55:11] have an incident declared for our release, right? Something happened. This is our priority.
+[55:19] Let's try and triage it and figure out how many additional people we can bring in to help us get
+[55:25] unblocked to either meet our timeline or adjust our scope. And then you communicate that to me
+[55:31] and I communicate that out to the rest of the organization. Here's what we're doing to mitigate
+[55:35] our dependencies and manage our risks. And so if there's something that comes up and we go,
+[55:40] oh, we did not see that that was coming. That's okay. I fully expect that to happen.
+[55:46] The playbook on how we're going to manage that is largely dependent on what our priorities are
+[55:51] and what the actual risk is, right? If we, for example, for this continuous scoring one,
+[55:57] if per as a squad says, don't you dare touch my code base and we have to wait on them,
+[56:03] that we have to wait on them, right? That's a risk that we have to manage.
+[56:07] And so the timeline due date would change based off of them saying, don't touch our code base.
+[56:14] Does that make sense, Victor? Does that answer your question?
+[56:17] It does. Thank you.
+[56:19] Yeah. This gives us a rubric for being able to make the decision of what, if anything, has to change.
+[56:26] Hopefully the answer is nothing because you all are incredibly capable, smart, and intelligent.
+[56:33] But if something does need to change, how do we reorient the troops to make sure that we're all in the same boat?
+[56:40] I'll use one more analogy and then I'll stop.
+[56:42] If we are all in the same boat and you have a hole that you discovered under your seat, we all have to work together to make sure that the boat gets bailed out.
+[56:52] And this helps us decide who grabs the bucket.
+[56:56] Does anyone jump overboard?
+[56:58] Do we stop rowing?
+[57:00] Do we continue rowing?
+[57:01] What do we do?
+[57:02] Since I've been talking for a little bit, I'm going to set the timer for 10 minutes,
+[57:07] and then I will circle back on this list and see how we're doing.
+[57:10] Again, when you feel like you are done, put in the status column on this planning sync
+[57:15] done, D-O-N-E.
+[57:17] If you have questions about it or if you feel like you need more time, we have lots of time
+[57:21] left.
+[57:22] We still have a half hour to go over some of these things.
+[57:25] And the next goal would be that in our conversation, we could actually integrate some of the other
+[57:30] folks that are going to contribute to this project. So as to Malachi's example, if you need Malachi to
+[57:35] do an analysis when something is done, this is an opportunity for us to make sure that we put that
+[57:41] dependency on his radar so that he knows that that's work that he's going to have to do.
+[57:46] 10 minutes and then I'll check on everyone. Hey Bryce, just a quick question. There's not
+[57:50] a ton on the intent score except for that one doc. Like should I, I mean, I can add some stuff in
+[57:57] here but i might need a little bit more context to be able to plan the whole epic out sure um
+[58:04] let's do this why don't you start you're talking about um the 5221 uh 2250 br 2250 it's the yeah
+[58:15] yeah that's the one i'm talking about that one's coming let me add you to a document um
+[58:20] to the brief that's being proposed and you can look that over and we'll go from there
+[58:25] Okay, sounds good. Thank you.
+[58:27] Okay.
+[58:28] And that's one of those that is still very much in flux,
+[58:31] so that document could change here any minute.
+[58:55] Malachi, it looks like you're in that document already.
+[59:23] Yes.
+[59:24] No, that document is already included.
+[59:25] Okay, so we're talking about the same document there.
+[59:27] Yeah.
+[59:28] Okay.
+[59:55] Thank you.
+[60:00] you
+[60:30] you
+[61:00] Bryce, I don't quite get the due dates on one of mine.
+[61:21] Which one?
+[61:22] It's like TI-718.
+[61:26] Okay.
+[61:26] and the confluence it says June 17th
+[61:29] but when I open up the epic itself
+[61:31] it says May 18th
+[61:34] yeah
+[61:35] there's been some
+[61:37] editing of some of
+[61:39] these things so you tell me what date you think
+[61:41] works do you think that's a May 18th
+[61:43] or do you think it needs to be later than that
+[61:45] that effectively gives you
+[61:47] three and a half sprints
+[61:49] yeah I'd rather go with June
+[61:53] but
+[61:54] and so there's an important you know question which is the parent for audience intent scoring
+[62:04] says that that due date is the 27th of april yeah so if that needs to be included in the initiative
+[62:12] then we need to adjust the due date for the parent but if you think that that work can be done
+[62:18] separately as like follow on work, then we can actually split that out into its own,
+[62:24] its own body of work.
+[62:26] I probably say that split it out, but do I need to make a new initiative or how does
+[62:36] that work?
+[62:36] You let me deal with that.
+[62:38] Why don't you just make a note somewhere that you feel like that needs to be split
+[62:42] out into its own body of work and then what that body of work entails.
+[62:47] you'll know that this ticket is completed when fill that out and then we can talk about it more
+[62:53] okay hey bryce the i don't know the ber the 2250 that icon there does that what does that represent
+[63:01] is that just their specific icon or is that i don't know it doesn't look like an epic i'm just
+[63:09] curious what that is are you talking about when you click on it when you click on 2250 yeah so
+[63:15] So two, two, five, zero, it's got that light bulb, right?
+[63:17] Epics typically had like the lightning bolt there.
+[63:19] So I'm just curious, what is that light bulb?
+[63:21] Is that like.
+[63:23] If you hover over it, you'll see that the, the tool tip hint is that it's an initiative.
+[63:28] Oh, okay.
+[63:28] So those are, that's higher than an Epic there.
+[63:31] Okay.
+[63:31] So I just need to create some tickets that have that, um, Epic as the parent.
+[63:36] Does that sound correct?
+[63:37] Okay.
+[63:38] Yep.
+[63:38] And remember to good reminder for everybody and a four minutes remaining before we'll
+[63:43] do another check-in.
+[63:45] Hopefully this dialogue is not too distracting.
+[63:48] An epic should be something that can be completed in a month or less.
+[63:54] Two sprints or less.
+[63:55] So think about story point estimates.
+[63:58] If it's an eight, that is an epic.
+[64:00] If an epic is like, you know, a 10 or a 12, we need to break that up into multiple epics because an epic shouldn't carry on month to month.
+[64:11] Ideally, an epic should be completed in one, two sprints.
+[64:14] if you add the child work items well is that the same as creating a ticket
+[64:21] like directly on the epic yes okay it may depending on your access it may put that child
+[64:30] ticket in the wrong project but that's effectively the same thing i can help you move them if they
+[64:37] end up in the wrong place i'm more concerned about the tickets and the scope at this point
+[64:44] of time. Those other things are much smaller paper trail items that we can resolve.
+[64:52] If you also have a ticket with two minutes remaining where you just feel like WTF is this,
+[64:58] you could put that in a safer work format. And we can ask the, especially for some of those
+[65:05] dependencies, we can ask for more clarification. The roadmaps for some of these other teams are
+[65:10] also in flux, so they may not have any information to provide because they're still ironing out
+[65:16] exactly what they want to try and deliver. So if that's what you need, we can put in a comment,
+[65:21] need to clarify, need to get more context, and then I will help chase down those answers.
+[65:28] I guess, Brian, that was mostly directed at you. Yeah, mine, they're all WTF, which is fine.
+[65:33] no I mean I understand what the
+[65:38] child tickets are for
+[65:40] I just don't know the scope of the
+[65:43] parent ticket
+[65:44] if it
+[65:46] only includes that
+[65:48] that's in the children or further discussion
+[65:50] and let me see if I can find
+[65:54] for you Brian there was a
+[65:56] dependency document let me see if I can find
+[65:58] that as a starting place it might have a PRD
+[66:00] linked to it
+[66:01] I don't know if we ever did a PRD for this.
+[66:05] here brian here's what a quick search pulled up for me
+[66:35] Oh, this is from Hannah. Yeah. I thought you meant a PRD on our side.
+[66:52] Oh, okay. Yeah, I don't. As far as I'm aware, there is not a PRD on our side.
+[67:01] You know, I thought incrementality was a word, but every time I type it, it's like, nope.
+[67:05] It should be a word, how much we use it in advertising.
+[67:09] Professionalization is also not a word.
+[67:11] Yes.
+[67:14] Matt and I ran into that on Friday.
+[67:19] Okay, 30 seconds left.
+[67:21] How are folks feeling?
+[67:22] Let's go back to the table and see how we're doing on having this filled out here.
+[67:30] I see one done.
+[67:32] So let's go ahead and cancel that timer and let's give folks another five minutes here.
+[67:47] I'm sorry, were we supposed to rank them too?
+[67:50] Or is that?
+[67:52] Yep.
+[67:52] Rank is if you feel like there's an order that these need to be completed in, you put them in rank.
+[67:58] And that's a collaborative conversation because you all know the dependencies better than I do.
+[68:03] I have some sense of where there's an order of operations, but that's beyond me.
+[68:09] That's beyond my understanding of how some of these features work.
+[68:13] So if you, Ryan, if you're looking at yours and you're saying, I feel like waypoint targeting should come before incrementality, then we can sequence those in that order.
+[68:25] And it's not necessarily one over the other,
+[68:28] but I'm going to force us to do that for the time being.
+[68:31] Does that make sense?
+[68:33] Yeah.
+[68:34] I mean, even if it could work in parallel,
+[68:35] you just want to sequence number.
+[68:38] Yep.
+[68:41] I don't want to stack rank.
+[68:45] Hey, Bryce, where do these transcripts go
+[68:47] after we're done with the meeting?
+[68:49] Are they saved in like cloud somewhere?
+[68:51] No, I upload them directly to Mark and Richard's.
+[68:55] inbox. No, I'm not. That's not true. Yeah. It's on my local machine. Yeah.
+[69:02] Okay, cool. That's what I thought. I would just be interested in the transcript from
+[69:06] this meeting afterwards. So. Some more cross team meetings go into revenue accelerator,
+[69:17] which is what we use across the PMO, the project management org, which is silly because we don't
+[69:23] track deals. We're not, we're, we're not using revenue accelerator for what revenue accelerator
+[69:27] is built for, but that's what we use. So there are some transcripts that are recorded to the
+[69:32] cloud, but the vast majority of like squad meetings are all on my local machine. Um,
+[69:37] and thanks to someone named Malachi, who's seems like they're pretty smart. Um, I did set up
+[69:41] whisper to transcribe those automatically. So that was pretty helpful. Oh, cool. Yeah. You know what
+[69:47] I did too um after that is I took whisper and I and I took uh open ai's uh 4-0 transcript one
+[69:55] because I found that it hallucinates a lot of times or it messes it up so you had to adjust
+[70:00] some of the settings but basically what I do is I create two transcripts one with that one with
+[70:04] whisper and then I compare the two and then it gives me the best of both worlds every time
+[70:08] because what I was getting I'll share with you that code if you want Bryce um but yeah
+[70:14] what i what i would really love is that anytime a meeting is done that i don't have to wait for
+[70:21] the transcript to be done that's a huge blocker for me where this is totally taking on a tangent
+[70:27] here um so let's come back we've got two minutes here and malachi we can talk more about those
+[70:34] details later. Yeah. Brian, with the details that are still missing, do you have a sense of
+[70:47] sequencing? When do you think they need to be done? Or can they be done at any time?
+[70:54] Are you talking to me? Sorry. It's I turned down the volume so I could concentrate. Sorry.
+[71:00] I
+[71:03] talk to me about sequencing
+[71:06] I think that these things because they're an ask for amendment from select they don't have
+[71:11] any relevance to anything else that's going on in any of this hierarchy
+[71:14] okay
+[71:15] I don't think they're
+[71:24] there's like any specific prioritization of one over the other.
+[71:32] This is like a dead hawk when we have the time work.
+[71:36] Okay.
+[71:41] So I'll put in Brian for you specifically.
+[71:44] The ask from select was,
+[71:48] was this was the ask if we could have this by this date.
+[71:55] And this one was this date.
+[71:57] Kind of confused.
+[71:58] I think that there's one that's something that's missing here.
+[72:01] Because 8.24 is LLM based, which I was misreading it.
+[72:10] We were talking about doing a Fangorn version of this
+[72:13] and a Bottoms Up Keywords version of this.
+[72:16] the llm one we we've already provided them with the llm well and llm methodology i don't really
+[72:24] recall what this is this one i think is separate brian and i think the ask is like if i remember
+[72:32] this correctly this is like a hey we want like a chatbot experience where it goes from like llm
+[72:38] with customer inputs and becomes like an audience expression i think okay so this one's a little
+[72:44] more i'm gonna need i'm gonna need some clarification from them so this one you can ask
+[72:49] jordan if you're there jordan will say it's not possible right so we need some other solution
+[72:56] other than like literally produce an audience expression um but maybe you'll discover something
+[73:03] brian i don't know yeah i'll poke around but i think that this is you
+[73:09] Okay, so let's come back here. It looks like most of these are done. So let me share my screen here
+[73:17] and we'll talk through next steps. We have 17 minutes remaining. So here's what we have so far.
+[73:26] Next steps would be to try and identify for anyone, Alex, you've got two here, identify when
+[73:32] you think that these can be delivered and make sure that that's filled out. The next thing that
+[73:37] we want to do is because our sprint starts today, within these parents and children,
+[73:44] we need to identify what from these need to be put into the next sprint. And the order of
+[73:51] operations for doing so is that we're going to look at this stack rank, and we're going to order
+[73:56] by stack rank. And so anything that is for the sake of being arbitrary, anything that is one
+[74:02] to 10 should be in the backlog. Anything that is one to five should probably be in the sprint.
+[74:12] Anything that is one, two, or three should likely be marked as a P1 in our sprint,
+[74:19] like something that we are going to get done this sprint, hell or high water.
+[74:24] So the next thing that we need to do is we need, and I'll open up 457 as the example.
+[74:29] the next thing that we need to do is to take 457 as the epic because we can't put an entire epic
+[74:37] into the sprint we need to look through and make sure that any of these tickets that are not yet
+[74:42] done are in the next sprint so as an example here ryan you have this ticket ti 812 that is listed in
+[74:52] this 457 that is not in the next sprint so i would add this to the next sprint and the easy way to do
+[74:59] it. This is a column view, so you can configure columns to have Sprint in it. If you don't have
+[75:04] that column view, you can just as easily click on the ticket itself, and there's a Sprint option
+[75:10] for you to add it to the next Sprint. I accidentally created two of these, so we're going to put
+[75:15] everything in 707, and I will fix and update the name. So that's the next task. If there is
+[75:21] something that you feel like needs to be put into the Sprint but that isn't a ticket, please create
+[75:26] that ticket and then put it into the next sprint. I'm going to give you all 10 minutes to go ahead
+[75:32] and do that next process. Again, the ask is looking through here. This could be create a spike ticket.
+[75:38] I need a spike ticket to answer next questions. I need to sync with, or let's pick these. Sorry,
+[75:49] let me go back and focus on these and not create wild examples. You know, this one here as an
+[75:55] example doesn't have, I think, much for us to do as next steps, but we might need to complete the
+[76:00] evaluation, or we need to have the DPL with Richard to get permission to proceed forward.
+[76:08] So making sure that whatever for the children slash epic column, whatever those next tickets
+[76:13] are that need to be done this next sprint that are high priority, the next thing that needs to
+[76:18] get done should go in the sprint. 10-minute timer, and we'll come back.
+[76:25] And we'll do one thing before we wrap up.
+[76:55] Thank you.
+[77:25] Thank you.
+[77:55] Thank you.
+[78:25] Thank you.
+[78:55] Thank you.
+[79:25] What's our current sprint?
+[79:35] 06 or 07?
+[79:39] 06 or 07, but I'm moving them around,
+[79:42] so it doesn't matter.
+[79:44] I'm moving tickets around.
+[79:45] I just completed the sprint, and I will start.
+[79:47] So just put it in wherever, Victor, and I'll move it.
+[79:50] I'll consolidate it,
+[79:51] because that's the last thing we're going to do
+[79:53] is look at the sprint,
+[79:54] Look at how many points we have and then cut out anything that we don't think we're going to get to.
+[80:00] Thank you.
+[80:30] Thank you.
+[81:00] Thank you.
+[81:30] Thank you.
+[82:00] Thank you.
+[82:30] Thank you.
+[83:00] Thank you.
+[83:30] Thank you.
+[84:00] Thank you.
+[84:30] Thank you.
+[85:00] Thank you.
+[85:30] Thank you.
+[86:00] you
+[86:30] All right, everybody.
+[86:38] Last thing that we're going to do here before I let everyone go, and I, again, thank you all for your attention here as we're doing something different than what we normally do.
+[86:50] So I just want to take a look at where the sprint is based off of the rollover from the sprint that I closed while we were on this call, and then how much work is in here.
+[87:00] Keep in mind that we're all going to be out of office, not all of us.
+[87:04] Many of us are going to be out of office as the week goes on.
+[87:08] So this really needs to be effectively a mini sprint.
+[87:12] If we look at how many working days we have, there are 80 points in here total, which I
+[87:17] think is relatively good, given that we have a shorter sprint due to Mountain Meet.
+[87:23] What I'm going to ask you all to do is if you come up with a ticket that needs to be
+[87:28] added to the sprint. I'm going to ask you to post that going forward into the targeting
+[87:35] infrastructure squad channel and tag myself and tag Mike. Because one of the things that I want
+[87:40] to understand as we go forward is we have a lot of tickets that we roll over. I shouldn't say a lot.
+[87:45] We have an insignificant amount of tickets that roll over. And I want to understand what it is
+[87:51] that keeps us from adding all of those tickets in advance. Part of that could be provision,
+[87:56] Part of that could be quarterly timeline.
+[87:58] Part of that could be that Bryce gets mauled by a bear.
+[88:03] Thank you, Matt.
+[88:06] So one of the things that I want to make sure that we have is if there's anything that you
+[88:10] need to add to the sprint, let me know and let's have a discussion in the channel if
+[88:17] it needs to be this sprint, if it like absolutely must be.
+[88:20] And the criteria for that are effectively like, is it going to block us from meeting
+[88:24] one of our deliverables?
+[88:26] Is it a risk that we uncovered during the sprint?
+[88:30] Is it a high priority ticket?
+[88:32] Those are the kinds of things that we'll use to evaluate if it should go in the sprint or not.
+[88:37] For kicks and giggles, I've thought about putting in, there's a limiter.
+[88:42] You can actually say, don't let anyone add any tickets to the sprint.
+[88:45] I don't want to do that.
+[88:46] That would be fun.
+[88:47] Maybe it's like an April Fool's joke, but I don't want to do that permanently.
+[88:50] So if you have a ticket that you feel like needs to be added, post in the channel.
+[88:54] Let's have a conversation about it.
+[88:55] I think that 84 points is enough at this point, given that we have a shorter sprint.
+[89:02] Any questions about this sprint?
+[89:05] Questions about what's in it?
+[89:06] What our priorities are?
+[89:08] As a reminder, the roadmap could change.
+[89:11] So we could get a note right after Mountain Meet that we have adjusted our priorities.
+[89:17] But as of right now, this is where it stands.
+[89:20] And I will be adding project syncs on your calendars.
+[89:24] and I will be asking the leads to drive the agendas where your name is associated with it.
+[89:29] And if you need to co-lead, we can also do that. And then I'll be sharing this table
+[89:34] back out with Mike and Kale. So is there anything else? Anyone have any questions,
+[89:39] issues, concerns before we go ahead and kick off the sprint?
+[89:46] The bid stream work that Ryan, Malik and I were doing the last sprint, some of that is probably
+[89:52] is in this sprint as well.
+[89:55] Do we want to keep that?
+[89:58] That's kind of our
+[89:58] outside of planning, but
+[90:01] additional investigation stuff.
+[90:05] I'm
+[90:05] going to say yes for now, but let's do
+[90:07] this. Can we change it to be a P3?
+[90:10] That works.
+[90:12] Let's do that.
+[90:13] Let's change it to be a P3. I only see that
+[90:15] one ticket. Are there any others that I'm
+[90:17] missing?
+[90:19] Malky or Ryan, I don't know if you guys had other things
+[90:21] that you think we're going to roll?
+[90:23] Malachi, is that this one for you?
+[90:30] Yeah, it is.
+[90:32] It is that one.
+[90:34] Yeah, Malachi, it's that one.
+[90:35] That one should be done this sprint though, right?
+[90:38] Yeah, yeah.
+[90:40] So I'll finish it.
+[90:42] In fact, I was planning on meeting with you, Ryan,
+[90:45] but I've already got the backfill and everything done and all that.
+[90:50] So we should be pretty good to go.
+[90:52] Yeah.
+[90:53] It's not in prod yet, but we'll review it.
+[90:57] Okay.
+[90:59] Great.
+[90:59] Thank you all for your time again.
+[91:01] For anyone just, I know we're one minute over, so I appreciate everyone hanging on.
+[91:05] Just as a reminder, I did send out an updated calendar invitation for our reservation.
+[91:11] For those of you that are going to New York, it includes travel details and a reminder
+[91:16] to please check the menu
+[91:18] because everything is family style.
+[91:19] So the portions are huge.
+[91:22] So please think about what you want in advance
+[91:24] and we can either all meet up
+[91:26] and we can travel together,
+[91:26] which is what I'll be doing.
+[91:28] Or if you want to go explore
+[91:29] in between the engineering event and our event,
+[91:32] you're also free to do that
+[91:33] and you can meet us for our reservation at 815.
+[91:36] I said it later on purpose
+[91:38] because it was either that
+[91:39] or it was right after the engineering event
+[91:41] because it is New York City
+[91:42] and we have to have a reservation.
+[91:44] So that's a little bit later,
+[91:45] but I think that will actually work out nicely.
+[91:47] Questions about that, let me know.
+[91:49] I will send out a reminder on Wednesday as well.
+[91:52] So if you have anything else, let me know in Slack.
+[91:54] My DMs are always open because I can't close them.
+[91:57] Thanks, everyone.
+[91:59] Thank you.
+[92:01] Thank you.
