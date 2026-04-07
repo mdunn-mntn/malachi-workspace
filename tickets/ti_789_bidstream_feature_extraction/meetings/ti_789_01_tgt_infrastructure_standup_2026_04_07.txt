@@ -1,0 +1,230 @@
+[00:00] You'll get the recording faster than waiting for Zoom to process it for me.
+[00:05] Or deliverables. If there's any risks here, please let me know, and that's what we want to focus on
+[00:11] during our stand-up, okay? So, as we talk through our tickets, we're going to go epic by epic today.
+[00:17] We are not going to have a stand-up on Thursday, because for those of us that are going to New
+[00:21] York, we will be traveling, so this is the chance to talk through any of the risks that you might
+[00:26] have, and then we will resume our normal stand-up process for next week. The last thing I want to
+[00:32] call out that's going to be a little bit different about what I'm going to ask today is, as we go
+[00:37] through these tickets, if I have not gotten to you yet, please make sure that these are all up to
+[00:42] date. One of the asks going forward is that these are all up to date with their status before we
+[00:47] jump into this meeting, and if we need to adjust the time a little bit for the PST folks, Pacific
+[00:53] Time, we can do that, but what we want to do is want to make sure that this accurately reflects
+[00:57] the state of our work as it stands now. So, if I'm talking through tickets, and I haven't come to
+[01:02] yours yet, please make sure that your tickets are up to date, that they reflect the current state of
+[01:06] things, so that we can be able to move a little bit faster and give you all time back, because
+[01:10] the goal that we're going to try to get to, again, that I stated yesterday, is like a five to ten
+[01:15] minute stand-up. Just go around the room and say, are there any obstacles to our timeline, to our
+[01:20] scope, is there anything that we all need to swarm and address on, does anyone discover the leaky hole
+[01:25] in their boat, and if not, we can go back about our business. So, with all of that context, let's start
+[01:31] talking about Fangorn. We've got this TI-457. This is the big one that we're trying to wrap up that
+[01:37] that gives us the ability to say Fangorn is done, it is ready to go out the door, and we are just
+[01:43] waiting for approvals and for all of our cross-functional partners to be updated. So, Matt, do
+[01:49] you want to talk through, as the lead for this, do you want to talk through any obstacles that you're
+[01:53] experiencing while you safely do drop off and drive home? I'm now parked in front of my house, so we're good.
+[02:01] So, let's see, it looks like, from what I was seeing, we're very close to being ready to scale
+[02:07] it up. I don't know, Brian wants to give the update on where we stand, being able to do this for
+[02:12] basically all advertisers now. We're very close. So, I think that's the only thing
+[02:19] remaining, is if we need to scale this to everyone, can we do that? And I think we're very close to
+[02:26] having that ready. I don't know if Brian wants to give his update on that. That's the main thing.
+[02:35] Brian, are you here?
+[02:36] No, it looks like Brian is not here. Okay, all right. Yeah, he has it. Last I heard, we were talking in Slack, oh, here he is.
+[02:45] Yeah. Brian, yeah, we were just wondering about the Vertex pipeline stuff as part of it.
+[02:55] I was in the mission control, because I'm on call. Yeah, you're good.
+[02:58] So, what Matt was asking was, we were just confirming, based on what we talked about yesterday,
+[03:02] Yeah, you're good.
+[03:04] So what Matt was asking was, we were just confirming based off what we talked about yesterday,
+[03:09] and we want to identify any risks to the timeline or to the scope of these tickets.
+[03:13] So the question that Matt had posted was, if we are blocked by any potential rollout to all customers, which sounds like that was work that you were doing.
+[03:15] sounds like that was work that you were doing. Did I state that question correctly, Matt?
+[03:23] Yeah, yeah. Looking for the update, Brian. It looks like you're really close to having it ready for all
+[03:28] verticals, which is what we would need to roll it out. Yeah, it's done for all verticals. We actually
+[03:36] merged it and then reverted the merge just moments ago. I'm just running a validation, and Sean is
+[03:41] running to make sure that the outputs look proper to hook up to what he's doing. So, we're
+[03:47] running a validation, and Sean is running to make sure that the outputs look proper
+[03:52] to hook up to what he's got. But, yeah, it's done. I mean, I've already moved it to done, but it's,
+[04:00] yeah, I just need to run one more validation over the most, because the validation set
+[04:07] was running over a data set that has expired. So, it needs to be updated and run again just
+[04:15] to make sure everything's tightened up. And, Brian, is that this ticket that you're
+[04:21] working on here, or is there a different ticket that you're... It's the ticket that's in done
+[04:28] for me, which would be there. This one, okay. Great. The ticket that's in...
+[04:38] I don't know what we need to do with the ticket that's in to do, because, again,
+[04:45] that's something that Matt was working on.
+[04:52] So, let's come back to that one in a minute here. So, Matt, based off of what I'm hearing so far,
+[04:57] you're not anticipating any blocks. We haven't seen any issues that would prevent us from
+[05:02] resolving these tickets. Is that correct, before April 27th? Yep. Should be good.
+[05:09] And these are all in the current sprint that ends on the 20th. So, that's great.
+[05:14] Cool. So, again, let's... We're trying to shift our process a little bit. So,
+[05:18] let's jump down to this one. We have this placeholder ticket that we put in here.
+[05:23] Is this still a placeholder, Ryan, or do we have a sense of being able to say,
+[05:28] we now know what needs to be done, we're just ready to do it?
+[05:32] Oh, yeah. That's in progress. Yeah. Okay.
+[05:37] Yeah, sorry. Put that in progress. Yeah. I'm literally working on it right now.
+[05:41] Okay. I'm going to remove the flag that says it's blocked. So, go ahead and move that over.
+[05:46] And then let's say that this is started. This is in development. And then the timeline for
+[05:52] this is the 13th, which is Monday, a week from yesterday. Does that timeline still work?
+[05:57] Yep. Okay. Perfect.
+[06:00] Great. And you can move that into in progress. I did update the workflow yesterday, by the way.
+[06:05] One of the things that I noticed in doing an audit for finance yesterday is that we have a
+[06:11] bunch of tickets that go from in progress to done. And part of the workflow in this assumes that we
+[06:16] at least go to in review and ready for deployment. So, there's a prompt when you move from ready
+[06:23] deployment for done. So, one of the things that I was trying to figure out how to do to not make
+[06:28] it over burdensome is the developer field should always be assigned to the person who moves it
+[06:35] over into progress. So, if I'm Ryan and I move the ticket into in progress,
+[06:40] it should mark me as the developer. Spikes are treated a little bit differently. So,
+[06:44] this is for most tickets. But you can't close a ticket if there's not a developer assigned.
+[06:51] So, as we try that out to try and make sure we have all the data that finance needs for the
+[06:55] tickets, if you come across moving the ticket friction, please let me know and we can try to
+[07:00] resolve that friction. Great. So, let's now jump down. And Ryan, would you also update this is no
+[07:07] longer a placeholder? Can we update the description to describe what this is actually doing? And I
+[07:12] will find the linked ticket for where this should go. Sure. That'd be awesome. Great. Let's move down
+[07:20] to the next one. So, we've got this tech debt one. We've got a couple tickets in progress. I'm not
+[07:25] super concerned about that because that's not a super high priority. So, the next one here is
+[07:31] 750 customer profile recommendations. Victor, any obstacles, any new revelations coming out of your
+[07:37] analysis there? No, not right now. Okay. And then let's just double check. Does this have a due date?
+[07:45] It says a due date of the 15th. Does that still sound okay to you?
+[07:50] Or do you want to change that date? Or they want what? This Epic has a due date currently set at
+[07:59] May 15th. Yeah, right now I don't want to change. No. Okay. So, then if anything comes around that
+[08:05] we want to shift the due date, let's try to put it in a secondary Epic instead of bumping up this
+[08:10] date. Sounds good. Okay. Great. Cool. So, let's jump down here. We've got this continuous scoring POC
+[08:17] MVP. We started a conversation yesterday with Forrest to ask about the timeline for this.
+[08:24] Ryan, is any of this blocked or do we feel like we're still making good progress to deliver this
+[08:29] work? Yeah. Okay. Sorry. I was a little confused. We were talking about continuous scoring.
+[08:32] Yeah. Okay. Sorry. I was, I was a little confused.
+[08:35] We were talking about continuous scoring. Yeah. With, okay.
+[08:42] Okay. I'm just a little confused. Cause adding, I mean,
+[08:46] adding Finghorn scores to MembershipDB, I guess, should be part of this. But the bidder team
+[08:53] doesn't depend on that necessarily. So, anyway. Do we need a parallel or a, like, rename this
+[09:03] ticket in here to make sure the scores are going to the correct, like, we're producing the continuous
+[09:09] scores? Yeah. I mean, that's, yeah, maybe just a ticket. Yeah, actually, we probably do need a
+[09:18] ticket that says, yeah, just output continuous scores to the bidder team. Okay.
+[09:28] Yeah. Because my plan, here's the plan. My plan is to, like, output the scores to Bidder team
+[09:33] and into MembershipDB in parallel until I figure out, because I don't know how the Bidder team
+[09:40] can get the scores from MembershipDB. Got it. I need to talk to Zach and Jordan and, you know,
+[09:46] get them together and figure out how they can get the scores from MembershipDB. And
+[09:53] so, we can't turn off the Bidder stuff until they figure that out. Okay. Yeah. Hopefully,
+[10:01] that makes sense. But yeah. So, maybe just, yeah, another ticket that says
+[10:05] output scores, you know, output scores is continuous.
+[10:11] Cool. Is that a ticket that Matt, you and Ryan can work on?
+[10:15] Yeah. Yeah, we can do that. Perfect. I'm just going to mention them in here so that they have
+[10:20] that insight that we need to sync with them. If you need help setting up that meeting,
+[10:25] post MountainMeet, let me know and I'm happy to help find time for you all to have that sync.
+[10:29] Or ideally, we could do it in the dev channel. That would be just guess if we could do that.
+[10:37] Great. Okay. So, let's jump down to the next one. Let's see. This is a Q2. This one,
+[10:44] I'm going to move this to closed later today. That's part of the cleanup I'm going to do.
+[10:49] I'm going to do it kind of all this afternoon. So, any tickets that are still in Q1 are going
+[10:54] to move to this Q2 tech debt epic. But I do need to mark this as started
+[11:01] because it's in development. And then we are not going to talk through those really quick.
+[11:06] Let's go through here. This is released. That's great. We got 607. Alex, do you want to talk
+[11:13] about this? Are you syncing today with Alex on the implementation path here?
+[11:20] That's slightly different. That's like beta bottom-up keywords in general. This, I will
+[11:26] review with the experiment team. This is the kind of setup methodology work to incorporate bottom-up
+[11:34] keywords into continuous scoring in the future. And this is going to be due at the end of this
+[11:39] sprint. So, that's in a good place. No blockers or issues with this.
+[11:51] Great. Just save that so that they're aware. Great. And then the next one, Brian, you were
+[11:58] talking about this one. You said we needed to figure out what to do with this one.
+[12:02] This 745, is that correct? Yeah, sorry. That one. So, we've talked about this one several times
+[12:10] already. I don't really like Matt and I need to have a discussion. I think he has a validation
+[12:18] notebook somewhere. But basically, we don't like there needs to be a thoughtful way of validating
+[12:31] the Fangorn model that is retrained with the feature store versus what we have in our production
+[12:42] deployed currently. And I think Matt did some of that analysis. I was talking about doing some of
+[12:48] that analysis within the last sprint. But it's not a blocker for rolling out Fangorn. It's just an
+[12:56] update to creating a methodology that makes sense for determining when we can roll out new models.
+[13:06] Yeah, I think we'll probably have to have a sync on that, you and I. Because I did produce those
+[13:10] and I shared them and I was like, you know, here's like 15 different metrics. So, we kind
+[13:15] of have to choose which ones we want to use to make the decision. And then we'll figure out how
+[13:21] to get that more automated in Vertex, I think is what the goal of this is.
+[13:25] As a forcing function, do you have a sense of when this needs to be done?
+[13:31] It doesn't need to be done for the release of Fangorn.
+[13:38] It's more of like a methodology for future development. It's not a, you know, it's not a
+[13:48] priority. Ideally, we would have it by the end of Q2.
+[13:54] Okay. So, given that, it sounds like there's a couple options.
+[13:59] One is that this is sort of an evergreen ticket that's sort of always in progress
+[14:05] on the board, which makes the project manager and me shudder. But at the same time, I can see that
+[14:11] if it's sort of a thing that needs to be done at the end of Q2, we could keep it around. Would you
+[14:17] have any objection to me changing this to a spike ticket to represent the fact that there's sort of
+[14:26] some conversation, some work that needs to be done to separate it from the actual implementation?
+[14:32] I think that makes sense. I think there's research that needs to be done first. Right,
+[14:37] Brian? Like, that probably makes more sense. Like, figure out what we need to do before we
+[14:41] actually do anything. Yeah. Okay. Can we also at some point put in a description about what we,
+[14:50] what kind of research needs to be in here? Like, what the exit criteria of the spike is?
+[14:56] So that we can say, right, for this to be rolling over from sprint to sprint to sprint, we can say,
+[15:02] you know, have we completed the scope of this spike? Yes or no? Are we ready to move on to
+[15:07] development? That would be, that would be helpful as well for Mike, so that when he comes back,
+[15:14] he can look at the ticket and understand what the purpose of this ticket is. Okay. Will do. Great.
+[15:23] Okay, we're going to run out of time here. So let's just jump through.
+[15:26] Sean, we've got this identity graph integration ticket right here. Yeah, those are dependent on
+[15:32] their work, as we discussed on Friday. So yeah, it looks like they're not ready for their, like,
+[15:38] long rollover, rollout for the CRM for all the advertisers at this point. So we cannot do. Yeah.
+[15:47] Do we have an exit plan for these? Because they're in the current sprint,
+[15:52] so are we expecting that they're going to be unblocked before our sprint is over?
+[15:57] Last time they gave a timeline, right? Like, for one is the billing, the other two is CRM. I can
+[16:01] follow up on this. I don't, I, with the mountain meat coming up, I don't know if their work is,
+[16:06] will be done by this spring. Because this, technically, these are blocked by their tickets.
+[16:11] So I can find out what their tickets are. I can link them, if that's helpful. Yeah, that'd be
+[16:16] great. If you could also link them to this Epic itself, so that we could sort of say, like, Epic
+[16:21] is ready to be started once that linked ticket that's a blocker, right? It's resolved. We can
+[16:26] use that as reference to be able to say that it's ready to go in or not. Yep. Sounds good. Great.
+[16:32] And then once we have those tickets, Sean, let's see if we want to double check and confirm
+[16:37] about timelines. You and I can stick on that in the infrastructure channel, and then we'll see
+[16:42] about if we should move these out of the sprint, or if we should keep them. Okay. If they're blocked
+[16:46] in my opinion, it doesn't make any sense to leave them in the sprint. Yeah, makes sense. And then is
+[16:53] the Q1 ticket, is that all resolved? Because this is the Q2 ticket, correct? Yeah, this is the Q2
+[17:01] ticket. Yeah, the Q1 Epic is completely done, I believe. Perfect. Yeah. Let me just open that up
+[17:08] while we're on here. One of the things that we talked about, is it this one here, this one? Let's see.
+[17:18] Okay, so let's mark it as done. Great. Okay, so let's jump down here. Last two, Alex, you have this one for
+[17:32] interest segment quality score implementation? Yeah, this is figure out what we're going to do in this epic and fill it out with some actual details and stories. So a spike to make sure that that happens this sprint and set us up for the rest of the quarter. Great. And then last but not least, we've got this midstream feature extraction and audience augmentation.
+[17:46] So a spike to make sure that that happens to sprint and set us up for the rest of the quarter.
+[17:53] Great.
+[17:54] And then last but not least, we've got this midstream feature extraction and audience augmentation.
+[18:02] Yeah, no, no blockers or anything here. For me, this is evaluation of Augmenter log. It additional kind of like research outside of our primary deliverables. I expect to get to this this sprint, maybe a little ambitious, but it's the lowest priority thing. So it's okay if it rolls. Okay. Malachi, anything to call? No, I was gonna say I don't have any blockers for this. I'm just waiting for things to run. I have a couple data proc jobs,
+[18:17] but it's the lowest priority thing.
+[18:18] So it's okay if it rolls.
+[18:22] Malachi, anything to call out?
+[18:23] No.
+[18:23] I was going to say, I don't have any blockers for this.
+[18:26] I'm just waiting for things to run.
+[18:32] but they shouldn't be running anywhere near the scale of the other stuff that was causing it to go really high. And does this belong in the bottoms up keyword? It doesn't have a parent. Does it belong in that body of work? Or should we put it in the Q2 tech epic? That should be... I think TI 607 would be a good candidate for this. That's the bottom of keywords continuous scoring research.
+[18:45] Or should we put it in the Q2 tech debt tech epic?
+[18:50] That should be...
+[18:53] I think TI-607 would be a good candidate for this.
+[18:57] That's the bottom of Q where it's continuous scoring research.
+[19:00] Yeah, we can put that in there. And I think this is already done, correct? That's correct. So this is done. Okay. Yeah. Great. All right. Thanks, everyone, for going through that. I'm going to give you guys four minutes back. Just as a reminder, if you have not already, please RSVP using Google Calendar to the dinner invitation for Friday.
+[19:25] It's the instructions that I updated or the reservation is at 815. So we're going to meet at the M social to or you can meet us there at 730 to then head up. It's going to be 30 minutes ish, depending on how efficient we are traveling. On a Friday, the reservation options were pretty slim. So please RSVP so I can update the headcount for our reservation. And then we will talk to everyone again.
+[19:36] It's going to be 30 minutes-ish, depending on how efficient we are at traveling.
+[19:39] on a Friday. The reservation options were pretty slim. So please RSVP so I can update the head
+[19:50] Let me see. I canceled this stand up for all meetings for Wednesday. So we should be all done with that. And I think that's it. If there's anyone else.
+[20:00] If anyone has anything else, post it in the squad Slack channel, um, and I will talk with
+[20:05] you all very soon.
+[20:06] Where, where is the RSVP?
+[20:07] Is it in the targeting?
+[20:09] The calendar invitation has, if you can say that you accept the invitation, um, oh, okay.
+[20:16] Yeah.
+[20:17] And, and Bryce, you mentioned meet, it's social.
+[20:19] What social is that?
+[20:20] Uh, there's two hotels.
+[20:22] The one is the Conrad, the other one is the M social.
+[20:27] I will, and I will post the address for that in the calendar invitations at social, right?
+[20:33] Yes.
+[20:34] At M social at seven 30, which gives some transition time between the engineering event.
+[20:40] Uh, you can explore, you can go do things, meet us at the place, or you can head back
+[20:45] to your hotel, have some transition time, and then we'll meet up to, for those of you
+[20:48] that want to travel together.
+[20:50] Is it, is it walkable from the other one, the Conrad?
+[20:54] No.
+[20:55] We have to take the subway, um, from where we are up Manhattan to time square, regardless
+[21:02] from either location, the M social is just a little bit closer.
+[21:05] So if you're going to walk, if you were staying at the Conrad, you're going to have to walk
+[21:08] from the Conrad past the M social in order to get to the subway stop.
+[21:13] So we will meet at the M social, which is a little bit closer.
+[21:16] Oh, okay.
+[21:17] Cause there's some, Conrad and M social are walkable.
+[21:23] Yeah, they're, I think 12 minutes apart or eight minutes apart from each other.
+[21:26] Walk, walking, depending on if you walk in New York fast or not.
+[21:32] Yeah.
+[21:32] So I will again, update the address for the M social hotel in the calendar invite, and
+[21:37] please use the calendar invitation to RSVP.
+[21:40] If you have any other questions, don't hesitate to either DM me in Slack or to post in the
+[21:44] squat channel.
+[21:45] So thanks everyone.
+[21:46] Have a great Tuesday.
+[21:48] Thanks Bryce.

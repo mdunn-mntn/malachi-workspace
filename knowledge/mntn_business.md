@@ -1,5 +1,5 @@
 # MNTN Business Knowledge
-Last updated: 2026-04-06
+Last updated: 2026-04-07
 
 General knowledge about MNTN as a business — products, strategy, org structure, industry context, terminology, and institutional knowledge. Sourced from shared docs, meetings, messages, and conversations. Updated as new business context is learned.
 
@@ -133,13 +133,14 @@ General knowledge about MNTN as a business — products, strategy, org structure
 |------|------------|
 | **Multi-touch** | Display ad campaigns that complement CTV campaigns (retargeting via display) |
 | **Mountain Match** | MNTN's proprietary targeting system (replaced interest audiences) |
-| **Fangorn** | IP-level scoring model (0-1 score per IP per advertiser). Currently all high-intent IPs scored at flat 10,000 |
+| **Fangorn** | IP-level scoring model (0-1 score per IP per advertiser). Currently all high-intent IPs scored at flat 10,000. As of 2026-04-07: all-verticals support complete (Brian), final validation running. TI-457 close to ready for full rollout. TI-745 (model validation methodology) converted to spike — not blocking rollout, targeting end of Q2. |
 | **BUK (Bottoms Up Keywords)** | Data-driven keyword recommendation via ALS collaborative filtering model (TI-273, Paused). Replaces LLM-only MM V2 with pixel-data-driven recommendations |
 | **DAR (Dynamic Attribute Recommendations)** | Original name for the BUK initiative |
 | **ALS (Alternating Least Squares)** | Collaborative filtering matrix factorization model used in BUK. Users=advertisers, items=DS19 keywords |
 | **Mountain Match V2 (MNTN Matched)** | Current production keyword system. LLM-based, homepage scrape → 20 parent → ~200 child → DS19 alignment |
 | **DS19 (Data Source 19)** | The targetable keyword universe (~20,000 keywords as `data_source_category_id`). Used in audience expressions |
-| **Continuous Scoring** | Planned initiative to blend BUK keyword rankings + Fangorn IP scores via DCG, replacing flat 10K scoring |
+| **Continuous Scoring** | Planned initiative to blend BUK keyword rankings + Fangorn IP scores via DCG, replacing flat 10K scoring. Architecture: scores output to Bidder team AND MembershipDB in parallel. Long-term plan is Bidder reads from MembershipDB (requires Zach/Jordan sync), but direct Bidder output continues until that path is proven. |
+| **MembershipDB** | Database that stores audience/scoring data. Continuous scoring will write Fangorn scores here; Bidder team needs integration path to read from it (TBD, requires Zach/Jordan coordination). |
 | **DCG (Discounted Cumulative Gain)** | Method to convert BUK keyword ranks into per-IP scores based on which keywords the IP visited |
 | **Parent keywords** | User-facing keyword labels in UI (LLM-generated from clustered child keywords) |
 | **Child keywords** | DS19 keyword IDs in the audience expression (not shown to customers) |
@@ -166,6 +167,7 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | 2026-04-06 | Rogus announcement | Engineering Levels & Skills Rubric released, Q2 output-driven delivery shift, updated ceremonies |
 | 2026-04-06 | PM planning doc | Q2 OKR table — epic-to-deliverable mapping, incrementality initiative (BER-2250) |
 | 2026-04-07 | Matt Brorby sync | 10% holdout exists on all campaigns (IP hash), observational analysis approach, lift-optimized model concept, performance vs incrementality tension |
+| 2026-04-07 | TGT Infrastructure Standup | Fangorn all-verticals done (Brian, validating), continuous scoring architecture (MembershipDB + Bidder parallel), identity graph blocked on CRM rollout, Bryce/Sean/Victor/Forrest people context, Jira workflow update, MountainMeet NYC this week |
 
 ---
 
@@ -174,13 +176,16 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | Person | Role / Context |
 |--------|---------------|
 | **Alex Knorr** | Lead on BUK (Bottoms Up Keywords) model development. Built ALS pipeline, experiment design, scoring methodology |
-| **Brian** | Also involved in BUK development |
-| **Victor** | Infrastructure/compute for BUK pipeline (Databricks budget, DAG management) |
+| **Brian** | Working on Fangorn Vertex pipeline. Completed all-verticals support (merged, running final validation). Also involved in BUK development. |
+| **Victor** | Infrastructure/compute for BUK pipeline (Databricks budget, DAG management). Working on TI-750 customer profile recommendations (due May 15). |
+| **Sean** | Identity graph integration. Blocked on CRM rollout for all advertisers (external dependency). |
 | **Matt Brorby** | Staff Data Scientist. Working on Fangorn continuous scoring; proposed DCG-based IP-level scoring approach. Wrote the lift-optimized model doc (training on impression receipt as a feature). Key advisor on incrementality methodology. |
 | **Alex Bohr** | Product lead on incrementality (identity team). Wrote the Intent Score Shuffling product brief. Driving BER-2250. Believes incrementality should be the sole optimization target (no trade-off). |
 | **Nick** | Experimentation team. Runs experiment analysis, has the 10% holdout identification query (IP hash bucketing). Works with Kirsa on methodology. |
 | **Kristen** | Data analytics. May be doing related incrementality intent analysis (posted in #chapter-data-analytics). Check before duplicating work. |
+| **Bryce** | TPM/Scrum Master for TGT Infrastructure squad. Runs standups, manages sprint workflow, Jira hygiene. Updated Jira workflow (2026-04-07): developer field auto-assigned on move to in-progress, must go through in-review → ready-for-deployment → done. |
 | **Rogus** | Engineering leadership. Announced Engineering Levels & Skills Rubric (2026-04-06). Driving Q2 shift to output-driven delivery. |
+| **Forrest** | Involved in continuous scoring POC/MVP timeline discussions. |
 | **Michelle** | Former GPM for targeting. Departed ~March 2026. Presented beta BUK campaign performance results |
 | **Richard** | Provided critical feedback on BUK experiment results ("numbers are bullshit" — size confounding) |
 | **Mike** | Sees value in BUK but needs clearer performance signal |
