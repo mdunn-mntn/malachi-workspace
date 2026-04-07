@@ -620,9 +620,11 @@ Every campaign has a **10% holdout group** — IPs that are never served impress
 - This is **pure random assignment by IP** — the holdout should have the same intent tier distribution as the targeted 90%
 - The holdout group is used for the incrementality dashboard in the UI
 
-**How to identify holdout IPs:**
-- Nick (experimentation team) has the identification query — ask him
-- The bucketing is the same mechanism used for Fangorn experiment groups
+**How to identify holdout IPs (Zach Schoenberger, 2026-04-07):**
+- Use `external.tpa_membership_update_log__v2` (TMUL v2) — this logs which IPs are in which segments, including holdout bucket assignments
+- The audience expression contains bucket specifications that define the holdout split
+- **Performance warning:** TMUL is expensive for 30-day windows. Plan queries carefully — dry_run first.
+- Nick (experimentation team) also has identification queries — cross-reference his approach
 
 **Use for incrementality analysis:**
 - Compare visit rates between 10% holdout (no impressions ever) vs 90% targeted group

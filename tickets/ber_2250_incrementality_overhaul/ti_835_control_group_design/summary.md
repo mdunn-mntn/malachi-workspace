@@ -39,7 +39,11 @@ Use Intent to Treat: compare ALL IPs in the 90% targeted group (whether or not t
 
 ## 4. Investigation & Findings
 
-*Not yet started.*
+### Holdout IP Identification (Zach Schoenberger, 2026-04-07)
+- **Table:** `external.tpa_membership_update_log__v2` (TMUL v2) — logs which IPs are in which segments, including holdout bucket assignments
+- The audience expression has bucket specifications that define the 10%/90% split
+- **Performance warning:** TMUL is expensive for 30-day windows — need to plan queries carefully
+- Nicholas (experimentation) meeting on 2026-04-07 — details pending transcript review
 
 ## 5. Solution
 
