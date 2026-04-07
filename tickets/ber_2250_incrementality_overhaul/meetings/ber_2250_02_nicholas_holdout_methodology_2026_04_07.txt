@@ -1,0 +1,529 @@
+[00:00] No, this is actually very timely because, um, the, like, the thing that Matt is also questioning is kind of related to this audience thing.
+[00:07] So, it'll all it's actually all timely.
+[00:09] I'll come together.
+[00:30] Hey, there. I can stick around for about ten minutes.
+[00:43] That's okay. Sounds good. I'll make it quick. Let me pull up my thing. I actually
+[00:45] I'll make it quick.
+[00:46] Um, let me pull up my thing.
+[00:51] I, I actually just was going through my really long toolbox queries.
+[00:59] Um, I have something specifically for audiences here that has a
+[01:03] user's peak performance, um, let me just see if I can just run this right now.
+[01:10] Actually just do a quick check.
+[01:13] Um.
+[01:20] User's peak.
+[01:28] Do I have the actual?
+[01:31] I do have something that toggles mountain mesh and peak performance.
+[01:33] Oh, we're already in luck.
+[01:35] Ha ha.
+[01:35] I don't have to do anything.
+[01:36] Um, let's see.
+[01:39] Temp audience expressions.
+[01:42] Um, do, do, do.
+[01:47] Let me double check because some of these things I made before I learned
+[01:50] more about the table structures.
+[01:53] Okay.
+[01:53] This is the good table, this table here, education.
+[01:57] This is a table that matches the segments.
+[02:01] Like there's the relationship of campaign groups to campaign IDs.
+[02:04] You know how there's like the group and then all those ideas, the campaign
+[02:08] ideas is like the real, the real things that actually spend money and talk to
+[02:12] beeswax and do the bidding campaign group is just kind of a holder for it.
+[02:17] The same way that the audience there's an audience ID is a fun little holder
+[02:21] and has its own JSON.
+[02:23] It has a JSON expression, which is like audience audiences.
+[02:27] That is actually just another template in the same way that the
+[02:30] campaign group is a template.
+[02:32] And it just, there is another service that then says like given these
+[02:36] general instructions, make a bunch of actual audience segments, which is
+[02:41] audience segment IDs, um, that map to the campaign.
+[02:46] So then they have the audience segment ID has a one-to-one mapping with the campaign ID.
+[02:51] So they're like the real things that actually make the world churn.
+[02:56] Furthermore, the audience segment ID of the stage one campaign, which I believe is like funnel level one, but I levels were so I jerry rigged it by just using the campaign named to get the stage one campaigns here.
+[03:01] um, which I believe is like funnel level one.
+[03:04] Um, but I levels were, so I Jerry rigged it by just using the campaign named
+[03:10] to get the stage one campaigns here.
+[03:12] Um, that audience size of that stage one campaign is actually the thing that
+[03:18] routes to the audiences in the UI.
+[03:22] Okay.
+[03:23] Um, so if you make changes to, uh, to like an audience here, I have, um, to,
+[03:30] to, to, to, to there's someone that I made some changes to, um, for our
+[03:40] campaign that's launching today at midnight, or I guess tomorrow at midnight.
+[03:45] Um, like this is the, uh, original campaign that I copied it from and I
+[03:53] liked, I down sampled it with the thing.
+[03:56] And like that applied to the stage one expression, like the stage one
+[04:00] campaigns, audience segment, like that, the, the audience attached to the
+[04:05] stage one campaign that actually is what popular, um, so it is very, it is
+[04:10] customer facing if we do ever like make changes to these custom, like, but it's
+[04:17] cool to see that that's actually like really how it all, uh, works.
+[04:22] Um, so yeah, I will send you this, um, I'll send you this query.
+[04:28] Really?
+[04:28] It's just this thing here of the, it does a JSON path check for stuff to
+[04:35] check for if it peak performance is toggled on and off and if it uses
+[04:38] mountain matched.
+[04:39] Okay.
+[04:41] I know you don't have a lot.
+[04:42] When it doesn't use mountain match, that's saying that it's not, it's the
+[04:46] 10% holdout group.
+[04:47] Am I misunderstanding that?
+[04:49] No, this is, this is completely different from the holdout, but the
+[04:52] audience, the, the reason why I was like, Oh, this is kind of relevant.
+[04:55] Malachi for like the longer thing that I, I'd be happy to share and show
+[05:00] Matt if Matt has, if Matt had the time is like actually how the audience
+[05:05] expressions like, and how they populate down and like where to spend, where
+[05:09] to query for them as well.
+[05:12] But generally speaking, um, they are queryable both in audience audiences,
+[05:17] as well as audience dot segment campaigns.
+[05:19] So in my analysis that I showed today, I went all the way down to campaign
+[05:25] group IDs.
+[05:26] So if I joined that to this, where mountain matched is true, then that should
+[05:32] subset it down to the campaigns that we care about.
+[05:35] Right.
+[05:36] And then I can roll up the numbers again.
+[05:38] Yes.
+[05:39] That that's what I was thinking.
+[05:40] If you subset it to these ones, I don't know if I'm checking here for if
+[05:44] campaign is live or whatever the setting is.
+[05:48] Right.
+[05:49] But yeah, you can use this to generally say, yeah, like this table keeps the
+[05:54] live checking of what audiences are mapped to what, um, campaigns.
+[06:01] So if that changes, so yeah.
+[06:05] Um, I will send you this Matt and then Malachi, I can give you like a more, I
+[06:10] can go like the real, like more answers.
+[06:14] Um, okay.
+[06:18] Well, I will take this and in my few minutes, I'll try and get something
+[06:22] running.
+[06:23] Well, before I have to start something else.
+[06:25] Yeah.
+[06:25] Yeah.
+[06:25] No, totally.
+[06:26] Totally understand.
+[06:27] Um, but yeah, in short, it's, um, just so you know, it's like, I technically,
+[06:31] you could just grab it from this temp table.
+[06:33] Yeah.
+[06:34] Like this is the real like area here, like in the audience expressions.
+[06:40] And then like, so you can get rid of a lot of this other stuff.
+[06:44] I think I use this as an analysis to just check how many campaigns there were
+[06:48] that were using peak performance, um, uh, at a time.
+[06:53] So yeah.
+[06:55] Um, cool.
+[06:57] Okay.
+[06:58] Perfect.
+[06:59] Thank you, Nick.
+[06:59] I appreciate it.
+[07:01] All right.
+[07:01] You're welcome.
+[07:02] I see.
+[07:02] We'll see you.
+[07:03] Thanks.
+[07:03] Bye.
+[07:03] Can you send that to me as well?
+[07:04] I'm just out of curiosity.
+[07:06] That'd be, that'd be cool.
+[07:07] Yeah.
+[07:11] Thank you.
+[07:12] You're welcome.
+[07:13] And yeah, I didn't get a chance to see your, or to respond to your Slack
+[07:16] message.
+[07:16] Yes, I will be.
+[07:17] And oh, nice.
+[07:19] Yeah.
+[07:19] In New York.
+[07:20] So it'd be cool.
+[07:22] Good.
+[07:23] Yeah.
+[07:23] And I'm excited.
+[07:24] That'll be fun.
+[07:25] I'm excited to get to go have dinner with you guys too.
+[07:27] I think it'll be good.
+[07:29] Um, but yeah.
+[07:31] So let me give you a really cool, like a general, uh, rundown of like the
+[07:38] audience expressions.
+[07:40] And, uh, let's see, I think this is the one that I like to use that I was, I
+[07:46] I was doing a lot of QA work for the new to brand one.
+[07:54] Audience split, audience is my name, live campaigns.
+[07:58] Check. See if I just send this. Where does this take me? There we go. Cool. Okay. This
+[08:02] Check.
+[08:04] See if I just send this.
+[08:06] Where does this take me?
+[08:19] There we go.
+[08:21] Cool.
+[08:22] Okay.
+[08:24] Um, this is, uh, this is like some of the, um, experiment campaigns and live
+[08:29] audience campaigns, um, that are involved in the new experiments for new to
+[08:33] brand.
+[08:34] For new to brand.
+[08:35] Mm hmm.
+[08:38] This is using the audience segments.
+[08:41] Um, and I use this query, which I can send to you.
+[08:46] It uses the same tables ultimately as the audience segment campaigns, um, to
+[08:54] do it.
+[08:55] Okay.
+[08:56] Um,
+[08:59] I'm, I don't know if it's worthwhile going into audience audiences because
+[09:02] ultimately it's just a rapper.
+[09:05] Um, but like, it's just a rapper.
+[09:08] And then like the audience segment campaigns is like what actually matters.
+[09:11] Like the things that are biddable live inside of this one of like where, what
+[09:16] actually then gets communicated to the better.
+[09:19] So I think that this is the table that really actually matters.
+[09:21] It's not really, I don't think it's necessarily worthwhile looking into
+[09:24] audience audiences.
+[09:26] Um, I will give you a sample.
+[09:29] Here's, I think it's, I've been like, I'll go through a sample.
+[09:33] One of the, um, audience expressions, which is just, um, I think it's
+[09:41] literally just expression, the word expression inside of this, um, inside
+[09:47] of these things here.
+[09:49] Um, and what I do is I like to go to VS code.
+[09:58] Documents.
+[10:01] Good.
+[10:03] Okay.
+[10:06] Make a new file.
+[10:09] It's a Jason thing.
+[10:10] So you can just paste it and call it Jason.
+[10:14] And then you can set the format it just control shift P or I guess whatever
+[10:20] this is, control shift F option, shift F whenever to format it, to like
+[10:24] actually look at it in a more like readable format.
+[10:28] And, um, this, there's multiple layers to the, um, to the expression.
+[10:36] It literally has the name holdout in it.
+[10:38] So you can look at it.
+[10:40] Yeah.
+[10:41] So yeah, there's like a bunch of different like overarching clauses.
+[10:48] The first one is like a select and the categories and geos.
+[10:54] These ones are the three categories that exist like in all audience
+[10:58] expressions.
+[11:00] Um, and I think that essentially all of these run on a giant and clause
+[11:06] between all of these.
+[11:07] Yep.
+[11:08] And I understand how those segments come out.
+[11:09] I just didn't realize that the holdout was part of each one of those.
+[11:12] So it just naturally holds out a certain.
+[11:16] So it's basically.
+[11:20] Saying there's a thousand buckets.
+[11:23] There's a thousand buckets.
+[11:24] Um, and this is saying, hold out, like ignore.
+[11:28] I don't know.
+[11:28] Yeah.
+[11:28] Like the, I guess the it's saying ignore anyone that is ranged that ends
+[11:34] in zero to nine, nine, nine.
+[11:39] Okay.
+[11:40] For what it's worth.
+[11:41] This is technically different than the buckets that we run for our
+[11:45] experiments.
+[11:47] You can see like the where clause, like all the, these are, this is the
+[11:51] holdout that we're using for the experiments.
+[11:55] Um, and he has the same, you know, 1000 buckets, like five, five, zero,
+[12:00] six, nine, nine, like, but it could be like zero to 99.
+[12:07] And this is technically a different group of users than this one, because
+[12:11] this one is hashing on the prefix of this number, which is like three,
+[12:15] three, two, seven, eight.
+[12:18] And this one is hashing the IP address using this ex 46 as the hash.
+[12:25] So essentially what I'm trying to say is that like this holdout will equally
+[12:31] hold out users like 10%, even like separately from this, if that makes
+[12:37] sense.
+[12:38] Um, I guess like the, the main point is that for all of our experiments,
+[12:43] we usually have, um, like, you know, there's the buckets that are like zero
+[12:50] to 99 here.
+[12:52] Right.
+[12:54] And you know, like there's like 500 or something and then like maybe another
+[13:00] one like targets at like 700 or something.
+[13:04] I don't know.
+[13:05] Um, the main point is that like, if we have one campaign that targets a range
+[13:12] of zero to 500, um, they are not actually losing, like they are first
+[13:21] hundred here, like using this ex 46 bucket.
+[13:26] Like this is the hash on the ex 46.
+[13:31] Okay.
+[13:35] Um,
+[13:38] I have a question, Nick.
+[13:39] Just sorry.
+[13:40] I just want to make sure I understand this.
+[13:41] So do you know, you're talking about the audience expression and how the
+[13:44] buckets in there, where in this case, this looks totally separate than the
+[13:49] other audience expression, right?
+[13:51] Cause isn't there typically an audience expression that has all the category
+[13:55] IDs and I don't see any of that stuff here.
+[13:57] So are you saying it's a subset?
+[13:58] That is in here.
+[13:59] I just collapsed it.
+[14:00] Oh, I see.
+[14:01] Okay.
+[14:01] You see like, there's like categories.
+[14:04] I just like collapsed all of this stuff to be like the, the four overarching
+[14:10] sections that are ended together is like the selects, like then the
+[14:15] categories, which is like the, the categories is like where like a lot of
+[14:18] the like stuff that yeah, everyone targets.
+[14:22] Um, yeah.
+[14:23] So that's still there.
+[14:24] Let me erase my drawing.
+[14:31] Um, so there's still like the data source 19 and all those keywords.
+[14:37] These are 14 data source for, which I, oh, that's the CRM blocks.
+[14:42] This is blocking CRMs.
+[14:44] This is, I believe, visitor look backs.
+[14:47] This blocks visitors up to 30 and this is converters up to 30 days and seconds.
+[14:54] Um, and yeah, the geos always target people in the United States.
+[15:05] But yeah, so really just that,
+[15:07] the i also yeah this is the audience segment expression not the audience expression
+[15:14] okay i was thinking for a second that you were saying that there was like a separate
+[15:17] Okay.
+[15:17] I was thinking for a second that you were saying that there was like a
+[15:20] separate experimentation, like, um,
+[15:25] uh, well, like, like segment.
+[15:27] Yeah.
+[15:28] Like your whole, um, what?
+[15:30] Yeah.
+[15:31] The name, the audience.
+[15:32] No.
+[15:36] What's the name of this whole Jason string.
+[15:38] There's a name for it.
+[15:39] The expression.
+[15:40] Yeah.
+[15:41] The expression.
+[15:41] Thank you.
+[15:42] I thought, I thought you were saying there was a completely new expression.
+[15:44] Okay.
+[15:44] That, but this makes no, yep.
+[15:46] No, the, the whole, uh, the whole, uh, thing is just, I was just saying that
+[15:50] within this, like there is one extra clause, like there's the categories, the
+[15:55] geos and that's usually it.
+[15:57] And it's actually a pretty good way for you to check if anything, like another
+[16:01] way that you could check for, if an experiment is affecting this at all, is
+[16:05] this last where clause, um, which is saying like, Oh, you know, we actually
+[16:11] after all of everything that's been done, there's like one final clause that
+[16:17] does only grab the people that do fall in the range of zero to 500.
+[16:23] Do fall in the range of zero to 500 out of a thousand.
+[16:30] Okay.
+[16:30] So yeah, but like essentially if it's not an experiment campaign, it'll usually
+[16:34] look like, like that instead.
+[16:37] Okay.
+[16:38] And that where clause is just added usually from experiments right now.
+[16:42] Can you go back to your actual query though?
+[16:45] Cause you're filtering those out.
+[16:47] Um, I'm not only grabbing experiment campaigns.
+[16:50] I am gra I'm filtering these in like a lot of weird ways.
+[16:54] Cause I have like an experiment campaigns like thing.
+[17:00] Um, like this campaign, this, I, I filtered this because I have like a,
+[17:05] here, I'll show you, like, I have a boilerplate experiments section, which
+[17:10] is like only grabbing experiments.
+[17:13] And really actually it's based off of this thing here, which is really just
+[17:18] and really actually it's based off of this thing here which is really just saying the experiment
+[17:26] key like this string essentially checks the name of the campaign
+[17:32] And it checks like essentially for everything after the first space,
+[17:36] like it checks for everything after the first space.
+[17:39] Essentially for everything after the first space, like after the first space
+[17:44] in the name shows up, then it looks at all of the things that are within there
+[17:47] and then says, is there an E X dash number?
+[17:51] And that's like what this is saying is like, if that's not null, if it doesn't
+[17:54] have an E X dash number that returned this expression thing turns returns null.
+[18:00] So it's like a very, very specific search on the name of a campaign group for me
+[18:04] to qualify this as an experiment, which I know is really hacky, but this is the
+[18:08] solution they came up with at the time.
+[18:10] Okay, but from the audience expression, then if I guess I don't understand how
+[18:15] it's being segmented in that way, like how you could actually tell.
+[18:20] So you're saying that like if I want to look at, let's say I have a list of
+[18:23] impressions, right?
+[18:27] That's not probably out there.
+[18:30] In the circumstance, I'm going to be using it, right?
+[18:32] I need to create a control group.
+[18:35] And the control group is going to be everybody that received was potential
+[18:47] potentially could have received an impression but did not as my baseline
+[18:52] for determining incremental lift.
+[18:56] And so I basically need to grab every single possible IP that's in that
+[19:04] group and set it aside as a control and then be able to compare it to those
+[19:09] who actually did get served an ad.
+[19:12] I see that's where the that's where the suggestion is.
+[19:15] So I see that you're grabbing that here, but it's not necessarily I guess it
+[19:21] is tied to a campaign because the segment the audience is fine, but I
+[19:24] really need to be able to do the granular level at the IP level and
+[19:28] separate those who are the 10% holdout who aren't so I'm just trying to think
+[19:32] exactly how I do that in this situation here.
+[19:35] Yeah.
+[19:35] Yeah, because this isn't yeah, I don't know how to actually grab the IP
+[19:38] addresses that do fall within this.
+[19:43] Yeah.
+[19:45] So where's the buckets being created?
+[19:47] I guess like how is that being interpreted because if there's some way
+[19:50] to interpret the buckets?
+[19:56] The way that the buckets are being inter I think.
+[20:00] My first solution, like, I guess, is your end solution that you want to get is you want to be
+[20:03] able to get the household, like, you want to get the IP addresses of everyone that would
+[20:09] technically be targetable by this.
+[20:11] Everyone that would technically be targeted, but then also be able to tell which ones were
+[20:15] the 10% holdout and which ones were not, like, were in the 90% that were eligible.
+[20:20] Hmm.
+[20:23] I see.
+[20:24] Um, you could probably, I think this is my, like, I don't really know if this is an actual
+[20:31] solution, but I'd like to, I've been actually kind of wanting to get the, like, audience
+[20:38] tools team, like Zach and Jordan to give me this.
+[20:41] Um, if you can run like this JSON thing and say like today, give me everyone that falls
+[20:49] into this like thing, right?
+[20:51] Like you mean, give me the list.
+[20:54] Yeah.
+[20:54] Like all IPs.
+[20:55] If I give you an audience expression that does work and is valid, give me back all the
+[21:00] IPs that fall within it.
+[21:02] I think that's like a request I have to Jordan and Zach, which I have not like really publicly
+[21:06] committed to them, but I'd like to make that request to them formally.
+[21:09] Okay.
+[21:11] Because with that, you could just modify this thing and say, what if I own, like, you know,
+[21:18] you could essentially, you actually, you know what you could do.
+[21:21] You can start messing with this audience expression where you can just say it like
+[21:26] remove this holdout entirely.
+[21:28] Cause this thing is just another holdup.
+[21:30] Like you could get rid of this and like, you know, if this doesn't exist and then you
+[21:34] could just copy the holdout and just say, okay, well, like I only want to target.
+[21:40] Um, the people that have that like hash address here, like you could put that there.
+[21:48] And say, I only want to target the people.
+[21:50] Give me the households that do fall within this range of a thousand or within the thousand
+[21:55] range from zero to 99.
+[21:58] Like this, assuming if you get rid of like this part here, like something like this,
+[22:04] you can probably be like, okay, this is the holdout group.
+[22:07] Okay.
+[22:08] Then you could like also modify it.
+[22:10] I bet to then say like, okay, get rid of the holdout entirely.
+[22:14] And then only target the people that fall into the range of, you know, 100 to a 999.
+[22:24] Okay.
+[22:25] Using, using their hash.
+[22:27] This is like my, this is how I would like take a stab at it.
+[22:30] Again, this relies on them being able to have a thing that outputs IP addresses when it
+[22:35] receives an audience expression.
+[22:37] Then you could essentially just fire it a bunch of those, like a bunch of things to
+[22:42] get, like, here's the IPs that fit into it versus not fit into it.
+[22:51] um okay i am
+[22:59] um okay let me see let me see what i could do with that um if you can if you goodness i'm sorry
+[23:00] Um, okay.
+[23:03] Let me see.
+[23:03] Let me see what I can do.
+[23:05] Okay.
+[23:05] Let me see.
+[23:06] Let me see what I can do with that.
+[23:08] Um, if you can, if you goodness, I'm sorry.
+[23:11] I'm like five straight hours of meetings.
+[23:15] If you can send me over the JSON and the, uh, uh, yeah, I think you already sent me the
+[23:21] query or maybe that was just for Matt.
+[23:23] But if you send that to me, that'd be great.
+[23:24] And then let me get you, let me get you a cleaner query though.
+[23:29] Like that's more generalizable and not like only the ones that use whatever.
+[23:35] Um, my data group is, I think crashing, it doesn't want to interact with me.
+[23:41] All right.
+[23:41] Maybe it does.
+[23:42] Um, I'll give you a version that essentially just has the, I think it's actually just this.
+[23:46] has the I think it's actually just this.
+[23:51] Yeah. And the funnel. All right.
+[24:00] Okay.
+[24:00] And all right.
+[24:04] Uh, we can have dark funnel equals one.
+[24:11] This is the, this is for the stage one campaigns, which is probably the only one that you want
+[24:19] because stage two and stage three is just, um, is like whoever has been already hit with
+[24:27] the first ads from stage one.
+[24:28] Yeah.
+[24:29] Yep.
+[24:30] I just did a ton of stuff on that whole trace from stage three and onward verified visits
+[24:36] back to stage one bid IP.
+[24:38] It was a, it was a doozy.
+[24:41] Yeah.
+[24:41] It's, it's goofy.
+[24:43] I feel like I, I don't like that.
+[24:46] It was, I had to, I feel like I was like fighting the team to like slowly get this information
+[24:50] out of them.
+[24:51] Like maybe I'm just like not good at asking people for help, but yeah, I felt like it
+[24:56] was a, I didn't, I wasn't happy to have to learn it the way I did and I'm having, I wish
+[25:01] that there was more documentation and people are generally shared more knowledge, more
+[25:05] proactively or something.
+[25:06] I don't know.
+[25:07] I think that there's probably things that's about the stages that you don't understand
+[25:11] too, because I did so much work on it for three weeks.
+[25:14] I was like, there's a lot of assumptions that were made when people told me original stuff
+[25:19] and I'm like, that does not work all the time.
+[25:21] Yeah.
+[25:22] Yeah.
+[25:23] Cool.
+[25:23] Hey, I really appreciate you sending all this.
+[25:26] I'm gonna take a look at it and then when I come up with a query or if you come up with
+[25:28] something interesting, I will send it to you because I'm sure that you will find that valuable
+[25:32] in the future.
+[25:32] So yeah, if you get something, if you have some way to get the actual IPs that are targetable
+[25:40] or not targetable, given an audience ID or an expression like anything, that would be
+[25:46] invaluable to me because I've been wanting to have a lot of stuff to be like, okay, like
+[25:51] who's actually, yeah, targetable within the audience or not.
+[25:56] Form analysis.
+[25:57] So yeah, here's a, here's a more like streamlines one.
+[26:01] like streamlines one let me share my screen real quick okay this is like just like the the true
+[26:10] real subset um here um and the point that i wanted to say is um oh the there's an extra filter here
+[26:16] And the point that I wanted to say is, oh, the, I, there's an extra filter here, which
+[26:24] is just the audience.
+[26:26] Like, this is like, you can remove this filter to be like, this is only for live campaigns,
+[26:31] essentially, like that is active.
+[26:34] Yep.
+[26:36] But, but yeah, I think that's, I think that's everything.
+[26:43] Maybe, don't know if it's worthwhile looking into this, but if you're doing this investigation,
+[26:49] I guess the one like flaw that I'm not maybe accounting for, like that you're mentioning,
+[26:54] assumptions that I may or may not be making is that there is other expression types that
+[26:58] aren't this like pretty J, I mean, pretty in quotes, JSON, which is.
+[27:08] Are you talking about the expression type one?
+[27:10] Yeah.
+[27:10] Like, yeah.
+[27:11] Like there's some scenarios where there's not expression type two, like expression type
+[27:14] one or whatever, where it's like, I've seen some where it's just like easy.
+[27:18] Like it just says like users last visit equals 90 days or something.
+[27:22] Like, it's like a really random, like just string of texts.
+[27:25] That's not JSON at all.
+[27:27] Yeah.
+[27:28] I thought that everything should have been switched over.
+[27:31] Everything should be using expression type two.
+[27:34] So let me, I've seen, let me, let me just pull up.
+[27:37] I mean, I believe you, but I don't think the audience expression reads doesn't even,
+[27:41] I was told by Zach that they don't even read the audience expression type one.
+[27:45] Like it's, it's only type two that gets read.
+[27:50] So I, that's weird.
+[27:53] Here, let me see if I can find a one right here.
+[27:56] Yeah.
+[27:57] Look at this user last visit time greater than equal to 90 day.
+[28:04] Like, I don't know what this means.
+[28:05] Are you saying that the expression type one is just weird like that?
+[28:08] Yeah.
+[28:09] It's just weird.
+[28:10] Like, it's like a, like, and it's not even what I'm trying to say is it's not even like,
+[28:14] oh, this is a completely new campaign.
+[28:16] This is for the same campaign.
+[28:18] Like this campaign and CTV prospecting has a stage one, it's like segment.
+[28:24] It's technically a different segment ID attached to the same audience.
+[28:30] Okay.
+[28:31] And it has like one of the segments.
+[28:33] This is the type two, I think is like this thing.
+[28:36] And then like the type like one or something like there's another type and it's just like
+[28:40] these like extra things.
+[28:42] I have no clue what these mean.
+[28:43] Yeah, Zach, Zach, actually, I think I brought this up Zach, and he said, do not worry about
+[28:47] it.
+[28:47] And then that was the end of the conversation.
+[28:51] But that's what the difference of if you filter for only the expression type is two
+[28:56] or whatever, then you get like the actual common JSON, and it maps one to one with the
+[29:03] segments and campaigns.
+[29:04] Okay.
+[29:06] Yeah.
+[29:07] Okay.
+[29:08] I think that this for what it's worth, also, it's like, you know, it's like, you know,
+[29:12] for what it's worth, also, this audience expression thing can be run to get you a size,
+[29:16] like you can get an audience size, and that actually matches what's in the UI.
+[29:20] So the version two is like what's used for calculating UI audience size and stuff.
+[29:24] But I just don't know what the other stuff means.
+[29:27] Okay.
+[29:32] All right.
+[29:32] Sorry, I'm a little bit late to the next meeting.
+[29:34] I gotta go.
+[29:34] Oh, sorry.
+[29:35] Yeah.
+[29:35] No, you're all good.
+[29:36] No, don't be apologize.
+[29:37] Thank you very much.
+[29:38] I needed this to go to do some work I needed to do.
+[29:40] So.
+[29:41] Cool.
+[29:42] All right.
+[29:43] Thanks.
+[29:44] It was cool seeing you.
+[29:45] I'll see you later.
+[29:46] Yes, for sure.
+[29:46] Okay.
+[29:47] Take care, Nick.
+[29:48] All right.
+[29:48] Bye.

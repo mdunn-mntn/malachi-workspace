@@ -620,11 +620,24 @@ Every campaign has a **10% holdout group** — IPs that are never served impress
 - This is **pure random assignment by IP** — the holdout should have the same intent tier distribution as the targeted 90%
 - The holdout group is used for the incrementality dashboard in the UI
 
-**How to identify holdout IPs (Zach Schoenberger, 2026-04-07):**
-- Use `external.tpa_membership_update_log__v2` (TMUL v2) — this logs which IPs are in which segments, including holdout bucket assignments
-- The audience expression contains bucket specifications that define the holdout split
-- **Performance warning:** TMUL is expensive for 30-day windows. Plan queries carefully — dry_run first.
-- Nick (experimentation team) also has identification queries — cross-reference his approach
+**How the holdout works (Nicholas + Zach, 2026-04-07):**
+- The holdout is embedded IN the audience segment expression JSON as a where clause
+- **1000 buckets** — holdout = range 0-99 (10%), targeted = range 100-999 (90%)
+- The hash uses a **prefix (e.g., ex46)** — this is DIFFERENT from experiment bucket hashing (which hashes on the IP address directly). They are independent random assignments.
+- Expression lives in `audience_segment_campaigns.expression` (expression_type = 2 only — type 1 is legacy, not read)
+- Literally has the name "holdout" in the JSON — can be identified by parsing the expression
+
+**How to get holdout IP lists:**
+- **Option 1 (Zach):** Use `external.tpa_membership_update_log__v2` (TMUL v2) — logs which IPs are in which segments. **Expensive for 30-day windows** — dry_run first.
+- **Option 2 (not yet built):** Nick wants Jordan/Zach to build a tool that takes an audience expression and returns matching IPs. Doesn't exist yet — would be ideal.
+- **Option 3:** Parse the JSON expression to extract the bucket hash and range, then apply the same hash function to IPs from TMUL to determine which bucket they fall into. Requires understanding the hash function used (ex46 prefix).
+
+**Key tables for audience expressions:**
+- `audience_segment_campaigns` — the real table. Maps 1:1 with campaign_id. Contains the expression JSON. Filter: `expression_type = 2`.
+- `audience.audiences` — just a wrapper/template. Don't use for analysis.
+- Nick (experimentation team) has a streamlined query to extract expressions — ask him.
+
+**Important: Stage 1 campaigns only for holdout analysis.** S2/S3 campaigns target people already hit by S1 ads — they're downstream of the targeting decision. Use `funnel_level = 1`.
 
 **Use for incrementality analysis:**
 - Compare visit rates between 10% holdout (no impressions ever) vs 90% targeted group
@@ -651,8 +664,19 @@ These are two distinct concepts, often confused:
 **Implication:** Querying `audiences` alone will NOT reveal which audience was actually used for
 targeting. Always join to `audience.audience_segments` for campaign-level analysis.
 
-- `expression_type_id = 2` = TPA (Third Party Audience) expression type in audience_segments
-- `audience.audience_segment_campaigns` maps which audience segment is active for each campaign_group
+- `expression_type_id = 2` = TPA (Third Party Audience) expression type — the real JSON expression. **Only type 2 is read by the system** (Zach confirmed). Type 1 is legacy text format — ignore it.
+- `audience.audience_segment_campaigns` maps which audience segment is active for each campaign — **1:1 mapping with campaign_id** (not campaign_group_id). This is the real thing that drives delivery.
+
+### Audience Expression Structure (Nicholas, 2026-04-07)
+The expression JSON (type 2) has 3-4 overarching AND clauses:
+1. **selects** — category selections
+2. **categories** — DS19 keywords, data source filters, CRM blocks, visitor/converter lookbacks (30d)
+3. **geos** — geography targeting (usually US)
+4. **holdout/buckets** (optional) — bucket range for holdout (0-99 out of 1000) or experiment groups (e.g., 0-500)
+
+The relationship chain: `campaign_groups` (template) → `campaigns` (actual bidding entities) → `audience_segment_campaigns` (1:1 with campaign) → `audience_segments` (expression JSON).
+
+`audience.audiences` is just another template wrapper — like campaign_groups is to campaigns. Don't query it directly for analysis.
 
 ### audience.campaign_segment_history Contamination
 `audience.campaign_segment_history` blends both `audiences` (template) and `audience_segments`

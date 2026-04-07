@@ -39,11 +39,38 @@ Use Intent to Treat: compare ALL IPs in the 90% targeted group (whether or not t
 
 ## 4. Investigation & Findings
 
-### Holdout IP Identification (Zach Schoenberger, 2026-04-07)
-- **Table:** `external.tpa_membership_update_log__v2` (TMUL v2) — logs which IPs are in which segments, including holdout bucket assignments
-- The audience expression has bucket specifications that define the 10%/90% split
-- **Performance warning:** TMUL is expensive for 30-day windows — need to plan queries carefully
-- Nicholas (experimentation) meeting on 2026-04-07 — details pending transcript review
+### Holdout Architecture (Nicholas + Zach, 2026-04-07)
+
+**How the holdout works:**
+- Holdout is embedded IN the audience segment expression JSON as a where clause
+- 1000 buckets — holdout = range 0-99 (10%), targeted = range 100-999 (90%)
+- Hash uses a prefix (e.g., ex46) — DIFFERENT from experiment bucket hashing (which hashes on IP directly)
+- The two are independent random assignments — holdout is separate from any experiment grouping
+- Expression lives in `audience_segment_campaigns.expression` (filter expression_type = 2)
+- Literally has "holdout" in the JSON
+
+**How to identify holdout IPs:**
+- **TMUL v2** (`external.tpa_membership_update_log__v2`) — Zach's recommendation. Logs which IPs are in which segments. Expensive for 30-day windows.
+- **No direct "expression → IP list" tool exists yet** — Nick wants Jordan/Zach to build one. Would take an expression JSON and return matching IPs.
+- **Workaround:** Parse the JSON for the bucket hash and range, apply same hash to TMUL IPs to determine bucket assignment.
+
+**Key tables:**
+- `audience_segment_campaigns` — 1:1 with campaign_id, contains expression JSON (type 2 only)
+- `audience.audiences` — just a wrapper, don't use directly
+- Nick sending a streamlined query for extracting expressions
+
+**Important:** Only analyze Stage 1 campaigns (funnel_level = 1). S2/S3 are downstream — they target people already hit by S1 ads.
+
+**Expression JSON structure (4 AND clauses):**
+1. selects — category selections
+2. categories — DS19 keywords, data source filters, CRM blocks, visitor/converter lookbacks
+3. geos — geography (usually US)
+4. holdout/buckets — bucket range for holdout or experiment groups
+
+**Experiment vs holdout hashing:**
+- Incrementality holdout: hashes on prefix (ex46)
+- Experiment groups: hashes on IP address
+- These are independent — an IP in the 10% incrementality holdout can still be in any experiment bucket
 
 ## 5. Solution
 
