@@ -2145,7 +2145,7 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 | `advertiser_verticals` | fpa | Advertiser → vertical mapping | advertiser_id, vertical_id, type (1=primary) |
 | `advertiser_settings` | r2 | Advertiser-level reporting settings | advertiser_id, reporting_style ('last_touch', etc.) |
 | `campaign_segment_history` | audience | Campaign segment change history (CONTAMINATED — mixes template + targeting objects) | campaign_id, segment history |
-| `audience_segment_campaigns` | audience | Maps active audience segment → campaign_group | campaign_group_id, expression_type_id |
+| `audience_segment_campaigns` | audience | Maps audience segment → campaign (**1:1 with campaign_id**, NOT campaign_group). Contains audience expression JSON. Filter `expression_type = 2` only (type 1 is legacy, not read). Expression has 4 AND clauses: selects, categories (DS19/CRM/lookbacks), geos, holdout/buckets. Holdout hash: `MD5('{AID}:{IP}')` mod 1000, 0-99 = holdout. | campaign_id, audience_segment_id, expression, expression_type |
 | `membership_updates_logs` | tpa | TPA membership update log (Greenplum version) | ip, segment_id, update_time |
 | `advertisers` | public | Advertiser dimension table (Greenplum version of bronze.integrationprod.advertisers) | advertiser_id, name, deleted, is_test |
 | `data_sources` | audience | Data source registry | data_source_id, name, data_source_type_id |

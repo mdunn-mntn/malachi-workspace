@@ -181,9 +181,12 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | **Sean** | Identity graph integration. Blocked on CRM rollout for all advertisers (external dependency). |
 | **Matt Brorby** | Staff Data Scientist. Working on Fangorn continuous scoring; proposed DCG-based IP-level scoring approach. Wrote the lift-optimized model doc (training on impression receipt as a feature). Key advisor on incrementality methodology. |
 | **Alex Bohr** | Product lead on incrementality (identity team). Wrote the Intent Score Shuffling product brief. Driving BER-2250. Believes incrementality should be the sole optimization target (no trade-off). |
-| **Nick** | Experimentation team. Runs experiment analysis, has the 10% holdout identification query (IP hash bucketing). Works with Kirsa on methodology. |
+| **Nicholas** | Experimentation team. Runs experiment analysis, has audience expression queries and holdout identification. Identifies experiments by parsing campaign_group name for "EX-{number}" pattern. Works with Kirsa on methodology. |
 | **Kristen** | Data analytics. May be doing related incrementality intent analysis (posted in #chapter-data-analytics). Check before duplicating work. |
-| **Bryce** | TPM/Scrum Master for TGT Infrastructure squad. Runs standups, manages sprint workflow, Jira hygiene. Updated Jira workflow (2026-04-07): developer field auto-assigned on move to in-progress, must go through in-review → ready-for-deployment → done. |
+| **Zach Schoenberger** | Audience tools team (with Jordan). Provided the holdout hash function (`MD5('{AID}:{IP}')` mod 1000). Confirmed expression_type 1 is legacy/not read. Key contact for audience expression mechanics. |
+| **Jordan** | Audience tools team (with Zach Schoenberger). Nick wants Jordan to build an "expression → IP list" tool. Key contact for audience infrastructure. |
+| **Ryan Kleck** | TI team. Suggested MemDB hash reuse for deciles. Works on feature store pipeline (airflow-ti). |
+| **Bryce Wagg** | TPM/Scrum Master for TGT Infrastructure squad. Runs standups, manages sprint workflow, Jira hygiene. Updated Jira workflow (2026-04-07): developer field auto-assigned on move to in-progress, must go through in-review → ready-for-deployment → done. |
 | **Rogus** | Engineering leadership. Announced Engineering Levels & Skills Rubric (2026-04-06). Driving Q2 shift to output-driven delivery. |
 | **Forrest** | Involved in continuous scoring POC/MVP timeline discussions. |
 | **Michelle** | Former GPM for targeting. Departed ~March 2026. Presented beta BUK campaign performance results |

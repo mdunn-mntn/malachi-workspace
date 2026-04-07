@@ -575,13 +575,30 @@ Is MNTN's intent tier targeting generating **incrementality**, or are we buying 
 High-intent audiences are a shared targeting pool across CTV, Meta, and Google. Overlap reduces the probability that any single platform is driving marginal conversion. We have never tested whether the intent scoring methodology itself drives incremental lift.
 
 ### Phase 1: Observational Analysis (Existing 10% Holdout)
-**Discovery (Matt Brorby, 2026-04-07):** Every campaign already has a 10% holdout group — IPs are hashed, last 2 digits < 10 never receive impressions. Pure random assignment by IP. This IS the control group — no shuffling needed for the initial analysis.
+**Discovery (Matt Brorby, 2026-04-07):** Every campaign already has a 10% holdout group. This IS the control group — no shuffling needed for the initial analysis.
+
+**Holdout hash function (Zach Schoenberger, 2026-04-07):**
+```sql
+-- Greenplum/Postgres (replicates Rust audience service):
+SELECT (('x' || substr(md5('{AID}:{IP}'), 1, 16))::bit(64)::bigint % 1000) AS bucket;
+-- bucket 0-99 = holdout (10%), 100-999 = targeted (90%)
+```
+- Hash input is `{AID}:{IP}` — holdout is **per-advertiser per-IP**, not global
+- Same IP can be holdout for one advertiser but targeted for another
+
+**IMPORTANT: Holdout hash ≠ experiment bucket hash.** These are two DIFFERENT random assignments:
+- **Holdout hash:** `MD5('{AID}:{IP}')` mod 1000 — embedded in the audience expression JSON. Determines the 10% incrementality holdout.
+- **Experiment bucket hash:** Hashes on IP address directly using a different prefix (e.g., ex46). Determines which experiment arm an IP falls into (e.g., control vs treatment for Fangorn).
+- The two are **independent** — an IP in the 10% holdout can be in any experiment bucket.
 
 - **Control:** 10% holdout (never served impressions, same intent tier distribution as targeted group)
 - **Treatment:** 90% targeted group (eligible for impressions)
 - **Methodology:** ITT — compare ALL IPs in 90% targeted group vs 10% holdout, regardless of whether impressions were actually served. Only a fraction of the 90% actually gets impressions (budget-constrained), so ITT avoids selection bias from impression delivery.
 - **Breakdown:** By intent tier (high/mid/peak performance), by advertiser vertical, by spend level
 - **Nick** (experimentation team) has the holdout query. **Kristen** may already be doing related work.
+
+### How to Identify Experiment Campaigns
+Nick identifies experiment campaigns by parsing `campaign_group.name` for the pattern **"EX-{number}"** (e.g., "EX-46"). This is hacky but is the current method — there's no dedicated experiment flag in the schema. The regex extracts everything after the first space in the name and checks for an EX-{number} pattern. If null, it's not an experiment.
 
 ### Phase 2: Intent Score Shuffling Experiment (Contingent on Phase 1)
 - **Treatment:** Reassign a defined cohort of mid-intent IPs into high-intent buckets, and vice versa
