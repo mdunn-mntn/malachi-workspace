@@ -51,18 +51,18 @@ Bryce described the requirement in Slack. Key points:
 - MemDB already hashes IPs for the 10% holdout — could potentially reuse that mechanism
 - "They want it stratified by intent score" — AUD-5221 says "Split audiences into deciles based on intent score distribution"
 
-### Design Ambiguity (MUST RESOLVE)
+### Design Clarification (Partially Resolved 2026-04-07)
 
-There are **two different interpretations** floating around:
+~~Two different interpretations were floating around — random vs intent-stratified.~~
 
-| Approach | Description | Use Case |
-|----------|-------------|----------|
-| **Random deciles** | Hash ALL US IPs into 10 equal buckets, no stratification | Generic A/B/C testing for any advertiser |
-| **Intent-stratified deciles** | Bucket by intent score percentiles, even/odd for test/control | Incrementality measurement — preserves score distribution in each arm |
+**Resolved: Intent-stratified deciles** (Alex Knorr confirmed, 2026-04-07). NOT random bucketing.
 
-Bryce's Slack description sounds like **random deciles** (generic A/B testing tool). The TI-831 Jira description says **intent-stratified** (for the incrementality experiment). These serve different purposes and have different implementations.
+**Remaining open questions (Alex Knorr, 2026-04-07):**
+1. **Which scores?** Are these campaign-level intent scores (Fangorn)? BUK keyword scores? Something else?
+2. **Which advertisers?** A subset for the experiment, or all advertisers? (Presumably not all — too broad)
+3. **Jordan Piepkow's input** — Bryce tagged him, waiting for response on implementation feasibility from the audience tools side
 
-**Need to clarify with Bryce/AUD team:** Is this a general-purpose A/B testing mechanism (random buckets), or specifically intent-score-stratified for the incrementality experiment? The answer determines the entire design.
+These answers determine the scope and complexity of the implementation.
 
 ## 5. Solution
 
@@ -78,9 +78,11 @@ Bryce's Slack description sounds like **random deciles** (generic A/B testing to
 
 ## 8. Open Items / Follow-ups
 
-- [ ] **BLOCKING: Clarify random vs intent-stratified design with Bryce/AUD team** — determines entire implementation
+- [x] ~~Clarify random vs intent-stratified~~ — **Resolved: intent-stratified** (Alex Knorr, 2026-04-07)
+- [ ] **BLOCKING: Which scores?** Campaign-level Fangorn scores? BUK? (Alex Knorr's question)
+- [ ] **BLOCKING: Which advertisers?** Subset for experiment or all? (Alex Knorr's question)
+- [ ] **WAITING: Jordan Piepkow's input** on implementation feasibility from audience tools side
 - [ ] Read the Google Doc for full requirements
-- [ ] Determine which intent scores to use as decile boundaries (if intent-stratified)
 - [ ] Investigate MemDB holdout hash mechanism — can it be extended for deciles? (Ryan's suggestion)
 - [ ] Daily vs weekly refresh cadence decision
 - [ ] Even/odd targeting — how does this integrate with the existing pipeline?
