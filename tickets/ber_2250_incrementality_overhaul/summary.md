@@ -24,18 +24,39 @@ We currently measure incrementality against a counterfactual, but we have **neve
 - If competitors (Meta, Google) can claim the same conversions on the same audiences, MNTN's value proposition narrows to reach and format, not performance
 - The inability to demonstrate incrementality becomes a churn driver as advertisers mature in their measurement sophistication
 
-## 3. Plan of Action
+## 3. Plan of Action (Revised after Matt Brorby sync, 2026-04-07)
 
-1. TI-835: Design control group and measurement methodology (shuffle %, cohort selection, ITT framework)
-2. TI-831: Build audience deciles for advertiser experimentation (even/odd targeting)
-3. TI-837: Create implementation plan (shuffling mechanism, system changes, rollback, RX coordination)
-4. Run the experiment for the defined window
-5. TI-839: Measure results using ITT methodology, determine follow-up
-6. TI-842: Present results to leadership and broader audience
+**Phase 1: Observational analysis (no experiment needed)**
+1. TI-835: Use existing 10% holdout to measure baseline incrementality by intent tier
+2. Get holdout query from Nick (experimentation team)
+3. Check Kristen's related work in #chapter-data-analytics
+4. Present findings to Kale/Alex Bohr — get direction on performance vs incrementality trade-off
+
+**Phase 2: Shuffling experiment (contingent on Phase 1)**
+5. TI-831: Build audience deciles for experimentation (even/odd targeting)
+6. TI-837: Design and implement shuffling experiment (IF observational data supports it)
+7. TI-839: Measure experiment results
+8. TI-842: Present to leadership
+
+**Phase 3: Lift-optimized model (future)**
+9. Train a model focused on incremental lift (using impression receipt as a feature) — replaces intent scoring with lift scoring
+
+### Key Insight: Control Group Already Exists
+Every campaign has a **10% holdout group** (IP hash, last 2 digits < 10, never served impressions). This is a pure random assignment. No shuffling needed for the initial analysis — we can measure incrementality RIGHT NOW with existing data.
+
+### Key Tension: Performance vs Incrementality
+Optimizing for incrementality and optimizing for visit rate are partially opposed (Matt Brorby). High-intent = high visit rate but low lift. Low-intent = low visit rate but high lift. Need Kale/Alex direction on how to balance before designing any experiment.
 
 ## 4. Investigation & Findings
 
-*Work not yet started. Findings will be added as the experiment progresses.*
+### Matt Brorby Sync (2026-04-07)
+- 10% holdout exists on all campaigns — use this as control (no shuffling needed for baseline)
+- ITT methodology: compare ALL IPs in 90% targeted group vs 10% holdout, regardless of actual impression delivery
+- Nick has the holdout identification query
+- Kristen may already be doing related work (#chapter-data-analytics)
+- Phase 2 idea: train a model on lift directly, using impression receipt as a feature
+- Alex Bohr is the product lead on incrementality (identity team)
+- Performance vs incrementality trade-off is a real tension — need leadership direction
 
 ## 5. Solution
 
@@ -65,7 +86,7 @@ We currently measure incrementality against a counterfactual, but we have **neve
 | Ticket | Summary | Folder | Status | SP |
 |--------|---------|--------|--------|----|
 | [TI-831](https://mntn.atlassian.net/browse/TI-831) | Audience Deciles for Advertiser Experimentation | `ti_831_audience_deciles/` | Not Started | 5 |
-| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Control group design and measurement methodology | `ti_835_control_group_design/` | Backlog | 3 |
-| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Implementation plan for intent score shuffling | `ti_837_implementation_plan/` | Backlog | 5 |
+| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | `ti_835_control_group_design/` | Backlog | 3 |
+| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Shuffling experiment design (contingent on TI-835) | `ti_837_implementation_plan/` | Backlog | 5 |
 | [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | `ti_839_measure_results/` | Backlog | 5 |
 | [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | `ti_842_present_results/` | Backlog | 3 |

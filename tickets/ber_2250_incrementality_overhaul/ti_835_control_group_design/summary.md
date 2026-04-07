@@ -1,4 +1,4 @@
-# TI-835: Control Group Design and Measurement Methodology
+# TI-835: Observational Incrementality Analysis Using Existing 10% Holdout
 
 **Jira:** https://mntn.atlassian.net/browse/TI-835
 **Status:** Backlog
@@ -11,23 +11,31 @@
 
 ## 1. Introduction
 
-Design the control group methodology for the intent score shuffling incrementality experiment. This is the foundational design ticket — everything downstream depends on getting this right.
+Measure baseline incrementality using the **existing 10% holdout group** on every campaign. This gives us the first empirical signal on whether intent tiers produce incremental lift — before running any shuffling experiment.
 
 ## 2. The Problem
 
-We need to define how IPs get shuffled between intent tiers in a way that:
-- Produces statistically valid results (sufficient power)
-- Minimizes business risk (don't degrade performance for too many advertisers)
-- Enables clean ITT analysis (original scores must be preserved)
+We don't know whether our intent tier targeting generates incremental lift. Before designing an experiment (shuffling), we should first look at the data we already have.
+
+### Key Insight (Matt Brorby, 2026-04-07)
+Every campaign already has a **10% holdout group**:
+- IPs are hashed; last 2 digits < 10 → never receive impressions
+- Pure random assignment by IP
+- Should have same intent tier distribution as the targeted 90%
+- This IS the counterfactual — no new experiment needed for the initial analysis
+
+### ITT Methodology
+Use Intent to Treat: compare ALL IPs in the 90% targeted group (whether or not they actually received an impression) vs the 10% holdout. This avoids selection bias from the fact that only a fraction of the 90% actually get impressions served.
 
 ## 3. Plan of Action
 
-1. Define what percentage of each intent tier (high/mid) gets shuffled
-2. Determine cohort selection criteria — random vs stratified by vertical/spend
-3. Establish the ITT measurement framework
-4. Define the shuffling window duration
-5. Ensure original intent scores are logged before reassignment
-6. Document in a way RX squad can build ITT reporting against
+1. Get holdout identification query from **Nick** (experimentation team)
+2. Check with **Kristen** (data analytics) — she may already be doing a similar analysis (#chapter-data-analytics)
+3. Pick a set of advertisers with sufficient volume
+4. For each advertiser: pull visit rates for 10% holdout vs 90% targeted, by intent tier
+5. Calculate incremental lift by tier: `(targeted_VR - holdout_VR) / holdout_VR`
+6. Break down by vertical, spend level, campaign duration
+7. Document findings and present to Kale/Alex Bohr
 
 ## 4. Investigation & Findings
 
@@ -39,11 +47,11 @@ We need to define how IPs get shuffled between intent tiers in a way that:
 
 ## 6. Questions Answered
 
-- **Q:** What is the right shuffle percentage to balance statistical power vs business risk?
+- **Q:** What is the incremental visit rate lift by intent tier?
   **A:** *Pending*
-- **Q:** How do we handle advertisers with very small high-intent pools?
+- **Q:** Is mid-intent actually more incremental than high-intent?
   **A:** *Pending*
-- **Q:** What is the minimum experiment duration for meaningful incrementality signal?
+- **Q:** How much of the 90% targeted group actually receives impressions (ITT dilution)?
   **A:** *Pending*
 
 ## 7. Data Documentation Updates
@@ -52,6 +60,18 @@ We need to define how IPs get shuffled between intent tiers in a way that:
 
 ## 8. Open Items / Follow-ups
 
-- [ ] Research comparable incrementality experiment designs
-- [ ] Determine minimum sample size for statistical power
-- [ ] Coordinate with RX squad on ITT reporting needs
+- [ ] Get holdout query from Nick
+- [ ] Check Kristen's work in #chapter-data-analytics
+- [ ] Identify good advertisers for the analysis (sufficient volume, multiple intent tiers active)
+- [ ] Discuss with Kale: what do we do if high-intent is NOT incremental? (performance vs incrementality trade-off)
+- [ ] Talk to Alex Bohr (product lead on incrementality)
+
+## Key People
+
+| Person | Role |
+|--------|------|
+| **Matt Brorby** | Staff DS — outlined approach, wrote the lift-model doc, thinking about performance vs incrementality trade-off |
+| **Alex Bohr** | Product lead on incrementality — wrote the Intent Score Shuffling product brief, on identity team |
+| **Nick** | Experimentation team — has the holdout identification query |
+| **Kristen** | Data analytics — may already be doing related incrementality intent analysis |
+| **Kale** | Director — originated the idea, passed to Alex. Need direction on performance vs incrementality balance |

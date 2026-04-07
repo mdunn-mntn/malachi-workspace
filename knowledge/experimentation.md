@@ -574,21 +574,39 @@ Is MNTN's intent tier targeting generating **incrementality**, or are we buying 
 
 High-intent audiences are a shared targeting pool across CTV, Meta, and Google. Overlap reduces the probability that any single platform is driving marginal conversion. We have never tested whether the intent scoring methodology itself drives incremental lift.
 
-### Experiment Design: Intent Score Shuffling
-- **Treatment:** Reassign a defined cohort of mid-intent IPs into high-intent buckets, and corresponding high-intent IPs into mid-intent buckets
+### Phase 1: Observational Analysis (Existing 10% Holdout)
+**Discovery (Matt Brorby, 2026-04-07):** Every campaign already has a 10% holdout group — IPs are hashed, last 2 digits < 10 never receive impressions. Pure random assignment by IP. This IS the control group — no shuffling needed for the initial analysis.
+
+- **Control:** 10% holdout (never served impressions, same intent tier distribution as targeted group)
+- **Treatment:** 90% targeted group (eligible for impressions)
+- **Methodology:** ITT — compare ALL IPs in 90% targeted group vs 10% holdout, regardless of whether impressions were actually served. Only a fraction of the 90% actually gets impressions (budget-constrained), so ITT avoids selection bias from impression delivery.
+- **Breakdown:** By intent tier (high/mid/peak performance), by advertiser vertical, by spend level
+- **Nick** (experimentation team) has the holdout query. **Kristen** may already be doing related work.
+
+### Phase 2: Intent Score Shuffling Experiment (Contingent on Phase 1)
+- **Treatment:** Reassign a defined cohort of mid-intent IPs into high-intent buckets, and vice versa
 - **Control:** Unshuffled IPs in both tiers
-- **Critical requirement:** Log original intent scores for ALL shuffled IPs *before* reassignment — this is required for clean ITT analysis
-- **Measurement:** Intent to Treat (ITT) methodology — compare results based on *assigned* intent tier at time of shuffle, regardless of actual conversion behavior. This avoids post-treatment selection bias.
-- **Reversibility:** Experiment is fully reversible. Shuffling can be stopped and scores restored without architectural change.
+- **Critical requirement:** Log original intent scores before reassignment for clean ITT analysis
+- **Reversibility:** Fully reversible — shuffling can be stopped and scores restored
+- **Contingent on Phase 1 results and leadership direction on performance vs incrementality trade-off**
+
+### Phase 3: Lift-Optimized Model (Future)
+Matt Brorby outlined training a model focused on *lift* rather than visit prediction:
+- Training data: same features as Fangorn + whether the IP received an impression (and when)
+- Target: incremental visit/conversion (visits WITH impression vs visits WITHOUT)
+- Output: rank-ordering by incremental lift rather than by intent
+- This would replace intent scoring with lift scoring
+
+### Key Tension: Performance vs Incrementality
+Optimizing for incrementality and performance (visit rate) are partially opposed:
+- High-intent users → high visit rate, low lift (would have visited anyway)
+- Low-intent users → low visit rate, high lift (wouldn't have visited without the ad)
+- A group with 0% natural visit rate + 10% post-impression visit rate = infinite lift but only 10% VR
+- Need to find the balance: maximize absolute performance WHILE maximizing incremental contribution
+- **Need explicit leadership direction** on how to weight these before designing any experiment
 
 ### Why ITT (Intent to Treat)
-ITT is the established experimental design for intent-assignment questions. It compares outcomes based on the group an IP was *assigned* to, not what actually happened. This prevents the selection bias that would corrupt a naive comparison (e.g., if shuffled IPs self-select back to their original behavior).
-
-### Parameters to Define (TI-835)
-- What percentage of each tier is shuffled
-- How the cohort is selected (random vs stratified by vertical/spend)
-- Duration of the shuffle window
-- Minimum sample size for statistical power
+ITT is the established methodology for intent-assignment questions. It compares outcomes based on the group an IP was *assigned* to, not what actually happened. This prevents selection bias — e.g., the 90% targeted group includes IPs that never actually received impressions (budget constraints, not watching TV at the time, etc.). Comparing only impression-recipients vs holdout would introduce bias because impression-receipt correlates with behavioral differences.
 
 ### Key Metrics
 - Incremental lift by original intent tier vs assigned tier

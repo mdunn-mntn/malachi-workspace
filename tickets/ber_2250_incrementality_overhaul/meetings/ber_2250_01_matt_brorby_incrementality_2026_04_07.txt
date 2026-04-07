@@ -1,0 +1,253 @@
+[00:00] Do that, all right, sweet, we're good, all right, and, uh, I think we're looking in ticket, um, just take it as this.
+[00:14] Oh, I made a series of tickets within it, but this is the epic 831 yeah Okay, if you go there, I actually added this is cool I added a jira mcp into cloud, which is really nice because it helps fill out details of.
+[00:29] Tickets a ton it's like, way better I love using this thing, but anyways, yeah, it's, um, sorry, I'll hand off to you, I don't I just kind of want to know what you guys are thinking incrementality and then I can say my comments afterwards so yes, so.
+[00:32] this thing um but anyways uh yeah it's um sorry i'll hand off to you i don't i just kind of want
+[00:39] to know what you guys are thinking with inquiry mentality and then i can say my comments afterwards
+[00:42] so yes so let me see if i can bring this back up that
+[00:46] Let me see if I can bring this back up.
+[00:50] That.
+[00:51] Oh, sorry I have a ton of things here.
+[01:01] All right, so first is that Alex.
+[01:07] or is writing up this Doc which it looks like you're looking at.
+[01:15] Yes, so this.
+[01:17] um.
+[01:19] they're looking to increment look at incrementality right basically.
+[01:24] For any advertiser that is savvy in any way they're likely doing some sort of incrementality measurement to determine whether it's worth using mountain or not right.
+[01:39] As opposed to just looking at the raw performance to be like oh wow that's a really high visit rate or that's a high conversion rate okay well.
+[01:48] Is it due to mountain or is it just due to the money they're spending elsewhere so that's the point here, and I think what Alex's idea and what i've heard from kale is this idea of shuffling.
+[02:02] Which is, if we have our current intent audiences right now right or the fangorn ones where we can basically rank order households based on their intent to visit.
+[02:18] What that's actually doing is what this highlighted questions here we are targeting by intent not incrementality not lift.
+[02:30] So we're just targeting people who would have visited anyways or would have converted anyways without us even sending right.
+[02:38] So this is how to look good on an incrementality dashboard.
+[02:45] Those are difficult because.
+[02:48] People who obviously we're going to visit already are going to be much higher conversion and visits rates right the true incremental stuff okay anyways continue, I have some questions about the control stuff but.
+[03:02] So then flipping over to this now, this is the doc that I wrote and just share I wrote this like back in December, when I was getting fangorn ready.
+[03:12] had a thought and share like identity team knows about this and some other people know about this, but this is basically that is that.
+[03:22] What is the likelihood that a household visits or converts if we serve them an impression versus not so like that's what the model needs to know is what's the value of serving an impression to this household yep.
+[03:37] um yeah and so in that we have impression data, so we might as well use that to train a model and this kind of outlines that idea, which is basically set up the training data.
+[03:49] it's very similar to what we have now for fangorn where you just have a ton of features that look backwards in time.
+[03:56] And then you have the forward looking target of a visit or a conversion in the forward looking window, the only thing that we would add.
+[04:03] Is this conditional thing of impressions, so when you have like here's all the features did they visit this advertiser, yes or no, additionally in there on the training side, we will have whether they receive an impression or not, and Oh, when did that impression happen, how many days ago.
+[04:26] Okay, so you're saying that you're generating your control by getting all the visits and we don't just log visits that are attributed to us is that correct, is that what you're saying.
+[04:33] generating your control by getting all the visits and we don't just log visits that are
+[04:39] attributed to us is that correct is that what you're saying um or that had necessarily had a
+[04:46] That makes sense.
+[04:46] So anything out of page view so it basically you'd be comparing page views without impressions versus page views with impressions yep.
+[04:57] And the thing is.
+[04:59] I know now.
+[05:00] So the control group here that like if you're just going to do an analysis to be like, let me test this hypothesis that this is worth doing.
+[05:10] We have an incrementality dashboard in the UI.
+[05:15] Where when they create an audience, there is a 10% holdout that is created.
+[05:22] So 10% of their audience never receives an impression.
+[05:29] And so you can use that group as your control.
+[05:37] an impression. And so you can use that group as your control. Does that make sense? Are
+[05:49] No, that makes sense. The only thing I was thinking about is, so when I was doing this work before an incrementality, one of the issues that we had, I think this is mitigated by the fact that we have a pixel, right?
+[05:59] But the type of people that see impressions versus the people that don't see impressions are inherently different, right? There's just behavioral differences.
+[06:03] people that don't see impressions are inherently different right there's just behavioral differences
+[06:06] so like an example would be like i don't think it's i i think this mitigates it though because
+[06:13] we're still counting visits but like if you were to just grab a sample like let's say you had an
+[06:16] But like if you were to just grab a sample, like let's say you had an arbitrary like large audience, right?
+[06:21] And for example, like in our mountain match audiences, and you were to say, compare the people who saw impressions versus the people who don't, that's not, I don't think a fair comparison, right?
+[06:33] You have to like create a control of people who would have been just as likely to see an impression and has the same relative features to maybe some other impression comparable one.
+[06:46] And then I can't, it's been so long since I did this, but I feel like what we did is found pairs, matching pairs and created a control treatment that way.
+[07:01] So for example, we got like a list of a hundred thousand IPs, we're going to target 50,000 of those.
+[07:06] But when we do the comparison, we're comparing this specific IP to this IP type of thing, right? Rather than just as a whole.
+[07:13] I don't know if that makes much sense, but yeah, exactly.
+[07:17] Like filtering on some sort of like, I don't remember. I think we did Euclidean distance, but it's like, whatever you can do something like that. Right.
+[07:24] Is that the thought process behind this or is it simpler than that? Sounds like.
+[07:29] For training a model is simpler for doing the analysis that tells you whether it's worth it or not.
+[07:38] Well, I mean, I think training the model is fine.
+[07:41] I think there is just this hypothesis that lower intent households that are currently in our, in like say mid intent have a higher incrementality.
+[07:57] a higher incrementality, like the incremental lift is higher for them versus the high intent
+[08:00] Like the incremental lift is higher for them versus the high intent group. Right.
+[08:06] Which is just saying people who are already going to visit it's low lift.
+[08:12] People who weren't going to visit when you serve them an ad now they do that's higher lift.
+[08:19] What's the outcome of this though? Cause like, let's say we do find out that we just like, we're super not incremental. Right.
+[08:26] Like, is there, are we just going to start tanking our stuff because we want to remove it? Like, I don't know.
+[08:31] Cause there's, they're totally different things. Right. Like optimizing on the visits versus optimizing on incrementality are almost, they're not opposed, but they're kind of are. Right.
+[08:42] Because yes, that's how I feel. That's what I put in here. And then I think Alex on the identity team says, yeah, he's wondering why there's a trade off.
+[08:52] Like from his perspective, there's no trade off. It's all about incrementality.
+[08:57] Definitely what we're showing on the dashboard. We want to look good.
+[09:04] And I think more people are just looking at their performance as opposed to looking at the incrementality dashboard that we provide.
+[09:12] Yeah. And so maybe this could be a toggle thing. I'm just wondering what Cale or management or, you know, execs think about this because it's like, well, what do I find?
+[09:20] Like, let's say I find out we got, you know, 60% of the people target aren't incremental. Right. Like what, what then, what are we going to do about that? Right.
+[09:27] So do we have an answer for that yet? Or.
+[09:31] So there are.
+[09:34] I think there's like different kinds of advertisers and different kinds of campaigns. So there's, there's a consideration, I think, there of what's the goal of this, which is tying.
+[09:48] It's every initiative seems to be mixed up with another initiative. So there's another initiative that's like make campaign objectives mean something.
+[09:58] Yeah. So if you can imagine like the tension there has been.
+[10:04] Okay. If one is just like awareness where they're trying to just get as many views as possible, like page views or visits, that's just reach.
+[10:14] So that's easy enough. But if you're targeting ROAS and like, you want to go all in on just doing really good, then if you find one person to convert your ROAS is super high.
+[10:23] doing really good then if you find one person to convert your ROAS is super high
+[10:29] but it's like that's not really what you want right yeah yeah so it's revenue still which is
+[10:31] But it's like, that's not really what you want. Right.
+[10:37] Revenue still, which is still like just getting people through the funnel.
+[10:42] Doesn't matter what the lift is, is getting as many people through the funnel as possible.
+[10:48] So I don't know. There's this tension. So I would think about that and how to frame that because I've been trying to think about it too, where we have like one is the amount of lift.
+[10:58] And then the other is just the intent, which is like the absolute.
+[11:03] So it's like an absolute visit rate and then an incremental visit rate, say.
+[11:08] Okay.
+[11:09] And how do you balance those? Do you go 100% on one or the other? I don't know.
+[11:15] Here's a question I have then. Like who's in charge of this? Like is this Cale that's kind of more leading the incrementality thing? Is it somebody else?
+[11:22] So this Alex Bohr is, I believe, doing this now. He's kind of taken it on.
+[11:31] Cale, when I talked with Cale, he may have been the one that has the idea on this and kind of just passed it off to Alex to write up the doc.
+[11:39] But their first idea is just what happens if we take people from mid intent and shuffle them up into high intent and vice versa.
+[11:50] Like we just randomize the intent groups a little bit. What does that do to incrementality?
+[11:56] That's like the experiment that they want to do.
+[12:00] I'm trying to do some analyses ahead of time because I don't think they've done any, just to see if that's likely to be successful or not.
+[12:09] Okay. I guess my thing is that I would really like to understand what, like I don't know if this would be a good idea, but maybe to tag Cale, you, and Alex in like a little thread and just be like, hey, and I could write it up and just be like, hey.
+[12:26] Like, so we can do the incrementality and I'm totally fine with this, but like my, you know, I'm sure Cale already talked about this, but I'm like, can we maybe have some direction as to like what, assuming the outcome is X, right?
+[12:39] What is our goal here? You know, because like, for example, you just said mixing up medium intent and high intent, right? To see if it increases incrementality.
+[12:49] Well, we're going to be moving away from what sounds like is those types of buckets anyway with the continuous scoring, right? But even then, let's say it's not.
+[13:00] So I guess like, I don't know, like when we're optimizing against visits and everything we do versus incrementality, it's, yeah.
+[13:13] It's funny, Alex is, Alex is right, but it depends on which side of the team he's on, right? If he's some sort of third party measurement company, like, yeah, a hundred percent.
+[13:21] But this kind of the weird thing with advertising is that it's like, there's this middle ground, right? You don't want to be a hundred percent.
+[13:29] Oh, we are only going to count people that we believe are like 95% likely that we driven by ads, right? Because that would be shooting yourself in the foot.
+[13:37] But at the same time, you don't want to be like, hey, come to us and we'll give you $10 roll ads, which is ridiculous, right? Type of stuff.
+[13:43] So it's like, you have to play this middle ground where you're like, hey, here's performance. But then also you're not like, because it's, it's, it's marketing at the end of the day.
+[13:52] You know, when we compare ourselves to other advertising groups and other advertising groups say, hey, we can do this. It's like, you gotta, you have to, you know, you're not going to make everybody happy too, but.
+[14:00] not going to make everybody happy too but yeah so there's a balance there for sure and i think like
+[14:05] the considerations i had was that can we can we get like the incremental visit rates
+[14:14] as a phone like okay so say i have fangorn scores for an advertiser for all ips say i say i have
+[14:16] Like, okay. So say I have Fangorn scores for an advertiser for all IPs. Say I have that. So I can rank order the households and it correlates very well with their actual intent to visit. Okay.
+[14:32] And now I have another model that I've trained on this incrementality where now I can order by lift. Right.
+[14:43] So there, I think there's just like some mathematics that we would need to do to, to figure it out what the balance is. Right. In the doc that I wrote, I kind of talk about that balance.
+[14:59] So it's like, okay, say they basically have very close to zero intent to naturally visit the page. But if you serve them impression now it's like a 10% change. Right.
+[15:04] close to zero intent to naturally visit the page. But if you serve them impression, now
+[15:12] it's like a 10% chance. Right?
+[15:17] And if you find a group of people like that and serve them ads, you will see a 10% visit rate and like this infinite lift basically. Right. So it's like, there's, there's a, there's the absolute performance of getting like a 10% visit rate plus a higher lift.
+[15:39] So like, I think that's the way to think about it and how to balance those things. So you don't want to just target things that get you a higher lift. Like they don't push you into the visit rates that you would get maybe on your own. I don't know. I'm trying to balance that.
+[15:56] So if we grabbing the control from the group of people that visited, then we're not having to deal with this situation where like, cause, cause like, for example, like if we have no record of someone ever visiting, then the lift is anybody that we tried in that group is going to be super incremental. Right. Because it's never been seen.
+[16:14] incremental, right? Because they've never been seen. So there, I mean, that's an easy one. We
+[16:16] So there, I mean, that's an easy one. We can just say, oh, well, let's just not base anything on site visits. Let's just start targeting IPs regardless of that. But okay. So it seems like there's just, it feels like to me, like there's two things that they're trying to solve here. So first one is the, is the, the switching between mid intent, high intent. And the other one is incrementality. I just, I kind of want to think about like, what one should we target first?
+[16:43] Like, do we want to focus on shuffling high intent, mid intent? Like, I guess they seem like two different things. Like what would be nice is we could just do a first initial analysis that says, okay, let's look at just historical data and see if we can measure lift. We'll just grab all the visits, whether or not we send them an impression, compare those two groups, probably have to randomly sample them. Cause I don't see, I assume they're probably not evenly distributed there, but do something like that. Right.
+[16:45] focus on shuffling high intent and mid intent? Like, I guess they seem like two different things.
+[16:53] Like what would be nice is we could just do a first initial analysis that says, okay, let's
+[16:58] look at just historical data and see if we can measure lift. We'll just grab all the visits,
+[17:13] And then just perform some sort of incrementality analysis based on what visits sounds like IVR or like visits. Yes. No, it's going to be the not anything to do with conversions yet.
+[17:26] Right. Yes. Yeah. So sorry. Looks like Kristen is possibly doing this. I don't know if you saw that in the chapter data analytics channel. She replied to the thing that I put in there.
+[17:32] if you saw that in the chapter data analytics channel.
+[17:35] She replied to the thing that I put in there.
+[17:42] So it looks like there's an incrementality intent analysis
+[17:48] Oh, okay.
+[17:50] Looks like it's doing a meta analysis across and advertisers to provide the distribution of intent tiers between holdout and the control both before and after we apply our sampling logic.
+[18:07] I don't know exactly if this is solving it.
+[18:11] But maybe.
+[18:13] Yeah.
+[18:15] So anyways, the goal, the real thing is to figure out where we have the most incremental lift.
+[18:25] And how can we target those households for an advertiser.
+[18:33] Okay, that would be like what I would think about. And then the secondary metric to think about is maintaining performance like maintaining performance as best we can. But it doesn't sound like that's the goal of this. The goal is not to maintain performance, it is to solely focus on the lift.
+[18:54] Well, that should be, I think that should be pretty simple, at least comparing because what you could do is compare your control group to any division of whatever impression so we can figure out what types of people, right, whether they're mid intent or high intent, and the.
+[19:01] pretty simple at least comparing because what you could do is compare your control group
+[19:05] to any division of whatever impression so we can figure out what types of people right whether
+[19:14] they're mid intent or high intent and the if you were doing that though you'd probably
+[19:15] I'm just thinking, Matt, would you, if you're comparing the control, like let's say this. Okay, so I can grab everybody from one group and everybody from the second group, right.
+[19:28] Do I need to adjust for the distribution of the different types of people that visited, like for the distribution of the different types of people that visited.
+[19:40] Like, for example, whether or not they were mid intent or high intent, when I'm making comparisons or is it sufficient for me to just say, I'm going to compare everybody in this group versus everybody in this group, because you're the answer your question you just said is like which ones are the most incremental.
+[19:45] example whether or not they were mid intent or high intent when i'm making comparisons or is it
+[19:49] sufficient for me to just say i'm going to compare everybody in this group versus everybody in this
+[19:53] group because your the answer your question you just said is like which ones are the most
+[19:57] incremental. So like, for example, if I
+[20:00] Split people up into high intent and I'm trying to figure out what's the high
+[20:02] intent incrementality versus mid intent.
+[20:04] Do I need to then grab high intent from the control versus high intent in the
+[20:09] treatment or not treatment, but like, you know, I'm saying the, the ones we
+[20:12] served impressions to, or is it still sufficient to say, here's everybody in
+[20:15] the control compared to just the high intent in the treatment, the visit,
+[20:21] whatever.
+[20:21] Yeah.
+[20:22] So yeah, let me outline like the way I'm thinking about it is.
+[20:27] I think, and tell me if this is not what you see, but we have a 10% holdout
+[20:33] group for pretty much all campaigns that I am aware of.
+[20:38] So all campaigns have this 10% holdout group.
+[20:42] So that's your counterfactual group, right?
+[20:47] This 10% should be randomly sampled across the intent tiers.
+[20:53] They should have the same distribution.
+[20:56] Okay.
+[20:56] As the population that you're targeting in your audience, right?
+[21:02] So they, so, so we're kind of stuck in this world where the advertiser has built
+[21:07] an audience and I would stick with that first.
+[21:11] So they have their audience built 10% of that audience.
+[21:16] We're not going to serve impressions to, so let's just look at where they would
+[21:21] have landed in the intent grouping and what their visit rates were.
+[21:28] And we can compare that to the ones that were in the targeted group and
+[21:35] see what the visit rates are there.
+[21:37] Now that's, I think what Alex is saying, because he's, if you look at his doc,
+[21:43] he says ITT, which is the intent to treat effect.
+[21:49] So here now it, it's gets tricky because in the target, in the 90% audience, how
+[22:00] much do we actually send impressions to might be a small percentage of that.
+[22:04] Right.
+[22:05] Like say you're in your audience is 10 million, but your budget is such that
+[22:10] you're only targeting 10% of that.
+[22:12] Right.
+[22:14] So now you have this weird waiting.
+[22:17] And if that's what you're asking, like that's what I'm trying
+[22:19] to think through right now.
+[22:20] Okay.
+[22:22] So there's the intent to treat effect, which is that, which is you have to take
+[22:27] everyone in that targeted group, the 90% and look at their visit rate.
+[22:32] Even if we didn't serve them an impression, you have to look at, they
+[22:35] could have received an impression if they were watching TV at the time.
+[22:40] Like it's all conditional on all those things.
+[22:42] Right.
+[22:43] So we eliminate all that and we just say they were in the targeted group.
+[22:47] We may or may not have got an impression for them, but we have this 10% where we
+[22:52] definitely didn't serve them an impression.
+[22:54] So let's just look at the visit rates there and we can look at
+[22:58] it also by the intent groups.
+[23:00] Then you could do a further analysis on the ones that we actually did send
+[23:03] impressions to and kind of look at that, but that requires more thought.
+[23:08] Like you've been thinking like, what's the difference between someone who
+[23:11] received an impression and someone who didn't, but could have, that's a,
+[23:16] that's a finer analysis that I don't think we're getting at here.
+[23:19] So, okay.
+[23:20] That this is clear.
+[23:21] This makes sense to me.
+[23:23] Um, the 10% holdout group I've heard of this.
+[23:25] Do you, do you have a query that shows me how to actually see which
+[23:29] I know that Nick on the experimentation team definitely does, because this is
+[23:34] like this bucketing thing that we've been doing where, yeah, the way that
+[23:39] it works, it was like an IP comes in.
+[23:42] Well, basically we just hash the IP and IP comes in, it goes through a hash.
+[23:47] That hashes it to some number.
+[23:50] And we just look at whether it's, you know, the last two digits
+[23:55] are below 10 or above 10 and that's, and that randomly assigns them.
+[24:01] So it is pure random assignment to I by IP.
+[24:06] I don't know where, like where that information is stored, but Nick might
+[24:13] have the query because he would need it for his experiment analysis.
+[24:18] Okay.
+[24:19] I will ask Nick that I think this gives me enough context to at least create
+[24:24] some tickets and start looking into it.
+[24:25] So, um, it sounds like Alex is also like really big into this.
+[24:30] So maybe I'll, I'll talk to him.
+[24:32] Yeah.
+[24:32] He's kind of the product lead on it.
+[24:34] Like, I guess so.
+[24:35] Okay.
+[24:37] Um, all right.
+[24:38] I don't think I have any questions for that.
+[24:39] Um, yeah, I'll let you know what I find and then I will, you
+[24:44] know, come to you with anything.
+[24:46] Um, appreciate you walking through it with me.
+[24:49] Yep.
+[24:49] Um, yeah.
+[24:50] And then the next thing would be to think about how to train a model
+[24:53] that would just be focused on Lyft.
+[24:56] So, okay, well, that'll be fun.
+[25:01] Otherwise right now it's just a strategy, right?
+[25:03] Like if we randomly shuffle things, is that better?
+[25:07] Which is kind of funny.
+[25:07] Cause I've heard many times, like if we just randomly do something, it's better.
+[25:13] Which is why, like, I think the scores that we assigned in like max reach, it
+[25:19] was just better to just like give them a random number than try to do anything.
+[25:26] So, okay.
+[25:27] I'm going to just write out some stuff for kale, um, to ask him.
+[25:30] I have a meeting with him tomorrow.
+[25:32] So, um, all right.
+[25:33] Well, thank you, Matt.
+[25:34] Um, I will let you, uh, get back to your work and, and, uh, tell you what I find
+[25:41] out after I get some more information on this, so cool.
+[25:46] Thank you.
+[25:47] All right.
+[25:48] Take care.
+[25:49] All right.
