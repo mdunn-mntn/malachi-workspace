@@ -628,19 +628,21 @@ Every campaign has a **10% holdout group** — IPs that are never served impress
 - Literally has the name "holdout" in the JSON — can be identified by parsing the expression
 
 **How to get holdout IP lists:**
-- **Option 1 — MD5 bucket hash (PREFERRED, Zach 2026-04-07):** Compute the bucket for any IP directly using the hash function. No TMUL needed. **This is the cheapest approach by far.**
+- **Option 1 — MD5 bucket hash (PREFERRED, Zach 2026-04-07):** Compute the bucket for any IP directly. No TMUL needed. **This is the cheapest approach by far.**
 
 ```sql
--- Greenplum/Postgres version (Zach's original):
-SELECT ('x' || substr(md5('100.17.100.240'), 3, 2) || substr(md5('100.17.100.240'), 1, 2))::bit(64)::bigint % 64;
-
--- BigQuery equivalent (needs testing):
--- MOD(ABS(FARM_FINGERPRINT(ip)) or similar — need to confirm BQ produces same buckets as the GP md5 approach
+-- Greenplum/Postgres (Zach's confirmed function):
+SELECT md5('{AID}:100.17.100.240') AS ip_hash,
+       (('x' || substr(md5('{AID}:100.17.100.240'), 1, 16))::bit(64)::bigint % 1000) AS bucket;
+-- If bucket is 0-99 inclusive → holdout. 100-999 → targeted.
 ```
 
-**How it works:** MD5 hash the IP string, byte-swap first 4 hex chars, cast to bigint, mod by the number of buckets (64 in this example, but holdout uses 1000 buckets). The audience expression specifies the bucket count and holdout range (e.g., 0-99 out of 1000).
-
-**IMPORTANT:** The mod divisor must match what's in the audience expression. The holdout expression uses 1000 buckets (range 0-99 = holdout). Zach's example uses `% 64` — confirm whether the holdout uses 64 or 1000 buckets, and whether the hash prefix matches the expression's hash key (e.g., ex46).
+**Critical details:**
+- The hash input is **`{AID}:{IP}`** — the advertiser ID is prefixed. This means holdout assignment is **per-advertiser per-IP**, not global per-IP.
+- Takes first 16 hex chars of the MD5, casts to 64-bit integer, mod 1000
+- 1000 buckets: 0-99 = holdout (10%), 100-999 = targeted (90%)
+- Replace `{AID}` with the actual advertiser_id (integer)
+- **BQ equivalent needs testing** — MD5 returns bytes in BQ, not hex string. Will need `TO_HEX(MD5(...))` and then a cast approach.
 
 - **Option 2 (Zach, expensive fallback):** Use `external.tpa_membership_update_log__v2` (TMUL v2) — logs which IPs are in which segments. **Expensive for 30-day windows** — dry_run first. Only use if the hash approach doesn't match.
 - **Option 3 (not yet built):** Nick wants Jordan/Zach to build a tool that takes an audience expression and returns matching IPs. Doesn't exist yet.

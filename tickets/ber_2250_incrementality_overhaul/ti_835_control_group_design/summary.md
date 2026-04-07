@@ -52,11 +52,14 @@ Use Intent to Treat: compare ALL IPs in the 90% targeted group (whether or not t
 **How to identify holdout IPs:**
 - **MD5 bucket hash (PREFERRED, Zach 2026-04-07):** Compute the bucket for any IP directly — no TMUL needed:
 ```sql
--- Greenplum/Postgres (Zach's function):
-SELECT ('x' || substr(md5('100.17.100.240'), 3, 2) || substr(md5('100.17.100.240'), 1, 2))::bit(64)::bigint % 64;
+-- Greenplum/Postgres (Zach's confirmed function):
+SELECT md5('{AID}:100.17.100.240') AS ip_hash,
+       (('x' || substr(md5('{AID}:100.17.100.240'), 1, 16))::bit(64)::bigint % 1000) AS bucket;
+-- bucket 0-99 = holdout, 100-999 = targeted
 ```
-- MD5 hash the IP, byte-swap first 4 hex chars, cast to bigint, mod by bucket count
-- **TODO:** Confirm bucket count (64 vs 1000) and hash key alignment with the audience expression holdout clause. Port to BigQuery equivalent.
+- **Hash input is `{AID}:{IP}`** — advertiser ID is prefixed, so holdout assignment is per-advertiser per-IP
+- First 16 hex chars of MD5, cast to 64-bit int, mod 1000
+- **TODO:** Port to BigQuery (MD5 returns bytes in BQ, need `TO_HEX(MD5(...))` + cast approach)
 - **TMUL v2 (expensive fallback):** `external.tpa_membership_update_log__v2` — only if hash approach doesn't match.
 - **No direct "expression → IP list" tool exists yet** — Nick wants Jordan/Zach to build one.
 
