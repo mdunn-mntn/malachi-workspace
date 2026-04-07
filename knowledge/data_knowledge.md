@@ -640,6 +640,7 @@ SELECT md5('{AID}:100.17.100.240') AS ip_hash,
 **Critical details:**
 - The hash input is **`{AID}:{IP}`** — the advertiser ID is prefixed. This means holdout assignment is **per-advertiser per-IP**, not global per-IP.
 - Takes first 16 hex chars of the MD5, casts to 64-bit integer, mod 1000
+- Zach calls this the `rust_equivalent` — the SQL replicates what the Rust-based audience service does at runtime
 - 1000 buckets: 0-99 = holdout (10%), 100-999 = targeted (90%)
 - Replace `{AID}` with the actual advertiser_id (integer)
 - **BQ equivalent needs testing** — MD5 returns bytes in BQ, not hex string. Will need `TO_HEX(MD5(...))` and then a cast approach.
