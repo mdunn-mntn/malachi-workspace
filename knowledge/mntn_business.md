@@ -68,8 +68,11 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - **Engineering Levels & Skills Rubric released** — specific per-level criteria for Speed (Delivery/Volume), Craft (Technical Quality), Adaptability (Responsiveness/Ownership). Next official review ~April 2027, manager feedback within ~1 month, mid-point ~November 2026.
 
 ### Incrementality Initiative (BER-2250, Q2 2026)
-- **Intent Score Shuffling experiment** — shuffle IPs between intent tiers to measure whether intent scoring generates incremental lift or just buys audiences who'd convert anyway
-- **ITT (Intent to Treat) methodology** — measure by assigned tier, not actual conversion, to avoid selection bias
+- **Phase 1 (now): Observational analysis** — use existing 10% holdout group (IP hash, last 2 digits < 10) to measure baseline incrementality by intent tier. No experiment needed.
+- **Phase 2 (contingent): Intent Score Shuffling** — shuffle IPs between intent tiers to causally confirm observational findings. Only if Phase 1 shows incrementality differences.
+- **Phase 3 (future): Lift-optimized model** — train a model on incremental lift directly, using impression receipt as a feature (Matt Brorby concept).
+- **ITT (Intent to Treat) methodology** — measure by assigned group, not actual impression delivery, to avoid selection bias
+- **Key tension (Matt Brorby, 2026-04-07):** Performance (visit rate) vs incrementality (lift) are partially opposed. High-intent = high VR, low lift. Low-intent = low VR, high lift. Need leadership direction on balance.
 - **Business stakes:** If low incrementality → retention risk (charging for outcomes that would've happened). If proven → competitive moat vs Meta/Google.
 - Product brief: [Confluence](https://mntn.atlassian.net/wiki/external/NTM1ZmViMzc1YzczNDQ0YjgzZDVlMjdkNTk2ZGY4NmY)
 
@@ -160,6 +163,9 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | 2026-03-30 | Kirsa meeting (TI-504) | Multi-touch history, Mountain Match, attribution defaults, org/people, metrics philosophy, industry context, terminology |
 | 2026-03-31 | Alex Knorr meeting (BUK) | BUK/ALS/DAR/DS19/Fangorn/DCG/Continuous Scoring terminology, Shopper Graph API, Feature Store, parent/child keywords |
 | 2026-03-31 | Malachi/Kale 1x1 | Strategic direction shift to incrementality, Michelle departure, Jack → identity EM, product leadership gap coverage, BUK not dead |
+| 2026-04-06 | Rogus announcement | Engineering Levels & Skills Rubric released, Q2 output-driven delivery shift, updated ceremonies |
+| 2026-04-06 | PM planning doc | Q2 OKR table — epic-to-deliverable mapping, incrementality initiative (BER-2250) |
+| 2026-04-07 | Matt Brorby sync | 10% holdout exists on all campaigns (IP hash), observational analysis approach, lift-optimized model concept, performance vs incrementality tension |
 
 ---
 
@@ -170,7 +176,11 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | **Alex Knorr** | Lead on BUK (Bottoms Up Keywords) model development. Built ALS pipeline, experiment design, scoring methodology |
 | **Brian** | Also involved in BUK development |
 | **Victor** | Infrastructure/compute for BUK pipeline (Databricks budget, DAG management) |
-| **Matt** | Working on Fangorn continuous scoring; proposed DCG-based IP-level scoring approach |
+| **Matt Brorby** | Staff Data Scientist. Working on Fangorn continuous scoring; proposed DCG-based IP-level scoring approach. Wrote the lift-optimized model doc (training on impression receipt as a feature). Key advisor on incrementality methodology. |
+| **Alex Bohr** | Product lead on incrementality (identity team). Wrote the Intent Score Shuffling product brief. Driving BER-2250. Believes incrementality should be the sole optimization target (no trade-off). |
+| **Nick** | Experimentation team. Runs experiment analysis, has the 10% holdout identification query (IP hash bucketing). Works with Kirsa on methodology. |
+| **Kristen** | Data analytics. May be doing related incrementality intent analysis (posted in #chapter-data-analytics). Check before duplicating work. |
+| **Rogus** | Engineering leadership. Announced Engineering Levels & Skills Rubric (2026-04-06). Driving Q2 shift to output-driven delivery. |
 | **Michelle** | Former GPM for targeting. Departed ~March 2026. Presented beta BUK campaign performance results |
 | **Richard** | Provided critical feedback on BUK experiment results ("numbers are bullshit" — size confounding) |
 | **Mike** | Sees value in BUK but needs clearer performance signal |

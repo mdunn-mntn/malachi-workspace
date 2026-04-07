@@ -609,6 +609,33 @@ LiveRamp's identity graph is external to MNTN's data warehouse.
 
 ---
 
+## Campaign Holdout / Incrementality Measurement
+
+### 10% Holdout Group (All Campaigns)
+Every campaign has a **10% holdout group** — IPs that are never served impressions.
+
+**Mechanism (Matt Brorby, 2026-04-07):**
+- When an IP enters the targeting pipeline, it goes through a hash function
+- Last 2 digits of the hash determine group assignment: < 10 → holdout, ≥ 10 → targeted
+- This is **pure random assignment by IP** — the holdout should have the same intent tier distribution as the targeted 90%
+- The holdout group is used for the incrementality dashboard in the UI
+
+**How to identify holdout IPs:**
+- Nick (experimentation team) has the identification query — ask him
+- The bucketing is the same mechanism used for Fangorn experiment groups
+
+**Use for incrementality analysis:**
+- Compare visit rates between 10% holdout (no impressions ever) vs 90% targeted group
+- Use ITT (Intent to Treat): compare ALL IPs in 90% group, not just those who actually received impressions
+- Why ITT: only a fraction of the 90% actually gets impressions (budget-constrained). Comparing only impression-recipients vs holdout introduces selection bias (impression receipt correlates with behavioral differences like watching TV at that time)
+
+**Key gotcha — ITT dilution:**
+- If the audience is 10M but the budget only reaches 10% of them, the 90% targeted group's visit rate is diluted by the 80% who were eligible but never actually received an impression
+- The true treatment effect is on the impression-recipients, but ITT gives you the unbiased average effect across the full eligible group
+- For a finer analysis (actual treatment effect on the treated), need to model the impression-receipt probability — more complex, not needed for initial analysis
+
+---
+
 ## Audience System Architecture
 
 ### audience.audiences vs audience.audience_segments (Greenplum)
