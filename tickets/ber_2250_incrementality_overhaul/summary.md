@@ -62,10 +62,10 @@ We currently measure incrementality against a counterfactual, but we have **neve
 
 ## Child Tickets
 
-| Ticket | Summary | Status | SP |
-|--------|---------|--------|----|
-| [TI-831](https://mntn.atlassian.net/browse/TI-831) | Audience Deciles for Advertiser Experimentation | Not Started | 5 |
-| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Control group design and measurement methodology | Backlog | 3 |
-| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Implementation plan for intent score shuffling | Backlog | 5 |
-| [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | Backlog | 5 |
-| [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | Backlog | 3 |
+| Ticket | Summary | Folder | Status | SP |
+|--------|---------|--------|--------|----|
+| [TI-831](https://mntn.atlassian.net/browse/TI-831) | Audience Deciles for Advertiser Experimentation | `ti_831_audience_deciles/` | Not Started | 5 |
+| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Control group design and measurement methodology | `ti_835_control_group_design/` | Backlog | 3 |
+| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Implementation plan for intent score shuffling | `ti_837_implementation_plan/` | Backlog | 5 |
+| [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | `ti_839_measure_results/` | Backlog | 5 |
+| [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | `ti_842_present_results/` | Backlog | 3 |

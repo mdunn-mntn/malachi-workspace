@@ -46,12 +46,21 @@ And because an AI assistant (Claude) runs inside this workspace with persistent 
 Jira Ticket
      │
      ▼
-tickets/ti_xxx/
+tickets/ti_xxx/                           ← standalone ticket (flat)
 ├── summary.md        ← you write this throughout
 ├── queries/          ← SQL lives here, not in notebooks
 ├── outputs/          ← query results, CSVs
 ├── meetings/         ← meeting transcripts, notes
 └── artifacts/        ← notebooks, scripts, deliverables
+
+tickets/ber_2250_epic/                    ← epic with 2+ children (nested)
+├── summary.md        ← epic-level summary linking all children
+├── ti_831_child_ticket/
+│   ├── summary.md    ← child has same full structure
+│   ├── queries/
+│   └── ...
+├── ti_835_another_child/
+└── ...
      │
      ▼
 Investigation reveals new schema knowledge, join key, gotcha, or business logic

@@ -27,6 +27,36 @@ Every folder has an explicit definition. When in doubt about where something goe
 `prefix_number_short_description` — all lowercase, underscores only.
 Examples: `ti_650_stage_3_vv_audit`, `dm_3118_rtc_monitor`, `mm_44_ipdsc_hh_discrepancy`
 
+### Epic / initiative nesting
+
+When a ticket is an **epic or initiative with 2+ child tickets**, nest the children inside the parent folder:
+
+```
+ber_2250_incrementality_overhaul/    ← epic/initiative folder
+├── summary.md                       ← epic-level summary (links to all children)
+├── queries/                         ← epic-level shared queries (if any)
+├── outputs/                         ← epic-level shared outputs (if any)
+├── meetings/                        ← epic-level meetings
+├── artifacts/                       ← epic-level artifacts
+├── ti_831_audience_deciles/         ← child ticket folder
+│   ├── summary.md
+│   ├── queries/
+│   ├── outputs/
+│   ├── meetings/
+│   └── artifacts/
+├── ti_835_control_group_design/     ← child ticket folder
+│   └── ...
+└── ti_839_measure_results/          ← child ticket folder
+    └── ...
+```
+
+**Rules:**
+- **Nest only when there are 2+ children.** Standalone tickets stay flat at `tickets/` root.
+- Each child ticket folder has the same required structure as any ticket (summary.md, queries/, outputs/, etc.)
+- The epic-level `summary.md` links to all children and tracks the overall initiative
+- Epic-level `queries/`, `outputs/`, etc. are for shared/cross-cutting work. Ticket-specific work goes in the child folder.
+- Child folder names use the ticket prefix + short description (not the full epic description)
+
 ### Required contents (every ticket folder must have all of these)
 ```
 ti_xxx_name/
