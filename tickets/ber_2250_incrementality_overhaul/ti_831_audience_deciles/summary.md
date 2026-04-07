@@ -36,7 +36,33 @@ Without this, the experiment has no clean experimental design.
 
 ## 4. Investigation & Findings
 
-*Work not yet started.*
+### 2026-04-07: Slack Context from Bryce Wagg (AUD-5221)
+
+Bryce described the requirement in Slack. Key points:
+- Take ALL IPs in the US in the DB, randomly split into 10 groups
+- Allow users to select groups into inclusions or exclusions → A/B/C tests
+- Use evens for group A, odds for group B → clean controllable splits
+- Lists must be kept updated as IPs rotate in/out (cadence TBD: daily vs weekly)
+- Customer doesn't need to be alerted to the mechanism
+- Bryce asking TI to confirm we can own this work + provide timeline estimate
+
+**Ryan Kleck's observations:**
+- If truly random split, IP rotation shouldn't matter (statistically equivalent replacement)
+- MemDB already hashes IPs for the 10% holdout — could potentially reuse that mechanism
+- "They want it stratified by intent score" — AUD-5221 says "Split audiences into deciles based on intent score distribution"
+
+### Design Ambiguity (MUST RESOLVE)
+
+There are **two different interpretations** floating around:
+
+| Approach | Description | Use Case |
+|----------|-------------|----------|
+| **Random deciles** | Hash ALL US IPs into 10 equal buckets, no stratification | Generic A/B/C testing for any advertiser |
+| **Intent-stratified deciles** | Bucket by intent score percentiles, even/odd for test/control | Incrementality measurement — preserves score distribution in each arm |
+
+Bryce's Slack description sounds like **random deciles** (generic A/B testing tool). The TI-831 Jira description says **intent-stratified** (for the incrementality experiment). These serve different purposes and have different implementations.
+
+**Need to clarify with Bryce/AUD team:** Is this a general-purpose A/B testing mechanism (random buckets), or specifically intent-score-stratified for the incrementality experiment? The answer determines the entire design.
 
 ## 5. Solution
 
@@ -52,7 +78,11 @@ Without this, the experiment has no clean experimental design.
 
 ## 8. Open Items / Follow-ups
 
+- [ ] **BLOCKING: Clarify random vs intent-stratified design with Bryce/AUD team** — determines entire implementation
 - [ ] Read the Google Doc for full requirements
-- [ ] Determine which intent scores to use as decile boundaries
+- [ ] Determine which intent scores to use as decile boundaries (if intent-stratified)
+- [ ] Investigate MemDB holdout hash mechanism — can it be extended for deciles? (Ryan's suggestion)
+- [ ] Daily vs weekly refresh cadence decision
 - [ ] Even/odd targeting — how does this integrate with the existing pipeline?
 - [ ] Balance check methodology
+- [ ] Timeline estimate for Bryce
