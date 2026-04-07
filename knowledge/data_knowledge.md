@@ -1153,6 +1153,11 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 - Output: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/` partitioned by dt/hh
 - Pipeline code: `steelhouse/airflow-ti` repo, `models/feature_store/feature_group_1_source/`
 
+### Parquet vs BQ Schema Differences (confirmed TI-810)
+- **augmentor_log parquet LIST fields** (`pmp`, `iab_categories`, `mntn_segments`): Parquet legacy LIST format = `struct<list: array<struct<element: T>>>`. `F.size(F.col("pmp.list"))` fails in Spark — interpreted as map subscript. Use `F.col("pmp").isNotNull()` instead.
+- **guid_log `product` column**: STRUCT in parquet (`{amount, brand, category, currency, ...}`), but appears as flat columns in BQ silver view. Cannot compare to string `"null"` — use `.isNotNull()`.
+- **General rule**: Always inspect raw parquet schema before writing Spark aggregations — BQ silver views enrich/flatten types differently from raw parquet.
+
 ### private_marketplace_deals Table
 - Reference table for PMP deal names and IDs — not built by us, comes from Beeswax/exchanges
 - DS42 (select team) converts PMP string IDs to integer `data_source_category_id` values
