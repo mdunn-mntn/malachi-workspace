@@ -178,8 +178,8 @@ None — findings are consistent with TI-804.
 - ~~Incorporate Alex Knorr feedback from 2026-04-03 review session~~ Done (MNTN Match V2, High Intent IPs, 82x median lift)
 - ~~Scale to 500 advertisers~~ Done
 - ~~Independent validation via Fangorn experiment~~ Done (Alex, 2026-04-06)
-- Waiting on Kale feedback on deck (sent 2026-04-03, Alex has meeting with Kale 2026-04-07)
-- Record ~5min Loom with Alex for Paulo (VP Eng) and Richard (CTO)
+- ~~Record ~5min Loom with Alex for Paulo (VP Eng) and Richard (CTO)~~ Done (TI-829, 2026-04-08) — sent to Kale
+- Waiting on Kale/Paulo/Richard feedback on Loom + deck
 - Investigate zero-scored IPs in Fangorn eval (keywords BUK is missing?)
 - Replicate Alex's Fangorn eval in BQ locally (5 advertisers, 30-day window — no sampling needed)
 - TI-805: BUK vs MM V2 head-to-head

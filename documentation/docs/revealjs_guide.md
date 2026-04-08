@@ -76,11 +76,19 @@ githack.com caches aggressively. When iterating on a deck:
 - **For sharing:** Use the latest gist URL
 - **Alternative:** Open the local `.html` file directly during development
 
-## Standalone Build Process
+## Standalone Build & Sharing Process
 
-1. Write the deck in `ti_xxx_presentation_deck.html` (uses CDN links)
-2. Run the inline script to create `ti_xxx_presentation_deck_standalone.html`
-3. Share via `bash .claude/scripts/share_deck.sh path/to/standalone.html`
+1. Write the deck in `ti_xxx_presentation_deck.html` (uses CDN links for dev)
+2. Download CDN files once to `/tmp/` (`reveal.css`, `white.css`, `reveal.js`)
+3. Run the inline script to create `ti_xxx_presentation_deck_standalone.html` (~190KB, zero dependencies)
+4. Share via: `bash .claude/scripts/share_deck.sh path/to/standalone.html` — creates a gist and returns a rendered githack URL
+5. Send the URL in Slack instead of attaching a file
+
+**Sharing options:**
+- **githack gist** (primary): `share_deck.sh` creates a public gist, returns a rendered URL. CDN caches aggressively — create a new gist for each revision during iteration.
+- **HTMLPeek** (htmlpeek.com): Paste HTML, get a shareable link. Anonymous shares expire after 30 days. Kale recommended.
+- **PageDrop** (pagedrop.io): Drag-and-drop HTML hosting. Alternative to HTMLPeek.
+- **Direct file**: Attach `.html` file in Slack/email. Works offline, anyone can open in a browser.
 
 ```python
 # Inline script to build standalone
