@@ -1,0 +1,407 @@
+[00:00] These tickets, so, like, this is, like, the high-level thing, right, the initiative.
+[00:11] And so, then, under here, we have those tickets, but I think, and these ones all roll up to
+[00:20] Like if I click on this one, it rolls up to 831 for some reason.
+[00:24] yeah that's i i created that though okay i don't think i create 831
+[00:29] oh no i don't think it had much details on it that's exactly what it was it just said 831 and
+[00:30] Okay.
+[00:31] Oh, no, I don't think it had much details on it.
+[00:35] That's exactly what it was.
+[00:36] It just said 831, and then it had the title, but there was no definition in it at all.
+[00:41] So, I think it makes sense for this to be under the bear ticket, like this, 831, but
+[00:49] then these four should be underneath a new epic, which is, like, about measuring, like,
+[01:03] understanding this incrementality stuff.
+[01:05] Okay.
+[01:06] So, let's.
+[01:07] Which is, like, the actual task here, yeah.
+[01:11] The BER 2250, that is the, what's it called, an idea?
+[01:17] Yeah, or initiative.
+[01:19] Okay, that's the initiative related to incrementality overhaul.
+[01:23] However, there are two separate incrementality asks, and currently, 831, TI 831 has four
+[01:32] tickets, which I've created, that is associated with the wrong epic.
+[01:36] So, that epic has already existed.
+[01:39] That's related to a separate one.
+[01:40] Those four should be put under a new epic that's still under BER 2250.
+[01:45] I would say, yes.
+[01:46] Yeah, there should be two epics for us.
+[01:48] Okay.
+[01:49] One being this Decile work, and the other being this test of incrementality, and, like,
+[01:57] running in a shuffling experiment.
+[02:00] Okay.
+[02:01] Who are the owners of the Decile work?
+[02:03] Where is that coming from?
+[02:05] And then, can you give me a quick explanation?
+[02:07] It doesn't have to go in depth, but just enough information that I can, I could adjust these
+[02:11] tickets a little bit to be a little clearer, and then leave that to whoever's in charge
+[02:16] of that.
+[02:17] I don't know that anyone's in charge of the Decile work, other than the product manager,
+[02:25] or, like, Alex B. He's the one that kind of put that out there, I think.
+[02:30] I don't know exactly where it came from, other than from him.
+[02:34] So I don't know that anyone is assigned to it.
+[02:39] It seems like Sean and Ryan both have interest in it, from an engineering perspective, and
+[02:45] they typically have done this kind of stuff.
+[02:47] So I don't know.
+[02:49] It's a good, like, I think there's just a lot of engineering work with the Decile thing,
+[02:55] because it is just setting up that functionality of, okay, currently we have a 10%, like, holdout
+[03:01] group.
+[03:02] Can we use that same functionality to create 10 groups for every advertiser, and then they
+[03:09] can choose whether to target all or some?
+[03:15] Oh, gotcha, gotcha.
+[03:16] Okay.
+[03:17] So, okay.
+[03:18] So, if I'm understanding this correctly, the Decile work is, can we introduce a way to
+[03:24] bucket people into 10 equal groups, rather than just the 90-10 split currently?
+[03:28] Is that kind of?
+[03:29] Right.
+[03:30] And it would surface to the user.
+[03:34] Because right now, they don't really see the holdout group.
+[03:38] They don't.
+[03:39] I mean, it's in the incrementality dashboard in the UI, but, like, they don't really see
+[03:47] it in a lot of the reporting stuff.
+[03:49] So this would be, like, a new functionality, which is enabling experimentation for the
+[03:58] advertiser.
+[03:59] Okay.
+[04:00] Which I guess, like, Alex wants to do it because he's seen it work at the trade desk, and they
+[04:07] do it in this similar way.
+[04:10] They kind of take the US population and put it into 10 randomly assigned buckets, and
+[04:19] then you can build your audiences on top of those and, like, segment it in any way, like,
+[04:24] when you build an experiment.
+[04:25] But you really only see it when you're building an experiment, from what I understand.
+[04:30] So this incrementality work with the Deciles, is that then?
+[04:38] So the intent score shuffling, is that connected to that?
+[04:41] Or that's separate?
+[04:42] Okay.
+[04:43] So that is the...
+[04:44] Okay.
+[04:45] So I had that correct.
+[04:46] That document is about the other incrementality stuff that currently doesn't have an epic.
+[04:48] Is that correct?
+[04:49] Or is that completely separate?
+[04:50] It's the one that doesn't have an epic.
+[04:52] All four of these tickets that you have, these tasks, should go under that new epic that
+[04:58] addresses the intent score shuffling document, basically.
+[05:03] And that's what we were talking about when it comes to basically trying to measure incremental
+[05:08] lift and seeing what we can do.
+[05:11] And then also, you know, what's the lift on our various scoring currently and holdouts
+[05:16] and things like...
+[05:17] Okay.
+[05:18] Cool.
+[05:19] Like, do we already have an answer to this?
+[05:20] Or should we just...
+[05:22] Do we also run this experiment?
+[05:24] I'm actually running that stuff already.
+[05:26] I've already started working on TI-835 currently, and some other stuff.
+[05:31] Okay, cool.
+[05:33] I thought that maybe I did a lot of work that wasn't unnecessary.
+[05:35] Cool.
+[05:36] So basically, the follow-up here is I need to create a new epic, make it really clear
+[05:40] that there's an incrementality in epic.
+[05:43] And then currently, I guess there's no tickets for the deciles work.
+[05:49] But there's really just one thing with the deciles work, and it's more of like an implementation
+[05:53] to like, how can we split up the bucket?
+[05:55] So that probably has to do with like Zach and getting that into...
+[06:00] Okay, that's fine.
+[06:01] There's gonna be a lot on the audience side, likely.
+[06:03] Yeah.
+[06:04] How they surface those.
+[06:07] So Jordan, Peepco, Zach is probably the main person for that one, sounds like, or main
+[06:13] people for that.
+[06:15] They definitely have the knowledge between the two of them on like, what would need to
+[06:18] happen.
+[06:19] Like, so it's like 90% of what would need to happen.
+[06:23] Okay, cool.
+[06:24] That sounds good.
+[06:25] I can create some tickets for that that just says that's the next step in there, or maybe
+[06:29] some spikes.
+[06:30] All right.
+[06:31] The only other thing I have to ask then, or I wanted to share with you then, I did talk
+[06:34] to Cale, and I'm sure you've talked to Cale too.
+[06:37] Cale told me, and we had a pretty long conversation around incremental lift and what does this
+[06:42] impact, right?
+[06:43] So I just want to share some of my notes here.
+[06:45] So the actual item is that we show up poorly as incremental and third party platforms.
+[06:51] Okay, so they're not intending to do it internally.
+[06:54] They're intending to completely trust a third party.
+[06:56] And right now that is Lift Lab.
+[06:59] And so we are not going to internalize it.
+[07:02] Lift Lab gets paid by the advertiser.
+[07:04] So the bias is with the advertiser, which means that their incremental reports are going
+[07:08] to be very conservative, right?
+[07:11] As far as they can be.
+[07:12] So I don't know where that goes in far as us doing incrementality and measuring it and
+[07:17] whatever because, but basically we're going to be at the mercy of these third parties
+[07:22] because I think ultimately we're trying to decrease churn.
+[07:25] People will be happier.
+[07:26] So there's a couple of things I wanted to mention, which you might already know, but
+[07:29] I just want to bring them out here is that I think the idea is number one is that when
+[07:35] people come to the platform, we need to ask them, what is your goal, right?
+[07:39] Is it reach?
+[07:40] Is it performance?
+[07:41] Is it incrementality, et cetera?
+[07:42] So that's the idea is the initial funnel immediately tailors to their needs.
+[07:47] However, people, when it comes to incrementality, measure it at different times, right?
+[07:52] So how big of a company, if you grow, when your budget comes in, et cetera, might change
+[07:56] when you do incrementality.
+[07:57] So you might not be interested in incrementality when you start, but later you might be interested
+[08:02] because you got a new budget and they need to reassess how their allocation of spend
+[08:05] between their different platforms, mountain being one of them, right?
+[08:08] Well, that's the other thing, right?
+[08:11] I brought up to kale that right now, and you know this, that our North star is IVR, right?
+[08:17] And so inherently we are going to optimize against organic or unattributed traffic simply
+[08:24] because that makes sense, right?
+[08:26] And so my concern here at first I thought profitability, but that doesn't matter because
+[08:30] we charge at CPM.
+[08:32] We don't charge it the visit, right?
+[08:35] But the issue here is that if we then make this a North star performance is going to
+[08:41] be impacted, right?
+[08:43] For whoever rolls it out.
+[08:44] I mean, that's, I mean, cause I told him, I said, here's the simplest thing.
+[08:46] When you want a hundred percent incrementality, I said, we'll get rid of the site visit.
+[08:50] Let's only target people that never visited ever before.
+[08:53] Bam.
+[08:54] Wow.
+[08:55] We've got insanely incremental.
+[08:56] But then he said, well, then people care about conversions.
+[08:58] It's not just me incrementality.
+[08:59] And I'm like, well, everything can, everything goes towards the mean.
+[09:04] And that is incremental row as ends up being the most important North star across the board
+[09:08] for pretty much marketing in general.
+[09:10] So really, I think that we should be thinking about this as far as an, I mean, as much as
+[09:15] we hate it, I think incremental row as is probably going to, this is going to turn into
+[09:20] that as I think I'm already jumping the gun and say, that's exactly what's going to happen,
+[09:24] which I did a lot at.
+[09:26] I used to be the third party guy who measured against incremental row as in lifetime value.
+[09:31] So I think that's where we're going.
+[09:32] But just to give you how important this is, kale told me, he's like, this is going to
+[09:36] be extremely important.
+[09:38] He thinks that this is going to be like getting this solved as the most important thing we
+[09:41] could do right now.
+[09:42] And that the company will probably be moving towards this whole incremental row as thing.
+[09:47] So that being said, I just wanted to share that with you as that.
+[09:51] It sounds like this is super high initiative to whoever's there.
+[09:55] So it sounds like you already have a model or you already have thoughts about maybe how
+[09:59] we have separate models, right?
+[10:00] We have a IVR model for our IVR performance.
+[10:04] We have a incremental row as one.
+[10:06] So I guess I don't know where you're at in that process.
+[10:08] I don't know how much time you have to talk about it, but I'd love to hear your thoughts
+[10:10] and kind of how that is connected.
+[10:14] So yeah.
+[10:15] Yeah.
+[10:16] I mean, that's exactly what I've been hearing and discussing as well with kale is this move
+[10:24] towards incrementality, which is kind of funny.
+[10:25] Like I wrote that doc that I shared about like creating that model.
+[10:29] I wrote it in December back when everyone was still saying, yeah, our North Star is
+[10:35] IVR.
+[10:36] I said the same thing.
+[10:38] I said the same thing with it.
+[10:39] And everyone's like, no, it's just the visit, just the visit.
+[10:43] It always, because what really matters at the end of the day is did somebody spend money
+[10:47] on your platform or not?
+[10:48] Like that's it.
+[10:49] I mean like in how much of that is, is driven from ads.
+[10:52] That's what everybody cares about.
+[10:53] So even though it's a hard solution, like problem, and I don't think I have all the
+[10:57] answers.
+[11:00] I just want to share something I thought was interesting when I was calculating incremental
+[11:03] ROAS before in the past.
+[11:04] Now you could argue that this is a terrible idea, but this is what we did, right?
+[11:08] Is that we had deterministic stuff because we're working directly with mobile data.
+[11:14] So what we could know for certain is which device installed the app and then when they
+[11:20] opened it versus the time that they saw an ad, right?
+[11:25] So we knew they clicked on the ad and they knew when they opened the app.
+[11:27] So if you were to measure that as far as volume goes, right, your expectation is there's going
+[11:32] to be some sort of baseline, right?
+[11:34] It's going to look like kind of like a line like this, right?
+[11:35] That's going up and down at peak times and stuff, right?
+[11:37] That's your baseline installs.
+[11:39] Now it changes based on who it is and what the app is, right?
+[11:42] But app installs are super simple, right?
+[11:45] So again, this isn't against conversion.
+[11:47] This is just app install, right?
+[11:49] But more or less, right?
+[11:51] If you were to bucket those users on equal time buckets, meaning that you have the same
+[11:56] amount of users.
+[11:57] So if overall you had a hundred thousand installs, you had, well, let's say 50,000 installs and
+[12:03] you had 50 buckets, right?
+[12:04] The goal would be every single one of those buckets would be a thousand users, right?
+[12:09] Now you let the time Delta change.
+[12:12] In the first five seconds, you might get those 5,000 and adjacent to the ad shown, right?
+[12:17] At the point, and this is hacky, right?
+[12:20] It's more of an art than a science at a certain point, because there's so much variation between
+[12:24] the types of apps and everything.
+[12:26] Is that at the point where you could from the graph say that, Hey, here's about where
+[12:33] we would be guessing 50, 50, whether or not this person is organic.
+[12:37] We would kind of say, Hey, this is like as far as we're willing to go, right?
+[12:41] So here we know that we're going to be capturing some organic people.
+[12:44] We can't change that in the first five seconds, but we know because of such a huge spike that
+[12:49] the likelihood is that 90% of these are driven by the ads, right?
+[12:54] That's how we measured it.
+[12:55] So in a third party, we only care about like, we care about being conservative, right?
+[13:00] So if that was up to me, I would be like, okay, I only want to be built on the first
+[13:03] five seconds after the ad shown.
+[13:04] Right.
+[13:05] Cause it's like a hundred percent incremental.
+[13:06] Um, but that doesn't work here.
+[13:08] So a mountain, we obviously have some sort of like bridge there.
+[13:11] So that's how I dealt with it before.
+[13:13] And there's some more nuance to it.
+[13:14] And I did some analyses on which advertiser it was, blah, blah, blah.
+[13:17] Cause I was vetting Google and Twitter and you know, the trade desk, stuff like that.
+[13:24] I'm sure you have some other ideas about it, but, um, I, all that to being said is
+[13:28] that, um, yeah, it sounds like incremental rel is a super important and, um, I have experience
+[13:31] rel is a super important and, um, I have experience in it. So that's, that's good.
+[13:35] Cause like, that's, that's kind of funny. Cause like same idea is I just kind of randomly floated
+[13:42] to Alex in that shuffling doc, his brief that he wrote. If you look at the comments, one of the
+[13:45] brief that he wrote.
+[13:46] If you look at the comments, like one of the comments was, oh, can we just look at like
+[13:50] the time of impression to the time of whatever conversion event we care about.
+[13:55] Um, just kind of look at those times and then see how it might correlate with like our different
+[14:02] intent scores to be like, oh, this person.
+[14:04] Yeah, we did send them an impression, but like the, whatever event happened, like at
+[14:10] a time interval where it doesn't really correlate as well as like that really short time period.
+[14:17] And so seeing like assigning the, that like, where do we see the most incremental changes
+[14:24] and things like that by looking at the timing of impressions, cause we do have that in like
+[14:27] the good log, right.
+[14:28] We have, or in the, uh, whatever the final table is like the cost impression log or something.
+[14:35] Yeah.
+[14:36] Well, which mostly visits, right.
+[14:38] Yes.
+[14:39] Um, what's really hard about this though, is that in my example, I wasn't talking, I
+[14:44] used app open because I knew that they installed the app when they opened the app.
+[14:48] Right.
+[14:49] So I had that.
+[14:50] It's a very easy thing to measure.
+[14:51] There's really no nuance in it.
+[14:53] Um, no matter what partner it was, right.
+[14:56] They had to open the app to use it.
+[14:58] Right.
+[14:59] So having a really low funnel event is probably the best way to measure causality because,
+[15:00] low funnel event is probably the best way to measure causality because but what's really hard
+[15:04] about it is ctv number one not deterministic right so we're dealing with ips i not ip uh you know
+[15:11] ipfv or something like that device the second thing is we deal with conversion rates that are
+[15:15] The second thing is we deal with conversion rates that are way different, right?
+[15:20] Some of our, a lot of our products are, you know, two weeks out conversion, right.
+[15:25] And just to tell you like the truth of math, like I did an analysis, I actually have a
+[15:29] published article on this.
+[15:33] When you're measuring in this field with just apps, right.
+[15:36] Which is like immediate, like you see an ad on the app, you click on it.
+[15:38] Boom.
+[15:39] It's there.
+[15:40] You, there's no, like, it's so easy to do so.
+[15:43] You could really, for the majority of cases, only estimate those across on average, a max
+[15:52] of like six and a half hours, typically to 30 minutes, meaning that if it took more than
+[15:58] six and a half hours to convert, your signal was barely noticeable.
+[16:04] And it was very, very hard to optimize against.
+[16:06] And so that's one of the difficult parts is that this, that method works really well.
+[16:12] It might be different for CTV.
+[16:13] I haven't analyzed CTV, so it might be totally different, but the difference is so hard to
+[16:20] measure that the, our biggest issue with doing the whole incrementality is that like the
+[16:25] nature of CTV is, is very like, people aren't converting right away.
+[16:30] Right.
+[16:31] And so you really, when it comes down to is unless you have a giant spike where it's very
+[16:35] easy to show, Hey, we have, we're our typical baseline is we have, you know, 10 installs
+[16:41] an hour.
+[16:42] Right.
+[16:43] And now we have 150.
+[16:45] Like it's a lot harder to change that then, well, we have some noise here, which we don't
+[16:51] know whether or not this is deterministic.
+[16:54] It's like, Oh, well, yeah, we do have an extra 10 installs this hour, but is that just noise?
+[16:58] Right.
+[16:59] Like, is that just, you know, so that's where you're dealing with is, and I guess I'm pretty
+[17:03] sure
+[17:04] Conversion events are very, that's why I was like, when you mentioned the app stuff, like
+[17:06] that's the one that does make the most sense to me is like as a conversion event visits,
+[17:12] you could probably get a little closer to as well.
+[17:17] Like I can imagine people watching TV and then they have their phone and they go visit
+[17:20] a website, but yeah, the IP component to it is very tricky as well.
+[17:26] You're always just guessing.
+[17:28] We probably want to limit to only non-cellular IPs and on specific, I don't know, I mean,
+[17:34] this is going off.
+[17:36] A lot of stuff will be like kind of limiting through, yeah, those kinds of filters.
+[17:42] So one of the ideas is using the identity graph as like a filter, right?
+[17:47] Filters out all of those T-Mobile IPs and whatever other mobile IP stuff.
+[17:53] Okay.
+[17:54] But yeah, definitely, yeah.
+[17:58] Just investigate like our current incrementality.
+[18:02] Like that's the whole thing.
+[18:04] Like right now, like we just need a baseline on like what it actually looks like and what
+[18:08] does our intent score tiering actually doing?
+[18:14] Like everyone suspects it is just capturing people who are going to visit anyways.
+[18:19] So can we see that?
+[18:23] How bad is the issue?
+[18:27] Also our own incrementality dashboard, I don't know.
+[18:30] Whenever I go and look at our own incrementality dashboard, of course, I've never seen negative
+[18:36] incrementality or zero incrementality.
+[18:40] It's always positive.
+[18:41] I've seen negative incrementality.
+[18:44] So negative incrementality to me, this is probably just the nerd in me, is the funniest
+[18:50] thing in the world to me.
+[18:52] Because it's like, if you break it down, it's hilarious, right?
+[18:55] Like we did it for TikTok, right?
+[18:58] TikTok installs and TikTok ran some sort of ad and they had negative lift.
+[19:02] And it's hilarious to explain to someone to go.
+[19:04] So turns out if you did nothing at all, people would have been more likely to download your
+[19:09] app.
+[19:10] But your ad was so terrible that people who were going to download it were like, you know
+[19:14] what?
+[19:15] Better not.
+[19:16] Yeah.
+[19:17] It's hilarious.
+[19:18] Yeah.
+[19:19] Goodness.
+[19:20] Bud Light is a great example of that one too, with their whole campaign they ran a couple
+[19:24] years back.
+[19:25] But yeah, I digress.
+[19:26] It's hilarious.
+[19:27] Sorry.
+[19:28] Okay.
+[19:29] So yeah.
+[19:30] Yeah.
+[19:31] I think.
+[19:32] Yeah, that's all good.
+[19:33] Okay.
+[19:34] Any other things that came up there?
+[19:35] Like with Cale, it sounds like in those discussions as well.
+[19:36] And in talking with him, it is like, yeah, we probably won't have like an ensemble of
+[19:48] and in talking with him it is like yeah we probably will have like
+[19:52] an ensemble of models or approaches maybe to different
+[20:00] things, right? So it's like, yeah, we can't, there's no one model that to rule them all.
+[20:07] It is all different things. So it's like, yeah, you want incrementality? Okay, well,
+[20:12] we'll use our incrementality optimizations versus you want IVR, we'll optimize for that.
+[20:20] So, but always keeping in the back of the mind, like this trade-off thing, right? Like,
+[20:25] yeah, we could go all out and optimize on incrementality and your performance is going to
+[20:30] be like on IVR and revenue and all that is going to be terrible. Yeah. Yeah. Well, I asked him this
+[20:38] question literally right at the beginning of conversation. I said, if performance metrics are
+[20:41] the North star of mountain, we'll look badly on targeting. If we start adjusting to match
+[20:45] incrementality or no, since it's only going to affect advertisers who opt in or at specific
+[20:50] times. And he said the latter. So he says, we'd only do this. So I guess what we lose in
+[20:54] performance as a whole, we gained in churn retention, things like that. Right. So.
+[21:00] Yeah. And it makes sense. I think it's just always keeping a pulse on like what the advertiser is
+[21:05] caring about. Yeah. They always care about incrementality. It always matters. My favorite
+[21:11] too, is I worked at a company that would promote insane ROAS. I didn't ROAS, I shouldn't say,
+[21:18] I contracted for a company. He wanted me to build some stuff for them. Right. And I remember my
+[21:22] favorite one was their leading dashboard that said $8 ROAS. And I was like, really $8 ROAS.
+[21:29] And so it's the highest number I've ever seen. And they were bold about it. And that was the
+[21:35] average, by the way, there were individual advertisers that had higher. And so I remember
+[21:40] the guy, he really shouldn't have been in data, but he got thrown into it. Right. He comes to me
+[21:44] and he goes, well, what should we tell our clients like based on this data? And it said to
+[21:49] throw so much money at us that because we're a money printing machine, I'm like, if I were to
+[21:53] tell you that every dollar you give me, I give you $8 back. I'm like, you gotta do that till the
+[21:57] machine breaks. Right. But in real incrementality stuff that I found, like in the real world where
+[22:02] I was on that side where I was doing, okay, the 50, 50 measurement, all that stuff, it's pretty
+[22:07] rare for things to be over a dollar incremental. And when they are, it's like awesome. Right. So
+[22:14] like a lot of times the trade desk is actually, I know our competitor, but they are really good at
+[22:18] it. A lot of times we would see stuff with them, at least with the apps and stuff where we'd see
+[22:22] like a dollar 15, you know, which is like good. All right. But most of the time, like good
+[22:27] advertisers have around like 90 cents on the dollar, not really necessarily accounting for
+[22:32] all the lifetime benefits way in the future, but it was about, you know, 90 cents. And then poor
+[22:36] ones were typically like 50 cents or worse. Right. So anyways, cool. Well, thank you, Matt. This
+[22:42] clears up everything. I'll, I'll change those tickets. I'll continue to work on the eight 35.
+[22:47] I'll create a new Epic. And then yeah, I will let you know what some results I find out and
+[22:53] any questions after that. Cool. Cool. That's good. Sweet, man. Well, I was going to say,
+[22:58] I'll see you Thursday, but I guess not, man, you're, you're going to have a tan pretty soon. So
+[23:02] I'll just be here. Cranking out the findings that I need for the experiment.
+[23:11] It'll be nice. I'll have like two days of real focused work. Hopefully that's so nice. Sometimes
+[23:15] like I know this is like workaholic stuff, but like, goodness, sometimes I'm like, you know,
+[23:19] maybe I should just take a day off. So nobody pings me all day. Yeah. Get some stuff done,
+[23:25] but exactly. Cool. All right. Thanks, man.
