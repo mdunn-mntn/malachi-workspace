@@ -694,7 +694,7 @@ Reference diagram: `documentation/architecture/audience_intent_scoring.png`
 
 ### Special Values
 - **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
-- **8000** = Peak Performance (PP) — **planned, not yet active** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. This is a waterfall: HI → PP.
+- **8000** = Peak Performance (PP) — **was active Jan-Feb 2026, currently minimal** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. Waterfall: HI → PP. Top advertisers with PP data: 34185, 36232, 37158, 34838. Most PP activity ended by late February. Sporadic single-digit impressions in March-April.
 - **3333-6665** = Mid Intent (MI) — bucket-matched IPs not in the vertical. 1.4% of impressions.
 - **-1** = unscored (no Fangorn/intent score assigned). 28.7% of impressions.
 - **-4** = rare edge case (9 impressions observed)
