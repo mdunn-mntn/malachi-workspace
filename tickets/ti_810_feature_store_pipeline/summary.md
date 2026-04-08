@@ -2,10 +2,56 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-810
 **Epic:** [TI-789](https://mntn.atlassian.net/browse/TI-789) — Bidstream Feature Extraction & Audience Augmentation
-**Status:** In Progress
+**Status:** In Progress — backfill complete, waiting on Ryan review
 **Date Started:** 2026-04-01
 **Date Completed:**
 **Assignee:** Malachi
+
+---
+
+## Current Status (2026-04-08)
+
+**All Layer 1 code + backfill complete. Blocked on Ryan PR review.**
+
+### What's Done
+- 7 Layer 1 PySpark models written, tested, compiled (PR #962 CI green)
+- Applied Ryan's feedback: HLL sketches, sum+count not avg, Spark config placement, removed timeout overrides
+- Fixed 2 parquet schema bugs: guid_log product STRUCT, aug_log nested LIST fields (pmp/iab/segments)
+- All 7 models backfilled 30 days in dev (~530 Dataproc Serverless jobs, zero errors)
+- DAG changes included in PR
+- model_task_config.json regenerated
+
+### Backfill Results
+| Model | Days | Jobs | Errors |
+|-------|------|------|--------|
+| win_logs_ip | 31 | 31 | 0 |
+| bae_ip | 31 | 31 | 0 |
+| cil_ip | 31 | 31 | 0 |
+| guid_log_ip | 31 | 31 | 0 |
+| conv_log_ip | 31 | 31 | 0 |
+| aug_log_ip_hourly | 31 | 372 | 0 |
+| aug_log_ip (daily) | 30 | 30 | 0 |
+
+### Dev Output Paths
+All at `gs://mntn-data-archive-dev/feature_store/feature_group_1_source/{model}_feature_ti_810_bidstream_ip_features/dt=YYYY-MM-DD/`
+
+### What's Next (requires Ryan)
+1. **Meet with Ryan** to review PR #962 and spot-check output schemas
+2. **gsutil cp dev→prod** — copy backfilled data to prod bucket (new folders, no overwrite risk)
+3. **Ryan approves + merges PR** — models start running automatically in prod DAGs
+4. **Monitor first prod runs** — verify output matches dev
+5. **Layer 2 derived model** — next ticket, Ryan offered to show template
+
+### Key Links
+- **PR:** https://github.com/SteelHouse/airflow-ti/pull/962
+- **Branch:** `feature/ti-810-bidstream-ip-features`
+- **Repo local:** `~/Developer/work/mntn/airflow-ti`
+- **Feature store naming doc:** `airflow-ti/docs/feature_store_naming_standards.md`
+
+### Open Questions for Ryan
+- isNotNull() workaround for parquet LIST fields — good enough or better pattern?
+- Layer 2 template — he offered `guid_log_derived_ip_vertical_id.py` as reference
+- Compute cost review — ~530 Dataproc Serverless jobs for backfill, ongoing daily cost
 
 ---
 
