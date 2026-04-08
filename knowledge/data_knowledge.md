@@ -517,6 +517,7 @@ Domain-level ecommerce classifier that assigns an `ecommerce_score` to each doma
   1. **Empty name regression (since 2025-12-23):** 79–82% of new advertisers have empty string. 4,366+ advertisers affected.
   2. **Stale names:** 7% of populated names differ from current `advertisers.company_name` (customers renamed after FPA row was created).
   - **Always JOIN to `advertisers.company_name`** for the current name — never use `fpa_advertiser_verticals.advertiser_name`.
+- **Shortcut for vertical/bucket lookups:** `tpa.dim_vertical` in coredb (created by Ryan Kleck) — PK is `vertical_id`, pre-joined with bucket info (`bucket_id`, `bucket_name`, `vertical_bucket_name`, `verticals_in_bucket`). Use this instead of self-joining `advertiser_verticals` type=0 + type=1 when you just need the vertical→bucket mapping.
 
 ---
 
