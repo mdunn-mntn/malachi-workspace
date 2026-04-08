@@ -168,6 +168,34 @@ The shuffling experiment must clearly define its success metric:
 - If measuring attributed visits → expect large differences driven by the VV redirect mechanism
 - The experiment design should account for the fact that "incremental" has two very different meanings depending on the measurement table
 
+### Strategic Context (Kale + Matt Brorby, 2026-04-08)
+
+**Kale's direction:** Incrementality is the #1 priority. MNTN almost certainly looks bad on external platforms (LiftLab, Kochava) because everything is optimized for visits. Incremental ROAS is the top metric. Shutter internal dashboards, move to third-party vendors. OKR: run 5 experiments with external vendors.
+
+**Matt's confirmation:** "Everyone suspects intent scoring is just capturing people who would visit anyway." This aligns with our guid_log ~0% lift finding. The baseline measurement is the critical first step.
+
+**Matt's incremental ROAS experience (prior role, mobile):**
+- Time-delta bucketing: bucket users by time from ad impression to conversion. Short windows (5s) ≈ 100% incremental. Beyond ~6.5 hours, signal barely noticeable.
+- Industry benchmarks: Good advertisers ~$0.90 incremental/dollar. Poor ~$0.50. Trade Desk ~$1.15 (considered good). Claims of $8 ROAS are attributed, not incremental.
+- Over $1.00 incremental ROAS is rare and "awesome."
+
+**CTV-specific challenges (Matt):**
+- Not deterministic — IP-based, not device-based like mobile
+- Long conversion windows (weeks, not seconds/hours)
+- Much harder to separate signal from noise at longer time intervals
+- Should filter out cellular IPs (T-Mobile, etc.) via identity graph
+- Time-delta bucketing may work differently for CTV — needs investigation
+
+**LiftLab context (Matt):**
+- LiftLab is paid by the advertiser → bias toward conservative measurement
+- Their reports will be as conservative as possible
+- MNTN is "at the mercy of these third parties" — we won't internalize incrementality measurement
+
+**Ensemble approach (Matt + Kale):**
+- No single model. IVR model for performance-focused advertisers, incremental ROAS model for incrementality-focused ones.
+- Only applies to advertisers who opt into incrementality — won't tank performance metrics company-wide.
+- Kale confirmed: "We'd only do this for advertisers who opt in. What we lose in performance, we gain in churn retention."
+
 ## 6. Questions Answered
 
 - **Q:** What is the incremental visit rate lift from CTV ads?

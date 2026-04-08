@@ -94,12 +94,27 @@ The shuffling experiment (TI-837) is designed to test whether intent tier target
 
 ---
 
-## 5. Recommendations
+## 5. Industry Context: What "Good" Looks Like
 
-1. **Share this finding with the shuffling experiment design team** — it shapes how they define success.
-2. **Align on metric definition** before investing in experiment infrastructure. "Incremental" means different things depending on the table.
-3. **Accelerate continuous HHST scoring** — per-tier analysis (the original goal of TI-835) is blocked until this ships.
-4. **Consider adding a total-traffic metric** alongside attributed visits in client reporting — the current numbers may overstate true incrementality.
+Matt Brorby (Staff DS, former third-party incrementality measurement):
+
+- **Incremental ROAS benchmarks:** Good advertisers = ~$0.90 per dollar spent. Poor = ~$0.50. Trade Desk = ~$1.15 (considered excellent). Over $1.00 is rare.
+- **Companies claiming $8 ROAS are measuring attributed, not incremental.** The gap between attributed and incremental ROAS can be 8x or more.
+- **LiftLab is paid by the advertiser** — their reports will be as conservative as possible. We are at the mercy of their methodology.
+- **CTV is harder than mobile:** IP-based (not deterministic), long conversion windows (weeks, not seconds), cellular IP noise. Time-to-conversion signal degrades much faster than in mobile.
+
+**Translation for us:** Our clickpass_log 2-8x lift is an attributed metric. When LiftLab measures us, they'll be looking at something closer to guid_log. We need to prepare for the possibility that our externally-measured incrementality is near zero — and have a plan to change it.
+
+---
+
+## 6. Recommendations
+
+1. **Reframe incrementality around incremental ROAS, not incremental visits.** This is what external vendors measure and what advertisers care about.
+2. **Research LiftLab methodology** (TI-856) — understand exactly how they'll measure us before they do.
+3. **Plan 5 external vendor experiments** (TI-857, Q2 OKR) — get ahead of the problem by running controlled tests.
+4. **Identify which audiences are incremental** (TI-858) — if 60% aren't, know which 60%.
+5. **Build ensemble model approach** — separate IVR optimization from incremental ROAS optimization. Advertisers who opt into incrementality get different targeting.
+6. **Expand holdout bucketing** (TI-859) — need richer experimentation infrastructure (Zach + Jordan).
 
 ---
 
