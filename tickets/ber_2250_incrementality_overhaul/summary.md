@@ -92,18 +92,50 @@ All scored IPs get flat HHST=10000 (HI). Per-tier analysis not possible until co
 
 ## 8. Open Items / Follow-ups
 
-- [ ] TI-835: Control group design — shuffle %, cohort selection, duration
-- [ ] TI-831: Audience deciles — even/odd targeting implementation
+- [x] TI-835: Observational analysis — **COMPLETE** (two stories finding)
+- [ ] TI-856: Research LiftLab methodology — prerequisite for external experiments
+- [ ] TI-857: Plan and scope 5 external vendor experiments (Q2 OKR)
+- [ ] TI-858: Identify which targeting audiences are incremental vs not
+- [ ] TI-859: Expand holdout bucketing infrastructure (Zach + Jordan)
 - [ ] TI-837: Implementation plan — which systems change, how scores are logged, rollback
+- [ ] TI-831: Audience deciles — even/odd targeting (separate customer-facing A/B tool)
 - [ ] Coordinate with RX squad on ITT reporting requirements
 - [ ] Determine minimum experiment duration for statistical power
+- [ ] Establish LiftLab liaison/DS relationship
+
+## Jira Structure (updated 2026-04-08)
+
+```
+BER-2250: Incrementality Overhaul (Initiative)
+├── TI-831: Audience Deciles for Advertiser Experimentation (separate workstream)
+└── TI-855: Incrementality Experimentation & External Vendor Validation (EPIC) ← NEW
+    ├── TI-835: Observational incrementality analysis (10% holdout) — IN PROGRESS
+    ├── TI-837: Design and implement intent score shuffling experiment — Backlog
+    ├── TI-839: Measure incrementality results — Backlog
+    ├── TI-842: Present results to broader audience — Backlog
+    ├── TI-856: Research LiftLab methodology — NEW
+    ├── TI-857: Plan 5 external vendor experiments (Q2 OKR) — NEW
+    ├── TI-858: Identify incremental vs non-incremental audiences — NEW
+    └── TI-859: Expand holdout bucketing infrastructure (Zach + Jordan) — NEW
+```
 
 ## Child Tickets
 
-| Ticket | Summary | Folder | Status | SP |
-|--------|---------|--------|--------|----|
-| [TI-831](https://mntn.atlassian.net/browse/TI-831) | Audience Deciles for Advertiser Experimentation | `ti_831_audience_deciles/` | Not Started | 5 |
-| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | `ti_835_control_group_design/` | **Analysis Complete** | 3 |
-| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Shuffling experiment design (contingent on TI-835) | `ti_837_implementation_plan/` | Backlog | 5 |
-| [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | `ti_839_measure_results/` | Backlog | 5 |
-| [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | `ti_842_present_results/` | Backlog | 3 |
+### TI-855: Incrementality Experimentation & External Vendor Validation (EPIC)
+
+| Ticket | Summary | Status | SP |
+|--------|---------|--------|----|
+| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | **In Progress** | 3 |
+| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Design and implement intent score shuffling experiment | Backlog | 5 |
+| [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | Backlog | 5 |
+| [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | Backlog | 3 |
+| [TI-856](https://mntn.atlassian.net/browse/TI-856) | Research LiftLab methodology | Not Started | 3 |
+| [TI-857](https://mntn.atlassian.net/browse/TI-857) | Plan 5 external vendor experiments (Q2 OKR) | Not Started | 5 |
+| [TI-858](https://mntn.atlassian.net/browse/TI-858) | Identify incremental vs non-incremental audiences | Not Started | 5 |
+| [TI-859](https://mntn.atlassian.net/browse/TI-859) | Expand holdout bucketing infrastructure | Not Started | 5 |
+
+### TI-831: Audience Deciles (separate workstream)
+
+| Ticket | Summary | Status | SP |
+|--------|---------|--------|----|
+| [TI-831](https://mntn.atlassian.net/browse/TI-831) | Audience Deciles for Advertiser Experimentation | Not Started | 5 |
