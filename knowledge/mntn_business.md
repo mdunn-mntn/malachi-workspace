@@ -1,5 +1,5 @@
 # MNTN Business Knowledge
-Last updated: 2026-04-07
+Last updated: 2026-04-08
 
 General knowledge about MNTN as a business — products, strategy, org structure, industry context, terminology, and institutional knowledge. Sourced from shared docs, meetings, messages, and conversations. Updated as new business context is learned.
 
@@ -100,6 +100,12 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - **Visit Conversion Rate** — conversions / visits (quality of visits)
 - **Effective Conversion Rate** — conversions / impressions
 
+### Pricing Model & Incrementality Impact (Kale, 2026-04-08)
+- MNTN charges on **CPM** (cost per thousand impressions), not CPV — so changing targeting for incrementality shouldn't directly affect profit/revenue.
+- **But it WILL affect performance metrics (IVR)** — if targeting is adjusted to optimize for incrementality (e.g., reaching lower-intent users), IVR performance will suffer.
+- TI squad could appear to be performing worse on current metrics while actually improving incrementality.
+- Incrementality is a bucket/category of measurement — if the North Star is IVR and we adjust for incrementality, IVR suffers. This is the core tension.
+
 ### What "Good" Looks Like for Experiments
 - 10-15% improvement = a win for most experiments
 - 50-100% = exceptional (seen with targeting changes like Fangorn)
@@ -115,15 +121,34 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - CTV has inherent limitations — no SDK on most devices, reliance on IP-based matching
 - Apple's privacy changes (ATT/App Tracking Transparency) obfuscated device identifiers for mobile
 
-### Lift Testing Partners
-- **Lift Lab** — external partner used for geo-based lift measurement. Segments by geography and measures raw metric lift during campaign period.
-- Lift tests are a key focus area — finding ways to improve MNTN's performance in partner-run lift studies
+### Lift Testing Partners & External Incrementality Vendors
+- **LiftLab** — primary external partner for incrementality measurement. Keeps coming up with advertisers. Geo-based lift measurement — segments by geography and measures raw metric lift during campaign period.
+- **Kochava** — another incrementality/attribution vendor option.
+- Possibly more vendors in the space.
+- **Strategic shift (Kale, 2026-04-08):** Plan to shutter internal incrementality dashboards and move to approved third-party vendors. Messaging: "We changed the way we do incrementality." Need a dedicated LiftLab liaison/DS on the MNTN side.
+- If advertisers trust LiftLab, MNTN has to trust LiftLab — can't argue with the vendor the customer chose.
+- Lift tests are a key focus area — finding ways to improve MNTN's performance in partner-run lift studies.
+
+### Competitive Positioning on Incrementality (Kale, 2026-04-08)
+- Solving incrementality would be **HUGE** — dramatically change growth and retention (Kale's words).
+- MNTN almost certainly looks bad on external incrementality studies because everything is currently optimized toward the visit (high-intent users who would've converted anyway).
+- This is the core strategic risk: if external vendors show low lift, it undermines MNTN's value proposition. If MNTN can prove incrementality, it becomes a competitive moat vs Meta/Google.
 
 ---
 
 ## Customer & Advertiser Context
 
-*Add knowledge about advertiser segments, verticals, common use cases, onboarding patterns.*
+### Incrementality in the Customer Lifecycle (Kale, 2026-04-08)
+- Customers care about incrementality at specific lifecycle points:
+  - **(a) Evaluating CTV as a new channel** they've never used before — "is this incremental to my existing spend?"
+  - **(b) Periodic budget planning** — marketing managers ask "how incremental are my channels today vs last year, should I pour more or less into CTV?"
+- Customers go in and out of incrementality measurement to make decisions. Once they figure it out, they likely shift their objective to something different (reach, performance).
+- **Onboarding implication:** When advertisers come into MNTN, ask their funnel AND which feature they want: reach, performance, or incrementality — then tailor their specific experience accordingly.
+
+### Incremental ROAS Is the Top Customer Metric (Kale, 2026-04-08)
+- Not incremental visits, not incremental impressions — **incremental ROAS** is what matters.
+- This is what external vendors measure and what advertisers ultimately care about.
+- Internal metrics (IVR, visit rate) are operational; incremental ROAS is the customer-facing proof point.
 
 ---
 
@@ -149,7 +174,9 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | **Campaign splits** | (Planned) Ability to split a live campaign's audience for experimentation |
 | **IVR** | Impression-to-Visit Rate (primary performance metric) |
 | **VCR** | Video Completion Rate |
-| **Lift Lab** | External geo-based lift measurement partner |
+| **LiftLab** | Primary external incrementality measurement vendor. Geo-based lift measurement. Advertisers frequently use them. MNTN moving toward LiftLab as approved third-party vendor. |
+| **Kochava** | External attribution/incrementality vendor (alternative to LiftLab) |
+| **Incremental ROAS** | The top incrementality metric — what external vendors measure and advertisers care about. Not incremental visits or impressions. |
 | **PEX** | Team involved in identifying beta candidates for features |
 | **CS** | Customer Success team |
 | **Hidden campaigns** | Non-customer-facing experiment campaigns invisible to advertisers in UI/reporting |
@@ -168,6 +195,7 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | 2026-04-06 | PM planning doc | Q2 OKR table — epic-to-deliverable mapping, incrementality initiative (BER-2250) |
 | 2026-04-07 | Matt Brorby sync | 10% holdout exists on all campaigns (IP hash), observational analysis approach, lift-optimized model concept, performance vs incrementality tension |
 | 2026-04-07 | TGT Infrastructure Standup | Fangorn all-verticals done (Brian, validating), continuous scoring architecture (MembershipDB + Bidder parallel), identity graph blocked on CRM rollout, Bryce/Sean/Victor/Forrest people context, Jira workflow update, MountainMeet NYC this week |
+| 2026-04-08 | Kale McNaney conversation | Incrementality customer lifecycle (eval + budget planning), CPM pricing vs IVR tension, incremental ROAS as top metric, external vendors (LiftLab primary, Kochava), shutter internal dashboards strategy, competitive positioning |
 
 ---
 
