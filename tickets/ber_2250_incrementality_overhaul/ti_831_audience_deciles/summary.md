@@ -51,18 +51,17 @@ Bryce described the requirement in Slack. Key points:
 - MemDB already hashes IPs for the 10% holdout — could potentially reuse that mechanism
 - "They want it stratified by intent score" — AUD-5221 says "Split audiences into deciles based on intent score distribution"
 
-### Design Clarification (Partially Resolved 2026-04-07)
+### Design Clarification (Resolved 2026-04-07)
 
-~~Two different interpretations were floating around — random vs intent-stratified.~~
+**Matt Brorby clarified after talking to Alex Bohr — these are TWO SEPARATE workstreams:**
 
-**Resolved: Intent-stratified deciles** (Alex Knorr confirmed, 2026-04-07). NOT random bucketing.
+1. **BER-2250 (Incrementality Overhaul):** Do our current intent tiers produce incremental value? Accomplish through score shuffling + ITT methodology. This is TI-835's observational analysis and the shuffling experiment.
 
-**Remaining open questions (Alex Knorr, 2026-04-07):**
-1. **Which scores?** Are these campaign-level intent scores (Fangorn)? BUK keyword scores? Something else?
-2. **Which advertisers?** A subset for the experiment, or all advertisers? (Presumably not all — too broad)
-3. **Jordan Piepkow's input** — Bryce tagged him, waiting for response on implementation feasibility from the audience tools side
+2. **Deciles (TI-831 / AUD-5221):** Enable A/B testing for customers. Take the population of IPs, randomly assign to 10 groups ("US Population 1", "US Population 2", ...). Advertisers select from these segments to build A and B campaigns with their own segments layered on top. This is a **general-purpose A/B testing tool**, NOT intent-stratified.
 
-These answers determine the scope and complexity of the implementation.
+**Ryan Kleck on #2:** "easy-ish.. either use the hashing Zach/Jordan has already or we can make a new data source (seems like overkill to me but whatever)"
+
+**Implication:** TI-831 is simpler than we thought — it's random bucketing of all US IPs into 10 groups, not intent-stratified. The intent-stratified incrementality work is handled by TI-835/TI-837 under BER-2250 separately.
 
 ## 5. Solution
 
@@ -78,11 +77,10 @@ These answers determine the scope and complexity of the implementation.
 
 ## 8. Open Items / Follow-ups
 
-- [x] ~~Clarify random vs intent-stratified~~ — **Resolved: intent-stratified** (Alex Knorr, 2026-04-07)
-- [ ] **BLOCKING: Which scores?** Campaign-level Fangorn scores? BUK? (Alex Knorr's question)
-- [ ] **BLOCKING: Which advertisers?** Subset for experiment or all? (Alex Knorr's question)
-- [ ] **WAITING: Jordan Piepkow's input** on implementation feasibility from audience tools side
+- [x] ~~Clarify random vs intent-stratified~~ — **Resolved: RANDOM bucketing** (Matt Brorby clarified, 2026-04-07). Intent-stratified work is separate (TI-835/837).
+- [ ] Decide implementation: reuse Zach/Jordan's existing hashing OR new data source (Ryan says existing hash is simpler)
 - [ ] Read the Google Doc for full requirements
+- [ ] Determine refresh cadence (daily vs weekly) for IP rotation
 - [ ] Investigate MemDB holdout hash mechanism — can it be extended for deciles? (Ryan's suggestion)
 - [ ] Daily vs weekly refresh cadence decision
 - [ ] Even/odd targeting — how does this integrate with the existing pipeline?
