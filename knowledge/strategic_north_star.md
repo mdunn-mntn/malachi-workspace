@@ -1,5 +1,5 @@
 # Strategic North Star — Q2 2026
-Last updated: 2026-04-06
+Last updated: 2026-04-08
 
 This is the **leverage filter** for all work. Every ticket, every task, every hour should be evaluated against this document. If work doesn't connect clearly to the objectives below, question whether it's the highest-leverage use of time.
 
@@ -49,15 +49,29 @@ From PM planning doc (2026-04-06):
 | **TI-784: B2B Audience Curation** | TI-786: Interest Segment Quality Score Implementation | Possible contributor |
 | **PRO-118: Campaign Objectives V3** | TI-639: ROAS/CPA Audience Scoring Model | Possible contributor |
 
-### The Big Bet: Incrementality
+### The Big Bet: Incrementality (KALE'S #1 PRIORITY — 2026-04-08)
 
-The single highest-leverage initiative for Q2 is **proving (or disproving) that MNTN's intent targeting generates incremental lift**. This is existential-level importance:
+**Kale's words: "The most valuable thing right now is getting this incrementality thing out. Everything regresses to incrementality / incremental ROAS. Solving this would be HUGE and would dramatically change growth and retention."**
 
-- If high-intent targeting produces low incrementality → we're charging customers for outcomes they'd have gotten anyway → **retention risk**
-- If we can prove incrementality → competitive moat vs Meta/Google → **revenue growth + retention**
-- Advertisers increasingly demand incrementality proof → being first with this data is a **differentiation play**
+The single highest-leverage initiative for Q2 is **making MNTN look good on third-party incrementality platforms** (LiftLab, Kochava). This is existential-level importance:
 
-This is why BER-2250 and the Intent Score Shuffling experiment are the top priority.
+- MNTN almost certainly looks bad on external incrementality because **everything is optimized toward the visit** — internal metrics overstate true incrementality (TI-835 confirmed: guid_log ~0% lift vs clickpass 2-8x lift)
+- **Incremental ROAS** is the top metric — not incremental visits, not impressions
+- If advertisers trust LiftLab, **we have to trust LiftLab** — need a dedicated LiftLab liaison/DS
+- Customers care about incrementality at lifecycle inflection points: evaluating CTV as a new channel, periodic budget planning ("should I pour more or less into CTV?")
+- OKR: **Run 5 experiments with external vendors**
+
+**Strategic shift (Kale direction):**
+- **Shutter internal incrementality dashboards** — move to approved third-party vendors
+- Messaging: "We changed the way we do incrementality"
+- Customer-driven: ask advertisers what they want (reach, performance, incrementality) → tailor their experience
+- **Change targeting methodology** so we're incremental, not just attributed
+- CPM pricing means incrementality changes don't directly hit profit, but IVR performance metrics will suffer
+
+**The uncomfortable truth (TI-835 observational finding):**
+Our internal attributed-visits metric (clickpass_log) shows 2-8x lift — but total site traffic (guid_log) shows ~0% lift. External vendors like LiftLab measure something closer to guid_log. **The gap between our internal metrics and external measurement IS the problem to solve.**
+
+This is why BER-2250, the shuffling experiment, and external vendor partnerships are the top priority.
 
 ---
 

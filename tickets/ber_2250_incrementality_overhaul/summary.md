@@ -40,13 +40,26 @@ We currently measure incrementality against a counterfactual, but we have **neve
 **Workstream 3: Observational Analysis (our initiative, not in brief)**
 - Use existing 10% holdout to measure baseline incrementality NOW
 - Ticket: TI-835
-- **Initial results (2026-04-08):** guid_log shows ~0 lift across 10 advertisers. clickpass_log analysis pending.
+- **COMPLETE (2026-04-08):** "The Two Stories" finding — guid_log ~0% lift, clickpass_log 2-8x lift. See TI-835 summary.
 
 ### Key Insight: Control Group Already Exists
 Every campaign has a **10% holdout group** — `MD5('{AID}:{IP}') mod 1000`, bucket 0-99 = holdout. Per-advertiser per-IP. No shuffling needed for observational analysis.
 
+### Kale's Strategic Direction (2026-04-08)
+**"The most valuable thing right now is getting this incrementality thing out. Solving this would be HUGE and dramatically change growth and retention."**
+
+- **Incremental ROAS** is the top metric — not visits, not impressions
+- MNTN almost certainly looks bad on external incrementality (LiftLab/Kochava) because everything is optimized toward the visit
+- **TI-835 confirms this:** internal attributed-visits metric (clickpass_log) shows 2-8x lift, but total site traffic (guid_log) shows ~0% lift. External vendors measure closer to guid_log.
+- **Strategic shift:** shutter internal incrementality dashboards → move to approved third-party vendors
+- OKR: **run 5 experiments with external vendors**
+- Customer-driven: ask advertisers what they want (reach, performance, incrementality) → tailor experience
+- Need a dedicated LiftLab liaison/DS
+- CPM pricing → incrementality changes don't directly hit profit, but IVR metrics will suffer
+- If we adjust targeting for incrementality, IVR performance will look worse — but it's the right thing to do
+
 ### Key Tension: Performance vs Incrementality
-Optimizing for incrementality and visit rate are partially opposed (Matt Brorby). Need leadership direction on balance.
+Optimizing for incrementality and visit rate are partially opposed (Matt Brorby, confirmed by Kale). Kale's direction: incrementality wins. If we start adjusting for incrementality, IVR performance will suffer, and TI will appear to perform worse on current metrics. But incremental ROAS is what matters.
 
 ### HHST Reality (2026-04-08)
 All scored IPs get flat HHST=10000 (HI). Per-tier analysis not possible until continuous scoring rolls out. PP at 8000 is planned but not active. Aggregate analysis only for now.
@@ -90,7 +103,7 @@ All scored IPs get flat HHST=10000 (HI). Per-tier analysis not possible until co
 | Ticket | Summary | Folder | Status | SP |
 |--------|---------|--------|--------|----|
 | [TI-831](https://mntn.atlassian.net/browse/TI-831) | Audience Deciles for Advertiser Experimentation | `ti_831_audience_deciles/` | Not Started | 5 |
-| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | `ti_835_control_group_design/` | Backlog | 3 |
+| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | `ti_835_control_group_design/` | **Analysis Complete** | 3 |
 | [TI-837](https://mntn.atlassian.net/browse/TI-837) | Shuffling experiment design (contingent on TI-835) | `ti_837_implementation_plan/` | Backlog | 5 |
 | [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | `ti_839_measure_results/` | Backlog | 5 |
 | [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | `ti_842_present_results/` | Backlog | 3 |
