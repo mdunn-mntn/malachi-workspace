@@ -39,6 +39,27 @@ Use Intent to Treat: compare ALL IPs in the 90% targeted group (whether or not t
 
 ## 4. Investigation & Findings
 
+### HHST Distribution Reality (2026-04-08)
+Checked actual `advertiser_household_score` distribution across all impressions (1 day):
+- **10000 (RTC/flat):** 69.9% — all Fangorn-scored IPs get flat 10000
+- **-1 (unscored):** 28.7% — no Fangorn score
+- **3333-6665 (MI range):** 1.4% — only scored range with real variation
+- **HI (>=6666):** 0% — NO impressions in this range
+- **PP (1-3332):** 0% — NO impressions in this range
+
+**Conclusion:** Per-tier analysis (HI vs MI vs PP) is NOT possible with current data. All scored IPs get flat 10000. Differentiated tiers will only exist after continuous scoring rollout. **Aggregate analysis (holdout vs targeted, all tiers pooled) is the correct and only viable approach.**
+
+### Visit Source Table Comparison (2026-04-08)
+For WGU (31357), 7-day window:
+- **guid_log:** 1,889,820 unique IPs (all pixel-detected visits — broadest)
+- **clickpass_log:** 776,315 unique IPs (VV redirects only — subset)
+- **Decision: Use guid_log** for maximum coverage of holdout IP visits
+
+### Initial Holdout Distribution Signal (2026-04-08)
+clickpass_log hash validation on WGU: 4.59% holdout / 95.41% targeted (7 days).
+Expected under null (no ad effect): 10% / 90%.
+Holdout share < 10% = ads are driving incremental visits. Roughly 2x lift implied.
+
 ### Holdout Architecture (Nicholas + Zach, 2026-04-07)
 
 **How the holdout works:**
