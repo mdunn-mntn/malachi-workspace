@@ -657,6 +657,46 @@ SELECT md5('{AID}:100.17.100.240') AS ip_hash,
 
 **MemDB holdout hash (Ryan Kleck, 2026-04-07):** MemDB already hashes IPs for the existing 10% holdout mechanism. This same mechanism could potentially be extended/reused for decile-based audience splits (AUD-5221/TI-831). Investigate before building a new hashing system.
 
+---
+
+## Intent Scoring Architecture (advertiser_household_score / HHST)
+
+Reference diagram: `documentation/architecture/audience_intent_scoring.png`
+
+### Venn Diagram: Bucket > Vertical > Keywords
+- **DS13** = buckets and verticals
+- **Bucket** = Industry (broad)
+- **Vertical** = Subindustry (narrow, within a bucket)
+- **Keywords** = DS19 keyword matches (narrowest, within a vertical)
+
+### Campaign Level Scores (HHST on cost_impression_log)
+| Tier | HHST Range | Criteria | Score Assignment |
+|------|-----------|----------|-----------------|
+| **High Intent (HI)** | 6666-10000 (always 10000) | IPs that fall in the **vertical** (subindustry) | Always flat 10000 |
+| **Mid Intent (MI)** | 3333-6665 | IPs in the **bucket** (industry) but NOT the vertical. Ranked by # of page views, most recent page view. | Variable within range |
+| **Max Reach / Peak Performance (PP)** | 1-3332 | All other IPs in the audience not in the bucket or vertical | Random score in range |
+
+### Advertiser Level Scores (same ranges, different criteria)
+| Tier | HHST Range | Criteria |
+|------|-----------|----------|
+| **HI** | 6666-10000 (always 10000) | IPs in the vertical |
+| **MI** | 3333-6665 | IPs in bucket but NOT vertical, **>1 page view** in the bucket |
+| **Max Reach** | 1-3332 | IPs in bucket but NOT vertical, **exactly 1 page view** — random score |
+
+### Current Production Reality (as of 2026-04-08)
+- **69.9%** of impressions: HHST = 10000 (HI — all scored IPs get flat 10000)
+- **28.7%** of impressions: HHST = -1 (unscored — no Fangorn score / not in any segment)
+- **1.4%** of impressions: HHST in MI range (3333-6665) — real variation exists here
+- **~0%** in PP/Max Reach range (1-3332)
+- **~0%** in HI sub-range (6666-9999) — everything is flat 10000
+
+**Implication:** Per-tier incrementality analysis is not meaningful until continuous scoring replaces the flat 10000. Aggregate analysis (holdout vs targeted, all tiers pooled) is the correct approach.
+
+### Special Values
+- **10000** = RTC (Real-Time Conquest) or flat Fangorn score (all HI IPs)
+- **-1** = unscored (no Fangorn/intent score assigned)
+- **-4** = rare edge case (9 impressions observed)
+
 **Use for incrementality analysis:**
 - Compare visit rates between 10% holdout (no impressions ever) vs 90% targeted group
 - Use ITT (Intent to Treat): compare ALL IPs in 90% group, not just those who actually received impressions
