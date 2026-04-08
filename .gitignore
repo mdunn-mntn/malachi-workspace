@@ -47,6 +47,10 @@ __pycache__/
 .env
 *.key
 
+# Slack bot raw data — daily JSON dumps, not for remote
+knowledge/slack_raw/
+slack_bot/logs/
+
 # Personal notes — not for remote
 self_review/
 tickets/ti_650_stage_3_vv_audit/outputs/ti_650_trace_table_24adv.json

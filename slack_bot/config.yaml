@@ -1,0 +1,24 @@
+# Slack Knowledge Bot Configuration
+# Channels: leave empty to auto-discover all channels the bot is in.
+# Add specific channels here to restrict scraping to a subset.
+channels: []
+  # - id: "C_XXXXXXX"
+  #   name: "data-engineering"
+  #   priority: high
+
+# Knowledge extraction settings
+extraction:
+  model: "claude-sonnet-4-6-20250514"
+  min_confidence: "medium"
+  max_tokens_per_batch: 100000
+
+# Schedule
+schedule:
+  time: "06:00"
+  timezone: "America/Los_Angeles"
+
+# Paths (relative to workspace root)
+paths:
+  workspace: "/Users/malachi/Developer/work/mntn/workspace"
+  raw_data: "knowledge/slack_raw"
+  review_queue: "knowledge/slack_review_queue.md"
