@@ -706,6 +706,26 @@ Reference diagram: `documentation/architecture/audience_intent_scoring.png`
 - Use ITT (Intent to Treat): compare ALL IPs in 90% group, not just those who actually received impressions
 - Why ITT: only a fraction of the 90% actually gets impressions (budget-constrained). Comparing only impression-recipients vs holdout introduces selection bias (impression receipt correlates with behavioral differences like watching TV at that time)
 
+**guid_log vs clickpass_log for incrementality (TI-835):**
+- **guid_log** captures ALL pixel visits (direct, organic, paid, VV — everything). Both holdout and targeted IPs visit at the same rate → ~0% lift. This measures total site traffic, which MNTN ads barely move.
+- **clickpass_log** captures VV-attributed visits only (user clicked through from MNTN ad). Targeted group has 2-8x more attributed visits than holdout → massive lift. This measures MNTN attribution signal.
+- Use clickpass_log for "does our targeting drive attributed visits?" Use guid_log for "does our targeting drive total site traffic?"
+
+**BQ holdout hash (ported from Greenplum, TI-835):**
+```sql
+-- BQ equivalent of MD5('{AID}:{IP}') unsigned mod 1000:
+MOD(
+  ABS(
+    CAST(
+      CONCAT('0x', SUBSTR(TO_HEX(MD5(CONCAT(CAST(advertiser_id AS STRING), ':', ip))), 1, 16))
+    AS INT64)
+  ),
+  1000
+)
+-- Bucket 0-99 = holdout (10%), 100-999 = targeted (90%)
+-- Per-advertiser per-IP assignment
+```
+
 **Key gotcha — ITT dilution:**
 - If the audience is 10M but the budget only reaches 10% of them, the 90% targeted group's visit rate is diluted by the 80% who were eligible but never actually received an impression
 - The true treatment effect is on the impression-recipients, but ITT gives you the unbiased average effect across the full eligible group

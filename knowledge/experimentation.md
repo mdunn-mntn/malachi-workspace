@@ -269,6 +269,30 @@ In TI-748, new media plan campaigns REPLACED the old campaigns and targeted the 
 
 **Lesson:** Before running CausalImpact, check the **IVR ratio** between pre-period and post-period. If it's less than ~0.5x or more than ~2x, the structural gap is too large for synthetic control — something fundamental changed beyond the treatment.
 
+### Metric Source Selection — guid_log vs clickpass_log (TI-835 Lesson)
+
+**guid_log and clickpass_log answer fundamentally different incrementality questions.** Choosing the wrong one will lead to correct math but wrong conclusions.
+
+| Source | What It Captures | Incrementality Question It Answers | TI-835 Result |
+|---|---|---|---|
+| `guid_log` | All pixel visits (direct, organic, paid, VV — everything) | "Does MNTN targeting increase total site traffic?" | ~0% lift — holdout visits at same rate as targeted |
+| `clickpass_log` | VV-attributed visits only (user clicked through from MNTN ad) | "Does MNTN targeting increase MNTN-attributed visits?" | 2-8x lift — targeted group has massively more VV redirects |
+
+**Why guid_log shows no lift:** Users visit advertiser sites from Google, direct, email, etc. regardless of whether they saw an MNTN ad. The 10% holdout visits the site at the same rate as the 90% targeted group because most visits come from non-MNTN channels. The MNTN-driven visits are a small fraction of total guid_log traffic.
+
+**Why clickpass_log shows massive lift:** VV redirects only happen when a user engages with an MNTN ad. Holdout IPs never receive ads, so they generate almost zero clickpass records. The signal is enormous (2-8x) because the mechanism being measured (ad exposure → click-through) is directly blocked for the holdout.
+
+**Rule:** Before running any incrementality analysis, explicitly state:
+1. What metric/table defines a "visit" or "conversion"
+2. Whether you're measuring total traffic incrementality (guid_log) or attribution incrementality (clickpass_log)
+3. What the expected result would be under the null hypothesis for that specific table
+
+**Statistical approach that worked (TI-835):**
+- **Primary test:** Binomial test — H0: proportion of visits from targeted IPs = 0.9 (matching the 90/10 split). Rejection means the targeted group visits at a disproportionate rate.
+- **Effect size:** Bootstrap confidence intervals (10K resamples) on the targeted-to-holdout visit rate ratio.
+- **Multiple testing:** Benjamini-Hochberg FDR correction across all advertisers (controls false discovery rate).
+- **Sample:** 9 advertisers, 30-day window was sufficient for both guid_log and clickpass_log analyses.
+
 ### Data Quality Issues Found (TI-748)
 - Weeks with <1,000 impressions can produce absurd rate metrics (IVR=366x) due to VV attribution lag after campaign pauses. Always filter.
 - `uniques` column in agg tables is unreliable at campaign level.
@@ -518,6 +542,7 @@ When analyzing features that affect publisher/network allocation:
 | TI-748 | Media Plan Causal Impact (v5) | Per-advertiser CausalImpact (BIC covariates, ramp-up exclusion) + panel model | Aggregate IVR near zero (-0.23% spend-weighted). BUT: config change on Feb 3, 2026 (max_networks 18→25→15, PERML-412) explains the split — new-config plans show +10-17% IVR lift, old-config plans show -26 to -31% decline. | **Primary lesson:** Concentration is the mechanism, config change made it the default. Lighting NY (16 pubs under old config from natural budget/vertical pruning) proves concentration works regardless of config era. Also: BIC covariate selection beats hand-picking; 4-week ramp-up exclusion needed for new campaigns; selection bias confirmed (hand-picked beta); per-publisher scores only in GCS (not BQ); runtime config needed for clean A/B tests. |
 | TI-780 | Ramp-up window research | Empirical analysis of campaign maturity curves | 4-week ramp-up window identified (N=6,917 campaigns, $10K+ spend). Week 4 = first week with <5% WoW change. | Consistent across spend tiers. Steady-state IVR varies by launch quarter (0.008–0.013) — future analyses should use cohort-specific baselines rather than a single global baseline. |
 | TI-504 | Fangorn AIS experiment (RCT) | Direct RCT (proportion z-test, Welch t-test, chi², Mann-Whitney, bootstrap CI) + CausalImpact validation + HI-tier segmentation | Edward Martin PP +123%, MI_PP +70%, Collector Store PP +60%, MI +43% — significant across ALL tests. G-Shock/Reedsy/Zumba no effect by t-test; z-test detects small effects at scale. CausalImpact invalid due to population discontinuity (audience split, creative removal, budget, maturity — NOT `is_test` flag which is just a reporting flag). | **Primary lesson:** (1) Synthetic control fails when experiment creates new campaigns with split audiences — use direct RCT comparison instead. (2) Proportion z-test is the standard for IVR in RCTs (confirmed by Nick Martin, experiment owner). (3) t-test on daily rates is a useful secondary consistency check — if z-test is significant but t-test isn't, effect may not be day-over-day reliable. (4) Bootstrap at household level for ratio metrics (CPA/ROAS). (5) Self-referencing covariates produce artificially perfect fits. (6) `is_test = true` excludes from summary tables but does NOT affect delivery. |
+| TI-835 | Control group incrementality (holdout 10% analysis) | Binomial test (H0: targeted proportion = 0.9), bootstrap CIs, BH FDR correction across advertisers | guid_log: ~0% lift across all 9 advertisers (holdout visits at same rate as targeted). clickpass_log: 2-8x incremental lift across all 10 advertisers (targeted group has massively more VV-attributed visits). | **Primary lesson:** guid_log vs clickpass_log answer fundamentally different questions. guid_log = total site traffic (pixel fires from all sources) — shows no targeting effect because users visit from Google/direct/etc regardless. clickpass_log = MNTN-attributed visits (VV redirects) — shows massive lift because holdout IPs never get ads, so they never click through. "Incremental" means different things depending on which table you use. Must define success metric before running any incrementality experiment. Statistical approach: binomial test + bootstrap CIs + BH FDR correction worked well for 9-advertiser, 30-day window. |
 | BUK Exp 1 (Sep 2025) | BUK vs MM V2 — fixed 200 keywords | A/B with audience isolation blocking (old method, had IP contamination) | Control outperformed across ALL 5 advertisers (IVR 1.53% vs 0.67%, CPV $5.07 vs $9.08). 200 keywords pushed vertical coverage to 80-88%. | **Primary lesson:** More keywords ≠ better. Fixed keyword count is wrong approach — need a threshold. Within treatment, IPs overlapping with control keywords performed 5-10x better than non-overlapping — validates keyword quality but not audience sizing strategy. |
 | BUK Exp 2 (Nov-Dec 2025) | BUK vs MM V2 — percentile threshold + score adjustments | True A/B via MD5 hash on IP (no bleed). 5 advertisers, 2 weeks (11/21–12/4). Percentile threshold ~top 42%, popularity penalty, advertiser lift. | +26.84% avg relative IVR lift, but inconsistent across advertisers. Hello Molly +137% (audience -83%), Hatch -25% (audience +93%). | **Primary lesson:** Performance inversely correlated with audience size change — size confounding makes results ambiguous. All 5 advertisers show negative rank-performance correlation (higher BUK rank → higher visit rate), confirming rankings are directionally aligned. Next experiment must control for audience size to isolate keyword quality effect. |
 
