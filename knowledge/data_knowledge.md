@@ -693,9 +693,13 @@ Reference diagram: `documentation/architecture/audience_intent_scoring.png`
 **Implication:** Per-tier incrementality analysis is not meaningful until continuous scoring replaces the flat 10000. Aggregate analysis (holdout vs targeted, all tiers pooled) is the correct approach.
 
 ### Special Values
-- **10000** = RTC (Real-Time Conquest) or flat Fangorn score (all HI IPs)
-- **-1** = unscored (no Fangorn/intent score assigned)
+- **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
+- **8000** = Peak Performance (PP) — **planned, not yet active** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. This is a waterfall: HI → PP.
+- **3333-6665** = Mid Intent (MI) — bucket-matched IPs not in the vertical. 1.4% of impressions.
+- **-1** = unscored (no Fangorn/intent score assigned). 28.7% of impressions.
 - **-4** = rare edge case (9 impressions observed)
+
+**Once PP (8000) goes live**, per-tier incrementality analysis becomes possible: compare HI (10000) vs PP (8000) vs MI (3333-6665) holdout/targeted visit rates.
 
 **Use for incrementality analysis:**
 - Compare visit rates between 10% holdout (no impressions ever) vs 90% targeted group
