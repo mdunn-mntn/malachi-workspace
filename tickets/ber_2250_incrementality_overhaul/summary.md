@@ -24,28 +24,32 @@ We currently measure incrementality against a counterfactual, but we have **neve
 - If competitors (Meta, Google) can claim the same conversions on the same audiences, MNTN's value proposition narrows to reach and format, not performance
 - The inability to demonstrate incrementality becomes a churn driver as advertisers mature in their measurement sophistication
 
-## 3. Plan of Action (Revised after Matt Brorby sync, 2026-04-07)
+## 3. Three Workstreams Under BER-2250 (Alex Bloore, 2026-04-08)
 
-**Phase 1: Observational analysis (no experiment needed)**
-1. TI-835: Use existing 10% holdout to measure baseline incrementality by intent tier
-2. Get holdout query from Nick (experimentation team)
-3. Check Kristen's related work in #chapter-data-analytics
-4. Present findings to Kale/Alex Bohr — get direction on performance vs incrementality trade-off
+**Workstream 1: Intent Score Shuffling Experiment (THE PRIORITY — product brief)**
+- Discovery work — "needs to happen FIRST" (Alex Bloore)
+- TI squad: shuffle IPs between HI/MI tiers, log original scores
+- RX squad (or TI with RX consultation): ITT measurement
+- Tickets: TI-837 (design + implement), TI-839 (measure results), TI-842 (present)
 
-**Phase 2: Shuffling experiment (contingent on Phase 1)**
-5. TI-831: Build audience deciles for experimentation (even/odd targeting)
-6. TI-837: Design and implement shuffling experiment (IF observational data supports it)
-7. TI-839: Measure experiment results
-8. TI-842: Present to leadership
+**Workstream 2: Population Split / Deciles (separate from experiment)**
+- Random 10-group split of all US IPs for customer A/B testing (like Trade Desk)
+- Customers select even/odd groups, layer their segments on top
+- Ticket: TI-831
 
-**Phase 3: Lift-optimized model (future)**
-9. Train a model focused on incremental lift (using impression receipt as a feature) — replaces intent scoring with lift scoring
+**Workstream 3: Observational Analysis (our initiative, not in brief)**
+- Use existing 10% holdout to measure baseline incrementality NOW
+- Ticket: TI-835
+- **Initial results (2026-04-08):** guid_log shows ~0 lift across 10 advertisers. clickpass_log analysis pending.
 
 ### Key Insight: Control Group Already Exists
-Every campaign has a **10% holdout group** (IP hash, last 2 digits < 10, never served impressions). This is a pure random assignment. No shuffling needed for the initial analysis — we can measure incrementality RIGHT NOW with existing data.
+Every campaign has a **10% holdout group** — `MD5('{AID}:{IP}') mod 1000`, bucket 0-99 = holdout. Per-advertiser per-IP. No shuffling needed for observational analysis.
 
 ### Key Tension: Performance vs Incrementality
-Optimizing for incrementality and optimizing for visit rate are partially opposed (Matt Brorby). High-intent = high visit rate but low lift. Low-intent = low visit rate but high lift. Need Kale/Alex direction on how to balance before designing any experiment.
+Optimizing for incrementality and visit rate are partially opposed (Matt Brorby). Need leadership direction on balance.
+
+### HHST Reality (2026-04-08)
+All scored IPs get flat HHST=10000 (HI). Per-tier analysis not possible until continuous scoring rolls out. PP at 8000 is planned but not active. Aggregate analysis only for now.
 
 ## 4. Investigation & Findings
 
