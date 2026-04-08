@@ -660,6 +660,42 @@ ITT is the established methodology for intent-assignment questions. It compares 
 - If we can prove incrementality → competitive moat vs Meta/Google → **revenue growth + retention**
 - First mover on incrementality proof = **differentiation play**
 
+### Incremental ROAS Measurement — Industry Context (Matt Brorby, 2026-04-08)
+
+**Time-delta bucketing method (Matt's prior role — mobile, deterministic):**
+- In mobile (deterministic, app installs): bucket users by time from ad impression to conversion event
+- Short windows (5 seconds) ≈ 100% incremental
+- Signal becomes "barely noticeable" beyond ~6.5 hours for app installs
+- For most apps, useful signal window was 30 minutes to 6.5 hours max
+- This is "more art than science" — huge variation by app/advertiser
+
+**Incremental ROAS benchmarks (industry):**
+- Good advertisers: ~$0.90 incremental per dollar spent
+- Poor advertisers: ~$0.50 or worse
+- Trade Desk: ~$1.15 incremental ROAS (considered good)
+- Companies claiming $8 ROAS are measuring attributed, not incremental — massively inflated
+- Over $1.00 incremental ROAS is "awesome" and rare
+
+**CTV-specific challenges for incrementality:**
+- NOT deterministic — IP-based, not device-based
+- Long conversion windows (weeks, not seconds/hours like mobile)
+- Hard to separate signal from noise at longer time intervals
+- Should filter out cellular IPs (T-Mobile, etc.) — use identity graph as filter
+- Conversion events vary wildly by advertiser/product type
+- Time-delta bucketing may work differently for CTV vs mobile — needs investigation
+
+**LiftLab measurement context:**
+- LiftLab is paid by the advertiser → bias toward conservative measurement
+- Their incremental reports will be as conservative as possible
+- MNTN is "at the mercy of these third parties"
+
+**Ensemble approach for models:**
+- "No one model to rule them all" — separate optimization for different objectives
+- IVR model for performance-focused advertisers
+- Incremental ROAS model for incrementality-focused advertisers
+- Trade-off is inherent: optimizing for incrementality hurts IVR and vice versa
+- Only applies to advertisers who opt into incrementality measurement
+
 ### Product Brief
 Full brief: [Confluence](https://mntn.atlassian.net/wiki/external/NTM1ZmViMzc1YzczNDQ0YjgzZDVlMjdkNTk2ZGY4NmY)
 
