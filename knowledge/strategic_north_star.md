@@ -143,3 +143,49 @@ When evaluating any piece of work, score it:
 4. **When prioritizing Todoist:** A-priority = Tier 1-2 work only. B-priority = Tier 3. C/D/E = Tier 4.
 5. **When work surfaces mid-session:** Evaluate immediately against this framework before creating tasks.
 6. **Proactively suggest:** If you notice the user spending time on Tier 4 work while Tier 1-2 items are pending, say so.
+
+<!-- slack-extracted: 2026-04-08-full -->
+- ### Incrementality vs. Continuous Scoring Priority (April 2026)
+
+As of the Q2 kickoff, **incrementality is the priority over continuous scoring**. The sequencing is:
+
+1. A spike must be completed to create a concrete plan for all incrementality work
+2. Timeline: incrementality learnings are expected by end of April
+3. Those learnings will inform and feed into the continuous scoring release at end of Q2
+
+This was confirmed by Bryce Wagg after syncing with leadership.
+- ### Incrementality OKR — Two Distinct Workstreams
+
+The "Incrementality" initiative (BER-2250 umbrella) contains two separate workstreams that were initially conflated:
+
+**1. Incrementality Experiment (BER-2250 discovery)**
+Does MNTN's current intent targeting generate incremental lift? Uses score shuffling and ITT (Intent-to-Treat) methodology as described in the experiment brief. This is discovery work that must come first.
+
+**2. Population Split / "Deciles" (AUD-5221)**
+Enables customer-facing A/B testing by splitting the entire US IP universe into 10 randomly assigned groups (US Population 1–10). Advertisers can select even/odd groups to create clean A/B campaign splits with any variable (e.g., creative) tested across them. This is the same mechanism used by The Trade Desk.
+- Groups must be kept current as IPs rotate in/out (cadence TBD: daily or weekly)
+- Implemented via a new data source; existing MemDB hash mechanism may be reusable
+- Owned by TI team (confirmed); timeline TBD pending design decision on random vs. intent-stratified deciles
+
+These are tracked separately in Jira but both fall under the Incrementality OKR.
+- ### Fangorn Experiment Results — Current Lift by Intent Tier (as of April 2026)
+
+The Fangorn V2 experiment (EX50) is showing the following average IVR lift figures, tracked via the experimentation team's Mode dashboard:
+
+- **High Intent:** 11.61% lift
+- **Mid Intent:** 9.78% lift
+- **Mid Intent with Peak Performance:** 11.2% lift
+- **Peak Performance:** 36% lift
+
+The original OKR target was 10% lift in Visit Rate for 5 verticals, benchmarked against 2025 YTD numbers. A non-technical stakeholder explainer has been published to Confluence. A dashboard to track ongoing progress is planned post-MNTN Meet (Nick is the Mode resource).
+
+**Note:** The Fangorn audience lookalike support epic (TI-462) was confirmed complete as of this period.
+- ### Vertex Scoring Pipeline — Advertiser vs. Vertical Level Decision
+
+The full advertiser-level scoring pipeline (TI-798) for Vertex was tested at scale across ~9,800 advertisers but hit a 7-hour TTL on the cluster. As a result, the team pivoted to **vertical-level scoring** for the initial deployment:
+
+- Vertical-level run: ~30 minutes on the same cluster (to be scaled back before deployment)
+- Full advertiser-level run: ~$200/hour, unsustainable for daily cadence currently
+- Eventual goal is daily advertiser-level scoring; vertical-level is the interim approach
+
+The Dataproc cost spike observed around March 27, 2026 was attributed to testing this pipeline (not to IPDSC changes).

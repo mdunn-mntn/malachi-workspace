@@ -706,3 +706,10 @@ Full brief: [Confluence](https://mntn.atlassian.net/wiki/external/NTM1ZmViMzc1Yz
 - TI-837: Implementation plan for intent score shuffling
 - TI-839: Measure incrementality results
 - TI-842: Present results to broader audience
+
+<!-- slack-extracted: 2026-04-08-full -->
+- ### Incrementality Experiment Design — Intent Tier Hypothesis
+
+A hypothesis under active exploration: lower-intent audience groups (Mid Intent, Max Reach) may generate more incremental lift than High Intent groups, because High Intent users are also heavily targeted by Google, Meta, and other platforms — meaning MNTN's attribution to those users may not represent true incrementality.
+
+Analysis of the Incrementality dashboard by intent group (High Intent, Mid Intent, Peak Performance, Max Reach) is being pursued via BAE-4007. Metrics of interest: incremental lift on IVR and VVR by intent tier.

@@ -1297,3 +1297,44 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 | bidder_auction_events | — | 112M/hr |
 
 Daily IVR base rate: ~4.8% (563K visitors / 11.7M impressed IPs).
+
+<!-- slack-extracted: 2026-04-08-full -->
+- ### BigQuery Standardized Timezone Conversion Functions
+
+Standardized functions are available in BigQuery (bronze, silver, and gold datasets) to convert UTC timestamps to advertiser-local time, consistent with CoreDW behavior:
+
+- `public.timetz(time, time_zone)` → returns `DATETIME`
+- `public.hourtz(time, time_zone)` → returns `DATETIME`
+- `public.datetz(time, time_zone)` → returns `DATE`
+
+**Why these exist:** Created late in the CoreDW→BigQuery migration after inconsistencies were found with native approaches like `TIMESTAMP_TRUNC(..., time_zone)` and `DATETIME_TRUNC(..., time_zone)`.
+
+**Reporting pipeline convention:**
+- `timestamp` columns → UTC
+- `datetime` columns → Advertiser local time
+
+Use these functions instead of native BigQuery truncation functions when timezone conversion is needed.
+- ### CoreDB DDL Change Management — Migration to Alembic (In Progress)
+
+As of April 2026, CoreDB DDL changes are executed manually without a migration framework. This makes it difficult to link schema changes to tickets, enforce parity across prod/QA/dev environments, or reason about triggers.
+
+An effort is actively underway (led by the platform team, target mid-May 2026) to adopt a migration system similar to Alembic that would:
+- Link DPLAT tickets to pull requests
+- Enforce schema parity between prod, QA, and dev
+- Enable local testing
+
+Until then, DDL changes to CoreDB are coordinated via the #data-platform channel.
+- ### Data Engineering MCP Server
+
+An internal Model Context Protocol (MCP) server is available for data engineering tooling at `https://data-eng-ai.in.mountain.com/`. It is deployed via GitHub Actions to Argo.
+
+**Current tools include:**
+- GCS folder size lookups
+- Row count queries against Parquet files
+- Parquet schema inspection
+- TI on-call utilities
+- Dataproc batch analysis with code change recommendations (partially functional)
+
+**How to contribute:** Merge tool additions to `main`, then run the GitHub Action to generate and deploy an Argo PR.
+
+**Slack bot:** A Slack bot interface is also available for interacting with the MCP (e.g., Parquet schema queries). Contact the owner (Ryan Kleck) to be added to the bot's channel.

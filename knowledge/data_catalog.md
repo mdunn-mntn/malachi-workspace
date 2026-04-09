@@ -2155,3 +2155,33 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 | `impression_log` | logdata | All bid attempts (won + lost) | ip (INET), ip_raw, bid_ip, original_ip, campaign_id |
 | `ui_visits` | summarydata | Verified visits — `ip` is INET type; use `host(ip)` to strip /32 | ip (INET), impression_time, is_new |
 | `ui_conversions` | summarydata | Conversions — use `order_amt`, NOT `order_amt_usd` (which is NULL) | order_amt, advertiser_id |
+
+<!-- slack-extracted: 2026-04-08-full -->
+- ### `tpa.dim_vertical` (CoreDB)
+
+A dimension table with a primary key of `vertical_id`, created to simplify lookups that previously required querying `fpa.advertiser_verticals`.
+
+**Schema:**
+- `vertical_id` (integer, PK) — advertiser vertical ID (type=1 from `fpa.advertiser_verticals`)
+- `bucket_id` (integer) — bucket vertical ID (type=0 from `fpa.advertiser_verticals`)
+- `vertical_name` (varchar 512)
+- `bucket_name` (varchar 512)
+- `vertical_bucket_name` (text) — concatenation: `bucket_name || ' > ' || vertical_name`
+- `verticals_in_bucket` (integer) — count of type=1 verticals sharing the same 3-char ID prefix as this bucket
+- `created_at`, `updated_at` (timestamp)
+
+**Use for:** Vertical dimension lookups. Prefer over querying `fpa.advertiser_verticals` directly when you need a single row per vertical with bucket context.
+- ### `ui.audience_keyword_state` (CoreDB)
+
+Stores the parent and child keyword associations for a given audience ID. This is the preferred table for looking up which keywords are applied to an audience, as an alternative to parsing the JSON expression blob in `audience.audiences`.
+
+**Key columns:**
+- `keyword_type` — either `PARENT` (keywords shown in the UI audience builder) or `CHILD` (keywords grouped under a parent)
+- `selected` (boolean) — CHILD keywords where `selected = true` are the ones included in the audience expression JSON blob used by DataSource 19
+
+**Use for:** Identifying which keywords (including AI Recommended Attributes) are associated with an audience. Replication to BigQuery is not confirmed — submit a Data Platform Jira ticket to request replication if needed.
+- ### `ui.audience_x_marketing_objective` (CoreDB / intprod)
+
+Mapping table that associates audience segments with a campaign's marketing objective (strategy), formerly called `objective_id` on `campaign_groups`. Used to enforce alignment between audience segment types and the campaign strategy (Retargeting vs. Prospecting).
+
+**Context:** When the Campaign Strategy feature was introduced (~2025), customers were prompted to select a strategy, which locked down audience editing until they complied. Adoption was never forced — legacy audiences that were never updated can still exist on live campaigns with a strategy mismatch. If a customer edits an audience, the strategy is locked to match the campaign's strategy. An audience attached to multiple campaigns can become misaligned with one of them.

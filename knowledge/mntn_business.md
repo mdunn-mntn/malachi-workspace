@@ -221,3 +221,57 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | **Richard** | Provided critical feedback on BUK experiment results ("numbers are bullshit" — size confounding) |
 | **Mike** | Sees value in BUK but needs clearer performance signal |
 | **Allison** | Sees value in BUK, involved in prioritization decisions |
+
+<!-- slack-extracted: 2026-04-08-full -->
+- ### MNTN Express — GA Launch (April 6, 2026)
+
+MNTN Express (formerly called MNTN Go) launched to General Availability on April 6, 2026 — one month ahead of the original May target.
+
+**What it is:** A simplified, self-serve PTV (Performance TV) application designed for small business / lower-sophistication advertisers. Built from zero to customer spend in approximately 2 months for beta.
+
+**Routing changes at GA:**
+- All self-sign-ups via Mountain.com now route to MNTN Express (PTV access only available via sales demo or manual routing)
+- A new question in the sign-up flow assesses marketing expertise to route intermediate+ users back to PTV
+
+**Key details:**
+- Express domain: `express.mountain.com` (production redirects from the Go domain in place)
+- Express landing page lives on the PTV corporate site (no separate website)
+- Billing: no changes required
+- A one-time bulk migration of churned small-business PTV accounts to `express_enabled` was performed at launch with coordinated outreach via Biz Ops, Sales, and PEX
+- ### Engineering Levels & Skills Rubric (April 2026)
+
+MNTN published an updated Engineering Levels & Skills Rubric in April 2026, available at the Engineering Confluence space. Key points:
+
+- The rubric applies to **all IC engineering roles**: SWE, DE, DS, and DA. Language is intentionally generic across disciplines (not SWE-specific).
+- Next official review cycle is planned for approximately one year from publication.
+- All engineers should receive rubric-based feedback at least twice before then: once from their manager within ~1 month (translating current performance to new expectations), and once at an informal ~6-month midpoint check.
+- Analysts are not capped at Senior — the rubric applies uniformly across levels for all engineering functions.
+- ### Identity Graph — Scale Metrics (April 2026)
+
+The MNTN identity graph covers approximately:
+- ~150 million households
+- ~1.85 billion device IFAs
+
+**Data providers:** Experian, Deepsync, Augmentor log, GUID log
+- ### Campaign Strategy (Marketing Objective) Feature — Legacy Audience Behavior
+
+When the Campaign Strategy feature (stored as `objective_id` on `campaign_groups`, previously called Marketing Objective) was introduced (~2025), customers were prompted to select a strategy (Retargeting or Prospecting). Adoption was voluntary — customers who declined to update were not forced, and no drop-dead date was enforced.
+
+As a result, "legacy" audiences that were never updated can still exist on live campaigns without a strategy designation or with a mismatched strategy. If a customer edits such an audience, the strategy will be locked to match the campaign's current strategy going forward.
+
+Note: An audience can be attached to multiple campaigns. Updating it to align with one campaign's strategy may cause misalignment with another campaign it is attached to. The UI surfaces a warning in this case.
+- ### TI/AUD Squad Q2 Workflow Process Changes
+
+Effective Q2 2026, the following process changes apply to TI and AUD squads:
+
+**Ticket hygiene:**
+- Default priority is P3 (adjusted during grooming)
+- `Developer` field is required on all tickets (feeds software capitalization audit)
+- Avoid moving tickets directly from In Progress to Done
+- `Release Type` defaults to Backend on creation — update to UI or N/A as appropriate
+
+**New ceremonies:**
+- Weekly backlog grooming (Bryce + Mike, with squad leads planned)
+- Weekly project syncs per active project (for risk/timeline/scope alignment, demos, and pairing)
+
+**Standup focus:** Blockers, PR reviews, and immediate needs only — larger discussions handled in project syncs. Tickets should be updated before standup.

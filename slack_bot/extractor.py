@@ -154,7 +154,7 @@ def extract(raw_path: Path) -> list[dict]:
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     response = client.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=16384,
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -201,7 +201,7 @@ def _extract_by_channel(
 
         response = client.messages.create(
             model=model,
-            max_tokens=4096,
+            max_tokens=16384,
             messages=[{"role": "user", "content": prompt}],
         )
         items = _parse_extraction_response(response.content[0].text)
@@ -215,34 +215,52 @@ def _extract_by_channel(
 
 def _parse_extraction_response(text: str) -> list[dict]:
     """Parse the LLM response into a list of extraction items."""
-    # Try to find JSON array in the response
     text = text.strip()
 
     # Handle markdown code blocks
     if "```json" in text:
         start = text.index("```json") + 7
-        end = text.index("```", start)
-        text = text[start:end].strip()
-    elif "```" in text:
-        start = text.index("```") + 3
-        end = text.index("```", start)
-        text = text[start:end].strip()
+        # Find closing ``` — may not exist if truncated
+        try:
+            end = text.index("```", start)
+            text = text[start:end].strip()
+        except ValueError:
+            text = text[start:].strip()
+    elif text.startswith("```"):
+        text = text[3:].strip()
+        if text.endswith("```"):
+            text = text[:-3].strip()
 
+    # Try direct parse first
     try:
         items = json.loads(text)
-        if isinstance(items, list):
-            # Validate each item has required fields
-            valid = []
-            for item in items:
-                if all(k in item for k in ("category", "content", "confidence")):
-                    if item["confidence"] in ("high", "medium"):
-                        valid.append(item)
-            return valid
-        return []
     except json.JSONDecodeError:
-        logger.error("Failed to parse extraction response as JSON")
-        logger.debug("Response text: %s", text[:500])
-        return []
+        # Truncated JSON: try to salvage by closing the array
+        # Find the last complete object (ends with })
+        last_brace = text.rfind("}")
+        if last_brace > 0:
+            truncated = text[: last_brace + 1]
+            if not truncated.rstrip().endswith("]"):
+                truncated = truncated.rstrip().rstrip(",") + "\n]"
+            try:
+                items = json.loads(truncated)
+            except json.JSONDecodeError:
+                logger.error("Failed to parse extraction response as JSON (even after truncation fix)")
+                logger.debug("Response text (first 500): %s", text[:500])
+                return []
+        else:
+            logger.error("Failed to parse extraction response as JSON")
+            logger.debug("Response text (first 500): %s", text[:500])
+            return []
+
+    if isinstance(items, list):
+        valid = []
+        for item in items:
+            if all(k in item for k in ("category", "content", "confidence")):
+                if item["confidence"] in ("high", "medium"):
+                    valid.append(item)
+        return valid
+    return []
 
 
 if __name__ == "__main__":
