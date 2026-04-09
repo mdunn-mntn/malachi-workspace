@@ -1,7 +1,7 @@
 # BER-2250: Incrementality Overhaul
 
 **Jira:** https://mntn.atlassian.net/browse/BER-2250
-**Status:** Not Started
+**Status:** In Progress
 **Date Started:** 2026-04-06
 **Date Completed:**
 **Assignee:** Malachi
@@ -109,7 +109,7 @@ All scored IPs get flat HHST=10000 (HI). Per-tier analysis not possible until co
 BER-2250: Incrementality Overhaul (Initiative)
 ├── TI-831: Audience Deciles for Advertiser Experimentation (separate workstream)
 └── TI-855: Incrementality Experimentation & External Vendor Validation (EPIC) ← NEW
-    ├── TI-835: Observational incrementality analysis (10% holdout) — IN PROGRESS
+    ├── TI-835: Observational incrementality analysis (10% holdout) — COMPLETE
     ├── TI-837: Design and implement intent score shuffling experiment — Backlog
     ├── TI-839: Measure incrementality results — Backlog
     ├── TI-842: Present results to broader audience — Backlog
@@ -125,7 +125,7 @@ BER-2250: Incrementality Overhaul (Initiative)
 
 | Ticket | Summary | Status | SP |
 |--------|---------|--------|----|
-| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | **In Progress** | 3 |
+| [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | **Complete** | 3 |
 | [TI-837](https://mntn.atlassian.net/browse/TI-837) | Design and implement intent score shuffling experiment | Backlog | 5 |
 | [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | Backlog | 5 |
 | [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | Backlog | 3 |
