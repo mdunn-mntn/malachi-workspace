@@ -2185,3 +2185,18 @@ Stores the parent and child keyword associations for a given audience ID. This i
 Mapping table that associates audience segments with a campaign's marketing objective (strategy), formerly called `objective_id` on `campaign_groups`. Used to enforce alignment between audience segment types and the campaign strategy (Retargeting vs. Prospecting).
 
 **Context:** When the Campaign Strategy feature was introduced (~2025), customers were prompted to select a strategy, which locked down audience editing until they complied. Adoption was never forced — legacy audiences that were never updated can still exist on live campaigns with a strategy mismatch. If a customer edits an audience, the strategy is locked to match the campaign's strategy. An audience attached to multiple campaigns can become misaligned with one of them.
+
+<!-- slack-extracted: 2026-04-08-review -->
+- ### `archives.advertiser_archives` (CoreDB)
+
+Tracks all database-level changes to advertiser records, including the `is_test` flag and other account-level fields.
+
+**Key columns:**
+- `version` — incrementing version number per change
+- `update_time` — timestamp of the change
+- `user_id` — the internal MNTN user who made the change (populated by the UI layer; may be inaccurate if the change was made directly via database connection, since shared DB credentials are used)
+- Various advertiser fields including `is_test`
+
+**Join:** `JOIN users u USING (user_id)` to get `email_addr` of the actor.
+
+**Gotcha:** If a change is made directly to the database (not through the UI), `user_id` will not be reliably set — it will retain the prior value. Only UI-originated changes have accurate `user_id` attribution. Analogous tables exist for other entities (e.g., `archives.campaign_groups_archives`).

@@ -22,8 +22,8 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
     marker = f"<!-- slack-extracted: {date_label} -->"
 
     updated_files = set()
-    review_items = []
     skipped = 0
+    unknown_category = 0
 
     # Group items by target file
     by_file: dict[str, list[dict]] = {}
@@ -31,8 +31,8 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
         category = item.get("category", "")
         doc_path = get_doc_path(category)
         if not doc_path:
-            logger.warning("Unknown category '%s' — routing to review queue", category)
-            review_items.append(item)
+            logger.warning("Unknown category '%s' — skipping item", category)
+            unknown_category += 1
             continue
         key = str(doc_path)
         by_file.setdefault(key, []).append(item)
@@ -40,8 +40,8 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
     for file_path_str, file_items in by_file.items():
         file_path = Path(file_path_str)
         if not file_path.exists():
-            logger.warning("Target file does not exist: %s", file_path)
-            review_items.extend(file_items)
+            logger.warning("Target file does not exist: %s — skipping", file_path)
+            skipped += len(file_items)
             continue
 
         content = file_path.read_text()
@@ -52,26 +52,12 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
             skipped += len(file_items)
             continue
 
-        # Check for contradictions (simple heuristic: if content mentions
-        # the same table/term in a conflicting way)
-        safe_items = []
-        for item in file_items:
-            if _might_contradict(item["content"], content):
-                logger.info("Potential contradiction detected — routing to review queue")
-                item["review_reason"] = "Potential contradiction with existing documentation"
-                review_items.append(item)
-            else:
-                safe_items.append(item)
-
-        if not safe_items:
-            continue
-
-        # Build the append block
-        append_block = _build_append_block(safe_items, marker)
+        # Apply all items directly — no review queue gating
+        append_block = _build_append_block(file_items, marker)
 
         # Try to insert under existing section if specified
         inserted = False
-        for item in safe_items:
+        for item in file_items:
             section = item.get("existing_section")
             if section:
                 updated_content = _insert_under_section(content, section, append_block)
@@ -86,17 +72,12 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
 
         file_path.write_text(content)
         updated_files.add(file_path.name)
-        logger.info("Updated %s with %d items", file_path.name, len(safe_items))
-
-    # Write review queue
-    if review_items:
-        _append_review_queue(review_items, date_label)
+        logger.info("Updated %s with %d items", file_path.name, len(file_items))
 
     return {
         "updated_files": sorted(updated_files),
-        "review_queue_count": len(review_items),
         "skipped": skipped,
-        "items_applied": len(items) - len(review_items) - skipped,
+        "items_applied": len(items) - skipped - unknown_category,
     }
 
 

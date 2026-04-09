@@ -14,7 +14,7 @@ extraction:
 
 # Schedule
 schedule:
-  time: "06:00"
+  time: "00:00"
   timezone: "America/Los_Angeles"
 
 # Paths (relative to workspace root)
