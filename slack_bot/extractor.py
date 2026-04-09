@@ -66,6 +66,7 @@ Return a JSON array. Each item:
   "category": "data_catalog|data_knowledge|mntn_business|experimentation|strategic",
   "content": "Clean documentation entry. Write as if adding to a reference doc — no Slack tone.",
   "confidence": "high|medium",
+  "source_person": "First Last — the person who shared this knowledge",
   "source_channel": "#channel-name",
   "source_date": "YYYY-MM-DD",
   "existing_section": "Section header in the target doc to append under, or null if new"
@@ -75,6 +76,8 @@ Return a JSON array. Each item:
 If there is NO extractable knowledge, return an empty array: `[]`
 
 Only include items with "high" or "medium" confidence. When in doubt, leave it out.
+- **high**: Stated as fact by someone knowledgeable, confirmed by others, or clearly authoritative.
+- **medium**: Plausible and useful but unconfirmed, from a single source, or could be outdated.
 
 ## Messages
 

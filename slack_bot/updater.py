@@ -22,12 +22,17 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
     marker = f"<!-- slack-extracted: {date_label} -->"
 
     updated_files = set()
+    review_items = []
     skipped = 0
     unknown_category = 0
 
-    # Group items by target file
+    # Split by confidence: high → auto-apply, medium → review queue
+    high_items = [i for i in items if i.get("confidence") == "high"]
+    medium_items = [i for i in items if i.get("confidence") == "medium"]
+
+    # Group high-confidence items by target file
     by_file: dict[str, list[dict]] = {}
-    for item in items:
+    for item in high_items:
         category = item.get("category", "")
         doc_path = get_doc_path(category)
         if not doc_path:
@@ -52,7 +57,7 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
             skipped += len(file_items)
             continue
 
-        # Apply all items directly — no review queue gating
+        # Auto-apply high-confidence items
         append_block = _build_append_block(file_items, marker)
 
         # Try to insert under existing section if specified
@@ -67,17 +72,23 @@ def update_docs(items: list[dict], date_label: str | None = None) -> dict:
                     break
 
         if not inserted:
-            # Append to end of file
             content = content.rstrip() + "\n\n" + append_block + "\n"
 
         file_path.write_text(content)
         updated_files.add(file_path.name)
         logger.info("Updated %s with %d items", file_path.name, len(file_items))
 
+    # Route medium-confidence items to review queue
+    if medium_items:
+        for item in medium_items:
+            item["review_reason"] = "Medium confidence — needs verification"
+        _append_review_queue(medium_items, date_label)
+
     return {
         "updated_files": sorted(updated_files),
+        "review_queue_count": len(medium_items),
         "skipped": skipped,
-        "items_applied": len(items) - skipped - unknown_category,
+        "items_applied": len(high_items) - skipped - unknown_category,
     }
 
 
@@ -86,8 +97,11 @@ def _build_append_block(items: list[dict], marker: str) -> str:
     lines = [marker]
     for item in items:
         content = item["content"].strip()
-        source = item.get("source_channel", "slack")
-        lines.append(f"- {content}")
+        person = item.get("source_person", "")
+        channel = item.get("source_channel", "slack")
+        date = item.get("source_date", "")
+        attribution = f"(via {person}, {channel}, {date})" if person else f"({channel}, {date})"
+        lines.append(f"- {content} {attribution}")
     return "\n".join(lines)
 
 
@@ -155,7 +169,8 @@ def _append_review_queue(items: list[dict], date_label: str):
         category = item.get("category", "unknown")
         source = item.get("source_channel", "slack")
         content = item["content"].strip()
-        lines.append(f"### [{category}] from {source}")
+        person = item.get("source_person", "unknown")
+        lines.append(f"### [{category}] from {person} in {source}")
         lines.append(f"**Reason:** {reason}")
         lines.append(f"**Confidence:** {item.get('confidence', 'unknown')}")
         lines.append(f"\n{content}\n")
