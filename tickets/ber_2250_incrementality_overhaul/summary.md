@@ -75,20 +75,69 @@ All scored IPs get flat HHST=10000 (HI). Per-tier analysis not possible until co
 - Alex Bohr is the product lead on incrementality (identity team)
 - Performance vs incrementality trade-off is a real tension — need leadership direction
 
+### Matt Brorby Sync (2026-04-08) — Incremental ROAS & Industry Context
+- **"Everyone suspects intent scoring is just capturing people who would visit anyway."** — validates TI-835 guid_log ~0% lift finding
+- Matt's prior role: measured incremental ROAS for mobile (deterministic, app installs)
+- **Time-delta bucketing method:** bucket users by time from ad impression to conversion event. Short windows (5s) ≈ 100% incremental. Signal becomes "barely noticeable" beyond ~6.5 hours for apps. Has a published article on this.
+- **Incremental ROAS benchmarks:** Good advertisers ~$0.90/dollar. Poor ~$0.50. Trade Desk ~$1.15 (considered good). Over $1.00 is rare and "awesome." Companies claiming $8 ROAS are measuring attributed, not incremental.
+- **CTV-specific challenges:** Not deterministic (IP-based), long conversion windows (weeks), cellular IP noise, signal-to-noise degradation at longer intervals. Should filter out cellular IPs via identity graph. Matt hasn't analyzed CTV yet — "might be totally different."
+- **LiftLab:** Paid by the advertiser → bias toward conservative measurement. MNTN is "at the mercy of these third parties."
+- **Ensemble approach:** "No one model to rule them all." IVR model for performance-focused advertisers, incremental ROAS model for incrementality-focused ones. Only applies to opt-in advertisers.
+- **Internal dashboards:** Matt noted he's "never seen negative or zero incrementality" on MNTN's internal incrementality dashboard — always positive. Suggests internal dashboards overstate.
+- Confirmed Jira restructure: TI-835/837/839/842 should be under a new EPIC (not TI-831). Decile work is separate, owned by Sean/Ryan/Zach/Jordan.
+
+### TI-835 Observational Results (2026-04-08) — "The Two Stories"
+- **guid_log (all pixel visits):** Holdout share ~10% across all 9 advertisers = no incremental lift on total site traffic. CTV ads don't generate net new visits.
+- **clickpass_log (VV-attributed visits):** Holdout share 1.3-5.1% = 2-8x incremental lift on attributed visits. All 9 advertisers significant at p < 0.001 after FDR correction.
+- **Interpretation:** CTV ads capture attribution, not new traffic. Same people who'd visit anyway arrive through the MNTN VV redirect path. Internal metrics overstate true incrementality. External vendors (LiftLab) will measure something closer to guid_log.
+- Full details in [TI-835 summary](ti_835_control_group_design/summary.md).
+
+### Fangorn Experiment Results — Current Lift by Intent Tier
+From the experimentation team's Mode dashboard (EX50):
+- **High Intent:** 11.61% IVR lift
+- **Mid Intent:** 9.78% lift
+- **Mid Intent with Peak Performance:** 11.2% lift
+- **Peak Performance:** 36% lift
+
+Original OKR target was 10% lift in Visit Rate for 5 verticals.
+
+### Incrementality Priority Sequencing (Bryce Wagg, confirmed with leadership)
+1. A spike must be completed to create a concrete plan for all incrementality work
+2. Incrementality learnings expected by end of April 2026
+3. Those learnings will inform continuous scoring release at end of Q2
+4. **Incrementality is priority over continuous scoring**
+
 ## 5. Solution
 
-*Pending experiment results.*
+### What We Know So Far (TI-835)
+CTV ads don't increase total site traffic but dramatically increase MNTN-attributed visits. The gap between internal attribution metrics and external incrementality measurement is the core problem to solve. Incremental ROAS (not visits) is the metric that matters.
+
+### What We Need to Determine
+- Which third-party vendors we're partnering with (LiftLab? Kochava? Others?)
+- How those vendors measure, and how it maps to our data
+- Which targeting audiences are truly incremental vs just capturing organic
+- Whether the shuffling experiment should measure attributed visits, total visits, or conversions/ROAS
 
 ## 6. Questions Answered
 
 - **Q:** Is our intent targeting generating incrementality, or are we buying audiences who would have converted anyway?
-  **A:** *Pending — this is the core question the experiment will answer.*
+  **A:** Partially answered. TI-835 shows CTV ads don't increase total site traffic (guid_log ~0% lift) but do increase MNTN-attributed visits (clickpass_log 2-8x lift). The full answer requires external vendor validation and per-audience-segment analysis.
+
+- **Q:** What does "good" incremental ROAS look like?
+  **A:** Industry benchmarks (Matt Brorby): good = ~$0.90/dollar, poor = ~$0.50, Trade Desk = ~$1.15. Over $1.00 is rare. Companies claiming $8 ROAS are measuring attributed, not incremental.
+
+- **Q:** Will adjusting for incrementality hurt performance?
+  **A:** Yes. Kale confirmed this is expected and acceptable — only for advertisers who opt in. CPM pricing means profit isn't directly affected, but IVR metrics will look worse.
 
 ## 7. Data Documentation Updates
 
 - Added Intent Score Shuffling section to `knowledge/experimentation.md` (ITT methodology, design, parameters)
 - Added incrementality initiative context to `knowledge/mntn_business.md`
 - Created `knowledge/strategic_north_star.md` with Q2 OKR leverage framework
+- Added incremental ROAS benchmarks and CTV challenges to `knowledge/experimentation.md`
+- Added guid_log vs clickpass_log methodology lesson to `knowledge/experimentation.md`
+- Added customer lifecycle / pricing impact / external vendors to `knowledge/mntn_business.md`
+- Added BQ holdout hash and visit source comparison to `knowledge/data_knowledge.md`
 
 ## 8. Open Items / Follow-ups
 
