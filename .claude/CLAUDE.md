@@ -20,6 +20,7 @@ workspace/
 │       ├── outputs/      ← csvs, jsons, query results
 │       ├── meetings/     ← meeting transcripts, notes
 │       └── artifacts/    ← notebooks, pdfs, scripts, deliverables
+├── slack_bot/            ← Slack knowledge extraction bot (runs on Pi 5 at midnight PST)
 ├── documentation/        ← reference docs, architecture diagrams, code snippets
 ├── self_review/          ← performance self-assessment (gitignored, never committed)
 ├── claude-prompts/       ← planning files and prompt templates
@@ -42,6 +43,8 @@ workspace/
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
 | `.claude/scripts/transcribe.sh` | Meeting transcription — runs both OpenAI (whisper-1) and local mlx-whisper, merges best of both (OpenAI accuracy backbone + local coverage patches). Use `--provider openai` or `--provider local` to force one. `--keep-both` saves individual provider files. |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
+| `knowledge/slack_review_queue.md` | Medium-confidence Slack extractions needing manual review |
+| `slack_bot/` | Slack knowledge extraction bot — scraper, extractor, updater. Runs on Pi 5 at midnight PST. Add bot to channels via `/invite @Knowledge Extractor` |
 | `self_review/summary.md` | Self-review guide — workflow, rubric, leadership direction (Paulo/Kale/Alyson), how to write rationales |
 | `self_review/self_review_2.md` | **Active self-review** — update after every ticket (gitignored) |
 | `self_review/self_review_1.html` | Submitted review #1 (archived, do not modify) |

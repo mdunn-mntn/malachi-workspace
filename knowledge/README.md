@@ -26,6 +26,25 @@ At the end of any BigQuery investigation:
 4. Write to these files after approval
 5. Commit with the ticket ID: `git commit -m "TI-XXX: update data_catalog with <table> findings"`
 
+## Slack Knowledge Extraction Bot
+
+A passive bot scrapes Slack channels nightly and uses Claude API to extract institutional knowledge into these docs automatically.
+
+**How it works:**
+- Runs at **midnight PST** on a Raspberry Pi 5 (`pihole5.local`)
+- Scrapes all channels the bot is invited to → extracts knowledge via Claude Sonnet → updates these docs → commits and pushes
+- **High confidence** items are auto-applied with `<!-- slack-extracted: YYYY-MM-DD -->` markers
+- **Medium confidence** items go to `slack_review_queue.md` for manual review
+- Each entry includes attribution: who said it, which channel, what date
+
+**To add a new channel:** In Slack, type `/invite @Knowledge Extractor` in the channel. It will be auto-discovered on the next run.
+
+**Code:** `slack_bot/` in the workspace root. Config: `slack_bot/config.yaml`.
+
+**Logs:** `ssh -i ~/.ssh/pi5 pi5@192.168.10.177 'tail -30 ~/workspace/slack_bot/logs/cron.log'`
+
+**Raw data:** `knowledge/slack_raw/` (gitignored) — daily JSON dumps of scraped messages.
+
 ## Entry Templates
 
 See `data_catalog.md` header for the table entry format.
