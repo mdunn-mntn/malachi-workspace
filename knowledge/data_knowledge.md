@@ -1389,3 +1389,14 @@ The `core.advertiser_default_values` table allows per-advertiser overrides of ca
 **Known issue (April 2026):** Many advertisers created before the budget minimum feature was introduced are missing records in this table. When an advertiser has CART disabled, the default values record may not have been created, causing budget floor/ceiling to not apply correctly. 
 
 **Workaround:** Toggle CART ON then OFF in the Advertiser Info page in Command Center — this creates the missing record, fixes existing budget allocations on live campaigns, and syncs everything downstream. A migration to back-populate all affected advertisers is tracked in PRO-497.
+
+<!-- slack-extracted: 2026-04-14 -->
+- **Offline Upload Values — Future-Dated Conversions Issue**
+
+The table `ui.offline_upload_values` can contain conversions with future timestamps if the customer uploads data that includes future-dated records. This was confirmed via `upload_id = 27358`, which had a `max(time)` of `2026-04-17` at a time when that date had not yet occurred.
+
+**Root cause:** The upstream discrepancy originates from the third-party data provider (xdd). Data can fail to match hashed values at the time of the initial run but recover later.
+
+**Resolution pattern:** Re-triggering the pipeline after xdd data recovers will produce correct match results (e.g., 1,458 conversions surfaced on rerun).
+
+**Action item for data quality:** Ensure offline uploads do not contain conversions with future dates before processing. No other downstream action is required once data recovers. (via Lilit, #reporting_helpdesk_ask_anything, 2026-04-13)
