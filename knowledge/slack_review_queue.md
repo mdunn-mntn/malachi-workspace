@@ -93,3 +93,33 @@ The `core.advertiser_default_values` table allows per-advertiser overrides of ca
 **Known issue (April 2026):** Many advertisers created before the budget minimum feature was introduced are missing records in this table. When an advertiser has CART disabled, the default values record may not have been created, causing budget floor/ceiling to not apply correctly. 
 
 **Workaround:** Toggle CART ON then OFF in the Advertiser Info page in Command Center — this creates the missing record, fixes existing budget allocations on live campaigns, and syncs everything downstream. A migration to back-populate all affected advertisers is tracked in PRO-497.
+
+## 2026-04-16
+
+### [mntn_business] from Mike Dolt in #targeting-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**DMA Targeting — Nielsen Licensing Requirement:** DMAs (Designated Market Areas) are a Nielsen construct and require a paid license to use for targeting. They are not open-source or freely available. Meta was observed switching to Comscore markets as an alternative. MNTN alternatives under consideration include MSA (Metropolitan Statistical Area) or CBSA (Core-Based Statistical Area) data, which do not carry the same licensing requirement.
+
+### [mntn_business] from Ryan Kleck in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**MNTN Express — Vertical Targeting Approach (Current vs. Planned):** MNTN Express advertisers are not currently treated differently from a targeting perspective. The current approach scrapes the advertiser's site to determine their vertical. The planned improvement is to use the vertical the customer selects in the UI directly, with a waterfall fallback: use the site-scraped vertical first; if unavailable, use the UI-selected vertical.
+
+### [data_catalog] from Sean Yang in #data-platform
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**`public.ip_info` — CoreDW vs. BQ Row Count Discrepancy:** A minor row count discrepancy exists between the CoreDW and BQ versions of `public.ip_info`:
+- CoreDW: 9,144,472 rows
+- BQ (`dw-main-silver.public.ip_info`): 9,144,484 rows
+
+The BQ version has slightly more rows. This is likely an artifact of replication timing. Confirm with the data engineering team before treating either as authoritative.
+
+### [mntn_business] from Jack Barbey in #identity_core
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Identity Graph RFD — In Progress (April 2026):** Jack Barbey (identity engineering manager) drafted an Identity Graph RFD and is building internal consensus before sharing externally with downstream teams. The document is hosted in Confluence: https://mntn.atlassian.net/wiki/x/JoDz0w. Review was solicited from the identity_core team.

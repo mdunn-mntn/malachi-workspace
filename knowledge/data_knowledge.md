@@ -1400,3 +1400,15 @@ The table `ui.offline_upload_values` can contain conversions with future timesta
 **Resolution pattern:** Re-triggering the pipeline after xdd data recovers will produce correct match results (e.g., 1,458 conversions surfaced on rerun).
 
 **Action item for data quality:** Ensure offline uploads do not contain conversions with future dates before processing. No other downstream action is required once data recovers. (via Lilit, #reporting_helpdesk_ask_anything, 2026-04-13)
+
+<!-- slack-extracted: 2026-04-16 -->
+- **Fangorn Experiment — Mid-Intent + Peak Performance Logic Bug:** A logic error was identified in the Mid-Intent + Peak Performance audience expression during the Fangorn experiment. The bug affected the Treatment side only.
+
+**Root cause:** On the Control side, the audience expression uses a 6-digit `vertical_id` for High Intent and a 3-digit `vertical_id` for Mid Intent. On the Treatment side, the `advertiser_id` was mistakenly used for both High and Mid Intent instead.
+
+When Peak Performance was enabled and the threshold dropped to 3333:
+- **Treatment (correct behavior):** ORs in the 6-digit `vertical_id` → targets the vertical OR (bucket AND keywords)
+- **Control (buggy behavior):** ORed in the `advertiser_id` → accidentally targeted Bucket OR Keywords, which simplified to just the bucket at the 3333 threshold
+
+**Fix for rollout:** Mimic DS13 exactly — use a 6-digit `vertical_id` for High Intent and a 3-digit `vertical_id` for Mid Intent on the Treatment side. The `advertiser_id` will no longer be used for intent-tier differentiation in audience expressions. (via Ryan Kleck, #dev_fangorn-model_ex, 2026-04-01)
+- **Datastream Replication — Primary Key Policy:** When adding tables to Datastream replication, BigQuery does not use serialized/synthetic primary key columns. PKs should be data columns that are meaningfully unique (e.g., `location_id`), not auto-generated serial columns. Adding a serial column purely for replication purposes is discouraged because it is not representative of the data. (via Dustin Niehoff, #data-platform, 2026-04-01)

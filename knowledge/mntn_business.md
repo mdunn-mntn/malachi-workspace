@@ -275,3 +275,15 @@ Effective Q2 2026, the following process changes apply to TI and AUD squads:
 - Weekly project syncs per active project (for risk/timeline/scope alignment, demos, and pairing)
 
 **Standup focus:** Blockers, PR reviews, and immediate needs only — larger discussions handled in project syncs. Tickets should be updated before standup.
+
+<!-- slack-extracted: 2026-04-16 -->
+- **Scalyr Log Management Tool:** Scalyr was decommissioned in March 2026. Engineers no longer have access and the Okta tile has been removed. Any workflows that previously relied on Scalyr for log search/monitoring need alternative tooling. (via Edris Mohsin, #engineering-team, 2026-04-01)
+- **Fangorn DS13 → DS46 Swap — Implementation Approach:** The decision was made to implement the DS13 → DS46 audience swap using an advertiser-configuration flag approach rather than an exclusion-script hack. Key design decisions:
+- The Audience Service reads a per-advertiser `on_fangorn` flag during segment breakdown; when `true`, it swaps DS13 → DS46
+- Toggling the flag triggers a segment rebuild
+- The base expression is unchanged, so UI audience sizes will NOT change
+- New advertisers default to `true`
+- Long-term, Jamie will replace this with an audience overlay system (~2 sprints out)
+
+**Rollout plan:** Set all advertisers to `false` → API-flip one advertiser to `true` → validate → scale via script. (via Bryce Wagg, #targeting-squad, 2026-04-01)
+- **Fangorn Leadership Review Outcomes:** Leadership approved the Fangorn phased rollout with the following tier allocation: 44% Tier 1 / 40% Tier 2 / 16% Tier 3. Reported average IVR lift in peak performance: 35.9%. Richard requested a tech blog post (Bryce and Kale leading). Mark flagged a sales enablement opportunity to be discussed with GTM on a project kickoff call. (via Bryce Wagg, #dev_fangorn-model_ex, 2026-04-01)

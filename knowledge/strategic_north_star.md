@@ -189,3 +189,6 @@ The full advertiser-level scoring pipeline (TI-798) for Vertex was tested at sca
 - Eventual goal is daily advertiser-level scoring; vertical-level is the interim approach
 
 The Dataproc cost spike observed around March 27, 2026 was attributed to testing this pipeline (not to IPDSC changes).
+
+<!-- slack-extracted: 2026-04-16 -->
+- **Fangorn Rollout — Approved Tier Allocation and Next Steps:** Leadership formally approved the Fangorn phased rollout. Tier allocation: 44% Tier 1 / 40% Tier 2 / 16% Tier 3. Sales enablement and GTM preparation are being coordinated. A tech blog post has been initiated by Bryce and Kale at Richard's request. The Mid-Intent + Peak Performance logic bug (Treatment side only) was identified and a fix is scoped for the production rollout. (via Bryce Wagg, #dev_fangorn-model_ex, 2026-04-01)

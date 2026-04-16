@@ -2200,3 +2200,23 @@ Tracks all database-level changes to advertiser records, including the `is_test`
 **Join:** `JOIN users u USING (user_id)` to get `email_addr` of the actor.
 
 **Gotcha:** If a change is made directly to the database (not through the UI), `user_id` will not be reliably set — it will retain the prior value. Only UI-originated changes have accurate `user_id` attribution. Analogous tables exist for other entities (e.g., `archives.campaign_groups_archives`).
+
+<!-- slack-extracted: 2026-04-16 -->
+- **`logdata.icloud_ipv4_ips` — CoreDW External Table (Legacy):** A foreign table exists in CoreDW under `logdata.icloud_ipv4_ips` sourcing from a GCS bucket at `pxf://mntn-data-curated-prod/icloud_ips/all_ips/` (Parquet format). The table contains a single column: `ip_address` (text). No active usage was found in the GitHub codebase as of the migration audit.
+
+**Purpose:** Contains Apple iCloud Private Relay IP addresses. Used by the Targeting team to exclude these IPs from bidding so they never enter MembershipDB.
+
+**BQ equivalents:**
+- Raw model: `dw-main-bronze.sqlmesh__raw.raw__icloud_ips_raw` (SQLMesh Python model sourcing from the same GCS bucket)
+- Migrated table: `dw-main-silver.summarydata.icloud_ipv4` (the migrated version of the related `summarydata.icloud_ipv4` table)
+
+**Note:** `summarydata.icloud_ipv4` in CoreDW has ~120,550 rows; BQ silver has ~120,482 rows — minor row count discrepancy exists. The `ipdsc` job depends on this table and is being updated to point to the BQ version. (via Ryan Kleck, #chapter-data-engineering, 2026-04-01)
+- **`geo.locations` / `geo.location_data` — Table Lineage and Migration Status:**
+- `geo.locations` on CoreDW is a **view** built on top of `location_data` and `location_counts`. `location_counts` has been deprecated but was not cleaned up from the view definition.
+- `geo.locations` in intprod is replicated from CoreDW (row counts match).
+- The BQ replacement table is `geo.location_data`. The BQ geo pipeline (originally owned by Sheetal, now Nivas) is **not yet complete**.
+- `dw-main-bronze.analytics_curated.geo_location_data` is the current CoreDW copy in BQ — use this for production queries until the native BQ geo pipeline is finished.
+- **Do NOT replicate `geo.locations` from intprod to BQ** — this would be circular. The source of truth for geo data is the BQ geo pipeline.
+- `geo.locations.location_id` is definitionally unique and can be promoted to a primary key if Datastream replication is needed.
+
+**`tpa.categories`:** Already exists as a view in bronze (`dw-main-bronze.tpa.categories`). It is sourced from BQ/SQLMesh — not from intprod. Do not add it to Datastream replication from intprod as that would be circular. (via Dustin Niehoff, #data-platform, 2026-04-01)
