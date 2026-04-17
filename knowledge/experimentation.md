@@ -625,12 +625,48 @@ SELECT (('x' || substr(md5('{AID}:{IP}'), 1, 16))::bit(64)::bigint % 1000) AS bu
 ### How to Identify Experiment Campaigns
 Nick identifies experiment campaigns by parsing `campaign_group.name` for the pattern **"EX-{number}"** (e.g., "EX-46"). This is hacky but is the current method — there's no dedicated experiment flag in the schema. The regex extracts everything after the first space in the name and checks for an EX-{number} pattern. If null, it's not an experiment.
 
-### Phase 2: Intent Score Shuffling Experiment (Contingent on Phase 1)
-- **Treatment:** Reassign a defined cohort of mid-intent IPs into high-intent buckets, and vice versa
-- **Control:** Unshuffled IPs in both tiers
-- **Critical requirement:** Log original intent scores before reassignment for clean ITT analysis
-- **Reversibility:** Fully reversible — shuffling can be stopped and scores restored
-- **Contingent on Phase 1 results and leadership direction on performance vs incrementality trade-off**
+### Phase 1 Results: ITT Shows Zero (April 2026)
+**No statistically significant incrementality detected** under ITT across high-intent, mid-intent, and peak performance groups. This is NOT a statement that ads don't work — the methodology cannot determine incrementality with available data.
+
+**Why ITT shows zero — coverage dilution:**
+- Analyzed 10 advertisers across 8 verticals (10-day pre-period, 20-day post-period)
+- High-intent impressions: 69% of total impression share despite representing only 16% of scored IP universe
+- **Coverage problem:** e.g., Boosted Safe — only 14% of high-intent treatment group (400K impressions / 2M IPs) actually received ads
+- When 86% of "treatment" receives no treatment, comparison groups become nearly identical → biases toward zero
+- This is a structural limitation of ITT when impression coverage is low
+
+**Incrementality measurement spectrum (current state):**
+- **High end (inflated):** Current dashboard compares exposed group vs random sample — "wildly inflates" results because exposed group is pre-selected high-intent users likely to convert anyway
+- **Low end (conservative):** ITT framework — biased toward zero due to coverage dilution
+- **Middle ground:** LATE estimates show larger lifts (4%+ coverage threshold) but inconsistent — only 2 mid-intent examples (Hexclad, Zazzle) moved in opposite directions
+
+**Technical constraints discovered:**
+- Prospecting intent scores only retained for 35 days in active storage
+- Assigned max score per IP during 10-day pre-period as fixed treatment assignment
+- Peak performance impressions appear despite not being enabled — likely from real-time conquesting before scores are available
+
+### Phase 2: Ghost Bidding Experiment (REPLACES Shuffling — April 2026)
+
+**PIVOT:** Intent score shuffling has been replaced by **ghost bidding methodology** + **dedicated mid-intent experiment**. Key decisions:
+- Treatment group must be **fully mid-intent focused** (not shuffled high/mid mix) to generate stronger signal
+- Use **ghost bidding** to calculate Average Treatment on the Treated (ATT) rather than ITT
+- **Target timeline:** April 30th deadline for experiment setup and ghost bidding implementation
+
+**Ghost bidding mechanism:**
+1. Holdout IPs are deterministically identified via hash but **still appear in augmenter/bid logs**
+2. Calculate campaign win rate from actual served impressions
+3. Apply win rate as sampling probability to holdout IPs appearing in bid stream
+4. Compare visit rates: exposed treatment IPs vs pseudo-exposed holdout IPs
+
+**Advantages over ITT:**
+- Eliminates coverage dilution by comparing only IPs that would have been served
+- Answers: "Of people who received an impression, what is the incremental lift?"
+- Can be implemented observationally without bidding logic changes — only needs logging enhancements
+- Initial analysis will use win rate approximation method
+- Trade Desk previously built this methodology; Alex Bloore was involved in alpha testing at Goodway
+
+**Key insight — mid-intent performance context:**
+When customers shift budget to mid-intent, "performance drops off a cliff" and costs increase. The experiment aims to validate whether this group is **incremental despite being more expensive**. The answer won't be "performance is better in mid-intent" — it will be "people are more influenced incrementally when served ads in mid-intent vs high-intent."
 
 ### Phase 3: Lift-Optimized Model (Future)
 Matt Brorby outlined training a model focused on *lift* rather than visit prediction:
@@ -639,16 +675,33 @@ Matt Brorby outlined training a model focused on *lift* rather than visit predic
 - Output: rank-ordering by incremental lift rather than by intent
 - This would replace intent scoring with lift scoring
 
+### Fellowship System — Weighted Model Combination (Alex Knorr, April 2026)
+Conceptual framework for balancing performance and incrementality:
+- Build a **toolbox of independent targeting models** (conversion probability, incrementality, new-to-brand, keyword intent, etc.)
+- **Combination engine** aggregates models with adjustable weights, agnostic to underlying architecture
+- **Feedback loop** adjusts weights based on campaign performance — either Bayesian updating or Performance team APIs requesting more incrementality vs performance signal
+- Enables threading the needle between competing objectives without rebuilding models
+- Connects to continuous scoring roadmap: once implemented, score thresholds can be dynamically adjusted per customer goal (narrower for performance, wider for incrementality)
+
 ### Key Tension: Performance vs Incrementality
 Optimizing for incrementality and performance (visit rate) are partially opposed:
 - High-intent users → high visit rate, low lift (would have visited anyway)
 - Low-intent users → low visit rate, high lift (wouldn't have visited without the ad)
 - A group with 0% natural visit rate + 10% post-impression visit rate = infinite lift but only 10% VR
 - Need to find the balance: maximize absolute performance WHILE maximizing incremental contribution
-- **Need explicit leadership direction** on how to weight these before designing any experiment
 
-### Why ITT (Intent to Treat)
+### Marketing Philosophy (confirmed April 2026)
+Mountain functions as a **mid-funnel priming channel** that feeds bottom-funnel conversions in search/social, NOT as a direct conversion driver:
+- CPA comparison is apples-to-oranges — Mountain should not match Meta/search CPAs on same reach
+- Value proposition shift needed: position Mountain as driving **incremental reach that improves blended efficiency** across the marketing mix
+- Measurement window must be longer than current approach to capture mid-funnel effects
+- Site visits are a "late" signal — by that point, lower-funnel channels claim attribution
+- Need reporting that shows acceleration of users moving toward high-intent status because of Mountain exposure
+
+### Why ITT (Intent to Treat) — and Its Limitations
 ITT is the established methodology for intent-assignment questions. It compares outcomes based on the group an IP was *assigned* to, not what actually happened. This prevents selection bias — e.g., the 90% targeted group includes IPs that never actually received impressions (budget constraints, not watching TV at the time, etc.). Comparing only impression-recipients vs holdout would introduce bias because impression-receipt correlates with behavioral differences.
+
+**Limitation discovered (April 2026):** When impression coverage is very low (14-16% of treatment group), ITT structurally biases toward zero because the vast majority of "treated" IPs are behaviorally identical to holdout. Ghost bidding (ATT) addresses this by comparing only IPs that would have been served.
 
 ### Key Metrics
 - Incremental lift by original intent tier vs assigned tier

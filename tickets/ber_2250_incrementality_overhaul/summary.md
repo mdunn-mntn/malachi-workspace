@@ -112,11 +112,36 @@ Original OKR target was 10% lift in Visit Rate for 5 verticals.
 ### What We Know So Far (TI-835)
 CTV ads don't increase total site traffic but dramatically increase MNTN-attributed visits. The gap between internal attribution metrics and external incrementality measurement is the core problem to solve. Incremental ROAS (not visits) is the metric that matters.
 
+### ITT Results (April 2026) — Zero Lift Detected
+No statistically significant incrementality under ITT across any intent tier. Root cause: **coverage dilution** — only 14-16% of treatment group actually receives impressions; remaining 86% behaves identically to holdout. This is structural, not a statement that ads don't work.
+
+### Pivot: Ghost Bidding Replaces Shuffling (April 2026)
+Intent score shuffling has been replaced by **ghost bidding methodology** + **dedicated mid-intent experiment**:
+- **Ghost bidding:** Compare exposed treatment IPs vs pseudo-exposed holdout IPs (matched via campaign win rate applied to holdout bid stream appearances)
+- **Pure mid-intent treatment group** — not shuffled mix — to generate stronger signal
+- **ATT (Average Treatment on the Treated)** instead of ITT to eliminate coverage dilution
+- **Target deadline:** April 30th for experiment setup
+- Trade Desk previously built this methodology; Alex Bloore involved in alpha testing at Goodway
+
+### Action Items (from meeting)
+- **Malachi:** Build ghost bidding methodology for experiment analysis framework
+- **Malachi:** Set up dedicated mid-intent campaign experiment with Experiments team
+- **Alex Knorr:** Review findings and recommendations with Malachi
+- **Kyla:** Program management connecting all incrementality workstreams
+- Defer to Kirsa and Nick for experiment sizing (budget, advertiser selection)
+- Confirm whether bidder logging changes can ship by April 30th or use win rate approximation
+
+### Fellowship System (Alex Knorr, April 2026)
+Conceptual framework for balancing performance and incrementality long-term:
+- Toolbox of independent targeting models (conversion, incrementality, new-to-brand, keyword intent)
+- Combination engine with adjustable weights per campaign/advertiser goal
+- Bayesian updating feedback loop adjusts weights based on outcomes
+- Connects to continuous scoring roadmap
+
 ### What We Need to Determine
-- Which third-party vendors we're partnering with (LiftLab? Kochava? Others?)
-- How those vendors measure, and how it maps to our data
-- Which targeting audiences are truly incremental vs just capturing organic
-- Whether the shuffling experiment should measure attributed visits, total visits, or conversions/ROAS
+- Whether bidder logging changes can ship by April 30th or use win rate approximation
+- Exact experiment budget and advertiser selection (Kirsa + Nick)
+- Cross-squad coordination: Jason (partner vendors), Megan (experimentation), TI (methodology)
 
 ## 6. Questions Answered
 
