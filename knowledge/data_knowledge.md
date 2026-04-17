@@ -702,6 +702,25 @@ Reference diagram: `documentation/architecture/audience_intent_scoring.png`
 
 **Once PP (8000) goes live**, per-tier incrementality analysis becomes possible: compare HI (10000) vs PP (8000) vs MI (3333-6665) holdout/targeted visit rates.
 
+### Intent Tier Thresholds (Prospecting Scoring Pipeline)
+Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` — daily per IP/advertiser/campaign. Scores retained only **35 days** in active storage.
+
+| Tier | Score Range | Criteria |
+|------|------------|----------|
+| **High Intent** | 10000 | Vertical + keyword match |
+| **Peak** | 7000-9999 | Vertical only (no keyword) |
+| **Mid Intent** | 3333-6999 | Keyword only (no vertical) |
+| **Max Reach** | <3333 | Neither vertical nor keyword |
+
+**Coverage rates in ITT analysis (Alex Knorr pre-analysis, April 2026):**
+- High intent: **3.4% median** coverage of treatment group (NOT 14% as initially estimated in meetings)
+- Peak: **0.2%** median coverage
+- Mid intent: **0.04%** median coverage
+- LATE (Wald estimator) only credible above ~4-5% coverage → only high-intent barely crosses this threshold
+- 10 advertisers across 8 verticals, 25-day post-period (Mar 21 – Apr 14)
+- External table: `dw-main-bronze.external.TI_835_prospecting_scores`
+- Full report: `reports/TI_835_Pre_Analysis_v4.html` in SteelHouse/databricks_targeting (branch TI-835)
+
 **Use for incrementality analysis:**
 - Compare visit rates between 10% holdout (no impressions ever) vs 90% targeted group
 - Use ITT (Intent to Treat): compare ALL IPs in 90% group, not just those who actually received impressions

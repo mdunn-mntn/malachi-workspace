@@ -1958,6 +1958,28 @@ WHERE t.data_source_id = 4
 
 ---
 
+## bronze.external.TI_835_prospecting_scores
+- **Type:** EXTERNAL TABLE (GCS-backed Parquet)
+- **GCS path:** `gs://mntn-data-archive-dev/alex.knorr/TI_835_prospecting_scores/*.parquet`
+- **Partition:** None (flat Parquet files)
+- **Use for:** TI-835 incrementality pre-analysis scoring. Contains per-IP intent group assignments
+  and household scores for 10 advertisers across 8 verticals. Created by Alex Knorr from
+  Databricks pre-analysis (SteelHouse/databricks_targeting, branch TI-835).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| company_name | STRING | Advertiser name |
+| advertiser_id | INTEGER | FK → core.advertisers |
+| campaign_id | INTEGER | FK → core.campaigns |
+| ip | STRING | IP address |
+| intent_group | STRING | Intent tier assignment (High, Peak, Mid, Max Reach) |
+| household_score | INTEGER | Fangorn household score |
+
+**Query tip:** Join on `advertiser_id` + `ip` to link back to impression/visit tables.
+Source scoring pipeline: `gs://household-scoring-prod/output/scoring/prospecting_intent/` (daily, 35-day retention).
+
+---
+
 # bronze.tpa
 
 **Project:** dw-main-bronze | **Dataset:** tpa

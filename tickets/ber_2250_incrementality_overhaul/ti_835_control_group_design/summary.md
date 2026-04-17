@@ -221,6 +221,25 @@ The shuffling experiment must clearly define its success metric:
 - **Audience expression structure:** Documented in data_knowledge.md
 - **guid_log vs clickpass_log interpretation:** Added to experimentation.md
 
+### Alex Knorr Pre-Analysis (Databricks, April 2026)
+
+Alex Knorr ran a parallel pre-analysis using Databricks with more granular intent tier breakdowns.
+
+**Repo:** SteelHouse/databricks_targeting, branch `TI-835`, path `notebooks/Incrementality_Pre_Analysis/`
+**External table:** `dw-main-bronze.external.TI_835_prospecting_scores` (GCS: `gs://mntn-data-archive-dev/alex.knorr/TI_835_prospecting_scores/*.parquet`)
+**Report:** `reports/TI_835_Pre_Analysis_v4.html`
+
+**Key findings:**
+- 10 advertisers across 8 verticals analyzed, 25-day post-period (Mar 21 – Apr 14)
+- Coverage rates were **worse** than meeting-note estimates:
+  - High intent: **3.4% median** (not 14% as initially discussed)
+  - Peak: **0.2%** median
+  - Mid intent: **0.04%** median
+- LATE (Wald estimator) only credible above ~4-5% coverage — only high-intent barely crosses this threshold
+- Intent tier thresholds used: High=10000 (vertical+keyword), Peak=7000-9999 (vertical only), Mid=3333-6999 (keyword only), Max Reach <3333
+- Scoring source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` (daily, 35-day retention)
+- These results reinforce the pivot to ghost bidding (ATT) — ITT is structurally unable to detect incrementality at these coverage levels
+
 ## 8. Open Items / Follow-ups
 
 - [x] Get holdout query from Nick → Zach provided hash function

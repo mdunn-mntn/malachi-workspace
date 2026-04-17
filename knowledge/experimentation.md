@@ -645,6 +645,13 @@ Nick identifies experiment campaigns by parsing `campaign_group.name` for the pa
 - Assigned max score per IP during 10-day pre-period as fixed treatment assignment
 - Peak performance impressions appear despite not being enabled — likely from real-time conquesting before scores are available
 
+**Alex Knorr's pre-analysis repo and external table:**
+- Repo: SteelHouse/databricks_targeting, branch `TI-835`, path `notebooks/Incrementality_Pre_Analysis/`
+- External table: `dw-main-bronze.external.TI_835_prospecting_scores` (GCS: `gs://mntn-data-archive-dev/alex.knorr/TI_835_prospecting_scores/*.parquet`)
+- Report: `reports/TI_835_Pre_Analysis_v4.html`
+- Coverage rates even lower than meeting estimates: high-intent median 3.4% (not 14%), peak 0.2%, mid 0.04%
+- 10 advertisers, 8 verticals, 25-day post-period (Mar 21 – Apr 14)
+
 ### Phase 2: Ghost Bidding Experiment (REPLACES Shuffling — April 2026)
 
 **PIVOT:** Intent score shuffling has been replaced by **ghost bidding methodology** + **dedicated mid-intent experiment**. Key decisions:
