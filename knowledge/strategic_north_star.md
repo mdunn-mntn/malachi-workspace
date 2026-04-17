@@ -1,5 +1,5 @@
 # Strategic North Star — Q2 2026
-Last updated: 2026-04-08
+Last updated: 2026-04-17
 
 This is the **leverage filter** for all work. Every ticket, every task, every hour should be evaluated against this document. If work doesn't connect clearly to the objectives below, question whether it's the highest-leverage use of time.
 
@@ -113,6 +113,61 @@ When evaluating any piece of work, score it:
 - It optimizes something that isn't a bottleneck
 - It's interesting but doesn't connect to revenue/retention/cost
 - It could be done later with no consequence
+
+---
+
+## Q2 2026 — Three Strategic Themes (Mike Dolt, Q2 Roadmap, 2026-04-17)
+
+From Mike Dolt's Q2 Targeting Roadmap presentation. **31 line items** committed for Q2, organized under three themes. All three feed into the North Star: Mountain Matched AI.
+
+### Theme 1: B2B Expansion
+Expanding ICP (Ideal Customer Profile) into B2B via integrations, data sources, and audience types.
+- **6 integrations slated:** Tillium, Klaviyo, Ours Privacy, HubSpot V2, Freshman, Bombora (list may shift — Jason Puertas confirmed integration priorities are moving fast)
+- **Mountain Mesh for B2B:** Existing Mountain Mesh doesn't work well for B2B (can't infer targeting from website alone — need company size, industry, target persona inputs)
+- **Waypoint Targeting:** Targeting users who dropped off at various points in the B2B sales cycle
+- **Interest Segment Quality Score:** Evaluating quality of ~20K interest segments so we can recommend effectively (Alex's prior-quarter work continuing)
+- **B2B Firmographic Curation:** Building out firmographic data — currently P3, priority may shift
+- **B2B customer identification:** Mechanism TBD — possibly a toggle during PTV onboarding (self-sign-ups go to Express, PTV requires salesperson)
+
+### Theme 2: Incrementality
+Standardize third-party lift measurement as a first-class capability. Build experimentation framework for advertisers and internal use.
+- Incrementality measurement produces signal that makes targeting models smarter (every lift study generates training data for Fangorn and future models)
+- **Incrementality as a separate scoring model** is being discussed — working alongside Fangorn, trained for different outcomes
+- **Audience deciles** for advertiser experimentation (directly enabling the experimentation framework)
+- **Unified customer experiments audience** — currently P3, priority may shift
+- External vendor validation (LiftLab, Kochava) continuing
+
+### Theme 3: Mountain Matched AI (North Star)
+Next-gen targeting powered by continuous scoring, graph-based identity, and smarter ML models. **Multi-quarter bet — shipping piece by piece, not all at once.**
+- **10 initiatives**, 3 already in development (Fangorn)
+- **What's shipping Q2:**
+  - Fangorn rollout (end of April target)
+  - Continuous scoring (high probability ships with Fangorn)
+  - Campaign objectives models (ROAS/CPA-specific)
+  - Modularize and extend model inputs (TI side)
+  - DAR/BUK integration with Fangorn
+- **Identity & Data Quality:**
+  - Identity graph integration (starting slow — scoring signals + CRM exclusions first)
+  - Customer profile recommendations quality (Victor's work)
+- **Select products:**
+  - LLM text audience expression (needed for Select, aligns with MM AI plans)
+  - Mountain Matched Awareness Audience (max reach/awareness model for Select)
+  - Permel Universal Optimization Controller integration (future pacing)
+
+### Technical Investments (Keeping the Lights On)
+- **MembershipDB resilience**
+- **Targeting-wide monitoring dashboard** (similar to Mission Control — daily check for service health, DAG status, pipeline issues)
+- **Audience overlays** (needed for Fangorn rollout; hack in place until overlays ship)
+- **Geo-changes:** Move geo-resolution from targeting to Bidder. Bidder has geo data from bid request. **Currently missing 20-25% of bids** because we lack geodata for those IPs — significant improvement opportunity.
+- **Public API:** Move business logic from Gary to Audience Service
+- **Select: Move from targeting all US to specifically who they need**
+- **Feature inventory and data quality evaluations** (TI side — know what data we have, assess quality)
+
+### Key Insight: B2B + Incrementality Are Foundations for MM AI
+Both B2B and incrementality work are not separate from Mountain Matched AI — they are literally the foundation pillars that Q3/Q4 MM AI will be built on.
+
+### MNTN Express and Targeting
+Express clients **don't install Pixel** — no performance metrics available. Targeting has no meaningful role until Express adds Pixel and performance metrics. This will come later down the line.
 
 ---
 

@@ -1,5 +1,5 @@
 # MNTN Business Knowledge
-Last updated: 2026-04-08
+Last updated: 2026-04-17
 
 General knowledge about MNTN as a business — products, strategy, org structure, industry context, terminology, and institutional knowledge. Sourced from shared docs, meetings, messages, and conversations. Updated as new business context is learned.
 
@@ -25,6 +25,28 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - Kirsa manually assigned every AID (advertiser ID) to a vertical/protocol — took months
 - Performance vs interest audiences: ~500% improvement
 - Led to current targeting approach including Fangorn (bottoms-up keywords)
+
+### Mountain Matched AI (North Star — Q2 2026+)
+- **Next-gen targeting suite** encompassing continuous scoring, graph-based identity, and ML-driven audience consumption
+- Replaces static segments and static scores with dynamic, intelligent targeting
+- Not on company OKR list for Q2, but is the **horizon all Q2 work aims toward** — B2B and incrementality are the foundation
+- **Multi-quarter bet** — shipping piece by piece across Q2-Q4, not all at once
+- "What's gonna make Mountain's targeting really unique" — competitive moat vs other CTV platforms (Mike Dolt, Q2 Roadmap)
+- Components: Fangorn rollout, continuous scoring, campaign objective models, identity graph integration, LLM audience expressions
+
+### Mountain Mesh for B2B
+- Existing Mountain Mesh doesn't work for B2B — cannot infer targeting from website alone (unlike e-commerce where product is obvious)
+- B2B needs additional inputs: company size, industry, target persona within the company
+- Separate B2B-specific flow planned (Mountain Mesh would look completely different for B2B)
+
+### Waypoint Targeting
+- Planned feature for B2B: targeting users who dropped off at various points in the B2B sales cycle
+- Important because B2B sales cycles are long with multiple drop-off points
+
+### Interest Segment Quality Score
+- Project to evaluate and rank the ~20K interest segments (DS19 keywords)
+- Currently MNTN can't recommend segments because quality is unknown
+- Alex Knorr working on this (continued from prior quarter)
 
 ### Media Plan
 - Algorithm-based publisher allocation for CTV campaigns
@@ -53,8 +75,8 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - **Nick** — Works with Kirsa on experimentation methodology and statistical approach. Involved in power analysis and methodology improvement planning.
 - **Toph** — Production ops. Validates campaign changes for pacing risk (e.g., media plan beta rollout).
 - **Jack** — Engineering manager for identity team (took over role ~March 2026).
-- **Alex Floor** — Covering product leadership for targeting during GPM search (alongside Mike Dole and Kale).
-- **Mike Dole** — Covering product leadership for targeting during GPM search (alongside Alex Floor and Kale).
+- **Alex Bloore** — VP Engineering. Covering product leadership for targeting during GPM search (alongside Mike Dolt and Kale). Approved Mike's Q2 roadmap ("Mike, you killed it").
+- **Mike Dolt** — Acting as himself + Ellison + RTPM for Q2 roadmap/product. Covering product leadership for targeting during GPM search (alongside Alex Bloore and Kale). Presented Q2 Targeting Roadmap (2026-04-17).
 
 ### Strategic Direction Shift (Kale, 2026-03-31)
 - **Incrementality is the new north star for targeting.** Kale is sharpening the TI team focus: Fangorn and prediction models will narrow toward incrementality, not just intent/ROAS optimization.
@@ -80,6 +102,36 @@ General knowledge about MNTN as a business — products, strategy, org structure
 1. **Targeting** — Fangorn, bottoms-up keywords, audience optimization. Most impactful lever.
 2. **New ad formats** — Vertical video, pause ads
 3. **Lift and incrementality** — New-to-brand rates, lift test performance improvement, geo-based lift testing with partners (e.g., Lift Lab). **Elevated to top priority for Q2 2026 via BER-2250.**
+
+---
+
+## Q2 2026 B2B Expansion (Mike Dolt, Roadmap 2026-04-17)
+
+MNTN is sharpening focus on B2B as a mid-market segment. B2B customers already exist on the platform but aren't well-served by current targeting.
+
+### Q2 B2B Integrations (6 planned)
+Tillium, Klaviyo, Ours Privacy, HubSpot V2, Freshman, Bombora. List subject to change — Jason Puertas confirmed integration priorities move fast.
+
+### B2B Customer Identification
+- Mechanism TBD — possibly a toggle during PTV onboarding
+- All self-sign-ups now route to MNTN Express; PTV access requires salesperson
+- Salesperson onboarding interview is one potential identification point
+- Brian McAdams raised the question; Mike confirmed it's still being debated internally
+
+### Why B2B Matters for MNTN
+- If MNTN solves B2B targeting, it also solves MNTN's own marketing problem (MNTN is itself a B2B company)
+- Paula touched on this: solving B2B for customers = solving it for ourselves
+
+---
+
+## Geo-Resolution — Bidder Migration (Q2 2026)
+
+- Currently, targeting does geo-resolution for IPs. IPs without geodata are **not bid on** (risk of geo-violation)
+- **20-25% of bids are missed** because targeting lacks geodata for those IPs
+- Proposal: Have Bidder do geo-resolution instead — bid requests already carry geo data
+- This would be "discovery-heavy work" to determine feasibility
+- Victor asked about IPDSC impact — Mike said likely no direct impact
+- Significant revenue opportunity if resolved (20-25% more bids)
 
 ---
 
@@ -177,6 +229,14 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | **LiftLab** | Primary external incrementality measurement vendor. Geo-based lift measurement. Advertisers frequently use them. MNTN moving toward LiftLab as approved third-party vendor. |
 | **Kochava** | External attribution/incrementality vendor (alternative to LiftLab) |
 | **Incremental ROAS** | The top incrementality metric — what external vendors measure and advertisers care about. Not incremental visits or impressions. |
+| **Mountain Matched AI** | North Star: next-gen targeting suite — continuous scoring, graph-based identity, ML-driven audience consumption. Multi-quarter bet (Q2-Q4 2026+). |
+| **Mountain Mesh** | Component of Mountain Match that auto-generates targeting from advertiser's website. Doesn't work for B2B (needs company size, industry, persona inputs). |
+| **Waypoint Targeting** | Planned B2B feature: target users who dropped off at various sales cycle stages |
+| **Interest Segment Quality Score** | Scoring system to rank ~20K DS19 interest segments by quality (Alex Knorr) |
+| **Firmographic Curation** | B2B demographic data (company size, industry, revenue) — not yet built, P3 for Q2 |
+| **Audience Overlays** | System for modifying audience segment behavior without changing base expressions. Needed for Fangorn rollout. Jamie building (~2 sprints). |
+| **Gary** | Internal service that currently holds some business logic being migrated to Audience Service |
+| **Permel** | External partner — Universal Optimization Controller for future pacing integration |
 | **PEX** | Team involved in identifying beta candidates for features |
 | **CS** | Customer Success team |
 | **Hidden campaigns** | Non-customer-facing experiment campaigns invisible to advertisers in UI/reporting |
@@ -196,6 +256,7 @@ General knowledge about MNTN as a business — products, strategy, org structure
 | 2026-04-07 | Matt Brorby sync | 10% holdout exists on all campaigns (IP hash), observational analysis approach, lift-optimized model concept, performance vs incrementality tension |
 | 2026-04-07 | TGT Infrastructure Standup | Fangorn all-verticals done (Brian, validating), continuous scoring architecture (MembershipDB + Bidder parallel), identity graph blocked on CRM rollout, Bryce/Sean/Victor/Forrest people context, Jira workflow update, MountainMeet NYC this week |
 | 2026-04-08 | Kale McNaney conversation | Incrementality customer lifecycle (eval + budget planning), CPM pricing vs IVR tension, incremental ROAS as top metric, external vendors (LiftLab primary, Kochava), shutter internal dashboards strategy, competitive positioning |
+| 2026-04-17 | Mike Dolt Q2 Roadmap presentation | Mountain Matched AI North Star, 3 themes (B2B/Incrementality/MMAI), 31 line items, B2B integrations (6), Mountain Mesh for B2B, Waypoint Targeting, geo-resolution migration (20-25% missed bids), MNTN Express no pixel, Alex Bloore/Mike Dolt roles, terminology (audience overlays, Gary, Permel, firmographics) |
 
 ---
 
