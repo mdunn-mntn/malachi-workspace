@@ -192,3 +192,18 @@ The Dataproc cost spike observed around March 27, 2026 was attributed to testing
 
 <!-- slack-extracted: 2026-04-16 -->
 - **Fangorn Rollout — Approved Tier Allocation and Next Steps:** Leadership formally approved the Fangorn phased rollout. Tier allocation: 44% Tier 1 / 40% Tier 2 / 16% Tier 3. Sales enablement and GTM preparation are being coordinated. A tech blog post has been initiated by Bryce and Kale at Richard's request. The Mid-Intent + Peak Performance logic bug (Treatment side only) was identified and a fix is scoped for the production rollout. (via Bryce Wagg, #dev_fangorn-model_ex, 2026-04-01)
+
+<!-- slack-extracted: 2026-04-17 -->
+- **Bidstream Data (augmentor_log) as Replacement for 33Across Site Visit Signal Spend**
+
+Analysis (TI-647) found that replacing 33Across data with internal augmentor_log/bid_event data for Site Visit Signals could save approximately $21K/month:
+- Data source 28 (33Across): ~$45K/month spend, ~38.6% match rate → estimated $17K savings
+- Data source 40 (33Across API): ~$27K/month spend, ~13.5% match rate → estimated $4K savings
+
+Additional advantages of using internal bidstream data over 33Across:
+1. Data is available sooner than 33Across delivery.
+2. Can be used in models without incremental cost.
+3. Contains net-new signals not present in third-party data.
+4. Naturally filters to IPs MNTN can actually bid on, reducing noise.
+
+Next step: TI-657 implements the augmentor_log/bid_event data integration into Site Visit Signals. (via Ryan Kleck, #tgt-infrastructure-squad, 2026-04-16)

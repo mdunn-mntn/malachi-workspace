@@ -1412,3 +1412,20 @@ When Peak Performance was enabled and the threshold dropped to 3333:
 
 **Fix for rollout:** Mimic DS13 exactly — use a 6-digit `vertical_id` for High Intent and a 3-digit `vertical_id` for Mid Intent on the Treatment side. The `advertiser_id` will no longer be used for intent-tier differentiation in audience expressions. (via Ryan Kleck, #dev_fangorn-model_ex, 2026-04-01)
 - **Datastream Replication — Primary Key Policy:** When adding tables to Datastream replication, BigQuery does not use serialized/synthetic primary key columns. PKs should be data columns that are meaningfully unique (e.g., `location_id`), not auto-generated serial columns. Adding a serial column purely for replication purposes is discouraged because it is not representative of the data. (via Dustin Niehoff, #data-platform, 2026-04-01)
+
+<!-- slack-extracted: 2026-04-17 -->
+- **cost_impression_log — Customer-Centric Spend View and PSA Exclusion**
+
+`cost_impression_log` is designed to depict spend and costs from a customer-centric perspective. PSAs (Public Service Announcements — impressions served when no paid ad is available) are excluded from `cost_impression_log` because they are not charged to the customer. This means `cost_impression_log` spend figures will not match raw cache or Beeswax totals when PSAs are present for a given campaign. The discrepancy is expected behavior, not a data quality issue.
+
+Practical implication: If a campaign shows higher spend in Beeswax/cache than in `cost_impression_log`, check whether PSAs were served for that campaign ID during the period in question. Query `impression_log` filtering on `original_cid` to confirm PSA volume. (via ray, #reporting_helpdesk_ask_anything, 2026-04-16)
+- **PSA Root Cause Pattern — Ad-Service Cache and NULL update_time**
+
+A PSA spike incident (April 15–16, 2026) revealed a structural risk in the ad-service cache refresh logic:
+
+- The cache performs full refreshes filtering on `update_time`, but a significant number of historical VAST metadata rows have **NULL `update_time`** because that column was not always tracked.
+- Those NULL-`update_time` rows are never picked up in refresh cycles, so they are effectively frozen in cache.
+- After ticket CDS-3414 (~April 1, 2026) changed from full updates to batch updates, any creative IDs (CRIDs) composed entirely of NULL-`update_time` rows stopped being refreshed.
+- Redis has a 14-day TTL, so those rows naturally expired around April 15, resulting in missing Redis keys → full PSAs for affected campaigns.
+- **Impact was limited to older creatives** (pre-dating `update_time` tracking). Newer Select creatives with populated `update_time` were unaffected.
+- Remediation: fix deployed ~12:53 ET April 16. Follow-up work planned to ensure `update_time` is properly maintained going forward. (via bermudez, #mission-control, 2026-04-16)

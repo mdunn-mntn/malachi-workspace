@@ -287,3 +287,44 @@ Effective Q2 2026, the following process changes apply to TI and AUD squads:
 
 **Rollout plan:** Set all advertisers to `false` → API-flip one advertiser to `true` → validate → scale via script. (via Bryce Wagg, #targeting-squad, 2026-04-01)
 - **Fangorn Leadership Review Outcomes:** Leadership approved the Fangorn phased rollout with the following tier allocation: 44% Tier 1 / 40% Tier 2 / 16% Tier 3. Reported average IVR lift in peak performance: 35.9%. Richard requested a tech blog post (Bryce and Kale leading). Mark flagged a sales enablement opportunity to be discussed with GTM on a project kickoff call. (via Bryce Wagg, #dev_fangorn-model_ex, 2026-04-01)
+
+<!-- slack-extracted: 2026-04-17 -->
+- **Fangorn Rollout — Approved Configuration Details (April 2026)**
+
+Leadership approved a phased Fangorn rollout with the following tier allocation: 44% Tier 1 / 40% Tier 2 / 16% Tier 3. Key outcomes from the approval call:
+- 35.9% average IVR lift in peak performance confirmed.
+- A logic error was identified in mid-intent + peak performance interaction.
+- Richard requested a tech blog post (Bryce and Kale have started drafting).
+- Mark flagged a sales enablement opportunity to be discussed with GTM on Friday's project kickoff call.
+
+**Fangorn Enablement Mechanics:**
+- Audience service will read a new advertiser configuration flag (`onFangorn`) and swap DS13 to DS46 during segment breakdown.
+- A 3-point ticket is going to Jamie in the next AUD sprint (reusing existing card AUD-5301).
+- Rollout is executed via a script that flips the `onFangorn` flag per advertiser ID (AID).
+- Command Center toggle UI will be implemented.
+- UI audience sizes should not change for peak performance since base expressions are unchanged — only the segment breakdown shifts.
+
+**Continuous Scoring Pairing:**
+Continuous scoring (100-point step increments replacing fixed-value buckets) will ship with Fangorn on the same advertiser-level inclusion/exclusion list. This avoids the peak-performance-to-mid-intent floodgate problem and stacks expected lift. May 15 PER deadline for continuous scoring fits within the Fangorn two-week rollout window.
+
+**Pre-Launch Due Diligence:**
+Toph (production ops) is checking pacing risk for the ~10% of campaigns currently spending in peak performance against the Tier 1 rollout list, to catch meaningful audience-size drops (especially high-budget campaigns) before the flag is flipped. Tier 3 advertisers are excluded from rollout. (via Bryce Wagg, #dev_fangorn-model_ex, 2026-04-16)
+- **Claude Enterprise Licensing — Seat Expansion and Policy**
+
+MNTN upgraded its Claude plan to Anthropic Enterprise (from a 150-seat cap). Key policy decisions made during the transition:
+- Claude licenses are being restricted to Engineering department employees. Non-engineering staff (~30 seats) had their licenses reviewed and potentially revoked.
+- The Enterprise plan also provides higher token quotas, which was a primary driver for the upgrade.
+- Requests for Claude seats should go through IT at ithelp.mntn.com. (via Robin Fox, #engineering-team, 2026-04-16)
+- **PTV Tech Course — Performance Pacing & ML Micro-Learning (Workramp)**
+
+A new micro-learning module, *Performance Pacing & Performance Machine Learning*, has been added to the PTV Tech Course learning path in Workramp. It covers how campaigns are paced, how budgets are managed in real time, and how machine learning predicts and optimizes performance before campaign launch. The module is not mandatory but highly encouraged. Accessible via the PTV Tech Course learning path for engineers who have already completed it. (via hellsbells, #engineering-team, 2026-04-16)
+- **AI Engineering Training — Claude Code Workshop (TaskFlow)**
+
+MNTN Engineering published an internal hands-on workshop repository (github.com/SteelHouse/claude-code-workshop) called TaskFlow. It is a CLI task manager codebase with intentional bugs and architectural flaws mapped to guided exercises. The workshop teaches four disciplines of AI engineering:
+1. Prompt Engineering (Exercises 1–4)
+2. Context Engineering — including CLAUDE.md design (Exercises 5–6)
+3. Intent Engineering — goals, guardrails, decision boundaries (Exercise 7)
+4. Specification Engineering — machine-actionable specs as contracts (Exercise 8)
+5. Combined exercises including multi-file debugging, race conditions, and architectural refactors (Exercises 9–15)
+
+Optimized for Claude Code but compatible with any AI coding assistant. (via Adam Ferras, #engineering-team, 2026-04-16)

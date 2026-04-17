@@ -123,3 +123,13 @@ The BQ version has slightly more rows. This is likely an artifact of replication
 **Confidence:** medium
 
 **Identity Graph RFD — In Progress (April 2026):** Jack Barbey (identity engineering manager) drafted an Identity Graph RFD and is building internal consensus before sharing externally with downstream teams. The document is hosted in Confluence: https://mntn.atlassian.net/wiki/x/JoDz0w. Review was solicited from the identity_core team.
+
+## 2026-04-17
+
+### [data_knowledge] from Tucker Saland in #identity_core_dev
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**SQLMesh Resolve Flag — Under-the-Hood Behavior**
+
+The `resolve SQLMesh` flag works by finding the underlying physical table that a SQLMesh view references and loading that table directly, bypassing the view layer. This is relevant when debugging view-level vs. table-level query behavior in the identity/targeting pipelines.

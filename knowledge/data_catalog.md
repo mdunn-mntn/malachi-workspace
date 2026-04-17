@@ -2220,3 +2220,15 @@ Tracks all database-level changes to advertiser records, including the `is_test`
 - `geo.locations.location_id` is definitionally unique and can be promoted to a primary key if Datastream replication is needed.
 
 **`tpa.categories`:** Already exists as a view in bronze (`dw-main-bronze.tpa.categories`). It is sourced from BQ/SQLMesh — not from intprod. Do not add it to Datastream replication from intprod as that would be circular. (via Dustin Niehoff, #data-platform, 2026-04-01)
+
+<!-- slack-extracted: 2026-04-17 -->
+- **summarydata.offline_conversions — Migrated to BigQuery**
+
+The `summarydata.offline_conversions` table has been cut over from CoreDW (Postgres) to BigQuery. The CoreDW version is stale (last record: 2026-03-02, last run: 2026-03-04). The active, up-to-date table is in BigQuery (`summarydata.offline_conversions` in BQ), with data current as of mid-April 2026 (last record: 2026-04-14, last run: 2026-04-16). Always query the BigQuery version for offline conversion data. (via Lilit, #reporting_helpdesk_ask_anything, 2026-04-16)
+- **dw-main-gold.ddm.audit_45_augmentor_log_summary and audit_128_augmentor_segment_summary — Augmentor Audit Tables**
+
+Two BigQuery audit tables exist for monitoring augmentor pipeline health:
+- `dw-main-gold.ddm.audit_45_augmentor_log_summary` — tracks augmentor log counts by status (200, 204, etc.). Confirmed to match `bronze.raw.augmentor_log` row counts exactly.
+- `dw-main-gold.ddm.audit_128_augmentor_segment_summary` — tracks segment-level augmentor data.
+
+These tables are used by Mission Control system metrics. Note: The system metrics dashboard was previously pulling from DrMon (which had reliability issues); migration to pull directly from BigQuery was in progress as of April 2026. (via Pratik, #mission-control, 2026-04-16)
