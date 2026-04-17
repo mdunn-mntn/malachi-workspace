@@ -1,0 +1,499 @@
+[00:00] All right, yeah, I'd love to hear the update of everything.
+[00:03] Okay, um, I'll give you the quick overview of the presentation, but, um, I started from,
+[00:13] and I'll share my screen, basically everything you had here, uh, was super helpful place for
+[00:16] Basically, everything you had here was a super helpful place for me to start.
+[00:22] So your queries and summary on TI835.
+[00:25] the main thing I focused on
+[00:29] is
+[00:33] is missing prospecting scores.
+[00:41] So, as you pointed out here, uh, we can't use our cost impression log for those scores because
+[00:49] it's like where we served impressions is what we get. Right. However, we have prospecting
+[00:53] intense scores, which are, uh, what we generate and then send to the bidder ahead of time. So,
+[01:03] this notebook is basically building that. So, the idea was I took, I looked for, uh,
+[01:11] 10 campaigns, 10 advertisers that had data source 19. So, mountain match keyword campaigns that
+[01:18] were active during the window that we have, uh, and, and during the window that we have.
+[01:26] So, I picked 10 of them and then I went through and I said, okay, from, uh, March 11th to the
+[01:32] 20th is our like 10 day pre-period window. Take the max prospecting score from each of those
+[01:39] campaigns per IP, and that's your assigned group. Then go to GUID log for visits in this post
+[01:47] period. And so wait, say that again. So, when a campaign is running, we generate prospecting
+[01:56] intense scores, which are like a 30 every day, a 30 day look back on their visit behavior and
+[02:02] then scoring them into high intent, mid intent, peak performance. So, uh, we own one. We only
+[02:13] have 10 days of this data in big query because it's massive. But then on the, uh, GCS side,
+[02:21] like reading it to spark, we only keep 35 days. So, we're kind of constrained on the window we
+[02:26] can do. And so to try and remove the complexity of like, what was your scope, like find when your
+[02:35] impression event happened or visit event happened and then like find the date and then find the
+[02:40] date in our prospecting score of like your most recent score. I just said, let's pick a pre-period
+[02:46] and assign everyone from the campaigns. These are your kind of like intent groups. And then based
+[02:53] on those, we can look at a post period of all of your visits. So, we can say ahead of time if
+[02:59] somebody, you know, from March 11th to March 20th, if an IP was high intent, mid intent, or peak
+[03:07] performance. And then with the deterministic hash logic that you built, we can also tell if they're
+[03:13] holdout or targeted. So, we can do the breakout of kind of visit rate comparisons between intent
+[03:20] groups and targeted versus holdout. Right. Um, yeah, I think, uh, Zach Salona gave me that hash
+[03:27] too, which is cool. Um, okay. That makes sense. So, basically you're using the fact that we do
+[03:34] the prospecting intent as like a metric to determine whether or not they had a visit.
+[03:39] Right. And so, just like you pointed out, right, we can't, uh, we can't use at the time of impression
+[03:45] served because, you know, we're serving high intent. That's like the way our waterfall works.
+[03:50] So, they're getting most of the impressions. But you, and, and holdout groups are not getting any
+[03:56] impressions. So, then you wouldn't have any data for them. So, this is a way to say what intent
+[03:59] group is everyone at based on a snapshot in time and like fix them in time. Then we can, uh, do a
+[04:07] pretty similar analysis. Like if you look at the sequel, it's not going to look too much
+[04:10] different from what you put together. Right. Of, you know, create the hash, add in these, uh,
+[04:16] prospecting intent scores that I created, and then, uh, group everything, their, their visits
+[04:23] in the post period and impressions, um, at the advertiser intent group targetable or holdout
+[04:31] level. Okay. So, what, explain to me why, if we have a pixel on them, couldn't we just use
+[04:42] something like the GUID log, right? Because like the GUID log is going to get stuff that
+[04:50] for the, what comparing between the, those that visited, but didn't receive an impression from us.
+[05:04] So, I am using pixel log for that post period. Did they visit or not?
+[05:11] Okay. He is, we need to have like a pre pre experiment, like pre period assignment to a
+[05:19] group. So, um, I'm using good log the same way you did. So I think you're correct there in that
+[05:26] did they visit or not? Yes or no. Then we can say, what group did we assign them to? So somebody
+[05:34] could be high intent in the holdout and they visit, or they could be high intent in the targeted
+[05:40] group and they visited. Okay. Does that make sense? So that gives us the, the, that gives us
+[05:49] this intent group basically breakout. So 10 advertisers, three in 10 groups of 30 kind of
+[05:55] evaluations total. Can I have you explain the control group one more time? Yeah, of course.
+[06:00] Okay. So you start, I was just thinking, so the control group is everybody who
+[06:10] received a visit and the good log, but, um, and the pre period,
+[06:19] we know what they were assigned, but the post period, we know that we didn't send them an
+[06:23] impression. Is that yeah. So almost, so it's just like you have, we know what the control group is
+[06:31] ahead of time. The 10% deterministic hash. Okay. And because our prospecting intense force,
+[06:40] we score everything. So even if they're in the holdout, we give them a high intent,
+[06:46] mid intent, or max reach, you know, score. So we can know you're in the holdout and you would be
+[06:54] high intense, but because they're in the holdout, they won't receive any impressions. So then the
+[07:00] idea is we can say in intent to treat framework, we can say, what is the visit rate of everyone in
+[07:08] the holdout that was assigned to high intent versus the visit rate of everyone who was assigned
+[07:14] high intent in the target book. Gotcha. So the pro the fact that we score everything
+[07:21] helps us. So, so basically the control group was still the 10% holdout group,
+[07:25] but I'm just using an extra victim score. Right. Right. So we're, we're, so we can compare high
+[07:30] intent. So what was the followup of that then? I know that we, you basically came to the conclusion
+[07:37] that we can't see very much lift if at all. Yeah. And that's because we don't have enough
+[07:42] information. Is that sound? Yeah. So it's, it's the problem is kind of this intent to treat
+[07:48] framework. The way intent to treat works is we are you are evaluating everyone in the assigned
+[07:56] group. And so that's kind of removes a selection bias problem, because if you think about,
+[08:04] okay, everyone we assigned to high intent is not the same thing as everyone who gets an
+[08:08] impression, right. Cause there's like pacing and targeting and budgets and, and everything else.
+[08:14] Right. So by going to the larger, everyone who would have been treated, you're kind of like
+[08:21] accounting for that selection bias. However, in our case, we have this coverage problem,
+[08:26] and this is like one example, but you can see it in the data. And like, you know, this too,
+[08:31] Our high intent group for boosted safe, this advertiser, is 2 million IPs.
+[08:37] But in this 20-day window that I evaluated, we only served 400,000 impressions.
+[08:43] So even with a frequency of one, which we also know isn't true, only 14% of the treatment group actually received the treatment, which means the other 86% of IPs that we're calling treated, they're behaving just like the holdout.
+[08:45] which we also know isn't true, only 14% of the treatment group actually received the treatment,
+[08:53] which means the other 86% of IPS that we're calling treated, they're behaving just like
+[09:00] the holdout. So in this intent to treat framework, we're basically like pushing
+[09:04] the differences towards zero because so few people actually, you know, receive the ad.
+[09:12] Wouldn't we filter out only those that received the ad? I'm sorry. I may be
+[09:18] misunderstanding this. So. Yeah. So the, that's the key difference in intent to treat,
+[09:23] tend to treat is the you're evaluating everyone in the group that they were assigned to,
+[09:29] which is that we, you know, identified as high intense. Oh, receiving an impression is not the
+[09:33] intense oh gotcha receiving an impression is not the same thing right that is a not the same causal
+[09:41] framework as you're in high intent versus you're in high intent and you got an impression
+[09:45] in high intent and you got an impression. That's kind of what we're doing today. And it's why our
+[09:52] incrementality in the dashboard looks so good is we're saying everyone who we served an impression
+[09:57] to who are probably high intent because of how our waterfall scoring works, right? Versus a random
+[10:05] sample of holdout. So like, of course we look super good, but this is trying to get to that
+[10:10] causal answer, which you kind of have to like disentangle. So the answer is we don't get,
+[10:17] we don't get any results from this that are consistent, partly because of this coverage
+[10:22] thing, which is a problem with the data we have available to do this observational study. Like I
+[10:28] only have 35 days of prospecting intent scores that we keep, you know, not in glacier or whatever.
+[10:36] So we're only looking at like 20 days of impressions, but you know, an experiment
+[10:40] would be similar where if we tried to do this intent to treat framework and you're like, well,
+[10:45] we're comparing this 2 million treated group when only 14% of them at most actually got an impression.
+[10:53] So you're like diluting the effect.
+[10:59] So then that gets worse with mid intent and peak performance where like,
+[11:04] you know, we serve even less impressions, right? Because of how our kind of waterfall thing goes.
+[11:08] So, okay. So the intent to treat group, let's say it's a million people and then the control.
+[11:20] The assumption here is that the control on them are the same, right?
+[11:24] Well, we have the holdout, right? So like, you know, we can use that boosted safe example.
+[11:29] Right.
+[11:29] So they're, you know, some smaller group, but like this would be their,
+[11:33] so like uh you know we can use that boosted safe example right so they're you know some smaller
+[11:40] group but like this would be their this is the percentage of the holdout that is high intent
+[11:46] Sorry, I'm eating.
+[11:48] No, that's fine.
+[11:51] Sorry.
+[11:51] Yeah.
+[11:57] Sorry, I'm eating.
+[12:00] So the thought here, I'm just trying to make sure, like, so that makes sense though, right?
+[12:08] You wouldn't compare people who only received or only had a visit.
+[12:13] Right.
+[12:15] Is that the idea?
+[12:16] Sorry. So can you go back to the last slide?
+[12:19] Yeah.
+[12:20] Yeah.
+[12:22] So only 396,000 were served an impression.
+[12:26] Mm hmm.
+[12:30] I guess I don't understand.
+[12:33] If we're comparing people who received an impression versus people who don't.
+[12:39] Not a fair comparison.
+[12:40] But intent to treat says, ignore, ignore the idea of did they actually receive treatment focus on what group were they assigned to?
+[12:51] focus on what group were they assigned to so for us that's this larger number
+[13:00] Oh, you do that is, yeah, go ahead.
+[13:04] Sorry.
+[13:05] No, the problem with that is when the coverage, the amount of your treatment group that receives treatment is so low, then the rest are just behaving like the holdout.
+[13:19] So we're trying to say, OK, only 14.
+[13:22] What is the effect of receiving an ad on visits when only 14% of people actually received an ad?
+[13:31] Then the other 86% are behaving the exact same as the holdout because they didn't get an impression.
+[13:37] So then it's like, why is our lift no different from zero?
+[13:40] Because the majority of our group that we're evaluating is the same as the holdout, right?
+[13:45] the holdout right well is the problem that the people who receive ads and the people who don't
+[13:53] behave entirely differently like that there's something inherently different about them
+[13:58] meaning like i guess the reason that some received ads and some didn't is not a random assignment
+[14:01] I guess.
+[14:04] The reason that some received ads and some didn't is not a random assignment, and that's the problem.
+[14:11] Then you can't you can't draw causal links when there's those selection bias issues.
+[14:16] Right, right.
+[14:17] That makes sense.
+[14:17] So if we were totally if we were, this would work in a perfect world where we just randomly applied an ad to a random group, but it's not.
+[14:25] We have selection choices between.
+[14:27] So basically, as soon as you start to select those people, right, and compare it to the ones who didn't, they're inherently different, right?
+[14:36] Because we've said the best people from this group compared to all the people in the other group.
+[14:41] Maybe they're more active.
+[14:43] Maybe some of the people in high intent don't have CTVs.
+[14:46] Maybe they're they show up more frequently, like more active.
+[14:50] Maybe we're it was it happened to be a day where we bid more.
+[14:53] You know, any number of other things could be like confounders.
+[14:57] And so then you can't.
+[14:59] It's harder to make that clear link of received impression influence their visit.
+[15:05] OK, and so that makes sense to me.
+[15:07] So in this case, then what is the solution to it?
+[15:11] So the recommendation that I had is kind of two parts for and this I think this is important and like informs your work on 837, the like experiment experimental design.
+[15:23] I think if we're going to run an experiment and the hypothesis is like there's more incrementality to be had in mid intense,
+[15:30] then we should the treatment campaigns that we're like comparing to in the experiment should be mid intent only focused, not just the shuffle.
+[15:41] And the thinking there is.
+[15:44] Excuse me.
+[15:46] If we shuffle a portion of mid intent into high intent and then try and measure the effect, it's going to be some diluted incrementality of mid intent.
+[15:55] But if the hypothesis and the thing we're trying to validate is that there's more incrementality within mid intent, well, then let's serve a ton of volume at mid intent to evaluate that.
+[16:04] So the shuffling is kind of like the way in the short term we might approach this from a our clients want performance and incrementality.
+[16:12] But an experiment where we say the treatment campaigns are mid intent only and we'll evaluate incrementality of that versus our regular control, which would be the same thing we're doing today.
+[16:25] And we could compare incrementality there. So that's the first recommendation. The second one to deal with that dilution problem is to change how we're measuring things.
+[16:36] So just like we talked through intent to treat has this kind of coverage problem that, you know, we're not going to have a budget or a time range in an experiment to like do any differently than what we saw here observationally.
+[16:47] to do any differently than what we saw here observationally.
+[16:51] What if we took from the bid logs
+[16:55] and looked at people that we tried to serve an impression to but didn't win?
+[16:59] Would that be valid?
+[16:59] uh this is your your close i think you've had these conversations with matt but you're basically
+[17:00] Uh, this is your your quote, I think you've had these conversations with Matt, but you're basically almost describing the ghost bidding idea.
+[17:09] Okay, how many conversations you know, I haven't had that. I haven't talked about that. So cool. So there is an effect instead, like a causal effect. And it's called the average treatment on the treated.
+[17:23] So the idea is, instead of doing intent to treat, where we are getting diluted by these signals, what if we had a way to compare just this group who was served impressions?
+[17:34] Well, to have an appropriate counterfactual, we would have to know which of the control holdout households would be served impressions.
+[17:44] And the way we can do that is with this ghost bidding. And so what this is, is in our and I'll show you this in our augmenter log, if somebody comes through and they're like targetable for a campaign, right, you'll like see in the augmenter log, here's an IP, and their segment ID will be in our list of segments.
+[17:48] And so what this is, is in our, and I'll show you this,
+[17:51] in our augmenter log, if somebody comes through
+[17:55] and they're like targetable for a campaign,
+[17:56] You'll see in the augmenter log, here's an IP, and their segment ID will be in our list of segments.
+[18:03] But some of the holdout IPs also come through, we just don't bid on them. So then the idea is, calculate the win rate for that campaign, and then apply that as pseudo impressions to the holdout group. So we know that the holdout group receives zero impressions, but let's say you calculate the win rate of 10% of the of the augmenter log values end up in an impression.
+[18:18] So we know that the holdout group receives zero impressions.
+[18:23] But let's say you calculate the win rate of 10% of the Augmentor log values end up in an impression.
+[18:31] Then every time you see a holdout IP show up in augmenter log, you could do like a 10% sample, you know, coin flip, that's like 10% weighted. And those would be pseudo impressions that the holdout group gets. And now your comparison is everyone who received an impression in the treatment group, or in the targeted group, compared to the pseudo impression holdout group that we created.
+[18:49] targeted group compared to the pseudo impression holdout group that we created okay so
+[18:58] and maybe showing this would help no that i mean that makes perfect sense my question is okay so
+[19:01] No, that I mean, that makes perfect sense. My question is, okay, so where are we, I guess, where are we at now? And what do what can I do? Or what do I need to do in relation to maybe, maybe help that?
+[19:13] Okay, so I think we're good on on this being the recommendation going forward of run a mid intent experiment with the experiment team. And then the evaluation is this ghost bidding version. So I think for you next sprint that work and however you if you want to break up in multiple stories that that makes sense too. But now it's all kind of encompassed in that TI 837.
+[19:16] Okay, so I think we're good on this
+[19:20] being the recommendation going forward
+[19:22] of run a mid-intent experiment
+[19:26] with the experiment team.
+[19:29] And then the evaluation is this ghost bidding version.
+[19:40] I think it's working with the experiment team to like set up and design this experiment where we, you know, keep our 10% holdout and then have the other 90% split between mid intent only focus campaign and a normal for the rest of the experiment.
+[19:46] to set up and design this experiment
+[19:48] where we keep our 10% holdout
+[19:52] and then have the other 90% split
+[19:55] between mid and 10 only focus campaign and a normal.
+[20:00] Or, you know, a couple advertisers, whatever they think will work for budget.
+[20:06] And then for you defining and designing this ghost bidding methodology.
+[20:11] So, you know, here's an example.
+[20:13] I went into augmenter log for this campaign in this segment ID.
+[20:20] We know this IP is a holdout because you can do that determination logic.
+[20:24] So, this IP showed up in augmenter log, but not in this mountain segment because it was a holdout.
+[20:35] On the flip side, here's an IP that was in the targetable group and it showed up in augmenter log to be bid against a bunch of times.
+[20:43] And the segment ID associated with this campaign shows up in here.
+[20:48] So, I think figuring out, and I think it's, I'm not exactly sure, but like, how do we calculate win rate?
+[20:57] Which is, I imagine some sort of like, maybe that's available in cost impression log or something, I don't know.
+[21:04] How we calculate win rate and then how do we say, all right, here's the holdout IPs that showed up.
+[21:10] How do we like give them pseudo impressions like, oh, this one showed up, win rate was 10%.
+[21:16] There's a 10% chance that you would receive an impression, you know, when you show up here.
+[21:22] Okay.
+[21:23] Yeah, that makes sense.
+[21:26] And since that will be, this will be super helpful, I think in general.
+[21:33] And you can probably help inform the bidding team on how we can do this in a, like, going forward instead of kind of a hacky manual way.
+[21:41] But like, this work can happen before the experiment results are done.
+[21:45] So, that's why I'm thinking they're like two things in parallel.
+[21:48] Okay, gotcha.
+[21:51] Okay.
+[21:53] So, to kind of-
+[21:55] So, what are your thoughts?
+[21:57] What's your feedback so far?
+[21:58] I mean, that's, that sounds, that sounds great.
+[22:05] I mean, I'm aligned with that.
+[22:07] My only thought process though was how we're going to measure incrementality, like,
+[22:15] there are some other interesting ways to measure incrementality.
+[22:19] And my thought process was doing something related to conversion versus,
+[22:33] it's not like a, it's not like a true lift analysis, right?
+[22:36] It's more of an art than a science.
+[22:37] But I don't know if I explained this to you.
+[22:39] So, apologies, you can stop me.
+[22:40] But the thought process is that there is a time delta between when an ad is shown
+[22:48] and then when someone visits a page, right?
+[22:51] And depending on the page, we're going to have a baseline visit rate, right?
+[22:56] And it's going to look kind of like waves.
+[22:59] People are going to, there's going to be peak times and low times and stuff.
+[23:02] And obviously, something has to have a decent amount of volume to get good stuff.
+[23:05] So, this is hard because you need to have a decent amount of noise, like, on websites.
+[23:10] This wouldn't work for low traffic.
+[23:12] But most people have a decent amount of traffic, right?
+[23:14] So, what you can do is you can actually break up the time delta into equal buckets.
+[23:22] Let's say 50, for example.
+[23:24] And what you do is each one of those buckets of time are not equal amounts of time.
+[23:30] They're equal amounts of users or visits in this case, right?
+[23:35] So, what you would expect is that if there's no effect on the ad, right,
+[23:41] you have just that normal wave looking graph, right?
+[23:47] However, if you are measuring from the time that someone sees an ad
+[23:51] to the time that they visit, you can actually see what the impact is for a visit,
+[24:03] or sorry, for seeing an ad and a visit.
+[24:06] So, in other words, another ways of saying this is that you're going to have a normal amount of traffic
+[24:13] from visits, just organic visits.
+[24:16] But as soon as you show someone an ad, you should expect to see a spike
+[24:20] within proximity of viewing that ad due to, you know, obviously seeing the ad.
+[24:28] So, the other ways you can think about this is every single dot on the graph
+[24:32] is going to represent the count of visits from how long ago they saw the ad.
+[24:40] So, in other words, you'd say like the first person sees an ad
+[24:44] and like 10 seconds later, they visit the webpage, right?
+[24:49] You count that.
+[24:50] So, you count the total amount of users.
+[24:53] And so, the idea here is that I don't know if I'm making this sound visually very well,
+[25:00] but I wonder if I can whiteboard.
+[25:01] I'm going to show something real quick.
+[25:03] So, I'm going to do a new whiteboard real quick.
+[25:06] This is...
+[25:07] Yeah, let's see.
+[25:08] Okay, this might help a little bit.
+[25:09] I can draw too, cool.
+[25:10] Okay.
+[25:11] Yep.
+[25:11] Okay.
+[25:12] So, the idea here is that no ad served.
+[25:15] This is what your visit count looks like, right?
+[25:19] And imagine those are waves.
+[25:20] And this is broken up into...
+[25:21] I imagine we just do four buckets, right?
+[25:24] Where each one of these represents number of users.
+[25:36] It doesn't represent number of users, but here, I'll show you.
+[25:39] So...
+[25:40] Like time increments?
+[25:41] Time increments, right.
+[25:42] So, this like...
+[25:42] So, for example, to get from this many users to this many users, you might have...
+[25:48] Like, to make this easy, you might have 4,000 people.
+[25:52] And you have...
+[25:55] It might take 10 seconds to get 1,000 people.
+[25:59] And then 5 minutes to get the next 1,000.
+[26:02] So, anyways, this doesn't really make much sense on that graph.
+[26:04] But imagine you were to see an ad.
+[26:06] So, zero is the time the ad was displayed, right?
+[26:10] And what you would expect to see is that when people see the ad and you mark when they actually
+[26:14] visit, you expect to see something like this.
+[26:22] See what I'm saying?
+[26:23] Okay.
+[26:24] Now, sorry.
+[26:25] It was just a little delayed.
+[26:26] I see what you're loading.
+[26:27] Yeah.
+[26:28] So, that's...
+[26:29] Yeah, exactly.
+[26:30] So, this is like what...
+[26:31] So, for example, let's say this...
+[26:32] Like, the zero hour is like they saw the ad at this time, right?
+[26:36] And so, because of that, this is number of visits on the left-hand side.
+[26:40] So, you have number of visits.
+[26:43] What is your like incremental number for this then?
+[26:47] Well, it's not so much incremental number.
+[26:49] I'm saying this more of an art and a science rather than true lift, right?
+[26:54] But the idea here is that you can show that your ad caused some waves, right?
+[27:01] It obviously caused some visits, right?
+[27:03] And so, the idea here is that this is going to change and look different for each advertiser
+[27:08] and all that different stuff.
+[27:10] But there's a certain point where if you draw this line and let's say this line is like...
+[27:15] Okay.
+[27:16] So, this is the standard line.
+[27:18] Let's just say this is just true organic line right here, right?
+[27:22] At this point, there's a certain point where the percentage of users based on how many...
+[27:28] So, if you average about a hundred users, like hundred visits, whatever, however much time
+[27:35] and right here you're at a thousand, then you can say with pretty good confidence
+[27:44] that 90% of these users were driven by the ad, right?
+[27:50] And there's a certain point where the guess gets lower and lower.
+[27:56] So, at 500, you're at like one-fifth, whatever.
+[27:58] And then there's a point where you're just 50-50 guessing.
+[28:00] This doesn't really necessarily show lift, but it does show that you can prove that the ads are doing something.
+[28:13] And in regards to, I don't know, there might be some cool way to time series do something like where you can try to measure some sort of impact.
+[28:15] I don't know.
+[28:16] There might be some cool way to time series do something like where you can try to measure
+[28:21] some sort of impact.
+[28:22] But this is really cool because it's a very simple way to view impact on an ad.
+[28:27] It's not necessarily incremental.
+[28:29] I still think that what we're doing is good, right?
+[28:33] But this is also kind of cool because you can introduce certain value with showing people...
+[28:44] For example, you're talking about look back windows.
+[28:46] You're talking about how long do we know for certain that certain people are being driven by the ads?
+[28:53] Are we actually seeing an increase from driving ads?
+[28:57] Because what you would hate to see and what you wouldn't want to see is we have this TTL
+[29:02] and you don't see anything, right?
+[29:04] That would show that our ads aren't really doing anything, right?
+[29:07] This one shows our ads are doing something.
+[29:10] We just don't necessarily know exactly how much.
+[29:14] It's not a causality like a necessarily incremental lift.
+[29:17] I don't know.
+[29:18] There might be a way to use this, but it's more of like...
+[29:24] I don't know.
+[29:25] This analysis...
+[29:26] So something that Alex B brought up is this idea of like...
+[29:33] Viewing CTV ads being kind of like more mid funnel than bottom of funnel,
+[29:39] which is a little different than how we kind of have thought about it at Mountain.
+[29:42] But like the comparison is, you know, if you see an ad on your phone,
+[29:47] it's very easy to quickly go get your phone and do the same thing.
+[29:50] Whereas when you're watching TV, right?
+[29:52] Maybe the time to action is longer.
+[29:56] So your analysis here, this is almost like informing our attribution windows
+[30:01] or recommending kind of like a higher, longer look back window.
+[30:06] So like instead of, you know, seconds, this is like days.
+[30:12] Analysis is like on a day scale or something like that, right?
+[30:16] And it might be valuable to also understand for our clients,
+[30:20] depending on which advertiser,
+[30:22] to kind of know where we might see that lift, right?
+[30:24] So when I was in the mobile industry, this would be like,
+[30:28] depending on the app, of course.
+[30:29] You just do app open, right?
+[30:31] Because we just cared about installs.
+[30:33] This would literally sometimes be like 30 seconds, right?
+[30:37] Because they could click on something.
+[30:38] Now for CTV, I have no idea what it looks like for CTV.
+[30:41] I'm kind of with Alex.
+[30:43] I bet it would be, you know, farther out here or something, right?
+[30:48] Well, yeah.
+[30:49] My question though is that in mobile,
+[30:53] I could show that there was really,
+[30:56] we couldn't tell the difference after six and a half hours for most people.
+[31:03] And in a lot of the cases, it was 30, like 30 minutes to a couple hours at most.
+[31:10] I wonder if for CTV, we would even see a difference.
+[31:16] That's what I want to know is that I don't know that answer for CTV,
+[31:19] but it would be really valuable to understand how far,
+[31:22] if we do see a spike, how far out here.
+[31:26] And that's what I'm thinking.
+[31:27] So like this, what I'm saying, it's like, this is not,
+[31:30] this is not literally like incremental lifts, you know, statistical,
+[31:33] all that type of stuff.
+[31:34] But I think it is valuable to understand it.
+[31:37] At what point in time do we expect to see like incremental,
+[31:42] because this matters.
+[31:43] The reason I'm saying this is that I worked at Coachella that did this type of
+[31:46] stuff. And if we're going to work with lift app or lift up,
+[31:48] whatever they're called, right.
+[31:49] The slab, I think.
+[31:50] Yeah.
+[31:51] Lift lab, right.
+[31:52] They're going to be doing stuff similar to this.
+[31:56] And they might even be recommending to their clients.
+[32:00] Like if you cannot hear, here is, you know,
+[32:05] where we can see a difference in there,
+[32:07] like their look back windows, you know?
+[32:12] And one of the things that they used to argue a lot of times with these
+[32:15] third parties is they would say,
+[32:16] if you can't see a measurable distance difference within like a certain
+[32:21] short period of time, is it even drawing any?
+[32:24] Cause it's very difficult to see that lift after a certain period of time
+[32:29] because like, and here's a simple way to phrase it, but they would say,
+[32:34] well, Alex, can you tell me what was the last ad you saw?
+[32:41] You know? And then specifically, can you,
+[32:45] like the answer for most people is no. And maybe if they do,
+[32:48] they can remember. And then the next thing is, well,
+[32:51] if you can't remember an ad you saw at all, are you going to, like,
+[32:55] do you really think that an ad you saw seven days ago is impacting your
+[33:00] decision today? Isn't impacting it 30 days ago, which it probably is.
+[33:04] But the point is, it's very hard to measure. Sure. Right. So anyways,
+[33:08] that's why I was bringing this up as I think that I was going to want to run
+[33:11] this on some advertisers to kind of see.
+[33:16] Yeah, I think it's worth evaluating. I think,
+[33:22] I think the more incremental focus for the experiments will be,
+[33:27] or will be the way we'll want to evaluate the experiments.
+[33:31] Not that this isn't a way we can't like observationally evaluate this for our,
+[33:36] you know, at a broader sense of how,
+[33:40] what's our like time to action or something.
+[33:42] I don't know exactly the term you'd want to use for what this means for our
+[33:46] customers.
+[33:47] What is Alex,
+[33:49] what is the test method that shows in your,
+[33:54] your lip analysis? Like what, what statistical tests is being used?
+[33:59] So like for the,
+[34:03] like if we were going to do the ghost bidding. Oh,
+[34:07] the term it, the test is super easy. It's just,
+[34:10] it's just a two samples Z test because it's just two proportions.
+[34:15] The key is like how you set things up and how,
+[34:18] what your counterfactual group is. So it,
+[34:21] it, the,
+[34:22] the causal terminology is the average treatment on the treated.
+[34:26] That's what we want to like get to with the ghost bidding.
+[34:29] So then the idea is, excuse me,
+[34:33] you can compare what's the visit rate of people who received an impression in
+[34:39] the treatment group compared to pseudo impressions received by the holdout
+[34:46] group. And then, you know,
+[34:48] you know, that holdout group has a visit rate.
+[34:50] That treatment group has a visit rate.
+[34:53] That difference is now the incremental, you know, lift.
+[35:04] All right, so I guess let's...
+[35:10] Yeah.
+[35:14] what can i do yeah so okay so uh like we said on hold on i'll share my screen just for my own
+[35:16] Yeah. So, okay. So like we said on,
+[35:21] hold on, I'll share my screen just for my own sake of thinking about this.
+[35:29] I just jumped in on this CIA three,
+[35:31] five to like finish that by the end of this week,
+[35:33] just so we were like on track still for end of month.
+[35:36] So like you are still like,
+[35:39] you're still leading and everything that you've scoped out for an expert is
+[35:43] like the same. I'm thinking
+[35:47] the recommendations that I,
+[35:48] that I talked through and I talked through with Matt for how to do the
+[35:53] experiment. I think that's where you should focus next sprints is figure out
+[36:00] with the experiment team, like how we can set up a, you know,
+[36:02] mid intent only served treatment group while keeping our holdouts.
+[36:08] And then, you know,
+[36:10] I just have the ghost bidding part and the methodology around doing that I
+[36:15] think is the,
+[36:16] the thing you can work on in parallel besides like meeting with the
+[36:19] experiment team.
+[36:22] Okay. Sounds good.
+[36:23] And I like we can keep chatting and meeting about it.
+[36:26] Like I'm happy to work through all this stuff. But yeah, the, the,
+[36:31] nothing in like the plan has changed as far as like what we should do going
+[36:36] forward. I think, I think it's just, I just got us to,
+[36:41] the next step.
+[36:45] Went about a slightly different way to get to the,
+[36:47] kind of the same answer you had before basically. And then, okay,
+[36:52] if that is the answer,
+[36:54] thinking through what we can do to have like a better experiment or like
+[36:59] better methodology to get the result we want.
+[37:01] And I think the answer is we need more data for like mid intent serving to
+[37:07] evaluate mid intent incrementality-ness.
+[37:11] And then we need like to establish the logic of how this ghost bidding idea
+[37:16] of how this ghost bidding idea would work.
+[37:19] Okay.
+[37:20] That sounds good.
+[37:22] I am very thankful that you picked up, finished this off.
+[37:27] By the way, your slides look awesome.
+[37:29] those are super cool the the power of claude man i stole from matt who stole from kale
+[37:31] The power of Claude, man. I stole from Matt who stole from Cale.
+[37:37] That's cool.
+[37:38] So it worked out. So yeah, good, good feedback this morning.
+[37:42] I think Cale and Alex are all on board. I think, like I mentioned to them,
+[37:46] the ghost bidding methodology is just like something we can do outside the
+[37:50] experiment.
+[37:51] I think the experiment just gets us the volume of mid intent impressions and
+[37:57] like serving that we need to kind of do a better, deeper analysis.
+[38:02] Okay, cool. All right. Well,
+[38:05] I will get started on some of the other stuff and yeah,
+[38:09] I'll reach out to you if I need anything. But yeah,
+[38:11] thank you for going through this. I know this is,
+[38:13] we went a little bit longer than that.
+[38:15] It's all good. Thank you for having such detailed notes.
+[38:18] It was very easy to like pick up where you left off and keep making progress
+[38:22] here.
+[38:23] Cool. Cool. All right. Thank you, Alex.
+[38:25] All right. See you, dude.
