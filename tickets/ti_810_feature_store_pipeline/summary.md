@@ -2,22 +2,27 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-810
 **Epic:** [TI-789](https://mntn.atlassian.net/browse/TI-789) — Bidstream Feature Extraction & Audience Augmentation
-**Status:** In Progress — backfill complete, waiting on Ryan review
+**Status:** Complete — Layer 1 in prod, running daily
 **Date Started:** 2026-04-01
-**Date Completed:**
+**Date Completed:** 2026-04-08
 **Assignee:** Malachi
 
 ---
 
-## Current Status (2026-04-08)
+## Current Status (2026-04-17)
 
-**All Layer 1 code + backfill complete. Blocked on Ryan PR review.**
+**Layer 1 COMPLETE. All 7 models running in prod daily since 2026-04-09. Layer 2 next (with Ryan, next week).**
 
 ### What's Done
 - 7 Layer 1 PySpark models written, tested, compiled (PR #962 CI green)
 - Applied Ryan's feedback: HLL sketches, sum+count not avg, Spark config placement, removed timeout overrides
 - Fixed 2 parquet schema bugs: guid_log product STRUCT, aug_log nested LIST fields (pmp/iab/segments)
 - All 7 models backfilled 30 days in dev (~530 Dataproc Serverless jobs, zero errors)
+- Ryan approved PR #962 ("Looks good!") — merged 2026-04-08
+- Prod DAGs running daily since merge — all 7 models current through dt=2026-04-16
+- Ryan confirmed: isNotNull() workaround for parquet LIST fields is acceptable
+- Ryan: Layer 2 derived model next week, using `guid_log_derived_ip_vertical_id.py` as template
+- Ryan: "whenever you do analysis and something is important, turn it into a feature"
 - DAG changes included in PR
 - model_task_config.json regenerated
 
@@ -35,12 +40,12 @@
 ### Dev Output Paths
 All at `gs://mntn-data-archive-dev/feature_store/feature_group_1_source/{model}_feature_ti_810_bidstream_ip_features/dt=YYYY-MM-DD/`
 
-### What's Next (requires Ryan)
-1. **Meet with Ryan** to review PR #962 and spot-check output schemas
-2. **gsutil cp dev→prod** — copy backfilled data to prod bucket (new folders, no overwrite risk)
-3. **Ryan approves + merges PR** — models start running automatically in prod DAGs
-4. **Monitor first prod runs** — verify output matches dev
-5. **Layer 2 derived model** — next ticket, Ryan offered to show template
+### What's Next
+1. ~~Meet with Ryan~~ — Done 2026-04-08, approved PR
+2. ~~gsutil cp dev→prod~~ — Prod DAGs populated automatically after merge
+3. ~~Ryan approves + merges PR~~ — Merged 2026-04-08
+4. ~~Monitor first prod runs~~ — Running daily since 2026-04-09, all current through dt=2026-04-16
+5. **Layer 2 derived model** — next ticket, Ryan offered to walk through template next week
 
 ### Key Links
 - **PR:** https://github.com/SteelHouse/airflow-ti/pull/962
