@@ -123,13 +123,41 @@ Intent score shuffling has been replaced by **ghost bidding methodology** + **de
 - **Target deadline:** April 30th for experiment setup
 - Trade Desk previously built this methodology; Alex Bloore involved in alpha testing at Goodway
 
-### Action Items (from meeting)
-- **Malachi:** Build ghost bidding methodology for experiment analysis framework
-- **Malachi:** Set up dedicated mid-intent campaign experiment with Experiments team
-- **Alex Knorr:** Review findings and recommendations with Malachi
+### Alex Knorr 1:1 Sync (2026-04-17) — Confirmed Direction
+Alex presented TI-835 findings to Kale and Alex Bloore that morning — both on board. Key confirmations:
+
+**Two parallel workstreams for Malachi (next sprint):**
+1. **Experiment setup:** Work with experiments team (Kirsa, Nick) to set up a **mid-intent-only treatment campaign** alongside the existing campaign for selected advertisers. Keep the 10% holdout. The other 90% split between mid-intent-only and normal campaign.
+2. **Ghost bidding methodology:** Build the analysis framework independently — this can happen before experiment results are in.
+
+**Ghost bidding implementation details (Alex confirmed):**
+- Holdout IPs DO appear in `augmentor_log` — verified. They show up but aren't bid on.
+- Targetable IPs show up with their segment ID in the augmentor log entries
+- Calculate win rate: what fraction of augmentor_log appearances end up as impressions (probably from `cost_impression_log`)
+- Apply win rate as coin flip probability to each holdout IP's augmentor_log appearances → pseudo impressions
+- Compare: visit rate of exposed treatment IPs vs visit rate of pseudo-exposed holdout IPs
+- Statistical test: simple two-sample z-test on two proportions — the methodology complexity is in constructing the counterfactual, not the test itself
+- Causal framework: **Average Treatment on the Treated (ATT)**
+
+**Time-delta analysis (Malachi's idea — discussed):**
+- Not incremental lift per se, but shows ads cause visit spikes relative to baseline
+- Break time from ad to visit into equal-user-count buckets, plot visit density
+- Spike near zero = ad-driven visits; decay shows how long the effect lasts
+- In mobile, signal disappeared after ~6.5 hours. Unknown for CTV — worth investigating
+- Relevant to LiftLab: third parties argue if no measurable effect in short window, ads aren't driving action
+- Alex: "worth evaluating observationally, but ghost bidding is the experiment evaluation method"
+
+**Alex's feedback on Malachi's prior work:**
+- "Everything you had here was a super helpful place for me to start" (referring to TI-835 queries and summary)
+- "Thank you for having such detailed notes — very easy to pick up where you left off"
+
+### Action Items (from Alex Knorr sync, 2026-04-17)
+- **Malachi:** Build ghost bidding methodology — win rate calculation from augmentor_log + cost_impression_log, pseudo-impression assignment to holdout IPs
+- **Malachi:** Work with experiments team (Kirsa, Nick) to set up mid-intent-only treatment campaign
+- **Malachi (stretch):** Run time-delta analysis on a few advertisers to understand CTV ad-to-visit decay curve
+- **Alex Knorr:** Continues leading TI-835, presented to leadership, available for ongoing collaboration
 - **Kyla:** Program management connecting all incrementality workstreams
 - Defer to Kirsa and Nick for experiment sizing (budget, advertiser selection)
-- Confirm whether bidder logging changes can ship by April 30th or use win rate approximation
 
 ### Fellowship System (Alex Knorr, April 2026)
 Conceptual framework for balancing performance and incrementality long-term:
