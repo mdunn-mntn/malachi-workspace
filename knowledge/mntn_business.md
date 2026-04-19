@@ -370,6 +370,19 @@ Continuous scoring (100-point step increments replacing fixed-value buckets) wil
 
 **Pre-Launch Due Diligence:**
 Toph (production ops) is checking pacing risk for the ~10% of campaigns currently spending in peak performance against the Tier 1 rollout list, to catch meaningful audience-size drops (especially high-budget campaigns) before the flag is flipped. Tier 3 advertisers are excluded from rollout. (via Bryce Wagg, #dev_fangorn-model_ex, 2026-04-16)
+<!-- slack-extracted: 2026-04-19 -->
+- **Haus x MNTN Partnership (announced Oct 2025)**
+
+MNTN has an official business partnership with Haus (haus.io), an incrementality measurement vendor specializing in geo-based lift testing with augmented synthetic control. Key details:
+- **Partnership type:** Business partnership, NOT a technical integration. Haus is featured in the MNTN Integrations Marketplace in the UI.
+- **Customer-facing:** MNTN provides Haus-specific lift testing best practices in the Help Center.
+- **Press release:** Published 2025-10-14.
+- **Haus methodology:** Geo holdouts + augmented synthetic control (same methodology as Meta GeoLift). Susan Athey on advisory board.
+- **How sales uses it:** Haus is one of several lift testing partners (alongside LiftLab, Measured, Northbeam) that customers can use. Sales has an intake process in #ask-incremental-lift-tests for lift test requests.
+- **Office Hours (2026-02-20):** Solutions x Sales ran a "Lift Testing" session covering methodologies behind LiftLab, Haus, and Measured, ICPs for each, and how to speak to lift testing with prospects.
+- **Other partnerships mentioned alongside Haus:** Northbeam, iSpot (potential), LiftLab, Measured.
+(via Allie Dupere, #sales, 2025-10-10; Keaton, #sales, 2026-02-20; Lauren Reedy, #ask-incremental-lift-tests, 2026-03-23)
+
 - **Claude Enterprise Licensing — Seat Expansion and Policy**
 
 MNTN upgraded its Claude plan to Anthropic Enterprise (from a 150-seat cap). Key policy decisions made during the transition:
