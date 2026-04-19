@@ -1,8 +1,8 @@
-# TI-837: Design and Implement Intent Score Shuffling Experiment
+# TI-837: Ghost Bidding Incrementality Experiment — Implementation Plan
 
 **Jira:** https://mntn.atlassian.net/browse/TI-837
-**Status:** Backlog (contingent on TI-835 results)
-**Date Started:**
+**Status:** In Progress (pivoted from shuffling to ghost bidding, 2026-04-17)
+**Date Started:** 2026-04-17
 **Date Completed:**
 **Assignee:** Malachi
 **Parent:** [BER-2250](https://mntn.atlassian.net/browse/BER-2250) — Incrementality Overhaul
@@ -11,16 +11,20 @@
 
 ## 1. Introduction
 
-Based on observational findings from TI-835, design and implement the intent score shuffling experiment — IF the data supports it.
+Design and implement a ghost bidding analysis framework to measure the incremental lift of MNTN's intent-tier targeting, using Average Treatment on the Treated (ATT) methodology applied to the existing 10% holdout group. This replaces the original intent score shuffling approach, which was abandoned due to ITT coverage dilution showing zero signal (TI-835).
+
+**Pivot history:** TI-835 observational analysis revealed "The Two Stories" — guid_log shows ~0% lift (total site traffic unchanged), clickpass_log shows 2-8x lift (MNTN-attributed visits). The ITT approach structurally biases toward zero when impression coverage is low (14-16% of treatment group). Ghost bidding (ATT) addresses this by comparing only IPs that would have been served.
 
 ## 2. The Problem
 
-The observational analysis (TI-835) will show whether there's an incrementality difference between intent tiers using existing holdout data. This ticket is the next step: a causal experiment to confirm those findings.
+### What TI-835 Showed
+- guid_log: ~0% lift across 9 advertisers — CTV ads do NOT increase total site traffic
+- clickpass_log: 2-8x lift across all 9 advertisers — CTV ads DO increase MNTN-attributed visits
+- ITT (Intent to Treat) shows zero because only 14-16% of the "treatment" group actually receives impressions
+- Coverage rates even lower than meeting estimates: high-intent median 3.4%, peak 0.2%, mid 0.04% (Alex Knorr's pre-analysis)
 
-### Contingency
-- If TI-835 shows high-intent is already highly incremental → shuffling may not be needed
-- If mid-intent shows higher incrementality → shuffling experiment is warranted
-- If no measurable difference → need leadership direction before proceeding
+### Why Ghost Bidding
+Ghost bidding compares only IPs that *would have been served* — eliminating coverage dilution. The question shifts from "does assigning someone to a treatment group matter?" (ITT) to "does actually seeing the ad matter?" (ATT/LATE).
 
 ### Performance vs Incrementality Trade-off (Matt Brorby, 2026-04-07)
 Optimizing for incrementality and optimizing for visit rate are partially opposed:
@@ -35,26 +39,109 @@ Matt outlined a model that trains on impressions as a feature — predicting the
 
 ## 3. Plan of Action
 
-*Contingent on TI-835 results. Plan will be defined after observational analysis.*
+### Phase 1: Ghost Bidding Analysis Framework (Now — May 2026)
+
+**Objective:** Build an ATT estimator using the existing 10% holdout, without requiring bidder-side changes.
+
+#### Step 1: Win-Rate Calculation
+- Holdout IPs are deterministically identified via hash but **still appear in augmentor_log** (bid stream)
+- Calculate campaign-level win rate from actual served impressions in cost_impression_log
+- Win rate = (impressions served to treatment IPs) / (augmentor appearances for treatment IPs)
+- Validate win rate stability across days, intent tiers, and advertisers
+
+#### Step 2: Pseudo-Exposure Assignment for Holdout
+- Apply win rate as sampling probability to holdout IPs appearing in augmentor_log
+- Each holdout IP that appears in the bid stream gets "pseudo-exposed" with probability = campaign win rate
+- This creates a counterfactual group of holdout IPs that *would have been served* — the ghost impression
+- Academic basis: Johnson, Lewis & Nubbemeyer (2017 JMR, SSRN 2620078) — the canonical ghost-ad design
+
+#### Step 3: ATT Estimation
+- Compare visit rates: actually-exposed treatment IPs vs pseudo-exposed holdout IPs
+- **ATT estimator:** Difference in visit rates between these two groups
+- **LATE estimator (if needed):** tau_LATE = ITT / first-stage exposure rate (Imbens-Angrist Wald estimator)
+- Break down by intent tier (high/mid/peak performance) and by advertiser
+
+#### Step 4: Variance Reduction
+- **CUPED** on pre-period visit history (20-50% SE reduction)
+- Ghost-ad conditioning itself provides ~25% SE reduction (Johnson-Lewis-Reiley 2017, "When Less Is More")
+- Stratified randomization on pre-period sales (10-20% SE reduction)
+- Combined: ~40% SE reduction, equivalent to 2.7x the sample
+
+#### Step 5: Power Analysis
+- Apply Lewis-Rao formula with MNTN-specific sigma calibration per advertiser
+- Flag campaigns where MDE > 15% — these cannot produce reliable point estimates
+- **Rule of thumb:** Do not report iROAS without +/-50 pp CI for campaigns below 5M impressions
+- Pre-compute MDE for each advertiser using 52 weeks of historical revenue
+
+#### Step 6: Mid-Intent Treatment Campaign
+- Set up mid-intent-only treatment campaign with experiments team (Kirsa, Nick)
+- **Target:** April 30th deadline for experiment setup
+- Purpose: stronger signal — pure mid-intent focus rather than shuffled high/mid mix
+- The ghost bidding framework analyzes BOTH existing campaigns AND this new mid-intent campaign
+
+**Deliverable:** ATT estimates with confidence intervals for 6-10 advertisers, broken down by intent tier.
+
+### Future Work: Triangulation Roadmap
+
+Ghost bidding is the immediate step. The full roadmap (from the iROAS Measurement Playbook — see `artifacts/iroas_measurement_playbook.md`):
+
+1. **Next: DMA-Randomized Geo Holdout Pilot**
+   - 6-10 performance advertisers, >=$500k/month CTV spend
+   - 4-week pre-period, 4-week treatment, conformal inference via GeoLift (ASCM)
+   - Feasible today without bidder changes — geo is identity-agnostic
+   - Commuting-zone aggregation where spillover is a risk (NY-NJ-CT, DC-VA-MD)
+   - GeoLift (R) or PyMC-Marketing (Python) on Databricks
+
+2. **Then: Calibrated Bayesian MMM (Meridian)**
+   - Feed geo lift + ghost bidding results as LogNormal priors on CTV channel ROI
+   - Weekly MMM data mart in BigQuery (advertiser x geo x week x channel x KPI)
+   - Reported iROAS = posterior mean with 80% credible interval per advertiser
+   - Connects to Kale's 5 external vendor experiment initiative
+
+3. **End State: Unified Measurement**
+   - Bayesian blending of geo, household RCT, switchback, clean-room, and MMM
+   - Explicit uncertainty per advertiser (wider intervals for small campaigns)
+   - PIE-style meta-model for non-lift-tested campaigns (Gordon et al. 2023/2026)
+
+**11 open decisions** needed from leadership to unblock the full rollout — documented in the playbook Part 4 and `knowledge/experimentation.md` (Open Decisions section).
 
 ## 4. Investigation & Findings
 
-*Not yet started.*
+*Ghost bidding framework under construction. TI-835 findings inform this work (see TI-835 summary).*
 
 ## 5. Solution
 
-*Pending.*
+*In progress — ghost bidding ATT estimator.*
 
 ## 6. Questions Answered
 
-*None yet.*
+- **Can we measure incrementality with ITT on the existing holdout?** No — coverage dilution (14-16% actual impression coverage) structurally biases ITT toward zero. Ghost bidding (ATT) addresses this.
+- **Is shuffling still the right approach?** No — replaced by ghost bidding (April 17, 2026). Ghost bidding is more methodologically sound and doesn't require operational changes to the targeting system.
 
 ## 7. Data Documentation Updates
 
-*None yet.*
+- Added "Incrementality Measurement — Causal Method Reference" section to `knowledge/experimentation.md` (2026-04-19)
+- Includes: ranked method reference, Lewis-Rao power constraints, ghost bidding academic foundation, co-viewing bias, triangulation architecture, vendor assessments, reading list
+- Full iROAS Measurement Playbook stored at `artifacts/iroas_measurement_playbook.md`
 
 ## 8. Open Items / Follow-ups
 
-- [ ] Wait for TI-835 results
-- [ ] Get leadership direction on performance vs incrementality trade-off
-- [ ] Determine if shuffling experiment is warranted based on observational findings
+- [x] ~~Wait for TI-835 results~~ (complete — "The Two Stories" finding)
+- [ ] Build win-rate calculation pipeline (augmentor_log + cost_impression_log)
+- [ ] Implement pseudo-exposure assignment for holdout IPs
+- [ ] Compute ATT estimates for 6-10 advertisers by intent tier
+- [ ] Implement CUPED variance reduction on pre-period visit history
+- [ ] Run power analysis per advertiser (Lewis-Rao formula)
+- [ ] Set up mid-intent-only treatment campaign with Kirsa/Nick (deadline: April 30th)
+- [ ] Get leadership direction on performance vs incrementality trade-off (Kale/Alex Bohr)
+- [ ] Present ghost bidding methodology and initial results to Kale/Alex Knorr
+
+## 9. Key References
+
+- **Full playbook:** `artifacts/iroas_measurement_playbook.md` — 10 ranked methods, feasibility scorecards, phased rollout, 11 open decisions, reading list
+- **Johnson, Lewis & Nubbemeyer (2017) JMR** — Ghost ads canonical design (SSRN 2620078)
+- **Johnson, Lewis & Reiley (2017) Marketing Science** — Exposure conditioning adds 31% precision
+- **Lewis & Rao (2015) QJE** — Power analysis ground truth for ad measurement
+- **Gordon et al. (2023) Marketing Science** — DML with 5,000+ features fails on 663 RCTs
+- **Alex Knorr's pre-analysis:** SteelHouse/databricks_targeting, branch TI-835, `dw-main-bronze.external.TI_835_prospecting_scores`
+- **Knowledge base:** `knowledge/experimentation.md` — extracted MNTN-relevant insights from playbook

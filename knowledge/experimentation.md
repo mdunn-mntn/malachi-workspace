@@ -1,5 +1,5 @@
 # Experimentation & Causal Inference — Knowledge Base
-Last updated: 2026-04-06 | Started from TI-748 (Media Plan Causal Impact)
+Last updated: 2026-04-19 | Started from TI-748 (Media Plan Causal Impact)
 
 This is a living document. Add to it every time we learn something new about experimental design, covariate selection, test methodology, or edge cases at MNTN.
 
@@ -773,3 +773,196 @@ Full brief: [Confluence](https://mntn.atlassian.net/wiki/external/NTM1ZmViMzc1Yz
 A hypothesis under active exploration: lower-intent audience groups (Mid Intent, Max Reach) may generate more incremental lift than High Intent groups, because High Intent users are also heavily targeted by Google, Meta, and other platforms — meaning MNTN's attribution to those users may not represent true incrementality.
 
 Analysis of the Incrementality dashboard by intent group (High Intent, Mid Intent, Peak Performance, Max Reach) is being pursued via BAE-4007. Metrics of interest: incremental lift on IVR and VVR by intent tier.
+
+---
+
+## Incrementality Measurement — Causal Method Reference
+
+*Source: iROAS Measurement Playbook (2026-04-19). Full document: `tickets/ber_2250_incrementality_overhaul/artifacts/iroas_measurement_playbook.md`*
+
+### Ranked Method Reference — MNTN Stack Feasibility
+
+| Rank | Method | Stack Status | MNTN Application | Key Reference |
+|---|---|---|---|---|
+| 1 | **Geo randomized holdouts + ASCM** | **Green** (feasible today) | DMA-randomized holdout, analyzed with GeoLift/augsynth. No bidder changes needed. Privacy-durable, walled-garden-agnostic. | Abadie 2021 JEL; Ben-Michael et al. 2021 JASA; Vaver-Koehler 2011 Google |
+| 2 | **Household RCT with ghost bidding** | **Yellow** (building now — BER-2250 Phase 2) | Gold standard for CTV. Our approach: win-rate approximation from augmentor/bid logs as stopgap; full bidder-side ghost logging as target state. | Johnson-Lewis-Nubbemeyer 2017 JMR |
+| 3 | **Bayesian MMM (Meridian)** | **Yellow** (needs calibration from 1 & 2) | Production surface for per-advertiser iROAS. Weak alone; strong when calibrated with experimental priors. Connects to Kale's 5 external vendor experiments. | Jin et al. 2017; Zhang et al. 2024 Google |
+| 4 | **CausalImpact / BSTS** | **Green** (already in-house from TI-748) | Single-market switch-ons, always-on campaigns. Keep using for feature rollouts. Know its SUTVA limits. | Brodersen et al. 2015 AoAS |
+| 5 | **Switchback experiments** | **Green** (data), **Yellow** (power) | When geo holdouts are politically impossible or carryover spillover is severe. Time-block randomization. | Bojinov et al. 2023 Mgmt Science |
+| 6 | **Staggered DiD (Callaway-Sant'Anna)** | **Green** | Platform-level rollouts (new supply partner, bid-shading change, identity graph update). Avoid canonical TWFE. | Callaway-Sant'Anna 2021 JoE; Goodman-Bacon 2021 |
+| 7 | **IV via auction variation** | **Yellow** | Stopgap before ghost logging: exploit bid-shading/frequency-cap/pacing as instruments. Log the randomized component. | Waisman et al. 2024; Gui-Nair-Niu 2022 |
+| 8 | **Regression discontinuity** | **Yellow** | Local effects at frequency caps, reserve prices, quality-score thresholds. Narrow but nearly free. | Calonico-Cattaneo-Titiunik 2014 Econometrica |
+| 9 | **Uplift / CATE modeling** | **Yellow** | **For targeting optimization, NOT headline iROAS.** Deploy tau_hat(x) as bid multiplier once experimental data exists. | Kunzel et al. 2019 PNAS; Wager-Athey 2018 JASA |
+| 10 | **DML / TMLE / PSM-IPW** | **Red** (for iROAS claims) | Internal diagnostics only. Never report as customer-facing iROAS. | Gordon et al. 2023 Marketing Science |
+
+### Statistical Power Constraints — Lewis & Rao Applied to CTV
+
+**The fundamental constraint on all CTV incrementality measurement:**
+
+Lewis & Rao (2015 QJE) formula: **N_per_arm = 2 * ((z_{alpha/2} + z_beta) * sigma / delta_y)^2**
+
+Applied to a typical MNTN campaign:
+- 10M impressions, $25-$50 CPM, frequency ~5, ~2M households
+- Household sigma ~$70 weekly sales, cost per HH ~$0.125
+- **MDE at 50/50 split, 80% power: ~$0.28/HH/week — right at break-even iROAS**
+
+Variance reduction stack (compounding):
+- CUPED on pre-period visit history: **20-50% SE reduction**
+- Ghost-ad conditioning (Johnson-Lewis-Reiley 2017): **25-31% SE reduction** (equivalent to 1.7x sample)
+- Stratified randomization on pre-period sales: **10-20% SE reduction**
+- Combined: **~40% SE reduction**, equivalent to 2.7x the sample size
+
+**Rules of thumb:**
+- Do NOT report an iROAS point estimate without +/-50 pp confidence interval for campaigns below 5M impressions
+- Below 5M impressions: "directionally consistent with positive ROI" — not a point estimate
+- Pre-compute MDE via GeoLift's power simulator on 52 weeks of historical revenue; refuse pilots with MDE > 15%
+- Lewis-Rao's original finding: median SE on ROI was 26.1% for retail, 115% for brokerage — even with 25 RCTs totaling millions of users
+
+**MNTN implication:** Set expectations with Kale/leadership that CTV incrementality measurement is inherently noisy. The goal is calibrated uncertainty, not false precision. This is the scientific reality every competitor faces.
+
+### Observational Methods Are Not Defensible for Headline iROAS
+
+**Key evidence (cite when vendors claim otherwise):**
+
+| Study | Finding | Implication |
+|---|---|---|
+| **Gordon et al. 2019** (15 Facebook RCTs, 500M observations) | Observational methods off by **3x** in half the studies | Rich platform features don't fix selection bias |
+| **Gordon et al. 2023** "Close Enough?" (663 Meta RCTs, 5,000+ features, deep-learning DML) | Median absolute error: **62-115 pp** on lift vs true RCT values of 6-28% | Even best-in-class ML can't close the gap |
+| **Blake-Nosko-Tadelis 2015** (eBay paid search) | OLS ROI: **>4,100%**. True causal ROI: **-63%** | Not a nuance — it's a sign-flip |
+
+**Vendor assessment:**
+- **Defensible:** Measured (geo experiments), Haus (geo + synthetic control), LiftLab (geo switchback) — when using their experimental methods
+- **Directional only:** Incrmntal ("causal AI" on aggregated change-events — novel but unverified), Rockerbox/Northbeam (MTA-first with MMM bolt-ons, no published methodology)
+- **MNTN's current dashboard:** Inflates results by comparing exposed group vs random sample (confirmed Matt Brorby April 2026). Exposed group is pre-selected high-intent users likely to convert anyway.
+
+### Ghost Bidding — Academic Foundation
+
+Connecting BER-2250 Phase 2 implementation to the literature:
+
+**Core paper:** Johnson, Lewis & Nubbemeyer (2017 JMR, SSRN 2620078) — won 2022 Weitz-Winer-O'Dell Award
+- For each bid request: hash(household_id, campaign_id, salt) mod N assigns arms
+- Control arm suppressed BUT auction outcome logged as "ghost impression"
+- ITT: mean KPI difference across all assigned households (exposed or not)
+- **LATE/CACE:** tau_LATE = ITT / first-stage exposure rate (Imbens-Angrist Wald estimator)
+- Filtering to exposed + would-have-been-exposed recovers treatment-on-treated
+
+**Precision gain:** Johnson, Lewis & Reiley (2017 Marketing Science, "When Less Is More")
+- Ghost-ad conditioning delivers **25% SE reduction = 31% more precision**
+- Equivalent to growing a 3.1M-user experiment to 5.3M users
+- Google runs >100M predicted ghost ads/day; TTD and Viant market commercially
+
+**MNTN's implementation (win-rate approximation):**
+- Holdout IPs appear in augmentor_log (bid stream) but are suppressed from serving
+- Calculate campaign-level win rate from actual served impressions in cost_impression_log
+- Apply win rate as sampling probability to pseudo-expose holdout IPs
+- Compare visit rates: exposed treatment IPs vs pseudo-exposed holdout IPs
+- This is a valid approximation without bidder-side product changes
+- Full ghost-bid logging (bidder change) is the target state
+
+**Key gotchas for MNTN:**
+- Randomization must be at bid-request, not post-hoc (we use deterministic hash — good)
+- Walled-garden contamination: holdout HH may see same campaign on Amazon/Meta — dilutes control
+- Divergent delivery (Eckles-Gordon-Johnson): bidder optimizes differently when control excluded — freeze model during experiments
+- Co-viewing inflates numerator — keep conversions and exposure at same unit (household)
+
+### Co-viewing Bias in CTV
+
+**Industry measurements:**
+- TVision: average viewers per viewing household — **1.46 on linear, 1.44 on CTV**, peaking at **1.52 in primetime**
+- iSpot: co-viewing contributes incremental **~41% of viewership** on streaming
+- Range: **1.23 to 1.90 per impression** depending on daypart, demo, genre
+
+**The industry's frequent use of a single "1.2x" factor masks material variation.** These multipliers are dynamic, not static.
+
+**Rule:** Keep the numerator (conversions) and denominator (exposure) at the same unit of analysis:
+- If conversions are household-resolved via identity graph → use household-level impressions and spend
+- If conversions are individual-pixel (typical for web purchases) → accept that co-viewing inflates apparent iROAS, apply daypart/genre adjustment or flag the bias
+
+### Triangulation Architecture — The End-State Pattern
+
+The meta-pattern endorsed by Meta, Google, PyMC-Marketing, and the BCG 2025 "trifecta" study (46% of leading marketers):
+
+```
+Geo lift tests (4-6 per advertiser per year)
+    ↓ point estimates + SEs
+Feed as LogNormal(log(est), SE) priors on channel ROI
+    ↓
+Meridian / PyMC-Marketing MMM (refresh weekly)
+    ↓
+Reported iROAS = posterior mean + 80% credible interval
+```
+
+**MNTN mapping:**
+1. **Now:** Ghost bidding ATT from existing 10% holdout (BER-2250 Phase 2)
+2. **Next:** DMA-randomized geo holdout pilot (6-10 advertisers, >=$500k/month)
+3. **Then:** Calibrated Meridian MMM with geo + RCT results as priors
+4. **End state:** Bayesian blending of geo, household RCT, switchback, clean-room, and MMM — with explicit uncertainty per advertiser
+
+**Critical alignment:** Experiment estimand != MMM estimand. Experiments measure short-window partial-reduction effects; MMM ROI is against zero-spend counterfactual. Meridian's `roi_calibration_period` parameter aligns these.
+
+### Walled Garden Measurement Constraints
+
+**Household-level ghost bidding is impossible inside walled gardens** — the auction happens publisher-side. MNTN cannot control bid suppression for Disney, Netflix, Amazon, YouTube inventory.
+
+| Platform | Clean Room | Access Type | Lift Support |
+|---|---|---|---|
+| Amazon | AMC (AWS Clean Rooms) | Custom SQL, ~100-user threshold | Yes (holdout-based) |
+| YouTube | Google ADH | Custom SQL, 50-user threshold | Yes |
+| Disney | InfoSum/Snowflake/LiveRamp | Templated queries (no open SQL) | Via VideoAmp/Samba TV/EDO |
+| Netflix | Snowflake/InfoSum/LiveRamp | Post-campaign measurement | Transitioning (Xandr → in-house) |
+| Roku | Snowflake | Templated queries | 20+ measurement partners |
+
+**What works across walled gardens:**
+- **Geo holdouts** — identity-agnostic, walled gardens participate whether or not we control the auction
+- **MMM with walled-garden spend as channel input** — aggregate-level, no clean-room required
+- **Clean-room lift studies** (AMC, ADH) — where platforms support holdout-based measurement
+
+**Integration priority for MNTN:** BigQuery Clean Rooms (native) > Snowflake (publisher reach) > LiveRamp Safe Haven (identity resolution) > AMC/ADH (on demand)
+
+### Incremental ROAS Benchmarks — Expanded
+
+| Source | iROAS | Context |
+|---|---|---|
+| **Matt Brorby (MNTN, April 2026)** | Good: ~$0.90, Poor: ~$0.50 | Internal industry knowledge |
+| **Trade Desk** | ~$1.15 | Considered good; >$1.00 is "awesome" and rare |
+| **Measured 2025 CTV Insights** (274 experiments, 60 brands) | **Median CTV: $2.88** | vs Meta $2.30, Google $2.39 |
+| **Companies claiming $8+ ROAS** | Attributed, NOT incremental | Massively inflated — observational, not causal |
+| **Shapiro-Hitsch-Tuchman 2021** (288 brands) | Median ad elasticity 0.01; marginal ROI negative for >80% of CPG | Reality check for TV/CTV priors |
+
+**Note:** Measured's geo experiments are methodologically sound (randomized DMA holdouts). Their attribution dashboards are separate products with weaker methodology. Distinguish between the two when citing.
+
+### Open Decisions for Leadership (from Playbook Part 4)
+
+These 11 decisions, once made, unblock the full iROAS measurement rollout. To be driven with Product, Engineering, Legal, and Finance:
+
+1. **Holdout size policy** — Is 10% the floor, or allow advertisers to opt up to 20-50%? Controls MDE directly.
+2. **MDE floor** — Refuse lift tests where MDE > 15%, or run and caveat? Recommend: refuse.
+3. **Co-viewing treatment** — Flat 1.2x multiplier, dynamic Nielsen/iSpot adjustment, or bias disclosure? Both scientific and sales decision.
+4. **Feature pricing** — Free for enterprise, paid add-on, or standard UI KPI? Comparable vendors charge $50k-$500k/year.
+5. **Build vs buy geo experimentation** — Open-source GeoLift (own methodology) vs Haus/LiftLab/Measured (managed, faster, less transparent, ongoing cost)?
+6. **Bidder-side ghost-bid logging** — Green-light the bidder change. Which eng team? Is suppression-with-logging allowed under supply-partner contracts?
+7. **Clean-room priority** — Which first? Recommend: BQ + Snowflake + LiveRamp, then AMC/ADH on demand.
+8. **MMM build vs buy** — Build on Meridian (open-source, best methodology) vs license Recast/Analytic Partners? Recommend: Meridian.
+9. **Randomization unit** — Household default. Policy for advertisers with device-level pixels pushing for user-level?
+10. **Measurement window** — 7/14/28-day post-impression for conversions? Affects numerator and lift magnitude.
+11. **Reporting uncertainty** — Point estimate only, point + interval, or interval only?
+
+### Incrementality Reading List (Consumption Order)
+
+*Priority-ordered. Annotations explain relevance to MNTN.*
+
+1. **Lewis & Rao (2015) QJE** — Power analysis ground truth. Read first so every method is sized correctly.
+2. **Gordon et al. (2019) Marketing Science** — Proof that observational methods fail even at Facebook scale.
+3. **Gordon et al. (2023) "Close Enough?" Marketing Science** — DML with 5,000+ features still fails on 663 RCTs. Read before anyone proposes ML-only iROAS.
+4. **Johnson, Lewis & Nubbemeyer (2017) JMR** — Ghost ads canonical design. Directly relevant to BER-2250 Phase 2.
+5. **Johnson, Lewis & Reiley (2017) Marketing Science** — Exposure conditioning adds 31% precision. Core variance-reduction argument.
+6. **Blake, Nosko & Tadelis (2015) Econometrica** — eBay sign-flip. Attribution ROI >4,100% vs true causal -63%.
+7. **Shapiro, Hitsch & Tuchman (2021) Econometrica** — 288 brands: median elasticity 0.01, ROI negative for >80%. TV/CTV reality check.
+8. **Brodersen et al. (2015) AoAS** — BSTS/CausalImpact method already in use at MNTN. Read for identification assumptions.
+9. **Abadie (2021) JEL** — Synthetic controls review. Foundation for GeoLift and Meridian geo priors.
+10. **Ben-Michael et al. (2021) JASA** — Augmented SCM. The ridge-augmented estimator GeoLift defaults to.
+11. **Jin et al. (2017) Google** — Bayesian MMM with carryover and saturation. The model under Meridian.
+12. **Zhang et al. (2024) Google** — MMM calibration with Bayesian priors. The experiment-as-prior pattern.
+13. **Callaway & Sant'Anna (2021) JoE** — Staggered DiD. Reference for platform-level rollout studies.
+
+Also useful: Imbens-Angrist (1994) for LATE; Calonico-Cattaneo-Titiunik (2014) for RDD; Bojinov et al. (2023) for switchback; King-Nielsen (2019) on why PSM matching is wrong.
