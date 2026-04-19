@@ -1,24 +1,26 @@
 # Incrementality Primer — Talk Track
 
-**Format:** Loom, ~20 minutes. Narrate conversationally — this is a teaching moment, not a presentation. Talk like you're explaining it to a smart colleague over coffee.
+**Format:** Loom, ~20 minutes. Narrate conversationally — teaching moment, not a boardroom pitch.
 
-**Pacing cues:**
-- [PAUSE] = 2-3 seconds of silence. Let the slide land.
-- [SLOW] = drop your pace for emphasis.
-- [ADVANCE] = click to next slide.
-- Aim for ~40-50 seconds per slide. Some faster, some slower.
+**How to read this:**
+- Everything in `> blockquotes` is what you say out loud.
+- `[NEXT → Slide X: description]` = hit the right arrow. The description tells you what's about to appear so you're never surprised.
+- `[PAUSE]` = 2-3 seconds of silence. Let the slide breathe.
+- `[SLOW]` = drop your speaking pace for emphasis.
+- `[STOP RECORDING]` = you're done.
 
 ---
 
-## SLIDE 1 — Title
+## You're looking at: SLIDE 1 — Title
+*"Incrementality Measurement: A Primer for the TI Team"*
 
 > Hey everyone. This is a primer on incrementality measurement — what it is, why it matters, and what we're building. It's about twenty minutes. If you're working on anything related to targeting, experiments, or how we measure whether our ads actually work, this is for you.
 
-[ADVANCE]
+[NEXT → Slide 2: Big red "4,100%" and "-63%" numbers. eBay sign-flip.]
 
 ---
 
-## SLIDE 2 — The eBay Sign-Flip (4,100% → -63%)
+## You're looking at: SLIDE 2 — The eBay Sign-Flip
 
 > I want to start with a number.
 
@@ -30,11 +32,11 @@
 
 > And then the true number. Negative sixty-three percent. The ads were *losing money*. Not underperforming. Losing. Every dollar they spent on paid search came back as sixty-three cents of loss.
 
-[ADVANCE]
+[NEXT → Slide 3: "Same company. Same data. Different method." with Tadelis story text.]
 
 ---
 
-## SLIDE 3 — The Tadelis Story
+## You're looking at: SLIDE 3 — The Tadelis Story
 
 > Same company. Same data. Different method.
 
@@ -44,37 +46,39 @@
 
 > So they did. They turned off paid search in a third of the country. And sales — [SLOW] barely — moved. The people clicking eBay's paid search ads were going to buy from eBay anyway. The entire fifty million was going to people the ads didn't influence.
 
-> Tadelis published the paper in *Econometrica* — one of the top economics journals in the world. eBay's CMO left the company.
+> Tadelis published the paper in Econometrica — one of the top economics journals in the world. eBay's CMO left the company.
 
 [PAUSE]
 
-[ADVANCE]
+[NEXT → Slide 4: Power Line in large navy text — "Without a counterfactual, ROAS is fiction."]
 
 ---
 
-## SLIDE 4 — Power Line
+## You're looking at: SLIDE 4 — Power Line
 
-> [SLOW] Without a counterfactual, ROAS is fiction.
+[PAUSE — let the slide appear, hold 1 second, then speak]
 
-[PAUSE — let it sit for 3 full seconds]
+> [SLOW] Without a counterfactual... ROAS is fiction.
+
+[PAUSE — 3 full seconds of silence]
 
 > That's the core idea of this entire talk. If you don't know what *would have happened without the ad*, you cannot know what the ad caused. Everything else I'm going to show you is a strategy for answering that counterfactual question.
 
-[ADVANCE]
+[NEXT → Slide 5: Y(1), Y(0) equation box. "The One Idea Everything Is Built On."]
 
 ---
 
-## SLIDE 5 — Potential Outcomes
+## You're looking at: SLIDE 5 — Potential Outcomes
 
 > Let me make this concrete. Every household has two potential outcomes. Y-one — what happens if they see our ad. Y-zero — what happens if they don't. The causal effect of our ad on that household is the difference between those two numbers.
 
 > Simple, right? Except there's a catch — and it's the catch that makes this an entire field of study.
 
-[ADVANCE]
+[NEXT → Slide 6: "You only ever observe one." in large text.]
 
 ---
 
-## SLIDE 6 — The Fundamental Problem
+## You're looking at: SLIDE 6 — The Fundamental Problem
 
 > You only ever observe one.
 
@@ -82,11 +86,11 @@
 
 > This is called the fundamental problem of causal inference. And every method I'm about to walk through — randomization, geo experiments, synthetic controls, all of it — is a different strategy for *estimating* that missing half.
 
-[ADVANCE]
+[NEXT → Slide 7: Three numbered items — selection bias, activity bias, confounding.]
 
 ---
 
-## SLIDE 7 — Why Ads Are Especially Hard
+## You're looking at: SLIDE 7 — Why Ads Are Especially Hard
 
 > Now, this problem exists everywhere in science. Clinical trials face it. Economists face it. But advertising has a specific twist that makes it worse.
 
@@ -100,11 +104,11 @@
 
 > All three of these forces push reported ROAS upward.
 
-[ADVANCE]
+[NEXT → Slide 8: "View-through ROAS looks high even if the ad did nothing." in bold.]
 
 ---
 
-## SLIDE 8 — The Result
+## You're looking at: SLIDE 8 — The Result
 
 > And this is the result. View-through ROAS looks high even if the ad did nothing.
 
@@ -112,21 +116,21 @@
 
 > This is why eBay's dashboards said four thousand percent and the truth was negative sixty-three. The dashboards were measuring selection, not causation.
 
-[ADVANCE]
+[NEXT → Slide 9: Numbered list of five strategies.]
 
 ---
 
-## SLIDE 9 — Five Strategies Overview
+## You're looking at: SLIDE 9 — Five Strategies Overview
 
 > So how do we actually solve this? How do we estimate the missing half — the counterfactual?
 
 > There are five families of methods, and I'm going to walk through each one. Some are better than others. Some we can use today, some we're building toward. But they all attack the same fundamental problem from different angles.
 
-[ADVANCE]
+[NEXT → Slide 10: "Strategy 1 — Randomization." Coin-flip logic.]
 
 ---
 
-## SLIDE 10 — Randomization
+## You're looking at: SLIDE 10 — Randomization
 
 > Strategy one. Randomization. This is the most powerful idea in the field, and once it clicks you'll see why practitioners get almost religious about it.
 
@@ -136,11 +140,11 @@
 
 > That's the magic of a randomized controlled trial. It doesn't eliminate selection bias by measuring it and adjusting for it. It eliminates it *by construction*.
 
-[ADVANCE]
+[NEXT → Slide 11: Treatment vs Control side-by-side boxes. Ghost ads.]
 
 ---
 
-## SLIDE 11 — Ghost Ads
+## You're looking at: SLIDE 11 — Ghost Ads
 
 > Now, the cleverest version of this in advertising is called ghost ads — or ghost bidding.
 
@@ -150,11 +154,11 @@
 
 > Google runs over a hundred million ghost ads per day. The Trade Desk markets this. Viant markets this. And right now, our bidder can't do it natively. That's one of the things we're building.
 
-[ADVANCE]
+[NEXT → Slide 12: ITT vs TOT side-by-side boxes.]
 
 ---
 
-## SLIDE 12 — ITT vs TOT
+## You're looking at: SLIDE 12 — ITT vs TOT
 
 > Quick but important distinction. When you run one of these experiments, you have two ways to analyze it.
 
@@ -164,11 +168,11 @@
 
 > The difference matters in practice. We saw this on TI-835 — our ITT analysis showed zero lift because only fourteen to sixteen percent of the treatment group actually received impressions. When eighty-six percent of your "treated" group got no treatment, the comparison collapses. Ghost ads and the ATT estimator we're building address exactly this problem.
 
-[ADVANCE]
+[NEXT → Slide 13: Three CTV challenges — no user ID, no ghost infra, need huge samples.]
 
 ---
 
-## SLIDE 13 — Why RCTs Are Hard in CTV
+## You're looking at: SLIDE 13 — Why RCTs Are Hard in CTV
 
 > So if randomization is so great, why doesn't everyone just do it? Three reasons, specific to CTV.
 
@@ -178,11 +182,11 @@
 
 > Third — and this is the Lewis and Rao problem — CTV conversion rates are low, and the effects we're trying to detect are modest. Two to eight percent lift. To reliably detect that, you need *enormous* sample sizes. Most ad experiments in the industry are underpowered, which means they produce null results that get interpreted as "the ad doesn't work" when really the experiment just didn't have enough data.
 
-[ADVANCE]
+[NEXT → Slide 14: "Strategy 2 — Geo Experiments." "Can't randomize households? Randomize geographies."]
 
 ---
 
-## SLIDE 14 — Geo Experiments
+## You're looking at: SLIDE 14 — Geo Experiments
 
 > Which brings us to strategy two — and this is the pragmatic answer for right now.
 
@@ -190,11 +194,11 @@
 
 > The logic is the same as an RCT. Randomization at the geo level means the groups are, on average, balanced. Outcome differences are causal.
 
-[ADVANCE]
+[NEXT → Slide 15: Four green checkmarks — no IDs needed, walled gardens don't matter, co-viewing doesn't matter, MNTN already does this.]
 
 ---
 
-## SLIDE 15 — Why Geo Works for CTV
+## You're looking at: SLIDE 15 — Why Geo Works for CTV
 
 > And here's why this is such a natural fit for CTV specifically.
 
@@ -202,11 +206,11 @@
 
 > And critically — we already do this. MNTN sells geo-based incrementality measurement today through Haus. This isn't hypothetical. It's live. The question is whether we build our own platform-native version.
 
-[ADVANCE]
+[NEXT → Slide 16: Three red X items — 41% effect after campaign ends, DMAs not interchangeable, limited power.]
 
 ---
 
-## SLIDE 16 — Geo Challenges
+## You're looking at: SLIDE 16 — Geo Challenges
 
 > But geo isn't free. Three things to know.
 
@@ -216,19 +220,19 @@
 
 > Third, you only have about two hundred and ten DMAs to work with. That limits statistical power, especially for smaller advertisers.
 
-[ADVANCE]
+[NEXT → Slide 17: "Strategy 3 — Quasi-Experiments." "When you can't randomize, exploit something that looks like randomization."]
 
 ---
 
-## SLIDE 17 — Quasi-Experiments
+## You're looking at: SLIDE 17 — Quasi-Experiments
 
 > Strategy three. Sometimes you can't randomize at all — not users, not geos. But sometimes something happened in the world that *looks like* a random assignment if you squint. We call these quasi-experiments.
 
-[ADVANCE]
+[NEXT → Slide 18: DiD equation — (CA after - CA before) - (OR after - OR before). "Big assumption: parallel trends."]
 
 ---
 
-## SLIDE 18 — DiD
+## You're looking at: SLIDE 18 — DiD
 
 > The workhorse here is difference-in-differences — DiD. The idea is simple.
 
@@ -236,11 +240,11 @@
 
 > The big assumption is parallel trends. Without the campaign, California and Oregon would have moved in sync. If that's true, this works beautifully. If California was already accelerating for other reasons, you're in trouble.
 
-[ADVANCE]
+[NEXT → Slide 19: CausalImpact. Synthetic CA = 30% AZ + 25% NV + 20% TX + 25% CO. "We already use this at MNTN."]
 
 ---
 
-## SLIDE 19 — CausalImpact / BSTS
+## You're looking at: SLIDE 19 — CausalImpact / BSTS
 
 > And here's the souped-up version — synthetic control. Instead of comparing California to one other state, you build a *synthetic California* out of a weighted combination of all the other states. Thirty percent Arizona, twenty-five percent Nevada, twenty percent Texas, twenty-five percent Colorado — chosen so that pre-campaign, this synthetic California matches the real one almost exactly.
 
@@ -248,11 +252,11 @@
 
 > This is what Google's CausalImpact tool does — the Bayesian structural time series approach. And we already use it at MNTN. We used it for the TI-748 media plan analysis. So if you've seen those results, you've already seen this method in action. Now you know the formal name and — more importantly — the assumption it rests on.
 
-[ADVANCE]
+[NEXT → Slide 20: "Strategy 4 — Marketing Mix Modeling." "Completely different animal. Top-down, not bottom-up."]
 
 ---
 
-## SLIDE 20 — MMM
+## You're looking at: SLIDE 20 — MMM
 
 > Strategy four is a completely different animal. Everything I've shown you so far is bottom-up — individual exposures, individual or geo-level comparisons. Marketing Mix Modeling is top-down.
 
@@ -262,11 +266,11 @@
 
 > The weakness: it's observational. You didn't randomize anything. The causal interpretation depends on controlling for every confounder, which you never do perfectly.
 
-[ADVANCE]
+[NEXT → Slide 21: Triangulation diagram — Geo Lift Tests → Bayesian MMM → iROAS. "46% of leading marketers use this."]
 
 ---
 
-## SLIDE 21 — Triangulation
+## You're looking at: SLIDE 21 — Triangulation
 
 > Which is why the modern pattern is triangulation. You don't rely on MMM alone. You run experiments — geo lift tests — to get causal estimates. Then you feed those estimates into the MMM as Bayesian priors. The model is now anchored to experimental truth instead of floating on correlations.
 
@@ -274,11 +278,13 @@
 
 > This is the architecture Google, Meta, and nearly half of leading marketers have converged on. We're not there yet, but this is the end state we're building toward.
 
-[ADVANCE]
+[NEXT → Slide 22: "Strategy 5 — Causal ML." "Mathematically beautiful. Operationally dangerous."]
 
 ---
 
-## SLIDE 22 — Causal ML
+## You're looking at: SLIDE 22 — Causal ML
+
+*Move through this one with conviction. You're dismissing, not teaching.*
 
 > Strategy five. And I'm going to be direct about this one.
 
@@ -286,11 +292,11 @@
 
 > They all rest on one assumption: no unmeasured confounders. If you've controlled for everything that affects both exposure and outcome, they work perfectly. The problem is — in ads, you *always* have unmeasured confounders. Unobserved intent. Off-platform exposure. Audience overlap with other channels. Things the model can't see.
 
-[ADVANCE]
+[NEXT → Slide 23: Big red "62-115 pp" number. "The Evidence Is Brutal." Gordon 2023.]
 
 ---
 
-## SLIDE 23 — The Gordon Result
+## You're looking at: SLIDE 23 — The Gordon Result
 
 > And here's the evidence. This is from a 2023 paper in Marketing Science. The researchers took 663 actual randomized experiments from Meta — real RCTs with known true effects — and asked: how well do observational methods recover the truth?
 
@@ -304,11 +310,11 @@
 
 > No amount of ML closes the gap. If you don't have a counterfactual, you don't have causation — no matter how fancy the model.
 
-[ADVANCE]
+[NEXT → Slide 24: Attribution vs Incrementality side-by-side boxes. "Both useful. Only one is causal."]
 
 ---
 
-## SLIDE 24 — Attribution vs Incrementality
+## You're looking at: SLIDE 24 — Attribution vs Incrementality
 
 > Now I want to draw a sharp line between two things that get confused constantly.
 
@@ -318,11 +324,11 @@
 
 > Both are useful. Both have their place. But they answer fundamentally different questions, and only one of them is causal. The trap the industry falls into — and that we fall into — is using attribution numbers as if they were incrementality numbers.
 
-[ADVANCE]
+[NEXT → Slide 25: ROAS table — Last-click $3.50, Multi-touch $2.80, View-through $2.40, Shapley $1.90. "None tell you if CTV caused any sales."]
 
 ---
 
-## SLIDE 25 — The Attribution Trap
+## You're looking at: SLIDE 25 — The Attribution Trap
 
 > Here's the trap in concrete terms. Take a single CTV campaign. Same data, same conversions, same spend. Run it through four different attribution models.
 
@@ -330,11 +336,11 @@
 
 > Attribution is the journey. Incrementality is the causation. We need both, but we need to stop confusing them.
 
-[ADVANCE]
+[NEXT → Slide 26: "How Power Works." Three drivers: effect size, sample size, variance. MDE warning.]
 
 ---
 
-## SLIDE 26 — Power
+## You're looking at: SLIDE 26 — Power
 
 > One more concept before we bring it home. Statistical power. This is the thing everyone hand-waves, and it quietly kills more experiments than bad methodology.
 
@@ -342,11 +348,11 @@
 
 > Here's the practical implication. Before you run any experiment, you need to compute the minimum detectable effect — the MDE. That's the smallest lift your experiment can reliably see given its sample size. If your MDE is fifteen percent but the realistic lift is five percent, you've designed an experiment that *cannot succeed*. You'll run it, get a null result, and conclude "the ad doesn't work" — when really you just didn't have enough data to see it.
 
-[ADVANCE]
+[NEXT → Slide 27: "Most ad experiments are underpowered." Lewis-Rao QJE 2015.]
 
 ---
 
-## SLIDE 27 — Lewis-Rao
+## You're looking at: SLIDE 27 — Lewis-Rao
 
 > And this is the uncomfortable reality. A 2015 paper in the Quarterly Journal of Economics — one of the top journals in all of economics — showed that most ad experiments are underpowered.
 
@@ -356,11 +362,13 @@
 
 > This isn't pessimism. It's the scientific reality. And it means we need to be honest about uncertainty — with ourselves and with our advertisers.
 
-[ADVANCE]
+[NEXT → Slide 28: "Why This Matters Now." Haus and LiftLab already selling to our advertisers.]
 
 ---
 
-## SLIDE 28 — Why Now
+## You're looking at: SLIDE 28 — Why Now
+
+*Shift your energy here. You're no longer the teacher. You're the advocate.*
 
 > So — why does this matter *right now*?
 
@@ -372,11 +380,11 @@
 
 > That's not acceptable. Not for a company that wants to own its measurement narrative.
 
-[ADVANCE]
+[NEXT → Slide 29: "What We're Building." Geo holdouts → Ghost ads → Calibrated MMM diagram. "Ghost ads are the goal. Geo experiments get us there."]
 
 ---
 
-## SLIDE 29 — What We're Building
+## You're looking at: SLIDE 29 — What We're Building
 
 > Here's what we're doing about it.
 
@@ -388,31 +396,37 @@
 
 > Geo holdouts, ready today. Ghost ads, building now. Calibrated MMM, the end state. Everything else is support.
 
-[ADVANCE]
+[NEXT → Slide 30: Power Line in large text — "Without a counterfactual, ROAS is fiction." and "We're building ours now."]
 
 ---
 
-## SLIDE 30 — Close
+## You're looking at: SLIDE 30 — Close
 
-> [PAUSE — 3 seconds of silence]
+[PAUSE — let the slide appear. 2 seconds of silence before you speak.]
 
 > [SLOW] Without a counterfactual... ROAS is fiction.
 
-[PAUSE]
+[PAUSE — 3 full seconds]
 
 > Every method I just walked through — randomization, geo experiments, synthetic control, MMM — is a strategy for building that counterfactual. For estimating the universe where the ad didn't run, so we can measure what the ad actually caused.
 
 > [SLOW] We're building ours now.
 
-[PAUSE — hold for 3 seconds, then end recording]
+[PAUSE — hold 3 seconds]
+
+[STOP RECORDING]
 
 ---
 
-## APPENDIX SLIDE — Study Plan
+*The appendix slide (Study Plan) is after this. Only advance and narrate if you want to include it. Otherwise you're done.*
 
-> *Only narrate if you want to include it.* Otherwise, stop recording on Slide 30.
+---
+
+## If you continue: APPENDIX — Study Plan
 
 > If you want to go deeper, here's a three-week study plan. The Mixtape — Scott Cunningham's causal inference textbook — chapters one through three. Then Lewis and Rao's power paper and Gordon's observational-methods paper. Then run a GeoLift tutorial end-to-end. That combination will give you the foundation to design real experiments. Full reading list is in our experimentation knowledge base.
+
+[STOP RECORDING]
 
 ---
 
@@ -420,8 +434,8 @@
 
 - **Record in one take if you can.** The conversational energy of a single take is better than a polished multi-take. Mistakes make it feel human.
 - **Power Pause on Slide 4 and Slide 30.** These are your two biggest moments. Three seconds of silence before "Without a counterfactual, ROAS is fiction." Every second of silence makes the line hit harder.
-- **Slow down on the numbers.** Four thousand one hundred percent. Negative sixty three percent. Sixty to a hundred and fifteen percentage points. Numbers need space to land.
+- **Slow down on the numbers.** Four thousand one hundred percent. Negative sixty-three percent. Sixty to a hundred and fifteen percentage points. Numbers need space to land.
 - **The Tadelis story is your emotional peak.** This is where the audience decides whether to care. Lean into it. Don't rush. "They turned it off in a third of the country. Sales barely moved." Let that sit.
-- **Slides 22-23 (Causal ML) should feel fast and decisive.** You're not teaching this method — you're dismissing it. "Mathematically beautiful. Operationally dangerous." Then the Gordon result. Then move on. Thirty to forty seconds total.
-- **Slide 28 (Why Now) should feel urgent.** This is where you shift from teacher to advocate. "Haus is already selling incrementality answers to our advertisers." That's a punch. Deliver it like one.
+- **Slides 22-23 (Causal ML) should feel fast and decisive.** You're not teaching — you're dismissing. "Mathematically beautiful. Operationally dangerous." Then the Gordon result. Then move on. Thirty to forty seconds total.
+- **Slide 28 (Why Now) should feel urgent.** Shift from teacher to advocate. "Haus is already selling incrementality answers to our advertisers." That's a punch. Deliver it like one.
 - **End cleanly.** Don't say "that's all I have" or "any questions." The Power Line is the last thing in the air. Say it, pause, stop recording.
