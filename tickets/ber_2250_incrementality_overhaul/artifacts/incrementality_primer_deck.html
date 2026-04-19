@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Incrementality Measurement: A Primer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+<style>
+.reveal {
+    font-size: 32px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #222;
+}
+.reveal h1 { margin-top: 0; font-size: 2em; color: #1B2A4A; font-weight: 700; }
+.reveal h2 { margin-top: 0; font-size: 1.4em; color: #1B2A4A; font-weight: 600; }
+.reveal h3 { margin-top: 0; font-size: 1em; color: #1B2A4A; font-weight: 600; }
+.reveal p { margin: 0.4em 0; }
+.reveal section { background: #FAFAFA; }
+
+.big-number {
+    font-size: 4em;
+    font-weight: 800;
+    color: #D63B2F;
+    line-height: 1.1;
+    margin: 0.2em 0;
+}
+.big-number-context {
+    font-size: 0.75em;
+    color: #666;
+    margin: 0.3em 0;
+}
+.power-line {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: #1B2A4A;
+    line-height: 1.4;
+    max-width: 85%;
+    margin: 0 auto;
+}
+.subtitle {
+    font-size: 0.7em;
+    color: #666;
+    margin-top: 0.5em;
+}
+.strategy-num {
+    font-size: 0.6em;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.3em;
+}
+.key-point {
+    font-size: 0.85em;
+    color: #2E5090;
+    font-weight: 600;
+    margin: 0.4em 0;
+}
+.detail {
+    font-size: 0.7em;
+    color: #666;
+    line-height: 1.6;
+}
+.emphasis {
+    color: #D63B2F;
+    font-weight: 700;
+}
+.navy-emphasis {
+    color: #1B2A4A;
+    font-weight: 700;
+}
+.vs-container {
+    display: flex;
+    justify-content: center;
+    gap: 2em;
+    margin-top: 1em;
+}
+.vs-box {
+    flex: 1;
+    max-width: 40%;
+    padding: 0.8em;
+    border-radius: 8px;
+    font-size: 0.7em;
+    line-height: 1.5;
+}
+.vs-left {
+    background: #f0f0f0;
+    border-left: 4px solid #999;
+}
+.vs-right {
+    background: #e8f0ff;
+    border-left: 4px solid #2E5090;
+}
+.method-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6em;
+    margin-top: 0.8em;
+    font-size: 0.65em;
+}
+.method-card {
+    background: #f5f7fa;
+    border-radius: 6px;
+    padding: 0.6em 0.8em;
+    text-align: left;
+    border-left: 3px solid #2E5090;
+}
+.method-card.highlight {
+    border-left-color: #D63B2F;
+    background: #fff5f5;
+}
+.method-card strong {
+    color: #1B2A4A;
+    display: block;
+    margin-bottom: 0.2em;
+}
+.numbered-list {
+    font-size: 0.75em;
+    text-align: left;
+    max-width: 80%;
+    margin: 0.8em auto 0;
+    line-height: 2;
+}
+.numbered-list .num {
+    color: #999;
+    margin-right: 0.3em;
+}
+.equation-box {
+    background: #f5f7fa;
+    border-radius: 8px;
+    padding: 1em 1.5em;
+    display: inline-block;
+    margin: 0.5em 0;
+    font-size: 0.9em;
+}
+.equation-box .var {
+    color: #2E5090;
+    font-weight: 600;
+    font-style: italic;
+}
+.footer-note {
+    text-align: center;
+    font-size: 0.4em;
+    color: #AAA;
+    margin-top: 1em;
+}
+.reveal table {
+    font-size: 0.55em;
+    margin: 0.5em auto;
+    border-collapse: collapse;
+}
+.reveal table th {
+    background: #1B2A4A;
+    color: white;
+    padding: 0.4em 0.8em;
+    font-weight: 600;
+}
+.reveal table td {
+    padding: 0.35em 0.8em;
+    border-bottom: 1px solid #eee;
+}
+.reveal table tr:nth-child(even) { background: #f9f9fb; }
+.checkmark { color: #2a9d2a; }
+.xmark { color: #D63B2F; }
+.diagram-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1em;
+    margin: 1em 0;
+    font-size: 0.75em;
+}
+.diagram-node {
+    background: #f5f7fa;
+    border: 2px solid #2E5090;
+    border-radius: 8px;
+    padding: 0.6em 1em;
+    font-weight: 600;
+    color: #1B2A4A;
+}
+.diagram-node.red {
+    border-color: #D63B2F;
+    background: #fff5f5;
+}
+.diagram-arrow {
+    font-size: 1.5em;
+    color: #999;
+}
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- SLIDE 1: Title -->
+<section>
+    <h1 style="font-size: 1.8em;">Incrementality Measurement</h1>
+    <p style="font-size: 1em; color: #2E5090; font-weight: 600; margin-top: 0.3em;">A Primer for the TI Team</p>
+    <p class="subtitle">Malachi Dunn &middot; April 2026</p>
+    <p class="footer-note">~20 min &middot; BER-2250 Incrementality Overhaul</p>
+</section>
+
+<!-- SLIDE 2: The eBay Sign-Flip -->
+<section>
+    <p class="big-number-context">eBay, 2015. Attributed ROI:</p>
+    <div class="big-number">4,100%</div>
+    <p class="big-number-context">True causal ROI:</p>
+    <div class="big-number" style="font-size: 3em;">-63%</div>
+    <p class="footer-note">Blake, Nosko &amp; Tadelis (2015), Econometrica</p>
+</section>
+
+<!-- SLIDE 3: Same data, different method -->
+<section>
+    <h2>Same company. Same data.</h2>
+    <p style="font-size: 1.1em; color: #666; margin-top: 0.5em;">Different method.</p>
+    <p style="font-size: 0.75em; color: #999; margin-top: 1.5em;">The ads were losing money the entire time.<br>Nobody knew because nobody measured the counterfactual.</p>
+</section>
+
+<!-- SLIDE 4: Power Line -->
+<section>
+    <div class="power-line">
+        You can't measure what an ad caused<br>
+        without knowing what would've happened without it.
+    </div>
+</section>
+
+<!-- SLIDE 5: Potential Outcomes -->
+<section>
+    <h2>The One Idea Everything Is Built On</h2>
+    <div class="equation-box" style="margin-top: 0.5em;">
+        <span class="var">Y</span>(1) = outcome if they <span class="navy-emphasis">see the ad</span><br>
+        <span class="var">Y</span>(0) = outcome if they <span class="navy-emphasis">don't</span><br><br>
+        Causal effect = <span class="var">Y</span>(1) &minus; <span class="var">Y</span>(0)
+    </div>
+    <p class="footer-note">Rubin (1974) &middot; The potential outcomes framework</p>
+</section>
+
+<!-- SLIDE 6: The Fundamental Problem -->
+<section>
+    <h2>The Fundamental Problem</h2>
+    <div class="power-line" style="font-size: 1.2em; margin-top: 0.5em;">
+        You only ever observe one.
+    </div>
+    <p class="detail" style="margin-top: 1em;">The household either saw the ad or didn't.<br>The other universe is permanently unobservable.</p>
+    <p class="key-point" style="margin-top: 0.8em;">Every method in this talk is a strategy<br>for estimating the missing half.</p>
+</section>
+
+<!-- SLIDE 7: Why Ads Are Hard -->
+<section>
+    <h2>Why Ads Are Especially Hard</h2>
+    <div class="numbered-list">
+        <span class="num">1.</span> <span class="navy-emphasis">Selection bias</span> &mdash; we target people likely to convert<br>
+        <span class="num">2.</span> <span class="navy-emphasis">Activity bias</span> &mdash; heavy users see more ads AND buy more<br>
+        <span class="num">3.</span> <span class="navy-emphasis">Confounding</span> &mdash; holidays boost both spend and sales
+    </div>
+    <p class="detail" style="margin-top: 1em;">All three inflate every ROAS number.</p>
+</section>
+
+<!-- SLIDE 8: The Result -->
+<section>
+    <div class="power-line" style="font-size: 1.1em;">
+        View-through ROAS looks high<br>even if the ad did nothing.
+    </div>
+    <p class="detail" style="margin-top: 1em;">The targeting <em>works</em> &mdash; that's the problem.<br>It works so well that post-exposure conversion rates look high<br>even when the ad itself contributed zero.</p>
+</section>
+
+<!-- SLIDE 9: Five Strategies Overview -->
+<section>
+    <h2>Five Strategies for the Missing Half</h2>
+    <div class="numbered-list">
+        <span class="num">1.</span> <span class="navy-emphasis">Randomization</span> (RCTs, ghost ads)<br>
+        <span class="num">2.</span> <span class="navy-emphasis">Geo experiments</span> (the pragmatic RCT)<br>
+        <span class="num">3.</span> <span class="navy-emphasis">Quasi-experiments</span> (DiD, synthetic control)<br>
+        <span class="num">4.</span> <span class="navy-emphasis">Marketing Mix Modeling</span> (the top-down view)<br>
+        <span class="num">5.</span> <span class="navy-emphasis">Causal ML</span> (handle with care)
+    </div>
+</section>
+
+<!-- SLIDE 10: Strategy 1 — Randomization -->
+<section>
+    <p class="strategy-num">Strategy 1</p>
+    <h2>Randomization</h2>
+    <div class="power-line" style="font-size: 1em; margin-top: 0.5em;">
+        If you flip a coin to decide who sees the ad,<br>
+        the two groups are identical in every way<br>
+        <em>except exposure.</em>
+    </div>
+    <p class="detail" style="margin-top: 0.8em;">Any outcome difference must be caused by the ad.<br>The coin doesn't care about intent, income, or device.</p>
+</section>
+
+<!-- SLIDE 11: Ghost Ads -->
+<section>
+    <p class="strategy-num">Strategy 1 &middot; Ghost Ads</p>
+    <h2>The Clever Version of an RCT</h2>
+    <div class="vs-container">
+        <div class="vs-box vs-right">
+            <strong style="color: #1B2A4A;">Treatment</strong>
+            Selected by targeting<br>
+            <span class="navy-emphasis">Sees the ad</span>
+        </div>
+        <div class="vs-box vs-left">
+            <strong style="color: #666;">Control</strong>
+            Selected by targeting<br>
+            <span style="color: #999;">Sees nothing (or PSA)</span>
+        </div>
+    </div>
+    <p class="key-point" style="margin-top: 0.5em;">Both groups were selected. Only one was exposed.</p>
+    <p class="detail">Removes selection bias without losing auction-level comparability.</p>
+</section>
+
+<!-- SLIDE 12: ITT vs TOT -->
+<section>
+    <p class="strategy-num">Strategy 1 &middot; Estimators</p>
+    <h2>ITT vs TOT</h2>
+    <div class="vs-container">
+        <div class="vs-box vs-left">
+            <strong style="color: #666;">Intent-to-Treat (ITT)</strong>
+            Compare groups <em>as assigned</em><br>
+            Conservative &middot; Clean &middot; Easy to interpret<br>
+            <span style="color: #999;">What we should report</span>
+        </div>
+        <div class="vs-box vs-right">
+            <strong style="color: #1B2A4A;">Treatment-on-Treated (TOT)</strong>
+            Adjust for who <em>actually saw</em> the ad<br>
+            Closer to the stakeholder question<br>
+            <span style="color: #2E5090;">What leadership wants to hear</span>
+        </div>
+    </div>
+    <p class="detail" style="margin-top: 0.5em;">The difference matters. ITT biases toward zero when coverage is low.</p>
+</section>
+
+<!-- SLIDE 13: Why RCTs Are Hard in CTV -->
+<section>
+    <p class="strategy-num">Strategy 1 &middot; CTV Challenges</p>
+    <h2>Why RCTs Are Hard in CTV</h2>
+    <div class="numbered-list">
+        <span class="num">1.</span> No persistent cross-device ID<br>
+        <span class="num">2.</span> Household co-viewing (3 people, 1 coin flip)<br>
+        <span class="num">3.</span> Walled gardens won't let you run holdouts<br>
+        <span class="num">4.</span> Ghost-ad infrastructure doesn't exist yet<br>
+        <span class="num">5.</span> Low conversion rates need <em>huge</em> samples
+    </div>
+    <p class="footer-note">Lewis &amp; Rao (2015): most ad experiments are underpowered</p>
+</section>
+
+<!-- SLIDE 14: Strategy 2 — Geo Experiments -->
+<section>
+    <p class="strategy-num">Strategy 2</p>
+    <h2>Geo Experiments</h2>
+    <div class="power-line" style="font-size: 1em; margin-top: 0.5em;">
+        Can't randomize households?<br>
+        Randomize geographies.
+    </div>
+    <p class="detail" style="margin-top: 0.8em;">Split DMAs into treatment and control.<br>Some get your CTV campaign. Others don't.<br>Compare total sales.</p>
+</section>
+
+<!-- SLIDE 15: Why Geo Works for CTV -->
+<section>
+    <p class="strategy-num">Strategy 2 &middot; Why It Fits CTV</p>
+    <h2>Geo Experiments + CTV = Natural Fit</h2>
+    <div class="numbered-list">
+        <span class="num"><span class="checkmark">&#10003;</span></span> No user IDs needed<br>
+        <span class="num"><span class="checkmark">&#10003;</span></span> Walled gardens don't matter (measuring total sales)<br>
+        <span class="num"><span class="checkmark">&#10003;</span></span> Co-viewing doesn't matter (a geo is a geo)<br>
+        <span class="num"><span class="checkmark">&#10003;</span></span> MNTN already does this via Haus
+    </div>
+    <p class="detail" style="margin-top: 0.5em;">This is the method Haus, LiftLab, and Meta GeoLift all use.</p>
+</section>
+
+<!-- SLIDE 16: Geo Challenges -->
+<section>
+    <p class="strategy-num">Strategy 2 &middot; Challenges</p>
+    <h2>Geo Is Not Free</h2>
+    <div class="numbered-list">
+        <span class="num"><span class="xmark">&#10007;</span></span> DMAs aren't interchangeable (NYC &ne; Omaha) &mdash; need synthetic controls<br>
+        <span class="num"><span class="xmark">&#10007;</span></span> Spillover (VPNs, travel, cross-border streaming)<br>
+        <span class="num"><span class="xmark">&#10007;</span></span> Only ~210 DMAs &mdash; limited power<br>
+        <span class="num"><span class="xmark">&#10007;</span></span> 41% of CTV effect shows up <em>after</em> campaign ends
+    </div>
+    <p class="footer-note">Haus BFCM 2025 report: measurement window matters</p>
+</section>
+
+<!-- SLIDE 17: Strategy 3 — Quasi-Experiments -->
+<section>
+    <p class="strategy-num">Strategy 3</p>
+    <h2>Quasi-Experiments</h2>
+    <div class="power-line" style="font-size: 1em; margin-top: 0.5em;">
+        When you can't randomize, exploit<br>something that <em>looks like</em> randomization.
+    </div>
+</section>
+
+<!-- SLIDE 18: DiD -->
+<section>
+    <p class="strategy-num">Strategy 3 &middot; Difference-in-Differences</p>
+    <h2>DiD: The Workhorse</h2>
+    <div class="equation-box">
+        (<span class="var">CA after</span> &minus; <span class="var">CA before</span>) &minus; (<span class="var">OR after</span> &minus; <span class="var">OR before</span>)
+    </div>
+    <p class="detail" style="margin-top: 0.5em;">Cancels out baseline differences AND shared trends.<br>What's left is the causal effect.</p>
+    <p class="key-point" style="margin-top: 0.5em;">Big assumption: parallel trends</p>
+    <p class="detail">Without the campaign, CA and OR would have moved in sync.</p>
+</section>
+
+<!-- SLIDE 19: Synthetic Control / CausalImpact -->
+<section>
+    <p class="strategy-num">Strategy 3 &middot; Synthetic Control</p>
+    <h2>CausalImpact / BSTS</h2>
+    <p class="detail" style="margin-top: 0.3em;">Build a <span class="navy-emphasis">"synthetic California"</span> from weighted other states.</p>
+    <div class="equation-box" style="font-size: 0.8em;">
+        Synthetic CA = 30% AZ + 25% NV + 20% TX + 25% CO
+    </div>
+    <p class="detail" style="margin-top: 0.5em;">Chosen to match real CA historically.<br>Post-treatment gap = causal effect.</p>
+    <p class="key-point" style="margin-top: 0.5em;">We already use this at MNTN (TI-748).</p>
+</section>
+
+<!-- SLIDE 20: Strategy 4 — MMM -->
+<section>
+    <p class="strategy-num">Strategy 4</p>
+    <h2>Marketing Mix Modeling</h2>
+    <div class="power-line" style="font-size: 1em; margin-top: 0.5em;">
+        Completely different animal.<br>Top-down, not bottom-up.
+    </div>
+    <p class="detail" style="margin-top: 0.8em;">Weekly aggregated data. Regress sales on spend by channel.<br>The <em>only</em> method that works across all channels at once.</p>
+</section>
+
+<!-- SLIDE 21: Triangulation -->
+<section>
+    <p class="strategy-num">Strategy 4 &middot; The Modern Pattern</p>
+    <h2>MMM + Experiments = Triangulation</h2>
+    <div class="diagram-box">
+        <div class="diagram-node">Geo Lift Tests</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-node" style="border-color: #1B2A4A;">Bayesian MMM</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-node red">iROAS</div>
+    </div>
+    <p class="detail">Experiments provide <span class="navy-emphasis">causal priors</span>.<br>MMM extends them to <span class="navy-emphasis">all channels</span>.</p>
+    <p class="footer-note">BCG 2025: 46% of leading marketers use this "trifecta" pattern</p>
+</section>
+
+<!-- SLIDE 22: Strategy 5 — Causal ML -->
+<section>
+    <p class="strategy-num">Strategy 5</p>
+    <h2>Causal ML</h2>
+    <div class="power-line" style="font-size: 1em; margin-top: 0.3em;">
+        Mathematically beautiful.<br>Operationally dangerous.
+    </div>
+    <p class="detail" style="margin-top: 0.8em;">Propensity matching, doubly-robust estimators, uplift models, causal forests.<br>All rely on <em>no unmeasured confounders</em>.<br>In ads, you <span class="emphasis">always</span> have unmeasured confounders.</p>
+</section>
+
+<!-- SLIDE 23: The Gordon Result -->
+<section>
+    <h2>The Evidence Is Brutal</h2>
+    <p class="big-number-context">663 RCTs &middot; 5,000+ user features &middot; Deep-learning DML</p>
+    <div class="big-number" style="font-size: 2.5em;">62-115 pp</div>
+    <p class="big-number-context">median absolute error on lift</p>
+    <p class="detail" style="margin-top: 0.5em;">No amount of ML closes the gap.</p>
+    <p class="footer-note">Gordon, Moakler &amp; Zettelmeyer (2023), Marketing Science</p>
+</section>
+
+<!-- SLIDE 24: Attribution vs Incrementality -->
+<section>
+    <h2>Attribution vs Incrementality</h2>
+    <div class="vs-container">
+        <div class="vs-box vs-left">
+            <strong style="color: #666;">Attribution</strong>
+            "Among paths that converted,<br>how do we divide credit?"<br><br>
+            <span style="color: #999;">Journey question</span>
+        </div>
+        <div class="vs-box vs-right">
+            <strong style="color: #1B2A4A;">Incrementality</strong>
+            "Would they have converted<br>without the ad?"<br><br>
+            <span style="color: #2E5090;">Causal question</span>
+        </div>
+    </div>
+    <p class="key-point" style="margin-top: 0.5em;">Both useful. Only one is causal. Don't confuse them.</p>
+</section>
+
+<!-- SLIDE 25: The Attribution Trap -->
+<section>
+    <h2>The Attribution Trap</h2>
+    <p class="detail">Your CTV ROAS might be:</p>
+    <table>
+        <tr><td>Last-click</td><td style="font-weight: 700;">$3.50</td></tr>
+        <tr><td>Multi-touch</td><td style="font-weight: 700;">$2.80</td></tr>
+        <tr><td>View-through</td><td style="font-weight: 700;">$2.40</td></tr>
+        <tr><td>Shapley</td><td style="font-weight: 700;">$1.90</td></tr>
+    </table>
+    <p class="key-point" style="margin-top: 0.5em;">All from the same data.<br>None tell you if CTV caused any sales.</p>
+</section>
+
+<!-- SLIDE 26: Power -->
+<section>
+    <h2>How Power Works</h2>
+    <p class="detail">Power = probability of detecting an effect that actually exists.</p>
+    <div class="numbered-list" style="margin-top: 0.5em;">
+        <span class="num">1.</span> <span class="navy-emphasis">Effect size</span> &mdash; bigger effects are easier to detect<br>
+        <span class="num">2.</span> <span class="navy-emphasis">Sample size</span> &mdash; more observations = more power<br>
+        <span class="num">3.</span> <span class="navy-emphasis">Variance</span> &mdash; noisier outcomes = less power
+    </div>
+    <p class="key-point" style="margin-top: 0.8em;">If your MDE is 15% but the true lift is 5%,<br>don't run the experiment.</p>
+</section>
+
+<!-- SLIDE 27: Lewis-Rao -->
+<section>
+    <h2>The Lewis-Rao Reality Check</h2>
+    <div class="power-line" style="font-size: 1em;">
+        Most ad experiments are underpowered.
+    </div>
+    <p class="detail" style="margin-top: 0.8em;">A null result often means "not enough data" &mdash; not "no effect."</p>
+    <p class="detail" style="margin-top: 0.5em;">CTV specifics: low conversion rates + modest lifts<br>+ household-level measurement = <span class="navy-emphasis">structurally hard</span>.</p>
+    <p class="footer-note">Lewis &amp; Rao (2015), Quarterly Journal of Economics</p>
+</section>
+
+<!-- SLIDE 28: What This Means for MNTN -->
+<section>
+    <h2>What This Means for MNTN</h2>
+    <div class="numbered-list">
+        <span class="num">1.</span> <span class="navy-emphasis">Geo experiments</span> &mdash; obvious first bet (infrastructure exists today)<br>
+        <span class="num">2.</span> <span class="navy-emphasis">Ghost ads</span> &mdash; aspirational second bet (requires bidder eng)<br>
+        <span class="num">3.</span> <span class="navy-emphasis">CausalImpact</span> &mdash; keep using for rollout measurements<br>
+        <span class="num">4.</span> <span class="navy-emphasis">MMM</span> &mdash; long-term capability that ties it all together<br>
+        <span class="num">5.</span> <span class="navy-emphasis">Causal ML</span> &mdash; on the bench until experiments exist
+    </div>
+</section>
+
+<!-- SLIDE 29: Study Plan -->
+<section>
+    <h2>Going Deeper: 3-Week Study Plan</h2>
+    <div class="numbered-list">
+        <span class="num">1.</span> <em>Causal Inference: The Mixtape</em> ch. 1-3 &mdash; 8 hours<br>
+        <span class="num">2.</span> Lewis &amp; Rao (2015) + Gordon et al. (2019) &mdash; 4 hours<br>
+        <span class="num">3.</span> GeoLift tutorial end-to-end in a notebook &mdash; a weekend<br>
+        <span class="num">4.</span> Redo your CausalImpact analysis, focused on assumptions
+    </div>
+    <p class="detail" style="margin-top: 0.8em;">This leaves you genuinely competent to design Phase 1.</p>
+</section>
+
+<!-- SLIDE 30: Close -->
+<section>
+    <div class="power-line" style="font-size: 1.3em;">
+        You can't measure what an ad caused<br>
+        without knowing what would've happened without it.
+    </div>
+    <p style="font-size: 0.8em; color: #666; margin-top: 1.2em;">
+        Every method on this list is a strategy for building that counterfactual.
+    </p>
+    <p style="font-size: 0.85em; color: #2E5090; font-weight: 600; margin-top: 0.8em;">
+        We're building ours now.
+    </p>
+</section>
+
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+    hash: true,
+    slideNumber: true,
+    controls: true,
+    progress: true,
+    center: true,
+    transition: 'fade',
+    transitionSpeed: 'slow',
+    width: 1100,
+    height: 800,
+    margin: 0.01,
+    minScale: 0.2,
+    maxScale: 1.5,
+});
+</script>
+</body>
+</html>
