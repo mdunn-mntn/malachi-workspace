@@ -194,7 +194,7 @@
 
 > The logic is the same as an RCT. Randomization at the geo level means the groups are, on average, balanced. Outcome differences are causal.
 
-[NEXT → Slide 15: Four green checkmarks — no IDs needed, walled gardens don't matter, co-viewing doesn't matter, MNTN already does this.]
+[NEXT → Slide 15: Four green checkmarks — no IDs needed, walled gardens don't matter, co-viewing doesn't matter, industry standard.]
 
 ---
 
@@ -204,7 +204,7 @@
 
 > You don't need user IDs. You're comparing aggregate sales by geography, not tracking individual households. Walled gardens — Disney, Netflix, Amazon — don't matter, because you're measuring *total sales*, not pixel fires from your own ad server. Co-viewing doesn't matter because a DMA is a DMA regardless of how many people watch.
 
-> And critically — we already do this. MNTN sells geo-based incrementality measurement today through Haus. This isn't hypothetical. It's live. The question is whether we build our own platform-native version.
+> And critically — this is already the industry standard. Haus, LiftLab, Meta's GeoLift — they all use geo holdouts. The question is whether we build our own platform-native version or rely on third-party vendors to tell the story for us.
 
 [NEXT → Slide 16: Three red X items — 41% effect after campaign ends, DMAs not interchangeable, limited power.]
 
@@ -362,7 +362,7 @@
 
 > This isn't pessimism. It's the scientific reality. And it means we need to be honest about uncertainty — with ourselves and with our advertisers.
 
-[NEXT → Slide 28: "Why This Matters Now." Haus and LiftLab already selling to our advertisers.]
+[NEXT → Slide 28: "Why This Matters Now." Third-party vendors selling incrementality answers. LiftLab running 5 experiments on our campaigns.]
 
 ---
 
@@ -372,11 +372,11 @@
 
 > So — why does this matter *right now*?
 
-> [SLOW] Haus is already selling incrementality answers to our advertisers. LiftLab is running five experiments this quarter on our campaigns. Third-party vendors are telling our customers what our ads are worth.
+> [SLOW] Third-party vendors — Haus, LiftLab, Measured — are selling incrementality answers to CTV advertisers across the industry. LiftLab is running five experiments this quarter on *our* campaigns. Vendors are answering the question "does CTV work?" and we're not in the room.
 
 [PAUSE]
 
-> If we can't validate those numbers — or build our own — we're outsourcing our most important measurement question. We're letting someone else tell the story of whether MNTN works.
+> If we can't build our own measurement — or at least validate what vendors are telling our advertisers — we're outsourcing our most important question. We're letting someone else tell the story of whether MNTN works.
 
 > That's not acceptable. Not for a company that wants to own its measurement narrative.
 
@@ -437,5 +437,5 @@
 - **Slow down on the numbers.** Four thousand one hundred percent. Negative sixty-three percent. Sixty to a hundred and fifteen percentage points. Numbers need space to land.
 - **The Tadelis story is your emotional peak.** This is where the audience decides whether to care. Lean into it. Don't rush. "They turned it off in a third of the country. Sales barely moved." Let that sit.
 - **Slides 22-23 (Causal ML) should feel fast and decisive.** You're not teaching — you're dismissing. "Mathematically beautiful. Operationally dangerous." Then the Gordon result. Then move on. Thirty to forty seconds total.
-- **Slide 28 (Why Now) should feel urgent.** Shift from teacher to advocate. "Haus is already selling incrementality answers to our advertisers." That's a punch. Deliver it like one.
+- **Slide 28 (Why Now) should feel urgent.** Shift from teacher to advocate. "Vendors are answering the question 'does CTV work?' and we're not in the room." That's a punch. Deliver it like one.
 - **End cleanly.** Don't say "that's all I have" or "any questions." The Power Line is the last thing in the air. Say it, pause, stop recording.
