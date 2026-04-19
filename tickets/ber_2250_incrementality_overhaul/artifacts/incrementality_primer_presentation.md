@@ -1,6 +1,6 @@
 # Incrementality Measurement: A Primer for the TI Team
 
-**Power Line:** You can't measure what an ad caused without knowing what would've happened without it.
+**Power Line:** Without a counterfactual, ROAS is fiction.
 
 **Audience:** TI team — data science, engineering, analytics. Varying causal inference backgrounds.
 **Format:** Loom video (~20 min), narrated over RevealJS slides.
@@ -56,10 +56,14 @@
 ### Slide 2: The eBay Sign-Flip (Opening — Startling Stat)
 eBay 2015. Attributed ROI: 4,100%. True causal ROI: -63%.
 Same company. Same data. Different method.
-(Narration: "This is from a 2015 Econometrica paper. eBay ran paid search ads for years, measuring ROI the standard way — attributed conversions divided by spend. 4,100% return. Then they ran a proper experiment — turned off ads in random geos. Sales barely moved. The true ROI was negative sixty-three percent. Not lower. Negative. The ads were losing money.")
+(Narration: "In 2013, eBay's marketing team was spending $50 million a year on paid search. Their dashboards showed a 4,100% ROI. Then Steve Tadelis — an economist they'd hired from Berkeley — asked one question: 'What happens if we turn it off?' They turned off paid search in a third of the country. Sales barely moved. The entire $50 million was going to people who would have bought anyway. Tadelis published the paper. eBay's CMO left the company.")
 
-### Slide 3: Power Line
-"You can't measure what an ad caused without knowing what would've happened without it."
+### Slide 3: The Tadelis Story
+Same company. Same data. Different method.
+(Narration: Tadelis story — character, emotion, moment, specific detail)
+
+### Slide 4: Power Line
+"Without a counterfactual, ROAS is fiction."
 
 ### Slide 4: Potential Outcomes
 Y(1) = outcome if they see the ad
