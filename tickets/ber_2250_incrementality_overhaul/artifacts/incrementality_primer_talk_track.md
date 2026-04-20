@@ -418,18 +418,6 @@
 
 ---
 
-*The appendix slide (Study Plan) is after this. Only advance and narrate if you want to include it. Otherwise you're done.*
-
----
-
-## If you continue: APPENDIX — Study Plan
-
-> If you want to go deeper, here's a three-week study plan. The Mixtape — Scott Cunningham's causal inference textbook — chapters one through three. Then Lewis and Rao's power paper and Gordon's observational-methods paper. Then run a GeoLift tutorial end-to-end. That combination will give you the foundation to design real experiments. Full reading list is in our experimentation knowledge base.
-
-[STOP RECORDING]
-
----
-
 ## Recording Tips
 
 - **Record in one take if you can.** The conversational energy of a single take is better than a polished multi-take. Mistakes make it feel human.
