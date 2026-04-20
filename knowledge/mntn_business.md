@@ -186,6 +186,15 @@ Tillium, Klaviyo, Ours Privacy, HubSpot V2, Freshman, Bombora. List subject to c
 - MNTN almost certainly looks bad on external incrementality studies because everything is currently optimized toward the visit (high-intent users who would've converted anyway).
 - This is the core strategic risk: if external vendors show low lift, it undermines MNTN's value proposition. If MNTN can prove incrementality, it becomes a competitive moat vs Meta/Google.
 
+### CTV vs Paid Search — Accelerator Framing (Alex Bloore VP TPM, 2026-04-20)
+Alex pushed back on positioning CTV as a "richer-signal upgrade to paid search" (Malachi's original BUK Loom framing). His read — endorsed by Malachi — is materially different and more defensible. This is the framing to use in exec/buyer-facing materials:
+
+- **Paid search's moat is timing, not signal.** Search wins because it surfaces options at the moment intent is absolute-peak — right when a user sits down to explore. CTV cannot pump budget and instantly see results. The timing advantage is structural; richer signal does not close it.
+- **Google has richer behavioral signal than MNTN.** GA is on everyone's site — Google has durable, structured behavioral data MNTN cannot match. Claiming CTV has richer signal than search overstates the case.
+- **CTV's real value is as an accelerator.** Take the non-incremental portion of a marketer's search budget and make it incremental by creating more high-intent users. CTV makes lower-funnel spend more efficient; it doesn't replace search.
+
+Implication for positioning: do not frame CTV as "search replacement" or "signal upgrade." Frame it as the thing that creates the high-intent audience that search then closes. This is the contrarian-but-defensible angle. Tracking ticket: [TI-891](https://mntn.atlassian.net/browse/TI-891). Reinforces Kale's "incremental ROAS is the metric" read from 2026-04-08.
+
 ---
 
 ## Customer & Advertiser Context
