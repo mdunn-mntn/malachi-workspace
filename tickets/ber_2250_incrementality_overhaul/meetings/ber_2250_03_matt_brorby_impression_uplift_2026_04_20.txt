@@ -1,0 +1,1306 @@
+[00:01] All right, cool. Um, so I posted a,
+[00:05] I created a loom video yesterday, um,
+[00:08] going over incremental row as, and, uh,
+[00:13] I posted there. It's pretty cool. It's a good summary.
+[00:15] It's basically like a high, I wouldn't say super high level.
+[00:19] It's not like exec level.
+[00:20] Cause I do say some more like technical things about certain
+[00:25] things, but, um, the TLDR is that I took Claude and made to
+[00:30] do research, a ton of research on every single article I could
+[00:33] find, I think went through like 4,000 articles. It was insane.
+[00:35] Right. And so then I started to read all the methodology and
+[00:38] what the top methodology is across the board.
+[00:40] And, uh, number one is randomized control trials, right?
+[00:43] That's, uh, I think that's an obvious one.
+[00:45] The gold standard, the gold standard, right?
+[00:47] Um, the second one is ghost bidding, actually.
+[00:49] So ghost bidding is, is the best way to do it.
+[00:52] In fact, it's what, uh, it's what Google and meta use.
+[00:55] Um, I put it in there, but Google sends like a hundred
+[00:58] million ghost ads a day.
+[01:00] And it is different than how we've talked about ghost bidding,
+[01:03] but the same idea of we would have targeted this person.
+[01:07] So they pseudo get an impression, right?
+[01:09] They, they do some sort of like a PSA ad,
+[01:13] like an actual alternate ad served, or do they just fake it?
+[01:17] They fake it.
+[01:18] Um, you can do a PSA ad.
+[01:20] No, they fake it.
+[01:21] Um, you can do a PSA ad, but yeah, they do fake it.
+[01:24] And so the, um, yeah, so there's that.
+[01:29] Um, and then there's some other cool ones where it shows like
+[01:32] how you can use causal impact.
+[01:36] And, um, there's some other methods they're using there,
+[01:39] but basically a gold standard is gold bid or ghost bidding and
+[01:42] the randomized control trials.
+[01:43] So basically as far as engineering is concerned is we need to
+[01:47] figure out how we can actually implement ghost bidding to be like,
+[01:50] just like a thing that's done all the time.
+[01:53] Um, yeah, we can still work around it for now,
+[01:58] but this is something I want to bring up,
+[02:00] but Jordan and Zach are literally going to hate my guts.
+[02:03] When I say this,
+[02:04] the best thing that we can do like the best
+[02:09] is geo targeting DMA targeting
+[02:14] with synthetic controls.
+[02:16] And I'll tell you why the issue is,
+[02:20] uh, the issue is power.
+[02:23] So I did a ton of research.
+[02:26] The problem with advertising is power.
+[02:28] We do not.
+[02:29] So here's the issue.
+[02:30] If you're your minimum, like a, uh, measurable lift,
+[02:35] right.
+[02:36] It's 15%, but we're only getting what two to 8%.
+[02:42] Like that's what I said in the meeting.
+[02:43] It doesn't matter.
+[02:44] It doesn't matter.
+[02:45] So the problem is that exactly what you're finding.
+[02:47] Right.
+[02:48] I even covered the two different types of,
+[02:49] uh, of ways to measure the audiences,
+[02:52] right.
+[02:53] The ITT versus TOT.
+[02:54] Right.
+[02:55] And the,
+[02:56] the consensus is that we just,
+[02:58] most tests just don't hit power.
+[03:00] And the only way that we can do this is if we have to have huge scale,
+[03:03] like literally we would have to have do like advertisers that spend like
+[03:07] $500,000 a month or something crazy like that.
+[03:10] Like it would be.
+[03:11] And power here is not impression serve,
+[03:13] but like,
+[03:14] no,
+[03:15] because the conversion rate and the visit rates are so low.
+[03:18] It's based on visits.
+[03:19] Yeah.
+[03:20] Impressions.
+[03:21] That'd be great.
+[03:22] Yeah.
+[03:23] Right.
+[03:24] So that's the problem is it's such a low conversion rate.
+[03:25] And so that's our issue.
+[03:26] And so the problem with advertising is a few things,
+[03:30] right.
+[03:31] Targeting is inherently non-random,
+[03:32] right?
+[03:33] Like we can't,
+[03:34] there's targeting.
+[03:35] Election bias is our,
+[03:36] is our team's goal.
+[03:38] Yeah.
+[03:39] That's literally our selection bias.
+[03:40] Right.
+[03:41] So you,
+[03:42] so the only way that you can do that is like,
+[03:47] yeah,
+[03:48] exactly.
+[03:49] Like the,
+[03:50] the,
+[03:51] I think the best way to do it is we already have geo,
+[03:54] which makes it possible to target geo,
+[03:57] but that's like set up real experiments,
+[03:59] things like that.
+[04:00] Right.
+[04:01] I think ghost bidding is probably the best way that we can do this.
+[04:05] Like that's honestly my opinion,
+[04:09] ghost bidding,
+[04:10] having it set up in the system where we do ghost bids all the time is the
+[04:15] only realistic way that we can do it.
+[04:22] Besides geo targeting,
+[04:24] like besides,
+[04:25] so there's like a little offshoot of geo where it's like you create a
+[04:28] synthetic geo.
+[04:29] So like,
+[04:30] let's say I even use this,
+[04:32] this example,
+[04:33] if you take California and you do a campaign for all of California and you
+[04:37] didn't run it for Oregon,
+[04:38] right.
+[04:39] You can compare Oregon and then subtract and do the different diff,
+[04:42] right.
+[04:43] Or you can create a synthetic California made from many DMAs,
+[04:46] right.
+[04:47] That match California for like the last year.
+[04:49] So that's the other way you can do it.
+[04:51] But the TLDR on that is that again,
+[04:55] I think geo is the best bet and ghost bidding is something that we should
+[04:59] absolutely like,
+[05:00] I don't even see if Google can't think of a better way.
+[05:03] Yeah.
+[05:04] If we're going to be able to find a better way than that.
+[05:06] So,
+[05:07] and,
+[05:08] and your proposal here,
+[05:09] I'm with you.
+[05:10] Uh,
+[05:11] ghost bidding doesn't necessarily require geo in,
+[05:15] in what you're proposing,
+[05:16] right.
+[05:17] You're just saying geo is another option for us.
+[05:19] Yeah.
+[05:20] Geo is another option.
+[05:21] And it's the fact that we already have geo,
+[05:23] but the problem with geo is that like exactly what I said is that it's,
+[05:28] it's hard because you can't just like,
+[05:33] it's this same old experimentation problem.
+[05:36] And the problem that I find with cursor,
+[05:38] we don't get enough budget to get the scale to actually have a detectable
+[05:43] effect on it.
+[05:44] It's like,
+[05:45] it's just not enough.
+[05:46] Like a lot of the time it's so hard to think of mental lift.
+[05:48] So I think that the only feasible way of doing this is with ghost bidding.
+[05:52] I don't think that there's anything else that we can do.
+[05:54] And we talked about geo at some point with the experiment team and they were
+[05:59] like less enthusiastic about it.
+[06:01] I think the other problem for us,
+[06:03] a lot of our,
+[06:04] well,
+[06:05] synthetic geo gets around this,
+[06:06] right.
+[06:07] But a lot of our customers are filtering to specific geos in their targeting,
+[06:12] like another layer of selection bias into it.
+[06:16] So not everything is like us campaign,
+[06:18] right.
+[06:19] It's like Michigan campaign.
+[06:20] So then you can get into like zip code and kind of do it that way.
+[06:23] But I'm,
+[06:25] I think ghost bidding you're right is maybe the best.
+[06:27] Like geo is an option.
+[06:29] I've,
+[06:30] I've proposed that a while ago before we had the IP randomization working
+[06:38] is something we thought of as well.
+[06:40] So I'm with you.
+[06:41] I think ghost bidding is a,
+[06:42] is our best bet.
+[06:43] Yeah.
+[06:45] Cool.
+[06:46] Well,
+[06:47] I think that we should just basically figure out exactly how we are going to
+[06:51] implement ghost bidding.
+[06:52] I just think,
+[06:53] I mean,
+[06:54] we can have a talk with the team,
+[06:55] but like I said,
+[06:56] I just did a ton of,
+[06:57] I did a ton of research on it.
+[06:58] The only realistic ones are the geo and the,
+[07:00] and the ghost bidding.
+[07:01] And we already have,
+[07:02] we can do geo.
+[07:03] The problem isn't the capability of geo.
+[07:05] The problem is that we have to get advertisers.
+[07:08] They're willing to do it.
+[07:09] Right.
+[07:10] And we have to have the budget to do it.
+[07:11] And the problem with that is that we don't always get a very big budget and
+[07:15] it's difficult to get power.
+[07:18] Yeah.
+[07:19] But every,
+[07:20] if,
+[07:21] but if every single time we send a bid,
+[07:23] we send a ghost bid.
+[07:27] Then,
+[07:29] you know,
+[07:30] we can basically fix that.
+[07:32] So,
+[07:33] yeah,
+[07:34] I think it's out to me.
+[07:36] I agree.
+[07:37] I think you're on the right track.
+[07:38] I think thinking about this sprint,
+[07:42] it,
+[07:43] I would say,
+[07:44] how do we like define this methodology and do it manually for like,
+[07:49] you know,
+[07:50] this experiment,
+[07:51] right.
+[07:52] In the idea of,
+[07:54] can you build out this logic and this methodology?
+[07:57] And then if we run an experiment where it's like mid intent focused,
+[08:01] like we talked about using your methodology to evaluate that.
+[08:05] And then hopefully that informs how we,
+[08:07] you know,
+[08:08] in a broader sense,
+[08:09] continue to have ghost bidding kind of running in the background so that it's
+[08:13] always available.
+[08:15] I,
+[08:16] yeah.
+[08:17] And I think that's the only feasible way.
+[08:18] Also,
+[08:19] the other thing I was going to say,
+[08:20] it's connected as the MMM stuff.
+[08:23] I did,
+[08:24] I was doing some research on that too,
+[08:26] but I don't know if you know this Google and Facebook both have open source
+[08:30] MMM.
+[08:31] Oh,
+[08:32] really?
+[08:33] Yep.
+[08:34] And I've never done any mixed media modeling.
+[08:36] Yeah.
+[08:37] And I think that that's the,
+[08:39] really the thing here is we,
+[08:49] this is where I think it comes down to,
+[08:51] right.
+[08:53] Is we don't just want to target on the conversion.
+[08:58] We want to target on the incremental conversion.
+[09:01] Right.
+[09:02] And so it's a twofold thing.
+[09:04] We could build a model that says,
+[09:06] Hey,
+[09:07] every time we logged a conversion,
+[09:08] let's build,
+[09:09] let's build towards conversions.
+[09:10] And that'd probably move us in the right step towards incrementality.
+[09:13] Right.
+[09:14] But that's not really solving the problem either.
+[09:16] It's the incremental conversion.
+[09:17] So what we need to do is have a toggle that says not just conversion,
+[09:23] but says incremental conversion.
+[09:25] Yes.
+[09:26] No.
+[09:27] Was this incremental?
+[09:28] And I don't know if that's something that we add onto the conversion table.
+[09:30] If we create a new table that says incremental conversions only,
+[09:33] but whatever it is,
+[09:35] we need to use that.
+[09:39] And then eventually the model will have to train on incremental conversions.
+[09:42] And this is the problem on it though.
+[09:45] This is the problem.
+[09:46] I wanted to make this,
+[09:47] this is cool.
+[09:48] Actually,
+[09:49] I'll think you'll like it.
+[09:50] I scraped all the different things.
+[09:52] And so I was able to get a lot of really cool articles and like things I had
+[09:55] never heard of before.
+[09:56] So eBay,
+[09:58] well,
+[09:59] actually that's not the eBay story.
+[10:00] I start with the eBay story.
+[10:01] The meta did try to do a machine learning model,
+[10:07] the determined incrementality,
+[10:08] like not lift.
+[10:10] But they basically were like,
+[10:12] can we figure out with enough features,
+[10:16] like whether or not someone is going to convert,
+[10:18] right?
+[10:19] They threw everything at it,
+[10:21] like thousands of features.
+[10:22] I mean,
+[10:23] they had metas.
+[10:24] I mean,
+[10:25] they had metadata,
+[10:26] like,
+[10:27] you know what I'm saying?
+[10:28] They had literally probably the best amount of data.
+[10:30] Google and Facebook have more data on anybody than anybody else.
+[10:33] Right.
+[10:34] They were way off without a counterfactual.
+[10:38] They couldn't,
+[10:39] they couldn't prove anything.
+[10:40] It was super far off.
+[10:41] I mean,
+[10:42] I think what they've done to it is like,
+[10:43] we can throw in a thousand features in there and stuff and make our
+[10:46] targeting a little bit better,
+[10:47] but we're still not going to be,
+[10:48] I think it's going to be a step in the right direction moving away from
+[10:51] visits,
+[10:52] but it's not going to solve the incrementality issue.
+[10:54] Right.
+[10:55] It's like,
+[10:56] I don't know.
+[10:57] It's just,
+[10:58] it's,
+[10:59] it's a hard thing to just say only target incremental people because you
+[11:01] have no idea why people converted.
+[11:03] Did you have this in your list of research articles,
+[11:07] the causal modeling for the brave and true?
+[11:11] I think Matt posted this as well.
+[11:13] That's funny.
+[11:14] I actually think that's one of the articles that was linked in it.
+[11:20] Yes.
+[11:21] Cool.
+[11:22] Okay.
+[11:23] So I think Matt is doing some testing and looking at like these meta
+[11:27] learners,
+[11:28] but the idea it's kind of,
+[11:29] kind of what you're saying.
+[11:30] And so I think for us like targeting as,
+[11:35] as,
+[11:36] as you're aware and you know,
+[11:37] right,
+[11:38] like there are a lot of extra confounding features to get to the conversion
+[11:42] piece.
+[11:44] So then the meta learners say we can keep the visit as the goal,
+[11:51] but now everything is conditional on an impression.
+[11:54] So then the,
+[11:56] if they received an impression or not is an input into the model.
+[12:00] So then when you model,
+[12:02] you say probability of visit with an impression,
+[12:06] probability of visit without an impression.
+[12:09] And then the difference in the probability is like incremental in the idea
+[12:13] of instead of the person with the highest probability of visit,
+[12:18] what you really would rank order by is the highest difference in probability
+[12:24] of visit if they received an impression.
+[12:27] And then I think,
+[12:28] I think the idea then is more incremental visits than any of them who convert.
+[12:34] Those are incremental conversion.
+[12:35] So it kind of saves us some of the like confounding that comes from conversions
+[12:43] in a way.
+[12:44] I think the way Matt is thinking about how do we model for incrementality in
+[12:49] some way.
+[12:50] Okay.
+[12:51] I will take a look at this.
+[12:53] But yeah,
+[12:55] I mean I am going to basically work on,
+[12:59] I think that the,
+[13:01] I think the big lift here is educating people on our issues,
+[13:11] which are number one,
+[13:12] reaching power and what our options are,
+[13:17] which I really think the only feasible options are geo targeting and ghost
+[13:21] bidding.
+[13:22] We can do causal impact,
+[13:23] but like again,
+[13:24] we still run into the issue of causal impact where it's,
+[13:27] it's so hard to grab all the features and get everything that you need.
+[13:32] Right.
+[13:33] And then the second thing is going to be building out that with engineering.
+[13:36] And so that's more of an engineering thing,
+[13:38] but like still it's like we need to build that out.
+[13:40] And then third,
+[13:41] you and I probably need to get really,
+[13:46] really strong about answering all the what ifs,
+[13:50] what,
+[13:51] why type of thing.
+[13:52] So like being able to say with confidence,
+[13:56] we need to hit this number of visits and impressions before we can
+[14:01] realistically make a determined depending,
+[14:04] depending on their historical IVR.
+[14:06] Right.
+[14:07] We need to have this many impressions and this many things.
+[14:10] So I guess,
+[14:11] I don't know,
+[14:12] brush up on your power stuff.
+[14:14] Yeah.
+[14:15] I mean like sample size calculator,
+[14:16] right.
+[14:17] Is like a thing we'll have to think about.
+[14:19] And,
+[14:20] and it's like everything in stats.
+[14:23] It's like a,
+[14:24] it depends.
+[14:25] Right.
+[14:26] So then the answer is like,
+[14:27] okay,
+[14:28] here's the size that you need.
+[14:29] Or if you think that the difference is large enough or will be large
+[14:34] enough,
+[14:35] right.
+[14:36] From your test,
+[14:37] then we can have a smaller size.
+[14:39] So there's like things we can tweak,
+[14:40] but exactly your point of,
+[14:42] of power is very important for us to understand.
+[14:48] Before we run some of this stuff.
+[14:52] Okay.
+[14:53] Well,
+[14:54] let's,
+[14:55] I assume we'll probably sync together.
+[14:56] I'm going to go through the tickets.
+[14:57] I,
+[14:58] just to give you an idea of what I'm doing.
+[14:59] Hold on.
+[15:00] Let me pull it up here.
+[15:01] I've created some tickets.
+[15:02] Okay.
+[15:05] Okay.
+[15:06] So I already did the company,
+[15:07] the loom video.
+[15:08] Yeah.
+[15:09] I'll watch that today.
+[15:10] Yeah.
+[15:11] It's pretty,
+[15:12] I don't know.
+[15:13] Y'all,
+[15:14] y'all have to give me some feedback.
+[15:15] Tell me if it's boring or not.
+[15:17] I was going to give you the script because it was so much stuff.
+[15:18] I was just.
+[15:19] Sure.
+[15:20] I didn't want to.
+[15:21] Plus it was like,
+[15:22] it was still 21 minutes with like the whole script,
+[15:24] like scripts.
+[15:25] So trying to keep it brief.
+[15:29] What am I going to do here?
+[15:34] We need to think about.
+[15:39] Excuse me.
+[15:41] Just trying to think here.
+[15:43] If proceeding.
+[15:44] So if we're going to proceed,
+[15:46] this is what the 10% holdout.
+[15:54] Okay.
+[15:55] Design shuffling mechanism,
+[15:56] reassign cohorts between intent tiers,
+[15:59] determine shuffle percentage and duration.
+[16:02] Identify system changes,
+[16:03] needy,
+[16:04] needed.
+[16:06] Preserve original scores for ITT analysis.
+[16:08] I went to second phase,
+[16:09] train a model focused on lift,
+[16:11] not just visit prediction using impression receipt as a training feature.
+[16:15] This would replace the shuffling approach with the model.
+[16:18] I think I need to have a discussion with Matt.
+[16:21] About.
+[16:23] This point,
+[16:24] I'm looking at ticket T eight 37.
+[16:26] It's ghost bidding,
+[16:27] experiment,
+[16:28] design and intent focused.
+[16:31] That's probably what I'm working on.
+[16:34] Yes.
+[16:35] Okay.
+[16:36] Which part.
+[16:39] I'm just kind of reading through it.
+[16:41] Hold on,
+[16:42] Matt.
+[16:43] Do you,
+[16:44] do you have a minute?
+[16:46] Do you have a minute?
+[16:48] Yeah, yeah, yeah, of course.
+[16:57] Hold on.
+[16:57] I'm just trying to see if I can...
+[16:59] So some of this, I think, goes away.
+[17:01] So.
+[17:03] So some of this,
+[17:04] I think goes away.
+[17:08] Some of the ass,
+[17:09] I think here are not needed if we don't do shuffling.
+[17:12] Like if we do mid intent only.
+[17:14] Yeah.
+[17:18] So there's something that you said.
+[17:19] High intent is already higher,
+[17:20] highly incremental.
+[17:22] How does he know that?
+[17:25] Where do you say that?
+[17:28] Oh,
+[17:29] based on TI three,
+[17:30] 84.
+[17:32] This might be a slop here.
+[17:33] Well,
+[17:34] cause hold on TI eight.
+[17:35] That's our ticket.
+[17:38] Sorry.
+[17:40] Oh,
+[17:41] this is the hypothesis.
+[17:43] That's,
+[17:44] that's like,
+[17:45] oh,
+[17:46] okay.
+[17:47] Sorry.
+[17:48] I was like,
+[17:49] okay,
+[17:50] hold on.
+[17:51] I'm like,
+[17:52] what?
+[17:53] I'm like,
+[17:54] we didn't figure that out.
+[17:55] Right.
+[17:56] So that,
+[17:57] I think this was all,
+[17:58] yeah,
+[17:59] this is all written pre results.
+[18:00] Yeah.
+[18:01] Yeah.
+[18:02] Yeah.
+[18:03] Yeah.
+[18:04] Let's see here.
+[18:05] Get them the info.
+[18:18] All right.
+[18:28] Morning,
+[18:29] Matt.
+[18:30] Hey there.
+[18:31] How's it going?
+[18:33] Good.
+[18:34] Good.
+[18:35] How you doing,
+[18:36] Matt?
+[18:37] I'm starting to get sick now.
+[18:39] Oh,
+[18:40] that sucks.
+[18:41] Everyone got sick.
+[18:42] Everybody,
+[18:43] man.
+[18:44] I took so many,
+[18:45] so much NAC and all this stuff.
+[18:46] I was like exercise and do all this stuff.
+[18:48] Cause I'm like,
+[18:49] I don't want to get sick.
+[18:50] I didn't even go to the meeting.
+[18:51] Now I'm getting sick.
+[18:53] I have a buddy who had strep last week from his kids.
+[18:57] So I don't know if it's just that.
+[19:00] Just being around.
+[19:01] Yeah.
+[19:01] Yeah.
+[19:02] Okay.
+[19:03] Well, Matt, let me give you the quick TLDR that I was talking to Alex.
+[19:07] So I posted a video about incrementality, which it's pretty good.
+[19:13] But generally, the gist is there's really only two feasible things that I think that we can do.
+[19:15] the gist is there's really only two feasible things that I think that we can
+[19:20] do.
+[19:21] And number one is geo targeting,
+[19:23] which we have capabilities of doing,
+[19:25] but we also have the issues of two things,
+[19:27] right?
+[19:28] Budget and getting to,
+[19:30] getting to power,
+[19:31] right?
+[19:32] We just don't have the sample size large enough to detect the lift.
+[19:35] Right.
+[19:36] And then the,
+[19:37] the other one is ghost bidding.
+[19:39] And I have done a ton of research on all of it.
+[19:42] And I think ghost bidding is the only realistic thing.
+[19:45] In fact,
+[19:46] Google and meta is that's what they use.
+[19:47] So I don't know if we're going to think of a better thing than Google and
+[19:50] meta.
+[19:51] I probably not.
+[19:52] So I think that kind of going forward from this,
+[19:55] we can,
+[19:56] I want to educate the team on why we're doing that.
+[20:00] And I think the video that I posted is pretty good, but we probably should have a discussion.
+[20:03] But really what it comes down to is we need to do two things.
+[20:06] So number one, we need to take a ghost bidding and figure out how to actually make it something
+[20:12] that's just part of the process where we just do ghost bids all the time.
+[20:15] I think that's the solution.
+[20:17] And then number two, if you like Jordan and Zachary, I hate my guts if I talk about geo,
+[20:22] but they hate geo so bad with a, with a passion.
+[20:25] But geo also is really valid because you can, you don't have the issues, right?
+[20:32] Like we show an ad to a household, but three people see it all, you know, all the different
+[20:38] things that come with, you know, not having identifier one person and things like that.
+[20:43] So not being targeted either.
+[20:46] So yeah, that's where we're at now.
+[20:48] And so I guess I'm just trying to think like, what is our objective right now to solve?
+[20:55] Because I personally think it's, let's set up ghost bidding and figure out how we can
+[21:00] get that implemented.
+[21:02] And then number two is, I guess the, the biggest issue that I bring up, you should definitely
+[21:09] watch the video.
+[21:09] It's, it's pretty cool.
+[21:11] I'm, you're not going to learn anything as far as like how causal impact works probably.
+[21:14] But it's just our biggest issue, right, is just I think it's the size of our experiments.
+[21:26] Like if our lift is only, which I'd be surprised if it was more, but, you know, 2% to 8% and our minimum detectable effect is like 15%, right?
+[21:35] Like that's our limitation.
+[21:36] And so it seems like unless we're doing ghost bidding on a huge sample, we are only going to, we're going to be stuck to only super large advertisers, which is like only going to be a handful of our advertisers are spending enough.
+[21:49] Or we switch to something like, I don't know.
+[21:52] I mean, that's like, I think that's really the issue here is, is the size.
+[21:55] So I'll leave it at that.
+[21:56] But that's what we're discussing is like, I'm trying to think of like, what are our next steps?
+[22:02] Yeah.
+[22:02] So, this is in the context of these analyses have been done, basically inconclusive about
+[22:11] whether there's lift or not.
+[22:14] It's somewhere in between zero and a large number.
+[22:22] It's not significantly negative.
+[22:25] So, yeah, next things.
+[22:29] I think the ghost bidding or whatever our version of ghost bidding, it makes the most sense because we already have the data in a sense, right?
+[22:38] We see available impressions coming in through bidder or like whatever log that it is, bid log, augmenter log, whatever the thing is, that stream of data is coming in already.
+[22:53] so if we can just hook up like our intent stuff to it and say we would have bid on this but
+[23:02] it's in the holdout group then that allows us to do the like the ghost bidding aspect
+[23:08] so there's two like there's a couple things ghost bidding i don't know if that has a clear
+[23:13] definition but in some cases ghost bidding is you actually do bid um you just show them
+[23:20] an unrelated ad, I think. Whereas the other one is you intentionally don't bid, which
+[23:29] is what we're doing now. But you record that you would have. There you don't know if you
+[23:38] would have won the bid or not.
+[23:39] Okay.
+[23:40] okay um but yes i agree the geo stuff is um isn't that largely outside of our control i would say
+[23:54] unless like what are you meaning by geo like we actually do experiment yeah well that's the
+[23:59] problem is what i'm saying is that the only way to do an official geo test is to get both the budget
+[24:05] and the advertisers to be on board.
+[24:08] So it makes it really hard
+[24:09] because our limitation is,
+[24:12] it depends on the IVR, right?
+[24:14] We basically take the IVR, calculate power and go,
+[24:16] okay, well, how many impressions
+[24:17] are we actually going to have to send
+[24:19] and how many visits are we going to have to do
+[24:20] to reach power to actually measure,
+[24:22] you know, like effectively measure this, right?
+[24:25] And that's usually a lot.
+[24:26] And when our limitation is budget,
+[24:28] it starts to become like they're counterintuitive.
+[24:31] It's like, well, we need a really large budget
+[24:33] in order to detect an effect,
+[24:35] but we need to detect an effect.
+[24:37] And so when you stick it with geo,
+[24:39] it becomes problematic.
+[24:40] But if you're doing ghost bidding,
+[24:42] then you don't necessarily,
+[24:45] you don't have the same issue, right?
+[24:46] Because you're not really spending any money ghost bidding.
+[24:49] Right.
+[24:50] So that's, I really think,
+[24:51] the only solution that we can do.
+[24:53] We already have an experiment in flight, basically,
+[24:56] which is the holdout group.
+[24:57] Yeah.
+[24:58] From a geo perspective,
+[25:00] one thing we can do,
+[25:02] one of my tickets or tasks of this sprint
+[25:05] is to evaluate Lyft Labs,
+[25:07] which is like a third-party
+[25:08] incrementality measurement partner.
+[25:11] I've looked at nothing so far,
+[25:13] but someone somewhere told me, I think,
+[25:16] that they do geo-based incrementality methods.
+[25:20] I think most of our,
+[25:22] well, I don't know if I can say this,
+[25:24] but from what I've heard,
+[25:27] advertisers that are exploring Mountain
+[25:31] if they are doing something with incrementality it's likely geo or there is a component of geo
+[25:37] based to it because that's the easiest thing for them to do they just do geo based targeting
+[25:42] and they say which one won which is the better one okay mountain didn't do anything why are we
+[25:48] even using them right vice versa so geo is like the way the easy way to do to do it via third
+[25:54] party stuff but i don't know if we can have constraints and we don't have to do it that way
+[26:01] We don't have a bidding as an option, but my exploration should help maybe inform, you know, what are the drawbacks and what are the trade-offs with geo from a lift slabs perspective?
+[26:13] It would be good to see what it looks like. So if that's part of what this is, which is just seeing like how the third party aspect of this works. So we can say, you know, with the ghost bidding, it's going to be the cleanest.
+[26:26] Right.
+[26:26] We're going to have the best way to ensure we measure any effect.
+[26:31] geo as with any like causal evaluation thing that's not a randomized control thing it's going
+[26:41] to have some caveats to it so um like that's that's it's going to have reduced power most
+[26:51] likely compared to what a ghost bidding situation would do yeah and i was thinking too like there's
+[26:58] another thing i bring up is that like you can do diff and diff with like a manufactured geo as well
+[27:05] so we could just target like california and then build some sort of synthetic california from other
+[27:11] geos based on like a year's worth of data so like that's another thing and the thing is like i want
+[27:15] to move away from geo because number one they hate geo geo is actually the biggest problem most
+[27:19] problematic thing in audience targeting anyways and they hate it with a passion so um the second
+[27:25] thing and it's also super dependent on one and that's max mind right um the only other thing
+[27:32] is i mean ghost bidding and so i i did have a question though and this is what my thought
+[27:38] process is is that my when you build a model the problem with just doing conversion
+[27:43] is exactly where we're running into with visit right is that we could still market towards a
+[27:50] conversion which is probably maybe better than necessarily just a visit but that still doesn't
+[27:55] solve the incremental process so like i'm thinking long term like we probably need to build out a
+[28:03] data set that says that's basically conversion but then we mark it as incremental or not
+[28:10] and we train it on that but the only problem i have with that is like i'll bring up but
+[28:15] meta did a similar thing where meta grabbed like thousands of features and try to predict it just
+[28:21] from a machine learning model and it was like wrong like just completely wrong like they threw
+[28:26] all the data they could at it and they just still couldn't reliably predict incremental um just from
+[28:32] like features alone they you have to have a counterfactual to do it reliably yes and so
+[28:40] i just wonder if it's even possible or i mean maybe for our cases not but like i want to hear
+[28:47] your thought process is what if we got a huge data set of conversions where we use the counterfactual
+[28:56] to try to you know you like predicting group mentality and then we trained a model on that
+[29:02] like do you think that that's like the ultimate end goal here or yeah okay i was waiting for the
+[29:09] channel to be created but i'm just going to share this now uh i already have something um
+[29:17] so and i've talked with alex about this but it is like i think what you're describing
+[29:26] is these different kind of meta learners which we've been like talking about alex on it which is
+[29:33] there's like T learners, S learners, X learners
+[29:37] but they all kind of do the same thing
+[29:39] one is trained on the actual treatment group
+[29:44] the ones that you targeted
+[29:45] another model is trained on a holdout group
+[29:49] that never saw any impressions
+[29:51] and you try to predict intent
+[29:54] in both separate models on separate data sets
+[29:58] same features
+[30:01] but entirely different data sets.
+[30:08] And then you're looking at the differences
+[30:10] in those predictions
+[30:11] to tell you something about incrementality.
+[30:14] So that's kind of what this is describing.
+[30:16] And it's in this repo.
+[30:19] I can share this in the channel once it's created,
+[30:21] but I've already started like building off
+[30:24] of what we did with Fangorn using the same features,
+[30:26] but having some impression data in there.
+[30:29] and trying to build that out so that we have like here's all the ones that we
+[30:36] have in our regular targeting and here's the ones that tend to be or that are in that 10%
+[30:44] holdout group and let's train a model and see what happens
+[30:47] so that's the idea and it is true like you can't just train on features and try to predict
+[30:55] incrementality you need to have because otherwise what happens is it just predicts intent to treat
+[31:02] um it's just gonna like look and be like well what led to them receiving an impression versus not
+[31:12] like right it's just predicting your targeting as opposed to predicting actual lift
+[31:18] But anyways, I built it. This is a prototype that I have going. I haven't done much evaluation
+[31:28] of it yet. But it is there's a structure there. There's this clod markdown, which is the new
+[31:36] readme file. Right? So, I think this is where we can start building off of something like
+[31:44] this. But that's what I've been looking at doing.
+[31:46] That sounds exactly like what I was thinking.
+[31:51] So there's just arguments here about what to do.
+[31:54] Alex and I have been talking about it a little bit in the last week, like I said.
+[31:56] So there's like a T learner, which is the most straightforward approach, or an X learner, which is a T learner with another layer on it.
+[32:07] Just trying to like...
+[32:08] Like two-stage modeling?
+[32:10] Yeah, it's just trying to...
+[32:14] I don't know.
+[32:16] It's very similar to
+[32:19] it's just trying to de-bias
+[32:22] things a little bit more
+[32:23] is what the X-Learner does, I guess.
+[32:26] Right.
+[32:27] So what does that look
+[32:29] when, okay, I just want to understand
+[32:31] how this works, right?
+[32:32] So you use the two model approach.
+[32:34] Yes.
+[32:35] Predicting incremental visit.
+[32:36] Does that mean
+[32:37] that when you create the list
+[32:43] of people to target,
+[32:44] you can i guess like can you explain to me the order and with this when this like would occur
+[32:51] so for example you got to train the model on the treatment then the control and then what you take
+[32:55] the difference between the two yeah like so i explain that a little bit to me this how how is
+[33:01] it selecting people based on that if you wouldn't mind so yeah there's the the treatment model
+[33:10] it trains on the treated households and then there's the control model which trains on the
+[33:14] holdout household so there we got to make sure that on the treated side it is like you got to
+[33:23] get it all down to the campaign level first because that or to the advertiser level first because
+[33:27] the holdouts are defined at the advertiser level so you go down to the advertiser level get all
+[33:32] campaigns sort it all out um and create these data sets so you have one data set that is
+[33:40] only the treated another that is only the holdout you train this model and then you have like we
+[33:49] apply the calibration so that you can actually do a difference on them but basically they each
+[33:54] each model is going to predict intent to visit in this case this is all still visits
+[34:01] It gives you a score.
+[34:03] It'll give you a score that has been calibrated so that it matches the actual observed visit rates.
+[34:14] So that if you were to do like some summary aggregation, the predicted total visit rate matches the actual visit rate.
+[34:21] So it does a calibration in that way.
+[34:24] And then you take the difference and that's your uplift score.
+[34:26] for a given household, for a given advertiser.
+[34:32] So then you can do that sorting.
+[34:36] Okay.
+[34:37] And then the ordering is not just highest visit intent.
+[34:42] It is highest incremental given an impression, essentially, right?
+[34:50] Yep.
+[34:50] Okay.
+[34:50] okay so basically the same scores that you're applying to each ip at the ip level would be
+[34:59] applied except it would just be this score that's taking in the incremental intent there i've never
+[35:05] heard of plat scaling so i'll have to look that up yeah it's a simple it's like one of the simpler
+[35:11] ones, I think. Let's see.
+[35:15] Is the scale between 0 and 1?
+[35:17] Yeah. Yep. Well, it scales it, yes, because it's scaling it to a visit rate. So
+[35:25] it's either 0 or 100%. So 0 to 1. And then this curve here, I got to kind of remember
+[35:36] what it is but it is doing it's like a ranking thing and how well it is it yeah how incrementality
+[35:44] above random or something right yeah incremental focused or causal focus it kind of looks like an
+[35:50] a like it says not a uc but it kind of looks like that i don't have the outputs in this
+[35:55] i think i saw it at the bottom maybe i'm wrong i could swear i saw it looks like a uc curve but
+[36:01] It does look like it. It's not in this notebook because it doesn't show the output.
+[36:09] But it does look like a UZ curve where the dash line is no better than random. Like the
+[36:15] 45-degree line.
+[36:16] Do you have a way to be able to see this?
+[36:22] I don't know if it uploads with outputs. I know it doesn't show outputs here.
+[36:32] Okay, gotcha.
+[36:34] I can get my version. I don't know if I ‑‑ no, I've been pulling things, so
+[36:39] it's been overwriting and making it go away. So I don't have the output of what it looks
+[36:45] like here.
+[36:46] Is all of it in the impression uplift, though? Or, like ‑‑
+[36:52] So this is all, yes, it's all in that folder.
+[36:58] It's all in that directory.
+[37:00] What would this look like in production, right?
+[37:03] Is it switching over to this?
+[37:05] Is it what I thought originally where we have people choose when they come on which one they're going to be?
+[37:14] I think we'd figure that out a little bit to some degree.
+[37:18] We can try and look at it from their objectives.
+[37:21] But there's something to be on what to do if we were to make this even kind of balance.
+[37:29] I kind of thought originally Malachi, what you're saying of like the customer chooses
+[37:33] when they come in what's important.
+[37:34] But like the real answer is people want both.
+[37:39] They want high performing, like high performance visit rates and ROAS and everything.
+[37:44] And they're incremental.
+[37:45] And since those are like those things, we need to like figure out how we, you know, do everything.
+[37:52] Right.
+[37:53] Well, that's the thing that's silly about it, because I was like, oh, well, I'll solve our incrementality problem.
+[37:57] Let's just target people that never had a site visit.
+[38:01] There you go.
+[38:02] Performance would be terrible, but the incrementality would look awesome.
+[38:05] Right.
+[38:06] So how does that work then, Matt?
+[38:08] Because I'm kind of curious.
+[38:09] couldn't you just have couldn't you have a model that's optimized on both where you have two well
+[38:16] i wouldn't say not two y but you have your your ivr your i guess you could say incremental row as
+[38:24] as one yeah
+[38:25] pause sorry real quick i'm saying incremental row as but we're talking about incremental
+[38:34] conversions right now we're talking about well in visits in this case it's incremental visits
+[38:39] but it's all correlated so it doesn't really matter yeah but like well the only reason i say
+[38:48] that is that i feel like everything goes towards incremental roas because at the end of the day
+[38:53] it's not just about what they convert but then how much money did they spend and how much did
+[38:58] they spend so i don't know if like those are stepping stones to the right direction or if it
+[39:04] already solves it but like i feel like if we feel like it's already going to go to that then maybe
+[39:09] we need to take in effect the amount that it gets complicated though right because every advertiser
+[39:15] is going to have different cost of products and frequency and all that stuff so then you'd have
+[39:20] to create a model per advertiser and then that probably one i think those are in my mind those
+[39:24] become like post-processing on the model.
+[39:28] So the model gives you a probability.
+[39:30] What you care about is like an expected value.
+[39:33] So that's just a probability times something.
+[39:37] And you can't have an incremental conversion
+[39:39] without an incremental visit.
+[39:41] So then if the model is giving us that kind of
+[39:45] less confounded signal,
+[39:49] then as Matt said, we can kind of build from there, right?
+[39:52] yep yeah so like if we're not in this world and i don't know that we're going to this world but
+[39:58] say they have something
+[40:00] Like, I want to achieve a row as of this and, um, or an incremental row as of this.
+[40:09] And they have a number that they give you and you want to target that number.
+[40:14] Then you can still use like these kinds of models that we're building that are all
+[40:19] basically more like probability estimators.
+[40:23] And then you just take the advertisers specific values and put them on top of
+[40:28] that, then you can optimize it's like, oh, I need to hit a certain number.
+[40:32] Well, I need to know what is the advertiser's like average order
+[40:35] value and all these other things.
+[40:37] They're baseline, uh, like conversion rates from the visits and all these
+[40:43] things, and then you can just multiply it all out and try to optimize it that way.
+[40:48] Should we create a feature that takes the household and sums up their total spend?
+[40:57] We can do that.
+[40:58] Platforms and then normalize it, throw it into the model, something that gets updated.
+[41:03] Yeah.
+[41:04] I mean, we can do these things for sure.
+[41:05] I think it's all about like what we really need.
+[41:08] Um, so I tried to abstract away things that have like the, well, as far as
+[41:17] features, that's a fine feature to include in the model, I would say, but
+[41:21] like as the model predicting, I think, um, having to predict something between
+[41:27] zero and one that is still not even like universal across all advertisers, but
+[41:35] it's, it is a little bit better.
+[41:37] But whereas when you start to try and predict row as, or something tied to
+[41:42] dollars, it gets a little trickier because that's much more heterogeneous.
+[41:48] Um, but for sure it's all post-processing stuff or secondary
+[41:55] models or things like that.
+[41:57] Like, I think that's likely what would happen.
+[42:00] Um, yeah, like, but what I was saying where it's like, they have a target that
+[42:09] they want to hit of a certain metric.
+[42:11] Like, I don't, we're not there yet, but, uh, so I don't think we need to worry
+[42:14] about that and I don't know that we'll ever go there, but I have seen
+[42:17] another platforms like Google analytics does have something like that.
+[42:21] Google ads where you can be like, I want to, here's my budget.
+[42:26] I want to hit a $8.
+[42:29] CPM is my target.
+[42:33] And then it will try to do that.
+[42:37] Giving you a budget and then it sounds like, okay, what if we just find all the
+[42:42] whales out there that spend an egregious amount of money and then just send that
+[42:46] one person, like a thousand ads until they buy our product.
+[42:50] Yeah.
+[42:51] I could do that too.
+[42:53] No, that's not the models.
+[42:55] That's what the models might learn, but like, we don't control all these levers.
+[42:59] That's the other part, right?
+[43:02] TOEF is doing that to some degree.
+[43:04] From what I understand, he's controlling the frequency levers.
+[43:10] So we say target this household.
+[43:11] They're likely to convert.
+[43:12] And then TOEF says, I'm only going to send them two impressions.
+[43:16] It's the limit.
+[43:21] But then we say, no, you got to send them 10 impressions.
+[43:24] That's when it tips over.
+[43:26] Cause we can do that too.
+[43:27] That's the other part of this.
+[43:28] Like you can see, um, number of impressions.
+[43:33] You could see that, like how many impressions and tell it
+[43:36] like tips over in your favor.
+[43:38] Cause that's kind of what the model can be trained on too, but yeah.
+[43:43] Well, I'm just trying to think about what is the objective that
+[43:49] the leadership wants, right?
+[43:52] And it's that we don't look incremental and we just want
+[43:54] to start looking incremental.
+[43:56] So it sounds like the easiest step to that, right?
+[43:59] We've established as the ghost bidding and the geo targeting, which we want
+[44:04] to move away from geo targeting.
+[44:05] And there's a lot of issues with that.
+[44:08] So it sounds like our next step right here is twofold, right?
+[44:13] Education of our limitations and why we need to do ghost bidding and then
+[44:20] getting it as a P one as like, we need to try to get this implemented.
+[44:26] And then it sounds like for you, it's also, I don't know.
+[44:33] Is there anything, I guess, is there anything I can do for you?
+[44:37] Like analysis wise or something that might help you, like maybe a feature
+[44:41] you need to look into or something that can help you.
+[44:42] Cause it sounds like you're going to build two models, right?
+[44:46] I don't know if you have the features.
+[44:48] Here's the thing.
+[44:48] I don't necessarily want to build the models.
+[44:50] Oh, you don't.
+[44:51] One of you two can probably take it on if you want to.
+[44:55] Um, we'll figure that part out throughout the team of doing this, but
+[44:59] yeah, we do need to build the models.
+[45:01] I think what needs to happen is.
+[45:04] So what I told Paulo is I don't know who decided to set up these
+[45:10] fold-out groups and for what reason, other than like, Oh, we want to
+[45:14] measure incrementality, but it is actually, like you said, the thing
+[45:18] that's going to allow us to actually build the model, if we didn't have
+[45:22] this 10% holdout, we would kind of be stuck until we, until we built it.
+[45:29] Cause it would be the issue that you talked about with meta.
+[45:32] You have no training data.
+[45:33] You have no clean training data.
+[45:34] You're just predicting targeting.
+[45:37] Um, but we have it for whatever reason we did this.
+[45:42] And so that actually built the training set for us.
+[45:45] So we're already ahead on that.
+[45:47] We can build a model today.
+[45:49] Um, so that's where we're good.
+[45:51] The only thing is the ghost bidding.
+[45:53] Like we can't, if we can do that part of it, that tells us a better
+[45:58] estimate of where we are as far as incrementality, that's what I would say.
+[46:06] I tried to do it in this impression uplift, like, but I don't trust the numbers.
+[46:11] So, um, yeah, I think the key is it's, it's what Matt just said.
+[46:17] They're right.
+[46:18] Ghost bidding gets us a better understanding of where we are today
+[46:22] and an incremental number that isn't zero or ridiculously high.
+[46:27] Uh, and then there, I just want to call that out because I don't think the end
+[46:33] goal with ghost bidding is like an actual product that we build and serve to our
+[46:37] customers because at the end of the day, they care about incrementality from third
+[46:43] parties who are like, you know, impartial, not grading your own homework kind of
+[46:47] thing.
+[46:48] So that's where the, we are integrating with third parties, but that doesn't
+[46:52] mean we shouldn't be able to analyze this internally and evaluate it and
+[46:56] then going forward, if we build these incrementality models, are they getting,
+[46:59] is this getting better with, you know, the signals we're producing?
+[47:04] That's how I think about it of, of as we just saw with the work you and I did last
+[47:11] week, there isn't a good number today of like, where are we at incrementally?
+[47:14] So ghost bidding helps us get there better, like a more trustworthy number.
+[47:21] And then, you know, an experiment into mid intent helps us answer that question
+[47:25] of like, okay, is there more incrementality to be had in mid intent?
+[47:30] And I think that's a question slash stop gap solution until we have the more
+[47:36] modeled incrementality solution built out in my mind.
+[47:41] Okay.
+[47:41] So I just want to make sure we have some actionable stuff here.
+[47:44] We need to figure out who's going to build the model for the incrementality
+[47:46] stuff.
+[47:47] I don't care if that's me, but that's just something we have to determine.
+[47:50] Um, and then the kind of a side off of that is that how it's going to be
+[47:54] implemented.
+[47:55] The second thing is when you communicate right now with like, sounds like Mike,
+[48:00] um, whoever leadership's going to be involved here, right?
+[48:05] Just about like when you explain, Hey, this is why we think we need to do it.
+[48:08] And this is what we need to do.
+[48:09] And then going off of that, we basically need to meet with, um, sounds like Zach
+[48:17] and Jordan on ghost bidding implementation and make it a high priority if it's
+[48:25] possible.
+[48:26] I would also ask Ryan because I would say it's closely related to what he's been
+[48:31] doing on future store.
+[48:33] Yeah.
+[48:33] Like all we need ghost bidding.
+[48:36] Okay.
+[48:37] I think we need to align on what we really need on this ghost bidding side.
+[48:40] Okay.
+[48:41] Because my feeling right now is like Alex said, it's a tool for us internally.
+[48:51] That's what it is.
+[48:52] It's not going to be what we show on the incrementality dashboard or externally
+[48:57] facing.
+[48:58] It's going to be for us.
+[49:00] And really it's just for us to try to measure incrementality and to use it to
+[49:04] like train models.
+[49:06] So we already have the data.
+[49:10] We just need it to be massaged into a dataset that we can use, which is why I
+[49:17] can have said like Ryan is close to that.
+[49:19] He knows.
+[49:21] Yeah.
+[49:21] Well, I don't think you need Zach or Jordan today to do the ghost bidding
+[49:26] method.
+[49:26] Unless we want to modify it into like ghost bidding in a way that matches what
+[49:33] other places do.
+[49:35] Well, can we talk about ghost bidding just for a second?
+[49:38] Like, okay.
+[49:38] So when I think of ghost bidding, right, how is the augmenter log solving ghost
+[49:44] bidding?
+[49:45] I'm an example.
+[49:45] Let me bring it up.
+[49:46] Cause that's, what's confusing to me.
+[49:47] Cause like we don't have anything to do with the augmenter log.
+[49:50] It that's just what they send us to bid on.
+[49:52] So I guess there is still some logic where we process whether or not we would
+[49:58] have bid on that person.
+[49:59] Yes.
+[50:00] Me.
+[50:00] Yes.
+[50:01] Okay.
+[50:01] So that part is control.
+[50:02] Okay.
+[50:03] So I'm, I'm understanding that correctly.
+[50:06] Okay.
+[50:07] In ghost bidding.
+[50:08] Sometimes it's that you actually bid or not.
+[50:11] I can't recall.
+[50:12] You bid, but you give you, you bid $0.
+[50:16] Yeah.
+[50:17] I can't remember if it's the one where you bid and intentionally lose or it's
+[50:21] the one that you bid and you win and then you show them a different ad.
+[50:25] Don't we though the, what I'm thinking about of like, we can do this today, at
+[50:30] least do the analysis is your, uh, the code that you worked with Zach and
+[50:37] Jordan on for the deterministic hash for the holdout, like we can calculate that
+[50:42] at any time.
+[50:44] That means for example, we can say, okay, campaign ID five, five, seven, five, two,
+[50:48] five, this segment ID.
+[50:51] We know this IP is a holdout IP for this campaign.
+[50:56] Like we know that all good for this advertiser.
+[50:59] So then if we go in the Augmentor log and look for where that IP shows up, here's
+[51:04] an event for this IP.
+[51:07] This campaign in this segment does not appear in the mountain segments that this
+[51:11] IP is associated with because it's a holdout.
+[51:14] However, you do know that we would have bid on it or we could have bid on it
+[51:19] because it's in the holdout set.
+[51:21] So within Augmentor log, you can already identify IPs that are in the holdout.
+[51:26] That's still like came to us as an bid option.
+[51:30] And then on the flip side, you can in the same thing, here's a targetable IP and
+[51:36] the segment for this campaign, you know, will show up in this list of mountain
+[51:41] segments for the events for this IP because it's targetable.
+[51:45] So then the idea is, you know, some probably need more than Augmentor log for
+[51:50] this piece, right?
+[51:50] But you could calculate like a win rate for this campaign.
+[51:55] And then for every holdout IP that you see, you could like apply that win rate
+[52:01] and say, okay, the win rate was 10% of the holdout group.
+[52:06] We see a hundred IPs show up in Augmentor log.
+[52:11] So then 10% of them would have won and gotten an impression.
+[52:16] So then you're like, okay, now what's, what's the visits that that holdout
+[52:21] group that came through had, you know, in the post period, just like you're doing
+[52:26] before in good log, did they visit, but now we have pseudo impressions.
+[52:31] So now you can calculate, you know, pseudo visit rate on the holdout group.
+[52:37] So talking with Ryan will be very helpful.
+[52:41] Cause I think this data is obnoxious to work with for one, and he'll have some
+[52:45] thoughts on the future, sort of do that.
+[52:47] But this is what I mean when I say like, I don't think we need Jordan or, or
+[52:50] Zach today, like all of the data is out there.
+[52:54] We just need to define the methodology to like build and identify this.
+[52:58] So then, you know, maybe the output is like advertiser or campaign ID, IP, and
+[53:06] then like, or like holdout IP and then like pseudo impressions, actual visits
+[53:10] or something, right?
+[53:12] So then you maybe don't even need the visit part, but just like, here's our
+[53:16] pseudo impression table for holdout IPs for every campaign.
+[53:21] Okay.
+[53:22] Does that make sense?
+[53:23] Yeah, that makes sense.
+[53:23] I'm just thinking like, it's not gonna, it's going to be a bit of a mess, but
+[53:28] it's possible, I think.
+[53:31] Is there any reason to scale it up though?
+[53:33] Cause we have a 10% holdout group.
+[53:34] I'm just wondering if like scaling the holdout group.
+[53:39] Yeah.
+[53:40] I mean, if we're already kind of doing this, then really the limitation, there's
+[53:43] really no limitation.
+[53:44] It's more of like a accessibility thing.
+[53:48] Like I think step one is like building the methodology regardless of how big the
+[53:52] holdout group is.
+[53:55] Gotcha.
+[53:55] Okay.
+[53:56] I can do that.
+[53:57] That's totally something I can own.
+[53:59] Like that sounds fine to me.
+[54:00] I just, I, I was under the impression that there needs to be more of a strategic way
+[54:07] to deal with ghost bidding.
+[54:08] Like for example, like I didn't know if there was some sort of implementation
+[54:11] where it's like every single time we send a bid, we also have like a ghost bid
+[54:16] associate.
+[54:16] I don't know.
+[54:17] Like, I don't know exactly how that looks, but I was, but like the fact that we have
+[54:21] the 10% group, it sounds like we already are kind of in adjacent, maybe good ticket
+[54:29] to have would be investigating the best methodology for implementing ghost bidding.
+[54:36] Does that sound like valid there?
+[54:39] Or is there, I think of it as like 10% is already fine.
+[54:42] Like, I think here, here's the trade-off to those, the 10% are IPs that we would
+[54:51] target and serve ads to, for our customers that we are purposely holding out.
+[54:55] Thankfully for these kinds of investigations, the larger that percentages is the like
+[55:01] more performance we're leaving on the table for our customers.
+[55:04] So that's why it's probably going to be hard.
+[55:08] And, and this is a ticket I have this sprint to kind of like, I think you put this
+[55:12] together Malachi, kind of answer part of that question, but I think you're right.
+[55:18] This is a separate piece, but to me, I I'm imagining like you're building out this
+[55:23] methodology.
+[55:24] We can use kind of the experiment on mid intent to kind of use that new methodology
+[55:30] to evaluate.
+[55:31] And then maybe the end result is there's a new like data pipeline that runs every
+[55:36] day and it populates a table of like, hold out IP pseudo visits.
+[55:41] So then anyone could go kind of rebuild a treatment on the treated basically from
+[55:47] that table and, and like, you could take true impressions, pseudo impressions, and
+[55:52] then visits and kind of calculate these things.
+[55:54] That's kind of, that's what I'm thinking about what that, you know, the outputs
+[55:59] might look like.
+[55:59] So the manual version, evaluate an experiment based on that, and then build out
+[56:04] kind of like the broad pipeline that bill checks these things kind of every day.
+[56:09] Okay.
+[56:10] Okay.
+[56:11] So just, just not trying to be a dead horse here, but the idea here is figure out a
+[56:18] way to collect and get all the data that we need from augment or log in an
+[56:23] ingestible way that is easy for us to basically, I don't know, like do these lips
+[56:30] calculations and all that stuff.
+[56:33] The other part, and I don't know where this lives, Matt, if you've interacted
+[56:37] with this data more, you know, obviously jump in, but like win rate will not be
+[56:41] just an augment or log thing.
+[56:43] You'll have to find something else to calculate that.
+[56:46] All we can do with augment or log, I think as you create the candidates, if you want
+[56:52] to actually do something as simple as, you know, group by, you know, treated
+[56:59] versus hold out and get visits versus pseudo visits, like that's going to be a
+[57:05] little trickier, but for sure we can do the, the, the sub setting down and the,
+[57:14] like the pipeline to take from augment or log to hold out information.
+[57:24] Trying to think of like the, we don't need to figure out the structure now, but the
+[57:28] point is you want to get it into a state where you can say, okay, here's all the
+[57:33] bits that, what's the point of this?
+[57:36] So the point is and the treatment side, the 90% that we do have as targetable, we
+[57:46] only target a smaller percentage of that.
+[57:50] So there's intent to treat, and then there's the like treatment on the treated.
+[57:55] So how do we do that on the holdout group?
+[57:58] If we don't know who we would have targeted in that subset, that's what the augment or
+[58:03] log lets you do.
+[58:04] Let's you say, we saw this IP come in once.
+[58:09] So it has a 10% chance if it's a 10% or we saw this IP come in a hundred times for
+[58:15] available impressions.
+[58:16] And every time we said no, because it's in the holdout group.
+[58:19] So that allows you to build a comparison group to your actual treated group.
+[58:25] So then you can do what we do in the dashboard where we just say, on one side it
+[58:33] is, what was the visit rate?
+[58:36] What's the impression visit rate divided by the visit rate for the holdout group?
+[58:44] That's the lift.
+[58:45] In this case, now we can actually do what's the impression visit rate versus what's
+[58:48] the pseudo impression visit rate on the holdout group.
+[58:52] We could actually build something like that.
+[58:54] So that's the point of it is to further reduce down the 10% holdout to the subset
+[59:03] that could have received an impression.
+[59:06] Okay.
+[59:08] I'm going to meet with Ryan, talk to him about this, and then I will figure out how
+[59:15] to, I'll figure out the augmenter log stuff.
+[59:19] So it sounds like that's the next big thing.
+[59:21] And then, after we figured that out and have a plan of action, I think the next
+[59:26] step after that would be bring this up to Mike, just generally, just to kind of, and
+[59:32] Bryce, Bryce probably want to know too, Mike and Bryce, and then just kind of go
+[59:37] from there for the plan.
+[59:38] Then we can figure out that point, like, you know, when we're going to build the
+[59:43] models and Matt, I just thought you were the model guy.
+[59:46] So I was like, Matt, every model that we want to build, we're just going to have
+[59:50] you do it.
+[59:50] That's the plan here.
+[59:52] No, but we'll, we'll figure that out.
+[59:55] And so then additionally, I would say.
+[60:00] Um, we would want to figure out, do we have, okay, I think Alex, you already figured this out,
+[60:07] mapping then not only whether they could have received an impression, but what was their
+[60:12] household score, the prospecting score at that time for that given IP, right? You can classify
+[60:17] them into high intent, mid intent, like, can we actually do that? Do they have that score or is
+[60:22] that? Yeah, the asterisk is that we keep 35 days of prospecting intent scores. So, you can do it
+[60:29] on a more recent type campaign. The other thing I looked at, and I don't think there's a very good
+[60:35] solution to this, but like, there is a non-zero amount of changing of intent groups, as you might
+[60:42] expect from like a fixed period in time assignment to when they receive an impression. Because here's
+[60:49] the thing that was the hard part for you, right, was on the holdout group, it's just like, well,
+[60:53] they didn't get any impressions. So, what was their score? Like, how do we assign them an intent
+[60:58] score? Are they high intent because they were high intent before, or were they mid intent? Like,
+[61:03] which one do we put them in if they've been in all the buckets? So, with this tracking, like, when the
+[61:13] potential impressions came in, we can at least do that. We can say, okay, the first
+[61:18] time that we saw an available impression for this holdout IP was on this day. So, what was
+[61:25] their intent score up to that point? We could do something. We can at least do that. That could be
+[61:31] part of the pipeline, or it could not be. Yeah, assigning their intent group would be helpful
+[61:35] there. Yeah, for evaluation stuff, yeah. Right. I think it's all, like, that would be a secondary,
+[61:43] like a level two data set. But there is some movement there. So, but I think you kind of have
+[61:49] to just draw a line in the sand and say, you know, this is treatment group assignment as of
+[61:55] and everything moves forward is evaluated with that assignment treatment group in mind.
+[62:04] Yeah, yeah. So, yeah, I think where are we then? I think what determines, like,
+[62:08] how fast all this happens is where are we on, like, what we've communicated as far as, like,
+[62:13] the analysis and... I went through all of this with Cale and Alex. Okay. So, they're on board.
+[62:20] Alex is, the target that Bryce has is April 30th, like, experiments. But the asterisk on that is,
+[62:27] doesn't have, the experiment doesn't have to be running by the April 30th, but we need the, like,
+[62:33] prep work and setup and discussion with the experiment team. So, I think for you, Malachi,
+[62:39] right now, all of that is represented in TI-837. But it's kind of, like, two streams of work,
+[62:50] right? There's everything we just discussed of, like, defining the GhostBid methodology.
+[62:54] And then in parallel is discussion with the experiment team of running a mid-intent focused
+[63:03] experiment, you know, versus our normal. And then, you know, the results of that experiment
+[63:09] lets us use your GhostBidding methodology to, like, evaluate treatment on the treated
+[63:14] for incrementality. Okay. Does that make sense? Yep. Yep. And if you want to break that up,
+[63:21] you know, however you want, you know, Bryce would be happy, I'm sure. Because what I just described
+[63:26] sounds like at least eight points in one ticket. So, you probably want, like, two work streams for
+[63:31] But I just want to say, yeah.
+[63:33] So I have one additional complexity
+[63:37] to add on top of a proposed experiment.
+[63:44] So it's what we basically just did with Fangorm experiment, which was like with what we're proposing now, it's kind of betting that mid intent is where we should be trying to find the incrementality.
+[63:51] with what we're proposing now, it's kind of betting that mid-intent is where we should be
+[63:55] trying to find the incrementality. But what if that's not the case? What if they're all in max
+[64:00] reach and we've never seen them because it's so hard to see it in there? So, what we did with
+[64:07] FameGorm was you just set up campaigns for every intent group. You say, let's target, let's have
+[64:13] one campaign that's only in high intent, another one that's only in mid-intent, and another one
+[64:18] that's only in max reach. It doesn't even go outside of those. And that's all you do. And then
+[64:24] you try to measure the incrementality in each of those buckets.
+[64:34] Like, the other way that I think about it is you just set up a campaign that has no
+[64:39] the threshold set to zero. So, it's automatically already from the beginning targeting every, well,
+[64:47] the ideal case for me is there's no nothing. Like, any impression that's coming in,
+[64:53] bid on it. You have the 10% holdout, keep it in the 10% holdout. So, now it's just like 100% of IPs
+[65:02] are in here, and X% we're going to try and get, the other percent we're not. And now it's just
+[65:11] like, I don't know what the intent score is for them, but we'll look at that on the backend after
+[65:15] we're all done. Then you have the full continuum of all intent. That was one of the analyses I was
+[65:24] looking at doing was, can we just go into the campaigns that were spending in max reach and
+[65:29] then do this analysis? Like with ghost bidding? Yeah. Yeah. That's an extra complexity so we don't
+[65:36] get stuck in being like, oh, okay, we did it for mid-intent, but what about max reach? We
+[65:42] didn't test that. Okay. Let's do that experiment now. Trying to think ahead of that a little bit.
+[65:46] Fair. I think the only, and I agree, I think that makes sense. The only feedback I can see
+[65:53] with that ask is, do we have the experiment budget or like the appetite to spend a bunch
+[65:59] looking across these things? How important is it to product or experimentation or anyone else,
+[66:06] right? To define that. Like Fanghorn, it was very clear why we needed a big experiment to do this,
+[66:10] right? It was expensive. Maybe it's less defined here of like ready to do that. Right. Okay.
+[66:20] But I agree with your insight of, we have a hypothesis that there is incrementality in
+[66:25] mid-intents, but the answer could once again be, even in this treatment on the treated framework,
+[66:33] that's not where the incrementality is.
+[66:39] There's definitely some in the max reach. I think max reach could have,
+[66:46] very possible it has the biggest incrementality.
+[66:54] But we'll see. That's what I would like to know because-
+[66:59] Max reach is also scored as mid-intent now.
+[67:03] It's all, it's what?
+[67:06] Max reach as a intent group doesn't exist anymore.
+[67:10] Exactly, yeah.
+[67:13] But it means when we do an experiment, they're all going to show up as mid-intent.
+[67:17] up as mid intent.
+[67:20] wait how does that happen
+[67:25] wouldn't it just be that they don't show up
+[67:27] so that
+[67:29] I'm trying to recall how that works
+[67:33] I'm trying to recall how that works. The max reach side of it works. It's just unscored.
+[67:43] When I do this logic.
+[67:45] Yeah.
+[67:47] There are no longer any scores below three, three, three, three.
+[67:53] Right. Yeah, yeah, yeah. That's true.
+[67:56] So they all, they should all be classified as mid-intent now, right?
+[68:00] Or they go, they're unscored, unscored as max reach.
+[68:04] Okay.
+[68:08] So I'd be interested to see what the unscored numbers look like.
+[68:11] Well, I'm not seeing any unscoreds come through. So then do they just
+[68:16] don't exist in prospecting intent? Like we're filtering them out.
+[68:19] They don't exist in prospecting intent, yes.
+[68:22] Okay.
+[68:23] They have no score in prospecting intent.
+[68:27] This is another thing with Ryan that we need to talk about too.
+[68:30] We've been talking about this with continuous scoring,
+[68:34] is possibly putting scores back in for max reach.
+[68:37] Right.
+[68:38] So that something is there.
+[68:40] So then in this case, in my analysis,
+[68:44] unscored aren't part of the universe because if they're not in prospecting intent.
+[68:50] Yeah.
+[68:51] Like where do I get unscored?
+[68:52] They're in membership DB, I think.
+[68:55] That's the thing. That's how they get through.
+[68:58] Got it.
+[68:59] Uh, I think based on like the very confusing discussions I've had with engineers on this.
+[69:07] Um, okay. Okay.
+[69:10] But it's something we can figure out for sure.
+[69:12] Basically, like my idea, the thought of it is they're in DS 19, but they're not in DS 13.
+[69:16] 19 but they're not in ds13 because mid intent is ds19 but in the bucket yeah and then max reach is
+[69:28] any keyword but no yes bucket or vertical no nothing yeah no nothing on the on that side so
+[69:30] Yes.
+[69:31] Bucket or vertical.
+[69:31] No, nothing. Yeah. No, nothing on the, on that side. So, yeah.
+[69:39] Because that's what I would expect if you're in the keywords,
+[69:41] but you don't have any browsing history in the vertical.
+[69:43] I mean, that tells me there's possibly a lot of incremental lift available there.
+[69:49] Cause you've not been in the, you're not been browsing in the vertical.
+[69:53] So you have no visits.
+[69:55] Which is what Malachi said in the beginning,
+[69:58] send it to people who have no visits, no site visits in the vertical.
+[70:02] Nice.
+[70:02] But if they match on the keywords, that's even better. That's like the best candidates
+[70:06] to send it to people who matched on the keywords, but don't have any site visits.
+[70:10] So, okay.
+[70:14] All right. But yeah, let's, uh, I think Malachi, you got the next steps.
+[70:20] They sounded correct to me.
+[70:22] Yep.
+[70:24] Clear as mud.
+[70:25] Clear as mud. That's right. Um, Bryce is going to post a channel.
+[70:28] We'll have an incrementality channel cause this is going to be a big initiative. So,
+[70:31] um, you guys get to have another channel to be a part of. It's really great.
+[70:36] This is a good one.
+[70:37] But, uh, yeah, go ahead and start with that. And, um, yeah, I'll, I'll sync up with you guys too,
+[70:41] because we're going to have a, um, we'll have the standup talk today too. So,
+[70:45] you know, we'll probably discuss it again. Cool. Thanks guys for joining.
+[70:50] Yeah. Thanks for, uh, getting everybody together again. Good, good conversation.
+[70:55] Yeah. Sweet. Um, all right. Talk to you guys later. Bye.
