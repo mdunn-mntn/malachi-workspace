@@ -44,7 +44,7 @@ Matt outlined a model that trains on impressions as a feature — predicting the
 **Objective:** Build an ATT estimator using the existing 10% holdout, without requiring bidder-side changes.
 
 #### Step 1: Win-Rate Calculation
-- Holdout IPs are deterministically identified via hash but **still appear in augmentor_log** (bid stream)
+- Holdout IPs are deterministically identified via hash but **still appear in augmentor_log** (bid stream) — **empirically confirmed 2026-04-20**: 10.0% of unique IPs in augmentor_log fall in bucket 0-99 for advertiser 31357 (WGU), matching the uniform expectation. See `queries/ti_837_augmentor_holdout_bucket_verification.sql` and `outputs/ti_837_augmentor_holdout_bucket_result_2026_04_19.json`.
 - Calculate campaign-level win rate from actual served impressions in cost_impression_log
 - Win rate = (impressions served to treatment IPs) / (augmentor appearances for treatment IPs)
 - Validate win rate stability across days, intent tiers, and advertisers
@@ -107,6 +107,39 @@ Ghost bidding is the immediate step. The full roadmap (from the iROAS Measuremen
 
 ## 4. Investigation & Findings
 
+### Augmentor_log holdout verification (2026-04-20)
+
+**Question:** Alex Knorr (Apr 17) said holdout IPs appear in augmentor_log; Ryan Kleck
+(Apr 20) said they don't. Which is correct? This decides whether the ghost bidding
+pipeline can be built from existing data (Alex's read) or requires an ETL + bidder
+change (Ryan's read).
+
+**Method:** For advertiser 31357 (WGU), hash each IP in `bronze.raw.augmentor_log`
+for 1 hour on 2026-04-19 using the production formula
+`MD5(advertiser_id:ip) → first 64 bits (unsigned) mod 1000`, ported to BQ via a
+Chinese-remainder split over two 32-bit halves (2^32 mod 1000 = 296). Count rows and
+unique IPs where bucket is in 0-99 (the holdout range).
+
+**Result:**
+| in_holdout_bucket | n_rows        | unique_ips  |
+|-------------------|---------------|-------------|
+| false             | 1,246,877,127 | 16,465,297  |
+| true              |   114,582,413 |  1,826,814  |
+
+- Unique IPs in holdout bucket: **1,826,814 / 18,292,111 = 10.0%** — exactly the
+  uniform expectation. Confirms augmentor_log is advertiser-agnostic and
+  IP-complete: holdouts for any advertiser pass through at the expected 10% rate.
+- Rows in holdout bucket: **8.4%** (slightly below 10%). Possible causes: holdout
+  IPs have slightly fewer augmentor events per IP than non-holdout IPs, frequency
+  cap interaction, or a downstream re-augmentation that treats holdouts differently.
+  Worth flagging but does not block the methodology.
+
+**Decision:** Alex Knorr's read is correct. The ghost bidding pipeline can be built
+using `augmentor_log` (pseudo-exposure) × `cost_impression_log` (actual exposure)
+with no ETL change from Zach/Jordan and no bidder-side change from Kevaughn. The
+multi-party meeting scheduled for Apr 22 becomes a walkthrough-and-align session
+rather than a scoping session.
+
 *Ghost bidding framework under construction. TI-835 findings inform this work (see TI-835 summary).*
 
 ## 5. Solution
@@ -117,6 +150,7 @@ Ghost bidding is the immediate step. The full roadmap (from the iROAS Measuremen
 
 - **Can we measure incrementality with ITT on the existing holdout?** No — coverage dilution (14-16% actual impression coverage) structurally biases ITT toward zero. Ghost bidding (ATT) addresses this.
 - **Is shuffling still the right approach?** No — replaced by ghost bidding (April 17, 2026). Ghost bidding is more methodologically sound and doesn't require operational changes to the targeting system.
+- **Do holdout IPs appear in augmentor_log?** Yes (empirically confirmed 2026-04-20, advertiser 31357, 1 hour of data). 10.0% of unique IPs fall in hash buckets 0-99 — the uniform expectation — so augmentor_log captures all IPs regardless of holdout status. The ghost bidding pipeline can proceed using existing data without ETL or bidder-side changes.
 
 ## 7. Data Documentation Updates
 
@@ -127,6 +161,8 @@ Ghost bidding is the immediate step. The full roadmap (from the iROAS Measuremen
 ## 8. Open Items / Follow-ups
 
 - [x] ~~Wait for TI-835 results~~ (complete — "The Two Stories" finding)
+- [x] ~~Verify holdout IPs appear in augmentor_log~~ (complete 2026-04-20 — yes, at 10.0% of unique IPs)
+- [ ] Follow up on 8.4% row-level discrepancy with Ryan/Zach — is there a downstream dedupe/freq-cap that treats holdouts differently?
 - [ ] Build win-rate calculation pipeline (augmentor_log + cost_impression_log)
 - [ ] Implement pseudo-exposure assignment for holdout IPs
 - [ ] Compute ATT estimates for 6-10 advertisers by intent tier
