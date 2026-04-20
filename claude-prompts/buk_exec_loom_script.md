@@ -1,4 +1,7 @@
-# BUK Exec Loom — Final Script + Deck
+# Site Intent Exec Loom — Final Script + Deck
+
+> **Note on naming:** "Site Intent" is the marketing-friendly name for what was internally called BUK (Bottoms-Up Keywords). Use **Site Intent** in all exec-facing and buyer-facing language. BUK stays as the internal engineering shorthand only.
+
 
 **Audience:** Paulo Black (VP Eng), Richard Girges (CTO), Kale (Director, TI)
 **Co-recording:** Alex Knorr
@@ -122,7 +125,7 @@ Five words. Exec-repeatable. Bookends the script (Slide 1 and Slide 13).
 >
 > Paid search sees two words: *'athletic shoes.'* That's all Google gets. That's all Google can sell.
 >
-> BUK — our Bottoms-Up Keywords — scrapes the advertiser's website and captures what users actually do once they arrive. Every click. Every page. Every product.
+> **Site Intent** — that's what we call it — scrapes the advertiser's website and captures what users actually do once they arrive. Every click. Every page. Every product.
 >
 > **Paid search sees the query. We see the behavior.**
 >
@@ -168,7 +171,7 @@ Five words. Exec-repeatable. Bookends the script (Slide 1 and Slide 13).
 >
 > **One.** CTV is not a different channel. It is paid search, running on the same intent Google runs on, delivered on a screen Google cannot reach.
 >
-> **Two.** BUK enriches that intent in a way paid search *literally cannot*. Google sees the query. We see what the user actually wants.
+> **Two.** Site Intent enriches that signal in a way paid search *literally cannot*. Google sees the query. We see what the user actually wants.
 >
 > **Three.** Moving budget from search to CTV is not a risk. It is not a trade. It is an *upgrade*. Same dollar. Richer signal. Television reach. The math is not close.
 >
@@ -258,17 +261,17 @@ Net: 732 words → 668 words. More white space for pauses, which is where impact
 | 6 | Cialdini | 5 | Scarcity upgraded to strong ("paying more for less information") |
 | 7 | Billboard Test | 5 | 13 slides, one idea per slide, every slide readable in under 2 seconds |
 | 8 | Close | 5 | Power Line callback, slide 13 mirrors slide 1 |
-| 9 | Audience Adaptation | 5 | Marketing language, BUK defined in one phrase, no engineering jargon |
+| 9 | Audience Adaptation | 5 | Marketing language, Site Intent defined in one phrase, no engineering jargon |
 | 10 | Greene's Laws | 5 | Bolder than v1. "They're wrong. All three." "A lie." "Literally cannot." "The math is not close." |
 
 **Average: 4.8 / 5.**
 
 ### The one fix you (Malachi) can make
 
-If TI-803 value analysis has produced a single quantified "richer signal" stat — % of advertiser sessions where BUK captures intent tokens not in the original query, % keyword coverage lift, anything directional — drop it into the compare slide (slide 9) and into the script right after *"Paid search sees the query. We see the behavior."*
+If TI-803 value analysis has produced a single quantified "richer signal" stat — % of advertiser sessions where Site Intent captures intent tokens not in the original query, % keyword coverage lift, anything directional — drop it into the compare slide (slide 9) and into the script right after *"Paid search sees the query. We see the behavior."*
 
 **Template:**
-> "Across the [N] advertisers we've shipped BUK on, we're capturing roughly [X]% more unique intent signals than the query alone. Same user. Same dollar. [X]% more to aim at."
+> "Across the [N] advertisers we've shipped Site Intent on, we're capturing roughly [X]% more unique intent signals than the query alone. Same user. Same dollar. [X]% more to aim at."
 
 That single stat lifts Data Persuasion 3 → 5 and the overall to 5.0.
 
