@@ -50,10 +50,9 @@ RCTs are gold standard but impractical at MNTN's scale. Observational ML alone f
 ## Malachi's Commitments (Action Items)
 
 ### This week
-1. **Watch Matt's 21-min Loom** — posted yesterday. Required prep.
-2. **Meet with Ryan** — augmentor_log access, win-rate calculation, future-store relationship
-3. **Define ghost bidding methodology manually** — build output dataset schema
-4. **Brush up on power / sample size** — be able to answer "what budget do we need for what MDE?"
+1. **Meet with Ryan** — augmentor_log access, win-rate calculation, future-store relationship
+2. **Define ghost bidding methodology manually** — build output dataset schema
+3. **Brush up on power / sample size** — be able to answer "what budget do we need for what MDE?"
 
 ### By April 30 (Bryce's checkpoint — prep, not execution)
 5. **Coordinate mid-intent experiment** with Kirsa + Nick
