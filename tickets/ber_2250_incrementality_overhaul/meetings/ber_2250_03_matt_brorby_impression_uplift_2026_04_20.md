@@ -72,9 +72,9 @@ RCTs are gold standard but impractical at MNTN's scale. Observational ML alone f
 ## Core Strategic Insights
 
 ### The power problem is the whole ballgame
-> "The problem with advertising is power... the minimum measurable lift is 15%, but we're only getting 2 to 8%."
+Malachi: "The problem with advertising is power... the minimum measurable lift is likely around 15%, but we're only getting 2 to 8%."
 
-This is why geo doesn't work at MNTN's budget scale, why observational ML fails, and why ghost bidding (which reuses the existing 10% holdout rather than carving out a new one) is structurally the only path.
+Matt agreed with the framing. This is why geo doesn't work at MNTN's budget scale, why observational ML fails, and why ghost bidding (which reuses the existing 10% holdout rather than carving out a new one) is structurally the only path.
 
 ### Ghost bidding is internal measurement, not a product
 > "I don't think the end goal with ghost bidding is like an actual product... customers care about incrementality from third parties who are impartial. Not grading your own homework."
