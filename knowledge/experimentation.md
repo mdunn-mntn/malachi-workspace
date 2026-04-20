@@ -660,10 +660,16 @@ Nick identifies experiment campaigns by parsing `campaign_group.name` for the pa
 - **Target timeline:** April 30th deadline for experiment setup and ghost bidding implementation
 
 **Ghost bidding mechanism:**
-1. Holdout IPs are deterministically identified via hash but **still appear in augmenter/bid logs**
+1. Holdout IPs are deterministically identified via hash but **should appear in augmentor_log** — see conflict flag below
 2. Calculate campaign win rate from actual served impressions
 3. Apply win rate as sampling probability to holdout IPs appearing in bid stream
 4. Compare visit rates: exposed treatment IPs vs pseudo-exposed holdout IPs
+
+**CRITICAL OPEN QUESTION (2026-04-20):** Alex Knorr (April 17) said holdout IPs **do** appear in augmentor_log. Ryan Kleck (April 20) said he doesn't think they are. Must be resolved before the ghost bidding pipeline can be built. If holdouts are NOT in augmentor_log, an ETL change with Zach + Jordan is the prerequisite, followed by bidder-side logic change with Kevaughn to skip them for bidding but log them. Meeting scheduled: Malachi + Alex + Ryan + Zach + Jordan + Kevaughn.
+
+**Matt Brorby's T-learner prototype (2026-04-20):** Matt has already built a T-learner with Platt Scaling on branch `mbrorby/workspace/impression-uplift` in `SteelHouse/databricks_targeting`. Two XGBoost Spark models (treatment + control), calibrated so subtraction is in probability space. Uplift = Platt(Model_T(x)) − Platt(Model_C(x)). Ranks by incremental probability, not absolute. Qini curve evaluation. Matt explicitly does NOT want to own implementation — Malachi + Alex Knorr co-driving (TI-886). Holdout hash ported from Greenplum to Spark: `MD5(advertiser_id:ip)` first 16 hex → mod 1000, buckets 0-99 = holdout. Uses `decimal(20,0)` to avoid overflow. Control IPs drawn from `cost_impression_log` (IPs served by other advertisers in same window), NOT feature store — fixes support mismatch (feature store IPs include households no ad system would target, ~0.03% visit rate vs ~9% for targeted).
+
+**Power constraint (Malachi's framing, 2026-04-20):** Our minimum detectable effect lands around ~15% while realistic CTV lift is 2-8%. This is the whole ballgame — why geo doesn't work at MNTN budget scale, why observational ML fails, and why ghost bidding (reusing existing 10% holdout instead of carving a new one) is structurally the only path. TI-884 quantifies this precisely per advertiser.
 
 **Advantages over ITT:**
 - Eliminates coverage dilution by comparing only IPs that would have been served
