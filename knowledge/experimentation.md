@@ -972,3 +972,25 @@ These 11 decisions, once made, unblock the full iROAS measurement rollout. To be
 13. **Callaway & Sant'Anna (2021) JoE** — Staggered DiD. Reference for platform-level rollout studies.
 
 Also useful: Imbens-Angrist (1994) for LATE; Calonico-Cattaneo-Titiunik (2014) for RDD; Bojinov et al. (2023) for switchback; King-Nielsen (2019) on why PSM matching is wrong.
+
+## Past Incrementality Tests — Edgar's Lessons Learned (2026-04-20)
+
+Source: Edgar von Trotha review of 50+ past MNTN incrementality tests. Full docs in `tickets/ber_2250_incrementality_overhaul/artifacts/`:
+- `lessons_from_past_incrementality_tests.md` — 6 themes
+- `incremental_lift_tests_customer_tracker.xlsx` — 55 tests, 8 platforms (Haus 23, Internal 9, LiftLab 9, Measured 8, others 6)
+
+### Six lessons (directional)
+
+1. **Well-designed test can still produce poor efficiency** — high power + clean geo + sufficient duration still yielded sub-1% lift in some cases. Good design = trustworthy results, not automatically good results.
+2. **Audience strategy drives more impact than test structure** — high-intent / previously-exposed audiences underperform incrementally. Broader prospecting yields stronger incremental outcomes. (Directly validates TI-835's "Two Stories" finding.)
+3. **Exposure density > total spend** — national wide-geo tests with low per-market spend fail; concentrated geo tests with same budget succeed. Frequency matters more than reach.
+4. **CTV impact often outside the primary KPI** — strongest signal frequently appears in retail/marketplace revenue, repeat-customer LTV, or downstream conversion behavior rather than primary DTC KPI. Single metric rarely captures full effect.
+5. **Short or reactive tests increase customer churn risk** — premature pauses, early readouts, and short durations drive customer dissatisfaction more than poor media performance does.
+6. **Weak results still valuable for retest** — strongest outcomes often emerged after one or more weak tests + clear diagnosis + focused input changes. Testing compounds value.
+
+### Test-design implications (for TI-884 and TI-885)
+
+- **6-week minimum test + 2-week post-treatment window** — per tracker, most completed successful tests hit this threshold
+- **Holdout %** varies widely in tracker — 50% Haus geo holdouts common; 33% seen in 3-cell tests
+- **Power Score column** exists in tracker but sparsely populated — we can fill this in as TI-884 output
+- **Cross-reference Power Score against Lift Achieved** to empirically validate MDE predictions
