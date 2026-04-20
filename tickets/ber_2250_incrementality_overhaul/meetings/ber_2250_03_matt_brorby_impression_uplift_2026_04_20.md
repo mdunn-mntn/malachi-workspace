@@ -1,8 +1,8 @@
-# BER-2250: Matt Brorby — Impression Uplift Model Walkthrough
+# BER-2250: Impression Uplift Model + Ghost Bidding Strategy Working Session
 
 **Date:** 2026-04-20
-**Attendees:** Matt Brorby (Staff DS), Malachi Dunn
-**Type:** Technical walkthrough — Matt showing Malachi his prototype + strategy session
+**Attendees:** Malachi Dunn, Alex Knorr (present from the start), Matt Brorby (Staff DS — joined later)
+**Type:** 3-way working session — ghost bidding strategy + Matt's prototype walkthrough once he joined
 **Transcript:** `ber_2250_03_matt_brorby_impression_uplift_2026_04_20.txt`
 **Branch:** https://github.com/SteelHouse/databricks_targeting/tree/mbrorby/workspace/impression-uplift
 
@@ -43,9 +43,8 @@ RCTs are gold standard but impractical at MNTN's scale. Observational ML alone f
 > "I don't necessarily want to build the models." — Matt
 
 - **Matt:** Domain expert, strategist, methodology advisor. Will **not** own implementation.
-- **Malachi:** Primary owner of ghost bidding data pipeline, stakeholder communication, experiment coordination.
-- **Alex Knorr:** Collaborator on model finalization (shared with Malachi).
-- **Ryan Kleck:** Data accessibility expert — Malachi needs to meet with him re: augmentor_log + future-store.
+- **Malachi + Alex (co-drivers):** Both in the call from the start discussing strategy before Matt joined. Joint ownership of ghost bidding pipeline, model work, and experiment coordination — Alex leans implementation/model, Malachi leans methodology/stakeholder comms.
+- **Ryan Kleck:** Data accessibility expert — need to sync re: augmentor_log + future-store.
 
 ## Malachi's Commitments (Action Items)
 
