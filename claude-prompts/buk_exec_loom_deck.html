@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BUK Exec Loom — CTV is paid search, upgraded</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+<style>
+:root {
+    --navy: #1B2A4A;
+    --blue: #2E5090;
+    --mid: #5A7DB5;
+    --light: #A8BDD9;
+    --muted: #C8CDD4;
+    --red: #D63B2F;
+    --text: #222222;
+    --text-light: #666666;
+    --bg: #FAFAFA;
+}
+.reveal { font-size: 32px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg); }
+.reveal .slides { text-align: left; }
+.reveal h1 { margin-top: 0; font-size: 2em; color: var(--navy); font-weight: 700; letter-spacing: -0.01em; }
+.reveal h2 { margin-top: 0; font-size: 1.4em; color: var(--navy); font-weight: 700; letter-spacing: -0.01em; }
+.reveal h3 { margin-top: 0; font-size: 1em; color: var(--navy); font-weight: 600; }
+.reveal p { color: var(--text); line-height: 1.4; }
+.reveal strong { color: var(--navy); font-weight: 700; }
+.reveal em { color: var(--red); font-style: normal; font-weight: 700; }
+.reveal section { text-align: left; }
+.reveal .center { text-align: center; }
+
+.power-line {
+    text-align: center;
+    font-size: 1.6em;
+    color: var(--navy);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+.power-line .accent { color: var(--red); }
+
+.big-claim {
+    text-align: center;
+    font-size: 1.3em;
+    color: var(--navy);
+    font-weight: 700;
+    line-height: 1.4;
+}
+.big-claim .soft { color: var(--text-light); font-weight: 400; display: block; font-size: 0.55em; margin-top: 1.2em; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.quote {
+    text-align: center;
+    font-size: 1.15em;
+    color: var(--text);
+    font-style: italic;
+    line-height: 1.45;
+    max-width: 85%;
+    margin: 0 auto;
+}
+.quote::before { content: "\201C"; color: var(--muted); font-size: 2em; display: block; line-height: 0.5; margin-bottom: 0.3em; }
+.quote::after { content: "\201D"; color: var(--muted); font-size: 2em; display: block; line-height: 0.2; margin-top: 0.3em; }
+.quote-attr { text-align: center; font-size: 0.7em; color: var(--text-light); margin-top: 1.2em; letter-spacing: 0.05em; text-transform: uppercase; }
+
+.three-up {
+    display: flex;
+    gap: 1.5em;
+    justify-content: space-between;
+    margin-top: 1em;
+}
+.three-up .item { flex: 1; text-align: center; }
+.three-up .num { font-size: 0.7em; color: var(--muted); letter-spacing: 0.15em; font-weight: 700; margin-bottom: 0.4em; }
+.three-up .text { font-size: 0.9em; color: var(--navy); font-weight: 600; line-height: 1.35; }
+
+.compare {
+    display: flex;
+    gap: 2em;
+    align-items: stretch;
+    margin-top: 1.2em;
+}
+.compare .side {
+    flex: 1;
+    padding: 1.3em 1em;
+    border-radius: 6px;
+    text-align: center;
+}
+.compare .side.thin { background: #F0F0F0; color: var(--text-light); }
+.compare .side.thick { background: var(--navy); color: #FFF; }
+.compare .side .label { font-size: 0.55em; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.8em; opacity: 0.7; }
+.compare .side .signal { font-size: 1.1em; font-weight: 700; line-height: 1.25; }
+.compare .side.thick .signal { color: #FFF; }
+
+.strike { text-decoration: line-through; text-decoration-thickness: 3px; text-decoration-color: var(--red); color: var(--text-light); }
+
+.takeaway {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    align-items: center;
+    gap: 1.2em;
+    padding: 0.55em 0;
+    border-top: 1px solid #E4E4E4;
+}
+.takeaway:last-child { border-bottom: 1px solid #E4E4E4; }
+.takeaway .n { font-size: 2em; font-weight: 700; color: var(--muted); text-align: center; line-height: 1; }
+.takeaway .line { font-size: 0.95em; color: var(--navy); font-weight: 600; line-height: 1.3; }
+.takeaway .line em { color: var(--red); font-style: normal; }
+
+.footer-note { text-align: center; font-size: 0.5em; color: var(--text-light); margin-top: 1.5em; letter-spacing: 0.04em; }
+
+.timing { position: fixed; top: 0.6em; right: 1em; font-size: 12px; color: var(--muted); letter-spacing: 0.1em; z-index: 10; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- 1. TITLE / POWER LINE HERO -->
+<section data-background-color="#1B2A4A">
+    <div class="power-line" style="color: #FFF;">
+        CTV is paid search&nbsp;&mdash; <span style="color: #FF6B5E;">upgraded.</span>
+    </div>
+    <p style="text-align: center; color: #A8BDD9; font-size: 0.7em; margin-top: 2em; letter-spacing: 0.12em; text-transform: uppercase;">
+        Malachi Dunn &middot; Alex Knorr &middot; Targeting Infrastructure
+    </p>
+</section>
+
+<!-- 2. OPENER — WHAT BUYERS BELIEVE -->
+<section>
+    <div class="big-claim">
+        CTV is a new channel.<br>
+        CTV is a risky channel.<br>
+        CTV is <em>not</em> paid search.
+        <span class="soft">What every media buyer believes</span>
+    </div>
+</section>
+
+<!-- 3. OPENER — THE FLIP -->
+<section data-background-color="#1B2A4A">
+    <div class="big-claim" style="color: #FFF;">
+        They're wrong.<br>
+        <span style="color: #FF6B5E;">All three.</span>
+    </div>
+</section>
+
+<!-- 4. ACT 1 — THE OBJECTION (QUOTE) -->
+<section>
+    <div class="quote">
+        We trust paid search. We trust paid social.<br>
+        CTV is the unknown.
+    </div>
+    <p class="quote-attr">Every sophisticated buyer, every meeting</p>
+</section>
+
+<!-- 5. ACT 1 — WHY THE ARGUMENT FAILS -->
+<section>
+    <div class="big-claim">
+        The whole conversation<br>is built on <em>a lie</em>.
+        <span class="soft">CTV isn't a different channel from search</span>
+    </div>
+</section>
+
+<!-- 6. ACT 2 — THE KEY QUESTION -->
+<section>
+    <div class="big-claim">
+        How does the user<br>get to the website?
+        <span class="soft">The question no one's asking</span>
+    </div>
+</section>
+
+<!-- 7. ACT 2 — THE ANSWER -->
+<section data-background-color="#1B2A4A">
+    <div class="big-claim" style="color: #FFF;">
+        They <span style="color: #FF6B5E;">search</span>.
+        <span class="soft" style="color: #A8BDD9;">Almost every CTV conversion rides on search intent</span>
+    </div>
+</section>
+
+<!-- 8. ACT 2 — THE WIRING -->
+<section>
+    <h2 class="center" style="margin-bottom: 0.8em;">The wiring buyers don't see</h2>
+    <div style="text-align: center; font-size: 0.85em; color: var(--navy); line-height: 1.9; font-weight: 600;">
+        User searches&nbsp;&nbsp;&rarr;&nbsp;&nbsp;User lands on site&nbsp;&nbsp;&rarr;&nbsp;&nbsp;<span style="color: var(--red);">CTV ad served</span>&nbsp;&nbsp;&rarr;&nbsp;&nbsp;Return visit = conversion
+    </div>
+    <p class="footer-note">CTV performance is measured on the site visit. The visit starts with a search.</p>
+</section>
+
+<!-- 9. ACT 2 — WHAT GOOGLE SEES VS. WHAT WE SEE -->
+<section>
+    <h2 class="center" style="margin-bottom: 0.3em;">Paid search sees the query.<br>We see the behavior.</h2>
+    <div class="compare">
+        <div class="side thin">
+            <div class="label">Paid Search</div>
+            <div class="signal">&ldquo;athletic shoes&rdquo;</div>
+        </div>
+        <div class="side thick">
+            <div class="label">BUK</div>
+            <div class="signal">&ldquo;colorful trail running shoes,<br>size 8, under $150&rdquo;</div>
+        </div>
+    </div>
+    <p class="footer-note">BUK = Bottoms-Up Keywords. We scrape the advertiser's site and capture what users actually do once they arrive.</p>
+</section>
+
+<!-- 10. STORY — NIKE -->
+<section>
+    <h2 class="center" style="margin-bottom: 0.6em;">One runner. Denver.</h2>
+    <div style="text-align: center; font-size: 0.85em; color: var(--text); line-height: 1.9;">
+        Types <strong>&ldquo;athletic shoes&rdquo;</strong> into Google.<br>
+        Lands on Nike.<br>
+        Scrolls past the black. Past the white.<br>
+        Stops on <span style="color: var(--red); font-weight: 700;">bright pink trail runners</span>. Adds to cart.
+    </div>
+    <p class="footer-note" style="margin-top: 1.6em;">Google saw "athletic shoes." We saw "colorful trail runner." Same search. Same dollar. Sharper aim.</p>
+</section>
+
+<!-- 11. ACT 3 — THREE TAKEAWAYS -->
+<section>
+    <h2 style="text-align: center; margin-bottom: 0.9em;">Three things to walk away with</h2>
+    <div class="takeaway">
+        <div class="n">1</div>
+        <div class="line">CTV is <em>not</em> a different channel. It's the same intent signal search runs on &mdash; on a screen search can't reach.</div>
+    </div>
+    <div class="takeaway">
+        <div class="n">2</div>
+        <div class="line">BUK enriches that intent in a way paid search <em>literally cannot</em>. Google sees the query. We see what the user wants.</div>
+    </div>
+    <div class="takeaway">
+        <div class="n">3</div>
+        <div class="line">Shifting budget from search to CTV is not a risk. It's an <em>upgrade</em>. Same dollar. Richer signal. Television reach.</div>
+    </div>
+</section>
+
+<!-- 12. THE WRONG QUESTION / THE RIGHT QUESTION -->
+<section>
+    <div style="text-align: center; font-size: 1em; line-height: 1.8;">
+        <div style="color: var(--text-light); margin-bottom: 1.2em;">
+            <span class="strike">Why CTV instead of search?</span>
+        </div>
+        <div style="font-size: 1.25em; color: var(--navy); font-weight: 700;">
+            Why pay for the <em>thin</em> version of a signal<br>when we can deliver the <em>thick</em> one?
+        </div>
+    </div>
+</section>
+
+<!-- 13. CLOSE / POWER LINE CALLBACK -->
+<section data-background-color="#1B2A4A">
+    <div class="power-line" style="color: #FFF;">
+        CTV is paid search&nbsp;&mdash; <span style="color: #FF6B5E;">upgraded.</span>
+    </div>
+    <p style="text-align: center; color: #A8BDD9; font-size: 0.75em; margin-top: 1.8em; line-height: 1.6;">
+        Same intent. &nbsp;Richer context. &nbsp;Bigger screen.
+    </p>
+</section>
+
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+    hash: true,
+    slideNumber: true,
+    controls: true,
+    progress: true,
+    center: true,
+    transition: 'fade',
+    transitionSpeed: 'slow',
+    width: 1100,
+    height: 800,
+    margin: 0.01,
+    minScale: 0.2,
+    maxScale: 1.5,
+});
+</script>
+</body>
+</html>
