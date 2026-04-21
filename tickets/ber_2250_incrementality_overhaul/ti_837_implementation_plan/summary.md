@@ -43,23 +43,28 @@ Matt outlined a model that trains on impressions as a feature — predicting the
 
 **Objective:** Build an ATT estimator using the existing 10% holdout, without requiring bidder-side changes.
 
-#### Step 1: Win-Rate Calculation
-- Holdout IPs are deterministically identified via hash but **still appear in augmentor_log** (bid stream) — **empirically confirmed 2026-04-20**: 10.0% of unique IPs in augmentor_log fall in bucket 0-99 for advertiser 31357 (WGU), matching the uniform expectation. See `queries/ti_837_augmentor_holdout_bucket_verification.sql` and `outputs/ti_837_augmentor_holdout_bucket_result_2026_04_19.json`.
-- Calculate campaign-level win rate from actual served impressions in cost_impression_log
-- Win rate = (impressions served to treatment IPs) / (augmentor appearances for treatment IPs)
-- Validate win rate stability across days, intent tiers, and advertisers
+**Methodology update (Matt Brorby, 2026-04-21):** The original Step 1–3 framing below (compute campaign win rate, apply as sampling probability to holdout IPs, compare visit rates) has been superseded by a cleaner approach. Rather than approximating "would-have-been-served" via an aggregate win rate, we use the per-event targeting signal already in `augmentor_log` — intent score and HHST at the moment of the bid opportunity — to filter holdout IPs directly. Matt's exact framing: *"use augmentor_log to see if any IPs in the holdout group appear and if we would have bid on them at the time (what was their intent score and what was the HHST?). This will get us candidate IPs from the holdout to build our comparison group. Next steps are possibly post-processing where we sample from these candidates in order to make sure the treated and control groups have similar distributions. The 'distribution' is a bit vague here, but could initially just be trying to match on prospecting intent scores."* Alex Knorr already has the structure started.
 
-#### Step 2: Pseudo-Exposure Assignment for Holdout
-- Apply win rate as sampling probability to holdout IPs appearing in augmentor_log
-- Each holdout IP that appears in the bid stream gets "pseudo-exposed" with probability = campaign win rate
-- This creates a counterfactual group of holdout IPs that *would have been served* — the ghost impression
-- Academic basis: Johnson, Lewis & Nubbemeyer (2017 JMR, SSRN 2620078) — the canonical ghost-ad design
+#### Step 1 (revised): Holdout Candidate Extraction from augmentor_log
+- For each advertiser, pull all holdout IP appearances in `augmentor_log` during the analysis window (hash bucket 0-99 using `MD5(advertiser_id:ip)` → 64-bit unsigned mod 1000).
+- At each appearance, retain the event-level targeting signals: intent score, HHST (Household Signal Threshold — confirm exact semantics with Ryan), mntn_segments, geo, inventory_source, time.
+- Filter to events where **MNTN would have bid** given the campaign's active intent threshold and HHST gate at that moment. Events that don't clear the targeting gate are not candidates.
+- Output: per-advertiser candidate-holdout table of (ip, event_time, intent_score, hhst, etc.)
+
+#### Step 2 (revised): Propensity Matching to Build Comparison Group
+- For each advertiser, pair the candidate-holdout table with the actually-served (treatment) table from `cost_impression_log`.
+- Match on distribution of prospecting intent scores (and any other covariates Alex's pre-analysis surfaces) so the comparison group mirrors the treated group.
+- This is a one-to-one or stratified sampling step — not a win-rate multiplication.
+- Academic basis: Johnson, Lewis & Nubbemeyer (2017 JMR, SSRN 2620078) — ghost ads canonical design; propensity matching is a MNTN-specific adaptation using the targeting signal we already log.
 
 #### Step 3: ATT Estimation
-- Compare visit rates: actually-exposed treatment IPs vs pseudo-exposed holdout IPs
-- **ATT estimator:** Difference in visit rates between these two groups
-- **LATE estimator (if needed):** tau_LATE = ITT / first-stage exposure rate (Imbens-Angrist Wald estimator)
-- Break down by intent tier (high/mid/peak performance) and by advertiser
+- Compare visit rates: actually-exposed treatment IPs vs propensity-matched holdout IPs.
+- **ATT estimator:** Difference in visit rates between these two groups.
+- **LATE estimator (if needed):** tau_LATE = ITT / first-stage exposure rate (Imbens-Angrist Wald estimator).
+- Break down by intent tier (high/mid/peak performance) and by advertiser.
+
+#### Original win-rate approach (ARCHIVED, 2026-04-21)
+The pre-2026-04-21 plan proposed: calculate campaign-level win rate from `cost_impression_log / augmentor_log`, then apply that rate as a sampling probability on holdout augmentor appearances. Matt noted this is unnecessary approximation when we have the per-event targeting signal. The win-rate number may still be useful as a sanity check (Q: does the fraction of candidates we keep ≈ the win rate?) but not as the core ghost-bidding mechanism.
 
 #### Step 4: Variance Reduction
 - **CUPED** on pre-period visit history (20-50% SE reduction)

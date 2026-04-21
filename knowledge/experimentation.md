@@ -659,11 +659,13 @@ Nick identifies experiment campaigns by parsing `campaign_group.name` for the pa
 - Use **ghost bidding** to calculate Average Treatment on the Treated (ATT) rather than ITT
 - **Target timeline:** April 30th deadline for experiment setup and ghost bidding implementation
 
-**Ghost bidding mechanism:**
-1. Holdout IPs are deterministically identified via hash and **do appear in augmentor_log** — empirically verified 2026-04-20 (see RESOLVED note below)
-2. Calculate campaign win rate from actual served impressions
-3. Apply win rate as sampling probability to holdout IPs appearing in bid stream
-4. Compare visit rates: exposed treatment IPs vs pseudo-exposed holdout IPs
+**Ghost bidding mechanism (revised 2026-04-21 per Matt Brorby):**
+1. Holdout IPs are deterministically identified via hash and **do appear in augmentor_log** — empirically verified 2026-04-20 (see RESOLVED note below).
+2. For each holdout IP appearance in `augmentor_log`, retain the event-level targeting signals (intent score, HHST, segments) and filter to events where MNTN would have bid — i.e., the IP cleared the advertiser's active intent threshold and HHST gate at that moment. Those are the candidate holdout IPs.
+3. Propensity-match the candidate-holdout group to the actually-served treatment group (from `cost_impression_log`) on intent score (and other covariates as needed) so distributions are similar.
+4. Compare visit rates: exposed treatment IPs vs propensity-matched holdout IPs.
+
+The pre-2026-04-21 plan (compute campaign win rate, apply as sampling probability) has been archived. Matt noted the per-event targeting signal is already in augmentor_log, so aggregate win-rate approximation is unnecessary. Alex Knorr has the structure started.
 
 **RESOLVED (2026-04-20):** Augmentor_log contains holdout IPs at the uniform-expected rate. For advertiser 31357 (WGU), 1 hour of `bronze.raw.augmentor_log` on 2026-04-19 shows 10.0% of unique IPs in hash buckets 0-99 — exactly the uniform expectation for a 10% holdout. augmentor_log has no advertiser_id column and is pre-bid, so it is IP-complete regardless of any given advertiser's holdout status. Alex Knorr's read was correct; the ghost bidding pipeline can proceed using existing data without an ETL change from Zach/Jordan or a bidder-side change from Kevaughn. Query + results: `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/queries/ti_837_augmentor_holdout_bucket_verification.sql`, output in the same ticket's `outputs/` folder. Open follow-up: row-level holdout fraction was 8.4% (vs 10.0% at the unique-IP level), suggesting holdout IPs may have slightly fewer augmentor events per IP than non-holdout IPs — worth a follow-up with Ryan/Zach to understand whether frequency-cap or dedupe logic treats holdouts differently. Does not block the methodology.
 

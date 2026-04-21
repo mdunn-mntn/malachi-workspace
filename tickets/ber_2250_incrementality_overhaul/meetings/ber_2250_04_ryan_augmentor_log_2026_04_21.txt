@@ -1,0 +1,324 @@
+[00:00] Cool. I use this for reference. I use AI to summarize, like, stuff all the time. Um, okay,
+[00:07] so, I was looking at the tickets and there are multiple things going on that you and I are
+[00:12] working on, right? Um, so, number one, I know this has been pushed off, but all the feature store
+[00:16] stuff, there's still the level two stuff. We still need to get into production. It's ready to go.
+[00:23] It's tested. It's just, like, you know, you and I will have to work on that at some point in time.
+[00:28] Just that's on the back burner. Not something that's important now, but something that I'm
+[00:32] still aware of that we are, um, working on. Um, the second thing is this. So, I had a,
+[00:39] I had a conversation with Matt and Alex, and actually, I wish you were there. It's not a big
+[00:43] deal, though, but basically, here's, here's a situation in your mentality in a nutshell.
+[00:49] Okay.
+[00:50] We've never run an experimentation, um, big enough to actually detect the lift,
+[00:55] right? We're getting null results where we can't detect it because the lift is very small
+[00:59] and we're just not big enough. So, basically, the results are pretty inconclusive of how,
+[01:04] whether or not the ads have an effect. They do have an effect, right? It's not negative lift.
+[01:08] It's just, it's inconclusive. So, anyways, right now is the solution for that and pretty much the
+[01:13] solution that we're going to, like, it's not going to deviate from this. And just to give you an
+[01:17] idea, Google and Meta use ghost bidding, and that's what they use. So, I'm like, if those
+[01:22] two giant powerhouse companies can't think of anything better than ghost bidding, then
+[01:26] you're, you know what I'm saying? We're not going to come up with something better than what they
+[01:29] do. So, we're working towards ghost bidding, right?
+[01:31] Yeah, that's cool.
+[01:32] Anyways, this is where I'm a little bit confused as to what the actual objective is. So,
+[01:38] there is a way, because of the 10% holdout group that we currently have,
+[01:42] to basically see ghost bidding in the Augmentor log, like what we could have bid on, but not,
+[01:50] right? With the 10% holdout group.
+[01:52] Oh, see, this is the part I don't know. I mean, are you sure that they put that in the,
+[01:57] you're talking about the segments column, right?
+[01:59] Yes, and they do.
+[02:02] They do, okay. Do you ask Zach or whatever?
+[02:06] Yeah, no, I have it. So, I can share it with you, but there's this really weird hash, like,
+[02:10] thing you got to do to search to figure out what's part of the holdout group. But you can
+[02:13] actually get that from the Augmentor log, right?
+[02:16] Uh-huh, okay.
+[02:17] And so, here's the part that I'm maybe a little confused on. When I talked to them,
+[02:22] is they were saying that you would probably be the person that's
+[02:29] more, maybe it's not, and I don't care if I take it over, but like,
+[02:33] that you would be more the person that would understand what we need to do with the Augmentor
+[02:37] log. Because essentially, this is the part that maybe I need to clarify with them that I'm not
+[02:41] 100% sure. So, it sounds like we need to take Augmentor log, get the things that we would need
+[02:47] to support the measurement of ghost bidding, and then store it indefinitely. You know what I'm
+[02:52] saying? So, I think that's what it is. It's like, we need to pull data from the Augmentor log,
+[02:58] and then...
+[02:59] Yeah, okay. Yeah, so we can make, we should make a feature of it, maybe, I guess, like,
+[03:04] should make a feature out of it maybe i guess like is or yeah or we should okay um i mean as
+[03:14] long as you're sure that they put the segment id in there when it's a holdout yes yes and i can
+[03:18] when it's a holdout.
+[03:22] Yes, yes. And I can show you, let me show you this.
+[03:25] Yeah, do you have any, yeah.
+[03:26] Yeah, yeah, yeah. Oh, Ryan, what did I do to myself? I just decided to be a part of it.
+[03:36] I was living the good life when I was working in my own silo.
+[03:41] Yeah, I heard everything, dude. Did you hear Tucker's going to the trade desk?
+[03:48] No.
+[03:49] Yeah, he's gonna be, it's hilarious. He's gonna be on Jack's old team, the identity team.
+[03:56] Really?
+[03:57] So, we traded Jack for Tucker with the trade desk.
+[04:03] But he's still here. Oh, is that like an...
+[04:05] Oh, he leaves, or this will be his last week, he said.
+[04:08] Oh, really?
+[04:10] Yeah.
+[04:11] Crazy. No, I didn't hear that.
+[04:19] That reminds me, I'm gonna bring up something to you after. Yes, there is...
+[04:23] Thanks.
+[04:26] Oh, no, you're all good, you're all good. How's Phoenix right now?
+[04:31] It's hot, but we're gonna go, we're going to Sedona this weekend, and it's gonna be a lot
+[04:37] nicer.
+[04:38] Are you a Devin Booker fan? I'm a Suns fan.
+[04:42] Oh, I don't even pay attention to the Suns anymore.
+[04:46] Oh, really?
+[04:46] I used to way back when in the Dan Toney era, the seven seconds or less.
+[04:51] Oh, I gotta ask. Okay, hold on. I gotta ask Alex. I can't remember. Alex, where is that
+[04:57] hash you gave me? Which notebook?
+[05:02] I can't find it. Sorry, there's like a hash thing that Alex gave me.
+[05:08] Hey, lie down.
+[05:14] My dog wants my feed.
+[05:15] no
+[05:16] leave if you're gonna bark
+[05:19] come on
+[05:25] sorry i'm just i do have it well zach gave it to me thank you yeah
+[05:36] Sorry, I'm just, I do have it. Well, Zach gave it to me. Thank you.
+[05:42] Yeah, I've seen I know Alex had it. So yeah, I got it from Zach and I gave it to him. So I
+[05:49] yeah i've seen i know alex had it so yeah i got it from zach and i gave it to him so i actually
+[05:54] ran it in mine, but I couldn't find my notebook for some reason. So yeah, there's this holdout
+[06:00] You should put that in a feature store, honestly, like by day, whether this IP is a holdout for
+[06:05] this advertiser ID, I guess it's by advertiser ID.
+[06:08] Okay, yeah.
+[06:10] I guess it's by advertiser ID.
+[06:11] Okay, here it is. Queries TI 835, incrementality SQL. Cool, cool, cool. Yeah, here it is. Let me
+[06:22] share my screen. That's probably easier. I'll show you my desktop too. You could see all my
+[06:28] bad things that I send about you to other people.
+[06:32] Yep. Nice, of course.
+[06:34] Just joking. All right, here's where it is.
+[06:39] The, where is it? Oh yeah, this.
+[06:44] Yeah, okay. The hex 75, there's a colon.
+[06:48] GUID log.
+[06:51] Okay. Okay.
+[06:54] So yeah, yeah, we can hold.
+[06:55] From GUID log. I mean, that'll work on any IP, I assume though.
+[06:58] I guess, how do you know? I guess Augmenter log, you know, they might not be in the GUID log,
+[07:03] but I mean, whatever. Yeah, that functional work.
+[07:07] Yeah. And so I think we can do the holdout thing. So I guess what I'm trying to understand is like,
+[07:11] maybe I should just talk about it in the incrementality thing. I just like,
+[07:13] want to be clear about what the goal is that we're.
+[07:16] But yeah, but yeah, but I mean, they hold out at an advertiser or no,
+[07:23] they hold out at a campaign level, right?
+[07:24] Yeah, it's at a campaign level.
+[07:26] They just hash it with an advertiser. I see.
+[07:30] Yes, the holdout should be at the campaign level.
+[07:35] Wait.
+[07:36] Yeah, because it's part of the, it's part of the audience expression.
+[07:39] Yes.
+[07:40] Or the buckets. Yeah.
+[07:42] Yes. Within, yeah. And that's at the, yeah, that's at the campaign level. Yep.
+[07:45] Okay. Well, all right.
+[07:50] Okay, cool. So I think just, no, you're fine. So there's two things here.
+[07:55] So just kind of connected to it. I was talking to Zach and Jordan
+[08:01] for a bit at Mountain Meat and they hate geo with a passion, but they have to deal with geo.
+[08:08] And one of the things they were talking about is
+[08:14] getting the geo data, right?
+[08:17] Getting the geo data from the Augmentor log. And it looks like they already send it.
+[08:26] But we need to vet those. I actually think I need to vet those. So like,
+[08:31] we're just not collecting any information for the Augmentor log because of cost stuff.
+[08:35] And Kevon too is, he's not, I think, no, maybe it's a boss. A boss is the person, but
+[08:43] what actual data we filter, because we're not getting 100% of the data from the Augmentor log.
+[08:48] So I guess there's this filter stuff out or something.
+[08:51] We do, we do. We don't take, I don't even think half of the stuff that they could give us.
+[08:55] Dude, we should get it all. But yeah, okay.
+[08:58] So here's, so sorry, this is like all connected to one thing. So you and I need to create a specific
+[09:00] connected to one thing so you and i need to create a specific augmenter log thing for incremental
+[09:06] lift based on this ghost bidding methodology right like what things we need right but we also need to
+[09:12] figure out and it's connected is that there's a lot of teams that want to start storing augmenter
+[09:15] a lot of teams that want to start storing Augmentor log for long periods of time for
+[09:19] different use cases, right? And some of it also has to go like with talking to a boss and like,
+[09:26] come on about like what data's in there and what we should include and for how long and how we're
+[09:32] going to store it. So there's kind of like two different things, but they're a little bit
+[09:36] connected about basically what are we going to start doing with Augmentor log and where we're
+[09:40] going to store it, right? And so we could do this built, like we could build out this thing just for
+[09:45] our use case and, but. Or you want to see what other teams want to maybe. Yeah, it's kind of
+[09:53] like a twofold thing and I don't know, I need to. Yeah, that's, that's reasonable. I'd maybe,
+[09:58] um, well, I immediately think we should make it a feature thing, but if you're going to do it for
+[10:03] we should make it a feature thing but if
+[10:06] you're gonna do for other teams
+[10:08] they're well but yeah and now keep in mind you can't store the raw log for long because i mean
+[10:15] because, I mean, they do that and it's on a 30 day thing or whatever. It's way too expensive. So
+[10:21] you have to, yeah, so you're talking about storing aggregations. There are going to be less data,
+[10:26] I assume. Yeah. You're not going to store the raw log because that is way too much data, dude.
+[10:33] No, I know. I'm just thinking about. So the sooner people tell us what they want,
+[10:39] the sooner we could aggregate it and store it, you know?
+[10:45] Yeah. Where's the incremental lift? Is it dev, incremental lift dev?
+[10:50] But I do think, yeah, I do think we should get
+[10:55] immediately IP, the segments.
+[11:05] I'm going to store this efficiently. Oh man.
+[11:10] Oh man.
+[11:15] Like on an hourly basis, get IP, the segments they qualify for, the segment ID,
+[11:23] and we could join that back to, I don't know how to get back to campaign ID or whatever,
+[11:27] or advertiser ID with that. And then whether they're a holdout or not.
+[11:34] I'm messaging them right now. Yeah, that's going to, that's going to be a huge table though,
+[11:41] just stuff to explode the segments out.
+[11:49] That'd be huge.
+[11:56] Sorry, or,
+[11:57] or man, let me, let me see. Let me look at Opera log.
+[12:07] I have any,
+[12:11] I don't have any,
+[12:15] I don't have any,
+[12:19] I don't have any,
+[12:21] I don't have any,
+[12:27] I don't have any,
+[12:39] I mean, what, what, what else do other teams need though? I mean, I guess, because that's,
+[12:44] I don't mind helping them out, but like, if they want everything in the kitchen sink.
+[12:50] I don't think so. I think it's just,
+[12:54] we actually might already be doing this. The Augmenter log, I think has geo lat long.
+[12:59] Is that right? Oh, okay. Yeah. Or it has date. I think date is the only one we're not good.
+[13:01] it has date I think
+[13:03] date is the only one we're not getting
+[13:05] let's do big query
+[13:07] let's get a big query
+[13:09] let's um
+[13:11] Yeah, let's look at the Oggrelog together here.
+[13:16] Let me try to query it.
+[13:26] I'm going to select the art from DW.
+[13:31] All right. I just, I forgot we had a big group chat before.
+[13:36] So this is everybody that's, I would have put this in the, in the lift thing.
+[13:42] Okay.
+[13:44] Okay.
+[13:46] I'm sorry. I'm going to try to, where's Augmenter log, Augmenter log B1.
+[13:54] You never tell the partition columns with, I hate that.
+[14:02] Okay.
+[14:03] We, so the win rate methodology.
+[14:07] So the cost. Oh, that's what it is. So the win rate is going to be the cost impression log,
+[14:15] everything we want divided by the Augmenter log per campaign per day.
+[14:20] Okay. And that, that's what I think was going on.
+[14:26] So wait, so we need to do,
+[14:28] or wait, cost of pressure log, or, okay. So they want to get the win rate of the treatment and then
+[14:35] all right okay so they want to get the win rate of the treatment and then
+[14:41] like filter down and control to like that same win rate or something right
+[14:45] Is that, is that the idea?
+[14:46] I think that's what it is. Yeah. Okay. And then also there's a weird discrepancy. So we have a
+[14:50] 10% holdout group, but for some reason, the Augmenter log, we're only thinking about 10%
+[14:54] holdout. I don't know. I think that's, was one of the things we saw the Augmenter. Oh, sorry.
+[14:59] Unique IPs and Augmenter show holdouts at exactly 10%, but rows show only 8.4%.
+[15:01] I don't know. I think that was one of the things
+[15:02] we saw.
+[15:04] The augmenter... Oh, sorry. Unique IPs and augmenters
+[15:06] show holdouts at exactly 10%, but rows
+[15:08] show only 8.4%.
+[15:10] Holdouts appear to get
+[15:12] 16% fewer augmenter events per
+[15:14] IP than non-holdouts.
+[15:17] Huh. Why?
+[15:19] We don't know why.
+[15:23] Holdout...
+[15:24] Hmm.
+[15:28] Okay.
+[15:31] Yeah, okay.
+[15:39] All right, let's check. Let's see what's in. Oh my god.
+[15:45] All right, let's see what's in.
+[15:48] Oh, my God.
+[15:53] Dude, this is...
+[15:55] Where's Augmenter Log?
+[15:58] when did fangorn fangorn hasn't gone live has it
+[16:01] Augmenter path.
+[16:02] Let's do this.
+[16:10] When did Fangorn, Fangorn hasn't gone live, has it?
+[16:13] No.
+[16:15] That's right. We got the approval to go online, but.
+[16:18] Yeah, we still got some work to do.
+[16:19] Yeah, that's okay. I had my dates wrong in here. For some reason,
+[16:23] I had something that said that it was like, ready to go.
+[16:33] Why yes, to do region
+[16:39] east, east.
+[16:47] No, excuse me. Oh, oh god.
+[16:53] 2026, 04, 420, man.
+[16:58] Yeah, this here is 420. All right.
+[17:01] I guess it was 420.
+[17:02] All right.
+[17:20] Shoot.
+[17:22] Okay.
+[17:22] Okay.
+[17:26] let me share my screen
+[17:30] Uh, yeah, let me share my screen.
+[17:33] Formula is what we need to figure out and how we're going to store it because that's.
+[17:38] Yeah. Okay. I mean, then you, I mean, we'd make like a,
+[17:46] I'd probably say campaign level thing where, where we have the number of IPs.
+[17:55] Uh, let me share my screen here and I'll show you what's an augment or log.
+[18:04] Yeah. So see, this is the geo I think they're talking about.
+[18:08] So they don't, they don't get like location IDs. They just get like,
+[18:12] you know, they get country city, I guess. Latin long is there, but that all is zero,
+[18:17] zero. That doesn't seem correct.
+[18:20] Yeah, no, it is. They, they mess up. Not all of them send geo.
+[18:23] So that's another thing we wanted to do is figure out a advertiser level.
+[18:30] Um, which, which networks or whatever are sending us geo and at what percentage?
+[18:36] Cause that's another problem they have is that, uh, we are thinking about just doing
+[18:40] it through from the augment or log. Cause they're probably, they're a hundred percent
+[18:43] using max mind, but the problem is they're not.
+[18:45] Yeah.
+[18:46] So that was a whole discussion about it. And so basically trying to answer that question.
+[18:57] Is this Louisiana? This one doesn't qualify for mountain segments. This one doesn't qualify.
+[19:04] They don't have a zip. No, that one has a zip.
+[19:06] IP equals
+[19:12] anyway. Okay. So this, okay. So this mountain segments though, you, you know what table this
+[19:20] relates to, right? Yeah. Okay. Yeah. The audience segments, right. Yep.
+[19:26] Yeah. Okay. So this, okay. So this mountain segments though, you, you know what table this
+[19:32] relates to, right? Yeah. Okay. Yeah. The audience segments, right. Yep.
+[19:39] When is that? Uh,
+[19:43] yeah, cause I was just looking at this with, uh,
+[19:47] Alex, it's the segment ID column, right? Right here. So this guy,
+[19:56] so one Oh eight and you should be able to get all the way back to
+[20:00] Yeah, so I would, okay, yeah, here, and then campaign ID, yeah, so, oh, man, so how do
+[20:16] So...
+[20:16] Oh, man.
+[20:24] So how do we want to do this?
+[20:26] Okay, so they want the win rates
+[20:27] by GEO also?
+[20:29] was that the idea no just the win rates by campaign because we're moving away from so
+[20:31] No, just the win rates by campaign, because we're moving away from, so here's the thing is,
+[20:41] geo is something that's super valid, and it's awesome, we can use geo, but the problem with
+[20:46] geo is it's a budget issue, right? Every single time we do this, you do geo, you have to get
+[20:55] advertisers on board, and you have to do all this different garbage, right? So,
+[21:00] go spitting is really the only solution, because it doesn't cost us any money to do go spitting,
+[21:05] right, to have the holdout group. So, yeah, yeah, the answer is, okay, um, well,
+[21:12] I mean, I would just start a, okay, sorry, we're, um, and then what's, where's the winds at? Is it
+[21:21] the win, win log, cost impression log, or cost impression log shows us every, yes, every
+[21:27] impression that we actually want. We also get win logs directly from, I think that's from beeswax.
+[21:35] So, I think that's a beeswax table. So, the IDs, the names of the columns are a little bit different,
+[21:40] but yeah, I wouldn't worry about that, then cost impression log is sufficient. So, okay,
+[21:45] but do they have, um, they have campaign ID though there, or I guess,
+[21:52] do what, what, or I guess what I'm confused about, like this IP qualifies for all these campaigns.
+[22:00] So, how do you know that, I guess, so, so we're, this one row, we're going to store it as,
+[22:07] you're going to explode all these, however big this is. I don't know how big this is.
+[22:12] The big, yeah, like, I don't know, let's say, I don't know, a hundred of these. Um,
+[22:24] so then your win rate, man, see, how's the bear squad do win rate? Because like,
+[22:34] like, what's your win rate going to be? Because like, like, let's say we only bid on one of the,
+[22:40] one of the, or this IP for one of these, you know,
+[22:45] or maybe we bid for all of them. Actually, I heard we do bid for all of them,
+[22:48] but you're only going to win one. Or does that make sense? Or I don't know,
+[22:53] like this is going to be your denominator or like this, for this IP.
+[22:59] What is your denominator going to be? The number of rows in augmenter log
+[23:04] for this campaign? I think the number of, yeah, yeah. Your denominator would be
+[23:10] the number of rows in augmenter log and your numerator would be the number of rows in the
+[23:14] cost impression log. And that would show your, and then the only way you're going to split them
+[23:20] out is by the, of course, the hash, the holdout group and the non holdout group. So it has
+[23:26] something to do with that, but yeah, there's a good question there with a segment. It looks
+[23:29] like Matt's typing in that chat. I don't want to take too much of your time here. I can probably
+[23:34] answer that question for you, but I just want to bring it up on your radar of like, maybe some
+[23:40] questions that we need to ask before we like formally talk about it and then say, Hey,
+[23:46] cause like, obviously I didn't schedule the meeting yet. So I kind of wanted to talk with
+[23:49] you and like be like, yeah, this is, I think this is what we need in order to set up. So ghost
+[23:55] bidding, like the thing is the ghost bidding is a really good way to set up a meeting.
+[23:58] Like the thing is the ghost bidding is already working. We just don't have a way to effectively
+[24:02] measure it very well, at least in a structured way. I think that we need to create a
+[24:08] structured way to do it. Yeah. I would, I would just make a new, you know, feature set that runs
+[24:15] hourly grabs IP, I guess geo, but you know, this IP changes geos. You have to consider that like
+[24:23] do max geo. And then I guess it's let's say P could, Oh man, this is going to be a big data set.
+[24:34] I don't know. Let's think about it. Let's think about it. Okay. I will sync with them again
+[24:43] about this. I just wanted to run this by you, Ryan. So I'll, I'll give some more clarity
+[24:48] and then hopefully I will take all the gas work out of it and then just basically say,
+[24:53] this is exactly what we want and it needs to be in these tables. And then it's just
+[24:57] summarized to the point where the implementation is on that side of the fence. Okay. All right.
+[25:04] Cool. Thank you. Oh yeah. Yep. Let me know. Oh, and then your, your other feature store stuff,
+[25:09] are you going to, are you going to do the layer two stuff here sometime sooner? I mean,
+[25:13] it's not a big deal. I was going to do the layer two. This is this higher priority. So
+[25:19] since your layer one stuff's running, you know, it's your layer two stuff you can do
+[25:23] whenever you want. Cause you know, you don't, you want it to backfill or hopefully you want
+[25:27] to backfill layer one. So it's just sitting there waiting for you. So it's all good.
+[25:30] for you so it's all good okay cool yep all right thanks ryan take care yep bye
