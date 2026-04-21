@@ -133,3 +133,17 @@ The BQ version has slightly more rows. This is likely an artifact of replication
 **SQLMesh Resolve Flag — Under-the-Hood Behavior**
 
 The `resolve SQLMesh` flag works by finding the underlying physical table that a SQLMesh view references and loading that table directly, bypassing the view layer. This is relevant when debugging view-level vs. table-level query behavior in the identity/targeting pipelines.
+
+## 2026-04-21
+
+### [mntn_business] from malachi in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**BUK (Bottoms-Up Keywords) Naming Discussion:** Malachi proposed renaming BUK for marketability. Candidates included: Site Intent, Behavior Keywords, Onsite Intent, Journey Keywords, Intent Trails. Mike Dolt favored "Behavior Keywords". Alex Bloore opposed any "keywords" framing entirely — it confused him when he joined (implying TV search), and he believed the direction was toward "Attributes". Alex requested PMM engagement on the naming decision before finalizing. No final name selected as of 2026-04-20.
+
+### [mntn_business] from Jack Barbey in #identity_core
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Identity Graph — Recency Metric (Not Yet Built):** As of April 2026, the MNTN identity graph does not include a recency metric (i.e., how recently data about a user/household was last received). Jack Barbey noted that recency could be sourced from intermediate tables — the most practical approach would be attaching a "last seen" date to each ID, from which household-level recency could be derived. The `asOfDate` and lookback window of the graph provide a rough date range (approximately a 30-day rolling window). This was flagged as a potential future enhancement, possibly tied to geo confidence scoring.

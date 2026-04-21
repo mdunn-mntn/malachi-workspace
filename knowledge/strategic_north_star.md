@@ -262,3 +262,6 @@ Additional advantages of using internal bidstream data over 33Across:
 4. Naturally filters to IPs MNTN can actually bid on, reducing noise.
 
 Next step: TI-657 implements the augmentor_log/bid_event data integration into Site Visit Signals. (via Ryan Kleck, #tgt-infrastructure-squad, 2026-04-16)
+
+<!-- slack-extracted: 2026-04-21 -->
+- **Incrementality Dev Channel (#dev-incremental-lift) established April 2026:** A dedicated engineering channel was created to coordinate MNTN's incrementality and experimentation initiative. Al Beretta described three work themes: (1) Holdout and experimentation infrastructure — ghost bidding, audience segmentation, campaign isolation for A/B and multivariate testing; (2) Partner integrations — connecting with measurement partners (LiftLab and others) so experiment parameters, reporting data, and lift study results flow in and out of the platform; (3) New reporting — surfacing incrementality and A/B testing results natively in-platform. The bulk of Q2 work is on the TI squad or related to LiftLab. Mike Dolzer noted a project plan was forthcoming. (via Al Beretta, #dev-incremental-lift, 2026-04-20)
