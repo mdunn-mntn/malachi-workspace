@@ -43,7 +43,26 @@ Matt outlined a model that trains on impressions as a feature — predicting the
 
 **Objective:** Build an ATT estimator using the existing 10% holdout, without requiring bidder-side changes.
 
-**Methodology update (Matt Brorby, 2026-04-21):** The original Step 1–3 framing below (compute campaign win rate, apply as sampling probability to holdout IPs, compare visit rates) has been superseded by a cleaner approach. Rather than approximating "would-have-been-served" via an aggregate win rate, we use the per-event targeting signal already in `augmentor_log` — intent score and HHST at the moment of the bid opportunity — to filter holdout IPs directly. Matt's exact framing: *"use augmentor_log to see if any IPs in the holdout group appear and if we would have bid on them at the time (what was their intent score and what was the HHST?). This will get us candidate IPs from the holdout to build our comparison group. Next steps are possibly post-processing where we sample from these candidates in order to make sure the treated and control groups have similar distributions. The 'distribution' is a bit vague here, but could initially just be trying to match on prospecting intent scores."* Alex Knorr already has the structure started.
+**Methodology locked (2026-04-21):** Matt Brorby's event-level filter approach is the *primary* methodology. Ryan Kleck's aggregate win-rate is retained as a *secondary sanity check*. See "Methodology decision rationale" below.
+
+Matt's framing (from Slack, 2026-04-21): *"use augmentor_log to see if any IPs in the holdout group appear and if we would have bid on them at the time (what was their intent score and what was the HHST?). This will get us candidate IPs from the holdout to build our comparison group. Next steps are possibly post-processing where we sample from these candidates in order to make sure the treated and control groups have similar distributions. The 'distribution' is a bit vague here, but could initially just be trying to match on prospecting intent scores."* Alex Knorr already has the structure started.
+
+### Methodology decision rationale (2026-04-21)
+
+Two candidate methodologies surfaced after Matt's Slack clarification and Ryan's meeting on 2026-04-21:
+
+1. **Event-level filter + propensity matching (Matt):** for each holdout IP appearance in augmentor_log, keep the event if intent score ≥ campaign threshold AND HHST cleared; propensity-match candidate-holdout distribution to served-treatment distribution on intent score.
+2. **Aggregate win-rate sampling (Ryan):** compute win_rate = cost_impression_rows / augmentor_rows per campaign-day; apply that rate as inclusion probability to holdout augmentor rows.
+
+**Decision: Matt's event-level filter is the primary methodology.** Rationale:
+
+- **Academic:** matches Johnson-Lewis-Nubbemeyer (2017 JMR) canonical ghost-ad design, which conditions on the deterministic ad-serving rule to identify ghost-exposed controls.
+- **Statistical:** Ryan's aggregate approach assumes uniform win rate across intent bands. Almost certainly false — high-intent IPs win auctions at different rates than low-intent IPs. Applying a marginal win rate biases the holdout candidate pool toward mean-intent, underestimating ATT in exactly the intent-tier breakouts we need.
+- **Pragmatic:** Intent-tier heterogeneity is the whole point. TI-884 (power per tier), TI-885 (mid-intent), and TI-886 (uplift ranking) all depend on per-tier measurement. Aggregate win-rate collapses that.
+
+**Ryan's aggregate is retained as a secondary estimator / sanity check.** If the two estimates agree, we gain robustness. If they disagree, the disagreement is itself diagnostic of heterogeneity and should be reported.
+
+**Storage is a separate design problem.** Matt's methodology does not require full per-event storage — IP-day aggregation with intent-score distribution bins + qualifying-event counts is sufficient. That design is Open (Q4 in the Slack thread).
 
 #### Step 1 (revised): Holdout Candidate Extraction from augmentor_log
 - For each advertiser, pull all holdout IP appearances in `augmentor_log` during the analysis window (hash bucket 0-99 using `MD5(advertiser_id:ip)` → 64-bit unsigned mod 1000).
