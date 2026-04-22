@@ -213,6 +213,70 @@ Implication for positioning: do not frame CTV as "search replacement" or "signal
 
 ---
 
+## The Data Model Chain — How Audiences, Campaigns, and Bidding Fit Together
+
+The canonical hierarchy from raw data to bid decision. Source: Malachi's Slack explainer to Matt Brorby, 2026-04-22 — captured here because this mental model is useful onboarding context and recurs in every incrementality / targeting discussion.
+
+```
+data_sources (IP + category_id mapping)
+    │   category_id within a data_source IS the atomic audience of that data_source
+    ▼
+audience expressions (boolean include/exclude of data_source × category_id tuples)
+    │   resolves to an IP set, loaded into MembershipDB as an audience_segment
+    ▼
+campaigns (1:1 with one audience_segment via audience_segment_campaigns, expression_type=2)
+    │
+    ▼
+advertisers
+    │
+    ▼
+verticals (one per advertiser, fixed assignment)
+```
+
+### Atomic unit: (data_source_id, category_id, ip)
+- **data_sources** are catalogued providers of IP data (internal or third-party)
+- **category_ids** are each data_source's self-categorization of IPs (e.g. "sports fans," "in-market for auto")
+- A category_id within a data_source is, functionally, an atomic audience — the smallest targetable group
+- MNTN authors some data_sources in-house (DS19 keyword universe, DS38 UI keywords, DS42 PMP deals); most are third-party
+
+### How audiences get built
+- An **audience expression** is a boolean combination of (data_source_id, category_id) tuples — include these, exclude those
+- When a campaign is created, the expression is translated into the set of IPs that satisfy it
+- That IP set is loaded into **MembershipDB** as an audience segment — the thing the bidder actually reads
+- One campaign → one expression → one segment in memdb (via `audience_segment_campaigns`, `expression_type = 2`)
+
+### What augmentor_log captures
+- Every bid request that came through gets evaluated against memdb segments
+- augmentor_log records the evaluation: IP, time, which campaigns/audiences matched, intent score, HHST, geo, etc.
+- **Pre-bid-decision** — it's the "who passes the targeting gate for whom" log, not the bid itself
+- Bidding happens after augmentor_log: if an IP passes a campaign's targeting gate at auction time, we bid
+
+### Log chain (Malachi → Matt, 2026-04-22)
+| Table | What it is | Unique ID |
+|-------|-----------|-----------|
+| `logdata.guid_log` | All page views | none — use ip + time + advertiser_id |
+| `logdata.conversion_log` | Conversions | none — use ip + time + advertiser_id |
+| `logdata.augmentor_log` (bronze.raw) | Every targeting-gate evaluation | none — use ip + time + advertiser_id |
+| `logdata.impression_log` | Impressions bid on (attempted) | yes (impression_id) |
+| `logdata.cost_impression_log` | Impressions won — **use this most** | yes |
+
+Only impression tables have first-class unique IDs. For visits/conversions/augmentor events the composite key is `(ip, timestamp, advertiser_id)`.
+
+**Open nuance to reconcile:** my catalog trace paths put impression_log *after* win_logs for CTV (see data_knowledge.md "Impression trace paths"). Malachi's plain-English framing is "impression_log = bid attempts, cost_impression_log = wins." Possible reconciliation: impression_log rows fire in two contexts (bid submission AND post-win pixel), with different semantics per channel. Worth empirically checking whether impression_log rows exist without a corresponding win_logs row. Flagged 2026-04-22.
+
+### Filtering order for analysis
+Work down the chain, not up: `audiences → campaigns → advertisers → verticals`. Start by picking the audience(s) you care about, then campaigns using them, then the advertisers those campaigns belong to. This reflects how the system is built — IPs are never directly attached to anything; they're always attached via a (data_source, category_id) membership.
+
+### Implications for ghost bidding (TI-837)
+The "Would MNTN have bid on this holdout IP?" question decomposes into three boolean gates evaluated on a single augmentor_log row:
+1. IP matches a campaign's audience expression at that moment
+2. Intent score ≥ campaign threshold
+3. HHST gate clear
+
+All three yes → valid ghost-bid candidate for that campaign. All three fields are present in the augmentor_log row, so the filter is a pure row-level predicate — no external joins to memdb required at analysis time (the audience-expression match is already baked into which campaign's evaluation produced the row).
+
+---
+
 ## Internal Terminology & Acronyms
 
 | Term | Definition |
@@ -266,6 +330,7 @@ Implication for positioning: do not frame CTV as "search replacement" or "signal
 | 2026-04-07 | TGT Infrastructure Standup | Fangorn all-verticals done (Brian, validating), continuous scoring architecture (MembershipDB + Bidder parallel), identity graph blocked on CRM rollout, Bryce/Sean/Victor/Forrest people context, Jira workflow update, MountainMeet NYC this week |
 | 2026-04-08 | Kale McNaney conversation | Incrementality customer lifecycle (eval + budget planning), CPM pricing vs IVR tension, incremental ROAS as top metric, external vendors (LiftLab primary, Kochava), shutter internal dashboards strategy, competitive positioning |
 | 2026-04-17 | Mike Dolt Q2 Roadmap presentation | Mountain Matched AI North Star, 3 themes (B2B/Incrementality/MMAI), 31 line items, B2B integrations (6), Mountain Mesh for B2B, Waypoint Targeting, geo-resolution migration (20-25% missed bids), MNTN Express no pixel, Alex Bloore/Mike Dolt roles, terminology (audience overlays, Gary, Permel, firmographics) |
+| 2026-04-22 | Malachi → Matt Brorby Slack explainer | Consolidated data model chain (data_source → category_id → audience expression → campaign → advertiser → vertical), log chain with unique-ID rules (augmentor_log / impression_log / cost_impression_log / guid_log / conversion_log), ghost-bidding decomposition in terms of the three augmentor_log gates |
 
 ---
 
