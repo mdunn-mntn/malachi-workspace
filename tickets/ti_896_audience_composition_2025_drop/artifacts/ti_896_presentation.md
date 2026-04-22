@@ -1,67 +1,111 @@
 # Audience composition shift analysis — 2025 performance drop
 
-**Initial findings** — TI-896 | Malachi | 2026-04-22
+**Final findings** — TI-896 | Malachi Dunn | 2026-04-22
+**Deck:** https://gist.githack.com/mdunn-mntn/f836ba48d987ead2894535e772c8f451/raw/ti_896_deck_standalone.html
 
 ---
 
 ## Power Line
 
-> **Interest-audience use tripled the week Peak Performance launched.**
+> **21% of 2025-active advertisers have adopted Peak Performance.**
 
-This is the only material composition shift across 2025-active advertisers in the drop window. Every other audience-type mix moved within ±2pp.
+This is the only material audience-composition shift across the 2025-active cohort since the performance drop began. Every other bucket moved within ±1pp.
 
 ---
 
 ## Act 1 — Disruption
 
-Revenue per AID has halved over 18 months (Ray). New-cohort 3-month CLV is down ~50% (Will). 70% of consecutively-active advertisers are now cutting budgets MoM (Will). Pixel opt-out has been ruled out.
+Revenue per AID has halved over 18 months (Ray's data). New-cohort 3-month CLV is down ~50% (Will's data). ~70% of consecutively-active advertisers are now cutting budgets MoM (Will's data). Pixel opt-out has been ruled out (0.4%).
 
-Richard's ask from our lane: **did the mix of audience types advertisers target shift?** If yes, in which direction, when, and by how much.
+In the audience-composition lane: did the mix of audience types advertisers target shift?
 
-**One number:** the share of 2025-active advertisers running at least one Interest audience went from **13% on Sep 29** to **30% today**. The inflection point is the week Peak Performance shipped. Every other composition metric moved within ±2pp.
+**One number:** the share of 2025-active advertisers with ≥1 Peak Performance audience went from **~1% in Aug–Sep 2025** to **21% today**. The inflection aligns with the Oct 6 Peak Performance launch.
 
 ---
 
 ## Act 2 — Revelation
 
-### Slide 2.1 — The inflection
+### Peak Performance adoption
 
-![Interest-audience use tripled after Peak Performance launch](ti_896_chart_01_interest_jump.png)
+![Peak Performance adoption](ti_896_chart_01_pp_jump.png)
 
-- **Sep 29 2025:** 13% of active advertisers used Interest audiences (flat line for 9 months prior)
-- **Oct 6 2025:** Peak Performance tier launches
-- **Apr 22 2026:** 30% of active advertisers use Interest audiences
-- **Nov 19 2025:** Max Reach scoring turned off — Interest trajectory unchanged (continued climbing)
+- **Near-zero through May 2025**, ~1% baseline June–Sep (early-access / legacy RTC+DS13+DS19 configurations)
+- **Oct 6 2025:** Peak Performance tier launches; sharp inflection begins
+- **Apr 20 2026:** 21% of 2025-active advertisers use Peak Performance audiences
+- **Nov 19 2025:** Max Reach scoring turned off — PP trajectory unchanged (continued climbing)
 
-### Slide 2.2 — Everything else is flat
+### Everything else stayed flat
 
 ![Audience-type usage across 2025-active advertisers](ti_896_chart_02_cohort_composition.png)
 
-In the drop window (Sep 2025 → Dec 2025):
-- MM: 100% → 99.5% (flat — every advertiser uses it)
-- 3P: 71% → 69% (–2pp)
-- CRM: 25% → 25% (flat)
-- **Interest: 10% → 25% (+15pp)**
+In the Sep–Dec 2025 drop window:
+- **MM:** 100% → 98% (near-universal, tiny decline)
+- **Keywords:** 70% → 71% (flat)
+- **3P:** 56% → 57% (flat)
+- **CRM:** 25% → 25% (flat)
+- **Peak Performance:** 1% → 15% (the only mover)
 
-The noise floor is ~2pp. Interest is the only signal above noise.
+Noise floor is ~1pp. Peak Performance is the only signal above noise.
 
-### Slide 2.3 — Retargeting share (Alex's hypothesis)
+### Retargeting share
 
-![Retargeting share of active campaigns has fallen ~13pp over 18 months](ti_896_chart_03_retargeting.png)
+![Retargeting share has fallen ~13pp over 18 months](ti_896_chart_03_retargeting.png)
 
-Alex Knorr's hypothesis: "if advertisers are setting up fewer retargeting campaigns, that could explain conversion drops."
+- Long-term: retargeting share of active campaigns fell from **42% → 25%** over 18 months
+- In the drop window (Sep–Dec 2025): stable at 25%
+- Long-term trend worth watching; not an acute signal for the Nov onset
 
-- Long-term: retargeting share fell from **38% → 25%** over 18 months (Nov 2024 → today)
-- In the drop window specifically (Sep–Dec 2025): stable at 25%
-- Long-term trend worth watching, but not the acute signal for the Nov 2025 drop
+Caveat: `objective_id` is unreliable post-2025 TV migration. `funnel_level` cross-check trends inversely — both reported.
 
-Caveat: `objective_id` is unreliable post-2025 TV migration (known gotcha). `funnel_level` cross-check trends inversely — we report both.
+### Shift magnitudes
 
-### Slide 2.4 — Shift magnitudes
+![Sep-Dec 2025 cohort share deltas](ti_896_chart_04_shift_magnitudes.png)
 
-![Sep-Dec 2025 shifts](ti_896_chart_04_shift_magnitudes.png)
+Peak Performance gained +12pp Sep 29 → Dec 29 2025. Every other bucket moved within ±1pp.
 
-Interest audiences gained +12pp in three months. Every other bucket moved within ±1pp.
+---
+
+## Track A — Spend-weighted view
+
+![PP presence vs spend share](ti_896_chart_05_pp_spend_share.png)
+
+Advertiser-presence climbs to 21%. Spend-weighted share lands at ~12–13%. The ~8pp gap shows Peak Performance adopters skew smaller-spend than cohort average.
+
+Sidebar: **MM spend share dropped 75% → 38% over 18 months** — materially bigger shift than presence view indicated. Flagged for separate investigation.
+
+---
+
+## Track B — Default vs custom Peak Performance
+
+![PP default vs custom](ti_896_chart_06_pp_default_vs_custom.png)
+
+Among PP adopters (stable across the ramp):
+- **34% default-only** — template with pure DS13+DS19 pattern
+- **58% custom-only** — template with additional DS clauses layered on (exclusions, overlays, extra keywords, CRM combinations)
+- **3% both**
+- **5% unclassified** (template not yet in archives — CDC lag)
+
+**Majority of adopters are customizing the recommended template, not using it as-is.**
+
+Classifier is a structural proxy (pure DS13+DS19 vs layered). Formal product definition of "default" is an open question for the audience-tools team.
+
+---
+
+## Track C — Per-advertiser ROAS cross-check
+
+![PP adopters vs non-adopters, ROAS delta](ti_896_chart_07_pp_vs_conv_scatter.png)
+
+1,217 advertisers delivering in both Aug–Sep 2025 (baseline) and Dec 2025 (post) with ≥1,000 VVs each window.
+
+**Median deltas:**
+| Cohort | n | Δ conv rate | Δ ROAS | Δ AOV |
+|---|---:|---:|---:|---:|
+| New PP adopter | 161 | +38% | **+46%** | −1% |
+| Non-adopter | 657 | +82% | **+124%** | 0% |
+
+Both cohorts saw Q4 ROAS lift. **Peak Performance adopters captured roughly half the lift non-adopters did.** AOV is flat in both, so the gap is in conversion rate, not basket size.
+
+Audience-side cross-check — not the canonical conversion analysis. Baseline window (Aug–Sep 2025) is the tail of the pre-drop period.
 
 ---
 
@@ -69,38 +113,40 @@ Interest audiences gained +12pp in three months. Every other bucket moved within
 
 ### What the data says
 
-1. **One material composition shift** in the 2025 drop window: Interest-audience adoption tripled, starting the week Peak Performance launched.
-2. **No corroborating move on MM, 3P, CRM, or prospecting/retargeting mix** during the drop window — those aren't the story.
-3. **Max Reach off (Nov 19)** did not visibly bend Interest adoption or any other curve — the Peak Performance ramp continued smoothly through it.
+1. **Peak Performance adoption reached 21%** of 2025-active advertisers. Near-zero pre-launch; sharp inflection at Oct 6; continued through Max Reach off (Nov 19) and through the Oct scoring-bug fix.
+2. **No other audience-type shift** above ~1pp noise. MM / Keywords / 3P / CRM / retargeting all flat in the drop window.
+3. **Adopters skew smaller** (21% by presence vs 12–13% by spend) and **most are customizing** the template (58% custom vs 34% default).
+4. **PP adopters captured half the Q4 ROAS lift** non-adopters did (+46% vs +124% median). Flat AOV in both cohorts, so the gap is conversion rate.
 
-### What the data doesn't say
+### What the data does not say
 
-- Whether Peak Performance adoption *caused* the conversion fall. Rev-per-AID was already declining in 2024, long before Peak Performance shipped — Interest's ramp is *one* moving piece inside a system-wide contraction. Requires advertiser-level joins against Ray's conversion deltas and Will's spend-velocity data to go further.
-- Whether default Peak Performance recommendations differ from what advertisers shipped — requires default-vs-custom analysis (queued).
-- Whether max-reach-off hurt conversion rates even while leaving audience composition unchanged — delivery/performance side, owned by Ray's team.
+- Whether Peak Performance *causes* the relative ROAS underperformance. Correlation in the cross-check, not causation. A proper causal test requires hold-out or staggered-rollout analysis.
+- Whether custom-PP adopters perform differently from default-PP adopters. Segmenting the 34/58 split against conversion outcomes is the logical next step.
+- Whether the max-reach-off event (Nov 19) degraded conversion rates without shifting audience composition — that's delivery-side, Ray's lane.
 
-### Next steps (ranked)
+### Follow-up work
 
-1. **Advertiser-level scatter:** Δ(Interest share) vs Δ(conversion rate), Sep–Dec 2025. If advertisers who adopted Peak Performance saw larger conversion declines, that's the smoking gun. *(Planned tomorrow.)*
-2. **Default-vs-custom cut:** how many of these Interest audiences are the MNTN-provided defaults vs. advertiser-built variants. *(Planned tomorrow; Malachi + Alex Knorr agreed this angle in today's meeting.)*
-3. **Peak Performance scoring sanity check:** compare October 2025 (launch + scoring bug) vs Nov–Dec 2025 (post-fix). If Interest-audience campaigns under-delivered conversions specifically in that period, the analysis escalates.
+1. **Causal test of Peak Performance on ROAS** — requires a controlled hold-out or staggered-rollout design. Default-following advertisers (the 34% cohort) are a natural "as-designed" baseline.
+2. **Default vs custom performance split** — do custom PP audiences drag the adopter-median down disproportionately? Reuse Track C methodology with Track B's classification.
+3. **Formal definition of "default Peak Performance"** — for audience-tools team (Ryan / Jordan). Current classifier is a structural proxy.
+4. **MM spend-share decline investigation** — sidebar finding from Track A (75% → 38% over 18 months).
 
 ---
 
 ## Methodology
 
-- **Cohort:** every advertiser with ≥1 impression on any day in 2025 (`summarydata.sum_by_campaign_by_day`)
-- **Source:** `dw-main-bronze.integrationprod.archives_audience_segment_archives`, `expression_type_id = 2`, `is_targeted = TRUE`. 77 weeks, 4,111 advertisers, 93K active campaigns as of Apr 22 2026.
-- **Classifier:** regex-extract `data_source_id` values from expression JSON → join to canonical `data_sources` dim → bucket to war-room categories (MM / 3P / CRM / Interest / RTC Keywords / Extension / Exclusion).
-  - MM = DS19 (MNTN Matched) + DS2 (MNTN First Party) + per-advertiser "First Party Audience" sources
-  - 3P = DS1/3/11/17/18/20/22/29/33/35 + other vendor sources + per-advertiser "Third Party Audience"
-  - CRM = DS4 + DS31 + DS47
-  - Interest = DS13/42/46 (Peak Performance family)
-- **Time reconstruction:** per `(campaign_id)`, `LEAD(update_time)` gives each version an effective window; we explode to weeks and roll up.
-- **Events annotated:** Peak Performance launch (early Oct 2025, Mike Dolt); Max Reach scoring off (Nov 19 2025, Ryan Kleck).
+- **Cohort:** every advertiser with ≥1 impression on any day in 2025 (`summarydata.sum_by_campaign_by_day`). 4,109 advertisers as of 2026-04-22.
+- **Primary source:** `dw-main-bronze.integrationprod.archives_audience_segment_archives`, `expression_type_id = 2`, `is_targeted = TRUE`. 77 weekly observations, 93K active campaigns.
+- **Peak Performance detector (segment level):** regex requires `score_type=rtc` AND `data_source_id=13` AND `data_source_id=19` in the same expression. Refined through V1→V5 verification (see [verification note](ti_896_verification.md)).
+- **Default-vs-custom classifier (template level, `archives_audiences_archives`):** template is `default_pp` if expression carries only DS13 and DS19; `custom_pp` if additional DS clauses present.
+- **Spend-weighting (Track A):** join archive effective windows to `sum_by_campaign_by_day` on `(campaign_id, day)`; weight by `media_cost`.
+- **ROAS cross-check (Track C):** per-advertiser two-window comparison (Aug–Sep 2025 vs Dec 2025), ≥1,000 VVs per window. Metrics from `summarydata.sum_by_campaign_by_day`.
+- **Events annotated:** Peak Performance launch (early Oct 2025); Max Reach scoring off (Nov 19 2025).
 
 ## Known limits
 
-- We count *presence* of each DS type in any active campaign expression. We don't yet weight by spend or impression share — a campaign with a Peak Performance clause attached but zero delivery still counts. Delivery-weighted view requires joining archive windows to daily spend (planned tomorrow).
-- `objective_id` reliability gotcha noted on the retargeting slide.
-- Scores themselves have a 35-day TTL in BQ — we cannot retroactively look at Nov 2025 intent scores for a conversion-correlation analysis.
+- Adoption is measured at advertiser / campaign-day grain. Not weighted by impression count within delivered campaigns.
+- `objective_id` reliability gotcha affects retargeting share chart.
+- Scores (intent tier) have a 35-day TTL in BQ — can't retroactively inspect Nov 2025 intent scoring.
+- Track C survivorship: advertisers that cut spend below 1,000 VVs/window are excluded.
+- Default/custom classifier is a structural heuristic, not a product-sourced definition.

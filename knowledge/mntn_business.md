@@ -1,4 +1,17 @@
 # MNTN Business Knowledge
+
+## Peak Performance adoption mix (per TI-896, 2026-04-22)
+
+Peak Performance audience tier launched week of Oct 6 2025. As of Apr 2026:
+
+- **21% of 2025-active advertisers** have adopted at least one PP audience.
+- **~12–13% of cohort spend** flows through PP campaigns (adopters skew smaller-spend than cohort average).
+- **Among adopters:** 34% use the default template (pure DS13+DS19 structural pattern), 58% customize the template by layering additional DS clauses (exclusions, overlays, extra keywords, CRM combinations), 3% run a mix, 5% unclassified (template not yet in archives).
+- **PP-adopter cohort captured ~half the Q4 ROAS lift** non-adopters saw (median +46% vs +124% Aug–Sep to Dec 2025). AOV flat in both cohorts — gap is conversion rate, not basket size.
+
+Structural "pure DS13+DS19" (template level) vs "DS13+DS19 + additional DS" is the best currently-known proxy for default-vs-custom PP usage. Formal product definition of "default" is a Ryan / Jordan (audience-tools team) question.
+
+
 Last updated: 2026-04-17
 
 General knowledge about MNTN as a business — products, strategy, org structure, industry context, terminology, and institutional knowledge. Sourced from shared docs, meetings, messages, and conversations. Updated as new business context is learned.

@@ -1,7 +1,7 @@
 # TI-896: Audience composition shift analysis — 2025 performance drop war room
 
 **Jira:** https://mntn.atlassian.net/browse/TI-896
-**Status:** In Progress
+**Status:** Complete (Phase 1 + follow-up Tracks A/B/C shipped)
 **Date Started:** 2026-04-22
 **Date Completed:**
 **Assignee:** Malachi
@@ -210,7 +210,16 @@ Chart: [artifacts/ti_896_chart_07_pp_vs_conv_scatter.png](artifacts/ti_896_chart
 
 ## 5. Solution
 
-*Pending.*
+Four-phase analytical bundle delivered as a single RevealJS deck (14+ slides), with query + CSV + chart artifacts for each phase:
+
+1. **Headline cohort analysis** — Peak Performance (strict detector: `score_type=rtc + DS13 + DS19`) adoption went near-zero → 21% of 2025-active advertisers since the Oct 6 launch. Every other audience bucket flat ±1pp.
+2. **Track A — Spend-weighted view** — PP ~12–13% of cohort spend vs 21% advertiser-presence. Adopters skew smaller-spend.
+3. **Track B — Default vs custom** — 34% adopters use the pure DS13+DS19 template; 58% customize by layering additional DS clauses; 3% both; 5% unclassified.
+4. **Track C — ROAS cross-check** — PP adopters captured ~half the Q4 ROAS lift (median +46% vs +124%). AOV flat in both cohorts.
+
+Final deck: https://gist.githack.com/mdunn-mntn/f836ba48d987ead2894535e772c8f451/raw/ti_896_deck_standalone.html
+
+Verification bundle: [artifacts/ti_896_verification.md](artifacts/ti_896_verification.md) — ten independent checks (V1–V10).
 
 ## 6. Questions Answered
 
@@ -220,15 +229,24 @@ Chart: [artifacts/ti_896_chart_07_pp_vs_conv_scatter.png](artifacts/ti_896_chart
 
 ## 7. Data Documentation Updates
 
-*To be filled at ticket close.*
+- `knowledge/data_knowledge.md` — corrected DS-id mappings (DS3 ≠ LiveRamp; DS35 = LiveRamp IP; DS11 = LiveRamp segments; DS13 = Vertical Categorization = Peak Performance). Added the canonical PP detector spec (score_type=rtc + DS13 + DS19) and noted the template-vs-segment schema difference.
+- `knowledge/mntn_business.md` — added "Peak Performance adoption mix" section with the 21% / 12–13% / 34-58-3-5 / +46-vs-+124 numbers and the default-vs-custom heuristic.
 
 ## 8. Open Items / Follow-ups
 
-- [ ] Confirm BQ mirror for `archives.audiences_archives`
-- [ ] Confirm DS id for "third party" — meeting transcript may have said DS35 (possible mistranscription of DS3). Verify in schema.
-- [ ] Cross-check Peak Performance tier vs `data_source_id=13` — whether it's a new DS id or a sub-tier of DS13 (Jaguar intent)
-- [ ] After primary analysis: does the timeline show a regime change at Nov 19 2025 when max-reach scoring was turned off?
-- [ ] Hand-off of remaining scores-based work (35-day TTL means most historical scores are gone)
+### Resolved during this ticket
+- ✅ BQ mirror for `archives_audiences_archives` confirmed
+- ✅ DS35 = LiveRamp IP (canonical `data_sources` dim; not DS3 — memory was wrong)
+- ✅ DS13 confirmed as Peak Performance per both product language (Bryce) and structural detector
+- ✅ Nov 19 max-reach-off does not visibly bend any cohort-level composition curve
+
+### Open for follow-up tickets
+- [ ] **Causal test of Peak Performance on ROAS** — Track C shows PP adopters captured ~half the Q4 ROAS lift non-adopters did. Correlation only. A controlled hold-out / staggered-rollout analysis is the canonical next step. Default-following 34% cohort is a natural "as-designed" baseline.
+- [ ] **Default vs custom performance split** — do custom-PP adopters underperform default-PP adopters? Segment Track C's ROAS deltas by Track B's classifier.
+- [ ] **Formal default-PP definition** — for Ryan / Jordan (audience-tools). Our structural proxy (pure DS13+DS19 template) is best-effort.
+- [ ] **MM spend-share decline** — Track A surfaced a sidebar finding: MM spend share dropped 75% → 38% over 18 months, materially bigger than advertiser-presence indicated. Worth its own ticket.
+- [ ] **DS16 jump** — separate 1% → 35% DS16 (MNTN Taxonomy Data) ramp observed during verification, partially polluted by NOT-clause exclusions (12.5%). Deserves a dedicated structural look.
+- [ ] **Scores-based work** — 35-day TTL means most historical PP score distributions are gone; can only analyze forward from ~now.
 
 ## Links
 

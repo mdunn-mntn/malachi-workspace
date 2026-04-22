@@ -496,6 +496,8 @@ Jaguar is MNTN's IP scoring model that predicts household purchase intent.
 - Input: `bronze.raw.tmul_daily` → membership DB → bidder
 - Scores stored in `cost_impression_log.model_params` as key=value pairs (e.g., `score=0.8523`)
 - `data_source_id = 13` — canonical `data_sources.name` is **"MNTN Vertical Categorization"**. In war-room language (Bryce Wagg, 2026-04-22) this DS is called **"Peak Performance"** and carries the Jaguar intent scoring. Same DS id, two names depending on the audience — code = Vertical Categorization, product = Peak Performance.
+- **Canonical Peak Performance segment-level detector (TI-896, verified):** expression must contain ALL THREE of `"score_type":"rtc"`, `"data_source_id":13`, `"data_source_id":19`. Neither DS13-alone nor DS13+DS19-without-RTC is sufficient — DS13-alone over-counts by ~12pp (legacy Vertical Categorization use); DS13+DS19-without-RTC has ~1% false-positive baseline (legacy hybrid Interest+Keywords audiences that predate PP). All three signals together give near-zero pre-Oct-2025 baseline, matching the formal launch date.
+- **Template-level (in `archives_audiences_archives`) uses the compact `{"interest":{"include":[{"or":[...DS13...DS19...]}]}}` schema**; segment-level (`archives_audience_segment_archives`) uses the translated `{"select":[...],"categories":{"where":{...}},"geos":{...}}` form, which adds auxiliary DS ids (DS14 global flag, holdout MD5 bucketing). Structural "pure DS13+DS19" checks only work at template level.
 - Scores applied at bid time — not stored long-term in BQ event tables
 - Pipeline is DS13 (not DS2 or DS4)
 
