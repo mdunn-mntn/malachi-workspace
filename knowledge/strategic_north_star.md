@@ -265,3 +265,15 @@ Next step: TI-657 implements the augmentor_log/bid_event data integration into S
 
 <!-- slack-extracted: 2026-04-21 -->
 - **Incrementality Dev Channel (#dev-incremental-lift) established April 2026:** A dedicated engineering channel was created to coordinate MNTN's incrementality and experimentation initiative. Al Beretta described three work themes: (1) Holdout and experimentation infrastructure — ghost bidding, audience segmentation, campaign isolation for A/B and multivariate testing; (2) Partner integrations — connecting with measurement partners (LiftLab and others) so experiment parameters, reporting data, and lift study results flow in and out of the platform; (3) New reporting — surfacing incrementality and A/B testing results natively in-platform. The bulk of Q2 work is on the TI squad or related to LiftLab. Mike Dolzer noted a project plan was forthcoming. (via Al Beretta, #dev-incremental-lift, 2026-04-20)
+
+<!-- slack-extracted: 2026-04-22 -->
+- **Incrementality Measurement — TI Squad Methodology Progress**
+
+TI squad has completed TI-835, an observational study of incrementality using existing holdout groups and an Intent-to-Treat (ITT) framework. This work is informing TI-837, which has two components:
+1. Building out a manual ghost bidding methodology for Treatment-on-the-Treated (TOT) incrementality evaluation.
+2. Setting up an experiment with Mid-Intent and/or Max Reach focused treatment campaigns to evaluate incrementality opportunities in lower-scoring audience groups.
+
+A separate methodology review of LiftLab is underway (TI-856). The ITT → TOT progression reflects a deliberate deepening of causal rigor in MNTN's incrementality measurement approach. (via Alex Knorr, #dev-incremental-lift, 2026-04-21)
+- **Incremental Lift Targeting Model — RFD Published**
+
+Matt Brorby has published an RFD (Request for Discussion) for an Incremental Lift Targeting Model, linked in the targeting-squad channel. The stated goal is to develop a model that identifies and targets households that would not have visited or converted without MNTN advertising — i.e., truly incremental audiences. This is prototyping-stage work aligned with the company's incrementality north star. (via Matt Brorby, #targeting-squad, 2026-04-21)

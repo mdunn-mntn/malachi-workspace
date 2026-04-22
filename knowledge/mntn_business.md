@@ -420,3 +420,36 @@ Optimized for Claude Code but compatible with any AI coding assistant. (via Adam
 - **TI Squad Jira Operating Standards (Bryce Wagg, April 2026):** The TI (Targeting Infrastructure) squad uses the following Jira conventions: Story points: 1=half day, 2=1 day, 3=1-2 days, 5=3-5 days, 8=1 week+ (should be broken down), 13+=must be an epic (max story size is 8). Ticket hygiene: no subtasks; use Tasks over Stories; spikes are unpointed and research-only (code goes in a separate ticket); default priority P3; every ticket must pass through every status. Epics should ideally represent a single sprint; rarely span two sprints. Required fields on creation: Release Type, User-Facing, Developer. Sprint naming format: `<Team Acronym> Sprint - MM/DD/YYYY - MM/DD/YYYY` (e.g., `TI Sprint - 04/07/2026 - 04/20/2026`). Scrum cadence: daily 15-min standup (blockers first, right-to-left board), weekly backlog refinement (exit = next 1-2 sprints ready), sprint planning at sprint start, review/demo + retro at sprint end. (via Bryce Wagg, #targeting-squad, 2026-04-20)
 - **Audience and Intent Scoring Venn Diagram — Documented in Confluence:** The Venn Diagram illustrating the relationship between High Intent, Mid, Max Reach, and Peak Performance audience tiers is now documented in Confluence at https://mntn.atlassian.net/wiki/spaces/TAR/pages/3567452174/Audience+and+Intent+Scoring+Venn+Diagram. Previously this only existed in Slack. (via Ryan Kleck, #tgt-infrastructure-squad, 2026-04-20)
 - **NeonPixel — No Dayparting Usage:** As of April 2026, there are no NeonPixel (NP) campaigns using dayparting. Confirmed by Tofer (production ops). (via Tofer, #production-ops, 2026-04-20)
+
+<!-- slack-extracted: 2026-04-22 -->
+- **LiftLab Integration — Two Initiatives**
+
+MNTN has two active initiatives with LiftLab, described as 'Data In' and 'Data Out'. There is a shared external Slack channel with LiftLab; the primary business-side point of contact is named Kent. Internal documentation is maintained in a shared Google Doc (linked in the dev-incremental-lift channel file list). LiftLab feasibility approvals are required before advertisers can be onboarded for incremental lift tests. (via Al Beretta, #dev-incremental-lift, 2026-04-21)
+- **Fangorn — Tier 1 Rollout Advertiser Selection Criteria**
+
+The initial Fangorn Tier 1 rollout list was ranked using four criteria:
+1. **HHST × Audience Ratio** — Do campaigns stay in high-intent and is audience size maintained or growing?
+2. **Score Opportunity** — Does the existing audience's median Fangorn score show room for improvement (approximately < 0.8–0.85)?
+3. **Audience Size Stability** — How much does Fangorn change audience size? Smaller changes are preferred.
+4. **Scale / Budget** — Advertiser spend, log-scaled and normalized, as a proxy for impact of a successful rollout.
+
+The initial list contains 369 advertisers. (via Matt Brorby, #dev_fangorn-model_ex, 2026-04-21)
+- **Fangorn — Continuous Scoring Rollout Scope**
+
+Continuous intent scores (replacing bucketed scores of 10k, 8k, etc.) will only be available for advertisers included in the Fangorn rollout, as determined by a CoreDB reference table being developed by the targeting team. Advertisers excluded from the rollout will continue to receive bucketed scores. The continuous scoring rollout is intentionally synchronized with the Fangorn model rollout — it is not a universal upgrade to all advertisers. (via Matt Brorby, #production-ops, 2026-04-21)
+- **Fangorn — Intent Group Bucket Boundaries (Continuous Scoring)**
+
+With the rollout of continuous Fangorn scoring, intent groups are mapped to score ranges (0–10000) as follows:
+- **4 Max Reach:** 0–3332
+- **3 Mid:** 3333–6665
+- **2 Peak Performance:** 6666–8000
+- **1 High Intent:** 8001–10000
+
+Key boundary decisions:
+- High Intent begins at **8001**, not 8000 (score 8000 is reserved for Peak Performance).
+- Bucket boundaries are set at clean 100-point increments for reporting and code simplicity.
+- Option 1 bucket schema was selected (boundary rows span ~100 scores each) over Option 2 (which produced single-score edge rows at 8000 and 10000).
+- The distribution of actual scores does not show discontinuous spikes at boundary values (6666, 8001, 10000), validating the even-increment approach. (via Forrest Bajbek, #production-ops, 2026-04-21)
+- **New Hire — Luis Chelala, Sr. Project Manager (PMO)**
+
+Luis Chelala joined MNTN as a Senior Project Manager on the PMO team, starting 2026-05-04. He will be supporting the Attribution and Identity teams. (via Tasha, #identity_core, 2026-04-21)

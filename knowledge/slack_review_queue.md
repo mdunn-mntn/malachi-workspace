@@ -147,3 +147,21 @@ The `resolve SQLMesh` flag works by finding the underlying physical table that a
 **Confidence:** medium
 
 **Identity Graph — Recency Metric (Not Yet Built):** As of April 2026, the MNTN identity graph does not include a recency metric (i.e., how recently data about a user/household was last received). Jack Barbey noted that recency could be sourced from intermediate tables — the most practical approach would be attaching a "last seen" date to each ID, from which household-level recency could be derived. The `asOfDate` and lookback window of the graph provide a rough date range (approximately a 30-day rolling window). This was flagged as a potential future enhancement, possibly tied to geo confidence scoring.
+
+## 2026-04-22
+
+### [experimentation] from Alex Knorr in #targeting-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Playbook: Extracting Value from Historical Experiments**
+
+Alex Knorr developed a playbook for leveraging historical experiment data to evaluate new signals (e.g., analyzing BUK signals against the Fangorn experiment results). The playbook is documented in Confluence. This approach allows the team to extract signal value from already-run experiments without requiring new test cycles, and has been identified as a reusable methodology worth socializing across the team.
+
+### [mntn_business] from Matt Brorby in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Fangorn — Timeline Risk: Continuous Scoring Coupling**
+
+As of late April 2026, there are no blocking obstacles to the Fangorn rollout timeline. The primary identified risk is whether continuous scoring and the Fangorn model rollout should be launched simultaneously — decoupling them introduces complexity. The beta advertiser list is awaiting final feedback before being finalized.
