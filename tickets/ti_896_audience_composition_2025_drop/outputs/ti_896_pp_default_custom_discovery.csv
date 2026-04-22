@@ -1,0 +1,1001 @@
+audience_id,advertiser_id,user_id,name,n_audiences_by_user,name_class,n_distinct_ds_ids,ds_ids_present_str,expr_class
+55928,37518,113140,MNTN Matched KW Audience - EX Control,6,name_other,4,"13,17,19,35",expr_layered
+55933,37518,113140,IGNORE,6,name_other,2,"13,19",expr_pure_pp
+55934,33768,113140,Vacationers In-Market For Travel Insurance - EX Control,6,name_other,3,"1,13,19",expr_layered
+55935,33768,113140,Vacationers In-Market For Travel Insurance - EX Treatment,6,name_other,3,"1,13,19",expr_layered
+55936,38219,113140,10.1 MNTN Matched & Keywords - EX Control,6,name_other,3,"13,19,35",expr_layered
+55940,32352,113140,EX Pause Ads Control,6,name_other,4,"2,4,13,19",expr_layered
+54952,37386,113176,Chili Crisp,4,name_other,3,"13,19,35",expr_layered
+54953,37386,113176,Hot Honey,4,name_other,3,"13,19,35",expr_layered
+67036,60082,113176,Grande Aire example audience ,4,name_other,4,"13,18,19,35",expr_layered
+72161,62235,113176,FT example audience ,4,name_other,3,"13,19,35",expr_layered
+52195,38220,113188,PG&E Electrification | General,3,name_other,3,"13,19,35",expr_layered
+52196,38220,113188,PG&E Electrification | Income Qualified,3,name_other,3,"13,19,35",expr_layered
+66569,57970,113188,Prospecting Audience,3,name_other,2,"13,19",expr_pure_pp
+52123,45550,113378,MNTN Matched Destin-Fort Walton Beach ALL Kids  3- 18 ,15,name_other,3,"13,19,35",expr_layered
+54606,45520,113378,(Recommended) Homeowners - HVAC,15,name_other,4,"13,18,19,35",expr_layered
+55681,50522,113378,NJ SMB Copy (MNTN),15,name_other,4,"13,17,19,35",expr_layered
+55967,52565,113378,TwinLakes 1.8.26 Recco,15,name_other,3,"13,19,35",expr_layered
+56098,53121,113378,DEN Chewy Vet Clinic ,15,name_other,3,"13,19,35",expr_layered
+56120,53121,113378,ATL Chewy Vet Clinic  Matched,15,name_other,3,"13,19,35",expr_layered
+56125,53121,113378,DEN Chewy Vet Clinic  5 miles,15,name_other,3,"13,19,35",expr_layered
+56127,53121,113378,Alpharetta/ Halcyon Chewy Vet Clinic,15,name_other,3,"13,19,35",expr_layered
+56180,53121,113378,ATL Chewy Vet Clinic  Matched Copy 01,15,name_other,3,"13,19,35",expr_layered
+56182,53121,113378,ATL Chewy Vet Clinic  Copy 01,15,name_other,3,"13,19,35",expr_layered
+56265,41331,113378,Philly & DC Matched + Interest and Demo,15,name_other,3,"13,19,35",expr_layered
+57696,55335,113378,CAN Syracuse,15,name_other,3,"13,19,35",expr_layered
+57700,55335,113378,CAN Rochester,15,name_other,3,"13,19,35",expr_layered
+60202,50522,113378,testt,15,name_other,3,"13,19,35",expr_layered
+61648,57959,113378,MNTN Golden State Derm Prospecting,15,name_other,4,"13,17,19,35",expr_layered
+24315,30392,113385,SWATCH X TATE CTV PROSPECTING V2 (Narrowing segments),1,name_other,3,"1,13,19",expr_layered
+54513,48603,113669,MNTN Matched + 3P | East Coast 3mi,1,name_other,4,"13,18,19,35",expr_layered
+64912,30506,113728,TELEVISION Campaign Copy 02,1,name_other,2,"13,19",expr_pure_pp
+29316,30181,114464,Matched - Keywords,1,name_other,2,"13,19",expr_pure_pp
+64931,59018,114498,MNTN Matched with 3P and geos,1,name_other,4,"13,18,19,35",expr_layered
+51116,44058,114584,10142025 pros,2,name_other,2,"13,19",expr_pure_pp
+51167,44058,114584,Pros 1,2,name_other,2,"13,19",expr_pure_pp
+51226,31677,114929,2026 Early Access,1,name_other,3,"4,13,19",expr_layered
+65655,45536,115143,Example - MNTN Matched March'26,3,name_other,2,"13,19",expr_pure_pp
+69460,45536,115143,RCHSD - Orthopedic - Nevada,3,name_other,2,"13,19",expr_pure_pp
+69461,45536,115143,RCSD - Ortho - California,3,name_other,2,"13,19",expr_pure_pp
+70523,31297,115420,"NRO Manor, TX",2,name_other,2,"13,19",expr_pure_pp
+70526,31297,115420,"NRO Edmond, OK",2,name_other,2,"13,19",expr_pure_pp
+50581,48714,115627,Idaho USED Target Audience,3,name_other,2,"13,19",expr_pure_pp
+55894,52405,115627,Mountain West Bank - TV - Jan 2026,3,name_other,2,"13,19",expr_pure_pp
+67573,60089,115627,"Flagpole Farms 2026 - MNTN Matched, Political, Geo",3,name_other,4,"13,17,19,35",expr_layered
+44243,40325,115800,SWD - High Intent - WPB,3,name_other,2,"13,19",expr_pure_pp
+57887,55538,115800,PowerChord - Test Match Audience,3,name_other,3,"13,19,35",expr_layered
+71634,62066,115800,MNTN Match - w/ Interests and Zips,3,name_other,2,"13,19",expr_pure_pp
+63873,47257,116079,TELEVISION Campaign Group Copy 03,11,name_other,2,"13,19",expr_pure_pp
+63875,47257,116079,TELEVISION Campaign Group Copy 05,11,name_other,2,"13,19",expr_pure_pp
+64520,32192,116079,TELEVISION Campaign Group Copy 091,11,name_other,2,"13,19",expr_pure_pp
+64522,32192,116079,!@##$,11,name_other,2,"13,19",expr_pure_pp
+64524,32192,116079,TELEVISION Campaign Group Copy 10,11,name_other,2,"13,19",expr_pure_pp
+64540,32192,116079,updatingcampaignName123,11,name_other,2,"13,19",expr_pure_pp
+64543,32192,116079,TELEVISION Campaign Group Copy 92,11,name_other,2,"13,19",expr_pure_pp
+64544,32192,116079,TELEVISION Campaign Group Copy 94,11,name_other,2,"13,19",expr_pure_pp
+64552,32192,116079,1,11,name_other,2,"13,19",expr_pure_pp
+67087,47257,116079,TELEVISION Campaign,11,name_other,2,"13,19",expr_pure_pp
+67089,47257,116079,TELEVISION Campaign Copy 02,11,name_other,2,"13,19",expr_pure_pp
+34576,32305,116200,Prosp Aud MNTN Match'24 _Dec22 Update,1,name_other,2,"13,19",expr_pure_pp
+50659,32233,116213,MNTN Matched with Attributes + Peak Performance 10/7,1,name_contains,2,"13,19",expr_pure_pp
+63818,43029,116552,26' SS Prospecting,1,name_other,3,"13,19,35",expr_layered
+32463,35546,117155,NFL Fans (Cold Weather),4,name_other,2,"13,19",expr_pure_pp
+34013,39685,117155,MNTN Matched Keywords (Incl states ),4,name_other,3,"4,13,19",expr_layered
+50915,35546,117155,NFL Fans (Warm Weather),4,name_other,2,"13,19",expr_pure_pp
+50923,35546,117155,MNTN Matched (Warm Weather Exclusions),4,name_other,2,"13,19",expr_pure_pp
+32259,32704,117236,MNTN Matched Keywords 10.9.2024,3,name_other,2,"13,19",expr_pure_pp
+35400,32704,117236,Printer Prospecting Audience 1.27.25,3,name_other,2,"13,19",expr_pure_pp
+54154,32704,117236,Pause Ad Audience,3,name_other,3,"13,19,35",expr_layered
+48045,32603,117349,Texas Interest Based 3P ,3,name_other,4,"4,13,19,35",expr_layered
+50391,32603,117349,Texas Interest Based 3P Spanish,3,name_other,3,"13,19,35",expr_layered
+50394,32603,117349,Test,3,name_other,3,"13,19,35",expr_layered
+15293,32819,117559,Country Music Fans (100mi Radius),2,name_other,5,"1,2,13,17,19",expr_heavily_layered
+55267,32819,117559,SVIP Country Music Fans (100mi Radius),2,name_other,7,"1,2,13,17,18,19,35",expr_heavily_layered
+67276,32863,117672,MNTN Match 3.17.26,2,name_other,3,"4,13,19",expr_layered
+68599,32863,117672,Bravo Ad Bundle,2,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+51840,32167,117702,test update latency,3,name_other,2,"13,19",expr_pure_pp
+52108,32167,117702,testing interest latency,3,name_other,3,"13,17,19",expr_layered
+52109,32167,117702,testing interest resolver,3,name_other,4,"13,18,19,35",expr_layered
+51219,31504,117722,MNTN Matched 10.16.2025,3,name_other,2,"13,19",expr_pure_pp
+53350,30480,117722,ThinkRaven Audience,3,name_other,4,"2,4,13,19",expr_layered
+53833,36743,117722,MNTN Select - 90 Day & Reality,3,name_other,4,"2,4,13,19",expr_layered
+52832,30807,117732,Rural Prospecting Holiday 2025,2,name_other,2,"13,19",expr_pure_pp
+52833,30807,117732,Urban Prospecting Holiday 2025,2,name_other,2,"13,19",expr_pure_pp
+44766,32987,118015,Brand - Always On - Prospecting - 7/8/25,6,name_other,5,"13,17,18,19,35",expr_heavily_layered
+44832,32987,118015,Americas 250 - MNTN Match,6,name_other,4,"13,18,19,35",expr_layered
+45443,32987,118015,Brand - Americas250 - Prospecting - 7/21/25,6,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54442,32987,118015,Small Group Tours_MATCH,6,name_other,5,"13,17,18,19,35",expr_heavily_layered
+57704,32987,118015,Explorations - Small Group 3rd Party and MATCH,6,name_other,5,"13,17,18,19,35",expr_heavily_layered
+73043,32987,118015,Americas 250 - MNTN Match_4-13-26,6,name_other,4,"13,18,19,35",expr_layered
+52441,49259,118060,Prospecting: Keywords,1,name_other,2,"13,19",expr_pure_pp
+43844,43718,118071,GA DMA,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54361,49881,118071,MNTN Matched - Palm Beach,7,name_other,2,"13,19",expr_pure_pp
+54910,50350,118071,Example - MNTN Matched,7,name_other,2,"13,19",expr_pure_pp
+55438,50632,118071,MNTN Matched - Omaha DMA ,7,name_other,2,"13,19",expr_pure_pp
+57335,55202,118071,Example - MNTN Matched,7,name_other,3,"13,19,35",expr_layered
+63813,58446,118071,Example - Hiring Audience Strategy,7,name_other,4,"13,18,19,35",expr_layered
+67575,59158,118071,Example - MNTN Matched,7,name_other,3,"13,19,35",expr_layered
+62282,57993,118369,Scouting-SpringRecruit26-v1,1,name_other,2,"13,19",expr_pure_pp
+36418,33179,118519,MNTN Matched KWs Lower 48 | Site Visitor Exclusion 1.23,1,name_other,3,"2,13,19",expr_layered
+38136,37737,118566,Prospecting - MNTN Matched,4,name_other,3,"1,13,19",expr_layered
+39364,41168,118566,Prospecting - MNTN Matched,4,name_other,2,"13,19",expr_pure_pp
+66312,37737,118566,Prospecting - MNTN Matched (Updated Mar 2026),4,name_other,2,"13,19",expr_pure_pp
+74072,63016,118566,MNTN Matched,4,name_other,2,"13,19",expr_pure_pp
+54880,50137,118702,MNTN Matched ,1,name_other,2,"13,19",expr_pure_pp
+34009,38899,118725,MNTN Matched + Geo,7,name_other,3,"4,13,19",expr_layered
+37716,33243,118725,MNTN Matched + GEO (New Profile),7,name_other,3,"4,13,19",expr_layered
+47116,33644,118725,MNTN Matched - Re-run,7,name_other,2,"13,19",expr_pure_pp
+50378,46888,118725,MNTN Matched + Geo,7,name_other,2,"13,19",expr_pure_pp
+50847,44421,118725,MNTN Matched + Geo,7,name_other,2,"13,19",expr_pure_pp
+50891,48665,118725,MNTN Matched (Temp Interests),7,name_other,3,"4,13,19",expr_layered
+51043,33243,118725,MNTN Matched & Geo,7,name_other,2,"13,19",expr_pure_pp
+54157,44821,118969,Example - MNTN Team,1,name_other,3,"13,19,35",expr_layered
+55384,50650,119116,Bedding ,1,name_other,2,"13,19",expr_pure_pp
+53843,38790,119119,Prospecting  - MNTN Matched - 11/17,1,name_other,2,"13,19",expr_pure_pp
+51767,33467,119236,Jim Jefferies - Kansas City,24,name_other,5,"13,17,18,19,35",expr_heavily_layered
+53092,33467,119236,Jim Gaffigan - St. Louis,24,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+54083,33467,119236,Nate Bargatze - Cedar Rapids IA - 6.12.26,24,name_other,4,"4,13,19,35",expr_layered
+54084,33467,119236,Nate Bargatze - Rosemont IL - 6.13.26,24,name_other,4,"4,13,19,35",expr_layered
+54085,33467,119236,Nate Bargatze - Houston TX - 6.19.26,24,name_other,4,"4,13,19,35",expr_layered
+54087,33467,119236,Nate Bargatze - Austin TX - 6.20.26,24,name_other,4,"4,13,19,35",expr_layered
+54103,33467,119236,Nate Bargatze - Pittsburgh PA - 7.31.26,24,name_other,4,"4,13,19,35",expr_layered
+54281,33467,119236,Bert Kreischer - Tulsa OK - 1.24.26,24,name_other,5,"1,4,13,19,35",expr_heavily_layered
+54286,33467,119236,Bert Kreischer - Youngstown OH - 03.08.26,24,name_other,5,"1,4,13,19,35",expr_heavily_layered
+54339,33467,119236,"Nate Bargatze - Knoxville, TN - 1.25.26 Copy 01",24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54528,33467,119236,Nate Bargatze - Indianapolis IN - 2.14.26,24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54532,33467,119236,Nate Bargatze - Washington DC - 4.02.26,24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54542,33467,119236,Nate Bargatze - Fargo ND - 4.23.26,24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54717,33467,119236,"Bert Kreischer - Detroit, MI - 02.28.26 - Added Show",24,name_other,5,"1,4,13,19,35",expr_heavily_layered
+55254,33467,119236,"Nate Bargatze - Hershey, PA - 5.16.26",24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+55256,33467,119236,"Nate Bargatze - Houston, TX - 6.18.26",24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+55257,33467,119236,"Nate Bargatze - Austin, TX - 6.20.26",24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+55258,33467,119236,"Nate Bargatze - Pittsburgh, PA - 7.30.26",24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+56324,33467,119236,Fortune Feimster - Rochester MN,24,name_other,3,"13,19,35",expr_layered
+58180,33467,119236,Jim Gaffigan - Pensacola,24,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+58519,33467,119236,Fortune Feimster - Oklahoma City - 4/2/26,24,name_other,3,"13,19,35",expr_layered
+65196,33467,119236,"Felipe Esparza - Grand Prairie, TX - 04/24/26",24,name_other,5,"13,17,18,19,35",expr_heavily_layered
+72143,33467,119236,"John Crist - Duluth, GA - 06/06/26",24,name_other,5,"4,13,17,19,35",expr_heavily_layered
+75090,33467,119236,"Sal Vulcano - Kansas City, MO",24,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+52044,33491,119277,PDN_102925,3,name_other,4,"13,17,19,35",expr_layered
+61310,33491,119277,AI_021926,3,name_other,4,"13,17,19,35",expr_layered
+61311,33491,119277,Control_021926,3,name_other,4,"13,17,19,35",expr_layered
+72424,33497,119291,Twist Audience MNTN Matched + 3rd Party,1,name_other,5,"4,13,17,19,35",expr_heavily_layered
+1757,33500,119296,RV In Market | RV Interest,1,name_other,4,"1,13,19,35",expr_layered
+26945,33448,119338,Moving Services 2024_Prospecting,2,name_other,4,"1,2,13,19",expr_layered
+65061,33448,119338,Moving Services 2026_Prospecting_MNTN Matched,2,name_other,4,"1,2,13,19",expr_layered
+53681,42248,119371,KWD - South,4,name_other,2,"13,19",expr_pure_pp
+53682,42248,119371,KWD - East,4,name_other,2,"13,19",expr_pure_pp
+53683,42248,119371,KWD - West,4,name_other,2,"13,19",expr_pure_pp
+53688,42248,119371,KWD - Midwest,4,name_other,2,"13,19",expr_pure_pp
+39886,33518,119456,National Prospecting - Tier 1 Participants,6,name_other,4,"2,4,13,19",expr_layered
+39909,33518,119456,National Prospecting - Tier 3 Participants,6,name_other,6,"2,4,13,17,19,35",expr_heavily_layered
+39911,33518,119456,National Prospecting - Tier 2 Participants,6,name_other,6,"2,4,13,17,19,35",expr_heavily_layered
+43756,37344,119456,Milwaukee - Austin - Houston,6,name_other,2,"13,19",expr_pure_pp
+63389,55581,119456,Miami Dade,6,name_other,4,"13,18,19,35",expr_layered
+71628,33518,119456,National Prospecting - Tier 4 Participants,6,name_other,6,"2,4,13,17,19,35",expr_heavily_layered
+50758,32101,119755,September 2025 Heavyup Copy 01,1,name_other,8,"1,2,4,13,17,18,19,35",expr_heavily_layered
+38429,33753,119845,MNTN Matched_2025,1,name_other,4,"2,4,13,19",expr_layered
+54392,33760,119854,MSF 2025 EOY MNTN Matched,1,name_other,4,"2,4,13,19",expr_layered
+33690,33768,119908,6.12 MNTN Matched + KW,2,name_other,4,"13,17,19,35",expr_layered
+36396,33768,119908,6.12MNTN Edit - Vacationers In-Market For Travel Insurance,2,name_other,5,"1,13,17,19,35",expr_heavily_layered
+67580,58797,119962,Mother's Day Prospecting,1,name_other,4,"4,13,19,35",expr_layered
+41627,36891,119996,MNTN Matched + Ice Cream + Zips,1,name_other,3,"1,13,19",expr_layered
+48418,43815,120104,Prospecting - Keywords/Interests (MNTN Sept 25),9,name_other,2,"13,19",expr_pure_pp
+51218,47333,120104,Ozempic + Weight Loss (MNTN - Oct. '25),9,name_other,4,"13,18,19,35",expr_layered
+55023,50195,120104,Prospecting - No States - (MNTN - Dec. '25),9,name_other,2,"13,19",expr_pure_pp
+58182,37056,120104,"myFICO - Prepared Planners, MM + Peak Performance",9,name_contains,4,"2,13,19,35",expr_layered
+62722,37798,120104,Prospecting - (MNTN - Feb. '26) - DEC,9,name_other,3,"2,13,19",expr_layered
+64595,35215,120104,Prospecting Corp - BLS Audience -  Mar 2026,9,name_other,5,"2,4,13,19,35",expr_heavily_layered
+65861,37798,120104,Prospecting - (MNTN - Feb. '26)  - DEP,9,name_other,3,"2,13,19",expr_layered
+65889,37798,120104,2026 FID - DEI (MNTN - March '26),9,name_other,3,"1,13,19",expr_layered
+65894,37798,120104,2026 FID - DEK (MNTN - March '26),9,name_other,3,"1,13,19",expr_layered
+73075,34363,120158,National - State Specific,3,name_other,3,"13,19,35",expr_layered
+73097,34363,120158,Texas Cities,3,name_other,3,"13,19,35",expr_layered
+73105,34363,120158,Houston,3,name_other,3,"13,19,35",expr_layered
+23660,33926,120187,JHM_3P_Prospecting,1,name_other,4,"4,13,19,35",expr_layered
+47209,32167,120351,fdsafasf,5,name_other,2,"13,19",expr_pure_pp
+61039,32167,120351,jordan where test,5,name_other,2,"13,19",expr_pure_pp
+64886,36678,120351,EX-46 New to Brand - Control,5,name_other,8,"1,4,13,17,19,21,34,35",expr_heavily_layered
+64888,36678,120351,EX-46 New to Brand - Treatment CRM,5,name_other,8,"1,13,17,19,21,34,35,47",expr_heavily_layered
+64892,36678,120351,EX-46 New to Brand - Treatment CRM and Lookback,5,name_other,8,"1,13,17,19,21,34,35,47",expr_heavily_layered
+50649,48570,120403,MNTN Matched,2,name_other,4,"2,4,13,19",expr_layered
+73302,38277,120403,MM + Babies,2,name_other,5,"2,4,13,19,35",expr_heavily_layered
+41231,42942,120421,HELOC + MNTN Match,1,name_other,4,"1,13,19,35",expr_layered
+52102,34408,120453,Custom One Home,2,name_other,2,"13,19",expr_pure_pp
+53235,49183,120453,Homeowners actively looking for home renovation/improvements,2,name_other,3,"13,19,35",expr_layered
+40317,34052,120458,MTTN Matched Custom - Homeowners + 50K Income,1,name_other,5,"1,4,13,19,35",expr_heavily_layered
+69069,42842,120551,2026-03-24 MNTN Matched with Katia,1,name_other,2,"13,19",expr_pure_pp
+56464,39818,120650,NPD_Prospecting_NC_01.16.26,1,name_other,2,"13,19",expr_pure_pp
+55460,36945,120712,2026 Reco,1,name_other,3,"13,18,19",expr_layered
+31906,34271,120983,MNTN Match V2,2,name_other,2,"13,19",expr_pure_pp
+66229,58151,120983,Prospecting - MNTN Match ,2,name_other,4,"13,17,19,35",expr_layered
+39001,41798,121074,MNTN Matched (select DMAs),6,name_other,4,"1,2,13,19",expr_layered
+46804,46374,121074,MNTN Matched Keywords,6,name_other,3,"2,13,19",expr_layered
+50499,46422,121074,MNTN Matched AI,6,name_other,3,"2,13,19",expr_layered
+50510,46308,121074,MNTN Matched AI Keywords - NEW,6,name_other,3,"2,13,19",expr_layered
+50513,41798,121074,MNTN Matched AI Keywords - Select DMAs - NEW,6,name_other,3,"2,13,19",expr_layered
+50701,46423,121074,MNTN Matched AI Keywords,6,name_other,3,"2,13,19",expr_layered
+52368,34400,121135,Homeowners,1,name_other,4,"13,17,19,35",expr_layered
+54014,37983,121330,EOY MNTN Matched,1,name_other,4,"2,4,13,19",expr_layered
+55762,50145,121405,Test,2,name_other,2,"13,19",expr_pure_pp
+74817,38473,121405,PP - MNTN Matched + Petsmart GEO uploads,2,name_other,2,"13,19",expr_pure_pp
+55759,32286,121496,Charlotte Keywords (Selling) Peak Performance,1,name_contains,3,"2,13,19",expr_layered
+51677,34585,121497,Little Things - Prospecting,2,name_other,4,"2,13,17,19",expr_layered
+55393,34585,121497,Q1-MNTN Matched + Lux Interests,2,name_other,5,"2,13,17,19,35",expr_heavily_layered
+50193,44836,121529,MNTN Matched 9.30,2,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+62308,40279,121529,Dynamic Attributes MM,2,name_other,2,"13,19",expr_pure_pp
+54744,34671,121666,FY26 Sleeping Beauty,2,name_other,2,"13,19",expr_pure_pp
+64780,34671,121666,FY26 Coppelia,2,name_other,2,"13,19",expr_pure_pp
+67585,34471,121714,Spurs MNTN Matched,1,name_other,3,"4,13,19",expr_layered
+48774,45550,121871,Destin-Fort Walton Beach ALL Kids  3- 18,1,name_other,3,"13,19,35",expr_layered
+23655,32899,122129,MNTN Matched,2,name_other,3,"13,17,19",expr_layered
+33818,32899,122129,MNTN Matched - Keywords,2,name_other,2,"13,19",expr_pure_pp
+50816,34976,122318,Nov25_PRO,1,name_other,4,"13,17,19,35",expr_layered
+42955,44254,122438,Dermatology,1,name_other,3,"13,19,35",expr_layered
+15615,34928,122462,Columbus Zoo Outside Market - Excludes Columbus,280,name_other,6,"2,4,13,18,19,35",expr_heavily_layered
+20522,36619,122462,LA BOWL 2025 Prospecting Audience,280,name_other,4,"1,13,19,35",expr_layered
+26298,36724,122462,MNTN Matched May 9,280,name_other,3,"1,13,19",expr_layered
+27979,38034,122462,RC-Las VegasNV,280,name_other,4,"1,13,19,35",expr_layered
+30229,38792,122462,CTV - FL COS - Broward_County,280,name_other,5,"1,2,13,19,43",expr_heavily_layered
+30360,36317,122462,MOAA MNTN Matched,280,name_other,2,"13,19",expr_pure_pp
+30422,38551,122462,Opera Interests + Theatre,280,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+30558,33021,122462,MNTN Matched Top Geos (July 1 Update),280,name_other,3,"2,13,19",expr_layered
+30624,38059,122462,Updated keywords,280,name_other,5,"1,2,4,13,19",expr_heavily_layered
+31163,32169,122462,Key words 9.12.24,280,name_other,5,"1,4,13,19,35",expr_heavily_layered
+31674,36794,122462,MNTN Matched Keywords 9.26,280,name_other,2,"13,19",expr_pure_pp
+31861,34077,122462,MNTN Matched KWs 10.2,280,name_other,3,"4,13,19",expr_layered
+32060,36313,122462,MNTN Matched (Include Non Purchasers 90+ Days),280,name_other,4,"1,4,13,19",expr_layered
+32334,31901,122462,MNTN Matched + Keywords,280,name_other,3,"4,13,19",expr_layered
+33250,37239,122462,MNTN Matched 12/4/25,280,name_other,2,"13,19",expr_pure_pp
+33533,37906,122462,MNTN Matched_V2,280,name_other,3,"1,13,19",expr_layered
+33705,39392,122462,MNTN Matched + Geo,280,name_other,2,"13,19",expr_pure_pp
+33710,35484,122462,MNTN Matched 2.0 + Geo,280,name_other,2,"13,19",expr_pure_pp
+33921,34472,122462,MNTN Matched KWs & Est. Income,280,name_other,3,"1,13,19",expr_layered
+33941,31906,122462,Bouqs Subs Prospecting Audience 11-15-24 AB,280,name_other,5,"4,13,18,19,35",expr_heavily_layered
+34039,39590,122462,QCK MNTN Matched,280,name_other,5,"1,13,17,19,35",expr_heavily_layered
+34685,30828,122462,MNTN Matched Keywords - 2024 Narrow,280,name_other,2,"13,19",expr_pure_pp
+34803,40108,122462,CT 1Q 2Q 2025 Lincoln,280,name_other,4,"1,13,19,35",expr_layered
+34831,40108,122462,CT 1Q 2Q 2025 Topeka,280,name_other,4,"1,13,19,35",expr_layered
+34832,40108,122462,CT 1Q 2Q 2025 Omaha,280,name_other,4,"1,13,19,35",expr_layered
+34833,40108,122462,CT 1Q 2Q 2025 KC,280,name_other,4,"1,13,19,35",expr_layered
+34842,39819,122462,TIS TRIAD,280,name_other,2,"13,19",expr_pure_pp
+35234,37336,122462,MNTN Match for Jan 2025 Launch,280,name_other,3,"4,13,19",expr_layered
+35261,33667,122462,MNTN Matched - M.Ed. Focused Copy 01,280,name_other,3,"4,13,19",expr_layered
+35307,40317,122462,Prospecting-evg,280,name_other,5,"4,13,17,19,35",expr_heavily_layered
+35562,33667,122462,MNTN Matched - Business,280,name_other,2,"13,19",expr_pure_pp
+35982,39207,122462,MNTN Matched- Prospecting,280,name_other,4,"2,4,13,19",expr_layered
+36002,31901,122462,Watches Keywords,280,name_other,3,"4,13,19",expr_layered
+36073,33667,122462,MNTN Matched - Healthcare,280,name_other,2,"13,19",expr_pure_pp
+36208,33667,122462,MNTN Matched - Nursing,280,name_other,2,"13,19",expr_pure_pp
+36212,40555,122462,Tushbaby + Snug,280,name_other,2,"13,19",expr_pure_pp
+36229,38893,122462,OPNYMNTNMatchedAudience,280,name_other,3,"2,13,19",expr_layered
+36570,36842,122462,Imar's San Francisco Audience,280,name_other,3,"1,13,19",expr_layered
+37193,40159,122462,Prospecting - Keywords (MNTN Feb. '25),280,name_other,4,"2,4,13,19",expr_layered
+37294,33819,122462,ACT North Region,280,name_other,2,"13,19",expr_pure_pp
+37295,33819,122462,ACT East Region,280,name_other,2,"13,19",expr_pure_pp
+37296,33819,122462,ACT South Region,280,name_other,2,"13,19",expr_pure_pp
+37996,41212,122462,MNTN Matched,280,name_other,3,"1,13,19",expr_layered
+38225,39956,122462,MNTN Matched + Grandscape 35 mile,280,name_other,4,"1,13,19,35",expr_layered
+38259,31573,122462,MNTNMatched-Keywords,280,name_other,3,"2,13,19",expr_layered
+39232,35849,122462,General payment keywords,280,name_other,4,"2,4,13,19",expr_layered
+39709,35559,122462,MNTN Match - National Copy  (SH),280,name_other,3,"2,13,19",expr_layered
+40047,38101,122462,DALLAS AUD 1,280,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+40488,30455,122462,MNTN Matched Keyword 1,280,name_other,2,"13,19",expr_pure_pp
+40648,38363,122462,Evergreen Audience | MNTN Matched | Apr 2025,280,name_other,4,"2,4,13,19",expr_layered
+40710,40938,122462,44130,280,name_other,2,"13,19",expr_pure_pp
+40785,42337,122462,MNTN-Prospecting,280,name_other,5,"4,13,17,19,35",expr_heavily_layered
+40801,37129,122462,PRO Texas MNTN Matched Updated 4.17.25,280,name_other,5,"1,2,13,19,35",expr_heavily_layered
+40843,35838,122462,LLV MNTN Matched 4-18-25,280,name_other,2,"13,19",expr_pure_pp
+41000,34086,122462,Performance Eyewear,280,name_other,3,"4,13,19",expr_layered
+41193,32595,122462,Prospecting - 4CAT w/ MNTN Matched (Slimmed 4/26/25),280,name_other,6,"1,2,4,13,19,35",expr_heavily_layered
+41211,40329,122462,NE Panhandle Zip Codes,280,name_other,4,"1,13,19,35",expr_layered
+41326,41034,122462,MNTN Matched - Keywords [TN],280,name_other,4,"1,13,19,35",expr_layered
+41377,42792,122462,Tyler Prospecting Audience - Keywords,280,name_other,2,"13,19",expr_pure_pp
+41385,38034,122462,RC-Las Vegas NV May 25 on,280,name_other,4,"1,13,19,35",expr_layered
+41515,43656,122462,In-Market_Sacramento,280,name_other,3,"1,13,19",expr_layered
+41585,42262,122462,RT Federal Credit Union Account,280,name_other,3,"13,19,35",expr_layered
+41995,43992,122462,La Jolla,280,name_other,3,"1,13,19",expr_layered
+42134,43685,122462,Willow Patient Awareness ,280,name_other,3,"13,19,35",expr_layered
+42470,32404,122462,Brand KeyStates UGRAD 3P + Keywords 05.15.2025,280,name_other,5,"1,4,13,19,35",expr_heavily_layered
+42638,43610,122462,First Audience - CPSD,280,name_other,4,"13,18,19,35",expr_layered
+42825,38026,122462,CTV-DA-Prospecting-Brand-2025 Updated,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+42833,44489,122462,MNTN Matched + 3rd Party - City of Chicago,280,name_other,3,"13,19,43",expr_layered
+42834,44489,122462,MNTN Matched + 3rd Party - North Chicago,280,name_other,3,"13,19,43",expr_layered
+42959,36842,122462,MNTN Matched Keywords_ATLANTA,280,name_other,2,"13,19",expr_pure_pp
+42984,40778,122462,In-Market_Boise,280,name_other,3,"13,17,19",expr_layered
+43358,44587,122462,Onondaga Flooring June Promo,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+43375,36256,122462,MNTN Matched + 3P East,280,name_other,3,"13,19,35",expr_layered
+43599,42834,122462,Caregivers,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+43662,44232,122462,WCSS Clackamas - Audience,280,name_other,4,"13,18,19,35",expr_layered
+43663,44232,122462,WCSS Hillsboro - Audience,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+43664,44232,122462,WCSS Santa Rosa - Piner - Audience,280,name_other,4,"13,18,19,35",expr_layered
+43665,44232,122462,WCSS Del Sur - Audience,280,name_other,4,"13,18,19,35",expr_layered
+43841,42834,122462,LGBTQ,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+43915,40327,122462,3Q CTV - Albany DMA,280,name_other,4,"13,17,19,35",expr_layered
+43921,40329,122462,3Q Rapid City DMA,280,name_other,4,"13,17,19,35",expr_layered
+43923,40329,122462,3Q NE Panhandle Zip Codes,280,name_other,4,"13,17,19,35",expr_layered
+44364,39277,122462,Prospecting - Radius (B&D),280,name_other,5,"2,4,13,19,35",expr_heavily_layered
+44492,39439,122462,Broad Targeting - New Customers ,280,name_other,4,"4,13,19,35",expr_layered
+44627,38101,122462,Nashville Aud 1,280,name_other,5,"1,4,13,17,19",expr_heavily_layered
+44659,40532,122462,Prospecting,280,name_other,4,"2,4,13,19",expr_layered
+44728,38101,122462,milwaukee Aud 1,280,name_other,5,"1,4,13,17,19",expr_heavily_layered
+44769,40500,122462,MNTN Matched - CHA,280,name_other,2,"13,19",expr_pure_pp
+44800,45477,122462,"OMF test audience Fredericksburg, VA",280,name_other,4,"13,18,19,35",expr_layered
+44826,45477,122462,"OMF test audience Columbus, OH",280,name_other,4,"13,18,19,35",expr_layered
+44962,38101,122462,san diego aud 1,280,name_other,5,"1,4,13,17,19",expr_heavily_layered
+45062,45458,122462,CA Example audience,280,name_other,3,"13,19,35",expr_layered
+45230,45524,122462,LSER Locations,280,name_other,2,"13,19",expr_pure_pp
+45235,44302,122462,Prospecting - MNTN Match ,280,name_other,2,"13,19",expr_pure_pp
+45251,45360,122462,FLC,280,name_other,4,"13,18,19,35",expr_layered
+45406,45697,122462,Rent One Nat'l audience,280,name_other,3,"13,19,35",expr_layered
+45439,37989,122462,Stanford Football Interest in the Bay Area,280,name_other,2,"13,19",expr_pure_pp
+45599,42357,122462,Brand - Charleston - Keywords,280,name_other,2,"13,19",expr_pure_pp
+45601,42357,122462,Cyber - Charleston - Keywords,280,name_other,2,"13,19",expr_pure_pp
+45602,42357,122462,ET - Charleston - Keywords,280,name_other,2,"13,19",expr_pure_pp
+45632,42357,122462,Brand - NOVA - Keywords,280,name_other,2,"13,19",expr_pure_pp
+45635,42357,122462,Tech - NOVA - Keywords,280,name_other,2,"13,19",expr_pure_pp
+45637,42357,122462,Cyber - NOVA - Keywords,280,name_other,2,"13,19",expr_pure_pp
+45639,42357,122462,ET - NOVA - Keywords,280,name_other,2,"13,19",expr_pure_pp
+45842,32887,122462,Payroll,280,name_other,3,"13,19,35",expr_layered
+45847,32887,122462,IT,280,name_other,3,"13,19,35",expr_layered
+45922,43636,122462,tourist match,280,name_other,2,"13,19",expr_pure_pp
+45956,44832,122462,High Income Travelers Copy 02,280,name_other,2,"13,19",expr_pure_pp
+45970,38288,122462,HVAC + MM + QM 7/30/25,280,name_other,4,"1,13,19,35",expr_layered
+46039,43632,122462,matched ,280,name_other,2,"13,19",expr_pure_pp
+46206,33819,122462,ACT West Region,280,name_other,2,"13,19",expr_pure_pp
+46305,45862,122462,Leather Audience- USA,280,name_other,2,"13,19",expr_pure_pp
+46384,42357,122462,Nursing - Charleston - Keywords,280,name_other,2,"13,19",expr_pure_pp
+46390,42357,122462,Nursing - NOVA - Keywords,280,name_other,2,"13,19",expr_pure_pp
+46435,38101,122462,Sacramento Aud 1,280,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+46437,38101,122462,West Palm Aud 1,280,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+46441,38101,122462,Redding Aud 1,280,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+46485,36581,122462,MNTN Matched - Mansfield,280,name_other,2,"13,19",expr_pure_pp
+46490,46192,122462,Merit Auto Group,280,name_other,3,"1,13,19",expr_layered
+46637,42248,122462,Keywords - Salt Lake City,280,name_other,2,"13,19",expr_pure_pp
+46669,37775,122462,Holiday Cards 2025,280,name_other,4,"1,4,13,19",expr_layered
+46674,35093,122462,NSO_Fort Collins,280,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+46679,40521,122462,All Retirement Communities ,280,name_other,2,"13,19",expr_pure_pp
+46736,45575,122462,Yankees / Sports Bergen County,280,name_other,4,"13,18,19,35",expr_layered
+46788,43973,122462,Prospect Audience,280,name_other,2,"13,19",expr_pure_pp
+47153,43367,122462,LPS Awareness,280,name_other,4,"13,17,19,35",expr_layered
+47268,33038,122462,MNTN Matched 2025,280,name_other,4,"2,4,13,19",expr_layered
+47307,46616,122462,Rockland Conquest,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+47349,46189,122462,Master CFH,280,name_other,4,"13,17,19,35",expr_layered
+47451,42665,122462,Service Area,280,name_other,2,"13,19",expr_pure_pp
+47460,40327,122462,Southern Tier,280,name_other,4,"13,17,19,35",expr_layered
+47505,45474,122462,SD to Ventura County,280,name_other,3,"13,19,35",expr_layered
+47511,46696,122462,intro campaign ,280,name_other,2,"13,19",expr_pure_pp
+47714,36201,122462,Matched ,280,name_other,3,"13,19,35",expr_layered
+47746,45686,122462,MNTN Matched,280,name_other,2,"13,19",expr_pure_pp
+47803,30743,122462,MNTN Matched Sep 2025,280,name_other,2,"13,19",expr_pure_pp
+47840,44848,122462,test,280,name_other,2,"13,19",expr_pure_pp
+47929,44707,122462,Camping Van + Van Life Affiliation,280,name_other,4,"2,13,19,35",expr_layered
+47942,46502,122462,Roku,280,name_other,3,"13,19,35",expr_layered
+48002,38293,122462,Homeowner + HVAC + QM + MM  9/10,280,name_other,3,"13,19,35",expr_layered
+48090,43442,122462,Fall 2025 body contouring ,280,name_other,2,"13,19",expr_pure_pp
+48102,46289,122462,V1,280,name_other,2,"13,19",expr_pure_pp
+48165,44245,122462,Nissan Enfield Conquest,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+48182,36071,122462,Pehr - New Parents,280,name_other,2,"13,19",expr_pure_pp
+48332,44339,122462,Q3 Rebanner CTV - Later Start,280,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+48475,46542,122462,Initial Group,280,name_other,3,"4,13,19",expr_layered
+48484,41067,122462,Thanksgiving Buffet,280,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+48572,41417,122462,Dallas Stars ,280,name_other,3,"13,19,35",expr_layered
+48605,46271,122462,Vintage Market Audience,280,name_other,2,"13,19",expr_pure_pp
+48622,46428,122462,FinServ Decision Makers,280,name_other,3,"13,19,35",expr_layered
+48634,46414,122462,Holiday Meals,280,name_other,4,"13,18,19,35",expr_layered
+48740,36109,122462,Target Audience - Grilling (West Coast Expansion | Walmart),280,name_other,3,"13,19,35",expr_layered
+48757,32167,122462,e12,280,name_other,3,"13,18,19",expr_layered
+48762,40321,122462,Binsky HVAC + Plumbing + MM PP 10/1,280,name_other,3,"13,19,35",expr_layered
+48773,47277,122462,Express Credit Auto,280,name_other,5,"4,13,17,19,35",expr_heavily_layered
+48787,32741,122462,Prospecting 10012025,280,name_other,4,"2,4,13,19",expr_layered
+48809,32167,122462,PP only,280,name_other,2,"13,19",expr_pure_pp
+48825,39277,122462,In-Store_MNTN-Matched_Loc-Tier-2_NCA_ATTN,280,name_other,4,"2,4,13,19",expr_layered
+48848,44629,122462,Likely to Move Utah,280,name_other,3,"13,18,19",expr_layered
+48874,47384,122462,OCTOBER 2025,280,name_other,2,"13,19",expr_pure_pp
+50001,46106,122462,AI Match Profile Oct 2025,280,name_other,2,"13,19",expr_pure_pp
+50045,46943,122462,New Site Traffic,280,name_other,2,"13,19",expr_pure_pp
+50107,42211,122462,October Boat Show 2025,280,name_other,5,"4,13,17,19,35",expr_heavily_layered
+50148,37323,122462,Greenville NC,280,name_other,3,"13,19,35",expr_layered
+50153,38291,122462,MD HVAC + MM QM 9/30,280,name_other,3,"13,19,35",expr_layered
+50158,38291,122462,VA HVAC MM 9/30,280,name_other,4,"13,18,19,35",expr_layered
+50163,42683,122462,"Gilbert, AZ",280,name_other,2,"13,19",expr_pure_pp
+50196,35832,122462,Q4 2025 MNTN Match + Seattle/Tacoma/Portland Geo,280,name_other,2,"13,19",expr_pure_pp
+50210,34249,122462,Boston - Business - Keywords,280,name_other,2,"13,19",expr_pure_pp
+50226,33467,122462,Shane Gillis - Sacramento,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+50278,48526,122462,MNTN Matched + 3P + West Flamingo,280,name_other,2,"13,19",expr_pure_pp
+50323,40785,122462,Joi Keywords - Peak (Oct) ,280,name_other,4,"2,4,13,19",expr_layered
+50324,40785,122462,Blokes Keywords - Peak (Oct),280,name_other,4,"2,4,13,19",expr_layered
+50325,40785,122462,AI Keywords - Peak (All + Focus States),280,name_other,4,"2,4,13,19",expr_layered
+50327,33467,122462,Golden Girls - Denver,280,name_other,3,"13,19,35",expr_layered
+50333,41531,122462,MM  PP 10/5,280,name_other,2,"13,19",expr_pure_pp
+50334,38799,122462,Boats - Fishing,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+50338,38799,122462,Boats - Yamaha Affinity,280,name_other,4,"13,18,19,35",expr_layered
+50358,46563,122462,Tanner MNTN Match,280,name_other,2,"13,19",expr_pure_pp
+50366,39737,122462,Clipper Vacations  Fall 25,280,name_other,5,"1,13,17,19,35",expr_heavily_layered
+50404,40001,122462,GPO Holiday Savings,280,name_other,3,"13,19,35",expr_layered
+50435,40321,122462,Binsky HVAC + Plumbing + MM 10/14,280,name_other,4,"13,17,19,35",expr_layered
+50440,37316,122462,"AI MNTN Matched 10/8/2025 - NJ, WP, Indirect",280,name_other,3,"4,13,19",expr_layered
+50478,46289,122462,V1_Focus 4,280,name_other,2,"13,19",expr_pure_pp
+50479,46289,122462,V1_Focus 4 Lifestyle,280,name_other,2,"13,19",expr_pure_pp
+50516,42683,122462,"Oklahoma City, OK",280,name_other,3,"13,19,35",expr_layered
+50540,38288,122462,HVAC + MM + QM PP 10/5,280,name_other,4,"1,13,19,35",expr_layered
+50545,40562,122462,MMPP Only 10/5,280,name_other,2,"13,19",expr_pure_pp
+50625,44215,122462,MNTN Match,280,name_other,4,"13,18,19,35",expr_layered
+50644,48625,122462,naples,280,name_other,2,"13,19",expr_pure_pp
+50665,46874,122462,Prospecting_MntnMatched,280,name_other,2,"13,19",expr_pure_pp
+50667,48700,122462,syracuse/watertown,280,name_other,2,"13,19",expr_pure_pp
+50672,48703,122462,Nissan Colonie  Conquest,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+50737,38363,122462,Timex Atelier | MNTN Matched,280,name_other,2,"13,19",expr_pure_pp
+50766,38363,122462,Timex Atelier | MNTN Matched 2,280,name_other,2,"13,19",expr_pure_pp
+50782,47052,122462,MNTN Matched,280,name_other,3,"13,19,35",expr_layered
+50797,40268,122462,"PW, Syossett and Greenvale ",280,name_other,4,"13,19,35,43",expr_layered
+50840,41531,122462,MM  PP 10/9,280,name_other,2,"13,19",expr_pure_pp
+50859,48711,122462,Prospecting Audience - 10.9,280,name_other,2,"13,19",expr_pure_pp
+50936,44242,122462,Interest Industry,280,name_other,3,"13,19,35",expr_layered
+50962,48812,122462,Holiday Lighting Q4,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+50969,46289,122462,V1_NewFocus 4 Lifestyle,280,name_other,2,"13,19",expr_pure_pp
+51012,34671,122462,FY26 Nutcracker,280,name_other,2,"13,19",expr_pure_pp
+51034,38294,122462,Parkers HVAC + Home Year Built + MM 10/14,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+51047,45345,122462,REMAX External 2025,280,name_other,2,"13,19",expr_pure_pp
+51057,44617,122462,AI Keywords - Oct25,280,name_other,2,"13,19",expr_pure_pp
+51142,32741,122462,Prospecting 10142025,280,name_other,4,"2,4,13,19",expr_layered
+51150,32404,122462,Pause Ads - Brand KeyStates UGRAD 3P + Keywords 10.15.2025,280,name_other,5,"1,4,13,19,35",expr_heavily_layered
+51153,39206,122462,Plumbing + HVAC + QM + MM PP 10/15,280,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+51212,48933,122462,Prospecting MNTN Matched + Interst,280,name_other,4,"13,18,19,35",expr_layered
+51252,38292,122462,HVAC 10/17 No Havertown,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+51254,45550,122462,test,280,name_other,2,"13,19",expr_pure_pp
+51313,40187,122462,AI Keywords - Eatontown (Oct),280,name_other,2,"13,19",expr_pure_pp
+51371,44247,122462,Lia Hyundai Enfield ,280,name_other,4,"13,17,18,19",expr_layered
+51401,41531,122462,HVAC + MM PP 10/20,280,name_other,4,"13,17,19,35",expr_layered
+51442,35086,122462,Rental Marketing KW (Peak Performance ON),280,name_contains,3,"4,13,19",expr_layered
+51449,44801,122462,MNTN Suggestions- BMW Attributes 10.21,280,name_other,2,"13,19",expr_pure_pp
+51463,44848,122462,Nov 2025 personal lines,280,name_other,2,"13,19",expr_pure_pp
+51507,48755,122462,"WPD 2025 - Vaccine Motivated, donors, social impact Chicago",280,name_other,4,"13,17,19,35",expr_layered
+51531,36313,122462,MNTN Matched (Include Non Purchasers 90+ Days) 102225,280,name_other,3,"4,13,19",expr_layered
+51547,45027,122462,Generated Test Name DO NOT DELETE,280,name_other,2,"13,19",expr_pure_pp
+51625,36247,122462,MNTN Suggestions: MNTN Matched w/ Attributes - TOURS,280,name_other,2,"13,19",expr_pure_pp
+51629,46874,122462,MNTN Sugg: MNTN Matched w Attributes 10/23,280,name_other,2,"13,19",expr_pure_pp
+51651,49021,122462,"Foundation Repair, High Income",280,name_other,3,"13,17,19",expr_layered
+51679,41029,122462,LTDBE Attendee NC25,280,name_other,2,"13,19",expr_pure_pp
+51684,41531,122462,HVAC + MM PP 10/24,280,name_other,4,"13,17,19,35",expr_layered
+51797,40562,122462,Pest Control + MM 12/8 MMPP ,280,name_other,4,"13,17,19,35",expr_layered
+51799,42538,122462,Gifts & Writers,280,name_other,2,"13,19",expr_pure_pp
+51827,39549,122462,PRO: MNTN Matched + Luau  + Hawaiian Travelers 10/27,280,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+51920,45031,122462,GaryAllan_Huntsville,280,name_other,4,"13,17,19,35",expr_layered
+51960,40295,122462,Flint,280,name_other,5,"1,13,17,19,35",expr_heavily_layered
+52066,45477,122462,"V2 | OMF test audience Fredericksburg, VA",280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+52220,36109,122462,Target Audience - Grilling (West Coast Expansion | All),280,name_other,3,"13,19,35",expr_layered
+52283,38626,122462,National ,280,name_other,2,"13,19",expr_pure_pp
+52450,44051,122462,MNTN Matched,280,name_other,2,"13,19",expr_pure_pp
+52494,41331,122462,Spring MNTN Matched + Interest,280,name_other,3,"13,19,35",expr_layered
+52497,41331,122462,Summer MNTN Matched + Interest,280,name_other,3,"13,19,35",expr_layered
+52536,33739,122462,MNTN Matched + CRM - Nov 2025,280,name_other,3,"4,13,19",expr_layered
+52538,33736,122462,MNTN Matched (AVL) Nov 2025,280,name_other,3,"4,13,19",expr_layered
+52600,46836,122462,Test_Audience,280,name_other,3,"13,17,19",expr_layered
+52619,37934,122462,"Central Oregon, Hermiston & Redding ",280,name_other,3,"13,17,19",expr_layered
+52698,49371,122462,Anxiety and Panic Attack ,280,name_other,2,"13,19",expr_pure_pp
+52749,49460,122462,Paid Search Geo + IM Ford,280,name_other,3,"13,19,35",expr_layered
+52751,49460,122462,Paid Search Geo + IM Ford + Ram,280,name_other,3,"13,19,35",expr_layered
+52784,49230,122462,MNTN Matched (Google ads main keywords) | TMR,280,name_other,2,"13,19",expr_pure_pp
+52981,47500,122462,Glyphosate Free,280,name_other,2,"13,19",expr_pure_pp
+53133,40535,122462,AWR Prospecting Boost (MNTN Nov. '25),280,name_other,6,"2,4,13,18,19,35",expr_heavily_layered
+53277,39549,122462,PRO: MNTN Matched +  Polynesian + BYU + Black Friday 11/13,280,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+53700,41331,122462,Philly & DC Matched + Interest,280,name_other,3,"13,19,35",expr_layered
+53831,32244,122462,Sur La Table South Coast Audience 111725 TB,280,name_other,5,"1,4,13,17,19",expr_heavily_layered
+53863,38790,122462,Prospecting  - MNTN Matched - 11/17 Copy 01,280,name_other,3,"4,13,19",expr_layered
+53905,34042,122462,Q4-2025 Holiday Push,280,name_other,3,"2,13,19",expr_layered
+53955,41190,122462,Awareness - Passive,280,name_other,2,"13,19",expr_pure_pp
+54026,38800,122462,WR - Yamaha Affinity,280,name_other,4,"13,18,19,35",expr_layered
+54035,40352,122462,MNTN Keywords + Omaha Geofenced Locations,280,name_other,2,"13,19",expr_pure_pp
+54161,32023,122462,MNTN Pause Ads Test,280,name_other,5,"2,13,17,19,35",expr_heavily_layered
+54209,35215,122462,Prospecting Lincoln NE  - MNTN Matched - Nov 2025,280,name_other,4,"1,4,13,19",expr_layered
+54210,35215,122462,Prospecting Louisville KY - MNTN Matched - Nov 2025,280,name_other,4,"1,4,13,19",expr_layered
+54211,35215,122462,Prospecting Lexington KY  - MNTN Matched - Nov 2025,280,name_other,4,"1,4,13,19",expr_layered
+54212,35215,122462,Prospecting Omaha NE  - MNTN Matched - Nov 2025,280,name_other,4,"1,4,13,19",expr_layered
+54213,35215,122462,Prospecting Boulder Denver - MNTN Matched - Nov 2025,280,name_other,4,"1,4,13,19",expr_layered
+54317,38734,122462,MNTN Prospecting EOY 2025,280,name_other,5,"2,4,13,19,35",expr_heavily_layered
+54490,41893,122462,Shopper English - Holiday,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54493,49758,122462,BCST_PROS_MNTNMatch,280,name_other,3,"2,13,19",expr_layered
+54497,49230,122462,MNTN Matched (Google Ads other relevant keywords) v2 | TMR,280,name_other,2,"13,19",expr_pure_pp
+54500,49230,122462,MNTN Matched (Google ads main keywords+ AI recommend) | TMR ,280,name_other,2,"13,19",expr_pure_pp
+54543,46943,122462,New Site Traffic 2,280,name_other,2,"13,19",expr_pure_pp
+54557,43083,122462,MNTN Match and Interest - Detroit,280,name_other,3,"13,19,35",expr_layered
+54599,50151,122462,All Service Area cities,280,name_other,4,"13,17,19,35",expr_layered
+54628,45520,122462,(Zips) Homeowners - HVAC,280,name_other,4,"13,18,19,35",expr_layered
+54634,44617,122462,AI Keywords - Dec25 - Top DMAs,280,name_other,2,"13,19",expr_pure_pp
+54721,49789,122462,Home Buyers ,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54778,38288,122462,HVAC + MMPP 12/8,280,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+54789,33926,122462,JHM - Power & Purpose Daily Planner 2026,280,name_other,3,"4,13,19",expr_layered
+54823,50315,122462,2025_MNTN Matched_College Football_Tampa DMA,280,name_other,2,"13,19",expr_pure_pp
+54864,38952,122462,Dec 2025 - MNTN Matched with expanded list + CRM,280,name_other,4,"4,13,19,35",expr_layered
+54873,35227,122462,New Prospecting Audience 12.08.2025,280,name_other,3,"4,13,19",expr_layered
+54919,38694,122462,Cloud,280,name_other,3,"4,13,19",expr_layered
+54933,49643,122462,Chevy Truck Buyers,280,name_other,5,"13,17,18,19,35",expr_heavily_layered
+55083,40724,122462,IM Ford/Ram/GM/Nonlux - PS Geo + 70 Zip,280,name_other,3,"13,19,35",expr_layered
+53850,48943,122552,BRAND-AWARENESS-ENT,1,name_other,3,"13,19,35",expr_layered
+52673,35157,122682,Test,1,name_other,4,"13,17,19,35",expr_layered
+32053,34928,122754,MNTN Matched Spring 2026,2,name_other,4,"2,4,13,19",expr_layered
+52194,37532,122754,Wilds Winter Audience,2,name_other,2,"13,19",expr_pure_pp
+42459,36566,122869,Keywords + Healthlink ,1,name_other,2,"13,19",expr_pure_pp
+51675,33467,122916,"Jim Jefferies - San Jose, CA - 01/17/26",13,name_other,4,"13,17,19,35",expr_layered
+52801,33467,122916,"Jim Gaffigan - Chicago, IL - 2/21/26",13,name_other,5,"1,4,13,19,35",expr_heavily_layered
+52847,33467,122916,"Jim Gaffigan - Boise, ID - 6/11/26",13,name_other,5,"1,4,13,19,35",expr_heavily_layered
+53222,33467,122916,Nate Bargatze Pause Ads,13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54071,33467,122916,"Nate Bargatze - St. Louis, MO - 1.22.26",13,name_other,4,"4,13,19,35",expr_layered
+54081,33467,122916,Nate Bargatze - Fort Worth TX - 6.6.26,13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54091,33467,122916,"Nate Bargatze - Washington, DC - 4.3.26",13,name_other,4,"4,13,19,35",expr_layered
+54092,33467,122916,"Nate Bargatze - Des Moines, IA - 4.24.26",13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54096,33467,122916,"Nate Bargatze - OMaha, NE - 4.25.26",13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54101,33467,122916,Nate Bargatze - Birmingham - 5.29.26,13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54102,33467,122916,Nate Bargatze - Phoenix AZ - 6.26.26,13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54104,33467,122916,Nate Bargatze - Grand Rapids MI - 8.1.26,13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+54106,33467,122916,Nate Bargatze - Detroit MI - 8.14.26,13,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+62922,57988,122941,FDR,1,name_other,2,"13,19",expr_pure_pp
+47818,35335,123041,CHULA VISTA AUDIENCE 2025,1,name_other,3,"13,19,35",expr_layered
+45133,44108,123053,SG - Prospecting - Spring 2026,3,name_other,2,"13,19",expr_pure_pp
+48390,45240,123053,General Fishing 2026 - USA,3,name_other,4,"2,4,13,19",expr_layered
+71962,58419,123053,General Outdoors 2026 - Focus A-Series ,3,name_other,2,"13,19",expr_pure_pp
+51209,35349,123067,Q42025 Mobile-Pensacola General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+51467,35349,123067,Q42025 Orlando General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+52199,35349,123067,Q42025 Las Vegas General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+52200,35349,123067,Q42025 Birmingham General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+52201,35349,123067,Q42025 Colorado Springs General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+55793,35349,123067,Huntsville General Brand Q12026,9,name_other,2,"13,19",expr_pure_pp
+55880,35349,123067,Q12026 Savannah General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+55881,35349,123067,Q12026 Columbia General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+55882,35349,123067,Q12026 Huntsville General Brand,9,name_other,5,"4,13,17,19,35",expr_heavily_layered
+68704,51409,123115,TELEVISION Campaign Copy 02,1,name_other,2,"13,19",expr_pure_pp
+69511,47269,123174,Juliska - Mntn Match,1,name_other,2,"13,19",expr_pure_pp
+61661,35459,123249,Prospecting 2026,1,name_other,2,"13,19",expr_pure_pp
+69310,60722,123344,High Intent Buyers,1,name_other,3,"13,19,35",expr_layered
+40133,39812,123354,Mntn Matched - KWs,2,name_other,2,"13,19",expr_pure_pp
+73319,62286,123354,Zone 3 Keywords,2,name_other,3,"13,19,35",expr_layered
+18682,36201,123697,Ursuline,8,name_other,4,"1,13,19,35",expr_layered
+29301,35790,123697,Design Center,8,name_other,5,"1,13,17,19,35",expr_heavily_layered
+44522,36535,123697,home owner ,8,name_other,3,"13,17,19",expr_layered
+46457,36535,123697,martched contractor,8,name_other,3,"13,19,35",expr_layered
+48788,36065,123697,Matched ,8,name_other,2,"13,19",expr_pure_pp
+51231,48927,123697,matched,8,name_other,2,"13,19",expr_pure_pp
+52408,49338,123697,OCSU,8,name_other,4,"13,18,19,35",expr_layered
+55876,36065,123697,9th Graders,8,name_other,3,"13,19,35",expr_layered
+55200,49333,124135,Evergreen - MNTN Matched w/ Attributes 10.16,3,name_other,2,"13,19",expr_pure_pp
+56756,37316,124135,AI MNTN Matched + Interest Segment 1/22/26 - Basking Ridge,3,name_other,4,"4,13,19,35",expr_layered
+61028,37316,124135,"AI MNTN Matched + Sports Segment 2/18/26 - NJ, WP, Indirect",3,name_other,4,"4,13,19,35",expr_layered
+32408,34468,124243,Commercial Lending Audience,2,name_other,5,"1,4,13,19,35",expr_heavily_layered
+41688,34468,124243,Suncoast Broad Awareness Interests,2,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+63119,34365,124432,2026-2027 STC,1,name_other,4,"13,17,19,35",expr_layered
+52530,34468,124508,Suncoast Broad Awareness Cashback+,1,name_other,7,"1,2,4,13,17,19,35",expr_heavily_layered
+45528,34206,124581,Keywords - Personal Injury|Car/Moto Owner|Accident SEATAC,39,name_other,2,"13,19",expr_pure_pp
+50375,45355,124581,AI Keywords - New,39,name_other,2,"13,19",expr_pure_pp
+50918,40605,124581,MNTN Match - Oct,39,name_other,2,"13,19",expr_pure_pp
+54851,49923,124581,Prospecting - 3PD + Keywords + Performance,39,name_other,3,"13,19,35",expr_layered
+55065,40457,124581,B2C AI Keywords + 3PD,39,name_other,3,"13,19,35",expr_layered
+55066,40457,124581,B2C AI Keywords + 3PD (south tampa),39,name_other,3,"13,19,35",expr_layered
+55067,40457,124581,B2C AI Keywords + 3PD (alpharetta),39,name_other,3,"13,19,35",expr_layered
+55068,40457,124581,B2C AI Keywords + 3PD (rino),39,name_other,3,"13,19,35",expr_layered
+55069,40457,124581,B2C AI Keywords + 3PD (torrey hills),39,name_other,3,"13,19,35",expr_layered
+55070,40457,124581,B2C AI Keywords + 3PD (wellesley),39,name_other,3,"13,19,35",expr_layered
+55352,34206,124581,Keywords - Personal Injury|Car/Moto Owner|Accident WA,39,name_other,2,"13,19",expr_pure_pp
+57028,31455,124581,2026 MNTN Prospecting Audience + Peak (C2),39,name_other,5,"2,4,13,18,19",expr_heavily_layered
+59243,40457,124581,B2C AI Keywords + 3PD (albuquerque),39,name_other,3,"13,19,35",expr_layered
+59244,40457,124581,B2C AI Keywords + 3PD (brentwood),39,name_other,3,"13,19,35",expr_layered
+59246,40457,124581,B2C AI Keywords + 3PD (des peres),39,name_other,3,"13,19,35",expr_layered
+59247,40457,124581,B2C AI Keywords + 3PD (oviedo),39,name_other,3,"13,19,35",expr_layered
+59248,40457,124581,B2C AI Keywords + 3PD (irvine),39,name_other,3,"13,19,35",expr_layered
+59249,40457,124581,B2C AI Keywords + 3PD (1league city),39,name_other,3,"13,19,35",expr_layered
+59250,40457,124581,B2C AI Keywords + 3PD (weston),39,name_other,3,"13,19,35",expr_layered
+59254,40457,124581,B2C AI Keywords + 3PD (leauge city),39,name_other,3,"13,19,35",expr_layered
+61351,49637,124581,DMA TEST: AI Keywords + Peak + 3PD,39,name_other,4,"2,13,19,35",expr_layered
+65192,40457,124581,B2C AI Keywords + 3PD (preston hollow),39,name_other,4,"2,13,19,35",expr_layered
+66633,50659,124581,Prospecting - All (corporate),39,name_other,4,"2,13,19,35",expr_layered
+66636,50659,124581,Prospecting - All (franchise),39,name_other,4,"2,13,19,35",expr_layered
+68836,60341,124581,Prospecting - AI + 3PD (mlk-jr),39,name_other,3,"13,19,35",expr_layered
+73585,40457,124581,B2C AI Keywords + 3PD (research triangle),39,name_other,3,"13,19,35",expr_layered
+73586,40457,124581,B2C AI Keywords + 3PD (durham),39,name_other,3,"13,19,35",expr_layered
+73588,40457,124581,B2C AI Keywords + 3PD (heath),39,name_other,3,"13,19,35",expr_layered
+73589,40457,124581,B2C AI Keywords + 3PD (downtown austin),39,name_other,3,"13,19,35",expr_layered
+73593,40457,124581,B2C AI Keywords + 3PD (sugar house),39,name_other,3,"13,19,35",expr_layered
+73594,40457,124581,B2C AI Keywords + 3PD (west mckinney),39,name_other,3,"13,19,35",expr_layered
+73596,40457,124581,B2C AI Keywords + 3PD (south austin),39,name_other,3,"13,19,35",expr_layered
+73597,40457,124581,B2C AI Keywords + 3PD (merrick park),39,name_other,3,"13,19,35",expr_layered
+73599,40457,124581,B2C AI Keywords + 3PD (coconut park),39,name_other,3,"13,19,35",expr_layered
+73600,40457,124581,B2C AI Keywords + 3PD (midtown doral),39,name_other,3,"13,19,35",expr_layered
+73602,40457,124581,B2C AI Keywords + 3PD (buckhead),39,name_other,3,"13,19,35",expr_layered
+73604,40457,124581,B2C AI Keywords + 3PD (holly springs),39,name_other,3,"13,19,35",expr_layered
+73605,40457,124581,B2C AI Keywords + 3PD (north hills),39,name_other,3,"13,19,35",expr_layered
+73606,40457,124581,B2C AI Keywords + 3PD (downtown raleigh),39,name_other,3,"13,19,35",expr_layered
+43296,36256,124790,MNTN Matched + 3P West,1,name_other,3,"13,19,35",expr_layered
+50343,37795,124814,Credit Sense - new account openers,1,name_other,4,"13,17,19,35",expr_layered
+66372,49190,124849,life insurance BL,1,name_other,2,"13,19",expr_pure_pp
+57058,50707,124870,Kitsap Coverage,1,name_other,4,"13,17,19,35",expr_layered
+56955,36109,124872,Target Audience - IYKYK (Total Dist. Area + Western U.S.),3,name_other,3,"13,19,35",expr_layered
+57973,36109,124872,Target Audience - IYKYK (Western U.S. Only),3,name_other,5,"13,17,18,19,35",expr_heavily_layered
+57974,36109,124872,Target Audience - IYKYK (Eastern U.S. Only),3,name_other,5,"13,17,18,19,35",expr_heavily_layered
+69741,36390,125049,SpringIntoSavings-GTALL,3,name_other,2,"13,19",expr_pure_pp
+69749,36390,125049,SpringIntoSavings-GTUWY,3,name_other,2,"13,19",expr_pure_pp
+72201,36390,125049,RVOutletShow-Kalamazoo,3,name_other,2,"13,19",expr_pure_pp
+44486,36420,125109,Pros MNTN Matched 2.0,1,name_other,4,"4,13,19,35",expr_layered
+48771,36702,125118,Parents or Pizza Lovers,1,name_other,5,"1,13,17,19,35",expr_heavily_layered
+55345,34550,125129,prospecting_all-markets-parents_us,3,name_other,3,"13,19,35",expr_layered
+56669,39998,125129,"Irvine, CA - Parents",3,name_other,4,"1,13,19,35",expr_layered
+69294,39998,125129,"Irvine, CA - Parents Copy 01",3,name_other,4,"1,13,19,35",expr_layered
+53931,36482,125199,AI MNTN Match Profile - Prospecting,1,name_other,7,"2,4,13,17,18,19,35",expr_heavily_layered
+54558,43083,125234,MNTN Match and Interest - Columbus,2,name_other,3,"13,19,35",expr_layered
+54559,43083,125234,MNTN Match and Interest - Cleveland,2,name_other,3,"13,19,35",expr_layered
+72398,36492,125289,Newtown Awareness,1,name_other,2,"13,19",expr_pure_pp
+35950,36945,125342,Cole Haan | MNTN Matched KW List,1,name_other,3,"2,13,19",expr_layered
+54417,36569,125379,Holiday 2025,1,name_other,3,"13,19,35",expr_layered
+57651,55465,125391,Test One - Broad,2,name_other,2,"13,19",expr_pure_pp
+58561,55465,125391,"Audience 3: ""Broad"" (Prospecting – MNTN Matched keywords)",2,name_other,3,"13,19,35",expr_layered
+51839,36582,125400,GreenTech - MNTN Matched,1,name_other,2,"13,19",expr_pure_pp
+55025,36583,125403,MNTN Prospecting_MNTN Match + Keywords + Segments + Peak,1,name_other,4,"2,13,19,35",expr_layered
+44930,39277,125413,Austin,12,name_other,6,"1,2,4,13,19,35",expr_heavily_layered
+46407,39277,125413,BandD Anniversary Markets,12,name_other,3,"13,19,35",expr_layered
+46904,39277,125413,Corpus Test,12,name_other,4,"2,4,13,19",expr_layered
+47033,39277,125413,Realtor Audience,12,name_other,4,"4,13,19,35",expr_layered
+47719,39277,125413,MNTN Matched | 12 Dollar Pick-Up - BandD and Retail,12,name_other,3,"4,13,19",expr_layered
+47795,39277,125413,MNTN Match OR Ice Cream Parlor Visitors | Scoop Shop,12,name_other,3,"13,19,35",expr_layered
+48824,39277,125413,In-Store_MNTN-Matched_Loc-Tier-1_NCA_ATTN,12,name_other,4,"2,4,13,19",expr_layered
+51334,39277,125413,In-Store_MNTN-Matched_Tiffwich_Mesquite-TX_NCA_ATTN,12,name_other,4,"2,4,13,19",expr_layered
+51335,39277,125413,In-Store_MNTN-Matched_Tiffwich_Richardson-TX_NCA_ATTN,12,name_other,4,"2,4,13,19",expr_layered
+51336,39277,125413,In-Store_MNTN-Matched_Tiffwich_Tampa-FL_NCA_ATTN,12,name_other,4,"2,4,13,19",expr_layered
+52053,39277,125413,BandD_MNTN-Matched_Loc-Tier-1_NCA_ATTN,12,name_other,4,"2,4,13,19",expr_layered
+52119,39277,125413,BandD_MNTN-Matched_Loc-Tier-2_NCA_ATTN,12,name_other,4,"2,4,13,19",expr_layered
+54496,36678,125570,PRO | MNTN Matched + 3P  | 12/11/2025,1,name_other,7,"1,2,4,13,17,19,35",expr_heavily_layered
+53329,46830,125711,Winter in Wooville,2,name_other,5,"13,17,18,19,35",expr_heavily_layered
+71912,58873,125711,MNTN Matched,2,name_other,2,"13,19",expr_pure_pp
+73763,36724,125714,MNTN Matched May 9 - Work Boots,1,name_other,3,"1,13,19",expr_layered
+69525,36723,125721,Prospecting 2026,1,name_other,3,"4,13,19",expr_layered
+55268,32741,125877,Prospecting 01012026,1,name_other,4,"2,4,13,19",expr_layered
+63365,57858,126009,Affinity Interests,1,name_other,4,"2,4,13,19",expr_layered
+51990,36898,126052,Raine W5 Flight 2,1,name_other,2,"13,19",expr_pure_pp
+50535,36937,126137,Ai MNTN Match Profile,1,name_other,2,"13,19",expr_pure_pp
+27846,38034,126164,SC-Dallas TX,1,name_other,4,"1,13,19,35",expr_layered
+58681,32167,126310,narrowed1234,2,name_other,3,"13,19,35",expr_layered
+59689,32167,126310,test 211,2,name_other,2,"13,19",expr_pure_pp
+58458,35881,126366,Prospecting - 3P Financial Advisors + MNTN Match + CRM,1,name_other,7,"2,4,13,17,18,19,35",expr_heavily_layered
+50519,35827,126437,October - Shoppers MNTN Matched,4,name_other,4,"13,18,19,35",expr_layered
+50532,35827,126437,October - Shoppers Control,4,name_other,5,"13,17,18,19,35",expr_heavily_layered
+52580,35827,126437,November - Plugged In Control,4,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54465,35827,126437,December - Lifestyle Control,4,name_other,4,"13,17,19,35",expr_layered
+52803,37115,126497,Pause Ads EX Evergreen,1,name_other,4,"4,13,19,35",expr_layered
+54208,35215,126669,Chicago IL - MNTN Match & Agent Locas 25 Mi  (Nov 2025),10,name_other,3,"4,13,19",expr_layered
+54214,38952,126669,Nov 2025 - MNTN Matched with expanded list + CRM,10,name_other,4,"4,13,19,35",expr_layered
+57091,33736,126669,MNTN Matched (AVL) Jan 2026,10,name_other,3,"4,13,19",expr_layered
+57107,33739,126669,MNTN Matched + CRM - Jan 2026,10,name_other,3,"4,13,19",expr_layered
+59261,35215,126669,Prospecting Audience - Corp - Feb 2026,10,name_other,5,"1,2,4,13,19",expr_heavily_layered
+59682,35215,126669,Prospecting Boulder Denver - MNTN & Address - Feb 2026,10,name_other,4,"1,4,13,19",expr_layered
+59721,35215,126669,Prospecting Corp - MNTN + New Interest Segs - Feb 2026 ,10,name_other,5,"2,4,13,19,35",expr_heavily_layered
+62932,35215,126669,Prospecting Corp - MNTN + New Interest Segs -  Mar 2026,10,name_other,5,"2,4,13,19,35",expr_heavily_layered
+63337,38952,126669,Mar 2026 - MNTN Matched with expanded list + CRM,10,name_other,4,"4,13,19,35",expr_layered
+74172,35215,126669,Prospecting Corp - BLS Audience -  32026 KS MO IL IA excl,10,name_other,5,"2,4,13,19,35",expr_heavily_layered
+68121,60423,126678,MNTN AI Match Profile - Prospecting,1,name_other,3,"4,13,19",expr_layered
+51312,48956,126762,LovePotion prospecting,1,name_other,2,"13,19",expr_pure_pp
+66578,49123,126813,Protein Launch 2026 MM + 3P (TEST),1,name_other,3,"13,19,35",expr_layered
+48776,37316,126974,Basking Ridge,6,name_other,3,"4,13,19",expr_layered
+56755,37316,126974,"AI MNTN Matched 1/22/26 - NJ, WP, Indirect",6,name_other,4,"4,13,19,35",expr_layered
+68089,37316,126974,"AI MNTN Matched + Sports Segment 3/20/26 - NJ, WP, Indirect",6,name_other,4,"4,13,19,35",expr_layered
+68989,37316,126974,AI MNTN Matched + Sports Segment 3/24/26 - Basking Ridge,6,name_other,4,"4,13,19,35",expr_layered
+73220,37316,126974,"AI MNTN Matched + Interest Segment4.14.26 - NJ, WP, Indirect",6,name_other,4,"4,13,19,35",expr_layered
+73222,37316,126974,AI MNTN Matched + Interest Segment 4.14.26  - Basking Ridge,6,name_other,4,"4,13,19,35",expr_layered
+54950,37386,127047,Sriracha ,1,name_other,3,"13,19,35",expr_layered
+42592,40973,127084,AI Keywords,1,name_other,2,"13,19",expr_pure_pp
+71975,62206,127098,AWALL,1,name_other,3,"13,19,35",expr_layered
+54701,37129,127127,PRO US MNTN Matched Updated 12.4.25,1,name_other,6,"1,2,13,18,19,35",expr_heavily_layered
+33087,33684,127135,MNTN Matched Keywords V1,1,name_other,4,"2,4,13,19",expr_layered
+55039,37443,127155,NC - Chapel Hill,2,name_other,3,"13,19,35",expr_layered
+55044,37443,127155,CO,2,name_other,3,"13,19,35",expr_layered
+71718,33788,127229,Garnet Hill Core Audience,1,name_other,5,"2,4,13,19,35",expr_heavily_layered
+54699,37509,127279,Prospecting,1,name_other,3,"2,13,19",expr_layered
+32186,37518,127297,MNTN Matched KW Audience,1,name_other,2,"13,19",expr_pure_pp
+67196,60174,127377,Avails,1,name_other,4,"13,17,19,35",expr_layered
+55812,37588,127488,LTL GTM Pilot,1,name_other,2,"13,19",expr_pure_pp
+53882,37171,127615,Holiday 2025 Broad,3,name_other,4,"2,4,13,19",expr_layered
+53884,37171,127615,MNTN Matched Business/Broad Audience 11.17.25,3,name_other,4,"2,4,13,19",expr_layered
+53885,37171,127615,MNTN Matched Liberal Arts 11.17.25 ,3,name_other,5,"2,4,13,19,35",expr_heavily_layered
+74780,37722,127794,Western Prospecting Heritage _Product,1,name_other,3,"13,19,35",expr_layered
+55790,49789,127810,Persimmon ,4,name_other,4,"13,17,19,35",expr_layered
+70659,37553,127810,FY26 Traditional Apr-June,4,name_other,4,"13,18,19,35",expr_layered
+70660,37553,127810,FY26 CTX Transfer Apr-June,4,name_other,3,"13,19,35",expr_layered
+70661,49789,127810,Q2 Persimmon,4,name_other,4,"13,17,19,35",expr_layered
+32715,37775,127901,2024 Holiday Cards,2,name_other,4,"2,4,13,19",expr_layered
+32722,37775,127901,2024 Holiday Events,2,name_other,4,"2,4,13,19",expr_layered
+64421,37817,127983,Audience for CAP Grant 2026-2027,1,name_other,2,"13,19",expr_pure_pp
+74699,37350,128025,TELEVISION Campaign,1,name_other,2,"13,19",expr_pure_pp
+28187,37842,128035,MNTN Matched,1,name_other,2,"13,19",expr_pure_pp
+32068,37315,128047,MNTN Matched New Keywords,1,name_other,4,"2,4,13,19",expr_layered
+52161,43212,128129,CK UTD - MNTN Match Awareness - MNTNMTCHAWR,1,name_other,2,"13,19",expr_pure_pp
+51995,35548,128154,Q425 Campaign,2,name_other,2,"13,19",expr_pure_pp
+56012,50628,128154,Moretti_Generic,2,name_other,2,"13,19",expr_pure_pp
+50973,34439,128171,Q1 2026: MNTN Matched + Persona Interest Data,1,name_other,4,"13,17,19,35",expr_layered
+50560,37001,128294,MNTN Matched Keywords_ExclHoldoutStates,2,name_other,3,"2,13,19",expr_layered
+52347,37001,128294,MNTN Matched Keywords_10.2025,2,name_other,3,"2,13,19",expr_layered
+64614,58106,128325,GLN_Pros_2026_HV & Albany,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+64620,58106,128325,GLN_Pros_2026_NY-Binghamton,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+64622,58106,128325,GLN_Pros_2026_NY-Buffalo,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+64624,58106,128325,GLN_Pros_2026_NY-Rochester,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+64627,58106,128325,GLN_Pros_2026_PA-NorthEast & Lehigh Valley,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+64628,58106,128325,GLN_Pros_2026_PA-SouthCentral & Baltimore,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+64630,58106,128325,GLN_Pros_2026_PA/NJ-Lehigh Valley,7,name_other,5,"13,17,18,19,35",expr_heavily_layered
+61691,55684,128432,2026-02 MNTN Match,1,name_other,4,"4,13,19,35",expr_layered
+55712,38144,128669,MNTN Matched w/ Keywords_Edina_Q1 2026,1,name_other,3,"4,13,19",expr_layered
+56753,40904,128740,Albany_Competitive-Visitors-and-CRM,7,name_other,4,"4,13,19,35",expr_layered
+56758,40904,128740,Prospecting Mobile_AI-and-CRM,7,name_other,3,"4,13,19",expr_layered
+64526,40904,128740,Prospecting-Macon_AI-and-CRM,7,name_other,3,"4,13,19",expr_layered
+65911,40904,128740,Prospecting-Dothan_AI-and-CRM,7,name_other,3,"4,13,19",expr_layered
+66046,40904,128740,Prospecting Montgomery_AI-and-CRM,7,name_other,4,"4,13,19,35",expr_layered
+66086,40904,128740,Prospecting Columbus_Tupelo_AI-and-CRM,7,name_other,4,"4,13,19,35",expr_layered
+70236,40904,128740,Prospecting Birmingham_AI-and-CRM,7,name_other,3,"4,13,19",expr_layered
+46920,42782,128796,Jen's 3p test recommendation,1,name_other,5,"2,4,13,19,35",expr_heavily_layered
+56003,52694,128800,Fix It Forward,1,name_other,2,"13,19",expr_pure_pp
+55827,50942,128984,Accutron Keywords - MNTN Matched,1,name_other,5,"13,17,18,19,35",expr_heavily_layered
+48569,36470,129022,HDTLA Sept 25 (7mile+41Zips+InMktHonda+Toyota+Non-Lx),2,name_other,5,"1,4,13,19,35",expr_heavily_layered
+50225,43030,129022,IM Ford MM ROwn NluxLA - PS+NW +80%,2,name_other,4,"1,13,19,35",expr_layered
+47133,38363,129131,CFB & NFL | MNTN Matched,1,name_other,5,"13,17,18,19,35",expr_heavily_layered
+45407,38385,129168,BOGO New Audience | July '25,2,name_other,4,"13,17,19,35",expr_layered
+51994,38385,129168,Fresno Prospecting,2,name_other,4,"13,17,19,35",expr_layered
+29204,38419,129216,MNTN Match Audience LAS VEGAS,2,name_other,2,"13,19",expr_pure_pp
+32600,38419,129216,Los Angeles MNTN Mathched Audience,2,name_other,2,"13,19",expr_pure_pp
+38426,38420,129217,Homeowner Applicants V4,1,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+48356,34303,129255,September National Prospecting 2025,2,name_other,5,"2,13,17,19,35",expr_heavily_layered
+64113,34303,129255,GO/Powder Pink,2,name_other,4,"2,13,19,35",expr_layered
+55099,38484,129310,Jax - q1 2025,2,name_other,3,"13,19,35",expr_layered
+63144,38484,129310,Prospecting-MM-26,2,name_other,3,"13,19,35",expr_layered
+50200,38498,129337,MICROSTROKE SEPT 2025,1,name_other,3,"13,19,35",expr_layered
+50355,47424,129373,VU NYC HUB Prospects,1,name_other,2,"13,19",expr_pure_pp
+29515,38571,129462,Washington County Residents ,1,name_other,4,"13,17,19,35",expr_layered
+55557,38588,129497,Kitchen and Bath 2026 v.1,4,name_other,5,"13,17,18,19,35",expr_heavily_layered
+55641,38588,129497,Spring 2026 v.1,4,name_other,5,"13,17,18,19,35",expr_heavily_layered
+55804,38588,129497,Spring 2026 v.2,4,name_other,5,"13,17,18,19,35",expr_heavily_layered
+56018,38588,129497,Kitchen and Bath 2026 v.1 PEX audience,4,name_other,5,"13,17,18,19,35",expr_heavily_layered
+55606,38588,129523,Campaign 1 2026_v2,1,name_other,5,"13,17,18,19,35",expr_heavily_layered
+64449,38626,129591,Bexar County,1,name_other,2,"13,19",expr_pure_pp
+74102,61265,129624,Grandin Road MNTN Matched,1,name_other,2,"13,19",expr_pure_pp
+33199,38662,129696,Winter,1,name_other,4,"1,13,19,35",expr_layered
+51208,48859,129718,BFAS_Prospecting,1,name_other,2,"13,19",expr_pure_pp
+71014,38704,129734,New 4/2026,1,name_other,3,"13,19,35",expr_layered
+48474,32954,129750,BOFM_MNTN Match_PROS- NY Phili Hart DMA,3,name_other,3,"2,13,19",expr_layered
+59597,57334,129750,KIMS_Prospecting _Audience,3,name_other,3,"2,13,19",expr_layered
+70474,57335,129750,BCCH_Prospecting _Audience,3,name_other,3,"2,13,19",expr_layered
+50503,38720,129762,MNTN Matched October Evergreen + Turkey + CRM,1,name_other,3,"4,13,19",expr_layered
+56480,51241,129764,Prospecting - AI+Peak+3PD - SA Zips,1,name_other,3,"13,19,35",expr_layered
+58718,38722,129769,MNTN Matched NYDMA,1,name_other,3,"13,19,35",expr_layered
+70528,38668,129819,FY26 Contractors/Owners - Attributes & Industry/Revenue,1,name_other,4,"13,17,19,35",expr_layered
+40044,38101,129896,ATL Aud 1,11,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+44628,38101,129896,Cleveland Aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+44629,38101,129896,Memphis Aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+44631,38101,129896,Mobile Aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+44729,38101,129896,new orleans Aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+44963,38101,129896,san antonio aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+44964,38101,129896,san fran oak aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+45498,38101,129896,wichita Aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+45499,38101,129896,amarillo Aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+54125,38101,129896,houston aud 1,11,name_other,5,"1,4,13,17,19",expr_heavily_layered
+62829,38101,129896,All Zips Aud 1,11,name_other,6,"1,4,13,17,19,35",expr_heavily_layered
+30314,38535,129976,MNTN Matched Audience,1,name_other,4,"2,4,13,19",expr_layered
+58424,38835,129980,Country Music,1,name_other,4,"13,17,19,35",expr_layered
+54781,38977,130245,River Road,1,name_other,3,"4,13,19",expr_layered
+34529,39009,130297,MNTN Matched OKC,2,name_other,2,"13,19",expr_pure_pp
+55293,39009,130297,MNTN MATCHED ARDMORE,2,name_other,2,"13,19",expr_pure_pp
+69029,38583,130315,WOZ_MNTN Matched + 3P_Geo Targeted_3.24.26,1,name_other,6,"2,13,17,18,19,35",expr_heavily_layered
+31542,39024,130324,Skincare AI Target Audience,1,name_other,3,"13,19,35",expr_layered
+30938,35141,130358,Keywords 9.9.24,11,name_other,4,"2,4,13,19",expr_layered
+31114,35094,130358,Keywords/Interests for High/Mid pop - updated 081525 AB,11,name_other,5,"2,4,13,19,35",expr_heavily_layered
+31993,31815,130358,"Shopper intent graph v2 10.4,24",11,name_other,5,"1,4,13,19,35",expr_heavily_layered
+32392,31921,130358,Avon Audience KW v2 10152024 LC,11,name_other,4,"1,4,13,19",expr_layered
+33955,36412,130358,Beekman prospecting 111524 AB,11,name_other,6,"1,4,13,18,19,35",expr_heavily_layered
+41446,42097,130358,MNTN Recommended Adults,11,name_other,4,"2,4,13,19",expr_layered
+41456,42097,130358,MNTN Recommended Kids + Households with Kids 13 and under,11,name_other,3,"1,13,19",expr_layered
+43369,43413,130358,CTV Prospecting 6.10.2025,11,name_other,4,"2,13,19,35",expr_layered
+46709,35094,130358,Keywords/interests for Low Pop only 081525 AB,11,name_other,5,"2,4,13,19,35",expr_heavily_layered
+47232,46408,130358,CTV Prospecting KM 8.26.25,11,name_other,3,"13,19,35",expr_layered
+50125,35573,130358,Prospecting KW 093025 AB,11,name_other,3,"2,13,19",expr_layered
+50798,40268,130487,East Long Island ,7,name_other,4,"13,19,35,43",expr_layered
+50800,40268,130487,Southwest Long Island,7,name_other,3,"13,19,43",expr_layered
+55396,50576,130487,Orange County - Interests,7,name_other,2,"13,19",expr_pure_pp
+55453,50574,130487,San Diego- Interests,7,name_other,2,"13,19",expr_pure_pp
+55500,50655,130487,Seattle- Interests,7,name_other,2,"13,19",expr_pure_pp
+55503,50656,130487,Houston- Interests,7,name_other,2,"13,19",expr_pure_pp
+73360,62581,130487,South Florida,7,name_other,2,"13,19",expr_pure_pp
+73915,62975,130516,Covington,1,name_other,2,"13,19",expr_pure_pp
+31456,38689,130542,MNTN Match Audience (10/22 updated),1,name_other,2,"13,19",expr_pure_pp
+63830,48524,130577,Berkley - Bass Fishing Targets,1,name_other,3,"4,13,19",expr_layered
+52312,48866,130625,MNTN Matched Sample,1,name_other,3,"4,13,19",expr_layered
+64593,30506,130659,TELEVISION Campaign,1,name_other,2,"13,19",expr_pure_pp
+52232,44351,130723,Income Stipulation ,1,name_other,3,"13,19,35",expr_layered
+53960,38884,130839,Health & Wellness WithPD,1,name_other,2,"13,19",expr_pure_pp
+42684,38458,130855,MNTN Matched + 3rd Party - 7.10.25,1,name_other,5,"1,4,13,19,35",expr_heavily_layered
+32906,39334,130895,Ai Recommended Keywords Audience (General),1,name_other,4,"2,4,13,19",expr_layered
+32380,31314,130945,Halloween Prospecting 082825 AB,2,name_other,8,"1,2,4,11,13,17,19,35",expr_heavily_layered
+48534,41057,130945,Prospecting - Interest Groups,2,name_other,6,"1,2,4,13,19,35",expr_heavily_layered
+68154,41100,130984,water 2026 03,1,name_other,2,"13,19",expr_pure_pp
+35366,40332,131042,NV Waterproofing ,25,name_other,4,"1,13,19,35",expr_layered
+35411,40336,131042,Flagstaff/Tucson CTV,25,name_other,3,"1,13,19",expr_layered
+35586,40430,131042,MNTN Matched + ABCNE,25,name_other,5,"1,13,17,19,35",expr_heavily_layered
+36216,40326,131042,Saber,25,name_other,4,"1,13,19,35",expr_layered
+39822,41338,131042,Hello Garage All Markets,25,name_other,4,"1,13,19,35",expr_layered
+39832,40331,131042,Tampa  DMA,25,name_other,4,"1,13,19,35",expr_layered
+41846,40331,131042,Orlando DMA New Keywords,25,name_other,4,"1,13,19,35",expr_layered
+43827,43695,131042,Zone 1,25,name_other,4,"13,17,19,35",expr_layered
+43829,43695,131042,Zone 2,25,name_other,4,"13,17,19,35",expr_layered
+43907,39418,131042,3Q - Nebraska Sioux City,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+43909,39418,131042,3Q - Des Moines PFM,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+43910,39418,131042,3Q - Kansas City Topeka,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+43912,39418,131042,3Q - Colorado Counties,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+43920,40329,131042,3Q Sioux Falls DMA minus Sioux Falls Proper,25,name_other,4,"13,17,19,35",expr_layered
+43922,40329,131042,3Q Casper DMA,25,name_other,4,"13,17,19,35",expr_layered
+47798,40295,131042,South Bend and TC,25,name_other,5,"1,13,17,19,35",expr_heavily_layered
+48641,39418,131042,Wichita,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+48642,39418,131042,4Q Springfield,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+50486,48681,131042,Generators,25,name_other,4,"13,17,19,35",expr_layered
+53069,41338,131042,Omaha Zips 2026 Jan,25,name_other,4,"1,13,19,35",expr_layered
+55446,39418,131042,Des Moines,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+55448,39418,131042,PFM,25,name_other,5,"1,4,13,19,35",expr_heavily_layered
+55462,41338,131042,KC Jan 2026,25,name_other,4,"1,13,19,35",expr_layered
+62634,40326,131042,Paramount Zip Codes,25,name_other,4,"1,13,19,35",expr_layered
+70986,40331,131042,Miami Spanish,25,name_other,4,"1,13,19,35",expr_layered
+48467,32320,131148,SMB Prospecting (Demographics) -- Healthcare 9.17.25,1,name_other,6,"1,4,13,18,19,35",expr_heavily_layered
+51806,37815,131313,ECI - Prosecting,2,name_other,4,"2,4,13,19",expr_layered
+52008,46278,131313,Awareness,2,name_other,3,"2,13,19",expr_layered
+48692,38294,131318,Parkers HVAC + Home Year Built + MM 9/23,55,name_other,4,"13,18,19,35",expr_layered
+49923,47078,131318,Homeowners + AOH30+ MM 10/15,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+50222,38298,131318,Signature Elevators MM 10/1,55,name_other,3,"13,19,35",expr_layered
+50541,39206,131318,Plumbing + HVAC + QM + MM PP 10/5,55,name_other,4,"1,13,19,35",expr_layered
+50860,38290,131318,HVAC & Homeowner & Age of Home 10yrs + QM EX AKRON 10/15,55,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+51157,42493,131318,"Homeowners + Plumbing, electrical, and HVAC +MM PP 10/15",55,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+51358,38291,131318,VA HVAC 10/20 MM Removed,55,name_other,4,"13,18,19,35",expr_layered
+51360,38291,131318,MD HVAC 10/20 MM Removed,55,name_other,4,"13,18,19,35",expr_layered
+51380,38296,131318,Schneller KY - Plumbing + HVAC 10/20,55,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+51504,38292,131318,HVAC 10/22 No Havertown MM removed,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+51513,38292,131318,Plumbing 10/22 No Havertown MM removed,55,name_other,4,"1,13,19,35",expr_layered
+51515,42493,131318,"Homeowners + Plumbing, electrical, and HVAC +MM PP 10/22",55,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+53697,38296,131318,Schneller OH - Plumbing and HVAC MM PP 11/14,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+53878,38298,131318,Signature Elevators MM 11/17,55,name_other,4,"13,17,19,35",expr_layered
+53962,40321,131318,Associated Heating avails,55,name_other,4,"13,17,18,19",expr_layered
+54183,49626,131318,Test,55,name_other,3,"13,19,35",expr_layered
+54234,40321,131318,Binsky HVAC + Plumbing 11/21,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54394,38299,131318,SM Air Audience + MM PP 11/25,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54904,50356,131318,Test Audience,55,name_other,3,"13,19,35",expr_layered
+54905,40562,131318,Pest Control & Aflu HO - New Zip Codes,55,name_other,4,"13,17,19,35",expr_layered
+55071,38288,131318,HVAC + MMPP 2/9,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+55072,38290,131318,HVAC + Plumbing + MMPP 12/20,55,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+55081,38294,131318,Parkers HVAC + MM 12/15 PP,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+55364,50646,131318,Durham Chapel Hill,55,name_other,4,"13,17,19,35",expr_layered
+55373,50646,131318,Durham Chapel Hill Narrowed,55,name_other,3,"13,19,35",expr_layered
+56048,40321,131318,Jim's Plumbing Now avails,55,name_other,3,"13,19,35",expr_layered
+56225,38007,131318,Polk County,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+56456,40321,131318,Mr Sparky avails,55,name_other,3,"13,19,35",expr_layered
+56578,54123,131318,Evergreen,55,name_other,3,"13,19,35",expr_layered
+56672,54150,131318,Mister Sparky 2,55,name_other,3,"13,18,19",expr_layered
+57036,40321,131318,Avalon Air - AL,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+58186,53240,131318,AHHS Dayton/Richmond - Gen Brand,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+58188,53240,131318,AHHS Philadelphia - Home Services,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+59154,40562,131318,Pest control & MM 2-9,55,name_other,4,"13,17,19,35",expr_layered
+59156,38294,131318,Parkers HVAC + MM 2/9,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+59598,38298,131318,MM & HO + Seniors 3/6,55,name_other,3,"13,19,35",expr_layered
+59817,57498,131318,American Standard Avails,55,name_other,2,"13,19",expr_pure_pp
+60789,38288,131318,HVAC + MMPP 2/17,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+60821,38292,131318,HVAC No Havertown 2/17/26,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+60971,38294,131318,Parkers HVAC & AOH10+ no Memphis  2/18,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+61020,53242,131318,2-18-26,55,name_other,4,"13,18,19,35",expr_layered
+61030,53240,131318,AHHS Boston - Gen Brand,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+61035,53240,131318,AHHS Hickory & Denver - Gen Brand,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+63380,38007,131318,Excluding Polk County,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+65322,38299,131318,MM + HVAC & AOH10+,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+67060,58698,131318,HVAC & HHI150+ EXP,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+67151,60176,131318,Avails,55,name_other,4,"13,17,19,35",expr_layered
+67578,60307,131318,Avails Narrowed,55,name_other,3,"13,19,35",expr_layered
+67723,38298,131318,MM w/ PM & Channels Blocked 3/24 narrowed,55,name_other,3,"13,19,35",expr_layered
+69080,60901,131318,Avails,55,name_other,3,"13,19,35",expr_layered
+69281,60978,131318,Avails,55,name_other,3,"13,19,35",expr_layered
+70156,49581,131318,Tier 1& 2 Zips 3/30,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+73298,60174,131318,Charleston Avails,55,name_other,4,"13,17,19,35",expr_layered
+73309,60174,131318,Vancouver Avails,55,name_other,4,"13,18,19,35",expr_layered
+74077,38292,131318,HVAC AND PLUMBING No Havertown 4/17/26,55,name_other,5,"13,17,18,19,35",expr_heavily_layered
+40435,39100,131345,ADS - Mountain Match V2,1,name_other,3,"4,13,19",expr_layered
+47559,46641,131351,FSCU 2026,1,name_other,3,"13,19,35",expr_layered
+63255,54139,131440,DEN - B2B - Prospecting - MNTN Peak Performance,1,name_contains,2,"13,19",expr_pure_pp
+51901,48737,131510,Austin Prospects,2,name_other,2,"13,19",expr_pure_pp
+67828,39670,131510,The Marc Prospects2,2,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54239,40633,131547,Q4 2025 Testing Audience - Pause Ads,1,name_other,5,"2,4,13,19,35",expr_heavily_layered
+34767,39700,131560,Master Spas Matched Audience,1,name_other,2,"13,19",expr_pure_pp
+38194,40236,131578,Persona_Awarness + Keywords_General,1,name_other,5,"1,13,17,19,35",expr_heavily_layered
+51402,32167,131579,Peak Performance ONLY,2,name_default_prefix,3,"4,13,19",expr_layered
+51548,32167,131579,Macie Test - PP ONLY,2,name_other,2,"13,19",expr_pure_pp
+36968,34611,131589,Prospecting Audience Feb 2025 LC,12,name_other,5,"1,4,13,19,35",expr_heavily_layered
+38049,32147,131589,Prospecting Evergreen LC 030125,12,name_other,6,"1,2,4,13,19,35",expr_heavily_layered
+38814,32244,131589,Sur La Table Culinary Audience 03112025,12,name_other,4,"1,4,13,19",expr_layered
+40887,40341,131589,CTV Prospecting 10.08.25 CM,12,name_other,5,"1,2,4,13,19",expr_heavily_layered
+45153,41057,131589,Prospecting No DMA Exclusions CM 07.07.25,12,name_other,6,"1,2,4,13,19,35",expr_heavily_layered
+47260,46479,131589,CTV Prospecting CM 8.26.25,12,name_other,4,"2,4,13,19",expr_layered
+50288,34611,131589,Prospecting DMA Cell B Audience Oct 2025 TB,12,name_other,4,"1,13,19,35",expr_layered
+50298,34611,131589,Prospecting DMA Cell A Audience Oct 2025 TB,12,name_other,4,"1,13,19,35",expr_layered
+50880,41057,131589,Prospecting DMA Exclusions CM 10.09.25,12,name_other,4,"2,4,13,19",expr_layered
+53275,41057,131589,Prospecting No DMA Exclusions 11122025 CM MA,12,name_other,6,"2,4,13,18,19,35",expr_heavily_layered
+56243,32147,131589,Bouqs MM Only VDay Audience CM 011326,12,name_other,3,"4,13,19",expr_layered
+69782,32147,131589,CTV Subs Prospecting CM 03.27.26,12,name_other,5,"4,13,18,19,35",expr_heavily_layered
+46066,45575,131670,Passaic County General Sports,5,name_other,5,"13,17,18,19,35",expr_heavily_layered
+48769,47328,131670,Fright Nights 2025,5,name_other,6,"4,13,17,18,19,35",expr_heavily_layered
+51744,49145,131670,Splash NY,5,name_other,3,"13,19,35",expr_layered
+52236,43367,131670,Black Friday Sale,5,name_other,4,"13,17,19,35",expr_layered
+54052,49784,131670,Syracuse Tickets,5,name_other,4,"13,17,19,35",expr_layered
+21712,32153,131682,Tello Prepaid & Competitors Prospecting,1,name_other,5,"1,2,4,13,19",expr_heavily_layered
+50504,39783,131727,Targeting (AP),1,name_other,3,"4,13,19",expr_layered
+54708,50153,131753,SJIVB,2,name_other,4,"13,18,19,35",expr_layered
+56852,39737,131753,Clipper Vacations  Spring 2026,2,name_other,5,"1,13,17,19,35",expr_heavily_layered
+67212,39292,131840,Seattle 5mi 50plus,1,name_other,3,"13,19,35",expr_layered
+50553,39856,131848,Prospecting Update 10.02.2025,1,name_other,2,"13,19",expr_pure_pp
+34884,39866,131873,MNTN Matched + 3P - Albuquerque - Westside,4,name_other,3,"1,13,19",expr_layered
+34917,39866,131873,"MNTN Matched + 3P - Royal Oak, MI",4,name_other,4,"1,13,19,35",expr_layered
+34919,39866,131873,MNTN Matched + 3P - Santa Fe- South Capitol,4,name_other,3,"1,13,19",expr_layered
+65152,58663,131873,LOLA Theater List,4,name_other,2,"13,19",expr_pure_pp
+55002,49684,131926,TK Multi-incentive,1,name_other,3,"13,19,35",expr_layered
+58847,52316,131946,Nitty Gritty Dirt Band,2,name_other,3,"13,17,19",expr_layered
+70559,52316,131946,Aaron Lewis,2,name_other,4,"13,17,19,35",expr_layered
+58311,52711,132050,Q1 2026 Home Equity V2,1,name_other,4,"13,17,19,35",expr_layered
+56359,40063,132051,Auto Loan 2026,1,name_other,4,"1,13,19,35",expr_layered
+55540,40064,132053,Rug Cleaning New Customers,1,name_other,2,"13,19",expr_pure_pp
+36846,34838,132113,hc-z1-ecr_clay-alldig-2025 Mar 19,31,name_other,4,"1,13,19,35",expr_layered
+37026,34838,132113,hc-z2-ser-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37034,34838,132113,hc-z2-gul-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37035,34838,132113,hc-z2-ser-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+37041,34838,132113,hc-z2-gul-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+37044,34838,132113,hc-z3-wva-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37056,34838,132113,hc-z3-vir-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37057,34838,132113,hc-z3-ner-btv-2026,31,name_other,3,"1,13,19",expr_layered
+37058,34838,132113,hc-z3-ken-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37060,34838,132113,hc-z2-ten_fob-btv-2025 Mar 19,31,name_other,4,"1,13,19,35",expr_layered
+37061,34838,132113,hc-z2-bam-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37064,34838,132113,hc-z1-wcr-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37065,34838,132113,hc-z1-sca_fob-btv-2025 Mar 19,31,name_other,4,"1,13,19,35",expr_layered
+37066,34838,132113,hc-z1-flg-btv-2026,31,name_other,3,"1,13,19",expr_layered
+37067,34838,132113,hc-z1-ecr_fob-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+37069,34838,132113,hc-z3-wva-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+37070,34838,132113,hc-z3-vir-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+37071,34838,132113,hc-z3-ner-alldig-2026,31,name_other,3,"1,13,19",expr_layered
+37072,34838,132113,hc-z3-ken-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+37073,34838,132113,hc-z2-ten-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+37074,34838,132113,hc-z2-bam-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+37076,34838,132113,hc-z1-flg-alldig-2026,31,name_other,3,"1,13,19",expr_layered
+41050,34838,132113,hc-z4-tnt-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+41054,34838,132113,hc-z4-tnt-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+42488,34838,132113,hc-z4-roc-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+42489,34838,132113,hc-z4-roc-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+42490,34838,132113,hc-z4-pac-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+42492,34838,132113,hc-z4-txn-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+42493,34838,132113,hc-z4-txn-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+42494,34838,132113,hc-z4-txs-alldig-2026,31,name_other,4,"1,13,19,35",expr_layered
+42495,34838,132113,hc-z4-txs-btv-2026,31,name_other,4,"1,13,19,35",expr_layered
+50438,34352,132200,MNTN Only,1,name_other,2,"13,19",expr_pure_pp
+41743,40157,132217,MNTN Matched ,1,name_other,3,"13,17,19",expr_layered
+58328,40202,132285,KANSAS CITY BASEMENT 2026,1,name_other,2,"13,19",expr_pure_pp
+35355,40337,132366,MNTN Matched (6 Studios),10,name_other,4,"13,19,35,43",expr_layered
+35363,40342,132366,Greenbrae - MNTN Matched (Peak Performance),10,name_contains,3,"1,13,19",expr_layered
+41332,40337,132366,MNTN Matched(saratoga),10,name_other,4,"1,13,19,43",expr_layered
+41334,40337,132366,MNTN Matched (Victor),10,name_other,4,"1,13,19,43",expr_layered
+41335,40337,132366,MNTN Matched (Amherst),10,name_other,4,"1,13,19,43",expr_layered
+46462,46188,132366,"OTF Highlands, Castlerock, Sloan Lake - MNTN Matched ",10,name_other,3,"13,19,43",expr_layered
+66403,46188,132366,"Arizona, DNU",10,name_other,3,"13,19,43",expr_layered
+67043,59558,132366,"HWX Roseville, CA (Douglas)",10,name_other,2,"13,19",expr_pure_pp
+70984,40337,132366,Hudson Valley Region,10,name_other,4,"1,13,19,43",expr_layered
+70987,40337,132366,Rochester Region,10,name_other,4,"1,13,19,43",expr_layered
+52844,39921,132388,Logistics,2,name_other,2,"13,19",expr_pure_pp
+52845,39921,132388,Logistics-MNTN Matched,2,name_other,2,"13,19",expr_pure_pp
+48207,40279,132398,Q4 2025 MNTN Match Audience 9-12,1,name_other,2,"13,19",expr_pure_pp
+55201,50559,132422,El Dorado Hills CA,1,name_other,3,"13,19,35",expr_layered
+47652,40352,132495,MNTN Keywords + NJPA Geofenced Locations,6,name_other,2,"13,19",expr_pure_pp
+51740,40352,132495,MNTN Keywords + Southwest Austin Geofenced Location,6,name_other,2,"13,19",expr_pure_pp
+54651,40352,132495,MNTN Keywords + Knoxville Geofenced Location,6,name_other,2,"13,19",expr_pure_pp
+55110,49814,132495,Q1 2026 MNTN Matched + DMAs,6,name_other,2,"13,19",expr_pure_pp
+55830,52188,132495,Keywords + Top Sales Markets,6,name_other,2,"13,19",expr_pure_pp
+70290,58893,132495,Bushnell MNTN Matched + 3PS,6,name_other,3,"13,19,35",expr_layered
+55285,50586,132514,Clearview,1,name_other,2,"13,19",expr_pure_pp
+39532,40835,132585,San Antonio April 2025 Audience,1,name_other,5,"1,13,17,19,35",expr_heavily_layered
+35688,40451,132612,Florida Car Wash Interests ,2,name_other,2,"13,19",expr_pure_pp
+43469,40451,132612,California,2,name_other,2,"13,19",expr_pure_pp
+36436,40477,132651,Valentine's Day 2025,1,name_other,6,"1,13,17,18,19,35",expr_heavily_layered
+56858,40499,132688,Leave Management Buyers,1,name_other,3,"4,13,19",expr_layered
+45948,40521,132720,Prospecting Mntn Matched No Booking Since Feb 2025,1,name_other,4,"2,4,13,19",expr_layered
+54222,40522,132745,Summer Camps 2026,1,name_other,5,"13,17,18,19,35",expr_heavily_layered
+54164,40563,132791,Base and Matched - April 26 Target,4,name_other,6,"1,2,13,17,19,35",expr_heavily_layered
+58760,40563,132791,Pressure Washer Pros,4,name_other,3,"13,19,35",expr_layered
+58762,40563,132791,Pressure Washer Pros Hispanic,4,name_other,3,"13,19,35",expr_layered
+68884,40563,132791,Base and Matched Hispanic April 26 Target,4,name_other,6,"1,2,13,17,19,35",expr_heavily_layered
+53336,40597,132849,Mid & Bottom Q4,1,name_other,2,"13,19",expr_pure_pp
+51929,47499,132910,PRS | MNTN Matched,5,name_other,2,"13,19",expr_pure_pp
+51949,47498,132910,PRS | MNTN Matched,5,name_other,3,"13,19,35",expr_layered
+52842,47498,132910,PRS | MNTN Matched + Ford,5,name_other,3,"13,19,35",expr_layered
+54033,49678,132910,PRS | MNTN Matched + Interests | Radius,5,name_other,4,"2,13,19,35",expr_layered
+55433,49731,132910,PRS | MNTN_Interests_Cities,5,name_other,3,"13,19,35",expr_layered
+56404,52387,132965,Parents ,1,name_other,2,"13,19",expr_pure_pp
+42271,32404,132978,SOBE Key States 3P + Keywords 05.19.2025,2,name_other,3,"1,13,19",expr_layered
+42276,32404,132978,STEM Key States 3P + Keywords 05.19.2025,2,name_other,3,"1,13,19",expr_layered
+37416,40689,132989,4 State Broader Reach,1,name_other,4,"13,18,19,35",expr_layered
+40789,40690,132990,No WS,1,name_other,3,"4,13,19",expr_layered
+45200,40696,133005,Female Standard,4,name_other,2,"13,19",expr_pure_pp
+46243,40696,133005,Female Dallas | Chicago,4,name_other,2,"13,19",expr_pure_pp
+47366,40696,133005,Female,4,name_other,2,"13,19",expr_pure_pp
+55601,40696,133005,Q1 Female Skewing,4,name_other,3,"13,19,35",expr_layered
+50442,40714,133037,Mountain Matched,1,name_other,2,"13,19",expr_pure_pp
+50143,40796,133131,Banned Together October 2025,1,name_other,2,"13,19",expr_pure_pp

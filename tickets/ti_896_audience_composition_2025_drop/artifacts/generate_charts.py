@@ -266,6 +266,67 @@ def chart_05_pp_spend_share(df):
     save(fig, "ti_896_chart_05_pp_spend_share.png")
 
 
+def chart_06_pp_default_vs_custom(df):
+    """Track B — of PP adopters, share default / custom / both / unclassified."""
+    try:
+        df_dc = pd.read_csv(OUTPUTS / "ti_896_pp_default_custom_weekly.csv",
+                            parse_dates=["week_start"])
+    except FileNotFoundError:
+        print("ti_896_pp_default_custom_weekly.csv not found; skipping chart 06.")
+        return
+
+    # Restrict to post-launch window where adopter counts are meaningful (n>=50)
+    dfw = df_dc[df_dc["n_pp_adopters"] >= 50].copy()
+    if dfw.empty:
+        print("No weeks with >=50 adopters; skipping chart 06.")
+        return
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+
+    x = dfw["week_start"]
+    s_def = dfw["share_default_of_adopters"].fillna(0) * 100
+    s_cust = dfw["share_custom_of_adopters"].fillna(0) * 100
+    s_both = dfw["share_both_of_adopters"].fillna(0) * 100
+    s_unclass = 100 - s_def - s_cust - s_both
+
+    # Stacked area
+    ax.stackplot(x,
+                 s_def, s_cust, s_both, s_unclass,
+                 colors=[BASELINE, ACCENT, "#888", "#D0D0D0"])
+
+    # In-band labels — put at a middle x position so they sit cleanly inside the bands
+    mid_idx = len(dfw) // 2
+    mid_x = x.iloc[mid_idx]
+
+    y_def_mid  = float(s_def.iloc[mid_idx]) / 2
+    y_cust_mid = float(s_def.iloc[mid_idx]) + float(s_cust.iloc[mid_idx]) / 2
+    ax.text(mid_x, y_def_mid,  f"Default  {s_def.iloc[-1]:.0f}%",
+            color="white", fontsize=12, weight="bold", ha="center", va="center")
+    ax.text(mid_x, y_cust_mid, f"Custom  {s_cust.iloc[-1]:.0f}%",
+            color="white", fontsize=12, weight="bold", ha="center", va="center")
+
+    # "Both" and "unclassified" as small tick labels on the right
+    top = float(s_def.iloc[-1]) + float(s_cust.iloc[-1])
+    ax.text(x.iloc[-1], top + float(s_both.iloc[-1]) / 2,
+            f"  Both {s_both.iloc[-1]:.0f}%", color="#666", fontsize=8, va="center", ha="left")
+    ax.text(x.iloc[-1], top + float(s_both.iloc[-1]) + float(s_unclass.iloc[-1]) / 2,
+            f"  Unclassified {s_unclass.iloc[-1]:.0f}%", color="#999", fontsize=8, va="center", ha="left")
+
+    ax.set_title("~60% of Peak Performance adopters customise the template",
+                 loc="left", color="#222")
+    ax.set_ylabel("Share of Peak Performance adopters (%)")
+    ax.set_ylim(0, 100)
+    ax.set_xlim(x.iloc[0], x.iloc[-1])
+
+    ax.text(0.01, -0.18,
+            "Default = audience template has only DS13 + DS19 (minimal PP pattern). Custom = template layers "
+            "additional DS clauses (exclusions, overlays, extra keywords). Split has been stable since launch. "
+            "'Both' = advertiser runs a mix. 'Template not yet archived' = CDC lag on the template table.",
+            transform=ax.transAxes, fontsize=8, color="#777")
+
+    save(fig, "ti_896_chart_06_pp_default_vs_custom.png")
+
+
 def main():
     ARTIFACTS.mkdir(exist_ok=True)
     df = load()
@@ -274,6 +335,7 @@ def main():
     chart_03_retargeting(df)
     chart_04_shift_magnitudes(df)
     chart_05_pp_spend_share(df)
+    chart_06_pp_default_vs_custom(df)
     print(f"Wrote {len(list(ARTIFACTS.glob('ti_896_chart_*.png')))} chart PNGs")
 
 

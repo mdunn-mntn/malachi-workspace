@@ -147,6 +147,38 @@ Query: [queries/ti_896_composition_spend_weighted.sql](queries/ti_896_compositio
 CSV: [outputs/ti_896_composition_spend_weighted.csv](outputs/ti_896_composition_spend_weighted.csv)
 Chart: [artifacts/ti_896_chart_05_pp_spend_share.png](artifacts/ti_896_chart_05_pp_spend_share.png)
 
+### Track B — Default vs custom Peak Performance audiences (2026-04-22)
+
+Three heuristics tested (discovery on 1,000 PP-detecting audience templates from `archives_audiences_archives`):
+
+| Heuristic | Clarity |
+|---|---|
+| `user_id` histogram | One account (122462) holds 28% of templates — possible service account, but no clean ≥80% boundary |
+| Name pattern (contains "Peak Performance") | **Fails** — 7 of 1000 audiences. Names are advertiser-driven. |
+| Expression structural — pure (DS13+DS19 only) vs layered (+more DS) | **25% pure / 52% layered / 23% heavily-layered** — clean split |
+
+**Best-effort classifier adopted (flagged as heuristic in the deck):** expression structural test.
+
+- Template classified as `default_pp` if its expression uses only DS13 + DS19.
+- Template classified as `custom_pp` if DS13 + DS19 plus any additional DS clause.
+- Segments propagate the template classification via `audience_id`.
+
+**Result (among PP adopters, stable since launch):**
+- **34% default-only** (advertiser accepts the template as-is)
+- **58% custom-only** (advertiser layers on exclusions / overlays / extra keywords)
+- **3% both**
+- **5% unclassified** (template not yet in archives — CDC lag or new audience)
+
+Pattern holds steady across the entire ramp — no drift toward either default or custom over time.
+
+Queries:
+- Discovery: [queries/ti_896_pp_default_custom_discovery.sql](queries/ti_896_pp_default_custom_discovery.sql)
+- Weekly rollup: [queries/ti_896_pp_default_custom_weekly.sql](queries/ti_896_pp_default_custom_weekly.sql)
+CSVs: [outputs/ti_896_pp_default_custom_discovery.csv](outputs/ti_896_pp_default_custom_discovery.csv), [outputs/ti_896_pp_default_custom_weekly.csv](outputs/ti_896_pp_default_custom_weekly.csv)
+Chart: [artifacts/ti_896_chart_06_pp_default_vs_custom.png](artifacts/ti_896_chart_06_pp_default_vs_custom.png)
+
+**Open question:** formal product definition of "default Peak Performance" is a follow-up for the audience-tools team (Ryan / Jordan). This analysis uses a structural-heuristic proxy.
+
 ## 5. Solution
 
 *Pending.*

@@ -185,16 +185,43 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 <!-- 13a. Track A deep-dive: spend-weighted PP -->
 <section>
-  <h2>Deep dive &mdash; spend-weighted PP</h2>
+  <h2>Spend-weighted Peak Performance</h2>
   <div style="font-size:0.72em; line-height:1.55;">
-    <p>Execs asked: <b>how much MNTN spend actually flows through Peak Performance</b>, not just how many advertisers have it attached?</p>
-    <p>Method: join archive effective windows to <code>sum_by_campaign_by_day</code>, weight each campaign-day by <code>media_cost</code>, report <code>&Sigma;spend(PP campaigns) / &Sigma;spend(all cohort campaigns)</code> per week.</p>
+    <p>Advertiser-presence counts a campaign even if it never delivered. A more exacting view weights each week&rsquo;s mix by actual media spend: <b>how much MNTN spend flows through campaigns whose active expression carries Peak Performance</b>.</p>
+    <p>Method: join archive effective windows to <code>sum_by_campaign_by_day</code>, weight each campaign-day by <code>media_cost</code>, then compute <code>&Sigma;spend(PP campaigns) / &Sigma;spend(all cohort campaigns)</code> per week.</p>
   </div>
 </section>
 
 <section class="chart-slide">
   <img src="CHART_05_PLACEHOLDER" alt="PP presence vs spend share">
   <p class="chart-caption">Advertiser-presence (red) climbs to 21%. Spend-weighted (navy) lands at <b>~12&ndash;13%</b>. Gap of ~8pp tells us PP adopters skew smaller than cohort average &mdash; the headline &ldquo;advertiser share&rdquo; number slightly overstates PP&rsquo;s delivery footprint.</p>
+</section>
+
+<!-- 13b. Track B: Default vs custom PP -->
+<section>
+  <h2>Are advertisers using Peak Performance as delivered?</h2>
+  <div style="font-size:0.72em; line-height:1.55;">
+    <p>Two ways to run Peak Performance:</p>
+    <p><b>Default</b> &mdash; audience template carries the minimal PP pattern (DS13 intent + DS19 keywords) and nothing else. The product as it ships.</p>
+    <p><b>Custom</b> &mdash; advertiser layers on additional DS clauses: exclusion lists (past converters / page-viewers), CRM overlays, extra keyword groups, or combined targeting.</p>
+    <p>Classification runs on <code>archives_audiences_archives</code> at template level, since segment-level expressions always carry auxiliary flags (DS14 global, holdout structure) that obscure the signal.</p>
+  </div>
+</section>
+
+<section class="chart-slide">
+  <img src="CHART_06_PLACEHOLDER" alt="PP default vs custom">
+  <p class="chart-caption"><b>58% of adopters run custom PP; 34% use the default.</b> Split has been stable across the entire ramp &mdash; no drift toward defaults or customisation over time. Majority are modifying the recommended template.</p>
+</section>
+
+<section>
+  <h2>What that means for the drop</h2>
+  <div style="font-size:0.72em; line-height:1.55;">
+    <p>The adoption story is not &ldquo;advertisers unthinkingly attached the MNTN template.&rdquo; Most are actively customising.</p>
+    <p>Two implications worth exploring:</p>
+    <p><b>1.</b> If custom PP audiences perform differently from default PP audiences in conversions, the 58% custom cohort dominates the aggregate performance and should be segmented.</p>
+    <p><b>2.</b> Template-following advertisers are a useful baseline &mdash; their 34% acts as the &ldquo;as-designed&rdquo; cohort for any future causal test of Peak Performance on conversions.</p>
+    <p style="color:#999; font-size:0.85em; margin-top:0.8em;"><i>Classifier limits: &ldquo;pure DS13+DS19&rdquo; is a best-effort heuristic. Formal product definition of &ldquo;default&rdquo; is a follow-up question for the audience-tools team.</i></p>
+  </div>
 </section>
 
 <!-- 13. Methodology appendix -->

@@ -147,3 +147,32 @@ DS13 intent layer (small `cats` ids — 107000, 108000, 111004) paired with DS19
 **WGU (AID 31357) sensitivity:** PP spend share is slightly higher excluding WGU (~14% vs ~13% including WGU). Doesn't flip the finding.
 
 **Pre-launch baseline (spend-weighted):** ~0% through May 2025, ~1.3% June–Sep (matches presence baseline interpretation — legacy / early-access configurations).
+
+---
+
+## V9 — Default-vs-custom classifier (Track B)
+
+**Discovery query:** [queries/ti_896_pp_default_custom_discovery.sql](../queries/ti_896_pp_default_custom_discovery.sql) — ran three heuristics on 1,000 PP-detecting templates from `archives_audiences_archives`.
+
+**Heuristic alignment:**
+
+| Heuristic | Finding | Verdict |
+|---|---|---|
+| `user_id` | One account (122462) has 280 of 1000 templates (28%). No clean ≥80% boundary. | Fails as sole classifier |
+| Name pattern | 7/1000 contain "Peak Performance" (0.7%). Names are advertiser-driven. | **Fails** |
+| Expression structure | 253 pure (DS13+DS19 only) / 522 layered / 225 heavily-layered | **Cleanest signal — adopted** |
+
+**Selected heuristic:** template classified `default_pp` iff expression has only DS13 + DS19; otherwise `custom_pp`. Per user direction (approved plan): ship best-effort classifier with uncertainty call-out in the deck. Formal product definition of "default" is a follow-up for audience-tools team.
+
+**Template-level vs segment-level — why the classifier runs on templates:** `audience_segment_archives` stores the translated segment expression which always carries auxiliary DS ids (DS14 global flag, holdout MD5 bucketing, geo logic). Running the "pure DS13+DS19" check at segment level returns 0 matches — the added auxiliaries break the signal. The template table (`audiences_archives`) preserves the compact `{"interest":{"include":[...]}}` schema where the pure-vs-layered split survives.
+
+**Published numbers (of PP adopters, stable since Oct):**
+- Default-only: ~34%
+- Custom-only: ~58%
+- Both: ~3%
+- Unclassified: ~5% (template not in archives — CDC lag)
+
+**Limits explicitly disclosed in deck:**
+- "Pure DS13+DS19" is a structural proxy, not a formal product definition.
+- We do not yet know how the product UI presents "default" vs customisation — could be subtly different from our structural test.
+- ~5% of PP-detected segments have no matching template in `audiences_archives` (unclassified bucket). These are likely brand-new audiences not yet replicated to archives.
