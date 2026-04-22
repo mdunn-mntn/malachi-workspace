@@ -7,7 +7,7 @@ Deck URL: https://gist.githack.com/mdunn-mntn/f47a6f106ed5ff502cedcb7de50231d8/r
 
 **[TI-896] Initial audience-composition findings — 2025 performance drop**
 
-cc @Alex Knorr (co-driver reconciliation before war-room post), @Bryce Wagg, @Ryan Kleck, @Jordan Piepkow
+cc @Alex Knorr, @Bryce Wagg, @Ryan Kleck, @Jordan Piepkow
 
 **Headline:** Within the audience-composition lane, one shift dominates — **Peak Performance (DS13) adoption went from 10% on Sep 22 to 30% today**, inflecting the week of Peak Performance launch (Oct 6 2025). Every other bucket (MM / Keywords / 3P / CRM) flat within ±1pp in the drop window. Retargeting share stable Sep–Dec 2025.
 

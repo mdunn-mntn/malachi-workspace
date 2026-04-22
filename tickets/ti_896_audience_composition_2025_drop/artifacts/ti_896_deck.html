@@ -86,7 +86,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <section>
   <h1>Audience composition shift analysis</h1>
   <p class="subtitle">2025 performance drop &mdash; war-room initial findings<br>
-  TI-896 &nbsp;&middot;&nbsp; Alex Knorr (driver) + Malachi (co-driver) &nbsp;&middot;&nbsp; 2026-04-22</p>
+  TI-896 &nbsp;&middot;&nbsp; Malachi Dunn &nbsp;&middot;&nbsp; 2026-04-22</p>
 </section>
 
 <!-- 2. Power Line -->
@@ -96,9 +96,9 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   <p class="big-number-context">Every other bucket &mdash; MM, 3P, CRM, Keywords &mdash; flat in the drop window.</p>
 </section>
 
-<!-- 3. Scope (per Bryce) -->
+<!-- 3. Scope -->
 <section>
-  <h2>Scope (per Bryce&rsquo;s post)</h2>
+  <h2>Scope</h2>
   <div class="kv">
     <p><span class="k">Cohort</span> Advertisers active since Jan 2025</p>
     <p><span class="k">Buckets counted</span> <span class="v">DS19 Keywords</span>, <span class="v">DS13 Peak Performance</span>, <span class="v">DS35 3P</span>, <span class="v">DS4 CRM</span>, <span class="v">Mountain Matched</span></p>
@@ -143,7 +143,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <!-- 7. Chart 3 - Retargeting -->
 <section class="chart-slide">
   <img src="CHART_03_PLACEHOLDER" alt="Retargeting">
-  <p class="chart-caption">Alex Knorr&rsquo;s hypothesis: long-term retargeting decline (42% &rarr; 25%), but <b>stable in the Sep&ndash;Dec 2025 drop window</b>.</p>
+  <p class="chart-caption">Long-term retargeting decline (42% &rarr; 25%) but <b>stable in the Sep&ndash;Dec 2025 drop window</b>.</p>
 </section>
 
 <!-- 8. Chart 4 - Shift magnitudes -->
@@ -164,7 +164,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 <!-- 10. Cross-reference -->
 <section>
-  <h2>Cross-reference (per Bryce)</h2>
+  <h2>Cross-reference</h2>
   <div style="font-size:0.72em; line-height:1.55;">
     <p>&bull; <b>Max Reach scoring off on 11/19/2025</b> is the closest in-time product event to the Nov onset. Conversion-angle analysis is open (Ray).</p>
     <p>&bull; <b>Peak Performance scoring bug (Oct 2025)</b> was fixed end of Oct &mdash; doesn&rsquo;t fit the Nov-onward trend. Adoption ramp continued through and beyond the fix, so this isn&rsquo;t a scoring-bug artefact.</p>
@@ -199,7 +199,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   <div style="font-size:0.62em; line-height:1.5;">
     <p><b>Cohort:</b> every advertiser with &ge; 1 impression on any day in 2025 &mdash; <code>summarydata.sum_by_campaign_by_day</code>.</p>
     <p><b>Source of targeting:</b> <code>dw-main-bronze.integrationprod.archives_audience_segment_archives</code>, <code>expression_type_id = 2</code>, <code>is_targeted = TRUE</code>. 77 weekly observations, 4,111 advertisers, 93K active campaigns (as of 2026-04-22).</p>
-    <p><b>Classifier:</b> regex-extract <code>data_source_id</code> values from expression JSON &rarr; join canonical <code>data_sources</code> dim &rarr; bucket to Bryce&rsquo;s categories.</p>
+    <p><b>Classifier:</b> regex-extract <code>data_source_id</code> values from expression JSON &rarr; join canonical <code>data_sources</code> dim &rarr; bucket to the 5 war-room categories.</p>
     <div style="margin-top:0.5em;">
       <table>
         <tr><th>Bucket</th><th>DS id</th><th>Canonical name</th></tr>
