@@ -495,7 +495,7 @@ Jaguar is MNTN's IP scoring model that predicts household purchase intent.
 **Architecture:**
 - Input: `bronze.raw.tmul_daily` → membership DB → bidder
 - Scores stored in `cost_impression_log.model_params` as key=value pairs (e.g., `score=0.8523`)
-- `data_source_id = 13` = Audience Intent Scoring (Jaguar) in the `audience.data_sources` table
+- `data_source_id = 13` — canonical `data_sources.name` is **"MNTN Vertical Categorization"**. In war-room language (Bryce Wagg, 2026-04-22) this DS is called **"Peak Performance"** and carries the Jaguar intent scoring. Same DS id, two names depending on the audience — code = Vertical Categorization, product = Peak Performance.
 - Scores applied at bid time — not stored long-term in BQ event tables
 - Pipeline is DS13 (not DS2 or DS4)
 
@@ -592,9 +592,20 @@ is stored in UPPERCASE, LOWERCASE, and ORIGINAL case variants.
 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
 This appears when a row has no email value. Exclude from counts.
 
-### LiveRamp (DS 3) Cross-IP Identity Linkage
+### LiveRamp Cross-IP Identity Linkage
+**Canonical DS ids (verified 2026-04-22 against `bronze.integrationprod.data_sources`):**
+- **DS3 = "MNTN Third Party"** (not LiveRamp — this note's original framing was wrong)
+- **DS11 = "LiveRamp"** (audience-segment-based)
+- **DS35 = "LiveRamp IP"** (IP-based variant — this is what Bryce called out as "3P" in the TI-896 war-room scope)
+
 LiveRamp maps IPs to a shared identity graph (household/person level). When LiveRamp links IP_A ↔ IP_B,
-both IPs receive identical segment membership entries in `tpa_membership_update_log` with `data_source_id=3`.
+both IPs receive identical segment membership entries in `tpa_membership_update_log` with `data_source_id` in {11, 35}.
+
+**Full canonical DS map — query `bronze.integrationprod.data_sources` before relying on any tribal-knowledge DS id.** Known gotchas from that lookup (2026-04-22):
+- DS2 = MNTN First Party
+- DS19 = MNTN Matched (= "Keywords" in war-room/product language per Bryce)
+- DS38 = MNTN UI Audience Keywords (different thing — UI-keyword strings, ~40M rows)
+- Per-advertiser audiences appear in the 1000+ range with names like "{AID} - First Party Audience" / "Third Party Audience" / "Control Group Audience" / "Extension Audience". Any MM/3P/CRM count that excludes these will undercount.
 
 **Key limitation for cross-stage tracing:** If an S1 impression is served to IP_A, and LiveRamp links IP_A to IP_B,
 IP_B enters the S2 targeting segment. The S2 VV at IP_B cannot be traced back to the S1 impression at IP_A
