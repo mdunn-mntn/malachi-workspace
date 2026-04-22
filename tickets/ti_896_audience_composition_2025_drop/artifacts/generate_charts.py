@@ -327,6 +327,63 @@ def chart_06_pp_default_vs_custom(df):
     save(fig, "ti_896_chart_06_pp_default_vs_custom.png")
 
 
+def chart_07_pp_vs_conv_scatter(df):
+    """Track C — per-advertiser Δ(PP share) vs Δ(ROAS). Audience-side cross-check."""
+    try:
+        df_sc = pd.read_csv(OUTPUTS / "ti_896_pp_vs_conv_scatter.csv")
+    except FileNotFoundError:
+        print("ti_896_pp_vs_conv_scatter.csv not found; skipping chart 07.")
+        return
+
+    # Coerce booleans + clip extreme outliers
+    df_sc = df_sc.dropna(subset=["delta_pp_share", "delta_roas_rel"])
+    df_sc = df_sc[(df_sc["delta_roas_rel"] > -1) & (df_sc["delta_roas_rel"] < 5)]
+
+    is_new    = df_sc["is_pp_new_adopter"].astype(str).str.lower() == "true"
+    is_cont   = df_sc["is_pp_continuing"].astype(str).str.lower() == "true"
+    is_non    = df_sc["is_non_adopter"].astype(str).str.lower() == "true"
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+
+    ax.axhline(0, color="#333", linewidth=0.5)
+    ax.axvline(0, color="#333", linewidth=0.5)
+
+    # Plot non-adopters first (gray), then new adopters (red)
+    ax.scatter(df_sc.loc[is_non, "delta_pp_share"] * 100,
+               df_sc.loc[is_non, "delta_roas_rel"] * 100,
+               color=GRAY, s=14, alpha=0.45, label=f"Non-adopter (n={is_non.sum()})")
+    ax.scatter(df_sc.loc[is_new, "delta_pp_share"] * 100,
+               df_sc.loc[is_new, "delta_roas_rel"] * 100,
+               color=ACCENT, s=22, alpha=0.75, label=f"New PP adopter (n={is_new.sum()})")
+
+    # Median markers
+    med_new = df_sc.loc[is_new, "delta_roas_rel"].median() * 100
+    med_non = df_sc.loc[is_non, "delta_roas_rel"].median() * 100
+    ax.axhline(med_new, color=ACCENT, linestyle="--", linewidth=1.0, alpha=0.7)
+    ax.axhline(med_non, color="#333", linestyle="--", linewidth=1.0, alpha=0.7)
+    ax.text(55, med_new + 12, f"PP adopter median  +{med_new:.0f}%",
+            color=ACCENT, fontsize=11, weight="bold", ha="center")
+    ax.text(55, med_non + 12, f"Non-adopter median  +{med_non:.0f}%",
+            color="#333", fontsize=11, weight="bold", ha="center")
+
+    ax.set_title("Peak Performance adopters captured half the ROAS lift non-adopters did",
+                 loc="left", color="#222")
+    ax.set_xlabel("Δ PP delivery share (Aug-Sep to Dec 2025), percentage points")
+    ax.set_ylabel("Δ ROAS (Aug-Sep to Dec 2025), relative %")
+    ax.set_xlim(-10, 100)
+    ax.set_ylim(-100, 400)
+
+    ax.legend(loc="upper right", fontsize=9, frameon=False)
+
+    ax.text(0.01, -0.18,
+            "One dot per advertiser (n=1,217 with >=1,000 VVs both windows). Adopter = PP share <1% "
+            "Aug-Sep and >=5% Dec. Both cohorts saw Q4 ROAS lift; adopters lifted ~half as much. "
+            "Audience-side cross-check \u2014 not the canonical conv analysis.",
+            transform=ax.transAxes, fontsize=8, color="#777")
+
+    save(fig, "ti_896_chart_07_pp_vs_conv_scatter.png")
+
+
 def main():
     ARTIFACTS.mkdir(exist_ok=True)
     df = load()
@@ -336,6 +393,7 @@ def main():
     chart_04_shift_magnitudes(df)
     chart_05_pp_spend_share(df)
     chart_06_pp_default_vs_custom(df)
+    chart_07_pp_vs_conv_scatter(df)
     print(f"Wrote {len(list(ARTIFACTS.glob('ti_896_chart_*.png')))} chart PNGs")
 
 

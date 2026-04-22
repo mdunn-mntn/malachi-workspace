@@ -176,3 +176,30 @@ DS13 intent layer (small `cats` ids — 107000, 108000, 111004) paired with DS19
 - "Pure DS13+DS19" is a structural proxy, not a formal product definition.
 - We do not yet know how the product UI presents "default" vs customisation — could be subtly different from our structural test.
 - ~5% of PP-detected segments have no matching template in `audiences_archives` (unclassified bucket). These are likely brand-new audiences not yet replicated to archives.
+
+---
+
+## V10 — Conversion-rate + ROAS cross-check (Track C)
+
+**Query:** [queries/ti_896_pp_vs_conv_scatter.sql](../queries/ti_896_pp_vs_conv_scatter.sql) — per-advertiser deltas for conv rate, ROAS, and AOV from `summarydata.sum_by_campaign_by_day` (no TTL issues).
+
+**Methodology notes:**
+- Used `summarydata.sum_by_campaign_by_day` instead of `clickpass_log` / `ui_conversions` because those tables have 90-day TTL — Aug-Sep 2025 data is already expired. Summary table has data back to 2024-01-01.
+- Conversion count = `click_conversions + view_conversions`. VV count = `view_viewed`. Order value = `click_order_value + view_order_value`. ROAS = order_value / media_cost.
+- PP delivery share at advertiser level = `SUM(view_viewed WHERE is_pp_day) / SUM(view_viewed)`. "PP day" = any active archive expression version that day contained `score_type=rtc + DS13 + DS19`.
+- Noise floor: ≥1,000 VVs in each window (excludes tiny delivery with extreme rates).
+
+**Cohort labels:**
+- `new_adopter`: PP delivery share <1% Aug-Sep AND ≥5% Dec (n=161)
+- `continuing`: ≥5% in both windows (n=3; too small to publish)
+- `non_adopter`: <5% in post (n=657)
+
+**Dave / Alex Bloore sanity check:** Dave's Slack (2026-04-21) said overall conversion volume was stable-to-up and advertiser order values were up ~24%. My cohort-level view matches: non-adopter median conv rate +82%, ROAS +124%, AOV ≈0% (consistent with "volume up, AOV stable" at within-advertiser grain). The "order amounts dropping" story Bryce flagged happens at AID-mix level (lead-gen customers with no order_amt pass) — that's a customer-mix shift, not within-advertiser AOV compression.
+
+**Caveats published in deck:**
+- Audience-side **cross-check**, not canonical conversion analysis (Ray owns that).
+- Baseline window (Aug-Sep 2025) is tail of pre-drop period; no cleaner baseline exists since PP didn't exist earlier.
+- Survivorship bias: advertisers that cut spend to below 1,000 VVs/window are excluded.
+- Comparing two windows (not full time series) so trends between are invisible.
+
+**Key finding to report:** both cohorts lifted in Q4; PP adopters lifted ~half as much. Audience-side cross-check corroborates the direction of the war-room concern without independently proving causation.

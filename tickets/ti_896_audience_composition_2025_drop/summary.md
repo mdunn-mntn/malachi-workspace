@@ -179,6 +179,35 @@ Chart: [artifacts/ti_896_chart_06_pp_default_vs_custom.png](artifacts/ti_896_cha
 
 **Open question:** formal product definition of "default Peak Performance" is a follow-up for the audience-tools team (Ryan / Jordan). This analysis uses a structural-heuristic proxy.
 
+### Track C — Per-advertiser ROAS delta vs PP adoption (2026-04-22)
+
+Audience-side cross-check against the war-room conversion metric. Source: `summarydata.sum_by_campaign_by_day` (no TTL issue; covers the window). Uses `view_viewed` for VVs, `click_conversions + view_conversions` for conversions, `click_order_value + view_order_value / media_cost` for ROAS, `order_value / conversions` for AOV.
+
+Cohort: 1,217 advertisers with ≥1,000 VVs in both baseline (Aug 1–Sep 28 2025) and post (Dec 1–31 2025).
+
+Labels:
+- **new_adopter** — PP delivery share <1% in baseline AND ≥5% in post
+- **continuing** — ≥5% in both windows (tiny sample: n=3)
+- **non_adopter** — <5% in post
+
+**Median deltas (relative):**
+| Cohort | n | Δ conv rate | Δ ROAS | Δ AOV |
+|---|---|---|---|---|
+| new_adopter | 161 | +38% | +46% | −1% |
+| continuing | 3 | — | — | — (noisy) |
+| non_adopter | 657 | +82% | +124% | 0% |
+
+**Key finding:** both cohorts saw Q4 ROAS lift, but **PP adopters captured ~half the lift non-adopters did (+46% vs +124%)**. AOV is flat in both, so the gap is in conversion rate, not basket size. This is consistent with PP correlating with weaker per-advertiser ROAS improvement in the drop window.
+
+Framing guardrails:
+- Audience-side **cross-check** — not the canonical conversion analysis (Ray owns that).
+- Baseline (Aug–Sep 2025) is the tail of pre-drop period; no cleaner baseline available since PP didn't exist earlier.
+- Survivorship bias: advertisers that cut spend entirely are excluded by the ≥1,000 VV threshold.
+
+Query: [queries/ti_896_pp_vs_conv_scatter.sql](queries/ti_896_pp_vs_conv_scatter.sql)
+CSV: [outputs/ti_896_pp_vs_conv_scatter.csv](outputs/ti_896_pp_vs_conv_scatter.csv)
+Chart: [artifacts/ti_896_chart_07_pp_vs_conv_scatter.png](artifacts/ti_896_chart_07_pp_vs_conv_scatter.png)
+
 ## 5. Solution
 
 *Pending.*
