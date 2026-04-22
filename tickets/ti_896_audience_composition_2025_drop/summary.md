@@ -128,11 +128,24 @@ Scoring bug existed at PP launch (early Oct 2025), fixed end of Oct. Adoption ra
 ### Artifacts
 - Query: [queries/ti_896_composition_by_week.sql](queries/ti_896_composition_by_week.sql)
 - CSV: [outputs/ti_896_composition_by_week.csv](outputs/ti_896_composition_by_week.csv) (77 weeks)
-- Charts: [artifacts/ti_896_chart_*.png](artifacts/) (4 PNGs, 200 DPI, Tufte-aligned)
+- Charts: [artifacts/ti_896_chart_*.png](artifacts/) (5 PNGs, 200 DPI, Tufte-aligned)
 - Chart generator: [artifacts/generate_charts.py](artifacts/generate_charts.py)
 - Deck: [artifacts/ti_896_deck_standalone.html](artifacts/ti_896_deck_standalone.html)
-- Deck URL: https://gist.githack.com/mdunn-mntn/f47a6f106ed5ff502cedcb7de50231d8/raw/ti_896_deck_standalone.html
+- Deck URL (current): https://gist.githack.com/mdunn-mntn/2e8ac10861643c9f979a8340efaefb1b/raw/ti_896_deck_standalone.html
 - War-room context: [meetings/ti_896_war_room_shared_charts_2026_04_22.md](meetings/ti_896_war_room_shared_charts_2026_04_22.md)
+- Verification bundle: [artifacts/ti_896_verification.md](artifacts/ti_896_verification.md)
+
+### Track A — Spend-weighted composition view (2026-04-22)
+
+To address the "counting attached-but-not-delivered" critique, joined archive effective windows to `sum_by_campaign_by_day` and weighted by `media_cost`.
+
+**Result:** PP spend-weighted share reached **~12–13% of cohort spend**, vs the 21% advertiser-presence number. ~8pp gap = PP adopters skew smaller than the cohort average. MM spend share dropped 75% → 38% over 18 months (noteworthy for follow-up — bigger shift in spend than advertiser-presence indicated).
+
+Coverage reconciliation: archive-joined total spend Oct-Dec 2025 matches cohort total ($48M over 14 weeks) — no material missing spend.
+
+Query: [queries/ti_896_composition_spend_weighted.sql](queries/ti_896_composition_spend_weighted.sql)
+CSV: [outputs/ti_896_composition_spend_weighted.csv](outputs/ti_896_composition_spend_weighted.csv)
+Chart: [artifacts/ti_896_chart_05_pp_spend_share.png](artifacts/ti_896_chart_05_pp_spend_share.png)
 
 ## 5. Solution
 

@@ -183,6 +183,20 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   </div>
 </section>
 
+<!-- 13a. Track A deep-dive: spend-weighted PP -->
+<section>
+  <h2>Deep dive &mdash; spend-weighted PP</h2>
+  <div style="font-size:0.72em; line-height:1.55;">
+    <p>Execs asked: <b>how much MNTN spend actually flows through Peak Performance</b>, not just how many advertisers have it attached?</p>
+    <p>Method: join archive effective windows to <code>sum_by_campaign_by_day</code>, weight each campaign-day by <code>media_cost</code>, report <code>&Sigma;spend(PP campaigns) / &Sigma;spend(all cohort campaigns)</code> per week.</p>
+  </div>
+</section>
+
+<section class="chart-slide">
+  <img src="CHART_05_PLACEHOLDER" alt="PP presence vs spend share">
+  <p class="chart-caption">Advertiser-presence (red) climbs to 21%. Spend-weighted (navy) lands at <b>~12&ndash;13%</b>. Gap of ~8pp tells us PP adopters skew smaller than cohort average &mdash; the headline &ldquo;advertiser share&rdquo; number slightly overstates PP&rsquo;s delivery footprint.</p>
+</section>
+
 <!-- 13. Methodology appendix -->
 <section>
   <h2>Methodology</h2>

@@ -128,5 +128,22 @@ DS13 intent layer (small `cats` ids — 107000, 108000, 111004) paired with DS19
 
 - Cohort: **4,109 advertisers** with ≥1 impression in 2025.
 - Peak Performance adopters as of 2026-04-20: **858 advertisers** = **21%** of the cohort.
+- Peak Performance spend-weighted share as of 2026-04-20: **~12–13% of cohort spend** (Track A).
 - Pre-launch baseline (June–Sep 2025): ~1% (early-access / legacy RTC+DS13+DS19 configurations).
-- MM, Keywords, 3P, CRM, retargeting-share: all flat within ±1pp Sep–Dec 2025.
+- MM, Keywords, 3P, CRM, retargeting-share: all flat within ±1pp Sep–Dec 2025 on presence view.
+- MM **spend share** (not presence) dropped ~75% → ~38% over 18 months — flagged for separate investigation.
+
+---
+
+## V8 — Spend-weighted reconciliation (Track A)
+
+**Query:** [queries/ti_896_composition_spend_weighted.sql](../queries/ti_896_composition_spend_weighted.sql) — joins archive effective windows to `sum_by_campaign_by_day`, weighted by `media_cost`.
+
+**Coverage check:**
+- Reference: SUM(media_cost) across 2025-active cohort, Oct 1 – Dec 31 2025 = **$48.36M**.
+- My archive-joined view: matches (~$3-4M/week × 14 weeks ≈ $49M, matches reference within rounding).
+- Conclusion: archive reconstruction covers essentially all cohort spend. No material missing data.
+
+**WGU (AID 31357) sensitivity:** PP spend share is slightly higher excluding WGU (~14% vs ~13% including WGU). Doesn't flip the finding.
+
+**Pre-launch baseline (spend-weighted):** ~0% through May 2025, ~1.3% June–Sep (matches presence baseline interpretation — legacy / early-access configurations).

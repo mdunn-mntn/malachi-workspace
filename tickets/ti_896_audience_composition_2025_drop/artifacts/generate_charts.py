@@ -227,6 +227,45 @@ def chart_04_shift_magnitudes(df):
     save(fig, "ti_896_chart_04_shift_magnitudes.png")
 
 
+def chart_05_pp_spend_share(df):
+    """Track A — PP presence share vs PP spend share on same axes."""
+    try:
+        df_spend = pd.read_csv(OUTPUTS / "ti_896_composition_spend_weighted.csv",
+                               parse_dates=["week_start"])
+    except FileNotFoundError:
+        print("ti_896_composition_spend_weighted.csv not found; skipping chart 05.")
+        return
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    # Presence line (from main df): pct_adv_pp
+    x1, y1 = df["week_start"], df["pct_adv_pp"] * 100
+    # Spend-weighted line: pct_spend_pp
+    x2, y2 = df_spend["week_start"], df_spend["pct_spend_pp"] * 100
+
+    ax.plot(x1, y1, color=ACCENT, linewidth=2.4, label="% of advertisers with PP")
+    ax.plot(x2, y2, color=BASELINE, linewidth=2.4, label="% of MNTN spend on PP campaigns")
+
+    # Direct labels
+    ax.text(x1.iloc[-1], y1.iloc[-1], f"  {y1.iloc[-1]:.0f}%  advertisers",
+            color=ACCENT, fontsize=10, weight="bold", va="center")
+    ax.text(x2.iloc[-1], y2.iloc[-1], f"  {y2.iloc[-1]:.0f}%  spend",
+            color=BASELINE, fontsize=10, weight="bold", va="center")
+
+    ax.set_title("Peak Performance spend-weighted view lands below the presence view",
+                 loc="left", color="#222")
+    ax.set_ylabel("% (of advertisers, or of MNTN spend)")
+    ax.set_ylim(0, max(25, max(y1.max(), y2.max()) * 1.15))
+    annotate_events(ax)
+
+    ax.text(0.01, -0.18,
+            "Presence: >=1 PP campaign attached. Spend-weighted: share of cohort media_cost flowing through "
+            "campaigns whose active expression matches PP. Spend view ~8pp below presence view = PP adopters "
+            "skew smaller. Source: TI-896 Track A.",
+            transform=ax.transAxes, fontsize=8, color="#777")
+
+    save(fig, "ti_896_chart_05_pp_spend_share.png")
+
+
 def main():
     ARTIFACTS.mkdir(exist_ok=True)
     df = load()
@@ -234,6 +273,7 @@ def main():
     chart_02_cohort_composition(df)
     chart_03_retargeting(df)
     chart_04_shift_magnitudes(df)
+    chart_05_pp_spend_share(df)
     print(f"Wrote {len(list(ARTIFACTS.glob('ti_896_chart_*.png')))} chart PNGs")
 
 
