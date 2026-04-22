@@ -8,75 +8,39 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
 <style>
 :root {
-  --navy: #1B2A4A;
-  --blue: #2E5090;
-  --mid:  #5A7DB5;
-  --light:#A8BDD9;
-  --muted:#C8CDD4;
-  --red:  #D63B2F;
-  --bg:   #FAFAFA;
-  --text: #222;
-  --text-light: #666;
+  --navy: #1B2A4A; --blue: #2E5090; --mid: #5A7DB5; --light: #A8BDD9;
+  --muted: #C8CDD4; --red: #D63B2F; --bg: #FAFAFA; --text: #222; --text-light: #666;
 }
-
 html, body { background: var(--bg); }
-
-.reveal { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--text); font-size: 32px; }
+.reveal { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--text); font-size: 30px; }
 .reveal .slides { text-align: left; }
 .reveal h1, .reveal h2, .reveal h3 {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  color: var(--navy); text-transform: none; font-weight: 700; letter-spacing: -0.02em;
-  margin-top: 0;
+  color: var(--navy); text-transform: none; font-weight: 700; letter-spacing: -0.02em; margin-top: 0;
 }
-.reveal h1 { font-size: 2em; line-height: 1.1; }
-.reveal h2 { font-size: 1.4em; }
-.reveal h3 { font-size: 1.0em; }
-
+.reveal h1 { font-size: 1.8em; line-height: 1.1; }
+.reveal h2 { font-size: 1.25em; }
+.reveal h3 { font-size: 0.95em; }
 .subtitle { color: var(--text-light); font-size: 0.55em; font-weight: 400; margin-top: 0.4em; }
-
-.power-line {
-  color: var(--red); font-size: 1.05em; font-weight: 700; text-align: center;
-  padding: 0.4em 0; line-height: 1.25;
-}
-
-.big-number {
-  font-size: 4.2em; font-weight: 800; color: var(--red);
-  text-align: center; line-height: 1; margin: 0.15em 0;
-}
-.big-number-context {
-  color: var(--text-light); font-size: 0.75em; text-align: center; line-height: 1.3;
-}
-
-.reveal ul, .reveal ol { display: block; font-size: 0.75em; line-height: 1.5; }
+.reveal ul, .reveal ol { display: block; font-size: 0.7em; line-height: 1.5; }
 .reveal ul li, .reveal ol li { margin-bottom: 0.3em; }
-
 .chart-slide img {
-  max-width: 100%; max-height: 75vh; object-fit: contain; display: block; margin: 0 auto;
+  max-width: 100%; max-height: 70vh; object-fit: contain; display: block; margin: 0 auto;
   box-shadow: 0 4px 16px rgba(0,0,0,0.06);
 }
 .chart-caption {
   text-align: center; color: var(--text-light); font-size: 0.55em; margin-top: 0.3em; line-height: 1.3;
 }
-
-.takeaway {
-  background: #fff; border-left: 4px solid var(--red);
-  padding: 0.6em 1em; font-size: 0.75em; color: var(--text);
-  margin: 0.8em 0;
-}
-.takeaway-navy { border-left-color: var(--navy); }
-
-.footer-note {
-  color: var(--muted); font-size: 0.4em; text-align: center; margin-top: 0.6em;
-}
-
 .kv { font-size: 0.7em; color: var(--text); line-height: 1.6; }
 .kv .k { color: var(--text-light); display: inline-block; min-width: 9em; }
 .kv .v { font-weight: 700; color: var(--navy); }
-
-table { font-size: 0.6em; border-collapse: collapse; width: 100%; }
-th, td { padding: 0.35em 0.6em; text-align: left; border-bottom: 1px solid #eee; }
+table { font-size: 0.55em; border-collapse: collapse; width: 100%; }
+th, td { padding: 0.35em 0.6em; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
 th { color: var(--text-light); font-weight: 600; border-bottom: 2px solid #ddd; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.note { color: var(--text-light); font-size: 0.6em; line-height: 1.45; }
+.q { color: var(--navy); font-weight: 700; }
+.warn { color: var(--red); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -84,210 +48,256 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 <!-- 1. Title -->
 <section>
-  <h1>Audience composition shift analysis</h1>
-  <p class="subtitle">2025 performance drop &mdash; war-room findings (v2, post-critique)<br>
-  TI-896 &nbsp;&middot;&nbsp; Malachi Dunn &nbsp;&middot;&nbsp; 2026-04-22</p>
+  <h1>TI-896 &mdash; Audience composition shift analysis</h1>
+  <p class="subtitle">War-room investigation into the late-2025 conversion / ROAS drop &mdash; audience-side lane<br>
+  Malachi Dunn &middot; 2026-04-22</p>
 </section>
 
-<!-- 2. Opening contrast -->
+<!-- 2. Question -->
 <section>
-  <p class="big-number-context">Six months ago, <b>zero</b> advertisers were running Peak Performance.</p>
-  <p class="big-number-context" style="margin-top:0.6em;">Today, <b>one in eight</b> are.</p>
-  <p class="big-number-context" style="margin-top:1em;">And the audience that ran the business for two years &mdash; Mountain Matched &mdash;<br><b>lost a third of its spend share in a single week.</b></p>
+  <h2>Question</h2>
+  <p style="font-size:0.78em; line-height:1.45;">Did the mix of audience types used by 2025-active advertisers shift materially during the late-2025 conversion drop, and if so &mdash; in which direction, when, and which cohorts?</p>
+  <p class="note" style="margin-top:1em;">Audience-side only. Conversion-rate / pixel / attribution work owned by Ray's team; customer-mix work by Will Cavey.</p>
 </section>
 
-<!-- 3. Power Line -->
+<!-- 3. Product context — MM 2.0 state table -->
 <section>
-  <p class="power-line">Two audience shifts coincide with the conversion drop:<br>
-  Peak Performance went from 0 to ~12% of advertisers (and ~12% of spend).<br>
-  Mountain Matched lost ~30pp of cohort spend on Oct 27 2025.</p>
-  <p class="big-number-context" style="margin-top:0.8em;">Everything else moved within &plusmn;5pp.</p>
+  <h2>Product context &mdash; MNTN Match 2.0 audience tiers</h2>
+  <p style="font-size:0.7em; line-height:1.5;">Mountain Matched (MM 2.0) is the umbrella audience system. Within it, an impression's "TI Name" is determined by which scoring criteria the user satisfies. Peak Performance is one tier in this system, not a separate audience product.</p>
+  <table style="margin-top:0.6em;">
+    <tr><th>State</th><th>In Bucket (DS13)</th><th>In Vertical</th><th>Has Keywords (DS19)</th><th>TI Name</th><th>Score</th><th>MM 2.0 bid?</th></tr>
+    <tr><td>1</td><td>—</td><td>—</td><td>—</td><td>NULL</td><td>NULL</td><td>No</td></tr>
+    <tr><td>2</td><td>—</td><td>—</td><td>✓</td><td>Max Reach</td><td>NULL</td><td>Yes (keywords only)</td></tr>
+    <tr><td>3</td><td>✓</td><td>—</td><td>—</td><td>Mid Intent (not bid)</td><td>3333-6665</td><td>No</td></tr>
+    <tr><td>4</td><td>✓</td><td>—</td><td>✓</td><td>Mid Intent</td><td>3333-6665</td><td>Yes</td></tr>
+    <tr><td>5</td><td>✓</td><td>✓</td><td>—</td><td><b>Peak Performance</b></td><td><b>8000</b></td><td>Yes (DS13 + vertical, no keywords)</td></tr>
+    <tr><td>6</td><td>✓</td><td>✓</td><td>✓</td><td>High Intent</td><td>10000</td><td>Yes</td></tr>
+  </table>
+  <p class="note" style="margin-top:0.6em;">
+    Fangorn scoring (4/30 beta launch) maps these to: High Intent 8001-10000, Peak Performance 6666-8000, Mid Intent 3333-6665. Advertiser-level scores do not change with the rollout.
+  </p>
 </section>
 
-<!-- 4. Scope -->
+<!-- 4. Detector definitions and uncertainty -->
 <section>
-  <h2>Scope</h2>
+  <h2>Detectors used and what they catch</h2>
+  <table>
+    <tr><th>Bucket</th><th>Detector regex on segment expression</th></tr>
+    <tr><td>"PP-enabled" (this analysis)</td><td><code>score_type=rtc</code> AND <code>data_source_id=13</code> AND <code>data_source_id=19</code></td></tr>
+    <tr><td>Mountain Matched</td><td><code>data_source_id=2</code> OR per-advertiser <code>% - First Party Audience</code></td></tr>
+    <tr><td>Keywords</td><td><code>data_source_id=19</code></td></tr>
+    <tr><td>3P</td><td><code>data_source_id=35</code> (LiveRamp IP)</td></tr>
+    <tr><td>CRM</td><td><code>data_source_id=4</code></td></tr>
+  </table>
+  <p class="note" style="margin-top:0.6em;">
+    <span class="warn">Detector caveat:</span> the "PP-enabled" detector requires both DS13 and DS19. Per the state table, true PP-tier impressions (state 5) require DS13 AND vertical match but NOT keywords. So this detector catches audience expressions that enable Mid Intent + High Intent (states 4 + 6) and by inclusion also PP. It does NOT catch a hypothetical "PP-only" audience (state 5 only). Treat the 12% number as "advertisers with audiences capable of delivering across the High Intent + PP + Mid Intent tiers" rather than "advertisers explicitly choosing PP".
+  </p>
+  <p class="note">
+    <span class="warn">Bucket overlap caveat:</span> of 100 randomly sampled PP-detector segment expressions, 24 also contain DS2 (the MM detector flag). PP-enabled and MM detectors are partially overlapping &mdash; counting them as fully independent overstates the underlying composition shift.
+  </p>
+</section>
+
+<!-- 5. Cohort and method -->
+<section>
+  <h2>Cohort and method</h2>
   <div class="kv">
-    <p><span class="k">Cohort</span> 4,109 advertisers active since Jan 2025 (~4,000 currently active)</p>
-    <p><span class="k">Buckets counted</span> <span class="v">DS19 Keywords</span>, <span class="v">DS13 Peak Performance</span>, <span class="v">DS35 3P</span>, <span class="v">DS4 CRM</span>, <span class="v">Mountain Matched</span></p>
-    <p><span class="k">Sources</span> <code>archives.audience_segment_archives</code> + <code>archives.audiences_archives</code> + <code>summarydata.sum_by_campaign_by_day</code></p>
-    <p><span class="k">Lookback</span> 18 months (Nov 2024 &rarr; Apr 2026), weekly</p>
-    <p><span class="k">Methods</span> presence + spend-weighted + per-advertiser delta + bootstrap CIs (M3) + LEAD-cap (M10)</p>
+    <p><span class="k">Cohort</span> 4,109 advertisers with &ge;1 impression on any day in 2025 (~4,000 currently active)</p>
+    <p><span class="k">Lookback</span> Nov 2024 &rarr; Apr 2026, weekly grain</p>
+    <p><span class="k">Targeting source</span> <code>archives_audience_segment_archives</code> + <code>archives_audiences_archives</code></p>
+    <p><span class="k">Delivery source</span> <code>summarydata.sum_by_campaign_by_day</code></p>
+    <p><span class="k">Effective windows</span> per-campaign LEAD(update_time) capped at <code>min(LEAD, last_active_day + 1)</code></p>
   </div>
-  <div class="takeaway takeaway-navy" style="margin-top:0.8em;">
-    Wider picture (for calibration): Rev/AID ~$31K &rarr; ~$15K over 18 months (Ray). New-cohort 3M CLV down ~50% (Will). ~70% of consecutively active advertisers cutting MoM (Will). Will Cavey's customer-mix work and Ray's reporting-side work both point to the same drop window &mdash; this completes the audience triangulation.
-  </div>
+  <p class="note" style="margin-top:0.8em;">
+    The LEAD cap prevents campaigns that have stopped delivering from being credited as still running their last-attached audience indefinitely. Without it the headline "PP-enabled" advertiser number reads 21% instead of 12% (8.5pp inflation by paused campaigns).
+  </p>
 </section>
 
-<!-- 5. The big number — corrected -->
+<!-- 6. Headline numbers -->
 <section>
-  <p class="big-number-context">Of currently-active 2025-cohort advertisers,<br>share with at least one delivering Peak Performance campaign:</p>
-  <p class="big-number">12%</p>
-  <p class="big-number-context" style="margin-top:0.6em;">~500 advertisers running PP today, of ~4,000 currently active.</p>
-  <p class="big-number-context" style="margin-top:0.8em;">Peak Performance launched <b>week of Oct 6 2025</b>. Pre-launch baseline ~1% (early-access and legacy RTC+DS13+DS19 configs).</p>
-  <p class="big-number-context" style="margin-top:1em; color:#999; font-size:0.6em;"><i>Earlier draft of this analysis published 21%; that number counted any advertiser with PP ever attached, even if those campaigns had been paused for months. The corrected number caps each expression's effective window at the campaign's last delivery day.</i></p>
+  <h2>Headline numbers (week of Apr 13 2026)</h2>
+  <table>
+    <tr><th>Bucket</th><th class="num">% advertisers</th><th class="num">% of cohort spend</th><th class="num">Δ presence Sep 29 → Dec 29 2025</th></tr>
+    <tr><td>PP-enabled (DS13+DS19+rtc)</td><td class="num">12.4%</td><td class="num">12.2%</td><td class="num">+7.8 pp</td></tr>
+    <tr><td>Mountain Matched (DS2)</td><td class="num">96.6%</td><td class="num">39.1%</td><td class="num">−2.0 pp</td></tr>
+    <tr><td>Keywords (DS19)</td><td class="num">40.4%</td><td class="num">39.7%</td><td class="num">−4.9 pp</td></tr>
+    <tr><td>3P (DS35)</td><td class="num">32.1%</td><td class="num">41.5%</td><td class="num">−3.5 pp</td></tr>
+    <tr><td>CRM (DS4)</td><td class="num">18.7%</td><td class="num">34.2%</td><td class="num">−0.5 pp</td></tr>
+  </table>
+  <p class="note" style="margin-top:0.8em;">
+    Spend share columns sum to &gt;100% because campaigns can carry multiple bucket flags. MM near-100% presence reflects that almost every advertiser keeps at least one DS2-flagged campaign even as DS2 spend share has dropped.
+  </p>
 </section>
 
-<!-- 6. Chart 1 - PP jump -->
+<!-- 7. Chart 1 - PP adoption ramp -->
 <section class="chart-slide">
-  <img src="CHART_01_PLACEHOLDER" alt="Peak Performance jump">
-  <p class="chart-caption">Near-zero through Sep 2025, sharp inflection at the Oct 6 launch. Max Reach off (Nov 19) &mdash; trajectory continued unchanged. PP detector requires score_type=rtc + DS13 + DS19 together. Effective windows capped at last delivery day.</p>
+  <img src="CHART_01_PLACEHOLDER" alt="PP-enabled adoption ramp">
+  <p class="chart-caption">PP-enabled presence over the 18-month window. Pre-launch baseline ~1% (early-access / legacy DS13+DS19+rtc configurations). Sharp inflection at the Oct 6 2025 launch. Trajectory continued through the Nov 19 Max-Reach-off event without a visible bend.</p>
 </section>
 
-<!-- 7. Chart 5b - MM cliff (NEW co-headline) -->
+<!-- 8. Chart 5b - MM spend cliff -->
 <section class="chart-slide">
   <img src="CHART_05B_PLACEHOLDER" alt="MM spend cliff Oct 27">
-  <p class="chart-caption">Mountain Matched held 73-79% of cohort spend through Oct 20. On Oct 27 it dropped to 56%; the next two weeks fell to 41-44% and stayed there. <b>This 30pp cliff is materially larger than the PP rise in spend dollars.</b> Coincident with PP rollout but the causal link is not established here.</p>
+  <p class="chart-caption">Mountain Matched spend share (DS2-flagged campaigns) over 18 months. Held 73&ndash;79% of cohort spend through Oct 20 2025. Dropped to 56.7% on Oct 27, 44.0% on Nov 3, sustained 42&ndash;46% through April 2026.</p>
 </section>
 
-<!-- 8. Chart 2 - Composition -->
+<!-- 9. MM/PP overlap empirical check -->
+<section>
+  <h2>MM cliff vs PP rise &mdash; advertiser-level overlap</h2>
+  <p style="font-size:0.7em;">Per-advertiser comparison of the week of Oct 13 2025 (pre-cliff) vs Nov 3 2025 (post-cliff). Of 1,773 advertisers active in both periods:</p>
+  <ul>
+    <li>Of <b>135 new PP-detector advertisers</b> in post: <b>78 (58%) also retained MM (DS2) presence</b> — they added PP-enabled audiences without dropping MM.</li>
+    <li>Of <b>341 advertisers who lost MM (DS2) presence</b> in post: only <b>52 (15%) gained the PP detector flag</b> — the MM cliff is mostly NOT explained by detectable migration to PP-enabled.</li>
+    <li><b>526 advertisers</b> had MM (DS2) in both periods, no PP detector — stable MM-only.</li>
+    <li><b>248 advertisers</b> lost MM (DS2) without gaining PP detector — meaningful population dropping MM-style targeting without obvious replacement.</li>
+  </ul>
+  <p class="note" style="margin-top:0.6em;">
+    Most likely explanations for the unexplained MM loss: (1) advertisers migrated to MM 2.0 syntax that uses neither DS2 nor matches the PP detector, (2) genuine reductions in MM-style spend, (3) campaign restructuring under the new tier system. Audience-side data does not isolate which.
+  </p>
+</section>
+
+<!-- 10. Chart 2 - composition over time -->
 <section class="chart-slide">
   <img src="CHART_02_PLACEHOLDER" alt="Cohort composition">
-  <p class="chart-caption">Honest revision of the prior "everything else flat" claim. In the Sep&ndash;Dec 2025 window: Keywords -5pp, 3P -3.5pp, MM -2pp, CRM flat. PP +8pp is still the biggest mover by presence, but other buckets did move.</p>
+  <p class="chart-caption">Per-bucket presence-based share over 18 months. MM stays near-universal; Keywords, 3P, CRM all decline modestly during the drop window; PP-enabled rises.</p>
 </section>
 
-<!-- 9. Chart 4 - Shift magnitudes -->
+<!-- 11. Chart 4 - shift magnitudes -->
 <section class="chart-slide">
   <img src="CHART_04_PLACEHOLDER" alt="Shift magnitudes">
-  <p class="chart-caption">Sep 29 &rarr; Dec 29 2025 cohort-share deltas (presence-based). Peak Performance +7.8pp; Keywords -4.9pp; 3P -3.5pp; MM -2pp; CRM flat.</p>
+  <p class="chart-caption">Cohort-share deltas Sep 29 &rarr; Dec 29 2025. PP-enabled is the only bucket that gained presence; everything else lost between 0.5 and 5 pp.</p>
 </section>
 
-<!-- 10. Three takeaways (revised) -->
-<section>
-  <h2>Three takeaways</h2>
-  <div style="font-size:0.78em; line-height:1.55;">
-    <p><span style="color:#bbb;">1.</span> <b>Peak Performance reached 12%</b> of currently-active advertisers (and 12% of cohort spend). Near-zero pre-launch, inflection at Oct 6.</p>
-    <p><span style="color:#bbb;">2.</span> <b>Mountain Matched spend collapsed from 73-79% to 42-46% in a single week (Oct 27 2025).</b> This is the larger spend movement; it is co-equal with PP in importance.</p>
-    <p><span style="color:#bbb;">3.</span> <b>Other buckets moved modestly (-2 to -5pp).</b> The original "everything else flat" framing was an artifact of paused-campaign attribution.</p>
-  </div>
-</section>
-
-<!-- 11. Cross-reference -->
-<section>
-  <h2>Cross-reference</h2>
-  <div style="font-size:0.72em; line-height:1.55;">
-    <p>&bull; <b>Max Reach scoring off on 11/19/2025</b> is the closest in-time product event to the Nov onset. Conversion-angle analysis is open (Ray).</p>
-    <p>&bull; <b>Peak Performance scoring bug (Oct 2025)</b> was fixed end of Oct &mdash; doesn&rsquo;t fit the Nov-onward trend.</p>
-    <p>&bull; Rev/AID collapse pre-dates Peak Performance launch by a full year. <b>Correlation only</b>; causation requires joining with Ray&rsquo;s conversion data at advertiser grain.</p>
-    <p>&bull; PP <b>score history has a 35-day TTL</b> in BQ &mdash; every week we delay deciding what to test costs a future causal read.</p>
-  </div>
-</section>
-
-<!-- 12. Track A intro -->
-<section>
-  <h2>Track A &mdash; Spend-weighted view</h2>
-  <p class="big-number-context">Presence and spend-weighted views <b>now agree at ~12%</b>.</p>
-  <p class="big-number-context" style="margin-top:0.5em;">The original 8pp gap (21% presence vs 12% spend) was the same paused-campaign attribution issue. Once corrected, the metrics line up &mdash; PP adopters do not skew smaller.</p>
-</section>
-
+<!-- 12. Chart 5 - presence vs spend -->
 <section class="chart-slide">
   <img src="CHART_05_PLACEHOLDER" alt="PP presence vs spend share">
-  <p class="chart-caption">Both lines land at ~12%. The spend-weighted view (navy) was always tracking actual delivery; the presence view (red) is now corrected to match.</p>
+  <p class="chart-caption">PP-enabled presence (red) and spend-weighted share (navy) track each other at ~12% &mdash; PP-enabled advertisers do not skew larger or smaller than the cohort average in delivery.</p>
 </section>
 
-<!-- 13. Track B - Default vs custom PP -->
+<!-- 13. Default vs custom intro -->
 <section>
-  <h2>Track B &mdash; Default vs custom PP</h2>
-  <div style="font-size:0.72em; line-height:1.55;">
-    <p>Two ways to run Peak Performance:</p>
-    <p><b>Default</b> &mdash; audience template carries the minimal PP pattern (DS13 intent + DS19 keywords) and nothing else.</p>
-    <p><b>Custom</b> &mdash; advertiser layers on additional DS clauses: exclusion lists, CRM overlays, extra keyword groups, geo logic.</p>
-    <p>Random-sample discovery (Fix M7) confirmed structural split: 39% pure DS13+DS19, 48% layered, 14% heavily-layered.</p>
-    <p style="color:#999; font-size:0.85em;"><i>Classifier limits: structural proxy at template level; doesn't capture campaign-level layering. Formal definition of "default" is open for audience-tools team.</i></p>
-  </div>
+  <h2>Default vs custom Peak Performance &mdash; template structure</h2>
+  <p style="font-size:0.7em; line-height:1.5;">Within PP-enabled audiences:</p>
+  <ul>
+    <li><b>Default:</b> audience template carries only DS13 + DS19 (minimal expression).</li>
+    <li><b>Custom:</b> template carries DS13+DS19 plus additional DS clauses (exclusions, CRM overlays, geo, extra keyword groups).</li>
+  </ul>
+  <p class="note" style="margin-top:0.6em;">
+    Random sample of 1,000 PP audience templates (Oct 2025+): 39% pure DS13+DS19, 48% layered (3-4 DS ids), 14% heavily layered (≥5 DS ids).
+  </p>
+  <p class="note" style="margin-top:0.4em;">
+    Classifier limit: template-level structural test does not capture campaign-level layering. Formal product definition of "default" is open with the audience-tools team.
+  </p>
 </section>
 
+<!-- 14. Chart 6 - default vs custom over time -->
 <section class="chart-slide">
-  <img src="CHART_06_PLACEHOLDER" alt="PP default vs custom">
-  <p class="chart-caption"><b>~61% of adopters run custom PP; ~32% use the default.</b> Split has been stable across the entire ramp &mdash; no drift over time. Majority are modifying the recommended template.</p>
+  <img src="CHART_06_PLACEHOLDER" alt="PP default vs custom over time">
+  <p class="chart-caption">Of weekly PP-enabled adopters: ~32% run default-only templates, ~61% run custom-only, ~3% run both, ~5% unclassified (template not yet replicated to archives — CDC lag). Mix has been stable across the entire ramp.</p>
 </section>
 
-<!-- 14. Track C: ROAS cross-check -->
+<!-- 15. Track C method -->
 <section>
-  <h2>Track C &mdash; ROAS cross-check</h2>
-  <div style="font-size:0.7em; line-height:1.55;">
-    <p>For 1,213 advertisers delivering in both Aug-Sep 2025 (baseline) and Dec 2025 (post) with &ge;1,000 VVs each window, compare ROAS change by PP-adoption status. <b>About half of each cohort has $0 order value</b> (lead-gen / no-pixel) &mdash; ROAS is undefined for those, dropped from the median.</p>
-    <p>Bootstrap 95% CIs on medians (1,000 resamples).</p>
-  </div>
-  <table style="margin-top:0.8em;">
-    <tr><th>Cohort</th><th class="num">n cohort</th><th class="num">n with ROAS</th><th class="num">Median &Delta;ROAS</th><th class="num">95% CI</th></tr>
-    <tr><td>New PP adopter</td><td class="num">206</td><td class="num">101 (49%)</td><td class="num"><b>+64%</b></td><td class="num">[+25%, +121%]</td></tr>
-    <tr><td>Non-adopter</td><td class="num">1,007</td><td class="num">381 (38%)</td><td class="num"><b>+130%</b></td><td class="num">[+104%, +154%]</td></tr>
+  <h2>Per-advertiser ROAS comparison</h2>
+  <p style="font-size:0.7em; line-height:1.5;">For 1,213 advertisers delivering in both windows below with &ge;1,000 view-views in each:</p>
+  <ul>
+    <li>Baseline: Aug 1 &ndash; Sep 28 2025 (8 weeks, pre-launch tail)</li>
+    <li>Post: Dec 1 &ndash; Dec 31 2025 (4 weeks, post-launch ramped)</li>
+    <li>New PP-enabled: PP delivery share &lt;1% baseline AND &ge;5% post (n=206)</li>
+    <li>Non-adopter: PP delivery share &lt;5% post (n=1,007)</li>
+    <li>Continuing: &ge;5% in both (n=4, too small to report)</li>
+  </ul>
+  <p class="note" style="margin-top:0.6em;">
+    ROAS = order_value / media_cost. Δ ROAS = (post ROAS / baseline ROAS) − 1. Bootstrap medians: 1,000 resamples, 95% percentile interval.
+  </p>
+</section>
+
+<!-- 16. Track C results -->
+<section>
+  <h2>Track C results</h2>
+  <table>
+    <tr><th>Cohort</th><th class="num">n cohort</th><th class="num">n with valid ROAS</th><th class="num">Median Δ ROAS</th><th class="num">95% CI</th><th class="num">Median Δ conv rate</th></tr>
+    <tr><td>New PP-enabled</td><td class="num">206</td><td class="num">101 (49%)</td><td class="num">+64%</td><td class="num">[+25%, +121%]</td><td class="num">+38%</td></tr>
+    <tr><td>Non-adopter</td><td class="num">1,007</td><td class="num">381 (38%)</td><td class="num">+130%</td><td class="num">[+104%, +154%]</td><td class="num">+65%</td></tr>
   </table>
+  <p style="font-size:0.7em; margin-top:0.6em; line-height:1.5;">
+    About half of each cohort has $0 order value in at least one window (lead-gen advertisers, no e-commerce pixel) &mdash; ROAS is undefined for them and they drop from the median calculation. The two cohort medians' 95% CIs overlap.
+  </p>
+  <p class="note" style="margin-top:0.5em;">
+    Δ AOV: PP-enabled median &minus;1.3% [&minus;3.7%, +2.5%]; non-adopter median &minus;0.1% [&minus;1.9%, +1.7%]. Flat in both. Where the ROAS gap exists, it lives in conversion rate, not basket size.
+  </p>
 </section>
 
+<!-- 17. Chart 7 - scatter -->
 <section class="chart-slide">
-  <img src="CHART_07_PLACEHOLDER" alt="Peak Performance adopters vs non-adopters ROAS delta">
-  <p class="chart-caption">Adopter-cohort median (+64%) is roughly half of non-adopter median (+130%), but <b>the 95% CIs overlap</b>. The gap is directional, not statistically robust at 95%. Frame the comparison as suggestive cross-check, not definitive.</p>
+  <img src="CHART_07_PLACEHOLDER" alt="Δ ROAS scatter by cohort">
+  <p class="chart-caption">One dot per advertiser. Median bands shown with bootstrap 95% CI shading.</p>
 </section>
 
-<!-- 15. Weekly time series -->
+<!-- 18. Chart 9 - weekly time series + selection bias -->
 <section class="chart-slide">
-  <img src="CHART_09_PLACEHOLDER" alt="Weekly cohort ROAS time series">
-  <p class="chart-caption"><b>Adopters started with ~1.5x higher baseline ROAS</b> (Aug-Sep ~28-31 vs ~17-25 for non-adopters). The two cohorts are not exchangeable &mdash; adopters self-selected. Both lifted Q4. Attributing the gap to PP requires propensity matching; this analysis does not do that.</p>
+  <img src="CHART_09_PLACEHOLDER" alt="Weekly cohort spend-weighted ROAS">
+  <p class="chart-caption">Spend-weighted ROAS per cohort per week. New PP-enabled cohort baseline ~28&ndash;31 in Aug 2025; non-adopter cohort ~17&ndash;25. The cohorts are not exchangeable at baseline — adopters self-selected. Both lifted Q4 in absolute terms.</p>
 </section>
 
-<!-- 16. Default vs custom ROAS -->
+<!-- 19. Default vs custom × ROAS -->
+<section>
+  <h2>Default vs custom &mdash; ROAS deltas</h2>
+  <p style="font-size:0.7em; line-height:1.5;">Among new PP-enabled adopters, classified by which template type drove &ge;80% of their post-window PP delivery:</p>
+  <table>
+    <tr><th>Class</th><th class="num">n cohort</th><th class="num">n valid ROAS</th><th class="num">Median Δ ROAS</th><th class="num">Median Δ conv rate</th></tr>
+    <tr><td>Default-dominant</td><td class="num">54</td><td class="num">34</td><td class="num">+41%</td><td class="num">+43%</td></tr>
+    <tr><td>Custom-dominant</td><td class="num">135</td><td class="num">58</td><td class="num">+64%</td><td class="num">+24%</td></tr>
+    <tr><td>Mixed</td><td class="num">17</td><td class="num">9</td><td class="num">+290%</td><td class="num">+114%</td></tr>
+  </table>
+  <p class="note" style="margin-top:0.6em;">
+    Cohorts are too small for confident inference. Bootstrap CIs (not shown) are wide and overlap. Default and custom directions diverge for ROAS vs conv rate, but underpowered.
+  </p>
+</section>
+
+<!-- 20. Chart 8 - default vs custom ROAS -->
 <section class="chart-slide">
   <img src="CHART_08_PLACEHOLDER" alt="Default vs custom PP ROAS">
-  <p class="chart-caption">Within new adopters: default-template-dominant median +41%, custom-template-dominant +64%, mixed +290%. Cohorts are tiny (54/135/17); CIs are wide. Suggestive only &mdash; does not survive significance test.</p>
+  <p class="chart-caption">Median Δ ROAS by template class with bootstrap 95% CI error bars. Cohorts small; CIs wide.</p>
 </section>
 
-<!-- 17. Reading carefully -->
+<!-- 21. Caveats -->
 <section>
-  <h2>Reading this carefully</h2>
-  <div style="font-size:0.7em; line-height:1.55;">
-    <p><b>Three things the data <i>does</i> say:</b></p>
-    <p><b>1.</b> Two coincident audience shifts in the drop window (PP rise + MM spend cliff Oct 27).</p>
-    <p><b>2.</b> Both cohorts saw Q4 ROAS lift; adopters' median is lower in absolute terms.</p>
-    <p><b>3.</b> AOV is flat in both cohorts (-1% / 0% medians), so any ROAS gap lives in conversion rate.</p>
-    <p style="margin-top:1em;"><b>Three things the data does <i>not</i> say:</b></p>
-    <p><b>1.</b> That PP <i>caused</i> the relative ROAS underperformance &mdash; cohorts self-selected and CIs overlap.</p>
-    <p><b>2.</b> That MM cliff and PP rise are causally linked &mdash; they're time-correlated only.</p>
-    <p><b>3.</b> Anything about the Max-Reach-off (Nov 19) impact &mdash; that's delivery-side, Ray's lane.</p>
-  </div>
+  <h2>Caveats</h2>
+  <ul style="font-size:0.65em; line-height:1.5;">
+    <li><b>Detector specificity.</b> The "PP-enabled" detector (DS13+DS19+rtc) catches audiences enabling Mid Intent + High Intent + PP tiers, not pure-PP-tier audiences. The 12% number is "advertisers with PP-tier-capable audiences" not "advertisers explicitly choosing PP."</li>
+    <li><b>MM/PP detector overlap.</b> 24% of sampled PP-detector expressions also contain DS2. The two buckets are partially overlapping, not independent.</li>
+    <li><b>Cohort assignment in Track C self-selects.</b> New PP-enabled cohort had ~1.5x higher baseline spend-weighted ROAS than non-adopters. Lift comparison does not isolate PP's effect on its own.</li>
+    <li><b>~50% of Track C cohort has $0 order value.</b> Medians on residual; AOV not informative for those advertisers.</li>
+    <li><b>Default-vs-custom classifier is template-level structural.</b> Doesn't capture campaign-level layering.</li>
+    <li><b><code>objective_id</code> is unreliable</b> post-2025 TV migration; retargeting share chart uses both <code>objective_id</code> and <code>funnel_level</code>.</li>
+    <li><b>Intent score history has 35-day TTL</b> in BQ; cannot retroactively inspect Nov 2025 PP scoring.</li>
+    <li><b>Continuing user knowledge gap:</b> 248 advertisers lost MM (DS2) presence without gaining PP detector. Audience-side data does not explain the disposition (new MM 2.0 syntax that triggers neither detector? genuine spend reduction? campaign restructuring?).</li>
+  </ul>
 </section>
 
-<!-- 18. Next steps — the ASK -->
+<!-- 22. Open questions -->
 <section>
-  <h2>Next steps &mdash; ranked, with asks</h2>
-  <div style="font-size:0.72em; line-height:1.55;">
-    <p><span style="color:var(--red); font-weight:700;">[P0] Decision:</span> Do we commit to a controlled hold-out / propensity-matched DiD on Peak Performance? <b>Yes/no this week.</b> Ray's team owns the design; default-following 32% cohort is a natural baseline.</p>
-    <p><span style="color:var(--red); font-weight:700;">[P0] Investigation:</span> What product / billing / advertiser change happened on / around Oct 27 2025 to cause the MM spend cliff? <b>Owner needed.</b> This is co-equal with PP in spend dollars.</p>
-    <p><span style="color:var(--navy); font-weight:700;">[P1]</span> Default-vs-custom PP performance split with longer post window (current 4-week Dec window underpowered; rerun in Feb-Apr 2026 window).</p>
-  </div>
+  <h2>Open questions</h2>
+  <ul style="font-size:0.7em; line-height:1.5;">
+    <li><b>What does the new MM 2.0 audience expression look like at the database level?</b> Does it use a different syntax that's not caught by the DS2 or DS13+DS19+rtc detectors? If so, the bucket counts here understate MM 2.0 adoption and overstate the MM cliff.</li>
+    <li><b>What drove the Oct 27 MM (DS2) spend drop?</b> 248 of 341 affected advertisers don't show up in the PP detector. Audience-side data shows the timing but not the cause. Likely needs product-side review of what shipped that week.</li>
+    <li><b>What's the formal product definition of "default Peak Performance"?</b> Audience-tools team (Ryan / Jordan).</li>
+    <li><b>Default vs custom PP performance with longer post window.</b> Current 4-week Dec window is underpowered.</li>
+    <li><b>DS16 jump (1% → 35%).</b> Real in volume but partially polluted by NOT-clause exclusions (12.5%); needs include-vs-exclude JSON parsing before publishable.</li>
+  </ul>
 </section>
 
-<!-- 19. Methodology appendix -->
+<!-- 23. Appendix -->
 <section>
-  <h2>Methodology</h2>
-  <div style="font-size:0.62em; line-height:1.5;">
-    <p><b>Cohort:</b> every advertiser with &ge; 1 impression on any day in 2025 &mdash; 4,109 total.</p>
-    <p><b>Source of targeting:</b> <code>archives_audience_segment_archives</code> at segment level + <code>archives_audiences_archives</code> at template level.</p>
-    <p><b>Effective-window cap (Fix M10):</b> per-campaign LEAD(update_time) capped at <code>min(LEAD, last_active_day + 1)</code>. Kills paused-campaign overcounting; reduced headline PP adoption from 21% to 12%.</p>
-    <p><b>Detectors:</b></p>
-    <div style="margin-top:0.5em;">
-      <table>
-        <tr><th>Bucket</th><th>Detector</th></tr>
-        <tr><td>Peak Performance</td><td>score_type=rtc + DS13 + DS19 in same expression</td></tr>
-        <tr><td>Keywords</td><td>DS19</td></tr>
-        <tr><td>3P</td><td>DS35 (LiveRamp IP)</td></tr>
-        <tr><td>CRM</td><td>DS4</td></tr>
-        <tr><td>MM</td><td>DS2 + per-advertiser First Party audiences</td></tr>
-      </table>
-    </div>
-    <p style="margin-top:0.5em;"><b>Fixes applied (post-critique v2):</b> M1 n_valid_roas reporting, M2 selection-bias disclosure, M3 bootstrap CIs, M5 trailing-week trim, M6 MM cliff promoted to co-finding, M7 random-sample discovery, M8 campaign-layering caveat, M9 regex case-sensitivity disclosure, M10 LEAD cap. New views: default-vs-custom &times; ROAS, weekly cohort ROAS time series.</p>
-    <p><b>Events annotated:</b> Peak Performance launch (early Oct 2025); Max Reach scoring off (Nov 19 2025).</p>
-  </div>
-</section>
-
-<!-- 20. Close -->
-<section>
-  <p class="power-line" style="margin-top:1.5em;">Two audience shifts coincide with the conversion drop:<br>
-  Peak Performance went from 0 to ~12%.<br>
-  Mountain Matched lost ~30pp of spend on Oct 27.</p>
-  <p class="big-number-context" style="margin-top:1em;">Both deserve direct investigation. Track C is consistent with concern but does not prove causation.</p>
-  <p class="big-number-context" style="margin-top:0.5em; font-size:0.65em;"><a href="https://mntn.atlassian.net/browse/TI-896" style="color:#888;">TI-896</a> &nbsp;&middot;&nbsp; full methodology + fixes + bootstrap CIs &nbsp;&middot;&nbsp; asks: hold-out test on PP, owner for MM-cliff investigation</p>
+  <h2>Reproducibility</h2>
+  <ul style="font-size:0.62em; line-height:1.5;">
+    <li>16 verification checks (V1–V16) in <code>artifacts/ti_896_verification.md</code></li>
+    <li>7 SQL queries in <code>queries/</code>; 8 output CSVs in <code>outputs/</code></li>
+    <li>Chart generator: <code>artifacts/generate_charts.py</code> (10 PNGs, 200 DPI)</li>
+    <li>Bootstrap CI script: <code>artifacts/bootstrap_track_c.py</code> (1,000 resamples, RNG seed 20260422)</li>
+    <li>Standalone deck builder: <code>artifacts/build_standalone_deck.py</code></li>
+    <li>Empirical PP/MM overlap: <code>queries/ti_896_pp_mm_overlap_check.sql</code> &amp; <code>queries/ti_896_mm_pp_advertiser_overlap.sql</code></li>
+  </ul>
 </section>
 
 </div></div>

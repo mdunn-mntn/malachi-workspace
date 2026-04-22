@@ -1,18 +1,39 @@
 # MNTN Business Knowledge
 
-## Peak Performance adoption mix (per TI-896, 2026-04-22)
+## Peak Performance / Mountain Matched relationship (per TI-896, 2026-04-22)
+
+**Product level:** Mountain Matched is part of the Peak Performance product offering (per user 2026-04-22). They are not independent audience products.
+
+**Database / expression level:** mostly separable, but with partial overlap. Empirical sample of 100 random PP segment expressions (`score_type=rtc + DS13 + DS19`) since Oct 15 2025:
+- **24 of 100 also contain DS2** (the "MM" detector flag)
+- 76 of 100 do not contain DS2
+- 0 of 100 contain per-advertiser DS ids in the 1000-99999 range
+- 0 of 100 contain the strings "first party" or "mountain matched" in the expression JSON
+
+**Most common DS-id sets in PP expressions:**
+- `13,14,19,21,34` (25%) — the bare PP signature plus auxiliary system flags
+- `13,14,17,19,21,34,35` (8%) — adds 3P
+- `13,14,19,21,34,35` (8%) — adds 3P
+- `2,4,13,14,19,21,34` (7%) — adds MM + CRM
+- The auxiliary DS14, DS21, DS34 are present in nearly all PP expressions — likely system-level (global flag, holdout, geo).
+
+**Implication for analysis:** if you bucket "MM" by DS2 presence and "PP" by `score_type=rtc + DS13 + DS19`, the buckets are mostly disjoint (76% of PP expressions don't flag MM) but ~24% of PP advertisers will appear in BOTH buckets. The MM-spend cliff and PP rise are likely the same product-migration event observed on two sides of the categorization boundary, but they are NOT identical at the database level.
+
+Source: `queries/ti_896_pp_mm_overlap_check.sql` and `outputs/ti_896_pp_mm_overlap_check.csv`.
+
+## Peak Performance — corrected adoption numbers (TI-896 v2, 2026-04-22)
 
 Peak Performance audience tier launched week of Oct 6 2025. As of Apr 2026:
 
-- **21% of 2025-active advertisers** have adopted at least one PP audience.
-- **~12–13% of cohort spend** flows through PP campaigns (adopters skew smaller-spend than cohort average).
-- **Among adopters:** 34% use the default template (pure DS13+DS19 structural pattern), 58% customize the template by layering additional DS clauses (exclusions, overlays, extra keywords, CRM combinations), 3% run a mix, 5% unclassified (template not yet in archives).
-- **PP-adopter cohort captured ~half the Q4 ROAS lift** non-adopters saw (median +46% vs +124% Aug–Sep to Dec 2025). AOV flat in both cohorts — gap is conversion rate, not basket size.
+- **~12% of currently-active advertisers** are running at least one delivering PP campaign (corrected from earlier 21% — the inflated number was an artifact of paused-campaign attribution, see Fix M10 in TI-896 verification).
+- **~12% of cohort spend** flows through PP campaigns. Presence and spend-weighted views agree.
+- **Among adopters:** ~32% use the default template (pure DS13+DS19 structural pattern), ~61% customize the template by layering additional DS clauses, ~3% run a mix, ~5% unclassified.
+- **Track C ROAS cross-check:** adopters median +64% Q4 ROAS lift [bootstrap 95% CI +25% to +121%, n=101 valid] vs non-adopters +130% [+104% to +154%, n=381 valid]. **CIs overlap — directional only.** Adopters had ~1.5x higher *baseline* ROAS than non-adopters (~28-31 vs ~17-25 in Aug 2025), so cohorts are not exchangeable.
 
 Structural "pure DS13+DS19" (template level) vs "DS13+DS19 + additional DS" is the best currently-known proxy for default-vs-custom PP usage. Formal product definition of "default" is a Ryan / Jordan (audience-tools team) question.
 
 
-Last updated: 2026-04-17
+Last updated: 2026-04-22
 
 General knowledge about MNTN as a business — products, strategy, org structure, industry context, terminology, and institutional knowledge. Sourced from shared docs, meetings, messages, and conversations. Updated as new business context is learned.
 

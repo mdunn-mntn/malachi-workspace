@@ -88,7 +88,7 @@ def chart_01_interest_jump(df):
     ax.plot(x, y, color=ACCENT, linewidth=2.4)
 
     peak_y = y.iloc[-1]
-    ax.set_title(f"Peak Performance reached {peak_y:.0f}% of currently-active advertisers",
+    ax.set_title(f"Peak Performance presence — % of currently-active advertisers (Nov 2024 - Apr 2026)",
                  loc="left", color="#222")
     ax.set_ylabel("% of cohort advertisers running an active PP campaign")
     ax.set_xlabel("")
@@ -215,7 +215,7 @@ def chart_04_shift_magnitudes(df):
         ax.text(v + off, bar.get_y() + bar.get_height() / 2, f"{v:+.1f}pp",
                 va="center", ha=ha, color=bar.get_facecolor(), weight="bold", fontsize=10)
 
-    ax.set_title("Peak Performance was the dominant audience-presence shift Sep-Dec 2025",
+    ax.set_title("Cohort-share deltas Sep 29 -> Dec 29 2025",
                  loc="left", color="#222")
     ax.set_xlabel("Change in cohort share (percentage points)")
     ax.set_ylabel("")
@@ -264,7 +264,7 @@ def chart_05_pp_spend_share(df):
     ax.text(x2.iloc[-1], y2.iloc[-1], f"  {y2.iloc[-1]:.0f}%  spend",
             color=BASELINE, fontsize=10, weight="bold", va="center")
 
-    ax.set_title("Peak Performance: ~12% of advertisers, ~12% of spend",
+    ax.set_title("Peak Performance presence vs spend share over time",
                  loc="left", color="#222")
     ax.set_ylabel("% (of advertisers, or of MNTN spend)")
     ax.set_ylim(0, max(20, max(y1.max(), y2.max()) * 1.15))
@@ -329,7 +329,7 @@ def chart_05b_mm_spend_cliff(df):
                     fontsize=9, color=ACCENT, weight="bold",
                     arrowprops=dict(arrowstyle="->", color=ACCENT, lw=1.0))
 
-    ax.set_title("Mountain Matched spend share crashed Oct 27 2025 (coincident with PP rollout)",
+    ax.set_title("Mountain Matched spend share fell from 73-79% to 42-46% in 2 weeks (Oct 27 - Nov 10 2025)",
                  loc="left", color="#222")
     ax.set_ylabel("% of cohort media spend")
     ax.set_ylim(0, 90)
@@ -390,7 +390,7 @@ def chart_06_pp_default_vs_custom(df):
     ax.text(x.iloc[-1], top + float(s_both.iloc[-1]) + float(s_unclass.iloc[-1]) / 2,
             f"  Unclassified {s_unclass.iloc[-1]:.0f}%", color="#999", fontsize=8, va="center", ha="left")
 
-    ax.set_title("~60% of Peak Performance adopters customise the template",
+    ax.set_title("Default vs custom Peak Performance, share of weekly adopters",
                  loc="left", color="#222")
     ax.set_ylabel("Share of Peak Performance adopters (%)")
     ax.set_ylim(0, 100)
@@ -468,9 +468,8 @@ def chart_07_pp_vs_conv_scatter(df):
             f"Non-adopter median +{med_non*100:.0f}%\nCI95 [{lo_non*100:+.0f}%, {hi_non*100:+.0f}%]",
             color="#333", fontsize=10, weight="bold", ha="center")
 
-    title = "Both cohorts lifted Q4; adopters' median is lower but CIs overlap" if overlap else \
-            "PP adopters captured significantly less Q4 ROAS lift than non-adopters"
-    ax.set_title(title, loc="left", color="#222")
+    ax.set_title("Δ ROAS distribution by cohort, Aug-Sep -> Dec 2025",
+                 loc="left", color="#222")
     ax.set_xlabel("Δ PP delivery share (Aug-Sep to Dec 2025), percentage points")
     ax.set_ylabel("Δ ROAS (Aug-Sep to Dec 2025), relative %")
     ax.set_xlim(-10, 100)
@@ -590,7 +589,7 @@ def chart_09_weekly_cohort_roas(df):
 
     annotate_events(ax)
 
-    ax.set_title("Adopters had higher baseline ROAS than non-adopters — both lifted Q4",
+    ax.set_title("Spend-weighted ROAS by cohort, weekly (Aug 2025 - Apr 2026)",
                  loc="left", color="#222")
     ax.set_ylabel("Spend-weighted ROAS (order value / media spend)")
     ax.set_xlabel("")
