@@ -13,35 +13,24 @@ cohort AS (
     AND impressions > 0
 ),
 
--- 2) DS classifier: map every data_source_id to a war-room category
+-- 2) DS classifier — aligned to Bryce Wagg's war-room scope post (2026-04-22 13:25).
+-- Bryce's canonical 5 buckets:
+--   DS19 = Keywords
+--   DS13 = Peak Performance
+--   DS35 = 3rd Party
+--   DS4  = CRM
+--   Mountain Matched = separate (interpret as DS2 + per-advertiser First Party audiences)
+-- Everything else → Other (reported for completeness but not headline)
 ds_class AS (
   SELECT
     data_source_id, name,
     CASE
-      -- MM (Mountain Match) — MNTN's targetable first-party + per-advertiser FP
-      WHEN data_source_id = 19                                          THEN 'MM'
-      WHEN data_source_id = 2                                           THEN 'MM'
-      WHEN name LIKE '% - First Party Audience'                         THEN 'MM'
-      -- 3P (Third-Party vendors + per-advertiser 3P)
-      WHEN data_source_id IN (1, 3, 11, 17, 18, 20, 22, 24, 25, 26, 27, 28, 29, 32, 33, 35, 36, 39, 40, 44, 50, 51, 52, 55, 56)
-                                                                        THEN '3P'
-      WHEN name LIKE '% - Third Party Audience'                         THEN '3P'
-      -- CRM (first-party email/IP uploads)
-      WHEN data_source_id IN (4, 31, 47)                                THEN 'CRM'
-      -- Interest / Intent / Peak Performance family
-      WHEN data_source_id IN (13, 42, 46)                               THEN 'Interest'
-      -- RTC Keywords / MNTN-managed keyword lists
-      WHEN data_source_id IN (38)                                       THEN 'RTC Keywords'
-      -- Extension / lookalike
-      WHEN data_source_id IN (7)                                        THEN 'Extension'
-      WHEN name LIKE '% - Extension Audience'                           THEN 'Extension'
-      -- Control / retargeting exclusion (NOT ad-targeting audience types)
-      WHEN data_source_id IN (6, 21, 23, 34)                            THEN 'Exclusion/Control'
-      WHEN name LIKE '% - Control Group Audience'                       THEN 'Exclusion/Control'
-      -- IP lists
-      WHEN data_source_id IN (8, 10)                                    THEN 'IP/Geo List'
-      -- Infrastructure (ignore in headline cuts)
-      WHEN data_source_id IN (9, 12, 14, 15, 16, 30, 38)                THEN 'Infrastructure'
+      WHEN data_source_id = 19                        THEN 'Keywords'
+      WHEN data_source_id = 13                        THEN 'Peak Performance'
+      WHEN data_source_id = 35                        THEN '3P'
+      WHEN data_source_id = 4                         THEN 'CRM'
+      WHEN data_source_id = 2                         THEN 'MM'
+      WHEN name LIKE '% - First Party Audience'       THEN 'MM'
       ELSE 'Other'
     END AS category
   FROM `dw-main-bronze.integrationprod.data_sources`
@@ -89,6 +78,7 @@ archive_ds AS (
 ),
 
 -- 5) Collapse DS ids → category per (campaign, version) — one row per DS-category used
+-- Keep Bryce's 5 canonical buckets + MM; drop 'Other' for headline cuts.
 archive_cat AS (
   SELECT DISTINCT
     ar.campaign_id,
@@ -101,7 +91,7 @@ archive_cat AS (
     dsc.category
   FROM archive_ds ar
   JOIN ds_class dsc USING (data_source_id)
-  WHERE dsc.category NOT IN ('Infrastructure', 'Exclusion/Control', 'Other', 'IP/Geo List')
+  WHERE dsc.category <> 'Other'
 ),
 
 -- 6) Explode each version's effective window to weeks
@@ -137,12 +127,11 @@ camp_week AS (
     week_start, campaign_id, advertiser_id,
     ANY_VALUE(funnel_level) AS funnel_level,
     ANY_VALUE(objective_id) AS objective_id,
-    LOGICAL_OR(category = 'MM')           AS has_mm,
-    LOGICAL_OR(category = '3P')           AS has_3p,
-    LOGICAL_OR(category = 'CRM')          AS has_crm,
-    LOGICAL_OR(category = 'Interest')     AS has_interest,
-    LOGICAL_OR(category = 'RTC Keywords') AS has_rtc_kw,
-    LOGICAL_OR(category = 'Extension')    AS has_extension
+    LOGICAL_OR(category = 'MM')                AS has_mm,
+    LOGICAL_OR(category = '3P')                AS has_3p,
+    LOGICAL_OR(category = 'CRM')               AS has_crm,
+    LOGICAL_OR(category = 'Peak Performance')  AS has_pp,
+    LOGICAL_OR(category = 'Keywords')          AS has_keywords
   FROM camp_week_cat
   GROUP BY week_start, campaign_id, advertiser_id
 )
@@ -154,20 +143,18 @@ SELECT
   COUNT(DISTINCT campaign_id)   AS n_campaigns,
 
   -- Share of ADVERTISERS with any campaign in each bucket
-  COUNT(DISTINCT IF(has_mm,        advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_mm,
-  COUNT(DISTINCT IF(has_3p,        advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_3p,
-  COUNT(DISTINCT IF(has_crm,       advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_crm,
-  COUNT(DISTINCT IF(has_interest,  advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_interest,
-  COUNT(DISTINCT IF(has_rtc_kw,    advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_rtc_kw,
-  COUNT(DISTINCT IF(has_extension, advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_extension,
+  COUNT(DISTINCT IF(has_mm,       advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_mm,
+  COUNT(DISTINCT IF(has_3p,       advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_3p,
+  COUNT(DISTINCT IF(has_crm,      advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_crm,
+  COUNT(DISTINCT IF(has_pp,       advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_pp,
+  COUNT(DISTINCT IF(has_keywords, advertiser_id, NULL)) / NULLIF(COUNT(DISTINCT advertiser_id), 0) AS pct_adv_keywords,
 
   -- Share of CAMPAIGNS touching each bucket
-  COUNTIF(has_mm)        / NULLIF(COUNT(*), 0) AS pct_camp_mm,
-  COUNTIF(has_3p)        / NULLIF(COUNT(*), 0) AS pct_camp_3p,
-  COUNTIF(has_crm)       / NULLIF(COUNT(*), 0) AS pct_camp_crm,
-  COUNTIF(has_interest)  / NULLIF(COUNT(*), 0) AS pct_camp_interest,
-  COUNTIF(has_rtc_kw)    / NULLIF(COUNT(*), 0) AS pct_camp_rtc_kw,
-  COUNTIF(has_extension) / NULLIF(COUNT(*), 0) AS pct_camp_extension,
+  COUNTIF(has_mm)       / NULLIF(COUNT(*), 0) AS pct_camp_mm,
+  COUNTIF(has_3p)       / NULLIF(COUNT(*), 0) AS pct_camp_3p,
+  COUNTIF(has_crm)      / NULLIF(COUNT(*), 0) AS pct_camp_crm,
+  COUNTIF(has_pp)       / NULLIF(COUNT(*), 0) AS pct_camp_pp,
+  COUNTIF(has_keywords) / NULLIF(COUNT(*), 0) AS pct_camp_keywords,
 
   -- Retargeting cut (Alex Knorr): objective_id=4 retargeting; 1,5,6 prospecting
   COUNTIF(objective_id = 4)           / NULLIF(COUNT(*), 0) AS pct_camp_retargeting,

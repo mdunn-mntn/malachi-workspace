@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TI-896 — Audience composition shift analysis</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+<style>
+:root {
+  --navy: #1B2A4A;
+  --blue: #2E5090;
+  --mid:  #5A7DB5;
+  --light:#A8BDD9;
+  --muted:#C8CDD4;
+  --red:  #D63B2F;
+  --bg:   #FAFAFA;
+  --text: #222;
+  --text-light: #666;
+}
+
+html, body { background: var(--bg); }
+
+.reveal { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--text); font-size: 32px; }
+.reveal .slides { text-align: left; }
+.reveal h1, .reveal h2, .reveal h3 {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: var(--navy); text-transform: none; font-weight: 700; letter-spacing: -0.02em;
+  margin-top: 0;
+}
+.reveal h1 { font-size: 2em; line-height: 1.1; }
+.reveal h2 { font-size: 1.4em; }
+.reveal h3 { font-size: 1.0em; }
+
+.subtitle { color: var(--text-light); font-size: 0.55em; font-weight: 400; margin-top: 0.4em; }
+
+.power-line {
+  color: var(--red); font-size: 1.25em; font-weight: 700; text-align: center;
+  padding: 0.4em 0; line-height: 1.2;
+}
+
+.big-number {
+  font-size: 4.2em; font-weight: 800; color: var(--red);
+  text-align: center; line-height: 1; margin: 0.15em 0;
+}
+.big-number-context {
+  color: var(--text-light); font-size: 0.75em; text-align: center; line-height: 1.3;
+}
+
+.reveal ul, .reveal ol { display: block; font-size: 0.75em; line-height: 1.5; }
+.reveal ul li, .reveal ol li { margin-bottom: 0.3em; }
+
+.chart-slide img {
+  max-width: 100%; max-height: 75vh; object-fit: contain; display: block; margin: 0 auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.chart-caption {
+  text-align: center; color: var(--text-light); font-size: 0.55em; margin-top: 0.3em; line-height: 1.3;
+}
+
+.takeaway {
+  background: #fff; border-left: 4px solid var(--red);
+  padding: 0.6em 1em; font-size: 0.75em; color: var(--text);
+  margin: 0.8em 0;
+}
+.takeaway-navy { border-left-color: var(--navy); }
+
+.footer-note {
+  color: var(--muted); font-size: 0.4em; text-align: center; margin-top: 0.6em;
+}
+
+.kv { font-size: 0.7em; color: var(--text); line-height: 1.6; }
+.kv .k { color: var(--text-light); display: inline-block; min-width: 9em; }
+.kv .v { font-weight: 700; color: var(--navy); }
+
+table { font-size: 0.6em; border-collapse: collapse; width: 100%; }
+th, td { padding: 0.35em 0.6em; text-align: left; border-bottom: 1px solid #eee; }
+th { color: var(--text-light); font-weight: 600; border-bottom: 2px solid #ddd; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- 1. Title -->
+<section>
+  <h1>Audience composition shift analysis</h1>
+  <p class="subtitle">2025 performance drop &mdash; war-room initial findings<br>
+  TI-896 &nbsp;&middot;&nbsp; Alex Knorr (driver) + Malachi (co-driver) &nbsp;&middot;&nbsp; 2026-04-22</p>
+</section>
+
+<!-- 2. Power Line -->
+<section>
+  <p class="big-number-context">Within the audience-composition lane, one shift dominates:</p>
+  <p class="power-line">Peak Performance adoption tripled<br>right after Oct 2025 launch.</p>
+  <p class="big-number-context">Every other bucket &mdash; MM, 3P, CRM, Keywords &mdash; flat in the drop window.</p>
+</section>
+
+<!-- 3. Scope (per Bryce) -->
+<section>
+  <h2>Scope (per Bryce&rsquo;s post)</h2>
+  <div class="kv">
+    <p><span class="k">Cohort</span> Advertisers active since Jan 2025</p>
+    <p><span class="k">Buckets counted</span> <span class="v">DS19 Keywords</span>, <span class="v">DS13 Peak Performance</span>, <span class="v">DS35 3P</span>, <span class="v">DS4 CRM</span>, <span class="v">Mountain Matched</span></p>
+    <p><span class="k">Sources</span> <code>archives.audiences_archives</code> + <code>archives.audience_segment_archives</code></p>
+    <p><span class="k">Lookback</span> 18 months (Nov 2024 &rarr; Apr 2026), weekly</p>
+    <p><span class="k">Target</span> EOD 2026-04-22 initial findings; targeting-squad check &rarr; war room</p>
+  </div>
+  <div class="takeaway takeaway-navy" style="margin-top:0.8em;">
+    Wider picture (for calibration): Rev/AID ~$31K &rarr; ~$15K over 18 months (Ray). New-cohort 3M CLV down ~50% (Will). ~70% of consecutively active advertisers cutting MoM (Will).
+  </div>
+</section>
+
+<!-- 4. The big number -->
+<section>
+  <p class="big-number-context">Share of 2025-active advertisers using Peak Performance audiences</p>
+  <div style="display:flex; justify-content:space-around; align-items:baseline; margin:0.4em 0;">
+    <div>
+      <p class="big-number" style="color:#888; font-size:2.8em;">10%</p>
+      <p class="big-number-context">Sep 22 2025</p>
+    </div>
+    <div style="font-size:2em; color:#888;">&rarr;</div>
+    <div>
+      <p class="big-number">30%</p>
+      <p class="big-number-context">today</p>
+    </div>
+  </div>
+  <p class="big-number-context" style="margin-top:0.8em;">Peak Performance tier launched <b>week of Oct 6 2025</b>.</p>
+</section>
+
+<!-- 5. Chart 1 - PP jump -->
+<section class="chart-slide">
+  <img src="CHART_01_PLACEHOLDER" alt="Peak Performance jump">
+  <p class="chart-caption">Nine months flat at ~13%, then sharp inflection at the Peak Performance launch. Max Reach scoring off (Nov 19) &mdash; trajectory continued unchanged.</p>
+</section>
+
+<!-- 6. Chart 2 - Everything else flat -->
+<section class="chart-slide">
+  <img src="CHART_02_PLACEHOLDER" alt="Cohort composition">
+  <p class="chart-caption">MM stays near-universal. Keywords/3P/CRM all flat in the drop window. Peak Performance is the only line above noise.</p>
+</section>
+
+<!-- 7. Chart 3 - Retargeting -->
+<section class="chart-slide">
+  <img src="CHART_03_PLACEHOLDER" alt="Retargeting">
+  <p class="chart-caption">Alex Knorr&rsquo;s hypothesis: long-term retargeting decline (42% &rarr; 25%), but <b>stable in the Sep&ndash;Dec 2025 drop window</b>.</p>
+</section>
+
+<!-- 8. Chart 4 - Shift magnitudes -->
+<section class="chart-slide">
+  <img src="CHART_04_PLACEHOLDER" alt="Shift magnitudes">
+  <p class="chart-caption">Sep 29 &rarr; Dec 29 2025 cohort-share deltas. Peak Performance +12pp. Every other bucket within &plusmn;1pp.</p>
+</section>
+
+<!-- 9. Three takeaways -->
+<section>
+  <h2>Three takeaways</h2>
+  <div style="font-size:0.78em; line-height:1.55;">
+    <p><span style="color:#bbb;">1.</span> <b>Peak Performance adoption tripled</b> in the Oct&ndash;Dec 2025 drop window, coincident with launch (Oct 6). Sep 22: 10%. Today: 30%.</p>
+    <p><span style="color:#bbb;">2.</span> <b>No other audience-type shift</b> above ~1pp noise. MM near-universal, Keywords/3P/CRM flat, retargeting share stable Sep&ndash;Dec 2025.</p>
+    <p><span style="color:#bbb;">3.</span> <b>Max Reach off (Nov 19)</b> didn&rsquo;t bend any cohort-level composition curve. Peak Performance ramp continued through it uninterrupted.</p>
+  </div>
+</section>
+
+<!-- 10. Cross-reference -->
+<section>
+  <h2>Cross-reference (per Bryce)</h2>
+  <div style="font-size:0.72em; line-height:1.55;">
+    <p>&bull; <b>Max Reach scoring off on 11/19/2025</b> is the closest in-time product event to the Nov onset. Conversion-angle analysis is open (Ray).</p>
+    <p>&bull; <b>Peak Performance scoring bug (Oct 2025)</b> was fixed end of Oct &mdash; doesn&rsquo;t fit the Nov-onward trend. Adoption ramp continued through and beyond the fix, so this isn&rsquo;t a scoring-bug artefact.</p>
+    <p>&bull; Rev/AID collapse pre-dates Peak Performance launch by a full year. <b>Correlation only</b>; causation requires joining with Ray&rsquo;s conversion data at advertiser grain.</p>
+  </div>
+</section>
+
+<!-- 11. What the data does not say -->
+<section>
+  <h2>What the data does not say</h2>
+  <div style="font-size:0.72em; line-height:1.55;">
+    <p>&bull; We count <b>presence</b> of each DS type in active campaign expressions. Not spend-weighted yet &mdash; a Peak Performance clause attached with zero delivery still counts.</p>
+    <p>&bull; We don&rsquo;t yet distinguish <b>default</b> Peak Performance recommendations from <b>custom</b> advertiser layering on top.</p>
+    <p>&bull; Per-advertiser <b>conversion delta</b> correlated with Peak Performance adoption is the obvious next test.</p>
+  </div>
+</section>
+
+<!-- 12. Next steps -->
+<section>
+  <h2>Next steps &mdash; ranked</h2>
+  <div style="font-size:0.75em; line-height:1.55;">
+    <p><span style="color:var(--red); font-weight:700;">[P0]</span> Per-advertiser scatter: &Delta;(Peak Performance share) vs. &Delta;(conversion rate) Sep&ndash;Dec 2025. Join with Ray&rsquo;s data.</p>
+    <p><span style="color:var(--red); font-weight:700;">[P0]</span> Default-vs-custom split on Peak Performance audiences.</p>
+    <p><span style="color:var(--navy); font-weight:700;">[P1]</span> Spend-weighted composition: weight mix by daily spend so attached-but-not-delivered campaigns don&rsquo;t skew.</p>
+    <p><span style="color:var(--navy); font-weight:700;">[P1]</span> Cross-check Alex Knorr&rsquo;s numbers against this view. Reconcile before final war-room delivery.</p>
+  </div>
+</section>
+
+<!-- 13. Methodology appendix -->
+<section>
+  <h2>Methodology</h2>
+  <div style="font-size:0.62em; line-height:1.5;">
+    <p><b>Cohort:</b> every advertiser with &ge; 1 impression on any day in 2025 &mdash; <code>summarydata.sum_by_campaign_by_day</code>.</p>
+    <p><b>Source of targeting:</b> <code>dw-main-bronze.integrationprod.archives_audience_segment_archives</code>, <code>expression_type_id = 2</code>, <code>is_targeted = TRUE</code>. 77 weekly observations, 4,111 advertisers, 93K active campaigns (as of 2026-04-22).</p>
+    <p><b>Classifier:</b> regex-extract <code>data_source_id</code> values from expression JSON &rarr; join canonical <code>data_sources</code> dim &rarr; bucket to Bryce&rsquo;s categories.</p>
+    <div style="margin-top:0.5em;">
+      <table>
+        <tr><th>Bucket</th><th>DS id</th><th>Canonical name</th></tr>
+        <tr><td>Keywords</td><td>DS19</td><td>MNTN Matched</td></tr>
+        <tr><td>Peak Performance</td><td>DS13</td><td>MNTN Vertical Categorization</td></tr>
+        <tr><td>3P</td><td>DS35</td><td>LiveRamp IP</td></tr>
+        <tr><td>CRM</td><td>DS4</td><td>CRM</td></tr>
+        <tr><td>MM</td><td>DS2 + per-advertiser FP</td><td>MNTN First Party + ldquo;{AID} - First Party Audiencerdquo;</td></tr>
+      </table>
+    </div>
+    <p style="margin-top:0.5em;"><b>Events annotated:</b> Peak Performance launch (early Oct 2025, Mike Dolt); Max Reach scoring off (Nov 19 2025, Ryan Kleck).</p>
+  </div>
+</section>
+
+<!-- 14. Close -->
+<section>
+  <p class="power-line" style="margin-top:2em;">Peak Performance adoption tripled<br>right after Oct 2025 launch.</p>
+  <p class="big-number-context" style="margin-top:1em;">The audience lane has one signal. Everything else is noise.</p>
+  <p class="big-number-context" style="margin-top:0.5em; font-size:0.65em;"><a href="https://mntn.atlassian.net/browse/TI-896" style="color:#888;">TI-896</a> &nbsp;&middot;&nbsp; full methodology, data, next steps &nbsp;&middot;&nbsp; follow-up tomorrow: per-advertiser conversion scatter + default-vs-custom</p>
+</section>
+
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  hash: true, slideNumber: true, controls: true, progress: true,
+  center: true, transition: 'fade', transitionSpeed: 'slow',
+  width: 1100, height: 800, margin: 0.01, minScale: 0.2, maxScale: 1.5,
+});
+</script>
+</body>
+</html>

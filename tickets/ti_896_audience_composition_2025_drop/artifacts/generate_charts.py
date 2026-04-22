@@ -43,9 +43,9 @@ MUTED = "#C8D0D8"
 EVENT_PP = pd.Timestamp("2025-10-06")      # Peak Performance launch (early Oct per Mike)
 EVENT_MAX_REACH = pd.Timestamp("2025-11-19")  # Max Reach scoring off (Ryan)
 
-CATS = ["mm", "3p", "crm", "interest"]
-LABELS = {"mm": "MM", "3p": "3P", "crm": "CRM", "interest": "Interest"}
-COLORS = {"mm": BASELINE, "3p": GRAY, "crm": "#4C72B0", "interest": ACCENT}
+CATS = ["mm", "3p", "crm", "pp", "keywords"]
+LABELS = {"mm": "MM", "3p": "3P", "crm": "CRM", "pp": "Peak Performance", "keywords": "Keywords"}
+COLORS = {"mm": BASELINE, "3p": GRAY, "crm": "#4C72B0", "pp": ACCENT, "keywords": "#8E8E8E"}
 
 
 def load() -> pd.DataFrame:
@@ -76,15 +76,15 @@ def save(fig, name):
 
 
 def chart_01_interest_jump(df):
-    """Headline: Interest audience adoption tripled Sep-Dec 2025."""
+    """Headline: Peak Performance adoption tripled Sep-Dec 2025."""
     fig, ax = plt.subplots(figsize=(11, 5.5))
     x = df["week_start"]
-    y = df["pct_adv_interest"] * 100
+    y = df["pct_adv_pp"] * 100
     ax.plot(x, y, color=ACCENT, linewidth=2.4)
 
-    ax.set_title("Interest-audience use tripled after Peak Performance launch",
+    ax.set_title("Peak Performance audience use tripled after launch",
                  loc="left", color="#222")
-    ax.set_ylabel("% of 2025-active advertisers using Interest audiences")
+    ax.set_ylabel("% of 2025-active advertisers using Peak Performance audiences")
     ax.set_xlabel("")
     ax.set_ylim(0, max(35, y.max() * 1.1))
 
@@ -108,12 +108,11 @@ def chart_01_interest_jump(df):
     annotate_events(ax)
 
     ax.text(0.01, -0.18,
-            "Data: archives_audience_segment_archives, expression JSON -> data_source_id classification "
-            "(DS13/42/46 = Interest family). Cohort: advertisers with >=1 2025 impression. "
-            "Source: TI-896.",
+            "Data: archives_audience_segment_archives, expression JSON -> data_source_id = 13 (Peak Performance). "
+            "Cohort: advertisers with >=1 2025 impression. Source: TI-896.",
             transform=ax.transAxes, fontsize=8, color="#777")
 
-    save(fig, "ti_896_chart_01_interest_jump.png")
+    save(fig, "ti_896_chart_01_pp_jump.png")
 
 
 def chart_02_cohort_composition(df):
@@ -136,8 +135,8 @@ def chart_02_cohort_composition(df):
     annotate_events(ax)
 
     ax.text(0.01, -0.18,
-            "MM stays near-universal. Interest ramps from 10% to 30% — the only material shift in the drop window. "
-            "3P modestly up long-term; CRM flat.",
+            "MM stays near-universal; Keywords, 3P, CRM all flat in the drop window. "
+            "Peak Performance is the only line above noise.",
             transform=ax.transAxes, fontsize=8, color="#555")
 
     save(fig, "ti_896_chart_02_cohort_composition.png")
@@ -184,12 +183,13 @@ def chart_04_shift_magnitudes(df):
     dec = df[df["week_start"] == pd.Timestamp("2025-12-29")].iloc[0]
 
     categories = [
-        ("Interest",     "pct_adv_interest"),
-        ("3P",           "pct_adv_3p"),
-        ("CRM",          "pct_adv_crm"),
-        ("MM",           "pct_adv_mm"),
-        ("Retargeting",  "pct_camp_retargeting"),
-        ("Prospecting",  "pct_camp_prospecting"),
+        ("Peak Performance", "pct_adv_pp"),
+        ("Keywords",         "pct_adv_keywords"),
+        ("3P",               "pct_adv_3p"),
+        ("CRM",              "pct_adv_crm"),
+        ("MM",               "pct_adv_mm"),
+        ("Retargeting",      "pct_camp_retargeting"),
+        ("Prospecting",      "pct_camp_prospecting"),
     ]
     deltas = []
     for label, col in categories:
@@ -211,7 +211,7 @@ def chart_04_shift_magnitudes(df):
         ax.text(v + off, bar.get_y() + bar.get_height() / 2, f"{v:+.1f}pp",
                 va="center", ha=ha, color=bar.get_facecolor(), weight="bold", fontsize=10)
 
-    ax.set_title("Interest gained +12pp Sep-Dec 2025 — the only material cohort shift",
+    ax.set_title("Peak Performance gained +12pp Sep-Dec 2025 — the only material shift",
                  loc="left", color="#222")
     ax.set_xlabel("Change in cohort share (percentage points)")
     ax.set_ylabel("")
