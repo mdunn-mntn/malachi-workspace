@@ -1,7 +1,7 @@
 # Audience composition shift analysis — 2025 performance drop
 
 **Final findings (v2 — post-critique fixes)** — TI-896 | Malachi Dunn | 2026-04-22
-**Deck:** https://gist.githack.com/mdunn-mntn/f836ba48d987ead2894535e772c8f451/raw/ti_896_deck_standalone.html
+**Deck (v2):** https://gist.githack.com/mdunn-mntn/6139627102ffaff497ab2153d3bd9460/raw/ti_896_deck_standalone.html
 
 ---
 
