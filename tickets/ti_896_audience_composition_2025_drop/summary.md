@@ -1,7 +1,7 @@
 # TI-896: Audience composition shift analysis — 2025 performance drop war room
 
 **Jira:** https://mntn.atlassian.net/browse/TI-896
-**Status:** Complete (Phase 1 + follow-up Tracks A/B/C shipped)
+**Status:** Complete v2 — post-critique fixes (M1–M10 + new charts 08/09 + bootstrap CIs) shipped 2026-04-22
 **Date Started:** 2026-04-22
 **Date Completed:**
 **Assignee:** Malachi
@@ -100,24 +100,28 @@ Per Bryce's 2026-04-22 13:25 post:
 | CRM | DS4 |
 | Mountain Matched (MM) | (interpret as) DS2 + `% - First Party Audience` |
 
-### Primary finding — Peak Performance adoption tripled
-Cohort-level share of 2025-active advertisers using at least one Peak Performance (DS13) audience:
+### Primary finding — TWO coincident audience shifts (post-critique correction)
 
-| Week | PP share |
+After the LEAD-cap fix (V11), the headline numbers changed materially. The "21% of advertisers have adopted PP" claim was inflated by paused-but-not-deleted campaigns whose archive expressions extended forever past their last delivery. Corrected:
+
+**A. Peak Performance: near-zero → ~12% of currently-active advertisers (and ~12% of cohort spend).**
+
+| Week | PP share (corrected) |
 |---|---|
-| 2025-09-22 | 9.6% (flat line for ~9 months prior) |
-| 2025-09-29 | 12.7% |
-| **2025-10-06** | **15.7%** ← Peak Performance launch week |
-| 2025-10-20 | 19.3% |
-| 2025-11-03 | 21.2% |
-| **2025-11-17** | **23.1%** ← Max Reach scoring turned off Nov 19 |
-| 2025-12-01 | 24.1% |
-| 2025-12-29 | 24.9% |
-| 2026-04-20 | 30% |
+| 2025-09-22 | 0.7% (pre-launch baseline) |
+| 2025-09-29 | 3.7% |
+| **2025-10-06** | **6.5%** ← Peak Performance launch week |
+| 2025-10-20 | 10.3% |
+| 2025-11-03 | 10.7% |
+| **2025-11-17** | **11.0%** ← Max Reach scoring turned off Nov 19 |
+| 2025-12-29 | 11.5% |
+| 2026-04-13 | **12.4%** |
 
-**Other buckets in the Sep–Dec 2025 drop window:** MM 100% → 98% (nearly flat); Keywords 70% → 71% (flat); 3P 56% → 57% (flat); CRM 25% → 25% (flat). Retargeting share stable at ~25%.
+**B. Mountain Matched spend share collapsed at the week of Oct 27 2025.** Held 73-79% of cohort spend through Oct 20; dropped to 56.7% on Oct 27; 44.0% on Nov 3; sustained 42-46% through April 2026. **A 30pp cliff in 1 week**, materially larger than the PP rise in spend dollars. Coincident with PP rollout.
 
-Peak Performance is the **only** cohort-level composition shift above noise.
+**Other buckets in Sep–Dec 2025:** Keywords 49% → 44% (-5pp), 3P 41% → 38% (-3.5pp), MM presence 100% → 98% (-2pp), CRM flat. The original "everything else flat" claim was the same paused-campaign attribution issue; it weakens after correction.
+
+**Presence and spend-weighted PP views now AGREE at ~12%** (the prior 21%/12% spread was the same Fix M10 issue). PP adopters do NOT skew smaller than cohort average.
 
 ### Max Reach off (Nov 19) shows no composition signal
 The Peak Performance ramp continued smoothly through Nov 19. Max Reach turn-off may have affected conversion rates (Ryan confirmed the team only looked at pacing impact at the time) but did not shift *who advertisers targeted* at the cohort level.
@@ -135,11 +139,13 @@ Scoring bug existed at PP launch (early Oct 2025), fixed end of Oct. Adoption ra
 - War-room context: [meetings/ti_896_war_room_shared_charts_2026_04_22.md](meetings/ti_896_war_room_shared_charts_2026_04_22.md)
 - Verification bundle: [artifacts/ti_896_verification.md](artifacts/ti_896_verification.md)
 
-### Track A — Spend-weighted composition view (2026-04-22)
+### Track A — Spend-weighted composition view (2026-04-22; revised post-Fix-M10)
 
-To address the "counting attached-but-not-delivered" critique, joined archive effective windows to `sum_by_campaign_by_day` and weighted by `media_cost`.
+Joined archive effective windows to `sum_by_campaign_by_day` and weighted by `media_cost`. After Fix M10 corrected the presence overcount, the two views now agree.
 
-**Result:** PP spend-weighted share reached **~12–13% of cohort spend**, vs the 21% advertiser-presence number. ~8pp gap = PP adopters skew smaller than the cohort average. MM spend share dropped 75% → 38% over 18 months (noteworthy for follow-up — bigger shift in spend than advertiser-presence indicated).
+**Result:**
+- PP spend-weighted share = **~12% of cohort spend** (matches the corrected 12% presence number; no longer a "skew smaller" finding).
+- **MM spend cliff (V16):** 73-79% pre-Oct 20 → 56.7% Oct 27 → 44% Nov 3 → 42-46% sustained through April 2026. This is the larger absolute-dollar shift in the drop window; promoted from sidebar to co-equal headline.
 
 Coverage reconciliation: archive-joined total spend Oct-Dec 2025 matches cohort total ($48M over 14 weeks) — no material missing spend.
 
@@ -179,47 +185,66 @@ Chart: [artifacts/ti_896_chart_06_pp_default_vs_custom.png](artifacts/ti_896_cha
 
 **Open question:** formal product definition of "default Peak Performance" is a follow-up for the audience-tools team (Ryan / Jordan). This analysis uses a structural-heuristic proxy.
 
-### Track C — Per-advertiser ROAS delta vs PP adoption (2026-04-22)
+### Track C — Per-advertiser ROAS delta vs PP adoption (2026-04-22; revised with bootstrap CIs)
 
-Audience-side cross-check against the war-room conversion metric. Source: `summarydata.sum_by_campaign_by_day` (no TTL issue; covers the window). Uses `view_viewed` for VVs, `click_conversions + view_conversions` for conversions, `click_order_value + view_order_value / media_cost` for ROAS, `order_value / conversions` for AOV.
+Audience-side cross-check against the war-room conversion metric. After Fix M10 (LEAD cap), the cohort sizes shifted (more advertisers correctly classified as new_adopter once stale paused-PP attribution was removed).
 
-Cohort: 1,217 advertisers with ≥1,000 VVs in both baseline (Aug 1–Sep 28 2025) and post (Dec 1–31 2025).
+**Cohort sizes (post-Fix-M10):** 1,213 advertisers with ≥1,000 VVs in both Aug–Sep and Dec windows.
 
-Labels:
-- **new_adopter** — PP delivery share <1% in baseline AND ≥5% in post
-- **continuing** — ≥5% in both windows (tiny sample: n=3)
-- **non_adopter** — <5% in post
+**Critical caveat (Fix M1):** about half of each cohort has $0 order value in at least one window (lead-gen / no-pixel). `delta_roas_rel` is NULL for them. Medians are computed on the valid-ROAS subset.
 
-**Median deltas (relative):**
-| Cohort | n | Δ conv rate | Δ ROAS | Δ AOV |
-|---|---|---|---|---|
-| new_adopter | 161 | +38% | +46% | −1% |
-| continuing | 3 | — | — | — (noisy) |
-| non_adopter | 657 | +82% | +124% | 0% |
+**Bootstrap-honest median deltas (Fix M3, 1,000 resamples, 95% CI):**
 
-**Key finding:** both cohorts saw Q4 ROAS lift, but **PP adopters captured ~half the lift non-adopters did (+46% vs +124%)**. AOV is flat in both, so the gap is in conversion rate, not basket size. This is consistent with PP correlating with weaker per-advertiser ROAS improvement in the drop window.
+| Cohort | n cohort | n with valid ROAS | Median Δ ROAS | 95% CI |
+|---|---:|---:|---:|---:|
+| new_adopter | 206 | 101 (49%) | +64% | [+25%, +121%] |
+| non_adopter | 1,007 | 381 (38%) | +130% | [+104%, +154%] |
+| continuing | 4 | 3 | — | (too small) |
+
+**Key revised finding:** point-estimate ROAS gap is real (~half the lift) but **the 95% CIs OVERLAP**. The gap is directional, not statistically robust. Framing softened from "captured ~half the lift" to "directional cross-check, consistent with concern but not definitive."
+
+**Selection bias (M2 disclosure):** new adopters had ~1.5x higher *baseline* spend-weighted ROAS than non-adopters (~28-31 vs ~17-25 in Aug 2025). The two cohorts are not exchangeable — adopters self-selected. Attributing the lift gap to PP requires propensity matching; this analysis does not do that.
 
 Framing guardrails:
 - Audience-side **cross-check** — not the canonical conversion analysis (Ray owns that).
 - Baseline (Aug–Sep 2025) is the tail of pre-drop period; no cleaner baseline available since PP didn't exist earlier.
 - Survivorship bias: advertisers that cut spend entirely are excluded by the ≥1,000 VV threshold.
 
+### Track D (NEW per Fix Section-4 #2) — Default-PP vs custom-PP × ROAS
+
+Intersected Track B template classification with Track C window methodology. New adopters labeled by dominant template type:
+
+| Class | n cohort | n valid ROAS | Median Δ ROAS |
+|---|---:|---:|---:|
+| Default-dominant | 54 | 34 | +41% |
+| Custom-dominant | 135 | 58 | +64% |
+| Mixed | 17 | 9 | +290% (noisy) |
+
+Sample sizes are too small for confident inference. The apparent reversal (custom > default in ROAS lift, default > custom in conv-rate lift) is interesting but the CIs are too wide to claim it. Logged for follow-up with longer post window.
+
+### Track E (NEW per Fix Section-4 #3) — Weekly cohort spend-weighted ROAS time series
+
+Median ROAS is uninformative (most advertisers have $0 order value → median is 0). Switched to spend-weighted ROAS per week per cohort. Reveals the M2 selection-bias concretely: adopter cohort baseline ROAS was ~28-31 in Aug 2025, non-adopter was ~17-25 — the cohorts were not comparable at baseline.
+
 Query: [queries/ti_896_pp_vs_conv_scatter.sql](queries/ti_896_pp_vs_conv_scatter.sql)
 CSV: [outputs/ti_896_pp_vs_conv_scatter.csv](outputs/ti_896_pp_vs_conv_scatter.csv)
 Chart: [artifacts/ti_896_chart_07_pp_vs_conv_scatter.png](artifacts/ti_896_chart_07_pp_vs_conv_scatter.png)
 
-## 5. Solution
+## 5. Solution (v2 — post-critique)
 
-Four-phase analytical bundle delivered as a single RevealJS deck (14+ slides), with query + CSV + chart artifacts for each phase:
+Five-phase analytical bundle delivered as a single RevealJS deck (~20 slides) + verification doc with V1–V16 checks:
 
-1. **Headline cohort analysis** — Peak Performance (strict detector: `score_type=rtc + DS13 + DS19`) adoption went near-zero → 21% of 2025-active advertisers since the Oct 6 launch. Every other audience bucket flat ±1pp.
-2. **Track A — Spend-weighted view** — PP ~12–13% of cohort spend vs 21% advertiser-presence. Adopters skew smaller-spend.
-3. **Track B — Default vs custom** — 34% adopters use the pure DS13+DS19 template; 58% customize by layering additional DS clauses; 3% both; 5% unclassified.
-4. **Track C — ROAS cross-check** — PP adopters captured ~half the Q4 ROAS lift (median +46% vs +124%). AOV flat in both cohorts.
+1. **Headline cohort analysis** — Peak Performance (strict detector: `score_type=rtc + DS13 + DS19`) adoption went near-zero → ~12% of currently-active advertisers since Oct 6 2025. Other buckets: Keywords -5pp, 3P -3.5pp, MM -2pp presence; CRM flat.
+2. **Track A — Spend-weighted view + MM cliff** — PP ~12% of cohort spend (matches presence). Mountain Matched spend dropped 73-79% → 42-46% in 1 week starting Oct 27 — co-equal headline.
+3. **Track B — Default vs custom** — ~32% default-only, ~61% custom-only, ~3% both, ~5% unclassified. Random-sample discovery confirmed structural split.
+4. **Track C — ROAS cross-check (with bootstrap CIs)** — adopters median +64% [+25%, +121%], non-adopters +130% [+104%, +154%]. CIs OVERLAP — directional only.
+5. **Track D — Default vs custom × ROAS** + **Track E — Weekly cohort ROAS time series**. Selection bias surfaced: adopters had ~1.5x higher baseline ROAS.
 
 Final deck: https://gist.githack.com/mdunn-mntn/f836ba48d987ead2894535e772c8f451/raw/ti_896_deck_standalone.html
 
-Verification bundle: [artifacts/ti_896_verification.md](artifacts/ti_896_verification.md) — ten independent checks (V1–V10).
+Verification bundle: [artifacts/ti_896_verification.md](artifacts/ti_896_verification.md) — sixteen independent checks (V1–V16).
+Bootstrap script: [artifacts/bootstrap_track_c.py](artifacts/bootstrap_track_c.py)
+Standalone deck builder: [artifacts/build_standalone_deck.py](artifacts/build_standalone_deck.py)
 
 ## 6. Questions Answered
 

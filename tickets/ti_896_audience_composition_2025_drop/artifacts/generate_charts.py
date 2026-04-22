@@ -76,27 +76,30 @@ def save(fig, name):
 
 
 def chart_01_interest_jump(df):
-    """Headline: Peak Performance adoption tripled Sep-Dec 2025."""
+    """Headline: Peak Performance adoption — currently active campaigns only (Fix M10).
+    Trims trailing partial-data week."""
+    df_p = df.copy().sort_values("week_start").reset_index(drop=True)
+    while len(df_p) > 1 and df_p.iloc[-1]["n_advertisers"] < 0.7 * df_p.iloc[-2]["n_advertisers"]:
+        df_p = df_p.iloc[:-1]
+
     fig, ax = plt.subplots(figsize=(11, 5.5))
-    x = df["week_start"]
-    y = df["pct_adv_pp"] * 100
+    x = df_p["week_start"]
+    y = df_p["pct_adv_pp"] * 100
     ax.plot(x, y, color=ACCENT, linewidth=2.4)
 
-    ax.set_title("21% of 2025-active advertisers have adopted Peak Performance",
-                 loc="left", color="#222")
-    ax.set_ylabel("% of 2025-active advertisers with >=1 Peak Performance audience")
-    ax.set_xlabel("")
-    ax.set_ylim(0, max(35, y.max() * 1.1))
-
-    # Direct label: peak
     peak_y = y.iloc[-1]
+    ax.set_title(f"Peak Performance reached {peak_y:.0f}% of currently-active advertisers",
+                 loc="left", color="#222")
+    ax.set_ylabel("% of cohort advertisers running an active PP campaign")
+    ax.set_xlabel("")
+    ax.set_ylim(0, max(20, y.max() * 1.1))
+
     ax.annotate(f"{peak_y:.0f}%",
                 xy=(x.iloc[-1], peak_y),
                 xytext=(6, 0), textcoords="offset points",
                 fontsize=12, color=ACCENT, weight="bold", va="center")
 
-    # Baseline callout — sit well below the line so we don't overprint
-    baseline_idx = (df["week_start"] == pd.Timestamp("2025-09-29")).idxmax()
+    baseline_idx = (df_p["week_start"] == pd.Timestamp("2025-09-29")).idxmax()
     base_y = y.iloc[baseline_idx]
     ax.scatter([x.iloc[baseline_idx]], [base_y], color=GRAY, zorder=3, s=25)
     ax.annotate(f"Sep 29: {base_y:.0f}%",
@@ -108,8 +111,8 @@ def chart_01_interest_jump(df):
     annotate_events(ax)
 
     ax.text(0.01, -0.18,
-            "PP detector: expression carries score_type=rtc + DS13 + DS19 together. "
-            "~1% pre-Oct baseline = early-access / legacy RTC+DS13+DS19 configs, not formal PP. "
+            "PP detector: expression carries score_type=rtc + DS13 + DS19 together. Effective windows capped at "
+            "campaign last-active day (Fix M10) so paused-but-not-deleted campaigns no longer inflate adoption. "
             "Cohort: advertisers with >=1 2025 impression. Source: TI-896.",
             transform=ax.transAxes, fontsize=8, color="#777")
 
@@ -212,7 +215,7 @@ def chart_04_shift_magnitudes(df):
         ax.text(v + off, bar.get_y() + bar.get_height() / 2, f"{v:+.1f}pp",
                 va="center", ha=ha, color=bar.get_facecolor(), weight="bold", fontsize=10)
 
-    ax.set_title("Peak Performance was the only material shift Sep-Dec 2025",
+    ax.set_title("Peak Performance was the dominant audience-presence shift Sep-Dec 2025",
                  loc="left", color="#222")
     ax.set_xlabel("Change in cohort share (percentage points)")
     ax.set_ylabel("")
@@ -228,7 +231,8 @@ def chart_04_shift_magnitudes(df):
 
 
 def chart_05_pp_spend_share(df):
-    """Track A — PP presence share vs PP spend share on same axes."""
+    """Track A — PP presence share vs PP spend share on same axes.
+    Trims trailing weeks below 50% of prior-week spend (Fix M5 — incomplete data tail)."""
     try:
         df_spend = pd.read_csv(OUTPUTS / "ti_896_composition_spend_weighted.csv",
                                parse_dates=["week_start"])
@@ -236,34 +240,108 @@ def chart_05_pp_spend_share(df):
         print("ti_896_composition_spend_weighted.csv not found; skipping chart 05.")
         return
 
+    # Fix M5: drop trailing weeks where total_spend < 50% of prior week
+    df_spend = df_spend.copy().sort_values("week_start").reset_index(drop=True)
+    df_spend["spend_prev"] = df_spend["total_spend"].shift(1)
+    while len(df_spend) > 1 and df_spend.iloc[-1]["total_spend"] < 0.5 * df_spend.iloc[-1]["spend_prev"]:
+        df_spend = df_spend.iloc[:-1]
+    df_spend = df_spend.drop(columns=["spend_prev"])
+
+    df_pres = df.copy().sort_values("week_start").reset_index(drop=True)
+    # Also drop the trailing partial week from presence df (last week n_advertisers fell sharply)
+    while len(df_pres) > 1 and df_pres.iloc[-1]["n_advertisers"] < 0.7 * df_pres.iloc[-2]["n_advertisers"]:
+        df_pres = df_pres.iloc[:-1]
+
     fig, ax = plt.subplots(figsize=(11, 5.5))
-    # Presence line (from main df): pct_adv_pp
-    x1, y1 = df["week_start"], df["pct_adv_pp"] * 100
-    # Spend-weighted line: pct_spend_pp
+    x1, y1 = df_pres["week_start"], df_pres["pct_adv_pp"] * 100
     x2, y2 = df_spend["week_start"], df_spend["pct_spend_pp"] * 100
 
     ax.plot(x1, y1, color=ACCENT, linewidth=2.4, label="% of advertisers with PP")
     ax.plot(x2, y2, color=BASELINE, linewidth=2.4, label="% of MNTN spend on PP campaigns")
 
-    # Direct labels
     ax.text(x1.iloc[-1], y1.iloc[-1], f"  {y1.iloc[-1]:.0f}%  advertisers",
             color=ACCENT, fontsize=10, weight="bold", va="center")
     ax.text(x2.iloc[-1], y2.iloc[-1], f"  {y2.iloc[-1]:.0f}%  spend",
             color=BASELINE, fontsize=10, weight="bold", va="center")
 
-    ax.set_title("Peak Performance spend-weighted view lands below the presence view",
+    ax.set_title("Peak Performance: ~12% of advertisers, ~12% of spend",
                  loc="left", color="#222")
     ax.set_ylabel("% (of advertisers, or of MNTN spend)")
-    ax.set_ylim(0, max(25, max(y1.max(), y2.max()) * 1.15))
+    ax.set_ylim(0, max(20, max(y1.max(), y2.max()) * 1.15))
     annotate_events(ax)
 
     ax.text(0.01, -0.18,
-            "Presence: >=1 PP campaign attached. Spend-weighted: share of cohort media_cost flowing through "
-            "campaigns whose active expression matches PP. Spend view ~8pp below presence view = PP adopters "
-            "skew smaller. Source: TI-896 Track A.",
+            "Presence: >=1 active PP campaign that delivered. Spend-weighted: share of cohort media_cost on "
+            "campaigns running PP. Both metrics now AGREE at ~12% (Fix M10 corrected prior 21% presence "
+            "overcount from paused-campaign attribution). Trailing partial-data weeks trimmed.",
             transform=ax.transAxes, fontsize=8, color="#777")
 
     save(fig, "ti_896_chart_05_pp_spend_share.png")
+
+
+def chart_05b_mm_spend_cliff(df):
+    """Track A sidebar promoted to co-finding (Fix M6) — MM spend cliff Oct 27 2025.
+    MM was 73-79% of cohort spend pre-Oct, dropped to 56% on Oct 27,
+    then 42-46% sustained Nov-Apr 2026."""
+    try:
+        df_spend = pd.read_csv(OUTPUTS / "ti_896_composition_spend_weighted.csv",
+                               parse_dates=["week_start"])
+    except FileNotFoundError:
+        print("ti_896_composition_spend_weighted.csv not found; skipping chart 05b.")
+        return
+
+    # Trim incomplete trailing weeks
+    df_spend = df_spend.copy().sort_values("week_start").reset_index(drop=True)
+    df_spend["spend_prev"] = df_spend["total_spend"].shift(1)
+    while len(df_spend) > 1 and df_spend.iloc[-1]["total_spend"] < 0.5 * df_spend.iloc[-1]["spend_prev"]:
+        df_spend = df_spend.iloc[:-1]
+    df_spend = df_spend.drop(columns=["spend_prev"])
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    x = df_spend["week_start"]
+    y_mm = df_spend["pct_spend_mm"] * 100
+    y_pp = df_spend["pct_spend_pp"] * 100
+    y_kw = df_spend["pct_spend_keywords"] * 100
+    y_3p = df_spend["pct_spend_3p"] * 100
+    y_crm = df_spend["pct_spend_crm"] * 100
+
+    ax.plot(x, y_mm, color=ACCENT, linewidth=2.6, label="MM")
+    ax.plot(x, y_kw, color=BASELINE, linewidth=2.0, label="Keywords")
+    ax.plot(x, y_3p, color=GRAY, linewidth=1.6, label="3P")
+    ax.plot(x, y_crm, color="#888", linewidth=1.6, label="CRM")
+    ax.plot(x, y_pp, color="#4C72B0", linewidth=2.0, label="PP")
+
+    # Direct labels at right
+    for series, label, color in [(y_mm,"MM",ACCENT),(y_kw,"Keywords",BASELINE),(y_3p,"3P",GRAY),(y_crm,"CRM","#888"),(y_pp,"PP","#4C72B0")]:
+        ax.text(x.iloc[-1], series.iloc[-1], f"  {label}  {series.iloc[-1]:.0f}%",
+                color=color, fontsize=10, weight="bold", va="center")
+
+    # Annotate the Oct 27 cliff specifically
+    cliff_date = pd.Timestamp("2025-10-27")
+    cliff_idx_arr = (df_spend["week_start"] == cliff_date)
+    if cliff_idx_arr.any():
+        cliff_idx = cliff_idx_arr.idxmax()
+        cliff_y = y_mm.iloc[cliff_idx]
+        prev_y = y_mm.iloc[cliff_idx - 1] if cliff_idx > 0 else cliff_y
+        ax.annotate(f"Oct 27: MM spend\nfell {prev_y:.0f}% -> {cliff_y:.0f}%",
+                    xy=(cliff_date, cliff_y),
+                    xytext=(20, -40), textcoords="offset points",
+                    fontsize=9, color=ACCENT, weight="bold",
+                    arrowprops=dict(arrowstyle="->", color=ACCENT, lw=1.0))
+
+    ax.set_title("Mountain Matched spend share crashed Oct 27 2025 (coincident with PP rollout)",
+                 loc="left", color="#222")
+    ax.set_ylabel("% of cohort media spend")
+    ax.set_ylim(0, 90)
+    annotate_events(ax)
+
+    ax.text(0.01, -0.18,
+            "MM held 73-79% of cohort spend through Oct 20 2025. On Oct 27 it dropped to 56%; the next two "
+            "weeks fell to 41-44% and stayed there through April 2026 (~30pp below the pre-Oct baseline). "
+            "PP launched Oct 6. The MM cliff is materially larger than the PP rise (in spend dollars).",
+            transform=ax.transAxes, fontsize=8, color="#777")
+
+    save(fig, "ti_896_chart_05b_mm_spend_cliff.png")
 
 
 def chart_06_pp_default_vs_custom(df):
@@ -328,46 +406,71 @@ def chart_06_pp_default_vs_custom(df):
 
 
 def chart_07_pp_vs_conv_scatter(df):
-    """Track C — per-advertiser Δ(PP share) vs Δ(ROAS). Audience-side cross-check."""
+    """Track C — per-advertiser Δ(PP share) vs Δ(ROAS). Audience-side cross-check.
+    Adds bootstrap 95% CIs (Fix M3) and reports n_valid_roas explicitly (Fix M1)."""
     try:
         df_sc = pd.read_csv(OUTPUTS / "ti_896_pp_vs_conv_scatter.csv")
     except FileNotFoundError:
         print("ti_896_pp_vs_conv_scatter.csv not found; skipping chart 07.")
         return
 
-    # Coerce booleans + clip extreme outliers
+    # Cohort sizes BEFORE dropping NaN delta_roas_rel (true cohort sizes)
+    is_new_full = df_sc["is_pp_new_adopter"].astype(str).str.lower() == "true"
+    is_non_full = df_sc["is_non_adopter"].astype(str).str.lower() == "true"
+    n_new_total = int(is_new_full.sum())
+    n_non_total = int(is_non_full.sum())
+
     df_sc = df_sc.dropna(subset=["delta_pp_share", "delta_roas_rel"])
     df_sc = df_sc[(df_sc["delta_roas_rel"] > -1) & (df_sc["delta_roas_rel"] < 5)]
 
-    is_new    = df_sc["is_pp_new_adopter"].astype(str).str.lower() == "true"
-    is_cont   = df_sc["is_pp_continuing"].astype(str).str.lower() == "true"
-    is_non    = df_sc["is_non_adopter"].astype(str).str.lower() == "true"
+    is_new = df_sc["is_pp_new_adopter"].astype(str).str.lower() == "true"
+    is_non = df_sc["is_non_adopter"].astype(str).str.lower() == "true"
+    n_new_valid = int(is_new.sum())
+    n_non_valid = int(is_non.sum())
+
+    # Bootstrap medians (load from JSON if present, else compute inline)
+    rng = np.random.default_rng(20260422)
+    def boot_ci(vals, n_boot=1000):
+        arr = np.array(vals, dtype=float)
+        if len(arr) == 0:
+            return (float("nan"), float("nan"), float("nan"))
+        meds = np.array([np.median(rng.choice(arr, len(arr), replace=True)) for _ in range(n_boot)])
+        return (float(np.median(arr)), float(np.percentile(meds, 2.5)), float(np.percentile(meds, 97.5)))
+
+    new_vals = df_sc.loc[is_new, "delta_roas_rel"].to_numpy()
+    non_vals = df_sc.loc[is_non, "delta_roas_rel"].to_numpy()
+    med_new, lo_new, hi_new = boot_ci(new_vals)
+    med_non, lo_non, hi_non = boot_ci(non_vals)
+    overlap = not (hi_new < lo_non or hi_non < lo_new)
 
     fig, ax = plt.subplots(figsize=(11, 5.5))
-
     ax.axhline(0, color="#333", linewidth=0.5)
     ax.axvline(0, color="#333", linewidth=0.5)
 
-    # Plot non-adopters first (gray), then new adopters (red)
     ax.scatter(df_sc.loc[is_non, "delta_pp_share"] * 100,
                df_sc.loc[is_non, "delta_roas_rel"] * 100,
-               color=GRAY, s=14, alpha=0.45, label=f"Non-adopter (n={is_non.sum()})")
+               color=GRAY, s=14, alpha=0.45,
+               label=f"Non-adopter (n={n_non_total} cohort, {n_non_valid} with valid ROAS)")
     ax.scatter(df_sc.loc[is_new, "delta_pp_share"] * 100,
                df_sc.loc[is_new, "delta_roas_rel"] * 100,
-               color=ACCENT, s=22, alpha=0.75, label=f"New PP adopter (n={is_new.sum()})")
+               color=ACCENT, s=22, alpha=0.75,
+               label=f"New PP adopter (n={n_new_total} cohort, {n_new_valid} with valid ROAS)")
 
-    # Median markers
-    med_new = df_sc.loc[is_new, "delta_roas_rel"].median() * 100
-    med_non = df_sc.loc[is_non, "delta_roas_rel"].median() * 100
-    ax.axhline(med_new, color=ACCENT, linestyle="--", linewidth=1.0, alpha=0.7)
-    ax.axhline(med_non, color="#333", linestyle="--", linewidth=1.0, alpha=0.7)
-    ax.text(55, med_new + 12, f"PP adopter median  +{med_new:.0f}%",
-            color=ACCENT, fontsize=11, weight="bold", ha="center")
-    ax.text(55, med_non + 12, f"Non-adopter median  +{med_non:.0f}%",
-            color="#333", fontsize=11, weight="bold", ha="center")
+    # Median bands with CI shading
+    ax.axhspan(lo_new*100, hi_new*100, color=ACCENT, alpha=0.10)
+    ax.axhspan(lo_non*100, hi_non*100, color="#333", alpha=0.08)
+    ax.axhline(med_new*100, color=ACCENT, linestyle="--", linewidth=1.0, alpha=0.85)
+    ax.axhline(med_non*100, color="#333", linestyle="--", linewidth=1.0, alpha=0.85)
+    ax.text(80, med_new*100 + 18,
+            f"PP adopter median +{med_new*100:.0f}%\nCI95 [{lo_new*100:+.0f}%, {hi_new*100:+.0f}%]",
+            color=ACCENT, fontsize=10, weight="bold", ha="center")
+    ax.text(80, med_non*100 + 18,
+            f"Non-adopter median +{med_non*100:.0f}%\nCI95 [{lo_non*100:+.0f}%, {hi_non*100:+.0f}%]",
+            color="#333", fontsize=10, weight="bold", ha="center")
 
-    ax.set_title("Peak Performance adopters captured half the ROAS lift non-adopters did",
-                 loc="left", color="#222")
+    title = "Both cohorts lifted Q4; adopters' median is lower but CIs overlap" if overlap else \
+            "PP adopters captured significantly less Q4 ROAS lift than non-adopters"
+    ax.set_title(title, loc="left", color="#222")
     ax.set_xlabel("Δ PP delivery share (Aug-Sep to Dec 2025), percentage points")
     ax.set_ylabel("Δ ROAS (Aug-Sep to Dec 2025), relative %")
     ax.set_xlim(-10, 100)
@@ -375,13 +478,134 @@ def chart_07_pp_vs_conv_scatter(df):
 
     ax.legend(loc="upper right", fontsize=9, frameon=False)
 
-    ax.text(0.01, -0.18,
-            "One dot per advertiser (n=1,217 with >=1,000 VVs both windows). Adopter = PP share <1% "
-            "Aug-Sep and >=5% Dec. Both cohorts saw Q4 ROAS lift; adopters lifted ~half as much. "
-            "Audience-side cross-check \u2014 not the canonical conv analysis.",
+    overlap_msg = "CIs OVERLAP — gap is directional, not statistically robust at 95%." if overlap else \
+                  "CIs do NOT overlap — gap survives 1,000-resample bootstrap."
+    pct_valid_new = n_new_valid / n_new_total * 100 if n_new_total else 0
+    pct_valid_non = n_non_valid / n_non_total * 100 if n_non_total else 0
+    ax.text(0.01, -0.20,
+            f"~{pct_valid_new:.0f}% of adopters and ~{pct_valid_non:.0f}% of non-adopters have non-zero order value "
+            f"(rest are lead-gen / no-pixel — ROAS undefined). Medians are computed only on advertisers "
+            f"with valid ROAS in both windows. {overlap_msg} Audience-side cross-check, not canonical conv analysis.",
             transform=ax.transAxes, fontsize=8, color="#777")
 
     save(fig, "ti_896_chart_07_pp_vs_conv_scatter.png")
+
+
+def chart_08_default_vs_custom_roas(df):
+    """Fix Section-4 #2 — default-PP vs custom-PP ROAS deltas."""
+    try:
+        df_dc = pd.read_csv(OUTPUTS / "ti_896_pp_default_custom_roas.csv")
+    except FileNotFoundError:
+        print("ti_896_pp_default_custom_roas.csv not found; skipping chart 08.")
+        return
+
+    adopters = df_dc[df_dc["is_pp_new_adopter"].astype(str).str.lower() == "true"]
+    classes = ["default_dominant", "custom_dominant", "mixed"]
+    rng = np.random.default_rng(20260422)
+    def boot_ci(vals, n_boot=1000):
+        arr = np.array(vals, dtype=float)
+        arr = arr[np.isfinite(arr)]
+        if len(arr) == 0:
+            return (float("nan"), float("nan"), float("nan"), 0)
+        meds = np.array([np.median(rng.choice(arr, len(arr), replace=True)) for _ in range(n_boot)])
+        return (float(np.median(arr)), float(np.percentile(meds, 2.5)), float(np.percentile(meds, 97.5)), len(arr))
+
+    rows = []
+    for cls in classes:
+        sub = adopters[adopters["pp_template_dominant_post"] == cls]
+        n_total = len(sub)
+        med, lo, hi, n_valid = boot_ci(sub["delta_roas_rel"].to_numpy())
+        rows.append((cls, n_total, n_valid, med, lo, hi))
+
+    fig, ax = plt.subplots(figsize=(10, 5.0))
+    labels = [f"{r[0].replace('_dominant','').title()}\n(n={r[1]} cohort, {r[2]} valid ROAS)" for r in rows]
+    medians = [r[3] * 100 for r in rows]
+    los = [(r[3] - r[4]) * 100 for r in rows]
+    his = [(r[5] - r[3]) * 100 for r in rows]
+    colors = [BASELINE, ACCENT, GRAY]
+
+    y = np.arange(len(rows))
+    ax.barh(y, medians, color=colors, alpha=0.85, edgecolor="none", height=0.55)
+    ax.errorbar(medians, y, xerr=[los, his], fmt="none", ecolor="#333", elinewidth=1.4, capsize=6)
+
+    for i, (med, lo, hi) in enumerate(zip(medians, [r[4]*100 for r in rows], [r[5]*100 for r in rows])):
+        ax.text(med + (15 if med >= 0 else -15), y[i],
+                f"{med:+.0f}% (CI {lo:+.0f}% to {hi:+.0f}%)",
+                va="center", ha="left" if med >= 0 else "right",
+                color="#222", fontsize=10, weight="bold")
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    ax.invert_yaxis()
+    ax.axvline(0, color="#333", linewidth=0.6)
+    ax.set_xlabel("Median Δ ROAS (Aug-Sep -> Dec 2025), relative %")
+    ax.set_title("Default vs custom Peak Performance adopters: ROAS lift comparison",
+                 loc="left", color="#222")
+
+    ax.text(0.01, -0.20,
+            "Among new PP adopters (post-window dominant template class). 'Default' = PP segment templates "
+            "carrying only DS13+DS19. 'Custom' = layered with additional DS clauses. Mixed: both. "
+            "Bootstrap 95% CIs from 1,000 resamples. Tiny cohorts mean wide CIs; differences are directional.",
+            transform=ax.transAxes, fontsize=8, color="#777")
+
+    save(fig, "ti_896_chart_08_default_vs_custom_roas.png")
+
+
+def chart_09_weekly_cohort_roas(df):
+    """Fix Section-4 #3 — weekly spend-weighted ROAS time series, adopters vs non.
+    (Median is uninformative — most cohort advertisers have $0 order value.
+    Spend-weighted ROAS captures the dynamics that matter.)"""
+    try:
+        df_w = pd.read_csv(OUTPUTS / "ti_896_weekly_roas_adopters_vs_non.csv",
+                           parse_dates=["week_start"])
+    except FileNotFoundError:
+        print("ti_896_weekly_roas_adopters_vs_non.csv not found; skipping chart 09.")
+        return
+
+    piv = df_w.pivot(index="week_start", columns="cohort", values="spend_weighted_roas")
+    if "new_adopter" not in piv.columns or "non_adopter" not in piv.columns:
+        print("expected cohorts missing; skipping chart 09.")
+        return
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    ax.plot(piv.index, piv["new_adopter"], color=ACCENT, linewidth=2.2, label="New PP adopter cohort")
+    ax.plot(piv.index, piv["non_adopter"], color=BASELINE, linewidth=2.2, label="Non-adopter cohort")
+
+    # Direct labels at right
+    last = piv.iloc[-1]
+    ax.text(piv.index[-1], last["new_adopter"], f"  Adopter  {last['new_adopter']:.0f}",
+            color=ACCENT, fontsize=10, weight="bold", va="center")
+    ax.text(piv.index[-1], last["non_adopter"], f"  Non-adopter  {last['non_adopter']:.0f}",
+            color=BASELINE, fontsize=10, weight="bold", va="center")
+
+    # Annotate baseline window endpoint
+    ax.axvspan(pd.Timestamp("2025-08-01"), pd.Timestamp("2025-09-28"),
+               color="#dddddd", alpha=0.4)
+    ax.text(pd.Timestamp("2025-08-15"), ax.get_ylim()[1]*0.95,
+            "  baseline\n  Aug-Sep", fontsize=9, color="#666", va="top")
+    ax.axvspan(pd.Timestamp("2025-12-01"), pd.Timestamp("2025-12-31"),
+               color="#dddddd", alpha=0.4)
+    ax.text(pd.Timestamp("2025-12-10"), ax.get_ylim()[1]*0.95,
+            "  post\n  Dec", fontsize=9, color="#666", va="top")
+
+    annotate_events(ax)
+
+    ax.set_title("Adopters had higher baseline ROAS than non-adopters — both lifted Q4",
+                 loc="left", color="#222")
+    ax.set_ylabel("Spend-weighted ROAS (order value / media spend)")
+    ax.set_xlabel("")
+    ax.set_ylim(0, max(piv.values.max() * 1.15, 70))
+
+    ax.legend(loc="upper left", fontsize=9, frameon=False)
+
+    ax.text(0.01, -0.18,
+            "Spend-weighted ROAS per cohort per week (median is uninformative because ~50% of cohort "
+            "advertisers have zero order value). Adopter baseline ROAS was ~28-31; non-adopter ~17-25 — a "
+            "~1.5x baseline gap that warns against direct lift comparison without propensity matching. "
+            "Both cohorts lifted Q4 in absolute terms.",
+            transform=ax.transAxes, fontsize=8, color="#777")
+
+    save(fig, "ti_896_chart_09_weekly_cohort_roas.png")
 
 
 def main():
@@ -392,8 +616,11 @@ def main():
     chart_03_retargeting(df)
     chart_04_shift_magnitudes(df)
     chart_05_pp_spend_share(df)
+    chart_05b_mm_spend_cliff(df)
     chart_06_pp_default_vs_custom(df)
     chart_07_pp_vs_conv_scatter(df)
+    chart_08_default_vs_custom_roas(df)
+    chart_09_weekly_cohort_roas(df)
     print(f"Wrote {len(list(ARTIFACTS.glob('ti_896_chart_*.png')))} chart PNGs")
 
 

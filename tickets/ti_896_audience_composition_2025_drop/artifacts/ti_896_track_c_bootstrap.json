@@ -1,0 +1,76 @@
+{
+  "new_adopter": {
+    "n_total": 206,
+    "delta_roas_rel": {
+      "n_valid": 101,
+      "median": 0.644598709,
+      "ci_low": 0.248918448,
+      "ci_high": 1.2079813271249982
+    },
+    "delta_conv_rate_rel": {
+      "n_valid": 179,
+      "median": 0.377280556781159,
+      "ci_low": 0.2417992915117424,
+      "ci_high": 0.7309920421599103
+    },
+    "delta_aov_rel": {
+      "n_valid": 99,
+      "median": -0.012765691,
+      "ci_low": -0.036619874,
+      "ci_high": 0.024542924
+    }
+  },
+  "non_adopter": {
+    "n_total": 1007,
+    "delta_roas_rel": {
+      "n_valid": 381,
+      "median": 1.295355232,
+      "ci_low": 1.034745798,
+      "ci_high": 1.541067526
+    },
+    "delta_conv_rate_rel": {
+      "n_valid": 764,
+      "median": 0.6494109007848472,
+      "ci_low": 0.4857207161065128,
+      "ci_high": 0.8356562863106657
+    },
+    "delta_aov_rel": {
+      "n_valid": 375,
+      "median": -0.000643832,
+      "ci_low": -0.018993234,
+      "ci_high": 0.016865737
+    }
+  },
+  "continuing": {
+    "n_total": 4,
+    "delta_roas_rel": {
+      "n_valid": 3,
+      "median": 2.40133794,
+      "ci_low": 0.75458573,
+      "ci_high": 3.599201429
+    },
+    "delta_conv_rate_rel": {
+      "n_valid": 4,
+      "median": 1.2851350165245694,
+      "ci_low": -1.0,
+      "ci_high": 3.591829368544321
+    },
+    "delta_aov_rel": {
+      "n_valid": 3,
+      "median": -0.101228819,
+      "ci_low": -0.158056488,
+      "ci_high": 0.085349172
+    }
+  },
+  "delta_roas_overlap": {
+    "new_adopter_ci": [
+      0.248918448,
+      1.2079813271249982
+    ],
+    "non_adopter_ci": [
+      1.034745798,
+      1.541067526
+    ],
+    "overlap": true
+  }
+}

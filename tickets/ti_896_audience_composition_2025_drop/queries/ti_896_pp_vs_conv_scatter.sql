@@ -18,14 +18,27 @@ cohort AS (
   WHERE day BETWEEN DATE('2025-01-01') AND CURRENT_DATE() AND impressions > 0
 ),
 
+-- Last delivery day per campaign — used to cap LEAD windows (Fix M10).
+camp_last_active AS (
+  SELECT campaign_id, MAX(day) AS last_active_day
+  FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
+  WHERE day BETWEEN DATE('2025-06-01') AND CURRENT_DATE()
+    AND impressions > 0
+  GROUP BY campaign_id
+),
+
 -- Archive-window flags: per (campaign, day) is this day covered by a PP segment version?
 archive_rows AS (
   SELECT
     asa.campaign_id,
     asa.update_time,
-    COALESCE(
-      LEAD(asa.update_time) OVER (PARTITION BY asa.campaign_id ORDER BY asa.update_time, asa.version),
-      CURRENT_TIMESTAMP()
+    LEAST(
+      COALESCE(
+        LEAD(asa.update_time) OVER (PARTITION BY asa.campaign_id ORDER BY asa.update_time, asa.version),
+        CURRENT_TIMESTAMP()
+      ),
+      COALESCE(TIMESTAMP_ADD(TIMESTAMP(la.last_active_day), INTERVAL 1 DAY),
+               CURRENT_TIMESTAMP())
     ) AS next_update_time,
     REGEXP_CONTAINS(asa.expression, r'"score_type"\s*:\s*"rtc"')
       AND REGEXP_CONTAINS(asa.expression, r'"data_source_id"\s*:\s*13\b')
@@ -33,6 +46,7 @@ archive_rows AS (
   FROM `dw-main-bronze.integrationprod.archives_audience_segment_archives` asa
   JOIN `dw-main-bronze.integrationprod.campaigns` c USING (campaign_id)
   JOIN cohort USING (advertiser_id)
+  LEFT JOIN camp_last_active la USING (campaign_id)
   WHERE asa.expression_type_id = 2 AND asa.is_targeted = TRUE
     AND c.deleted = FALSE AND c.is_test = FALSE
     AND asa.update_time >= TIMESTAMP('2025-06-01')

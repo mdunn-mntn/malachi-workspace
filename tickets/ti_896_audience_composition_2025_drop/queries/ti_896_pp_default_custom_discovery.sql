@@ -73,5 +73,7 @@ SELECT
 FROM pp_audiences pp
 JOIN ds_ids_in_expr dse USING (audience_id)
 WHERE pp.rn = 1
-ORDER BY pp.user_id, pp.audience_id
+-- Random sample (Fix M7) — was ORDER BY user_id, which clustered samples
+-- by service-account groupings and biased the structural-split discovery.
+ORDER BY RAND()
 LIMIT 1000

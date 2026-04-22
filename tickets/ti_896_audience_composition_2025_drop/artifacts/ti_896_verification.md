@@ -179,6 +179,90 @@ DS13 intent layer (small `cats` ids — 107000, 108000, 111004) paired with DS19
 
 ---
 
+## V11 — LEAD-cap correction (Fix M10) — material headline change
+
+**Defect identified by red-team critique:** original `LEAD(update_time)` with `COALESCE(NULL, CURRENT_TIMESTAMP())` extended every campaign-version's effective window indefinitely past the campaign's actual delivery. Paused-but-not-deleted campaigns therefore continued to count as "currently running" their last attached audience set.
+
+**Fix:** `next_update_time = LEAST(LEAD(update_time), TIMESTAMP_ADD(TIMESTAMP(last_active_day), INTERVAL 1 DAY))` where `last_active_day` is the campaign's most recent day with `impressions > 0`.
+
+**Impact (composition_by_week.sql):**
+
+| Date | Old pct_adv_pp | New pct_adv_pp | Δ |
+|---|---:|---:|---:|
+| 2025-09-22 | 1.1% | 0.7% | -0.4pp |
+| 2025-10-06 | 6.9% | 6.5% | -0.4pp |
+| 2025-12-29 | 16.0% | 11.5% | -4.5pp |
+| 2026-04-13 | **20.9%** | **12.4%** | **-8.5pp** |
+
+The discrepancy widens over time as more campaigns accumulate paused-but-not-deleted state. The 21% headline was largely an artifact of that overcounting; the corrected number is ~12%.
+
+**Spend-weighted (Track A):** unchanged (the JOIN to `sum_by_campaign_by_day` already filtered to delivered days; the LEAD cap was a no-op there). Presence and spend-weighted views now agree at ~12%, killing the prior "PP adopters skew smaller" framing.
+
+## V12 — Track C bootstrap CIs (Fix M3) and zero-ROAS contamination (Fix M1)
+
+**Bootstrap setup:** 1,000 resamples, 95% percentile interval, RNG seed 20260422.
+
+**Cohort sizes vs valid-ROAS subsets:**
+
+| Cohort | n total | n with valid ΔROAS | % valid |
+|---|---:|---:|---:|
+| New PP adopter | 206 | 101 | 49% |
+| Non-adopter | 1,007 | 381 | 38% |
+| Continuing | 4 | 3 | — (too small) |
+
+**About half of each cohort has $0 order value** in at least one window (lead-gen advertisers, no-pixel campaigns) — `delta_roas_rel` is computed via `SAFE_DIVIDE(0/X, 0/Y)` which returns NULL. Earlier deck cited "n=161 / n=657" cohort sizes implicitly; medians were computed on the smaller valid subsets without saying so.
+
+**Bootstrap medians and 95% CIs (delta_roas_rel):**
+
+| Cohort | Median | CI95 |
+|---|---:|---:|
+| New PP adopter | +64.5% | [+24.9%, +120.8%] |
+| Non-adopter | +129.5% | [+103.5%, +154.1%] |
+
+**The 95% CIs OVERLAP** ([+25%, +121%] vs [+104%, +154%]). The point-estimate gap is real and directional (~half the lift), but the difference is not statistically robust at 95% under bootstrap resampling. Headline language softened from "captured ~half the lift" to "directional cross-check."
+
+**Conv rate deltas:** new +37.7% [+24%, +73%] vs non +64.9% [+49%, +84%] — CIs nearly touch but overlap slightly. Same directional story.
+
+**AOV deltas:** new -1.3% [-3.7%, +2.5%] vs non -0.1% [-1.9%, +1.7%] — both flat, intervals overlap. AOV story holds.
+
+## V13 — Default vs custom PP × ROAS (Section-4 #2 / Fix M8)
+
+**Method:** intersected Track B template classification with Track C window methodology. Each new-adopter advertiser labeled by the dominant template type (≥80% of post-window PP VVs).
+
+**Cohort sizes (out of 206 new adopters):**
+- 54 default_dominant
+- 135 custom_dominant
+- 17 mixed
+
+**Median delta_roas_rel by class (with bootstrap 95% CI):**
+
+| Class | n total | n valid ROAS | Median | 95% CI |
+|---|---:|---:|---:|---:|
+| Default dominant | 54 | 34 | +41% | wide |
+| Custom dominant | 135 | 58 | +64% | wide |
+| Mixed | 17 | 9 | +290% | wide |
+
+**Conv-rate deltas:** default +42.5% (n=49), custom +24.2% (n=115), mixed +114.1% (n=15).
+
+**Sample sizes are too small for confident inference.** The apparent reversal (custom > default in ROAS lift, default > custom in conv-rate lift) is interesting but the CIs are too wide to claim it. Logged as a follow-up for a longer post window.
+
+## V14 — Random-sample discovery rerun (Fix M7)
+
+**Original discovery:** `ORDER BY pp.user_id, pp.audience_id LIMIT 1000` — 25% pure / 52% layered / 23% heavily-layered.
+**Random sample rerun:** `ORDER BY RAND() LIMIT 1000` — **39% pure / 48% layered / 14% heavily-layered**.
+
+The original's "25% pure" understated the structural-default share by 14pp because the deterministic ordering by user_id clustered service-account audiences (which tend to be layered) at the top of the sample. The random rerun shifts the discovery slightly toward "default" but the weekly classifier output (which runs on the full population, not the sample) was always correct. Discovery legitimacy is now defensible.
+
+## V15 — Trailing-week trim (Fix M5)
+
+Track A spend-weighted CSV's last week (2026-04-13) showed `total_spend = $564K` vs the prior week's $2.77M — incomplete data. Chart generation now drops trailing weeks where `total_spend < 50% of prior week`. Same logic applied to the presence chart (drops weeks where `n_advertisers < 70% of prior week`). Affects only the most recent 1-2 weekly observations.
+
+## V16 — MM spend-share cliff is a 1-week event (Fix M6)
+
+Re-described from "MM spend share dropped 75% → 38% over 18 months" to: **MM held 73-79% of cohort spend through Oct 20 2025; on Oct 27 it fell to 56.7%; Nov 3 to 44.0%; sustained 42-46% through April 2026.** This is a 30pp cliff in 1 week, coincident with PP rollout, and is now treated as a co-equal headline finding rather than a sidebar.
+
+---
+
 ## V10 — Conversion-rate + ROAS cross-check (Track C)
 
 **Query:** [queries/ti_896_pp_vs_conv_scatter.sql](../queries/ti_896_pp_vs_conv_scatter.sql) — per-advertiser deltas for conv rate, ROAS, and AOV from `summarydata.sum_by_campaign_by_day` (no TTL issues).

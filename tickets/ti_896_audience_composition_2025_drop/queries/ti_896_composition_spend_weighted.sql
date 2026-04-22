@@ -21,6 +21,15 @@ cohort AS (
   WHERE day BETWEEN DATE('2025-01-01') AND CURRENT_DATE() AND impressions > 0
 ),
 
+-- Last delivery day per campaign — caps LEAD windows for paused campaigns (Fix M10).
+camp_last_active AS (
+  SELECT campaign_id, MAX(day) AS last_active_day
+  FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
+  WHERE day BETWEEN DATE('2024-11-01') AND CURRENT_DATE()
+    AND impressions > 0
+  GROUP BY campaign_id
+),
+
 ds_class AS (
   SELECT
     data_source_id, name,
@@ -41,9 +50,13 @@ archive_rows AS (
     c.advertiser_id,
     asa.version,
     asa.update_time,
-    COALESCE(
-      LEAD(asa.update_time) OVER (PARTITION BY asa.campaign_id ORDER BY asa.update_time, asa.version),
-      CURRENT_TIMESTAMP()
+    LEAST(
+      COALESCE(
+        LEAD(asa.update_time) OVER (PARTITION BY asa.campaign_id ORDER BY asa.update_time, asa.version),
+        CURRENT_TIMESTAMP()
+      ),
+      COALESCE(TIMESTAMP_ADD(TIMESTAMP(la.last_active_day), INTERVAL 1 DAY),
+               CURRENT_TIMESTAMP())
     ) AS next_update_time,
     asa.expression,
     REGEXP_CONTAINS(asa.expression, r'"score_type"\s*:\s*"rtc"')
@@ -52,6 +65,7 @@ archive_rows AS (
   FROM `dw-main-bronze.integrationprod.archives_audience_segment_archives` asa
   JOIN `dw-main-bronze.integrationprod.campaigns` c USING (campaign_id)
   JOIN cohort USING (advertiser_id)
+  LEFT JOIN camp_last_active la USING (campaign_id)
   WHERE asa.expression_type_id = 2
     AND asa.is_targeted = TRUE
     AND c.deleted = FALSE

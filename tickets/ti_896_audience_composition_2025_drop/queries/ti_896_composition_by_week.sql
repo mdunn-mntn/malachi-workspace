@@ -13,6 +13,17 @@ cohort AS (
     AND impressions > 0
 ),
 
+-- 1b) Last delivery day per campaign — used to cap LEAD windows for paused campaigns
+-- Fix M10: a campaign that was paused and stopped getting CDC updates would
+-- otherwise extend its expression effective window to CURRENT_TIMESTAMP forever.
+camp_last_active AS (
+  SELECT campaign_id, MAX(day) AS last_active_day
+  FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
+  WHERE day BETWEEN DATE('2024-11-01') AND CURRENT_DATE()
+    AND impressions > 0
+  GROUP BY campaign_id
+),
+
 -- 2) DS classifier — aligned to Bryce Wagg's war-room scope post (2026-04-22 13:25).
 -- Bryce's canonical 5 buckets:
 --   DS19 = Keywords
@@ -47,9 +58,15 @@ archive_rows AS (
     asa.audience_id,
     asa.version,
     asa.update_time,
-    COALESCE(
-      LEAD(asa.update_time) OVER (PARTITION BY asa.campaign_id ORDER BY asa.update_time, asa.version),
-      CURRENT_TIMESTAMP()
+    -- Cap effective window at min(LEAD, last_active_day + 1) to prevent paused-but-not-edited
+    -- campaigns from inflating current-week PP adoption (Fix M10).
+    LEAST(
+      COALESCE(
+        LEAD(asa.update_time) OVER (PARTITION BY asa.campaign_id ORDER BY asa.update_time, asa.version),
+        CURRENT_TIMESTAMP()
+      ),
+      COALESCE(TIMESTAMP_ADD(TIMESTAMP(la.last_active_day), INTERVAL 1 DAY),
+               CURRENT_TIMESTAMP())
     ) AS next_update_time,
     asa.expression,
     -- Peak Performance detector (schema-specific to segment_archives).
@@ -64,6 +81,7 @@ archive_rows AS (
   FROM `dw-main-bronze.integrationprod.archives_audience_segment_archives` asa
   JOIN `dw-main-bronze.integrationprod.campaigns` c USING (campaign_id)
   JOIN cohort USING (advertiser_id)
+  LEFT JOIN camp_last_active la USING (campaign_id)
   WHERE asa.expression_type_id = 2
     AND asa.is_targeted = TRUE
     AND c.deleted = FALSE
