@@ -71,7 +71,68 @@ Use `campaigns.objective_id = 4` (retargeting) vs `campaigns.objective_id IN (1,
 
 ## 4. Investigation & Findings
 
-*To be filled as work progresses.*
+### Archive tables (resolved)
+- `dw-main-bronze.integrationprod.archives_audience_segment_archives` confirmed in BQ. 4.1M rows, 279K distinct campaigns, data range 2023-04-20 → 2026-04-22. 3.66M rows have `expression_type_id = 2`.
+- `dw-main-bronze.integrationprod.archives_audiences_archives` also in BQ (template level), 146K rows back to 2011. Has `user_id` and `name` — useful for default-vs-custom work.
+- **No Greenplum dependency** — analysis can live entirely in BQ.
+
+### Canonical DS mapping (critical correction)
+Memory / `data_knowledge.md` had DS3 = LiveRamp 3P — **this is wrong.** The canonical `dw-main-bronze.integrationprod.data_sources` dim says:
+- DS2 = MNTN First Party
+- **DS3 = MNTN Third Party** (not LiveRamp)
+- DS4 = CRM
+- **DS11 = LiveRamp** (not DS3)
+- DS13 = MNTN Vertical Categorization (**= Peak Performance in war-room language, per Bryce**)
+- DS19 = MNTN Matched (**= Keywords in war-room language, per Bryce**)
+- **DS35 = LiveRamp IP** (this is what Bryce listed as "3P" in his scope)
+
+Per-advertiser audiences also get their own DS ids (1000+ range) with names like "{AID} - First Party Audience" / "Third Party Audience" / "Control Group Audience" / "Extension Audience". Meaningful for any MM/3P breakdown that needs to include custom advertiser-built audiences.
+
+→ **Logged in [../../knowledge/data_knowledge.md](../../knowledge/data_knowledge.md) gotchas list on commit.**
+
+### Bryce's canonical 5 buckets (war-room scope)
+Per Bryce's 2026-04-22 13:25 post:
+| Bucket | DS id |
+|---|---|
+| Keywords | DS19 |
+| Peak Performance | DS13 |
+| 3P | DS35 |
+| CRM | DS4 |
+| Mountain Matched (MM) | (interpret as) DS2 + `% - First Party Audience` |
+
+### Primary finding — Peak Performance adoption tripled
+Cohort-level share of 2025-active advertisers using at least one Peak Performance (DS13) audience:
+
+| Week | PP share |
+|---|---|
+| 2025-09-22 | 9.6% (flat line for ~9 months prior) |
+| 2025-09-29 | 12.7% |
+| **2025-10-06** | **15.7%** ← Peak Performance launch week |
+| 2025-10-20 | 19.3% |
+| 2025-11-03 | 21.2% |
+| **2025-11-17** | **23.1%** ← Max Reach scoring turned off Nov 19 |
+| 2025-12-01 | 24.1% |
+| 2025-12-29 | 24.9% |
+| 2026-04-20 | 30% |
+
+**Other buckets in the Sep–Dec 2025 drop window:** MM 100% → 98% (nearly flat); Keywords 70% → 71% (flat); 3P 56% → 57% (flat); CRM 25% → 25% (flat). Retargeting share stable at ~25%.
+
+Peak Performance is the **only** cohort-level composition shift above noise.
+
+### Max Reach off (Nov 19) shows no composition signal
+The Peak Performance ramp continued smoothly through Nov 19. Max Reach turn-off may have affected conversion rates (Ryan confirmed the team only looked at pacing impact at the time) but did not shift *who advertisers targeted* at the cohort level.
+
+### Peak Performance scoring bug ruled out
+Scoring bug existed at PP launch (early Oct 2025), fixed end of Oct. Adoption ramp continued well past the fix — the composition signal is post-fix, not an artifact of random scoring.
+
+### Artifacts
+- Query: [queries/ti_896_composition_by_week.sql](queries/ti_896_composition_by_week.sql)
+- CSV: [outputs/ti_896_composition_by_week.csv](outputs/ti_896_composition_by_week.csv) (77 weeks)
+- Charts: [artifacts/ti_896_chart_*.png](artifacts/) (4 PNGs, 200 DPI, Tufte-aligned)
+- Chart generator: [artifacts/generate_charts.py](artifacts/generate_charts.py)
+- Deck: [artifacts/ti_896_deck_standalone.html](artifacts/ti_896_deck_standalone.html)
+- Deck URL: https://gist.githack.com/mdunn-mntn/f47a6f106ed5ff502cedcb7de50231d8/raw/ti_896_deck_standalone.html
+- War-room context: [meetings/ti_896_war_room_shared_charts_2026_04_22.md](meetings/ti_896_war_room_shared_charts_2026_04_22.md)
 
 ## 5. Solution
 
