@@ -92,7 +92,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <!-- 2. Power Line -->
 <section>
   <p class="big-number-context">Within the audience-composition lane, one shift dominates:</p>
-  <p class="power-line">Peak Performance adoption tripled<br>right after Oct 2025 launch.</p>
+  <p class="power-line">21% of 2025-active advertisers<br>have adopted Peak Performance.</p>
   <p class="big-number-context">Every other bucket &mdash; MM, 3P, CRM, Keywords &mdash; flat in the drop window.</p>
 </section>
 
@@ -113,25 +113,16 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 <!-- 4. The big number -->
 <section>
-  <p class="big-number-context">Share of 2025-active advertisers using Peak Performance audiences</p>
-  <div style="display:flex; justify-content:space-around; align-items:baseline; margin:0.4em 0;">
-    <div>
-      <p class="big-number" style="color:#888; font-size:2.8em;">10%</p>
-      <p class="big-number-context">Sep 22 2025</p>
-    </div>
-    <div style="font-size:2em; color:#888;">&rarr;</div>
-    <div>
-      <p class="big-number">30%</p>
-      <p class="big-number-context">today</p>
-    </div>
-  </div>
-  <p class="big-number-context" style="margin-top:0.8em;">Peak Performance tier launched <b>week of Oct 6 2025</b>.</p>
+  <p class="big-number-context">Of 2025-active advertisers, share with at least one<br>Peak Performance audience attached to an active campaign:</p>
+  <p class="big-number">21%</p>
+  <p class="big-number-context" style="margin-top:0.6em;">4,109 advertisers in cohort. 858 currently running Peak Performance.</p>
+  <p class="big-number-context" style="margin-top:0.8em;">Peak Performance launched <b>week of Oct 6 2025</b>. Pre-launch baseline ~1% (early-access and legacy RTC+DS13+DS19 configurations).</p>
 </section>
 
 <!-- 5. Chart 1 - PP jump -->
 <section class="chart-slide">
   <img src="CHART_01_PLACEHOLDER" alt="Peak Performance jump">
-  <p class="chart-caption">Nine months flat at ~13%, then sharp inflection at the Peak Performance launch. Max Reach scoring off (Nov 19) &mdash; trajectory continued unchanged.</p>
+  <p class="chart-caption">Near-zero through May 2025, ~1% baseline June&ndash;Sep (early-access / legacy RTC configs), sharp inflection at the Oct 6 launch. Max Reach off (Nov 19) &mdash; trajectory continued unchanged.</p>
 </section>
 
 <!-- 6. Chart 2 - Everything else flat -->
@@ -156,7 +147,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <section>
   <h2>Three takeaways</h2>
   <div style="font-size:0.78em; line-height:1.55;">
-    <p><span style="color:#bbb;">1.</span> <b>Peak Performance adoption tripled</b> in the Oct&ndash;Dec 2025 drop window, coincident with launch (Oct 6). Sep 22: 10%. Today: 30%.</p>
+    <p><span style="color:#bbb;">1.</span> <b>Peak Performance adoption reached 21%</b> of 2025-active advertisers. Near-zero pre-launch, inflection at Oct 6.</p>
     <p><span style="color:#bbb;">2.</span> <b>No other audience-type shift</b> above ~1pp noise. MM near-universal, Keywords/3P/CRM flat, retargeting share stable Sep&ndash;Dec 2025.</p>
     <p><span style="color:#bbb;">3.</span> <b>Max Reach off (Nov 19)</b> didn&rsquo;t bend any cohort-level composition curve. Peak Performance ramp continued through it uninterrupted.</p>
   </div>
@@ -204,7 +195,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
       <table>
         <tr><th>Bucket</th><th>DS id</th><th>Canonical name</th></tr>
         <tr><td>Keywords</td><td>DS19</td><td>MNTN Matched</td></tr>
-        <tr><td>Peak Performance</td><td>DS13</td><td>MNTN Vertical Categorization</td></tr>
+        <tr><td>Peak Performance</td><td>score_type=rtc + DS13 + DS19</td><td>(detector) MNTN Vertical Categorization + MNTN Matched + RTC scoring</td></tr>
         <tr><td>3P</td><td>DS35</td><td>LiveRamp IP</td></tr>
         <tr><td>CRM</td><td>DS4</td><td>CRM</td></tr>
         <tr><td>MM</td><td>DS2 + per-advertiser FP</td><td>MNTN First Party + ldquo;{AID} - First Party Audiencerdquo;</td></tr>
@@ -216,7 +207,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 <!-- 14. Close -->
 <section>
-  <p class="power-line" style="margin-top:2em;">Peak Performance adoption tripled<br>right after Oct 2025 launch.</p>
+  <p class="power-line" style="margin-top:2em;">21% of 2025-active advertisers<br>have adopted Peak Performance.</p>
   <p class="big-number-context" style="margin-top:1em;">The audience lane has one signal. Everything else is noise.</p>
   <p class="big-number-context" style="margin-top:0.5em; font-size:0.65em;"><a href="https://mntn.atlassian.net/browse/TI-896" style="color:#888;">TI-896</a> &nbsp;&middot;&nbsp; full methodology, data, next steps &nbsp;&middot;&nbsp; follow-up tomorrow: per-advertiser conversion scatter + default-vs-custom</p>
 </section>

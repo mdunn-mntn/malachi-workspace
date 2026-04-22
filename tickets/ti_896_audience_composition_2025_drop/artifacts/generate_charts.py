@@ -82,9 +82,9 @@ def chart_01_interest_jump(df):
     y = df["pct_adv_pp"] * 100
     ax.plot(x, y, color=ACCENT, linewidth=2.4)
 
-    ax.set_title("Peak Performance audience use tripled after launch",
+    ax.set_title("21% of 2025-active advertisers have adopted Peak Performance",
                  loc="left", color="#222")
-    ax.set_ylabel("% of 2025-active advertisers using Peak Performance audiences")
+    ax.set_ylabel("% of 2025-active advertisers with >=1 Peak Performance audience")
     ax.set_xlabel("")
     ax.set_ylim(0, max(35, y.max() * 1.1))
 
@@ -108,7 +108,8 @@ def chart_01_interest_jump(df):
     annotate_events(ax)
 
     ax.text(0.01, -0.18,
-            "Data: archives_audience_segment_archives, expression JSON -> data_source_id = 13 (Peak Performance). "
+            "PP detector: expression carries score_type=rtc + DS13 + DS19 together. "
+            "~1% pre-Oct baseline = early-access / legacy RTC+DS13+DS19 configs, not formal PP. "
             "Cohort: advertisers with >=1 2025 impression. Source: TI-896.",
             transform=ax.transAxes, fontsize=8, color="#777")
 
@@ -211,7 +212,7 @@ def chart_04_shift_magnitudes(df):
         ax.text(v + off, bar.get_y() + bar.get_height() / 2, f"{v:+.1f}pp",
                 va="center", ha=ha, color=bar.get_facecolor(), weight="bold", fontsize=10)
 
-    ax.set_title("Peak Performance gained +12pp Sep-Dec 2025 — the only material shift",
+    ax.set_title("Peak Performance was the only material shift Sep-Dec 2025",
                  loc="left", color="#222")
     ax.set_xlabel("Change in cohort share (percentage points)")
     ax.set_ylabel("")

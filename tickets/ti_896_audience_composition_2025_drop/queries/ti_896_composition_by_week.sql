@@ -36,7 +36,8 @@ ds_class AS (
   FROM `dw-main-bronze.integrationprod.data_sources`
 ),
 
--- 3) All archive rows for cohort advertisers, with LEAD for effective window
+-- 3) All archive rows for cohort advertisers, with LEAD for effective window.
+-- Flag DS13+DS19 presence per-expression here so the strict PP detector works at version grain.
 archive_rows AS (
   SELECT
     asa.campaign_id,
@@ -50,7 +51,16 @@ archive_rows AS (
       LEAD(asa.update_time) OVER (PARTITION BY asa.campaign_id ORDER BY asa.update_time, asa.version),
       CURRENT_TIMESTAMP()
     ) AS next_update_time,
-    asa.expression
+    asa.expression,
+    -- Peak Performance detector (schema-specific to segment_archives).
+    -- Named PP audiences (sampled in V1 from audiences_archives) pair DS13 intent layer with
+    -- DS19 keywords. Translated to the segment-level schema they ALWAYS carry an RTC score
+    -- directive: "score":{"types":[{"score_type":"rtc","id":<N>}]}. Pre-Oct-2025 matches that
+    -- had DS13+DS19 but NO "score_type":"rtc" were legacy hybrid Interest+Keywords audiences,
+    -- not PP. Require all three signals to count as PP.
+    REGEXP_CONTAINS(asa.expression, r'"score_type"\s*:\s*"rtc"')
+      AND REGEXP_CONTAINS(asa.expression, r'"data_source_id"\s*:\s*13\b')
+      AND REGEXP_CONTAINS(asa.expression, r'"data_source_id"\s*:\s*19\b') AS is_pp_expr
   FROM `dw-main-bronze.integrationprod.archives_audience_segment_archives` asa
   JOIN `dw-main-bronze.integrationprod.campaigns` c USING (campaign_id)
   JOIN cohort USING (advertiser_id)
@@ -72,13 +82,14 @@ archive_ds AS (
     ar.version,
     ar.update_time,
     ar.next_update_time,
+    ar.is_pp_expr,
     CAST(m_ds_id AS INT64) AS data_source_id
   FROM archive_rows ar,
   UNNEST(REGEXP_EXTRACT_ALL(ar.expression, r'"data_source_id"\s*:\s*(\d+)[,}\s]')) AS m_ds_id
 ),
 
 -- 5) Collapse DS ids → category per (campaign, version) — one row per DS-category used
--- Keep Bryce's 5 canonical buckets + MM; drop 'Other' for headline cuts.
+-- Keep the 5 canonical buckets + MM; drop 'Other' for headline cuts.
 archive_cat AS (
   SELECT DISTINCT
     ar.campaign_id,
@@ -88,6 +99,7 @@ archive_cat AS (
     ar.version,
     ar.update_time,
     ar.next_update_time,
+    ar.is_pp_expr,
     dsc.category
   FROM archive_ds ar
   JOIN ds_class dsc USING (data_source_id)
@@ -102,6 +114,7 @@ weekly AS (
     ac.funnel_level,
     ac.objective_id,
     ac.category,
+    ac.is_pp_expr,
     week_start
   FROM archive_cat ac,
   UNNEST(GENERATE_DATE_ARRAY(
@@ -116,22 +129,29 @@ camp_week_cat AS (
   SELECT
     week_start, campaign_id, advertiser_id, category,
     ANY_VALUE(funnel_level) AS funnel_level,
-    ANY_VALUE(objective_id) AS objective_id
+    ANY_VALUE(objective_id) AS objective_id,
+    LOGICAL_OR(is_pp_expr)  AS is_pp_expr
   FROM weekly
   GROUP BY week_start, campaign_id, advertiser_id, category
 ),
 
 -- 8) Per-campaign-week set of categories used (LOGICAL_OR by unique campaign)
+-- Peak Performance uses the STRICT detector (DS13 AND DS19 in same expression)
+-- because post-V3 verification (2026-04-22):
+--   - DS13-alone over-counts: pre-Oct baseline had ~13% DS13 usage without DS19 (plain
+--     Vertical Categorization / Interest audiences, not Peak Performance).
+--   - "Peak Performance"-named audiences ALWAYS pair DS13 intent layer with DS19 keywords
+--     (OR clause). is_pp_expr on archive_rows carries that conjunction, LOGICAL_OR'd here.
 camp_week AS (
   SELECT
     week_start, campaign_id, advertiser_id,
     ANY_VALUE(funnel_level) AS funnel_level,
     ANY_VALUE(objective_id) AS objective_id,
-    LOGICAL_OR(category = 'MM')                AS has_mm,
-    LOGICAL_OR(category = '3P')                AS has_3p,
-    LOGICAL_OR(category = 'CRM')               AS has_crm,
-    LOGICAL_OR(category = 'Peak Performance')  AS has_pp,
-    LOGICAL_OR(category = 'Keywords')          AS has_keywords
+    LOGICAL_OR(category = 'MM')        AS has_mm,
+    LOGICAL_OR(category = '3P')        AS has_3p,
+    LOGICAL_OR(category = 'CRM')       AS has_crm,
+    LOGICAL_OR(is_pp_expr)             AS has_pp,
+    LOGICAL_OR(category = 'Keywords')  AS has_keywords
   FROM camp_week_cat
   GROUP BY week_start, campaign_id, advertiser_id
 )
