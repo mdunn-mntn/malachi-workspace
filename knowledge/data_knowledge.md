@@ -1281,6 +1281,19 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 - Output: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/` partitioned by dt/hh
 - Pipeline code: `steelhouse/airflow-ti` repo, `models/feature_store/feature_group_1_source/`
 
+### augmentor_log `mntn_segments` for holdout IPs (confirmed 2026-04-22)
+When a holdout IP appears in `augmentor_log`, the `mntn_segments` array **does NOT contain the segment the IP is a holdout of**. The filter logic strips the segment at audience evaluation time — holdouts are not qualified to bid on, so the matching segment is never attached to the row.
+
+This means you **cannot** use `mntn_segments` as a proxy for "would we have bid on this IP if not for the holdout." The implication for ghost-bidding / lift measurement:
+- Pick the target audience externally — reconstruct it from `prospecting_scores` / DS13 + DS19 overlap or from `audience_segments.expression`
+- Intersect that targetable IP universe with the holdout hash (`MD5('{AID}:{IP}')` mod 1000 ∈ 0-99)
+- Look those IPs up in `augmentor_log` inside the campaign window — appearances prove biddability (IP was seen by the augmentor, so it was eligible for *some* bid request) even without the segment match on the row itself
+- Matt Brorby verified on a few test IPs; Malachi and Alex Knorr corroborated on Zoom 2026-04-22
+
+Confusingly, the 2026-04-20 verification that "10% of unique IPs in augmentor_log hash into buckets 0-99" is still correct — holdout IPs are present in the log, just not attached to the segment they're a holdout of. The two facts are consistent.
+
+**Also:** advertiser_id 90 is a MNTN PSA advertiser. PSA impressions are served to holdout IPs intentionally (they show up in `cost_impression_log` for buckets 0-99). Exclude AID 90 from any holdout-based lift analysis — Alex Knorr hit this as a confusing anomaly before the PSA fact was surfaced.
+
 ### Parquet vs BQ Schema Differences (confirmed TI-810)
 - **augmentor_log parquet LIST fields** (`pmp`, `iab_categories`, `mntn_segments`): Parquet legacy LIST format = `struct<list: array<struct<element: T>>>`. `F.size(F.col("pmp.list"))` fails in Spark — interpreted as map subscript. Use `F.col("pmp").isNotNull()` instead.
 - **guid_log `product` column**: STRUCT in parquet (`{amount, brand, category, currency, ...}`), but appears as flat columns in BQ silver view. Cannot compare to string `"null"` — use `.isNotNull()`.

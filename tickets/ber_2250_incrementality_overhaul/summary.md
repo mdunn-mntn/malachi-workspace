@@ -8,6 +8,62 @@
 
 ---
 
+## Status Update for Bryce Wagg — 2026-04-22
+
+### TL;DR
+BER-2250 has six active workstreams. The critical-path deliverable is **TI-855 (external vendor validation, due April 30)**, and its critical-path input is **TI-837 ghost bidding methodology**, which is blocked on a single decision by **Alex Bloore**: do we commit to bidder-level ghost bidding (Zach/Jordan build, longer timeline) or run an augmentor_log stopgap analysis now (Malachi build, 1-2 weeks)? Every other workstream is progressing in parallel and either complete (TI-835) or on its own track (TI-831 deciles). **Need Alex Bloore's decision by 2026-04-24 to protect the April 30 date.**
+
+### Timeline at a glance
+
+| Date | Deliverable | Owner | Status |
+|------|-------------|-------|--------|
+| 2026-04-22 PM | Alex Bloore sync — lock methodology path | Malachi | **BLOCKING** |
+| 2026-04-23 | TI-884 Lewis-Rao MDE smoke-test (5 advertisers) | Malachi | On track |
+| 2026-04-24 | TI-891 Alex Bloore CTV-as-accelerator one-pager | Malachi | On track |
+| 2026-04-25 (Fri) | Kirsa sync — TI-885 mid-intent experiment design | Malachi + Kirsa | Blocked on booking |
+| 2026-04-30 | TI-855 experiment setup complete + baseline incrementality estimate | Malachi | **At risk** until 04-22 decision |
+| 2026-05-02 | Todoist: BUK 500 advertiser follow-ups | Malachi | On track (separate) |
+| 2026-05-15 | TI-886 Matt Brorby T-learner review | Malachi | On track |
+| 2026-05-30 | TI-839 ATT results + TI-842 leadership presentation | Malachi | Sequenced |
+
+### Current state per workstream
+
+1. **TI-855 EPIC — External vendor validation (April 30).** Critical path. Blocked on methodology lock.
+2. **TI-835 — Observational analysis.** ✅ Complete (2026-04-08). "Two Stories" finding: guid_log ~0% lift, clickpass_log 2-8x lift. In review by Alex Knorr.
+3. **TI-837 — Ghost bidding implementation.** **Blocked on Alex Bloore decision (2026-04-22).** Methodology refined 2026-04-22: holdout IPs appear in augmentor_log but their `mntn_segments` array does NOT include the segment they are a holdout of. Audience must be reconstructed externally (DS13/DS19 overlap) before intersecting with holdout hash. Ryan Kleck does NOT build pipeline until decision is resolved — analysis-first, pipeline-later. Pick 1-2 advertisers with active 14-day windows.
+4. **TI-884 — Power analysis (Lewis-Rao MDE).** On track, due 2026-04-23. Smoke-test on 5 advertisers, expand to top 50. Not blocked.
+5. **TI-885 — Mid-intent experiment design.** Blocked on Kirsa sync (not yet booked). Owner-side question: 3-cell (existing) vs 2-cell. Due 2026-04-30.
+6. **TI-886 — Matt Brorby T-learner review.** On track, due 2026-05-15. Pull mbrorby/impression-uplift branch; run Qini notebook.
+7. **TI-831 — Population deciles.** Separate workstream. Zach/Jordan own. Confirmed lower priority (2026-04-22 meeting). Needs downstream tracking — we need to know which hash buckets they map to in audience_segments.
+8. **TI-856, TI-857, TI-858, TI-859** — Deferred post-sprint 5752.
+
+### Decision-maker ask — Alex Bloore
+
+**Question:** Should TI-837 ghost bidding be delivered via (A) the augmentor_log stopgap analysis I can build this sprint, or (B) a Zach/Jordan bidder-level implementation with longer timeline?
+
+**Trade-offs:**
+| | A — augmentor_log stopgap | B — bidder-level ghost bidding |
+|--|---|---|
+| Timeline | ~1-2 weeks for 1-2 advertisers | Multi-sprint; Zach/Jordan must scope |
+| April 30 TI-855 | Hits date | Misses date |
+| Scope | Per-advertiser analysis | Reusable production pipeline |
+| Methodological cleanliness | Requires audience reconstruction (DS13/DS19), propensity match, manual per-advertiser setup | Clean: bidder emits decision log at auction time |
+| Throwaway risk | Might duplicate work once B ships | None — directly productionizes |
+| Owner | Malachi (analysis), Ryan (no pipeline yet) | Zach + Jordan + Alex Bloore scoping |
+
+**Recommendation (my read):** do A as a stopgap **and** commit to B as the production path. A's output becomes the validation signal for B, which tells us if the bidder-level work is worth the cycles (Matt Brorby's point from the meeting). A is not throwaway — it's the April 30 deliverable and the baseline we'll compare B against. **This needs your confirmation by 2026-04-24 so Ryan knows whether to clear calendar for B scoping.**
+
+### Open leadership questions (not blocking April 30 but pending)
+- **Kale:** Performance-vs-incrementality trade-off direction. If we adjust targeting for incrementality, IVR falls — approved strategy or advertiser opt-in only?
+- **Alex Bohr:** Product lead on incrementality — should be involved in TI-885 mid-intent experiment design alongside Kirsa.
+
+### Standup flags for Bryce
+- 23 SP in sprint 5752; consider pulling TI-831 (deciles) since Zach/Jordan own and it's lower priority.
+- TI-884, TI-885 marked P3 in Jira but should be P1/P2 given April 30 checkpoint.
+- TI-891 (Alex Bloore positioning), TI-892 (Edgar geo-holdout) need sprint planning — currently backlog.
+
+---
+
 ## 1. Introduction
 
 Initiative to prove whether MNTN's intent tier targeting generates **incremental** lift, or whether we're buying audiences who would have converted anyway. This is the single highest-leverage initiative for Q2 2026.
@@ -205,20 +261,23 @@ Conceptual framework for balancing performance and incrementality long-term:
 - [ ] Determine minimum experiment duration for statistical power
 - [ ] Establish LiftLab liaison/DS relationship
 
-## Jira Structure (updated 2026-04-08)
+## Jira Structure (updated 2026-04-22)
 
 ```
 BER-2250: Incrementality Overhaul (Initiative)
-├── TI-831: Audience Deciles for Advertiser Experimentation (separate workstream)
-└── TI-855: Incrementality Experimentation & External Vendor Validation (EPIC) ← NEW
+├── TI-831: Audience Deciles for Advertiser Experimentation (separate workstream, Zach/Jordan)
+└── TI-855: Incrementality Experimentation & External Vendor Validation (EPIC, Apr 30)
     ├── TI-835: Observational incrementality analysis (10% holdout) — COMPLETE
-    ├── TI-837: Design and implement intent score shuffling experiment — Backlog
+    ├── TI-837: Ghost bidding implementation (pivoted from shuffling) — In Progress, blocked on Alex Bloore
     ├── TI-839: Measure incrementality results — Backlog
     ├── TI-842: Present results to broader audience — Backlog
-    ├── TI-856: Research LiftLab methodology — NEW
-    ├── TI-857: Plan 5 external vendor experiments (Q2 OKR) — NEW
-    ├── TI-858: Identify incremental vs non-incremental audiences — NEW
-    └── TI-859: Expand holdout bucketing infrastructure (Zach + Jordan) — NEW
+    ├── TI-856: Research LiftLab methodology — Deferred
+    ├── TI-857: Plan 5 external vendor experiments (Q2 OKR) — Deferred
+    ├── TI-858: Identify incremental vs non-incremental audiences — Deferred
+    ├── TI-859: Expand holdout bucketing infrastructure (Zach + Jordan) — Deferred
+    ├── TI-884: Power analysis — Lewis-Rao MDE per advertiser (Apr 23)
+    ├── TI-885: Mid-intent treatment experiment setup (Apr 30, blocked on Kirsa)
+    └── TI-886: Matt Brorby T-learner review (May 15)
 ```
 
 ## Child Tickets
@@ -228,13 +287,16 @@ BER-2250: Incrementality Overhaul (Initiative)
 | Ticket | Summary | Status | SP |
 |--------|---------|--------|----|
 | [TI-835](https://mntn.atlassian.net/browse/TI-835) | Observational incrementality analysis (10% holdout) | **Complete** | 3 |
-| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Design and implement intent score shuffling experiment | Backlog | 5 |
+| [TI-837](https://mntn.atlassian.net/browse/TI-837) | Ghost bidding implementation (pivoted from shuffling) | In Progress (blocked on Alex Bloore) | 5 |
 | [TI-839](https://mntn.atlassian.net/browse/TI-839) | Measure incrementality results | Backlog | 5 |
 | [TI-842](https://mntn.atlassian.net/browse/TI-842) | Present results to broader audience | Backlog | 3 |
-| [TI-856](https://mntn.atlassian.net/browse/TI-856) | Research LiftLab methodology | Not Started | 3 |
-| [TI-857](https://mntn.atlassian.net/browse/TI-857) | Plan 5 external vendor experiments (Q2 OKR) | Not Started | 5 |
-| [TI-858](https://mntn.atlassian.net/browse/TI-858) | Identify incremental vs non-incremental audiences | Not Started | 5 |
-| [TI-859](https://mntn.atlassian.net/browse/TI-859) | Expand holdout bucketing infrastructure | Not Started | 5 |
+| [TI-856](https://mntn.atlassian.net/browse/TI-856) | Research LiftLab methodology | Deferred | 3 |
+| [TI-857](https://mntn.atlassian.net/browse/TI-857) | Plan 5 external vendor experiments (Q2 OKR) | Deferred | 5 |
+| [TI-858](https://mntn.atlassian.net/browse/TI-858) | Identify incremental vs non-incremental audiences | Deferred | 5 |
+| [TI-859](https://mntn.atlassian.net/browse/TI-859) | Expand holdout bucketing infrastructure | Deferred | 5 |
+| [TI-884](https://mntn.atlassian.net/browse/TI-884) | Power analysis — Lewis-Rao MDE per advertiser | In Progress (Apr 23) | 3 |
+| [TI-885](https://mntn.atlassian.net/browse/TI-885) | Mid-intent treatment experiment setup | Blocked on Kirsa (Apr 30) | 5 |
+| [TI-886](https://mntn.atlassian.net/browse/TI-886) | Matt Brorby T-learner review | Scheduled (May 15) | 5 |
 
 ### TI-831: Audience Deciles (separate workstream)
 

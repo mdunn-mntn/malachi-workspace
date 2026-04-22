@@ -43,7 +43,9 @@ Matt outlined a model that trains on impressions as a feature — predicting the
 
 **Objective:** Build an ATT estimator using the existing 10% holdout, without requiring bidder-side changes.
 
-**Methodology locked (2026-04-21):** Matt Brorby's event-level filter approach is the *primary* methodology. Ryan Kleck's aggregate win-rate is retained as a *secondary sanity check*. See "Methodology decision rationale" below.
+**Methodology locked (2026-04-21), refined (2026-04-22):** Matt Brorby's event-level filter approach is the *primary* methodology. Ryan Kleck's aggregate win-rate is retained as a *secondary sanity check*. See "Methodology decision rationale" below. Key refinement from 2026-04-22 meeting: holdout IPs appear in augmentor_log but their `mntn_segments` array does NOT include the segment they are a holdout of — so the targetable audience must be reconstructed externally (DS13/DS19 overlap or `audience_segments.expression`) before intersecting with the holdout hash. See "Methodology correction" below.
+
+**Path decision pending Alex Bloore (2026-04-22):** Zach Schoenberger and Jordan Piepkow are discussing with Alex Bloore about implementing ghost bidding at the **bidder level** (production solution, longer timeline). The augmentor_log analysis described here is the **stopgap** that gets us an incrementality estimate for the TI-855 April 30 deliverable without waiting on bidder work. Malachi's sync with Alex Bloore (afternoon of 2026-04-22) is the decision point: commit to the stopgap, or wait for the bidder implementation. Ryan does not build any pipeline until this is resolved.
 
 Matt's framing (from Slack, 2026-04-21): *"use augmentor_log to see if any IPs in the holdout group appear and if we would have bid on them at the time (what was their intent score and what was the HHST?). This will get us candidate IPs from the holdout to build our comparison group. Next steps are possibly post-processing where we sample from these candidates in order to make sure the treated and control groups have similar distributions. The 'distribution' is a bit vague here, but could initially just be trying to match on prospecting intent scores."* Alex Knorr already has the structure started.
 
@@ -64,11 +66,20 @@ Two candidate methodologies surfaced after Matt's Slack clarification and Ryan's
 
 **Storage is a separate design problem.** Matt's methodology does not require full per-event storage — IP-day aggregation with intent-score distribution bins + qualifying-event counts is sufficient. That design is Open (Q4 in the Slack thread).
 
-#### Step 1 (revised): Holdout Candidate Extraction from augmentor_log
-- For each advertiser, pull all holdout IP appearances in `augmentor_log` during the analysis window (hash bucket 0-99 using `MD5(advertiser_id:ip)` → 64-bit unsigned mod 1000).
-- At each appearance, retain the event-level targeting signals: intent score, HHST (Household Signal Threshold — confirm exact semantics with Ryan), mntn_segments, geo, inventory_source, time.
-- Filter to events where **MNTN would have bid** given the campaign's active intent threshold and HHST gate at that moment. Events that don't clear the targeting gate are not candidates.
-- Output: per-advertiser candidate-holdout table of (ip, event_time, intent_score, hhst, etc.)
+#### Step 1 (revised 2026-04-22): Holdout Candidate Extraction from augmentor_log
+**Important:** holdout IPs appear in augmentor_log, but their `mntn_segments` array does NOT include the segment the IP is a holdout of (confirmed empirically by Matt Brorby and Alex Knorr, 2026-04-22 meeting). The audience therefore cannot be reconstructed from `mntn_segments` on the holdout rows. Instead:
+
+1. **Pick the target audience externally.** For a given advertiser and campaign, reconstruct the targetable IP universe from `prospecting_scores` / `advertiser_scores`, or from the DS13 × DS19 overlap that `audience_segments.expression` would resolve to at campaign time. This is the "who would have been eligible" set, independent of holdout status.
+2. **Apply the holdout hash.** Compute `MD5('{advertiser_id}:{ip}')` → 64-bit unsigned → mod 1000 on the targetable IP set. IPs in buckets 0-99 are holdouts for that advertiser.
+3. **Look up in augmentor_log during the campaign window.** For each holdout IP, verify at least one appearance in `augmentor_log` inside the campaign's active window. An appearance proves the IP was biddable (the augmentor evaluated it for *some* bid request) even though `mntn_segments` does not attest to audience membership.
+4. **Attach event-level signals at the appearance.** Retain intent score, HHST (Household Signal Threshold — semantics still to confirm with Ryan), geo, inventory_source, time.
+5. **Filter to events where MNTN would have bid** given the campaign's active intent threshold and HHST gate at that moment.
+
+Output: per-advertiser candidate-holdout table of (ip, event_time, intent_score, hhst, etc.).
+
+**PSA advertiser exclusion:** `advertiser_id = 90` is the MNTN PSA advertiser. PSA impressions are intentionally served to holdout IPs. Exclude AID 90 from the treatment side of the analysis.
+
+**Scope (2026-04-22 meeting decision):** This is analysis-only, not pipeline. Pick 1-2 advertisers with an active 14-day campaign window. Run in BQ SQL. Ryan does NOT build a pipeline version until the analysis produces meaningful results AND the Alex Bloore decision on bidder-level ghost bidding is resolved.
 
 #### Step 2 (revised): Propensity Matching to Build Comparison Group
 - For each advertiser, pair the candidate-holdout table with the actually-served (treatment) table from `cost_impression_log`.
@@ -185,16 +196,20 @@ rather than a scoping session.
 ## 8. Open Items / Follow-ups
 
 - [x] ~~Wait for TI-835 results~~ (complete — "The Two Stories" finding)
-- [x] ~~Verify holdout IPs appear in augmentor_log~~ (complete 2026-04-20 — yes, at 10.0% of unique IPs)
+- [x] ~~Verify holdout IPs appear in augmentor_log~~ (complete 2026-04-20 — yes, at 10.0% of unique IPs. Caveat: segment is NOT in mntn_segments array on those rows, confirmed 2026-04-22)
+- [ ] **Sync with Alex Bloore (2026-04-22 afternoon): commit to augmentor_log stopgap vs wait for bidder-level ghost bidding (Zach/Jordan path)** — blocking decision for TI-855 April 30
 - [ ] Follow up on 8.4% row-level discrepancy with Ryan/Zach — is there a downstream dedupe/freq-cap that treats holdouts differently?
-- [ ] Build win-rate calculation pipeline (augmentor_log + cost_impression_log)
-- [ ] Implement pseudo-exposure assignment for holdout IPs
-- [ ] Compute ATT estimates for 6-10 advertisers by intent tier
+- [ ] Pick 1-2 advertisers with active 14-day campaign windows (post Alex-Bloore sync)
+- [ ] Reconstruct target audiences from prospecting_scores / DS13 × DS19 overlap for picked advertisers
+- [ ] Intersect target IPs with holdout hash (buckets 0-99) and look up in augmentor_log
+- [ ] Propensity-match candidate-holdout distribution to served-treatment distribution on intent score
+- [ ] Compute ATT estimates with CI by intent tier
 - [ ] Implement CUPED variance reduction on pre-period visit history
-- [ ] Run power analysis per advertiser (Lewis-Rao formula)
-- [ ] Set up mid-intent-only treatment campaign with Kirsa/Nick (deadline: April 30th)
+- [ ] Run power analysis per advertiser (Lewis-Rao formula — TI-884)
+- [ ] Set up mid-intent-only treatment campaign with Kirsa/Nick — TI-885 (deadline: April 30th)
 - [ ] Get leadership direction on performance vs incrementality trade-off (Kale/Alex Bohr)
 - [ ] Present ghost bidding methodology and initial results to Kale/Alex Knorr
+- [ ] Exclude AID 90 (MNTN PSA advertiser) from analysis — PSA impressions are served to holdouts intentionally
 
 ## 9. Key References
 
