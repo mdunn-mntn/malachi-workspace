@@ -779,7 +779,13 @@ These are two distinct concepts, often confused:
 **Implication:** Querying `audiences` alone will NOT reveal which audience was actually used for
 targeting. Always join to `audience.audience_segments` for campaign-level analysis.
 
-- `expression_type_id = 2` = TPA (Third Party Audience) expression type — the real JSON expression. **Only type 2 is read by the system** (Zach confirmed). Type 1 is legacy text format — ignore it.
+- `expression_type_id = 2` = TPA (Third Party Audience) expression type — the real JSON expression. **Only type 2 is read by the system** (Zach confirmed). Type 1 is legacy text format — ignore it. (Cross-check: cohort archives since 2025-08-01 have 18,589 type-1 rows of which 100% are `is_targeted=false` — confirms type 1 is non-targeting legacy. Some old ticket comments described type 1 as "OPM" — that's outdated; per Zach 2026-03-13 type 1 is just legacy text format.)
+- **Per-advertiser data source IDs** (`data_sources.data_source_type_id = 2`, IDs ≥1000) with names like `{AID} - First Party Audience`, `{AID} - Third Party Audience`, `{AID} - Control Group Audience`, `{AID} - Extension Audience` — **do NOT appear in segment-archive expression JSON**. Cohort sample (April 2026): 0 expression references to these DS IDs. Audience-bucket detectors that try to match by name pattern (e.g., `name LIKE '% - First Party Audience'`) won't fire on segment expressions. Only global DS IDs (1-99 range) appear. Source: TI-896 verification 2026-04-22.
+- **Canonical `data_sources.name` vs Bryce war-room labels (TI-896, 2026-04-22):**
+  - DS2 canonical name = "MNTN First Party"; Bryce called it "Mountain Matched (MM)"
+  - DS19 canonical name = "MNTN Matched"; Bryce called it "Keywords"
+  - Names don't agree with product labels. Use Bryce's product labels in war-room context; cite canonical names in DS-id reference docs.
+- **Audience-bucket detector convention (used in TI-221, TI-270, TI-896):** filter `expression LIKE '%"data_source_id":N,%'` (Postgres) or `REGEXP_CONTAINS(expression, r'"data_source_id"\s*:\s*N\b')` (BQ). Always with `expression_type_id = 2 AND is_targeted = TRUE`.
 - `audience.audience_segment_campaigns` maps which audience segment is active for each campaign — **1:1 mapping with campaign_id** (not campaign_group_id). This is the real thing that drives delivery.
 
 ### Audience Expression Structure (Nicholas, 2026-04-07)

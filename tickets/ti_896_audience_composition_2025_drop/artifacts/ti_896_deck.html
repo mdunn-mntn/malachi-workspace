@@ -97,6 +97,24 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   </p>
 </section>
 
+<!-- 4b. Detector verification -->
+<section>
+  <h2>Detector verification against prior conventions and the dim</h2>
+  <ul style="font-size:0.65em; line-height:1.5;">
+    <li><b>Detector pattern matches old tickets.</b> TI-221 and TI-270 use <code>expression LIKE '%"data_source_id":19,%' AND expression_type_id = 2</code> for the same Keywords / MNTN Matched detection. Same regex convention as this analysis.</li>
+    <li><b><code>expression_type_id=2</code> filter is correct.</b> Type 1 is legacy text format, not used by the system (Zach 2026-03-13). Cohort sample: 18,589 type-1 rows since Aug 2025, all with <code>is_targeted=false</code> &mdash; not used for targeting.</li>
+    <li><b>Canonical data_sources naming differs from Bryce's product labels.</b>
+      <ul>
+        <li>DS2 canonical name = "MNTN First Party"; Bryce called it "Mountain Matched (MM)"</li>
+        <li>DS19 canonical name = "MNTN Matched"; Bryce called it "Keywords"</li>
+      </ul>
+      Bryce's product labels used throughout this deck. Canonical names cited for cross-reference with the data dim.
+    </li>
+    <li><b>Per-advertiser data source IDs do not appear in segment expressions.</b> The 12,158 per-advertiser sources named <code>{AID} - First Party Audience</code> etc. are zero-prevalence in cohort segment-archive expressions (Apr 2026 sample). The MM detector's <code>name LIKE '% - First Party Audience'</code> fallback clause never fires; effective MM detection is just DS2.</li>
+    <li><b>3P bucket is narrowly scoped per direction</b> (DS35 = LiveRamp IP only). Broader 3P ecosystem (DS3, DS11, DS17, DS18, DS20, DS22, DS29, DS33, DS36, DS39) is excluded by this scope but is present in many PP expressions; would shift 3P numbers if included.</li>
+  </ul>
+</section>
+
 <!-- 5. Cohort and method -->
 <section>
   <h2>Cohort and method</h2>

@@ -3,7 +3,7 @@
 War-room investigation into the late-2025 conversion / ROAS drop. This is the audience-side lane; conversion / pixel / attribution work is owned by Ray's team and customer-mix work by Will Cavey.
 
 Malachi Dunn · 2026-04-22
-Deck: https://gist.githack.com/mdunn-mntn/eca5f8a222e664c2ee8743a26724657c/raw/ti_896_deck_standalone.html
+Deck: https://gist.githack.com/mdunn-mntn/abd19d18ef30cc897d42dbd5b3b8731f/raw/ti_896_deck_standalone.html
 
 ---
 
@@ -49,6 +49,14 @@ Fangorn scoring (4/30 beta launch) maps these to: High Intent 8001-10000, Peak P
 1. **Specificity.** The "PP-enabled" detector requires both DS13 and DS19. Per the state table, true PP-tier impressions (state 5) require DS13 AND vertical match but NOT keywords. So this detector catches audience expressions that enable Mid Intent + High Intent (states 4 + 6) and by inclusion can also deliver to PP. It does NOT specifically catch a "PP-only" audience (state 5 only). Read the 12% number as "advertisers with audiences capable of delivering across the High Intent + PP + Mid Intent tiers" rather than "advertisers explicitly choosing PP".
 
 2. **Bucket overlap.** Of 100 randomly sampled PP-detector segment expressions, 24 also contain DS2 (the MM detector flag). PP-enabled and MM detectors are partially overlapping — counting them as fully independent overstates the underlying composition shift.
+
+### Detector verification against prior conventions
+
+- **Detector pattern matches prior tickets.** TI-221 and TI-270 use `expression LIKE '%"data_source_id":19,%' AND expression_type_id = 2` for the same MM/Keywords detection. Same regex convention.
+- **`expression_type_id = 2` filter is correct.** Per Zach (2026-03-13), type 1 is legacy text format, not read by the system. Cohort archives since Aug 2025 contain 18,589 type-1 rows, all with `is_targeted = false` — confirms type 1 is non-targeting legacy.
+- **Canonical names in `data_sources.name` don't match Bryce's product labels.** DS2's canonical name is "MNTN First Party" (Bryce → "MM"); DS19's canonical name is "MNTN Matched" (Bryce → "Keywords"). Bryce's product labels are used in this analysis; the dim names are cited for cross-reference only.
+- **Per-advertiser data source IDs are zero-prevalence in cohort segment expressions.** The 12,158 per-advertiser sources named `{AID} - First Party Audience`, `{AID} - Third Party Audience`, etc. don't appear in cohort archive expressions (Apr 2026 sample). The MM detector's `name LIKE '% - First Party Audience'` fallback clause never fires; effective MM detection is just DS2.
+- **3P bucket is narrowly scoped per direction (DS35 only).** Broader 3P ecosystem (DS3, DS11, DS17, DS18, DS20, DS22, DS29, DS33, DS36, DS39) is excluded by Bryce's scope. ~10-25% of PP expressions reference these other 3P sources; including them would shift the 3P bucket numbers materially.
 
 ## Headline numbers (Apr 13 2026)
 
