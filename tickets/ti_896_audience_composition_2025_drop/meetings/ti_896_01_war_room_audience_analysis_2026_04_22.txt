@@ -1,0 +1,391 @@
+[00:00] He basically learned that starting sometime in November, we are seeing a
+[00:07] very, uh, significant drop in performance specifically around conversions.
+[00:16] So while all the, like the site visits and like CPMs and all that stuff are fine.
+[00:23] Uh, the actual conversions and like the size of orders, et cetera, have decreased,
+[00:32] which have led to ROAS getting decreased.
+[00:36] Um, the trend seems to be starting out sometime in November.
+[00:43] Uh, they have already went through like a bunch of stuff that got released
+[00:47] during that time and things like that.
+[00:50] Um, so there is a lot of analysis happening right now, but specifically
+[00:56] from our standpoint, Alex Bloor said that he wants us to analyze whether
+[01:04] there are any trends and shifts in audience composition, um, meaning
+[01:12] whether people started to use, um, more mountain matched or have they started
+[01:19] to use more third-party segments or are they doing more stuff with CRMs and
+[01:24] things like that, uh, so they're basically trying to figure out if there
+[01:29] is any correlation between this drop and the way people are building out their
+[01:37] audiences and consequently how we are targeting them.
+[01:43] Okay.
+[01:44] First off, where are the performance numbers coming from?
+[01:47] Like who did the report?
+[01:51] Um, I believe that's just like our pixel conversion data.
+[01:58] I wonder what the difference is.
+[01:59] Do we have those numbers just to see you just across the board?
+[02:05] Uh, it was specifically, uh, the conversion, like the number of conversions
+[02:11] and the, like the order amount bucket, sorry, order amount kind of median that
+[02:20] were decreased, which led to ROAS being decreased as well.
+[02:25] Yes.
+[02:26] Okay.
+[02:31] Do we onboard a bunch of new customers, advertisers?
+[02:35] Uh, we have onboarded people.
+[02:37] Some people have churned.
+[02:39] Uh, they have been looking at like the activity of like new
+[02:43] customers and stuff like that.
+[02:44] They are seeing the trend that like the number of people that have been
+[02:51] onboarding have decreased and also the budget that those people
+[02:57] spend with us have also decreased.
+[03:00] Um, but it does not like the, the amount of like the decrease there does not
+[03:07] correlate to, uh, the amount of drop on the performance side.
+[03:14] And also, uh, they have released, uh, the pixel opt-out functionality, I believe
+[03:22] specifically for conversions around November, but they've also ran the
+[03:27] analysis already that it does not like the numbers there don't correlate.
+[03:32] Um, so there's something else going on.
+[03:34] Okay.
+[03:38] So it would just be nice to see what it is.
+[03:41] It's not like a, is it just like a drastic quick drop or it's
+[03:44] like a gradual drop that's.
+[03:47] I believe it is.
+[03:48] It was like a pretty drastic drop starting in November specifically,
+[03:54] uh, which led them to believe that something is going on.
+[03:59] Um, they're trying to figure out what exactly, uh, but from us, they want to
+[04:04] specifically know the audience composition part, because maybe that will point us
+[04:12] towards a shift in the industry or a shift in like the user behavior and stuff like
+[04:21] that, uh, because I don't believe we had any releases in November.
+[04:27] Uh, pretty much the only thing that comes to mind for me specifically is big
+[04:32] performance, uh, specifically the launch of big performance where we didn't have
+[04:37] the scoring, uh, working properly for that.
+[04:41] There was a performance drop there, but it happened in like beginning of October
+[04:47] and we've fixed the scoring by the end of October.
+[04:51] Uh, so it, it doesn't answer the question.
+[04:55] Why is it still happening?
+[04:59] Yeah.
+[04:59] I'm just trying to think what would cause the only thing I could think of that
+[05:02] would cause like a gradual, if it was a staunch drop and it's related to targeting,
+[05:08] then yeah, I'm, I'm just thinking about what, how we're going to determine the why
+[05:12] here, because if we can replicate and say, Hey, yeah, we can see that problem.
+[05:18] I think then it goes back to, if it is a targeting issue, then it would have to go
+[05:22] back to one of those updates.
+[05:25] What did we do in November?
+[05:26] There was like a big change.
+[05:30] Nothing.
+[05:31] Yeah.
+[05:32] Yeah.
+[05:33] We were, we had cold freeze.
+[05:34] Like that's, that's the biggest kind of question I have here is, Oh, uh, that's
+[05:39] the biggest question I have here is that, yeah, nothing happened product wise in
+[05:45] November because it's holidays and we don't do anything around holidays.
+[05:49] So.
+[05:50] And the advertiser lists that they provided, is that like the focus right now?
+[05:56] Yeah.
+[05:56] So that's basically all the advertisers that were active from the beginning of
+[06:01] 2025.
+[06:03] Okay.
+[06:04] Uh, so they want, they don't, they don't care about everyone who were inactive
+[06:10] during starting like 2025.
+[06:12] So they just like, you gave us a list of everybody who had a campaign running at
+[06:17] some point starting in 2025 and they want to see scoped to those advertisers.
+[06:25] Were there any trends or changes in their audience composition?
+[06:31] So I have the logic from Jordan.
+[06:33] We could look at like how many audiences have data source 19 keywords, how many
+[06:39] have for mountain matched, how many contain data source 35 for third party,
+[06:46] how many contain data source 13, right.
+[06:50] For peak performance.
+[06:51] So there might be some overlapping because you could have multiple of those
+[06:54] things together, but I guess we could try and look at that and then look at when
+[07:00] those campaigns were created or updated or something like that and then break it
+[07:04] out that way.
+[07:06] Yeah.
+[07:07] Yeah.
+[07:07] That sounds, that sounds like a good idea to me.
+[07:10] Uh, one thing to double check with Jordan that I don't have on top of my mind is I
+[07:16] believe we should have like an archive table for audiences specifically.
+[07:21] So.
+[07:23] At least I hope so.
+[07:24] Uh, so you can, uh, you can use that table, um, to kind of see, oh, okay.
+[07:32] We do.
+[07:32] So yeah, you can use the table to kind of see the like changes through time.
+[07:40] Um, yeah.
+[07:44] It's curious the, if it's specifically like ROAS and conversions, that's weird.
+[07:51] Cause it's like, it's, it's not starting at the top of the funnel.
+[07:55] If it's down funnel, what could possibly cause that?
+[07:58] Like, to me, it's something changed with the pixel is one like thing that could
+[08:03] happen as a technical thing that causes a sharp drop.
+[08:06] Otherwise like behavior, we should check for sure.
+[08:09] But behavior, customer behavior, I don't know.
+[08:14] Yeah.
+[08:15] I mean, drastically.
+[08:16] Yeah.
+[08:17] I, I, I don't, I'm not saying that we're going to be able to answer
+[08:22] the whole thing right away.
+[08:24] They're just like trying to basically look at it from all the possible angles.
+[08:29] Um, because some, something is happening, uh, for sure.
+[08:36] We just don't know what, and that's, that's, that's another problem is
+[08:42] that like specifically conversions, like the site visits stayed the same.
+[08:46] The conversions and, uh, order values have gone down.
+[08:52] That's why it wasn't kind of like caught earlier because they were checking
+[08:57] like the IVR and stuff like that.
+[08:59] Um, didn't necessarily pay much attention to like the median ROAS.
+[09:05] So CPM and everything stayed the same.
+[09:08] CPM.
+[09:08] So they actually have decreased CPM like in March because they thought that it was
+[09:14] like one of the potential, like causes of churn that CPM was very high.
+[09:17] like causes of churn that CPM was
+[09:20] very high.
+[09:23] But it had not, it didn't have the effect they were hoping
+[09:26] for it to have.
+[09:29] That's just the customer-facing CPM. It's not the actual, like, will we pay a CPM rate?
+[09:31] That's just the customer facing CPM.
+[09:33] It's not the actual, like what we pay C, CPM, right?
+[09:37] That's what I'm asking.
+[09:40] Yeah, yeah, yeah, yeah, yeah.
+[09:41] The customer facing one.
+[09:42] Correct.
+[09:44] Okay.
+[09:45] Um, I mean, we did, when, when was our Google migration?
+[09:50] I mean, cause that was in September.
+[09:53] Okay.
+[09:56] So that's before, okay.
+[10:00] I don't think this is the cause, but we did remove max reach scoring around that
+[10:06] time.
+[10:08] Yeah.
+[10:08] Let me look at that.
+[10:09] When did we do that?
+[10:17] Max reach on scoring.
+[10:25] December 11 ish.
+[10:30] Okay.
+[10:36] That's definitely something to keep in mind, but yeah, like again, it started in
+[10:41] November, so, and we did a pretty deep investigation on that already, Ryan, I
+[10:45] already, Ryan, I think.
+[10:48] Yeah.
+[10:48] turn off my screen
+[10:52] it's around December I think
+[10:54] having a ticket when I turn it off
+[10:59] but yeah
+[10:59] where did you guys get that advertiser list
+[11:00] Where did you guys get that advertiser list?
+[11:03] Do they post it somewhere?
+[11:04] Yeah.
+[11:04] Yeah.
+[11:05] They posted it in the world in the chat.
+[11:07] Yeah.
+[11:07] Oh, hold on.
+[11:25] I'm sorry.
+[11:26] Maybe I'm blind.
+[11:26] There's a war room chat.
+[11:28] Is that like a channel?
+[11:29] Yeah.
+[11:29] Yeah.
+[11:30] There was a war room channel.
+[11:31] I'll, I'll, uh, everyone involved, uh, November 19th is the exact day we turned
+[11:43] max reach off.
+[11:51] You said November 19th?
+[11:54] Yeah.
+[11:54] November 19th.
+[11:56] Yep.
+[11:57] Is when we turned off the max reach scoring job.
+[12:01] Yeah.
+[12:03] So we started at random.
+[12:06] We didn't have any higher hierarchy for the, uh, uh, what zero to 3,333 and then
+[12:13] went to unscored.
+[12:14] Is that correct?
+[12:16] Yeah.
+[12:16] Yep.
+[12:18] Yeah.
+[12:19] Yeah.
+[12:19] It was getting scored with a random number each day and then, um, yeah, then it went
+[12:27] to just being unscored.
+[12:29] Yeah.
+[12:30] And you said, Ryan, that you guys have already kind of like analyzed that there was no impact
+[12:35] on stuff like that.
+[12:36] Have you looked at it from the conversions perspective?
+[12:40] Uh, it's a good question.
+[12:44] Did we, I don't think so.
+[12:49] I doubt it.
+[12:50] Okay.
+[12:51] Okay.
+[12:51] I think we were looking at like alerts from the pacing team side.
+[12:55] I'm just trying to remember Ryan are like all thing that happened.
+[13:00] Honestly, I don't even know if we looked at visits, but it was more, yeah.
+[13:05] Performance, uh,
+[13:16] yeah.
+[13:16] I mean, so yeah, we could look into that maybe.
+[13:23] Although we, although we only keep scores for 90 day, I forget how long, but they, they
+[13:31] might, I think the scores might be in the cost impression log or something.
+[13:35] So we can look at that.
+[14:02] I remember, but I remember I'm in this channel when it was like right after GCP migration,
+[14:19] where they had issues with the VVS verified visit stuff.
+[14:24] But I don't know if that, or it's weird as this is this, what we're talking about only
+[14:29] affects conversions and not visits, but I know that they saw a drop in verified visits.
+[14:30] and not visits
+[14:31] but
+[14:32] but no that they saw a drop in verified visits i don't know if that ever got resolved but
+[14:44] so we're going to look at the to see if there's any audience changes over that time
+[14:47] So we're going to look at the, to see if there's any audience changes over that time
+[14:55] um, across all these advertisers, is that the first step just to see if their audience,
+[15:00] like expressions that they were selecting, like changed significantly and then
+[15:08] look at these other technical things possibly.
+[15:11] Yeah, I can try and I don't know how I'm going to do the time piece, but I can look at
+[15:17] like the number, the distinct audiences associated with each, you know, containing data source 19,
+[15:24] containing 13, et cetera, um, to try and validate how that, that kind of process.
+[15:33] And then I guess based that on, yeah, I can start there.
+[15:41] Just to clarify with the advertisers, this is, is it just advertisers that started or
+[15:46] advertisers that were already spending start of January, 2025.
+[15:49] And then throughout the year, I'm just like trying to understand the whole filter.
+[15:53] That's a good question.
+[15:54] I believe it's just like anyone who had an active campaign starting January, 2025.
+[16:06] So even if they started their first active campaign.
+[16:08] Yeah.
+[16:09] Even if they started in March, yeah.
+[16:17] Is other teams looking at like the actual data table?
+[16:22] Yeah.
+[16:23] Yeah.
+[16:23] Ray is looking at like the, all the reporting associated stuff and
+[16:29] they're also looking at the pixel stuff and the attribution stuff and everything.
+[16:33] There are a lot going on.
+[16:35] Oh, nice.
+[16:36] So we, so we should really just focus on the audience stuff.
+[16:39] Yeah.
+[16:41] Okay.
+[16:43] Uh, I, I, I mean, I can help out a little, I'm out tomorrow, but, um, if,
+[16:49] yeah, whatever you guys need help with, like if scores or something or, yeah.
+[16:57] I would love to see what I can do without scores.
+[16:59] Just given how hard those are to get.
+[17:02] Well, yeah.
+[17:02] Plus they TTL out.
+[17:04] So you'd have to, uh, like Glacier, whatever GCS equivalent is GCP.
+[17:11] No, they just get deleted.
+[17:13] Oh, I guess.
+[17:15] Can you, do we have like tiered storage?
+[17:22] No, they're just gone.
+[17:25] Honestly.
+[17:27] Then we definitely don't want to go that route.
+[17:29] I was expecting it to let me see how far back they go.
+[17:31] March 16th or yeah.
+[17:35] So it's 35 day TTL.
+[17:38] Yeah.
+[17:38] It's not, not that long.
+[17:43] Yeah.
+[17:44] And sucks.
+[17:52] One question for the group is based off of this.
+[17:56] Um, when do we think that we'll have something back to report?
+[18:01] Do we want to try and shoot?
+[18:02] It's already almost two o'clock mountain time, uh, one o'clock Pacific.
+[18:08] So do we want to try and have an initial set or an initial description of the data by end of today?
+[18:16] That would be ideal in my mind.
+[18:18] Or do we want to try and shoot for tomorrow?
+[18:20] And based off of that timeline, does that impact anything for Fangorn?
+[18:24] So that we can then communicate that downstream.
+[18:30] Got you, Matt and Ronnie.
+[18:31] So that's a question for you specifically about Fangorn timelines.
+[18:37] Um, I don't think it affects anything unless Ryan you're,
+[18:41] I mean, you're already going to be up and you've done this.
+[18:45] There's not much extra planned.
+[18:46] And I'm not planning to take on a bunch of stuff on this if it's not needed.
+[18:50] So, okay.
+[18:53] Yeah.
+[18:53] Same.
+[18:54] I don't think, but if you need help, Alex, yeah, let me know.
+[18:59] Sounds like myself and Malachi can prioritize this work and then doesn't have Fangorn impacts.
+[19:06] Okay.
+[19:07] So you're going to look at the audience, make up Alex and then Malachi.
+[19:11] What are you going to do kind of, or just so?
+[19:15] Um, I don't know.
+[19:19] I mean, Alex, I could help you with that.
+[19:20] Or I don't know if there's anything particular.
+[19:23] I just was kind of wanting to make sure that, um,
+[19:25] uh, what'd you say Ray's team is doing already?
+[19:30] They're looking at like the reporting stuff.
+[19:32] I think they're looking at the reporting end.
+[19:35] I don't know.
+[19:37] How do I find CRM audiences?
+[19:41] It's GS for, I believe.
+[19:43] Yeah.
+[19:43] Yeah.
+[19:44] Okay.
+[19:44] Let me write all these down.
+[19:47] I'll give you the table with all of them if you want.
+[19:49] So we could just see if the distribution of the different types of audiences and what it was.
+[19:54] Um, I wonder if, cause here's the thing.
+[20:00] Here's the thing that I was wondering too, if we're offering people a specific split
+[20:05] with mountain match, but then people deviate from that too, that's also important to know
+[20:09] because then it's not based on our suggestions.
+[20:11] It'd be interesting if it was just like, yeah, everybody comes on our platform, makes a really
+[20:14] crappy choice, but I mean, that's possibility.
+[20:18] So we could probably want to at least rule out like what percentage of people are using
+[20:23] our default audiences versus not, because that could be a good indicator.
+[20:30] I just saw something, when did we start doing holdouts?
+[20:33] Because I mean, I guess that would affect visits too, but yeah, didn't we start doing
+[20:38] holdouts sometime?
+[20:41] I thought holdouts was always a part of things.
+[20:43] Holdouts, we started doing holdouts in experiments, I think around that time, but the holdout
+[20:45] I think around that time but the holdout
+[20:49] logic
+[20:50] existed already
+[20:52] yeah I think it predates like pretty much
+[20:54] everyone on this world
+[20:55] okay okay
+[20:57] yeah um but yeah what what'll suck is if you find there's more mountain match campaigns
+[21:00] But yeah, what will suck is if you find there's more mountain match campaigns, then we're
+[21:05] going to have to like dig into the mountain match like stuff.
+[21:11] This is a different conversation, I know this kind of shoots myself in the foot, but when
+[21:17] it comes to results from experiments, kind of the stuff that I've been going into is
+[21:21] I think that there has to be a change in how we do experiments and stuff, at least with
+[21:27] some of these things, because it's really hard to interpret.
+[21:31] I feel like we could be getting false positive signal on some stuff.
+[21:36] I'm not saying that's the case, but if you take the unscored IPs, for example, we could
+[21:40] be like, oh yeah, everything's all good.
+[21:44] It appears that way, but really we just didn't have enough data to support the results.
+[21:48] Or secondly, we've been focused entirely on IVR, and now there's the switch to which is
+[21:56] going to eventually turn into incremental ROAS, so I mean that's also another thing
+[22:00] is like when we're optimizing just for visits and stuff, that doesn't necessarily correlate
+[22:05] with conversion.
+[22:06] Yeah, exactly.
+[22:07] I mean, it sounds like it would, and it certainly does.
+[22:11] More visits equals more conversions, but that's not necessarily the case.
+[22:16] Like a great example would be like if you just started advertising to a bunch of kids
+[22:19] who don't have a credit card, like they might click on your stuff all day, but I don't know.
+[22:26] I kind of agree with Mark though, you can't really control that, because if you're selling
+[22:31] like Rolexes versus cheap watches, you're going to convert more, or I don't know.
+[22:39] Is the goal of advertising, I guess, to get eyes on your product or to sell your product?
+[22:46] I think it's sell, because when you go into, I mean, it depends.
+[22:49] It depends on what's the end goal.
+[22:52] Like from our perspective, it looks great, performance looks great, but then at the end
+[22:56] of the day, everyone starts going, well, how effective is this, right?
+[22:59] Well, then why do you need salesmen though, if it's to sell the product?
+[23:03] That's just my thinking.
+[23:04] Like a good salesman is worth their weight in gold, you know?
+[23:09] Let's save that conversation for a later debate.
+[23:14] So Alex, you're going to have a, do you think you want to try and post an update before
+[23:18] the end of your day today, or do you want to try and have an update?
+[23:21] Let's try the end of today.
+[23:23] I think I have the query and logic in place.
+[23:27] I just need to run some stuff.
+[23:31] And then, so let's do that.
+[23:33] And then let's also, Mike, you're going to add us to that War Room channel.
+[23:38] We can then communicate our status.
+[23:40] Yep.
+[23:41] Sounds good.
+[23:42] Perfect.
+[23:43] And then the only other thing would be, Alex, is there a way that once you have some initial
+[23:46] thoughts, we can re-sync with Ryan before he's done for the day?
+[23:51] Yeah.
+[23:52] I will, just like this, I'll post another channel in the targeting group for kind of
+[23:57] a wider audience before it goes to the War Room.
+[24:00] Perfect.
+[24:01] Great.
+[24:02] Ryan, are you on, is AZ time Denver time too?
+[24:07] It's not, right?
+[24:08] I don't know.
+[24:09] Arizona's working.
+[24:10] I think I'm an hour ahead of Ryan.
+[24:11] Okay.
+[24:12] It's 1pm.
+[24:13] It's 1pm right now.
+[24:14] Yeah.
+[24:15] Okay.
+[24:16] Two for me.
+[24:17] Okay, perfect.
+[24:18] We have a plan.
+[24:19] Thanks everyone for jumping on and we'll just go from there and see what we have.
+[24:22] Good luck.
+[24:23] Sounds good.
+[24:24] Thank you, Bryce.
