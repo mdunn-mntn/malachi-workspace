@@ -1,0 +1,403 @@
+[00:00] He should be here somewhere. I just talked to him. Let me ping him. Okay, real quick.
+[00:15] Is Jen out today?
+[00:22] Maybe she's double booked. We'll catch up with her after, Nick.
+[00:30] Oh, I gotta do my expenses, too. All right, there he is. Sorry, I was just taking, writing notes, and then I lost track. I forgot, Mike, that you did jump right into this.
+[00:46] All good. All right, let's dive right in. So, we already talked today about the Fangorn release stuff, so we can chat more about that if we need to, if there's any follow-ups. I know we were running over time for those that were in that meeting, but I did want to connect quickly before we get into that on the vertical automation that we looped you guys in on today.
+[01:01] that were in that meeting. Um, but I did want to connect quickly before we get into that on the,
+[01:08] uh, auto vertical automation that we lived you guys in on today. Um,
+[01:15] I think it's probably a combination of me being out of office, Nick being very busy with a bunch of other stuff, including some mode migration, but it seems like it's also been coming in more quickly, that they're not getting manually assigned, and we're having to do it manually.
+[01:30] quickly that they're not getting manually assigned and we're having to do it manually.
+[01:36] The volume seems to be picked up pretty significantly. So I wanted to see if there's
+[01:42] any questions on that or. This group hasn't had really had time to look into that, but it is on
+[01:46] This group hasn't had really had time to look into that, but it is on my to-do list to discuss with Mike and to see where that slots into our current workload, so thanks for bringing it up again, and Mike, we can sync on what makes the most sense to try and resolve that.
+[02:02] Ryan was on call, and so Kirsten pinged the on-call person, but I think that he's out kind of today, so if it's not a P0, it's unlikely that he'll get to it.
+[02:15] All good. Yeah, not a today thing, for sure, but yeah, Nick and I are going to have to put in some hours on those categorizations, unfortunately.
+[02:27] So I want to make sure they don't keep coming at the same rate.
+[02:34] So what is the vertical auto assignment? What's broken?
+[02:38] I don't know if it's broken, or if the volume of those that are coming is just higher, and so the ones that aren't getting auto assigned is also higher, if it's like a percentage of the total that don't get auto assigned.
+[02:52] I think there was a recent fix that we made to that one, or, okay, never mind.
+[02:57] I think we have like over a hundred right now that need to be manually assigned, so.
+[03:03] Is this an express, like mounted express?
+[03:06] It's across all AIDs, I believe, including express.
+[03:10] Yeah, just anyone that doesn't have a vertical assigned, which is like regardless of express, or, yeah.
+[03:17] Well, everyone's going through express now, by default, if they're like a self-sign up, so that could drive the increased volume that you're seeing.
+[03:28] Yeah, I mean, I think that there's definitely more advertisers, like from the, what was it, from the last mountain meet, like the number of absolute volume does seem a lot higher.
+[03:40] But I will say that it seems like anecdotally, like from the quality of like what was the thing, what was the advertisers that would get past the scraper, was like either a combination of like either the website is just like two JPEGs, and there's like no text for the scraper to understand what it is, or like.
+[03:58] It shouldn't have been approved to begin with, like we were working with the domain approval team on those use cases.
+[04:04] Yeah, yeah.
+[04:05] But like, yeah, a lot of them are like, oh, this is very obviously a house cleaning service, you know, like, why wouldn't this be automatically?
+[04:12] I've seen a large amount of car dealerships.
+[04:15] Yeah, that also seems like it should be easy to identify.
+[04:19] Yeah, yeah.
+[04:21] I would hope we can get to a point where, well, I should, they should be few and far between, but also Fangorn, if fully released would eliminate the need for this, or is that not true?
+[04:35] What? It would, it would eliminate the need for this auto assignment stuff to work?
+[04:42] With the assignments in general, the vertical assignments, the current vertical assignments.
+[04:46] It relies even more heavily on that, probably.
+[04:49] Yeah, yeah.
+[04:51] Because the scores are produced at a vertical level and then joined to advertisers based
+[05:02] It relies even more heavily on that probably working.
+[05:06] Because the scores are produced at a vertical level and then joined to advertisers based on their...
+[05:12] Aren't the verticals new or like different than what we're assigning?
+[05:18] Um, I see what you mean.
+[05:25] We need to know what vertical they're in in order to assign them a score because it tells
+[05:33] which vertical is important in the feature space it's like oh you are in the apparel like shoes
+[05:44] vertical therefore all of the good log stuff we have there in that vertical is more important
+[05:47] Or all of the good log stuff we have there in that vertical is more important probably
+[05:52] to look at.
+[05:53] So we like use that as our first guide.
+[05:58] So maybe it's a larger conversation for this group for future planning, which is like,
+[06:07] how do we eliminate that?
+[06:10] I think a year plus ago, we were like, we'll do it temporarily until we find a better solution
+[06:19] within how we score households.
+[06:25] And it doesn't need to be an immediate solution.
+[06:27] good that we have some automation here, but as the person who invented the vertical taxonomy,
+[06:41] I don't think it's very good.
+[06:43] Like I think there's a lot of room for improvement on that because, you know, I just selected
+[06:48] the verticals and the buckets based on the advertisers that we had in late 2023, early
+[06:54] 2024.
+[06:56] And we have not been able to change it since then.
+[06:59] So it would be good to know that there's something at some point in the future that eliminates
+[07:06] the need for these manually assigned verticals.
+[07:11] We had something.
+[07:13] And then it was inching up to be above the line, now it's like disappeared below the
+[07:18] line somewhere.
+[07:19] Oh, I see.
+[07:20] So it's on the roadmap.
+[07:21] It's just not.
+[07:22] Yeah, it's on some roadmap somewhere.
+[07:25] I don't know.
+[07:26] All right.
+[07:27] Cool.
+[07:28] Well, it's just top of mind because we have so many to do today.
+[07:36] All right.
+[07:43] What do you guys have?
+[07:44] Do we want to continue any discussions around the Fangorn release stuff?
+[07:50] Or are we going to have a separate meeting for that?
+[07:55] I think for Fangorn, we're going to take a bit till Monday.
+[07:57] We need to put some data together and make a shiny presentation and all that stuff.
+[08:06] What I think we wanted to focus on today was bottoms up keywords, specifically starting
+[08:16] to engage with you guys, even though it's most likely still kind of like ways away.
+[08:22] We wanted to get this on your radar because that experiment is going to be complex and
+[08:34] we would want to kind of gather as much data there as possible because we are going to
+[08:42] try to evaluate how these two brand new models work together and coexist and how all of that
+[08:51] kind of like this whole precipice of kind of adding these keywords behind the scenes
+[08:55] works and if there is any kind of blind spots in how we are trying to approach it and stuff
+[09:00] like that.
+[09:02] So I think that's kind of what we got, at least for now, the next biggest thing coming
+[09:09] in terms of experiments.
+[09:11] Yeah, let's definitely talk that.
+[09:15] I'm trying to create an epic, but Jen made some changes to our board and now I don't
+[09:21] see anything.
+[09:22] Nick, do you know how to access our board now?
+[09:26] Because I think she changed the type.
+[09:29] For the...
+[09:33] In Jira.
+[09:34] Oh, let me double check.
+[09:36] Let me see.
+[09:37] I'll see if I can pull it up.
+[09:39] It's all right.
+[09:40] I'll just take notes.
+[09:43] I'm not in a ticket.
+[09:46] Okay.
+[09:47] So the experiment is for bottoms up keywords and we want to combine that with continuous
+[09:56] scoring.
+[09:57] Is that correct?
+[09:58] Yeah.
+[09:59] Is that the version of continuous scoring we've talked about in relation to the Fangorn
+[10:04] release where it's in increments of 100 or is it the full version of continuous scoring?
+[10:14] I think the focus is those things will already be on the timeline they're already on.
+[10:18] So whatever version of continuous scoring we kind of land on for Fangorn.
+[10:24] I think it's going out with the, I don't know how you phrased it, Matt, but like a Fangorn
+[10:32] plus where it's like mini continuous scoring, but I'm wondering if we want to test the final
+[10:41] version of continuous scoring alongside bottoms up keywords.
+[10:45] I think it's the full version, right?
+[10:47] With the bottom up keywords.
+[10:49] And that would be down.
+[10:50] Alex has put a lot of work into like that, uh, seeing how the scores play together and
+[10:55] how they track with performance.
+[10:58] So I think we're getting to a point where we're well-informed on how we can combine
+[11:06] these things.
+[11:07] I don't know.
+[11:08] I'm speaking for Alex.
+[11:09] Maybe Alex, you have more.
+[11:11] I guess my point was whether it's continuous or like the a hundred point ranges, I guess
+[11:16] kind of doesn't matter.
+[11:17] Okay.
+[11:18] I see what you mean.
+[11:19] Yeah.
+[11:20] It should be whatever we would want to release.
+[11:21] But yeah, yeah.
+[11:22] I think Kirsa is correct.
+[11:25] Whatever the like most production best version we want to test.
+[11:28] So a hundred point ranges is, uh, continuous in my mind.
+[11:36] Okay.
+[11:37] But yeah, the idea is then with Fangorn in place, with continuous scoring in place, layering
+[11:44] on the bottom up keyword signals that are also, you know, ranked continuous scores for
+[11:51] IPs.
+[11:52] So then an IP is not just 0.9 on Fangorn, it's, you know, 0.9 in Fangorn and 0.8 from
+[12:00] keywords and how we blend that together into a final score.
+[12:04] Okay.
+[12:06] Do we need a few different treatments here to parse out the specific performance improvements
+[12:14] from each feature or do we only care about the overall combination of all three?
+[12:16] Or do we only care about the overall combination of all?
+[12:20] Because this is essentially three features combined into one.
+[12:24] We've tested Fangorn by itself.
+[12:26] We've tested Bottoms Up Keywords by itself.
+[12:29] And the hypothesis is all three combined will provide the performance lift that we're looking for.
+[12:30] And the hypothesis is all three combined will provide the performance lift that we're looking
+[12:36] for.
+[12:38] Do we need to do any other versions of that?
+[12:41] So by that, I mean like continuous scoring alone or, you know, any other iterations of
+[12:47] how we might consider releasing that depending on the results.
+[12:51] The score is probably less interesting, but I think it'd be valuable to include the continuous
+[12:58] score combinations, but with mountain match keywords.
+[13:03] Because even in a bottom-up keywords world, there will be cold start advertisers who we don't have data for, so they'll be using regular keywords.
+[13:14] So there won't be any rankings, but it's probably important to evaluate what the continuous score combinations look like in a uniform keyword set.
+[13:15] So there won't be any rankings, but it's probably important to evaluate what the continuous
+[13:21] score combinations will look like in a uniform keyword setting.
+[13:24] So it will be Fangorn with continuous scoring full version.
+[13:30] Mountain match v2 keywords.
+[13:33] So the scoring won't be that different, but I guess the concept right is of what we're
+[13:38] doing is, you know, keywords ranked one to N for bottom up keywords, LLM keywords don't
+[13:45] have rankings.
+[13:46] So they're all just rank one together.
+[13:49] So if we have one treatment arm that is treating keywords as different intent signals and visits
+[13:56] to them as different, and then we should also evaluate how our current keywords as a different
+[14:02] arm will interact in this new system since they're still going to be used in some way.
+[14:08] Am I explaining that well, Matt or Mike?
+[14:11] Yeah, so basically for layman's like I am, that seems that we're going to be testing what we
+[14:20] have right now.
+[14:21] That's going to be our control, right?
+[14:23] What we will have next month once Fangorn and continuous scoring v0 releases in whatever
+[14:30] shape or form we're doing that, that's going to be the control, right?
+[14:34] Then we're going to be testing what we have with bottoms up keywords because we specifically
+[14:43] want to test out the change we want to do.
+[14:46] And we will also be testing the same kind of pipelines and everything set up for the
+[14:53] bottoms up keywords.
+[14:55] But with the existing mountain match keywords for all of those advertisers that will not be a
+[15:03] part of a rollout, for example, or stuff like that, because we want to make sure that all that
+[15:08] work we're about to release for some people won't break anything for the other people.
+[15:17] Yes.
+[15:18] Okay.
+[15:19] I see.
+[15:21] Okay, so let me just reiterate how I'm thinking of this and you tell me if this aligns.
+[15:26] So the control is Fangorn with continuous scoring mini version.
+[15:34] I don't know of a better way to call it.
+[15:37] For Monday, I'll have a better name, I think.
+[15:40] Okay.
+[15:41] It's a good long weekend task.
+[15:44] Fangorn plus, I think is what you called it earlier.
+[15:47] But I want to make sure that that accounts for that.
+[15:51] There is a version of continuous scoring on that.
+[15:54] And then we can have two treatments in addition to that control.
+[15:58] Treatment one is Fangorn with the full version of continuous scoring and bottoms up keywords integrated.
+[16:07] the second version is just fangorn with the full version of continuous scoring
+[16:13] yeah okay and these are not to keep adding wrinkles high intent is the only thing we care
+[16:17] Yeah.
+[16:18] Okay.
+[16:19] And these are not to keep adding wrinkles.
+[16:23] High intent is the only thing we care about or normal structure, right?
+[16:28] For continuous scoring.
+[16:29] Well, that's going to be my next question.
+[16:31] We have to talk about the audience size and the household score thresholds and how we want to handle that for this.
+[16:38] So, yes.
+[16:46] The theory with continuous scoring, right, is that sizing should not have an impact on our results, right?
+[16:55] So, if my group, my high intent is 30 million, but I'm always targeting kind of the best performing first,
+[17:03] then that high intent total size is no longer like a random bucket I'm pulling from.
+[17:09] So, whether I add 10 million or 20 million kind of lower scoring pieces on the end is less of a concern.
+[17:19] I'm saying that as a somewhat unproven statement.
+[17:24] Yeah.
+[17:26] I'm just thinking, I'm trying to think of a way that we can do this without having all of the different treatments that we did for the last test.
+[17:40] But it is possible that these changes could have a different impact on high intent than they have on a campaign and peak performance than they have on a campaign.
+[17:50] Like that problem statement still exists.
+[17:53] Is that correct?
+[17:55] I guess in continuous scoring world, Matt, can you talk through maybe how we think about intent groups now or how future us will talk about intent groups in this new paradigm?
+[18:04] talk about intent groups in this new paradigm they don't exist is that the right answer
+[18:10] i can finally unveil this love visual perfect setup without meaning to
+[18:15] Love visual.
+[18:16] Perfect setup without meaning to.
+[18:19] So, this is actually slightly incorrect, I noticed.
+[18:21] So, right now, this is how we're working.
+[18:23] High intent, you target the whole thing.
+[18:25] Peak performance, you target the whole thing.
+[18:27] Mid intent, okay, this is technically continuous.
+[18:29] Or not technically, it is continuous.
+[18:31] So, you can go through there.
+[18:33] What we're proposing to do is you just have the slider and it adjusts through all this range.
+[18:40] The idea of up here is high intent and then it's peak performance and mid intent.
+[18:45] Like you can name those ranges.
+[18:47] Yeah.
+[18:48] But it doesn't, it's just continuous the whole way down.
+[18:52] There's no jumps.
+[18:54] As it should be.
+[18:54] There shouldn't be any jumps anywhere along the way.
+[18:56] It should smoothly change intent and it should smoothly change performance.
+[19:02] So...
+[19:04] And then that threshold is defined by pacing of the campaign instead of, you know, pre-campaign cuts that we've decided on.
+[19:14] Yeah.
+[19:15] Say like this bar is your full audience size, right, on the bottom.
+[19:18] And you're trying to hit that dash line.
+[19:19] You know, like that's your demand that you need to hit.
+[19:22] Yeah.
+[19:23] You slide the threshold until you hit it.
+[19:25] So I think in terms of like breaking it up, I don't think it, it doesn't matter for the treatment.
+[19:31] We're not going to lock anything because there's no buckets, right?
+[19:34] We want the score to be automatically adjusting as it's sliding up and down.
+[19:40] But I think the question becomes, do we, like, I think it's imperative that the control,
+[19:50] not every campaign is just targeting, has a 10,000 threshold on their control.
+[19:55] Right.
+[19:56] We need to have some that have 10,000, some that have...
+[20:00] That's a good question.
+[20:03] We do have 8,000, some of them are in mid intent,
+[20:06] because we want to make sure,
+[20:11] Regardless of what threshold each customer currently have, has.
+[20:15] You know, doing that.
+[20:17] On a continuous way is still an improvement.
+[20:26] But the question then becomes,
+[20:29] We just know some of them are targeting high intent,
+[20:31] some of them are targeting peak performance,
+[20:33] some of them are targeting mid intent,
+[20:34] some are targeting max reach.
+[20:36] Because I think we initially started with that approach last time,
+[20:40] and then we moved towards, well, every advertiser is different.
+[20:43] So like, we don't know if,
+[20:45] just because the two that are targeting peak performance saw worsened
+[20:49] performance on continuous scoring,
+[20:51] is that because it was peak performance or because of the AID is uniquely
+[20:55] weird.
+[20:56] So that's how we ended up with all of those iterations last time was
+[21:00] because we wanted to see the impact that this would have across different
+[21:05] types of campaigns that are currently at these different thresholds.
+[21:10] So it's less about the treatment, having a locked threshold,
+[21:13] and more about like, what is the starting point? What is the control?
+[21:20] Yeah, I was kind of thinking it more along the lines of,
+[21:24] how we controlled the audience size in this last experiment where Nick,
+[21:28] you set up the like holdout hash bucketing.
+[21:33] Well, that's a different, also necessary conversation.
+[21:38] But I think like you, because like everything is all, oh,
+[21:42] your budget is not like the actual budget that the advertiser would choose.
+[21:47] But if we can say, okay, we're going to use this much budget,
+[21:52] we're going to reduce on the actual like experiment,
+[21:57] we'll reduce the audience size down,
+[22:00] randomly sample it down so that as the budget gets used,
+[22:05] you can move through these intent ranges. Like you naturally would,
+[22:11] you know, we can maybe control that. That's how I was thinking.
+[22:14] Like, can we,
+[22:15] we can get a, we can force a dollar per user ratio.
+[22:22] Yeah. It's just, it's really not an exact science.
+[22:26] Like we end up hard code. Like we've done that in the past where we're like,
+[22:29] I think if we set this budget with this audience size,
+[22:32] we'll end up at a mid intent threshold and then it still ends up switching and
+[22:37] we have to hard code it. So I think it's easier to just hard code it,
+[22:41] but I'm just trying to think,
+[22:44] do we need all of those iterations per advertiser or can,
+[22:48] can we simplify it because now we have two treatments,
+[22:51] one control across four different audience types.
+[22:59] Yeah.
+[23:00] So that would be four,
+[23:01] essentially it would be four controls and two treatments per.
+[23:09] Right. Am I thinking about that? Right.
+[23:11] Right. I'm just trying to think through if, yeah.
+[23:13] What is the alternative to doing it that way again?
+[23:17] I mean, that's six campaigns instead of what did we have last time?
+[23:20] Eight
+[23:23] slightly better.
+[23:25] And then our main takeaway from the experiment was comparing the like to
+[23:29] like, so high intent to high intent, mid intent to mid intent.
+[23:33] It's kind of where we ended up going.
+[23:34] And then the other stuff was like nice guardrail,
+[23:38] like secondary things to report when there was questions,
+[23:40] but even to do those four comparisons that required all eight campaigns.
+[23:51] It's so many campaigns.
+[23:54] Could we prioritize audience type based on our current customer base?
+[24:04] Like the most common, like, do we have that?
+[24:09] I know we talked about this with the last one,
+[24:11] but do we have a breakdown of across all campaign groups?
+[24:16] What percent are targeting in high intent?
+[24:19] AKA a 10,000 threshold.
+[24:21] What percent are targeting an 8,000 threshold?
+[24:24] What percent are like, do we have that breakdown?
+[24:27] Can we just pick enough versions that gets us to like 70% of customers
+[24:33] covered?
+[24:35] Yeah.
+[24:36] Yeah.
+[24:37] If you choose a high intent and max reach.
+[24:41] Those are the two that are most common.
+[24:44] High intent.
+[24:45] Oh yeah.
+[24:46] From what I've seen in the dashboards from forest,
+[24:48] high intent is typically around 40 something percent of campaigns.
+[24:53] And then max reach is like around 30.
+[24:58] Peak performance is still low around 10%.
+[25:00] I don't know why.
+[25:02] Because we're, we're telling customers it hurts performance.
+[25:08] But I thought it was toggle on by default.
+[25:10] So maybe the getting actually people to opt out of it.
+[25:14] Okay.
+[25:15] But that's like the breakdown.
+[25:17] Okay.
+[25:18] That's good to know.
+[25:19] Yeah.
+[25:23] And basically I've learned in that 40% is who we're kind of targeting for
+[25:27] the first rollout of Fangorn.
+[25:31] And then the rest of us,
+[25:32] we're kind of targeting the ones who are in high intent.
+[25:36] Okay. I think I have what I need, Nick.
+[25:38] We can go back and discuss this more.
+[25:41] And maybe pro con it and.
+[25:44] Get back to you guys on what our recommendation would be.
+[25:49] I'm kind of leaning towards, we just have to have six campaigns and.
+[25:53] Here's a thought that I had.
+[25:55] And you guys pushed back on, tell me why it's not a good idea.
+[25:58] But why do we.
+[25:59] Why don't we just set the thresholds?
+[26:02] I guess then we don't know what happens.
+[26:04] It's going to say, why don't we just set the thresholds to zero?
+[26:07] Target everyone.
+[26:09] That answers that answers the question of what does this feature do for
+[26:12] customers who are targeting in max reach,
+[26:14] which it sounds like is 35% of campaigns.
+[26:18] It just doesn't answer the question.
+[26:20] How does this feature impact a campaign that's currently targeting in
+[26:24] the high intent or.
+[26:25] It's just that we would have targeted people in high intent by doing that.
+[26:28] So we can do the group analysis still, where we say,
+[26:33] we know this household was in high intent when it was targeted,
+[26:37] even though the threshold was really low.
+[26:39] It's like, we have the scores.
+[26:42] You can't do it in mode.
+[26:44] Probably in a nice way. That's the issue.
+[26:46] You can't make a nice clean group.
+[26:49] Well, well, presumably now I'm thinking about it more.
+[26:52] We might be able to skip the lower
+[26:58] threshold versions because
+[27:03] if it's the same group,
+[27:06] well, not that it's the same,
+[27:07] but like it has the highest likelihood of being successful.
+[27:11] So like if we're,
+[27:13] if we have a threshold of zero on a campaign and we release continuous
+[27:19] scoring,
+[27:23] presumably their threshold goes up from zero,
+[27:28] which we, we know will be successful
+[27:35] with more confidence than we know when we're just targeting within high
+[27:39] intent. Like we like, so like,
+[27:43] I think what I'm trying to say is like the,
+[27:47] the lower the threshold to control is the higher,
+[27:49] the likelihood of success.
+[27:51] And so if we can see success with high intent and peak performance,
+[27:55] perhaps we can more safely assume we would have seen success.
+[28:00] If we had done the experiment with mid intent MX reach.
+[28:04] If it beats high intent targeting in performance,
+[28:07] then we don't need to know if it would have beat mid intent just by,
+[28:12] we already kind of understand our score.
+[28:14] Well, and also mid intent is already continuous, right?
+[28:16] Like you were saying. So like, it's like,
+[28:22] we could do high and peak and assume that the same is going to be true for
+[28:27] max reach, or we could do high and peak and max.
+[28:33] But I don't think we need to do mid intent at all.
+[28:38] So Nick and I will talk more and we'll report back,
+[28:43] but we'll start kind of mapping out an experiment for this.
+[28:47] And we'll let you know.
+[28:51] We'll talk more next week.
+[28:57] Thanks for bringing this one up. It's a good discussion.
+[29:04] All right. Thank you guys. Thank you. Thanks. Thanks everybody.

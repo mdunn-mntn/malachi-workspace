@@ -93,3 +93,50 @@ Management has seen two inconclusive BUK experiments and inconsistent beta resul
 - Phase 1 (TI-804) ready to start immediately
 - Phase 3b (TI-807) needs Fangorn experiment details from Alex
 - Experience Scottsdale (switched 2026-03-30) will have enough post data by ~end of April for inclusion in Phase 3
+
+## 9. BUK + Fangorn + Continuous Scoring Experiment Design — Kirsa Meeting (2026-04-23)
+
+**Transcript:** [meetings/ti_803_01_kirsa_buk_experiment_design_2026_04_23.txt](meetings/ti_803_01_kirsa_buk_experiment_design_2026_04_23.txt)
+**Attendees:** Kirsa Haenebalcke, Nick, Mike Dolt, Matt (Brorby), Alex Knorr, Malachi
+
+### Scope
+
+Kirsa's experimentation team engaged early to plan the forthcoming combined experiment: Fangorn + full continuous scoring + BUK (Bottoms-Up Keywords). Meeting was exploratory — Kirsa/Nick will now go draft a formal experiment design and return next week.
+
+### Proposed design (emerging consensus)
+
+**Control:** Fangorn + "mini" continuous scoring (100-point buckets) — i.e., whatever ships with the next Fangorn release. Matt will name this by Monday; "Fangorn Plus" was Kirsa's working label.
+
+**Treatment 1:** Fangorn + **full** continuous scoring + BUK (ranked 1→N keywords)
+**Treatment 2:** Fangorn + **full** continuous scoring + Mountain Match V2 keywords (no BUK rankings)
+- Rationale for Treatment 2: even after BUK rollout, cold-start advertisers with no behavioral data will fall back to MM V2 keywords. Need to evaluate how current (unranked) keywords behave in the new continuous/Fangorn system.
+
+**Audience thresholds to test:**
+- High intent (~40% of campaigns today)
+- Max reach (~30% of campaigns today)
+- Peak performance (~10% of campaigns today)
+- **Mid intent: likely dropped.** Rationale: mid intent is *already* continuous today, so the test doesn't add information. Also: if the experiment wins at the higher threshold, it will almost certainly win at lower thresholds (higher threshold = more aggressive target, harder test).
+
+### Key lessons captured
+
+1. **In continuous-scoring world, "intent groups" don't exist as discrete buckets.** It's a slider — threshold is defined by **campaign pacing toward demand** (adjust until you hit the dashed line), not by pre-campaign bucket cuts. Mid intent is already continuous today.
+2. **Why the last experiment had 8 arms (4 thresholds × 2 treatments):** not to test the treatment at each threshold, but to isolate "is this working differently at different thresholds?" from "is this just advertiser-specific weirdness?" Dropping mid-intent gets us to 6 arms (3×2).
+3. **Budget + audience-size control to force a threshold doesn't work cleanly.** Last time they hard-coded thresholds after repeated size manipulations still produced threshold switching. Hard-coding is simpler and more reliable.
+4. **Theory (unproven):** In continuous scoring, audience sizing shouldn't matter because the algorithm always targets best-performers first. Adding lower-ranked IPs on the end doesn't dilute performance the way it does in discrete-bucket targeting. Needs empirical validation from this experiment.
+5. **"Higher threshold success implies lower threshold success" heuristic** (unproven, used for design choices): if the combined feature wins at high intent (hardest), we can more confidently assume success at max reach. Justifies dropping mid-intent as a design simplification.
+
+### Unresolved threads
+
+- How to blend Fangorn score + BUK keyword score into a final score (e.g., IP = 0.9 Fangorn + 0.8 keywords → what's the combining function?). Alex Knorr has done work here; referenced but not covered in this meeting.
+- Exact control threshold mix. Kirsa leaning toward one control per audience type (not one unified control) to match what advertisers are currently running.
+- Whether this is one experiment or staged experiments. Current lean: one combined experiment with multiple treatment arms.
+
+### Side thread — vertical auto-assignment backlog
+
+Unrelated to BUK but surfaced by Mike Dolt: ~100+ advertisers need manual vertical assignment because auto-assignment is not keeping up with volume. **Fangorn relies *more* heavily on vertical assignment than current targeting** (Fangorn scores are produced at vertical level, then joined to advertisers). Kirsa notes the vertical taxonomy (which she created in late-2023/early-2024) has not been updated and is "not very good" — replacing it has been on a roadmap but is currently below the line. Volume increase driven by self-sign-up advertisers defaulting to Express. Nick + Mike taking manual cleanup; no P0 today but capacity risk if rate continues.
+
+### Next steps
+
+- **Kirsa + Nick:** draft a full experiment design, including treatment arm count and per-advertiser audience-threshold mix. Report back next week.
+- **Matt:** rename "Fangorn Plus" / "mini continuous scoring" to something clearer by Monday.
+- **Alex Knorr:** continue score-blending work (Fangorn × BUK combination function) — referenced as "well-informed" but not detailed here.

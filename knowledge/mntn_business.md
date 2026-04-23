@@ -568,3 +568,16 @@ Luis Chelala joined MNTN as a Senior Project Manager on the PMO team, starting 2
 - 5% are unclassified
 
 This supersedes the previously documented figures of ~32% default / ~61% custom (TI-896), which may have been calculated on a slightly different population or date range. (via malachi, #targeting-squad, 2026-04-22)
+
+### Vertical Taxonomy and Auto-Assignment (Kirsa + Mike Dolt, 2026-04-23)
+
+MNTN's vertical taxonomy was authored by Kirsa Haenebalcke in **late-2023 / early-2024** based on the advertiser mix at the time. It has not been updated since. Kirsa considers it "not very good" — the buckets were chosen from the advertisers she had then, not from a first-principles taxonomy, and it has not been refreshed as the advertiser base has grown.
+
+**Operational consequence:** Every advertiser must have a vertical assigned. Auto-assignment handles most of this, but a growing tail (~100+ at time of this meeting) is not getting auto-assigned and has to be hand-labeled by Mike Dolt and Nick. Root-cause mix is a combination of:
+- Higher advertiser volume overall (absolute count up materially since start of year)
+- Self-sign-up → Express as the default path, which brings more low-signal advertisers into the pipeline
+- Scraper failures on advertisers whose sites are "two JPEGs and no text" or who arguably should not have been approved in the first place
+
+**Why this matters for Fangorn:** Fangorn scores are produced at the **vertical level** and then joined to advertisers. A missing or wrong vertical is not a cosmetic label problem — the advertiser cannot be scored. Fangorn increases, not decreases, the dependency on accurate vertical assignment.
+
+**Roadmap status:** There has been an idea for a vertical-replacement mechanism living in the household-scoring area, but it has slipped below the line on the roadmap. No committed owner or date as of 2026-04-23. Fully releasing Fangorn will NOT eliminate the need for verticals — Fangorn depends on them.

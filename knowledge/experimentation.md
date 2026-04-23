@@ -996,3 +996,38 @@ Source: Edgar von Trotha review of 50+ past MNTN incrementality tests. Full docs
 - **Holdout %** varies widely in tracker — 50% Haus geo holdouts common; 33% seen in 3-cell tests
 - **Power Score column** exists in tracker but sparsely populated — we can fill this in as TI-884 output
 - **Cross-reference Power Score against Lift Achieved** to empirically validate MDE predictions
+
+## Continuous Scoring Experiment Design (Kirsa meeting 2026-04-23)
+
+Source: Meeting with Kirsa Haenebalcke, Nick, Matt Brorby, Mike Dolt, Alex Knorr. Transcript: `tickets/ti_803_buk_value_analysis/meetings/ti_803_01_kirsa_buk_experiment_design_2026_04_23.txt`.
+
+### Intent "groups" disappear under continuous scoring
+
+With full continuous scoring, discrete intent buckets (high / peak / mid / max reach) **stop existing as a targeting concept**. Targeting is a slider over a continuous score; the threshold is set by **campaign pacing toward demand** (slide the threshold until delivery matches the budget line), not pre-campaign bucket cuts.
+
+**Implication for experiment design:**
+- Mid intent today is already continuous, so it provides no new information when testing continuous scoring.
+- Audience-size parity across treatment arms becomes less important: the algorithm always targets best-performers first, so adding more IPs on the end should not dilute performance the way it does in discrete-bucket targeting (theoretical, unproven — flag as a validation target).
+- The unit of variation in a continuous-scoring experiment is the *starting threshold* on the control arm, because that represents what real advertisers currently run.
+
+### Treatment arm count: balancing isolation vs throughput
+
+Past continuous-scoring experiments ran 8 arms (4 thresholds × 2 treatments) to disentangle "is this working differently at different thresholds?" from "is this advertiser-specific weirdness?". **Each threshold in the experiment was not a treatment — it was a noise isolator.**
+
+Design heuristics from Kirsa:
+1. **Drop mid intent** if continuous scoring is in play — it's already continuous, adds no signal.
+2. **Higher threshold success implies lower threshold success** (unproven heuristic). If the treatment wins at high intent (hardest, most constrained audience), we can more confidently assume it wins at max reach. Justifies dropping the easiest thresholds if arm count is a constraint.
+3. **Prioritize thresholds by customer distribution** when trimming arms: at MNTN today roughly 40% high intent, 30% max reach, 10% peak performance, rest mid.
+
+### Budget + audience-size control does not force a threshold cleanly
+
+Attempts to hard-control the threshold via budget × audience-size manipulations have not worked reliably — the campaign switches thresholds even after careful sizing. **Lesson: hard-code the threshold value in the campaign config rather than trying to steer it with budget.** Simpler, more reliable.
+
+### Combined-feature experiments: which arm isolates what?
+
+When testing multiple related features simultaneously (e.g., Fangorn + continuous scoring + BUK), decide up front:
+- Do we only care about the combined end state? → single treatment arm, maximize power.
+- Do we need to isolate each feature's contribution? → arm per isolation, accept lower power.
+- Do we need to cover fallback populations (e.g., cold-start advertisers who won't get BUK)? → add an arm for the fallback config (e.g., MM V2 keywords under continuous scoring without BUK).
+
+For the upcoming BUK + Fangorn + Continuous experiment, Kirsa's emerging design is 3 arms: control = Fangorn + mini-continuous; treatment 1 = full-continuous + BUK; treatment 2 = full-continuous + MM V2. Treatment 2 exists to cover the cold-start fallback, not to isolate continuous-scoring-alone impact.
