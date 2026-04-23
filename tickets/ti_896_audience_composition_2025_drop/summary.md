@@ -240,7 +240,7 @@ Five-phase analytical bundle delivered as a single RevealJS deck (~20 slides) + 
 4. **Track C — ROAS cross-check (with bootstrap CIs)** — adopters median +64% [+25%, +121%], non-adopters +130% [+104%, +154%]. CIs OVERLAP — directional only.
 5. **Track D — Default vs custom × ROAS** + **Track E — Weekly cohort ROAS time series**. Selection bias surfaced: adopters had ~1.5x higher baseline ROAS.
 
-Final deck (v2): https://gist.githack.com/mdunn-mntn/f4206b0d0726cb75d8356191e3fb9466/raw/ti_896_deck_standalone.html
+Final deck (v2): https://gist.githack.com/mdunn-mntn/4655922f7b6f7cee1ed0d200fbc8154e/raw/ti_896_deck_standalone.html
 
 Verification bundle: [artifacts/ti_896_verification.md](artifacts/ti_896_verification.md) — sixteen independent checks (V1–V16).
 Bootstrap script: [artifacts/bootstrap_track_c.py](artifacts/bootstrap_track_c.py)

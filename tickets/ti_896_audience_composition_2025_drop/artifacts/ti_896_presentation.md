@@ -3,7 +3,7 @@
 War-room investigation into the late-2025 conversion / ROAS drop. This is the audience-side lane; conversion / pixel / attribution work is owned by Ray's team and customer-mix work by Will Cavey.
 
 Malachi Dunn · 2026-04-22
-Deck: https://gist.githack.com/mdunn-mntn/f4206b0d0726cb75d8356191e3fb9466/raw/ti_896_deck_standalone.html
+Deck: https://gist.githack.com/mdunn-mntn/4655922f7b6f7cee1ed0d200fbc8154e/raw/ti_896_deck_standalone.html
 
 ---
 

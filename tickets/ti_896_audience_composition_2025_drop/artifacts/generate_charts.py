@@ -187,11 +187,11 @@ def chart_04_shift_magnitudes(df):
     dec = df[df["week_start"] == pd.Timestamp("2025-12-29")].iloc[0]
 
     categories = [
-        ("Peak Performance", "pct_adv_pp"),
-        ("Keywords",         "pct_adv_keywords"),
-        ("3P",               "pct_adv_3p"),
-        ("CRM",              "pct_adv_crm"),
-        ("MM",               "pct_adv_mm"),
+        ("DS13+DS19+rtc",    "pct_adv_pp"),
+        ("Keywords (DS19)",  "pct_adv_keywords"),
+        ("3P (DS35)",        "pct_adv_3p"),
+        ("CRM (DS4)",        "pct_adv_crm"),
+        ("DS2 (OPM)",        "pct_adv_mm"),
         ("Retargeting",      "pct_camp_retargeting"),
         ("Prospecting",      "pct_camp_prospecting"),
     ]
