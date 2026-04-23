@@ -88,9 +88,9 @@ def chart_01_interest_jump(df):
     ax.plot(x, y, color=ACCENT, linewidth=2.4)
 
     peak_y = y.iloc[-1]
-    ax.set_title(f"Peak Performance presence — % of currently-active advertisers (Nov 2024 - Apr 2026)",
+    ax.set_title(f"DS13+DS19 expressions — % of currently-active advertisers (Nov 2024 - Apr 2026)",
                  loc="left", color="#222")
-    ax.set_ylabel("% of cohort advertisers running an active PP campaign")
+    ax.set_ylabel("% of cohort advertisers with DS13+DS19+rtc audience")
     ax.set_xlabel("")
     ax.set_ylim(0, max(20, y.max() * 1.1))
 
@@ -111,9 +111,9 @@ def chart_01_interest_jump(df):
     annotate_events(ax)
 
     ax.text(0.01, -0.18,
-            "PP detector: expression carries score_type=rtc + DS13 + DS19 together. Effective windows capped at "
-            "campaign last-active day (Fix M10) so paused-but-not-deleted campaigns no longer inflate adoption. "
-            "Cohort: advertisers with >=1 2025 impression. Source: TI-896.",
+            "Detector: expression carries score_type=rtc + DS13 + DS19 together. This catches all HI campaigns and "
+            "some PP campaigns (PP can also have DS19 in expression but it doesn't affect targeting). "
+            "Effective windows capped at campaign last-active day. Cohort: advertisers with >=1 2025 impression.",
             transform=ax.transAxes, fontsize=8, color="#777")
 
     save(fig, "ti_896_chart_01_pp_jump.png")

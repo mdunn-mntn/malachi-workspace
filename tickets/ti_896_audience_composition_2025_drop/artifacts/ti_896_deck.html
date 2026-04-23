@@ -7,9 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
 <style>
-:root {
-  --navy: #1B2A4A; --red: #D63B2F; --bg: #FAFAFA; --text: #222; --text-light: #666;
-}
+:root { --navy: #1B2A4A; --red: #D63B2F; --bg: #FAFAFA; --text: #222; --text-light: #666; }
 html, body { background: var(--bg); }
 .reveal { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--text); font-size: 30px; }
 .reveal .slides { text-align: left; }
@@ -34,6 +32,7 @@ th, td { padding: 0.4em 0.7em; text-align: left; border-bottom: 1px solid #eee; 
 th { color: var(--text-light); font-weight: 600; border-bottom: 2px solid #ddd; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .note { color: var(--text-light); font-size: 0.55em; line-height: 1.4; margin-top: 0.6em; }
+.warn { color: var(--red); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -46,109 +45,68 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   Malachi Dunn &middot; 2026-04-22</p>
 </section>
 
-<!-- 2. Headline -->
+<!-- 2. Scope and definitions caveat -->
+<section>
+  <h2>Scope</h2>
+  <p style="font-size:0.72em; line-height:1.5;">
+    Audience-side investigation: did the mix of audience types used by 2025-active advertisers shift during the late-2025 conversion drop? Cohort: 4,109 advertisers active in 2025 (~4,000 currently active). Lookback: Nov 2024 - Apr 2026, weekly. Source: <code>archives_audience_segment_archives</code> + <code>sum_by_campaign_by_day</code>.
+  </p>
+  <p style="font-size:0.72em; line-height:1.5; margin-top:1em;">
+    <span class="warn">Definitions caveat:</span> "MM", "PP", "HI", "MI", "Max Reach" do not currently have authoritative org-wide DB-level detector definitions. Multiple sources gave conflicting interpretations (Bryce, Michelle, Nick, Zach, Alyson, Ryan). This deck uses a single concrete detector &mdash; <b>DS13+DS19+rtc presence in segment expression</b> &mdash; for the trajectory-rise finding, which catches all HI campaigns and some PP campaigns but does not separate them. Definition reconciliation tracked in <a href="https://mntn.atlassian.net/browse/TI-897" style="color:#2E5090;">TI-897</a>.
+  </p>
+</section>
+
+<!-- 3. Headline numbers -->
 <section>
   <h2>Headline numbers (week of Apr 13 2026)</h2>
   <table>
-    <tr><th>Bucket</th><th class="num">% advertisers</th><th class="num">% of cohort spend</th><th class="num">Δ presence Sep 29 → Dec 29 2025</th></tr>
-    <tr><td>Peak Performance (DS13+DS19+rtc)</td><td class="num">12.4%</td><td class="num">12.2%</td><td class="num">+7.8 pp</td></tr>
-    <tr><td>OPM segments (DS2)</td><td class="num">96.6%</td><td class="num">39.1%</td><td class="num">−2.0 pp</td></tr>
-    <tr><td>Keywords (DS19)</td><td class="num">40.4%</td><td class="num">39.7%</td><td class="num">−4.9 pp</td></tr>
-    <tr><td>3P (DS35)</td><td class="num">32.1%</td><td class="num">41.5%</td><td class="num">−3.5 pp</td></tr>
-    <tr><td>CRM (DS4)</td><td class="num">18.7%</td><td class="num">34.2%</td><td class="num">−0.5 pp</td></tr>
+    <tr><th>Metric</th><th class="num">Value</th></tr>
+    <tr><td>Cohort advertisers with DS13+DS19+rtc audience expressions (PP-toggle / HI capable)</td><td class="num">12.4%</td></tr>
+    <tr><td>Cohort spend through DS13+DS19+rtc-flagged campaigns</td><td class="num">12.2%</td></tr>
+    <tr><td>Pre-launch baseline (Sep 2025)</td><td class="num">~1%</td></tr>
+    <tr><td>Of those audiences using the pure DS13+DS19 template (no other DS layered)</td><td class="num">~32%</td></tr>
+    <tr><td>Customizing the template with additional DS clauses</td><td class="num">~61%</td></tr>
   </table>
-  <p class="note">Cohort: 4,109 advertisers active in 2025. Spend share &gt;100% because campaigns can carry multiple flags.</p>
+  <p class="note">"DS13+DS19+rtc presence" is the most concrete definition we have; under TI-897 we'll confirm whether this maps to PP-toggle, HI, both, or some hybrid.</p>
 </section>
 
-<!-- 3. PP ramp chart -->
+<!-- 4. DS13+DS19 ramp chart -->
 <section class="chart-slide">
-  <img src="CHART_01_PLACEHOLDER" alt="PP adoption ramp">
-  <p class="chart-caption">Pre-launch baseline ~1%. Sharp inflection at the Oct 6 2025 launch. Trajectory continued through Nov 19 (Max-Reach-off) without a bend.</p>
+  <img src="CHART_01_PLACEHOLDER" alt="DS13+DS19 expressions adoption ramp">
+  <p class="chart-caption">DS13+DS19+rtc expressions: % of currently-active 2025-cohort advertisers with at least one such audience. Pre-launch baseline ~1%; sharp inflection at the Oct 6 2025 PP launch; reaches ~12% by April 2026. Trajectory continued through the Nov 19 Max-Reach-off event without a bend.</p>
 </section>
 
-<!-- 4. DS2 (OPM) cliff chart -->
+<!-- 5. Default vs custom chart -->
 <section class="chart-slide">
-  <img src="CHART_05B_PLACEHOLDER" alt="DS2 OPM spend cliff Oct 27">
-  <p class="chart-caption">DS2 (OPM segments) spend share held 73&ndash;79% through Oct 20 2025; dropped to 56.7% on Oct 27, 44.0% on Nov 3, sustained 42&ndash;46% through April 2026. ~99.7% of DS2 usage is in inclusion clauses (real targeting), not exclusions.</p>
+  <img src="CHART_06_PLACEHOLDER" alt="Default vs custom template, share of weekly adopters">
+  <p class="chart-caption">Of weekly DS13+DS19+rtc adopters: ~32% use pure DS13+DS19 templates (default), ~61% layer additional DS clauses (custom), ~3% run both, ~5% unclassified. Stable across the entire ramp. Whether "default" maps to MM-product-default or PP-product-default is a TI-897 question.</p>
 </section>
 
-<!-- 5. Composition chart -->
-<section class="chart-slide">
-  <img src="CHART_02_PLACEHOLDER" alt="Cohort composition">
-  <p class="chart-caption">Per-bucket presence over 18 months. PP rises; Keywords / 3P / CRM all decline modestly during the drop window; MM presence stays near-universal.</p>
-</section>
-
-<!-- 6. DS2 cliff vs PP rise overlap -->
-<section>
-  <h2>DS2 (OPM) cliff vs PP rise &mdash; advertiser overlap</h2>
-  <p style="font-size:0.7em;">Week of Oct 13 vs Nov 3 2025. 1,773 advertisers active in both periods.</p>
-  <table>
-    <tr><th>Slice</th><th class="num">n</th></tr>
-    <tr><td>New PP-detector advertisers in post: also retained DS2</td><td class="num">78 of 135 (58%)</td></tr>
-    <tr><td>Lost DS2 in post: gained PP detector flag</td><td class="num">52 of 341 (15%)</td></tr>
-    <tr><td>Stable on both PP and DS2</td><td class="num">118</td></tr>
-    <tr><td>Stable DS2-only (no PP detector)</td><td class="num">526</td></tr>
-    <tr><td>Lost DS2 without gaining PP</td><td class="num">248</td></tr>
-  </table>
-  <p class="note">Most of the DS2 spend cliff is NOT explained by detectable migration to PP-enabled. Likely: advertisers using new MM 2.0 syntax that triggers neither detector, or genuine reductions.</p>
-</section>
-
-<!-- 7. Default vs custom chart -->
-<section class="chart-slide">
-  <img src="CHART_06_PLACEHOLDER" alt="PP default vs custom">
-  <p class="chart-caption">~32% default-only, ~61% custom-only, ~3% both, ~5% unclassified. Stable across the ramp.</p>
-</section>
-
-<!-- 8. Track C results -->
+<!-- 6. Track C results -->
 <section>
   <h2>Per-advertiser ROAS comparison</h2>
-  <p style="font-size:0.7em;">1,213 advertisers delivering ≥1,000 VVs in both Aug-Sep 2025 and Dec 2025. Bootstrap 95% CIs (1,000 resamples).</p>
+  <p style="font-size:0.7em; line-height:1.5;">1,213 advertisers delivering &ge;1,000 VVs in both Aug-Sep 2025 and Dec 2025 windows. Cohort labels by DS13+DS19+rtc delivery share: "new adopter" = &lt;1% baseline AND &ge;5% post (n=206). "Non-adopter" = &lt;5% post (n=1,007). Bootstrap 95% CIs from 1,000 resamples.</p>
   <table>
-    <tr><th>Cohort</th><th class="num">n cohort</th><th class="num">n with valid ROAS</th><th class="num">Median Δ ROAS</th><th class="num">95% CI</th><th class="num">Median Δ conv rate</th></tr>
-    <tr><td>New PP-enabled</td><td class="num">206</td><td class="num">101 (49%)</td><td class="num">+64%</td><td class="num">[+25%, +121%]</td><td class="num">+38%</td></tr>
+    <tr><th>Cohort</th><th class="num">n cohort</th><th class="num">n with valid ROAS</th><th class="num">Median &Delta; ROAS</th><th class="num">95% CI</th><th class="num">Median &Delta; conv rate</th></tr>
+    <tr><td>New DS13+DS19 adopter</td><td class="num">206</td><td class="num">101 (49%)</td><td class="num">+64%</td><td class="num">[+25%, +121%]</td><td class="num">+38%</td></tr>
     <tr><td>Non-adopter</td><td class="num">1,007</td><td class="num">381 (38%)</td><td class="num">+130%</td><td class="num">[+104%, +154%]</td><td class="num">+65%</td></tr>
   </table>
-  <p class="note">~50% of each cohort has $0 order value (lead-gen / no-pixel) — ROAS undefined; medians on residual. CIs overlap. AOV flat in both (−1% / 0% medians).</p>
+  <p class="note">~50% of each cohort has $0 order value (lead-gen / no-pixel) - ROAS undefined; medians on residual. Both cohort medians' 95% CIs overlap. AOV flat in both (-1% / 0%). New adopters had ~1.5x higher BASELINE spend-weighted ROAS than non-adopters - cohorts not exchangeable, lift comparison does not isolate the audience effect.</p>
 </section>
 
-<!-- 9. Track C scatter chart -->
+<!-- 7. Track C scatter -->
 <section class="chart-slide">
   <img src="CHART_07_PLACEHOLDER" alt="Δ ROAS scatter by cohort">
   <p class="chart-caption">One dot per advertiser. Median bands with bootstrap 95% CI shading. CIs overlap.</p>
 </section>
 
-<!-- 10. Default vs custom × ROAS -->
-<section>
-  <h2>Default vs custom &mdash; ROAS deltas</h2>
-  <table>
-    <tr><th>Class</th><th class="num">n cohort</th><th class="num">n valid ROAS</th><th class="num">Median Δ ROAS</th><th class="num">Median Δ conv rate</th></tr>
-    <tr><td>Default-dominant</td><td class="num">54</td><td class="num">34</td><td class="num">+41%</td><td class="num">+43%</td></tr>
-    <tr><td>Custom-dominant</td><td class="num">135</td><td class="num">58</td><td class="num">+64%</td><td class="num">+24%</td></tr>
-    <tr><td>Mixed</td><td class="num">17</td><td class="num">9</td><td class="num">+290%</td><td class="num">+114%</td></tr>
-  </table>
-  <p class="note">Cohorts small; CIs wide. Underpowered for confident inference.</p>
-</section>
-
-<!-- 11. Caveats (terse) -->
-<section>
-  <h2>Caveats</h2>
-  <ul>
-    <li><b>DS2 is OPM segments, NOT Mountain Matched</b> (per Alyson + Zach 2026-04-22). Bryce's earlier "MM = DS2" mapping was wrong. Mountain Matched the product (MM 2.0) is not detectable by current methodology — needs definition from Ryan / Zach.</li>
-    <li>"PP-enabled" detector (DS13+DS19+rtc) catches audiences enabling Mid Intent + High Intent + PP tiers within MM 2.0 — not specifically PP-tier-only.</li>
-    <li>24% of PP-detector expressions also contain DS2; buckets partially overlap.</li>
-    <li>New PP-enabled cohort had ~1.5x higher baseline ROAS than non-adopters; cohorts not exchangeable, lift comparison doesn't isolate PP's effect.</li>
-    <li>3P scope is narrow (DS35 only); DS3 / DS11 / DS17 / DS18 etc. excluded.</li>
-  </ul>
-</section>
-
-<!-- 12. Open questions -->
+<!-- 8. Open questions -->
 <section>
   <h2>Open questions</h2>
   <ul>
-    <li><b>How is "Mountain Matched" the product detected at the database level?</b> DS19 is canonically named "MNTN Matched" but Bryce called it Keywords. Need authoritative MM-product detector from Ryan / Zach.</li>
-    <li><b>What does the new MM 2.0 audience expression look like at the database level?</b> Does it use a syntax not caught by the DS2 or DS13+DS19+rtc detectors?</li>
-    <li><b>What drove the Oct 27 DS2 (OPM) spend drop?</b> 248 of 341 affected advertisers don't show up in the PP detector.</li>
-    <li>Formal product definition of "default Peak Performance" — Ryan / Jordan.</li>
+    <li><b>Definitions of MM / PP / HI / MI / Max Reach detectors</b> &mdash; tracked in <a href="https://mntn.atlassian.net/browse/TI-897" style="color:#2E5090;">TI-897</a>. Until resolved, the trajectory above is best read as "DS13+DS19+rtc adoption" not "PP adoption" specifically.</li>
+    <li><b>Default vs custom long-term performance</b> &mdash; current 4-week post window underpowered. Re-run with Q1 2026 once data settles.</li>
+    <li><b>What drove the Oct 27 DS2 (OPM) spend share drop?</b> Likely a system / pipeline change (DS2/DS3 may not be deliberate advertiser targeting, per Slack discussion 2026-04-22). If confirmed, this is engineering / bidder territory, not audience-side.</li>
   </ul>
 </section>
 
