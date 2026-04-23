@@ -52,7 +52,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   <table>
     <tr><th>Bucket</th><th class="num">% advertisers</th><th class="num">% of cohort spend</th><th class="num">Δ presence Sep 29 → Dec 29 2025</th></tr>
     <tr><td>Peak Performance (DS13+DS19+rtc)</td><td class="num">12.4%</td><td class="num">12.2%</td><td class="num">+7.8 pp</td></tr>
-    <tr><td>Mountain Matched (DS2)</td><td class="num">96.6%</td><td class="num">39.1%</td><td class="num">−2.0 pp</td></tr>
+    <tr><td>OPM segments (DS2)</td><td class="num">96.6%</td><td class="num">39.1%</td><td class="num">−2.0 pp</td></tr>
     <tr><td>Keywords (DS19)</td><td class="num">40.4%</td><td class="num">39.7%</td><td class="num">−4.9 pp</td></tr>
     <tr><td>3P (DS35)</td><td class="num">32.1%</td><td class="num">41.5%</td><td class="num">−3.5 pp</td></tr>
     <tr><td>CRM (DS4)</td><td class="num">18.7%</td><td class="num">34.2%</td><td class="num">−0.5 pp</td></tr>
@@ -66,10 +66,10 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   <p class="chart-caption">Pre-launch baseline ~1%. Sharp inflection at the Oct 6 2025 launch. Trajectory continued through Nov 19 (Max-Reach-off) without a bend.</p>
 </section>
 
-<!-- 4. MM cliff chart -->
+<!-- 4. DS2 (OPM) cliff chart -->
 <section class="chart-slide">
-  <img src="CHART_05B_PLACEHOLDER" alt="MM spend cliff Oct 27">
-  <p class="chart-caption">MM spend share held 73&ndash;79% through Oct 20 2025; dropped to 56.7% on Oct 27, 44.0% on Nov 3, sustained 42&ndash;46% through April 2026.</p>
+  <img src="CHART_05B_PLACEHOLDER" alt="DS2 OPM spend cliff Oct 27">
+  <p class="chart-caption">DS2 (OPM segments) spend share held 73&ndash;79% through Oct 20 2025; dropped to 56.7% on Oct 27, 44.0% on Nov 3, sustained 42&ndash;46% through April 2026. ~99.7% of DS2 usage is in inclusion clauses (real targeting), not exclusions.</p>
 </section>
 
 <!-- 5. Composition chart -->
@@ -78,19 +78,19 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   <p class="chart-caption">Per-bucket presence over 18 months. PP rises; Keywords / 3P / CRM all decline modestly during the drop window; MM presence stays near-universal.</p>
 </section>
 
-<!-- 6. MM cliff vs PP rise overlap -->
+<!-- 6. DS2 cliff vs PP rise overlap -->
 <section>
-  <h2>MM cliff vs PP rise &mdash; advertiser overlap</h2>
+  <h2>DS2 (OPM) cliff vs PP rise &mdash; advertiser overlap</h2>
   <p style="font-size:0.7em;">Week of Oct 13 vs Nov 3 2025. 1,773 advertisers active in both periods.</p>
   <table>
     <tr><th>Slice</th><th class="num">n</th></tr>
-    <tr><td>New PP-detector advertisers in post: also retained MM (DS2)</td><td class="num">78 of 135 (58%)</td></tr>
-    <tr><td>Lost MM (DS2) in post: gained PP detector flag</td><td class="num">52 of 341 (15%)</td></tr>
-    <tr><td>Stable on both PP and MM</td><td class="num">118</td></tr>
-    <tr><td>Stable MM-only</td><td class="num">526</td></tr>
-    <tr><td>Lost MM without gaining PP</td><td class="num">248</td></tr>
+    <tr><td>New PP-detector advertisers in post: also retained DS2</td><td class="num">78 of 135 (58%)</td></tr>
+    <tr><td>Lost DS2 in post: gained PP detector flag</td><td class="num">52 of 341 (15%)</td></tr>
+    <tr><td>Stable on both PP and DS2</td><td class="num">118</td></tr>
+    <tr><td>Stable DS2-only (no PP detector)</td><td class="num">526</td></tr>
+    <tr><td>Lost DS2 without gaining PP</td><td class="num">248</td></tr>
   </table>
-  <p class="note">Most of the MM-spend cliff is NOT explained by detectable migration to PP-enabled. Likely: advertisers using MM 2.0 syntax not caught by either detector, or genuine MM reductions.</p>
+  <p class="note">Most of the DS2 spend cliff is NOT explained by detectable migration to PP-enabled. Likely: advertisers using new MM 2.0 syntax that triggers neither detector, or genuine reductions.</p>
 </section>
 
 <!-- 7. Default vs custom chart -->
@@ -133,11 +133,11 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <section>
   <h2>Caveats</h2>
   <ul>
+    <li><b>DS2 is OPM segments, NOT Mountain Matched</b> (per Alyson + Zach 2026-04-22). Bryce's earlier "MM = DS2" mapping was wrong. Mountain Matched the product (MM 2.0) is not detectable by current methodology — needs definition from Ryan / Zach.</li>
     <li>"PP-enabled" detector (DS13+DS19+rtc) catches audiences enabling Mid Intent + High Intent + PP tiers within MM 2.0 — not specifically PP-tier-only.</li>
-    <li>24% of PP-detector expressions also contain DS2 (MM detector flag); buckets partially overlap.</li>
+    <li>24% of PP-detector expressions also contain DS2; buckets partially overlap.</li>
     <li>New PP-enabled cohort had ~1.5x higher baseline ROAS than non-adopters; cohorts not exchangeable, lift comparison doesn't isolate PP's effect.</li>
-    <li>Per-advertiser DS IDs (1000+ range) don't appear in segment expressions; effective MM detection is just DS2.</li>
-    <li>3P scope is narrow (DS35 only); DS3/DS11/DS17/DS18 etc. excluded.</li>
+    <li>3P scope is narrow (DS35 only); DS3 / DS11 / DS17 / DS18 etc. excluded.</li>
   </ul>
 </section>
 
@@ -145,8 +145,9 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <section>
   <h2>Open questions</h2>
   <ul>
-    <li>What does the new MM 2.0 audience expression look like at the database level? Does it use a syntax not caught by the DS2 or DS13+DS19+rtc detectors?</li>
-    <li>What drove the Oct 27 MM (DS2) spend drop? 248 of 341 affected advertisers don't show up in the PP detector.</li>
+    <li><b>How is "Mountain Matched" the product detected at the database level?</b> DS19 is canonically named "MNTN Matched" but Bryce called it Keywords. Need authoritative MM-product detector from Ryan / Zach.</li>
+    <li><b>What does the new MM 2.0 audience expression look like at the database level?</b> Does it use a syntax not caught by the DS2 or DS13+DS19+rtc detectors?</li>
+    <li><b>What drove the Oct 27 DS2 (OPM) spend drop?</b> 248 of 341 affected advertisers don't show up in the PP detector.</li>
     <li>Formal product definition of "default Peak Performance" — Ryan / Jordan.</li>
   </ul>
 </section>

@@ -305,14 +305,14 @@ def chart_05b_mm_spend_cliff(df):
     y_3p = df_spend["pct_spend_3p"] * 100
     y_crm = df_spend["pct_spend_crm"] * 100
 
-    ax.plot(x, y_mm, color=ACCENT, linewidth=2.6, label="MM")
+    ax.plot(x, y_mm, color=ACCENT, linewidth=2.6, label="DS2 (OPM)")
     ax.plot(x, y_kw, color=BASELINE, linewidth=2.0, label="Keywords")
     ax.plot(x, y_3p, color=GRAY, linewidth=1.6, label="3P")
     ax.plot(x, y_crm, color="#888", linewidth=1.6, label="CRM")
     ax.plot(x, y_pp, color="#4C72B0", linewidth=2.0, label="PP")
 
     # Direct labels at right
-    for series, label, color in [(y_mm,"MM",ACCENT),(y_kw,"Keywords",BASELINE),(y_3p,"3P",GRAY),(y_crm,"CRM","#888"),(y_pp,"PP","#4C72B0")]:
+    for series, label, color in [(y_mm,"DS2 (OPM)",ACCENT),(y_kw,"Keywords",BASELINE),(y_3p,"3P",GRAY),(y_crm,"CRM","#888"),(y_pp,"PP",  "#4C72B0")]:
         ax.text(x.iloc[-1], series.iloc[-1], f"  {label}  {series.iloc[-1]:.0f}%",
                 color=color, fontsize=10, weight="bold", va="center")
 
@@ -329,16 +329,16 @@ def chart_05b_mm_spend_cliff(df):
                     fontsize=9, color=ACCENT, weight="bold",
                     arrowprops=dict(arrowstyle="->", color=ACCENT, lw=1.0))
 
-    ax.set_title("Mountain Matched spend share fell from 73-79% to 42-46% in 2 weeks (Oct 27 - Nov 10 2025)",
+    ax.set_title("DS2 (OPM) spend share fell from 73-79% to 42-46% in 2 weeks (Oct 27 - Nov 10 2025)",
                  loc="left", color="#222")
     ax.set_ylabel("% of cohort media spend")
     ax.set_ylim(0, 90)
     annotate_events(ax)
 
     ax.text(0.01, -0.18,
-            "MM held 73-79% of cohort spend through Oct 20 2025. On Oct 27 it dropped to 56%; the next two "
-            "weeks fell to 41-44% and stayed there through April 2026 (~30pp below the pre-Oct baseline). "
-            "PP launched Oct 6. The MM cliff is materially larger than the PP rise (in spend dollars).",
+            "DS2 (OPM segments per Alyson + Zach 2026-04-22) held 73-79% of cohort spend through Oct 20 2025. "
+            "On Oct 27 it dropped to 56%; the next two weeks fell to 41-44% and stayed there through April 2026 "
+            "(~30pp below the pre-Oct baseline). PP launched Oct 6. ~99.7% of DS2 usage is in inclusion clauses (real targeting).",
             transform=ax.transAxes, fontsize=8, color="#777")
 
     save(fig, "ti_896_chart_05b_mm_spend_cliff.png")
