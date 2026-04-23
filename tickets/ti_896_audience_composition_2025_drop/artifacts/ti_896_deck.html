@@ -45,18 +45,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   Malachi Dunn &middot; 2026-04-22</p>
 </section>
 
-<!-- 2. Scope and definitions caveat -->
-<section>
-  <h2>Scope</h2>
-  <p style="font-size:0.72em; line-height:1.5;">
-    Audience-side investigation: did the mix of audience types used by 2025-active advertisers shift during the late-2025 conversion drop? Cohort: 4,109 advertisers active in 2025 (~4,000 currently active). Lookback: Nov 2024 - Apr 2026, weekly. Source: <code>archives_audience_segment_archives</code> + <code>sum_by_campaign_by_day</code>.
-  </p>
-  <p style="font-size:0.72em; line-height:1.5; margin-top:1em;">
-    <span class="warn">Definitions caveat:</span> "MM", "PP", "HI", "MI", "Max Reach" do not currently have authoritative org-wide DB-level detector definitions. Multiple sources gave conflicting interpretations (Bryce, Michelle, Nick, Zach, Alyson, Ryan). This deck uses a single concrete detector &mdash; <b>DS13+DS19+rtc presence in segment expression</b> &mdash; for the trajectory-rise finding, which catches all HI campaigns and some PP campaigns but does not separate them. Definition reconciliation tracked in <a href="https://mntn.atlassian.net/browse/TI-897" style="color:#2E5090;">TI-897</a>.
-  </p>
-</section>
-
-<!-- 3. Headline numbers -->
+<!-- 2. Headline numbers -->
 <section>
   <h2>Headline numbers (week of Apr 13 2026)</h2>
   <table>
@@ -67,7 +56,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
     <tr><td>Of those audiences using the pure DS13+DS19 template (no other DS layered)</td><td class="num">~32%</td></tr>
     <tr><td>Customizing the template with additional DS clauses</td><td class="num">~61%</td></tr>
   </table>
-  <p class="note">"DS13+DS19+rtc presence" is the most concrete definition we have; under TI-897 we'll confirm whether this maps to PP-toggle, HI, both, or some hybrid.</p>
+  <p class="note">Cohort: 4,109 advertisers with &ge;1 impression in 2025. 18-month weekly lookback.</p>
 </section>
 
 <!-- 4. DS13+DS19 ramp chart -->
@@ -85,13 +74,13 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <!-- 6. Track C results -->
 <section>
   <h2>Per-advertiser ROAS comparison</h2>
-  <p style="font-size:0.7em; line-height:1.5;">1,213 advertisers delivering &ge;1,000 VVs in both Aug-Sep 2025 and Dec 2025 windows. Cohort labels by DS13+DS19+rtc delivery share: "new adopter" = &lt;1% baseline AND &ge;5% post (n=206). "Non-adopter" = &lt;5% post (n=1,007). Bootstrap 95% CIs from 1,000 resamples.</p>
+  <p style="font-size:0.7em; line-height:1.5;">1,213 advertisers delivering &ge;1,000 VVs in both Aug-Sep 2025 and Dec 2025. Adopters = DS13+DS19+rtc share &lt;1% baseline, &ge;5% post (n=206). Non-adopters = &lt;5% post (n=1,007).</p>
   <table>
     <tr><th>Cohort</th><th class="num">n cohort</th><th class="num">n with valid ROAS</th><th class="num">Median &Delta; ROAS</th><th class="num">95% CI</th><th class="num">Median &Delta; conv rate</th></tr>
     <tr><td>New DS13+DS19 adopter</td><td class="num">206</td><td class="num">101 (49%)</td><td class="num">+64%</td><td class="num">[+25%, +121%]</td><td class="num">+38%</td></tr>
     <tr><td>Non-adopter</td><td class="num">1,007</td><td class="num">381 (38%)</td><td class="num">+130%</td><td class="num">[+104%, +154%]</td><td class="num">+65%</td></tr>
   </table>
-  <p class="note">~50% of each cohort has $0 order value (lead-gen / no-pixel) - ROAS undefined; medians on residual. Both cohort medians' 95% CIs overlap. AOV flat in both (-1% / 0%). New adopters had ~1.5x higher BASELINE spend-weighted ROAS than non-adopters - cohorts not exchangeable, lift comparison does not isolate the audience effect.</p>
+  <p class="note">~50% of each cohort has $0 order value (lead-gen / no-pixel); medians on residual. CIs overlap. AOV flat in both. Adopters had ~1.5x higher BASELINE ROAS than non-adopters &mdash; cohorts not exchangeable.</p>
 </section>
 
 <!-- 7. Track C scatter -->
@@ -104,9 +93,9 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <section>
   <h2>Open questions</h2>
   <ul>
-    <li><b>Definitions of MM / PP / HI / MI / Max Reach detectors</b> &mdash; tracked in <a href="https://mntn.atlassian.net/browse/TI-897" style="color:#2E5090;">TI-897</a>. Until resolved, the trajectory above is best read as "DS13+DS19+rtc adoption" not "PP adoption" specifically.</li>
-    <li><b>Default vs custom long-term performance</b> &mdash; current 4-week post window underpowered. Re-run with Q1 2026 once data settles.</li>
-    <li><b>What drove the Oct 27 DS2 (OPM) spend share drop?</b> Likely a system / pipeline change (DS2/DS3 may not be deliberate advertiser targeting, per Slack discussion 2026-04-22). If confirmed, this is engineering / bidder territory, not audience-side.</li>
+    <li>Audience detector definitions (MM / PP / HI / MI / Max Reach) &mdash; <a href="https://mntn.atlassian.net/browse/TI-897" style="color:#2E5090;">TI-897</a>.</li>
+    <li>Default vs custom long-term performance &mdash; rerun Q1 2026 once data settles.</li>
+    <li>Oct 27 DS2 (OPM) spend share drop &mdash; likely system / pipeline change, engineering / bidder side.</li>
   </ul>
 </section>
 
