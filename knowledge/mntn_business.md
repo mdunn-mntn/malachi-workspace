@@ -552,3 +552,19 @@ Key boundary decisions:
 - **New Hire — Luis Chelala, Sr. Project Manager (PMO)**
 
 Luis Chelala joined MNTN as a Senior Project Manager on the PMO team, starting 2026-05-04. He will be supporting the Attribution and Identity teams. (via Tasha, #identity_core, 2026-04-21)
+
+<!-- slack-extracted: 2026-04-23 -->
+- **Crypto/Bitcoin/Blockchain Advertiser Policy (effective ~April 2026):** MNTN now accepts Crypto, Bitcoin, and Blockchain advertisers with the following requirements:
+- Must be a US-based company
+- Pre-payment required before launch (advertiser must complete a designated intake form)
+- Minimum budget is $50,000 (monthly, consistent spend preferred)
+- Sites with gambling components are not eligible — submit domain through the account approvals process in Salesforce if unsure (via Rachel Siegel, #sales, 2026-04-22)
+- **World Cup Inventory — Outreach Restrictions:** MNTN does not have rights to mention the World Cup in any public outreach or written materials. Sales sequences must not reference it directly. Acceptable alternatives include phrases like 'soccer games this summer' or 'an upcoming soccer tournament.' Discussion of World Cup inventory is permitted on calls. (via alexaguttroff, #sales, 2026-04-22)
+- **MNTN Select — Salesforce Budget Date Validation Rule:** A Salesforce validation rule is now live for the MNTN Select product. When adding MNTN Select to an opportunity, Budget Start Date and Budget End Date are required fields. The rule blocks saving if: either date is blank; Budget Start Date or Budget End Date is earlier than the Opportunity Close Date; or Budget Start Date is later than Budget End Date. Budget Start Date equal to Opportunity Close Date is permitted. Budget Start Date equal to Budget End Date is also permitted. (via Michael Botler, #sales, 2026-04-22)
+- **Peak Performance Audience Customization Rate (updated ~April 2026):** Among Peak Performance adopters, the audience customization breakdown is:
+- 34% use the default-only template (pure DS13+DS19 structural pattern)
+- 58% customize the template (layered with extra DS clauses)
+- 3% use both default and custom configurations
+- 5% are unclassified
+
+This supersedes the previously documented figures of ~32% default / ~61% custom (TI-896), which may have been calculated on a slightly different population or date range. (via malachi, #targeting-squad, 2026-04-22)
