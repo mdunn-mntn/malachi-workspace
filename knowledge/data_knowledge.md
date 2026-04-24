@@ -1513,3 +1513,22 @@ A systemic pacing failure affecting 1000+ CGIDs (>90% underspend on 4/20, follow
 - Short-term mitigations: PAC manually adjusted daily budget caps and synced to Beeswax; HHST was manually reset by Forrest.
 
 **Impact:** No underspend on 4/21, but significant overspend. Full overspend impact list shared with PEX the following day. (via Johnny, #mission-control, 2026-04-21)
+
+<!-- slack-extracted: 2026-04-24 -->
+- ### analytics_request_log — GA3 Volume Drop Root Cause Pattern
+
+A drop in `analytics_request_log` total volume that is isolated to GA3 (while GA4 volume remains normal) indicates a reduction in cross-device requests, not a data pipeline failure. Diagnostic indicators:
+
+1. **GA4 volume stays normal** — GA4 is `cross_device = false`, so it is unaffected by cross-device resolution issues.
+2. **Distinct `ad_served_id` volume stays consistent** — all relevant matched impressions are still represented; the drop is in cross-device enrichment only.
+3. **Distinct `ga_client_id` volume drops in tandem with GA3 volume** — the ratio of `ga_client_id`s per IP drives GA3 cross-device request volume.
+4. **The `analytics_request_log` to `clickpass_log` monitor will not alert** in this scenario, because matched impressions are still present.
+
+Root cause observed 2026-04-22 (hr19 UTC): truncation of `partner_sync_by_advertiser_v3` in ScyllaDB caused the drop. Restoring that table restored GA3 volume. (via Nish, #mission-control, 2026-04-23)
+- ### Experimental Campaigns — Sync Disabled (Monitoring Implication)
+
+Experimental (EX) campaigns have syncing to BX (the bidder exchange layer) intentionally disabled as part of the experiment design. This has a known monitoring side effect: any audit or monitor that relies on synced data (e.g., publisher/network blocklist sync, app bundle sync) will fire incorrectly for these campaigns even when the campaign configuration itself is correct.
+
+**Recommended handling:** Exclude experimental CGIDs from sync-dependent monitors on a per-campaign basis, or implement logic to suppress alerts for campaigns flagged as experimental. Creating a dedicated App Bundle Sync Monitor that accounts for this distinction has been identified as a future improvement (DM-4375).
+
+**Example (Audit #9, 2026-04-23):** An advertiser updated their AID block list after the experiment campaign was already running. The update was never propagated to BX because syncing was disabled, causing Audit #9 (DSP Control - Publisher & Network Blocking) to fire. The audit fire was technically correct but operationally expected given the sync-disabled state. (via Tom Manuel, #mission-control, 2026-04-23)

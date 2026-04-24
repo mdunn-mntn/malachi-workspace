@@ -581,3 +581,20 @@ MNTN's vertical taxonomy was authored by Kirsa Haenebalcke in **late-2023 / earl
 **Why this matters for Fangorn:** Fangorn scores are produced at the **vertical level** and then joined to advertisers. A missing or wrong vertical is not a cosmetic label problem — the advertiser cannot be scored. Fangorn increases, not decreases, the dependency on accurate vertical assignment.
 
 **Roadmap status:** There has been an idea for a vertical-replacement mechanism living in the household-scoring area, but it has slipped below the line on the roadmap. No committed owner or date as of 2026-04-23. Fully releasing Fangorn will NOT eliminate the need for verticals — Fangorn depends on them.
+
+<!-- slack-extracted: 2026-04-24 -->
+- ### Spotify Privacy Compliance Requirement — Pixel Data Isolation (2026-04)
+
+Spotify has raised a blocker to deploying the MNTN pixel based on privacy law concerns. Specifically, Spotify requires that data collected via the MNTN pixel be used **solely for Spotify's purposes** and not fed into MNTN's identity graph for cross-device attribution at the household level or used to benefit other clients or MNTN's broader business.
+
+Spotify's stated requirements to proceed:
+1. MNTN must agree to act as a **Service Provider** under applicable privacy laws.
+2. A contractual commitment that pixel data is not used beyond Spotify's purposes.
+3. **Technical validation** that those contractual limitations are being enforced (i.e., pixel fires are isolated from the identity graph, Mountain Matched, etc.).
+
+**Business stakes:** Spotify is a $200K/month account at launch, with potential to grow to $20M/year in spend. Launch date is 2026-05-15. This requirement is expected to become standard for most large brand advertisers.
+
+**Strategic implication:** MNTN needs a mechanism to isolate specific advertiser pixel fires from the identity graph and other shared data uses. This is considered a likely dealbreaker class of requirement for enterprise/brand advertisers going forward. (via Elena, #identity_core, 2026-04-23)
+- ### Geographic Targeting — Minimum Radius
+
+MNTN supports geographic targeting down to a minimum radius of **0.5 miles**. This applies to source audience location targeting. (via Riley Skoric, #sales, 2026-04-23)
