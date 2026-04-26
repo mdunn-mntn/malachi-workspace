@@ -1532,3 +1532,23 @@ Experimental (EX) campaigns have syncing to BX (the bidder exchange layer) inten
 **Recommended handling:** Exclude experimental CGIDs from sync-dependent monitors on a per-campaign basis, or implement logic to suppress alerts for campaigns flagged as experimental. Creating a dedicated App Bundle Sync Monitor that accounts for this distinction has been identified as a future improvement (DM-4375).
 
 **Example (Audit #9, 2026-04-23):** An advertiser updated their AID block list after the experiment campaign was already running. The update was never propagated to BX because syncing was disabled, causing Audit #9 (DSP Control - Publisher & Network Blocking) to fire. The audit fire was technically correct but operationally expected given the sync-disabled state. (via Tom Manuel, #mission-control, 2026-04-23)
+
+<!-- slack-extracted: 2026-04-26 -->
+- ## RabbitMQ Consumer Outage Pattern — Segment/Campaign Mis-Targeting Risk
+
+When RabbitMQ consumers stop processing messages (due to acknowledgment timeout errors or other failures), the following impacts occur:
+
+- **Segment or campaign mis-targeting** — audience updates handled through the batch-job path (RabbitMQ) are delayed or dropped.
+- **Intent scores not updated** — intent scoring pipeline depends on RabbitMQ consumers; a multi-day outage means stale intent scores for the affected period.
+- **Spend impact** — similar to the 4/1 incident, campaign groups with recently updated audiences may see no spend or significant underspend during the consumer downtime window.
+- **Kafka path is independent** — Kafka consumers can remain functional even when RabbitMQ consumers fail. This means audience updates flowing through Kafka (e.g., standard audience refresh) may still work while batch-job-path updates (RabbitMQ) do not.
+
+**Detection gap:** Current alerting does NOT surface when a large backlog of messages is sitting in the RabbitMQ queue waiting to be consumed. The `message-delivered` metric dropping and the `messages ready` backlog count rising are the two Grafana signals to watch.
+
+**Grafana dashboard for RabbitMQ:** `grafana.prod.in.mountain.com/d/Kn5xm-gZk/rabbitmq-overview` — use the `mntn-gke-bidder-01-prometheus` datasource, `bidder` namespace, `rabbitmq-rtb` cluster.
+- Panel 14: message-delivered metric (drop = consumers stopped)
+- Panel 9: messages ready/backlog count (rise = consumers falling behind)
+
+**Baseline note:** There is always a baseline of ~2M unprocessed messages in the backlog for historical reasons (Bidder team to confirm). Monitor for count increasing *above* this baseline.
+
+**Incident timeline (April 2026):** Issue began between 4/22 ~04:00 UTC and 4/23 ~01:00 UTC; consumers recovered ~4/25 14:15 UTC. Estimated ~2-day impact window. A prior similar incident occurred 4/1 (caused by Aerospike issue), resulting in no spend/underspend for CGs with newly updated audiences from 4/1 hr0 UTC through 4/2 hr13 UTC. (via Changxing Cao, #production-ops, 2026-04-25)
