@@ -1031,3 +1031,57 @@ When testing multiple related features simultaneously (e.g., Fangorn + continuou
 - Do we need to cover fallback populations (e.g., cold-start advertisers who won't get BUK)? → add an arm for the fallback config (e.g., MM V2 keywords under continuous scoring without BUK).
 
 For the upcoming BUK + Fangorn + Continuous experiment, Kirsa's emerging design is 3 arms: control = Fangorn + mini-continuous; treatment 1 = full-continuous + BUK; treatment 2 = full-continuous + MM V2. Treatment 2 exists to cover the cold-start fallback, not to isolate continuous-scoring-alone impact.
+
+## Ghost-Bidding ATT — TI-837 Application Notes (2026-04-27)
+
+First end-to-end ATT run on Zazzle (advertiser 37775), 1 day. Record key methodological reusable lessons, separate from the ticket-specific findings (those live in `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/summary.md`).
+
+### Why ATT, not ITT — articulated cleanly
+
+**ITT failure mode for MNTN:** Targeted-vs-holdout comparison dilutes any real effect by the (1 − coverage) factor. With ~14-16% coverage, a true 4pp effect on served IPs becomes ~0.6pp ITT effect. With finite sample noise, that becomes "no statistically significant lift" — exactly what TI-835 ITT-on-guid reported.
+
+**ATT fixes this** by restricting to:
+- Treatment side: IPs that received a Zazzle impression (`cost_impression_log` filter).
+- Control side: IPs that *would have* received an impression if not for the holdout — proxied by "appeared in `augmentor_log` during window" (biddable holdouts).
+
+**Concrete recovered signal (Zazzle, 1 day):** ITT-on-guid for high-intent (TI-835) showed ~0%. ATT-on-guid for high-intent shows +1.30pp lift, p<0.0001. The signal was always there; ITT couldn't see it.
+
+### Attribution lift vs real lift — the right framing for the deck
+
+**Two outcome variables, different things:**
+- `clickpass_log` = MNTN-attributed visits (impression + later visit + pixel match). Structurally requires impression for a row to exist → holdouts mostly cannot appear in clickpass at all → clickpass lift over-rewards being treated.
+- `guid_log` = total pixel visits regardless of channel → the only honest test of whether MNTN drives new traffic.
+
+**The wedge between clickpass-lift and guid-lift = attribution capture.** It quantifies how much MNTN credit is borrowed from search/direct/email/etc. For Zazzle high-intent: clickpass +1.49pp, guid +1.30pp → ~78% of MNTN-attributed visits would have happened anyway through other channels. This is exactly what LiftLab/Kochava measure when they tell advertisers MNTN's incrementality is overstated.
+
+**Implication for any incrementality presentation:** lead with guid lift (real causation), reference clickpass lift as the wedge that explains the gap with external vendors. Never present clickpass lift alone — it overstates by ~5-20× depending on tier.
+
+### Tier stratification is not optional
+
+Intent tiers (high / peak / mid / max_reach) have different baseline visit rates AND different treatment-effect magnitudes. Treatment IPs are over-represented in high-intent vs the underlying targetable universe (the algorithm preferentially serves higher-intent IPs first when budget is constrained). Computing unstratified ATT mixes tier composition and effect together — the result is uninterpretable.
+
+**Always stratify by intent tier**, then compute weighted-overall ATT using treatment counts as weights (this is the ATT-style stratification, not ITT-style which would weight by tier sizes in the holdout).
+
+### Biddable-holdout filter: loose vs tight
+
+Loose filter (any augmentor appearance) overcounts the control with IPs whose augmentor appearance was for a different advertiser's bid request. The treated side has equivalent overcounting (cost_impression_log includes any Zazzle impression regardless of which campaign), so the bias is mostly symmetric and cancels. The asymmetry is on **broad-audience tiers (peak)** where the control's "online but not Zazzle-relevant" inclusion outpaces the treatment's. This may explain the negative guid-ATT we saw at peak — selection bias, not real negative incrementality.
+
+**Tightening options:**
+1. Augmentor row had `mntn_segments` matching Zazzle's neighboring tier segment (medium tightness)
+2. Augmentor row was within Zazzle's geo/daypart/inventory targeting envelope (tight)
+3. Augmentor row was a real Zazzle bid request (tightest — requires bidder-side data we don't have)
+
+For BER-2250's April 30 deliverable: stay loose, document the bias direction (toward zero on broad tiers), and flag negative findings as suspect-pending-tightening rather than chasing them.
+
+### Cost reality: federated dry-runs are unreliable
+
+BQ dry-run on a query touching `household_scoring__prospecting_intent__v1` (federated Parquet external table) reported 610 GB. Actual processed bytes: 18.1 TB (~30× under-estimate). The estimator can't see into the federated source's actual scan footprint.
+
+**Practical rules:**
+- For federated-table queries, treat dry-run as a lower bound only.
+- Sample the actual scan cost on a small window before scaling up. (1 day → 18 TB → predicts 7 days ≈ 125 TB / ~$625 / one advertiser.)
+- Materialize the prospecting + holdout-hash intermediate to a sandbox table (write access permitting) before iterating on visit-side queries.
+
+### Visit window matters
+
+Visit-window = analysis-window in the smoke test means cross-day attribution is missed (impression Day N → visit Day N+1 is lost when N is the last analysis day). For a 7-day analysis window, add a 3-day post-period for visit lookahead. The treated side is more affected (impressions skew earlier in any window), so the bias is asymmetric — undercounts treatment visits — and the resulting lift estimate is conservative.

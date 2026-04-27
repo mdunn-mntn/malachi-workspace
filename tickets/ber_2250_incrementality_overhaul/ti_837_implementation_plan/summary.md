@@ -142,6 +142,43 @@ Ghost bidding is the immediate step. The full roadmap (from the iROAS Measuremen
 
 ## 4. Investigation & Findings
 
+### 1-day smoke test on Zazzle (2026-04-27)
+
+**Run:** advertiser 37775 (Zazzle), window 2026-04-24 (single day), pipeline = `queries/ti_837_lift_analysis.sql` + `artifacts/ti_837_compute_att.py`.
+
+**Cost:** ~10 min wall, 18.1 TB processed (~$90). The 1-day BQ dry-run estimated 610 GB — federated-table cost estimation is unreliable; actual was ~30× higher. Logged.
+
+**Pivot from WGU:** WGU (31357) is not in `household_scoring__prospecting_intent__v1` — it's a keyword-only (DS19) advertiser, not vertical/DS13. We pivoted to Zazzle (37775) which has 12 active campaigns, ~74M unique IPs in the prospecting feed, and was already in Alex Knorr's TI-835 sample.
+
+**Per-tier results:**
+
+| Tier | Outcome | Treated rate | Holdout-biddable rate | Lift (pp) | p |
+|------|---------|--------------|-----------------------|-----------|---|
+| high | clickpass | 1.51% | 0.022% | **+1.49** | <0.0001 |
+| high | guid | 1.82% | 0.53% | **+1.30** | <0.0001 |
+| peak | clickpass | 0.316% | 0.011% | **+0.306** | <0.0001 |
+| peak | guid | 0.456% | 0.708% | **−0.252** | <0.0001 |
+| mid | clickpass | 0.0073% | 0% | +0.007 | <0.0001 |
+| mid | guid | 0.0073% | 0.0058% | +0.001 | 0.42 |
+
+**Weighted ATT (ATT-stratified, treatment-count weights):**
+- clickpass: +0.92pp
+- guid: +0.65pp
+
+**No `max_reach` tier** — Zazzle's prospecting only scores high/peak/mid.
+
+### Three findings from the smoke test
+
+1. **Ghost-bidding ATT recovers a real guid signal that ITT couldn't see.** TI-835 ITT-on-guid showed ~0% lift across all 9 advertisers because 86% of "targeted" never got served and diluted the signal. ATT conditioning on actually-served vs actually-biddable shows **+1.30pp lift on high-intent guid for Zazzle**. This is the answer to the question TI-835 couldn't answer: *yes, MNTN ads do drive new high-intent traffic*. Confirmation in one advertiser, one day — replication needed.
+
+2. **Peak intent has negative guid-ATT** (−0.25pp, p<0.0001). Three explanations, in rough plausibility order:
+   - **Selection bias on the control side**: today's biddable-holdout filter is the loosest possible (any augmentor appearance counts). For peak (vertical-only matches, broad audience), this brings in disproportionate "online but not Zazzle-relevant" IPs whose visit baseline differs from Zazzle's actual targeting envelope.
+   - **Real null/negative incrementality at the intermediate tier.** Peak audience is "users who like education content" — broader, less keyword-anchored. Maybe targeting at this tier really doesn't add value for total traffic.
+   - **Sample noise.** Unlikely given n_treated=380K, n_control=947K.
+   - **Decision (per user, 2026-04-27):** don't chase as a separate investigation. Let it surface naturally when we replicate across advertisers; if it persists, dig in then.
+
+3. **Clickpass overstates attribution ~20× vs real-traffic effect for high-intent.** High-intent clickpass lift is 70×, guid lift is 3.4×. Both are real, but the wedge between them is "attribution capture" — visits MNTN takes credit for that would have happened anyway through search, direct, or other channels. This is exactly the gap LiftLab and Kochava pick up when they tell advertisers MNTN's incrementality is overstated. Worth highlighting prominently in the deck.
+
 ### Augmentor_log holdout verification (2026-04-20)
 
 **Question:** Alex Knorr (Apr 17) said holdout IPs appear in augmentor_log; Ryan Kleck
@@ -192,6 +229,32 @@ rather than a scoping session.
 - Added "Incrementality Measurement — Causal Method Reference" section to `knowledge/experimentation.md` (2026-04-19)
 - Includes: ranked method reference, Lewis-Rao power constraints, ghost bidding academic foundation, co-viewing bias, triangulation architecture, vendor assessments, reading list
 - Full iROAS Measurement Playbook stored at `artifacts/iroas_measurement_playbook.md`
+
+### Decisions locked 2026-04-27 (brainstorm with user)
+
+**Goal:** A statistically significant incrementality estimate at three levels:
+1. **Overall MNTN** — single number across a representative sample of advertisers, with CI.
+2. **By intent tier** — high / peak / mid / max_reach where applicable.
+3. **By advertiser** — only where N is sufficient for significance.
+
+**Audience:** TI team. Final artifact is a presentation. Technical detail is OK.
+
+**Validation:** None — internal consumption, no external benchmarking.
+
+**Methodology:**
+- Ghost-bidding ATT (locked).
+- Biddable-holdout filter stays loose (augmentor appearance for any reason). Tightening deferred — the treated side has equivalent bias under the loose filter, and we want speed first.
+- Variance reduction (CUPED, stratified randomization checks) deferred to Phase 2 if signal warrants.
+
+**Iteration discipline (per user direction):**
+- Speed first. Test on small samples. Optimize and log learnings before scaling.
+- Don't waste compute during the planning phase.
+- Converge on a method that works, then scale up.
+- Don't worry about iteration cost ceiling — focus on reducing per-query cost.
+
+**Scope of advertiser pool:**
+- Source: Alex Knorr's TI-835 9-advertiser list. 7 of 9 are in `household_scoring__prospecting_intent__v1`: Ferguson Home (31276), Ancient Nutrition (31455), First Watch (34143), HexClad (34611), Clayton Homes (34838), Zazzle (37775), Northern Tool (40563). Missing: Angi (32766), REVOLVE (53308) — likely keyword-only or behind a different scoring pipeline, same as WGU.
+- "Enough advertisers to estimate MNTN-overall without going massive" — final pick TBD by next chat. Probably 5-7 from the 7 available, weighted/selected for size + vertical diversity.
 
 ## 8. Open Items / Follow-ups
 

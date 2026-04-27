@@ -1315,6 +1315,27 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 - Output: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/` partitioned by dt/hh
 - Pipeline code: `steelhouse/airflow-ti` repo, `models/feature_store/feature_group_1_source/`
 
+### BQ dry-run is unreliable on federated tables (confirmed 2026-04-27)
+A query touching `household_scoring__prospecting_intent__v1` (Parquet external table over `gs://household-scoring-prod/...`) dry-runs at 610 GB but actually processes **18.1 TB** when run — ~30× under-estimate. The estimator cannot see into the federated source's actual scan footprint. Rule: for any query that joins a federated/external table, treat the dry-run as a lower bound only. Sample on a smaller window (1 day) before committing to a larger run.
+
+### `clickpass_log` cannot do apples-to-apples holdout comparisons (2026-04-27)
+By definition, a `clickpass_log` row requires (a) a MNTN impression AND (b) a subsequent visit matched to that impression. Holdout IPs (per-advertiser hash bucket 0-99) by construction don't get served impressions for that advertiser → essentially cannot generate clickpass rows for that advertiser. So any clickpass-based "lift" calculation between treatment and holdout will show enormous lift simply because the table's existence requires the treatment.
+
+The non-zero clickpass entries observed for holdouts are spillover: the holdout hash is per-(AID, IP), so an IP that's a Zazzle holdout might be served Ferguson Home ads, get a Ferguson clickpass row, and visit Zazzle in the same window — but the visit gets attributed to Ferguson, not Zazzle. These are tiny.
+
+**Implication for incrementality measurement:** use `guid_log` as the honest test of total-traffic causation. Use `clickpass_log` only to quantify *attribution capture* — the wedge between the two = visits MNTN takes credit for that would have happened anyway. For Zazzle high-intent ATT (TI-837, 1-day, 2026-04-27): clickpass lift +1.49pp / guid lift +1.30pp → ~78% of MNTN-attributed visits would have happened anyway via other channels.
+
+### Canonical prospecting_intent table (used in TI-837)
+`dw-main-bronze.external.household_scoring__prospecting_intent__v1` — federated Parquet table over `gs://household-scoring-prod/output/scoring/prospecting_intent/year=YYYY/month=MM/day=DD/`. 10-day rolling retention in BQ; deeper history (35-day) accessible via raw GCS. Schema: `ip, advertiser_id, campaign_group_id, campaign_id, household_score, year, month, day`.
+
+**Intent tier from household_score** (per Alex Knorr's TI-835 thresholds):
+- 10000 = `high` (vertical + keyword match)
+- 7000-9999 = `peak` (vertical only)
+- 3333-6999 = `mid` (keyword only)
+- <3333 = `max_reach`
+
+**Coverage gap:** keyword-only advertisers (e.g., WGU 31357) are NOT in this table — they're scored via a different pipeline (Mountain Match V2 / DS19 keyword match without DS13 vertical scoring). For TI-835's 9-advertiser sample: 7 are present (Ferguson Home, Ancient Nutrition, First Watch, HexClad, Clayton Homes, Zazzle, Northern Tool); 2 are absent (Angi 32766, REVOLVE 53308) — same exclusion pattern as WGU.
+
 ### augmentor_log `mntn_segments` for holdout IPs (confirmed 2026-04-22)
 When a holdout IP appears in `augmentor_log`, the `mntn_segments` array **does NOT contain the segment the IP is a holdout of**. The filter logic strips the segment at audience evaluation time — holdouts are not qualified to bid on, so the matching segment is never attached to the row.
 

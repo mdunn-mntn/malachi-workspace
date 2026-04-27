@@ -8,6 +8,34 @@
 
 ---
 
+## Status Update — 2026-04-27 (TI-837 smoke test landed)
+
+Ad-hoc ghost-bidding lift analysis ran end-to-end on Zazzle (advertiser 37775), 1-day window 2026-04-24. **Methodology works.** Cost was 18 TB / ~$90 / 10 min wall; the federated-table dry-run estimate (610 GB) underestimated by ~30×.
+
+**Headline findings:**
+- High-intent: clickpass lift +1.49pp (70×), guid lift +1.30pp (3.4×). **Real new traffic exists at high-intent — ATT recovers a guid signal that ITT couldn't see in TI-835.**
+- Peak intent: clickpass +0.31pp (30×), guid −0.25pp. Negative guid-ATT for peak is the surprise — likely selection bias on the loose biddable-holdout filter; not chasing as a separate investigation.
+- Mid-intent: noise (192K treated IPs, single-day).
+- Clickpass attribution overstated ~20× vs real-traffic effect — the wedge between clickpass and guid is "attribution capture."
+
+**Locked decisions for next-chat planning (per user 2026-04-27):**
+- Goal: stat-sig incrementality estimates at three levels — MNTN-overall, per-tier, per-advertiser-where-N-permits.
+- Audience: TI team, final deliverable is a presentation.
+- No external validation needed (internal).
+- Iteration discipline: speed first, log learnings, optimize before scale.
+- Advertiser pool: 7 of TI-835's 9 advertisers (Ferguson Home, Ancient Nutrition, First Watch, HexClad, Clayton Homes, Zazzle, Northern Tool) — Angi and REVOLVE are not in the prospecting_intent feed, similar to WGU.
+
+**Open planning questions for next chat:**
+- Final advertiser pick (5-7 from the 7 available, optimizing for vertical diversity + sample size)
+- Window strategy (1-day too noisy, 7-day at $90/advertiser-day = ~$3K — what's the sweet spot?)
+- Aggregation formula for MNTN-overall (equal-weight, spend-weight, sample-weight)
+- Cost optimization (materialize prospecting+hash to sandbox table?)
+- Visit-window vs analysis-window (post-period buffer for cross-day attribution?)
+
+Planning prompt at `claude-prompts/ti_837_planning_prompt.md`.
+
+---
+
 ## Status Update for Bryce Wagg — 2026-04-22
 
 ### TL;DR
