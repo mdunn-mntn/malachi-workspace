@@ -274,7 +274,27 @@ rather than a scoping session.
 - [ ] Present ghost bidding methodology and initial results to Kale/Alex Knorr
 - [ ] Exclude AID 90 (MNTN PSA advertiser) from analysis — PSA impressions are served to holdouts intentionally
 
-## 9. Key References
+## 9. Execution Progress (2026-04-27+)
+
+Working from `artifacts/ti_837_execution_plan.md` — 7-advertiser × 7-day primary
+analysis with IVW meta-analysis aggregation and a 0.5pp guid-CI N-gate per cell.
+
+| Stage | Status | Notes |
+|---|---|---|
+| **Stage 1** — 7-adv × 1-day smoke (window 04-23) | In progress (running) | Single-query batched, augmentor scan amortized across 7 advertisers. Output → `outputs/ti_837_lift_7adv_1day_2026_04_23.json`. |
+| **Stage 2** — 7-adv × 7-day primary (window 04-20→04-26, +3-day visit post-period to 04-29) | Pending | SQL drafted at `queries/ti_837_lift_analysis_7adv_7day.sql`. |
+| **Stage 3** — IVW meta-analysis + N-gate + sensitivity | Code ready, needs Stage 2 output | `artifacts/ti_837_compute_att.py` extended for multi-advertiser pivot, per-tier IVW, MNTN-overall IVW, leave-one-advertiser-out. Backward-compat for Zazzle 1-day input verified — reproduces +1.30pp / +1.49pp wedge exactly. |
+| **Stage 4** — diagnostic re-runs for cells failing N-gate | Pending | Only triggered if Stage 2 leaves critical cells underpowered. |
+| **Stage 5** — Tufte charts + RevealJS deck + presentation critique | Pending | Charts: per-tier guid+clickpass wedge, per-advertiser high-intent ATT, wedge ratio per tier, MNTN-overall headline. |
+
+### Lessons surfaced during execution (append-only)
+
+- **2026-04-27 — bq CLI flag-parser RecursionError on SQL strings starting with `--`.**
+  When passing SQL as a positional argument to `bq query`, if the first character is `--` (a SQL block-leading comment), absl's flag parser interprets the whole SQL as an unknown flag and tries to compute Levenshtein distance suggestions, blowing Python's recursion limit. The query never dispatches. Workaround: pipe SQL via stdin to `bq query` (works through `bq_run.sh` wrapper too). Documented in `knowledge/data_knowledge.md`.
+- **2026-04-27 — augmentor_log partition coverage confirmed for 04-20 onward.**
+  Verified via `INFORMATION_SCHEMA.PARTITIONS` before Stage 1 — partitions present back to 04-19 (1-day buffer to TTL). Window 04-20→04-26 is safe inside the 10-day TTL given today is 04-27.
+
+## 10. Key References
 
 - **Full playbook:** `artifacts/iroas_measurement_playbook.md` — 10 ranked methods, feasibility scorecards, phased rollout, 11 open decisions, reading list
 - **Johnson, Lewis & Nubbemeyer (2017) JMR** — Ghost ads canonical design (SSRN 2620078)
