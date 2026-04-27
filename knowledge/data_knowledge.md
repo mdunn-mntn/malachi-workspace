@@ -1318,6 +1318,18 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 ### BQ dry-run is unreliable on federated tables (confirmed 2026-04-27)
 A query touching `household_scoring__prospecting_intent__v1` (Parquet external table over `gs://household-scoring-prod/...`) dry-runs at 610 GB but actually processes **18.1 TB** when run — ~30× under-estimate. The estimator cannot see into the federated source's actual scan footprint. Rule: for any query that joins a federated/external table, treat the dry-run as a lower bound only. Sample on a smaller window (1 day) before committing to a larger run.
 
+### `bq query` crashes on SQL strings starting with `--` (workaround: pipe via stdin) (2026-04-27)
+The `bq` CLI uses Google's `absl` flag parser. When the SQL is passed as a positional argument that begins with `--` (e.g., a SQL block-leading comment line `-- TI-XXX: ...`), absl interprets the entire SQL string as an unknown flag and tries to compute Levenshtein distance suggestions against known flags. The recursive distance function blows Python's recursion limit and crashes with `RecursionError: maximum recursion depth exceeded` from `_damerau_levenshtein`. No query is dispatched — the bq process never reaches BigQuery.
+
+**Workaround:** pipe SQL to `bq query` via stdin instead of passing as a positional argument. Works through the `bq_run.sh` wrapper too:
+```bash
+bash .claude/scripts/bq_run.sh --ticket "TI-XXX" --label "..." \
+  --use_legacy_sql=false --format=prettyjson --max_rows=500 --project_id=dw-main-silver \
+  < path/to/query.sql > output.json
+```
+
+Alternative: strip the leading `--` comment from the SQL before passing positionally (workable but brittle). Stdin is the durable fix.
+
 ### `clickpass_log` cannot do apples-to-apples holdout comparisons (2026-04-27)
 By definition, a `clickpass_log` row requires (a) a MNTN impression AND (b) a subsequent visit matched to that impression. Holdout IPs (per-advertiser hash bucket 0-99) by construction don't get served impressions for that advertiser → essentially cannot generate clickpass rows for that advertiser. So any clickpass-based "lift" calculation between treatment and holdout will show enormous lift simply because the table's existence requires the treatment.
 
