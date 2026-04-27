@@ -281,8 +281,8 @@ analysis with IVW meta-analysis aggregation and a 0.5pp guid-CI N-gate per cell.
 
 | Stage | Status | Notes |
 |---|---|---|
-| **Stage 1** — 7-adv × 1-day smoke (window 04-23) | In progress (running) | Single-query batched, augmentor scan amortized across 7 advertisers. Output → `outputs/ti_837_lift_7adv_1day_2026_04_23.json`. |
-| **Stage 2** — 7-adv × 7-day primary (window 04-20→04-26, +3-day visit post-period to 04-29) | Pending | SQL drafted at `queries/ti_837_lift_analysis_7adv_7day.sql`. |
+| **Stage 1** — 7-adv × 1-day smoke (window 04-23) | ✅ Complete (2026-04-27) | 18.2 TB / 18.2 TB billed / 10.6 min wall — single-query batching held perfectly (matched the 1-advertiser smoke-test cost; ~7× reduction over naive linear scan). 42 cells, 41 pass the 0.5pp guid N-gate (Clayton mid is the lone fail — zero visitors both arms). Zazzle 04-23 high guid +1.36pp reproduces the 04-24 smoke +1.30pp within 0.07pp drift. Local output: `outputs/ti_837_lift_7adv_1day_2026_04_23.json` (gitignored). |
+| **Stage 2** — 7-adv × 7-day primary (window 04-20→04-26, +3-day visit post-period to 04-29) | In progress (running 2026-04-27) | SQL: `queries/ti_837_lift_analysis_7adv_7day.sql`. |
 | **Stage 3** — IVW meta-analysis + N-gate + sensitivity | Code ready, needs Stage 2 output | `artifacts/ti_837_compute_att.py` extended for multi-advertiser pivot, per-tier IVW, MNTN-overall IVW, leave-one-advertiser-out. Backward-compat for Zazzle 1-day input verified — reproduces +1.30pp / +1.49pp wedge exactly. |
 | **Stage 4** — diagnostic re-runs for cells failing N-gate | Pending | Only triggered if Stage 2 leaves critical cells underpowered. |
 | **Stage 5** — Tufte charts + RevealJS deck + presentation critique | Pending | Charts: per-tier guid+clickpass wedge, per-advertiser high-intent ATT, wedge ratio per tier, MNTN-overall headline. |
@@ -293,6 +293,8 @@ analysis with IVW meta-analysis aggregation and a 0.5pp guid-CI N-gate per cell.
   When passing SQL as a positional argument to `bq query`, if the first character is `--` (a SQL block-leading comment), absl's flag parser interprets the whole SQL as an unknown flag and tries to compute Levenshtein distance suggestions, blowing Python's recursion limit. The query never dispatches. Workaround: pipe SQL via stdin to `bq query` (works through `bq_run.sh` wrapper too). Documented in `knowledge/data_knowledge.md`.
 - **2026-04-27 — augmentor_log partition coverage confirmed for 04-20 onward.**
   Verified via `INFORMATION_SCHEMA.PARTITIONS` before Stage 1 — partitions present back to 04-19 (1-day buffer to TTL). Window 04-20→04-26 is safe inside the 10-day TTL given today is 04-27.
+- **2026-04-27 — Single-query batching is essentially free.** Stage 1 7-advertiser scan cost 18.2 TB, the same as the 1-advertiser smoke. The augmentor_log scan dominates total bytes; doing it once and inner-joining holdouts/targets per advertiser scales linearly in IPs (cheap) rather than in augmentor rows (expensive). Confirms the plan §4 optimization #1 was correctly identified as the dominant lever.
+- **2026-04-27 — Per-advertiser high-intent guid-ATT spans an order of magnitude.** Stage 1 1-day window: Northern Tool +0.21pp at the low end, Ferguson Home +6.96pp at the high end. The plan's "+0.3pp to +3pp" plausible range is too tight — Ferguson's lift is real and reflects vertical (Home Goods / Plumbing) where MNTN's intent signal is most differentiated. Don't drop Ferguson as an outlier; it's the strongest evidence in the cohort.
 
 ## 10. Key References
 
