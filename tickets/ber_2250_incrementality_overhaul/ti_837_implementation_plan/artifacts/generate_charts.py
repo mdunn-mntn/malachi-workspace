@@ -145,11 +145,11 @@ def chart_money_per_tier_wedge(meta, out_path):
     ax.set_xticks(x)
     ax.set_xticklabels([TIER_LABEL[t] for t in tiers], fontsize=12)
     ax.set_ylabel("Visit-rate lift (percentage points)", fontsize=11)
-    ax.set_title("Clickpass overstates real lift at every intent tier",
+    ax.set_title("Targeting drives 3.4pp more total visits at high intent — clickpass overstates by 24%",
                  loc="left", color=COLOR_NAVY, pad=8)
     ax.text(0, 1.05,
-            "MNTN attribution captures more visits than targeting actually causes — "
-            "the gap is the share that would have happened anyway.",
+            "Per-tier visit-rate ATT (95% CI), IVW-pooled across 7 advertisers, 7-day window. "
+            "Wedge inverts at peak — clickpass under-credits lift there.",
             transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT,
             ha="left")
     legend = ax.legend(loc="upper right", frameon=False, fontsize=10)
@@ -186,13 +186,15 @@ def chart_per_advertiser_high_intent(cells, out_path):
     ax.invert_yaxis()
     ax.axvline(0, color=COLOR_TEXT_LIGHT, lw=0.6, zorder=1)
     ax.set_xlabel("High-intent guid-visit ATT (percentage points)", fontsize=11)
-    ax.set_title("Targeting lift varies 30× across advertisers — but every one is positive",
+    ax.set_title("High-intent lift spans 200× — from Ferguson +10.6pp to Northern Tool flat",
                  loc="left", color=COLOR_NAVY, pad=8)
     ax.text(0, 1.05,
-            "Per-advertiser guid-visit ATT at the high-intent tier (95% CI). "
-            "Every advertiser shows a real positive lift; magnitude tracks vertical fit.",
+            "Per-advertiser high-intent guid-visit ATT (95% CI), 7-day window. "
+            "Six of seven show real positive lift; Northern Tool is indistinguishable from holdout.",
             transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT, ha="left")
-    ax.set_xlim(0, max(his) * 1.18)
+    ax.set_xlim(min(0, min(los) * 1.2), max(his) * 1.18)
+    if min(los) < 0:
+        ax.axvline(0, color=COLOR_TEXT_LIGHT, lw=0.8, zorder=1)
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
     plt.close(fig)
@@ -233,45 +235,57 @@ def chart_wedge_ratio(meta, out_path):
         ax.set_xticklabels([TIER_LABEL[t] for t, _, _ in plotted], fontsize=12)
         ax.set_ylabel("Clickpass-ATT ÷ Guid-ATT", fontsize=11)
         ax.set_ylim(0, max(vals) * 1.25)
-    ax.set_title("MNTN credits 1.1–1.2 visits for every 1 it actually causes",
+    ax.set_title("MNTN attribution overstates lift at high intent, under-credits at peak",
                  loc="left", color=COLOR_HERO, pad=8)
     ax.text(0, 1.05,
-            "Ratio of clickpass-attributed lift to true (guid-traffic) lift. "
-            "Anything above 1× is over-credit; anything below 1× is under-credit.",
+            "Clickpass-ATT ÷ guid-ATT per tier. Above 1× = over-credit; below 1× = under-credit. "
+            "Mid-intent is too noisy to interpret.",
             transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT, ha="left")
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
     plt.close(fig)
 
 
-# ---------- Chart 4: MNTN-overall headline ----------
+# ---------- Chart 4: MNTN headline — high-intent IVW pool (the "where targeting works" number) ----------
 def chart_overall_headline(meta, out_path):
-    overall = meta["mntn_overall_ivw"]
-    g = overall["guid"]
-    c = overall["clickpass"]
+    """Lead with the high-intent IVW pool — the most defensible single
+    'MNTN incrementality' number. The all-cells pool is mathematically valid
+    but dominated by mid-tier cells with tiny variance and near-zero ATT,
+    which understates the lift in the segment MNTN actually targets."""
+    high_pool = meta["per_tier_ivw"].get("high")
+    if not high_pool:
+        return
+    g = high_pool["guid"]
+    c = high_pool["clickpass"]
 
-    fig, ax = plt.subplots(figsize=(11, 5.6))
-    bars = ax.bar([0, 1], [c["att"] * 100, g["att"] * 100],
-                  color=[COLOR_MUTED, COLOR_NAVY],
-                  edgecolor="none", width=0.5, zorder=2)
-    ax.errorbar([0, 1],
-                [c["att"] * 100, g["att"] * 100],
-                yerr=[[(c["att"] - c["ci_low"]) * 100, (g["att"] - g["ci_low"]) * 100],
-                      [(c["ci_high"] - c["att"]) * 100, (g["ci_high"] - g["att"]) * 100]],
-                fmt="none", ecolor=COLOR_TEXT_LIGHT, lw=1.0, capsize=4, zorder=3)
-    for b, label, color in zip(bars,
-                                [f"{c['att']*100:+.3f}pp\n(clickpass)",
-                                 f"{g['att']*100:+.3f}pp\n(guid)"],
-                                [COLOR_TEXT_LIGHT, COLOR_NAVY]):
-        ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.02,
-                label, ha="center", va="bottom",
-                color=color, fontsize=12.5, fontweight="bold")
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(["Clickpass\n(MNTN-credited)", "Guid\n(true total)"], fontsize=12)
-    ax.set_ylabel("MNTN-overall ATT (pp)", fontsize=11)
-    ax.set_title("Overall MNTN incrementality (IVW-pooled across 7 advertisers × 3 tiers)",
-                 loc="left", color=COLOR_NAVY, pad=8)
-    ax.set_ylim(0, max(c["ci_high"], g["ci_high"]) * 100 * 1.25)
+    fig, ax = plt.subplots(figsize=(11, 6.0))
+    big_g = g["att"] * 100
+    big_c = c["att"] * 100
+
+    # central hero number
+    ax.text(0.5, 0.62, f"+{big_g:.2f}pp",
+            transform=ax.transAxes, ha="center", va="center",
+            color=COLOR_HERO, fontsize=110, fontweight="bold")
+    ax.text(0.5, 0.30,
+            f"true incremental visits at high intent  ·  "
+            f"95% CI [{g['ci_low']*100:+.2f}pp, {g['ci_high']*100:+.2f}pp]",
+            transform=ax.transAxes, ha="center", va="center",
+            color=COLOR_TEXT, fontsize=14)
+    ax.text(0.5, 0.18,
+            f"MNTN clickpass attribution credits +{big_c:.2f}pp — a {(big_c/big_g):.2f}× over-statement",
+            transform=ax.transAxes, ha="center", va="center",
+            color=COLOR_TEXT_LIGHT, fontsize=12)
+    ax.text(0.5, 0.08,
+            "IVW-pooled across 7 advertisers · 04-20 → 04-26 UTC, 3-day visit post-period",
+            transform=ax.transAxes, ha="center", va="center",
+            color=COLOR_TEXT_LIGHT, fontsize=10, style="italic")
+    ax.text(0.5, 0.92, "MNTN's high-intent targeting causes",
+            transform=ax.transAxes, ha="center", va="center",
+            color=COLOR_NAVY, fontsize=18, fontweight="bold")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
     plt.close(fig)
