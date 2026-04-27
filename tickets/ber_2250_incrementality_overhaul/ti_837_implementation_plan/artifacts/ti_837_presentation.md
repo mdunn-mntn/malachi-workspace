@@ -139,8 +139,6 @@ clickpass_log + guid_log [04-20 → 04-30]
 
 **Aggregation.** Two-proportion ATT per (advertiser, tier, outcome). Inverse-variance-weighted across advertisers for the per-tier pool.
 
-**Cost.** Stage 1 smoke (1 day): 18.2 TB. Stage 2 primary (7 days): 126.7 TB / 74 min wall / 560 slot-hours. Single-query batching held at 1× the smoke-test cost — augmentor scan amortized perfectly across 7 advertisers.
-
 ---
 
 ## Slide 9 — Caveats, honestly
@@ -159,12 +157,7 @@ Three things I'd want a methodologist to push on.
 
 **Phase 2b — escape augmentor's 10-day TTL.** Bidder-level ghost bidding (Zach + Jordan, pending Alex Bloore decision). Without it, conversions analysis is bounded by the TTL — and conversions lag impressions by 7-30 days.
 
-**Phase 2c — iROAS.** Per-advertiser incremental conversions × AOV ÷ MNTN spend. The number Kale and leadership actually want.
-
-**Decision the TI team needs to make:**
-The wedge is real and persistent. **Is it a bug we fix in clickpass, or a feature we report alongside it?** If we keep clickpass as the headline metric, we're systematically over-claiming credit at high intent and under-claiming at peak — and the team should at least be aware of the magnitude. If we replace clickpass with guid for incrementality reporting, we lose the per-impression attribution chain that powers Beeswax, billing, and the ML feature pipeline.
-
-I think the answer is *both* — clickpass for attribution, guid-ATT for incrementality, with the wedge ratio reported as a calibration term.
+**Two different questions, both worth answering.** Attribution captures the visits MNTN can credibly claim credit for; incrementality captures the visits targeting actually causes. They're not supposed to be the same number — last-touch, view-through, multi-touch all systematically diverge from true lift, by design. The wedge is the calibration term between them, and it's worth publishing alongside clickpass so we know the size of the gap when reading attribution-driven reports.
 
 ---
 

@@ -1085,3 +1085,55 @@ BQ dry-run on a query touching `household_scoring__prospecting_intent__v1` (fede
 ### Visit window matters
 
 Visit-window = analysis-window in the smoke test means cross-day attribution is missed (impression Day N → visit Day N+1 is lost when N is the last analysis day). For a 7-day analysis window, add a 3-day post-period for visit lookahead. The treated side is more affected (impressions skew earlier in any window), so the bias is asymmetric — undercounts treatment visits — and the resulting lift estimate is conservative.
+
+### Stage 2 update — 7-day, 7-advertiser primary findings (2026-04-27)
+
+After Stage 1 smoke (Zazzle 1-day) confirmed the methodology, Stage 2 ran 7 advertisers × 7 days (window 2026-04-20 → 04-26 UTC, +3-day visit post-period). All 26 (advertiser, tier, outcome) cells passed the 0.5pp guid-ATT CI half-width N-gate.
+
+**Headline numbers:**
+- High-intent IVW pool: clickpass +4.17pp, guid +3.36pp (CI ±0.02pp). Wedge ratio 1.24× — clickpass over-credits real lift by 24%.
+- Peak-intent IVW pool: clickpass +0.55pp, guid +0.88pp. Wedge ratio 0.62× — clickpass *under*-credits real lift by 38%. **The wedge inverts at peak.** This is consistent across the 3 advertisers that retained a peak tier (Ferguson, Ancient Nutrition, Clayton) under the MAX-score collapse.
+- Mid-intent IVW pool: both outcomes ~0.005-0.01pp — at the noise floor.
+- Per-advertiser high-intent guid-ATT spans **200×** (Northern Tool −0.05pp to Ferguson +10.55pp). Six of seven significant.
+
+**Why the wedge inverts at peak.** At high intent (vertical+keyword match), the funnel is sharp — IPs that visit after a treated impression reliably fire clickpass attribution. At peak (vertical-only), the funnel is more diffuse — visits do happen more often when treated, but a smaller fraction of those visits trigger clean clickpass events for MNTN. So clickpass captures a smaller share of treated peak-tier visits than guid does, and the ATT (treated − holdout) ends up smaller in clickpass than in guid.
+
+**Implication.** The wedge isn't directional in a single direction. Don't describe it as "clickpass overstates lift." Describe it as "clickpass-attributed lift and guid-traffic lift diverge in different directions at different funnel positions." Aggregate hides both errors (they roughly cancel pooled across tiers); per-tier reporting surfaces them.
+
+### MAX-household-score collapse (when aggregating per-IP across multi-day windows)
+
+For per-IP analyses spanning ≥2 days of `household_scoring__prospecting_intent__v1`, you must decide how to assign a single tier per (advertiser, IP) when scores fluctuate across days. Three valid choices:
+
+- **MAX over the window** — assign the IP its highest observed tier. Matches how the bidder treats the IP at any given moment; one row per (advertiser, IP) in the output. **What we used in TI-837 Stage 2.**
+- **Latest** — assign the most recent day's score. Closer to "current state" semantics.
+- **Per-day subjects** — keep (advertiser, IP, day) as the subject unit. Preserves daily tier composition but introduces within-IP correlation that needs clustered SEs.
+
+**Trade-off observed in TI-837 Stage 2.** Under MAX, four of seven advertisers (HexClad, First Watch, Zazzle, Northern Tool) had virtually 100% of their targetable IPs hit `score = 10000` on at least one day in the week — so their peak/mid tiers came back EMPTY. The peak-tier IVW pool only reflects three advertisers (Ferguson, Ancient, Clayton). Generalization to "all-MNTN peak-tier lift" is therefore limited by sample composition, not statistical precision.
+
+**Rule for future multi-day per-IP aggregations.** Decide explicitly which collapse rule applies. If peak/mid stratification matters for your analysis, prefer per-day subjects over MAX — or accept that some advertisers will not contribute to the peak/mid pools.
+
+### IVW pathology — pooling across cells with very different rates
+
+Inverse-variance-weighted meta-analysis across stratified cells gives each cell a weight of `1/var = n / [p(1−p)]`. For very low base rates (mid-tier visit rate ~0.005-0.01%), `p(1−p) ≈ p`, so variance is roughly `p/n`. Combine that with mid-tier sample sizes in the millions, and 1/var becomes orders of magnitude larger than for high-tier cells. The "pool across all cells" then collapses to ~the mid-tier ATT — which is near zero.
+
+**TI-837 Stage 2 observation.** MNTN-overall IVW across all 26 cells = +0.16pp guid. Leave-one-out drop of Ancient Nutrition (whose mid-tier cell had massive 1/var weight) jumps the pool to +1.33pp. The per-tier pools are stable across leave-one-out; the all-cells pool is not.
+
+**Lesson.** When stratifying across tiers with very different base rates, an IVW pool across all cells is mathematically valid but answers the wrong question. Lead with per-tier pools; report the all-cells pool only as a sanity check, with the leave-one-out swing alongside.
+
+### Attribution and incrementality answer different questions — frame accordingly
+
+Last-touch attribution, view-through attribution, and multi-touch attribution are designed to credit specific channels for outcomes. Causal-incrementality estimators are designed to measure what would have changed if the channel didn't exist. **They aren't supposed to produce the same number** — the wedge between them is informative about how much "credit" each channel claims vs. causes.
+
+**Reporting principle for MNTN:** publish both. Use clickpass for billing, attribution dashboards, and per-impression analytics where attribution is the right unit. Use guid-ATT for incrementality claims, vendor benchmarking, and pricing/iROAS conversations where causation is the right unit. The wedge ratio is itself a metric — it tells leadership how much they should discount clickpass-attributed lift to get to a true-incrementality estimate, by tier.
+
+This is the same framing LiftLab and Kochava use externally. Adopting it internally aligns MNTN's narrative with what advertisers already hear.
+
+### Northern Tool case — when incrementality ≈ 0 despite strong attribution
+
+Northern Tool (advertiser 40563) showed +5.56pp clickpass-ATT but −0.05pp guid-ATT at high intent (CI [−0.17pp, +0.06pp], not statistically distinguishable from zero). The biddable-holdout IPs visited at 5.90% in the 7-day window without ever being served an MNTN ad. The targeted IPs visited at 5.85% — within sampling noise of the holdout.
+
+**Interpretation.** For Northern Tool's high-intent IPs in this window, MNTN didn't cause incremental visits. The IPs were going to visit anyway (likely from search, direct, or other channels). Yet the clickpass-attribution chain credits MNTN with +5.56pp because every served impression followed by a visit fires a clickpass row.
+
+**This is the type of case the wedge methodology is designed to surface.** Not all MNTN-attributed lift is real; the magnitude of the gap varies by advertiser, vertical, and intent tier. Northern Tool is an extreme case but not an outlier in kind — it's a quantitative version of the qualitative concern external vendors have been raising.
+
+**Diagnostic next step (Phase 2):** check whether Northern Tool's natural visit rate is driven by their own brand strength / search dominance / repeat-customer base. If so, MNTN targeting them at high intent has near-zero room to add — the visits happen anyway. iROAS for that advertiser is likely much lower than clickpass-ROAS would suggest.

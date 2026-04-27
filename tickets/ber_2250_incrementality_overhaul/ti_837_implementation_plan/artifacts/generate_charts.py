@@ -145,18 +145,22 @@ def chart_money_per_tier_wedge(meta, out_path):
     ax.set_xticks(x)
     ax.set_xticklabels([TIER_LABEL[t] for t in tiers], fontsize=12)
     ax.set_ylabel("Visit-rate lift (percentage points)", fontsize=11)
-    ax.set_title("Targeting drives 3.4pp more total visits at high intent — clickpass overstates by 24%",
-                 loc="left", color=COLOR_NAVY, pad=8)
-    ax.text(0, 1.05,
+    # Title above subtitle — explicit positioning to avoid set_title/ax.text z-order issues
+    ax.text(0, 1.14,
+            "Targeting drives 3.4pp more total visits at high intent — clickpass overstates by 24%",
+            transform=ax.transAxes, fontsize=14, fontweight="bold",
+            color=COLOR_NAVY, ha="left", va="bottom")
+    ax.text(0, 1.06,
             "Per-tier visit-rate ATT (95% CI), IVW-pooled across 7 advertisers, 7-day window. "
-            "Wedge inverts at peak — clickpass under-credits lift there.",
+            "Wedge inverts at peak.",
             transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT,
-            ha="left")
-    legend = ax.legend(loc="upper right", frameon=False, fontsize=10)
+            ha="left", va="bottom")
+    ax.legend(loc="upper right", frameon=False, fontsize=10,
+              bbox_to_anchor=(1.0, 1.0))
 
     ax.set_ylim(min(0, min(guid_lows + cp_lows) * 1.4),
                 max(guid_highs + cp_highs) * 1.18)
-    plt.tight_layout()
+    plt.subplots_adjust(top=0.84, left=0.08, right=0.97, bottom=0.10)
     plt.savefig(out_path, dpi=200)
     plt.close(fig)
 
@@ -177,25 +181,35 @@ def chart_per_advertiser_high_intent(cells, out_path):
                 xerr=[[a - lo for a, lo in zip(atts, los)],
                       [hi - a for a, hi in zip(atts, his)]],
                 fmt="none", ecolor=COLOR_TEXT_LIGHT, lw=1.0, capsize=3, zorder=3)
-    for b, v in zip(bars, atts):
-        ax.text(v + 0.05, b.get_y() + b.get_height() / 2,
-                f"{v:+.2f}pp", va="center", ha="left",
-                color=COLOR_NAVY, fontsize=10.5, fontweight="bold")
+    # Negative bars get the label to the LEFT of the bar tip; positive bars to the RIGHT.
+    # Avoids the error-bar cap colliding with the leading "−" character.
+    x_range = max(his) - min(0, min(los))
+    pad = x_range * 0.012
+    for b, v, lo in zip(bars, atts, los):
+        if v < 0:
+            ax.text(v - pad, b.get_y() + b.get_height() / 2,
+                    f"{v:+.2f}pp", va="center", ha="right",
+                    color=COLOR_NAVY, fontsize=10.5, fontweight="bold")
+        else:
+            ax.text(v + pad, b.get_y() + b.get_height() / 2,
+                    f"{v:+.2f}pp", va="center", ha="left",
+                    color=COLOR_NAVY, fontsize=10.5, fontweight="bold")
     ax.set_yticks(y)
     ax.set_yticklabels(names, fontsize=11.5)
     ax.invert_yaxis()
     ax.axvline(0, color=COLOR_TEXT_LIGHT, lw=0.6, zorder=1)
     ax.set_xlabel("High-intent guid-visit ATT (percentage points)", fontsize=11)
-    ax.set_title("High-intent lift spans 200× — from Ferguson +10.6pp to Northern Tool flat",
-                 loc="left", color=COLOR_NAVY, pad=8)
-    ax.text(0, 1.05,
-            "Per-advertiser high-intent guid-visit ATT (95% CI), 7-day window. "
-            "Six of seven show real positive lift; Northern Tool is indistinguishable from holdout.",
-            transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT, ha="left")
-    ax.set_xlim(min(0, min(los) * 1.2), max(his) * 1.18)
-    if min(los) < 0:
-        ax.axvline(0, color=COLOR_TEXT_LIGHT, lw=0.8, zorder=1)
-    plt.tight_layout()
+    # Title above subtitle, both with explicit positioning (no set_title)
+    ax.text(0, 1.14,
+            "High-intent lift spans 200× — Ferguson +10.6pp to Northern Tool flat",
+            transform=ax.transAxes, fontsize=14, fontweight="bold",
+            color=COLOR_NAVY, ha="left", va="bottom")
+    ax.text(0, 1.06,
+            "Per-advertiser high-intent guid-visit ATT (95% CI), 7-day window.",
+            transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT,
+            ha="left", va="bottom")
+    ax.set_xlim(min(0, min(los) * 1.2) - pad * 8, max(his) * 1.18)
+    plt.subplots_adjust(top=0.84, left=0.16, right=0.97, bottom=0.12)
     plt.savefig(out_path, dpi=200)
     plt.close(fig)
 
@@ -217,7 +231,11 @@ def chart_wedge_ratio(meta, out_path):
         ratios.append(r)
         labels.append(f"{r:.2f}×")
 
-    plotted = [(t, r, l) for t, r, l in zip(tiers, ratios, labels) if r is not None]
+    # Drop mid-intent: when both numerator and denominator are at the noise
+    # floor (~0.01pp), the ratio is mathematically valid but uninterpretable —
+    # and it dominates a chart meant to be about the high-vs-peak inversion.
+    plotted = [(t, r, l) for t, r, l in zip(tiers, ratios, labels)
+               if r is not None and t != "mid"]
     fig, ax = plt.subplots(figsize=(10, 5.6))
     if plotted:
         x = list(range(len(plotted)))
@@ -225,23 +243,28 @@ def chart_wedge_ratio(meta, out_path):
         bars = ax.bar(x, vals, color=COLOR_HERO, edgecolor="none", zorder=2,
                       width=0.45)
         ax.axhline(1, color=COLOR_TEXT_LIGHT, lw=0.7, ls="--", zorder=1)
-        ax.text(len(plotted) - 1, 1.02, "1× = clickpass matches guid",
-                color=COLOR_TEXT_LIGHT, fontsize=9, ha="right", va="bottom")
-        for b, lbl in zip(bars, labels[:len(plotted)]):
-            ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.05,
+        # Annotation centered between the bars — no collision with axis label or bars
+        mid_x = (len(plotted) - 1) / 2
+        ax.text(mid_x, 1.04, "1× = clickpass matches guid",
+                color=COLOR_TEXT_LIGHT, fontsize=9, ha="center", va="bottom")
+        for b, _, lbl in zip(bars, vals, [l for _, _, l in plotted]):
+            ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.04,
                     lbl, ha="center", va="bottom",
-                    color=COLOR_HERO, fontsize=12, fontweight="bold")
+                    color=COLOR_HERO, fontsize=14, fontweight="bold")
         ax.set_xticks(x)
         ax.set_xticklabels([TIER_LABEL[t] for t, _, _ in plotted], fontsize=12)
         ax.set_ylabel("Clickpass-ATT ÷ Guid-ATT", fontsize=11)
-        ax.set_ylim(0, max(vals) * 1.25)
-    ax.set_title("MNTN attribution overstates lift at high intent, under-credits at peak",
-                 loc="left", color=COLOR_HERO, pad=8)
-    ax.text(0, 1.05,
-            "Clickpass-ATT ÷ guid-ATT per tier. Above 1× = over-credit; below 1× = under-credit. "
-            "Mid-intent is too noisy to interpret.",
-            transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT, ha="left")
-    plt.tight_layout()
+        ax.set_ylim(0, max(max(vals), 1.0) * 1.30)
+    # Title above subtitle (explicit positioning)
+    ax.text(0, 1.14,
+            "Attribution overstates at high intent, under-credits at peak",
+            transform=ax.transAxes, fontsize=14, fontweight="bold",
+            color=COLOR_HERO, ha="left", va="bottom")
+    ax.text(0, 1.06,
+            "Clickpass-ATT ÷ guid-ATT per tier. Above 1× = over-credit; below 1× = under-credit.",
+            transform=ax.transAxes, fontsize=10.5, color=COLOR_TEXT_LIGHT,
+            ha="left", va="bottom")
+    plt.subplots_adjust(top=0.84, left=0.10, right=0.97, bottom=0.12)
     plt.savefig(out_path, dpi=200)
     plt.close(fig)
 
