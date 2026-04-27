@@ -28,8 +28,9 @@ import math
 import sys
 from pathlib import Path
 
-# Advertiser ID -> human-readable name (TI-837 cohort)
+# Advertiser ID -> human-readable name (TI-837 cohorts; superset of Phase 1 + Phase 2)
 ADVERTISER_NAMES = {
+    # Phase 1 cohort (7)
     31276: "Ferguson Home",
     31455: "Ancient Nutrition",
     34143: "First Watch",
@@ -37,6 +38,35 @@ ADVERTISER_NAMES = {
     34838: "Clayton Homes",
     37775: "Zazzle",
     40563: "Northern Tool",
+    # Phase 2 cohort (30 — 28 new + 31276 + 31455 shared with Phase 1)
+    30181: "Longines",
+    30392: "Swatch",
+    30496: "Lofta",
+    31297: "Mountain Mike's Pizza",
+    31464: "Fiji Airways",
+    32244: "Sur La Table",
+    32320: "Biz2Credit",
+    32404: "National University",
+    32527: "Haggar Clothing",
+    32899: "Balance of Nature",
+    33467: "Outback Presents",
+    33572: "Jase Medical",
+    33684: "SUMMIT One Vanderbilt",
+    34141: "UD - Daniels College of Business",
+    34365: "Barbara B. Mann Performing Arts Hall",
+    34862: "Planned Parenthood Federation of America",
+    35086: "TurboTenant",
+    35374: "Experience Scottsdale",
+    35573: "Casper",
+    37222: "NET-A-PORTER",
+    37796: "California Grown",
+    38307: "Re-Bath Horney",
+    38422: "Signature Hardware Account",
+    42097: "Gruns",
+    43996: "JS Health",
+    46426: "BoggBag",
+    50525: "Overjet",
+    56187: "Ignite Attachments",
 }
 
 OUTCOMES = ("clickpass", "guid")

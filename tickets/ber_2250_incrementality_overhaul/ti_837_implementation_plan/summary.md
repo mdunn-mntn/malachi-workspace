@@ -413,6 +413,77 @@ biddability via served-treatment proxy (not augmentor), HLL approximation
 and run the pipeline. Expected cost ≈ $200-400 (proportional to advertiser
 count; was $90 for 7).
 
+### Phase 2 lift run — RESULTS (2026-04-27)
+
+Lift pipeline ran on the 30-advertiser cohort. **126.7 TB billed, 87 min wall,
+635 slot-hours** — same byte count as Phase 1 (augmentor scan dominates and is
+advertiser-agnostic), 18% more wall time from larger downstream joins.
+
+**Pipeline validation: Phase 1 anchors reproduce within 0.15pp:**
+- Ferguson Home: P1 +10.55pp → P2 +10.70pp (Δ +0.15pp)
+- Ancient Nutrition: P1 +1.76pp → P2 +1.79pp (Δ +0.03pp)
+
+**Headline IVW comparison:**
+
+| Metric | Phase 1 (7) | Phase 2 (30) |
+|---|---|---|
+| HIGH guid IVW | +3.36pp | +2.69pp |
+| HIGH clickpass IVW | +4.17pp | +2.59pp |
+| **HIGH wedge (c/g)** | **1.24× over-credit** | **0.96× ~equal** |
+| PEAK guid IVW | +0.88pp | +0.22pp |
+| PEAK clickpass IVW | +0.55pp | +0.22pp |
+| **PEAK wedge IVW** | **0.62× under-credit** | **1.00× ~equal** |
+| LOO Ancient swing | ±1.17pp (FLAGGED) | none > ±0.05pp |
+
+**Two major findings:**
+
+1. **Phase 1's clickpass over-credit at high (1.24×) DOES NOT REPRODUCE.**
+   Across all four pooling methods (IVW, arithmetic mean, median,
+   sample-weighted), Phase 2's high-tier wedge is 0.88-1.00×. The
+   1.24× over-credit was likely an artifact of Phase 1's tier-collapsed
+   advertisers (HexClad/First Watch/Zazzle/Northern Tool) whose peak/mid
+   IPs got absorbed into the high tier under MAX-tier construction —
+   inflating clickpass disproportionately. **At a clean high-intent
+   tier with diverse subjects, clickpass and guid agree.**
+
+2. **Phase 1's clickpass under-credit at PEAK reproduces — but only with
+   non-IVW pooling.** IVW peak pool is dominated by noise-floor cells
+   with vanishing variance. Sample-size-weighted, arithmetic mean, and
+   median pooling all show **clickpass ~0.30-0.34× of guid at peak**
+   (clickpass under-credits by 3×). This is a stronger result than
+   Phase 1's 0.62× because the new cohort has 19 passing peak cells vs
+   Phase 1's 3.
+
+| Peak pooling method | clickpass | guid | wedge |
+|---|---|---|---|
+| IVW | +0.22pp | +0.22pp | 1.00× |
+| Arithmetic mean | +0.84pp | +2.55pp | 0.33× UNDER |
+| Median | +0.36pp | +1.19pp | 0.30× UNDER |
+| Sample-weighted | +1.02pp | +2.96pp | 0.34× UNDER |
+
+**Per-advertiser distribution (high-intent guid):**
+- 27 of 29 advertisers pass the 0.5pp gate
+- 25 of 27 (93%) show positive lift
+- Range: -1.21pp (Outback Presents) to +16.29pp (TurboTenant)
+- Median: +2.86pp
+
+**IVW dominance pathology eliminated.** Leave-one-out sensitivity flags
+ZERO advertisers with >0.05pp overall swing (vs Phase 1 had Ancient
+Nutrition swinging by ±1.17pp).
+
+**Methodology lesson surfaced:** IVW is the right pooling method when
+all cells are well-powered with similar variance, but it COLLAPSES TO
+NOISE-FLOOR CELLS when many cells have tiny ATT and tiny variance. For
+peak-tier reporting in incrementality studies, **sample-size-weighted
+or median pooling is more robust.** Documented in
+`knowledge/experimentation.md`.
+
+**Output artifacts:**
+- `outputs/ti_837_lift_30adv_7day_2026_04_20_to_26.json` (gitignored, 1782 lines)
+- `outputs/ti_837_per_cell_table_30adv.csv` (gitignored)
+- `outputs/ti_837_meta_analysis_30adv_2026_04_20_to_26.json` (gitignored)
+- `queries/ti_837_lift_analysis_30adv_7day.sql` (committed)
+
 ---
 
 ## 10. Key References

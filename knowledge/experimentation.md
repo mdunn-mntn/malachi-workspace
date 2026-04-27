@@ -1120,6 +1120,17 @@ Inverse-variance-weighted meta-analysis across stratified cells gives each cell 
 
 **Lesson.** When stratifying across tiers with very different base rates, an IVW pool across all cells is mathematically valid but answers the wrong question. Lead with per-tier pools; report the all-cells pool only as a sanity check, with the leave-one-out swing alongside.
 
+**TI-837 Phase 2 update (2026-04-27, 30-advertiser cohort).** The IVW pathology also bites WITHIN a single tier when many cells are at noise-floor magnitudes. Phase 2 peak-tier IVW: clickpass +0.22pp / guid +0.22pp / wedge 1.00× — appears to show no wedge. But the per-advertiser distribution is bimodal: 8 advertisers with low-magnitude noise-floor wedge ≈1.0× (Casper, Re-Bath, NET-A-PORTER, etc.) get high IVW weight from low variance, while 11 advertisers with substantial under-credit (wedge 0.1-0.5×) get lower weight. Alternative pooling reveals the true pattern:
+
+| Pooling method | clickpass | guid | wedge |
+|---|---|---|---|
+| IVW | +0.22pp | +0.22pp | 1.00× |
+| Arithmetic mean (advertiser-equal) | +0.84pp | +2.55pp | 0.33× |
+| Median | +0.36pp | +1.19pp | 0.30× |
+| Sample-size weighted | +1.02pp | +2.96pp | 0.34× |
+
+Three of four methods agree: clickpass under-credits guid by ~3× at peak intent. **For peak-tier reporting, prefer sample-size-weighted or median over IVW.** IVW remains the right tool for high-tier (where all cells are well-powered with similar variance and the four methods all converge to ~1.0× wedge).
+
 ### Attribution and incrementality answer different questions — frame accordingly
 
 Last-touch attribution, view-through attribution, and multi-touch attribution are designed to credit specific channels for outcomes. Causal-incrementality estimators are designed to measure what would have changed if the channel didn't exist. **They aren't supposed to produce the same number** — the wedge between them is informative about how much "credit" each channel claims vs. causes.
