@@ -1153,6 +1153,7 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 
 - **`funnel_level` is on `campaigns`, NOT `campaign_groups`**: `campaign_groups` has no `funnel_level` column. Use `campaigns.funnel_level = 1` for prospecting filter.
 - **`agg__daily_sum_by_campaign` effective start: 2025-09-01**: Despite the GCP data floor of 2025-01-01, the aggregates table only has data from September 2025 onwards.
+- **`agg__daily_sum_by_campaign` STALE since 2026-03-31** (confirmed 2026-04-27, TI-837 Phase 2): MAX(day) is 2026-03-31; no April 2026 data. For analysis windows after 2026-03-31, use `cost_impression_log` directly (not aggregates) or `sum_by_campaign_by_day` (max=2026-04-14). Pipeline owner unknown — flag if blocking work.
 - **`uniques` in `agg__daily_sum_by_campaign` is unreliable for per-advertiser analysis**: The column exists but often contains zeros or values that don't aggregate meaningfully at the campaign level. Do not use VVR (vv/uniques) as a metric from this table.
 - **Low-impression weeks produce extreme rate metrics**: When campaigns pause but VVs still attribute (lookback window), you get weeks with e.g. 7 impressions and 2,564 VVs (IVR=366). Always filter weeks with <1,000 impressions when computing rate metrics.
 - **`r2_advertiser_settings` has no `deleted` column**: Unlike most integrationprod tables, this table has no deleted/is_test flags. All rows are valid.
