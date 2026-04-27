@@ -285,7 +285,52 @@ analysis with IVW meta-analysis aggregation and a 0.5pp guid-CI N-gate per cell.
 | **Stage 2** — 7-adv × 7-day primary (window 04-20→04-26, +3-day visit post-period to 04-29) | ✅ Complete (2026-04-27) | 126.7 TB / 74 min wall / 560 slot-hours. Single-query batching held — augmentor scan amortized 7×. 26 cells output (peak/mid empty for HexClad/First Watch/Zazzle/Northern Tool — MAX(score)/week absorbed them into high). Local output: `outputs/ti_837_lift_7adv_7day_2026_04_20_to_26.json` (gitignored). |
 | **Stage 3** — IVW meta-analysis + N-gate + sensitivity | ✅ Complete (2026-04-27) | All 26 cells pass the 0.5pp guid CI half-width gate. High-tier IVW pool: clickpass +4.17pp / guid +3.36pp (1.24× over-credit). Peak-tier pool (3 advertisers): clickpass +0.55pp / guid +0.88pp (0.62× UNDER-credit — wedge inverts). Mid-tier essentially zero. Leave-one-out flagged Ancient Nutrition swinging the all-cells pool by 1.17pp — confirms IVW dominance pathology in mid-rate cells; per-tier numbers are stable. |
 | **Stage 4** — diagnostic re-runs | Skipped (not needed) | All cells pass the N-gate. No window extensions required. |
-| **Stage 5** — Tufte charts + RevealJS deck + presentation critique | ✅ Complete (2026-04-27) | 4 PNG charts (`artifacts/ti_837_chart_*.png`), narrative `artifacts/ti_837_presentation.md`, self-contained RevealJS deck `artifacts/ti_837_presentation_deck.html` (550 KB). Critique applied (rounded headline numbers, trimmed caveats to Rule of Three, cut redundant prose). Shared via githack: https://gist.githack.com/mdunn-mntn/2fe8641ccb19896126f70eeb95a622ff/raw/ti_837_presentation_deck.html |
+| **Stage 5** — Tufte charts + RevealJS deck + presentation critique | ✅ Complete (2026-04-27); chart polish pending | 4 PNG charts (`artifacts/ti_837_chart_*.png`), narrative `artifacts/ti_837_presentation.md`, self-contained RevealJS deck `artifacts/ti_837_presentation_deck.html` (550 KB). Critique applied (rounded headline numbers, trimmed caveats to Rule of Three, cut redundant prose). Shared via githack: https://gist.githack.com/mdunn-mntn/2fe8641ccb19896126f70eeb95a622ff/raw/ti_837_presentation_deck.html |
+
+### ⚠ Known chart cosmetic issues (open follow-up — fix before sharing publicly)
+
+Confirmed by user review of the rendered RevealJS deck on 2026-04-27. None affect data correctness; all are matplotlib/HTML layout bugs in `artifacts/generate_charts.py` and `artifacts/ti_837_presentation_deck.html`.
+
+1. **Title/subtitle z-ordering inverted in 3 charts.** In `chart_money_per_tier_wedge`, `chart_per_advertiser_high_intent`, and `chart_wedge_ratio` the subtitle (gray, written via `ax.text(0, 1.05, ..., transform=ax.transAxes)`) renders **above** the bold-navy title (written via `ax.set_title(..., pad=8)`). Reading order should be title → subtitle, not subtitle → title.
+   - **Fix.** Either (a) move the subtitle below the title with `ax.text(0, 1.02, ..., va='top', transform=ax.transAxes)` and bump the title pad up, (b) use `fig.suptitle()` for the main title and reserve `ax.set_title()` for the subtitle, or (c) concatenate into one multi-line title with markdown-style first line bold via `ax.text` only.
+   - **Files.** `artifacts/generate_charts.py` lines invoking `ax.text(0, 1.05, ..., transform=ax.transAxes)` immediately after `ax.set_title(...)` in three chart functions.
+
+2. **Northern Tool `-0.05pp` label collides with error-bar caps.** In `chart_per_advertiser_high_intent`, the bar value `v = -0.05` and the text x-position `v + 0.05 = 0.0` puts the label "−0.05pp" right next to the zero line. The error-bar left-cap (drawn at `att - 1.96*se`) renders *over* the leading "−" character, so the rendered label looks like "0.05pp" with a stray cap glyph next to it.
+   - **Fix.** For negative bars, place the label to the LEFT of the bar end (not the right): `if v < 0: x_pos = v - 0.05; ha = 'right'`. Apply the same logic in the per-advertiser chart and any future negative-ATT chart.
+   - **File.** `artifacts/generate_charts.py` `chart_per_advertiser_high_intent` function, the `for b, v in zip(bars, atts)` text loop.
+
+3. **Wedge-ratio mid-tier bar overlaps the `1× = clickpass matches guid` annotation.** In `chart_wedge_ratio`, the mid-intent ratio (2.34×) draws a bar that intersects the dashed reference line and its text annotation, which sits at `y=1.02` near the right edge. The annotation text gets occluded by the mid bar.
+   - **Fix.** Either (a) move the annotation to the left edge (`ha='left'` at `x=0`), (b) drop mid-intent from this chart entirely (it's flagged as noise floor in the text and the 2.34× number is statistically meaningless given the underlying ATTs are ~0.01pp), or (c) raise the annotation y-position above the tallest bar.
+   - **Recommended.** Drop mid-intent from the wedge-ratio chart. Mathematically: when both numerator and denominator are at the noise floor, the ratio is uninterpretable, and visually the bar dominates a chart that's meant to be about the high-vs-peak inversion.
+   - **File.** `artifacts/generate_charts.py` `chart_wedge_ratio` function.
+
+4. **(Optional) Subtitle text wraps off the right edge** on the per-advertiser chart in widescreen viewport (≥2560px). The full subtitle "Per-advertiser high-intent guid-visit ATT (95% CI), 7-day window. Six of seven show real positive lift; Northern Tool is indistinguishable from holdout." extends past the chart's right margin. Either shorten it or wrap.
+
+**To re-render after fixing:**
+
+```bash
+python3 tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/artifacts/generate_charts.py \
+  --csv tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/outputs/ti_837_per_cell_table.csv \
+  --meta tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/outputs/ti_837_meta_analysis_2026_04_20_to_26.json \
+  --out-dir tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/artifacts/
+
+# rebuild self-contained HTML deck (re-base64s the PNGs):
+cd tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/artifacts/
+python3 -c "
+import base64, pathlib, json
+charts = {f: base64.b64encode(pathlib.Path(f).read_bytes()).decode()
+          for f in ['ti_837_chart_mntn_overall_headline.png',
+                    'ti_837_chart_money_per_tier_with_wedge.png',
+                    'ti_837_chart_per_advertiser_high_intent.png',
+                    'ti_837_chart_wedge_ratio_per_tier.png']}
+pathlib.Path('/tmp/ti_837_charts_b64.json').write_text(json.dumps(charts))"
+# then re-run the deck-build python (the HTML body is parameterized on /tmp/ti_837_charts_b64.json)
+
+# share the new deck:
+bash .claude/scripts/share_deck.sh tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/artifacts/ti_837_presentation_deck.html
+```
+
+Note: Stage 2/3 outputs (`ti_837_per_cell_table.csv`, `ti_837_meta_analysis_2026_04_20_to_26.json`) are gitignored, so the next session needs to re-run `ti_837_compute_att.py` against the local Stage 2 BQ output (`outputs/ti_837_lift_7adv_7day_2026_04_20_to_26.json`) before regenerating charts. If that local file has been deleted, re-run Stage 2 — but note augmentor_log TTL: by 2026-05-04 the 04-20 partition will be purged, slide window forward.
 
 ### Lessons surfaced during execution (append-only)
 
