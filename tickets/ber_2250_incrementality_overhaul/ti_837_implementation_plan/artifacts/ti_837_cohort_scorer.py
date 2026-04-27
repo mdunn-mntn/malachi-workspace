@@ -94,14 +94,22 @@ def main():
         s = a4_by.get(aid)
         v = a5_by.get(aid)
 
-        distinct_ips = int(u["distinct_ips"])
-        max_high = int(u["max_tier_high"])
-        max_peak = int(u["max_tier_peak"])
-        max_mid  = int(u["max_tier_mid"])
-        max_mr   = int(u["max_tier_max_reach"])
-        ips_3tier = int(u["ips_all_three_tiers"])
-        frac_stuck = float(u["frac_stuck_at_10000"])
-        frac_multi = float(u["frac_multi_tier"])
+        # A.1d schema (1-day HLL on 2026-04-23): distinct_ips_total +
+        # ips_ever_{high,peak,mid,max_reach}. These OVERLAP (an IP at peak on
+        # one day and high another day is counted in both). For 1-day this
+        # doesn't matter — each IP has at most one tier on a single day.
+        distinct_ips = int(u.get("distinct_ips_total") or u.get("distinct_ips", 0))
+        max_high = int(u.get("ips_ever_high") or u.get("max_tier_high", 0))
+        max_peak = int(u.get("ips_ever_peak") or u.get("max_tier_peak", 0))
+        max_mid  = int(u.get("ips_ever_mid")  or u.get("max_tier_mid", 0))
+        max_mr   = int(u.get("ips_ever_max_reach") or u.get("max_tier_max_reach", 0))
+
+        # Collapse proxy: frac_high_only = high / total. ≥0.95 = very stuck.
+        frac_high_only = max_high / distinct_ips if distinct_ips > 0 else 1.0
+        tier_diversity_proxy = 1.0 - frac_high_only
+        ips_3tier  = 0
+        frac_stuck = frac_high_only
+        frac_multi = tier_diversity_proxy
 
         # Per-tier holdout count (10% of MAX-tier population)
         ho_high = round(max_high * 0.10)

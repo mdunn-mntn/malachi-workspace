@@ -344,6 +344,77 @@ Note: Stage 2/3 outputs (`ti_837_per_cell_table.csv`, `ti_837_meta_analysis_2026
 - **2026-04-27 — IVW pool over all cells is dominated by mid-tier near-zero rates.** The plan's "MNTN-overall IVW across all cells" gives +0.16pp guid; leave-one-out swings to +1.33pp dropping Ancient Nutrition. The dominance is mathematical: mid-tier rates ~0.005% have variance ~5e-9 per IP, giving them inverse-variance weights orders of magnitude above high-tier cells. Per-tier pools are stable and defensible. We led the deck with the high-tier pool (+3.36pp) and noted the all-cells pathology in caveats. For Phase 2: consider sample-size-weighted or arithmetic-mean-of-advertiser-ATTs alternatives.
 - **2026-04-27 — The clickpass-vs-guid wedge inverts at peak intent.** At high intent: clickpass +4.17pp > guid +3.36pp (over-credit by 24%). At peak: clickpass +0.55pp < guid +0.88pp (under-credit by 38%). The asymmetry is funnel-dependent: high-intent IPs trigger clean clickpass attribution chains; peak-intent IPs visit but don't always fire clickpass events. Aggregate hides both errors because they roughly cancel. Worth surfacing to the broader team as a structural finding about attribution capture rates by intent tier — not just "clickpass overstates," but "clickpass overstates AND understates depending on where in the funnel you look."
 
+## 11. Phase 2 cohort selection (2026-04-27)
+
+Phase 1 used 7 advertisers inherited from TI-835's sufficiency screen
+(convenience selection). Three weaknesses surfaced: tier collapse on 4 of 7
+(MAX-tier construction absorbed peak/mid into high), Ancient Nutrition
+dominance in IVW pooling, no defense against "you cherry-picked 7."
+
+Built a fresh stratified cohort of **30 advertisers** for the same 7-day
+window (2026-04-20 → 2026-04-26). Selection methodology:
+
+1. **Stage A — empirical universe characterization** (read-only BQ):
+   - A.1d (1-day HLL on 2026-04-23): per-advertiser distinct IPs and
+     per-tier IP counts (`ips_ever_high/peak/mid/max_reach`). Dropped to
+     1-day after 7-day attempts (full COUNT DISTINCT, simpler MAX, HLL
+     on 7 days) all stalled at 30+ min wall / 800B+ slot-ms with no
+     bytes reported. The external prospecting Parquet has 20K parallel
+     inputs per partition — the SCAN dominates regardless of
+     aggregation strategy.
+   - A.3 (cost_impression_log, 7-day): 1,687 active advertisers with
+     served_distinct_ips per advertiser.
+   - A.4 (agg__daily_sum_by_campaign, March 2026): spend +
+     funnel/objective/channel mix. **Discovered table is stale at
+     2026-03-31 — switched stratification window to March; documented
+     in `knowledge/data_knowledge.md`.**
+   - A.5 (fpa_advertiser_verticals): vertical category per advertiser.
+   - A.2 SKIPPED: full augmentor scan would cost $250-500. By
+     hash-symmetry of the holdout MD5 construction, biddable_rate ≈
+     win_rate × O(10); used `holdouts × 0.30` as a conservative
+     biddable proxy.
+
+2. **Stage B — empirical selection criteria** (`artifacts/ti_837_cohort_selection_criteria.md`):
+   - Inclusion: in prospecting feed, active in window (≥100 served IPs),
+     per-tier biddable_holdouts ≥ 5,000 in any of {high, peak, mid}
+     (power calc: 95% CI ≤ 0.5pp at p ∈ [0.005, 0.05]),
+     `frac_high_only = max_high / total ≤ 0.95` (tier-collapse
+     prevention), March spend ≥ $5,000.
+   - Stratification: spend tercile × top-vertical, with composite
+     scoring on (high-tier biddable_holdouts × tier-diversity).
+
+3. **Stage C — final 30-advertiser cohort** (`artifacts/ti_837_phase2_cohort.md`):
+   - 13 high / 7 mid / 10 low spend.
+   - 20 distinct verticals (Apparel ×3, Home Improvement ×3, etc.).
+   - Phase 1 anchors retained: **Ancient Nutrition + Ferguson Home**
+     (the two NOT tier-collapsed). The 4 collapsed Phase 1 advertisers
+     (First Watch, HexClad, Zazzle, Northern Tool) are correctly
+     excluded by the new tier-diversity gate; their Phase 1 results
+     stand as a "high-only" validation cohort.
+   - Sister-company audience dedup (Re-Bath Oslund and Re-Bath Horney
+     had identical (high, peak, mid) signatures): kept one, replaced
+     the other with Fiji Airways.
+   - Largest single advertiser is 8% of pooled high-tier biddable
+     holdouts (vs Phase 1 where Ancient was ~40%) — IVW dominance
+     fragility bounded.
+
+**Artifacts (all committed):**
+- `queries/cohort_selection/a1c_universe_hll.sql`, `a3_cost_impression_treatment.sql`,
+  `a4_spend_funnel_mix.sql`, `a5_vertical.sql`
+- `outputs/cohort_selection/a*.csv`, `cohort_scored.csv`, `cohort_final.csv`
+- `artifacts/ti_837_cohort_scorer.py`, `ti_837_cohort_builder.py`,
+  `ti_837_cohort_selection_criteria.md`, `ti_837_phase2_cohort.md`
+
+**Caveats reported in cohort doc:** 1-day prospecting proxy (not 7-day),
+biddability via served-treatment proxy (not augmentor), HLL approximation
+(~1-3% error). Actual ATT run validates all three.
+
+**Next session:** drop the 30-advertiser list into the Phase 1 lift SQL
+and run the pipeline. Expected cost ≈ $200-400 (proportional to advertiser
+count; was $90 for 7).
+
+---
+
 ## 10. Key References
 
 - **Full playbook:** `artifacts/iroas_measurement_playbook.md` — 10 ranked methods, feasibility scorecards, phased rollout, 11 open decisions, reading list

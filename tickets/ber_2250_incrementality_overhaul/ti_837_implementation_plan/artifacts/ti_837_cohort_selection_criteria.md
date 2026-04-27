@@ -28,7 +28,7 @@ An advertiser is **eligible** for the cohort iff ALL of the following hold:
 | **In prospecting feed** | row in `household_scoring__prospecting_intent__v1` for any day in window | A.1 | Mirrors Phase 1; excludes keyword-only DS19 advertisers (Angi, REVOLVE) |
 | **Active in window** | served ≥ 100 distinct IPs in `cost_impression_log` 2026-04-20→26 | A.3 | Advertiser must actually run during the window to have ATT |
 | **Per-tier biddable-holdout n ≥ 5,000** | for ≥ 1 of {high, peak, mid} tiers (estimated as `holdouts × biddable_rate_proxy`) | A.1 + power calc | Power calc: yields ≤ 0.5pp CI half-width at 95% for visit-rate p in [0.005, 0.05] |
-| **Tier diversity** (NEW) | `frac_multi_tier ≥ 0.20` (≥20% of IPs span ≥2 tiers across the week) | A.1 | Mitigates MAX-tier collapse — at least 20% of subjects are not stuck at a single tier |
+| **Tier diversity** (NEW) | `frac_high_only = max_tier_high / distinct_ips ≤ 0.95` | A.1b | Mitigates MAX-tier collapse — at least 5% of IPs are not at score=10000. Per-IP score variance was too expensive to compute on the external prospecting table; this is the cheap proxy. |
 | **Prospecting spend ≥ $5,000** | March 2026 reference | A.4 | Filters tail of dormant advertisers; ensures campaigns are real |
 
 ## Stratification dimensions (used for sampling within eligible pool)

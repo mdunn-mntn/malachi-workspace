@@ -29,7 +29,7 @@ TARGET_N = 30
 
 # Eligibility (Stage B gates)
 MIN_BIDDABLE_HOLDOUTS = 5_000      # any of {high, peak, mid}
-MIN_FRAC_MULTI_TIER   = 0.20
+MIN_FRAC_MULTI_TIER   = 0.05       # tier-diversity proxy: 1 - max_high/distinct_ips
 MIN_MARCH_SPEND       = 5_000
 MIN_SERVED_IPS        = 100        # already filtered in A.3
 
@@ -111,23 +111,35 @@ def composite_score(r):
 def build_cohort(eligible, cells, target_n=TARGET_N):
     selected = set()
     rationale = {}
+    used_audiences = set()  # (high, peak, mid) tuples — dedupe sister companies
 
-    # Pass 1: take top-1 per (spend × vertical) cell
+    def audience_signature(r):
+        return (r["max_tier_high"], r["max_tier_peak"], r["max_tier_mid"])
+
+    # Pass 1: take top-1 per (spend × vertical) cell, skip duplicate audiences
     for cell_key, members in cells.items():
         members.sort(key=composite_score, reverse=True)
-        if members:
-            r = members[0]
+        for r in members:
+            sig = audience_signature(r)
+            if sig in used_audiences:
+                continue
             selected.add(r["advertiser_id"])
+            used_audiences.add(sig)
             rationale[r["advertiser_id"]] = f"cell-anchor ({cell_key[0]} spend × {cell_key[1]})"
+            break
 
-    # Pass 2: top up to target_n by composite score across all eligible
+    # Pass 2: top up by composite score, skip duplicate audiences
     if len(selected) < target_n:
         remaining = [r for r in eligible if r["advertiser_id"] not in selected]
         remaining.sort(key=composite_score, reverse=True)
         for r in remaining:
             if len(selected) >= target_n:
                 break
+            sig = audience_signature(r)
+            if sig in used_audiences:
+                continue
             selected.add(r["advertiser_id"])
+            used_audiences.add(sig)
             rationale[r["advertiser_id"]] = "topup (next-best by composite score)"
 
     final = [r for r in eligible if r["advertiser_id"] in selected]
