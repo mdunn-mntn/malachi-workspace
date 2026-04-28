@@ -1,0 +1,308 @@
+[00:00] Good. Hey, I appreciate it. I was just going to say to you, I think you already understand, but
+[00:05] I basically, I've just been running some really large queries using Augmentor log and to come up
+[00:14] with some incrementality tests. And they take quite a bit of time to run, about an hour and a
+[00:20] half sometimes. I'm scanning the BigQuery tables. So I was trying to figure out if there's a way I
+[00:25] could do it faster. My, my idea is I like to run everything from my laptop. So I'll probably use a
+[00:34] Databricks connector and then like, just give it my key and so I can do the results locally. I think
+[00:41] it should work the same way. But yeah, I mean, I really appreciate it. I didn't know if there,
+[00:48] you said that maybe there's some stuff that would help. So yeah, that's what I'm here for. So I mean,
+[00:54] everything's running correctly in BigQuery. It's just more of like, can I get it to run much faster
+[00:59] with higher compute if I need to? Oh, so you have it already running in BigQuery, right?
+[01:07] Yeah, correct. So I can already run all of these things in BigQuery. The fact is,
+[01:10] it just takes me like an hour and a half to get results or more sometimes for some of them.
+[01:14] So that's really the limitation. Okay. Okay. Okay. Yeah. From your data set,
+[01:21] if you wanted to run it in Databricks
+[01:23] or Dataproc or whatever it is, right?
+[01:28] The only
+[01:29] complex part is
+[01:31] this click path
+[01:33] log, which is medium sized.
+[01:36] It depends on how much history
+[01:37] do you need. How much history do you need there?
+[01:40] Not long.
+[01:42] Okay, so in a
+[01:43] perfect world, 30
+[01:45] days would be nice, but really I only need
+[01:47] like three to seven days.
+[01:49] Yeah, I've checked
+[01:51] I've checked starting 2016, 26, sorry, 26, this year actually, right?
+[01:57] And it has 140 million rows, so you should be good.
+[02:01] Okay.
+[02:01] If you need just a couple of days, yeah, just don't worry about it.
+[02:07] Yeah, so right now I'm only doing seven days on relatively small advertisers,
+[02:10] and it's taking me quite a long time.
+[02:12] Mostly the Augmentor log scan is the thing that's taking the longest
+[02:15] because it's so big.
+[02:16] because
+[02:18] augmenter log is
+[02:20] every single IP that we could possibly
+[02:22] fit on
+[02:23] yeah, augmenter log is tricky
+[02:25] and so just when you're reading from
+[02:27] the S3
+[02:28] just to
+[02:30] I would advise just to specify explicitly
+[02:33] partitions, it will speed up
+[02:35] quite a bit
+[02:36] okay, so really the only difference
+[02:39] is I can do what you gave me
+[02:41] the code
+[02:44] and connect my...
+[02:49] I guess I need to make a new compute
+[02:50] because it's been a while since I used Databricks.
+[02:53] Oh, for the long-running compute,
+[02:55] I would advise just to use job compute.
+[02:58] Just job compute?
+[02:59] Okay, so if I go to...
+[03:01] Yeah, I can show you.
+[03:02] I can show you how to do it.
+[03:05] If you can share, I...
+[03:06] Oh, I can share whatever works better.
+[03:08] No, I'll share. No problem.
+[03:11] So just give you...
+[03:13] Like if you can create like new, create new notebook,
+[03:17] just like entity.
+[03:20] Okay.
+[03:21] Like let's put here like, no, no, no, no serverless.
+[03:26] Don't worry about it yet.
+[03:28] Just let's name it like just the serverless,
+[03:34] serverless like check or whatever,
+[03:36] whatever you like.
+[03:37] So we can find it.
+[03:39] And just type df equals spark range. Range. Like, 100, right?
+[03:52] Yep.
+[03:53] And df display.
+[03:56] Okay.
+[03:57] So, it will be our simple notebook. So, wait, wait, wait. Don't run it yet.
+[04:04] Oh.
+[04:04] No worries. So, then you can, when you go to the jobs and pipelines.
+[04:11] Okay. Jobs and pipelines. Okay.
+[04:16] Right, right. So, you see there is a create on the right hand side. Yeah. Create job.
+[04:25] So, what we here need to specify task, right? So, let's click on this notebook. This is
+[04:32] is above notebook right in the center of the screen the region notebook oh right here right here
+[04:39] and then task name you can name it same doesn't really matter but it's serverless
+[04:47] job right okay okay and notebook workspace that's right on path just to find your notebook
+[04:55] Oh, okay. So the one I just created, serverless check. Okay. Confirm.
+[05:00] Yeah. Then compute. Can you go to the compute drop down and add new job cluster?
+[05:07] Okay.
+[05:08] Here we can specify job compute, serverless job compute. Here you can specify
+[05:13] all necessary options if you need libraries or something like that, right?
+[05:17] Yeah.
+[05:17] Yeah, for right now, and let's not forget tags.
+[05:22] Okay.
+[05:24] Tracking, let me give you, we need a couple of tags.
+[05:28] Just let me send it to you in just a moment.
+[05:40] So while I'm searching for tags, just a quick comment here that when you're
+[05:47] running something for a long time, like, or use big compute or running, let's say you're
+[05:54] using compute more than like 16 or 20 cores for more than an hour, right?
+[06:02] I would advise you to use job compute.
+[06:05] It's much, much more cost efficient, if it makes sense.
+[06:09] Okay.
+[06:10] Yes.
+[06:11] So what we need to specify is this three tags here.
+[06:19] Project, I'll talk and I'm passing it to our chat.
+[06:31] Yeah, this three, I just.
+[06:34] Okay, so are those the keys or?
+[06:36] Yeah, keys.
+[06:38] Project, oops.
+[06:41] And name the project you are working on.
+[06:46] Right?
+[06:48] I see.
+[06:50] Okay.
+[06:50] The TI-837.
+[06:56] Nice.
+[06:58] Uh-huh.
+[06:59] Okay.
+[07:00] Squad.
+[07:00] We're in targeting infrastructure.
+[07:03] Oh, TI.
+[07:03] You can put TI.
+[07:04] Whatever.
+[07:05] Or ML Squad.
+[07:06] Everybody puts ML Squad still.
+[07:08] Oh, ML.
+[07:10] Like this?
+[07:11] All capitals.
+[07:13] But yeah, that's right.
+[07:16] Okay.
+[07:17] And dev.
+[07:19] Dev capital.
+[07:21] Camel case.
+[07:22] So dev.
+[07:23] Doesn't really matter.
+[07:25] Whatever.
+[07:26] Yes.
+[07:26] And how many workers?
+[07:28] Let's say for this one, we need just one.
+[07:29] Right?
+[07:30] And let's put two.
+[07:32] Let's put two.
+[07:33] And enable autoscaling just to make sure.
+[07:36] Right?
+[07:37] Also, one thing.
+[07:39] Right?
+[07:39] You see this?
+[07:40] It is checked.
+[07:41] use preemptible workers if you have lots of stages i would advise uncheck it only
+[07:53] so because it usually
+[07:58] uh but but it's needed for broad lot when you you know uh your how your job works right then
+[08:05] predictability, so it could work, right? But usually if you do explorations, nodes reclaimant
+[08:14] is usually like a little bit tricky to deal with and adds lots of unnecessary
+[08:23] variables. So, let me put it this way. So, let's put the min and max, like, min one and max two,
+[08:31] right so this is uh yeah it's good uh can you go scroll down uh advanced uh advanced
+[08:42] advanced manual and now access mode can you select uh dedicated you see this there is a drop down
+[08:51] standard oh yeah dedicated dedicated this one and same as yeah it's it's good okay yeah confirm
+[09:00] Okay. And I can create a task?
+[09:05] Yeah. Just create that task.
+[09:11] Mm-hmm. And so you successfully created a task, right? And let's run now.
+[09:16] Okay.
+[09:19] That's pretty much it. So now when you go to the view run, you will see right now
+[09:27] it's spinning up compute it will take like five five to five to six minutes depending on note
+[09:34] size bigger node sizes uh starts up quicker because we have more compute power but this one
+[09:40] just have four cores shouldn't be too long yeah and you can monitor it right here once
+[09:49] Once cluster spins up, you are able to actually see output right here.
+[10:00] In here, you see no results available yet.
+[10:03] Yeah.
+[10:04] So this is specific to a notebook.
+[10:05] But what if I were to want to run it in here?
+[10:08] So what if I want to execute and then get the output?
+[10:12] What do you mean by that?
+[10:19] instead of having a notebook running it,
+[10:22] if I just want to have the notebook here,
+[10:25] so I can have a Jupyter notebook here,
+[10:26] but then access the compute resources.
+[10:34] Yeah, there is an option to do that, right?
+[10:38] A couple of options.
+[10:42] There is Spark Connect, but it has limitations, right?
+[10:45] Okay.
+[10:46] If you're good with those limitations,
+[10:47] you can do that like remote start.
+[10:50] This is the first thing, right?
+[10:53] Second thing, Airflow TI, you can initiate it from local, right?
+[10:59] And it will be running in Databricks.
+[11:02] And after it's successful, we can fetch the result, if it makes sense.
+[11:08] So right now, result is not output because usually we're dealing with big data sets.
+[11:13] So usually we don't output the result tables.
+[11:17] We usually put the output into the RK file or something like that.
+[11:29] Gotcha.
+[11:30] We can do analysis later on.
+[11:33] Yeah.
+[11:34] Because while the majority of our output is actually not large at all, we have
+[11:40] to scan all the tables because we need to calculate them, but then they're just counts
+[11:44] and sums.
+[11:45] So there are usually very few rows, the output.
+[11:48] Yeah.
+[11:49] Which is why I can use it locally.
+[11:52] Like if I were able to save or something.
+[11:56] Yeah, it makes sense.
+[11:57] What we can do here, right?
+[11:59] If you just care about output, right?
+[12:04] Can I go to the Airflow TI?
+[12:07] Oh, like the GitHub?
+[12:10] Yeah, GitHub.
+[12:13] Let's open a different page.
+[12:14] so we would preserve this one.
+[12:20] I had one.
+[12:22] Oh, that's okay.
+[12:36] Okay.
+[12:38] So here, if you can go to the models,
+[12:40] models, vertical categorization, and vertical auto-assignment.
+[12:51] You see, this one model runs on Databricks compute.
+[12:58] What happens here, right?
+[13:00] And you can run it from local, right?
+[13:05] And what we can do is just to right now it saves,
+[13:09] if you can scroll all the way down,
+[13:12] it saves to the CL line 290.
+[13:15] It saves it to the parquet file, right?
+[13:19] Yeah.
+[13:19] We can do it like you can do like self-display or something.
+[13:24] The only thing is not ready right now is it output, right?
+[13:29] So, yeah, what we can pull for the results and for the output,
+[13:35] and it will print to your system output the results.
+[13:39] after it's completed.
+[13:41] Okay.
+[13:42] So, yeah.
+[13:44] The only thing which doesn't work right now
+[13:46] is printing output.
+[13:49] Okay.
+[13:51] Just going back to what we had over here.
+[13:56] So, is there a reason that we set it up this way
+[13:59] as like a task as opposed to like...
+[14:02] Because I remember sometimes...
+[14:02] I don't know if it's any different,
+[14:04] but remember we just opened up a notebook
+[14:06] and then I remember we would have some sort of like...
+[14:09] Yeah. Cost. Cost is the only difference. So, for example, when we develop, we use our own compute, right? You see your cluster, right?
+[14:24] Uh-huh.
+[14:25] Oh, you probably, but I can recreate it. No worries. Because if you don't use it 30 days, it will automatically clean up.
+[14:33] Yeah, that's what happens.
+[14:34] Yeah, I can create it.
+[14:36] But this one is mostly for you to develop stuff, right?
+[14:41] So that your cluster is up and you can run and make sure that syntax is correct
+[14:47] and it does things as you expect it on tiny dataset.
+[14:54] Yeah.
+[14:55] Yep.
+[14:56] And then when you actually need to run something,
+[14:58] then that's when you set up a task where it's not.
+[15:00] it's only being used when it needs to be used
+[15:02] and not just sitting on
+[15:04] right
+[15:07] yeah
+[15:08] and the caveat
+[15:10] reason is the cost
+[15:12] because this one regular
+[15:14] cluster is a 3x
+[15:16] more than 3x of a cost
+[15:18] that's why
+[15:20] for example if you look at my
+[15:22] computer my computer is tiny
+[15:24] I usually like 16 cores
+[15:26] or 24 cores
+[15:28] no more than that
+[15:29] And if I needed something to run and it runs more than 20, 30 minutes,
+[15:40] I'll definitely run it on the job compute.
+[15:42] If it requires big cluster.
+[15:46] Nobody cares if it's $1 or $3.
+[15:51] This is not a big deal.
+[15:53] But if we're talking about your runtime, 70 bucks versus 210, right?
+[16:01] That's a huge difference.
+[16:03] Okay.
+[16:05] Well, thank you very much for this, Victor.
+[16:07] I will try to get this set up for myself.
+[16:12] Yeah, I know.
+[16:13] Cluster I need to create.
+[16:14] If you need a cluster, I can create a cluster.
+[16:17] Yeah, if you would, wouldn't mind.
+[16:19] That would be great.
+[16:20] Yeah.
+[16:20] Let me create a cluster for you.
+[16:22] But yeah, the options.
+[16:25] So yeah, just to summarize, those are the options, right?
+[16:28] If you wanted to output the result locally, right?
+[16:31] Two options, either play with Spark Connect, Databricks Connect,
+[16:36] then it will be the case.
+[16:38] But there are limitations, and yeah, it's not as convenient.
+[16:44] So not everything is supported there, right?
+[16:47] Gotcha.
+[16:47] Or we can create, if you want to result in your system output,
+[16:53] we can enhance our airflow.
+[16:56] But in this case, you don't need to rely even on Databricks.
+[17:00] We can choose what you're using to run Databricks,
+[17:04] Dataproc, Cluster, or whatever.
+[17:08] Okay.
+[17:10] Again, thank you.
+[17:11] Thank you very much, Victor.
+[17:12] This is very helpful.
+[17:13] Hopefully this
+[17:14] I can get this to run a lot quicker
+[17:17] On my local machine
+[17:18] After putting in those stuff
+[17:21] Nice
+[17:22] So let me create compute for you
+[17:24] And I'll ping you as compute
+[17:26] Okay
+[17:27] Sounds good, thank you
+[17:30] Let me know if you have any additional questions
+[17:33] Awesome, okay
+[17:34] Take care, Victor, thank you
+[17:35] Bye

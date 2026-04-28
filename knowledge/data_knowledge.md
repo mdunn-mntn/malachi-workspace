@@ -1661,3 +1661,33 @@ spark.read.format("bigquery") \
 
 **Speedup estimate (TI-837 case):** v1 = 87 min wall on BQ for 30 advertisers, 7-day window. Hypothesis (untested): reading augmentor + guid from GCS via Spark on a high-compute Databricks cluster could cut to 10-20 min while also avoiding BQ scan billing. Awaiting first run to confirm.
 
+
+### Databricks compute economics (Victor Savitskiy, 2026-04-28, TI-837)
+
+**Job compute is 3× cheaper than interactive cluster compute.** Use job compute (Job → Add new job cluster) for any run >20-30 min OR using >16-20 cores. Interactive cluster is for development only ("make sure syntax works on a tiny dataset"). Same workload that costs $210 on interactive cluster runs ~$70 on job compute.
+
+**Required tags on every job/cluster** (cost tracking):
+- `project = TI-XXX` (or relevant ticket)
+- `squad = ML` (universal label even for non-ML squads — convention)
+- `env = Dev`
+
+**Cluster setup defaults (Victor):** autoscale min 1 max 2 (or more for compute-heavy), Advanced → access mode = `dedicated`, **uncheck** "Use preemptible workers" for exploration (preemptible only for production where you've handled node-reclaim tolerance).
+
+### Reading from GCS via Spark — explicit partition filters required
+
+Per Victor: "Augmentor log is tricky. When reading from S3 [GCS], specify explicitly partitions — it speeds up quite a bit." Spark partition pruning needs explicit predicates in the `.filter()` chain (or `WHERE` SQL), not just downstream WHERE clauses, because directory pruning is decided at scan plan time. Pattern:
+
+```python
+spark.read.parquet("gs://mntn-data-archive-prod/augmentor_log/") \
+  .filter("year = '2026' AND month = '04' AND day BETWEEN '20' AND '26'")
+```
+
+Without the filter pushed at read level, Spark scans every partition (orders of magnitude slower).
+
+### Running Databricks compute from a local laptop — three patterns
+
+1. **Databricks Connect / Spark Connect** — full notebook locally, compute on cluster. Limitation: not all Spark APIs supported.
+2. **`airflow_ti` enhancement** — trigger Databricks/Dataproc job from local, fetch result back. Currently saves to Parquet only (line ~290 in `vertical_auto_assignment`); needs a small enhancement to print to system output. Choice of compute engine: Databricks / Dataproc / Dataproc-serverless.
+3. **Job in Databricks UI** — create job, run, view output. Manual, not local-friendly but cheapest for one-shot runs.
+
+For analysis-style work where output is small (e.g., per-cell ATT counts ~360 rows), Databricks Connect works fine. For bulk processing with huge output, save to Parquet and analyze locally afterward.
