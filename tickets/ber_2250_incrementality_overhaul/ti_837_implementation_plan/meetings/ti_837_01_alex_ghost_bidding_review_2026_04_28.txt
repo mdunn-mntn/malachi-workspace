@@ -1,0 +1,427 @@
+[00:00] So pre-period, pull everybody's prospecting intent, max prospecting intent score that they had.
+[00:06] That's like the group that they're in.
+[00:08] Then, you know, holdout versus targeted, and then you do your kind of ghost bidding methodology to say,
+[00:14] here's an IP that was high intent and would have received an impression in the post-period or something like that, right?
+[00:22] Based on the bid rate. Okay.
+[00:24] Okay.
+[00:25] So I just, just for clarity to, I still need to make sure I go through all the methodology and stuff.
+[00:34] So some of the things that were suggested to me by, by AI for testing it, I haven't validated all of it at this point.
+[00:43] So there might be some weird things, but I just want to make that clear that I haven't gone through.
+[00:47] I plan, I'm going to do it in the next like hour and a half before we do our next meeting.
+[00:52] But everything looks fine.
+[00:53] So there's a sample size and 30 advertisers, seven days.
+[00:57] I had to sample them because the problem with our original group, I had seven advertisers and four of them were all high intent only,
+[01:05] and the other three were not.
+[01:07] So I wanted to make sure I had a good sample across because I need to clarify it.
+[01:11] Thank you, sweetheart.
+[01:12] I need to clarify it, but the, what am I trying to say?
+[01:21] Oh, the other ticket, the ticket that says mid intent, you know, where we're switching.
+[01:25] I think we wanted to see the incrementality of just the mid intent.
+[01:28] Right.
+[01:29] But I think this solves it.
+[01:30] So I think this is, might've been two birds with one stone type of thing.
+[01:35] Okay. So let's just look at this here.
+[01:37] Again, some of these things I have not looked at in a bit.
+[01:41] So I need to make sure that this makes sense.
+[01:43] I assume it is, but I just want to make sure.
+[01:45] So the confidence interval is pretty small.
+[01:50] So we're pretty, we're pretty confident that this is, these are correct.
+[01:54] 25 of the 27 advertisers I sampled had sufficient sample size to, or not sufficient sample size.
+[02:00] They all had sufficient sample size, but had positive lift.
+[02:04] Two of them had negative lift, which I thought was funny.
+[02:06] I, again, I've been through this before, but negative lift is like the funniest thing in the world to me.
+[02:11] But it's, I also think that of them.
+[02:19] Oh yeah.
+[02:20] So there were some that didn't meet power.
+[02:22] So we excluded those.
+[02:23] This is interesting.
+[02:26] These advertisers, these 30 advertisers, these are all active.
+[02:36] Prospecting campaigns that you picked for these.
+[02:39] They had to be.
+[02:40] Because that's one of the checks we did last time for the offline.
+[02:48] Yeah.
+[02:49] Those kind of boxes are checked.
+[02:51] Because the time window that which I selected for it.
+[02:54] So made sure that the campaigns are, are within the same time.
+[02:58] Again, this is only a three day or a seven day period.
+[03:01] It's not super long, but the Augmenter log is like massive.
+[03:04] Yeah.
+[03:05] It took me forever to run.
+[03:06] I think it's, I think the longest query, the biggest drawback was that it took me like 90 minutes to run some of the stuff.
+[03:12] That's why I was like trying to, one of the things I want to do is see if I can do a data grip.
+[03:16] See if I can get down to like 15 minutes or something like that.
+[03:19] And then these are some interesting things.
+[03:22] I haven't seen these concepts, but they make sense.
+[03:24] So leave one out.
+[03:25] So you drop any single advertiser and you see if it changes anything significantly.
+[03:29] And then the same largest single advertiser wait.
+[03:32] So make sure not one advertiser is waiting like the results more than any other.
+[03:35] And they're not.
+[03:36] So pretty cool.
+[03:37] So these are pretty consistent results.
+[03:39] So yeah, here's again, I haven't gone through this, but this is cut off here.
+[03:45] But you can actually see this is distribution of Lyft on the GUID logs.
+[03:50] So this would be just peer visits.
+[03:52] Pretty cool.
+[03:55] So we can actually.
+[03:56] And these are percentage points.
+[03:58] So like 16, the top one, they're performing arts hall.
+[04:02] 19% increase in.
+[04:06] Not like a percent difference, but like a change in percentage points.
+[04:11] So like call it a treatment group is 20% and control group is 0.2% than a 19.8%.
+[04:21] Is that my, I always get percentage point confused.
+[04:24] So I'm just making sure.
+[04:25] So percentage points.
+[04:26] What I understand is it's not like difference in the percentages.
+[04:30] Yeah.
+[04:31] Yeah.
+[04:32] Yeah.
+[04:33] Okay.
+[04:34] Exactly.
+[04:35] So if I went here, you can see percentage points.
+[04:36] So 1.3 to 7.5.
+[04:37] Yeah.
+[04:38] 6.2%.
+[04:39] Yeah.
+[04:40] It's a lot more.
+[04:41] Yeah.
+[04:42] Cause then it looks like a hundred percent.
+[04:43] Now that's fine.
+[04:44] Okay.
+[04:45] So, and I think that's how we would want to measure the Lyft too.
+[04:47] Is that.
+[04:50] So yeah.
+[04:52] I mean, this is just across the board.
+[04:54] These are the different ones I grabbed.
+[04:57] I know that these are being cut off.
+[04:59] Obviously we'll fix that.
+[05:02] So here's some interesting things here.
+[05:04] If you, this is again, if you look at the click pass, which click pass is what we attribute to ourselves.
+[05:11] Right.
+[05:12] And then you look at the GUID.
+[05:15] You would, in a perfect attribution world.
+[05:18] Now I don't think this is an issue.
+[05:19] Cause our problem is not make attribution match Lyft.
+[05:22] That's not the problem.
+[05:23] There are industry standards, but it's cool.
+[05:25] Interesting to compare the different effects.
+[05:28] So like, for example, if we run a campaign and we suddenly get an increase in number of click, like attributed.
+[05:34] Our own attributed visits, right.
+[05:37] Versus just the number of visits that are in the good log.
+[05:41] Then you can kind of see like how different attribution is attributing things versus how many actual visits we're driving.
+[05:51] Right.
+[05:53] So, you know, if we were to increase cause 10 visits, right.
+[05:57] We'd expect 10, 10 attributed visits in the click pass.
+[06:00] And then, and then 10 in the good log, if everything was perfect.
+[06:06] I want to go more into, into depth with this, but this is more of just some.
+[06:16] There's some lower.
+[06:17] What is our thinking there?
+[06:18] It's just like, we're under attributing what's considered or to be considered a visit in click pass is a stricter requirement.
+[06:29] So there are less visits.
+[06:31] So click past that's counter to what our hypothesis was here.
+[06:38] Right?
+[06:39] No.
+[06:40] Um, or kind of, I mean, so it depends what, well, first off, which hypothesis are you talking about?
+[06:48] We were using click pass.
+[06:50] I don't, this is me maybe paraphrasing.
+[06:52] So I don't know if this is right, but we were in our incrementality reporting before we were using click pass.
+[06:58] Which was like over boosting, uh, incrementality or part of the reason, or is that never a statement we need to make?
+[07:09] I don't think so.
+[07:10] And I also don't know if I agree with that sentiment after I look at this.
+[07:14] I think that's fine.
+[07:16] I just want to make sure I was remembering this, but, um.
+[07:19] And again, I need to go really into the methodology.
+[07:22] I just got these numbers and I haven't had time to, um.
+[07:25] Sure.
+[07:26] To go through them.
+[07:27] Peak intent, I assume is like peak performance, right?
+[07:29] Yes.
+[07:30] Yes.
+[07:31] Peak performance.
+[07:32] Yep.
+[07:33] So basically, um, yeah, I don't think that we are over attributing based on this.
+[07:43] So, for example, if you were to, um.
+[07:47] Oh, these are different pooling methods.
+[07:49] These are also different things to look at that I want to look at.
+[07:53] Um.
+[07:54] Um.
+[07:55] But if you look at the increase to click pass versus GUIN, the wedge here is it's talking about the difference between those two.
+[08:03] So obviously the perfect would be one.
+[08:05] Sure.
+[08:06] And so it looks pretty.
+[08:08] This is across all high intent IPs.
+[08:10] So this is just filter for high intent.
+[08:12] One of the reasons too, I think we see the more confidence in high intent is because we mostly deliver to high intent.
+[08:17] Sure.
+[08:18] We're not delivering to mid intent as much.
+[08:21] So it's a lot harder to get large sample sizes and stuff on things that are not.
+[08:27] Um.
+[08:28] But it seems pretty consistent.
+[08:30] But this is weird for peak performance.
+[08:33] It's opposite.
+[08:34] Actually, it looks like we're under.
+[08:38] Um, crediting ourselves for peak performance stuff, but I don't know if this is again, I don't think this is.
+[08:47] There are more variables when it comes to intent, right?
+[08:50] Because like.
+[08:53] This is what's weird about attribution is.
+[09:00] We have to consider other touches.
+[09:06] When we.
+[09:10] This could be the other thing that could be affecting you here.
+[09:13] That's not in a high intent.
+[09:17] You are taking people who were assigned their max score of peak performance before the campaign started.
+[09:26] So IPs that visited the vertical, but not any of the keywords.
+[09:32] However.
+[09:34] There is in your post period window, even though it's small.
+[09:38] There is probably some movement before they are served an impression.
+[09:45] Meaning your post period sees them as peak performance.
+[09:49] But then maybe they visit a keyword in the next two days and we serve that impression because now they're high intent.
+[09:55] So there could be some confounding.
+[09:58] That's kind of like skewing numbers here based on that.
+[10:00] And I don't think there's a great way to deal with that because we want a kind of like fixed.
+[10:06] Group like your assignment group should be fixed.
+[10:11] If that makes sense.
+[10:13] Yeah.
+[10:15] And one of the things I was just trying to think of it matters.
+[10:18] It probably does.
+[10:19] But CTV is more top of funnel.
+[10:26] And people see multiple ads from multiple advertisers typically within a certain period of time.
+[10:36] And so when you measure a certain amount of lift.
+[10:44] I think you also have to consider the fact that it's possible that somebody else could have driven that person as well.
+[10:46] that somebody else could have driven that person
+[10:53] as well like I don't know how to continue it but I just that's my thought process is that
+[11:00] I don't know how to continue it.
+[11:02] But that's my thought process is that.
+[11:07] I don't know.
+[11:08] I guess I'm just I'm basing that on the fact that the idea is that we're over attributing.
+[11:12] But I'm just not seeing the numbers that we're over attributing.
+[11:16] At least based on what I've done.
+[11:18] Well, and that's good, I think.
+[11:20] Because we were over attributing.
+[11:23] We were not accounting for intent groups when we were doing that incrementality before.
+[11:28] That's a big thing.
+[11:29] So we were saying performance of people we serve to who are high intent versus the 10 percent random holdout.
+[11:37] Which basically says how do we perform incrementally against random super freaking well.
+[11:44] And this is more saying the people we serve to are high intent.
+[11:46] the people we serve to are high intent,
+[11:50] so then the comparison is other holdout high intents,
+[11:53] which is a different, more accurate comparison group.
+[11:59] where we're not like over
+[12:00] Where we're not like over.
+[12:01] We're not like over buffing our performance.
+[12:04] Yeah.
+[12:05] So.
+[12:08] I think.
+[12:12] I haven't even read all these things.
+[12:14] I generated this right before our meeting.
+[12:16] At peak intent click pass shows a third of the real lift.
+[12:21] Yeah.
+[12:22] I think that could also be possible too.
+[12:24] And I think there's some selection of.
+[12:31] Like I said the selection issues here of.
+[12:36] They were peak performance in the pre period.
+[12:39] They could have moved to high intent in the post period.
+[12:42] But we wouldn't assign them that.
+[12:44] Based on this methodology.
+[12:46] And so there's probably some of that going on too.
+[12:50] Okay.
+[12:52] What else what else you got here.
+[12:53] Let's see in here.
+[12:58] So very small ATT and very small visit rate has vanishing variance and gets a huge IDW weight.
+[13:05] Oh, that makes sense.
+[13:09] Yeah.
+[13:11] New zero variance outsize weight.
+[13:12] They dragged out people at one.
+[13:24] Oh, that's good to know.
+[13:30] Oh, that's good to know.
+[13:32] I learned something new every day.
+[13:34] That makes sense.
+[13:36] Different weighting methods, I guess.
+[13:42] Can you talk through how you did the win rates for different campaigns and then apply those to the control?
+[13:47] Yeah.
+[13:47] Oh, yeah. Perfect.
+[13:51] Mm-hmm.
+[13:54] Would have been served.
+[14:02] Would have been served.
+[14:03] Yeah.
+[14:04] So the win rate on cost inflection law actually was served.
+[14:24] So then what is the where are the like pseudo impressions?
+[14:27] How are those coming from?
+[14:31] Are you talking about the.
+[14:35] How do we calculate visit rate for the holdout group?
+[14:43] Because we get visits from good log.
+[14:46] But then when we talked about ghost bidding, it was like, apply the win rate to the holdout IPS.
+[14:52] So then a portion of them who would have been served would also get impressions, if that makes sense.
+[14:57] Yeah.
+[15:00] I'm just trying to think the methodology.
+[15:02] So.
+[15:05] The holdout group.
+[15:15] Sorry, Alex, you can repeat the question again.
+[15:17] Yeah, no, you're good.
+[15:18] I'm just I want to.
+[15:20] I'm asking now.
+[15:21] So you're like ready for later.
+[15:25] So if we think about how bidding works on the targeted group, they we score them, they're targetable.
+[15:34] They show up in Augmenter log of like, hey, do you want to bid on this?
+[15:38] Yes or no.
+[15:39] And we see the targetable.
+[15:40] So like, OK, let's bid.
+[15:42] But then not everything in Augmenter log ends up with an impression.
+[15:46] There is a subset of IP that actually win an impression.
+[15:51] So then you have and then your visit rate is number of impressions served divided by visits for the targetable group.
+[15:59] So then in the holdout group in the ghost bidding methodology, we have we know who the holdouts are.
+[16:06] Then from that 10 percent holdout from Augmenter log, we know which ones would have showed up as something we could have bid on.
+[16:15] But what we don't have is impressions served to them because we don't serve them impressions.
+[16:20] So then if we apply the win rate from the targeted group, let's say of all the IPs we see in Augmenter log, 10 percent of them actually end up with impression.
+[16:30] If we see them.
+[16:33] I believe that we treat it as if we would have served them a bid.
+[16:40] OK.
+[16:41] I believe that is how it works.
+[16:43] And it's not 10 percent, which is weird, I think.
+[16:45] Yeah, that's a totally made up win rate.
+[16:48] But it's, or no, not win rate. I mean, like, if we see them in the augmenter log, the assumption is that they would have been bid on, right? That's what the idea is. So if we find their holdout group, we know that they're part of the holdout group, and we see them in the augmenter log, then we assume that they are, they would have been bid on.
+[17:00] Right. That's what the idea is.
+[17:02] So if we find their holdout group.
+[17:06] We know that they're part of the holdout group and we see them in the Augmenter log, then we assume that they are they would have been bid on.
+[17:13] And so it's counted as like a impression would have been served.
+[17:18] And that's how we calculate that.
+[17:20] So then the denominator for the holdout group.
+[17:26] Is larger than it should be.
+[17:29] Making their visit rate lower.
+[17:38] Yeah, I think that unless there's a way that you think is better to do so, I think that I need to double check. Like I said, I need to go through the methodology just to verify all that stuff. But I think that you can weight it so that the proportion of each one that you see.
+[17:45] I think that I need to double check.
+[17:47] Like I said, I need to go through the methodology just to verify all that stuff.
+[17:51] But I think that you can weight it so that the proportion of each one that you see.
+[18:03] So for example, the proportion of people that you bid on that were not part of the holdout group.
+[18:11] Matches the proportion of people that you would that were part of the holdout group that you could have bid on.
+[18:21] But again, I don't know. Actually, I don't know the answer to that right now.
+[18:25] Yeah. So let's make sure that's ready to go.
+[18:27] So if that's kind of hard, so if that – I just have like an answer ready, and if the results are kind of incomplete with that piece, let's call it out.
+[18:30] I just have like an answer ready.
+[18:33] And if the results are kind of incomplete with that piece, let's call it out.
+[18:38] Because the difference is, if you think about it this way.
+[18:41] Let's say there's 100,000 targetable IPs in Augmenter log.
+[18:48] Like 100,000 IPs showed up for a campaign.
+[18:52] But then only 20,000 impressions were served.
+[18:55] Because we don't win every bid that we see.
+[18:59] So then your visits are divided by 20,000 for the targetable group.
+[19:06] Then on the holdout, let's say there was all...
+[19:10] Like for the sake of this, it's 50-50.
+[19:13] For the holdout group, there was 100,000 IPs that also showed up in Augmenter log.
+[19:19] But if we don't apply that impression rate, now you're saying visits divided by 100,000.
+[19:24] Instead of visits divided by 20,000.
+[19:28] So you're like artificially pushing down the visit rate of the holdout group.
+[19:33] Yeah, like the idea of what you're saying is that...
+[19:36] We don't win every auction we see in Augmenter log.
+[19:40] Yeah, exactly. That's a good point.
+[19:43] And I know that the idea is that we bid on as many people as we can.
+[19:47] I mean within budget, right? It's actually within budget.
+[19:50] So that's not necessarily true.
+[19:52] But if you're comparing those who actually got served an impression,
+[19:57] it's possible that the holdout group, because it includes...
+[20:00] 100% of people that were in the holdout because we didn't have to actually bid
+[20:03] on them. They were just potential to bid on, um, that we, we,
+[20:07] we could be underweighting the IVR.
+[20:09] Right? Yep. Uh, underweighting the IVR of the holdout group.
+[20:13] Of the holdout group. Yes. Yes.
+[20:15] Like I think this is fine, right?
+[20:16] Cause you have impressions already for the target.
+[20:18] Because they're, because the holdout group is going to have organic visits.
+[20:22] Exactly. And so you're just saying because, yeah. So if you applied,
+[20:27] and you said, Oh, a hundred percent of these people we were going to bid on,
+[20:30] which is not the reality. We are only going to proportion.
+[20:32] Even more than that,
+[20:34] we would win and serve an impression to a hundred percent of the things we see
+[20:38] in augmentation, which we know is not true. So that part,
+[20:43] I think that part's really important for this gold ghost bidding methodology.
+[20:46] And so, uh,
+[20:48] the left side that the billable holdouts part of your pipeline,
+[20:51] I think that's the one thing we want to tighten up here.
+[20:54] Just to be clear, the meeting for the incrementality,
+[20:58] I don't think we're going over these results.
+[21:01] Cool. Even better.
+[21:02] Okay. I think that meeting is just to discuss what our
+[21:07] plans are for the tickets and kind of clearing up what the,
+[21:12] what going forward is, um, looking like. So I don't think this,
+[21:16] this is not the meeting that's like, Hey, um, let's go over what you did.
+[21:21] Cool. Yep. Even better.
+[21:22] Then, then we can set up another review when you're kind of,
+[21:25] I think this part's hard. So, uh, you know,
+[21:29] I don't expect us like end of day to day to like review this or even tomorrow.
+[21:32] So, um, definitely think through, you might even,
+[21:37] there there's gotta be some metrics somewhere of like campaign win rates that
+[21:40] you can do without trying to calculate them yourself.
+[21:45] That might be a better team question, but, um, I think that part,
+[21:49] so if you go back to your initial results, Oh yeah. Over here.
+[21:55] Yeah.
+[21:56] So if the denominator in the visit rate for the holdout is
+[22:01] artificially large, then it's going to show a bigger lift.
+[22:05] I think these results,
+[22:07] but the cool thing about it though is I would have a hard time believing that
+[22:11] it's going to go up 6% if we adjust for the proportion. Maybe it will,
+[22:15] maybe I don't know. I hope not. That would suck.
+[22:17] But I think that it's unlikely though.
+[22:18] I think that obviously ads work. So, um,
+[22:22] 6% lift is pretty big.
+[22:27] Like that's huge. Yeah. Um, so if that's the case, but yeah,
+[22:31] I think you're right. I do not think I am applying that proportion. Um,
+[22:37] yeah. Just double check that part. Okay.
+[22:40] That sounds good to me. Um, let's see if there's anything here. Oh,
+[22:45] this is just how I chose 13. I spend seven. Well, okay.
+[22:49] Let me look at this one active in the window greater than a hundred served
+[22:53] IPS. Um,
+[22:56] one other thing I would check here. Why don't I send you my notebook?
+[23:00] You don't have to use this exact notebook, but just like,
+[23:04] so you know the checks that I did,
+[23:09] cause this is all from a SQL query or mostly. So you can use this. Um,
+[23:16] so for each advertiser
+[23:21] in the window,
+[23:25] I checked their audience expressions to make sure that they contain data source
+[23:30] 19 keywords.
+[23:32] You can also check the campaign objectives to make sure that they're prospecting.
+[23:37] So, um, if that's already something you're doing here,
+[23:42] that's fine. Um,
+[23:44] but that would be a nice road to have in this table too of like, you know,
+[23:49] one campaign per one advertiser.
+[23:51] They're all prospecting mountain match campaigns.
+[23:56] That makes sense.
+[24:00] Um,
+[24:05] let's see.
+[24:12] I think we already talked about number three and then number two is basically
+[24:16] what we were just talking about. That's conversions visits. Yeah.
+[24:20] The conversions thing. I don't even want to talk about conversions right now.
+[24:23] Yeah. I don't think we worry about that either. Cool.
+[24:29] Cool. I think you're close. I think just the, the tighten up the holdout part.
+[24:34] And I think we're,
+[24:34] I think we'll see some kind of valid results here or, or more trustworthy.
+[24:40] All right. Hey, thank you, Alex, for going over this with me. Yeah. I'm going to,
+[24:43] I'm going to look into those and see if I can make stuff better.
+[24:48] And then the whole methodology stuff will be pretty cool.
+[24:51] Yeah. And, um, for your interest and I need to review it,
+[24:54] but I can share it with you when I'm done, uh,
+[24:56] having some conversations with our attribution incrementality team, uh,
+[25:01] since they're partnering with lift lab, um,
+[25:04] lift lab is using a geo-based experimentation.
+[25:08] So they split the entire U S to treatment control geos and then only serve your
+[25:15] campaigns to matched treatment half. So, um,
+[25:20] yeah, exactly. Kind of how you were talking about as another option for
+[25:23] incrementality. So that's what they're using. So, um, I have a video I'm going to
+[25:28] review. I can share it with you as well, if you're interested,
+[25:30] just to like understand that a little better.
+[25:32] Okay. Uh,
+[25:36] but that might be an interesting comparison to what we're doing.
+[25:39] Cause of course, uh, they don't have access to go spitting.
+[25:45] Okay. Um, all right.
+[25:50] Yep. Well, um, I will,
+[25:53] I might be able to send you something at the end of the day.
+[25:56] Cool. Yeah. Yeah. I'm happy to review again,
+[25:59] if you want to send me something and then maybe we talk tomorrow morning or,
+[26:04] you know, whatever, whatever works when,
+[26:05] when you think you're ready for another review, I'm happy to chat, but, uh,
+[26:08] makes sense, especially since the roof, like you said,
+[26:11] the review this afternoon is the experiment set up,
+[26:13] not necessarily these results. So that helps, um, you know, more time.
+[26:18] Okay. Sounds good. Awesome. Awesome work on this. This is, uh,
+[26:23] this is really good stuff. I think, uh, so be,
+[26:27] this will be very important going forward.
+[26:29] Cool. All right. Hey, thanks, Alex.
+[26:30] thanks alex yeah thanks my guy bye see ya
