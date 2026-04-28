@@ -103,6 +103,30 @@ The deck v3 includes these caveats but **needs revision after v3 lift run lands*
 
 ---
 
+## Infrastructure path forward — Databricks + GCS direct reads
+
+Per Victor Savitskiy (2026-04-28, #data-platform): the augmentor + guid logs
+have **GCS archives** that can be read directly via Spark on Databricks,
+bypassing BigQuery slot contention + scan billing.
+
+| Table | Read path |
+|---|---|
+| `augmentor_log` | `gs://mntn-data-archive-prod/augmentor_log/` (Parquet, no TTL) |
+| `guid_log` | `gs://mntn-data-archive-prod/guid_log/` (Parquet) |
+| `prospecting_intent_v1` | `gs://household-scoring-prod/output/scoring/prospecting_intent/` (Hive-partitioned Parquet) |
+| `cost_impression_log` | BQ-only — Spark BigQuery connector tables-only mode (resolves SQLMesh physical at runtime) |
+| `clickpass_log` | BQ-only with view materialization — `materializationDataset` + `viewsEnabled=true` (medium size, ~200M output row limit) |
+| `campaigns` | Tiny — either BQ or coredb |
+
+**Implication for Phase 2a (conversions outcome).** The 30-day window will be
+4-5× our current scan if run on BQ — likely $400-600 / 6+ hours. On
+Databricks reading GCS directly: hypothesis is 10-20 min and effectively
+free past cluster costs. The migration is the single highest-leverage
+infra investment for the program.
+
+Documented in `knowledge/data_catalog.md` (per-table) and
+`knowledge/data_knowledge.md` (read-pattern strategy).
+
 ## Open methodology questions for future iterations
 
 1. **Cross-window validation.** Replicate on a different week. Are wedge patterns stable?

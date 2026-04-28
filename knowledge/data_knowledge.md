@@ -1621,3 +1621,43 @@ The root cause of slow HHST recovery is that max-reach IPs stopped being scored,
 When a campaign group's audience size drops to zero overnight without a visible UI change in the activity log, a common root cause is that the advertiser's pixel data and exclusion rules have converged — i.e., the IPs being collected by the pixel are the same set of IPs being excluded by the campaign's audience configuration (e.g., Login Domain / Current Student Exclusion overlapping with a 1+ Page View audience).
 
 This is distinct from segment deprecation. Possible triggers include changes to the advertiser's pixel mapping or the OPM expression logic, even if the pixel continues firing. Resolution requires the advertiser to update their pixel configuration or audience exclusion rules to separate the included and excluded populations. (via zach.schoenberger, #mission-control, 2026-04-27)
+
+## Databricks ↔ BigQuery — read paths for the big logs (TI-837, 2026-04-28)
+
+For high-volume scans (augmentor_log, guid_log specifically), reading directly from GCS via Spark on Databricks is dramatically cheaper and faster than scanning through BigQuery. BQ slot contention + scan billing avoided. Per Victor Savitskiy (#data-platform):
+
+| Table | GCS path | BQ-only? | Read pattern |
+|---|---|---|---|
+| `bronze.raw.augmentor_log` | `gs://mntn-data-archive-prod/augmentor_log/` | No | **Read GCS Parquet directly via Spark.** Full historical archive, no 10-day TTL constraint. |
+| `silver.logdata.guid_log` | `gs://mntn-data-archive-prod/guid_log/` | No | **Read GCS Parquet directly via Spark.** |
+| `silver.logdata.cost_impression_log` | n/a | **BQ-only** | Spark BigQuery connector, table-only mode (resolves SQLMesh physical at runtime). Efficient streaming, no materialization needed. |
+| `silver.logdata.clickpass_log` | n/a (complicated view) | BQ-only | Spark BigQuery connector with `materializationDataset` + `viewsEnabled=true`. BQ materializes a temp table; output-size limit ~200M rows on the result. Medium data size, queryable. |
+| `bronze.external.household_scoring__prospecting_intent__v1` | `gs://household-scoring-prod/output/scoring/prospecting_intent/` | No | Hive-partitioned Parquet (year/month/day). Read from GCS directly. |
+| `bronze.integrationprod.campaigns` | n/a | BQ-only | Tiny (508k rows / 100 MB). Either BQ or coredb. |
+
+**Spark BigQuery connector pattern (Victor):**
+
+```python
+# Option 1: views/queries supported, ~200M output row limit, extra materialization cost
+spark.read.format("bigquery") \
+  .option("parentProject", "dw-main-bronze") \
+  .option("billingProject", "dw-main-bronze") \
+  .option("project", "dw-main-bronze") \
+  .option("materializationDataset", "external") \
+  .option("viewsEnabled", "true") \
+  .load("table_or_query")
+
+# Option 2: tables-only, no size limit, no extra cost
+spark.read.format("bigquery") \
+  .option("parentProject", "dw-main-bronze") \
+  .option("billingProject", "dw-main-bronze") \
+  .option("project", "dw-main-bronze") \
+  .load("table_name")
+```
+
+**All 3 project-related properties must be set** or extra costs apply.
+
+**Third option:** `airflow_vs` reader in `airflow_ti` — gives choice of compute engine (databricks / dataproc / dataproc-serverless). Useful for production pipelines, not interactive.
+
+**Speedup estimate (TI-837 case):** v1 = 87 min wall on BQ for 30 advertisers, 7-day window. Hypothesis (untested): reading augmentor + guid from GCS via Spark on a high-compute Databricks cluster could cut to 10-20 min while also avoiding BQ scan billing. Awaiting first run to confirm.
+

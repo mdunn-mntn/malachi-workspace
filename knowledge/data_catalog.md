@@ -96,7 +96,9 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 ## silver.logdata.clickpass_log
 - **Type:** VIEW → `sqlmesh__logdata.logdata__clickpass_log__218519243` (VIEW → upstream Postgres)
+- **Underlying physical:** `dw-main-bronze.history.clickpass_log_physical` (1 B rows / 2.9 TB, DAY-partitioned on `time`)
 - **Partition:** None at view level. **No TTL** — confirmed 2026-03-03 (expirationTime: none). Use `DATE(time)` for date filters.
+- **GCS archive:** **None as a clean dump — view is "complicated" per Victor.** Read via Spark BigQuery connector with `materializationDataset=external` + `viewsEnabled=true` (BQ materializes a temp table for the view). Output-size limit ~200M rows applies if pulling rows back to driver, but aggregations are fine. Medium data size — queryable. (via Victor Savitskiy 2026-04-28, TI-837)
 - **Use for:** Verified visit log — one row per verified visit redirect. "clickpass" is the old term for verified visit (VV). Contains ALL VV types: CTV and display. **Not** click-only; not CTV-only. (Confirmed by Zach: "vv can happen for display as well and would be here.") `ui_visits` is the superset that adds display clicks and non-VV traffic.
 - **36 columns** (confirmed schema 2026-03-03)
 
@@ -265,6 +267,8 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 ## silver.logdata.guid_log
 - **Type:** VIEW → `sqlmesh__logdata.logdata__guid_log__614422669` (VIEW → upstream Postgres)
+- **Underlying physical:** `dw-main-bronze.history.guid_log_physical` (TABLE, 107 B rows / 366 TB, DAY-partitioned on `time`)
+- **GCS archive:** `gs://mntn-data-archive-prod/guid_log/` — read directly from GCS via Spark for high-volume scans on Databricks. (via Victor Savitskiy 2026-04-28, TI-837)
 - **Use for:** GUID (cookie) creation and attribute events — user identity tracking
 
 | Column | Type | Notes |
@@ -522,9 +526,10 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 ---
 
 ## silver.logdata.cost_impression_log
-- **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical)
+- **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical, 71 B rows / 56 TB)
 - **Partition:** DAY on `time`
 - **Clustering:** advertiser_id, impression_id
+- **GCS archive:** **None — BigQuery-only dataset.** Stream from BQ via Spark BigQuery connector (efficient with the table-only mode; SQLMesh physical name resolved at runtime). (via Victor Savitskiy 2026-04-28, TI-837)
 - **Use for:** Impression-level spend enriched with geo, device, segment data. 90-day rolling.
 
 | Column | Type | Notes |
@@ -1448,8 +1453,10 @@ These are the bronze-layer SQLMesh models that eventually feed silver.
 
 ## bronze.raw.augmentor_log (**PRIMARY RAW SOURCE**)
 - **Type:** TABLE (physical), HOUR partition on `time`, **10-day TTL**, clustering: ip
+- **Total volume:** ~293 B rows / 884 TB logical (current 10-day window).
 - **Partition filter REQUIRED** (requirePartitionFilter: true)
 - **Use for:** Raw augmentor service events — pre-bid request enrichment. Raw source for v_augmentor_log.
+- **GCS archive:** `gs://mntn-data-archive-prod/augmentor_log/` — full historical archive in Parquet, no TTL constraint. **Read directly from GCS via Spark** for high-volume scans on Databricks (bypasses BQ slot contention + scan billing). (via Victor Savitskiy 2026-04-28, TI-837)
 
 | Column | Type | Notes |
 |--------|------|-------|
