@@ -1148,3 +1148,25 @@ Northern Tool (advertiser 40563) showed +5.56pp clickpass-ATT but −0.05pp guid
 **This is the type of case the wedge methodology is designed to surface.** Not all MNTN-attributed lift is real; the magnitude of the gap varies by advertiser, vertical, and intent tier. Northern Tool is an extreme case but not an outlier in kind — it's a quantitative version of the qualitative concern external vendors have been raising.
 
 **Diagnostic next step (Phase 2):** check whether Northern Tool's natural visit rate is driven by their own brand strength / search dominance / repeat-customer base. If so, MNTN targeting them at high intent has near-zero room to add — the visits happen anyway. iROAS for that advertiser is likely much lower than clickpass-ROAS would suggest.
+
+<!-- slack-extracted: 2026-04-28 -->
+- ## NTB (New-to-Brand) Experiment Results — Identity Graph (treat_crm)
+
+**Experiment:** Identity Graph CRM targeting experiment testing whether CRM-based audience resolution increases new-to-brand customer acquisition.
+
+**Key finding (Beddy's excluded):** Results are favorable and consistent across the remaining advertisers:
+- **Cost per New Customer (primary target):** 47% cheaper in treatment; 85% posterior probability favorable; 82% of new-advertiser holdout favorable → **Roll**
+- **CPA (primary guardrail):** 30% cheaper; 74% avg favorable, 71% new-advertiser favorable; 27% degradation risk → **Caution**
+- **NTB Conversion Rate (secondary target):** 51% higher rate; 90% avg favorable, 85% new-advertiser favorable → **Roll**
+- **Overall Conversion Rate (secondary guardrail):** 29% higher rate; 94% avg favorable, 85% new-advertiser favorable; 12% degradation risk → **Roll**
+
+**Data quality note:** Beddy's had their treatment flipped back to control for at least one week mid-experiment. Results quoted above exclude Beddy's. Safe inclusion date range for Beddy's is pending confirmation from Nick.
+
+**Open question:** The overall conversion rate also improved (not just NTB rate), which is unexpected. The mechanism is not fully explained — whether this reflects a true lift or a composition effect warrants follow-up investigation if bandwidth allows. (via Alexander Jerneck, #identity_core_dev, 2026-04-28)
+- ## Incrementality Measurement — ATT (Augmentor-Based Ad-hoc Analysis)
+
+Initial incrementality lift analysis using ATT (likely Augmented Synthetic Control or similar augmentor-data method) was run across 7 advertisers:
+- Lift was demonstrable for all 7 advertisers.
+- 4 of 7 advertisers had only HI (high-intent) targeting, which limits visibility into lift on lower-intent audience segments.
+- Current computation constraints limit the analysis to ~3 days of augmentor data at a time; advertiser selection is being done strategically to improve signal across targeting groups.
+- Ghost bidding implementation in the bidder is **not** a prerequisite for ad-hoc incrementality measurement — ad-hoc analysis can proceed independently to prepare for the formal experiment. (via malachi, #dev-incremental-lift, 2026-04-28)

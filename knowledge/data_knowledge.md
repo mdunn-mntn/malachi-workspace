@@ -1586,3 +1586,38 @@ When RabbitMQ consumers stop processing messages (due to acknowledgment timeout 
 **Baseline note:** There is always a baseline of ~2M unprocessed messages in the backlog for historical reasons (Bidder team to confirm). Monitor for count increasing *above* this baseline.
 
 **Incident timeline (April 2026):** Issue began between 4/22 ~04:00 UTC and 4/23 ~01:00 UTC; consumers recovered ~4/25 14:15 UTC. Estimated ~2-day impact window. A prior similar incident occurred 4/1 (caused by Aerospike issue), resulting in no spend/underspend for CGs with newly updated audiences from 4/1 hr0 UTC through 4/2 hr13 UTC. (via Changxing Cao, #production-ops, 2026-04-25)
+
+<!-- slack-extracted: 2026-04-28 -->
+- ## summarydata.visits.elapsed_time — Time-to-Visit After Impression
+
+`summarydata.visits.elapsed_time` captures the delta between an impression's timestamp and the subsequent page view timestamp for verified visits. Key details:
+- Applies to records sourced from VVS's clickpass_log output (i.e., `visits.click = false`).
+- The impression used for attribution is logged by clickpass_log at redirect time, and elapsed_time is computed from that impression's `time` field.
+- Useful for calculating lift on visits and understanding per-advertiser visit lag distributions.
+- Filters on `click = false` are recommended to isolate VV-sourced records. (via ray, #reporting_helpdesk_ask_anything, 2026-04-28)
+- ## HHST (Household Score Threshold) — Behavior, Recent Changes, and Known Issues
+
+### What HHST Does
+HHST controls the minimum intent score required for a household to be targeted. Lowering the threshold expands the audience pool; raising it restricts to higher-intent households. The system reacts to campaign pacing: underspending campaigns trigger HHST decreases to expand reach.
+
+### March 2026 Change — Switch from Beeswax Win Notifications to CIL
+On approximately March 16, 2026, the HHST DAG was changed to use the Cost Impression Log (CIL) as the pacing signal instead of Beeswax (Bx) win notifications. Previously, Bx win notifications caused HHST to not properly adjust for some campaigns. The CIL-based approach reduced instances of HHST failing to respond to underspending campaigns.
+
+**Side effect:** The CIL change coincided with a decline in audience quality metrics (pv_perc) and IVR beginning mid-March 2026. Increased sensitivity to pacing has caused more aggressive HHST decreases on underperforming campaigns.
+
+### April 1, 2026 — Sub-Second Bidding Migration
+A sub-second bidding solution was rolled out on April 1, 2026, migrating more campaign groups to that solution. This contributed to additional underspend, which in turn drove further HHST decreases.
+
+### Asymmetry in HHST Bump Logic
+The HHST bump-up procedure is slow relative to the drop-down procedure:
+- Campaigns pacing well in mid-intent receive a +300 point bump.
+- Underspending campaigns can drop thousands of points (e.g., 10,000 → 3,400 in a single adjustment).
+- Recovery from a large drop can take ~2 weeks even when the campaign subsequently paces well.
+
+### Pending Fix — Max Reach Scoring
+The root cause of slow HHST recovery is that max-reach IPs stopped being scored, removing fine-grained HHST control over the max-reach bucket. A proposed fix assigns random scores to max-reach IPs at bid time (bidder-side), restoring fine-grained HHST control within the max-reach bucket. (via Tofer, #production-ops, 2026-04-27)
+- ## Audience Size Drop to Zero — Pixel Mapping / OPM Expression Conflicts
+
+When a campaign group's audience size drops to zero overnight without a visible UI change in the activity log, a common root cause is that the advertiser's pixel data and exclusion rules have converged — i.e., the IPs being collected by the pixel are the same set of IPs being excluded by the campaign's audience configuration (e.g., Login Domain / Current Student Exclusion overlapping with a 1+ Page View audience).
+
+This is distinct from segment deprecation. Possible triggers include changes to the advertiser's pixel mapping or the OPM expression logic, even if the pixel continues firing. Resolution requires the advertiser to update their pixel configuration or audience exclusion rules to separate the included and excluded populations. (via zach.schoenberger, #mission-control, 2026-04-27)

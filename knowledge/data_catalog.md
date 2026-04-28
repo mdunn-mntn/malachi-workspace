@@ -2275,3 +2275,17 @@ These tables are used by Mission Control system metrics. Note: The system metric
 - **Purpose:** Specifies a datasource ID to replace DS 13 (MNTNVerticalCategorization) during segment breakdown for a given advertiser. `NULL` = no replacement (default behavior).
 - **Added:** 2026-04-23 (DPLAT-969), deployed to QA then prod; replicated to coredw, reportingprod, and archive.
 - **Context:** Added to support audience expression customization work (AUD-5301), specifically to allow per-advertiser override of the vertical categorization datasource. (via Jaime Mutale, #data-platform, 2026-04-23)
+
+<!-- slack-extracted: 2026-04-28 -->
+- ## graph.visits vs graph.sitevisitors (Reporting Metrics)
+
+- **`graph.visits`**: Event count of Verified Visits — the correct metric for tracking Verified Visit volume.
+- **`graph.SiteVisitors`**: Unique users (typically by IP) who had a Verified Visit. Despite the name, this is a unique-user metric, not a visit count. Generally not the right choice when comparing pre/post impression visit volume.
+- **Pre-impression visit proxies** (for before/after campaign launch comparisons): `PageViews` (raw page view count) or `RawVisitors` (unique IPs of those page views).
+- **Verified Visits timing:** VVs should begin occurring as soon as a campaign launches, provided the advertiser has a pixel set up. The "21 days" threshold sometimes referenced is not a hard system rule — the actual trigger is campaign launch + pixel presence. (via ray, #reporting_helpdesk_ask_anything, 2026-04-28)
+- ## summarydata.all_facts — BigQuery Migration ETA
+
+`summarydata.all_facts` is scheduled to be available in BigQuery on **May 5, 2026**. Until then, queries requiring this table must use the CoreDW (Postgres) source. Note: a current pipeline (`airflow-camperbid`) is using `all_facts` and is flagged for eventual refactor to use source tables directly. (via Mike Dolzer, #data-platform, 2026-04-28)
+- ## guid_identity_daily.sql — No-Share Filter Required
+
+The model at `models/dw-main-silver/aggregates/guid_identity_daily.sql` in the SQLMesh repo must be updated to join against the `public.advertisers` table and filter out no-share advertisers using the new boolean column (TRUE = cannot use data). This is required as part of the No-Share Advertiser Policy implementation. The column name was pending confirmation as of late April 2026. (via Jack Barbey, #identity_core_dev, 2026-04-28)

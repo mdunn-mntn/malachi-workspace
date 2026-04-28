@@ -598,3 +598,57 @@ Spotify's stated requirements to proceed:
 - ### Geographic Targeting — Minimum Radius
 
 MNTN supports geographic targeting down to a minimum radius of **0.5 miles**. This applies to source audience location targeting. (via Riley Skoric, #sales, 2026-04-23)
+
+<!-- slack-extracted: 2026-04-28 -->
+- ## Identity Graph Help Desk & Access Pattern
+
+The Identity team has launched a dedicated help desk channel for all Identity Graph questions. Key changes:
+- **Access pattern:** BigQuery is the official access point for batch use. Delta/Parquet references are deprecated.
+- **Schema and contracted columns**, SLAs, and integration guidance are documented in the help desk channel canvas (RFD and data contracts pinned there).
+- All Identity Graph questions, integration use cases, and escalations should be directed to the help desk channel rather than pinging engineers directly. (via Elena, #engineering-team, 2026-04-28)
+- ## QFMP Creative Tracking — Post-April 2026 Gap
+
+As of April 1, 2026, QFMP (Quill Full-Motion Production) videos are no longer uploaded through the QFMP platform. All QFMP video handling is done manually and off-platform. As a result:
+- Creative tagging for QFMP is unreliable for any creatives after that date.
+- The prior CAAS tagging system for QFMP tracking is broken.
+- **QFAI creatives** can still be tracked via a Tableau dashboard and the `viva-server` Neon DB.
+- For QFMP creative sourcing questions post-April 2026, manual investigation or PM escalation is required. (via Tejas Widjonarko, #data-platform, 2026-04-28)
+- ## No-Share Advertiser Policy — Overview & Implementation
+
+MNTN is implementing a "No-Share" policy allowing advertisers to opt out of contributing their pixel data to shared models and audiences. Key details:
+
+**Scope of data affected:** `guid_log`, `conversion_log`, `verified_visits` (clickpass data), and any downstream uses including Fangorn, BUK, DS13, DS19, and feature store tables.
+
+**Mechanism:** A new boolean column will be added to `public.advertisers`. A value of `TRUE` indicates the advertiser's data **cannot** be used. All pipelines touching the affected data sources must join against `public.advertisers` and filter on this column.
+
+**Initial use case:** Spotify is the first advertiser requesting no-share status. Spotify has confirmed they will not use MNTN Matched, so Mountain Match model degradation concerns are mitigated for this case.
+
+**Known limitations of the current approach:**
+1. Retroactive removal is not possible — the exclusion only applies going forward.
+2. Fangorn: if implemented without retraining, models will score against a feature distribution not seen during training, causing miscalibration for excluded advertiser households.
+3. BUK: excluded advertisers receive no collaborative filtering recommendations; cold-start LLM path is the fallback.
+4. DS13/DS19: households that exclusively visit an excluded advertiser's URLs will not receive vertical or keyword tags from those URLs.
+
+**What "No-Share" means operationally:** No using the data to build shared models or target other advertisers' audiences. Internal analytics use is permitted.
+
+**Long-term path:** Pseudo-anonymization or tokenization techniques should be evaluated as the scalable solution for cases where full data cutoff is too blunt. A formal policy definition (who qualifies, what branches to trim vs. full root cutoff) is required before this becomes a standard offering. (via Ryan Kleck, #tgt-infrastructure-squad, 2026-04-28)
+- ## Media Plan Service — Gemini API Credit Constraint Failure Mode
+
+New Media Plan generation failed due to a resource/credit constraint on Gemini APIs called by the PER-ML media plan service. This is a known failure mode: if the GCP service account associated with the media plan service lacks appropriate roles or exhausts Gemini API credits, Media Plan creation will silently fail for all users attempting to create new plans. Resolution requires verifying GCP service account roles and API quota. (via Tom Manuel, #mission-control, 2026-04-27)
+- ## Campaign Budget Minimums — Override Mechanism and Risk
+
+MNTN has a mechanism to disable budget minimum enforcement entirely for individual advertisers, setting the effective minimum to $0.01. This override has existed at least since February 2026 and can allow campaigns with daily budgets as low as $7 to go live. This directly contributes to chronic underspend on affected campaign groups, as the pacing system attempts to manage budget splits on non-viable budgets. The override is stored in the advertiser configuration (not the campaign group), and the standard Command Center minimum of $500 does not apply when the override is active. A review of which advertisers have this override enabled and whether it should be permitted is needed. (via Tofer, #production-ops, 2026-04-27)
+- ## Q1/Q2 2026 Performance Investigation — Leading Hypotheses
+
+An ongoing cross-functional investigation into performance decline and customer churn has identified the following leading hypotheses, in order of current investigation priority:
+
+1. **High CPMs** — Customer sentiment data and aggregate metrics suggest CPMs have risen, degrading ROAS/CPA.
+2. **Conversion pixel misconfiguration** — Many advertisers lack valid Order IDs or Order Amounts, which affects CPA (deduplication removes conversions) and ROAS measurement. Prevalence among new vs. existing customers is a key open question.
+3. **Poor new customer performance** — New customers (primarily SMB) have worse spend and performance metrics, and their growing share in the customer mix is pulling down aggregate metrics.
+4. **Customer mix shift toward SMB** — Revenue per advertiser has declined since Q1/Q2 2025. A concurrent increase in advertiser count has not offset the per-AID revenue decline. Hypothesis: rapid SMB growth with poor retention is replacing higher-spending customers with lower-spending ones.
+5. **Customer Lifetime Value decline** — A notable increase in customers spending 10%+ less MoM has been observed; investigation pending overlay with conversion data to separate pixel issues from genuine LTV decline.
+
+**Analytical approach:** Splitting data along customer size tier (SMB/Mid/Large), conversion pixel quality, customer age, and competitive spend until a directional smoking gun is found. (via ray, #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die, 2026-04-28)
+- ## Daniel Hartnett — New Senior Engineer, Audience Team
+
+Daniel Hartnett joined the Audience (Targeting) team as a Senior Engineer in late April 2026. (via Mike Dolt, #targeting-squad, 2026-04-28)

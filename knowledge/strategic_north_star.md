@@ -277,3 +277,14 @@ A separate methodology review of LiftLab is underway (TI-856). The ITT → TOT p
 - **Incremental Lift Targeting Model — RFD Published**
 
 Matt Brorby has published an RFD (Request for Discussion) for an Incremental Lift Targeting Model, linked in the targeting-squad channel. The stated goal is to develop a model that identifies and targets households that would not have visited or converted without MNTN advertising — i.e., truly incremental audiences. This is prototyping-stage work aligned with the company's incrementality north star. (via Matt Brorby, #targeting-squad, 2026-04-21)
+
+<!-- slack-extracted: 2026-04-28 -->
+- ## Fangorn Rollout — Alpha Target April 30, 2026
+
+Fangorn Tier 1 rollout is targeting an Alpha launch on April 30, 2026. In-flight work includes:
+- **TI-862**: DS46 IPDSC Tier 1 enable (Sean Yang)
+- **TI-863**: Advertiser IDs list (Ryan Kleck)
+- **TI-878**: CoreDB exclude table (Ryan Kleck)
+- **TI-876 / TI-864**: Tiering criteria and pacing analysis — in review with Matt, targeting sign-off ahead of 4/30 Alpha
+
+P1 tickets TI-727 (Fangorn Scores to MembershipDB) and TI-777 (Output Sample Score Data) were still in Backlog as of the sprint report and represent spillover risk for the 4/30 target. (via Bryce Wagg, #tgt-infrastructure-squad, 2026-04-28)
