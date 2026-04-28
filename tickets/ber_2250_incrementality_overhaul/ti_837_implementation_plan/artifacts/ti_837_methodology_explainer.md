@@ -194,8 +194,17 @@ In Phase 2:
 | High-intent wedge (clickpass/guid) | 0.96× ≈ 1.0× |
 | Peak-intent wedge (median) | 0.30× (clickpass under-credits 3×) |
 
-**Heads-up:** these numbers are subject to change after the win-rate
-correction Alex flagged. The `biddable_holdouts` denominator is currently
-"all augmentor matches" but should be "augmentor matches subsampled at
-MNTN's win rate." Corrected lift will be smaller; the wedge ratios may
-shift.
+**Heads-up:** these v1 numbers are SUPERSEDED. Two bugs identified during
+Phase 2 review:
+
+1. **Biddable-holdout denominator** is artificially large — needs
+   subsampling at MNTN's empirical win rate.
+2. **Prospecting-campaign filter** missing on `cost_impression_log` and
+   `clickpass_log` — current served_treatment includes retargeting impressions
+   (`objective_id = 4`), conflating retargeting lift with prospecting.
+
+v2 attempted fix #1 but ran 2+ hours with poor parallelization, was
+cancelled. v3 includes both fixes and uses a pre-computed win-rate lookup
+to avoid v2's slow JOIN materialization.
+
+Canonical tracker: `artifacts/ti_837_methodology_status.md`.

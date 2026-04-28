@@ -413,7 +413,21 @@ biddability via served-treatment proxy (not augmentor), HLL approximation
 and run the pipeline. Expected cost ≈ $200-400 (proportional to advertiser
 count; was $90 for 7).
 
-### Phase 2 lift run — RESULTS (2026-04-27)
+### Status — 2026-04-28 (current)
+
+**Phase 2 v1 results (2026-04-27) are SUPERSEDED.** Two methodology bugs
+identified post-hoc by Alex Knorr (denominator) and team review
+(prospecting-campaign filter). Currently re-running as v3 with both fixes.
+See `artifacts/ti_837_methodology_status.md` for the canonical issue
+tracker.
+
+| Run | Status | Notes |
+|---|---|---|
+| v1 (30-advertiser) | Superseded | Has both bugs. Numbers used in deck v3 (gist `3b95859223e3efdaec4e8401452d1724`). |
+| v2 (win-rate fix only) | **CANCELLED at ~2h** | Half-fix; query graph 5× more complex than v1; augmentor scan stuck at 1%. |
+| v3 (win-rate + prospecting filter) | **In progress** | Both bugs fixed. Win_rates pre-computed as a small lookup query, hardcoded into main lift SQL to avoid v2's slow JOIN materialization. |
+
+### Phase 2 v1 lift run — RESULTS (2026-04-27, SUPERSEDED)
 
 Lift pipeline ran on the 30-advertiser cohort. **126.7 TB billed, 87 min wall,
 635 slot-hours** — same byte count as Phase 1 (augmentor scan dominates and is
