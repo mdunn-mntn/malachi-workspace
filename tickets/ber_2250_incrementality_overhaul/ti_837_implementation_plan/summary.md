@@ -413,90 +413,86 @@ biddability via served-treatment proxy (not augmentor), HLL approximation
 and run the pipeline. Expected cost ≈ $200-400 (proportional to advertiser
 count; was $90 for 7).
 
-### Status — 2026-04-28 (current)
+### Status — 2026-04-28 (CANONICAL: v4)
 
-**Phase 2 v1 results (2026-04-27) are SUPERSEDED.** Two methodology bugs
-identified post-hoc by Alex Knorr (denominator) and team review
-(prospecting-campaign filter). Currently re-running as v3 with both fixes.
-See `artifacts/ti_837_methodology_status.md` for the canonical issue
-tracker.
+**v4 is the canonical run.** Includes both methodology fixes:
+1. Prospecting-only filter on cost_impression and clickpass (objective_id IN 1, 5, 6)
+2. Win-rate-corrected biddable_holdouts denominator (per-advertiser hash subsample)
 
 | Run | Status | Notes |
 |---|---|---|
-| v1 (30-advertiser) | Superseded | Has both bugs. Numbers used in deck v3 (gist `3b95859223e3efdaec4e8401452d1724`). |
-| v2 (win-rate fix only) | **CANCELLED at ~2h** | Half-fix; query graph 5× more complex than v1; augmentor scan stuck at 1%. |
-| v3 (win-rate + prospecting filter) | **In progress** | Both bugs fixed. Win_rates pre-computed as a small lookup query, hardcoded into main lift SQL to avoid v2's slow JOIN materialization. |
+| v1 (no fixes) | Superseded | Both bugs present. Wedge story didn't reproduce. |
+| v2 (win-rate fix only) | Cancelled at ~2h | Half-fix; slow query graph; missing prospecting filter. |
+| v3 (incomplete) | Cancelled at ~18 min | Full-campaign win_rates applied to prospecting-only served — internal inconsistency. |
+| **v4 (prospecting-only + consistent win_rates)** | **CANONICAL** | Complete fix. Win_rates recomputed from prospecting-only served. 113 min wall, 126.7 TB. |
 
-### Phase 2 v1 lift run — RESULTS (2026-04-27, SUPERSEDED)
+### v4 lift run — CANONICAL RESULTS (2026-04-28)
 
-Lift pipeline ran on the 30-advertiser cohort. **126.7 TB billed, 87 min wall,
-635 slot-hours** — same byte count as Phase 1 (augmentor scan dominates and is
-advertiser-agnostic), 18% more wall time from larger downstream joins.
+**126.7 TB billed, 113 min wall, 575 slot-hours** — same byte profile
+as v1 (augmentor scan is advertiser-agnostic and dominates).
 
-**Pipeline validation: Phase 1 anchors reproduce within 0.15pp:**
-- Ferguson Home: P1 +10.55pp → P2 +10.70pp (Δ +0.15pp)
-- Ancient Nutrition: P1 +1.76pp → P2 +1.79pp (Δ +0.03pp)
+#### Sample-weighted high-intent (the headline)
 
-**Headline IVW comparison:**
+For every 1,000 high-intent prospecting IPs MNTN serves:
+- Holdout visit rate: **2.31%** (23 visits per 1,000 IPs, organic)
+- Treated visit rate: **2.76%** (28 visits per 1,000 IPs)
+- **Lift: +0.44pp absolute / +19% relative** (≈ 5 incremental visits per 1,000)
 
-| Metric | Phase 1 (7) | Phase 2 (30) |
-|---|---|---|
-| HIGH guid IVW | +3.36pp | +2.69pp |
-| HIGH clickpass IVW | +4.17pp | +2.59pp |
-| **HIGH wedge (c/g)** | **1.24× over-credit** | **0.96× ~equal** |
-| PEAK guid IVW | +0.88pp | +0.22pp |
-| PEAK clickpass IVW | +0.55pp | +0.22pp |
-| **PEAK wedge IVW** | **0.62× under-credit** | **1.00× ~equal** |
-| LOO Ancient swing | ±1.17pp (FLAGGED) | none > ±0.05pp |
+#### Per-tier IVW (×100 for pp)
 
-**Two major findings:**
+| Tier | Clickpass | Guid (truth) | Wedge | Verdict |
+|---|---|---|---|---|
+| **High** | +1.22pp ±0.0084 | **+0.77pp** ±0.022 | **1.59×** | clickpass over-credits 60% |
+| Peak | +0.12pp ±0.0054 | −0.02pp ±0.010 | undefined | no real lift |
+| Mid | +0.02pp ±0.0024 | +0.00pp ±0.0037 | noise | noise floor |
 
-1. **Phase 1's clickpass over-credit at high (1.24×) DOES NOT REPRODUCE.**
-   Across all four pooling methods (IVW, arithmetic mean, median,
-   sample-weighted), Phase 2's high-tier wedge is 0.88-1.00×. The
-   1.24× over-credit was likely an artifact of Phase 1's tier-collapsed
-   advertisers (HexClad/First Watch/Zazzle/Northern Tool) whose peak/mid
-   IPs got absorbed into the high tier under MAX-tier construction —
-   inflating clickpass disproportionately. **At a clean high-intent
-   tier with diverse subjects, clickpass and guid agree.**
+#### Robustness — high-intent guid across 4 pooling methods
 
-2. **Phase 1's clickpass under-credit at PEAK reproduces — but only with
-   non-IVW pooling.** IVW peak pool is dominated by noise-floor cells
-   with vanishing variance. Sample-size-weighted, arithmetic mean, and
-   median pooling all show **clickpass ~0.30-0.34× of guid at peak**
-   (clickpass under-credits by 3×). This is a stronger result than
-   Phase 1's 0.62× because the new cohort has 19 passing peak cells vs
-   Phase 1's 3.
-
-| Peak pooling method | clickpass | guid | wedge |
+| Method | guid-ATT | clickpass-ATT | Wedge |
 |---|---|---|---|
-| IVW | +0.22pp | +0.22pp | 1.00× |
-| Arithmetic mean | +0.84pp | +2.55pp | 0.33× UNDER |
-| Median | +0.36pp | +1.19pp | 0.30× UNDER |
-| Sample-weighted | +1.02pp | +2.96pp | 0.34× UNDER |
+| IVW (default) | +0.77pp | +1.22pp | 1.59× |
+| Median | +0.56pp | +1.62pp | 2.91× |
+| Arithmetic mean | +0.98pp | +2.17pp | 2.21× |
+| Sample-weighted | +0.44pp | +2.33pp | 5.29× |
 
-**Per-advertiser distribution (high-intent guid):**
-- 27 of 29 advertisers pass the 0.5pp gate
-- 25 of 27 (93%) show positive lift
-- Range: -1.21pp (Outback Presents) to +16.29pp (TurboTenant)
-- Median: +2.86pp
+**All 4 methods agree:** real positive lift at high intent + clickpass over-credits.
 
-**IVW dominance pathology eliminated.** Leave-one-out sensitivity flags
-ZERO advertisers with >0.05pp overall swing (vs Phase 1 had Ancient
-Nutrition swinging by ±1.17pp).
+#### Per-advertiser distribution (high-intent guid)
 
-**Methodology lesson surfaced:** IVW is the right pooling method when
-all cells are well-powered with similar variance, but it COLLAPSES TO
-NOISE-FLOOR CELLS when many cells have tiny ATT and tiny variance. For
-peak-tier reporting in incrementality studies, **sample-size-weighted
-or median pooling is more robust.** Documented in
-`knowledge/experimentation.md`.
+- **27 of 29 cells** pass the 0.5pp N-gate
+- **21 of 27 (78%)** positive
+- Range: **−3.30pp (Ferguson Home) to +6.88pp (TurboTenant)**
+- Median: **+0.56pp**
+- Largest leave-one-out swing: **<±0.05pp** — no advertiser drives the result
 
-**Output artifacts:**
-- `outputs/ti_837_lift_30adv_7day_2026_04_20_to_26.json` (gitignored, 1782 lines)
-- `outputs/ti_837_per_cell_table_30adv.csv` (gitignored)
-- `outputs/ti_837_meta_analysis_30adv_2026_04_20_to_26.json` (gitignored)
-- `queries/ti_837_lift_analysis_30adv_7day.sql` (committed)
+#### Two methodology fixes (vs v1)
+
+1. **Prospecting filter on cost_impression and clickpass** (`objective_id IN 1, 5, 6`). v1 included retargeting, conflating two strategies. Removing it dropped served_treatment dramatically for some advertisers (e.g., Ferguson Home went from +10.55pp lift in v1 to −3.30pp in v4 — Ferguson's "lift" was retargeting, not prospecting).
+2. **Win-rate-corrected biddable_holdouts** (Alex Knorr, 2026-04-28). Subsample biddable_holdouts at per-advertiser empirical win_rate so the holdout denominator matches treated arm's "actually-served" condition. Per-advertiser win_rates 0.07% to 12.5% (median 0.8%). Implemented as deterministic hash (`MD5(advertiser_id||':wr:'||ip)`) — independent of the original holdout assignment hash.
+
+Win_rates pre-computed from a small upstream query and hardcoded as
+STRUCT literal in the lift SQL — avoids v2's slow CTE materialization.
+
+#### Output artifacts (canonical)
+
+- `outputs/ti_837_lift_30adv_7day_v4_2026_04_20_to_26.json` (gitignored, BQ raw output)
+- `outputs/ti_837_per_cell_table_30adv_v4.csv` (gitignored)
+- `outputs/ti_837_meta_analysis_30adv_v4_2026_04_20_to_26.json` (gitignored)
+- `queries/ti_837_lift_analysis_30adv_7day_v4.sql` (committed)
+- `artifacts/ti_837_chart_*_v4.png` (4 charts, gitignored)
+- `artifacts/ti_837_phase2_presentation_deck.html` (committed)
+- Standalone deck shared:
+  https://gist.githack.com/mdunn-mntn/94c9375ffc952c58c0ff623daa640065/raw/ti_837_phase2_presentation_deck_standalone.html
+
+#### Power Line
+
+> **Targeting causes real but modest lift.<br>
+>  Attribution shows it 60% larger than reality.**
+
+Supports Alex Bloore's strategic hypothesis: high-intent shoppers were
+going to convert anyway, so the room for incremental lift is small.
+Validates the "movable middle" framing for Mountain-Match AI roadmap —
+mid-intent and uplift modeling should be the next experimental tracks.
 
 ---
 

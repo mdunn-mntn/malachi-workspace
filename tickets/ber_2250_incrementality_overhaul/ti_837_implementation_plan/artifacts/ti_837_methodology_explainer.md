@@ -194,17 +194,17 @@ In Phase 2:
 | High-intent wedge (clickpass/guid) | 0.96× ≈ 1.0× |
 | Peak-intent wedge (median) | 0.30× (clickpass under-credits 3×) |
 
-**Heads-up:** these v1 numbers are SUPERSEDED. Two bugs identified during
-Phase 2 review:
+**Heads-up:** the numbers above are from the v1 run. **v4 is the canonical run** — applies both methodology fixes (prospecting-only filter + win-rate-corrected denominator). v4 numbers are dramatically smaller:
 
-1. **Biddable-holdout denominator** is artificially large — needs
-   subsampling at MNTN's empirical win rate.
-2. **Prospecting-campaign filter** missing on `cost_impression_log` and
-   `clickpass_log` — current served_treatment includes retargeting impressions
-   (`objective_id = 4`), conflating retargeting lift with prospecting.
+| Metric | v1 (no fixes) | v4 (canonical) |
+|---|---|---|
+| HIGH guid IVW | +2.69pp | **+0.77pp** |
+| HIGH clickpass IVW | +2.59pp | **+1.22pp** |
+| HIGH wedge | 0.96× | **1.59× over-credit** |
+| Sample-weighted high lift | +6.21pp / +467% rel | **+0.44pp / +19% rel** |
+| Per-advertiser median (high) | +2.86pp | +0.56pp |
+| % positive (high) | 93% | 78% |
 
-v2 attempted fix #1 but ran 2+ hours with poor parallelization, was
-cancelled. v3 includes both fixes and uses a pre-computed win-rate lookup
-to avoid v2's slow JOIN materialization.
+The methodology fixes (especially the prospecting-only filter) revealed that v1's lift was inflated by retargeting impressions. True prospecting lift is modest — high-intent +0.4-0.8pp depending on pooling method. Clickpass over-credits real lift by ~60% at high intent.
 
-Canonical tracker: `artifacts/ti_837_methodology_status.md`.
+Canonical tracker: `artifacts/ti_837_methodology_status.md`. Canonical SQL: `queries/ti_837_lift_analysis_30adv_7day_v4.sql`.

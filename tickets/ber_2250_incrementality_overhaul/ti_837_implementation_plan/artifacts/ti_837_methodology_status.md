@@ -10,9 +10,10 @@ Source of truth for what's known, what's been fixed, and what's pending.
 | Run | Date | Status | What it answered |
 |---|---|---|---|
 | **v0 — Phase 1 (7 advertisers)** | 2026-04-27 | Shipped | Initial wedge story. Superseded. |
-| **v1 — 30-advertiser cohort** | 2026-04-27 | Shipped, **superseded** | Phase 2 deck v3 (gist `3b95859223e3efdaec4e8401452d1724`). Has BOTH bugs below. |
-| **v2 — win-rate correction** | 2026-04-28 | **CANCELLED** at ~2h | Half-fix. Still missing prospecting filter. Query graph 5× more complex than v1; augmentor scan stuck at 1% for 60+ min. |
-| **v3 — win-rate + prospecting filter** | 2026-04-28 (in progress) | TBD | The clean run. Both bugs fixed. |
+| **v1 — 30-advertiser cohort** | 2026-04-27 | **Superseded** | Has both bugs below. Numbers from this run drove an internal deck not yet shared. |
+| **v2 — win-rate correction** | 2026-04-28 | Cancelled at ~2h | Half-fix; missing prospecting filter; query graph 5× more complex than v1. |
+| **v3 — win-rate + prospecting filter** | 2026-04-28 | Cancelled at ~18 min | Win_rates derived from full-campaign served, applied to prospecting-only — internal inconsistency. |
+| **v4 — prospecting-only + consistent win_rates** | 2026-04-28 | **CANONICAL** | Both bugs fixed. Win_rates recomputed from prospecting-only served. 113 min wall, 126.7 TB. |
 
 ---
 
