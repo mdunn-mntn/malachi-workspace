@@ -1,0 +1,452 @@
+[00:01] I've been using it more often lately and enjoy it quite a bit.
+[00:11] Hello, everyone.
+[00:13] Hello.
+[00:20] Thank you.
+[00:30] Hey, Mike, we're just waiting on Alex primarily, but we'll talk, we'll wait for other folks
+[00:49] here as well.
+[00:50] Sounds good, man.
+[00:51] Are we going to discuss incrementally?
+[00:53] No, we can incrementally discuss incrementality.
+[00:57] Nice.
+[00:58] Nice.
+[00:59] That was a good one.
+[01:02] You said I was the man, the myth, the legend.
+[01:04] I think that you are.
+[01:05] I think you just reestablished yourself as the leader on that scoreboard.
+[01:10] Nice.
+[01:21] There you go.
+[01:22] Hey, Alex.
+[01:28] Hey, everybody.
+[01:30] All right, so we're on this call to discuss incrementality, and we've had a couple different
+[01:38] discussions.
+[01:39] I apologize, I'm off camera.
+[01:40] I'm sitting on the couch while I'm waiting for my two-year-old to go down for a nap.
+[01:44] And so what I wanted to primarily do is get us aligned on the goal of the experiment that
+[01:51] we had originally set out was the end of this month.
+[01:55] So that's the primary thing that I want to make sure as an outcome that we have from
+[01:58] this meeting.
+[02:00] We've talked about ghost bidding, so we can do that secondarily because I think in a thread
+[02:05] we kind of aligned that that's a future iteration.
+[02:08] So really, I want to focus on this experiment that we've talked about doing in the short
+[02:14] term, which ideally was the end of the month.
+[02:17] So I'll restate that one more time.
+[02:19] Our primary goal is to discuss the incrementality experiment that we originally discussed launching
+[02:25] at the end of the month.
+[02:26] Does anyone else have anything that they want to discuss about incrementality before we
+[02:30] start with that topic?
+[02:35] I don't, but I think I'm confused because I think the term experiment is confusing me.
+[02:43] Malika and I had a conversation because I got looped into this, and this was the first
+[02:48] I was hearing about it last week.
+[02:49] So I just don't know if we're talking about like an actual experiment that I'll be running
+[02:53] or something else.
+[02:55] So that's where I'm lost.
+[02:58] Yeah, so I think the initial idea was that it was going to be like a proper experiment
+[03:04] running through your team.
+[03:06] I think the team may have landed at a point that we may not have to do that to start.
+[03:12] Okay, that's where my confusion was then.
+[03:15] We may not have to run a proper media experiment.
+[03:19] We might be able to look at past data.
+[03:23] Okay, that's helpful.
+[03:25] That's what I understand is going on.
+[03:27] Malika and Alex can keep me honest on it, but I think that might be where some of the
+[03:31] confusion is coming from.
+[03:36] Yeah, that's where I was thinking is that I thought that that was also the case, especially
+[03:42] with the mid intent ticket and discussion.
+[03:45] And then there was kind of thinking about it.
+[03:47] And I'm like, I don't really think that we need to run a formal experiment.
+[03:50] And I was able to get some lift numbers without that because of the Augmenter log.
+[03:54] So I think we're on the same page about that.
+[03:57] Cool.
+[03:58] I'm here to support as needed.
+[03:59] But that's helpful context.
+[04:00] Thank you.
+[04:01] It's still nice to have Cursa here, though, just talking about the incrementality going
+[04:05] forward.
+[04:06] I do think that there are a number of stakeholders on different teams that are involved in this.
+[04:11] And so having some sort of everybody being on the same page and understanding what's
+[04:16] going on would probably be helpful.
+[04:20] Great.
+[04:21] So with that context, Alex, for everybody's shared context, can you restate the goal of
+[04:28] you wanted to deliver by the end of the month so that we can align on where we are to that
+[04:32] goal?
+[04:34] So, yeah.
+[04:37] This is not what I'm going to say first is not by the end of the month.
+[04:41] It's just the question that I need to answer is that we the current default targeting methodology
+[04:49] that we have is going to prioritize high intent.
+[04:52] High intent, almost by definition, is not going to be incremental.
+[04:57] You're targeting folks that are going to probably convert anyways in some way or they're going
+[05:02] to be more likely to convert by definition.
+[05:05] So if we're trying to drive incrementality, sticking with the same targeting strategy
+[05:10] is not going to probably not going to get us there.
+[05:14] So the easiest way that we could kind of test that hypothesis would just be let's move down
+[05:15] way that we could kind of test that hypothesis would just be let's move down our intent tiers
+[05:22] and see if that affects things like how does that play out if we target more of like a mid intent
+[05:28] as opposed to high intent can we use what we know ctv is good at which is like sort of priming
+[05:30] Can we use what we know CTV is good at, which is sort of priming customers for lower funnel
+[05:37] conversions down the road that might be assisted by a meta or a Google or something else?
+[05:43] Does that drive incrementality?
+[05:45] That's the hypothesis that I was coming at.
+[05:48] And then it's like, okay, we don't have to build new models to kind of test that hypothesis.
+[05:54] We can just use our existing models, see what happens, and then learn something.
+[05:59] And the learn something is why I wanted to press for this to be set up by the end of the month.
+[06:06] Not that we need the learnings by the end of the month, but we need to start making decisions
+[06:11] and learning what the roadmap needs to look like for the rest of Q2 into Q3.
+[06:16] If we find that there's something here, it might not be perfect the way it is.
+[06:21] But if we find that there's something here that we can adjust our scoring methodology in a way that
+[06:27] if somebody is going after incrementality, then we can prioritize their targeting slightly differently
+[06:33] to drive that result.
+[06:36] That'll inform everything else that we're trying to do for mountain matched AI.
+[06:40] So that's why I wanted to get the results as early as possible.
+[06:44] The end of April date was really based on the presumption that I thought we're going to have
+[06:49] to actually run an experiment that would probably take a few weeks.
+[06:52] And then we wouldn't really have answers until the end of May at that point to know what we need to do.
+[06:59] That's the background.
+[07:01] Question for that. The main metric is obviously incrementality measured via third party,
+[07:08] measured via our own internal that hopefully mirrors third party. What's the...
+[07:16] That was basically what I challenged the team to figure out.
+[07:21] We're not going to use a third party to measure this.
+[07:24] So what can we do internally?
+[07:27] I don't like our current incrementality measurement in-house and I'm not going to get into why right now.
+[07:33] So I challenged the team to come up with alternatives, which they did.
+[07:37] So that's, I think, where we're at.
+[07:42] Any other questions from the group before we circle back with the TI folks to talk about next steps
+[07:49] and progress on answering that question?
+[07:53] Yeah, I just want to make it clear.
+[07:55] So there's an overall, like, what is the incremental lift that we provide here at Mountain
+[08:00] on a series of advertisers we could check?
+[08:02] But then kind of a subset of that is what is the incrementality of maybe our different performance groups, right?
+[08:09] High intent versus mid intent.
+[08:11] OK, so both of those can be solved simultaneously.
+[08:15] I think that I've already started on doing that methodology.
+[08:19] I don't want to go into all the details unless we need to.
+[08:22] But I think that both of those are...
+[08:25] We have a pretty valid way of doing that right now.
+[08:28] So I think that we don't need to worry necessarily about that.
+[08:31] yeah
+[08:34] great if there's no other questions about that then can we talk about kind of where we are
+[08:44] to progress because if the goal is to have an answer to Alex's question by the end of the month
+[08:45] Because if the goal is to have an answer to Alex's question by the end of the month, we've done some research on the TI side.
+[08:52] And then Edgar is here because we were talking at Mountain Meat about an incrementality playbook to be shared with customers.
+[08:59] So we wanted to try and kind of synchronize all of those efforts.
+[09:02] So Malachi, do you and Alex want to give the TLDR on kind of where you are in answering that question and then what next steps are in your life?
+[09:11] Alex, why don't you start about what our initial findings were and then I'll follow up with what I've done recently.
+[09:18] Cool.
+[09:19] Yeah.
+[09:20] So at a high level, the first thing we wanted to do to try and answer this, I guess I can step back and say there are a lot of different ways we can try and structure kind of this causal analysis.
+[09:31] And what is the counterfactual that we're going to be evaluating against to say is this incremental?
+[09:35] So what we started with is something called intent to treat, which is kind of the most conservative way to evaluate this.
+[09:43] And it is saying who are the people in the group that we assign them to and evaluate the entire group.
+[09:50] So not necessarily who received impressions or who did we target, who was eligible for a bid.
+[09:56] It's just who did we assign into given groups and then compare that way.
+[10:00] So across all our systems and Matt and I have talked, it's really nice that we already have this.
+[10:06] We have a 10% random holdout of IPs from all of our campaigns.
+[10:11] So we can always identify a group that we would have targeted if we didn't hold them out with this 10% random sampling logic.
+[10:20] So we have a group we can compare against.
+[10:23] The next kind of key step to that is taking those, call it treatment and control groups, and assigning them to our intent buckets.
+[10:33] So would we identify them as high intent or mid intent or peak performance kind of in a pre-period?
+[10:40] Then once we have that, we can say, okay, here's everyone who was high intent and we would have targeted them compared to everyone who is high intent and they were in this 10% random sample.
+[10:45] targeted them compared to everyone who is high intent and they were in this 10% random sample.
+[10:52] And then we can compare those like-to-like intent groups and look at their visit rate of,
+[10:59] okay, we identified them as high intent. They're in the 10% holdout. How many of them organically
+[11:01] They're in a 10% holdout.
+[11:02] How many of them organically went to this customer's website in some post period?
+[11:07] So that's a lot of setup to say in this intent-to-treat framework, incrementality was essentially flat, no difference.
+[11:16] And a lot of that and conclusions from that are in this intent-to-treat framework, as I explained, we do it on group assignments.
+[11:25] But if the majority of your group is not targeted or not served an impression, like in your treatment group, then they're behaving no different than your control.
+[11:33] And you can see this.
+[11:34] I have some results later, but the idea is like 80% of our people we assigned to targetable may not necessarily receive an impression, right?
+[11:45] If they even show up, if they're even eligible, if they're CTV, the list goes on.
+[11:49] So with that in mind, you have a very small number that are actually like receiving treatment and you're trying to measure an impact from that.
+[11:57] We've kind of got our post, what we were showing incrementality dashboard as maybe the more extreme positive end.
+[12:03] And then intent-to-treat is kind of the more conservative, no lift end.
+[12:08] And that's basically where we started with this offline evaluation.
+[12:12] And so the key there is understanding that intent-to-treat methodology.
+[12:17] But then two, kind of what Malachi alluded to, these 10% random sample holdouts that we have in all of our campaigns,
+[12:24] and we can always construct because they're based on advertiser ID and IP, means we can do a lot of this evaluation already.
+[12:33] So that's my handoff for you, Malachi.
+[12:36] Yeah, and I just want to make sure there's no questions on that.
+[12:39] If not, I can talk about the follow-up.
+[12:44] Okay.
+[12:45] So yeah, essentially the follow-up of that is that we can basically right now do an ad hoc way of measuring this.
+[12:52] So the Augmentor log that we get is going to contain every IP that we can bid on.
+[12:59] Included in that is going to be the holdout group.
+[13:01] And so essentially we can take everybody from every IP and say which IPs were part of the groups that we would target,
+[13:10] and then which were part of the 10% holdout group, and then which were actually bid on.
+[13:15] And so if we compare these two rates, so we take the rates of everybody we saw in the Augmentor log and could be bid on,
+[13:21] and then compare it to the people that we did bid and win on,
+[13:24] we can compare the rates between those two and essentially get this idea of lift.
+[13:28] Now, I have done that analysis, but there is one asterisk there.
+[13:33] And the problem is that not every single person that shows up in the Augmentor log in the holdout group
+[13:40] would have been somebody that we would have sent a bid to and won it, right?
+[13:45] And so there's kind of a visit rate decrease, essentially,
+[13:53] when we're comparing the holdout group versus the actual treated,
+[13:57] because the proportion of people that we actually target are slightly different.
+[14:01] And so I'm working on basically adjusting for that.
+[14:05] But right now, the results are not ready to necessarily present.
+[14:09] But the idea is that we do have a baseline lift rate across a series of advertisers that I grabbed,
+[14:17] with pretty conclusive evidence that we can see lift here.
+[14:21] Just going off of what you said, Alex, to the...
+[14:25] I don't know, actually, the results that I found is not that...
+[14:28] is actually that high intent is pretty incremental.
+[14:31] We're not having issues with there.
+[14:33] In fact, it's kind of a weird thing, but the majority of people that we end up targeting are high intent only.
+[14:38] So one of the issues there that was hard was that most advertisers
+[14:43] are just going to be targeting high intent for the most part.
+[14:46] And so it was getting a sample of advertisers that also had a good distribution of mid intent
+[14:53] and just the max reach audience.
+[14:59] So yeah, that's where we're at now.
+[15:01] I think going forward is that there are limitations on Augmentor log and what we can do there.
+[15:07] Not limitations, but more compute resources.
+[15:10] So we only keep Augmentor log for a period of time.
+[15:13] It's a ton of data.
+[15:15] And so doing this ad hoc analysis way of doing the lift isn't probably something we want to continue doing in the future.
+[15:22] It seems like we should probably figure out a way to both fix the issue that I just talked about
+[15:27] where we have some sort of way of saying, hey, we would have bid on this person
+[15:30] and we're not just accepting every single person that comes into the Augmentor log
+[15:34] as a valid hole-out group if they're part of it.
+[15:36] If we have some sort of strategic way of saying like we randomly select this person
+[15:40] and this one is what we would have bid on so that we can calculate better lift measurement
+[15:44] and account for that, that's something we need to do.
+[15:47] But as far as the ad hoc analysis right now, we should have something before 430.
+[15:52] I'm pretty confident of that because I have the results now.
+[15:56] And then we can discuss what that means going forward.
+[15:59] Is there any risk by looking at the advertisers or campaigns that are targeting across all of those buckets,
+[16:03] or campaigns that are targeting across all of those buckets,
+[16:09] like you mentioned, that we're,
+[16:13] like there's something unique about those advertisers
+[16:15] that maybe their high intent is smaller or somehow different than the other high intent
+[16:20] and that could sway the data a little bit?
+[16:24] What do you mean by risk? What would be the risk there?
+[16:29] Like there's a reason why our threshold is lower and only looking at those advertisers that fit.
+[16:40] I understand why it's a requirement because you can't compare high to mid to max
+[16:44] if we're not targeting all of them.
+[16:46] But I'm wondering if it could potentially, I can't think of the right word.
+[16:53] Some selection bias potentially.
+[16:55] Thank you.
+[16:56] Thank you.
+[16:58] My brain is too slow. It feels like Monday still.
+[17:01] If there's a selection bias there because maybe the reason they have a low threshold
+[17:06] is because their high intent is really small and smaller high intent audiences tend to be more or less incremental.
+[17:13] I don't know. I'm just trying to think it through from all angles.
+[17:17] That is certainly a possibility.
+[17:20] I think though that when we're measuring lift, it's generally going to be a per advertiser thing anyways.
+[17:27] When we're looking at the numbers and saying, hey, is something incremental? What's the lift?
+[17:32] How they perform across the board is a little bit less important as it is specifically based on advertisers.
+[17:42] It's definitely something to look into. I do think that is valid.
+[17:45] Especially because like I said, when I first did it, it was like all high intent.
+[17:49] There's probably something about that.
+[17:52] I just want to pause right there and ask Alex, does that provide you with enough signal to answer your immediate question?
+[18:00] Or are there more things that we need to do with the last couple of days to make progress on your ultimate goal?
+[18:09] I don't need my question fully answered by April 30th to restate that.
+[18:17] I want to see your full results, Malachi, so we can actually talk through details a little bit on what spread looks like.
+[18:30] And then you go from there.
+[18:31] I think this is the first round of learnings.
+[18:34] Then let's figure out what we learned and see where we go next.
+[18:39] On the ghost bidding approach, what I hear, this is like the second.
+[18:45] We have like kind of two things we ended up being able to answer here is like, is this ghost bidding methodology reasonable?
+[18:53] And we kind of faked it to a certain extent by doing a post hoc.
+[18:59] Sounds like there's something to it that we can, we now need to go to the bidder team and actually have them implement what we had talked to them about implementing a couple months ago, which is like at time of bid, simulate the option for the holdout.
+[19:00] Sounds like there's something to it
+[19:02] that we now need to go to the bidder team
+[19:05] and actually have them implement what we had talked to them about
+[19:09] implementing a couple months ago,
+[19:11] which is at time of bid, simulate the auction for the holdout,
+[19:15] And then go and log that so that you're not having to munch through the entire log to find these folks.
+[19:23] Like, we would actually have, here's the IPs that were, could have been exposed and use them to compare to the ones that actually were exposed.
+[19:33] And I, this would also be something to talk with. I think Alex actually would probably be the one to do this.
+[19:41] But I do personally believe that the solution for it going forward, if our clients want something more incremental, would to be to train a model on this, right?
+[19:47] clients want something more incremental would to be to train a model on this right it's where we
+[19:55] start to flag conversions it gets complex because conversions
+[20:00] Or even a smaller subset of visits.
+[20:01] So it's harder to do so, but if we find the visit to be incremental, then we can
+[20:06] just probably apply that to the conversion itself.
+[20:08] But, um, anyways, that being said, is that we train a model based on that.
+[20:14] So instead of at the visit rate, right.
+[20:16] Um, maybe we just do incremental visits as the next step.
+[20:20] And, um, that would be kind of a solution.
+[20:24] So not necessarily something that is part of our regular performance marketing, but
+[20:31] instead, like if somebody comes into the platform and says, Hey, I care about
+[20:34] incrementality or somebody who's a current customer and they say, Hey, we're
+[20:37] going to do incrementality.
+[20:39] Um, and then we kind of switch that lever on them, right.
+[20:41] Just like we would with another mountain match campaign.
+[20:43] So that's where I'm thinking this is headed towards.
+[20:46] And if we have ghost bidding implemented at the better level, um, what makes
+[20:52] something incremental necessarily for one advertiser might not be the same.
+[20:56] And so it's kind of going to be, I don't know that there's more discussion to be
+[21:00] there, but, um, there's a general model, but there may be more value into for
+[21:04] certain clients, for certain reasons that we build out custom, you know, for their
+[21:09] specific use to a case type of models.
+[21:12] And, and Matt's actually, uh, done some initial research and put together a PRD
+[21:18] kind of along these lines already as well.
+[21:21] Uh, on this idea, like uplift idea.
+[21:25] So, you know, can we score IPs based on their, if they were served an
+[21:30] impression or if they were in the treatment, you know, how much higher
+[21:33] uplift would they get, which is going to be a different ordering of IPs for a
+[21:38] given advertiser versus their intent, you know, probability or intent to visit.
+[21:44] So it doesn't sound like then Malachi, from what you're saying, your analysis
+[21:49] that you just talked about, you will be ready to share it soon, but will it tell
+[21:53] us like about this initial hypothesis of there's like the movable middle group.
+[22:03] Where it's like the mid intent, or like, is that the case?
+[22:06] Where are the most incremental, uh, you know, like, you know,
+[22:13] uh, lift coming from.
+[22:17] It should within limitation.
+[22:18] Um, I'm only able to run seven days at a time and it's, I mean, it takes about an
+[22:23] hour and 45 minutes to run that for just a few advertisers and they're
+[22:26] not large advertisers either.
+[22:28] Um, so with those findings though, um, yes.
+[22:32] So I've actually separated them out by their scores, their prospecting scores.
+[22:36] And so I'm not just comparing, for example, like mid intent versus
+[22:40] everything in the previous period.
+[22:42] I'm saying mid intent treated versus what we, the mid intent holdout was, um,
+[22:48] and seeing what the difference is.
+[22:49] And so, um, yes.
+[22:51] Cool.
+[22:52] I think that's just like the initial one to be like, okay, there's, there's
+[22:55] a path here that makes sense.
+[22:57] That's all we need.
+[22:58] Would we need to repeat this with Fangorn scores?
+[23:01] Cause doesn't that change what's mid and
+[23:04] they are available now.
+[23:05] So you could just swap them if you wanted to.
+[23:07] I know Alex, you probably looked at it on our side, but.
+[23:12] Yeah, it's not necessarily the easiest thing.
+[23:16] So I don't want to put that on, but then on a Malachi to do now, but
+[23:21] for sure, I think it makes sense.
+[23:23] Yeah.
+[23:23] I think the methodology that Malachi is building for us here, kind of in an
+[23:28] ad hoc sense, even if it's, you know, replaced in the future or easier to
+[23:32] replicate with ghost bidding from the actual bidder, we can do more of this
+[23:37] analysis of, okay, let's lay over Fangorn scores or, you know, when we're doing
+[23:42] this new incrementality model, we can kind of measure some of these things.
+[23:45] Post hoc is kind of the, is what I'm hoping for some of that too.
+[23:49] So then it's a matter.
+[23:51] And then, and then I think the conversation goes into how do we
+[23:55] evaluate this and experiment on our side?
+[23:57] How do we evaluate this?
+[23:58] Is there a way we can test with like our third party partners as well and try
+[24:03] and validate kind of more external validation of these modeling things?
+[24:07] I will say, I think of most people on this call are aware.
+[24:11] We do have a experiment in progress with, um, ownerly, I think it's the
+[24:18] AID that they are running a lift test with house and we have, uh, multiple
+[24:24] cells, one cell is targeting high intent and one or not, not high intent.
+[24:28] One cell is targeting a mountain matched audience.
+[24:31] The other is targeting an interest based audience.
+[24:34] So it's a little bit similar in that an interest based audience is going to
+[24:39] have much lower median household scores, even though household scores
+[24:44] don't exist for interest, but like overall, it's like the same concept.
+[24:48] Um, and the main metric there is to see, does that increase our performance
+[24:53] in a, in a lift test environment?
+[24:54] So that's an example of a third party.
+[24:56] I think that'll be a useful data point.
+[24:58] And I know Lauren's and Edgar are working hard to find more advertisers
+[25:02] to do similar tests with.
+[25:04] Um, I would be interested to do a high intent versus mid intent
+[25:08] version of that potentially both using mountain matched.
+[25:12] I'd also be interested to do frequency versions of that with
+[25:15] different frequency settings.
+[25:17] So we, we initially talked about Kirsa as well of exactly what you just
+[25:22] outlined of like high intent versus mid intent, but as an experiment, and
+[25:27] then the analysis of the experiment would use kind of what Malachi is doing now.
+[25:33] So then like, what is the ghost bidding say about the mid intent focused
+[25:37] experiment versus the high intent?
+[25:39] So, uh, sounds like from this discussion, that's not a setup right now by the
+[25:44] end of the month kind of thing, but I think we still have that in our back
+[25:47] pocket of something we're probably going to want to discuss.
+[25:50] Having this methodology that you guys just described for measuring
+[25:54] incrementality internally, not using the current system will be necessary
+[26:00] for us to do any sort of experiments internally.
+[26:03] I also kind of feel like with the movement towards trying to be like our
+[26:08] own San, right, that there's probably going to be some sort of push in the
+[26:12] future to be like, Hey, we will do our own incrementality testing, just like
+[26:16] you know, Google or Facebook would do.
+[26:23] Yeah.
+[26:24] I mean, I think that that's a big principle of all of this is we have to
+[26:28] if we want to move to a place where we are creating like multiple, like goal
+[26:33] based optimization models, like we have to have a way to validate internally,
+[26:38] whether they're working.
+[26:39] And then I think absolutely.
+[26:41] If we can then butt that up against some third party validation to tune our
+[26:47] methodologies, like that's where we have to be.
+[26:49] If we really want to iterate on this, we have to be able to move quickly on
+[26:53] understanding what's working and what's not working.
+[26:55] And so overlaps with other conversations we've had around like causal impact
+[27:01] on all these changes that we're implementing and being able to continue
+[27:05] to monitor the work that this team's doing and ultimately other teams.
+[27:11] So, so it sounds like next steps are reviewing more of the research.
+[27:17] Is that correct?
+[27:18] Alex, being able to then figure out where we're going afterwards.
+[27:23] We want to review the research more, probe a little bit more and then work
+[27:28] on what our next steps are.
+[27:31] Yeah, I think that's right.
+[27:33] I just, I want to see the results and kind of like poke at them a little bit
+[27:37] more and then turn that into a learning agenda basically for us internally.
+[27:43] Like what are the things we want to learn over the next six weeks or so?
+[27:48] And then plot it out from there.
+[27:52] Malachi and Alex and Matt, when do you think we could have that
+[27:56] deeper dive ready for review?
+[28:00] I believe by the 30th would be fine.
+[28:02] Give me enough time to just double check all the methodology before we present it.
+[28:08] And then we could schedule a meeting if not this week, early, early next week
+[28:14] to go over those results.
+[28:16] So, we chatted with you already about this Alex a little bit, but do you think
+[28:23] there is a value here to set up this as a weekly kind of check-in meeting to discuss
+[28:28] like those findings and things in progress and stuff like that?
+[28:32] Because I feel like up to this point, there was a little bit of like confusion
+[28:37] about the direction and stuff like that.
+[28:38] It seems like we are on kind of track at this point, but I want to make sure we
+[28:44] stay on this track.
+[28:46] I'm good with that.
+[28:47] Yeah.
+[28:50] There's like the broader program management question for all of the
+[28:53] incrementality work that's happening right now, because there's stuff that
+[28:57] Jason's doing on the integration side.
+[28:59] There's stuff that Al's doing on the reporting side.
+[29:02] There's stuff that Megan's doing on like the experiment setup side on the UI.
+[29:07] That also needs to happen.
+[29:08] But I think for this group to keep like poking at this specific path, yeah, I
+[29:13] think a weekly check-in makes sense.
+[29:16] Then I need to follow up with Kyla and Howard handling the overall program of
+[29:21] everything that's happening.
+[29:23] Great.
+[29:24] Since we only have one minute left, any other action items or follow-ups or open
+[29:28] questions from the rest of the group that we need to resolve?
+[29:32] Thank you.
+[29:32] We have tickets right now that are looking at third party stuff, right, Alex?
+[29:38] On our side, Kay, you were looking at that?
+[29:40] Just so we know like what we're going up against, right?
+[29:43] Yeah, I have Edgar who's on this call, actually.
+[29:48] Thank you.
+[29:48] He provided me a video from Lift Lab.
+[29:51] So they went through their methodology, which is like a geo-based.
+[29:54] So they're, you know, they're splitting the US in half for cohort pairs.
+[30:00] So I need to review that and I will just document what we have from them so far
+[30:04] and how they're doing this for us to think about, you know, how they're going
+[30:09] to measure this if we were to run, you know, say our modeled incrementality
+[30:13] against it.
+[30:14] Edgar, let's send the recording we have from Houzz too.
+[30:19] Yes.
+[30:19] Thank you.
+[30:20] Houzz is our most commonly used external partner.
+[30:25] It's not the one that we have decided to integrate with and not our favorite, but
+[30:29] the one that customers use most commonly.
+[30:35] Yep, I'll send that after this call.
+[30:37] And if there's anything else you need from either partner, Alex, just let me know.
+[30:42] I can reach out to them directly and get what we need.
+[30:45] Yeah, I think there's some like nice to have, you know, me poking holes in
+[30:49] methodology questions, but I don't think any of that is like terribly relevant yet.
+[30:53] I think it's more just a higher level understanding of what they're trying to
+[30:56] do, you know, the data on our side that they're going to be consuming to kind of
+[31:00] build these things just so we can kind of like match those up with what we're
+[31:03] trying to do.
+[31:05] For sure.
+[31:07] All right.
+[31:08] If anyone has anything else, please let me or anyone else on the squad know, and
+[31:12] we will go from there to figure out when we can have this analysis available for
+[31:16] broader consumption.
+[31:17] And I thank everyone for their time today.
+[31:20] Thank you, Bryce.
+[31:21] Thanks, everybody.
+[31:21] Thank you very much, everybody.
+[31:23] Bye.
+[31:23] Thanks all.

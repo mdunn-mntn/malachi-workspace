@@ -652,3 +652,31 @@ An ongoing cross-functional investigation into performance decline and customer 
 - ## Daniel Hartnett — New Senior Engineer, Audience Team
 
 Daniel Hartnett joined the Audience (Targeting) team as a Senior Engineer in late April 2026. (via Mike Dolt, #targeting-squad, 2026-04-28)
+
+## Mountain-Match AI Roadmap — Intent-Probability vs. Incremental-Lift Scoring
+
+**Strategic framing (Alex Bloore, 2026-04-28 team meeting):**
+- Current default targeting prioritizes **high-intent** IPs.
+- "High intent, almost by definition, is not going to be incremental" — high-intent shoppers were going to convert anyway; targeting them captures attribution but doesn't drive new visits.
+- **The "movable middle" hypothesis:** mid-intent IPs may produce more incremental lift, because they're not yet committed but can be primed.
+- **CTV's role per Alex Bloore:** CTV is a funnel-priming channel — set up lower-funnel conversions assisted by Meta / Google / search, NOT a last-touch closer.
+
+**Implication for Mountain-Match scoring:**
+The Q2-Q3 roadmap should consider evolving from "intent-probability" scoring → **"incremental-lift-probability"** scoring (uplift modeling). Different IP ordering for advertisers who explicitly opt into incrementality optimization. Matt has a PRD draft for this.
+
+**Why the offline ATT methodology matters:** Without an internal incrementality measurement we trust, MNTN can't validate that a new uplift model actually drives more incremental lift than the existing intent model. The TI-837 ghost-bidding ATT pipeline becomes the validation harness for any future targeting strategy.
+
+**Third-party measurement stance (Alex Bloore):** MNTN does not use third-party tools (LiftLab, Houzz) to drive internal scoring decisions — those are for cross-validation only. Internal measurement is the source of truth.
+
+## TI Squad Incrementality Program — Cross-Team Dependencies (2026-04-28)
+
+The incrementality program touches multiple teams beyond TI:
+- **Jason** — integration-side work (data pipeline / publisher integration)
+- **Al** — reporting-side (incrementality dashboards customer-facing)
+- **Megan** — UI experiment-setup (advertiser-facing experiment configuration)
+- **Bidder team (Zach + Jordan)** — bidder-level ghost bidding (escapes augmentor 10-day TTL; production solution; pending Alex Bloore decision)
+- **Edgar** — third-party attribution liaison (Houzz, LiftLab)
+- **Matt** — uplift modeling PRD
+
+**Coordination owners:** Bryce + Kyla + Howard. Weekly TI-incrementality check-in being established.
+
