@@ -13,7 +13,8 @@ Source of truth for what's known, what's been fixed, and what's pending.
 | **v1 — 30-advertiser cohort** | 2026-04-27 | **Superseded** | Has both bugs below. Numbers from this run drove an internal deck not yet shared. |
 | **v2 — win-rate correction** | 2026-04-28 | Cancelled at ~2h | Half-fix; missing prospecting filter; query graph 5× more complex than v1. |
 | **v3 — win-rate + prospecting filter** | 2026-04-28 | Cancelled at ~18 min | Win_rates derived from full-campaign served, applied to prospecting-only — internal inconsistency. |
-| **v4 — prospecting-only + consistent win_rates** | 2026-04-28 | **CANONICAL** | Both bugs fixed. Win_rates recomputed from prospecting-only served. 113 min wall, 126.7 TB. |
+| v4 — prospecting-only + consistent win_rates | 2026-04-28 | Superseded by v5 | First clean run. +0.77pp guid IVW high-intent. Reported as canonical until v5 revealed the multi-segment story. |
+| **v5 — 4-segment (all/prospecting/stage1/retargeting)** | 2026-04-28 | **CANONICAL** | Same hash and cohort. Splits lift across 4 segments. Reveals: retargeting +21pp, Stage 1 alone −0.06pp, prospecting all stages averages +0.78pp. ~6 hr wall (139 stages from 4-segment UNION ALL), 4.5T slot-ms, 126.7 TB. |
 
 ---
 

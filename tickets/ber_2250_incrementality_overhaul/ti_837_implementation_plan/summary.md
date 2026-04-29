@@ -413,20 +413,79 @@ biddability via served-treatment proxy (not augmentor), HLL approximation
 and run the pipeline. Expected cost ≈ $200-400 (proportional to advertiser
 count; was $90 for 7).
 
-### Status — 2026-04-28 (CANONICAL: v4)
+### Status — 2026-04-28 (CANONICAL: v5)
 
-**v4 is the canonical run.** Includes both methodology fixes:
-1. Prospecting-only filter on cost_impression and clickpass (objective_id IN 1, 5, 6)
-2. Win-rate-corrected biddable_holdouts denominator (per-advertiser hash subsample)
+**v5 is the canonical run.** Multi-segment analysis splitting lift across
+4 campaign cuts (all / prospecting-all-stages / Stage 1 only / retargeting
+only) using same hash, same cohort, same window. Surfaces that lift is
+heavily concentrated in retargeting, with Stage 1 prospecting alone
+showing zero incremental lift at high intent.
 
 | Run | Status | Notes |
 |---|---|---|
-| v1 (no fixes) | Superseded | Both bugs present. Wedge story didn't reproduce. |
-| v2 (win-rate fix only) | Cancelled at ~2h | Half-fix; slow query graph; missing prospecting filter. |
-| v3 (incomplete) | Cancelled at ~18 min | Full-campaign win_rates applied to prospecting-only served — internal inconsistency. |
-| **v4 (prospecting-only + consistent win_rates)** | **CANONICAL** | Complete fix. Win_rates recomputed from prospecting-only served. 113 min wall, 126.7 TB. |
+| v1 (no fixes) | Superseded | Both bugs present. |
+| v2 (win-rate fix only) | Cancelled at ~2h | Half-fix; slow query graph. |
+| v3 (incomplete) | Cancelled at ~18 min | Internal inconsistency. |
+| v4 (prospecting-only + consistent win_rates) | Superseded by v5 | First clean run. Reported +0.77pp guid IVW high-intent. v5 reveals that's the prospecting-all-stages average — masks Stage 1's near-zero lift and Stage 2/3 multi-touch's contribution. |
+| **v5 (4-segment multi-segment)** | **CANONICAL** | 4-segment analysis. ~6 hr wall (139 stages — 4-segment UNION ALL inflated graph), 4.5T slot-ms, 126.7 TB billed. |
 
-### v4 lift run — CANONICAL RESULTS (2026-04-28)
+### v5 lift run — CANONICAL RESULTS (2026-04-28)
+
+**The 4-segment headline (high-intent guid IVW):**
+
+| Segment | guid IVW | guid sample-wt | clickpass IVW | wedge | Cells pos |
+|---|---|---|---|---|---|
+| **Retargeting only** | **+21.07pp** | +28.89pp | +13.97pp | 0.66× | 8/8 |
+| All campaigns combined | +3.12pp | +5.44pp | +2.88pp | 0.92× | 25/27 |
+| Prospecting (all stages) | +0.78pp | +0.46pp | +1.24pp | 1.58× | 20/26 |
+| **Stage 1 only** | **−0.06pp** | −1.03pp | +0.47pp | −8.5× | 12/25 |
+
+**Three findings:**
+
+1. **Retargeting drives the bulk of measured incremental lift.** +21pp at high
+   intent, +17pp at peak. Real causal effect AND likely selection bias
+   (bidder preferentially bids on visit-prone IPs; our random hash subsample
+   doesn't replicate this). True causal effect is bounded between zero and
+   +21pp; refining requires bidder-level ghost bidding (Phase 2b).
+
+2. **Stage 1 prospecting alone shows zero incremental lift at high intent.**
+   guid-ATT IVW = −0.06pp, sample-weighted = −1.03pp, only 12 of 25
+   advertisers (48%) positive. High-intent shoppers were going to convert
+   anyway. Validates Alex Bloore's "movable middle" hypothesis — the
+   opportunity isn't at high intent.
+
+3. **The "+3.12pp combined" view is misleading.** Mixed-segment denominators
+   conflate retargeting's +21pp with Stage 1's zero. The arithmetic averages
+   to +3.12pp but obscures both stories. Earlier internal incrementality
+   reports used this conflated view.
+
+**Per-segment win_rates** (median):
+- All campaigns: 1.00%
+- Prospecting all stages: 0.84%
+- Stage 1 only: 0.69%
+- Retargeting only: 0.10%
+
+Retargeting has tiny win_rate (highly competitive bidding, very specific
+target IPs). The retargeting holdout subsample is small (~84k high-tier IPs
+across 8 cells); statistical noise is correspondingly larger.
+
+**Output artifacts:**
+- `outputs/ti_837_lift_30adv_7day_v5_2026_04_20_to_26.json` (gitignored, 7,328 lines)
+- `outputs/ti_837_meta_analysis_30adv_v5_segment_*.json` (4 files, gitignored)
+- `outputs/ti_837_per_cell_table_30adv_v5_segment_*.csv` (4 files, gitignored)
+- `queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql` (committed)
+- `artifacts/ti_837_chart_segment_*_v5.png` (3 charts, gitignored)
+- `artifacts/ti_837_phase2_presentation_deck.html` (committed; rebuilt)
+- Standalone deck shared:
+  https://gist.githack.com/mdunn-mntn/4e934200ec2cce7886f9e5bea93d75fd/raw/ti_837_phase2_presentation_deck_standalone.html
+
+**Power Line:**
+
+> **Retargeting drives the lift.<br>
+>  Pure prospecting drives almost none.<br>
+>  Combined views hide both.**
+
+### v4 lift run — RESULTS (2026-04-28, superseded by v5)
 
 **126.7 TB billed, 113 min wall, 575 slot-hours** — same byte profile
 as v1 (augmentor scan is advertiser-agnostic and dominates).

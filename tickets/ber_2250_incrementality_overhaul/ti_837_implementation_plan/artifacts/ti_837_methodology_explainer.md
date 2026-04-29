@@ -194,17 +194,14 @@ In Phase 2:
 | High-intent wedge (clickpass/guid) | 0.96× ≈ 1.0× |
 | Peak-intent wedge (median) | 0.30× (clickpass under-credits 3×) |
 
-**Heads-up:** the numbers above are from the v1 run. **v4 is the canonical run** — applies both methodology fixes (prospecting-only filter + win-rate-corrected denominator). v4 numbers are dramatically smaller:
+**Heads-up:** the v1 numbers above are SUPERSEDED. **v5 is the canonical run** — multi-segment analysis splits lift across 4 campaign cuts.
 
-| Metric | v1 (no fixes) | v4 (canonical) |
-|---|---|---|
-| HIGH guid IVW | +2.69pp | **+0.77pp** |
-| HIGH clickpass IVW | +2.59pp | **+1.22pp** |
-| HIGH wedge | 0.96× | **1.59× over-credit** |
-| Sample-weighted high lift | +6.21pp / +467% rel | **+0.44pp / +19% rel** |
-| Per-advertiser median (high) | +2.86pp | +0.56pp |
-| % positive (high) | 93% | 78% |
+| Metric | v1 (no fixes) | v4 (prosp-only) | v5 segment 'rtg' | v5 segment 'prosp' | v5 segment 'stage1' |
+|---|---|---|---|---|---|
+| HIGH guid IVW | +2.69pp | +0.77pp | **+21.07pp** | +0.78pp | **−0.06pp** |
+| Sample-wt lift | +6.21pp | +0.44pp | +28.89pp | +0.46pp | −1.03pp |
+| % positive (high) | 93% | 78% | 100% (8/8) | 77% (20/26) | 48% (12/25) |
 
-The methodology fixes (especially the prospecting-only filter) revealed that v1's lift was inflated by retargeting impressions. True prospecting lift is modest — high-intent +0.4-0.8pp depending on pooling method. Clickpass over-credits real lift by ~60% at high intent.
+The v5 segmentation reveals what v4 (and earlier) couldn't: lift is concentrated in retargeting, while Stage 1 prospecting alone drives near-zero incremental lift. The +0.78pp v4 prospecting-all-stages number is an arithmetic average of Stage 1 (zero) + Stage 2/3 multi-touch (modest positive).
 
-Canonical tracker: `artifacts/ti_837_methodology_status.md`. Canonical SQL: `queries/ti_837_lift_analysis_30adv_7day_v4.sql`.
+Canonical tracker: `artifacts/ti_837_methodology_status.md`. Canonical SQL: `queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql`. Methodology defense: `artifacts/ti_837_methodology_defense.md` (16 anticipated objections + answers).
