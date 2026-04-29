@@ -1457,27 +1457,48 @@ These are the bronze-layer SQLMesh models that eventually feed silver.
 - **Partition filter REQUIRED** (requirePartitionFilter: true)
 - **Use for:** Raw augmentor service events — pre-bid request enrichment. Raw source for v_augmentor_log.
 - **GCS archive:** `gs://mntn-data-archive-prod/augmentor_log/` — full historical archive in Parquet, no TTL constraint. **Read directly from GCS via Spark** for high-volume scans on Databricks (bypasses BQ slot contention + scan billing). (via Victor Savitskiy 2026-04-28, TI-837)
+- **GCS partition layout (verified 2026-04-29, TI-837):**
+  - Top level: `region={east,west}/`
+  - Date level: `dt=YYYY-MM-DD/` (a single string column, NOT separate year/month/day)
+  - Full path example: `gs://mntn-data-archive-prod/augmentor_log/region=east/dt=2026-04-23/`
+  - Earliest partition: ~`2026-03-30` (archive history is ~30 days; not infinite as the "no TTL" framing suggests)
+  - For a complete daily scan you must read BOTH `region=east` and `region=west`. Spark loads both if you read the parent path with `.filter("dt = '2026-04-23'")`, but explicit per-region paths give better partition pruning.
+
+- **Row-level schema gotcha:** `augmentor_log` has **NO `advertiser_id` column at the row level**. Augmentor is a per-bid-request log — one row per upstream bid eval, not per advertiser. The only advertiser-relatable signal at this layer is `mntn_segments` (array of segment IDs that evaluated this IP). To attribute an augmentor row to an advertiser, you must join `mntn_segments` ↦ `audience_segments.expression` ↦ advertiser. See TI-837 v5 SQL `queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql` for the canonical pattern.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | time | TIMESTAMP | Partition key (**required in filter**) |
 | ip | STRING | Clustering key |
-| epoch | INTEGER | |
+| time_stamp | STRING | String representation of timestamp |
+| epoch | LONG (INT64) | Unix epoch (verify unit per record — augmentor uses microseconds) |
+| hh | INTEGER | Hour bucket (0-23) |
 | domain / app_bundle / site_name | STRING | |
 | placement_type / environment_type / inventory_source | STRING | |
 | device_type / video_placement | STRING | |
 | os / user_agent / ifa / network / isp | STRING | |
 | geo | STRING | Raw geo string |
-| mntn_segments | RECORD | LIST of segment IDs |
-| pmp | RECORD | LIST of PMP deals |
-| iab_categories / categories | RECORD | LIST |
+| mntn_segments | ARRAY\<INTEGER\> | Segments that evaluated this IP (no advertiser_id linkage at row level) |
+| pmp | ARRAY\<STRING\> | PMP deal IDs |
+| iab_categories / categories | ARRAY\<STRING\> | |
 | is_blocked | BOOLEAN | |
 | blocking_site | STRING | |
 | ipv6 | STRING | |
 | page / referrer | STRING | |
-| _source_file / _batch_id | STRING | |
+| publisher_id / publisher_name / publisher_domain | STRING | |
+| _source_file / _batch_id | STRING | ETL provenance |
 
-- **Warning:** Very short TTL (10 days). Partition filter required — always include `time` in WHERE.
+- **Warning:** Very short TTL (10 days) on the BQ hot table. Partition filter required — always include `time` in BQ WHERE clauses.
+- **Spark / Databricks read pattern:**
+  ```python
+  # Cleanest: explicit region + dt path → no partition pruning ambiguity
+  df = spark.read.parquet("gs://mntn-data-archive-prod/augmentor_log/region=east/dt=2026-04-23/")
+
+  # Both regions, range of days (parent path + filters)
+  df = (spark.read.parquet("gs://mntn-data-archive-prod/augmentor_log/")
+        .filter("dt BETWEEN '2026-04-20' AND '2026-04-26'"))
+  ```
+  Smoke test: `~/.databricks-py312/bin/python .claude/scripts/databricks_smoke.py`
 
 ---
 

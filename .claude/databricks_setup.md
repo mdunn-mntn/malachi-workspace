@@ -1,110 +1,226 @@
 # Databricks setup — TI-837 cluster
 
+**Status:** Smoke tests passing as of 2026-04-29 (Malachi).
+
 **Cluster URL:** https://1262887251702944.4.gcp.databricks.com/compute/clusters/5428-215533-4jodkdfs?o=1262887251702944
 **Workspace URL:** `https://1262887251702944.4.gcp.databricks.com`
 **Cluster ID:** `5428-215533-4jodkdfs`
 **Org ID:** `1262887251702944`
-**Owner / requested by:** Malachi (TI-837)
+**Owner:** Malachi (TI-837)
 **Provisioned by:** Victor Savitskiy (2026-04-28)
 
-## Required tags on every job/cluster
+## Resolved cluster config (as of 2026-04-29)
 
-Per Victor — finance tracks costs by these:
-- `project = TI-837` (or current ticket)
-- `squad = ML` (universal label, even non-ML squads use it)
-- `env = Dev`
+| Field | Value |
+|---|---|
+| spark_version | `17.3.x-scala2.13` (DBR 17.3 LTS, Apache Spark 4.0.0) |
+| driver_node_type_id | `c3d-standard-4` (4 vCPU / 16 GB RAM, AMD Genoa) |
+| node_type_id | `c3d-standard-8` (8 vCPU / 32 GB RAM, AMD Genoa) |
+| autoscale | min/max set per Malachi's edits — bumped from initial 1-2 to higher ceiling |
+| autotermination_minutes | 60 (increased from initial 10 to keep cluster alive during long ops) |
+| runtime_engine | `STANDARD` (Photon optional upgrade) |
+| data_security_mode | `SINGLE_USER` |
 
-## Auth setup (local laptop)
+## Required tags
 
-API token is in the user's keychain (Malachi mentioned having one in earlier
-conversation). Should be set as env var:
+Per Victor — finance tracks costs by these. Current tags (as of 2026-04-29):
+`project=malachi-ad-hoc, Squad=MLSQUAD, Env=DEV` — Malachi has flagged these are intentional for now; can be flipped to canonical `project=TI-837, squad=ML, env=Dev` later if finance attribution requires it.
+
+## Local environment
+
+**Python.** DBR 17.3 → `databricks-connect==17.3.*` requires **Python 3.12**.
+The system Python on this laptop is 3.11. We use a **uv-managed venv** at
+`~/.databricks-py312` so the 3.12 dependency is isolated.
+
 ```bash
-export DATABRICKS_HOST=https://1262887251702944.4.gcp.databricks.com
-export DATABRICKS_TOKEN=<user's PAT>
-export DATABRICKS_CLUSTER_ID=5428-215533-4jodkdfs
+# One-time:
+uv venv --python 3.12 ~/.databricks-py312
+VIRTUAL_ENV=~/.databricks-py312 uv pip install "databricks-connect==17.3.*"
 ```
-Or via `~/.databrickscfg`:
+
+Verify:
+```bash
+~/.databricks-py312/bin/python -c "from databricks.connect import DatabricksSession; print('ok')"
+~/.databricks-py312/bin/python --version    # → Python 3.12.13
 ```
+
+Pulled in transitively: `databricks-sdk==0.105.0`, `pyarrow`, `grpcio`, `pandas`, `numpy`.
+The system-wide `pyspark==4.0.0` does NOT enter this venv (uv venvs are isolated); no conflict.
+
+**Databricks CLI (Go).** Installed via brew tap:
+```bash
+brew tap databricks/tap
+brew install databricks
+databricks --version    # → 0.298.0 as of 2026-04-29
+```
+
+## Auth setup
+
+PAT lives in macOS keychain under service name `databricks-ti837` (no token in dotfiles, not in env vars, not in shell history).
+
+**Store / rotate** (run from any terminal — token is read with `-w` so it doesn't echo):
+```bash
+security add-generic-password -s "databricks-ti837" -a "$USER" -w "<PAT>" -U
+```
+
+**Read** (used by scripts):
+```bash
+DATABRICKS_TOKEN=$(security find-generic-password -s "databricks-ti837" -w)
+```
+
+**`~/.databrickscfg`** (chmod 600). Generated once via:
+```bash
+PAT=$(security find-generic-password -s databricks-ti837 -w)
+umask 077
+cat > ~/.databrickscfg <<EOF
 [DEFAULT]
-host = https://1262887251702944.4.gcp.databricks.com
-token = <user's PAT>
+host       = https://1262887251702944.4.gcp.databricks.com
+token      = ${PAT}
 cluster_id = 5428-215533-4jodkdfs
+EOF
+chmod 600 ~/.databrickscfg
 ```
 
-## Connection options
+This file is what `databricks` CLI reads by default. Confirm:
+```bash
+databricks current-user me
+```
 
-### Option 1: Databricks Connect (recommended for interactive analytical work)
+## Smoke test
 
-Runs Spark code locally; computation happens on the cluster. Limitation:
-not all Spark APIs supported. Fine for our use case (DataFrame reads,
-filters, aggregations, simple joins).
+Canonical script: [.claude/scripts/databricks_smoke.py](.claude/scripts/databricks_smoke.py)
 
 ```bash
-pip install --user databricks-connect==<cluster-runtime-version>
+~/.databricks-py312/bin/python .claude/scripts/databricks_smoke.py
 ```
 
-Match the runtime version to the cluster (check in Databricks UI →
-Compute → cluster → Configuration). Typical: `15.4.0` for runtime 15.x.
+Validates two paths:
+- **A. BQ Spark connector** — reads `dw-main-bronze.integrationprod.campaigns`,
+  filters `deleted=FALSE AND is_test=FALSE`, returns count.
+  Expected: ~437k. Wall time: ~7s on the small interactive cluster.
+- **B. GCS Parquet read** — reads `gs://mntn-data-archive-prod/augmentor_log/region=east/dt=YYYY-MM-DD/`,
+  prints schema, returns `limit(10).count()`.
+  Expected: 10. Wall time: ~100s **on first read** of a partition (Spark walks the directory listing); subsequent reads on the same path are sub-second.
 
-Then in Python:
-```python
-from databricks.connect import DatabricksSession
-spark = DatabricksSession.builder.remote(
-    host=os.environ['DATABRICKS_HOST'],
-    cluster_id=os.environ['DATABRICKS_CLUSTER_ID'],
-    token=os.environ['DATABRICKS_TOKEN']
-).getOrCreate()
+If the cluster is TERMINATED, start it first:
+```bash
+databricks clusters start --cluster-id 5428-215533-4jodkdfs
+# wait ~5 min for RUNNING
 ```
 
-### Option 2: `databricks-sql-connector` (SQL-only, requires SQL Warehouse — not this cluster)
+## GCS read patterns (critical — partition layout is NOT what the v5 SQL implies)
 
-Different product. Use for SQL Warehouses, not classic compute clusters.
-Skip unless we get a SQL Warehouse path from Victor.
+**Augmentor partition layout** (verified 2026-04-29):
 
-### Option 3: Submit jobs via Databricks Jobs API
-
-Fully decoupled — submit a notebook, fetch result via REST. More setup
-overhead but most production-like. See `airflow_ti` pattern.
-
-## Cluster modify if needed
-
-Victor: "you should be able to modify the compute if you need to adjust
-nodes/settings or extra libraries"
-
-Useful upgrades for our heaviest scans:
-- More worker nodes (autoscale max higher) for the augmentor scan
-- Photon-enabled runtime if available
-- Adjust `spark.executor.memory` for the row-heavy Parquet scans
-
-For long runs, switch to **Job compute** instead (3× cheaper than
-interactive cluster — see `knowledge/data_knowledge.md`).
-
-## Quickstart smoke test (after auth setup)
-
-```python
-from databricks.connect import DatabricksSession
-spark = DatabricksSession.builder.remote(
-    host=..., cluster_id=..., token=...
-).getOrCreate()
-
-# Smoke: count rows in a tiny BQ dim table via the connector
-df = (spark.read.format("bigquery")
-    .option("parentProject", "dw-main-bronze")
-    .option("billingProject", "dw-main-bronze")
-    .option("project", "dw-main-bronze")
-    .load("dw-main-bronze.integrationprod.campaigns")
-    .filter("deleted = FALSE AND is_test = FALSE")
-)
-print(df.count())   # should be ~507k
+```
+gs://mntn-data-archive-prod/augmentor_log/region={east,west}/dt=YYYY-MM-DD/
 ```
 
+NOT `year=YYYY/month=MM/day=DD/` (the original setup-doc smoke test used the wrong filter and hung the cluster — fixed). For a complete daily scan you must read both regions; with the parent path Spark loads both:
+
 ```python
-# Smoke: scan one day of augmentor from GCS with explicit partition filter
+# Single region, single day — explicit, no partition pruning ambiguity
+df = spark.read.parquet("gs://mntn-data-archive-prod/augmentor_log/region=east/dt=2026-04-23/")
+
+# Both regions, range of days (cross-window validation pattern)
 df = (spark.read.parquet("gs://mntn-data-archive-prod/augmentor_log/")
-    .filter("year = '2026' AND month = '04' AND day = '23'")
-    .filter("ip IS NOT NULL AND ip != '0.0.0.0'")
-    .select("ip")
-    .distinct()
-)
-print(df.count())  # baseline against BQ scan time
+      .filter("dt BETWEEN '2026-04-20' AND '2026-04-26'"))
 ```
+
+**Archive history.** Earliest GCS partition is ~`2026-03-30`. Despite "no TTL" framing, the archive is ~30 days deep; very-backward windows (>30d ago) won't find data.
+
+**Other tables.** `guid_log` is also archived in GCS — same `gs://mntn-data-archive-prod/guid_log/` root. `prospecting_intent_v1` archives at `gs://household-scoring-prod/output/scoring/prospecting_intent/`. Both expected to follow Hive partitioning; verify before relying.
+
+## Compute strategy
+
+Two clusters, two purposes:
+
+1. **Interactive cluster (this one, `5428-215533-4jodkdfs`).** Dev, smoke
+   tests, schema poking, small pulls. Keep it small. Auto-terminates when idle.
+
+2. **Job clusters.** Spin a fresh one inside each Job's workflow definition for
+   each real run (the v5 port, Phase 2a, cross-window validation). Bigger
+   config (e.g., `c3d-highmem-16` workers, autoscale 4-16, Photon ON).
+   **Job compute is 3× cheaper** than interactive cluster per Victor —
+   substantial savings on a 5-hour run. Cluster lives only for the duration
+   of the run, then tears down.
+
+Suggested job-cluster spec for the v5 port:
+- driver: `c3d-standard-8`
+- worker: `c3d-highmem-16` (more memory per worker for augmentor shuffle)
+- autoscale: 4-16
+- runtime_engine: `PHOTON`
+- preemptible workers: OFF (we haven't reasoned about retry tolerance yet)
+- tags: same as interactive cluster
+
+## Editing the cluster
+
+Three options. Pick the one that matches the change.
+
+**UI.** Cluster page → Edit. Restart needed for most changes. Easiest for one-offs.
+
+**CLI.**
+```bash
+databricks clusters edit --json '{
+  "cluster_id": "5428-215533-4jodkdfs",
+  "cluster_name": "...",
+  "spark_version": "17.3.x-scala2.13",
+  "node_type_id": "c3d-standard-8",
+  "driver_node_type_id": "c3d-standard-4",
+  "autoscale": {"min_workers": 1, "max_workers": 4},
+  "autotermination_minutes": 60,
+  "runtime_engine": "STANDARD",
+  "data_security_mode": "SINGLE_USER",
+  "single_user_name": "malachi@mountain.com"
+}'
+```
+**`clusters edit` is a replace, not a patch.** Pass the full spec or you'll lose fields.
+
+**SDK** (preferred when scripting):
+```python
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.compute import AutoScale, RuntimeEngine, DataSecurityMode
+
+w = WorkspaceClient()  # reads ~/.databrickscfg
+w.clusters.edit(
+    cluster_id="5428-215533-4jodkdfs",
+    cluster_name="Malachi - TI-837",
+    spark_version="17.3.x-scala2.13",
+    node_type_id="c3d-standard-8",
+    driver_node_type_id="c3d-standard-4",
+    autoscale=AutoScale(min_workers=1, max_workers=4),
+    autotermination_minutes=60,
+    runtime_engine=RuntimeEngine.PHOTON,
+    data_security_mode=DataSecurityMode.SINGLE_USER,
+    single_user_name="malachi@mountain.com",
+)
+```
+
+## Lessons from the 2026-04-29 setup session
+
+1. **DBR 17.x is gated behind Python 3.12.** `databricks-connect>=16.2`
+   declares `Requires-Python ==3.12.*`. Resolved via uv venv with managed
+   3.12 — avoids touching system Python.
+2. **System pyspark conflicts with databricks-connect.** Both ship the
+   `pyspark` namespace. The uv venv sidesteps this completely; no need to
+   uninstall the global one.
+3. **GCS partition layout was wrong in the original setup template.**
+   Augmentor uses `region={east,west}/dt=YYYY-MM-DD/`, not `year/month/day`.
+   First Test B run hung the cluster for 10 min (until INACTIVITY
+   auto-terminate fired) because the wrong filter forced Spark to scan
+   every partition. Caught the bug, updated the canonical pattern.
+4. **First-time GCS reads are slow** (~100s for a single partition's
+   `limit(10).count()`). Spark walks the GCS listing on cold reads;
+   subsequent reads in the same session are sub-second. Don't take
+   first-call wall time as the steady-state figure.
+5. **`augmentor_log` has no `advertiser_id` column at row level.** Per-bid-
+   request log; advertiser linkage goes through `mntn_segments` →
+   `audience_segments.expression`. Documented in
+   `knowledge/data_catalog.md`.
+
+## Pointers
+
+- Canonical SQL pattern: `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql`
+- v5 methodology defense: `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/artifacts/ti_837_methodology_defense.md`
+- Victor's walkthrough notes: `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/meetings/ti_837_03_victor_meeting_actions.md`
+- Catalog entry (augmentor): `knowledge/data_catalog.md` § `bronze.raw.augmentor_log`
