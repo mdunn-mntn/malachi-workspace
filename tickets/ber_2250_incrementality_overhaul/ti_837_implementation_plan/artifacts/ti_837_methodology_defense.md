@@ -126,7 +126,7 @@ bidder's actual scoring function (Phase 2b).
 
 ## 5. Why MAX-tier subject construction (not per-day subjects)?
 
-**Question:** "An IP at peak intent today might be at high intent tomorrow.
+**Question:** "An IP at peak performance today might be at high intent tomorrow.
 Your subjects are assigned by MAX score over the week. Doesn't that mix
 populations?"
 
@@ -242,7 +242,7 @@ also report arithmetic mean, median, sample-weighted as robustness checks.
 - IVW is the classical meta-analysis combiner — readers expect it.
 - Reporting all four lets the audience see whether the pattern is
   robust (it is at high intent — all 4 methods give wedge 1.6×-5.3×
-  in v4) or method-dependent (peak intent: IVW says 1.0×, others say
+  in v4) or method-dependent (peak performance: IVW says 1.0×, others say
   ~0.30× — flag the divergence and explain).
 
 **If pushed:** "If they were all the same parameter, all 4 methods would
@@ -401,7 +401,82 @@ These are in the deck and in `methodology_status.md`:
 
 ---
 
-## 16. What would change the headline number?
+## 16. The retargeting reframe — "isn't lift just lift?"
+
+**Question:** "We're measuring lift. We saw +21pp lift on retargeting. Why
+do we keep saying it's not really +21pp incremental?"
+
+**Choice:** Frame the +21pp as the experiment's measured lift, with a
+caveat about counterfactual scope — not as "the number is wrong."
+
+**Why:**
+The +21pp **is** what the experiment measured. Within the experiment's
+defined frame:
+- Treated: served via retargeting (whoever the bidder picked + won)
+- Holdout: 10% holdout bucket × any augmentor row, subsampled at retargeting
+  win rate
+
+The lift between those arms is genuinely +21pp. It IS incremental in the
+experiment's frame.
+
+The caveat is about which question the experiment answers:
+- **"What did MNTN's retargeting drive vs. our defined holdout?"** → +21pp.
+  Answered. Real.
+- **"What would happen if MNTN didn't run retargeting at all?"** → harder
+  question, requires a tighter counterfactual. Our holdout is broader than
+  the natural retargeting candidate pool (because "any augmentor row"
+  includes IPs the bidder wouldn't have bid on for retargeting). If natural
+  retargeting candidates have higher organic visit rates than random
+  augmentor IPs, our holdout rate is biased low → measured lift is biased
+  high relative to "what would happen without retargeting."
+
+**For the deck, the framing is:** retargeting drives +21pp lift in this
+experiment. The harder counterfactual question (what would happen without
+any retargeting) needs bidder-level ghost bidding, where the holdout
+replicates the bidder's selection logic.
+
+**If pushed:** "The +21pp isn't wrong. It's the answer to the question the
+experiment asked. The follow-on question — counterfactual to no-retargeting
+— requires a different experimental setup we'll get from Phase 2b."
+
+---
+
+## 17. What is "cross-window validation"?
+
+**Question:** "You keep saying 'no cross-window validation yet.' What is
+cross-window validation?"
+
+**Definition:** Re-run the same analysis on a **different time window**
+(different 7-day stretch) and check whether the findings reproduce.
+
+For TI-837's analysis (window 2026-04-20 → 04-26), cross-window validation
+would mean running the identical pipeline on, say, 2026-04-13 → 04-19 (the
+preceding week). If the segment-level findings hold:
+
+- Retargeting still ~+21pp at high intent (within ±5pp)
+- Stage 1 still ~zero
+- Same advertisers ranked similarly
+
+…then the result is robust to time-period-specific effects (one-week sales
+events, holiday effects, anomalous bidder behavior).
+
+If the windows disagree by 5-10pp+, then the single-window number is sample
+noise as much as signal — we can't ship a confident headline from one week.
+
+**Status:** No cross-window validation done yet for TI-837. Augmentor
+10-day TTL bounds backward replication (04-13 partition is purged on
+2026-04-23). Forward replication is straightforward — run the same analysis
+on next week's data once it lands. Databricks GCS reads (no TTL) enable
+arbitrary cross-window comparisons.
+
+**Standard methodology rule:** any single-window incrementality result
+should be cross-window validated before broad sharing. We're not there yet
+for v5; the deck is internal-only until at least one cross-window
+replication confirms the segment ordering.
+
+---
+
+## 18. What would change the headline number?
 
 | Change | Direction | Magnitude estimate |
 |---|---|---|

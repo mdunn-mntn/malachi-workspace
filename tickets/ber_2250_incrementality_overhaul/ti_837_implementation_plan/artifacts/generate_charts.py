@@ -45,7 +45,7 @@ COLOR_TEXT = "#222222"
 COLOR_TEXT_LIGHT = "#666666"
 BACKGROUND = "#FAFAFA"
 
-TIER_LABEL = {"high": "High Intent", "peak": "Peak Intent",
+TIER_LABEL = {"high": "High Intent", "peak": "Peak Performance",
               "mid": "Mid Intent", "max_reach": "Max Reach"}
 TIER_ORDER = ["high", "peak", "mid", "max_reach"]
 

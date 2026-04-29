@@ -106,7 +106,7 @@ If all cells are independent estimates of the same true parameter, IVW is the **
 
 The math assumes all cells estimate **the same parameter**. In reality, each advertiser has its own true ATT (Ferguson +10.7pp, Outback −1.2pp). We're pooling heterogeneous quantities. IVW's assumption is violated, but the procedure still runs — it just answers "what's the variance-weighted average of these heterogeneous things" rather than "what's the one true MNTN-wide ATT."
 
-When some cells are at the noise floor (peak intent for 8 advertisers in Phase 2), those cells have **near-zero variance** and get **near-infinite weight** — they dominate the pool even though their estimates are noise.
+When some cells are at the noise floor (peak performance for 8 advertisers in Phase 2), those cells have **near-zero variance** and get **near-infinite weight** — they dominate the pool even though their estimates are noise.
 
 This is why for peak/mid we report median or sample-size-weighted instead.
 

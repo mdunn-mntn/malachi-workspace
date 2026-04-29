@@ -159,7 +159,7 @@ def chart_segment_x_tier():
 
     ax.axhline(0, color="#999", linewidth=0.6)
     ax.set_xticks(x_base)
-    ax.set_xticklabels(["High intent", "Peak intent", "Mid intent"],
+    ax.set_xticklabels(["High intent", "Peak performance", "Mid intent"],
                        fontsize=11, color=COLOR_TEXT)
     ax.set_ylabel("guid-ATT (percentage points, IVW pool)",
                   fontsize=10, color=COLOR_LIGHT_TEXT)

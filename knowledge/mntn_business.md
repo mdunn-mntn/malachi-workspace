@@ -743,3 +743,16 @@ An ecommerce binary classifier exists in production that converts DDP URLs into 
 - **Calling model:** `github.com/SteelHouse/dbt/blob/main/ml_squad/models/vertical_categorization/ddp_vertical_classification_api.py` calls the above API
 - **Training repo:** `github.com/SteelHouse/url-ecommerce-predictor`
 - **Gotcha:** Original training notebook was in AWS; backup status uncertain. Model artifacts are in Databricks. (via Ryan Kleck, Alex Knorr, Victor Savitskiy, #tgt-infrastructure-squad, 2026-04-28)
+
+## Intent-tier terminology (MNTN-specific)
+
+The household_score → intent tier mapping in production scoring uses these labels. **Always use the MNTN labels in customer-facing or exec-facing materials**, even if "peak intent" reads more naturally outside the org.
+
+| household_score | MNTN label | Notes |
+|---|---|---|
+| 10000 | "high intent" | Saturation flag — top-quintile + keyword match. The bidder treats this tier differently from peak. |
+| 7000–9999 | **"peak performance"** (NOT "peak intent") | Per Alex Knorr 1:1 transcript 2026-04-28 + team meeting same day. "Peak" alone is fine; if qualified, use "peak performance." |
+| 3333–6999 | "mid intent" | The "movable middle" hypothesis — historically under-tested but where MNTN may have most incremental headroom. |
+| <3333 | "max reach" | Lowest intent tier, broadest pool. |
+
+Boundaries from `bronze.external.household_scoring__prospecting_intent__v1`. These match the bidder's eligibility logic, not statistical conveniences (e.g., score deciles).

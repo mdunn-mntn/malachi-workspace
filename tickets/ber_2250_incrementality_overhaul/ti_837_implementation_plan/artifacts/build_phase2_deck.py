@@ -97,11 +97,30 @@ def main():
               <tr><td>Cohort</td><td>30 MNTN advertisers, stratified across spend × vertical × intent diversity</td></tr>
               <tr><td>Window</td><td>2026-04-20 → 04-26 UTC (7 days), +3-day post-period for visit attribution</td></tr>
               <tr><td>Holdout</td><td>Per-(advertiser, IP) MD5 hash · 10% holdout · production-equivalent</td></tr>
-              <tr><td>Holdout denominator</td><td>Subsampled at per-(advertiser, segment) empirical win rate</td></tr>
+              <tr><td>Holdout denominator</td><td>Subsampled at per-(advertiser, segment) empirical win rate to match treated arm's "actually-served" condition</td></tr>
               <tr><td>Outcomes</td><td>Clickpass visits (attributed) and Guid visits (causal counterfactual)</td></tr>
-              <tr><td>Segments</td><td>4 cuts of cost_impression filtered by campaign type</td></tr>
             </tbody>
           </table>
+        </section>
+        """,
+
+        # ─── SLIDE 2b — How the 4 segments are defined ─────────────────────
+        """
+        <section data-slide="2b">
+          <h2>How the 4 segments are defined</h2>
+          <p style="margin-top:0.4em;">Each segment filters <code>cost_impression_log</code> and <code>clickpass_log</code> on the campaign's <code>objective_id</code> and <code>funnel_level</code>. <code>guid_log</code> is never filtered (it's a cause-agnostic visit signal — every advertiser-site visit fires regardless of which campaign drove it).</p>
+          <table style="margin-top:0.5em;">
+            <thead><tr><th>Segment</th><th>SQL filter</th><th>Strategy isolated</th></tr></thead>
+            <tbody>
+              <tr><td><strong>All campaigns</strong></td><td><code>(no filter)</code></td><td>Every paid impression for the advertiser, regardless of campaign type</td></tr>
+              <tr><td><strong>Prospecting (all stages)</strong></td><td><code>objective_id IN (1, 5, 6)</code></td><td>Stage 1 prospecting + Multi-Touch (S2) + Multi-Touch Full Funnel (S3). Excludes retargeting (4) and ego (7).</td></tr>
+              <tr><td><strong>Stage 1 only</strong></td><td><code>objective_id IN (1, 5, 6) AND funnel_level = 1</code></td><td>Pure top-of-funnel prospecting — first touch, no multi-touch reinforcement. <code>funnel_level</code> is authoritative for stage; <code>objective_id</code> alone is unreliable since UI migration broke the mapping.</td></tr>
+              <tr><td><strong>Retargeting only</strong></td><td><code>objective_id = 4</code></td><td>Already-engaged IPs (past site visit, click, CRM list)</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:0.7em; color:var(--text-light); margin-top:0.5em;">
+            The same IP can appear in multiple segments if the advertiser served them via more than one campaign type. Segment counts overlap; they're not partitions.
+          </p>
         </section>
         """,
 
@@ -155,7 +174,7 @@ def main():
           <h2 style="text-align:left;">Lift profile by tier — segment matters more than tier</h2>
           <img src="{charts['by_tier']}" alt="Segment × tier lift profile">
           <p style="font-size:0.7em; color:var(--text-light); text-align:left; margin-top:0.4em;">
-            Retargeting (red) shows large positive lift across high + peak. Stage 1 prospecting (gray) shows zero or slightly negative lift across all three tiers. Mid intent is at the noise floor everywhere — none of the segments show meaningful mid-tier lift in this 7-day window.
+            Retargeting (red) shows large positive lift across high + peak performance. Stage 1 prospecting (gray) shows zero or slightly negative lift across all three tiers. Mid intent is at the noise floor everywhere — none of the segments show meaningful mid-tier lift in this 7-day window.
           </p>
         </section>
         """,
@@ -179,7 +198,7 @@ def main():
           <h2>Stage 1 prospecting alone: zero incremental lift at high intent</h2>
           <p style="margin-top:0.4em;">When we filter to <strong>Stage 1 only</strong> (pure top-of-funnel prospecting, before any multi-touch reinforcement), guid-ATT at high intent is <span class="red"><strong>−0.06pp</strong></span>. Sample-weighted: <span class="red"><strong>−1.03pp</strong></span>. Only <strong>12 of 25</strong> advertisers (48%) show positive lift.</p>
           <p style="margin-top:0.5em;"><strong>Interpretation:</strong> high-intent shoppers were going to convert anyway. Stage 1 prospecting is reaching IPs who would visit the site naturally — search, direct, brand pull. MNTN's pure top-of-funnel layer doesn't add measurable incrementality at the highest intent tier.</p>
-          <p style="margin-top:0.5em;"><strong>This validates Alex Bloore's "movable middle" hypothesis</strong> — high-intent isn't where the room to grow lift lives. The opportunity is downstream (multi-touch nurturing) or upstream (mid-intent shoppers we haven't shown them to be incremental on yet, but where there's more headroom).</p>
+          <p style="margin-top:0.5em;"><strong>The headroom for incremental lift is downstream</strong> (multi-touch nurturing — Stage 2/3 within prospecting carry the +0.78pp average) <strong>or upstream</strong> (mid-intent shoppers, where MNTN has room to push customers who haven't yet committed). The high-intent tier is where MNTN's incremental room is smallest.</p>
         </section>
         """,
 
@@ -200,7 +219,7 @@ def main():
           <h2>Two methodology fixes versus prior internal numbers</h2>
           <p style="margin-top:0.4em;">Earlier internal "incrementality" reports overstated lift for two reasons we now correct:</p>
           <ol style="margin-top:0.5em;">
-            <li style="margin-bottom:0.6em;"><strong>Holdout denominator artificially large.</strong> "In augmentor_log" ≠ "would have been served." MNTN's bidder wins ~1% of auctions. Subsampling biddable_holdouts at the per-(advertiser, segment) empirical win rate makes the holdout denominator apples-to-apples with treated arm's "actually-served" condition. (Per Alex Knorr review, 2026-04-28.)</li>
+            <li style="margin-bottom:0.6em;"><strong>Holdout denominator artificially large.</strong> "In augmentor_log" ≠ "would have been served." MNTN's bidder wins ~1% of auctions. Subsampling biddable_holdouts at the per-(advertiser, segment) empirical win rate makes the holdout denominator apples-to-apples with treated arm's "actually-served" condition.</li>
             <li style="margin-bottom:0.6em;"><strong>Mixed-segment treatment denominator.</strong> Earlier reports counted ALL impressions for an advertiser as "treated" — conflating retargeting (+21pp lift) with prospecting (+0.78pp lift) into a single misleading +3.12pp combined headline. v5 separates the four segments so each is measured against its appropriate counterfactual.</li>
           </ol>
           <p style="margin-top:0.5em; font-size:0.78em; color: var(--text-light);">
@@ -264,12 +283,12 @@ biddable_holdouts (×4)          served_treatment (×4)
         <section data-slide="12">
           <h2>What I'd want a methodologist to push on</h2>
           <ol style="margin-top:0.4em;">
-            <li style="margin-bottom:0.4em;"><strong>Selection bias on retargeting.</strong> The +21pp retargeting lift combines true causal effect with bidder-selection bias on visit-prone IPs. Random hash subsampling can't separate them. True causal effect is bounded between 0 and +21pp; refining requires bidder-level ghost bidding.</li>
-            <li style="margin-bottom:0.4em;"><strong>Cohort selection bias.</strong> We filtered for tier-diverse advertisers. Most MNTN advertisers target high-intent only — our 30 may not generalize. Per Bryce, team meeting 2026-04-28.</li>
-            <li style="margin-bottom:0.4em;"><strong>Single window.</strong> 7 days, 2026-04-20 → 04-26. No cross-window validation yet. Augmentor 10-day TTL bounds backward replication.</li>
-            <li style="margin-bottom:0.4em;"><strong>Intent-score movement during window.</strong> An IP could score peak in pre-period and high during the analysis week, but they're locked in our "peak" subject pool (MAX-tier construction). Partial explanation for peak-tier negative lift.</li>
+            <li style="margin-bottom:0.4em;"><strong>Retargeting counterfactual scope.</strong> The +21pp retargeting lift is what the experiment measured: served retargeting vs would-have-been-served retargeting holdouts (subsampled at retargeting win rate). It IS incremental within that frame. The harder question — "what would happen if MNTN didn't run retargeting at all?" — needs a tighter counterfactual that replicates the bidder's selection logic. That's bidder-level ghost bidding (Phase 2b).</li>
+            <li style="margin-bottom:0.4em;"><strong>Cohort selection bias.</strong> We filtered for tier-diverse advertisers — those whose IPs span multiple intent tiers. Most MNTN advertisers target high-intent only, so our 30 may not represent "the typical MNTN advertiser." Replication on a random sample is future work.</li>
+            <li style="margin-bottom:0.4em;"><strong>Single window — no cross-window validation yet.</strong> Cross-window validation = re-run the same analysis on a different 7-day window (e.g., 2026-04-13 → 04-19) and check whether the segment ordering and magnitudes reproduce. If retargeting +21pp shows up consistently across multiple windows, the result is real. If it varies by 5-10pp week-over-week, the single-window number is sample noise as much as signal. Augmentor's 10-day TTL bounds backward replication; Databricks GCS reads remove that constraint for forward replication.</li>
+            <li style="margin-bottom:0.4em;"><strong>Intent-score movement during window.</strong> An IP could score "peak performance" in pre-period and "high intent" mid-week, but they're locked in their MAX-tier subject pool. Partial explanation for peak-tier numbers being noisy.</li>
             <li style="margin-bottom:0.4em;"><strong>CTV multi-advertiser confounding.</strong> A CTV viewer sees ads from many advertisers concurrently. Some attributed lift may be from competitor concurrent campaigns. Hard to disentangle without cross-platform exposure data.</li>
-            <li style="margin-bottom:0.4em;"><strong>Random subsampling math.</strong> Random hash subsampling at win_rate matches denominator size but doesn't replicate bidder selection. Lift estimate is unbiased only if bidder-selection is uncorrelated with visit propensity within the biddable population.</li>
+            <li style="margin-bottom:0.4em;"><strong>Random subsampling math.</strong> Random hash subsampling at win_rate matches denominator <em>size</em> but doesn't replicate bidder <em>selection</em>. The lift estimate is unbiased under the conditional-independence assumption (bidder selection uncorrelated with visit propensity within the biddable population). For retargeting, that assumption is the most fragile.</li>
           </ol>
         </section>
         """,
@@ -279,8 +298,8 @@ biddable_holdouts (×4)          served_treatment (×4)
         <section data-slide="13">
           <h2>What's next</h2>
           <ul style="margin-top:0.4em;">
-            <li style="margin-bottom:0.5em;"><span class="pill">Bidder-level ghost bidding</span> Production solution that escapes the augmentor 10-day TTL AND replicates bidder selection logic. Pending Alex Bloore decision; Zach + Jordan on bidder team. Best path to clean retargeting causal estimate.</li>
-            <li style="margin-bottom:0.5em;"><span class="pill">Migrate to Databricks</span> Read augmentor + guid logs directly from GCS (<code>gs://mntn-data-archive-prod/</code>). Cluster ready (Victor S., 2026-04-28). 5–10× speedup; skip BQ scan billing. Enables affordable cross-window validation + Phase 2a.</li>
+            <li style="margin-bottom:0.5em;"><span class="pill">Bidder-level ghost bidding</span> Production solution that escapes the augmentor 10-day TTL AND replicates bidder selection logic. Best path to a tighter retargeting counterfactual.</li>
+            <li style="margin-bottom:0.5em;"><span class="pill">Migrate to Databricks</span> Read augmentor + guid logs directly from GCS (<code>gs://mntn-data-archive-prod/</code>). 5–10× speedup; skip BQ scan billing. Enables affordable cross-window validation + Phase 2a.</li>
             <li style="margin-bottom:0.5em;"><span class="pill">Conversions outcome</span> Same pipeline, swap <code>ui_conversions</code> for <code>guid_log</code>. Conversions are 10-20× rarer → need ~30-day window. Augmentor TTL is the binding constraint — Databricks GCS reads remove it.</li>
             <li style="margin-bottom:0.5em;"><span class="pill">iROAS</span> Per-advertiser <code>(incremental conversions × AOV) ÷ MNTN spend</code>. Depends on conversions outcome.</li>
           </ul>
