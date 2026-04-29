@@ -1,11 +1,90 @@
 # TI-837: Ghost Bidding Incrementality Experiment — Implementation Plan
 
 **Jira:** https://mntn.atlassian.net/browse/TI-837
-**Status:** In Progress (pivoted from shuffling to ghost bidding, 2026-04-17)
+**Status:** v5 multi-segment shipped (2026-04-29). Deck shared internally;
+not yet broadly shared externally. 3 open decisions.
 **Date Started:** 2026-04-17
-**Date Completed:**
+**Date Completed:** —
 **Assignee:** Malachi
 **Parent:** [BER-2250](https://mntn.atlassian.net/browse/BER-2250) — Incrementality Overhaul
+
+---
+
+## ✱ Current State (2026-04-29 — read first)
+
+**v5 is canonical.** 4-segment lift analysis on 30-advertiser cohort, 7-day
+window 2026-04-20 → 04-26 UTC. Run history: v0 (Phase 1, 7 advertisers) →
+v1 (30-adv, no fixes) → v2/v3 (cancelled) → v4 (prospecting-only) → **v5
+(4-segment multi-segment, canonical)**.
+
+### v5 headline (high-intent guid IVW)
+
+| Segment | guid IVW | sample-wt | clickpass IVW | wedge |
+|---|---|---|---|---|
+| **Retargeting only** | **+21.07pp** | +28.89pp | +13.97pp | 0.66× |
+| All campaigns combined | +3.12pp | +5.44pp | +2.88pp | 0.92× |
+| Prospecting (all stages) | +0.78pp | +0.46pp | +1.24pp | 1.58× |
+| **Stage 1 only** | **−0.06pp** | −1.03pp | +0.47pp | −8.5× |
+
+### Power Line
+
+> **Retargeting drives the lift. Pure prospecting drives almost none. Combined views hide both.**
+
+### Deck (canonical)
+
+🔗 https://gist.githack.com/mdunn-mntn/79e8e3e1d56a52a61dca2754c0161b59/raw/ti_837_phase2_presentation_deck_standalone.html
+
+15 slides covering: cold open · methodology · segment definitions (with
+SQL filters) · headline chart · headline table · segment×tier · why
+retargeting · Stage 1 zero finding · wedge chart · methodology fixes ·
+pipeline · cohort design · 6 caveats · what's next · power line.
+
+Deck rebuilt with: "peak performance" terminology (not "peak intent");
+names stripped (no Alex Bloore / Knorr / Bryce / Victor); retargeting
+caveat reframed as counterfactual scope (not "lift isn't real");
+cross-window validation defined.
+
+### Pending decisions (next session)
+
+1. **Send deck to Alex Knorr for sanity check?** Recommended before broader
+   sharing.
+2. **Set up Databricks?** TI-837 cluster ready
+   (`5428-215533-4jodkdfs`, workspace
+   `https://1262887251702944.4.gcp.databricks.com`). Need user's PAT +
+   cluster runtime version to install matching `databricks-connect`.
+   Unlocks Phase 2a (conversions, 30-day window) + cross-window
+   replication.
+3. **Cross-window validation** — re-run v5 on a different 7-day window
+   (suggested: 2026-05-04 → 05-10 as next clean forward window once augmentor
+   partitions land). Standard methodology rule before external sharing.
+
+### Key docs (read in order if picking up cold)
+
+1. This summary §11 (full v5 results)
+2. `artifacts/ti_837_methodology_status.md` — issue tracker + run history
+3. `artifacts/ti_837_methodology_defense.md` — 18 anticipated objections
+4. `artifacts/ti_837_methodology_explainer.md` — plain-English IVW/N-gate/wedge
+5. `artifacts/ti_837_phase2_cohort.md` — 30-advertiser cohort + rationale
+6. `claude-prompts/ti_837_phase5_handoff_prompt.md` — handoff for fresh chats
+7. Meeting actions: `meetings/ti_837_0{1,2,3}_*_actions.md`
+
+### Canonical SQL
+
+`queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql` — 4-segment
+megaquery with hardcoded per-segment win_rates. Reuse for cross-window:
+change window dates (4 places) + recompute win_rates if cohort changes.
+
+### Critical operational rules
+
+- BQ via stdin to `bash .claude/scripts/bq_run.sh` (flag parser crashes on
+  `--` SQL).
+- Augmentor 10-day TTL: today's window's 04-20 partition expires
+  ~2026-04-30. Forward windows (next week onward) are clean.
+- Databricks job compute is 3× cheaper than interactive cluster.
+- GCS reads with explicit partition filters: `gs://mntn-data-archive-prod/
+  {augmentor_log,guid_log}/`
+- "Peak performance" not "peak intent" in any external material.
+- Names stripped from performance decks; retained in internal docs.
 
 ---
 
