@@ -680,3 +680,66 @@ The incrementality program touches multiple teams beyond TI:
 
 **Coordination owners:** Bryce + Kyla + Howard. Weekly TI-incrementality check-in being established.
 
+<!-- slack-extracted: 2026-04-29 -->
+- ## AI/ML Model Inventory by Squad (Compliance Audit, 2026-04-28)
+
+### Targeting Squad (TGT) — Production
+**Pre-trained OSS Models:**
+- `BAAI/bge-large-en-v1.5` via sentence-transformers 2.6.0 — Semantic embeddings for keyword clustering (Bottom Up Keywords)
+- `Alibaba-NLP/gte-large-en-v1.5` — Vector search for keyword recommendations and signals categorization
+
+**OSS Algorithms trained on proprietary MNTN data:**
+- Apache Spark ALS (pyspark 3.4.1) — Keyword recommendations (Bottom Up Keywords)
+- XGBoost (xgboost 2.0.3) — IP-advertiser conversion scoring (Fangorn)
+- scikit-learn K-means (scikit-learn 1.3.0) — Keyword clustering (Bottom Up Keywords)
+- scikit-learn LogisticRegression — URL ecommerce binary classifier (DDP URL → vertical classification, hourly job)
+
+**Supporting libraries:** PyTorch 2.1.0 (CPU), HuggingFace Transformers 4.41.0, LangChain 0.1.20
+
+**Open Source Data:** Mountain Matched Keywords training uses Common Crawl (commoncrawl.org); versions updated monthly.
+
+### PERML Squad — Production
+**Proprietary LLM APIs (not OSS):**
+- Gemini 2.0 Flash via Google Vertex AI — media plan generation, network scoring
+- GPT-4o-mini via OpenAI API — evaluation, fallback
+- Gemini Embedding 001 via Google Vertex AI — vector embeddings for network search
+- `ft:gpt-4.1-mini-2025-04-14:mntn::BMhxthUA` — vertical categorization (fine-tuned, not OSS)
+
+**OSS Algorithms trained on proprietary MNTN data:**
+- AutoGluon Tabular + TimeSeries (Apache 2.0) — delivery forecasting (impressions, spend, reach, cost)
+- LightGBM (MIT) — network performance prediction; also used inside AutoGluon ensemble
+- XGBoost (Apache 2.0) — inside AutoGluon ensemble
+- CatBoost (Apache 2.0) — inside AutoGluon ensemble
+- scikit-learn RandomForestRegressor (BSD-3) — network performance modeling
+- FAISS (MIT) — vector similarity search index
+
+**Supporting libraries:** LangChain, Pydantic AI, Instructor
+
+**Non-Prod (emerging):** CausalImpact (Apache 2.0) + PyMC (Apache 2.0) + statsmodels (BSD-3) — Bayesian causal analysis
+
+**Open Source Data:** None — all models trained on proprietary MNTN data (advertiser-network daily performance, CTV flight-level delivery metrics via Beeswax augmentor logs, historical campaign data from internal PostgreSQL/BigQuery).
+
+### CDS Squad — Non-Prod Only
+PoC Content Moderation Pipeline (not in production):
+- Gemma 4 (open weights) via Ollama — local inference only
+- CLIP + Whisper (MIT), YOLOv8/Ultralytics (AGPL-3.0), PaddleOCR (Apache 2.0), NudeNet (Apache 2.0), Detoxify (Apache 2.0), Falconsai NSFW classifier, TimesFormer (Meta research license)
+- All inference-only; no fine-tuning or training; fully on-prem.
+
+### AI Squad, MSS, Reporting, UI, ATTR, QFAI — Nothing to declare
+No OSS models in use across these squads as of 2026-04-28.
+
+### Identity Core Squad — Nothing to declare
+Uses open source software libraries but no OSS AI models (pretrained LLMs or open-weight models).
+
+**Note:** All OSS algorithm licenses confirmed permissive (Apache 2.0, MIT, BSD-3) — no GPL licensing concerns flagged. (via Kale McNaney, addy, bermudez, Brian McAdams, Victor Savitskiy, Adam Ferras, Alexander Jerneck, #engineering-team, 2026-04-28)
+- ## URL Ecommerce Classifier — DDP Vertical Classification
+
+An ecommerce binary classifier exists in production that converts DDP URLs into verticals. It runs as an hourly job.
+
+- **Model:** scikit-learn LogisticRegression (scikit-learn 1.7.2)
+- **Trained by:** Tucker (with Alyson's supervision); training performed in AWS; model copied to GCS/Databricks
+- **Model registry:** Databricks Models — `prod/ml/ecommerce_classifier`
+- **API code:** `github.com/SteelHouse/ip-vertical-classification` — loads model from Databricks
+- **Calling model:** `github.com/SteelHouse/dbt/blob/main/ml_squad/models/vertical_categorization/ddp_vertical_classification_api.py` calls the above API
+- **Training repo:** `github.com/SteelHouse/url-ecommerce-predictor`
+- **Gotcha:** Original training notebook was in AWS; backup status uncertain. Model artifacts are in Databricks. (via Ryan Kleck, Alex Knorr, Victor Savitskiy, #tgt-infrastructure-squad, 2026-04-28)
