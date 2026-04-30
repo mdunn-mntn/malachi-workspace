@@ -197,3 +197,33 @@ There is recognized ambiguity in how "Mountain Matched" audiences are defined fo
 ### Identity Graph — Sources Field Added to Final Graph Output
 
 A `Sources` field is being added to the final identity graph output (PR: SteelHouse/idg#113). This addition surfaces the source provenance of graph edges/nodes in the final output, which supports auditability and downstream filtering (e.g., for privacy-scoped use cases such as the Spotify pixel isolation requirement).
+
+## 2026-04-30
+
+### [mntn_business] from Matt Brorby in #dev_fangorn-model_ex
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Fangorn Model — Launch Status (Late April 2026)
+
+**Fangorn** is a targeting/scoring model (or pipeline component) that was in active rollout as of late April 2026. The initial launch targeted 3 advertisers. A NASA-style go/no-go launch checklist was created in Confluence to guide the rollout. Coordination involved the PEX (Product Experimentation), PER (Performance/Experimentation Runtime?), and data platform teams. A launch playbook was being documented for future rollouts. The model involves continuous scoring, which required coordination with Forrest/PER to enable.
+
+### [data_knowledge] from ray in #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## NTB (New-to-Brand) Enforcement in Audience Expressions
+
+**NTB Reporting** has two components:
+1. A **reporting-only** feature for the incrementality dashboard.
+2. A **backend enforcement** component: NTB enforcement in audience expressions, which operates primarily via site visitor/converter exclusions. This was a gradual rollout throughout 2025, with the majority of rollout occurring near end of year.
+
+The backend enforcement is the component with meaningful behavioral impact on targeting — it affects which audiences are eligible by excluding known site visitors/converters from certain audience expressions.
+
+### [data_knowledge] from Alex Knorr in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## conversion_signal GCS Archive vs. conversion_log
+
+The GCS path `gs://mntn-data-archive-prod/signals/conversion_signal` is used for ad hoc work but is **not** the primary source for model training. BUK uses `conversion_log` in the feature store (via `gs://mntn-data-archive-prod/conversion_log`). The feature store source is managed via Airflow (`airflow-ti` repo, `models/feature_store/feature_group_1_source/conversion_log_advertiser_id_dsc_id.py`). The Spotify pixel_isolation filter is expected to be applied in the feature store pipeline for these sources.

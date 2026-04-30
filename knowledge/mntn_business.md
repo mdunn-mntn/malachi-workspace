@@ -756,3 +756,14 @@ The household_score → intent tier mapping in production scoring uses these lab
 | <3333 | "max reach" | Lowest intent tier, broadest pool. |
 
 Boundaries from `bronze.external.household_scoring__prospecting_intent__v1`. These match the bidder's eligibility logic, not statistical conveniences (e.g., score deciles).
+
+<!-- slack-extracted: 2026-04-30 -->
+- ## CoreDW Deprecation — Hard Cutover Date: 5/19/2026
+
+Legacy CoreDW is being decommissioned on **May 19, 2026**. All teams with tables or services reading from CoreDW must have cutover work planned to their BigQuery equivalents prior to this date. Teams needing BigQuery access should raise a DPLAT access ticket immediately. The Data Platform team is assisting with onboarding and the #data-platform channel contains onboarding resources. (via Mike Dolzer, #engineering-team, 2026-04-29)
+- ## Select Reached Audiences — New Product Feature
+
+**Select Reached Audiences** is a retargeting capability that allows advertisers to re-engage households that previously saw a MNTN Select ad across 150+ premium networks, directly within Performance TV campaigns. It is designed to be combined with Select Content Targeting and intent-based targeting to create a layered awareness-to-conversion funnel on CTV. This feature was being previewed to revenue-facing teams in late April/early May 2026. (via Gabs Fuchs, #sales, 2026-04-29)
+- ## Sales Tool Transition: Outreach → Nooks
+
+MNTN is transitioning all Brand and Agency Account Executives from Outreach to **Nooks** as the primary sales engagement/dialing platform. The cutover date for all Brand and Agency AEs was Monday, May 4, 2026. Nooks accounts are provisioned via Okta SSO. (via Abe Lofy, #sales, 2026-04-29)

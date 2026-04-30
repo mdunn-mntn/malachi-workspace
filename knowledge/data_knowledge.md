@@ -1707,3 +1707,24 @@ Without the filter pushed at read level, Spark scans every partition (orders of 
 3. **Job in Databricks UI** — create job, run, view output. Manual, not local-friendly but cheapest for one-shot runs.
 
 For analysis-style work where output is small (e.g., per-cell ATT counts ~360 rows), Databricks Connect works fine. For bulk processing with huge output, save to Parquet and analyze locally afterward.
+
+<!-- slack-extracted: 2026-04-30 -->
+- ## Media Plan Race Condition — Campaign No-Spend Bug
+
+A confirmed race condition exists during **flight date changes** on campaigns using Media Plans. When a campaign's flight end date is modified, there is a gap window during which media plan regeneration fails, leaving the campaign without an active media plan and causing it to pause (no spend). This issue was confirmed in production on 2026-04-28/29 affecting Media Plan experiment campaigns. The fix involved updating campaign end dates and patching the media plan display. **Implication for monitoring:** If experiment campaigns using Media Plans suddenly stop spending after a flight date modification, check for this race condition first. (via Jen Wang, #mission-control, 2026-04-29)
+- ## Probabilistic Attribution (Comprehensive Reporting) — iCloud VV Behavior
+
+MNTN's **Probabilistic Attribution** feature (labeled "Comprehensive Reporting" in the UI) handles visits and conversions from iCloud Private Relay IPs (Apple's pseudo-VPN). Prior to this feature, iCloud visit/conversion events were discarded if no other signal was found. With the feature enabled:
+
+- iCloud visits are logged to a **separate table** and do not enter regular visit volume directly.
+- Reporting takes a **weighted approach** using guids per iCloud IP to estimate attributable volume from iCloud visits.
+- A similar weighted approach applies to conversions.
+- At launch, average lift was ~7% on fewer than 50% of advertisers. After backend teams fixed upstream iCloud blocking bugs, the average lift dropped to ~1%.
+- **New customers** have this enabled by default. **Existing customers** have it off (toggle available in UI).
+- There is **no way to differentiate** regular vs. probabilistic visit/conversion volume in reporting — a tooltip in the UI explains the methodology but volume is blended.
+- Only one iteration has shipped, and it was scoped to iCloud IPs only.
+
+**Data implication:** When analyzing visit or conversion volume for advertisers with Comprehensive Reporting enabled, be aware that a small share (~1%) may originate from probabilistic iCloud attribution rather than deterministic matching. (via ray, #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die, 2026-04-29)
+- ## Dynamic Take Rates — Feature Status: Disabled
+
+MNTN tested **Dynamic Take Rates** (lowering take rates based on campaign performance) with a small pilot of approximately 20 small/new advertisers, many of whom subsequently churned. The feature had a design flaw: it could lower take rates but had no mechanism to raise them. For remaining advertisers that did not churn, take rates were gradually restored to the global level. **The feature has been disabled.** No ongoing behavioral impact expected. (via ray, #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die, 2026-04-29)
