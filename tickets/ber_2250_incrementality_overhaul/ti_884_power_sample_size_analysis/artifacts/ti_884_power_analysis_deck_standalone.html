@@ -533,15 +533,141 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
   </ul>
 </section>
 
-<!-- 14. Methodology summary -->
+<!-- 14. Methodology section divider -->
+<section class="center">
+  <h3 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.7em; color: var(--gray);">Appendix — Methodology</h3>
+  <h2 style="margin-top: 0.8em;">How "power" is calculated, from first principles.</h2>
+  <p class="subtitle gray" style="margin-top: 0.8em;">Full walkthrough in <code>artifacts/ti_884_methodology.md</code></p>
+</section>
+
+<!-- 15. What is power -->
 <section>
-  <h2>Methodology — what's behind the numbers.</h2>
+  <h2>Step 1 — What "power" actually is.</h2>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Every experiment is a hypothesis test. Two ways to be wrong:</p>
+  <table style="font-size: 0.6em; margin-top: 0.6em;">
+    <tr><th></th><th>Truth: H₀ (no lift)</th><th>Truth: H₁ (real lift δ)</th></tr>
+    <tr><td><strong>Decide H₁</strong></td><td>Type I error · prob = <span class="red">α</span></td><td>Correct · prob = <span class="navy">1 − β</span> = power</td></tr>
+    <tr><td><strong>Decide H₀</strong></td><td>Correct</td><td>Type II error · prob = β</td></tr>
+  </table>
   <ul style="margin-top: 0.8em; font-size: 0.78em;">
-    <li><span class="navy">Lewis &amp; Rao (2015 QJE):</span> N = 2 &times; ((z<sub>α/2</sub> + z<sub>β</sub>) &middot; σ / Δ)². Outcome-agnostic — calculator handles binomial (visits, CVR) and continuous (iROAS).</li>
-    <li><span class="navy">CUPED ρ measured on MNTN data:</span> mean 0.357 across 3 large advertisers. Range 0.17–0.46. SE multiplier: <strong>0.934</strong> (literature midpoint was 0.866 — MNTN is a bit weaker).</li>
-    <li><span class="navy">Ghost-ad conditioning (Johnson-Lewis-Reiley 2017):</span> 25% SE reduction. TI-837's win-rate work supports this.</li>
-    <li><span class="navy">Holdout:</span> 10% per-advertiser hash. Validated TI-837 phase 0c (2026-04-29).</li>
-    <li><span class="navy">Calculator:</span> <code>ti_884_mde_calculator.py</code>. Sample sizing for any advertiser is one function call.</li>
+    <li>α = 0.05 — false-positive tolerance (we pick this up front)</li>
+    <li>1 − β ≥ 0.80 — desired power (we pick this up front)</li>
+    <li><span class="navy">MDE</span> = smallest δ we have power to detect at chosen α and 1 − β</li>
+  </ul>
+</section>
+
+<!-- 16. The test statistic -->
+<section>
+  <h2>Step 2 — The two-proportion z-test.</h2>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">For each arm, compute visit rate. The lift estimator:</p>
+  <p style="margin-top: 0.4em; font-size: 0.95em; text-align: center;" class="navy">
+    Δ̂ = p̂<sub>t</sub> − p̂<sub>c</sub>
+  </p>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Each IP is a Bernoulli(p) draw → variance p(1−p). Sample mean of n IPs has variance p(1−p)/n. Two arms independent → variances add:</p>
+  <p style="margin-top: 0.4em; font-size: 0.85em; text-align: center;" class="navy">
+    SE(Δ̂) = σ · √(1/n<sub>t</sub> + 1/n<sub>c</sub>),  where σ = √(p(1−p))
+  </p>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Standardize: <strong>z = Δ̂ / SE</strong>. Under H₀, z ~ N(0,1). Reject H₀ if |z| &gt; z<sub>α/2</sub> = 1.96.</p>
+</section>
+
+<!-- 17. Lewis-Rao derivation -->
+<section>
+  <h2>Step 3 — Inverting the test gives MDE.</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">Under H₁ (true effect = δ), require P(reject H₀) ≥ 1 − β. Plug in the normal CDF, solve for δ:</p>
+  <p style="margin-top: 0.6em; font-size: 0.95em; text-align: center;" class="navy">
+    MDE<sub>abs</sub> = (z<sub>α/2</sub> + z<sub>1−β</sub>) · σ · √(1/n<sub>t</sub> + 1/n<sub>c</sub>)
+  </p>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">For α = 0.05 and power = 0.80:</p>
+  <ul style="margin-top: 0.4em; font-size: 0.78em;">
+    <li>z<sub>α/2</sub> = z<sub>0.025</sub> = 1.96</li>
+    <li>z<sub>1−β</sub> = z<sub>0.80</sub> = 0.84</li>
+    <li>Sum = <strong>2.80</strong> — this is the constant in every Lewis-Rao calc</li>
+  </ul>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Stakeholders care about relative lift: <span class="navy">MDE<sub>rel</sub> = MDE<sub>abs</sub> / p</span>.</p>
+</section>
+
+<!-- 18. Hand calc verification -->
+<section>
+  <h2>Step 4 — Sanity check (Lewis-Rao hand calc).</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">At p = 5%, n<sub>t</sub> = n<sub>c</sub> = 10,000, no variance reduction:</p>
+  <table style="font-size: 0.62em; margin-top: 0.6em;">
+    <tr><th>Step</th><th>Compute</th><th>Result</th></tr>
+    <tr><td>σ</td><td>√(0.05 · 0.95)</td><td>0.2179</td></tr>
+    <tr><td>SE term</td><td>√(2 / 10,000)</td><td>0.01414</td></tr>
+    <tr><td>MDE<sub>abs</sub></td><td>2.80 · 0.2179 · 0.01414</td><td>0.00863 (0.86 pp)</td></tr>
+    <tr><td><strong>MDE<sub>rel</sub></strong></td><td>0.00863 / 0.05</td><td><span class="navy"><strong>17.27%</strong></span></td></tr>
+  </table>
+  <p style="margin-top: 1em; font-size: 0.78em;">Calculator passes this self-test. See <code>ti_884_mde_calculator.py</code>.</p>
+</section>
+
+<!-- 19. Worked example WGU -->
+<section>
+  <h2>Step 5 — Same math, applied to WGU.</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">From <code>ti_884_top50_mde_tiers.csv</code>, advertiser 31357:</p>
+  <table style="font-size: 0.6em; margin-top: 0.6em;">
+    <tr><th>Input</th><th>Value</th></tr>
+    <tr><td>Treated IPs (Stage 1, April)</td><td>15,599,393</td></tr>
+    <tr><td>Biddable holdout (treated × 10/90)</td><td>1,733,265</td></tr>
+    <tr><td>p (visit rate)</td><td>9.66%</td></tr>
+    <tr><td>σ = √(p(1−p))</td><td>0.296</td></tr>
+    <tr><td>SE = σ · √(1/n<sub>t</sub> + 1/n<sub>c</sub>)</td><td>2.37 × 10⁻⁴</td></tr>
+    <tr><td>MDE<sub>abs</sub> = 2.80 · SE</td><td>0.066 pp</td></tr>
+    <tr><td><strong>MDE<sub>rel</sub> = MDE<sub>abs</sub> / p</strong></td><td><span class="navy"><strong>0.69%</strong></span></td></tr>
+    <tr><td>Post-stack (× 0.595)</td><td><span class="navy">0.41%</span></td></tr>
+  </table>
+  <p style="margin-top: 0.8em; font-size: 0.78em;">WGU is huge → SE is tiny → MDE is tiny. They're in the lucky tier.</p>
+</section>
+
+<!-- 20. Variance reduction stack -->
+<section>
+  <h2>Step 6 — Variance-reduction stack (the post-stack multiplier).</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">Each technique replaces SE with SE × <em>vr</em>; they stack multiplicatively.</p>
+  <table style="font-size: 0.6em; margin-top: 0.6em;">
+    <tr><th>Technique</th><th>Mechanism</th><th>SE multiplier</th></tr>
+    <tr><td><strong>CUPED</strong></td><td>Residualize on pre-period covariate · √(1 − ρ²)</td><td><span class="navy">0.934</span> (MNTN-measured)</td></tr>
+    <tr><td><strong>Ghost-ad</strong></td><td>Condition on biddable IPs only (LATE)</td><td>0.75 (literature)</td></tr>
+    <tr><td><strong>Stratified</strong></td><td>Randomize within intent-tier strata</td><td>0.85 (literature)</td></tr>
+    <tr><td><strong>Stack</strong></td><td>0.934 × 0.75 × 0.85</td><td><span class="navy"><strong>0.595</strong></span></td></tr>
+  </table>
+  <p style="margin-top: 1em; font-size: 0.78em;">Net: <span class="navy">~40% SE reduction</span>. MDE × 0.595 ≈ 60% of raw.</p>
+</section>
+
+<!-- 21. CUPED rho measurement detail -->
+<section>
+  <h2>How we measured CUPED ρ on MNTN data.</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">For each IP treated by Stage 1 in BOTH Feb and Mar 2026, indicator (0/1) per period. Pearson ρ between Feb and Mar indicators per advertiser:</p>
+  <table style="font-size: 0.6em; margin-top: 0.6em;">
+    <tr><th>Advertiser</th><th>n IPs both periods</th><th>ρ</th><th>√(1 − ρ²)</th></tr>
+    <tr><td>WGU (31357)</td><td>10.1M</td><td>0.461</td><td>0.887</td></tr>
+    <tr><td>Vivint (30506)</td><td>3.2M</td><td>0.170</td><td>0.985</td></tr>
+    <tr><td>Ferguson (31276)</td><td>2.2M</td><td>0.441</td><td>0.897</td></tr>
+    <tr><td><strong>mean</strong></td><td>—</td><td><strong>0.357</strong></td><td><strong>0.934</strong></td></tr>
+  </table>
+  <p style="margin-top: 0.8em; font-size: 0.78em;" class="navy">MNTN's CUPED gives ~7% SE reduction — weaker than literature midpoint (~13%). Driver: high binary-outcome variance + moderate cross-period IP retention.</p>
+</section>
+
+<!-- 22. Why CVR is harder (math) -->
+<section>
+  <h2>Why CVR is ~6× harder than visits — same math.</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">MDE<sub>rel</sub> scales as σ/p. For binary outcomes, σ/p = √((1−p)/p) — drops as p rises.</p>
+  <table style="font-size: 0.62em; margin-top: 0.6em;">
+    <tr><th>Outcome</th><th>p (cohort median)</th><th>σ</th><th>σ / p</th></tr>
+    <tr><td>Visit rate</td><td>2.15%</td><td>0.145</td><td>6.74</td></tr>
+    <tr><td>Conversion rate</td><td>0.055%</td><td>0.0235</td><td>42.6</td></tr>
+    <tr><td><strong>Ratio</strong></td><td>—</td><td>—</td><td><span class="red"><strong>6.3×</strong></span></td></tr>
+  </table>
+  <p style="margin-top: 0.8em; font-size: 0.78em;">Same N, same advertiser, same variance reduction → CVR MDE is ~6× higher than visits MDE. Pure consequence of σ/p scaling. To halve CVR MDE, you need 4× the spend.</p>
+</section>
+
+<!-- 23. Caveats -->
+<section>
+  <h2>Caveats / where MDE numbers might be off.</h2>
+  <ul style="margin-top: 0.6em; font-size: 0.75em;">
+    <li><span class="navy">CUPED ρ varies by advertiser</span> (0.17 Vivint vs 0.46 WGU). Per-advertiser ρ should be measured before publishing TI-885 numbers.</li>
+    <li><span class="navy">Ghost-ad multiplier 0.75 is literature.</span> TI-837 win-rate work could give MNTN-specific number.</li>
+    <li><span class="navy">Cohort-median spend curve is "typical advertiser."</span> Use the per-advertiser table for actual decisions.</li>
+    <li><span class="navy">IPs aren't perfectly independent</span> (households have multiple IPs). Bias is small because hash randomizes at IP level.</li>
+    <li><span class="navy">iROAS deferred</span> — calculator API is ready, needs per-advertiser revenue σ pull.</li>
   </ul>
 </section>
 

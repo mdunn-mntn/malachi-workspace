@@ -81,23 +81,62 @@ The answer is two answers:
 
 ## Methodology details
 
-**Sample sizing — Lewis-Rao:**
+> **Want the full math walk-through?** See [ti_884_methodology.md](ti_884_methodology.md) — derives Lewis-Rao from the two-proportion z-test, walks through CUPED and ghost-ad math, and shows worked examples that reproduce the CSV numbers exactly.
+
+### How "power" is calculated, in 30 seconds
+
+We're testing whether treated and control visit rates differ. Under standard
+CLT assumptions, the lift estimator `Δ̂ = p̂_t − p̂_c` is approximately normal
+with SE = `σ · √(1/n_t + 1/n_c)`, where `σ = √(p(1−p))` for a binary outcome.
+
+**Power** = probability of rejecting H₀ (no lift) when the true lift = δ.
+We want power ≥ 0.80 at α = 0.05. Inverting the test gives the smallest δ
+detectable at that power:
+
 ```
-N_per_arm = 2 × ((z_{α/2} + z_β) × σ / Δ)²
+MDE_abs = (z_{α/2} + z_{1−β}) · σ · √(1/n_t + 1/n_c)
+        = 2.80 · σ · √(1/n_t + 1/n_c)
+MDE_rel = MDE_abs / p
 ```
-For binomial visits: `σ = √(p(1-p))`. For continuous outcomes (iROAS): plug in revenue σ. The calculator is outcome-agnostic.
 
-**Variance-reduction stack (post-stack SE multiplier):**
-- **CUPED:** `√(1 - ρ²)` where ρ = Pearson correlation of visit-rate Feb-vs-Mar 2026 per IP. **Measured on MNTN data:** mean ρ = 0.357 across 3 large advertisers (range 0.17–0.46). CUPED multiplier = 0.934.
-- **Ghost-ad conditioning:** ~0.75 (Johnson-Lewis-Reiley 2017). TI-837's win-rate work supports this for MNTN.
-- **Stratified randomization (intent tier):** ~0.85 (literature, conservative).
-- **Stack:** 0.934 × 0.75 × 0.85 = **0.595** (40% SE reduction).
+That's the entire calculation. Everything else in this analysis is plugging
+in MNTN-specific values for σ (depends on baseline rate p), n_t, n_c, plus
+multiplying by the variance-reduction stack.
 
-**Holdout:** 10% per-advertiser hash, validated TI-837 phase 0c (2026-04-29). Biddable holdout = treated × (10/90).
+### Variance-reduction stack (post-stack SE multiplier 0.595 = 40% SE reduction)
 
-**Window:** April 2026 (full month, Stage 1 only, exclude AID 90).
+- **CUPED** — `√(1 − ρ²)` where ρ = correlation of pre-period visit indicator
+  with treatment-period visit indicator per IP. **Measured on MNTN data
+  (this ticket):** mean ρ = 0.357 across 3 large advertisers (range 0.17–0.46).
+  Multiplier = **0.934**. Weaker than literature (≈0.866) — driven by high
+  binary-outcome variance and moderate cross-period IP retention.
+- **Ghost-ad conditioning** — restrict to biddable IPs only (won an auction
+  in either arm). Removes population dilution. Multiplier ≈ **0.75**
+  (Johnson-Lewis-Reiley 2017). TI-837's win-rate work supports this.
+- **Stratified randomization** — randomize within intent-tier strata, analyze
+  with stratified estimator. Cochran's variance theorem gives ≤ overall
+  variance. Multiplier ≈ **0.85** (literature, conservative).
 
-**Cohort:** Top 50 advertisers by April spend ($143k – $3.35M monthly). Plus 7 of Lauren's completed-test advertisers pulled separately (3 had measurable current data).
+### Setup
+
+- **Holdout:** 10% per-advertiser hash, validated TI-837 phase 0c (2026-04-29).
+  Biddable holdout = treated × (10/90).
+- **Window:** April 2026 (full month, Stage 1 only, exclude AID 90).
+- **Cohort:** Top 50 advertisers by April spend ($143k – $3.35M monthly). Plus
+  Lauren's 7 completed-test advertisers pulled separately (3 had measurable
+  current data).
+- **Unit of analysis:** IP. Outcome aggregation: did this IP visit at least
+  once in the window? (binary).
+
+### Sanity check — Lewis-Rao hand calc
+
+At p=0.05, n_t = n_c = 10,000, no variance reduction:
+- σ = √(0.05·0.95) = 0.2179
+- SE = 0.2179 · √(2/10,000) = 0.00308
+- MDE_abs = 2.80 · 0.00308 = 0.00863 (0.86 pp)
+- MDE_rel = 0.00863 / 0.05 = **17.27%**
+
+Calculator self-test passes this exact value. See [ti_884_mde_calculator.py](ti_884_mde_calculator.py).
 
 ---
 

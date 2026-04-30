@@ -131,13 +131,14 @@ on MNTN, not the ~13% literature midpoint.
 ## 5. Solution
 
 **Deliverables:**
+- `artifacts/ti_884_methodology.md` — **full math walkthrough**: derives Lewis-Rao from the two-proportion z-test, explains CUPED + ghost-ad + stratified randomization with formulas, includes worked examples reproducing the CSV numbers exactly. Read this first.
 - `artifacts/ti_884_mde_calculator.py` — outcome-agnostic Lewis-Rao calculator.
   Functions: `mde_binomial`, `mde_continuous`, `n_required_binomial`, `spend_required`.
-  Self-tested against Lewis-Rao hand calc.
+  Self-tested against Lewis-Rao hand calc (p=0.05, N=10k, no var reduction → MDE_rel=17.27%).
 - `artifacts/ti_884_run_analysis.py` — applies calculator to top-50 + Lauren's 7,
   produces tier CSVs and spend-curve CSV.
 - `artifacts/ti_884_power_analysis_presentation.md` — stakeholder narrative.
-- `artifacts/ti_884_power_analysis_deck_standalone.html` — RevealJS deck.
+- `artifacts/ti_884_power_analysis_deck_standalone.html` — RevealJS deck (15+ slides covering findings + methodology appendix).
 - `artifacts/generate_charts.py` — Tufte-compliant chart generator.
 - `outputs/ti_884_top50_mde_tiers.csv` — per-advertiser tiered MDE table.
 - `outputs/ti_884_spend_threshold_curve.csv` — Al's spend → MDE curve.
