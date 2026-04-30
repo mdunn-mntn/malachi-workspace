@@ -83,6 +83,17 @@ retargeting in our cohort runs through type=2, so the 0/5.43M validation above
 covers the full retargeting population — there is no "OPM lane" that bypasses
 holdout enforcement.**
 
+**Authoritative confirmation (Zach Schoenberger, 2026-04-30 in `#targeting`):**
+Three universal rules:
+1. **CRM lists are only usable in prospecting campaigns, never retargeting.** (Resolves the implicit "CRM retargeting" framing — there is no such thing in the bidder.)
+2. **Every campaign has a 10% holdout.** Universal, no exceptions.
+3. **Every campaign has an audience expression.** "In order for us to buy ads for any campaign they need an audience."
+
+Alex K's original concern ("do retargeting / CRM campaigns have holdout?") was
+conflating two distinct lanes: CRM lives on prospecting (always known to enforce
+holdout), and retargeting (`objective_id=4`) is OPM-based site-visitor audiences
+(empirically verified to enforce holdout). Both layers covered, no gap.
+
 ---
 
 ## 3. Why is "appeared in augmentor_log" the biddability signal?

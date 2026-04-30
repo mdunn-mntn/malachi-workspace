@@ -874,6 +874,15 @@ verify against `audience_segment_campaigns` for production analysis.
 - `funnel_level = 2` or higher = retargeting
 - For RTC monitoring: always filter `funnel_level = 1`
 
+### Three Universal Rules for Audiences + Holdout (Zach Schoenberger, AUTHORITATIVE, 2026-04-30)
+Zach Schoenberger is the highest-confidence source for audience-platform questions — when in doubt, defer to him.
+
+1. **CRM lists are only usable in PROSPECTING campaigns, never retargeting.** A common misconception is that "retargeting on a CRM list" exists; it doesn't. CRM lists are an MNTN data source (`data_source_id=4`) used to find/match new IPs through prospecting campaigns. Retargeting (`objective_id=4`) targets users who have already engaged with the advertiser's site — page-views, conversions, OPM-resolved past visitors — not CRM uploads.
+2. **Every campaign has a 10% holdout.** Universal. No exceptions for retargeting, CRM-targeted prospecting, or any other type. The 10% MD5(advertiser_id:ip) mod 1000 < 100 holdout is enforced by the bidder for every campaign.
+3. **Every campaign has an audience expression.** "In order for us to buy ads for any campaign they need an audience." There is no edge case of a campaign with no audience expression — if it's eligible to bid, it has an `audience_segments` row. Empirically: this row is `expression_type_id=2 AND is_targeted=TRUE`.
+
+**Implication for TI-837:** Alex K's concern "do retargeting / CRM campaigns have holdout?" was conflating two things. CRM lives on prospecting (which we always knew enforces holdout); retargeting is OPM-based site-visitor audiences (which we empirically verified also enforces holdout, 0/5.43M served IPs in holdout bucket). Both layers covered, no gap.
+
 ---
 
 ## Stage 3 VV Pipeline & IP Mutation Audit
