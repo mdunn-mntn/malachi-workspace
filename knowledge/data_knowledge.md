@@ -623,6 +623,35 @@ LiveRamp's identity graph is external to MNTN's data warehouse.
 
 ---
 
+## Spark BQ connector — silver-table type quirks (TI-837, 2026-04-30)
+
+When reading silver tables (`dw-main-silver.logdata.*`) into Spark via `databricks-connect`, the BQ connector's schema resolver fails on two source-schema types that exist in `cost_impression_log`:
+
+- **`recency_elapsed_time` (BQ `INTERVAL`)** — connector throws `Unexpected type: INTERVAL`. There is **no `selectedFields` workaround** because the connector reads the FULL table schema before applying projection. The INTERVAL column is needed by Dustin's data team's pipelines (per Dustin Niehoff 2026-04-30) and is not going to be removed; we live with it.
+- **`media_spend` / `data_spend` / `platform_spend` (BQ `BIGNUMERIC(76)`)** — Spark's max DECIMAL precision is 38. Connector option `bigNumericDefaultPrecision=38` truncates these on read.
+
+**Workaround (canonical, Victor Savitskiy 2026-04-30):** use `query` mode + materialization to `dw-main-bronze.external` (sanctioned scratch dataset, Terragrunt-managed). Push column projection down to BQ so the Spark connector only sees the result schema.
+
+```python
+df = (
+    spark.read.format("bigquery")
+    .option("parentProject", "dw-main-bronze")  # set ALL THREE (Victor)
+    .option("billingProject", "dw-main-bronze")
+    .option("project", "dw-main-bronze")
+    .option("viewsEnabled", "true")
+    .option("materializationDataset", "external")
+    .option("bigNumericDefaultPrecision", "38")
+    .option("bigNumericDefaultScale", "9")
+    .load("""SELECT advertiser_id, ip, campaign_id FROM `dw-main-silver.logdata.cost_impression_log` WHERE ...""")
+)
+```
+
+Full pattern + alternative (Dustin's `temporaryGcsBucket=dataproc-temp-us-central1-754673906299-me0b3bsh`) documented in `.claude/databricks_setup.md`.
+
+**Other silver tables — same pattern works** for `clickpass_log` and `guid_log`. `guid_log` is also archived to `gs://mntn-data-archive-prod/guid_log/` (per Victor) — for high-volume reads, prefer GCS direct over the BQ connector.
+
+---
+
 ## Campaign Holdout / Incrementality Measurement
 
 ### 10% Holdout Group (All Campaigns)

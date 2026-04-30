@@ -108,6 +108,61 @@ databricks clusters start --cluster-id 5428-215533-4jodkdfs
 # wait ~5 min for RUNNING
 ```
 
+## Spark BQ Connector — silver-table read pattern (Victor + Dustin, 2026-04-30)
+
+The MNTN silver tables (`logdata.cost_impression_log`, `clickpass_log`, `guid_log`) have type-conversion issues with the Spark BQ connector at the schema-resolution step:
+
+- `cost_impression_log` has `recency_elapsed_time` (BQ `INTERVAL`) — the connector's `SchemaConverters` cannot convert INTERVAL to a Spark type, blocks all reads even when projecting other columns.
+- `media_spend / data_spend / platform_spend` are wide `BIGNUMERIC(76)` — Spark's max DECIMAL precision is 38; needs `bigNumericDefaultPrecision=38`.
+
+**Canonical workaround (Victor Savitskiy 2026-04-30, confirmed by Dustin Niehoff):** use `query` mode with materialization to `dw-main-bronze.external` (Terragrunt-managed bronze layer dataset, sanctioned for this pattern). Push the SELECT down to BigQuery so the Spark connector only ever sees the projected result schema.
+
+```python
+# All three project options must be set — Victor flagged this explicitly.
+# Missing any one can cause silent failures or wrong-quota billing.
+df = (
+    spark.read.format("bigquery")
+    .option("parentProject", "dw-main-bronze")
+    .option("billingProject", "dw-main-bronze")
+    .option("project",        "dw-main-bronze")
+    .option("viewsEnabled", "true")
+    .option("materializationDataset", "external")  # dw-main-bronze.external — sanctioned
+    .option("bigNumericDefaultPrecision", "38")
+    .option("bigNumericDefaultScale", "9")
+    .load("""
+        SELECT
+          CAST(advertiser_id AS INT64) AS advertiser_id,
+          ip,
+          campaign_id
+        FROM `dw-main-silver.logdata.cost_impression_log`
+        WHERE DATE(time) BETWEEN '2026-04-22' AND '2026-04-28'
+          AND advertiser_id IN (...)
+          AND ip IS NOT NULL AND ip != '0.0.0.0'
+    """)
+)
+```
+
+**Why all three project options matter (Victor):** the connector resolves auth, billing, and storage differently depending on which ones are set. Set all three to `dw-main-bronze` even when reading from `dw-main-silver` tables — the table reference inside the SQL itself tells BQ where the source data is. The three options are about WHERE the connector charges, materializes, and authenticates.
+
+**Materialization happens in `dw-main-bronze.external`** — a Terragrunt-managed bronze-layer scratch dataset. Verified write access (2026-04-30). Don't materialize into other production datasets.
+
+**Keeping INTERVAL columns** (rare — we usually project them away): Victor's example shows the cast pattern:
+
+```python
+.load("""
+  SELECT * EXCEPT(recency_elapsed_time),
+         CURRENT_DATE AS anchor_date,
+         CURRENT_DATE + recency_elapsed_time AS recency_elapsed_time_tmp
+  FROM `dw-main-silver.logdata.cost_impression_log`
+""")
+.withColumn("recency_elapsed_time", F.expr("recency_elapsed_time_tmp - anchor_date"))
+.drop("recency_elapsed_time_tmp", "anchor_date")
+```
+
+**Alternative (Dustin):** instead of BQ-side materialization, use `temporaryGcsBucket=dataproc-temp-us-central1-754673906299-me0b3bsh` to materialize to GCS and read from there. Both approaches are valid; `materializationDataset=external` is simpler in our pipeline.
+
+**The owners of these silver tables (Dustin):** "the datatypes of the source tables are up to the data team that own them, not us, but I do know at the very least that the INTERVAL type is necessary for their pipelines." Long-term changes to the silver schemas are out of scope for us.
+
 ## GCS read patterns (critical — partition layout is NOT what the v5 SQL implies)
 
 **Augmentor partition layout** (verified 2026-04-29):

@@ -136,46 +136,63 @@ def register_sources(spark, advertisers, dt_imp_start, dt_imp_end_excl, dt_visit
     camp.createOrReplaceTempView("campaign_dim")
     print(f"[spark_lift]   campaign_dim temp view registered", flush=True)
 
-    # 3. prospecting — BQ external table; partition cols are STRING
-    print(f"[spark_lift]   loading prospecting...", flush=True)
+    # 3. prospecting — BQ external table backed by GCS Parquet.
+    # The connector cannot read external tables via Storage API directly
+    # ("Only external tables with connections can be read with the Storage API").
+    # Use query mode → BQ runs the SELECT, materializes the result to
+    # dw-main-bronze.external, Spark reads that materialized table.
+    pros_sql = f"""
+        SELECT DISTINCT
+          CAST(advertiser_id AS INT64) AS advertiser_id,
+          ip,
+          CAST(household_score AS INT64) AS household_score
+        FROM `dw-main-bronze.external.household_scoring__prospecting_intent__v1`
+        WHERE CAST(advertiser_id AS INT64) IN ({adv_csv})
+          AND year={year_str} AND month={month_str}
+          AND day IN ({days_csv})
+          AND ip IS NOT NULL AND ip != '0.0.0.0'
+    """
+    print(f"[spark_lift]   loading prospecting (query mode)...", flush=True)
     pros = (
         spark.read.format("bigquery")
         .option("parentProject", "dw-main-bronze")
         .option("billingProject", "dw-main-bronze")
+        .option("project", "dw-main-bronze")
+        .option("viewsEnabled", "true")
+        .option("materializationDataset", "external")
         .option("bigNumericDefaultPrecision", "38")
         .option("bigNumericDefaultScale", "9")
-        .option("selectedFields", "advertiser_id,ip,household_score,year,month,day")
-        .load("dw-main-bronze.external.household_scoring__prospecting_intent__v1")
-        .filter(
-            f"CAST(advertiser_id AS BIGINT) IN ({adv_csv}) "
-            f"AND year={year_str} AND month={month_str} "
-            f"AND day IN ({days_csv}) "
-            f"AND ip IS NOT NULL AND ip != '0.0.0.0'"
-        )
-        .selectExpr(
-            "CAST(advertiser_id AS BIGINT) AS advertiser_id",
-            "ip",
-            "CAST(household_score AS BIGINT) AS household_score",
-        )
-        .distinct()
+        .load(pros_sql)
     )
     pros.createOrReplaceTempView("prospecting")
     print(f"[spark_lift]   prospecting temp view registered", flush=True)
 
-    # 4-6. Silver tables — BQ in `query` mode.
+    # 4-6. Silver tables — BQ in `query` mode (Victor's pattern, 2026-04-30).
     #
     # `query` pushes the entire SELECT + WHERE down to BigQuery; the result
     # is materialized to a temp table in `materializationDataset`, then
     # read by Spark. The Spark schema converter only sees the result
-    # columns (advertiser_id, ip, campaign_id) — never the source schema's
-    # INTERVAL / wide-BIGNUMERIC columns that broke the connector when
-    # we tried `.load(table)` style.
+    # columns we project — never the source schema's INTERVAL /
+    # wide-BIGNUMERIC columns that broke the connector when we tried
+    # `.load(table)` style.
+    #
+    # Three project-related options ALL must be set (parentProject +
+    # billingProject + project) — Victor explicitly flagged this. The
+    # connector resolves auth/quota differently depending on which of
+    # these are set, and missing any of the three can cause silent failures
+    # or wrong-quota billing.
+    #
+    # `materializationDataset=external` in `dw-main-bronze` is the
+    # sanctioned location (Terragrunt-managed bronze layer dataset). We
+    # have write access here. Cleaner than creating a per-user scratch.
     SILVER_OPTS = dict(
-        parentProject="dw-main-silver",
-        billingProject="dw-main-silver",
+        parentProject="dw-main-bronze",
+        billingProject="dw-main-bronze",
+        project="dw-main-bronze",
         viewsEnabled="true",
-        materializationProject="dw-main-silver",
-        materializationDataset="scratch_malachi",
+        materializationDataset="external",
+        bigNumericDefaultPrecision="38",
+        bigNumericDefaultScale="9",
     )
 
     def _bq_query(opts: dict, sql: str):
