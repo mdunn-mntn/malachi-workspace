@@ -6,56 +6,76 @@
 **Date Completed:**
 **Assignee:** Malachi
 **Story Points:** 3
-**Priority:** P3 (flagged to Bryce — should be P1 or P2 given April 30 checkpoint dependency)
-**Due:** Apr 28 (sprint-scoped)
+**Priority:** P3 (flagged to Bryce — should be P1/P2 given Apr 30 checkpoint dependency)
+**Due:** Apr 28 (slipped — kicked off 2026-04-30 after TI-837 went into review)
 **Parent Epic:** BER-2250 Incrementality Overhaul
 
 ---
 
 ## 1. Introduction
 
-Quantify MNTN's ability to detect incremental lift per advertiser given current holdout
-size and spend levels. Produces a per-advertiser Minimum Detectable Effect (MDE) table
-that answers: "at budget X and historical IVR Y, what is the smallest lift we can
-reliably measure?"
+Quantify MNTN's ability to detect incremental lift per advertiser given current
+holdout sizes, spend levels, and historical visit / conversion rates. Produces a
+per-advertiser Minimum Detectable Effect (MDE) table and a budget-threshold curve
+that answers: *"At budget X and historical IVR/CVR Y, what is the smallest lift we
+can reliably measure?"*
 
-This ticket is a stream split from TI-837 (Bryce, 2026-04-20). TI-837 owns the ghost
-bidding methodology and pipeline; TI-884 owns the statistical capacity analysis
-that picks which advertisers TI-885 enrolls.
+Stream split from TI-837 (Bryce, 2026-04-20). TI-837 owns the ghost bidding
+methodology and pipeline; TI-884 owns the statistical capacity analysis that
+picks which advertisers TI-885 enrolls.
+
+Mike Dolt (Slack 2026-04-30) escalated this immediately after TI-837: Al Beretta
+needs the budget threshold above which incrementality testing achieves
+statistical significance.
 
 ## 2. The Problem
 
-Malachi's rough read, confirmed by Matt Brorby (2026-04-20) and grounded in
-Lewis & Rao (2015 QJE): at current MNTN budgets, holdout sizes, and IVR variance,
-the minimum detectable lift lands around ~15%, while realistic CTV incremental lift
-sits at 2-8%. Most of our customers are structurally underpowered to measure what
-they actually deliver — but we don't know *which* ones until we run the numbers.
+Rough read confirmed by Matt Brorby (2026-04-20) and grounded in Lewis & Rao
+(2015 QJE): at current MNTN budgets, holdout sizes, and IVR variance, the
+minimum detectable lift lands around ~15%, while realistic CTV incremental lift
+sits at 2–8%. Most advertisers are likely structurally underpowered to measure
+what they actually deliver — but we don't know *which* ones until we run the
+numbers.
 
 Impact:
-- **Stakeholder communication** — Mike/Bryce/Kale need to know which campaigns can
-  support reliable measurement and which can't, before we commit to experiments.
-- **Experiment sizing** — TI-885 advertiser selection is currently blind; without
-  this analysis, we'd over-recruit underpowered advertisers and waste the window.
-- **Validation** — Lauren's tracker has a "Power Score" column with historical
-  Lift % outcomes; we can empirically validate the MDE estimates against that.
+- **Stakeholder communication** — Mike/Bryce/Kale need to know which campaigns
+  can support reliable measurement and which can't, before we commit to
+  experiments.
+- **Al's budget threshold** — Al is figuring out a spend threshold above which
+  iROAS measurement gets statistically significant. Calculator must answer that
+  question, not just produce a top-50 ranking.
+- **Experiment sizing** — TI-885 advertiser selection is currently blind;
+  without this analysis, we'd over-recruit underpowered advertisers and waste
+  the window.
+- **Validation** — Lauren's tracker has 7 completed tests with measured Lift %;
+  we can empirically validate the MDE estimates against those.
 
 ## 3. Plan of Action
 
-1. Build MDE calculator in `artifacts/mde_calculator.ipynb` — inputs: monthly spend,
-   historical IVR, campaign duration, holdout %; outputs: per-advertiser MDE.
-2. Formula: Lewis-Rao `N = 2 * ((z_α/2 + z_β) * σ / Δy)²` with stacked variance
-   reduction — CUPED (×0.5–0.8), ghost-ad conditioning (×0.75), stratified
-   randomization (×0.8–0.9).
-3. Pull top 50 advertisers by MNTN spend from `agg__daily_sum_by_campaign`.
-4. Apply calculator → `outputs/top50_mde_tiers.csv` with tiers: well-powered (MDE <5%),
-   borderline (5-10%), underpowered (>10%).
-5. Cross-validate against Lauren's tracker — compare Power Score column vs completed
-   Lift % for 7 completed tests; flag systematic over/underestimation.
-6. Build stakeholder-facing slide deck following `presentation_playbook.md` +
-   `revealjs_guide.md`. Power Line: "most advertisers cannot measure what they deliver."
-7. Run presentation critique per `claude-prompts/presentation_critique.md` before
-   delivering.
-8. Offer to populate Lauren's "Power Score" column in the 55-test tracker.
+Locked plan: `/Users/malachi/.claude/plans/i-need-to-get-curious-penguin.md`.
+
+1. **Pull top-50 advertiser inputs** from `cost_impression_log` (April 2026,
+   `funnel_level=1`, exclude AID 90). Per advertiser: monthly_spend,
+   monthly_impressions, distinct treated IPs, biddable holdout IPs,
+   p_visit (90d), p_cvr (90d where pixel data exists).
+2. **Build outcome-agnostic MDE calculator** in `artifacts/ti_884_mde_calculator.ipynb`.
+   Core function: `mde(n_t, n_c, baseline_rate, sigma, alpha=0.05, power=0.8, var_reduction=1.0)`.
+   Wrappers: `mde_binomial`, `mde_continuous`. Reverse helpers: `n_required`, `spend_required`.
+3. **Measure CUPED ρ** on MNTN data: per-IP visit rate Feb-2026 vs Mar-2026 for
+   3–5 large advertisers, compute Pearson ρ, use mean as the variance-reduction
+   multiplier (sqrt(1-ρ²)) instead of literature midpoint.
+4. **Apply calculator** to top-50 → `outputs/ti_884_top50_mde_tiers.csv` with
+   tiers (well <5%, borderline 5–10%, underpowered >10%) raw and post-stack.
+5. **Build spend-threshold curve** for Al: monthly budget → MDE at median
+   advertiser IVR/CVR. `outputs/ti_884_spend_threshold_curve.csv`.
+6. **Cross-validate** against Lauren's 7 completed tests. If MDE > reported lift
+   for most/all, that's a Tier-1 stakeholder finding.
+7. **Stakeholder deck** — `artifacts/ti_884_power_analysis_presentation.md` +
+   RevealJS standalone HTML. Power Line: *"Most MNTN advertisers cannot measure
+   what they deliver."* Run presentation critique before sharing.
+8. **Document** measured CUPED ρ in `knowledge/data_knowledge.md` (MNTN-specific
+   tribal knowledge worth capturing).
+9. **Share** deck URL via Jira comment + Slack thread that prompted the work.
 
 ## 4. Investigation & Findings
 
@@ -71,14 +91,17 @@ _(Populated as questions are resolved.)_
 
 ## 7. Data Documentation Updates
 
-_(Populated as new knowledge emerges.)_
+_(Populated as new knowledge emerges. Expected: MNTN-specific CUPED ρ for
+visit-rate, biddable-holdout fraction by advertiser cohort, top-50 IVR/CVR
+distribution.)_
 
 ## 8. Open Items / Follow-ups
 
-- Confirm with Matt Brorby whether his PSM audit's 26 advertisers should be the
-  starting candidate pool for TI-885, or whether we use a broader MNTN-spend ranking.
-- Determine exact variance-reduction stack CUPED achieves on MNTN CTV data — the
-  50-80% range is an external-literature estimate; we should measure it on a
-  historical slice before baking into MDE numbers.
-- Confirm the holdout % the production system uses (TI-837 contradiction: is it
-  10% universal, or advertiser-specific?).
+- **iROAS extension** — calculator API supports `mde_continuous(...)` from day 1,
+  but pulling per-advertiser revenue σ is deferred to a follow-up ticket if Al
+  asks for revenue MDE specifically.
+- **Holdout %** — TI-837 confirmed 10% universal across 8 cells. If TI-884
+  finds advertisers where biddable holdout is materially less than 10% of
+  biddable treated, flag separately.
+- **Lauren's "Power Score" column** — opaque logic, no formula on file. After
+  calculator is built, offer to back-fill her tracker; closes the loop.
