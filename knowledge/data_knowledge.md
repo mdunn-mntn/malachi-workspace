@@ -1757,3 +1757,27 @@ MNTN's **Probabilistic Attribution** feature (labeled "Comprehensive Reporting" 
 - ## Dynamic Take Rates — Feature Status: Disabled
 
 MNTN tested **Dynamic Take Rates** (lowering take rates based on campaign performance) with a small pilot of approximately 20 small/new advertisers, many of whom subsequently churned. The feature had a design flaw: it could lower take rates but had no mechanism to raise them. For remaining advertisers that did not churn, take rates were gradually restored to the global level. **The feature has been disabled.** No ongoing behavioral impact expected. (via ray, #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die, 2026-04-29)
+
+<!-- ti_884: 2026-04-30 -->
+## CUPED ρ on MNTN visit-rate data — measured 2026-04-30 (TI-884)
+
+Measured Pearson correlation of per-IP visit indicator (binary 0/1) between two
+adjacent 30-day windows (Feb 2026 vs Mar 2026), filtered to IPs treated by Stage 1
+campaigns in BOTH windows. Used to compute the CUPED SE multiplier
+`sqrt(1 - ρ²)` for variance-reduction stack in power analysis.
+
+| advertiser_id | name | n_ips_both_periods | mean Feb visit | mean Mar visit | ρ | CUPED SE multiplier |
+|---|---|---|---|---|---|---|
+| 31357 | WGU | 10.1M | 13.5% | 11.7% | 0.461 | 0.887 |
+| 30506 | Vivint | 3.2M | 4.5% | 1.7% | 0.170 | 0.985 |
+| 31276 | Ferguson Home | 2.2M | 26.8% | 24.0% | 0.441 | 0.897 |
+| **mean** | — | — | — | — | **0.357** | **0.934** |
+
+**Implication:** MNTN-specific CUPED gives only ~7% SE reduction (0.934 multiplier),
+significantly less than the ~13% literature midpoint (sqrt(1-0.5²)=0.866). Driver:
+high binary-outcome variance and moderate cross-period IP retention. Use 0.934
+in headline post-stack MDE numbers. ρ varies by advertiser type — higher for
+brands with repeat-traffic IPs (Ferguson, WGU); lower for Vivint where Feb→Mar
+visit rates are very different.
+
+Query: `tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/queries/ti_884_cuped_rho_measurement.sql`.

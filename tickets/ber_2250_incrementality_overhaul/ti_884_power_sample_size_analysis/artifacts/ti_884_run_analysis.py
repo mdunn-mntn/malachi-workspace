@@ -31,10 +31,17 @@ ALPHA = 0.05
 POWER = 0.80
 HOLDOUT_FRAC = 0.10
 # Post-stack SE multiplier: CUPED * ghost-ad * stratified.
-# CUPED literature midpoint sqrt(1-0.5^2)=0.866 (will be replaced with measured).
-# Ghost-ad ~25% SE reduction → 0.75. Stratified ~15% → 0.85.
-# Stack: 0.866 * 0.75 * 0.85 = 0.552. Use 0.55 as the planned post-stack multiplier.
-VAR_REDUCTION_STACK = 0.55  # PLACEHOLDER — replace with MNTN-measured CUPED ρ
+# CUPED multiplier MEASURED on MNTN data 2026-04-30 (queries/ti_884_cuped_rho_measurement.sql):
+#   ρ = 0.357 mean across 3 large advertisers (WGU 0.461, Vivint 0.170, Ferguson 0.441).
+#   CUPED SE multiplier = sqrt(1 - 0.357^2) = sqrt(1 - 0.127) = 0.934 (mean).
+# Per-advertiser multipliers: WGU 0.887, Vivint 0.985, Ferguson 0.897. Wide spread.
+# Ghost-ad: ~25% SE reduction → 0.75 (literature, TI-837 win-rate work supports).
+# Stratified: ~15% → 0.85 (literature, intent-tier strata available).
+# Stack at mean ρ: 0.934 × 0.75 × 0.85 = 0.595
+CUPED_SE_MULT_MEAN = 0.934
+GHOST_AD_SE_MULT = 0.75
+STRATIFIED_SE_MULT = 0.85
+VAR_REDUCTION_STACK = CUPED_SE_MULT_MEAN * GHOST_AD_SE_MULT * STRATIFIED_SE_MULT  # 0.595
 
 # Lauren's 7 completed tests (from incremental_lift_tests_customer_tracker_summary.md).
 # AIDs from tracker; lift_pct reported in tracker. April 2026 metrics pulled separately
