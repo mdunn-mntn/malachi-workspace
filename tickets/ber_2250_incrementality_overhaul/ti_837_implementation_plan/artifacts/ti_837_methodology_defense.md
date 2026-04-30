@@ -57,6 +57,19 @@ re-assigned). But that error is symmetric across both arms within the
 window, so the difference is unbiased. The window is short (7 days) which
 bounds rotation rate.
 
+**Validated empirically across all campaign types (Alex Knorr ask, 2026-04-29):**
+For the 30-advertiser cohort on 2026-04-23, computed the holdout bucket
+(`MD5(advertiser_id:ip) mod 1000`) for **5,432,546 served IPs** across 8 (objective_id,
+funnel_level) cells covering Prospecting (objective_id=1), Multi-Touch
+(objective_id=5), MTFF (objective_id=6), and **Retargeting (objective_id=4) at
+funnel_level 1, 2, and 3**. Result: **0 of 5.43M served IPs fall in the holdout
+bucket (0-99) for any cell.** Prospecting (which we know enforces holdouts) at
+0% confirms the analyst-side hash matches the production bidder's; retargeting
+also at 0% confirms holdouts are enforced for retargeting bidding the same way.
+Query: `queries/ti_837_validate_holdout_on_retargeting.sql`. Resolves Alex's
+"I don't think we actually use holdout logic on retargeting / CRM campaigns"
+concern.
+
 ---
 
 ## 3. Why is "appeared in augmentor_log" the biddability signal?

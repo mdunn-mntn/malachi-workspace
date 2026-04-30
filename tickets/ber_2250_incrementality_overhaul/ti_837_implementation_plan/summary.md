@@ -44,19 +44,59 @@ names stripped (no Alex Bloore / Knorr / Bryce / Victor); retargeting
 caveat reframed as counterfactual scope (not "lift isn't real");
 cross-window validation defined.
 
+### Updates 2026-04-29 (later in day, post-deck-share)
+
+**Holdout enforcement validated (Alex Knorr feedback):** Tested whether the
+production bidder enforces the 10% holdout hash for retargeting and
+multi-touch campaigns (Alex's #1 concern). Counted served IPs across 8
+(objective_id, funnel_level) cells covering Prospecting (1), Multi-Touch
+(5), MTFF (6), and **Retargeting (4) at every funnel_level** for the
+30-advertiser cohort on 2026-04-23. **0 of 5,432,546 served IPs** fell in
+the holdout bucket (0-99) for any cell. Prospecting baseline at 0%
+confirms our hash matches the production bidder's; retargeting also at 0%
+empirically refutes the concern. **The +21pp retargeting headline survives
+this validation.** Query: `queries/ti_837_validate_holdout_on_retargeting.sql`.
+Logged to `knowledge/data_knowledge.md` and `methodology_defense.md` §2.
+
+**Win-rate upstream computation documented (Alex's #2):** Wrote the
+upstream SQL that produced the per-(advertiser, segment) win_rates
+hardcoded in v5's STRUCT literal — `queries/ti_837_compute_winrates_per_advertiser_segment.sql`.
+Formula: `win_rate = served_treatment_n / (biddable_holdouts_n × 9)` where
+the ×9 comes from hash symmetry (90/10 partition).
+
+**Cross-window validation in flight (Phase 0c):** running the v5 4-segment
+SQL on a shifted window (04-22 → 04-28). 5/7 day overlap with original
+v5 window (some shared variance) + 2 fresh days (04-27, 04-28). Job ID:
+`ti837_xwin_7ff5a9c7-4e8f-4bbd-81c7-b7e33c63e38f` in `dw-main-silver`,
+us-central1. Started 2026-04-29 21:00 PT. Polling via Python BQ client
+(see `artifacts/run_xwin_robust.py`). Two prior `bq` CLI attempts went
+phantom (orphaned by location mismatch: client looked in US, job ran in
+us-central1) — switched to Python client for proper visibility.
+
+**Databricks setup complete:** Python 3.12 venv at `~/.databricks-py312`
+with `databricks-connect==17.3.7` matching DBR 17.3 LTS. Smoke tests
+passing (BQ campaigns dim + GCS augmentor partition read). See
+`.claude/databricks_setup.md`. Spark port (`artifacts/spark_lift_3adv_1day.py`)
+runs against augmentor + bronze.integrationprod cleanly; **blocked on
+silver-table BQ-connector reads** (cost_impression, clickpass, guid)
+because of unsupported INTERVAL/wide-BIGNUMERIC columns. Workaround
+requires a writable BQ scratch dataset for `query` mode materialization.
+Awaiting Victor or Dustin's recommendation for a sanctioned scratch
+dataset before unblocking. Per Victor: `guid_log` IS available on GCS
+(`gs://mntn-data-archive-prod/guid_log/`), so post-unblock we'll switch
+that read to GCS direct.
+
 ### Pending decisions (next session)
 
 1. **Send deck to Alex Knorr for sanity check?** Recommended before broader
-   sharing.
-2. **Set up Databricks?** TI-837 cluster ready
-   (`5428-215533-4jodkdfs`, workspace
-   `https://1262887251702944.4.gcp.databricks.com`). Need user's PAT +
-   cluster runtime version to install matching `databricks-connect`.
-   Unlocks Phase 2a (conversions, 30-day window) + cross-window
-   replication.
-3. **Cross-window validation** — re-run v5 on a different 7-day window
-   (suggested: 2026-05-04 → 05-10 as next clean forward window once augmentor
-   partitions land). Standard methodology rule before external sharing.
+   sharing. Alex has already given feedback on the deck (resolved via
+   holdout-enforcement validation, win-rate SQL share, plus the
+   "retargeting in deck = objective_id=4" clarification).
+2. **Set up Databricks?** ✓ DONE (smoke passing). Cost_imp/clickpass
+   reads are blocked pending scratch-dataset auth from dplat.
+3. **Cross-window validation** — IN FLIGHT (job `ti837_xwin_*`, expected
+   completion late 2026-04-29 / early 2026-04-30). Result will be added to
+   §11 once fetched.
 
 ### Key docs (read in order if picking up cold)
 

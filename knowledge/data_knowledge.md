@@ -651,6 +651,22 @@ SELECT md5('{AID}:100.17.100.240') AS ip_hash,
 -- If bucket is 0-99 inclusive → holdout. 100-999 → targeted.
 ```
 
+**Holdout enforcement validated empirically across all campaign types (TI-837, 2026-04-29):**
+Counted served IPs from `cost_impression_log` for 30-advertiser v5 cohort on 2026-04-23, computed `MD5(advertiser_id:ip) mod 1000` per row, binned by bucket:
+
+| objective_id | funnel_level | what it is | n_served_ips | frac_in_holdout (0-99) |
+|---|---|---|---|---|
+| 1 | 1 | Stage 1 prospecting | 2,422,278 | **0.000%** |
+| 1 | 2 | S2 within objective=Prospecting | 5,917 | **0.000%** |
+| 1 | 3 | S3 within objective=Prospecting | 752 | **0.000%** |
+| 4 | 1 | Stage 1 within Retargeting CAMPAIGN | 796,499 | **0.000%** |
+| 4 | 2 | Stage 2 within Retargeting CAMPAIGN | 300,261 | **0.000%** |
+| 4 | 3 | Stage 3 within Retargeting CAMPAIGN | 121,337 | **0.000%** |
+| 5 | 2 | Multi-Touch (S2 obj-coded) | 1,571,506 | **0.000%** |
+| 6 | 3 | MTFF (S3 obj-coded) | 213,996 | **0.000%** |
+
+**Total: 5.43M served IPs across all 8 cells, 0 in holdout bucket.** Holdout hash is enforced for every campaign type and funnel level — including formal Retargeting (objective_id=4) campaigns. Prospecting baseline at 0% confirms the analyst-side hash matches the production bidder's. Query: `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/queries/ti_837_validate_holdout_on_retargeting.sql`.
+
 **Critical details:**
 - The hash input is **`{AID}:{IP}`** — the advertiser ID is prefixed. This means holdout assignment is **per-advertiser per-IP**, not global per-IP.
 - Takes first 16 hex chars of the MD5, casts to 64-bit integer, mod 1000
