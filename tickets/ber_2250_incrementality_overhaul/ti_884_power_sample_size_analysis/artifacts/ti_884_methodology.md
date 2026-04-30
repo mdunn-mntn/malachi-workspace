@@ -448,7 +448,32 @@ methodology improvement, not a TI-884 deliverable.
 
 ---
 
-## 9. References (in-repo and external)
+## 9. Third-party comparison — Haus benchmark
+
+Alex Knorr shared (Slack 2026-04-30) Haus's stated thresholds for valid geo
+incrementality experiments:
+
+- **500–1000 conversions per week minimum** per advertiser.
+- **$10M/year cross-channel spend minimum** ("brands that spend at least
+  $10,000,000 per year across all channels is where they see incrementality
+  benefits"). $10M/year ≈ **$833k/month**.
+
+Compared against this analysis:
+
+| Threshold | TI-884 (MNTN Stage 1 only) | Haus (cross-channel) |
+|---|---|---|
+| Visits-rate measurable | ~$200k/month | n/a |
+| Conversion-rate measurable | ~$2M/month | ~$833k/month |
+
+Haus's $833k sits between our two thresholds because they measure full
+cross-channel incrementality — richer signal, lower σ/μ — while TI-884 isolates
+MNTN Stage 1 only. The 500–1000-conversions-per-week heuristic is a useful
+concrete benchmark when stakeholders push back on the spend-threshold framing,
+since it translates directly to a per-week N. See
+[knowledge/experimentation.md](../../../../knowledge/experimentation.md) for the
+full note.
+
+## 10. References (in-repo and external)
 
 In-repo:
 - [ti_884_mde_calculator.py](ti_884_mde_calculator.py) — the math, with self-tests against the hand calc.

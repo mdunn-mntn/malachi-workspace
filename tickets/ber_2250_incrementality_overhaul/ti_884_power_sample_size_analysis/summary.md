@@ -187,3 +187,8 @@ Added to `knowledge/data_knowledge.md` (2026-04-30):
 - **Per-advertiser CUPED ρ** — only 3 measured. For TI-885 advertiser-specific
   sample sizing, measure ρ per recruit. Vivint's 0.17 vs Ferguson's 0.44 shows
   the spread matters.
+- **Haus benchmark cross-reference (2026-04-30, via Alex Knorr):** Haus
+  recommends 500–1000 conversions/week + $10M/year cross-channel spend as
+  validity thresholds. $10M/year ≈ $833k/month — sits between our visits
+  ($200k) and conversions ($2M) Stage-1-only thresholds, consistent with Haus
+  measuring richer cross-channel signal. Logged in `knowledge/experimentation.md`.

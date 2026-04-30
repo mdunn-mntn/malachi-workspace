@@ -1182,3 +1182,26 @@ Initial incrementality lift analysis using ATT (likely Augmented Synthetic Contr
 - 4 of 7 advertisers had only HI (high-intent) targeting, which limits visibility into lift on lower-intent audience segments.
 - Current computation constraints limit the analysis to ~3 days of augmentor data at a time; advertiser selection is being done strategically to improve signal across targeting groups.
 - Ghost bidding implementation in the bidder is **not** a prerequisite for ad-hoc incrementality measurement — ad-hoc analysis can proceed independently to prepare for the formal experiment. (via malachi, #dev-incremental-lift, 2026-04-28)
+
+<!-- ti_884: 2026-04-30 -->
+- ## Haus Benchmark: Geo Incrementality Experiment Sample-Size Threshold
+
+**Source:** Alex Knorr (Slack, 2026-04-30) sharing Haus's stated recommendations.
+
+Haus (third-party incrementality measurement vendor) recommends two thresholds for valid geo incrementality experiments:
+
+1. **500–1000 conversions per week minimum** for the experiment to be statistically valid.
+2. **$10M/year minimum total cross-channel spend** ("brands that spend at least $10,000,000 per year across all channels is where they see incrementality benefits").
+
+$10M/year ≈ **$833k/month** total cross-channel spend. For comparison against TI-884's MNTN-Stage-1-only thresholds:
+
+| Threshold | TI-884 (MNTN Stage 1 only) | Haus (cross-channel) |
+|---|---|---|
+| Visits-rate measurable | **~$200k/month** Stage 1 spend | n/a (Haus doesn't break out by metric) |
+| Conversion-rate measurable | **~$2M/month** Stage 1 spend | **~$833k/month** total cross-channel |
+
+**Reconciliation:** Haus's $10M/year benchmark sits between our visits ($200k) and conversions ($2M) MNTN Stage 1 thresholds. This is consistent — Haus measures full cross-channel incrementality (lower σ/μ from richer signal) while TI-884 isolates MNTN Stage 1 only. The Haus 500–1000-conversions-per-week heuristic is a useful concrete benchmark when stakeholders push back on the spend-threshold framing — translates directly to N for sample-size calculations.
+
+**Implication for TI-885 / advertiser recruitment:** advertisers with <500 conversions/week on MNTN Stage 1 alone should not be promised conversion-rate readouts. Visits-rate readouts are still viable above ~$200k/month.
+
+**See also:** [TI-884 spend curve](../tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/outputs/ti_884_spend_threshold_curve.csv); [TI-884 methodology](../tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/artifacts/ti_884_methodology.md) §4.
