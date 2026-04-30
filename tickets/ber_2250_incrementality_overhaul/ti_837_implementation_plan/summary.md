@@ -64,14 +64,21 @@ hardcoded in v5's STRUCT literal — `queries/ti_837_compute_winrates_per_advert
 Formula: `win_rate = served_treatment_n / (biddable_holdouts_n × 9)` where
 the ×9 comes from hash symmetry (90/10 partition).
 
-**Cross-window validation in flight (Phase 0c):** running the v5 4-segment
-SQL on a shifted window (04-22 → 04-28). 5/7 day overlap with original
-v5 window (some shared variance) + 2 fresh days (04-27, 04-28). Job ID:
-`ti837_xwin_7ff5a9c7-4e8f-4bbd-81c7-b7e33c63e38f` in `dw-main-silver`,
-us-central1. Started 2026-04-29 21:00 PT. Polling via Python BQ client
-(see `artifacts/run_xwin_robust.py`). Two prior `bq` CLI attempts went
-phantom (orphaned by location mismatch: client looked in US, job ran in
-us-central1) — switched to Python client for proper visibility.
+**Cross-window validation COMPLETE (Phase 0c, 2026-04-30):** 4-segment
+xwin attempted twice, both hit BQ's 6-hour query timeout. Pivoted to
+**lean 2-segment variant** (kept `prosp` + `rtg` — load-bearing segments).
+Lean run completed in 2.91 hr / 268 TB / 71,844 slot-min. **Result:
+deck's segment ordering and magnitudes reproduce.**
+
+| Segment | v5 (04-20→26) | xwin (04-22→28) | Δ |
+|---|---|---|---|
+| `rtg` | +30.35pp | +29.06pp | −1.29pp (~4% rel) |
+| `prosp` | +0.43pp | +0.39pp | −0.04pp |
+
+Segment ordering: `rtg ≫ prosp` on **both** windows. The +21pp deck
+headline is robust on independent data. Stage 1 (`stage1`) NOT
+separately validated by this run — would need a follow-on. Full doc:
+`artifacts/ti_837_xwin_validation.md`.
 
 **Databricks setup complete:** Python 3.12 venv at `~/.databricks-py312`
 with `databricks-connect==17.3.7` matching DBR 17.3 LTS. Smoke tests
@@ -94,9 +101,9 @@ that read to GCS direct.
    "retargeting in deck = objective_id=4" clarification).
 2. **Set up Databricks?** ✓ DONE (smoke passing). Cost_imp/clickpass
    reads are blocked pending scratch-dataset auth from dplat.
-3. **Cross-window validation** — IN FLIGHT (job `ti837_xwin_*`, expected
-   completion late 2026-04-29 / early 2026-04-30). Result will be added to
-   §11 once fetched.
+3. **Cross-window validation** — ✓ DONE (lean 2-segment variant). Segment
+   ordering and magnitudes reproduce. Stage 1 segment not separately
+   validated; follow-on run optional.
 
 ### Key docs (read in order if picking up cold)
 
