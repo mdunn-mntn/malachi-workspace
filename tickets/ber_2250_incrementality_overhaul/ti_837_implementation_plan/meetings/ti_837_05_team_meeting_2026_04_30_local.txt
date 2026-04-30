@@ -1,0 +1,665 @@
+[00:00] I'm going to record. Cool. So let's go actually over the deck and then let's go into methodology
+[00:05] because I do understand methodology, but it's like nice to like, let's do this together.
+[00:12] Make sure that we've got the whole, okay. All right. I'm going to pull up this deck
+[00:16] and then I'm going to, on the sideline, we'll just switch over to the LLM too. Cause I'll
+[00:21] make sure I ask some questions on it. So, um, okay. So here's the deck. When we measure mountains
+[00:28] lift the answer depends on which campaigns count a combined mountain drove 3.1 percentage points
+[00:33] lift um we measured the same 30 advertisers same day same hash four ways right so all campaigns
+[00:39] campaigns combined prospecting only campaigns with all their stages stage one only because
+[00:45] there's no retargeting in that so that's just the first impression we send the right and then
+[00:49] retargeting only okay um so they all tell different stories okay you already been over this the
+[00:57] treatment oh okay um so here's how the four segments are defined so all campaigns is no
+[01:03] filter prospecting is only in the objective id one five and six okay um stage one only
+[01:10] is when you filter it to funnel level one so that makes sure that you're only doing the very first
+[01:16] initial impression sent by a prospecting campaign and then retargeting is objective id equals four
+[01:21] so that's it okay um i think seven ego i think is retargeting as well i don't know what it means
+[01:29] but i think that's also retargeting you are correct um i had the definition of ego it's
+[01:35] not used very often i didn't put it in there so i don't think it's gonna make much difference but
+[01:38] yes i don't think it matters yes good good point um okay so each segment filters cost impression
+[01:44] log and collect pass log on the campaign's objective id and funnel level good log is
+[01:48] never filtered it's a cause agnostic visit signal obviously it's every single pixel driven and here
+[01:53] are the results retargeting drives the lift so retargeting only campaigns pretty big lift um
+[01:59] okay um so there's a lot of value in retargeting campaigns i mean obviously it caused lift um can
+[02:07] you sorry can you go back real quick yes so retargeting here is when you say retargeting
+[02:12] drives lift objective four yeah so that is a specific retargeting campaign and i think that
+[02:17] is only triggered when they choose to give you an uploaded list yeah usually it's a list of people
+[02:24] that have already visited their website so this is more like it's kind of weird but retargeting
+[02:30] is almost like a it's a combined thing it's like hey these people are visited so it's like
+[02:36] retargeting but it also can be like hey this person hasn't purchased in a long while let's
+[02:40] see if they can get them to revisit so anyways cross the board very very high um i the the
+[02:48] comparison in retargeting is hard to understand as well like i don't meaning there isn't really
+[02:55] a control group there because we don't have holdouts there is there is a holdout really we
+[03:01] still do a 10 holdout on crm list yes we do really yes okay so i double checked it yes i
+[03:08] thought you were correct but uh yeah no we do do a holdout group on retargeting um i need to double
+[03:14] check no i mean i already double checked but i'm going to send a message to zach be like hey i found
+[03:18] that we're holding out yeah i would ask i would ask that that because that's like so they send us
+[03:23] a crm list i want to target these people and we still hold out some percentage of those ips yeah
+[03:28] because what i think happens that's a good finding because the answer would probably be we shouldn't
+[03:33] be doing that yeah no i so i think this is what happened so i don't know all the audience
+[03:39] information but from what i understand at some point in time
+[03:43] the way that the the audiences were created changed so i think there was a point in time
+[03:52] where you could select another advertiser's data source and then you would just target that and the
+[04:00] audience expression wouldn't build it. I don't know if that makes sense. I think that there
+[04:04] wasn't some sort of building, but I think what happens every single time now, regardless of
+[04:08] what campaign type is there is an audience that's built in data source too. And built into that
+[04:13] audience is the bucketing. So even if they do give us that, they still do the holdout group on the
+[04:18] IPs in those segments. So just for our own, while we're looking, do you have an, uh, cause what is
+[04:25] that called audience segments.
+[04:27] Do you have an example retargeting campaign
+[04:29] from your analysis?
+[04:30] And I'll just like, or an advertiser ID or something.
+[04:33] Let me see if I can just pull it up.
+[04:34] Hey, can I get an, I could just create
+[04:37] a retargeting campaign from list of advertisers.
+[04:47] We calculate.
+[04:51] Okay.
+[04:52] I guess I could look where objective is for as well.
+[04:57] But...
+[04:58] All right.
+[05:00] I'll just give you a list.
+[05:07] It's really quick.
+[05:08] All this is connected up to BigQuery and all that stuff.
+[05:11] I even linked up Databricks.
+[05:14] Which is cool.
+[05:19] It's...
+[05:49] Okay, here's some.
+[05:56] Yeah.
+[05:57] I'll send those over to you.
+[05:59] Cool.
+[06:03] Man, side note, I know that these things aren't super bad.
+[06:08] How good are you at, did you study a lot of leak code?
+[06:12] Some.
+[06:14] Not too much, I would say.
+[06:15] what uh i never like applied for fang jobs so i was like less kind of focused on memorizing those
+[06:24] if that makes sense i always felt like those tests were always really like like i get it but
+[06:30] then also it's like if you're just trying to filter people through a certain criterion like
+[06:35] because what i always felt was annoying about this is like if i took
+[06:38] um like i i had this totally side note i had this one um sql test right and i do sql all the time
+[06:47] like i there's very few things i would say i'm an expert in but i'm like i'm pretty good at that
+[06:50] stuff right and i remember i had this one question where i was answering everything right and then
+[06:55] there was this one like weird date thing they wanted me to part the date and i can't remember
+[07:00] it was like you needed to extract the month number from it or something and i there was a few
+[07:05] different date functions and i'm like to be honest like most of the time i'm just like throwing this
+[07:08] stuff in and i'm not really paying attention what does the function do so as i get to it and at the
+[07:13] end of it they're like yeah i was like they're like you know we just need someone who's a little
+[07:17] bit more proficient in sql and like perfect i'm like i don't know i mean if you're there to find
+[07:22] people who've memorized state functions in sql i mean i guess but and there's good interviews where
+[07:28] they understand that but what i was laughing about as i was like you saw my resume like we talked
+[07:34] about I worked at Disney I'm like I wrote production SQL on Disney's at like every ad
+[07:39] you've seen on Disney is running on that I'm like it's this funny how you can take that and be like
+[07:44] yeah this guy doesn't know anything it's crazy the supply has gone so high in this type of stuff
+[07:51] data science software engineering that's like I feel like 10 years ago you could just get a job
+[07:56] and then just be like hey you know some basic stuff sweet we'll hire you and now it's like
+[08:00] I feel like entry level, you got to learn like a lot of stuff, but.
+[08:05] Okay. So, okay. I saw that. That makes sense.
+[08:08] What you shared just real quick. So it looks like there's,
+[08:11] and I don't know that I guess expression version.
+[08:14] So these are old ones and they, I think expression version,
+[08:20] this is the old type of expression. This is the new ones.
+[08:22] So the new ones do have the holdout. So yeah,
+[08:25] that would be a good question for Zach of just like, yeah, what is,
+[08:28] what is the implication of that?
+[08:30] Because
+[08:30] I would assume we don't want that.
+[08:34] But maybe they have some other way to be like,
+[08:36] yeah, no, we ignore that for this
+[08:38] objective ID or something.
+[08:40] Targeting squad. Would that be
+[08:42] targeting squad? Or would that be targeting
+[08:44] infrastructure? I was going to tag Zach and Jordan
+[08:46] and just ask them openly because I think that's
+[08:48] probably a good thing to ask. Yeah, you could make a thread
+[08:50] in the targeting squad probably.
+[08:58] Okay, so ignoring the – I'll let you write that message, but I'm just thinking out loud.
+[09:09] So ignoring the control case, it makes sense that retargeting – does it make sense?
+[09:18] It makes sense that retargeting looks like it has high incrementality because we're probably missing the first kind of like visit, right?
+[09:27] They're in the retargeting pool because they visited the site or visited there, but we're missing that signal.
+[09:33] We're just saying, you know, did this person get influenced by the impression that we serve them in the retargeting campaign?
+[09:41] But they already have some baked-in intents that we don't necessarily see in the data.
+[09:48] So I think that makes sense.
+[09:57] Okay. Sorry. I couldn't hear you when you were talking. I was typing. Okay. So what did you say?
+[10:15] so retargeting campaigns why would they have high incrementality they're in the retargeting group
+[10:23] because they've already visited received an impression whatever so they have some high
+[10:29] baked in intent that we don't see within the you know metrics of the campaign itself because
+[10:35] they're really likely to convert but they probably add to serve them to it so if we're using their
+[10:41] 10% holdout group in that, the likelihood is that it like you think about this way, right?
+[10:46] If you like Nike shoes, and you're a Nike customer, but you haven't bought Nike shoes in
+[10:52] a long time, Nike's like, hey, I want to get these guys to buy shoes. You spend you spent 90%
+[10:57] of those people on your list that have already bought shoes, you go, hey, here's a sale or here's
+[11:02] an ad, would you like to buy more like new shoes? They're probably like, yeah, I already I've
+[11:05] already converted. So like, once you get that first conversion, their likelihood to do a second
+[11:08] version is very high right right so if you go back to your deck it is um not like truly incremental
+[11:17] it is uh there's incremental lift but that's not like real they're not really incremental
+[11:24] they are kind of the same way like the nature of retargeting is showing a boosted lift or showing
+[11:33] a boosted lift and incrementality kind of like we were before with our other groups not that this is
+[11:39] wrong i'm just saying like the way we should think about retard like retargeting isn't actually
+[11:44] incremental right it's like these people already have baked in high intent high probability of
+[11:50] doing something and then we're serving them an impression specifically because of that
+[11:55] does that make sense yeah and the issue here is
+[12:01] so i don't think your results wrong i just think the nature of retargeting campaigns yeah but like
+[12:10] here's the thing though is that's all a base on degree right because like you could also say that
+[12:18] someone was only incremental if it's the first ad they've ever seen or they've never converted
+[12:24] right like how long after yeah does it become incremental so i do think that it's still valid
+[12:29] to say that retargeting campaigns have,
+[12:31] they do them for a reason, right?
+[12:33] Right, right.
+[12:35] But this doesn't necessarily solve,
+[12:37] like, I get this.
+[12:38] It might be something we take out
+[12:39] because it might be lead to the wrong idea
+[12:42] where it's like,
+[12:43] how incremental are our specific prospecting campaigns
+[12:47] on net new IPs,
+[12:49] us not knowing if they've,
+[12:51] I mean, we know that they visited,
+[12:53] but not necessarily know that they've converted, right?
+[12:55] At least that's not built into the model.
+[12:57] I think this is good.
+[12:58] I think I'm trying to think through what the interpretation here is.
+[13:05] Like it's not necessarily, oh, retargeting is the best for incrementality, right?
+[13:10] It's like, well, there's a little caveat of what retargeting means.
+[13:13] But I think your breakout here is super important to show, right?
+[13:16] Because you're showing like the difference between zero and plus 20 is this 3% in the middle.
+[13:23] So you have to account for this campaign objective difference, right?
+[13:29] Like you can't just look in aggregate at advertisers or something.
+[13:34] Exactly, exactly.
+[13:35] And this is also too something to bring up.
+[13:37] None of these really met power anyways.
+[13:39] So like if you look at negative, it's like I don't,
+[13:42] our ads didn't cause negative lift.
+[13:44] Like, you know what I'm saying?
+[13:45] So these ratios are like kind of invalid.
+[13:48] But the point of this, I think, is to show they're not that incremental.
+[13:54] It's almost nothing, right?
+[13:55] So I think that's the takeaway is not so much.
+[13:58] Let's get into the nitty gritty of these details of like how incremental like, oh, let's start
+[14:04] saying, hey, mountain is five.
+[14:05] You know, let's look at this.
+[14:06] And depending on how we weight it, by the way, the reason you see two is there's two
+[14:09] different weighting ones.
+[14:10] One's IVW, which I think is a variance weighted one where you get higher weight if your variance
+[14:16] is lower.
+[14:16] and then the other one is sample weighted which is based on the sample size i believe so
+[14:20] so yeah they're just two different ways to calculate here um anyways so that being said
+[14:28] um any more questions about that one i think this is pretty straightforward this is just how many
+[14:34] percentage points increase are we seeing across these campaigns really this is what we care about
+[14:40] right here yeah and and i think your stage one result makes sense as well right like
+[14:46] uh alex blore even said at our last meeting right like the call to action from a ctv ad
+[14:55] versus something else is much lower and that kind of conversion time is longer so like
+[15:00] the incremental incrementality we can measure in this call it seven day window that you have
+[15:06] off of the first tv impression is low no yeah exactly i need to go 30 days i need to have more
+[15:13] data so this is limited but this gives us enough information to go right so this is about okay so
+[15:19] this is just more of how many were positive the wedge basically is just the take the percentage of
+[15:26] the um untreated versus the percentage of the treated and divide them um or sorry no excuse me
+[15:36] excuse me the percentage of the guid like the visits lift versus the click pass lift to see
+[15:43] the difference between our attribution uh our and our actual page view so basically it means that if
+[15:50] we increased two percent lift um in our guid we would expect to attribute two percent more or
+[15:57] something i see okay that's that's where it's coming from and and the way i should think about
+[16:02] So GUID is pixel data of did we see the pixel fire of any visit?
+[16:07] And then ClickPass is like verified visits?
+[16:10] Yes.
+[16:12] I've never worked with ClickPass.
+[16:13] No, you're okay.
+[16:14] So ClickPass is the most base level log table for visits.
+[16:18] So yes, to get into ClickPass, you had to have had a prior impression and it had to be attributed.
+[16:23] And I believe it's last click.
+[16:25] I think that's the methodology.
+[16:26] So it's all based on last click.
+[16:28] Okay.
+[16:28] Yep.
+[16:29] Just a different way to measure visits and you're doing a comparison.
+[16:32] Cool.
+[16:32] Great.
+[16:32] Exactly.
+[16:33] So, yeah.
+[16:36] And so this is basically, all this tells you is how close are we over-attributing and under-attributing for this.
+[16:43] So we're over-attributing, over-attributing.
+[16:46] Or, well, no, under-attributing, over-attributing, and then over-attributing for prospecting, which makes sense.
+[16:54] Stage one only is like, yeah, super low.
+[16:58] Probably some sample size stuff with stage one, too.
+[17:00] Just the size of the data there is much lower, I imagine.
+[17:05] All right.
+[17:05] So this one, lift profile, this is the kind of breakout.
+[17:10] High intent versus peak performance on the different campaigns.
+[17:16] So how do they differ?
+[17:21] So there's large positive lift across our specific groups.
+[17:27] So let's see here.
+[17:29] Actually, retargeting red shows a large positive
+[17:31] rift across the high plus peak.
+[17:38] Stage one, mid intent is all noise for across all segments.
+[17:45] Retargeting lift.
+[17:47] Is this just comparing retargeting to...
+[17:51] This is split by your prospecting scores.
+[17:54] Yeah, I know it's split by prospecting scores,
+[17:56] but I'm just trying to make...
+[17:57] Oh, yes, this is correct.
+[17:58] Sorry.
+[17:58] I was just like, the number seemed high,
+[18:00] but then I forgot that retargeting is high.
+[18:02] So, okay.
+[18:03] That makes sense.
+[18:05] So high intent is incremental.
+[18:09] So I don't know if this really tells you much.
+[18:11] I guess it shows that prospecting,
+[18:15] I don't even think I had enough prospecting
+[18:18] in peak performance.
+[18:20] Or it showed no lift.
+[18:23] Yeah, I imagine there's a sample size component to this
+[18:26] that's making kind of a full analysis a little bit harder.
+[18:31] Yeah.
+[18:31] I think the take...
+[18:33] I don't know if I would even include this one.
+[18:35] Yeah, I'm kind of leaning towards taking this one out.
+[18:38] I think that maybe raises more questions than answers.
+[18:41] The only thing I think that should be said
+[18:42] is because they wanted to know what the lift on those are.
+[18:46] And so maybe I should just say the sample size is too small.
+[18:48] We need to do like an actual 30-day
+[18:51] like augmenter look or something.
+[18:55] good 18 maybe you just need like this chart with another y-axis that has like sample size like
+[19:04] volume in some way and then it's like not exactly a bar chart in this sense something else
+[19:10] i don't know okay it'd be nice if you could overlay both pieces right like average treatment
+[19:18] on the treated and the size of the groups that you're evaluating to get that number
+[19:23] something like that. I'm sure you can come up with a better idea than what I just suggested.
+[19:27] But yeah, just some context of like size of groups.
+[19:37] Yeah, this is a good, this is your kind of caveat slide for retargeting.
+[19:53] Yep, selection bias, yep.
+[20:00] I don't know.
+[20:08] The only concern I have about your second statement,
+[20:12] unless you already know this from the bidder,
+[20:14] I don't know if it preferentially bids higher on Visit Pro and IPs.
+[20:20] Oh, sorry.
+[20:21] I thought our bidder is very dumb, and it just says,
+[20:24] if someone shows up, bid on them for all of the campaigns
+[20:29] with the same amount of campaigns.
+[20:30] It does.
+[20:32] This is hallucination, so it's a good point.
+[20:34] Let's bring this out here.
+[20:36] The bidder does not preferentially bid higher on visit.
+[20:40] Well, once it's been scored, it's random.
+[20:48] Sorry.
+[20:48] I mean, I don't think the bidder differentiates
+[20:53] between this one's retargeting or this one.
+[20:56] Like, if an IP shows up and it's retargeting for one campaign,
+[20:59] and prospecting for another,
+[21:01] there's no difference in the way that it tries to bid.
+[21:04] No,
+[21:05] you're correct.
+[21:07] But I think selection bias,
+[21:08] I think is an important point there.
+[21:11] There is actually something that's wrong about that.
+[21:13] So when there,
+[21:15] and you might know this,
+[21:17] when there is a smaller group and one is larger,
+[21:23] it does give preference to the campaign with a smaller subset of IPs.
+[21:28] uh because they have less yeah so there is their pace if i'm i'm almost positive that's the case
+[21:36] i think that we talked about that with um cursa at one point in time but i do believe that so yeah
+[21:41] if you take if you take a thousand ips in one campaign group they made some small second versus
+[21:45] a million in another and they both have an ip and you have a choice to bid on which one i think it
+[21:49] bids on the smaller group more often cool than that i was gonna say i don't i don't think selection
+[21:56] bias is wrong but maybe just rewording this a little bit this statement i think the rest is fine
+[22:02] there um yep that's true our intent shoppers are going to compare anyways stage one prospecting is
+[22:12] reaching ips would visit side naturally let's see
+[22:18] and it's not that you want to disclude stage two and three because i think that there is value
+[22:28] obviously in the mentality like sometimes people need to be touched more than once it's still
+[22:32] incremental um it's just the fact that it's like well when we send a first impression how
+[22:38] incremental is that i think that's valuable to say because a lot of times we do filter by stage one
+[22:42] it might be worth adding a sentence or two on that or a sentence on there of like um kind of
+[22:49] what we talked about and you you have the recording or transcripts so kind of the way alex
+[22:53] blore said it as well of the like influence or call to action from a ctv ad versus like
+[23:02] when you're on your phone already and get that and can click right away something like that maybe
+[23:07] would be worth having here just to say kind of reinforce of like yeah it makes sense that this
+[23:11] as like low incremental just given the kind of a long cycle and everything i don't know if i want
+[23:17] to include this slide for the wedge because i think this is i think i should take out all the
+[23:21] attribution stuff maybe no i mean the attribution stuff is valid because they do care about how
+[23:26] how much we're over attributing right because that was like that was the problem reporting
+[23:30] is that we're reporting that our lift is too high we're attributing too much but
+[23:34] attribution and attribution and lift are totally different things so
+[23:39] So my only, maybe the only thing missing from this,
+[23:47] if you want to talk about wedge,
+[23:50] and maybe you're going to show it on the next slide, is why.
+[23:54] Why is prospecting over-attributing click paths
+[23:58] versus in our other cases you're showing that it's not?
+[24:02] Like what is the mechanism driving that?
+[24:05] I think that would be interesting and important.
+[24:08] if we don't have that then we can if what is the mechanism driving so what you're saying here is
+[24:16] i'll ignore the all campaigns but like retargeting only our attribution is under crediting
+[24:23] retargeting campaigns versus good log yeah but and prospecting is over crediting
+[24:31] verified visits versus good luck.
+[24:36] What is the difference between those two?
+[24:40] I think it's just the fact that they're so
+[24:43] connected. Attribution has nothing into
+[24:48] whether or not it's incremental. They just say, last click, we get the credit. That's just how
+[24:52] things are working. This is like an internal knowledge factor.
+[24:56] Not that we would adjust attribution, because attribution is not going to change.
+[24:59] they're that's stupid that's it's just whatever um but it's just well knowing that we are
+[25:08] what would that what would what could we do from that i guess we don't change anything when we're
+[25:18] over attributing right like if we're doing that for prospecting because that's just the name of
+[25:22] the game but there might be something to be said about when we do retargeting and all campaigns
+[25:31] where we're under that we probably could be more aggressive about those types of attribution but
+[25:37] then again i don't know if they can even change it anyways because i think it's a whole ctv thing so
+[25:41] i don't know this is probably more of just an informational slide than it is a like yeah maybe
+[25:45] the call out for this slide is it just reinforces our kind of modeling decisions of the good log is
+[25:55] the right like source of truth to use because we're over inflating attributed visits in prospecting
+[26:03] and that's what we care about from a targeting perspective of modeling against
+[26:07] so like like good log is the right label to use maybe that's the good way to say it
+[26:13] okay i like that i like that um okay two methodology i don't i haven't even read this
+[26:21] slide two methodology fixes versus prior internal numbers early internal incrementality reports
+[26:27] overstayed lift for two reasons we now correct oh in augmenter log we would have been served okay
+[26:32] we talked about this right i don't think this yeah you can take this slide out yeah i don't
+[26:36] think we need to throw the methodology in there mixed segment treatment denominator early reports
+[26:41] counted all impressions for advertisers treated conflating retargeting oh yeah okay cool you
+[26:46] already have that story i think that's good so i'll just take that one out i'll talk about that
+[26:49] at the beginning i'll talk about you know this is something i thought was really interesting
+[26:54] they said the difference between a good statistician and a bad statistician is a good
+[26:58] statistician knows all the uh assumptions and i thought that was like valid i'm like it's true
+[27:05] it's like funny because like it's like when you it doesn't well i don't know maybe i'm biased
+[27:09] because I was good with math, but learning the stats tricks is easy, right? The hard part is
+[27:15] getting into actual like, you know, work mode where you're working with real life situations
+[27:21] and then knowing, okay, well, what are my assumptions and what, what does this mean?
+[27:25] And what does this not mean? Right. So, okay. Methodology here is pretty straightforward. I
+[27:31] only added one more thing. So I subsample at win rate and everything else is the same.
+[27:39] I wouldn't mind.
+[27:41] You don't have to.
+[27:43] Actually, it's for a higher level team.
+[27:46] Never mind.
+[27:47] I was going to say go in with a win rate methodology,
+[27:50] but for this group, probably not necessary.
+[27:52] I don't think so.
+[27:53] I think for me, though, this is what I want to go with you.
+[27:56] How we picked a third of the advertisers,
+[27:59] this just shows what was the limitation.
+[28:02] Active and window, biddable holdouts, 5%.
+[28:05] He's not scored a 10%, so at least hit 5%.
+[28:07] So we had some volume in the other ones.
+[28:10] Unique audience signature.
+[28:13] Okay, cool.
+[28:14] So what I'd want a methodologist to push on.
+[28:18] Yeah, see, I need to make,
+[28:20] I had to tell AI to be very specific
+[28:21] because I hate how it just starts throwing in.
+[28:24] There's so many rules about how to make a slide deck.
+[28:26] And every single time,
+[28:27] like I corrected this recently.
+[28:29] Every single time we would have a meeting
+[28:30] and I'd throw in some things,
+[28:32] I'd be like, Alex Knorr said this
+[28:33] and blah, blah, blah said this.
+[28:35] I'm like, you don't throw down.
+[28:36] don't add that in my slides i know remember the one time it's like what would it say i don't know
+[28:43] it's like said something you said something like uh oh yeah richard called my numbers bullshit
+[28:48] that doesn't need to be a bullet point in the slide deck just ship it you know yeah no but i
+[28:56] totally agree i was like what is it i told it like i had explicit results recently i was like do not
+[29:01] mention any names unless i tell you to because the other thing was like bryce said this and i'm like
+[29:07] bro anyways okay um let's see retargeting counterfactual scope the 22 is what the experiment
+[29:14] measured server targeting it is re-incremental within that frame that's true we talked about
+[29:19] that the harder question what would happen mountain didn't run retargeting at all needs
+[29:22] a tighter counterfactual it replicates the bitter selection logic that's bitter level ghost bidding
+[29:26] sorry can we go back one slide
+[29:30] that I have a question on
+[29:31] stratified across 13 high 7 mid 10 low
+[29:37] oh those are spend levels
+[29:38] tier diversity
+[29:41] 5% of IPs not at score
+[29:47] 10,000
+[29:48] so here's what I'm trying to think about
+[29:52] in prospecting in tents
+[29:55] we score everything,
+[29:59] which is different from this campaign spent enough
+[30:04] to go into mid-intense, I think.
+[30:06] Does that make sense?
+[30:08] So then, like, I don't know if there's a good way.
+[30:12] I don't know if there's a better way.
+[30:13] Like, I don't want you to change the methodology,
+[30:16] but maybe we just talk through this now.
+[30:21] Somebody could have a very high-scored audience,
+[30:25] meaning like 40 million IPs across high mid-peak performance,
+[30:31] but then their budget and their keywords
+[30:34] are only like 2 million high intent IPs.
+[30:37] So even though the audience is super large
+[30:39] and they have a large number of prospecting scores,
+[30:43] they never left high intent in the actual campaign flight.
+[30:47] Does that make sense?
+[30:50] So I don't want you to change anything now.
+[30:53] Yeah.
+[30:53] But – and because I think the assignment of prospecting score at the IP level I think is the thing that works better than the prospecting score of the campaign.
+[31:18] So something to think about if there's a better way to do that.
+[31:22] I don't know if we have like, maybe you can get this from pacing team of pick a point in time in the campaign of where their pacing score threshold was.
+[31:37] And if their pacing score threshold is dropping into mid intent, then you know they're serving into mid intent, if that makes sense.
+[31:44] Yeah, I think that.
+[31:45] that's a hard one though and i struggle with that at the ip level even to get the intense scores
+[31:50] because they change so uh nobody's gonna call on that but that's a hard kind of like confounder
+[31:56] here let me change some um oh goodness i totally forgot hold on uh hold on edgar i am sorry i
+[32:08] I forgot about this.
+[32:11] I will still get to it if you need me to.
+[32:17] Okay, cool.
+[32:19] Sorry, Edgar asked me to take a look
+[32:23] at his incrementality cheat sheet.
+[32:28] Okay.
+[32:28] All right.
+[32:29] So retargeting thing, we talked about this.
+[32:33] Cohort selection.
+[32:34] We filter for tier diverse advertisers,
+[32:36] those whose IPs span multiple intent tiers,
+[32:38] Most mountain advertisers target high intent only,
+[32:40] so our 30 may not represent the typical mountain advertiser.
+[32:42] I think that's a good holdout.
+[32:44] I don't need to include this slide.
+[32:46] This might just be like a index or something.
+[32:48] Again, I need to just make this really simple.
+[32:52] Results, what to do next.
+[32:55] No cross-window validation yet.
+[32:58] That's true, kind of.
+[33:02] I don't think it's going to make a difference.
+[33:03] But NIP could score peak performance in pre-period
+[33:06] in high intent midweek, but they're locked in their max
+[33:08] tier subject pool based on how I
+[33:10] do it. So I look for the max score
+[33:12] that they received in the prior week.
+[33:15] Yep.
+[33:16] At the IP level?
+[33:18] At the IP level, yeah. Advertiser IP
+[33:20] level, yeah. Right, right, right. Sorry.
+[33:22] No, production, solution,
+[33:24] what's next?
+[33:26] Oh, yeah. We already talked about that.
+[33:28] Bidder level ghost bidding, migrate
+[33:30] to Databricks. I actually already did that.
+[33:34] That's like a personal thing, again.
+[33:36] that'll be good though because now you can look at you know 30 days or something yeah yeah and
+[33:42] that's the thing too and it's actually runs a lot faster what sucks too is bigquery is really weird
+[33:47] like it doesn't scale compute very well i hate bigquery it fucking sucks actually i hate it
+[33:53] yeah i don't have any control over that no and it sucks you wouldn't believe how many different
+[33:57] things are just stuck on something i'm like i'm like if it just scaled a little bit more like
+[34:03] with more workers i'm like this could have been done anyways yeah we're on the same page there
+[34:09] um conversions are 10 to 20 times rarer need 30 day window um yeah and then iro as where it's like
+[34:19] i don't even know how we touch that subject because here's the thing you can't do incremental
+[34:27] row as you would have to build a new model per advertiser you'd have to have some sort of built
+[34:32] It's in like logic where you take the conversion and then see how much they spend and then use that as a feedback for that advertiser.
+[34:42] Are you talking about like predicting IROFs?
+[34:45] Yeah.
+[34:45] Yeah, I think we stick, well, agreed.
+[34:51] There's just not a lot of signal because your counterfactual, if we're going to model it, is your 10% holdout.
+[34:59] But now it's your 10% holdout that also converted that like the conversion rates are very small.
+[35:03] So if you try and subset to just that, correct.
+[35:08] I think the way I'm trying to do it now is you can model against, you can model the counterfactual.
+[35:14] And then you can get a score for IPs that have a high uplift, meaning like their probability of visit or something goes up if you serve them an ad.
+[35:26] or they were in the treatment group, if that makes sense.
+[35:29] And we can talk.
+[35:30] I can share my screen.
+[35:31] We can go through some of the stuff I'm working on if you want.
+[35:33] Okay.
+[35:38] Okay.
+[35:38] But I think your statement is right.
+[35:41] Like conversions get hard.
+[35:43] IROAS gets hard.
+[35:44] The other thing I think will benefit from a larger data set from your analysis,
+[35:51] like even visits attribution windows are like 14 to 30 days yeah and so we need bigger ones
+[35:58] because seven days is just not enough especially for ctv especially right right like so ctv is one
+[36:05] where actually here's a crazy thing they did a study on ctv and found out that most of the
+[36:09] most of the conversions and everything happened after the campaign's already over
+[36:12] most of the time and it's like a long time sometimes it's like this is the weird thing
+[36:17] this is what gets really hard about it and what you run into is that when you go so far out from
+[36:24] the date of an ad for conversion it's almost impossible to predict unless you have right
+[36:30] like a tribute what drove it yeah it's so hard like you just you just can't like if somebody
+[36:35] does 60 days after they saw an ad they go buy a tv because they saw it on a ctv thing it's like
+[36:40] it's so hard to say that's incremental it's like impossible it's almost impossible i mean um
+[36:47] Yeah, it's very hard. I mean, and the chances that they don't get touched again, too, is the other issue. Whereas like, that's where like Facebook and Google get all the money, right? Because they just touch everybody all the time. And it's crazy, too, because it makes them look super good.
+[37:11] and I'm not saying they don't drive obviously I mean I probably get 99 I pay for YouTube
+[37:18] premium but at the time you know most of my ads I got were from or for from you know YouTube
+[37:24] anyways so it's like if I was going to convert on stuff and uh it comes from that so it's not
+[37:29] like it's not yeah but there's also a really high correlation like you know I could have saw a
+[37:35] DoorDash ad on my CTV then flipped open YouTube was just watching videos happened to get a banner
+[37:41] ad for DoorDash and then I go and convert on DoorDash not by clicking on the ad but then
+[37:46] Google goes hey I gave you the ad right and that's what they do so it's it's it's it's all
+[37:54] the more you get into stats and you know this the the less the more you realize that the world
+[38:00] doesn't actually work in truth um here's a here's a question on this what's next slide as well and I
+[38:07] I don't have the answer, so this is a genuine question.
+[38:11] And maybe it's a question to ask in that meeting.
+[38:15] Does any of this yet tell us a direction we need to go with an actual experiment?
+[38:20] Or are we not there yet with results where you think it's valuable?
+[38:25] What would the experiment be?
+[38:27] well the only setup i was thinking of before is like peak performance and mid intent focused
+[38:37] campaigns so then only serving into mid intent only serving into peak performance
+[38:43] and then doing your similar ghost bidding analysis against those because they'll still
+[38:48] have a 10 holdout it'll just be like people we know were scored into mid intent only
+[38:54] and then serve two.
+[38:55] Yeah, we would have to do that.
+[38:57] Then you'd have more signal.
+[38:59] But I don't know if we're there yet,
+[39:01] if that's a recommendation yet,
+[39:03] because I think the scaling up to a longer window
+[39:06] might maybe give a clearer answer.
+[39:10] Yeah, so basically this is what I'm looking to get out of the meeting.
+[39:14] This is what I want to push.
+[39:16] I want to say, one, let's do ghost bidding.
+[39:20] Two, high intent is not incremental.
+[39:22] I mean even if it like even though this is not power we know it's not very much lift because
+[39:28] you know these these things might not be valid might be noise but it's like the truth is we
+[39:33] just couldn't really measure it right right um so the follow-up is what do we do about that right
+[39:40] and the answer to that I think is let's do don't go spitting and then number two let's start we
+[39:46] could yes we could do an experiment where we say but that's the problem the experiment well I don't
+[39:52] know. Actually, no, we don't run into the same problems
+[39:54] with the... No.
+[39:56] Yes, we do. We still run into the same problems.
+[40:00] They're able to get statistically valid visit rates.
+[40:07] Yeah.
+[40:09] Because they're doing group means on like a T test.
+[40:12] Oh, yeah.
+[40:13] Okay.
+[40:14] So we probably would want to run an experiment.
+[40:18] But then how do I answer that question?
+[40:19] How much money do they need to spend on that experiment?
+[40:23] Well, how would that be different than Ghostbit?
+[40:24] Explain that to me because I don't understand that.
+[40:26] So how would their experiment?
+[40:28] ah ghost bidding still applies ghost business bidding is the mechanism of evaluating uh
+[40:36] incrementality you're still calculating the average treatment on the treated the experiment
+[40:42] ensures that we are serving impressions and recording visits from mid-intense scored ips
+[40:50] or peak performance scored ips so you don't have to deal with that selection bias issue of like
+[40:56] let me find campaigns that served into mid intent because they're larger and they spend a lot of
+[41:02] money we can say you know specifically what's the incrementality of mid intent what's the
+[41:08] incrementality of peak performance which is like harder for you to answer right now because there's
+[41:12] not a lot of data in those buckets right right and so getting one to do that and then but we only
+[41:18] spent you know about two weeks five and a budget on mid intent then you have much larger volume to
+[41:25] work against why would the power be less though than that like why would you need less money spent
+[41:33] even if you were to split up i guess if you made it oh i think you're you're still correct i think
+[41:38] there's still power oh okay gotcha but you could still run an experiment where you said hey
+[41:43] advertisers do you care if we run an experiment where we only run like mid intent only campaigns
+[41:48] and okay gotcha and then split and hold hold people out between that and the other one and
+[41:53] And that's less, well, sorry, for this experiment, the comparison of mid-intent versus current is less important.
+[41:59] What's important for your analysis is the lift focused in mid-intent.
+[42:07] So we only serve to mid-intent.
+[42:10] There's still a holdout group.
+[42:11] But now it's mid-intent focused lift analysis or ATT.
+[42:18] Yes. Okay.
+[42:19] Does that make sense?
+[42:20] Because right now you don't really have an answer for peak performance or mid-intense.
+[42:25] What's the ATT there?
+[42:28] No.
+[42:29] And so then the experiment would say, let's spend money specifically into those groups to try and get that answer.
+[42:37] Okay.
+[42:39] This would be neat, Alex.
+[42:41] And I don't know if you want me to make it a spike or not.
+[42:43] but if you, if you want to, and again, I don't know how busy you are. Like I'm not trying to
+[42:52] push off any work, but if you want to come up with that thought process behind the brains of
+[42:58] that experiment to bring up to Cursa, and I can make that a spike ticket that's just like, Hey,
+[43:03] you're just going to brainstorm what experiment and how we'd want to do that experiment so that
+[43:10] we can schedule up a meeting with cursa you could do that and then i will focus on making the changes
+[43:16] to this and the thing that i was thinking we maybe if we have time tomorrow early in the morning or
+[43:23] whatever um would be doing the actual math methodology with you so like make sure that
+[43:31] you and i both are agreed about that because so we went over like the high level like
+[43:35] what what we're going to say and what the move is and the move is ghostbiting and what we just
+[43:42] talked about right um how incremental are those groups let's set up a formal experiment um and
+[43:48] then i need to get 30 days of data possible i don't know if that's a that's something i just
+[43:54] run in databricks and we just say hey it's really expensive we're going to run it and i could run
+[43:59] it on a large campaign it's just going to be a lot of data or i could just say like if you get
+[44:05] if you get your Databricks notebook and like your code working on like even just like one or two
+[44:10] days we can set up a job compute cluster and run it as a job so if you set up a job and Victor
+[44:18] taught me this um job compute clusters in Databricks cost a quarter of the cost of
+[44:25] you know your cluster so if you have really big heavy jobs you can set up the exact same big heavy
+[44:34] job compute cluster and it costs a fourth of the cost and all it'll do is just like execute your
+[44:39] notebook so um i do that for really big stuff too so like even if it needs to run for like 13 hours
+[44:47] you can get answers uh for cheap okay so maybe that's the follow-up so we're agreed about this
+[44:53] not we're not incremental on high intent um we need to run a larger experiment for 30 days
+[45:04] we need to do ghost bidding set up and we need to set up an experiment for mid intent
+[45:12] and peak performance only campaigns maybe let's ask let's ask that question in the meeting of
+[45:18] like what's the criteria where we want to do an experiment and i can show you what i've been
+[45:24] working on and that maybe helps frame the context of like would testing this instead be a better
+[45:30] idea if we're there yet so um because then maybe we can circumvent the whole
+[45:38] mid intent peak performance question entirely yeah because from an experiment standpoint
+[45:45] what i'm thinking is it'd just be a waste of time this is why it's not going to change our
+[45:52] direction i don't think yeah right the direction is going to go towards what you just talked about
+[45:59] with the model trained on the treatment and then untreated.
+[46:02] So I think that we should just say,
+[46:03] we can answer this confidently.
+[46:06] I think that the big item here,
+[46:09] and I don't know if I want to bring in the other stuff.
+[46:11] I might just mention it about the power analysis,
+[46:15] but I just want to make it clear.
+[46:17] We need to do the bitter stuff
+[46:19] because we need to have a table that says,
+[46:21] here are the, just like the cost impression log.
+[46:25] So basically an identical table with a lot of data,
+[46:27] the cost impression log,
+[46:27] but it's like the holdout cost and pressure log right right the holdout log we could call it
+[46:31] um so we can do incremental lift and then we need to figure out what we're going to do with
+[46:37] like how are we going to bring this to advertisers like we were talking with al
+[46:42] excuse me hey we could show them the average treatment treated that that was my point i
+[46:50] think to alan obviously not my decision but like as long as they're caveated with
+[46:56] if these are valid or not you could show average treatment on the treated with kind of the ghost
+[47:03] bidding methodology for anyone okay just do we trust are we comfortable enough showing them
+[47:09] numbers that are not don't meet the power you know frameworks that's like 99 of stuff anyways
+[47:17] right exactly i'm fine with showing them the numbers i'm just gonna be like hey let's just
+[47:20] be real. That's like not an us thing though. Yeah. That's not my fault. Um, and we can also say,
+[47:26] Hey, we can solve this problem by doing augment or log the holdout groups. Then I can calculate
+[47:31] these in relative times. And then maybe you and I, maybe as a followup, if they want us to do it,
+[47:36] I can say, Hey, Alex, I can do this on 30 days, but I need to set this. I need more time. Like
+[47:41] I'm probably going to need a couple of days to like, yeah. And I can work with you. We can get
+[47:45] your beefier kind of evaluation done.
+[47:48] I think the way to think about it is get all the code working on like one or two days and
+[47:53] then we can like blow up the date range and like throw a big cluster at it.
+[47:58] Exactly.
+[47:59] Agreed.
+[47:59] Agreed.
+[48:00] Okay, cool.
+[48:00] I think we're all situated here.
+[48:02] Thank you very, very much, Alex.
+[48:04] Yeah.
+[48:04] No, this is really good.
+[48:05] I think this will have a lot of good feedback and I think will help with some good direction.
+[48:14] Okay.
+[48:15] sounds good awesome all right cool pimp if you have more questions um if you need me to review
+[48:22] anything before tomorrow but like i'm down to just meet again tomorrow if you want to just do the
+[48:26] more deep dive in another meeting yeah we'll do that i'll i'll come to that meeting with the deck
+[48:31] prepared cool with our changes and then we'll hopefully we just focus on like let's just make
+[48:36] sure the math and the sql is correct and yeah yeah yeah because our meeting's not till monday
+[48:40] So we've actually got all tomorrow and then that.
+[48:45] Okay.
+[48:45] No, it's right in the morning.
+[48:46] So we don't have a ton of time on Monday, but still it's all good.
+[48:49] Okay, cool.
+[48:50] See ya.
+[48:51] All right.
+[48:51] Thanks.
+[48:51] See ya.
