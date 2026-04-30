@@ -100,6 +100,7 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 - **Partition:** None at view level. **No TTL** — confirmed 2026-03-03 (expirationTime: none). Use `DATE(time)` for date filters.
 - **GCS archive:** **None as a clean dump — view is "complicated" per Victor.** Read via Spark BigQuery connector with `materializationDataset=external` + `viewsEnabled=true` (BQ materializes a temp table for the view). Output-size limit ~200M rows applies if pulling rows back to driver, but aggregations are fine. Medium data size — queryable. (via Victor Savitskiy 2026-04-28, TI-837)
 - **Use for:** Verified visit log — one row per verified visit redirect. "clickpass" is the old term for verified visit (VV). Contains ALL VV types: CTV and display. **Not** click-only; not CTV-only. (Confirmed by Zach: "vv can happen for display as well and would be here.") `ui_visits` is the superset that adds display clicks and non-VV traffic.
+- **What it actually is (Zach Schoenberger 2026-04-30):** **visits = clicks + VVs**, MNTN-attributed. One row per attributed visit: MNTN served impression → user visited advertiser site within ~30 days → MNTN pixel matched the visit back to the impression. NOT page views — that's `guid_log`.
 - **36 columns** (confirmed schema 2026-03-03)
 
 | Column | Type | Notes |
@@ -269,7 +270,8 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__guid_log__614422669` (VIEW → upstream Postgres)
 - **Underlying physical:** `dw-main-bronze.history.guid_log_physical` (TABLE, 107 B rows / 366 TB, DAY-partitioned on `time`)
 - **GCS archive:** `gs://mntn-data-archive-prod/guid_log/` — read directly from GCS via Spark for high-volume scans on Databricks. (via Victor Savitskiy 2026-04-28, TI-837)
-- **Use for:** GUID (cookie) creation and attribute events — user identity tracking
+- **What it actually is (Zach Schoenberger 2026-04-30):** **page-view events.** One row per page view on an advertiser site by a tracked household — fires for every page view regardless of whether MNTN ever served an ad. **Not** the same as visits — clickpass_log is visits.
+- **Use for:** site-traffic / page-view-level analysis; cause-agnostic "did this IP hit the advertiser site?" signal at IP-day granularity (after dedup).
 
 | Column | Type | Notes |
 |--------|------|-------|

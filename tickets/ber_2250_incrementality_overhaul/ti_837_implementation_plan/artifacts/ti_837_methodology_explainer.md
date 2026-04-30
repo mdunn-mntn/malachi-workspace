@@ -12,8 +12,8 @@ There's a recurring confusion: **"How can we measure lift on `clickpass_log` if 
 
 | Table | What lands in it |
 |---|---|
-| `clickpass_log` | A visit-event row fires whenever an MNTN-served impression is followed by a visit to the advertiser site within the attribution window. **It's a row per (impression → visit) match.** Used for billing/attribution. |
-| `guid_log` | A visit-event row fires whenever a known guid (MNTN-tracked household identifier) visits an advertiser's site, **regardless of whether MNTN ever served them an ad.** It's the raw "did this person visit?" signal. |
+| `clickpass_log` | **Visits (clicks + VVs), MNTN-attributed.** One row per attributed visit: MNTN-served impression → advertiser-site visit within ~30 days → MNTN pixel matched. Used for billing/attribution. |
+| `guid_log` | **Page-view events.** One row per page view on an advertiser site by a tracked household — fires regardless of whether MNTN ever served an ad. Not a visit log; one visit can produce many `guid_log` rows. (Authoritative per Zach Schoenberger, 2026-04-30: "page view = guid log; visit = a click or a vv".) |
 
 ### How the lift comparison works
 
