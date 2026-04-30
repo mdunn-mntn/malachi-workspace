@@ -1866,8 +1866,16 @@ the `core_*` tables here.
 
 ## bronze.integrationprod.audience_segments
 - **Type:** TABLE
-- **Use for:** Advertiser-level audience segment definitions (targeting expressions).
+- **Use for:** Advertiser-level audience segment definitions (targeting expressions). NOTE: this bronze table does NOT have `campaign_id` or `is_targeted` — those columns live on the silver view `audience.audience_segments` (see below).
 - **Columns:** advertiser_id, expression (STRING), expression_type_id, segment_id, create_time, update_time
+
+## dw-main-silver.audience.audience_segments
+- **Type:** VIEW
+- **Use for:** Active campaign-level targeting expressions. This is what the bidder evaluates. Always join here (not bronze) for "what audience is this campaign actually targeting" questions.
+- **Columns:** audience_segment_id, audience_id, **campaign_id**, segment_id, expression, expression_type_id, **is_targeted (BOOLEAN)**, update_time, create_time
+- **Filter rule:** `expression_type_id = 2 AND is_targeted = TRUE` for actively-targeted audiences. Type=1 (OPM) rows are source representations that get wrapped into type=2 (TPA) form at bidder evaluation; org-wide for retargeting (`objective_id=4`), 0 of 64,202 type=1 rows are `is_targeted=TRUE`.
+- **expression_type_id ENUM** (from `audience.expression_types`): 1=opm, 2=tpa, 3=sga.
+- **Holdout clause** lives in the type=2 TPA expression JSON: `MD5('{advertiser_id}:{ip}') mod 1000`, buckets 0-99 = holdout (10%). Verified end-to-end TI-837: 0 of 5.43M served retargeting IPs land in holdout buckets.
 
 ## bronze.integrationprod.audience_audiences
 - **Type:** TABLE
@@ -2197,7 +2205,7 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 | `advertiser_verticals` | fpa | Advertiser → vertical mapping | advertiser_id, vertical_id, type (1=primary) |
 | `advertiser_settings` | r2 | Advertiser-level reporting settings | advertiser_id, reporting_style ('last_touch', etc.) |
 | `campaign_segment_history` | audience | Campaign segment change history (CONTAMINATED — mixes template + targeting objects) | campaign_id, segment history |
-| `audience_segment_campaigns` | audience | Maps audience segment → campaign (**1:1 with campaign_id**, NOT campaign_group). Contains audience expression JSON. Filter `expression_type = 2` only (type 1 is legacy, not read). Expression has 4 AND clauses: selects, categories (DS19/CRM/lookbacks), geos, holdout/buckets. Holdout hash: `MD5('{AID}:{IP}')` mod 1000, 0-99 = holdout. | campaign_id, audience_segment_id, expression, expression_type |
+| `audience_segment_campaigns` | audience | Maps audience segment → campaign (**1:1 with campaign_id**, NOT campaign_group). Contains audience expression JSON. Filter `expression_type_id = 2 AND is_targeted = TRUE` for actively-targeted audiences (type 1 is OPM source representation; gets wrapped into type 2 at evaluation, never `is_targeted=TRUE` for retargeting — verified empirically TI-837 2026-04-30: 0/64,202 type=1 retargeting rows are targeted). Expression has 4 AND clauses: selects, categories (DS19/CRM/lookbacks), geos, holdout/buckets. Holdout hash: `MD5('{AID}:{IP}')` mod 1000, 0-99 = holdout. | campaign_id, audience_segment_id, expression, expression_type, is_targeted |
 | `dim_vertical` | tpa (coredb) | Vertical dimension lookup — PK is `vertical_id`, includes bucket rollup. Created by Ryan Kleck as a convenience replacement for querying `fpa.advertiser_verticals` for vertical/bucket info. | vertical_id, bucket_id, vertical_name, bucket_name, vertical_bucket_name, verticals_in_bucket |
 | `membership_updates_logs` | tpa | TPA membership update log (Greenplum version) | ip, segment_id, update_time |
 | `advertisers` | public | Advertiser dimension table (Greenplum version of bronze.integrationprod.advertisers) | advertiser_id, name, deleted, is_test |

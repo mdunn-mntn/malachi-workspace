@@ -176,6 +176,18 @@ This applies to:
 - Within-advertiser comparisons (only include campaigns with 4+ weeks of delivery)
 - Any future experiment comparing new vs existing campaigns
 
+### Validating Production Holdout Enforcement Empirically (TI-837 Lesson)
+
+When an experiment's identification depends on the production system enforcing a holdout (e.g., the 10% MD5(advertiser_id:ip) bucket for ghost-bidding lift), **don't trust documentation or asking — verify against served-IP data before publishing.**
+
+**The check:** for every served IP in the treated arm, recompute the holdout-bucket assignment using the production hash. If holdout enforcement is real, **0% of served IPs land in the holdout bucket**. Any non-zero overlap means the bidder is leaking treatment into holdout, and your treated/holdout comparison is contaminated.
+
+TI-837 result (2026-04-30): 0 of 5,432,546 served IPs across 8 (objective_id × funnel_level) cells landed in the holdout bucket. Holdout enforcement validated for both prospecting and retargeting.
+
+**Adjacent check — audience-system coverage.** If the production system has multiple audience-evaluation paths, confirm the holdout enforces on all of them. TI-837: `audience.audience_segments` has both `expression_type=1` (OPM source representation) and `expression_type=2` (TPA, with embedded holdout JSON). Empirical: 0 of 64,202 type=1 retargeting rows have `is_targeted=TRUE` org-wide → only the type=2 path is ever live → there's no "OPM lane" that could bypass holdout. Always identify all evaluation paths and confirm `is_targeted` flagging before assuming uniform enforcement.
+
+**Pattern, generalized:** before any production-experiment result depends on a system invariant (randomization integrity, holdout enforcement, eligibility gates), write the SQL that would falsify the invariant. If it returns the expected zero/ones, the result is defensible. If it doesn't, you've caught a methodology bug before the results meeting.
+
 ### Selection Bias
 Advertisers who adopt a new feature may be systematically different:
 - More engaged with the platform
