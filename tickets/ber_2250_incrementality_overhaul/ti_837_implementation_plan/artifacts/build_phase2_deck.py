@@ -168,16 +168,7 @@ def main():
         </section>
         """,
 
-        # ─── SLIDE 5 — by-tier chart ───────────────────────────────────────
-        f"""
-        <section data-slide="5" class="img-slide">
-          <h2 style="text-align:left;">Lift profile by tier — segment matters more than tier</h2>
-          <img src="{charts['by_tier']}" alt="Segment × tier lift profile">
-          <p style="font-size:0.7em; color:var(--text-light); text-align:left; margin-top:0.4em;">
-            Retargeting (red) shows large positive lift across high + peak performance. Stage 1 prospecting (gray) shows zero or slightly negative lift across all three tiers. Mid intent is at the noise floor everywhere — none of the segments show meaningful mid-tier lift in this 7-day window.
-          </p>
-        </section>
-        """,
+        # ─── SLIDE 5 — by-tier chart REMOVED 2026-04-30 per Alex K feedback (raised more questions than it answered; mid-tier sample size made values statistically meaningless without overlay). Detail deferred to TI-919 spike. Brief mention in narration only.
 
         # ─── SLIDE 6 — Why retargeting drives so much ──────────────────────
         """
@@ -186,7 +177,7 @@ def main():
           <p style="margin-top:0.4em;">Retargeting targets IPs <strong>already engaged</strong> with the advertiser — they visited the site, browsed products, or were uploaded as a CRM list. Two effects compound:</p>
           <ol style="margin-top:0.5em;">
             <li style="margin-bottom:0.5em;"><strong>True causal effect:</strong> reminding an engaged user of the brand drives them back. Real and substantial — repeated exposure is what retargeting is designed for.</li>
-            <li style="margin-bottom:0.5em;"><strong>Selection bias:</strong> the bidder preferentially bids higher on visit-prone IPs (past converters score higher). Our random hash subsample doesn't replicate this selection — so the "treated retargeting" set may be systematically more visit-prone than the comparable holdout subsample.</li>
+            <li style="margin-bottom:0.5em;"><strong>Selection bias from audience size:</strong> the bidder gives preference to campaigns with smaller targeting audiences. Retargeting audiences are smaller than prospecting, so when an IP is eligible for both, retargeting wins disproportionately. The bidder doesn't differentiate by retargeting-vs-prospecting at IP level — it differentiates by audience size, and retargeting just happens to be smaller. Our random hash subsample doesn't replicate this win pattern, so the "treated retargeting" set is systematically more visit-prone than the comparable holdout subsample.</li>
           </ol>
           <p style="margin-top:0.5em;">The +21pp number is the <strong>combined effect</strong> of both. Honest reading: retargeting drives substantial real lift, somewhere between zero and +21pp, with selection inflating the measurement. Bounding the true causal share requires bidder-level ghost bidding (Phase 2b).</p>
         </section>
@@ -195,9 +186,10 @@ def main():
         # ─── SLIDE 7 — Stage 1 zero lift (the surprising one) ──────────────
         """
         <section data-slide="7">
-          <h2>Stage 1 prospecting alone: zero incremental lift at high intent</h2>
-          <p style="margin-top:0.4em;">When we filter to <strong>Stage 1 only</strong> (pure top-of-funnel prospecting, before any multi-touch reinforcement), guid-ATT at high intent is <span class="red"><strong>−0.06pp</strong></span>. Sample-weighted: <span class="red"><strong>−1.03pp</strong></span>. Only <strong>12 of 25</strong> advertisers (48%) show positive lift.</p>
+          <h2>Stage 1 prospecting alone: approximately zero incremental lift at high intent</h2>
+          <p style="margin-top:0.4em;">When we filter to <strong>Stage 1 only</strong> (pure top-of-funnel prospecting, before any multi-touch reinforcement), guid-ATT at high intent is <strong>approximately zero</strong> (point estimate −0.06pp; sample-weighted −1.03pp; 12 of 25 advertisers positive). The 7-day-window CI half-widths exceed the point estimate, so the right read is "no measurable lift," not "negative lift."</p>
           <p style="margin-top:0.5em;"><strong>Interpretation:</strong> high-intent shoppers were going to convert anyway. Stage 1 prospecting is reaching IPs who would visit the site naturally — search, direct, brand pull. MNTN's pure top-of-funnel layer doesn't add measurable incrementality at the highest intent tier.</p>
+          <p style="margin-top:0.5em;"><strong>Channel context (Alex Bloore):</strong> a CTV ad's call-to-action is fundamentally weaker than display. A high-intent shopper sitting on their phone can click immediately; a high-intent shopper watching their TV cannot. The conversion path is longer, the call-to-action effect is smaller, and a 7-day window is short for CTV-driven brand pull to materialize. Low Stage 1 measurement at 7 days is partly a window/channel artifact, not just a "no lift" finding.</p>
           <p style="margin-top:0.5em;"><strong>The headroom for incremental lift is downstream</strong> (multi-touch nurturing — Stage 2/3 within prospecting carry the +0.78pp average) <strong>or upstream</strong> (mid-intent shoppers, where MNTN has room to push customers who haven't yet committed). The high-intent tier is where MNTN's incremental room is smallest.</p>
         </section>
         """,
@@ -208,25 +200,15 @@ def main():
           <h2 style="text-align:left;">Attribution wedge by segment — clickpass over- and under-credits</h2>
           <img src="{charts['wedge']}" alt="Wedge by segment">
           <p style="font-size:0.7em; color:var(--text-light); text-align:left; margin-top:0.4em;">
-            <strong>Stage 1 wedge is negative</strong> — clickpass shows positive lift (+0.47pp) while guid shows zero/negative (−0.06pp). Attribution is crediting Stage 1 with visits that would have happened anyway. <strong>Retargeting wedge 0.66×</strong> — clickpass under-credits real lift by ~34%. <strong>Prospecting wedge 1.58×</strong> — clickpass over-credits by 58%.
+            <strong>Stage 1 wedge is negative</strong> — clickpass shows positive lift (+0.47pp) while guid shows zero (−0.06pp). Attribution is crediting Stage 1 with visits that would have happened anyway. <strong>Retargeting wedge 0.66×</strong> — clickpass under-credits real lift by ~34%. <strong>Prospecting wedge 1.58×</strong> — clickpass over-credits by 58%.
           </p>
+          <div class="takeaway-box" style="margin-top: 0.6em;">
+            <strong>This slide is about modeling decisions, not just attribution observation.</strong> The wedge tells us why <code>guid_log</code> is the right label to use for incrementality modeling: clickpass over-credits attributed visits in prospecting and under-credits in retargeting. <code>guid_log</code> is the cause-agnostic visit signal — it's what the targeting model should be trained against.
+          </div>
         </section>
         """,
 
-        # ─── SLIDE 9 — Two methodology fixes ────────────────────────────────
-        """
-        <section data-slide="9">
-          <h2>Two methodology fixes versus prior internal numbers</h2>
-          <p style="margin-top:0.4em;">Earlier internal "incrementality" reports overstated lift for two reasons we now correct:</p>
-          <ol style="margin-top:0.5em;">
-            <li style="margin-bottom:0.6em;"><strong>Holdout denominator artificially large.</strong> "In augmentor_log" ≠ "would have been served." MNTN's bidder wins ~1% of auctions. Subsampling biddable_holdouts at the per-(advertiser, segment) empirical win rate makes the holdout denominator apples-to-apples with treated arm's "actually-served" condition.</li>
-            <li style="margin-bottom:0.6em;"><strong>Mixed-segment treatment denominator.</strong> Earlier reports counted ALL impressions for an advertiser as "treated" — conflating retargeting (+21pp lift) with prospecting (+0.78pp lift) into a single misleading +3.12pp combined headline. v5 separates the four segments so each is measured against its appropriate counterfactual.</li>
-          </ol>
-          <p style="margin-top:0.5em; font-size:0.78em; color: var(--text-light);">
-            Both fixes preserve internal consistency: same hash for both arms, same window, same advertisers. Per-segment win_rates are computed from prospecting-only / retargeting-only / stage-1-only served counts respectively.
-          </p>
-        </section>
-        """,
+        # ─── SLIDE 9 — REMOVED 2026-04-30 per Alex K. "Two methodology fixes vs prior internal numbers" belongs in the verbal preamble, not as a slide. The mixed-segment treatment denominator point is implicit in the 4-segment framing of slides 1, 3, 4. The holdout-subsampling point is on slide 2.
 
         # ─── SLIDE 10 — Pipeline ──────────────────────────────────────────
         """
@@ -275,6 +257,9 @@ biddable_holdouts (×4)          served_treatment (×4)
             </tbody>
           </table>
           <p style="margin-top:0.6em; font-size:0.78em;">Stratified across <strong>13 high / 7 mid / 10 low</strong> spend × <strong>20 verticals</strong>. Largest single advertiser is 8% of pooled high-tier weight — no single advertiser drives the headline. <strong>23 of 30 advertisers run retargeting</strong> (data for segment 4 covers most but not all).</p>
+          <div class="takeaway-box" style="margin-top: 0.6em; font-size:0.78em;">
+            <strong>Caveat (Alex K):</strong> the tier-diversity gate is on the <em>prospecting-score distribution</em> for each advertiser's IPs, not on what the campaign actually <em>served</em>. Some advertisers in this cohort have IPs that score peak/mid by the model, but never received an impression at that tier because the campaign budget concentrated at high intent. The IP-level tier and the served tier can diverge — peak/mid measurements partly reflect "did the budget reach this tier?" not just "is this tier incremental?"
+          </div>
         </section>
         """,
 
