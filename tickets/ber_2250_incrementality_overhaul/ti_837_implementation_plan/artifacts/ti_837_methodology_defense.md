@@ -70,6 +70,19 @@ Query: `queries/ti_837_validate_holdout_on_retargeting.sql`. Resolves Alex's
 "I don't think we actually use holdout logic on retargeting / CRM campaigns"
 concern.
 
+**Coverage of legacy OPM audiences (closed empirically 2026-04-30):** Alex's
+follow-up — "do older `expression_type=1` (OPM) retargeting audiences enforce
+the same holdout? They appear not to carry the holdout JSON in `expression`."
+Answered without needing to ping Jordan/Zach: in `audience.audience_segments`
+org-wide for `objective_id=4`, **0 of 64,202 type=1 (OPM) rows have
+`is_targeted=TRUE`**, while **39,440 of 55,447 type=2 (TPA) rows are targeted.**
+OPM is the source representation that gets wrapped into a TPA expression
+(per `SegmentExpressionService.kt:178`); the bidder evaluates only the
+TPA-wrapped form, which carries the holdout clause. **100% of actively-targeted
+retargeting in our cohort runs through type=2, so the 0/5.43M validation above
+covers the full retargeting population — there is no "OPM lane" that bypasses
+holdout enforcement.**
+
 ---
 
 ## 3. Why is "appeared in augmentor_log" the biddability signal?
