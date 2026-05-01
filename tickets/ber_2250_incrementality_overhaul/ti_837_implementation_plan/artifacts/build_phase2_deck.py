@@ -100,36 +100,36 @@ def main():
         """
         <section data-slide="3">
           <h2>The 4-segment ATT, in proportion</h2>
-          <p style="margin-top:0.3em; color:var(--text-light); font-size:0.78em;">High-intent guid-ATT, IVW-pooled. Bars to scale.</p>
-          <div style="margin-top:1em; font-size:0.85em;">
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; font-weight:600; color:var(--navy);">Retargeting only</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:0; top:0; height:100%; width:100%; background:var(--red); display:flex; align-items:center; padding-left:0.7em; color:white; font-weight:700; font-variant-numeric:tabular-nums;">+21.07pp</div>
+          <p style="color:var(--text-light); font-size:0.78em;">High-intent guid-ATT, IVW-pooled. Retargeting bar = 90% of slide width; others scaled relative.</p>
+          <div style="font-size:0.78em; max-width:90%; margin:0 auto; padding-right:1em;">
+            <div style="display:flex; align-items:center; margin-bottom:0.55em;">
+              <div style="width:9em; flex-shrink:0; font-weight:600; color:var(--navy);">Retargeting only</div>
+              <div style="flex:1; position:relative; height:2em; background:#F4F4F4;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:90%; background:var(--red); display:flex; align-items:center; padding-left:0.6em; color:white; font-weight:700; font-variant-numeric:tabular-nums;">+21.07pp</div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; color:var(--text-light);">All campaigns</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:0; top:0; height:100%; width:14.8%; background:var(--mid); display:flex; align-items:center; padding-left:0.7em; color:white; font-variant-numeric:tabular-nums;">+3.12pp</div>
+            <div style="display:flex; align-items:center; margin-bottom:0.55em;">
+              <div style="width:9em; flex-shrink:0; color:var(--text-light);">All campaigns</div>
+              <div style="flex:1; position:relative; height:2em; background:#F4F4F4;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:13.3%; background:var(--mid); display:flex; align-items:center; padding-left:0.6em; color:white; font-variant-numeric:tabular-nums;">+3.12pp</div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; color:var(--text-light);">Prospecting (1+2+3)</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:0; top:0; height:100%; width:3.7%; background:var(--mid);"></div>
-                <div style="position:absolute; left:4%; top:0; height:100%; display:flex; align-items:center; color:var(--text); font-variant-numeric:tabular-nums; font-size:0.9em;">+0.78pp</div>
+            <div style="display:flex; align-items:center; margin-bottom:0.55em;">
+              <div style="width:9em; flex-shrink:0; color:var(--text-light);">Prospecting (1+2+3)</div>
+              <div style="flex:1; position:relative; height:2em; background:#F4F4F4;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:3.3%; background:var(--mid);"></div>
+                <div style="position:absolute; left:4%; top:0; height:100%; display:flex; align-items:center; color:var(--text); font-variant-numeric:tabular-nums;">+0.78pp</div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; color:var(--text-light);">Stage 1 only</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:50%; top:0; height:100%; width:2px; background:var(--text-light);"></div>
-                <div style="position:absolute; left:51%; top:0; height:100%; display:flex; align-items:center; color:var(--text-light); font-variant-numeric:tabular-nums; font-size:0.9em; font-style:italic;">≈ 0  (point estimate −0.06pp)</div>
+            <div style="display:flex; align-items:center; margin-bottom:0.55em;">
+              <div style="width:9em; flex-shrink:0; color:var(--text-light);">Stage 1 only</div>
+              <div style="flex:1; position:relative; height:2em; background:#F4F4F4;">
+                <div style="position:absolute; left:45%; top:0; height:100%; width:2px; background:var(--text-light);"></div>
+                <div style="position:absolute; left:46%; top:0; height:100%; display:flex; align-items:center; color:var(--text-light); font-variant-numeric:tabular-nums; font-style:italic;">≈ 0 &nbsp; (point estimate −0.06pp)</div>
               </div>
             </div>
           </div>
-          <div class="takeaway-box" style="margin-top: 1em;">
+          <div class="takeaway-box" style="margin-top: 0.8em; max-width:90%; margin-left:auto; margin-right:auto;">
             <strong>The lift is concentrated in retargeting.</strong> Stage 1 alone is at the noise floor. The "+3.12pp combined" headline is mostly retargeting bleeding through.
           </div>
         </section>
@@ -271,14 +271,12 @@ biddable_holdouts (×4)          served_treatment (×4)
         # ─── SLIDE 12 — Caveats ─────────────────────────────────────────────
         """
         <section data-slide="12">
-          <h2>What I'd want a methodologist to push on</h2>
-          <ol style="margin-top:0.4em;">
-            <li style="margin-bottom:0.4em;"><strong>Retargeting counterfactual scope.</strong> The +21pp retargeting lift is what the experiment measured: served retargeting vs would-have-been-served retargeting holdouts (subsampled at retargeting win rate). It IS incremental within that frame. The harder question — "what would happen if MNTN didn't run retargeting at all?" — needs a tighter counterfactual that replicates the bidder's selection logic. That's bidder-level ghost bidding (Phase 2b).</li>
-            <li style="margin-bottom:0.4em;"><strong>Cohort selection bias.</strong> We filtered for tier-diverse advertisers — those whose IPs span multiple intent tiers. Most MNTN advertisers target high-intent only, so our 30 may not represent "the typical MNTN advertiser." Replication on a random sample is future work.</li>
-            <li style="margin-bottom:0.4em;"><strong>Single window — partial cross-window validation done.</strong> Re-ran the lean 2-segment variant (rtg + prosp) on 2026-04-22 → 04-28 (different week, same cohort). Retargeting sample-weighted ATT: v5 +28.89pp → xwin +29.06pp (Δ −1.29pp). Prospecting: v5 +0.43pp → xwin +0.39pp (Δ −0.04pp). Segment ordering reproduces. Phase 2a (30-day window on Databricks) extends this further once augmentor's 10-day TTL is no longer binding.</li>
-            <li style="margin-bottom:0.4em;"><strong>Intent-score movement during window.</strong> An IP could score "peak performance" in pre-period and "high intent" mid-week, but they're locked in their MAX-tier subject pool. Partial explanation for peak-tier numbers being noisy.</li>
-            <li style="margin-bottom:0.4em;"><strong>CTV multi-advertiser confounding.</strong> A CTV viewer sees ads from many advertisers concurrently. Some attributed lift may be from competitor concurrent campaigns. Hard to disentangle without cross-platform exposure data.</li>
-            <li style="margin-bottom:0.4em;"><strong>Random subsampling math.</strong> Random hash subsampling at win_rate matches denominator <em>size</em> but doesn't replicate bidder <em>selection</em>. The lift estimate is unbiased under the conditional-independence assumption (bidder selection uncorrelated with visit propensity within the biddable population). For retargeting, that assumption is the most fragile.</li>
+          <h2>Where the analysis is fragile</h2>
+          <ol style="margin-top:0.4em; font-size:0.78em;">
+            <li style="margin-bottom:0.55em;"><strong>Retargeting counterfactual.</strong> +21pp is incremental within "served retargeting vs would-have-been-served retargeting." The harder question — "what if we didn't run retargeting at all?" — needs bidder-level ghost bidding (Phase 2b) to replicate selection.</li>
+            <li style="margin-bottom:0.55em;"><strong>Cohort selection.</strong> We filtered for tier-diverse advertisers. Most MNTN advertisers target high-intent only, so the 30 here may not represent "the typical MNTN advertiser." Phase 1 (30 net-new advertisers) replicates on a fresh cohort.</li>
+            <li style="margin-bottom:0.55em;"><strong>Single window — cross-window done on 2 segments.</strong> Re-ran rtg + prosp on 2026-04-22 → 04-28: retargeting +28.89 → +29.06pp (Δ −1.29pp); prospecting +0.43 → +0.39pp (Δ −0.04pp). Ordering reproduces. Phase 2a extends to 30-day on Databricks.</li>
+            <li style="margin-bottom:0.55em;"><strong>Subsampling matches size, not selection.</strong> Random hash subsampling at win_rate gives unbiased lift under conditional independence (bidder selection uncorrelated with visit propensity within biddable). For retargeting that assumption is the most fragile — Phase 2b closes it.</li>
           </ol>
         </section>
         """,
