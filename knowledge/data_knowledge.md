@@ -1791,3 +1791,36 @@ brands with repeat-traffic IPs (Ferguson, WGU); lower for Vivint where Feb→Mar
 visit rates are very different.
 
 Query: `tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/queries/ti_884_cuped_rho_measurement.sql`.
+
+<!-- slack-extracted: 2026-05-01 -->
+- ## DS9 (MNTN Campaigns) in MemDB
+
+DS9 (data source 9, representing MNTN Campaigns / "Select Campaigns") **is** populated in MemDB and has been since its inception. It does not have entries in `tpa.categories` because it predates the current form of that table. The `/totals` endpoint is based on default requirements of DS14/category 1; if IPs are from category 1000, they will not appear in totals without an explicit adjustment to the totals request. This is distinct from DS42 (MNTN Select), which is also in MemDB. (via zach.schoenberger, #targeting-squad, 2026-04-30)
+- ## CRM Lists — Prospecting Only; All Campaigns Have Holdouts
+
+- CRM lists are only usable in **prospecting campaigns** (not retargeting).
+- All campaigns (including retargeting) have a holdout group.
+- Every delivering campaign requires an audience expression — this is true for retargeting campaigns as well. (via zach.schoenberger, #targeting-squad, 2026-04-30)
+- ## Audience Service (AS) — vertical_data_source Upsert Flow (Fangorn)
+
+When a user toggles a vertical data source in the Command Center UI and saves, the normal flow is:
+1. Gary-QL calls Audience Service (AS).
+2. AS upserts the `vertical_data_source` value.
+3. AS updates the advertiser's segments.
+4. AS publishes a downstream event (message) that the consumer picks up to execute the swap flow (segment expression regeneration).
+
+This flow can be triggered manually via a PUT method call to AS even without the UI toggle being deployed. The SQL-only path (direct DB update) does **not** kick off the swap flow; the PUT method to AS must be used to trigger downstream segment regeneration. (via Jaime Mutale, #targeting-squad, 2026-04-30)
+- ## coredb/integrationprod Health Monitoring
+
+- **pgbouncer-specific dashboard:** `http://monitor-coredw-prod.in.mountain.com:3000/d/c0f42b11.../live-monitor` (internal)
+- **Full coredb instance metrics:** GCP Console → `https://console.cloud.google.com/sql/instances/coredb-prod/overview?project=mntn-csql-core-db-prod` — dropdown provides multiple metric views.
+
+For latency blips connecting to coredb from application services, check GCP Console first before escalating. (via mohan, #data-platform, 2026-04-30)
+- ## Open Market Bidding Logic — Bid Below Impression Floor Drops
+
+When MNTN bids on open market (non-deal) inventory via Beeswax:
+- Publishers set a floor price for open market supply (the "impression bid floor"). This floor is not constant — it varies by inventory and is not MNTN-specific.
+- MNTN's bid price for open market is based on a rolling ~7-day average CPM paid for that publisher (computed by `coredw/lds/functions/populate_publisher_adsize_metrics.sql`).
+- If MNTN's average publisher CPM is below the publisher's floor, the bid is **dropped on MNTN's side** (not sent to Beeswax). This was an explicit design choice: a previous attempt to always meet the impression floor resulted in average CPM inflation without a corresponding spend increase, so it was reverted.
+- **PMP deals use fixed pricing** and are not subject to this drop logic — MNTN has never responded well to biddable deals and negotiates fixed-price PMPs instead.
+- **Known limitation:** Since bid prices are based on historical win averages, prices will not self-adjust upward if market floors rise. The Performance Pricing team's ML-based solution is intended to address this longer-term. (via Abbas, #production-ops, 2026-04-30)

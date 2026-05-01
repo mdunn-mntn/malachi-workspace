@@ -767,3 +767,29 @@ Legacy CoreDW is being decommissioned on **May 19, 2026**. All teams with tables
 - ## Sales Tool Transition: Outreach → Nooks
 
 MNTN is transitioning all Brand and Agency Account Executives from Outreach to **Nooks** as the primary sales engagement/dialing platform. The cutover date for all Brand and Agency AEs was Monday, May 4, 2026. Nooks accounts are provisioned via Okta SSO. (via Abe Lofy, #sales, 2026-04-29)
+
+<!-- slack-extracted: 2026-05-01 -->
+- ## Zip Code / Location Reporting Beta
+
+MNTN's Reporting team launched a Zip Code Reporting and Location Report Beta. The redesigned report makes top state performers more discoverable alongside zip-code-level data. Early results from Hugo Insurance (a beta participant) show the feature drove significant advertiser behavior changes: budget redistribution by state, cross-channel reallocation, and underwriter pricing adjustments based on MNTN CPA data. Hugo Insurance increased overall budget by 77% (some state budgets more than doubled) as a direct result of insights surfaced by this report. The initiative was a cross-functional effort spanning BER, RX, Design, and the Mid Market Initiative. (via Al Beretta, #engineering-team, 2026-04-30)
+- ## MNTN-Strata Design System & Claude Design Integration
+
+MNTN has an internal design system called **MNTN-Strata**, built on shadcn components. The MNTN Express (LAB) team created the components and exposed a shadcn registry. Andrew Corp (Integrations team) piloted using the registry and collaborated with Preston to create a Claude Design design system from it.
+
+- **Hosted Storybook (internal, VPN required):** `https://mntn-shadcn-registry.qa.in.mountain.com/`
+- **Registry JSON:** `https://mntn-shadcn-registry.qa.in.mountain.com/registry.json`
+- **Source repos:** Figma (Strata) + `mntn-go` GitHub repo
+- **Access:** Requires Tailscale VPN (internal `.in.mountain.com` domain)
+- **Status (as of 2026-04-30):** Not 100% pixel-perfect replication of Figma/components, but useful for ideating design solutions. Not yet broadly publicized. (via Preston, #engineering-team, 2026-04-30)
+- ## api.mountain.com Ownership Transfer — May 1, 2026
+
+Starting May 1, 2026, `api.mountain.com` is owned by MAPI and no longer returns Reporting/r2ds/request-data-service data. Internal users are not expected to be impacted. The internal r2ds URL (`r2ds.prod.in.mountain.com`) remains available through end of Q2 2026 (final decom date TBD). Teams still using r2ds should migrate to CHAPI. Contact Lauren Gregg for migration assistance. (via Lauren Gregg, #engineering-team, 2026-04-30)
+- ## Sales Tooling: Outreach → Nooks Migration
+
+MNTN's AE sales team migrated from Outreach to Nooks for sequencing and outbound sales activity. As of May 1, 2026, Outreach access was removed. Prospect sequences carried over to Nooks at the same stage they were in Outreach. Monday AM training was provided for the new setup. AEs log in via Okta dashboard. (via Abe Lofy, #sales, 2026-04-30)
+- ## Fangorn Model — Alpha Launch (2026-04-30)
+
+Fangorn launched to a 3-advertiser Alpha cohort on April 30, 2026 at 5:00 PM PT (midnight UTC). Matt Brorby served as Mission Control Director for the launch. The scoring pipeline writes scores for the bidder to consume. Advertiser onboarding is managed via a PUT command to Audience Service (documented in the Targeting runbook: https://mntn.atlassian.net/wiki/spaces/TAR/pages/3584196632). The launch was preceded by a preflight checklist at 4:30 PM PT. (via Bryce Wagg, #tgt-infrastructure-squad, 2026-04-30)
+- ## SMB Performance Decline — Q1/Q2 2026
+
+As of late April 2026, the percentage of SMB campaign groups (CGs) hitting performance goals has been declining since mid-March, while Mid-Market and Large Corporate segments remain steady or improving over the same period. SMB is defined as advertisers spending less than $25K/month. (via Johnny, #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die, 2026-04-30)

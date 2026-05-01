@@ -227,3 +227,76 @@ The backend enforcement is the component with meaningful behavioral impact on ta
 ## conversion_signal GCS Archive vs. conversion_log
 
 The GCS path `gs://mntn-data-archive-prod/signals/conversion_signal` is used for ad hoc work but is **not** the primary source for model training. BUK uses `conversion_log` in the feature store (via `gs://mntn-data-archive-prod/conversion_log`). The feature store source is managed via Airflow (`airflow-ti` repo, `models/feature_store/feature_group_1_source/conversion_log_advertiser_id_dsc_id.py`). The Spotify pixel_isolation filter is expected to be applied in the feature store pipeline for these sources.
+
+## 2026-05-01
+
+### [mntn_business] from Mick Mathis in #sales
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Competitive Intelligence: CTV Market Moves (Late April 2026)
+
+Key competitive developments relevant to MNTN sales conversations:
+
+1. **Pinterest + tvScientific:** Pinterest (600M+ MAUs) launched CTV advertising via tvScientific, entering performance CTV. Differentiation angle: MNTN's deterministic measurement and direct-to-publisher inventory vs. intent signals alone.
+2. **The Trade Desk + DramaBox:** TTD added short-form drama content to CTV inventory. Brand safety risk is elevated. MNTN differentiates on premium, curated, brand-safe supply.
+3. **Amazon Ads:** Launched AI Video Generator and DAX (audio) integration targeting SMB with low-cost, fast creative. MNTN counters with measurement depth, premium inventory, and outcome guarantees.
+
+Source: Mick Mathis's "The CTV Download" mini-series, published in Crayon.
+
+### [mntn_business] from Weiang Li in #identity_core
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Audience Acuity — Behavioral Data (S3)
+
+Audience Acuity is providing two data assets: (1) graph/identity data already merged into main, and (2) S3 behavioral data not yet integrated. As of 2026-04-30, no team (including Targeting) has reviewed the behavioral data. It is currently only available in S3; a GCS importer may be needed if Audience Acuity cannot deliver directly to GCS. The TI squad has been tasked with a spike to evaluate this data for potential use in predictive modeling and targeting.
+
+### [data_knowledge] from Alexander Jerneck in #identity_core_dev
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Identity Graph — PagerDuty Alert Strategy
+
+Proposed alerting architecture for the identity graph build pipeline:
+1. Keep the graph build job running overnight (current behavior) so results are ready by start of business.
+2. Add a separate lightweight Databricks job that reads the latest graph, performs a basic sanity check, and fails if a new graph is not populated. Schedule this check job during business hours.
+3. Configure PagerDuty to alert on the check job (high urgency) rather than on the overnight graph generation job.
+
+PagerDuty supports "support hours" settings that can suppress or downgrade alerts during off-hours — permission changes required to configure this.
+
+### [experimentation] from malachi in #dev-incremental-lift
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Incrementality Test — Minimum Budget for Statistical Power
+
+Malachi (TI-884) is analyzing the minimum advertiser spend required to detect incremental lift with sufficient statistical power. Key findings (preliminary, as of 2026-04-30):
+
+- The minimum detectable budget varies significantly between **visits** and **conversions** as the target metric — results must be reported separately for each.
+- The budget threshold is high: **very few currently active MNTN advertisers reach the spend level required to detect lift** under typical conditions.
+- Exception: a new advertiser with a strong product and high true lift (e.g., 10%+) may achieve power at lower spend levels.
+- Implication: incrementality testing as a product may be a positioning challenge for most of the customer base, not just a measurement challenge.
+
+This analysis was requested by Al Beretta (SVP/VP) to determine budget thresholds before building out incrementality reporting.
+
+### [mntn_business] from Jenien Lim in #ask-incremental-lift-tests
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Lendio — Incrementality Lift Test Request
+
+Lendio (a current MNTN advertiser at $80K/month) has requested an incrementality lift test on their CTV campaigns. Key context: MNTN is not currently included in Lendio's Marketing Mix Model (MMM), which is blocking budget increases. Lendio is open to a lift test as a path to unlocking additional budget. Test design TBD; internal strategy alignment with Edgar von Trotha is the next step before customer call. Budget recommendation for the test is pending from MNTN's side.
+
+### [mntn_business] from Johnny in #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## HHST Issues — Fangorn Scope
+
+As of late April 2026, the performance churn investigation identified three open HHST (Household Scoring/Targeting) action items on the PAC (Performance & Automation Controls) side:
+1. Support HHST in Stage 2 campaigns.
+2. Resolve HHST moving too fast or too slow based on various campaign group (CG) conditions.
+3. Resolve the "HHST=0 trap" (campaigns getting stuck at zero household scoring).
+
+Items 2 and 3 are expected to be addressed by the Fangorn project, pending verification and a confirmed GA plan. Resolution ownership is with Trixy.
