@@ -1,13 +1,14 @@
 # TI-849: Monitor Fangorn score lift and visit rate improvements
 
 **Jira:** https://mntn.atlassian.net/browse/TI-849
-**Status:** In Progress (D0 scaffolding complete 2026-05-01)
+**Status:** Done (closed as infrastructure-complete 2026-05-01)
 **Date Started:** 2026-04-20
-**Date Completed:**
+**Date Completed:** 2026-05-01
 **Assignee:** Malachi
-**Story Points:** 5
+**Story Points:** 3 (reduced from 5 — actual scope was infrastructure-only)
 **Priority:** P1 - Critical
 **Parent:** TI-457
+**Follow-up:** [TI-921](https://mntn.atlassian.net/browse/TI-921) — final evaluation + Mode dashboard (next sprint)
 
 ---
 
