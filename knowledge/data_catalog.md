@@ -1056,6 +1056,7 @@ See entries above.
 - **Partition:** DAY on `day`
 - **Date range:** 2024-01-01 to present (15+ months — longer than agg__daily_sum_by_campaign which starts Sep 2025)
 - **Use for:** Daily campaign-level KPI aggregation. **Best table for experiments needing long pre-periods** (52-week pre-period for CausalImpact).
+- **STALENESS GOTCHA (verified 2026-05-01):** This rollup view is currently lagging by ~17 days (max=2026-04-14 when current date is 2026-05-01). Same lag affects `sum_by_campaign_group_by_day` and `sum_by_advertiser_by_day`. Verify max(day) before using for recent-window analysis. The downstream `silver.aggregates.agg__daily_sum_by_campaign` is even worse (empty since 2026-03-31). **For fresh data, query the underlying fact tables directly: `silver.summarydata.{impression_facts, visit_facts, conversion_facts, spend_facts}`** — these are at hour grain and stay fresh through current day.
 
 | Column | Type | Notes |
 |---|---|---|

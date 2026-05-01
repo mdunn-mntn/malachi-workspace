@@ -1284,6 +1284,31 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - BUK payload includes parent keyword groups with child keyword IDs and model version hash
 - Currently: every DAG retrain overwrites ALL advertiser keywords (not idempotent — planned fix)
 
+### Fangorn Tier 1 Production Launch (2026-04-30, DAGs completed early 2026-05-01)
+**Per-advertiser switch:** `bronze.integrationprod.audience_advertiser_configurations.vertical_data_source = 46`. When set, the Audience Service swaps DS13 → DS46 in segment breakdown expressions at query time. Persisted base expression unchanged → UI audience sizes do NOT change.
+
+**May 1 launch AIDs (3 advertisers, all flipped 08:00–08:01 UTC):**
+| AID | Advertiser | Vertical | Reporting style |
+|-----|------------|----------|-----------------|
+| 32320 | Biz2Credit | 111004 — Lending & Brokerage | industry_standard |
+| 38659 | Big Blue Bubble Inc. | 110001 — Games & Comics | industry_standard |
+| 32233 | University of Northwestern Ohio | 107000 — Colleges & Universities | industry_standard |
+
+**Authoritative inclusion query** (Mode dashboards, monitoring, etc.):
+```sql
+SELECT advertiser_id FROM `dw-main-bronze.integrationprod.audience_advertiser_configurations` WHERE vertical_data_source = 46;
+```
+
+**Note:** Ryan Kleck mentioned `tpa.fangorn_advertiser_inclusion` in Slack (2026-05-01) but it does NOT exist in BQ — `audience_advertiser_configurations.vertical_data_source = 46` is the de-facto inclusion list.
+
+**Rollback mechanism:** `UPDATE audience.advertiser_configurations SET vertical_data_source = NULL WHERE vertical_data_source = 46;` — query-time only, no audience re-ingestion needed.
+
+**Score data path:** `gs://household-scoring-prod/output/scoring/fangorn_prospecting_scoring/year=YYYY/month=MM/day=DD/`. BQ surface tables: `bronze.household_scoring.advertiser_intent_daily` and `prospecting_intent_daily` (daily partitioned, populated by overnight DAG).
+
+**DS46 in IPDSC:** `bronze.external.ipdsc__v1` carries DS46 alongside DS13. DS46 fully populated (3.1B rows back to 2026-01-29). DS46 row volume is ~16% of DS13 (consistent with a more selective Fangorn-scored layer).
+
+**Tiering:** 369 Tier-1 advertisers approved (44% of fleet), but **only 3 launched on May 1**. Tier 1 expansion is staged — Mode dashboard auto-detects via `vertical_data_source = 46` filter so it picks up new flips without code changes. Out of scope for TI-457: Tier 2 / Tier 3 rollouts, continuous scoring full GA (TI-606/TI-816).
+
 ### Continuous Scoring (Fangorn + Keywords)
 - Combines Fangorn intent score (s, 0-1) with BUK keyword evidence score (K, 0-1)
 - Keyword score: `K = 1 - exp(-β * Σ 1/log2(rank+1))` where sum is over matched keywords
