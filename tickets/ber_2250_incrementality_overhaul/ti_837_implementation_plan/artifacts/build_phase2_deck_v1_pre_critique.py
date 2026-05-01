@@ -69,111 +69,106 @@ def main():
 
     slides = [
 
-        # ─── SLIDE 1 — POWER LINE + story (Disruption) ─────────────────────
+        # ─── SLIDE 1 — Cold open ───────────────────────────────────────────
         """
         <section data-slide="1">
-          <p class="powerline" style="font-size:1.7em; margin-top:1em; line-height:1.25;">
-            Pure prospecting drives near-zero incremental lift.
-          </p>
-          <p style="text-align:center; margin-top:1.4em; color: var(--text-light); font-size:0.95em; line-height:1.5;">
-            Same 30 advertisers, same 7 days, four ways of slicing it.<br>
-            The combined <strong>+3.12pp</strong> headline tells none of the four stories.
-          </p>
-          <p class="footer-note" style="margin-top:1.6em;">
-            v5 multi-segment ghost-bidding ATT · 2026-04-20 → 04-26 · 30 advertisers
-          </p>
+          <h2 style="margin-bottom:0.6em;">When we measure MNTN's lift, the answer depends on which campaigns count.</h2>
+          <p style="margin-top:0.6em;">A combined "MNTN drove +3.1pp lift" headline obscures very different sub-stories.</p>
+          <p style="margin-top:0.4em;">We measured the same 30 advertisers, same 7 days, same hash — <strong>4 ways</strong>:</p>
+          <ul style="margin-top:0.4em;">
+            <li>All campaigns combined</li>
+            <li>Prospecting (all stages: 1, 2, 3)</li>
+            <li>Stage 1 only (pure top-of-funnel)</li>
+            <li>Retargeting only</li>
+          </ul>
+          <p style="margin-top:1em;"><strong>The four numbers tell different stories.</strong></p>
         </section>
         """,
 
-        # ─── SLIDE 2 — THE HEADLINE CHART (was slide 3) ─────────────────────
-        f"""
-        <section data-slide="2" class="img-slide">
-          <h2 style="text-align:left;">Retargeting carries the lift. Three of four segments don't.</h2>
-          <img src="{charts['headline']}" alt="High-intent guid-ATT by segment">
-          <p style="font-size:0.7em; color:var(--text-light); text-align:left; margin-top:0.4em;">
-            High-intent guid-ATT across 4 segments, IVW pool (solid) and sample-weighted (hatched). Retargeting: +21pp guid lift. Stage 1 only: ≈ 0. The "all campaigns" combined view (+3.12pp) is dominated by retargeting being mixed in.
-          </p>
-        </section>
-        """,
-
-        # ─── SLIDE 3 — 4-BAR CSS CHART (replaces old slide 4 numbers table) ─
+        # ─── SLIDE 2 — Methodology brief ────────────────────────────────────
         """
-        <section data-slide="3">
-          <h2>The 4-segment ATT, in proportion</h2>
-          <p style="margin-top:0.3em; color:var(--text-light); font-size:0.78em;">High-intent guid-ATT, IVW-pooled. Bars to scale.</p>
-          <div style="margin-top:1em; font-size:0.85em;">
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; font-weight:600; color:var(--navy);">Retargeting only</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:0; top:0; height:100%; width:100%; background:var(--red); display:flex; align-items:center; padding-left:0.7em; color:white; font-weight:700; font-variant-numeric:tabular-nums;">+21.07pp</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; color:var(--text-light);">All campaigns</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:0; top:0; height:100%; width:14.8%; background:var(--mid); display:flex; align-items:center; padding-left:0.7em; color:white; font-variant-numeric:tabular-nums;">+3.12pp</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; color:var(--text-light);">Prospecting (1+2+3)</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:0; top:0; height:100%; width:3.7%; background:var(--mid);"></div>
-                <div style="position:absolute; left:4%; top:0; height:100%; display:flex; align-items:center; color:var(--text); font-variant-numeric:tabular-nums; font-size:0.9em;">+0.78pp</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; margin-bottom:0.7em;">
-              <div style="width:10em; flex-shrink:0; color:var(--text-light);">Stage 1 only</div>
-              <div style="flex:1; position:relative; height:2.2em; background:#F4F4F4;">
-                <div style="position:absolute; left:50%; top:0; height:100%; width:2px; background:var(--text-light);"></div>
-                <div style="position:absolute; left:51%; top:0; height:100%; display:flex; align-items:center; color:var(--text-light); font-variant-numeric:tabular-nums; font-size:0.9em; font-style:italic;">≈ 0  (point estimate −0.06pp)</div>
-              </div>
-            </div>
-          </div>
-          <div class="takeaway-box" style="margin-top: 1em;">
-            <strong>The lift is concentrated in retargeting.</strong> Stage 1 alone is at the noise floor. The "+3.12pp combined" headline is mostly retargeting bleeding through.
-          </div>
-        </section>
-        """,
-
-        # ─── SLIDE 4 — Methodology compressed (combines old 2 + 2b) ────────
-        """
-        <section data-slide="4">
-          <h2>How we measured it — ghost-bidding ATT</h2>
-          <p style="margin-top:0.4em;">Compare <strong>IPs we actually served</strong> against IPs that <strong>would have been served</strong> if not for the random 10% holdout. Per-(advertiser, IP) MD5 hash, production-equivalent. Holdout subsampled at per-(advertiser, segment) win rate so the denominator matches treated's "actually-served" condition.</p>
+        <section data-slide="2">
+          <h2>What we measured — ghost-bidding ATT</h2>
+          <p style="margin-top:0.4em;"><strong>The problem with ITT:</strong> only 14–16% of "treated" hash-bucket IPs were actually served. The other 84% diluted the effect.</p>
+          <p style="margin-top:0.5em;"><strong>The fix:</strong> compare <strong>IPs we actually served</strong> against IPs that <strong>would have been served</strong> if not for the random 10% holdout.</p>
           <table style="margin-top:0.7em;">
-            <thead><tr><th>Segment</th><th>Filter</th><th>What it isolates</th></tr></thead>
+            <thead><tr><th>Setup</th><th>Detail</th></tr></thead>
             <tbody>
-              <tr><td><strong>All campaigns</strong></td><td><code>(no filter)</code></td><td>Every paid impression for the advertiser</td></tr>
-              <tr><td><strong>Prospecting (all stages)</strong></td><td><code>objective_id IN (1,5,6)</code></td><td>Stage 1 + Multi-Touch (S2) + MTFF (S3). Excludes retargeting (4).</td></tr>
-              <tr><td><strong>Stage 1 only</strong></td><td><code>... AND funnel_level = 1</code></td><td>Pure top-of-funnel — first touch, no multi-touch reinforcement</td></tr>
-              <tr><td><strong>Retargeting only</strong></td><td><code>objective_id = 4</code></td><td>Already-engaged IPs (past site visit, click)</td></tr>
+              <tr><td>Cohort</td><td>30 MNTN advertisers, stratified across spend × vertical × intent diversity</td></tr>
+              <tr><td>Window</td><td>2026-04-20 → 04-26 UTC (7 days), +3-day post-period for visit attribution</td></tr>
+              <tr><td>Holdout</td><td>Per-(advertiser, IP) MD5 hash · 10% holdout · production-equivalent</td></tr>
+              <tr><td>Holdout denominator</td><td>Subsampled at per-(advertiser, segment) empirical win rate to match treated arm's "actually-served" condition</td></tr>
+              <tr><td>Outcomes</td><td>Clickpass visits (attributed) and Guid visits (causal counterfactual)</td></tr>
+            </tbody>
+          </table>
+        </section>
+        """,
+
+        # ─── SLIDE 2b — How the 4 segments are defined ─────────────────────
+        """
+        <section data-slide="2b">
+          <h2>How the 4 segments are defined</h2>
+          <p style="margin-top:0.4em;">Each segment filters <code>cost_impression_log</code> and <code>clickpass_log</code> on the campaign's <code>objective_id</code> and <code>funnel_level</code>. <code>guid_log</code> is never filtered (it's a cause-agnostic visit signal — every advertiser-site visit fires regardless of which campaign drove it).</p>
+          <table style="margin-top:0.5em;">
+            <thead><tr><th>Segment</th><th>SQL filter</th><th>Strategy isolated</th></tr></thead>
+            <tbody>
+              <tr><td><strong>All campaigns</strong></td><td><code>(no filter)</code></td><td>Every paid impression for the advertiser, regardless of campaign type</td></tr>
+              <tr><td><strong>Prospecting (all stages)</strong></td><td><code>objective_id IN (1, 5, 6)</code></td><td>Stage 1 prospecting + Multi-Touch (S2) + Multi-Touch Full Funnel (S3). Excludes retargeting (4) and ego (7).</td></tr>
+              <tr><td><strong>Stage 1 only</strong></td><td><code>objective_id IN (1, 5, 6) AND funnel_level = 1</code></td><td>Pure top-of-funnel prospecting — first touch, no multi-touch reinforcement. <code>funnel_level</code> is authoritative for stage; <code>objective_id</code> alone is unreliable since UI migration broke the mapping.</td></tr>
+              <tr><td><strong>Retargeting only</strong></td><td><code>objective_id = 4</code></td><td>Already-engaged IPs (past site visit, click, CRM list)</td></tr>
             </tbody>
           </table>
           <p style="font-size:0.7em; color:var(--text-light); margin-top:0.5em;">
-            <code>guid_log</code> (cause-agnostic visit signal) is never segment-filtered; it captures every advertiser-site visit regardless of which campaign drove it. Two outcomes per arm: <strong>guid</strong> (causal counterfactual) and <strong>clickpass</strong> (attribution-credited). Pipeline detail in appendix.
+            The same IP can appear in multiple segments if the advertiser served them via more than one campaign type. Segment counts overlap; they're not partitions.
           </p>
         </section>
         """,
 
-        # ─── SLIDE 5 — RIGOR ANCHORS (NEW) ─────────────────────────────────
-        """
-        <section data-slide="5">
-          <h2>Two empirical sanity checks (before you ask)</h2>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.2em; margin-top:0.8em;">
-            <div style="background:#F0F4F9; border-left:4px solid var(--navy); padding:1em 1.2em;">
-              <p style="font-size:0.7em; color:var(--text-light); margin:0; text-transform:uppercase; letter-spacing:0.05em;">Holdout enforcement</p>
-              <p class="big-number" style="font-size:2.4em; margin:0.3em 0; color:var(--navy);">0 / 5,432,546</p>
-              <p style="font-size:0.78em; margin:0; line-height:1.4;">Served IPs landing in the holdout bucket across 8 (objective_id × funnel_level) cells. Production bidder enforces holdout for prospecting <em>and</em> retargeting. Refutes the "retargeting bypasses holdout" failure mode.</p>
-            </div>
-            <div style="background:#F0F4F9; border-left:4px solid var(--navy); padding:1em 1.2em;">
-              <p style="font-size:0.7em; color:var(--text-light); margin:0; text-transform:uppercase; letter-spacing:0.05em;">Cross-window reproduction</p>
-              <p class="big-number" style="font-size:2.4em; margin:0.3em 0; color:var(--navy);">+29.06pp</p>
-              <p style="font-size:0.78em; margin:0; line-height:1.4;">Retargeting sample-weighted ATT on a different week (04-22 → 04-28). v5 was +28.89pp on the canonical week — Δ −1.29pp. Segment ordering reproduces. Prospecting +0.39pp vs +0.43pp (Δ −0.04pp).</p>
-            </div>
-          </div>
-          <p style="margin-top:1em; font-size:0.85em;"><strong>Plus:</strong> <em>Per Zach Schoenberger (audience-platform owner): every campaign has a 10% holdout, every campaign has an audience expression, CRM lists are only on prospecting (never retargeting). Three universal rules — all empirically consistent with the result above.</em></p>
+        # ─── SLIDE 3 — THE HEADLINE CHART ──────────────────────────────────
+        f"""
+        <section data-slide="3" class="img-slide">
+          <h2 style="text-align:left;">Retargeting drives the lift.  Pure prospecting drives almost none.</h2>
+          <img src="{charts['headline']}" alt="High-intent guid-ATT by segment">
+          <p style="font-size:0.7em; color:var(--text-light); text-align:left; margin-top:0.4em;">
+            High-intent guid-ATT across 4 segments, IVW pool (solid) and sample-weighted (hatched). Retargeting: +21pp guid lift. Stage 1 only: −0.06pp. The "all campaigns" combined view (+3.12pp) is dominated by retargeting being mixed in.
+          </p>
         </section>
         """,
+
+        # ─── SLIDE 4 — Headline numbers table ──────────────────────────────
+        """
+        <section data-slide="4">
+          <h2>The 4-segment headline numbers</h2>
+          <table style="margin-top:0.5em;">
+            <thead><tr><th>Segment</th><th>guid IVW</th><th>guid sample-wt</th><th>clickpass IVW</th><th>wedge</th><th>Cells</th></tr></thead>
+            <tbody>
+              <tr style="background:#FBE5E3;">
+                <td><strong>Retargeting only</strong></td>
+                <td class="num"><strong class="red">+21.07pp</strong></td>
+                <td class="num">+28.89pp</td>
+                <td class="num">+13.97pp</td>
+                <td class="num">0.66×</td>
+                <td class="num">8/8 pos</td>
+              </tr>
+              <tr><td>All campaigns combined</td><td class="num">+3.12pp</td><td class="num">+5.44pp</td><td class="num">+2.88pp</td><td class="num">0.92×</td><td class="num">25/27 pos</td></tr>
+              <tr><td>Prospecting (all stages 1+2+3)</td><td class="num">+0.78pp</td><td class="num">+0.46pp</td><td class="num">+1.24pp</td><td class="num">1.58×</td><td class="num">20/26 pos</td></tr>
+              <tr style="background:#EEEEEE;">
+                <td><strong>Stage 1 only</strong></td>
+                <td class="num"><strong>−0.06pp</strong></td>
+                <td class="num">−1.03pp</td>
+                <td class="num">+0.47pp</td>
+                <td class="num">−8.5×</td>
+                <td class="num">12/25 pos</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="takeaway-box" style="margin-top: 0.6em;">
+            <strong>The lift is heavily concentrated in the retargeting layer.</strong> Stage 1 prospecting alone shows zero or slightly negative lift. The "+3.12pp combined" headline is mostly retargeting bleeding through.
+          </div>
+        </section>
+        """,
+
+        # ─── SLIDE 5 — by-tier chart REMOVED 2026-04-30 per Alex K feedback (raised more questions than it answered; mid-tier sample size made values statistically meaningless without overlay). Detail deferred to TI-919 spike. Brief mention in narration only.
 
         # ─── SLIDE 6 — Why retargeting drives so much ──────────────────────
         """
@@ -275,7 +270,7 @@ biddable_holdouts (×4)          served_treatment (×4)
           <ol style="margin-top:0.4em;">
             <li style="margin-bottom:0.4em;"><strong>Retargeting counterfactual scope.</strong> The +21pp retargeting lift is what the experiment measured: served retargeting vs would-have-been-served retargeting holdouts (subsampled at retargeting win rate). It IS incremental within that frame. The harder question — "what would happen if MNTN didn't run retargeting at all?" — needs a tighter counterfactual that replicates the bidder's selection logic. That's bidder-level ghost bidding (Phase 2b).</li>
             <li style="margin-bottom:0.4em;"><strong>Cohort selection bias.</strong> We filtered for tier-diverse advertisers — those whose IPs span multiple intent tiers. Most MNTN advertisers target high-intent only, so our 30 may not represent "the typical MNTN advertiser." Replication on a random sample is future work.</li>
-            <li style="margin-bottom:0.4em;"><strong>Single window — partial cross-window validation done.</strong> Re-ran the lean 2-segment variant (rtg + prosp) on 2026-04-22 → 04-28 (different week, same cohort). Retargeting sample-weighted ATT: v5 +28.89pp → xwin +29.06pp (Δ −1.29pp). Prospecting: v5 +0.43pp → xwin +0.39pp (Δ −0.04pp). Segment ordering reproduces. Phase 2a (30-day window on Databricks) extends this further once augmentor's 10-day TTL is no longer binding.</li>
+            <li style="margin-bottom:0.4em;"><strong>Single window — no cross-window validation yet.</strong> Cross-window validation = re-run the same analysis on a different 7-day window (e.g., 2026-04-13 → 04-19) and check whether the segment ordering and magnitudes reproduce. If retargeting +21pp shows up consistently across multiple windows, the result is real. If it varies by 5-10pp week-over-week, the single-window number is sample noise as much as signal. Augmentor's 10-day TTL bounds backward replication; Databricks GCS reads remove that constraint for forward replication.</li>
             <li style="margin-bottom:0.4em;"><strong>Intent-score movement during window.</strong> An IP could score "peak performance" in pre-period and "high intent" mid-week, but they're locked in their MAX-tier subject pool. Partial explanation for peak-tier numbers being noisy.</li>
             <li style="margin-bottom:0.4em;"><strong>CTV multi-advertiser confounding.</strong> A CTV viewer sees ads from many advertisers concurrently. Some attributed lift may be from competitor concurrent campaigns. Hard to disentangle without cross-platform exposure data.</li>
             <li style="margin-bottom:0.4em;"><strong>Random subsampling math.</strong> Random hash subsampling at win_rate matches denominator <em>size</em> but doesn't replicate bidder <em>selection</em>. The lift estimate is unbiased under the conditional-independence assumption (bidder selection uncorrelated with visit propensity within the biddable population). For retargeting, that assumption is the most fragile.</li>
@@ -294,19 +289,26 @@ biddable_holdouts (×4)          served_treatment (×4)
             <li style="margin-bottom:0.5em;"><span class="pill">iROAS</span> Per-advertiser <code>(incremental conversions × AOV) ÷ MNTN spend</code>. Depends on conversions outcome.</li>
           </ul>
           <div class="takeaway-box" style="margin-top: 0.6em;">
-            <strong>Decision for the room:</strong> agree that <em>combined</em> campaign-level lift is no longer the canonical incrementality headline. <em>Segment-specific</em> is. Yes/no by Friday so we can update internal reporting + downstream modeling docs accordingly.
+            <strong>Decision to take to leadership:</strong> publish segment-specific incrementality reports internally. Stage 1 ≈ zero, multi-touch ≈ modest, retargeting ≈ large-but-selection-inflated. The "all-campaigns" headline conflates all three.
           </div>
         </section>
         """,
 
-        # ─── SLIDE 14 — Power Line close ────────────────────────────────────
+        # ─── SLIDE 14 — Power Line ──────────────────────────────────────────
         """
         <section data-slide="14">
-          <p class="powerline" style="font-size:1.7em; margin-top:1.5em; line-height:1.25;">
-            Pure prospecting drives near-zero incremental lift.
+          <p class="powerline" style="font-size:1.4em; margin-top:0.5em;">
+            Retargeting drives the lift.<br>
+            Pure prospecting drives almost none.<br>
+            Combined views hide both.
           </p>
-          <p style="text-align:center; margin-top:1em; color: var(--text-light); font-size:0.85em; font-style:italic;">
-            Retargeting carries the lift. Combined views hide it.
+          <p style="text-align:center; margin-top:1.2em; color: var(--text-light); font-size:0.8em;">
+            Retargeting +21pp guid lift (real but selection-inflated).<br>
+            Stage 1 prospecting −0.06pp (zero incremental lift at high intent).<br>
+            Prospecting all stages averages to +0.78pp; "all campaigns" reads +3.12pp.
+          </p>
+          <p style="text-align:center; margin-top:0.9em; color: var(--text-light); font-size:0.65em;">
+            30 advertisers · 7-day window · 4 segments · 23 advertisers run retargeting · 0 single-advertiser dominance flags.
           </p>
         </section>
         """,
