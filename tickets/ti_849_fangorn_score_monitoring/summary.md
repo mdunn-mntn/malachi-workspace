@@ -11,6 +11,20 @@
 
 ---
 
+## Methodology (revised 2026-05-01 PM, per user direction)
+
+Two methods only:
+
+1. **Descriptive pre/post KPIs** ([queries/ti_849_pre_post_summary.sql](queries/ti_849_pre_post_summary.sql) + daily/CG variants). Volume context only — NOT a lift claim. Spend confound is real and the user explicitly rejected this as a headline.
+
+2. **CausalImpact synthetic control** per (treated AID, metric) — TI-748 / TI-542 / TI-803 / TI-504 pattern. Predicts what the advertiser's daily IVR/CVR/ROAS/CPA/CPV would have been WITHOUT Fangorn, using non-Fangorn advertisers as platform covariates plus holiday/lag/spend covariates. VIF → BIC → CausalImpact validation. Daily granularity (not weekly — post-period is too short).
+   - Query: [queries/ti_849_method3_covariate_pull.sql](queries/ti_849_method3_covariate_pull.sql)
+   - Pipeline: [artifacts/ti_849_method3_causal_impact.py](artifacts/ti_849_method3_causal_impact.py)
+
+**DEPRECATED — Method 2 within-AID DiD via TI-835 holdout + augmentor_log:** infeasible. Augmentor scan is TB-scale and can't run daily. CausalImpact's covariate matrix absorbs the same confounds (spend, seasonality, secular platform trends) without the data lift. File [queries/ti_849_method2_did_period_lift.sql](queries/ti_849_method2_did_period_lift.sql) kept as methodology trail; do not run.
+
+---
+
 ## 1. Introduction
 
 Fangorn — MNTN's first ML-based IP intent scoring model — launched 2026-04-30 (DAGs completed early 2026-05-01). Initial production rollout flipped 3 Tier-1 advertisers to `vertical_data_source = 46` in `audience.advertiser_configurations`, triggering DS13 → DS46 audience swaps in the Audience Service. This ticket monitors KPI movements vs the pre-launch baseline and delivers a leadership writeup for Richard's D+7 review on 2026-05-07.

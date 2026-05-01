@@ -1,4 +1,9 @@
-/* ========================================================================
+/* DEPRECATED 2026-05-01 — augmentor_log scan is too expensive (TB-scale)
+   and not feasible to re-run daily. Replaced by Method 3 (CausalImpact
+   with platform covariates, TI-748 pattern). Keeping file as
+   methodology trail; do NOT run.
+
+   ========================================================================
    TI-849 Method 2 (Within-AID DiD) — period-lift building block
 
    Adapted from TI-837 v3 (`ti_837_lift_analysis_30adv_7day_v3.sql`).
