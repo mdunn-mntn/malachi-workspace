@@ -4,3 +4,4 @@
 2026-04-07 09.07.25 TGT Infrastructure Standup
 2026-04-08 | /Users/malachi/Documents/zoom/2026-04-08 11.00.18 Zoom Meeting/audio1721683560.m4a | tickets/ber_2250_incrementality_overhaul/ti_835_control_group_design/meetings/ti_835_02_matt_brorby_incrementality_2026_04_08.txt | both | Matt Brorby incrementality strategy sync
 2026-04-23 | /Users/malachi/Documents/zoom/2026-04-23 13.31.42 Kirsa Haenebalcke's Personal Meeting Room/audio1114700328.m4a | tickets/ti_803_buk_value_analysis/meetings/ti_803_01_kirsa_buk_experiment_design_2026_04_23.txt | both | Kirsa BUK + Fangorn + continuous scoring experiment design
+2026-05-04 | /Users/malachi/Documents/zoom/2026-05-04 10.02.32 Shareout Incrementality Analysis Results/audio1541017996.m4a | tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/meetings/ti_837_07_shareout_incrementality_results_2026_05_04.txt | both | Incrementality results shareout — bidder-level ghost bidding approved

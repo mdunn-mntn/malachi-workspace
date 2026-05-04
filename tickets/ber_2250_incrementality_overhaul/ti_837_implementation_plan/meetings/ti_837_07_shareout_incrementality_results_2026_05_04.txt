@@ -1,0 +1,272 @@
+[00:00] Cool. All right. Thanks, everybody, for joining. So, today, I'm going to go over the, basically,
+[00:05] results of the experiment, um, that I ran, um, to just determine how incremental, um,
+[00:10] our campaigns are. So, I'm going to jump right into it. Um, just wanted to focus on the results
+[00:18] first, and then we can go to the methodology if we got some time. Um, but, uh, here we go. Here's
+[00:25] the headline. Uh, peer prospecting drives pretty much zero incremental lift. Um, I tested 30
+[00:32] advertisers over seven days. Um, there's different ways that you could sample and average it out,
+[00:38] but, uh, it's pretty much the same. There's no incremental lift. So, I'd like to go into that.
+[00:44] Um, here are the actual numbers. So, um, retargeting is going to be anybody who's
+[00:50] creating a retargeting campaign. Um, all campaigns combined is just going to combine
+[00:54] the prospecting with retargeting. Prospecting you're seeing here is, um, exactly what it sounds
+[01:00] like. It's, it's all the prospecting campaigns, but I also decided to split it out by stages. So,
+[01:05] if we're unaware, um, prospecting campaigns have multiple stages. So, that includes
+[01:09] retargeting. Um, for example, stage two in prospecting requires that, um, an IP have had
+[01:15] a prior impression within the same campaign. So, it kind of gives us a little bit of an idea as to
+[01:20] what our, I guess, our individual impression, um, lift is. So, here are just some of these numbers.
+[01:30] Um, yeah, I don't know if there's any, any initial, uh, response to that because this is kind of the
+[01:37] big slide here. So, the big thing is that we really just aren't very incremental on, um,
+[01:45] our prospecting campaign. So, there's a lot of work that can be done, uh, to increase that.
+[01:50] I did want to bring up though that CTV, I was only able to do seven days at a time. Um, a big part
+[01:56] of that being the fact that the augmenter log is, uh, limited by the number of days you can go back,
+[02:02] but also it's just extremely large. It took about a couple hours to run just a subsample of, of
+[02:10] relatively smaller advertisers, not even our largest advertisers over a seven day period.
+[02:14] So, CTV in and of itself is probably, we'd probably see more lift just because there is
+[02:22] a longer time to convert and a longer time to visit on average for, um, just CTV across in
+[02:29] general. So, I'd like to do this for 30 days, but I do think these numbers are very, very strong,
+[02:33] um, to just kind of give us an idea of where we're at. Um, I don't expect them to change that much
+[02:39] more if I was going to go 30 day window, but, um, they would still be slightly different.
+[02:47] I, I think that's probably the biggest challenge that we've got with evaluating these results.
+[02:54] Like with that context, I am not surprised at all that retargeting performs so well because
+[03:01] you are catching them later in the customer journey. They've already been exposed in some
+[03:08] way, shape or form to the brand. And then you're coming and getting them later in the funnel.
+[03:14] They're now like further into consideration. You're catching them. That's far more likely to
+[03:16] You're catching them.
+[03:18] that's far more likely to drive something within the window that you're like within your measurement
+[03:24] window it's not about whether it's more likely to drive lift period it's just like within your
+[03:29] seven-day window they're probably gonna move faster um so i think we can take it with that
+[03:30] window, they're probably going to move faster. Um, so I think we can take it with that caveat,
+[03:39] right. I think the longer you draw out the window, retargeting probably doesn't change that much.
+[03:46] Prospecting starts to tick up would be my guess. Yeah. Can I, I guess my clarifying question on
+[03:51] that is when you, when you say a seven day window, are you talking about seven days of conversions,
+[03:56] visits, impressions, impressions, and then looking at the visits and conversions,
+[04:01] all associated with those impressions from a seven day window? Can you dive more into that?
+[04:06] Yes. So that would mean that you're, you're exactly correct. So that would mean that right
+[04:10] at the start, we would start to get, um, visits, um, and impressions or not impressions, but visits
+[04:17] from prior. Um, but that shouldn't matter though, because we're also going to capture, um, those
+[04:25] things in the holdout group. And so the lift is not going to matter between the two. Um, so if you
+[04:31] capture some visits in your, um, that happened from prior, then that's, that's not going to make
+[04:36] much of a difference. Um, the only thing that's a little bit different is that on the tail end
+[04:42] with impressions there, they were given a three day window afterwards of, uh, visit time. So that
+[04:48] those last impressions had the same amount of time as the previous ones. Um, but, um, yeah.
+[04:55] Yeah. I think I have more questions, but you mentioned you'll dive into the methodology
+[04:58] after this. So I'll hold on those. Yeah, absolutely. So we can go a little bit more
+[05:03] into it. So this is just more of an, an, um, overview of the last slide. So just retargeting
+[05:09] all campaigns, prospecting, and then stage one only. Um, this is how I measured it. So this is
+[05:17] yeah, go ahead. Sorry. Just, just before we start talking about the specifics here. Um,
+[05:23] so basically the headline is the way we are doing prospecting right now is not incremental.
+[05:30] Correct. At all. Okay. Very, very small. I mean, I wouldn't say it's zero percent incremental.
+[05:35] Um, I do want to call out one thing is that based on the power of this, we can say with pretty strong
+[05:44] confidence that this number is, is relatively right. Whether I can say this exact percentage,
+[05:50] like 0.78, you know, percentage points is the exact lift I can't because I don't have enough,
+[05:56] um, data, but it's, it's a good metric to say generally it's, it's pretty unincremental at all.
+[06:02] Correct. Um, so yeah, here's the methodology. Um, I mean, there's a lot of things to go into,
+[06:09] but you can just see how I split out. So prospecting is defined by, uh, this,
+[06:14] these filters campaigns, um, stage one and retargeting. So, um, I did want to call out
+[06:22] two. There was question whether or not when we do a, um, retargeting campaign. So somebody gives us
+[06:28] a CRM list that there is a holdout there. There is a holdout. So there's a holdout in all campaigns,
+[06:30] There is a holdout.
+[06:31] So there's a holdout in all campaigns, meaning that somebody gives us a thousand people to target.
+[06:36] We will only target 900 of them, which also makes it a little bit harder to measure because we, depending on how large the list that people give us, the smaller than the sample we have of people that we can target.
+[06:45] list that people give us, the smaller than the sample we have of people that we can target.
+[06:53] I just want to call it as well that that 10% holdout is also valid for our other retargeting
+[07:00] objectives. So just something to think through as well. And, and from Malachi's findings,
+[07:05] like earlier, this was important from a, you know, how we model incrementality perspective
+[07:10] of making sure we're not including retargeting. Cause as you can see, right, obviously that's
+[07:14] driving a lot. You don't want that signal in our model, but, uh, interestingly to think through
+[07:19] as well, that, that the lift that Malachi is showing on retargeting is also based on like
+[07:25] that similar holdout methodology that we're seeing. So, um, you know, call, call it real,
+[07:31] that it fits the same methodology. Yeah. And I wanted to call it one more thing, Alex,
+[07:36] you may have remembered that at the beginning I said, I actually, I don't think the prospecting
+[07:40] is, uh, I think it is incremental. So, um, Alex actually pointed this out and is great, but
+[07:47] because we don't have a bitter level ghost bidding methodology, I have to include everybody
+[07:54] in the augmenter log. And so what was happening is that when I take the win rate from everybody
+[08:00] in the augmenter log, I'm actually diluting the, uh, lift because I'm including everybody.
+[08:09] But in reality, we don't win every single bid and we also don't bid on a hundred percent of people.
+[08:13] Right. So what I was doing is I was basically comparing a 100% group versus whatever our
+[08:19] campaigns would be. So in order to mitigate that, what I did is, um, I calculated the win rate of
+[08:26] the campaign for the group that we were at. And then I applied that same win rate to the, um, hold
+[08:33] out group that we would get from the augmenter log. So basically if we only targeted 1% of IPs,
+[08:38] I'd take a random sample of that from the augmenter log to calculate my rates for that group. So that
+[08:45] you'd get, um, a good estimate of what the actual lift was. So a lot of this stuff is just kind of
+[08:54] going into the biases and the, you know, actual causal effect here. I just wanted to call out that,
+[09:01] um, the, the 30 day thing that, again, this is only a seven day window. Um, I'd like to get more
+[09:07] advertisers in general, but really the big thing that I want to point out here is what do we do
+[09:14] about this, right? What is the, um, next steps here. And really what I think that we need to do
+[09:18] And really what I think that we need to do is, number one, is to implement a better level logic where every single time we make a bid, we put in, we create another table similar to the cost impression log where it's like, here's a ghost bid that we, you know, we store that each time so that we can determine these without using the Augmentor log.
+[09:34] bid that we, you know, and we store that each time so that we can, um, determine these without using
+[09:40] the augmenter log. Um, and then the second thing is of course, you know, how can we tackle this
+[09:47] incrementality thing, um, for targeting and my thought process. And this is also, this comes from
+[09:55] Matt and Alex as well is basically creating a model that's trained on incremental, um, visits
+[10:05] and then having some sort of either toggle where we let advertisers choose whether or not they want
+[10:10] to do incremental, um, campaigns versus their performance, right? Cause there's a balance
+[10:16] between the two. And I think that that probably solves the issue with, you know, determining
+[10:21] whether or not peak performance, um, versus high intent versus, you know, our mid intent, our
+[10:26] different audiences are incremental. Um, because obviously they are going to be more incremental
+[10:32] than high intent, right? If we just started targeting people that had no site visits, we'd
+[10:36] get high incrementality. So obviously we don't want to just do that. We know the balance of
+[10:41] performance. And I think that going forward, um, the solution is this, uh, building a model out for it.
+[10:48] Um, but yeah, I want to leave this open for discussion. There's a lot of different things
+[10:51] we can go into. So, um, but really the, the takeaway from this is that high intent is not
+[10:56] very incremental. Um, what, what should we do about now? That don't make sense to me. Um,
+[11:05] one thing that, uh, we also talked about that would be a part of this analysis, I believe
+[11:11] is helping us figure out the budget thresholds specifically for like around how much
+[11:19] budget people need to put behind if they want to kind of do any sort of incrementality analysis.
+[11:26] Did you get to that by any chance? Yes, correct. I did. So there's actually another deck that I
+[11:30] could share out here. I went over this with Al, um, the other day with Alex as well,
+[11:36] but the short answer is about $200,000 per month. And, um, there's a range and it depends on what
+[11:46] their IVR is. So if they have high IVR, it's going to be a little bit less. And it also depends on
+[11:52] what their lift is, right? So really it's this balance of, uh, for a completely new advertiser
+[11:58] that has a good project, it's very common that they might have very high lift. And so
+[12:03] the amount of money they need to spend is a lot less, but somebody as large as like, you know,
+[12:07] say McDonald's, for example, it's going to be really hard to determine their lift just because,
+[12:12] um, not determine their lift, but to reach that number, um, because it's going to be a lot less,
+[12:18] incremental. Most people understand McDonald's. So let me pull up this deck though, because I
+[12:24] actually do have it. And I'll just piggyback off of that from this conversation. It's old now. So
+[12:32] And I'll just piggyback off of that, uh, from this conversation. It's old now. So I think it
+[12:37] was like September, 2025, when this meeting happened with house to go through their methodology.
+[12:43] But in that meeting, they recommended to us customers who are spending $10 million a year
+[12:49] across all channels is where they see kind of sufficient power on their side to be comfortable
+[12:55] with those results. So I think that, you know, Malcolm, if you share this, I think it kind of
+[12:59] aligns, but this idea of like, uh, like sample sizing and power will be very important, either
+[13:05] how we communicate that to customers, if they're below that, or kind of how we approach that.
+[13:11] Yeah. And I think that's the big thing too, that, um, we were trying to discuss is that
+[13:17] in reality, when you're actually using rigid statistical tests, most, a lot of tests don't
+[13:22] really reach power. And so a lot of times people are looking at results and have no,
+[13:26] they think things look good and it's fine for kind of understanding which direction you're
+[13:31] going to go. But to say this causes this amount of lift, very few of our advertisers actually
+[13:36] even have that power on a month to month basis. So there's some different things that we can do to,
+[13:41] um, determine that, but it's kind of, it's always going to be a weight between it. It's going to
+[13:46] be like, Hey, you need to spend this X amount of money, unless they're already a large client.
+[13:49] It's for our smaller advertisers that want incrementality. We can run the test, but we
+[13:54] have to have this asterisk that says, well, you know, we can't say with definitive results that
+[13:59] these are, you know, this is a 4% lift or something like that, because it's just the
+[14:04] the limitations of this.
+[14:06] I'm sorry.
+[14:06] I'm having a hard time finding this deck.
+[14:08] I know I have the deck, but.
+[14:10] I have a quick question while you're searching for that.
+[14:14] And I apologize if this was already discussed previously, but as part of this analysis, did you look at all at different audience types on prospecting campaigns?
+[14:15] if this was already discussed previously, but, um, as part of this analysis, did you look at all
+[14:19] at different audience types on prospecting campaigns? So mountain matched versus interest
+[14:24] based audiences? No, I don't know if we have enough that are using just interests to run that
+[14:30] comparison, but no, I just separated this out by, um, what you saw there. So retargeting prospecting
+[14:37] and, um, I was going to split it up because I know that sometimes we have display only
+[14:43] for certain campaigns and we have CTV, but I didn't split it up any further than what I showed
+[14:48] you up there. Okay. I would be curious to know, um, if we have enough advertisers using interest
+[14:56] based audiences, I don't know if we do, but if we do, I'd be interested to see what that looks like
+[15:00] compared to a mountain matched audience. Can you define what you mean by interest space? Just like
+[15:07] some of the third party audiences? Yeah. So like historically all our campaigns before,
+[15:12] before mountain matched, all our campaigns were just using third party audiences. Um,
+[15:17] and they're typically a lot more broad and perform much worse from like a ROAS and CPA perspective.
+[15:24] But part of our hypothesis for lift tests is that those might do better. So I was curious if we can
+[15:31] do that internal analysis. I honestly don't know if we have enough advertisers with that are not
+[15:37] using mountain matched though. Okay. I don't know, Mike, if you know, top of mind, if we have
+[15:44] a meaningful number of advertisers that don't have mountain matched enabled, but
+[15:52] okay. Sorry, curse. I didn't cut you off here. Can you guys see this deck? Yeah. Okay. Perfect. I
+[15:57] just want to make sure. So yeah, I, I finally found it. It was on a different folder. I'm
+[16:02] I'm planning on making, uh, once we figure out what we're going to do afterwards, um, I was
+[16:07] planning on consolidating this into a single deck and the single thing and sharing it out, um, with
+[16:12] the incrementality stakeholders. Um, so yeah, we ran a couple of incrementality tests. Did they
+[16:19] have power? These did not have power. Um, some of the tests that we ran and I just want to get to
+[16:28] the, uh, actual results here. So here's, here's a pretty cool, uh, visualization here. And so on
+[16:35] the X axis, you'd see how much monthly spend estimated on average, right. Depending on their,
+[16:40] uh, visit rate, how much did they have to spend? And then you can see here, there's this, uh, MDE,
+[16:46] their minimal detectable effect. And so it kind of shows like where they would have to be. So for
+[16:51] example, if I'm looking here at the 50 K, right. The minimal detectable effect would be about 8%
+[16:56] lift. So if we didn't get that lift or higher, then we wouldn't be able to measure it. So let's
+[17:02] say the actual lift was actually 4%, right. It could definitely be, um, very valid and we're
+[17:08] doing a great job, but we just wouldn't be able to measure it based on, on power. And so really
+[17:14] for the most part, I would say our lift, depending on client, it varies. So it depends from client
+[17:21] to client, but a good rule of thumb is around 200 K based on averages, because we typically see
+[17:26] lift numbers are right around 4% to 5%. Um, on average, some of them are a lot larger than that,
+[17:32] but this would give us a good metric to understand how much we need to spend. So
+[17:37] it's a hard answer to say, this is how much you need to spend. It's, it's completely dependent
+[17:41] on the advertiser. Um, but it's a decent amount of money. It's not, you know, we're not going
+[17:46] to be able to do it with small advertisers that give us $5,000 for a month of spend.
+[17:51] Yeah. It makes sense. The number is a little higher than I expected, but that's fine. I,
+[18:01] It makes sense.
+[18:03] The number's a little higher than I expected,
+[18:05] but that's fine.
+[18:07] I trust where you...
+[18:08] I was like 100, but it's fine.
+[18:10] These numbers are actually a little bit lower than even what House recommended. So mine are about somewhere on the low end of what House said. So I think that makes me feel confident about it.
+[18:15] mine are about somewhere on the low end of what house said. So I think that makes me feel
+[18:21] confident about it. Yeah. Which is interesting because I know house is definitely running
+[18:25] tests for campaigns with less spend than that. Way less. Yeah. Um, not, not that they should be
+[18:35] or anything like that, but I, I do know that they probably say that's the best practice.
+[18:40] So then somebody comes along and says, we'll give you money to run a test and they say, okay,
+[18:44] sounds good. Um, well I have some worse news too, because this is based on visits. If we
+[18:45] well I have some
+[18:48] worse news too because this is based on visits if we wanted to do something like
+[18:52] incremental ROAS go ahead and multiply this number by five
+[18:56] that makes sense
+[18:58] so there's very few i think there's only like 10 i like i looked at all of it i think it's 10
+[19:05] it. I think it's 10 advertisers in total. It might be a little bit more than that,
+[19:08] that are spending that volume. So WGU is an example. So I could run a lift analysis on WGU.
+[19:14] Um, on their conversions too, but, um, yeah.
+[19:26] Uh, I actually have another list that I'll share with you. Uh, lift lab is doing a similar sort of
+[19:33] like which of your advertisers would be best fits for us to go and run tests for. And we gave them
+[19:40] a bunch of data and they've been looking at it and they spit back a list of 200 or something
+[19:47] advertisers stack ranked by their viability. WGU is at the top of that list purely by spend. I'm
+[19:55] sure, but I can share that with you guys too. And Malachi, if you could like cross-reference that.
+[20:00] Some of the things you were looking at, that would be interesting to see what you're finding compared to what they're seeing.
+[20:08] Yeah, absolutely. Um, so I think going forward from this, uh, again, you guys are seeing a lot of stuff in these slides and I could talk about them, but I think that it would be a bad use of time.
+[20:17] Um, if you guys really want to understand the methodology, I will happily send these to you guys afterwards. Um, but I think about going forward. Um, I believe that the most important thing that we can do is start figuring out how we can get this better level methodology out.
+[20:32] So probably working with, I don't know if that'd be Zach and Jordan. I don't know if that's the audience team. Um, but it's definitely gonna be at the better level and then maybe coming out with a schema.
+[20:43] So like where Alex and I are speaking with them about how we wanted to decide what that new table looks like so we can do these, um, easier. And then the second thing is going to be the, um, models that I talked about.
+[20:57] So it, how exactly that's going to look for our, um, advertisers. So whether or not we're going to build this into a model where we start to tweak incrementality based on campaigns, just like performance behind the scene, or whether or not we're going to have completely separate models, we say, okay, you're doing incrementality, you're doing performance. Um, either way though, I, they, we need to create a model to do that.
+[21:01] advertisers. So whether or not we're going to build this into a model where we start to
+[21:07] tweak incrementality based on campaigns, just like performance behind the scene,
+[21:11] or whether or not we're going to have completely separate models, we say, okay,
+[21:21] So, um, those seem like the two things that we need to go forward and, um, plan.
+[21:29] Yeah, that makes sense to me. That sort of aligns what we've been talking with Elon. There's a first ascent team being spawned around the incrementality. Uh, so yeah, that basically aligns with our, uh, plans here. Um, because obviously we cannot present people incrementality that will show that we are not incremental, right? Um, so yeah.
+[21:33] along there's a first ascent team being spawned around the incrementality uh so yeah that basically
+[21:40] aligns with our uh plans here um because obviously we cannot present people incrementality that will
+[21:52] And Cursa, here's just an interesting slide and, and get to, but, um, so you can compare the minimal detectable effect between visits and conversions. So you could see that you need really, really high, uh, conversion lift, at least on the scale that of the ones that I chose. This is not the case for much larger ones, but, um, yeah, very difficult to do conversion lift, um, with statistical rigor that is.
+[22:01] So you could see that you need really, really high conversion lift, at least on the scale
+[22:07] of the ones that I chose. This is not the case for much larger ones, but yeah. Very difficult to do
+[22:19] But you know what, I kind of feel like we work a little bit with vibes anyways. So I,
+[22:24] is this though, and I just want to make sure I'm understanding this correctly. Is this though, based on our current performance. So like if we were to find ways to improve how incremental our campaigns are based on the audiences that we're targeting, et cetera, does this minimal detectable effect.
+[22:44] Data improve, or can we, can we get where we need to be with lower budgets if we do better? Or is that
+[22:52] there is a way to do this. So at the advertiser level, no, the only thing that would change it is if their IVR or their conversion rate increased. So they just had really high conversion rate, like door dash or something like that. Right. Um,
+[23:03] the raw conversion, the raw conversion. Right. Okay. That's the only thing that changes it where it's, it's volume and rates, right. The only part our performance doesn't have impact on these minimums. No. So the only thing, thank you. Yeah. We could do something though. So what you could do is you won't be able to do it at the advertiser level, but if you were to grab a lot of advertisers that were similar, so like, it's like similar to our verticals. Like I said, we're targeting a higher budget marketing.
+[23:26] food delivery, um, bucket. We could put all of them together and then kind of have an overall lifts to say, Hey, this is on average for your type of advertisers. Here's what the lift is. And that's a way that we could reach that easier. But at the advertiser level, no, I'm not without it's kind of a workaround in terms of our performance.
+[23:31] similar to our verticals, right. But if we were to have like a, you know, food delivery, um,
+[23:37] bucket. We could put all of them together and then kind of have an overall lifts to say, Hey,
+[23:43] this is on average for your type of advertisers. Here's what the lift is. And that's a way that
+[23:48] we could reach that easier, but at the advertiser level, no, um, not without, you know, it's kind
+[23:54] of a work around it. Makes sense. Thank you.
+[24:08] So, on the ghost bidding side.
+[24:12] I think we are, you guys already started a threat with Trixie and Rokas probably, um, but Rokas, Zach, and I were talking about it like a month and a half ago, and they didn't put it on their roadmap, but also, I think they'll have some capacity.
+[24:19] But Rogus, Zach, and I were talking about it like a month and a half ago, and they didn't put it on their roadmap, but also I think they'll have some capacity to pick it up.
+[24:31] So we just got to go back to them and say, yeah, we want to prioritize getting that on the list.
+[24:38] Probably get done.
+[24:40] I don't know when, but they're open to it.
+[24:44] Mike and I scoped, Mike Dalton, I scoped that ghost bidder work as part of the Ascent team so we're prepared to take that on.
+[24:52] Okay. And do you have somebody from the bidder team?
+[24:59] We're negotiating that resourcing with Paolo right now. We believe we have good people from TI as well, assuming that we have like approval, blessing, advising power with Rokas.
+[25:13] So ideally someone from bidder, but feel like we're otherwise resourced if they, if they can't lend someone out.
+[25:21] Okay, okay, cool.
+[25:23] We should keep them in the loop on that though.
+[25:27] Definitely. I'll connect with Rokas. I think we can do it ourselves, but I looked at his like initial technical proposal. Seems pretty straightforward.
+[25:35] So we will just need somebody to do code reviews, basically.
+[25:39] Yeah, that's what I remember. The general consensus was that it wasn't overly complex for us to do it. They just needed some time to get it done.
+[25:50] And I shared out Rokas and Zach's write up from our conversation a month ago with Mike. So, obviously, we all have access to the same engineers, but the written down thought process we have as part of our documentation for this Ascent team as well.
+[26:06] Awesome.
+[26:09] And then for TI work, I think coming up with sort of a good sketch, which Matt, I know you had put together a sketch of what the modeling could look like to model for incrementality.
+[26:26] I'm going to defer to you guys to say like, all right, that's the plan. That's what we want to go after. And then we can figure out how does that fit into the roadmap of work that you guys have.
+[26:31] all right, that's the plan.
+[26:32] That's what we want to go after.
+[26:34] Um, and then we can figure out how does that fit into the, uh, into the roadmap
+[26:39] of work that you guys have.
+[26:42] Yeah, that sounds good.
+[26:44] Yeah.
+[26:45] Yeah, our current plan is to just roll it all up into that first Ascent team and have them kind of just log up in the virtual room and figure out incrementality.
+[26:59] Figure out how to get it done. Yeah.
+[27:04] Okay, so for media next steps for me, I'm going to combine both these decks. I wasn't planning on sharing the second one, but I'll put them both into one, probably create a summary about what we decided to do going forward.
+[27:16] And then I'll post that in the chat when I'm finished. And then, yeah, and then I think we have our sprint planning so we'll be able to throw these new tickets into this today.
+[27:27] So, thank you everybody for joining. I know we're at time, so.
+[27:31] Awesome.
+[27:32] Thanks.
+[27:33] Thank you very much for this.
+[27:35] Thanks.
