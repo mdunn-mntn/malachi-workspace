@@ -202,6 +202,30 @@ for credit). Used in incremental attribution analysis.
 Columns prefixed with `probattr_` = probabilistic attribution model metrics, as opposed to
 deterministic last-touch or last-tv-touch attribution.
 
+`summarydata.sum_by_*_by_day` (advertiser / campaign_group / campaign) exposes 20 `probattr_*`
+columns: `probattr_views`, `probattr_view_conversions`, `probattr_view_order_value`,
+`probattr_site_visitors`, `probattr_new_site_visitors`, `probattr_existing_site_visitors`,
+`probattr_new_visitors`, `probattr_last_touch_views`, `probattr_last_touch_view_conversions`,
+`probattr_last_touch_view_order_value`, plus `probattr_competing_*` mirrors of each. These are
+the right surface for ROAS/CPA-style modeling that needs probabilistically-attributed (rather
+than deterministic last-touch) outcome signals. Discovered TI-832 (2026-05-05).
+
+### sum_by_*_by_day post-BQ-migration column drops (TI-832, 2026-05-05)
+On `dw-main-silver.summarydata.sum_by_advertiser_by_day`, `sum_by_campaign_group_by_day`, and
+`sum_by_campaign_by_day`, the BQ migration **dropped** the cost-side duplicates of the spend
+columns:
+- `data_cost`, `fee_cost`, `partner_cost` — gone from all three views
+- `legacy_spend` — gone from `sum_by_campaign_group_by_day`
+
+The `*_spend` columns (`media_spend`, `data_spend`, `platform_spend`) remain and replace them.
+Any code with `SELECT *` followed by an explicit `*_cost` projection will crash. Caught
+3 prod failures in `feature_store_setup_model` DAG (`summary_advertiser_id`,
+`summary_campaign_group_id`, `summary_campaign_id`).
+
+`sum_by_advertiser_by_day` also exposes `raw_*` un-attributed metrics not present on the
+campaign / campaign_group views: `raw_conversions`, `raw_order_value`, `raw_visits`,
+`raw_new_site_visitors`, `raw_existing_site_visitors`. Plus `new_to_file` and `visitors`.
+
 ### attribution_model_id
 - `attribution_model_type_id = 0` should be treated as `1` (last-touch) — known business rule.
   See `ui_visits` column description comment.

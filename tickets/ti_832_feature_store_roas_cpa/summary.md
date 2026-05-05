@@ -51,11 +51,50 @@ Layer-1 source tasks (19): `guid_log_ip_advertiser_id_rollup`, `guid_log_adverti
 Layer-2 derived (7): `guid_log_derived_ip_vertical_id`, `guid_and_conv_log_derived_advertiser_id_dsc_id`, `guid_log_generic_penalty_derived_advertiser_id_dsc_id`, `site_visit_signal_derived_advertiser_id_dsc_id`, `core_derived_advertiser_id`, `core_derived_campaign_id`, `core_derived_campaign_group_id`.
 Layer-3 pivot (1): `guid_log_pivot_ip_vertical_id`.
 
-(Failing 3 to be identified next.)
+### 4.4 Failing tasks (last 3 prod runs, screenshot 2026-05-05)
+
+Three Layer-1 source tasks failing — `summary_advertiser_id`, `summary_campaign_group_id`, `summary_campaign_id`. The Layer-2 `core_derived_*` cascades are upstream-blocked, not independently failing.
+
+### 4.5 Root cause — post-BQ-migration column drop on `dw-main-silver.summarydata.sum_by_*_by_day`
+
+All three models do `SELECT *` from BQ, then explicitly project a fixed column list. The migration dropped the `*_cost` columns (and `legacy_spend` on campaign_group), so the explicit projection now references columns that don't exist.
+
+| Column projected in code | sum_by_advertiser_by_day | sum_by_campaign_group_by_day | sum_by_campaign_by_day |
+|--------------------------|:-:|:-:|:-:|
+| `data_cost`     | dropped | dropped | dropped |
+| `fee_cost`      | dropped | dropped | dropped |
+| `partner_cost`  | dropped | dropped | dropped |
+| `legacy_spend`  | n/a     | dropped | n/a     |
+
+The `*_spend` columns (`media_spend`, `data_spend`, `platform_spend`) **are** still present — the migration consolidated cost → spend. `legacy_spend` already has a defensive `if "legacy_spend" not in bq_df.columns` shim (lines 76–77 of `summary_campaign_group_id.py`) but the cost columns have no fallback, hence the crash.
+
+**Fix:** drop the four columns from the explicit `.select(...)` projection in the three model files. No downstream code references them (Layer-2 `core_derived_*` only reads spend/visit/conversion fields). Verify with grep before pushing.
+
+### 4.6 New columns in schema not yet projected (potential ROAS/CPA inputs)
+
+Discovered via the same schema diff. These are candidates for the broader ROAS/CPA feature work in Phase 2 of this ticket — particularly `probattr_*` and `raw_*` for un-attributed and probabilistically-attributed conversion/order signals.
+
+- **`probattr_*` (20 columns, all three views):** probabilistic-attribution variants of view/visit/conversion/order_value metrics — `probattr_views`, `probattr_view_conversions`, `probattr_view_order_value`, `probattr_site_visitors`, `probattr_new_site_visitors`, `probattr_last_touch_views`, `probattr_last_touch_view_conversions`, `probattr_last_touch_view_order_value`, plus `probattr_competing_*` mirrors of each.
+- **`raw_*` (advertiser only, 5 columns):** `raw_conversions`, `raw_order_value`, `raw_visits`, `raw_new_site_visitors`, `raw_existing_site_visitors` — un-attributed conversion/visit/spend signals.
+- **`new_to_file`, `visitors`** (advertiser only).
 
 ## 5. Solution
 
-(to be filled once schema fixes ship + ROAS/CPA features are added)
+### 5.1 Phase 1 — fix the column-drift crash (2026-05-05)
+
+Branch: `feature/ti-832-fix-summary-bq-column-drift` in airflow-ti (commit `06a98cf`).
+
+Patched four files (-17 lines, no additions):
+- `models/feature_store/feature_group_1_source/summary_advertiser_id.py` — drop `data_cost`, `fee_cost`, `partner_cost` from explicit `.select(...)`.
+- `models/feature_store/feature_group_1_source/summary_campaign_id.py` — same three.
+- `models/feature_store/feature_group_1_source/summary_campaign_group_id.py` — same three plus `legacy_spend`; remove the `legacy_spend` defensive shim that's now dead.
+- `utils_model/feature_store_core_campaign.py` — drop the same three from `SUMMARY_OUTCOME_METRIC_COLS` so Layer-2 `core_derived_*` doesn't crash on the next run with the now-missing parquet columns.
+
+Verified repo-wide grep returns no surviving references; all four files compile cleanly. No `dags/` changes (per prod-safety: Ryan owns DAG dep wiring).
+
+### 5.2 Phase 2 — ROAS/CPA features (pending)
+
+Audit `probattr_*`, `raw_*`, and goal-type-conditioned aggregates against PRO-118 / TI-639 needs; engineer net-new Layer-1 / Layer-2 models.
 
 ## 6. Questions Answered
 
