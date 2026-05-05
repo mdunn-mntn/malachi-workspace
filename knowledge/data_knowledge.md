@@ -870,9 +870,9 @@ Use `audience_segment_campaigns` + `audience_segments` instead.
 verify against `audience_segment_campaigns` for production analysis.
 
 ### Prospecting vs Retargeting (Audience Type)
-- `funnel_level = 1` = prospecting (never-served households)
-- `funnel_level = 2` or higher = retargeting
-- For RTC monitoring: always filter `funnel_level = 1`
+- **The prospecting/retargeting axis is `objective_id`, NOT `funnel_level`.** Use `objective_id IN (1, 5, 6)` for prospecting (or `NOT IN (2, 4, 7)` to exclude onsite, retargeting, ego). `funnel_level` is MNTN product stage (S1/S2/S3) — every stage contains both prospecting and retargeting campaigns. Verified empirically 2026-05-05: 21,639 retargeting campaigns sit inside `funnel_level=1` (~27% of Stage 1).
+- For RTC monitoring specifically: filter `funnel_level = 1 AND objective_id IN (1, 5, 6)` — RTC is a prospecting product at Stage 1.
+- **Anti-pattern:** filtering `funnel_level = 1` alone to mean "prospecting only" — it includes Stage 1 retargeting.
 
 ### Three Universal Rules for Audiences + Holdout (Zach Schoenberger, AUTHORITATIVE, 2026-04-30)
 Zach Schoenberger is the highest-confidence source for audience-platform questions — when in doubt, defer to him.
@@ -1206,7 +1206,7 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 
 ## Additional Gotchas (TI-748 findings)
 
-- **`funnel_level` is on `campaigns`, NOT `campaign_groups`**: `campaign_groups` has no `funnel_level` column. Use `campaigns.funnel_level = 1` for prospecting filter.
+- **`funnel_level` is on `campaigns`, NOT `campaign_groups`**: `campaign_groups` has no `funnel_level` column. Note: `funnel_level=1` ≠ "prospecting only" (Stage 1 also contains retargeting campaigns); for the prospecting/retargeting split use `objective_id IN (1, 5, 6)`. See "Prospecting vs Retargeting (Audience Type)" above.
 - **`agg__daily_sum_by_campaign` effective start: 2025-09-01**: Despite the GCP data floor of 2025-01-01, the aggregates table only has data from September 2025 onwards.
 - **`agg__daily_sum_by_campaign` STALE since 2026-03-31** (confirmed 2026-04-27, TI-837 Phase 2): MAX(day) is 2026-03-31; no April 2026 data. For analysis windows after 2026-03-31, use `cost_impression_log` directly (not aggregates) or `sum_by_campaign_by_day` (max=2026-04-14). Pipeline owner unknown — flag if blocking work.
 - **`uniques` in `agg__daily_sum_by_campaign` is unreliable for per-advertiser analysis**: The column exists but often contains zeros or values that don't aggregate meaningfully at the campaign level. Do not use VVR (vv/uniques) as a metric from this table.

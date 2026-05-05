@@ -91,7 +91,8 @@ These are the load-bearing MNTN incrementality lessons Scout should encode. Each
 - **Counterfactual exists per advertiser at IP level** — same point as 10% holdout but via a different mechanism
 
 ### Operational gotchas (would corrupt Scout's metric calculation)
-- **objective_id is unreliable** — use `funnel_level` for stage (Ray 2026-03-11). 48,934 S3 campaigns mis-tagged objective_id=1.
+- **Ray's `objective_id` bug (2026-03-11)** — ~48,934 S3 campaigns mis-tagged `objective_id=1` instead of `6`. The bug affects **stage classification only** (use `funnel_level` for stage). It does NOT corrupt the prospecting/retargeting split — both `objective_id=1` and `=6` are prospecting flavors. For the prospecting filter: `objective_id IN (1, 5, 6)` is correct.
+- **`funnel_level` ≠ "prospecting" filter** — `funnel_level` is MNTN product stage (S1/S2/S3); every stage contains both prospecting and retargeting campaigns. Verified 2026-05-05: 21,639 retargeting campaigns inside `funnel_level=1`. For prospecting weight, use `objective_id IN (1, 5, 6)`, not `funnel_level=1`.
 - **`fpa_advertiser_verticals.advertiser_name` is stale** — 79-82% of new advertisers have empty name since 2025-12-23. Always JOIN to `advertisers.company_name`.
 - **WGU (AID 31357) is ~30% of monthly spend** — if Scout normalizes anything cross-advertiser without filtering or weighting, WGU dominates.
 - **agg__daily_sum_by_campaign starts 2025-09-01**; `sum_by_campaign_by_day` is the right table for long pre-periods.
@@ -103,8 +104,8 @@ Reviewed Edgar's 8-metric cheat sheet against MNTN priors. Findings (full detail
 
 **Highest-impact corrections:**
 1. **Row 2 MDE formula** — `2/sqrt(N)` is the ~50%-power detection threshold, not 80% power. Standard 80%-power version is `≈ 4/sqrt(N)`. 600 conv/cell → real MDE ~16%, not 8%. Recommend rewriting or labelling explicitly.
-2. **Row 5 prospecting filter** — `objective_id` is broken (Ray, 2026-03-11: 48,934 S3 campaigns mis-tagged from UI migration). Use `funnel_level=1`. Also: tier diversity (% spend outside high-intent) is a better incrementality predictor than prospecting weight alone (TI-885).
-3. **Row 8 duration** — `window × 2` gives 4 weeks for a 14-day window, below MNTN's 6+2 standard. Floor at `max(window×2, 6 weeks)` active + 2 weeks post. Note TI-748's separate 4-week ramp-up exclusion.
+2. **Row 5 prospecting filter** — specify `campaigns.objective_id IN (1, 5, 6)` for the numerator (or `NOT IN (2, 4, 7)`). Do NOT use `funnel_level` — that's MNTN product stage; every stage contains both prospecting and retargeting (verified empirically 2026-05-05: 21,639 retargeting campaigns inside `funnel_level=1`, ~27% of Stage 1). Ray's 2026-03-11 bug (48,934 S3 campaigns tagged `objective_id=1` instead of `6`) doesn't bite the prospecting/retargeting split — both 1 and 6 are prospecting. The bug is a stage-classification problem, not a prospecting-filter problem. Also: tier diversity (% spend outside high-intent) is a better incrementality predictor than prospecting weight alone (TI-885).
+3. **Row 8 duration** — `window × 2` undershoots for short windows: 14-day window → 4 weeks (below MNTN's TI-885 standard of 6w active + 2w post); 7-day window → 2 weeks (way below). For 30d / 45d windows the formula is fine. The 6-week floor exists because ad delivery and CTV viewer behavior both need ~6 weeks to settle, independent of the attribution window. Fix: `max(window × 2, 6 weeks)` active + 2 weeks post. Separate concept worth noting: TI-748 found a 4-week ramp-up exclusion at the *start* of the test (bidder learning, audience scoring stabilization).
 
 **Recommended additions (gates that come *before* the table):**
 - **ITT on the 10% always-on holdout** — every MNTN advertiser already has this (Zach 2026-04-30). Should be the *first* feasibility check; geo-holdout only when ITT is too thin.
@@ -115,11 +116,11 @@ Reviewed Edgar's 8-metric cheat sheet against MNTN priors. Findings (full detail
 - **CTV vs display isolation** via `channel_id`.
 
 **Operational gotchas to encode:**
-- `objective_id` unreliable (use `funnel_level`)
 - `fpa_advertiser_verticals.advertiser_name` stale (JOIN to `advertisers.company_name`)
 - WGU = 30% of spend (normalization risk)
 - `agg__daily_sum_by_campaign` starts Sep 2025; `sum_by_campaign_by_day` for long pre-periods
 - Uniques in `agg__daily_sum_by_campaign` are unreliable
+- Ray's `objective_id` bug (~48,934 S3 campaigns tagged `objective_id=1` instead of `6`) — affects stage classification (use `funnel_level` for stage), not the prospecting/retargeting split (both `objective_id=1` and `=6` are prospecting flavors)
 
 ## 6. Questions Answered
 

@@ -40,9 +40,18 @@ Aligned. The 2-3+ floor and 6 ceiling are reasonable. One thing missing: **reach
 
 This is the **most load-bearing metric on the page** — directly validates BER-2250 Lesson 2 and TI-835 ("Two Stories"). Two refinements:
 
-1. **`objective_id` is unreliable for stage classification.** Per Ray (2026-03-11), 48,934 S3 ("Multi-Touch Plus") campaigns are mis-tagged objective_id=1 from a UI bug during TV Only migration. Use **`campaigns.funnel_level = 1`** as the prospecting filter, not objective_id. Otherwise this metric is dirty.
+1. **Use `objective_id`, not `funnel_level`, for the prospecting filter.** They're independent axes:
+   - `funnel_level` = MNTN product stage (S1/S2/S3) — **every stage contains both prospecting and retargeting campaigns**. Verified: 21,639 retargeting campaigns sit inside `funnel_level=1`.
+   - `objective_id` = literal targeting type — this is the prospecting/retargeting split.
 
-2. **High-prospecting ≠ high-incrementality on its own.** A 100%-prospecting advertiser that's all *high-intent* prospecting will still show low lift. TI-885 finding: most MNTN advertisers target high-intent only, and tier diversity (mid + low intent share) is the better incrementality predictor. Consider replacing or augmenting with **% spend outside high-intent tiers**.
+   Correct filter for the numerator:
+   ```sql
+   campaigns.objective_id IN (1, 5, 6)   -- prospecting at S1/S2/S3
+   -- equivalently: NOT IN (2, 4, 7)     -- exclude onsite, retargeting, ego
+   ```
+   Ray's 2026-03-11 bug (48,934 S3 campaigns tagged `objective_id=1` instead of `6`) **doesn't bite here** — both 1 and 6 are prospecting flavors, so the bug only corrupts stage analysis, not the prospecting/retargeting split.
+
+2. **High-prospecting ≠ high-incrementality on its own.** A 100%-prospecting advertiser that's all *high-intent* prospecting will still show low lift. TI-885 finding: most MNTN advertisers target high-intent only, and tier diversity (mid + low intent share) is the better incrementality predictor. Consider replacing or augmenting with **% spend outside high-intent IP-buckets**.
 
 ### Row 6 — Conversions per $1K
 
@@ -57,13 +66,33 @@ Aligned, but **scope this to test type**. CTV share matters for *aggregate / pre
 
 ### Row 8 — Minimum test duration = window × 2
 
-Aligned with **BER-2250 Lesson 5** and **TI-885** (short tests fail). One adjustment:
+The formula is right *in spirit* (you need ~2× the conversion window so attribution can play out) but it produces durations that are too short when the conversion window itself is short. The "× 2" rule binds for long windows; for short windows, a flat 6-week floor needs to bind instead.
 
-- TI-885 standard is **6 weeks active + 2 weeks post-treatment**, regardless of conversion window.
-- For a 14-day window, "× 2" gives 28 days = 4 weeks — **shorter than MNTN's standard**.
-- For a 30-day window, "× 2" gives 60 days ≈ 8.5 weeks — fine.
+What `window × 2` gives across realistic conversion windows, vs MNTN's standard from TI-885:
 
-Recommend a floor: `max(window × 2, 6 weeks active) + 2 weeks post`. Also, **TI-748 found a 4-week post-launch ramp-up window** where new-campaign noise dominates — exclude that from the analysis (separate from the 2-week post-treatment window).
+| Conversion window | Formula gives | In weeks | TI-885 standard | Verdict |
+|---|---|---|---|---|
+| 7 days (visits) | 14 days | 2 weeks | 6w active + 2w post | **Way too short** |
+| 14 days (visits / light conv) | 28 days | 4 weeks | 6w active + 2w post | **Too short** |
+| 30 days (conversions) | 60 days | ~8.5 weeks | 6w active + 2w post | Fine |
+| 45 days (slow conv, CTV) | 90 days | ~13 weeks | 6w active + 2w post | Fine |
+
+The TI-885 6-week floor exists for two reasons that aren't captured by `window × 2`:
+
+1. **Steady-state takes time.** Ad delivery isn't instantly even across geos. New tests take a few weeks for impressions and frequency to stabilize across cells. Tests shorter than this are dominated by ramp-up noise rather than treatment effect.
+2. **CTV viewer behavior.** Most conversions following a CTV impression happen well after the impression — sometimes weeks later. Even with a 14-day attribution window, the 14 days of post-impression observation only fully accumulate if the impression happened *before* the last 14 days of the test. A 4-week test essentially throws away the second half of the impressions.
+
+**Recommended formula:**
+
+> **Minimum duration = `max(conversion_window × 2, 6 weeks)` active treatment + 2 weeks post-treatment observation.**
+
+For 30d / 45d conversion windows, the `× 2` rule still binds (it's the more conservative number). For 7d / 14d windows, the 6-week floor binds.
+
+**Related note** (separate exclusion, worth Scout knowing): TI-748 found that the **first 4 weeks of a new campaign are dominated by ramp-up noise** (bidder learning, audience scoring stabilization, frequency capping kicking in). This is *separate* from the post-treatment observation window — it's an exclusion at the *start* of the test, not the end. A fully rigorous version:
+
+> 4w ramp-up exclusion + 6w active measurement + 2w post-treatment observation = **12 weeks total minimum**.
+
+That's stricter than most advertisers will tolerate, so it's a confidence-band item rather than a stop-the-test rule. Scout could surface it as: "test will be measurable at 8 weeks, most accurate at 12."
 
 ---
 
