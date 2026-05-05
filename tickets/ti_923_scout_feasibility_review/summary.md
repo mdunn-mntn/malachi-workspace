@@ -26,12 +26,11 @@ He asked me on 2026-04-30 (verbally, in the TI-837 team meeting) to review his "
 
 ## 3. Plan of Action
 
-1. ⬜ Get Google Doc link from user/Slack
-2. ⬜ Read Edgar's proposed metrics; categorize by what each is trying to predict (power, audience fit, KPI volume, geo structure, etc.)
-3. ⬜ Cross-reference each metric against the priors below; flag gaps and contradictions
-4. ⬜ Draft feedback (terse, bulleted, doc-comment-ready)
-5. ⬜ Deliver as doc comments + Slack reply
-6. ⬜ Post Jira progress comment; close ticket
+1. ✅ Get doc from user (`artifacts/edgar_ctv_incrementality_cheat_sheet.docx`)
+2. ✅ Read metrics; map each to the relevant prior
+3. ✅ Draft per-row comments + Slack reply (`artifacts/ti_923_feedback_doc_comments.md`, `artifacts/ti_923_slack_reply_draft.md`)
+4. ⬜ Deliver to Edgar (doc comments + Slack reply) — pending Google Doc URL or Edgar's preferred channel
+5. ⬜ Post Jira progress comment; close ticket
 
 ## 4. Priors to Validate Against
 
@@ -100,11 +99,34 @@ These are the load-bearing MNTN incrementality lessons Scout should encode. Each
 
 ## 5. Solution
 
-(filled after review)
+Reviewed Edgar's 8-metric cheat sheet against MNTN priors. Findings (full detail in `artifacts/ti_923_feedback_doc_comments.md`):
+
+**Highest-impact corrections:**
+1. **Row 2 MDE formula** — `2/sqrt(N)` is the ~50%-power detection threshold, not 80% power. Standard 80%-power version is `≈ 4/sqrt(N)`. 600 conv/cell → real MDE ~16%, not 8%. Recommend rewriting or labelling explicitly.
+2. **Row 5 prospecting filter** — `objective_id` is broken (Ray, 2026-03-11: 48,934 S3 campaigns mis-tagged from UI migration). Use `funnel_level=1`. Also: tier diversity (% spend outside high-intent) is a better incrementality predictor than prospecting weight alone (TI-885).
+3. **Row 8 duration** — `window × 2` gives 4 weeks for a 14-day window, below MNTN's 6+2 standard. Floor at `max(window×2, 6 weeks)` active + 2 weeks post. Note TI-748's separate 4-week ramp-up exclusion.
+
+**Recommended additions (gates that come *before* the table):**
+- **ITT on the 10% always-on holdout** — every MNTN advertiser already has this (Zach 2026-04-30). Should be the *first* feasibility check; geo-holdout only when ITT is too thin.
+- **Pre-period availability** — ≥26/52 weeks in `sum_by_campaign_by_day` (not `agg__daily_sum_by_campaign`).
+- **Attribution-incrementality tension flag** — TI-835 "Two Stories." High-attribution advertisers expected to show lower lift even at sufficient power.
+- **Multi-KPI breadth** — BER-2250 Lesson 4 (CTV impact often outside primary KPI).
+- **Spend stability across the test window** — TI-748 (pause/scale corrupts CausalImpact).
+- **CTV vs display isolation** via `channel_id`.
+
+**Operational gotchas to encode:**
+- `objective_id` unreliable (use `funnel_level`)
+- `fpa_advertiser_verticals.advertiser_name` stale (JOIN to `advertisers.company_name`)
+- WGU = 30% of spend (normalization risk)
+- `agg__daily_sum_by_campaign` starts Sep 2025; `sum_by_campaign_by_day` for long pre-periods
+- Uniques in `agg__daily_sum_by_campaign` are unreliable
 
 ## 6. Questions Answered
 
-(filled after review)
+- **Q:** Is Edgar's MDE formula correct?
+  **A:** It's the detection threshold (~50% power, 95% CI half-width on a Poisson count), not the 80%-power MDE. Standard formula at α=0.05/two-tailed/80%-power is `(z_{α/2}+z_β) × sqrt(2/N) ≈ 4/sqrt(N)`. Edgar's number is optimistic by ~2×.
+- **Q:** What's missing from the cheat sheet?
+  **A:** ITT viability on the existing 10% holdout (most consequential omission), pre-period data availability gate, attribution-incrementality tension flag, multi-KPI breadth, spend stability, CTV/display isolation. Plus operational dirty-data gotchas (objective_id, advertiser_name staleness, WGU normalization).
 
 ## 7. Data Documentation Updates
 
