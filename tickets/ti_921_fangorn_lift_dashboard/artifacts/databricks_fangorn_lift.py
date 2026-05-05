@@ -499,10 +499,23 @@ ci_results
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## 6. Combined readout
+# MAGIC ## 6. Combined readout — CausalImpact (headline) + pre/post (comparison)
+# MAGIC
+# MAGIC Output column order is intentional: CausalImpact rel_effect / p / CrI
+# MAGIC come first per metric (the lift claim), then pre/post pct_change for
+# MAGIC the same metric (the naive baseline). Pre/post serves both as
+# MAGIC comparison and as a backstop where CI couldn't fit (e.g., constant
+# MAGIC zero series).
 
 # COMMAND ----------
-# DBTITLE 1,Combined view: pre/post + CausalImpact side by side
+# DBTITLE 1,Combined view: CausalImpact-first, pre/post next to it
+
+# Identifying / context columns up front
+CONTEXT_COLS = ["advertiser_id", "advertiser_name", "cohort", "flip_date",
+                "pre_days", "post_days"]
+# Per-metric column order: CI (rel_effect, p_value, post_n_days) then
+# pre/post (pre, post, pct_change). This is what stakeholders read.
+METRIC_ORDER = ["ivr", "cvr", "roas", "cpa", "cpv"]
 
 if not ci_results.empty:
     ci_pivot = ci_results.pivot_table(
@@ -510,7 +523,8 @@ if not ci_results.empty:
         columns="metric",
         values=["rel_effect", "p_value", "post_n_days"],
     )
-    ci_pivot.columns = ['_'.join(map(str, c)).strip() for c in ci_pivot.columns]
+    ci_pivot.columns = ['ci_' + '_'.join(map(str, c)).strip()
+                         for c in ci_pivot.columns]
     ci_pivot = ci_pivot.reset_index()
     combined = pre_post.merge(
         ci_pivot,
@@ -518,8 +532,21 @@ if not ci_results.empty:
         how="left",
     )
 else:
-    print("[combined] No CausalImpact fits — outputting pre/post only.")
+    print("[combined] No CausalImpact fits — outputting pre/post only "
+          "(probably running locally on incompatible pandas; use Databricks).")
     combined = pre_post.copy()
+
+# Reorder columns: context, then for each metric: ci_rel_effect, ci_p_value,
+# ci_post_n_days, then pre_post pre / post / pct_change.
+ordered = list(CONTEXT_COLS)
+for m in METRIC_ORDER:
+    for col in [f"ci_rel_effect_{m}", f"ci_p_value_{m}", f"ci_post_n_days_{m}",
+                f"{m}_pre", f"{m}_post", f"{m}_pct_change"]:
+        if col in combined.columns:
+            ordered.append(col)
+# Append remaining columns (volume metrics etc.) at the end
+ordered += [c for c in combined.columns if c not in ordered]
+combined = combined[ordered]
 
 combined.to_csv(OUTPUT_DIR / "ti_921_combined.csv", index=False)
 print(f"Wrote {OUTPUT_DIR / 'ti_921_combined.csv'}")
@@ -527,16 +554,22 @@ combined
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## 7. What to share
+# MAGIC ## 7. What to share with the team
 # MAGIC
-# MAGIC - **Slack/Jira summary:** point at the rows in `ti_921_combined.csv` and
-# MAGIC   call out anything where pre/post movement is >20% AND CausalImpact
-# MAGIC   p-value < 0.10. Either condition alone is suggestive; both together
-# MAGIC   is signal.
+# MAGIC The headline numbers are CausalImpact's `ci_rel_effect_*` columns —
+# MAGIC that's the lift claim. Pre/post sits next to them so the audience
+# MAGIC can see how much the synthetic control changes the answer.
+# MAGIC
+# MAGIC - **Slack/Jira summary:** lead with CausalImpact rel_effect ± CrI for
+# MAGIC   IVR and CVR; mention pre/post `pct_change` if it disagrees materially
+# MAGIC   ("naive pre/post said +25% IVR but CausalImpact says +8% — most of
+# MAGIC   the apparent lift was platform tailwind").
 # MAGIC - **Per-advertiser plots:** the CausalImpact `*.png` files in `outputs/`
-# MAGIC   show actual vs counterfactual + cumulative effect. These are what
-# MAGIC   leadership wants to see.
-# MAGIC - **Final readout per cohort:** when a cohort hits 4 weeks post-flip
-# MAGIC   (TI-780 maturity rule), do a one-pager: pre/post table, three CI plots
-# MAGIC   for the most-moved metrics, two-sentence interpretation, list of
-# MAGIC   advertisers in the cohort.
+# MAGIC   show actual vs counterfactual + cumulative effect. These are the
+# MAGIC   exec-credible visualization — drop them straight into a deck.
+# MAGIC - **Don't trust early reads.** With only 3-7 post days, CrIs will be
+# MAGIC   wide and most p-values won't clear 0.10. Treat as directional only.
+# MAGIC   Cohort matures at 4 weeks post-flip (TI-780).
+# MAGIC - **Final per-cohort readout:** at 4 weeks, one-pager — three CI plots
+# MAGIC   for the biggest-moving metrics, a small table of CI rel_effect vs
+# MAGIC   pre/post pct_change side-by-side, two-sentence interpretation.

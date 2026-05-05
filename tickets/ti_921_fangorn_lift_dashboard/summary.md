@@ -11,7 +11,9 @@
 
 ## 1. Introduction
 
-Fangorn (DS46) launched 2026-04-30 to 3 Tier-1 advertisers. Tier-1 expansion to ~369 advertisers (44% of fleet) is staged across coming weeks; Tier 2 (40%) and Tier 3 (16%) follow. TI-849 built the measurement infrastructure (per/post + CausalImpact synthetic control) for the launch trio. **TI-921 turns that into a wave-aware, durable evaluation system** — one that picks up new flips automatically, normalizes results across cohorts that flipped on different days, and surfaces results without Malachi pulling weekly.
+Fangorn (DS46) launched 2026-04-30 to 3 Tier-1 advertisers. Tier-1 expansion to ~369 advertisers (44% of fleet) is staged across coming weeks; Tier 2 (40%) and Tier 3 (16%) follow. TI-849 built the measurement infrastructure (CausalImpact synthetic control + pre/post comparison) for the launch trio. **TI-921 turns that into a wave-aware, durable evaluation system** — one that picks up new flips automatically, normalizes results across cohorts that flipped on different days, and surfaces results without Malachi pulling weekly.
+
+**Methodology framing (TI-921):** CausalImpact synthetic control is the **headline lift claim**. Pre/post is reported alongside it as the **naive comparison** so stakeholders can see how much the synthetic control changes the answer (and so we have a backstop for AIDs/metrics where CI can't fit, like Big Blue Bubble's CVR). This reverses TI-849's framing — at TI-849 time we had only 1-7 days post and CI was too thin to lead with; at TI-921 cadence we'll have 4+ weeks per cohort.
 
 Two deliverables:
 1. **Hand-off to Alex Knorr** — runnable in Databricks, fully documented, so he can produce results during Malachi's OOO.

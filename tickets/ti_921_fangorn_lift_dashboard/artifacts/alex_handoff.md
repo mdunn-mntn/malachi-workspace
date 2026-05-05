@@ -69,16 +69,20 @@ What we won't see, intentionally:
 
 ## 2. What we measure
 
-### Two methods, paired
+### Two methods — CausalImpact is the headline, pre/post is the comparison
 
-You'll see both in the notebook. They answer different questions:
+You'll see both in the notebook. They answer related questions; we report both because the *gap between them* is itself informative.
 
-| Method | What it answers | Strengths | Weaknesses |
-|---|---|---|---|
-| **(1) Pre/post KPIs per AID** | "Did this advertiser's IVR/CVR/etc. move after we flipped them?" | Easy to read; matches TI-221/TI-270 (Jaguar) precedent that leadership trusts. | Confounded by spend swings, seasonality, calendar effects. NOT a lift claim — volume context only. |
-| **(2) CausalImpact synthetic control per (AID, metric)** | "What WOULD this advertiser's IVR have been without the flip, and how does the actual compare?" | Absorbs platform-wide trends, seasonality, spend confounds. Produces 95% credible intervals + p-values. | Computationally heavier; harder to explain. Needs ≥60 days pre-period. |
+| Method | What it answers | Role in the readout |
+|---|---|---|
+| **(1) CausalImpact synthetic control per (AID, metric)** *(headline)* | "What WOULD this advertiser's IVR have been without the flip, and how does the actual compare?" Uses non-Fangorn advertisers + holiday/lag/spend covariates as a synthetic control. Produces a relative effect, a 95% credible interval, and a p-value. | **The lift claim.** This is what we report up. Controls for spend swings, seasonality, and platform-wide trends that contaminate naive comparisons. |
+| **(2) Pre/post KPIs per AID** *(comparison)* | "Did this advertiser's IVR/CVR/etc. move after we flipped them, ignoring everything else?" | **The naive baseline.** What stakeholders would see if they did the math themselves. We show it next to the CI number so the audience can see how much the synthetic control changes the answer. |
 
-The user-facing headline is method 1. Method 2 is the defensible-against-skeptics check we ship in the appendix.
+**Why this framing matters:** if pre/post says +25% IVR but CausalImpact says +8%, the gap is the story — most of what looks like Fangorn lift was actually platform-wide tailwind. Conversely, if pre/post says -5% but CausalImpact says +12%, Fangorn worked despite a headwind. The two together are more persuasive than either alone.
+
+**Pre/post also fills gaps where CI can't fit.** When an advertiser has constant data (Big Blue Bubble's CVR is always 0 because they have no pixel), CausalImpact errors out. Pre/post still reports "0% pre, 0% post" — which is the honest answer. So pre/post doubles as a backstop.
+
+**CausalImpact early-window caveat:** with only 3-7 days post-flip, credible intervals will be wide and most p-values won't clear 0.05. That's expected and honest. Treat early reads as directional; the proper readout is at 4 weeks post (TI-780 maturity rule), when CI's CrI tightens.
 
 ### KPI suite
 - **Volume:** impressions, uniques (HLL), VVs (clicks + views + competing_views), conversions, order_value, spend.
@@ -165,19 +169,22 @@ I copied the CausalImpact pipeline from TI-849 verbatim — same VIF → BIC →
 - **BQ from Databricks:** the workspace already has a BQ service account configured for read access — confirm with Ryan or the data-platform channel if you hit a permissions error.
 - **BQ from laptop:** `gcloud auth application-default login` once, then use the `google-cloud-bigquery` Python client.
 
-### CausalImpact compatibility note (read this before troubleshooting fits)
+### CausalImpact compatibility note — IMPORTANT (CI is the headline; this has to work)
 
-The published `causalimpact` 0.1.1 (PyPI) was written against pandas 1.x APIs and breaks in places under pandas ≥2.1. **On Databricks ML runtimes (≤14.x) it works out of the box** because those runtimes ship pandas 1.5 / 2.0. On a fresh laptop with current pandas it fails with errors like `KeyError: 0`, `applymap`, or `cannot concatenate object of type ndarray`.
+The published `causalimpact` 0.1.1 (PyPI) was written against pandas 1.x APIs and breaks under pandas ≥2.1 with errors like `KeyError: 0`, `applymap`, or `cannot concatenate object of type ndarray`. **On Databricks ML runtimes (≤14.x) it works out of the box** because those runtimes ship pandas 1.5 / 2.0. **Run this on Databricks** — that's the supported path.
 
-If you need to run locally:
+If you need to run locally for any reason, use a pinned venv:
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install 'pandas<2.0' causalimpact google-cloud-bigquery statsmodels matplotlib numpy
 ```
 
-The notebook has a small monkeypatch shim for the most common breakage (`DataFrame.applymap`, positional Series indexing). If you hit a new compat error, the cleanest fix is the venv above; trying to patch the library further is whack-a-mole.
+The notebook has small monkeypatch shims for the most common breakages (`DataFrame.applymap`, positional Series indexing). Anything beyond those — go to the venv.
 
-**Pre/post (Method 1) has no such constraint** — it's pure pandas + numpy and works on any reasonable environment. If CI is unavailable, you still have the headline numbers.
+**If CI fails for a specific (AID, metric):** the notebook catches the exception per-fit and continues. Pre/post for that row still reports — that's what makes pre/post the backstop. Common reasons CI fails:
+- "Input response cannot be constant" — the metric series is all zeros (e.g., Big Blue Bubble's CVR; no pixel firing). Expected; just rely on pre/post.
+- "exog contains inf or nans" — covariate quality issue, usually for AIDs with sparse history. Skip and note.
+- Insufficient pre-days — fewer than 30 daily observations before flip. Either extend the panel window in the SQL (`window_start = '2026-01-01'`) or accept the AID as not-yet-evaluable.
 
 ---
 
@@ -269,7 +276,7 @@ These are mostly inherited from TI-849 — flagged here to keep them from biting
 1. **Cadence:** weekly run, or trigger-on-new-cohort-flip? My default is weekly; lighter ops, plus we want trend lines anyway.
 2. **Mode dashboard ownership:** you take it on, or pair with whoever owns Mode for the team?
 3. **Cohort definition:** treat all 3 May-1 AIDs as a single cohort, or each AID a cohort of one? My default is single cohort per flip date — easier to compare cohorts to each other.
-4. **Failure threshold:** what move triggers a Slack escalation? My default: pre→post change >20% in any direction on IVR or CVR for an advertiser with `has_conversion_pixel = true`.
+4. **Escalation threshold:** what triggers a Slack ping? My default: CausalImpact `rel_effect` outside ±15% on IVR or CVR with p < 0.10, OR pre/post moves more than 20% with no CI-confirmed direction (means a confound we don't understand).
 5. **What to put in the archive view's frozen schema:** I have a draft in `mode_dashboard_plan.md` — would value your input on which fields are load-bearing.
 6. **Tier 2 timing:** do we have any visibility on when Tier 2 starts flipping? Affects how soon the wave-aware infra has to be battle-tested.
 

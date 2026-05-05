@@ -17,23 +17,28 @@ The third point is what makes a dashboard worth building (vs just emailing pre/p
 ## Three views
 
 ### View 1: Live cohort overview
-**Default landing page.** One row per (cohort, advertiser).
+**Default landing page.** One row per (cohort, advertiser). CausalImpact columns lead — they're the lift claim. Pre/post sits next to them as the naive comparison.
 
-| Column | Source |
-|---|---|
-| Cohort label | wave_config.csv |
-| Advertiser name | wave_config.csv → advertisers.company_name |
-| Flip date | wave_config.csv |
-| Days since flip | computed |
-| Maturity (D+1..D+27 / Mature) | computed: 4-week rule per TI-780 |
-| Impressions pre / post / Δ% | pre_post.csv |
-| IVR pre / post / Δ% (with conditional formatting) | pre_post.csv |
-| CVR pre / post / Δ% (muted if no pixel) | pre_post.csv + wave_config.has_conversion_pixel |
-| ROAS pre / post / Δ% (muted if no $) | pre_post.csv + wave_config.has_dollar_value |
-| CausalImpact rel_effect (IVR) ± 95% CrI | ci_results.csv |
-| CausalImpact p-value (IVR) | ci_results.csv |
+| Column | Source | Notes |
+|---|---|---|
+| Cohort label | wave_config.csv | |
+| Advertiser name | wave_config.csv → advertisers.company_name | |
+| Flip date | wave_config.csv | |
+| Days since flip | computed | |
+| Maturity (D+1..D+27 / Mature) | computed: 4-week rule per TI-780 | Mature rows get a green badge |
+| **CausalImpact IVR rel_effect ± 95% CrI** | ci_results.csv | **Headline.** Conditional formatting on rel_effect |
+| **CausalImpact IVR p-value** | ci_results.csv | <0.05 bold; 0.05-0.10 italic; >0.10 muted |
+| Pre/post IVR Δ% | pre_post.csv | The naive comparison; flag if disagrees with CI rel_effect by >10pp |
+| **CausalImpact CVR rel_effect ± 95% CrI** | ci_results.csv | Muted if no pixel |
+| **CausalImpact CVR p-value** | ci_results.csv | |
+| Pre/post CVR Δ% | pre_post.csv | |
+| **CausalImpact ROAS rel_effect ± 95% CrI** | ci_results.csv | Muted if no $-conversions |
+| Pre/post ROAS Δ% | pre_post.csv | |
+| Volume context (impressions, spend pre/post) | pre_post.csv | Small print, far right |
 
-Filters: cohort, vertical, maturity. Sort: pct change descending.
+Filters: cohort, vertical, maturity, "CI vs pre/post disagreement > X" toggle (highlights advertisers where the methodology matters most).
+
+Sort: CI rel_effect (IVR) descending by default.
 
 ### View 2: Advertiser drill-down
 Pick an advertiser → see:
