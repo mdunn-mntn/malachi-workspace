@@ -514,6 +514,21 @@ WHERE cg.product_id = 2
   training-data flag, **not** the source of truth. Use `campaign_groups.product_id = 2`.
 - Select started **2025-07-31** — any historical analysis before that date will have zero rows.
 
+**Cross-validation (verified 2026-05-05):**
+- `product_id` is fully populated — only values 1 (PTV) and 2 (Select), no NULLs, no other values.
+- `product_id=2` and `is_select_cid=TRUE` agree **100%** on bidder pipeline data
+  (280 Select campaigns ↔ 17,093 PTV campaigns, no mixed cases in last 30d).
+- 252/260 active product_id=2 groups (97%) have PMP deals attached.
+- The 8 Select groups without PMP deals are all internal QA test campaigns
+  (advertisers 45842, 45983 — names like "alex_test_prod_X", "bryan test", "NHL Live Sports Test Campaign").
+  `is_test` flag is unset on these groups, so a strict filter should also exclude
+  test-account advertisers, not just `is_test=FALSE` on the group.
+
+**Don't use PMP-deal attachment as a Select proxy.** 28 PTV (`product_id=1`) groups also have PMP deals
+attached — all are **Pause Ads** campaigns (named "Pause Ads", "EX-49 Pause Ads V2", "Hugo Pause Ads",
+"Earnings Pause Ad Campaign", etc.). Pause Ads are a separate PTV feature that uses PMP inventory but
+is NOT MNTN Select. Filtering by PMP-deal attachment alone would over-count Select by ~10%.
+
 **Related Select/PMP tables** (for deal-level or pricing context):
 - `mntnselect_offering_versions` — Select offering catalog (offerings, PMP deals, run windows, CPMs)
 - `core_private_marketplace_deals` / `core_private_marketplace_groups` — PMP deal hierarchy
@@ -521,7 +536,12 @@ WHERE cg.product_id = 2
 - `core_select_advertiser_margins` / `core_select_margins` — Select-specific pricing
 - `invoice_select_publisher_invoices` — Select publisher invoicing
 
-(Empirically verified 2026-05-05, prompted by Victor Savitskiy question.)
+### Pause Ads (PTV feature, not Select)
+"Pause Ads" is a separate product feature that runs on PTV campaign groups (`product_id = 1`) but
+uses PMP deal inventory via `core_campaign_group_x_private_marketplace_deals`. Identifiable by
+campaign group name patterns like "Pause Ads", "Pause Ad Campaign", "EX-49 Pause Ads V2". 28 such
+groups exist as of 2026-05-05. **Do not confuse with MNTN Select** — different product line,
+different `product_id`. (Verified 2026-05-05.)
 
 ### RTC (Real-Time Conquest)
 Real-Time Conquest is a CTV prospecting targeting mode. The bidder targets IP addresses identified
