@@ -165,6 +165,20 @@ I copied the CausalImpact pipeline from TI-849 verbatim — same VIF → BIC →
 - **BQ from Databricks:** the workspace already has a BQ service account configured for read access — confirm with Ryan or the data-platform channel if you hit a permissions error.
 - **BQ from laptop:** `gcloud auth application-default login` once, then use the `google-cloud-bigquery` Python client.
 
+### CausalImpact compatibility note (read this before troubleshooting fits)
+
+The published `causalimpact` 0.1.1 (PyPI) was written against pandas 1.x APIs and breaks in places under pandas ≥2.1. **On Databricks ML runtimes (≤14.x) it works out of the box** because those runtimes ship pandas 1.5 / 2.0. On a fresh laptop with current pandas it fails with errors like `KeyError: 0`, `applymap`, or `cannot concatenate object of type ndarray`.
+
+If you need to run locally:
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install 'pandas<2.0' causalimpact google-cloud-bigquery statsmodels matplotlib numpy
+```
+
+The notebook has a small monkeypatch shim for the most common breakage (`DataFrame.applymap`, positional Series indexing). If you hit a new compat error, the cleanest fix is the venv above; trying to patch the library further is whack-a-mole.
+
+**Pre/post (Method 1) has no such constraint** — it's pure pandas + numpy and works on any reasonable environment. If CI is unavailable, you still have the headline numbers.
+
 ---
 
 ## 5. Wave-awareness — the only meaningful change vs TI-849

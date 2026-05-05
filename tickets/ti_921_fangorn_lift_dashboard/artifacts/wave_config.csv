@@ -3,3 +3,51 @@ advertiser_id,advertiser_name,flip_date,cohort,vertical,has_conversion_pixel,has
 38659,Big Blue Bubble Inc.,2026-05-01,Tier1-Wave1,Games & Comics,false,false,No conversion pixel — only IVR/VVR meaningful
 32233,University of Northwestern Ohio,2026-05-01,Tier1-Wave1,Colleges & Universities,true,false,Lead-gen — CVR meaningful AOV/ROAS not
 46538,authenTEAK,2026-05-05,Tier1-Wave2,Outdoor Furniture & Goods,true,true,E-commerce furniture — full KPI suite meaningful
+30181,Longines,2026-05-06,Tier1-Wave2,Jewelry & Watches,true,true,"30d: 122 conv $268,844 order_value"
+30496,Lofta,2026-05-06,Tier1-Wave2,Medical Devices & Equipment,true,true,"30d: 722 conv $248,031 order_value"
+30750,National Business Furniture,2026-05-06,Tier1-Wave2,Furniture,true,true,"30d: 207 conv $526,456 order_value"
+32394,Bugaboo North America Inc,2026-05-06,Tier1-Wave2,"Family Planning, Maternity, & Infant Care",true,true,"30d: 16 conv $20,724 order_value"
+33023,Petal and Pup,2026-05-06,Tier1-Wave2,Apparel & Accessories,true,true,"30d: 2302 conv $307,122 order_value"
+33330,Concordia University Irvine,2026-05-06,Tier1-Wave2,Colleges & Universities,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+33980,Locumstory,2026-05-06,Tier1-Wave2,B2B - Healthcare,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+34967,US Sports Camp,2026-05-06,Tier1-Wave2,Sports Teams & Leagues,true,true,"30d: 1278 conv $714,593 order_value"
+35513,Rollins College Professional Advancement,2026-05-06,Tier1-Wave2,Colleges & Universities,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+35573,Casper,2026-05-06,Tier1-Wave2,Mattresses & Bedding,true,true,"30d: 320 conv $322,363 order_value"
+35805,Glacier Country Tourism,2026-05-06,Tier1-Wave2,Travel Destination Promotion,false,false,No conversion pixel — only IVR/VVR meaningful
+36743,Lulus,2026-05-06,Tier1-Wave2,Apparel & Accessories,true,true,"30d: 19753 conv $2,729,088 order_value"
+38019,All Inclusive Outlet,2026-05-06,Tier1-Wave2,"Hotels, Resorts, & Accommodations",true,true,"30d: 38 conv $135,351 order_value"
+38363,Timex,2026-05-06,Tier1-Wave2,Jewelry & Watches,true,true,"30d: 747 conv $156,409 order_value"
+38656,Inter Miami CF,2026-05-06,Tier1-Wave2,Sports Teams & Leagues,true,true,"30d: 99 conv $30,704 order_value"
+38667,Trading Card Market - Logical Position,2026-05-06,Tier1-Wave2,Games & Comics,true,true,"30d: 79 conv $51,189 order_value"
+39130,University of Central Oklahoma - Masters,2026-05-06,Tier1-Wave2,Colleges & Universities,false,false,No conversion pixel — only IVR/VVR meaningful
+39292,Modern Nose Clinic,2026-05-06,Tier1-Wave2,Hospitals & Medical Centers,false,false,No conversion pixel — only IVR/VVR meaningful
+39439,LA Opera,2026-05-06,Tier1-Wave2,"Theatre, Dance, & Films",true,true,"30d: 31 conv $5,887 order_value"
+39975,MyRacehorse,2026-05-06,Tier1-Wave2,Sports Teams & Leagues,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+40558,Waggle,2026-05-06,Tier1-Wave2,Apparel & Accessories - Athletic & Outdoors,true,true,"30d: 138 conv $11,180 order_value"
+40761,COCOLAB,2026-05-06,Tier1-Wave2,Dental Care & Teeth Whitening,true,true,"30d: 52 conv $1,905 order_value"
+41801,NJ Sharing Network,2026-05-06,Tier1-Wave2,Charitable Organizations,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+42021,Sensorio,2026-05-06,Tier1-Wave2,Museums & Art Galleries,true,true,"30d: 69 conv $13,594 order_value"
+43809,Ostinol,2026-05-06,Tier1-Wave2,"Vitamins, Supplements & Health Stores",false,false,No conversion pixel — only IVR/VVR meaningful
+44101,Dehnco,2026-05-06,Tier1-Wave2,"B2B - Logistics, Operations, & Manufacturing",false,false,No conversion pixel — only IVR/VVR meaningful
+44885,Super.com - Fin Tech,2026-05-06,Tier1-Wave2,Apparel & Accessories - Athletic & Outdoors,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+45474,San Diego Detox,2026-05-06,Tier1-Wave2,Mental Health & Addiction Services,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+45550,Destin-Fort Walton Beach,2026-05-06,Tier1-Wave2,Travel Destination Promotion,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+45747,VTSU - Vermont State University,2026-05-06,Tier1-Wave2,Colleges & Universities,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+46219,Zoological Society of Milwaukee,2026-05-06,Tier1-Wave2,Charitable Organizations,true,true,"30d: 220 conv $45,425 order_value"
+46408,Meyer- Circulon,2026-05-06,Tier1-Wave2,Kitchen & Cookware,true,true,"30d: 25 conv $3,477 order_value"
+46846,Wasatch Pain Solutions,2026-05-06,Tier1-Wave2,Hospitals & Medical Centers,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+49659,Arcade Belt Co.,2026-05-06,Tier1-Wave2,Apparel & Accessories,true,true,"30d: 46 conv $2,852 order_value"
+49816,ADRA,2026-05-06,Tier1-Wave2,Charitable Organizations,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+49894,Hartford Foundation,2026-05-06,Tier1-Wave2,Charitable Organizations,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+50556,Luxury Detox Options,2026-05-06,Tier1-Wave2,Mental Health & Addiction Services,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+52396,Boutique Living by Curate,2026-05-06,Tier1-Wave2,Real Estate & Builders,false,false,No conversion pixel — only IVR/VVR meaningful
+52589,Workbar,2026-05-06,Tier1-Wave2,B2B - Small Businesses,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+55727,FrankCrum,2026-05-06,Tier1-Wave2,B2B - HR & Payroll,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+56575,Refills,2026-05-06,Tier1-Wave2,Weight Loss Services,true,true,"30d: 319 conv $157,541 order_value"
+56606,Greensboro Groove,2026-05-06,Tier1-Wave2,Sports Teams & Leagues,true,true,30d: 5 conv $281 order_value
+57847,Income Protection USA,2026-05-06,Tier1-Wave2,B2B - Healthcare,false,false,No conversion pixel — only IVR/VVR meaningful
+58209,Aloha,2026-05-06,Tier1-Wave2,B2B - Healthcare,false,false,No conversion pixel — only IVR/VVR meaningful
+58851,Lymow,2026-05-06,Tier1-Wave2,Home Improvement & Hardware,true,true,"30d: 33 conv $73,507 order_value"
+60423,Catholic Gifts & More,2026-05-06,Tier1-Wave2,Religion & Churches,true,true,30d: 5 conv $279 order_value
+61088,Portland Sea Dogs DBH,2026-05-06,Tier1-Wave2,Sports Teams & Leagues,true,true,"30d: 64 conv $4,420 order_value"
+61830,RITMO,2026-05-06,Tier1-Wave2,Live Music & Comedy,false,false,No conversion pixel — only IVR/VVR meaningful

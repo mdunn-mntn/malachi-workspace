@@ -47,7 +47,28 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 # CausalImpact: install once with `%pip install causalimpact` if not already present.
+# Compat shims for pandas 2.1+ / 3.x — the published `causalimpact` package
+# (0.1.1) was written against pandas 1.x APIs and breaks otherwise.
+import pandas as _pd_shim
+if not hasattr(_pd_shim.DataFrame, "applymap"):
+    # Removed in pandas 2.1; replaced by .map().
+    _pd_shim.DataFrame.applymap = lambda self, fn, *a, **kw: self.map(fn, *a, **kw)
+
 from causalimpact import CausalImpact
+import causalimpact.main as _ci_main
+
+
+def _standardize_pre_post_data_patched(self):
+    """Drop-in for the broken `mu[0]` / `sig[0]` positional indexing on
+    Series with non-integer indexes (broke in pandas 2.x)."""
+    from causalimpact.misc import standardize
+    self.normed_pre_data, (mu, sig) = standardize(self.pre_data)
+    self.normed_post_data = (self.post_data - mu) / sig
+    # Was: (mu[0], sig[0]) — fails on non-default indexes in pandas 2.x.
+    self.mu_sig = (mu.iloc[0], sig.iloc[0])
+
+
+_ci_main.CausalImpact._standardize_pre_post_data = _standardize_pre_post_data_patched
 
 # BigQuery client. On Databricks, the workspace already has a BQ service
 # account; locally, run `gcloud auth application-default login` once.
@@ -68,7 +89,10 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 BQ_PROJECT = "dw-main-bronze"
 
 # CausalImpact fit minima — relaxed when post-period is short.
-MIN_PRE_DAYS = 60
+# 30 instead of TI-748's 60 because not all AIDs have 60+ days of pre-history
+# in our panel (some are newer to MNTN, others paused before flip). 30 still
+# gives sensible CrI's; widen the panel window if you want more headroom.
+MIN_PRE_DAYS = 30
 MIN_POST_DAYS = 1
 MIN_DAILY_IMPRESSIONS = 1000
 
@@ -130,28 +154,29 @@ print(wave.head(20))
 # DBTITLE 1,Run BQ panel query
 
 # Inject the wave_config CSV into the SQL at runtime so we don't have to
-# keep two copies in sync. Replaces the inline `WITH wave_config AS (...)`
-# block with one constructed from the CSV.
-def build_wave_config_cte(wave_df: pd.DataFrame) -> str:
-    rows = []
-    for _, r in wave_df.iterrows():
-        rows.append(
-            f"  SELECT {int(r['advertiser_id'])} AS advertiser_id, "
-            f"DATE '{r['flip_date'].strftime('%Y-%m-%d')}' AS flip_date, "
-            f"'{r['cohort']}' AS cohort"
-        )
-    return "WITH wave_config AS (\n" + "\n  UNION ALL\n".join(rows) + "\n),\n"
+# keep two copies in sync. Replaces only the `wave_config AS (...)` CTE
+# body in-place, preserving any DECLAREs and other CTEs around it.
+import re as _re
+
+
+def build_wave_config_cte_body(wave_df: pd.DataFrame) -> str:
+    rows = [
+        f"  SELECT {int(r['advertiser_id'])} AS advertiser_id, "
+        f"DATE '{r['flip_date'].strftime('%Y-%m-%d')}' AS flip_date, "
+        f"'{r['cohort']}' AS cohort"
+        for _, r in wave_df.iterrows()
+    ]
+    return "wave_config AS (\n" + "\n  UNION ALL\n".join(rows) + "\n)"
 
 
 def load_panel(wave_df: pd.DataFrame) -> pd.DataFrame:
     sql = DAILY_PANEL_SQL.read_text()
-    # The SQL file's `WITH wave_config AS (...)` block goes through `,` to
-    # `prospecting_campaigns AS (...)`. Replace from `WITH` to that boundary.
-    new_cte = build_wave_config_cte(wave_df)
-    head, sep, tail = sql.partition("prospecting_campaigns AS (")
-    if not sep:
-        raise RuntimeError("Couldn't find prospecting_campaigns CTE marker in SQL")
-    sql_runtime = new_cte + sep + tail
+    # Replace from `wave_config AS (` through the matching closing paren.
+    # `[\s\S]*?` is lazy across newlines, so it stops at the first `)`.
+    new_body = build_wave_config_cte_body(wave_df)
+    sql_runtime, n = _re.subn(r"wave_config AS \([\s\S]*?\)", new_body, sql, count=1)
+    if n != 1:
+        raise RuntimeError("Couldn't find wave_config CTE in SQL to replace")
 
     client = bigquery.Client(project=BQ_PROJECT)
     print("[load] Running daily-panel query against BigQuery...")
@@ -393,14 +418,14 @@ def fit_one(panel: pd.DataFrame, plat: pd.DataFrame, adv_id: int, adv_name: str,
     candidates = [c for c in ALL_CANDIDATES if c in df.columns]
     pre_df = df.loc[pre_period[0]:pre_period[1]]
     feats = pre_df[candidates].fillna(0.0)
-    target = pre_df[metric].fillna(method="ffill").fillna(method="bfill")
+    target = pre_df[metric].ffill().bfill()
 
     keep = drop_high_vif(feats)
     winning = best_subset_by_bic(target, feats[keep])
     if not winning:
         winning = keep[:3]   # safety fallback
 
-    ci_data = pd.DataFrame({"y": df[metric].fillna(method="ffill").fillna(method="bfill")})
+    ci_data = pd.DataFrame({"y": df[metric].ffill().bfill()})
     ci_data = ci_data.join(df[winning].fillna(0.0))
 
     print(f"[fit] {adv_name} ({adv_id}) {metric}: pre={pre_period} post={post_period} cov={winning}")
@@ -455,7 +480,9 @@ for _, w in wave.iterrows():
         try:
             r = fit_one(panel, plat, aid, name, cohort, flip, metric)
         except Exception as e:
-            print(f"  ERROR fitting {name} ({aid}) {metric}: {e}")
+            import traceback as _tb
+            print(f"  ERROR fitting {name} ({aid}) {metric}: {type(e).__name__}: {e}")
+            _tb.print_exc()
             continue
         if r is None:
             print(f"  SKIP {name} ({aid}) {metric}: insufficient pre/post days")
@@ -485,14 +512,15 @@ if not ci_results.empty:
     )
     ci_pivot.columns = ['_'.join(map(str, c)).strip() for c in ci_pivot.columns]
     ci_pivot = ci_pivot.reset_index()
+    combined = pre_post.merge(
+        ci_pivot,
+        on=["advertiser_id", "advertiser_name", "cohort"],
+        how="left",
+    )
 else:
-    ci_pivot = pd.DataFrame()
+    print("[combined] No CausalImpact fits — outputting pre/post only.")
+    combined = pre_post.copy()
 
-combined = pre_post.merge(
-    ci_pivot,
-    on=["advertiser_id", "advertiser_name", "cohort"],
-    how="left",
-)
 combined.to_csv(OUTPUT_DIR / "ti_921_combined.csv", index=False)
 print(f"Wrote {OUTPUT_DIR / 'ti_921_combined.csv'}")
 combined

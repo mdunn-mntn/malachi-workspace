@@ -18,7 +18,7 @@
      silver.summarydata.{impression,visit,conversion,spend}_facts
    ======================================================================== */
 
-DECLARE window_start DATE DEFAULT DATE '2026-02-01';   -- adjust if pre-period needs more history
+DECLARE window_start DATE DEFAULT DATE '2026-01-01';   -- pre-period headroom; CausalImpact wants ≥30 pre-days, more is better
 DECLARE window_end   DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
 
 WITH wave_config AS (
