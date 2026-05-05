@@ -2,14 +2,14 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-931
 **Type:** Bug
-**Status:** In Progress
+**Status:** Verified in prod 2026-05-05 — awaiting next 01:03 UTC scheduled-run confirmation before Done transition
 **Priority:** P3 — Normal
 **Story Points:** 2
 **Sprint:** TI Sprint 05/04/26 – 05/18/26 (id 6160)
 **Date Started:** 2026-05-05
-**Date Completed:**
+**Date Completed:** 2026-05-05 (verified)
 **Assignee:** Malachi
-**Blocks:** [TI-832](https://mntn.atlassian.net/browse/TI-832)
+**Blocks:** [TI-832](https://mntn.atlassian.net/browse/TI-832) (now unblocked)
 
 ---
 
@@ -57,12 +57,12 @@ Repo-wide grep for the four column names returns clean. All four files `py_compi
 - [x] `python3 -m py_compile` on all four files → clean
 - [x] Diff size confirmed: 4 files, -17 lines, 0 additions, no `dags/` touched
 
-**Post-merge (pending):**
-- [ ] `deploy_prod.yaml` GitHub Action goes green
-- [ ] Clear failed task instances for `summary_*` + `core_derived_*` for 5/3, 5/4, 5/5 in prod Astronomer/Airflow UI
-- [ ] Cleared instances run green
-- [ ] Next 01:03 UTC scheduled run goes green for all 6 tasks with no manual clearing
-- [ ] Spot-check parquet output landed in `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/summary_*/dt=YYYY-MM-DD/`
+**Post-merge (verified 2026-05-05):**
+- [x] `deploy_prod.yaml` GitHub Action [run 25403532901](https://github.com/SteelHouse/airflow-ti/actions/runs/25403532901) succeeded → bundle v82 in prod
+- [x] Cleared 9 failed task instances (`summary_*` × 3 days) with **Run with latest bundle version** on; cascade-cleared 9 `core_derived_*` Layer-2 instances via Downstream
+- [x] All 18 cleared instances re-ran green (verified day-by-day to avoid heal-window write races)
+- [ ] Next 01:03 UTC scheduled run (~2026-05-06 01:03 UTC) goes green for all 6 tasks with no manual clearing — **passive monitoring; final confirmation**
+- [ ] Spot-check parquet output landed in `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/summary_*/dt=YYYY-MM-DD/` — optional
 
 ## 6. Data Documentation Updates
 

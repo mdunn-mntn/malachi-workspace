@@ -1,11 +1,11 @@
 # TI-832: Update Feature Store with ROAS/CPA-specific features
 
 **Jira:** https://mntn.atlassian.net/browse/TI-832
-**Status:** In Progress (blocked on TI-931)
+**Status:** In Progress — TI-931 fix verified 2026-05-05; ready for Phase 2
 **Date Started:** 2026-05-05
 **Date Completed:**
 **Assignee:** Malachi
-**Blocked by:** [TI-931](https://mntn.atlassian.net/browse/TI-931) — column-drift bug fix on `summary_*` models. Must merge + DAG green before this work proceeds.
+**Was blocked by:** [TI-931](https://mntn.atlassian.net/browse/TI-931) — column-drift bug fix verified in prod 2026-05-05 (PR #1024 merged, 18 task instances re-run green). Now unblocked.
 
 ---
 
