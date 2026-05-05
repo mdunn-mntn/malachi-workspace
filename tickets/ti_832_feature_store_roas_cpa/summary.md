@@ -1,7 +1,7 @@
 # TI-832: Update Feature Store with ROAS/CPA-specific features
 
 **Jira:** https://mntn.atlassian.net/browse/TI-832
-**Status:** In Progress — TI-931 fix verified 2026-05-05; ready for Phase 2
+**Status:** In Progress — Phase 2 (Fangorn V2 conversion-feature spec) underway. TI-931 unblocker shipped 2026-05-05.
 **Date Started:** 2026-05-05
 **Date Completed:**
 **Assignee:** Malachi
