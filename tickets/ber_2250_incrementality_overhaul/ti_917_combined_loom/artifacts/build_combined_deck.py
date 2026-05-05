@@ -162,7 +162,7 @@ NEW_SLIDES = {
     </tbody>
   </table>
   <div class="takeaway-box" style="margin-top: 0.7em;">
-    <strong>What we promise Lauren:</strong> visit lift, CVR lift, and an iROAS estimate down to a 0.49 floor.<br>
+    <strong>What we promise back:</strong> visit lift, CVR lift, and an iROAS estimate down to a 0.49 floor.<br>
     <span class="gray">For AID 9090 (no revenue reported, no current CVR data), the same screen returns visits only.</span>
   </div>
   <p class="footer-note" style="margin-top: 0.5em;">Source: <code>outputs/ti_917_revenue_mde_per_advertiser.csv</code>. Calculator: <code>ti_884_mde_calculator.py</code>.</p>
@@ -240,6 +240,109 @@ print(rel)                    # 0.0295</pre>
   <p style="margin-top: 1em; font-size: 0.8em; color: var(--text-light);">Methodology depth &mdash; for the record, skipped in main flow.</p>
 </section>
 """,
+
+    # Replaces TI-837 sl 6 — drops the selection-bias point, keeps the clickpass-vs-guid caution.
+    "10_why_retargeting": """
+<section>
+  <h2>Why retargeting drives 21pp &mdash; and why we should be careful</h2>
+  <div style="margin-top: 0.7em; font-size: 0.88em; line-height: 1.55;">
+    <p><strong>Clickpass-attributed retargeting reads bigger than guid-attributed.</strong> At high intent, clickpass shows ~24% more lift than guid. <span class="gray">Guid is the ground truth for incremental visits.</span></p>
+    <p><strong>The seven-day window understates anything with lag.</strong> Conversions that take longer than 7 days to fire don't show up. Retargeting numbers come from the most pre-qualified IPs, where lag is shortest &mdash; so we're getting the cleanest read here. Stage 1 will read worse with longer windows; retargeting will read mostly the same.</p>
+  </div>
+  <div class="takeaway-box" style="margin-top: 0.8em;">
+    <strong>Conclusion:</strong> retargeting works. Report it as a downstream lift on a pre-qualified population, with guid (not clickpass) as the canonical number.
+  </div>
+</section>
+""",
+
+    # Replaces TI-837 sl 7 — adds explicit 7-day window caveat.
+    "11_stage1_zero": """
+<section>
+  <h2>Stage 1 prospecting alone: zero incremental lift at high intent</h2>
+  <div style="margin-top: 0.6em; font-size: 0.88em; line-height: 1.55;">
+    <p>Pure Stage 1 prospecting at high intent: <span class="red"><strong>&minus;0.06 pp</strong></span> on guid visits. CI crosses zero.</p>
+    <p>The whole MNTN audience product is Stage 1 prospecting. It's our flagship. In v5, on guid visits, it does not move the number.</p>
+  </div>
+  <div class="takeaway-box" style="margin-top: 0.7em; font-size: 0.85em;">
+    <strong>Two reasons not to over-read this:</strong><br>
+    <span class="navy">1.</span> Seven-day window. Prospecting effects can ramp over 14&ndash;30 days &mdash; Phase 2a (30-day Databricks) re-runs the same cohort to check.<br>
+    <span class="navy">2.</span> Clickpass-attributed Stage 1 <em>does</em> show lift. The audience product moves attribution credit, not the count of visits in the seven-day window.
+  </div>
+</section>
+""",
+
+    # Replaces TI-884 sl 10 — reconciles $2M vs $5M as floor vs target.
+    "17_cvr_wall": """
+<section>
+  <h2>Conversion-rate measurement is in another league</h2>
+  <table style="margin-top: 0.6em; font-size: 0.6em;">
+    <thead><tr><th>Operating point</th><th>What it buys</th><th>Min monthly Stage 1 spend</th></tr></thead>
+    <tbody>
+      <tr><td>Floor</td><td>CVR experiment is <em>possible</em> at all (~10% rel MDE)</td><td><strong>$2M+</strong></td></tr>
+      <tr><td>Target</td><td>5% rel MDE at the cohort median &mdash; the well-powered bar</td><td><strong>$5M+</strong></td></tr>
+      <tr><td>Tight</td><td>2% rel MDE at the cohort median</td><td><strong>$30M+</strong></td></tr>
+    </tbody>
+  </table>
+  <div class="takeaway-box" style="margin-top: 0.7em;">
+    <strong>38 of 47 top-50 advertisers are underpowered for CVR experiments at any current spend.</strong><br>
+    <span class="gray">We have one advertiser at $5M+ Stage 1.</span> Floor is $2M; the well-powered bar is $5M; nobody hits "tight."
+  </div>
+</section>
+""",
+
+    # NEW educational slide: the inversion (rate → spend)
+    "23b_spend_inversion": """
+<section>
+  <h2>From baseline rate to minimum spend &mdash; the inversion</h2>
+  <p style="margin-top: 0.3em; font-size: 0.78em; color: var(--text-light);">Same Lewis-Rao, solved for n (then dollars) instead of MDE.</p>
+<pre style="font-size: 0.6em; line-height: 1.45; margin-top: 0.6em;">spend_required(p, target_mde_rel, cpm, imps_per_ip, var_reduction)
+
+# What it does, in three lines:
+n_total      = (z &middot; sigma &middot; var_red / target_mde_abs)^2 / (h &middot; (1 - h))
+impressions  = n_total &middot; (1 - h) &middot; imps_per_ip   # only treated arm gets served
+spend        = impressions &middot; cpm / 1000</pre>
+  <div class="takeaway-box" style="margin-top: 0.7em; font-size: 0.85em;">
+    <strong>What dominates:</strong> baseline rate <em>p</em>. Sigma scales as &radic;p(1-p), and the inversion squares it. <span class="navy">Halving p roughly quadruples required spend.</span> CPM and imps/IP move spend linearly &mdash; rate dominates.
+  </div>
+  <p class="footer-note" style="margin-top: 0.4em;">Holdout fixed at 10%. Variance reduction defaults raw (1.0); pass 0.595 for the canonical post-stack.</p>
+</section>
+""",
+
+    # NEW educational slide: the recommendation table
+    "23c_spend_bands": """
+<section>
+  <h2>Recommended monthly Stage 1 spend by baseline rate</h2>
+  <p style="margin-top: 0.2em; font-size: 0.78em; color: var(--text-light);">Target 5% relative MDE &middot; $25 CPM &middot; 10 imps/IP &middot; 10% holdout.</p>
+  <table style="margin-top: 0.5em; font-size: 0.55em;">
+    <thead><tr><th>Baseline rate (p)</th><th>Spend &mdash; raw</th><th>Spend &mdash; post-stack</th><th>Where this hits</th></tr></thead>
+    <tbody>
+      <tr><td>0.01% CVR</td><td>$78M</td><td>$28M</td><td>nobody at MNTN</td></tr>
+      <tr><td>0.1% CVR</td><td>$7.8M</td><td>$2.8M</td><td>typical CVR floor</td></tr>
+      <tr><td>0.5% CVR</td><td>$1.6M</td><td>$553k</td><td>high-CVR commerce</td></tr>
+      <tr><td>1% (low IVR)</td><td>$777k</td><td>$275k</td><td>low-traffic verticals</td></tr>
+      <tr><td>2% IVR</td><td>$385k</td><td>$136k</td><td><strong>typical IVR / cohort median</strong></td></tr>
+      <tr><td>5% IVR</td><td>$149k</td><td>$53k</td><td>high-rate advertisers</td></tr>
+      <tr><td>10% IVR</td><td>$71k</td><td>$25k</td><td>very high-rate (e.g. WGU)</td></tr>
+    </tbody>
+  </table>
+  <div class="takeaway-box" style="margin-top: 0.6em; font-size: 0.78em;">
+    <strong>How to use this:</strong> pull the advertiser's IVR and CVR. Look up the row. Multiply by their CPM/<span class="gray">$25</span> and 10/<span class="gray">imps/IP</span> if they're off-default. <strong>Post-stack column is the ask</strong> &mdash; the variance stack is canonical.
+  </div>
+</section>
+""",
+
+    # Tighter appendix replacement for "What I'd want a methodologist to push on"
+    "A2_caveats": """
+<section>
+  <h2>Caveats &mdash; what to push on</h2>
+  <div style="margin-top: 0.6em; font-size: 0.85em; line-height: 1.6;">
+    <p><strong>1. Tier collapse.</strong> Max-household-score across the week pushes most IPs into the high tier; per-tier peak/mid pools are thin (only 3 of 7 advertisers).</p>
+    <p><strong>2. Loose biddable filter.</strong> "Appeared in augmentor" is the floor; tighter intent-or-HHST gates are deferred. Treated arm has the same bias, so internally consistent &mdash; but ATT <em>levels</em> may shift.</p>
+    <p><strong>3. Pooling sensitivity.</strong> All-cells inverse-variance pool is dominated by mid-tier low-rate cells. Leave-one-out can swing it 1pp. Per-tier numbers are what we lead with.</p>
+  </div>
+  <p class="footer-note" style="margin-top: 0.6em;">None of these break the conclusion. They temper the magnitudes.</p>
+</section>
+""",
 }
 
 
@@ -257,37 +360,38 @@ PLAN = [
     ("837", 10),                     # How the pipeline works — end-to-end
     ("837", 2),                      # How the 4 segments are defined
     ("837", 3),                      # Retargeting drives the lift; prospecting drives almost none
-    # Section 3 — Results (5; methodologist's caveats moved to appendix)
+    # Section 3 — Results (4; selection-bias point removed, attribution wedge moved out of main flow)
     ("837", 4),                      # The 4-segment headline numbers
     ("837", 5),                      # Lift profile by tier
-    ("837", 6),                      # Why retargeting drives 21pp
-    ("837", 7),                      # Stage 1 prospecting alone: zero
-    ("837", 8),                      # Attribution wedge
-    # Section 4 — Power (3; first-principles math moved to appendix)
+    ("new", "10_why_retargeting"),   # Replaces 837[6] — drops selection bias, adds windowing nuance
+    ("new", "11_stage1_zero"),       # Replaces 837[7] — adds 7-day window caveat explicitly
+    # Section 4 — Power (3)
     ("884", 1),                      # Last quarter, MNTN ran 7 incrementality tests
     ("884", 5),                      # If those tests were noise, what scale do we need
     ("884", 19),                     # Variance-reduction stack — 40% SE reduction
     # Section 5 — Spend thresholds (3)
     ("884", 7),                      # Visit-rate measurability emerges around $200k/month
-    ("884", 10),                     # Conversion-rate measurement requires $2M+/month
+    ("new", "17_cvr_wall"),          # Replaces 884[10] — reconciles $2M floor / $5M target / $30M tight
     ("884", 12),                     # What this means
-    # Section 6 — Min-spend rule (instructional, 7)
+    # Section 6 — Min-spend rule (instructional, 9)
     ("new", "19_screening_rule_visits_cvr"),  # Steps 1-2: visits + CVR
     ("new", "20_screening_rule_revenue"),      # Steps 3-4: revenue + iROAS
     ("new", "21_story_csm"),                   # Hall framework: a CS lead's question
     ("new", "22_worked_example"),              # The five-minute answer (table)
-    ("new", "23_calculator"),                  # One function call
+    ("new", "23_calculator"),                  # MDE direction (rate → MDE)
+    ("new", "23b_spend_inversion"),            # NEW: spend direction (rate → spend) — the inversion
+    ("new", "23c_spend_bands"),                # NEW: recommendation table across IVR/CVR bands
     ("new", "25_iroas_chart"),                 # Per-advertiser iROAS power chart
     ("new", "26_iroas_thresholds"),            # Two binding constraints
     # Section 7 — Close (3)
     ("837", 13),                     # What's next (TI-885, bidder-level)
     ("new", "28_recap"),             # Three things to take away
     ("new", "29_close"),             # Power Line + CTA
-    # Appendix
+    # Appendix (4)
     ("new", "A1_appendix_header"),
-    ("837", 12),                     # What I'd want a methodologist to push on
+    ("new", "A2_caveats"),           # Tighter replacement for 837[12]
+    ("837", 8),                      # Attribution wedge (kept here for the curious)
     ("884", 13),                     # How "power" is calculated, from first principles
-    ("884", 20),                     # CUPED ρ measurement on MNTN data
 ]
 
 
