@@ -1,0 +1,251 @@
+[00:00] you
+[00:30] you
+[01:00] you
+[01:30] Hey, what's up, Ryan?
+[01:34] Yo.
+[01:35] Yeah, sorry.
+[01:36] I was just messing around.
+[01:37] So, yeah, you're going to be a data engineer.
+[01:42] Nice, dude.
+[01:43] I think so.
+[01:45] I think I'll probably push on doing the data engineering rather.
+[01:48] I think we have a couple of data scientists, but I don't know.
+[01:51] I think I'd rather do some data engineering.
+[01:53] Yeah, in my opinion, you need more data engineers than data scientists,
+[01:57] but I don't know.
+[02:00] Anyway, so yeah, dude, I did start doing, or yeah, let me see your ticket for the campaign
+[02:08] stuff.
+[02:09] But sure.
+[02:10] Yeah.
+[02:11] Let's see here.
+[02:13] You filter it to me.
+[02:18] Evaluate no update feature store with ROAS.
+[02:23] Okay.
+[02:24] So it's TI 832.
+[02:25] I'll share the screen here.
+[02:28] Yeah, because I think I have some of that in place at least.
+[02:37] Okay, here, I'll share.
+[02:47] Okay.
+[02:49] Yeah.
+[02:50] Yeah.
+[02:53] Add, spend, order value, conversion signals.
+[02:58] are available.
+[03:01] Yeah.
+[03:03] Okay, yeah.
+[03:04] That's in the stuff that's
+[03:06] breaking, I think.
+[03:08] Okay, the stuff you sent this morning.
+[03:10] Yeah.
+[03:11] I was about to take a look at that.
+[03:13] I just had two quick things I just finished
+[03:16] that
+[03:18] the
+[03:18] Incrementality team wanted me to do.
+[03:22] Yeah, no worries.
+[03:24] Yeah, can you pull up...
+[03:26] I can kind of walk you through those
+[03:27] if you pull up the repo.
+[03:29] Or I could share my screen if you
+[03:31] want to. Sure. Do you want to share
+[03:33] your screen? Yeah.
+[03:38] Or you'll probably
+[03:39] just have Claude, you know.
+[03:42] I would just have Claude
+[03:43] do all this. Yeah.
+[03:46] Okay, so we got...
+[03:47] Let's see.
+[03:48] Just so you know.
+[03:49] So,
+[03:50] yeah, so
+[03:54] Feature Store.
+[03:57] So which one of the ones, these are one of the ones breaking.
+[04:05] So this pulls in, where does it do the read model?
+[04:13] Oh, read model. Yeah. Okay. You know, so this,
+[04:16] this is a big query one.
+[04:21] So I think what happened is, yeah, it's,
+[04:24] I specifically select all these.
+[04:30] Yeah, but I think...
+[04:32] Why do you have to select each column?
+[04:34] Why can't you select star or whatever?
+[04:37] That's a good question.
+[04:40] You could...
+[04:41] Why did I do it this way, though?
+[04:42] I think because I wanted it to fail on this step.
+[04:49] You know, if you just select star.
+[04:52] Yeah.
+[04:54] Yes, I think I wanted this to fail.
+[04:58] That is a good question.
+[05:02] If you want to do it differently, that's fine too.
+[05:05] But yeah, if you did just, this is just a,
+[05:08] yeah, this is just consuming this table for a day.
+[05:12] So it's pretty, and this is a, yeah, this is a BigQuery table.
+[05:15] So this is going to just write it out to GCS
+[05:17] so that way we can, yeah, run the next layer on it.
+[05:23] Can we just take a step back just for a second?
+[05:26] What is the purpose of this?
+[05:27] So I understand this is the feature store,
+[05:29] but what I'm understanding is,
+[05:31] like, where are we pulling data from?
+[05:33] And then it's going to a specific table that Matt is using
+[05:37] or he's going to use at some point in time.
+[05:39] Does that understand correctly?
+[05:41] So Alex is going to be building this model, I believe.
+[05:45] So what I would do is fix the broken stuff, you know,
+[05:50] but then also talk to Alex and be like,
+[05:53] what features do you think you need?
+[05:57] And then he's going to like tell you,
+[05:59] you know,
+[06:00] you could kind of show him what we have in here and then he'll tell you
+[06:05] like,
+[06:05] Oh,
+[06:06] this is what I need or whatever.
+[06:08] Campaign summary,
+[06:09] big query.
+[06:11] Oh,
+[06:12] I was just curious what tables this is coming from.
+[06:15] Yeah.
+[06:15] Okay.
+[06:16] That's some by campaign by day is okay.
+[06:17] It's pulling from that.
+[06:18] And then we're just pulling features from it,
+[06:21] aggregating them,
+[06:21] just the specific ones we want.
+[06:23] So that we can create a table that we're basically going to build a model on.
+[06:28] Yeah, I think this is aggregating.
+[06:30] Let's look at the layer two stuff.
+[06:32] I had Claude do a lot of this.
+[06:33] By the way, we pull from silver because Victor could tell you more.
+[06:40] But it's not a view in silver.
+[06:43] If you use gold, it's like a view.
+[06:45] And then it slows down.
+[06:47] Victor has a plan to make this reader faster if you use silver.
+[06:53] okay so you try to use the silver layer if possible if it's there um and so yeah so this
+[07:03] is gonna this is just a bunch of campaign level stuff so the next layer two stuff you know is
+[07:09] gonna be like oh seven day unique seven day blah blah whatever you know um so let's look at feature
+[07:17] to our core derived campaign ID.
+[07:24] Yeah, I'm pretty sure this is where we consume.
+[07:30] Let me look for read bottle.
+[07:32] So in that ticket, though, that ticket that I'm assigned to
+[07:36] has nothing to do with things being broken this morning.
+[07:40] No.
+[07:40] Okay.
+[07:41] So that's connected, though.
+[07:42] I have to fix the broken stuff first, which that's fine.
+[07:45] Yeah.
+[07:45] I think that's not going to be an issue.
+[07:48] But it seems like we need to add basically these additional features into the feature store.
+[07:53] So basically, it's going to be a process of, I don't know if it's from that table.
+[07:56] I don't know if you can get it from that table.
+[07:58] But if you can, adding those columns to it and or pulling from another table that has those features and then adding them to this.
+[08:07] Does that sound correct?
+[08:10] Yeah.
+[08:11] So, yeah.
+[08:12] Whatever features Alex thinks he needs.
+[08:15] yeah um yeah you'll have to add to this but i do but i do think let's see what model is this for
+[08:23] though because i thought matt was building the model for um incrementality is this a totally
+[08:28] separate model or uh i mean these features aren't used at all i was just i was really just getting
+[08:36] them started you know for the ROAS model or whatever or the campaign level goals so this
+[08:44] isn't I don't think Matt even uses these he doesn't use these in incrementality or anything
+[08:49] no one no one uses these okay no I guess I'm just kind of wondering what model like are we talking
+[08:56] about the Fangorn model like adding more features for the Fangorn model are we talking about the
+[08:59] incrementality model oh no sorry we're talking about yeah we're talking about campaign level
+[09:05] Okay, so Fangorn right now is, yeah, based on visit rate.
+[09:09] He tries to maximize visit rate.
+[09:11] Right.
+[09:12] But other campaigns might want to maximize ROAS or whatever, something else.
+[09:18] And so that's what we're talking about.
+[09:20] I think that's what your ticket's about.
+[09:21] Gotcha.
+[09:22] So there is a – that's the missing piece.
+[09:26] So we're building a model optimized against different KPIs.
+[09:33] I didn't realize we were doing that.
+[09:34] So that makes sense.
+[09:35] yeah update feature store through as cpa yeah so so yeah right now fangorns only visits
+[09:41] but they want to do like yeah all this stuff row as cpa so to get that you'll need the cost of
+[09:51] you know yep you know it goes into those calculations yeah no this makes sense to me
+[09:55] i don't think this is too difficult so basically this a success is basically that obviously i fix
+[10:00] the broken stuff in it and then i get those features added into this okay this is all
+[10:05] correct yeah and then yeah i'll airflow ti and then get and then you know he might need he needs
+[10:12] the outcome variables too um you know so you get that in there if you can um and and then yeah then
+[10:22] you should be good uh and let me let me show you one other thing oh yeah so those have been failing
+[10:29] so just if you fix it and then backfill them but none of these are used in prod right now
+[10:36] oh the core derived yeah none of these this is saying the upstream failed you know so yeah so
+[10:44] it can't do that so if you do fix these just backfill these and you know you should and then
+[10:49] these should run so if there's there should be any problem if i just restart
+[10:54] yeah just yeah just clear it you know once you fix the code okay clear and run okay clear yeah
+[11:02] clear all these tasks and instances that are um and then the way the code's written just so you
+[11:12] know i think i have it documented but um we get when we do this snapshot run this is where the
+[11:22] outcome variables are put into the
+[11:26] snapshots.
+[11:30] The outcome variables are forward-looking.
+[11:33] How many visits did we get? For Fangorn,
+[11:38] how many visits did we get seven days after
+[11:41] the features come in?
+[11:46] This is where I put those outcome variables.
+[11:50] So you'll see in the code, it'll be like if snapshot.
+[12:02] It'll be like if snapshot, you know, then if we're running snapshot mode,
+[12:12] then do something different.
+[12:14] Or, you know, it'll be like, oh, include forward outcomes,
+[12:18] include more columns.
+[12:20] is what it's going to do.
+[12:24] So,
+[12:24] and then,
+[12:26] yeah,
+[12:26] what,
+[12:27] then it'll just,
+[12:28] yeah,
+[12:28] it'll include more columns.
+[12:30] So just have Claude take a look at it.
+[12:32] I think I tried to update Claude.
+[12:35] MD as much as possible.
+[12:39] Oh,
+[12:39] for the specific repo.
+[12:41] Is that how you guys have been doing it?
+[12:42] I've noticed that that's been going on,
+[12:43] but I haven't been part of it.
+[12:44] So have we been throwing Claude markdown files in each of the.
+[12:48] Yep.
+[12:49] Yep.
+[12:50] So anything, so yeah, whatever, you know, whatever,
+[12:54] if you make any changes, have an update clot.
+[12:56] And then one other thing with the feature store specifically is, oh yeah,
+[13:07] this, this doc here, I'll give you the path name.
+[13:14] Okay.
+[13:14] this stock though
+[13:17] has
+[13:22] it's called feature store naming standards but really it's a lot of
+[13:27] yeah it's a lot of like guidelines when you're doing
+[13:31] feature store stuff so you can tell Claude to follow these guidelines
+[13:35] and if you want to make new guidelines
+[13:38] add them here and in the Airflow
+[13:43] TI, have it update that markdown
+[13:47] file. And then in Airflow TI, let me show you this.
+[13:51] This is kind of cool.
+[13:56] Airflow TI
+[13:57] actions, there's
+[14:01] this sync store feature naming doc to
+[14:05] Confluence. So if you run this,
+[14:09] it'll take that markdown file and update
+[14:12] disconfluence article which I'll give you
+[14:16] so that way you don't have to
+[14:20] even mess with this
+[14:23] article and it lives in a repo
+[14:29] so whatever you kind of want to do
+[14:33] with feature store stuff and I'll probably be building features too
+[14:37] though just so you know
+[14:39] So, I mean, but if you, if you want to define stuff or cloud wants to define stuff, just,
+[14:46] just have a look at this, update this and then run that action to update confluence.
+[14:53] But yeah, that's, that's about it, dude.
+[14:55] So not too hard.
+[14:57] Yeah, no, no problem.
+[14:58] All right.
+[14:58] I'll, I'll reach out if I have any questions, but I doubt that I probably will.
+[15:01] It seems pretty straightforward.
+[15:02] So yeah.
+[15:04] Thank you for coming over this run.
+[15:06] All right, dude.
+[15:07] No problem.
+[15:07] Talk to you later.
+[15:08] Bye.
+[15:08] Good luck.
+[15:09] Bye.

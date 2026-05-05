@@ -1,0 +1,490 @@
+[00:00] So, I talked with Ryan about ticket 832.
+[00:07] It looks like, um, Matt is doing it and I understand what's being asked here, but, um,
+[00:13] what I don't understand and what I want to clear up on is there's this term models being
+[00:18] thrown around and I'm not actually sure what model or what this is for or anything like
+[00:23] that.
+[00:24] So, um, I just guess want to clear up on that.
+[00:26] So, I understand we have a fangorn model.
+[00:30] I understand that we have, we're developing feature store.
+[00:34] I don't know what the purpose of the feature store is currently, what this specific ask
+[00:40] for the ROAS CPA is for.
+[00:42] Um, so yeah, any context around the models and why it's being done.
+[00:45] It just helps me a little bit for understanding why we're doing this.
+[00:47] Yeah, of course.
+[00:48] So, let's, for, to understand the feature store, let's like, I'll give you the example.
+[00:53] It works for fangorn as well.
+[00:54] I'll give you the example of bottom up keywords and how that pipeline worked before the feature
+[01:00] store existed.
+[01:01] So we want to run bottom up keywords every day to generate recommendations for advertisers
+[01:08] and the keywords that they should target, uh, to do that every day, we're going to train
+[01:13] a model.
+[01:14] So then every day I generate a training data set that is a 30 day look back of all advertisers
+[01:17] that is a 30-day look back of all advertisers' visits and conversions
+[01:21] aggregated up to the keyword level.
+[01:24] So that pipeline, the training set aggregation every day took like four hours and then another four hours for like model training and then like the LLM clustering.
+[01:33] four hours for like model training and then like the LLM clustering.
+[01:38] But when you run the model every single day in that 30 day window, there's only like one
+[01:44] net new day, but you're reprocessing all 30 days.
+[01:48] Yep.
+[01:49] Super inefficient to do it that way.
+[01:51] So the feature store is a way for us to kind of independent from the models that are using
+[01:56] them process and generate data signals, aggregations, features for models on a consistent cadence
+[02:06] without them kind of being specific model focused.
+[02:11] Okay.
+[02:12] So in the feature store kind of layer one does these daily, does daily roll up calculations
+[02:20] And that is, you know, every day there is a new day of visits, conversions, impressions, whatever, to like counts at different levels.
+[02:29] Then layer two does the kind of higher order aggregations of, okay, we're bottom of keywords.
+[02:30] Then layer two does the kind of higher order aggregations of, okay, we're bottom of keywords.
+[02:38] We just added one new day.
+[02:40] Let's do a new 30 day roll up.
+[02:42] And since you've kind of pre chewed the layer one single day aggregations, that 30 day combination
+[02:49] is a lot easier to do.
+[02:51] Okay.
+[02:52] So that's kind of the goal of the feature store is like decouple dataset building and
+[02:57] like feature building from the actual like models themselves.
+[03:01] So if we pull, so to reiterate, if we're pulling data from these log tables or aggregation
+[03:08] table, things like that, right.
+[03:10] And we process it every single day, it's a lot of data to process.
+[03:14] So we're only pulling the features that we want from each of the tables and we're storing
+[03:19] them in aggregate by day and then by 30 day because layer two could be any number 30 day
+[03:26] for bottom of keywords.
+[03:27] But like Fangorn has other aggregations, right?
+[03:30] So explain to me how that changes much like, so if we're doing an aggregation, okay.
+[03:42] I guess it makes sense if it's by day because then you've already calculated by day.
+[03:46] So really, but what does need to do is if you're doing a 30 day or a 60 day, you would
+[03:51] have to recalculate that each time, but you already have the data there that you don't
+[03:56] have.
+[03:57] All you're doing is aggregating the output of the aggregate.
+[03:59] So you're not touching.
+[04:00] Okay.
+[04:01] That makes sense.
+[04:02] So there is an aggregation being done every day on layer two or three, but the data that
+[04:05] it's aggregating is much smaller.
+[04:07] So I imagine that only takes maybe minutes or less.
+[04:11] Because and then on the per day level, layer one, you only need to do one day at a time.
+[04:17] So that's also very easy.
+[04:19] Then layer two, you're taking the last 30 days that you've already computed and putting
+[04:26] them together, which is much easier than rereading 30 days of raw data every time.
+[04:32] Okay.
+[04:33] So follow up.
+[04:34] So we're training models every day, right?
+[04:40] Because there are for bottom up keywords, there are new days, which means new signal
+[04:46] at the keyword level for people who have visited, converted, et cetera.
+[04:51] There's potentially new advertisers and potentially new keywords as well that we would want the
+[04:57] model to see.
+[04:58] Gotcha.
+[04:59] That makes sense.
+[05:00] For Fangorn, Fangorn was trained once back at Q4, Q1.
+[05:07] And so the model training happened once, but the prediction using that model generating
+[05:16] IP level scores, that happens every day.
+[05:20] Okay.
+[05:22] So the feature store is a use case for any model building we could use.
+[05:30] It's not particular to a specific model.
+[05:33] So if we add certain features, because again, you might not even care about every feature,
+[05:37] you might only want to grab a subset of them for a particular model.
+[05:41] Right.
+[05:42] But we should calculate all the visits and conversions and all these things.
+[05:46] And then the other thing that saves not just subsets, but then you're not redoing work
+[05:51] for different models.
+[05:52] So like, what if Fangorn and bottom up keywords and model number three all use like daily
+[06:00] impression volume?
+[06:02] Well, if you had separate model pipelines, each of them would have their own way to compute
+[06:07] that.
+[06:08] Now you're unifying it with one system doing that kind of computation one time.
+[06:12] Okay.
+[06:13] And so when this one, this ticket specifically says audit and update the feature store to
+[06:16] ensure all necessary features.
+[06:18] So it's an ad spend order value conversion signal required for row ads or CPA optimization.
+[06:25] First off, what model is this for?
+[06:28] Are we?
+[06:29] Yep.
+[06:30] I'm getting confused.
+[06:31] Yeah.
+[06:32] No, no problem.
+[06:33] So let me see if I can actually if there's any good documentation.
+[06:38] I will find it.
+[06:39] I don't have it offhand right now.
+[06:41] Okay.
+[06:42] So Fangorn predicts is a model that takes in a bunch of features around visits and conversions
+[06:49] at time spent recency, etc.
+[06:53] And the output, the variable that we're predicting is probability of visiting in the next 14
+[06:58] day window.
+[06:59] Yep.
+[07:00] So it's predicting visits.
+[07:03] What we can also do with that model is change the output signal we're trying to predict.
+[07:09] So when it says row as CPA specific features, Matt has a version of Fangorn that instead
+[07:18] of predicting visits, predicts on conversions.
+[07:22] Okay.
+[07:23] So you have the same idea, but now this gives us an opportunity to re-score IPs with different
+[07:31] campaign objectives in mind.
+[07:33] Okay.
+[07:34] So then the ask is, you know, more features related to conversions and such.
+[07:40] Okay.
+[07:41] So the general ask here is try to, do I need to talk to Matt about like all the features
+[07:48] or is this kind of up in the air like, hey, just go and add anything related to spend
+[07:53] into the feature store to choose from, Zach?
+[07:57] I would ask Matt.
+[07:59] I think he has in mind a question or the data from way.
+[08:09] Let me see if I can find where he shared that.
+[08:14] I have so many channels, I can't remember which ones things come from.
+[08:25] I.
+[08:36] I would check with Matt.
+[08:38] He might have a few ideas of where you can look for that.
+[08:40] But check with Matt.
+[08:42] See if he has some ideas.
+[08:44] The other thing I would do is I'd like go into the code for the feature store and kind
+[08:48] of evaluate what we're building right now in like layer one.
+[08:51] That'll give you a good sense because there is a conversion.
+[08:56] There's like layer ones for conversions in there.
+[08:59] There's Matt.
+[09:00] Oh, hello.
+[09:01] Yo, yo.
+[09:02] Hey, Matt, thanks for jumping in real quick.
+[09:06] So we were just talking about the TI-832 ticket for ROAS CPA specific.
+[09:11] So Alex just kind of went through the rundown that we're just basically going to train a
+[09:16] Fangorn model, but against conversion ROAS.
+[09:20] Anyways, in the ticket, it specifies something like ad spend, order value, you know, basically
+[09:24] anything related to conversion.
+[09:26] Did you have a list of specific features you were interested in?
+[09:29] Or was this kind of a general like catch all like, hey, let's just see if we can add as
+[09:33] many things about conversions and spend into the feature store?
+[09:37] No, I was kind of leaving it open-ended.
+[09:41] Just whatever you can think of that might be helpful.
+[09:45] So I think that would, that's all I was thinking about.
+[09:48] I know you had mentioned things before, so I kind of just left it open.
+[09:51] Gotcha.
+[09:52] Or even like, oh, if they, what kind of device do they have kind of situations too?
+[09:59] Like iPhone owner, you know?
+[10:03] So like, it could be anything, but feel free to like limit it down to whatever you think
+[10:10] is, you know, low hanging fruit that we should just put in to a model like that.
+[10:17] I think it's just because like, we're kind of reaching a plateau with Fangorn now just
+[10:20] using the, what is basically GUID log or the augmenter log and just like saying how much
+[10:27] activity in this vertical, how much activity in this vertical, like could make it a little
+[10:32] bit richer of a dataset.
+[10:34] I did this on the feature store not too long ago where I loaded it in.
+[10:38] I can't remember if I did that optimized against the visit or the conversion.
+[10:43] I think it was the visit.
+[10:44] Yeah, you did a whole bunch of analysis of things to add, so it's just like.
+[10:49] Like that, but for conversions and then specifically though, like conversion level data, like actually
+[10:56] how much did they spend?
+[10:58] How often?
+[10:59] Things like that.
+[11:00] Okay.
+[11:02] I think that's pretty straightforward.
+[11:03] I guess the only question I have is, so from a high level, I just want to make sure I understand
+[11:06] how Fangorn works.
+[11:07] So Fangorn is essentially, we have a feature store and we have a model, Fangorn model,
+[11:14] right?
+[11:15] Some vector of all the different features, right?
+[11:16] And that outputs a number between zero and one, and that is then run on every single
+[11:21] IP advertiser pair, right?
+[11:26] So every single IP gets a score every day and we're evaluating that score based on the
+[11:32] bidder.
+[11:33] So basically replace the bidder, like the hierarchical 10,000 score with that, you know,
+[11:38] leveraging.
+[11:39] My question is when we're doing the conversion, like I guess, how is it going to work with
+[11:44] multiple models?
+[11:46] This Fangorn thing, is that going to be a toggle?
+[11:48] Is it's going to be something that balances between the two?
+[11:50] That kind of.
+[11:51] Yeah, it's going to be a toggle in a sense where what we are likely going to do is read
+[11:59] in the objective, like the campaign objective, and then at the campaign level, it will decide
+[12:01] like the campaign objective and then the at the campaign level it will decide which
+[12:08] score to use like oh okay this is a prospecting campaign but it's set up for
+[12:19] Like the metric that they care about is CPV, whereas this one, their metric is ROAS.
+[12:27] So there we may have two different models producing scores.
+[12:33] So at the campaign level, it kind of decides we'll produce the Fangorn score.
+[12:39] And this like Fangorn V2 score is all about conversions.
+[12:42] Like we'll produce them both for all the advertisers, and then it just kind of gets decided at the
+[12:47] campaign level, which one to use.
+[12:49] Okay.
+[12:50] So it sounds like this.
+[12:53] So first off, just I need to, I'm going to basically evaluate what are going to be all
+[13:01] the conversion metrics that we'd want to collect, then get them added into here.
+[13:08] And then the result will be that we'll start including these features as part of the model
+[13:13] training.
+[13:15] The model, that's crazy.
+[13:18] The model trains every single day and it rescores every day.
+[13:22] No, no, no.
+[13:23] It just retrains periodically.
+[13:26] So like the one that we're using now in production was trained in December.
+[13:31] We just haven't implemented the retrained version of it yet because we're just trying
+[13:36] to push this one out and then we will get the retraining.
+[13:40] So the bottoms up keywords is the one that like re-evaluates every day.
+[13:45] This one, it will take in new features.
+[13:47] The features get calculated every day and updated and fed into the model.
+[13:53] So we have to keep an eye on like feature drift to make sure that there's no feature
+[13:57] drift happening.
+[13:58] Okay.
+[13:59] Otherwise you just train the model once and then just use it until things get out of whack.
+[14:01] you just train the model once and then just use it until things get out of whack.
+[14:07] okay and just to clarify or just to reinforce for you malachi model training and model serving are
+[14:17] So as Matt said, the model, you know, for now is static, but the serving, the scoring
+[14:23] of IPs, what's their probability of visiting that is running every day or single.
+[14:31] This is totally separate and not part of this ticket, but I'm just out of curiosity.
+[14:37] And what I'm under, I understand this when it goes to production work, when you have
+[14:41] models in production, I've understood that there's two different ways that you can deal
+[14:46] with that.
+[14:47] So I know that there's like periodic training where you just train it on a huge batch of
+[14:51] data, right?
+[14:52] Which is what we have, right?
+[14:53] We have a model and then it stays static.
+[14:55] There's also another method.
+[14:57] Maybe I'm wrong about this, where as we get new signal, there's kind of a stream of data
+[15:02] where it tweaks those parameters in real time.
+[15:05] That's not something we're going to end up doing, at least in the near future.
+[15:08] Not in the near term.
+[15:09] No.
+[15:10] Yeah.
+[15:11] I didn't think so.
+[15:12] Cause everything that I think we run is like on a batch process.
+[15:13] So, okay, cool.
+[15:14] Well, I don't think I have any other questions.
+[15:17] I think this makes total sense.
+[15:18] So I, I'm already, there was some bugs this morning, something wasn't running that Ryan
+[15:23] pointed me out.
+[15:24] I already found them.
+[15:25] We just, there were some changes in some names and big retables.
+[15:27] So I'm going to fix that.
+[15:29] And then I will go and add some features here for CPA and yeah, if there's anything
+[15:37] else that you guys can think of that you want to share with me, let me know, but otherwise
+[15:42] thank you for clearing this up for me.
+[15:43] Yeah.
+[15:44] Was there any other things, Alex?
+[15:45] I think the only thing to be careful of is like, now we're getting into this like conversions
+[15:51] and we did like, there was an issue.
+[15:53] There was a thing you need to be careful with on the impression side too, when we first
+[15:58] started dealing with incrementality is like a data leakage.
+[16:01] So I think we just want to be careful about that, that the features, I think there's like
+[16:08] no way to have to worry about it.
+[16:09] Cause that more comes in on the training side, right, Alex, I guess, but yeah, I careful
+[16:14] about that.
+[16:15] You're not like giving the answer to the model from a, from a feature store perspective,
+[16:24] I think be super careful about like your, how you're assigning dates for things because
+[16:32] there's a, there's like a day that we processed in the feature store, but then there's like
+[16:38] the timestamp of the conversion events.
+[16:41] And so we just want to be really crisp about when those things are.
+[16:44] I think that's what you're asking, right, Matt?
+[16:46] Yeah.
+[16:47] So you don't want to, you don't want everything to default to whatever day you processed.
+[16:50] You want like, you know, here's the day that I processed, but you know, this conversion,
+[16:55] did this conversion happen today or not?
+[16:58] Right.
+[16:59] And I think that'll naturally happen in the data.
+[17:00] I don't think you have to worry too much, but just, that's the thing you got to be really
+[17:03] careful of, of like not miss assigning conversions to wrong dates, if that makes sense.
+[17:08] Where does the model stored?
+[17:10] Is it just on a GCS bucket where there's just like a saved model and then the training that
+[17:16] occurs is that done in Databricks or?
+[17:20] So the one that's there now was in Databricks, but all future ones are done through the Vertex
+[17:26] AI pipeline.
+[17:28] And that one is just easy.
+[17:29] Like you just run a single command and it kicks off like a GitHub action.
+[17:30] You just run a single command and it kicks off like a GitHub action.
+[17:35] Is it?
+[17:40] What's the base model under that?
+[17:41] It's XGBoost.
+[17:42] It's XGBoost classifier.
+[17:44] I'm assuming every single time you do XGBoost, you're running from a fresh version
+[17:46] So what I'm assuming then every single time you do XGBoost, you're actually running from
+[17:50] a fresh version of XGBoost and then training it on that new data each time, rather than
+[17:55] retraining the old model or.
+[17:58] Right.
+[17:59] There's really no.
+[18:00] I think you're thinking more like in the neural network of starting from like a baseline of
+[18:05] weights and then like tuning those weights on a subset of data.
+[18:08] Yeah.
+[18:09] That's what I'm thinking.
+[18:10] Like an XGBoost framework, that's like less of a thing, I guess.
+[18:14] Yeah.
+[18:15] You just start fresh every time.
+[18:16] Okay.
+[18:17] That makes sense.
+[18:18] Yeah.
+[18:20] That's what I'm thinking.
+[18:21] I'm thinking about like hyperparameter tuning and stuff like that.
+[18:22] So, okay, cool.
+[18:24] Not that that was important for this ticket, just out of my curiosity.
+[18:28] All right.
+[18:29] The only other thing for me, just a couple of call outs for now in the feature store,
+[18:31] just a couple call outs uh for now in the feature store i would say ignore trying to do these
+[18:37] aggregations at the data source category id level like the bottom of keywords level because there's
+[18:43] kind of like two sets of layer one data there's ip level which is what fangorn models are using
+[18:46] There's IP level, which is what Fangorn models are using.
+[18:50] And then like advertiser keyword.
+[18:53] So focus on that IP level aggregation style and then if you want to.
+[18:59] Household associated data.
+[19:01] Yeah.
+[19:02] And if you want, I don't know how much of the testing you've done at the feature store,
+[19:07] you can like run local airflow and test your code generating features locally.
+[19:13] If you want help with that, you can ping me and we can get on a call and I'll walk
+[19:16] you through it.
+[19:18] Okay.
+[19:20] So just, I don't know how this is related, but I know that there's the first ascent team
+[19:25] for incrementality.
+[19:26] Are we building that?
+[19:32] I know it's not, I don't think it's for the sprint, but do you know how they're supposed
+[19:34] to be a model that's going to be built the set of two models we're talking about with
+[19:38] incremental conversions?
+[19:40] Is that something you're working on right now, Matt?
+[19:43] Yeah.
+[19:44] Alex has worked on it too.
+[19:45] Okay.
+[19:46] Alex iterated on like what I had started to get it close.
+[19:49] So I'm hopping back onto that, what Alex has built.
+[19:54] So tomorrow is when all the incrementality stuff kicks off.
+[19:59] We'll see how complex.
+[20:00] It gets right away because I am assuming right away, Ryan will have to build out
+[20:03] feature or stuff, possibly get data organized, and then we can iterate on a model.
+[20:10] But who knows what's going to happen?
+[20:12] Like they may just say, based on the analysis that have been done already,
+[20:17] we're just going to allocate 50% of the budgets to mid intent and 50% to high intent.
+[20:24] And that's what we're going to start.
+[20:26] And we're just going to do it for like these verticals that we see
+[20:30] have a lot of incremental potential.
+[20:33] Were you part of that meeting where I gave the readout about the,
+[20:38] I don't think you were Matt, were you?
+[20:40] I've seen one of, I've seen some of your analyses, but I don't know.
+[20:44] No, I did one just the other day with, I don't think you're a part of it.
+[20:47] Basically, I measured out the incrementality of our
+[20:51] campaigns prospecting and prospecting campaigns across the border, pretty much at like zero.
+[20:56] Like they're not incremental at all.
+[20:57] At least they probably are, but not, we don't have enough lift to detect it,
+[21:03] at least without doing it on our giant advertisers.
+[21:07] The goal, I think the moving forward on that, like,
+[21:13] it sounded like they wanted to do what we're going to do where we actually have like an actual like,
+[21:18] I like your guys' two model thing.
+[21:19] That's really cool.
+[21:20] I'd never seen that before, where we base things on incremental results,
+[21:25] but I told them at the beginning, I was like, well, we could do incrementality really easy.
+[21:28] I said, we just, let's just target people who've never had a site visit.
+[21:32] I've called a day, right?
+[21:34] But I don't know what the balance is.
+[21:36] And they also brought up something too, that I'm like, well,
+[21:39] this is what I was going to wonder too.
+[21:40] If we ever do build that, it seems like we would have to build a model for every single
+[21:43] It seems like we would have to build a model for every single advertiser that we have,
+[21:47] because you would have to do like, everything's so different, you know,
+[21:52] like a great example is that I remember I was running incrementality for a small client,
+[21:57] Onyx Hunt.
+[21:58] You guys probably know, I don't know if you heard of it, but it's a hunting app,
+[22:01] but it's used by a lot of things.
+[22:03] Basically it shows property lines and all that stuff, right?
+[22:05] Well, Onyx Hunt was not very well known, right?
+[22:07] So every single time we did campaigns for Onyx Hunt, they were extremely incremental.
+[22:11] I mean, we'd have 15, 20% lift on stuff, right?
+[22:13] Because nobody had heard of it.
+[22:14] But then you switch over to McDonald's and it's like,
+[22:16] everybody and their mom knows what McDonald's is.
+[22:19] And right?
+[22:20] So most of the people you're going to target be non-incremental.
+[22:22] So we'd be lucky to get like 1% or 2% lift on those.
+[22:24] And that's not even reaching power, right?
+[22:26] So I guess it's like, when we answer this whole incrementality question,
+[22:29] like what Mike brought up yesterday, he's like, some clients say we're super incremental.
+[22:32] I'm like, yeah, well, it depends on the client, right?
+[22:33] So I just don't know what the solution for that's going to be,
+[22:36] whether it's like, we periodically choose which clients,
+[22:40] we have some sort of toggle.
+[22:41] It says these clients we're going to build models for
+[22:44] because it's worth the investment, right?
+[22:47] Or what else we're going to do with it?
+[22:49] Because like I said, incrementality is super subject to the client and, you know.
+[22:55] Yeah, it's going to be tricky.
+[22:57] I think with that, I'm trying to read through all the docs now that they have,
+[23:01] but that's kind of what it is.
+[23:03] It's like, oh, what do we do?
+[23:04] Just basically remove anyone that we've seen with a site visit.
+[23:10] Just fully remove them.
+[23:13] Um, that's what prospecting is kind of supposed to do, but it's supposed to do.
+[23:17] Yeah.
+[23:18] But I agree.
+[23:19] Like, oh, like how do you measure like what you were talking about?
+[23:26] The brand awareness of a given advertiser so that you can say, well, yeah, McDonald's.
+[23:33] Okay.
+[23:34] We're starting at a super high baseline.
+[23:37] So there's not much room.
+[23:38] Whereas this is a brand new thing.
+[23:40] No one's heard about.
+[23:41] Okay.
+[23:42] Everything's going to be in the middle.
+[23:43] So yeah, we're getting, I think I do that.
+[23:45] I see they have been pulling in some of the findings though.
+[23:47] Cause I just saw like, okay.
+[23:49] Minimum spends of like 50,000 required for six weeks or something.
+[23:53] It's like, okay, that, that looks very familiar from yesterday, I think.
+[23:58] Yeah.
+[23:59] And it really totally depends.
+[24:00] That's another thing too.
+[24:01] It totally depends on the conversion rate too.
+[24:02] Like depending on the clients, like that baseline number, I was like around $200,000 a month.
+[24:07] That's great on average, but I'm like, what if we have like real estate?
+[24:10] Like how often people are going to convert on a house or something?
+[24:13] It's like, that's, you'll never reach power.
+[24:15] It's impossible.
+[24:16] Right.
+[24:16] But then you have other stuff like DoorDash where it's like, yeah, I mean, most people
+[24:21] are going to be willing to spend 10, 15 bucks for food.
+[24:23] So it's a lot easier to reach power and we might only need $10,000 for those people.
+[24:28] So yeah, we'll see how this all goes.
+[24:32] Let's see.
+[24:33] Cool.
+[24:34] Well, hey, thanks guys for jumping into this random 30 minute meeting for me.
+[24:39] So I will hopefully get this done real quick.
+[24:43] All right, cool.
+[24:45] Also side note, I think, do you guys feel like there's enough room for, we have enough
+[24:52] work for another engineer?
+[24:54] Cause I think I'm going to talk to Mike about it.
+[24:56] I think I'm going to ask to be an engineer cause I think they're going to look on doing
+[25:02] that.
+[25:02] So I don't know, I guess that was a rhetorical question.
+[25:06] Yeah.
+[25:06] I mean, that's something that you want to do for sure.
+[25:09] I know I'm talking to you guys.
+[25:10] It's funny.
+[25:11] I've been talking to a couple of people and I talked to data scientists and they're like,
+[25:14] you should be a data scientist.
+[25:16] And I talked to an engineer and they're like, you should be an engineer.
+[25:18] So it's a little bit biased each way.
+[25:21] I told Malachi when we talked to this last time, Matt, and I'm curious what you think.
+[25:26] My answer was, it depends on how comfortable you are with ambiguity.
+[25:30] Like data science has a lot more ambiguity in my biased opinion.
+[25:34] Yeah.
+[25:35] Engineering.
+[25:35] It's all about like your strengths and your passion.
+[25:39] If you feel like, oh yeah, engineering, it's all about, you know, understanding the data
+[25:45] structures and the underlying infrastructure and like being very passionate and having
+[25:49] strong viewpoints on that stuff.
+[25:51] Yeah.
+[25:51] Whereas a data scientist is all like, ah, whatever, like whatever works, I don't care.
+[25:55] I just need to like get the data in a timely fashion and be able to shove it through this
+[26:00] model.
+[26:02] I think what I'm going to end up doing is try to do engineering and not because, but
+[26:06] it's like, I already know how to do data science.
+[26:08] And like, I already present and except for maybe some, any it's, it's cool.
+[26:13] I always like seeing what you guys think of because you guys have brought up some stuff
+[26:18] that I've never thought of before, but I'm like, I don't know if I've really done like
+[26:22] really in-depth engineering.
+[26:24] So anyways, I'm just excited.
+[26:26] Cause I think, and with this whole thing and stuff, I think Mike was making it sound like
+[26:29] we might have room for another engineer because we were talking to them and it's like, I don't
+[26:33] even think we have, to be honest, I don't think we really have a need for an analyst
+[26:36] on this team except for maybe like some visualization stuff, but nothing that we have is super
+[26:41] repeatable.
+[26:41] And, um, they're, I think they're moving towards analysts being on, like they have a team
+[26:47] that solves problems.
+[26:50] And so they have a bunch of analysts that like, every time something comes up and they're
+[26:52] like, Hey, we don't know why this is not working.
+[26:54] They have analysts for that.
+[26:55] And then of course, reporting and anything that has like regular dashboards and stuff,
+[26:59] but outside of that, like, I think that they're going to change it.
+[27:03] So we'll see.
+[27:05] Anyways, unrelated to this thing, just thought I'd get you guys' opinions on it, but cool.
+[27:12] All right.
+[27:12] Well, I'll let you guys know if I run into any issues.
+[27:14] Thank you again.
+[27:15] Appreciate it.
+[27:16] Yep.
+[27:16] All right.
+[27:17] Thanks.
+[27:17] I'll see you.
