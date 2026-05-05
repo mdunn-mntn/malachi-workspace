@@ -484,21 +484,26 @@ Missing these filters will include internal test accounts and deleted entities i
 Product line is stamped on `campaign_groups.product_id` (INT64). Lookup is
 `bronze.integrationprod.core_products`:
 
-**Which `campaign_groups` table is the source of truth?** There are four variants in
-`bronze.integrationprod` — all derived from the same Postgres source. Verified 2026-05-05 to agree
-exactly on Select counts (all show 260 active product_id=2 groups, zero per-row disagreement on
-`product_id`):
+**Source of truth (confirmed by Ray, 2026-05-05):** `campaign_groups.product_id` in **coredb**
+(the Postgres production database). The UI sets this value when users manage Select vs PTV
+campaigns. That stamp flows org-wide — it is the canonical filter element for customer reporting
+AND for invoices. Application-derived flags like `is_select_cid` are bespoke (bidder/camperbid
+context) and should circle back to UI values but aren't the source.
+
+**BQ replicas of coredb's `campaign_groups`** — four variants exist in `bronze.integrationprod`,
+all derived from the same Postgres source. Verified 2026-05-05 to agree exactly on Select counts
+(all show 260 active product_id=2 groups, zero per-row disagreement on `product_id`):
 
 | Table | What it is | Use when |
 |---|---|---|
-| **`public_campaign_groups_raw`** | **System of record** — the actual Datastream CDC landing table from Postgres `public.campaign_groups`. Has `datastream_metadata`, PK, clustered, `max_staleness=15min`. | Pipelines / Spark / Databricks — closest to source, supports incremental reads via `datastream_metadata.source_timestamp`. |
+| **`public_campaign_groups_raw`** | Datastream CDC landing table — closest BQ replica of coredb's Postgres `public.campaign_groups`. Has `datastream_metadata`, PK, clustered, `max_staleness=15min`. | Pipelines / Spark / Databricks — closest to source, supports incremental reads via `datastream_metadata.source_timestamp`. |
 | `public_campaign_groups` | SQLMesh versioned view over the CDC raw. | Equivalent to raw with SQLMesh applied. |
 | `campaign_groups` | SQLMesh-derived analytical table with cleaned/enriched columns (`update_time_raw`, `has_audience_raw`, `display_creatives_status_id_raw`). | Day-to-day analytics — slightly fewer rows than CDC due to SQLMesh filters. |
 | `campaign_groups_raw` | Another SQLMesh-derived intermediate, ~same columns as analytical `campaign_groups`. | Internal staging — usually no reason to query directly. |
 
 **`product_id` is immutable in practice.** Verified across 735,704 archive row versions in
 `archives_campaign_group_archives` covering 117,393 distinct campaign groups: zero groups have ever
-had `product_id` changed. It is set at creation and never modified.
+had `product_id` changed. It is set at creation by the UI and never modified.
 
 | product_id | name | Notes |
 |------------|------|-------|
