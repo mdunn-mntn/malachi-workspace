@@ -55,3 +55,4 @@ slack_bot/logs/
 self_review/
 tickets/ti_650_stage_3_vv_audit/outputs/ti_650_trace_table_24adv.json
 tickets/ti_650_stage_3_vv_audit/outputs/ti_650_trace_table_amsoil.json
+tickets/ti_832_feature_store_roas_cpa/outputs/ti_832_training_data.csv

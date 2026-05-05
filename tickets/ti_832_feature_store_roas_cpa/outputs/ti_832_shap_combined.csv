@@ -1,0 +1,50 @@
+feature,mean_abs_shap,source
+ci_pct_new,1.2069312,cost_impression_log
+bae_pct_genre,0.342262,bidder_auction_events
+cv_max_amt_30d,0.30992293,conv_log (IP grain)
+wl_avg_price,0.27487245,win_logs
+ci_pct_rtc,0.25932795,cost_impression_log
+bae_n_auctions,0.25270572,bidder_auction_events
+cv_avg_amt_30d,0.22559711,conv_log (IP grain)
+ci_total_cost,0.21537513,cost_impression_log
+cv_n_conv_14d,0.19701433,conv_log (IP grain)
+cvp_days_since_last,0.19511747,"conv_log (IP, adv pair)"
+wl_n_adv,0.17017137,win_logs
+bae_n_pubs,0.1696726,bidder_auction_events
+ci_pct_video,0.15144655,cost_impression_log
+ci_hh_score,0.14789179,cost_impression_log
+cv_n_conv_30d,0.14614421,conv_log (IP grain)
+ci_n_imp,0.14129274,cost_impression_log
+cvp_n_conv_30d,0.13810572,"conv_log (IP, adv pair)"
+wl_n_wins,0.13546614,win_logs
+cv_n_orders_30d,0.1301297,conv_log (IP grain)
+cv_days_since_last,0.12528056,conv_log (IP grain)
+wl_n_models,0.11871839,win_logs
+wl_vcr,0.1129208,win_logs
+cv_usd_amt_7d,0.10806437,conv_log (IP grain)
+cv_n_adv_30d,0.10419512,conv_log (IP grain)
+cv_usd_amt_30d,0.09576847,conv_log (IP grain)
+wl_plays,0.0914987,win_logs
+cv_total_amt_30d,0.08042274,conv_log (IP grain)
+cv_mobile_30d,0.07843725,conv_log (IP grain)
+cv_mobile_flag_30d,0.07606561,conv_log (IP grain)
+cv_usd_amt_14d,0.07233941,conv_log (IP grain)
+ci_n_vendors,0.06745662,cost_impression_log
+wl_completes,0.06660025,win_logs
+bae_n_makes,0.05974389,bidder_auction_events
+cv_n_conv_7d,0.057658296,conv_log (IP grain)
+wl_n_makes,0.051062454,win_logs
+cv_tablet_30d,0.04844455,conv_log (IP grain)
+ci_adv_hh_score,0.04481423,cost_impression_log
+cv_n_types_30d,0.042296033,conv_log (IP grain)
+wl_measurable,0.04102025,win_logs
+cv_n_sources_30d,0.036765777,conv_log (IP grain)
+wl_viewable,0.029167635,win_logs
+bae_samsung,0.026547378,bidder_auction_events
+bae_lg,0.021450076,bidder_auction_events
+wl_mutes,0.018048225,win_logs
+cvp_usd_amt_30d,0.013121915,"conv_log (IP, adv pair)"
+bae_roku,0.0127030825,bidder_auction_events
+wl_clicks,0.010256797,win_logs
+wl_pauses,0.0061023394,win_logs
+cv_desktop_30d,0.0,conv_log (IP grain)

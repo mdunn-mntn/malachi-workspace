@@ -1,0 +1,181 @@
+Loading data...
+Loaded 421,366 rows, 0.3216% conversion rate (1,355 positives)
+
+Pre-bid features:      28  (win_logs, cost_impression_log, bidder_auction_events)
+Conv-history features: 21  (conv_log IP-grain + (IP, adv) pair)
+Total features:        49
+
+Train: 337,092 (1,084 pos)   Test: 84,274 (271 pos)
+
+
+======================================================================
+MODEL A — Pre-bid only: 28 features
+======================================================================
+Test AUC: 0.8090
+              precision    recall  f1-score   support
+
+     no_conv       1.00      0.89      0.94     84003
+   converted       0.01      0.49      0.03       271
+
+    accuracy                           0.89     84274
+   macro avg       0.51      0.69      0.48     84274
+weighted avg       0.99      0.89      0.94     84274
+
+
+Top 15 Features:
+ Rank Feature                      Source                           Gain   Weight
+------------------------------------------------------------------------------------------
+  5.0 ci_pct_new                   cost_impression_log            1166.8     1013
+  7.0 ci_total_cost                cost_impression_log             333.1      556
+  8.3 bae_n_pubs                   bidder_auction_events           251.4      641
+  8.3 ci_pct_rtc                   cost_impression_log             822.9      255
+  9.0 bae_n_auctions               bidder_auction_events           289.0      699
+  9.0 ci_n_imp                     cost_impression_log             419.2      170
+ 10.0 ci_adv_hh_score              cost_impression_log             351.4      159
+ 10.3 bae_pct_genre                bidder_auction_events           263.1      842
+ 11.7 wl_n_models                  win_logs                        244.4      453
+ 11.7 wl_completes                 win_logs                        269.0      260
+ 12.0 wl_avg_price                 win_logs                        246.4      744
+ 13.3 bae_n_makes                  bidder_auction_events           198.4      423
+ 13.3 ci_pct_video                 cost_impression_log             280.1      432
+ 15.0 wl_plays                     win_logs                        172.5      455
+ 15.7 wl_clicks                    win_logs                        185.9       52
+
+By Source Table:
+Source                      Feats   Used   Avg Rank   Total Gain
+-----------------------------------------------------------------
+cost_impression_log             8      8       10.7       3819.4
+bidder_auction_events           7      7       14.5       1736.7
+win_logs                       13     13       16.8       2467.0
+
+======================================================================
+MODEL B — Conv-history only: 21 features
+======================================================================
+Test AUC: 0.7485
+              precision    recall  f1-score   support
+
+     no_conv       1.00      0.93      0.96     84003
+   converted       0.02      0.41      0.04       271
+
+    accuracy                           0.93     84274
+   macro avg       0.51      0.67      0.50     84274
+weighted avg       0.99      0.93      0.96     84274
+
+
+Top 15 Features:
+ Rank Feature                      Source                           Gain   Weight
+------------------------------------------------------------------------------------------
+  3.7 cv_max_amt_30d               conv_log (IP grain)             488.3     1076
+  5.7 cv_n_adv_30d                 conv_log (IP grain)             612.3     1020
+  6.3 cv_days_since_last           conv_log (IP grain)             212.7      615
+  6.7 cv_n_orders_30d              conv_log (IP grain)             309.9      541
+  7.3 cv_n_conv_14d                conv_log (IP grain)             222.4      604
+  7.3 cv_usd_amt_14d               conv_log (IP grain)             188.8      748
+  7.3 cv_usd_amt_30d               conv_log (IP grain)             242.6      920
+  8.7 cv_avg_amt_30d               conv_log (IP grain)             180.4     1029
+  9.3 cv_n_conv_30d                conv_log (IP grain)             190.0      592
+ 10.0 cv_mobile_flag_30d           conv_log (IP grain)             252.4      316
+ 11.0 cv_usd_amt_7d                conv_log (IP grain)             183.5      864
+ 11.0 cvp_n_conv_30d               conv_log (IP, adv pair)         588.4      533
+ 12.0 cv_total_amt_30d             conv_log (IP grain)             227.0      196
+ 12.3 cv_mobile_30d                conv_log (IP grain)             198.5      352
+ 12.7 cv_tablet_30d                conv_log (IP grain)             134.5      212
+
+By Source Table:
+Source                      Feats   Used   Avg Rank   Total Gain
+-----------------------------------------------------------------
+conv_log (IP grain)            18     17       10.4       4113.1
+conv_log (IP, adv pair)         3      3       14.8        833.5
+
+======================================================================
+MODEL C — All combined: 49 features
+======================================================================
+Test AUC: 0.8187
+              precision    recall  f1-score   support
+
+     no_conv       1.00      0.93      0.97     84003
+   converted       0.02      0.44      0.04       271
+
+    accuracy                           0.93     84274
+   macro avg       0.51      0.69      0.50     84274
+weighted avg       0.99      0.93      0.96     84274
+
+
+Top 15 Features:
+ Rank Feature                      Source                           Gain   Weight
+------------------------------------------------------------------------------------------
+  7.3 ci_pct_new                   cost_impression_log            1660.4      656
+ 11.0 bae_n_pubs                   bidder_auction_events           260.2      496
+ 12.0 cv_n_adv_30d                 conv_log (IP grain)             457.1      316
+ 12.3 ci_total_cost                cost_impression_log             326.3      362
+ 13.7 ci_pct_rtc                   cost_impression_log             457.7      156
+ 14.0 cv_days_since_last           conv_log (IP grain)             364.6      198
+ 14.3 cv_max_amt_30d               conv_log (IP grain)             460.5      442
+ 14.7 bae_pct_genre                bidder_auction_events           300.3      562
+ 15.3 cvp_n_conv_30d               conv_log (IP, adv pair)         502.1      477
+ 16.0 bae_n_auctions               bidder_auction_events           289.7      495
+ 16.7 ci_n_imp                     cost_impression_log             309.3      116
+ 16.8 cv_usd_amt_14d               conv_log (IP grain)             265.7      295
+ 17.0 ci_adv_hh_score              cost_impression_log             343.4       92
+ 18.7 wl_avg_price                 win_logs                        267.3      585
+ 18.7 cv_n_orders_30d              conv_log (IP grain)             286.9      187
+
+By Source Table:
+Source                      Feats   Used   Avg Rank   Total Gain
+-----------------------------------------------------------------
+cost_impression_log             8      8       19.2       3762.8
+conv_log (IP grain)            18     17       24.7       4845.9
+bidder_auction_events           7      7       26.1       1775.2
+win_logs                       13     13       27.6       2432.3
+conv_log (IP, adv pair)         3      3       28.2        762.3
+
+======================================================================
+SHAP — Model C (All Features Combined)
+======================================================================
+
+Top 25 by SHAP:
+  1.206931  ci_pct_new                   (cost_impression_log)
+  0.342262  bae_pct_genre                (bidder_auction_events)
+  0.309923  cv_max_amt_30d               (conv_log (IP grain))
+  0.274872  wl_avg_price                 (win_logs)
+  0.259328  ci_pct_rtc                   (cost_impression_log)
+  0.252706  bae_n_auctions               (bidder_auction_events)
+  0.225597  cv_avg_amt_30d               (conv_log (IP grain))
+  0.215375  ci_total_cost                (cost_impression_log)
+  0.197014  cv_n_conv_14d                (conv_log (IP grain))
+  0.195117  cvp_days_since_last          (conv_log (IP, adv pair))
+  0.170171  wl_n_adv                     (win_logs)
+  0.169673  bae_n_pubs                   (bidder_auction_events)
+  0.151447  ci_pct_video                 (cost_impression_log)
+  0.147892  ci_hh_score                  (cost_impression_log)
+  0.146144  cv_n_conv_30d                (conv_log (IP grain))
+  0.141293  ci_n_imp                     (cost_impression_log)
+  0.138106  cvp_n_conv_30d               (conv_log (IP, adv pair))
+  0.135466  wl_n_wins                    (win_logs)
+  0.130130  cv_n_orders_30d              (conv_log (IP grain))
+  0.125281  cv_days_since_last           (conv_log (IP grain))
+  0.118718  wl_n_models                  (win_logs)
+  0.112921  wl_vcr                       (win_logs)
+  0.108064  cv_usd_amt_7d                (conv_log (IP grain))
+  0.104195  cv_n_adv_30d                 (conv_log (IP grain))
+  0.095768  cv_usd_amt_30d               (conv_log (IP grain))
+
+Saved SHAP plot: /Users/malachi/Developer/work/mntn/workspace/tickets/ti_832_feature_store_roas_cpa/outputs/ti_832_shap_combined.png
+
+Lift table (Model C, base rate 0.3216%):
+ top_pct     n     rate    lift_x
+    0.01   842 0.060570 18.835728
+    0.05  4213 0.025398  7.897991
+    0.10  8427 0.016732  5.203199
+    0.25 21068 0.009493  2.952100
+    0.50 42137 0.005791  1.800738
+
+======================================================================
+FINAL
+======================================================================
+A (pre-bid only,    28 feats):  AUC=0.8090
+B (conv-hist only,  21 feats):  AUC=0.7485
+C (all combined,    49 feats):  AUC=0.8187
+Lift from conv-history: ΔAUC=+0.0097
+
+Files saved to /Users/malachi/Developer/work/mntn/workspace/tickets/ti_832_feature_store_roas_cpa/outputs/
