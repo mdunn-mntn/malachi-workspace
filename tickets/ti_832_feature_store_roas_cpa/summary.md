@@ -147,12 +147,12 @@ Both reuse `rolling_sum_exprs` / `forward_sum_exprs` / HLL helpers from [`utils_
 
 The bidstream side is dominant. SHAP top 25 includes 14 features that are **already** at IP grain in the feature store from TI-810 (`ci_pct_new`, `bae_pct_genre`, `wl_avg_price`, etc). **Confirm V2 consumes them** via the existing pivot — that may be a bigger lever than the conv-history adds.
 
-### 5.5 Open questions for Matt + Alex
+### 5.5 Decisions (resolved 2026-05-05, moving forward without waiting on Matt+Alex)
 
-1. **Per-pair grain (`conv_log_derived_ip_advertiser_id`) is new** — pivot output may need per-(ip, advertiser) rows instead of one wide row per IP. Is V2's input shape compatible? **Need confirmation before PR-B2.**
-2. **Drop the device-class columns from PR-A?** SHAP says yes; Matt explicitly mentioned they might be useful. Recommend follow Matt's read of why he expected signal — if it's about cross-device household resolution, may need a different feature shape.
-3. **Currency normalization** — USD-only filter sufficient (~99% covered)? **Rec: yes** (FX rates not in feature store).
-4. **Training-set scale** — 1,355 positives is statistically thin. Top-10 SHAP rankings are robust; bottom-of-25 has noise. Run with 5% sample (~6,800 positives) before PR-B if extra confidence wanted? **Rec: no — top-25 cliff is clear.**
+1. **Build the per-pair Layer-2 model.** SHAP forced it (cvp_days_since_last #10, cvp_n_conv_30d #17). V2 scores per-(IP, advertiser_id) so the input pattern fits naturally — same as V1's pivot, just a different join. If Matt's V2 training input doesn't consume per-pair, the cost is sunk on a small unused L2 model; not blocking.
+2. **Drop device-class columns** (`cv_desktop_30d` / `cv_mobile_30d` / `cv_tablet_30d` / `cv_mobile_flag_30d`). SHAP put them all below top-25. **Why no signal:** the bidstream side already represents device at bid time (`bae_n_makes`, `wl_n_models` are both top-25), and at IP grain conversion-side device is largely the same household / same gear — redundant. If Matt's intuition is about cross-device identity resolution, that's a different feature shape entirely (multi-IP household joins) and belongs on a follow-up ticket.
+3. **Currency:** USD-only filter (`UPPER(COALESCE(order_curr,'USD'))='USD'`) covers ~99%. FX rates not in feature store — defer.
+4. **Sample size:** Proceed with 1% / 1,355 positives. Top-25 cliff is clear (top of 25 has SHAP ≥0.10; #26+ all <0.09). Top-10 drives the spec and is robust at any sample size. Re-running at 5% would burn ~3.9TB BQ scan to confirm decisions already obvious from the cliff. If V2 training reveals instability, re-run later.
 
 ### 5.6 Sequence
 
