@@ -1,4 +1,5 @@
 advertiser_id,advertiser_name,flip_date,cohort,vertical,has_conversion_pixel,has_dollar_value,notes
-32320,Biz2Credit,2026-05-01,Tier1-Wave1,Lending & Brokerage,true,false,Lead-gen — CVR meaningful, AOV/ROAS not
+32320,Biz2Credit,2026-05-01,Tier1-Wave1,Lending & Brokerage,true,false,Lead-gen — CVR meaningful AOV/ROAS not
 38659,Big Blue Bubble Inc.,2026-05-01,Tier1-Wave1,Games & Comics,false,false,No conversion pixel — only IVR/VVR meaningful
-32233,University of Northwestern Ohio,2026-05-01,Tier1-Wave1,Colleges & Universities,true,false,Lead-gen — CVR meaningful, AOV/ROAS not
+32233,University of Northwestern Ohio,2026-05-01,Tier1-Wave1,Colleges & Universities,true,false,Lead-gen — CVR meaningful AOV/ROAS not
+46538,authenTEAK,2026-05-05,Tier1-Wave2,Outdoor Furniture & Goods,true,true,E-commerce furniture — full KPI suite meaningful

@@ -19,12 +19,13 @@ Goal: keep producing per-advertiser KPI movement readouts as new Fangorn cohorts
 
 | Step | What | Where | Cadence |
 |---|---|---|---|
-| 1 | Add new flips to `wave_config.csv` | this folder | Each time a cohort flips |
-| 2 | Run the Databricks notebook | `databricks_fangorn_lift.py` | Weekly (or on demand) |
-| 3 | Eyeball results | notebook outputs + `outputs/` | After each run |
-| 4 | Post Slack/Jira summary if anything moves >20% | `#tar-ti` | After each run |
-| 5 | Once cohort reaches 4 weeks post-flip, do final readout | one-pager | Per cohort |
-| 6 | (Later) wire to Mode | `mode_dashboard_plan.md` | One-time + weekly maintenance |
+| 1 | Run discovery query → grab newly-flipped AIDs | [`../queries/ti_921_discover_new_flips.sql`](../queries/ti_921_discover_new_flips.sql) | Each Slack rollout announcement |
+| 2 | Append discovered AIDs (with cohort label, pixel/dollar status) to `wave_config.csv` | this folder | After step 1 |
+| 3 | Run the Databricks notebook | `databricks_fangorn_lift.py` | Weekly (or on demand) |
+| 4 | Eyeball results | notebook outputs + `outputs/` | After each run |
+| 5 | Post Slack/Jira summary if anything moves >20% | `#tar-ti` | After each run |
+| 6 | Once cohort reaches 4 weeks post-flip, do final readout | one-pager | Per cohort |
+| 7 | (Later) wire to Mode | `mode_dashboard_plan.md` | One-time + weekly maintenance |
 
 Everything else in this doc is to give you the mental model so steps 1-5 make sense.
 
@@ -122,7 +123,7 @@ If you don't trust a number in the dashboard for an advertiser, check whether th
 
 | Table | Used for | Critical notes |
 |---|---|---|
-| `dw-main-bronze.integrationprod.audience_advertiser_configurations` | Detects current treated AIDs (`vertical_data_source = 46`) | Snapshot table from CDC; current state only. We log historical flips in `wave_config.csv` ourselves. |
+| `dw-main-bronze.integrationprod.audience_advertiser_configurations` | Detects current treated AIDs (`vertical_data_source = 46`) | Snapshot table from CDC; current state only. **`TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)` gives the moment vds was last set** — reliable for flip-time detection. (Ignore the `update_time` column — frequently NULL.) |
 | `dw-main-bronze.integrationprod.advertisers` | AID → company name. Filter `deleted = FALSE AND is_test = FALSE`. | `company_name` is the right column (current name). |
 | `dw-main-bronze.integrationprod.campaigns` | Funnel-level filter. We use `funnel_level = 1` (prospecting). | `objective_id` is **not** authoritative for stage — use `funnel_level`. |
 | `dw-main-silver.summarydata.impression_facts` | Daily impressions + uniques (HLL) | **Fresh through current day.** Use `DATE(hour)` to date-filter. |
@@ -137,7 +138,7 @@ If you don't trust a number in the dashboard for an advertiser, check whether th
 |---|---|
 | `silver.summarydata.sum_by_campaign_group_by_day` | **Stale at 2026-04-14** (17+ days behind; this is a known data-platform issue inherited from TI-849). The TI-221 GP query used these rollups; we pivoted to underlying facts. If they come back fresh, simplifying off them is a future optimization. |
 | `silver.aggregates.agg__daily_sum_by_campaign` | Empty since 2026-03-31. |
-| `dw-main-bronze.tpa.fangorn_advertiser_inclusion` | Mentioned by Ryan in Slack but does not exist in BQ. Use `audience_advertiser_configurations.vertical_data_source = 46`. |
+| `dw-main-bronze.tpa.fangorn_advertiser_inclusion` | **Source-of-truth, but lives in TPA-service Postgres, not BQ.** Has columns `advertiser_id` + `fangorn_advertiser_inclusion_date` (= the planned flip date PT). Updated when Matt/Ryan run the rollout. The downstream effect — `audience_advertiser_configurations.vertical_data_source = 46` in BQ — propagates after the nightly household-scoring run (midnight-1am PT). For our purposes the BQ flag is what matters; if you need the canonical Postgres view, ask Ryan Kleck. |
 
 ---
 
@@ -185,7 +186,25 @@ Two changes to make this work:
    - Post = `flip_date + 1 → CURRENT_DATE - 1` (grows daily; flip day itself excluded per TI-221 convention)
    - `days_since_flip` is included in the daily panel so trends can be aligned across cohorts that flipped on different dates (essential for Mode).
 
-There's also [`../queries/ti_921_flip_date_detection.sql`](../queries/ti_921_flip_date_detection.sql) — a best-effort detector that pulls flip dates from `audience_advertiser_configurations._archive` (Datastream history). Use it as a cross-check against `wave_config.csv` to make sure no flips slipped through.
+### Discovery workflow (run after each wave)
+
+When a new cohort flips:
+
+1. Run [`../queries/ti_921_discover_new_flips.sql`](../queries/ti_921_discover_new_flips.sql). It returns every AID currently flipped (`vertical_data_source = 46`) that's *not* in `wave_config.csv`, with the precise UTC flip moment (`TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)`) and PT date.
+2. For each row returned, append a line to `wave_config.csv` with the cohort label (e.g., `Tier1-Wave3`), pixel/dollar status, and any vertical-specific notes.
+3. Re-run the Databricks notebook.
+
+There's also [`../queries/ti_921_flip_date_detection.sql`](../queries/ti_921_flip_date_detection.sql) — a best-effort detector against `audience_advertiser_configurations_archive` (Datastream history). Use it if the archive table exists in your environment; otherwise stick with the discovery query above (which uses the live snapshot's source_timestamp, no archive needed).
+
+### What's already known (as of 2026-05-05 PM PT)
+
+| AID | Advertiser | flip_date PT | Cohort | Notes |
+|---|---|---|---|---|
+| 32320 | Biz2Credit | 2026-05-01 | Tier1-Wave1 | Lead-gen |
+| 38659 | Big Blue Bubble | 2026-05-01 | Tier1-Wave1 | No conversion pixel |
+| 32233 | UNW Ohio | 2026-05-01 | Tier1-Wave1 | Lead-gen |
+| 46538 | authenTEAK | 2026-05-05 | Tier1-Wave2 | E-commerce furniture (full KPI suite) |
+| **+50 incoming** | TBD | **2026-05-06** | Tier1-Wave2 | Per Matt 2026-05-05 PM. Run discovery query tomorrow morning after household scoring completes. Ryan/Jaime API push already done; `tpa.fangorn_advertiser_inclusion` has `fangorn_advertiser_inclusion_date = 2026-05-06` for these. |
 
 ---
 

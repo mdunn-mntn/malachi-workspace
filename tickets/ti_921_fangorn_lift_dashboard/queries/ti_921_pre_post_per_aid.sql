@@ -32,7 +32,8 @@ WITH wave_config AS (
   -- When new AIDs flip, append rows here AND to the CSV.
   SELECT 32320 AS advertiser_id, 'Biz2Credit'                       AS advertiser_name, DATE '2026-05-01' AS flip_date, 'Tier1-Wave1' AS cohort UNION ALL
   SELECT 38659,                  'Big Blue Bubble Inc.',                                DATE '2026-05-01',                'Tier1-Wave1'           UNION ALL
-  SELECT 32233,                  'University of Northwestern Ohio',                     DATE '2026-05-01',                'Tier1-Wave1'
+  SELECT 32233,                  'University of Northwestern Ohio',                     DATE '2026-05-01',                'Tier1-Wave1'           UNION ALL
+  SELECT 46538,                  'authenTEAK',                                          DATE '2026-05-05',                'Tier1-Wave2'
 ),
 
 -- Cross-check vs the source-of-truth current state.

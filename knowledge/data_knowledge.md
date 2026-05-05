@@ -1416,7 +1416,9 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 SELECT advertiser_id FROM `dw-main-bronze.integrationprod.audience_advertiser_configurations` WHERE vertical_data_source = 46;
 ```
 
-**Note:** Ryan Kleck mentioned `tpa.fangorn_advertiser_inclusion` in Slack (2026-05-01) but it does NOT exist in BQ — `audience_advertiser_configurations.vertical_data_source = 46` is the de-facto inclusion list.
+**Note (corrected 2026-05-05):** `tpa.fangorn_advertiser_inclusion` IS the source-of-truth inclusion list — but it lives in TPA-service Postgres, NOT in BQ. Schema: `(advertiser_id, fangorn_advertiser_inclusion_date)`. The `_date` column is the planned PT flip date. Joins to `audience.advertiser_configurations` (also Postgres). Updates happen when Matt/Ryan run a rollout — Ryan's `select ff.advertiser_id, cc.vertical_data_source FROM tpa.fangorn_advertiser_inclusion ff JOIN audience.advertiser_configurations cc ON ff.advertiser_id = cc.advertiser_id WHERE fangorn_advertiser_inclusion_date = 'YYYY-MM-DD'` is the canonical Postgres-side query. The BQ-observable effect is `audience_advertiser_configurations.vertical_data_source = 46`, which propagates after the nightly household-scoring run completes (midnight-1am PT). Fangorn-targeted bidding starts the next morning.
+
+**Flip-time detection in BQ:** `TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)` on `audience_advertiser_configurations` reliably gives the moment `vertical_data_source` was last set per advertiser. The `update_time` column is frequently NULL — don't use it. Verified 2026-05-05 against the 3 May-1 launch AIDs (all source_ts = 08:00-08:01 UTC matching the 08:00 UTC DAG completion) and 46538 authenTEAK (source_ts = 2026-05-05 22:26 UTC, the day Wave 2 vanguard flip happened).
 
 **Rollback mechanism:** `UPDATE audience.advertiser_configurations SET vertical_data_source = NULL WHERE vertical_data_source = 46;` — query-time only, no audience re-ingestion needed.
 
@@ -1424,7 +1426,14 @@ SELECT advertiser_id FROM `dw-main-bronze.integrationprod.audience_advertiser_co
 
 **DS46 in IPDSC:** `bronze.external.ipdsc__v1` carries DS46 alongside DS13. DS46 fully populated (3.1B rows back to 2026-01-29). DS46 row volume is ~16% of DS13 (consistent with a more selective Fangorn-scored layer).
 
-**Tiering:** 369 Tier-1 advertisers approved (44% of fleet), but **only 3 launched on May 1**. Tier 1 expansion is staged — Mode dashboard auto-detects via `vertical_data_source = 46` filter so it picks up new flips without code changes. Out of scope for TI-457: Tier 2 / Tier 3 rollouts, continuous scoring full GA (TI-606/TI-816).
+**Tiering:** 369 Tier-1 advertisers approved (44% of fleet); staged rollout. Tier 2 (40%) and Tier 3 (16%) follow.
+
+**Tier-1 rollout actuals (live tracking):**
+- **Wave 1 (2026-05-01):** 3 AIDs — 32320 Biz2Credit, 38659 Big Blue Bubble, 32233 UNW Ohio.
+- **Wave 2 vanguard (2026-05-05):** 1 AID — 46538 authenTEAK (Outdoor Furniture & Goods, full KPI suite).
+- **Wave 2 main (2026-05-06):** ~50 AIDs — Matt + Ryan pushed via TPA inclusion API at 2026-05-05 ~3:42 PM PT; effective after tonight's household-scoring run. AID list available next morning via `vertical_data_source = 46` auto-detect or the discovery query at `tickets/ti_921_fangorn_lift_dashboard/queries/ti_921_discover_new_flips.sql`.
+
+The Mode dashboard / TI-921 pipeline auto-detects new flips via `vertical_data_source = 46`. Out of scope for TI-457: Tier 2 / Tier 3 rollouts, continuous scoring full GA (TI-606/TI-816).
 
 ### Continuous Scoring (Fangorn + Keywords)
 - Combines Fangorn intent score (s, 0-1) with BUK keyword evidence score (K, 0-1)
