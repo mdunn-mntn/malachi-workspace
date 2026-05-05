@@ -2,7 +2,7 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-931
 **Type:** Bug
-**Status:** Verified in prod 2026-05-05 — awaiting next 01:03 UTC scheduled-run confirmation before Done transition
+**Status:** Done (closed 2026-05-05; transitioned In Progress → In Review → Done)
 **Priority:** P3 — Normal
 **Story Points:** 2
 **Sprint:** TI Sprint 05/04/26 – 05/18/26 (id 6160)
