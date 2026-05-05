@@ -376,6 +376,10 @@ Same rule: query `summarydata.*`. Never query `sqlmesh__summarydata.*` directly.
 For schemas, always reference `bronze.integrationprod`. The `core_` prefix is stripped in silver.core
 (e.g. `integrationprod.core_flights` → `silver.core.flights`).
 
+**Tables NOT exposed in silver.core** (because they don't have a `core_` prefix in bronze):
+`campaigns`, `campaign_groups`, `advertisers`, `advertiser_configs`, and most other top-level
+integrationprod tables. For these, query `bronze.integrationprod.<table>` directly.
+
 ### bronze.raw physical vs silver enriched (key differences)
 | Aspect | bronze.raw | silver.logdata |
 |--------|-----------|----------------|
@@ -475,6 +479,49 @@ Missing these filters will include internal test accounts and deleted entities i
 ---
 
 ## Advertising Concepts & Domain Logic
+
+### MNTN Product Identification (PTV / Select / QuickFrame)
+Product line is stamped on `bronze.integrationprod.campaign_groups.product_id` (INT64). Lookup is
+`bronze.integrationprod.core_products`:
+
+| product_id | name | Notes |
+|------------|------|-------|
+| 1 | PTV | Performance TV — the main product. ~120,899 groups (2010-present). |
+| 2 | **Select** | MNTN's media marketplace / PMP product (Hannah's org). 378 groups, first created 2025-07-31. |
+| 3 | QuickFrame | Listed in `core_products` but no campaign_groups attached (as of 2026-05-05). |
+
+**Canonical filter for MNTN Select campaigns/groups:**
+```sql
+-- Select campaign groups
+SELECT campaign_group_id, advertiser_id, name
+FROM `dw-main-bronze.integrationprod.campaign_groups`
+WHERE product_id = 2 AND deleted = FALSE AND is_test = FALSE;
+
+-- Select campaigns (line items) — product_id is on the GROUP, not the campaign
+SELECT c.*
+FROM `dw-main-bronze.integrationprod.campaigns` c
+JOIN `dw-main-bronze.integrationprod.campaign_groups` cg
+  ON c.campaign_group_id = cg.campaign_group_id
+WHERE cg.product_id = 2
+  AND c.deleted = FALSE AND cg.deleted = FALSE
+  AND c.is_test = FALSE AND cg.is_test = FALSE;
+```
+
+**Important:**
+- `product_id` lives **only on `campaign_groups`** — not on `campaigns`. Always filter at the group
+  level and join down.
+- `bronze.integrationprod.camperbid_mmm_training_data.is_select_cid` exists but is a derived
+  training-data flag, **not** the source of truth. Use `campaign_groups.product_id = 2`.
+- Select started **2025-07-31** — any historical analysis before that date will have zero rows.
+
+**Related Select/PMP tables** (for deal-level or pricing context):
+- `mntnselect_offering_versions` — Select offering catalog (offerings, PMP deals, run windows, CPMs)
+- `core_private_marketplace_deals` / `core_private_marketplace_groups` — PMP deal hierarchy
+- `core_campaign_group_x_private_marketplace_deals` — group ↔ PMP deal mapping
+- `core_select_advertiser_margins` / `core_select_margins` — Select-specific pricing
+- `invoice_select_publisher_invoices` — Select publisher invoicing
+
+(Empirically verified 2026-05-05, prompted by Victor Savitskiy question.)
 
 ### RTC (Real-Time Conquest)
 Real-Time Conquest is a CTV prospecting targeting mode. The bidder targets IP addresses identified
