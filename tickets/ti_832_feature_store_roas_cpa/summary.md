@@ -58,25 +58,78 @@ After Phase 2 sign-off: implement the agreed metrics in `conv_log_ip` (and any p
 - Feature drift to be monitored once V2 is in prod.
 - Local testing path: `python model_run.py conv_log_ip -a '{"run_date": "YYYY-MM-DD"}'` (Dataproc Serverless, dev bucket, branch suffix). Alex offered a walkthrough.
 
-## 5. Phase 2 — feature spec (TO DRAFT, before Phase 3 starts)
+## 5. Phase 2 — feature spec (DRAFTED 2026-05-05, awaiting Matt + Alex sign-off)
 
-Candidate metrics to propose to Matt + Alex (column-by-column; each gets the standard 7/14/30d backward + 7/14d forward outcome treatment via the existing helper):
+**Source-table audit (14d, 1.0B rows of `dw-main-silver.logdata.conversion_log`):**
+- `order_amt_usd` is **1.4% populated → unusable**. Use `order_amt` filtered to USD currency.
+- `device_type` 96.9% / `is_mobile_device` 96.9% / `operating_system` 97.1% — viable IP-grain features.
+- `conversion_type` cardinality = 6,541 → HLL only, no direct enumeration.
+- 47.9M distinct IPs in 30 days — Layer-2 `(ip)` grain is tractable.
 
-- `conv_count` — conversions per IP per window
-- `order_value_sum` — total revenue per IP per window
-- `avg_order_value` — `order_value_sum / conv_count` (computed in Layer 2 from the two above)
-- `days_since_last_conv` — recency
-- `distinct_conv_advertisers_30d` — breadth (does this IP convert across many brands?)
-- `view_conv_share` — view-attributed share (vs click)
-- Forward outcomes for training: `conv_count_forward_outcome_{7,14}d`, `order_value_forward_outcome_{7,14}d`
+**What `conv_log_ip` produces today** (Layer-1, daily): `conversion_count`, `total_order_amount`, `order_amount_count`, `max_order_amount`, plus HLL sketches for `order_id` / `conversion_type` / `conversion_source_id` / `advertiser_id`. **No timestamps, no currency-clean revenue, no device split, no Layer-2.**
 
-**Open spec questions:**
-1. Click-attributed vs view-attributed vs both vs probattr? (depends on V2 training target)
-2. Strip view-attributed outliers? (advertiser variance is huge — ToS/checkout vs B2B)
-3. Recency window cap (90d? 365d?)
-4. Device-type as feature (Matt mentioned in passing — needs a source-table audit; might be in `bae_ip` or `aug_log_ip`)
+### 5.1 Layer-1 additions to `conv_log_ip` (PR-A, ~30 net lines)
 
-Output of Phase 2: this section gets filled in with the final agreed list, then a Jira comment posts the spec for Matt + Alex thumb-up.
+| Column | Aggregation | Why |
+|---|---|---|
+| `conversion_time_min` | `MIN(time)` | Earliest conv on dt — first-conv recency in Layer-2 |
+| `conversion_time_max` | `MAX(time)` | Last-conv recency |
+| `usd_order_amount` | `SUM(CASE WHEN UPPER(COALESCE(order_curr,'USD'))='USD' THEN CAST(order_amt AS DOUBLE) ELSE 0 END)` | Currency-clean revenue (~99% coverage; non-USD zero-fills) |
+| `desktop_conv_count` | `SUM(WHEN device_type='desktop' THEN 1)` | Mirror `guid_log_ip` device-class pattern |
+| `mobile_conv_count` | `SUM(WHEN LOWER(device_type) IN ('mobile','phone') THEN 1)` | Same |
+| `tablet_conv_count` | `SUM(WHEN device_type='tablet' THEN 1)` | Same |
+| `other_device_conv_count` | `conversion_count − (desktop+mobile+tablet)` | Captures CTV / unknown |
+| `os_family_hll` | `hll_sketch_agg(os_family, 12)` | Mergeable distinct-OS count in Layer-2 |
+
+Existing columns kept as-is. No removals.
+
+### 5.2 New Layer-2 model `conv_log_derived_ip` (PR-B, ~250 lines)
+
+Mirrors [`guid_log_derived_ip_vertical_id.py`](../../../airflow-ti/models/feature_store/feature_group_2_derived/guid_log_derived_ip_vertical_id.py) **minus the `vertical_id` grain** (pure IP). `MultiSnapshotFileStorageBaseModel(["base","monthly"])`. Reuses `rolling_sum_exprs` / `forward_sum_exprs` / `rolling_hll_merge_exprs` / `forward_hll_merge_exprs` from [`utils_model/feature_store_core_campaign.py`](../../../airflow-ti/utils_model/feature_store_core_campaign.py) — no new aggregation code.
+
+**Backward (lookback) columns** — windows `(7, 14, 30)`:
+
+| Column | Source | Notes |
+|---|---|---|
+| `conversion_count_{7,14,30}d` | `SUM(conversion_count)` | Volume |
+| `total_order_amount_{7,14,30}d` | `SUM(total_order_amount)` | Currency-mixed (parity with L1) |
+| `usd_order_amount_{7,14,30}d` | `SUM(usd_order_amount)` | Primary revenue feature |
+| `max_order_amount_30d` | `MAX(max_order_amount)` over window | High-value-purchase signal |
+| `desktop_conv_count_{7,14,30}d` / `mobile_…` / `tablet_…` | `SUM(...)` | Device split |
+| `distinct_advertisers_30d` | `hll_merge_extract_count(advertiser_id_hll)` | Multi-brand converter? |
+| `distinct_conversion_types_30d` | `hll_merge_extract_count(conversion_type_hll)` | Funnel-stage diversity |
+| `distinct_orders_30d` | `hll_merge_extract_count(order_id_hll)` | True-distinct order count |
+| `last_conversion_time_max` | `MAX(conversion_time_max)` | Last-touch timestamp |
+| `last_conversion_day` | `to_date(last_conversion_time_max)` | Date form |
+| `days_since_last_conversion` | `datediff(run_date, last_conversion_day) + 1`, sentinel `999` | Mirrors `days_since_last_visit_in_vertical` |
+
+**Forward outcome columns** (monthly snapshot only):
+
+| Column | Source | Notes |
+|---|---|---|
+| `conversion_count_forward_{7,14}d_outcome` | forward `conversion_count` | Did this IP convert post-snapshot? |
+| `usd_order_amount_forward_{7,14}d_outcome` | forward `usd_order_amount` | ROAS training target |
+| `first_conversion_time_min_forward_outcome` | forward `MIN(conversion_time_min)` | Time-to-first-conversion |
+| `first_conversion_day_forward_outcome` | `to_date(...)` | Date form |
+| `days_until_first_conversion_forward_outcome` | `datediff(...)`, sentinel `999` | Time-to-conversion outcome |
+
+**Layer-3 (pivot) — out of scope.** Only build if V2 needs a wide-format input — Matt's call later.
+
+### 5.3 Open questions for Matt + Alex (with recommendation)
+
+1. **Currency normalization** — FX-adjusted vs USD-only filter? **Rec: USD-only filter** (~1% non-USD; FX not in feature store).
+2. **Outlier capping at L1** — cap `conversion_count` per IP per day or surface raw? **Rec: raw at L1, cap at training time** (preserve information).
+3. **`vertical_id` breakdown** — pivot `(ip, vertical_id)` or pure IP? **Rec: pure IP MVP**; add `_ip_vertical_id` variant in follow-up if V2 wants vertical breadth.
+4. **Attribution split (click/view/probattr)** — conversion_log has no attribution column at event row. **Rec: stay attribution-agnostic at IP grain**; attribution lives on advertiser-grain `summary_*` (already in feature store).
+5. **Recency cap** — 30d window + `999` sentinel for "never converted"? **Rec: yes**, consistency with `guid_log_derived`. Longer windows = separate ticket.
+6. **`probattr_*` / `raw_*` extension to IP grain** — currently advertiser-grain. **Rec: defer**; only add if Matt explicitly wants it.
+7. **OS-family counts** — desktop/mobile/tablet/other only, or also mac/windows/ios/android counts at L1? **Rec: device-class only at L1**, OS-family as PR-A2 follow-up if Matt asks.
+
+### 5.4 Sequence
+
+PR-A (Layer-1 extension) ships first → backfill `conv_log_ip` for the 30d lookback by clearing failed/stale tasks. PR-B (Layer-2 derived) ships second. PR-C (DAG dep wiring) is Ryan's.
+
+**STOP gate:** no PR-A / PR-B code lands until Matt + Alex thumb up the spec.
 
 ## 6. Solution
 
