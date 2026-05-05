@@ -117,7 +117,7 @@ Lift @ top 1%: **18.8x** (60.6% conv rate vs 0.32% base).
 
 Existing columns kept (`conversion_count`, `total_order_amount`, `order_amount_count`, `max_order_amount`, HLL sketches). Device-class additions and `os_family_hll` from inspection draft **dropped** based on SHAP — no measurable signal.
 
-### 5.3 Two new Layer-2 derived models (PR-B, PR-B2)
+### 5.3 New Layer-2 derived model (PR-B)
 
 **`conv_log_derived_ip`** (pure IP grain) — feeds the IP-level conversion-history features that SHAP confirmed:
 
@@ -132,37 +132,33 @@ Existing columns kept (`conversion_count`, `total_order_amount`, `order_amount_c
 | `cv_days_since_last` | `datediff(run_date, MAX(conversion_time_max).date) + 1`, sentinel 999 | #20 (0.125) |
 | Forward outcomes (monthly snapshot only) | `cv_n_conv_forward_{7,14}d_outcome`, `cv_usd_amt_forward_{7,14}d_outcome`, `cv_first_conv_day_forward_outcome`, `cv_days_until_first_conv_forward_outcome` | training labels |
 
-**`conv_log_derived_ip_advertiser_id`** (per-pair grain) — SHAP forced this; 2 of top 17 are per-pair:
+Reuses `rolling_sum_exprs` / `forward_sum_exprs` / HLL helpers from [`utils_model/feature_store_core_campaign.py`](../../../airflow-ti/utils_model/feature_store_core_campaign.py) — no new aggregation code.
 
-| Column | Source aggregation | SHAP rank |
-|---|---|---|
-| `cvp_n_conv_30d` | `COUNT(*)` per (ip, advertiser_id) over 30d | #17 (0.138) |
-| `cvp_usd_amt_30d` | `SUM(usd_order_amount)` per pair over 30d | (probable, not in top 25 but pairs with cvp_n_conv) |
-| `cvp_days_since_last` | `datediff(run_date, MAX(conversion_time_max).date) + 1`, sentinel 999 | #10 (0.195) |
-| Forward outcomes (monthly snapshot only) | `cvp_n_conv_forward_{7,14}d_outcome`, `cvp_usd_amt_forward_{7,14}d_outcome` | training labels |
+**Per-pair Layer-2 model (`conv_log_derived_ip_advertiser_id`) — DROPPED 2026-05-05** per Matt + Ryan in Slack:
+- Matt: *"the (IP, advertiser) feature pair is a big issue we also tried to avoid with Fangorn… skip that for now and try to generalize features to be at the IP-level."*
+- Ryan: *"shape it the way it needs to be shaped for scoring ALL advertisers, because inference needs to be quick and doing data munging during inference is not ideal."*
 
-Both reuse `rolling_sum_exprs` / `forward_sum_exprs` / HLL helpers from [`utils_model/feature_store_core_campaign.py`](../../../airflow-ti/utils_model/feature_store_core_campaign.py) — no new aggregation code.
+Cost: 2 of top-17 SHAP features (`cvp_days_since_last` #10, `cvp_n_conv_30d` #17) are intentionally left on the table. Revisit if V2 IP-only training underperforms expectations.
 
 ### 5.4 What's already in the feature store (no PR needed)
 
 The bidstream side is dominant. SHAP top 25 includes 14 features that are **already** at IP grain in the feature store from TI-810 (`ci_pct_new`, `bae_pct_genre`, `wl_avg_price`, etc). **Confirm V2 consumes them** via the existing pivot — that may be a bigger lever than the conv-history adds.
 
-### 5.5 Decisions (resolved 2026-05-05, moving forward without waiting on Matt+Alex)
+### 5.5 Decisions (resolved 2026-05-05)
 
-1. **Build the per-pair Layer-2 model.** SHAP forced it (cvp_days_since_last #10, cvp_n_conv_30d #17). V2 scores per-(IP, advertiser_id) so the input pattern fits naturally — same as V1's pivot, just a different join. If Matt's V2 training input doesn't consume per-pair, the cost is sunk on a small unused L2 model; not blocking.
+1. **IP-only grain confirmed by Matt + Ryan via Slack.** Per-pair (IP, advertiser_id) Layer-2 model dropped — see §5.3. Squeezing the simplest IP-only feature set first; per-pair revisits later if needed.
 2. **Drop device-class columns** (`cv_desktop_30d` / `cv_mobile_30d` / `cv_tablet_30d` / `cv_mobile_flag_30d`). SHAP put them all below top-25. **Why no signal:** the bidstream side already represents device at bid time (`bae_n_makes`, `wl_n_models` are both top-25), and at IP grain conversion-side device is largely the same household / same gear — redundant. If Matt's intuition is about cross-device identity resolution, that's a different feature shape entirely (multi-IP household joins) and belongs on a follow-up ticket.
 3. **Currency:** USD-only filter (`UPPER(COALESCE(order_curr,'USD'))='USD'`) covers ~99%. FX rates not in feature store — defer.
 4. **Sample size:** Proceed with 1% / 1,355 positives. Top-25 cliff is clear (top of 25 has SHAP ≥0.10; #26+ all <0.09). Top-10 drives the spec and is robust at any sample size. Re-running at 5% would burn ~3.9TB BQ scan to confirm decisions already obvious from the cliff. If V2 training reveals instability, re-run later.
 
 ### 5.6 Sequence
 
-1. PR-A — Layer-1 `conv_log_ip` extension (3 cols only: `conversion_time_min/max`, `usd_order_amount`). ~15 net lines.
+1. PR-A — Layer-1 `conv_log_ip` extension (3 cols: `conversion_time_min/max`, `usd_order_amount`). ~15 net lines.
 2. Backfill `conv_log_ip` for the 30d lookback by clearing tasks (`feature_store_setup_model`).
 3. PR-B — Layer-2 `conv_log_derived_ip` (pure IP). ~250 lines.
-4. PR-B2 — Layer-2 `conv_log_derived_ip_advertiser_id` (per-pair). ~250 lines.
-5. PR-C — Ryan wires DAG deps.
+4. PR-C — Ryan wires DAG deps.
 
-**STOP gate:** no PR-A / PR-B / PR-B2 until Matt + Alex thumb up the measured spec.
+Phase 3 is now in motion — IP-only path is locked.
 
 ### 5.7 Artifacts
 
