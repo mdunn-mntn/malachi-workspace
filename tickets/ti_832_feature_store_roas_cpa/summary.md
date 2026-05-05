@@ -82,7 +82,7 @@ Discovered via the same schema diff. These are candidates for the broader ROAS/C
 
 ### 5.1 Phase 1 — fix the column-drift crash (2026-05-05)
 
-Branch: `feature/ti-832-fix-summary-bq-column-drift` in airflow-ti (commit `06a98cf`).
+Branch: `feature/ti-832-fix-summary-bq-column-drift` in airflow-ti (commit `06a98cf`). PR: [airflow-ti#1024](https://github.com/SteelHouse/airflow-ti/pull/1024) — open for review 2026-05-05.
 
 Patched four files (-17 lines, no additions):
 - `models/feature_store/feature_group_1_source/summary_advertiser_id.py` — drop `data_cost`, `fee_cost`, `partner_cost` from explicit `.select(...)`.
