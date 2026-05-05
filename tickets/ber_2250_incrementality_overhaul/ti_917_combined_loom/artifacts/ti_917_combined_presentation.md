@@ -4,12 +4,12 @@
 **Power Line:** *Lift is real for retargeting. Measurement is real for visits.*
 **Date:** 2026-05-05
 **Owner:** Malachi
-**Runtime:** 18–20 min spoken (29 main + 4 appendix slides)
-**Sources mined:** TI-837 v5 deck (15 slides) + TI-884 power deck (24 slides) + new iROAS extension (3 charts, 11 new slides)
+**Runtime:** 19–21 min spoken (30 main + 8 appendix slides)
+**Sources mined:** TI-837 v5 deck (15 slides) + TI-884 power deck (24 slides) + new iROAS extension (3 charts, 12 new slides)
 
 ---
 
-## Slide map (main flow — 29)
+## Slide map (main flow — 30)
 
 | # | Section | Slide | Source |
 |---|---------|-------|--------|
@@ -26,31 +26,36 @@
 | 11 | Results | Stage 1 prospecting alone: zero (with 7-day window caveat) | new (replaces TI-837 sl 8) |
 | 12 | Power | Last quarter, MNTN ran 7 incrementality tests | TI-884 sl 2 |
 | 13 | Power | If those tests were noise, what scale do we need? | TI-884 sl 6 |
-| 14 | Power | Variance-reduction stack — 40% SE reduction | TI-884 sl 20 |
-| 15 | Spend | Visit-rate measurability emerges around $200k/month | TI-884 sl 8 |
-| 16 | Spend | Conversion-rate is in another league — $2M floor / $5M target / $30M tight | new (replaces TI-884 sl 11) |
-| 17 | Spend | What this means | TI-884 sl 13 |
-| 18 | Min-spend | The screening rule — visits and conversions | new |
-| 19 | Min-spend | The screening rule — revenue and iROAS | new |
-| 20 | Min-spend | Story: a CS lead pings the team Tuesday morning | new (Hall framework) |
-| 21 | Min-spend | The five-minute answer — AID 34835, $265k/mo | new |
-| 22 | Min-spend | Calculator — MDE direction (rate → MDE) | new |
-| 23 | Min-spend | **From rate to spend — the inversion (educational)** | new |
-| 24 | Min-spend | **Recommended monthly Stage 1 spend by baseline rate (educational)** | new |
-| 25 | Min-spend | iROAS — only 2 of 50 well-powered (chart) | new |
-| 26 | Min-spend | iROAS thresholds — when can we promise dollar-lift? | new |
-| 27 | Close | What's next (TI-885 mid-intent, bidder-level) | TI-837 sl 14 |
-| 28 | Close | Three things to take away | new |
-| 29 | Close | Power Line + call to action | new |
+| 14 | Power | **Where MDE comes from — the derivation (educational, in main flow)** | new |
+| 15 | Power | Variance-reduction stack — 40% SE reduction | TI-884 sl 20 |
+| 16 | Spend | Visit-rate measurability emerges around $200k/month | TI-884 sl 8 |
+| 17 | Spend | Conversion-rate is in another league — $2M floor / $5M target / $30M tight | new (replaces TI-884 sl 11) |
+| 18 | Spend | What this means | new (replaces TI-884 sl 13) |
+| 19 | Min-spend | The screening rule — visits and conversions | new |
+| 20 | Min-spend | The screening rule — revenue and iROAS | new |
+| 21 | Min-spend | Story: a CS lead pings the team Tuesday morning | new (Hall framework) |
+| 22 | Min-spend | The five-minute answer — AID 34835, $265k/mo | new |
+| 23 | Min-spend | Calculator — MDE direction (rate → MDE) | new |
+| 24 | Min-spend | **From rate to spend — the inversion (educational)** | new |
+| 25 | Min-spend | **Recommended monthly Stage 1 spend by baseline rate (educational)** | new |
+| 26 | Min-spend | iROAS — only 2 of 50 well-powered (chart) | new |
+| 27 | Min-spend | iROAS thresholds — when can we promise dollar-lift? | new |
+| 28 | Close | What's next (TI-885 mid-intent, bidder-level) | TI-837 sl 14 |
+| 29 | Close | Three things to take away | new |
+| 30 | Close | Power Line + call to action | new |
 
-## Appendix (4 — skipped on first take)
+## Appendix (8 — skipped on first take, full Lewis-Rao step-by-step for the curious)
 
 | # | Slide | Source |
 |---|-------|--------|
-| 30 | Appendix header | new |
-| 31 | Caveats — what to push on | new (replaces TI-837 sl 13) |
-| 32 | Attribution wedge by segment | TI-837 sl 9 |
-| 33 | How "power" is calculated, from first principles | TI-884 sl 14 |
+| 31 | Appendix header | new |
+| 32 | Caveats — what to push on | new (replaces TI-837 sl 13) |
+| 33 | Attribution wedge by segment | TI-837 sl 9 |
+| 34 | Step 1 — What "power" actually is | TI-884 sl 14 |
+| 35 | Step 2 — The two-proportion z-test | TI-884 sl 15 |
+| 36 | Step 3 — Inverting the test gives MDE | TI-884 sl 16 |
+| 37 | Step 4 — Sanity check (Lewis-Rao hand calc) | TI-884 sl 17 |
+| 38 | Step 5 — Same math, applied to WGU | TI-884 sl 18 |
 
 ## Critique passes applied (2026-05-05)
 

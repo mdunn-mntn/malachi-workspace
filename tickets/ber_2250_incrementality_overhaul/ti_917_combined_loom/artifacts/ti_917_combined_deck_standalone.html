@@ -607,6 +607,26 @@ biddable_holdouts (×4)          served_treatment (×4)
   <h2 style="margin-bottom: 1em;">If those tests were noise,<br>what scale do we need<br>for the lifts <em>not</em> to be?</h2>
 </section>
 
+
+<section>
+  <h2>Where MDE comes from &mdash; the derivation, in one slide</h2>
+  <div style="margin-top: 0.5em; font-size: 0.78em; line-height: 1.55;">
+    <p><strong>1. Two-proportion z-test.</strong> Each IP is Bernoulli(p). Lift estimator &Delta;&#770; = p&#770;<sub>t</sub> &minus; p&#770;<sub>c</sub> with
+       <span class="navy">SE = &sigma; &middot; &radic;(1/n<sub>t</sub> + 1/n<sub>c</sub>)</span>, &sigma; = &radic;(p(1&minus;p)).</p>
+    <p><strong>2. Invert for power.</strong> Require P(reject H<sub>0</sub>) &ge; 1&minus;&beta; under true effect &delta;. Solve for &delta;:</p>
+    <p style="text-align: center; margin: 0.4em 0; font-size: 0.95em;" class="navy">
+      MDE<sub>abs</sub> = (z<sub>&alpha;/2</sub> + z<sub>1&minus;&beta;</sub>) &middot; &sigma; &middot; &radic;(1/n<sub>t</sub> + 1/n<sub>c</sub>)
+    </p>
+    <p><strong>3. Plug in the standard knobs.</strong> &alpha;=0.05 &rArr; z<sub>&alpha;/2</sub>=1.96. Power=0.80 &rArr; z<sub>1&minus;&beta;</sub>=0.84. Sum = <strong class="navy">2.80</strong> &mdash; the constant in every Lewis-Rao calc.</p>
+    <p><strong>4. Translate.</strong> Stakeholders care about relative lift: <span class="navy">MDE<sub>rel</sub> = MDE<sub>abs</sub> / p</span>.</p>
+  </div>
+  <div class="takeaway-box" style="margin-top: 0.6em; font-size: 0.78em;">
+    <strong>Three knobs determine MDE:</strong> &alpha; and power are fixed by convention (the 2.80). <strong>Sample size and baseline rate are the only knobs we can move.</strong> Variance reduction (next slide) shrinks SE without moving either.
+  </div>
+  <p class="footer-note" style="margin-top: 0.4em;">Full step-by-step in the appendix (slides 31&ndash;35), with the Lewis-Rao hand-calc sanity check and the WGU worked example.</p>
+</section>
+
+
 <section>
   <h2>Step 6 — Variance-reduction stack (the post-stack multiplier).</h2>
   <p style="margin-top: 0.4em; font-size: 0.78em;">Each technique replaces SE with SE × <em>vr</em>; they stack multiplicatively.</p>
@@ -887,10 +907,77 @@ spend        = impressions &middot; cpm / 1000</pre>
           </p>
         </section>
 
-<section class="center">
-  <h3 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.7em; color: var(--gray);">Appendix — Methodology</h3>
-  <h2 style="margin-top: 0.8em;">How "power" is calculated, from first principles.</h2>
-  <p class="subtitle gray" style="margin-top: 0.8em;">Full walkthrough in <code>artifacts/ti_884_methodology.md</code></p>
+<section>
+  <h2>Step 1 — What "power" actually is.</h2>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Every experiment is a hypothesis test. Two ways to be wrong:</p>
+  <table style="font-size: 0.6em; margin-top: 0.6em;">
+    <tr><th></th><th>Truth: H₀ (no lift)</th><th>Truth: H₁ (real lift δ)</th></tr>
+    <tr><td><strong>Decide H₁</strong></td><td>Type I error · prob = <span class="red">α</span></td><td>Correct · prob = <span class="navy">1 − β</span> = power</td></tr>
+    <tr><td><strong>Decide H₀</strong></td><td>Correct</td><td>Type II error · prob = β</td></tr>
+  </table>
+  <ul style="margin-top: 0.8em; font-size: 0.78em;">
+    <li>α = 0.05 — false-positive tolerance (we pick this up front)</li>
+    <li>1 − β ≥ 0.80 — desired power (we pick this up front)</li>
+    <li><span class="navy">MDE</span> = smallest δ we have power to detect at chosen α and 1 − β</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Step 2 — The two-proportion z-test.</h2>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">For each arm, compute visit rate. The lift estimator:</p>
+  <p style="margin-top: 0.4em; font-size: 0.95em; text-align: center;" class="navy">
+    Δ̂ = p̂<sub>t</sub> − p̂<sub>c</sub>
+  </p>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Each IP is a Bernoulli(p) draw → variance p(1−p). Sample mean of n IPs has variance p(1−p)/n. Two arms independent → variances add:</p>
+  <p style="margin-top: 0.4em; font-size: 0.85em; text-align: center;" class="navy">
+    SE(Δ̂) = σ · √(1/n<sub>t</sub> + 1/n<sub>c</sub>),  where σ = √(p(1−p))
+  </p>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Standardize: <strong>z = Δ̂ / SE</strong>. Under H₀, z ~ N(0,1). Reject H₀ if |z| &gt; z<sub>α/2</sub> = 1.96.</p>
+</section>
+
+<section>
+  <h2>Step 3 — Inverting the test gives MDE.</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">Under H₁ (true effect = δ), require P(reject H₀) ≥ 1 − β. Plug in the normal CDF, solve for δ:</p>
+  <p style="margin-top: 0.6em; font-size: 0.95em; text-align: center;" class="navy">
+    MDE<sub>abs</sub> = (z<sub>α/2</sub> + z<sub>1−β</sub>) · σ · √(1/n<sub>t</sub> + 1/n<sub>c</sub>)
+  </p>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">For α = 0.05 and power = 0.80:</p>
+  <ul style="margin-top: 0.4em; font-size: 0.78em;">
+    <li>z<sub>α/2</sub> = z<sub>0.025</sub> = 1.96</li>
+    <li>z<sub>1−β</sub> = z<sub>0.80</sub> = 0.84</li>
+    <li>Sum = <strong>2.80</strong> — this is the constant in every Lewis-Rao calc</li>
+  </ul>
+  <p style="margin-top: 0.6em; font-size: 0.78em;">Stakeholders care about relative lift: <span class="navy">MDE<sub>rel</sub> = MDE<sub>abs</sub> / p</span>.</p>
+</section>
+
+<section>
+  <h2>Step 4 — Sanity check (Lewis-Rao hand calc).</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">At p = 5%, n<sub>t</sub> = n<sub>c</sub> = 10,000, no variance reduction:</p>
+  <table style="font-size: 0.62em; margin-top: 0.6em;">
+    <tr><th>Step</th><th>Compute</th><th>Result</th></tr>
+    <tr><td>σ</td><td>√(0.05 · 0.95)</td><td>0.2179</td></tr>
+    <tr><td>SE term</td><td>√(2 / 10,000)</td><td>0.01414</td></tr>
+    <tr><td>MDE<sub>abs</sub></td><td>2.80 · 0.2179 · 0.01414</td><td>0.00863 (0.86 pp)</td></tr>
+    <tr><td><strong>MDE<sub>rel</sub></strong></td><td>0.00863 / 0.05</td><td><span class="navy"><strong>17.27%</strong></span></td></tr>
+  </table>
+  <p style="margin-top: 1em; font-size: 0.78em;">Calculator passes this self-test. See <code>ti_884_mde_calculator.py</code>.</p>
+</section>
+
+<section>
+  <h2>Step 5 — Same math, applied to WGU.</h2>
+  <p style="margin-top: 0.4em; font-size: 0.78em;">From <code>ti_884_top50_mde_tiers.csv</code>, advertiser 31357:</p>
+  <table style="font-size: 0.6em; margin-top: 0.6em;">
+    <tr><th>Input</th><th>Value</th></tr>
+    <tr><td>Treated IPs (Stage 1, April)</td><td>15,599,393</td></tr>
+    <tr><td>Biddable holdout (treated × 10/90)</td><td>1,733,265</td></tr>
+    <tr><td>p (visit rate)</td><td>9.66%</td></tr>
+    <tr><td>σ = √(p(1−p))</td><td>0.296</td></tr>
+    <tr><td>SE = σ · √(1/n<sub>t</sub> + 1/n<sub>c</sub>)</td><td>2.37 × 10⁻⁴</td></tr>
+    <tr><td>MDE<sub>abs</sub> = 2.80 · SE</td><td>0.066 pp</td></tr>
+    <tr><td><strong>MDE<sub>rel</sub> = MDE<sub>abs</sub> / p</strong></td><td><span class="navy"><strong>0.69%</strong></span></td></tr>
+    <tr><td>Post-stack (× 0.595)</td><td><span class="navy">0.41%</span></td></tr>
+  </table>
+  <p style="margin-top: 0.8em; font-size: 0.78em;">WGU is huge → SE is tiny → MDE is tiny. They're in the lucky tier.</p>
 </section>
 </div></div>
 <script>/*!

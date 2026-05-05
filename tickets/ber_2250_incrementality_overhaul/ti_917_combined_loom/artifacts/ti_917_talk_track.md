@@ -2,9 +2,9 @@
 
 **Audience:** TI team
 **Power Line:** *Lift is real for retargeting. Measurement is real for visits.*
-**Target runtime:** 18–22 min spoken (29 main slides + 4 appendix)
+**Target runtime:** 19–22 min spoken (30 main slides + 8 appendix)
 **Format:** Loom — full-screen browser (deck) + face-cam pip
-**Note:** appendix slides 30–33 (caveats, attribution wedge, Lewis-Rao first principles) are skipped on first take. Available if anyone asks.
+**Note:** appendix slides 31–38 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take. Available if anyone asks.
 
 Cue legend:
 - *[advance]* — next slide
@@ -200,7 +200,29 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 14 — Variance-reduction stack: 40% SE reduction
+## Slide 14 — Where MDE comes from: the derivation
+
+> Pause for two minutes of math, because everything downstream — the screening rule, the spend bands, the variance stack — depends on this one formula. *[pause]*
+>
+> Step one — every IP is a Bernoulli draw with probability p of visiting. Two arms, treated and control. The lift estimator is the difference of sample means: delta-hat equals p-hat treated minus p-hat control. Each arm's standard error scales with sigma — square root of p times one-minus-p — and the inverse square root of sample size. Two arms independent, variances add: **standard error of delta equals sigma times square root of one over n-treated plus one over n-control.**
+>
+> Step two — invert for power. Under the alternative hypothesis, true effect equals delta. We require the probability of rejecting the null to be at least one-minus-beta. Solve the normal CDF for delta. *[pause]* You get:
+>
+> **MDE-absolute equals z-alpha-over-two plus z-one-minus-beta — times sigma — times square root of one over n-t plus one over n-c.**
+>
+> Step three — plug in the standard knobs. Alpha five percent gives z equals one-point-nine-six. Power eighty percent gives z equals zero-point-eight-four. **Sum equals two-point-eight zero — that's the constant in every Lewis-Rao calculation.** Every time we compute MDE for any outcome, that 2.80 is the front-end multiplier.
+>
+> Step four — translate. Stakeholders care about relative lift, not absolute. **MDE-relative equals MDE-absolute divided by p.** That's the percentage we quote.
+>
+> *[point at takeaway]* Bottom line for the team: alpha and power are fixed by convention — that gives us the 2.80. **The only knobs we can actually move are sample size and baseline rate.** And the next slide shows the third lever — variance reduction — which shrinks SE without moving either.
+
+*[advance]*
+
+**~90 sec**
+
+---
+
+## Slide 15 — Variance-reduction stack: 40% SE reduction
 
 > The math, compressed. Three multipliers knock down standard error.
 >
@@ -218,7 +240,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 15 — Visit-rate $200k inflection
+## Slide 16 — Visit-rate $200k inflection
 
 > First headline from the power side. Visits break open around two hundred K a month.
 >
@@ -232,7 +254,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 16 — Conversion-rate is in another league
+## Slide 17 — Conversion-rate is in another league
 
 > Conversions are not visits. Three operating points.
 >
@@ -252,7 +274,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 17 — What this means
+## Slide 18 — What this means
 
 > Three lines.
 >
@@ -268,7 +290,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 18 — Screening rule: visits & CVR
+## Slide 19 — Screening rule: visits & CVR
 
 > Operational section starts here. The screening rule has four steps. Two on this slide; two on the next.
 >
@@ -284,7 +306,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 19 — Screening rule: revenue & iROAS
+## Slide 20 — Screening rule: revenue & iROAS
 
 > Two harder checks.
 >
@@ -300,7 +322,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 20 — Story: a CS lead's question
+## Slide 21 — Story: a CS lead's question
 
 > Picture the moment. *[pause]* A CS lead pings the team Tuesday morning.
 >
@@ -316,7 +338,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 21 — The five-minute answer
+## Slide 22 — The five-minute answer
 
 > *[point at row 1]* Visits. Three-point-one-two M treated, three hundred forty-six K control, baseline visit rate four-point-eight-nine percent. mde_binomial returns one-point-three-two percent rel MDE. Well-powered.
 >
@@ -334,7 +356,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 22 — Calculator: one function call (the MDE direction)
+## Slide 23 — Calculator: one function call (the MDE direction)
 
 > The calculator is one Python file in the TI-884 artifacts folder. Three functions cover everything we'll do.
 >
@@ -354,7 +376,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 23 — From rate to spend: the inversion (educational)
+## Slide 24 — From rate to spend: the inversion (educational)
 
 > *[point at function name]* `spend_required` is the same Lewis-Rao math, solved for n instead of MDE — then converted to dollars.
 >
@@ -374,7 +396,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 24 — Recommended spend bands (educational)
+## Slide 25 — Recommended spend bands (educational)
 
 > Now the concrete numbers. Target five percent relative MDE — that's our well-powered threshold. Twenty-five-dollar CPM. Ten impressions per IP. Ten percent holdout. Raw and post-stack columns.
 >
@@ -408,7 +430,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 25 — iROAS chart: only 2 of 50
+## Slide 26 — iROAS chart: only 2 of 50
 
 > *[point at red dots]* Two red dots. The only two top-fifty advertisers well-powered for iROAS at current scale.
 >
@@ -424,7 +446,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 26 — iROAS thresholds
+## Slide 27 — iROAS thresholds
 
 > Two binding constraints. Both have to clear.
 >
@@ -440,7 +462,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 27 — What's next
+## Slide 28 — What's next
 
 > Roadmap, briefly.
 >
@@ -458,7 +480,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 28 — Three takeaways
+## Slide 29 — Three takeaways
 
 > *[point at 1]* Lift is real for retargeting. Plus twenty-one. Stage 1 alone is zero on guid visits in a seven-day window. Aggregates hide both.
 >
@@ -472,7 +494,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 29 — Power Line + call to action
+## Slide 30 — Power Line + call to action
 
 > *[pause]*
 >
@@ -497,13 +519,13 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 | Hook & frame (1-3) | 3 | 1:20 |
 | Methodology (4-7) | 4 | 1:55 |
 | Results (8-11) | 4 | 2:25 |
-| Power (12-14) | 3 | 2:05 |
-| Spend thresholds (15-17) | 3 | 1:55 |
-| Min-spend rule + education (18-26) | 9 | 8:05 |
-| Close (27-29) | 3 | 1:55 |
-| **Total (main flow)** | **29** | **~19:40** |
+| Power + derivation (12-15) | 4 | 3:35 |
+| Spend thresholds (16-18) | 3 | 1:55 |
+| Min-spend rule + education (19-27) | 9 | 8:05 |
+| Close (28-30) | 3 | 1:55 |
+| **Total (main flow)** | **30** | **~21:10** |
 
-Real Loom recording typically runs 5–10% under estimate. **Realistic: 18–20 min.** Appendix slides 30–33 are skipped on first take.
+Real Loom recording typically runs 5–10% under estimate. **Realistic: 19–21 min.** Appendix slides 31–38 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take.
 
 ## Cialdini elements (where the deck and talk track lean on each)
 

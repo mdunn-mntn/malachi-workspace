@@ -331,6 +331,28 @@ spend        = impressions &middot; cpm / 1000</pre>
 </section>
 """,
 
+    # NEW main-flow educational slide — derives MDE from the two-proportion z-test,
+    # so the 2.80 constant on the variance-stack slide isn't a magic number.
+    "13b_power_to_mde": """
+<section>
+  <h2>Where MDE comes from &mdash; the derivation, in one slide</h2>
+  <div style="margin-top: 0.5em; font-size: 0.78em; line-height: 1.55;">
+    <p><strong>1. Two-proportion z-test.</strong> Each IP is Bernoulli(p). Lift estimator &Delta;&#770; = p&#770;<sub>t</sub> &minus; p&#770;<sub>c</sub> with
+       <span class="navy">SE = &sigma; &middot; &radic;(1/n<sub>t</sub> + 1/n<sub>c</sub>)</span>, &sigma; = &radic;(p(1&minus;p)).</p>
+    <p><strong>2. Invert for power.</strong> Require P(reject H<sub>0</sub>) &ge; 1&minus;&beta; under true effect &delta;. Solve for &delta;:</p>
+    <p style="text-align: center; margin: 0.4em 0; font-size: 0.95em;" class="navy">
+      MDE<sub>abs</sub> = (z<sub>&alpha;/2</sub> + z<sub>1&minus;&beta;</sub>) &middot; &sigma; &middot; &radic;(1/n<sub>t</sub> + 1/n<sub>c</sub>)
+    </p>
+    <p><strong>3. Plug in the standard knobs.</strong> &alpha;=0.05 &rArr; z<sub>&alpha;/2</sub>=1.96. Power=0.80 &rArr; z<sub>1&minus;&beta;</sub>=0.84. Sum = <strong class="navy">2.80</strong> &mdash; the constant in every Lewis-Rao calc.</p>
+    <p><strong>4. Translate.</strong> Stakeholders care about relative lift: <span class="navy">MDE<sub>rel</sub> = MDE<sub>abs</sub> / p</span>.</p>
+  </div>
+  <div class="takeaway-box" style="margin-top: 0.6em; font-size: 0.78em;">
+    <strong>Three knobs determine MDE:</strong> &alpha; and power are fixed by convention (the 2.80). <strong>Sample size and baseline rate are the only knobs we can move.</strong> Variance reduction (next slide) shrinks SE without moving either.
+  </div>
+  <p class="footer-note" style="margin-top: 0.4em;">Full step-by-step in the appendix (slides 31&ndash;35), with the Lewis-Rao hand-calc sanity check and the WGU worked example.</p>
+</section>
+""",
+
     # Replaces TI-884 sl 12 — strips named reference, keeps and tightens the substance.
     "17_what_this_means": """
 <section>
@@ -380,9 +402,10 @@ PLAN = [
     ("837", 5),                      # Lift profile by tier
     ("new", "10_why_retargeting"),   # Replaces 837[6] — drops selection bias, adds windowing nuance
     ("new", "11_stage1_zero"),       # Replaces 837[7] — adds 7-day window caveat explicitly
-    # Section 4 — Power (3)
+    # Section 4 — Power (4)
     ("884", 1),                      # Last quarter, MNTN ran 7 incrementality tests
     ("884", 5),                      # If those tests were noise, what scale do we need
+    ("new", "13b_power_to_mde"),     # NEW: derivation of MDE in one slide (the 2.80 explained)
     ("884", 19),                     # Variance-reduction stack — 40% SE reduction
     # Section 5 — Spend thresholds (3)
     ("884", 7),                      # Visit-rate measurability emerges around $200k/month
@@ -402,11 +425,15 @@ PLAN = [
     ("837", 13),                     # What's next (TI-885, bidder-level)
     ("new", "28_recap"),             # Three things to take away
     ("new", "29_close"),             # Power Line + CTA
-    # Appendix (4)
+    # Appendix (8) — full Lewis-Rao derivation step-by-step + caveats + wedge
     ("new", "A1_appendix_header"),
     ("new", "A2_caveats"),           # Tighter replacement for 837[12]
     ("837", 8),                      # Attribution wedge (kept here for the curious)
-    ("884", 13),                     # How "power" is calculated, from first principles
+    ("884", 14),                     # Step 1 — What "power" actually is
+    ("884", 15),                     # Step 2 — The two-proportion z-test
+    ("884", 16),                     # Step 3 — Inverting the test gives MDE
+    ("884", 17),                     # Step 4 — Sanity check (Lewis-Rao hand calc)
+    ("884", 18),                     # Step 5 — Same math, applied to WGU
 ]
 
 
