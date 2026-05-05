@@ -331,6 +331,21 @@ spend        = impressions &middot; cpm / 1000</pre>
 </section>
 """,
 
+    # Replaces TI-884 sl 12 — strips named reference, keeps and tightens the substance.
+    "17_what_this_means": """
+<section>
+  <h2>What this means &mdash; in three lines</h2>
+  <ul style="margin-top: 0.7em; font-size: 0.85em; line-height: 1.65;">
+    <li><span class="navy">Budget thresholds:</span> <strong>$100k+/month post-stack for visits</strong>; <strong>$2M floor / $5M target for CVR</strong>; iROAS only when revenue is reported and σ/μ cooperates.</li>
+    <li><span class="navy">Recruiting an experiment cohort:</span> use the post-stack tier from <code>ti_884_top50_mde_tiers.csv</code> (visits/CVR) and <code>ti_917_revenue_mde_per_advertiser.csv</code> (iROAS). Calculator gates anyone outside the top-50.</li>
+    <li><span class="navy">Stakeholder communication:</span> stop reporting "Lift %" without the matching MDE confidence band. <strong>Anything below MDE is noise &mdash; even when it looks clean.</strong></li>
+  </ul>
+  <div class="takeaway-box" style="margin-top: 0.7em;">
+    Re-frame the conversation: incrementality measurement is a <strong>budget</strong> question, not a methodology question. Methodology is solved.
+  </div>
+</section>
+""",
+
     # Tighter appendix replacement for "What I'd want a methodologist to push on"
     "A2_caveats": """
 <section>
@@ -372,7 +387,7 @@ PLAN = [
     # Section 5 — Spend thresholds (3)
     ("884", 7),                      # Visit-rate measurability emerges around $200k/month
     ("new", "17_cvr_wall"),          # Replaces 884[10] — reconciles $2M floor / $5M target / $30M tight
-    ("884", 12),                     # What this means
+    ("new", "17_what_this_means"),   # Replaces 884[12] — strips named reference, tightens substance
     # Section 6 — Min-spend rule (instructional, 9)
     ("new", "19_screening_rule_visits_cvr"),  # Steps 1-2: visits + CVR
     ("new", "20_screening_rule_revenue"),      # Steps 3-4: revenue + iROAS

@@ -1205,3 +1205,71 @@ $10M/year ≈ **$833k/month** total cross-channel spend. For comparison against 
 **Implication for TI-885 / advertiser recruitment:** advertisers with <500 conversions/week on MNTN Stage 1 alone should not be promised conversion-rate readouts. Visits-rate readouts are still viable above ~$200k/month.
 
 **See also:** [TI-884 spend curve](../tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/outputs/ti_884_spend_threshold_curve.csv); [TI-884 methodology](../tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/artifacts/ti_884_methodology.md) §4.
+
+<!-- ti_917: 2026-05-05 -->
+## TI-917 — iROAS / revenue MDE extension and the rate→spend inversion
+
+### Per-IP revenue MDE: the calculator already supported it
+
+`ti_884_mde_calculator.py` exposes `mde_continuous(n_t, n_c, mu, sigma, var_reduction=...)` which is identical to `mde_binomial` except `sigma` is passed directly instead of derived from `p`. For revenue, the unit of analysis is per-IP revenue (sum of `order_amt` per IP across the window — most IPs are zero, a long-tail are positive), and σ is the cross-IP standard deviation of that distribution.
+
+**Workflow** (TI-917 implementation):
+1. Pull per-IP revenue per advertiser via `SUM(order_amt) GROUP BY (advertiser_id, ip)` over the window. Only filter to advertiser-served IPs (the treated arm) for σ — assume σ_treated ≈ σ_control under H0.
+2. Aggregate to per-advertiser μ + σ.
+3. Plug into `mde_continuous`. Use the canonical post-stack `var_reduction=0.595`.
+4. Convert relative MDE to per-IP dollars and to iROAS: min iROAS = (mde_abs × n_treated) / monthly_spend.
+
+Reference: `tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/artifacts/ti_917_run_revenue_mde.py`. Output CSV (`ti_917_revenue_mde_per_advertiser.csv`) ships per-advertiser tier labels.
+
+### Headline: iROAS is dramatically harder than visits or CVR
+
+For the TI-884 top-50 cohort, post-stack tier counts:
+
+| Outcome | Well-powered (<5% MDE) | Borderline (5-10%) | Underpowered (>10%) | No data |
+|---------|-----------------------:|-------------------:|--------------------:|--------:|
+| Visits  | 46 | 1 | 1 | 2 |
+| CVR     | 8  | 12 | 28 | 2 |
+| **Revenue / iROAS** | **2** | **7** | **23** | **18** |
+
+**Two binding constraints make iROAS the hardest outcome:**
+
+1. **Revenue must be reported.** 18 of 50 (36%) have `order_amt = $0` (see `data_knowledge.md` for the gap). Education, services, lead-gen, financial — iROAS is unmeasurable for these advertisers at any spend.
+
+2. **σ/μ must be tolerable.** Per-IP revenue is heavy-tailed for almost every advertiser — most cluster at σ/μ between 30 and 200, *orders of magnitude* harder than visit rates (where σ/μ ≈ √((1-p)/p), bounded by the rate). The 2 well-powered advertisers (AID 34835, AID 34834) hit a sweet spot of high CVR + tight σ/μ.
+
+### The Lewis-Rao spend inversion — derive minimum spend from baseline rate
+
+`spend_required(p, target_mde_rel, cpm, impressions_per_ip, holdout_frac, var_reduction)` inverts the same Lewis-Rao math, solving for n then converting to dollars. Three lines:
+
+```
+n_total       = (z · σ · var_red / target_mde_abs)^2 / (h · (1 − h))
+impressions   = n_total · (1 − h) · imps_per_ip   # only treated arm gets served
+spend         = impressions · cpm / 1000
+```
+
+**Dominant lever: baseline rate p.** σ scales as √(p(1−p)), and the inversion squares it. **Halving p roughly quadruples required spend.** CPM and imps/IP scale linearly — they matter, but rate dominates by orders of magnitude.
+
+### Recommended monthly Stage 1 spend by baseline rate
+
+Target 5% relative MDE, $25 CPM, 10 imps/IP, 10% holdout. Both columns (raw and post-stack) computed via `spend_required`:
+
+| Baseline rate (p) | Spend — raw | Spend — post-stack | Where this hits |
+|---|---:|---:|---|
+| 0.01% CVR | $78M | $28M | nobody at MNTN |
+| 0.1% CVR | $7.8M | $2.8M | typical CVR floor (the "$2M wall") |
+| 0.5% CVR | $1.6M | $553k | high-CVR commerce |
+| 1% (low IVR) | $777k | $275k | low-traffic verticals |
+| **2% IVR** | **$385k** | **$136k** | **typical IVR / cohort median (the "$200k visits" rule)** |
+| 5% IVR | $149k | $53k | high-rate advertisers |
+| 10% IVR | $71k | $25k | very-high-rate (e.g. WGU) |
+
+**Adjustment rule (linear):** for an advertiser with non-default CPM or imps/IP, multiply the table value by `(advertiser_cpm / 25) × (advertiser_imps_per_ip / 10)`. Example: 1% IVR, $35 CPM, 15 imps/IP, post-stack → $275k × 1.4 × 1.5 = ~$578k.
+
+### When to use which method
+
+- **Forward direction** (`mde_binomial` / `mde_continuous`): given an advertiser's current sample size and rate, what's the smallest lift we can detect today? This is the screening-rule check.
+- **Inverse direction** (`spend_required` / `n_required_binomial`): given a target MDE we want to promise, what's the minimum spend? This is the "should we recruit this advertiser into TI-885 / a new pilot?" check.
+
+Both directions live in the same calculator file. The variance-reduction stack (post-stack `var_reduction=0.595`) is canonical and should be used as the default post-stack value across all calls.
+
+**See also:** [TI-917 combined deck](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/artifacts/ti_917_combined_deck_standalone.html); [revenue MDE per advertiser](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/outputs/ti_917_revenue_mde_per_advertiser.csv).

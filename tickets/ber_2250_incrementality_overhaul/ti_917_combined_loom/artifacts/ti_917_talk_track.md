@@ -336,19 +336,21 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ## Slide 22 — Calculator: one function call (the MDE direction)
 
-> The calculator lives in the TI-884 artifacts folder. Three functions.
+> The calculator is one Python file in the TI-884 artifacts folder. Three functions cover everything we'll do.
 >
-> mde_binomial — visits, conversions. Pass n_t, n_c, baseline rate, var_reduction zero-point-five-nine-five.
+> mde_binomial — visits and conversions. Pass n_treated, n_control, baseline rate. Pass var_reduction zero-point-five-nine-five for post-stack.
 >
-> mde_continuous — revenue. Same shape, mu and sigma instead of p.
+> mde_continuous — revenue. Same shape, but takes mu and sigma instead of just p, because revenue is a continuous outcome and sigma is its standard deviation directly.
 >
-> Defaults: alpha five, power eighty. Post-stack multiplier is the canonical zero-point-five-nine-five.
+> Defaults: alpha five percent, power eighty percent. Post-stack multiplier zero-point-five-nine-five.
 >
-> *[pause]* This is the **forward direction** — given the sample size we have, what's the smallest lift we can detect? Now flip it. Given the lift we *want* to detect, what spend do we need? That's the next slide.
+> *[pause]* This is the **forward direction** — given the sample size and rate we have today, what's the smallest lift we can detect? That's what every screening-rule check returns.
+>
+> But there's a second question the team gets asked just as often: *given the lift we want to detect, what spend do we need?* That's the inverse. Same math, solved the other way. Walking through it next.
 
 *[advance]*
 
-**~45 sec**
+**~55 sec**
 
 ---
 
@@ -356,41 +358,53 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 > *[point at function name]* `spend_required` is the same Lewis-Rao math, solved for n instead of MDE — then converted to dollars.
 >
-> *[point at first line]* Total IPs = z times sigma times the variance-reduction multiplier divided by the absolute MDE we want, all squared, divided by the holdout factor h-times-one-minus-h.
+> *[point at first line]* Total IPs needed equals z times sigma times the variance-reduction multiplier, divided by the absolute MDE we want, all squared — divided by the holdout factor h-times-one-minus-h.
 >
-> *[point at second line]* Impressions equals total IPs times one-minus-h — only the treated arm gets served — times impressions per IP.
+> *[point at second line]* Impressions equals total IPs times one-minus-h — only the treated arm gets served, holdouts by definition do not — times impressions per IP.
 >
-> *[point at third line]* Spend equals impressions times CPM divided by a thousand.
+> *[point at third line]* Spend equals impressions times CPM divided by a thousand. That's it. Three lines.
 >
-> *[point at takeaway]* What dominates this is the **baseline rate p**. Sigma scales as the square root of p times one-minus-p, and the inversion squares it. **Halving p roughly quadruples required spend.** CPM and impressions per IP move spend linearly — they matter, but rate dominates.
+> *[point at takeaway]* What dominates is the **baseline rate p**. Sigma scales as the square root of p times one-minus-p, and the inversion squares it. **Halving p roughly quadruples required spend.** CPM and impressions per IP move spend linearly — they matter, but rate dominates.
 >
-> Concretely: if you double an advertiser's CPM you double the spend requirement. If you halve their visit rate you quadruple it.
+> Two intuitions for the team. *[pause]* One — **doubling an advertiser's CPM doubles the spend requirement, but halving their visit rate quadruples it.** Rate is the dominant lever. Two — **the variance stack is a 40% SE reduction, which means roughly 65% less spend.** Same math, post-stack column on the next slide. The variance stack is a budget multiplier, not a methodology luxury.
 
 *[advance]*
 
-**~70 sec**
+**~85 sec**
 
 ---
 
 ## Slide 24 — Recommended spend bands (educational)
 
-> Concrete numbers. Target five percent relative MDE. Twenty-five-dollar CPM. Ten impressions per IP. Ten percent holdout. Both columns shown — raw and post-stack.
+> Now the concrete numbers. Target five percent relative MDE — that's our well-powered threshold. Twenty-five-dollar CPM. Ten impressions per IP. Ten percent holdout. Raw and post-stack columns.
 >
-> *[point at the typical IVR row]* **Two percent IVR — that's the cohort median.** Three hundred eighty-five K raw, **one hundred thirty-six K post-stack.** That's the floor for visit measurability we keep citing.
+> Walk down the rate column with me. *[pause]*
 >
-> *[point at one percent row]* One percent — low IVR — **two-seventy-five K post-stack.**
+> *[point at typical IVR row]* **Two percent IVR — the cohort median.** Three hundred eighty-five K raw, **one hundred thirty-six K post-stack.** That's where the "$200k for visits, $100k post-stack" rule of thumb comes from. It's just this row.
 >
-> *[point at half-percent CVR row]* Half-percent baseline — high-CVR commerce — **five hundred fifty K.**
+> *[point at high-IVR row]* High-rate advertisers like WGU at ten percent IVR drop to twenty-five K post-stack. Visit measurement is essentially free for them.
 >
-> *[point at typical CVR row]* Tenth-of-a-percent CVR — typical CVR floor — **two-point-eight M.** Where the two-million-dollar number comes from.
+> *[point at low-IVR row]* One percent — low-traffic verticals — **two-seventy-five K post-stack.** Almost double the cohort median, because the rate halved.
 >
-> *[pause]* **How to use this:** pull the advertiser's IVR and CVR. Find their row. Multiply by their CPM over twenty-five and ten over their impressions per IP if those are off-default. Post-stack column is the ask.
+> *[point at typical CVR row]* And tenth-of-a-percent CVR — typical CVR floor — **two-point-eight million.** Where the $2M wall on the conversion slide comes from. *[pause]* That's the difference between detecting a change in visits — easy — and detecting a change in conversions — twenty times harder, just from the rate.
 >
-> If you only have one advertiser to brief tomorrow, this is the table to memorize.
+> **Worked example — let's do one together.** Imagine a new advertiser comes through screening. We pull their stats: monthly Stage 1 spend **two hundred thousand**, IVR **one percent**, CPM **thirty-five dollars**, **fifteen impressions per IP**. *[pause]*
+>
+> Step one — find the row. One percent IVR — **post-stack base is two-seventy-five K**.
+>
+> Step two — adjust CPM. Their thirty-five-dollar CPM versus our table's twenty-five — **multiply by one-point-four**. Each impression costs more.
+>
+> Step three — adjust imps per IP. Their fifteen versus our ten — **multiply by one-point-five**. More impressions per IP means more impressions per unique sampled IP, which costs proportionally more.
+>
+> *[pause]* Net required spend: two-seventy-five times one-point-four times one-point-five — **roughly five hundred eighty K post-stack**.
+>
+> They're spending two hundred. *[pause]* **Tell sales: they're at thirty-five percent of what's needed for a clean five-percent visit-rate readout. Either decline, run a longer window, or quote a much wider MDE band.**
+>
+> Two minutes of math; three numbers from the table; we just answered "can we measure this advertiser?" without running a single query. *[pause]* That's the leverage of the inversion. Pull IVR. Read row. Multiply by CPM over twenty-five and imps over ten. Post-stack column is the ask.
 
 *[advance]*
 
-**~80 sec**
+**~120 sec**
 
 ---
 

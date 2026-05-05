@@ -1294,6 +1294,11 @@ use `COALESCE(email, email_data)` for combined NTB analysis. Prevalence threshol
 `summarydata.ui_conversions` (Greenplum) uses `order_amt` for purchase amount.
 **Do NOT use `order_amt_usd`** — this column is NULL in ui_conversions. Use `order_amt` directly.
 
+### `ui_conversions.order_amt` reporting gap (TI-917, 2026-05-05)
+`order_amt` is **only populated when the advertiser's conversion pixel carries a dollar value**. For top-50 advertisers (April 2026 cohort), **18 of 50 (36%) report $0** — they fire the conversion pixel but don't pass an order amount. Affected verticals are predictable: education (e.g. WGU, our top spender), services, lead-gen, financial. Implication: any revenue-based or iROAS analysis silently drops these advertisers. **Always check the converting-IPs count and `SUM(order_amt) > 0` before promising a revenue readout.**
+
+Reference data: `tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/outputs/ti_917_revenue_sigma_per_advertiser.json` has the per-advertiser revenue stats (treated_ips, converting_ips, total_revenue, μ, σ, p50/p95/max).
+
 ### ui_visits.impression_time
 `ui_visits.impression_time` = the timestamp of the original impression (NOT the visit time).
 Use this when filtering visits by the period when ads were being served (e.g., "visits attributed
