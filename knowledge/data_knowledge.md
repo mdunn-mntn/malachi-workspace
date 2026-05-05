@@ -1849,3 +1849,9 @@ When MNTN bids on open market (non-deal) inventory via Beeswax:
 - If MNTN's average publisher CPM is below the publisher's floor, the bid is **dropped on MNTN's side** (not sent to Beeswax). This was an explicit design choice: a previous attempt to always meet the impression floor resulted in average CPM inflation without a corresponding spend increase, so it was reverted.
 - **PMP deals use fixed pricing** and are not subject to this drop logic — MNTN has never responded well to biddable deals and negotiates fixed-price PMPs instead.
 - **Known limitation:** Since bid prices are based on historical win averages, prices will not self-adjust upward if market floors rise. The Performance Pricing team's ML-based solution is intended to address this longer-term. (via Abbas, #production-ops, 2026-04-30)
+
+<!-- slack-extracted: 2026-05-05 -->
+- **AdDB → BigQuery Replication (Upcoming Migration):** A maintenance window was scheduled on AdDB to enable replication from AdDB to BigQuery. Services reading AdDB were asked to temporarily shut down (or extend caches) during the 30-minute window. Key operational notes:
+- `creative-sync-service` specifically must be turned off during AdDB maintenance; other services can likely remain on with stale cache.
+- Default cache TTL for services reading AdDB is ~5 minutes.
+- Attribution Squad supports AdDB reads and can coordinate downtime via Nate Gardner / `U040UFVBVDW`. (via Mike Dolzer, #data-platform, 2025-05-04)
