@@ -47,7 +47,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install google-cloud-bigquery db-dtypes causalimpact
+# MAGIC %pip install google-cloud-bigquery db-dtypes causalimpact==0.1.1
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
