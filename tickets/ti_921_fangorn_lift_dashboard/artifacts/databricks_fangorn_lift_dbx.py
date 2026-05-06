@@ -47,26 +47,8 @@
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### 1a. Install runtime dependencies (Databricks only)
-# MAGIC
-# MAGIC Databricks ML runtimes don't ship `google-cloud-bigquery` or `db-dtypes` (needed for
-# MAGIC `.to_dataframe()` on BQ results). The cell below installs them and restarts Python.
-# MAGIC Skip this cell on a laptop where deps are already installed.
-
-# COMMAND ----------
-
-# Databricks: install missing libs. (No-op on laptop — pip install will be quick.)
-%pip install google-cloud-bigquery db-dtypes
-
-# COMMAND ----------
-
-# Restart Python so the freshly-installed packages are visible.
-# Wrapped in try/except so it's a no-op on laptop (where dbutils doesn't exist).
-try:
-    dbutils.library.restartPython()
-except NameError:
-    pass
+# MAGIC %pip install google-cloud-bigquery db-dtypes
+# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
@@ -90,40 +72,14 @@ from google.cloud import bigquery
 
 warnings.filterwarnings("ignore")
 
-# Resolve the notebook's folder so we can reference companion files
-# (wave_config.csv, the SQL queries, outputs/) by relative path.
-# Three resolution strategies, in order:
-#   1. Databricks: ask dbutils for the notebook path -> /Workspace/...
-#   2. Laptop: cwd if it's already pointing at the artifacts folder
-#   3. Laptop fallback: hard-coded developer path
-NOTEBOOK_DIR = None
-try:
-    nb_path = (
-        dbutils.notebook.entry_point.getDbutils()
-        .notebook().getContext().notebookPath().get()
-    )
-    candidate = Path("/Workspace" + nb_path).parent
-    if (candidate / "wave_config.csv").exists():
-        NOTEBOOK_DIR = candidate
-except (NameError, Exception):
-    pass
-
-if NOTEBOOK_DIR is None:
-    cwd = Path.cwd()
-    if (cwd / "wave_config.csv").exists():
-        NOTEBOOK_DIR = cwd
-
-if NOTEBOOK_DIR is None:
+# Resolve paths so this runs identically on Databricks and locally
+NOTEBOOK_DIR = Path.cwd()
+# When running interactively in Databricks the cwd is the notebook dir; locally
+# we may be running from anywhere — resolve to the artifacts/ folder of TI-921.
+if not (NOTEBOOK_DIR / "wave_config.csv").exists():
     candidate = Path("/Users/malachi/Developer/work/mntn/workspace/tickets/ti_921_fangorn_lift_dashboard/artifacts")
     if candidate.exists():
         NOTEBOOK_DIR = candidate
-
-if NOTEBOOK_DIR is None:
-    raise RuntimeError(
-        "Could not resolve NOTEBOOK_DIR. Set it explicitly to the path of "
-        "the artifacts/ folder containing wave_config.csv."
-    )
-
 TICKET_DIR = NOTEBOOK_DIR.parent
 WAVE_CONFIG_CSV = NOTEBOOK_DIR / "wave_config.csv"
 DAILY_PANEL_SQL = TICKET_DIR / "queries" / "ti_921_daily_panel.sql"
@@ -133,9 +89,19 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 BQ_PROJECT = "dw-main-bronze"
 
 print(f"Notebook dir: {NOTEBOOK_DIR}")
-print(f"Wave config:  {WAVE_CONFIG_CSV} (exists: {WAVE_CONFIG_CSV.exists()})")
-print(f"Daily panel SQL: {DAILY_PANEL_SQL} (exists: {DAILY_PANEL_SQL.exists()})")
+print(f"Wave config:  {WAVE_CONFIG_CSV}")
 print(f"Output dir:   {OUTPUT_DIR}")
+
+# COMMAND ----------
+
+NOTEBOOK_DIR = Path("/Workspace/Users/malachi@mountain.com/malachi-workspace/tickets/ti_921_fangorn_lift_dashboard/artifacts")
+TICKET_DIR = NOTEBOOK_DIR.parent
+WAVE_CONFIG_CSV = NOTEBOOK_DIR / "wave_config.csv"
+DAILY_PANEL_SQL = TICKET_DIR / "queries" / "ti_921_daily_panel.sql"
+OUTPUT_DIR = TICKET_DIR / "outputs"
+OUTPUT_DIR.mkdir(exist_ok=True)
+print(f"NOTEBOOK_DIR: {NOTEBOOK_DIR}")
+print(f"wave_config exists: {WAVE_CONFIG_CSV.exists()}")
 
 # COMMAND ----------
 
