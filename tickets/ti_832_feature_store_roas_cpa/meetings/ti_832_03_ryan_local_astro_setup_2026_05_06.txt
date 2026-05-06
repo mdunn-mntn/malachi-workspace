@@ -1,0 +1,388 @@
+[00:00] when somebody like looks at the DAG, because it has like, you know, it,
+[00:07] it just becomes really confusing.
+[00:09] Yeah.
+[00:09] So yeah, if you share your screen, do you, yeah.
+[00:15] You merge that code, let me make sure that code.
+[00:19] Yeah, I merged the code this morning.
+[00:21] Um, all it did is it added a couple new columns, um, to it and then replaced
+[00:28] one of the amount columns, cause we are using a U S there's a, there's a USD
+[00:33] amount column that doesn't actually fill.
+[00:36] Um, it's like some sort of conversion column or something, but there's another
+[00:40] column that's like filled like a hundred percent of the time.
+[00:42] So how's the same information.
+[00:44] Okay, cool.
+[00:45] All right, cool.
+[00:45] I'll show, I'll show my screen though.
+[00:47] Yeah.
+[00:47] And you, do you know how to make sure Astro deployed it just so, I mean,
+[00:51] just, just to make sure that let's go through it.
+[00:55] Yeah.
+[00:56] Go, go to your stuff or whatever.
+[01:01] Yeah.
+[01:02] Or, um, yeah, man, Astro or you probably, you might've had a pulled up and, um,
+[01:17] we had deployments.
+[01:18] Yeah.
+[01:19] And then prod just click on, click on that.
+[01:22] Yeah.
+[01:23] Then.
+[01:23] So there's your deployment.
+[01:24] So yeah, I did that 901, you know, it deployed your, your new stuff.
+[01:30] So you're good.
+[01:31] Okay, cool.
+[01:31] It takes like a few minutes.
+[01:33] So if you ever do this and you just, you just want to wait like a few
+[01:36] minutes for that to finish.
+[01:39] All right.
+[01:39] So you're good.
+[01:40] Yeah.
+[01:40] So go back to airflow and then, um, or you go, yeah, isn't it?
+[01:47] yeah
+[01:48] isn't it the
+[01:51] AI
+[01:53] yeah you could use this
+[01:57] yeah
+[02:00] Yeah.
+[02:04] What's that one failed one.
+[02:05] Okay.
+[02:06] Yeah.
+[02:06] This is from way before.
+[02:07] Yeah.
+[02:08] Yeah.
+[02:08] Okay.
+[02:08] So then I, yeah, I would go to the one that you want to start with
+[02:11] and then clear everything.
+[02:15] What is 30 days ago?
+[02:16] The of April like this.
+[02:23] Yeah.
+[02:23] Yeah.
+[02:24] Just do that.
+[02:24] That's fine.
+[02:25] Okay.
+[02:26] And then I see, and then, um, oh, that are, yeah, just the one, this is the
+[02:34] task group, click on the one task.
+[02:38] I think it was con flog IP.
+[02:42] Yeah.
+[02:42] So it's missing days.
+[02:47] Yeah.
+[02:47] I guess it doesn't even go back that far.
+[02:50] So yeah, cause that wasn't added.
+[02:54] Um, well, um, shoot.
+[03:04] I don't want you to try to stay doing backfills and prod.
+[03:08] Um, I mean, you could, you could just say clear there, uh, for 30 days.
+[03:16] Why, why, why do you need 30 days?
+[03:18] I'm just, yeah.
+[03:19] So basically there, what's really powerful when you're doing conversions
+[03:23] is the time to conversion and then time from last conversion.
+[03:27] And so there are, there are multiple different roll-ups.
+[03:29] There's a seven day roll-up to show how many conversions or when was
+[03:32] the last conversion in seven days.
+[03:34] And then there's a 30 day one.
+[03:35] And that's how far they're back.
+[03:36] They're going to go.
+[03:38] Um, so yeah, it's kind of, uh, yeah, if I go here too, um, yeah.
+[03:49] Well, let's actually, let's do both.
+[03:51] Let's just run it, clear it and prod and then backfill.
+[03:57] Yeah.
+[03:57] Okay.
+[03:58] Then backfill the days that you're missing and your local environment
+[04:02] your local environment and copy the data into prod.
+[04:06] Okay.
+[04:07] So you want it, you should do a local run and then copy.
+[04:11] So, um, yeah, so just clear, clear that or yeah.
+[04:14] Check on that first comms log IP one.
+[04:17] Yeah.
+[04:18] Clear task instance.
+[04:20] And then uncheck let's see.
+[04:24] Downstream is check.
+[04:25] Uh, yeah, just, just do future click future up there.
+[04:29] And then that's all.
+[04:31] And should we hit run with latest bundle version?
+[04:34] Yeah, you can.
+[04:35] I think it will do it anyway.
+[04:37] And then uncheck downstream just to be sure we must nothing uses that downstream.
+[04:44] Or, uh, that's okay.
+[04:47] Yeah.
+[04:47] Then hit confirm.
+[04:49] Okay.
+[04:52] And let that, so this, this is adding it to layer one and then the layer
+[04:58] two, you go back and you're like min and the max or something, right.
+[05:01] Or are you like do another min or max?
+[05:04] Okay.
+[05:05] Right.
+[05:06] Yeah.
+[05:06] So that's, that's the layer two.
+[05:08] I haven't pulled in that PR for, for that one.
+[05:10] Okay.
+[05:11] Yeah.
+[05:12] So I'm kind of curious.
+[05:14] Yeah.
+[05:14] Okay.
+[05:14] Go ahead.
+[05:15] No, you're fine.
+[05:15] So none of these are dependent on each other too, because that was one of the
+[05:19] things that made me think that I had to rerun all of it, um, rather than just
+[05:23] one of the tasks, so these are all individual tables that are, that are
+[05:27] tables that are running independently of each other, at least per group.
+[05:32] Yeah.
+[05:32] That's what I want them to be.
+[05:34] Well, layer one, I want it to be independent.
+[05:38] It should be like, yeah, very, very, uh, layer one should be just running for a
+[05:45] day.
+[05:45] We shouldn't be backfilling layer one a ton, but now, I mean, if you're adding
+[05:49] columns and yeah.
+[05:50] Yeah.
+[05:50] That's the only change on it.
+[05:52] Actually.
+[05:53] A couple of times too.
+[05:53] So.
+[05:55] Yeah.
+[05:55] Some of these, you can't run like augment or log, you can't run more than, you
+[06:00] know, cause they delete that.
+[06:01] Yeah.
+[06:03] So you're kind of screwed if you don't, but anyway.
+[06:07] Yeah, that should be fine.
+[06:08] Hold on.
+[06:09] Let me check the PR too.
+[06:10] I just want to make sure.
+[06:12] Yeah.
+[06:12] So USD order amount.
+[06:14] Yeah.
+[06:15] Filters order amount by order currency USD.
+[06:18] The sources order amount USD column is unusable.
+[06:21] Yeah.
+[06:21] So that was one of them.
+[06:23] And then, yeah, there's some of the other ones too.
+[06:26] So conversion time in conversion time, max.
+[06:29] Okay.
+[06:30] Where the other two things are added there.
+[06:32] So we could do some calculations cause we didn't have any time, which is kind
+[06:36] of nice.
+[06:37] That's in your next PR, right?
+[06:38] The layer two stuff.
+[06:40] Yeah.
+[06:41] At least this.
+[06:41] So we're adding the column, the conversion time min and max to this one.
+[06:45] But then when you do the roll up, yeah.
+[06:46] It, the, the calculations off of it will be in layer two.
+[06:50] Okay.
+[06:50] So.
+[06:51] Then, yeah, there's a couple other things I want to show you then, but so let's,
+[06:56] or so run, let's run those missing ones locally.
+[07:00] So do yeah.
+[07:03] And your CLI, where is it?
+[07:09] Okay.
+[07:10] So I've actually, it's been a while since I run it locally.
+[07:15] So you'll have to go, go to your terminal.
+[07:19] It's probably the best place or yeah.
+[07:25] And then make sure.
+[07:28] Oh my, hold on.
+[07:31] I've got.
+[07:39] Yeah.
+[07:39] Look at all those folders.
+[07:40] I like it.
+[07:41] You have a folder per ticket.
+[07:42] I've been doing that because it makes things so much better and I can update
+[07:46] the knowledge that, so every time I learn stuff, like for example, just doing this,
+[07:49] this ticket, actually, I did the feature store before and I had all the artifacts
+[07:52] from the previous one.
+[07:53] So I was like, Oh, it's a folder.
+[07:56] Yeah.
+[07:56] It just makes things faster.
+[07:58] I'm sorry.
+[08:00] One second.
+[08:01] I've got to find my.
+[08:09] Oh, thank you.
+[08:12] You probably hear my kids.
+[08:14] No, I don't.
+[08:14] It's not good.
+[08:15] Okay.
+[08:16] Hold on.
+[08:17] Um, where is this actually?
+[08:19] Don't sorry.
+[08:19] I'm just, I'm just trying to see where my GitHub folder is.
+[08:25] I can't find it.
+[08:27] Okay.
+[08:27] Put all the Airflow stuff in there.
+[08:29] It's not in the workspace that I'm working in.
+[08:31] in
+[08:31] yeah
+[08:33] Oh, it's in here.
+[08:45] Oh, it's in here.
+[08:46] Okay.
+[08:46] I'm crazy.
+[08:47] Hold on.
+[08:49] It's in work.
+[08:55] Oh, develop.
+[08:56] Okay.
+[08:56] That's where it's at.
+[08:57] So I'm in developer.
+[09:04] New window.
+[09:17] Okay.
+[09:27] That's cool, Brian.
+[09:29] I might add some to the features store.
+[09:36] Oh, shoot.
+[09:37] I got a meeting in nine minutes, but that's two things I run
+[09:42] a running at locally.
+[09:44] Um, and then I want you to look at the snapshot tag and, um, or
+[09:45] And then I want you to look at the snapshot tag.
+[09:53] And or have Claude look at it, you know.
+[09:57] Okay.
+[09:59] Sorry, it took me a second to find it.
+[10:00] Sure.
+[10:01] Yeah, no problem.
+[10:02] All right.
+[10:04] I have multiple Mac books and so I've been having shared
+[10:07] folders between them, but they're slightly different.
+[10:12] That sounds confusing.
+[10:14] Well, it's just because like, if you're on the same network,
+[10:16] you can share files between them.
+[10:17] So if I'm on this one versus my other one, um, it's pretty quick, but hold on.
+[10:22] Yeah, sure.
+[10:24] There you go.
+[10:26] Okay.
+[10:28] Here it is.
+[10:29] This is the airflow TI one, so I can open up the terminal.
+[10:32] Okay, cool.
+[10:33] Yeah.
+[10:33] Over on the terminal, your airflow TI, make sure you're on main branch.
+[10:36] Is it, or, um, I'm on my, um,
+[10:44] great to be on your, this is the one I just pulled the vein branch.
+[10:48] So it should be okay.
+[10:49] That's fine.
+[10:50] Then just do Astro dev restart.
+[10:52] See if that, uh, so not Astro project, uh, maybe hit LS or what?
+[11:07] Yeah.
+[11:08] So I've got my, this is everything that's in Astro or airflow TI.
+[11:16] Yeah.
+[11:17] You need to, um, I need to set up Astro in the airflow TI, like in the same space.
+[11:30] Is that, yeah, I have, uh,
+[11:38] it says, if I do Astro dev in it, I can turn this one into an Astro project.
+[11:47] That I think that, hang on one second, uh, for is Astro install.
+[11:57] Where is our Astro or is this got spark on.
+[12:08] You have Astro installed.
+[12:11] I do Astro dev in it.
+[12:12] Yeah.
+[12:14] That was it.
+[12:14] Yeah.
+[12:15] you might
+[12:18] have to
+[12:18] mess with
+[12:18] some other
+[12:19] stuff
+[12:19] though
+[12:19] but
+[12:20] yes
+[12:22] okay now do astro dev start
+[12:27] yeah hello yeah you got talk doctor running okay it's gonna do a bunch of doctor stuff
+[12:33] Yeah.
+[12:33] Hello.
+[12:34] Yeah.
+[12:35] You got talk doctor running.
+[12:36] Okay.
+[12:36] It's going to do a bunch of doctor stuff.
+[12:40] Okay.
+[12:40] So does it basically just create a container for, yeah, it creates all, all
+[12:48] the containers or whatever, and then it'll run on local host 80, 80, it'll
+[12:54] give you a link here once it's ready.
+[12:57] Oh, kind of like an airflow, like local.
+[13:02] Yeah.
+[13:03] A local airflow.
+[13:07] And then, um, here, here's, I'll give you the confluence page that I used.
+[13:11] You might have to, there may be a couple of things you have to tweak or whatever.
+[13:15] I think, I think for the most part, I don't think you have to do much.
+[13:20] We'll see.
+[13:23] And then, uh, well, let's go and pull up the code or let's see where
+[13:33] do you want me to send you the PR?
+[13:35] Um, for your layer two stuff, let's see where feature store to, so you're
+[13:44] going to add this to this column to good and calm vlog or one of the, um,
+[13:45] so you're going to add this to
+[13:48] this column to
+[13:49] good and conf log
+[13:51] or one of the
+[13:55] one of the layer 2 things right
+[13:57] right
+[13:58] it says exactly in the description
+[14:00] I can't remember for the layer two.
+[14:03] Yeah.
+[14:03] I guess.
+[14:04] Um, okay.
+[14:05] Maybe, maybe this doesn't matter.
+[14:06] You're, um, I'm thinking how to do the snapshot because do you, do you, when
+[14:16] you, I try to add the outcome variables to the snapshot, so are you going to.
+[14:21] Want to look ahead 30 days and see if somebody converted, is that a train
+[14:27] a model on that, or you're just going to use like the last 30 days to
+[14:31] Yes.
+[14:32] So it's, yeah, at the IP level.
+[14:34] So it's kind of, you can kind of think of it at like, um, that's fine.
+[14:38] Yeah.
+[14:38] What, what we, what's our real time, real time conquesting, right.
+[14:42] You can think about it like real time conversion type thing where we look at
+[14:45] all the conversions, the most recent ones, and then that kind of adds value to it.
+[14:50] So, yeah.
+[14:51] Yeah.
+[14:52] If you were going to like look ahead, um,
+[14:56] you, you, you have to like, if you were going to look ahead, um, you'd have to
+[15:00] go to the feature store snapshot tag and change the schedule of when it runs.
+[15:07] All right.
+[15:07] Sorry.
+[15:07] Not change the schedule, but change.
+[15:11] Um, pull up, um, let's use this.
+[15:15] That's still building pull, pull up in prod airflow.
+[15:19] Um, and then, and then, and then, and then, and then, and then, and then, and
+[15:24] air flow, um, pull up the DAGs and prod air flow.
+[15:29] I gotta get going though, but, uh, yeah, go DAGs and then feature store.
+[15:36] Look for feature store snapshot.
+[15:41] Yeah.
+[15:41] That one, which by the way, I feature store set up models poorly named, but
+[15:46] okay, now here, yeah, you see how some of these, um, some of these have green
+[15:51] check marks there, um, it's, it's checking to see when it should run that
+[16:00] snapshot and they all run on different cadences because some of them, because
+[16:06] I want to include the outcome variables, you know, so some of them, I want seven
+[16:11] days ahead, so I need to wait until like all these snapshots, these are all
+[16:16] monthly by the way, ideally I want them to run on like May 1st, you know, and
+[16:25] then, but I need to wait seven days.
+[16:29] So to get the, the look ahead stuff.
+[16:33] Okay.
+[16:34] So, and so really I need to wait till like May 8th or something to run that
+[16:38] snapshot so I get that look ahead.
+[16:41] Okay.
+[16:42] So that's kind of all I was telling like, if you, if you need like the
+[16:46] outcome variables to be longer than you're gonna have to come in here
+[16:50] into this DAG and mess with it.
+[16:52] But since you don't like, I'll just, just forget about it for now, but, but
+[16:57] just keep that in the back of your mind.
+[17:00] Okay.
+[17:01] That sounds good.
+[17:02] Okay.
+[17:02] So yeah, so I think you just need that Astra dev and it to work.
+[17:06] Let me see.
+[17:07] It should have started by now.
+[17:09] Oh, error building, build a container network and driver
+[17:13] field programming external.
+[17:16] Do you have tail scale on by chance?
+[17:20] I guess that doesn't matter.
+[17:23] But let's see.
+[17:25] It says port is already allocated.
+[17:28] Maybe I've set it up somewhere else.
+[17:29] I don't know if that causes an issue or maybe I have to try it again.
+[17:33] I wonder if I try to get it to work.
+[17:39] So I can, I can work on it and then
+[17:41] yeah, we're gonna look at that confluence page.
+[17:43] I think I sent you and then there, I think there's a couple of settings
+[17:46] you might have to do like, um, you already have it installed authenticate.
+[17:54] You maybe authenticate with G cloud.
+[17:56] You might have to do that.
+[17:57] Okay.
+[17:59] Yeah.
+[17:59] Just, just follow those steps and you don't have to get to like step three.
+[18:04] Once, once you get to step three, yeah.
+[18:09] Or, but it looks like that port's taken, I don't know.
+[18:12] You might have to just kill whatever Docker stuff you have running.
+[18:16] Kill all the Docker stuff and then try it again.
+[18:18] Okay.
+[18:19] Sounds good.
+[18:20] All right.
+[18:20] All right.
+[18:21] Yep.
+[18:22] Talk to you later.
+[18:23] Bye.
