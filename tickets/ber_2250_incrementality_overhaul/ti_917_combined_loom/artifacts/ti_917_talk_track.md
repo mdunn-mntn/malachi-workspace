@@ -242,37 +242,43 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ## Slide 16 — Visit-rate $200k inflection
 
-> First headline from the power side. Visits break open around two hundred K a month.
+> First headline from the power side. *[pause]*
 >
-> *[point at table]* Fifty K — underpowered. Two hundred K — four percent rel MDE raw, two-point-four post-stack — that's the inflection. Five hundred K — tight. Two M — very tight.
+> At cohort medians — two-point-one-five percent IVR, three-point-five impressions per IP — visits become measurable around **fifty K a month post-stack, one-fifty K raw**. That's where the curve crosses the well-powered threshold. Above two hundred K, you can comfortably detect realistic two-to-eight-percent lifts.
 >
-> Below two hundred K — or one hundred K post-stack — visits don't have power. Above it, they do.
+> Two definitions to keep distinct as we look at the chart on the next slide. **Crossing the threshold** = MDE drops to five percent — barely powered. **Comfortable measurement** = MDE drops well into the realistic-lift band — two to four percent. The first number is a floor; the second is what we'd want for a real readout.
 
 *[advance]*
 
-**~30 sec**
+**~35 sec**
 
 ---
 
 ## Slide 17 — The spend → MDE curve
 
-> *[chart on screen — spend curve with a horizontal 5% line drawn, navy raw curve, dashed light-blue post-stack curve, gray "realistic CTV lift band" 2–8%]*
+> *[chart on screen]* Same content as a picture. Two definitions before we talk about the curves. *[pause]*
 >
-> Same thing as a picture. *[pause]*
+> **Raw MDE** — Lewis-Rao with no variance reduction. Just plain holdout data. That's the navy solid line.
 >
-> *[point at the horizontal 5% line]* That horizontal line is the well-powered threshold. Anything above it is underpowered. Anything below it is well-powered.
+> **Post-stack MDE** — same math, with the variance-reduction stack applied: CUPED, ghost-ad conditioning, stratified randomization. Forty-percent SE reduction post-stack, which is the dashed light-blue line.
 >
-> *[trace the navy raw curve from left to right]* Raw MDE — no variance reduction. At fifty K a month we're way above the line, around eight percent MDE — underpowered. The curve crosses the five-percent line right around **one-fifty K monthly spend**. Every dollar after that buys more measurability.
+> Same advertiser, same spend, two different MDE numbers. Post-stack is always the smaller one — that's the budget multiplier we get from the variance stack. *[pause]*
 >
-> *[trace the dashed light-blue line]* Post-stack — same advertisers, same scale, but with CUPED, ghost-ad, and stratified randomization layered in. The whole curve drops. **The five-percent crossing moves from one-fifty K down to about fifty K.** That's the variance stack as a budget multiplier — same statistical power, three times less spend required.
+> *[point at the dashed 5% line]* The dashed horizontal line is the well-powered threshold — five percent relative MDE.
 >
-> *[point at the shaded gray band]* And the shaded band is the realistic CTV-lift range we'd expect to see — two to eight percent. **For an experiment to be informative, the curve has to dip below that band, not above it.** Below one-fifty K raw, we can't even tell a real eight-percent lift from noise. Above five hundred K, we can detect a two-percent lift comfortably.
+> *[point at the navy curve]* Raw curve crosses the threshold at **one-fifty K a month**. Below that, you can't even tell an eight-percent lift from noise.
+>
+> *[point at the post-stack curve]* Post-stack crosses at **fifty K**. Same advertiser, same data, three times less spend required, just by layering in the variance stack.
+>
+> *[point at the shaded band]* And the shaded gray band is the realistic CTV lift range — two to eight percent. For an experiment to be *informative*, the curve has to dip well *below* that band. At five hundred K raw the curve is around two-and-a-half percent — that's where you can detect a typical CTV lift comfortably. At fifty K raw you're up at eight percent — you can only detect huge effects.
+>
+> *[point at subtitle]* One important caveat. **This chart uses the cohort's actual observed delivery — three-point-five impressions per IP, twenty-four-eighty-four CPM.** The recommendation table on the next slide uses round teaching numbers — ten impressions per IP, twenty-five CPM. Same math, different parametrization. For any real advertiser, multiply the table value by their CPM divided by twenty-five and their imps-per-IP divided by ten.
 >
 > If you only memorize one chart from the power analysis, this is the one.
 
 *[advance]*
 
-**~75 sec**
+**~110 sec**
 
 ---
 
@@ -420,11 +426,13 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ## Slide 26 — Recommended spend bands (educational)
 
-> Now the concrete numbers. Target five percent relative MDE — that's our well-powered threshold. Twenty-five-dollar CPM. Ten impressions per IP. Ten percent holdout. Raw and post-stack columns.
+> Now the concrete numbers, with **round teaching parameters so the math is portable**. Target five percent relative MDE. Twenty-five-dollar CPM. **Ten** impressions per IP. Ten percent holdout. Raw and post-stack columns.
+>
+> Quick note before we read it. The previous slide's chart used the cohort's actual observed delivery — three-point-five imps per IP — which is why it showed a fifty-K post-stack crossing at typical IVR. **This table uses ten imps per IP** because most planning conversations assume that round number, and because it makes the adjustment math easier. **Both are correct under their own parametrization.** The adjustment rule is at the bottom.
 >
 > Walk down the rate column with me. *[pause]*
 >
-> *[point at typical IVR row]* **Two percent IVR — the cohort median.** Three hundred eighty-five K raw, **one hundred thirty-six K post-stack.** That's where the "$200k for visits, $100k post-stack" rule of thumb comes from. It's just this row.
+> *[point at typical IVR row]* **Two percent IVR — the cohort median.** Three hundred eighty-five K raw, **one hundred thirty-six K post-stack.** That's the typical-advertiser floor at round teaching parameters.
 >
 > *[point at high-IVR row]* High-rate advertisers like WGU at ten percent IVR drop to twenty-five K post-stack. Visit measurement is essentially free for them.
 >

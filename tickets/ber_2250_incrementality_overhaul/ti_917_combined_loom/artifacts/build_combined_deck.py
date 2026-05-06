@@ -33,6 +33,7 @@ OUT_STANDALONE = THIS_DIR / "ti_917_combined_deck_standalone.html"
 CHART_IROAS = THIS_DIR / "ti_917_chart_iroas_mde_vs_spend.png"
 CHART_TIER = THIS_DIR / "ti_917_chart_tier_breakdown.png"
 CHART_SIGMA = THIS_DIR / "ti_917_chart_sigma_over_mu.png"
+CHART_SPEND = THIS_DIR / "ti_917_chart_spend_curve.png"
 
 
 # --------------------------- section extraction ---------------------------
@@ -198,6 +199,18 @@ print(rel)                    # 0.0295</pre>
   <h2 style="text-align: left;">iROAS &mdash; only 2 of 50 well-powered</h2>
   <img src="data:image/png;base64,{IROAS_MDE_B64}" style="max-width: 92%; max-height: 68vh;" />
   <p class="footer-note" style="margin-top: 0.4em;">Per-advertiser revenue MDE (post-stack). Source: <code>outputs/ti_917_revenue_mde_per_advertiser.csv</code>.</p>
+</section>
+""",
+
+    # Replaces TI-884 sl 7 (the spend → MDE curve chart) with a regenerated version
+    # whose title matches the annotations and explicitly calls out cohort-medians.
+    "17_spend_curve": """
+<section class="img-slide">
+  <h2 style="text-align: left;">Visit-rate MDE crosses 5% at $150k raw, $50k post-stack</h2>
+  <img src="data:image/png;base64,{SPEND_CURVE_B64}" style="max-width: 95%; max-height: 70vh;" />
+  <p class="footer-note" style="margin-top: 0.4em;">
+    Cohort medians: IVR=2.15%, CPM=$24.84, 3.5 imps/IP. Recommendation table on next slide uses round teaching numbers (10 imps/IP, $25 CPM).
+  </p>
 </section>
 """,
     "26_iroas_thresholds": """
@@ -409,7 +422,7 @@ PLAN = [
     ("884", 19),                     # Variance-reduction stack — 40% SE reduction
     # Section 5 — Spend thresholds (4)
     ("884", 7),                      # Visit-rate measurability emerges around $200k/month (text setup)
-    ("884", 6),                      # The spend → MDE curve (chart with 5%-threshold line drawn)
+    ("new", "17_spend_curve"),       # Regenerated chart — title now matches annotations
     ("new", "17_cvr_wall"),          # Replaces 884[10] — reconciles $2M floor / $5M target / $30M tight
     ("new", "17_what_this_means"),   # Replaces 884[12] — strips named reference, tightens substance
     # Section 6 — Min-spend rule (instructional, 9)
@@ -543,11 +556,13 @@ def main():
     iroas_b64 = b64_image(CHART_IROAS)
     tier_b64 = b64_image(CHART_TIER)
     sigma_b64 = b64_image(CHART_SIGMA)
+    spend_b64 = b64_image(CHART_SPEND)
 
     new_filled = {
         k: v.replace("{IROAS_MDE_B64}", iroas_b64)
             .replace("{TIER_BREAKDOWN_B64}", tier_b64)
             .replace("{SIGMA_MU_B64}", sigma_b64)
+            .replace("{SPEND_CURVE_B64}", spend_b64)
         for k, v in NEW_SLIDES.items()
     }
 
