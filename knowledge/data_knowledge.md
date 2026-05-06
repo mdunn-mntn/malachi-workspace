@@ -1552,6 +1552,13 @@ The non-zero clickpass entries observed for holdouts are spillover: the holdout 
 ### Canonical prospecting_intent table (used in TI-837)
 `dw-main-bronze.external.household_scoring__prospecting_intent__v1` — federated Parquet table over `gs://household-scoring-prod/output/scoring/prospecting_intent/year=YYYY/month=MM/day=DD/`. 10-day rolling retention in BQ; deeper history (35-day) accessible via raw GCS. Schema: `ip, advertiser_id, campaign_group_id, campaign_id, household_score, year, month, day`.
 
+**Gotcha (TI-933, 2026-05-06): partition filter pushdown breaks across month boundaries with `OR`.** When the analysis window spans two months (e.g., 2026-04-29 → 2026-05-05), do NOT write `WHERE (year='2026' AND month='04' AND day IN (...)) OR (year='2026' AND month='05' AND day IN (...))`. The federated Parquet planner scans all partitions and tries to read expired files (e.g., `month=03/day=31`), failing with `Not found: Files gs://household-scoring-prod/.../part-*.parquet`. **Fix: split into per-month CTEs and `UNION ALL`** — the planner gets two clean partition-pruned scans:
+```sql
+prospecting_apr AS (SELECT advertiser_id, ip FROM ...v1 WHERE year='2026' AND month='04' AND day IN (...) AND ...),
+prospecting_may AS (SELECT advertiser_id, ip FROM ...v1 WHERE year='2026' AND month='05' AND day IN (...) AND ...),
+prospecting AS (SELECT DISTINCT advertiser_id, ip FROM (SELECT * FROM prospecting_apr UNION ALL SELECT * FROM prospecting_may))
+```
+
 **Intent tier from household_score** (per Alex Knorr's TI-835 thresholds):
 - 10000 = `high` (vertical + keyword match)
 - 7000-9999 = `peak` (vertical only)
