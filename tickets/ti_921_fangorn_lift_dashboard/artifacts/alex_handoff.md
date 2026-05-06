@@ -3,8 +3,8 @@
 **Author:** Malachi (handing off; OOO ~2 weeks starting 2026-05-09)
 **Audience:** Alex Knorr
 **Companion files (all in this folder unless noted):**
-- [`databricks_fangorn_lift.ipynb`](databricks_fangorn_lift.ipynb) — **the rich notebook** with markdown explanations, embedded SQL, side-by-side comparison tables, and inline plots. Outputs baked in — viewable on GitHub without running. **Open this one.**
-- [`databricks_fangorn_lift.py`](databricks_fangorn_lift.py) — same logic as a plain `.py` (Databricks's native source format). Use this if you prefer cleaner git diffs over baked-in outputs. Either file works as a Databricks notebook.
+- [`databricks_fangorn_lift.ipynb`](databricks_fangorn_lift.ipynb) — **the notebook** with markdown explanations, embedded SQL, side-by-side comparison tables, and inline plots. Outputs baked in — viewable on GitHub without running. **Open this one.**
+- [`_build_notebook.py`](_build_notebook.py) — the source-of-truth script that *generates* the .ipynb. If the notebook needs structural changes, edit this script and re-run it. (We removed the standalone `.py` notebook variant — Databricks Repos collapses `.ipynb` and `.py` files with the same base name, causing a clone error.)
 - [`discover_new_flips.py`](discover_new_flips.py) — one-liner script: reads `wave_config.csv` and prints any newly-flipped AIDs to stdout
 - [`wave_config.csv`](wave_config.csv) — manually-maintained per-AID flip date table (source of truth for waves)
 - [`mode_dashboard_plan.md`](mode_dashboard_plan.md) — what we want the Mode dashboard to look like
@@ -137,7 +137,9 @@ This is the headline workflow. Do it Monday mornings (or after each new wave is 
 **On laptop (fallback only — CI may fail):**
 ```bash
 source ~/.ti921-venv/bin/activate    # the venv from A3
-python3 tickets/ti_921_fangorn_lift_dashboard/artifacts/databricks_fangorn_lift.py
+python3 -m jupyter nbconvert --to notebook --execute --inplace \
+  tickets/ti_921_fangorn_lift_dashboard/artifacts/databricks_fangorn_lift.ipynb \
+  --ExecutePreprocessor.timeout=1800 --allow-errors
 ```
 The pre/post path always works. CausalImpact may or may not — depends on your local pandas. If you hit errors, run on Databricks instead.
 
@@ -152,23 +154,25 @@ In `#tar-ti`, post:
 
 Keep it short — 3-5 lines max. Example: *"Fangorn day-7 readout: CausalImpact says Big Blue Bubble IVR +18% (p=0.04), Biz2Credit IVR -3% (p=0.6, no effect), Lulus too early (D+1). Full table in TI-921 outputs."*
 
-### B5. (One-time) Import the notebook into Databricks
+### B5. (One-time) Connect the repo to Databricks
 
-You only need to do this once. Two ways:
+You only need to do this once. **Use Databricks Repos / Git folders — manual file upload won't work** because the notebook reads `wave_config.csv` and the SQL queries by relative path.
 
-**Way 1 — Via Databricks Repos (preferred, picks up updates automatically):**
-1. In the Databricks left nav, click **Workspace** → **Repos** → your user folder → **Add Repo**.
-2. Repo URL: `git@github.com:mdunn-mntn/malachi-workspace.git`. Branch: `main`.
-3. Browse into `tickets/ti_921_fangorn_lift_dashboard/artifacts/` and double-click `databricks_fangorn_lift.py`. Databricks auto-detects the cell separators.
-4. **Pull** the repo periodically (top-right of the Repos UI) to pick up changes from the laptop side.
+1. **Link your GitHub account in Databricks:** top-right profile → User Settings → Linked accounts → GitHub → paste a Personal Access Token with `repo` scope. (Generate at https://github.com/settings/tokens.)
+2. **Add the repo:** Workspace → Users → your folder → right-click → Create → Git folder.
+3. URL: `https://github.com/mdunn-mntn/malachi-workspace.git`. Branch: `main`.
+4. **Important: enable Sparse checkout** to avoid clone errors from unrelated files in the repo. Cone pattern: `tickets/ti_921_fangorn_lift_dashboard`. (Without sparse checkout, Databricks tries to clone the whole repo, and other tickets' `.py` + `.ipynb` pairs with the same base name will block it.)
+5. Click Create. Wait for clone.
+6. Open `tickets/ti_921_fangorn_lift_dashboard/artifacts/databricks_fangorn_lift.ipynb`.
+7. **Pull periodically** via the Git icon in the Repos UI to pick up changes from upstream.
 
-**Way 2 — Manual import (snapshot — won't auto-update):**
-1. In the Databricks left nav, click **Workspace** → your user folder → **Import**.
-2. Choose **File** → upload `databricks_fangorn_lift.py` from your laptop.
-3. Format = **Python notebook**. Databricks reads the `# COMMAND ----------` markers as cell separators.
-4. The notebook appears as a regular Databricks notebook. Attach to a cluster, hit Run all.
+### B5a. Two-way sync — committing your changes back to GitHub
 
-Way 1 is preferred because all the supporting files (`wave_config.csv`, the SQL queries) live in the same repo and the notebook references them by relative path.
+After running the notebook on Databricks (or making any edits):
+1. Click the **Git** icon next to the file tree (looks like a branch).
+2. You'll see changed files (the executed `.ipynb`, new files in `outputs/`, etc.).
+3. Check the boxes for files you want to include. Write a commit message like *"TI-921: Databricks run YYYY-MM-DD"*.
+4. Click **Commit & Push**. Databricks pushes to `origin/main` using the GitHub PAT you linked.
 
 ### B6. When a cohort reaches 4 weeks post-flip: final readout
 
@@ -344,17 +348,21 @@ If you don't trust a number in the dashboard for an advertiser, check whether th
 
 *Procedural runbook is in §B. This section is for someone who wants to know what's inside the notebook before running it.*
 
-[`databricks_fangorn_lift.py`](databricks_fangorn_lift.py) is structured as 7 cells (separated by `# COMMAND ----------`):
+[`databricks_fangorn_lift.ipynb`](databricks_fangorn_lift.ipynb) is structured as 22 cells (markdown + code, alternating):
 
-1. **Setup + imports** — including monkeypatch shims for pandas 2.x compat in CausalImpact.
+1. **Setup + imports** — including pandas-2.x compatibility shims for `causalimpact`.
 2. **Load `wave_config.csv`** — reads the manual source-of-truth flip table.
 3. **Pull daily KPI panel from BQ** — runs `queries/ti_921_daily_panel.sql` with the wave_config injected at runtime (replaces the inline CTE). Returns one row per (advertiser_id, day) for every active prospecting advertiser, with `is_treated` / `aid_in_treatment_group` flags and `days_since_flip`.
-4. **Method 2 — CausalImpact per (AID, metric)** — for each flipped AID and each metric: build per-AID feature frame, drop high-VIF covariates, BIC-search for the best subset, fit CausalImpact, save plot + summary stats. The headline lift claim.
-5. **Method 1 — pre/post per AID** — straightforward aggregation from the daily panel for context/comparison.
-6. **Combined readout** — joins Method 1 + Method 2 outputs into `ti_921_combined.csv` with columns ordered CI-first per metric (rel_effect, p_value, post_n_days), then pre/post side-by-side.
-7. **What to share** — markdown cell with the rules of thumb for posting Slack/Jira summaries.
+4. **Method 1 — pre/post per AID** — straightforward aggregation from the daily panel; the naive comparison.
+5. **Method 2 — CausalImpact per (AID, metric)** — for each flipped AID and each metric: build per-AID feature frame, drop high-VIF covariates, BIC-search for the best subset, fit CausalImpact, save plot + summary stats. The headline lift claim.
+6. **Side-by-side comparison table** — pre/post Δ% next to CI rel_effect with a "gap" column highlighting where the methods disagree.
+7. **Before/after KPI pivot** — pre / post / Δ% per metric per AID; auto-mutes columns where pixel/dollar value isn't meaningful.
+8. **Inline CI plots** — every `ti_921_ci_*.png` displayed in-notebook (after Section 5 has run on Databricks).
+9. **What to share** — Slack/Jira summary template + escalation thresholds.
 
 The CausalImpact pipeline is copied from TI-849 verbatim (same VIF → BIC → CI flow, same covariate set, same scaling). The only material change vs TI-849 is per-AID flip date and runtime SQL injection.
+
+The notebook is generated by `_build_notebook.py` — to make structural changes (add/remove cells, rewrite explanations), edit that script and re-run it. Don't hand-edit the .ipynb's JSON.
 
 ### Alternative: standalone Python pipeline
 [`../../ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py`](../../ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py) is the original TI-849 version. Runs on a laptop with `gcloud auth application-default login`. Useful for spot-checks; use the TI-921 notebook for production.
