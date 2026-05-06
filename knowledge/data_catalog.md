@@ -2328,3 +2328,20 @@ These tables are used by Mission Control system metrics. Note: The system metric
 - ## guid_identity_daily.sql — No-Share Filter Required
 
 The model at `models/dw-main-silver/aggregates/guid_identity_daily.sql` in the SQLMesh repo must be updated to join against the `public.advertisers` table and filter out no-share advertisers using the new boolean column (TRUE = cannot use data). This is required as part of the No-Share Advertiser Policy implementation. The column name was pending confirmation as of late April 2026. (via Jack Barbey, #identity_core_dev, 2026-04-28)
+
+<!-- slack-extracted: 2026-05-06 -->
+- **`campaign_groups.product_id` — Source of Truth for MNTN Select vs. PTV Identification**
+
+- **Table:** `campaign_groups` (coredb, replicated to `bronze.integrationprod`)
+- **Column:** `product_id` — values: `1=PTV`, `2=Select`, `3=QuickFrame` (via `core_products` lookup)
+- **Authority:** The UI sets `product_id` when managing Select vs. PTV campaigns. This value flows to reporting and invoices. It is the canonical source of truth across the system.
+- **Validation:** Four table variants exist in `bronze.integrationprod` (`campaign_groups`, `campaign_groups_raw`, `public_campaign_groups`, `public_campaign_groups_raw`) — all agree. Immutable across 735K archive row versions. Bidder-side `is_select_cid` agrees 100% but is considered a bespoke derived value, not the source of truth.
+- **PMP caveat:** PMP-deal attachment is not a clean proxy — 28 PTV "Pause Ads" groups also use PMP deals.
+- **Reporting usage:** `product_id` is the filter element for customer-facing Select reporting and invoices. (via ray, #reporting_helpdesk_ask_anything, 2026-05-05)
+- **`audience.advertiser_configurations.enable_taxonomy_block` — DS16 vs. DS2 for MT+ Audiences**
+
+- The field `enable_taxonomy_block` in `audience.advertiser_configurations` controls whether an advertiser uses **DS16** (taxonomy block) or **DS2** for building MT+ (Mid-Touch Plus) audiences.
+- If `enable_taxonomy_block = false`, DS2 will be used instead of DS16 — this is expected behavior for those advertisers, not a misconfiguration.
+- Only **3 advertiser IDs** currently have `enable_taxonomy_block = false` (including AID 31357).
+- The existing audit monitor for DS16 exclusion (audit [40]) does not account for this flag, causing false positives. The DM team has a ticket (DM-4433) to update the audit logic to check `enable_taxonomy_block` before flagging; ETA early June 2026.
+- **Campaign group exclusions** in the audit query are likely experiment-related holdouts. (via zach.schoenberger, #production-ops, 2026-05-05)

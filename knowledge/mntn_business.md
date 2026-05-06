@@ -807,3 +807,17 @@ As of late April 2026, the percentage of SMB campaign groups (CGs) hitting perfo
 - **MNTN Select** is MNTN's media marketplace product — described as the "first ever" media marketplace allowing media buyers to shop for their own programs and deals. It represents MNTN's entry into the broader media business beyond performance advertising. (via Marwan Soghaier, #engineering-team, 2025-05-04)
 - **Mike Dolzer** was promoted to **Senior Project Manager**. His contributions include driving major migrations and projects to completion, upleveling operational teams (BAE and DPLAT) to handle increased request volume, and adapting focus as priorities evolve across the teams under his ownership. (via Kaila, #engineering-team, 2025-05-04)
 - **Luis Chelala** has joined the Identity Core team as a new PM (Product Manager). This was announced by Elena in #identity_core. (via Elena, #identity_core, 2025-05-04)
+
+<!-- slack-extracted: 2026-05-06 -->
+- **Atlas Code MCP (Internal AI Tooling)**
+
+MNTN has developed a next-generation MCP system called **Atlas Code MCP**, distinct from the existing MNTN Prod MCP currently used by Compass. Key differences:
+
+- **MNTN Prod MCP**: Used by Compass for infrastructure context. Focused on infrastructure, developed during the BQ migration.
+- **Atlas Code MCP**: ~300+ additional tools (and growing). Covers the entire MNTN codebase, GCP, best practices documentation, and team documentation. Designed to provide enough context to write complete fixes or features in a single planning session (Claude Code or Cursor).
+- The Atlas system is architecturally reusable and extensible — new agent personalities can be created via a single pull request without touching core code.
+- As of May 2026, Atlas Code MCP is in active development (not GA). An announcement will be made when it reaches GA.
+- The core architecture was refactored from the April release; apps, MCPs, and integrations can be hung off the core. (via Harvey Yau, #engineering-team, 2026-05-05)
+- **Tejas Widjonarko promoted to Senior Technical Program Manager (QFAI team)**
+
+Tejas Widjonarko was promoted to Senior Technical Program Manager on the QFAI team, effective May 2026. He owns PRD creation and program execution for QFAI. Notable recent deliveries include a new login flow and a tiered subscription model. (via Emily (Jaffe) Sgroi, #engineering-team, 2026-05-05)

@@ -1986,3 +1986,12 @@ When MNTN bids on open market (non-deal) inventory via Beeswax:
 - `creative-sync-service` specifically must be turned off during AdDB maintenance; other services can likely remain on with stale cache.
 - Default cache TTL for services reading AdDB is ~5 minutes.
 - Attribution Squad supports AdDB reads and can coordinate downtime via Nate Gardner / `U040UFVBVDW`. (via Mike Dolzer, #data-platform, 2025-05-04)
+
+<!-- slack-extracted: 2026-05-06 -->
+- **Audience Segment Report Pipeline — Cadence and Availability**
+
+- The audience segment report is a daily batch job.
+- Job kicks off at **10:15 UTC** and takes approximately **6 hours** to complete, making results available around **9:00 AM PT**.
+- The general target SLA for graph/all_facts data is also 9 AM in the corresponding timezone (ongoing batch job).
+- 9 AM ET / 6 AM PT stated in help desk documentation is **inaccurate** for audience segment data — it will not be available by 6 AM PT.
+- DAG monitoring starting point: https://cloud.astronomer.io/cmcvc7plk045e01o49xkio5lc/dags (Astronomer/Airflow). (via ray, #reporting_helpdesk_ask_anything, 2026-05-05)
