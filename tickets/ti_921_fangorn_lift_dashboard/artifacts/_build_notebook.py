@@ -104,7 +104,7 @@ Skip this cell on a laptop where deps are already installed."""))
 
     nb.cells.append(code("""
 # Databricks: install missing libs. (No-op on laptop — pip install will be quick.)
-%pip install google-cloud-bigquery db-dtypes
+%pip install google-cloud-bigquery db-dtypes causalimpact
 """))
 
     nb.cells.append(code("""
