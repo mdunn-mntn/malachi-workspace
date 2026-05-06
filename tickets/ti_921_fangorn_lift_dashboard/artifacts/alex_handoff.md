@@ -3,12 +3,15 @@
 **Author:** Malachi (handing off; OOO ~2 weeks starting 2026-05-09)
 **Audience:** Alex Knorr
 **Companion files (all in this folder unless noted):**
-- [`databricks_fangorn_lift.py`](databricks_fangorn_lift.py) — Databricks-ready notebook (run it end-to-end)
+- [`databricks_fangorn_lift.ipynb`](databricks_fangorn_lift.ipynb) — **the rich notebook** with markdown explanations, embedded SQL, side-by-side comparison tables, and inline plots. Outputs baked in — viewable on GitHub without running. **Open this one.**
+- [`databricks_fangorn_lift.py`](databricks_fangorn_lift.py) — same logic as a plain `.py` (Databricks's native source format). Use this if you prefer cleaner git diffs over baked-in outputs. Either file works as a Databricks notebook.
+- [`discover_new_flips.py`](discover_new_flips.py) — one-liner script: reads `wave_config.csv` and prints any newly-flipped AIDs to stdout
 - [`wave_config.csv`](wave_config.csv) — manually-maintained per-AID flip date table (source of truth for waves)
 - [`mode_dashboard_plan.md`](mode_dashboard_plan.md) — what we want the Mode dashboard to look like
 - [`../queries/ti_921_pre_post_per_aid.sql`](../queries/ti_921_pre_post_per_aid.sql) — wave-aware pre/post (Method 1)
 - [`../queries/ti_921_daily_panel.sql`](../queries/ti_921_daily_panel.sql) — daily KPI panel feeding both methods
-- [`../queries/ti_921_flip_date_detection.sql`](../queries/ti_921_flip_date_detection.sql) — best-effort flip-date detection from CDC
+- [`../queries/ti_921_discover_new_flips.sql`](../queries/ti_921_discover_new_flips.sql) — discovery query (the .py wrapper above is preferred)
+- [`../queries/ti_921_flip_date_detection.sql`](../queries/ti_921_flip_date_detection.sql) — best-effort flip-date detection from CDC archive
 - [`../../ti_849_fangorn_score_monitoring/`](../../ti_849_fangorn_score_monitoring/) — predecessor ticket; queries + CausalImpact pipeline live here
 
 ---
