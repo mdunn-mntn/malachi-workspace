@@ -274,6 +274,12 @@ for col in ["impressions", "uniques", "active_cgs", "vv", "conversions",
             "order_value", "spend", "vast_start", "vast_complete", "days_since_flip"]:
     panel[col] = pd.to_numeric(panel[col], errors="coerce")
 
+# Cast pandas extension dtypes (Float64 / Int64 from db-dtypes) to plain numpy
+# float — statsmodels OLS in BIC search rejects FloatingArray with
+# "unrecognized data structures: <class 'FloatingArray'> / <class 'ndarray'>".
+for col in panel.select_dtypes(include=["Float64", "Int64"]).columns:
+    panel[col] = panel[col].astype(float)
+
 print(
     f"Panel: {len(panel):,} rows | "
     f"treated AIDs: {panel[panel['aid_in_treatment_group']]['advertiser_id'].nunique()} | "
@@ -550,10 +556,20 @@ def drop_high_vif(features, threshold=10.0):
         keep.remove(keep[vifs.index(max(vifs))])
     return keep
 
-def best_subset_by_bic(target, features, max_size=5):
+def best_subset_by_bic(target, features, max_size=3):
+    # max_size=3 default — most winning subsets historically use 2-3 covariates;
+    # capping at 3 cuts the BIC search from ~3,500 OLS fits to ~470 (~7x faster).
+    # Bump to 5 only if you suspect a 4-5 covariate model materially improves fit.
     cols = list(features.columns)
     best_bic, best_subset = np.inf, []
-    y = target.dropna()
+    # Cast to plain numpy float — statsmodels can't handle pandas FloatingArray
+    # (which is what db-dtypes produces on BQ-to-pandas conversion in newer pandas).
+    target = pd.Series(np.asarray(target, dtype=np.float64), index=target.index).dropna()
+    features = pd.DataFrame(
+        np.asarray(features, dtype=np.float64),
+        columns=features.columns, index=features.index,
+    )
+    y = target
     for k in range(1, min(max_size, len(cols)) + 1):
         for subset in combinations(cols, k):
             X = sm.add_constant(features[list(subset)].loc[y.index].fillna(0.0), has_constant="add")
