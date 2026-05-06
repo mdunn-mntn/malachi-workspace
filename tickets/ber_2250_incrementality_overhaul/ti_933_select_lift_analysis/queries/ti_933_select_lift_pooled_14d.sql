@@ -37,18 +37,30 @@ campaign_dim AS (
   WHERE c.deleted = FALSE AND c.is_test = FALSE
 ),
 
-prospecting AS (
+prospecting_apr AS (
   SELECT DISTINCT
     CAST(advertiser_id AS INT64) AS advertiser_id,
     ip
   FROM `dw-main-bronze.external.household_scoring__prospecting_intent__v1`
-  WHERE CAST(advertiser_id AS INT64) IN (SELECT advertiser_id FROM select_cohort)
-    AND (
-      (year = '2026' AND month = '04' AND day IN ('22','23','24','25','26','27','28','29','30'))
-      OR
-      (year = '2026' AND month = '05' AND day IN ('01','02','03','04','05'))
-    )
+  WHERE year = '2026' AND month = '04'
+    AND day IN ('22','23','24','25','26','27','28','29','30')
+    AND CAST(advertiser_id AS INT64) IN (SELECT advertiser_id FROM select_cohort)
     AND ip IS NOT NULL AND ip != '0.0.0.0'
+),
+prospecting_may AS (
+  SELECT DISTINCT
+    CAST(advertiser_id AS INT64) AS advertiser_id,
+    ip
+  FROM `dw-main-bronze.external.household_scoring__prospecting_intent__v1`
+  WHERE year = '2026' AND month = '05'
+    AND day IN ('01','02','03','04','05')
+    AND CAST(advertiser_id AS INT64) IN (SELECT advertiser_id FROM select_cohort)
+    AND ip IS NOT NULL AND ip != '0.0.0.0'
+),
+prospecting AS (
+  SELECT DISTINCT advertiser_id, ip FROM (
+    SELECT * FROM prospecting_apr UNION ALL SELECT * FROM prospecting_may
+  )
 ),
 ip_assigned AS (
   SELECT
