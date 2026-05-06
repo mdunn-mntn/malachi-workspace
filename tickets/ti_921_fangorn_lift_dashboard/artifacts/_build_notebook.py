@@ -443,7 +443,17 @@ the part attributable to the flip.
 CI_AVAILABLE = False
 try:
     import sys
+    import types
     import pandas as pd
+
+    # Pre-import shim for 0.1.1: it imports `from pandas.util.testing import is_list_like`,
+    # but pandas.util.testing was removed in pandas 2.0. Create a fake module that
+    # forwards to pandas.api.types so the import line in causalimpact/analysis.py succeeds.
+    if "pandas.util.testing" not in sys.modules:
+        _fake_pd_testing = types.ModuleType("pandas.util.testing")
+        from pandas.api.types import is_list_like as _is_list_like
+        _fake_pd_testing.is_list_like = _is_list_like
+        sys.modules["pandas.util.testing"] = _fake_pd_testing
 
     import causalimpact as _ci_pkg
     ci_version = getattr(_ci_pkg, "__version__", "unknown")
