@@ -15,19 +15,210 @@
 
 ## 0. TL;DR — what you actually need to do
 
-Goal: keep producing per-advertiser KPI movement readouts as new Fangorn cohorts flip, and feed a Mode dashboard once it's built.
+Goal: keep producing per-advertiser CausalImpact lift estimates as new Fangorn cohorts flip, and feed a Mode dashboard once it's built.
 
-| Step | What | Where | Cadence |
+**If you've never touched this before, jump to §A First-time setup.** It's a numbered walkthrough — do it end-to-end before anything else.
+
+| Cadence | Procedure | Where in this doc |
+|---|---|---|
+| One-time | Set up your environment (clone repo, BQ auth, optional venv, smoke test) | **§A First-time setup** |
+| One-time | Import the notebook into Databricks | **§B5** |
+| Each Slack rollout | Discover new flips → update `wave_config.csv` → commit | **§B1** |
+| Weekly | Run the notebook on Databricks → review output | **§B2** + **§B3** |
+| Weekly | Post Slack/Jira summary if material moves | **§B4** |
+| Per-cohort | At 4 weeks post-flip, write the final readout | **§B6** |
+| (Later) | Build the Mode dashboard | [`mode_dashboard_plan.md`](mode_dashboard_plan.md) |
+
+**Headline framing reminder:** CausalImpact is the lift claim. Pre/post is reported alongside as the naive comparison and as a backstop. See §2 for the why; §C for how to read the output.
+
+---
+
+## §A First-time setup (do this once, in order)
+
+### A1. Get the repo on your laptop (skip if you already have it)
+```bash
+git clone git@github.com:mdunn-mntn/malachi-workspace.git
+cd malachi-workspace
+```
+**Verify:** `ls tickets/ti_921_fangorn_lift_dashboard/` should show `summary.md`, `artifacts/`, `queries/`, `outputs/`, `meetings/`.
+
+### A2. Auth to BigQuery
+The notebook reads BQ via `google-cloud-bigquery`. Auth once:
+```bash
+gcloud auth application-default login
+```
+A browser opens. Log in with your `@mountain.com` account. Done.
+
+**Verify:** `bq query --use_legacy_sql=false --project_id=dw-main-bronze 'SELECT 1 AS ok'` returns `ok = 1`.
+
+### A3. (Local-only path) Install Python deps with a pinned-pandas venv
+**Skip this step if you'll only run on Databricks.** On Databricks, the ML runtime ships everything pre-installed.
+
+```bash
+cd /Users/<you>/Developer/  # or wherever
+python3 -m venv .ti921-venv
+source .ti921-venv/bin/activate
+pip install 'pandas<2.0' causalimpact google-cloud-bigquery statsmodels matplotlib numpy
+```
+
+The pandas pin matters — see §4 CI compat note. This venv is only for laptop work.
+
+**Verify:** `python3 -c "from causalimpact import CausalImpact; print('ok')"` prints `ok`.
+
+### A4. Smoke-test the discovery script
+This script reads `wave_config.csv`, runs a 2-second BQ query, and prints any advertiser flipped to Fangorn that's not yet logged:
+```bash
+cd /path/to/malachi-workspace
+python3 tickets/ti_921_fangorn_lift_dashboard/artifacts/discover_new_flips.py
+```
+**Expected today (2026-05-06):** stderr says `Known AIDs in wave_config.csv: 52` and `No new flips — wave_config.csv is up to date.` (since we already logged Wave 2's 48 + the original 4 yesterday). If you see new rows, follow §B1 to add them.
+
+If it errors with "permission denied" or "google.auth", you either haven't run §A2 (`gcloud auth application-default login`) or don't have BQ read access on `dw-main-bronze` — ping Ryan Kleck or `#data-platform`.
+
+### A5. Read [`alex_handoff.md`](alex_handoff.md) §1-§3 for the mental model
+- §1 — what Fangorn is and what flipping it does to KPIs
+- §2 — the two methods (CausalImpact headline + pre/post comparison) and why
+- §3 — data flow + every BQ table we read
+
+You don't need to memorize §3, but glance through it once so the column names aren't surprises.
+
+---
+
+## §B Recurring operations (do this every Slack rollout, and weekly)
+
+### B1. After each Slack rollout announcement: discover new flips and update wave_config
+
+Whenever Matt, Ryan, or Bryce posts something like *"rolled out the next 50 advertisers"*, the new AIDs land in BQ within ~24 hours (after the next nightly household-scoring run). Then:
+
+**Step 1 — Run the discovery script:**
+```bash
+python3 tickets/ti_921_fangorn_lift_dashboard/artifacts/discover_new_flips.py
+```
+Reads `wave_config.csv`, runs the discovery query against BQ, prints a CSV to stdout with one row per newly-flipped AID — including a `suggested_csv_row` column that's already formatted to paste into wave_config.csv.
+
+If you'd rather run the raw SQL in the BQ console, [`../queries/ti_921_discover_new_flips.sql`](../queries/ti_921_discover_new_flips.sql) has the same logic but with the known-AID list hardcoded inline (it gets stale; the Python script reads the CSV fresh every run).
+
+**Step 2 — Edit `tickets/ti_921_fangorn_lift_dashboard/artifacts/wave_config.csv`:**
+- Open the file.
+- For each new AID returned by the query, paste the `suggested_csv_row` value as a new line at the bottom.
+- Update the cohort label (replace `TierX-WaveY` with e.g. `Tier1-Wave3`).
+- Override `has_conversion_pixel` / `has_dollar_value` / `notes` if the auto-detection got it wrong (check by spot-querying `silver.summarydata.conversion_facts` for a sample of the AIDs).
+- The `flip_date` from the discovery query is the day `vertical_data_source` was set in BQ. **Effective Fangorn targeting starts the morning after the next household-scoring run.** If the BQ flip happened during the day, set `flip_date` to the next day. (Heuristic: if `flip_ts_utc` time is between 07:00-08:00 UTC, that's the morning after scoring → use that calendar day. If it's later in the day, use the next calendar day.)
+
+**Step 3 — Commit and push:**
+```bash
+git add -f tickets/ti_921_fangorn_lift_dashboard/artifacts/wave_config.csv
+git commit -m "TI-921: log new flips for [cohort name]"
+git push origin main
+```
+Note the `-f` — `*.csv` is gitignored repo-wide; this file is the documented exception.
+
+**Step 4 — Run the notebook (see §B2).**
+
+### B2. Weekly: run the notebook and review
+
+This is the headline workflow. Do it Monday mornings (or after each new wave is logged in B1).
+
+**On Databricks (the supported path):**
+1. Open your Databricks workspace.
+2. If you already imported the notebook, open it. If not, see §B5 below for the one-time import.
+3. Make sure the notebook is attached to a cluster with the BigQuery connector and the ML runtime (≤14.x).
+4. Click **Run all**. Takes ~5-10 minutes for the panel pull + all CI fits.
+5. Outputs land in `tickets/ti_921_fangorn_lift_dashboard/outputs/` in the cluster's mounted git workspace:
+   - `ti_921_combined.csv` — the headline table (CI rel_effect + p-value, with pre/post side-by-side)
+   - `ti_921_pre_post.csv` — pre/post only (backstop for AIDs where CI couldn't fit)
+   - `ti_921_ci_results.csv` — CI fit details (covariates picked, CrI bounds)
+   - `ti_921_panel.csv` — raw daily panel (large; feeds Mode)
+   - `ti_921_ci_<aid>_<metric>.png` — per-(AID, metric) CausalImpact plot
+
+**On laptop (fallback only — CI may fail):**
+```bash
+source ~/.ti921-venv/bin/activate    # the venv from A3
+python3 tickets/ti_921_fangorn_lift_dashboard/artifacts/databricks_fangorn_lift.py
+```
+The pre/post path always works. CausalImpact may or may not — depends on your local pandas. If you hit errors, run on Databricks instead.
+
+### B3. After the notebook: scan the output (see §C for what to look at)
+
+### B4. Post a Slack/Jira summary if anything moves materially
+
+In `#tar-ti`, post:
+- Any (AID, metric) where CausalImpact `rel_effect` is ±15% or more *and* `p_value < 0.10`
+- Any case where pre/post Δ% > 20% but CI says no effect (means a confound — flag for investigation)
+- Anomalies (e.g., post_days = 0, no data, etc.)
+
+Keep it short — 3-5 lines max. Example: *"Fangorn day-7 readout: CausalImpact says Big Blue Bubble IVR +18% (p=0.04), Biz2Credit IVR -3% (p=0.6, no effect), Lulus too early (D+1). Full table in TI-921 outputs."*
+
+### B5. (One-time) Import the notebook into Databricks
+
+You only need to do this once. Two ways:
+
+**Way 1 — Via Databricks Repos (preferred, picks up updates automatically):**
+1. In the Databricks left nav, click **Workspace** → **Repos** → your user folder → **Add Repo**.
+2. Repo URL: `git@github.com:mdunn-mntn/malachi-workspace.git`. Branch: `main`.
+3. Browse into `tickets/ti_921_fangorn_lift_dashboard/artifacts/` and double-click `databricks_fangorn_lift.py`. Databricks auto-detects the cell separators.
+4. **Pull** the repo periodically (top-right of the Repos UI) to pick up changes from the laptop side.
+
+**Way 2 — Manual import (snapshot — won't auto-update):**
+1. In the Databricks left nav, click **Workspace** → your user folder → **Import**.
+2. Choose **File** → upload `databricks_fangorn_lift.py` from your laptop.
+3. Format = **Python notebook**. Databricks reads the `# COMMAND ----------` markers as cell separators.
+4. The notebook appears as a regular Databricks notebook. Attach to a cluster, hit Run all.
+
+Way 1 is preferred because all the supporting files (`wave_config.csv`, the SQL queries) live in the same repo and the notebook references them by relative path.
+
+### B6. When a cohort reaches 4 weeks post-flip: final readout
+
+Per the TI-780 maturity rule, a Fangorn cohort's lift is "real" at 4 weeks post-flip. For each cohort that hits maturity:
+
+1. Run the notebook (B2) with that cohort included.
+2. Open `outputs/ti_921_combined.csv` filtered to that cohort.
+3. For the 3 most-moved metrics (highest absolute CI rel_effect), grab the corresponding CI plots from `outputs/ti_921_ci_*.png`.
+4. Write a one-pager: cohort summary, the 3 plots, the CI-vs-pre/post comparison table, two-sentence interpretation.
+5. Post in `#tar-ti`, link from Jira TI-921, archive in `tickets/ti_921_fangorn_lift_dashboard/artifacts/cohort_readouts/`.
+
+For Wave 1 (flipped 2026-05-01), maturity hits ~2026-05-29.
+For Wave 2 main (flipped 2026-05-06), maturity hits ~2026-06-03.
+
+---
+
+## §C Reading the output
+
+Open `tickets/ti_921_fangorn_lift_dashboard/outputs/ti_921_combined.csv`. Scan in this order:
+
+1. **Filter rows where `post_days > 0`.** Anything with 0 post days hasn't started yet — ignore.
+2. **Look at `ci_rel_effect_ivr` and `ci_p_value_ivr` first.** This is the headline IVR lift claim per advertiser.
+   - `rel_effect` between -1 and 1 (i.e., -100% to +100%). Multiply by 100 mentally for percent.
+   - `p_value < 0.05` = strong signal. `0.05-0.10` = directional. `> 0.10` = inconclusive (often means insufficient post-period).
+3. **Compare to `ivr_pct_change`** (the pre/post column right next to it). If they agree in direction and rough magnitude, you're confident. If they disagree by >10pp, the synthetic control is correcting for a confound — flag this as the more interesting story.
+4. **Repeat for CVR, ROAS, CPA, CPV columns.** Note: muted/blank for advertisers without conversion pixels (`has_conversion_pixel = false` in `wave_config.csv`).
+5. **`ci_post_n_days_*`** tells you how many days of post-data the CI fit used. Below 7 → wide CrI; trust the direction but not the magnitude.
+6. **Volume context columns (`impressions_pre`, `impressions_post`, `spend_pre`, `spend_post`)** are far right. Check them if a rate-metric move looks weird — e.g., post impressions dropped 90%? Then the post-period is too short or the campaign paused.
+
+### Reading the CausalImpact plots
+Each `ti_921_ci_<aid>_<metric>.png` has three panels (top to bottom):
+- **Original:** actual KPI series (solid) vs counterfactual prediction (dashed), with shaded 95% CrI. Vertical line = flip date. After the flip, if the solid is consistently above the dashed, that's the lift.
+- **Pointwise:** per-day estimated effect (actual minus counterfactual), with CrI shading. Above zero = positive lift that day.
+- **Cumulative:** running sum of the pointwise effect. Up-and-to-the-right = sustained positive lift.
+
+These plots are what leadership wants to see. Copy straight into a deck.
+
+---
+
+## §D Worked example — Wave 1 day-3 readout (data as of 2026-05-04)
+
+Today (2026-05-06), the Wave 1 advertisers (flipped 2026-05-01) have ~5 post days. The smoke test from yesterday produced this for the first 3 days:
+
+| Advertiser | IVR pre→post (Δ%) | CVR pre→post (Δ%) | Interpretation |
 |---|---|---|---|
-| 1 | Run discovery query → grab newly-flipped AIDs | [`../queries/ti_921_discover_new_flips.sql`](../queries/ti_921_discover_new_flips.sql) | Each Slack rollout announcement |
-| 2 | Append discovered AIDs (with cohort label, pixel/dollar status) to `wave_config.csv` | this folder | After step 1 |
-| 3 | Run the Databricks notebook | `databricks_fangorn_lift.py` | Weekly (or on demand) |
-| 4 | Eyeball results | notebook outputs + `outputs/` | After each run |
-| 5 | Post Slack/Jira summary if anything moves >20% | `#tar-ti` | After each run |
-| 6 | Once cohort reaches 4 weeks post-flip, do final readout | one-pager | Per cohort |
-| 7 | (Later) wire to Mode | `mode_dashboard_plan.md` | One-time + weekly maintenance |
+| Biz2Credit | 1.06% → 0.97% (-8%) | 4.92% → 5.55% (+13%) | IVR slightly down, CVR up — Fangorn may be filtering toward higher-converting eyeballs even at slightly lower visit rate. Wait for CI at maturity. |
+| Big Blue Bubble | 0.96% → 1.26% (+31%) | n/a (no pixel) | Clean IVR win on the only KPI that matters for them. CausalImpact at maturity should confirm or kill this. |
+| UNW Ohio | 0.41% → 0.43% (+5%) | 1.37% → 0.00% | CVR=0 in 3 post days for a lead-gen advertiser is a flag — could be conversion-event lag, could be a pixel issue. Check Mike Dolt. |
+| authenTEAK | n/a (Wave 2 vanguard, post starts today) | n/a | Will appear in next run. |
 
-Everything else in this doc is to give you the mental model so steps 1-5 make sense.
+**The pattern to notice:** these are pre/post-only numbers. CausalImpact will refine each of them. Today's 31% IVR jump for Big Blue Bubble could be 31%, or could be 18% with the rest being platform tailwind — we don't know without the synthetic control. That's why CI is the headline at maturity.
+
+**Today's run (2026-05-06):** the Wave 2 main cohort (50 AIDs) has 0 post days because they flipped at midnight last night. They'll start showing post-period numbers tomorrow. Wave 1 is now D+5; CI fits should start producing meaningful CrIs.
 
 ---
 
@@ -146,28 +337,24 @@ If you don't trust a number in the dashboard for an advertiser, check whether th
 
 ---
 
-## 4. How to run it (three ways)
+## 4. Reference — how the notebook is organized
 
-### A) The fastest answer: pre/post BQ query
-For a 5-minute "did rates move?" sanity check, run [`../queries/ti_921_pre_post_per_aid.sql`](../queries/ti_921_pre_post_per_aid.sql) directly in BQ. It auto-detects flipped AIDs from `vertical_data_source = 46`, and uses a 30-day pre-period anchored to each AID's flip date (read from `wave_config.csv` if mounted, or from a `WITH wave_config AS ...` literal block at the top — open the file and adjust if you've added new waves).
+*Procedural runbook is in §B. This section is for someone who wants to know what's inside the notebook before running it.*
 
-### B) Databricks notebook (the primary handoff path)
-[`databricks_fangorn_lift.py`](databricks_fangorn_lift.py). Open in Databricks, attach to a cluster with the BQ connector, hit run-all. Sections:
-1. Setup + imports
-2. Load `wave_config.csv` (small, manual)
-3. Pull daily KPI panel from BQ → Spark DataFrame → pandas (panel fits in memory comfortably for any plausible cohort size)
-4. Method 1: per-AID pre/post summary
-5. Method 2: CausalImpact per (AID, metric)
-6. Write outputs + per-metric plots
+[`databricks_fangorn_lift.py`](databricks_fangorn_lift.py) is structured as 7 cells (separated by `# COMMAND ----------`):
 
-I copied the CausalImpact pipeline from TI-849 verbatim — same VIF → BIC → CI flow, same covariate set, same scaling. The only change is per-AID flip date.
+1. **Setup + imports** — including monkeypatch shims for pandas 2.x compat in CausalImpact.
+2. **Load `wave_config.csv`** — reads the manual source-of-truth flip table.
+3. **Pull daily KPI panel from BQ** — runs `queries/ti_921_daily_panel.sql` with the wave_config injected at runtime (replaces the inline CTE). Returns one row per (advertiser_id, day) for every active prospecting advertiser, with `is_treated` / `aid_in_treatment_group` flags and `days_since_flip`.
+4. **Method 2 — CausalImpact per (AID, metric)** — for each flipped AID and each metric: build per-AID feature frame, drop high-VIF covariates, BIC-search for the best subset, fit CausalImpact, save plot + summary stats. The headline lift claim.
+5. **Method 1 — pre/post per AID** — straightforward aggregation from the daily panel for context/comparison.
+6. **Combined readout** — joins Method 1 + Method 2 outputs into `ti_921_combined.csv` with columns ordered CI-first per metric (rel_effect, p_value, post_n_days), then pre/post side-by-side.
+7. **What to share** — markdown cell with the rules of thumb for posting Slack/Jira summaries.
 
-### C) The standalone Python pipeline
-[`../../ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py`](../../ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py) is the original. Runs on your laptop with `gcloud auth application-default login`. Use this if Databricks is unavailable for some reason.
+The CausalImpact pipeline is copied from TI-849 verbatim (same VIF → BIC → CI flow, same covariate set, same scaling). The only material change vs TI-849 is per-AID flip date and runtime SQL injection.
 
-### Auth
-- **BQ from Databricks:** the workspace already has a BQ service account configured for read access — confirm with Ryan or the data-platform channel if you hit a permissions error.
-- **BQ from laptop:** `gcloud auth application-default login` once, then use the `google-cloud-bigquery` Python client.
+### Alternative: standalone Python pipeline
+[`../../ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py`](../../ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py) is the original TI-849 version. Runs on a laptop with `gcloud auth application-default login`. Useful for spot-checks; use the TI-921 notebook for production.
 
 ### CausalImpact compatibility note — IMPORTANT (CI is the headline; this has to work)
 
@@ -188,44 +375,35 @@ The notebook has small monkeypatch shims for the most common breakages (`DataFra
 
 ---
 
-## 5. Wave-awareness — the only meaningful change vs TI-849
+## 5. Reference — how wave-awareness works
 
-TI-849 hard-coded `pre = 2026-03-31 → 2026-04-29`, `post = 2026-05-01 → today`. That works only when all advertisers flip on the same day. For any future cohort that flips on a different date, we have to compute pre/post per-AID.
+*Procedural runbook is in §B1. This section is for someone who wants the conceptual mechanics.*
 
-Two changes to make this work:
+TI-849 hard-coded `pre = 2026-03-31 → 2026-04-29`, `post = 2026-05-01 → today`. That works only when all advertisers flip on the same day. For any future cohort that flips on a different date, pre/post has to be computed per-AID. Two pieces make this work:
 
-1. **`wave_config.csv` is the source of truth for flip dates.** Maintain it manually. When a cohort flips, append rows (one per AID) before re-running the pipeline. The notebook reads this CSV; the queries reference it. Schema:
+1. **`wave_config.csv` is the source of truth for flip dates.** Maintained manually (per §B1). The notebook reads this CSV at runtime and injects the values into the daily-panel SQL (replacing the inline `WITH wave_config AS (...)` block). Schema:
    ```
-   advertiser_id,advertiser_name,flip_date,cohort,vertical,has_conversion_pixel,notes
-   32320,Biz2Credit,2026-05-01,Tier1-Wave1,Lending & Brokerage,true,
-   38659,Big Blue Bubble Inc.,2026-05-01,Tier1-Wave1,Games & Comics,false,no conversion pixel
-   32233,University of Northwestern Ohio,2026-05-01,Tier1-Wave1,Colleges & Universities,true,lead-gen no $ value
+   advertiser_id,advertiser_name,flip_date,cohort,vertical,has_conversion_pixel,has_dollar_value,notes
    ```
 
-2. **Pre / post are computed per AID:**
+2. **Per-AID pre/post + `days_since_flip`:**
    - Pre = `flip_date − 31 → flip_date − 1` (30 days)
-   - Post = `flip_date + 1 → CURRENT_DATE - 1` (grows daily; flip day itself excluded per TI-221 convention)
-   - `days_since_flip` is included in the daily panel so trends can be aligned across cohorts that flipped on different dates (essential for Mode).
+   - Post = `flip_date + 1 → CURRENT_DATE - 1` (grows daily; flip day excluded per TI-221 convention)
+   - `days_since_flip` is on every panel row — negative for pre, positive for post. Lets the dashboard align cohorts on the x-axis even when they flipped weeks apart.
 
-### Discovery workflow (run after each wave)
+### Cross-check tool
 
-When a new cohort flips:
+[`../queries/ti_921_flip_date_detection.sql`](../queries/ti_921_flip_date_detection.sql) is a best-effort detector against `audience_advertiser_configurations_archive` (Datastream history) — use if the archive table is available in your environment. Most of the time the discovery query in §B1 (which uses live snapshot `source_timestamp`) is enough.
 
-1. Run [`../queries/ti_921_discover_new_flips.sql`](../queries/ti_921_discover_new_flips.sql). It returns every AID currently flipped (`vertical_data_source = 46`) that's *not* in `wave_config.csv`, with the precise UTC flip moment (`TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)`) and PT date.
-2. For each row returned, append a line to `wave_config.csv` with the cohort label (e.g., `Tier1-Wave3`), pixel/dollar status, and any vertical-specific notes.
-3. Re-run the Databricks notebook.
+### What's already known (as of 2026-05-06 morning PT)
 
-There's also [`../queries/ti_921_flip_date_detection.sql`](../queries/ti_921_flip_date_detection.sql) — a best-effort detector against `audience_advertiser_configurations_archive` (Datastream history). Use it if the archive table exists in your environment; otherwise stick with the discovery query above (which uses the live snapshot's source_timestamp, no archive needed).
-
-### What's already known (as of 2026-05-05 PM PT)
-
-| AID | Advertiser | flip_date PT | Cohort | Notes |
+| AID | Advertiser | flip_date | Cohort | Notes |
 |---|---|---|---|---|
 | 32320 | Biz2Credit | 2026-05-01 | Tier1-Wave1 | Lead-gen |
 | 38659 | Big Blue Bubble | 2026-05-01 | Tier1-Wave1 | No conversion pixel |
 | 32233 | UNW Ohio | 2026-05-01 | Tier1-Wave1 | Lead-gen |
 | 46538 | authenTEAK | 2026-05-05 | Tier1-Wave2 | E-commerce furniture (full KPI suite) |
-| **+50 incoming** | TBD | **2026-05-06** | Tier1-Wave2 | Per Matt 2026-05-05 PM. Run discovery query tomorrow morning after household scoring completes. Ryan/Jaime API push already done; `tpa.fangorn_advertiser_inclusion` has `fangorn_advertiser_inclusion_date = 2026-05-06` for these. |
+| 48 advertisers | (full list in `wave_config.csv`) | 2026-05-06 | Tier1-Wave2 | Effective today after last night's household-scoring run. Includes Lulus ($2.7M/30d), Casper, NBF, US Sports Camp, etc. |
 
 ---
 
