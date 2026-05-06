@@ -432,6 +432,8 @@ active[display_cols].round({c: 4 for c in display_cols if 'pre' in c or 'post' i
 # MAGIC %md
 # MAGIC ## 5. Method 2 — CausalImpact synthetic control (the *headline lift claim*)
 # MAGIC
+# MAGIC Two views: cohort-level (5b, the headline) and per-mature-AID (5c, drill-down).
+# MAGIC
 # MAGIC For each treated AID and each metric, fit a Bayesian structural time-series model on the
 # MAGIC pre-period using non-Fangorn advertisers' KPIs as covariates. Predict what the post-period
 # MAGIC *would* have been without the flip. Compare to actual.
@@ -465,32 +467,31 @@ active[display_cols].round({c: 4 for c in display_cols if 'pre' in c or 'post' i
 # MAGIC
 # MAGIC ### Caveats
 # MAGIC
-# MAGIC - **Requires pandas <2.1** (the published `causalimpact` 0.1.1 has API breakages on newer pandas).
-# MAGIC   On Databricks ML runtimes (≤14.x) this works out of the box. On a fresh laptop you'll see
-# MAGIC   errors like `KeyError: 0` or `cannot concatenate object of type ndarray` — use a pinned venv.
 # MAGIC - **Wide credible intervals when post is short.** With 3-7 days post, most p-values won't clear
-# MAGIC   0.10. That's expected and honest. Treat early reads as directional; the proper readout is at
-# MAGIC   4 weeks post (TI-780 maturity rule).
-# MAGIC - **Some metrics can't fit.** "Input response cannot be constant" → metric is all zeros (e.g.,
-# MAGIC   Big Blue Bubble's CVR; no pixel firing). The script catches the per-fit exception and
-# MAGIC   continues to the next; pre/post still reports for that row.
+# MAGIC   0.10. That's expected — we report them anyway and flag statistical significance explicitly.
+# MAGIC - **Constant-response errors.** If a metric is exactly zero every day (e.g., conversions for an
+# MAGIC   AID without a pixel), the model can't fit. These are caught and skipped.
 
 # COMMAND ----------
 
-# Try to import. If pandas is too new, this fails — skip Section 5 and rely on pre/post.
+# Try to import. causalimpact 0.2.6 needs a pandas compat shim.
 CI_AVAILABLE = False
 try:
-    from causalimpact import CausalImpact
-    import causalimpact.main as _ci_main
+    import pandas as pd
+    # v0.2.6 uses pd.core.dtypes.common.is_datetime_or_timedelta_dtype which was
+    # removed in pandas 2.0. Patch it back in before importing causalimpact.
+    if not hasattr(pd.core.dtypes.common, 'is_datetime_or_timedelta_dtype'):
+        def _is_datetime_or_timedelta_dtype(arr_or_dtype):
+            from pandas.api.types import is_datetime64_any_dtype, is_timedelta64_dtype
+            try:
+                return is_datetime64_any_dtype(arr_or_dtype) or is_timedelta64_dtype(arr_or_dtype)
+            except TypeError:
+                return False
+        pd.core.dtypes.common.is_datetime_or_timedelta_dtype = _is_datetime_or_timedelta_dtype
 
-    def _standardize_pre_post_data_patched(self):
-        from causalimpact.misc import standardize
-        self.normed_pre_data, (mu, sig) = standardize(self.pre_data)
-        self.normed_post_data = (self.post_data - mu) / sig
-        self.mu_sig = (mu.iloc[0], sig.iloc[0])  # was: (mu[0], sig[0])
-    _ci_main.CausalImpact._standardize_pre_post_data = _standardize_pre_post_data_patched
+    from causalimpact import CausalImpact
     CI_AVAILABLE = True
-    print("CausalImpact available — Section 5 will fit models.")
+    print(f"CausalImpact ready (v{__import__('causalimpact').__version__}, pandas {pd.__version__})")
 except Exception as e:
     print(f"CausalImpact NOT available: {type(e).__name__}: {e}")
     print("Section 5 cells will be skipped. Run on Databricks for CI fits.")
@@ -546,17 +547,21 @@ plat[["day", "platform_ivr", "platform_cvr", "platform_roas",
 
 # COMMAND ----------
 
+# DBTITLE 1,Section 5b — Cohort-level CausalImpact
 # MAGIC %md
-# MAGIC ### 5b. Fit CausalImpact for every (AID, metric)
+# MAGIC ### 5b. Cohort-level CausalImpact (the headline)
 # MAGIC
-# MAGIC This loop is the heaviest part of the notebook — ~5 seconds per fit, so for 50 AIDs × 5 metrics
-# MAGIC that's roughly 20 minutes. The script catches per-fit exceptions and continues, so a few failures
-# MAGIC don't take down the run.
-# MAGIC
-# MAGIC **On a laptop with modern pandas, all fits will fail.** The cell below is a no-op in that case
-# MAGIC (it checks `CI_AVAILABLE`). Run on Databricks for actual results.
+# MAGIC Cohort-level CausalImpact — aggregate KPIs across all advertisers in each cohort into a single
+# MAGIC daily time series, then fit CausalImpact once per (cohort, metric). This is the headline lift
+# MAGIC claim: one rel_effect ± CrI per cohort per metric, robust to noise from individual advertisers.
+# MAGIC Per-AID fits in the next sub-section are for drill-down only.
 
 # COMMAND ----------
+
+# DBTITLE 1,Cohort-level CausalImpact fits
+import re as _re
+import io as _io
+import contextlib as _contextlib
 
 MIN_PRE_DAYS = 30
 MIN_POST_DAYS = 1
@@ -618,6 +623,17 @@ def best_subset_by_bic(target, features, max_size=5):
                 best_bic, best_subset = bic, list(subset)
     return best_subset
 
+def _extract_p_value(ci_obj):
+    """Parse p-value from causalimpact 0.2.6 summary text output."""
+    buf = _io.StringIO()
+    with _contextlib.redirect_stdout(buf):
+        ci_obj.summary()
+    text = buf.getvalue()
+    m = _re.search(r"P-value\s+([\d.]+)%", text)
+    if m:
+        return float(m.group(1)) / 100.0
+    return np.nan
+
 def fit_one(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
     adv = panel[panel["advertiser_id"] == adv_id].copy()
     adv = compute_metrics(adv)
@@ -643,46 +659,143 @@ def fit_one(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
         winning = keep[:3]
     ci_data = pd.DataFrame({"y": df[metric].ffill().bfill()})
     ci_data = ci_data.join(df[winning].fillna(0.0))
+
+    # --- causalimpact 0.2.6 API ---
     ci = CausalImpact(ci_data, pre_period, post_period)
-    s = ci.summary_data
-    fig = ci.plot()
+    ci.run()
+
+    # Extract results from ci.inferences (contains full pre+post period)
+    post_start = pd.Timestamp(post_period[0])
+    inf = ci.inferences
+    post_inf = inf[inf.index >= post_start]
+
+    avg_actual = post_inf["response"].mean()
+    avg_predicted = post_inf["point_pred"].mean()
+    cum_actual = post_inf["cum_response"].iloc[-1]
+    cum_pred_lower = post_inf["cum_pred_lower"].iloc[-1]
+    cum_pred_upper = post_inf["cum_pred_upper"].iloc[-1]
+
+    # Save plot — ci.plot() shows inline and returns None, so capture via plt.gcf()
+    ci.plot()
+    fig = plt.gcf()
     fig.savefig(OUTPUT_DIR / f"ti_921_ci_{adv_id}_{metric}.png", dpi=150, bbox_inches="tight")
-    plt.close()
+    plt.close(fig)
+
+    # Extract p-value from summary text
+    p_value = _extract_p_value(ci)
+
     return {
         "advertiser_id": adv_id, "advertiser_name": adv_name,
         "cohort": cohort, "flip_date": flip_date, "metric": metric,
         "pre_n_days": (pd.Timestamp(pre_period[1]) - pd.Timestamp(pre_period[0])).days + 1,
         "post_n_days": (pd.Timestamp(post_period[1]) - pd.Timestamp(post_period[0])).days + 1,
         "covariates": ",".join(winning),
-        "avg_actual_post":   s.loc["actual", "average"],
-        "avg_predicted_post":s.loc["predicted", "average"],
-        "abs_effect":        s.loc["actual","average"] - s.loc["predicted","average"],
-        "rel_effect":        (s.loc["actual","average"] - s.loc["predicted","average"]) / s.loc["predicted","average"]
-                              if s.loc["predicted","average"] else np.nan,
-        "cum_effect_95_lower": s.loc["actual","cumulative"] - s.loc["predicted_upper","cumulative"],
-        "cum_effect_95_upper": s.loc["actual","cumulative"] - s.loc["predicted_lower","cumulative"],
-        "p_value": ci.p_value,
+        "avg_actual_post":   avg_actual,
+        "avg_predicted_post": avg_predicted,
+        "abs_effect":        avg_actual - avg_predicted,
+        "rel_effect":        (avg_actual - avg_predicted) / avg_predicted
+                              if avg_predicted else np.nan,
+        "cum_effect_95_lower": cum_actual - cum_pred_upper,
+        "cum_effect_95_upper": cum_actual - cum_pred_lower,
+        "p_value": p_value,
     }
+
+# ========================================================================
+# 5b. Cohort-level CausalImpact fits
+# ========================================================================
+treated_panel = panel[panel["aid_in_treatment_group"]].copy()
+cohort_daily = treated_panel.groupby(["cohort", "day"]).agg(
+    impressions=("impressions", "sum"),
+    uniques=("uniques", "sum"),
+    vv=("vv", "sum"),
+    conversions=("conversions", "sum"),
+    order_value=("order_value", "sum"),
+    spend=("spend", "sum"),
+    vast_start=("vast_start", "sum"),
+    vast_complete=("vast_complete", "sum"),
+    active_cgs=("active_cgs", "sum"),
+    n_aids=("advertiser_id", "nunique"),
+).reset_index()
+# Each cohort's flip date = the earliest flip within that cohort
+cohort_flip = wave.groupby("cohort")["flip_date"].min().reset_index()
+cohort_daily = cohort_daily.merge(cohort_flip, on="cohort")
+
+cohort_ci_rows = []
+if CI_AVAILABLE:
+    print(f"Fitting cohort-level CI: {cohort_daily['cohort'].nunique()} cohorts × {len(METRIC_DEFS)} metrics...")
+    for cohort_name, sub in cohort_daily.groupby("cohort"):
+        flip = sub["flip_date"].iloc[0]
+        for metric in METRIC_DEFS:
+            adv_id = -hash(cohort_name) % 10**8  # numeric sentinel ID
+            try:
+                # Treat the cohort aggregate as a synthetic single-AID
+                cohort_as_aid = sub.copy()
+                cohort_as_aid["advertiser_id"] = adv_id
+                cohort_as_aid["aid_in_treatment_group"] = True
+                # Build temporary panel: cohort rows + non-treated control pool
+                ctrl = panel[~panel["aid_in_treatment_group"]].copy()
+                temp_panel = pd.concat([cohort_as_aid, ctrl], ignore_index=True)
+                r = fit_one(temp_panel, plat, adv_id, f"Cohort: {cohort_name}",
+                            cohort_name, flip, metric)
+            except Exception as e:
+                print(f"  ✗ {cohort_name} / {metric}: {type(e).__name__}: {e}")
+                continue
+            if r is None:
+                print(f"  SKIP {cohort_name} / {metric}: insufficient pre/post days")
+                continue
+            cohort_ci_rows.append(r)
+            print(f"  ✓ {cohort_name} / {metric}: rel_eff={r['rel_effect']:+.2%} p={r['p_value']:.3f} (n_post={r['post_n_days']}d)")
+else:
+    print("CI_AVAILABLE=False — skipping cohort fits.")
+
+cohort_ci = pd.DataFrame(cohort_ci_rows)
+if not cohort_ci.empty:
+    cohort_ci.to_csv(OUTPUT_DIR / "ti_921_cohort_ci_results.csv", index=False)
+    print(f"\nWrote {len(cohort_ci)} cohort fits → {OUTPUT_DIR / 'ti_921_cohort_ci_results.csv'}")
+    display(cohort_ci[["advertiser_name","cohort","metric","rel_effect","p_value","post_n_days"]])
+else:
+    print("No cohort CI fits produced.")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 5c. Per-AID CausalImpact (drill-down, mature AIDs only)
+# MAGIC
+# MAGIC For individual advertiser-level drill-down, fit CausalImpact per (AID, metric) — but only for
+# MAGIC advertisers with ≥7 post-days. Too-early AIDs are deferred to the next run (wide CrIs on <7
+# MAGIC days make the fits useless). The forest plot in Section 6.6 and per-AID CI plots in Section 8
+# MAGIC populate from these results.
+
+# COMMAND ----------
+
+# Per-AID fits: drill-down only, restricted to mature AIDs (≥7 post-days)
+MATURITY_THRESHOLD_DAYS = 7
+today = panel["day"].max()
+mature_aids = wave[(today - wave["flip_date"]).dt.days >= MATURITY_THRESHOLD_DAYS]
+print(f"Per-AID CI: fitting {len(mature_aids)} mature advertisers (≥{MATURITY_THRESHOLD_DAYS} post-days). "
+      f"{len(wave) - len(mature_aids)} too-early AIDs deferred to next run.")
 
 ci_rows = []
 if CI_AVAILABLE:
-    for _, w in wave.iterrows():
+    for _, w in mature_aids.iterrows():
         for metric in METRIC_DEFS:
             try:
                 r = fit_one(panel, plat, int(w["advertiser_id"]), w["advertiser_name"],
                             w["cohort"], w["flip_date"], metric)
             except Exception as e:
+                print(f"  ✗ {w['advertiser_name'][:20]} / {metric}: {type(e).__name__}: {e}")
                 continue
             if r is not None:
                 ci_rows.append(r)
+                print(f"  ✓ {w['advertiser_name'][:20]} / {metric}: rel_effect={r['rel_effect']:+.3f}, p={r['p_value']:.3f}")
 
 ci_results = pd.DataFrame(ci_rows)
 if not ci_results.empty:
     ci_results.to_csv(OUTPUT_DIR / "ti_921_ci_results.csv", index=False)
-    print(f"Wrote {len(ci_results)} CI fits → {OUTPUT_DIR / 'ti_921_ci_results.csv'}")
+    print(f"\nWrote {len(ci_results)} CI fits → {OUTPUT_DIR / 'ti_921_ci_results.csv'}")
     print(ci_results[["advertiser_name","cohort","metric","rel_effect","p_value","post_n_days"]].head(20))
 else:
-    print("No CI fits produced. Run on Databricks (pre/post-only readout follows).")
+    print("No per-AID CI fits produced (all AIDs below maturity threshold or CI unavailable).")
 
 # COMMAND ----------
 
