@@ -2,7 +2,7 @@
 
 Reads:
   outputs/ti_933_select_volume_by_advertiser.csv
-  outputs/ti_933_select_lift_pooled_14d.json
+  outputs/ti_933_select_lift_pooled_7d.json
   outputs/ti_933_xlsx_vs_our_cohort.csv
 
 Writes:
@@ -88,7 +88,7 @@ def chart_volume_by_advertiser():
 
 def load_lift():
     """Return (per_adv_rows, pooled_dict) parsed from the lift JSON."""
-    with open(OUT / "ti_933_select_lift_pooled_14d.json") as f:
+    with open(OUT / "ti_933_select_lift_pooled_7d.json") as f:
         rows = json.load(f)
     pooled = {r["arm"]: r for r in rows if r["is_pooled"]}
     per_adv = [r for r in rows if not r["is_pooled"]]
@@ -153,10 +153,10 @@ def chart_pooled_lift():
                 fontsize=10, fontweight="bold", color=bar.get_facecolor() if v != 0 else GRAY)
     ax.axhline(0, color="#444", linewidth=0.7)
     ax.set_ylabel("Visit-rate lift, percentage points", fontsize=10, color="#444")
-    ax.set_title("MNTN Select lift vs prior segments (visit rate, 14 days)",
+    ax.set_title("MNTN Select lift vs prior segments (visit rate, 7 days)",
                  fontsize=14, fontweight="bold", color=NAVY, loc="left", pad=14)
     ax.text(0, 1.04,
-            f"Pooled across 38 Select advertisers · 2026-04-22 to 2026-05-05 · 95% CI on Select bar",
+            f"Pooled across 38 Select advertisers · 2026-04-29 to 2026-05-05 · 95% CI on Select bar",
             transform=ax.transAxes, fontsize=9, color=GRAY)
     ax.grid(axis="y", linestyle=":", linewidth=0.5, alpha=0.4)
     ax.spines["bottom"].set_visible(True)
@@ -238,7 +238,7 @@ def chart_per_advertiser_power(metrics_pooled):
     ax.set_ylabel("Visit-rate lift, percentage points (guid)", fontsize=10, color="#444")
     ax.set_title("Per-advertiser Select lift — none individually powered, pooled is",
                  fontsize=14, fontweight="bold", color=NAVY, loc="left", pad=14)
-    ax.text(0, 1.04, f"38 active Select advertisers · 14-day window · red = 95% CI excludes zero",
+    ax.text(0, 1.04, f"38 active Select advertisers · 7-day window · red = 95% CI excludes zero",
             transform=ax.transAxes, fontsize=9, color=GRAY)
     ax.grid(axis="both", linestyle=":", linewidth=0.5, alpha=0.4)
     fig.tight_layout()
