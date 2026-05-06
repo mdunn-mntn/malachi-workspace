@@ -35,7 +35,69 @@ TI-917 measured incrementality across all-product campaigns and segmented by fun
 
 ## 4. Investigation & Findings
 
-_To be populated as work progresses._
+### 4.1 Volume reconnaissance (Phase 1 — done 2026-05-06)
+
+Query: `queries/ti_933_select_volume_by_advertiser.sql` (92 GB processed, 9.6s wall, ~5min slot — clustered on campaign_id, partition-pruned).
+Output: `outputs/ti_933_select_volume_by_advertiser.{json,csv}` — 38 active Select advertisers in last 30 days.
+
+| | |
+|---|---|
+| Active Select advertisers (last 30d, with cost_imp activity) | **38** |
+| Active Select campaign_groups | 87 |
+| Active Select campaigns | 192 |
+| Total impressions, last 30d | ~27.0M |
+| Total spend, last 30d | ~$549k |
+| Highest single-advertiser monthly equiv. spend | Masterbuilt — **$106k/mo** |
+| Advertisers clearing TI-917's $200k/mo MDE floor | **0** |
+| Retargeting campaigns across all 38 | **0** (entirely prospecting) |
+
+Top 10 by impression volume:
+
+| Rank | AID | Advertiser | Imps 30d | Spend 30d | Monthly equiv. |
+|----:|-----|------------|---------:|----------:|---------------:|
+| 1 | 40598 | Masterbuilt | 6.29M | $104,851 | $106k |
+| 2 | 41034 | Hugo Insurance | 4.68M | $79,721 | $81k |
+| 3 | 31460 | Extra Space Storage | 2.38M | $37,546 | $38k |
+| 4 | 45921 | Goldfish Swim School | 1.75M | $27,585 | $28k |
+| 5 | 40807 | NinjaOne | 1.37M | $21,662 | $22k |
+| 6 | 36743 | Lulus | 1.35M | $42,540 | $43k |
+| 7 | 47228 | Pioneer Mini Split | 1.34M | $21,115 | $21k |
+| 8 | 40601 | Kamado Joe | 1.24M | $19,580 | $20k |
+| 9 | 35086 | TurboTenant | 1.01M | $15,868 | $16k |
+| 10 | 59241 | Bauer | 0.86M | $41,390 | $42k |
+
+**Key finding:** No single Select advertiser has the volume to be individually statistically powered for visit-rate lift detection. **Pooling is the only path to a defensible number.** Also: **zero retargeting campaigns** across all 38 — confirms Kale's framing that Select is purely awareness/prospecting. The TI-917 prosp/stage1/rtg segment split does not apply; we collapse to a single segment ("all Select").
+
+### 4.2 Augmentor biddability sanity check (Phase 2 — done 2026-05-06)
+
+Query: `queries/ti_933_augmentor_select_intersection.sql`.
+Result: on 2026-05-04, **99.99%** of Select-served IPs (409,580 of 409,604) appear in `augmentor_log`. The 10% biddable-holdout filter applies to Select cleanly — no methodology pivot needed.
+
+### 4.3 Cross-check vs Kale's "Select Live Campaigns" xlsx (done 2026-05-06)
+
+Kale shared a 58-AID list (`artifacts/Select Live Campaigns.xlsx`, 151 CGID rows) of advertisers he was thinking about for the analysis. Cross-tabulation:
+
+| | Count |
+|---|---:|
+| AIDs in Kale's xlsx | 58 |
+| AIDs in our 30-day BQ cohort | 38 |
+| Overlap (in both) | **38** |
+| In our cohort but NOT in xlsx | **0** |
+| In xlsx but NOT in our cohort | 20 |
+
+The 20 xlsx-only advertisers either have zero recent impressions (campaigns not yet started or ended) or fall outside our 30-day window. **Notable: LifeMD shows 5M imps in the xlsx but isn't in our 30d data** — its flights ended before our window or the imps are aggregated over a longer historical period than the augmentor TTL allows us to query.
+
+**Bottom line:** our 38-advertiser cohort is a complete superset of Kale's currently-actionable list. No advertisers are missing.
+
+Output: `outputs/ti_933_xlsx_vs_our_cohort.csv` (58 rows).
+
+### 4.4 Pooled Select lift (Phase 3 — in progress)
+
+_Filling in once the lift query lands. Pre-registered expectations:_
+
+- Pooled visit-rate lift (guid) is the headline number.
+- Per-advertiser CIs will mostly span zero — confirm this.
+- Conversion-rate lift will likely have wide CIs because Select is awareness-focused (low conversion volume per advertiser).
 
 ## 5. Solution
 
