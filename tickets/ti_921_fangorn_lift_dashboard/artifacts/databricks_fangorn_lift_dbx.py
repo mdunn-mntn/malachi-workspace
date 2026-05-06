@@ -47,7 +47,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install google-cloud-bigquery db-dtypes
+# MAGIC %pip install google-cloud-bigquery db-dtypes causalimpact
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -745,6 +745,107 @@ display
 
 # COMMAND ----------
 
+# DBTITLE 1,Section 6.5 — Pre/post bar charts
+# MAGIC %md
+# MAGIC ## 6.5 Pre/post bar charts — every KPI per advertiser
+# MAGIC
+# MAGIC Bar chart per metric (IVR, CVR, ROAS, CPV, CPA), one row per metric. Each metric subplot shows pre value (gray) and post value (blue) side by side per advertiser. Quick visual scan of which KPIs moved.
+
+# COMMAND ----------
+
+# DBTITLE 1,Pre/post bar charts per KPI
+import matplotlib.pyplot as plt
+import numpy as np
+
+active_ap = pre_post[pre_post["post_days"] > 0].copy()
+metric_specs = [
+    ("ivr",  "IVR (visit rate)",        "rate"),
+    ("cvr",  "CVR (conversion rate)",   "rate"),
+    ("roas", "ROAS",                    "scalar"),
+    ("cpv",  "CPV ($ per visit)",       "money"),
+    ("cpa",  "CPA ($ per acquisition)", "money"),
+]
+
+fig, axes = plt.subplots(len(metric_specs), 1, figsize=(11, 3 * len(metric_specs)))
+for ax, (m, label, kind) in zip(axes, metric_specs):
+    df = active_ap[[f"{m}_pre", f"{m}_post", "advertiser_name", "cohort"]].dropna(subset=[f"{m}_pre", f"{m}_post"])
+    df = df[(df[f"{m}_pre"] > 0) | (df[f"{m}_post"] > 0)]
+    if df.empty:
+        ax.text(0.5, 0.5, f"No {m.upper()} data", ha="center", va="center", transform=ax.transAxes)
+        ax.set_title(label); continue
+    x = np.arange(len(df))
+    w = 0.4
+    ax.bar(x - w/2, df[f"{m}_pre"],  w, label="Pre",  color="#999999")
+    ax.bar(x + w/2, df[f"{m}_post"], w, label="Post", color="#1f77b4")
+    ax.set_xticks(x)
+    ax.set_xticklabels([n[:18] for n in df["advertiser_name"]], rotation=40, ha="right")
+    ax.set_title(label)
+    ax.legend(loc="upper right", fontsize=9)
+    if kind == "rate":
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v*100:.1f}%"))
+    elif kind == "money":
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"${v:,.0f}"))
+    ax.grid(axis="y", alpha=0.3)
+
+fig.tight_layout()
+fig.savefig(OUTPUT_DIR / "ti_921_pre_post_charts.png", dpi=150, bbox_inches="tight")
+plt.show()
+
+# COMMAND ----------
+
+# DBTITLE 1,Section 6.6 — Forest plot
+# MAGIC %md
+# MAGIC ## 6.6 CausalImpact vs pre/post — forest plot per metric
+# MAGIC
+# MAGIC For each metric, dot-and-error-bar chart showing CausalImpact rel_effect with 95% credible interval (blue circle + bars) vs naive pre/post pct_change (red ×) per advertiser. Where the two diverge, the synthetic control is correcting for a confound. Where they agree, the lift is robust.
+
+# COMMAND ----------
+
+# DBTITLE 1,CausalImpact vs pre/post forest plot
+if not ci_results.empty:
+    metrics_to_plot = ["ivr", "cvr", "roas", "cpv", "cpa"]
+    fig, axes = plt.subplots(1, len(metrics_to_plot), figsize=(4 * len(metrics_to_plot), 6), sharey=True)
+
+    for ax, m in zip(axes, metrics_to_plot):
+        ci_m = ci_results[ci_results["metric"] == m].copy()
+        pp_m = pre_post[pre_post["post_days"] > 0][["advertiser_id", "advertiser_name", f"{m}_pct_change"]]
+        pp_m = pp_m.rename(columns={f"{m}_pct_change": "pp_pct"})
+        merged = ci_m.merge(pp_m, on=["advertiser_id", "advertiser_name"], how="left")
+
+        if merged.empty:
+            ax.text(0.5, 0.5, f"No {m.upper()} fits", ha="center", va="center", transform=ax.transAxes)
+            ax.set_title(m.upper()); continue
+
+        merged = merged.sort_values("rel_effect")
+        y = np.arange(len(merged))
+
+        lower = merged["rel_effect"] - (merged["cum_effect_95_lower"] / merged["avg_predicted_post"].abs() / merged["post_n_days"])
+        upper = (merged["cum_effect_95_upper"] / merged["avg_predicted_post"].abs() / merged["post_n_days"]) - merged["rel_effect"]
+        ax.errorbar(
+            merged["rel_effect"], y,
+            xerr=[lower.abs().fillna(0), upper.abs().fillna(0)],
+            fmt="o", color="#1f77b4", ecolor="#1f77b4", capsize=3, label="CausalImpact rel_effect ± 95% CrI"
+        )
+        ax.scatter(merged["pp_pct"], y, color="#d62728", marker="x", s=60, label="Pre/post Δ%")
+
+        ax.axvline(0, color="black", linewidth=0.5)
+        ax.set_yticks(y)
+        ax.set_yticklabels([n[:22] for n in merged["advertiser_name"]], fontsize=8)
+        ax.set_title(m.upper())
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v*100:+.0f}%"))
+        ax.grid(axis="x", alpha=0.3)
+        if ax is axes[0]:
+            ax.legend(loc="upper left", fontsize=8)
+
+    fig.suptitle("CausalImpact (●) vs naive pre/post (×) — divergence shows what the synthetic control corrects for", fontsize=11)
+    fig.tight_layout()
+    fig.savefig(OUTPUT_DIR / "ti_921_lift_comparison.png", dpi=150, bbox_inches="tight")
+    plt.show()
+else:
+    print("CI not run yet — run Section 5 first to populate this chart.")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 7. Before & after: full KPI table per advertiser
 # MAGIC
@@ -817,6 +918,51 @@ table
 
 # COMMAND ----------
 
+# DBTITLE 1,Section 7.5 — Daily IVR trends
+# MAGIC %md
+# MAGIC ## 7.5 Daily trend per advertiser — IVR over time with flip date marker
+# MAGIC
+# MAGIC Small multiples — one panel per treated advertiser showing daily IVR over the panel window. The red dashed vertical line marks each advertiser’s Fangorn flip date. Useful for spotting whether the flip produced a visible step-change vs continuing a pre-existing trend.
+
+# COMMAND ----------
+
+# DBTITLE 1,Daily IVR trend small multiples
+treated_aids = wave["advertiser_id"].tolist()
+panel_treated = panel[panel["advertiser_id"].isin(treated_aids)].copy()
+panel_treated["ivr_d"] = panel_treated["vv"] / panel_treated["impressions"].replace(0, np.nan)
+
+ncols = 3
+nrows = (len(treated_aids) + ncols - 1) // ncols
+nrows = min(nrows, 18)
+fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 2.2 * nrows), sharex=False)
+axes = axes.flatten() if hasattr(axes, "flatten") else [axes]
+
+i = 0
+for aid, sub in panel_treated.groupby("advertiser_id"):
+    if i >= len(axes): break
+    ax = axes[i]
+    sub = sub.sort_values("day")
+    flip = sub["flip_date"].iloc[0]
+    ax.plot(sub["day"], sub["ivr_d"], color="#1f77b4", linewidth=1)
+    ax.axvline(flip, color="red", linestyle="--", linewidth=1, alpha=0.7)
+    name = wave[wave["advertiser_id"] == aid]["advertiser_name"].iloc[0]
+    ax.set_title(f"{name[:22]} (flip {flip.strftime('%m-%d')})", fontsize=9)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v*100:.1f}%"))
+    ax.tick_params(axis="x", labelsize=7, rotation=30)
+    ax.tick_params(axis="y", labelsize=7)
+    ax.grid(alpha=0.3)
+    i += 1
+
+for j in range(i, len(axes)):
+    axes[j].axis("off")
+
+fig.suptitle("Daily IVR per advertiser — red dashed line = Fangorn flip date", fontsize=11)
+fig.tight_layout()
+fig.savefig(OUTPUT_DIR / "ti_921_daily_trends.png", dpi=150, bbox_inches="tight")
+plt.show()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 8. CausalImpact plots (per AID, per metric)
 # MAGIC
@@ -846,6 +992,19 @@ else:
         name = match["advertiser_name"].iloc[0] if len(match) else f"AID {aid}"
         display(Markdown(f"### {name} — {metric.upper()}"))
         display(Image(filename=str(p)))
+
+# COMMAND ----------
+
+print(f"OUTPUT_DIR: {OUTPUT_DIR}")
+print(f"OUTPUT_DIR exists: {OUTPUT_DIR.exists()}")
+print(f"\nFiles in OUTPUT_DIR:")
+for f in sorted(OUTPUT_DIR.iterdir()):
+    print(f"  {f.name}  ({f.stat().st_size:,} bytes)")
+print(f"\nCI_AVAILABLE: {CI_AVAILABLE}")
+print(f"ci_results rows: {len(ci_results)}")
+if len(ci_results) > 0:
+    print(f"ci_results columns: {list(ci_results.columns)}")
+    print(ci_results[['advertiser_name','metric','rel_effect','p_value','post_n_days']].head(10))
 
 # COMMAND ----------
 
