@@ -1,9 +1,9 @@
 # TI-832: Update Feature Store with ROAS/CPA-specific features
 
 **Jira:** https://mntn.atlassian.net/browse/TI-832
-**Status:** In Progress — Phase 2 (Fangorn V2 conversion-feature spec) underway. TI-931 unblocker shipped 2026-05-05.
+**Status:** In Review — All 4 PRs merged + deployed 2026-05-06 (PR #1025 L1 extension, #1026 L2 model, #1028 daily DAG dep, #1029 monthly snapshot). Awaiting first nightly run + first monthly snapshot to confirm green.
 **Date Started:** 2026-05-05
-**Date Completed:**
+**Date Completed:** (pending nightly verification)
 **Assignee:** Malachi
 **Was blocked by:** [TI-931](https://mntn.atlassian.net/browse/TI-931) — column-drift bug fix verified in prod 2026-05-05 (PR #1024 merged, 18 task instances re-run green). Now unblocked.
 
@@ -153,12 +153,18 @@ The bidstream side is dominant. SHAP top 25 includes 14 features that are **alre
 
 ### 5.6 Sequence
 
-1. PR-A — Layer-1 `conv_log_ip` extension (3 cols: `conversion_time_min/max`, `usd_order_amount`). ~15 net lines.
-2. Backfill `conv_log_ip` for the 30d lookback by clearing tasks (`feature_store_setup_model`).
-3. PR-B — Layer-2 `conv_log_derived_ip` (pure IP). ~250 lines.
-4. PR-C — Ryan wires DAG deps.
+| Step | PR | What | Status |
+|---|---|---|---|
+| 1 | [#1025](https://github.com/SteelHouse/airflow-ti/pull/1025) | L1 — extend `conv_log_ip` (`conversion_time_min/max`, `usd_order_amount`). +15 lines. | ✅ merged + deployed 2026-05-06; 27 days of prod parquet backfilled with new cols (Astronomer clear) |
+| 2 | [#1026](https://github.com/SteelHouse/airflow-ti/pull/1026) | L2 — new `conv_log_derived_ip` model (pure IP, 13 backward + 5 forward outcome cols). +293 lines. | ✅ merged + deployed 2026-05-06; Dataproc test on 2026-05-04 succeeded |
+| 3 | [#1028](https://github.com/SteelHouse/airflow-ti/pull/1028) | Daily DAG dep — `feature_store_setup_model.py` adds `conv_log_ip >> conv_log_derived_ip`. +9 lines. | ✅ merged 2026-05-06 |
+| 4 | [#1029](https://github.com/SteelHouse/airflow-ti/pull/1029) | Monthly snapshot — `feature_store_snapshot.py` day-15 ShortCircuit + snap operator (reuses 14d-forward gate). +21 lines. | ✅ merged 2026-05-06 |
 
-Phase 3 is now in motion — IP-only path is locked.
+**Verification still pending:**
+- First nightly run of `conv_log_derived_ip` (tonight 01:03 UTC) — confirm parquet lands at `feature_group_2_derived/conv_log_derived_ip/dt=2026-05-06/`
+- First monthly snapshot (2026-05-15 02:00 UTC) — confirm parquet lands at `feature_group_2_derived_monthly/conv_log_derived_ip/dt=2026-05-01/`
+
+After both verify green → flip Jira to Done, close TI-832.
 
 ### 5.7 Artifacts
 
