@@ -46,7 +46,7 @@ Two polished decks exist but live separately, so non-attendees got either the li
 **Combined deck (28 main slides + 4 appendix):**
 - Standalone HTML: `artifacts/ti_917_combined_deck_standalone.html` (790 KB, zero deps)
 - CDN dev version: `artifacts/ti_917_combined_deck.html`
-- Shareable URL: https://gist.githack.com/mdunn-mntn/1b5fa993cceccc57e4a668565afe7629/raw/ti_917_combined_deck_standalone.html
+- Shareable URL: https://gist.githack.com/mdunn-mntn/db852731c0c60374987cd7c8101046b3/raw/ti_917_combined_deck_standalone.html
 - Source narrative + slide map: `artifacts/ti_917_combined_presentation.md`
 - Build script: `artifacts/build_combined_deck.py` (re-runnable)
 

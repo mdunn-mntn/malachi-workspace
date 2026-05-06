@@ -407,8 +407,9 @@ PLAN = [
     ("884", 5),                      # If those tests were noise, what scale do we need
     ("new", "13b_power_to_mde"),     # NEW: derivation of MDE in one slide (the 2.80 explained)
     ("884", 19),                     # Variance-reduction stack — 40% SE reduction
-    # Section 5 — Spend thresholds (3)
-    ("884", 7),                      # Visit-rate measurability emerges around $200k/month
+    # Section 5 — Spend thresholds (4)
+    ("884", 7),                      # Visit-rate measurability emerges around $200k/month (text setup)
+    ("884", 6),                      # The spend → MDE curve (chart with 5%-threshold line drawn)
     ("new", "17_cvr_wall"),          # Replaces 884[10] — reconciles $2M floor / $5M target / $30M tight
     ("new", "17_what_this_means"),   # Replaces 884[12] — strips named reference, tightens substance
     # Section 6 — Min-spend rule (instructional, 9)

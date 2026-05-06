@@ -2,9 +2,9 @@
 
 **Audience:** TI team
 **Power Line:** *Lift is real for retargeting. Measurement is real for visits.*
-**Target runtime:** 19–22 min spoken (30 main slides + 8 appendix)
+**Target runtime:** 20–23 min spoken (31 main slides + 8 appendix)
 **Format:** Loom — full-screen browser (deck) + face-cam pip
-**Note:** appendix slides 31–38 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take. Available if anyone asks.
+**Note:** appendix slides 32–39 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take. Available if anyone asks.
 
 Cue legend:
 - *[advance]* — next slide
@@ -254,7 +254,29 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 17 — Conversion-rate is in another league
+## Slide 17 — The spend → MDE curve
+
+> *[chart on screen — spend curve with a horizontal 5% line drawn, navy raw curve, dashed light-blue post-stack curve, gray "realistic CTV lift band" 2–8%]*
+>
+> Same thing as a picture. *[pause]*
+>
+> *[point at the horizontal 5% line]* That horizontal line is the well-powered threshold. Anything above it is underpowered. Anything below it is well-powered.
+>
+> *[trace the navy raw curve from left to right]* Raw MDE — no variance reduction. At fifty K a month we're way above the line, around eight percent MDE — underpowered. The curve crosses the five-percent line right around **one-fifty K monthly spend**. Every dollar after that buys more measurability.
+>
+> *[trace the dashed light-blue line]* Post-stack — same advertisers, same scale, but with CUPED, ghost-ad, and stratified randomization layered in. The whole curve drops. **The five-percent crossing moves from one-fifty K down to about fifty K.** That's the variance stack as a budget multiplier — same statistical power, three times less spend required.
+>
+> *[point at the shaded gray band]* And the shaded band is the realistic CTV-lift range we'd expect to see — two to eight percent. **For an experiment to be informative, the curve has to dip below that band, not above it.** Below one-fifty K raw, we can't even tell a real eight-percent lift from noise. Above five hundred K, we can detect a two-percent lift comfortably.
+>
+> If you only memorize one chart from the power analysis, this is the one.
+
+*[advance]*
+
+**~75 sec**
+
+---
+
+## Slide 18 — Conversion-rate is in another league
 
 > Conversions are not visits. Three operating points.
 >
@@ -274,7 +296,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 18 — What this means
+## Slide 19 — What this means
 
 > Three lines.
 >
@@ -290,7 +312,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 19 — Screening rule: visits & CVR
+## Slide 20 — Screening rule: visits & CVR
 
 > Operational section starts here. The screening rule has four steps. Two on this slide; two on the next.
 >
@@ -306,7 +328,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 20 — Screening rule: revenue & iROAS
+## Slide 21 — Screening rule: revenue & iROAS
 
 > Two harder checks.
 >
@@ -322,7 +344,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 21 — Story: a CS lead's question
+## Slide 22 — Story: a CS lead's question
 
 > Picture the moment. *[pause]* A CS lead pings the team Tuesday morning.
 >
@@ -338,7 +360,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 22 — The five-minute answer
+## Slide 23 — The five-minute answer
 
 > *[point at row 1]* Visits. Three-point-one-two M treated, three hundred forty-six K control, baseline visit rate four-point-eight-nine percent. mde_binomial returns one-point-three-two percent rel MDE. Well-powered.
 >
@@ -356,7 +378,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 23 — Calculator: one function call (the MDE direction)
+## Slide 24 — Calculator: one function call (the MDE direction)
 
 > The calculator is one Python file in the TI-884 artifacts folder. Three functions cover everything we'll do.
 >
@@ -376,7 +398,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 24 — From rate to spend: the inversion (educational)
+## Slide 25 — From rate to spend: the inversion (educational)
 
 > *[point at function name]* `spend_required` is the same Lewis-Rao math, solved for n instead of MDE — then converted to dollars.
 >
@@ -396,7 +418,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 25 — Recommended spend bands (educational)
+## Slide 26 — Recommended spend bands (educational)
 
 > Now the concrete numbers. Target five percent relative MDE — that's our well-powered threshold. Twenty-five-dollar CPM. Ten impressions per IP. Ten percent holdout. Raw and post-stack columns.
 >
@@ -430,7 +452,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 26 — iROAS chart: only 2 of 50
+## Slide 27 — iROAS chart: only 2 of 50
 
 > *[point at red dots]* Two red dots. The only two top-fifty advertisers well-powered for iROAS at current scale.
 >
@@ -446,7 +468,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 27 — iROAS thresholds
+## Slide 28 — iROAS thresholds
 
 > Two binding constraints. Both have to clear.
 >
@@ -462,7 +484,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 28 — What's next
+## Slide 29 — What's next
 
 > Roadmap, briefly.
 >
@@ -480,7 +502,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 29 — Three takeaways
+## Slide 30 — Three takeaways
 
 > *[point at 1]* Lift is real for retargeting. Plus twenty-one. Stage 1 alone is zero on guid visits in a seven-day window. Aggregates hide both.
 >
@@ -494,7 +516,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 30 — Power Line + call to action
+## Slide 31 — Power Line + call to action
 
 > *[pause]*
 >
@@ -520,12 +542,12 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 | Methodology (4-7) | 4 | 1:55 |
 | Results (8-11) | 4 | 2:25 |
 | Power + derivation (12-15) | 4 | 3:35 |
-| Spend thresholds (16-18) | 3 | 1:55 |
-| Min-spend rule + education (19-27) | 9 | 8:05 |
-| Close (28-30) | 3 | 1:55 |
-| **Total (main flow)** | **30** | **~21:10** |
+| Spend thresholds (16-19) | 4 | 3:10 |
+| Min-spend rule + education (20-28) | 9 | 8:05 |
+| Close (29-31) | 3 | 1:55 |
+| **Total (main flow)** | **31** | **~22:25** |
 
-Real Loom recording typically runs 5–10% under estimate. **Realistic: 19–21 min.** Appendix slides 31–38 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take.
+Real Loom recording typically runs 5–10% under estimate. **Realistic: 20–22 min.** Appendix slides 32–39 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take.
 
 ## Cialdini elements (where the deck and talk track lean on each)
 
