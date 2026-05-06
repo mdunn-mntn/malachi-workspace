@@ -436,23 +436,49 @@ the part attributable to the flip.
   continues to the next; pre/post still reports for that row."""))
 
     nb.cells.append(code("""
-# Try to import. If pandas is too new, this fails — skip Section 5 and rely on pre/post.
+# Import causalimpact with version-specific shims for pandas 2.x compatibility.
+# Supports both:
+#   - 0.1.1 (statsmodels-backed, ~5-15s per fit, RECOMMENDED — pin via %pip install causalimpact==0.1.1)
+#   - 0.2.6 (TensorFlow Probability-backed, ~30-60s per fit + first-call graph compilation)
 CI_AVAILABLE = False
 try:
-    from causalimpact import CausalImpact
-    import causalimpact.main as _ci_main
+    import sys
+    import pandas as pd
 
-    def _standardize_pre_post_data_patched(self):
-        from causalimpact.misc import standardize
-        self.normed_pre_data, (mu, sig) = standardize(self.pre_data)
-        self.normed_post_data = (self.post_data - mu) / sig
-        self.mu_sig = (mu.iloc[0], sig.iloc[0])  # was: (mu[0], sig[0])
-    _ci_main.CausalImpact._standardize_pre_post_data = _standardize_pre_post_data_patched
+    import causalimpact as _ci_pkg
+    ci_version = getattr(_ci_pkg, "__version__", "unknown")
+    print(f"causalimpact version: {ci_version}")
+    print(f"causalimpact path:    {_ci_pkg.__file__}")
+
+    if not hasattr(pd.DataFrame, "applymap"):
+        pd.DataFrame.applymap = lambda self, fn, *a, **kw: self.map(fn, *a, **kw)
+
+    if not hasattr(pd.core.dtypes.common, "is_datetime_or_timedelta_dtype"):
+        def _is_datetime_or_timedelta_dtype(arr_or_dtype):
+            from pandas.api.types import is_datetime64_any_dtype, is_timedelta64_dtype
+            try:
+                return is_datetime64_any_dtype(arr_or_dtype) or is_timedelta64_dtype(arr_or_dtype)
+            except TypeError:
+                return False
+        pd.core.dtypes.common.is_datetime_or_timedelta_dtype = _is_datetime_or_timedelta_dtype
+
+    from causalimpact import CausalImpact
+
+    if ci_version.startswith("0.1"):
+        import causalimpact.main as _ci_main
+        def _standardize_pre_post_data_patched(self):
+            from causalimpact.misc import standardize
+            self.normed_pre_data, (mu, sig) = standardize(self.pre_data)
+            self.normed_post_data = (self.post_data - mu) / sig
+            self.mu_sig = (mu.iloc[0], sig.iloc[0])
+        _ci_main.CausalImpact._standardize_pre_post_data = _standardize_pre_post_data_patched
+
     CI_AVAILABLE = True
-    print("CausalImpact available — Section 5 will fit models.")
+    print(f"CausalImpact ready (v{ci_version}, pandas {pd.__version__}). CI_AVAILABLE={CI_AVAILABLE}")
 except Exception as e:
-    print(f"CausalImpact NOT available: {type(e).__name__}: {e}")
-    print("Section 5 cells will be skipped. Run on Databricks for CI fits.")
+    import traceback
+    traceback.print_exc()
+    print(f"\\nCausalImpact NOT available. CI_AVAILABLE={CI_AVAILABLE}. Section 5 cells will skip.")
 """))
 
     nb.cells.append(md("""### 5a. Build platform covariates
