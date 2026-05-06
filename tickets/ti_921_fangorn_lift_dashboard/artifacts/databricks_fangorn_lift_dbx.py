@@ -547,6 +547,17 @@ plat[["day", "platform_ivr", "platform_cvr", "platform_roas",
 
 # COMMAND ----------
 
+# DBTITLE 1,Cast nullable extension dtypes to float64
+# Cast pandas nullable extension dtypes (Float64, Int64) to plain numpy float
+# statsmodels OLS doesn't accept FloatingArray; this fixes the BIC subset search.
+for col in panel.select_dtypes(include=["Float64", "Int64"]).columns:
+    panel[col] = panel[col].astype(float)
+for col in plat.select_dtypes(include=["Float64", "Int64"]).columns:
+    plat[col] = plat[col].astype(float)
+print("Cast complete. Numeric dtypes after:", panel.select_dtypes(include="number").dtypes.unique())
+
+# COMMAND ----------
+
 # DBTITLE 1,Section 5b — Cohort-level CausalImpact
 # MAGIC %md
 # MAGIC ### 5b. Cohort-level CausalImpact (the headline)
@@ -608,7 +619,8 @@ def drop_high_vif(features, threshold=10.0):
         keep.remove(keep[vifs.index(max(vifs))])
     return keep
 
-def best_subset_by_bic(target, features, max_size=5):
+def best_subset_by_bic(target, features, max_size=3):
+    """BIC subset search capped at max_size=3 (469 subsets vs 3,472 at max_size=5)."""
     cols = list(features.columns)
     best_bic, best_subset = np.inf, []
     y = target.dropna()
@@ -636,6 +648,11 @@ def _extract_p_value(ci_obj):
 
 def fit_one(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
     adv = panel[panel["advertiser_id"] == adv_id].copy()
+    # FIX: Cast nullable Int64/Float64 to plain float64 — statsmodels/CausalImpact
+    # chokes on pandas FloatingArray objects.
+    num_cols = adv.select_dtypes(include=["number"]).columns
+    adv[num_cols] = adv[num_cols].astype("float64")
+
     adv = compute_metrics(adv)
     adv["adv_active_cgs"] = adv["active_cgs"].astype(float)
     df = adv.merge(plat, on="day", how="inner").sort_values("day")
@@ -651,14 +668,15 @@ def fit_one(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
     post_period = [post.index[0].strftime("%Y-%m-%d"), post.index[-1].strftime("%Y-%m-%d")]
     candidates = [c for c in ALL_CANDIDATES if c in df.columns]
     pre_df = df.loc[pre_period[0]:pre_period[1]]
-    feats = pre_df[candidates].fillna(0.0)
-    target = pre_df[metric].ffill().bfill()
+    feats = pre_df[candidates].fillna(0.0).astype("float64")
+    target = pre_df[metric].ffill().bfill().astype("float64")
     keep = drop_high_vif(feats)
     winning = best_subset_by_bic(target, feats[keep])
     if not winning:
         winning = keep[:3]
     ci_data = pd.DataFrame({"y": df[metric].ffill().bfill()})
     ci_data = ci_data.join(df[winning].fillna(0.0))
+    ci_data = ci_data.astype("float64")  # ensure no FloatingArray leaks through
 
     # --- causalimpact 0.2.6 API ---
     ci = CausalImpact(ci_data, pre_period, post_period)
@@ -716,24 +734,30 @@ cohort_daily = treated_panel.groupby(["cohort", "day"]).agg(
     active_cgs=("active_cgs", "sum"),
     n_aids=("advertiser_id", "nunique"),
 ).reset_index()
+# Cast aggregated columns to float64 (groupby on nullable Int64 produces nullable results)
+num_cols = cohort_daily.select_dtypes(include=["number"]).columns
+cohort_daily[num_cols] = cohort_daily[num_cols].astype("float64")
+
 # Each cohort's flip date = the earliest flip within that cohort
 cohort_flip = wave.groupby("cohort")["flip_date"].min().reset_index()
 cohort_daily = cohort_daily.merge(cohort_flip, on="cohort")
 
 cohort_ci_rows = []
 if CI_AVAILABLE:
+    # Build control pool ONCE (not per-metric)
+    ctrl = panel[~panel["aid_in_treatment_group"]].copy()
+    ctrl_num = ctrl.select_dtypes(include=["number"]).columns
+    ctrl[ctrl_num] = ctrl[ctrl_num].astype("float64")
+
     print(f"Fitting cohort-level CI: {cohort_daily['cohort'].nunique()} cohorts × {len(METRIC_DEFS)} metrics...")
     for cohort_name, sub in cohort_daily.groupby("cohort"):
         flip = sub["flip_date"].iloc[0]
         for metric in METRIC_DEFS:
             adv_id = -hash(cohort_name) % 10**8  # numeric sentinel ID
             try:
-                # Treat the cohort aggregate as a synthetic single-AID
                 cohort_as_aid = sub.copy()
-                cohort_as_aid["advertiser_id"] = adv_id
+                cohort_as_aid["advertiser_id"] = float(adv_id)
                 cohort_as_aid["aid_in_treatment_group"] = True
-                # Build temporary panel: cohort rows + non-treated control pool
-                ctrl = panel[~panel["aid_in_treatment_group"]].copy()
                 temp_panel = pd.concat([cohort_as_aid, ctrl], ignore_index=True)
                 r = fit_one(temp_panel, plat, adv_id, f"Cohort: {cohort_name}",
                             cohort_name, flip, metric)
