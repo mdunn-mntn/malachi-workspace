@@ -34,7 +34,7 @@ The ecommerce classifier's threshold settings needed evaluation — too permissi
 - Product lookup CSV used as ground truth: `data/tgt_4016_product_lookup.csv`
 - Analysis implemented in both Python script and Jupyter notebook
 - See `artifacts/tgt_4016_thresholds.ipynb` for full analysis
-- Companion Python script: `artifacts/tgt_4016_thresholds.py`
+- Companion Python script: `artifacts/tgt_4016_thresholds_script.py` (renamed from `.py` to avoid a Databricks Repos collision with the `.ipynb` of the same base name)
 
 ---
 

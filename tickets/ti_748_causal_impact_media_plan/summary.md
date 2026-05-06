@@ -194,7 +194,7 @@ Overall IVR near zero (spend-weighted -0.23%, panel +2.06% n.s.) — **because t
 ## 5. Solution
 
 **Deliverables:**
-- `artifacts/ti_748_causal_impact.py` — CLI-runnable analysis script (v5)
+- `artifacts/ti_748_causal_impact_script.py` — CLI-runnable analysis script (v5). Renamed from `.py` to avoid a Databricks Repos collision with the `.ipynb` of the same base name.
 - `artifacts/ti_748_causal_impact.ipynb` — Presentation notebook with glossary, methodology, and appendix
 - `knowledge/experimentation.md` — New knowledge doc for experiment design (living document)
 
@@ -361,7 +361,7 @@ The `max_networks` was changed from 25 to 15 on **Feb 3, 2026** (olympus commit 
 | File | Description |
 |---|---|
 | `artifacts/ti_748_media_plan_findings.md` | **Stakeholder-facing findings doc** — What/Why/What's Next for Kirsa, Daniella, media team |
-| `artifacts/ti_748_causal_impact.py` | Main analysis script v5 (CLI-runnable) |
+| `artifacts/ti_748_causal_impact_script.py` | Main analysis script v5 (CLI-runnable). Renamed from `.py` to avoid Databricks Repos collision with the `.ipynb`. |
 | `artifacts/ti_748_causal_impact.ipynb` | Presentation notebook v5 (with glossary + methodology appendix) |
 | `artifacts/ti_748_methodology_explainer.md` | Technical + non-technical methodology explanation |
 | `artifacts/datagrip_causal_impact.py` | Original Jaguar experiment notebook (reference only) |
