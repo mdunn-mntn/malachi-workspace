@@ -1,0 +1,335 @@
+[00:00] Hey, Malachi.
+[00:01] Hey, Victor.
+[00:02] How's it going?
+[00:03] Doing good.
+[00:04] Can you hear me?
+[00:05] Yes, I can hear you just fine.
+[00:06] Can you hear me?
+[00:07] Yes, yes.
+[00:08] Okay, perfect.
+[00:09] Yeah, let me, let me share my screen.
+[00:10] So, essentially, uh, two, two ideas here.
+[00:11] Okay.
+[00:12] Yeah, I've modified a little bit because for some reason it didn't filter in the way you
+[00:13] implement it, didn't work for me.
+[00:14] I guess probably due to Spark version, but what I'm talking here.
+[00:15] You have this, this way of filtering BigQuery data, right.
+[00:16] It didn't work for me, so I'm not sure if it's a good idea.
+[00:17] Okay.
+[00:18] So, basically, uh, what I'm trying to do here is, uh, I'm trying to do a little bit of a
+[00:19] new, uh, a little bit of a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,
+[00:20] a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,
+[00:30] it didn't work for me.
+[00:31] I guess probably due to Spark version,
+[00:34] but what I'm talking here,
+[00:36] you have this way of filtering BigQuery data, right?
+[00:42] It didn't work for me.
+[00:52] a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a verdict.
+[01:03] This one.
+[01:04] So that I'm just do real regular data frame filtered,
+[01:09] which should be pretty good push down.
+[01:12] Okay.
+[01:13] Yeah, but it doesn't really impact performance.
+[01:17] Augmentor log. Augmentor log is huge. Um, good thing is that we need to only IPs looks like,
+[01:27] and there is a feature store table for that, which we run hourly and then day to daily level.
+[01:36] And so it's, it makes it super easy. So I'll just switch instead of Augmentor log to this,
+[01:43] uh, features table. Okay. The, I just want to make sure that still works because when we're,
+[01:53] the reason we're grabbing, grabbing Augmentor log is we need to see the, all the IPs we could have
+[02:02] bid on that are in the holdout group, but we did not. So we need to make sure that we get
+[02:07] an exhaustive list of all of those. Yeah. Yeah. But this is my understanding.
+[02:15] This feature table is, uh, so look, uh, yeah, it's good question. Let's, let's figure it out
+[02:22] because, yeah. Cause the Augmentor log is going to show you everybody that we saw. So just because
+[02:26] they got a score, we scored them. Doesn't mean we necessarily saw them or had the potential to
+[02:31] bid on that. Makes sense. Okay. Yeah. We get all from Augmentor log. Yeah. For this particular
+[02:36] use case, for this use case, I think Sean or Ryan, I think probably Ryan implemented feature store
+[02:43] right for this use case. Let me show what I mean by that. Okay.
+[02:48] So, uh, what it does, if, if I go to the models, features store is the reason hourly. So we run it
+[02:59] hourly and we just extract from our Augmentor log and write, uh, just do some filtering. If it makes
+[03:00] So we run it hourly and we just extract from our augmented log
+[03:07] and write just some filtering, if it makes sense,
+[03:12] and augment some data on IP level.
+[03:22] from the Augmentor. Okay. Yeah. Can, oh, can you just send me the link to that? Um, GitHub?
+[03:26] I know I could find it, but yeah. Thank you. So it, this feature tables have more than you need,
+[03:34] right? But what we need is a group by a list of IPs. Correct. Yep. Cause all I'm good. All I do
+[03:41] is hash them afterwards to see whether they would have been part of the holdout group or not.
+[03:46] Yep. Perfect. Yep. Exactly. And I've looked at it. I don't see any filtering. So it's
+[03:51] exactly the same. Uh, so there is no filter except, uh, IP is not null and the IP is not
+[03:58] empty, if it makes sense. Right. I think it should be good. Okay. Yeah. And then we just
+[04:06] group by a piece of, it makes Augmentor log read real fast because it's, we can compress data so
+[04:14] much so that it's useful. Uh, biggest part are now is, uh. The join.
+[04:27] Prospecting, actually not a join, but prospecting intent. Oh yeah. This one is huge too. Yeah. I
+[04:35] don't know for this particular analysis, I need prospecting intent because I don't need to split
+[04:41] it up by high intent and mid intent and peak performance. I don't think so. Oh, if you could,
+[04:48] uh, if you could exclude it because right now prospect, because this is a huge
+[04:55] and we do scan it three times in filters three times, right? Yeah. I'm just thinking they're
+[05:02] probably the follow-up question that they're going to ask is probably going to be,
+[05:06] it's just a one-time thing because when they do the ghost bidding, we'll just have a table like
+[05:11] the cost impression log, that will be like the ghost bid log. And then I'll be able to calculate
+[05:15] these pretty easily just from that. Right. Um, and we'll include that in there.
+[05:22] So if you can exclude prospecting intent, then essentially you're good, right? Because
+[05:28] only Augmentor log, so you can do seven days, 14, whatever it is, right?
+[05:33] Right now prospecting intent is huge. For example, right now I'm running on 14 days
+[05:41] just to do pre-filtering. Uh, what I do it, you can, you can see it's, um,
+[05:50] yeah, it's, we, we're limiting it, right. But it's huge. For example, right now,
+[05:56] what is it like 15%? Yeah. Probably less 12, 13%. And, uh, we, uh, process 4.6 terabyte.
+[06:00] Yeah.
+[06:01] Probably less, 12%, 13%.
+[06:03] And we process 4.6 terabytes. We'll process 8 times more or something like that, right? And we'll
+[06:14] write... About a terabyte.
+[06:15] um, yeah, eight terabytes. So yeah. Uh, but it's, it's one terabyte. It'll be terabyte.
+[06:29] It's processing pretty well. So I'm using like pretty modest cluster of 400 node, uh,
+[06:34] course, right. We can bump it up, but right now, for example, it should take two hours
+[06:41] just to filter it and probably, uh, one and a half hour for rest of the processing.
+[06:47] Okay. So you've already started this process for seven days. Yes. Okay. That makes sense.
+[06:54] Yeah. Cause I just need the output of that and it wouldn't be super imperative if it
+[06:59] weren't for the fact that they asked for it, like the exact sex for it. So,
+[07:06] yeah. So I, I, I let it, I can let it, let it run, but it runs with this changes. So
+[07:13] what I'm doing instead, instead of doing filtering three times,
+[07:18] reason we're doing three times, is it because, uh, let me go to our, uh, your original one.
+[07:25] I decided not to mess with yours, uh, and just, oh, why is it highlighted? Oh, it's not me. I
+[07:33] didn't execute it. So I didn't mess with any of it. I just put a copy. So in a sense, you see,
+[07:40] we, when we go, uh, read prospecting, we then read into two groups, holdout and targeted,
+[07:50] right? It's essentially because Spark can do one thing in parallel, right? So essentially it will
+[07:59] do one time for holdout, one time for targeting, and it will do one more time. Uh, there is
+[08:05] somewhere here. There is one more. Oh, I see. Okay. So in a sense, this part,
+[08:14] this part, right? Or is it this part will be good at three times.
+[08:20] Okay. In order to prevent that, uh, address that and speed up a little bit. I'm just,
+[08:29] saving it to the data, to the S3. This way it's much easier to read. Okay. And I did a little
+[08:30] to the data, to the S3.
+[08:36] This way it's much easier to read.
+[08:38] Okay.
+[08:39] And add a little bit of a sort in order to do a little bit more efficient read by
+[08:44] buckets.
+[08:47] these two main fixes and it should complete seven days in probably three and a half hours.
+[08:55] Oh, but only 400 cores. If we were to increase it like 10 times, uh, like 4,000 cores,
+[09:05] it probably 2,000, realistically 2,000 cores, right? Then we'll probably, we'll do it in an
+[09:12] hour and a half, something like that. Okay. I mean, as long as the output is somewhere I can
+[09:16] access it, like if you run and I get the output, that's all I care about. And so I can just check
+[09:22] when that's done. Yeah. Output will be, um, yeah. Output will be,
+[09:32] output will be, where is this output? Uh, I'll show you. I'll ping you a list. I'll ping you.
+[09:40] Um, man, here it is. Yeah. Okay. It's going to be in the, in your Victor. Okay. That's fine.
+[09:54] Yeah. But you'll be able to grab it, but yeah, this one end result. Yeah. I'll, I'll just give
+[10:00] it to the, okay. Thank you. I, Victor, sorry. I didn't know you were actually going to go do this
+[10:05] for me. I appreciate it. I'm very happy that this has run. Um, I thought we were going to
+[10:10] meet together and you're going to show me and I was going to execute it. So the fact that it's
+[10:14] already running, I'm very, very thankful for. So yeah, I, yeah, I'm happy to help. I'll just
+[10:21] wanted to figure out what's, uh, what's the fastest way. This is not the best way to increase
+[10:28] performance, but the fastest way, because, uh, there is, there are better ways, but it's,
+[10:33] they are much more involved and involved data preparation a little bit. So we need to redesign
+[10:39] the flow, which introduces complexity, probability of an error, right? Yeah. Well, the problem that I
+[10:46] was going to bring up too, is that it probably spending a ton of time doing that is not
+[10:54] needed because we, this is a temporary solution. Um, once they implement the ghost bidding,
+[11:03] um, tables and logs, then it will be really easy because there's only going to be one.
+[11:09] I mean, it's still going to be large. Don't get me wrong, but you know, you could take like,
+[11:13] for example, the impression log and the, um, you know, the impression log is everything we bid on,
+[11:19] right. Right. Or yeah, everything that we ended up baiting on. So when we have a ghost,
+[11:26] we're essentially going to have a ghost impression logger and ghost bid log, right. Which is going
+[11:29] to be everybody that I think how they're going to do it. And I don't know if you're on the first
+[11:33] ascent team, but how I think it's going to happen is that every single time they make a bid, they'll
+[11:37] randomly select another one that would be, would have been possible as I guess there might be two,
+[11:44] right. Cause there's going to be one from the holdout. No, it would just be one from the
+[11:48] holdout. Yeah. So it'd just be a random, it would just be a random other IP that was also eligible
+[11:52] in the same category. And then that one is going to be stored. And I think linked to that initial
+[11:58] bid. Interesting. So it wouldn't be actual bidding, like with unrelated stuff. Right. So
+[12:07] yeah. So that's how the ghost bidding logic is, is that basically if you have, um, 10,000 eligible
+[12:14] IPs and you bid on one, we randomly choose another one that we are bidding on, but we're not right.
+[12:20] That meets the same criteria, but then we just store that. And we actually never send the
+[12:25] impression to them. And so how we're doing the augment or log right now, this is what we're
+[12:30] doing is we're just, we're just saying every IP that we didn't bid on is eligible is that holdout
+[12:37] group. But basically you can think of. And so when we calculate the rate of the visit rates from those
+[12:42] other ones, we didn't, we compare that to the ones we did. And then that's how we calculate the lift.
+[12:47] Although it's problematic because it's huge. And then number two is there's another thing, but
+[12:56] every single one that's in the, that we didn't bid on, we wouldn't have won. Right. And so
+[13:03] if you include all of them, you're actually diluting what the true visit rate in the
+[13:10] conversion rate would be. So what you have to do is you also have to sample those. So anyways,
+[13:14] when we do the ghost bidding, it will be nice is that every single time we do a bid, we have a
+[13:15] bidding will be nice is that every single time we do a bid we have a fake bid every time we do a
+[13:19] bid fake bid and so it will be much much easier to compare and then we'll be able to make those um
+[13:23] and this goes beat how do we know who would have won it or not we don't know if they would have
+[13:29] won it but what we can do is we can okay so this is what we do we would take the win rate of the
+[13:30] but what we can do is we can, okay. So this is what we do. We would take the win rate
+[13:35] of the actual bids for that campaign, for that advertiser, probably the advertiser as a whole.
+[13:40] And then whatever the advertiser wins on average, we would sample that from the ghost bids
+[13:46] that they targeted. So for example, if they targeted a hundred bids, one 80 of them,
+[13:52] and then we had a hundred ghost bids, then we'd randomly sample 80 of those hundred ghost bids.
+[13:57] And then that would be our comparison group. So where we're comparing those two groups.
+[14:02] Yeah. And so that's basically what we're going to do. And the cool thing about that too,
+[14:06] is we can also store it indefinitely augmenter log. I think we drop after,
+[14:10] I mean the table we dropped after, I think 10 days, but I do think the parquet goes longer
+[14:14] 30 days, maybe. I can't remember. Okay. And, but is this will be like one-to-one
+[14:21] or ghost bids will be like less frequent than actual bids?
+[14:25] Ghost bids would be one-to-one to every bid. Yes. You randomly choose an equivalent one.
+[14:33] Yeah. So it's one-to-one. So every single time, I don't know what the process is that an actual
+[14:37] process is going to be, but I do know it's random. So it has to be, I have to have some
+[14:40] sort of random generator that chooses from the list of potential IPs that they could bid on
+[14:50] at the same time that they make the bid. So every time they make a, they make a choice on the bid,
+[14:54] it's like, it's lower quality though. But like, it's basically the same type of thing. So it has
+[14:58] to have all the same requirements. Right. And then we just randomly select one of those to send the
+[15:05] bid to and one that we don't. Right. So that's, I think, I mean, I'm not exactly sure the a hundred
+[15:09] percent of the implementation, but the idea behind it is that we're going to start storing.
+[15:13] Oh, nice. Nice. Because the way I originally thought it would be actual bid like on like 10%
+[15:22] or whatever on 1% where we would actually don't show something completely different. Like for
+[15:28] example, some, I don't know. That is one way. So there's two different types of ghost bids.
+[15:35] There's PSA ads where they do actually bid on two different things. And one of them, they send
+[15:40] just like a, whatever, a public service announcement ad, and then one's the true ad,
+[15:44] but in most circumstances, and it's also cost effective, right? Cause you don't have to pay
+[15:47] for the ad space. You just choose one. And the reason it works is because what's problematic
+[15:55] is that we have lots of selection bias, right? I mean, that's the whole point. Targeting is
+[15:59] selection bias. We're biased towards particular people for specific reasons. Right. But the
+[16:04] problem with that is when you're doing randomized control trials, our bias is not it's biased,
+[16:10] right? It's not random. And so the way that you mitigate that is that when you're setting up your
+[16:15] control group, if you have the same bias between the control group, but you randomly choose one
+[16:20] that you're not going to use, then you actually have an equal control group to your treatment.
+[16:25] And so that's how we can make the comparison. And so that's the whole point of this is that
+[16:29] so technically what we can do, we can do the lift analysis now, but we have to do it the way that I
+[16:35] just sent you in a query where it's like, we have to look at all the augmenter log and do all this
+[16:40] stuff where if it's just in a ghost bid log, where we already have the score, just like cost
+[16:44] impression log does, we have the campaign and all that. We can just then query ghost impression logs,
+[16:51] compare that the join conversions and visits and all that stuff, the KPIs to that table
+[16:57] for an advertiser. And then all we have to do is compare that to the actual cost impression log.
+[17:03] And then same thing, conversions, visits, join those two. And then those two different numbers,
+[17:07] those rates we can compare. And we'd expect that ours that we sent bids to ads to would be higher
+[17:13] than our ghosts. So, yep, that's the long-term solution. And I think that's what they're all
+[17:20] working on because they want to start doing incrementality on it. So in our models, and so
+[17:25] we need to have some sort of efficient way to do it. But right now we're doing this inefficient way
+[17:31] because people wanted to know what does it look like now? I don't know why they wanted to do it
+[17:36] to honestly, sometimes I think they just want to see something that makes them feel good. But
+[17:40] at the end of the day, I was like, we're going to do it anyway. So whether I do this analysis or not,
+[17:45] but I think they want to know. When I ran the analysis, I just split it up by
+[17:50] different types of campaigns. So I did retargeting, then I did prospecting, but then I broke down
+[17:56] prospecting into like all of it versus stage one only. So I could kind of see what's the difference.
+[18:03] But this time they're like, well, can we look at all our select campaigns? And I said, sure,
+[18:07] it's just going to be a long while. So that's kind of where the ask is at because they wanted to know
+[18:13] for select specifically.
+[18:15] Yeah, it makes sense. And if we beat and we win, we have to show the ad, right?
+[18:22] Yes, yes. So if we bid and win, we're definitely sending them the ad, yes.
+[18:27] Got it. Yeah, makes sense.
+[18:29] So, yep. Again, Victor, I really appreciate it. I don't know if you're going to get an
+[18:38] I don't know if I have a link to the actual... Oh wait, I think you did send it. No, you sent me the...
+[18:46] Oh, wait, I think you did send it.
+[18:47] No, you sent me the...
+[18:51] I just...
+[18:52] I sent you the bucket, right?
+[18:55] On the progress.
+[18:57] Let me give you...
+[19:01] on the progress of this run, right?
+[19:03] Oh, I see. I think you sent it. Does that not take me?
+[19:07] Just a moment. I'll do something different.
+[19:12] Oh, a GCS bucket.
+[19:14] I also wanted to share with you, just a moment, permissions. Indeed permissions.
+[19:21] Indeed permissions.
+[19:27] Malachi.
+[19:33] Mm-hmm. So, could you please try opening following... I did send you a link to the
+[19:46] job. Okay. I'm just curious if you can open it. I can see the job.
+[19:52] Yeah, if you can... Can you share what you see? Yeah, no, absolutely. I'll share it.
+[19:57] The only thing I was trying to see if that bucket looks...
+[20:00] I didn't see that project. I'll have to look for it.
+[20:03] So, if you can go to the runs.
+[20:06] Runs? Uh-huh. Yeah, I can click on the top one.
+[20:11] This one? No, no, yeah, you see the result table right below.
+[20:18] Oh, sorry, the table right there. Yes, yeah, click on this one.
+[20:22] Okay.
+[20:23] So, this one has, it is run, and if you see this, our output route is, this is a path.
+[20:34] Yes.
+[20:35] And also the window right now is set 7D, right?
+[20:43] So, there you have two subfolders.
+[20:47] one for intent data,
+[20:53] and the other will be result.
+[20:55] Okay.
+[20:57] Okay. Let me hold on. I think I should have access. Mountain Data Archive Dev.
+[21:00] Okay, let me, hold on. I think I should have access.
+[21:02] Mountain Data Archive Dev.
+[21:04] I just didn't, is it the same?
+[21:07] It's in Bronze Layer.
+[21:09] Oh, it's in Bronze Layer. Okay.
+[21:11] And then I can go.
+[21:19] Cool.
+[21:25] All right. Thank you. And then, Victor, yeah, it's going to be what? TI?
+[21:29] Yeah. It's at the score two. It will be landed in the score two.
+[21:30] It's at the score two. It will be landed in Darger score two.
+[21:34] Okay.
+[21:35] Windows one day, this is just test data, so don't pay attention to this one.
+[21:39] Okay.
+[21:40] But if you wanted one day, I had one run for one day.
+[21:45] If you go one directory up to the parent of this.
+[21:50] Okay.
+[21:53] Oh, sorry, did you ask a question?
+[21:55] Yeah, could you just go up one level?
+[21:59] Yeah.
+[22:00] 3933 without suffix.
+[22:05] Should I click on this one?
+[22:06] Yeah, click on this one.
+[22:08] This one result of one day.
+[22:11] Oh, I see. So the V2 is, okay.
+[22:15] V2 will be for seven days.
+[22:18] Okay.
+[22:19] And then the 14 days is not going to run, correct?
+[22:22] Oh, we can run, we just need to increase compute a bit.
+[22:26] Okay.
+[22:27] Let's just look at the seven day one.
+[22:29] I don't know if it'd be super important.
+[22:31] I mean, because you'd have to just, we have to get it.
+[22:34] I have to get it out by tomorrow.
+[22:36] So I don't know if we'll have time to run the 14 day one.
+[22:40] Unless we scheduled a job to run simultaneously or something, but.
+[22:44] Yeah, it can run overnight or something like that.
+[22:47] Yeah.
+[22:48] Let's see if seven days is good.
+[22:50] Okay.
+[22:52] In the meantime, if you can check that.
+[22:55] I tried not to modify any of the flow of the job, right?
+[23:03] I just adjusted a couple of the steps in order to reference.
+[23:09] Yeah, this argument log stuff.
+[23:12] Argument replaced by feature.
+[23:15] And the intermediate table instead of, I moved instead of CT, like you had it for impressions.
+[23:27] I just moved it to a physical table.
+[23:30] That's it.
+[23:32] Okay.
+[23:33] Yeah, that's fine.
+[23:34] I guess I'll just wait till this completes.
+[23:38] And then I will let you, yeah, again, I really appreciate it.
+[23:42] Thank you, Victor.
+[23:44] You're welcome.
+[23:45] Welcome.
+[23:46] Happy to help.
+[23:47] I'm quite excited.
+[23:48] No, go ahead.
+[23:49] Go ahead.
+[23:50] I was just going to say, I'm a little bit excited too, because I think that in a couple weeks or whenever things are going down, I think I might be transitioning to maybe doing data engineering on the team.
+[24:00] to maybe doing data engineering on the team.
+[24:04] So that's cool.
+[24:06] That's awesome to hear.
+[24:09] And, but just as if you have any questions,
+[24:13] let me know regarding these data set,
+[24:15] Regarding this data set, what did it add, right?
+[24:18] We have, you've pointed out that it's probably really temporary, because ghost beating will be soon much easier, right?
+[24:29] But if we were to optimize, there are still ways to make this one faster.
+[24:33] It's just much more involved, if it makes sense.
+[24:36] Okay.
+[24:37] I mean, if that ends up being something that we still need to do, because like they said, they said it'd probably be three sprints for this to be.
+[24:45] And that's being optimistic for everything to be done.
+[24:48] It's possible that we might need to run this again.
+[24:50] So optimizing it might definitely be something that comes up.
+[24:53] Yeah.
+[24:54] But only if we absolutely need it, because otherwise it will take a little bit at least.
+[25:01] Complexity is data verification.
+[25:03] It's the same result, right?
+[25:05] It will take at least a day.
+[25:07] Okay.
+[25:08] Sounds good.
+[25:09] Well, thank you again, Victor.
+[25:10] And yeah, I'll just wait till this is done.
+[25:12] And hopefully I can get these results and kind of deal with them.
+[25:15] And then we'll go from there.
+[25:16] Nice.
+[25:17] Yeah.
+[25:18] Okay.
+[25:19] That's good.
+[25:20] Thank you, Victor.
+[25:21] Yeah.
+[25:22] Welcome.
+[25:23] And yeah, talk to you soon.
+[25:24] Yeah.
+[25:25] Take care.
+[25:26] Bye.
+[25:27] Bye.
