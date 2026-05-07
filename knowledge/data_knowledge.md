@@ -226,6 +226,30 @@ Any code with `SELECT *` followed by an explicit `*_cost` projection will crash.
 campaign / campaign_group views: `raw_conversions`, `raw_order_value`, `raw_visits`,
 `raw_new_site_visitors`, `raw_existing_site_visitors`. Plus `new_to_file` and `visitors`.
 
+### conversion_log: silver SQLMesh hides bronze.raw corruption (TI-832, 2026-05-06)
+Bronze (`dw-main-bronze.raw.conversion_log`) and silver (`dw-main-silver.logdata.conversion_log`)
+diverge: silver SQLMesh strips rows with corrupt `order_amt` while bronze surfaces them as-is.
+Confirmed 30-day window (2026-04-05 → 2026-05-04): bronze had **7,366 rows / 4 advertisers /
+6,405 IPs** with `order_amt > $1B` (max $7.4T); silver had **0 rows** in the same filter.
+
+The 4 advertisers with corrupt `order_amt`:
+- **34957 Harley Mid Funnel (Agency: MediaHub)** — 5,499 rows, ~$1.78T cluster (magnitude
+  ≈ ms-since-epoch for ~April 2026 — pixel writing a timestamp into `order_amt`)
+- **33903 Bioharvest Ltd** — 1,107 rows, ~$7.4T cluster (different encoding bug)
+- **32023 Tarte** — 759 rows, ~$6.5T cluster, only **1 distinct order_id** firing 759 times
+  across 64 IPs (pixel retransmission on top of corrupt amount)
+- **63746 Networking Today** — 1 row, $1.21B (one-off)
+
+**Implications:**
+1. Anything that aggregates `order_amt` from the GCS parquet sink (e.g., `conv_log_ip`
+   feature store model, anything reading the parquet directly) will surface these extreme
+   values. Always plan training-time outlier handling (Matt's V2 trims top 1%).
+2. Anything that queries silver via BQ won't see them — the issue looks invisible from
+   the most-common entry point. **For data quality investigations on conversion_log, query
+   bronze.raw, not silver.**
+3. Pixel ops owns conversion-pixel integration: route to **Ashley Pineda Varela** (per Zach
+   2026-05-06). Surfaced via TI-832 outlier sheet.
+
 ### attribution_model_id
 - `attribution_model_type_id = 0` should be treated as `1` (last-touch) — known business rule.
   See `ui_visits` column description comment.

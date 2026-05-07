@@ -180,6 +180,50 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 | ga_tracking_id | STRING | |
 | ga_client_id | STRING | |
 
+**Caveat — silver hides corrupt order_amt** (TI-832, 2026-05-06). Bronze (`dw-main-bronze.raw.conversion_log`) contains thousands of rows from 4 advertisers (34957 Harley, 33903 Bioharvest, 32023 Tarte, 63746 Networking Today) with corrupt `order_amt` in the $1B–$7.4T range — likely timestamp leakage / unit-conversion bugs at the pixel layer. Silver SQLMesh strips these. **If investigating data quality on conversions, query `bronze.raw.conversion_log` not silver — or you'll see zero issues that absolutely exist upstream.** Pixel ops (Ashley Pineda Varela) flagged via TI-832 outlier sheet.
+
+---
+
+## feature_store/feature_group_1_source/conv_log_ip (parquet, daily)
+- **Type:** Parquet at `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/conv_log_ip/dt=YYYY-MM-DD/`
+- **Source repo:** [airflow-ti `models/feature_store/feature_group_1_source/conv_log_ip.py`](https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_1_source/conv_log_ip.py)
+- **Use for:** IP-grain daily conversion rollup. Inputs to Layer-2 derived models for Fangorn V1/V2.
+- **Filter applied:** drops `pixel_isolation=true` advertisers + null/0.0.0.0/127.0.0.1 IPs.
+
+| Column | Aggregation | Notes |
+|--------|------------|-------|
+| dt, ip | grain | Partition + IP |
+| conversion_count | `COUNT(*)` | Daily conv volume |
+| total_order_amount | `SUM(order_amt)` | Currency-mixed |
+| usd_order_amount | `SUM(order_amt WHERE order_curr=USD)` | TI-832 — currency-clean (~99% covered) |
+| order_amount_count | `COUNT(WHERE order_amt > 0)` | |
+| max_order_amount | `MAX(order_amt)` | Includes corrupt values from the 4 advertisers above |
+| conversion_time_min, conversion_time_max | `MIN`/`MAX(time)` | TI-832 — feeds L2 recency math |
+| order_id_hll, conversion_type_hll, conversion_source_hll, advertiser_id_hll | PySpark Datasketches HLL | Mergeable in L2 via `F.hll_union_agg` + `F.hll_sketch_estimate` (NOT the ZetaSketch UDF) |
+
+History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path retains forever (see `conv_log_derived_ip` below).
+
+---
+
+## feature_store/feature_group_2_derived/conv_log_derived_ip (parquet, daily)
+- **Type:** Parquet at `gs://mntn-data-archive-prod/feature_store/feature_group_2_derived/conv_log_derived_ip/dt=YYYY-MM-DD/`
+- **Monthly snapshot:** `gs://mntn-data-archive-prod/feature_store/feature_group_2_derived_monthly/conv_log_derived_ip/dt=YYYY-MM-01/` (fires on day 15 of each month with `run_date = first of month`; forever-retained)
+- **Source repo:** [airflow-ti `models/feature_store/feature_group_2_derived/conv_log_derived_ip.py`](https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_2_derived/conv_log_derived_ip.py)
+- **Use for:** IP-grain rolling/forward conversion features. Built for Fangorn V2 (Matt Brorby's conversion-target XGBoost). SHAP-validated on TI-832 — see `tickets/ti_832_feature_store_roas_cpa/outputs/ti_832_shap_combined.csv`.
+- **Partition convention:** base partition is `dt = run_date + 1` (as-of-next-day boundary); monthly snapshot partition is `dt = run_date` (first of month).
+
+| Column | Notes |
+|--------|-------|
+| snapshot_date, ip | grain |
+| cv_n_conv_{7,14,30}d | Conversion count per window |
+| cv_usd_amt_{7,14,30}d | USD-only revenue per window |
+| cv_max_amt_30d | Single largest order in 30d (SHAP top-3 feature) |
+| cv_avg_amt_30d | `usd_amt_30d / n_conv_30d` |
+| cv_n_orders_30d, cv_n_adv_30d | HLL-merged distinct counts |
+| last_conversion_time_max, last_conversion_day, cv_days_since_last | Recency; sentinel `999` = no conversion in window |
+| cv_n_conv_forward_{7,14}d_outcome, cv_usd_amt_forward_{7,14}d_outcome | Training labels — monthly snapshot only |
+| first_conversion_time_min_forward_outcome, first_conversion_day_forward_outcome, cv_days_until_first_conv_forward_outcome | Time-to-first-conversion outcomes — monthly snapshot only |
+
 ---
 
 ## silver.logdata.click_log
