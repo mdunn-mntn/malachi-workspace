@@ -314,8 +314,8 @@ result_pd.head(10)
 
 import math
 
-# Per-advertiser CSV
-per_adv_csv = f"{OUT_DIR}/per_adv_lift_{WINDOW}.csv"
+# Per-advertiser CSV — name matches the local chart-gen script
+per_adv_csv = f"{OUT_DIR}/ti_933_per_advertiser_lift_{WINDOW}.csv"
 result_pd.to_csv(per_adv_csv, index=False)
 print(f"Wrote {per_adv_csv}")
 
@@ -332,12 +332,19 @@ pooled["clickpass_rate"] = pooled["clickpass_visitors"] / pooled["n_ips"]
 pooled["guid_rate"]      = pooled["guid_visitors"]      / pooled["n_ips"]
 pooled["ui_conv_rate"]   = pooled["ui_converters"]      / pooled["n_ips"]
 
-pooled_csv = f"{OUT_DIR}/pooled_lift_{WINDOW}.csv"
+pooled_csv = f"{OUT_DIR}/ti_933_pooled_lift_{WINDOW}.csv"
 pooled.to_csv(pooled_csv, index=False)
 print(f"Wrote {pooled_csv}")
 
 print("\n=== POOLED TABLE ===")
 print(pooled.to_string(index=False))
+
+# Also display in Databricks UI — click the result panel's "Download" button to
+# pull these CSVs directly to your laptop without the Databricks CLI.
+print("\n--- per-advertiser results (click Download in the result panel below) ---")
+display(spark.createDataFrame(result_pd))
+print("--- pooled results (click Download in the result panel below) ---")
+display(spark.createDataFrame(pooled))
 
 # COMMAND ----------
 
