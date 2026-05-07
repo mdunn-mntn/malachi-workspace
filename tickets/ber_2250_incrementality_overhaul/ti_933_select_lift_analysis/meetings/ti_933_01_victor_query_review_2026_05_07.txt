@@ -1,0 +1,96 @@
+[00:00] compute. Um, and it probably needs a pretty beefy cluster, um, to run in a decent amount of time.
+[00:09] Um, I mean, there's obviously some sort of balance. I'm not sure exactly. It's going to
+[00:13] be really memory intensive, though. I know that. Can you go through the, which are main
+[00:19] transformations you do here? Yeah. So let's go to. Okay. So I grabbed the campaigns.
+[00:33] Um, select only, right? Yes. Only select only campaigns. And I'm grabbing all that's only
+[00:38] active ones too. So there's 38 campaigns to give you an idea. This is the scale. So it's not like
+[00:43] a crazy amount of like, I guess there are a decent amount of impressions and stuff here, but it's
+[00:47] mostly these ones here. Um, sorry, let me go back here. Um, it does a little hash, like,
+[00:55] because I need to do the holdout groups. But then the first thing it does is it grabs all the
+[00:59] augmenter log IPs. Um, so it's grabbing from the augmenter, which that's the big one. So first,
+[01:07] it's got to scan the augmenter log for all those days, which is like a ton of data, right? So the
+[01:11] first, there's the big scan of that table. And then afterwards, I have to join, um, the impression
+[01:22] or sorry, the, uh, the conversions and the visit information to the augmenter log IPs that are
+[01:29] there. So there's a big join condition. So it's all in this query. I didn't write this query. The
+[01:35] AI wrote this query, so I don't understand it or I do understand it, but I haven't necessarily
+[01:39] gone through it. But basically, this is I believe, the huge ask here is when you start doing the left
+[01:46] join. Um, all together. So yeah, so that's it. I mean, and then afterwards, it's just it once you
+[01:54] get those results, then it's just a bunch of calculations, which are pretty simple. But
+[01:58] that's the big thing. It's a scan of huge all of the augmenter log. And then, then it's a join on
+[02:04] the IPs that we end up pulling from the augmenter log. And that join, I think is what takes the
+[02:08] majority of the time. Got it. Yeah, I'll take a look at the big query. Is it the same query, right?
+[02:16] It should be the same query. Yeah. So this is big query. So yeah, this is what I'm trying to do.
+[02:21] And that's, that's it. And like I said, um, if I can give you some more context to, I have,
+[02:27] you should be able to see them, but I have this queries. Um, it's, it's in there in DataGrip. If
+[02:34] you can't see it, um, it's under, so sorry, under the ticket that says TI 933. Um, it's under this
+[02:42] BER 2250 ticket. So first, make sure you open that one, then the TI 933, select lift analysis.
+[02:49] Artifacts is where I put all my like, Python scripts and other things. But under here queries,
+[02:57] you can see, so these are all the queries that should be running. And so for example, this is
+[03:04] Oh, no. Okay. So this was something else. Uh, not this ticket. This was just making sure that the
+[03:10] bidder was using select stuff. So these are the two queries. So you see, there's a lift pooled
+[03:14] seven day. And then, yeah. And that's, this is the big, it's the same query I just showed you,
+[03:20] but this is the massive query that's taking six plus hours because of the time. And like I said,
+[03:26] it's not even a massive amount of, I mean, it's a massive amount of data because it's augmenter log,
+[03:31] right? It's got every bid, but I mean, I'm only grabbing seven days. And then the other one,
+[03:34] the 14 days is I did like to do it, but I don't know if I'm going to be able to have the compute.
+[03:38] So in, in just it's those two queries, it's really simple. I need to basically, the output should be
+[03:45] pretty small because it's all aggregated. So once I grab these IPs, then it's just aggregated
+[03:49] metrics. And then I can need to save the output, but I need to query it first. So anyways, I keep,
+[03:55] I'm saying a lot of stuff. I just would like to set up a job compute to get this to run today.
+[03:59] And hopefully maybe a couple hours with enough compute to do it in like an hour or two,
+[04:02] with enough compute to do it
+[04:04] in like an hour or two, maybe at most.
+[04:06] If that's possible.
+[04:08] Yeah, let me take a look at it.
+[04:12] okay i will uh give me yeah no problem and do you want to just end this meeting and give you time
+[04:15] Give me. Yeah, no problem. And do you want to just end this meeting and give you time to look
+[04:21] at it or do you? Yeah. Yeah. Give me like an hour. Okay. Yeah. Perfect. Then let me know what you
+[04:26] think. And then if there's a better way to do it, by all means, we can do it that way. But,
+[04:30] but yeah, that's it. Thank you. Yeah. Let me start with that. Yeah. Thank you. And the
+[04:35] good question. I noticed your status. Yeah. Are you expecting a child or already child?
+[04:41] So, yeah, it's an interesting thing. So about three months after I started, I had a baby
+[04:47] and there is a year. You can take leave for like a year after the baby is born,
+[05:00] but it has to be at least a year after you started. So I couldn't take it right away
+[05:04] because I hadn't been here for a year. So what I decided to do is typically, you know, like,
+[05:08] for example, like Paulo and Allison, they both took six or I think Allison will have a little
+[05:13] bit longer, but about six weeks off, you know, they don't do that paid leave. So I just asked
+[05:18] them, I was like, Hey, how do I just make it simple? I said, why don't I just do two week
+[05:23] vacation? I'll just call it the paternity leave. So it's really kind of just, just spending some
+[05:28] time. So yes, my daughter's already born. She's actually eight months old. So I have two girls,
+[05:30] months old oh so i have two girls but it is technically that's what i'm taking it for so
+[05:36] oh okay okay yeah yeah yeah i see i see yeah thank you but uh yeah i'm very excited you have
+[05:44] two children yeah two yeah that's right do you the boy and a girl or yes that's what i thought
+[05:46] Yeah. Yeah.
+[05:48] That's right. Do you have a boy and a girl or?
+[05:51] Yes.
+[05:52] That's what I thought. Which one's the older one? Do you have an older girl or older boy?
+[05:55] A boy.
+[05:56] Okay.
+[05:56] My son is older. Yeah.
+[06:00] Well, he started high school next year.
+[06:04] I know. Isn't it crazy how quick they grow up?
+[06:07] Dude, it's so unbelievably quick.
+[06:10] Yeah.
+[06:11] And, and I feel like I'm not getting younger.
+[06:17] Yeah. So.
+[06:20] But it's, it's fun. It's lots of, lots of challenges, but it's good. It's good. And you
+[06:25] have your older daughter, how old is she?
+[06:29] My oldest daughter, she's about to turn three. So yeah, they're only a couple of weeks apart
+[06:34] from each other. So their, their birthdays are the June, end of June to June 24th and July 8th.
+[06:40] So they're two weeks, they're about two weeks apart. So yeah. Back-to-back birthdays.
+[06:46] Yeah. And does your wife works right now or she takes care of babies?
+[06:54] Oh yeah. Yeah. She stays at home. I'm blessed that she's able to be able to stay home and
+[07:01] take care of the kids.
+[07:03] Nice.
+[07:04] So yeah, that's, that's nice. So it'll be, I'll be able to just spend time with the family too.
+[07:10] It'll be nice.
+[07:10] That is awesome. And especially like, it's, is it getting nicer outside? Temperature rise?
+[07:18] I mean, is it? Okay. Sounds good.
+[07:24] Yeah. I think it's nice and sunny out too.
+[07:28] Yeah.
+[07:30] That's awesome, man. Yeah. Let me take a look at this one. I will ping you and see what I can do
+[07:37] there.
+[07:37] Yeah. Thank you so much, Victor. Appreciate it.
+[07:40] Yeah.
+[07:41] Okay. Take care.
+[07:42] Yeah. Talk to you soon. Bye.
