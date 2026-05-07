@@ -779,8 +779,8 @@ def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
     pointwise_all = np.concatenate([pointwise_pre, pointwise_post])
 
     # Pointwise CI bands (for shading)
-    pw_lower_pre = actual_pre - fitted_pre_upper  # effect lower = actual - upper bound
-    pw_upper_pre = actual_pre - fitted_pre_lower  # effect upper = actual - lower bound
+    pw_lower_pre = actual_pre - fitted_pre_upper
+    pw_upper_pre = actual_pre - fitted_pre_lower
     pw_lower_post = actual_post - pred_upper
     pw_upper_post = actual_post - pred_lower
     pw_lower_all = np.concatenate([pw_lower_pre, pw_lower_post])
@@ -836,22 +836,36 @@ def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
 
 def _plot_causal_impact(result, flip_date, title, save_path):
     """
-    3-panel CausalImpact plot showing BOTH pre and post periods.
+    3-panel CausalImpact plot: last 28 days of pre + all post.
+    Trims the early pre-period to avoid BSTS warm-up CrI blow-out.
     Red dashed vertical line at flip_date marks the intervention.
-    Panel 1: Actual vs counterfactual (pre overlap confirms model fit, post divergence = effect)
-    Panel 2: Pointwise effect (~0 in pre, diverges in post)
-    Panel 3: Cumulative effect (0 in pre, accumulates in post)
     """
     all_dates = result["all_index"]
     flip = pd.Timestamp(flip_date)
 
+    # Trim to last 28 days of pre + all post (avoids warm-up CrI blow-out)
+    plot_start_date = flip - pd.Timedelta(days=28)
+    mask = all_dates >= plot_start_date
+
+    plot_dates = all_dates[mask]
+    actual = result["actual_all"][mask]
+    predicted = result["predicted_all"][mask]
+    pred_lower = result["predicted_lower_all"][mask]
+    pred_upper = result["predicted_upper_all"][mask]
+    pointwise = result["pointwise_all"][mask]
+    pw_lower = result["pw_lower_all"][mask]
+    pw_upper = result["pw_upper_all"][mask]
+    cum = result["cum_all"][mask]
+    cum_lower = result["cum_lower_all"][mask]
+    cum_upper = result["cum_upper_all"][mask]
+
     fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
 
     # Panel 1: actual vs counterfactual
-    axes[0].plot(all_dates, result["actual_all"], color="black", linewidth=1.5, label="Actual")
-    axes[0].plot(all_dates, result["predicted_all"], color="#1f77b4", linestyle="--",
+    axes[0].plot(plot_dates, actual, color="black", linewidth=1.5, label="Actual")
+    axes[0].plot(plot_dates, predicted, color="#1f77b4", linestyle="--",
                  linewidth=1.5, label="Counterfactual")
-    axes[0].fill_between(all_dates, result["predicted_lower_all"], result["predicted_upper_all"],
+    axes[0].fill_between(plot_dates, pred_lower, pred_upper,
                          color="#1f77b4", alpha=0.15)
     axes[0].axvline(flip, color="red", linestyle="--", linewidth=1, alpha=0.7)
     axes[0].axhline(0, color="black", linewidth=0.4)
@@ -861,8 +875,8 @@ def _plot_causal_impact(result, flip_date, title, save_path):
     axes[0].grid(alpha=0.3)
 
     # Panel 2: pointwise effect
-    axes[1].plot(all_dates, result["pointwise_all"], color="black", linewidth=1.5)
-    axes[1].fill_between(all_dates, result["pw_lower_all"], result["pw_upper_all"],
+    axes[1].plot(plot_dates, pointwise, color="black", linewidth=1.5)
+    axes[1].fill_between(plot_dates, pw_lower, pw_upper,
                          color="#1f77b4", alpha=0.15)
     axes[1].axvline(flip, color="red", linestyle="--", linewidth=1, alpha=0.7)
     axes[1].axhline(0, color="black", linewidth=0.4)
@@ -870,8 +884,8 @@ def _plot_causal_impact(result, flip_date, title, save_path):
     axes[1].grid(alpha=0.3)
 
     # Panel 3: cumulative effect
-    axes[2].plot(all_dates, result["cum_all"], color="black", linewidth=1.5)
-    axes[2].fill_between(all_dates, result["cum_lower_all"], result["cum_upper_all"],
+    axes[2].plot(plot_dates, cum, color="black", linewidth=1.5)
+    axes[2].fill_between(plot_dates, cum_lower, cum_upper,
                          color="#1f77b4", alpha=0.15)
     axes[2].axvline(flip, color="red", linestyle="--", linewidth=1, alpha=0.7)
     axes[2].axhline(0, color="black", linewidth=0.4)
@@ -933,7 +947,7 @@ def fit_one_verbose(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
     print(f"      [stage 5] UCM fit DONE: {_time.time()-t4:.1f}s", flush=True)
     t5 = _time.time()
 
-    # Custom 3-panel plot: pre+post with flip-date marker
+    # Custom 3-panel plot: last 28d pre + all post, with flip-date marker
     plot_title = f"{adv_name} \u2014 {metric.upper()} (flip {flip_date.strftime('%m-%d')})"
     plot_path = OUTPUT_DIR / f"ti_921_ci_{adv_id}_{metric}.png"
     _plot_causal_impact(result, flip_date, plot_title, plot_path)
