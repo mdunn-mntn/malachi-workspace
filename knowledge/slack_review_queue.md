@@ -300,3 +300,41 @@ As of late April 2026, the performance churn investigation identified three open
 3. Resolve the "HHST=0 trap" (campaigns getting stuck at zero household scoring).
 
 Items 2 and 3 are expected to be addressed by the Fangorn project, pending verification and a confirmed GA plan. Resolution ownership is with Trixy.
+
+## 2026-05-07
+
+### [data_catalog] from scotty in #data-platform
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## sqlmesh model — require_partition_filter removed
+
+The `require_partition_filter` constraint was removed from at least one SQLMesh model (commit `32ef660d57c575f90476984e502afc312e817f3e` in the `sqlmesh` repo) due to a failing plan. If this constraint needs to be re-enabled on the model, a `WHERE` clause must be added to the final SQL portion of the model before the partition filter requirement can be enforced again.
+
+### [mntn_business] from Mick Mathis in #sales
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Competitive Intelligence — Crayon Usage (April 2026)
+
+April 2026 was the highest-usage month for Crayon (competitive battlecard platform) since adoption began, and correlated with the highest number of battlecard-assisted closed-won deals recorded. Sales reps are encouraged to use Crayon battlecards for deal prep, live calls, and follow-ups. The Crayon homepage for MNTN is at https://app.crayon.co/intel/mntn/home/.
+
+### [mntn_business] from Frankie in #sales
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## CTV Market Context — Key 2026 Stats (Third-Party)
+
+The following third-party data points are useful for sales positioning and internal market context:
+- **70% of advertisers plan to increase streaming TV spend in 2026** (MNTN research), with CTV leading all channels in planned spend growth — ahead of social, search, and online video.
+- **Local cable TV ad spending fell ~20% in 2025**, while local CTV is on track to hit **$3.6B in 2026** (eMarketer). Strong validation for conversations with multi-location or regional advertisers still holding linear budgets.
+- **Wellness advertisers** saw YoY **+31% visit rates** and **+19% ROAS** heading into summer 2025 (MNTN data).
+- **FIFA World Cup** (June 11) and **NBA Finals** (June 3) audience spikes are key seasonal triggers for getting campaigns in market before Q3 2026.
+
+### [strategic] from Brian McAdams in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Proxima — Upcoming Partner Meeting
+
+Kale forwarded an email thread regarding a meeting with **Proxima**. The meeting is scheduled for the following Wednesday (relative to early May 2026). Brian McAdams is coordinating, with at least two other team members included via calendar invite.

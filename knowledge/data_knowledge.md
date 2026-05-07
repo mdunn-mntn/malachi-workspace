@@ -2014,3 +2014,17 @@ When MNTN bids on open market (non-deal) inventory via Beeswax:
 - The general target SLA for graph/all_facts data is also 9 AM in the corresponding timezone (ongoing batch job).
 - 9 AM ET / 6 AM PT stated in help desk documentation is **inaccurate** for audience segment data — it will not be available by 6 AM PT.
 - DAG monitoring starting point: https://cloud.astronomer.io/cmcvc7plk045e01o49xkio5lc/dags (Astronomer/Airflow). (via ray, #reporting_helpdesk_ask_anything, 2026-05-05)
+
+<!-- slack-extracted: 2026-05-07 -->
+- ## Lost VAST % Alert — Historical False-Alarm Root Cause
+
+The Lost VAST % monitoring alert had a bug: old logic from 2023 filtered checks only on `partner_id = 8`, causing records with `partner_id = 79` to be incorrectly flagged as missing VAST. This produced false positives that were only detectable after a large drop event from Beeswax exposed the logic gap. The alert was corrected to include both partner IDs. A follow-up ticket exists to build a separate VAST % monitor focused on the MNTN bidder specifically. (via Harry Connelly, #mission-control, 2026-05-06)
+- ## Pixel Issues in conversion_log — Escalation Path
+
+When anomalous conversion amounts are detected in `conversion_log` (e.g., suspiciously high values for specific advertisers), this is typically a pixel configuration issue rather than a data pipeline bug. The correct escalation path is to route these to **Pixel Ops** — starting with **Ashley Pineda Varela**. (via zach.schoenberger, #targeting-squad, 2026-05-06)
+- ## Shopify Identity Links — Trustworthiness in Graph
+
+For Shopify-sourced identity data:
+- **Email and phone links** from Shopify orders can be treated as high-trust ("truthy") links in the identity graph.
+- **IP, guid, and ga_client_id** links associated via Shopify order-ID-matched `conversion_log` rows should also be treated as legitimate links, but with nuance: if these identifiers appear connected to many other IDs in the dataset, they are likely **shared identifiers** (e.g., household or device shared by multiple people).
+- Shared IDs should still be tracked in the graph for **exclusion** purposes but should **not** be used for inclusion/targeting, and should ideally be flagged as shared in the graph model. (via Jack Barbey, #identity_core_dev, 2026-05-06)

@@ -821,3 +821,61 @@ MNTN has developed a next-generation MCP system called **Atlas Code MCP**, disti
 - **Tejas Widjonarko promoted to Senior Technical Program Manager (QFAI team)**
 
 Tejas Widjonarko was promoted to Senior Technical Program Manager on the QFAI team, effective May 2026. He owns PRD creation and program execution for QFAI. Notable recent deliveries include a new login flow and a tiered subscription model. (via Emily (Jaffe) Sgroi, #engineering-team, 2026-05-05)
+
+<!-- slack-extracted: 2026-05-07 -->
+- ## Incident Response Bots — HAL vs C-3PO
+
+- **`hal`** is the correct bot to use when creating a triage/incident Slack channel for production issues.
+- **`c3po`** is a different bot and does NOT create private triage channels. Using c3po for incidents will post to unintended channels (e.g., #pex) rather than spinning up a dedicated incident channel.
+- When declaring an incident, use `hal` to spin up the triage channel, then add devops and relevant stakeholders. (via bermudez, #mission-control, 2026-05-06)
+- ## BOS (Budget Optimization Service) — Freeze Behavior During BQ Incidents
+
+- **BOS** recalculates and re-evaluates campaign budgets on an hourly basis using BigQuery data.
+- When BQ is unavailable, BOS must be **frozen** (stopped), meaning daily budgets are not updated in Beeswax (BW).
+- **Potential impacts during a BOS freeze:**
+  - Overspending campaigns will not be stopped sooner than scheduled.
+  - Underspending campaigns will not have budgets increased to offset prior-day underspend.
+  - Flights ending during the freeze window may under- or overspend.
+- BOS freeze does **not** stop bidding/spending — the platform continues to bid and serve ads; only the budget recalculation loop is halted.
+- This issue affects BQ only, not CoreDW. (via trixy, #mission-control, 2026-05-06)
+- ## Integration Partner Test AIDs — Process & Sandbox Concept
+
+- Scripts exist (owned by members of the engineering/QA team) to spin up test Advertiser IDs (AIDs) on production quickly — the process takes approximately one minute.
+- Test AIDs should be clearly labeled (e.g., "Tealium TEST" or "Tealium Partner Acct") so internal teams (PEX, engineering, etc.) can easily identify them.
+- **Q2 2026 integrations requiring test AIDs:** Tealium, Liftlab, Upwave, Quorum.
+- Desired sandbox functionality: ability to disable specific feature sets on test accounts (e.g., prevent billing additions or campaigns going live).
+- This process should be documented in the integrations playbook going forward.
+- Long-term vision: evolve test AIDs into formal sandbox accounts. (via Jason Huertas, #engineering-team, 2026-05-06)
+- ## Targeting Squad — Owned Services, DAGs, and Jobs
+
+The following repositories and pipelines are owned or actively worked on by the Targeting Squad:
+
+**Services (GitHub repos under SteelHouse org):**
+- `ad-buying-ui`
+- `audience-consumer`
+- `audience-service`
+- `clickpass-consumer`
+- `crm-integration-consumer`
+- `ip-vertical-classification`
+- `membership-db` (contains server, gateway, and ETL — all in one repo)
+- `membership-updates-aggregator`
+- `oracle-audience-service`
+- `search-service`
+- `segmentation-journal`
+- `shopper_graph`
+
+**DAGs (Astronomer/Airflow):**
+- `audience_intent`
+- `category_taxonomy`
+- `tpa_ipdsc_export`
+
+**membership-db architecture:**
+- **Server** = the membership DB itself
+- **Gateway** = read layer (reads data from membership DB)
+- **ETL** = write layer (writes data to membership DB)
+- All three components live in the single `membership-db` repo.
+
+**Criticality guidance:** UI-facing services are P0/critical. Streaming services have a longer grace period before downtime causes client-facing issues. (via Macie Kluting, #targeting-squad, 2026-05-06)
+- ## Fangorn Rollout — ~50 Advertiser Milestone
+
+As of the Fangorn launch, approximately 50 advertisers were successfully added to the Fangorn rollout. The scoring job ran successfully overnight, updated their targeting expressions, and output the expected counts. This represents a meaningful rollout milestone for the Fangorn system. (via Ryan Kleck, #fangorn_launch_day, 2026-05-06)
