@@ -637,6 +637,7 @@ import pandas as pd
 from itertools import combinations
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from scipy import stats as _scipy_stats
+import matplotlib.pyplot as plt
 
 MIN_PRE_DAYS = 30
 MIN_POST_DAYS = 1
@@ -721,13 +722,14 @@ def best_subset_by_bic(target, features, max_size=3):
 # Pure statsmodels CausalImpact — no broken 3rd-party package needed
 # Uses UnobservedComponents (local level + exog regression) fitted via
 # MLE on the pre-period, then forecasts the post-period counterfactual.
+# Returns full-span arrays for pre+post plotting.
 # =====================================================================
 def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
     """
     Statsmodels-native CausalImpact.
     ci_data: DataFrame with 'y' col + covariate cols, DatetimeIndex.
     pre_period / post_period: [start_str, end_str].
-    Returns dict with predictions, effects, p-value.
+    Returns dict with full-span predictions, effects, p-value.
     """
     y_all = ci_data["y"].astype(float)
     X_all = ci_data.drop(columns=["y"]).astype(float)
@@ -739,6 +741,7 @@ def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
     X_pre = X_all[pre_mask]
     y_post = y_all[post_mask]
     X_post = X_all[post_mask]
+    n_pre = int(pre_mask.sum())
     n_post = int(post_mask.sum())
 
     # Fit local-level + exog on pre-period
@@ -746,25 +749,56 @@ def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
     with np.errstate(all="ignore"):
         res = mod.fit(disp=False, maxiter=200)
 
-    # Forecast counterfactual for post-period
+    # --- Pre-period: in-sample fitted values ---
+    pre_pred = res.get_prediction()
+    fitted_pre = pre_pred.predicted_mean.values
+    pre_ci = pre_pred.conf_int(alpha=alpha)
+    fitted_pre_lower = pre_ci.iloc[:, 0].values
+    fitted_pre_upper = pre_ci.iloc[:, 1].values
+
+    # --- Post-period: out-of-sample forecast (counterfactual) ---
     fcast = res.get_forecast(steps=n_post, exog=X_post)
     pred_mean = fcast.predicted_mean.values
-    ci_bounds = fcast.conf_int(alpha=alpha)
-    pred_lower = ci_bounds.iloc[:, 0].values
-    pred_upper = ci_bounds.iloc[:, 1].values
+    post_ci = fcast.conf_int(alpha=alpha)
+    pred_lower = post_ci.iloc[:, 0].values
+    pred_upper = post_ci.iloc[:, 1].values
 
     actual_post = y_post.values
+    actual_pre = y_pre.values
 
-    # Point effects
-    pointwise = actual_post - pred_mean
-    cum_effect = pointwise.cumsum()
+    # --- Full-span arrays for plotting ---
+    all_index = y_all[pre_mask | post_mask].index
+    actual_all = np.concatenate([actual_pre, actual_post])
+    predicted_all = np.concatenate([fitted_pre, pred_mean])
+    predicted_lower_all = np.concatenate([fitted_pre_lower, pred_lower])
+    predicted_upper_all = np.concatenate([fitted_pre_upper, pred_upper])
 
+    # Pointwise effect: residuals in pre (should be ~0), actual-forecast in post
+    pointwise_pre = actual_pre - fitted_pre
+    pointwise_post = actual_post - pred_mean
+    pointwise_all = np.concatenate([pointwise_pre, pointwise_post])
+
+    # Pointwise CI bands (for shading)
+    pw_lower_pre = actual_pre - fitted_pre_upper  # effect lower = actual - upper bound
+    pw_upper_pre = actual_pre - fitted_pre_lower  # effect upper = actual - lower bound
+    pw_lower_post = actual_post - pred_upper
+    pw_upper_post = actual_post - pred_lower
+    pw_lower_all = np.concatenate([pw_lower_pre, pw_lower_post])
+    pw_upper_all = np.concatenate([pw_upper_pre, pw_upper_post])
+
+    # Cumulative effect: 0 in pre, accumulating from post start
+    cum_pre = np.zeros(n_pre)
+    cum_post = pointwise_post.cumsum()
+    cum_all = np.concatenate([cum_pre, cum_post])
+    cum_lower_all = np.concatenate([np.zeros(n_pre), (actual_post - pred_upper).cumsum()])
+    cum_upper_all = np.concatenate([np.zeros(n_pre), (actual_post - pred_lower).cumsum()])
+
+    # --- Summary statistics (post-period only) ---
     avg_actual = actual_post.mean()
     avg_predicted = pred_mean.mean()
     abs_effect = avg_actual - avg_predicted
     rel_effect = abs_effect / avg_predicted if abs(avg_predicted) > 1e-12 else np.nan
 
-    # Cumulative CI
     cum_actual = actual_post.sum()
     cum_pred_lower = pred_lower.sum()
     cum_pred_upper = pred_upper.sum()
@@ -776,6 +810,7 @@ def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
     p_value = 2 * (1 - _scipy_stats.norm.cdf(abs(z)))
 
     return {
+        # Summary stats
         "avg_actual": avg_actual,
         "avg_predicted": avg_predicted,
         "abs_effect": abs_effect,
@@ -784,44 +819,67 @@ def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
         "cum_pred_lower": cum_pred_lower,
         "cum_pred_upper": cum_pred_upper,
         "p_value": p_value,
-        # For plotting
-        "post_index": y_post.index,
-        "actual_post": actual_post,
-        "pred_mean": pred_mean,
-        "pred_lower": pred_lower,
-        "pred_upper": pred_upper,
-        "pointwise": pointwise,
-        "cum_effect": cum_effect,
+        # Full-span arrays for plotting
+        "all_index": all_index,
+        "actual_all": actual_all,
+        "predicted_all": predicted_all,
+        "predicted_lower_all": predicted_lower_all,
+        "predicted_upper_all": predicted_upper_all,
+        "pointwise_all": pointwise_all,
+        "pw_lower_all": pw_lower_all,
+        "pw_upper_all": pw_upper_all,
+        "cum_all": cum_all,
+        "cum_lower_all": cum_lower_all,
+        "cum_upper_all": cum_upper_all,
     }
 
-def _plot_causal_impact(result, title, save_path):
-    """3-panel CausalImpact plot (original, pointwise, cumulative)."""
-    idx = result["post_index"]
-    fig, axes = plt.subplots(3, 1, figsize=(10, 7), sharex=True)
 
-    # Panel 1: actual vs predicted
-    axes[0].plot(idx, result["actual_post"], "k-", label="Actual")
-    axes[0].plot(idx, result["pred_mean"], "b--", label="Counterfactual")
-    axes[0].fill_between(idx, result["pred_lower"], result["pred_upper"], alpha=0.2, color="blue")
-    axes[0].axhline(0, color="grey", lw=0.5)
+def _plot_causal_impact(result, flip_date, title, save_path):
+    """
+    3-panel CausalImpact plot showing BOTH pre and post periods.
+    Red dashed vertical line at flip_date marks the intervention.
+    Panel 1: Actual vs counterfactual (pre overlap confirms model fit, post divergence = effect)
+    Panel 2: Pointwise effect (~0 in pre, diverges in post)
+    Panel 3: Cumulative effect (0 in pre, accumulates in post)
+    """
+    all_dates = result["all_index"]
+    flip = pd.Timestamp(flip_date)
+
+    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+
+    # Panel 1: actual vs counterfactual
+    axes[0].plot(all_dates, result["actual_all"], color="black", linewidth=1.5, label="Actual")
+    axes[0].plot(all_dates, result["predicted_all"], color="#1f77b4", linestyle="--",
+                 linewidth=1.5, label="Counterfactual")
+    axes[0].fill_between(all_dates, result["predicted_lower_all"], result["predicted_upper_all"],
+                         color="#1f77b4", alpha=0.15)
+    axes[0].axvline(flip, color="red", linestyle="--", linewidth=1, alpha=0.7)
+    axes[0].axhline(0, color="black", linewidth=0.4)
     axes[0].set_ylabel("Response")
-    axes[0].legend(loc="upper left", fontsize=8)
-    axes[0].set_title(title, fontsize=10)
+    axes[0].set_title(title)
+    axes[0].legend(loc="best", fontsize=9)
+    axes[0].grid(alpha=0.3)
 
     # Panel 2: pointwise effect
-    axes[1].plot(idx, result["pointwise"], "k-")
-    axes[1].axhline(0, color="grey", lw=0.5)
-    axes[1].fill_between(idx, result["pred_lower"] - result["pred_mean"],
-                         result["pred_upper"] - result["pred_mean"], alpha=0.2, color="blue")
+    axes[1].plot(all_dates, result["pointwise_all"], color="black", linewidth=1.5)
+    axes[1].fill_between(all_dates, result["pw_lower_all"], result["pw_upper_all"],
+                         color="#1f77b4", alpha=0.15)
+    axes[1].axvline(flip, color="red", linestyle="--", linewidth=1, alpha=0.7)
+    axes[1].axhline(0, color="black", linewidth=0.4)
     axes[1].set_ylabel("Pointwise effect")
+    axes[1].grid(alpha=0.3)
 
-    # Panel 3: cumulative
-    axes[2].plot(idx, result["cum_effect"], "k-")
-    axes[2].axhline(0, color="grey", lw=0.5)
+    # Panel 3: cumulative effect
+    axes[2].plot(all_dates, result["cum_all"], color="black", linewidth=1.5)
+    axes[2].fill_between(all_dates, result["cum_lower_all"], result["cum_upper_all"],
+                         color="#1f77b4", alpha=0.15)
+    axes[2].axvline(flip, color="red", linestyle="--", linewidth=1, alpha=0.7)
+    axes[2].axhline(0, color="black", linewidth=0.4)
     axes[2].set_ylabel("Cumulative effect")
     axes[2].set_xlabel("Day")
+    axes[2].grid(alpha=0.3)
 
-    plt.tight_layout()
+    fig.tight_layout()
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
@@ -875,10 +933,10 @@ def fit_one_verbose(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
     print(f"      [stage 5] UCM fit DONE: {_time.time()-t4:.1f}s", flush=True)
     t5 = _time.time()
 
-    # Save plot
-    plot_title = f"{adv_name} | {metric.upper()} | {cohort}"
+    # Custom 3-panel plot: pre+post with flip-date marker
+    plot_title = f"{adv_name} \u2014 {metric.upper()} (flip {flip_date.strftime('%m-%d')})"
     plot_path = OUTPUT_DIR / f"ti_921_ci_{adv_id}_{metric}.png"
-    _plot_causal_impact(result, plot_title, plot_path)
+    _plot_causal_impact(result, flip_date, plot_title, plot_path)
     print(f"      [stage 6] plot saved: {_time.time()-t5:.1f}s | total={_time.time()-t0:.1f}s", flush=True)
 
     return {
