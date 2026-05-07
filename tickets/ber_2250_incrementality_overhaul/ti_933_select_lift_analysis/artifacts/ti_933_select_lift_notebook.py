@@ -49,6 +49,14 @@ spark.conf.set("spark.datasource.bigquery.materializationProject", BQ_MAT_PROJEC
 spark.conf.set("spark.datasource.bigquery.materializationDataset", BQ_MAT_DATASET)
 spark.conf.set("spark.datasource.bigquery.viewsEnabled", "true")
 
+# --- Small-file coalescing for GCS parquet reads ---
+# prospecting_intent has ~20k tiny part files per day (upstream Spark writes
+# without coalescing). Without this, Spark creates one task per part file and
+# task scheduling overhead dominates the actual scan. 512MB target = combine
+# many small files into one Spark partition.
+spark.conf.set("spark.sql.files.maxPartitionBytes", "536870912")  # 512 MB
+spark.conf.set("spark.sql.files.openCostInBytes", "33554432")     # 32 MB (default 4 MB; raises threshold for "should I combine")
+
 # ---------------- derived ----------------
 if SMOKE_TEST:
     # Single day, both impression and visit windows. Tiny but exercises every code path.
