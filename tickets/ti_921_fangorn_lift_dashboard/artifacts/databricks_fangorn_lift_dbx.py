@@ -47,7 +47,29 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install google-cloud-bigquery db-dtypes causalimpact==0.1.1
+# MAGIC %pip uninstall -y causalimpact pymc pytensor arviz numba llvmlite
+# MAGIC %pip install google-cloud-bigquery db-dtypes "causalimpact==0.1.1"
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
+import sys, types
+import pandas as pd
+
+# Shim for causalimpact 0.1.1: it imports from pandas.util.testing (removed in pandas 2.0)
+if "pandas.util.testing" not in sys.modules:
+    _fake = types.ModuleType("pandas.util.testing")
+    from pandas.api.types import is_list_like
+    _fake.is_list_like = is_list_like
+    sys.modules["pandas.util.testing"] = _fake
+
+import causalimpact
+print(f"version: {getattr(causalimpact, '__version__', 'unknown')}")
+print(f"path:    {causalimpact.__file__}")
+
+# COMMAND ----------
+
+# MAGIC %pip install google-cloud-bigquery db-dtypes causalimpact
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -609,12 +631,16 @@ print("Cast complete. Numeric dtypes after:", panel.select_dtypes(include="numbe
 # COMMAND ----------
 
 # DBTITLE 1,Cohort-level CausalImpact fits
-import re as _re
-import io as _io
-import contextlib as _contextlib
+import time as _time
+import numpy as np
+import pandas as pd
+from itertools import combinations
+from statsmodels.tsa.statespace.structural import UnobservedComponents
+from scipy import stats as _scipy_stats
 
 MIN_PRE_DAYS = 30
 MIN_POST_DAYS = 1
+
 ALL_CANDIDATES = [
     "platform_ivr", "platform_cvr", "platform_vcr", "platform_roas", "platform_cpa",
     "platform_impressions", "platform_spend", "platform_active_advertisers",
@@ -644,54 +670,169 @@ def compute_metrics(df):
             out[m] = out[m].clip(lower=lo, upper=hi)
     return out
 
+def _fast_bic(y, X):
+    """Analytical BIC using numpy lstsq."""
+    n = len(y)
+    k = X.shape[1]
+    coef, residuals, _, _ = np.linalg.lstsq(X, y, rcond=None)
+    rss = ((y - X @ coef) ** 2).sum() if len(residuals) == 0 else residuals[0]
+    if rss <= 0:
+        return np.inf
+    return n * np.log(rss / n) + k * np.log(n)
+
 def drop_high_vif(features, threshold=10.0):
+    """Fast VIF using numpy."""
     keep = list(features.columns)
     while len(keep) > 1:
-        X = features[keep].fillna(0.0)
-        X_const = sm.add_constant(X, has_constant="add")
-        try:
-            vifs = [variance_inflation_factor(X_const.values, i + 1) for i in range(len(keep))]
-        except Exception:
+        X = features[keep].fillna(0.0).values
+        n, p = X.shape
+        if n <= p:
             break
+        vifs = []
+        for i in range(p):
+            y_i = X[:, i]
+            X_others = np.column_stack([np.ones(n), np.delete(X, i, axis=1)])
+            coef = np.linalg.lstsq(X_others, y_i, rcond=None)[0]
+            ss_res = ((y_i - X_others @ coef) ** 2).sum()
+            ss_tot = ((y_i - y_i.mean()) ** 2).sum()
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            vifs.append(1 / (1 - r2) if r2 < 1 else np.inf)
         if max(vifs) < threshold:
             break
-        keep.remove(keep[vifs.index(max(vifs))])
+        keep.pop(vifs.index(max(vifs)))
     return keep
 
 def best_subset_by_bic(target, features, max_size=3):
-    """BIC subset search capped at max_size=3 (469 subsets vs 3,472 at max_size=5)."""
+    """BIC subset search using fast numpy lstsq."""
     cols = list(features.columns)
     best_bic, best_subset = np.inf, []
-    y = target.dropna()
+    y = target.dropna().values
+    valid_idx = target.dropna().index
     for k in range(1, min(max_size, len(cols)) + 1):
         for subset in combinations(cols, k):
-            X = sm.add_constant(features[list(subset)].loc[y.index].fillna(0.0), has_constant="add")
-            try:
-                bic = sm.OLS(y, X).fit().bic
-            except Exception:
-                continue
+            X_raw = features[list(subset)].loc[valid_idx].fillna(0.0).values
+            X = np.column_stack([np.ones(len(y)), X_raw])
+            bic = _fast_bic(y, X)
             if bic < best_bic:
                 best_bic, best_subset = bic, list(subset)
     return best_subset
 
-def _extract_p_value(ci_obj):
-    """Parse p-value from causalimpact 0.2.6 summary text output."""
-    buf = _io.StringIO()
-    with _contextlib.redirect_stdout(buf):
-        ci_obj.summary()
-    text = buf.getvalue()
-    m = _re.search(r"P-value\s+([\d.]+)%", text)
-    if m:
-        return float(m.group(1)) / 100.0
-    return np.nan
+# =====================================================================
+# Pure statsmodels CausalImpact — no broken 3rd-party package needed
+# Uses UnobservedComponents (local level + exog regression) fitted via
+# MLE on the pre-period, then forecasts the post-period counterfactual.
+# =====================================================================
+def _run_causal_impact(ci_data, pre_period, post_period, alpha=0.05):
+    """
+    Statsmodels-native CausalImpact.
+    ci_data: DataFrame with 'y' col + covariate cols, DatetimeIndex.
+    pre_period / post_period: [start_str, end_str].
+    Returns dict with predictions, effects, p-value.
+    """
+    y_all = ci_data["y"].astype(float)
+    X_all = ci_data.drop(columns=["y"]).astype(float)
 
-def fit_one(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
+    pre_mask = (ci_data.index >= pre_period[0]) & (ci_data.index <= pre_period[1])
+    post_mask = (ci_data.index >= post_period[0]) & (ci_data.index <= post_period[1])
+
+    y_pre = y_all[pre_mask]
+    X_pre = X_all[pre_mask]
+    y_post = y_all[post_mask]
+    X_post = X_all[post_mask]
+    n_post = int(post_mask.sum())
+
+    # Fit local-level + exog on pre-period
+    mod = UnobservedComponents(y_pre, level="local level", exog=X_pre)
+    with np.errstate(all="ignore"):
+        res = mod.fit(disp=False, maxiter=200)
+
+    # Forecast counterfactual for post-period
+    fcast = res.get_forecast(steps=n_post, exog=X_post)
+    pred_mean = fcast.predicted_mean.values
+    ci_bounds = fcast.conf_int(alpha=alpha)
+    pred_lower = ci_bounds.iloc[:, 0].values
+    pred_upper = ci_bounds.iloc[:, 1].values
+
+    actual_post = y_post.values
+
+    # Point effects
+    pointwise = actual_post - pred_mean
+    cum_effect = pointwise.cumsum()
+
+    avg_actual = actual_post.mean()
+    avg_predicted = pred_mean.mean()
+    abs_effect = avg_actual - avg_predicted
+    rel_effect = abs_effect / avg_predicted if abs(avg_predicted) > 1e-12 else np.nan
+
+    # Cumulative CI
+    cum_actual = actual_post.sum()
+    cum_pred_lower = pred_lower.sum()
+    cum_pred_upper = pred_upper.sum()
+
+    # P-value via z-test on average effect
+    se_per_step = (pred_upper - pred_lower) / (2 * _scipy_stats.norm.ppf(1 - alpha / 2))
+    avg_se = np.sqrt((se_per_step ** 2).sum()) / n_post
+    z = abs_effect / avg_se if avg_se > 1e-12 else 0.0
+    p_value = 2 * (1 - _scipy_stats.norm.cdf(abs(z)))
+
+    return {
+        "avg_actual": avg_actual,
+        "avg_predicted": avg_predicted,
+        "abs_effect": abs_effect,
+        "rel_effect": rel_effect,
+        "cum_actual": cum_actual,
+        "cum_pred_lower": cum_pred_lower,
+        "cum_pred_upper": cum_pred_upper,
+        "p_value": p_value,
+        # For plotting
+        "post_index": y_post.index,
+        "actual_post": actual_post,
+        "pred_mean": pred_mean,
+        "pred_lower": pred_lower,
+        "pred_upper": pred_upper,
+        "pointwise": pointwise,
+        "cum_effect": cum_effect,
+    }
+
+def _plot_causal_impact(result, title, save_path):
+    """3-panel CausalImpact plot (original, pointwise, cumulative)."""
+    idx = result["post_index"]
+    fig, axes = plt.subplots(3, 1, figsize=(10, 7), sharex=True)
+
+    # Panel 1: actual vs predicted
+    axes[0].plot(idx, result["actual_post"], "k-", label="Actual")
+    axes[0].plot(idx, result["pred_mean"], "b--", label="Counterfactual")
+    axes[0].fill_between(idx, result["pred_lower"], result["pred_upper"], alpha=0.2, color="blue")
+    axes[0].axhline(0, color="grey", lw=0.5)
+    axes[0].set_ylabel("Response")
+    axes[0].legend(loc="upper left", fontsize=8)
+    axes[0].set_title(title, fontsize=10)
+
+    # Panel 2: pointwise effect
+    axes[1].plot(idx, result["pointwise"], "k-")
+    axes[1].axhline(0, color="grey", lw=0.5)
+    axes[1].fill_between(idx, result["pred_lower"] - result["pred_mean"],
+                         result["pred_upper"] - result["pred_mean"], alpha=0.2, color="blue")
+    axes[1].set_ylabel("Pointwise effect")
+
+    # Panel 3: cumulative
+    axes[2].plot(idx, result["cum_effect"], "k-")
+    axes[2].axhline(0, color="grey", lw=0.5)
+    axes[2].set_ylabel("Cumulative effect")
+    axes[2].set_xlabel("Day")
+
+    plt.tight_layout()
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fit_one_verbose(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
+    """Fit CausalImpact for one (advertiser/cohort, metric) using statsmodels UCM."""
+    t0 = _time.time()
+
     adv = panel[panel["advertiser_id"] == adv_id].copy()
-    # FIX: Cast nullable Int64/Float64 to plain float64 — statsmodels/CausalImpact
-    # chokes on pandas FloatingArray objects.
     num_cols = adv.select_dtypes(include=["number"]).columns
     adv[num_cols] = adv[num_cols].astype("float64")
-
     adv = compute_metrics(adv)
     adv["adv_active_cgs"] = adv["active_cgs"].astype(float)
     df = adv.merge(plat, on="day", how="inner").sort_values("day")
@@ -705,41 +846,40 @@ def fit_one(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
         return None
     pre_period = [pre.index[0].strftime("%Y-%m-%d"), pre.index[-1].strftime("%Y-%m-%d")]
     post_period = [post.index[0].strftime("%Y-%m-%d"), post.index[-1].strftime("%Y-%m-%d")]
+
+    print(f"      [stage 1] data prep: {_time.time()-t0:.1f}s | df shape={df.shape}", flush=True)
+    t1 = _time.time()
+
     candidates = [c for c in ALL_CANDIDATES if c in df.columns]
     pre_df = df.loc[pre_period[0]:pre_period[1]]
     feats = pre_df[candidates].fillna(0.0).astype("float64")
     target = pre_df[metric].ffill().bfill().astype("float64")
     keep = drop_high_vif(feats)
+    print(f"      [stage 2] VIF done: {_time.time()-t1:.1f}s | {len(candidates)}->{len(keep)} covariates", flush=True)
+    t2 = _time.time()
+
     winning = best_subset_by_bic(target, feats[keep])
     if not winning:
         winning = keep[:3]
+    print(f"      [stage 3] BIC done: {_time.time()-t2:.1f}s | winning={winning}", flush=True)
+    t3 = _time.time()
+
     ci_data = pd.DataFrame({"y": df[metric].ffill().bfill()})
     ci_data = ci_data.join(df[winning].fillna(0.0))
-    ci_data = ci_data.astype("float64")  # ensure no FloatingArray leaks through
+    ci_data = ci_data.astype("float64")
+    print(f"      [stage 4] ci_data ready: shape={ci_data.shape}, fitting UCM...", flush=True)
+    t4 = _time.time()
 
-    # --- causalimpact 0.2.6 API ---
-    ci = CausalImpact(ci_data, pre_period, post_period)
-    ci.run()
+    # Pure statsmodels CausalImpact
+    result = _run_causal_impact(ci_data, pre_period, post_period)
+    print(f"      [stage 5] UCM fit DONE: {_time.time()-t4:.1f}s", flush=True)
+    t5 = _time.time()
 
-    # Extract results from ci.inferences (contains full pre+post period)
-    post_start = pd.Timestamp(post_period[0])
-    inf = ci.inferences
-    post_inf = inf[inf.index >= post_start]
-
-    avg_actual = post_inf["response"].mean()
-    avg_predicted = post_inf["point_pred"].mean()
-    cum_actual = post_inf["cum_response"].iloc[-1]
-    cum_pred_lower = post_inf["cum_pred_lower"].iloc[-1]
-    cum_pred_upper = post_inf["cum_pred_upper"].iloc[-1]
-
-    # Save plot — ci.plot() shows inline and returns None, so capture via plt.gcf()
-    ci.plot()
-    fig = plt.gcf()
-    fig.savefig(OUTPUT_DIR / f"ti_921_ci_{adv_id}_{metric}.png", dpi=150, bbox_inches="tight")
-    plt.close(fig)
-
-    # Extract p-value from summary text
-    p_value = _extract_p_value(ci)
+    # Save plot
+    plot_title = f"{adv_name} | {metric.upper()} | {cohort}"
+    plot_path = OUTPUT_DIR / f"ti_921_ci_{adv_id}_{metric}.png"
+    _plot_causal_impact(result, plot_title, plot_path)
+    print(f"      [stage 6] plot saved: {_time.time()-t5:.1f}s | total={_time.time()-t0:.1f}s", flush=True)
 
     return {
         "advertiser_id": adv_id, "advertiser_name": adv_name,
@@ -747,19 +887,22 @@ def fit_one(panel, plat, adv_id, adv_name, cohort, flip_date, metric):
         "pre_n_days": (pd.Timestamp(pre_period[1]) - pd.Timestamp(pre_period[0])).days + 1,
         "post_n_days": (pd.Timestamp(post_period[1]) - pd.Timestamp(post_period[0])).days + 1,
         "covariates": ",".join(winning),
-        "avg_actual_post":   avg_actual,
-        "avg_predicted_post": avg_predicted,
-        "abs_effect":        avg_actual - avg_predicted,
-        "rel_effect":        (avg_actual - avg_predicted) / avg_predicted
-                              if avg_predicted else np.nan,
-        "cum_effect_95_lower": cum_actual - cum_pred_upper,
-        "cum_effect_95_upper": cum_actual - cum_pred_lower,
-        "p_value": p_value,
+        "avg_actual_post": result["avg_actual"],
+        "avg_predicted_post": result["avg_predicted"],
+        "abs_effect": result["abs_effect"],
+        "rel_effect": result["rel_effect"],
+        "cum_effect_95_lower": result["cum_actual"] - result["cum_pred_upper"],
+        "cum_effect_95_upper": result["cum_actual"] - result["cum_pred_lower"],
+        "p_value": result["p_value"],
     }
 
 # ========================================================================
 # 5b. Cohort-level CausalImpact fits
 # ========================================================================
+_wall_start = _time.time()
+_stats = {"attempted": 0, "success": 0, "skipped_degenerate": 0, "skipped_nodata": 0,
+          "errored": 0, "errors_by_type": {}}
+
 treated_panel = panel[panel["aid_in_treatment_group"]].copy()
 cohort_daily = treated_panel.groupby(["cohort", "day"]).agg(
     impressions=("impressions", "sum"),
@@ -773,51 +916,111 @@ cohort_daily = treated_panel.groupby(["cohort", "day"]).agg(
     active_cgs=("active_cgs", "sum"),
     n_aids=("advertiser_id", "nunique"),
 ).reset_index()
-# Cast aggregated columns to float64 (groupby on nullable Int64 produces nullable results)
 num_cols = cohort_daily.select_dtypes(include=["number"]).columns
 cohort_daily[num_cols] = cohort_daily[num_cols].astype("float64")
 
-# Each cohort's flip date = the earliest flip within that cohort
 cohort_flip = wave.groupby("cohort")["flip_date"].min().reset_index()
 cohort_daily = cohort_daily.merge(cohort_flip, on="cohort")
 
 cohort_ci_rows = []
-if CI_AVAILABLE:
-    # Build control pool ONCE (not per-metric)
-    ctrl = panel[~panel["aid_in_treatment_group"]].copy()
-    ctrl_num = ctrl.select_dtypes(include=["number"]).columns
-    ctrl[ctrl_num] = ctrl[ctrl_num].astype("float64")
+ctrl = panel[~panel["aid_in_treatment_group"]].copy()
+ctrl_num = ctrl.select_dtypes(include=["number"]).columns
+ctrl[ctrl_num] = ctrl[ctrl_num].astype("float64")
 
-    print(f"Fitting cohort-level CI: {cohort_daily['cohort'].nunique()} cohorts × {len(METRIC_DEFS)} metrics...")
-    for cohort_name, sub in cohort_daily.groupby("cohort"):
-        flip = sub["flip_date"].iloc[0]
-        for metric in METRIC_DEFS:
-            adv_id = -hash(cohort_name) % 10**8  # numeric sentinel ID
-            try:
-                cohort_as_aid = sub.copy()
-                cohort_as_aid["advertiser_id"] = float(adv_id)
-                cohort_as_aid["aid_in_treatment_group"] = True
-                temp_panel = pd.concat([cohort_as_aid, ctrl], ignore_index=True)
-                r = fit_one(temp_panel, plat, adv_id, f"Cohort: {cohort_name}",
-                            cohort_name, flip, metric)
-            except Exception as e:
-                print(f"  ✗ {cohort_name} / {metric}: {type(e).__name__}: {e}")
-                continue
-            if r is None:
-                print(f"  SKIP {cohort_name} / {metric}: insufficient pre/post days")
-                continue
-            cohort_ci_rows.append(r)
-            print(f"  ✓ {cohort_name} / {metric}: rel_eff={r['rel_effect']:+.2%} p={r['p_value']:.3f} (n_post={r['post_n_days']}d)")
-else:
-    print("CI_AVAILABLE=False — skipping cohort fits.")
+print(f"Fitting cohort-level CI: {cohort_daily['cohort'].nunique()} cohorts x {len(METRIC_DEFS)} metrics")
+print(f"Method: statsmodels UnobservedComponents (local level + exog) | numpy BIC")
+print("=" * 80)
+
+for cohort_name, sub in cohort_daily.groupby("cohort"):
+    flip = sub["flip_date"].iloc[0]
+    n_pre = len(sub[sub["day"] < flip])
+    n_post = len(sub[sub["day"] > flip])
+    print(f"\n--- Cohort: {cohort_name} | flip={flip.strftime('%Y-%m-%d')} | pre={n_pre}d post={n_post}d ---")
+
+    if n_post < MIN_POST_DAYS:
+        print(f"  SKIP ALL: only {n_post} post-days (need >={MIN_POST_DAYS})")
+        _stats["skipped_nodata"] += len(METRIC_DEFS)
+        continue
+
+    for metric in METRIC_DEFS:
+        _stats["attempted"] += 1
+        t0 = _time.time()
+        adv_id = -hash(cohort_name) % 10**8
+
+        print(f"\n  [{metric.upper()}] Preparing data...", end=" ", flush=True)
+        cohort_as_aid = sub.copy()
+        cohort_as_aid["advertiser_id"] = float(adv_id)
+        cohort_as_aid["aid_in_treatment_group"] = True
+        temp_panel = pd.concat([cohort_as_aid, ctrl], ignore_index=True)
+
+        cohort_slice = temp_panel[temp_panel["advertiser_id"] == adv_id].copy()
+        cohort_slice = compute_metrics(cohort_slice)
+        target_series = cohort_slice[metric].dropna()
+
+        t_prep = _time.time() - t0
+        print(f"({t_prep:.1f}s)")
+        print(f"    target '{metric}': n={len(target_series)}, "
+              f"min={target_series.min():.6f}, max={target_series.max():.6f}, "
+              f"mean={target_series.mean():.6f}, "
+              f"n_zero={int((target_series == 0).sum())}, "
+              f"n_nan={int(cohort_slice[metric].isna().sum())}")
+
+        if target_series.empty or target_series.std() == 0 or (target_series == 0).all():
+            print(f"    DEGENERATE INPUT: constant or all-zero. SKIPPING.")
+            _stats["skipped_degenerate"] += 1
+            continue
+
+        try:
+            r = fit_one_verbose(temp_panel, plat, adv_id,
+                                f"Cohort: {cohort_name}", cohort_name, flip, metric)
+        except Exception as e:
+            t_elapsed = _time.time() - t0
+            etype = type(e).__name__
+            print(f"    ERROR after {t_elapsed:.1f}s: {etype}: {e}")
+            _stats["errored"] += 1
+            _stats["errors_by_type"][etype] = _stats["errors_by_type"].get(etype, 0) + 1
+            continue
+
+        if r is None:
+            print(f"    returned None (insufficient pre/post)")
+            _stats["skipped_nodata"] += 1
+            continue
+
+        print(f"    \u2713 SUCCESS | rel_eff={r['rel_effect']:+.2%} p={r['p_value']:.3f} "
+              f"(post={r['post_n_days']}d, covs={r['covariates']})")
+        cohort_ci_rows.append(r)
+        _stats["success"] += 1
+
+_wall_elapsed = _time.time() - _wall_start
+print("\n" + "=" * 80)
+print("COHORT CI SUMMARY")
+print(f"  Wall time: {_wall_elapsed:.1f}s ({_wall_elapsed/60:.1f} min)")
+print(f"  Attempted: {_stats['attempted']} | Success: {_stats['success']} | "
+      f"Degenerate: {_stats['skipped_degenerate']} | No-data: {_stats['skipped_nodata']} | "
+      f"Errored: {_stats['errored']}")
+if _stats["errors_by_type"]:
+    print(f"  Error types: {_stats['errors_by_type']}")
+print("=" * 80)
 
 cohort_ci = pd.DataFrame(cohort_ci_rows)
 if not cohort_ci.empty:
     cohort_ci.to_csv(OUTPUT_DIR / "ti_921_cohort_ci_results.csv", index=False)
-    print(f"\nWrote {len(cohort_ci)} cohort fits → {OUTPUT_DIR / 'ti_921_cohort_ci_results.csv'}")
+    print(f"\nWrote {len(cohort_ci)} cohort fits -> {OUTPUT_DIR / 'ti_921_cohort_ci_results.csv'}")
     display(cohort_ci[["advertiser_name","cohort","metric","rel_effect","p_value","post_n_days"]])
 else:
-    print("No cohort CI fits produced.")
+    print("\ncohort_ci is empty.")
+
+# COMMAND ----------
+
+import causalimpact
+print(f"version: {getattr(causalimpact, '__version__', 'unknown')}")
+print(f"path:    {causalimpact.__file__}")
+
+# Check what the first fit was actually doing
+import sys
+print(f"\ntfp installed: {'tensorflow_probability' in sys.modules}")
+print(f"tf installed:  {'tensorflow' in sys.modules}")
+
 
 # COMMAND ----------
 
