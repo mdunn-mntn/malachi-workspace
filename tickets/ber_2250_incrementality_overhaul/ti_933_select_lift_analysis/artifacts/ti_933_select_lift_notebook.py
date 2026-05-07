@@ -101,31 +101,41 @@ try:
     print(f"      OK — {cnt} active Select campaign_groups")
 except Exception as e:
     print(f"      FAIL — {type(e).__name__}: {e}")
-    print("      Check: cluster service account has BQ Data Viewer + Job User on dw-main-bronze;")
-    print("             scratch_ti933 dataset exists or SA has BQ Data Editor to create it.")
+    print("      Check: cluster SA has bigquery.jobs.create on BQ_PARENT_PROJECT;")
+    print("             BQ_MAT_DATASET exists or SA has BQ Data Editor to create it.")
     raise
 
-print("\n[2/3] GCS parquet — prospecting_intent...")
+# Note: GCS smoke checks below use dbutils.fs.ls() instead of spark.read.parquet().count().
+# The full-scan count was too slow because prospecting_intent has ~17k tiny part files per day
+# (small-file pattern from upstream Spark writes). For a path-validation check, listing files
+# is enough — actual read happens later in the lift query.
+
+print("\n[2/3] GCS parquet — prospecting_intent (path + a few files)...")
 try:
     p = f"gs://household-scoring-prod/output/scoring/prospecting_intent/year={WINDOW_START[:4]}/month={WINDOW_START[5:7]}/day={WINDOW_START[8:10]}"
-    cnt = spark.read.parquet(p).count()
-    print(f"      OK — {cnt} rows in {p}")
+    files = dbutils.fs.ls(p)
+    print(f"      OK — {len(files)} files at {p}")
+    print(f"      first file: {files[0].name}  ({files[0].size:,} bytes)")
 except Exception as e:
     print(f"      FAIL — {type(e).__name__}: {e}")
     print("      Check: cluster SA has Storage Object Viewer on gs://household-scoring-prod/")
     raise
 
-print("\n[3/3] GCS parquet — augmentor_log archive...")
+print("\n[3/3] GCS parquet — augmentor_log archive (path + a few files)...")
 try:
     p = f"gs://mntn-data-archive-prod/augmentor_log/region=east/dt={WINDOW_START}"
-    cnt = spark.read.parquet(p).count()
-    print(f"      OK — {cnt} rows in {p}")
+    files = dbutils.fs.ls(p)
+    print(f"      OK — {len(files)} files at {p}")
+    print(f"      first file: {files[0].name}  ({files[0].size:,} bytes)")
 except Exception as e:
     print(f"      FAIL — {type(e).__name__}: {e}")
     print("      Check: cluster SA has Storage Object Viewer on gs://mntn-data-archive-prod/")
     raise
 
 print("\nAll smoke checks passed. Proceed.")
+print("\nNote: prospecting_intent has many small files per day (~17k). The lift query handles this")
+print("      via Spark's natural parallelism. If shuffle is slow on the actual run, consider:")
+print("        spark.conf.set('spark.sql.files.maxPartitionBytes', '512m')  # combine small files")
 
 # COMMAND ----------
 
