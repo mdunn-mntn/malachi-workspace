@@ -18,27 +18,99 @@
 
 # COMMAND ----------
 
-# Window. Set to "7d" for 2026-04-29..2026-05-05 or "14d" for 2026-04-22..2026-05-05.
-# Visit window extends +3 days for attribution lag.
+# --- Run mode ---
+# SMOKE_TEST = True  → single day, exercises the full pipeline in 3-5 min. Run this FIRST
+#                      to catch auth / schema / path issues before committing to a long run.
+# SMOKE_TEST = False → real analysis at the WINDOW below.
+SMOKE_TEST = True
+
+# Real analysis window. Toggle between "7d" and "14d".
 WINDOW = "7d"
 
-if WINDOW == "7d":
+# --- Output location ---
+# DBFS FileStore is simplest (browser download URL: /files/ti_933/...).
+# Swap to a GCS bucket (e.g., "gs://mntn-data-archive-prod/ti_933/") or a Unity
+# Catalog Volume (e.g., "/Volumes/main/default/ti_933/") if your org prefers
+# persistent storage. Path must end with a slash.
+OUT_BASE = "/dbfs/FileStore/ti_933/"
+
+# ---------------- derived ----------------
+if SMOKE_TEST:
+    # Single day, both impression and visit windows. Tiny but exercises every code path.
+    WINDOW_LABEL = "smoke"
+    WINDOW_START = "2026-05-04"
+    WINDOW_END   = "2026-05-05"   # exclusive
+    VISIT_END    = "2026-05-08"   # +3 days
+elif WINDOW == "7d":
+    WINDOW_LABEL = "7d"
     WINDOW_START = "2026-04-29"
-    WINDOW_END   = "2026-05-06"   # exclusive
+    WINDOW_END   = "2026-05-06"
     VISIT_END    = "2026-05-09"
 elif WINDOW == "14d":
+    WINDOW_LABEL = "14d"
     WINDOW_START = "2026-04-22"
     WINDOW_END   = "2026-05-06"
     VISIT_END    = "2026-05-09"
 else:
     raise ValueError(f"Unknown WINDOW: {WINDOW}")
 
-OUT_DIR = f"/dbfs/FileStore/ti_933/{WINDOW}"
-import os; os.makedirs(OUT_DIR, exist_ok=True)
+OUT_DIR = f"{OUT_BASE}{WINDOW_LABEL}"
+import os; os.makedirs(OUT_DIR, exist_ok=True) if OUT_DIR.startswith("/dbfs") or OUT_DIR.startswith("/Volumes") else None
 
-print(f"WINDOW: {WINDOW}  ({WINDOW_START} -> {WINDOW_END}, visits +3d to {VISIT_END})")
+print(f"MODE:    {'SMOKE TEST (single day)' if SMOKE_TEST else 'PRODUCTION (' + WINDOW + ')'}")
+print(f"WINDOW:  {WINDOW_START} -> {WINDOW_END}  (visits +3d to {VISIT_END})")
 print(f"OUT_DIR: {OUT_DIR}")
-print(f"Spark: {spark.version}")
+print(f"Spark:   {spark.version}")
+if SMOKE_TEST:
+    print()
+    print("→ Smoke test produces a real but tiny lift number (wide CIs).")
+    print("→ Set SMOKE_TEST = False after this run completes successfully.")
+
+# COMMAND ----------
+
+# MAGIC %md ## 1b. Smoke checks — auth + path validation
+# MAGIC
+# MAGIC Run this cell first. Confirms (a) BQ Spark connector + scratch dataset works,
+# MAGIC (b) GCS parquet paths exist for both archives. Each check should return a non-zero
+# MAGIC count in <30s. If any fails, the rest of the notebook will fail too — fix here first.
+
+# COMMAND ----------
+
+print("[1/3] BQ Spark connector + scratch dataset...")
+try:
+    cnt = (spark.read.format("bigquery")
+           .option("table", "dw-main-bronze.integrationprod.campaign_groups")
+           .option("filter", "product_id = 2 AND deleted = false AND is_test = false")
+           .load()
+           .count())
+    print(f"      OK — {cnt} active Select campaign_groups")
+except Exception as e:
+    print(f"      FAIL — {type(e).__name__}: {e}")
+    print("      Check: cluster service account has BQ Data Viewer + Job User on dw-main-bronze;")
+    print("             scratch_ti933 dataset exists or SA has BQ Data Editor to create it.")
+    raise
+
+print("\n[2/3] GCS parquet — prospecting_intent...")
+try:
+    p = f"gs://household-scoring-prod/output/scoring/prospecting_intent/year={WINDOW_START[:4]}/month={WINDOW_START[5:7]}/day={WINDOW_START[8:10]}"
+    cnt = spark.read.parquet(p).count()
+    print(f"      OK — {cnt} rows in {p}")
+except Exception as e:
+    print(f"      FAIL — {type(e).__name__}: {e}")
+    print("      Check: cluster SA has Storage Object Viewer on gs://household-scoring-prod/")
+    raise
+
+print("\n[3/3] GCS parquet — augmentor_log archive...")
+try:
+    p = f"gs://mntn-data-archive-prod/augmentor_log/region=east/dt={WINDOW_START}"
+    cnt = spark.read.parquet(p).count()
+    print(f"      OK — {cnt} rows in {p}")
+except Exception as e:
+    print(f"      FAIL — {type(e).__name__}: {e}")
+    print("      Check: cluster SA has Storage Object Viewer on gs://mntn-data-archive-prod/")
+    raise
+
+print("\nAll smoke checks passed. Proceed.")
 
 # COMMAND ----------
 
@@ -314,8 +386,8 @@ result_pd.head(10)
 
 import math
 
-# Per-advertiser CSV — name matches the local chart-gen script
-per_adv_csv = f"{OUT_DIR}/ti_933_per_advertiser_lift_{WINDOW}.csv"
+# Per-advertiser CSV — name matches the local chart-gen script (window-suffixed)
+per_adv_csv = f"{OUT_DIR}/ti_933_per_advertiser_lift_{WINDOW_LABEL}.csv"
 result_pd.to_csv(per_adv_csv, index=False)
 print(f"Wrote {per_adv_csv}")
 
@@ -332,7 +404,7 @@ pooled["clickpass_rate"] = pooled["clickpass_visitors"] / pooled["n_ips"]
 pooled["guid_rate"]      = pooled["guid_visitors"]      / pooled["n_ips"]
 pooled["ui_conv_rate"]   = pooled["ui_converters"]      / pooled["n_ips"]
 
-pooled_csv = f"{OUT_DIR}/ti_933_pooled_lift_{WINDOW}.csv"
+pooled_csv = f"{OUT_DIR}/ti_933_pooled_lift_{WINDOW_LABEL}.csv"
 pooled.to_csv(pooled_csv, index=False)
 print(f"Wrote {pooled_csv}")
 
@@ -363,7 +435,7 @@ def lift_with_ci(p_t: float, n_t: int, p_h: float, n_h: int):
 t = pooled[pooled["arm"] == "treated_served"].iloc[0]
 h = pooled[pooled["arm"] == "holdout_biddable"].iloc[0]
 
-print(f"=== POOLED LIFT — MNTN Select, {WINDOW} window ===")
+print(f"=== POOLED LIFT — MNTN Select, {WINDOW_LABEL} window ===")
 print(f"  Treated:  n_ips={t['n_ips']:>12,}  cp_v={t['clickpass_visitors']:>10,}  gv_v={t['guid_visitors']:>10,}  uc={t['ui_converters']:>8,}")
 print(f"  Holdout:  n_ips={h['n_ips']:>12,}  cp_v={h['clickpass_visitors']:>10,}  gv_v={h['guid_visitors']:>10,}  uc={h['ui_converters']:>8,}")
 print()
