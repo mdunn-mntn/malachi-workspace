@@ -1537,6 +1537,8 @@ BigQuery interactive queries have a **hard 6-hour execution limit** (cannot be r
 
 3. **Always pull `bq show -j --format=prettyjson` on a failed/timed-out job to see WHERE it died.** Stages-completed (94/128), last running stage (`S15: Output`), and records-read (9.6B) on that stage tells you whether the bottleneck was the augmentor scan (early stages) or the join/aggregate output (late stages). On TI-933 it was the latter, which pointed directly at the double-aggregation issue rather than augmentor cost.
 
+4. **For heavy lift / multi-day augmentor queries, push to Databricks instead of BQ.** No 6-hour wall, GCS-native parquet reads (augmentor archive at `gs://mntn-data-archive-prod/augmentor_log/` retains ~30 days vs BQ's 10), shuffle-heavy joins benefit from memory-optimized clusters. Use BQ Spark connector for tables not yet in GCS. See airflow-ti repo for Spark job patterns.
+
 ### BQ dry-run is unreliable on federated tables (confirmed 2026-04-27)
 A query touching `household_scoring__prospecting_intent__v1` (Parquet external table over `gs://household-scoring-prod/...`) dry-runs at 610 GB but actually processes **18.1 TB** when run — ~30× under-estimate. The estimator cannot see into the federated source's actual scan footprint. Rule: for any query that joins a federated/external table, treat the dry-run as a lower bound only. Sample on a smaller window (1 day) before committing to a larger run.
 
