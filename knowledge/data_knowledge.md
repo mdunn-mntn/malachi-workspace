@@ -1527,6 +1527,16 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 - Output: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/` partitioned by dt/hh
 - Pipeline code: `steelhouse/airflow-ti` repo, `models/feature_store/feature_group_1_source/`
 
+### BQ 6-hour wall + slot competition + double-aggregation = silent timeout (TI-933, 2026-05-06)
+
+BigQuery interactive queries have a **hard 6-hour execution limit** (cannot be raised; max is 6 hours). Long-running ATT-style lift queries on `augmentor_log` over multi-day windows can hit this wall and die with zero output, returning `Operation timed out after 6.0 hours. Consider reducing the amount of work performed by your operation so that it can complete within this limit.` Three lessons learned at once on TI-933:
+
+1. **Don't run two heavy queries in parallel on the same reservation.** Both 7d and 14d Select lift queries hit the 6h wall at exactly the same point (94/128 stages, 73% complete, 692 slot-hours each). They shared `dw-main-bronze:us-central1.adhoc` slots and effectively halved each other's throughput. Run sequentially. The original TI-917 v5 query (4 segments × 7d) finished in 6h running solo; mine (1 segment × 7d) timed out running parallel with another query.
+
+2. **Don't double-aggregate when one can be derived from the other in Python.** A query that produces both per-(advertiser, arm) AND pooled-(arm) rows via two CTEs runs the same heavy 4-way LEFT JOIN twice — once at per-advertiser grouping, once at pooled grouping. Each pass shuffles billions of rows. Drop the pooled CTE and reconstruct in Python: `pooled_n_ips = SUM(per_adv_n_ips)`, `pooled_visitors = SUM(per_adv_visitors)`, `pooled_rate = SUM(visitors)/SUM(ips)`. Mathematically identical because (advertiser_id, ip) pairs are unique across advertisers. This is what killed TI-933 v2 — `S15: Output` was reading 9.6B records doing the second-pass pooled join.
+
+3. **Always pull `bq show -j --format=prettyjson` on a failed/timed-out job to see WHERE it died.** Stages-completed (94/128), last running stage (`S15: Output`), and records-read (9.6B) on that stage tells you whether the bottleneck was the augmentor scan (early stages) or the join/aggregate output (late stages). On TI-933 it was the latter, which pointed directly at the double-aggregation issue rather than augmentor cost.
+
 ### BQ dry-run is unreliable on federated tables (confirmed 2026-04-27)
 A query touching `household_scoring__prospecting_intent__v1` (Parquet external table over `gs://household-scoring-prod/...`) dry-runs at 610 GB but actually processes **18.1 TB** when run — ~30× under-estimate. The estimator cannot see into the federated source's actual scan footprint. Rule: for any query that joins a federated/external table, treat the dry-run as a lower bound only. Sample on a smaller window (1 day) before committing to a larger run.
 

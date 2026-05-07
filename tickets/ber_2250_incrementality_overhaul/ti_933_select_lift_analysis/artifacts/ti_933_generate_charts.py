@@ -86,12 +86,46 @@ def chart_volume_by_advertiser():
     plt.close(fig)
 
 
-def load_lift():
-    """Return (per_adv_rows, pooled_dict) parsed from the lift JSON."""
-    with open(OUT / "ti_933_select_lift_pooled_7d.json") as f:
+def load_lift(window="7d"):
+    """Return (per_adv_rows, pooled_dict) — pooled computed in Python from per-adv rows.
+
+    Mathematically identical to the BQ pooled CTE because (advertiser_id, ip) pairs are
+    unique across advertisers — SUM of per-advertiser counts equals DISTINCT count of
+    pairs. Computing in Python avoids a 4-way LEFT JOIN re-shuffle in BQ.
+    """
+    with open(OUT / f"ti_933_select_lift_pooled_{window}.json") as f:
         rows = json.load(f)
-    pooled = {r["arm"]: r for r in rows if r["is_pooled"]}
-    per_adv = [r for r in rows if not r["is_pooled"]]
+    # Cast string-encoded BQ JSON numbers to ints/floats
+    per_adv = []
+    for r in rows:
+        per_adv.append({
+            "advertiser_id": int(r["advertiser_id"]),
+            "arm": r["arm"],
+            "n_ips": int(r["n_ips"]),
+            "clickpass_visitors": int(r["clickpass_visitors"]),
+            "guid_visitors": int(r["guid_visitors"]),
+            "ui_converters": int(r["ui_converters"]),
+            "clickpass_rate": float(r["clickpass_rate"]) if r["clickpass_rate"] is not None else None,
+            "guid_rate": float(r["guid_rate"]) if r["guid_rate"] is not None else None,
+            "ui_conv_rate": float(r["ui_conv_rate"]) if r["ui_conv_rate"] is not None else None,
+        })
+    pooled = {}
+    for arm in ("treated_served", "holdout_biddable"):
+        arm_rows = [r for r in per_adv if r["arm"] == arm]
+        n_ips = sum(r["n_ips"] for r in arm_rows)
+        cp_v = sum(r["clickpass_visitors"] for r in arm_rows)
+        gv_v = sum(r["guid_visitors"] for r in arm_rows)
+        uc_v = sum(r["ui_converters"] for r in arm_rows)
+        pooled[arm] = {
+            "arm": arm,
+            "n_ips": n_ips,
+            "clickpass_visitors": cp_v,
+            "guid_visitors": gv_v,
+            "ui_converters": uc_v,
+            "clickpass_rate": cp_v / n_ips if n_ips else None,
+            "guid_rate": gv_v / n_ips if n_ips else None,
+            "ui_conv_rate": uc_v / n_ips if n_ips else None,
+        }
     return per_adv, pooled
 
 

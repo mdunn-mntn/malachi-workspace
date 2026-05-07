@@ -177,56 +177,26 @@ subjects AS (
   SELECT 'holdout_biddable' AS arm, advertiser_id, ip FROM bh_subsampled
   UNION ALL
   SELECT 'treated_served'   AS arm, advertiser_id, ip FROM served_treatment
-),
-
-per_adv_per_arm AS (
-  SELECT
-    s.advertiser_id,
-    s.arm,
-    COUNT(DISTINCT s.ip)                                     AS n_ips,
-    COUNT(DISTINCT cp.ip)                                    AS clickpass_visitors,
-    COUNT(DISTINCT gv.ip)                                    AS guid_visitors,
-    COUNT(DISTINCT uc.ip)                                    AS ui_converters,
-    SAFE_DIVIDE(COUNT(DISTINCT cp.ip), COUNT(DISTINCT s.ip)) AS clickpass_rate,
-    SAFE_DIVIDE(COUNT(DISTINCT gv.ip), COUNT(DISTINCT s.ip)) AS guid_rate,
-    SAFE_DIVIDE(COUNT(DISTINCT uc.ip), COUNT(DISTINCT s.ip)) AS ui_conv_rate
-  FROM subjects s
-  LEFT JOIN cp_pairs   cp ON cp.advertiser_id = s.advertiser_id AND cp.ip = s.ip
-  LEFT JOIN guid_visits gv ON gv.advertiser_id = s.advertiser_id AND gv.ip = s.ip
-  LEFT JOIN ui_conv    uc ON uc.advertiser_id = s.advertiser_id AND uc.ip = s.ip
-  GROUP BY s.advertiser_id, s.arm
-),
-
-pooled_per_arm AS (
-  SELECT
-    -1                                                       AS advertiser_id,
-    s.arm,
-    COUNT(DISTINCT CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip))                                     AS n_ips,
-    COUNT(DISTINCT IF(cp.ip IS NOT NULL, CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip), NULL))         AS clickpass_visitors,
-    COUNT(DISTINCT IF(gv.ip IS NOT NULL, CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip), NULL))         AS guid_visitors,
-    COUNT(DISTINCT IF(uc.ip IS NOT NULL, CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip), NULL))         AS ui_converters,
-    SAFE_DIVIDE(
-      COUNT(DISTINCT IF(cp.ip IS NOT NULL, CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip), NULL)),
-      COUNT(DISTINCT CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip))
-    ) AS clickpass_rate,
-    SAFE_DIVIDE(
-      COUNT(DISTINCT IF(gv.ip IS NOT NULL, CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip), NULL)),
-      COUNT(DISTINCT CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip))
-    ) AS guid_rate,
-    SAFE_DIVIDE(
-      COUNT(DISTINCT IF(uc.ip IS NOT NULL, CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip), NULL)),
-      COUNT(DISTINCT CONCAT(CAST(s.advertiser_id AS STRING), '|', s.ip))
-    ) AS ui_conv_rate
-  FROM subjects s
-  LEFT JOIN cp_pairs   cp ON cp.advertiser_id = s.advertiser_id AND cp.ip = s.ip
-  LEFT JOIN guid_visits gv ON gv.advertiser_id = s.advertiser_id AND gv.ip = s.ip
-  LEFT JOIN ui_conv    uc ON uc.advertiser_id = s.advertiser_id AND uc.ip = s.ip
-  GROUP BY s.arm
 )
 
-SELECT * FROM (
-  SELECT *, FALSE AS is_pooled FROM per_adv_per_arm
-  UNION ALL
-  SELECT *, TRUE  AS is_pooled FROM pooled_per_arm
-)
-ORDER BY is_pooled DESC, advertiser_id, arm;
+-- Per-(advertiser, arm) only. Pooled stats reconstructed in Python by
+-- summing across advertisers (mathematically identical because (aid, ip)
+-- pairs are unique across advertisers — pooled_n_ips = SUM(per_adv_n_ips),
+-- pooled_visitors = SUM(per_adv_visitors), pooled_rate = SUM(visitors)/SUM(ips)).
+-- Drops a 4-way LEFT JOIN re-shuffle that doubled S15: Output cardinality.
+SELECT
+  s.advertiser_id,
+  s.arm,
+  COUNT(DISTINCT s.ip)                                     AS n_ips,
+  COUNT(DISTINCT cp.ip)                                    AS clickpass_visitors,
+  COUNT(DISTINCT gv.ip)                                    AS guid_visitors,
+  COUNT(DISTINCT uc.ip)                                    AS ui_converters,
+  SAFE_DIVIDE(COUNT(DISTINCT cp.ip), COUNT(DISTINCT s.ip)) AS clickpass_rate,
+  SAFE_DIVIDE(COUNT(DISTINCT gv.ip), COUNT(DISTINCT s.ip)) AS guid_rate,
+  SAFE_DIVIDE(COUNT(DISTINCT uc.ip), COUNT(DISTINCT s.ip)) AS ui_conv_rate
+FROM subjects s
+LEFT JOIN cp_pairs   cp ON cp.advertiser_id = s.advertiser_id AND cp.ip = s.ip
+LEFT JOIN guid_visits gv ON gv.advertiser_id = s.advertiser_id AND gv.ip = s.ip
+LEFT JOIN ui_conv    uc ON uc.advertiser_id = s.advertiser_id AND uc.ip = s.ip
+GROUP BY s.advertiser_id, s.arm
+ORDER BY s.advertiser_id, s.arm;
