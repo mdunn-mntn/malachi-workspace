@@ -34,6 +34,21 @@ WINDOW = "7d"
 # persistent storage. Path must end with a slash.
 OUT_BASE = "/dbfs/FileStore/ti_933/"
 
+# --- BigQuery connector config ---
+# parentProject = where BQ JOBS run (billing). Cluster SA needs `bigquery.jobs.create` here.
+# materializationProject = where temp datasets live for view reads. SA needs Data Editor here.
+# Default 'mntn-databricks' fails for users without jobs.create there.
+# Most likely working alternative: dw-main-silver (where most of our SAs have perms).
+BQ_PARENT_PROJECT = "dw-main-silver"
+BQ_MAT_PROJECT    = "dw-main-silver"
+BQ_MAT_DATASET    = "scratch_ti933"
+
+# Set as Spark conf so all connector reads inherit these (no per-call overrides needed)
+spark.conf.set("spark.datasource.bigquery.parentProject", BQ_PARENT_PROJECT)
+spark.conf.set("spark.datasource.bigquery.materializationProject", BQ_MAT_PROJECT)
+spark.conf.set("spark.datasource.bigquery.materializationDataset", BQ_MAT_DATASET)
+spark.conf.set("spark.datasource.bigquery.viewsEnabled", "true")
+
 # ---------------- derived ----------------
 if SMOKE_TEST:
     # Single day, both impression and visit windows. Tiny but exercises every code path.
@@ -124,11 +139,12 @@ print("\nAll smoke checks passed. Proceed.")
 from datetime import date, timedelta
 
 def bq(table: str, filter_clause: str = None, columns: list = None):
-    """Read a BigQuery table via the Spark connector with optional pushdown filter + projection."""
-    rdr = (spark.read.format("bigquery")
-           .option("table", table)
-           .option("viewsEnabled", "true")
-           .option("materializationDataset", "scratch_ti933"))  # required for view reads
+    """Read a BigQuery table via the Spark connector with optional pushdown filter + projection.
+
+    parentProject / materializationProject / materializationDataset / viewsEnabled
+    are set globally via spark.conf.set in cell 1. No per-call overrides needed.
+    """
+    rdr = spark.read.format("bigquery").option("table", table)
     if filter_clause:
         rdr = rdr.option("filter", filter_clause)
     df = rdr.load()
