@@ -136,6 +136,9 @@ HTML = f"""<!DOCTYPE html>
     visit-rate lift.<br>
     <span style="font-size: 0.7em; color: var(--text-light); font-weight: 500;">Significant. Pooled across 22 active advertisers, 7 days.</span>
   </p>
+  <p style="margin-top: 2.0em; font-size: 0.75em; color: var(--text-light); text-align: center;">
+    Malachi Dunn &middot; Targeting Infrastructure &middot; 2026-05-07
+  </p>
 </section>
 
 <!-- Slide 2: Title / Context -->

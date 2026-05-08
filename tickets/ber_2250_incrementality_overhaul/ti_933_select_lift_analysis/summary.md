@@ -1,9 +1,9 @@
 # TI-933: Lift analysis on MNTN Select campaigns
 
 **Jira:** https://mntn.atlassian.net/browse/TI-933
-**Status:** In Progress
+**Status:** In Review
 **Date Started:** 2026-05-06
-**Date Completed:**
+**Date Completed:** 2026-05-07
 **Assignee:** Malachi
 **Parent Epic:** TI-916 (Incrementality findings — communication & followup) → BER-2250 (Incrementality Overhaul)
 **Sprint:** TI Sprint 05/04/26 - 05/18/26 (id 6160)
@@ -123,7 +123,7 @@ Select sits between "all campaigns" and prospecting, well above prospecting-only
 
 Standalone RevealJS deck at [`artifacts/ti_933_select_lift_deck.html`](artifacts/ti_933_select_lift_deck.html), 11 slides. Power Line: "MNTN Select drives +2.06 percentage point visit-rate lift." Three-act: question → numbers → action.
 
-Shared via githack: https://gist.githack.com/mdunn-mntn/4dd99adf8c6cb75b8f2d996cc5cabae4/raw/ti_933_select_lift_deck.html
+Shared via githack: https://gist.githack.com/mdunn-mntn/23125c48396b25f3459183af929de765/raw/ti_933_select_lift_deck.html
 
 ## 5. Solution
 
@@ -134,7 +134,7 @@ Action recommendations delivered in the deck's slide 9:
 - **CONSIDER:** layer intent scoring on Select inventory as a possible easy-mode lift bump
 - **UNLOCK:** ghost-bidder (TI-886) is the path to per-advertiser readouts
 
-Deck URL: https://gist.githack.com/mdunn-mntn/4dd99adf8c6cb75b8f2d996cc5cabae4/raw/ti_933_select_lift_deck.html
+Deck URL: https://gist.githack.com/mdunn-mntn/23125c48396b25f3459183af929de765/raw/ti_933_select_lift_deck.html
 
 ## 6. Questions Answered
 
@@ -149,8 +149,10 @@ _To be populated as work progresses. Anticipated: Select augmentor_log coverage 
 
 ## 8. Open Items / Follow-ups
 
-- **OOO overlap:** Malachi OOO 2026-05-09 to 2026-05-22 covers most of the sprint (sprint ends 05-18). Phase 1 + 2 should land before 05-09; Phase 3 + 4 likely resume on return 05-22, after sprint close. Coordinate with Ryan / Bryce on sprint-end status.
-- **Hannah's top-10 list:** Hannah is sending top-10 historical Select CGIDs. Most will be outside augmentor_log's 10-day TTL → unqueryable for the holdout method. File the list in `meetings/` for context but do not gate the analysis on it.
+- **v3 notebook ready** at [`artifacts/ti_933_select_lift_notebook_v3.py`](artifacts/ti_933_select_lift_notebook_v3.py) — fixes the per-impression attribution-window asymmetry (every IP gets a fixed `ATTRIBUTION_DAYS` lookahead from its first eligibility moment, vs the v2 fixed-calendar window). Ready to run for 14d if needed.
+- **14d window deferred** — could run overnight on the same Jobs Compute config. Not on critical path; 7d already has tight CIs.
+- **Per-advertiser readouts** — gated on ghost-bidder ([TI-886](https://mntn.atlassian.net/browse/TI-886)). Today we can run this analysis ad-hoc but it's a multi-hour Spark job; ghost-bidder makes per-customer numbers cheap and queryable from a logged ghost-bid table.
+- **Methodology lesson captured** in [`knowledge/experimentation.md`](../../../knowledge/experimentation.md) under "TI-933 — Per-impression attribution window" so the next ATT lift iteration gets it right.
 
 ## Critical Risks (from approved plan)
 
