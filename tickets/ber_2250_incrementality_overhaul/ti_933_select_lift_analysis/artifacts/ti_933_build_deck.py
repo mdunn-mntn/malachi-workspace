@@ -153,7 +153,7 @@ HTML = f"""<!DOCTYPE html>
 <section>
   <h2>The question</h2>
   <div class="quote-block" style="margin-top: 1.0em; font-size: 0.95em;">
-    "Did we look at Select campaigns separately? Select is geo + show targeting only &mdash; no audience scoring. Could be more incremental."
+    How incremental are our Select campaigns?
   </div>
   <p style="margin-top: 1.0em;">We tested this on every active Select advertiser with augmentor coverage in the window.</p>
 </section>
