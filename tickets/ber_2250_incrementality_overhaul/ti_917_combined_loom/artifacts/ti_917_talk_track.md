@@ -1,8 +1,8 @@
 # TI-917 — Loom talk track (word-for-word)
 
 **Audience:** TI team
-**Power Line:** *Lift is real for retargeting. Measurement is real for visits.*
-**Target runtime:** 20–23 min spoken (31 main slides + 8 appendix)
+**One-line summary:** v5 ghost-bidding lift results + Lewis-Rao power primer + screening rule for advertiser measurability (visits / CVR / iROAS).
+**Target runtime:** 22–25 min spoken (33 main slides + 8 appendix)
 **Format:** Loom — full-screen browser (deck) + face-cam pip
 **Note:** appendix slides 32–39 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take. Available if anyone asks.
 
@@ -30,13 +30,21 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 2 — Power Line
+## Slide 2 — What this covers
 
-> One sentence to take away: **lift is real for retargeting. Measurement is real for visits.** *[pause]* Everything in this Loom is what stands behind those two clauses.
+> Twenty-minute walkthrough for the TI team. Three sections.
+>
+> *[point at item 1]* The v5 ghost-bidding ATT lift results — thirty advertisers, four segments, seven-day window.
+>
+> *[point at item 2]* The Lewis-Rao power primer plus the variance-reduction stack — where MDE comes from, what determines minimum spend.
+>
+> *[point at item 3]* The screening rule we should run on any new advertiser before promising a readout.
+>
+> Skipping the appendix on first take — it has the full step-by-step derivation, a per-advertiser worked example, and the attribution wedge. There if anybody wants to dig in.
 
 *[advance]*
 
-**~20 sec**
+**~35 sec**
 
 ---
 
@@ -44,11 +52,11 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 > Two questions show up in every incrementality conversation, and we usually answer them in two different rooms.
 >
-> One — what is MNTN's lift? That's the v5 ghost-bidding result.
+> One — **did MNTN drive lift?** That's the v5 ghost-bidding result.
 >
-> Two — could we measure it if it weren't? That's the power analysis.
+> Two — **could we have detected lift if it existed?** That's the power analysis.
 >
-> A measured "no lift" only matters if we had the power to detect lift. The screening rule at the end is what falls out when we read both together.
+> A measured "no lift" only matters if we had the power to detect lift in the first place. The screening rule at the end is what falls out when we read both questions together.
 
 *[advance]*
 
@@ -240,7 +248,49 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 16 — Visit-rate $200k inflection
+## Slide 16 — Significance vs power: two different questions
+
+> Pause for a definition that comes up in every results conversation.
+>
+> **Significance** answers: "did we observe an effect unlikely to be chance?" Computed after the experiment, from the data. Inputs are the observed effect, sample size, and noise. Answers "was this result real?"
+>
+> **Power** answers: "if there's a true effect of size X, how likely are we to detect it?" Computed before the experiment, as a planning input. Inputs are the *hypothesized* effect, sample size, and noise. Answers "did we collect enough data?"
+>
+> *[pause]* Significance tells you **what happened**. Power tells you **what your test was capable of finding**. They're not the same question.
+>
+> The screening rule we're about to walk through — and everything from TI-884 — is a *power* check. It gates whether to *start* a test. It does not tell you how to *read* one. The next slide covers the reading-one half.
+
+*[advance]*
+
+**~50 sec**
+
+---
+
+## Slide 17 — Underpowered ≠ insignificant
+
+> Four quadrants. Two axes — was the test powered (a-priori), and did it come back significant (post-hoc).
+>
+> *[point at top-left]* **Powered AND significant.** Clean detection. The design worked, a real effect was found. This is what every well-designed experiment hopes for.
+>
+> *[point at top-right]* **Powered AND insignificant.** Strong evidence the true effect is small. Worth reporting — "we *would* have found it if it were there."
+>
+> *[point at bottom-left]* **Underpowered AND significant.** *[pause]* This one trips people up. The result is real — but the design didn't earn it. The actual effect was bigger than what the test was sized for. You got lucky.
+>
+> *[point at bottom-right]* **Underpowered AND insignificant.** Genuine "we don't know." Could be no effect; could be a small effect we couldn't see.
+>
+> Why this matters: a-priori power and post-hoc significance answer different questions. **Underpowered tests can still come back significant if the actual effect is large enough.** They just can't *promise* small effects will surface.
+>
+> *[pause]* When an exec asks "are these results trustworthy?" — the cleanest answer is: pooled estimates are rigorously powered. Per-advertiser results are available where the observed effect was large enough to clear the noise floor. We got the answer because the lift was big — not because the experiment was designed to find them.
+>
+> Hold on to this distinction. It's how you avoid the "but TI-884 said this advertiser was underpowered" objection on a test that came back positive.
+
+*[advance]*
+
+**~85 sec**
+
+---
+
+## Slide 18 — Visit-rate $200k inflection
 
 > First headline from the power side. *[pause]*
 >
@@ -254,7 +304,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 17 — The spend → MDE curve
+## Slide 19 — The spend → MDE curve
 
 > *[chart on screen]* Same content as a picture. Two definitions before we talk about the curves. *[pause]*
 >
@@ -282,7 +332,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 18 — Conversion-rate is in another league
+## Slide 20 — Conversion-rate is in another league
 
 > Conversions are not visits. Three operating points.
 >
@@ -302,7 +352,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 19 — What this means
+## Slide 21 — What this means
 
 > Three lines.
 >
@@ -318,7 +368,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 20 — Screening rule: visits & CVR
+## Slide 22 — Screening rule: visits & CVR
 
 > Operational section starts here. The screening rule has four steps. Two on this slide; two on the next.
 >
@@ -334,7 +384,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 21 — Screening rule: revenue & iROAS
+## Slide 23 — Screening rule: revenue & iROAS
 
 > Two harder checks.
 >
@@ -350,7 +400,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 22 — Story: a CS lead's question
+## Slide 24 — Story: a CS lead's question
 
 > Picture the moment. *[pause]* A CS lead pings the team Tuesday morning.
 >
@@ -366,7 +416,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 23 — The five-minute answer
+## Slide 25 — The five-minute answer
 
 > *[point at row 1]* Visits. Three-point-one-two M treated, three hundred forty-six K control, baseline visit rate four-point-eight-nine percent. mde_binomial returns one-point-three-two percent rel MDE. Well-powered.
 >
@@ -384,7 +434,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 24 — Calculator: one function call (the MDE direction)
+## Slide 26 — Calculator: one function call (the MDE direction)
 
 > The calculator is one Python file in the TI-884 artifacts folder. Three functions cover everything we'll do.
 >
@@ -404,7 +454,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 25 — From rate to spend: the inversion (educational)
+## Slide 27 — From rate to spend: the inversion (educational)
 
 > *[point at function name]* `spend_required` is the same Lewis-Rao math, solved for n instead of MDE — then converted to dollars.
 >
@@ -424,7 +474,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 26 — Recommended spend bands (educational)
+## Slide 28 — Recommended spend bands (educational)
 
 > Now the concrete numbers, with **round teaching parameters so the math is portable**. Target five percent relative MDE. Twenty-five-dollar CPM. **Ten** impressions per IP. Ten percent holdout. Raw and post-stack columns.
 >
@@ -460,7 +510,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 27 — iROAS chart: only 2 of 50
+## Slide 29 — iROAS chart: only 2 of 50
 
 > *[point at red dots]* Two red dots. The only two top-fifty advertisers well-powered for iROAS at current scale.
 >
@@ -476,7 +526,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 28 — iROAS thresholds
+## Slide 30 — iROAS thresholds
 
 > Two binding constraints. Both have to clear.
 >
@@ -492,7 +542,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 29 — What's next
+## Slide 31 — What's next
 
 > Roadmap, briefly.
 >
@@ -510,7 +560,7 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 30 — Three takeaways
+## Slide 32 — Three takeaways
 
 > *[point at 1]* Lift is real for retargeting. Plus twenty-one. Stage 1 alone is zero on guid visits in a seven-day window. Aggregates hide both.
 >
@@ -524,21 +574,23 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 
 ---
 
-## Slide 31 — Power Line + call to action
+## Slide 33 — Summary & references
 
-> *[pause]*
+> Wrapping up. Three findings.
 >
-> Lift is real for retargeting. *[pause]* Measurement is real for visits.
+> *[point at finding 1]* Retargeting drives the lift — plus twenty-one points guid at high intent. Pure Stage 1 prospecting reads near zero on guid in a seven-day window. Aggregate hides both.
 >
-> The ask: **pull every next advertiser through the screen** before promising a readout. Calculator and tier CSVs are linked at the bottom of the deck.
+> *[point at finding 2]* Methodology stack — Lewis-Rao plus ghost-ad plus CUPED plus stratified — gives us forty percent SE reduction. Same math for visits, CVR, and revenue.
 >
-> The screening rule turns the next "can we measure this client?" question into a five-minute conversation. *[pause]* Use it.
+> *[point at finding 3]* Visits clear the screening rule for forty-six of fifty top advertisers. CVR clears for eight. iROAS clears for two — and only when revenue is reported.
 >
-> Thanks team.
+> *[point at takeaway box]* The calculator and tier CSVs are linked at the bottom. Run any new advertiser through the screening rule before promising a readout.
+>
+> Questions in chat. Thanks.
 
 *[stop recording]*
 
-**~35 sec**
+**~50 sec**
 
 ---
 
@@ -549,13 +601,13 @@ Recording tip: don't read titles aloud. Lead with the idea. Drop hedges.
 | Hook & frame (1-3) | 3 | 1:20 |
 | Methodology (4-7) | 4 | 1:55 |
 | Results (8-11) | 4 | 2:25 |
-| Power + derivation (12-15) | 4 | 3:35 |
-| Spend thresholds (16-19) | 4 | 3:10 |
-| Min-spend rule + education (20-28) | 9 | 8:05 |
-| Close (29-31) | 3 | 1:55 |
-| **Total (main flow)** | **31** | **~22:25** |
+| Power: theory + interpretation (12-17) | 6 | 5:50 |
+| Spend thresholds (18-21) | 4 | 3:10 |
+| Min-spend rule + education (22-30) | 9 | 8:05 |
+| Close (31-33) | 3 | 1:55 |
+| **Total (main flow)** | **33** | **~24:40** |
 
-Real Loom recording typically runs 5–10% under estimate. **Realistic: 20–22 min.** Appendix slides 32–39 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take.
+Real Loom recording typically runs 5–10% under estimate. **Realistic: 22–24 min.** Appendix slides 34–41 (caveats, attribution wedge, full Lewis-Rao step-by-step + WGU worked example) are skipped on first take.
 
 ## Cialdini elements (where the deck and talk track lean on each)
 

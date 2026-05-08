@@ -84,23 +84,28 @@ NEW_SLIDES = {
 </section>
 """,
     "01_powerline": """
-<section class="center">
-  <h3 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.6em; color: var(--text-light);">TI-917 · BER-2250 · 2026-05-05</h3>
-  <p class="power-line" style="margin-top: 1.2em; font-size: 1.6em; line-height: 1.3;">
-    Lift is real for retargeting.<br>Measurement is real for visits.
-  </p>
-  <p class="footnote" style="margin-top: 1.6em;">For TI team. 20 min. Combined v5 results + power primer + screening rule.</p>
+<section>
+  <h3 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.6em; color: var(--text-light); text-align: center;">TI-917 · BER-2250 · 2026-05-08</h3>
+  <h1 style="margin-top: 0.6em; font-size: 1.6em; line-height: 1.2; text-align: center;">Combined v5 incrementality + power primer + screening rule</h1>
+  <p style="text-align: center; font-size: 0.8em; color: var(--navy); margin-top: 0.5em; font-weight: 600;">Malachi Dunn</p>
+  <div style="margin-top: 1.0em; font-size: 0.85em; line-height: 1.6;">
+    <p style="margin-bottom: 0.3em;"><strong>What this covers:</strong></p>
+    <p>1. v5 ghost-bidding ATT lift results &mdash; 30 advertisers, 4 segments, 7-day window</p>
+    <p>2. Lewis-Rao power primer + variance-reduction stack</p>
+    <p>3. Screening rule for advertiser measurability &mdash; visits, CVR, iROAS</p>
+  </div>
+  <p class="footer-note" style="margin-top: 1.0em;">Audience: TI team. ~20 min. Appendix (slides 34&ndash;41) skipped on first pass.</p>
 </section>
 """,
     "03_two_questions": """
 <section>
   <h2>Two questions, joined at the hip</h2>
   <div style="margin-top: 1.0em; font-size: 0.95em; line-height: 1.8;">
-    <p><strong>1. What is MNTN's lift?</strong> The v5 ghost-bidding result.</p>
-    <p><strong>2. Could we measure it if it weren't?</strong> The power analysis.</p>
+    <p><strong>1. Did MNTN drive lift?</strong> The v5 ghost-bidding result.</p>
+    <p><strong>2. Could we have detected lift if it existed?</strong> The power analysis.</p>
   </div>
   <div class="takeaway-box" style="margin-top: 1.0em;">
-    A measured "no lift" only matters if we had the power to detect lift. The screening rule at the end is what falls out when we read both together.
+    A measured "no lift" only matters if we had the power to detect lift in the first place. The screening rule at the end is what falls out when we read both together.
   </div>
 </section>
 """,
@@ -237,14 +242,21 @@ print(rel)                    # 0.0295</pre>
 </section>
 """,
     "29_close": """
-<section class="center">
-  <p class="power-line" style="font-size: 1.6em; line-height: 1.3;">
-    Lift is real for retargeting.<br>Measurement is real for visits.
-  </p>
-  <p style="margin-top: 1.4em; font-size: 0.95em; color: var(--text); font-weight: 600;">
-    Pull every next advertiser through the screen<br>before promising a readout.
-  </p>
-  <p class="footer-note" style="margin-top: 1.2em;">Calculator: <code>ti_884_mde_calculator.py</code> &middot; tier CSVs: <code>ti_884</code> &amp; <code>ti_917</code>.</p>
+<section>
+  <h2>Summary &amp; references</h2>
+  <div style="margin-top: 0.5em; font-size: 0.82em; line-height: 1.55;">
+    <p><strong>Findings:</strong></p>
+    <p>1. Retargeting drives the lift (+21pp guid at high intent). Pure Stage 1 prospecting reads ~0 on guid in a 7-day window. Aggregate hides both.</p>
+    <p>2. Methodology stack &mdash; Lewis-Rao + ghost-ad + CUPED + stratified &mdash; is a 40% SE reduction. Same math for visits, CVR, revenue.</p>
+    <p>3. Visits clear the screening rule for 46 of 50 top advertisers; CVR for 8; iROAS for 2 (and only when revenue is reported).</p>
+  </div>
+  <div class="takeaway-box" style="margin-top: 0.7em; font-size: 0.78em;">
+    <strong>Where to find things:</strong><br>
+    Calculator: <code>tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/artifacts/ti_884_mde_calculator.py</code><br>
+    Visit/CVR tiers: <code>ti_884_top50_mde_tiers.csv</code> &middot; iROAS tiers: <code>ti_917_revenue_mde_per_advertiser.csv</code><br>
+    Source decks: TI-837 v5 (lift), TI-884 (power), TI-917 (this combined Loom).
+  </div>
+  <p class="footer-note" style="margin-top: 0.6em;">Run any new advertiser through the screening rule before promising a readout. Questions in chat.</p>
 </section>
 """,
     "A1_appendix_header": """
@@ -344,6 +356,45 @@ spend        = impressions &middot; cpm / 1000</pre>
 </section>
 """,
 
+    # NEW educational slide — distinguishes significance (post-hoc) from power (a-priori)
+    "15b_significance_vs_power": """
+<section>
+  <h2>Significance vs power &mdash; two different questions</h2>
+  <p style="margin-top: 0.3em; font-size: 0.78em; color: var(--text-light);">Same words, different meanings. Worth keeping straight before reading any result.</p>
+  <table style="margin-top: 0.5em; font-size: 0.6em;">
+    <thead><tr><th></th><th>Significance</th><th>Power</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Question</strong></td><td>"Did we observe an effect unlikely to be chance?"</td><td>"If there's a true effect of size X, how likely are we to detect it?"</td></tr>
+      <tr><td><strong>Computed</strong></td><td>After the experiment, from the data</td><td>Before the experiment, as a planning input</td></tr>
+      <tr><td><strong>Answers</strong></td><td>"Was this result real?"</td><td>"Did we collect enough data to find the effect we expected?"</td></tr>
+      <tr><td><strong>Inputs</strong></td><td>observed effect + n + noise</td><td>hypothesized effect + n + noise</td></tr>
+    </tbody>
+  </table>
+  <div class="takeaway-box" style="margin-top: 0.7em; font-size: 0.82em;">
+    <strong>Significance tells you what happened. Power tells you what your test was capable of finding.</strong> The screening rule (next section) is a power check, not a significance check &mdash; it gates whether to <em>start</em> a test, not how to <em>read</em> one.
+  </div>
+</section>
+""",
+
+    # NEW educational slide — the 4-quadrant matrix + a-priori vs post-hoc framing.
+    "15c_underpowered_not_insignificant": """
+<section>
+  <h2>Underpowered ≠ insignificant &mdash; the four quadrants</h2>
+  <table style="margin-top: 0.4em; font-size: 0.62em;">
+    <thead><tr><th></th><th>Significant</th><th>Insignificant</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Powered</strong></td><td><span class="navy">Clean detection</span> &mdash; design worked, real effect found.</td><td><span class="navy">Strong evidence true effect is small.</span></td></tr>
+      <tr><td><strong>Underpowered</strong></td><td><span class="red">Got lucky</span> &mdash; actual effect was bigger than assumed. Result is real but design didn't earn it.</td><td><span class="gray">Couldn't tell either way.</span> The "we don't know" cell.</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top: 0.6em; font-size: 0.78em; line-height: 1.55;">
+    <p><strong>A-priori power</strong> (planning) ≠ <strong>post-hoc significance</strong> (reading).<br>
+       <span class="gray" style="margin-left: 1em;">Underpowered tests can still come back significant <em>if the actual effect is large</em>. They just can't promise <em>small</em> effects will surface.</span></p>
+    <p><strong>How to communicate this to execs:</strong> "Pooled estimates are rigorously powered. Per-advertiser results are available where the observed effect was large enough to clear the noise floor &mdash; we got the answer because the lift was big, not because the experiment was designed to find them."</p>
+  </div>
+</section>
+""",
+
     # NEW main-flow educational slide — derives MDE from the two-proportion z-test,
     # so the 2.80 constant on the variance-stack slide isn't a magic number.
     "13b_power_to_mde": """
@@ -420,6 +471,8 @@ PLAN = [
     ("884", 5),                      # If those tests were noise, what scale do we need
     ("new", "13b_power_to_mde"),     # NEW: derivation of MDE in one slide (the 2.80 explained)
     ("884", 19),                     # Variance-reduction stack — 40% SE reduction
+    ("new", "15b_significance_vs_power"),       # NEW: two questions, post-hoc vs a-priori
+    ("new", "15c_underpowered_not_insignificant"),  # NEW: the 4-quadrant matrix
     # Section 5 — Spend thresholds (4)
     ("884", 7),                      # Visit-rate measurability emerges around $200k/month (text setup)
     ("new", "17_spend_curve"),       # Regenerated chart — title now matches annotations

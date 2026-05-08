@@ -2,10 +2,11 @@
 
 **Jira:** https://mntn.atlassian.net/browse/TI-917
 **Parent:** TI-916 (absorbs TI-918 power-primer scope)
-**Status:** In Progress
+**Status:** Done (resolution: Done)
 **Date Started:** 2026-05-05
-**Date Completed:** —
+**Date Completed:** 2026-05-08
 **Assignee:** Malachi
+**Loom:** https://www.loom.com/share/4d2258ce292f444380345c57f4d52ecf
 
 ---
 
@@ -46,7 +47,7 @@ Two polished decks exist but live separately, so non-attendees got either the li
 **Combined deck (28 main slides + 4 appendix):**
 - Standalone HTML: `artifacts/ti_917_combined_deck_standalone.html` (790 KB, zero deps)
 - CDN dev version: `artifacts/ti_917_combined_deck.html`
-- Shareable URL: https://gist.githack.com/mdunn-mntn/00c42e0f4c68d85b39859cf9661e9889/raw/ti_917_combined_deck_standalone.html
+- Shareable URL: https://gist.githack.com/mdunn-mntn/9dbcf07d8928cacfb9e4bde9e7ce0b28/raw/ti_917_combined_deck_standalone.html
 - Source narrative + slide map: `artifacts/ti_917_combined_presentation.md`
 - Build script: `artifacts/build_combined_deck.py` (re-runnable)
 
