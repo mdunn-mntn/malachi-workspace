@@ -245,7 +245,7 @@ HTML = f"""<!DOCTYPE html>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Select cohort:</strong> <code>campaign_groups.product_id = 2</code> in coredb. 38 active advertisers in last 30d; 23 with measurable holdout/treated overlap in the 7d window. <strong>All 38 are a complete superset of the &quot;Select Live Campaigns&quot; advertisers list.</strong></p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Holdout assignment:</strong> 10% per-(advertiser, IP) hash. Identical to TI-917 v5; product-agnostic.</p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Biddability filter:</strong> 99.99% of Select-served IPs appear in <code>augmentor_log</code> &mdash; the filter applies cleanly to Select.</p>
-  <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Visit rate:</strong> guid_log (independent identity graph, no clickpass survivorship bias) within +3 days of impression window.</p>
+  <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>How we count a "visit":</strong> any IP that landed on the advertiser&#39;s website within 3 days of the ad-serving window. We use MNTN&#39;s identity graph (which sees site visits from any traffic source &mdash; search, social, direct, ads), not just MNTN-attributed clicks. This is the fair-comparison measure: visits get counted for both treated and holdout IPs alike, regardless of whether an MNTN ad ran.</p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Compute path:</strong> BigQuery hit the 6-hour wall three times. Ported to Spark on Databricks (Jobs Compute) using the airflow-ti <code>aug_log_ip</code> feature store output. Ran in ~3 hours on 400 cores. Materialized intermediate <code>ip_assigned</code> to GCS to avoid 3x prospecting scans.</p>
 </section>
 
