@@ -160,9 +160,9 @@ HTML = f"""<!DOCTYPE html>
 
 <!-- Slide 4: Cohort / Volume -->
 <section class="img-slide">
-  <h2 style="text-align: center;">38 active Select advertisers — all prospecting</h2>
+  <h2 style="text-align: center;">38 active Select advertisers — by 30-day impression volume</h2>
   <img src="data:image/png;base64,{volume_png}" alt="Volume by advertiser">
-  <p class="footer-note">Largest is $106k/mo (Masterbuilt). None individually clears TI-917's $200k/mo MDE floor &mdash; pooling is required for stat power.</p>
+  <p class="footer-note">All prospecting (zero retargeting). Largest is $106k/mo (Masterbuilt). None individually clears TI-917's $200k/mo MDE floor &mdash; pooling is required for stat power.</p>
 </section>
 
 <!-- Slide 5: Per-advertiser power -->

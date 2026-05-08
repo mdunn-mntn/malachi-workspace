@@ -66,11 +66,12 @@ def chart_volume_by_advertiser():
     ax.set_yticks(y)
     ax.set_yticklabels(names, fontsize=10)
     ax.invert_yaxis()
-    ax.set_xlabel("Impressions, last 30 days (millions)", fontsize=10, color="#444")
+    ax.set_xlabel("Impressions served, last 30 days (millions)", fontsize=12, color="#222", fontweight="bold", labelpad=10)
+    ax.tick_params(axis="x", labelsize=10, colors="#444")
     # Direct labels: impressions in M and monthly $ on the right
     for i, (im, m) in enumerate(zip(imps, monthly)):
         ax.text(im + max(imps) * 0.012, i,
-                f"{im:.1f}M  ·  ${m:,.0f}k/mo",
+                f"{im:.1f}M imps  ·  ${m:,.0f}k/mo spend",
                 va="center", fontsize=9, color="#222")
     ax.set_xlim(0, max(imps) * 1.32)
     # Hide y-axis line for cleanliness
