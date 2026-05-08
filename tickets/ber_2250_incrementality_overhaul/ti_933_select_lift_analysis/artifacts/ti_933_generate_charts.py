@@ -175,11 +175,13 @@ def chart_pooled_lift():
     if select_lift is not None and select_lo is not None and select_hi is not None:
         ax.errorbar([labels[-1]], [select_lift], yerr=[[select_lift - select_lo], [select_hi - select_lift]],
                     fmt="none", ecolor="#222", capsize=6, capthick=1.2, elinewidth=1.2)
-    # Direct labels on each bar
+    # Direct labels on each bar — always placed above the bar (or above zero for tiny
+    # negative bars) so they never collide with the x-axis tick labels below.
     for bar, v in zip(bars, values):
-        ax.text(bar.get_x() + bar.get_width() / 2, v + (0.6 if v >= 0 else -1.2),
+        label_y = max(v, 0) + 0.6
+        ax.text(bar.get_x() + bar.get_width() / 2, label_y,
                 f"{v:+.2f}pp" if v != 0 else "n/a",
-                ha="center", va="bottom" if v >= 0 else "top",
+                ha="center", va="bottom",
                 fontsize=10, fontweight="bold", color=bar.get_facecolor() if v != 0 else GRAY)
     ax.axhline(0, color="#444", linewidth=0.7)
     ax.set_ylabel("Visit-rate lift, percentage points", fontsize=10, color="#444")

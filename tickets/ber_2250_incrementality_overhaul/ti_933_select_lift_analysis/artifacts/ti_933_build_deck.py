@@ -248,9 +248,6 @@ HTML = f"""<!DOCTYPE html>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Biddability filter:</strong> 99.99% of Select-served IPs appear in <code>augmentor_log</code> &mdash; the filter applies cleanly to Select.</p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Visit rate:</strong> guid_log (independent identity graph, no clickpass survivorship bias) within +3 days of impression window.</p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Compute path:</strong> BigQuery hit the 6-hour wall three times. Ported to Spark on Databricks (Jobs Compute) using the airflow-ti <code>aug_log_ip</code> feature store output. Ran in ~3 hours on 400 cores. Materialized intermediate <code>ip_assigned</code> to GCS to avoid 3x prospecting scans.</p>
-  <div class="takeaway-box" style="margin-top: 0.4em; font-size: 0.78em;">
-    <strong>Caveat for execs:</strong> the per-(AID, IP) holdout doesn&#39;t restrict denominator to in-DMA. Holdout includes some out-of-DMA IPs that wouldn&#39;t have been served even without holdout. Bias is <strong>toward zero</strong> &mdash; Select&#39;s true lift is at least as large as +2.06pp.
-  </div>
 </section>
 
 <!-- Slide 11: Close / Power Line -->
