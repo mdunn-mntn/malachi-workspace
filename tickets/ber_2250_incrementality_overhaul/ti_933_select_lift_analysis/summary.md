@@ -91,17 +91,50 @@ The 20 xlsx-only advertisers either have zero recent impressions (campaigns not 
 
 Output: `outputs/ti_933_xlsx_vs_our_cohort.csv` (58 rows).
 
-### 4.4 Pooled Select lift (Phase 3 — in progress)
+### 4.4 Pooled Select lift (Phase 3 — DONE 2026-05-07)
 
-_Filling in once the lift query lands. Pre-registered expectations:_
+**Compute path:** BigQuery hit the 6-hour interactive-query wall on three attempts (v1 partition-pruning bug, v2 timed out parallel, v3 timed out alone — all ~73% complete at S15/S0D Output stage with 9-34B records being shuffled). Ported to Spark on Databricks Jobs Compute. Victor (DE) revised my notebook with two key optimizations: (1) substitute the airflow-ti `aug_log_ip` feature-store output for raw `augmentor_log` (much smaller; same biddability filter), (2) materialize `ip_assigned` to GCS parquet sorted by bucket so the holdout/targeted/wr_bucket splits don't re-scan the prospecting universe 3×. Ran on a 400-core c3d-highmem cluster in ~3 hours.
 
-- Pooled visit-rate lift (guid) is the headline number.
-- Per-advertiser CIs will mostly span zero — confirm this.
-- Conversion-rate lift will likely have wide CIs because Select is awareness-focused (low conversion volume per advertiser).
+**Result:** pooled across 23 active Select advertisers (the other 15 of 38 had no biddable-holdout / served-treatment overlap in the 7d window), 7-day window 2026-04-29 → 2026-05-05.
+
+| Metric | Treated rate | Holdout rate | Lift | 95% CI | Sig |
+|--------|------------:|-------------:|-----:|--------|-----|
+| **Visit rate (guid)** | 2.6334% | 0.5782% | **+2.055 pp** | [+2.011, +2.100] | YES |
+| Visit rate (clickpass) | 1.6650% | 0.0096% | +1.655 pp | [+1.634, +1.676] | (biased — needs MNTN imp) |
+| **Conversion rate** | 0.1447% | 0.0048% | **+0.140 pp** | [+0.133, +0.147] | YES |
+
+Treated arm: 1,513,123 IPs. Holdout arm: 167,257 IPs.
+
+**Comparison to TI-917 baselines:**
+
+| Segment | Visit-rate lift |
+|---------|----------------:|
+| All campaigns (TI-917) | +3.12 pp |
+| Prospecting (TI-917) | +0.78 pp |
+| Stage 1 only (TI-917) | -0.06 pp |
+| Retargeting (TI-917) | +21.07 pp |
+| **MNTN Select (this ticket)** | **+2.055 pp** |
+
+Select sits between "all campaigns" and prospecting, well above prospecting-only. **Result Branch 1 from the deck framing: Select IS incremental.**
+
+**Per-advertiser power:** 0 / 23 advertisers have CIs that exclude zero individually. Largest single Select advertiser by treated IPs is AID 41034 (Hugo Insurance) at 437,262 IPs — still under the volume needed for individual stat power. Pooled is the only viable headline number until ghost-bidder lands.
+
+### 4.5 Deck
+
+Standalone RevealJS deck at [`artifacts/ti_933_select_lift_deck.html`](artifacts/ti_933_select_lift_deck.html), 11 slides. Power Line: "MNTN Select drives +2.06 percentage point visit-rate lift." Three-act: question → numbers → action.
+
+Shared via githack: https://gist.githack.com/mdunn-mntn/4dd99adf8c6cb75b8f2d996cc5cabae4/raw/ti_933_select_lift_deck.html
 
 ## 5. Solution
 
-_TBD._
+**Pooled MNTN Select visit-rate lift = +2.055 pp (95% CI [+2.011, +2.100])**, conversion-rate lift = +0.140 pp (95% CI [+0.133, +0.147]). Both significant. Select is incremental.
+
+Action recommendations delivered in the deck's slide 9:
+- **DO:** treat Select as confirmed-incremental; sell pooled (not per-advertiser) results until ghost-bidder lands
+- **CONSIDER:** layer intent scoring on Select inventory as a possible easy-mode lift bump
+- **UNLOCK:** ghost-bidder (TI-886) is the path to per-advertiser readouts
+
+Deck URL: https://gist.githack.com/mdunn-mntn/4dd99adf8c6cb75b8f2d996cc5cabae4/raw/ti_933_select_lift_deck.html
 
 ## 6. Questions Answered
 
