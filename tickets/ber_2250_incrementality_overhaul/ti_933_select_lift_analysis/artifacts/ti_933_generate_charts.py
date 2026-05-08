@@ -67,10 +67,6 @@ def chart_volume_by_advertiser():
     ax.set_yticklabels(names, fontsize=10)
     ax.invert_yaxis()
     ax.set_xlabel("Impressions, last 30 days (millions)", fontsize=10, color="#444")
-    ax.set_title("Top 20 active MNTN Select advertisers by impression volume",
-                 fontsize=14, fontweight="bold", color=NAVY, loc="left", pad=14)
-    ax.text(0, 1.04, f"Last 30 days · 38 active advertisers · all prospecting",
-            transform=ax.transAxes, fontsize=9, color=GRAY)
     # Direct labels: impressions in M and monthly $ on the right
     for i, (im, m) in enumerate(zip(imps, monthly)):
         ax.text(im + max(imps) * 0.012, i,
@@ -187,11 +183,6 @@ def chart_pooled_lift():
                 fontsize=10, fontweight="bold", color=bar.get_facecolor() if v != 0 else GRAY)
     ax.axhline(0, color="#444", linewidth=0.7)
     ax.set_ylabel("Visit-rate lift, percentage points", fontsize=10, color="#444")
-    ax.set_title("MNTN Select lift vs prior segments (visit rate, 7 days)",
-                 fontsize=14, fontweight="bold", color=NAVY, loc="left", pad=14)
-    ax.text(0, 1.04,
-            f"Pooled across 38 Select advertisers · 2026-04-29 to 2026-05-05 · 95% CI on Select bar",
-            transform=ax.transAxes, fontsize=9, color=GRAY)
     ax.grid(axis="y", linestyle=":", linewidth=0.5, alpha=0.4)
     ax.spines["bottom"].set_visible(True)
     fig.tight_layout()
@@ -270,10 +261,6 @@ def chart_per_advertiser_power(metrics_pooled):
         ax.text(max(xs) * 0.98, pooled_lift, f"  pooled = {pooled_lift:+.2f}pp", color=NAVY, fontsize=9, va="bottom", ha="right")
     ax.set_xlabel("Monthly equivalent spend, $k", fontsize=10, color="#444")
     ax.set_ylabel("Visit-rate lift, percentage points (guid)", fontsize=10, color="#444")
-    ax.set_title("Per-advertiser Select lift — none individually powered, pooled is",
-                 fontsize=14, fontweight="bold", color=NAVY, loc="left", pad=14)
-    ax.text(0, 1.04, f"38 active Select advertisers · 7-day window · red = 95% CI excludes zero",
-            transform=ax.transAxes, fontsize=9, color=GRAY)
     ax.grid(axis="both", linestyle=":", linewidth=0.5, alpha=0.4)
     fig.tight_layout()
     fig.savefig(ART / "ti_933_chart_per_advertiser_power.png", bbox_inches="tight")

@@ -144,7 +144,7 @@ HTML = f"""<!DOCTYPE html>
   <h1 style="margin-top: 0.6em; font-size: 1.6em; line-height: 1.2; text-align: center;">Is MNTN Select incremental — and what do we do?</h1>
   <div style="margin-top: 1.0em; font-size: 0.85em; line-height: 1.6;">
     <p style="margin-bottom: 0.3em;"><strong>Follow-up to TI-917.</strong> Same ATT-style 10% biddable-holdout method, cohort filtered to <code>campaign_groups.product_id = 2</code>.</p>
-    <p>Window: 2026-04-29 → 2026-05-05 (7 days). Run on Databricks (BQ couldn't &mdash; 6-hour wall).</p>
+    <p>Window: 2026-04-29 &rarr; 2026-05-05 (7 days).</p>
   </div>
   <p class="footer-note" style="margin-top: 1.0em;">Three takeaways: incremental, no per-advertiser power, action follows.</p>
 </section>
@@ -156,7 +156,6 @@ HTML = f"""<!DOCTYPE html>
     "Did we look at Select campaigns separately? Select is geo + show targeting only &mdash; no audience scoring. Could be more incremental."
   </div>
   <p style="margin-top: 1.0em;">We tested this on every active Select advertiser with augmentor coverage in the window.</p>
-  <p style="margin-top: 0.5em;"><strong>The real question for execs is not "what's the lift?" &mdash; it's "what should we do about Select?"</strong> This deck answers both.</p>
 </section>
 
 <!-- Slide 4: Cohort / Volume -->
