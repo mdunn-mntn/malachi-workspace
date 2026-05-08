@@ -1273,3 +1273,30 @@ Target 5% relative MDE, $25 CPM, 10 imps/IP, 10% holdout. Both columns (raw and 
 Both directions live in the same calculator file. The variance-reduction stack (post-stack `var_reduction=0.595`) is canonical and should be used as the default post-stack value across all calls.
 
 **See also:** [TI-917 combined deck](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/artifacts/ti_917_combined_deck_standalone.html); [revenue MDE per advertiser](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/outputs/ti_917_revenue_mde_per_advertiser.csv).
+
+## TI-933 — Per-impression attribution window (lesson learned)
+
+**Issue surfaced 2026-05-07** while building the Select lift deck.
+
+In the TI-917 / TI-933 ATT lift methodology, the visit window is set as a **fixed calendar range** (e.g., 2026-04-29 → 2026-05-08 for the Select 7d analysis: 7-day impression window + 3-day post-period). The query then attributes any visit within that calendar range to the impression.
+
+**The unintended consequence:** each impression gets a *different* number of attribution days depending on when in the impression window it served:
+
+| Impression date | Days available for visit attribution |
+|---|---:|
+| Day 1 of impression window | up to 9 days (full +3 post-period plus the rest of the impression window) |
+| Mid-window | ~6 days |
+| Last day of impression window | exactly 3 days |
+
+This **does not bias the lift estimate** — both treated and holdout arms are evaluated against the same calendar window, so the asymmetry cancels in the difference. But it's methodologically inelegant and makes the per-impression "attribution window" claim ambiguous when explained to non-statistical audiences.
+
+**Fix for next time:** instead of a fixed calendar visit window, give every impression a **constant per-impression lookahead** — e.g., 3 or 7 days starting from the impression's own timestamp. Possible implementations:
+
+1. **Per-row attribution:** join cost_imp_log to visit logs with a temporal predicate `visit.time BETWEEN impression.time AND impression.time + INTERVAL 3 DAY`. Slightly more complex query, fully consistent attribution per impression.
+2. **Cohort-style binning:** bin impressions by day, run separate attribution per cohort, average. Simpler but gives less per-impression precision.
+
+Option 1 is preferred — same SQL pattern works in both BQ and Spark. The win-rate denominator subsampling needs to be revisited in this design (probably stays per-(advertiser, IP) but now we're double-attributing IPs that got served on multiple days; need to dedup).
+
+**For the holdout arm:** the equivalent is "if this IP had been served on day X, would it have visited within X+3 days?" This is harder to define without a counterfactual impression timestamp. Two reasonable choices: (a) treat the entire visit window as eligible (current behavior), or (b) randomly assign each holdout IP a "would-have-been-served" date drawn from the impression-day distribution and apply the same +3 lookahead. Option (b) makes treated and holdout fully symmetric on attribution-window length.
+
+**Why we shipped without the fix:** the asymmetry doesn't bias the result, deck timeline pressure, and Victor's Spark run was already well-optimized. Logging this so the next iteration (likely once ghost-bidder lands) gets it right.

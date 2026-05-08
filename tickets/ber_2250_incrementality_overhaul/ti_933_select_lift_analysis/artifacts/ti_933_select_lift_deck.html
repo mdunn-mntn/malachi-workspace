@@ -170,7 +170,6 @@
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Holdout assignment:</strong> 10% per-(advertiser, IP) hash. Identical to TI-917 v5; product-agnostic.</p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Biddability filter:</strong> 99.99% of Select-served IPs appear in <code>augmentor_log</code> &mdash; the filter applies cleanly to Select.</p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>How we count a "visit":</strong> an IP that landed on the advertiser&#39;s site between April 29 and May 8 &mdash; same window for treated and holdout. Detected via MNTN&#39;s identity graph (any traffic source, not just MNTN-attributed clicks).</p>
-  <p style="margin-top: 0.3em; font-size: 0.75em; color: var(--text-light); font-style: italic;"><strong>Known limitation, fix next time:</strong> each impression gets 3-9 attribution days depending on when it served (later impressions get fewer). Affects both arms equally, so the lift comparison is fair &mdash; but the next iteration should fix every impression to a constant 3 or 7-day window.</p>
   <p style="margin-top: 0.4em; font-size: 0.8em;"><strong>Compute path:</strong> BigQuery hit the 6-hour wall three times. Ported to Spark on Databricks (Jobs Compute) using the airflow-ti <code>aug_log_ip</code> feature store output. Ran in ~3 hours on 400 cores. Materialized intermediate <code>ip_assigned</code> to GCS to avoid 3x prospecting scans.</p>
 </section>
 
