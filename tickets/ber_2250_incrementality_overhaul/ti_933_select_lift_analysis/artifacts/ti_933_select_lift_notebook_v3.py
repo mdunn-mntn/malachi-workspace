@@ -35,7 +35,7 @@
 
 # COMMAND ----------
 
-WINDOW = "7d"          # "7d", "14d", or "1d" (smoke)
+WINDOW = "14d"         # "7d", "14d", or "1d" (smoke)
 ATTRIBUTION_DAYS = 7   # per-IP visit attribution window length, in days
 
 # Spark conf (carried from v2)
