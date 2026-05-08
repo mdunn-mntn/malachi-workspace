@@ -14,8 +14,9 @@
 # MAGIC    Both are "first day we could have served this IP." Visits are attributed
 # MAGIC    in `[anchor, anchor + ATTRIBUTION_DAYS]`. Every IP gets the same window length.
 # MAGIC
-# MAGIC 2. **`ATTRIBUTION_DAYS` parameter** (default 3). Set to 7 if you want the
-# MAGIC    longer attribution window for a more inclusive read.
+# MAGIC 2. **`ATTRIBUTION_DAYS` parameter** (default 7). 7d gives each impression a
+# MAGIC    full week of attributable visits — more inclusive read than the previous
+# MAGIC    3-day post-period convention.
 # MAGIC
 # MAGIC 3. **14d-ready.** Same WINDOW="14d" toggle as v2; output goes to the same
 # MAGIC    GCS path but with `_v3` suffix on the result subdirectory so v2 and v3
@@ -32,7 +33,7 @@
 # COMMAND ----------
 
 WINDOW = "7d"          # "7d", "14d", or "1d" (smoke)
-ATTRIBUTION_DAYS = 3   # per-IP visit attribution window length, in days
+ATTRIBUTION_DAYS = 7   # per-IP visit attribution window length, in days
 
 # Spark conf (carried from v2)
 spark.conf.set("spark.sql.files.maxPartitionBytes", "536870912")  # 512 MB
