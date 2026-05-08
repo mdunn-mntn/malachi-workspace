@@ -248,13 +248,30 @@ def chart_per_advertiser_power(metrics_pooled):
     his = [r["hi_pp"] - r["lift_pp"] if r["hi_pp"] is not None else 0 for r in rows_out]
     sig_mask = [r["lo_pp"] is not None and (r["lo_pp"] > 0 or r["hi_pp"] < 0) for r in rows_out]
 
-    for x, y, lo, hi, s, r in zip(xs, ys, los, his, sig_mask, rows_out):
+    # Determine which dots get labels. Showing every label causes overlap in the
+    # lower-left cluster. Strategy: label significant advertisers in the top-N by
+    # lift OR by spend, and skip the cluster of small-spend / small-lift advertisers
+    # (they're significant but visually undifferentiated).
+    sig_indices = [i for i, s in enumerate(sig_mask) if s]
+    top_by_lift = sorted(sig_indices, key=lambda i: -rows_out[i]["lift_pp"])[:8]
+    top_by_spend = sorted(sig_indices, key=lambda i: -rows_out[i]["monthly_equiv_spend"])[:6]
+    label_set = set(top_by_lift) | set(top_by_spend)
+
+    for idx, (x, y, lo, hi, s, r) in enumerate(zip(xs, ys, los, his, sig_mask, rows_out)):
         color = RED if s else GRAY
         ax.errorbar([x], [y], yerr=[[lo], [hi]], fmt="o", color=color,
                     ecolor=color, capsize=3, alpha=0.85, markersize=7)
-        if s:
-            ax.annotate(r["advertiser_name"], (x, y), textcoords="offset points", xytext=(7, 3),
-                        fontsize=9, color=RED, fontweight="bold")
+        if s and idx in label_set:
+            # Right-half dots get left-aligned labels; left-half dots get right-aligned
+            x_mid = (max(xs) + min(xs)) / 2
+            if x > x_mid:
+                ax.annotate(r["advertiser_name"], (x, y),
+                            textcoords="offset points", xytext=(-8, 4),
+                            fontsize=8, color=RED, fontweight="bold", ha="right")
+            else:
+                ax.annotate(r["advertiser_name"], (x, y),
+                            textcoords="offset points", xytext=(8, 4),
+                            fontsize=8, color=RED, fontweight="bold", ha="left")
 
     ax.axhline(0, color="#444", linewidth=0.7)
     # Pooled line
