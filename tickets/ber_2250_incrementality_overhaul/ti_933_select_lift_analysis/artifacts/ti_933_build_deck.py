@@ -134,7 +134,7 @@ HTML = f"""<!DOCTYPE html>
   <p style="font-size: 1.5em; color: var(--navy); font-weight: 700; line-height: 1.4; letter-spacing: -0.01em;">
     MNTN Select drives <span class="red">+2.06 percentage point</span><br>
     visit-rate lift.<br>
-    <span style="font-size: 0.7em; color: var(--text-light); font-weight: 500;">Significant. Pooled across 23 active advertisers, 7 days.</span>
+    <span style="font-size: 0.7em; color: var(--text-light); font-weight: 500;">Significant. Pooled across 22 active advertisers, 7 days.</span>
   </p>
 </section>
 
@@ -169,7 +169,7 @@ HTML = f"""<!DOCTYPE html>
 <section class="img-slide">
   <h2 style="text-align: center;">No single Select advertiser is individually powered</h2>
   <img src="data:image/png;base64,{power_png}" alt="Per-advertiser lift">
-  <p class="footer-note">Each dot is one advertiser's lift estimate; error bars are its 95% CI. Each individual CI spans zero &mdash; we have estimates, but no single advertiser is significantly incremental on its own. Pooling all 23 together (dashed line, +2.06pp) is significant because the combined sample size is much larger.</p>
+  <p class="footer-note">Each dot is one advertiser's lift estimate; error bars are its 95% CI. <strong>17 of 22 advertisers are individually significantly positive</strong> (CI excludes zero); 5 span zero. The pooled estimate (dashed line, +2.06pp) averages across all 22 and is the headline because it has the tightest CI.</p>
 </section>
 
 <!-- Slide 6: The Pooled Lift Bar Chart (compared to TI-917 baselines) -->
@@ -198,7 +198,7 @@ HTML = f"""<!DOCTYPE html>
           <td class='num'>{pct(pooled_h['clickpass_rate'])}%</td>
           <td class='num'>{cp_lift:+.3f}pp</td>
           <td class='num'>[{cp_lo:+.3f}, {cp_hi:+.3f}]</td>
-          <td><span class='pill pill-gray'>biased*</span></td></tr>
+          <td><span class='pill pill-gray'>undercount*</span></td></tr>
       <tr><td><strong>Conversion rate</strong></td>
           <td class='num'>{pct(pooled_t['ui_conv_rate'])}%</td>
           <td class='num'>{pct(pooled_h['ui_conv_rate'])}%</td>
@@ -208,7 +208,7 @@ HTML = f"""<!DOCTYPE html>
     </tbody>
   </table>
   <p class="footer-note" style="margin-top: 0.5em;">
-    Treated arm: {int(pooled_t['n_ips']):,} IPs. Holdout arm: {int(pooled_h['n_ips']):,} IPs. *Clickpass requires an MNTN impression to fire, biasing the holdout to ~zero. Guid is the honest measure.
+    Treated arm: {int(pooled_t['n_ips']):,} IPs. Holdout arm: {int(pooled_h['n_ips']):,} IPs. *Clickpass requires an MNTN impression to fire, so it can&#39;t see holdout visits and undercounts treated visits too &mdash; the apparent lift is conservative. Guid is the honest measure.
   </p>
   <div class="takeaway-box" style="margin-top: 0.6em;">
     <strong>Read:</strong> Select is genuinely incremental on visits AND conversions. Both 95% CIs exclude zero with comfortable margin. Select genuinely drives lift.
