@@ -169,7 +169,7 @@ HTML = f"""<!DOCTYPE html>
 <section class="img-slide">
   <h2 style="text-align: center;">No single Select advertiser is individually powered</h2>
   <img src="data:image/png;base64,{power_png}" alt="Per-advertiser lift">
-  <p class="footer-note">Each dot is one advertiser; error bars are too wide to call individually. Pooled across all 23 (dashed line) is +2.06pp and significant &mdash; we can measure Select as a whole, not per-advertiser.</p>
+  <p class="footer-note">Each dot is one advertiser's lift estimate; error bars are its 95% CI. Each individual CI spans zero &mdash; we have estimates, but no single advertiser is significantly incremental on its own. Pooling all 23 together (dashed line, +2.06pp) is significant because the combined sample size is much larger.</p>
 </section>
 
 <!-- Slide 6: The Pooled Lift Bar Chart (compared to TI-917 baselines) -->
