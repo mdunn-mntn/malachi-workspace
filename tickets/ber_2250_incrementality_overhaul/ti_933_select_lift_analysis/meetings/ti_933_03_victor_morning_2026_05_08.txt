@@ -1,0 +1,330 @@
+[00:00] Uh, set it up or, um, I'd like, yeah, because just so, um, yeah, we can do it.
+[00:09] I just, yeah, not much set up there, but yeah, okay, yeah, that would be, that'd be great.
+[00:15] Yeah.
+[00:15] I just sent it your way.
+[00:16] Um, it should be, I based it off of the V2.
+[00:19] So based on V2, yeah, sorry.
+[00:25] The one, the notebook that you created.
+[00:27] So I just modified the, the version two, one that you did, um, to be 14 days.
+[00:33] And then, like I said, change that little window, but otherwise it should be the same as the,
+[00:38] the one that you ran last night.
+[00:39] Yeah.
+[00:40] Just, I'll download it.
+[00:45] And, um, give me a moment.
+[00:55] Okay.
+[01:19] I'm sharing my screen.
+[01:21] Uh, yes.
+[01:25] Yeah, let me know if you are able to see it.
+[01:30] Yeah.
+[01:31] So it's the same, just, just new, new windows here, right?
+[01:35] Uh, yeah, this one's right window.
+[01:37] And yeah, got it.
+[01:39] You want it six days.
+[01:44] Okay.
+[01:46] Rest of it unchanged.
+[01:50] Yes.
+[01:52] Yep.
+[01:53] It should be four.
+[01:54] Yeah.
+[01:54] So we're changing it to, um, 14 day window instead of the seven for the augmenter log.
+[02:01] And then, um, yeah, like I said, just the amount of time that they get around each impression has,
+[02:10] um,
+[02:13] The only thing I debated yesterday to make one more change to speed it up, but probably will not,
+[02:19] um, if data is good, yeah, I will not risk it.
+[02:22] Uh, the only thing I would probably change is increase this one.
+[02:27] Uh, just a moment.
+[02:37] Open existing.
+[02:49] I didn't want it to have too many, uh,
+[02:59] too many partitions.
+[03:00] And so, so you wanted to put it this way, window ID, these three.
+[03:05] Nice.
+[03:06] Nice.
+[03:07] So we're ready to run it, right?
+[03:10] Yeah.
+[03:10] I think it should be ready to run.
+[03:11] I mean, I didn't test it, but it's the same thing as the other one.
+[03:14] Oh, displays.
+[03:16] It's fine.
+[03:17] It's, uh, we are reading from results, but it's tiny, right?
+[03:20] So yeah, it should be good.
+[03:23] Should be good.
+[03:25] So majority, most of the time, like huge part of the time takes just this, uh, safe.
+[03:32] No, no, no.
+[03:33] This one, this one, this one is good.
+[03:35] This one, this one is, uh, will take all the time.
+[03:38] Yeah.
+[03:38] The cohort plus holdout target assignment.
+[03:41] Yeah.
+[03:42] Yeah.
+[03:43] This one, right?
+[03:44] So it's, uh, the rest of it is tiny.
+[03:47] So yeah.
+[03:48] How, how would I schedule?
+[03:49] I just don't do much here.
+[03:53] I usually have this job, which I, my Victor ad hoc, right.
+[04:00] I'll, I'll just modify, uh, my Victor ad hoc.
+[04:06] I've set it up once, right.
+[04:08] And then I just, uh, look at tasks and modify tasks.
+[04:14] So right now this is V2, right?
+[04:18] I'm just saying that, okay, let me, let me do this, this one, V3, right?
+[04:26] Confirm.
+[04:29] And because it's bigger, much, it's twice as much data.
+[04:36] And the data is massive.
+[04:38] I am, I'll go, I'm going to increase.
+[04:45] Oh, save.
+[04:46] So what I do is just modify stuff, right.
+[04:49] And edit cluster size.
+[04:57] Probably I'll put 30, 35.
+[05:09] Yeah, it should be good.
+[05:12] Enable auto-scaling.
+[05:14] That's my, it might to understand that if this takes two hours to run,
+[05:18] that this could be as expensive as like $120.
+[05:23] I've checked yesterday.
+[05:25] It costed, uh, $35 in Databricks charges, but probably even less.
+[05:35] Gotcha.
+[05:35] Okay.
+[05:36] And, uh, probably, uh, let, let, let me check.
+[05:41] Uh, let me show, I'll start and then we will check the price if you want.
+[05:47] Okay.
+[05:47] Yeah.
+[05:49] So, uh, 35, eight.
+[05:55] So yeah, I, and I put, uh, tags and that's it, right.
+[05:59] So important to put a job compute here policy.
+[06:02] Okay.
+[06:03] So confirm.
+[06:05] What, so what I do, I have this, uh, job.
+[06:09] So that not to spend too much time setting up, right.
+[06:13] I have one of them.
+[06:15] Uh, and I just modify the, which notebook I'm running here in which I need.
+[06:22] So that's why it takes, uh, so now I'm saving it.
+[06:27] And.
+[06:32] Successfully stealth and run now.
+[06:36] Just let me double check it.
+[06:38] It's correct.
+[06:38] So V3, we have modified this one, so we should be, we should be good costs, right?
+[06:55] So v3, we have modified this one.
+[07:00] So we should be,
+[07:03] we should be good.
+[07:05] Cost, right?
+[07:09] So, yesterday all my experimentation and all of that, right, on my purpose, I did a small
+[07:15] On my productivity.
+[07:19] Before, when I made sure that, uh, again, it did and auto-identifier.
+[07:26] Yeah.
+[07:27] And he could follow up other things as well.
+[07:31] I did a small test on my, uh, all-purpose cluster, but it took no more than 35 bucks.
+[07:44] And let's, let me check it on GCP site where it is.
+[07:47] Okay.
+[08:00] Victor, where did you work before Mountain?
+[08:04] A company called Genesis.
+[08:06] Did you learn a lot of the stuff at Genesis or was it prior to that?
+[08:11] Some, something there, something's prior.
+[08:14] In Genesis, I didn't work with that massive data.
+[08:18] So, um, I, I learned quite a few things here too.
+[08:27] So, uh, if I go to the Google cloud console.
+[08:32] Okay.
+[08:34] As usual.
+[08:36] Oh yeah.
+[08:36] I need to set that up because I still have the auth, authenticator, which I'm a huge fan of.
+[08:42] Yeah.
+[08:44] Yeah.
+[08:45] I remember, uh, my, one of my previous companies when I worked at GoDaddy is to have, uh, they
+[08:51] give us, it was company provided, you'd be key, you know, when you inserted to use BC slot and it
+[08:58] stayed there all the time.
+[09:01] I thought it was cool.
+[09:03] Uh, so is it running?
+[09:07] Let me check.
+[09:11] What's up with our run.
+[09:12] Good.
+[09:19] What's up with our run?
+[09:42] Yeah, so it's not, not that big of a deal at all.
+[10:00] So, uh, so May 7th, it's yesterday, right?
+[10:05] Yeah.
+[10:07] In total, but compute engine.
+[10:11] Whoa.
+[10:11] Cloud storage.
+[10:12] Why, why do we spend so much on cloud storage?
+[10:17] I'll need to check it.
+[10:18] We shouldn't be starting anything there.
+[10:21] Huh?
+[10:22] Oh, okay.
+[10:22] I was like, I was going to say, well, I don't think I did anything cloud storage, but I did
+[10:25] run two of those.
+[10:26] Um, the same thing that you're running, I ran on big query twice, but it didn't store anything.
+[10:32] Cause it didn't complete.
+[10:34] I mean, I don't know.
+[10:35] Maybe it has, does, does it store stuff in intermediary?
+[10:38] And if you're running those queries.
+[10:40] But probably somewhere in big query shouldn't, shouldn't affect this one.
+[10:43] Oh, gotcha.
+[10:44] That makes sense.
+[10:45] Yeah.
+[10:46] I just, just give me a little, I wanted to find the cluster itself of yesterday's run.
+[10:54] So you did.
+[11:14] Just curious, does it have labels?
+[11:23] Oh yeah.
+[11:37] It's half and half 32 bucks in data bricks and 32 bucks.
+[11:44] So it's six 64 bucks or something like that.
+[11:47] And that's the cost for storing it.
+[11:51] No, no.
+[11:51] It's for running only for running.
+[11:54] Oh, so Databricks isn't doing all the compute.
+[11:56] It's doing both.
+[11:59] Databricks.
+[12:00] Yeah.
+[12:00] Yeah.
+[12:01] Yeah.
+[12:01] Databricks charges, but Databricks uses.
+[12:06] Actually, it's rather a little bit more complex than that, but for this particular run, when
+[12:10] we use a job compute structure is, uh, there is Databricks charge and there is a DCP charge
+[12:18] for compute.
+[12:20] Gotcha.
+[12:21] Okay.
+[12:21] Databricks charges for management of a compute and the Google charges for computer itself.
+[12:26] So, and here's the difference, right?
+[12:30] If we're, uh, because we're writing job compute, Databricks charges 30 bucks and the compute
+[12:37] charges 30 bucks.
+[12:39] Right.
+[12:40] But if we were to use, uh, well, if we were to use.
+[12:48] All purpose compute Databricks charge would much higher.
+[12:52] Actually, you know, it doesn't make sense a little bit.
+[12:57] Let me, let me check.
+[13:02] Let me check also specifically.
+[13:10] That'd be interesting.
+[13:14] Oh, cluster ID.
+[13:16] That'd be interesting.
+[13:23] Oh, cluster ID.
+[13:25] Oh, yeah, yeah.
+[13:26] Cluster ID.
+[13:37] You can take find it.
+[14:05] Weird.
+[14:21] Oh.
+[14:23] You're such a methodite,
+[14:25] you have no knowledge of yourself.
+[14:32] Oh, yeah, so it's actually not 35 bucks.
+[14:58] So it's actually not 35 bucks.
+[15:01] It is Databricks usage is 18, 19 bucks.
+[15:07] Oh, okay.
+[15:09] That's cool.
+[15:09] So rest of 35 is my other experiments, which I did.
+[15:15] So yeah.
+[15:16] Okay, cool.
+[15:17] So it's 19 plus 19 bucks on Databricks side
+[15:22] and 33 on GCP.
+[15:27] Okay.
+[15:31] Yeah, it's running.
+[15:37] Why do you say seven days?
+[15:48] It should be 14 days.
+[15:52] Yeah, that's what I thought.
+[15:53] But you see seven day partitions.
+[15:58] Oh, hold on.
+[16:00] Why seven days?
+[16:14] Sorry, the seven days is supposed to be the amount of time.
+[16:15] Sorry, the seven days is supposed to be the amount of time.
+[16:21] Oh, we need to change this.
+[16:24] Did I run wrong notebook?
+[16:27] No.
+[16:28] It says seven days.
+[16:29] Yeah, hold on.
+[16:30] I'm looking at mine.
+[16:35] Oh.
+[16:40] Yeah, we need to put 14, right?
+[16:42] Oh, yeah, sorry.
+[16:43] That is my mistake.
+[16:44] I didn't switch it.
+[16:45] I changed the other things I thought I did.
+[16:48] In other words, I don't.
+[16:49] Yes, that's the only line that needs to change.
+[16:52] The attribution days needs to be equal seven.
+[16:57] So yeah, so right below that,
+[17:00] you should see attribution days underneath the window.
+[17:04] Yeah, okay, that's correct.
+[17:06] Yeah, sorry, I didn't switch the 14.
+[17:08] That's the only thing you should have to change.
+[17:10] So let's check 14 days and our attribution date.
+[17:15] Now I see it, right?
+[17:16] And then you calculate Windows end plus attribution date.
+[17:20] So we should be good.
+[17:24] Right, visit end, visit end, visit end.
+[17:28] We're good, right?
+[17:30] Let me adjust.
+[17:31] I wanna, out of curiosity.
+[17:47] Mm.
+[18:03] Mm.
+[18:12] Mm.
+[18:17] So yeah, let me rerun it, rerun it.
+[18:38] So now should be better, now should be better.
+[18:41] So yeah.
+[18:54] It's annoying that it have to start.
+[18:56] So yeah, does it answer your question?
+[19:00] Yes, so I just have a question about you.
+[19:04] So I noticed that you use the preferred worker type
+[19:07] and you have that certain worker type.
+[19:09] That's one of the more expensive
+[19:10] or lower expensive ones.
+[19:12] Why would you choose that and more workers
+[19:16] as opposed to maybe a more powerful source and less workers?
+[19:21] Is there any reason for that?
+[19:23] Yeah.
+[19:23] Okay, yeah, I'd love to know.
+[19:30] Just a moment.
+[19:34] I'll need to search it.
+[19:40] Okay.
+[19:59] Thank you.
+[20:00] I have an article here, I forgot, dbt, probably it was archived or something.
+[20:25] Confluence doesn't, like, it's, I feel like the search function on it is not that
+[20:29] great.
+[20:30] Yeah, probably.
+[20:31] So, there is a page, I'll find it, right, I have a page to compare nodes, performance
+[20:52] of exactly that, performance of pipeline, between, depending, same core count, different
+[21:01] node size.
+[21:08] So it depends on what you're doing, right, because I don't understand how exact, I need
+[21:13] to study how Spark computes stuff, but I know that there are different optimizations, right,
+[21:20] so, like, for example, I know that memory is really big in this, because you have to
+[21:27] store a lot of data while you're joining, and so, I don't know.
+[21:33] I don't know enough about, like, how it gets split up, but I know that sometimes having
+[21:37] a bunch of small chunks of data is faster in certain regards, and then others, it's,
+[21:45] I don't know, it depends, but.
+[21:49] Yeah, it's exactly right, and the issue, the added complexity of Java, right, because Spark
+[21:59] runs in Java, and this is a bigger heap size, heap size is huge, it makes it easier, harder
+[22:11] to manage for Java virtual machine, that's why they, like, attempt to do it off heap
+[22:16] It was an attempt to do it off heap storage
+[22:21] so that it's not managed by JVM.
+[22:24] But this introduces several caveats, right?
+[22:28] And when we increase node size to get a bigger node size, performance per core could suffer sometimes.
+[22:30] and when we increase node size to get a bigger node size, performance per core could suffer
+[22:38] sometimes.
+[22:41] For that, it feels like, at least when I was testing it, checking it, extra configuration
+[22:51] needs to be applied in order for the memory size per executor not to be that big, yeah,
+[22:59] so it's briefly, I will find this article, for some reason, it doesn't let me search.
+[23:02] For some reason, it doesn't let me search.
+[23:04] Okay.
+[23:17] We had space, no, it's not those, I know that, yeah, let me search for it, but yeah.
+[23:36] Okay, no worries.
+[23:38] I have, I had an article here, but I don't, cannot find it here.
+[23:43] I press, oh, yeah, what if I search dbt, so it's not even dbt.
+[23:46] I press over.
+[23:48] What if I search dbt?
+[23:58] Yeah, I need to look it up.
+[24:05] Yeah, I need to look it up, sorry for that.
+[24:14] So it's running, let's check, let's check, yeah.
+[24:17] Let's check.
+[24:20] Let's check.
+[24:26] Yeah. And which company did you work prior to Mountain?
+[24:34] Which company did you work prior to mounting?
+[24:37] Oh, I did a lot of contracting, so I worked at, I worked at Disney prior, and then Pinterest
+[24:48] and Etsy.
+[24:49] I kind of did a bunch of random stuff, so like some of those was engineering, some of
+[24:52] those was analyst work, but yeah.
+[24:56] Yeah, so now they look better, they look better, so 14 partitions here, and argumental log
+[25:11] also.
+[25:12] Good, yeah, now I just need to wait.
+[25:18] Okay, thank you, thank you very much, Victor, again, you're always so helpful every single
+[25:24] time I ask, so.
+[25:26] You're welcome, yeah, let me know if you have any questions, and yeah, let me find this
+[25:32] article which I, it was like more than a year ago, so yeah, well, let me see if I can find
+[25:41] it.
+[25:42] Okay, sounds good.
+[25:44] Yeah.
+[25:45] All right, well, thank you, Victor.
+[25:48] Yeah.
+[25:49] Talk to you soon.
