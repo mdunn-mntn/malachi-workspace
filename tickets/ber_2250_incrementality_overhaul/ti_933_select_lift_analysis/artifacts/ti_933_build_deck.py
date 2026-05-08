@@ -169,7 +169,7 @@ HTML = f"""<!DOCTYPE html>
 <section class="img-slide">
   <h2 style="text-align: center;">No single Select advertiser is individually powered</h2>
   <img src="data:image/png;base64,{power_png}" alt="Per-advertiser lift">
-  <p class="footer-note">Each dot = one advertiser, error bars = 95% CI. Pooled (dashed line) is +2.06pp; individual estimates can't beat the noise floor.</p>
+  <p class="footer-note">Each dot is one advertiser; error bars are too wide to call individually. Pooled across all 23 (dashed line) is +2.06pp and significant &mdash; we can measure Select as a whole, not per-advertiser.</p>
 </section>
 
 <!-- Slide 6: The Pooled Lift Bar Chart (compared to TI-917 baselines) -->
@@ -211,7 +211,7 @@ HTML = f"""<!DOCTYPE html>
     Treated arm: {int(pooled_t['n_ips']):,} IPs. Holdout arm: {int(pooled_h['n_ips']):,} IPs. *Clickpass requires an MNTN impression to fire, biasing the holdout to ~zero. Guid is the honest measure.
   </p>
   <div class="takeaway-box" style="margin-top: 0.6em;">
-    <strong>Read:</strong> Select is genuinely incremental on visits AND conversions. Both 95% CIs exclude zero with comfortable margin. The geo + show targeting framing works.
+    <strong>Read:</strong> Select is genuinely incremental on visits AND conversions. Both 95% CIs exclude zero with comfortable margin. Select genuinely drives lift.
   </div>
 </section>
 
