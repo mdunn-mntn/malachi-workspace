@@ -157,10 +157,9 @@
 <section>
   <h2>What we do about it</h2>
   <div style="margin-top: 0.5em; font-size: 0.85em; line-height: 1.5;">
-    <p style="margin-bottom: 0.4em;"><span class="pill pill-green">DO</span> <strong>Treat Select as a confirmed-incremental product.</strong> The geo + show framing genuinely drives lift, even without intent scoring on top. Brand-direct customers asking for proof can see the +2pp visit + +0.14pp conversion numbers.</p>
-    <p style="margin-bottom: 0.4em;"><span class="pill pill-green">DO</span> <strong>Sell pooled, not per-advertiser, for now.</strong> No single Select advertiser hits the volume needed to power their own readout. We can promise line-of-business lift, not customer-specific lift.</p>
-    <p style="margin-bottom: 0.4em;"><span class="pill pill-gray">CONSIDER</span> <strong>Layer intent scoring on Select (easy-mode lift bump).</strong> If pure geo + show drives +2pp, adding the prospecting intent score on top could plausibly take it higher &mdash; the same engineering pattern PTV uses, applied to Select inventory.</p>
-    <p style="margin-bottom: 0.4em;"><span class="pill pill-red">UNLOCK</span> <strong>Ghost-bidder (TI-886) makes per-advertiser readouts possible.</strong> Today we can't tell a Select customer "your lift is X" without 90+ days of data. Ghost-bidder removes the augmentor 10-day TTL ceiling and gives every customer a per-advertiser number.</p>
+    <p style="margin-bottom: 0.4em;"><span class="pill pill-green">DO</span> <strong>Treat Select as a confirmed-incremental product.</strong> Select targeting genuinely drives lift. Brand-direct customers asking for proof can see the +2pp visit + +0.14pp conversion numbers.</p>
+    <p style="margin-bottom: 0.4em;"><span class="pill pill-green">DO</span> <strong>Lead with the pooled +2.06pp; per-advertiser numbers also available for the majority.</strong> 17 of 22 active Select advertisers are individually significantly positive in this 7d window &mdash; the line-of-business effect is consistent, not outlier-driven. The 5 advertisers with CIs spanning zero are volume-limited; ghost-bidder unlocks them.</p>
+    <p style="margin-bottom: 0.4em;"><span class="pill pill-red">UNLOCK</span> <strong>Ghost-bidder (TI-886) makes per-advertiser readouts production-grade.</strong> Today we can run this analysis ad-hoc but it requires multi-hour Spark jobs. Ghost-bidder gives every customer a per-advertiser number from a logged ghost-bid table &mdash; cheap, fast, and removes the augmentor TTL ceiling.</p>
   </div>
 </section>
 
