@@ -12,7 +12,10 @@
 # MAGIC      - Treated anchor = first cost_impression date for that (advertiser, IP)
 # MAGIC      - Holdout anchor = first augmentor appearance date for that IP
 # MAGIC    Both are "first day we could have served this IP." Visits are attributed
-# MAGIC    in `[anchor, anchor + ATTRIBUTION_DAYS]`. Every IP gets the same window length.
+# MAGIC    in `[anchor, anchor + ATTRIBUTION_DAYS - 1]` inclusive — exactly N calendar
+# MAGIC    days starting from the anchor day. So ATTRIBUTION_DAYS=7 means May 4
+# MAGIC    anchor → counts visits on May 4 through May 10 (7 days total). Every IP
+# MAGIC    gets the same window length.
 # MAGIC
 # MAGIC 2. **`ATTRIBUTION_DAYS` parameter** (default 7). 7d gives each impression a
 # MAGIC    full week of attributable visits — more inclusive read than the previous
@@ -368,9 +371,9 @@ SELECT
   s.advertiser_id,
   s.arm,
   COUNT(DISTINCT s.ip)                                     AS n_ips,
-  COUNT(DISTINCT CASE WHEN cp.visit_date BETWEEN s.anchor_date AND date_add(s.anchor_date, {ATTRIBUTION_DAYS}) THEN cp.ip END) AS clickpass_visitors,
-  COUNT(DISTINCT CASE WHEN gv.visit_date BETWEEN s.anchor_date AND date_add(s.anchor_date, {ATTRIBUTION_DAYS}) THEN gv.ip END) AS guid_visitors,
-  COUNT(DISTINCT CASE WHEN uc.visit_date BETWEEN s.anchor_date AND date_add(s.anchor_date, {ATTRIBUTION_DAYS}) THEN uc.ip END) AS ui_converters
+  COUNT(DISTINCT CASE WHEN cp.visit_date BETWEEN s.anchor_date AND date_add(s.anchor_date, {ATTRIBUTION_DAYS - 1}) THEN cp.ip END) AS clickpass_visitors,
+  COUNT(DISTINCT CASE WHEN gv.visit_date BETWEEN s.anchor_date AND date_add(s.anchor_date, {ATTRIBUTION_DAYS - 1}) THEN gv.ip END) AS guid_visitors,
+  COUNT(DISTINCT CASE WHEN uc.visit_date BETWEEN s.anchor_date AND date_add(s.anchor_date, {ATTRIBUTION_DAYS - 1}) THEN uc.ip END) AS ui_converters
 FROM subjects s
 LEFT JOIN cp_pairs   cp ON cp.advertiser_id = s.advertiser_id AND cp.ip = s.ip
 LEFT JOIN guid_visits gv ON gv.advertiser_id = s.advertiser_id AND gv.ip = s.ip
