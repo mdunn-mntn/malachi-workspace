@@ -1,7 +1,17 @@
 # Experimentation & Causal Inference — Knowledge Base
-Last updated: 2026-04-19 | Started from TI-748 (Media Plan Causal Impact)
+Last updated: 2026-05-08 | Started from TI-748 (Media Plan Causal Impact)
 
 This is a living document. Add to it every time we learn something new about experimental design, covariate selection, test methodology, or edge cases at MNTN.
+
+---
+
+## Visualization rule for CausalImpact / pre-post results
+
+**Charts: aggregate-only.** Per-advertiser detail belongs in tables, not in the visualizations. Notebooks should be flat and short.
+
+**Why:** The Fangorn KPI notebook (TI-849 / TI-921) was flagged 2026-05-08 as "really really long and complex … wasn't clear what's going on" when handed off. Per-advertiser charts overwhelm the audience and obscure the headline. The headline is the aggregate effect; per-advertiser breakdowns are appendix-grade.
+
+**Apply to:** all incrementality / lift / CausalImpact / pre-post deliverables — Fangorn, BUK, BER-2250 follow-ups, ad-hoc reads. One IVR chart, one CVR chart, one CPA chart — pooled. Per-advertiser rows live in a table next to it.
 
 ---
 
@@ -681,7 +691,9 @@ The pre-2026-04-21 plan (compute campaign win rate, apply as sampling probabilit
 
 **RESOLVED (2026-04-20):** Augmentor_log contains holdout IPs at the uniform-expected rate. For advertiser 31357 (WGU), 1 hour of `bronze.raw.augmentor_log` on 2026-04-19 shows 10.0% of unique IPs in hash buckets 0-99 — exactly the uniform expectation for a 10% holdout. augmentor_log has no advertiser_id column and is pre-bid, so it is IP-complete regardless of any given advertiser's holdout status. Alex Knorr's read was correct; the ghost bidding pipeline can proceed using existing data without an ETL change from Zach/Jordan or a bidder-side change from Kevaughn. Query + results: `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/queries/ti_837_augmentor_holdout_bucket_verification.sql`, output in the same ticket's `outputs/` folder. Open follow-up: row-level holdout fraction was 8.4% (vs 10.0% at the unique-IP level), suggesting holdout IPs may have slightly fewer augmentor events per IP than non-holdout IPs — worth a follow-up with Ryan/Zach to understand whether frequency-cap or dedupe logic treats holdouts differently. Does not block the methodology.
 
-**Matt Brorby's T-learner prototype (2026-04-20):** Matt has already built a T-learner with Platt Scaling on branch `mbrorby/workspace/impression-uplift` in `SteelHouse/databricks_targeting`. Two XGBoost Spark models (treatment + control), calibrated so subtraction is in probability space. Uplift = Platt(Model_T(x)) − Platt(Model_C(x)). Ranks by incremental probability, not absolute. Qini curve evaluation. Matt explicitly does NOT want to own implementation — Malachi + Alex Knorr co-driving (TI-886). Holdout hash ported from Greenplum to Spark: `MD5(advertiser_id:ip)` first 16 hex → mod 1000, buckets 0-99 = holdout. Uses `decimal(20,0)` to avoid overflow. Control IPs drawn from `cost_impression_log` (IPs served by other advertisers in same window), NOT feature store — fixes support mismatch (feature store IPs include households no ad system would target, ~0.03% visit rate vs ~9% for targeted).
+**Matt Brorby's T-learner prototype (2026-04-20):** Matt built a T-learner with Platt Scaling on branch `mbrorby/workspace/impression-uplift` in `SteelHouse/databricks_targeting`. Two XGBoost Spark models (treatment + control), calibrated so subtraction is in probability space. Uplift = Platt(Model_T(x)) − Platt(Model_C(x)). Ranks by incremental probability, not absolute. Qini curve evaluation. Holdout hash ported from Greenplum to Spark: `MD5(advertiser_id:ip)` first 16 hex → mod 1000, buckets 0-99 = holdout. Uses `decimal(20,0)` to avoid overflow. Control IPs drawn from `cost_impression_log` (IPs served by other advertisers in same window), NOT feature store — fixes support mismatch (feature store IPs include households no ad system would target, ~0.03% visit rate vs ~9% for targeted).
+
+**Ownership update (2026-05-08):** TI-886 (T-learner productionization) has been reassigned away from the TI side — owned by another person (confirmed via Alex Knorr). MNTN's TI work on the BER-2250 follow-up is the **bidder-process ghost-bidding implementation**, not the model. The 30-day window run, the 30-net-new-advertiser cohort, and most other follow-up analyses are **blocked on the bidder-process implementation going live** — the post-hoc Databricks-on-augmentor-logs path is no longer the plan. Don't start them in parallel.
 
 **Power constraint (Malachi's framing, 2026-04-20):** Our minimum detectable effect lands around ~15% while realistic CTV lift is 2-8%. This is the whole ballgame — why geo doesn't work at MNTN budget scale, why observational ML fails, and why ghost bidding (reusing existing 10% holdout instead of carving a new one) is structurally the only path. TI-884 quantifies this precisely per advertiser.
 
