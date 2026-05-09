@@ -879,3 +879,21 @@ The following repositories and pipelines are owned or actively worked on by the 
 - ## Fangorn Rollout — ~50 Advertiser Milestone
 
 As of the Fangorn launch, approximately 50 advertisers were successfully added to the Fangorn rollout. The scoring job ran successfully overnight, updated their targeting expressions, and output the expected counts. This represents a meaningful rollout milestone for the Fangorn system. (via Ryan Kleck, #fangorn_launch_day, 2026-05-06)
+
+<!-- slack-extracted: 2026-05-09 -->
+- **Upwave Brand Lift Integration (Beta Launch ~May 2026)**
+
+MNTN is entering beta with an Upwave integration that enables PTV and Select customers to run brand lift studies via surveys. This is the first brand lift measurement integration supported for PTV and Select campaigns.
+
+- **Vendor:** Upwave (https://www.upwave.com/capabilities-brand-lift)
+- **Methodology:** Survey-based brand perception measurement
+- **Eligibility:** PTV and Select customers
+- **Context:** MNTN has been providing Upwave as a managed service to customers for approximately one year prior to this self-serve integration
+- **Strategic value:** Intended to prove top-of-funnel performance for customers and complement incrementality measurement in customer readouts
+- **Owner:** Jason Huertas (Product)
+- **Channel context:** Leadership noted that brand lift and incremental lift results should eventually be combined in customer readouts (via Jason Huertas, #incremental-lift-stakeholders, 2026-05-08)
+- **Org Changes — Engineering Promotions (May 2026)**
+
+- **Michael Pascuzzi** promoted to **Staff Engineer**. Key technical leader driving architecture decisions and cross-platform systems thinking.
+- **Jared** (last name unclear from context) promoted to **Senior Software Engineer**. Known for quality focus, design partnership, and attention to detail.
+- **Hamza** (last name unclear from context) promoted to **Senior Software Engineer**. Led significant platform work including a recently launched AI chat feature. (via Emily (Jaffe) Sgroi, #engineering-team, 2026-05-09)

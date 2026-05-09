@@ -1312,3 +1312,25 @@ Option 1 is preferred — same SQL pattern works in both BQ and Spark. The win-r
 **For the holdout arm:** the equivalent is "if this IP had been served on day X, would it have visited within X+3 days?" This is harder to define without a counterfactual impression timestamp. Two reasonable choices: (a) treat the entire visit window as eligible (current behavior), or (b) randomly assign each holdout IP a "would-have-been-served" date drawn from the impression-day distribution and apply the same +3 lookahead. Option (b) makes treated and holdout fully symmetric on attribution-window length.
 
 **Why we shipped without the fix:** the asymmetry doesn't bias the result, deck timeline pressure, and Victor's Spark run was already well-optimized. Logging this so the next iteration (likely once ghost-bidder lands) gets it right.
+
+<!-- slack-extracted: 2026-05-09 -->
+- **Select Campaign Incrementality Analysis (TI-933)**
+
+A quasi-experimental lift analysis was run on Select-only campaigns with the following findings:
+
+- **Estimated average lift:** ~1.5–3 percentage points (pooled average), subject to advertiser. Zazzle was a notable outlier at +11.6 pp.
+- **3-day window result:** >2.0% lift on pooled average. Likely an underestimate due to the short conversion window.
+- **14-day follow-up:** Confirmed positive lift, slightly lower than initial estimate. Variance attributed to unequal conversion windows across impressions in the first pass.
+- **Why Select may be more incremental:** Select campaigns are not subject to MNTN's standard targeting bias, so enhanced incrementality is expected.
+- **Methodological caveat:** A 3-day window was used due to compute limitations. The 14-day follow-up capped conversion/visit windows at 7 days consistently, but the most recent impressions had not yet had the full 7-day window at time of analysis.
+
+**Ideal experimental design for a definitive lift measurement:**
+1. 3–4 week ramp-up period for new campaigns to reach steady state
+2. 4 weeks of control/treatment measurement
+3. 30-day post-experiment period so each impression gets an equal 30-day conversion window
+- Total: ~60–90 days end-to-end
+
+**Note:** Results are not yet ready for client-facing use. The incrementality ascent team will gather and verify more data before publishing findings. Ghost-bidding infrastructure, once implemented, will enable long-term lift analysis on virtually any campaign type by saving every bid. (via malachi, #incremental-lift-stakeholders, 2026-05-08)
+- **Incrementality Experiment Power Analysis — Spend Thresholds**
+
+For IVR-based incrementality measurement, reaching statistical power requires approximately **$200K/month in spend** when measuring over a single month. This threshold is driven by the typically low lift percentages observed — when lift is small, very large sample sizes (impressions/spend) are needed to achieve significance. Results will sometimes reach significance and sometimes not at this threshold; it is not a guarantee. (via malachi, #incremental-lift-stakeholders, 2026-05-08)

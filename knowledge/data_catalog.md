@@ -2389,3 +2389,23 @@ The model at `models/dw-main-silver/aggregates/guid_identity_daily.sql` in the S
 - Only **3 advertiser IDs** currently have `enable_taxonomy_block = false` (including AID 31357).
 - The existing audit monitor for DS16 exclusion (audit [40]) does not account for this flag, causing false positives. The DM team has a ticket (DM-4433) to update the audit logic to check `enable_taxonomy_block` before flagging; ETA early June 2026.
 - **Campaign group exclusions** in the audit query are likely experiment-related holdouts. (via zach.schoenberger, #production-ops, 2026-05-05)
+
+<!-- slack-extracted: 2026-05-09 -->
+- **audience.audience_type_alpha — View Definition and MM Detection Issue**
+
+`audience.audience_type_alpha` is a view in the core (Postgres/coredw) database used to identify Mountain Matched (MM) campaign groups. It detects MM by checking audience expressions for `data_source_id: 13` (DS13) or `data_source_id: 19` (DS19) patterns.
+
+**Schema (abbreviated):**
+- `campaign_group_id`
+- `audience_id`
+- `mntn_matched` (always `true` when row exists)
+
+**Detection logic:** Two UNIONed branches — one matching DS19 expressions, one matching DS13 expressions — both filtered to advertisers present in `fpa.advertiser_verticals`.
+
+**Known issue (Fangorn / DS46 migration):** After Fangorn launch, some campaign groups were migrated to use `data_source_id: 46` (DS46) instead of DS13 in the `audience_segments` table. The `audience_type_alpha` view still only checks for DS13 and DS19, so migrated campaigns will no longer be recognized as MM by this view. This primarily affects **monitoring dashboards and reporting** (e.g., `bi.v_feature_date`) rather than bidder mechanics. Teams that query DS13/DS19 for MM campaign identification (including DM and BAE teams) need to update their queries to include DS46.
+
+**Related tables:**
+- `audience.audiences` — contains raw expression JSON
+- `audience.audience_x_campaign_groups` — links audiences to campaign groups
+- `audience.audience_segments` — mutated by Fangorn overlay; DS13 → DS46 changes applied here
+- `campaign_groups` — joined for parent/child campaign group resolution (via Ryan Kleck, #fangorn_launch_day, 2026-05-08)

@@ -2052,3 +2052,15 @@ For Shopify-sourced identity data:
 - **Email and phone links** from Shopify orders can be treated as high-trust ("truthy") links in the identity graph.
 - **IP, guid, and ga_client_id** links associated via Shopify order-ID-matched `conversion_log` rows should also be treated as legitimate links, but with nuance: if these identifiers appear connected to many other IDs in the dataset, they are likely **shared identifiers** (e.g., household or device shared by multiple people).
 - Shared IDs should still be tracked in the graph for **exclusion** purposes but should **not** be used for inclusion/targeting, and should ideally be flagged as shared in the graph model. (via Jack Barbey, #identity_core_dev, 2026-05-06)
+
+<!-- slack-extracted: 2026-05-09 -->
+- **DS13 → DS46 Migration: Reporting Impact (Fangorn)**
+
+As part of the Fangorn rollout, campaign groups on Mountain Match are being migrated from `data_source_id: 13` (DS13) to `data_source_id: 46` (DS46) in the `audience.audience_segments` table. This is an overlay/mutation applied on the fly and does not change the underlying `audience.audiences` expression table.
+
+**Impact:**
+- **Bidder mechanics:** Not affected — the bidder reads from `audience_segments` which is updated correctly.
+- **Reporting/dashboards:** Any query or view that detects MM campaigns by looking for DS13 (or DS19) in audience expressions will fail to identify migrated campaigns. This includes `audience.audience_type_alpha`, `bi.v_feature_date`, and any ad hoc queries using `expression LIKE '%:13,%'` or equivalent.
+- **Audience size concern:** Some DS13 verticals show significantly different audience sizes when compared to DS46 equivalents. This was flagged as a risk but the rollout is proceeding with awareness of this.
+
+**Action required for affected teams (DM, BAE, and others):** Update queries that filter or identify MM campaigns using DS13/DS19 to also include DS46. (via Matt Brorby, #fangorn_launch_day, 2026-05-08)

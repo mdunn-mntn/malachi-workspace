@@ -338,3 +338,37 @@ The following third-party data points are useful for sales positioning and inter
 ## Proxima — Upcoming Partner Meeting
 
 Kale forwarded an email thread regarding a meeting with **Proxima**. The meeting is scheduled for the following Wednesday (relative to early May 2026). Brian McAdams is coordinating, with at least two other team members included via calendar invite.
+
+## 2026-05-09
+
+### [strategic] from malachi in #targeting-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Incrementality Ascent Team — Ghost Bid Log Schema Planning**
+
+The incrementality first-ascent team is planning the schema for the ghost bid log (the counterfactual bid record used for lift measurement). A standing design requirement has been identified: the ghost bid log schema should include all fields present in `cost_impression_log` (score, campaign, campaign type such as Select, etc.) so that analysts can connect these dimensions without additional joins. A parallel pipeline for ghost bids is also under consideration.
+
+### [mntn_business] from malachi in #fangorn_launch_day
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Fangorn — Early Post-Launch KPI Signal**
+
+In the 3 days following Tier 1 release of Fangorn, preliminary indicators show positive effects on IVR, CVR, and CPA. These are very early signals and not yet statistically conclusive. Per campaign ramp-up research (TI-780), steady-state spend and impression frequency requires ~3–4 weeks after a campaign change, and conclusive KPI impact results require ~2–4 weeks beyond that depending on advertiser cohort size. Full analysis is deferred until the lead analyst (Malachi) returns from a 2-week absence.
+
+### [mntn_business] from Alexander Jerneck in #identity_core
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**CRM Experiment — Results and Phased Rollout Plan**
+
+The CRM experiment (identity/targeting) is nearing completion with positive results. The planned next step is a phased rollout: starting with ~10 advertisers, expanding to ~100, and continuing to scale while monitoring performance throughout. The rollout approach is expected to follow the same methodology used by the targeting team for prior phased launches. Audience expressions are under consideration as one rollout mechanism; other approaches are also being evaluated.
+
+### [data_knowledge] from Victor Savitskiy in #data-platform
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Predactiv DDP Data Feed — Outage Noted May 2026**
+
+The Predactiv data partner pipeline stopped flowing as of the partition `gs://mntn-data-partners/partners/predactiv/dt=2026050804/`. This was the latest available partition as of the report date. The issue was escalated to the data platform team. Predactiv data arrives via GCS partitioned by `dt` (date+hour format: `YYYYMMDDHR`).
