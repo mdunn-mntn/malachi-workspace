@@ -288,3 +288,13 @@ Fangorn Tier 1 rollout is targeting an Alpha launch on April 30, 2026. In-flight
 - **TI-876 / TI-864**: Tiering criteria and pacing analysis — in review with Matt, targeting sign-off ahead of 4/30 Alpha
 
 P1 tickets TI-727 (Fangorn Scores to MembershipDB) and TI-777 (Output Sample Score Data) were still in Backlog as of the sprint report and represent spillover risk for the 4/30 target. (via Bryce Wagg, #tgt-infrastructure-squad, 2026-04-28)
+
+<!-- slack-extracted: 2026-05-12 -->
+- ## Fangorn Tier 1 Rollout Plan — GTM Sync (May 2026)
+
+Alex Knorr and Matt Brorby are preparing a Fangorn rollout analysis for the upcoming GTM Check-in. The analysis (using queries developed by Malachi) is being built into a rerunnable notebook for repeatability at future check-ins.
+
+**Release plan:**
+- Present results at GTM sync (week of May 12, 2026).
+- Rerun analysis on Monday May 18 to confirm no dramatic changes.
+- Roll out the remainder of Tier 1 after May 18 validation. (via Alex Knorr, #tgt-infrastructure-squad, 2026-05-11)

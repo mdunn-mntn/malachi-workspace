@@ -2409,3 +2409,12 @@ The model at `models/dw-main-silver/aggregates/guid_identity_daily.sql` in the S
 - `audience.audience_x_campaign_groups` — links audiences to campaign groups
 - `audience.audience_segments` — mutated by Fangorn overlay; DS13 → DS46 changes applied here
 - `campaign_groups` — joined for parent/child campaign group resolution (via Ryan Kleck, #fangorn_launch_day, 2026-05-08)
+
+<!-- slack-extracted: 2026-05-12 -->
+- ## coredb: dso.network_performance_thresholds & dso.publisher_performance_thresholds
+
+These two tables in the `dso` schema of coredb (intprod) have not been actively used for more than a year (as of May 2026). Both tables are currently **empty**.
+
+**Datastream replication note:** Datastream will not begin replication of a table from intprod to BigQuery unless the table contains at least one row. These tables are blocked from replication as a result of being empty.
+
+**Status:** The owning squad (per schema ownership, the pacing/spend squad — Swapnil Patil / Tony Chen) confirmed these table references can be removed. No downstream consumers are known. (via Sheetal Ramesh, #data-platform, 2026-05-11)

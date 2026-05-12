@@ -372,3 +372,21 @@ The CRM experiment (identity/targeting) is nearing completion with positive resu
 **Predactiv DDP Data Feed — Outage Noted May 2026**
 
 The Predactiv data partner pipeline stopped flowing as of the partition `gs://mntn-data-partners/partners/predactiv/dt=2026050804/`. This was the latest available partition as of the report date. The issue was escalated to the data platform team. Predactiv data arrives via GCS partitioned by `dt` (date+hour format: `YYYYMMDDHR`).
+
+## 2026-05-12
+
+### [mntn_business] from Benny in #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Fangorn Rollout — HHST Threshold Logic Update
+
+The latest release of Fangorn includes updates to the HHST (Household Scoring Threshold) logic, intended to address gaps in prior HHST behavior. A known side effect of the Fangorn release is that it may alter Intent Level distributions (audience sizes) for customers. There is concern internally (Benny, Q1 2026 Performance Churn Investigation) that prior HHST behavior may have been a contributor to observed performance declines, particularly those surfacing in PEX tickets. Quantification of HHST-level shifts YTD is in progress.
+
+### [mntn_business] from Alexander Jerneck in #identity_core_dev
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## NTB (New-to-Brand) Experiment — Identity Team Rollout Epic
+
+An epic (ID-283) has been created for the NTB Experiment rollout. The experiment has already slipped approximately 5 weeks from its original target. Realistic goal is end of Q2 2026, though this depends on cross-team dependencies — the Identity team may need to get onto other teams' backlogs first. Work is intended to begin as soon as possible given current priorities.

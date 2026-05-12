@@ -2064,3 +2064,38 @@ As part of the Fangorn rollout, campaign groups on Mountain Match are being migr
 - **Audience size concern:** Some DS13 verticals show significantly different audience sizes when compared to DS46 equivalents. This was flagged as a risk but the rollout is proceeding with awareness of this.
 
 **Action required for affected teams (DM, BAE, and others):** Update queries that filter or identify MM campaigns using DS13/DS19 to also include DS46. (via Matt Brorby, #fangorn_launch_day, 2026-05-08)
+
+<!-- slack-extracted: 2026-05-12 -->
+- ## stable* vs regular ROAS/CPA/ConversionRate metrics
+
+`stableroas`, `stablecpa`, and `stableconversionrate` metrics are directly connected to ramping data and budget change reporting. They represent a weighted split of ROAS/CPA/Conversion Rate for the cohort of impressions/households from the *existing* budget, versus the ramping behavior of incremental dollars.
+
+**Rule of thumb:** For standard reporting widgets (e.g., conversion/visits reporting in Express), use `roas`, `cpa`, `conversionrate`, and `visits` — not the `stable*` variants. The `stable*` metrics are purpose-built for ramping/budget-change analysis contexts. (via Al Beretta, #reporting_helpdesk_ask_anything, 2026-05-11)
+- ## Databricks → BigQuery Spark Connector: Known Transient Failures & Configuration
+
+The Identity team's weekly graph build job on Databricks has experienced recurring `INTERNAL: http2 exception` / `StatusRuntimeException` errors when pushing queries to BigQuery and reading results back via the Spark BigQuery connector. These appear to be transient gRPC-level failures.
+
+**Key configuration options to set:**
+- `temporaryGcsBucket` — The connector sometimes requires a temp GCS bucket for intermediate result storage; not specifying one can cause failures.
+- `viewsEnabled` — Must be set if the query touches any BigQuery views.
+- `materializationDataset` — Required when materializing query results; currently set to `aggregates` in the Identity graph job.
+- `parentProject` / `materializationProject` — Currently both set to `dw-main-silver` for Identity graph jobs. Recommendation: switch `parentProject` to `mntn-identity-prod` so job history is disambiguated from other teams in the BigQuery Job History UI.
+
+**Mitigation approaches applied:**
+- Increase Spark `maxFailures` from 4 to 6 to tolerate transient connector errors.
+- Tune BQ options and connection timeouts in the BQ writer code.
+- Materialized views persist in BQ for 24 hours before deletion — a failed job can be repaired and will skip already-completed steps.
+
+**Job history filter:** Use `databricks-compute@mntn-databricks.iam.gserviceaccount.com` as the User filter in BigQuery → Job History to find Identity team queries.
+
+**Code location:** `parentProject` for BQ jobs is defined in `src/main/scala/com/mntn/idg/graph/datasets/graphDatasets.scala`. (via Jack Barbey, #identity_core_dev, 2026-05-11)
+- ## HHST Pacing State: Max Reach (MR) Fix — TI Team IP Scoring Change (May 2026)
+
+Starting around May 1, 2026, the TI team began scoring Max Reach (MR) IPs independently (separate from Fangorn scoring). This change fixed a "max reach trap" where HHST would remain stuck in MR state for extended periods even when pacing recovered.
+
+**Effect:** HHST now reacts more quickly and transitions back to Mid Intent (MI) when pacing recovers. As a result:
+1. More IPs are scored (rather than unscored/MR).
+2. More campaign groups (CGs) benefit, shifting audience from MR (unscored) to MI or higher intent levels.
+3. In theory, performance across CGs should improve due to better audience quality.
+
+This change is observable in pacing signals: HHST MR reduced while HI/PP/MI levels increased — this is expected and indicates healthy pacing behavior, not a problem. (via Swapnil Patil, #mission-control, 2026-05-11)
