@@ -1,10 +1,14 @@
 # TI-XXX: Power Analysis Workshop — Pedagogical Deck + Calculator
 
-**Jira:** TBD — ticket creation deferred until Malachi returns from OOO
-**Status:** Scaffolded (folder only; awaiting build)
-**Date Started:** 2026-05-15 (folder scaffold)
-**Date Completed:** TBD
+**Jira:** TBD — ticket creation deferred until return from OOO
+**Status:** Built; awaiting dry run + Jira creation
+**Date Started:** 2026-05-15
+**Date Completed:** TBD (after dry run with Alex Knorr or Ryan Kleck)
 **Assignee:** Malachi
+
+**Live URLs:**
+- Workshop deck: https://gist.githack.com/mdunn-mntn/9ba1ca32c6f7d8d38f7d4e83772e6280/raw/ti_xxx_workshop_deck.html
+- MDE calculator: https://gist.githack.com/mdunn-mntn/34c2828f4288d123f5bfaf60f08bc244/raw/ti_xxx_mde_calculator.html
 
 ---
 
@@ -31,19 +35,35 @@ Full plan: `/Users/malachi/.claude/plans/there-is-a-three-video-generic-bachman.
 10. Rename folder + files once TI number is assigned
 
 ## 4. Investigation & Findings
-*(To be filled during build. Source material already gathered in TI-917/TI-884/TI-933.)*
 
-Reuse, don't rebuild:
-- TI-884 MDE math + top-50 tier CSV → copy into `outputs/`
-- TI-917 spend-threshold curve chart (slide 17) → reuse
-- TI-933 per-advertiser CI chart + pooled headline (+2.055pp) → reuse
-- `knowledge/experimentation.md` Lewis-Rao section → cite, don't restate
+Math verified bit-for-bit against TI-884:
+- Lewis-Rao z-factor at α=0.05, power=0.80 → **2.80** (JS rational approx: 2.801585).
+- WGU visits MDE: raw 0.686% / post-stack 0.408% — matches `ti_884_top50_mde_tiers.csv`.
+- Ownerly visits MDE: 5.927% raw — matches TI-884 cross-validation (4.7× above reported 0.72%).
+- POST_STACK_MULT = 0.5954 (0.934 · 0.75 · 0.85) — matches TI-884.
+- Top-50 tier counts from copied CSV: **48 visits well-powered, 8 CVR, 2 iROAS**. (Memory said "11/50 for CVR" — CSV is the source of truth; 8 is correct as of the TI-884 run.)
+
+Source reuse:
+- `outputs/ti_xxx_top50_mde_tiers.csv` — copied from TI-884.
+- TI-917 spend curve concept reused but regenerated locally with cohort-actual params (3.5 imps/IP, $24.84 CPM); raw 5% threshold lands at $124k/mo, post-stack at $44k/mo.
+- TI-933 pool-or-nothing visualization stylized (exact per-advertiser bounds remain in TI-933's `outputs/`).
 
 ## 5. Solution
-*(To be filled when deck + calculator are built.)*
+
+Built and published:
+- `artifacts/ti_xxx_mde_calculator.py` (153 lines) — Python reference, mirrors TI-884 math.
+- `artifacts/ti_xxx_mde_calculator.html` — single-file interactive calculator. Beasley-Springer-Moro `normInv` port; matches Python to ≤0.001 pp on all test cases. 8 pre-loaded advertiser examples.
+- `artifacts/generate_charts.py` — 6 Tufte-style charts (spend curve, tier waterfall, noise reveal, four states, pool-or-nothing, distribution overlap).
+- `artifacts/build_workshop_deck.py` + `ti_xxx_workshop_deck.html` — 23-slide standalone RevealJS deck (920 KB, charts inlined as base64).
+- `artifacts/ti_xxx_facilitator_notes.md` — slide-by-slide timing, drill prompts, hand-raise moments, anticipated questions.
+- `artifacts/ti_xxx_handout.md` — one-pager with 3 questions, spend-threshold rule, calculator URL.
+- `outputs/ti_xxx_screening_examples.csv` — 11 curated advertisers (WGU, Ferguson, Vivint, Hugo, Masterbuilt, Ownerly, GLD, Boll & Branch, Select pool, retargeting cohort, Stage-1 cohort).
 
 ## 6. Questions Answered
-*(To be filled.)*
+- **Q:** Should this live under BER-2250?
+  **A:** No — standalone ticket. The workshop is a durable, reusable teaching artifact decoupled from any single experiment readout.
+- **Q:** Same advertiser examples as TI-917?
+  **A:** Yes for headline contrasts (WGU, Ownerly, GLD). New for Select pool (TI-933) and the calculator drill format.
 
 ## 7. Data Documentation Updates
 None expected — this is a pedagogical artifact, not a data analysis. Any new MDE methodology refinements that emerge during workshop dry runs should land in `knowledge/experimentation.md`.

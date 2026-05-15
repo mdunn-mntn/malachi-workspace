@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MDE Calculator — Power Analysis Workshop</title>
+<style>
+  :root {
+    --navy: #1B2A4A; --blue: #2E5090; --gray: #888;
+    --red: #D63B2F; --green: #2A7A3B; --amber: #B57F00;
+    --bg: #FAFAFA; --card: #FFFFFF; --line: #E5E7EB;
+    --text: #222; --text-light: #666;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    margin: 0; padding: 24px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 22px; color: var(--navy); margin: 0 0 4px 0; font-weight: 700; }
+  .sub { color: var(--text-light); font-size: 13px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 6px; padding: 18px;
+  }
+  h2 { font-size: 14px; color: var(--navy); margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+  label { display: block; font-size: 12px; color: var(--text-light); margin-bottom: 4px; margin-top: 12px; font-weight: 600; }
+  label:first-of-type { margin-top: 0; }
+  input, select {
+    width: 100%; padding: 8px 10px; font-size: 14px;
+    border: 1px solid var(--line); border-radius: 4px;
+    font-family: inherit; background: #FFF;
+  }
+  input:focus, select:focus { outline: 2px solid var(--blue); outline-offset: -1px; border-color: var(--blue); }
+  .examples {
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);
+  }
+  .examples select { font-size: 13px; }
+  .btn-row { margin-top: 16px; display: flex; gap: 8px; }
+  button {
+    flex: 1; padding: 10px 12px; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--navy); background: var(--navy); color: white;
+    border-radius: 4px; cursor: pointer; font-family: inherit;
+  }
+  button.ghost { background: white; color: var(--navy); }
+  button:hover { opacity: 0.9; }
+  .results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .result-block { border: 1px solid var(--line); border-radius: 4px; padding: 14px; background: var(--card); }
+  .result-block h3 { font-size: 12px; margin: 0 0 8px 0; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .mde-num { font-size: 28px; font-weight: 700; line-height: 1.1; }
+  .mde-num.well_powered { color: var(--green); }
+  .mde-num.borderline { color: var(--amber); }
+  .mde-num.underpowered { color: var(--red); }
+  .mde-num.no_data { color: var(--gray); }
+  .mde-detail { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+  .tier-badge {
+    display: inline-block; padding: 2px 8px; font-size: 11px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    border-radius: 3px; margin-top: 6px;
+  }
+  .tier-badge.well_powered { background: #E0F0E4; color: var(--green); }
+  .tier-badge.borderline { background: #FBF1D9; color: var(--amber); }
+  .tier-badge.underpowered { background: #FBE0DD; color: var(--red); }
+  .tier-badge.no_data { background: #EEE; color: var(--gray); }
+  .verdict {
+    margin-top: 16px; padding: 14px; border-radius: 4px;
+    font-size: 14px; line-height: 1.5;
+    background: #F4F6FA; border-left: 4px solid var(--blue);
+  }
+  .verdict strong { color: var(--navy); }
+  .verdict.fail { background: #FBE0DD; border-left-color: var(--red); }
+  .verdict.fail strong { color: var(--red); }
+  .verdict.pass { background: #E0F0E4; border-left-color: var(--green); }
+  .verdict.pass strong { color: var(--green); }
+  .footnote {
+    margin-top: 16px; font-size: 11px; color: var(--text-light);
+    line-height: 1.5;
+  }
+  details { margin-top: 12px; font-size: 12px; }
+  details summary { cursor: pointer; color: var(--text-light); font-weight: 600; }
+  details > div { margin-top: 8px; padding-left: 8px; }
+  details code { background: #F0F0F0; padding: 1px 4px; border-radius: 2px; font-size: 11px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 800px) {
+    .grid, .results, .row-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MDE Calculator — Power Analysis Workshop</h1>
+  <p class="sub">
+    Lewis-Rao MDE for binomial outcomes (visit rate, conversion rate). Defaults:
+    α=0.05, power=0.80, 10% holdout, post-stack variance reduction = 0.595
+    (CUPED × ghost-ad × stratified). Math mirrors <code>ti_xxx_mde_calculator.py</code>.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Advertiser inputs</h2>
+
+      <label for="monthly_spend">Monthly spend ($)</label>
+      <input id="monthly_spend" type="number" value="3353345" step="1000">
+
+      <label for="treated_ips">Treated IPs</label>
+      <input id="treated_ips" type="number" value="15599393" step="1000">
+
+      <label for="p_visit">Baseline visit rate (%)</label>
+      <input id="p_visit" type="number" value="9.66" step="0.01">
+
+      <label for="p_cvr">Baseline conversion rate (%)</label>
+      <input id="p_cvr" type="number" value="0.59" step="0.001">
+
+      <div class="row-2">
+        <div>
+          <label for="holdout_frac">Holdout fraction</label>
+          <input id="holdout_frac" type="number" value="0.10" step="0.01" min="0.01" max="0.5">
+        </div>
+        <div>
+          <label for="reported_lift">Reported lift (% relative, optional)</label>
+          <input id="reported_lift" type="number" placeholder="e.g. 0.72" step="0.01">
+        </div>
+      </div>
+
+      <div class="examples">
+        <label for="example">Load example advertiser</label>
+        <select id="example">
+          <option value="">— pick one —</option>
+          <option value="wgu">WGU (AID 31357) — top-spend, well-powered</option>
+          <option value="ferguson">Ferguson Home (AID 31276) — high IVR, dual-pass</option>
+          <option value="vivint">Vivint (AID 30506) — visits-only (low IVR)</option>
+          <option value="hugo">Hugo Insurance (AID 41034) — biggest Select, still small</option>
+          <option value="masterbuilt">Masterbuilt (AID 40598) — largest Select pool</option>
+          <option value="ownerly">Ownerly (AID 44630) — Lauren's pilot, reported 0.72%</option>
+          <option value="gld">GLD (AID 40586) — Lauren's pilot, reported 0.67%</option>
+          <option value="bollbranch">Boll &amp; Branch (AID 31966) — paused, tiny N</option>
+        </select>
+      </div>
+
+      <div class="btn-row">
+        <button id="calc">Calculate MDE</button>
+        <button id="reset" class="ghost">Reset</button>
+      </div>
+
+      <details>
+        <summary>Advanced</summary>
+        <div>
+          <label for="alpha">Alpha</label>
+          <input id="alpha" type="number" value="0.05" step="0.01">
+          <label for="power">Power</label>
+          <input id="power" type="number" value="0.80" step="0.05">
+          <label for="post_stack">Post-stack SE multiplier</label>
+          <input id="post_stack" type="number" value="0.595" step="0.01">
+          <div class="footnote">
+            Cohort defaults: ρ=0.357 → CUPED mult 0.934; ghost-ad 0.75; stratified 0.85;
+            combined ≈ 0.595.
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Minimum detectable effect</h2>
+      <div class="results">
+        <div class="result-block">
+          <h3>Visits — raw</h3>
+          <div id="visits_raw_num" class="mde-num">—</div>
+          <div id="visits_raw_detail" class="mde-detail"></div>
+          <span id="visits_raw_tier" class="tier-badge"></span>
+        </div>
+        <div class="result-block">
+          <h3>Visits — post-stack</h3>
+          <div id="visits_stack_num" class="mde-num">—</div>
+          <div id="visits_stack_detail" class="mde-detail"></div>
+          <span id="visits_stack_tier" class="tier-badge"></span>
+        </div>
+        <div class="result-block">
+          <h3>CVR — raw</h3>
+          <div id="cvr_raw_num" class="mde-num">—</div>
+          <div id="cvr_raw_detail" class="mde-detail"></div>
+          <span id="cvr_raw_tier" class="tier-badge"></span>
+        </div>
+        <div class="result-block">
+          <h3>CVR — post-stack</h3>
+          <div id="cvr_stack_num" class="mde-num">—</div>
+          <div id="cvr_stack_detail" class="mde-detail"></div>
+          <span id="cvr_stack_tier" class="tier-badge"></span>
+        </div>
+      </div>
+
+      <div id="verdict" class="verdict" style="display:none;"></div>
+
+      <div class="footnote">
+        Tiers — <span style="color:var(--green);font-weight:700">well-powered</span> &lt; 5% relative MDE ·
+        <span style="color:var(--amber);font-weight:700">borderline</span> 5–10% ·
+        <span style="color:var(--red);font-weight:700">underpowered</span> ≥ 10%.
+        Holdout is derived from treated IPs at the chosen fraction. Math: <code>MDE_abs = z·√(p(1−p))·√(1/n_t + 1/n_c)·vr</code>; z = z<sub>α/2</sub> + z<sub>power</sub>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Inverse normal CDF — Beasley-Springer-Moro rational approximation.
+function normInv(p) {
+  if (p <= 0 || p >= 1) return NaN;
+  const a = [-3.969683028665376e+01,  2.209460984245205e+02,
+             -2.759285104469687e+02,  1.383577518672690e+02,
+             -3.066479806614716e+01,  2.506628277459239e+00];
+  const b = [-5.447609879822406e+01,  1.615858368580409e+02,
+             -1.556989798598866e+02,  6.680131188771972e+01,
+             -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01,
+             -2.400758277161838e+00, -2.549732539343734e+00,
+              4.374664141464968e+00,  2.938163982698783e+00];
+  const d = [ 7.784695709041462e-03,  3.224671290700398e-01,
+              2.445134137142996e+00,  3.754408661907416e+00];
+  const plow = 0.02425, phigh = 1 - plow;
+  let q, r;
+  if (p < plow) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0]*q + c[1])*q + c[2])*q + c[3])*q + c[4])*q + c[5]) /
+           ((((d[0]*q + d[1])*q + d[2])*q + d[3])*q + 1);
+  } else if (p <= phigh) {
+    q = p - 0.5; r = q * q;
+    return (((((a[0]*r + a[1])*r + a[2])*r + a[3])*r + a[4])*r + a[5]) * q /
+           (((((b[0]*r + b[1])*r + b[2])*r + b[3])*r + b[4])*r + 1);
+  } else {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0]*q + c[1])*q + c[2])*q + c[3])*q + c[4])*q + c[5]) /
+            ((((d[0]*q + d[1])*q + d[2])*q + d[3])*q + 1);
+  }
+}
+
+function zFactor(alpha, power) {
+  return normInv(1 - alpha/2) + normInv(power);
+}
+
+function mdeBinomial(n_t, n_c, p, vr, alpha, power) {
+  if (n_t <= 0 || n_c <= 0 || p <= 0 || p >= 1) return { abs: Infinity, rel: Infinity, tier: 'no_data' };
+  const sigma = Math.sqrt(p * (1 - p));
+  const se = sigma * Math.sqrt(1/n_t + 1/n_c) * vr;
+  const abs = zFactor(alpha, power) * se;
+  const rel = abs / p;
+  return { abs, rel, tier: tierLabel(rel) };
+}
+
+function tierLabel(rel) {
+  if (!isFinite(rel)) return 'no_data';
+  if (rel < 0.05) return 'well_powered';
+  if (rel < 0.10) return 'borderline';
+  return 'underpowered';
+}
+
+const EXAMPLES = {
+  wgu: { monthly_spend: 3353345, treated_ips: 15599393, p_visit: 9.66, p_cvr: 0.59, label: 'WGU' },
+  ferguson: { monthly_spend: 812221, treated_ips: 5107255, p_visit: 17.77, p_cvr: 1.81, label: 'Ferguson Home' },
+  vivint: { monthly_spend: 1755737, treated_ips: 21207995, p_visit: 0.39, p_cvr: 0.04, label: 'Vivint' },
+  hugo: { monthly_spend: 80884, treated_ips: 437262, p_visit: 0.32, p_cvr: 0.002, label: 'Hugo Insurance' },
+  masterbuilt: { monthly_spend: 106380, treated_ips: 600000, p_visit: 1.20, p_cvr: 0.05, label: 'Masterbuilt' },
+  ownerly: { monthly_spend: 265000, treated_ips: 1487242, p_visit: 1.48, p_cvr: 0.10, label: 'Ownerly', reported_lift: 0.72 },
+  gld: { monthly_spend: 200000, treated_ips: 2387685, p_visit: 3.26, p_cvr: 0.15, label: 'GLD', reported_lift: 0.67 },
+  bollbranch: { monthly_spend: 50000, treated_ips: 1462, p_visit: 6.43, p_cvr: 0.40, label: 'Boll & Branch', reported_lift: 1.00 },
+};
+
+function $(id) { return document.getElementById(id); }
+
+function fmt(x, digits=3) { return isFinite(x) ? x.toFixed(digits) : '—'; }
+function pct(x, digits=3) { return isFinite(x) ? (x*100).toFixed(digits) + '%' : '—'; }
+function pp(x, digits=3)  { return isFinite(x) ? (x*100).toFixed(digits) + ' pp' : '—'; }
+
+function setResult(prefix, mde, p) {
+  const numEl = $(`${prefix}_num`);
+  const detailEl = $(`${prefix}_detail`);
+  const tierEl = $(`${prefix}_tier`);
+  if (!isFinite(mde.rel)) {
+    numEl.textContent = '—';
+    detailEl.textContent = 'insufficient inputs';
+    tierEl.textContent = 'no data'; tierEl.className = 'tier-badge no_data';
+    numEl.className = 'mde-num no_data';
+    return;
+  }
+  numEl.textContent = (mde.rel * 100).toFixed(2) + '%';
+  numEl.className = `mde-num ${mde.tier}`;
+  detailEl.textContent = `${(mde.abs*100).toFixed(3)} pp on baseline ${(p*100).toFixed(3)}%`;
+  tierEl.textContent = mde.tier.replace('_', ' ');
+  tierEl.className = `tier-badge ${mde.tier}`;
+}
+
+function renderVerdict(visitsStack, reportedLift) {
+  const el = $('verdict');
+  if (!isFinite(visitsStack.rel)) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const mdeRelPct = visitsStack.rel * 100;
+  if (reportedLift && isFinite(reportedLift) && reportedLift > 0) {
+    const ratio = mdeRelPct / reportedLift;
+    if (ratio > 1.5) {
+      el.className = 'verdict fail';
+      el.innerHTML = `<strong>This is noise.</strong> Reported relative lift is ${reportedLift.toFixed(2)}%; ` +
+        `post-stack MDE for visits is ${mdeRelPct.toFixed(2)}% — <strong>${ratio.toFixed(1)}×</strong> above the reported number. ` +
+        `The test couldn't have detected what it claimed.`;
+    } else if (ratio < 0.8) {
+      el.className = 'verdict pass';
+      el.innerHTML = `<strong>This is detectable.</strong> Reported ${reportedLift.toFixed(2)}% vs ` +
+        `MDE ${mdeRelPct.toFixed(2)}%. Effect comfortably above the noise floor.`;
+    } else {
+      el.className = 'verdict';
+      el.innerHTML = `<strong>Borderline.</strong> Reported ${reportedLift.toFixed(2)}% vs ` +
+        `MDE ${mdeRelPct.toFixed(2)}%. Within the gray zone — not clearly noise, not clearly signal.`;
+    }
+  } else {
+    if (visitsStack.tier === 'well_powered') {
+      el.className = 'verdict pass';
+      el.innerHTML = `<strong>Well-powered for visits.</strong> Post-stack MDE = ${(visitsStack.rel*100).toFixed(2)}%. ` +
+        `Anything reported above this is real signal.`;
+    } else if (visitsStack.tier === 'borderline') {
+      el.className = 'verdict';
+      el.innerHTML = `<strong>Borderline for visits.</strong> Post-stack MDE = ${(visitsStack.rel*100).toFixed(2)}%. ` +
+        `Effect-size needs to exceed this to be detectable — most prospecting lifts won't.`;
+    } else {
+      el.className = 'verdict fail';
+      el.innerHTML = `<strong>Underpowered.</strong> Post-stack MDE = ${(visitsStack.rel*100).toFixed(2)}%. ` +
+        `Pool with other advertisers, extend the window, or don't run the test.`;
+    }
+  }
+}
+
+function calculate() {
+  const monthly_spend = parseFloat($('monthly_spend').value) || 0;
+  const treated_ips = parseFloat($('treated_ips').value) || 0;
+  const p_visit = (parseFloat($('p_visit').value) || 0) / 100;
+  const p_cvr = (parseFloat($('p_cvr').value) || 0) / 100;
+  const h = Math.max(0.01, Math.min(0.5, parseFloat($('holdout_frac').value) || 0.10));
+  const alpha = parseFloat($('alpha').value) || 0.05;
+  const power = parseFloat($('power').value) || 0.80;
+  const postStack = parseFloat($('post_stack').value) || 0.595;
+  const reportedLift = parseFloat($('reported_lift').value);
+
+  const n_c = treated_ips * h / (1 - h);
+
+  const vRaw = mdeBinomial(treated_ips, n_c, p_visit, 1.0, alpha, power);
+  const vStack = mdeBinomial(treated_ips, n_c, p_visit, postStack, alpha, power);
+  const cRaw = mdeBinomial(treated_ips, n_c, p_cvr, 1.0, alpha, power);
+  const cStack = mdeBinomial(treated_ips, n_c, p_cvr, postStack, alpha, power);
+
+  setResult('visits_raw', vRaw, p_visit);
+  setResult('visits_stack', vStack, p_visit);
+  setResult('cvr_raw', cRaw, p_cvr);
+  setResult('cvr_stack', cStack, p_cvr);
+
+  renderVerdict(vStack, reportedLift);
+}
+
+$('calc').addEventListener('click', calculate);
+$('reset').addEventListener('click', () => {
+  $('monthly_spend').value = 3353345;
+  $('treated_ips').value = 15599393;
+  $('p_visit').value = 9.66;
+  $('p_cvr').value = 0.59;
+  $('holdout_frac').value = 0.10;
+  $('alpha').value = 0.05;
+  $('power').value = 0.80;
+  $('post_stack').value = 0.595;
+  $('reported_lift').value = '';
+  $('example').value = '';
+  calculate();
+});
+
+$('example').addEventListener('change', (e) => {
+  const ex = EXAMPLES[e.target.value];
+  if (!ex) return;
+  $('monthly_spend').value = ex.monthly_spend;
+  $('treated_ips').value = ex.treated_ips;
+  $('p_visit').value = ex.p_visit;
+  $('p_cvr').value = ex.p_cvr;
+  $('reported_lift').value = ex.reported_lift || '';
+  calculate();
+});
+
+// Initial render with WGU loaded.
+calculate();
+</script>
+</body>
+</html>
