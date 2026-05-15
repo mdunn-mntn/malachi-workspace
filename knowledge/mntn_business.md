@@ -897,3 +897,19 @@ MNTN is entering beta with an Upwave integration that enables PTV and Select cus
 - **Michael Pascuzzi** promoted to **Staff Engineer**. Key technical leader driving architecture decisions and cross-platform systems thinking.
 - **Jared** (last name unclear from context) promoted to **Senior Software Engineer**. Known for quality focus, design partnership, and attention to detail.
 - **Hamza** (last name unclear from context) promoted to **Senior Software Engineer**. Led significant platform work including a recently launched AI chat feature. (via Emily (Jaffe) Sgroi, #engineering-team, 2026-05-09)
+
+<!-- slack-extracted: 2026-05-15 -->
+- **PAPI (PTV API) — Production Launch**
+
+The PTV API (PAPI) launched to production as MNTN's new public API for Performance TV campaign management. PAPI is the strategic replacement path for GaryQL (the internal GraphQL service). Base URL: `https://api.mountain.com/ptv` (requires API key). Public docs: `https://api.mountain.com/ptv/docs`.
+
+**Capabilities at launch:**
+- Enterprise-grade REST APIs for programmatic campaign operations
+- Standardized AuthN/AuthZ, request validation, and rate limiting
+- OpenAPI specs with auto-generated docs
+- Endpoints covering: campaigns, flights, advertisers, audiences, budget, geo-lists, and reporting (via CHAPI)
+
+**Strategic significance:** LiftLab is the first external technology partner integrating via PAPI for incrementality experiments. PAPI is also a critical path for next-gen UI development. (via Benny, #engineering-team, 2026-05-14)
+- **BigQuery Migration — Final Cutover Date**
+
+The CoreDW-to-BigQuery migration final cutover date has been set to **Thursday, May 21, 2026**. After this date, all data will live natively in BigQuery. CoreDW servers are scheduled to be shut down on **Tuesday, May 26, 2026**. The cutover date was shifted from an earlier target to accommodate the large scale of work remaining for downstream teams. (via Mike Dolzer, #engineering-team, 2026-05-14)

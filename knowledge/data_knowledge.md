@@ -2099,3 +2099,22 @@ Starting around May 1, 2026, the TI team began scoring Max Reach (MR) IPs indepe
 3. In theory, performance across CGs should improve due to better audience quality.
 
 This change is observable in pacing signals: HHST MR reduced while HI/PP/MI levels increased — this is expected and indicates healthy pacing behavior, not a problem. (via Swapnil Patil, #mission-control, 2026-05-11)
+
+<!-- slack-extracted: 2026-05-15 -->
+- **Realtime Spend Source — Migration from R2DS to CHAPI**
+
+The UI layer's realtime spend calculation (used when a user edits a live flight budget) was sourcing from the `r2ds` service. An incident on 2026-05-13 revealed that r2ds experienced a ~50% failure rate, causing Gary (GaryQL) to calculate incorrect spend for flights being updated, which contributed to an overspend incident.
+
+Three identified remediation actions:
+1. **Migrate realtime spend queries from r2ds to CHAPI** — CHAPI is considered more reliable.
+2. **Update realtime spend queries to use the new BQ-sourced table** — the existing tables used are being deprecated post-BQ migration.
+3. **Improve fallback/error handling logic** in the event realtime spend cannot be retrieved (especially critical until CHAPI migration is complete).
+
+**Caution:** This is mission-critical UI code. Changes require thorough testing. QA environments lack real spend data, making validation difficult. Recommended approach: deploy changes behind a feature flag and validate against test AIDs or experiment accounts with pre-existing spend in production. (via Tom Manuel, #mission-control, 2026-05-14)
+- **Flight Budget Edit Validation Bug — Budget Lowered Below Amount Already Spent**
+
+A bug was identified (2026-05-13) where the UI allowed a user to save a flight budget lower than the amount already spent on that flight (e.g., a flight with $11,744 in spend was saved with a $972 budget). The UI validation logic is intended to prevent users from setting a budget below current spend, but this guard failed.
+
+The consequence is that MNTN absorbs the difference between actual spend and the incorrectly saved budget amount, since billing is based on the saved budget figure. This was escalated as a P0 incident (`#inc-20260513-budget-change`, PS-8109).
+
+**Root cause investigation:** Tom Manuel found the issue via Pendo session recordings. The realtime spend source (r2ds) failure likely contributed — if Gary calculated spend as zero or incorrect at the time of the edit, the validation threshold would be wrong. (via Tom Manuel, #mission-control, 2026-05-13)
