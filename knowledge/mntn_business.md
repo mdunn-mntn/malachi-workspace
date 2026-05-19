@@ -913,3 +913,6 @@ The PTV API (PAPI) launched to production as MNTN's new public API for Performan
 - **BigQuery Migration — Final Cutover Date**
 
 The CoreDW-to-BigQuery migration final cutover date has been set to **Thursday, May 21, 2026**. After this date, all data will live natively in BigQuery. CoreDW servers are scheduled to be shut down on **Tuesday, May 26, 2026**. The cutover date was shifted from an earlier target to accommodate the large scale of work remaining for downstream teams. (via Mike Dolzer, #engineering-team, 2026-05-14)
+
+<!-- slack-extracted: 2026-05-19 -->
+- **Brand to Select Bundle Matcher v2 (in testing):** A new version of the Bundle Matcher GPT tool is being tested for pre-sale use. Key improvement over v1: v2 pulls from MNTN's API directly, so bundle recommendations made pre-sale match exactly what the brand will see when they log into the Select platform. This eliminates the inconsistency between pre-sale recommendations and in-platform options. v2 URL: https://chatgpt.com/g/g-69fe4c6bef488191a07d41b7ab622a91-bundle-to-brand-matcher-api. The original Bundle Matcher GPT remains functional — sales team is advised to try both while v2 is in testing. (via Mick Mathis, #sales, 2026-05-18)

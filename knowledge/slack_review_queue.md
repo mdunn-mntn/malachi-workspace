@@ -390,3 +390,41 @@ The latest release of Fangorn includes updates to the HHST (Household Scoring Th
 ## NTB (New-to-Brand) Experiment — Identity Team Rollout Epic
 
 An epic (ID-283) has been created for the NTB Experiment rollout. The experiment has already slipped approximately 5 weeks from its original target. Realistic goal is end of Q2 2026, though this depends on cross-team dependencies — the Identity team may need to get onto other teams' backlogs first. Work is intended to begin as soon as possible given current priorities.
+
+## 2026-05-19
+
+### [data_knowledge] from David Rose in #targeting_helpdesk_ask_anything
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**IP Address CRM Upload — Match Rate Pipeline:** Match rates for IP address-based CRM uploads are tracked in `ui.audience_uploads` in the DB. If match rates are not populating in the UI, check whether entries exist in that table. Files may be successfully stored in GCP and available for audience targeting in the UI even when match rate computation has not completed or has failed — these are independent pipeline stages. (Observed for AID 65688, ticket PS-8119.)
+
+### [data_knowledge] from Meghan Besse in #mission-control
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Overspend Pipeline — BAE Dependency on BigQuery Migration:** The overspend fix endpoint exists but is not ready for consumption and may change once hourly spend data is implemented. The BAE (Budget Allocation Engine) work is blocked pending completion of the BigQuery migration before it can finalize the overspend integration. A PR is ready for testing once BAE work is complete.
+
+### [data_knowledge] from Tom Manuel in #production-ops
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Budget Allocation Over 100% — DSP Controls Interaction:** When an advertiser enables DSP controls, an automated process shuts down Stage 2 and pushes budget into Stage 3. If the advertiser already had a non-standard budget allocation setup prior to enabling DSP controls, the automation may produce invalid budget splits (e.g., total not summing to 1.0 / over 100%). This is a known edge case. The standard budget floor for the relevant stage is expected to be 0.15–0.15. Campaigns should be checked for valid budget allocation totals after DSP controls are enabled.
+
+### [data_knowledge] from Alexander Jerneck in #identity_core_dev
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Identity Graph — Precision Benchmarks (Shopify-based, WIP):** Early precision measurements for the identity graph using Shopify as ground truth show: existing system = 14% precision, graph without shared IPs = 20% precision. This represents a meaningful improvement and provides a candidate optimization metric for the graph. Results are preliminary (work in progress).
+
+### [strategic] from Brian McAdams in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Proxima Data Partnership — Cross-Team Scope (TI-841/TI-935):** Proxima data is being scoped for use across three teams: Targeting, Identity, and Select. Brian McAdams is leading the data requirement articulation. Before data is received, requirements need confirmation from: (1) the ML/targeting team on enrichment and model progression use cases, (2) the Identity team on their use case, and (3) the Select team (initial questions drafted; Select team to review for additional ideas). Proxima will send a data slice for analysis once requirements are finalized.
+
+### [experimentation] from Edgar von Trotha in #ask-incremental-lift-tests
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Rockerbox as Incrementality Measurement Partner — First Test (Great Health Works, AID 59042):** MNTN's first incrementality lift test using Rockerbox as the measurement platform has been initiated for Great Health Works (AID 59042, $250K budget). The test design is a market-matched (DMA-based) CTV lift test. Key review flags noted by the data science team: (1) budget split across treatment DMAs should be confirmed — equal splits risk signal dilution in larger markets; (2) Amazon sales conversions should be confirmed as captured in measurement; (3) a power analysis/score was not included in the test design submitted. No red flags identified overall. Test launch planned for approximately June 1, 2026.

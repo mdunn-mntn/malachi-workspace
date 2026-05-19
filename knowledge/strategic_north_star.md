@@ -298,3 +298,6 @@ Alex Knorr and Matt Brorby are preparing a Fangorn rollout analysis for the upco
 - Present results at GTM sync (week of May 12, 2026).
 - Rerun analysis on Monday May 18 to confirm no dramatic changes.
 - Roll out the remainder of Tier 1 after May 18 validation. (via Alex Knorr, #tgt-infrastructure-squad, 2026-05-11)
+
+<!-- slack-extracted: 2026-05-19 -->
+- **IPv6 Bidding Rollout — Pre-Launch Data Ramp Plan (TI-908):** The IPv6 pipeline is currently running with an extra filter applied. Before launch, data volume should be gradually increased to the full amount approximately 2 weeks prior to the launch date. Post-launch, data volume may increase significantly as auction log feeds back into the identity graph, potentially requiring additional capacity work. An outstanding investigation is needed to estimate how geo filtering impacts the amount of IPv6 data eligible for bidding. (via Victor Savitskiy, #tgt-infrastructure-squad, 2026-05-18)
