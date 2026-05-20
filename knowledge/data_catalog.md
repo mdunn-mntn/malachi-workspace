@@ -2422,3 +2422,16 @@ These two tables in the `dso` schema of coredb (intprod) have not been actively 
 <!-- slack-extracted: 2026-05-19 -->
 - **Databricks → BigQuery Connector — Project/Billing Configuration (mntn-identity-prod):** When using the Spark BigQuery connector to read from `dw-main-silver` while billing jobs to `mntn-identity-prod`, use the `project` and `billingProject` configuration parameters (the older `parentProject` parameter is deprecated per the GoogleCloudDataproc spark-bigquery-connector). Set `billingProject` to `mntn-identity-prod` and `project` to `dw-main-silver`. Materialization temp tables will land in the `dw-silver` project. The `mntn-identity-prod.aggregates` dataset is only needed if billing/materialization is pointed at `mntn-identity-prod`; if billingProject is correctly set, a separate aggregates dataset in the identity project is not required. The service account `databricks-compute@mntn-databricks.iam.gserviceaccount.com` requires `BigQuery Job User` (`roles/bigquery.jobUser`) on `mntn-identity-prod` and `roles/bigquery.dataViewer` + BigQuery Read Session User on relevant datasets. (via Jack Barbey, #identity_core_dev, 2026-05-18)
 - **SQLMesh — guid_identity_daily.sql Job Alerting:** As of 2026-05-18, no alerting is configured for SQLMesh job failures, including `guid_identity_daily.sql`. Alerting needs to be set up in the SQLMesh repo. This is a known gap acknowledged by the identity team. (via Weiang Li, #identity_core_dev, 2026-05-18)
+
+<!-- slack-extracted: 2026-05-20 -->
+- ## ui.audience_uploads
+
+- **Key column:** `match_rate` — populated for email and phone CRM upload types; always `NULL` for IP-type uploads (`audience_upload_type_id = 3`). This is expected, not a data quality issue.
+- **Key column:** `audience_upload_type_id = 3` — denotes IP-type uploads.
+- **Match rate source (email/phone):** Calculated by the Spark job at `spark/crm/crm_match_rate_gcp.py`, orchestrated by `dags/crm/crm_match_rate_dag.py` (Airflow). Result written back to this table.
+- **Gotcha:** The gary GraphQL API resolves `AudienceUpload.match_rate` directly from this column. For IP uploads, no fallback logic exists — consumers of this field must handle the null case explicitly. (via Macie Kluting, #targeting-squad, 2026-05-19)
+- ## core.live_schedule_events
+
+- **Schema change (2026-05-19):** Column `source_event_key` was dropped from this table across QA, DEV, and PROD environments.
+- **Ticket:** DPLAT-1069
+- **Action required:** Any queries or models referencing `source_event_key` on `core.live_schedule_events` will fail — remove references. (via sai, #data-platform, 2026-05-19)

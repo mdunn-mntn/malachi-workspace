@@ -2125,3 +2125,17 @@ The consequence is that MNTN absorbs the difference between actual spend and the
 - **VV of NTB Drop (sys signal since 3/17) — False Alarm:** A previously flagged drop in Verified Visit (VV) of New-to-Brand (NTB) metrics since 2026-03-17 was determined to be a false alarm. The issue is on the monitoring data source side, not a true feature or attribution issue. (via Johnny, #mission-control, 2026-05-18)
 - **Offline Attribution (sys606) — Pipeline Bug (2026-05-16):** A bug was introduced into the offline attribution pipeline causing a data quality cliff-drop beginning 2026-05-16. The bug was identified and fixed. The SM606 monitoring chart should reflect improved numbers after the fix, though the chart may require a daily refresh to display the corrected data. (via ray, #mission-control, 2026-05-18)
 - **Identity Graph Monitoring Dashboard Pattern (Alexander Jerneck):** For identity/DS model monitoring dashboards, the established pattern is: (1) calculate metrics in a Databricks notebook, (2) save results to a BigQuery table, (3) build the dashboard in HTML reading from the BQ tables, (4) publish to Mode. Convenience scripts for pushing/pulling notebooks from Databricks, running dashboards locally, and publishing to Mode exist in the `dsanalysis` repo under the `graph-heuristics/id-166` branch. (via Alexander Jerneck, #identity_core_dev, 2026-05-18)
+
+<!-- slack-extracted: 2026-05-20 -->
+- ## CRM Upload Match Rate — IP Type Behavior
+
+Match rate for CRM audience uploads is defined differently depending on upload type:
+
+- **Email / Phone uploads:** Match rate reflects how many records were successfully converted to IP addresses for targeting/exclusion. Calculated by the Spark pipeline (`crm_match_rate_gcp.py`, DAG: `crm_match_rate_dag.py`) and stored in `ui.audience_uploads.match_rate`.
+- **IP uploads:** Match rate is not calculated or stored — the `match_rate` column in `ui.audience_uploads` is `NULL` for all records where `audience_upload_type_id = 3` (IP type). This is expected behavior, not a data bug.
+
+**Why:** When the upload is already a list of IPs, no conversion step is needed, so a match rate is conceptually N/A (or effectively 100%). The existing Spark match rate pipeline only handles email and phone types.
+
+**UI treatment:** The recommended approach is to display `N/A` in the UI for IP-type uploads rather than showing `--` (null) or hard-coding `100%`, to avoid confusion about what the metric means. Additionally, surfacing the upload type in the display table provides context for why some rows show a percentage and others show N/A.
+
+**Table:** `ui.audience_uploads` — `match_rate` column is null for IP-type uploads by design. (via Macie Kluting, #targeting-squad, 2026-05-19)

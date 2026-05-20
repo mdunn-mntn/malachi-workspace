@@ -301,3 +301,12 @@ Alex Knorr and Matt Brorby are preparing a Fangorn rollout analysis for the upco
 
 <!-- slack-extracted: 2026-05-19 -->
 - **IPv6 Bidding Rollout — Pre-Launch Data Ramp Plan (TI-908):** The IPv6 pipeline is currently running with an extra filter applied. Before launch, data volume should be gradually increased to the full amount approximately 2 weeks prior to the launch date. Post-launch, data volume may increase significantly as auction log feeds back into the identity graph, potentially requiring additional capacity work. An outstanding investigation is needed to estimate how geo filtering impacts the amount of IPv6 data eligible for bidding. (via Victor Savitskiy, #tgt-infrastructure-squad, 2026-05-18)
+
+<!-- slack-extracted: 2026-05-20 -->
+- ## Incrementality — LiftLab Beta Customer Onboarding (2026-05)
+
+MNTN is running a LiftLab beta for incremental lift testing. A starter list of approximately 25 prioritized customers has been identified; CS is expected to receive that list to begin engagement. Accounts not on the list but expressing strong interest or suitability should be escalated directly rather than self-enrolled.
+
+**Owner:** Edgar von Trotha is coordinating the beta customer pipeline.
+
+This is consistent with the Q2 strategic priority to prove incrementality via approved third-party vendors. (via Edgar von Trotha, #ask-incremental-lift-tests, 2026-05-19)

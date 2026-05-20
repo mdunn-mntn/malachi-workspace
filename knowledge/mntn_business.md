@@ -916,3 +916,57 @@ The CoreDW-to-BigQuery migration final cutover date has been set to **Thursday, 
 
 <!-- slack-extracted: 2026-05-19 -->
 - **Brand to Select Bundle Matcher v2 (in testing):** A new version of the Bundle Matcher GPT tool is being tested for pre-sale use. Key improvement over v1: v2 pulls from MNTN's API directly, so bundle recommendations made pre-sale match exactly what the brand will see when they log into the Select platform. This eliminates the inconsistency between pre-sale recommendations and in-platform options. v2 URL: https://chatgpt.com/g/g-69fe4c6bef488191a07d41b7ab622a91-bundle-to-brand-matcher-api. The original Bundle Matcher GPT remains functional — sales team is advised to try both while v2 is in testing. (via Mick Mathis, #sales, 2026-05-18)
+
+<!-- slack-extracted: 2026-05-20 -->
+- ## Product Releases — May/June 2026 (Sales Update)
+
+### HubSpot Integration V2
+- **Status:** Closed Beta, GA early June
+- **Function:** Sends MNTN impression data into HubSpot for attribution
+- **Relevance:** Opens B2B opportunities for accounts using HubSpot for lead attribution tracking
+- **Action:** Flag accounts for the beta to the Solutions team
+
+### Tealium Integration
+- **Status:** Closed Beta, GA early June
+- **Function:** Sends audience data from Tealium to MNTN for targeting/exclusions
+- **Relevance:** Unlocks CDP-based conversations for prospects using Tealium
+
+### Upwave Integration
+- **Status:** Beta, end of May
+- **Function:** Automated onboarding in the MNTN platform for Upwave brand studies
+- **Action:** Flag interested customers in the Upwave channel to be added to beta
+
+### Creative Scheduling
+- **Status:** Closed Beta, June 1 (active customers only)
+- **Function:** Lets advertisers schedule a creative to run during a specific time window
+- **Use case:** Marketers with promotional calendars
+
+### Creative Sequencing
+- **Status:** Rolling out to GA over the week of this update
+
+### Coming Soon
+- **Unified Reporting Dashboard** with period-over-period comparison — closed beta May 28
+- **Retargeting Deliverability enhancements** — closed beta June 2 (via Mick Mathis, #sales, 2026-05-19)
+- ## Targeting Squad — Audit & Monitor Reference for DS/Model Changes
+
+A Confluence reference page has been established at `mntn.atlassian.net/wiki/spaces/TAR/pages/3609919524` titled **"Audits & Monitors for Targeting Model / DS Changes."** It is a Targeting-squad-focused snapshot derived from the Mission Control audit registry spreadsheet.
+
+**Contents:**
+- Targeting squad P0 audits (audit IDs: 17, 40, 109, 110, 117, 118, and others) with ownership
+- Adjacent Bidder and Campaign Management audits that targeting model swaps can inadvertently trigger (audit IDs: 34, 72, 41, 42, 56)
+- A pre-flight checklist to run before any targeting model or DS change ships
+
+**Source of truth:** The Mission Control audit registry Google Sheet. The Confluence page is a curated snapshot for the Targeting squad.
+
+**When to use:** Review before any DS swap or model change ships, especially releases involving Fangorn or Continuous Scoring. (via Bryce Wagg, #targeting-squad, 2026-05-19)
+- ## Jira Ticket Workflow — Fix Versions and Flags (Targeting Squad)
+
+### Fix Version Automation
+- Fix versions are only auto-generated when a ticket moves to **Ready for Deployment (RFD)** status. Tickets that skip RFD and go directly to Done will not have a fix version attached, and the release Slack notification will not fire.
+- A PR-approval automation moves tickets to RFD automatically. Tickets without associated code (observability, infra, docs) do not trigger this automation and must be moved to RFD manually.
+
+### Jira Flags
+- Jira's flag feature places a yellow banner on a ticket without changing its status. Intended for situations that need attention but are not fully blocked — e.g., stalled on a question, awaiting a decision, or carrying a known risk.
+- **Convention:** Use flags as a status overlay, not a replacement for the Blocked status. Use Blocked for hard stops only.
+
+**Reference:** `mntn.atlassian.net/wiki/spaces/TAR/pages/2050097175/Jira+Ticket+Workflow` (via Bryce Wagg, #targeting-squad, 2026-05-19)
