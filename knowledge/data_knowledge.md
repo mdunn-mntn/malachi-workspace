@@ -2139,3 +2139,26 @@ Match rate for CRM audience uploads is defined differently depending on upload t
 **UI treatment:** The recommended approach is to display `N/A` in the UI for IP-type uploads rather than showing `--` (null) or hard-coding `100%`, to avoid confusion about what the metric means. Additionally, surfacing the upload type in the display table provides context for why some rows show a percentage and others show N/A.
 
 **Table:** `ui.audience_uploads` — `match_rate` column is null for IP-type uploads by design. (via Macie Kluting, #targeting-squad, 2026-05-19)
+
+<!-- slack-extracted: 2026-05-22 -->
+- ## CRM IP Audience Upload — MemDB Sizing Behavior
+
+When a user uploads a CRM list consisting entirely of IP addresses, the audience size may appear missing in the UI and return no result from the `/totals` endpoint of `audience-service`. This is **not necessarily a processing failure** — the IPs may be present in `audience_uploads` and `audience_upload_ips` tables and correctly loaded into membership DB (memDB), but still show no UI size for the following reasons:
+
+1. **Sampling vs. prod endpoint confusion:** `membership-gateway-as.prod.in.mountain.com/totals` is the **sampling** endpoint, not production. Use `membership-gateway.prod.in.mountain.com/totals` to check actual membership DB contents. A small IP list may return zero results in the sample but be present in prod.
+2. **Small list behavior:** For interest/geo segments, sizes below 1,000 show as `< 1,000`. For CRM uploads, no such fallback label is displayed — the size field simply appears blank even if targeting is active.
+3. **Targeting still occurs:** IPs present in memDB will be targeted when they appear in the bidstream, even if no UI size is shown. For very small lists (e.g., ~36 unique IPs), match frequency will be low by probability.
+
+**RabbitMQ ACK timeout** (30-min default) has been flagged as a potential failure mode for large CRM files that take longer to process — pod restarts can prevent the TPA refresh from populating memDB. Increasing the ACK timeout beyond 30 minutes in broker config is a suggested mitigation for that specific failure path. (via Jordan Piepkow, #targeting-squad, 2026-05-21)
+- ## Mountain Match (Targeting) — DMA Usage Scope
+
+DMA (Designated Market Area) is used in MNTN's platform for **customer-facing geo targeting** (advertisers can filter by DMA in campaign setup), but it is **not used as a model input, scoring feature, or pipeline column** within the Mountain Match targeting infrastructure.
+
+Specifically (confirmed by the targeting infrastructure squad):
+- **Model inputs:** DMAs are not used
+- **Scoring outputs:** No DMA references surfaced to customers, PEX, or external APIs via Mountain Match
+- **Pipeline/BQ schemas (squad-owned):** No DMA column references of consequence
+- **Customer-facing UI:** DMA-based geo filtering is available (handled by the PRO UI squad and reporting layer, not the targeting squad)
+- **Reporting side:** DMA data is available in reporting outputs
+
+No references to `DMA` or `Geo type ID 4 = DMA` were found in targeting infrastructure repos. (via Matt Brorby, #tgt-infrastructure-squad, 2026-05-21)

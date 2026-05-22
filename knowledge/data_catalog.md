@@ -2435,3 +2435,22 @@ These two tables in the `dso` schema of coredb (intprod) have not been actively 
 - **Schema change (2026-05-19):** Column `source_event_key` was dropped from this table across QA, DEV, and PROD environments.
 - **Ticket:** DPLAT-1069
 - **Action required:** Any queries or models referencing `source_event_key` on `core.live_schedule_events` will fail — remove references. (via sai, #data-platform, 2026-05-19)
+
+<!-- slack-extracted: 2026-05-22 -->
+- ## silver.logdata.event_log — Video Completion Events
+
+To retrieve video completion events on a per-impression basis, query `dw-main-silver.logdata.event_log` and filter on `event_type_raw = 'vast_complete'`. Key columns for this use case:
+- `td_impression_id` — join key to impressions
+- `campaign_id`
+- `advertiser_id`
+- `creative_id`
+- `time` — timestamp of the completion event (always filter on this column for performance)
+
+`cost_impression_log` does **not** contain video completion data; `event_log` is the correct source. (via Pratik, #reporting_helpdesk_ask_anything, 2026-05-21)
+- ## dw-main-gold.salesforce.v_accounts_log — Known Data Gap (Jan 30 – May 16, 2026)
+
+As of 2026-05-21, `dw-main-gold.salesforce.v_accounts_log` (and its underlying tables in `dw-main-silver.sqlmesh__salesforce`) is missing approximately 3.5 months of historical partitions: data from **2026-01-30 through 2026-05-16 is absent**. Data exists for dates through 2026-01-29 and from 2026-05-17 onward.
+
+**Root cause:** BAE (Business Analytics Engineering) migration/salesforce work is in progress and expected to wrap by **2026-06-02**. Anomalies in this table should be expected until then.
+
+**Usage note:** This view is used for the Scout Book of Business Coverage KR — specifically to pull a frozen Apr 1 snapshot as the OKR denominator. The Apr 1 partition is currently unavailable; downstream users should rely on cached snapshots until the gap is resolved. (via Kaitlin Dickinson, #data-platform, 2026-05-21)

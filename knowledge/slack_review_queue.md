@@ -428,3 +428,34 @@ An epic (ID-283) has been created for the NTB Experiment rollout. The experiment
 **Confidence:** medium
 
 **Rockerbox as Incrementality Measurement Partner — First Test (Great Health Works, AID 59042):** MNTN's first incrementality lift test using Rockerbox as the measurement platform has been initiated for Great Health Works (AID 59042, $250K budget). The test design is a market-matched (DMA-based) CTV lift test. Key review flags noted by the data science team: (1) budget split across treatment DMAs should be confirmed — equal splits risk signal dilution in larger markets; (2) Amazon sales conversions should be confirmed as captured in measurement; (3) a power analysis/score was not included in the test design submitted. No red flags identified overall. Test launch planned for approximately June 1, 2026.
+
+## 2026-05-22
+
+### [mntn_business] from Eric Salinger in #mission-control
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Bid 204 Instability — Bidder Service Memory Profiling (May 2026)
+
+BID 204 errors were observed fluctuating for several hours on 2026-05-20 and 2026-05-21 in the EAST region. Root cause investigation requires **memory profiling** of the bidder service, which is a slow process. Key operational notes:
+- Bidder service deployment queue is backed up; changes cannot go out on Fridays without an explicit exception
+- Next available deployment window after a holiday weekend is **Tuesday** (Monday 5/26 is a holiday)
+- Timeline: deploy profiling instrumentation Tuesday → collect data over ~1 day → analyze → develop fix. Resolution expected to be slow-moving.
+
+This is tracked as an ongoing instability pattern in mission control.
+
+### [mntn_business] from Johnny in #mission-control
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## HHST (High-Household Spend Targeting) — Slow Ramp-Up Behavior
+
+HHST is known to ramp up slowly after a spend disruption. A significant underspend event on 2026-05-19 caused the HI% (Household Index percentage) to drop on 2026-05-20, and it was **not bouncing back to pre-event levels** by 2026-05-21. This slow recovery is a documented characteristic of HHST and should be expected after any underspend event — performance impact may persist for multiple days.
+
+### [mntn_business] from Ryan Kleck in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Fangorn — Automatic Advertiser Inclusion (TI-914)
+
+A ticket (TI-914) for automatically including advertisers into Fangorn has been deployed to QA and is ready for production pending final logic decisions around inclusion criteria. This is being tracked by the targeting infrastructure squad.
