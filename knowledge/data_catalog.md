@@ -2454,3 +2454,22 @@ As of 2026-05-21, `dw-main-gold.salesforce.v_accounts_log` (and its underlying t
 **Root cause:** BAE (Business Analytics Engineering) migration/salesforce work is in progress and expected to wrap by **2026-06-02**. Anomalies in this table should be expected until then.
 
 **Usage note:** This view is used for the Scout Book of Business Coverage KR — specifically to pull a frozen Apr 1 snapshot as the OKR denominator. The Apr 1 partition is currently unavailable; downstream users should rely on cached snapshots until the gap is resolved. (via Kaitlin Dickinson, #data-platform, 2026-05-21)
+
+<!-- slack-extracted: 2026-05-23 -->
+- **dw-main-bronze.raw — Household ID (HH) Log Tables**
+
+Four raw tables exist for household ID enrichment across event types:
+- `dw-main-bronze.raw.ads_clickpass_hh_log`
+- `dw-main-bronze.raw.click_hh_log`
+- `dw-main-bronze.raw.guid_hh_log`
+- `dw-main-bronze.raw.conversion_hh_log`
+
+**Column naming inconsistency (as of 2026-05-22):** `ads_clickpass_hh_log` uses `household_id`, `household_version`, etc. (full names), while `click_hh_log` and `guid_hh_log` use shortened names: `hh_id`, `hh_version`, etc. Standardization to the full `household_id` naming convention has been requested.
+
+**Known data gap:** `conversion_hh_log` currently only contains `hh_resolution_id` — the columns `hh_id`, `hh_confidence_score`, and `hh_ver` are present in the raw Kafka events (confirmed in conversion log source) but are not being ingested into the table. A DPLAT ticket (DPLAT-1100) has been filed to resolve this. The attribution team currently pulls directly from raw Kafka events as a workaround.
+
+**Expected schema for HH log tables:**
+- `hh_id` (or `household_id`) — household identifier
+- `hh_confidence_score` — confidence score for household resolution
+- `hh_ver` (or `hh_version`) — graph version used for resolution
+- `hh_resolution_id` — resolution event identifier (via Jack Barbey, #identity_core, 2026-05-22)
