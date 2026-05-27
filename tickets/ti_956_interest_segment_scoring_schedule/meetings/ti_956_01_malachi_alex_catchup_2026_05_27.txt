@@ -1,0 +1,439 @@
+[00:00] All good. We have been doing weekly check-ins with the go-to-market team on Thursdays,
+[00:05] so it doesn't need to be ready for this Thursday, um, but if that's something you go through,
+[00:11] that would be good, and we skipped the last week because we had just released the rest of
+[00:15] wave one and had, like, two days of data, so it was, like, not interesting. I'm in this,
+[00:20] someone invited me, uh, oh, Jennifer. Jennifer invited me with Kirsten and Nick for Thursday.
+[00:27] Says review causal impact with the experiment team, but you're not on it, I don't think, so.
+[00:32] No, this is different, but that.
+[00:34] I have no idea what that is about. I'll have to ask them.
+[00:37] So, yeah, this is, like, PEX group, just, like, go-to-market tracking of where we're at with
+[00:41] Fangorn, so. Okay.
+[00:42] I don't think we need causal impact for that yet, and I would just, like, if you can run
+[00:47] things and look and say, like, yeah, we have enough data, or, like, no, this is too messy
+[00:51] still, that's kind of what I want to know for now.
+[00:54] Been since tier two.
+[00:57] So, we have kind of three things in flight right now. We have the first three advertisers,
+[01:03] and I can share my screen for this, but the first three advertisers that we ran,
+[01:09] they have been out for 26 days.
+[01:14] Yep.
+[01:15] Not including the day that they switched. Then we have a random sample of 50 advertisers
+[01:20] from tier one. They have been out for 20 days, and then we released the remaining 312
+[01:28] tier one advertisers last week, so they have been out for seven days.
+[01:33] Okay.
+[01:33] So, the best volume is 50 advertisers and 20 post-period days, which is okay. Probably
+[01:42] not great for conversion still.
+[01:44] But, okay, that's kind of where we're at. Monday will be wave two, which is tier two,
+[01:50] and so, along with tier two, I have some evaluation to say these are a list of verticals
+[01:58] that any new advertisers, we can just roll them out automatically.
+[02:03] Okay.
+[02:04] That's also going to go out with wave two.
+[02:05] Tier two is just, there's nothing different about the, I guess, the model. It's just the
+[02:11] remaining advertisers.
+[02:12] Yeah, so the different waves are kind of like, tier two have more concerning kind of scores,
+[02:20] and so there are some things that I have to pull out of, like, the audience gets too small,
+[02:24] so we're going to remove them from the wave, but they're kind of the middle pack.
+[02:28] Then tier three is the most extreme, like, hey, these advertisers have their audience
+[02:33] reduced by, like, 80 percent. So, those are, okay, we have to make some actual adjustments.
+[02:38] Gotcha. So, there's actually some, I didn't realize that, so the different tiers actually
+[02:42] represent different confidence in the scores.
+[02:45] Yeah, and, like, tier one's the most, like, low-risk, high-reward group.
+[02:53] Gotcha. So, that's another thing I was going to ask. So, like, would,
+[02:57] were we also limiting people who have, like, huge spend profiles to?
+[03:02] It is kind of. Not necessarily huge spend, but more, like, where are their score thresholds,
+[03:08] and how are they pacing? So, like, making sure that, are we, like, are we expanding the audience?
+[03:15] How good is the score? And then, are they low thresholds, or are they pacing poorly?
+[03:22] Those would be signs that we wouldn't want to take them out, right? Like, if they're already
+[03:25] struggling to spend, we don't want to, like, reduce the size.
+[03:27] Yeah, that makes sense. So, the reason that they would be,
+[03:34] have a smaller size is just because the, oh, that's because of the score threshold, right?
+[03:40] Yeah, exactly.
+[03:41] Yeah, so basically.
+[03:42] Like, if it's .8 and above.
+[03:43] Yeah, that's right.
+[03:43] So, for tier three, if it's, like, okay, at .8 and above, this advertiser is getting their audience
+[03:49] to spend, like, how good is their score? And then, if it's, like, .8 and above,
+[03:53] if it's, like, okay, at .8 and above, this advertiser is getting their audience reduced,
+[03:58] we have the ability to change the threshold on a per advertiser basis. So, the work I'll be doing
+[04:03] next sprint is, like, okay, if we move the threshold to .6, does their audience get to,
+[04:09] like, is their audience much larger, and we're more comfortable with it?
+[04:12] Gotcha. Okay, that makes sense.
+[04:15] So, let me share my screen, and we can talk through some of the stuff that I built.
+[04:20] Um, this is all pretty much based on the queries that you built, your daily pacing.
+[04:25] Mm-hmm.
+[04:26] So...
+[04:28] And yours was so much easier to look through, too. Like...
+[04:30] Oh, this?
+[04:32] Yeah, no, because it was nice, because I hadn't had time to, like, really go through it
+[04:38] after I had generated some of that stuff and ran it, so...
+[04:41] So, this is all your code. I think the only changes I did,
+[04:45] this prospecting logic and this mountain campaign, match campaign IDs, this mirrors the logic Matt
+[04:52] was using in validating the tiers and which campaigns we're using. So, everything else
+[04:56] stays the same. And then I used our... where do I join it? Rollout tier.
+[05:05] The table, yeah.
+[05:07] Yeah. So, this is our... wherever it is. Yeah. Fangorn Advertiser Inclusion.
+[05:13] Mm-hmm.
+[05:15] To subset. So, I won't go through this, but doing this work, I actually realized what you can do
+[05:22] with these little things. If you go to the bottom of this list,
+[05:26] and it's really hard to do on here, so let's expand this.
+[05:31] And you have a display, like a data frame display, or a chart, you can say, add to a
+[05:38] notebook dashboard. So, then I can go view, rollout evaluation.
+[05:46] So, then this is the dashboard that I put together based on that notebook. So,
+[05:49] every time we run the notebook, it updates this. And then this is, like, some Claude
+[05:54] built HTML to, like, present that. So, every time we add a tier in that table,
+[05:59] it'll update here, and then it'll update the comparison group to our next number. So,
+[06:04] tier one, tier two, tier three, these are basically all versions of tier one. And then
+[06:08] the control tier four, this is tier two. So, there's some misnomers in the naming,
+[06:12] but that's okay. And then what I've presented is two different things. Lift is pre-post,
+[06:19] and then difference in difference is pre-post for treatment and control,
+[06:23] and then the difference between those. So, it's an estimated causal effect,
+[06:27] since we have a comparison control group and a pre- and a post-time period. So,
+[06:32] when you have all four of those things, you can do this kind of estimate of causal effect.
+[06:38] So...
+[06:42] Okay.
+[06:43] So, start with kind of the best thing we can, like, interpret and evaluate here. Positive lift
+[06:51] in visit rates for all of these groups, relative to the tier where we haven't rolled it out yet.
+[06:57] And very strong difference in difference for there. Obviously, we only have seven days,
+[07:02] so we're a little bit lower here, but this looks really good, right? 27%
+[07:07] estimated causal impact of Fangorn on visit rates.
+[07:13] Once we get into conversions, things are a little messier, as, you know, you've already
+[07:18] called out before you left, right? There's a timing thing here. These three advertisers don't
+[07:23] have an order value. So, ROAS doesn't show here, and it's only three advertisers. So,
+[07:29] decline in conversion rate, increase in cost per acquisition, but this is three advertisers.
+[07:31] increase in cost per acquisition but this is three advertisers let me understand like try
+[07:38] to understand something so i've got the pre pre-post right so nothing changing just what
+[07:46] what was the average of the IVR pre versus the post, and that's what the percentage, right?
+[07:53] Yep.
+[07:54] So, when you say treated lift or DID adjusted, I guess what I'm not understanding is you're saying,
+[08:02] is that the percentage points difference? Or not percentage points difference, is that?
+[08:07] So, when you say, like, plus 15% treated lift, right?
+[08:11] That is just the 15% difference between these two numbers.
+[08:14] Okay. Yeah, I got you.
+[08:16] And then difference in difference says that number as pre-post for the treatment group,
+[08:26] but then it also calculates a pre-post for the control group. And then you take the percent
+[08:31] difference in those things. So, now you account for, like, seasonality or things
+[08:36] that would affect both groups.
+[08:38] Okay. Yeah. Okay. So, that's making sense to me. So, the pre-post for the treatment group,
+[08:45] so, what do you mean by you plug in the 15% difference? Are you saying that
+[08:54] you adjust the line for each of those versus the treatment, and then you
+[09:00] do the difference between the two?
+[09:02] Yeah. So, let me, I'm going to, like, make up an example here.
+[09:08] Is the 15% added to the treatment?
+[09:15] So, let's say it was, and I'll just pick the real values for this, 1.28, 1.47.
+[09:26] And let's say this was, like, 1.28 as well, but it was, like, 1.30 here.
+[09:35] So, then you would say difference in difference would be this minus this
+[09:45] and then here and then this, this, I think, or, yes, this minus this. So, the
+[10:02] treatment lift is, you know, this is not in percentages. This is percentage points.
+[10:07] The treatment lift is a 19.19 percentage point increase from the treatment.
+[10:16] But we need to account with how the control changed
+[10:20] because taking that difference out controls for what would have happened and some seasonality
+[10:26] type effects. So, while just a pre-post would show a 0.19, if we take out, we subtract out
+[10:35] what the control group did pre-post, the true difference in difference effect is a 0.17.
+[10:43] And the pre-post, the control here, just the ones that we haven't released yet.
+[10:47] Yeah. So, originally it was, hey, this is 50 random advertisers from this group,
+[10:54] so that's a control. But now I've switched it to say wave one that we've released versus this
+[11:02] next wave that we haven't rolled out yet. Another, like, 400 advertisers.
+[11:06] Gotcha. Gotcha. Okay. So, and they were chosen at random.
+[11:10] Wave two, this case they're not. So, it's like less valid, but for the sake of
+[11:16] thing that hasn't changed yet.
+[11:17] Yeah. That makes sense. Okay. So, no, that makes sense to me. What I was wondering.
+[11:25] So, when you say plus 15%, that is...
+[11:30] Just this.
+[11:31] Yeah. Just the difference between the two. And the DID adjusted
+[11:36] was, yeah, I got you. I got you. Yeah. Okay. No, that makes sense to me. That's why I figured
+[11:43] that's what it was. I just wanted to make sure I was understanding that.
+[11:45] what it was i just wanted to make sure i was understanding that um so that's how you can this
+[11:50] difference in difference why this is negative for example yeah row as went up but row as went up
+[11:57] more in the control group so if you just did a pure pre-post oh row as went up but the control
+[12:03] pre-post, oh, ROAS went up. But the control group where ROAS went up for that same time period.
+[12:12] So, now the effect looks worse.
+[12:13] So, like, it's kind of seems like the most valid form of diff and diff would be, like, if you,
+[12:23] like, when you randomly selected them and then you randomly select another
+[12:28] group. Oh, I've seen them. Yeah. So, like, a version of diff and diff, for example, would be,
+[12:34] like, you know, when they do the geo testing and they'll choose one market and then they
+[12:38] subtract it out, like, from the other market. So, you get that, you make sure you're not getting
+[12:42] any unseasonality. That's basically diff and diff, like, in a different...
+[12:46] Yeah. And the key with diff and diff, you don't necessarily need random assignment
+[12:51] between treatment and control. But what you need is the treatment and control groups have to have
+[12:58] parallel trends. Right. So, even if control is only, like, 10% of treatment. So, you have, like,
+[13:04] way higher volume and treatment. If they followed the same patterns in the pre-period,
+[13:09] then it's an acceptable comparison. Gotcha. So, basically, the assumption is that they...
+[13:14] Before we made a change, both groups were the same.
+[13:16] Yeah. So, it should...
+[13:17] That's the big assumption.
+[13:18] In our case, as long as it's large enough, it's going to be the... I mean, we assume seasonality
+[13:24] is going to affect everything roughly. Okay, gotcha. Yeah, I get what you're saying. So...
+[13:29] And my talking points have kind of been, this is the headline, put less weight into these
+[13:36] conversion-based metrics, given the time that we've had so far. Even 20 days is probably
+[13:42] light from your analysis, right? Yeah. So, what's crazy about it is, for CTV,
+[13:49] our windows are, like, super long. Yeah. Really, really long.
+[13:56] It's true. Like, there was a study I posted on our other thing that I read through that
+[14:02] basically said that the... I don't know if it's true or not, but there was a study that I read
+[14:09] that basically said that they believe the most... A large portion of their conversions happen after
+[14:16] the campaign ends, which is really quite interesting. But... So, then I did... These are
+[14:22] kind of the headline KPIs that I talked through to go to market. Then I have this simple summary,
+[14:27] just like with some flags. So, this is like, we had three advertisers here, we had 49 here,
+[14:33] but only 41 of them actually have active campaigns. Like, we evaluated them in May,
+[14:40] and then as they rolled out, they, you know, don't have campaigns running. And then here,
+[14:45] we identified 312, but then 260 of them are running right now. And then this is just the
+[14:51] visit rate numbers you saw above, with the difference on Lyft. And then flagging how many
+[14:56] dropped had a change... A decrease in visit rate of more than... Greater than or equal to 10%.
+[15:05] And then a median minimum pacing value here. That's kind of like another summary. And then
+[15:11] I created the same summary. This is based on the aggregates. So, like, the sum of
+[15:17] visits across all advertisers divided by the sum of impressions over the window.
+[15:22] This is the median visit rate across all advertisers in the group. So, it's like the per,
+[15:29] what the average advertiser in the group could expect.
+[15:32] Right.
+[15:33] So, you see much higher changes, impacts, on the median advertiser than you do.
+[15:40] Did you... Sorry, is the top one weighted at all?
+[15:43] This would be impression weighted, right? Because it's like the sum.
+[15:46] And then this would be the median, like, per advertiser. So, like, unweighted.
+[15:52] But kind of more middle of the road. Middle expected advertiser. And then I just have some
+[16:00] daily visit rate charts with the day that they switched.
+[16:03] Do you know...
+[16:04] These are my seven days. And then here's the upcoming...
+[16:07] That hasn't happened yet.
+[16:08] And then these are, like, the top 10 best and top 10 worst changes so far in visit rate terms.
+[16:16] All right.
+[16:17] So, that's what I put together to share with the Good Market team on Thursdays.
+[16:22] Okay. So, I'm just thinking...
+[16:30] One thing that I've actually kind of done. So, like, you have your median weighted one.
+[16:36] One of the ones that I've kind of defaulted to,
+[16:39] because it's, like, closer to higher impact, was doing a variance weighted one.
+[16:46] So, you typically get... I mean, it pretty much across the board.
+[16:50] You're going to get less variance when you have people spend more,
+[16:53] because they're going to have more signal.
+[16:55] And so, it's kind of, like, a good overall method of weighting.
+[17:01] Because our biggest... Like, a big concern would be, like,
+[17:06] what if, like, 90% of all the advertisers were, like, awesome,
+[17:09] but they were all low spend and they got equal weight.
+[17:11] And then, like, one of our really crappy ones were...
+[17:15] Super expensive or high budget.
+[17:18] Yeah. But I have typically done either, like, median.
+[17:22] I will compare the two. I usually do the median or the variance-adjusted one.
+[17:26] It's just a way of weighting, obviously, when we're doing 50 or something of them.
+[17:31] Okay. So, sounds like the purpose of using the causal impact here
+[17:36] would be just to further validate.
+[17:39] I think, yeah, internal validation.
+[17:41] But again, I'm not convinced.
+[17:44] Like I said, your best group is 50 advertisers and 20 post-period days.
+[17:50] I don't know if that's necessarily enough.
+[17:53] Maybe it is for a visit rate, but...
+[17:56] Not for conversions.
+[17:58] Yeah.
+[17:58] You're right.
+[18:04] I'd be really surprised if this changed conversion rates in any way.
+[18:10] Like, I mean, like, I would expect...
+[18:11] Well, higher visit rates where you should have more conversion.
+[18:14] More conversion. Yeah.
+[18:15] What I meant is, like, that it would be disproportionate.
+[18:17] That we would somehow have changed our targeting
+[18:20] to where we target people who are less likely to convert,
+[18:22] but more likely to visit.
+[18:23] Usually those go hand in hand.
+[18:25] So, even though we don't have data for it,
+[18:28] it would be very odd to see a big discrepancy between the two.
+[18:32] So, I think the only reason that we see any negative is just not enough data.
+[18:38] Yeah.
+[18:42] Okay. That's fine.
+[18:44] I will set this up for causal impact.
+[18:47] I was just trying to think, like...
+[18:50] I'm just trying to think of, like, what's super valuable to do.
+[18:52] Like, I want to set this up, but I kind of see what would be beneficial
+[18:58] is us having some sort of way to, like,
+[19:03] systematically show results.
+[19:09] Yeah.
+[19:10] That are easily accessible.
+[19:11] And I'm just trying to think, like...
+[19:17] Like, causal impact is good for us internally.
+[19:19] But, like, I wouldn't want to go through that with, like, go-to-market text.
+[19:23] No.
+[19:24] I like difference in difference,
+[19:25] because it's a little bit easier to explain.
+[19:27] And then just, obviously, like, pre-post.
+[19:30] Yeah. I was more thinking, like, even for our team,
+[19:34] having some sort of archive of every experiment.
+[19:40] That's cool, though. You showed in Databricks.
+[19:42] It makes me think, I wonder if there's a way to, like...
+[19:46] I don't know.
+[19:48] Post results on some sort of, like, web page that every time we update it,
+[19:52] it updates that web page.
+[19:54] And it's just accessible, like, internally or something like that.
+[19:59] And then, like...
+[20:00] The last time you run your databricks notebook, it will be updated, but then it just stays
+[20:04] there permanently until it gets run again, type of stuff, you know?
+[20:07] Yeah, there's got to be something like that because you can schedule databricks notebooks
+[20:11] to run.
+[20:12] Yeah.
+[20:13] Stuff.
+[20:14] So, you know, it could be like, it updates every morning at like 6 a.m. and then updates
+[20:18] a dashboard or something, but, uh, I think Bay team somewhere is working on a dashboard
+[20:24] for tracking this stuff.
+[20:25] I just haven't heard progress, so I'm like, okay, because I think because of the BigQuery
+[20:30] migration, so I'm, you know, easier to roll my own, uh, for our go-to-market purposes.
+[20:35] Yeah, that makes sense.
+[20:37] Um, okay, well, that makes sense.
+[20:39] Thank you for covering all that stuff, um, I'll set up more time next week to talk early
+[20:46] in the week.
+[20:47] We'll talk about the, uh, intra-segment scoring then.
+[20:54] Um, did you want to take a moment to, oh yeah, the, what, hold on, oh, that's what you're
+[21:04] talking about.
+[21:05] The intra-segment scoring.
+[21:06] I thought he put it into this sprint, I guess he did it for next sprint.
+[21:10] So I was going to actually going to ask you if you wanted to talk about that, but it looks
+[21:13] like he threw it in the next sprint.
+[21:15] That's fine.
+[21:16] I got some other stuff I'll throw in there.
+[21:17] I have a high level I can talk to you about.
+[21:20] So this is the idea of, uh, for LiveRamp alone and LiveRamp's like 90% of our intra-segments
+[21:28] and intra-segments are non-mountain segments that we buy.
+[21:32] So LiveRamp says like, uh, people who work at companies that are interested in AI, and
+[21:39] then we have a list of IPs.
+[21:41] So then a customer can like select that segment as they're targeting.
+[21:45] However, and we did that, you remember the demo that Jeff Capone from AT did of like
+[21:51] making it easier to search and classify them?
+[21:53] I believe so, yeah.
+[21:54] We did that, but if you, the example that I always use, if you search in our new search
+[22:00] and say like households with a hundred K plus income, you get back 90 segments.
+[22:05] So we have no concept of, we have a better, we have a concept of better search, but we
+[22:10] don't have a concept of like quality of like, okay, there are 90 different partners and
+[22:15] providers from LiveRamp that have different ways of targeting households with a hundred
+[22:20] K plus income.
+[22:21] Like which ones should I use?
+[22:24] For now we're not surfacing that in the UI, but I built out a set of quality scores based
+[22:30] on the IPs within the segments and then additional scoring based on historical performance of
+[22:37] campaigns, which use those interest segments.
+[22:40] The LiveRamp segments, oh, they would, they would change day every day.
+[22:45] Yeah.
+[22:46] Probably.
+[22:47] Or well, whenever they say.
+[22:48] Yeah.
+[22:49] Whenever we update.
+[22:50] So not necessarily every day.
+[22:51] Yeah.
+[22:52] Yeah.
+[22:53] So with 11Lab, Mike was like, Hey, can we run through and like just validate?
+[22:58] They picked 150 interest segments.
+[23:00] And so he was like, can you like score these and, you know, make sure there's nothing in
+[23:04] there that's garbage.
+[23:06] I metrics.
+[23:09] And there was kind of like, Hey, we can drop like 10 interest segments and add, you know,
+[23:15] 20 keywords and maintain your audience size while, you know, the theory being keyword
+[23:22] targeting better than interest segments.
+[23:25] So oh, and then, okay.
+[23:27] I want, yeah.
+[23:28] Cause one of my questions is why is it a Databricks job, but just the way to just update it and
+[23:33] doesn't have to be.
+[23:34] So right now I have like, I have an example notebook with like the code, but the code
+[23:38] is just like a class that you can run in PySpark anywhere.
+[23:43] So if it makes more sense to be like a Vertex job, like a Vertex AI job, that's triggered
+[23:50] by a DAG or it's like a regular PySpark job on GCP compute, that's in an Airflow DAG that
+[23:58] runs every day.
+[23:59] That's fine too.
+[24:00] I figured this would be a good opportunity for you to kind of like learn and build some
+[24:04] of that pipelining stuff.
+[24:07] And I will defer to you, you know, talk to Victor or Ryan of maybe what's the best way
+[24:11] to do this once you kind of understand what's in there, but basically something that'll
+[24:15] run like once a week or once a month and then right to a GCS storage location.
+[24:22] And then Macie can consume that and build something on the front end for like admin
+[24:28] users to say, okay, here's the actual scoring for our live ramp segments.
+[24:32] Gotcha.
+[24:33] I see what you're saying.
+[24:34] The quality metrics, I mean, right off the top, I'm not sure what quality metrics you
+[24:42] chose, but like literally just, I think, what was their IVR and CVR and maybe throw in some
+[24:51] other stuff too, what might be interesting to throw in there.
+[24:54] So if you just took like a 30 day and you grab their IPs, it might be interesting to
+[24:57] say, well, how many times did these people visit per user and all that stuff?
+[25:03] Right?
+[25:04] Yeah.
+[25:05] So there's some performance metrics and I'll send you, let me send you this.
+[25:09] Here's kind of the first version.
+[25:11] This is like quality of the segment.
+[25:12] So like how many IPs were active in the last 30 days?
+[25:16] How much does this cover versus the rest of our universe?
+[25:22] Meaning like if an interest segment has 90% of all IPs that we've seen in the last 30
+[25:27] days, that's not really useful.
+[25:29] That's just like a big blanket generic thing.
+[25:32] How similar is it to neighboring segments?
+[25:38] And then how often is it updating?
+[25:40] We have a ton of segments that are like, this was last updated in 2024.
+[25:44] It's like, okay, well that's not going to be a very valuable segment.
+[25:47] Right.
+[25:48] Like recency and stuff like that.
+[25:50] Exactly.
+[25:51] So there's that version or there's that.
+[25:53] And then there's performance based, exactly what you said, right?
+[26:00] What is the aggregate like IVR and conversion rate and things of segments using these when
+[26:06] we have it?
+[26:09] You could probably, I mean, I wonder how valuable this is, is like, I guess my first thought
+[26:17] is like impact because like how many people are actually using interest segments.
+[26:21] And then you're thinking like how big of a dip is it going to change?
+[26:27] But if you could show that of all the campaigns that use interest segments and get some sort
+[26:33] of baseline and then figure out, well, if we, like, like there's just a lot of ways
+[26:38] to measure this, but I'm just thinking you could see which interest segments do they
+[26:43] choose and then like what could be their perceived improvement if we were to, if they were to
+[26:50] choose our number one suggestion or something like that.
+[26:53] Exactly.
+[26:54] I also think that we should probably not give people 90 choices.
+[26:59] You know what I'm saying?
+[27:00] There are, there are over 200,000 interest segments.
+[27:05] Well, I mean like even when they search stuff, right?
+[27:07] Like I feel like, I feel like you should honestly.
+[27:12] That's what this is trying to do is like, you know, there's a large portion with low
+[27:17] quality scores that we could just filter out very easily, but, and present these scores
+[27:21] in the UI for users to get a sense of what they want.
+[27:24] For now, the only thing we present in the UI is the size of the interest segments, which
+[27:29] is not the full picture.
+[27:32] So the mic is aligned that this is important.
+[27:36] It is just less important than everything else.
+[27:38] So then the work you're doing is the interim step to say, well, let's make these scores
+[27:44] and kind of the evaluation of interest segments available to like admin users at the bare
+[27:49] minimum.
+[27:50] Is that your idea?
+[27:51] Um, yeah, this came from a request from Paulo and Allison of like, let's use interest segments
+[27:58] more.
+[27:59] And Allison and I were like, okay, let's just classify them into keywords or verticals.
+[28:03] And Paulo was like, let's try and do something more nuanced than that.
+[28:07] So this is my do something more nuanced than that approach.
+[28:11] Yeah.
+[28:12] That seems interesting.
+[28:14] And then, um, let me go to the repo, uh, did I link to like the notebook examples and the
+[28:22] repo and the ticket?
+[28:23] I think, um, let me check.
+[28:25] I have it open.
+[28:26] I did have it open.
+[28:29] Oh yes, I do have it open.
+[28:32] Yeah.
+[28:33] I think enter utils here.
+[28:35] Now you have the GitHub thing.
+[28:37] Cool.
+[28:38] Um, I will, let me add a notebook that just shows the use as well.
+[28:49] There's got to be a way to, I've seen people set up the auth.
+[28:51] Like I always got to type in a code all the time, but isn't there like a, I think there's
+[28:58] a different way.
+[28:59] Or GitHub?
+[29:00] No, no.
+[29:01] Okta.
+[29:02] Oh yeah.
+[29:03] I think sometimes people use that.
+[29:04] Yeah.
+[29:05] I'm going to review utils segment.
+[29:06] Okay.
+[29:07] So yeah, this should be the code.
+[29:18] I think it said like, you'll read through it.
+[29:20] I think the code is in a pretty good spot of, uh, it's like a class.
+[29:26] So it just like two lines of code can execute the full quality scoring pipeline.
+[29:31] There's just some setup and I'll put it in the ticket, um, some setup to like get the
+[29:35] data set that you pass into the class.
+[29:39] Okay.
+[29:41] Cool.
+[29:43] All right.
+[29:47] I'll take the comments.
+[29:53] Okay.
+[29:54] I got to drop.
+[29:55] Uh, but I think we'll, let's give that a review and kind of get the intuition of what's going
+[29:59] on.
+[30:00] And then we'll talk early next week about like, uh, more tech, like deep dive things.
+[30:06] Yeah, for sure.
+[30:07] All right.
+[30:08] Take care.
+[30:09] Thanks Malachi.
