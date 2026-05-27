@@ -950,6 +950,22 @@ MOD(
 - The true treatment effect is on the impression-recipients, but ITT gives you the unbiased average effect across the full eligible group
 - For a finer analysis (actual treatment effect on the treated), need to model the impression-receipt probability — more complex, not needed for initial analysis
 
+### advertiser_high scoring fanout — no liveness filter (Zach + Ryan, 2026-05-26)
+Source: `SteelHouse/airflow-ti` → `spark/audience_intent/advertiser_high.py` (lines 86-101).
+
+Pipeline scores at the **vertical** level (IP × vertical_id × household_score), then fans out to every advertiser via:
+```python
+high_intent_cats = advertiser_verticals.filter(F.col("type") == 1).select("advertiser_id", "vertical_id")
+final_output = vertical_scores.join(F.broadcast(high_intent_cats), on="vertical_id", how="inner")
+```
+The **only** filter on the advertiser side is `type == 1` (high-intent vertical mapping). There is **no active/live/churn filter**.
+
+**Consequence:** every IP gets a score row for **every** advertiser that has ever had a `type=1` row in `advertiser_verticals` — ~25K advertisers — even though only **~300-400 are actually live** (Zach 2026-05-26). ~60-80x compute/storage waste downstream.
+
+**Symptom that surfaced this:** a single IP returning ~20k advertiser_high score rows. That's expected under current code, but it shouldn't be.
+
+**Why a naive "filter to live" isn't enough:** advertisers whose campaign starts tomorrow need to be scored today (cold-start). The fix needs to include scheduled launches, not just currently-active campaigns. Owner of the fix: Victor Savitskiy (Ryan handed off 2026-05-26 while OOO 3 days).
+
 ---
 
 ## Audience System Architecture
