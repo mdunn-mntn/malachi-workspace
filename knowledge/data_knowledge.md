@@ -2162,3 +2162,28 @@ Specifically (confirmed by the targeting infrastructure squad):
 - **Reporting side:** DMA data is available in reporting outputs
 
 No references to `DMA` or `Geo type ID 4 = DMA` were found in targeting infrastructure repos. (via Matt Brorby, #tgt-infrastructure-squad, 2026-05-21)
+
+<!-- slack-extracted: 2026-05-27 -->
+- ## Audience Intent Scoring Scope — Active Advertiser Filtering
+
+The audience intent scoring pipeline (`spark/audience_intent/advertiser_high.py`) currently scores every IP for every advertiser that has a vertical assignment — approximately 25,000 advertisers. This is excessive: MNTN only has ~300–400 live advertisers at any given time.
+
+**Problem:** Generating scores for ~25K advertisers instead of ~400 active ones causes the membership loader (bidder-side) to crash due to data volume, and the problem worsens over time.
+
+**Expected behavior:** Scores should only be generated for advertisers with live campaigns **or** campaigns set to go live imminently. The definition of "active" for scoring purposes should include:
+- Advertisers with currently live campaigns
+- Advertisers with campaigns scheduled to launch soon (same-day launches do occur)
+- Recently onboarded advertisers (as a buffer)
+
+**Note:** Defining "active" is non-trivial — advertisers can churn and return — so the filtering logic needs to account for imminent launches rather than just current live status. (via Zach Schoenberger, #tgt-infrastructure-squad, 2026-05-27)
+- ## Ghost Bids — Bidder Feature (Deployed ~2026-05-27)
+
+**What it is:** Ghost Bids are a new bidder feature that allows IPs/segments previously excluded from bidding to pass through the bidder and be tagged with a failure reason rather than being hard-excluded. This enables data collection on traffic that would have been suppressed.
+
+**Failure reason identifiers:**
+- Beeswax Bidder: `threshold_failure_reasons = 'ghostBid'`
+- MNTN Bidder: `bid_dropped_reason = 'ghost-bid'`
+
+**Expected impact on metrics:** Expect approximately a ~10% increase in bid drop reasons after deployment. The expected volume is roughly 10% of successful bid count. Ghost Bids do **not** affect pacing, deliverability, or other campaign performance metrics.
+
+**Monitoring note:** When reviewing bid drop reason trends in dashboards or queries, account for this step-change increase starting from the Ghost Bid deployment date. (via Ryan Kleck, #mission-control, 2026-05-27)

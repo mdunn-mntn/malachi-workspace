@@ -970,3 +970,34 @@ A Confluence reference page has been established at `mntn.atlassian.net/wiki/spa
 - **Convention:** Use flags as a status overlay, not a replacement for the Blocked status. Use Blocked for hard stops only.
 
 **Reference:** `mntn.atlassian.net/wiki/spaces/TAR/pages/2050097175/Jira+Ticket+Workflow` (via Bryce Wagg, #targeting-squad, 2026-05-19)
+
+<!-- slack-extracted: 2026-05-27 -->
+- ## BigQuery Cutover — Reporting UI (Completed ~2026-05-27)
+
+**What happened:** The Reporting UI and all dependent services were fully cut over to BigQuery as the source of truth. Customers now see data sourced from BigQuery, not CoreDW.
+
+**Cutover mechanics:**
+- New plan submissions were paused starting 8:30 AM PST on cutover day. The BER squad performed rebasing and restatements (~4 hours).
+- During the pause window, SQLMesh showed an error requiring 6 approvers for new prod plans. Team migrations were allowed; new prod plan work was not.
+- Dev plans were unimpacted throughout.
+- CoreDW completed its final run successfully the day before, so both systems reflected updated data on cutover day.
+
+**Post-cutover state:**
+- CoreDW continues to run but is no longer the source for UI Reporting.
+- The majority of CoreDW monitors come down the day after Mission Control following cutover.
+- Legacy CoreDW servers are being decommissioned on **June 2, 2026**.
+- A backup of CoreDW is being taken at shutdown in case data recovery is needed, but recovery will require significant effort.
+- The `summarydata.visits` export from CoreDW was failing and has been removed from the pipeline; no backfill required as of cutover, but a manual export can be requested if needed.
+- Smoke tests for CoreDW deprecation will be shared in the data platform channel. (via Mike Dolzer, #engineering-team, 2026-05-27)
+- ## Audience Expression Logic — Segment Boolean Behavior (AND vs. OR)
+
+The expected behavior for the audience expression builder is that all non-geo segments (interest segments, Peak Performance / DS13, Mountain Match keywords, CRM) should be **OR'd together by default**. AND logic should only apply when explicitly triggered by the user via the audience narrowing toggle.
+
+**Geo segments** are auto-AND'd and the narrowing toggle is disabled for geo — this is by design.
+
+**Known bug (PRO-905 / AUD blocker, ~2026-05-27):** A bug was identified where the boolean relationship between Peak Performance and other segments depended on the **order in which segments were added** to the audience expression, not on any explicit user action. Specifically:
+- Adding an interest segment, then enabling PP → PP and interest segment are OR'd (correct)
+- Adding an interest segment, enabling PP, then adding an MM keyword → PP gets grouped with MM and the group is AND'd with the interest segment (incorrect)
+- Adding MM keywords first, then adding an interest segment → all are OR'd (correct)
+
+This order-dependency is a bug. The fix should ensure that regardless of addition order, all non-geo segments are OR'd unless the user explicitly narrows the audience. (via Mike Dolt, #targeting_helpdesk_ask_anything, 2026-05-27)
