@@ -528,7 +528,224 @@ def chart_ip_overlap():
     print(f"wrote {out}")
 
 
+def chart_prospecting_buckets_kpi():
+    df = pd.read_csv(OUTPUTS / "ti_999_prospecting_buckets_2026_05_28.csv").set_index("bucket")
+    order = ["a_no_3p_prospecting", "b_only_fresh_liveramp", "c_only_stale_3p", "d_fresh_and_stale_mix"]
+    labels = [
+        "No 3P\n(MNTN-internal)",
+        "Only fresh\nLiveRamp",
+        "Only stale 3P\n(ShareThis/Dstillery)",
+        "Fresh + stale\nmix",
+    ]
+    cr = [df.loc[b, "conversion_rate"] * 100 for b in order]
+    n_camps = [int(df.loc[b, "n_campaigns"]) for b in order]
+    spend = [df.loc[b, "total_spend_30d"] / 1e6 for b in order]
+    avg_3p = [df.loc[b, "avg_n_3p_dscids"] for b in order]
+    median_3p = [int(df.loc[b, "median_n_3p_dscids"]) for b in order]
+
+    # Headline: no-3P prospecting beats every 3P bucket
+    no3p_cr = df.loc["a_no_3p_prospecting", "conversion_rate"] * 100
+    fresh_cr = df.loc["b_only_fresh_liveramp", "conversion_rate"] * 100
+    ratio = no3p_cr / fresh_cr
+
+    fig, ax = plt.subplots(figsize=(13, 7.5), dpi=200)
+    fig.suptitle(
+        f"Prospecting without 3P converts {ratio:.1f}x better than fresh-LiveRamp prospecting",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.05, ha="left", y=0.97)
+    fig.text(0.05, 0.90,
+             "Conversion rate, prospecting campaigns only (CRM / IP-List / CRM-IDG-touching campaigns excluded).\n"
+             "30-day window ending 2026-05-28. $24.86M total prospecting spend in scope.",
+             color=GRAY, fontsize=10)
+
+    colors = [NAVY, "#2980B9", ACCENT_RED, "#7F8C8D"]
+    bars = ax.bar(range(4), cr, color=colors, width=0.55)
+    for i, b in enumerate(bars):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.005,
+                f"{cr[i]:.3f}%", ha="center", va="bottom",
+                color=NAVY, fontsize=12, fontweight="bold")
+        ax.text(b.get_x() + b.get_width() / 2, -0.018,
+                f"{n_camps[i]:,} camps · ${spend[i]:.2f}M spend\n"
+                f"median {median_3p[i]} 3P dscids (avg {avg_3p[i]:.1f})",
+                ha="center", va="top", color=GRAY, fontsize=9)
+    ax.set_xticks(range(4))
+    ax.set_xticklabels(labels, fontsize=11, color=NAVY)
+    ax.set_ylim(0, max(cr) * 1.20)
+    ax.set_yticks([])
+    ax.set_ylabel("")
+    ax.text(-0.03, 1.02, "Conversion rate", transform=ax.transAxes, fontsize=10, color=GRAY)
+    fig.tight_layout(rect=[0, 0.05, 1, 0.83])
+    out = HERE / "ti_999_chart_prospecting_buckets_kpi.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
+def chart_prospecting_spend_share():
+    df = pd.read_csv(OUTPUTS / "ti_999_prospecting_buckets_2026_05_28.csv").set_index("bucket")
+    no_3p = df.loc["a_no_3p_prospecting", "total_spend_30d"]
+    fresh = df.loc["b_only_fresh_liveramp", "total_spend_30d"]
+    stale_only = df.loc["c_only_stale_3p", "total_spend_30d"]
+    mix = df.loc["d_fresh_and_stale_mix", "total_spend_30d"]
+    total_prospecting = no_3p + fresh + stale_only + mix
+    total_excluded_retargeting = 40261340.59 - total_prospecting
+
+    fig, ax = plt.subplots(figsize=(13, 5.5), dpi=200)
+    fig.suptitle(
+        f"34.6% of prospecting spend touches 3P interest segments — $8.59M/mo (~$103M/yr)",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.97)
+    fig.text(0.04, 0.88,
+             "Prospecting spend = total $40.26M minus campaigns that reference CRM / IP-List / CRM-IDG ($15.4M excluded as retargeting).\n"
+             "30-day window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    segments = [
+        ("No 3P (MNTN-internal)", no_3p, NAVY),
+        ("Fresh LiveRamp only", fresh, "#2980B9"),
+        ("Stale 3P only", stale_only, ACCENT_RED),
+        ("Fresh + stale mix", mix, "#7F8C8D"),
+    ]
+    left = 0
+    for label, val, color in segments:
+        ax.barh([0], [val], left=[left], color=color, height=0.45)
+        pct = val / total_prospecting * 100
+        if pct >= 3:
+            ax.text(left + val / 2, 0,
+                    f"${val/1e6:.2f}M\n{pct:.1f}%",
+                    ha="center", va="center", color="white",
+                    fontsize=11, fontweight="bold")
+        else:
+            ax.text(left + val / 2, -0.35, f"${val/1e6:.2f}M ({pct:.1f}%)",
+                    ha="center", va="top", color=ACCENT_RED,
+                    fontsize=10, fontweight="bold")
+        left += val
+
+    # bottom labels (stagger to avoid collision)
+    cur = 0
+    for i, (label, val, color) in enumerate(segments):
+        if val / total_prospecting >= 0.03:
+            ax.text(cur + val / 2, -0.5, label, ha="center", va="top",
+                    color=color, fontsize=10, fontweight="bold")
+        cur += val
+
+    ax.set_xlim(0, total_prospecting * 1.02)
+    ax.set_ylim(-0.8, 0.7)
+    ax.set_yticks([])
+    ax.set_xticks([])
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    fig.tight_layout(rect=[0, 0, 1, 0.82])
+    out = HERE / "ti_999_chart_prospecting_spend_share.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
+def chart_prospecting_top_advertisers():
+    df = pd.read_csv(OUTPUTS / "ti_999_prospecting_top_advertisers_2026_05_28.csv")
+    df = df.head(15).iloc[::-1].reset_index(drop=True)
+    # Total prospecting stale exposure = stale_only + mix from buckets
+    prospecting_buckets = pd.read_csv(OUTPUTS / "ti_999_prospecting_buckets_2026_05_28.csv").set_index("bucket")
+    total_stale_prospecting = (prospecting_buckets.loc["c_only_stale_3p", "total_spend_30d"]
+                                + prospecting_buckets.loc["d_fresh_and_stale_mix", "total_spend_30d"])
+    top15_share = df["stale_spend"].sum() / total_stale_prospecting * 100
+
+    fig, ax = plt.subplots(figsize=(12, 8.5), dpi=200)
+    fig.suptitle(
+        f"In prospecting-only, ElevenLabs leads stale-3P exposure — WGU was retargeting, not prospecting",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.05, ha="left", y=0.97)
+    fig.text(0.05, 0.92,
+             f"Top 15 prospecting advertisers by stale-3P exposure. ~${total_stale_prospecting/1e6:.2f}M total monthly stale-3P prospecting spend; "
+             f"top 15 = {top15_share:.0f}%.\n30-day window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    colors = [ACCENT_RED if i >= len(df) - 5 else NAVY for i in range(len(df))]
+    bars = ax.barh(range(len(df)), df["stale_spend"] / 1e6, color=colors, height=0.7)
+    for i, b in enumerate(bars):
+        ax.text(b.get_width() + 0.015, i, f"${b.get_width():.2f}M",
+                va="center", ha="left", color=NAVY, fontsize=10, fontweight="bold")
+    ax.set_yticks(range(len(df)))
+    ax.set_yticklabels(df["company_name"].str.slice(0, 40), fontsize=10, color=NAVY)
+    ax.set_xlabel("Stale-3P prospecting spend, 30 days ($M)", color=GRAY, fontsize=10)
+    ax.set_xlim(0, df["stale_spend"].max() / 1e6 * 1.20)
+    ax.set_xticks([])
+    ax.spines["bottom"].set_visible(False)
+    fig.tight_layout(rect=[0, 0, 1, 0.89])
+    out = HERE / "ti_999_chart_prospecting_top_advertisers.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
+def chart_prospecting_advertiser_tiers():
+    df = pd.read_csv(OUTPUTS / "ti_999_prospecting_advertiser_tiers_2026_05_28.csv").set_index("spend_tier")
+    order = ["a_enterprise_100K+", "b_mid_20K_100K", "c_smb_5K_20K", "d_micro_under_5K"]
+    tier_labels = {
+        "a_enterprise_100K+": "Enterprise\n($100K+)",
+        "b_mid_20K_100K":     "Mid-market\n($20-100K)",
+        "c_smb_5K_20K":       "SMB\n($5-20K)",
+        "d_micro_under_5K":   "Micro\n(<$5K)",
+    }
+    n_advs = [int(df.loc[t, "n_advertisers"]) for t in order]
+    spend = [df.loc[t, "tier_prospecting_spend"] / 1e6 for t in order]
+    pct_3p = [df.loc[t, "pct_advs_use_3p"] for t in order]
+    pct_stale = [df.loc[t, "pct_advs_use_stale_3p"] for t in order]
+    pct_spend_3p = [df.loc[t, "pct_prospecting_spend_via_3p"] for t in order]
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6), dpi=200, gridspec_kw={"width_ratios": [1.1, 1]})
+    fig.suptitle(
+        "3P usage in prospecting: 41-56% of advertisers per tier; 28-36% of prospecting spend",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.97)
+    fig.text(0.04, 0.91,
+             "Bars (left): % of prospecting advertisers in each tier that use 3P / stale 3P. "
+             "Tier defined by prospecting spend.\n30-day window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    ax = axes[0]
+    x = list(range(len(order)))
+    width = 0.36
+    b1 = ax.bar([xi - width/2 for xi in x], pct_3p, width=width, color=NAVY,
+                label="Use 3P (LiveRamp/ShareThis/Dstillery)")
+    b2 = ax.bar([xi + width/2 for xi in x], pct_stale, width=width, color=ACCENT_RED,
+                label="Use stale 3P (ShareThis/Dstillery)")
+    for grp in (b1, b2):
+        for r in grp:
+            h = r.get_height()
+            ax.text(r.get_x() + r.get_width() / 2, h + 1.5,
+                    f"{h:.0f}%", ha="center", va="bottom", color=NAVY, fontsize=9, fontweight="bold")
+    ax.set_xticks(x)
+    ax.set_xticklabels([tier_labels[t] for t in order], fontsize=10, color=NAVY)
+    ax.set_ylim(0, 75)
+    ax.set_yticks([])
+    ax.legend(loc="upper right", frameon=False, fontsize=9)
+    ax.set_title("% of advertisers using 3P (prospecting context)",
+                 loc="left", fontsize=11, color=GRAY, pad=10)
+    for i, t in enumerate(order):
+        ax.text(i, -7, f"{n_advs[i]:,} advs\n${spend[i]:.1f}M spend",
+                ha="center", va="top", color=GRAY, fontsize=9)
+
+    ax2 = axes[1]
+    total = sum(spend)
+    spend_pct = [s / total * 100 for s in spend]
+    colors_right = ["#C0392B", "#2C3E50", "#7F8C8D", "#95A5A6"]
+    y = list(range(len(order)))
+    bars = ax2.barh(y, spend_pct, color=colors_right, height=0.6)
+    for i, b in enumerate(bars):
+        ax2.text(b.get_width() + 0.7, b.get_y() + b.get_height() / 2,
+                 f"{spend_pct[i]:.1f}%   (${spend[i]:.1f}M)",
+                 va="center", ha="left", color=NAVY, fontsize=10, fontweight="bold")
+    ax2.set_yticks(y)
+    ax2.set_yticklabels([tier_labels[t].replace("\n", " ") for t in order], fontsize=10, color=NAVY)
+    ax2.invert_yaxis()
+    ax2.set_xticks([])
+    ax2.set_xlim(0, max(spend_pct) * 1.35)
+    ax2.spines["bottom"].set_visible(False)
+    ax2.set_title("Prospecting spend share by tier",
+                  loc="left", fontsize=11, color=GRAY, pad=10)
+    fig.tight_layout(rect=[0, 0, 1, 0.85])
+    out = HERE / "ti_999_chart_prospecting_advertiser_tiers.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
 if __name__ == "__main__":
+    # Original (all campaigns) charts — kept for reference
     chart_bucket_spend_share()
     chart_staleness_by_ds()
     chart_stale_exposure()
@@ -538,3 +755,8 @@ if __name__ == "__main__":
     chart_1p_vs_3p_buckets()
     chart_spend_tier_3p_usage()
     chart_ip_overlap()
+    # Prospecting-only (CRM/IP-List/CRM-IDG excluded) — headline frame
+    chart_prospecting_buckets_kpi()
+    chart_prospecting_spend_share()
+    chart_prospecting_top_advertisers()
+    chart_prospecting_advertiser_tiers()

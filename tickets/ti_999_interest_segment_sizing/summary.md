@@ -312,6 +312,48 @@ Single-day IPDSC snapshot (2026-05-26) — counts of distinct IPs in DS4 (CRM) v
 - Doesn't account for the *quality* of categories within each universe — a CRM advertiser has only their own customers in 1P, while another advertiser also gets 1P CRM but for *their* customer set. The 268M-IP universe view is global; per-advertiser overlap will look different.
 - Per-campaign expression-resolution would give a more honest "% of this campaign's audience is 1P vs 3P" answer. Deferred — expensive to compute at scale.
 
+### Finding 11 (2026-05-28, methodology revision) — Prospecting-only re-cut
+
+User correction: CRM is a retargeting tool, not a prospecting list. Any campaign whose audience expression references list-style targeting should be excluded. Exclusion set: `{DS4 CRM, DS8 IP List, DS47 CRM Identity Graph Generated}`.
+
+**Impact of exclusion (against the original $40.26M / 30d universe):**
+- **2,014 of 15,525 campaigns reference at least one excluded DS.**
+- **$15.4M / 30d (38.3% of total spend) is in such campaigns** and treated as out-of-scope retargeting.
+- **Prospecting universe = 13,511 campaigns / $24.86M / 30d (~$298M/yr).**
+
+Query: `queries/ti_999_prospecting_only_buckets.sql`. Output: `outputs/ti_999_prospecting_buckets_2026_05_28.csv`.
+
+**Re-bucketed (prospecting only):**
+
+| Bucket | Camps | Advs | Spend (30d) | Conv rate | Median 3P dscids | Avg 3P dscids |
+|---|---:|---:|---:|---:|---:|---:|
+| a_no_3p_prospecting | 11,938 | 1,975 | $16.27M | **0.126%** | 0 | 0 |
+| b_only_fresh_liveramp | 846 | 493 | $4.03M | **0.059%** | 8 | 16.2 |
+| c_only_stale_3p | 52 | 42 | $0.24M | **0.041%** | 1 | 2.8 |
+| d_fresh_and_stale_mix | 675 | 373 | $4.32M | **0.034%** | 25 | 42.0 |
+
+**Headline shifts vs all-campaigns view:**
+- **Of prospecting spend, 34.6% uses 3P** ($8.59M / 30d → ~$103M/yr). Down from $172M/yr in the original (all-campaigns) frame because 40% of "interest-using" spend was in retargeting-mixed campaigns.
+- **Stale-3P prospecting exposure = $4.56M / 30d (~$55M/yr).** Down from $93M annualized in the all-campaigns view.
+- **No-3P prospecting converts 2.1x better than fresh-LiveRamp prospecting** (0.126% vs 0.059%). This was directionally visible in the original "neither" bucket but is now the cleanest comparison.
+- **Mix is still worst (0.034%)** — confirms the layering-hurts pattern in a clean prospecting frame.
+
+**Advertiser top-15 reshuffle** (queries/ti_999_prospecting_top_advertisers.sql):
+- **WGU drops out entirely** — their stale-3P spend was in retargeting campaigns, not prospecting.
+- **ElevenLabs leads at $0.72M / mo** of stale-3P prospecting exposure.
+- Top 5 = ~40% of stale-prospecting exposure (Gainbridge, Northern Tool, Taskrabbit, Windstream after ElevenLabs).
+
+**Advertiser-tier reshuffle** (queries/ti_999_prospecting_advertiser_tiers.sql):
+- Enterprise tier (≥$100K/30d in prospecting) drops from 77 → 39 advertisers (many were retargeting-heavy).
+- Enterprise tier's share of total spend drops from 50.6% → 34.3%. Prospecting spend is more evenly distributed than total spend.
+- 3P-usage rate flattens (~40-56% across tiers) in the prospecting view — every customer segment uses 3P at similar rates.
+
+**Caveats on the exclusion:**
+- DS8 (IP List) is a small population (185K ipdsc rows/day, 1,377 categories) but still a list upload — included in exclusion for consistency. Could be argued either way.
+- DS47 (CRM Identity Graph) has 13K active categories but only **2 campaigns** reference it — exclusion is mostly symbolic.
+- DS21 (MNTN Conversion) and DS34 (MNTN Pageview) are retargeting signals, but they're commonly used in **negative clauses** within prospecting campaigns (e.g., "exclude past visitors"). Not in the exclusion set; a campaign that uses DS34 only as an exclusion still counts as prospecting.
+- The bigger framing shift this enables: **the right product question may be "should advertisers use 3P at all?"** Not "score 3P better." No-3P prospecting outperforms by 2.1x. Scoring framework's strongest application could be *flagging campaigns to drop 3P entirely* rather than just ranking 3P alternatives.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
