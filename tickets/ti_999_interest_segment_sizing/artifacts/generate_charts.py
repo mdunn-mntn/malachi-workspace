@@ -744,6 +744,71 @@ def chart_prospecting_advertiser_tiers():
     print(f"wrote {out}")
 
 
+def chart_rank_simulation():
+    """Per-DS distribution of where advertisers' chosen dscids fall on the activity
+    percentile (proxy for quality until TI-956 ships).
+    Expects CSV: ti_999_rank_sim_2026_05_28.csv with columns:
+      ds_id, n_prospecting_camps_using_ds, n_camp_dscid_pairs,
+      avg_activity_pctile_chosen, median_activity_pctile_chosen,
+      avg_rank_chosen, median_rank_chosen,
+      pct_chosen_top_decile, pct_chosen_top_quartile, pct_chosen_top_half,
+      avg_n_ips_chosen, max_n_ips_chosen, n_active_dscids_in_ds
+    """
+    csv_path = OUTPUTS / "ti_999_rank_sim_2026_05_28.csv"
+    if not csv_path.exists():
+        print(f"skip: {csv_path} not found")
+        return
+    df = pd.read_csv(csv_path).set_index("ds_id")
+    ds_meta = [(35, "LiveRamp IP"), (17, "ShareThis"), (18, "Dstillery")]
+
+    # Filter to DSes present in result
+    ds_meta = [(d, n) for d, n in ds_meta if d in df.index]
+
+    fig, axes = plt.subplots(1, len(ds_meta), figsize=(15, 6), dpi=200, sharey=True)
+    if len(ds_meta) == 1:
+        axes = [axes]
+    fig.suptitle(
+        "Advertisers cluster around mid-pack dscids — most do not select top-decile by activity",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.97)
+    fig.text(0.04, 0.90,
+             "Per DS: % of chosen 3P dscids that fall in top-N by per-dscid IP volume (activity proxy "
+             "— stand-in for TI-956 scores until they ship).\n30-day prospecting window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    for ax, (ds_id, name) in zip(axes, ds_meta):
+        row = df.loc[ds_id]
+        buckets = [
+            ("Top 10%", row["pct_chosen_top_decile"], ACCENT_RED),
+            ("Top 25%", row["pct_chosen_top_quartile"], "#E67E22"),
+            ("Top 50%", row["pct_chosen_top_half"], NAVY),
+        ]
+        x = list(range(len(buckets)))
+        vals = [v for _, v, _ in buckets]
+        colors = [c for _, _, c in buckets]
+        bars = ax.bar(x, vals, color=colors, width=0.55)
+        for i, b in enumerate(bars):
+            ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 1,
+                    f"{vals[i]:.0f}%", ha="center", va="bottom",
+                    color=NAVY, fontsize=12, fontweight="bold")
+        ax.set_xticks(x)
+        ax.set_xticklabels([lbl for lbl, _, _ in buckets], fontsize=10, color=NAVY)
+        ax.set_ylim(0, 105)
+        ax.set_yticks([])
+        ax.set_title(
+            f"DS{ds_id}  {name}\n"
+            f"{int(row['n_prospecting_camps_using_ds']):,} prospecting camps · {int(row['n_active_dscids_in_ds']):,} dscids in DS",
+            loc="left", fontsize=10, color=GRAY, pad=8)
+        ax.text(0.98, 0.95,
+                f"median chosen at\n{int(row['median_activity_pctile_chosen'])}th pctile",
+                transform=ax.transAxes, ha="right", va="top",
+                color=NAVY, fontsize=10, fontweight="bold")
+
+    fig.tight_layout(rect=[0, 0.05, 1, 0.83])
+    out = HERE / "ti_999_chart_rank_simulation.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
 if __name__ == "__main__":
     # Original (all campaigns) charts — kept for reference
     chart_bucket_spend_share()
@@ -760,3 +825,5 @@ if __name__ == "__main__":
     chart_prospecting_spend_share()
     chart_prospecting_top_advertisers()
     chart_prospecting_advertiser_tiers()
+    # Rank simulation (where do chosen dscids fall in quality order)
+    chart_rank_simulation()

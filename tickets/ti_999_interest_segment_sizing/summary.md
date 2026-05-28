@@ -38,7 +38,14 @@
 
 **Sibling ticket open items:** see `tickets/ti_956_interest_segment_scoring_schedule/summary.md` §8 (Alex tech deep-dive questions about targetable_ips_df, performance-layer scope, hosting).
 
-**Deck:** `artifacts/ti_999_presentation_deck.html` + `_standalone.html` — RevealJS slide deck built from `presentation.md`. Share URL: see `share_link.txt`.
+**Deck:** `artifacts/ti_999_presentation_deck.html` (dev) + `_standalone.html` (shareable, all assets inlined). Share URL pinned in `artifacts/share_link.txt`:
+- Rendered: https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
+
+**Deferred analysis — rank simulation:** the user requested an analysis showing, for each prospecting campaign's chosen 3P dscids, where they fall in the activity-percentile order — and what the lift would look like if they picked top-N instead. Query scaffolded at `queries/ti_999_campaign_dscid_rank_sim.sql` but the IPDSC unnest is heavy and the query timed out at ~20 min in this session. Chart placeholder + Python rendering function exist in `artifacts/generate_charts.py`. Approach for next pickup:
+1. Run the unnest as a separate first step, materialize per-dscid IP counts to a CSV in `outputs/`.
+2. Then run a much lighter follow-up query that joins campaign dscids to the pre-computed per-dscid stats.
+3. Add as Finding 12 in this summary + as a new slide in the deck.
+4. Once TI-956 ships, replace the activity-proxy with Alex's real quality scores — the rank-sim then becomes the canonical "where did they pick" analysis.
 
 ---
 

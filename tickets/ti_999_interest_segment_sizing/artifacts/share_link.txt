@@ -1,0 +1,6 @@
+Deck shared 2026-05-28
+
+Rendered URL (githack): https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
+Gist:                   https://gist.github.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0
+
+Note: githack caches aggressively. For revisions, regenerate the standalone HTML and run share_deck.sh again — it creates a new gist with a new URL.
