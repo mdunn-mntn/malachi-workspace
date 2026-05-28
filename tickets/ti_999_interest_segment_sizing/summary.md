@@ -524,6 +524,45 @@ The audience expression only references `score_type=rtc` (or nothing). But `hous
 - Confirm the priority order the bidder uses across the three scores. Is `household_score` the primary ranking key, with RTC as a tiebreaker, or some weighted blend?
 - For the ~8k `score_type=rtc` expressions where DS19 is NOT in the filter, what does the bidder do with filter-matched IPs that don't qualify for RTC? Probably falls back to `household_score`, but worth confirming.
 
+### Finding 15 (2026-05-28) — Pass 1: full 8-bucket {MM, 1P, 3P} Venn (presence, any polarity)
+
+Triggered by: user re-direct 2026-05-28 — verify the "MM combines with other clauses via AND-intersection" model in two passes. **Pass 1 (this finding)** answers coexistence: do campaigns mix MM with 1P or 3P in the same expression? **Pass 2** (next finding) splits the MM-mixed buckets by polarity. **Pass 3** (Day 3) compares delivered score distributions to test the AND-intersection claim empirically.
+
+**Methodology shift:** the prospecting-only filter (exclude DS4/8/47) is **dropped** for this analysis. We're characterizing bidder behavior across the FULL active campaign universe, not the prospecting subset.
+
+**AST parse fix:** Pass 1 uses a JS-UDF that walks the JSON `expression.categories.where` subtree and tracks `op:"not"` ancestor depth — every category reference is classified positive or negative. TI-999's earlier regex lumped both. Spot-check validation against 5 sampled campaigns confirms the parse. Notable: campaign 623209 references LiveRamp (DS35) ONLY in a negative clause — TI-999's regex would have mis-flagged it as "uses LiveRamp."
+
+DS sets (locked):
+- **MM** = `{13 Vertical, 38 BUK, 46 Fangorn (ML Audience Intent)}` — MNTN-derived, IP-level scored.
+- **1P** = `{4 CRM, 8 IP List, 47 CRM-IDG}` — advertiser uploaded, not scored.
+- **3P** = `{17 ShareThis, 18 Dstillery, 35 LiveRamp IP}` — bought, not scored.
+
+Window: 2026-04-29 → 2026-05-28 (30d). Active = ≥1 impression in window. Query: `queries/ti_999_venn_buckets_pass1.sql`. Output: `outputs/ti_999_venn_buckets_pass1_2026_05_28.csv`.
+
+| Bucket | Campaigns | % camp | Advertisers | Spend (30d) | % spend | Annualized | Conv rate | Median 3P+ dscids |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1. nothing | 11,365 | 73.2% | 1,882 | $14.49M | 35.9% | $173.8M | 0.131% | 0 |
+| 2. MM only | 574 | 3.7% | 410 | $1.82M | 4.5% | $21.8M | 0.066% | 0 |
+| 3. 1P only | 1,292 | 8.3% | 356 | $7.65M | 18.9% | $91.8M | 0.055% | 0 |
+| 4. 3P only | 858 | 5.5% | 460 | $5.24M | 13.0% | $62.9M | 0.038% | 13 |
+| **5. MM + 3P** | **717** | **4.6%** | **420** | **$3.39M** | **8.4%** | **$40.7M** | 0.061% | 11 |
+| **6. MM + 1P** | **320** | **2.1%** | **71** | **$2.02M** | **5.0%** | **$24.2M** | 0.133% | 0 |
+| 7. 1P + 3P | 251 | 1.6% | 138 | $4.52M | 11.2% | $54.2M | 0.010% | 11 |
+| **8. MM + 1P + 3P** | **152** | **1.0%** | **70** | **$1.27M** | **3.1%** | **$15.3M** | 0.055% | 9 |
+| **Total** | **15,529** | 100% | | **$40.42M** | 100% | $485M | | |
+
+**Key reads:**
+
+- **Coexistence is real and material.** MM mixes with 1P or 3P in **1,189 campaigns / $6.68M / 30d / 16.5% of spend** (~$80M/yr). Victor's "MM campaigns combine with AND-intersection" framing has a non-trivial denominator to apply to. The earlier "AND-intersection of MM + 3P" claim is testable on a real cohort.
+- **Pure MM-only is small** (574 campaigns, $1.82M). Most MM campaigns are MM-mixed with at least one other family.
+- **`nothing` bucket is huge** (73% of campaigns, 36% of spend, $174M annualized). These campaigns have no MM, no 1P, no 3P clauses at all in the categories subtree. Almost certainly RTC-only and/or geo + audience-size-bucket targeting. Worth dissecting in a follow-up.
+- **MM_plus_1P has the highest conv rate of any cohort (0.133%)** — even higher than `nothing`. Likely retargeting + MM ranking combined; high baseline conversion + scored selection.
+- **1P + 3P (no MM) is catastrophic** (0.010% conv rate, $4.52M / 30d). 50% worse than 1P alone and 4x worse than 3P alone. Layering without MM scoring is destructive — consistent with TI-999 Finding 8's "Both is worst" pattern.
+- **3P-only is the worst single-source cohort by conv rate** (0.038%), 1.5x worse than 1P-only.
+- **Reconciliation:** 15,529 active campaigns ties to TI-999's earlier ~15,525 within rounding.
+
+**Coexistence ≠ AND-intersection semantics.** Pass 1 shows MM + 3P / MM + 1P expressions DO exist. It does NOT yet show whether the bidder treats them as AND-intersection (3P narrows MM's scored set) vs OR-additive (3P adds unscored IPs which only get bid when scored IPs are exhausted). The score-distribution scan in Pass 3 is the empirical test.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
