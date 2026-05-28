@@ -922,6 +922,44 @@ The ~$50M/yr framing was correct as gross-delivery sizing, but only ~$33M/yr is 
 - 100-impression threshold filters very-small-delivery noise but may also filter genuinely-paused-on-5/26 campaigns. Sanity check across multiple days planned.
 - The ~70% below-ceiling cohort may include campaigns that ARE budget-constrained but not at MM ceiling for vertical-mix or other product reasons. Not all "below ceiling" is equivalent.
 
+### Finding 15 (cont.) — Pass 7: top below-ceiling examples (3P clauses paid for but unreached)
+
+Query: `queries/ti_999_finding15_pass7_unjustified_examples.sql`. Output: `outputs/ti_999_pass7_unjustified_examples_2026_05_28.csv`. Top 15 below-ceiling campaigns by spend (30d) — these advertisers paid for 3P inclusion clauses that the bidder is barely reaching.
+
+| # | Advertiser | Campaign | Spend (30d) | 3P dscids picked | Unscored % (5/26) | Read |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | Outdoorsy | 329649 | $98.3K | 12 | 1.4% | 12 LiveRamp picks, ~unused |
+| 2 | American College of Education | 536501 | $88.4K | 20 | 0.6% | 20 LiveRamp picks, ~unused |
+| 3 | Cheddar's | 531366 | $73.9K | 6 | 1.6% | (also in Pass 4 example) |
+| 4 | Onewheel | 591735 | $45.4K | 17 | 1.6% | 17 LiveRamp picks, ~unused |
+| 5 | Mercury Insurance | 448179 | $36.8K | 15 | 0.1% | **15 dscids, ~zero unscored — entire 3P clause unused** |
+| 6 | Sphere | 517340 | $35.6K | 5 | 0.5% | ShareThis + Dstillery + LiveRamp all picked, none reached |
+| 7 | Front | 610982 | $31.2K | 8 | 0.9% | |
+| 8 | Station Casinos | 605080 | $30.8K | 11 | 5.4% | borderline |
+| 9 | Just Ingredients | 619590 | $30.5K | 3 | 1.6% | |
+| 10 | Lee Kum Kee | 557422 | $28.0K | 3 | 1.5% | |
+| 11 | 4Patriots LLC | 509490 | $26.0K | 21 | 0.4% | 21 dscids across all 3 providers, none reached |
+| 12 | CareScout #1 | 510470 | $25.1K | 19 | 0.1% | |
+| 13 | Grandscape | 552264 | $25.1K | 11 | 0.1% | |
+| 14 | **CareScout #2** | 544745 | $24.3K | **27** | **0.0%** | 27 LiveRamp dscids → **0** delivery via 3P |
+| 15 | **CareScout #3** | 594268 | $23.7K | **27** | **0.0%** | 27 LiveRamp dscids → **0** delivery via 3P |
+| **Top-15 total** | | | **~$620K** | ~225 | | |
+
+**Per-advertiser pattern visible in expressions:**
+- Outdoorsy 329649: `OR( DS1[6], DS13[1], DS17[5 ShareThis], DS19[97 RTC] )` then refined with 12 LiveRamp dscids. The buyer added LiveRamp + ShareThis + RTC + Oracle (DS1) — a SHOTGUN approach. The bidder is delivering 98.6% scored — meaning RTC + DS1 + MM is what's actually getting bid; LiveRamp and ShareThis sit unused.
+- Mercury Insurance 448179: `OR( DS13[121001], DS19[100+ RTC cats] )` + 15 LiveRamp refinement. 99.9% scored. The MM + RTC clauses fill the campaign at scored quality; LiveRamp clause is purely cosmetic.
+- CareScout (3 separate campaigns, 27 LiveRamp dscids each, all 0% unscored): the buyer is consistently picking large LiveRamp segment lists across multiple campaigns. None of these segments are being bid against. Each campaign spends ~$24K/30d with the LiveRamp picks contributing nothing.
+
+**Across the top-15: ~225 LiveRamp/ShareThis/Dstillery dscids selected, ~$620K of spend allocated to campaigns including them, and the bidder is reaching them at <2% delivery share for most.** This is the "you picked 3P segments but they aren't doing anything" pattern at advertiser scale.
+
+**Why this matters for the TI-956 case:**
+
+1. **TI-956's per-segment quality score has near-zero leverage for the below-ceiling cohort** at current spend. The buyer's pick doesn't get bid against, so picking a "better" pick doesn't change delivery.
+2. **The right product surface for these 328 campaigns is a DIAGNOSTIC, not a quality picker.** "Your 3P clause is not being reached at current spend. Options: (a) remove the 3P clause to simplify setup; (b) scale up spend so the bidder needs to overflow into 3P; (c) replace the 3P clause with a broader MM target."
+3. **TI-956's per-segment quality matters for the 17.7% ceiling-bound cohort + pure-3P-only cohort.** Those are the campaigns where which-3P-segment-you-picked actually affects delivery quality.
+
+This pass also surfaces a likely buyer education / UX gap: many advertisers are picking large 3P segment lists (CareScout: 27 LiveRamp dscids per campaign × 3 campaigns) on the assumption that those clauses do something. They mostly don't, at current spend.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
