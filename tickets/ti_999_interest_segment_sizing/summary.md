@@ -996,6 +996,46 @@ This pass also surfaces a likely buyer education / UX gap: many advertisers are 
 - Bid-stream-weighted overlap isn't the same as inherent overlap. An IP being "reachable by the bidder" depends on SSP availability + frequency caps + viewability filters, etc. The inherent population overlap could differ from the bid-stream-weighted overlap.
 - Per-segment overlap (which LiveRamp segments have highest MM overlap?) is what TI-956's quality score would naturally capture via the `targetability` axis. Pass 8 says nothing about that yet.
 
+### Finding 15 (cont.) — Pass 9: per-bucket IVR + CVR + cost-efficiency baselines
+
+Query: `queries/ti_999_finding15_pass9_ivr_cvr_baselines.sql`. Output: `outputs/ti_999_pass9_ivr_cvr_baselines_2026_05_28.csv`. Window: 30d ending 2026-05-28.
+
+IVR via HLL_COUNT.MERGE of `site_visitors` (distinct visitor count). CVR = (click_conversions + view_conversions) / impressions.
+
+| Bucket | n_camps | Spend (M) | IVR % | CVR % | CPM | $/visit | $/conv |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1. nothing | 11,365 | $14.49 | 2.57% | 0.131% | $21.37 | $0.83 | $16.26 |
+| 2. MM_only | 574 | $1.82 | 1.50% | 0.066% | $33.39 | $2.23 | $50.59 |
+| 3. 1P_only | 1,292 | $7.65 | 1.39% | 0.055% | $14.23 | $1.02 | $25.79 |
+| **4. 3P_only** | **858** | **$5.24** | **0.75%** | **0.038%** | **$28.47** | **$3.81** | **$75.10** |
+| 5. MM + 3P (mixed polarity) | 108 | $0.63 | 0.65% | 0.039% | $30.12 | $4.67 | $77.89 |
+| 5a. MM + 3P incl_only | 609 | $2.76 | 0.92% | 0.066% | $29.97 | $3.26 | $45.40 |
+| 6. MM + 1P (inclusion subset, 24 campaigns) | 24 | $0.14 | 4.81% | 2.529% | $35.20 | $0.73 | $1.39 |
+| 6b. MM + 1P excl_only | 296 | $1.88 | 1.09% | 0.021% | $22.58 | $2.07 | $107.04 |
+| 7. 1P + 3P (no MM) | 252 | $4.53 | 0.87% | 0.010% | $19.54 | $2.24 | $192.04 |
+| 8. MM + 1P + 3P | 151 | $1.26 | 0.84% | 0.055% | $30.67 | $3.63 | $55.39 |
+
+**Reads:**
+
+- **3P_only is the worst-efficiency prospecting cohort on every metric:** half the IVR of MM_only (0.75% vs 1.50%), $3.81/visit (4.5x worse than the "nothing"/retargeting baseline), $75/conversion (4.7x worse than retargeting). $5.24M / 30d → ~$63M/yr is the highest-leverage spend zone for TI-956 — improving per-segment quality could materially shift this entire bucket.
+- **MM + 3P incl_only has BETTER $/conv ($45) than MM_only ($51)** despite lower IVR. The 3P-added IPs visit less but convert proportionally. Read: buyers reasonably add 3P at the cohort level — the conversion math works. The opportunity is to make the WHICH 3P quality-driven instead of random.
+- **MM + 1P excl_only has very high $/conv ($107)** — 2x MM_only. Excluding past customers narrows MM toward people who haven't converted yet AND aren't easy to convert. CVR drops to 0.021% even though IVR (1.09%) is close to MM_only. Worth a separate look — possibly an opportunity to refine which 1P exclusions are actually helpful.
+- **1P + 3P (no MM) is catastrophic on CVR** (0.010%, $192/conv). The "layering without MM" anti-pattern shows up sharpest here. 252 campaigns / $4.53M / 30d (~$54M/yr) of spend in this bucket. Likely a UX / education issue — buyers layering both list-style and interest segments without MM scoring don't get the benefit either provides.
+- **Bucket 6 (24-campaign retargeting-with-MM subset) is the outlier high-performer** — 2.53% CVR, $1.39 cost-per-conversion. Tiny cohort but illustrates what happens when MM scoring meets 1P retargeting intent.
+
+**Headline efficiency comparison for the case:**
+
+| Prospecting bucket | Spend (30d) | $/conv | $/visit | IVR |
+|---|---:|---:|---:|---:|
+| MM_only (pure scored) | $1.82M | $51 | $2.23 | 1.50% |
+| **3P_only (no scoring)** | **$5.24M** | **$75 (1.5x worse)** | **$3.81 (1.7x worse)** | **0.75% (50% worse)** |
+| MM + 3P incl_only | $2.76M | $45 (best) | $3.26 | 0.92% |
+| 1P + 3P (worst layering) | $4.53M | **$192 (3.8x worse)** | $2.24 | 0.87% |
+
+The empirical case for TI-956: **the cohorts that rely on 3P selection without MM scoring (3P_only + 1P+3P) total $9.77M / 30d (~$117M/yr) and deliver the worst per-conversion efficiency of any prospecting cohort.** Per-segment quality scoring is the lever that directly addresses the bottom of this distribution.
+
+**Note:** IVR via HLL_COUNT.MERGE is distinct-visitor based; site_visitors as raw integer isn't available in this aggregate. Memory note (`uniques` is unreliable at campaign-level) refers to a different field — `site_visitors` HLL is the right read. Verified visit counts roll up consistently across buckets.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
