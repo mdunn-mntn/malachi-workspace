@@ -1097,17 +1097,25 @@ displayHTML(html)
 # MAGIC ## CausalImpact (Synthetic Control)
 # MAGIC
 # MAGIC Independent validation of the DiD headline. For each treated tier we fit a
-# MAGIC Bayesian structural time-series (BSTS) model where the treated tier's daily
-# MAGIC visit rate is the response and the impression-weighted visit rate of the
-# MAGIC control tiers is the synthetic-control covariate. CausalImpact estimates
-# MAGIC what the treated tier's visit rate would have been WITHOUT Fangorn and
-# MAGIC compares that counterfactual to the observed post-period series.
+# MAGIC local-level unobserved-components (UCM / state-space) model on the
+# MAGIC treated tier's daily visit rate during the pre-period, then forecast the
+# MAGIC counterfactual post-period and compare to actuals.
 # MAGIC
-# MAGIC `ci_pre_days` widget controls the pre-period length used for the BSTS fit
-# MAGIC — independent of the DiD `lookback_days` widget. Default 60 days gives
-# MAGIC enough headroom for a stable trend/seasonality decomposition.
+# MAGIC **Canonical TI-748/849 covariate selection:** VIF → BIC over 6
+# MAGIC candidates per tier:
+# MAGIC - `control_vr` — impression-weighted visit rate across control tiers
+# MAGIC - `control_imps` — control-tier total impressions (scaled)
+# MAGIC - `holiday` — binary US-holiday flag
+# MAGIC - `is_weekend` — Saturday/Sunday flag
+# MAGIC - `metric_lag1` — treated tier visit rate t−1
+# MAGIC - `metric_lag7` — treated tier visit rate t−7 (weekly seasonality)
 # MAGIC
-# MAGIC Caveat: needs `pip install causalimpact` on the cluster.
+# MAGIC VIF iteratively drops any covariate with VIF ≥ 10. BIC does a best-subset
+# MAGIC search up to size 5. The winning subset becomes the `exog` matrix for the
+# MAGIC UCM. Selected covariates are surfaced on each tile.
+# MAGIC
+# MAGIC `ci_pre_days` widget controls the pre-period length (default 60d), independent
+# MAGIC of the DiD `lookback_days` widget.
 
 # COMMAND ----------
 
@@ -1213,28 +1221,108 @@ print(f"[ci] tier × day rows: {len(ci_tier_daily):,} | tiers: {sorted(ci_tier_d
 
 # COMMAND ----------
 
-# DBTITLE 1,CausalImpact fits (statsmodels UCM)
+# DBTITLE 1,CausalImpact fits (statsmodels UCM + VIF→BIC covariate selection)
 import warnings
-from statsmodels.tsa.statespace.structural import UnobservedComponents
 import numpy as np
+import statsmodels.api as sm
+from itertools import combinations
+from statsmodels.tsa.statespace.structural import UnobservedComponents
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from scipy import stats
+
+# US holidays in the analysis window (extend if window pushes earlier/later)
+CI_HOLIDAYS = pd.to_datetime([
+    "2026-02-14", "2026-02-16",   # Valentine's, Presidents' Day
+    "2026-03-08", "2026-03-17",   # Daylight Saving, St. Patrick's
+    "2026-04-05",                  # Easter
+    "2026-05-10", "2026-05-25",   # Mother's Day, Memorial Day
+])
+
+# Candidate covariates at the TIER × DAY grain. Canonical TI-748/849 pattern
+# adapted for tier-level series. Notably excludes treated-tier OWN impressions
+# (could absorb part of the treatment effect — Fangorn changes who gets
+# impressions, so own-impressions is post-treatment downstream).
+CI_CANDIDATES = [
+    "control_vr",        # impression-weighted visit rate across control tiers
+    "control_imps",      # control-tier total impressions (scaled, ~O(1))
+    "holiday",           # binary US-holiday flag
+    "is_weekend",        # binary Sat/Sun flag
+    "metric_lag1",       # treated tier visit rate t-1
+    "metric_lag7",       # treated tier visit rate t-7 (weekly seasonality)
+]
+
+def drop_high_vif(features: pd.DataFrame, vif_threshold: float = 10.0) -> list:
+    """Iteratively drop the highest-VIF covariate until all are below threshold."""
+    keep = list(features.columns)
+    while len(keep) > 1:
+        X = features[keep].fillna(0.0)
+        X_const = sm.add_constant(X, has_constant="add")
+        try:
+            vifs = [variance_inflation_factor(X_const.values, i + 1)
+                    for i in range(len(keep))]
+        except Exception:
+            break
+        max_v = max(vifs)
+        if max_v < vif_threshold:
+            break
+        worst = keep[vifs.index(max_v)]
+        keep.remove(worst)
+    return keep
+
+def best_subset_by_bic(target: pd.Series, features: pd.DataFrame,
+                       max_size: int = 5):
+    """Search all subsets up to max_size, return (best_subset, best_bic)."""
+    cols = list(features.columns)
+    best_bic = float("inf")
+    best_subset = []
+    y = target.dropna()
+    for k in range(1, min(max_size, len(cols)) + 1):
+        for subset in combinations(cols, k):
+            X = sm.add_constant(features[list(subset)].loc[y.index].fillna(0.0),
+                                has_constant="add")
+            try:
+                bic = sm.OLS(y, X).fit().bic
+            except Exception:
+                continue
+            if bic < best_bic:
+                best_bic = bic
+                best_subset = list(subset)
+    return best_subset, best_bic
 
 def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
-    """Fit CausalImpact for one treated tier vs the impression-weighted
-    aggregate of control_tier_list as the synthetic-control covariate.
-    Uses statsmodels UnobservedComponents (local level + exogenous) instead
-    of the deprecated causalimpact package."""
+    """CausalImpact-style synthetic control via UCM with VIF→BIC-selected exog.
+
+    Pipeline:
+      1. Build candidate covariates at tier × day grain (control_vr,
+         control_imps, holiday, is_weekend, metric_lag1, metric_lag7).
+      2. VIF — iteratively drop the highest-VIF covariate until all VIF < 10.
+      3. BIC — best-subset search up to size 5; OLS on pre-period y.
+      4. UCM (local level + selected exog) on pre-period; forecast post.
+      5. Relative effect = avg(actual) / avg(predicted_counterfactual) − 1,
+         with 95% prediction interval and a two-sided z-test p-value.
+    """
     cutoff = pd.to_datetime(cutoff)
+
     # Treated series — pooled tier visit rate
     t = (ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"] == treated_tier]
          .set_index("day")[["visit_rate"]]
          .rename(columns={"visit_rate": "y"}))
-    # Control covariate — impression-weighted aggregate visit rate over control tiers
+
+    # Control aggregates (across control tiers)
     c_raw = ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"].isin(control_tier_list)]
     c = (c_raw.groupby("day", as_index=True)
               .agg(impressions=("impressions", "sum"), vv=("vv", "sum")))
-    c["control_vr"] = c["vv"] / c["impressions"]
+    c["control_vr"]   = c["vv"] / c["impressions"]
+    c["control_imps"] = c["impressions"] / 1e9   # scale for numerical stability
 
-    df = t.join(c[["control_vr"]]).dropna().sort_index()
+    # Build candidate frame
+    df = t.join(c[["control_vr", "control_imps"]]).sort_index()
+    df["holiday"]      = df.index.isin(CI_HOLIDAYS).astype(float)
+    df["is_weekend"]   = (df.index.dayofweek >= 5).astype(float)
+    df["metric_lag1"]  = df["y"].shift(1)
+    df["metric_lag7"]  = df["y"].shift(7)
+    df = df.dropna()
+
     pre_period  = [df.index.min().strftime("%Y-%m-%d"),
                    (cutoff - timedelta(days=1)).strftime("%Y-%m-%d")]
     post_period = [(cutoff + timedelta(days=1)).strftime("%Y-%m-%d"),
@@ -1248,13 +1336,24 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
         "cutoff": cutoff.strftime("%Y-%m-%d"),
         "pre_start": pre_period[0], "pre_end": pre_period[1], "n_pre": n_pre,
         "post_start": post_period[0], "post_end": post_period[1], "n_post": n_post,
+        "n_candidates": len(CI_CANDIDATES),
     }
     if n_pre < 30 or n_post < 5:
         return {**base, "skip_reason": f"insufficient days (n_pre={n_pre}, n_post={n_post})"}
 
-    # --- statsmodels UnobservedComponents approach ---
+    # --- Covariate selection on pre-period ---
+    pre_df = df.loc[pre_period[0]:pre_period[1]]
+    feats_pre  = pre_df[CI_CANDIDATES].fillna(0.0)
+    target_pre = pre_df["y"]
+
+    kept_after_vif = drop_high_vif(feats_pre, vif_threshold=10.0)
+    selected, best_bic = best_subset_by_bic(target_pre, feats_pre[kept_after_vif], max_size=5)
+    if not selected:
+        selected = kept_after_vif[:3]   # safety fallback
+
+    # --- UCM fit on pre, forecast post ---
     y_all = df["y"].values.astype(float)
-    X_all = df[["control_vr"]].values.astype(float)
+    X_all = df[selected].fillna(0.0).values.astype(float)
 
     y_pre = y_all[:n_pre]
     X_pre = X_all[:n_pre]
@@ -1264,14 +1363,12 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
         model = UnobservedComponents(y_pre, level="local level", exog=X_pre)
         res = model.fit(maxiter=200, disp=False)
 
-    # Forecast counterfactual for post-period
     X_post = X_all[n_pre:n_pre + n_post]
     forecast = res.get_forecast(steps=n_post, exog=X_post)
     predicted_post = forecast.predicted_mean
     ci_post = forecast.conf_int(alpha=0.05)
 
-    # conf_int may return DataFrame or ndarray depending on statsmodels version
-    if hasattr(ci_post, 'iloc'):
+    if hasattr(ci_post, "iloc"):
         lower_bound = ci_post.iloc[:, 0].values
         upper_bound = ci_post.iloc[:, 1].values
     else:
@@ -1288,20 +1385,22 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
     rel_ci_lower  = avg_actual / avg_upper - 1.0 if avg_upper else float("nan")
     rel_ci_upper  = avg_actual / avg_lower - 1.0 if avg_lower else float("nan")
 
-    # p-value via two-sided test on the effect
     abs_effect = avg_actual - avg_predicted
     se = (avg_upper - avg_lower) / (2 * 1.96)
-    from scipy import stats
     p_value = 2 * (1 - stats.norm.cdf(abs(abs_effect) / se)) if se > 0 else 1.0
 
     return {
         **base,
-        "avg_actual":       avg_actual,
-        "avg_predicted":    avg_predicted,
-        "rel_effect":       rel_effect,
-        "rel_ci_95_lower":  rel_ci_lower,
-        "rel_ci_95_upper":  rel_ci_upper,
-        "p_value":          p_value,
+        "kept_after_vif":      ",".join(kept_after_vif),
+        "selected_covariates": ",".join(selected),
+        "n_selected":          len(selected),
+        "best_bic":            best_bic,
+        "avg_actual":          avg_actual,
+        "avg_predicted":       avg_predicted,
+        "rel_effect":          rel_effect,
+        "rel_ci_95_lower":     rel_ci_lower,
+        "rel_ci_95_upper":     rel_ci_upper,
+        "p_value":             p_value,
     }
 
 ci_rows = []
@@ -1379,6 +1478,9 @@ for row in ci_rows:
       <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; margin-top:6px;">
         <span>{row["n_pre"]}d pre · {row["n_post"]}d post</span><span>control: tiers {row["control_tiers"]}</span>
       </div>
+      <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
+        covariates: {row.get("selected_covariates", "—")}
+      </div>
     </div>
     """)
 
@@ -1387,7 +1489,7 @@ ci_html = f"""
   <div style="background:#f6f8fa; padding:12px 16px; border-radius:6px; margin-bottom:12px;">
     <b>CausalImpact</b> &nbsp;·&nbsp;
     <b>CI window:</b> {ci_window_start} → {window_end} &nbsp;·&nbsp;
-    <b>Covariate:</b> impression-weighted visit rate across control tiers
+    <b>Covariates:</b> VIF→BIC over {len(CI_CANDIDATES)} candidates (control_vr, control_imps, holiday, is_weekend, metric_lag1, metric_lag7) — selected set shown per-tier below
   </div>
   <div style="display:flex; gap:12px; flex-wrap:wrap;">{"".join(tiles)}</div>
 </div>
