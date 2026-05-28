@@ -481,7 +481,7 @@ Query: `queries/ti_999_bidder_score_distribution.sql`. Output: `outputs/ti_999_b
 
 The audience expression only references `score_type=rtc` (or nothing). But `household_score` is applied by the bidder *regardless of what the expression declares* — it's a system-level scoring layer, not opted into per-campaign.
 
-**Finding 14c — 3P-using prospecting campaigns get DRAMATICALLY more scored impressions than no-3P prospecting:**
+**Finding 14c — 3P-using prospecting at the bucket level:**
 
 | Campaign class | household_score = -1 | 8k-10k (HI band) | 10000 (top) | Any positive score |
 |---|---:|---:|---:|---:|
@@ -489,7 +489,18 @@ The audience expression only references `score_type=rtc` (or nothing). But `hous
 | Prospecting, no 3P | 74.2% | 7.5% | 13.6% | **25.8%** |
 | Retargeting (uses CRM/IP-list) | 68.9% | 9.9% | 14.4% | **31.0%** |
 
-**This flips a key narrative from the earlier prospecting bucket analysis.** 3P-using prospecting campaigns deliver heavily on IPs that the household scorer ranks as high-quality (46% in HI/top bands). The hypothesis "3P-only IPs are unscored" was wrong — most 3P-filter-matched IPs DO have a household score, because LiveRamp/ShareThis/Dstillery cover IPs that overlap heavily with MNTN's scored household universe.
+**Finding 14d — But this is an ARTIFACT of mixing 3P with RTC.** When you split prospecting+3P by whether it ALSO uses internal targeting (RTC/BUK), the picture flips:
+
+| Sub-bucket | n_imps_30d | Unscored (-1) | HI band (8k+) | Any positive |
+|---|---:|---:|---:|---:|
+| **3P PURE** (no RTC, no BUK, no other internal targeting) | 3.29M | **73.6%** | 18.8% | 26.4% |
+| **3P + RTC** | 6.26M | 12.0% | 60.3% | 88.0% |
+
+**Pure-3P delivery (74% unscored) is essentially identical to no-3P prospecting (74.2% unscored).** Mixing 3P with RTC pulls the scored share to 88%, but that's **RTC bringing in the scored universe** — not 3P. The earlier "67% scored for prospecting+3P" was a lumping artifact.
+
+**This validates the Slack-thread hypothesis (Malachi 2026-05-28):** if 3P is unscored at the segment level (Finding 14b confirmed), pure-3P-only-targeting campaigns end up bidding on largely unscored IPs (74%), same as any other prospecting strategy with no scored-IP signal. The household_score-positive IPs that 3P-pure campaigns happen to hit aren't there *because* 3P brought them — the bidder hits roughly the same scored/unscored mix regardless of the audience filter when no scored-signal source (RTC, BUK, etc.) is in the expression.
+
+**Implication:** for an advertiser to benefit from 3P targeting, they need either (a) the 3P filter to coincide with scored IPs (which it doesn't preferentially) or (b) per-segment quality scoring on the 3P side itself (which TI-956 would provide). Without either, 3P is essentially "no-3P prospecting plus a filter that narrows the eligible IPs without improving their quality distribution."
 
 **RTC adds a separate small priority layer for recent-site visitors** (4.6% of all delivered impressions), consistent across campaign classes.
 

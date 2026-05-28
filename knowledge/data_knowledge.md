@@ -736,15 +736,22 @@ Every impression's `cost_impression_log.model_params` carries **three score fiel
 
 **3. Audience expressions reference only `score_type=rtc` or have no score block** (270k active expressions: 82% rtc, 18% none). But `household_score` is applied by the bidder regardless of the expression — it's a system-level scoring layer, not opted-in per-campaign.
 
-**4. 3P-using prospecting campaigns deliver heavily on scored IPs:**
+**4. 3P-using prospecting at the bucket level — but this is an ARTIFACT of mixing:**
 
 | Campaign class | household_score = -1 | 8k-10k (HI) | 10000 (top) | Any positive |
 |---|---:|---:|---:|---:|
-| Prospecting + 3P | 33.2% | 23.5% | 22.5% | **66.8%** |
-| Prospecting, no 3P | 74.2% | 7.5% | 13.6% | **25.8%** |
-| Retargeting (CRM/IP-list) | 68.9% | 9.9% | 14.4% | **31.0%** |
+| Prospecting + 3P | 33.2% | 23.5% | 22.5% | 66.8% |
+| Prospecting, no 3P | 74.2% | 7.5% | 13.6% | 25.8% |
+| Retargeting (CRM/IP-list) | 68.9% | 9.9% | 14.4% | 31.0% |
 
-Most 3P-filter-matched IPs DO have a graduated household score — LiveRamp/ShareThis/Dstillery IPs overlap heavily with MNTN's scored household universe.
+**Splitting prospecting+3P by whether it ALSO uses RTC reveals the actual driver:**
+
+| Sub-bucket | Unscored (-1) | HI band (8k+) | Any positive |
+|---|---:|---:|---:|
+| **3P PURE** (no RTC, no BUK, no other internal targeting) | **73.6%** | 18.8% | 26.4% |
+| **3P + RTC** | 12.0% | 60.3% | 88.0% |
+
+**Pure-3P delivery (~74% unscored) is essentially identical to no-3P prospecting (~74% unscored).** When 3P is mixed with RTC, the scored share jumps to 88%, but RTC is pulling in the scored IPs — not 3P. 3P-only filtering does not preferentially hit scored IPs; the bidder ends up at roughly the same scored/unscored mix as a prospecting campaign with no scored-signal source at all.
 
 **5. What's missing — per-segment quality scoring.** `household_score` ranks individual IPs. The bidder has no signal saying "this LiveRamp segment is higher-quality than that one" — that's the gap TI-956 / Alex's per-dscid composite scoring framework would fill. Per-segment scoring complements (not replaces) per-IP household scoring.
 
