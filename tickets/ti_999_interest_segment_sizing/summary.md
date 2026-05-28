@@ -471,10 +471,10 @@ No keyword scoring, no 3P-quality scoring, no lookalike. The bidder has exactly 
 
 **Finding 14b — 97% of 3P-using expressions declare `score_type=rtc`** — including expressions where DS19 is NOT in the filter (8,238 LiveRamp-using expressions without DS19 in their filter still ask for RTC scoring).
 
-**Finding 14c — In practice, `realtime_conquest_score` is effectively binary.** Of 61M impressions delivered on 2026-05-26:
-- 95.44% had `realtime_conquest_score = -1` (no RTC score)
-- 4.56% had `realtime_conquest_score = 10000` (top RTC match)
-- 0% in between
+**Finding 14c — `realtime_conquest_score` is binary by design.** RTC = Real-Time Conquesting; the score is a qualifier flag, not a graduated score. An IP either qualifies for real-time conquest targeting (10000) or it doesn't (-1). Of 61M impressions delivered on 2026-05-26:
+- 95.44% had `realtime_conquest_score = -1` (does not qualify for RTC)
+- 4.56% had `realtime_conquest_score = 10000` (qualifies for RTC)
+- 0% in between (correct by design)
 
 **Finding 14d — The split is consistent across all campaign classes** (3P does NOT change the picture):
 
@@ -490,11 +490,10 @@ No keyword scoring, no 3P-quality scoring, no lookalike. The bidder has exactly 
 - The 5% `rtc=10000` slice is a small priority group; the other 95% is undifferentiated filter-match volume.
 - The user's underlying intuition is right: 3P doesn't have a real scoring layer. But the consequence ("wouldn't be targeted") is wrong — they're heavily targeted, just without any quality differentiation.
 
-**Why this matters for TI-956:** today the bidder cannot tell a "good" LiveRamp segment from a "bad" one. Adding TI-956's per-dscid composite scores would give the bidder the missing ranking signal — replacing the binary RTC=10000/-1 partition with a graduated score across 3P. That's the gap to fill.
+**Why this matters for TI-956:** RTC is a binary qualifier (does this IP qualify for real-time conquest or not), NOT a graduated quality score. So today the bidder has **zero per-IP graduated quality signal of any kind**. Within both the RTC=10000 set and the RTC=-1 set, IPs are undifferentiated; ranking is presumably pacing-based or first-come. Adding TI-956's per-dscid composite scores would be MNTN's *first* continuous per-IP quality signal — replacing "this IP qualifies for RTC or not" with "this IP is more/less valuable than that one."
 
 **Open question for Zach (follow-up):**
-- Why is RTC score so binary in delivery? Either the RTC model assigns only 10000 / -1 (no intermediate scores), or the bidder filters out everything between them.
-- For the `score_type=rtc` expressions where DS19 is NOT in the filter (~8k expressions), what is the bidder actually doing with non-RTC-matched IPs? Default-low? Skip-entirely? Random?
+- For the ~8k `score_type=rtc` expressions where DS19 is NOT in the filter, what does the bidder do with the filter-matched IPs that don't qualify for RTC? Is there a default ranking, pacing-weighted random, or something else?
 
 ### Data sources to use
 
