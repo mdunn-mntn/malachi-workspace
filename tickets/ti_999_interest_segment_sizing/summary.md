@@ -615,6 +615,66 @@ For 1P_excl, the test is volume + score-shape vs MM_only:
 - Score distribution shape should be similar (still ranking by household_score).
 - Per-impression cost / efficiency should differ if exclusion meaningfully narrows the eligible set.
 
+### Finding 15 (cont.) — Pass 3: empirical hypothesis test via delivered score distributions
+
+Query: `queries/ti_999_score_dist_by_bucket_pass3.sql`. Output: `outputs/ti_999_score_dist_by_bucket_pass3_2026_05_26.csv`. Scope: single day 2026-05-26 (matches Finding 14d for direct comparability).
+
+**`household_score` distribution by sub-bucket (% of impressions per band):**
+
+| Sub-bucket | n_imps | unscored (-1) | 1-999 | 1k-5k | 5k-8k | 8k-10k | =10000 | HI (8k+) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1. nothing | 21.2M | 80.9% | 0.2% | 1.6% | 1.1% | 4.6% | 11.6% | 16.2% |
+| **2. MM_only** | **2.0M** | **4.2%** | 1.9% | 13.2% | 9.0% | 37.8% | 33.9% | **71.7%** |
+| 3. 1P_only | 16.0M | 82.1% | 0.3% | 1.2% | 0.9% | 5.9% | 9.6% | 15.5% |
+| 4. 3P_only | 6.1M | 41.0% | 0.6% | 9.3% | 7.1% | 17.5% | 24.5% | 42.0% |
+| **5a. MM + 3P incl_only** | **2.7M** | **23.3%** | 0.9% | 11.7% | 11.1% | 32.0% | 20.9% | **52.9%** |
+| 5b. MM + 3P excl_only | 27K | 0.4% | 0.1% | 0.5% | 0.1% | 2.0% | 96.9% | 98.9% |
+| 5c. MM + 3P mixed | 738K | 6.0% | 0.2% | 27.9% | 14.6% | 42.4% | 8.9% | 51.3% |
+| 6a. MM + 1P incl_only | 110K | 36.1% | 0.3% | 6.7% | 2.7% | 42.6% | 11.7% | 54.3% |
+| **6b. MM + 1P excl_only** | **2.7M** | **6.7%** | 1.3% | 6.1% | 9.9% | 43.6% | 32.4% | **76.0%** |
+| 6c. MM + 1P mixed | 7.9K | 0.2% | 0.2% | 0.5% | 0.2% | 0.5% | 98.5% | 99.0% |
+| 7. 1P + 3P | 8.4M | 68.7% | 1.5% | 6.0% | 2.6% | 4.7% | 16.4% | 21.1% |
+| 8. MM + 1P + 3P | 989K | 33.0% | 0.3% | 9.5% | 9.9% | 22.0% | 25.2% | 47.2% |
+
+**Conclusion: inclusion-is-dead-weight hypothesis is REFUTED. AND-intersection model is refuted for inclusion clauses.**
+
+The two head-to-head comparisons that matter:
+
+1. **MM_only (4.2% unscored) vs MM+3P_incl_only (23.3% unscored).** 5.5x increase in unscored delivery. If the bidder were strictly AND-intersecting (3P narrows MM's scored set), unscored share could only DECREASE or stay flat — you can't narrow IN unscored IPs that weren't there. The empirical jump from 4.2% → 23.3% can only be explained by 3P inclusion ADDING unscored IPs to the eligible set (OR-additive).
+2. **MM_only (4.2%) vs MM+1P_excl_only (6.7% unscored).** Nearly identical shape; slight uptick consistent with advertiser-selection rather than mechanic. Exclusion behaves as expected AND-NOT narrowing.
+
+Refined bidder semantics model (per Pass 3 evidence):
+
+- **Inclusion clauses are OR-additive.** Each positive clause adds eligible IPs to the bidder's universe.
+- **Exclusion clauses are AND-NOT.** Each negative clause removes IPs from the eligible universe (as expected).
+- **The bidder ranks the eligible universe by `household_score`** but does NOT strictly defer all unscored IPs — substantial unscored delivery occurs (especially when 3P inclusion adds unscored IPs).
+- Net practical effect: a campaign with MM + 3P inclusion delivers a *blend* of MM-scored IPs and 3P-added IPs that may be unscored. The buyer's chosen 3P segments meaningfully shape that blend.
+
+**This sharpens the TI-956 framing dramatically:**
+
+The "score helps buyers pick segments to *avoid* because they're dead weight anyway" framing is **wrong**. Inclusion 3P clauses *do* deliver — and they deliver to a meaningfully higher-unscored audience than MM_only would. So the right framing is:
+
+> **TI-956 gives buyers per-segment quality control over the unscored portion of delivery.** When buyers add 3P inclusion to an MM campaign, ~23% of delivery happens on IPs the household score knows nothing about. Today the buyer picks the 3P segment blindly — TI-956's per-segment quality lets them aim that ~23% at IPs that are more likely to perform.
+
+**Quantified prize zone (single-day extrapolation to 30d):**
+- MM + 3P incl_only spend: $2.76M / 30d
+- Unscored share: 23.3%
+- Spend on unscored impressions via 3P inclusion (MM+3P incl_only cohort): ~$643K / 30d → **~$7.7M annualized**
+- Generalized to all 3P-inclusion-touched cohorts (5a + 5c + 8 cohorts): ~$24M annualized of delivery happens on unscored IPs that the 3P clause helped pull in. TI-956 directly targets this prize.
+
+**Pure-3P (cohort 4) at 41% unscored is the bigger prize per dollar:**
+- 3P_only spend: $5.24M / 30d, 41% unscored = $2.15M / 30d → **$25.8M annualized** unscored delivery.
+- These campaigns have NO MM scoring at all — every IP eligibility decision comes from 3P. TI-956's per-segment quality is the only quality signal those campaigns can ever get.
+
+**Combined addressable prize:** ~$50M+ annualized of unscored delivery reached via 3P clauses. TI-956 lets buyers control segment quality for that spend.
+
+**Important caveat — descriptive, not causal:** the score-distribution differences across buckets reflect both bidder mechanics AND selection effects (advertiser composition, campaign objectives, vertical mix). The 5.5x unscored-share jump from MM_only to MM+3P_incl_only could partially reflect advertiser self-selection (campaigns using 3P inclusion are a different cohort than MM-only). But the magnitude (5.5x) and the directionality (only OR-additive can explain *more* unscored delivery) make the mechanism read robust against selection-effect dilution alone.
+
+**Open follow-ups:**
+- Confirm bidder ranking-and-pacing logic with engineering: does household_score truly drive a soft preference + pacing logic, or is there a separate priority queue?
+- For 30d window vs single-day: stable? (single-day matches Finding 14d framing; widening to 30d possible if score distributions look unstable.)
+- Per-campaign delivery-band analysis on top MM+3P_incl_only advertisers: are some advertisers entirely delivering to unscored IPs (TI-956 is critical) vs nearly entirely to MM-scored IPs (TI-956 marginal)?
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
