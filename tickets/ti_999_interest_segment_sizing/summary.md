@@ -883,6 +883,45 @@ This is a much sharper product surface than "score 3P segments" alone — it tie
 - "MM ceiling" per campaign requires causal isolation; we showed FICO's pattern holds across two campaigns, but advertiser-level confounds remain. Strongest controlled test would be A/B at campaign level (same advertiser, same MM segment, with/without 3P clause).
 - Pacing logic in the bidder isn't observable from impression logs — the model "scored-first then fall through" is an inference from the score distribution, not a direct read of bidder code.
 
+### Finding 15 (cont.) — Pass 6: per-campaign ceiling-bound distribution in 5a
+
+Query: `queries/ti_999_finding15_pass6_ceiling_distribution.sql`. Cohort: 430 of 609 MM+3P_incl_only campaigns with ≥100 delivered impressions on 5/26 (179 had no delivery that day, mostly small).
+
+Per-campaign unscored share defines ceiling-bound status:
+- `a` ceiling-bound: ≥50% unscored (overflow into 3P is active)
+- `b` partial overflow: 10-50% unscored
+- `c` below ceiling: <10% unscored (3P inclusion barely reached — MM hasn't hit ceiling at current spend)
+
+| Status | Campaigns | % camps | Advertisers | Spend (30d) | % spend | Avg unscored | Median unscored | Avg spend/camp | Avg 3P dscids |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **a. Ceiling-bound** | **76** | **17.7%** | 48 | $596.6K | **26.3%** | 76.2% | 74.7% | $7.9K | 23.4 |
+| b. Partial overflow | 26 | 6.0% | 22 | $73K | 3.2% | 24.1% | 17.6% | $2.8K | 23.7 |
+| **c. Below ceiling** | **328** | **76.3%** | 228 | **$1,598.8K** | **70.5%** | 1.2% | 0.5% | $4.9K | 18.4 |
+
+**This is the critical reframing:** of the 609 MM+3P_incl_only campaigns, only **17.7% (76 campaigns)** are actually overflowing into 3P-added unscored IPs at meaningful rates. **76.3% (328 campaigns)** are running below MM ceiling — their 3P inclusion clause sits in the expression but is effectively dead weight at current spend levels.
+
+**Spend distribution tells the same story:**
+- The **26.3% of spend** ($596.6K / 30d → ~$7.2M annualized) in the ceiling-bound cohort is where 3P inclusion is doing real work.
+- The **70.5% of spend** ($1.6M / 30d → ~$19M annualized) in the below-ceiling cohort is paying for 3P clauses that aren't being reached.
+
+**Refined TI-956 prize zone:** earlier we said ~$50M/yr unscored delivery is reached via 3P inclusion clauses. Pass 6 breaks that down:
+
+| Source | Annualized spend on unscored | Active or dead-weight? |
+|---|---:|---|
+| Pure 3P_only (no MM at all) | ~$25.8M | Active — only quality signal |
+| MM+3P incl_only **ceiling-bound** | ~$7.2M | Active — buyer-driven overflow |
+| MM+3P incl_only **below-ceiling** | <$1M (residual fall-through) | **Mostly inactive — 3P barely reached** |
+| **Total ACTIVE prize zone** | **~$33M/yr** | TI-956 quality scoring drives benefit here |
+
+The ~$50M/yr framing was correct as gross-delivery sizing, but only ~$33M/yr is where TI-956 quality scoring has a *direct* delivery effect. The other ~$19M/yr is buyer behavior that needs a different fix (educate / hide 3P controls / detect dead-weight clauses).
+
+**Product implication — second admin-UI surface:** beyond "surface MM ceiling at campaign setup," the data supports a "your 3P clause isn't being used" diagnostic for the ~70% of MM+3P campaigns where bidder isn't reaching the 3P-added IPs. Buyers can be told: "remove the 3P clause or scale up spend." This reduces noise + simplifies setup for sub-ceiling campaigns.
+
+**Caveats:**
+- Single-day proxy. Some "below ceiling" campaigns may ceiling-bind on other days. 7-day or 14-day pattern would tighten the cohort sizing; directional read should hold.
+- 100-impression threshold filters very-small-delivery noise but may also filter genuinely-paused-on-5/26 campaigns. Sanity check across multiple days planned.
+- The ~70% below-ceiling cohort may include campaigns that ARE budget-constrained but not at MM ceiling for vertical-mix or other product reasons. Not all "below ceiling" is equivalent.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
