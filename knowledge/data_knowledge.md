@@ -788,14 +788,19 @@ Most other named 3P providers (Sovrn, Cybba, Bombora, Captify, 33Across, Klickly
 
 **7. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do NOT compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — apples-to-oranges.
 
-**8. Clause-polarity bidder semantics (TI-999 Finding 15, 2026-05-28 PM).** Empirically validated via Pass 1/2/3 over 15,529 active campaigns + cost_impression_log delivery distribution:
+**8. Clause-polarity bidder semantics + MM-ceiling pacing-overflow (TI-999 Finding 15, 2026-05-28 PM).** Empirically validated via Pass 1/2/3/4/5 over 15,529 active campaigns + cost_impression_log delivery distribution + per-advertiser cross-bucket ceiling test:
 
-- **Inclusion (positive) clauses are OR-additive.** Each positive clause ADDS eligible IPs to the bidder's universe. Multiple inclusions union together.
-  - Empirical proof: `MM_only` campaigns deliver 4.2% unscored impressions; `MM + 3P inclusion_only` campaigns deliver 23.3% unscored (5.5x increase). The only mechanism that can move unscored share *upward* is adding eligible-but-unscored IPs — which is what OR-additive inclusion does. AND-intersection cannot increase unscored share.
+- **Inclusion (positive) clauses are OR-additive in the audience expression.** Buyers write `"op":"or"` to combine MM with 3P or RTC in the eligibility tree. Each positive clause adds eligible IPs to the universe.
 - **Exclusion (negative) clauses are AND-NOT (subtractive).** Each negative clause REMOVES IPs from the eligible universe.
-  - Empirical proof: `MM + 3P excl_only` delivers 0.4% unscored (cleaner than MM_only's 4.2% — narrowing intensifies scored concentration); `MM + 1P excl_only` delivers 6.7% unscored (within noise of MM_only). Consistent with AND-NOT narrowing of the scored set.
-- **The bidder ranks the resulting eligible universe by `household_score`,** but does NOT strictly exhaust scored IPs before bidding unscored — substantial unscored delivery happens when inclusion clauses bring in unscored IPs.
-- **Therefore: prior verbal model "MM combines targeting clauses with AND-intersection" was WRONG for inclusion clauses (correct for exclusion).** Verbatim from Victor 2026-05-28 said "every filter narrows the eligible IP set" — empirical pattern shows only *negative* filters narrow; *positive* filters add.
+- **Bidder behavior: scored-first within campaign pacing, fall through to unscored when MM ceiling exhausts.**
+  - Per-bid-request evaluation: SSPs send bid requests; bidder checks if IP matches expression. If yes, IP is eligible.
+  - Within eligibility, `household_score` shapes preference + CPM. Bidder prefers scored IPs while they are available in the bid stream + pacing windows.
+  - When the MM-segment-scored audience for a campaign saturates relative to pacing needs (the **MM ceiling**), the bidder falls through to 3P-added unscored IPs to keep spend pacing.
+- **Empirical proof (TI-999 Finding 15 Pass 3 + Pass 5):**
+  - `MM_only` 4.2% unscored vs `MM + 3P incl_only` 23.3% unscored (5.5x). Unscored share can only rise via OR-additive inclusion.
+  - `MM + 3P excl_only` 0.4% unscored. AND-NOT narrowing of the scored set.
+  - FICO single-advertiser cross-bucket test: MM_only campaign delivers 71.5K scored imps/day; MM+3P_incl_only campaign with 4x the spend delivers 60.1K scored imps/day (essentially the same ceiling) + 236K unscored imps. Confirms ceiling exhaustion + pacing overflow.
+- **Therefore: prior verbal model "MM combines targeting clauses with AND-intersection" was WRONG for inclusion clauses (correct for exclusion).** The right model is OR-additive eligibility + scored-first pacing preference + ceiling-overflow to unscored.
 
 **Usage patterns (TI-999 Finding 15 Pass 2 — 30d ending 2026-05-28):**
 - **3P clauses are overwhelmingly INCLUSION-only** (5a: 85% of MM_plus_3P; 609 campaigns / $2.76M / 30d).

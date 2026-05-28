@@ -24,21 +24,39 @@ Alex first proposed classifying by keywords/verticals; Paulo asked for
 "something more nuanced." This scoring framework is the nuanced answer.
 
 **Empirical sizing of the prize (TI-999 Finding 15, 2026-05-28):** The
-bidder treats inclusion clauses as OR-additive — meaning a 3P-inclusion
-clause on an MM campaign genuinely adds eligible (often-unscored) IPs to
-delivery. Quantified:
-- MM + 3P inclusion campaigns deliver 23.3% of impressions on unscored IPs
-  (vs 4.2% for MM-only) — ~$643K / 30d / ~$7.7M annualized of delivery on
-  unscored IPs reached via 3P inclusion.
-- Pure-3P campaigns deliver 41% unscored — ~$2.15M / 30d / ~$25.8M annualized.
-- **Combined ~$50M+/year of currently-blind delivery is steered by 3P
-  inclusion clauses.** Per-segment quality scoring (TI-956) lets buyers
-  control that selection — quantifiable lift, not theoretical.
+bidder is scored-first within campaign pacing, falls through to unscored
+3P-added IPs once the MM ceiling for the campaign's targeted segment is
+hit (FICO single-advertiser test: MM_only and MM+3P campaigns deliver
+the SAME scored-IP volume ~60-72K/day; the bigger MM+3P campaign spent
+4x more, all extra spend went to 236K unscored 3P-added impressions
+per day). Buyers add 3P inclusion clauses to **intentionally expand
+reach beyond MM's ceiling** — the unscored delivery is the buyer's
+chosen overflow path, not a bidder accident.
 
-This is the strongest framing for the TI-956 narrative: today buyers pick
-3P segments blindly, the bidder reaches the IPs in those segments,
-~$50M/year of delivery happens on IPs the household score knows nothing
-about. TI-956 makes that selection quality-informed.
+Quantified prize zone:
+- MM + 3P inclusion campaigns spend ~$643K / 30d (~$7.7M annualized)
+  on the unscored-IP overflow portion.
+- Pure-3P campaigns spend ~$2.15M / 30d (~$25.8M annualized) on
+  unscored 3P delivery (no MM ceiling at all — the whole budget is
+  3P-driven).
+- **Combined ~$50M+/year is the intentional buyer-driven reach
+  expansion via 3P clauses.** TI-956's per-segment quality score tells
+  buyers WHICH 3P segments to expand into. Today they pick blindly;
+  tomorrow they pick quality-informed.
+
+**Elevator pitch:** *"MM has a ceiling. When buyers' budgets exceed
+what MM delivers at quality, they expand into 3P interest segments to
+keep spending. Today they pick those 3P segments blindly. ~$50M/year
+of MNTN delivery is this intentional reach expansion. TI-956 ranks
+LiveRamp segments by 9 quality axes so buyers expand into the best
+ones — direct lift on currently-blind spend."*
+
+**Product implication for Macie / admin UI:** because MM ceiling is
+measurable per (campaign × MM segment × day), the UI can surface it
+directly to buyers as part of the campaign-setup flow:
+*"Budget $Y exceeds MM segment X's ceiling of ~$Z. The remaining
+$(Y - Z) will expand into 3P — pick high-quality 3P segments here →"*
+This ties TI-956 scores to the buyer's actual decision moment.
 
 Confluence design docs (saved as offline copies in `artifacts/`):
 - [Liveramp Segment Quality Steps - Archive](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3274506251/Liveramp+Segment+Quality+Steps+-+Archive) (page id 3274506251) — initial 7-component design.
