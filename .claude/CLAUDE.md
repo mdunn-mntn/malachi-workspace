@@ -36,7 +36,7 @@ workspace/
 | `knowledge/data_catalog.md` | Table schemas and join keys — read at session start, update immediately when new schema learned |
 | `knowledge/data_knowledge.md` | Business logic and gotchas — read at session start, update immediately when new knowledge found |
 | `knowledge/mntn_business.md` | General MNTN business knowledge — products, strategy, org, industry, terminology. Update when learning business context from docs, meetings, or conversations |
-| `knowledge/experimentation.md` | Experiment methodology, covariate selection, test design lessons — update when working on any experiment/analysis ticket |
+| `knowledge/experimentation.md` | Experiment methodology, covariate selection, test design lessons — update when working on any experiment/analysis ticket. **Contains the Standard Analysis Protocol — apply to every tiered rollout / experiment evaluation.** |
 | `knowledge/folder_definitions.md` | **Exact definition of what goes in every folder** — check here before placing any file |
 | `tickets/_template/summary_template.md` | Copy this when starting a new ticket — internal working doc |
 | `tickets/_template/presentation_template.md` | Copy this when starting a new ticket — external-facing narrative for sharing |
@@ -65,6 +65,27 @@ Full guide in `self_review/summary.md`.
 ## Ticket Work Protocol
 
 **When working on any ticket**, always read `tickets/ti_xxx_name/summary.md` first to orient to the current state, open items, and file structure. This is the ticket card — it tells you what's been done, what's pending, and where everything lives.
+
+## Experiment Analysis Protocol — apply to every tiered rollout / experiment evaluation
+
+**Trigger:** any task that asks "did this change move a KPI?" — feature flips, tiered rollouts, A/B tests, audience-platform experiments, scoring-algorithm changes, holdout studies, vendor lift tests, BUK rollouts, BER-2250 work.
+
+**Action:** read `knowledge/experimentation.md` § "Standard Analysis Protocol" first, then follow the 5-step pipeline:
+
+1. **Power analysis** up front (canonical: TI-884)
+2. **Cohort + flip-date detection** from a source-of-truth inclusion table (canonical: TI-921 wave-aware queries)
+3. **Pre/post + DiD with cluster-bootstrap inference** — `_did_bootstrap()` in TI-961's `RolloutTierEvaluations.py`. Resample advertisers with replacement, N=1000. Report point / 95% CI / two-sided p-value.
+4. **CausalImpact with VIF→BIC** — `run_ci_for_tier()` in the same file. Candidate covariates at tier × day grain (control_vr, control_imps, holiday, is_weekend, metric_lag1, metric_lag7). VIF drops collinear (threshold 10); BIC best-subset (max size 5).
+5. **Standardized output + scheduled execution** — durable results in GCS (Mode-compatible), re-run on schedule so the dashboard auto-refreshes.
+
+**Non-negotiables:**
+- **Report SE / CI / p-value for every point estimate, on both DiD and CI.** Never show DiD as a point estimate alone next to CI with full uncertainty.
+- **Control set = future-tier advertisers from the inclusion table.** Never substitute "never-flipped" advertisers when a proper control exists.
+- **Lookback ≥ 2-3× expected post-period length.** Default 60 days for daily granularity.
+- **Visit rate is the headline KPI.** Conversion-based metrics noisy until n_post ≥ 28 days.
+- **Methods convergence is the strongest informal-causal argument.** When DiD and CI agree on a point estimate, report it. When they disagree, investigate before reporting.
+
+When applying this protocol to a new experiment, capture any patterns that don't fit in a new subsection of `knowledge/experimentation.md` — that's how the framework discovers what it's missing.
 
 ## File Naming Convention
 

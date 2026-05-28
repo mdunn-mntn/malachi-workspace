@@ -1,7 +1,58 @@
 # Experimentation & Causal Inference — Knowledge Base
-Last updated: 2026-05-08 | Started from TI-748 (Media Plan Causal Impact)
+Last updated: 2026-05-28 | Started from TI-748 (Media Plan Causal Impact)
 
 This is a living document. Add to it every time we learn something new about experimental design, covariate selection, test methodology, or edge cases at MNTN.
+
+---
+
+## ⭐ Standard Analysis Protocol — apply to every tiered rollout / experiment evaluation
+
+**When to apply:** any analysis of a feature flip, tiered rollout, A/B test, audience-platform experiment, scoring-algorithm change, or holdout study. If the work answers "did this change move a KPI?", follow this protocol.
+
+**Why:** TI-748 / TI-849 / TI-921 / TI-961 each re-derived this pipeline from scratch. The team will run dozens more experiments (incrementality overhaul, 5 external vendor tests, BUK rollout follow-ups, audience experiments). The protocol exists so we get the same rigor every time, and so a teammate can read one method-section sentence and know what we did.
+
+### The 5-step pipeline
+
+| # | Step | Purpose | Canonical implementation |
+|---|------|---------|--------------------------|
+| 1 | **Power analysis** | Up front, before the experiment ships. Compute required cohort size for the MDE we care about. CUPED-adjust ρ if covariates exist. Communicate "we need N advertisers for X weeks to detect Y% lift at 80% power." | [`tickets/ti_884_power_analysis_calculator/`](../tickets/ti_884_power_analysis_calculator/) — `mde_binomial`, `mde_continuous` |
+| 2 | **Cohort + flip-date detection** | Define treated/control sets dynamically from a source-of-truth inclusion table (Postgres `tpa.*_inclusion` if it exists; else maintain a CSV). Auto-detect per-tier inclusion dates so analyses pick up new flips without code changes. | [`tickets/ti_921_fangorn_lift_dashboard/queries/`](../tickets/ti_921_fangorn_lift_dashboard/queries/) — wave-aware queries pattern |
+| 3 | **Pre/post + DiD with cluster-bootstrap inference** | Per (tier, KPI): aggregate per-advertiser pre/post sums, resample advertisers with replacement N=1000, recompute pooled DiD lift each time. Report point estimate, 95% CI (2.5/97.5 percentiles), two-sided p-value (`2 × min(P(boot ≥ 0), P(boot ≤ 0))`). **Cluster unit = advertiser** (the right level of clustering; daily rates within an advertiser are autocorrelated). | [`tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py`](../tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py) — `did_inference()` + `_did_bootstrap()` |
+| 4 | **CausalImpact with VIF→BIC covariate selection** | Per tier, fit statsmodels UCM (local level + selected exog) on pre-period. Candidate covariates at the tier × day grain: `control_vr`, `control_imps`, `holiday`, `is_weekend`, `metric_lag1`, `metric_lag7`. VIF iteratively drops covariates with VIF ≥ 10. BIC best-subset search up to size 5. The winning subset becomes the exog matrix. Forecast post-period, compare actual to predicted counterfactual. Report rel_effect, 95% CrI, p-value (normal approximation backed out from the PI width). | TI-961 same file — `run_ci_for_tier()`, `drop_high_vif()`, `best_subset_by_bic()` |
+| 5 | **Standardized output + scheduled execution** | Write one row per `(experiment, tier, kpi, method, run_date)` with point/CI/p/n to a durable location (GCS today; long-term a `silver.experiments_eval.*` table). Schedule re-runs so results auto-refresh as post-period accrues. Powers a Mode dashboard reading from the same table. | Scheduled-run pattern shared with [TI-956](../tickets/ti_956_interest_segment_scoring_schedule/). Dashboard pattern: Alex's RolloutTierEvaluations notebook + Nick's Mode build (in flight) |
+
+### Non-negotiables
+
+- **Report SE / CI / p-value for EVERY point estimate, on BOTH methods.** Showing only "DiD lift = +27%" while CI says "p = 0.255" mis-frames the comparison — one tile is honest about uncertainty, the other isn't. Use the TI-961 cluster bootstrap to give DiD the same treatment as CI.
+- **Control set is whatever has not yet been treated.** For tiered rollouts: future-tier advertisers from the inclusion table. For RCTs: the holdout group. Never use "never-flipped" advertisers as a substitute when a proper control exists — they introduce structural-difference confounds.
+- **Visit rate is the headline KPI.** Conversions / CPA / ROAS are noisy at short post-periods (Alex catchup 2026-05-27); don't lead with them until n_post ≥ 28 days.
+- **Daily granularity, not weekly.** Weekly gives too few post observations during early reads. Aggregate to daily; report cumulative effects across the post window.
+- **Methods convergence is the strongest informal-causal argument.** When DiD and CausalImpact land on the same point estimate, that IS the evidence. When they disagree, the gap itself is diagnostic — investigate before reporting.
+
+### When CausalImpact ≠ DiD — diagnostic checklist
+
+If the methods give materially different point estimates:
+1. **Control drifted in pre→post?** DiD subtracts the control's change directly; CI uses structural learning. If control coincidentally moved a lot, DiD over-corrects, CI under-corrects. Truth is in between.
+2. **Pre-period covariates don't track treated tightly?** CI's local-level state absorbs the unexplained variance; DiD doesn't. Wider PI on CI is the symptom.
+3. **Small N treated?** Both methods produce noisy point estimates. Cluster bootstrap surfaces this honestly via wide CI.
+4. **Selected covariates per tier are unstable across re-runs?** BIC may be flipping between local minima. Run with `ci_pre_days = 30, 60, 90` and check stability.
+
+### Lookback period heuristic
+
+- **Rule:** pre-period ≥ 2-3× expected post-period length
+- **Floors:** Kalman filter convergence needs 30+ pre days; BIC subset stability needs 60+ pre days; covariate variance estimation needs 7+ weekend cycles
+- **Default:** 60 days for daily granularity, 12 weeks for weekly
+- **Validate:** run `ci_pre_days = 30 / 60 / 90` as a robustness check; if `rel_effect` is stable across them, the lookback is appropriate
+
+### p-value computation (both methods)
+
+**DiD (cluster bootstrap):** `p = 2 × min( P(boot ≥ 0), P(boot ≤ 0) )` from the empirical distribution of N=1000 resamples.
+
+**CausalImpact (normal approximation):** `p = 2 × (1 − Φ(|abs_effect| / SE))` where `SE = (avg_upper − avg_lower) / (2 × 1.96)` is backed out from the 95% PI width. Note: this is a normal approximation, not the posterior tail probability Google's CausalImpact package reports. Equivalent in practice when prediction errors are well-behaved.
+
+### Future-state framework (not yet built)
+
+This protocol will eventually live in a Python package `mntn_experiment_eval/` with config-driven runners. Until then, copy the canonical implementations referenced above into each new ticket's `artifacts/` folder. **As we build new experiments, capture any patterns that don't fit this protocol in a new subsection here — that's how we discover what the framework needs.**
 
 ---
 
