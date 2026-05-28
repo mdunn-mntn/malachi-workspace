@@ -122,15 +122,79 @@ Performance sub-weights (inside the performance score, not the main composite):
 Entry point: `ThirdPartySegmentQuality(panel).quality_score_per_segment(...)` — accepts `weights`, `targetable_ips_df`, performance inputs.
 
 ### Inputs the scheduled job will need
-1. **Panel** — output of `build_edges_with_weights_estimator_only` over IPDSC for the chosen window (30d primary, 14d for volatility). Sampling rate p=0.0001.
-2. **`seg_meta_df`** — from `bronze.tpa.categories` (or equivalent): `data_source_category_id`, `updated_date`, `created_date`, `deprecated`. Needed for staleness.
-3. **`targetable_ips_df`** — set of IPs in MNTN's addressable universe. Needed for targetability axis (default weight 20.0). Source TBD — likely an aggregate from bid/audience tables.
-4. **`performance_df` + `campaign_segment_targets`** — optional. Joins active campaigns with their target segments + delivery KPIs (spend, impressions, visits, conversions, revenue). If missing, performance axis is skipped (`z_performance = 0`).
-5. **Sample notebook** — Alex will add a usage notebook to the repo demonstrating the end-to-end call.
 
-### Hosting trade-offs
-- **Databricks scheduled notebook** — fastest path, easiest re-run. Alex has been working in Databricks; the notebook lives at `https://1262887251702944.4.gcp.databricks.com/editor/notebooks/1904079882625393`. Downside: less standard for our production pipelining.
-- **Vertex AI + DAG** / **Airflow + PySpark on GCP compute** — closer to how production pipelines should live. Alex's hint: "good opportunity for you to learn and build some of that pipelining stuff." Talk to **Victor or Ryan** before committing.
+Confirmed against PR #57 source (`facade.py`, `base.py`, `sampling_logic.py`, `attributes.py`, `performance.py`).
+
+#### Required
+
+1. **Panel** — output of `build_edges_with_weights_estimator_only(ipdsc_df, p=0.0001, hash_scope='edge_day', date_col='event_date')`. Produces schema `ip, event_date, dscid, k_samp, m_hat, pi_ipday, w_ipday, rep_ipday, p_edge, w_edge`.
+   - **Source:** `dw-main-bronze.external.ipdsc__v1` filtered to **LiveRamp (`data_source_id = 35`)** and the desired window.
+   - **Required columns on `ipdsc_df`:** `ip` (string), `data_source_category_ids` (array<bigint>), date column (`dt` is auto-cast).
+   - **`data_source_category_ids` shape:** RECORD with nested `.list[].element` (INTEGER). Must flatten to `array<bigint>` before passing — `sample_ipdsc_edges` calls `F.transform(data_source_category_ids, ...)` directly.
+   - **Scale:** ~103M LiveRamp rows in `ipdsc__v1` per day (2026-05-20 sample). At p=0.0001 over 30 days → ~310k sampled edges. Panel cost is manageable.
+   - **TTL note:** `ipdsc__v1` is partitioned by `dt`. Confirm retention covers 30d primary + 14d volatility windows.
+
+2. **`seg_meta_df`** — `dw-main-bronze.tpa.categories` filtered to `data_source_id = 35`.
+   - **Required columns (used by `segment_staleness`):** `data_source_category_id` (INTEGER → cast to long as `dscid`), `updated_date` (DATE), `created_date` (DATE), `deprecated` (BOOLEAN).
+   - **Confirmed counts (2026-05-28):** 428,372 rows, 428,135 distinct `dscid`, 214,743 deprecated → ~213k active LiveRamp segments. (Design doc says ~252k; difference is likely an older snapshot or different filter.)
+   - **Coverage:** `created_date` from 2022-03-30, `updated_date` through 2026-05-28.
+
+3. **`targetable_ips_df`** — distinct list of IPs in MNTN's addressable universe.
+   - **Required columns:** just `ip` (`segment_targetable_share_30d` calls `.select(F.col("ip")).distinct()`).
+   - **Weight in composite:** 20.0 (tied for second-highest — significant impact on scores).
+   - **Semantic constraint:** must be **stricter than IPDSC itself**. If `targetable_ips_df` ⊇ all IPs in `ipdsc__v1`, then `pct_targetable_30d = 1.0` for every segment and the axis becomes useless. The point is to distinguish segments whose IPs we can actually act on from segments dominated by IPs we never deliver to.
+   - **Candidate comparison (scoped 2026-05-28):**
+     | Candidate | n_ips | Cost (30d) | Reading |
+     |---|---:|---:|---|
+     | `dw-main-silver.logdata.impression_log` distinct `bid_ip`, 30d | 66.4M | ~130 GB scan | "IPs we actually delivered to in the window" — tightest, matches the activity-axis temporal window |
+     | `dw-main-bronze.tpa.graph_ips_aa_100pct_ip` distinct `ip` (no date) | 245M | ~20 GB scan | Full identity-graph universe (147M households) — too broad; includes IPs we've never delivered to |
+     | `bid_logs` distinct IPs, 30d | TBD | not scoped (90d TTL) | RTB-eligible universe (everything we got a bid request for) — broader than delivered, narrower than graph |
+     | audience-platform expression resolution | TBD | TBD | "IPs an active campaign expression would currently include" — most product-aligned but complex to extract |
+   - **Recommendation (to bring to Alex + Zach):** start with `impression_log` 30d distinct `bid_ip`. It's cheap, matches the activity-axis window, and is unambiguous in semantics ("we delivered here"). Bid-logs is the obvious next step if Alex wants "could have delivered" rather than "did deliver."
+   - **Authority memory `[[reference_audience_platform_authority]]`:** Zach Schoenberger owns audience-platform / addressable questions — get a sanity check before committing.
+
+#### Optional (performance layer — adds weight 12.0 to composite)
+
+4. **`performance_df`** — campaign-level delivery KPIs over the window.
+   - **Required columns** (per `build_campaign_segment_targets_panel`): `advertiser_id`, `campaign_id`, `total_spend`, `impressions`, `visits`, `conversions`, `revenue`.
+   - **Candidate sources:**
+     - `dw-main-silver.aggregates.agg__daily_sum_by_campaign` — campaign × day aggregates. Effective start 2025-09-01 per memory.
+     - `dw-main-silver.summarydata.sum_by_campaign_by_day` — goes back to 2024-01-01; better for longer windows.
+   - **Roll-up:** sum across the chosen window per `(advertiser_id, campaign_id)`. Cap to active campaigns in window.
+
+5. **`campaign_segment_targets`** — which campaigns target which LiveRamp dscids.
+   - **Required columns:** `advertiser_id`, `campaign_id`, `data_source_category_id` (cast to `dscid`).
+   - **Candidate source:** `audience.audience_segments` (per memory: "actual targeting expressions, NOT `audience.audiences` which are templates"). Need to extract `data_source_category_id` literals from expression nodes filtered to `data_source_id = 35`.
+   - **Open:** confirm the expression-parsing path with Zach (audience-platform authority).
+
+6. **Sample notebook** — Alex committed to adding a usage notebook to the repo. Not in PR #57 head as of 2026-05-28 (12 files, no `.ipynb`). Track for next Alex sync.
+
+#### Optional bypass
+- Pass `perf_seg_score_df=...` directly to `quality_score_per_segment` to skip recomputation if performance scores are precomputed elsewhere.
+
+### Hosting trade-offs (notes for Victor/Ryan consult)
+
+Three real options. Decision should be made in the early-next-week tech deep-dive after consulting Victor or Ryan — Alex deferred. Memory `[[reference_databricks_for_heavy_queries]]` says we have memory-optimized clusters for shuffle-heavy Spark; memory `[[reference_airflow_ti]]` describes the airflow-ti feature-store deployment pattern.
+
+| Dimension | Databricks scheduled notebook | Vertex AI + Airflow DAG | Airflow + PySpark (Dataproc) in airflow-ti |
+|---|---|---|---|
+| Iteration speed | Fastest — same env Alex prototyped in | Moderate — Docker/IAM each iteration | Slowest — PR + deploy each iteration |
+| Standardization | Off-pattern for TI prod (one-off) | Off-pattern for TI prod (one-off) | On-pattern (matches feature-store DAGs) |
+| Code review | Notebook can hold imports of `segment_quality_utils`; the package is reviewed in PR #57 either way | Same | Same — plus DAG code itself is in PR |
+| Compute fit | Memory-optimized clusters; uniqueness pairwise step covered | Dataproc Serverless under the hood — fine for PySpark | Dataproc on-demand cluster per run — fine |
+| GCS write | DBFS mount or direct GCS write | Direct GCS write | Direct GCS write |
+| Ops/monitor | Databricks Workflows alerts + dashboards | Airflow alerts + Vertex job logs | Airflow alerts |
+| Ownership | DS-leaning (Alex's territory) | Split DS / data-eng | Data-eng owned |
+| Notebook→deck flow | Alex already shows Fangorn dashboards from a Databricks notebook (meeting 5/27) | N/A | N/A |
+
+**My initial read** (subject to Victor/Ryan input):
+- For the explicit "interim, not production" framing in the ticket → **Databricks scheduled notebook** is the path of least resistance. Same system Alex already uses, fastest iteration while Alex is still tuning weights, scheduling + GCS write are first-class. Macie can consume the GCS output the same way regardless of host.
+- For "build it like production from day one" → **Airflow + PySpark in airflow-ti** matches the feature-store pattern Ryan owns. Alex's "good opportunity to learn pipelining" hint points this way.
+- **Vertex AI in the middle** adds Docker/IAM overhead without the airflow-ti integration — likely the wrong trade-off unless someone makes a specific case for it.
+
+**Question to bring to Victor/Ryan:** for an interim DS-led scoring job whose output will be consumed by an admin UI, do you prefer Databricks now and migrate later, or put it in airflow-ti from the start? Either is defensible; team norms drive the answer.
+
+**airflow-ti safety reminder (`[[feedback_airflow_prod_safety]]`):** if Option 3, models go in feature branches; Ryan wires DAG deps; never push to main directly.
 
 ### Malachi suggestions for additional metrics (not yet in v1)
 - **Visits per user** over 30-day window
@@ -157,14 +221,31 @@ _Pending._
 - Possible: add LiveRamp interest segment scoring inputs/outputs to `knowledge/data_knowledge.md` once schema is settled.
 
 ## 8. Open Items / Follow-ups
-- Decide host (Databricks vs Vertex+DAG vs Airflow+PySpark) — consult Victor / Ryan.
-- Confirm GCS output path with Macie.
-- Confirm weekly vs monthly cadence with Alex.
-- Should the v1 output include impact-weighted ranking metrics, or hold for v2?
-- **Identify `targetable_ips_df` source.** Default composite gives targetability weight 20.0 — second-highest after specificity. Without it, scores will be biased. Likely candidates: aggregated bid_logs / event_log IPs over the same window, or a curated audience-platform list. Confirm with Alex + Zach.
-- **Decide whether to run the performance layer in v1.** Needs `performance_df` (advertiser_id, campaign_id, spend, impressions, visits, conversions, revenue) and `campaign_segment_targets` (advertiser_id, campaign_id, dscid). If we skip it, `z_performance = 0` and the composite still works. Including it adds 12.0 weight and the causal caveat Alex flagged in the doc.
-- **Pin `tpa.categories` schema** for staleness (need `updated_date`, `created_date`, `deprecated`).
-- **Output schema** — at minimum: `dscid`, `quality_score`, all `z_*` axes, raw component values (`reach_hat_30d`, `cv14`, `avg_share_30d`, etc.) for debugging/audits.
+
+### Resolved during 2026-05-28 PR-read pass
+- ✅ **PR #57 read end-to-end.** Confirmed entry point `ThirdPartySegmentQuality(panel).quality_score_per_segment(seg_meta_df, targetable_ips_df=..., performance_df=..., campaign_segment_targets=...)`. No notebook in PR yet — Alex still owes one.
+- ✅ **`tpa.categories` schema pinned.** Has `data_source_category_id, updated_date, created_date, deprecated` — exact columns `segment_staleness` expects. LiveRamp filter is `data_source_id = 35` (428k categories, 213k non-deprecated).
+- ✅ **`ipdsc__v1` LiveRamp filter identified.** `data_source_id = 35` ("LiveRamp IP" in `bronze.integrationprod.data_sources`). ~103M rows/day; p=0.0001 → ~10k sampled edges/day → ~310k panel rows over 30d.
+- ✅ **`targetable_ips_df` candidate analysis.** Recommendation: `impression_log` distinct `bid_ip` over the 30d window (66.4M IPs). Full identity graph (245M) is too broad — would dilute the axis. See §4 Input source mapping for details.
+- ✅ **Hosting trade-offs documented.** Three options compared; awaiting Victor/Ryan input.
+
+### To resolve in Alex tech deep-dive (early next week)
+1. **What did Alex use for `targetable_ips_df` in his Databricks notebook?** If different from `impression_log` 30d, understand why — may reveal a constraint I'm missing.
+2. **Performance layer in v1: yes or no?** Skipping reduces complexity (no `performance_df` / `campaign_segment_targets` plumbing) but loses 12.0 weight + the lift signals. Alex's own caveat in the design doc says performance is supportive, not causal. Lean: skip v1, add v2 once admin UI is live and consumers ask.
+3. **Where does `campaign_segment_targets` come from?** If we include performance, need to extract `advertiser_id × campaign_id × dscid` from audience expressions filtered to `data_source_id = 35`. Likely `audience.audience_segments` — confirm with Zach.
+4. **Cadence: weekly vs monthly?** LiveRamp doesn't change daily but `updated_date` *is* per-segment. Weekly probably aligns better with `tpa.categories` refresh; monthly is cheaper. Alex's call.
+5. **Output schema confirmation.** Minimum proposal: `dscid, quality_score, z_combo, z_combo_std, z_activity, z_stability, z_share, z_uniqueness, z_sample, z_staleness, z_specificity, z_targetability, z_performance` + raw component values (`reach_hat_30d, cv14, avg_share_30d, ess_30d, mean_topk_jaccard_30d, idf_norm, staleness_unit_score, pct_targetable_30d`) + `as_of_date`. Confirm with Macie what the admin UI needs.
+
+### To resolve with Victor/Ryan
+6. **Host decision.** See §4 Hosting trade-offs table for the framing question.
+
+### To resolve with Macie
+7. **GCS output path + format.** Parquet vs JSON vs CSV. Single file vs partitioned by `as_of_date`. Naming convention.
+
+### Lower priority
+- Should v1 surface impact-weighted ranking metrics (Malachi suggestion §4), or hold for v2?
+- `ipdsc__v1` retention: confirm 30d primary + 14d volatility windows are always available (no TTL surprise).
+- After first end-to-end run, sanity-check scores against Alex's manual notebook outputs.
 
 ## 9. Meeting Notes
 - `meetings/ti_956_01_malachi_alex_catchup_2026_05_27.txt` — same Malachi + Alex catchup. Interest-segment scoring is the second half of the meeting.
