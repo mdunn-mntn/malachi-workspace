@@ -23,6 +23,23 @@ Origin: ask from Paulo + Allison to "use interest segments more." Allison +
 Alex first proposed classifying by keywords/verticals; Paulo asked for
 "something more nuanced." This scoring framework is the nuanced answer.
 
+**Empirical sizing of the prize (TI-999 Finding 15, 2026-05-28):** The
+bidder treats inclusion clauses as OR-additive — meaning a 3P-inclusion
+clause on an MM campaign genuinely adds eligible (often-unscored) IPs to
+delivery. Quantified:
+- MM + 3P inclusion campaigns deliver 23.3% of impressions on unscored IPs
+  (vs 4.2% for MM-only) — ~$643K / 30d / ~$7.7M annualized of delivery on
+  unscored IPs reached via 3P inclusion.
+- Pure-3P campaigns deliver 41% unscored — ~$2.15M / 30d / ~$25.8M annualized.
+- **Combined ~$50M+/year of currently-blind delivery is steered by 3P
+  inclusion clauses.** Per-segment quality scoring (TI-956) lets buyers
+  control that selection — quantifiable lift, not theoretical.
+
+This is the strongest framing for the TI-956 narrative: today buyers pick
+3P segments blindly, the bidder reaches the IPs in those segments,
+~$50M/year of delivery happens on IPs the household score knows nothing
+about. TI-956 makes that selection quality-informed.
+
 Confluence design docs (saved as offline copies in `artifacts/`):
 - [Liveramp Segment Quality Steps - Archive](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3274506251/Liveramp+Segment+Quality+Steps+-+Archive) (page id 3274506251) — initial 7-component design.
 - [Liveramp Segment Quality Steps - Update](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3523477544/Liveramp+Segment+Quality+Steps+-+Update) (page id 3523477544) — **current canonical version, supersedes Archive**. Adds targetability + performance components; switches final mapping from percentile rank to sigmoid of standardized z_combo.
@@ -228,6 +245,15 @@ _Pending._
 - ✅ **`ipdsc__v1` LiveRamp filter identified.** `data_source_id = 35` ("LiveRamp IP" in `bronze.integrationprod.data_sources`). ~103M rows/day; p=0.0001 → ~10k sampled edges/day → ~310k panel rows over 30d.
 - ✅ **`targetable_ips_df` candidate analysis.** Recommendation: `impression_log` distinct `bid_ip` over the 30d window (66.4M IPs). Full identity graph (245M) is too broad — would dilute the axis. See §4 Input source mapping for details.
 - ✅ **Hosting trade-offs documented.** Three options compared; awaiting Victor/Ryan input.
+
+### Resolved during 2026-05-28 PM — Finding 15 empirical bidder-semantics gate
+- ✅ **Bidder treats inclusion as OR-additive, exclusion as AND-NOT.** Prior verbal "AND-intersection across all clauses" model refuted for inclusion. `MM + 3P incl_only` delivers 23.3% unscored impressions vs `MM_only`'s 4.2% (only OR-additive explains the increase). See [TI-999 Finding 15 Pass 3](../ti_999_interest_segment_sizing/summary.md).
+- ✅ **3P inclusion is NOT dead weight.** TI-956's per-segment quality score has a real, measurable prize zone:
+  - MM + 3P incl_only: $643K / 30d on unscored IPs reached via 3P inclusion → ~$7.7M annualized
+  - Pure 3P_only: $2.15M / 30d on unscored IPs → ~$25.8M annualized
+  - Combined: ~$50M+/year of delivery currently flowing to IPs the household score knows nothing about
+- ✅ **Phase 1 LiveRamp-only scope stays right.** LiveRamp = 97% of active 3P categories. ShareThis + Dstillery are categorically stale and a smaller prize.
+- ✅ **Updated elevator pitch:** "MM scores IPs at bid time. Nothing scores segments. Today buyers add 3P inclusion clauses to MM campaigns blindly — the bidder reaches the 3P IPs (~23% of delivery on unscored IPs), but buyers can't tell good segments from bad. TI-956 makes ~$50M/year of currently-blind delivery quality-informed."
 
 ### To resolve in Alex tech deep-dive (early next week)
 1. **What did Alex use for `targetable_ips_df` in his Databricks notebook?** If different from `impression_log` 30d, understand why — may reveal a constraint I'm missing.

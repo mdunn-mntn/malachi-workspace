@@ -786,9 +786,32 @@ Every impression's `cost_impression_log.model_params` carries **three score fiel
 
 Most other named 3P providers (Sovrn, Cybba, Bombora, Captify, 33Across, Klickly, Oracle, Experian, OnAudience, Liftlab) are registered but deliver zero IPDSC volume today.
 
-**7. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do NOT compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — apples-to-oranges. For prospecting analyses, exclude any campaign whose expression references DS4 / DS8 / DS47 (list-style retargeting). Per TI-999 methodology (memory `feedback_crm_excluded_from_prospecting`).
+**7. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do NOT compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — apples-to-oranges.
 
-**Revision history:** v1 of this section (2026-05-28 AM) incorrectly claimed the bidder had only RTC scoring. Corrected after Malachi flagged that RTC is a separate scoring system for recent sites only; the general scoring is `household_score`.
+**8. Clause-polarity bidder semantics (TI-999 Finding 15, 2026-05-28 PM).** Empirically validated via Pass 1/2/3 over 15,529 active campaigns + cost_impression_log delivery distribution:
+
+- **Inclusion (positive) clauses are OR-additive.** Each positive clause ADDS eligible IPs to the bidder's universe. Multiple inclusions union together.
+  - Empirical proof: `MM_only` campaigns deliver 4.2% unscored impressions; `MM + 3P inclusion_only` campaigns deliver 23.3% unscored (5.5x increase). The only mechanism that can move unscored share *upward* is adding eligible-but-unscored IPs — which is what OR-additive inclusion does. AND-intersection cannot increase unscored share.
+- **Exclusion (negative) clauses are AND-NOT (subtractive).** Each negative clause REMOVES IPs from the eligible universe.
+  - Empirical proof: `MM + 3P excl_only` delivers 0.4% unscored (cleaner than MM_only's 4.2% — narrowing intensifies scored concentration); `MM + 1P excl_only` delivers 6.7% unscored (within noise of MM_only). Consistent with AND-NOT narrowing of the scored set.
+- **The bidder ranks the resulting eligible universe by `household_score`,** but does NOT strictly exhaust scored IPs before bidding unscored — substantial unscored delivery happens when inclusion clauses bring in unscored IPs.
+- **Therefore: prior verbal model "MM combines targeting clauses with AND-intersection" was WRONG for inclusion clauses (correct for exclusion).** Verbatim from Victor 2026-05-28 said "every filter narrows the eligible IP set" — empirical pattern shows only *negative* filters narrow; *positive* filters add.
+
+**Usage patterns (TI-999 Finding 15 Pass 2 — 30d ending 2026-05-28):**
+- **3P clauses are overwhelmingly INCLUSION-only** (5a: 85% of MM_plus_3P; 609 campaigns / $2.76M / 30d).
+- **1P clauses are overwhelmingly EXCLUSION-only** (6b: 92% of MM_plus_1P; 296 campaigns / $1.88M / 30d). Classic CRM-suppression-from-prospecting pattern.
+- **MM + 3P excl_only is ESSENTIALLY NONEXISTENT** (7 campaigns, $20K). Buyers do not use 3P as a negative filter.
+
+**Methodology correction for prospecting filters:** the prior rule "exclude any campaign whose expression references DS4 / DS8 / DS47" (memory `feedback_crm_excluded_from_prospecting`) is over-broad — it removes 296 MM-prospecting campaigns ($1.88M / 30d) that use 1P only as *exclusion* (customer suppression), which is core prospecting hygiene. **Polarity-aware version:** exclude only campaigns with 1P-family DS in POSITIVE clauses; 1P in negative clauses means the campaign is using CRM as suppression and remains prospecting.
+
+**TI-956 prize zone (quantified from Finding 15 Pass 3):**
+- MM + 3P inclusion campaigns deliver $643K / 30d (~$7.7M annualized) on unscored IPs — these are 3P-added IPs the household score knows nothing about.
+- Pure 3P-only campaigns deliver $2.15M / 30d (~$25.8M annualized) on unscored IPs — every targeting decision in these campaigns rides entirely on 3P quality.
+- Combined ~$50M+ annualized of unscored-delivery is reached via 3P inclusion clauses. **Per-segment quality scoring (TI-956) gives buyers control over this entire zone** by letting them choose 3P segments more likely to land on productive IPs (vs blind picks today).
+
+**Revision history:**
+- v1 (2026-05-28 AM): incorrectly claimed the bidder had only RTC scoring. Corrected.
+- v2 (2026-05-28 PM, TI-999 Finding 15): added Item 8 — clause polarity semantics. Refuted the AND-intersection verbal model for inclusion; confirmed AND-NOT for exclusion. Updated prospecting-exclusion rule to be polarity-aware.
 
 ### CRM Upload Flow (DS 4)
 1. Advertiser uploads CSV of hashed emails (HEMs) → stored in `tpa.audience_upload_hashed_emails`
