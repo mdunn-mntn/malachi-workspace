@@ -457,43 +457,50 @@ Pairwise IP overlap among the three shared-catalog 3P providers (DS17 ShareThis,
 
 **Implication:** layering multiple 3P providers in one expression brings less incremental reach than it appears. For an advertiser using LiveRamp, adding Dstillery brings ~10M new IPs; adding ShareThis brings ~32M. Going past one 3P provider has steeply diminishing returns.
 
-### Finding 14 (2026-05-28) — How the bidder actually treats 3P targeting
+### Finding 14 (2026-05-28, revised) — How the bidder actually treats 3P targeting
 
 **Triggered by:** Slack thread with Alex Knorr + Sean Yang (2026-05-28). User asked whether 3P-only IPs get bid on, or whether they "wait" until HI/PP scored IPs are exhausted.
 
+**Revision note:** initial v1 of this finding incorrectly claimed "the bidder has exactly one ranking signal" by extrapolating from RTC. RTC is a separate binary qualifier for recent-site visitors only. The general/regular scoring system is `household_score` and is graduated. Per Malachi correction 2026-05-28.
+
 Query: `queries/ti_999_bidder_score_distribution.sql`. Output: `outputs/ti_999_bidder_score_distribution_2026_05_26.csv`.
 
-**Finding 14a — Only TWO score configurations exist across 270k active TPA expressions:**
+**Three score fields appear in every impression's `model_params`:**
+
+| Field | What it is | Distribution on 2026-05-26 (61M imps) |
+|---|---|---|
+| `household_score` | **General/main scoring system.** MNTN's per-IP household-quality score, graduated 0-10000. | 65.4% = -1, 15.4% = 10000, 11.1% = 8k-10k (HI band), 3.3% = 5k-8k, 4.3% = 1k-5k (PP-ish), 0.6% = 1-999 |
+| `advertiser_household_score` | **Per-advertiser scoring** (Mountain Match-style; advertiser-tuned). Mostly binary in delivery with a small graduated tail. | 70.2% = -1, 28.8% = 10000, 0.6% = 5k-8k, 0.4% = 1k-5k |
+| `realtime_conquest_score` | **RTC — Real-Time Conquesting qualifier.** Binary by design; applies to *recent-site* visitors only. | 95.4% = -1, 4.6% = 10000, 0% in between |
+
+**Finding 14a — `household_score` is graduated and broadly applied.** ~35% of impressions get a positive household score (full range 0-10000). This is MNTN's main per-IP ranking signal — what "HI / PP / mid-band" actually means in the bidder.
+
+**Finding 14b — Only two `score_type` configurations exist across 270k active TPA expressions:**
 - `score_type=rtc`: 222,008 expressions (82.2%)
 - (no score block): 48,166 expressions (17.8%)
 
-No keyword scoring, no 3P-quality scoring, no lookalike. The bidder has exactly one ranking signal available: RTC (DS19 / MNTN Matched).
+The audience expression only references `score_type=rtc` (or nothing). But `household_score` is applied by the bidder *regardless of what the expression declares* — it's a system-level scoring layer, not opted into per-campaign.
 
-**Finding 14b — 97% of 3P-using expressions declare `score_type=rtc`** — including expressions where DS19 is NOT in the filter (8,238 LiveRamp-using expressions without DS19 in their filter still ask for RTC scoring).
+**Finding 14c — 3P-using prospecting campaigns get DRAMATICALLY more scored impressions than no-3P prospecting:**
 
-**Finding 14c — `realtime_conquest_score` is binary by design.** RTC = Real-Time Conquesting; the score is a qualifier flag, not a graduated score. An IP either qualifies for real-time conquest targeting (10000) or it doesn't (-1). Of 61M impressions delivered on 2026-05-26:
-- 95.44% had `realtime_conquest_score = -1` (does not qualify for RTC)
-- 4.56% had `realtime_conquest_score = 10000` (qualifies for RTC)
-- 0% in between (correct by design)
+| Campaign class | household_score = -1 | 8k-10k (HI band) | 10000 (top) | Any positive score |
+|---|---:|---:|---:|---:|
+| Prospecting + 3P | 33.2% | 23.5% | 22.5% | **66.8%** |
+| Prospecting, no 3P | 74.2% | 7.5% | 13.6% | **25.8%** |
+| Retargeting (uses CRM/IP-list) | 68.9% | 9.9% | 14.4% | **31.0%** |
 
-**Finding 14d — The split is consistent across all campaign classes** (3P does NOT change the picture):
+**This flips a key narrative from the earlier prospecting bucket analysis.** 3P-using prospecting campaigns deliver heavily on IPs that the household scorer ranks as high-quality (46% in HI/top bands). The hypothesis "3P-only IPs are unscored" was wrong — most 3P-filter-matched IPs DO have a household score, because LiveRamp/ShareThis/Dstillery cover IPs that overlap heavily with MNTN's scored household universe.
 
-| Campaign class | rtc=10000 | rtc=-1 |
-|---|---:|---:|
-| Prospecting + 3P | 5.62% | 94.38% |
-| Prospecting, no 3P | 4.78% | 95.22% |
-| Retargeting (uses CRM/IP-list) | 4.04% | 95.96% |
+**RTC adds a separate small priority layer for recent-site visitors** (4.6% of all delivered impressions), consistent across campaign classes.
 
-**Answer to the user's question:**
-- 3P IPs DO get bid on — they're not "waiting" for HI/PP scored IPs. 94% of 3P-campaign delivery goes to unscored IPs.
-- BUT within that 94%, the bidder has **no quality signal at all for 3P**. It treats every 3P-filter-matched IP equally.
-- The 5% `rtc=10000` slice is a small priority group; the other 95% is undifferentiated filter-match volume.
-- The user's underlying intuition is right: 3P doesn't have a real scoring layer. But the consequence ("wouldn't be targeted") is wrong — they're heavily targeted, just without any quality differentiation.
-
-**Why this matters for TI-956:** RTC is a binary qualifier (does this IP qualify for real-time conquest or not), NOT a graduated quality score. So today the bidder has **zero per-IP graduated quality signal of any kind**. Within both the RTC=10000 set and the RTC=-1 set, IPs are undifferentiated; ranking is presumably pacing-based or first-come. Adding TI-956's per-dscid composite scores would be MNTN's *first* continuous per-IP quality signal — replacing "this IP qualifies for RTC or not" with "this IP is more/less valuable than that one."
+**Answer to the user's Slack question (revised):**
+- 3P IPs ARE bid on heavily AND most have a graduated household score. The bidder isn't "waiting for HI to exhaust" — it's actively ranking IPs (including 3P-matched ones) by `household_score`.
+- The bidder's per-IP scoring stack is: (a) household_score (general, graduated), (b) advertiser_household_score (per-advertiser, mostly binary), (c) RTC (recent-site qualifier, binary).
+- What's MISSING is **per-segment quality scoring** (per-dscid). The household score tells you the IP is good, but says nothing about whether the LiveRamp segment you picked is a high-quality segment vs a low-quality one. TI-956's framework would add the per-segment layer; it complements (does not replace) household scoring.
 
 **Open question for Zach (follow-up):**
-- For the ~8k `score_type=rtc` expressions where DS19 is NOT in the filter, what does the bidder do with the filter-matched IPs that don't qualify for RTC? Is there a default ranking, pacing-weighted random, or something else?
+- Confirm the priority order the bidder uses across the three scores. Is `household_score` the primary ranking key, with RTC as a tiebreaker, or some weighted blend?
+- For the ~8k `score_type=rtc` expressions where DS19 is NOT in the filter, what does the bidder do with filter-matched IPs that don't qualify for RTC? Probably falls back to `household_score`, but worth confirming.
 
 ### Data sources to use
 

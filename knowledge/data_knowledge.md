@@ -722,38 +722,42 @@ investigations (TI-644, MM-44) where targeting audiences appear smaller than exp
 
 ### Bidder Scoring Reality (TI-999 empirical, 2026-05-28)
 
-The bidder has **exactly one per-IP ranking signal today, and it's binary.** Confirmed empirically against `audience.audience_segments` + `cost_impression_log.model_params` on 2026-05-26.
+Every impression's `cost_impression_log.model_params` carries **three score fields** — they are separate scoring systems, not variants of one.
 
-**1. Only two `score_type` configurations exist across all 270,174 active TPA expressions** (`expression_type_id = 2 AND is_targeted = TRUE`):
-- `score_type=rtc`: 222,008 expressions (82.2%)
-- no score block at all: 48,166 expressions (17.8%)
+| Field | What it is | Distribution on 2026-05-26 (61M imps) |
+|---|---|---|
+| `household_score` | **General/main per-IP scoring system.** Graduated 0-10000. This is what "HI / PP / mid-band" actually means in the bidder. Applied broadly — not gated by audience-expression `score_type`. | 65.4% = -1 (unscored), 15.4% = 10000, 11.1% = 8k-10k (HI band), 3.3% = 5k-8k, 4.3% = 1k-5k (PP-ish), 0.6% = 1-999 |
+| `advertiser_household_score` | **Per-advertiser scoring** (Mountain Match-style; advertiser-tuned). Mostly binary in delivery with a small graduated tail. | 70.2% = -1, 28.8% = 10000, 0.6% = 5k-8k, 0.4% = 1k-5k |
+| `realtime_conquest_score` | **RTC — Real-Time Conquesting qualifier.** Binary BY DESIGN — applies to recent-site visitors only (not a graduated score, a qualifier flag). | 95.4% = -1, 4.6% = 10000 |
 
-There is no `score_type=keyword`, no `score_type=lookalike`, no `score_type=quality`, etc. RTC or nothing.
+**1. `household_score` is the main scoring system** — graduated full-range, broadly applied. ~35% of all delivered impressions have a positive household score.
 
-**2. RTC score is binary by design.** `realtime_conquest_score` is a Real-Time Conquest qualifier flag — an IP either qualifies (`10000`) or it doesn't (`-1`). Not a graduated quality score.
+**2. RTC is binary by design and applies only to recent-site visitors** — don't confuse RTC's binary behavior with the bidder's general scoring (`household_score` is graduated).
 
-Distribution of `realtime_conquest_score` across 61M impressions delivered on 2026-05-26:
-- 95.44% `= -1` (does not qualify for RTC)
-- 4.56% `= 10000` (qualifies for RTC)
-- 0% anywhere else
+**3. Audience expressions reference only `score_type=rtc` or have no score block** (270k active expressions: 82% rtc, 18% none). But `household_score` is applied by the bidder regardless of the expression — it's a system-level scoring layer, not opted-in per-campaign.
 
-**3. Split is consistent across campaign classes** (3P does not change it):
-| Campaign class | rtc=10000 | rtc=-1 |
-|---|---:|---:|
-| Prospecting + 3P | 5.6% | 94.4% |
-| Prospecting, no 3P | 4.8% | 95.2% |
-| Retargeting (uses CRM / IP-list) | 4.0% | 96.0% |
+**4. 3P-using prospecting campaigns deliver heavily on scored IPs:**
 
-**4. Implication for 3P:** the bidder treats 3P (DS17/18/35) as a **filter** — IPs in the dscid set are eligible — but has no concept of "this LiveRamp segment is higher quality than that one." All filter-matched IPs are undifferentiated below the binary RTC qualifier. This is the gap that per-dscid composite scores (TI-956 / Alex's framework) would fill.
+| Campaign class | household_score = -1 | 8k-10k (HI) | 10000 (top) | Any positive |
+|---|---:|---:|---:|---:|
+| Prospecting + 3P | 33.2% | 23.5% | 22.5% | **66.8%** |
+| Prospecting, no 3P | 74.2% | 7.5% | 13.6% | **25.8%** |
+| Retargeting (CRM/IP-list) | 68.9% | 9.9% | 14.4% | **31.0%** |
 
-**5. Active bought-3P set is small.** Of 60+ DSes in `data_sources`, only three carry material daily IPDSC volume AND fit "bought third-party interest":
+Most 3P-filter-matched IPs DO have a graduated household score — LiveRamp/ShareThis/Dstillery IPs overlap heavily with MNTN's scored household universe.
+
+**5. What's missing — per-segment quality scoring.** `household_score` ranks individual IPs. The bidder has no signal saying "this LiveRamp segment is higher-quality than that one" — that's the gap TI-956 / Alex's per-dscid composite scoring framework would fill. Per-segment scoring complements (not replaces) per-IP household scoring.
+
+**6. Active bought-3P set is small.** Of 60+ DSes in `data_sources`, only three carry material daily IPDSC volume AND fit "bought third-party interest":
 - DS35 LiveRamp IP (~104M rows/day, 213k active categories)
 - DS17 ShareThis (~65M rows/day, 1,850 active categories — taxonomy 100% >2yr stale)
 - DS18 Dstillery (~32M rows/day, 3,303 active categories — taxonomy 100% >2yr stale)
 
-Most other named 3P providers in `data_sources` (Sovrn, Cybba, Bombora, Captify, 33Across, Klickly, Oracle, Experian, OnAudience, Liftlab) are registered but deliver zero IPDSC volume today.
+Most other named 3P providers (Sovrn, Cybba, Bombora, Captify, 33Across, Klickly, Oracle, Experian, OnAudience, Liftlab) are registered but deliver zero IPDSC volume today.
 
-**6. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do **not** compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — that's apples-to-oranges. For prospecting analyses, exclude any campaign whose expression references DS4 / DS8 / DS47 (list-style retargeting). Per TI-999 methodology (memory `feedback_crm_excluded_from_prospecting`).
+**7. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do NOT compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — apples-to-oranges. For prospecting analyses, exclude any campaign whose expression references DS4 / DS8 / DS47 (list-style retargeting). Per TI-999 methodology (memory `feedback_crm_excluded_from_prospecting`).
+
+**Revision history:** v1 of this section (2026-05-28 AM) incorrectly claimed the bidder had only RTC scoring. Corrected after Malachi flagged that RTC is a separate scoring system for recent sites only; the general scoring is `household_score`.
 
 ### CRM Upload Flow (DS 4)
 1. Advertiser uploads CSV of hashed emails (HEMs) → stored in `tpa.audience_upload_hashed_emails`
