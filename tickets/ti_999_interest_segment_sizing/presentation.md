@@ -136,12 +136,71 @@ Lower bound: **10 campaigns ($59K / 30d, ~$710K/yr)** rely *exclusively* on stal
 
 ---
 
+## Deeper cut — 1P vs 3P, advertiser tiers, IP overlap
+
+### How does 3P actually compare to 1P on performance?
+
+![1P vs 3P bucket KPI](artifacts/ti_999_chart_1p_vs_3p_buckets.png)
+
+Re-bucket by audience composition. **1P-uploaded = {CRM, IP List}. 3P-interest = {LiveRamp, ShareThis, Dstillery}.**
+
+| Bucket | Camps | Spend (30d) | Avg 1P dscids | Avg 3P dscids | **Conv rate** |
+|---|---:|---:|---:|---:|---:|
+| Neither (retargeting / MNTN-internal only) | 11,940 | $16.27M | 0 | 0 | **0.126%** |
+| 1P only (CRM upload) | 1,610 | $9.63M | 3.1 | 0 | **0.066%** |
+| 3P only (LiveRamp / ShareThis / Dstillery) | 1,573 | $8.59M | 0 | **26.9** | **0.046%** |
+| **Both 1P + 3P** | **402** | **$5.77M** | 3.5 | 29.2 | **0.017%** |
+
+**1P-only beats 3P-only by 42% on conversion rate.** The advertiser's own CRM data outperforms bought 3P interest — not surprising, but now quantified.
+
+**Both is worst.** Layering 1P + 3P drops conv rate to 0.017% — 2.7x worse than 3P-only alone. Likely because the bidder evaluates the intersection, which biases toward heavily-tagged IPs (active proxies, multi-segment shoppers, low-quality activity) rather than the cleanest CRM IPs.
+
+**Volume confirms the user's framing**: 3P-only campaigns layer a median of **13 dscids** (avg 27) — 6.5x more categories than typical 1P campaigns. When measuring exposure, dscid count matters.
+
+### Who uses 3P? (Concentration check)
+
+![Spend tier 3P usage](artifacts/ti_999_chart_spend_tier_3p_usage.png)
+
+Group advertisers by 30d spend:
+
+| Tier | Advs | Tier spend | Share | % use 3P | % use 1P | % use stale 3P |
+|---|---:|---:|---:|---:|---:|---:|
+| Enterprise ($100K+) | 77 | $20.37M | **50.6%** | 62% | 68% | 43% |
+| Mid-market ($20-100K) | 292 | $12.34M | 30.7% | 52% | 45% | 26% |
+| SMB ($5-20K) | 535 | $5.59M | 13.9% | 49% | 29% | 25% |
+| Micro (<$5K) | 1,114 | $1.96M | 4.9% | 50% | 14% | 23% |
+
+- **Top 77 advertisers (3.8% of customer base) = 50.6% of spend.** Confirms heavy concentration.
+- **3P usage rate is flat (~50%) across tiers** — every customer segment uses 3P. Not just a big-advertiser pattern.
+- **1P usage drops sharply with size** (68% → 14%) — smaller advertisers don't have CRM data; they're 3P-dependent.
+- **Stale-3P exposure rate is also roughly flat (22-43%)** — concern is portfolio-wide, not concentrated in any one tier.
+
+### How much overlap between 1P and 3P IP universes?
+
+![IP overlap](artifacts/ti_999_chart_ip_overlap.png)
+
+Single-day snapshot (2026-05-26). Distinct IPs per data source:
+
+- **1P CRM (DS4): 227M IPs**
+- **3P interest (LiveRamp + ShareThis + Dstillery): 148M IPs**
+- **Overlap: 106M (in both)**
+
+**71.9% of 3P interest IPs are already in CRM** — 3P brings only **~28% incremental reach** over CRM. The remaining 42M "3P-only" IPs are the *incremental* value 3P provides.
+
+Combined with the bucket KPI finding: if 3P-only converts 42% worse than 1P-only AND 72% of 3P IPs are already in CRM, then the **incremental value of 3P over 1P is small**. Probably negative for advertisers with healthy CRM data.
+
+**Caveat:** this is a global-universe overlap. Per-campaign expression-resolution would give a per-campaign 1P/3P composition — deferred (expensive). The global ratio still constrains what's possible at the campaign level.
+
+---
+
 ## What this means for the scoring work (TI-956)
 
 1. **Phase 1 (LiveRamp-only, in flight) is the right starting point.** LiveRamp is 97% of interest-using campaigns and well-maintained (99.6% fresh). Value-add from scoring is the *other 8 axes* (uniqueness, specificity, activity, targetability, performance) — NOT staleness.
 2. **Phase 2 = ShareThis + Dstillery.** This is where the staleness axis earns its keep. The 21% conv-rate gap suggests filtering stale categories would lift performance materially. Up to ~$24M/yr potential.
 3. **The scoring infrastructure is data-source-agnostic.** Extending Phase 1 to Phase 2 is a config change (different `data_source_id` filter on the IPDSC source), not a rewrite.
 4. **Concentration says the rollout can be incremental.** WGU + ElevenLabs + Gainbridge + Ancient Nutrition + Northern Tool = 42% of exposure. Pilot scoring with those 5; learn; then broaden.
+5. **The "both 1P + 3P" pattern deserves its own investigation.** Layering signals appears to hurt — 0.017% conv vs 0.066% / 0.046% for either alone. If the bidder's intersection logic is biasing toward shared-low-quality IPs, a scoring framework that *down-weights heavily-tagged dscids* (specificity axis in Alex's framework) would directly address it.
+6. **For advertisers with strong CRM, 3P offers limited incremental value.** 72% of 3P IPs are already in CRM. The score/filter conversation should be paired with "should this advertiser be using 3P at all, given their 1P depth?"
 
 ---
 

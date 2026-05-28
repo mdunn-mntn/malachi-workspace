@@ -341,6 +341,193 @@ def chart_top_advertisers_stale():
     print(f"wrote {out}")
 
 
+def chart_1p_vs_3p_buckets():
+    df = pd.read_csv(OUTPUTS / "ti_999_1p_vs_3p_buckets_2026_05_28.csv")
+    df = df.set_index("bucket")
+    order = ["d_neither_1p_nor_3p", "a_1p_only", "b_3p_only", "c_both_1p_and_3p"]
+    labels = [
+        "Neither\n(retargeting / MNTN)",
+        "1P only\n(CRM upload)",
+        "3P only\n(LiveRamp / ShareThis / Dstillery)",
+        "Both\n1P + 3P",
+    ]
+    cr = [df.loc[b, "conversion_rate"] * 100 for b in order]
+    n_camps = [int(df.loc[b, "n_campaigns"]) for b in order]
+    spend = [df.loc[b, "total_spend_30d"] / 1e6 for b in order]
+    avg_3p = [df.loc[b, "avg_n_3p_dscids"] for b in order]
+    avg_1p = [df.loc[b, "avg_n_1p_dscids"] for b in order]
+
+    # Headline ratio: 1P-only beats 3P-only
+    onep_cr = df.loc["a_1p_only", "conversion_rate"] * 100
+    threep_cr = df.loc["b_3p_only", "conversion_rate"] * 100
+    lift = (onep_cr - threep_cr) / threep_cr * 100
+
+    fig, ax = plt.subplots(figsize=(13, 6.5), dpi=200)
+    fig.suptitle(
+        f"1P-only campaigns convert {lift:.0f}% better than 3P-only — "
+        f"and layering both is the worst",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.05, ha="left", y=0.97)
+    fig.text(0.05, 0.88,
+             "Conversion rate per audience-composition bucket. Average dscid counts under each bar show targeting volume.\n"
+             "30-day window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    colors = [GRAY, NAVY, ACCENT_RED, "#7F8C8D"]
+    bars = ax.bar(range(4), cr, color=colors, width=0.55)
+
+    for i, b in enumerate(bars):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.005,
+                f"{cr[i]:.3f}%", ha="center", va="bottom",
+                color=NAVY, fontsize=12, fontweight="bold")
+        # Footer with detail
+        ax.text(b.get_x() + b.get_width() / 2, -0.018,
+                f"{n_camps[i]:,} camps · ${spend[i]:.2f}M spend\n"
+                f"avg {avg_1p[i]:.1f} 1P  +  {avg_3p[i]:.1f} 3P  dscids",
+                ha="center", va="top", color=GRAY, fontsize=9)
+
+    ax.set_xticks(range(4))
+    ax.set_xticklabels(labels, fontsize=11, color=NAVY)
+    ax.set_ylim(0, max(cr) * 1.20)
+    ax.set_yticks([])
+    ax.set_ylabel("")
+    ax.text(-0.03, 1.02, "Conversion rate", transform=ax.transAxes,
+            fontsize=10, color=GRAY)
+    fig.tight_layout(rect=[0, 0, 1, 0.80])
+    out = HERE / "ti_999_chart_1p_vs_3p_buckets.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
+def chart_spend_tier_3p_usage():
+    df = pd.read_csv(OUTPUTS / "ti_999_advertiser_tiers_2026_05_28.csv")
+    # Tier display order: enterprise first (top)
+    tier_labels = {
+        "a_enterprise_100K+": "Enterprise\n($100K+ in 30d)",
+        "b_mid_20K_100K":     "Mid-market\n($20-100K)",
+        "c_smb_5K_20K":       "SMB\n($5-20K)",
+        "d_micro_under_5K":   "Micro\n(<$5K)",
+    }
+    df = df.set_index("spend_tier")
+    order = ["a_enterprise_100K+", "b_mid_20K_100K", "c_smb_5K_20K", "d_micro_under_5K"]
+
+    n_advs = [int(df.loc[t, "n_advertisers"]) for t in order]
+    tier_spend = [df.loc[t, "tier_total_spend"] / 1e6 for t in order]
+    pct_3p = [df.loc[t, "pct_advs_use_3p"] for t in order]
+    pct_1p = [df.loc[t, "pct_advs_use_1p"] for t in order]
+    pct_stale = [df.loc[t, "pct_advs_use_stale_3p"] for t in order]
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7), dpi=200, gridspec_kw={"width_ratios": [1.1, 1]})
+    fig.suptitle(
+        "Enterprise advertisers use 3P most (62%) — but every tier is ~50% 3P-user",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.98)
+    fig.text(0.04, 0.92,
+             "Each tier defined by 30-day spend. Top 77 advertisers ('enterprise') account for 50.6% of all MNTN spend.",
+             color=GRAY, fontsize=10)
+
+    # Left chart: % of advertisers using 1P / 3P / stale-3P per tier
+    ax = axes[0]
+    x = list(range(len(order)))
+    width = 0.27
+    b1 = ax.bar([xi - width for xi in x], pct_1p, width=width, color=NAVY, label="1P (CRM/IP)")
+    b2 = ax.bar(x,                          pct_3p, width=width, color=ACCENT_RED, label="3P (LiveRamp/ShareThis/Dstillery)")
+    b3 = ax.bar([xi + width for xi in x], pct_stale, width=width, color="#E67E22", label="Stale 3P (ShareThis/Dstillery)")
+    for grp in (b1, b2, b3):
+        for r in grp:
+            h = r.get_height()
+            ax.text(r.get_x() + r.get_width() / 2, h + 1.5,
+                    f"{h:.0f}%", ha="center", va="bottom", color=NAVY, fontsize=9, fontweight="bold")
+    ax.set_xticks(x)
+    ax.set_xticklabels([tier_labels[t] for t in order], fontsize=10, color=NAVY)
+    ax.set_ylim(0, 80)
+    ax.set_yticks([])
+    ax.legend(loc="upper right", frameon=False, fontsize=9)
+    ax.set_title("% of advertisers in tier that use each DS family",
+                 loc="left", fontsize=11, color=GRAY, pad=10)
+    # bottom annotation
+    for i, t in enumerate(order):
+        ax.text(i, -8,
+                f"{n_advs[i]:,} advs\n${tier_spend[i]:.1f}M tier spend",
+                ha="center", va="top", color=GRAY, fontsize=9)
+
+    # Right chart: tier share of total spend (enterprise at top)
+    ax2 = axes[1]
+    total = sum(tier_spend)
+    spend_pct = [s / total * 100 for s in tier_spend]
+    colors_right = ["#C0392B", "#2C3E50", "#7F8C8D", "#95A5A6"]
+    y = list(range(len(order)))
+    bars = ax2.barh(y, spend_pct, color=colors_right, height=0.6)
+    for i, b in enumerate(bars):
+        ax2.text(b.get_width() + 0.7, b.get_y() + b.get_height() / 2,
+                 f"{spend_pct[i]:.1f}%   (${tier_spend[i]:.1f}M)",
+                 va="center", ha="left", color=NAVY, fontsize=10, fontweight="bold")
+    ax2.set_yticks(y)
+    ax2.set_yticklabels([tier_labels[t].replace("\n", " ") for t in order],
+                       fontsize=10, color=NAVY)
+    ax2.invert_yaxis()  # enterprise at top
+    ax2.set_xticks([])
+    ax2.set_xlim(0, max(spend_pct) * 1.35)
+    ax2.spines["bottom"].set_visible(False)
+    ax2.set_title("Spend share by tier (of $40.3M total)",
+                  loc="left", fontsize=11, color=GRAY, pad=10)
+
+    fig.tight_layout(rect=[0, 0, 1, 0.85])
+    out = HERE / "ti_999_chart_spend_tier_3p_usage.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
+def chart_ip_overlap():
+    df = pd.read_csv(OUTPUTS / "ti_999_ip_overlap_2026_05_26.csv").set_index("metric")
+    n_1p_only = float(df.loc["n_ips_1p_only", "value"])
+    n_both = float(df.loc["n_ips_1p_and_3p", "value"])
+    n_3p_only = float(df.loc["n_ips_3p_only", "value"])
+    pct_3p_in_1p = float(df.loc["pct_3p_overlapping_1p", "value"])
+
+    total = n_1p_only + n_both + n_3p_only
+
+    fig, ax = plt.subplots(figsize=(13, 5.5), dpi=200)
+    fig.suptitle(
+        f"{pct_3p_in_1p:.0f}% of 3P IPs are already in CRM — 3P brings ~28% incremental reach",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.97)
+    fig.text(0.04, 0.89,
+             "Single-day IP-set composition (2026-05-26): IPs in DS4 (CRM) vs IPs in DS17/18/35 (3P interest).\n"
+             "If an advertiser already has CRM, most of 3P's reach is duplicative.",
+             color=GRAY, fontsize=10)
+
+    segments = [
+        ("1P CRM only", n_1p_only, NAVY),
+        ("In both 1P + 3P", n_both, ACCENT_RED),
+        ("3P only", n_3p_only, "#7F8C8D"),
+    ]
+    left = 0
+    for label, val, color in segments:
+        ax.barh([0], [val], left=[left], color=color, height=0.45)
+        pct = val / total * 100
+        ax.text(left + val / 2, 0,
+                f"{val/1e6:.0f}M\n{pct:.1f}%",
+                ha="center", va="center", color="white",
+                fontsize=11, fontweight="bold")
+        left += val
+
+    # bottom labels
+    cur = 0
+    for label, val, color in segments:
+        ax.text(cur + val / 2, -0.45, label, ha="center", va="top",
+                color=color, fontsize=11, fontweight="bold")
+        cur += val
+
+    ax.set_xlim(0, total * 1.02)
+    ax.set_ylim(-0.7, 0.7)
+    ax.set_yticks([])
+    ax.set_xticks([])
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    fig.tight_layout(rect=[0, 0, 1, 0.83])
+    out = HERE / "ti_999_chart_ip_overlap.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
 if __name__ == "__main__":
     chart_bucket_spend_share()
     chart_staleness_by_ds()
@@ -348,3 +535,6 @@ if __name__ == "__main__":
     chart_within_advertiser_kpi()
     chart_stale_vs_fresh_kpi()
     chart_top_advertisers_stale()
+    chart_1p_vs_3p_buckets()
+    chart_spend_tier_3p_usage()
+    chart_ip_overlap()

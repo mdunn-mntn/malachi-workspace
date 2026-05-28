@@ -234,6 +234,84 @@ Output: `outputs/ti_999_top_advertisers_stale_2026_05_28.csv`. Query: `queries/t
 
 WGU note: per `[[reference_audience_platform_authority]]` notes elsewhere in workspace memory, WGU is the largest single advertiser at ~30% of monthly MNTN spend. They're an outlier on multiple dimensions (S3 lookback, audience scale, segment count). Don't assume their stale-3P pattern generalizes — but they're worth their own conversation.
 
+### Finding 8 (2026-05-28) — 1P vs 3P bucket KPI comparison (with dscid volume)
+
+Query: `queries/ti_999_1p_vs_3p_buckets.sql`. Output: `outputs/ti_999_1p_vs_3p_buckets_2026_05_28.csv`.
+
+Per-campaign extraction now pulls **dscid counts** (not just DS presence). The regex captures `"data_source_id":N,"category_ids":[X,Y,Z]` blocks and counts category ids per DS. Buckets:
+- `1P_UPLOADED = {4 CRM, 8 IP List}` — advertiser-uploaded customer data
+- `3P_INTEREST = {17 ShareThis, 18 Dstillery, 35 LiveRamp IP}` — bought third-party
+
+| Bucket | Camps | Advs | Imp (30d) | Spend (30d) | Conv rate | avg 1P dscids/camp | avg 3P dscids/camp | median 3P |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Neither (retargeting / MNTN-internal only) | 11,940 | 1,975 | 731M | $16.27M | **0.126%** | 0 | 0 | 0 |
+| 1P only (CRM upload) | 1,610 | 380 | 623M | $9.63M | **0.066%** | 3.1 | 0 | 0 |
+| 3P only (LiveRamp/ShareThis/Dstillery) | 1,573 | 844 | 296M | $8.59M | **0.046%** | 0 | 26.9 | **13** |
+| Both 1P + 3P | 402 | 197 | 272M | $5.77M | **0.017%** | 3.5 | 29.2 | 13 |
+
+**Headlines:**
+- **1P-only campaigns convert 42% better than 3P-only** (0.066% vs 0.046%). Advertiser's own CRM data outperforms bought interest data — large directional signal.
+- **Both 1P + 3P is the WORST bucket at 0.017%** — 2.7x worse than 3P-only, 4x worse than 1P-only. Layering both signals appears to hurt rather than help. Two leading hypotheses: (a) bidder evaluates intersection, dragging eligible IPs toward overlap that may be heavily-shared / low-quality activity, or (b) selection: campaigns that layer many signals tend to be exploratory / complex / lower-priority.
+- **Volume matters**: median 3P-only campaign references **13 dscids** (avg 26.9). 3P campaigns layer 6.5x more categories than 1P campaigns (median 2 dscids per 1P campaign). The user's "account for volume, not just number" framing is correct: a campaign with 50 3P segments shouldn't be counted like one with 1.
+
+**Important interpretation:** the `neither` bucket has the highest conversion rate (0.126%) — but this is retargeting + RTC, by definition closer-to-conversion. Doesn't invalidate the comparison between 1P-only and 3P-only, which is the relevant test of "does 1P beat 3P."
+
+### Finding 9 (2026-05-28) — Advertiser-tier 3P usage + spend concentration
+
+Query: `queries/ti_999_advertiser_tiers.sql`. Output: `outputs/ti_999_advertiser_tiers_2026_05_28.csv`.
+
+Bucket advertisers by 30-day spend tier:
+
+| Tier | n_advs | Tier spend | Spend share | % use 3P | % use 1P | % use stale 3P | % spend via 3P | % via 1P | % via stale-3P |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Enterprise ($100K+) | 77 | $20.37M | **50.6%** | 62.3% | 67.5% | 42.9% | 38.1% | 52.1% | 24.7% |
+| Mid-market ($20-100K) | 292 | $12.34M | 30.7% | 52.4% | 44.9% | 25.7% | 31.1% | 28.1% | 11.5% |
+| SMB ($5-20K) | 535 | $5.59M | 13.9% | 49.3% | 29.0% | 24.7% | 34.4% | 19.0% | 15.5% |
+| Micro (<$5K) | 1,114 | $1.96M | 4.9% | 49.6% | 13.6% | 22.7% | 42.3% | 13.3% | 21.3% |
+| **Total** | **2,018** | **$40.26M** | 100% | | | | | | |
+
+**Key reads:**
+- **Top 77 advertisers = 50.6% of MNTN spend.** Half of total spend lives in 3.8% of advertisers.
+- **3P usage rate is remarkably flat (49-62%) across all tiers.** Even micro advertisers use 3P at ~50%.
+- **1P usage drops sharply with size**: 67.5% enterprise → 13.6% micro. Smaller advertisers don't have CRM data to upload; they rely on 3P + MNTN-internal signals.
+- **By spend-weighted exposure**: enterprise spend is heaviest on 1P (52.1%) — they have rich CRM. Micro advertisers' spend is heaviest on 3P (42.3% via 3P, only 13.3% via 1P).
+- **Stale-3P exposure rate also stays fairly flat (22-43%)** across tiers — concern isn't limited to one segment of the customer base.
+
+**Strategic implication:** the scoring framework matters across the whole customer base, but the *dollars at risk* are concentrated in enterprise. A pilot with the top 5-10 advertisers (per Finding 7) covers ~half the absolute exposure.
+
+### Finding 10 (2026-05-28) — IP-level overlap between 1P CRM and 3P interest universes
+
+Query: `queries/ti_999_ip_overlap_1p_vs_3p.sql`. Output: `outputs/ti_999_ip_overlap_2026_05_26.csv`.
+
+Single-day IPDSC snapshot (2026-05-26) — counts of distinct IPs in DS4 (CRM) vs DS17+18+35 (3P interest):
+
+| Set | n IPs |
+|---|---:|
+| Total IPs in universe | 268.6M |
+| In 1P CRM (DS4) | 227.1M |
+| In 3P interest (DS17 ∪ DS18 ∪ DS35) | 147.9M |
+| In **both** 1P and 3P | **106.4M** |
+| In 1P only | 120.7M |
+| In 3P only | 41.5M |
+| LiveRamp (DS35) | 104.0M |
+| ShareThis (DS17) | 64.5M |
+| Dstillery (DS18) | 32.4M |
+
+**Coverage ratios:**
+- **71.9% of 3P interest IPs are already in CRM.** 3P brings only ~28% incremental IP reach over what 1P CRM already provides.
+- **46.9% of 1P CRM IPs are also covered by 3P** (less interesting direction — CRM is the much larger set).
+- **Jaccard between 1P and 3P universes = 39.6%.**
+
+**Why this matters:**
+- For an advertiser with *any* meaningful CRM data, 3P interest segments add only ~28% incremental reach. The "value-add" of 3P is mostly in the **incremental 41.5M IPs** that 1P doesn't already cover.
+- Combined with Finding 8: 3P-only converts worse than 1P-only AND brings ~28% incremental IPs that 1P doesn't have. So the question becomes: are those 28% incremental IPs *high-value* enough to justify the 3P spend?
+- This also explains the "both buckets perform worst" pattern in Finding 8: the bidder likely evaluates 1P AND 3P as an intersection (the 106M shared IPs), which would heavily bias toward IPs that appear in many lists — likely the **most-tagged, most-active IPs**, which are correlated with bot-like / proxy behavior.
+
+**Caveats:**
+- Single-day snapshot. Identity-graph movement on either side could shift the ratio.
+- Doesn't account for the *quality* of categories within each universe — a CRM advertiser has only their own customers in 1P, while another advertiser also gets 1P CRM but for *their* customer set. The 268M-IP universe view is global; per-advertiser overlap will look different.
+- Per-campaign expression-resolution would give a more honest "% of this campaign's audience is 1P vs 3P" answer. Deferred — expensive to compute at scale.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
