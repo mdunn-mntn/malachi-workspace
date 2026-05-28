@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CausalImpact for Fangorn — How the Synthetic-Control Read Works</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+<style>
+:root {
+  --navy:  #1B2A4A;
+  --blue:  #2E5090;
+  --mid:   #5A7DB5;
+  --light: #A8BDD9;
+  --muted: #C8CDD4;
+  --red:   #D63B2F;
+  --text:  #222222;
+  --text-light: #666666;
+}
+.reveal { font-size: 32px; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+.reveal h1 { margin-top: 0; font-size: 2em; color: var(--navy); font-weight: 700; }
+.reveal h2 { margin-top: 0; font-size: 1.4em; color: var(--navy); font-weight: 700; }
+.reveal h3 { margin-top: 0; font-size: 1em; color: var(--navy); font-weight: 600; }
+.reveal section { text-align: left; }
+.reveal section.center { text-align: center; }
+.reveal p, .reveal li { color: var(--text); }
+.subtitle { color: var(--text-light); font-size: 0.7em; margin-top: 0.5em; }
+.byline   { color: var(--text-light); font-size: 0.55em; margin-top: 2em; }
+.muted    { color: var(--text-light); }
+.small    { font-size: 0.7em; }
+.tiny     { font-size: 0.55em; color: var(--text-light); }
+.kbd { font-family: SF Mono, Consolas, monospace; background: #f4f4f6; padding: 0.05em 0.3em; border-radius: 3px; font-size: 0.85em; color: var(--navy); }
+.formula { font-family: SF Mono, Consolas, monospace; font-size: 0.75em; background: #f4f4f6; padding: 0.6em 0.9em; border-radius: 5px; color: var(--navy); display: inline-block; }
+.callout { background: #f4f4f6; border-left: 4px solid var(--navy); padding: 0.6em 0.9em; border-radius: 3px; font-size: 0.78em; margin-top: 0.6em; }
+.callout-red { background: #fcf3f2; border-left: 4px solid var(--red); padding: 0.6em 0.9em; border-radius: 3px; font-size: 0.78em; margin-top: 0.6em; }
+
+/* CI tile mockup */
+.ci-tile {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 14px 18px; max-width: 460px; margin: 0.5em auto;
+  font-size: 0.65em;
+}
+.ci-tile .label { font-size: 0.85em; font-weight: 600; color: #6b7280; letter-spacing: 0.04em; text-transform: uppercase; }
+.ci-tile .row { display: flex; justify-content: space-between; margin-top: 6px; }
+.ci-tile .row.divider { border-top: 1px solid #f3f4f6; padding-top: 8px; margin-top: 10px; font-weight: 600; }
+.ci-tile .pos-soft { color: #86a886; }
+.ci-tile .pos-strong { color: #1a7f37; }
+.ci-tile .muted-row { color: #6b7280; font-size: 0.85em; }
+.ci-tile .footer-row { color: #9ca3af; font-size: 0.8em; margin-top: 6px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.65em; margin-top: 0.6em; }
+th { color: var(--text-light); font-weight: 600; padding: 0.35em 0.6em; border-bottom: 1px solid #ddd; text-align: left; }
+td { padding: 0.35em 0.6em; border-bottom: 1px solid #f1f1f4; }
+.num { font-family: SF Mono, Consolas, monospace; }
+
+svg.illus { width: 100%; max-width: 720px; height: 240px; display: block; margin: 0.4em auto; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- 1 · TITLE -->
+<section class="center">
+  <h1>CausalImpact for Fangorn</h1>
+  <p class="subtitle">How the synthetic-control read works · what the numbers mean</p>
+  <p class="byline">Malachi Dunn · Targeting Infrastructure · 2026-05-28</p>
+</section>
+
+<!-- 2 · THE QUESTION -->
+<section>
+  <h2>The question</h2>
+  <p style="margin-top: 0.6em; font-size: 0.95em;">
+    <strong>What would the treated tier's visit rate have been if Fangorn never flipped?</strong>
+  </p>
+  <p class="small muted" style="margin-top: 0.8em;">
+    We can't observe that — the flip happened. So we build it.
+  </p>
+  <div class="callout">
+    Causal effect = <span class="kbd">actual</span> − <span class="kbd">counterfactual</span>.
+    Everything else is machinery to construct the counterfactual.
+  </div>
+</section>
+
+<!-- 3 · THE TWO-STAGE APPROACH -->
+<section>
+  <h2>Two stages</h2>
+  <p class="small" style="margin-top: 0.4em;">
+    <strong style="color: var(--navy);">Pre-period:</strong> learn how the treated tier's daily visit rate
+    relates to a set of contemporaneous control signals (other tiers' rate, holiday flag, own lags).
+  </p>
+  <p class="small" style="margin-top: 0.5em;">
+    <strong style="color: var(--navy);">Post-period:</strong> we still observe those controls.
+    Run them through the learned model to predict what the treated tier <em>would have done</em>.
+    That prediction is the counterfactual.
+  </p>
+  <svg class="illus" viewBox="0 0 720 220">
+    <!-- pre/post divider -->
+    <line x1="380" y1="20" x2="380" y2="200" stroke="#D63B2F" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="385" y="35" font-size="13" fill="#D63B2F" font-weight="600">switch</text>
+    <!-- pre: treated and control move similarly -->
+    <path d="M 30 130 Q 100 110 180 125 T 380 120" stroke="#2E5090" stroke-width="2.5" fill="none"/>
+    <path d="M 30 145 Q 100 130 180 140 T 380 135" stroke="#888" stroke-width="2" fill="none" stroke-dasharray="3,3"/>
+    <!-- post: treated diverges up, control continues -->
+    <path d="M 380 120 Q 460 100 540 85 T 700 70" stroke="#2E5090" stroke-width="2.5" fill="none"/>
+    <path d="M 380 135 Q 460 130 540 128 T 700 125" stroke="#888" stroke-width="2" fill="none" stroke-dasharray="3,3"/>
+    <!-- counterfactual: dotted line continuing the pre-period trajectory -->
+    <path d="M 380 120 Q 460 122 540 124 T 700 128" stroke="#2E5090" stroke-width="1.5" fill="none" stroke-dasharray="2,4" opacity="0.6"/>
+    <!-- effect gap -->
+    <path d="M 700 70 L 700 128" stroke="#1a7f37" stroke-width="2.5"/>
+    <text x="660" y="60" font-size="13" fill="#1a7f37" font-weight="600">effect</text>
+    <!-- labels -->
+    <text x="35" y="170" font-size="13" fill="#2E5090">treated tier (actual)</text>
+    <text x="35" y="188" font-size="13" fill="#888">control covariates</text>
+    <text x="490" y="148" font-size="12" fill="#2E5090" opacity="0.7">counterfactual</text>
+  </svg>
+</section>
+
+<!-- 4 · THE MODEL -->
+<section>
+  <h2>The model</h2>
+  <p class="small">
+    Implementation: <span class="kbd">statsmodels.UnobservedComponents(level="local level", exog=…)</span>
+  </p>
+  <p class="small" style="margin-top: 0.7em;">
+    Three pieces:
+  </p>
+  <div style="font-size: 0.75em; margin-top: 0.4em; line-height: 1.6;">
+    <span style="color: var(--text-light);">1.</span>
+    <strong>Local level</strong> — random walk capturing slow, unexplained drift in the treated tier's rate<br>
+    <span style="color: var(--text-light);">2.</span>
+    <strong>Exogenous regressors</strong> — covariates the data selected (next slide)<br>
+    <span style="color: var(--text-light);">3.</span>
+    <strong>Observation noise</strong> — daily noise around the structured prediction
+  </div>
+  <div class="callout">
+    Fit by MLE on <strong>pre-period only</strong>. No post-period data ever touches parameter estimates.
+  </div>
+</section>
+
+<!-- 5 · CANDIDATE COVARIATES -->
+<section>
+  <h2>6 candidate covariates</h2>
+  <p class="small muted">Tier × day grain. We don't hand-pick — the data chooses.</p>
+  <table>
+    <tr><th>Name</th><th>What it captures</th></tr>
+    <tr><td class="kbd">control_vr</td><td>Impression-weighted visit rate across control tiers</td></tr>
+    <tr><td class="kbd">control_imps</td><td>Control-tier total impressions (platform-wide volume)</td></tr>
+    <tr><td class="kbd">holiday</td><td>Binary US-holiday flag</td></tr>
+    <tr><td class="kbd">is_weekend</td><td>Saturday/Sunday flag</td></tr>
+    <tr><td class="kbd">metric_lag1</td><td>Treated tier visit rate t−1 (own momentum)</td></tr>
+    <tr><td class="kbd">metric_lag7</td><td>Treated tier visit rate t−7 (weekly seasonality)</td></tr>
+  </table>
+</section>
+
+<!-- 6 · VIF -->
+<section>
+  <h2>Step 1 — VIF</h2>
+  <p class="small">
+    <strong>Variance Inflation Factor.</strong>
+    Iteratively drop the most multicollinear covariate until all VIF &lt; 10.
+  </p>
+  <p class="small" style="margin-top: 0.7em;">
+    Multicollinear covariates can't both stay in the model — they pull regression
+    coefficients in unstable directions and inflate forecast variance.
+  </p>
+  <div class="callout">
+    Example: <span class="kbd">control_vr</span> and <span class="kbd">metric_lag1</span>
+    are often highly correlated (parallel-trends + autocorrelation). One of them gets dropped here.
+  </div>
+</section>
+
+<!-- 7 · BIC -->
+<section>
+  <h2>Step 2 — BIC</h2>
+  <p class="small">
+    <strong>Bayesian Information Criterion.</strong>
+    Exhaustive best-subset search over surviving covariates, up to size 5.
+  </p>
+  <p class="small" style="margin-top: 0.6em;">
+    For each subset: fit OLS on pre-period y, compute BIC = fit penalty + complexity penalty.
+    Pick the subset with the lowest BIC.
+  </p>
+  <div class="callout">
+    BIC's job is to prevent overfitting. A model that fits pre-period noise produces a bad counterfactual.
+    BIC picks the <strong>smallest</strong> subset that explains pre well.
+  </div>
+  <p class="tiny" style="margin-top: 0.8em;">
+    The chosen subset becomes the <span class="kbd">exog</span> matrix for the UCM.
+    Selected covariates appear in the bottom of each tier's CI tile.
+  </p>
+</section>
+
+<!-- 8 · DAILY OUTPUT -->
+<section>
+  <h2>Daily forecast output</h2>
+  <p class="small">After fitting, we forecast every post-flip day:</p>
+  <table style="max-width: 700px; margin: 0.5em auto;">
+    <tr><th>day</th><th>actual</th><th>predicted</th><th>95% PI lower</th><th>95% PI upper</th></tr>
+    <tr><td class="num">2026-05-07</td><td class="num">2.10%</td><td class="num">1.62%</td><td class="num">0.88%</td><td class="num">2.41%</td></tr>
+    <tr><td class="num">2026-05-08</td><td class="num">1.94%</td><td class="num">1.65%</td><td class="num">0.92%</td><td class="num">2.45%</td></tr>
+    <tr><td class="num">…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td></tr>
+    <tr><td class="num">2026-05-27</td><td class="num">2.32%</td><td class="num">1.58%</td><td class="num">0.81%</td><td class="num">2.51%</td></tr>
+  </table>
+  <p class="tiny muted" style="margin-top: 0.7em;">
+    Interval widens with horizon (local level uncertainty compounds).
+    Interval narrows when covariates track the treated series tightly.
+  </p>
+</section>
+
+<!-- 9 · AGGREGATING -->
+<section>
+  <h2>Aggregating to a single number</h2>
+  <p class="small">Summarize the post-period:</p>
+  <div class="formula" style="margin-top: 0.4em;">
+    rel_effect = mean(actual) / mean(predicted) − 1
+  </div>
+  <div class="formula" style="margin-top: 0.3em;">
+    95% CrI = [ mean(actual)/mean(upper) − 1,  mean(actual)/mean(lower) − 1 ]
+  </div>
+  <p class="small" style="margin-top: 0.8em;">
+    <strong>Why relative?</strong> Visit rates are tiny (~2%). "+25%" is what stakeholders can act on.
+  </p>
+  <p class="small" style="margin-top: 0.4em;">
+    <strong>Why average, not cumulative?</strong> Cumulative grows with the post-window length —
+    useless for comparing across tiers with different post-period durations.
+  </p>
+</section>
+
+<!-- 10 · THE P-VALUE -->
+<section>
+  <h2>What the p-value means</h2>
+  <p class="small">
+    "Assuming Fangorn had <strong>no effect</strong>, how likely is a gap this large or larger?"
+  </p>
+  <div class="formula" style="margin-top: 0.5em;">
+    p = 2 × (1 − Φ( |mean_effect| / SE ))
+  </div>
+  <p class="small" style="margin-top: 0.4em;">
+    SE backed out from the 95% PI width: <span class="kbd">SE = (upper − lower) / (2 × 1.96)</span>.
+  </p>
+  <div class="callout-red" style="margin-top: 0.8em;">
+    <strong>p ≥ 0.10 is NOT "no effect."</strong>
+    It means we can't yet rule out chance given the data.
+    Short post-period, noisy covariates, and a near-zero true effect all produce the same p.
+  </div>
+  <p class="tiny muted" style="margin-top: 0.6em;">
+    Note: this is a normal approximation. Google's original CausalImpact package uses a posterior
+    tail probability from BSTS sampling. In practice the two agree when the prediction error
+    distribution is well-behaved.
+  </p>
+</section>
+
+<!-- 11 · CI vs DiD -->
+<section>
+  <h2>CausalImpact vs DiD</h2>
+  <table>
+    <tr><th></th><th>DiD</th><th>CausalImpact</th></tr>
+    <tr><td><strong>Assumes</strong></td><td>Parallel trends</td><td>Stable structural relationship</td></tr>
+    <tr><td><strong>Counterfactual</strong></td><td>Treated_pre + (Control_post − Control_pre)</td><td>Learned model forecast</td></tr>
+    <tr><td><strong>Reads well when</strong></td><td>Control closely matches treated trend</td><td>Multiple covariates explain treated variance</td></tr>
+    <tr><td><strong>CrI / SE</strong></td><td>From pooled variance</td><td>From state-space forecast intervals</td></tr>
+  </table>
+  <div class="callout" style="margin-top: 0.7em;">
+    When both agree → strong corroboration.
+    When CI &gt; DiD → CI is "giving credit" for the model's prediction that the treated tier
+    would have followed control's drop. DiD just subtracts the control's change directly.
+  </div>
+</section>
+
+<!-- 12 · READING A TILE -->
+<section>
+  <h2>Reading one tile</h2>
+  <p class="tiny muted">Tier 2 — illustrative</p>
+  <div class="ci-tile">
+    <div class="label">Tier 2 — CI (visit rate vs synthetic)</div>
+    <div class="row muted-row"><span>Actual avg</span><span>2.04%</span></div>
+    <div class="row muted-row"><span>Predicted (no flip)</span><span>1.61%</span></div>
+    <div class="row divider pos-soft"><span>Relative effect</span><span>+26.6%</span></div>
+    <div class="row muted-row"><span>95% CrI</span><span>[−13.2%, +133.2%]</span></div>
+    <div class="row muted-row"><span>p-value</span><span>0.255</span></div>
+    <div class="footer-row" style="display: flex; justify-content: space-between;">
+      <span>65d pre · 21d post</span><span>control: tiers 3,4,5</span>
+    </div>
+    <div class="footer-row">covariates: control_vr, metric_lag1, holiday</div>
+  </div>
+  <p class="tiny" style="margin-top: 0.8em;">
+    Translation: <em>"Average visit rate of 2.04% on 21 post-flip days. The model — trained only
+    on pre-flip data — predicted 1.61%. The +26.6% gap is our best point estimate of Fangorn's effect.
+    We can't yet rule out the null hypothesis (p = 0.26); another 4 weeks of post should tighten the CrI substantially."</em>
+  </p>
+</section>
+
+<!-- 13 · CURRENT READ -->
+<section>
+  <h2>Current read across waves</h2>
+  <table>
+    <tr><th>Tier</th><th>Switch</th><th>n_post</th><th class="num">Point</th><th>95% CrI</th><th>p</th></tr>
+    <tr><td>1</td><td>2026-04-30</td><td>27</td><td class="num">+46.0%</td><td>[−18%, +593%]</td><td>0.253</td></tr>
+    <tr><td>2</td><td>2026-05-06</td><td>21</td><td class="num">+26.6%</td><td>[−13%, +133%]</td><td>0.255</td></tr>
+    <tr><td>3</td><td>2026-05-19</td><td>8</td><td class="num">+16.4%</td><td>[−3%, +46%]</td><td>0.117</td></tr>
+  </table>
+  <p class="small" style="margin-top: 0.8em;">
+    All three positive. CrIs cross zero. <strong>Resolution comes with time</strong> — the model
+    doesn't re-fit on post data, but the forecast becomes more grounded as the post-period grows.
+  </p>
+  <p class="tiny muted" style="margin-top: 0.4em;">
+    Tier 1's wide CrI is because N=3 advertisers and control was structurally higher in pre.
+    Tier 3's narrow CrI but high p is because only 8 post days.
+    Tier 2 is the cleanest read.
+  </p>
+</section>
+
+<!-- 14 · WHAT TO BUILD IN MODE -->
+<section>
+  <h2>For the Mode dashboard</h2>
+  <p class="small">Surface in this order:</p>
+  <div style="font-size: 0.75em; margin-top: 0.6em; line-height: 1.7;">
+    <span style="color: var(--text-light);">1.</span> <strong>DiD-adjusted lift tiles</strong> — the conventional metric, tighter intervals, easier to read<br>
+    <span style="color: var(--text-light);">2.</span> <strong>Daily visit-rate per tier with switch line</strong> — visual divergence at the switch is the most intuitive causal signal<br>
+    <span style="color: var(--text-light);">3.</span> <strong>CI tile grid</strong> — rigor check; show selected covariates per tier<br>
+    <span style="color: var(--text-light);">4.</span> <strong>Per-advertiser distribution</strong> — % improving / degrading, top 10 each direction
+  </div>
+  <div class="callout" style="margin-top: 0.8em;">
+    Add a "post-period maturity" indicator on the CI panel:
+    🟡 monitor when n_post &lt; 28d; 🟢 read when n_post ≥ 28d.
+    Sets reader expectations about CrI width.
+  </div>
+</section>
+
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+    hash: true,
+    slideNumber: true,
+    controls: true,
+    progress: true,
+    center: true,
+    transition: 'fade',
+    transitionSpeed: 'slow',
+    width: 1100,
+    height: 800,
+    margin: 0.01,
+    minScale: 0.2,
+    maxScale: 1.5,
+});
+</script>
+</body>
+</html>
