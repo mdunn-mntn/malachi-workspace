@@ -457,6 +457,45 @@ Pairwise IP overlap among the three shared-catalog 3P providers (DS17 ShareThis,
 
 **Implication:** layering multiple 3P providers in one expression brings less incremental reach than it appears. For an advertiser using LiveRamp, adding Dstillery brings ~10M new IPs; adding ShareThis brings ~32M. Going past one 3P provider has steeply diminishing returns.
 
+### Finding 14 (2026-05-28) — How the bidder actually treats 3P targeting
+
+**Triggered by:** Slack thread with Alex Knorr + Sean Yang (2026-05-28). User asked whether 3P-only IPs get bid on, or whether they "wait" until HI/PP scored IPs are exhausted.
+
+Query: `queries/ti_999_bidder_score_distribution.sql`. Output: `outputs/ti_999_bidder_score_distribution_2026_05_26.csv`.
+
+**Finding 14a — Only TWO score configurations exist across 270k active TPA expressions:**
+- `score_type=rtc`: 222,008 expressions (82.2%)
+- (no score block): 48,166 expressions (17.8%)
+
+No keyword scoring, no 3P-quality scoring, no lookalike. The bidder has exactly one ranking signal available: RTC (DS19 / MNTN Matched).
+
+**Finding 14b — 97% of 3P-using expressions declare `score_type=rtc`** — including expressions where DS19 is NOT in the filter (8,238 LiveRamp-using expressions without DS19 in their filter still ask for RTC scoring).
+
+**Finding 14c — In practice, `realtime_conquest_score` is effectively binary.** Of 61M impressions delivered on 2026-05-26:
+- 95.44% had `realtime_conquest_score = -1` (no RTC score)
+- 4.56% had `realtime_conquest_score = 10000` (top RTC match)
+- 0% in between
+
+**Finding 14d — The split is consistent across all campaign classes** (3P does NOT change the picture):
+
+| Campaign class | rtc=10000 | rtc=-1 |
+|---|---:|---:|
+| Prospecting + 3P | 5.62% | 94.38% |
+| Prospecting, no 3P | 4.78% | 95.22% |
+| Retargeting (uses CRM/IP-list) | 4.04% | 95.96% |
+
+**Answer to the user's question:**
+- 3P IPs DO get bid on — they're not "waiting" for HI/PP scored IPs. 94% of 3P-campaign delivery goes to unscored IPs.
+- BUT within that 94%, the bidder has **no quality signal at all for 3P**. It treats every 3P-filter-matched IP equally.
+- The 5% `rtc=10000` slice is a small priority group; the other 95% is undifferentiated filter-match volume.
+- The user's underlying intuition is right: 3P doesn't have a real scoring layer. But the consequence ("wouldn't be targeted") is wrong — they're heavily targeted, just without any quality differentiation.
+
+**Why this matters for TI-956:** today the bidder cannot tell a "good" LiveRamp segment from a "bad" one. Adding TI-956's per-dscid composite scores would give the bidder the missing ranking signal — replacing the binary RTC=10000/-1 partition with a graduated score across 3P. That's the gap to fill.
+
+**Open question for Zach (follow-up):**
+- Why is RTC score so binary in delivery? Either the RTC model assigns only 10000 / -1 (no intermediate scores), or the bidder filters out everything between them.
+- For the `score_type=rtc` expressions where DS19 is NOT in the filter (~8k expressions), what is the bidder actually doing with non-RTC-matched IPs? Default-low? Skip-entirely? Random?
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
