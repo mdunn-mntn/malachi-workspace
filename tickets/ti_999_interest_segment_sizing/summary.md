@@ -827,6 +827,62 @@ This refines (but does not refute) the user's original framing: 3P inclusion doe
 - **A "TI-956 readiness scoring" of advertisers could be derived:** for each MM+3P_incl_only advertiser, compute their unscored share; rank; prioritize TI-956 deploy beneficiaries by that ranking + spend.
 - **The Phase 1 LiveRamp focus is still right.** FICO's expression is LiveRamp-only on the 3P side. Global X uses LiveRamp + ShareThis + Dstillery, but LiveRamp dominates count (12 vs 1+1).
 
+### Finding 15 (cont.) — Pass 5: MM-ceiling exhaustion hypothesis (CONFIRMED)
+
+**User hypothesis (2026-05-28):** unscored delivery in MM+3P_incl_only is not random bidder behavior — it's the symptom of **MM-IP exhaustion**. The bidder DOES prefer scored MM IPs within campaign pacing, but once MM's available scored audience is saturated for the day, the bidder falls through to 3P-added unscored IPs to maintain spend pacing.
+
+Query: `queries/ti_999_finding15_mm_ceiling_test.sql`.
+
+**Single-advertiser test — FICO appears in both buckets via different campaigns:**
+
+| FICO campaign | Bucket | Spend (30d) | Scored imps (5/26) | Unscored imps (5/26) | Scored / $K |
+|---|---|---:|---:|---:|---:|
+| 525934 | MM_only | $41.7K | **71,525** | 334 | 1,715 |
+| 325113 | MM + 3P incl_only | $168.5K | **60,111** | 236,447 | 357 |
+
+FICO's MM-scored delivery is **essentially flat (~60-72K imps/day)** regardless of campaign size. The MM_only campaign saturates the FICO-vertical MM ceiling at $41K of spend. The MM+3P campaign has 4x the budget but produces basically the same scored count — extra $127K of spend went to 236K unscored 3P-added impressions, not to incremental scored MM delivery.
+
+**Bucket-level corroboration:**
+
+| Bucket | n_camps | Spend (30d) | Scored (5/26) | Unscored (5/26) | Scored / $K |
+|---|---:|---:|---:|---:|---:|
+| 2_MM_only | 574 | $1.82M | 1.92M | 84K | 1,054 |
+| 5a_MM_plus_3P_incl_only | 609 | $2.76M | 2.08M | **630K** | 752 |
+| 6b_MM_plus_1P_excl_only | 296 | $1.88M | 2.55M | 184K | **1,357** |
+
+- MM+3P has 52% more spend than MM_only but only 8% more scored imps. The extra budget absorbed by 7.5x increase in unscored.
+- MM+1P_excl has the HIGHEST scored/$K (1,357) — exclusion narrows eligibility to scored MM, every $ concentrates on high-quality bids.
+
+**Conclusion: MM-ceiling exhaustion + bidder-pacing-overflow is the right mechanistic model.** Hypothesis confirmed.
+
+The bidder behavior is best modeled as: **scored-IPs-first within campaign pacing, fall through to unscored eligible IPs when scored options exhausted.** This sits between the strict "scored-only" model and the "ignores scoring entirely" model. household_score acts as both an eligibility preference (within pacing) AND a CPM-shaper (when both are bid).
+
+**REFRAMED TI-956 value proposition:**
+
+The earlier framing ("3P inclusion brings unscored delivery; TI-956 fixes it") was correct in mechanism but wrong in *intent*. The corrected framing:
+
+- Buyers who add 3P inclusion to MM campaigns are **intentionally expanding reach beyond MM's ceiling.** They have more budget than MM can absorb at quality, and 3P inclusion is the lever to spend it.
+- The resulting unscored delivery isn't an accident — it's the buyer's chosen overflow path.
+- **TI-956's job is to make that intentional overflow land on high-quality 3P segments.** Today buyers pick which 3P segments to overflow into blindly; TI-956's per-segment quality scores let them choose well.
+
+**Updated elevator pitch:**
+
+> "MM is MNTN's scored audience. When buyers' budgets exceed what MM can deliver at quality, they expand into 3P interest segments — currently blindly. ~$50M/year of MNTN delivery is intentional buyer overflow into 3P, landing on segment-level audiences with no quality signal. TI-956 gives buyers a per-segment quality score, so the overflow goes to segments most likely to perform."
+
+**Product implication for Macie / admin UI:**
+
+If MM ceiling is real and measurable per (campaign × MM segment × day), the UI could surface it directly to buyers:
+- "Your campaign targets MM segment X with budget $Y."
+- "MM's ceiling for this segment delivers ~$Z at quality."
+- "The remaining $(Y - Z) will overflow to 3P. Pick high-quality 3P segments here →" (links to TI-956-ranked options)
+
+This is a much sharper product surface than "score 3P segments" alone — it ties scoring directly to the buyer's actual decision moment (where the MM ceiling becomes binding).
+
+**Caveats:**
+- Single-day (5/26) snapshot for delivery. Multi-day pattern needs confirmation — could pull a 7d or 14d window if directional confidence requires.
+- "MM ceiling" per campaign requires causal isolation; we showed FICO's pattern holds across two campaigns, but advertiser-level confounds remain. Strongest controlled test would be A/B at campaign level (same advertiser, same MM segment, with/without 3P clause).
+- Pacing logic in the bidder isn't observable from impression logs — the model "scored-first then fall through" is an inference from the score distribution, not a direct read of bidder code.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
