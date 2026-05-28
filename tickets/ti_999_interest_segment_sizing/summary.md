@@ -117,6 +117,71 @@ Joined `data_sources` × `ipdsc__v1` (2026-05-26) × `tpa.categories` to classif
 
 **Implication for the Paulo/Kale narrative:** the "stale segment exposure" prize is **not** concentrated in LiveRamp. If we discover (in the campaign-usage rollup, finding #3) that ShareThis + Dstillery still drive material impression share, that's the highest-leverage place to focus next. LiveRamp's value-add from the scoring framework will come from the *other 8 axes* (activity, uniqueness, specificity, targetability, performance) — not from staleness.
 
+### Finding 3 (2026-05-28) — Campaign-level interest-segment usage and spend exposure
+
+Query: `queries/ti_999_campaign_buckets_and_spend.sql`. Output: `outputs/ti_999_campaign_buckets_30d_2026_05_28.csv`. Window: 2026-04-29 → 2026-05-28 (30 days). Active campaign = ≥1 impression in window.
+
+Bucket logic (documented in the query):
+- `INTEREST_DS = {17 ShareThis, 18 Dstillery, 35 LiveRamp IP}`
+- `INTERNAL_TARGETING_DS = {4 CRM-1P, 19 RTC, 38 BUK}`
+- `interest_only`: expression references INTEREST and does NOT reference INTERNAL_TARGETING
+- `interest_mixed`: references both
+- `no_interest`: doesn't reference INTEREST
+
+| Bucket | Campaigns | % camps | Advs | Impressions (30d) | Total Spend (30d) | $/k impr | UV-rate | Conv-rate |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| interest_only | 664 | 4.3% | 291 | 220M | $4.60M | $20.91 | 0.553% | 0.0379% |
+| interest_mixed | 1,311 | 8.4% | 777 | 347M | $9.75M | $28.08 | 0.410% | 0.0288% |
+| no_interest | 13,550 | 87.3% | 2,017 | 1,353M | $25.91M | $19.14 | 0.454% | 0.0982% |
+| **Total** | **15,525** | 100% | | **1.92B** | **$40.26M** | | | |
+
+**Per-DS usage among the 1,975 interest-using campaigns:**
+- LiveRamp: 1,917 (97%)
+- ShareThis: 693 (35%)
+- Dstillery: 538 (27%)
+
+**Headline numbers:**
+- **12.7% of active campaigns** use ≥1 interest segment (1,975 of 15,525)
+- **29.5% of MNTN impressions** flow through interest-using campaigns (567M of 1.92B)
+- **35.7% of MNTN total spend** flows through interest-using campaigns ($14.36M of $40.26M over 30 days → annualized **~$172M**)
+- The "interest-using" set is 97% LiveRamp by campaign count
+
+**KPI patterns (DESCRIPTIVE — selection effects):**
+- conversion_rate in `no_interest` (0.098%) is ~2.6-3.4x higher than either interest bucket. This reflects bucket composition (no_interest contains retargeting + RTC, which are by definition closer-to-conversion strategies) — NOT a causal claim about interest-segment quality.
+- unique-visitor rate is roughly comparable across buckets (0.41-0.55%).
+- `$/k impressions` is highest in `interest_mixed` ($28) — these campaigns layer the most signals; potentially CTV-heavy.
+
+**Caveats:**
+- Regex extraction captures every DS reference in the expression, including exclusion clauses (`"op":"not"`). "uses_X" therefore means "expression references X" not strictly "actively targets X." A future refinement: parse the JSON AST to distinguish positive vs negative clauses.
+- No CTV/display split here. May meaningfully shift the picture — to investigate if needed.
+- Per memory `[[reference_audience_platform_authority]]`: validate this with Zach before sharing externally — he's the audience-platform authority and should sanity-check the bucket logic against expression semantics.
+
+### Finding 4 (2026-05-28) — Stale-segment spend exposure
+
+Query: `queries/ti_999_stale_exposure.sql`. Output: `outputs/ti_999_stale_exposure_30d_2026_05_28.csv`. Same 30d window as Finding 3.
+
+Combining Findings 2 (ShareThis + Dstillery are 100% >2-year stale) and 3 (campaign-level DS references):
+
+| Subset | Campaigns | % of all | Imp (30d) | % of all imp | Spend (30d) | % of all spend |
+|---|---:|---:|---:|---:|---:|---:|
+| All active | 15,525 | 100% | 1.92B | 100% | $40.26M | 100% |
+| Any LiveRamp (DS35) — fresh | 1,917 | 12.3% | 555M | 28.9% | $13.97M | 34.7% |
+| Any ShareThis (DS17) — 100% stale | 694 | 4.5% | 261M | 13.6% | $6.31M | 15.7% |
+| Any Dstillery (DS18) — 100% stale | 538 | 3.5% | 141M | 7.3% | $3.19M | 7.9% |
+| **Any stale-3P (DS17 or DS18)** | **905** | **5.8%** | **333M** | **17.3%** | **$7.73M** | **19.2%** |
+| Stale-only (no LiveRamp, no internal targeting) | 10 | 0.1% | 1.83M | 0.1% | $59K | 0.15% |
+
+**Headline:** **5.8% of active campaigns and 19.2% of MNTN spend ($7.73M / 30d) reference at least one segment from a 100%-stale 3P provider** — ShareThis or Dstillery, neither of which has updated its taxonomy in >2 years. Annualized exposure: **~$93M/year**.
+
+**Stale-only is tiny (10 campaigns, $59K).** Most ShareThis/Dstillery users layer them with LiveRamp or internal signals — so the bidder isn't *purely* relying on stale data, but stale-segment targeting is still a known component of those campaigns' audience selection.
+
+**Interpretation bounds:**
+- Upper bound: $7.73M / 30d (~$93M / yr) — spend on campaigns where the bidder evaluates ≥1 stale-3P segment as part of audience selection. Reframing-the-targeting work could affect this much spend.
+- Lower bound: $59K / 30d (~$710K / yr) — spend on campaigns whose audience selection is *exclusively* stale-3P. This is the spend that would *directly* break if ShareThis/Dstillery stopped delivering data.
+- The truth is somewhere between, weighted by how much of each campaign's effective targeting comes from the stale-3P clause vs other layers.
+
+**Reality check:** LiveRamp accounts for the bulk of "interest-using" spend ($13.97M) — but LiveRamp metadata is fresh (99.6% updated in last 30d). The scoring framework's *staleness* axis adds little value for LiveRamp; the value is in the *other 8 axes* (uniqueness, specificity, activity, targetability, performance). For ShareThis + Dstillery, however, the staleness axis would push every active category to a low score — useful filtering, but blunt.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
