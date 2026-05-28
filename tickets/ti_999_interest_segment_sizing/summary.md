@@ -563,6 +563,58 @@ Window: 2026-04-29 → 2026-05-28 (30d). Active = ≥1 impression in window. Que
 
 **Coexistence ≠ AND-intersection semantics.** Pass 1 shows MM + 3P / MM + 1P expressions DO exist. It does NOT yet show whether the bidder treats them as AND-intersection (3P narrows MM's scored set) vs OR-additive (3P adds unscored IPs which only get bid when scored IPs are exhausted). The score-distribution scan in Pass 3 is the empirical test.
 
+### Finding 15 (cont.) — Pass 2: polarity sub-buckets for MM-mixed cohorts
+
+Query: `queries/ti_999_polarity_sub_buckets_pass2.sql`. Output: `outputs/ti_999_polarity_sub_buckets_pass2_2026_05_28.csv`.
+
+Sub-bucketing the three Pass 1 MM-mixed cohorts by the polarity of their non-MM clauses:
+
+#### MM + 3P (parent: 717 campaigns, $3.39M / 30d)
+| Sub-bucket | Campaigns | % of parent | Spend (30d) | % parent spend | Conv rate |
+|---|---:|---:|---:|---:|---:|
+| 5a. MM + 3P **incl_only** | 609 | 85.0% | $2.76M | 81.4% | 0.066% |
+| 5b. MM + 3P **excl_only** | 7 | 1.0% | $0.02M | 0.6% | 0.008% |
+| 5c. MM + 3P **mixed polarity** | 101 | 14.1% | $0.61M | 17.9% | 0.039% |
+
+#### MM + 1P (parent: 320 campaigns, $2.02M / 30d)
+| Sub-bucket | Campaigns | % of parent | Spend (30d) | % parent spend | Conv rate |
+|---|---:|---:|---:|---:|---:|
+| 6a. MM + 1P **incl_only** | 18 | 5.6% | $0.12M | 6.1% | **2.673%** |
+| 6b. MM + 1P **excl_only** | 296 | 92.5% | $1.88M | 93.2% | 0.021% |
+| 6c. MM + 1P **mixed polarity** | 6 | 1.9% | $0.01M | 0.6% | 0.013% |
+
+#### MM + 1P + 3P (parent: 152 campaigns, $1.27M / 30d)
+| Sub-bucket | Campaigns | Spend (30d) | Conv rate |
+|---|---:|---:|---:|
+| 8. 1Pexcl_3Pincl (most common) | 79 | $0.85M | 0.051% |
+| 8. 1Pincl_3Pincl | 40 | $0.13M | 0.097% |
+| 8. 1Pmix_3Pincl | 13 | $0.12M | 0.073% |
+| 8. 1Pexcl_3Pmix | 12 | $0.09M | 0.085% |
+| 8. 1Pexcl_3Pexcl | 5 | $0.09M | 0.005% |
+| (other cells <5 campaigns each) | 3 | ~$0 | — |
+
+**The polarity split reveals two distinct usage patterns:**
+
+1. **3P clauses are overwhelmingly used as inclusions.** 85% of MM_plus_3P campaigns use 3P incl_only; only 1% use excl_only. **Practical effect:** if the inclusion-dead-weight hypothesis holds, that's 609 campaigns / $2.76M / 30d (81% of MM+3P spend, ~$33M annualized) where the 3P clause is contributing nothing to delivery — the buyer is paying for a targeting filter that the bidder never reaches.
+
+2. **1P clauses are overwhelmingly used as exclusions.** 92% of MM_plus_1P campaigns use 1P excl_only — the classic "suppress known customers from prospecting" pattern. Under AND-NOT semantics, this is real work: it removes the advertiser's existing customers from MM's scored set so prospecting dollars aren't spent on people already converted.
+
+3. **The MM + 1P_INCL_ONLY anomaly (18 campaigns, 2.67% conv rate, 20x any other bucket).** Tiny cohort, extreme conversion rate. Likely retargeting-with-MM-ranking — narrow intersection of advertiser's known customers AND MM's high-scored audience. Different product use entirely.
+
+4. **MM + 1P + 3P dominant combo is `1Pexcl_3Pincl`** (79 campaigns, $0.85M, 67% of MM+1P+3P spend). Consistent with the broader pattern: 1P as suppression filter, 3P as inclusion. Conv rate 0.051% — slightly worse than MM_plus_1P_excl_only's 0.021%? Wait, recheck — 0.051% is actually higher than 0.021%. So adding 3P inclusion on top of 1P exclusion *appears* to lift conv rate modestly, but selection effects dominate; not a causal claim.
+
+**TI-999 methodology correction surfaced by Pass 2:** the prospecting-only filter (drop any campaign referencing DS4/8/47) was **over-broad.** It removed 296 campaigns / $1.88M / 30d of MM-prospecting that *negatively* references CRM (suppression of past customers — classic prospecting hygiene). Those campaigns belong in the prospecting universe, not retargeting. A polarity-aware retargeting filter would only exclude campaigns with 1P in *positive* clauses.
+
+**Implications for the AND-intersection hypothesis test (Pass 3):**
+
+The cleanest empirical test compares **MM_only vs MM_plus_3P_incl_only** delivered score distributions:
+- If indistinguishable → 3P inclusion is dead weight; the bidder isn't reaching those IPs.
+- If MM_plus_3P_incl_only shows a meaningfully higher unscored share → 3P inclusion IS reaching unscored IPs at non-trivial rates.
+
+For 1P_excl, the test is volume + score-shape vs MM_only:
+- Score distribution shape should be similar (still ranking by household_score).
+- Per-impression cost / efficiency should differ if exclusion meaningfully narrows the eligible set.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
