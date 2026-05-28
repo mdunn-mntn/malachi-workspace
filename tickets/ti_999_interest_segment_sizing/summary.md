@@ -673,7 +673,159 @@ The "score helps buyers pick segments to *avoid* because they're dead weight any
 **Open follow-ups:**
 - Confirm bidder ranking-and-pacing logic with engineering: does household_score truly drive a soft preference + pacing logic, or is there a separate priority queue?
 - For 30d window vs single-day: stable? (single-day matches Finding 14d framing; widening to 30d possible if score distributions look unstable.)
-- Per-campaign delivery-band analysis on top MM+3P_incl_only advertisers: are some advertisers entirely delivering to unscored IPs (TI-956 is critical) vs nearly entirely to MM-scored IPs (TI-956 marginal)?
+- Per-campaign delivery-band analysis on top MM+3P_incl_only advertisers: are some advertisers entirely delivering to unscored IPs (TI-956 is critical) vs nearly entirely to MM-scored IPs (TI-956 marginal)? — partially answered in Pass 4 below.
+
+### Finding 15 (cont.) — Pass 4: advertiser-level proof + example expressions
+
+Queries: `queries/ti_999_finding15_advertiser_proof.sql` (top advertisers per bucket + per-advertiser score distribution), `queries/ti_999_finding15_example_expressions.sql` (audience expression text for chosen example campaigns).
+Outputs: `outputs/ti_999_finding15_advertiser_proof_2026_05_28.csv`, `outputs/ti_999_finding15_example_expressions_2026_05_28.csv`.
+
+**Why this Pass is needed.** Pass 3 established the cohort-level distribution gap (MM_only 4.2% unscored vs MM+3P incl_only 23.3% unscored). Pass 4 zooms into specific advertisers + their actual audience-expression text so the mechanism is concrete, not statistical hand-wave.
+
+#### Top 10 advertisers per bucket (30d ending 2026-05-28)
+
+**2_MM_only baseline:**
+
+| # | Advertiser | Camps | Spend (30d) | Imps (30d) | Imps 5/26 | Unscored % | HI band % |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1 | LongHorn Steakhouse | 2 | $106.8K | 3.61M | 135K | 0.7% | 97.7% |
+| 2 | Autocamp | 2 | $84.8K | 3.87M | 137K | 0.6% | 40.8% |
+| 3 | Sollis Health | 3 | $81.6K | 2.99M | 188K | 1.4% | 68.5% |
+| 4 | authenTEAK | 2 | $55.7K | 0.36M | 5K | **58.4%** | 34.0% |
+| 5 | RushOrderTees | 1 | $43.8K | 0.46M | 16K | 0.1% | 99.8% |
+| 6 | Samaritan's Purse | 1 | $43.2K | 2.35M | 64K | 3.9% | 79.1% |
+| 7 | FICO | 1 | $41.7K | 2.07M | 72K | 0.5% | 98.9% |
+| 8 | Velotric | 4 | $40.4K | 1.63M | 85K | 0.3% | 99.0% |
+| 9 | Yard House | 2 | $36.6K | 1.31M | 49K | 0.5% | 94.3% |
+| 10 | Focus on The Family | 1 | $34.3K | 1.05M | 29K | 25.7% | 0.0% |
+
+MM-only delivery is mostly scored as expected (most rows show <5% unscored, >70% HI band). The exceptions (authenTEAK 58%, Focus on The Family 26%) indicate that even MM_only can deliver to unscored IPs under specific advertiser conditions — likely small budgets or specific creative/objective configurations forcing bid stream coverage.
+
+**5a_MM_plus_3P_incl_only:**
+
+| # | Advertiser | Camps | Spend (30d) | Imps (30d) | Avg 3P dscids | Unscored % | HI band % |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1 | **FICO** | 1 | **$168.5K** | 8.27M | **17** | **79.7%** | 8.4% |
+| 2 | ElevenLabs | 2 | $103.7K | 2.37M | 120 | (no delivery on 5/26) | — |
+| 3 | **Global X ETFs** | 1 | **$102.8K** | 4.55M | **14** | **79.8%** | 0.0% |
+| 4 | Outdoorsy | 1 | $98.3K | 2.80M | 12 | 1.4% | 88.2% |
+| 5 | CareScout | 4 | $95.9K | 1.87M | 25 | 1.2% | 15.9% |
+| 6 | Cheddar's | 2 | $93.4K | 3.14M | 6 | 1.6% | 98.0% |
+| 7 | American College of Education | 1 | $88.4K | 3.71M | 20 | 0.6% | 99.2% |
+| 8 | Food Lion (Assembly) | 16 | $79.3K | 4.81M | 1 | 0.0% | 56.3% |
+| 9 | Papa Murphy's | 2 | $69.8K | 1.79M | 52 | 7.9% | 33.5% |
+| 10 | Proton Mail | 1 | $69.8K | 3.00M | 14 | — | — |
+
+**Bimodal pattern is empirical.** FICO and Global X are the clear OR-additive examples: ~80% of their delivery lands on IPs with no household_score. Outdoorsy, CareScout, Cheddar's all use MM+3P_incl but their 3P-added IPs happen to overlap MM-scored IPs (or land on RTC qualifiers) — low unscored share. Per-advertiser variability is huge, and TI-956 per-segment quality differentiation matters MORE for advertisers where 3P clauses bring fresh unscored audiences.
+
+**6b_MM_plus_1P_excl_only:**
+
+| # | Advertiser | Camps | Spend (30d) | Imps (30d) | Avg 1P-neg dscids | Unscored % | HI band % |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1 | **Zazzle** | 4 | **$518.4K** | 28.07M | 4 | **1.1%** | **95.0%** |
+| 2 | HexClad | 1 | $152.8K | 6.92M | 1 | 1.5% | 96.1% |
+| 3 | Caraway Home | 3 | $132.8K | 6.20M | 1 | 13.7% | 14.0% |
+| 4 | Goldfish Swim School | 207 | $120.4K | 4.60M | 2 | 0.3% | 91.9% |
+| 5 | Upneeq | 1 | $110.1K | 4.40M | 1 | 1.8% | 97.7% |
+| 6 | Gruns | 2 | $101.6K | 4.87M | 2 | 3.7% | 51.3% |
+| 7 | Brooklinen | 2 | $88.7K | 3.95M | 6 | 16.5% | 25.2% |
+| 8 | Ancient Nutrition | 1 | $71.8K | 5.78M | 7 | 0.6% | 99.2% |
+| 9 | Meritage Homes CTV | 10 | $53.1K | 2.07M | 1.2 | 1.3% | 93.9% |
+| 10 | SUMMIT One Vanderbilt | 1 | $46.9K | 1.28M | 23 | 0.2% | 98.6% |
+
+Mostly clean AND-NOT pattern (unscored <5%, HI band >90%) for 7 of 10 advertisers. Caraway and Brooklinen show ~14-17% unscored — likely a different advertiser-side configuration (smaller MM clause, broader RTC reach, or display-heavy delivery). The dominant pattern still holds: 1P exclusion narrows the scored MM set.
+
+#### Example audience expressions (PROOF of the OR-additive vs AND-NOT structure)
+
+These are the **buyer-written expressions** — the bidder is honoring exactly what the buyer asked for, including the OR structure.
+
+**FICO campaign 325113 (5a_MM_plus_3P_incl_only, $168.5K/30d, 79.7% unscored):**
+
+```jsonc
+{ "categories": { "where": {
+  "op": "and", "value": [
+    { "op": "or", "value": [                                    // ← top-level OR
+      { "op": "any", "value": { "data_source_id": 13,           //   MM (Vertical)
+        "category_ids": [111001] }},
+      { "op": "any", "value": { "data_source_id": 35,           //   LiveRamp 3P
+        "category_ids": [1001357389, 1001357509, /* …9 total */] }}
+    ]},
+    { "op": "any", "value": { "data_source_id": 35,             // additional LiveRamp refinement
+      "category_ids": [/* 17 dscids */] }},
+    { "op": "any", "value": { "data_source_id": 14 }},          // geo-ish constraint
+    { "op": "not", "value": { "op": "or", "value": [            // negative clauses
+      { "op": "any", "value": { "data_source_id": 2 }},
+      { "op": "any", "value": { "data_source_id": 21 }},        // past conversions
+      { "op": "any", "value": { "data_source_id": 34 }}         // past pageviews
+    ]}}
+  ]
+}}}
+```
+
+**Reading:** Eligible IP = (in MM cat 111001 OR in any of 9 LiveRamp cats) AND in 17 additional LiveRamp cats AND geo-eligible AND NOT (recent visitor / converter). The top-level OR explicitly unions MM and LiveRamp. **Buyer-written.** The 79.7% unscored share is the bidder honoring that union — IPs satisfying the LiveRamp clause but not the MM clause are still eligible.
+
+**Global X ETFs campaign 259738 (5a_MM_plus_3P_incl_only, $102.8K/30d, 79.8% unscored):**
+
+```jsonc
+{ "categories": { "where": {
+  "op": "and", "value": [
+    { "op": "or", "value": [                                    // ← OR across MM + 3 different 3P providers
+      { "op": "any", "value": { "data_source_id": 46, "category_ids": [111003] }},  // MM Fangorn
+      { "op": "any", "value": { "data_source_id": 17, "category_ids": [1051] }},     // ShareThis
+      { "op": "any", "value": { "data_source_id": 18, "category_ids": [415110] }},   // Dstillery
+      { "op": "any", "value": { "data_source_id": 35, "category_ids": [/* 12 */] }}  // LiveRamp
+    ]},
+    { "op": "any", "value": { "data_source_id": 14 }},
+    { "op": "not", "value": { "op": "or", "value": [
+      { "op": "any", "value": { "data_source_id": 21 }},
+      { "op": "any", "value": { "data_source_id": 34 }}
+    ]}}
+  ]
+}}}
+```
+
+**Reading:** Eligible IP = (in MM cat OR in ShareThis cat OR in Dstillery cat OR in any of 12 LiveRamp cats). Buyer is unioning across MM + 3 separate 3P providers. The bidder delivers 79.8% unscored — the 3 3P clauses contribute IPs MM doesn't score.
+
+**Zazzle campaign 311968 (6b_MM_plus_1P_excl_only, $166.5K/30d, 1.1% unscored):**
+
+```jsonc
+{ "categories": { "where": {
+  "op": "and", "value": [
+    { "op": "or", "value": [
+      { "op": "any", "value": { "data_source_id": 13, "category_ids": [120002] }},   // MM Vertical
+      { "op": "any", "value": { "data_source_id": 19, "category_ids": [/* RTC ×54 */] }}
+    ]},
+    { "op": "any", "value": { "data_source_id": 14 }},
+    { "op": "not", "value": { "op": "or", "value": [
+      { "op": "any", "value": { "data_source_id": 2 }},
+      { "op": "any", "value": { "data_source_id": 4,            // ← CRM (1P) in NEGATIVE clause
+        "category_ids": [/* 4 dscids */] }},
+      { "op": "any", "value": { "data_source_id": 16 }},
+      { "op": "any", "value": { "data_source_id": 21 }},
+      { "op": "any", "value": { "data_source_id": 34 }}
+    ]}}
+  ]
+}}}
+```
+
+**Reading:** Eligible IP = (in MM cat OR in RTC) AND geo AND NOT (in past visitor cats OR **NOT in any of Zazzle's 4 CRM segments**). 1P (DS4) appears only inside `"op":"not"` — pure exclusion. Result: 1.1% unscored, 95% HI band. Buyer used CRM as suppression to prospect away from known customers.
+
+#### Implication for bidder mental model (correction)
+
+The earlier model "the bidder ranks by household_score, falling through to unscored only when scored exhausts" was **wrong as a strict statement**. Pass 4 evidence shows:
+
+1. **The audience expression itself is OR-additive at the buyer's writing time.** Buyers union MM with 3P (or with RTC, or with multiple 3P providers) using `"op":"or"`. The bidder doesn't choose to OR them — the expression already does.
+2. **Eligibility is per-bid-request, not pool-based.** SSPs send bid requests; the bidder evaluates each one against the expression. If the IP matches, the bid is eligible.
+3. **`household_score` plausibly shapes bid PRICE (CPM) but does not gate bid eligibility.** This explains why ~23% of MM+3P_incl_only delivery lands on unscored IPs — they're eligible per the OR expression, and the bidder bids on them at whatever the prevailing logic dictates.
+4. **Pacing forces bid coverage.** Campaigns have daily budgets to spend. If the bidder waited only for scored-IP bid requests, pacing would fail. The empirical mix is what successful pacing across an OR-expression looks like.
+
+This refines (but does not refute) the user's original framing: 3P inclusion does add to the eligible set; the bidder bids on those additions; the resulting score-distribution shift is the empirical signature.
+
+#### TI-956 implications, sharpened by Pass 4
+
+- **The per-advertiser variability is large.** FICO 79.7% unscored vs Cheddar's 1.6% — both MM+3P_incl_only. TI-956's per-segment quality score has the highest leverage for advertisers like FICO (where 3P is driving most delivery to unscored) and lower leverage for advertisers like Cheddar's (where 3P + MM overlap heavily).
+- **A "TI-956 readiness scoring" of advertisers could be derived:** for each MM+3P_incl_only advertiser, compute their unscored share; rank; prioritize TI-956 deploy beneficiaries by that ranking + spend.
+- **The Phase 1 LiveRamp focus is still right.** FICO's expression is LiveRamp-only on the 3P side. Global X uses LiveRamp + ShareThis + Dstillery, but LiveRamp dominates count (12 vs 1+1).
 
 ### Data sources to use
 
