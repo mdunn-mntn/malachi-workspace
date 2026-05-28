@@ -1,10 +1,44 @@
 # TI-999: Interest-segment portfolio sizing — usage, freshness, spend exposure
 
 **Jira:** https://mntn.atlassian.net/browse/TI-999
-**Status:** In Progress
+**Status:** In Progress — analysis substantially complete, awaiting Zach/Alex validation before any wider share
 **Date Started:** 2026-05-28
 **Date Completed:**
 **Assignee:** Malachi
+
+---
+
+## Current state (2026-05-28 — read this if you're a new chat session)
+
+**What's done:**
+- All 11 findings landed in this `summary.md` (Findings 1-11). Each finding has a SQL query in `queries/`, an output CSV in `outputs/`, and the canonical write-up here.
+- Headline numbers from the prospecting-only re-cut (Finding 11) are the **current canonical framing**. The earlier all-campaigns numbers (Findings 3-10) remain in this doc as the pre-correction historical view but should not be cited as headlines.
+- Presentation in `presentation.md` is restructured around the four user questions and leads with the prospecting-only numbers.
+- 13 charts rendered to `artifacts/ti_999_chart_*.png` by `artifacts/generate_charts.py`. Charts are gitignored (workspace convention); regenerate locally via `python3 artifacts/generate_charts.py`.
+- Sibling Jira ticket [TI-956](https://mntn.atlassian.net/browse/TI-956) is the scoring-pipeline build that this sizing analysis justifies. See `tickets/ti_956_interest_segment_scoring_schedule/`.
+
+**Headline numbers (prospecting-only, 30d ending 2026-05-28):**
+- Prospecting universe: 13,511 active campaigns, $24.86M / 30d (~$298M/yr).
+- 34.6% of prospecting spend uses 3P interest segments → $8.59M / 30d → ~$103M/yr.
+- 18.3% touches stale 3P (ShareThis or Dstillery) → $4.56M / 30d → ~$55M/yr.
+- No-3P prospecting converts 2.1x better than fresh-LiveRamp prospecting (0.126% vs 0.059%).
+- Top stale-3P prospecting advertisers: ElevenLabs ($0.72M), Gainbridge ($0.41M), Northern Tool ($0.30M), Taskrabbit ($0.16M), Windstream ($0.14M).
+
+**Methodology rules locked in:**
+- "Interest segment" = bought third-party with material IPDSC volume. Active set: `{DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp IP}`. Borderline `DS49 Publisher Network` flagged for review.
+- "Prospecting only" = exclude any campaign whose audience expression references `DS4 (CRM)`, `DS8 (IP List)`, or `DS47 (CRM Identity Graph)` — these are list-style retargeting tools. Per user instruction 2026-05-28.
+- DS21 (Conversion) and DS34 (Pageview) are NOT in the exclusion set — they're commonly used in negative-clause "exclude past visitors" patterns within prospecting campaigns.
+- KPI comparisons are descriptive, not causal. Selection effects (vertical, funnel position, advertiser sophistication) confound bucket-level comparisons.
+
+**Open items before wider share:**
+1. **Zach S.** — validate the retargeting-exclusion set (DS4/8/47) and bucket logic against expression semantics.
+2. **Zach S. or Alex K.** — resolve borderline DS49 (Publisher Network) — bought 3P or MNTN-internal contextual?
+3. **Alex K.** — sanity-check the prospecting-only numbers against his framework's expected inputs.
+4. **Macie** — confirm GCS output path + format for TI-956 once that lands.
+
+**Sibling ticket open items:** see `tickets/ti_956_interest_segment_scoring_schedule/summary.md` §8 (Alex tech deep-dive questions about targetable_ips_df, performance-layer scope, hosting).
+
+**Deck:** `artifacts/ti_999_presentation_deck.html` + `_standalone.html` — RevealJS slide deck built from `presentation.md`. Share URL: see `share_link.txt`.
 
 ---
 
