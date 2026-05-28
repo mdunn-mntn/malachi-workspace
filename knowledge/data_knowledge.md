@@ -713,10 +713,47 @@ investigations (TI-644, MM-44) where targeting audiences appear smaller than exp
 | 13 | Audience Intent Scoring | Jaguar model | — | — | Score stored in model_params |
 | 14 | — | — | YES | — | Blocked in MES |
 | 16 | MNTN Taxonomy | Taxonomy | NO | — | Real-time; not in ipdsc |
-| 19 | RTC | Real-Time Conquest | — | — | `realtime_conquest_score=10000` in model_params |
+| 19 | RTC | Real-Time Conquest | — | — | `realtime_conquest_score=10000` in model_params; **binary qualifier (see Bidder Scoring Reality below)** |
+| 17 | ShareThis | Bought 3P interest | YES (65M rows/day) | — | One of only three "bought 3P" sources with material IPDSC volume (TI-999) |
+| 18 | Dstillery | Bought 3P interest | YES (32M rows/day) | — | One of only three "bought 3P" sources with material IPDSC volume (TI-999) |
 | 21 | MNTN Conversion | Real-time | NO | — | Conversion-based exclusions |
 | 34 | MNTN Pageview | Real-time | NO | — | Page view-based exclusions |
 | 42 | — | — | — | — | Blocked in MES |
+
+### Bidder Scoring Reality (TI-999 empirical, 2026-05-28)
+
+The bidder has **exactly one per-IP ranking signal today, and it's binary.** Confirmed empirically against `audience.audience_segments` + `cost_impression_log.model_params` on 2026-05-26.
+
+**1. Only two `score_type` configurations exist across all 270,174 active TPA expressions** (`expression_type_id = 2 AND is_targeted = TRUE`):
+- `score_type=rtc`: 222,008 expressions (82.2%)
+- no score block at all: 48,166 expressions (17.8%)
+
+There is no `score_type=keyword`, no `score_type=lookalike`, no `score_type=quality`, etc. RTC or nothing.
+
+**2. RTC score is binary by design.** `realtime_conquest_score` is a Real-Time Conquest qualifier flag — an IP either qualifies (`10000`) or it doesn't (`-1`). Not a graduated quality score.
+
+Distribution of `realtime_conquest_score` across 61M impressions delivered on 2026-05-26:
+- 95.44% `= -1` (does not qualify for RTC)
+- 4.56% `= 10000` (qualifies for RTC)
+- 0% anywhere else
+
+**3. Split is consistent across campaign classes** (3P does not change it):
+| Campaign class | rtc=10000 | rtc=-1 |
+|---|---:|---:|
+| Prospecting + 3P | 5.6% | 94.4% |
+| Prospecting, no 3P | 4.8% | 95.2% |
+| Retargeting (uses CRM / IP-list) | 4.0% | 96.0% |
+
+**4. Implication for 3P:** the bidder treats 3P (DS17/18/35) as a **filter** — IPs in the dscid set are eligible — but has no concept of "this LiveRamp segment is higher quality than that one." All filter-matched IPs are undifferentiated below the binary RTC qualifier. This is the gap that per-dscid composite scores (TI-956 / Alex's framework) would fill.
+
+**5. Active bought-3P set is small.** Of 60+ DSes in `data_sources`, only three carry material daily IPDSC volume AND fit "bought third-party interest":
+- DS35 LiveRamp IP (~104M rows/day, 213k active categories)
+- DS17 ShareThis (~65M rows/day, 1,850 active categories — taxonomy 100% >2yr stale)
+- DS18 Dstillery (~32M rows/day, 3,303 active categories — taxonomy 100% >2yr stale)
+
+Most other named 3P providers in `data_sources` (Sovrn, Cybba, Bombora, Captify, 33Across, Klickly, Oracle, Experian, OnAudience, Liftlab) are registered but deliver zero IPDSC volume today.
+
+**6. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do **not** compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — that's apples-to-oranges. For prospecting analyses, exclude any campaign whose expression references DS4 / DS8 / DS47 (list-style retargeting). Per TI-999 methodology (memory `feedback_crm_excluded_from_prospecting`).
 
 ### CRM Upload Flow (DS 4)
 1. Advertiser uploads CSV of hashed emails (HEMs) → stored in `tpa.audience_upload_hashed_emails`
