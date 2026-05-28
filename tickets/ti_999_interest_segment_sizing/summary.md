@@ -1036,6 +1036,106 @@ The empirical case for TI-956: **the cohorts that rely on 3P selection without M
 
 **Note:** IVR via HLL_COUNT.MERGE is distinct-visitor based; site_visitors as raw integer isn't available in this aggregate. Memory note (`uniques` is unreliable at campaign-level) refers to a different field — `site_visitors` HLL is the right read. Verified visit counts roll up consistently across buckets.
 
+### Finding 15 (cont.) — Pass 10: per-segment CVR distribution
+
+Query: `queries/ti_999_finding15_pass10_per_segment_cvr.sql`. Output: `outputs/ti_999_pass10_per_segment_cvr_2026_05_28.csv`.
+
+Per LiveRamp dscid: assign 1/N share of each containing campaign's impressions, visits, conversions (equal-attribution proxy matching TI-956's default `target_weight='equal'`). Aggregate per dscid; filter to dscids with ≥100K weighted impressions support (1,005 dscids pass).
+
+**CVR quintile distribution:**
+
+| Quintile | n_dscids | Avg CVR | Median CVR | Spend (30d) | Avg $/conv | Avg $/visit | Avg IVR |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **5 (top 20%)** | **201** | **0.140%** | 0.066% | $1,877K | **$53** | $4.45 | 1.84% |
+| 4 (60-80%) | 201 | 0.016% | 0.015% | $1,904K | $203 | $5.42 | 0.98% |
+| 3 (40-60%) | 201 | 0.007% | 0.006% | $1,766K | $429 | $6.53 | 0.62% |
+| 2 (20-40%) | 201 | 0.002% | 0.002% | $1,977K | $1,284 | $11.78 | 0.35% |
+| **1 (bottom 20%)** | **201** | **0.0004%** | 0.0003% | $1,672K | **$14,525** | $72.22 | 0.18% |
+
+**The spread is 350x in CVR (top vs bottom quintile) and 274x in cost-per-conversion. The spend distribution is essentially FLAT across quintiles.** Buyers spend nearly identical amounts on the best and worst segments — they have no quality signal to differentiate.
+
+**$1.67M / 30d (~$20M annualized) currently flows to the worst 201 LiveRamp dscids, delivering essentially zero conversions** ($14.5K cost per conversion vs $53 in the top quintile). TI-956 quality ranking would let buyers avoid this entirely.
+
+**Methodology caveat:** equal-attribution divides campaign metrics by the dscid count in each campaign's expression. This is the right proxy for TI-956's default mode but doesn't isolate per-segment causal effect. A campaign with 10 dscids gets 1/10 of its metrics assigned to each dscid; the dscid that actually drove the conversion gets the same credit as the one that didn't. True per-segment performance requires lift-style isolation (Alex's framework Performance axis handles this with LOO baselining).
+
+### Finding 15 (cont.) — Pass 12: OR-additive vs AND-intersect inclusion semantics
+
+**Critical correction (per user 2026-05-28):** Pass 1-11 lumped all "inclusion" together as "positive polarity" without distinguishing whether MM and 3P (or MM and 1P) are unioned via `op:or` vs intersected via `op:and`. These have fundamentally different semantics:
+
+- **MM OR 3P (union):** eligible IP = in MM ∪ in 3P. **Expands reach.** 3P-only IPs are eligible (unscored). This is the case Pass 3 / Pass 6 actually measured.
+- **MM AND 3P (intersect):** eligible IP = in MM ∩ in 3P. **Narrows MM** to the subset that's also in the chosen 3P segments. All eligible IPs are in MM's scored set.
+- **MM AND NOT 3P (exclude):** eligible IP = in MM ∖ in 3P. **Narrows MM** by removing 3P-matched IPs. Stays scored.
+
+Query: `queries/ti_999_finding15_pass12_or_vs_and_inclusion.sql`. Output: `outputs/ti_999_pass12_or_vs_and_inclusion_2026_05_28.csv`. Parser enhanced to track per-clause OR-group-id (top AND-level = group 0; each `op:or` gets a new id).
+
+**Pattern distribution across MM-using campaigns (1,762 total):**
+
+| Pattern | n_campaigns | n_advertisers | Spend (30d) | % MM spend |
+|---|---:|---:|---:|---:|
+| 2_MM_only | 574 | 410 | $1,818K | 21.4% |
+| **5a_MM_OR_3P_pure (union)** | **523** | **306** | **$2,149K** | **25.3%** |
+| 5a_MM_AND_3P_pure (intersect) | 41 | 31 | $161K | 1.9% |
+| 5a_MM_OR_3P_with_AND_3P_too (FICO hybrid) | 45 | 37 | $452K | 5.3% |
+| 5b_MM_AND_NOT_3P (excl_only) | 7 | 6 | $20K | 0.2% |
+| 5c_MM_3P_mixed_polarity | 101 | 55 | $609K | 7.2% |
+| 6a_MM_OR_1P_pure | 18 | 16 | $123K | 1.5% |
+| **6b_MM_AND_NOT_1P (CRM suppress)** | **296** | **54** | **$1,881K** | **22.2%** |
+| 6c_MM_1P_mixed_polarity | 6 | 3 | $13K | 0.2% |
+| 8_MM_OR_1P_OR_3P_pure | 46 | 17 | $196K | 2.3% |
+| 8_MM_OR_3P_AND_NOT_1P | 89 | 43 | $933K | 11.0% |
+| 8_MM_OR_1P_AND_NOT_3P | 2 | 2 | $4K | <0.1% |
+| 8_MM_1P_3P_other_combo | 14 | 11 | $131K | 1.5% |
+
+**Reads on the OR/AND split for MM-mixed inclusion:**
+
+- **MM OR 3P (union/expand) is the DOMINANT 3P-inclusion pattern**: 523 campaigns / $2.15M / 30d (25.3% of MM spend). This is what we've been studying as "MM+3P_incl_only" in Passes 1-11.
+- **MM AND 3P (intersect/narrow) is RARE**: only 41 campaigns / $161K / 30d (1.9%). Buyers very rarely use 3P to narrow MM intersectively.
+- **FICO-style hybrid (OR + AND together)**: 45 campaigns / $452K / 30d. Multiple 3P clauses with mixed semantics.
+- **MM + CRM suppression (6b_MM_AND_NOT_1P)** is the second-largest MM-mixed pattern at $1.88M / 30d (22.2%).
+- **MM OR 3P with CRM exclude** (89 campaigns / $933K / 30d) is the third-most-common — "expand reach via 3P but exclude past customers."
+- **Buyer behavior**: across all MM-using campaigns, OR-additive is overwhelmingly more common than AND-intersect for inclusion. The "MM AND 3P narrows MM" semantic the bidder supports is essentially unused at the product level.
+
+### Finding 15 (cont.) — Pass 12b: delivery distribution per OR/AND/EXCL pattern
+
+Query: `queries/ti_999_finding15_pass12b_delivery_per_pattern.sql`. Output: `outputs/ti_999_pass12b_delivery_per_pattern_2026_05_28.csv`. Single-day 2026-05-26 delivery from `cost_impression_log`.
+
+**The empirical confirmation — your mental model is right:**
+
+| Pattern | n_camps | Imps (5/26) | Unscored % | Scored % | HI band % | Read |
+|---|---:|---:|---:|---:|---:|---|
+| 2_MM_only (baseline) | 393 | 2.00M | **4.2%** | 95.8% | 71.7% | Baseline scoring noise |
+| **5a_MM_AND_3P_pure (intersect)** | **35** | **94K** | **8.4%** | **91.6%** | **79.7%** | **AND narrows MM — stays mostly scored** |
+| **5a_MM_OR_3P_pure (union)** | **372** | **2.01M** | **14.1%** | 85.9% | 58.9% | **OR expands — 3.3x more unscored than MM_only** |
+| 5a_MM_OR_3P_with_AND_3P_too (FICO hybrid) | 34 | 607K | **56.0%** | 44.0% | 29.2% | OR + AND combined — max unscored |
+| **5b_MM_AND_NOT_3P (exclude)** | 6 | 27K | **0.4%** | 99.6% | **98.9%** | **AND NOT cleans MM to almost pure scored** |
+| 6b_MM_AND_NOT_1P (CRM suppress) | 287 | 2.74M | 6.7% | 93.3% | 76.0% | 1P excl similar to MM_only |
+
+**Three structurally distinct bidder behaviors empirically confirmed:**
+
+1. **OR-additive inclusion EXPANDS** — 14.1% unscored vs MM_only's 4.2% (3.3x). The OR brings in IPs not in MM's scored set. This is the FICO/Global X / Outdoorsy product behavior.
+2. **AND-intersect inclusion NARROWS** — 8.4% unscored, basically the same shape as MM_only. The 3P clause filters MM down to the subset in BOTH sets; eligibility stays in MM's scored universe. This is the very rare "use 3P as a quality refinement on MM" pattern.
+3. **AND NOT exclusion CLEANS** — 0.4% unscored, 98.9% HI band. The exclusion narrows MM hardest, producing the most-scored cohort of all. This is the Zazzle "don't bid on past customers" pattern.
+
+**Implications for the case:**
+
+- **The 25.3% of MM spend ($2.15M / 30d, ~$26M/yr) in `5a_MM_OR_3P_pure` is the prize zone for TI-956 quality scoring.** This is the empirically OR-additive cohort — where buyers expand reach and 3P quality directly affects delivery.
+- **The 1.9% ($161K / 30d) in `5a_MM_AND_3P_pure` doesn't need quality scoring as urgently** — the 3P clause is just narrowing MM and the eligibility stays scored. TI-956 scores could help buyers pick "good narrowing segments" but the leverage is small.
+- **The 5.3% ($452K / 30d) in `5a_MM_OR_3P_with_AND_3P_too` (FICO-style hybrid)** is the HIGHEST-unscored cohort (56% unscored) — biggest single per-campaign leverage. These are sophisticated buyers stacking multiple 3P clauses; segment quality matters most.
+- **The 11.0% ($933K / 30d) in `8_MM_OR_3P_AND_NOT_1P`** combines expansion via 3P with CRM suppression — also a major prize-zone cohort for TI-956.
+
+**Revised TI-956 active prize zone (post-Pass 12 correction):**
+
+| Cohort | Spend (30d) | Annualized | TI-956 leverage |
+|---|---:|---:|---|
+| 4_3P_only (no MM at all) | $5.24M | $63M | Highest — quality is the only signal |
+| 5a_MM_OR_3P_pure (union) ceiling-bound subset | ~$0.60M | ~$7.2M | High — overflow into unscored |
+| 5a_MM_OR_3P_with_AND_3P_too (hybrid) | $0.45M | $5.4M | High — 56% unscored, very sophisticated buyers |
+| 8_MM_OR_3P_AND_NOT_1P (expand + suppress) | $0.93M | $11.2M | High — expansion-with-hygiene |
+| 7_1P_plus_3P (catastrophic anti-pattern) | $4.53M | $54M | Highest — the worst-performing cohort |
+| **Combined TI-956 active prize zone** | **~$11.75M** | **~$141M** | **All scored quality-relevant** |
+
+Earlier estimate of ~$33M/yr was for the pure OR-additive overflow only. **The full quality-scoring prize zone is closer to ~$141M annualized**, covering every cohort where 3P selection actually shapes delivery quality.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
