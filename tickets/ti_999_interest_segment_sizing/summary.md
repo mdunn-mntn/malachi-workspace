@@ -10,6 +10,15 @@
 
 ## Current state (2026-05-28 — read this if you're a new chat session)
 
+> **Picking up in a new chat?** Paste the prompt block in [`HANDOFF_PROMPT.md`](HANDOFF_PROMPT.md). It primes a fresh session with the conceptual model + open items + canonical references.
+
+**Conceptual model — 1P / 3P / MM** (per Victor Savitskiy, 2026-05-28, must read before any bidder/scoring discussion):
+- **1P** = advertiser-uploaded data (CRM, IP-list). NOT scored by MNTN.
+- **3P** = bought interest segments (LiveRamp, ShareThis, Dstillery). NOT scored.
+- **MM** = Mountain Match = MNTN-derived targeting. IS scored → produces `household_score` (graduated 0-10000).
+- **RTC** = Real-Time Conquesting. Binary qualifier (10000 / -1) for recent-site visitors only. Separate scoring system from MM.
+- See `knowledge/data_knowledge.md` "1P / 3P / MM definitions" and "Bidder Scoring Reality" for the durable version.
+
 **What's done:**
 - All 11 findings landed in this `summary.md` (Findings 1-11). Each finding has a SQL query in `queries/`, an output CSV in `outputs/`, and the canonical write-up here.
 - Headline numbers from the prospecting-only re-cut (Finding 11) are the **current canonical framing**. The earlier all-campaigns numbers (Findings 3-10) remain in this doc as the pre-correction historical view but should not be cited as headlines.

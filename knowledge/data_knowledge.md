@@ -720,6 +720,22 @@ investigations (TI-644, MM-44) where targeting audiences appear smaller than exp
 | 34 | MNTN Pageview | Real-time | NO | — | Page view-based exclusions |
 | 42 | — | — | — | — | Blocked in MES |
 
+### 1P / 3P / MM definitions (per Victor Savitskiy, 2026-05-28)
+
+The 1P / 3P / MM distinction is about **who provided the data**, and which of them get scored by MNTN:
+
+| Term | What it is | Provided by | Purpose | DSes (working set) | MNTN-scored? |
+|---|---|---|---|---|---|
+| **1P** | Customer/account data the advertiser uploaded | The advertiser | Retarget known customers | DS4 CRM, DS8 IP List, DS47 CRM Identity Graph | **No** |
+| **3P** | Behavioral / interest segments bought from external data providers | External 3P vendor | Prospect against described interests | DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp IP | **No** |
+| **MM** (Mountain Match) | MNTN's targeting product — IPs scored by MNTN's models using verticals, keywords, behavioral signals | MNTN | Prospect via MNTN-derived per-IP quality | DS13 Vertical Categorization, DS38 BUK / UI Audience Keywords, DS46 ML Audience Intent (Fangorn). **RTC (DS19) is a SEPARATE scoring system** (binary `realtime_conquest_score` for recent-site visitors), likely not part of MM — confirm with Victor. | **Yes** — produces `household_score` |
+
+**Empirical layering** (TI-999, 30d window ending 2026-05-28):
+- **72% of 3P-only campaigns also use an MM signal in their expression**; those drive 83% of 3P-only impressions/spend.
+- "Pure 3P, no MM" is the minority: 28% of 3P-only campaigns, ~17% of impressions/spend.
+- 35% of 1P-only campaigns also use MM; they drive 52% of 1P-only spend.
+- Implication: when you see "good" delivery on a 3P campaign, it's almost always MM doing the scoring underneath — 3P alone does not bring scored IPs.
+
 ### Bidder Scoring Reality (TI-999 empirical, 2026-05-28)
 
 Every impression's `cost_impression_log.model_params` carries **three score fields** — they are separate scoring systems, not variants of one.
