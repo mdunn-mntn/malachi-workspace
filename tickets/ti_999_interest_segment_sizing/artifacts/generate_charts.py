@@ -208,7 +208,143 @@ def chart_stale_exposure():
     print(f"wrote {out}")
 
 
+def chart_within_advertiser_kpi():
+    df = pd.read_csv(OUTPUTS / "ti_999_within_advertiser_kpi_2026_05_28.csv")
+    df = df.set_index("bucket")
+    interest_cr = df.loc["interest", "conversion_rate"] * 100
+    no_interest_cr = df.loc["no_interest", "conversion_rate"] * 100
+    ratio = no_interest_cr / interest_cr
+
+    fig, ax = plt.subplots(figsize=(11, 6), dpi=200)
+    fig.suptitle(
+        f"Within the same {int(df.loc['interest', 'n_advertisers']):,} advertisers, "
+        f"no-interest converts at {ratio:.1f}x interest's rate",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.05, ha="left", y=0.97)
+    fig.text(0.05, 0.87,
+             "Removes advertiser-mix selection. Gap is likely funnel-stage (prospecting vs retargeting), "
+             "not segment-quality.\n30-day window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    labels = ["Interest-using\ncampaigns", "No-interest\ncampaigns"]
+    values = [interest_cr, no_interest_cr]
+    colors = [ACCENT_RED, GRAY]
+    bars = ax.bar(range(2), values, color=colors, width=0.45)
+
+    for i, b in enumerate(bars):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.005,
+                f"{values[i]:.3f}%", ha="center", va="bottom",
+                color=NAVY, fontsize=14, fontweight="bold")
+        n_camps_imp_spend = (
+            f"{int(df.iloc[i]['impressions_30d']) / 1e6:.0f}M impressions  ·  "
+            f"${df.iloc[i]['total_spend_30d'] / 1e6:.2f}M spend"
+        )
+        ax.text(b.get_x() + b.get_width() / 2, -0.020,
+                n_camps_imp_spend, ha="center", va="top",
+                color=GRAY, fontsize=9)
+
+    ax.set_xticks(range(2))
+    ax.set_xticklabels(labels, fontsize=12, color=NAVY)
+    ax.set_ylim(0, max(values) * 1.30)
+    ax.set_yticks([])
+    ax.set_ylabel("")
+    ax.text(-0.05, 1.02, "Conversion rate", transform=ax.transAxes,
+            fontsize=10, color=GRAY)
+    fig.tight_layout(rect=[0, 0, 1, 0.80])
+    out = HERE / "ti_999_chart_within_advertiser_kpi.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
+def chart_stale_vs_fresh_kpi():
+    df = pd.read_csv(OUTPUTS / "ti_999_stale_vs_fresh_kpi_2026_05_28.csv")
+    df = df.set_index("bucket")
+    order = ["a_no_interest", "b_only_fresh_liveramp", "c_only_stale_3p", "d_fresh_and_stale_mix"]
+    labels = [
+        "No interest\nsegments",
+        "Only fresh\nLiveRamp",
+        "Only stale 3P\n(ShareThis/Dstillery)",
+        "Fresh + stale\nmixed",
+    ]
+    cr = [df.loc[b, "conversion_rate"] * 100 for b in order]
+    fresh_cr = df.loc["b_only_fresh_liveramp", "conversion_rate"] * 100
+    stale_cr = df.loc["c_only_stale_3p", "conversion_rate"] * 100
+    gap_pct = (fresh_cr - stale_cr) / fresh_cr * 100
+
+    fig, ax = plt.subplots(figsize=(12, 6.5), dpi=200)
+    fig.suptitle(
+        f"Stale-only campaigns convert {gap_pct:.0f}% worse than fresh-only LiveRamp",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.05, ha="left", y=0.97)
+    fig.text(0.05, 0.88,
+             "Conversion rate per audience-composition bucket. "
+             "Direction supports the 'freshness matters' hypothesis (small-n caveat on stale-only).\n"
+             "30-day window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    colors = [GRAY, NAVY, ACCENT_RED, "#7F8C8D"]
+    bars = ax.bar(range(4), cr, color=colors, width=0.55)
+
+    for i, b in enumerate(bars):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.004,
+                f"{cr[i]:.3f}%", ha="center", va="bottom",
+                color=NAVY, fontsize=12, fontweight="bold")
+        ax.text(b.get_x() + b.get_width() / 2, -0.014,
+                f"{int(df.loc[order[i], 'n_campaigns']):,} camps\n"
+                f"${df.loc[order[i], 'total_spend_30d'] / 1e6:.2f}M spend",
+                ha="center", va="top", color=GRAY, fontsize=9)
+
+    ax.set_xticks(range(4))
+    ax.set_xticklabels(labels, fontsize=11, color=NAVY)
+    ax.set_ylim(0, max(cr) * 1.20)
+    ax.set_yticks([])
+    ax.set_ylabel("")
+    ax.text(-0.05, 1.02, "Conversion rate", transform=ax.transAxes,
+            fontsize=10, color=GRAY)
+    fig.tight_layout(rect=[0, 0, 1, 0.80])
+    out = HERE / "ti_999_chart_stale_vs_fresh_kpi.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
+def chart_top_advertisers_stale():
+    df = pd.read_csv(OUTPUTS / "ti_999_top_advertisers_stale_2026_05_28.csv")
+    df = df.head(15).iloc[::-1].reset_index(drop=True)  # smallest on bottom, largest on top
+    total_stale_spend = 7725333.81  # from finding 4
+    top_n_pct = df["stale_spend"].sum() / total_stale_spend * 100
+
+    fig, ax = plt.subplots(figsize=(12, 9), dpi=200)
+    fig.suptitle(
+        f"Top 15 advertisers concentrate {top_n_pct:.0f}% of stale-3P exposure",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.05, ha="left", y=0.97)
+    fig.text(0.05, 0.91,
+             "$7.73M total monthly stale-3P spend exposure. "
+             "Top 5 alone ≈ 42%. WGU is the single largest at $1.4M / month.\n"
+             "30-day window ending 2026-05-28.",
+             color=GRAY, fontsize=10)
+
+    # color top 5 in accent red, rest navy
+    colors = [ACCENT_RED if i >= len(df) - 5 else NAVY for i in range(len(df))]
+    bars = ax.barh(range(len(df)), df["stale_spend"] / 1e6, color=colors, height=0.7)
+
+    for i, b in enumerate(bars):
+        ax.text(b.get_width() + 0.02, i, f"${b.get_width():.2f}M",
+                va="center", ha="left", color=NAVY, fontsize=10, fontweight="bold")
+
+    ax.set_yticks(range(len(df)))
+    ax.set_yticklabels(df["company_name"].str.slice(0, 40), fontsize=10, color=NAVY)
+    ax.set_xlabel("Stale-3P spend exposure, 30 days ($M)", color=GRAY, fontsize=10)
+    ax.set_xlim(0, df["stale_spend"].max() / 1e6 * 1.20)
+    ax.set_xticks([])
+    ax.spines["bottom"].set_visible(False)
+    fig.tight_layout(rect=[0, 0, 1, 0.89])
+    out = HERE / "ti_999_chart_top_advertisers_stale.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
 if __name__ == "__main__":
     chart_bucket_spend_share()
     chart_staleness_by_ds()
     chart_stale_exposure()
+    chart_within_advertiser_kpi()
+    chart_stale_vs_fresh_kpi()
+    chart_top_advertisers_stale()

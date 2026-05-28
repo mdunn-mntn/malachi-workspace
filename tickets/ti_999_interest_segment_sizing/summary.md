@@ -182,6 +182,58 @@ Combining Findings 2 (ShareThis + Dstillery are 100% >2-year stale) and 3 (campa
 
 **Reality check:** LiveRamp accounts for the bulk of "interest-using" spend ($13.97M) — but LiveRamp metadata is fresh (99.6% updated in last 30d). The scoring framework's *staleness* axis adds little value for LiveRamp; the value is in the *other 8 axes* (uniqueness, specificity, activity, targetability, performance). For ShareThis + Dstillery, however, the staleness axis would push every active category to a low score — useful filtering, but blunt.
 
+### Finding 5 (2026-05-28) — Within-advertiser KPI gap (paired)
+
+Query: `queries/ti_999_within_advertiser_kpi.sql`. Output: `outputs/ti_999_within_advertiser_kpi_2026_05_28.csv`.
+
+Restricted to **1,017 advertisers that ran both interest-using and no-interest campaigns** in the window:
+
+| Bucket | Imp (30d) | Spend (30d) | Conv (30d) | Conv rate |
+|---|---:|---:|---:|---:|
+| interest | 567M | $14.36M | 183,299 | 0.0323% |
+| no_interest | 795M | $11.05M | 682,118 | 0.0858% |
+
+No-interest converts at **2.66x** the rate of interest within the same advertisers. Removes advertiser-mix selection. Does NOT remove funnel-stage selection: interest segments are predominantly prospecting tools; no-interest dominates retargeting/RTC for the same advertisers.
+
+**Read:** the 2.7x gap is mostly structural (funnel position), not a quality problem. Scoring + filtering can narrow it; won't close it.
+
+### Finding 6 (2026-05-28) — Stale-vs-fresh KPI test + lift estimate
+
+Query: `queries/ti_999_stale_vs_fresh_kpi.sql`. Output: `outputs/ti_999_stale_vs_fresh_kpi_2026_05_28.csv`.
+
+Splits all active campaigns into 4 buckets by audience composition:
+
+| Bucket | Camps | Advs | Spend (30d) | Conv rate |
+|---|---:|---:|---:|---:|
+| a_no_interest | 13,550 | 2,017 | $25.91M | 0.0982% |
+| b_only_fresh_liveramp | 1,070 | 603 | $6.63M | **0.0443%** |
+| c_only_stale_3p (no LiveRamp) | 58 | 48 | $0.39M | **0.0351%** |
+| d_fresh_and_stale_mix | 847 | 448 | $7.34M | 0.0234% |
+
+**Stale-only converts ~21% worse than fresh-only LiveRamp.** Direction supports "freshness matters." Small-n caveat: c bucket has 58 campaigns, 48 advertisers, $388K spend — precise % is noisy.
+
+**Mix bucket is the worst (0.023%).** Counterintuitive — layering stale on top of fresh appears to hurt rather than help. Possible explanations: bidder evaluates expression intersections, stale categories pull eligible-IP set toward unproductive cohorts; or selection (campaigns that layer many signals tend to be more complex / weaker performers).
+
+**Back-of-envelope lift estimate:** if filtering brought stale-3P campaigns to fresh-only performance, conv-rate would lift from 0.035% → 0.044%, a 26% relative improvement. Applied (loosely) to the $93M/yr stale-3P exposure, that's potentially ~$24M/yr of attributed-conversion-value uplift. Order-of-magnitude only. Real measurement needs a holdout.
+
+### Finding 7 (2026-05-28) — Top-advertiser concentration of stale-3P exposure
+
+Output: `outputs/ti_999_top_advertisers_stale_2026_05_28.csv`. Query: `queries/ti_999_top_advertisers_stale_exposure.sql`.
+
+| Rank | Advertiser | Stale-3P spend (30d) |
+|---:|---|---:|
+| 1 | Western Governors University | $1.40M |
+| 2 | ElevenLabs | $0.72M |
+| 3 | Gainbridge | $0.41M |
+| 4 | Ancient Nutrition | $0.37M |
+| 5 | Northern Tool + Equipment | $0.30M |
+| Top 5 total | | **$3.19M (42% of stale exposure)** |
+| Top 15 total | | **$4.40M (57% of stale exposure)** |
+
+**Highly concentrated.** A pilot of the scoring framework against the top 5–10 advertisers covers roughly half the problem. The rollout doesn't need to scale to all 3,000+ advertisers to capture most of the value.
+
+WGU note: per `[[reference_audience_platform_authority]]` notes elsewhere in workspace memory, WGU is the largest single advertiser at ~30% of monthly MNTN spend. They're an outlier on multiple dimensions (S3 lookback, audience scale, segment count). Don't assume their stale-3P pattern generalizes — but they're worth their own conversation.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
