@@ -1,6 +1,10 @@
-Deck shared 2026-05-28
+Deck shared 2026-05-28 (v3 — replaces misleading CRM-vs-3P slide with honest 3P-vs-3P overlap; adds open-questions slide)
 
-Rendered URL (githack): https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
-Gist:                   https://gist.github.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0
+Rendered URL (githack): https://gist.githack.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33/raw/ti_999_presentation_deck_standalone.html
+Gist:                   https://gist.github.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33
+
+Prior versions (kept for traceability):
+  v2 (rank-sim added):    https://gist.githack.com/mdunn-mntn/09d35323f314ab2c7781744bfc6682dc/raw/ti_999_presentation_deck_standalone.html
+  v1 (initial ship):       https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
 
 Note: githack caches aggressively. For revisions, regenerate the standalone HTML and run share_deck.sh again — it creates a new gist with a new URL.

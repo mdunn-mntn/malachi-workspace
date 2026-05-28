@@ -161,11 +161,24 @@
     <p class="footer-note">Every customer segment uses 3P in prospecting. Enterprise = 34.3% of prospecting spend (vs 50.6% of total spend — retargeting concentrates more in enterprise).</p>
 </section>
 
-<!-- SLIDE 11: IP overlap -->
+<!-- SLIDE 11: 3P-vs-3P IP overlap -->
 <section>
-    <h2>72% of 3P IPs are already in CRM</h2>
-    <img class="chart" src="ti_999_chart_ip_overlap.png" alt="IP overlap">
-    <p class="footer-note">Universe-level snapshot. For advertisers with rich CRM, 3P brings only ~28% incremental reach.</p>
+    <h2>3P providers overlap heavily with each other</h2>
+    <img class="chart" src="ti_999_chart_ip_overlap_3p_vs_3p.png" alt="3P-vs-3P overlap">
+    <p class="footer-note">
+        64% of Dstillery IPs are already in LiveRamp; 47% of ShareThis IPs are in LiveRamp.
+        Layering multiple 3P providers brings less incremental reach than buying them suggests.
+    </p>
+</section>
+
+<!-- SLIDE 11b: Rank simulation - where do they pick -->
+<section>
+    <h2>Where do advertisers pick on the activity scale?</h2>
+    <img class="chart" src="ti_999_chart_rank_simulation.png" alt="Rank simulation">
+    <p class="footer-note">
+        Median LiveRamp choice at 77th activity percentile; 100% in top quartile. ShareThis 65th; Dstillery 59th.
+        Buyers do self-select toward active segments — but activity is a proxy. Real "switch to top-N lift" awaits TI-956 composite scores.
+    </p>
 </section>
 
 <!-- SLIDE 12: Implications -->
@@ -189,6 +202,20 @@
             <p style="color: var(--text-light);">Top 5 prospecting advertisers (ElevenLabs, Gainbridge, Northern Tool, Taskrabbit, Windstream) cover ~40% of stale-3P exposure. Pilot there.</p>
         </div>
     </div>
+</section>
+
+<!-- SLIDE 12b: Open questions -->
+<section>
+    <h2>Open questions before this is final</h2>
+    <table style="font-size: 0.5em;">
+        <tr><th style="width: 28%;">Who</th><th>Question</th></tr>
+        <tr><td><strong>Zach S.</strong> (audience platform)</td><td>Is the operational interest-segment set <code>{17, 18, 35}</code> correct? Any "bought 3P" we're missing?</td></tr>
+        <tr><td><strong>Zach S.</strong></td><td>Is the prospecting exclusion <code>{4 CRM, 8 IP-List, 47 CRM-IDG}</code> right? Should DS21/DS34 also be excluded when in positive clauses?</td></tr>
+        <tr><td><strong>Zach S.</strong></td><td>Does the bidder evaluate <code>1P AND 3P</code> as a strict intersection of IP sets? Drives interpretation of the "mix is worst" finding.</td></tr>
+        <tr><td><strong>Zach S. or Alex K.</strong></td><td>What is DS49 Publisher Network — bought 3P, MNTN-internal contextual, or other? Material at 82M ipdsc/day.</td></tr>
+        <tr><td><strong>Alex K.</strong> (TI-956 owner)</td><td>Do these numbers match his intuition? Is activity a fair proxy for the composite score, or actively misleading?</td></tr>
+        <tr class="highlight-row"><td><strong>Blocked on TI-956</strong></td><td>Real lift estimate with composite scores. Causal validation via controlled "drop 3P" pilot.</td></tr>
+    </table>
 </section>
 
 <!-- SLIDE 13: Methodology / caveats -->

@@ -744,6 +744,71 @@ def chart_prospecting_advertiser_tiers():
     print(f"wrote {out}")
 
 
+def chart_ip_overlap_3p_vs_3p():
+    """3P-vs-3P IP overlap among LiveRamp / ShareThis / Dstillery.
+    Replaces the misleading CRM-vs-3P chart (CRM is per-advertiser, not catalog)."""
+    df = pd.read_csv(OUTPUTS / "ti_999_ip_overlap_3p_vs_3p_2026_05_26.csv").set_index("metric")
+    lr_only = float(df.loc["n_liveramp_only", "value"])
+    st_only = float(df.loc["n_sharethis_only", "value"])
+    ds_only = float(df.loc["n_dstillery_only", "value"])
+    lr_st  = float(df.loc["n_lr_and_st", "value"])  - float(df.loc["n_all_three", "value"])
+    lr_ds  = float(df.loc["n_lr_and_ds", "value"])  - float(df.loc["n_all_three", "value"])
+    st_ds  = float(df.loc["n_st_and_ds", "value"])  - float(df.loc["n_all_three", "value"])
+    all3   = float(df.loc["n_all_three", "value"])
+    total  = float(df.loc["total_ips_3p_universe", "value"])
+
+    fig, ax = plt.subplots(figsize=(13, 5.5), dpi=200)
+    fig.suptitle(
+        "64% of Dstillery IPs are already in LiveRamp — 3P providers overlap heavily",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.97)
+    fig.text(0.04, 0.89,
+             "3P interest-segment IP universes (LiveRamp DS35 + ShareThis DS17 + Dstillery DS18). "
+             "Single-day snapshot 2026-05-26.\n"
+             "Buying multiple 3P providers brings less incremental reach than the headline numbers suggest.",
+             color=GRAY, fontsize=10)
+
+    # Stacked horizontal bar showing the partition of the 3P universe
+    segments = [
+        ("LiveRamp only",          lr_only, "#2E5090"),
+        ("LiveRamp + ShareThis",   lr_st,   "#5A7DB5"),
+        ("LiveRamp + Dstillery",   lr_ds,   "#7E9FCB"),
+        ("All three",              all3,    ACCENT_RED),
+        ("ShareThis only",         st_only, "#7F8C8D"),
+        ("ShareThis + Dstillery",  st_ds,   "#95A5A6"),
+        ("Dstillery only",         ds_only, "#BDC3C7"),
+    ]
+    left = 0
+    for label, val, color in segments:
+        ax.barh([0], [val], left=[left], color=color, height=0.45)
+        pct = val / total * 100
+        if pct >= 5:
+            ax.text(left + val / 2, 0,
+                    f"{val/1e6:.0f}M\n{pct:.1f}%",
+                    ha="center", va="center", color="white",
+                    fontsize=10, fontweight="bold")
+        left += val
+
+    cur = 0
+    for i, (label, val, color) in enumerate(segments):
+        pct = val / total * 100
+        if pct >= 5:
+            y_off = -0.4 if i % 2 == 0 else -0.55
+            ax.text(cur + val / 2, y_off, label, ha="center", va="top",
+                    color=color, fontsize=9, fontweight="bold")
+        cur += val
+
+    ax.set_xlim(0, total * 1.02)
+    ax.set_ylim(-0.85, 0.7)
+    ax.set_yticks([])
+    ax.set_xticks([])
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    fig.tight_layout(rect=[0, 0, 1, 0.82])
+    out = HERE / "ti_999_chart_ip_overlap_3p_vs_3p.png"
+    fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
+    print(f"wrote {out}")
+
+
 def chart_rank_simulation():
     """Per-DS distribution of where advertisers' chosen dscids fall on the activity
     percentile (proxy for quality until TI-956 ships).
@@ -764,15 +829,16 @@ def chart_rank_simulation():
     # Filter to DSes present in result
     ds_meta = [(d, n) for d, n in ds_meta if d in df.index]
 
-    fig, axes = plt.subplots(1, len(ds_meta), figsize=(15, 6), dpi=200, sharey=True)
+    fig, axes = plt.subplots(1, len(ds_meta), figsize=(16, 7.5), dpi=200, sharey=True)
     if len(ds_meta) == 1:
         axes = [axes]
     fig.suptitle(
-        "Advertisers cluster around mid-pack dscids — most do not select top-decile by activity",
-        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.97)
-    fig.text(0.04, 0.90,
-             "Per DS: % of chosen 3P dscids that fall in top-N by per-dscid IP volume (activity proxy "
-             "— stand-in for TI-956 scores until they ship).\n30-day prospecting window ending 2026-05-28.",
+        "Advertisers favor high-activity 3P dscids — but rarely pick top-decile",
+        fontsize=14, fontweight="bold", color=NAVY, x=0.04, ha="left", y=0.98)
+    fig.text(0.04, 0.86,
+             "Per DS: % of chosen prospecting dscids that fall in each top-N bucket by per-dscid IP volume.\n"
+             "Activity is a proxy for TI-956 scores; high activity = broad segments (penalized by specificity once real scores ship).\n"
+             "30-day prospecting window ending 2026-05-28.",
              color=GRAY, fontsize=10)
 
     for ax, (ds_id, name) in zip(axes, ds_meta):
@@ -791,19 +857,15 @@ def chart_rank_simulation():
                     f"{vals[i]:.0f}%", ha="center", va="bottom",
                     color=NAVY, fontsize=12, fontweight="bold")
         ax.set_xticks(x)
-        ax.set_xticklabels([lbl for lbl, _, _ in buckets], fontsize=10, color=NAVY)
-        ax.set_ylim(0, 105)
+        ax.set_xticklabels([lbl for lbl, _, _ in buckets], fontsize=11, color=NAVY)
+        ax.set_ylim(0, 130)
         ax.set_yticks([])
         ax.set_title(
             f"DS{ds_id}  {name}\n"
-            f"{int(row['n_prospecting_camps_using_ds']):,} prospecting camps · {int(row['n_active_dscids_in_ds']):,} dscids in DS",
+            f"{int(row['n_prospecting_camps_using_ds']):,} camps · {int(row['n_active_dscids_in_ds']):,} dscids · median at {int(row['median_activity_pctile_chosen'])}th pctile",
             loc="left", fontsize=10, color=GRAY, pad=8)
-        ax.text(0.98, 0.95,
-                f"median chosen at\n{int(row['median_activity_pctile_chosen'])}th pctile",
-                transform=ax.transAxes, ha="right", va="top",
-                color=NAVY, fontsize=10, fontweight="bold")
 
-    fig.tight_layout(rect=[0, 0.05, 1, 0.83])
+    fig.tight_layout(rect=[0, 0.03, 1, 0.78])
     out = HERE / "ti_999_chart_rank_simulation.png"
     fig.savefig(out, dpi=200, bbox_inches="tight", facecolor="#FAFAFA")
     print(f"wrote {out}")
@@ -825,5 +887,7 @@ if __name__ == "__main__":
     chart_prospecting_spend_share()
     chart_prospecting_top_advertisers()
     chart_prospecting_advertiser_tiers()
+    # 3P-vs-3P honest overlap (replaces the misleading CRM-vs-3P chart)
+    chart_ip_overlap_3p_vs_3p()
     # Rank simulation (where do chosen dscids fall in quality order)
     chart_rank_simulation()

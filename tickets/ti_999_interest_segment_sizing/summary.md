@@ -41,11 +41,11 @@
 **Deck:** `artifacts/ti_999_presentation_deck.html` (dev) + `_standalone.html` (shareable, all assets inlined). Share URL pinned in `artifacts/share_link.txt`:
 - Rendered: https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
 
-**Deferred analysis — rank simulation:** the user requested an analysis showing, for each prospecting campaign's chosen 3P dscids, where they fall in the activity-percentile order — and what the lift would look like if they picked top-N instead. Query scaffolded at `queries/ti_999_campaign_dscid_rank_sim.sql` but the IPDSC unnest is heavy and the query timed out at ~20 min in this session. Chart placeholder + Python rendering function exist in `artifacts/generate_charts.py`. Approach for next pickup:
-1. Run the unnest as a separate first step, materialize per-dscid IP counts to a CSV in `outputs/`.
-2. Then run a much lighter follow-up query that joins campaign dscids to the pre-computed per-dscid stats.
-3. Add as Finding 12 in this summary + as a new slide in the deck.
-4. Once TI-956 ships, replace the activity-proxy with Alex's real quality scores — the rank-sim then becomes the canonical "where did they pick" analysis.
+**Rank simulation:** completed (delayed result from the IPDSC unnest landed after the deck shipped). See Finding 12 below. Chart `artifacts/ti_999_chart_rank_simulation.png`. Slide added to deck v2.
+
+**Correction (2026-05-28):** the original "72% of 3P IPs are in CRM" slide / Finding 10 was misleading — CRM is per-advertiser uploaded data, not a shared catalog. Comparing the universe-level CRM IP set (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery catalog is apples-to-oranges. The deck slide has been replaced with the honest **3P-vs-3P overlap** (Finding 13). Original Finding 10 remains in this doc with a "DO NOT CITE" warning for traceability.
+
+**Open questions list:** see §8 (Open Items) at the bottom — organized by who to ask and which are blocked. Send Zach a Slack with the methodology-validation questions (A1-A4); Alex sees them in the tech deep-dive (B1-B3).
 
 ---
 
@@ -320,7 +320,10 @@ Bucket advertisers by 30-day spend tier:
 
 **Strategic implication:** the scoring framework matters across the whole customer base, but the *dollars at risk* are concentrated in enterprise. A pilot with the top 5-10 advertisers (per Finding 7) covers ~half the absolute exposure.
 
-### Finding 10 (2026-05-28) — IP-level overlap between 1P CRM and 3P interest universes
+### Finding 10 (2026-05-28) — IP-level overlap between 1P CRM and 3P interest universes — DO NOT CITE
+
+> **⚠ Withdrawn 2026-05-28.** This finding compares the *universe-level* CRM IP set (227M IPs, summed across all advertisers' uploads) to the *catalog-level* 3P set (LiveRamp/ShareThis/Dstillery available to everyone). It's apples-to-oranges: CRM is per-advertiser private data; 3P is shared catalog. Use **Finding 13 (3P-vs-3P overlap)** as the honest comparison. Original text kept for traceability only.
+
 
 Query: `queries/ti_999_ip_overlap_1p_vs_3p.sql`. Output: `outputs/ti_999_ip_overlap_2026_05_26.csv`.
 
@@ -395,6 +398,65 @@ Query: `queries/ti_999_prospecting_only_buckets.sql`. Output: `outputs/ti_999_pr
 - DS21 (MNTN Conversion) and DS34 (MNTN Pageview) are retargeting signals, but they're commonly used in **negative clauses** within prospecting campaigns (e.g., "exclude past visitors"). Not in the exclusion set; a campaign that uses DS34 only as an exclusion still counts as prospecting.
 - The bigger framing shift this enables: **the right product question may be "should advertisers use 3P at all?"** Not "score 3P better." No-3P prospecting outperforms by 2.1x. Scoring framework's strongest application could be *flagging campaigns to drop 3P entirely* rather than just ranking 3P alternatives.
 
+### Finding 12 (2026-05-28) — Rank simulation: where do chosen dscids fall?
+
+Query: `queries/ti_999_campaign_dscid_rank_sim.sql`. Output: `outputs/ti_999_rank_sim_2026_05_28.csv`. Chart: `artifacts/ti_999_chart_rank_simulation.png`.
+
+For each prospecting campaign, rank its chosen 3P dscids against all available active dscids in that DS, ordered by per-dscid IP volume (1-day IPDSC snapshot). Activity is a **proxy** for the TI-956 composite score — it's *one* of Alex's nine axes (the rest aren't computable until TI-956 ships).
+
+| DS | n_camps_using | camp×dscid pairs | Median pctile chosen | % in top 10% | % in top 25% | % in top 50% |
+|---|---:|---:|---:|---:|---:|---:|
+| 35 LiveRamp IP | 1,515 | 36,518 | **76.7** | 16.7% | **100%** | 100% |
+| 17 ShareThis | 569 | 2,033 | 65.8 | 8.4% | 38.7% | 69.7% |
+| 18 Dstillery | 433 | 891 | 58.8 | 28.4% | 36.4% | 58.9% |
+
+**Reads:**
+- **Advertisers do not pick randomly.** Median chosen dscid sits at 59th-77th activity percentile — meaningfully above random. Buyers self-select toward bigger/more-active segments.
+- **LiveRamp is the most extreme**: **100% of chosen LiveRamp dscids fall in the top 25% by activity.** Only 17% land in the top decile. This means LiveRamp campaigns are essentially picking from the top quarter of the catalog — the bottom 75% of the 213,629 LiveRamp dscids is effectively unused.
+- **ShareThis + Dstillery are less concentrated.** ShareThis campaigns land 8% in top decile, 39% in top quartile. Dstillery campaigns are more bimodal (28% top decile, then drops off).
+- **Avg # of dscids per campaign**: LiveRamp ~24, ShareThis ~3.6, Dstillery ~2.
+
+**Critical caveat — activity is not quality:**
+Higher activity = broader segment = more IPs match. In Alex's TI-956 framework, the *activity* axis rewards higher reach (weight 20.0) but the *specificity* axis (weight 30.0, the largest) rewards LOWER activity (rare/specific = good). And the *uniqueness* axis (weight 25.0) penalizes ubiquitous segments.
+
+So "advertisers cluster at the 76th activity percentile for LiveRamp" can be read two opposite ways:
+- **Optimistic:** they avoid the dead 75% of the catalog. Good selection discipline.
+- **Pessimistic:** they over-pick broad, generic segments. Alex's specificity + uniqueness axes would penalize this. The composite score might recommend they shift toward *less* active, more specific dscids.
+
+Real lift estimate from "switching to top-N" requires TI-956's composite score, not the activity proxy alone. With activity alone, switching from median (76th) to top-decile (90th+) is a marginal jump because the activity distribution flattens at the top.
+
+**What this answers from the user's follow-up:** advertisers DO cluster above mid-pack — the system isn't "users pick random segments." But the headroom for improvement under TI-956's composite is **unknowable until those scores ship**. Once they do, re-run this analysis with `quality_score` instead of `activity_pctile` and the lift estimate becomes meaningful.
+
+### Finding 13 (2026-05-28) — 3P-vs-3P IP overlap (honest replacement for Finding 10)
+
+Query: `queries/ti_999_ip_overlap_3p_vs_3p.sql`. Output: `outputs/ti_999_ip_overlap_3p_vs_3p_2026_05_26.csv`. Chart: `artifacts/ti_999_chart_ip_overlap_3p_vs_3p.png`.
+
+Pairwise IP overlap among the three shared-catalog 3P providers (DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp IP). Single-day ipdsc snapshot (2026-05-26):
+
+| Set | n IPs |
+|---|---:|
+| Total 3P universe | 147.9M |
+| LiveRamp (DS35) | 104.0M |
+| ShareThis (DS17) | 64.5M |
+| Dstillery (DS18) | 32.4M |
+| LiveRamp only | 60.5M |
+| ShareThis only | 32.4M |
+| Dstillery only | 9.4M |
+| In all three | 7.4M |
+
+**Pairwise overlap rates:**
+- **46.6% of ShareThis IPs are also in LiveRamp.**
+- **64.3% of Dstillery IPs are also in LiveRamp.**
+- **29.3% of Dstillery IPs are also in ShareThis.**
+
+**Key reads:**
+- **LiveRamp is the biggest 3P universe by far** (104M IPs). Has the most exclusive IPs (60.5M LiveRamp-only).
+- **Dstillery is the most-duplicated provider.** 64% of its IPs are in LiveRamp; only 9.4M IPs are exclusively in Dstillery. An advertiser already targeting LiveRamp gets little incremental reach from also buying Dstillery.
+- **ShareThis adds the most incremental reach** beyond LiveRamp — 32.4M ShareThis-only IPs.
+- **Only 7.4M IPs are in all three** — a small "every 3P provider has this IP" core.
+
+**Implication:** layering multiple 3P providers in one expression brings less incremental reach than it appears. For an advertiser using LiveRamp, adding Dstillery brings ~10M new IPs; adding ShareThis brings ~32M. Going past one 3P provider has steeply diminishing returns.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
@@ -428,8 +490,32 @@ _Pending. Candidate updates:_
 
 ## 8. Open Items / Follow-ups
 
-- Confirm operational DS set with Alex (or Zach) after first cut.
-- Decide whether to surface CTV vs display split or keep aggregated for v1.
-- Out of scope for this ticket but related: causal estimation ("what's the lift
-  from switching to top-scored segment?") — needs scoring in production
-  (Track A/TI-956) first.
+### A. To send to Zach S. (audience-platform authority) — Slack-ready
+1. **Operational interest-segment DS set.** We're using `{17 ShareThis, 18 Dstillery, 35 LiveRamp IP}` as the active bought-3P set (only three with material IPDSC volume). Anything we're missing or incorrectly including?
+2. **Prospecting exclusion.** We exclude any campaign whose expression references `{4 CRM, 8 IP-List, 47 CRM-IDG}` as retargeting. Should DS21 (Conversion) and DS34 (Pageview) also be excluded when they appear in *positive* clauses? (Currently kept in scope because they're commonly in `"op":"not"` exclusion clauses within prospecting campaigns.)
+3. **Bidder evaluation semantics.** When a campaign uses both 1P (CRM) and 3P (LiveRamp) in its expression, does the bidder evaluate the IP-set *intersection* (target only IPs in both) or *union* (target IPs in either)? This drives interpretation of our "mix is worst" finding (0.017% conv rate in the all-campaigns view, 0.034% in the prospecting frame).
+4. **DS49 Publisher Network.** 82M ipdsc rows/day, 208 active categories. We've flagged this as borderline. Is it bought 3P interest (in scope), MNTN-internal contextual (out of scope), or something else?
+
+### B. To bring to Alex K. (TI-956 framework owner) — tech deep-dive
+1. **Sanity check the numbers.** 34.6% of prospecting spend on 3P (~$103M/yr), 18.3% on stale-3P (~$55M/yr), no-3P prospecting converts 2.1x better. Does this match his intuition?
+2. **Activity proxy validity.** For the rank-sim, we used per-dscid IP count as a stand-in for his composite score. But activity rewards broad segments while specificity (his largest axis at weight 30.0) penalizes them. Is this proxy actively misleading, or roughly OK for the "where do they pick" framing?
+3. **Re-run plan post-TI-956.** Once composite scores deploy, we want to re-run Finding 12 (rank-sim) with `quality_score` instead of `activity_pctile`. Does he see issues with that swap?
+
+### C. Blocked on TI-956 deploy — not actionable today
+- Real lift estimate from picking top-N (needs composite scores).
+- Causal "drop 3P" validation via controlled pilot on stale-3P prospecting campaigns.
+- Per-campaign quality scores in the admin UI.
+
+### D. Analyses we could still run ourselves (sized)
+1. **(small) Per-3P-provider top advertisers.** Who relies on Dstillery vs ShareThis vs LiveRamp specifically. Useful for the "Dstillery is mostly redundant" narrative.
+2. **(medium) Positive vs negative clause distinction.** Parse the expression AST to tighten the "uses X" definition. Currently uses regex which captures everything.
+3. **(medium) Per-tier conv-rate consistency.** Is the 2.1x no-3P advantage stable across spend tiers / verticals / advertiser sophistication?
+4. **(small) Stale-only deep-dive on ShareThis + Dstillery subset.** With 100% of their categories stale, isolate the campaigns that lean on them most.
+5. **(large) Per-campaign IP-set resolution.** Honestly compute "what fraction of *this campaign's* targeting is 3P vs 1P." Expensive but possible.
+
+### E. Existing Todoist follow-ups (in the TI-999 parent task)
+- Validate operational DS set + bucket logic with Zach Schoenberger (P3)
+- Resolve borderline DS49 Publisher Network (P2)
+- Run presentation past Alex before any wider share (P3)
+- Decide whether to add CTV vs display split (likely v2, P2)
+- ~~Rank simulation~~ (completed, Finding 12)
