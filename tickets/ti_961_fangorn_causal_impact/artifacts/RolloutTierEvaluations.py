@@ -1,6 +1,16 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "1"
+# ///
 # MAGIC %md
 # MAGIC ### Setup
+
+# COMMAND ----------
+
+# DBTITLE 1,Install google-cloud-bigquery
+# MAGIC %pip install google-cloud-bigquery db-dtypes --quiet
+# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
@@ -1101,12 +1111,13 @@ displayHTML(html)
 
 # COMMAND ----------
 
+# DBTITLE 1,CausalImpact setup and data pull
 dbutils.widgets.text("ci_pre_days", "60", "CausalImpact pre-period length (days from earliest cutover)")
 ci_pre_days = int(dbutils.widgets.get("ci_pre_days"))
 
 ci_window_start_date = min_inclusion - timedelta(days=ci_pre_days)
 ci_window_start = ci_window_start_date.strftime("%Y-%m-%d")
-print(f"CI window: {ci_window_start} → {window_end} ({ci_pre_days}d pre + {(window_end_date - min_inclusion).days}d post)")
+print(f"CI window: {ci_window_start} → {window_end} ({ci_pre_days}d pre + {(window_end_date.replace(tzinfo=None) - min_inclusion).days}d post)")
 
 # Build the CI panel by combining what daily_performance_df already has
 # (window_start_date → window_end_date) with a lean DELTA pull for the
@@ -1199,17 +1210,19 @@ ci_tier_daily = (
 ci_tier_daily["visit_rate"] = ci_tier_daily["vv"] / ci_tier_daily["impressions"]
 print(f"[ci] tier × day rows: {len(ci_tier_daily):,} | tiers: {sorted(ci_tier_daily['fangorn_rollout_tier_num'].unique().tolist())}")
 
+
 # COMMAND ----------
 
-try:
-    from causalimpact import CausalImpact
-except ImportError:
-    print("[ci] `causalimpact` not installed. Run: %pip install causalimpact")
-    raise
+# DBTITLE 1,CausalImpact fits (statsmodels UCM)
+import warnings
+from statsmodels.tsa.statespace.structural import UnobservedComponents
+import numpy as np
 
 def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
     """Fit CausalImpact for one treated tier vs the impression-weighted
-    aggregate of control_tier_list as the synthetic-control covariate."""
+    aggregate of control_tier_list as the synthetic-control covariate.
+    Uses statsmodels UnobservedComponents (local level + exogenous) instead
+    of the deprecated causalimpact package."""
     cutoff = pd.to_datetime(cutoff)
     # Treated series — pooled tier visit rate
     t = (ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"] == treated_tier]
@@ -1239,16 +1252,47 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
     if n_pre < 30 or n_post < 5:
         return {**base, "skip_reason": f"insufficient days (n_pre={n_pre}, n_post={n_post})"}
 
-    ci = CausalImpact(df, pre_period, post_period)
-    s = ci.summary_data
-    avg_actual    = float(s.loc["actual", "average"])
-    avg_predicted = float(s.loc["predicted", "average"])
-    avg_lower     = float(s.loc["predicted_lower", "average"])
-    avg_upper     = float(s.loc["predicted_upper", "average"])
+    # --- statsmodels UnobservedComponents approach ---
+    y_all = df["y"].values.astype(float)
+    X_all = df[["control_vr"]].values.astype(float)
+
+    y_pre = y_all[:n_pre]
+    X_pre = X_all[:n_pre]
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model = UnobservedComponents(y_pre, level="local level", exog=X_pre)
+        res = model.fit(maxiter=200, disp=False)
+
+    # Forecast counterfactual for post-period
+    X_post = X_all[n_pre:n_pre + n_post]
+    forecast = res.get_forecast(steps=n_post, exog=X_post)
+    predicted_post = forecast.predicted_mean
+    ci_post = forecast.conf_int(alpha=0.05)
+
+    # conf_int may return DataFrame or ndarray depending on statsmodels version
+    if hasattr(ci_post, 'iloc'):
+        lower_bound = ci_post.iloc[:, 0].values
+        upper_bound = ci_post.iloc[:, 1].values
+    else:
+        ci_arr = np.asarray(ci_post)
+        lower_bound = ci_arr[:, 0]
+        upper_bound = ci_arr[:, 1]
+
+    avg_actual    = float(np.mean(y_all[n_pre:n_pre + n_post]))
+    avg_predicted = float(np.mean(predicted_post))
+    avg_lower     = float(np.mean(lower_bound))
+    avg_upper     = float(np.mean(upper_bound))
+
     rel_effect    = avg_actual / avg_predicted - 1.0 if avg_predicted else float("nan")
-    # 95% CrI on relative effect = actual / [upper, lower] of predicted counterfactual
     rel_ci_lower  = avg_actual / avg_upper - 1.0 if avg_upper else float("nan")
     rel_ci_upper  = avg_actual / avg_lower - 1.0 if avg_lower else float("nan")
+
+    # p-value via two-sided test on the effect
+    abs_effect = avg_actual - avg_predicted
+    se = (avg_upper - avg_lower) / (2 * 1.96)
+    from scipy import stats
+    p_value = 2 * (1 - stats.norm.cdf(abs(abs_effect) / se)) if se > 0 else 1.0
 
     return {
         **base,
@@ -1257,7 +1301,7 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
         "rel_effect":       rel_effect,
         "rel_ci_95_lower":  rel_ci_lower,
         "rel_ci_95_upper":  rel_ci_upper,
-        "p_value":          float(ci.p_value),
+        "p_value":          p_value,
     }
 
 ci_rows = []
@@ -1273,6 +1317,7 @@ for tier in sorted(treated_tiers):
 
 ci_results_df = pd.DataFrame(ci_rows)
 display(ci_results_df)
+
 
 # COMMAND ----------
 
@@ -1623,6 +1668,3 @@ html = f"""
 """
 
 displayHTML(html)
-
-# COMMAND ----------
-

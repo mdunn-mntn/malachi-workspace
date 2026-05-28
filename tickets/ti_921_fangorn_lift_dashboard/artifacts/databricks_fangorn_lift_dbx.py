@@ -1084,6 +1084,98 @@ else:
 
 # COMMAND ----------
 
+# DBTITLE 1,All-treated aggregate CausalImpact
+# MAGIC %md
+# MAGIC ## 5c. All-treated aggregate CausalImpact
+# MAGIC
+# MAGIC Aggregate across ALL treated advertisers regardless of cohort — this is the platform-level
+# MAGIC lift answer ("is Fangorn working at scale?"). One CausalImpact fit per metric using the
+# MAGIC sum of all flipped AIDs' daily KPIs as the treated series, with the same non-treated
+# MAGIC advertiser platform as covariates.
+# MAGIC
+# MAGIC **Caveat:** advertisers flipped on different days (Wave 1 = May 1, Wave 2 = May 5 vanguard /
+# MAGIC May 6 main). We use the earliest flip date as the cutoff. The first few post-days include
+# MAGIC pre-flip Wave 2 data that isn't actually Fangorn-treated, so this slightly underestimates
+# MAGIC early lift. The effect washes out by D+14 once all cohorts are post-flip.
+
+# COMMAND ----------
+
+# DBTITLE 1,All-treated aggregate CI fits
+# Aggregate ALL treated AIDs (any cohort) into one daily KPI series
+all_treated = panel[panel["aid_in_treatment_group"]].copy()
+all_treated_daily = all_treated.groupby("day").agg(
+    impressions=("impressions", "sum"),
+    uniques=("uniques", "sum"),
+    vv=("vv", "sum"),
+    conversions=("conversions", "sum"),
+    order_value=("order_value", "sum"),
+    spend=("spend", "sum"),
+    vast_start=("vast_start", "sum"),
+    vast_complete=("vast_complete", "sum"),
+    active_cgs=("active_cgs", "sum"),
+    n_aids=("advertiser_id", "nunique"),
+).reset_index()
+# Cast nullable extension dtypes to plain float
+num_cols = all_treated_daily.select_dtypes(include=["number"]).columns
+all_treated_daily[num_cols] = all_treated_daily[num_cols].astype("float64")
+
+# Use earliest flip date across all cohorts
+agg_flip_date = wave["flip_date"].min()
+all_treated_daily["flip_date"] = agg_flip_date
+all_treated_daily["cohort"] = "AllTreated"
+
+print(f"Aggregate: {int(all_treated_daily['n_aids'].max())} treated advertisers, "
+      f"{len(all_treated_daily)} days, flip @ {agg_flip_date.strftime('%Y-%m-%d')}")
+
+all_treated_ci_rows = []
+ctrl_agg = panel[~panel["aid_in_treatment_group"]].copy()
+ctrl_agg_num = ctrl_agg.select_dtypes(include=["number"]).columns
+ctrl_agg[ctrl_agg_num] = ctrl_agg[ctrl_agg_num].astype("float64")
+
+print(f"Fitting all-treated aggregate CI: 1 cohort \u00d7 {len(METRIC_DEFS)} metrics...")
+print("=" * 80)
+for metric in METRIC_DEFS:
+    adv_id = -hash("AllTreated") % 10**8
+    t0 = _time.time()
+    print(f"\n  [{metric.upper()}]", end=" ", flush=True)
+    try:
+        agg_as_aid = all_treated_daily.copy()
+        agg_as_aid["advertiser_id"] = float(adv_id)
+        agg_as_aid["aid_in_treatment_group"] = True
+        temp_panel = pd.concat([agg_as_aid, ctrl_agg], ignore_index=True)
+        r = fit_one_verbose(temp_panel, plat, adv_id, "All Treated (Wave1+Wave2)",
+                            "AllTreated", agg_flip_date, metric)
+    except Exception as e:
+        print(f"    \u2717 AllTreated / {metric}: {type(e).__name__}: {e}")
+        continue
+    if r is None:
+        print(f"    SKIP AllTreated / {metric}: insufficient pre/post days")
+        continue
+    all_treated_ci_rows.append(r)
+    print(f"    \u2713 AllTreated / {metric}: rel_eff={r['rel_effect']:+.2%} p={r['p_value']:.3f} (n_post={r['post_n_days']}d)")
+
+all_treated_ci = pd.DataFrame(all_treated_ci_rows)
+print("\n" + "=" * 80)
+if not all_treated_ci.empty:
+    all_treated_ci.to_csv(OUTPUT_DIR / "ti_921_all_treated_ci_results.csv", index=False)
+    print(f"Wrote {len(all_treated_ci)} all-treated fits \u2192 {OUTPUT_DIR / 'ti_921_all_treated_ci_results.csv'}")
+    display(all_treated_ci[["advertiser_name","cohort","metric","rel_effect","p_value","post_n_days"]])
+else:
+    print("No all-treated CI fits produced.")
+
+# COMMAND ----------
+
+# DBTITLE 1,Append all-treated to cohort_ci
+# Concatenate all-treated fits into the main cohort_ci so downstream charts pick them up
+if not all_treated_ci.empty:
+    cohort_ci = pd.concat([cohort_ci, all_treated_ci], ignore_index=True)
+    cohort_ci.to_csv(OUTPUT_DIR / "ti_921_cohort_ci_results.csv", index=False)
+    print(f"cohort_ci now has {len(cohort_ci)} fits ({cohort_ci['cohort'].value_counts().to_dict()})")
+else:
+    print("Nothing to append — all_treated_ci is empty.")
+
+# COMMAND ----------
+
 import causalimpact
 print(f"version: {getattr(causalimpact, '__version__', 'unknown')}")
 print(f"path:    {causalimpact.__file__}")
@@ -1253,47 +1345,77 @@ plt.show()
 # COMMAND ----------
 
 # DBTITLE 1,CausalImpact vs pre/post forest plot
-if not ci_results.empty:
+# Use per-AID ci_results if available, otherwise fall back to cohort_ci
+_forest_data = ci_results if (not ci_results.empty) else cohort_ci
+
+if not _forest_data.empty:
     metrics_to_plot = ["ivr", "cvr", "roas", "cpv", "cpa"]
-    fig, axes = plt.subplots(1, len(metrics_to_plot), figsize=(4 * len(metrics_to_plot), 6), sharey=True)
+    # Filter to metrics that actually have data
+    metrics_to_plot = [m for m in metrics_to_plot if m in _forest_data["metric"].values]
 
-    for ax, m in zip(axes, metrics_to_plot):
-        ci_m = ci_results[ci_results["metric"] == m].copy()
-        pp_m = pre_post[pre_post["post_days"] > 0][["advertiser_id", "advertiser_name", f"{m}_pct_change"]]
-        pp_m = pp_m.rename(columns={f"{m}_pct_change": "pp_pct"})
-        merged = ci_m.merge(pp_m, on=["advertiser_id", "advertiser_name"], how="left")
+    if not metrics_to_plot:
+        print("No metrics to plot in forest chart.")
+    else:
+        fig, axes = plt.subplots(1, len(metrics_to_plot), figsize=(4 * len(metrics_to_plot), 5), sharey=False)
+        if len(metrics_to_plot) == 1:
+            axes = [axes]
 
-        if merged.empty:
-            ax.text(0.5, 0.5, f"No {m.upper()} fits", ha="center", va="center", transform=ax.transAxes)
-            ax.set_title(m.upper()); continue
+        for ax, m in zip(axes, metrics_to_plot):
+            ci_m = _forest_data[_forest_data["metric"] == m].copy()
+            if ci_m.empty:
+                ax.text(0.5, 0.5, f"No {m.upper()} fits", ha="center", va="center", transform=ax.transAxes)
+                ax.set_title(m.upper()); continue
 
-        merged = merged.sort_values("rel_effect")
-        y = np.arange(len(merged))
+            # Compute CrI bars from cumulative effect bounds
+            ci_m = ci_m.sort_values("rel_effect")
+            ci_m["ci_lower"] = ci_m["cum_effect_95_lower"] / (ci_m["avg_predicted_post"].abs() * ci_m["post_n_days"])
+            ci_m["ci_upper"] = ci_m["cum_effect_95_upper"] / (ci_m["avg_predicted_post"].abs() * ci_m["post_n_days"])
 
-        lower = merged["rel_effect"] - (merged["cum_effect_95_lower"] / merged["avg_predicted_post"].abs() / merged["post_n_days"])
-        upper = (merged["cum_effect_95_upper"] / merged["avg_predicted_post"].abs() / merged["post_n_days"]) - merged["rel_effect"]
-        ax.errorbar(
-            merged["rel_effect"], y,
-            xerr=[lower.abs().fillna(0), upper.abs().fillna(0)],
-            fmt="o", color="#1f77b4", ecolor="#1f77b4", capsize=3, label="CausalImpact rel_effect ± 95% CrI"
-        )
-        ax.scatter(merged["pp_pct"], y, color="#d62728", marker="x", s=60, label="Pre/post Δ%")
+            y = np.arange(len(ci_m))
+            xerr_lower = (ci_m["rel_effect"] - ci_m["ci_lower"]).abs().fillna(0).values
+            xerr_upper = (ci_m["ci_upper"] - ci_m["rel_effect"]).abs().fillna(0).values
 
-        ax.axvline(0, color="black", linewidth=0.5)
-        ax.set_yticks(y)
-        ax.set_yticklabels([n[:22] for n in merged["advertiser_name"]], fontsize=8)
-        ax.set_title(m.upper())
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v*100:+.0f}%"))
-        ax.grid(axis="x", alpha=0.3)
-        if ax is axes[0]:
-            ax.legend(loc="upper left", fontsize=8)
+            ax.errorbar(
+                ci_m["rel_effect"].values, y,
+                xerr=[xerr_lower, xerr_upper],
+                fmt="o", color="#1f77b4", ecolor="#1f77b4", capsize=4, markersize=8,
+                label="CI rel_effect \u00b1 95% CrI"
+            )
 
-    fig.suptitle("CausalImpact (●) vs naive pre/post (×) — divergence shows what the synthetic control corrects for", fontsize=11)
-    fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "ti_921_lift_comparison.png", dpi=150, bbox_inches="tight")
-    plt.show()
+            # Add pre/post naive comparison if available
+            if not ci_results.empty:
+                # Per-AID mode: join with pre_post
+                pp_m = pre_post[pre_post["post_days"] > 0][["advertiser_id", f"{m}_pct_change"]]
+                merged = ci_m.merge(pp_m, on="advertiser_id", how="left")
+                if f"{m}_pct_change" in merged.columns:
+                    ax.scatter(merged[f"{m}_pct_change"].values, y,
+                               color="#d62728", marker="x", s=80, zorder=5, label="Pre/post \u0394%")
+
+            ax.axvline(0, color="black", linewidth=0.8, linestyle="-")
+            labels = ci_m["advertiser_name"].apply(lambda s: s[:25]).tolist()
+            ax.set_yticks(y)
+            ax.set_yticklabels(labels, fontsize=9)
+            ax.set_title(f"{m.upper()} (D+{ci_m['post_n_days'].iloc[0]})", fontsize=11)
+            ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v*100:+.0f}%"))
+            ax.grid(axis="x", alpha=0.3)
+            if ax is axes[0]:
+                ax.legend(loc="lower right", fontsize=8)
+
+            # Annotate p-values
+            for i, (_, row) in enumerate(ci_m.iterrows()):
+                p = row["p_value"]
+                stars = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
+                if stars:
+                    ax.annotate(stars, (row["rel_effect"], i), xytext=(5, 0),
+                                textcoords="offset points", fontsize=10, color="#1f77b4", va="center")
+
+        fig.suptitle("Cohort-level CausalImpact — rel_effect \u00b1 95% CrI\n(* p<.05  ** p<.01  *** p<.001)",
+                     fontsize=11, y=1.02)
+        fig.tight_layout()
+        fig.savefig(OUTPUT_DIR / "ti_921_lift_comparison.png", dpi=150, bbox_inches="tight")
+        plt.show()
 else:
-    print("CI not run yet — run Section 5 first to populate this chart.")
+    print("CI not run yet \u2014 run Section 5 first to populate this chart.")
 
 # COMMAND ----------
 
