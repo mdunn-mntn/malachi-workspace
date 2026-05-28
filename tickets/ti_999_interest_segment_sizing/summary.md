@@ -17,6 +17,8 @@
 - **3P** = bought interest segments (LiveRamp, ShareThis, Dstillery). NOT scored.
 - **MM** = Mountain Match = MNTN-derived targeting. IS scored → produces `household_score` (graduated 0-10000).
 - **RTC** = Real-Time Conquesting. Binary qualifier (10000 / -1) for recent-site visitors only. Separate scoring system from MM.
+- **AND-intersection semantics:** MM campaigns combine targeting clauses with AND. Adding geo / 3P / any other filter NARROWS the scored audience — it doesn't bring new IPs in. So when 3P is layered with MM, MM scores its universe and 3P narrows it; 3P doesn't "pull in" scored IPs.
+- **Naming pitfall:** "1P scoring" in informal usage sometimes means MM scoring. Strict definitions above are canonical. Clarify if ambiguous.
 - See `knowledge/data_knowledge.md` "1P / 3P / MM definitions" and "Bidder Scoring Reality" for the durable version.
 
 **What's done:**

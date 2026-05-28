@@ -736,6 +736,14 @@ The 1P / 3P / MM distinction is about **who provided the data**, and which of th
 - 35% of 1P-only campaigns also use MM; they drive 52% of 1P-only spend.
 - Implication: when you see "good" delivery on a 3P campaign, it's almost always MM doing the scoring underneath — 3P alone does not bring scored IPs.
 
+**How the bidder combines signals** (per Victor Savitskiy, 2026-05-28):
+- MM campaigns use **AND-type intersection** for targeting clauses: every filter (geo, 3P segment, MM signal) NARROWS the eligible IP set.
+- Victor example: "if we add geo to campaign — it will narrow down scored audience." Same applies to layering 3P onto MM: 3P doesn't bring new IPs into the scored set; it narrows the MM-scored set to IPs that also match the 3P segment.
+- Within a single source, categories can be OR'd (e.g., `"op":"or"` between LiveRamp segments). Top-level combination across sources is AND.
+- Reinterprets the "3P+MM has 88% scored delivery" finding: this is MM scoring its already-scored universe, narrowed by 3P. NOT 3P pulling in scored IPs.
+
+**Naming-pitfall warning:** in informal usage, "1P scoring" is sometimes said to mean MM scoring (because MM is MNTN's own scoring system, vs 3P which is bought). The strict Victor definitions above are canonical: 1P is the advertiser's CRM upload, NOT MNTN-derived scoring. If a conversation says "1P scoring" with no context, clarify whether they mean strict-1P (CRM) or MM. Per Malachi correction in Victor Slack thread, 2026-05-28.
+
 ### Bidder Scoring Reality (TI-999 empirical, 2026-05-28)
 
 Every impression's `cost_impression_log.model_params` carries **three score fields** — they are separate scoring systems, not variants of one.
