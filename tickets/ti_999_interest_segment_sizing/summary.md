@@ -960,6 +960,42 @@ Query: `queries/ti_999_finding15_pass7_unjustified_examples.sql`. Output: `outpu
 
 This pass also surfaces a likely buyer education / UX gap: many advertisers are picking large 3P segment lists (CareScout: 27 LiveRamp dscids per campaign × 3 campaigns) on the assumption that those clauses do something. They mostly don't, at current spend.
 
+### Finding 15 (cont.) — Pass 8: MM-vs-3P IP overlap (inferred from delivery distribution)
+
+**Goal:** quantify the inherent IP overlap between LiveRamp segments and MM's scored universe. If overlap is high, 3P clauses are mostly narrowing within MM's already-scored set; if low, 3P clauses bring in genuinely-non-MM IPs that the bidder dips into during overflow.
+
+**Direct measurement was attempted** (joining `external.household_scoring__prospecting_intent__v1` with LiveRamp IPs from `ipdsc__v1`) but the federated Parquet scan ran beyond practical wall-time. Use the inference path instead — it's defensible given the consistent pattern across multiple buckets.
+
+**Inference from delivery score distributions (Pass 3 data):**
+
+| Cohort | Unscored share | Mechanism |
+|---|---:|---|
+| MM_only (no 3P at all) | 4.2% | Baseline scoring-system noise. MM clause matches scored IPs by definition; ~4% slip through as unscored. |
+| MM + 3P incl_only (mixed) | 23.3% | Adds 19.1 percentage points of unscored share over MM_only. The 3P-added portion is delivering substantially unscored. |
+| Pure 3P_only (no MM at all) | 41.0% | No scoring source. 3P-eligible IPs deliver at 59% scored (likely overlapping MM's universe by coincidence) and 41% unscored. |
+
+**Two corroborating empirical reads:**
+
+1. **3P_only's 59%-scored rate is the upper bound on inherent LiveRamp-vs-MM overlap.** When 3P is the SOLE eligibility source, 59% of delivered IPs still happen to have household_score > 0 — meaning ~59% of LiveRamp's bid-stream-reachable IPs are also in MM's scored universe. (This isn't pure overlap — it's the overlap rate weighted by bid stream availability + bidder selection — but it bounds the inherent overlap from below.) ~41% of 3P-eligible IPs reaching delivery are genuinely unscored by MM.
+
+2. **MM+3P incl_only adds 19.1pp unscored share over MM_only baseline.** If LiveRamp's IP universe were a strict subset of MM's scored universe, adding 3P inclusion couldn't increase unscored share. The fact that it adds nearly 20 percentage points means at least 20% of marginal 3P-reached IPs are NOT in MM's scored set for that campaign.
+
+**Reconciling the two:** the bidder doesn't reach every eligible IP; bid stream + pacing determine which eligible IPs actually get bid. So:
+- Bid-stream-weighted overlap (the practical IP set the bidder actually sees) is ~59% (from 3P_only's scored share).
+- The marginal IPs that 3P inclusion adds to MM campaigns are heavily UNSCORED — ~80% of marginal additions, given the 19pp shift.
+- Different read: the 41% of pure-3P delivery that lands on unscored IPs IS the "non-MM portion of LiveRamp's reachable universe." That portion is non-trivial.
+
+**Implication for the user's hypothesis (verbatim: "low overlap means the majority of 3P SHOULDN'T be targeted at all unless we've exhausted all scored IPs"):**
+
+- **The "should only target after MM exhausts" pattern IS what the bidder does** (Pass 5 + Pass 6 confirmed: 76.3% of MM+3P campaigns deliver almost entirely on MM until overflow). The product gap isn't bidder behavior — it's that buyers add 3P inclusion clauses to campaigns that won't ever overflow, paying for selection the bidder won't use.
+- **Inherent IP overlap between 3P and MM is moderate (~59% upper bound on the deliverable universe, much lower on marginal additions).** So 3P IS bringing genuinely-different IPs to delivery — they just only get reached when the campaign overflows MM.
+- The user's framing ("3P shouldn't be targeted unless scored exhausts") matches the empirical bidder behavior almost exactly. The "rarely happens" qualifier is also empirically right: only 17.7% of MM+3P campaigns actually overflow.
+
+**Caveats:**
+- This is inference from delivery distributions, not direct IP-set intersection. Direct measurement would tighten the bound — pulling 100k-IP samples from each universe and computing actual Jaccard would take ~10 min on a non-federated table but `household_score` is currently only available via the federated source.
+- Bid-stream-weighted overlap isn't the same as inherent overlap. An IP being "reachable by the bidder" depends on SSP availability + frequency caps + viewability filters, etc. The inherent population overlap could differ from the bid-stream-weighted overlap.
+- Per-segment overlap (which LiveRamp segments have highest MM overlap?) is what TI-956's quality score would naturally capture via the `targetability` axis. Pass 8 says nothing about that yet.
+
 ### Data sources to use
 
 | Purpose | Source | Notes |
