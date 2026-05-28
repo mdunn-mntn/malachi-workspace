@@ -1019,11 +1019,13 @@ def kpi_did(numerator: str, denominator: str, treated_tier: int, control_tiers: 
 
 
 KPI_SPECS = [
-    {"label": "IVR",  "sub": "VISITS / IMPS",     "num": "visits",      "den": "impressions",  "fmt": "pct", "lower_is_better": False},
-    {"label": "CVR",  "sub": "CONV / VISITS",     "num": "conversions", "den": "visits",       "fmt": "pct", "lower_is_better": False},
-    {"label": "ROAS", "sub": "ORDER / SPEND",     "num": "order_value", "den": "spend",        "fmt": "num", "lower_is_better": False},
-    {"label": "CPA",  "sub": "SPEND / CONV",      "num": "spend",       "den": "conversions",  "fmt": "num", "lower_is_better": True},
+    {"label": "IVR",  "sub": "VISITS / IMPS",     "num": "vv",          "den": "impressions",  "fmt": "pct", "lower_is_better": False, "kpi_num_col": "visits"},
+    {"label": "CVR",  "sub": "CONV / VISITS",     "num": "conversions", "den": "vv",           "fmt": "pct", "lower_is_better": False, "kpi_num_col": "conversions"},
+    {"label": "ROAS", "sub": "ORDER / SPEND",     "num": "order_value", "den": "spend",        "fmt": "num", "lower_is_better": False, "kpi_num_col": "order_value"},
+    {"label": "CPA",  "sub": "SPEND / CONV",      "num": "spend",       "den": "conversions",  "fmt": "num", "lower_is_better": True,  "kpi_num_col": "spend"},
 ]
+# `num`/`den` use the daily_performance_df column names (vv not visits, etc.) — used by the bootstrap.
+# `kpi_num_col` is the same column under daily_tier_metrics_pd's renamed columns — used by Alex's kpi_did().
 
 
 def fmt_kpi_value(x, kind):
@@ -1045,16 +1047,155 @@ def lift_color(x, lower_is_better):
     return "#1a7f37" if better else "#b91c1c"
 
 
+# ───────────────────────────────────────────────────────────────────────
+# Cluster-bootstrap inference for DiD lift
+# ───────────────────────────────────────────────────────────────────────
+# Resample advertisers with replacement (clustered bootstrap — advertiser is
+# the right level of clustering). For each resample, recompute the pooled
+# DiD lift. The empirical distribution of bootstrap lifts gives us SE, 95%
+# CI, and a two-sided p-value (fraction crossing zero × 2).
+import numpy as np
+
+DID_N_BOOT = 1000      # 1000 resamples per (tier, KPI) — ~30s total at 3 tiers × 4 KPIs
+DID_SEED   = 42
+
+def _per_aid_pre_post(daily_perf_pd, treated_tier, control_tiers, cutoff, lookback_days):
+    """Aggregate per-advertiser pre/post sums of every metric.
+    Returns (treated_wide, control_wide) pandas DataFrames with columns:
+      advertiser_id, fangorn_rollout_tier_num,
+      impressions_pre, impressions_post, vv_pre, vv_post,
+      conversions_pre, conversions_post, order_value_pre, order_value_post,
+      spend_pre, spend_post.
+    """
+    cutoff_ts = pd.to_datetime(cutoff)
+    pre_start = cutoff_ts - pd.Timedelta(days=lookback_days)
+
+    pdf = daily_perf_pd.copy()
+    pre_mask  = (pdf["day"] >= pre_start) & (pdf["day"] < cutoff_ts)
+    post_mask =  pdf["day"] > cutoff_ts
+    pdf["period"] = np.where(pre_mask, "pre", np.where(post_mask, "post", None))
+    pdf = pdf[pdf["period"].notna()]
+
+    agg = pdf.groupby(
+        ["advertiser_id", "fangorn_rollout_tier_num", "period"], as_index=False
+    ).agg(
+        impressions=("impressions", "sum"),
+        vv         =("vv",          "sum"),
+        conversions=("conversions", "sum"),
+        order_value=("order_value", "sum"),
+        spend      =("spend",       "sum"),
+    )
+
+    metrics = ["impressions", "vv", "conversions", "order_value", "spend"]
+    wide = agg.pivot_table(
+        index=["advertiser_id", "fangorn_rollout_tier_num"],
+        columns="period",
+        values=metrics,
+    ).fillna(0.0).reset_index()
+    wide.columns = [f"{a}_{b}" if b else a for a, b in wide.columns]
+
+    treated = wide[wide["fangorn_rollout_tier_num"] == treated_tier]
+    control = wide[wide["fangorn_rollout_tier_num"].isin(control_tiers)]
+    return treated, control
+
+
+def _did_lift_from_wide(treated, control, num, den):
+    """Pooled DiD lift = (t_post/t_pre) / (c_post/c_pre) − 1."""
+    def rate(df, period):
+        n = df[f"{num}_{period}"].sum()
+        d = df[f"{den}_{period}"].sum()
+        return n / d if d else float("nan")
+    t_pre, t_post = rate(treated, "pre"),  rate(treated, "post")
+    c_pre, c_post = rate(control, "pre"),  rate(control, "post")
+    if any(pd.isna([t_pre, t_post, c_pre, c_post])) or not all([t_pre, c_pre, c_post]):
+        return float("nan")
+    return (t_post / t_pre) / (c_post / c_pre) - 1
+
+
+def _did_bootstrap(treated, control, num, den, n_boot=DID_N_BOOT, seed=DID_SEED):
+    rng = np.random.default_rng(seed)
+    n_t, n_c = len(treated), len(control)
+    if n_t == 0 or n_c == 0:
+        return np.array([])
+    treated_arr = treated.reset_index(drop=True)
+    control_arr = control.reset_index(drop=True)
+    boot = np.empty(n_boot, dtype=float)
+    for i in range(n_boot):
+        t_idx = rng.integers(0, n_t, n_t)
+        c_idx = rng.integers(0, n_c, n_c)
+        boot[i] = _did_lift_from_wide(
+            treated_arr.iloc[t_idx], control_arr.iloc[c_idx], num, den
+        )
+    return boot[~np.isnan(boot)]
+
+
+def did_inference(treated, control, num, den, n_boot=DID_N_BOOT):
+    """Returns dict with point, 95% CI, two-sided p-value, n_t/n_c/n_boot."""
+    point = _did_lift_from_wide(treated, control, num, den)
+    boot  = _did_bootstrap(treated, control, num, den, n_boot=n_boot)
+    if len(boot) == 0:
+        return {"point": point, "se": float("nan"), "ci_95_lower": float("nan"),
+                "ci_95_upper": float("nan"), "p_value": float("nan"),
+                "n_t_aids": len(treated), "n_c_aids": len(control), "n_boot": 0}
+    return {
+        "point":        point,
+        "se":           float(boot.std()),
+        "ci_95_lower":  float(np.percentile(boot, 2.5)),
+        "ci_95_upper":  float(np.percentile(boot, 97.5)),
+        "p_value":      float(2 * min((boot >= 0).mean(), (boot <= 0).mean())),
+        "n_t_aids":     len(treated),
+        "n_c_aids":     len(control),
+        "n_boot":       int(len(boot)),
+    }
+
+
+# Convert daily_performance_df → pandas ONCE for bootstrap (per-tier cache reuses).
+_daily_perf_pd_did = (
+    daily_performance_df
+    .select("advertiser_id", "fangorn_rollout_tier_num", "day",
+            "impressions", "vv", "conversions", "order_value", "spend")
+    .toPandas()
+)
+_daily_perf_pd_did["day"] = pd.to_datetime(_daily_perf_pd_did["day"])
+
+# Cache per-advertiser pre/post pivots per tier (one pivot, reused across all 4 KPIs).
+_did_aid_cache = {}
+def _get_aid_pivots(treated_tier, control_tiers, cutoff):
+    key = (treated_tier, tuple(sorted(control_tiers)), str(cutoff))
+    if key not in _did_aid_cache:
+        _did_aid_cache[key] = _per_aid_pre_post(
+            _daily_perf_pd_did, treated_tier, control_tiers, cutoff, lookback_days
+        )
+    return _did_aid_cache[key]
+
+
+def sig_color(p, point, lower_is_better, threshold=0.10):
+    """Green if significant in the expected direction, gray otherwise."""
+    if pd.isna(p) or pd.isna(point):
+        return "#6b7280"
+    expected_dir = (point < 0) if lower_is_better else (point > 0)
+    return "#1a7f37" if (p < threshold and expected_dir) else "#6b7280"
+
+
 sections_html = []
 for tier in sorted(treated_tiers):
     if tier not in tier_inclusion_dates:
         continue
     cutoff = tier_inclusion_dates[tier]
+    # Pre-compute per-advertiser pivots once per tier (reused across all 4 KPIs)
+    treated_aid, control_aid = _get_aid_pivots(tier, control_tiers, cutoff)
+    print(f"[did-inference] Tier {tier}: bootstrapping {len(treated_aid)} treated × {len(control_aid)} control AIDs across {len(KPI_SPECS)} KPIs...")
+
     tiles = []
     for spec in KPI_SPECS:
-        r = kpi_did(spec["num"], spec["den"], tier, control_tiers, cutoff)
-        t_color   = lift_color(r["t_lift"],   spec["lower_is_better"])
-        did_color = lift_color(r["did_lift"], spec["lower_is_better"])
+        r   = kpi_did(spec["num"] if spec["num"] != "vv" else "visits",
+                      spec["den"] if spec["den"] != "vv" else "visits",
+                      tier, control_tiers, cutoff)
+        inf = did_inference(treated_aid, control_aid, spec["num"], spec["den"], n_boot=DID_N_BOOT)
+        t_color    = lift_color(r["t_lift"],   spec["lower_is_better"])
+        did_color  = lift_color(r["did_lift"], spec["lower_is_better"])
+        pval_color = sig_color(inf["p_value"], inf["point"], spec["lower_is_better"])
+
         tiles.append(f"""
         <div style="flex:1 1 0; min-width:200px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
           <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
@@ -1071,6 +1212,15 @@ for tier in sorted(treated_tiers):
           </div>
           <div style="margin-top:4px; display:flex; justify-content:space-between; font-weight:600; color:{did_color};">
             <span>DiD-adjusted</span><span>{fmt_lift(r['did_lift'])}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-top:6px;">
+            <span>95% CI</span><span>[{fmt_lift(inf['ci_95_lower'])}, {fmt_lift(inf['ci_95_upper'])}]</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:2px; font-weight:600; color:{pval_color};">
+            <span>p-value</span><span>{'—' if pd.isna(inf['p_value']) else f"{inf['p_value']:.3f}"}</span>
+          </div>
+          <div style="font-size:10px; color:#9ca3af; margin-top:4px;">
+            bootstrap n={inf['n_boot']} · treated={inf['n_t_aids']} aids · control={inf['n_c_aids']} aids
           </div>
         </div>
         """)
