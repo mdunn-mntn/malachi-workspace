@@ -1108,17 +1108,76 @@ ci_window_start_date = min_inclusion - timedelta(days=ci_pre_days)
 ci_window_start = ci_window_start_date.strftime("%Y-%m-%d")
 print(f"CI window: {ci_window_start} → {window_end} ({ci_pre_days}d pre + {(window_end_date - min_inclusion).days}d post)")
 
-# Re-pull daily performance with extended pre period (only if needed)
+# Build the CI panel by combining what daily_performance_df already has
+# (window_start_date → window_end_date) with a lean DELTA pull for the
+# incremental pre-period (ci_window_start_date → window_start_date - 1d).
+#
+# Why a lean delta: re-running Alex's full daily_performance_query with the
+# 60d window scans ~1 TB (impression_facts + visit_facts + conversion_facts +
+# spend_facts × 87 days). CI only needs impressions + visits, and we already
+# have window_start → window_end covered. The delta-only lean pull is ~100 GB.
+
+# Reuse already-pulled data (imp + vv only)
+existing_pd = (
+    daily_performance_df
+    .select("advertiser_id", "day", "impressions", "vv")
+    .toPandas()
+)
+existing_pd["day"] = pd.to_datetime(existing_pd["day"])
+
 if ci_window_start_date < window_start_date:
-    ci_daily_query = daily_performance_query.replace(
-        f"BETWEEN '{window_start}' AND '{window_end}'",
-        f"BETWEEN '{ci_window_start}' AND '{window_end}'",
+    delta_window_end = (window_start_date - timedelta(days=1)).strftime("%Y-%m-%d")
+    delta_query = f"""
+    WITH mntn_matched_cgids AS (
+      SELECT DISTINCT cg.campaign_group_id
+      FROM `dw-main-bronze.integrationprod.audience_audience_x_campaign_groups` axcg
+      JOIN `dw-main-bronze.integrationprod.audience_audiences` aus
+        ON axcg.audience_id = aus.audience_id
+      JOIN `dw-main-bronze.integrationprod.public_campaign_groups` cg
+        ON cg.campaign_group_id = axcg.campaign_group_id
+        OR cg.parent_campaign_group_id = axcg.campaign_group_id
+      WHERE aus.expression_type_id = 2
+        AND REGEXP_CONTAINS(aus.expression, r'."data_source_id":\\s?(13|19|46)\\s?[,}}].')
+    ),
+    prospecting_campaigns AS (
+      SELECT DISTINCT c.campaign_id, c.advertiser_id
+      FROM `dw-main-bronze.integrationprod.campaigns` c
+      JOIN mntn_matched_cgids mm ON c.campaign_group_id = mm.campaign_group_id
+      WHERE c.funnel_level = 1
+        AND c.objective_id = 1
+        AND c.deleted = FALSE
+        AND c.is_test = FALSE
+    ),
+    imp AS (
+      SELECT i.advertiser_id, DATE(i.hour) AS day,
+             CAST(SUM(i.display_impressions + i.ctv_impressions) AS INT64) AS impressions
+      FROM `dw-main-silver.summarydata.impression_facts` i
+      JOIN prospecting_campaigns pc USING (campaign_id, advertiser_id)
+      WHERE DATE(i.hour) BETWEEN '{ci_window_start}' AND '{delta_window_end}'
+      GROUP BY i.advertiser_id, day
+    ),
+    vis AS (
+      SELECT v.advertiser_id, DATE(v.hour) AS day,
+             CAST(SUM(v.clicks + v.views + COALESCE(v.competing_views, 0)) AS INT64) AS vv
+      FROM `dw-main-silver.summarydata.visit_facts` v
+      JOIN prospecting_campaigns pc USING (campaign_id, advertiser_id)
+      WHERE DATE(v.hour) BETWEEN '{ci_window_start}' AND '{delta_window_end}'
+      GROUP BY v.advertiser_id, day
     )
-    print(f"[ci] Re-pulling daily perf with {ci_pre_days}d pre headroom...")
-    ci_daily_pd_raw = bq_client.query(ci_daily_query).to_dataframe()
+    SELECT imp.advertiser_id, imp.day, imp.impressions,
+           CAST(COALESCE(vis.vv, 0) AS INT64) AS vv
+    FROM imp
+    LEFT JOIN vis USING (advertiser_id, day)
+    WHERE imp.impressions > 0
+    """
+    print(f"[ci] Pulling lean delta: {ci_window_start} → {delta_window_end} (imp + vv only)...")
+    delta_pd = bq_client.query(delta_query).to_dataframe()
+    delta_pd["day"] = pd.to_datetime(delta_pd["day"])
+    ci_daily_pd_raw = pd.concat([delta_pd, existing_pd], ignore_index=True)
+    print(f"[ci] Delta rows: {len(delta_pd):,} | combined with existing: {len(ci_daily_pd_raw):,}")
 else:
-    print(f"[ci] lookback_days={lookback_days} already covers {ci_pre_days}d pre — reusing daily_performance_df")
-    ci_daily_pd_raw = daily_performance_df.toPandas()
+    print(f"[ci] lookback_days={lookback_days} already covers {ci_pre_days}d pre — no delta pull needed")
+    ci_daily_pd_raw = existing_pd
 
 # Join rollout tier metadata and exclude flip day
 _rollout_pd = (
