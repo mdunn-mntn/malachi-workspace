@@ -902,6 +902,13 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 
 ---
 
+## silver.summarydata.impression_facts
+- **Type:** VIEW → `sqlmesh__summarydata.summarydata__impression_facts__3555911259` (**TABLE** — physical, ~1.8 TB)
+- **Partition:** DAY on `hour`
+- **Clustering:** NONE (verified 2026-05-28 — `bq show` returns `"clustering": null`)
+- **Use for:** Hourly impression aggregates by campaign/geo/device. Primary impressions reporting table; stays fresh through current day (unlike `sum_by_campaign_by_day` rollups).
+- **Optimization gotcha (TI-961, verified 2026-05-28):** Because there's NO clustering, filtering to a small advertiser list does NOT reduce bytes processed. The only knobs are date range (partition pruning works) + which fact tables to pull. A 60-day pull across all prospecting advertisers is ~206 GB; cutting to 14 days is ~50 GB; restricting to 50 advertisers makes zero difference at the bytes-processed level. **Asymmetric with `visit_facts`/`conversion_facts`/`spend_facts` which ARE clustered on advertiser/campaign** — keep in mind when joining across these tables.
+
 ## silver.summarydata.visit_facts
 - **Type:** VIEW → `sqlmesh__summarydata.summarydata__visit_facts__427634656` (**TABLE** — physical)
 - **Partition:** DAY on `hour`

@@ -1,9 +1,9 @@
 # TI-961: Causal Impact for Fangorn
 
 **Jira:** https://mntn.atlassian.net/browse/TI-961
-**Status:** In Progress
+**Status:** Complete (infrastructure + interim read); awaiting calendar-time for statistical maturity
 **Date Started:** 2026-05-27
-**Date Completed:**
+**Date Completed:** 2026-05-28
 **Assignee:** Malachi
 
 ---
@@ -160,23 +160,32 @@ Outputs: [`outputs/ti_961_smoke_ci_results.csv`](outputs/ti_961_smoke_ci_results
 - **Q:** Does Alex want CausalImpact for go-to-market?
   **A:** No. Internal validation only. DiD + pre-post is what he presents externally.
 - **Q:** Which Fangorn cohort has the best shot at resolving lift?
-  **A:** Group B (50 advertisers, 20 days post). Visit rate, not conversion.
-- **Q:** Is wave-2 a valid control?
-  **A:** Yes for DiD purposes (parallel-trends assumption); not random assignment but acceptable.
+  **A:** Tier 2 (~50 advertisers, ~21 days post). Visit rate, not conversion. Confirmed in the live Databricks run.
+- **Q:** Is wave-2 (Tier 4 future-flip) a valid control?
+  **A:** Yes for DiD purposes (parallel-trends assumption); not random assignment but acceptable. In the live notebook the "auto" control widget picks Tier 4 — exactly what we want.
 - **Q:** Why is conversion-rate / ROAS noisy?
   **A:** Too short a post-period; CTV attribution windows are long (large share of conversions land after campaign exposure).
+- **Q (added 2026-05-28):** Did the data turn out to be enough for CI?
+  **A:** Not yet, but directionally yes. Live Databricks run (deck-quality figures in [`artifacts/`](artifacts/)):
+    - **Tier 1** (N=3): CI +46.0% [−18.4%, +593%] p=0.253 · DiD +28.6% [−4.6%, +253%] p=0.138
+    - **Tier 2** (N=47): CI +26.6% [−13.2%, +133%] p=0.255 · DiD +27.2% [−9.6%, +93%] p=0.200
+    - **Tier 3** (N=283): CI +16.4% [−3.4%, +46%] p=0.117 · DiD +5.9% [−9.4%, +29%] p=0.446
+  - **Methods converge at +27% on the cleanest cohort (Tier 2).** Strongest informal-causal argument we can make today.
+  - Conversion rate on Tier 3 is the only `p<0.10` cell in the entire dashboard (DiD CVR +25.9% p=0.064) — worth watching but not yet a claim.
+  - **No CI/DiD p-value clears 0.10 on IVR.** Need 3–4 more weeks of post-period for statistical significance via either method.
 
 ## 7. Data Documentation Updates
-_Pending._
-- Possible: add "Fangorn rollout tiers + `fangorn_advertiser_inclusion` table" entry to `knowledge/data_catalog.md`.
-- Possible: add a methodology note to `knowledge/experimentation.md` about DiD vs CausalImpact for staged rollouts where wave-N+1 acts as control.
+- `knowledge/experimentation.md` § "⭐ Standard Analysis Protocol" — added top-level methodology section codifying the 5-step pipeline (power → cohort → DiD-bootstrap → CI-VIF→BIC → standardized output). Required reading for every future tiered rollout / experiment evaluation.
+- `.claude/CLAUDE.md` § "Experiment Analysis Protocol" — trigger added so future sessions invoke the protocol automatically.
+- `knowledge/data_catalog.md` — note added about `impression_facts` / `visit_facts` partition-by-hour-only (no clustering) and what that implies for query optimization.
+- `knowledge/data_knowledge.md` — notes added about `tpa.fangorn_advertiser_inclusion` (Postgres-only cohort source) and `audience_advertiser_configurations.update_time` NULL quirk (108 AIDs flipped on Fangorn have NULL update_time; the Postgres inclusion table is authoritative).
+- Memory `reference_causal_impact_pattern.md` — updated to reflect the tier-level variant + cluster-bootstrap DiD inference layered on top.
 
 ## 8. Open Items / Follow-ups
-- **Run the CI section in Databricks** and capture rel_effect / 95% CrI / p-value per treated tier. Paste numbers back into this summary under §6 Questions Answered with the comparison to Alex's DiD-adjusted lift.
-- Decide whether to extend CI covariates beyond the single control-tier visit rate (e.g., holiday flag, platform-wide visit rate, lagged tier-self covariate). Current single-covariate setup matches the DiD framing 1:1; adding more would shift the comparison away from apples-to-apples.
-- Skip CausalImpact on conversion/CPA/ROAS until ≥30 days post-period (Alex agrees the conversion window is too noisy at current cohort age, esp. for CTV).
-- Side suggestion (out of scope but worth tracking): an "experiment archive" web page fed by scheduled Databricks notebooks. Bay team may already be on this. Verify before duplicating.
-- Compare variance-weighted lift vs median + impression-weighted in Alex's dashboard (separate from CI — orthogonal weighting question for the DiD numbers).
+- **Calendar-time watch (≈2026-06-25):** with ~4 more weeks of post-period, Tier 2's CI and DiD p-values should resolve below 0.10 if the effect is real. No action required until then — just re-run the notebook.
+- **Monitor Tier 3 CVR (p=0.064):** the only sub-0.10 cell in the dashboard. If it stays below 0.10 with more post-period data, that's a real conversion-rate signal worth surfacing.
+- **TI-1003** ([Jira](https://mntn.atlassian.net/browse/TI-1003)) — stand up a simple TI experimentation archive (one-day scope) so the Fangorn read becomes the first entry stakeholders can bookmark.
+- Variance-weighted lift comparison vs median + impression-weighted is still an open follow-up for Alex's DiD numbers (orthogonal to CI).
 
 ## 9. Meeting Notes
 - `meetings/ti_961_01_malachi_alex_catchup_2026_05_27.txt` — 30-min Malachi + Alex catchup; covers both TI-961 (Fangorn CI eval) and the interest-segment scoring scope for TI-956.
