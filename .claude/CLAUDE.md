@@ -50,7 +50,7 @@ workspace/
 | `self_review/self_review_1.html` | Submitted review #1 (archived, do not modify) |
 | `documentation/docs/presentation_playbook.md` | **Presentation standards** — read before creating any presentation. Power Line, structure, storytelling, persuasion, delivery, checklists |
 | `documentation/docs/revealjs_guide.md` | **RevealJS layout guide** — config, font sizes, cutoff prevention rules, standalone build process. Read before building any RevealJS deck. |
-| `documentation/docs/revealjs_guide.md` | **RevealJS layout guide** — config, font sizes, cutoff prevention rules, standalone build process. Read before building any RevealJS deck. |
+| `documentation/docs/causal_impact_did_math_reference.md` | **CausalImpact + DiD math reference** — UCM state-space equations, Kalman filter, MLE, forecasting, VIF/BIC selection, cluster bootstrap, SE/CI/p derivations, worked Tier 2 example. Shareable with the team. |
 
 ## Self-Review Entry Guide
 
