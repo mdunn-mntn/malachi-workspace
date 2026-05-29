@@ -242,6 +242,7 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 
 1. **RTC vs MM pipeline relationship (AUD squad):** Sean's two statements differ — first read "RTC = MM real-time variant"; revised read "RTC is independent of MM, MM is batch via IPDSC, RTC is real-time match-and-tag." AUD team (Mike Dolt or Jordan Piepkow) to confirm whether RTC and MM share the same scoring engine or are genuinely separate pipelines. Affects Pass 19 deck framing (whether to fold RTC into MM-touching or keep separate).
 2. **How RTC-only audience expressions get created in the UI:** the 7,659 RTC-only campaigns (geo + `score_type=rtc` + DS14 + holdout, no buyer-picked DSes) — what UI flow produces this minimal expression? Default-when-no-template-picked? Specific product (e.g., "Geo only" prospecting)? AUD team to clarify.
+3. **How buyers OPT OUT of RTC:** 16 campaigns across 3 advertisers (AID 36678, 37336, 42097) have no `score_type=rtc` flag. Is there a UI toggle to disable RTC? Are these constructed via API / direct platform tooling? Why are 36678 and 37336 (both heavy MNTN Select users) the dominant non-RTC advertisers? Campaign IDs at `outputs/ti_999_pass20_anomalies_2026_05_29.csv`.
 3. **Confirm Oracle (DS1) disabled in buyer UI:** Sean unsure whether AUD team has already disabled Oracle as a selectable option in the buyer UI. Ask AUD directly. If still selectable, advocate for disabling (553 active prospecting campaigns are paying for clauses that never deliver).
 4. **DS2 vs DS21/DS34/DS43 functional split inside MNTN Pixel:** DS2 = OPM-segment pointer for retargeting; DS21/34 = pure exclusion suppression; DS43 = ISP filter. Kept grouped; flag if any downstream pass needs to disambiguate.
 5. **DS9 MNTN Select scope going forward:** Jordan + Sean both confirmed DS9 is Select-only today. Is it intended to broaden beyond the 6 advertisers currently using it? Tied to Select product roadmap.
@@ -261,9 +262,11 @@ Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass20_buckets_20
 
 ### Bucket breakdown
 
+> **Note on geo + RTC co-occurrence:** every prospecting expression has a `geos` clause (100% of campaigns) and RTC is in 99.9% of expressions. Geo and RTC are effectively bound together at the platform level — neither is a buyer-pickable axis in the "do I add this?" sense. What distinguishes the buckets below is **what the buyer attached on top of those defaults** (MM batch DSes, 3P interest segments, CRM lists, Select audiences).
+
 | Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
 |---|---:|---:|---:|---:|---:|
-| **RTC-only (no buyer picks — geo + platform defaults)** | **7,659** | **64.4%** | **$5.24M** | **16.3%** | **$63M** |
+| **Geo-only (no buyer audience layer)** — just the platform defaults: geo + RTC + DS14 freshness + holdout | **7,659** | **64.4%** | **$5.24M** | **16.3%** | **$63M** |
 | MM + RTC | 1,194 | 10.0% | $6.02M | 18.7% | $72M |
 | MM + RTC + 3P | 1,134 | 9.5% | $7.25M | 22.6% | $87M |
 | MM + RTC + CRM | 564 | 4.7% | $5.05M | 15.7% | $61M |
@@ -272,9 +275,40 @@ Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass20_buckets_20
 | MM + RTC + 3P + CRM | 302 | 2.5% | $3.26M | 10.2% | $39M |
 | RTC + 3P + CRM (no MM) | 96 | 0.8% | $2.51M | 7.8% | $30M |
 | Select combos | 12 | 0.1% | $0.20M | 0.6% | $2M |
-| Other combos (incl rare MM-without-RTC) | 8 | 0.1% | $0.10M | 0.3% | $1M |
-| Truly nothing (no RTC, no DSes) | 4 | 0.0% | $0.01M | 0.0% | $0M |
+| Anomalies (no RTC, see callout below) | 16 | 0.1% | $0.11M | 0.4% | $1M |
 | **Total prospecting** | **11,889** | 100% | **$32.10M** | 100% | **$385M** |
+
+### Anomaly cohort: 16 campaigns with no RTC (concentrated in 3 advertisers)
+
+99.9% of prospecting expressions have `score_type=rtc` auto-attached. The 16 that don't are concentrated in **just 3 advertisers** (AID 36678, AID 37336, AID 42097) — all sophisticated MNTN Select customers with custom audience setups. Full list at `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass20_anomalies_2026_05_29.csv`.
+
+**6 MM-without-RTC** — buyer attached explicit DS19 keywords (MM batch) but the expression has no `score_type=rtc` flag. Maybe intentional opt-out from the real-time scoring pipeline:
+
+| Campaign | Audience Seg | Advertiser | Spend (30d) | DS refs |
+|---:|---:|---:|---:|---|
+| 487499 | 621633 | 36678 | $36,970 | DS1(-), DS13(+), DS14(+), DS17(+), DS19(+), DS2(-), DS4(-) |
+| 608696 | 731603 | 36678 | $16,250 | DS1(-), DS14(+), DS17(+), DS19(+), DS2(-), DS35(+), DS4(-) |
+| 621934 | 748302 | 36678 | $1,250 | DS1(-), DS14(+), DS17(+), DS19(+), DS2(-), DS35(+), DS4(-) |
+| 247343 | 317894 | 37336 | $12,120 | DS14(+), DS19(+), DS2(-), DS4(-), DS8(-) |
+| 483155 | 583796 | 37336 | $19,910 | DS14(+), DS19(+), DS2(-), DS4(-), DS8(-) |
+| 620506 | 746338 | 42097 | $8,550 | DS13(-), DS14(+), DS2(-), DS21(-), DS34(-), DS35(+), DS4(-) |
+
+**10 no-RTC no-MM** — neither RTC nor MM batch, just custom DS combos (DS9 Select households, DS2 OPM pointer, DS8 IP list):
+
+| Campaign | Audience Seg | Advertiser | Spend (30d) | DS refs |
+|---:|---:|---:|---:|---|
+| 487500 | 621641 | 36678 | $2,320 | DS14(+), DS2(+) |
+| 487501 | 621637 | 36678 | $4,780 | DS14(+), DS9(+) |
+| 608694 | 731610 | 36678 | $60 | DS14(+), DS2(+) |
+| 608697 | 731612 | 36678 | $2,830 | DS14(+), DS9(+) |
+| 621932 | 748309 | 36678 | $0 | DS14(+), DS2(+) |
+| 621935 | 748311 | 36678 | $210 | DS14(+), DS9(+) |
+| 247341 | 317897 | 37336 | $1,860 | DS14(+), DS8(-), DS9(+) |
+| 247342 | 317896 | 37336 | $450 | DS14(+), DS2(+), DS8(-) |
+| 483150 | 583799 | 37336 | $1,240 | DS14(+), DS2(+), DS8(-) |
+| 483151 | 583801 | 37336 | $2,590 | DS14(+), DS8(-), DS9(+) |
+
+**Read:** AID 36678 alone accounts for 9 of 16 anomalies (the same advertiser that's the heaviest DS9 / MNTN Select household user). AID 37336 has 6 anomalies (also a DS9 user). These advertisers appear to be deliberately bypassing the RTC platform default — possibly because they want pure batch MM scoring (the 6 MM-without-RTC cases) or pure custom audience targeting via DS2 / DS9 (the 10 no-RTC no-MM cases). Worth asking AUD whether there's a UI flow that opts out of RTC, or whether these expressions are constructed via API / direct platform tooling.
 
 ### Axis-touching headline rollups
 
@@ -289,9 +323,9 @@ Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass20_buckets_20
 ### Read
 
 - **RTC is essentially universal in prospecting** (99.9% of spend). It's a platform default the audience compiler attaches to every prospecting campaign — not something the buyer explicitly opts into. Per Sean Yang's revised reading, the RTC pipeline runs independently of MM batch scoring: MM populates `household_score` via IPDSC; RTC populates `realtime_conquest_score` via a real-time match-and-tag pipeline.
-- **The single biggest cohort by campaign count is "RTC-only"** — 7,659 campaigns / 64.4% / $5.24M / 16.3% of spend. These buyers attached **no MM batch DS**, **no 3P interest segment**, **no CRM**, **no Select**. Their intentional input was just a geo. The platform handled everything else (RTC scoring, DS14 freshness filter, 10% holdout).
+- **The single biggest cohort by campaign count is "Geo-only (no buyer audience layer)"** — 7,659 campaigns / 64.4% / $5.24M / 16.3% of spend. These buyers attached **no MM batch DS**, **no 3P interest segment**, **no CRM**, **no Select**. Their intentional input was just a geo. The platform handled everything else (RTC scoring, DS14 freshness filter, 10% holdout).
 - **MM-touching = 67.2% of spend** (essentially unchanged from Pass 18). MM-touching campaigns almost always also have RTC (the platform default).
-- **MM-without-RTC is virtually nonexistent** (6 campaigns total, in the "other combos" bucket). The default is so sticky that even when buyers attach explicit MM DSes, RTC remains.
+- **MM-without-RTC is rare** (6 campaigns total, plus 10 more with no RTC and no MM — see anomaly callout). The RTC platform default is sticky, and the 16 exceptions are concentrated in 3 advertisers who appear to be deliberately bypassing it.
 - **3P-touching = 45.1% of spend** (unchanged from Pass 18).
 - **CRM-touching = 37.9% of spend, but 78% of that is exclusion-only** (hygiene). Only 318 campaigns / $1.57M / ~5% of all prospecting spend are CRM-include-touching.
 - **MNTN Select is microscopic** — 12 camps / $0.20M / 0.6%. Concentrated in 6 advertisers total. Never co-occurs with MM or 3P in the same expression.
