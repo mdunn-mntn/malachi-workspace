@@ -230,14 +230,14 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 
 ### Resolved (Sean Yang, TI team, 2026-05-29 Slack thread)
 
-- **DS1 Oracle delivery:** ✅ Oracle is a legacy 3P, no longer in IPDSC, still in MNTN's taxonomy so buyers can pick it on UI (may have been disabled by AUD — Sean unsure). The 553 positive-Oracle prospecting campaigns are almost certainly paying for dead-weight clauses.
+- **DS1 Oracle delivery:** ✅ Oracle is a legacy 3P, no longer in IPDSC, still in MNTN's taxonomy so buyers can pick it on UI (may have been disabled by AUD — Sean unsure). Jordan Piepkow confirms (2026-05-29): "deprecated but some audiences still use." The 553 positive-Oracle prospecting campaigns are almost certainly paying for dead-weight clauses.
 - **DS11 LiveRamp legacy:** ✅ Deprecated old LiveRamp (device_id→IP mapping); replaced by DS35 (IPs delivered directly). Retained in `tpa.categories` because reporting still needs them.
 - **DS38 BUK rollout:** ✅ Feature being rolled out, not yet active (Sean Yang). **BUK augments DS19 — does not replace it** (Alex Knorr, 2026-05-29): BUK leverages DS19 as an input and replaces the LLM-generated keyword pipeline, but DS19 (MNTN Matched V2) stays in production to handle cold-start cases (new advertisers / new keywords don't get BUK recommendations). Steady-state MM = DS13 + DS19 (V2) + DS38 (BUK) combined.
 - **DS19 in MM (RTC vs separate scoring):** ✅ RTC and MM are literally the same scoring system — RTC is the real-time variant (fires within an hour), main scorer catches up after. No separate RTC scoring system.
 
 ### Still open
 
-1. **DS14 universal use — confirmed 100% of all audience-targeted campaigns ever (270,263 campaigns / 12,196 advertisers / 0 negative refs).** Categories are 5 SSP-routing flags ("Beeswax Bidder", "Magnite", "Index Exchange", "IP Ends In .0", "ROOT"). Sean unsure of the code path. Bidder team (Jordan / Bryce) to confirm: this is platform code auto-attaching SSP-routing flags at campaign creation, right? Who owns the injection?
+1. **DS14 universal use — confirmed 100% of all audience-targeted campaigns ever (270,263 campaigns / 12,196 advertisers / 0 negative refs).** Categories are 5 SSP-routing flags ("Beeswax Bidder", "Magnite", "Index Exchange", "IP Ends In .0", "ROOT"). Sean unsure of the code path; Jordan Piepkow also doesn't know off the top of his head (2026-05-29). Next ask: Zach Schoenberger.
 2. **Confirm Oracle (DS1) disabled in buyer UI:** Sean unsure whether AUD team has already disabled Oracle as a selectable option in the buyer UI. Ask AUD directly. If still selectable, advocate for disabling (553 active prospecting campaigns are paying for clauses that never deliver).
 3. **DS2 vs DS21/DS34/DS43 functional split inside MNTN Pixel:** DS2 = OPM-segment pointer for retargeting; DS21/34 = pure exclusion suppression; DS43 = ISP filter. Kept grouped; flag if any downstream pass needs to disambiguate.
 4. **DS34 "MNTN Pageview" vs DS355420 "MNTN PageView":** near-duplicate names, distinct IDs and `data_source_key`. Pixel-platform team to confirm whether DS34 is being deprecated in favor of DS355420. Sean asking.
