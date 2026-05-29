@@ -27,6 +27,7 @@ PASS_NOTE = (
     "16 no-RTC anomalies on the 'RTC anomalies' sheet."
 )
 ANOMALIES_CSV = OUTPUTS / "ti_999_pass20_anomalies_2026_05_29.csv"
+POLARITY_KPI_CSV = OUTPUTS / "ti_999_pass22c_polarity_aware_buckets_2026_05_29.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -327,12 +328,91 @@ def write_anomalies_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "A5"
 
 
+def write_polarity_kpi_sheet(wb: Workbook) -> None:
+    if not POLARITY_KPI_CSV.exists():
+        return
+    ws = wb.create_sheet("Polarity KPIs")
+
+    ws.cell(row=1, column=1, value="Pass 22c — polarity-aware bucket KPIs (ratios)").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=10)
+
+    note = (
+        "Pass 21 buckets BUT 3P and CRM are split by polarity so MM combos are properly disambiguated. "
+        "MM + CRM-incl = customer-list-seeded MM scoring (adds non-MM-scored customer IPs as positive layer). "
+        "MM + CRM-excl = MM scoring with customer suppression (drilling down on MM-scored audience). "
+        "All KPIs are ratios: CVR/IVR/CTR as percentages, CPM and cost-per-conv in dollars. "
+        "3P-only (no MM, no CRM, no Select) is the cleanest baseline for measuring 3P quality interventions."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=10)
+    ws.row_dimensions[2].height = 72
+
+    headers = [
+        "Bucket", "n_campaigns", "n_advertisers", "Spend (30d, $M)", "% spend",
+        "CVR %", "IVR %", "CTR %", "CPM ($)", "Cost/conv ($)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 30
+
+    fill_mm = PatternFill("solid", fgColor="DCEFFC")        # MM-touching
+    fill_crm_incl = PatternFill("solid", fgColor="FFF9C4")  # contains CRM-incl
+    fill_baseline = PatternFill("solid", fgColor="E1F5E1")  # 3P-incl alone (clean baseline)
+    fill_default = PatternFill("solid", fgColor="F5F5F5")
+
+    with POLARITY_KPI_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            bucket = r["bucket"]
+            if bucket == "3P-incl":
+                fill = fill_baseline
+            elif "CRM-incl" in bucket and "CRM-excl" not in bucket:
+                fill = fill_crm_incl
+            elif bucket.startswith("MM"):
+                fill = fill_mm
+            else:
+                fill = fill_default
+            ws.cell(row=row_i, column=1, value=bucket).fill = fill
+            ws.cell(row=row_i, column=2, value=to_int(r["n_campaigns"])).fill = fill
+            ws.cell(row=row_i, column=2).number_format = "#,##0"
+            ws.cell(row=row_i, column=3, value=to_int(r["n_advertisers"])).fill = fill
+            ws.cell(row=row_i, column=3).number_format = "#,##0"
+            ws.cell(row=row_i, column=4, value=to_float(r["spend_30d_M"])).fill = fill
+            ws.cell(row=row_i, column=4).number_format = '"$"#,##0.000'
+            ws.cell(row=row_i, column=5, value=to_float(r["pct_spend"])).fill = fill
+            ws.cell(row=row_i, column=5).number_format = "0.0"
+            ws.cell(row=row_i, column=6, value=to_float(r["cvr_pct"])).fill = fill
+            ws.cell(row=row_i, column=6).number_format = "0.0000"
+            ws.cell(row=row_i, column=7, value=to_float(r["ivr_pct"])).fill = fill
+            ws.cell(row=row_i, column=7).number_format = "0.0000"
+            ws.cell(row=row_i, column=8, value=to_float(r["ctr_pct"])).fill = fill
+            ws.cell(row=row_i, column=8).number_format = "0.0000"
+            ws.cell(row=row_i, column=9, value=to_float(r["cpm_dollars"])).fill = fill
+            ws.cell(row=row_i, column=9).number_format = '"$"#,##0.00'
+            cpc_val = r.get("cost_per_conv_dollars", "")
+            if cpc_val and cpc_val.strip():
+                ws.cell(row=row_i, column=10, value=to_float(cpc_val)).fill = fill
+                ws.cell(row=row_i, column=10).number_format = '"$"#,##0.00'
+            else:
+                ws.cell(row=row_i, column=10, value="").fill = fill
+            row_i += 1
+
+    for col_idx, w in enumerate([44, 14, 14, 16, 12, 12, 12, 12, 12, 16], start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "B5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
     write_taxonomy_sheet(wb, rows)
     write_group_summary_sheet(wb, rows)
     write_pass_sheet(wb)
+    write_polarity_kpi_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
