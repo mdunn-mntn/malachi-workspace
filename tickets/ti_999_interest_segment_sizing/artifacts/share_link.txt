@@ -1,10 +1,13 @@
-Deck shared 2026-05-28 (v3 — replaces misleading CRM-vs-3P slide with honest 3P-vs-3P overlap; adds open-questions slide)
+Deck shared 2026-05-28 (v4 — Finding 15 rebuild: bidder semantics + OR/AND distinction + per-segment CVR spread + counterfactual)
 
-Rendered URL (githack): https://gist.githack.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33/raw/ti_999_presentation_deck_standalone.html
-Gist:                   https://gist.github.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33
+Rendered URL (githack): https://gist.githack.com/mdunn-mntn/838c9c3a30147997cc9b64d150628491/raw/ti_999_presentation_deck_standalone.html
+Gist:                   https://gist.github.com/mdunn-mntn/838c9c3a30147997cc9b64d150628491
+
+Power Line: Buyers add LiveRamp interest segments without any quality signal — ~$43M/yr of MNTN spend is allocated to the worst-performing segments at the same rate as the best. TI-956 fixes this with a per-segment quality score.
 
 Prior versions (kept for traceability):
-  v2 (rank-sim added):    https://gist.githack.com/mdunn-mntn/09d35323f314ab2c7781744bfc6682dc/raw/ti_999_presentation_deck_standalone.html
+  v3 (3P-vs-3P overlap):   https://gist.githack.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33/raw/ti_999_presentation_deck_standalone.html
+  v2 (rank-sim added):     https://gist.githack.com/mdunn-mntn/09d35323f314ab2c7781744bfc6682dc/raw/ti_999_presentation_deck_standalone.html
   v1 (initial ship):       https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
 
 Note: githack caches aggressively. For revisions, regenerate the standalone HTML and run share_deck.sh again — it creates a new gist with a new URL.
