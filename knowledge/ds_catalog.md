@@ -20,13 +20,13 @@
 | 1 | **MM** (Mountain Match 2.0) | DS13, DS19, DS38, DS46 | MNTN's proprietary scoring product. DS13 = bucket/vertical, DS19 = keywords (MNTN Matched V2, LLM-derived), DS38 = BUK keywords (queued — augments DS19, doesn't replace; V2 stays for cold-start). HI / PP / MI / Max Reach are scoring **tiers** inside this system. RTC and MM are the same scoring system — RTC is the real-time variant that fires within an hour, the main scorer catches up after (Sean Yang, TI team, 2026-05-29). |
 | 2 | **PP** (Peak Performance tier) | DS13 + DS19 (shared with MM) | Scoring tier inside MM where the IP matches the vertical (DS13) but has no keyword match (DS19). Score = 8000. Not a standalone DS family — surfaced separately because PP appears as a product in the UI. |
 | 3 | **MNTN Pixel** | DS2, DS21, DS34, DS43 | First-party data derived from the MNTN pixel. DS2 = OPM segment pointer, DS21 = conversion, DS34 = pageview, DS43 = ISP type. Used almost entirely as negative/exclusion clauses in prospecting. |
-| 4 | **MNTN Audiences** | DS9 | MNTN-owned first-party audience data sourced from MNTN Select impression exposure (e.g., "Households Reached in Andor Deal", "Households Reached in NFL Live + Playoffs"). NOT pixel-derived and NOT advertiser-uploaded — distinct first-party layer. 86 expression refs (50 prospecting + 36 multi-touch). |
+| 4 | **MNTN Select** | DS9, DS42 | MNTN's premium-video product — its own audience layer. DS9 = "Households Reached in [Deal Name]" audiences sourced from Select impression exposure; DS42 = Select deal/order registry (metadata only, no expression use). DS9 used by **3 of 22 active Select advertisers** (narrow retargeting feature, not Select-wide). The canonical product identifier is `campaign_groups.product_id=2` — a campaign-group attribute, not a DS. |
 | 5 | **3P** (bought interest) | DS1, DS17, DS18, DS35 | Externally-purchased interest segments. DS35 LiveRamp dominates by volume and freshness. DS1 Oracle carried in this group pending delivery verification. |
 | 6 | **Advertiser CRM** | DS4, DS8, DS47 | Advertiser-uploaded customer/IP lists. In prospecting these are almost entirely exclusion clauses (suppress known customers); positive use is retargeting territory. Victor canonically calls this "1P". |
 | 7 | **Bid mechanics / internal taxonomy** | DS14, DS16 | NOT a targeting family. DS14 carries bid-routing (Beeswax / Magnite / Index Exchange / IP filters); DS16 carries per-advertiser identifiers + MNTN-internal event taxonomy. Appear in nearly every expression because they encode plumbing. |
-| 8 | **Dormant / out-of-scope** | DS-1 sentinel, DS3, 5, 6, 7, 10, 11, 12, 15, 20, 22–33, 36, 37, 39–42, 44, 45, 48–61, plus 6 high-ID outliers (328493 Adjust, 328494 AppsFlyer, 328495 Branch, 328496 Kochava, 328497 Singular, 355420 MNTN PageView) | Registered DSes with zero or negligible use. **DS11 LiveRamp legacy** retained here per Sean Yang (TI team, 2026-05-29): deprecated old LiveRamp that used device_id→IP mapping; kept in `tpa.categories` only because reporting still needs the historical category references. Other sub-types: CRM-ingestion sources feeding DS4, deprecated providers, internal control/test, mobile-attribution partners. Do not affect Pass 17 buckets. |
+| 8 | **Dormant / out-of-scope** | DS-1 sentinel, DS3, 5, 6, 7, 10, 11, 12, 15, 20, 22–33, 36, 37, 39–41, 44, 45, 48–61, plus 6 high-ID outliers (328493 Adjust, 328494 AppsFlyer, 328495 Branch, 328496 Kochava, 328497 Singular, 355420 MNTN PageView) | Registered DSes with zero or negligible use. **DS11 LiveRamp legacy** retained here per Sean Yang (TI team, 2026-05-29): deprecated old LiveRamp that used device_id→IP mapping; kept in `tpa.categories` only because reporting still needs the historical category references. Other sub-types: CRM-ingestion sources feeding DS4, deprecated providers, internal control/test, mobile-attribution partners. Do not affect Pass 17 buckets. |
 
-**Coverage check:** all 68 canonical type=1 DSes (IDs -1 through 61, plus 6 high-ID outliers 328493-355420) are accounted for in exactly one group — 18 active (across MM / MNTN Pixel / MNTN Audiences / 3P / Advertiser CRM / Bid mechanics) + 50 dormant. PP's DSes intentionally double-list because PP is a tier inside MM, not a parallel family.
+**Coverage check:** all 68 canonical type=1 DSes (IDs -1 through 61, plus 6 high-ID outliers 328493-355420) are accounted for in exactly one group — 19 active (across MM / MNTN Pixel / MNTN Select / 3P / Advertiser CRM / Bid mechanics) + 49 dormant. PP's DSes intentionally double-list because PP is a tier inside MM, not a parallel family.
 
 ## What the `data_sources` table tells you — `visible` flag and the ID-jump boundary
 
@@ -62,7 +62,7 @@ Only the **3P providers + CRM upload** are surfaced as raw direct picks in the U
 | Prospecting Campaign | 11,721 |
 | Retargeting Campaign | 11,721 |
 
-Total type=2 rows: 79,587. **None are visible=true. None appear in TPA segment-archive expression JSON** (per `data_knowledge.md` audience-system docs). They're metadata containers for the audience-builder UI, not targeting expressions. Audience-bucket detectors that match by name pattern (e.g., `name LIKE '% - First Party Audience'`) won't fire on segment expressions — only the canonical type=1 IDs (-1 through 61 + the 6 high-ID outliers) appear in `data_source_id` references in expressions.
+Total type=2 rows: 79,587. **None are visible=true.** Mostly absent from TPA expression JSON, **but not universally** — empirical correction 2026-05-29 (TI-999): at least one advertiser (AID 36678) references their own per-advertiser DS `36678 - Prospecting Campaign` (DS69734) in 6 active expressions. The earlier "0 references" claim in `data_knowledge.md` was scoped to the four audience container types (First/Third Party / Control / Extension); the two campaign container types (Prospecting Campaign / Retargeting Campaign) DO appear in some expressions. Implication: audience-bucket detectors should enumerate referenced DS IDs from a sample of expressions rather than assuming only canonical type=1 IDs appear.
 
 ## MM 2.0 scoring state table (user-provided, 2026-05-29)
 
@@ -140,13 +140,14 @@ All 4 actively-used 3P DSes are `visible=true` — these ARE the raw buyer picks
 
 **Functional read:** LiveRamp dominates. ShareThis + Dstillery are widely used but stale. Oracle is a wild card pending delivery verification.
 
-### MNTN Audiences — MNTN-owned first-party audience data (non-pixel)
+### MNTN Select — Select-product audience + registry
 
-A distinct first-party layer that's neither pixel-derived nor advertiser-uploaded. DS9 is the only member today; treat as expandable if MNTN ships more Select-style audience products.
+MNTN Select is MNTN's premium-video product (see `mntn_business.md`); these are its dedicated DSes. The canonical product identifier is **`campaign_groups.product_id=2`** (per Ray, 2026-05-05 — a campaign-group attribute, NOT a DS). DS9 + DS42 are the Select-product DS layer.
 
 | DS | Name | Vis | +camps (30d active) | +spend (30d) | Expression refs (all objectives) | Notes |
 |---:|---|:-:|---:|---:|---:|---|
-| 9 | MNTN Campaigns | ✗ | 12 | $0.20M | 86 (50 prospecting + 36 multi-touch) | **MNTN Select household audiences.** Categories are "MNTN Select: Households Reached in [Deal Name]" — Andor Deal, NFL Live + Playoffs, A Night at the Movies, NBA Primetime Live, BowFlex: March Madness, Renovation Nation, etc. 213 categories in `tpa.categories` (208 Select households + 4 block lists + 1 ROOT); 56 distinct names; 1 partner_id (centrally created). Earliest category 2023-10-23, latest 2026-05-29 (still actively being added). **Used by only 6 distinct advertisers** — narrow, Select-customers-only rollout. Each category = a MNTN Select deal/show; the audience is households exposed to that deal's impressions. **Open:** canonical name for this layer + is it intended to broaden beyond Select customers? Sean Yang asking. |
+| 9 | MNTN Campaigns | ✗ | 12 | $0.20M | 86 (50 prospecting + 36 multi-touch) | **Select household-exposed audiences.** Categories are "MNTN Select: Households Reached in [Deal Name]" — Andor Deal, NFL Live + Playoffs, A Night at the Movies, NBA Primetime Live, BowFlex: March Madness, Renovation Nation, etc. 213 categories in `tpa.categories` (208 Select households + 4 block lists + 1 ROOT); 56 distinct names; 1 partner_id (centrally created). Earliest category 2023-10-23, latest 2026-05-29 (still actively being added). **Used by 3 of 22 active Select advertisers** (~14% — heaviest is AID 36678 at 29/98 of their campaigns). Narrow retargeting feature *within* Select, not a Select-wide signal. |
+| 42 | MNTN Select | ✗ | 0 | 0 | 0 | **Select deal/order registry — metadata only, not used for audience targeting.** 908 categories of deal/order IDs (UUIDs, timestamped compound IDs like `100444-456-1738701684948`). Likely a cross-reference table used by Select platform code, not a buyer pick. |
 
 ### Advertiser CRM — advertiser-uploaded customer lists
 
@@ -202,7 +203,6 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 | 39 | Klickly | ✗ | 0 | 0 | 0 | Provider, no current use |
 | 40 | 33Across API | ✗ | 0 | 0 | 0 | 3P provider variant, no current use |
 | 41 | Freshpaint | ✗ | 0 | 0 | 0 | CRM ingestion source |
-| 42 | MNTN Select | ✗ | 0 | 0 | 0 | Internal product reference (Select tier) |
 | 44 | Captify | ✗ | 0 | 0 | 0 | 3P provider, no current use |
 | 45 | Hubspot | ✗ | 0 | 0 | 0 | CRM ingestion source. Shares `data_source_key` with DS48 Tealium — possible duplicate/typo. |
 | 48 | Tealium | ✗ | 0 | 0 | 0 | CRM ingestion source. Shares `data_source_key` with DS45 Hubspot — possible duplicate/typo. |
