@@ -25,6 +25,7 @@ PASS_NOTE = (
     "RTC kept as its own axis per Sean Yang's revised reading (2026-05-29): "
     "RTC is an independent pipeline from MM, not the real-time variant of MM."
 )
+ANOMALIES_CSV = OUTPUTS / "ti_999_pass20_anomalies_2026_05_29.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -267,12 +268,71 @@ def write_pass_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "A5"
 
 
+def write_anomalies_sheet(wb: Workbook) -> None:
+    if not ANOMALIES_CSV.exists():
+        return
+    ws = wb.create_sheet("RTC anomalies")
+
+    title = "Pass 20 anomalies — 16 prospecting campaigns with no score_type=rtc (concentrated in 3 advertisers)"
+    ws.cell(row=1, column=1, value=title).font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=7)
+
+    note = (
+        "99.9% of prospecting expressions have score_type=rtc auto-attached. The 16 below are exceptions, "
+        "concentrated in AID 36678 (9 campaigns), AID 37336 (6), AID 42097 (1). "
+        "Both 36678 and 37336 are heavy MNTN Select household users (DS9). "
+        "MM-without-RTC = buyer added DS19 batch keywords but no RTC flag. "
+        "no-RTC no-MM = custom audience targeting via DS2/DS9/DS8 only. "
+        "Likely deliberately bypassing RTC default via API or custom tooling — RTC isn't UI-selectable. "
+        "AUD team to confirm the opt-out mechanism."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=7)
+    ws.row_dimensions[2].height = 72
+
+    headers = ["Anomaly class", "Campaign ID", "Audience Segment ID", "Advertiser ID", "Spend 30d ($)", "Has RTC", "Has MM", "DS refs"]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 28
+
+    mm_fill = PatternFill("solid", fgColor="FFE0B2")
+    nomm_fill = PatternFill("solid", fgColor="F8BBD0")
+
+    with ANOMALIES_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            fill = mm_fill if r["anomaly_class"] == "ANOMALY_MM_without_RTC" else nomm_fill
+            ws.cell(row=row_i, column=1, value=r["anomaly_class"]).fill = fill
+            ws.cell(row=row_i, column=2, value=to_int(r["campaign_id"])).fill = fill
+            ws.cell(row=row_i, column=2).number_format = "#,##0"
+            ws.cell(row=row_i, column=3, value=to_int(r["audience_segment_id"])).fill = fill
+            ws.cell(row=row_i, column=3).number_format = "#,##0"
+            ws.cell(row=row_i, column=4, value=to_int(r["advertiser_id"])).fill = fill
+            ws.cell(row=row_i, column=4).number_format = "#,##0"
+            ws.cell(row=row_i, column=5, value=to_float(r["spend_30d_K"]) * 1000).fill = fill
+            ws.cell(row=row_i, column=5).number_format = '"$"#,##0'
+            ws.cell(row=row_i, column=6, value=r["has_rtc"]).fill = fill
+            ws.cell(row=row_i, column=7, value=r["has_mm"]).fill = fill
+            ws.cell(row=row_i, column=8, value=r["ds_refs"]).fill = fill
+            ws.cell(row=row_i, column=8).alignment = Alignment(wrap_text=True)
+            row_i += 1
+
+    for col_idx, w in enumerate([28, 14, 18, 14, 14, 10, 10, 56], start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "A5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
     write_taxonomy_sheet(wb, rows)
     write_group_summary_sheet(wb, rows)
     write_pass_sheet(wb)
+    write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
     print(f"Wrote {OUT_XLSX} ({OUT_XLSX.stat().st_size} bytes)")
