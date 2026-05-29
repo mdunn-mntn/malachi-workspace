@@ -272,19 +272,28 @@ Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass21_buckets_20
 
 ### Bucket breakdown
 
+Buckets are mutually exclusive — each name implicitly excludes the axes not listed (e.g., "MM + 3P" means "no CRM, no Select").
+
 | Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
 |---|---:|---:|---:|---:|---:|
-| **Geo-only (no buyer audience layer)** | **7,663** | **64.5%** | **$5.25M** | **16.4%** | **$63M** |
+| **Geo-only** (no buyer audience layer) | **7,663** | **64.5%** | **$5.25M** | **16.4%** | **$63M** |
 | MM only | 1,194 | 10.0% | $6.02M | 18.7% | $72M |
 | MM + 3P | 1,133 | 9.5% | $7.25M | 22.6% | $87M |
-| MM + Advertiser CRM | 566 | 4.8% | $5.08M | 15.8% | $61M |
-| Advertiser CRM only | 480 | 4.0% | $1.07M | 3.3% | $13M |
+| MM + CRM | 566 | 4.8% | $5.08M | 15.8% | $61M |
+| CRM only | 480 | 4.0% | $1.07M | 3.3% | $13M |
 | 3P only | 439 | 3.7% | $1.41M | 4.4% | $17M |
-| MM + 3P + Advertiser CRM | 306 | 2.6% | $3.32M | 10.3% | $40M |
-| 3P + Advertiser CRM (no MM) | 96 | 0.8% | $2.51M | 7.8% | $30M |
-| MNTN Select + CRM | 7 | 0.1% | $0.17M | 0.5% | $2M |
-| MNTN Select only | 5 | 0.0% | $0.03M | 0.1% | $0M |
+| MM + 3P + CRM | 306 | 2.6% | $3.32M | 10.3% | $40M |
+| 3P + CRM | 96 | 0.8% | $2.51M | 7.8% | $30M |
+| Select + CRM | 7 | 0.1% | $0.17M | 0.5% | $2M |
+| Select only | 5 | 0.0% | $0.03M | 0.1% | $0M |
 | **Total prospecting** | **11,889** | 100% | **$32.10M** | 100% | **$385M** |
+
+> ⚠️ **CRM polarity matters when combined with MM (or any positive targeting layer).** The bucket table above lumps CRM-include and CRM-exclude together for headline simplicity, but they mean fundamentally different things at the scoring layer:
+>
+> - **CRM-exclude** = hygiene (suppress known customers from prospecting). Doesn't change MM scoring; eligible-IP pool is just narrowed to "MM-scored IPs that aren't already customers." Standard prospecting practice.
+> - **CRM-include** = positive targeting layer. The eligibility intersection becomes "MM-scored IPs ∩ CRM-list IPs" — MM scoring is now ranked over the customer-list cohort only. Effectively a customer-list-seeded MM prospecting motion (per Zach: this is the intended use of CRM in prospecting, not retargeting).
+>
+> Empirical split inside CRM-touching: **78% are pure exclusion** (hygiene), **16% are include-only**, **5% are both**. So most of the $12.15M CRM-touching spend is hygiene; only ~$1.57M (4.9% of all prospecting) involves CRM as a positive scoring constraint. Worth carving out for any downstream analysis where MM-scoring eligibility actually matters.
 
 Plus the **16-campaign no-RTC anomaly cohort** (see callout below) — these 16 still count in the table above (they fall into Geo-only / MM-only / various combos depending on their DSes), but are flagged separately because they bypass the universal RTC default.
 
@@ -326,7 +335,8 @@ Plus the **16-campaign no-RTC anomaly cohort** (see callout below) — these 16 
 |---|---:|---:|---:|---|
 | **MM-touching** (buyer-picked DS13/19/38/46) | 3,199 | $21.66M | **67.5%** | Buyer attached an MM batch DS clause. |
 | **3P-touching** (DS17/18/35) | 1,974 | $14.49M | **45.1%** | Buyer added a 3P interest segment (LiveRamp / ShareThis / Dstillery). |
-| **CRM-touching** (DS4/8/47, any polarity) | 1,455 | $12.15M | **37.9%** | 78% pure exclusion (hygiene); only 22% include or both. |
+| **CRM-touching** (DS4/8/47, any polarity) | 1,455 | $12.15M | **37.9%** | 78% pure exclusion (hygiene). Polarity matters when combined with MM — see callout above. |
+| **CRM-include-touching only** (DS4/8/47 used positively) | 318 | $1.57M | **4.9%** | The cohort that's a positive scoring constraint on top of MM, not hygiene. |
 | **MNTN Select-touching** (DS9/42) | 12 | $0.20M | **0.6%** | Narrow Select-customer cohort. Never co-occurs with MM or 3P. |
 
 ### Read
