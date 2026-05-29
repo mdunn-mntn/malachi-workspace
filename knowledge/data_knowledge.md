@@ -707,17 +707,22 @@ investigations (TI-644, MM-44) where targeting audiences appear smaller than exp
 ### Data Source (DS) Type Reference
 | DS ID | Name | Type | In IPDSC | In tmul_daily | Notes |
 |-------|------|------|----------|---------------|-------|
+| 1 | Oracle | Legacy 3P | NO (legacy) | — | **Legacy Oracle DS; no longer in IPDSC** (Sean Yang, TI team, 2026-05-29). Still in MNTN's taxonomy so buyers can pick it on UI (may have been disabled by AUD — unsure). 553 active prospecting campaigns positively reference it / $5.97M / 30d — those clauses are likely dead-weight since no IPs deliver via Oracle. |
 | 2 | MNTN First Party / OPM | Real-time | NO | YES | Always in tmul_daily; never in ipdsc block list |
 | 3 | (Third Party) | — | — | YES | In tmul_daily |
 | 4 | CRM | Batch upload | YES | NO | HEM → IP via Verisk identity graph; in ipdsc, NOT in tmul_daily rows |
-| 13 | Audience Intent Scoring | Jaguar model | — | — | Score stored in model_params |
-| 14 | — | — | YES | — | Blocked in MES |
-| 16 | MNTN Taxonomy | Taxonomy | NO | — | Real-time; not in ipdsc |
-| 19 | RTC | Real-Time Conquest | — | — | `realtime_conquest_score=10000` in model_params; **binary qualifier (see Bidder Scoring Reality below)** |
+| 9 | MNTN Campaigns (MNTN Select household audiences) | First-party non-pixel | — | — | Categories are "MNTN Select: Households Reached in [Deal Name]" — Andor, NFL Live + Playoffs, A Night at the Movies, etc. 86 audience-expression refs (50 prospecting + 36 multi-touch). MNTN-owned first-party data sourced from Select impression exposure; distinct from MNTN pixel and from advertiser CRM. |
+| 11 | LiveRamp (legacy) | Deprecated 3P | NO (legacy) | — | **Deprecated old LiveRamp** (Sean Yang, TI team, 2026-05-29). Used device_id→IP mapping; DS35 replaced it (LiveRamp now sends IPs directly). Retained in `tpa.categories` only because reporting still needs the historical category references. |
+| 13 | MNTN Vertical Categorization (bucket+vertical for MM 2.0) | Jaguar model | — | — | DS13 = bucket (industry) + vertical (subindustry). Score stored in `household_score` via MM scoring. Bryce-product-name = "Peak Performance". |
+| 14 | MNTN Global Data | — | YES | — | Blocked in MES. Bid routing (Beeswax/Magnite/Index Exchange/IP filters). Auto-attached to ~100% of prospecting campaigns. |
+| 16 | MNTN Taxonomy | Taxonomy | NO | — | Real-time; not in ipdsc. Per-advertiser identifiers + internal event taxonomy (PageViews/Conversions/etc.). |
+| 19 | MNTN Matched (keywords for MM 2.0) | RTC + main MM scorer | — | — | DS19 = keyword half of MM 2.0 state table. **RTC = MM real-time variant** (Sean Yang, 2026-05-29) — `realtime_conquest_score` is MM's hot-path output (fires within an hour), the main MM scorer catches up after. Not a separate scoring system. |
 | 17 | ShareThis | Bought 3P interest | YES (65M rows/day) | — | One of only three "bought 3P" sources with material IPDSC volume (TI-999) |
 | 18 | Dstillery | Bought 3P interest | YES (32M rows/day) | — | One of only three "bought 3P" sources with material IPDSC volume (TI-999) |
 | 21 | MNTN Conversion | Real-time | NO | — | Conversion-based exclusions |
-| 34 | MNTN Pageview | Real-time | NO | — | Page view-based exclusions |
+| 34 | MNTN Pageview | Real-time | NO | — | Page view-based exclusions. **Near-duplicate DS355420 "MNTN PageView" exists in the high-ID range — pixel team to confirm whether DS34 is being deprecated.** |
+| 35 | LiveRamp IP | Bought 3P interest | YES (104M rows/day) | — | Current LiveRamp. IPs delivered directly (vs DS11 legacy device_id→IP mapping). Dominant 3P by volume. |
+| 38 | MNTN UI Audience Keywords (BUK) | Queued MM signal | — | — | **Feature being rolled out, not yet active** (Sean Yang, TI team, 2026-05-29). 52.7M categories already loaded. When live, expected to update / replace the current DS19 keywords system. |
 | 42 | — | — | — | — | Blocked in MES |
 
 ### 1P / 3P / MM definitions (per Victor Savitskiy, 2026-05-28)
@@ -728,7 +733,7 @@ The 1P / 3P / MM distinction is about **who provided the data**, and which of th
 |---|---|---|---|---|---|
 | **1P** | Customer/account data the advertiser uploaded | The advertiser | Retarget known customers | DS4 CRM, DS8 IP List, DS47 CRM Identity Graph | **No** |
 | **3P** | Behavioral / interest segments bought from external data providers | External 3P vendor | Prospect against described interests | DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp IP | **No** |
-| **MM** (Mountain Match) | MNTN's targeting product — IPs scored by MNTN's models using verticals, keywords, behavioral signals | MNTN | Prospect via MNTN-derived per-IP quality | DS13 Vertical Categorization, DS38 BUK / UI Audience Keywords, DS46 ML Audience Intent (Fangorn). **RTC (DS19) is a SEPARATE scoring system** (binary `realtime_conquest_score` for recent-site visitors), likely not part of MM — confirm with Victor. | **Yes** — produces `household_score` |
+| **MM** (Mountain Match) | MNTN's targeting product — IPs scored by MNTN's models using verticals, keywords, behavioral signals | MNTN | Prospect via MNTN-derived per-IP quality | DS13 Vertical Categorization, DS19 MNTN Matched (keywords), DS38 BUK / UI Audience Keywords (queued — will update/replace DS19 when live), DS46 ML Audience Intent (Fangorn). **RTC and MM are the same scoring system** — per Sean Yang (TI team, 2026-05-29) RTC is the real-time variant that fires within an hour; the main scorer catches up after and produces the same result. `realtime_conquest_score` is the hot-path output of the same MM logic, not a separate scorer. | **Yes** — produces `household_score` |
 
 **Empirical layering** (TI-999, 30d window ending 2026-05-28):
 - **72% of 3P-only campaigns also use an MM signal in their expression**; those drive 83% of 3P-only impressions/spend.
