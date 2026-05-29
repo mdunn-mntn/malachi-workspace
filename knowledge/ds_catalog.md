@@ -1,21 +1,32 @@
 # MNTN Data Source (DS) Catalog — Canonical Reference
 
-**Source of truth:** `bronze.integrationprod.data_sources` (62 canonical type=1 DSes plus per-advertiser type=2 instances).
-**Last audited:** 2026-05-29 (TI-999 Finding 15 / Pass 16 DS audit).
-**Empirical usage:** 30-day window 2026-04-29 → 2026-05-28, prospecting only (objective_id IN 1,5,6), 11,864 campaigns / $31.96M.
+**Source of truth:** `bronze.integrationprod.data_sources` (62 canonical type=1 DSes plus per-advertiser type=2 instances) + `bronze.tpa.categories` for per-DS category semantics.
+**Last audited:** 2026-05-29 (TI-999 Finding 15 / Passes 16-17 DS audit + tpa.categories cross-check).
+**Empirical usage:** 30-day window 2026-04-29 → 2026-05-28, prospecting only (objective_id IN 1,5,6), 11,909 campaigns / $32.10M.
 
-## Family taxonomy
+## Family taxonomy (CORRECTED after tpa.categories cross-check)
 
 The 17 actively-used DSes group into four families:
 
 | Family | DSes | Buyer-selectable? | Functional role |
 |---|---|:-:|---|
-| **MM** (MNTN-derived audience targeting) | DS13, DS14, DS16, DS19, DS38*, DS46 | Yes (DS14 is the de-facto default) | Prospecting via MNTN's quality models |
+| **MM** (MNTN-derived audience targeting) | DS13, DS19, DS38\*, DS46 | Yes | Prospecting via MNTN audience signals |
 | **List Retargeting** (a.k.a. "1P" in tables) | DS4, DS8, DS47 | Yes (positive = retargeting; negative = CRM suppression in prospecting) | Re-engage / suppress known customers |
-| **3P interest segments** (bought) | DS17, DS18, DS35, possibly DS1 | Yes | Prospecting via described interests |
+| **3P interest segments** (bought) | DS1\*\*, DS17, DS18, DS35 | Yes | Prospecting via described interests |
 | **Pixel-derived / auto-attached** | DS2, DS21, DS34, DS43 | No (used as auto-exclusion clauses) | Past-visitor / converter suppression |
+| **Bid routing + internal taxonomy** (NOT a targeting family) | DS14, DS16 | Required by bidder mechanics, not buyer audience picks | Bid routing (DS14) + per-advertiser/internal event tags (DS16) |
 
 \* DS38 (BUK) is in the MM family conceptually but is empirically UNUSED in active prospecting (0 positive, 0 negative).
+\*\* DS1 (Oracle) included in 3P per user direction 2026-05-29 despite "zero IPDSC volume" memory note. Used positively in 553 prospecting campaigns / $5.97M / 30d. Open question whether the bidder delivers against Oracle clauses — pending Pass-7-style ceiling check.
+
+## DS14 / DS16 reclassification (correction from earlier passes)
+
+Earlier passes (10-15) called DS14 "MNTN Global Data" and DS16 "MNTN Taxonomy Data" and treated them as part of MM because their names suggested audience targeting. After querying `tpa.categories`:
+
+- **DS14 categories** are bid routing destinations (id=1 "Beeswax Bidder", id=150 "Magnite", id=152 "Index Exchange", id=1000 "IP Ends In .0"). Not audience targeting.
+- **DS16 categories** are per-advertiser identifiers (id=1 "AdvertiserID - Eat Clean Bro") plus MNTN-internal event taxonomy (id=2 "PageViews", id=3 "Conversions", id=5 "Prospecting", id=6 "Retargeting", id=7 "MultiTouch", id=8 "VV"). Not audience targeting.
+
+Both DS14 and DS16 appear in almost every campaign because they encode bid-side plumbing, not buyer-selected audience choices. They are NOT MM.
 
 ## Per-DS detail (canonical 0-61, ordered by ID)
 
@@ -92,12 +103,33 @@ The 17 actively-used DSes group into four families:
 3. **DS14 universal use:** 11,888 of 11,864 prospecting campaigns reference DS14 (essentially 100%). Is DS14 auto-attached at campaign creation, or is the buyer explicitly picking it? Behaves like a default.
 4. **DS2 (MNTN First Party) vs DS21/34 (pixel) overlap:** all three are MNTN-pixel-derived. What's the functional difference?
 
-## Naming convention recommendation (for the deck / future analyses)
+## Naming convention (CORRECTED — for deck / future analyses)
 
-- **MM** = `{DS13, DS14, DS16, DS19, DS46}` (drop DS38 from the active set since zero usage)
-- **List Retargeting (1P)** = `{DS4, DS8, DS47}` (positive use only DS4; DS8/DS47 are exclusion-only)
-- **3P interest** = `{DS17, DS18, DS35}` (canonical) + possibly DS1 Oracle pending delivery verification
+- **MM** = `{DS13, DS19, DS38, DS46}` (DS38 kept conceptually despite zero current usage)
+- **List Retargeting (1P)** = `{DS4, DS8, DS47}` (positive use only DS4; DS8/DS47 are exclusion-only in prospecting)
+- **3P interest** = `{DS1, DS17, DS18, DS35}` (DS1 Oracle included pending delivery verification)
 - **Pixel exclusions** = `{DS2, DS21, DS34, DS43}` (auto-attached, used only in negative clauses)
+- **Bid routing + internal taxonomy** = `{DS14, DS16}` (NOT in family taxonomy — these are bid-side mechanics, not buyer audience picks)
+
+## Pass 17 bucket results (CORRECTED MM, prospecting only)
+
+| Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
+|---|---:|---:|---:|---:|---:|
+| nothing (no MM/1P/3P targeting clauses) | 7,619 | 64.1% | $5.06M | 15.8% | $61M |
+| MM only | 1,119 | 9.4% | $5.51M | 17.2% | $66M |
+| 1P only | 486 | 4.1% | $1.22M | 3.8% | $15M |
+| 3P only | 488 | 4.1% | $1.63M | 5.1% | $20M |
+| **MM + 3P** | **1,208** | **10.2%** | **$7.75M** | **24.1%** | **$93M** |
+| MM + 1P | 511 | 4.3% | $4.51M | 14.0% | $54M |
+| 1P + 3P (no MM) | 97 | 0.8% | $2.53M | 7.9% | $30M |
+| MM + 1P + 3P | 361 | 3.0% | $3.89M | 12.1% | $47M |
+| **Total prospecting** | **11,909** | 100% | **$32.10M** | 100% | **$385M** |
+
+**Read:**
+- MM + 3P is the biggest single bucket by spend ($7.75M / 24.1% / ~$93M annualized) — the canonical prospecting-with-interest-segments cohort.
+- 3P-touching: 2,154 camps / 18.1% / $15.81M / 49.2% of prospecting spend (~$190M annualized).
+- MM-touching: 3,199 camps / 26.9% / $21.66M / 67.5%.
+- "Nothing" bucket (64% camps / 16% spend) = small prospecting campaigns using DS19 RTC score block + geo + pixel exclusions only. Avg $664/camp.
 
 ## Related references
 
