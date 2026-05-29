@@ -17,7 +17,13 @@ from openpyxl.utils import get_column_letter
 WORKSPACE = Path(__file__).resolve().parents[3]
 OUTPUTS = WORKSPACE / "tickets/ti_999_interest_segment_sizing/outputs"
 SRC_CSV = OUTPUTS / "ti_999_ds_with_categories_2026_05_29.csv"
-PASS18_CSV = OUTPUTS / "ti_999_pass18_buckets_2026_05_29.csv"
+PASS_CSV = OUTPUTS / "ti_999_pass19_buckets_2026_05_29.csv"
+PASS_LABEL = "Pass 19"
+PASS_NOTE = (
+    "Axes: MM {13,19,38,46} ∪ score_type=rtc · MNTN Select {9,42} · "
+    "3P {17,18,35} (Oracle carved out) · Advertiser CRM {4,8,47}. "
+    "RTC folded into MM per Sean Yang 2026-05-29 (RTC = MM real-time variant)."
+)
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -222,25 +228,27 @@ def write_group_summary_sheet(wb: Workbook, rows: list[dict]) -> None:
     ws.freeze_panes = "A4"
 
 
-def write_pass18_sheet(wb: Workbook) -> None:
-    if not PASS18_CSV.exists():
+def write_pass_sheet(wb: Workbook) -> None:
+    if not PASS_CSV.exists():
         return
-    ws = wb.create_sheet("Pass 18 buckets")
+    ws = wb.create_sheet(f"{PASS_LABEL} buckets")
 
-    ws.cell(row=1, column=1, value="Pass 18 audience-bucket results (30d prospecting, 2026-04-29 to 2026-05-28)").font = TITLE_FONT
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=7)
+    ws.cell(row=1, column=1, value=f"{PASS_LABEL} audience-bucket results (30d prospecting, 2026-04-29 to 2026-05-28)").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=10)
 
-    note = "Axes: MM {13,19,38,46} · MNTN Select {9,42} · 3P {17,18,35} (Oracle carved out) · Advertiser CRM {4,8,47}"
-    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=7)
+    ws.cell(row=2, column=1, value=PASS_NOTE).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=10)
+    ws.row_dimensions[2].height = 32
 
-    headers = ["Bucket", "n_campaigns", "% campaigns", "n_advertisers", "Spend (30d, $M)", "% spend", "Annualized ($M)"]
+    headers = ["Bucket", "n_campaigns", "% campaigns", "n_advertisers", "Spend (30d, $M)", "% spend", "Annualized ($M)", "MM batch-only", "MM RTC-only", "MM batch + RTC"]
     for col_idx, h in enumerate(headers, start=1):
         c = ws.cell(row=4, column=col_idx, value=h)
         c.fill = HEADER_FILL
         c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 30
 
-    with PASS18_CSV.open() as f:
+    with PASS_CSV.open() as f:
         reader = csv.DictReader(f)
         row_i = 5
         for r in reader:
@@ -251,9 +259,12 @@ def write_pass18_sheet(wb: Workbook) -> None:
             ws.cell(row=row_i, column=5, value=to_float(r["spend_30d_M"])).number_format = '"$"#,##0.000'
             ws.cell(row=row_i, column=6, value=to_float(r["pct_spend"])).number_format = "0.0"
             ws.cell(row=row_i, column=7, value=to_float(r["spend_annualized_M"])).number_format = '"$"#,##0.0'
+            ws.cell(row=row_i, column=8, value=to_int(r.get("n_mm_batch_only", 0))).number_format = "#,##0"
+            ws.cell(row=row_i, column=9, value=to_int(r.get("n_mm_rtc_only", 0))).number_format = "#,##0"
+            ws.cell(row=row_i, column=10, value=to_int(r.get("n_mm_batch_and_rtc", 0))).number_format = "#,##0"
             row_i += 1
 
-    for col_idx, w in enumerate([28, 14, 14, 16, 18, 12, 18], start=1):
+    for col_idx, w in enumerate([28, 14, 14, 16, 18, 12, 18, 16, 16, 18], start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = w
     ws.freeze_panes = "A5"
 
@@ -263,7 +274,7 @@ def main() -> None:
     wb = Workbook()
     write_taxonomy_sheet(wb, rows)
     write_group_summary_sheet(wb, rows)
-    write_pass18_sheet(wb)
+    write_pass_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
     print(f"Wrote {OUT_XLSX} ({OUT_XLSX.stat().st_size} bytes)")

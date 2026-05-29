@@ -245,41 +245,48 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 6. **DS9 MNTN Audiences canonical name + scope:** is "MNTN Audiences" the right umbrella, or does the platform team call this layer something specific (e.g., "MNTN Select Audiences")? Currently used by only 6 advertisers — is it intended to broaden beyond Select customers? Sean asking.
 7. **Mobile-attribution outliers (DS328493 Adjust / DS328494 AppsFlyer / DS328495 Branch / DS328496 Kochava / DS328497 Singular):** all six high-ID type=1 DSes have zero TPA-expression use. Do they show up anywhere else (e.g., MMP integration via core tables, attribution reports)? Out-of-scope for prospecting but worth confirming they're not silently feeding something downstream.
 
-## Pass 18 bucket results — current locked taxonomy
+## Pass 19 bucket results — current locked taxonomy (RTC folded into MM)
 
-Supersedes Pass 17. Two changes vs Pass 17:
-- **MNTN Select** added as a 4th audience axis (group `{DS9, DS42}`).
-- **DS1 Oracle removed from 3P** (Sean Yang confirmed Oracle is no longer in IPDSC → dead-weight clauses).
+Supersedes Pass 18. One change vs Pass 18:
+- **`score_type=rtc` in the expression now counts as MM.** Per Sean Yang (2026-05-29), RTC is the real-time variant of the MM scoring engine — same system, hot-path that fires within ~1hr for recent-site-visitor signal. The bucket math now treats `MM-touching = any MM-DS reference OR any `score_type=rtc` flag in the expression`.
 
-Axes: MM `{13,19,38,46}` · MNTN Select `{9,42}` · 3P `{17,18,35}` · Advertiser CRM `{4,8,47}`. "Any signal" = positive OR negative polarity.
+Axes: MM `{13,19,38,46}` ∪ `{score_type=rtc}` · MNTN Select `{9,42}` · 3P `{17,18,35}` · Advertiser CRM `{4,8,47}`. "Any signal" = positive OR negative DS reference, or (for MM) the RTC flag at the expression top level.
 
-Query: `tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass18_select_axis_oracle_carved.sql`
-Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass18_buckets_2026_05_29.csv`
+Query: `tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass19_rtc_in_mm.sql`
+Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass19_buckets_2026_05_29.csv`
 
 | Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
 |---|---:|---:|---:|---:|---:|
-| nothing (no audience signals) | 7,663 | 64.5% | $5.25M | 16.4% | $63M |
-| MM only | 1,194 | 10.0% | $6.02M | 18.7% | $72M |
-| **MM + 3P** | **1,133** | **9.5%** | **$7.25M** | **22.6%** | **$87M** |
-| MM + Advertiser CRM | 566 | 4.8% | $5.08M | 15.8% | $61M |
-| Advertiser CRM only | 480 | 4.0% | $1.07M | 3.3% | $13M |
-| 3P only | 439 | 3.7% | $1.41M | 4.4% | $17M |
-| MM + Advertiser CRM + 3P | 306 | 2.6% | $3.32M | 10.3% | $40M |
-| Advertiser CRM + 3P (no MM) | 96 | 0.8% | $2.51M | 7.8% | $30M |
-| MNTN Select + Advertiser CRM | 7 | 0.1% | $0.17M | 0.5% | $2M |
-| MNTN Select only | 5 | 0.0% | $0.03M | 0.1% | $0M |
+| **MM only** (incl. RTC-only) | **8,853** | **74.5%** | **$11.26M** | **35.1%** | **$135M** |
+| **MM + 3P** | **1,572** | **13.2%** | **$8.66M** | **27.0%** | **$104M** |
+| MM + Advertiser CRM | 1,044 | 8.8% | $6.15M | 19.1% | $74M |
+| MM + 3P + Advertiser CRM | 402 | 3.4% | $5.83M | 18.2% | $70M |
+| MM + MNTN Select + CRM | 5 | 0.0% | $0.17M | 0.5% | $2M |
+| MM + MNTN Select | 2 | 0.0% | $0.02M | 0.1% | $0M |
+| MNTN Select only | 3 | 0.0% | $0.01M | 0.0% | $0M |
+| MNTN Select + CRM | 2 | 0.0% | $0.00M | 0.0% | $0M |
+| Advertiser CRM only | 2 | 0.0% | $0.00M | 0.0% | $0M |
+| nothing (truly bare: no MM, no RTC, no 3P, no CRM, no Select) | 4 | 0.0% | $0.01M | 0.0% | $0M |
 | **Total prospecting** | **11,889** | 100% | **$32.10M** | 100% | **$385M** |
 
 **Read:**
-- **MM + 3P remains the biggest single audience-driven bucket** ($7.25M / 22.6% / $87M annualized) — slightly smaller than Pass 17 ($7.75M) because Oracle-only clauses no longer count as 3P.
-- **3P-touching (post-Oracle-carve-out): 1,974 camps / $14.49M / 45.1% of prospecting spend** ($174M annualized). Drops ~$1.3M vs Pass 17's "3P-touching $15.81M / 49.2%" — the carved Oracle volume rebucketed into MM-only / nothing.
-- **MM-touching: 3,199 camps / 26.9% / $21.67M / 67.5%** (essentially unchanged vs Pass 17; Oracle wasn't in MM).
-- **MNTN Select is microscopic: 12 camps / $0.20M / 0.6% of spend / $2.4M annualized.** Only 5 advertisers total. Notably **Select never co-occurs with MM or 3P** in the audience expression — it's exclusively used as standalone retargeting (5 camps) or with Advertiser CRM (7 camps). All 6 buckets containing both Select and (MM or 3P) are empty.
-- "Nothing" bucket (64.5% camps / 16.4% spend) — small prospecting campaigns relying on DS19 RTC score block + geo + MNTN Pixel exclusions only. Avg $686/camp.
+- **MM-touching now covers ~99.9% of prospecting spend** (11,878 camps / $32.09M). Once RTC is correctly bucketed as MM-real-time, essentially every MNTN prospecting campaign uses MM in some form. Only 4 campaigns / $14K are truly non-MM.
+- **3P-touching: 1,974 camps / $14.49M / 45.1%** (unchanged vs Pass 18).
+- **CRM-touching: 1,453 camps / $12.15M / 37.9%** — mostly hygiene exclusions (78% of CRM-touching campaigns reference CRM only as a negative clause; only 16% are CRM-include / look-alike-style). Per Zach Schoenberger (2026-04-30), CRM lists are usable only in prospecting (not retargeting), so CRM-include is intentional design, not a retargeting workaround.
+- **MNTN Select: 12 camps / $0.20M / 0.6%** (unchanged in totals, slight reshuffling: 7 of the 12 also use RTC, so they sit inside MM-touching buckets now).
+- **RTC-only is the dominant MM pattern.** Within the 11,878 MM-touching campaigns:
+  - 8,679 (73%) are RTC-only — no batch MM DS reference (DS13/19/38/46), just `score_type=rtc`
+  - 3,193 (27%) use both batch MM DSes and RTC
+  - 6 use batch MM DSes without RTC (rare)
+  - **Takeaway: MNTN prospecting overwhelmingly leans on the MM real-time / recent-visitor pathway. Buyer-picked DS13 verticals and DS19 keywords are present in ~27% of MM-touching campaigns, but the dominant signal is RTC.**
+
+### Pass 18 historical (superseded — kept for reference)
+
+Pass 18 treated RTC as outside MM. Under that framing the "nothing" bucket (RTC-only campaigns) accounted for 7,663 campaigns / $5.25M / 16.4% of spend, and MM-touching was 3,199 camps / $21.67M / 67.5%. Pass 19 corrects this by folding RTC into MM per Sean Yang's clarification.
 
 ### Pass 17 historical (superseded — kept for reference)
 
-The earlier Pass 17 run treated Oracle as 3P and had no Select axis. Headline numbers were: 3P-touching = 2,154 camps / $15.81M (49.2%); MM-touching = 3,199 camps / $21.66M (67.5%); MM+3P = 1,208 camps / $7.75M.
+Pass 17 treated Oracle as 3P and had no Select axis. Headline numbers were: 3P-touching = 2,154 camps / $15.81M (49.2%); MM-touching = 3,199 camps / $21.66M (67.5%); MM+3P = 1,208 camps / $7.75M.
 
 ## Related references
 
