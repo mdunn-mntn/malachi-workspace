@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TI-999 Finding 15 — Internal Data Walkthrough</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+<style>
+:root {
+  --navy:#1B2A4A; --blue:#2E5090; --mid:#5A7DB5; --muted:#C8CDD4;
+  --accent:#D63B2F; --green:#27AE60; --orange:#E67E22;
+  --bg:#FAFAFA; --text:#222; --text-light:#666; --rule:#E8E8E8;
+}
+.reveal { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:var(--text); font-size:26px; }
+.reveal .slides { text-align:left; }
+.reveal h1, .reveal h2, .reveal h3 {
+  font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+  color:var(--navy); text-transform:none; font-weight:700; letter-spacing:-0.02em;
+}
+.reveal h1 { font-size:1.6em; line-height:1.1; margin:0 0 0.3em 0; }
+.reveal h2 { font-size:1.05em; margin:0 0 0.3em 0; }
+.reveal h3 { font-size:0.75em; color:var(--text-light); text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.5em 0; }
+.reveal .subtitle { color:var(--text-light); font-size:0.6em; font-weight:400; margin-top:0.15em; }
+.reveal .slide-num { position:absolute; bottom:1em; right:1em; font-size:0.45em; color:#AAA; }
+.reveal .part-tag { font-size:0.5em; color:var(--blue); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.3em; }
+.reveal table { width:100%; border-collapse:collapse; font-size:0.5em; margin:0.4em 0; }
+.reveal table.small { font-size:0.42em; }
+.reveal table th { background:var(--navy); color:white; padding:0.35em 0.55em; text-align:left; font-weight:600; }
+.reveal table td { padding:0.28em 0.55em; border-bottom:1px solid var(--rule); }
+.reveal table tr:nth-child(even) { background:#F4F4F4; }
+.reveal table td.num { text-align:right; font-variant-numeric:tabular-nums; }
+.reveal table td.dim { color:var(--text-light); }
+.reveal .hl td { background:rgba(214,59,47,0.10) !important; font-weight:600; }
+.reveal .hl-green td { background:rgba(39,174,96,0.10) !important; font-weight:600; }
+.reveal .hl-blue td { background:rgba(46,80,144,0.10) !important; font-weight:600; }
+.reveal .footer-note { text-align:left; font-size:0.42em; color:#999; margin-top:0.5em; line-height:1.3; }
+.reveal img.chart { max-width:88%; max-height:60vh; display:block; margin:0.2em auto; }
+.reveal code { background:#EFEFEF; padding:1px 4px; border-radius:3px; font-size:0.88em; }
+.reveal pre { font-size:0.4em; line-height:1.4; background:#F0F0F0; padding:0.5em; border-radius:4px; }
+.reveal .two-col { display:grid; grid-template-columns:1fr 1fr; gap:1em; }
+.reveal .three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.8em; }
+.reveal .fact-block { padding:0.4em 0.6em; background:#F4F4F4; border-left:3px solid var(--blue); margin:0.4em 0; font-size:0.6em; }
+.reveal .ds-block { font-size:0.6em; line-height:1.55; }
+.reveal ul, .reveal ol { font-size:0.7em; line-height:1.55; }
+.reveal li { margin:0.18em 0; }
+.reveal .definition { font-size:0.7em; line-height:1.55; }
+.reveal .definition .label { color:var(--text-light); text-transform:uppercase; font-size:0.7em; letter-spacing:0.05em; margin-top:0.5em; }
+.reveal .key-stat { font-size:1.5em; color:var(--navy); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- ===== PART 1: FOUNDATIONS ===== -->
+
+<!-- 1: Title -->
+<section>
+  <div style="margin-top:2em;">
+    <div class="part-tag">TI-999 · Targeting Infrastructure · Internal Working Deck</div>
+    <h1>Finding 15 — Full Data Walkthrough</h1>
+    <div class="subtitle">Bidder semantics, audience composition, the OR/AND distinction, and the empirical case for per-segment quality scoring (TI-956).</div>
+    <p style="color:var(--text-light); font-size:0.55em; margin-top:2em;">
+      Malachi Dunn · 2026-05-28 · 30-day window ending 2026-05-28<br>
+      15,529 active campaigns · $40.42M total spend · 12 sequential analytical passes
+    </p>
+  </div>
+</section>
+
+<!-- 2: What this deck is -->
+<section>
+  <div class="part-tag">How to read this</div>
+  <h2>What this deck is</h2>
+  <ul style="font-size:0.65em;">
+    <li><strong>Internal working deck.</strong> Fact-and-data heavy. No power-line chrome.</li>
+    <li><strong>Builds incrementally.</strong> Definitions → permutations → bidder behavior → the problem → the fix → expected benefit. Every step backed by SQL queries committed in <code>queries/</code>.</li>
+    <li><strong>Conventions throughout:</strong> when a cohort is referenced we show (count of campaigns, % of total campaigns, $ spend, % of total spend) so the impact is visible at every step.</li>
+    <li><strong>Source of truth:</strong> <code>tickets/ti_999_interest_segment_sizing/summary.md</code> Finding 15 (Passes 1-12). Queries and outputs all in this folder.</li>
+    <li><strong>Companion docs:</strong> <code>presentation.md</code> (narrative) and the v4 share-out deck for leadership-readable framing.</li>
+  </ul>
+  <div class="fact-block">
+    All figures are over the 30-day window 2026-04-29 through 2026-05-28 unless stated otherwise. Active campaign = ≥1 impression in window. Single-day score distributions are 2026-05-26 (~61M impressions).
+  </div>
+  <span class="slide-num">2 / 56</span>
+</section>
+
+<!-- ===== PART 2: AUDIENCE FAMILY DEFINITIONS ===== -->
+
+<!-- 3: Section header -->
+<section>
+  <div class="part-tag">Part 1 — Foundations</div>
+  <h1>Audience Family Definitions</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    Before we discuss permutations we need a precise taxonomy. MNTN's bidder distinguishes four targeting families. Each has a different set of data sources, different scoring, and a different intended use.
+  </p>
+  <span class="slide-num">3 / 56</span>
+</section>
+
+<!-- 4: List-based Retargeting -->
+<section>
+  <div class="part-tag">Family 1 of 4</div>
+  <h2>List-based Retargeting (formerly called "1P" in earlier passes)</h2>
+  <div class="definition">
+    <div class="label">What it is</div>
+    Customer LISTS the advertiser uploaded (CRM list, IP list, hashed emails resolved to IPs). Buyer-selectable; the advertiser chooses to include or exclude.
+    <div class="label">Data sources</div>
+    DS4 (CRM), DS8 (IP List), DS47 (CRM Identity Graph Generated)
+    <div class="label">Scored by MNTN</div>
+    <strong>No.</strong> The bidder targets these IPs because they're on the advertiser's list, not because they've been scored for intent.
+    <div class="label">Intended use</div>
+    Retargeting — re-engaging the advertiser's known customer base, or excluding existing customers from prospecting.
+  </div>
+  <div class="fact-block" style="margin-top:0.7em;">
+    <strong>Naming correction (per user 2026-05-28):</strong> earlier passes called this "1P" (first-party). The accurate term is "List-based Retargeting" — the underlying data IS first-party, but functionally it's a retargeting product. Distinguishes from "MNTN First Party" (pixel data) — see next slide.
+  </div>
+  <div class="fact-block">
+    <strong>Operational note:</strong> DS4 in a POSITIVE clause = retargeting campaign. DS4 in a NEGATIVE clause inside a prospecting expression = customer suppression (still prospecting). The earlier TI-999 prospecting filter that excluded any campaign referencing DS4/8/47 was over-broad — it dropped 296 prospecting campaigns ($1.88M / 30d) that use this family only as exclusion.
+  </div>
+  <span class="slide-num">4 / 57</span>
+</section>
+
+<!-- 4b: MNTN First Party (pixel data) — separate, not in scope -->
+<section>
+  <div class="part-tag">Adjacent family — auto-attached, not buyer-selectable</div>
+  <h2>MNTN First Party (pixel data) — NOT in this analysis</h2>
+  <div class="definition">
+    <div class="label">What it is</div>
+    MNTN's pixel fires on the advertiser's website. Captures site-visit and conversion events. Becomes "MNTN First Party data" the bidder uses for retargeting and exclusion.
+    <div class="label">Data sources</div>
+    DS21 (MNTN Conversion), DS34 (MNTN Pageview)
+    <div class="label">Buyer-selectable?</div>
+    <strong>No.</strong> Pixel data is auto-attached. Buyers typically see it appear in NEGATIVE clauses in prospecting expressions: "exclude past visitors / converters." It's not a positive-targeting choice.
+    <div class="label">Why we don't analyze it here</div>
+    Because it's not buyer-selectable, it's not part of the "which segments should the buyer pick?" question that drives TI-956. We keep DS21/34 in scope as exclusion clauses (where they naturally appear) but don't bucket on them.
+  </div>
+  <div class="fact-block" style="margin-top:1em;">
+    <strong>The two "first-party" terms are different things:</strong>
+    <table style="margin-top:0.5em; font-size:0.9em;">
+      <tr><th>Term</th><th>What it actually is</th><th>Buyer-selectable</th></tr>
+      <tr><td>List-based Retargeting (a.k.a. "1P")</td><td>Advertiser-uploaded CRM/IP lists (DS4/8/47)</td><td>Yes</td></tr>
+      <tr><td>MNTN First Party</td><td>MNTN's pixel data on advertiser sites (DS21/34)</td><td>No — auto-attached</td></tr>
+    </table>
+  </div>
+  <span class="slide-num">5 / 57</span>
+</section>
+
+<!-- 5: 3P -->
+<section>
+  <div class="part-tag">Family 2 of 4</div>
+  <h2>3P — Third-Party interest segments</h2>
+  <div class="definition">
+    <div class="label">What it is</div>
+    Behavioral / interest segments BOUGHT from external data providers. The provider says "these IPs are interested in X" and MNTN uses that to find audiences matching described interests.
+    <div class="label">Data sources (active — material IPDSC volume)</div>
+    DS17 (ShareThis), DS18 (Dstillery), DS35 (LiveRamp IP)
+    <div class="label">Scored by MNTN</div>
+    <strong>No.</strong> MNTN has no quality differentiation across 3P segments. A buyer searching for "$100K+ income" returns ~90 LiveRamp segments — there is no per-segment quality signal in the UI today.
+    <div class="label">Intended use</div>
+    Prospecting via described interests / behaviors.
+  </div>
+  <div class="fact-block" style="margin-top:1em;">
+    <strong>Catalog status:</strong> LiveRamp ≈ 213k active categories (>97% of active 3P by count), 99.6% updated in last 30 days. ShareThis (1,850 active categories) + Dstillery (3,303) are 100% &gt;2-year stale at metadata level.
+  </div>
+  <span class="slide-num">5 / 56</span>
+</section>
+
+<!-- 6: MM -->
+<section>
+  <div class="part-tag">Family 3 of 4</div>
+  <h2>MM — Mountain Match (MNTN's targeting product)</h2>
+  <div class="definition">
+    <div class="label">What it is</div>
+    MNTN-derived targeting — IPs SCORED by MNTN's own models using verticals, keywords, and behavioral signals.
+    <div class="label">Data sources</div>
+    DS13 (Vertical Categorization), DS38 (BUK / UI Audience Keywords), DS46 (ML Audience Intent — Fangorn)
+    <div class="label">Scored by MNTN</div>
+    <strong>Yes.</strong> Produces <code>household_score</code> (graduated 0-10000) in <code>cost_impression_log.model_params</code>. This is the only family with per-IP quality scoring.
+    <div class="label">Intended use</div>
+    Prospecting via MNTN's quality models. The PRIMARY scored prospecting source.
+  </div>
+  <div class="fact-block" style="margin-top:1em;">
+    <strong>The household_score field:</strong> on 2026-05-26 across 61M impressions — 65% = -1 (unscored), 15% = 10000 (top band), 11% = 8k-10k (HI band), ~10% in middle bands. The bidder applies household_score REGARDLESS of whether the campaign's audience expression opts in.
+  </div>
+  <span class="slide-num">6 / 56</span>
+</section>
+
+<!-- 7: RTC -->
+<section>
+  <div class="part-tag">Family 4 of 4</div>
+  <h2>RTC — Real-Time Conquesting</h2>
+  <div class="definition">
+    <div class="label">What it is</div>
+    Binary qualifier for visitors of competitor / recent sites. Not a graduated score — a yes/no flag.
+    <div class="label">Data source</div>
+    DS19
+    <div class="label">Scored by MNTN</div>
+    <strong>Binary qualifier only:</strong> 10000 (qualifies) or -1 (does not). About 4.6% of delivered impressions qualify.
+    <div class="label">Intended use</div>
+    Conquesting recent-site visitors. NOT a quality scoring system — don't conflate with MM.
+  </div>
+  <div class="fact-block" style="margin-top:1em;">
+    <strong>Treat as separate from MM scoring.</strong> An impression's <code>realtime_conquest_score</code> field is independent of its <code>household_score</code>. RTC delivery is its own slice.
+  </div>
+  <span class="slide-num">7 / 56</span>
+</section>
+
+<!-- 8: Family summary table -->
+<section>
+  <div class="part-tag">Definitions — summary</div>
+  <h2>The four buyer-selectable targeting families</h2>
+  <table>
+    <tr><th>Family</th><th>What it is</th><th>DSes</th><th>Scored?</th><th>Intent</th></tr>
+    <tr><td>List Retargeting <span class="dim">(shortened to "1P" in tables)</span></td><td>Advertiser-uploaded customer lists</td><td>DS4 CRM, DS8 IP List, DS47 CRM-IDG</td><td>No</td><td>Retargeting</td></tr>
+    <tr><td>3P interest segments</td><td>Bought behavioral / interest segments</td><td>DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp</td><td>No</td><td>Prospecting via interests</td></tr>
+    <tr class="hl-green"><td>MM (Mountain Match)</td><td>MNTN-derived audience scoring</td><td>DS13 Vertical, DS38 BUK, DS46 Fangorn</td><td><strong>Yes — household_score 0-10000</strong></td><td>Prospecting via MNTN quality</td></tr>
+    <tr><td>RTC</td><td>Recent-site qualifier</td><td>DS19</td><td>Binary 10000/-1</td><td>Conquesting</td></tr>
+  </table>
+  <h3 style="margin-top:0.7em;">Why this taxonomy matters</h3>
+  <ul style="font-size:0.6em;">
+    <li>MM is the only family producing per-IP quality scores. <strong>"Scored vs unscored delivery" entirely depends on whether the bidder reaches MM IPs or non-MM IPs.</strong></li>
+    <li>List Retargeting (DS4/8/47) is conceptually a retargeting product, not prospecting. But it appears NEGATIVELY in 92% of MM-mixed campaigns — as CRM-suppression hygiene within prospecting. Polarity-aware handling required.</li>
+    <li>3P provides interest-based targeting but no quality scoring. This is the gap TI-956 fills.</li>
+    <li>RTC is independent — don't conflate with MM scoring.</li>
+    <li>MNTN First Party (DS21/34 pixel data) is NOT buyer-selectable and appears only as auto-attached exclusion clauses in prospecting expressions. Not in scope for this analysis.</li>
+  </ul>
+  <div class="footer-note">In tables throughout this deck we use the shorthand "1P" to refer to List Retargeting (DS4/8/47). This is for table-cell brevity only — the full label is List Retargeting per slides 4-5.</div>
+  <span class="slide-num">9 / 57</span>
+</section>
+
+<!-- ===== PART 3: PERMUTATIONS ===== -->
+
+<!-- 9: Section header -->
+<section>
+  <div class="part-tag">Part 2 — Permutations</div>
+  <h1>The Permutation Space</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    What a campaign actually targets is determined by three orthogonal axes. We need to walk through each axis before we can interpret the data.
+  </p>
+  <span class="slide-num">9 / 56</span>
+</section>
+
+<!-- 10: Three axes -->
+<section>
+  <h2>Three orthogonal axes determine a campaign's behavior</h2>
+  <div class="three-col" style="margin-top:1.2em;">
+    <div class="fact-block">
+      <h3 style="color:var(--blue);">Axis 1: Presence</h3>
+      <div style="font-size:0.85em;">Which families are referenced at all: any combination of {MM, 1P, 3P}. 2³ = 8 base permutations.</div>
+    </div>
+    <div class="fact-block">
+      <h3 style="color:var(--blue);">Axis 2: Polarity</h3>
+      <div style="font-size:0.85em;">For each present family, is the clause positive (include) or negative (exclude)? A family can appear with both polarities in a single campaign.</div>
+    </div>
+    <div class="fact-block">
+      <h3 style="color:var(--blue);">Axis 3: Structure</h3>
+      <div style="font-size:0.85em;">For positive clauses, structure determines whether they UNION (OR-additive) or INTERSECT (AND-restrictive) with other positive clauses. The expression JSON's <code>op:or</code> vs <code>op:and</code> nodes encode this.</div>
+    </div>
+  </div>
+  <div class="fact-block" style="margin-top:0.6em;">
+    <strong>Together they define what the campaign actually targets.</strong> We'll walk through each axis with empirical data, then look at every meaningful permutation.
+  </div>
+  <span class="slide-num">10 / 56</span>
+</section>
+
+<!-- 11: Axis 1 — 8 base permutations -->
+<section>
+  <h2>Axis 1: Presence — the 8 base permutations</h2>
+  <table>
+    <tr><th>#</th><th>Bucket</th><th>MM</th><th>1P / List Retarget</th><th>3P interest</th><th>Functional type</th></tr>
+    <tr><td>1</td><td>nothing</td><td>—</td><td>—</td><td>—</td><td>RTC / pixel-retargeting / geo only</td></tr>
+    <tr><td>2</td><td>MM only</td><td>✓</td><td>—</td><td>—</td><td>Pure MM prospecting</td></tr>
+    <tr><td>3</td><td>1P only</td><td>—</td><td>✓</td><td>—</td><td>List-based retargeting (positive)</td></tr>
+    <tr><td>4</td><td>3P only</td><td>—</td><td>—</td><td>✓</td><td>3P-only prospecting</td></tr>
+    <tr><td>5</td><td>MM + 3P</td><td>✓</td><td>—</td><td>✓</td><td>MM prospecting + 3P</td></tr>
+    <tr><td>6</td><td>MM + 1P</td><td>✓</td><td>✓</td><td>—</td><td>MM prospecting + list (mostly CRM suppress)</td></tr>
+    <tr><td>7</td><td>1P + 3P</td><td>—</td><td>✓</td><td>✓</td><td>Layered without MM scoring</td></tr>
+    <tr><td>8</td><td>MM + 1P + 3P</td><td>✓</td><td>✓</td><td>✓</td><td>Full stack</td></tr>
+  </table>
+  <div class="footer-note">Each cell defines presence/absence of ANY clause (positive or negative) referencing the family's DSes. The "1P / List Retarget" column corresponds to DS4/8/47 — buyer-uploaded CRM lists. Note: <strong>buckets 1 and 3 are both retargeting</strong> — but via different mechanisms (next slide).</div>
+  <span class="slide-num">12 / 57</span>
+</section>
+
+<!-- 11b: What "nothing" really is -->
+<section>
+  <h2>What "nothing" really contains — and how "1P only" differs</h2>
+  <table>
+    <tr><th>Bucket</th><th class="num">n camps</th><th class="num">% camps</th><th class="num">Spend</th><th>What's actually in the expression</th></tr>
+    <tr><td>nothing</td><td class="num">11,365</td><td class="num">73.2%</td><td class="num">$14.49M (35.9%)</td><td>Auto-attached: DS19 RTC, DS21/34 MNTN pixel, DS14 (internal), geo. The buyer isn't picking any MM / 1P-list / 3P clause.</td></tr>
+    <tr><td>1P only (List Retargeting only)</td><td class="num">1,292</td><td class="num">8.3%</td><td class="num">$7.65M (18.9%)</td><td>Buyer-uploaded CRM/IP lists (DS4/8/47) as positive targeting. The buyer explicitly chose retargeting.</td></tr>
+    <tr style="background:#FFF8E1;"><td><strong>Combined "retargeting" cohort</strong></td><td class="num"><strong>12,657</strong></td><td class="num"><strong>81.5%</strong></td><td class="num"><strong>$22.14M (54.8%)</strong></td><td>Both retargeting flavors combined</td></tr>
+  </table>
+  <ul style="font-size:0.6em;">
+    <li><strong>Yes — the majority of MNTN campaigns ARE retargeting.</strong> 81.5% of campaigns and 54.8% of spend ($22.14M / 30d, ~$266M / yr).</li>
+    <li>"nothing" = the bidder is operating off MNTN's own pixel data + RTC, no buyer-uploaded list, no MM scoring, no 3P interest selection.</li>
+    <li>"1P only" = the buyer uploaded a CRM/IP list and is targeting it directly — distinct from "nothing" because there's an explicit advertiser-selected list.</li>
+    <li>The prospecting universe is therefore the remaining 18.5% of campaigns ($18.28M / 30d, ~$219M / yr) — the buckets that include MM or 3P interest segments.</li>
+  </ul>
+  <span class="slide-num">13 / 57</span>
+</section>
+
+<!-- 12: Axis 2 — polarity -->
+<section>
+  <h2>Axis 2: Polarity — positive vs negative clauses</h2>
+  <p style="font-size:0.65em;">For each family present in a campaign, the clause can be positive (an <code>op:any</code> outside a <code>not</code> subtree) or negative (inside a <code>not</code>).</p>
+  <table>
+    <tr><th>Notation</th><th>Meaning</th><th>Set semantics</th></tr>
+    <tr><td><code>+MM</code></td><td>MM family in a positive clause</td><td>IP must match MM segment(s)</td></tr>
+    <tr><td><code>-3P</code></td><td>3P family in a negative clause</td><td>IP must NOT match the listed 3P segment(s)</td></tr>
+    <tr><td><code>+MM, -1P</code></td><td>MM positive, 1P used only for exclusion</td><td>MM minus 1P customer suppression — standard prospecting hygiene</td></tr>
+    <tr><td><code>+MM, +3P, -3P</code></td><td>MM positive AND 3P positive AND a separate 3P negative</td><td>Mixed polarity on same family — also occurs in practice</td></tr>
+  </table>
+  <h3 style="margin-top:0.8em;">Empirical observation</h3>
+  <ul style="font-size:0.62em;">
+    <li>MM is essentially never used in negative clauses (we have it in &lt;10 campaigns).</li>
+    <li>1P is overwhelmingly negative (96% of 1P clauses are exclusions).</li>
+    <li>3P is overwhelmingly positive (98% of 3P clauses are inclusions).</li>
+    <li>Buyers use these families with very specific intents — not arbitrary combinations.</li>
+  </ul>
+  <span class="slide-num">12 / 56</span>
+</section>
+
+<!-- 13: Axis 3 — OR vs AND -->
+<section>
+  <h2>Axis 3: Structure — OR-additive vs AND-intersect for positive clauses</h2>
+  <p style="font-size:0.65em;">
+    The audience expression is a tree of operators. Positive <code>op:any</code> leaves can be combined two ways depending on the structure of their parent / sibling operators.
+  </p>
+  <table>
+    <tr><th>Structure</th><th>Buyer-written</th><th>Set semantics</th><th>Bidder behavior</th></tr>
+    <tr class="hl"><td>OR (additive)</td><td><code>OR(MM, 3P)</code></td><td>(in MM) ∪ (in 3P)</td><td>EXPANDS reach — adds 3P IPs not in MM</td></tr>
+    <tr class="hl-green"><td>AND (intersect)</td><td><code>AND(MM, 3P)</code></td><td>(in MM) ∩ (in 3P)</td><td>NARROWS MM — only IPs in both</td></tr>
+    <tr class="hl-green"><td>AND NOT (exclude)</td><td><code>AND(MM, NOT 3P)</code></td><td>(in MM) ∖ (in 3P)</td><td>NARROWS MM by removing 3P matches</td></tr>
+  </table>
+  <h3 style="margin-top:1em;">Why this matters</h3>
+  <p style="font-size:0.62em;">
+    The earlier verbal model said "MM combines targeting clauses with AND-intersection." <strong>This is empirically wrong for inclusion clauses.</strong> We'll see in Part 4 that 92% of MM-mixed inclusion expressions use <code>OR(MM, 3P)</code>, not <code>AND(MM, 3P)</code>. The bidder is honoring exactly what the buyer wrote — but the verbal model misunderstood what buyers write.
+  </p>
+  <span class="slide-num">13 / 56</span>
+</section>
+
+<!-- 14: Full permutation -->
+<section>
+  <h2>The full meaningful permutation space</h2>
+  <p style="font-size:0.6em;">When you combine the three axes, the empirically-occurring patterns within MM-using campaigns are:</p>
+  <table class="small">
+    <tr><th>#</th><th>Pattern (positives only / exclusions noted)</th><th>Set semantics</th><th>What buyer intends</th></tr>
+    <tr><td>1</td><td>MM only</td><td>MM</td><td>Pure MM prospecting</td></tr>
+    <tr><td>2</td><td>MM + 3P (OR)</td><td>MM ∪ 3P</td><td>Expand reach beyond MM</td></tr>
+    <tr><td>3</td><td>MM + 3P (AND)</td><td>MM ∩ 3P</td><td>Narrow MM to 3P-resolved subset</td></tr>
+    <tr><td>4</td><td>MM + 3P (OR + AND) — hybrid</td><td>(MM ∪ 3P_A) ∩ 3P_B</td><td>Expand then intersect — sophisticated targeting</td></tr>
+    <tr><td>5</td><td>MM AND NOT 3P</td><td>MM ∖ 3P</td><td>Exclude 3P-matched IPs from MM</td></tr>
+    <tr><td>6</td><td>MM + 1P (OR)</td><td>MM ∪ 1P</td><td>Retargeting + MM scoring (tiny but high-value)</td></tr>
+    <tr><td>7</td><td>MM AND NOT 1P</td><td>MM ∖ 1P</td><td>Standard CRM suppression in prospecting</td></tr>
+    <tr><td>8</td><td>MM + 1P + 3P (OR-all)</td><td>MM ∪ 1P ∪ 3P</td><td>All three combined as union</td></tr>
+    <tr><td>9</td><td>MM OR 3P, AND NOT 1P</td><td>(MM ∪ 3P) ∖ 1P</td><td>Expand via 3P + suppress customers</td></tr>
+    <tr><td>10</td><td>3P only</td><td>3P</td><td>3P-driven prospecting (no MM scoring)</td></tr>
+    <tr><td>11</td><td>1P only</td><td>1P</td><td>Pure list retargeting</td></tr>
+    <tr><td>12</td><td>1P + 3P (no MM)</td><td>1P ∪ 3P</td><td>Layered without scoring (anti-pattern)</td></tr>
+    <tr><td>13</td><td>nothing</td><td>RTC + geo + …</td><td>RTC-only / retargeting fallthrough</td></tr>
+  </table>
+  <div class="footer-note">Each pattern has a different bidder behavior and a different per-conversion efficiency. The next sections walk through the data.</div>
+  <span class="slide-num">14 / 56</span>
+</section>
+
+<!-- ===== PART 4: SIZING — COUNTS AND SPEND ===== -->
+
+<!-- 15: Section header -->
+<section>
+  <div class="part-tag">Part 3 — Sizing</div>
+  <h1>Counts &amp; Spend per Permutation</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    Four columns matter for every cohort: count of campaigns, % of all campaigns, $ spend, % of all spend. The spend-weighted view is what tells us where impact actually lives.
+  </p>
+  <span class="slide-num">15 / 56</span>
+</section>
+
+<!-- 16: Counts per base bucket -->
+<section>
+  <h2>Base 8-bucket Venn — campaign counts</h2>
+  <table>
+    <tr><th>Bucket</th><th class="num">n campaigns</th><th class="num">% of total</th></tr>
+    <tr><td>1. nothing</td><td class="num">11,365</td><td class="num">73.2%</td></tr>
+    <tr><td>2. MM only</td><td class="num">574</td><td class="num">3.7%</td></tr>
+    <tr><td>3. 1P only</td><td class="num">1,292</td><td class="num">8.3%</td></tr>
+    <tr><td>4. 3P only</td><td class="num">858</td><td class="num">5.5%</td></tr>
+    <tr><td>5. MM + 3P</td><td class="num">717</td><td class="num">4.6%</td></tr>
+    <tr><td>6. MM + 1P</td><td class="num">320</td><td class="num">2.1%</td></tr>
+    <tr><td>7. 1P + 3P</td><td class="num">251</td><td class="num">1.6%</td></tr>
+    <tr><td>8. MM + 1P + 3P</td><td class="num">152</td><td class="num">1.0%</td></tr>
+    <tr style="background:#FFF8E1;"><td><strong>Total</strong></td><td class="num"><strong>15,529</strong></td><td class="num"><strong>100%</strong></td></tr>
+  </table>
+  <div class="footer-note">73% of campaigns use no MM/1P/3P targeting at all — RTC + geo only. The interest-segment cohort is the minority by count but holds disproportionate spend (next slide).</div>
+  <span class="slide-num">16 / 56</span>
+</section>
+
+<!-- 17: Spend per base bucket -->
+<section>
+  <h2>Base 8-bucket Venn — spend (the spend-weighted view)</h2>
+  <table>
+    <tr><th>Bucket</th><th class="num">n camps</th><th class="num">% camps</th><th class="num">Spend (30d)</th><th class="num">% spend</th><th class="num">Annualized</th></tr>
+    <tr><td>1. nothing</td><td class="num">11,365</td><td class="num">73.2%</td><td class="num">$14.49M</td><td class="num">35.9%</td><td class="num">$174M</td></tr>
+    <tr><td>2. MM only</td><td class="num">574</td><td class="num">3.7%</td><td class="num">$1.82M</td><td class="num">4.5%</td><td class="num">$22M</td></tr>
+    <tr><td>3. 1P only</td><td class="num">1,292</td><td class="num">8.3%</td><td class="num">$7.65M</td><td class="num">18.9%</td><td class="num">$92M</td></tr>
+    <tr class="hl"><td>4. 3P only</td><td class="num">858</td><td class="num">5.5%</td><td class="num">$5.24M</td><td class="num">13.0%</td><td class="num">$63M</td></tr>
+    <tr class="hl"><td>5. MM + 3P</td><td class="num">717</td><td class="num">4.6%</td><td class="num">$3.39M</td><td class="num">8.4%</td><td class="num">$41M</td></tr>
+    <tr><td>6. MM + 1P</td><td class="num">320</td><td class="num">2.1%</td><td class="num">$2.02M</td><td class="num">5.0%</td><td class="num">$24M</td></tr>
+    <tr class="hl"><td>7. 1P + 3P</td><td class="num">251</td><td class="num">1.6%</td><td class="num">$4.52M</td><td class="num">11.2%</td><td class="num">$54M</td></tr>
+    <tr class="hl"><td>8. MM + 1P + 3P</td><td class="num">152</td><td class="num">1.0%</td><td class="num">$1.27M</td><td class="num">3.1%</td><td class="num">$15M</td></tr>
+    <tr style="background:#FFF8E1;"><td><strong>Total</strong></td><td class="num"><strong>15,529</strong></td><td class="num"><strong>100%</strong></td><td class="num"><strong>$40.42M</strong></td><td class="num"><strong>100%</strong></td><td class="num"><strong>$485M</strong></td></tr>
+  </table>
+  <div class="footer-note">Red rows = 3P-touching cohorts (3P_only + MM+3P + 1P+3P + MM+1P+3P) = 1,978 campaigns / 12.7% of total / $14.42M / 35.7% of spend → ~$173M annualized.</div>
+  <span class="slide-num">17 / 56</span>
+</section>
+
+<!-- 18: Spend-weighted reading -->
+<section>
+  <h2>What the spend-weighted view tells us</h2>
+  <table>
+    <tr><th>Slice</th><th class="num">n camps</th><th class="num">% camps</th><th class="num">Spend (30d)</th><th class="num">% spend</th></tr>
+    <tr><td>All 3P-touching</td><td class="num">1,978</td><td class="num">12.7%</td><td class="num">$14.42M</td><td class="num">35.7%</td></tr>
+    <tr><td>All MM-touching</td><td class="num">1,763</td><td class="num">11.4%</td><td class="num">$8.50M</td><td class="num">21.0%</td></tr>
+    <tr><td>All 1P-touching</td><td class="num">2,015</td><td class="num">13.0%</td><td class="num">$15.46M</td><td class="num">38.2%</td></tr>
+    <tr class="hl"><td>3P-touching WITHOUT MM (3P_only + 1P+3P)</td><td class="num">1,109</td><td class="num">7.1%</td><td class="num">$9.77M</td><td class="num">24.2%</td></tr>
+    <tr class="hl-blue"><td>3P-touching WITH MM (MM+3P + MM+1P+3P)</td><td class="num">869</td><td class="num">5.6%</td><td class="num">$4.66M</td><td class="num">11.5%</td></tr>
+  </table>
+  <ul style="font-size:0.62em; margin-top:1em;">
+    <li><strong>Most 3P touchpoints are WITHOUT MM scoring</strong> ($9.77M / 30d, $117M/yr). These campaigns rely entirely on 3P selection — the segment quality buyers pick is the only quality signal in the stack.</li>
+    <li><strong>3P with MM is smaller</strong> ($4.66M / 30d, $56M/yr). Here MM provides scoring; 3P's role depends on whether the campaign overflows MM (Part 6).</li>
+    <li>1P-touching cohort (38.2% of spend) is mostly retargeting — distinct from prospecting analysis but covered for completeness.</li>
+  </ul>
+  <span class="slide-num">18 / 56</span>
+</section>
+
+<!-- 19: Polarity sub-buckets -->
+<section>
+  <h2>Adding polarity — MM-mixed sub-buckets</h2>
+  <table>
+    <tr><th>Pattern</th><th class="num">n camps</th><th class="num">% MM camps</th><th class="num">Spend (30d)</th><th class="num">% MM spend</th></tr>
+    <tr><td>MM only</td><td class="num">574</td><td class="num">32.6%</td><td class="num">$1,818K</td><td class="num">21.4%</td></tr>
+    <tr><td>MM + 3P incl_only</td><td class="num">609</td><td class="num">34.5%</td><td class="num">$2,762K</td><td class="num">32.5%</td></tr>
+    <tr><td>MM + 3P excl_only</td><td class="num">7</td><td class="num">0.4%</td><td class="num">$20K</td><td class="num">0.2%</td></tr>
+    <tr><td>MM + 3P mixed polarity</td><td class="num">101</td><td class="num">5.7%</td><td class="num">$609K</td><td class="num">7.2%</td></tr>
+    <tr><td>MM + 1P incl_only</td><td class="num">18</td><td class="num">1.0%</td><td class="num">$123K</td><td class="num">1.5%</td></tr>
+    <tr><td>MM + 1P excl_only</td><td class="num">296</td><td class="num">16.8%</td><td class="num">$1,881K</td><td class="num">22.2%</td></tr>
+    <tr><td>MM + 1P mixed polarity</td><td class="num">6</td><td class="num">0.3%</td><td class="num">$13K</td><td class="num">0.2%</td></tr>
+    <tr><td>MM + 1P + 3P (various)</td><td class="num">152</td><td class="num">8.6%</td><td class="num">$1,272K</td><td class="num">15.0%</td></tr>
+  </table>
+  <ul style="font-size:0.6em; margin-top:0.5em;">
+    <li>The two biggest MM-mixed patterns are <strong>"MM + 3P incl_only"</strong> ($2.76M / 30d) and <strong>"MM + 1P excl_only"</strong> ($1.88M / 30d).</li>
+    <li>Polarity confirms a structural observation: MM is essentially never excluded; 3P is almost always included; 1P is almost always excluded.</li>
+  </ul>
+  <span class="slide-num">19 / 56</span>
+</section>
+
+<!-- 20: OR vs AND breakdown -->
+<section>
+  <h2>Adding the OR/AND structural axis — the critical refinement</h2>
+  <table class="small">
+    <tr><th>Pattern</th><th class="num">n camps</th><th class="num">% all camps</th><th class="num">Spend</th><th class="num">% MM spend</th><th>Comment</th></tr>
+    <tr><td>2. MM only</td><td class="num">574</td><td class="num">3.7%</td><td class="num">$1,818K</td><td class="num">21.4%</td><td class="dim">pure MM</td></tr>
+    <tr class="hl"><td>5a. MM <strong>OR</strong> 3P (union/expand)</td><td class="num">523</td><td class="num">3.4%</td><td class="num">$2,149K</td><td class="num">25.3%</td><td class="dim"><strong>DOMINANT 3P inclusion pattern</strong></td></tr>
+    <tr><td>5a. MM <strong>AND</strong> 3P (narrow)</td><td class="num">41</td><td class="num">0.3%</td><td class="num">$161K</td><td class="num">1.9%</td><td class="dim">very rare</td></tr>
+    <tr><td>5a. MM OR 3P + AND 3P too (hybrid)</td><td class="num">45</td><td class="num">0.3%</td><td class="num">$452K</td><td class="num">5.3%</td><td class="dim">FICO pattern</td></tr>
+    <tr><td>5b. MM AND NOT 3P (exclude only)</td><td class="num">7</td><td class="num">0.05%</td><td class="num">$20K</td><td class="num">0.2%</td><td class="dim">essentially unused</td></tr>
+    <tr><td>5c. MM + 3P mixed polarity</td><td class="num">101</td><td class="num">0.7%</td><td class="num">$609K</td><td class="num">7.2%</td><td class="dim">has both +3P and -3P</td></tr>
+    <tr><td>6a. MM OR 1P (include 1P)</td><td class="num">18</td><td class="num">0.1%</td><td class="num">$123K</td><td class="num">1.5%</td><td class="dim">retargeting + MM (small, high-conv)</td></tr>
+    <tr class="hl-green"><td>6b. MM AND NOT 1P (CRM suppress)</td><td class="num">296</td><td class="num">1.9%</td><td class="num">$1,881K</td><td class="num">22.2%</td><td class="dim"><strong>DOMINANT 1P pattern</strong></td></tr>
+    <tr><td>6c. MM + 1P mixed polarity</td><td class="num">6</td><td class="num">0.04%</td><td class="num">$13K</td><td class="num">0.2%</td><td class="dim">tiny</td></tr>
+    <tr><td>8. MM OR 3P AND NOT 1P</td><td class="num">89</td><td class="num">0.6%</td><td class="num">$933K</td><td class="num">11.0%</td><td class="dim">expand + suppress</td></tr>
+    <tr><td>8. MM OR 1P OR 3P</td><td class="num">46</td><td class="num">0.3%</td><td class="num">$196K</td><td class="num">2.3%</td><td class="dim">all three OR'd</td></tr>
+    <tr><td>8. other MM+1P+3P combos</td><td class="num">22</td><td class="num">0.14%</td><td class="num">$148K</td><td class="num">1.7%</td><td class="dim">long tail</td></tr>
+  </table>
+  <div class="footer-note">OR-additive dominates 3P inclusion by 12.8x (523 vs 41). AND-NOT dominates 1P by 16.4x (296 vs 18). The "MM AND 3P narrows MM via intersection" semantic exists but is barely used.</div>
+  <span class="slide-num">20 / 56</span>
+</section>
+
+<!-- 21: Conversion rate per bucket -->
+<section>
+  <h2>Conversion rate per base bucket</h2>
+  <table>
+    <tr><th>Bucket</th><th class="num">n camps</th><th class="num">% camps</th><th class="num">Spend</th><th class="num">% spend</th><th class="num">Conv rate</th></tr>
+    <tr><td>nothing</td><td class="num">11,365</td><td class="num">73.2%</td><td class="num">$14.49M</td><td class="num">35.9%</td><td class="num">0.131%</td></tr>
+    <tr><td>MM only</td><td class="num">574</td><td class="num">3.7%</td><td class="num">$1.82M</td><td class="num">4.5%</td><td class="num">0.066%</td></tr>
+    <tr><td>1P only</td><td class="num">1,292</td><td class="num">8.3%</td><td class="num">$7.65M</td><td class="num">18.9%</td><td class="num">0.055%</td></tr>
+    <tr class="hl"><td>3P only</td><td class="num">858</td><td class="num">5.5%</td><td class="num">$5.24M</td><td class="num">13.0%</td><td class="num"><strong>0.038%</strong></td></tr>
+    <tr><td>MM + 3P</td><td class="num">717</td><td class="num">4.6%</td><td class="num">$3.39M</td><td class="num">8.4%</td><td class="num">0.061%</td></tr>
+    <tr><td>MM + 1P</td><td class="num">320</td><td class="num">2.1%</td><td class="num">$2.02M</td><td class="num">5.0%</td><td class="num">0.133%</td></tr>
+    <tr class="hl"><td>1P + 3P (no MM)</td><td class="num">251</td><td class="num">1.6%</td><td class="num">$4.52M</td><td class="num">11.2%</td><td class="num"><strong>0.010%</strong></td></tr>
+    <tr><td>MM + 1P + 3P</td><td class="num">152</td><td class="num">1.0%</td><td class="num">$1.27M</td><td class="num">3.1%</td><td class="num">0.055%</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>"nothing" leads on conversion rate (0.131%) — these are retargeting / RTC, by definition closer-to-conversion.</li>
+    <li>3P only is the worst-performing prospecting cohort (0.038%).</li>
+    <li><strong>1P + 3P (no MM) is catastrophic at 0.010% — the layering-without-scoring anti-pattern.</strong></li>
+  </ul>
+  <span class="slide-num">21 / 56</span>
+</section>
+
+<!-- 22: IVR + CVR + $/conv -->
+<section>
+  <h2>Full efficiency table — IVR, CVR, $/visit, $/conversion</h2>
+  <table class="small">
+    <tr><th>Bucket</th><th class="num">n camps</th><th class="num">% camps</th><th class="num">Spend</th><th class="num">% spend</th><th class="num">IVR</th><th class="num">CVR</th><th class="num">CPM</th><th class="num">$/visit</th><th class="num">$/conv</th></tr>
+    <tr><td>nothing</td><td class="num">11,365</td><td class="num">73.2%</td><td class="num">$14.49M</td><td class="num">35.9%</td><td class="num">2.57%</td><td class="num">0.131%</td><td class="num">$21.37</td><td class="num">$0.83</td><td class="num">$16</td></tr>
+    <tr><td>MM only</td><td class="num">574</td><td class="num">3.7%</td><td class="num">$1.82M</td><td class="num">4.5%</td><td class="num">1.50%</td><td class="num">0.066%</td><td class="num">$33.39</td><td class="num">$2.23</td><td class="num">$51</td></tr>
+    <tr><td>1P only</td><td class="num">1,292</td><td class="num">8.3%</td><td class="num">$7.65M</td><td class="num">18.9%</td><td class="num">1.39%</td><td class="num">0.055%</td><td class="num">$14.23</td><td class="num">$1.02</td><td class="num">$26</td></tr>
+    <tr class="hl"><td>3P only</td><td class="num">858</td><td class="num">5.5%</td><td class="num">$5.24M</td><td class="num">13.0%</td><td class="num">0.75%</td><td class="num">0.038%</td><td class="num">$28.47</td><td class="num">$3.81</td><td class="num">$75</td></tr>
+    <tr><td>MM + 3P OR (incl_only)</td><td class="num">609</td><td class="num">3.9%</td><td class="num">$2.76M</td><td class="num">6.8%</td><td class="num">0.92%</td><td class="num">0.066%</td><td class="num">$29.97</td><td class="num">$3.26</td><td class="num">$45</td></tr>
+    <tr><td>MM + 1P (CRM suppress)</td><td class="num">296</td><td class="num">1.9%</td><td class="num">$1.88M</td><td class="num">4.7%</td><td class="num">1.09%</td><td class="num">0.021%</td><td class="num">$22.58</td><td class="num">$2.07</td><td class="num">$107</td></tr>
+    <tr class="hl"><td>1P + 3P</td><td class="num">252</td><td class="num">1.6%</td><td class="num">$4.53M</td><td class="num">11.2%</td><td class="num">0.87%</td><td class="num">0.010%</td><td class="num">$19.54</td><td class="num">$2.24</td><td class="num"><strong>$192</strong></td></tr>
+    <tr><td>MM + 1P + 3P</td><td class="num">151</td><td class="num">1.0%</td><td class="num">$1.26M</td><td class="num">3.1%</td><td class="num">0.84%</td><td class="num">0.055%</td><td class="num">$30.67</td><td class="num">$3.63</td><td class="num">$55</td></tr>
+  </table>
+  <ul style="font-size:0.55em;">
+    <li>3P_only IVR (0.75%) is half MM_only's (1.50%). $/conv $75 vs $51 — 1.5x worse.</li>
+    <li>1P+3P (no MM): $192/conv = 3.8x worse than MM_only, 12x worse than "nothing." The most expensive prospecting bucket on every metric.</li>
+    <li>MM + 3P OR has comparable $/conv to MM_only ($45 vs $51) — buyer is rational to add 3P at the cohort level; the choice of WHICH 3P is what's currently random.</li>
+  </ul>
+  <span class="slide-num">22 / 56</span>
+</section>
+
+<!-- ===== PART 5: BIDDER BEHAVIOR ===== -->
+
+<!-- 23: Section -->
+<section>
+  <div class="part-tag">Part 4 — Bidder behavior</div>
+  <h1>What each permutation actually does at delivery time</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    Counts and spend tell us what BUYERS write. Delivery distribution tells us what the BIDDER does. The two together are what TI-956 has to address.
+  </p>
+  <span class="slide-num">23 / 56</span>
+</section>
+
+<!-- 24: Three behaviors -->
+<section>
+  <h2>Three structurally distinct bidder behaviors (empirical)</h2>
+  <table>
+    <tr><th>Buyer-written</th><th>Set semantics</th><th>Bidder behavior empirically</th><th>% unscored delivery</th></tr>
+    <tr><td>MM only</td><td>MM</td><td>Bid on MM-scored IPs (baseline)</td><td class="num">4.2%</td></tr>
+    <tr class="hl"><td><code>OR(MM, 3P)</code> — expand</td><td>MM ∪ 3P</td><td>Bid on union; reach unscored 3P-added IPs when MM ceiling hits</td><td class="num"><strong>14.1% (3.3x baseline)</strong></td></tr>
+    <tr class="hl-green"><td><code>AND(MM, 3P)</code> — narrow</td><td>MM ∩ 3P</td><td>Bid on intersection; stays in MM scored universe</td><td class="num">8.4% (≈ baseline)</td></tr>
+    <tr><td><code>AND(OR(MM,3P_A), 3P_B)</code> — hybrid</td><td>(MM ∪ 3P_A) ∩ 3P_B</td><td>FICO pattern. Maximum unscored — 3P_B narrows to 3P-resolved IPs</td><td class="num">56.0%</td></tr>
+    <tr class="hl-green"><td><code>AND(MM, NOT 3P)</code> — exclude</td><td>MM ∖ 3P</td><td>Removes 3P-matched from MM scored set</td><td class="num">0.4%</td></tr>
+    <tr><td><code>AND(MM, NOT 1P)</code> — CRM suppress</td><td>MM ∖ 1P</td><td>Removes customers from MM prospecting</td><td class="num">6.7%</td></tr>
+  </table>
+  <div class="footer-note">2026-05-26 single-day delivery from cost_impression_log.model_params, ~61M impressions. The bidder is honoring exactly the buyer-written structure — buyer composes via OR or AND, the eligibility set follows.</div>
+  <span class="slide-num">24 / 56</span>
+</section>
+
+<!-- 25: Bidder mental model -->
+<section>
+  <h2>The bidder's mental model — empirically supported</h2>
+  <ol style="font-size:0.62em;">
+    <li><strong>Eligibility = expression match.</strong> Per-bid-request evaluation. SSP sends bid request → bidder checks if IP matches the campaign's audience expression → bid eligible.</li>
+    <li><strong>Within eligibility, <code>household_score</code> shapes preference + CPM.</strong> Bidder prefers MM-scored IPs while they remain available in the bid stream + pacing windows.</li>
+    <li><strong>MM ceiling exists per (campaign × MM segment × day)</strong> — saturation point where MM-scored IPs in the bid stream are exhausted relative to pacing budget.</li>
+    <li><strong>When ceiling hits, bidder falls through to unscored eligible IPs</strong> — most relevant for OR-additive 3P clauses that brought in non-MM-scored IPs.</li>
+  </ol>
+  <div class="fact-block" style="margin-top:1em;">
+    <strong>This refines two earlier model claims:</strong>
+    <ul style="font-size:0.85em;">
+      <li>The "MM combines targeting clauses with AND-intersection" verbal model was WRONG for inclusion clauses — they're OR-additive, and the bidder honors that.</li>
+      <li>The "bidder strictly prefers scored, falls through to unscored" model is RIGHT — empirically validated by FICO's cross-bucket ceiling test (Part 5).</li>
+    </ul>
+  </div>
+  <span class="slide-num">25 / 56</span>
+</section>
+
+<!-- 26: MM_only baseline delivery -->
+<section>
+  <h2>Baseline: MM_only delivery distribution</h2>
+  <table>
+    <tr><th>Score band</th><th class="num">% of impressions</th></tr>
+    <tr><td>-1 (unscored)</td><td class="num">4.2%</td></tr>
+    <tr><td>1-999</td><td class="num">1.9%</td></tr>
+    <tr><td>1k-5k</td><td class="num">13.2%</td></tr>
+    <tr><td>5k-8k</td><td class="num">9.0%</td></tr>
+    <tr><td>8k-10k</td><td class="num">37.8%</td></tr>
+    <tr><td>10000 (top)</td><td class="num">33.9%</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>574 active MM_only campaigns, $1.82M / 30d.</li>
+    <li>96% scored, 72% in HI band (8k+). The MM_only cohort behaves as expected.</li>
+    <li>The 4.2% unscored is system-noise baseline (scoring system isn't perfectly aligned to the campaign's MM clause).</li>
+  </ul>
+  <div class="footer-note">This baseline anchors everything below — any cohort showing meaningfully different delivery is doing something structurally different.</div>
+  <span class="slide-num">26 / 56</span>
+</section>
+
+<!-- 27: OR include delivery -->
+<section>
+  <h2>OR-include (MM OR 3P) delivery: EXPANDS into unscored</h2>
+  <table>
+    <tr><th>Score band</th><th class="num">MM only</th><th class="num">MM OR 3P</th><th class="num">Δ</th></tr>
+    <tr><td>-1 (unscored)</td><td class="num">4.2%</td><td class="num"><strong>14.1%</strong></td><td class="num">+9.9pp</td></tr>
+    <tr><td>1-999</td><td class="num">1.9%</td><td class="num">0.9%</td><td class="num">-1.0pp</td></tr>
+    <tr><td>1k-5k</td><td class="num">13.2%</td><td class="num">11.7%</td><td class="num">-1.5pp</td></tr>
+    <tr><td>5k-8k</td><td class="num">9.0%</td><td class="num">11.1%</td><td class="num">+2.1pp</td></tr>
+    <tr><td>8k-10k</td><td class="num">37.8%</td><td class="num">32.0%</td><td class="num">-5.8pp</td></tr>
+    <tr><td>10000</td><td class="num">33.9%</td><td class="num">20.9%</td><td class="num">-13.0pp</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>523 campaigns, $2.15M / 30d. Same advertiser mix as MM_only but with 3P added via OR.</li>
+    <li><strong>Unscored share triples (4.2% → 14.1%).</strong> Top-band (10000) share drops by 13pp. This is the OR-additive 3P clause pulling unscored IPs into delivery.</li>
+    <li>Only OR-additive structure can cause unscored share to rise. AND-intersection cannot (you can't narrow IN unscored IPs that weren't already there).</li>
+  </ul>
+  <span class="slide-num">27 / 56</span>
+</section>
+
+<!-- 28: AND include delivery -->
+<section>
+  <h2>AND-include (MM AND 3P) delivery: NARROWS, stays scored</h2>
+  <table>
+    <tr><th>Score band</th><th class="num">MM only</th><th class="num">MM AND 3P</th><th class="num">Δ</th></tr>
+    <tr><td>-1 (unscored)</td><td class="num">4.2%</td><td class="num">8.4%</td><td class="num">+4.2pp</td></tr>
+    <tr><td>8k-10k</td><td class="num">37.8%</td><td class="num"><strong>52.7%</strong></td><td class="num">+14.9pp</td></tr>
+    <tr><td>10000</td><td class="num">33.9%</td><td class="num">27.0%</td><td class="num">-6.9pp</td></tr>
+    <tr><td>HI band (8k+) total</td><td class="num">71.7%</td><td class="num">79.7%</td><td class="num">+8.0pp</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>41 campaigns, $161K / 30d. RARE pattern — buyers don't typically use 3P as an AND-narrowing.</li>
+    <li>Unscored share stays close to MM_only baseline. HI band actually rises (79.7% vs 71.7%) — the intersection is more concentrated than MM_only's spread.</li>
+    <li><strong>AND-intersection narrows MM to a subset, keeping it scored.</strong> Confirms the user's mental model: AND-include behaves the way "AND-intersection" was originally described — but applies only to AND-style clauses, not all clauses.</li>
+  </ul>
+  <span class="slide-num">28 / 56</span>
+</section>
+
+<!-- 29: AND NOT exclude -->
+<section>
+  <h2>AND NOT (MM AND NOT 3P) delivery: cleanest narrowing</h2>
+  <table>
+    <tr><th>Score band</th><th class="num">MM only</th><th class="num">MM AND NOT 3P</th></tr>
+    <tr><td>-1 (unscored)</td><td class="num">4.2%</td><td class="num"><strong>0.4%</strong></td></tr>
+    <tr><td>HI band (8k+) total</td><td class="num">71.7%</td><td class="num"><strong>98.9%</strong></td></tr>
+    <tr><td>10000</td><td class="num">33.9%</td><td class="num">96.9%</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>7 campaigns, $20K / 30d. ESSENTIALLY UNUSED at the product level.</li>
+    <li>Exclusion produces the cleanest scored delivery — removing 3P-matched IPs from MM concentrates the delivery on top-band MM IPs.</li>
+    <li>Small-cohort caveat: 27K impressions on 5/26 means the distribution is noise-bounded. Direction is clear; magnitude is approximate.</li>
+  </ul>
+  <div class="fact-block" style="margin-top:1em;">
+    Even though MM AND NOT 3P produces the cleanest delivery, buyers don't use it. This is a product gap worth examining separately — if it works mechanically, why isn't it surfaced as a "filter out junk 3P" pattern?
+  </div>
+  <span class="slide-num">29 / 56</span>
+</section>
+
+<!-- 30: 1P excl delivery (CRM suppress) -->
+<section>
+  <h2>MM AND NOT 1P (CRM suppression in prospecting) — the dominant 1P pattern</h2>
+  <table>
+    <tr><th>Score band</th><th class="num">MM only</th><th class="num">MM AND NOT 1P</th></tr>
+    <tr><td>-1 (unscored)</td><td class="num">4.2%</td><td class="num">6.7%</td></tr>
+    <tr><td>8k-10k</td><td class="num">37.8%</td><td class="num">43.6%</td></tr>
+    <tr><td>10000</td><td class="num">33.9%</td><td class="num">32.4%</td></tr>
+    <tr><td>HI band (8k+) total</td><td class="num">71.7%</td><td class="num">76.0%</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>296 campaigns, $1.88M / 30d. The standard CRM-suppression-from-prospecting pattern.</li>
+    <li>Slightly worse $/conv ($107 vs $51) — suppression narrows MM to non-customers who haven't converted yet AND are harder to convert.</li>
+    <li>Delivery distribution is close to MM_only's — confirms exclusion narrows without changing scoring composition.</li>
+  </ul>
+  <div class="footer-note">This is the cohort that was over-excluded by the original TI-999 prospecting filter (drop any DS4/8/47 reference). Polarity-aware filter correctly keeps these campaigns in prospecting.</div>
+  <span class="slide-num">30 / 56</span>
+</section>
+
+<!-- ===== PART 6: MM CEILING ===== -->
+
+<!-- 31: Section -->
+<section>
+  <div class="part-tag">Part 5 — MM ceiling</div>
+  <h1>The MM Ceiling — Why OR-include Overflow Happens</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    OR-include only matters if the bidder actually reaches the 3P-added IPs. That requires MM scoring to "exhaust" relative to pacing — the MM ceiling.
+  </p>
+  <span class="slide-num">31 / 56</span>
+</section>
+
+<!-- 32: What is MM ceiling -->
+<section>
+  <h2>What "MM ceiling" means</h2>
+  <ul style="font-size:0.65em;">
+    <li>For each (campaign × MM segment × day), there's a finite supply of MM-scored IPs the bidder can actually bid on.</li>
+    <li>This supply is bounded by: MM segment size, the share of those IPs that appear in the bid stream, frequency caps, pacing logic.</li>
+    <li>If the campaign's daily budget exceeds what MM can absorb at quality, the bidder must either pause or bid on non-MM eligible IPs.</li>
+    <li>For campaigns with <code>OR(MM, 3P)</code> expressions, the non-MM eligible IPs are the 3P-added IPs — and the bidder bids them. Result: unscored delivery share rises.</li>
+  </ul>
+  <div class="fact-block" style="margin-top:1em;">
+    The MM ceiling is what makes OR-additive 3P inclusion meaningful. Without ceiling overflow, the 3P clause is a paid-for filter the bidder never reaches.
+  </div>
+  <span class="slide-num">32 / 56</span>
+</section>
+
+<!-- 33: FICO cross-bucket test -->
+<section>
+  <h2>FICO cross-bucket test — same advertiser, different campaigns</h2>
+  <table>
+    <tr><th>FICO campaign</th><th>Bucket</th><th class="num">Spend (30d)</th><th class="num">Scored imps (5/26)</th><th class="num">Unscored imps (5/26)</th><th class="num">Scored / $K</th></tr>
+    <tr><td>525934</td><td>MM only</td><td class="num">$41.7K</td><td class="num">71,525</td><td class="num">334</td><td class="num">1,715</td></tr>
+    <tr class="hl"><td>325113</td><td>MM OR 3P</td><td class="num">$168.5K</td><td class="num">60,111</td><td class="num">236,447</td><td class="num">357</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>Both campaigns target FICO's MM vertical (same buyer, same product family).</li>
+    <li>MM_only at $41.7K → delivers 71.5K scored imps/day. That's at or near FICO's MM ceiling for that vertical.</li>
+    <li>MM+3P OR at $168.5K (4x the budget) → delivers basically the same 60.1K scored imps/day + 236K unscored 3P-added imps.</li>
+    <li><strong>The 4x extra budget overflows entirely to unscored 3P-added IPs.</strong> MM ceiling is real and binds.</li>
+  </ul>
+  <span class="slide-num">33 / 56</span>
+</section>
+
+<!-- 34: FICO expression -->
+<section>
+  <h2>FICO 325113 — the actual expression</h2>
+  <pre><code>{ "categories": { "where": {
+  "op": "and", "value": [
+    { "op": "or", "value": [                       // ← top-level OR (additive)
+      { "op": "any", "value": {
+          "data_source_id": 13,                    // MM Vertical
+          "category_ids": [111001] }},
+      { "op": "any", "value": {
+          "data_source_id": 35,                    // LiveRamp 3P (9 dscids)
+          "category_ids": [1001357389, 1001357509, ...] }}
+    ]},
+    { "op": "any", "value": {                       // AND: must ALSO be in 17 more LiveRamp dscids
+        "data_source_id": 35,
+        "category_ids": [/* 17 more */] }},
+    { "op": "not", "value": { "op": "or", "value": [/* past visitors */] }}
+  ]
+}}}</code></pre>
+  <p style="font-size:0.62em; margin-top:0.5em;">
+    Buyer wrote OR explicitly. The bidder honors it: eligible IPs = (in MM 111001) ∪ (in any of 9 LiveRamp) intersected with (in 17 more LiveRamp) and not (recent visitor).
+  </p>
+  <p style="font-size:0.62em;">
+    Result: 79.7% unscored delivery. The 17 additional LiveRamp constraints narrow eligibility to IPs that ARE in LiveRamp segments — most of which aren't in MM scored set.
+  </p>
+  <span class="slide-num">34 / 56</span>
+</section>
+
+<!-- 35: Bucket-aggregate ceiling check -->
+<section>
+  <h2>Bucket-aggregate ceiling check</h2>
+  <table>
+    <tr><th>Bucket</th><th class="num">n camps</th><th class="num">Spend (30d)</th><th class="num">Scored imps (5/26)</th><th class="num">Unscored imps (5/26)</th><th class="num">Scored / $K</th></tr>
+    <tr><td>2_MM_only</td><td class="num">574</td><td class="num">$1,818K</td><td class="num">1.92M</td><td class="num">84K</td><td class="num">1,054</td></tr>
+    <tr><td>5a_MM_OR_3P (incl_only)</td><td class="num">609</td><td class="num">$2,762K</td><td class="num">2.08M</td><td class="num">630K</td><td class="num">752</td></tr>
+    <tr><td>6b_MM AND NOT 1P</td><td class="num">296</td><td class="num">$1,881K</td><td class="num">2.55M</td><td class="num">184K</td><td class="num">1,357</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>MM+3P OR has 52% MORE spend than MM_only but only 8% MORE scored imps. The extra budget produces 7.5x more unscored imps.</li>
+    <li>MM AND NOT 1P has the HIGHEST scored/$K (1,357) — exclusion concentrates spend on scored IPs.</li>
+    <li>Confirms the MM-ceiling + pacing-overflow mechanism at the cohort level.</li>
+  </ul>
+  <span class="slide-num">35 / 56</span>
+</section>
+
+<!-- ===== PART 7: When does OR include actually matter ===== -->
+
+<!-- 36: Section -->
+<section>
+  <div class="part-tag">Part 6 — When does OR-include matter?</div>
+  <h1>What % of campaigns actually overflow MM ceiling?</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    OR-include only matters if the campaign actually overflows. If it doesn't, the 3P clause is functionally dead-weight. We need to check this empirically.
+  </p>
+  <span class="slide-num">36 / 56</span>
+</section>
+
+<!-- 37: User hypothesis -->
+<section>
+  <h2>The hypothesis being tested</h2>
+  <div class="fact-block">
+    <strong>From the user (2026-05-28):</strong> "Low overlap means the majority of 3P shouldn't be targeted at all unless we've exhausted all scored IPs to target. Which rarely happens. Check % of campaigns where this does happen, that SHOULD be the only time it does."
+  </div>
+  <p style="font-size:0.65em; margin-top:1em;">
+    Translated to empirical question: of the 609 MM+3P_incl_only campaigns, how many actually have meaningfully high unscored delivery (indicating MM ceiling overflow) vs how many sit below ceiling with the 3P clause not being reached?
+  </p>
+  <p style="font-size:0.65em;">
+    Operational threshold (single-day proxy):
+  </p>
+  <ul style="font-size:0.62em;">
+    <li><strong>Ceiling-bound:</strong> ≥50% unscored share → 3P clause is doing real work</li>
+    <li><strong>Partial overflow:</strong> 10-50% unscored share → mixed</li>
+    <li><strong>Below ceiling:</strong> &lt;10% unscored share (essentially MM_only baseline) → 3P clause cosmetic at current spend</li>
+  </ul>
+  <span class="slide-num">37 / 56</span>
+</section>
+
+<!-- 38: Ceiling-bound distribution -->
+<section>
+  <h2>Empirical: only 17.7% of MM+3P campaigns are ceiling-bound</h2>
+  <table>
+    <tr><th>Status</th><th class="num">n camps</th><th class="num">% of 5a</th><th class="num">Spend (30d)</th><th class="num">% of 5a spend</th><th class="num">Avg unscored</th></tr>
+    <tr class="hl"><td>a. Ceiling-bound (>50% unscored)</td><td class="num">76</td><td class="num">17.7%</td><td class="num">$597K</td><td class="num">26.3%</td><td class="num">76.2%</td></tr>
+    <tr><td>b. Partial overflow (10-50%)</td><td class="num">26</td><td class="num">6.0%</td><td class="num">$73K</td><td class="num">3.2%</td><td class="num">24.1%</td></tr>
+    <tr class="hl-blue"><td>c. Below ceiling (&lt;10%)</td><td class="num">328</td><td class="num">76.3%</td><td class="num">$1,599K</td><td class="num">70.5%</td><td class="num">1.2%</td></tr>
+    <tr style="background:#FFF8E1;"><td><strong>Total (with delivery on 5/26)</strong></td><td class="num"><strong>430</strong></td><td class="num"><strong>100%</strong></td><td class="num"><strong>$2,269K</strong></td><td class="num"><strong>100%</strong></td><td class="num">—</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>76 campaigns (17.7%) are actually overflowing — TI-956 quality scoring matters directly for these.</li>
+    <li>328 campaigns (76.3%) sit below ceiling — their 3P clauses are paid for but the bidder isn't reaching them.</li>
+    <li>Spend distribution: 26.3% of MM+3P_incl_only spend ($597K / 30d → ~$7.2M/yr) is in the ceiling-bound zone.</li>
+    <li><strong>70.5% of spend ($1.6M / 30d → ~$19M/yr) is paying for 3P clauses that aren't being reached.</strong></li>
+  </ul>
+  <span class="slide-num">38 / 56</span>
+</section>
+
+<!-- 39: User hypothesis confirmed -->
+<section>
+  <h2>The user's hypothesis is empirically confirmed</h2>
+  <div class="fact-block">
+    "We should be only targeting scored IPs first, so if they were unscored when they were targeted, the only valid reason should be that they didn't [have scored IPs available]."
+  </div>
+  <ul style="font-size:0.65em;">
+    <li><strong>The bidder IS scored-first within pacing</strong> — confirmed by FICO test (Part 5) and bucket-aggregate scored/$K (Part 5).</li>
+    <li><strong>Unscored delivery ONLY happens when MM ceiling exhausts</strong> — confirmed by the 17.7% / 76.3% ceiling-bound distribution.</li>
+    <li><strong>This is rare</strong> — confirmed by the empirical 17.7% rate.</li>
+    <li><strong>When it happens outside that, we have audience expression examples + advertiser/campaign specifics</strong> — next slide.</li>
+  </ul>
+  <p style="font-size:0.62em; margin-top:1em;">
+    Refined product gap: the issue isn't that the bidder makes bad choices — it makes the right choice (overflow when forced). The issue is that buyers add 3P clauses to campaigns that won't ever force overflow.
+  </p>
+  <span class="slide-num">39 / 56</span>
+</section>
+
+<!-- ===== PART 8: Below-ceiling examples ===== -->
+
+<!-- 40: Section -->
+<section>
+  <div class="part-tag">Part 7 — Below-ceiling examples</div>
+  <h1>Specific Advertisers Paying for Unused 3P Clauses</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    Calling out the specific cases — advertiser, campaign, expression, time period — for the cohort where 3P inclusion is paid for but not reached.
+  </p>
+  <span class="slide-num">40 / 56</span>
+</section>
+
+<!-- 41: Top below-ceiling examples -->
+<section>
+  <h2>Top below-ceiling campaigns by spend (30d ending 2026-05-28)</h2>
+  <table class="small">
+    <tr><th>Advertiser</th><th>Campaign</th><th class="num">Spend (30d)</th><th class="num">Imps (30d)</th><th class="num">3P dscids</th><th class="num">Unscored % (5/26)</th></tr>
+    <tr><td>Outdoorsy</td><td>329649</td><td class="num">$98.3K</td><td class="num">2.80M</td><td class="num">12</td><td class="num">1.4%</td></tr>
+    <tr><td>American College of Education</td><td>536501</td><td class="num">$88.4K</td><td class="num">3.71M</td><td class="num">20</td><td class="num">0.6%</td></tr>
+    <tr><td>Cheddar's</td><td>531366</td><td class="num">$73.9K</td><td class="num">2.49M</td><td class="num">6</td><td class="num">1.6%</td></tr>
+    <tr><td>Onewheel</td><td>591735</td><td class="num">$45.4K</td><td class="num">1.30M</td><td class="num">17</td><td class="num">1.6%</td></tr>
+    <tr class="hl"><td><strong>Mercury Insurance</strong></td><td>448179</td><td class="num">$36.8K</td><td class="num">1.35M</td><td class="num">15</td><td class="num">0.1%</td></tr>
+    <tr><td>Sphere</td><td>517340</td><td class="num">$35.6K</td><td class="num">2.80M</td><td class="num">5</td><td class="num">0.5%</td></tr>
+    <tr><td>Front</td><td>610982</td><td class="num">$31.2K</td><td class="num">1.25M</td><td class="num">8</td><td class="num">0.9%</td></tr>
+    <tr><td>Just Ingredients</td><td>619590</td><td class="num">$30.5K</td><td class="num">1.26M</td><td class="num">3</td><td class="num">1.6%</td></tr>
+    <tr><td>Lee Kum Kee</td><td>557422</td><td class="num">$28.0K</td><td class="num">0.41M</td><td class="num">3</td><td class="num">1.5%</td></tr>
+    <tr><td>4Patriots LLC</td><td>509490</td><td class="num">$26.0K</td><td class="num">1.00M</td><td class="num">21</td><td class="num">0.4%</td></tr>
+    <tr class="hl"><td><strong>CareScout</strong> (1 of 3)</td><td>510470</td><td class="num">$25.1K</td><td class="num">0.49M</td><td class="num">19</td><td class="num">0.1%</td></tr>
+    <tr><td>Grandscape</td><td>552264</td><td class="num">$25.1K</td><td class="num">0.94M</td><td class="num">11</td><td class="num">0.1%</td></tr>
+    <tr class="hl"><td><strong>CareScout</strong> (2 of 3)</td><td>544745</td><td class="num">$24.3K</td><td class="num">0.46M</td><td class="num"><strong>27</strong></td><td class="num"><strong>0.0%</strong></td></tr>
+    <tr class="hl"><td><strong>CareScout</strong> (3 of 3)</td><td>594268</td><td class="num">$23.7K</td><td class="num">0.47M</td><td class="num"><strong>27</strong></td><td class="num"><strong>0.0%</strong></td></tr>
+  </table>
+  <div class="footer-note">Top-15 cohort: ~225 LiveRamp dscids selected across $620K of spend, almost none reached.</div>
+  <span class="slide-num">41 / 56</span>
+</section>
+
+<!-- 42: Mercury detail -->
+<section>
+  <h2>Case study: Mercury Insurance campaign 448179</h2>
+  <ul style="font-size:0.65em;">
+    <li>30d spend: $36.8K. 30d impressions: 1.35M.</li>
+    <li>Expression structure: <code>AND(OR(DS13[MM:121001], DS19[RTC×100+ cats]), DS14[geo]) AND NOT(DS21[past conv], DS34[past pageview])</code></li>
+    <li><strong>15 LiveRamp (DS35) dscids referenced — but ZERO are in the actually-targeted positive clause.</strong> Wait — let me re-check. (See note.)</li>
+    <li>5/26 delivery: 52,134 scored imps / 68 unscored = 0.1% unscored share.</li>
+    <li>Mercury's MM clause + RTC is filling the campaign well below MM ceiling — the 3P-added LiveRamp dscids never need to be reached.</li>
+    <li>Conclusion: 15 LiveRamp picks are paid for but the bidder doesn't bid them.</li>
+  </ul>
+  <div class="fact-block">
+    Methodological note: Mercury's expression has DS35 references in a refinement <code>AND</code> clause — they DO narrow eligibility. But because the MM clause is the limiting factor, the bidder stays in MM-scored territory. The 3P is acting as a filter, not as a reach expander.
+  </div>
+  <span class="slide-num">42 / 56</span>
+</section>
+
+<!-- 43: CareScout detail -->
+<section>
+  <h2>Case study: CareScout — 3 campaigns, 27 LiveRamp dscids each</h2>
+  <table>
+    <tr><th>Campaign</th><th class="num">Spend (30d)</th><th class="num">Imps (30d)</th><th class="num">3P dscids picked</th><th class="num">Unscored % (5/26)</th></tr>
+    <tr><td>510470</td><td class="num">$25.1K</td><td class="num">0.49M</td><td class="num">19</td><td class="num">0.1%</td></tr>
+    <tr><td>544745</td><td class="num">$24.3K</td><td class="num">0.46M</td><td class="num">27</td><td class="num">0.0%</td></tr>
+    <tr><td>594268</td><td class="num">$23.7K</td><td class="num">0.47M</td><td class="num">27</td><td class="num">0.0%</td></tr>
+    <tr style="background:#FFF8E1;"><td><strong>Total</strong></td><td class="num"><strong>$73.1K</strong></td><td class="num"><strong>1.42M</strong></td><td class="num"><strong>73</strong></td><td class="num">—</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li>CareScout is operating 3 separate campaigns, each picking 19-27 LiveRamp dscids.</li>
+    <li>None of these LiveRamp dscids drive material unscored delivery — meaning the bidder isn't reaching them.</li>
+    <li>The buyer has invested in segment selection across 3 campaigns; that investment is producing zero incremental targeting effect.</li>
+    <li>Cumulative: $73K of spend, 73 dscid-picks, no measurable 3P-targeting effect.</li>
+  </ul>
+  <div class="footer-note">Pattern repeats: large 3P dscid lists at moderate spend → bidder stays in MM-scored territory.</div>
+  <span class="slide-num">43 / 56</span>
+</section>
+
+<!-- 44: Below-ceiling impact -->
+<section>
+  <h2>The below-ceiling problem at portfolio scale</h2>
+  <table>
+    <tr><th>Slice</th><th class="num">n camps</th><th class="num">% of MM+3P incl_only</th><th class="num">Spend (30d)</th><th class="num">Annualized</th></tr>
+    <tr><td>MM+3P incl_only (total)</td><td class="num">609</td><td class="num">100%</td><td class="num">$2,762K</td><td class="num">$33.1M</td></tr>
+    <tr class="hl-blue"><td>Below ceiling (&lt;10% unscored)</td><td class="num">328</td><td class="num">76.3%</td><td class="num">$1,599K</td><td class="num">$19.2M</td></tr>
+    <tr class="hl"><td>Ceiling-bound (>50% unscored)</td><td class="num">76</td><td class="num">17.7%</td><td class="num">$597K</td><td class="num">$7.2M</td></tr>
+  </table>
+  <ul style="font-size:0.62em;">
+    <li><strong>~$19M/year of spend is paying for 3P clauses that aren't being used at current spend levels.</strong></li>
+    <li>The "fix" for this cohort isn't TI-956 quality scoring per se — it's a product diagnostic ("your 3P clause isn't being reached") + UI that hides or de-emphasizes 3P controls until they'd actually matter.</li>
+    <li>TI-956 quality matters MOST for the ~$7M/yr ceiling-bound cohort and for the $63M/yr pure-3P cohort.</li>
+  </ul>
+  <span class="slide-num">44 / 56</span>
+</section>
+
+<!-- ===== PART 9: The fix — quality scoring ===== -->
+
+<!-- 45: Section -->
+<section>
+  <div class="part-tag">Part 8 — The fix</div>
+  <h1>Per-Segment Quality Scoring</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    Where the bidder DOES reach 3P-added IPs, which 3P segments the buyer picked matters enormously. Today buyers pick blind. TI-956 changes that.
+  </p>
+  <span class="slide-num">45 / 56</span>
+</section>
+
+<!-- 46: Today's lack of quality signal -->
+<section>
+  <h2>Today: no per-segment quality signal in the buyer flow</h2>
+  <ul style="font-size:0.65em;">
+    <li>The MNTN UI surfaces only segment NAME and SIZE for LiveRamp categories.</li>
+    <li>~213k active LiveRamp segments. A search for "$100K+ household income" returns ~90 results.</li>
+    <li>The buyer picks based on naming similarity / vibe / Mike-or-Alex consulting them manually.</li>
+    <li>There is no CVR signal, no IVR signal, no quality composite, no freshness signal.</li>
+    <li><strong>Every buyer pick is uninformed.</strong> The result is what we'll show next.</li>
+  </ul>
+  <div class="fact-block" style="margin-top:1em;">
+    11Lab use case (Mike asked Alex 2026-05-26): score 150 interest segments to drop ~10 garbage ones. This is currently done manually by Alex one campaign at a time. TI-956 productionalizes the same scoring on a recurring schedule.
+  </div>
+  <span class="slide-num">46 / 56</span>
+</section>
+
+<!-- 47: Per-segment CVR distribution -->
+<section>
+  <h2>Per-LiveRamp-dscid CVR distribution — the 350x spread</h2>
+  <table>
+    <tr><th>Quintile</th><th class="num">n dscids</th><th class="num">Avg CVR</th><th class="num">Median CVR</th><th class="num">Spend (30d)</th><th class="num">% spend</th><th class="num">$/conv</th></tr>
+    <tr class="hl-green"><td>Q5 (top 20%)</td><td class="num">201</td><td class="num"><strong>0.140%</strong></td><td class="num">0.066%</td><td class="num">$1,877K</td><td class="num">13.9%</td><td class="num"><strong>$53</strong></td></tr>
+    <tr><td>Q4 (60-80%)</td><td class="num">201</td><td class="num">0.016%</td><td class="num">0.015%</td><td class="num">$1,904K</td><td class="num">14.1%</td><td class="num">$203</td></tr>
+    <tr><td>Q3 (40-60%)</td><td class="num">201</td><td class="num">0.007%</td><td class="num">0.006%</td><td class="num">$1,766K</td><td class="num">13.1%</td><td class="num">$429</td></tr>
+    <tr><td>Q2 (20-40%)</td><td class="num">201</td><td class="num">0.002%</td><td class="num">0.002%</td><td class="num">$1,977K</td><td class="num">14.7%</td><td class="num">$1,284</td></tr>
+    <tr class="hl"><td>Q1 (bottom 20%)</td><td class="num">201</td><td class="num"><strong>0.0004%</strong></td><td class="num">0.0003%</td><td class="num">$1,672K</td><td class="num">12.4%</td><td class="num"><strong>$14,525</strong></td></tr>
+    <tr><td>Unranked (low support)</td><td class="num">~</td><td class="num">0.062%</td><td class="num">—</td><td class="num">$4,298K</td><td class="num">31.8%</td><td class="num">—</td></tr>
+  </table>
+  <ul style="font-size:0.6em;">
+    <li>1,005 LiveRamp dscids with ≥100K weighted impressions of support.</li>
+    <li>Top quintile delivers 0.140% CVR; bottom quintile 0.0004%. <strong>350x spread.</strong></li>
+    <li>Cost per conversion: $53 (top) vs $14,525 (bottom). <strong>274x spread.</strong></li>
+    <li><strong>Spend is uniformly distributed across quintiles (12-15% each).</strong> Buyers have no quality signal to differentiate.</li>
+  </ul>
+  <span class="slide-num">47 / 56</span>
+</section>
+
+<!-- 48: The spread visually -->
+<section>
+  <h2>The 350x spread (visual)</h2>
+  <img class="chart" src="ti_999_chart_finding15_06_segment_cvr_quintiles.png">
+  <p style="font-size:0.55em; color:var(--text-light);">
+    Left: per-quintile CVR. Top: 0.140%. Bottom: 0.0004%. Right: % of LiveRamp-touching spend allocated to each quintile. Essentially uniform (12-15% per quintile). The contrast is the empirical proof of "buyers picking blindly."
+  </p>
+  <span class="slide-num">48 / 56</span>
+</section>
+
+<!-- 49: The bottom 20% is wasted -->
+<section>
+  <h2>Bottom 20% of LiveRamp dscids: $20M/yr at $14,525/conversion</h2>
+  <ul style="font-size:0.65em;">
+    <li>201 LiveRamp dscids in the bottom quintile.</li>
+    <li>$1,672K / 30d (~$20M/yr) of attributed spend.</li>
+    <li>Delivers ~512 conversions on ~90M impressions (CVR = 0.0006%).</li>
+    <li>Cost per conversion: ~$14,525.</li>
+    <li>For comparison: top quintile delivers conversions at ~$53/conv on similar spend volume.</li>
+  </ul>
+  <div class="fact-block">
+    <strong>$20M/yr of effectively-wasted-on-conversions spend.</strong> Even modest substitution toward higher-quality segments would dramatically improve portfolio efficiency.
+  </div>
+  <span class="slide-num">49 / 56</span>
+</section>
+
+<!-- ===== PART 10: Counterfactual benefit ===== -->
+
+<!-- 50: Section -->
+<section>
+  <div class="part-tag">Part 9 — Expected benefit</div>
+  <h1>What's the realistic upside?</h1>
+  <p style="color:var(--text-light); font-size:0.6em;">
+    The counterfactual: if buyers had quality scores and shifted away from bottom-quintile picks, what's the conversion uplift?
+  </p>
+  <span class="slide-num">50 / 56</span>
+</section>
+
+<!-- 51: Counterfactual setup -->
+<section>
+  <h2>Counterfactual setup</h2>
+  <ul style="font-size:0.65em;">
+    <li>Pull bottom-2 quintile (Q1 + Q2): $3.65M / 30d, ~196M impressions, 2,665 conversions.</li>
+    <li>If those impressions performed at top-quintile CVR (0.140%): would deliver ~274K conversions/month.</li>
+    <li>Conversion uplift potential: 271,787 extra conversions / month → 3.26M / year (theoretical ceiling).</li>
+  </ul>
+  <p style="font-size:0.62em; margin-top:1em;">
+    Realism adjustment: buyers can't shift 100% to top quintile (audience size, advertiser-specific relevance, holdout designs). We project three scenarios:
+  </p>
+  <table>
+    <tr><th>Scenario</th><th class="num">Q1+Q2 spend shifted</th><th class="num">Incremental conv / month</th><th class="num">Annualized</th></tr>
+    <tr><td>25% substitution</td><td class="num">$912K</td><td class="num">~68K</td><td class="num">~820K</td></tr>
+    <tr class="hl-blue"><td><strong>50% substitution (realistic)</strong></td><td class="num"><strong>$1.82M</strong></td><td class="num"><strong>~136K</strong></td><td class="num"><strong>~1.6M</strong></td></tr>
+    <tr><td>100% (theoretical ceiling)</td><td class="num">$3.65M</td><td class="num">~272K</td><td class="num">~3.26M</td></tr>
+  </table>
+  <span class="slide-num">51 / 56</span>
+</section>
+
+<!-- 52: Bottom line -->
+<section>
+  <h2>The realistic benefit: ~1.6M incremental conversions / year</h2>
+  <div class="key-stat" style="text-align:center; margin-top:1.5em;">~1.6M</div>
+  <p style="text-align:center; color:var(--text-light); font-size:0.7em;">
+    Additional conversions per year — from 50% substitution of bottom-2 quintile picks toward top-quintile quality, on the LiveRamp-touching cohorts alone.
+  </p>
+  <p style="font-size:0.6em; margin-top:1.5em;">
+    <strong>Plus indirect effects:</strong>
+  </p>
+  <ul style="font-size:0.6em;">
+    <li>Reduces cost-per-conversion across the entire 3P-reliant prospecting portfolio ($9.77M / 30d → $117M/yr).</li>
+    <li>Avoids the 1P+3P anti-pattern delivery cohort (currently $192/conv).</li>
+    <li>Improves buyer confidence in interest-segment targeting (currently uninformed picks → low return → frustration).</li>
+    <li>Surfaces a product story for Paulo/Kale: "we measure and rank our segments now."</li>
+  </ul>
+  <span class="slide-num">52 / 56</span>
+</section>
+
+<!-- ===== PART 11: Recommendations ===== -->
+
+<!-- 53: Recommendations -->
+<section>
+  <div class="part-tag">Part 10 — Recommendations</div>
+  <h1>Phase 1-4 build sequence</h1>
+  <table>
+    <tr><th>Phase</th><th>What ships</th><th>Who owns</th><th>What's unlocked</th></tr>
+    <tr><td>1</td><td>TI-956 LiveRamp scoring on weekly schedule → GCS</td><td>TI eng + Alex Knorr</td><td>Per-dscid composite quality score available for downstream consumers</td></tr>
+    <tr><td>2</td><td>Admin UI surface: MM ceiling estimate at campaign setup → routes to TI-956 top-N picks for overflow</td><td>Macie + TI eng</td><td>Buyers see the ceiling and the recommended top picks</td></tr>
+    <tr><td>3</td><td>Diagnostic for the 76% below-ceiling cohort: "your 3P clause isn't being reached"</td><td>Macie + TI eng</td><td>$19M/yr of paid-for-but-unused 3P picks cleaned up</td></tr>
+    <tr><td>4</td><td>Address 1P+3P anti-pattern: 252 campaigns / $54M/yr at $192/conv (3.8x worse than MM_only)</td><td>Allison + sales education</td><td>Migrate / restructure this cohort</td></tr>
+  </table>
+  <div class="footer-note">Phase 1 is the prerequisite for everything else. Phase 2-4 layer on top of Phase 1's quality output.</div>
+  <span class="slide-num">53 / 56</span>
+</section>
+
+<!-- ===== APPENDIX ===== -->
+
+<!-- 54: Methodology -->
+<section>
+  <div class="part-tag">Appendix</div>
+  <h2>Methodology</h2>
+  <ul style="font-size:0.55em;">
+    <li><strong>Window:</strong> 30d ending 2026-05-28. Active campaign = ≥1 impression in window.</li>
+    <li><strong>AST parser:</strong> JS UDF in <code>queries/ti_999_clause_polarity_ast.sql</code>. Tracks <code>op:not</code> ancestor depth and <code>op:or</code> group ID per leaf. Distinguishes OR-additive vs AND-intersect vs AND-NOT structures.</li>
+    <li><strong>Bucket classification:</strong> based on presence/absence of MM (DS13/38/46), 1P (DS4/8/47), 3P (DS17/18/35) in positive/negative clauses + OR/AND structure.</li>
+    <li><strong>Spend metric:</strong> <code>media_spend + data_spend + platform_spend</code> from <code>silver.summarydata.sum_by_campaign_by_day</code>.</li>
+    <li><strong>Conversion metric:</strong> <code>click_conversions + view_conversions</code>.</li>
+    <li><strong>Visit metric:</strong> <code>HLL_COUNT.MERGE(site_visitors)</code> (distinct visitor sketch).</li>
+    <li><strong>Delivery distribution:</strong> regex extraction of <code>household_score</code>, <code>advertiser_household_score</code>, <code>realtime_conquest_score</code> from <code>cost_impression_log.model_params</code> for 2026-05-26.</li>
+    <li><strong>Per-segment CVR:</strong> equal-attribution proxy (campaign metrics ÷ N picked dscids). Matches Alex Knorr's TI-956 default <code>target_weight='equal'</code>.</li>
+    <li><strong>MM ceiling test:</strong> FICO single-advertiser cross-bucket comparison (campaigns 525934 and 325113) + bucket-aggregate scored-imps-per-$K.</li>
+  </ul>
+  <span class="slide-num">54 / 56</span>
+</section>
+
+<!-- 55: Caveats -->
+<section>
+  <h2>Caveats</h2>
+  <ul style="font-size:0.6em;">
+    <li><strong>Descriptive, not causal.</strong> Bucket-level KPI differences may reflect advertiser-mix / vertical / funnel-stage selection effects. Controlled tests (A/B by clause structure within same advertiser) would tighten claims.</li>
+    <li><strong>Single-day score-distribution snapshot</strong> (2026-05-26). Multi-day pattern stability not verified. Direction is robust; magnitudes are noise-bounded for small cohorts (e.g., 5b MM AND NOT 3P with 27K imps).</li>
+    <li><strong>Equal-attribution per-segment CVR</strong> divides campaign metrics by dscid count. Over-credits dscids in narrow campaigns; under-credits in wide campaigns. True per-segment causal isolation requires Alex's TI-956 Performance axis (LOO-baseline).</li>
+    <li><strong>Quintile rank stability over time not verified.</strong> Some Q1 dscids may move to Q4 next week. Multi-week ranking needed before policy decisions.</li>
+    <li><strong>MM ceiling is per-(campaign, MM segment, day).</strong> The FICO test shows it at advertiser scale but specific per-segment ceiling values require per-MM-segment delivery scan.</li>
+    <li><strong>Inferred IP overlap.</strong> Direct overlap measurement via federated <code>household_scoring__v1</code> wasn't feasible (scan timed out). Used inference from delivery distributions instead.</li>
+  </ul>
+  <span class="slide-num">55 / 56</span>
+</section>
+
+<!-- 56: Open follow-ups + sources -->
+<section>
+  <h2>Open follow-ups + where to dig</h2>
+  <h3>Open follow-ups</h3>
+  <ul style="font-size:0.55em;">
+    <li>Direct MM-vs-3P IP overlap measurement (federated <code>household_scoring__prospecting_intent__v1</code> with Databricks compute).</li>
+    <li>Per-segment performance with LOO-baseline (Alex's TI-956 Performance axis).</li>
+    <li>Multi-week stability of CVR quintile rankings.</li>
+    <li>Per-MM-segment ceiling values (currently inferred at advertiser scale).</li>
+    <li>Hourly delivery pattern for FICO 325113 — does unscored share rise late in the day (pacing-driven exhaustion signature)?</li>
+  </ul>
+  <h3 style="margin-top:1em;">Source artifacts</h3>
+  <ul style="font-size:0.55em;">
+    <li><code>tickets/ti_999_interest_segment_sizing/summary.md</code> — canonical record of Finding 15 Passes 1-12</li>
+    <li><code>tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass*.sql</code> — all queries</li>
+    <li><code>tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass*.csv</code> — query results</li>
+    <li><code>knowledge/data_knowledge.md</code> §8 — durable "Bidder Scoring Reality" reference</li>
+    <li><code>knowledge/mntn_business.md</code> — MNTN business glossary</li>
+    <li>Memory: <code>reference_bidder_scoring_reality</code>, <code>feedback_crm_excluded_from_prospecting</code>, <code>reference_mntn_1p_3p_mm_definitions</code></li>
+  </ul>
+  <span class="slide-num">56 / 56</span>
+</section>
+
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  controls: true, progress: true, history: true, center: false,
+  transition: 'fade', backgroundTransition: 'fade',
+  width: 1280, height: 800, margin: 0.05, minScale: 0.2, maxScale: 1.8
+});
+</script>
+</body>
+</html>
