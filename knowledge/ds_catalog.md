@@ -1,23 +1,48 @@
 # MNTN Data Source (DS) Catalog — Canonical Reference
 
-**Source of truth:** `bronze.integrationprod.data_sources` (62 canonical type=1 DSes plus per-advertiser type=2 instances) + `bronze.tpa.categories` for per-DS category semantics.
-**Last audited:** 2026-05-29 (TI-999 Finding 15 / Passes 16-17 DS audit + tpa.categories cross-check).
+**Source of truth:** `bronze.integrationprod.data_sources` (61 canonical type=1 DSes — IDs 1-61, no DS0 — plus per-advertiser type=2 instances) + `bronze.tpa.categories` for per-DS category semantics.
+**Last audited:** 2026-05-29 (TI-999 Finding 15 / Passes 16-17 DS audit + tpa.categories cross-check + taxonomy lock).
 **Empirical usage:** 30-day window 2026-04-29 → 2026-05-28, prospecting only (objective_id IN 1,5,6), 11,909 campaigns / $32.10M.
 
-## Family taxonomy (CORRECTED after tpa.categories cross-check)
+> ⚠️ **NAMING-COLLISION WARNING — read before using "1P" anywhere**
+>
+> "1P" is overloaded and this catalog DOES NOT USE THE LABEL. Two distinct senses in active circulation:
+>
+> - **Victor Savitskiy canonical (2026-05-28):** "1P" = advertiser-uploaded data (DS4 CRM, DS8 IP List, DS47 CRM IDG). NOT MNTN-scored.
+> - **MNTN-pixel sense:** "1P" = data MNTN owns via its pixel (DS2, DS21, DS34, DS43).
+>
+> Both senses are defensible; both have shown up in prior TI-999 passes and Slack threads. This catalog avoids the collision by using **Advertiser CRM** for `{DS4, DS8, DS47}` and **MNTN Pixel** for `{DS2, DS21, DS34, DS43}`. Any cross-doc reference to "1P" should specify which sense.
 
-The 17 actively-used DSes group into four families:
+## Locked taxonomy (5 product groups + 1 bid-mechanics + 1 dormant)
 
-| Family | DSes | Buyer-selectable? | Functional role |
-|---|---|:-:|---|
-| **MM** (MNTN-derived audience targeting) | DS13, DS19, DS38\*, DS46 | Yes | Prospecting via MNTN audience signals |
-| **List Retargeting** (a.k.a. "1P" in tables) | DS4, DS8, DS47 | Yes (positive = retargeting; negative = CRM suppression in prospecting) | Re-engage / suppress known customers |
-| **3P interest segments** (bought) | DS1\*\*, DS17, DS18, DS35 | Yes | Prospecting via described interests |
-| **Pixel-derived / auto-attached** | DS2, DS21, DS34, DS43 | No (used as auto-exclusion clauses) | Past-visitor / converter suppression |
-| **Bid routing + internal taxonomy** (NOT a targeting family) | DS14, DS16 | Required by bidder mechanics, not buyer audience picks | Bid routing (DS14) + per-advertiser/internal event tags (DS16) |
+| # | Group | DSes | One-line definition |
+|---|---|---|---|
+| 1 | **MM** (Mountain Match 2.0) | DS13, DS19, DS38, DS46 | MNTN's proprietary scoring product. DS13 = bucket/vertical, DS19 = keywords. HI / PP / MI / Max Reach are scoring **tiers** inside this system. |
+| 2 | **PP** (Peak Performance tier) | DS13 + DS19 (shared with MM) | Scoring tier inside MM where the IP matches the vertical (DS13) but has no keyword match (DS19). Score = 8000. Not a standalone DS family — surfaced separately because PP appears as a product in the UI. |
+| 3 | **MNTN Pixel** | DS2, DS21, DS34, DS43 | First-party data derived from the MNTN pixel. DS2 = OPM segment pointer, DS21 = conversion, DS34 = pageview, DS43 = ISP type. Used almost entirely as negative/exclusion clauses in prospecting. |
+| 4 | **3P** (bought interest) | DS1, DS17, DS18, DS35 | Externally-purchased interest segments. DS35 LiveRamp dominates by volume and freshness. DS1 Oracle carried in this group pending delivery verification. |
+| 5 | **Advertiser CRM** | DS4, DS8, DS47 | Advertiser-uploaded customer/IP lists. In prospecting these are almost entirely exclusion clauses (suppress known customers); positive use is retargeting territory. Victor canonically calls this "1P". |
+| 6 | **Bid mechanics / internal taxonomy** | DS14, DS16 | NOT a targeting family. DS14 carries bid-routing (Beeswax / Magnite / Index Exchange / IP filters); DS16 carries per-advertiser identifiers + MNTN-internal event taxonomy. Appear in nearly every expression because they encode plumbing. |
+| 7 | **Dormant / out-of-scope** | DS3, 5, 6, 7, 9, 10, 11, 12, 15, 20, 22–33, 36, 37, 39–42, 44, 45, 48–61 | Registered DSes with zero +camps and zero −camps in the 30d prospecting window (DS9 has 12 camps / $0.20M but is internal cross-reference plumbing, kept here). Sub-typed by name (CRM-ingestion sources feeding DS4, deprecated providers, internal control/test). Do not affect Pass 17 buckets. |
 
-\* DS38 (BUK) is in the MM family conceptually but is empirically UNUSED in active prospecting (0 positive, 0 negative).
-\*\* DS1 (Oracle) included in 3P per user direction 2026-05-29 despite "zero IPDSC volume" memory note. Used positively in 553 prospecting campaigns / $5.97M / 30d. Open question whether the bidder delivers against Oracle clauses — pending Pass-7-style ceiling check.
+**Coverage check:** all 61 canonical type=1 DSes (IDs 1-61) are accounted for in exactly one group — 17 active (across MM / MNTN Pixel / 3P / Advertiser CRM / Bid mechanics) + 44 dormant. PP's DSes intentionally double-list because PP is a tier inside MM, not a parallel family. DS-1 sentinel listed under Dormant for completeness.
+
+## MM 2.0 scoring state table (user-provided, 2026-05-29)
+
+The MM 2.0 product evaluates each IP against DS13 (bucket = industry, vertical = subindustry) and DS19 (keywords) and assigns a tier and score:
+
+| State | In bucket (DS13 industry) | In vertical (DS13 subindustry) | Keywords (DS19) | Tier | Score | MM 2.0 bid-eligible? |
+|:-:|:-:|:-:|:-:|---|---|---|
+| 1 | ✗ | ✗ | ✗ | — | NULL | No — fails on keywords AND vertical |
+| 2 | ✗ | ✗ | ✓ | **Max Reach** | NULL | Yes — succeeds on keywords only |
+| 3 | ✓ | ✗ | ✗ | Mid Intent (not bid on) | 3333-6665 | No — fails on keywords |
+| 4 | ✓ | ✗ | ✓ | **Mid Intent** | 3333-6665 | Yes — succeeds on keywords AND DS13 (bucket) |
+| 5 | ✓ | ✓ | ✗ | **Peak Performance** | **8000** | Yes — fails on keywords, succeeds on DS13 (vertical) |
+| 6 | ✓ | ✓ | ✓ | **High Intent** | 10000 | Yes — succeeds on keywords AND DS13 (vertical) |
+
+**Read:** PP = "in vertical, no keyword match" → score 8000. It's MNTN's fallback tier when keywords don't fire but the vertical does. PP is what gets targeted "when we don't have other things" (user, 2026-05-29).
+
+The older TI-896 detector `score_type=rtc + DS13 + DS19` was a v1 expression pattern proxy; the current product definition is the scoring-tier construction above.
 
 ## DS14 / DS16 reclassification (correction from earlier passes)
 
@@ -26,113 +51,158 @@ Earlier passes (10-15) called DS14 "MNTN Global Data" and DS16 "MNTN Taxonomy Da
 - **DS14 categories** are bid routing destinations (id=1 "Beeswax Bidder", id=150 "Magnite", id=152 "Index Exchange", id=1000 "IP Ends In .0"). Not audience targeting.
 - **DS16 categories** are per-advertiser identifiers (id=1 "AdvertiserID - Eat Clean Bro") plus MNTN-internal event taxonomy (id=2 "PageViews", id=3 "Conversions", id=5 "Prospecting", id=6 "Retargeting", id=7 "MultiTouch", id=8 "VV"). Not audience targeting.
 
-Both DS14 and DS16 appear in almost every campaign because they encode bid-side plumbing, not buyer-selected audience choices. They are NOT MM.
+Both DS14 and DS16 appear in almost every campaign because they encode bid-side plumbing, not buyer-selected audience choices. They sit in the **Bid mechanics / internal taxonomy** group, not in any targeting family.
 
-## Per-DS detail (canonical 0-61, ordered by ID)
+## Per-DS detail (ordered by group, then ID)
 
-### Out-of-scope / unused / deprecated (44 DSes)
-
-| DS | Name | Notes |
-|---:|---|---|
-| -1 | MNTN Pixel | Probably a sentinel value; not in main analysis |
-| 3 | MNTN Third Party | Deprecated — replaced by named providers (DS17/18/35) |
-| 5 | Oracle Custom Audience | Unused in active prospecting |
-| 6 | MNTN Control Group | Internal experimentation control — out of scope |
-| 7 | MNTN Audience Ext | Internal |
-| 10 | MNTN Geo File | Geo (separate from categories tree) |
-| 11 | LiveRamp (legacy) | Deprecated — replaced by DS35 LiveRamp IP |
-| 12 | MNTN Product Groups | Internal product config |
-| 15 | MNTN Testing | Test |
-| 20, 22, 24–33, 36, 37, 39–42, 44, 45, 48–61 | Various named providers + ingestion sources (Experian, OnAudience, Klaviyo, Hubspot, Tealium, S3/GCS buckets, etc.) | None actively used in prospecting expressions. Many are CRM ingestion sources that feed DS4 CRM rather than being directly selectable. |
-
-### MM — MNTN-derived audience targeting
+### MM — Mountain Match 2.0
 
 | DS | Name | +camps | +spend (30d) | −camps | Notes |
 |---:|---|---:|---:|---:|---|
-| 13 | MNTN Vertical Categorization | 1,525 | $6.94M | 1 | Vertical-based targeting. Buyer picks "Finance" or similar. |
-| **14** | **MNTN Global Data** | **11,888** | **$32.10M** | 0 | **Default MNTN audience signal — appears in nearly every prospecting campaign.** Often used with category_ids `[1]` or `[1, 150]`. |
-| 16 | MNTN Taxonomy Data | 7,669 | $5.47M | 108 | Taxonomy-based filtering layered on top of DS14. |
-| 19 | MNTN Matched | 2,914 | $19.71M | 0 | "MNTN Matched" — what we'd previously called RTC. Buyer selects per-vertical IDs. Major MM signal. |
-| 38 | MNTN UI Audience Keywords | 0 | 0 | 0 | **BUK — currently unused in prospecting.** Memory had this as active; it isn't. |
-| 46 | ML Audience Intent Scoring Model | 241 | $1.70M | 0 | Fangorn ML-driven intent scoring. Newer, lower adoption. |
+| 13 | MNTN Vertical Categorization | 1,525 | $6.94M | 1 | Bucket (industry) + vertical (subindustry). **Also the underlying DS for the PP tier** — state 5/6 in the MM 2.0 state table both evaluate against DS13's vertical match. Product-named "Peak Performance" by Bryce Wagg (2026-04-22); canonical `data_sources.name` is what's shown here. |
+| 19 | MNTN Matched | 2,914 | $19.71M | 0 | **Keyword half of the MM 2.0 state table.** Buyer selects per-vertical keyword IDs. Largest MM signal by spend. Open question per `data_knowledge.md` whether RTC-DS19 is conceptually a separate scoring system from MM-core (`realtime_conquest_score` is its own field in `model_params`). For this taxonomy the user is treating it as MM. |
+| 38 | MNTN UI Audience Keywords | 0 | 0 | 0 | **BUK — empirically dormant in prospecting** (0 +camps / 0 −camps in 30d). Conceptually MM. Queued for rollout pending UI surfacing — PM/product confirm. |
+| 46 | ML Audience Intent Scoring Model | 241 | $1.70M | 0 | Fangorn ML-driven intent scoring. DS13→DS46 swap rolled out to first three advertisers week of 2026-04-30 (`mntn_business.md`). Lower adoption today; ramping. |
 
-**Functional read:** DS14 is the workhorse — almost every prospecting campaign references it. DS13/16/19 are layered selectively. DS46 is opt-in. DS38 is exists but isn't yet used.
+**Functional read:** DS13 + DS19 do the heavy lifting today (4,439 +camps combined, ~80% of MM-positive spend). DS46 is the Fangorn replacement path. DS38 (BUK) is queued.
 
-### List Retargeting (advertiser-uploaded lists)
+### PP — Peak Performance tier (subset of MM)
+
+| DS | Name | Membership | Notes |
+|---:|---|---|---|
+| 13 | MNTN Vertical Categorization | shared with MM | PP fires when the IP matches the vertical (DS13) and the bidder assigns score=8000 in `household_score`. |
+| 19 | MNTN Matched | shared with MM | PP specifically requires NO keyword match. If DS19 keywords ALSO fire, the IP escalates to High Intent (state 6, score=10000), not PP. |
+
+**Not a standalone DS family.** PP has no DSes that uniquely belong to it. The catalog surfaces it as a top-level row because PP is the product the UI exposes — but at the DS layer it's identical to MM, distinguished only by which state in the MM 2.0 state table fires. No new query, expression filter, or bucket logic for PP — it is a scoring tier inside MM.
+
+### MNTN Pixel — first-party data from MNTN's pixel
 
 | DS | Name | +camps | +spend (30d) | −camps | Notes |
 |---:|---|---:|---:|---:|---|
-| 4 | CRM | 318 | $1.58M | 754 | Buyer-uploaded customer list. **2.4x more campaigns use it for exclusion** (suppression in prospecting) than for positive retargeting. |
+| 2 | MNTN First Party | 21 | $0.13M | 482 | **Pointer to OPM segments**, not pixel data itself. In TPA expressions each DS2 category_id resolves to an OPM (`expression_type_id=1`) audience — pageview, conversion, OPM-resolved past visitors. Used as `blockFirstParty` suppression in prospecting. Per Jordan/Alyson/Zach 2026-04-22. |
+| 21 | MNTN Conversion | 0 | 0 | 3,842 | **Pure exclusion** — past converters suppressed from prospecting. |
+| 34 | MNTN Pageview | 0 | 0 | 3,818 | **Pure exclusion** — past pageview visitors suppressed from prospecting. |
+| 43 | MNTN ISP Type | 0 | 0 | 17 | Internal ISP-based exclusion. Niche. |
+
+**Functional read:** All four are auto-attached by MNTN platform code (not buyer-selected). DS2 is the OPM-pointer flag; DS21/34 are the standard "exclude past visitors" suppression; DS43 is an ISP filter. Almost zero positive use in prospecting (21 +camps total, all DS2).
+
+### 3P — bought third-party interest segments
+
+| DS | Name | +camps | +spend (30d) | −camps | Notes |
+|---:|---|---:|---:|---:|---|
+| 1 | Oracle | 553 | $5.97M | 161 | **OPEN: delivery verification.** Used positively in 553 prospecting campaigns ($5.97M) but memory note has zero IPDSC volume. Either delivers via a non-IPDSC path or those clauses are dead-weight. Pending Pass-7-style ceiling check. |
+| 17 | ShareThis | 686 | $5.95M | 35 | Bought interest segments. Catalog metadata 100% >2yr stale. |
+| 18 | Dstillery | 512 | $3.16M | 33 | Bought interest segments. Catalog metadata 100% >2yr stale. |
+| 35 | LiveRamp IP | 1,873 | $13.57M | 264 | The dominant 3P. ~213k active categories (97% of 3P by count). 99.6% fresh metadata. |
+
+**Functional read:** LiveRamp dominates. ShareThis + Dstillery are widely used but stale. Oracle is a wild card pending delivery verification.
+
+### Advertiser CRM — advertiser-uploaded customer lists
+
+| DS | Name | +camps | +spend (30d) | −camps | Notes |
+|---:|---|---:|---:|---:|---|
+| 4 | CRM | 318 | $1.58M | 754 | Buyer-uploaded customer list. **2.4× more campaigns use it for exclusion** (suppression in prospecting) than for positive retargeting. Victor canonically labels this group "1P". |
 | 8 | IP List | 0 | 0 | 492 | **Exclusion-only in prospecting** — buyers don't use IP lists as positive prospecting input. |
 | 47 | CRM Identity Graph Generated | 0 | 0 | 2 | Essentially unused (2 negative-only references). |
 
-**Functional read:** In prospecting, "1P / List Retargeting" is almost entirely about EXCLUDING known customers from MM-driven prospecting. Positive 1P clauses in a prospecting expression are rare (318 camps total).
+**Functional read:** In prospecting, Advertiser CRM is almost entirely about EXCLUDING known customers from MM-driven prospecting. Positive use is retargeting territory (`objective_id=4`), which is out of scope for the prospecting cut.
 
-### 3P interest segments (bought)
+### Bid mechanics / internal taxonomy
 
 | DS | Name | +camps | +spend (30d) | −camps | Notes |
 |---:|---|---:|---:|---:|---|
-| 17 | ShareThis | 686 | $5.95M | 35 | Bought interest segments. Catalog 100% &gt;2yr stale at metadata level. |
-| 18 | Dstillery | 512 | $3.16M | 33 | Bought interest segments. Catalog 100% &gt;2yr stale. |
-| 35 | LiveRamp IP | 1,873 | $13.57M | 264 | The dominant 3P. ~213k active categories (97% of 3P by count). 99.6% fresh metadata. |
-| 1 | Oracle | 553 | $5.97M | 161 | **Open question.** Used positively in 553 prospecting campaigns ($5.97M) but memory says zero IPDSC volume. Verify whether this DS drives actual delivery or is dead-weight like below-ceiling 3P. |
+| 14 | MNTN Global Data | 11,888 | $32.10M | 0 | **Bid routing.** Categories are Beeswax / Magnite / Index Exchange / IP-ends-in-.0 filters. Appears in 11,888 of 11,909 prospecting campaigns (~100%) — behaves like an auto-attached default. NOT audience targeting. |
+| 16 | MNTN Taxonomy Data | 7,669 | $5.47M | 108 | **Per-advertiser identifiers + internal event taxonomy** (PageViews, Conversions, Prospecting, Retargeting, MultiTouch, VV). NOT audience targeting. |
 
-**Functional read:** LiveRamp dominates by usage AND fresh metadata. ShareThis + Dstillery are widely used but their catalogs are stale. Oracle is a wild card — needs delivery-side verification.
+### Dormant / out-of-scope
 
-### Pixel-derived / auto-attached (not buyer-selectable in the family sense)
+Registered DSes with negligible or zero use in the 30d prospecting window. Listed for completeness; do not affect Pass 17 buckets.
 
-| DS | Name | +camps | −camps | Notes |
-|---:|---|---:|---:|---|
-| 2 | MNTN First Party | 21 | 482 | Memory name "MNTN First Party" is overloaded — this is pixel-derived first-party data. Mostly used as exclusion (482 camps), rarely positive (21). |
-| 21 | MNTN Conversion | 0 | 3,842 | **Pure exclusion** — past converters suppressed from prospecting. |
-| 34 | MNTN Pageview | 0 | 3,818 | **Pure exclusion** — past pageview visitors suppressed from prospecting. |
-| 43 | MNTN ISP Type | 0 | 17 | Internal ISP-based exclusion. Niche. |
-
-**Functional read:** These are pixel-fired data points used reflexively for "exclude past visitors from new prospecting." Not buyer-selectable in the "which segments should I pick?" sense. The TI-956 question doesn't apply to them.
-
-### Marginal / internal
-
-| DS | Name | +camps | +spend | Notes |
-|---:|---|---:|---:|---|
-| 9 | MNTN Campaigns | 12 | $0.20M | Internal campaign-cross-reference. Negligible usage. |
+| DS | Name | +camps | +spend | −camps | Sub-type |
+|---:|---|---:|---:|---:|---|
+| -1 | MNTN Pixel | — | — | — | Sentinel value; not used in TPA expressions |
+| 3 | MNTN Third Party | 0 | 0 | 0 | Deprecated — replaced by named providers (DS17/18/35) |
+| 5 | Oracle Custom Audience | 0 | 0 | 0 | Unused in active prospecting |
+| 6 | MNTN Control Group | 0 | 0 | 0 | Internal experimentation control |
+| 7 | MNTN Audience Ext | 0 | 0 | 0 | Internal |
+| 9 | MNTN Campaigns | 12 | $0.20M | 0 | Internal campaign-cross-reference. Negligible use. |
+| 10 | MNTN Geo File | 0 | 0 | 0 | Geo (separate from category tree) |
+| 11 | LiveRamp (legacy) | 0 | 0 | 0 | Deprecated — replaced by DS35 LiveRamp IP |
+| 12 | MNTN Product Groups | 0 | 0 | 0 | Internal product config |
+| 15 | MNTN Testing | 0 | 0 | 0 | Test DS |
+| 20 | OnAudience | 0 | 0 | 0 | 3P provider, no current use |
+| 22 | Experian | 0 | 0 | 0 | 3P provider, no current use |
+| 23 | guid_log | 0 | 0 | 0 | Internal log reference |
+| 24 | Justuno | 0 | 0 | 0 | CRM ingestion source (feeds DS4) |
+| 25 | 5x5 | 0 | 0 | 0 | Provider, no current use |
+| 26 | sharethis_predactiv | 0 | 0 | 0 | ShareThis variant, no current use |
+| 27 | LaunchLabs | 0 | 0 | 0 | Provider, no current use |
+| 28 | 33Across | 0 | 0 | 0 | 3P provider, no current use |
+| 29 | deepsync | 0 | 0 | 0 | Provider, no current use |
+| 30 | MNTN augmentor_log | 0 | 0 | 0 | Internal log reference |
+| 31 | CRM Upload | 0 | 0 | 0 | CRM ingestion source (feeds DS4) |
+| 32 | CDK | 0 | 0 | 0 | Provider, no current use |
+| 33 | Sovrn | 0 | 0 | 0 | 3P provider, no current use |
+| 36 | Cybba | 0 | 0 | 0 | 3P provider, no current use |
+| 37 | CallRail | 0 | 0 | 0 | Provider, no current use |
+| 39 | Klickly | 0 | 0 | 0 | Provider, no current use |
+| 40 | 33Across API | 0 | 0 | 0 | 3P provider variant, no current use |
+| 41 | Freshpaint | 0 | 0 | 0 | CRM ingestion source |
+| 42 | MNTN Select | 0 | 0 | 0 | Internal product reference (Select tier) |
+| 44 | Captify | 0 | 0 | 0 | 3P provider, no current use |
+| 45 | Hubspot | 0 | 0 | 0 | CRM ingestion source |
+| 48 | Tealium | 0 | 0 | 0 | CRM ingestion source |
+| 49 | Publisher Network | 0 | 0 | 0 | Internal |
+| 50 | shopify | 0 | 0 | 0 | CRM ingestion source |
+| 51 | Bombora | 0 | 0 | 0 | 3P provider, no current use |
+| 52 | Liftlab | 0 | 0 | 0 | Incrementality vendor, no current use |
+| 53 | GCS Bucket | 0 | 0 | 0 | Generic ingestion source |
+| 54 | S3 Bucket | 0 | 0 | 0 | Generic ingestion source |
+| 55 | Klaviyo | 0 | 0 | 0 | CRM ingestion source |
+| 56 | Segment | 0 | 0 | 0 | CRM ingestion source |
+| 57 | Ours Privacy | 0 | 0 | 0 | Provider, no current use |
+| 58 | Audience Acuity | 0 | 0 | 0 | Provider, no current use |
+| 59 | Storage Buckets | 0 | 0 | 0 | Generic ingestion source |
+| 60 | mParticle | 0 | 0 | 0 | CRM ingestion source |
+| 61 | AppsFlyer v2 | 0 | 0 | 0 | Mobile attribution, no current use |
 
 ## Open questions for further investigation
 
-1. **DS1 Oracle delivery test:** does the bidder actually deliver against Oracle clauses (despite zero IPDSC volume in catalog)? Or are these 553 campaigns paying for unreachable clauses? Similar pattern to the below-ceiling 3P cohort?
+1. **DS1 Oracle delivery test:** does the bidder actually deliver against Oracle clauses (despite zero IPDSC volume per memory)? Or are these 553 campaigns paying for unreachable clauses? Pending Pass-7-style ceiling check against `cost_impression_log`.
 2. **DS38 (BUK) zero usage:** memory had BUK as an active MM signal. Is BUK queued for rollout? Is the UI not surfacing it? Worth a UI/PM check.
-3. **DS14 universal use:** 11,888 of 11,864 prospecting campaigns reference DS14 (essentially 100%). Is DS14 auto-attached at campaign creation, or is the buyer explicitly picking it? Behaves like a default.
-4. **DS2 (MNTN First Party) vs DS21/34 (pixel) overlap:** all three are MNTN-pixel-derived. What's the functional difference?
+3. **DS19 in MM:** per Victor Savitskiy (2026-05-28), RTC may be a separate scoring system from MM-core (`realtime_conquest_score` lives in `model_params` distinct from `household_score`). This catalog treats DS19 as MM per user direction; flag for Victor confirmation.
+4. **DS14 universal use (11,888 of 11,909 prospecting campaigns ≈ 100%):** bid routing, not buyer pick — confirm with bidder team whether it's literally auto-attached at campaign creation.
+5. **DS2 vs DS21/DS34/DS43 functional split inside MNTN Pixel:** all are MNTN-pixel-derived but serve different roles. DS2 = OPM-segment pointer for retargeting; DS21/34 = pure exclusion suppression; DS43 = ISP filter. Kept grouped; flag if any downstream pass needs to disambiguate.
 
-## Naming convention (CORRECTED — for deck / future analyses)
+## Pass 17 bucket results (MM = {13,19,38,46}, prospecting only)
 
-- **MM** = `{DS13, DS19, DS38, DS46}` (DS38 kept conceptually despite zero current usage)
-- **List Retargeting (1P)** = `{DS4, DS8, DS47}` (positive use only DS4; DS8/DS47 are exclusion-only in prospecting)
-- **3P interest** = `{DS1, DS17, DS18, DS35}` (DS1 Oracle included pending delivery verification)
-- **Pixel exclusions** = `{DS2, DS21, DS34, DS43}` (auto-attached, used only in negative clauses)
-- **Bid routing + internal taxonomy** = `{DS14, DS16}` (NOT in family taxonomy — these are bid-side mechanics, not buyer audience picks)
-
-## Pass 17 bucket results (CORRECTED MM, prospecting only)
+Unchanged from the Pass 17 corrected-MM run. The locked MM definition above matches the Pass 17 query, so these totals tie out directly.
 
 | Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
 |---|---:|---:|---:|---:|---:|
-| nothing (no MM/1P/3P targeting clauses) | 7,619 | 64.1% | $5.06M | 15.8% | $61M |
+| nothing (no MM/CRM/3P targeting clauses) | 7,619 | 64.1% | $5.06M | 15.8% | $61M |
 | MM only | 1,119 | 9.4% | $5.51M | 17.2% | $66M |
-| 1P only | 486 | 4.1% | $1.22M | 3.8% | $15M |
+| Advertiser CRM only | 486 | 4.1% | $1.22M | 3.8% | $15M |
 | 3P only | 488 | 4.1% | $1.63M | 5.1% | $20M |
 | **MM + 3P** | **1,208** | **10.2%** | **$7.75M** | **24.1%** | **$93M** |
-| MM + 1P | 511 | 4.3% | $4.51M | 14.0% | $54M |
-| 1P + 3P (no MM) | 97 | 0.8% | $2.53M | 7.9% | $30M |
-| MM + 1P + 3P | 361 | 3.0% | $3.89M | 12.1% | $47M |
+| MM + Advertiser CRM | 511 | 4.3% | $4.51M | 14.0% | $54M |
+| Advertiser CRM + 3P (no MM) | 97 | 0.8% | $2.53M | 7.9% | $30M |
+| MM + Advertiser CRM + 3P | 361 | 3.0% | $3.89M | 12.1% | $47M |
 | **Total prospecting** | **11,909** | 100% | **$32.10M** | 100% | **$385M** |
 
 **Read:**
 - MM + 3P is the biggest single bucket by spend ($7.75M / 24.1% / ~$93M annualized) — the canonical prospecting-with-interest-segments cohort.
 - 3P-touching: 2,154 camps / 18.1% / $15.81M / 49.2% of prospecting spend (~$190M annualized).
 - MM-touching: 3,199 camps / 26.9% / $21.66M / 67.5%.
-- "Nothing" bucket (64% camps / 16% spend) = small prospecting campaigns using DS19 RTC score block + geo + pixel exclusions only. Avg $664/camp.
+- "Nothing" bucket (64% camps / 16% spend) = small prospecting campaigns using DS19 RTC score block + geo + MNTN Pixel exclusions only. Avg $664/camp.
+- Bucket labels above use **Advertiser CRM** in place of the prior "1P" / "List Retargeting" — math identical.
 
 ## Related references
 
-- `knowledge/data_knowledge.md` §8 "Bidder Scoring Reality" — score-field details
-- `tickets/ti_999_interest_segment_sizing/queries/ti_999_ds_catalog_usage.sql` — query that produced this audit
+- `knowledge/data_knowledge.md` §"Intent Scoring Architecture" — HHST score ranges, current production distribution
+- `knowledge/data_knowledge.md` §"Audience System Architecture" — DS2 = OPM-segment pointer, expression_type_id semantics
+- `knowledge/data_knowledge.md` §"Bidder Scoring Reality" — three score fields (household_score / advertiser_household_score / realtime_conquest_score)
+- `knowledge/mntn_business.md` §"Peak Performance / Mountain Matched relationship" — TI-896 segment-expression detection, 24% PP/MM overlap
+- `tickets/ti_999_interest_segment_sizing/queries/ti_999_ds_catalog_usage.sql` — query that produced the per-DS usage counts
+- `tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass17_corrected_mm.sql` — Pass 17 bucket query (MM = {13,19,38,46})
 - `tickets/ti_999_interest_segment_sizing/outputs/ti_999_ds_catalog_usage_2026_05_29.csv` — raw output
