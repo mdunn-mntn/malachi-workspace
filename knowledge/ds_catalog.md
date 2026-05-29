@@ -245,28 +245,41 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 6. **DS9 MNTN Audiences canonical name + scope:** is "MNTN Audiences" the right umbrella, or does the platform team call this layer something specific (e.g., "MNTN Select Audiences")? Currently used by only 6 advertisers — is it intended to broaden beyond Select customers? Sean asking.
 7. **Mobile-attribution outliers (DS328493 Adjust / DS328494 AppsFlyer / DS328495 Branch / DS328496 Kochava / DS328497 Singular):** all six high-ID type=1 DSes have zero TPA-expression use. Do they show up anywhere else (e.g., MMP integration via core tables, attribution reports)? Out-of-scope for prospecting but worth confirming they're not silently feeding something downstream.
 
-## Pass 17 bucket results (MM = {13,19,38,46}, prospecting only)
+## Pass 18 bucket results — current locked taxonomy
 
-Unchanged from the Pass 17 corrected-MM run. The locked MM definition above matches the Pass 17 query, so these totals tie out directly.
+Supersedes Pass 17. Two changes vs Pass 17:
+- **MNTN Select** added as a 4th audience axis (group `{DS9, DS42}`).
+- **DS1 Oracle removed from 3P** (Sean Yang confirmed Oracle is no longer in IPDSC → dead-weight clauses).
+
+Axes: MM `{13,19,38,46}` · MNTN Select `{9,42}` · 3P `{17,18,35}` · Advertiser CRM `{4,8,47}`. "Any signal" = positive OR negative polarity.
+
+Query: `tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass18_select_axis_oracle_carved.sql`
+Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass18_buckets_2026_05_29.csv`
 
 | Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
 |---|---:|---:|---:|---:|---:|
-| nothing (no MM/CRM/3P targeting clauses) | 7,619 | 64.1% | $5.06M | 15.8% | $61M |
-| MM only | 1,119 | 9.4% | $5.51M | 17.2% | $66M |
-| Advertiser CRM only | 486 | 4.1% | $1.22M | 3.8% | $15M |
-| 3P only | 488 | 4.1% | $1.63M | 5.1% | $20M |
-| **MM + 3P** | **1,208** | **10.2%** | **$7.75M** | **24.1%** | **$93M** |
-| MM + Advertiser CRM | 511 | 4.3% | $4.51M | 14.0% | $54M |
-| Advertiser CRM + 3P (no MM) | 97 | 0.8% | $2.53M | 7.9% | $30M |
-| MM + Advertiser CRM + 3P | 361 | 3.0% | $3.89M | 12.1% | $47M |
-| **Total prospecting** | **11,909** | 100% | **$32.10M** | 100% | **$385M** |
+| nothing (no audience signals) | 7,663 | 64.5% | $5.25M | 16.4% | $63M |
+| MM only | 1,194 | 10.0% | $6.02M | 18.7% | $72M |
+| **MM + 3P** | **1,133** | **9.5%** | **$7.25M** | **22.6%** | **$87M** |
+| MM + Advertiser CRM | 566 | 4.8% | $5.08M | 15.8% | $61M |
+| Advertiser CRM only | 480 | 4.0% | $1.07M | 3.3% | $13M |
+| 3P only | 439 | 3.7% | $1.41M | 4.4% | $17M |
+| MM + Advertiser CRM + 3P | 306 | 2.6% | $3.32M | 10.3% | $40M |
+| Advertiser CRM + 3P (no MM) | 96 | 0.8% | $2.51M | 7.8% | $30M |
+| MNTN Select + Advertiser CRM | 7 | 0.1% | $0.17M | 0.5% | $2M |
+| MNTN Select only | 5 | 0.0% | $0.03M | 0.1% | $0M |
+| **Total prospecting** | **11,889** | 100% | **$32.10M** | 100% | **$385M** |
 
 **Read:**
-- MM + 3P is the biggest single bucket by spend ($7.75M / 24.1% / ~$93M annualized) — the canonical prospecting-with-interest-segments cohort.
-- 3P-touching: 2,154 camps / 18.1% / $15.81M / 49.2% of prospecting spend (~$190M annualized).
-- MM-touching: 3,199 camps / 26.9% / $21.66M / 67.5%.
-- "Nothing" bucket (64% camps / 16% spend) = small prospecting campaigns using DS19 RTC score block + geo + MNTN Pixel exclusions only. Avg $664/camp.
-- Bucket labels above use **Advertiser CRM** in place of the prior "1P" / "List Retargeting" — math identical.
+- **MM + 3P remains the biggest single audience-driven bucket** ($7.25M / 22.6% / $87M annualized) — slightly smaller than Pass 17 ($7.75M) because Oracle-only clauses no longer count as 3P.
+- **3P-touching (post-Oracle-carve-out): 1,974 camps / $14.49M / 45.1% of prospecting spend** ($174M annualized). Drops ~$1.3M vs Pass 17's "3P-touching $15.81M / 49.2%" — the carved Oracle volume rebucketed into MM-only / nothing.
+- **MM-touching: 3,199 camps / 26.9% / $21.67M / 67.5%** (essentially unchanged vs Pass 17; Oracle wasn't in MM).
+- **MNTN Select is microscopic: 12 camps / $0.20M / 0.6% of spend / $2.4M annualized.** Only 5 advertisers total. Notably **Select never co-occurs with MM or 3P** in the audience expression — it's exclusively used as standalone retargeting (5 camps) or with Advertiser CRM (7 camps). All 6 buckets containing both Select and (MM or 3P) are empty.
+- "Nothing" bucket (64.5% camps / 16.4% spend) — small prospecting campaigns relying on DS19 RTC score block + geo + MNTN Pixel exclusions only. Avg $686/camp.
+
+### Pass 17 historical (superseded — kept for reference)
+
+The earlier Pass 17 run treated Oracle as 3P and had no Select axis. Headline numbers were: 3P-touching = 2,154 camps / $15.81M (49.2%); MM-touching = 3,199 camps / $21.66M (67.5%); MM+3P = 1,208 camps / $7.75M.
 
 ## Related references
 
