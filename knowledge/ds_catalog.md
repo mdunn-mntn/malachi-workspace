@@ -248,35 +248,45 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 5. **DS9 MNTN Select scope going forward:** Jordan + Sean both confirmed DS9 is Select-only today. Is it intended to broaden beyond the 6 advertisers currently using it? Tied to Select product roadmap.
 6. **Mobile-attribution outliers (DS328493 Adjust / DS328494 AppsFlyer / DS328495 Branch / DS328496 Kochava / DS328497 Singular):** all six high-ID type=1 DSes have zero TPA-expression use. Do they show up anywhere else (e.g., MMP integration via core tables, attribution reports)? Out-of-scope for prospecting but worth confirming they're not silently feeding something downstream.
 
-## Pass 20 bucket results — current locked taxonomy (RTC as its own axis)
+## Pass 21 bucket results — current locked taxonomy (RTC dropped from axes)
 
-Supersedes Pass 18 and Pass 19. Pass 20 is the most accurate framing under Sean Yang's revised reading (2026-05-29) that RTC and MM are independent pipelines. **5 binary axes**, each evaluated on its own:
-- **MM** = buyer-picked MM batch DSes `{DS13, DS19, DS38, DS46}`
-- **RTC** = `score_type=rtc` flag in the expression (auto-attached platform default; independent real-time scoring pipeline)
+Supersedes Pass 18, 19, and 20. RTC is in 99.9% of prospecting expressions and isn't a buyer-pickable axis — it belongs with the platform plumbing (geo, DS14 freshness filter, 10% holdout) rather than as a bucket category. Pass 21 drops it. **4 buyer-pickable binary axes:**
+- **MM** = `{DS13, DS19, DS38, DS46}`
 - **MNTN Select** = `{DS9, DS42}`
-- **3P** = `{DS17, DS18, DS35}` (Oracle DS1 carved out — dead-weight)
+- **3P** = `{DS17, DS18, DS35}` (Oracle DS1 carved out)
 - **Advertiser CRM** = `{DS4, DS8, DS47}` (any polarity)
 
-Query: `tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass20_rtc_separate.sql`
-Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass20_buckets_2026_05_29.csv`
+Universal platform plumbing (not bucket axes — present on essentially every prospecting campaign):
+- **Geo clause** — 100% of expressions
+- **`score_type=rtc`** — 99.9% (16 anomalies, see callout below)
+- **DS14** (freshness filter, IPs in `guid_log` 4d / `augmentor_log` 1d) — 100%
+- **10% holdout via MD5 hash bucket** — 100%
+- **MNTN Pixel exclusions** (DS21/34/43) — auto-attached suppression for past converters / pageview visitors / ISP filter
+
+Math is identical to Pass 18; only the labels and framing are improved.
+
+Query: `tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass18_select_axis_oracle_carved.sql` (reused)
+Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass21_buckets_2026_05_29.csv`
 
 ### Bucket breakdown
 
-> **Note on geo + RTC co-occurrence:** every prospecting expression has a `geos` clause (100% of campaigns) and RTC is in 99.9% of expressions. Geo and RTC are effectively bound together at the platform level — neither is a buyer-pickable axis in the "do I add this?" sense. What distinguishes the buckets below is **what the buyer attached on top of those defaults** (MM batch DSes, 3P interest segments, CRM lists, Select audiences).
+### Bucket breakdown
 
 | Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
 |---|---:|---:|---:|---:|---:|
-| **Geo-only (no buyer audience layer)** — just the platform defaults: geo + RTC + DS14 freshness + holdout | **7,659** | **64.4%** | **$5.24M** | **16.3%** | **$63M** |
-| MM + RTC | 1,194 | 10.0% | $6.02M | 18.7% | $72M |
-| MM + RTC + 3P | 1,134 | 9.5% | $7.25M | 22.6% | $87M |
-| MM + RTC + CRM | 564 | 4.7% | $5.05M | 15.7% | $61M |
-| RTC + CRM (no MM) | 478 | 4.0% | $1.07M | 3.3% | $13M |
-| RTC + 3P (no MM) | 438 | 3.7% | $1.41M | 4.4% | $17M |
-| MM + RTC + 3P + CRM | 302 | 2.5% | $3.26M | 10.2% | $39M |
-| RTC + 3P + CRM (no MM) | 96 | 0.8% | $2.51M | 7.8% | $30M |
-| Select combos | 12 | 0.1% | $0.20M | 0.6% | $2M |
-| Anomalies (no RTC, see callout below) | 16 | 0.1% | $0.11M | 0.4% | $1M |
+| **Geo-only (no buyer audience layer)** | **7,663** | **64.5%** | **$5.25M** | **16.4%** | **$63M** |
+| MM only | 1,194 | 10.0% | $6.02M | 18.7% | $72M |
+| MM + 3P | 1,133 | 9.5% | $7.25M | 22.6% | $87M |
+| MM + Advertiser CRM | 566 | 4.8% | $5.08M | 15.8% | $61M |
+| Advertiser CRM only | 480 | 4.0% | $1.07M | 3.3% | $13M |
+| 3P only | 439 | 3.7% | $1.41M | 4.4% | $17M |
+| MM + 3P + Advertiser CRM | 306 | 2.6% | $3.32M | 10.3% | $40M |
+| 3P + Advertiser CRM (no MM) | 96 | 0.8% | $2.51M | 7.8% | $30M |
+| MNTN Select + CRM | 7 | 0.1% | $0.17M | 0.5% | $2M |
+| MNTN Select only | 5 | 0.0% | $0.03M | 0.1% | $0M |
 | **Total prospecting** | **11,889** | 100% | **$32.10M** | 100% | **$385M** |
+
+Plus the **16-campaign no-RTC anomaly cohort** (see callout below) — these 16 still count in the table above (they fall into Geo-only / MM-only / various combos depending on their DSes), but are flagged separately because they bypass the universal RTC default.
 
 ### Anomaly cohort: 16 campaigns with no RTC (concentrated in 3 advertisers)
 
@@ -314,25 +324,28 @@ Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass20_buckets_20
 
 | Axis | Campaigns | Spend | % spend | Read |
 |---|---:|---:|---:|---|
-| **MM-touching** (buyer-picked DS13/19/38/46) | 3,196 | $21.58M | **67.2%** | Buyer attached an MM batch DS clause. Always co-occurs with RTC in practice. |
-| **RTC-touching** (`score_type=rtc` in expression) | 11,879 | $32.10M | **99.9%** | Auto-attached platform default. Effectively the universal scoring layer for prospecting. |
+| **MM-touching** (buyer-picked DS13/19/38/46) | 3,199 | $21.66M | **67.5%** | Buyer attached an MM batch DS clause. |
 | **3P-touching** (DS17/18/35) | 1,974 | $14.49M | **45.1%** | Buyer added a 3P interest segment (LiveRamp / ShareThis / Dstillery). |
-| **CRM-touching** (DS4/8/47, any polarity) | 1,452 | $12.15M | **37.9%** | 78% pure exclusion (hygiene); only 22% include or both. |
+| **CRM-touching** (DS4/8/47, any polarity) | 1,455 | $12.15M | **37.9%** | 78% pure exclusion (hygiene); only 22% include or both. |
 | **MNTN Select-touching** (DS9/42) | 12 | $0.20M | **0.6%** | Narrow Select-customer cohort. Never co-occurs with MM or 3P. |
 
 ### Read
 
-- **RTC is essentially universal in prospecting** (99.9% of spend). It's a platform default the audience compiler attaches to every prospecting campaign — not something the buyer explicitly opts into. Per Sean Yang's revised reading, the RTC pipeline runs independently of MM batch scoring: MM populates `household_score` via IPDSC; RTC populates `realtime_conquest_score` via a real-time match-and-tag pipeline.
-- **The single biggest cohort by campaign count is "Geo-only (no buyer audience layer)"** — 7,659 campaigns / 64.4% / $5.24M / 16.3% of spend. These buyers attached **no MM batch DS**, **no 3P interest segment**, **no CRM**, **no Select**. Their intentional input was just a geo. The platform handled everything else (RTC scoring, DS14 freshness filter, 10% holdout).
-- **MM-touching = 67.2% of spend** (essentially unchanged from Pass 18). MM-touching campaigns almost always also have RTC (the platform default).
-- **MM-without-RTC is rare** (6 campaigns total, plus 10 more with no RTC and no MM — see anomaly callout). The RTC platform default is sticky, and the 16 exceptions are concentrated in 3 advertisers who appear to be deliberately bypassing it.
-- **3P-touching = 45.1% of spend** (unchanged from Pass 18).
-- **CRM-touching = 37.9% of spend, but 78% of that is exclusion-only** (hygiene). Only 318 campaigns / $1.57M / ~5% of all prospecting spend are CRM-include-touching.
-- **MNTN Select is microscopic** — 12 camps / $0.20M / 0.6%. Concentrated in 6 advertisers total. Never co-occurs with MM or 3P in the same expression.
+- **The single biggest cohort by campaign count is "Geo-only (no buyer audience layer)"** — 7,663 campaigns / 64.5% / $5.25M / 16.4% of spend. These buyers attached **no MM batch DS**, **no 3P interest segment**, **no CRM**, **no MNTN Select audience**. Their intentional input was just a geo. The platform handled everything else (RTC scoring via the `score_type=rtc` flag, DS14 freshness filter, 10% holdout, pixel exclusions).
+- **MM-touching = 67.5% of spend** — 3,199 campaigns / $21.66M. Buyer attached an explicit MM batch DS clause (DS13 vertical, DS19 keywords, DS38 BUK queued, or DS46 Fangorn).
+- **3P-touching = 45.1% of spend** — 1,974 campaigns / $14.49M. Buyer attached a bought interest segment.
+- **MM + 3P is the biggest single audience-driven bucket** — 1,133 camps / $7.25M / 22.6% — the canonical "MM prospecting narrowed by 3P interest" cohort.
+- **CRM-touching = 37.9% of spend, but 78% of that is exclusion-only** (hygiene). Only ~5% of all prospecting spend involves CRM-include / look-alike-style.
+- **MNTN Select is microscopic** — 12 camps / $0.20M / 0.6%. Concentrated in 6 advertisers total. Never co-occurs with MM or 3P.
+- **RTC and geo are not bucket axes — they're platform plumbing.** RTC is in 99.9% of expressions; geo is in 100%. Treating either as a bucket axis adds no information; the meaningful axes are the buyer-pickable layers above.
+
+### Pass 20 historical (superseded — kept for reference)
+
+Pass 20 kept RTC as its own bucket axis. Headlines under Pass 20: RTC-only (geo-only) = 7,659 / 64.4% / $5.24M / 16.3%; MM + RTC = 1,194 / $6.02M; MM + RTC + 3P = 1,134 / $7.25M. Superseded by Pass 21 once we recognized RTC is universal (99.9%) and belongs in platform plumbing, not a bucket axis.
 
 ### Pass 19 historical (superseded — kept for reference)
 
-Pass 19 folded RTC into MM-touching based on Sean's first reading "RTC is literally the same as MM, but real-time." Headline under that framing: MM-touching = 99.9% of spend. Pass 19 is superseded by Pass 20 once Sean revised to "RTC is an independent pipeline."
+Pass 19 folded RTC into MM-touching based on Sean's first reading "RTC is literally the same as MM, but real-time." Headline under that framing: MM-touching = 99.9% of spend. Pass 19 is superseded by Pass 20 (and then Pass 21) once Sean revised to "RTC is an independent pipeline."
 
 Axes: MM `{13,19,38,46}` ∪ `{score_type=rtc}` · MNTN Select `{9,42}` · 3P `{17,18,35}` · Advertiser CRM `{4,8,47}`. "Any signal" = positive OR negative DS reference, or (for MM) the RTC flag at the expression top level.
 

@@ -17,13 +17,14 @@ from openpyxl.utils import get_column_letter
 WORKSPACE = Path(__file__).resolve().parents[3]
 OUTPUTS = WORKSPACE / "tickets/ti_999_interest_segment_sizing/outputs"
 SRC_CSV = OUTPUTS / "ti_999_ds_with_categories_2026_05_29.csv"
-PASS_CSV = OUTPUTS / "ti_999_pass20_buckets_2026_05_29.csv"
-PASS_LABEL = "Pass 20"
+PASS_CSV = OUTPUTS / "ti_999_pass21_buckets_2026_05_29.csv"
+PASS_LABEL = "Pass 21"
 PASS_NOTE = (
-    "Five independent axes: MM {13,19,38,46} · RTC (score_type=rtc) · "
-    "MNTN Select {9,42} · 3P {17,18,35} (Oracle carved out) · Advertiser CRM {4,8,47}. "
-    "RTC kept as its own axis per Sean Yang's revised reading (2026-05-29): "
-    "RTC is an independent pipeline from MM, not the real-time variant of MM."
+    "Four buyer-pickable axes: MM {13,19,38,46} · MNTN Select {9,42} · "
+    "3P {17,18,35} (Oracle carved out) · Advertiser CRM {4,8,47}. "
+    "RTC dropped as an axis — it's in 99.9% of expressions and belongs with platform plumbing "
+    "(geo, DS14 freshness filter, holdout) rather than as a bucket category. "
+    "16 no-RTC anomalies on the 'RTC anomalies' sheet."
 )
 ANOMALIES_CSV = OUTPUTS / "ti_999_pass20_anomalies_2026_05_29.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
