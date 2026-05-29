@@ -247,12 +247,58 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 5. **DS9 MNTN Select scope going forward:** Jordan + Sean both confirmed DS9 is Select-only today. Is it intended to broaden beyond the 6 advertisers currently using it? Tied to Select product roadmap.
 6. **Mobile-attribution outliers (DS328493 Adjust / DS328494 AppsFlyer / DS328495 Branch / DS328496 Kochava / DS328497 Singular):** all six high-ID type=1 DSes have zero TPA-expression use. Do they show up anywhere else (e.g., MMP integration via core tables, attribution reports)? Out-of-scope for prospecting but worth confirming they're not silently feeding something downstream.
 
-## Pass 19 bucket results — exploratory (pending AUD confirmation)
+## Pass 20 bucket results — current locked taxonomy (RTC as its own axis)
 
-> ⚠️ **Status: exploratory.** Pass 19 folds RTC into MM-touching based on Sean Yang's first reading ("RTC is literally the same as MM, but it gets done in real time"). Sean revised this later in the same thread: "RTC is a pipeline running independently to MM. MM is a batch process that goes through IPDSC." If the revised reading is right (AUD team to confirm), **RTC and MM are independent pipelines** and Pass 18's framing (RTC separate from MM-touching) is more accurate. Use Pass 18 as the primary deck framing until AUD clarifies.
+Supersedes Pass 18 and Pass 19. Pass 20 is the most accurate framing under Sean Yang's revised reading (2026-05-29) that RTC and MM are independent pipelines. **5 binary axes**, each evaluated on its own:
+- **MM** = buyer-picked MM batch DSes `{DS13, DS19, DS38, DS46}`
+- **RTC** = `score_type=rtc` flag in the expression (auto-attached platform default; independent real-time scoring pipeline)
+- **MNTN Select** = `{DS9, DS42}`
+- **3P** = `{DS17, DS18, DS35}` (Oracle DS1 carved out — dead-weight)
+- **Advertiser CRM** = `{DS4, DS8, DS47}` (any polarity)
 
-Pass 19 change vs Pass 18:
-- **`score_type=rtc` in the expression counts as MM.** Originally based on Sean's first reading — to be revised if AUD confirms RTC is an independent pipeline.
+Query: `tickets/ti_999_interest_segment_sizing/queries/ti_999_finding15_pass20_rtc_separate.sql`
+Output: `tickets/ti_999_interest_segment_sizing/outputs/ti_999_pass20_buckets_2026_05_29.csv`
+
+### Bucket breakdown
+
+| Bucket | n_camps | % | Spend (30d) | % spend | Annualized |
+|---|---:|---:|---:|---:|---:|
+| **RTC-only (no buyer picks — geo + platform defaults)** | **7,659** | **64.4%** | **$5.24M** | **16.3%** | **$63M** |
+| MM + RTC | 1,194 | 10.0% | $6.02M | 18.7% | $72M |
+| MM + RTC + 3P | 1,134 | 9.5% | $7.25M | 22.6% | $87M |
+| MM + RTC + CRM | 564 | 4.7% | $5.05M | 15.7% | $61M |
+| RTC + CRM (no MM) | 478 | 4.0% | $1.07M | 3.3% | $13M |
+| RTC + 3P (no MM) | 438 | 3.7% | $1.41M | 4.4% | $17M |
+| MM + RTC + 3P + CRM | 302 | 2.5% | $3.26M | 10.2% | $39M |
+| RTC + 3P + CRM (no MM) | 96 | 0.8% | $2.51M | 7.8% | $30M |
+| Select combos | 12 | 0.1% | $0.20M | 0.6% | $2M |
+| Other combos (incl rare MM-without-RTC) | 8 | 0.1% | $0.10M | 0.3% | $1M |
+| Truly nothing (no RTC, no DSes) | 4 | 0.0% | $0.01M | 0.0% | $0M |
+| **Total prospecting** | **11,889** | 100% | **$32.10M** | 100% | **$385M** |
+
+### Axis-touching headline rollups
+
+| Axis | Campaigns | Spend | % spend | Read |
+|---|---:|---:|---:|---|
+| **MM-touching** (buyer-picked DS13/19/38/46) | 3,196 | $21.58M | **67.2%** | Buyer attached an MM batch DS clause. Always co-occurs with RTC in practice. |
+| **RTC-touching** (`score_type=rtc` in expression) | 11,879 | $32.10M | **99.9%** | Auto-attached platform default. Effectively the universal scoring layer for prospecting. |
+| **3P-touching** (DS17/18/35) | 1,974 | $14.49M | **45.1%** | Buyer added a 3P interest segment (LiveRamp / ShareThis / Dstillery). |
+| **CRM-touching** (DS4/8/47, any polarity) | 1,452 | $12.15M | **37.9%** | 78% pure exclusion (hygiene); only 22% include or both. |
+| **MNTN Select-touching** (DS9/42) | 12 | $0.20M | **0.6%** | Narrow Select-customer cohort. Never co-occurs with MM or 3P. |
+
+### Read
+
+- **RTC is essentially universal in prospecting** (99.9% of spend). It's a platform default the audience compiler attaches to every prospecting campaign — not something the buyer explicitly opts into. Per Sean Yang's revised reading, the RTC pipeline runs independently of MM batch scoring: MM populates `household_score` via IPDSC; RTC populates `realtime_conquest_score` via a real-time match-and-tag pipeline.
+- **The single biggest cohort by campaign count is "RTC-only"** — 7,659 campaigns / 64.4% / $5.24M / 16.3% of spend. These buyers attached **no MM batch DS**, **no 3P interest segment**, **no CRM**, **no Select**. Their intentional input was just a geo. The platform handled everything else (RTC scoring, DS14 freshness filter, 10% holdout).
+- **MM-touching = 67.2% of spend** (essentially unchanged from Pass 18). MM-touching campaigns almost always also have RTC (the platform default).
+- **MM-without-RTC is virtually nonexistent** (6 campaigns total, in the "other combos" bucket). The default is so sticky that even when buyers attach explicit MM DSes, RTC remains.
+- **3P-touching = 45.1% of spend** (unchanged from Pass 18).
+- **CRM-touching = 37.9% of spend, but 78% of that is exclusion-only** (hygiene). Only 318 campaigns / $1.57M / ~5% of all prospecting spend are CRM-include-touching.
+- **MNTN Select is microscopic** — 12 camps / $0.20M / 0.6%. Concentrated in 6 advertisers total. Never co-occurs with MM or 3P in the same expression.
+
+### Pass 19 historical (superseded — kept for reference)
+
+Pass 19 folded RTC into MM-touching based on Sean's first reading "RTC is literally the same as MM, but real-time." Headline under that framing: MM-touching = 99.9% of spend. Pass 19 is superseded by Pass 20 once Sean revised to "RTC is an independent pipeline."
 
 Axes: MM `{13,19,38,46}` ∪ `{score_type=rtc}` · MNTN Select `{9,42}` · 3P `{17,18,35}` · Advertiser CRM `{4,8,47}`. "Any signal" = positive OR negative DS reference, or (for MM) the RTC flag at the expression top level.
 

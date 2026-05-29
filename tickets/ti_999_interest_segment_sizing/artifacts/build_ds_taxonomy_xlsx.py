@@ -17,12 +17,13 @@ from openpyxl.utils import get_column_letter
 WORKSPACE = Path(__file__).resolve().parents[3]
 OUTPUTS = WORKSPACE / "tickets/ti_999_interest_segment_sizing/outputs"
 SRC_CSV = OUTPUTS / "ti_999_ds_with_categories_2026_05_29.csv"
-PASS_CSV = OUTPUTS / "ti_999_pass19_buckets_2026_05_29.csv"
-PASS_LABEL = "Pass 19"
+PASS_CSV = OUTPUTS / "ti_999_pass20_buckets_2026_05_29.csv"
+PASS_LABEL = "Pass 20"
 PASS_NOTE = (
-    "Axes: MM {13,19,38,46} ∪ score_type=rtc · MNTN Select {9,42} · "
-    "3P {17,18,35} (Oracle carved out) · Advertiser CRM {4,8,47}. "
-    "RTC folded into MM per Sean Yang 2026-05-29 (RTC = MM real-time variant)."
+    "Five independent axes: MM {13,19,38,46} · RTC (score_type=rtc) · "
+    "MNTN Select {9,42} · 3P {17,18,35} (Oracle carved out) · Advertiser CRM {4,8,47}. "
+    "RTC kept as its own axis per Sean Yang's revised reading (2026-05-29): "
+    "RTC is an independent pipeline from MM, not the real-time variant of MM."
 )
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
@@ -240,7 +241,7 @@ def write_pass_sheet(wb: Workbook) -> None:
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=10)
     ws.row_dimensions[2].height = 32
 
-    headers = ["Bucket", "n_campaigns", "% campaigns", "n_advertisers", "Spend (30d, $M)", "% spend", "Annualized ($M)", "MM batch-only", "MM RTC-only", "MM batch + RTC"]
+    headers = ["Bucket", "n_campaigns", "% campaigns", "n_advertisers", "Spend (30d, $M)", "% spend", "Annualized ($M)"]
     for col_idx, h in enumerate(headers, start=1):
         c = ws.cell(row=4, column=col_idx, value=h)
         c.fill = HEADER_FILL
@@ -259,12 +260,9 @@ def write_pass_sheet(wb: Workbook) -> None:
             ws.cell(row=row_i, column=5, value=to_float(r["spend_30d_M"])).number_format = '"$"#,##0.000'
             ws.cell(row=row_i, column=6, value=to_float(r["pct_spend"])).number_format = "0.0"
             ws.cell(row=row_i, column=7, value=to_float(r["spend_annualized_M"])).number_format = '"$"#,##0.0'
-            ws.cell(row=row_i, column=8, value=to_int(r.get("n_mm_batch_only", 0))).number_format = "#,##0"
-            ws.cell(row=row_i, column=9, value=to_int(r.get("n_mm_rtc_only", 0))).number_format = "#,##0"
-            ws.cell(row=row_i, column=10, value=to_int(r.get("n_mm_batch_and_rtc", 0))).number_format = "#,##0"
             row_i += 1
 
-    for col_idx, w in enumerate([28, 14, 14, 16, 18, 12, 18, 16, 16, 18], start=1):
+    for col_idx, w in enumerate([36, 14, 14, 16, 18, 12, 18], start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = w
     ws.freeze_panes = "A5"
 
