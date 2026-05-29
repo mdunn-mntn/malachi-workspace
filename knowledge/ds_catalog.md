@@ -167,7 +167,7 @@ Both `visible=false` — pure platform plumbing, never buyer-selected.
 
 | DS | Name | Vis | +camps | +spend (30d) | −camps | Notes |
 |---:|---|:-:|---:|---:|---:|---|
-| 14 | MNTN Global Data | ✗ | 11,888 | $32.10M | 0 | **Bid routing.** Categories are Beeswax / Magnite / Index Exchange / IP-ends-in-.0 filters. Appears in 11,888 of 11,909 prospecting campaigns (~100%) — behaves like an auto-attached default. NOT audience targeting. |
+| 14 | MNTN Global Data | ✗ | 11,888 | $32.10M | 0 | **Freshness / eligibility filter, NOT bid routing** (per Sean Yang, TI team, 2026-05-29). Auto-attached to all expressions; narrows eligibility to IPs MNTN has seen recently — specifically in `guid_log` (4-day window) and `augmentor_log` (1-day window). The 5 categories (Beeswax Bidder, Magnite, Index Exchange, IP Ends In .0, ROOT) represent the source channels that count as "recent." Every campaign implicitly only bids on IPs MNTN has recently observed via these streams. |
 | 16 | MNTN Taxonomy Data | ✗ | 7,669 | $5.47M | 108 | **Per-advertiser identifiers + internal event taxonomy** (PageViews, Conversions, Prospecting, Retargeting, MultiTouch, VV). NOT audience targeting. |
 
 ### Dormant / out-of-scope
@@ -204,8 +204,8 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 | 40 | 33Across API | ✗ | 0 | 0 | 0 | 3P provider variant, no current use |
 | 41 | Freshpaint | ✗ | 0 | 0 | 0 | CRM ingestion source |
 | 44 | Captify | ✗ | 0 | 0 | 0 | 3P provider, no current use |
-| 45 | Hubspot | ✗ | 0 | 0 | 0 | CRM ingestion source. Shares `data_source_key` with DS48 Tealium — possible duplicate/typo. |
-| 48 | Tealium | ✗ | 0 | 0 | 0 | CRM ingestion source. Shares `data_source_key` with DS45 Hubspot — possible duplicate/typo. |
+| 45 | Hubspot | ✗ | 0 | 0 | 0 | CRM ingestion source. Shares `data_source_key='ojLY3uGYtq'` AND `create_time=2025-11-25 21:21:41.453456` with DS48 Tealium (Sean Yang, 2026-05-29). Likely unintentional batch artifact — `data_source_key` is auto-generated from timestamp, so simultaneous creation produced identical keys. |
+| 48 | Tealium | ✗ | 0 | 0 | 0 | CRM ingestion source. Shares `data_source_key='ojLY3uGYtq'` AND `create_time=2025-11-25 21:21:41.453456` with DS45 Hubspot — same batch artifact (see DS45 note). |
 | 49 | Publisher Network | ✗ | 0 | 0 | 0 | Internal |
 | 50 | shopify | ✓ | 0 | 0 | 0 | CRM ingestion source, buyer-visible but no current uptake |
 | 51 | Bombora | ✗ | 0 | 0 | 0 | 3P provider, no current use |
@@ -224,7 +224,7 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 | **328495** | Branch - Mobile Partner | ✗ | 0 | 0 | 0 | High-ID outlier. Mobile-attribution partner. |
 | **328496** | Kochava | ✗ | 0 | 0 | 0 | High-ID outlier. Mobile-attribution / measurement partner. |
 | **328497** | Singular | ✗ | 0 | 0 | 0 | High-ID outlier. Mobile-attribution / measurement partner. |
-| **355420** | MNTN PageView | ✗ | 0 | 0 | 0 | **High-ID outlier.** Newer pixel DS, distinct ID and `data_source_key` from DS34 "MNTN Pageview". Possible successor or experimental fork. **OPEN — confirm whether DS34 is being deprecated.** |
+| **355420** | MNTN PageView | ✗ | 0 | 0 | 0 | **Unused** (Sean Yang, TI team, 2026-05-29: "I don't think we ever use DS355420"). DS34 remains the canonical MNTN Pageview DS for production exclusion logic. DS355420 is shelf-warmer / experimental, no live traffic. |
 
 ## Open questions
 
@@ -232,23 +232,27 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 
 - **DS1 Oracle delivery:** ✅ Oracle is a legacy 3P, no longer in IPDSC, still in MNTN's taxonomy so buyers can pick it on UI (may have been disabled by AUD — Sean unsure). Jordan Piepkow confirms (2026-05-29): "deprecated but some audiences still use." The 553 positive-Oracle prospecting campaigns are almost certainly paying for dead-weight clauses.
 - **DS11 LiveRamp legacy:** ✅ Deprecated old LiveRamp (device_id→IP mapping); replaced by DS35 (IPs delivered directly). Retained in `tpa.categories` because reporting still needs them.
+- **DS14 mechanics:** ✅ Freshness / eligibility filter (Sean Yang, 2026-05-29): "MNTN global data, which gets automatically added to all expressions to filter down to only IPs seen in guid_log (4-day window) and augmentor_log (1-day window)." Not bid routing as previously framed.
+- **DS34 vs DS355420:** ✅ DS34 is canonical (production exclusion DS for pageviews). DS355420 is unused per Sean (2026-05-29): "I don't think we ever use DS355420." Shelf-warmer / experimental, no production traffic.
 - **DS38 BUK rollout:** ✅ Feature being rolled out, not yet active (Sean Yang). **BUK augments DS19 — does not replace it** (Alex Knorr, 2026-05-29): BUK leverages DS19 as an input and replaces the LLM-generated keyword pipeline, but DS19 (MNTN Matched V2) stays in production to handle cold-start cases (new advertisers / new keywords don't get BUK recommendations). Steady-state MM = DS13 + DS19 (V2) + DS38 (BUK) combined.
-- **DS19 in MM (RTC vs separate scoring):** ✅ RTC and MM are literally the same scoring system — RTC is the real-time variant (fires within an hour), main scorer catches up after. No separate RTC scoring system.
+- **DS19 in MM (RTC vs separate scoring):** ⚠️ Sean had two readings: (a) "RTC is literally the same as MM, but it gets done in real time within an hour" (early in thread); (b) "RTC is a pipeline running independently to MM, so it automatically assigns a 10k score in real time if found a match. MM is a batch process that goes through IPDSC" (later in thread). Reconciled read: RTC and MM are **independent pipelines** producing the same kind of output (10k scores) — RTC is a real-time match-and-tag pipeline filling `realtime_conquest_score`; MM is a batch IPDSC scoring pipeline filling `household_score`. They are NOT the same scoring system. **AUD team to confirm definitively.**
+- **DS45/DS48 duplicate `data_source_key`:** ✅ Same `data_source_key='ojLY3uGYtq'` AND same `create_time=2025-11-25 21:21:41.453456` (Sean Yang, 2026-05-29). Auto-generated from timestamp, simultaneous creation produced identical keys. Likely unintentional batch artifact, not by design.
 
 ### Still open
 
-1. **DS14 universal use — confirmed 100% of all audience-targeted campaigns ever (270,263 campaigns / 12,196 advertisers / 0 negative refs).** Categories are 5 SSP-routing flags ("Beeswax Bidder", "Magnite", "Index Exchange", "IP Ends In .0", "ROOT"). Sean unsure of the code path; Jordan Piepkow also doesn't know off the top of his head (2026-05-29). Next ask: Zach Schoenberger.
-2. **Confirm Oracle (DS1) disabled in buyer UI:** Sean unsure whether AUD team has already disabled Oracle as a selectable option in the buyer UI. Ask AUD directly. If still selectable, advocate for disabling (553 active prospecting campaigns are paying for clauses that never deliver).
-3. **DS2 vs DS21/DS34/DS43 functional split inside MNTN Pixel:** DS2 = OPM-segment pointer for retargeting; DS21/34 = pure exclusion suppression; DS43 = ISP filter. Kept grouped; flag if any downstream pass needs to disambiguate.
-4. **DS34 "MNTN Pageview" vs DS355420 "MNTN PageView":** near-duplicate names, distinct IDs and `data_source_key`. Pixel-platform team to confirm whether DS34 is being deprecated in favor of DS355420. Sean asking.
-5. **DS45 Hubspot ≡ DS48 Tealium duplicate `data_source_key`:** both rows have `data_source_key='ojLY3uGYtq'`. Likely a registration bug. Sean asking.
-6. **DS9 MNTN Audiences canonical name + scope:** is "MNTN Audiences" the right umbrella, or does the platform team call this layer something specific (e.g., "MNTN Select Audiences")? Currently used by only 6 advertisers — is it intended to broaden beyond Select customers? Sean asking.
-7. **Mobile-attribution outliers (DS328493 Adjust / DS328494 AppsFlyer / DS328495 Branch / DS328496 Kochava / DS328497 Singular):** all six high-ID type=1 DSes have zero TPA-expression use. Do they show up anywhere else (e.g., MMP integration via core tables, attribution reports)? Out-of-scope for prospecting but worth confirming they're not silently feeding something downstream.
+1. **RTC vs MM pipeline relationship (AUD squad):** Sean's two statements differ — first read "RTC = MM real-time variant"; revised read "RTC is independent of MM, MM is batch via IPDSC, RTC is real-time match-and-tag." AUD team (Mike Dolt or Jordan Piepkow) to confirm whether RTC and MM share the same scoring engine or are genuinely separate pipelines. Affects Pass 19 deck framing (whether to fold RTC into MM-touching or keep separate).
+2. **How RTC-only audience expressions get created in the UI:** the 7,659 RTC-only campaigns (geo + `score_type=rtc` + DS14 + holdout, no buyer-picked DSes) — what UI flow produces this minimal expression? Default-when-no-template-picked? Specific product (e.g., "Geo only" prospecting)? AUD team to clarify.
+3. **Confirm Oracle (DS1) disabled in buyer UI:** Sean unsure whether AUD team has already disabled Oracle as a selectable option in the buyer UI. Ask AUD directly. If still selectable, advocate for disabling (553 active prospecting campaigns are paying for clauses that never deliver).
+4. **DS2 vs DS21/DS34/DS43 functional split inside MNTN Pixel:** DS2 = OPM-segment pointer for retargeting; DS21/34 = pure exclusion suppression; DS43 = ISP filter. Kept grouped; flag if any downstream pass needs to disambiguate.
+5. **DS9 MNTN Select scope going forward:** Jordan + Sean both confirmed DS9 is Select-only today. Is it intended to broaden beyond the 6 advertisers currently using it? Tied to Select product roadmap.
+6. **Mobile-attribution outliers (DS328493 Adjust / DS328494 AppsFlyer / DS328495 Branch / DS328496 Kochava / DS328497 Singular):** all six high-ID type=1 DSes have zero TPA-expression use. Do they show up anywhere else (e.g., MMP integration via core tables, attribution reports)? Out-of-scope for prospecting but worth confirming they're not silently feeding something downstream.
 
-## Pass 19 bucket results — current locked taxonomy (RTC folded into MM)
+## Pass 19 bucket results — exploratory (pending AUD confirmation)
 
-Supersedes Pass 18. One change vs Pass 18:
-- **`score_type=rtc` in the expression now counts as MM.** Per Sean Yang (2026-05-29), RTC is the real-time variant of the MM scoring engine — same system, hot-path that fires within ~1hr for recent-site-visitor signal. The bucket math now treats `MM-touching = any MM-DS reference OR any `score_type=rtc` flag in the expression`.
+> ⚠️ **Status: exploratory.** Pass 19 folds RTC into MM-touching based on Sean Yang's first reading ("RTC is literally the same as MM, but it gets done in real time"). Sean revised this later in the same thread: "RTC is a pipeline running independently to MM. MM is a batch process that goes through IPDSC." If the revised reading is right (AUD team to confirm), **RTC and MM are independent pipelines** and Pass 18's framing (RTC separate from MM-touching) is more accurate. Use Pass 18 as the primary deck framing until AUD clarifies.
+
+Pass 19 change vs Pass 18:
+- **`score_type=rtc` in the expression counts as MM.** Originally based on Sean's first reading — to be revised if AUD confirms RTC is an independent pipeline.
 
 Axes: MM `{13,19,38,46}` ∪ `{score_type=rtc}` · MNTN Select `{9,42}` · 3P `{17,18,35}` · Advertiser CRM `{4,8,47}`. "Any signal" = positive OR negative DS reference, or (for MM) the RTC flag at the expression top level.
 
