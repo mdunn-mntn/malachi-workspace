@@ -1,13 +1,27 @@
-Deck shared 2026-05-28 (v4 — Finding 15 rebuild: bidder semantics + OR/AND distinction + per-segment CVR spread + counterfactual)
+Deck shared 2026-05-28 (v5 — rebuild around user's full build-up outline + DS19 added to MM family + List Retargeting / MNTN First Party clarifications)
 
-Rendered URL (githack): https://gist.githack.com/mdunn-mntn/838c9c3a30147997cc9b64d150628491/raw/ti_999_presentation_deck_standalone.html
-Gist:                   https://gist.github.com/mdunn-mntn/838c9c3a30147997cc9b64d150628491
+Rendered URL (githack): https://gist.githack.com/mdunn-mntn/1c042fcae99c626773292b4c1f113905/raw/ti_999_presentation_deck_standalone.html
+Gist:                   https://gist.github.com/mdunn-mntn/1c042fcae99c626773292b4c1f113905
 
-Power Line: Buyers add LiveRamp interest segments without any quality signal — ~$43M/yr of MNTN spend is allocated to the worst-performing segments at the same rate as the best. TI-956 fixes this with a per-segment quality score.
+Power Line: ~$43M/yr of MNTN spend is allocated to the worst-performing LiveRamp segments at the same rate as the best — because buyers have no quality signal.
+
+Structure (31 slides):
+  §1 Audience family definitions (List Retargeting, 3P, MM)
+  §2 Three axes of permutation + 8-bucket Venn + OR/AND distinction + full pattern breakdown
+  §3 What each permutation delivers (chart + FICO case study + expression)
+  §4 When does OR-include actually overflow MM ceiling? (17.7% yes, 76% no + below-ceiling examples + the fix-mental-model slide)
+  §5 The real prize: per-bucket efficiency + 350x CVR spread + counterfactual
+  §6 Recommendations (Phase 1-4) + Appendix
+
+Key taxonomy in v5:
+  - MM family includes DS13/19/38/46 (DS19 RTC added per user correction 2026-05-28)
+  - "1P" in tables = List Retargeting (DS4/8/47, buyer-uploaded lists)
+  - "MNTN First Party" (DS21/34 pixel data) is NOT buyer-selectable and not in scope
 
 Prior versions (kept for traceability):
-  v3 (3P-vs-3P overlap):   https://gist.githack.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33/raw/ti_999_presentation_deck_standalone.html
-  v2 (rank-sim added):     https://gist.githack.com/mdunn-mntn/09d35323f314ab2c7781744bfc6682dc/raw/ti_999_presentation_deck_standalone.html
-  v1 (initial ship):       https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
+  v4 (Finding 15 rebuild):  https://gist.githack.com/mdunn-mntn/838c9c3a30147997cc9b64d150628491/raw/ti_999_presentation_deck_standalone.html
+  v3 (3P-vs-3P overlap):    https://gist.githack.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33/raw/ti_999_presentation_deck_standalone.html
+  v2 (rank-sim added):      https://gist.githack.com/mdunn-mntn/09d35323f314ab2c7781744bfc6682dc/raw/ti_999_presentation_deck_standalone.html
+  v1 (initial ship):        https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
 
 Note: githack caches aggressively. For revisions, regenerate the standalone HTML and run share_deck.sh again — it creates a new gist with a new URL.
