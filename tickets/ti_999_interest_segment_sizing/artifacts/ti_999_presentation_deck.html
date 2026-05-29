@@ -48,7 +48,21 @@
 <p style="text-align:center; color:#AAA; font-size:0.45em; margin-top:2em;">Malachi Dunn · Targeting Infrastructure · 2026-05-28 · TI-999 Finding 15 · 30d window · 15,529 active campaigns · $40.42M</p>
 </section>
 
-<!-- 2: TL;DR -->
+<!-- 2: Work-in-progress note -->
+<section>
+<h2 style="color:var(--red);">⚠ Work-in-progress (2026-05-28 PM)</h2>
+<div style="margin-top:1em; font-size:0.65em; line-height:1.6;">
+<p>The taxonomy used in this deck is under revision. Open items for tomorrow's session:</p>
+<ul>
+<li><strong>Full DS catalog audit</strong> — go through every data_source_id MNTN uses and clarify exactly what each is, what family it belongs to (MM / 1P-list / 3P / pixel / etc.), and whether it's buyer-selectable.</li>
+<li><strong>Corrections already made:</strong> Pass 13 (DS19 in MM), Pass 14 (objective_id=4 is the formal retargeting flag — use that instead of inferring from clauses), Pass 15 (expanded MM = DS13/14/16/19/38/46; prospecting-only filter eliminates the "nothing" bucket).</li>
+<li><strong>Slides still pending re-run with the new taxonomy:</strong> delivery distribution (Pass 3), OR/AND breakdown (Pass 12), ceiling-bound (Pass 6), below-ceiling examples (Pass 7), efficiency (Pass 9), per-segment CVR (Pass 10), counterfactual (Pass 11). All charts use the original MM definition.</li>
+<li><strong>Recommended for tomorrow:</strong> lock the DS family definitions first, then re-run Pass 3 / 6 / 9 / 10 / 11 / 12 in one sweep before updating downstream slides.</li>
+</ul>
+</div>
+</section>
+
+<!-- 2b: TL;DR -->
 <section>
 <h2>The case in five steps</h2>
 <div style="margin-top:0.7em; font-size:0.72em; line-height:1.8;">
@@ -108,22 +122,20 @@ Prospecting via described interests.
 
 <!-- 6: MM -->
 <section>
-<h2>MM — Mountain Match (the MNTN-scored family)</h2>
+<h2>MM — Mountain Match (the MNTN-derived family)</h2>
 <div class="ds-list">
 <div class="label">What it is</div>
-MNTN-derived audience targeting — IPs scored by MNTN's own models using verticals, keywords, behavioral signals, and recent-site conquesting.
-<div class="label">Data sources</div>
-DS13 (Vertical Categorization) · <strong>DS19 (RTC — Real-Time Conquesting)</strong> · DS38 (BUK / UI Audience Keywords) · DS46 (ML Audience Intent — Fangorn)
+ALL MNTN-derived buyer-selectable audience signals — verticals, taxonomy, global data, audience matching, keywords, ML intent.
+<div class="label">Data sources (all 6)</div>
+DS13 MNTN Vertical Categorization · DS14 MNTN Global Data · DS16 MNTN Taxonomy Data · <strong>DS19 MNTN Matched</strong> · DS38 MNTN UI Audience Keywords (BUK) · DS46 ML Audience Intent Scoring Model (Fangorn)
 <div class="label">Scored by MNTN?</div>
-<strong>YES.</strong> Produces two scoring signals at impression time:<br>
-• <code>household_score</code> — graduated 0-10000 (from DS13/38/46)<br>
-• <code>realtime_conquest_score</code> — binary 10000/-1 qualifier (from DS19)
+<strong>Yes</strong> — produces <code>household_score</code> (0-10000 graduated) and <code>realtime_conquest_score</code> (binary qualifier) in <code>cost_impression_log.model_params</code>.
 <div class="label">Empirical scoring distribution (5/26, 61M imps)</div>
-household_score: 65% = -1 (unscored), 15% = 10000 (top), 11% = 8k-10k (HI), ~10% middle.<br>
-realtime_conquest_score: 95% = -1, 5% = 10000.
+household_score: 65% = -1 (unscored), 15% = 10000 (top), 11% = 8k-10k (HI), ~10% middle.
 <div class="label">Functional type</div>
-Prospecting + conquesting via MNTN's quality models. <strong>The only family where the bidder has per-IP MNTN quality information.</strong>
+Prospecting via MNTN's quality models. <strong>Every active prospecting campaign uses at least one MM data source — so "MM-only" is the most common prospecting pattern by far.</strong>
 </div>
+<div class="footer-note">DS19 was labeled "RTC" in earlier memory but its actual name is "MNTN Matched" — part of the MM family. DS14 (Global Data) and DS16 (Taxonomy Data) are the workhorse MM clauses in most prospecting campaigns.</div>
 </section>
 
 <!-- 7: Family summary + MNTN First Party note -->
@@ -166,22 +178,18 @@ We have to walk through each before the data makes sense.
 </div>
 </section>
 
-<!-- 10: 8-bucket Venn (with DS19 in MM) -->
+<!-- 10: Prospecting-only 4-bucket view -->
 <section>
-<h2>Axis 1: Presence — 8 base permutations (DS19 included in MM)</h2>
+<h2>Prospecting only (obj_id ∈ {1,5,6}) + expanded MM — only 4 buckets</h2>
 <table>
-<tr><th>Bucket</th><th class="num">n camps</th><th class="num">% camps</th><th class="num">Spend (30d)</th><th class="num">% spend</th><th class="num">Conv rate</th></tr>
-<tr><td>nothing</td><td class="num">10,743</td><td class="num">69.2%</td><td class="num">$10.32M</td><td class="num">25.5%</td><td class="num">0.154%</td></tr>
-<tr><td>MM only</td><td class="num">1,198</td><td class="num">7.7%</td><td class="num">$6.00M</td><td class="num">14.8%</td><td class="num">0.048%</td></tr>
-<tr><td>1P only (List Retarget)</td><td class="num">1,046</td><td class="num">6.7%</td><td class="num">$4.63M</td><td class="num">11.4%</td><td class="num">0.060%</td></tr>
-<tr class="hl"><td>3P only</td><td class="num">444</td><td class="num">2.9%</td><td class="num">$1.42M</td><td class="num">3.5%</td><td class="num">0.083%</td></tr>
-<tr class="hl"><td>MM + 3P</td><td class="num">1,132</td><td class="num">7.3%</td><td class="num">$7.22M</td><td class="num">17.8%</td><td class="num">0.040%</td></tr>
-<tr><td>MM + 1P</td><td class="num">566</td><td class="num">3.6%</td><td class="num">$5.06M</td><td class="num">12.5%</td><td class="num">0.079%</td></tr>
-<tr class="hl"><td>1P + 3P</td><td class="num">96</td><td class="num">0.6%</td><td class="num">$2.49M</td><td class="num">6.2%</td><td class="num">0.007%</td></tr>
-<tr class="hl"><td>MM + 1P + 3P</td><td class="num">307</td><td class="num">2.0%</td><td class="num">$3.31M</td><td class="num">8.2%</td><td class="num">0.028%</td></tr>
-<tr style="background:#FFF8E1;"><td><strong>Total</strong></td><td class="num"><strong>15,532</strong></td><td class="num"><strong>100%</strong></td><td class="num"><strong>$40.46M</strong></td><td class="num"><strong>100%</strong></td><td class="num">—</td></tr>
+<tr><th>Bucket</th><th class="num">n camps</th><th class="num">% camps</th><th class="num">Spend (30d)</th><th class="num">% spend</th><th class="num">Annualized</th><th class="num">Conv rate</th></tr>
+<tr><td>MM only</td><td class="num">8,838</td><td class="num"><strong>74.5%</strong></td><td class="num">$11.24M</td><td class="num">35.2%</td><td class="num">$135M</td><td class="num">0.058%</td></tr>
+<tr class="hl"><td>MM + 3P</td><td class="num">1,571</td><td class="num">13.2%</td><td class="num">$8.62M</td><td class="num">27.0%</td><td class="num">$103M</td><td class="num">0.047%</td></tr>
+<tr><td>MM + 1P (CRM suppress)</td><td class="num">1,052</td><td class="num">8.9%</td><td class="num">$6.29M</td><td class="num">19.7%</td><td class="num">$75M</td><td class="num">0.080%</td></tr>
+<tr class="hl"><td>MM + 1P + 3P</td><td class="num">402</td><td class="num">3.4%</td><td class="num">$5.80M</td><td class="num">18.1%</td><td class="num">$70M</td><td class="num">0.017%</td></tr>
+<tr style="background:#FFF8E1;"><td><strong>Total prospecting</strong></td><td class="num"><strong>11,864</strong></td><td class="num"><strong>100%</strong></td><td class="num"><strong>$31.96M</strong></td><td class="num"><strong>100%</strong></td><td class="num"><strong>$384M</strong></td><td class="num">—</td></tr>
 </table>
-<p class="footer-note">Re-run with DS19 (RTC) in MM family. Red rows = 3P-touching cohorts. "MM-touching" cohort = 3,203 camps / 20.6% / $21.59M / 53.3% — most MNTN spend has MNTN-scored signal of some kind.</p>
+<p class="footer-note">Pass 15: prospecting filter (objective_id IN 1, 5, 6) excludes retargeting (obj_id=4) and ego (obj_id=7). MM = {DS13, DS14, DS16, DS19, DS38, DS46}. With expanded MM, every prospecting campaign is MM-touching — no "nothing", "1P only", "3P only", "1P+3P" buckets exist. The interest-segment question is what gets layered on top: 3P (1,973 camps / $14.42M / 45.1% of prospecting / ~$173M/yr) or 1P CRM suppression.</p>
 </section>
 
 <!-- 11: Nothing vs 1P only (updated for DS19 in MM) -->

@@ -1,27 +1,24 @@
-Deck shared 2026-05-28 (v5 — rebuild around user's full build-up outline + DS19 added to MM family + List Retargeting / MNTN First Party clarifications)
+Deck shared 2026-05-28 (v6 — DS19 in MM + prospecting filter (obj=1,5,6) + expanded MM (DS13/14/16/19/38/46) + Pass 15 4-bucket view — WORK IN PROGRESS, taxonomy under revision)
 
-Rendered URL (githack): https://gist.githack.com/mdunn-mntn/1c042fcae99c626773292b4c1f113905/raw/ti_999_presentation_deck_standalone.html
-Gist:                   https://gist.github.com/mdunn-mntn/1c042fcae99c626773292b4c1f113905
+Rendered URL (githack): https://gist.githack.com/mdunn-mntn/dec381061ea7fab62c0d57962c8b1dcf/raw/ti_999_presentation_deck_standalone.html
+Gist:                   https://gist.github.com/mdunn-mntn/dec381061ea7fab62c0d57962c8b1dcf
+
+⚠ DO NOT SHARE EXTERNALLY YET — taxonomy is in flux. See TOMORROW_PLAN.md for the next session's plan: full DS catalog audit, then re-run Passes 3/6/9/12 with the locked definitions.
 
 Power Line: ~$43M/yr of MNTN spend is allocated to the worst-performing LiveRamp segments at the same rate as the best — because buyers have no quality signal.
 
-Structure (31 slides):
-  §1 Audience family definitions (List Retargeting, 3P, MM)
-  §2 Three axes of permutation + 8-bucket Venn + OR/AND distinction + full pattern breakdown
-  §3 What each permutation delivers (chart + FICO case study + expression)
-  §4 When does OR-include actually overflow MM ceiling? (17.7% yes, 76% no + below-ceiling examples + the fix-mental-model slide)
-  §5 The real prize: per-bucket efficiency + 350x CVR spread + counterfactual
-  §6 Recommendations (Phase 1-4) + Appendix
-
-Key taxonomy in v5:
-  - MM family includes DS13/19/38/46 (DS19 RTC added per user correction 2026-05-28)
-  - "1P" in tables = List Retargeting (DS4/8/47, buyer-uploaded lists)
-  - "MNTN First Party" (DS21/34 pixel data) is NOT buyer-selectable and not in scope
+Key taxonomy corrections so far:
+  - MM family expanded to {DS13, DS14, DS16, DS19, DS38, DS46} — all MNTN-derived buyer-selectable
+  - DS19 = "MNTN Matched" (per data_sources table) — belongs in MM
+  - Formal retargeting flag is `objective_id=4` — not inferred from clause composition
+  - Prospecting filter = objective_id IN (1, 5, 6) — 11,864 active prospecting campaigns / $31.96M / 30d
+  - List Retargeting ("1P") = DS4/8/47 buyer-uploaded lists
+  - MNTN First Party (pixel) = DS21/34, not buyer-selectable
+  - With expanded MM + prospecting filter, every campaign is MM-touching — no "nothing" bucket
 
 Prior versions (kept for traceability):
-  v4 (Finding 15 rebuild):  https://gist.githack.com/mdunn-mntn/838c9c3a30147997cc9b64d150628491/raw/ti_999_presentation_deck_standalone.html
-  v3 (3P-vs-3P overlap):    https://gist.githack.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33/raw/ti_999_presentation_deck_standalone.html
-  v2 (rank-sim added):      https://gist.githack.com/mdunn-mntn/09d35323f314ab2c7781744bfc6682dc/raw/ti_999_presentation_deck_standalone.html
-  v1 (initial ship):        https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
-
-Note: githack caches aggressively. For revisions, regenerate the standalone HTML and run share_deck.sh again — it creates a new gist with a new URL.
+  v5 (DS19 in MM, presentation deck):  https://gist.githack.com/mdunn-mntn/1c042fcae99c626773292b4c1f113905/raw/ti_999_presentation_deck_standalone.html
+  v4 (Finding 15 rebuild):              https://gist.githack.com/mdunn-mntn/838c9c3a30147997cc9b64d150628491/raw/ti_999_presentation_deck_standalone.html
+  v3 (3P-vs-3P overlap):                https://gist.githack.com/mdunn-mntn/a57b73607cda7bc34d01c4cf4348fd33/raw/ti_999_presentation_deck_standalone.html
+  v2 (rank-sim added):                  https://gist.githack.com/mdunn-mntn/09d35323f314ab2c7781744bfc6682dc/raw/ti_999_presentation_deck_standalone.html
+  v1 (initial ship):                    https://gist.githack.com/mdunn-mntn/e0172f8a4ff44e19645282992f83f5d0/raw/ti_999_presentation_deck_standalone.html
