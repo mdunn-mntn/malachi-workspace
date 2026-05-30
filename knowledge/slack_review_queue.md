@@ -459,3 +459,17 @@ HHST is known to ramp up slowly after a spend disruption. A significant underspe
 ## Fangorn — Automatic Advertiser Inclusion (TI-914)
 
 A ticket (TI-914) for automatically including advertisers into Fangorn has been deployed to QA and is ready for production pending final logic decisions around inclusion criteria. This is being tracked by the targeting infrastructure squad.
+
+## 2026-05-30
+
+### [data_catalog] from ray in #production-ops
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**`dw-main-silver.public.campaigns` and `dw-main-bronze.integrationprod.public_campaigns` — Campaigns Table Copies**
+
+There are at least two accessible copies of the campaigns table in BigQuery:
+- `dw-main-silver.public.campaigns` — silver-layer copy
+- `dw-main-bronze.integrationprod.public_campaigns` — bronze-layer copy (used as fallback if silver has permission issues)
+
+Both were referenced during Grafana/Mode dashboard repair work following the BQ migration. If permission issues arise accessing the silver copy, the bronze integrationprod copy may be used as an alternative.

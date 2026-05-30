@@ -310,3 +310,8 @@ MNTN is running a LiftLab beta for incremental lift testing. A starter list of a
 **Owner:** Edgar von Trotha is coordinating the beta customer pipeline.
 
 This is consistent with the Q2 strategic priority to prove incrementality via approved third-party vendors. (via Edgar von Trotha, #ask-incremental-lift-tests, 2026-05-19)
+
+<!-- slack-extracted: 2026-05-30 -->
+- **Identity Core — Confidence Score Model Going to Production (2026-05-29)**
+
+The Confidence Score model (PR: SteelHouse/idg#120) was merged and artifacts scheduled to be generated in production on 2026-05-29 for a Monday 2026-06-02 rollout. The CI/CD pipeline was updated to run three sequential jobs: generate sample models → score the main graph using them. Previously the pipeline ran Spark in local mode; it was switched to distributed Spark for this model, significantly improving job speed. The exclusion rollout dependent on this work was intentionally delayed to Monday to avoid overlap with the active P0 underspend incident. (via Jack Barbey, #identity_core_dev, 2026-05-29)

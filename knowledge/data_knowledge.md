@@ -2329,3 +2329,23 @@ The audience intent scoring pipeline (`spark/audience_intent/advertiser_high.py`
 **Expected impact on metrics:** Expect approximately a ~10% increase in bid drop reasons after deployment. The expected volume is roughly 10% of successful bid count. Ghost Bids do **not** affect pacing, deliverability, or other campaign performance metrics.
 
 **Monitoring note:** When reviewing bid drop reason trends in dashboards or queries, account for this step-change increase starting from the Ghost Bid deployment date. (via Ryan Kleck, #mission-control, 2026-05-27)
+
+<!-- slack-extracted: 2026-05-30 -->
+- **Data Source (DS) Taxonomy — Key DS Definitions and Legacy Notes**
+
+- **DS1:** Legacy Oracle data source. No longer present in IPDSC but still available in the taxonomy/UI. ~553 active prospecting campaigns reference it. May have been disabled by the AUD team — status should be confirmed.
+- **DS11:** Legacy Liveramp data source (deprecated). Used device_id to map to IP for targeting. Retained in the TPA taxonomy because reporting still requires it, but not used for active targeting.
+- **DS14:** MNTN global data — automatically added to all audience expressions to filter down to only IPs seen in `guid_log` (4-day window) and `augmentor_log` (1-day window). Functions as an activity recency filter.
+- **DS19:** Used as an input source for the BUK model (see BUK/DAR entry).
+- **DS35:** Current Liveramp data source. Liveramp now sends IP addresses directly (replacing the older device_id mapping approach of DS11).
+- **DS46:** Mountain Match Peak Performance feature flag data source. Impressions associated with DS46 should be reported as Peak Performance in audience segment reporting, equivalent to how DS13 is handled (clean swap of DS46 in place of DS13).
+- **DS9:** Related to MNTN Select campaign reach (limited internal knowledge).
+- **DS34 vs DS355420:** Two MNTN Pageview data sources exist; DS355420 is not actively used.
+- **DS2, DS21, DS34, DS43:** Multiple pixel data sources exist with different `data_source_category_id` values, each serving different purposes.
+- **DS45 and DS48:** Both share the same `data_source_key = 'ojLY3uGYtq'`, which appears to be auto-generated based on creation timestamp (both created 2025-11-25). Possibly unintentional duplication. (via Sean Yang, #tgt-infrastructure-squad, 2026-05-28)
+- **Acxiom Interest Segments — Vendor Source**
+
+All Acxiom interest segments used by MNTN are sourced via LiveRamp. More broadly, 98.4% of all audience segments in the platform are from LiveRamp, and 99.6% of active, recently-updated segments are from LiveRamp. Other segment vendors include Sharethis and Dstillery, but these account for a very small share. This was confirmed for legal/compliance purposes. (via malachi, #tgt-infrastructure-squad, 2026-05-28)
+- **IVR Anomaly During Underspend Incidents**
+
+During periods of significantly reduced platform spend, IVR (Incremental Visit Rate or a related visit-rate metric) will appear artificially elevated. This is a known artifact: lower total spend reduces the denominator while visit counts may not drop proportionally, inflating the rate. This should be treated as a false signal during spend incidents and not interpreted as a genuine performance improvement. Confirmed during the 2026-05-28 underspend incident. (via Johnny, #mission-control, 2026-05-29)

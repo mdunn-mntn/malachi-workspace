@@ -2480,3 +2480,18 @@ Four raw tables exist for household ID enrichment across event types:
 - `hh_confidence_score` — confidence score for household resolution
 - `hh_ver` (or `hh_version`) — graph version used for resolution
 - `hh_resolution_id` — resolution event identifier (via Jack Barbey, #identity_core, 2026-05-22)
+
+<!-- slack-extracted: 2026-05-30 -->
+- **`dw-main-bronze.raw.guid_log` — Size and Performance Characteristics**
+
+- **Total logical data:** ~200 TB
+- **Partition:** DAY-partitioned on `time` (TIMESTAMP). Matches the coreDW source table which was also daily-partitioned on `time`.
+- **Query behavior:** Filtering by `time` date range works correctly and limits partition scans. A secondary filter on `advertiser_id` does NOT further reduce partition scans — BQ must scan all rows within the time-partitioned range and then filter by `advertiser_id` in memory. A 3-month range query (March–May 2026) processed ~393 GB.
+- **Performance gotcha:** Ad-hoc queries run against a small slot reservation. Apparent slow queries (2+ minutes wall clock) are frequently caused by slot contention, not actual compute time. The underlying query may execute in ~4 seconds once slots are available. Check the BigQuery Admin monitoring console to distinguish slot-wait time from actual execution time.
+- **Slot reservation note:** The ad-hoc query reservation is intentionally limited for cost savings and will not be increased until end of quarter. (via Dustin Niehoff, #data-platform, 2026-05-28)
+- **`dso.campaign_group_daily_budgets` and `archives.campaign_group_daily_budget_archives` — Daily Budget Source**
+
+Real-time campaign budget data is sourced by unioning `dso.campaign_group_daily_budgets` (current) with `archives.campaign_group_daily_budget_archives` (historical). The union is then deduplicated using `DISTINCT ON (advertiser_id, campaign_group_id, hour(update_time))` to get one budget record per advertiser/campaign-group/hour. Rows where `billing_type_id = 2` are excluded (these represent a specific billing type that should not be included in budget reporting). This pattern is used in at least one real-time Mode report for monitoring budget vs. spend. (via Benny, #production-ops, 2026-05-29)
+- **Geo Location Mapping Discrepancy — `geo.v_location_data` (coreDW) vs. `dw-main-bronze.geo.v_location_data_lat_long` (BigQuery)**
+
+A confirmed data inconsistency exists in the `parent_location_id` field between the coreDW and BigQuery versions of the location data table. Example: `location_id = 657177` (postal code 14527, Feura Bush) has `parent_location_id = 143675` in coreDW but `parent_location_id = 93463` in BigQuery. This discrepancy affects geo-targeting audit logic (specifically audit 22) and caused IP-to-location mapping mismatches for certain IPs (e.g., `67.241.244.44`). The fix was expected to be deployed by Nivas on 2026-06-01, after which the audit would no longer trigger on this data. The active geo version at the time of discovery was `1777852800`. (via Benny, #mission-control, 2026-05-29)

@@ -1385,3 +1385,16 @@ A quasi-experimental lift analysis was run on Select-only campaigns with the fol
 - **Incrementality Experiment Power Analysis — Spend Thresholds**
 
 For IVR-based incrementality measurement, reaching statistical power requires approximately **$200K/month in spend** when measuring over a single month. This threshold is driven by the typically low lift percentages observed — when lift is small, very large sample sizes (impressions/spend) are needed to achieve significance. Results will sometimes reach significance and sometimes not at this threshold; it is not a guarantee. (via malachi, #incremental-lift-stakeholders, 2026-05-08)
+
+<!-- slack-extracted: 2026-05-30 -->
+- **Fangorn for Conversions Experiment — Prerequisites and Design Considerations**
+
+Before the Fangorn-for-Conversions experiment (EX-84) can begin, two TI-side tasks must be completed: (1) TI-1005: build a Vertex-based pipeline for the conversion model; (2) TI-1006: implement ROAS-based scoring capability for specific advertisers identified in the experiment (same functionality as the prior Fangorn experiment). Both tasks are estimated to be completable in one sprint by a DS/ML and DE resource.
+
+Experiment design considerations specific to conversion-outcome experiments:
+- Minimum experiment duration: 3 weeks per campaign; 4 weeks is the preferred floor.
+- Longer durations affect how many advertisers can be included in the experiment cohort.
+- A Power Analysis dashboard is in development to identify advertisers that can reach significance at different spend/time/lift thresholds, reducing the need to compromise on experiment duration. (via Alex Knorr, #dev_fangorn-model_ex, 2026-05-28)
+- **Experiment Advertiser Selection Error — Identity Core Exclusion Rollout**
+
+A methodological error was made during advertiser selection for the Identity Core exclusion experiment: 50 advertisers were selected into the experiment and then split 50/50 into treatment and control, resulting in only 25 treatment-group advertisers. The correct approach was to select 50 advertisers into the treatment arm. The resulting sample is sufficient to detect only larger effects. Correction requires re-submitting the advertiser list to PEX (partner/external team) for re-approval, adding at least one day of delay. Lesson: when designing tiered rollout experiments, clearly distinguish between "experiment inclusion list size" and "treatment arm size" — the inclusion list should be sized to the treatment arm target, not the full experiment. (via Alexander Jerneck, #identity_core_dev, 2026-05-29)
