@@ -191,45 +191,48 @@ def write_group_summary_sheet(wb: Workbook, rows: list[dict]) -> None:
     for r in rows:
         g = r["group"]
         if g not in by_group:
-            by_group[g] = {"n_ds": 0, "n_active": 0, "n_visible": 0, "pos_camps": 0, "pos_spend_M": 0.0, "neg_camps": 0}
+            by_group[g] = {"n_ds": 0, "n_active": 0, "n_visible": 0}
         by_group[g]["n_ds"] += 1
         is_active = (r["pos_camps"] > 0) or (r["neg_camps"] > 0)
         if is_active:
             by_group[g]["n_active"] += 1
         if r["visible"] == "Yes":
             by_group[g]["n_visible"] += 1
-        by_group[g]["pos_camps"] += r["pos_camps"]
-        by_group[g]["pos_spend_M"] += r["pos_spend_M"]
-        by_group[g]["neg_camps"] += r["neg_camps"]
 
     ws.cell(row=1, column=1, value="Group summary").font = TITLE_FONT
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=7)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
 
-    headers = ["Group", "# DSes", "# active (30d)", "# visible to buyers", "+camps total", "+spend total ($M)", "−camps total"]
+    note = (
+        "Active (30d) = at least one campaign referenced this DS positively or negatively in 30d prospecting. "
+        "Visible to buyers = data_sources.visible=true (buyer-pickable in the UI)."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=4)
+    ws.row_dimensions[2].height = 28
+
+    headers = ["Group", "# DSes in group", "# active (30d)", "# visible to buyers"]
     for col_idx, h in enumerate(headers, start=1):
-        c = ws.cell(row=3, column=col_idx, value=h)
+        c = ws.cell(row=4, column=col_idx, value=h)
         c.fill = HEADER_FILL
         c.font = HEADER_FONT
 
-    row_i = 4
+    row_i = 5
     for g in GROUP_SORT_ORDER:
         if g not in by_group:
             continue
         d = by_group[g]
         fill = GROUP_FILL.get(g, GROUP_FILL["Dormant / out-of-scope"])
-        vals = [g, d["n_ds"], d["n_active"], d["n_visible"], d["pos_camps"], d["pos_spend_M"], d["neg_camps"]]
+        vals = [g, d["n_ds"], d["n_active"], d["n_visible"]]
         for col_idx, v in enumerate(vals, start=1):
             cell = ws.cell(row=row_i, column=col_idx, value=v)
             cell.fill = fill
-            if col_idx == 6:
-                cell.number_format = '"$"#,##0.00'
-            elif col_idx in (2, 3, 4, 5, 7):
+            if col_idx in (2, 3, 4):
                 cell.number_format = "#,##0"
         row_i += 1
 
-    for col_idx, w in enumerate([28, 10, 16, 22, 16, 20, 14], start=1):
+    for col_idx, w in enumerate([28, 18, 18, 22], start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = w
-    ws.freeze_panes = "A4"
+    ws.freeze_panes = "A5"
 
 
 def write_pass_sheet(wb: Workbook) -> None:
@@ -349,7 +352,7 @@ def write_polarity_kpi_sheet(wb: Workbook) -> None:
 
     headers = [
         "Bucket", "n_campaigns", "n_advertisers", "Spend (30d, $M)", "% spend",
-        "CVR %", "IVR %", "CTR %", "CPM ($)", "Cost/conv ($)",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
     ]
     for col_idx, h in enumerate(headers, start=1):
         c = ws.cell(row=4, column=col_idx, value=h)
@@ -385,12 +388,12 @@ def write_polarity_kpi_sheet(wb: Workbook) -> None:
             ws.cell(row=row_i, column=4).number_format = '"$"#,##0.000'
             ws.cell(row=row_i, column=5, value=to_float(r["pct_spend"])).fill = fill
             ws.cell(row=row_i, column=5).number_format = "0.0"
-            ws.cell(row=row_i, column=6, value=to_float(r["cvr_pct"])).fill = fill
-            ws.cell(row=row_i, column=6).number_format = "0.0000"
-            ws.cell(row=row_i, column=7, value=to_float(r["ivr_pct"])).fill = fill
-            ws.cell(row=row_i, column=7).number_format = "0.0000"
-            ws.cell(row=row_i, column=8, value=to_float(r["ctr_pct"])).fill = fill
-            ws.cell(row=row_i, column=8).number_format = "0.0000"
+            ws.cell(row=row_i, column=6, value=to_float(r["cvr"])).fill = fill
+            ws.cell(row=row_i, column=6).number_format = "0.000000"
+            ws.cell(row=row_i, column=7, value=to_float(r["ivr"])).fill = fill
+            ws.cell(row=row_i, column=7).number_format = "0.000000"
+            ws.cell(row=row_i, column=8, value=to_float(r["ctr"])).fill = fill
+            ws.cell(row=row_i, column=8).number_format = "0.000000"
             ws.cell(row=row_i, column=9, value=to_float(r["cpm_dollars"])).fill = fill
             ws.cell(row=row_i, column=9).number_format = '"$"#,##0.00'
             cpc_val = r.get("cost_per_conv_dollars", "")
