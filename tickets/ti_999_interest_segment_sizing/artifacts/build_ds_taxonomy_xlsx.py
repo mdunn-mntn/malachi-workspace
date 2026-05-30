@@ -255,10 +255,19 @@ def write_pass_sheet(wb: Workbook) -> None:
         c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
     ws.row_dimensions[4].height = 30
 
+    # Highlight 3P-touching buckets only (the focus of TI-999's curation case)
+    fill_3p = PatternFill("solid", fgColor="F3E5F5")
+
     with PASS_CSV.open() as f:
         reader = csv.DictReader(f)
         row_i = 5
         for r in reader:
+            is_3p_bucket = "3P" in r["bucket"]
+            fill = fill_3p if is_3p_bucket else None
+            for col_idx in range(1, 8):
+                cell = ws.cell(row=row_i, column=col_idx)
+                if fill:
+                    cell.fill = fill
             ws.cell(row=row_i, column=1, value=r["bucket"])
             ws.cell(row=row_i, column=2, value=to_int(r["n_campaigns"])).number_format = "#,##0"
             ws.cell(row=row_i, column=3, value=to_float(r["pct_campaigns"])).number_format = "0.0"
@@ -266,6 +275,9 @@ def write_pass_sheet(wb: Workbook) -> None:
             ws.cell(row=row_i, column=5, value=to_float(r["spend_30d_M"])).number_format = '"$"#,##0.000'
             ws.cell(row=row_i, column=6, value=to_float(r["pct_spend"])).number_format = "0.0"
             ws.cell(row=row_i, column=7, value=to_float(r["spend_annualized_M"])).number_format = '"$"#,##0.0'
+            if fill:
+                for col_idx in range(1, 8):
+                    ws.cell(row=row_i, column=col_idx).fill = fill
             row_i += 1
 
     for col_idx, w in enumerate([36, 14, 14, 16, 18, 12, 18], start=1):
@@ -361,10 +373,10 @@ def write_polarity_kpi_sheet(wb: Workbook) -> None:
         c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
     ws.row_dimensions[4].height = 30
 
-    fill_mm = PatternFill("solid", fgColor="DCEFFC")        # MM-touching
-    fill_crm_incl = PatternFill("solid", fgColor="FFF9C4")  # contains CRM-incl
-    fill_baseline = PatternFill("solid", fgColor="E1F5E1")  # 3P-incl alone (clean baseline)
-    fill_default = PatternFill("solid", fgColor="F5F5F5")
+    # Minimal coloring — only the rows that matter for the deck story
+    fill_baseline = PatternFill("solid", fgColor="F3E5F5")    # 3P-incl alone = clean baseline for 3P quality work
+    fill_high_cvr = PatternFill("solid", fgColor="FFF9C4")    # CRM-incl combos = high CVR cohort
+    fill_default = None
 
     with POLARITY_KPI_CSV.open() as f:
         reader = csv.DictReader(f)
@@ -374,34 +386,30 @@ def write_polarity_kpi_sheet(wb: Workbook) -> None:
             if bucket == "3P-incl":
                 fill = fill_baseline
             elif "CRM-incl" in bucket and "CRM-excl" not in bucket:
-                fill = fill_crm_incl
-            elif bucket.startswith("MM"):
-                fill = fill_mm
+                fill = fill_high_cvr
             else:
                 fill = fill_default
-            ws.cell(row=row_i, column=1, value=bucket).fill = fill
-            ws.cell(row=row_i, column=2, value=to_int(r["n_campaigns"])).fill = fill
-            ws.cell(row=row_i, column=2).number_format = "#,##0"
-            ws.cell(row=row_i, column=3, value=to_int(r["n_advertisers"])).fill = fill
-            ws.cell(row=row_i, column=3).number_format = "#,##0"
-            ws.cell(row=row_i, column=4, value=to_float(r["spend_30d_M"])).fill = fill
-            ws.cell(row=row_i, column=4).number_format = '"$"#,##0.000'
-            ws.cell(row=row_i, column=5, value=to_float(r["pct_spend"])).fill = fill
-            ws.cell(row=row_i, column=5).number_format = "0.0"
-            ws.cell(row=row_i, column=6, value=to_float(r["cvr"])).fill = fill
-            ws.cell(row=row_i, column=6).number_format = "0.000000"
-            ws.cell(row=row_i, column=7, value=to_float(r["ivr"])).fill = fill
-            ws.cell(row=row_i, column=7).number_format = "0.000000"
-            ws.cell(row=row_i, column=8, value=to_float(r["ctr"])).fill = fill
-            ws.cell(row=row_i, column=8).number_format = "0.000000"
-            ws.cell(row=row_i, column=9, value=to_float(r["cpm_dollars"])).fill = fill
-            ws.cell(row=row_i, column=9).number_format = '"$"#,##0.00'
+            def apply_fill(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                return cell
+            apply_fill(1, bucket)
+            apply_fill(2, to_int(r["n_campaigns"]), "#,##0")
+            apply_fill(3, to_int(r["n_advertisers"]), "#,##0")
+            apply_fill(4, to_float(r["spend_30d_M"]), '"$"#,##0.000')
+            apply_fill(5, to_float(r["pct_spend"]), "0.0")
+            apply_fill(6, to_float(r["cvr"]), "0.000000")
+            apply_fill(7, to_float(r["ivr"]), "0.000000")
+            apply_fill(8, to_float(r["ctr"]), "0.000000")
+            apply_fill(9, to_float(r["cpm_dollars"]), '"$"#,##0.00')
             cpc_val = r.get("cost_per_conv_dollars", "")
             if cpc_val and cpc_val.strip():
-                ws.cell(row=row_i, column=10, value=to_float(cpc_val)).fill = fill
-                ws.cell(row=row_i, column=10).number_format = '"$"#,##0.00'
+                apply_fill(10, to_float(cpc_val), '"$"#,##0.00')
             else:
-                ws.cell(row=row_i, column=10, value="").fill = fill
+                apply_fill(10, "")
             row_i += 1
 
     for col_idx, w in enumerate([44, 14, 14, 16, 12, 12, 12, 12, 12, 16], start=1):
