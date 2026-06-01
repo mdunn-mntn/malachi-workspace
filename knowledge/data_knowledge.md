@@ -2671,9 +2671,23 @@ WHERE DATE(time) BETWEEN @start AND @end
 
 Then LEFT JOIN to `guid_log` (causal lift) and/or `clickpass_log` (attribution wedge) per IP × advertiser. See `knowledge/experimentation.md` § "Bidder-Level Ghost Bids — Live Stream Methodology" for the full methodology, including the ITT vs ATT trade-off, window-ceiling change (10 → 90 days), and what survives unchanged from TI-837 v5.
 
-**Open verification items (not yet confirmed empirically):**
+**Empirical verification on 2026-05-30 (verified 2026-06-01):**
+
+| Arm | rows | distinct advertisers | distinct campaigns | distinct IPs | has_price=TRUE | price>0 | objective_id populated |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `'ghost-bid'` | 752,981 | 22 | 106 | 180,879 | **0** | 752,981 (100%) | 752,981 (100%) |
+| eligible-no-failure | 3,948,214 | 22 | 127 | 887,088 | 3,948,214 (100%) | 3,948,214 (100%) | 3,948,214 (100%) |
+| other-failure | 69.17B | 22 | 145 | 30.0M | 0 | 769K | 69.17B (100%) |
+
+- **Ghost-bid rows carry full attribution** — `advertiser_id`, `campaign_id`, `objective_id`, `household_score`, `ip`, `price` are all 100% populated on ghost-bid rows. Cohort can be built off `bidder_bid_events` alone.
+- **`has_price = FALSE` on every ghost-bid row, but `price` IS logged.** Matches the Confluence page note (`hasPrice=false, price still logged`). **Use `has_price = TRUE` as the ITT-treatment filter** — it cleanly excludes ghost bids. Do NOT filter on `price > 0` to exclude ghosts (price is populated for both).
+- **Holdout fraction ≈ 16%** (753K / (753K + 3.95M)) for the day, consistent with a ~16% production holdout sample. Matches Ryan's "~10% of successful bid count" rough sizing.
+
+**⚠️ Coverage caveat — `bidder_bid_events` may be MNTN-bidder-only:** only **22 distinct advertisers** appear in the entire 2026-05-30 table across all arms, against ~300-400 live MNTN advertisers. The Confluence page describes two separate bidders (Beeswax = `rtb-bidder-service` Kotlin, MNTN = `rtb-campaign-service` Rust). The dashed `'ghost-bid'` value matches the MNTN-bidder naming convention. **Hypothesis:** `bidder_bid_events` captures only MNTN-bidder events; Beeswax-bidder bid events (with `'ghostBid'` camelCase) either land in a different BQ table or aren't yet ingested to silver. **Action required:** confirm with Ryan which BQ surface holds Beeswax-bidder events before scoping any incrementality analysis off `bidder_bid_events`; the advertiser coverage gap matters.
+
+**Open verification items still TBD:**
 - Scope of `holdout_cids` (Aerospike): global random fraction, per-campaign-group, or per-advertiser? Determines whether (advertiser, IP) is the cohort unit or just (IP).
-- Whether ghost-bid rows have full attribution populated (advertiser_id, campaign_id, etc.) — counts and field coverage TBD by 2026-06-01 verification query.
+- Whether the 22-advertiser MNTN-bidder coverage is the full incrementality cohort or whether Beeswax-bidder ghost bids also need to be sourced (and from where).
 
 <!-- slack-extracted: 2026-05-30 -->
 - **Data Source (DS) Taxonomy — Key DS Definitions and Legacy Notes**

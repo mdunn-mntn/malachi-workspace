@@ -1158,11 +1158,28 @@ The augmentor's 10-day TTL was the binding constraint on v5; Phase 2a needed Dat
 - **Fcap-boundary bias** (see Confluence "Ghost Win Simulation Discussion"). Holdout fcap state diverges from treatment after treatment's first impression because no impression is logged for ghost bids. Effect is bounded; only material if measurement moves to per-bid-attempt or per-impression matching. Our household × window grain is robust. Document the asymmetry in any BER-2250 deliverable; revisit if anyone proposes impression-level matching or heavy-fcap CTV-only studies.
 - **Pre-2026-05-27 analysis windows.** No backfill. For lift measurements covering March/April/May, the v5 post-hoc augmentor approach remains the only path.
 
-### Open questions to confirm before relying on the stream
+### Empirical verification (2026-05-30, full day)
+
+Single-day shape of `bidder_bid_events` confirms the methodology can be built off this stream:
+
+| Arm | rows | n_adv | n_camp | n_IPs | has_price=TRUE | price>0 | objective_id |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `'ghost-bid'` | 753K | 22 | 106 | 181K | **0%** | 100% | 100% |
+| eligible-no-failure | 3.95M | 22 | 127 | 887K | 100% | 100% | 100% |
+| other-failure | 69.17B | 22 | 145 | 30M | 0% | <0.1% | 100% |
+
+**What this verified:**
+- Ghost-bid rows carry full attribution (advertiser_id, campaign_id, objective_id, household_score, ip, price) — cohort labels are complete on the row.
+- `has_price = TRUE` is the right ITT-treatment filter — cleanly separates ghost bids (has_price=FALSE) from eligible real bids. **Do NOT filter on `price > 0`** to exclude ghost bids; price is populated for both.
+- Holdout fraction ≈ **16%** on 2026-05-30 (753K ghost / 4.7M total eligible), consistent with the Confluence "~10% of successful bid count" rough sizing.
+
+**Coverage caveat (open):** only **22 distinct advertisers** appear in the BQ silver `bidder_bid_events` for the entire day, against ~300-400 live MNTN advertisers. Strongly suggests this is the MNTN-bidder stream only (Rust `rtb-campaign-service`) and Beeswax-bidder bid events (`rtb-bidder-service` Kotlin, `threshold_failure_reasons = 'ghostBid'` camelCase per the Confluence page) land in a different BQ table or aren't ingested to silver yet. **Confirm with Ryan before scoping any incrementality analysis** — if Beeswax-bidder advertisers aren't in this stream, incrementality coverage is capped at ~22 advertisers of the ~30 originally analyzed in TI-837 Phase 2.
+
+### Open questions still to confirm
 
 1. **Scope of `holdout_cids` (Aerospike).** Per the Confluence page, holdout assignment comes from `membership-consumer` → Aerospike `holdout_cids`. Whether this is a single global random fraction, per-campaign-group, or per-advertiser determines whether arm assignment is independent of advertiser × tier × time. If per-campaign-group, the same IP can be holdout for one advertiser and treatment for another — analyses must cohort by (advertiser, IP, window), not just IP.
-2. **"Won" indicator on `bidder_bid_events`.** No explicit `won` boolean — proxy is `has_price = TRUE AND price > 0` (passed bidder, sent to exchange), but exchange-loss is not visible without joining `win_logs`. Verify with Ryan whether `has_price + price > 0` is a sufficient ITT-treatment definition or if a more specific filter is needed.
-3. **Will the Beeswax `'ghostBid'` (camelCase) stream ever land in BQ as a separate row class, or is the current `bidder_bid_events.threshold_failure_reasons = 'ghost-bid'` (dashed) the unified surface?** Verified empirically (2026-06-01): only the dashed form appears in BQ; camelCase returns zero. If Beeswax stream is also routed here, the column already captures it.
+2. **"Won at exchange" indicator on `bidder_bid_events`.** No explicit `won` boolean. `has_price = TRUE AND price > 0` defines "passed bidder, sent to exchange" — that's the ITT definition. Exchange-loss is not visible without joining `win_logs` on `auction_id`. Confirm with Ryan whether ITT (= sent to exchange) is the right estimand or whether ATT-on-won is required.
+3. **Beeswax-bidder BQ surface.** See coverage caveat above — find out where Beeswax `'ghostBid'` (camelCase) ghost-bid rows land in BQ.
 
 ### Why this is "the BER-2250 unblock," not just an iteration
 
