@@ -2571,17 +2571,25 @@ The audience intent scoring pipeline (`spark/audience_intent/advertiser_high.py`
 - Recently onboarded advertisers (as a buffer)
 
 **Note:** Defining "active" is non-trivial — advertisers can churn and return — so the filtering logic needs to account for imminent launches rather than just current live status. (via Zach Schoenberger, #tgt-infrastructure-squad, 2026-05-27)
-- ## Ghost Bids — Bidder Feature (Deployed ~2026-05-27)
+- ## Ghost Bids — Bidder Feature (Deployed 2026-05-27)
 
-**What it is:** Ghost Bids are a new bidder feature that allows IPs/segments previously excluded from bidding to pass through the bidder and be tagged with a failure reason rather than being hard-excluded. This enables data collection on traffic that would have been suppressed.
+**What it is:** Ghost Bids are a new bidder feature that allows IPs/segments previously excluded from bidding to pass through the bidder and be tagged with a failure reason rather than being hard-excluded. This enables data collection on traffic that would have been suppressed. **Critical for BER-2250 / TI-886 incrementality measurement.**
 
-**Failure reason identifiers:**
-- Beeswax Bidder: `threshold_failure_reasons = 'ghostBid'`
-- MNTN Bidder: `bid_dropped_reason = 'ghost-bid'`
+**Failure reason identifiers — raw GCS field names (per Ryan Kleck DM, 2026-06-01):**
+- Beeswax Bidder: `threshold_failure_reasons = 'ghostBid'` — raw avro at `gs://bidder-price-events-prod-east/topics/rtb-bid-price-events/date=YYYY-MM-DD/`
+- MNTN Bidder: `bid_dropped_reason = 'ghost-bid'` — raw parquet at `gs://bidder-bid-events-prod-east/v2/YYYY-MM-DD/HH`
 
-**Expected impact on metrics:** Expect approximately a ~10% increase in bid drop reasons after deployment. The expected volume is roughly 10% of successful bid count. Ghost Bids do **not** affect pacing, deliverability, or other campaign performance metrics.
+**BigQuery silver locations (verified 2026-06-01 — same project ID `dw-main-silver`):**
+- Beeswax field: `logdata.bidder_bid_events.threshold_failure_reasons` (STRING). Also exposed via `logdata.bid_attempted_log` (same underlying table). Filter: `threshold_failure_reasons LIKE '%ghostBid%'`.
+- MNTN bidder field: NOT present in `bidder_bid_events` under the raw GCS name `bid_dropped_reason`. The closest BQ field is `logdata.bidder_auction_events.auction_dropped_reason` (STRING). **TODO: confirm with Ryan whether `auction_dropped_reason LIKE '%ghost%'` is the MNTN-bidder ghost-bid signal in BQ, or whether the field is pending pipeline work.**
 
-**Monitoring note:** When reviewing bid drop reason trends in dashboards or queries, account for this step-change increase starting from the Ghost Bid deployment date. (via Ryan Kleck, #mission-control, 2026-05-27)
+**Ghost wins are NOT logged.** Bidder only emits ghost-bid records; whether those bids would have won is unknown. To estimate ghost wins, apply the campaign or advertiser win-rate to ghost-bid volume. See [Ghost Win Simulation Discussion](https://mntn.atlassian.net/wiki/spaces/DATA/pages/3608150103/Ghost+Win+Simulation+Discussion) for the in-flight design debate (Scylla push, etc.).
+
+**No backfill — data from 2026-05-27 forward only.** Cohort + experiment design needs to assume the deploy date as patient zero.
+
+**Expected impact on metrics:** ~10% increase in bid drop reasons (≈10% of successful bid count). Does **not** affect pacing, deliverability, or campaign performance metrics.
+
+**Monitoring note:** When reviewing bid drop reason trends in dashboards or queries, account for the step-change increase starting 2026-05-27. (via Ryan Kleck, #mission-control 2026-05-27 + DM 2026-06-01)
 
 <!-- slack-extracted: 2026-05-30 -->
 - **Data Source (DS) Taxonomy — Key DS Definitions and Legacy Notes**
