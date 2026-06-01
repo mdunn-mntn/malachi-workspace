@@ -196,6 +196,7 @@ SELECT
   COUNT(*) AS n_campaigns,
   ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS pct_campaigns,
   COUNT(DISTINCT advertiser_id) AS n_advertisers,
+  ROUND(100.0 * COUNT(DISTINCT advertiser_id) / (SELECT COUNT(DISTINCT advertiser_id) FROM classified), 2) AS pct_advertisers,
   ROUND(SUM(spend_30d) / 1e6, 4) AS spend_30d_M,
   ROUND(100.0 * SUM(spend_30d) / SUM(SUM(spend_30d)) OVER (), 2) AS pct_spend,
   ROUND(SAFE_DIVIDE(SUM(conversions_30d), SUM(impressions_30d)), 6) AS cvr,

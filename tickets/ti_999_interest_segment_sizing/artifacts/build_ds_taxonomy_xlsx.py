@@ -35,6 +35,7 @@ PASS27_CSV = OUTPUTS / "ti_999_pass27_mm_and_or_split_2026_06_01.csv"
 PASS28_CSV = OUTPUTS / "ti_999_pass28_full_permutation_matrix_2026_06_01.csv"
 PASS29_CSV = OUTPUTS / "ti_999_pass29_perm_matrix_geo_broad_vs_narrow_2026_06_01.csv"
 PASS30_CSV = OUTPUTS / "ti_999_pass30_perm_matrix_geo_narrow_only_2026_06_01.csv"
+PASS31_CSV = OUTPUTS / "ti_999_pass31_within_advertiser_vs_pure_mm_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -1254,7 +1255,8 @@ def write_pass30_geo_narrow_only_sheet(wb: Workbook) -> None:
         "3P-AND-incl", "3P-AND-excl", "3P-OR-incl",
         "CRM-AND-incl", "CRM-AND-excl", "CRM-OR-incl",
         "GEO-NARROW-incl", "GEO-NARROW-excl",
-        "n_campaigns", "% campaigns", "n_advertisers",
+        "n_campaigns", "% campaigns",
+        "n_advertisers", "% advertisers",
         "Spend (30d, $M)", "% spend",
         "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
     ]
@@ -1327,17 +1329,18 @@ def write_pass30_geo_narrow_only_sheet(wb: Workbook) -> None:
             apply(11, to_int(r["n_campaigns"]), "#,##0")
             apply(12, to_float(r["pct_campaigns"]), "0.00")
             apply(13, to_int(r["n_advertisers"]), "#,##0")
-            apply(14, to_float(r["spend_30d_M"]), '"$"#,##0.0000')
-            apply(15, to_float(r["pct_spend"]), "0.00")
-            apply(16, to_float(r["cvr"]), "0.000000")
-            apply(17, to_float(r["ivr"]), "0.000000")
-            apply(18, to_float(r["ctr"]), "0.000000")
-            apply(19, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            apply(14, to_float(r["pct_advertisers"]), "0.00")
+            apply(15, to_float(r["spend_30d_M"]), '"$"#,##0.0000')
+            apply(16, to_float(r["pct_spend"]), "0.00")
+            apply(17, to_float(r["cvr"]), "0.000000")
+            apply(18, to_float(r["ivr"]), "0.000000")
+            apply(19, to_float(r["ctr"]), "0.000000")
+            apply(20, to_float(r["cpm_dollars"]), '"$"#,##0.00')
             cpc = r.get("cost_per_conv_dollars", "")
             if cpc and cpc.strip():
-                apply(20, to_float(cpc), '"$"#,##0.00')
+                apply(21, to_float(cpc), '"$"#,##0.00')
             else:
-                apply(20, "")
+                apply(21, "")
             row_i += 1
 
     legend_row = row_i + 2
@@ -1354,9 +1357,134 @@ def write_pass30_geo_narrow_only_sheet(wb: Workbook) -> None:
     for i, (fill, label) in enumerate(legend_entries):
         c = ws.cell(row=legend_row + 1 + i, column=1, value=label)
         c.fill = fill
-        ws.merge_cells(start_row=legend_row + 1 + i, start_column=1, end_row=legend_row + 1 + i, end_column=19)
+        ws.merge_cells(start_row=legend_row + 1 + i, start_column=1, end_row=legend_row + 1 + i, end_column=21)
 
-    widths = [60, 5, 12, 12, 12, 13, 13, 13, 17, 17, 12, 12, 14, 16, 12, 14, 14, 14, 12, 16]
+    widths = [60, 5, 12, 12, 12, 13, 13, 13, 17, 17, 12, 12, 14, 14, 16, 12, 14, 14, 14, 12, 16]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "B5"
+
+
+def write_pass31_within_advertiser_sheet(wb: Workbook) -> None:
+    """Pass 31 — within-advertiser comparison vs pure MM baseline.
+
+    Per user direction (2026-06-01): "Is there any good way to see if any of those
+    other additions or exclusions on MM are truly due to the audience changes vs
+    just the advertisers that fall in that group?"
+
+    For each pattern, the question is: of advertisers who run BOTH that pattern AND
+    pure MM during the 30d window, what's the within-advertiser CVR difference? If
+    within ≈ cross → real audience effect. If within ≈ 0 → selection.
+    """
+    if not PASS31_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 31 — within-advertiser")
+
+    ws.cell(row=1, column=1, value="Pass 31 — within-advertiser KPI delta vs pure MM baseline (decomposes audience effect from selection effect)").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=12)
+
+    note = (
+        "For each non-baseline pattern P, the CVR gap vs pure MM can be either:\n"
+        "  · SELECTION — advertisers running P are systematically different (different verticals, CRM size, spend tier)\n"
+        "  · AUDIENCE — the pattern itself (adding 3P, suppressing CRM, narrowing geo) changes the bid pool and KPIs follow\n\n"
+        "WITHIN-advertiser delta isolates the audience effect: find advertisers running BOTH pattern P AND pure MM during the 30d window, "
+        "then compare their pattern-P CVR to their own pure-MM CVR. Average across overlapping advertisers — selection drops out because "
+        "the same advertiser is on both sides.\n\n"
+        "CAVEAT: most advertisers stick to one pattern within 30 days, so the within-advertiser overlap is small. Cells with "
+        "n_advertisers_with_mm_baseline < 5 are flagged 'too_few_advertisers' and should not be interpreted. Wider lookback window would help."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=12)
+    ws.row_dimensions[2].height = 200
+
+    headers = [
+        "Pattern",
+        "n_advertisers (total)", "n with MM baseline", "% with MM baseline",
+        "Spend $M (all)", "Spend $M (overlap subset)",
+        "CVR (all advertisers)",
+        "Within: pattern CVR", "Within: same-adv MM CVR", "Within delta (CVR)",
+        "Cross delta (CVR)",
+        "CVR verdict",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 54
+
+    # Verdict-based row coloring
+    fill_real    = PatternFill("solid", fgColor="C8E6C9")   # green: real audience effect
+    fill_select  = PatternFill("solid", fgColor="FFE0B2")   # orange: mostly selection
+    fill_flip    = PatternFill("solid", fgColor="F8BBD0")   # pink: sign flip — selection overstates
+    fill_mixed   = PatternFill("solid", fgColor="FFF9C4")   # yellow: mixed
+    fill_toofew  = PatternFill("solid", fgColor="ECEFF1")   # gray: too few advertisers
+
+    fill_by_verdict = {
+        "real_audience_effect": fill_real,
+        "mostly_selection": fill_select,
+        "sign_flip__selection_overstates_cross": fill_flip,
+        "mixed": fill_mixed,
+        "too_few_advertisers": fill_toofew,
+    }
+
+    with PASS31_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            verdict = r["cvr_verdict"]
+            fill = fill_by_verdict.get(verdict)
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col in (1, 12)))
+                return cell
+
+            apply(1, r["pattern"])
+            apply(2, to_int(r["n_advertisers_total"]), "#,##0")
+            apply(3, to_int(r["n_advertisers_with_mm_baseline"]), "#,##0")
+            apply(4, to_float(r["pct_advertisers_with_mm_baseline"]), "0.0")
+            apply(5, to_float(r["p_spend_M_all"]), '"$"#,##0.0000')
+            apply(6, to_float(r["p_spend_M_within"]), '"$"#,##0.0000')
+            apply(7, to_float(r["p_cvr_all"]), "0.000000")
+            # Within columns may be empty for rows with no MM-baseline overlap
+            def maybe_float(s):
+                if s and s.strip():
+                    return to_float(s)
+                return ""
+            p_cvr_w = r.get("p_cvr_within", "")
+            mm_cvr_w = r.get("mm_cvr_within", "")
+            w_delta = r.get("within_cvr_delta", "")
+            apply(8,  maybe_float(p_cvr_w),  "0.000000" if p_cvr_w.strip() else None)
+            apply(9,  maybe_float(mm_cvr_w), "0.000000" if mm_cvr_w.strip() else None)
+            apply(10, maybe_float(w_delta),  "+0.000000;-0.000000" if w_delta.strip() else None)
+            apply(11, to_float(r["cross_cvr_delta"]), "+0.000000;-0.000000")
+            apply(12, verdict)
+            row_i += 1
+
+    # Verdict legend
+    legend_row = row_i + 2
+    ws.cell(row=legend_row, column=1, value="Verdict legend (CVR verdict column)").font = Font(bold=True, size=12)
+    ws.merge_cells(start_row=legend_row, start_column=1, end_row=legend_row, end_column=12)
+    legend_entries = [
+        (fill_real,   "real_audience_effect — within delta matches cross delta in sign and ≥50% of magnitude. The pattern itself is doing the work."),
+        (fill_select, "mostly_selection — within delta is <10% of cross delta. The cross-advertiser gap is mostly because of which advertisers choose this pattern."),
+        (fill_flip,   "sign_flip — within delta and cross delta have opposite signs. Selection is overstating (or masking) the true audience effect."),
+        (fill_mixed,  "mixed — within delta is partially explanatory but the picture is muddied. Treat with caution."),
+        (fill_toofew, "too_few_advertisers — <5 advertisers run both pattern and pure MM in the 30d window. Underpowered; don't interpret."),
+    ]
+    for i, (fill, label) in enumerate(legend_entries):
+        c = ws.cell(row=legend_row + 1 + i, column=1, value=label)
+        c.fill = fill
+        c.alignment = Alignment(wrap_text=True, vertical="center")
+        ws.merge_cells(start_row=legend_row + 1 + i, start_column=1, end_row=legend_row + 1 + i, end_column=12)
+        ws.row_dimensions[legend_row + 1 + i].height = 30
+
+    widths = [56, 14, 14, 12, 14, 18, 14, 14, 18, 14, 14, 38]
     for col_idx, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = w
     ws.freeze_panes = "B5"
@@ -1377,6 +1505,7 @@ def main() -> None:
     write_pass28_permutation_matrix_sheet(wb)
     write_pass29_geo_broad_vs_narrow_sheet(wb)
     write_pass30_geo_narrow_only_sheet(wb)
+    write_pass31_within_advertiser_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
