@@ -1078,7 +1078,20 @@ So MM scoring (Fangorn-on OR Non-Fangorn) is generated only for campaigns whose 
 
 So a campaign can be **scored-but-not-acted-on** if it has DS13/DS19 in the expression but no HHST configured. The score exists in GCS but doesn't gate bidding decisions.
 
-**Ryan also noted:** he has seen 3P campaigns with Peak Performance enabled that get scored. Per the MM 2.0 state table, PP requires DS13 + DS19 + `score_type=rtc` in the expression, so those campaigns DO have DS13/DS19 — buyer enabled PP in addition to 3P. In our taxonomy they're "MM + 3P" (not 3P-only).
+**Architectural detail — DSes are not a bidder concept (Ryan Kleck, 2026-06-01):**
+
+> "the bidder doesn't know about DSs.. that's a MemDB concept. Then MemDB says, 'ok this IP belongs to this segment/campaign, and this one, etc' and we give the bidder ALL our scores."
+
+So the data flow is:
+1. **Audience expression** references DSes (DS13, DS17, DS19, etc.) and their categories.
+2. **MemDB** translates audience expressions into IP-level membership: it knows which IPs belong to which segments / campaigns.
+3. **Bidder** receives IP × campaign membership from MemDB along with ALL available scores for those IPs (whatever the scoring pipeline produced). The bidder operates on scores + HHST, not on DS references directly.
+
+**Implication:** DS-level audience semantics live in the audience platform (MemDB), not in the bidder. Bid-side analyses (e.g., `bid_events`) won't show DS references; they'll show IP + scores + campaign. To reason about DS-level audience composition, you must work upstream from the bidder, via the expression or MemDB membership.
+
+**Surprise empirical finding (TI-999, 2026-06-01) — Ryan didn't expect this:** MM+3P combinations dominate prospecting spend, not MM-only or 3P-only. From Pass 21 buckets: MM+3P = 1,133 campaigns / $7.25M (22.6% spend), MM+3P+CRM = 306 / $3.32M (10.3%), MM+CRM = 566 / $5.08M (15.8%) — vs MM-only at 1,194 / $6.02M (18.7%) and 3P-only at 439 / $1.41M (4.4%). Ryan's mental model was that buyers usually pick MM-only OR 3P-only, "tricky" edge case to combine. Empirically MM+3P combinations are the **majority of prospecting spend**, which raises a structural question: if 3P IPs that aren't also in DS13/19 don't get scored, what does adding 3P to an MM campaign actually do at the bidder level?
+
+**Working hypothesis (to validate):** the value of MM+3P (vs MM-only) shows up only when MM-scored IP supply is exhausted relative to pacing budget — the bidder falls through to unscored 3P-eligible IPs to fill remaining budget. This matches the earlier "MM ceiling" finding from TI-999 (Pass 12/13). For most campaigns where MM-scored IPs are plentiful, adding 3P is no-op — the 3P clause doesn't bring scored IPs in (only MM does), it just narrows or widens eligibility. **Worth validating with Ryan / Zach when this lands in the deck.**
 
 **Implication for TI-999 3P-only baseline (LOCKED methodology):**
 
