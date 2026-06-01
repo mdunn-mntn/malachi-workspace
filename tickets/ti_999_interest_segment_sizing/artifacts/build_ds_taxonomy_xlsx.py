@@ -30,6 +30,7 @@ ANOMALIES_CSV = OUTPUTS / "ti_999_pass20_anomalies_2026_05_29.csv"
 POLARITY_KPI_CSV = OUTPUTS / "ti_999_pass22c_polarity_aware_buckets_2026_05_29.csv"
 GEO_RESTRICTION_CSV = OUTPUTS / "ti_999_pass24_geo_restriction_2026_06_01.csv"
 EXCL_AXES_CSV = OUTPUTS / "ti_999_pass25_full_polarity_2026_06_01.csv"
+PASS26_CSV = OUTPUTS / "ti_999_pass26_or_vs_and_include_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -576,6 +577,219 @@ def write_excl_axes_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "B5"
 
 
+def write_or_vs_and_explainer_sheet(wb: Workbook) -> None:
+    """The three-tables-stacked explainer the user asked for."""
+    ws = wb.create_sheet("OR vs AND — explainer")
+
+    # Title
+    ws.cell(row=1, column=1, value="OR-include vs AND-include vs AND-exclude — layman's terms").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
+
+    # Setup paragraph
+    note = (
+        "Concrete example: buyer is running an MM (Mountain Match) campaign for 'auto-intent users' and wants to layer the Ford F-150 Intender 3P segment. "
+        "Two circles: A = MM audience (everyone MNTN scores as auto-intent), B = 3P segment (everyone in Ford F-150 Intender list). "
+        "There are four ways to combine them in the audience expression. Three of them are common in our data."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=6)
+    ws.row_dimensions[2].height = 56
+
+    # ---- TABLE 1: The four patterns ----
+    ws.cell(row=4, column=1, value="Table 1 — What each pattern means").font = Font(bold=True, size=13)
+    ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=6)
+
+    t1_headers = ["Pattern", "Plain English", "Bidder math", "Audience size effect", "Example", "Common in our data?"]
+    for col_idx, h in enumerate(t1_headers, start=1):
+        c = ws.cell(row=5, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[5].height = 30
+
+    t1_rows = [
+        ["AND-include", "Only target people who are in BOTH circles", "A ∩ B (intersection)", "Smaller — narrows to overlap only", "Target auto-intent users who ARE ALSO Ford F-150 Intenders", "5% of MM+3P-incl spend"],
+        ["OR-include", "Target circle A, AND ALSO add circle B", "A ∪ B (union)", "Bigger in theory — both circles combined", "Target auto-intent users, AND ALSO add Ford F-150 Intenders to the audience", "80% of MM+3P-incl spend"],
+        ["AND-exclude", "Target circle A, AND remove circle B", "A \\ B (subtraction)", "Smaller — removes overlap from A", "Target auto-intent users, EXCEPT those who are also Ford F-150 Intenders", "Yes (3P-exclude column)"],
+        ["OR-exclude", "(rare / structurally weird)", "NOT(A ∪ B) ≈ neither", "Almost nobody", "Doesn't really show up in our data", "No"],
+    ]
+    for r_idx, row in enumerate(t1_rows, start=6):
+        for c_idx, val in enumerate(row, start=1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=val)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+        ws.row_dimensions[r_idx].height = 40
+
+    # ---- TABLE 2: Buyer thinks vs Bidder reality ----
+    ws.cell(row=12, column=1, value="Table 2 — What buyer thinks vs what actually happens at the bidder (HHST > 0)").font = Font(bold=True, size=13)
+    ws.merge_cells(start_row=12, start_column=1, end_row=12, end_column=6)
+
+    note2 = (
+        "Critical context: the bidder needs a score on an IP to actually bid (when HHST > 0). Only people in MM (DS13/19/38/46) get scored. "
+        "So even if the expression LISTS the 3P-only IPs as eligible, the bidder skips them because they have no score."
+    )
+    ws.cell(row=13, column=1, value=note2).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=13, start_column=1, end_row=13, end_column=6)
+    ws.row_dimensions[13].height = 40
+
+    t2_headers = ["Pattern", "What buyer THINKS happens", "What actually happens at the bidder", "Match?"]
+    for col_idx, h in enumerate(t2_headers, start=1):
+        c = ws.cell(row=14, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[14].height = 30
+
+    t2_rows = [
+        ["AND-include", "I narrowed to auto-intent + Ford intenders", "Correct. Bidder bids on the intersection (MM ∩ 3P). Real narrowing.", "✓ Matches"],
+        ["OR-include", "I expanded my audience to include 3P", "Wrong. Bidder only bids on MM-scored IPs. The 3P-only people aren't scored, fail HHST. Audience-size theater.", "✗ Mismatch — THEATER"],
+        ["AND-exclude", "I removed Ford intenders from my MM", "Correct. Bidder bids on (MM minus Ford). Real subtraction.", "✓ Matches"],
+        ["OR-exclude", "(n/a)", "(n/a — doesn't happen in our data)", "—"],
+    ]
+    for r_idx, row in enumerate(t2_rows, start=15):
+        for c_idx, val in enumerate(row, start=1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=val)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            # Highlight the mismatch row
+            if r_idx == 16:  # OR-include row
+                cell.fill = PatternFill("solid", fgColor="FFE0B2")
+        ws.row_dimensions[r_idx].height = 50
+
+    # ---- TABLE 3: Portfolio totals ----
+    ws.cell(row=21, column=1, value="Table 3 — What our portfolio actually does (% of MM+3P-include spend)").font = Font(bold=True, size=13)
+    ws.merge_cells(start_row=21, start_column=1, end_row=21, end_column=6)
+
+    t3_headers = ["Pattern", "% of MM+3P-include spend", "What it really is"]
+    for col_idx, h in enumerate(t3_headers, start=1):
+        c = ws.cell(row=22, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[22].height = 30
+
+    t3_rows = [
+        ["OR-include", "80%", "Audience-size theater — buyer thought they were expanding, but with HHST > 0 the 3P clause changes nothing"],
+        ["AND-include", "5%", "Real narrowing — bidder genuinely bids only on MM ∩ 3P"],
+        ["Mixed", "8%", "Some 3P clauses are OR, some are AND in the same expression"],
+        ["3P-include WITHOUT MM (separate cohort)", "11.8% of all prospecting spend", "Pure 3P prospecting — no MM scoring at all"],
+    ]
+    for r_idx, row in enumerate(t3_rows, start=23):
+        for c_idx, val in enumerate(row, start=1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=val)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            if r_idx == 23:  # OR-include row — the headline finding
+                cell.fill = PatternFill("solid", fgColor="FFE0B2")
+        ws.row_dimensions[r_idx].height = 40
+
+    # ---- The deck-headline callout ----
+    ws.cell(row=28, column=1, value="THE LAYMAN HEADLINE FOR THE DECK").font = Font(bold=True, size=13, color="C62828")
+    ws.merge_cells(start_row=28, start_column=1, end_row=28, end_column=6)
+
+    headline = (
+        "When buyers layer interest segments on Mountain Match, 80% of the spend is doing nothing at the bidder. "
+        "They added 3P clauses to make the audience number look bigger in the UI, but the bidder only bids on "
+        "MM-scored people anyway because 3P-only people don't have scores. Only 5% of the spend is doing what "
+        "the buyer thought (real narrowing). The rest is mostly theater."
+    )
+    ws.cell(row=29, column=1, value=headline).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=29, start_column=1, end_row=29, end_column=6)
+    ws.row_dimensions[29].height = 70
+    ws.cell(row=29, column=1).fill = PatternFill("solid", fgColor="FFF9C4")
+
+    # Column widths
+    widths = [20, 36, 28, 32, 50, 26]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+
+def write_pass26_detail_sheet(wb: Workbook) -> None:
+    """Full Pass 26 cell-level detail with OR/AND split applied."""
+    if not PASS26_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 26 — OR vs AND detail")
+
+    ws.cell(row=1, column=1, value="Pass 26 — full polarity split WITH OR-include vs AND-include semantic classification").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=18)
+
+    note = (
+        "Same axes as Pass 25 plus the OR vs AND classification for 3P-include. "
+        "Classification logic: for each MM-positive clause and 3P-positive clause, walk the JSON tree to find the lowest common ancestor (LCA) operator. "
+        "LCA = 'or' → OR_include (additive, theater with HHST > 0). LCA = 'and' → AND_include (intersect, real narrowing). "
+        "Mixed = some pairs OR, some AND in the same expression. Yellow rows = OR_include cells. Pink rows = AND_include cells."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=18)
+    ws.row_dimensions[2].height = 80
+
+    headers = [
+        "What this cell says (plain English)",
+        "MM", "3P semantics", "3P-excl", "CRM-incl", "CRM-excl", "Geo",
+        "n_campaigns", "% campaigns", "n_advertisers", "% advertisers", "Spend (30d, $M)", "% spend",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 36
+
+    fill_or = PatternFill("solid", fgColor="FFF9C4")    # OR_include cells (theater)
+    fill_and = PatternFill("solid", fgColor="F8BBD0")    # AND_include cells (real narrowing)
+    fill_mixed = PatternFill("solid", fgColor="FFE0B2")  # mixed
+    fill_default = None
+
+    with PASS26_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            sem = r["f_3p_semantics"]
+            if sem == "OR_include":
+                fill = fill_or
+            elif sem == "AND_include":
+                fill = fill_and
+            elif sem == "mixed":
+                fill = fill_mixed
+            else:
+                fill = fill_default
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col == 1))
+                return cell
+            apply(1, r["plain_english"])
+            apply(2, r["f_mm"])
+            apply(3, r["f_3p_semantics"])
+            apply(4, r["f_3p_excl"])
+            apply(5, r["f_crm_incl"])
+            apply(6, r["f_crm_excl"])
+            apply(7, r["f_geo"])
+            apply(8, to_int(r["n_campaigns"]), "#,##0")
+            apply(9, to_float(r["pct_campaigns"]), "0.0")
+            apply(10, to_int(r["n_advertisers"]), "#,##0")
+            apply(11, to_float(r["pct_advertisers"]), "0.0")
+            apply(12, to_float(r["spend_30d_M"]), '"$"#,##0.000')
+            apply(13, to_float(r["pct_spend"]), "0.0")
+            apply(14, to_float(r["cvr"]), "0.000000")
+            apply(15, to_float(r["ivr"]), "0.000000")
+            apply(16, to_float(r["ctr"]), "0.000000")
+            apply(17, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            cpc = r.get("cost_per_conv_dollars", "")
+            if cpc and cpc.strip():
+                apply(18, to_float(cpc), '"$"#,##0.00')
+            else:
+                apply(18, "")
+            row_i += 1
+
+    widths = [78, 8, 22, 10, 12, 12, 16, 12, 12, 14, 14, 16, 12, 14, 14, 14, 12, 16]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "B5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
@@ -585,6 +799,8 @@ def main() -> None:
     write_polarity_kpi_sheet(wb)
     write_geo_restriction_sheet(wb)
     write_excl_axes_sheet(wb)
+    write_or_vs_and_explainer_sheet(wb)
+    write_pass26_detail_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
