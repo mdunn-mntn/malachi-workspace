@@ -2576,12 +2576,23 @@ The audience intent scoring pipeline (`spark/audience_intent/advertiser_high.py`
 **What it is:** Ghost Bids are a new bidder feature that allows IPs/segments previously excluded from bidding to pass through the bidder and be tagged with a failure reason rather than being hard-excluded. This enables data collection on traffic that would have been suppressed. **Critical for BER-2250 / TI-886 incrementality measurement.**
 
 **Failure reason identifiers — raw GCS field names (per Ryan Kleck DM, 2026-06-01):**
-- Beeswax Bidder: `threshold_failure_reasons = 'ghostBid'` — raw avro at `gs://bidder-price-events-prod-east/topics/rtb-bid-price-events/date=YYYY-MM-DD/`
-- MNTN Bidder: `bid_dropped_reason = 'ghost-bid'` — raw parquet at `gs://bidder-bid-events-prod-east/v2/YYYY-MM-DD/HH`
+- Beeswax Bidder: `threshold_failure_reasons = 'ghostBid'` (camelCase) — raw avro at `gs://bidder-price-events-prod-east/topics/rtb-bid-price-events/date=YYYY-MM-DD/`
+- MNTN Bidder: `bid_dropped_reason = 'ghost-bid'` (dashed) — raw parquet at `gs://bidder-bid-events-prod-east/v2/YYYY-MM-DD/HH`
 
-**BigQuery silver locations (verified 2026-06-01 — same project ID `dw-main-silver`):**
-- Beeswax field: `logdata.bidder_bid_events.threshold_failure_reasons` (STRING). Also exposed via `logdata.bid_attempted_log` (same underlying table). Filter: `threshold_failure_reasons LIKE '%ghostBid%'`.
-- MNTN bidder field: NOT present in `bidder_bid_events` under the raw GCS name `bid_dropped_reason`. The closest BQ field is `logdata.bidder_auction_events.auction_dropped_reason` (STRING). **TODO: confirm with Ryan whether `auction_dropped_reason LIKE '%ghost%'` is the MNTN-bidder ghost-bid signal in BQ, or whether the field is pending pipeline work.**
+**BigQuery silver — canonical query (verified 2026-06-01, project `dw-main-silver`):**
+
+```sql
+SELECT DATE(time) AS dt, COUNT(*) AS ghost_bids
+FROM dw-main-silver.logdata.bidder_bid_events
+WHERE DATE(time) >= '2026-05-27'
+  AND threshold_failure_reasons = 'ghost-bid'
+GROUP BY 1 ORDER BY 1
+```
+
+- **Column:** `logdata.bidder_bid_events.threshold_failure_reasons` (STRING). Also surfaced via `logdata.bid_attempted_log` (same underlying table).
+- **Value:** `'ghost-bid'` (dashed). NOT `'ghostBid'` — BQ silver normalizes to the MNTN-bidder convention even though Ryan's note used the Beeswax camelCase in one example. Filter literally on `= 'ghost-bid'`.
+- **Observed volume — 2026-05-30:** 752,981 ghost-bid rows in `bidder_bid_events` (full-day). Other top non-null reasons same day: `dailyTermImpressionRateLimited` (971M), `metadata:ctv-blocked-by-block-list` (711M) — so ghost-bid is a small minority of all dropped-bid records, sized like ~10% of post-pacing successful bids per Ryan.
+- **`bidder_auction_events.auction_dropped_reason` is NOT the ghost-bid surface.** It carries auction-level drops (`global-allow-list-rejection`, `no-candidates-after-pacing-engine`, etc.); zero `ghost`-matching values 2026-05-25 → 2026-05-31. Ignore it for ghost-bid analysis.
 
 **Ghost wins are NOT logged.** Bidder only emits ghost-bid records; whether those bids would have won is unknown. To estimate ghost wins, apply the campaign or advertiser win-rate to ghost-bid volume. See [Ghost Win Simulation Discussion](https://mntn.atlassian.net/wiki/spaces/DATA/pages/3608150103/Ghost+Win+Simulation+Discussion) for the in-flight design debate (Scylla push, etc.).
 
