@@ -92,7 +92,10 @@ SELECT
   COUNT(*)                                          AS n_campaigns,
   COUNT(DISTINCT advertiser_id)                     AS n_advertisers,
   ROUND(SUM(spend_30d) / 1e6, 3)                    AS spend_30d_M,
-  ROUND(100.0 * SUM(spend_30d) / SUM(SUM(spend_30d)) OVER (), 1) AS pct_total_spend,
+  -- Three coverage percentages (each cell as a share of the prospecting universe)
+  ROUND(100.0 * COUNT(*)                  / SUM(COUNT(*))                  OVER (), 1) AS pct_total_campaigns,
+  ROUND(100.0 * COUNT(DISTINCT advertiser_id) / (SELECT COUNT(DISTINCT advertiser_id) FROM bucketed), 1) AS pct_total_advertisers,
+  ROUND(100.0 * SUM(spend_30d)            / SUM(SUM(spend_30d))            OVER (), 1) AS pct_total_spend,
   ROUND(SAFE_DIVIDE(SUM(conversions_30d), SUM(impressions_30d)), 6) AS cvr,
   ROUND(SAFE_DIVIDE(SUM(visits_30d), SUM(impressions_30d)), 6)      AS ivr,
   ROUND(SAFE_DIVIDE(SUM(clicks_30d), SUM(impressions_30d)), 6)      AS ctr,

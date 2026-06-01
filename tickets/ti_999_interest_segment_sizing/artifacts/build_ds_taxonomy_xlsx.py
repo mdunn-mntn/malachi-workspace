@@ -509,7 +509,7 @@ def write_excl_axes_sheet(wb: Workbook) -> None:
 
     headers = [
         "is_MM", "is_3P_excl", "is_CRM_excl", "geo",
-        "n_campaigns", "n_advertisers", "Spend (30d, $M)", "% total spend",
+        "n_campaigns", "% campaigns", "n_advertisers", "% advertisers", "Spend (30d, $M)", "% spend",
         "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
         "n_with_3p_incl (context)", "n_with_crm_incl (context)",
     ]
@@ -549,23 +549,25 @@ def write_excl_axes_sheet(wb: Workbook) -> None:
             apply(3, r["crm_excl"])
             apply(4, r["geo"])
             apply(5, to_int(r["n_campaigns"]), "#,##0")
-            apply(6, to_int(r["n_advertisers"]), "#,##0")
-            apply(7, to_float(r["spend_30d_M"]), '"$"#,##0.000')
-            apply(8, to_float(r["pct_total_spend"]), "0.0")
-            apply(9, to_float(r["cvr"]), "0.000000")
-            apply(10, to_float(r["ivr"]), "0.000000")
-            apply(11, to_float(r["ctr"]), "0.000000")
-            apply(12, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            apply(6, to_float(r["pct_total_campaigns"]), "0.0")
+            apply(7, to_int(r["n_advertisers"]), "#,##0")
+            apply(8, to_float(r["pct_total_advertisers"]), "0.0")
+            apply(9, to_float(r["spend_30d_M"]), '"$"#,##0.000')
+            apply(10, to_float(r["pct_total_spend"]), "0.0")
+            apply(11, to_float(r["cvr"]), "0.000000")
+            apply(12, to_float(r["ivr"]), "0.000000")
+            apply(13, to_float(r["ctr"]), "0.000000")
+            apply(14, to_float(r["cpm_dollars"]), '"$"#,##0.00')
             cpc = r.get("cost_per_conv_dollars", "")
             if cpc and cpc.strip():
-                apply(13, to_float(cpc), '"$"#,##0.00')
+                apply(15, to_float(cpc), '"$"#,##0.00')
             else:
-                apply(13, "")
-            apply(14, to_int(r["n_with_3p_incl"]), "#,##0")
-            apply(15, to_int(r["n_with_crm_incl"]), "#,##0")
+                apply(15, "")
+            apply(16, to_int(r["n_with_3p_incl"]), "#,##0")
+            apply(17, to_int(r["n_with_crm_incl"]), "#,##0")
             row_i += 1
 
-    for col_idx, w in enumerate([8, 12, 12, 16, 12, 14, 18, 14, 14, 14, 14, 12, 16, 18, 18], start=1):
+    for col_idx, w in enumerate([8, 12, 12, 16, 12, 12, 14, 12, 18, 12, 14, 14, 14, 12, 16, 18, 18], start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = w
     ws.freeze_panes = "E5"
 
