@@ -1,0 +1,197 @@
+[00:00] All right. Sweet. So, um, yeah, Alex gave me, um, this basically this analysis on, um, our third
+[00:10] party segments. Right. And I think he said that you talked to him about, or somebody before, but
+[00:15] basically the idea that we're just suggesting any segments to our clients. And so they could be
+[00:21] adding bad segments. And so it's like, well, can we rank them and score them to, you know,
+[00:26] get them to maybe select better segments. Right. Pretty simple. Cause Alex has already kind of
+[00:31] done the analysis here, but what I wanted to do was like, how can we measure this impact,
+[00:38] I guess, on our audiences. So I wanted to get an idea of like what percentage of these are spend
+[00:42] and then what percentage are, are not right. So I could get a baseline conversion and just kind
+[00:49] of see like, okay, well, how much can we expect? Right. Let's just say on average, people are
+[00:53] choosing really terrible IBR, CBR ones and stuff. What is our best one, right? Things like that.
+[00:57] We wouldn't really be able to tell unless until everybody switched over campaigns anyway. So it
+[01:02] really makes a difference that we could actually measure until after that. Well, anyways, when
+[01:07] doing that, I started realizing like, we don't have the best, I guess the definitions for how
+[01:15] we measure things. And I guess not measure things, but how we what we call things, right?
+[01:22] so i brought that up earlier where i said and i'm going to share my screen here so you can kind of
+[01:27] just have something to look at here but my first thought was well if we change anything with um
+[01:33] like if i'm just looking at third party right that's fine i can just segment things down to
+[01:37] exclusively third party right but i also wanted to see like well what's the impact of this on
+[01:41] anything that's not mountain match so like for example here here's just an example this is only
+[01:46] mountain matched data sources in campaigns. So it is the majority of our spend roughly,
+[01:53] majority of our campaigns. Oh, I shouldn't say majority that we actually have geo,
+[01:57] it's got more than that. But you can look at this. But if you compare it to third party included,
+[02:03] they're not exactly identical. So they're about the same spend. But if you look at something like
+[02:08] our IVR, it's actually vastly different, right? So just adding a third party, I think that might be
+[02:13] anyways, the point of what I'm trying to say is that adding a third party or excluding it would
+[02:22] matter. Well, Victor and them thought that if you added a third party segment, that it's automatically
+[02:29] an and condition, which would make sense, right? You drill down further on what we would target
+[02:33] in Mountain Match, right? That's actually not the case. In fact, the majority of ours are third
+[02:39] party included. So it's saying it's an or condition. So I was thinking, well, what does
+[02:44] that actually mean, right? Well, if we're only targeting people that are scored, then this third
+[02:51] party segment shouldn't add any users that aren't already in the data sources already. So by
+[02:59] definition, they would be unscored, right? And so the only thing that they would get targeted would
+[03:03] be the intersection between those two, which should already exist in data source 13 or 19 already.
+[03:09] So seemingly, if we add a third party segment, it would only be targeted if we ran out of scores, scored IPs to target.
+[03:19] Right.
+[03:19] But yes, on those campaigns, they have the HHST.
+[03:24] Right.
+[03:25] And if it's not above zero, then they're not they can't even be targeted.
+[03:30] It's not even an exclusion.
+[03:31] It's not like max reach or anything.
+[03:33] So I don't even think they get targeted at all.
+[03:35] So what I'm thinking is occurring is we're saying, hey, look how large we can make our audience.
+[03:40] But then when it actually comes down to targeting, it literally does nothing.
+[03:44] At least that's what it appears to be.
+[03:46] And the only exception to that is I believe RTC is on 100% of campaigns regardless.
+[03:53] So I think that that would change things maybe.
+[03:58] Actually, I don't really know how that would affect it too much.
+[04:01] I don't think that would change anything at all because you're still just, RTC is just, you're getting the high intent score earlier. So it doesn't really matter.
+[04:10] Yeah. And so that's my thought process is that I don't think adding third party does anything at all.
+[04:15] yeah so i mean that's that's the thing it's all about the household score threshold so like
+[04:22] what i've seen in a lot of these um campaigns where they add the third party segments is like
+[04:30] the audience well i mean maybe not do you have anything here where you're including
+[04:35] geo plus third party plus mountain match yes um okay oh hold on mountain match third party
+[04:42] included and geo should be somewhere here it's uh okay because what i've seen is a lot of cases
+[04:51] like that where they do a mountain match audience it's super restrictive because of the geos they
+[04:58] placed on it and then they throw in the third party interest segments to try to boost the
+[05:02] audience size and you know exactly what you're saying happens like you know you're just adding
+[05:08] a bunch of garbage to your audience and like you're not really doing anything um i don't think
+[05:14] i actually have a geo one specifically i think geo i filtered it because the there's already a lot of
+[05:19] permutations here because i was doing it because it matters whether it's exclude or include right
+[05:23] on the third party as well because the third party include or exclude makes sense right because
+[05:29] then that's saying only target these ips and so you're drastically you know filtering join down
+[05:34] the targeting and so we can see like if i go just smart match versus third party exclude um
+[05:41] oh yeah well this is third party exclude only it doesn't really happen as often i think people are
+[05:47] adding and making their audiences larger most of the time yeah okay so i would want to drill down
+[05:52] into that line six where you're doing the third party include see how many of those are have
+[05:58] geo restrictions on them um i think that would be really interesting to look at because like i said
+[06:03] Like a lot of these times it's the CS team is talking to customers and telling them, you know, you have a really tiny audience.
+[06:11] Just throw some third party interest segments in there.
+[06:14] And it's, you know, they're already terrible.
+[06:18] Audience becomes even worse.
+[06:20] Yeah.
+[06:21] Well, I don't know how it would be.
+[06:24] One of the things.
+[06:25] I mean, not worse.
+[06:26] I wouldn't even think.
+[06:27] I don't even think it would affect it.
+[06:28] I mean, I think that the only thing that's weird here is, yeah, I don't, I didn't split
+[06:33] this up by geo.
+[06:34] So I'll make sure that there's nothing else here.
+[06:35] The only thing that that was weird is I'm like, well, everything's the same, but this
+[06:39] IDR ratio could be being impacted by one super large, I don't know if like WGU or something
+[06:45] is in one of these or something.
+[06:46] I don't know.
+[06:46] But, um, that being said, so because Alex, basically our thought process is like, Alex,
+[06:52] we have some sort of like, um, score, right.
+[06:55] And then we just either rank them.
+[06:57] And so we show them all of them, but ranked by the best performing to the least performing.
+[07:01] And there's some simple things we could do.
+[07:03] We could just see like, what's their overlap between like our scores, IPs, and then do
+[07:07] that.
+[07:07] But anyways, I was just thinking like, well, how do we, how do we actually measure it?
+[07:14] Because if I look just at the third party included, right, we do have some, they're
+[07:17] just use the third party, right?
+[07:18] And then we can measure impact on those.
+[07:20] And those are pretty simple, right?
+[07:21] So this shouldn't have any issue because we're going to target all of these regardless of
+[07:25] scores.
+[07:27] And so that shouldn't really make any difference. And you can kind of see too, it does matter because if you look at the difference, like look at Mountain Match, third party included, we have, you know, $66 cost per conversion. The CPM is pretty, pretty, well, it's about the same. But the cost per conversion of a third party is a lot different. And then the CVR and different things are different. So, I mean, they are not, they don't perform at all the same. And this is pretty large sample size too between both of these. So it's not like it's a bad example.
+[07:56] yeah um so and most people thought too that this third party included didn't even exist they're
+[08:04] like oh i think that should be an edge case i'm like it's not actually an edge case it's actually
+[08:07] literally pop spend that we have so yeah um okay well i don't really the only thing here is i was
+[08:14] trying to drill down with ryan i was like well what is going to happen then like how how do the
+[08:18] scores get applied because i thought maybe if you create a third party audience that it would score
+[08:25] that audience afterwards yeah no i mean it's that's just like the historical you know scoring
+[08:34] that we had where we ranked anything that was in mountain matched audience above any third party
+[08:41] stuff that got thrown into the audience so i mean unless there's an overlap between what's
+[08:48] in the third party segment and what's in like our high intent audiences or mid intent you're
+[08:54] they're not getting scored okay so i guess what i'm trying to think is like what is the
+[08:59] um i guess actionable thing here so i can employ i can employ or set this up so basically wanted
+[09:09] a databricks notebook that runs a score on their segment campaigns and then i guess i'll pass it
+[09:15] off to um forget which team and then they can deal with it how they want it to show up in the ui
+[09:20] that's fine. But as for us, it seems like we maybe have two different things that we should
+[09:26] maybe address is this third party inclusion when mountain matches selected doesn't make any sense,
+[09:32] right? So we probably shouldn't even give them the option or maybe have some sort of communication
+[09:35] that says, hey, only allowed people to do third party exclusion if they have a mountain match
+[09:42] selected at all. I mean, unless we want to give them the original choice.
+[09:46] okay we need to yeah we we the you know pecs is gonna push back on that okay they should
+[09:53] yeah so maybe just leave it in there yeah i mean we just leave it in and it's ineffective but it
+[10:00] makes their audience look bigger so it makes them feel better too okay yes cool that seems fine um
+[10:05] the other thing is um like what i brought up before is just when we're doing measure like
+[10:13] we're measuring our own impact on stuff. I think we have a pretty large or like a large enough
+[10:17] sample size, but I really do think that when we do these types of impacts on performance that,
+[10:25] I mean, unless you can think of a reason why we wouldn't want to do it, it seems to me we should
+[10:29] probably only use these two here. So, cause they, they make up the majority of campaigns, but we
+[10:36] should probably only check for mountain match and then in mountain match that has the third party
+[10:40] included because I don't think it has much of an impact if at all as ours and then basically
+[10:45] exclude every other campaign that's hits there um when we do I guess we would probably already
+[10:53] be doing that no I think the way I think the way that like pecs and the rest of the company looks
+[10:59] at this is anything that touches mountain mashed is considered a mountain match campaign so I think
+[11:04] what you're saying is valid where we only want to look at the pure mountain match campaigns or
+[11:10] mountain match plus third party i think we need to be able to like justify performance issues
+[11:16] in the rest of those types of campaigns um right so like we just need to be mindful of like how
+[11:25] everybody else is uh perceiving mountain match campaigns that makes sense well because like
+[11:32] here's here's actually this is a pretty large chunk 14 almost 15 percent of our spend right
+[11:36] they do mountain match plus the crm exclusion list right which is really valid because they're
+[11:41] excluding you know but this i mean if you look at just the cost per conversion right um it's way
+[11:48] higher um we get way different ivr ratios and cvr so i mean like it's literally half of mountain
+[11:55] match if you just look at this right and it's a large sample size we're talking 503 so when
+[11:59] advertisers basically say, Hey, don't target anybody that we've basically can probably usually
+[12:05] have converted before, right? That's usually what the CRM lists are part of. We get wildly
+[12:10] different performance. And so that's not really indicative. I mean, wait, that's, that's actually
+[12:14] interesting because if we assume that their CRM lists are people who have visited their site or
+[12:21] converted with them before, does that mean mountain match is basically, you know, kind of retargeting
+[12:29] because we don't have good identity. Yeah. So I don't know. You were gone a lot. Like I wouldn't
+[12:37] say like a lot's changed, but there's been a lot of discussion when you were gone. One of the big
+[12:41] things we were talking about was this whole incrementality thing. And we, I did a ton of
+[12:47] stuff in incrementality. And basically the gist is that we are really good at targeting people
+[12:52] that would have already converted. Hence when you do our incrementality, it's almost, there's
+[12:57] almost no lift. So, I mean, it's very low. It depends. It's advertiser specific too. So it's
+[13:04] hard, but across the board, we're talking like, I think our true causal incremental lift was like,
+[13:09] Oh, less than 2% on average. One, it was like actually less than 1% across the board most of
+[13:17] the time. So, but then if you looked at retargeting, they would have like 20% lift on average
+[13:22] because, you know, of course, you know, we're targeting people that have already converted
+[13:26] before. So, but yeah, that's, that's the answer there. So, I mean, that those are, those are big
+[13:34] things and they're totally different questions. And I think that the overall answer is that
+[13:39] we're not going to change the fact that that we're super biased and not incremental because
+[13:44] our job is not to really do that. But instead we are going to create an option as like,
+[13:52] do you want to have performance marketing or do you want to have incremental marketing?
+[13:56] Cause they're totally different. Cause I was like, there's a simple thing I could say,
+[13:59] well, let's make things a hundred percent incremental and not target any IPS that have
+[14:03] had a site visit ever, you know, and then performance would be really bad, but you know,
+[14:08] incrementality would be really good. So it really just depends on what the client wants at the end
+[14:11] of the day. True. So, all right, cool. Well, that's basically, I just wanted to bring that
+[14:17] up. So it sounds like, um, I'm just going to set up that thing that Alex gave me and then hand it
+[14:22] off to the team for targeting, but I just wanted to bring this to your attention.
+[14:27] So, okay.
+[14:28] Yeah.
+[14:29] Sounds good.
+[14:31] Yeah.
+[14:31] I, I'd be really curious once you break down like the geo stuff with the third party segments,
+[14:38] like what that looks like, because, you know, I've every time Toph comes to me with a performance
+[14:46] problem it's always because of a mountain match plus third party plus geo restriction audience
+[14:53] every single time so i know those audiences like don't perform well um it would you know be
+[14:59] interesting to see how poorly they do perform yeah and it looks like geo only is not actually a bad
+[15:09] um yeah i would assume those are just like super local businesses
+[15:14] yeah like the conversion rates are pretty good the the visit rates um
+[15:20] now they're pretty good the click-through rates are really bad and that matters for
+[15:26] well actually no we're not paid on the click so i don't think that should matter
+[15:31] just we're paid on the impression so yeah i mean the geo target the geo ones look pretty good and
+[15:35] that's the majority of our campaigns and that makes sense too because small businesses are
+[15:38] just gonna you know that's the kind of their market it's like hey we're a local shop and we
+[15:44] just want to target art city or something so um cool all right well that's it i got some stuff
+[15:50] to talk to you on tuesday but that's tomorrow um but i just want to run some of that stuff so
+[15:54] cool all right well thanks for sharing yeah also i was gonna say too i uh i keep i keep saying this
+[16:02] over and over but i showed my wife a picture of your baby and i was like isn't that just the
+[16:07] cutest baby you've ever seen and she's like what about ours and she's like don't you think it's
+[16:11] cute and I was like I don't know it's pretty close it's pretty close so oh man you know I
+[16:17] can't even say I really contributed because she looks just like like my husband so really
+[16:21] your husband right because that's his name yeah yeah that's right what uh what is your baby's name
+[16:28] uh Naomi Naomi oh that's pretty yeah so cool thanks well I'm hoping you're loving motherhood
+[16:33] I'm sure that you are.
+[16:35] Yeah.
+[16:35] That's yeah.
+[16:36] And I guess I'll see you today at 1 30 because we got our stuff.
+[16:40] So all right. See you there.
+[16:42] Thanks, Allison. Bye.
