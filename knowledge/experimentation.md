@@ -1107,6 +1107,69 @@ When testing multiple related features simultaneously (e.g., Fangorn + continuou
 
 For the upcoming BUK + Fangorn + Continuous experiment, Kirsa's emerging design is 3 arms: control = Fangorn + mini-continuous; treatment 1 = full-continuous + BUK; treatment 2 = full-continuous + MM V2. Treatment 2 exists to cover the cold-start fallback, not to isolate continuous-scoring-alone impact.
 
+## Bidder-Level Ghost Bids — Live Stream Methodology (2026-06-01)
+
+Deployed in production 2026-05-27 (Ryan Kleck DM). The bidder now evaluates each holdout household with the same eligibility logic as treatment and drops the bid, tagging the row `threshold_failure_reasons = 'ghost-bid'` in BQ silver. This **replaces** the TI-837 v5 post-hoc methodology for any analysis whose window starts on/after 2026-05-27. Pre-2026-05-27 windows must continue using v5 (augmentor + random-hash subsample).
+
+**See [`knowledge/data_knowledge.md`](data_knowledge.md) §"Ghost Bids — Bidder Feature" for column locations and the canonical filter; see [`memory/reference_ghost_bid_columns`](../../.claude/projects/-Users-malachi-Developer-work-mntn-workspace/memory/reference_ghost_bid_columns.md) for the same in memory.**
+
+### Query collapse — 6 tables → 2-3
+
+The v5 lift query (`tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql`) reads six source tables:
+
+| v5 source table | What it provided | Live ghost-bid equivalent |
+|---|---|---|
+| `bronze.external.household_scoring__prospecting_intent__v1` | per-advertiser intent score → tier (high/peak/mid/max_reach) | `bidder_bid_events.household_score` (directly on the row, per-bid) — same scoring grain, no separate scan |
+| `bronze.raw.augmentor_log` | "IP was biddable in window" (10-day TTL → analysis ceiling) | implicit in `bidder_bid_events` — being in the table means the bidder evaluated it |
+| `bronze.integrationprod.campaigns` (dim) | `objective_id`, `funnel_level`, `advertiser_id` per campaign | `objective_id` is **on the bid event row directly**; `funnel_level` is NOT — still need campaigns dim for Stage 1/2/3 cuts |
+| `silver.logdata.cost_impression_log` | treated cohort = IPs with served impressions | optional — see ATT vs ITT trade-off below |
+| `silver.logdata.clickpass_log` | attribution-credited visits (treatment-only) | unchanged — still needed for the attribution wedge |
+| `silver.logdata.guid_log` | total page-view visits (the honest causal-lift outcome) | unchanged — outcome side |
+| hardcoded `win_rates` CTE (30 STRUCTs) | random-hash subsample to match bidder's win-rate | **eliminated** — ghost bids are the bidder's actual eligibility decision, not a proxy |
+
+**Net:** v5 needed 6 source tables + a 30-row hand-maintained win-rate CTE. The new approach needs **2 tables minimum** (`bidder_bid_events` for both cohort labels + `guid_log` for outcome), **+ 1 dim** if segmenting by funnel_level, **+ 1 more table** if using ATT-on-served instead of ITT-on-bid (see below), **+ 1 more table** if also reporting the clickpass wedge.
+
+### ITT vs ATT — which treatment definition
+
+The new stream lets us pick either cleanly; v5 was effectively ATT-only because the augmentor proxy made ITT undefined.
+
+| Estimand | Treatment cohort definition | Tables touched | What it answers |
+|---|---|---|---|
+| **ITT** | `bidder_bid_events` rows with `threshold_failure_reasons IS NULL` (passed all bidder gates) | bid_events alone | "What's the lift of the *policy* of choosing to bid?" — most defensible for measuring the bidder's decision quality. |
+| **ATT (won)** | bid_events ⋈ `win_logs` on `auction_id` | + win_logs | "What's the lift conditional on winning the exchange auction?" — adds an exchange-loss confounder. |
+| **ATT (served)** | DISTINCT `ip` from `cost_impression_log` over the same window | + cost_impression_log | What v5 used. "What's the lift conditional on rendering an impression?" — closest to "this household was actually exposed." |
+
+**Recommendation: lead with ITT.** ITT directly answers the BER-2250 question ("is MNTN's bidding policy incremental?") and needs only one source table for the cohort. ATT-on-served is the v5-comparable estimand and worth reporting as a robustness check, but the gap between ITT and ATT-served is informative in its own right — it's the leakage from "bid placed" to "ad delivered."
+
+### Window ceiling: 10 → 90 days
+
+The augmentor's 10-day TTL was the binding constraint on v5; Phase 2a needed Databricks GCS reads to reach 30 days. `bidder_bid_events` is 90-day TTL — long pre-period (60-90d) AND long post-period (30-60d) both fit in plain BQ. The Standard Analysis Protocol's "lookback ≥ 2-3× post-period" heuristic is now genuinely satisfiable for incrementality.
+
+### What survives unchanged from v5
+
+- The two-outcome wedge (clickpass-ATT / guid-ATT) — `clickpass_log` and `guid_log` are unchanged
+- The IVW vs median vs sample-weighted pooling decision (lead with median or sample-weighted; IVW for sanity)
+- Tier stratification by `household_score` buckets (high=10000, peak=7000-9999, mid=3333-6999, max_reach<3333)
+- Per-advertiser-segment cuts (objective_id + funnel_level)
+- The visit-window vs analysis-window asymmetry (still add +3 days post-period for visit lookahead)
+
+### What's deliberately *not* solved by going live
+
+- **Fcap-boundary bias** (see Confluence "Ghost Win Simulation Discussion"). Holdout fcap state diverges from treatment after treatment's first impression because no impression is logged for ghost bids. Effect is bounded; only material if measurement moves to per-bid-attempt or per-impression matching. Our household × window grain is robust. Document the asymmetry in any BER-2250 deliverable; revisit if anyone proposes impression-level matching or heavy-fcap CTV-only studies.
+- **Pre-2026-05-27 analysis windows.** No backfill. For lift measurements covering March/April/May, the v5 post-hoc augmentor approach remains the only path.
+
+### Open questions to confirm before relying on the stream
+
+1. **Scope of `holdout_cids` (Aerospike).** Per the Confluence page, holdout assignment comes from `membership-consumer` → Aerospike `holdout_cids`. Whether this is a single global random fraction, per-campaign-group, or per-advertiser determines whether arm assignment is independent of advertiser × tier × time. If per-campaign-group, the same IP can be holdout for one advertiser and treatment for another — analyses must cohort by (advertiser, IP, window), not just IP.
+2. **"Won" indicator on `bidder_bid_events`.** No explicit `won` boolean — proxy is `has_price = TRUE AND price > 0` (passed bidder, sent to exchange), but exchange-loss is not visible without joining `win_logs`. Verify with Ryan whether `has_price + price > 0` is a sufficient ITT-treatment definition or if a more specific filter is needed.
+3. **Will the Beeswax `'ghostBid'` (camelCase) stream ever land in BQ as a separate row class, or is the current `bidder_bid_events.threshold_failure_reasons = 'ghost-bid'` (dashed) the unified surface?** Verified empirically (2026-06-01): only the dashed form appears in BQ; camelCase returns zero. If Beeswax stream is also routed here, the column already captures it.
+
+### Why this is "the BER-2250 unblock," not just an iteration
+
+Pre-2026-05-27, every BER-2250 follow-up analysis (30-day window run, net-new cohort, segment-level lift refresh, vendor lift comparisons) needed: (a) Databricks compute to reach beyond the 10-day augmentor TTL, (b) per-advertiser empirical win-rate calibration of the random hash subsample, (c) ~18 TB scans per advertiser per week (TI-837 Phase 2a cost reality). With the live stream, each of those analyses collapses to a 2-3 table BQ query over a 60-90 day window. Iteration cycle on incrementality measurement drops from days to hours.
+
+---
+
 ## Ghost-Bidding ATT — TI-837 Application Notes (2026-04-27)
 
 First end-to-end ATT run on Zazzle (advertiser 37775), 1 day. Record key methodological reusable lessons, separate from the ticket-specific findings (those live in `tickets/ber_2250_incrementality_overhaul/ti_837_implementation_plan/summary.md`).

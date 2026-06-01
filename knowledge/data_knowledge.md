@@ -2624,6 +2624,57 @@ GROUP BY 1 ORDER BY 1
 
 **Monitoring note:** When reviewing bid drop reason trends in dashboards or queries, account for the step-change increase starting 2026-05-27. (via Ryan Kleck, #mission-control 2026-05-27 + DM 2026-06-01)
 
+**Using `bidder_bid_events` for incrementality cohorts (verified 2026-06-01 schema):**
+
+| Field | Type | Use in lift analysis |
+|---|---|---|
+| `threshold_failure_reasons` | STRING | Arm label. `'ghost-bid'` = holdout. NULL/empty + `has_price = TRUE` = ITT treatment (passed eligibility, sent to exchange). |
+| `advertiser_id` | INTEGER | Cohort dimension |
+| `campaign_id`, `campaign_group_id`, `creative_id`, `line_item` | INTEGER | Cohort dimension |
+| `objective_id` | INTEGER | **On the bid event row directly** — no campaigns-dim join needed for prospecting / retargeting cuts (`IN (1,5,6)` = prospecting, `=4` = retargeting). |
+| `channel_id` | INTEGER | 8 = CTV, 1 = display |
+| `ip` | STRING | Household identifier (same grain as v5 cohort) |
+| `household_score`, `advertiser_household_score` | INTEGER | Tier stratification directly per bid — no separate scan of `household_scoring__prospecting_intent__v1` |
+| `has_price`, `price` | BOOLEAN / INTEGER | "Passed bidder, sent to exchange" filter. Ghost bids have `has_price = FALSE` per Confluence page. |
+| `auction_id`, `exchange_auction_id`, `bid_id` | STRING | Join keys to `win_logs` (for ATT-won cohort) |
+| `time` | TIMESTAMP | Bid timestamp — use `DATE(time)` for partition filtering |
+
+**NOT on `bidder_bid_events`:**
+- `funnel_level` — still need `bronze.integrationprod.campaigns` dim to split Stage 1 vs Stage 2/3 prospecting
+- "Won at exchange" indicator — only inferrable by joining `win_logs` on `auction_id`
+- "Impression rendered" indicator — only inferrable by chaining bid_events → win_logs → impression_log / cost_impression_log
+
+**Cohort patterns for incrementality:**
+
+```sql
+-- Holdout cohort (one table)
+SELECT DISTINCT advertiser_id, ip, household_score, objective_id
+FROM dw-main-silver.logdata.bidder_bid_events
+WHERE DATE(time) BETWEEN @start AND @end
+  AND threshold_failure_reasons = 'ghost-bid'
+  AND ip IS NOT NULL AND ip != '0.0.0.0';
+
+-- ITT treatment cohort (same table — bid placed)
+SELECT DISTINCT advertiser_id, ip, household_score, objective_id
+FROM dw-main-silver.logdata.bidder_bid_events
+WHERE DATE(time) BETWEEN @start AND @end
+  AND (threshold_failure_reasons IS NULL OR threshold_failure_reasons = '')
+  AND has_price = TRUE
+  AND ip IS NOT NULL AND ip != '0.0.0.0';
+
+-- ATT-served treatment cohort (separate table, same as v5)
+SELECT DISTINCT advertiser_id, ip
+FROM dw-main-silver.logdata.cost_impression_log
+WHERE DATE(time) BETWEEN @start AND @end
+  AND ip IS NOT NULL AND ip != '0.0.0.0';
+```
+
+Then LEFT JOIN to `guid_log` (causal lift) and/or `clickpass_log` (attribution wedge) per IP × advertiser. See `knowledge/experimentation.md` § "Bidder-Level Ghost Bids — Live Stream Methodology" for the full methodology, including the ITT vs ATT trade-off, window-ceiling change (10 → 90 days), and what survives unchanged from TI-837 v5.
+
+**Open verification items (not yet confirmed empirically):**
+- Scope of `holdout_cids` (Aerospike): global random fraction, per-campaign-group, or per-advertiser? Determines whether (advertiser, IP) is the cohort unit or just (IP).
+- Whether ghost-bid rows have full attribution populated (advertiser_id, campaign_id, etc.) — counts and field coverage TBD by 2026-06-01 verification query.
+
 <!-- slack-extracted: 2026-05-30 -->
 - **Data Source (DS) Taxonomy — Key DS Definitions and Legacy Notes**
 
