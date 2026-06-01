@@ -1064,6 +1064,31 @@ A daily distribution monitor emails the latest scoring landscape to `targeting-i
 - Most of MNTN's score volume (~270B of ~443B) is Non-Fangorn S1+S2. The "Mid" bucket (3333-6665) is the dominant graduated range for Non-Fangorn.
 - For 3P-only campaigns at S3, scoring is uniformly 10,000 — no scoring variance to confound 3P measurement at S3.
 
+### Scoring pipeline scope — which campaigns get scored at all (Ryan Kleck, 2026-06-01)
+
+**Scoring happens at the expression level, gated on DS reference:**
+
+> "we score every campaign that has DS13 or DS19 in its audience expression" — Ryan Kleck, 2026-06-01
+
+So MM scoring (Fangorn-on OR Non-Fangorn) is generated only for campaigns whose audience expression references **DS13 or DS19** (positively). The pipeline writes per-(advertiser, campaign, IP, score) rows to GCS for those campaigns.
+
+**Two-stage gate (Ryan):**
+1. **Scoring stage:** If DS13 OR DS19 is in the expression → the campaign gets scored (rows written to GCS).
+2. **Bidder stage:** Even when scored, "the bidder won't use scores unless the HHST is set."
+
+So a campaign can be **scored-but-not-acted-on** if it has DS13/DS19 in the expression but no HHST configured. The score exists in GCS but doesn't gate bidding decisions.
+
+**Ryan also noted:** he has seen 3P campaigns with Peak Performance enabled that get scored. Per the MM 2.0 state table, PP requires DS13 + DS19 + `score_type=rtc` in the expression, so those campaigns DO have DS13/DS19 — buyer enabled PP in addition to 3P. In our taxonomy they're "MM + 3P" (not 3P-only).
+
+**Implication for TI-999 3P-only baseline (LOCKED methodology):**
+
+- **True 3P-only campaigns** (no DS13/DS19/DS38/DS46 anywhere in the expression — per Pass 21 = 439 campaigns) are **NOT scored at all** by the MM pipeline. No `household_score` rows are written for these in GCS.
+- For these campaigns, the bidder evaluates eligibility on **3P category match + DS14 freshness + geo + holdout**, with no MM scoring layer to bias bid selection.
+- **RTC may still apply if HHST is set on the campaign** (Ryan's earlier wrinkle). RTC populates `realtime_conquest_score` separately.
+- **3P-only baseline (439 camps / $1.41M) is the cleanest MM-scoring-free 3P cohort for measuring segment quality**, modulo RTC for the HHST-enabled subset.
+
+**For Pass 24 / clean 3P attribution:** filter to 3P-only campaigns (NO DS13/19/38/46) AND filter impressions to `realtime_conquest_score != 10000` (RTC didn't fire). What's left is bidding driven purely by 3P + freshness + geo eligibility, no MM scoring contamination.
+
 ### Fangorn raw-score → HHST score-band mapping (Ryan Kleck, 2026-06-01)
 
 **Fangorn outputs continuous 0-1 raw scores. The downstream scoring job applies tier mapping** to translate Fangorn's output into the bidder's HHST score-band landscape (Max Reach / Mid / Peak / High Intent):
@@ -1074,6 +1099,40 @@ A daily distribution monitor emails the latest scoring landscape to `targeting-i
 4. **The Fangorn distribution should "look exactly how Fangorn scores look"** — Ryan's framing. The shape of the PP + HI spikes IS the shape of Fangorn's raw 0.8-1.0 distribution, mapped into score-band space.
 
 **Key implication:** Fangorn doesn't directly assign IPs to PP vs HI. It outputs 0-1 raw scores; PP and HI are downstream tier labels applied by the scoring job. The "two spikes" pattern in the Fangorn-on distribution is the natural shape of Fangorn raw scores binned into Mid/PP/HI ranges.
+
+### Why the Fangorn distribution shape isn't smooth (locked explanation)
+
+The Fangorn-on histogram looks like (a) a high floor below 3,300 (~48M scores per 10-wide bucket), (b) a sharp drop-off to ~10-15M per bucket between 3,300 and 6,665, then (c) two clear spikes around 6,666-7,900 (PP) and 8,001-10,000 (HI), each tapering downward.
+
+**Why each feature exists:**
+
+1. **The staunch drop-off at score 3,300** is the **tier boundary between Max Reach (1-3,332) and Mid (3,333-6,665)** in the downstream scoring job's mapping — not a Fangorn-internal artifact. Fangorn's raw distribution is continuous; the tier-mapping function squashes Fangorn raw ≤ 0.5 into Max Reach with much higher per-bucket density than it squashes Fangorn raw 0.5-0.8 into Mid. The boundary at 3,300 is operational, not statistical.
+
+2. **The two spikes around PP and HI** reflect **Fangorn's natural high-intent distribution mapped into the PP and HI bands** via linear mapping of raw 0.8-1.0. The peak of each spike sits around Fangorn raw ~0.85-0.9 (the densest part of the high-intent distribution). The downward taper toward 7,900 (top of PP) and 10,000 (top of HI) reflects Fangorn raw scores 0.95-1.0 being rare. So the spike shape IS the shape of Fangorn high-intent calibration.
+
+3. **The "raw Fangorn distribution would be a smooth curve"** intuition is correct, but the scoring job transforms it. The tier-mapping function is piecewise (different mapping for each tier), which creates the discrete-looking shape. If you plotted Fangorn raw 0-1 directly without the tier transformation, you'd see a smoother distribution.
+
+### HHST — what it is and what gates it (Ryan Kleck, 2026-06-01)
+
+**HHST = Household Score Threshold.** A campaign-level (or advertiser-level — see below) threshold setting that controls whether the bidder uses MM/RTC/Fangorn scores to gate bidding.
+
+- **HHST set:** bidder filters bid eligibility by score ≥ HHST. Only IPs scoring above the threshold get bid on.
+- **HHST not set:** bidder ignores scores entirely, regardless of what's in the `score` block of the audience expression. RTC, Fangorn, MM batch — all become no-ops for bidding decisions.
+
+**Critical correction from Ryan (2026-06-01):** "we also do advertiser level scores, but again the bidder doesn't use those unless HHST is set... **so whether the bidder uses scores is really more about HHST being set or not**." The HHST gate applies to:
+- `household_score` (per-IP, per-campaign or per-advertiser, populated by MM/Fangorn batch)
+- `advertiser_household_score` (per-IP, per-advertiser, populated separately)
+- `realtime_conquest_score` (RTC, per-IP, real-time)
+
+For ALL of these, **the bidder's use of the score is gated by HHST**. Score presence in `cost_impression_log.model_params` is independent of the bidder's use of that score. If HHST isn't set, the score is just metadata — it doesn't affect bid eligibility.
+
+**Two-stage gate (re-emphasized):**
+1. Stage 1 — scoring pipeline: writes scores to GCS if DS13/19 is in the expression, regardless of HHST.
+2. Stage 2 — bidder consumption: uses the score for bid filtering ONLY if HHST is set on the campaign.
+
+This makes HHST the **most important campaign-level scoring switch** — far more important than expression-level features (DS clauses, `score_type=rtc`). The expression tells the bidder "this is how to score IPs in principle"; HHST tells the bidder "actually use that score."
+
+**Where HHST lives in the schema:** unconfirmed. Likely a campaign/advertiser config table or a bidder runtime setting. Ryan's pointer for finding it: lookup bids for the campaign_id in `bid_events` and check whether the threshold is set on the bidder side.
 
 ### Intent Tier Thresholds (Prospecting Scoring Pipeline)
 Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` — daily per IP/advertiser/campaign. Scores retained only **35 days** in active storage.
