@@ -354,6 +354,8 @@ Plus the **16-campaign no-RTC anomaly cohort** (see callout below) — these 16 
 
 ### Read
 
+> **🔑 Load-bearing deck finding (Ryan Kleck + Venn analysis, 2026-06-01):** when buyers combine MM with 3P-include (the majority of prospecting spend — buckets `MM + 3P`, `MM + 3P + CRM`, and `MM + CRM` together = ~49% of spend), the bidder mechanics are **NOT audience expansion** as buyers usually assume. With HHST > 0, 3P functions as a **narrowing filter** that intersects MM scoring to (MM ∩ 3P). Only the IPs that fall in BOTH the MM-scored set AND the 3P segment get bid on; 3P-only IPs without MM scores fail the HHST threshold. **3P segment quality therefore directly determines which slice of MM-scored IPs the bidder bids on** — which means 3P quality directly determines MM delivery quality. This is the strongest argument for TI-956's per-segment scoring framework. Full mechanism in `data_knowledge.md` § "MM + 3P intersection mechanics — LOCKED LOGIC".
+
 - **The single biggest cohort by campaign count is "Geo-only (no buyer audience layer)"** — 7,663 campaigns / 64.5% / $5.25M / 16.4% of spend. These buyers attached **no MM batch DS**, **no 3P interest segment**, **no CRM**, **no MNTN Select audience**. Their intentional input was just a geo. The platform handled everything else (RTC scoring via the `score_type=rtc` flag, DS14 freshness filter, 10% holdout, pixel exclusions).
 - **MM-touching = 67.5% of spend** — 3,199 campaigns / $21.66M. Buyer attached an explicit MM batch DS clause (DS13 vertical, DS19 keywords, DS38 BUK queued, or DS46 Fangorn).
 - **3P-touching = 45.1% of spend** — 1,974 campaigns / $14.49M. Buyer attached a bought interest segment.
