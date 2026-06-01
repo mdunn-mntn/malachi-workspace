@@ -1064,6 +1064,17 @@ A daily distribution monitor emails the latest scoring landscape to `targeting-i
 - Most of MNTN's score volume (~270B of ~443B) is Non-Fangorn S1+S2. The "Mid" bucket (3333-6665) is the dominant graduated range for Non-Fangorn.
 - For 3P-only campaigns at S3, scoring is uniformly 10,000 — no scoring variance to confound 3P measurement at S3.
 
+### Fangorn raw-score → HHST score-band mapping (Ryan Kleck, 2026-06-01)
+
+**Fangorn outputs continuous 0-1 raw scores. The downstream scoring job applies tier mapping** to translate Fangorn's output into the bidder's HHST score-band landscape (Max Reach / Mid / Peak / High Intent):
+
+1. **Fangorn raw score ≤ 0.8 → Max Reach / Mid bands** (lower part of distribution, 1-6665)
+2. **Fangorn raw score > 0.8 → "high intent"** which the scoring job further splits into **PP (6666-7900) and HI (8001-10000)** via linear mapping. The split point inside the high-intent range determines whether an IP lands in PP vs HI.
+3. **Fangorn rarely produces scores above ~0.95** — this is what produces the downward slope on the high-intent spikes. The two spikes in the Fangorn distribution histogram (at the PP and HI ranges) taper because raw Fangorn scores between 0.95 and 1.0 are uncommon.
+4. **The Fangorn distribution should "look exactly how Fangorn scores look"** — Ryan's framing. The shape of the PP + HI spikes IS the shape of Fangorn's raw 0.8-1.0 distribution, mapped into score-band space.
+
+**Key implication:** Fangorn doesn't directly assign IPs to PP vs HI. It outputs 0-1 raw scores; PP and HI are downstream tier labels applied by the scoring job. The "two spikes" pattern in the Fangorn-on distribution is the natural shape of Fangorn raw scores binned into Mid/PP/HI ranges.
+
 ### Intent Tier Thresholds (Prospecting Scoring Pipeline)
 Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` — daily per IP/advertiser/campaign. Scores retained only **35 days** in active storage.
 
