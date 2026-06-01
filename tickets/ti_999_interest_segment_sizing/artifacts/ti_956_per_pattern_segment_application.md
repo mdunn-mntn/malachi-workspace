@@ -1,13 +1,66 @@
-# TI-956 — Per-pattern segment scoring & ranking application
+# TI-956 — Segment-ranking data product + per-pattern application reference
 
-**Status:** design spec (2026-06-01) — derived from Pass 27-33 empirical findings on how buyer expression patterns actually map to bidder behavior.
-**Audience:** Alex Knorr (TI-956 framework owner), Alyson Lefkowitz (incrementality / product), TI team review.
+**Status:** input to TI-956 build (2026-06-01) — derived from Pass 27-33 findings.
+**Audience:** Alex Knorr (TI-956 build owner), Alyson Lefkowitz, TI team, UI team (informational).
 
 ---
 
-## TL;DR
+## Scope split
 
-Per-segment scoring/ranking applies **differently depending on what else is in the campaign**. The rule of thumb:
+| Scope | Owner | Deliverable |
+|---|---|---|
+| **Data product — ranked segments table in GCS / BQ** | TI team (TI-956, Alex) | Daily refresh of per-(advertiser × segment) scores, ranks, and sizes. |
+| **UI logic — how to surface those ranks in the audience composer** | UI team | Per-pattern application of the ranking (see "Per-pattern application reference" below — informational only). |
+
+We (TI / TI-956) ship the data. UI team consumes the ranks/sizes and applies the per-pattern UI rules in their own scope.
+
+---
+
+## What we add to Alex's existing scoring framework
+
+Alex's existing scoring (in [`targeting-infra-ml#57`](https://github.com/SteelHouse/targeting-infra-ml/pull/57) or his notebook) already produces a composite per-segment quality score. TI-999 contributes three **input refinements** and one **output addition**:
+
+### Input refinements (correctness)
+
+1. **Restrict the quality computation to the OPERATIVE-TARGETING impression subset.** Per Pass 26-33 + Ryan Kleck (2026-06-01), MM+3P-OR-incl is bidder-inert under HHST > 0 — the 3P segment doesn't affect who gets bid on. Quality KPIs (CVR, IVR) from those impressions are MM-only KPIs with a 3P label slapped on. Including theater impressions in segment-quality scoring inflates the segment's apparent quality with MM-only signal.
+   - **Subset to keep:** impressions from campaigns matching `3P-only`, `3P-only + GEO`, `MM + 3P-AND-incl` (intersect with MM), or `3P-only + CRM-AND-excl` patterns.
+   - **Subset to drop:** impressions from `MM + 3P-OR-incl` (theater).
+   - **Classifier:** Pass 26 / Pass 32 JS UDFs (`queries/ti_999_pass26_or_vs_and_include.sql`, `queries/ti_999_pass32_perm_matrix_geo_narrow_incl_only.sql`) walk the audience expression tree to detect OR vs AND-include semantics via LCA. Port this logic into the TI-956 pipeline as an impression-filter.
+
+2. **Per-advertiser scoring with global fallback for sample-size.** Per-advertiser quality is more accurate but suffers on long-tail segments. Recommended structure: per-advertiser score where impressions ≥ threshold (e.g. 10K), global category-average fallback otherwise. Score table should include both columns so the UI team can pick which to apply.
+
+3. **Segment universe locked.** Active 3P set = `{DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp IP}` per TI-999 Finding 1. DS49 Publisher Network still borderline — confirm with Zach S. before including. DS1 Oracle flagged as legacy (553 campaigns reference it but zero IPDSC volume — likely dead weight; safe to exclude).
+
+### Output addition (UI team requirement)
+
+4. **Include `size` (distinct IP count) as an output column.** UI team needs both quality-rank AND size-rank to drive the per-pattern surfaces. Without size, the UI can't implement the OR-include "rank by size descending" flow (see reference below). Add to the daily output schema.
+
+### Suggested output schema for the GCS / BQ table
+
+| column | type | description |
+|---|---|---|
+| `day` | DATE | partition key |
+| `dscid` (or `data_source_id` + `category_id`) | INT64 | segment identifier |
+| `advertiser_id` | INT64 | NULL for global rows |
+| `quality_score` | FLOAT64 | Alex's composite — higher = better |
+| `size_distinct_ips` | INT64 | reach proxy — used for size-rank |
+| `quality_rank` | INT64 | dense rank, 1 = best, per advertiser_id (or global if advertiser_id IS NULL) |
+| `anti_quality_rank` | INT64 | dense rank, 1 = worst — used for AND-exclude UI |
+| `size_rank` | INT64 | dense rank, 1 = largest — used for OR-include UI |
+| `n_impressions` | INT64 | sample-size diagnostic |
+| `n_conversions` | INT64 | sample-size diagnostic |
+| `coverage_flag` | STRING | "per_advertiser" or "global_fallback" |
+| `freshness_days` | INT64 | days since segment's source data refreshed (LiveRamp/Dstillery/ShareThis) |
+
+GCS path TBD with Macie. Likely `gs://household-scoring-prod/output/scoring/segment_quality/year=YYYY/month=MM/day=DD/`. BQ surface table `bronze.household_scoring.segment_quality_daily` or similar.
+
+---
+
+## Per-pattern application reference (UI team scope — informational)
+
+The UI team can use the data product above to drive different surfaces depending on the buyer's campaign pattern. These rules are derived from TI-999 Pass 27-33 + Ryan Kleck's locked HHST mechanic. They are NOT in TI-956 scope but documented here so the UI team has the conceptual map.
+
+The rule of thumb:
 
 | Campaign pattern | Per-segment scoring application |
 |---|---|
@@ -94,44 +147,19 @@ GEO operates at a separate filter layer (`geos.where`). It narrows the geographi
 
 ---
 
-## Implementation plan / handoff to Alex
+## Open questions to confirm with Alex before TI-956 build finalizes
 
-### What TI-956 needs to deliver
-
-1. **Per-segment quality score** at the `(advertiser_id, dscid)` grain — daily refresh, GCS-landed (per Macie path TBD). Quality metric: CVR or lift over baseline, computed on the subset of impressions where the segment was the OPERATIVE targeting (filter out theater impressions).
-2. **Per-segment size** at the `(advertiser_id, dscid)` grain — distinct IP count, daily refresh.
-3. **Segment ranking API** that takes `(advertiser_id, campaign_pattern_type, mode)` where mode ∈ `{full-rank, size-rank, top-quality, top-anti-quality}` and returns ordered list of dscids.
-4. **Pattern-type classifier** — given an audience expression at compose time, classify it into one of: 3P-only / MM+OR / MM+AND-incl / MM+AND-excl / CRM-incl / CRM-excl. The Pass 27-32 SQL/JS UDFs are reference implementations.
-
-### Open implementation questions
-
-1. **Compute quality metric on the right subset of impressions.** Today's CVR on MM+3P-OR (theater) is the MM-only CVR with a 3P label slapped on — using it to rank 3P segments would just propagate selection bias. The quality score should be computed on (a) pure-3P delivery only, OR (b) MM+3P-AND-incl delivery only. Both have low spend → low sample size for many segments. Need to specify the right baseline.
-2. **Sample-size floor.** Many segments are low-volume; we should set a minimum impression count before a segment gets a per-advertiser quality score. Default global score for sub-threshold segments (e.g. category average).
-3. **Cold-start for new segments.** When LiveRamp ships a new segment, no quality data yet. Surface only as size-rank (Rule 2 UI), withhold from Rule 3 (top-quality) until threshold met.
-4. **HHST visibility.** For Rule 2's caveat (HHST = 0 means OR-incl DOES affect delivery), we need per-campaign HHST. Where it lives: unconfirmed (per `data_knowledge.md` HHST section). Pending probe.
-5. **Storage / freshness.** Daily DAG; GCS partitioned `year=YYYY/month=MM/day=DD`. BQ surface table `bronze.household_scoring.advertiser_segment_quality_daily` or similar. Coordinate with Macie.
-
-### Empirical findings that pin this design
-
-The rules above are not opinion — they fall out of:
-
-- **Pass 21 / Pass 26 bucket math** — the spend distribution across patterns says where this matters.
-- **Ryan Kleck (2026-06-01)** — locked the mechanic: HHST > 0 → OR-include is bidder-inert; HHST = 0 → OR-include broadens to unscored IPs.
-- **Matt Brorby (2026-06-01)** — RTC is first check in the bidder scoring waterfall; doesn't affect this design but worth knowing for impression attribution.
-- **Pass 33 within-advertiser comparison** — MM + 3P-OR-incl shows within-advertiser CVR delta of -8.08e-4 even though theory says delivery is unchanged. Either HHST is sometimes unset, or the theater clause changes some downstream behavior. Either way, surfacing 3P quality info in Rule 2's UI is still correct — buyers should know what they're picking even if it doesn't change delivery.
-
-### Where this comes from in TI-999
-
-- Pass 26 SQL: `queries/ti_999_pass26_or_vs_and_include.sql` (OR vs AND classification UDF)
-- Pass 32 SQL: `queries/ti_999_pass32_perm_matrix_geo_narrow_incl_only.sql` (canonical permutation taxonomy)
-- Pass 33 SQL: `queries/ti_999_pass33_within_advertiser_collapsed_taxonomy.sql` (within-advertiser deltas)
-- Knowledge: `knowledge/data_knowledge.md` § "MM + 3P intersection mechanics — LOCKED LOGIC", § "HHST — what it is and what gates it", § "Bidder-side score logging — empirical finding"
+1. **Sample-size floor for per-advertiser scoring.** Below what `n_impressions` does the per-advertiser score fall back to the global category average? (Working assumption: 10K imp + ≥20 conversions for CVR; adjustable.)
+2. **CTV vs display split.** Channel-id matters for KPI levels but doesn't change the structural rules. Should the ranking be channel-specific (separate quality_score per channel) or pooled?
+3. **Freshness exposure.** Should `freshness_days` filter the output (drop stale segments) or only annotate them so the UI can de-rank? TI-999 Finding 4 shows 18.3% of prospecting spend touches stale 3P (~$55M/yr); the UI team will need a freshness signal regardless.
+4. **DS49 Publisher Network inclusion** — borderline classification pending Zach S. (TI-999 Finding 1 open item).
+5. **HHST visibility** — for proper per-campaign theater filtering, we need to know whether HHST is set. Per `data_knowledge.md` § "Bidder-side score logging" the HHST field in `bidder_bid_events` is always 0 (not the configured value). Need a separate source. Until probed, the conservative move is to assume HHST > 0 dominates and filter all MM+3P-OR impressions out of the scoring subset.
 
 ---
 
-## Open questions to confirm with Alex / Alyson before building
+## Where this comes from in TI-999
 
-1. **Is the per-segment quality metric advertiser-specific (per-advertiser CVR / lift) or global?** Per-advertiser is more accurate but suffers sample-size problems for long-tail segments. Hybrid (advertiser-specific where N ≥ threshold, fall back to category average otherwise) is the likely shape.
-2. **What about CTV vs display split?** Channel-id matters for KPIs but doesn't change the structural rules above. Should the ranking be channel-specific?
-3. **Buyer UI integration.** Where does the ranked list surface? Audience composer? Recommendation prompt? Default audience preset? Affects whether we need real-time API or daily snapshot.
-4. **Override behavior.** If a buyer explicitly types in a low-quality segment for Rule 3 (MM+AND-incl), do we warn / hide / allow? Product call.
+- **Pass 26** (`queries/ti_999_pass26_or_vs_and_include.sql`) — JS UDF that classifies MM+3P-incl as OR (theater) vs AND-include (real narrowing) via expression-tree LCA. **Port to TI-956 pipeline as impression filter.**
+- **Pass 32** (`queries/ti_999_pass32_perm_matrix_geo_narrow_incl_only.sql`) — canonical 8-axis permutation taxonomy.
+- **Pass 33** (`queries/ti_999_pass33_within_advertiser_collapsed_taxonomy.sql`) — within-advertiser comparison showing MM + 3P-OR theater hurts within-CVR by -8.08e-4 even though theory says bidder-inert. Either HHST sometimes unset or selection of weak campaigns. Reinforces the rule: filter theater impressions out of segment-quality computation.
+- **Knowledge:** `knowledge/data_knowledge.md` § "MM + 3P intersection mechanics — LOCKED LOGIC", § "HHST — what it is and what gates it", § "Bidder-side score logging — empirical finding".
