@@ -29,6 +29,7 @@ PASS_NOTE = (
 ANOMALIES_CSV = OUTPUTS / "ti_999_pass20_anomalies_2026_05_29.csv"
 POLARITY_KPI_CSV = OUTPUTS / "ti_999_pass22c_polarity_aware_buckets_2026_05_29.csv"
 GEO_RESTRICTION_CSV = OUTPUTS / "ti_999_pass24_geo_restriction_2026_06_01.csv"
+EXCL_AXES_CSV = OUTPUTS / "ti_999_pass25_mm_excl_geo_axes_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -488,6 +489,87 @@ def write_geo_restriction_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "C5"
 
 
+def write_excl_axes_sheet(wb: Workbook) -> None:
+    if not EXCL_AXES_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 25 — MM × excl × geo")
+
+    title = "Pass 25 — 4 axes: MM presence × 3P-exclude × CRM-exclude × geo restriction (Alyson + Ryan, 2026-06-01)"
+    ws.cell(row=1, column=1, value=title).font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=15)
+
+    note = (
+        "Reframing: with HHST > 0, includes (3P-incl, CRM-incl) are no-ops — they make the audience LOOK bigger in the UI but don't change bidding. "
+        "Only presence + exclusions move bidder behavior. So we bucket by 4 binary axes: is_MM × is_3P_excl × is_CRM_excl × is_geo_restricted. "
+        "2^4 = 16 cells, sorted by spend. Include counts kept as context columns at the right (n_with_3p_incl, n_with_crm_incl, n_with_select) — note: these are NOT separate buckets, they're sub-counts within the same cell to show how many campaigns ALSO carried an include layer."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=15)
+    ws.row_dimensions[2].height = 84
+
+    headers = [
+        "is_MM", "is_3P_excl", "is_CRM_excl", "geo",
+        "n_campaigns", "n_advertisers", "Spend (30d, $M)", "% total spend",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
+        "n_with_3p_incl (context)", "n_with_crm_incl (context)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 30
+
+    fill_biggest = PatternFill("solid", fgColor="FFF9C4")     # biggest spend cell (MM × no-excl × geo-restricted)
+    fill_destroyer = PatternFill("solid", fgColor="FFCDD2")    # cells with 3P-excl (the destroyer)
+    fill_default = None
+
+    with EXCL_AXES_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            is_biggest = (r["mm"] == "MM" and r["three_p_excl"] == "no_3P-excl" and r["crm_excl"] == "no_CRM-excl" and r["geo"] == "geo_restricted")
+            has_3p_excl = (r["three_p_excl"] == "3P-excl")
+            if is_biggest:
+                fill = fill_biggest
+            elif has_3p_excl:
+                fill = fill_destroyer
+            else:
+                fill = fill_default
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                return cell
+            apply(1, r["mm"])
+            apply(2, r["three_p_excl"])
+            apply(3, r["crm_excl"])
+            apply(4, r["geo"])
+            apply(5, to_int(r["n_campaigns"]), "#,##0")
+            apply(6, to_int(r["n_advertisers"]), "#,##0")
+            apply(7, to_float(r["spend_30d_M"]), '"$"#,##0.000')
+            apply(8, to_float(r["pct_total_spend"]), "0.0")
+            apply(9, to_float(r["cvr"]), "0.000000")
+            apply(10, to_float(r["ivr"]), "0.000000")
+            apply(11, to_float(r["ctr"]), "0.000000")
+            apply(12, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            cpc = r.get("cost_per_conv_dollars", "")
+            if cpc and cpc.strip():
+                apply(13, to_float(cpc), '"$"#,##0.00')
+            else:
+                apply(13, "")
+            apply(14, to_int(r["n_with_3p_incl"]), "#,##0")
+            apply(15, to_int(r["n_with_crm_incl"]), "#,##0")
+            row_i += 1
+
+    for col_idx, w in enumerate([8, 12, 12, 16, 12, 14, 18, 14, 14, 14, 14, 12, 16, 18, 18], start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "E5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
@@ -496,6 +578,7 @@ def main() -> None:
     write_pass_sheet(wb)
     write_polarity_kpi_sheet(wb)
     write_geo_restriction_sheet(wb)
+    write_excl_axes_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
