@@ -32,6 +32,7 @@ GEO_RESTRICTION_CSV = OUTPUTS / "ti_999_pass24_geo_restriction_2026_06_01.csv"
 EXCL_AXES_CSV = OUTPUTS / "ti_999_pass25_full_polarity_2026_06_01.csv"
 PASS26_CSV = OUTPUTS / "ti_999_pass26_or_vs_and_include_2026_06_01.csv"
 PASS27_CSV = OUTPUTS / "ti_999_pass27_mm_and_or_split_2026_06_01.csv"
+PASS28_CSV = OUTPUTS / "ti_999_pass28_full_permutation_matrix_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -921,6 +922,157 @@ def write_pass27_mm_and_or_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "C5"
 
 
+def write_pass28_permutation_matrix_sheet(wb: Workbook) -> None:
+    """Pass 28 — full permutation matrix across all 10 buyer-targeting axes.
+
+    Per user direction (2026-06-01): show every observed permutation of MM,
+    3P (AND-incl / AND-excl / OR-incl), CRM (AND-incl / AND-excl / OR-incl),
+    GEO (AND-incl / AND-excl / OR-incl). Sorted by spend descending.
+    """
+    if not PASS28_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 28 — full permutation")
+
+    ws.cell(row=1, column=1, value="Pass 28 — every observed permutation of MM × 3P × CRM × GEO sub-axes").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=21)
+
+    note = (
+        "10 boolean axes: MM (positive) + 3P/CRM/GEO each split into AND-include / AND-exclude / OR-include. "
+        "MM = DS13/19/38/46 positive (no exclude axis — MM is rarely excluded). "
+        "3P = DS17/18/35. CRM = DS4/8/47. GEO = any clause with location_ids[] (walked from the separate `geos.where` subtree). "
+        "AND-include = positive clause whose LCA with every other positive clause is op:and (or sole). "
+        "AND-exclude = clause inside op:not (always AND-wrapped by op:not). "
+        "OR-include = positive clause with op:or as LCA against any other positive clause "
+        "(for geo: 2+ geo include clauses share the same op:or parent, e.g. 'target CA OR NY'). "
+        "Sorted by spend descending. Rows are color-coded by primary structural feature."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=21)
+    ws.row_dimensions[2].height = 130
+
+    headers = [
+        "Permutation",
+        "MM",
+        "3P-AND-incl", "3P-AND-excl", "3P-OR-incl",
+        "CRM-AND-incl", "CRM-AND-excl", "CRM-OR-incl",
+        "GEO-AND-incl", "GEO-AND-excl", "GEO-OR-incl",
+        "n_campaigns", "% campaigns", "n_advertisers",
+        "Spend (30d, $M)", "% spend",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 42
+
+    # Row coloring — by primary structural feature, scannable at a glance
+    fill_mm_only       = PatternFill("solid", fgColor="DCEFFC")  # MM with no other DS clauses (besides geo)
+    fill_mm_and_incl   = PatternFill("solid", fgColor="F8BBD0")  # MM + AND-include (real narrowing — important)
+    fill_mm_or_theater = PatternFill("solid", fgColor="FFF9C4")  # MM + OR-include only (theater)
+    fill_mm_mixed      = PatternFill("solid", fgColor="E1BEE7")  # MM + multiple non-geo patterns
+    fill_no_mm         = PatternFill("solid", fgColor="ECEFF1")  # no MM (3P-only, CRM-only, or untargeted)
+    fill_nothing       = PatternFill("solid", fgColor="F5F5F5")  # truly nothing (no MM, no 3P, no CRM, no GEO)
+    fill_geo_or_unusual= PatternFill("solid", fgColor="FFE0B2")  # GEO-OR-incl (multiple geo targets — unusual)
+
+    def is_true(s: str) -> bool:
+        return s.strip().lower() == "true"
+
+    def pick_fill(r) -> PatternFill:
+        mm  = is_true(r["has_mm"])
+        p_ai = is_true(r["has_3p_and_incl"])
+        p_ae = is_true(r["has_3p_and_excl"])
+        p_or = is_true(r["has_3p_or_incl"])
+        c_ai = is_true(r["has_crm_and_incl"])
+        c_ae = is_true(r["has_crm_and_excl"])
+        c_or = is_true(r["has_crm_or_incl"])
+        g_or = is_true(r["has_geo_or_incl"])
+        any_non_mm = (p_ai or p_ae or p_or or c_ai or c_ae or c_or)
+
+        if g_or and not mm and not any_non_mm:
+            return fill_geo_or_unusual
+        if not mm and not any_non_mm:
+            return fill_nothing
+        if not mm:
+            return fill_no_mm
+        # mm == True from here
+        if not any_non_mm:
+            return fill_mm_only
+        has_and = (p_ai or p_ae or c_ai or c_ae)
+        has_or  = (p_or or c_or)
+        if has_and and has_or:
+            return fill_mm_mixed
+        if has_and:
+            return fill_mm_and_incl
+        return fill_mm_or_theater
+
+    with PASS28_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            fill = pick_fill(r)
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col == 1))
+                return cell
+
+            apply(1, r["pattern"])
+            apply(2, "Y" if is_true(r["has_mm"]) else "")
+            apply(3, "Y" if is_true(r["has_3p_and_incl"]) else "")
+            apply(4, "Y" if is_true(r["has_3p_and_excl"]) else "")
+            apply(5, "Y" if is_true(r["has_3p_or_incl"]) else "")
+            apply(6, "Y" if is_true(r["has_crm_and_incl"]) else "")
+            apply(7, "Y" if is_true(r["has_crm_and_excl"]) else "")
+            apply(8, "Y" if is_true(r["has_crm_or_incl"]) else "")
+            apply(9, "Y" if is_true(r["has_geo_and_incl"]) else "")
+            apply(10, "Y" if is_true(r["has_geo_and_excl"]) else "")
+            apply(11, "Y" if is_true(r["has_geo_or_incl"]) else "")
+            apply(12, to_int(r["n_campaigns"]), "#,##0")
+            apply(13, to_float(r["pct_campaigns"]), "0.00")
+            apply(14, to_int(r["n_advertisers"]), "#,##0")
+            apply(15, to_float(r["spend_30d_M"]), '"$"#,##0.0000')
+            apply(16, to_float(r["pct_spend"]), "0.00")
+            apply(17, to_float(r["cvr"]), "0.000000")
+            apply(18, to_float(r["ivr"]), "0.000000")
+            apply(19, to_float(r["ctr"]), "0.000000")
+            apply(20, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            cpc = r.get("cost_per_conv_dollars", "")
+            if cpc and cpc.strip():
+                apply(21, to_float(cpc), '"$"#,##0.00')
+            else:
+                apply(21, "")
+            row_i += 1
+
+    # Color legend
+    legend_row = row_i + 2
+    ws.cell(row=legend_row, column=1, value="Legend (row color = primary structural feature)").font = Font(bold=True, size=12)
+    ws.merge_cells(start_row=legend_row, start_column=1, end_row=legend_row, end_column=21)
+    legend_entries = [
+        (fill_mm_only,        "MM-only (no 3P/CRM clauses; geo may be present)"),
+        (fill_mm_and_incl,    "MM + AND-include (real narrowing — 3P or CRM intersected with MM)"),
+        (fill_mm_or_theater,  "MM + OR-include only (theater — bidder-inert under HHST > 0)"),
+        (fill_mm_mixed,       "MM + both AND- and OR-include (mixed semantics)"),
+        (fill_no_mm,          "No MM (3P-only, CRM-only, or some non-MM combo — likely bid mechanics + targeting)"),
+        (fill_geo_or_unusual, "GEO-OR-include without MM/3P/CRM (multiple geo targets, no buyer targeting)"),
+        (fill_nothing,        "Nothing (no MM, no 3P, no CRM, no GEO — pure bid mechanics)"),
+    ]
+    for i, (fill, label) in enumerate(legend_entries):
+        c = ws.cell(row=legend_row + 1 + i, column=1, value=label)
+        c.fill = fill
+        ws.merge_cells(start_row=legend_row + 1 + i, start_column=1, end_row=legend_row + 1 + i, end_column=21)
+
+    widths = [60, 5, 12, 12, 12, 13, 13, 13, 13, 13, 13, 12, 12, 14, 16, 12, 14, 14, 14, 12, 16]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "B5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
@@ -933,6 +1085,7 @@ def main() -> None:
     write_or_vs_and_explainer_sheet(wb)
     write_pass26_detail_sheet(wb)
     write_pass27_mm_and_or_sheet(wb)
+    write_pass28_permutation_matrix_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
