@@ -31,6 +31,7 @@ POLARITY_KPI_CSV = OUTPUTS / "ti_999_pass22c_polarity_aware_buckets_2026_05_29.c
 GEO_RESTRICTION_CSV = OUTPUTS / "ti_999_pass24_geo_restriction_2026_06_01.csv"
 EXCL_AXES_CSV = OUTPUTS / "ti_999_pass25_full_polarity_2026_06_01.csv"
 PASS26_CSV = OUTPUTS / "ti_999_pass26_or_vs_and_include_2026_06_01.csv"
+PASS27_CSV = OUTPUTS / "ti_999_pass27_mm_and_or_split_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -816,6 +817,110 @@ def write_pass26_detail_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "B5"
 
 
+def write_pass27_mm_and_or_sheet(wb: Workbook) -> None:
+    """Pass 27 — MM-touching campaigns split by AND-include / AND-exclude / OR-include-only.
+
+    Per user direction (2026-06-01): on an MM campaign, separate out AND-include and
+    AND-exclude patterns regardless of source DS (CRM / 3P / Select / whatever).
+    OR-include only gets its own bucket when there are no AND patterns at all,
+    because under HHST > 0 it's bidder-inert and doesn't change delivery.
+    """
+    if not PASS27_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 27 — MM AND OR split")
+
+    ws.cell(row=1, column=1, value="Pass 27 — MM campaigns split by AND-include / AND-exclude / OR-include").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=12)
+
+    note = (
+        "MM-touching campaigns bucketed by the structural pattern of any non-MM clauses: "
+        "AND-include = positive non-MM clause AND-connected with MM (narrows MM to ∩ that segment). "
+        "AND-exclude = any negative non-MM clause (always AND-wrapped via op:not — removes that segment from MM). "
+        "OR-include = positive non-MM clause OR-connected with MM (additive in theory, but bidder-inert under HHST > 0 because non-MM IPs have no score). "
+        "Per user direction, OR-include is treated as fluff when AND-include or AND-exclude is also present — it gets its own bucket only when no AND patterns exist. "
+        "DS source (3P / CRM / Select) does not affect the bucketing here — what matters is the connector and polarity."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=12)
+    ws.row_dimensions[2].height = 110
+
+    headers = [
+        "Pattern", "Plain English",
+        "n_campaigns", "% campaigns", "n_advertisers", "% advertisers",
+        "Spend (30d, $M)", "% spend",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 36
+
+    pattern_fill = {
+        "MM_only":                     PatternFill("solid", fgColor="DCEFFC"),  # baseline MM blue
+        "MM_OR_include_only":          PatternFill("solid", fgColor="FFF9C4"),  # theater yellow
+        "MM_AND_include_only":         PatternFill("solid", fgColor="F8BBD0"),  # real narrowing pink
+        "MM_AND_exclude_only":         PatternFill("solid", fgColor="FFE0B2"),  # exclusion orange
+        "MM_AND_include_AND_exclude":  PatternFill("solid", fgColor="E1BEE7"),  # both purple
+        "no_MM":                       PatternFill("solid", fgColor="F5F5F5"),  # context gray
+    }
+
+    with PASS27_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            pat = r["pattern"]
+            fill = pattern_fill.get(pat)
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col == 2))
+                return cell
+
+            apply(1, pat)
+            apply(2, r["plain_english"])
+            apply(3, to_int(r["n_campaigns"]), "#,##0")
+            apply(4, to_float(r["pct_campaigns"]), "0.0")
+            apply(5, to_int(r["n_advertisers"]), "#,##0")
+            apply(6, to_float(r["pct_advertisers"]), "0.0")
+            apply(7, to_float(r["spend_30d_M"]), '"$"#,##0.000')
+            apply(8, to_float(r["pct_spend"]), "0.0")
+            apply(9, to_float(r["cvr"]), "0.000000")
+            apply(10, to_float(r["ivr"]), "0.000000")
+            apply(11, to_float(r["ctr"]), "0.000000")
+            apply(12, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            cpc = r.get("cost_per_conv_dollars", "")
+            if cpc and cpc.strip():
+                apply(13, to_float(cpc), '"$"#,##0.00')
+            else:
+                apply(13, "")
+            row_i += 1
+
+    # Headline takeaway under the table
+    ws.cell(row=row_i + 1, column=1, value="Headline").font = Font(bold=True, size=12)
+    ws.merge_cells(start_row=row_i + 1, start_column=1, end_row=row_i + 1, end_column=12)
+    headline = (
+        "Of all MM-touching campaigns: MM-only (pure scoring) and MM + OR-include-only (theater) together are 18% of campaigns and 36% of spend "
+        "— bidder behavior is identical between them. MM + AND-include (real narrowing) is a small slice (1.2% of campaigns, 3.7% of spend) and shows "
+        "very low CVR — when buyers genuinely intersect MM with a non-MM segment, KPIs drop. MM + AND-exclude is the bigger real-narrowing pattern "
+        "(7% of campaigns, 27% of spend) and is mainly CRM suppression. Both AND patterns combined still trail MM-only and theater by spend."
+    )
+    ws.cell(row=row_i + 2, column=1, value=headline).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=row_i + 2, start_column=1, end_row=row_i + 2, end_column=12)
+    ws.row_dimensions[row_i + 2].height = 100
+    ws.cell(row=row_i + 2, column=1).fill = PatternFill("solid", fgColor="FFF9C4")
+
+    widths = [30, 70, 14, 12, 14, 14, 16, 12, 14, 14, 14, 12, 16]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "C5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
@@ -827,6 +932,7 @@ def main() -> None:
     write_excl_axes_sheet(wb)
     write_or_vs_and_explainer_sheet(wb)
     write_pass26_detail_sheet(wb)
+    write_pass27_mm_and_or_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
