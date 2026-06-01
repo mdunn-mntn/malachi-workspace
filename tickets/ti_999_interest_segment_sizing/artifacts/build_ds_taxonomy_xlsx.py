@@ -36,6 +36,8 @@ PASS28_CSV = OUTPUTS / "ti_999_pass28_full_permutation_matrix_2026_06_01.csv"
 PASS29_CSV = OUTPUTS / "ti_999_pass29_perm_matrix_geo_broad_vs_narrow_2026_06_01.csv"
 PASS30_CSV = OUTPUTS / "ti_999_pass30_perm_matrix_geo_narrow_only_2026_06_01.csv"
 PASS31_CSV = OUTPUTS / "ti_999_pass31_within_advertiser_vs_pure_mm_2026_06_01.csv"
+PASS32_CSV = OUTPUTS / "ti_999_pass32_perm_matrix_geo_narrow_incl_only_2026_06_01.csv"
+PASS33_CSV = OUTPUTS / "ti_999_pass33_within_advertiser_collapsed_taxonomy_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -1490,6 +1492,261 @@ def write_pass31_within_advertiser_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "B5"
 
 
+def write_pass32_collapsed_perm_sheet(wb: Workbook) -> None:
+    """Pass 32 — primary permutation view, fully collapsed.
+
+    GEO-BROAD-incl (per [[feedback-us-only-no-geo-broad-axis]]) and GEO-NARROW-excl
+    (per [[feedback-geo-narrow-excl-not-meaningful-axis]]) both collapse into the
+    default. Only GEO-NARROW-incl survives as the geo axis. 8 axes, far less noise.
+    """
+    if not PASS32_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 32 — collapsed primary")
+
+    ws.cell(row=1, column=1, value="Pass 32 — PRIMARY VIEW (fully collapsed) — both GEO-BROAD and GEO-NARROW-excl folded into default").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=19)
+
+    note = (
+        "8 axes (down from 10 in Pass 28-29 and 9 in Pass 30):\n"
+        "  · MM (positive DS13/19/38/46)\n"
+        "  · 3P AND-incl / AND-excl / OR-incl (DS17/18/35)\n"
+        "  · CRM AND-incl / AND-excl / OR-incl (DS4/8/47)\n"
+        "  · GEO-NARROW-incl = positive geo clause to a state/DMA/city/ZIP (buyer narrowed below country)\n\n"
+        "DROPPED axes (small effect — not worth fragmenting rows):\n"
+        "  · GEO-BROAD-incl — we only target US today, so US-include is the default\n"
+        "  · GEO-NARROW-excl — small carve-out, doesn't change the addressable audience meaningfully\n\n"
+        "Sorted by spend descending. Row color = primary structural feature."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=19)
+    ws.row_dimensions[2].height = 200
+
+    headers = [
+        "Permutation",
+        "MM",
+        "3P-AND-incl", "3P-AND-excl", "3P-OR-incl",
+        "CRM-AND-incl", "CRM-AND-excl", "CRM-OR-incl",
+        "GEO-NARROW-incl",
+        "n_campaigns", "% campaigns",
+        "n_advertisers", "% advertisers",
+        "Spend (30d, $M)", "% spend",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 42
+
+    fill_mm_only       = PatternFill("solid", fgColor="DCEFFC")
+    fill_mm_and_incl   = PatternFill("solid", fgColor="F8BBD0")
+    fill_mm_or_theater = PatternFill("solid", fgColor="FFF9C4")
+    fill_mm_mixed      = PatternFill("solid", fgColor="E1BEE7")
+    fill_no_mm_targeting = PatternFill("solid", fgColor="ECEFF1")
+    fill_no_targeting  = PatternFill("solid", fgColor="F5F5F5")
+
+    def is_true(s: str) -> bool:
+        return s.strip().lower() == "true"
+
+    def pick_fill(r) -> PatternFill:
+        mm  = is_true(r["has_mm"])
+        p_ai = is_true(r["has_3p_and_incl"])
+        p_ae = is_true(r["has_3p_and_excl"])
+        p_or = is_true(r["has_3p_or_incl"])
+        c_ai = is_true(r["has_crm_and_incl"])
+        c_ae = is_true(r["has_crm_and_excl"])
+        c_or = is_true(r["has_crm_or_incl"])
+        any_non_mm_targeting = (p_ai or p_ae or p_or or c_ai or c_ae or c_or)
+        if not mm and not any_non_mm_targeting:
+            return fill_no_targeting
+        if not mm:
+            return fill_no_mm_targeting
+        if not any_non_mm_targeting:
+            return fill_mm_only
+        has_and = (p_ai or p_ae or c_ai or c_ae)
+        has_or  = (p_or or c_or)
+        if has_and and has_or:
+            return fill_mm_mixed
+        if has_and:
+            return fill_mm_and_incl
+        return fill_mm_or_theater
+
+    with PASS32_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            fill = pick_fill(r)
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col == 1))
+                return cell
+
+            apply(1, r["pattern"])
+            apply(2, "Y" if is_true(r["has_mm"]) else "")
+            apply(3, "Y" if is_true(r["has_3p_and_incl"]) else "")
+            apply(4, "Y" if is_true(r["has_3p_and_excl"]) else "")
+            apply(5, "Y" if is_true(r["has_3p_or_incl"]) else "")
+            apply(6, "Y" if is_true(r["has_crm_and_incl"]) else "")
+            apply(7, "Y" if is_true(r["has_crm_and_excl"]) else "")
+            apply(8, "Y" if is_true(r["has_crm_or_incl"]) else "")
+            apply(9, "Y" if is_true(r["has_geo_narrow_incl"]) else "")
+            apply(10, to_int(r["n_campaigns"]), "#,##0")
+            apply(11, to_float(r["pct_campaigns"]), "0.00")
+            apply(12, to_int(r["n_advertisers"]), "#,##0")
+            apply(13, to_float(r["pct_advertisers"]), "0.00")
+            apply(14, to_float(r["spend_30d_M"]), '"$"#,##0.0000')
+            apply(15, to_float(r["pct_spend"]), "0.00")
+            apply(16, to_float(r["cvr"]), "0.000000")
+            apply(17, to_float(r["ivr"]), "0.000000")
+            apply(18, to_float(r["ctr"]), "0.000000")
+            apply(19, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            row_i += 1
+
+    legend_row = row_i + 2
+    ws.cell(row=legend_row, column=1, value="Legend (row color = primary structural feature)").font = Font(bold=True, size=12)
+    ws.merge_cells(start_row=legend_row, start_column=1, end_row=legend_row, end_column=19)
+    legend_entries = [
+        (fill_mm_only,         "MM-only buyer targeting (no 3P/CRM; may have narrow geo)"),
+        (fill_mm_and_incl,     "MM + AND-include (real narrowing — 3P or CRM intersected with MM)"),
+        (fill_mm_or_theater,   "MM + OR-include only (theater — bidder-inert under HHST > 0)"),
+        (fill_mm_mixed,        "MM + both AND- and OR-include (mixed semantics)"),
+        (fill_no_mm_targeting, "No MM but has 3P/CRM clauses (3P-only or CRM-only campaign)"),
+        (fill_no_targeting,    "No MM, no 3P, no CRM (pure US-only or narrow-geo prospecting, no buyer targeting)"),
+    ]
+    for i, (fill, label) in enumerate(legend_entries):
+        c = ws.cell(row=legend_row + 1 + i, column=1, value=label)
+        c.fill = fill
+        ws.merge_cells(start_row=legend_row + 1 + i, start_column=1, end_row=legend_row + 1 + i, end_column=19)
+
+    widths = [56, 5, 12, 12, 12, 13, 13, 13, 17, 12, 12, 14, 14, 16, 12, 14, 14, 14, 12]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "B5"
+
+
+def write_pass33_within_advertiser_collapsed_sheet(wb: Workbook) -> None:
+    """Pass 33 — within-advertiser comparison using Pass 32 collapsed taxonomy.
+
+    Pass 31 had too many cells flagged 'too_few_advertisers' because MM and
+    MM+GEO-NARROW-excl were separate patterns, fragmenting overlap. With the
+    Pass 32 collapse, advertiser overlap on the key buckets goes up substantially.
+    """
+    if not PASS33_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 33 — within-adv collapsed")
+
+    ws.cell(row=1, column=1, value="Pass 33 — within-advertiser KPI delta vs pure MM (using Pass 32 collapsed taxonomy)").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=12)
+
+    note = (
+        "Same decomposition logic as Pass 31, but using the Pass 32 collapsed taxonomy "
+        "(no GEO-BROAD-incl axis, no GEO-NARROW-excl axis). MM and MM+GEO-NARROW-excl now "
+        "share the label 'MM' — that increases the advertiser overlap on the MM-baseline "
+        "subset substantially.\n\n"
+        "For each pattern P, within-advertiser delta = (CVR in P) − (CVR in MM) averaged "
+        "across advertisers running both. Selection effect drops out because the same advertiser "
+        "is on both sides. If within ≈ cross → real audience effect. If within ≈ 0 → selection."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=12)
+    ws.row_dimensions[2].height = 170
+
+    headers = [
+        "Pattern",
+        "n_advertisers (total)", "n with MM baseline", "% with MM baseline",
+        "Spend $M (all)", "Spend $M (overlap subset)",
+        "CVR (all advertisers)",
+        "Within: pattern CVR", "Within: same-adv MM CVR", "Within delta (CVR)",
+        "Cross delta (CVR)",
+        "CVR verdict",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 54
+
+    fill_real    = PatternFill("solid", fgColor="C8E6C9")
+    fill_select  = PatternFill("solid", fgColor="FFE0B2")
+    fill_flip    = PatternFill("solid", fgColor="F8BBD0")
+    fill_mixed   = PatternFill("solid", fgColor="FFF9C4")
+    fill_toofew  = PatternFill("solid", fgColor="ECEFF1")
+    fill_by_verdict = {
+        "real_audience_effect": fill_real,
+        "mostly_selection": fill_select,
+        "sign_flip__selection_overstates_cross": fill_flip,
+        "mixed": fill_mixed,
+        "too_few_advertisers": fill_toofew,
+    }
+
+    with PASS33_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            verdict = r["cvr_verdict"]
+            fill = fill_by_verdict.get(verdict)
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col in (1, 12)))
+                return cell
+
+            def maybe_float(s):
+                if s and s.strip():
+                    return to_float(s)
+                return ""
+
+            apply(1, r["pattern"])
+            apply(2, to_int(r["n_advertisers_total"]), "#,##0")
+            apply(3, to_int(r["n_advertisers_with_mm_baseline"]), "#,##0")
+            apply(4, to_float(r["pct_advertisers_with_mm_baseline"]), "0.0")
+            apply(5, to_float(r["p_spend_M_all"]), '"$"#,##0.0000')
+            apply(6, to_float(r["p_spend_M_within"]), '"$"#,##0.0000')
+            apply(7, to_float(r["p_cvr_all"]), "0.000000")
+            p_cvr_w = r.get("p_cvr_within", "")
+            mm_cvr_w = r.get("mm_cvr_within", "")
+            w_delta = r.get("within_cvr_delta", "")
+            apply(8,  maybe_float(p_cvr_w),  "0.000000" if p_cvr_w.strip() else None)
+            apply(9,  maybe_float(mm_cvr_w), "0.000000" if mm_cvr_w.strip() else None)
+            apply(10, maybe_float(w_delta),  "+0.000000;-0.000000" if w_delta.strip() else None)
+            apply(11, to_float(r["cross_cvr_delta"]), "+0.000000;-0.000000")
+            apply(12, verdict)
+            row_i += 1
+
+    legend_row = row_i + 2
+    ws.cell(row=legend_row, column=1, value="Verdict legend").font = Font(bold=True, size=12)
+    ws.merge_cells(start_row=legend_row, start_column=1, end_row=legend_row, end_column=12)
+    legend_entries = [
+        (fill_real,   "real_audience_effect — within delta matches cross delta in sign and ≥50% of magnitude. Pattern itself is doing the work."),
+        (fill_select, "mostly_selection — within delta is <10% of cross delta. Cross gap is mostly because of which advertisers choose this pattern."),
+        (fill_flip,   "sign_flip — within and cross have opposite signs. Selection is overstating or masking the true audience effect."),
+        (fill_mixed,  "mixed — within delta is partial but the picture is muddied. Interpret with caution."),
+        (fill_toofew, "too_few_advertisers — <5 advertisers run both pattern and pure MM. Underpowered; don't interpret."),
+    ]
+    for i, (fill, label) in enumerate(legend_entries):
+        c = ws.cell(row=legend_row + 1 + i, column=1, value=label)
+        c.fill = fill
+        c.alignment = Alignment(wrap_text=True, vertical="center")
+        ws.merge_cells(start_row=legend_row + 1 + i, start_column=1, end_row=legend_row + 1 + i, end_column=12)
+        ws.row_dimensions[legend_row + 1 + i].height = 30
+
+    widths = [52, 14, 14, 12, 14, 18, 14, 14, 18, 14, 14, 38]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "B5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
@@ -1506,6 +1763,8 @@ def main() -> None:
     write_pass29_geo_broad_vs_narrow_sheet(wb)
     write_pass30_geo_narrow_only_sheet(wb)
     write_pass31_within_advertiser_sheet(wb)
+    write_pass32_collapsed_perm_sheet(wb)
+    write_pass33_within_advertiser_collapsed_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
