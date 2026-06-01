@@ -33,6 +33,7 @@ EXCL_AXES_CSV = OUTPUTS / "ti_999_pass25_full_polarity_2026_06_01.csv"
 PASS26_CSV = OUTPUTS / "ti_999_pass26_or_vs_and_include_2026_06_01.csv"
 PASS27_CSV = OUTPUTS / "ti_999_pass27_mm_and_or_split_2026_06_01.csv"
 PASS28_CSV = OUTPUTS / "ti_999_pass28_full_permutation_matrix_2026_06_01.csv"
+PASS29_CSV = OUTPUTS / "ti_999_pass29_perm_matrix_geo_broad_vs_narrow_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -1073,6 +1074,151 @@ def write_pass28_permutation_matrix_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "B5"
 
 
+def write_pass29_geo_broad_vs_narrow_sheet(wb: Workbook) -> None:
+    """Pass 29 — permutation matrix with geo split into BROAD vs NARROW.
+
+    Per user direction (2026-06-01): "Separate geo broad vs geo restricted.
+    Geo broad is going to be US — almost every campaign will have geo set.
+    Restricted = limited to zip codes or states."
+    """
+    if not PASS29_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 29 — geo broad vs narrow")
+
+    ws.cell(row=1, column=1, value="Pass 29 — full permutation matrix with geo split into BROAD vs NARROW").font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=21)
+
+    note = (
+        "Same 10 axes as Pass 28, but with the geo dimension redefined:\n"
+        "  · GEO-BROAD-incl  = positive geo clause references a country-level location_id (e.g. US = 237). "
+        "Almost every campaign has this; it's the default.\n"
+        "  · GEO-NARROW-incl = positive geo clause references a sub-country location_id (state, DMA, city, ZIP). "
+        "Buyer has narrowed the geo target.\n"
+        "  · GEO-NARROW-excl = any geo exclusion clause (carve a region OUT of the include set — almost always sub-country).\n"
+        "Broad and narrow are NOT mutually exclusive — a campaign can include 'US OR California' (rare). "
+        "Location type classification from geo.location_data.location_type_id: 2=Country (broad); 3/4=DMA, 5=State, 6=City, 7=ZIP (all narrow). "
+        "Sorted by spend descending. Color = primary structural feature."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=21)
+    ws.row_dimensions[2].height = 170
+
+    headers = [
+        "Permutation",
+        "MM",
+        "3P-AND-incl", "3P-AND-excl", "3P-OR-incl",
+        "CRM-AND-incl", "CRM-AND-excl", "CRM-OR-incl",
+        "GEO-BROAD-incl", "GEO-NARROW-incl", "GEO-NARROW-excl",
+        "n_campaigns", "% campaigns", "n_advertisers",
+        "Spend (30d, $M)", "% spend",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 42
+
+    fill_mm_only       = PatternFill("solid", fgColor="DCEFFC")
+    fill_mm_and_incl   = PatternFill("solid", fgColor="F8BBD0")
+    fill_mm_or_theater = PatternFill("solid", fgColor="FFF9C4")
+    fill_mm_mixed      = PatternFill("solid", fgColor="E1BEE7")
+    fill_no_mm_targeting = PatternFill("solid", fgColor="ECEFF1")
+    fill_no_targeting  = PatternFill("solid", fgColor="F5F5F5")
+
+    def is_true(s: str) -> bool:
+        return s.strip().lower() == "true"
+
+    def pick_fill(r) -> PatternFill:
+        mm  = is_true(r["has_mm"])
+        p_ai = is_true(r["has_3p_and_incl"])
+        p_ae = is_true(r["has_3p_and_excl"])
+        p_or = is_true(r["has_3p_or_incl"])
+        c_ai = is_true(r["has_crm_and_incl"])
+        c_ae = is_true(r["has_crm_and_excl"])
+        c_or = is_true(r["has_crm_or_incl"])
+        any_non_mm_targeting = (p_ai or p_ae or p_or or c_ai or c_ae or c_or)
+
+        if not mm and not any_non_mm_targeting:
+            return fill_no_targeting
+        if not mm:
+            return fill_no_mm_targeting
+        if not any_non_mm_targeting:
+            return fill_mm_only
+        has_and = (p_ai or p_ae or c_ai or c_ae)
+        has_or  = (p_or or c_or)
+        if has_and and has_or:
+            return fill_mm_mixed
+        if has_and:
+            return fill_mm_and_incl
+        return fill_mm_or_theater
+
+    with PASS29_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            fill = pick_fill(r)
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col == 1))
+                return cell
+
+            apply(1, r["pattern"])
+            apply(2, "Y" if is_true(r["has_mm"]) else "")
+            apply(3, "Y" if is_true(r["has_3p_and_incl"]) else "")
+            apply(4, "Y" if is_true(r["has_3p_and_excl"]) else "")
+            apply(5, "Y" if is_true(r["has_3p_or_incl"]) else "")
+            apply(6, "Y" if is_true(r["has_crm_and_incl"]) else "")
+            apply(7, "Y" if is_true(r["has_crm_and_excl"]) else "")
+            apply(8, "Y" if is_true(r["has_crm_or_incl"]) else "")
+            apply(9, "Y" if is_true(r["has_geo_broad_incl"]) else "")
+            apply(10, "Y" if is_true(r["has_geo_narrow_incl"]) else "")
+            apply(11, "Y" if is_true(r["has_geo_narrow_excl"]) else "")
+            apply(12, to_int(r["n_campaigns"]), "#,##0")
+            apply(13, to_float(r["pct_campaigns"]), "0.00")
+            apply(14, to_int(r["n_advertisers"]), "#,##0")
+            apply(15, to_float(r["spend_30d_M"]), '"$"#,##0.0000')
+            apply(16, to_float(r["pct_spend"]), "0.00")
+            apply(17, to_float(r["cvr"]), "0.000000")
+            apply(18, to_float(r["ivr"]), "0.000000")
+            apply(19, to_float(r["ctr"]), "0.000000")
+            apply(20, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            cpc = r.get("cost_per_conv_dollars", "")
+            if cpc and cpc.strip():
+                apply(21, to_float(cpc), '"$"#,##0.00')
+            else:
+                apply(21, "")
+            row_i += 1
+
+    # Color legend
+    legend_row = row_i + 2
+    ws.cell(row=legend_row, column=1, value="Legend (row color = primary structural feature; geo dimension is informational, not color-coded)").font = Font(bold=True, size=12)
+    ws.merge_cells(start_row=legend_row, start_column=1, end_row=legend_row, end_column=21)
+    legend_entries = [
+        (fill_mm_only,         "MM-only buyer targeting (no 3P/CRM clauses; geo may be broad and/or narrow)"),
+        (fill_mm_and_incl,     "MM + AND-include (real narrowing — 3P or CRM intersected with MM)"),
+        (fill_mm_or_theater,   "MM + OR-include only (theater — bidder-inert under HHST > 0)"),
+        (fill_mm_mixed,        "MM + both AND- and OR-include (mixed semantics)"),
+        (fill_no_mm_targeting, "No MM but has 3P/CRM clauses (3P-only or CRM-only campaign)"),
+        (fill_no_targeting,    "No MM, no 3P, no CRM (geo + bid mechanics only — possibly Behavior Keywords or untargeted)"),
+    ]
+    for i, (fill, label) in enumerate(legend_entries):
+        c = ws.cell(row=legend_row + 1 + i, column=1, value=label)
+        c.fill = fill
+        ws.merge_cells(start_row=legend_row + 1 + i, start_column=1, end_row=legend_row + 1 + i, end_column=21)
+
+    widths = [60, 5, 12, 12, 12, 13, 13, 13, 16, 17, 17, 12, 12, 14, 16, 12, 14, 14, 14, 12, 16]
+    for col_idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "B5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
@@ -1086,6 +1232,7 @@ def main() -> None:
     write_pass26_detail_sheet(wb)
     write_pass27_mm_and_or_sheet(wb)
     write_pass28_permutation_matrix_sheet(wb)
+    write_pass29_geo_broad_vs_narrow_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
