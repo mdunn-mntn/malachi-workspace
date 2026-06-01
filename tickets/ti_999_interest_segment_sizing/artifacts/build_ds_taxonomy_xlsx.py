@@ -680,20 +680,46 @@ def write_or_vs_and_explainer_sheet(wb: Workbook) -> None:
                 cell.fill = PatternFill("solid", fgColor="FFE0B2")
         ws.row_dimensions[r_idx].height = 40
 
-    # ---- The deck-headline callout ----
-    ws.cell(row=28, column=1, value="THE LAYMAN HEADLINE FOR THE DECK").font = Font(bold=True, size=13, color="C62828")
+    # ---- Spend semantics clarification ----
+    ws.cell(row=28, column=1, value="Important: spend is NOT driven by audience size").font = Font(bold=True, size=12)
     ws.merge_cells(start_row=28, start_column=1, end_row=28, end_column=6)
 
-    headline = (
-        "When buyers layer interest segments on Mountain Match, 80% of the spend is doing nothing at the bidder. "
-        "They added 3P clauses to make the audience number look bigger in the UI, but the bidder only bids on "
-        "MM-scored people anyway because 3P-only people don't have scores. Only 5% of the spend is doing what "
-        "the buyer thought (real narrowing). The rest is mostly theater."
+    spend_note = (
+        "Advertisers are charged only when MNTN bids on and WINS an impression. Adding a 3P clause to MM doesn't 'cost more' — "
+        "same spend, same delivery, just a UI label that misrepresents what was targeted. So 'audience-size theater' is about "
+        "decoupled targeting intent (buyer believes they're targeting MM+3P, but mechanically gets MM-only delivery), NOT about wasted dollars."
     )
-    ws.cell(row=29, column=1, value=headline).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.cell(row=29, column=1, value=spend_note).alignment = Alignment(wrap_text=True, vertical="top")
     ws.merge_cells(start_row=29, start_column=1, end_row=29, end_column=6)
-    ws.row_dimensions[29].height = 70
-    ws.cell(row=29, column=1).fill = PatternFill("solid", fgColor="FFF9C4")
+    ws.row_dimensions[29].height = 56
+
+    # ---- The deck-headline callout ----
+    ws.cell(row=31, column=1, value="THE LAYMAN HEADLINE FOR THE DECK").font = Font(bold=True, size=13, color="C62828")
+    ws.merge_cells(start_row=31, start_column=1, end_row=31, end_column=6)
+
+    headline = (
+        "When buyers layer interest segments on Mountain Match, 80% of the spend on those combos delivers as if the 3P clause "
+        "wasn't there. Same impressions, same costs — but the buyer believes they're targeting MM+3P when the bidder is only "
+        "bidding on MM-scored people (3P-only people don't have scores). Only 5% of the spend is doing what the buyer thought "
+        "(real narrowing of MM by the 3P segment). The rest is decoupled targeting intent — a UI vs reality mismatch, not wasted budget."
+    )
+    ws.cell(row=32, column=1, value=headline).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=32, start_column=1, end_row=32, end_column=6)
+    ws.row_dimensions[32].height = 90
+    ws.cell(row=32, column=1).fill = PatternFill("solid", fgColor="FFF9C4")
+
+    # ---- TI-956 curation argument refined ----
+    ws.cell(row=34, column=1, value="TI-956 curation argument (refined for OR vs AND cohorts)").font = Font(bold=True, size=12)
+    ws.merge_cells(start_row=34, start_column=1, end_row=34, end_column=6)
+
+    ti956_note = (
+        "For AND-include (5% of MM+3P-incl spend): segment quality determines delivery quality → curation has real lift on KPIs (CVR, cost/conv). "
+        "For OR-include (80%): segment quality doesn't affect delivery, but curation prevents buyers from believing they're targeting low-quality "
+        "segments when they're actually getting MM-only delivery → curation has attribution / UI honesty value. Both warrant the TI-956 build; the framing is different per cohort."
+    )
+    ws.cell(row=35, column=1, value=ti956_note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=35, start_column=1, end_row=35, end_column=6)
+    ws.row_dimensions[35].height = 70
 
     # Column widths
     widths = [20, 36, 28, 32, 50, 26]

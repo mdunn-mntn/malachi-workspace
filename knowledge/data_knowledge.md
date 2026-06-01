@@ -1222,14 +1222,22 @@ So when buyers combine MM with 3P (which is the majority of prospecting spend pe
 - The 3P segment's quality determines **which slice of MM-scored IPs ends up being bid on**.
 - A bad 3P segment narrows MM to a subset that may be no more valuable than (and could be less valuable than) the full MM-scored audience.
 
+**Spend semantics clarification (Malachi, 2026-06-01):**
+
+- **Audience size does NOT determine spend.** Advertisers are only charged when MNTN bids on AND wins an impression. So adding a 3P clause to MM doesn't "cost more" — it just changes WHO can be targeted, not how much gets spent.
+- Implication for the "theater" framing: when an OR-include 3P clause has no effect on bidder behavior, **the buyer isn't wasting money on theater** — they're spending the same amount on the same MM delivery, just with a UI label that misrepresents what's being targeted.
+- The real harm is **decoupled targeting intent** — the buyer believes they're combining MM with a specific interest segment, but mechanically the 3P clause changes nothing. So budget gets spent on MM delivery while the buyer reports back to their team "we ran MM+3P-A campaigns" believing 3P-A had effect.
+- For AND-include cases (5% of MM+3P-incl spend), 3P quality DOES affect which MM-scored IPs the bidder sees — so curation has real lift there.
+- For OR-include cases (80% of MM+3P-incl spend), the 3P clause is bidder-inert — curation can't improve those campaigns' performance because the 3P didn't affect delivery to begin with. But ranking these 3P segments still has UI value: it would let MNTN show "your selected 3P segment X is low quality" or guide buyers toward more impactful selections in their next campaign.
+
 **Implication for TI-999 curation case (LOCK FOR DECK):**
 
 This is the strongest argument for 3P-segment curation MNTN can make:
 1. Buyers think they're combining MM with interest segments to expand or diversify.
-2. Mechanically, 3P-include just narrows MM scoring to the 3P-intersected subset.
-3. **3P quality directly determines MM delivery quality** because 3P decides which MM-scored IPs the bidder sees.
-4. Curation / ranking helps buyers pick 3P segments that intersect with HIGH-VALUE MM-scored IPs — the cohort that performs best.
-5. TI-956's per-segment scoring framework is the operational fix.
+2. Mechanically: 80% of MM+3P-include spend is OR semantics where the 3P clause doesn't affect bidder behavior (3P-only IPs aren't scored, fail HHST). Only 5% is AND semantics where 3P genuinely narrows MM.
+3. **For the AND-include 5%: 3P quality directly determines MM delivery quality** — curation has real lift.
+4. **For the OR-include 80%: 3P quality determines what's REPORTED to the buyer about their targeting** — curation prevents buyers from believing they're targeting low-quality segments when they're actually getting MM-only delivery. UI/attribution honesty is the value, not delivery-quality lift.
+5. TI-956's per-segment scoring framework is the operational fix for both.
 
 **Exception cases worth flagging:**
 
