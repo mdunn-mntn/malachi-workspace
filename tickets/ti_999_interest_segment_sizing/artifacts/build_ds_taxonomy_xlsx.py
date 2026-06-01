@@ -29,7 +29,7 @@ PASS_NOTE = (
 ANOMALIES_CSV = OUTPUTS / "ti_999_pass20_anomalies_2026_05_29.csv"
 POLARITY_KPI_CSV = OUTPUTS / "ti_999_pass22c_polarity_aware_buckets_2026_05_29.csv"
 GEO_RESTRICTION_CSV = OUTPUTS / "ti_999_pass24_geo_restriction_2026_06_01.csv"
-EXCL_AXES_CSV = OUTPUTS / "ti_999_pass25_mm_excl_geo_axes_2026_06_01.csv"
+EXCL_AXES_CSV = OUTPUTS / "ti_999_pass25_full_polarity_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -492,44 +492,45 @@ def write_geo_restriction_sheet(wb: Workbook) -> None:
 def write_excl_axes_sheet(wb: Workbook) -> None:
     if not EXCL_AXES_CSV.exists():
         return
-    ws = wb.create_sheet("Pass 25 — MM × excl × geo")
+    ws = wb.create_sheet("Pass 25 — full polarity")
 
-    title = "Pass 25 — 4 axes: MM presence × 3P-exclude × CRM-exclude × geo restriction (Alyson + Ryan, 2026-06-01)"
+    title = "Pass 25 — full polarity split with plain-English cell labels (Alyson refinement, 2026-06-01)"
     ws.cell(row=1, column=1, value=title).font = TITLE_FONT
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=15)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=18)
 
     note = (
-        "Reframing: with HHST > 0, includes (3P-incl, CRM-incl) are no-ops — they make the audience LOOK bigger in the UI but don't change bidding. "
-        "Only presence + exclusions move bidder behavior. So we bucket by 4 binary axes: is_MM × is_3P_excl × is_CRM_excl × is_geo_restricted. "
-        "2^4 = 16 cells, sorted by spend. Include counts kept as context columns at the right (n_with_3p_incl, n_with_crm_incl, n_with_select) — note: these are NOT separate buckets, they're sub-counts within the same cell to show how many campaigns ALSO carried an include layer."
+        "6 binary axes: MM × 3P-include × 3P-exclude × CRM-include × CRM-exclude × geo-restricted. "
+        "Up to 64 possible cells; only cells with ≥5 campaigns shown (34 total). Each cell carries a plain-English label in column A describing exactly what the campaign is doing. "
+        "Polarity check (verified 2026-06-01): excludes are wrapped in op:not in the expression JSON — confirmed by sampling actual expressions. "
+        "Yellow row = largest single audience-targeted cell by spend. Red rows = cells with 3P-exclude (the destroyer pattern — removes IPs from MM and consistently hurts CVR). All KPIs are ratios (CVR/IVR/CTR) or dollars (CPM/cost-per-conv)."
     )
     ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=15)
-    ws.row_dimensions[2].height = 84
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=18)
+    ws.row_dimensions[2].height = 92
 
     headers = [
-        "is_MM", "is_3P_excl", "is_CRM_excl", "geo",
+        "What this cell says (plain English)",
+        "MM", "3P-incl", "3P-excl", "CRM-incl", "CRM-excl", "Geo",
         "n_campaigns", "% campaigns", "n_advertisers", "% advertisers", "Spend (30d, $M)", "% spend",
         "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
-        "n_with_3p_incl (context)", "n_with_crm_incl (context)",
     ]
     for col_idx, h in enumerate(headers, start=1):
         c = ws.cell(row=4, column=col_idx, value=h)
         c.fill = HEADER_FILL
         c.font = HEADER_FONT
         c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-    ws.row_dimensions[4].height = 30
+    ws.row_dimensions[4].height = 36
 
-    fill_biggest = PatternFill("solid", fgColor="FFF9C4")     # biggest spend cell (MM × no-excl × geo-restricted)
-    fill_destroyer = PatternFill("solid", fgColor="FFCDD2")    # cells with 3P-excl (the destroyer)
+    fill_biggest = PatternFill("solid", fgColor="FFF9C4")      # largest cell by spend
+    fill_destroyer = PatternFill("solid", fgColor="FFCDD2")    # 3P-exclude rows
     fill_default = None
 
     with EXCL_AXES_CSV.open() as f:
         reader = csv.DictReader(f)
         row_i = 5
-        for r in reader:
-            is_biggest = (r["mm"] == "MM" and r["three_p_excl"] == "no_3P-excl" and r["crm_excl"] == "no_CRM-excl" and r["geo"] == "geo_restricted")
-            has_3p_excl = (r["three_p_excl"] == "3P-excl")
+        for idx, r in enumerate(reader):
+            is_biggest = (idx == 0)  # CSV is sorted desc by spend
+            has_3p_excl = (r["f_3p_excl"] == "3P-excl")
             if is_biggest:
                 fill = fill_biggest
             elif has_3p_excl:
@@ -543,33 +544,36 @@ def write_excl_axes_sheet(wb: Workbook) -> None:
                     cell.fill = fill
                 if fmt:
                     cell.number_format = fmt
+                cell.alignment = Alignment(vertical="top", wrap_text=(col == 1))
                 return cell
-            apply(1, r["mm"])
-            apply(2, r["three_p_excl"])
-            apply(3, r["crm_excl"])
-            apply(4, r["geo"])
-            apply(5, to_int(r["n_campaigns"]), "#,##0")
-            apply(6, to_float(r["pct_total_campaigns"]), "0.0")
-            apply(7, to_int(r["n_advertisers"]), "#,##0")
-            apply(8, to_float(r["pct_total_advertisers"]), "0.0")
-            apply(9, to_float(r["spend_30d_M"]), '"$"#,##0.000')
-            apply(10, to_float(r["pct_total_spend"]), "0.0")
-            apply(11, to_float(r["cvr"]), "0.000000")
-            apply(12, to_float(r["ivr"]), "0.000000")
-            apply(13, to_float(r["ctr"]), "0.000000")
-            apply(14, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            apply(1, r["plain_english"])
+            apply(2, r["f_mm"])
+            apply(3, r["f_3p_incl"])
+            apply(4, r["f_3p_excl"])
+            apply(5, r["f_crm_incl"])
+            apply(6, r["f_crm_excl"])
+            apply(7, r["f_geo"])
+            apply(8, to_int(r["n_campaigns"]), "#,##0")
+            apply(9, to_float(r["pct_campaigns"]), "0.0")
+            apply(10, to_int(r["n_advertisers"]), "#,##0")
+            apply(11, to_float(r["pct_advertisers"]), "0.0")
+            apply(12, to_float(r["spend_30d_M"]), '"$"#,##0.000')
+            apply(13, to_float(r["pct_spend"]), "0.0")
+            apply(14, to_float(r["cvr"]), "0.000000")
+            apply(15, to_float(r["ivr"]), "0.000000")
+            apply(16, to_float(r["ctr"]), "0.000000")
+            apply(17, to_float(r["cpm_dollars"]), '"$"#,##0.00')
             cpc = r.get("cost_per_conv_dollars", "")
             if cpc and cpc.strip():
-                apply(15, to_float(cpc), '"$"#,##0.00')
+                apply(18, to_float(cpc), '"$"#,##0.00')
             else:
-                apply(15, "")
-            apply(16, to_int(r["n_with_3p_incl"]), "#,##0")
-            apply(17, to_int(r["n_with_crm_incl"]), "#,##0")
+                apply(18, "")
             row_i += 1
 
-    for col_idx, w in enumerate([8, 12, 12, 16, 12, 12, 14, 12, 18, 12, 14, 14, 14, 12, 16, 18, 18], start=1):
+    widths = [78, 8, 10, 10, 12, 12, 16, 12, 12, 14, 14, 16, 12, 14, 14, 14, 12, 16]
+    for col_idx, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = w
-    ws.freeze_panes = "E5"
+    ws.freeze_panes = "B5"
 
 
 def main() -> None:
