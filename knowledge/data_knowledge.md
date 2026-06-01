@@ -1102,16 +1102,111 @@ So the data flow is:
 
 **For Pass 24 / clean 3P attribution:** filter to 3P-only campaigns (NO DS13/19/38/46) AND filter impressions to `realtime_conquest_score != 10000` (RTC didn't fire). What's left is bidding driven purely by 3P + freshness + geo eligibility, no MM scoring contamination.
 
-### Fangorn raw-score → HHST score-band mapping (Ryan Kleck, 2026-06-01)
+### Fangorn raw-score → HHST score-band mapping (Ryan Kleck, 2026-06-01) — LOCKED LOGIC
 
-**Fangorn outputs continuous 0-1 raw scores. The downstream scoring job applies tier mapping** to translate Fangorn's output into the bidder's HHST score-band landscape (Max Reach / Mid / Peak / High Intent):
+**Fangorn outputs continuous 0-1 raw scores. The downstream scoring job applies tier mapping** based on (a) the Fangorn raw value and (b) the IP's membership in DS13 Bucket / Vertical and DS19 Keywords:
 
-1. **Fangorn raw score ≤ 0.8 → Max Reach / Mid bands** (lower part of distribution, 1-6665)
-2. **Fangorn raw score > 0.8 → "high intent"** which the scoring job further splits into **PP (6666-7900) and HI (8001-10000)** via linear mapping. The split point inside the high-intent range determines whether an IP lands in PP vs HI.
-3. **Fangorn rarely produces scores above ~0.95** — this is what produces the downward slope on the high-intent spikes. The two spikes in the Fangorn distribution histogram (at the PP and HI ranges) taper because raw Fangorn scores between 0.95 and 1.0 are uncommon.
-4. **The Fangorn distribution should "look exactly how Fangorn scores look"** — Ryan's framing. The shape of the PP + HI spikes IS the shape of Fangorn's raw 0.8-1.0 distribution, mapped into score-band space.
+```
+if Fangorn raw > 0.8:
+    if IP in DS13 (Vertical) ∩ DS19 (Keywords) → HI band (8000-10000)
+    elif IP in DS13 (Bucket/Vertical) but NOT in DS19 → PP band (6666-8000)
 
-**Key implication:** Fangorn doesn't directly assign IPs to PP vs HI. It outputs 0-1 raw scores; PP and HI are downstream tier labels applied by the scoring job. The "two spikes" pattern in the Fangorn-on distribution is the natural shape of Fangorn raw scores binned into Mid/PP/HI ranges.
+elif Fangorn raw 0.6-0.8:
+    → MI band (3334-6665), regardless of DS13/DS19 overlap
+
+else (no Fangorn score, or raw < 0.6, or no DS13/DS19 score):
+    → Max Reach band (1-3332). **Just a random number, NOT Fangorn-derived.**
+```
+
+**Critical clarifications from Ryan (2026-06-01):**
+
+1. **PP and HI are NOT Fangorn-internal concepts.** Fangorn outputs a single 0-1 raw score; the scoring job applies the PP/HI split based on DS13 Vertical ∩ DS19 Keywords overlap.
+2. **MI is the same band regardless of DS membership** — Fangorn raw 0.6-0.8 always maps to Mid Intent, whether the IP is in DS13/DS19 or not.
+3. **Max Reach is just a random number** — "no fangorn at all." Max Reach is the fallback for IPs without Fangorn scores OR with Fangorn scores < 0.6. The 1-3332 range has no scoring semantics.
+4. **Why the score-band distribution looks the way it does:**
+   - The Max Reach band (1-3332) is uniform and high-volume because it's the random fallback for many IPs.
+   - The Mid band (3333-6665) is graduated and represents the Fangorn 0.6-0.8 raw distribution.
+   - The PP band (6666-8000) is graduated and represents Fangorn raw > 0.8 + (Vertical AND NOT Keywords).
+   - The HI band (8000-10000) is graduated and represents Fangorn raw > 0.8 + (Vertical AND Keywords).
+   - The tail-off near 7900-8000 and 9900-10000 is because Fangorn rarely produces raw scores > 0.99.
+
+**Implication for analysis:**
+
+- An IP scored 1-3332 (Max Reach) is **not Fangorn-evaluated** — random assignment, no intent signal.
+- An IP scored 3333-6665 (Mid) IS Fangorn-evaluated with raw 0.6-0.8, regardless of which DS layers it sits in.
+- An IP scored 6666-8000 (PP) IS Fangorn-evaluated with raw > 0.8 and is in DS13 Vertical but NOT DS19 Keywords.
+- An IP scored 8000-10000 (HI) IS Fangorn-evaluated with raw > 0.8 and is in BOTH DS13 Vertical AND DS19 Keywords.
+
+### MM + 3P intersection mechanics — LOCKED LOGIC (Ryan Kleck + Venn diagram, 2026-06-01)
+
+**The critical structural insight:** when a buyer adds a 3P-include layer to an MM campaign (the majority of prospecting spend is this pattern), the bidder effectively **narrows MM** to the intersection of MM-scored IPs and 3P segment members.
+
+**Mechanically, step-by-step (with HHST > 0 — the standard production setting):**
+
+```
+1. MM campaign (DS13/19 in expression) → scoring pipeline scores IPs in DS13/19.
+   - IPs in DS13 ∩ DS19 → HI / PP band scores
+   - IPs in DS13 only → PP band scores
+   - IPs in DS19 only → MI band scores (or maybe PP, unclear)
+   - IPs in neither → Max Reach random
+2. Buyer adds 3P-include (DS17/18/35 in expression as positive clause).
+3. MemDB translates the expression into IP × campaign membership:
+   - With AND semantics: only IPs in (DS13/19 ∩ 3P) are included in the campaign membership.
+   - With OR semantics: IPs in DS13/19 ∪ 3P are all included.
+4. Bidder receives MemDB membership + scores for those IPs.
+5. With HHST > 0, bidder requires score ≥ HHST to bid:
+   - IPs in (DS13/19 ∩ 3P): scored (because in DS13/19) → eligible to bid based on score
+   - IPs in 3P only (not in DS13/19): NO SCORE → fail HHST → NOT bid on
+6. Net result: bidder bids on (DS13/19 ∩ 3P) IPs only.
+```
+
+**The Venn picture (Ryan's diagram, 2026-06-01):**
+
+```
+        ┌────────────────────┐
+        │  Bucket (DS13 T0)  │
+        │   ┌────────────┐   │     <- DS13 Vertical (T1) is a subset of Bucket (T0)
+        │   │  Vertical  │   │        Peak Performance = inside Vertical
+        │   │   ┌────────┼───┼────┐
+        │   │   │   HI   │   │    │ <- HI = Vertical ∩ Keywords
+        │   │   │        │   │ MI │
+        └───┼───┘        │   │    │
+            │  Keywords  │   │    │ <- MI = Keywords only (or partial overlap)
+            │  (DS19)    │   │    │
+            │  Max reach │   │    │
+            └────────────┘   │    │
+                             └────┘
+
+Add a 3P circle that overlaps Bucket/DS13:
+- Where 3P ∩ Bucket (DS13) → IPs are scored AND in 3P → bid on (red square area in Ryan's diagram)
+- Where 3P falls outside Bucket → IPs are in 3P but NOT scored → with HHST > 0, NOT bid on
+```
+
+**Plain-English consequence:**
+
+Adding 3P-include to an MM campaign **does not bring 3P-only IPs into bidding** (because they're unscored and HHST > 0 filters them out). It also doesn't expand the addressable pool. Instead, **3P narrows MM to the 3P-segment-intersected subset of MM-scored IPs**.
+
+So when buyers combine MM with 3P (which is the majority of prospecting spend per Pass 21):
+- They are not "expanding audience via 3P interest segment diversification."
+- They are using 3P as a **narrowing filter** on MM scoring.
+- The 3P segment's quality determines **which slice of MM-scored IPs ends up being bid on**.
+- A bad 3P segment narrows MM to a subset that may be no more valuable than (and could be less valuable than) the full MM-scored audience.
+
+**Implication for TI-999 curation case (LOCK FOR DECK):**
+
+This is the strongest argument for 3P-segment curation MNTN can make:
+1. Buyers think they're combining MM with interest segments to expand or diversify.
+2. Mechanically, 3P-include just narrows MM scoring to the 3P-intersected subset.
+3. **3P quality directly determines MM delivery quality** because 3P decides which MM-scored IPs the bidder sees.
+4. Curation / ranking helps buyers pick 3P segments that intersect with HIGH-VALUE MM-scored IPs — the cohort that performs best.
+5. TI-956's per-segment scoring framework is the operational fix.
+
+**Exception cases worth flagging:**
+
+- If HHST is NOT set (or set to 0): bidder ignores scores → 3P expands MM by bringing unscored 3P-only IPs into bidding. This is the bad pattern — unscored IPs perform worse, and the buyer is unknowingly broadening to a low-quality audience.
+- The mix of HHST-set vs HHST-not-set across MM+3P campaigns determines whether 3P is "narrowing" or "expanding" in practice. We don't yet know the HHST distribution across MM+3P campaigns. Pending investigation.
+
+**Diagram source:** stored in `tickets/ti_999_interest_segment_sizing/artifacts/` once saved (Ryan's hand-drawn Venn, sent in Slack 2026-06-01).
 
 ### Why the Fangorn distribution shape isn't smooth (locked explanation)
 
