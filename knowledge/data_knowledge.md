@@ -1064,6 +1064,36 @@ A daily distribution monitor emails the latest scoring landscape to `targeting-i
 - Most of MNTN's score volume (~270B of ~443B) is Non-Fangorn S1+S2. The "Mid" bucket (3333-6665) is the dominant graduated range for Non-Fangorn.
 - For 3P-only campaigns at S3, scoring is uniformly 10,000 — no scoring variance to confound 3P measurement at S3.
 
+### Fangorn audience-overlay mechanic — audience vs audience_segments distinction (Ryan Kleck, 2026-06-01)
+
+**When MNTN switches an advertiser to Fangorn, the change uses the "audience overlay" feature.** Per Ryan Kleck (2026-06-01):
+
+> "when we switch someone to Fangorn we use the 'audience overlay' feature that changes their audience expression in the audience_segments table, but it does NOT change the base expression in audience table... so those will still have DS13 in audience table (if they have peak performance on)"
+
+**Implication: two layers of expression state for Fangorn-on advertisers:**
+
+| Table | Contains | What it shows for a Fangorn-on advertiser |
+|---|---|---|
+| `audience.audiences` (template / base) | The buyer's configured audience template | Still references **DS13 (Vertical)** and **DS19 (Keywords)** — the buyer's actual MM 2.0 config |
+| `audience.audience_segments` (active / bidder-facing) | The compiled, overlaid expression the bidder sees | References **DS46** (Fangorn scoring) as the active overlay |
+
+**So when we see DS46 in audience_segments without DS13/DS19, the advertiser is STILL using DS13/DS19-style targeting at the base layer.** The Fangorn overlay just tells the scoring pipeline to use Fangorn instead of the legacy scorer. The scoring substrate (which IPs are evaluated) is still DS13 vertical + DS19 keywords from the base configuration.
+
+**Practical implications for TI-999:**
+
+- **Pass 21+ "MM-touching" buckets** (which match on DS13/19/38/46 in audience_segments) capture campaigns where DS46 appears via Fangorn overlay AS WELL AS campaigns with DS13/DS19 directly. Both are MM; the difference is scoring algorithm (batch MM scorer vs Fangorn).
+- **A campaign with DS46 alone in audience_segments is still effectively running MM** because the underlying DS13/DS19 config in the `audiences` base table is what gets scored. Fangorn replaces the scoring algorithm, not the audience substrate.
+- **Confirming the locked logic** from earlier: scoring requires DS13 or DS19 in the EXPRESSION (whether base or overlaid). Fangorn-on campaigns have DS13/DS19 in `audiences` even if their `audience_segments` row shows DS46 instead.
+- **DS38 status:** Ryan not sure about DS38 (BUK) but per Alex Knorr (2026-05-29) BUK augments DS19 rather than replacing it — same logic likely applies.
+
+**Why this matters for "Are DS38/DS46 MM?":**
+
+Yes. Both are MM in the sense that:
+- DS46 (Fangorn) is the Fangorn scoring overlay applied on top of an existing DS13/DS19 MM 2.0 configuration. The campaign is MM with Fangorn scoring.
+- DS38 (BUK) is the keyword pipeline replacement — augments DS19, doesn't replace MM. Still MM.
+
+The "MM" group `{DS13, DS19, DS38, DS46}` is correct as the union of all things that signal "this is an MM 2.0 campaign," regardless of which scoring algorithm is active.
+
 ### Scoring pipeline scope — which campaigns get scored at all (Ryan Kleck, 2026-06-01)
 
 **Scoring happens at the expression level, gated on DS reference:**
