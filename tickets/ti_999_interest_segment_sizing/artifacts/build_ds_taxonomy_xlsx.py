@@ -28,6 +28,7 @@ PASS_NOTE = (
 )
 ANOMALIES_CSV = OUTPUTS / "ti_999_pass20_anomalies_2026_05_29.csv"
 POLARITY_KPI_CSV = OUTPUTS / "ti_999_pass22c_polarity_aware_buckets_2026_05_29.csv"
+GEO_RESTRICTION_CSV = OUTPUTS / "ti_999_pass24_geo_restriction_2026_06_01.csv"
 OUT_XLSX = OUTPUTS / "ti_999_ds_taxonomy_2026_05_29.xlsx"
 
 # Locked taxonomy assignments (post-Pass 18, post-Jordan/Sean clarifications).
@@ -417,6 +418,76 @@ def write_polarity_kpi_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "B5"
 
 
+def write_geo_restriction_sheet(wb: Workbook) -> None:
+    if not GEO_RESTRICTION_CSV.exists():
+        return
+    ws = wb.create_sheet("Pass 24 — Geo restriction")
+
+    title = "Pass 24 — bucket KPIs split by geo restriction (Alyson + Toph ask, 2026-06-01)"
+    ws.cell(row=1, column=1, value=title).font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=11)
+
+    note = (
+        "geo_restricted = expression has explicit location_ids[] in the geos clause (buyer-picked specific locations). "
+        "geo_broad_or_default = expression has a geos clause but no explicit location_ids[] (likely country-level / wildcard). "
+        "Toph's hypothesis: MM+3P+geo-restriction audiences perform poorly. Empirically: this IS the biggest single audience-targeted cohort ($5.62M / 17.6% of prospecting spend), but its cost-per-conv ($65.54) is actually BETTER than MM-only with geo restriction ($93.53). Geo restriction itself is the bigger drag — geo-broad versions consistently outperform geo-restricted across MM, MM+3P, and Geo-only. TI-956 curation lands at maximum leverage within this cohort."
+    )
+    ws.cell(row=2, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=11)
+    ws.row_dimensions[2].height = 90
+
+    headers = [
+        "Bucket", "Geo status", "n_campaigns", "n_advertisers", "Spend (30d, $M)", "% total spend",
+        "CVR (ratio)", "IVR (ratio)", "CTR (ratio)", "CPM ($)", "Cost/conv ($)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.fill = HEADER_FILL
+        c.font = HEADER_FONT
+        c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[4].height = 30
+
+    fill_largest = PatternFill("solid", fgColor="FFF9C4")  # the headline MM+3P+geo-restricted row
+    fill_default = None
+
+    with GEO_RESTRICTION_CSV.open() as f:
+        reader = csv.DictReader(f)
+        row_i = 5
+        for r in reader:
+            bucket = r["bucket"]
+            geo_status = r["geo_status"]
+            is_headline = bucket == "MM + 3P-incl" and geo_status == "geo_restricted"
+            fill = fill_largest if is_headline else fill_default
+
+            def apply(col, value, fmt=None):
+                cell = ws.cell(row=row_i, column=col, value=value)
+                if fill:
+                    cell.fill = fill
+                if fmt:
+                    cell.number_format = fmt
+                return cell
+            apply(1, bucket)
+            apply(2, geo_status)
+            apply(3, to_int(r["n_campaigns"]), "#,##0")
+            apply(4, to_int(r["n_advertisers"]), "#,##0")
+            apply(5, to_float(r["spend_30d_M"]), '"$"#,##0.000')
+            apply(6, to_float(r["pct_total_spend"]), "0.0")
+            apply(7, to_float(r["cvr"]), "0.000000")
+            apply(8, to_float(r["ivr"]), "0.000000")
+            apply(9, to_float(r["ctr"]), "0.000000")
+            apply(10, to_float(r["cpm_dollars"]), '"$"#,##0.00')
+            cpc = r.get("cost_per_conv_dollars", "")
+            if cpc and cpc.strip():
+                apply(11, to_float(cpc), '"$"#,##0.00')
+            else:
+                apply(11, "")
+            row_i += 1
+
+    for col_idx, w in enumerate([34, 22, 14, 16, 18, 14, 14, 14, 14, 12, 16], start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+    ws.freeze_panes = "C5"
+
+
 def main() -> None:
     rows = load_per_ds_rows()
     wb = Workbook()
@@ -424,6 +495,7 @@ def main() -> None:
     write_group_summary_sheet(wb, rows)
     write_pass_sheet(wb)
     write_polarity_kpi_sheet(wb)
+    write_geo_restriction_sheet(wb)
     write_anomalies_sheet(wb)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
