@@ -1027,6 +1027,43 @@ Reference diagram: `documentation/architecture/audience_intent_scoring.png`
 
 **Once PP (8000) goes live**, per-tier incrementality analysis becomes possible: compare HI (10000) vs PP (8000) vs MI (3333-6665) holdout/targeted visit rates.
 
+### Daily Prospecting Scores Distribution Monitor (GCS, PROD)
+
+A daily distribution monitor emails the latest scoring landscape to `targeting-infrastructure@mountain.com` and `machine-learning-squad@mountain.com`. Subject: `MNTN Prospecting Scores Distribution GCS - YYYY-MM-DD (PROD)`. Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/`. Sample PDF saved at `tickets/ti_999_interest_segment_sizing/artifacts/ti_999_prospecting_scores_distribution_gcs_2026_05_31_PROD.pdf`.
+
+**Headline (2026-05-31 snapshot — empirically locked):**
+
+| Cohort | Funnel Level | Count of Scores | Distinct Scores | Distinct Campaigns | Distinct Advertisers |
+|---|---|---:|---:|---:|---:|
+| Total | — | 443.6B | 10,000 | 6,536 | 1,352 |
+| Fangorn-on | 1 (S1) | 23.2B | **10,000** (graduated) | 463 | 292 |
+| Fangorn-on | 2 (S2) | 15.5B | 9,999 | 321 | 209 |
+| Fangorn-on | 3 (S3) | 15.7B | **1** (flat 10,000) | 322 | 209 |
+| Fangorn-on | 4 (S4) | 0 | 0 | 0 | 0 |
+| Non-Fangorn | 1 (S1) | 154.3B | **6,667** (discrete buckets) | 2,171 | 1,060 |
+| Non-Fangorn | 2 (S2) | 118.8B | 6,667 | 1,652 | 777 |
+| Non-Fangorn | 3 (S3) | 116.1B | **1** (flat 10,000) | 1,607 | 777 |
+| Non-Fangorn | 4 (S4) | 0 | 0 | 0 | 0 |
+
+**Key findings (lock these — they answer many TI-999 questions):**
+
+1. **Fangorn-on vs Non-Fangorn produce structurally different score distributions:**
+   - **Fangorn-on**: scores span the full continuous range 1-10,000 (10,000 distinct values). Distribution is concentrated below ~3300 (Max Reach floor at ~48M per bucket) then ramps down through Mid / Peak / High.
+   - **Non-Fangorn**: only 6,667 distinct scores — discrete buckets dominate. Volume concentrates at **8000 (Peak)** and **10,000 (High)** as point masses, plus graduated Max Reach (1-3332) and Mid (3333-6665). High = ~225M per FL1 bucket, Mid block ~100M per bucket.
+2. **S3 funnel level flattens to a single score of 10,000** for BOTH Fangorn-on and Non-Fangorn — no graduated scoring at S3. S3 is retargeting / down-funnel; the bidder doesn't differentiate within it.
+3. **S4 has zero scores** for both cohorts — S4 doesn't use `household_score` at all (likely pixel-exclusion-driven retargeting only).
+4. **Fangorn rollout = ~22% of S1 advertisers** (292 of ~1,352 distinct advertisers total).
+5. **Intent tier ranges (locked from this monitor):**
+   - **High Intent**: 8001-10000 (with 10000 as a discrete point mass for Non-Fangorn)
+   - **Peak**: 6666-7900 (with 8000 as discrete point mass for Non-Fangorn — note 8000 sits *between* Peak and High in this monitor)
+   - **Mid**: 3333-6665
+   - **Max Reach**: 1-3332
+
+**Implication for TI-999 3P-performance work:**
+- 3P-only baseline campaigns may be Fangorn-on OR Non-Fangorn. Performance will be affected by the underlying score distribution. **Segment the 3P-only baseline by Fangorn status** when comparing CVR / IVR.
+- Most of MNTN's score volume (~270B of ~443B) is Non-Fangorn S1+S2. The "Mid" bucket (3333-6665) is the dominant graduated range for Non-Fangorn.
+- For 3P-only campaigns at S3, scoring is uniformly 10,000 — no scoring variance to confound 3P measurement at S3.
+
 ### Intent Tier Thresholds (Prospecting Scoring Pipeline)
 Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` — daily per IP/advertiser/campaign. Scores retained only **35 days** in active storage.
 
