@@ -112,6 +112,13 @@ General knowledge about MNTN as a business — products, strategy, org structure
 - **Alex Bloore** — VP Engineering. Covering product leadership for targeting during GPM search (alongside Mike Dolt and Kale). Approved Mike's Q2 roadmap ("Mike, you killed it").
 - **Mike Dolt** — Acting as himself + Ellison + RTPM for Q2 roadmap/product. Covering product leadership for targeting during GPM search (alongside Alex Bloore and Kale). Presented Q2 Targeting Roadmap (2026-04-17).
 
+### Empirical Incrementality Lift (Alyson Lefkowitz to Malachi, 2026-06-01)
+
+- **MNTN's true causal incremental lift is < 1-2% across the board.** Per Alyson: "true causal incremental lift was like... actually less than 1% across the board most of the time," with a typical range up to ~2% on average.
+- **Retargeting gets ~20% lift on average** — order of magnitude higher than prospecting.
+- **Implication:** because MNTN doesn't have rich identity infrastructure, the prospecting system ends up scoring people who would have converted anyway (effectively retargeting). The incremental contribution is small even when targeting is well-tuned.
+- **Product direction (Alyson, 2026-06-01):** rather than forcing one optimization target, MNTN will likely offer **performance marketing vs incremental marketing as an explicit buyer choice.** Pure incremental ("don't target any IP that has had a site visit ever") would hurt performance but maximize incrementality; pure performance keeps the current scoring stack. The buyer picks.
+
 ### Strategic Direction Shift (Kale, 2026-03-31)
 - **Incrementality is the new north star for targeting.** Kale is sharpening the TI team focus: Fangorn and prediction models will narrow toward incrementality, not just intent/ROAS optimization.
 - **Rationale:** Purely exploitative optimization (targeting highest-intent users) hurts incrementality — those users are already targeted by Google/Meta, so MNTN's incremental lift looks weak. The system needs exploration (multi-armed bandit thinking) alongside exploitation.
