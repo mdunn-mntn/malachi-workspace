@@ -1193,9 +1193,86 @@ Per Pass 10's CVR quintile ranking of 1,005 LiveRamp dscids: for each campaign i
   `sum_by_campaign_by_day` (honor staleness lag).
 - **Active campaign** = had ≥1 impression in the window.
 
+### Finding 16 (2026-06-01) — Pass 27-33: locked permutation taxonomy + per-pattern TI-956 application logic
+
+**Outcome:** the buyer-expression permutation matrix is now collapsed to a canonical 8-axis taxonomy (MM, 3P-AND-incl, 3P-AND-excl, 3P-OR-incl, CRM-AND-incl, CRM-AND-excl, CRM-OR-incl, GEO-NARROW-incl). Two geo axes were dropped as not meaningful:
+- `GEO-BROAD-incl` (US-only is the default — we only target US today)
+- `GEO-NARROW-excl` (small carve-out, doesn't change addressable audience)
+
+Both decisions are durable rules captured in memory (`feedback_us_only_no_geo_broad_axis.md`, `feedback_geo_narrow_excl_not_meaningful_axis.md`).
+
+**Passes that landed the taxonomy:**
+- **Pass 26** (`queries/ti_999_pass26_or_vs_and_include.sql`) — JS UDF classifies MM+3P-incl campaigns as OR-include (theater) vs AND-include (real narrowing) via LCA walk of the expression tree.
+- **Pass 27** (`queries/ti_999_pass27_mm_and_or_split.sql`) — splits MM-touching campaigns by AND-include / AND-exclude / OR-include-only.
+- **Pass 28-30** (`queries/ti_999_pass28-30_*.sql`) — incremental refinement of the geo axes; eventually collapse GEO-BROAD-incl.
+- **Pass 32** (`queries/ti_999_pass32_perm_matrix_geo_narrow_incl_only.sql`) — **CANONICAL** primary permutation view. 93 distinct observed permutations across 11,888 prospecting campaigns / $32.16M / 30d.
+- **Pass 33** (`queries/ti_999_pass33_within_advertiser_collapsed_taxonomy.sql`) — within-advertiser KPI delta vs pure-MM baseline for each pattern, decomposing audience effect from selection effect.
+
+**Headline pattern shares (Pass 32, 30d ending 2026-05-28):**
+
+| Pattern | $M | % spend |
+|---|---|---|
+| MM | $4.38 | 13.6% |
+| MM + 3P-OR-incl + GEO-NARROW-incl | $3.54 | 11.0% |
+| MM + CRM-AND-excl | $3.44 | 10.7% |
+| (no buyer targeting — geo + bid mechanics only) | $3.10 | 9.7% |
+| GEO-NARROW-incl (no buyer targeting) | $2.19 | 6.8% |
+| MM + GEO-NARROW-incl | $1.62 | 5.1% |
+| MM + 3P-OR-incl | $1.57 | 4.9% |
+| MM + 3P-OR-incl + CRM-AND-excl | $1.55 | 4.8% |
+| MM + CRM-AND-excl + GEO-NARROW-incl | $1.20 | 3.7% |
+
+**Within-advertiser findings (Pass 33):**
+
+| Pattern | n_advertisers_w/_MM_baseline | within CVR delta | cross CVR delta | Verdict |
+|---|---|---|---|---|
+| (no buyer targeting) | 368 (40.0%) | +4.5e-5 | +6.3e-5 | real_audience_effect, but effectively zero — **pure MM doesn't measurably beat 'no targeting' within-advertiser** |
+| MM + GEO-NARROW-incl | 17 (4.8%) | -3.3e-5 | -2.05e-4 | mixed — narrow geo doesn't itself hurt; cross gap is selection |
+| MM + 3P-OR-incl (theater) | 19 (9.0%) | -8.08e-4 | -1.4e-4 | real_audience_effect — **theater hurts CVR within-advertiser even though supposedly bidder-inert** (worth investigating: HHST not always set? selection of weak campaigns?) |
+| CRM-AND-incl | 11 (15.9%) | +1.15e-4 | +7.04e-3 | mostly_selection — **apparent CRM-include lift is selection bias** |
+
+**Two findings to surface in any TI-999 / TI-956 narrative:**
+1. **MM may not add measurable value over no-targeting within-advertiser** (within delta +4.5e-5 on 368 overlapping advertisers). Load-bearing claim about MM marginal incrementality; needs replication with wider lookback.
+2. **MM + 3P-OR-incl theater shows a within-advertiser CVR hit** despite theory saying it's bidder-inert. Either HHST is sometimes unset in practice (RTC pipeline note: HHST > 0 is the standard production setting per Ryan, but not universal), or the OR-include changes some downstream behavior (audience-size telemetry feedback into bidder?), or it's campaign-selection within an advertiser. Worth a separate probe.
+
+**Sibling Slack thread (2026-06-01, Ryan Kleck):** confirmed the Fangorn audience-overlay mechanic and the per-advertiser `vertical_data_source` switch (`audience.advertiser_configurations.vertical_data_source = 46` for Fangorn-on; 364 advertisers / 2.56% currently). Open question on what unscored IPs look like in bid logs — Ryan unsure. Empirical probe (this session): in `bidder_bid_events`, `household_score` is 99.738% = 0, 0.262% = negative, never positive. HHST = 0 in 100% of rows. The actual 0-10000 MM/Fangorn scores aren't surfaced in `bidder_bid_events` — they're consumed upstream. See `knowledge/data_knowledge.md` § "Bidder-side score logging — empirical finding".
+
+### TI-956 implementation plan — per-pattern segment application logic
+
+Full design doc: `artifacts/ti_956_per_pattern_segment_application.md`. Highlights:
+
+| Campaign pattern | Per-segment scoring application |
+|---|---|
+| **3P-only** (no MM, may have GEO/CRM) | Apply scoring fully — 3P drives delivery |
+| **MM + 3P-OR-incl** (theater) | UI hygiene — rank top by SIZE descending, no delivery effect |
+| **MM + 3P-AND-incl** (real narrowing) | Show BEST audiences only — buyer picks the highest-quality slice |
+| **MM + 3P-AND-excl** (carve-out) | Show WORST audiences only — buyer excludes the lowest-quality slice |
+| **MM + CRM-AND-incl** | Same as 3P-AND-incl logic — narrow to best customer slice |
+| **MM + CRM-AND-excl** | Standard customer suppression — surface full CRM, no ranking |
+| **MM + CRM-OR-incl** | Same as 3P-OR-incl — UI hygiene only |
+
+**Open questions for Alex + Alyson (in the design doc):**
+1. Quality metric: per-advertiser, global, or hybrid?
+2. Sample-size floor for per-advertiser per-segment scoring?
+3. Cold-start handling for new segments?
+4. Where does the ranked list surface in UI?
+5. HHST visibility — per-campaign HHST currently unknown. Until probed, assume HHST > 0 dominates (Rule 2 applies as theater).
+
+### Methodology rules added in Finding 16
+
+- **Permutation matrix:** only `MM`, 3P × 3 (AND-incl/AND-excl/OR-incl), CRM × 3 (AND-incl/AND-excl/OR-incl), `GEO-NARROW-incl`. 8 axes. Drop `GEO-BROAD-incl` (US default) and `GEO-NARROW-excl` (small carve-out).
+- **Within-advertiser deltas:** require ≥5 advertisers running both patterns to interpret. 30d window is underpowered for many pairs; 60-90d recommended for follow-up runs.
+- **TI-956 segment quality computation:** must use the operative-targeting subset (pure-3P or MM+3P-AND-incl impressions only) — NOT MM+3P-OR-incl (theater inflates the segment's apparent quality with MM-only KPIs).
+
 ## 5. Solution
 
-_Pending._
+The TI-999 sizing analysis was the precondition for TI-956 build. With Findings 1-16 landed:
+1. The 3P interest-segment portfolio is sized at $103M/yr exposure (Findings 1-11).
+2. The buyer expression patterns are mapped and categorized into a locked 8-axis taxonomy (Finding 16, Pass 32).
+3. The bidder mechanics behind each pattern are now empirically grounded (Findings 14-16, locked with Ryan/Matt/Sean/Zach).
+4. The per-pattern TI-956 application logic is specified (`artifacts/ti_956_per_pattern_segment_application.md`).
+
+TI-999 transitions to "design locked, handed off to TI-956 build." Open items (§8) tracked separately.
 
 ## 6. Questions Answered
 

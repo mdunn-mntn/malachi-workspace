@@ -1280,6 +1280,26 @@ This makes HHST the **most important campaign-level scoring switch** — far mor
 
 **Where HHST lives in the schema:** unconfirmed. Likely a campaign/advertiser config table or a bidder runtime setting. Ryan's pointer for finding it: lookup bids for the campaign_id in `bid_events` and check whether the threshold is set on the bidder side.
 
+### Bidder-side score logging — empirical finding (2026-06-01)
+
+**Where the 0-10000 MM/Fangorn scores DON'T live: `silver.logdata.bidder_bid_events`.**
+
+Empirical probe on `bidder_bid_events` for 2026-05-28 (33.1B rows):
+- `household_score`: 99.738% = 0, 0.262% = negative. **Zero positive values.** No 0-10000 range observed.
+- `advertiser_household_score`: same exact split — 99.738% = 0, 0.262% = negative.
+- `conquest_score`: same exact split — 99.738% = 0, 0.262% = negative.
+- `household_score_threshold` (HHST): **100% = 0.** Every row.
+
+The three score fields have identical distributions, suggesting they're either copies of each other or all use 0 as a "not populated" placeholder.
+
+**Implications:**
+1. **The actual 0-10000 MM/Fangorn scores aren't surfaced in `bidder_bid_events`.** Either they're consumed upstream (in IPDSC / scoring pipeline / `augmentor_log`) and only a pass/fail boolean propagates to the bid-event row, OR `bidder_bid_events` is a downstream-filtered view that drops the raw score post-decision.
+2. **HHST = 0 in `bidder_bid_events` is the "applied" value the bidder used, not the configured value.** The configured HHST (per campaign/advertiser) is elsewhere; by the time we see it here, every row reads 0.
+3. **For the "what does no score look like in logs?" question** (Ryan Kleck didn't know, 2026-06-01): in `bidder_bid_events` the answer is **`household_score = 0` (NOT NULL)**. Per user expectation, the 0.262% negative values are likely `-1` sentinel for explicitly-unscored IPs — needs follow-up to confirm.
+4. **MM scoring monitor / Pass 21 / Pass 26 bucket math is unaffected** — none of that work depends on bidder_bid_events scores. The IPDSC scoring pipeline and the GCS prospecting scores monitor are the correct sources for the 0-10000 distributions.
+
+**Open question (worth probing later):** which table actually carries the 0-10000 scores at bid time? Candidates: `augmentor_log`, `bid_logs`, `cost_impression_log.model_params`, or per-IP scoring snapshots in `prospecting_intent_daily`. The first two have 10-day / 90-day TTLs respectively.
+
 ### Intent Tier Thresholds (Prospecting Scoring Pipeline)
 Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` — daily per IP/advertiser/campaign. Scores retained only **35 days** in active storage.
 
@@ -1839,6 +1859,8 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 ```sql
 SELECT advertiser_id FROM `dw-main-bronze.integrationprod.audience_advertiser_configurations` WHERE vertical_data_source = 46;
 ```
+
+**Empirical count (2026-06-01):** 364 advertisers (2.56% of 14,196 total configs) have `vertical_data_source = 46`. The remaining 13,832 (97.44%) have NULL = default DS13 (Vertical) substrate. Most of the 14k configs are inactive/historical accounts; the 364 corresponds roughly to "Fangorn-on advertisers across all stages." Per prior memory snapshot, ~22% of S1 advertisers are on Fangorn → 364 is in the right ballpark for the active subset.
 
 **Note (corrected 2026-05-05):** `tpa.fangorn_advertiser_inclusion` IS the source-of-truth inclusion list — but it lives in TPA-service Postgres, NOT in BQ. Schema: `(advertiser_id, fangorn_advertiser_inclusion_date)`. The `_date` column is the planned PT flip date. Joins to `audience.advertiser_configurations` (also Postgres). Updates happen when Matt/Ryan run a rollout — Ryan's `select ff.advertiser_id, cc.vertical_data_source FROM tpa.fangorn_advertiser_inclusion ff JOIN audience.advertiser_configurations cc ON ff.advertiser_id = cc.advertiser_id WHERE fangorn_advertiser_inclusion_date = 'YYYY-MM-DD'` is the canonical Postgres-side query. The BQ-observable effect is `audience_advertiser_configurations.vertical_data_source = 46`, which propagates after the nightly household-scoring run completes (midnight-1am PT). Fangorn-targeted bidding starts the next morning.
 
