@@ -1,0 +1,207 @@
+[00:00] Fine. Okay, cool. Let me know if my audio cuts out. No, you're good. You're good.
+[00:03] Um, you are correct in the context of a, a, um, mountain mash campaign. Yes. Mountain
+[00:14] mash campaign, them adding in a third party category will only actually increase their
+[00:20] odd targetable, or I should say usable audience size by the number of IPS that actually have a
+[00:26] scored you're 100 right there um that's why they added the concept of peak performance because what
+[00:34] peak performance is is doing is literally just including all of their scorable ips right now in
+[00:43] the context of non-mountain match campaigns a standard prospecting campaign that is not mountain
+[00:49] match there is no scoring threshold right and so for those campaigns it's totally fine right yes
+[00:55] so like the the guidance of expanding their audience via third-party categories is kind
+[01:04] of from a buy-on area before peak performance because the whole goal of that was to try to
+[01:10] add in ips and a subset of those ips would have scores and so by adding in
+[01:18] those catch-all buckets you'd be expanding the ones with scores like little by little
+[01:24] not ideal. And that's why we stopped doing that pattern and changed more towards the
+[01:32] peak performance model. Yeah. And what I was thinking though, is about the data sources,
+[01:37] is that even if they were to add those third-party audiences, they should already,
+[01:40] all the scored IPs that are possible should already be stored in data source 13 and 19.
+[01:45] Right. That's correct. Right. Okay. So here's where I'm, this is where I don't understand part.
+[01:49] And this is where I was thinking about the optimization, right? So this is where I'm
+[01:52] thinking 80 so let's let's actually get to the number so we can see the scale here um i think
+[01:58] it's this one yeah okay so the majority don't have mountain match campaigns because the majority of
+[02:04] small business just use geo only or something like that crm but of the ones that we are actually
+[02:09] controlling right it it accounts for 80 oh this is not the right one you just gotta take my word
+[02:18] i'll show you it's but basically of the mountain match campaigns that have like how many different
+[02:22] you splits, you know, between inclusion or exclusion. Um, this inclusion counts for 80%
+[02:27] of those mountain match campaigns. So it's like not a small amount. It's like 80, 800 and 900
+[02:31] campaigns running at one time, um, have mountain match with an, with an, or, um, inclusion.
+[02:37] What I was thinking is that since those don't matter, um, I'm, I'm not exactly sure what point
+[02:45] we are storing those IPs,
+[02:47] but if somebody adds it to their audience expression,
+[02:52] I thought that maybe we would have to store somewhere
+[02:55] all of those IPs in the third-party segment.
+[02:57] But I was thinking,
+[02:58] if we know that it's an or inclusion
+[03:00] and that doesn't make any difference anyways,
+[03:03] for Mountain Match campaign specifically,
+[03:05] we don't really need to even keep track
+[03:08] of those third-party segments,
+[03:10] I guess is what I'm saying.
+[03:11] Oh, I get what you're getting at.
+[03:12] Yeah.
+[03:13] um so it depends where it's stored because if it's a caching thing and we have to store that
+[03:17] at all time for every single mountain match campaign that's just a lot of extra ips because
+[03:21] big reason that people are doing this is that they only have maybe a million mountain match
+[03:25] campaigns so they add all these other ones their their size goes to like 20 million or 30 million
+[03:29] and they go oh that's great well i was just want to make sure we're not storing 20 to 30 million
+[03:33] ips when we don't need to so we do and there's one other part um that's not being talked about
+[03:40] which is the max reach, we do need to occasionally open up to max reach,
+[03:45] which is the rest of those IPs that are not data source searching.
+[03:50] We do 100% buy for them, right?
+[03:53] You're correct in that we would not buy for them
+[03:55] until we open them up to like max reach,
+[03:58] but those fall in the max reach unscored category.
+[04:02] So we do open up to them eventually in some scenarios,
+[04:05] and they do need to be there when we need to.
+[04:09] Okay.
+[04:10] so just in the case of the max yeah the max reach because then we just start we don't care if it's
+[04:15] unscored it's such a small percentage though i think it's very very rare that we hit it i did
+[04:20] it a while back it's like a very small percentage because they have to have a pretty small audience
+[04:25] size to begin with to exhaust all the ones that they have and yeah unless they have incredible
+[04:29] spend they're not doing that so the complexity of trying to add in are they hitting budget
+[04:38] into audience generation is not worth it yeah well my process is that like if i understand
+[04:48] correctly you can correct me if i'm wrong but in the process of like the bitter and all this stuff
+[04:54] that the most time-consuming thing is going to be the connection to the database or something
+[05:00] like that right the latency of having to so i think how it works right is it caches all the
+[05:07] ips they've seen before right and so if we like i guess i mean there's lots of different ways that
+[05:13] it's tackled but how i understand how they deal with this is that it's not so much the actual
+[05:18] processing the ips but it's going and getting those ips and so you have to you basically how
+[05:23] it works is you cache ips that you see because they're more likely to be referenced more often
+[05:29] and then so there's less like i guess fetching the data and getting it back on net new but
+[05:34] um i guess that was my thought process that if we don't have to store these at all but that's
+[05:41] the part where i'm not actually sure how membership db is dealing with cash and stuff like that so
+[05:46] db memdb sends the data down and it's ip does the campaign association you they the bidder team then
+[05:55] does put that data into a database you're 100 right there they do keep a hot cache i would
+[06:02] assume in redis in between although the database that they're using is also pretty fast so it's
+[06:07] like like five millisecond look up or less in terms of pulling out those segments you're right
+[06:14] and that is a one of the more time-consuming pieces absolutely um the reduction in size in
+[06:22] general is good yes absolutely but the thing is is like when we pull that generate that data
+[06:31] it takes time we're not going to be able to update and expand that fast enough in the scenario where
+[06:40] they need to spend faster so it's worth it to spend the extra money to make sure for the cash
+[06:46] because at that point relatively speaking not that much more to store
+[06:53] or even in terms of latency and network transfer at that point.
+[07:01] You're 100% right that it is a threat to pull on
+[07:04] when we have optimized other things
+[07:07] and gotten through a lot of other optimizations that needed to happen.
+[07:12] There's a lot more low-hanging fruit in relation to it
+[07:14] than trying to cut that specific piece down
+[07:17] because they are still smaller
+[07:19] than what you think.
+[07:24] It cuts it down,
+[07:26] but not in such a manner
+[07:28] that it really affects things too dramatically.
+[07:32] But it's a good thought process.
+[07:33] You're 100% pulling on the right thread
+[07:35] in relation to like,
+[07:36] yes, that is absolutely something
+[07:38] that could be optimized more.
+[07:39] Okay.
+[07:40] Well, could you,
+[07:41] if you wouldn't mind explaining to me,
+[07:43] so the way membership DB,
+[07:44] like we are do we do it once a day or something where it goes and gets the data that it needs
+[07:51] it's in membership db and then from that point the the bidder references that and then that's
+[07:56] when they deal with the caching and so they're reading for membership db and then they have some
+[08:00] sort of cash like so i'm just memberships pumps the state of a campaign segment out
+[08:10] it does not get queried directly by the bidder that is one key pieces right there is a separation
+[08:20] in terms of the teams and in terms of the tech tech stack and everything like
+[08:28] targeting sends the state of an ip in terms of the segments that it is in or all the campaigns
+[08:36] anytime there's an update for that IP, right?
+[08:40] Whether or not it's a impression that's seen
+[08:43] or a pixel event or et cetera,
+[08:46] that'll generate event.
+[08:47] We send the resulting set of segments
+[08:51] for that IP downstream.
+[08:53] Same for consuming the TPA export.
+[08:57] And then we also do this once every four hours
+[08:59] in case a new audience is created
+[09:01] or an audience is turned off
+[09:04] for an audience is dramatically changed, right?
+[09:07] But for our campaign changes,
+[09:10] like we need to reprocess the state of many IPs.
+[09:14] So we just do it all in one go.
+[09:16] What was that first step table you were talking about?
+[09:19] Or is that stored?
+[09:20] Like, is that just like a BigQuery?
+[09:23] No, this is actually membership DB itself, right?
+[09:26] Like it stores its own state.
+[09:28] The TPA export comes from BigQuery.
+[09:31] Real-time streaming data eventually makes its way
+[09:33] into BigQuery, but it goes into MemDB in parallel.
+[09:38] MemDB sends the state to Bitter.
+[09:42] That is the Tmall segment update stuff.
+[09:46] And then that is what Bitter caches.
+[09:49] And then Bitter goes to its own database
+[09:51] to reference those caches.
+[09:53] Gotcha.
+[09:53] So would I be incorrect in saying that membership DB
+[09:56] keeps a record of all possible segments?
+[10:00] it doesn't actually ever store
+[10:03] the IP to segment mapping
+[10:07] actually
+[10:08] it sends to them
+[10:11] it evaluates the expressions
+[10:13] it figures out what that state should be
+[10:15] at that point in time for the IP address
+[10:17] and it sends that data down
+[10:20] but it doesn't actually store it
+[10:21] it doesn't actually need to
+[10:23] right now
+[10:25] okay
+[10:27] if it did store it
+[10:30] would only store it in the context of okay now i know what delta to essentially send downstream
+[10:35] it's a whole other conversation is kind of going on again right now but that's okay the downstream
+[10:41] typically has a hard time adhering to deltas okay so i guess the only thing that i'm thinking about
+[10:50] is that at all time i know that tmall right should have every single segment even if it's not being
+[10:57] use? Because I can think about this, like LiveRamp's got 260,000 audience segments.
+[11:03] Are we just-
+[11:03] That's not Tmall. Now, Tmall is our segments to campaigns, segment expression.
+[11:11] LiveRamp, all that data, that lives inside of MemDB. That is the state that is stored
+[11:17] inside of MemDB.
+[11:19] Even if it's not active. So just at all times-
+[11:22] Yes.
+[11:23] Yes.
+[11:25] Huh.
+[11:25] A lot of those segments are,
+[11:27] would it be valuable?
+[11:28] Because part of this thing that I'm suggesting, right,
+[11:30] is the only time it really matters
+[11:32] when we're suggesting better ones to tip,
+[11:35] like obviously is first off,
+[11:38] it can't be connected to membership DB,
+[11:40] or sorry, not membership, excuse me,
+[11:42] mountain matched,
+[11:43] unless it's an and include or and exclude.
+[11:47] I guess the and include is the only one that matters.
+[11:49] And include is the only one that matters
+[11:50] because then it's just going to be the intersection
+[11:51] between the mountain match.
+[11:52] So maybe suggesting the highest performing third party segment in the end include.
+[11:57] But that only counts for a very small amount of campaigns anyways.
+[12:01] Yeah, it doesn't work at the end of the day for all the scenarios that we need to support.
+[12:09] what if i just suggested like the top certain amount of live ramp
+[12:18] plate or you know interest segments and just said the rest of these are garbage like
+[12:23] nobody's using 250 000 interest segments do we need to keep all those like could we just say
+[12:28] hey here's the top 100 from whatever and then only offer those like or is there a need to literally
+[12:36] store 250,000 different vibrant because there's a lot I mean, like, well, I don't nobody's using
+[12:40] all of them. So that top will change over time. What happens when the top and no longer overlap
+[12:48] between month to month? Well, I mean, like, what if we recalculate it, though, if we have recalculated
+[12:53] and then we always suggest like the top 100 and we rerun this every so often, I think it'd be pretty
+[12:59] easy just because well okay no my point is like okay you suggest the top 100 someone creates an
+[13:06] audience based off that top 100 and now two months later that's no longer the top 100 but they
+[13:14] haven't changed their audience we still need a target based off that segment the the live ramp
+[13:21] segments they decided to target that's yeah i guess that's that is a possibility i just i'm
+[13:27] thinking of like the majority of this interest segments we're not even using you know i'm saying
+[13:31] like it's just a lot of storage or something that's never being used and it's a huge it's a
+[13:36] huge section too i mean i don't know how many ips are in each segment i haven't done that calculation
+[13:40] but i mean 260 000 segments i mean that's a lot of stuff to just store and then never use you know
+[13:47] i mean maybe it's not storage is not like that expensive i guess so my biggest thought process
+[13:51] of the whole thing was just if we have a mountain match campaign and then we're sending it over
+[13:56] however we're processing that and we don't we only need to process a million of the ips
+[14:00] and we don't need to process the other 30 million because they added like 30 interest segments then
+[14:06] let's not do that because it's not important right but um okay well it's not my job it basically my
+[14:14] job is just to rank them so i already have a ranking system of like how you value those ips
+[14:18] and stuff and i'm handing it off to another team i don't know what they're going to do with it but
+[14:21] my job was just to rank those but yeah that's it i just wanted to bring that up to you because i
+[14:28] was like i don't know if this is a valid thing or not because it seemed i don't know seemed like
+[14:34] maybe it might optimize things a little bit so cool well i don't got anything else it was just
+[14:42] that nope we're good thanks man yep take care bye
