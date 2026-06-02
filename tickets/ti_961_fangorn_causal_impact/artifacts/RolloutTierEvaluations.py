@@ -36,14 +36,17 @@ dbutils.widgets.dropdown("lookback_days",     "14",   ["14", "21"], "Pre lookbac
 dbutils.widgets.text("change_threshold",      "0.10", "Visit-rate change threshold (e.g. 0.10 = 10%)")
 dbutils.widgets.text("min_impressions_floor", "1000", "Min pre+post impressions for Top-N examples")
 dbutils.widgets.text("control_tiers",         "auto", "Control tier nums (comma-sep) or 'auto' = tiers not yet flipped")
+dbutils.widgets.text("exclude_dates",         "2026-05-29,2026-05-30", "Days to exclude from all analyses (comma-sep YYYY-MM-DD) — e.g. pacing-issue days")
 
 lookback_days         = int(dbutils.widgets.get("lookback_days"))
 CHANGE_THRESHOLD      = float(dbutils.widgets.get("change_threshold"))
 MIN_IMPRESSIONS_FLOOR = int(dbutils.widgets.get("min_impressions_floor"))
 _control_tiers_raw    = dbutils.widgets.get("control_tiers").strip()
+_exclude_dates_raw    = dbutils.widgets.get("exclude_dates").strip()
+EXCLUDE_DATES         = [d.strip() for d in _exclude_dates_raw.split(",") if d.strip()]
 
 bq_client = bigquery.Client(project="dw-main-gold")
-print(f"lookback: {lookback_days}d · threshold: {CHANGE_THRESHOLD} · min_imps: {MIN_IMPRESSIONS_FLOOR} · control: {_control_tiers_raw}")
+print(f"lookback: {lookback_days}d · threshold: {CHANGE_THRESHOLD} · min_imps: {MIN_IMPRESSIONS_FLOOR} · control: {_control_tiers_raw} · exclude: {EXCLUDE_DATES or '—'}")
 
 
 # COMMAND ----------
@@ -278,6 +281,10 @@ daily_performance_df = spark.createDataFrame(daily_performance_pd)
 daily_performance_df = daily_performance_df.join(rollout_tier_df.select(F.col("advertiser_id"), F.col("fangorn_advertiser_inclusion_date"), F.col("fangorn_rollout_tier_num")), "advertiser_id", "inner")
 
 daily_performance_df = daily_performance_df.filter(F.col("day") != F.col("fangorn_advertiser_inclusion_date")) # exclude flip day
+
+if EXCLUDE_DATES:
+    daily_performance_df = daily_performance_df.filter(~F.col("day").isin(EXCLUDE_DATES))
+    print(f"Excluded {len(EXCLUDE_DATES)} day(s) from daily_performance_df: {EXCLUDE_DATES}")
 
 # COMMAND ----------
 
@@ -755,6 +762,10 @@ pacing_query = f"""
 """
 
 pacing_df = loadPostgresQuery(pacing_query, spark)
+
+if EXCLUDE_DATES:
+    pacing_df = pacing_df.filter(~F.col("date").isin(EXCLUDE_DATES))
+    print(f"Excluded {len(EXCLUDE_DATES)} day(s) from pacing_df: {EXCLUDE_DATES}")
 
 # COMMAND ----------
 
@@ -1246,19 +1257,20 @@ displayHTML(html)
 # MAGIC %md
 # MAGIC ## CausalImpact (Synthetic Control)
 # MAGIC
-# MAGIC Independent validation of the DiD headline. For each treated tier we fit a
-# MAGIC local-level unobserved-components (UCM / state-space) model on the
-# MAGIC treated tier's daily visit rate during the pre-period, then forecast the
-# MAGIC counterfactual post-period and compare to actuals.
+# MAGIC Independent validation of the DiD headline. For each treated tier × metric
+# MAGIC (IVR + CVR), we fit a local-level unobserved-components (UCM / state-space)
+# MAGIC model on the treated tier's daily metric during the pre-period, then
+# MAGIC forecast the counterfactual post-period and compare to actuals.
 # MAGIC
 # MAGIC **Canonical TI-748/849 covariate selection:** VIF → BIC over 6
-# MAGIC candidates per tier:
-# MAGIC - `control_vr` — impression-weighted visit rate across control tiers
-# MAGIC - `control_imps` — control-tier total impressions (scaled)
+# MAGIC candidates per (tier, metric). Control rate + control scale are
+# MAGIC metric-specific (visit-rate analogue for IVR; CVR analogue for CVR):
+# MAGIC - `control_vr` / `control_cvr` — denom-weighted rate across control tiers
+# MAGIC - `control_imps` / `control_visits` — control-tier scale covariate (scaled)
 # MAGIC - `holiday` — binary US-holiday flag
 # MAGIC - `is_weekend` — Saturday/Sunday flag
-# MAGIC - `metric_lag1` — treated tier visit rate t−1
-# MAGIC - `metric_lag7` — treated tier visit rate t−7 (weekly seasonality)
+# MAGIC - `metric_lag1` — treated tier metric t−1
+# MAGIC - `metric_lag7` — treated tier metric t−7 (weekly seasonality)
 # MAGIC
 # MAGIC VIF iteratively drops any covariate with VIF ≥ 10. BIC does a best-subset
 # MAGIC search up to size 5. The winning subset becomes the `exog` matrix for the
@@ -1286,10 +1298,10 @@ print(f"CI window: {ci_window_start} → {window_end} ({ci_pre_days}d pre + {(wi
 # spend_facts × 87 days). CI only needs impressions + visits, and we already
 # have window_start → window_end covered. The delta-only lean pull is ~100 GB.
 
-# Reuse already-pulled data (imp + vv only)
+# Reuse already-pulled data (imp + vv + conversions)
 existing_pd = (
     daily_performance_df
-    .select("advertiser_id", "day", "impressions", "vv")
+    .select("advertiser_id", "day", "impressions", "vv", "conversions")
     .toPandas()
 )
 existing_pd["day"] = pd.to_datetime(existing_pd["day"])
@@ -1332,14 +1344,24 @@ if ci_window_start_date < window_start_date:
       JOIN prospecting_campaigns pc USING (campaign_id, advertiser_id)
       WHERE DATE(v.hour) BETWEEN '{ci_window_start}' AND '{delta_window_end}'
       GROUP BY v.advertiser_id, day
+    ),
+    con AS (
+      SELECT c.advertiser_id, DATE(c.hour) AS day,
+             CAST(SUM(c.click_conversions + c.view_conversions + COALESCE(c.competing_view_conversions, 0)) AS INT64) AS conversions
+      FROM `dw-main-silver.summarydata.conversion_facts` c
+      JOIN prospecting_campaigns pc USING (campaign_id, advertiser_id)
+      WHERE DATE(c.hour) BETWEEN '{ci_window_start}' AND '{delta_window_end}'
+      GROUP BY c.advertiser_id, day
     )
     SELECT imp.advertiser_id, imp.day, imp.impressions,
-           CAST(COALESCE(vis.vv, 0) AS INT64) AS vv
+           CAST(COALESCE(vis.vv, 0) AS INT64) AS vv,
+           CAST(COALESCE(con.conversions, 0) AS INT64) AS conversions
     FROM imp
     LEFT JOIN vis USING (advertiser_id, day)
+    LEFT JOIN con USING (advertiser_id, day)
     WHERE imp.impressions > 0
     """
-    print(f"[ci] Pulling lean delta: {ci_window_start} → {delta_window_end} (imp + vv only)...")
+    print(f"[ci] Pulling lean delta: {ci_window_start} → {delta_window_end} (imp + vv + conversions)...")
     delta_pd = bq_client.query(delta_query).to_dataframe()
     delta_pd["day"] = pd.to_datetime(delta_pd["day"])
     ci_daily_pd_raw = pd.concat([delta_pd, existing_pd], ignore_index=True)
@@ -1359,13 +1381,22 @@ ci_daily_pd["day"] = pd.to_datetime(ci_daily_pd["day"])
 ci_daily_pd["fangorn_advertiser_inclusion_date"] = pd.to_datetime(ci_daily_pd["fangorn_advertiser_inclusion_date"])
 ci_daily_pd = ci_daily_pd[ci_daily_pd["day"] != ci_daily_pd["fangorn_advertiser_inclusion_date"]]
 
+if EXCLUDE_DATES:
+    _exclude_ts = pd.to_datetime(EXCLUDE_DATES)
+    before = len(ci_daily_pd)
+    ci_daily_pd = ci_daily_pd[~ci_daily_pd["day"].isin(_exclude_ts)]
+    print(f"[ci] Excluded {len(EXCLUDE_DATES)} day(s) from ci_daily_pd: dropped {before - len(ci_daily_pd):,} rows")
+
 # Aggregate to tier × day
 ci_tier_daily = (
     ci_daily_pd
     .groupby(["fangorn_rollout_tier_num", "day"], as_index=False)
-    .agg(impressions=("impressions", "sum"), vv=("vv", "sum"))
+    .agg(impressions=("impressions", "sum"), vv=("vv", "sum"), conversions=("conversions", "sum"))
 )
 ci_tier_daily["visit_rate"] = ci_tier_daily["vv"] / ci_tier_daily["impressions"]
+ci_tier_daily["cvr"]        = np.where(ci_tier_daily["vv"] > 0,
+                                       ci_tier_daily["conversions"] / ci_tier_daily["vv"],
+                                       np.nan)
 print(f"[ci] tier × day rows: {len(ci_tier_daily):,} | tiers: {sorted(ci_tier_daily['fangorn_rollout_tier_num'].unique().tolist())}")
 
 
@@ -1392,14 +1423,49 @@ CI_HOLIDAYS = pd.to_datetime([
 # adapted for tier-level series. Notably excludes treated-tier OWN impressions
 # (could absorb part of the treatment effect — Fangorn changes who gets
 # impressions, so own-impressions is post-treatment downstream).
-CI_CANDIDATES = [
-    "control_vr",        # impression-weighted visit rate across control tiers
-    "control_imps",      # control-tier total impressions (scaled, ~O(1))
-    "holiday",           # binary US-holiday flag
-    "is_weekend",        # binary Sat/Sun flag
-    "metric_lag1",       # treated tier visit rate t-1
-    "metric_lag7",       # treated tier visit rate t-7 (weekly seasonality)
+#
+# Per-metric specs control:
+#   - target:             column in ci_tier_daily used as the treated y series
+#   - control_num/den:    columns summed across control tiers to compute the
+#                         control rate (analogue of treated y)
+#   - control_scale_col:  column summed across control tiers, divided by
+#                         scale_factor for numerical stability
+#   - scale_factor:       1e9 for impressions, 1e6 for visits — keep ~O(1)
+#   - control_rate_name / control_scale_name:  named covariates in the model
+CI_METRIC_SPECS = [
+    {
+        "label":              "IVR",
+        "sub":                "visits / impressions",
+        "target":             "visit_rate",
+        "control_num":        "vv",
+        "control_den":        "impressions",
+        "control_scale_col":  "impressions",
+        "scale_factor":       1e9,
+        "control_rate_name":  "control_vr",
+        "control_scale_name": "control_imps",
+    },
+    {
+        "label":              "CVR",
+        "sub":                "conversions / visits",
+        "target":             "cvr",
+        "control_num":        "conversions",
+        "control_den":        "vv",
+        "control_scale_col":  "vv",
+        "scale_factor":       1e6,
+        "control_rate_name":  "control_cvr",
+        "control_scale_name": "control_visits",
+    },
 ]
+
+def _candidates_for(spec: dict) -> list:
+    return [
+        spec["control_rate_name"],
+        spec["control_scale_name"],
+        "holiday",
+        "is_weekend",
+        "metric_lag1",
+        "metric_lag7",
+    ]
 
 def drop_high_vif(features: pd.DataFrame, vif_threshold: float = 10.0) -> list:
     """Iteratively drop the highest-VIF covariate until all are below threshold."""
@@ -1439,12 +1505,14 @@ def best_subset_by_bic(target: pd.Series, features: pd.DataFrame,
                 best_subset = list(subset)
     return best_subset, best_bic
 
-def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
+def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff,
+                    metric_spec: dict) -> dict:
     """CausalImpact-style synthetic control via UCM with VIF→BIC-selected exog.
 
     Pipeline:
-      1. Build candidate covariates at tier × day grain (control_vr,
-         control_imps, holiday, is_weekend, metric_lag1, metric_lag7).
+      1. Build candidate covariates at tier × day grain (control rate +
+         control scale + holiday + is_weekend + metric_lag1/7). The two
+         control covariates are metric-specific via metric_spec.
       2. VIF — iteratively drop the highest-VIF covariate until all VIF < 10.
       3. BIC — best-subset search up to size 5; OLS on pre-period y.
       4. UCM (local level + selected exog) on pre-period; forecast post.
@@ -1452,21 +1520,28 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
          with 95% prediction interval and a two-sided z-test p-value.
     """
     cutoff = pd.to_datetime(cutoff)
+    candidates = _candidates_for(metric_spec)
+    target_col = metric_spec["target"]
 
-    # Treated series — pooled tier visit rate
+    # Treated series — pooled tier metric
     t = (ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"] == treated_tier]
-         .set_index("day")[["visit_rate"]]
-         .rename(columns={"visit_rate": "y"}))
+         .set_index("day")[[target_col]]
+         .rename(columns={target_col: "y"}))
 
-    # Control aggregates (across control tiers)
+    # Control aggregates (across control tiers) — sum the underlying counts,
+    # then compute the rate so it's impression/visit-weighted not equal-weighted.
     c_raw = ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"].isin(control_tier_list)]
-    c = (c_raw.groupby("day", as_index=True)
-              .agg(impressions=("impressions", "sum"), vv=("vv", "sum")))
-    c["control_vr"]   = c["vv"] / c["impressions"]
-    c["control_imps"] = c["impressions"] / 1e9   # scale for numerical stability
+    sum_cols = list({metric_spec["control_num"], metric_spec["control_den"], metric_spec["control_scale_col"]})
+    c = c_raw.groupby("day", as_index=True)[sum_cols].sum()
+    c[metric_spec["control_rate_name"]] = np.where(
+        c[metric_spec["control_den"]] > 0,
+        c[metric_spec["control_num"]] / c[metric_spec["control_den"]],
+        np.nan,
+    )
+    c[metric_spec["control_scale_name"]] = c[metric_spec["control_scale_col"]] / metric_spec["scale_factor"]
 
     # Build candidate frame
-    df = t.join(c[["control_vr", "control_imps"]]).sort_index()
+    df = t.join(c[[metric_spec["control_rate_name"], metric_spec["control_scale_name"]]]).sort_index()
     df["holiday"]      = df.index.isin(CI_HOLIDAYS).astype(float)
     df["is_weekend"]   = (df.index.dayofweek >= 5).astype(float)
     df["metric_lag1"]  = df["y"].shift(1)
@@ -1482,18 +1557,20 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff) -> dict:
 
     base = {
         "treated_tier": treated_tier,
+        "metric": metric_spec["label"],
+        "metric_sub": metric_spec["sub"],
         "control_tiers": ",".join(map(str, control_tier_list)),
         "cutoff": cutoff.strftime("%Y-%m-%d"),
         "pre_start": pre_period[0], "pre_end": pre_period[1], "n_pre": n_pre,
         "post_start": post_period[0], "post_end": post_period[1], "n_post": n_post,
-        "n_candidates": len(CI_CANDIDATES),
+        "n_candidates": len(candidates),
     }
     if n_pre < 30 or n_post < 5:
         return {**base, "skip_reason": f"insufficient days (n_pre={n_pre}, n_post={n_post})"}
 
     # --- Covariate selection on pre-period ---
     pre_df = df.loc[pre_period[0]:pre_period[1]]
-    feats_pre  = pre_df[CI_CANDIDATES].fillna(0.0)
+    feats_pre  = pre_df[candidates].fillna(0.0)
     target_pre = pre_df["y"]
 
     kept_after_vif = drop_high_vif(feats_pre, vif_threshold=10.0)
@@ -1557,12 +1634,13 @@ ci_rows = []
 for tier in sorted(treated_tiers):
     if tier not in tier_inclusion_dates:
         continue
-    print(f"[ci] Fitting tier {tier}...")
-    try:
-        ci_rows.append(run_ci_for_tier(tier, control_tiers, tier_inclusion_dates[tier]))
-    except Exception as e:
-        print(f"  [err] tier {tier}: {e}")
-        ci_rows.append({"treated_tier": tier, "skip_reason": str(e)})
+    for spec in CI_METRIC_SPECS:
+        print(f"[ci] Fitting tier {tier} · metric {spec['label']}...")
+        try:
+            ci_rows.append(run_ci_for_tier(tier, control_tiers, tier_inclusion_dates[tier], spec))
+        except Exception as e:
+            print(f"  [err] tier {tier} · {spec['label']}: {e}")
+            ci_rows.append({"treated_tier": tier, "metric": spec["label"], "skip_reason": str(e)})
 
 ci_results_df = pd.DataFrame(ci_rows)
 display(ci_results_df)
@@ -1589,26 +1667,25 @@ def ci_color(row):
         return "#1a7f37" if sig else "#86a886"
     return "#b91c1c" if sig else "#c98080"
 
-tiles = []
-for row in ci_rows:
-    tier = row.get("treated_tier")
+def _render_tile(row: dict) -> str:
+    metric = row.get("metric", "—")
+    sub    = row.get("metric_sub", "")
     if "rel_effect" not in row:
-        tiles.append(f"""
+        return f"""
         <div style="flex:1 1 0; min-width:240px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
           <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
-            Tier {tier} — CI
+            {metric} <span style="color:#9ca3af; font-weight:500;">({sub})</span>
           </div>
           <div style="margin-top:10px; color:#6b7280; font-size:13px;">
             {row.get("skip_reason", "no result")}
           </div>
         </div>
-        """)
-        continue
+        """
     color = ci_color(row)
-    tiles.append(f"""
+    return f"""
     <div style="flex:1 1 0; min-width:240px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
       <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
-        Tier {tier} — CI <span style="color:#9ca3af; font-weight:500;">(visit rate vs synthetic)</span>
+        {metric} <span style="color:#9ca3af; font-weight:500;">({sub})</span>
       </div>
       <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:14px;">
         <span style="color:#6b7280;">Actual avg</span><span>{fmt_pct(row["avg_actual"])}</span>
@@ -1632,6 +1709,25 @@ for row in ci_rows:
         covariates: {row.get("selected_covariates", "—")}
       </div>
     </div>
+    """
+
+# Group tiles by tier so each tier renders IVR + CVR side-by-side
+sections_html = []
+for tier in sorted(treated_tiers):
+    if tier not in tier_inclusion_dates:
+        continue
+    tier_rows = [r for r in ci_rows if r.get("treated_tier") == tier]
+    if not tier_rows:
+        continue
+    cutoff = tier_inclusion_dates[tier]
+    tile_html = "".join(_render_tile(r) for r in tier_rows)
+    sections_html.append(f"""
+    <div style="margin-bottom:18px;">
+      <div style="font-weight:600; color:#374151; margin-bottom:8px; font-size:13px;">
+        Tier {tier} &nbsp;·&nbsp; <span style="color:#6b7280; font-weight:500;">switched {cutoff} · vs control {', '.join(f'Tier {t}' for t in control_tiers)}</span>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">{tile_html}</div>
+    </div>
     """)
 
 ci_html = f"""
@@ -1639,46 +1735,59 @@ ci_html = f"""
   <div style="background:#f6f8fa; padding:12px 16px; border-radius:6px; margin-bottom:12px;">
     <b>CausalImpact</b> &nbsp;·&nbsp;
     <b>CI window:</b> {ci_window_start} → {window_end} &nbsp;·&nbsp;
-    <b>Covariates:</b> VIF→BIC over {len(CI_CANDIDATES)} candidates (control_vr, control_imps, holiday, is_weekend, metric_lag1, metric_lag7) — selected set shown per-tier below
+    <b>Metrics:</b> {', '.join(s['label'] for s in CI_METRIC_SPECS)} &nbsp;·&nbsp;
+    <b>Covariates:</b> VIF→BIC over 6 candidates per metric (control rate, control scale, holiday, is_weekend, metric_lag1, metric_lag7) — selected set shown per tile
+    {(' &nbsp;·&nbsp; <b>Excluded days:</b> ' + ', '.join(EXCLUDE_DATES)) if EXCLUDE_DATES else ''}
   </div>
-  <div style="display:flex; gap:12px; flex-wrap:wrap;">{"".join(tiles)}</div>
+  {''.join(sections_html)}
 </div>
 """
 displayHTML(ci_html)
 
 # COMMAND ----------
 
-# Diagnostic plot — one panel per treated tier, actual vs counterfactual + pointwise effect
+# Diagnostic plot — one panel per (treated tier × metric), actual vs control covariate
 import matplotlib.gridspec as gridspec
 
+_spec_by_label = {s["label"]: s for s in CI_METRIC_SPECS}
 ci_panels = [r for r in ci_rows if "rel_effect" in r]
 if ci_panels:
     fig = plt.figure(figsize=(12, 3.0 * len(ci_panels)))
-    gs = gridspec.GridSpec(len(ci_panels), 1, hspace=0.5)
+    gs = gridspec.GridSpec(len(ci_panels), 1, hspace=0.6)
 
     for i, row in enumerate(ci_panels):
-        tier = row["treated_tier"]
+        tier   = row["treated_tier"]
+        metric = row["metric"]
+        spec   = _spec_by_label[metric]
+        target_col       = spec["target"]
+        control_num_col  = spec["control_num"]
+        control_den_col  = spec["control_den"]
+        control_rate_col = spec["control_rate_name"]
         cutoff = pd.to_datetime(row["cutoff"])
+
         # Reconstruct the series for plotting
         t = (ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"] == tier]
-             .set_index("day")[["visit_rate"]].rename(columns={"visit_rate": "y"}))
+             .set_index("day")[[target_col]].rename(columns={target_col: "y"}))
         c_raw = ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"].isin(control_tiers)]
-        c = (c_raw.groupby("day", as_index=True)
-                  .agg(impressions=("impressions", "sum"), vv=("vv", "sum")))
-        c["control_vr"] = c["vv"] / c["impressions"]
-        df = t.join(c[["control_vr"]]).dropna().sort_index()
+        c = c_raw.groupby("day", as_index=True)[[control_num_col, control_den_col]].sum()
+        c[control_rate_col] = np.where(c[control_den_col] > 0,
+                                       c[control_num_col] / c[control_den_col],
+                                       np.nan)
+        df = t.join(c[[control_rate_col]]).dropna().sort_index()
 
         ax = fig.add_subplot(gs[i, 0])
         color = TIER_COLORS.get(tier, "#5dade2")
-        ax.plot(df.index, df["y"], color=color, marker="o", markersize=3, label=f"Tier {tier} actual")
-        ax.plot(df.index, df["control_vr"], color="#888", linestyle="--", linewidth=1.4, label="control (synthetic) covariate")
+        ax.plot(df.index, df["y"], color=color, marker="o", markersize=3,
+                label=f"Tier {tier} {metric} actual")
+        ax.plot(df.index, df[control_rate_col], color="#888", linestyle="--",
+                linewidth=1.4, label=f"control {metric} covariate")
         ax.axvline(cutoff, color=SWITCH_COLOR, linestyle="--", linewidth=1.4, alpha=0.9)
         ax.text(cutoff, ax.get_ylim()[1], f" switch: {cutoff.date()}",
                 color=SWITCH_COLOR, va="top", ha="left", fontsize=9, fontweight="semibold")
-        ax.set_title(f"Tier {tier} — CI rel_effect={fmt_pct_signed(row['rel_effect'])} "
+        ax.set_title(f"Tier {tier} — {metric}  ·  rel_effect={fmt_pct_signed(row['rel_effect'])} "
                      f"(95% CrI [{fmt_pct_signed(row['rel_ci_95_lower'])}, {fmt_pct_signed(row['rel_ci_95_upper'])}], "
                      f"p={row['p_value']:.3f})")
-        style_axis(ax, ylabel="visit rate", as_percent=True)
+        style_axis(ax, ylabel=metric.lower(), as_percent=True)
         ax.legend(loc="upper left", fontsize=8)
 
     fig.suptitle(f"CausalImpact daily series — {ci_window_start} → {window_end}",

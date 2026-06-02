@@ -112,9 +112,11 @@ modified notebook is checked in at
 with a new section inserted between "Headline KPIs" and "Executive Summary."
 
 **Three new cells:**
-1. **Setup + lean delta pull** — adds `ci_pre_days` widget (default 60d), pulls only the incremental pre-period days (`ci_window_start` → `window_start - 1`) using a slim impressions+visits query, then UNIONs with what `daily_performance_df` already has. Joins rollout-tier metadata, aggregates to tier × day visit rate.
-2. **Fit + render** — `run_ci_for_tier()` fits CausalImpact per treated tier with the impression-weighted control-tier visit rate as the synthetic-control covariate. Renders results as tiles styled to match Alex's existing DiD HTML block (actual avg, predicted-counterfactual avg, relative effect, 95% CrI, p-value, n_pre / n_post days, control tier list).
-3. **Diagnostic plot** — one panel per treated tier showing actual vs control covariate over the full CI window, with a switch line at the flip date and the rel_effect / CrI / p-value in the panel title.
+1. **Setup + lean delta pull** — adds `ci_pre_days` widget (default 60d), pulls only the incremental pre-period days (`ci_window_start` → `window_start - 1`) using a slim impressions+visits+conversions query, then UNIONs with what `daily_performance_df` already has. Joins rollout-tier metadata, aggregates to tier × day visit rate **and CVR**.
+2. **Fit + render** — `run_ci_for_tier(treated_tier, control_tiers, cutoff, metric_spec)` fits CausalImpact per (treated tier × metric) with metric-specific synthetic-control covariates: IVR uses `control_vr` + `control_imps`; CVR uses `control_cvr` + `control_visits`. Renders results as tiles grouped by tier with IVR + CVR side-by-side, styled to match Alex's existing DiD HTML block.
+3. **Diagnostic plot** — one panel per (treated tier × metric) showing actual vs control covariate over the full CI window, with a switch line at the flip date and the rel_effect / CrI / p-value in the panel title.
+
+**Outlier-day exclusion (added 2026-06-02 per Alex Knorr):** new `exclude_dates` widget (default `2026-05-29,2026-05-30`) drops named days from `daily_performance_df`, `pacing_df`, and `ci_daily_pd` so all downstream DiD / threshold / pacing / CausalImpact analyses see the same cleaned panel. Used here to remove two days with known pacing issues that would otherwise contaminate the CVR signal.
 
 ### BQ cost optimization
 The naive approach (re-running Alex's full `daily_performance_query` with `window_start = min_inclusion - ci_pre_days`) processes **~1 TB** for a 60-day pre window. Dry-run ladder (verified 2026-05-28):
