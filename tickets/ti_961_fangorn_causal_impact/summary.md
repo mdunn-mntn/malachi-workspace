@@ -184,8 +184,36 @@ Outputs: [`outputs/ti_961_smoke_ci_results.csv`](outputs/ti_961_smoke_ci_results
 - Memory `reference_causal_impact_pattern.md` — updated to reflect the tier-level variant + cluster-bootstrap DiD inference layered on top.
 
 ## 8. Open Items / Follow-ups
-- **Calendar-time watch (≈2026-06-25):** with ~4 more weeks of post-period, Tier 2's CI and DiD p-values should resolve below 0.10 if the effect is real. No action required until then — just re-run the notebook.
-- **Monitor Tier 3 CVR (p=0.064):** the only sub-0.10 cell in the dashboard. If it stays below 0.10 with more post-period data, that's a real conversion-rate signal worth surfacing.
+
+### Calendar-time power projection (refreshed 2026-06-02, post EXCLUDE_DATES filter)
+
+SE-scaling projection assuming current point estimate is the true effect.
+SE ∝ 1/√n_post (conservative-optimistic — real Kalman filter forecast
+variance grows with horizon, so add 30-50% buffer to dates).
+
+| Cell | Current p | Date for p<0.10 (CI) | Date for p<0.05 (CI) | Notes |
+|---|---|---|---|---|
+| Tier 1 IVR | 0.282 | ~Mar 2027 | hopeless | N=3 floor, not time |
+| Tier 1 CVR | 0.153 | 2026-06-09 | 2026-07-20 | Would resolve NEGATIVE — likely 1 outlier advertiser |
+| Tier 2 IVR | 0.247 | ~2026-08-10 | ~2026-10-07 | DiD will resolve sooner |
+| Tier 2 CVR | 0.424 | ~2026-10-22 | ~2026-12-20 | CI won't help; DiD already p=0.002 |
+| Tier 3 IVR | 0.083 | **2026-06-07** | **2026-06-13** | Closest cell — significance imminent |
+| Tier 3 CVR | 0.911 | n/a | n/a | Point ≈ 0; can't project without signal |
+
+### Recommended check-in cadence
+- **2026-06-09 (1 wk):** Tier 3 IVR CI hits p<0.05. First real milestone.
+- **2026-06-23 (3 wk):** Tier 2 IVR DiD likely at p<0.10; Tier 3 IVR firmly significant on both methods.
+- **2026-07-14 (6 wk):** Tier 2 IVR CI approaches p<0.10; full cross-tier IVR story defensible. **Best date to trust for team write-up.**
+
+### Read for the team
+- **IVR:** wait until ~2026-07-14 for a stable cross-tier read.
+- **CVR:** don't wait for CI corroboration — DiD on Tier 2 is already at p=0.002, that's the headline today. CI lags by 4-6+ months because daily-pooled CVR is structurally too noisy at tier-day grain.
+- **Tier 1:** will not resolve at tier-day grain. If a Tier 1 read is needed, pool Tier 1+2 advertisers in a single DiD or accept it's anecdotal.
+- **Tier 3 CVR:** point estimate is essentially zero; either the effect hasn't emerged yet (give 4-6 more weeks) or it genuinely isn't there for the Tier 3 cohort.
+
+### Other follow-ups
+- **TI-1003** ([Jira](https://mntn.atlassian.net/browse/TI-1003)) — stand up a simple TI experimentation archive (one-day scope) so the Fangorn read becomes the first entry stakeholders can bookmark.
+- Variance-weighted lift comparison vs median + impression-weighted is still an open follow-up for Alex's DiD numbers (orthogonal to CI).
 - **TI-1003** ([Jira](https://mntn.atlassian.net/browse/TI-1003)) — stand up a simple TI experimentation archive (one-day scope) so the Fangorn read becomes the first entry stakeholders can bookmark.
 - Variance-weighted lift comparison vs median + impression-weighted is still an open follow-up for Alex's DiD numbers (orthogonal to CI).
 
