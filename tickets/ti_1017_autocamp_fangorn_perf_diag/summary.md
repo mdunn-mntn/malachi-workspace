@@ -1,6 +1,6 @@
 # TI-1017: Autocamp Fangorn HHST collapse + performance diagnostic
 
-**Jira:** https://mntn.atlassian.net/browse/TI-1017
+**Jira:** https://mntn.atlassian.net/browse/TI-1017 (Done)
 **Status:** Complete
 **Date Started:** 2026-06-02
 **Date Completed:** 2026-06-02

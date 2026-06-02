@@ -1300,6 +1300,37 @@ The three score fields have identical distributions, suggesting they're either c
 
 **Open question (worth probing later):** which table actually carries the 0-10000 scores at bid time? Candidates: `augmentor_log`, `bid_logs`, `cost_impression_log.model_params`, or per-IP scoring snapshots in `prospecting_intent_daily`. The first two have 10-day / 90-day TTLs respectively.
 
+### Fangorn post-flip HHST trajectory — cohort baseline (TI-1017, 2026-06-02)
+
+Across **316 advertisers** flipped onto Fangorn between 2026-04-01 and 2026-06-02 (filtered to >1K impressions in both the 7-day pre-flip and 14-day post-flip windows), the typical Fangorn flip barely shifts the bid-time HHST distribution:
+
+| Stat | HHST=10000 share Δ (post − pre, pp) |
+|------|------:|
+| min (worst collapse) | -57.5 |
+| p5 | -22.5 |
+| p25 | -6.5 |
+| **median** | **-1.6** |
+| p75 | +0.3 |
+| p95 | +5.1 |
+| max | +44.1 |
+
+- **66% of advertisers (208/316)** were within ±5 pp of pre-flip HHST=10000 share.
+- **Only 4% (13/316)** had drops ≥30 pp post-flip.
+- **Use as a reference baseline** for any future Fangorn-escalation. If an advertiser's HHST=10000 share dropped <20 pp post-flip, that's normal Fangorn re-calibration. ≥30 pp is the top-4% severity bucket — investigate audience design and YoY spend scaling.
+
+**Cohort detection pattern:** `advertiser_id` set = `SELECT advertiser_id FROM dw-main-bronze.integrationprod.audience_advertiser_configurations WHERE vertical_data_source = 46`. Flip date = `DATE(MIN(TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)), "America/Los_Angeles")` (matches TI-921's canonical flip-detection pattern).
+
+**HHST-collapse failure mode (Autocamp case study, TI-1017):** Severe post-flip HHST drops cluster around advertisers with three coupled drivers:
+1. **OR-semantics audience expression** between DS46 (MM) and DS19 (keywords), e.g. `(any(DS46, [vertical_id]) OR any(DS19, [keyword_ids]))`. With HHST > 0, the bid-eligible HI pool is the **MM ∩ DS19-keyword intersection at raw>0.8**, which is much smaller than either pool alone.
+2. **High pre-flip HHST setting** (HHST=10000 specifically). The campaign was running pure-HI before the flip, so any narrowing of the HI pool surfaces as a pacing miss.
+3. **Spend scaling outpacing the HI pool**, especially YoY. If the advertiser's daily spend has grown faster than their HI-eligible IP pool, the bidder hits the audience ceiling at HHST=10000 and has to drop HHST to fill spend.
+
+When all three are present, the bidder progressively drops HHST → ends up serving the majority of impressions in unscored mode (HHST=-1). Counter-intuitively this often **improves IVR** (Fangorn's score quality lifts even the unscored fallback pool), but the operator-facing optics look alarming. *Mitigation framing for advertiser-facing teams:* the HHST trajectory in the UI is the bidder's pacing-adaptive response, not a Fangorn quality regression.
+
+### Bidder "Bidder IPs Available by Intent Tier" chart — semantics (TI-1017, 2026-06-02)
+
+The chart in the bidder UI titled "Bidder IPs Available by Intent Tier" (the one showing the High Intent / Peak Performance / Mid Intent / Max Reach stacked bars by day) shows **bid-time tier classification of impressions actually bid on**, not **audience composition**. So an IP can be in the audience and still not appear in this chart's High Intent slice if it isn't bid on at the moment in question. When HHST collapses to fill pacing, the chart's tier mix shifts (e.g., HI → Max Reach) even though audience membership is unchanged. APEX is the right reference for audience-composition questions.
+
 ### Intent Tier Thresholds (Prospecting Scoring Pipeline)
 Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` — daily per IP/advertiser/campaign. Scores retained only **35 days** in active storage.
 
