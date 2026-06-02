@@ -473,3 +473,23 @@ There are at least two accessible copies of the campaigns table in BigQuery:
 - `dw-main-bronze.integrationprod.public_campaigns` — bronze-layer copy (used as fallback if silver has permission issues)
 
 Both were referenced during Grafana/Mode dashboard repair work following the BQ migration. If permission issues arise accessing the silver copy, the bronze integrationprod copy may be used as an alternative.
+
+## 2026-06-02
+
+### [experimentation] from Victor Savitskiy in #tgt-infrastructure-squad
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Gemini vs. Existing LLM for Profile Generation — Evaluation Underway:** Two approaches were used to compare Gemini against the existing model for advertiser profile generation: (1) Manual/qualitative review of AI-generated recommendations (Mike Dolt's approach — found Gemini more concrete with better recommendations, and identified a path to eliminate the scraper component). (2) Embedding-based cosine similarity using BGE-M3 model with manual review of low-similarity cases (Victor Savitskiy's approach — found that for lower-similarity cases, one or both models refused to generate a recommendation, rather than generating a meaningfully different one). Results are inconclusive and a decision meeting is pending. A key potential upside of Gemini is eliminating the scraper component, which would reduce maintenance overhead.
+
+### [data_catalog] from Jack Barbey in #identity_core_dev
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**`dw-main-bronze.raw.click_hh_log` — ID Service Household Matching Behavior:** This table serves as a canary for ID Service BQ tables. Analysis of this table revealed inconsistent household ID assignment from the ID Service: approximately 25% of rows either had an ID Service household ID recorded or could be manually matched to graph version 1779667200. Among that 25%, ~57% showed disagreements between ID Service-assigned and manually-matched household IDs. Specific patterns observed: (a) No cases where ID Service returned a household ID that differed from a manual match — discrepancies were always ID Service missing a match the manual method found. (b) Some valid IP addresses were not resolved by ID Service despite being present in the graph. (c) ID Service occasionally returned household IDs for shared IP addresses. (d) Both methods agreed on some rows with no identifiable structural reason for the difference. Root cause investigation ongoing.
+
+### [data_catalog] from Jack Barbey in #identity_core
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Identity Graph — Confidence Score Distribution (Graph version 2026-06-01):** A new identity graph version with confidence scores was released on 2026-06-01. The score distribution has a notable spike at 1.0, representing IDs that are directly in the backbone household graph (these are assigned a score of 1.0 by definition). There is also an unexplained secondary spike at 0.25 that is under investigation. The confidence score is intended to predict the accuracy of assignment to a backbone household.
