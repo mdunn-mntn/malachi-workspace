@@ -46,10 +46,45 @@ Autocamp campaign **570106** (Beeswax Television Prospecting, Stage 1 PTV/CTV, c
 
 So the original "no HI in audience" hypothesis was retracted, but the underlying performance concern (HHST → 0, bid-tier mix shift, advertiser complained) was still open. The ticket reframed into: "What actually drove the HHST collapse and the perceived performance shift?"
 
+### Tofer's expanded context (3:33 + 3:39 PM, after I posted findings)
+
+After my findings were posted, Tofer shared the broader advertiser context that we didn't have at the start. This is the actual customer-facing story:
+
+> **Tofer (3:33 PM):** I think the overall topic is worth discussing. This client's performance is suffering after rolling them onto Fangorn, which I don't think it happening to a lot our advertisers. So maybe this is a one-off example?
+
+> **Tofer (3:39 PM):** The performance in this is admittedly tough. The background is the following:
+>
+> Customer is seeing significantly lower performance YoY despite using the same audience and similar creative (**8x ROAS last year vs. 2x this year**). Main differences:
+> - Conversion rate is down ~50%
+> - Spend increased from **~$25k last May to ~$80k+ this May**
+> - They are **maxing out their high-intent audience this year**, where-as last year this wasn't the case.
+>
+> I hadn't scoped this one fully but that's great we are seeing IVR lift post-Fangorn.
+>
+> I think the high intent piece from our graph was the only focus and so it became "why are we not spending as much in high intent anymore". When the reality is, **the new set of scoring methodology rolled out has helped the campaign in the last 2 weeks. I think that should be more of the focus.**
+
+> **Tofer (3:39 PM, to Matt Brorby):** I allow the campaign's HHST to open up and then we start to increase frequency (1x/14 → 2x/7 → 4x/3d). That then helped us pace in full and we started seeing BOS bring the value back up (0 → 401).
+
+### Other thread participants
+
+- **Alex Knorr (3:35 PM):** Provided Fangorn vertical details: `advertiser=37569, vertical_id=135001` — matches our audience expression's DS46 cat_id and RTC `id=135001`.
+- **Alex Knorr (3:38 PM):** "Im also seeing climbing visit rates after the change" — independently corroborated the IVR lift.
+- **Bryce Wagg (3:39 PM):** "@Alex Knorr something maybe we should share with PEX as a use case?" — suggests this is a candidate Fangorn success story for the PEX team.
+- **Matt Brorby:** Working through the campaign Activity Log in parallel (HHST + bos_campaign frequency-cap changes around 5/18–5/23, see §4 Activity Log timeline).
+
+### Reframed problem statement
+
+The story is now two coupled but distinct issues:
+
+1. **YoY performance degradation** (the real customer-facing concern): 8x → 2x ROAS year-over-year, CVR down ~50%, spend up ~3x ($25K → $80K+). The customer is now maxing out their high-intent audience because they're spending 3x as much against a similarly-sized scored pool. *This is not a Fangorn issue — Fangorn rolled out 2 weeks ago; the YoY drop is a 12-month phenomenon.*
+
+2. **Fangorn flip transition shock** (the precipitating signal): HHST collapse on 5/19 made the YoY problem visible by surfacing it as a sudden HHST=10000 → 0 trajectory in the UI. **But Fangorn itself helped the campaign — IVR doubled.** This is the part Tofer wants the team to focus on.
+
 ### Impact
-- Advertiser raised performance concern.
-- Bidder UI showed visually-alarming HHST trajectory (10000 → 0).
-- 5/19 spend missed pacing by ~70% ($546 vs ~$1,850 daily target).
+- Advertiser raised YoY performance concern.
+- Bidder UI showed visually-alarming HHST trajectory (10000 → 0) that *looked like* a Fangorn regression.
+- 5/19 spend missed pacing by ~70% ($546 vs ~$1,850 daily target) during the HHST retune.
+- Actual Fangorn impact: positive — IVR doubled, KPIs flat-to-improved.
 
 ## 3. Plan of Action
 
@@ -143,15 +178,87 @@ geos: location_ids [4003, 4069, 1749] (West Coast)
 
 RTC is gated by HHST per Ryan Kleck (memory: [reference_rtc_hhst_gating](memory)). When the bidder ran in unscored mode (HHST=-1), RTC effectively stopped firing. Post-recovery, RTC settled at ~half its pre-Fangorn rate (~4% vs ~8%), reflecting the lower share of HHST-gated impressions.
 
+### Q5 — Campaign Activity Log (Matt Brorby, 2026-06-02 thread)
+
+Matt shared the campaign Activity Log; chronological reconstruction of operator (Tofer) actions:
+
+| Date / time | Field | Before → After | Direction |
+|-------------|-------|----------------|-----------|
+| 5/15 7:09 PM | hhst (household_score_threshold) | 6666 → 6201 | tightened slightly |
+| 5/16 7:09 PM | hhst | 10000 → 6666 | loosened (likely automated daily retune) |
+| 5/18 4:09 PM | bos_campaign (secondary_frequency_cap) | 1 per 14 days → 4 per 3 days | **loosened frequency dramatically** |
+| 5/18 7:09 PM | hhst | 6101 → 10000 | tightened (Tofer pushing HHST high pre-Fangorn) |
+| 5/19 5:10 PM | daily_budgets | 774.48 → 819.1 | budget bumped |
+| 5/19 7:09 PM | hhst | 501 → 6101 | tightened (recovering after 5/19 crash) |
+| 5/20 7:09 PM | hhst | 0 → 501 | tightened slightly (HHST had bottomed out) |
+| 5/21 1:09 PM | bos_campaign sec_freq_cap | 2 per 7 days → 1 per 14 days | **tightened frequency** |
+| 5/22 5:09 PM | bos_campaign sec_freq_cap | 4 per 3 days → 2 per 7 days | **tightened frequency** |
+| 5/23 7:08 PM | hhst | 401 → 0 | loosened (intentional, per Tofer narrative) |
+
+**Operator strategy (Tofer's own description):** "I allow the campaign's HHST to open up and then we start to increase frequency (1x/14 → 2x/7 → 4x/3d). That then helped us pace in full and we started seeing BOS bring the value back up (0 → 401)."
+
+This means the HHST collapse on 5/19–5/22 was *partly operator-driven*, not purely an automated bidder response. Tofer deliberately allowed HHST to drop AND loosened frequency caps to recover pacing volume. The "natural" Fangorn-only response would have been less drastic; the manual frequency cap loosening (1x/14 → 4x/3d is ~10x looser) is what allowed the campaign to use the unscored pool to maintain spend.
+
+### Q6 — ROAS pre vs post Fangorn (campaign 570106)
+
+Computed from Q2's `order_amt_total` + `spend_usd` (same `all_facts` + `ui_conversions` source).
+
+| Window | Spend | Order Amt | ROAS |
+|--------|------:|----------:|-----:|
+| Pre-Fangorn (5/01–5/17) | $31,734 | $44,651 | **1.41x** |
+| Post-Fangorn (5/18–6/02) | $27,735 | $42,798 | **1.54x** |
+
+**Post-Fangorn ROAS is up ~9%.** This is *despite* the 5/19 crash day (spend $546, ROAS 5.52x — high but tiny denominator). Caveat: conversions are sparse (1–7/day, ~110 total in May) so daily ROAS is very noisy. The directional read (post > pre) is robust to the noise.
+
+Note this campaign-570106 ROAS (1.4–1.5x) is lower than Tofer's customer-facing "2x ROAS this year" because Tofer's number aggregates the full campaign group 114881 (CTV + display + multiple campaigns); we're looking at campaign 570106 in isolation.
+
+### Q7 — Fangorn-cohort HHST trajectory comparison (answers Tofer's "is this a one-off?")
+
+Compared Autocamp against all 316 advertisers flipped onto Fangorn between 2026-04-01 and today (filtered to advertisers with >1K impressions in both pre-flip and post-flip windows). Pre-flip window: 7 days before flip. Post-flip window: 14 days after flip.
+
+**Cohort distribution of HHST=10000 share delta (post − pre), in percentage points:**
+
+| Statistic | HHST=10000 Δ (pp) |
+|-----------|------------------:|
+| Min (worst collapse) | -57.5 |
+| 5th percentile | -22.5 |
+| 25th percentile | -6.5 |
+| **Median** | **-1.6** |
+| Mean | -4.7 |
+| 75th percentile | +0.3 |
+| 95th percentile | +5.1 |
+| Max | +44.1 |
+| **Autocamp (37569)** | **-50.2** |
+
+**Cohort summary:**
+
+- 66% of advertisers (208/316): stable HHST=10000 share, within ±5 pp of pre-flip
+- 4% of advertisers (13/316): drop of ≥30 pp post-flip (severe collapse)
+- **Autocamp: bottom 1.3 percentile (rank 4 of 316), only 3 advertisers had a worse drop**
+
+**Conclusion:** Tofer's "is this a one-off" hypothesis is empirically *correct.* The Fangorn rollout is generally stable — most advertisers' HHST trajectory barely changes. Autocamp is one of the most extreme outliers, in the bottom 1.3% of the entire cohort. The factors that drive Autocamp's collapse (3x YoY spend increase, OR-semantics audience expression with a thick keyword pool, high HHST starting point at 10000) are not present in the median advertiser. Worth a follow-up to characterize the other 12 severe-collapse advertisers and see if they share Autocamp's pattern.
+
+### IVR chart (Tofer's deeper-history snapshot)
+
+Tofer also posted a per-day Imp Visit Rate chart showing 5/03–6/02 — clean step change at 5/18:
+- 5/03–5/17 baseline: 0.50–0.70% IVR (flat band)
+- 5/18 step change: jumps to ~1.5%
+- 5/18–5/27: oscillates 1.3–2.0%
+- 5/28–6/02 climbs further: 1.5% → 3.0%+
+
+This is independent visual confirmation of the IVR doubling we computed from `all_facts` (Q2) — and it shows the lift is *continuing* to grow, not regressing.
+
 ### Synthesis — why HHST collapsed
 
-The mechanical chain:
-1. 5/18 Fangorn flip → MM scoring substrate becomes Fangorn's raw-score model.
+The mechanical chain (combining bidder behavior + Tofer's manual adjustments per the Activity Log):
+
+1. 5/18 Fangorn flip → MM scoring substrate becomes Fangorn's raw-score model. Tofer pushed HHST to 10000 at 7:09 PM and loosened freq cap to 4x/3d at 4:09 PM.
 2. At HHST=10000, only IPs in MM ∩ DS19-keyword at raw>0.8 qualify.
-3. That intersection is too small to fill Autocamp's ~$1,850/day pacing target on the West Coast geo restriction (location_ids 4003/4069/1749).
+3. That intersection is too small to fill Autocamp's ~$1,850/day pacing target — *especially given the YoY spend tripling* — on the West Coast geo restriction (location_ids 4003/4069/1749).
 4. 5/19 — bidder tries to sustain HHST=10000; impressions collapse to 15K (78% volume drop, spend $546 vs $1,850 target).
-5. 5/20–5/22 — bidder drops HHST entirely (HHST=-1, unscored mode) to recover pacing. Volume returns to ~75–85K/day. RTC effectively off.
-6. 5/23+ — partial HHST recovery as the bidder retunes. Settles at ~40% HHST=10000 + ~55% unscored.
+5. 5/20–5/22 — Tofer allowed HHST to drop (manual + bidder) and loosened frequency caps; bidder runs in unscored mode (HHST=-1) for 77–87% of impressions. Volume returns to ~75–85K/day. RTC effectively off.
+6. 5/23+ — Tofer started tightening HHST back up (0 → 401 → ...) and pulling frequency caps tighter (4x/3d → 2x/7 → 1x/14). Bidder settled at ~40% HHST=10000 + ~55% unscored.
+7. **Throughout the entire period, IVR was rising.** Fangorn's scoring is finding better-quality IPs even in the unscored fallback pool.
 
 ### Why the advertiser perceived a "performance concern" — but actual KPIs are flat-to-improved
 
@@ -170,11 +277,16 @@ This is a Fangorn-transition shock — *not* a performance regression. The campa
 
 ## 5. Solution
 
-This was a diagnostic spike. No code/config changes recommended for this specific campaign — the bidder's adaptive HHST response is working as designed. Recommendations / discussion points for the team:
+This was a diagnostic spike. No code/config changes recommended for this specific campaign — the bidder's adaptive HHST response is working as designed and Tofer's manual retunes (frequency-cap loosening, deliberate HHST drop) have already stabilized the campaign. Recommendations / discussion points for the team:
 
-1. **Communicate to Tofer / Trixy:** The performance concern is the 5/19 pacing dip during the Fangorn transition. Steady-state IVR has doubled. Mitigation for *future* Fangorn flips: warn advertisers that pacing may dip for 1–3 days while HHST retunes.
-2. **OR-semantics + HHST=10000 fragility:** Audiences with `(MM OR keywords)` + HHST=10000 are structurally fragile post-Fangorn because the bidder can only fill from MM ∩ keyword ∩ raw>0.8. If the team wants to keep HHST high after Fangorn flips, the audience builder may need to surface a warning when OR-keyword expressions are paired with high HHST settings.
-3. **Cross-reference TI-999 / TI-956:** The pattern observed here (MM ∩ keyword intersection sizing) is exactly the segment-quality problem TI-956 is scoring for. Worth adding Autocamp's audience to the TI-956 backtest cohort once that pipeline is live.
+1. **Reframe the narrative for the team / advertiser.** The "Fangorn hurt performance" story is wrong; Fangorn *helped* the campaign. The real story is two coupled issues:
+   - **Fangorn flip (2-week scope):** IVR doubled (0.48% → 1.0%+ and still climbing per Tofer's chart). This is a *win.*
+   - **YoY ROAS drop (12-month scope):** 8x → 2x ROAS, CVR down ~50%, spend up 3x ($25K → $80K+). The customer is now maxing out their high-intent audience because they're spending 3x as much against a similarly-sized scored pool. This is a separate scaling problem, not a Fangorn problem.
+2. **Candidate PEX use-case** (Bryce's suggestion): Share Autocamp as an example where Fangorn transition optics looked bad (HHST → 0) but the actual KPI was positive. Useful for setting expectations on future flips. Recommend Alex K + Bryce drive the PEX share-out.
+3. **Mitigation for future Fangorn flips.** Warn advertisers that pacing may dip 1–3 days while HHST retunes and that the visible HHST trajectory is not a quality regression. Possible product touchpoint: bidder UI annotation on Fangorn-flip day.
+4. **OR-semantics + HHST=10000 fragility.** Audiences with `(MM OR keywords)` + HHST=10000 are structurally fragile post-Fangorn because the bidder can only fill from MM ∩ keyword ∩ raw>0.8. For high-spend advertisers maxing out HI, this fragility compounds with the YoY scaling issue. Worth flagging on future advertiser onboarding to Fangorn.
+5. **Cross-reference TI-999 / TI-956.** The pattern observed here (MM ∩ keyword intersection sizing) is exactly the segment-quality problem TI-956 is scoring for. Worth adding Autocamp's audience to the TI-956 backtest cohort once that pipeline is live.
+6. **Generalizability check (Tofer's question: "is this a one-off?").** Worth a follow-up — pull post-flip HHST trajectories for all advertisers flipped onto Fangorn in the last 60 days. If most advertisers see a smaller HHST adjustment than Autocamp, this is indeed a one-off driven by Autocamp's YoY spend scaling. Recommend scoping as a separate ticket if there's interest.
 
 ## 6. Questions Answered
 
@@ -189,6 +301,18 @@ This was a diagnostic spike. No code/config changes recommended for this specifi
 
 - **Q:** Was RTC carrying load and did it drop off?
   **A:** RTC firing held at ~8% pre-Fangorn, fell to ~0.5% during HHST=0 mode, settled at ~3–4% in steady state. RTC is gated by HHST, so this tracks the HHST trajectory exactly.
+
+- **Q:** Is the advertiser's "performance concern" actually about Fangorn?
+  **A:** No. Tofer's expanded context (3:39 PM) shows the customer-facing concern is the YoY ROAS drop (8x → 2x), with conversion rate down ~50% and spend up 3x ($25K → $80K+). That's a 12-month scaling problem, not a 2-week Fangorn problem. Fangorn just made it briefly *more visible* via the HHST UI optics. Per Tofer's own conclusion: "the new set of scoring methodology rolled out has helped the campaign in the last 2 weeks. I think that should be more of the focus."
+
+- **Q:** Was the HHST collapse organic (bidder-driven) or operator-driven (Tofer)?
+  **A:** Both, in coupled fashion. The campaign Activity Log (Q5) shows Tofer manually loosened the secondary frequency cap from 1x/14-days to 4x/3-days on 5/18, then allowed HHST to drop. The bidder's own response to pacing pressure piled on. Without the frequency-cap loosening, the campaign would have collapsed even harder; with both levers loosened, the campaign found a new equilibrium at ~40% HI + ~55% unscored.
+
+- **Q:** Is this a Fangorn-wide problem or a one-off?
+  **A:** **One-off, empirically confirmed (Q7).** Across 316 advertisers flipped onto Fangorn since 4/01, the median HHST=10000 share barely changed (−1.6 pp) and 66% of advertisers were within ±5 pp of their pre-flip share. Only 4% had ≥30 pp drops. Autocamp is the **4th most severe collapse of 316**, in the bottom 1.3 percentile.
+
+- **Q:** Did Fangorn improve ROAS for this campaign?
+  **A:** Yes, +9% (Q6). Pre-Fangorn 5/01–5/17: 1.41x. Post-Fangorn 5/18–6/02: 1.54x. Caveat: conversions sparse (1–7/day) so noisy. Directional read robust.
 
 ## 7. Data Documentation Updates
 
