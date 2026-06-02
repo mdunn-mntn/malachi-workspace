@@ -1331,6 +1331,31 @@ When all three are present, the bidder progressively drops HHST → ends up serv
 
 The chart in the bidder UI titled "Bidder IPs Available by Intent Tier" (the one showing the High Intent / Peak Performance / Mid Intent / Max Reach stacked bars by day) shows **bid-time tier classification of impressions actually bid on**, not **audience composition**. So an IP can be in the audience and still not appear in this chart's High Intent slice if it isn't bid on at the moment in question. When HHST collapses to fill pacing, the chart's tier mix shifts (e.g., HI → Max Reach) even though audience membership is unchanged. APEX is the right reference for audience-composition questions.
 
+### Unscored IPs degrade attribution match rate — conversion CVR is undercounted (TI-1017, 2026-06-02)
+
+**Empirically observed on Autocamp campaign 570106 after 5/18 Fangorn flip** (via the "Audience Quality" report in the campaign Reports tab, surfaced by Trixy):
+
+| Metric | Pre-Fangorn (5/01–5/17) | Post-Fangorn (5/18+) |
+|--------|------------------------:|---------------------:|
+| Visit Match Rate (`matched_raw_pv / wins`) | ~95% | ~80% |
+| Conversion Match Rate (`matched_raw_conv / wins`) | ~70% | dropped to ~20%, recovered to ~40% |
+
+**Mechanism.** Post-Fangorn, the campaign was serving ~55% of impressions in HHST-unscored mode (HHST=-1, bidder ignores scores). Unscored IPs are by definition outside the MM scoring substrate (not in DS13/DS19) and have **lower identity-graph coverage** — they're less likely to appear in DS34 (CRM), DS21 (retargeting), or other identity-resolution sources. So:
+
+- **Visit attribution** still works reasonably well (~80% match rate post-flip) because visit attribution uses simpler signals — IP / cookie within session, short lookback.
+- **Conversion attribution** craters (~70% → ~20–40%) because conversion matching requires longer-term identity persistence (multi-day lookback, cross-device, household-level resolution). Unscored IPs don't have this coverage.
+
+**Measurement implication.** When the bidder serves a meaningful share of impressions on unscored IPs:
+- **Measured CVR (conv/visit) drops** because we can't see the conversions that occur. True CVR may be flat or higher.
+- **Measured ROAS may be undercounted** by the same factor — order amount attribution depends on conversion attribution.
+- **Visit metrics are robust**: IVR (visit/imp), reach, completion rate are unaffected by the attribution silo.
+
+**For Fangorn-flip diagnostics, treat conversion-based KPIs with a match-rate caveat.** Use visit-based metrics (IVR, reach, completion rate) as the primary signal for measuring Fangorn impact. If you must report on CVR / ROAS post-flip, pull the conversion match rate from the Audience Quality report and either (a) normalize the conversion count by `1 / match_rate` to estimate true conversions, or (b) restrict the CVR comparison to the scored-IP subset of impressions (filter `cost_impression_log` to `advertiser_household_score >= 1`).
+
+**This is a structural feature of the unscored-IP fallback path, not Fangorn-specific.** Any time the bidder runs in HHST=-1 mode (pacing pressure, low-supply day, audience exhaustion), expect conversion attribution to degrade in proportion to the unscored share. Worth noting on the operator side: an HHST drop carries both a quality cost (lower-intent IPs) AND a measurement cost (undercounted conversions).
+
+**Source:** "Audience Quality" report in campaign reports → Analytics tab → Audience Quality. Two charts: Visit Match Rate (`matched_raw_pv / wins`) and Conversion Match Rate (`matched_raw_conv / wins`). Other reports on the same tab: Audience Changes, TOW Changes, FPA Bleed, Day0 IVR.
+
 ### Intent Tier Thresholds (Prospecting Scoring Pipeline)
 Source: `gs://household-scoring-prod/output/scoring/prospecting_intent/` — daily per IP/advertiser/campaign. Scores retained only **35 days** in active storage.
 
