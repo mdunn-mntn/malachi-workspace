@@ -1262,10 +1262,12 @@ displayHTML(html)
 # MAGIC model on the treated tier's daily metric during the pre-period, then
 # MAGIC forecast the counterfactual post-period and compare to actuals.
 # MAGIC
-# MAGIC **Canonical TI-748/849 covariate selection:** VIF → BIC over 6
-# MAGIC candidates per (tier, metric). Control rate + control scale are
-# MAGIC metric-specific (visit-rate analogue for IVR; CVR analogue for CVR):
+# MAGIC **Canonical TI-748/849 covariate selection:** VIF → BIC over 7
+# MAGIC candidates per (tier, metric). Control rate + control scale + control
+# MAGIC rate lag are metric-specific (visit-rate analogue for IVR; CVR
+# MAGIC analogue for CVR):
 # MAGIC - `control_vr` / `control_cvr` — denom-weighted rate across control tiers
+# MAGIC - `control_vr_lag1` / `control_cvr_lag1` — control rate t−1 (momentum)
 # MAGIC - `control_imps` / `control_visits` — control-tier scale covariate (scaled)
 # MAGIC - `holiday` — binary US-holiday flag
 # MAGIC - `is_weekend` — Saturday/Sunday flag
@@ -1472,8 +1474,13 @@ CI_METRIC_SPECS = [
 ]
 
 def _candidates_for(spec: dict) -> list:
+    # control_rate_lag1 gives the model momentum from the control series —
+    # if control rate moved yesterday, treated rate tends to follow. Especially
+    # helpful for CVR where day-to-day noise drowns out small effects at the
+    # tier-day grain.
     return [
         spec["control_rate_name"],
+        f"{spec['control_rate_name']}_lag1",
         spec["control_scale_name"],
         "holiday",
         "is_weekend",
@@ -1556,6 +1563,7 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff,
 
     # Build candidate frame
     df = t.join(c[[metric_spec["control_rate_name"], metric_spec["control_scale_name"]]]).sort_index()
+    df[f"{metric_spec['control_rate_name']}_lag1"] = df[metric_spec["control_rate_name"]].shift(1)
     df["holiday"]      = df.index.isin(CI_HOLIDAYS).astype(float)
     df["is_weekend"]   = (df.index.dayofweek >= 5).astype(float)
     df["metric_lag1"]  = df["y"].shift(1)
@@ -1750,7 +1758,7 @@ ci_html = f"""
     <b>CausalImpact</b> &nbsp;·&nbsp;
     <b>CI window:</b> {ci_window_start} → {window_end} &nbsp;·&nbsp;
     <b>Metrics:</b> {', '.join(s['label'] for s in CI_METRIC_SPECS)} &nbsp;·&nbsp;
-    <b>Covariates:</b> VIF→BIC over 6 candidates per metric (control rate, control scale, holiday, is_weekend, metric_lag1, metric_lag7) — selected set shown per tile
+    <b>Covariates:</b> VIF→BIC over 7 candidates per metric (control rate + control rate lag1, control scale, holiday, is_weekend, metric_lag1, metric_lag7) — selected set shown per tile
     {(' &nbsp;·&nbsp; <b>Excluded days:</b> ' + ', '.join(EXCLUDE_DATES)) if EXCLUDE_DATES else ''}
   </div>
   {''.join(sections_html)}
