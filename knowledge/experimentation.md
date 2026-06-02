@@ -80,6 +80,13 @@ This protocol will eventually live in a Python package `mntn_experiment_eval/` w
 | Staggered adoption, small N per unit, need one aggregate estimate | **Panel data model (two-way FE)** | Units adopt at different times, want a single population-level treatment effect | Want per-unit effects, or units have enough data for individual time series models |
 | Want to understand feature importance | **SHAP / permutation importance** | Post-hoc explanation of what drove results | Not for causal claims |
 
+### Deeper read — DiD vs CausalImpact selection guide
+
+For the long-form "which one and why" with worked coffee-shop example, strength/weakness tables, and the canonical "use both" methods-convergence framing, see
+[`documentation/docs/did_vs_causalimpact_method_selection.md`](../documentation/docs/did_vs_causalimpact_method_selection.md).
+Shareable artifact — safe to send to anyone on the team or cross-functional
+stakeholders asking "why are you using DiD here and CausalImpact there?"
+
 ---
 
 ## Covariate Selection
