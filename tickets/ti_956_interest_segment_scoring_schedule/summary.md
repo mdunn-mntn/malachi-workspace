@@ -237,7 +237,85 @@ Three real options. Decision should be made in the early-next-week tech deep-div
 - **Filter aggressively in the UI** — don't show users 90 choices. Use the quality score to cut low-quality segments before surfacing.
 
 ## 5. Solution
-_Pending._
+
+### Implementation plan (locked 2026-06-02 after TI-999 close)
+
+**Architecture:** Databricks scheduled notebook → BQ table. Per the PR #57 investigation, Alex's scoring is Spark-native (Horvitz-Thompson estimator + pairwise Jaccard self-join + multi-stage z-score composite, ~2,000 lines of PySpark). Not SQL-expressible. Databricks is the only realistic host for v1.
+
+**What's been built (this ticket):**
+
+1. **Operative-3P extraction SQL** — `queries/ti_956_operative_3p_campaign_segments.sql`. Embeds the Pass 26 LCA classifier as a TEMP FUNCTION; returns one row per (campaign × dscid × polarity) tuple where the 3P clause actually drives delivery. Drops bidder-inert theater (MM + 3P-OR-incl). This is the TI-999 contribution to TI-956 — without this filter, the performance layer's segment-quality KPIs would reflect MM-only delivery with a 3P label slapped on, inflating the scores of theater-only segments.
+2. **Databricks notebook** — `artifacts/ti_956_segment_quality_scoring_notebook.py`. End-to-end pipeline:
+   - Reads ipdsc / seg_meta / targetable_ips / performance / campaign_segment_targets from BQ via the Spark connector
+   - Calls `build_edges_with_weights_estimator_only` to construct the HT panel
+   - Invokes `ThirdPartySegmentQuality(panel).quality_score_per_segment(...)` with the theater-filtered targets
+   - Adds `size_distinct_ips`, `quality_rank`, `anti_quality_rank`, `size_rank` (global dense ranks) — UI team requirement
+   - Adds `low_confidence_flag` for downstream de-ranking (HT variance is brutal at p=1e-4 on long-tail segments)
+   - Writes to `dw-main-bronze.household_scoring.segment_quality_daily` partitioned by `as_of_date`, clustered by `dscid`
+   - Smoke validation block (row count, score distribution, rank monotonicity, low-confidence share)
+
+**What Victor needs to set up:**
+
+1. **Databricks workspace + cluster** — Memory-optimized cluster (per `[[reference_databricks_for_heavy_queries]]` and `[[reference_databricks_node_sizing]]`: prefer more small-core nodes over fewer big-core for shuffle-heavy Spark). The pairwise Jaccard step in uniqueness.py is the killer; cluster needs enough total cores + shuffle bandwidth.
+2. **Install `targeting-infra-ml`** — Either pip-install from the repo (once PR #57 merges) or vendor the package into a workspace folder. The notebook imports `utils.segment_quality_utils.facade.ThirdPartySegmentQuality` and `utils.sampling_logic.build_edges_with_weights_estimator_only`.
+3. **BigQuery Spark connector** — Configure auth (service account on the cluster). Workspace probably already has this.
+4. **GCS temp bucket** — `gs://household-scoring-prod/databricks_temp/segment_quality/` for indirect BQ writes.
+5. **Create the output BQ table** — DDL:
+    ```sql
+    CREATE TABLE `dw-main-bronze.household_scoring.segment_quality_daily` (
+      dscid                INT64,
+      as_of_date           DATE,
+      window_start         DATE,
+      window_end           DATE,
+      quality_score        FLOAT64,
+      size_distinct_ips    INT64,
+      quality_rank         INT64,
+      anti_quality_rank    INT64,
+      size_rank            INT64,
+      z_activity           FLOAT64,
+      z_stability          FLOAT64,
+      z_share              FLOAT64,
+      z_uniqueness         FLOAT64,
+      z_sample             FLOAT64,
+      z_staleness          FLOAT64,
+      z_specificity        FLOAT64,
+      z_targetability     FLOAT64,
+      z_performance        FLOAT64,
+      z_combo              FLOAT64,
+      reach_hat_30d        FLOAT64,
+      cv14                 FLOAT64,
+      avg_share_30d        FLOAT64,
+      mean_topk_jaccard_30d FLOAT64,
+      idf_norm             FLOAT64,
+      staleness_unit_score FLOAT64,
+      pct_targetable_30d   FLOAT64,
+      ess_30d              FLOAT64,
+      sample_rate          FLOAT64,
+      low_confidence_flag  BOOL
+    )
+    PARTITION BY as_of_date
+    CLUSTER BY dscid;
+    ```
+6. **Databricks Workflow / Job schedule** — Weekly, Sunday 06:00 UTC. Notebook path: workspace import of `tickets/ti_956_interest_segment_scoring_schedule/artifacts/ti_956_segment_quality_scoring_notebook.py`.
+7. **Alerts** — Job-failure alert to TI Slack channel. Late-data alert if no rows for >9 days.
+
+**Pre-flight checklist:**
+
+- [ ] PR #57 merged in `SteelHouse/targeting-infra-ml` (currently blocked / needs theastrocat review)
+- [ ] Output BQ table created (DDL above)
+- [ ] Cluster sized + tested with a single-run invocation (validate the pairwise Jaccard step doesn't OOM)
+- [ ] Smoke validation passes on the first run
+- [ ] Macie confirms output schema matches what the admin UI needs
+
+### Storage plan
+
+| Surface | Location | Refresh | Consumer |
+|---|---|---|---|
+| Primary (BQ) | `dw-main-bronze.household_scoring.segment_quality_daily` | Weekly Sun 06:00 UTC | UI team, Mode dashboards, admin tooling |
+| GCS landing (optional) | `gs://household-scoring-prod/output/segment_quality/year=YYYY/month=MM/day=DD/*.parquet` | Same | Macie / non-BQ consumers — produced by BQ EXPORT from the table partition |
+| Notebook output (raw) | Cluster local DBFS during run | Per run | Debug / re-validate |
+
+GCS export step (optional, for Macie): runs as a downstream BQ scheduled query after the Databricks job completes, exports the latest partition as parquet to GCS. Add to airflow-ti if Macie's consumer pipeline lives there.
 
 ## 6. Questions Answered
 - **Q:** Why does this need a schedule rather than ad-hoc reruns?
