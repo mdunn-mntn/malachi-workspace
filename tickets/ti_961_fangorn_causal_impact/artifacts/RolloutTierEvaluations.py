@@ -1411,6 +1411,20 @@ from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from scipy import stats
 
+# Disable MLflow autologging for this section. Databricks autolog wraps every
+# sm.OLS().fit() (60+ per tier × metric from the BIC best-subset search) and
+# every UnobservedComponents.fit() with a sync tracking-server write. With
+# IVR + CVR that's ~400 fits per run — the autolog overhead dominates wall
+# time (a 5-min cell becomes 45+ min). We don't need per-fit MLflow runs
+# here; the cell produces a results DataFrame that's the actual artifact.
+try:
+    import mlflow
+    mlflow.autolog(disable=True)
+    mlflow.statsmodels.autolog(disable=True)
+    mlflow.sklearn.autolog(disable=True)
+except Exception as _e:
+    print(f"[ci] mlflow autolog disable skipped: {_e}")
+
 # US holidays in the analysis window (extend if window pushes earlier/later)
 CI_HOLIDAYS = pd.to_datetime([
     "2026-02-14", "2026-02-16",   # Valentine's, Presidents' Day
@@ -1588,7 +1602,7 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff,
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model = UnobservedComponents(y_pre, level="local level", exog=X_pre)
-        res = model.fit(maxiter=200, disp=False)
+        res = model.fit(maxiter=50, disp=False)
 
     X_post = X_all[n_pre:n_pre + n_post]
     forecast = res.get_forecast(steps=n_post, exog=X_post)
