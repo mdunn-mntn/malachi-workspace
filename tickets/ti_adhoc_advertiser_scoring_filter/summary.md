@@ -32,3 +32,34 @@ Advertisers with a gap of N+ days, by post-gap spend bucket:
 - Victor's rules generate scores when a campaign group is live OR was updated <24h ago. Any returning advertiser who flips a campaign group from off→on will trigger rule 2 (campaign_group.update_time) the same day. So the residual risk is advertisers who resume spend **without touching campaign_groups at all**, which is structurally close to impossible — bidding requires an active campaign group.
 - The next-day reconciliation check Victor described bounds worst-case latency to 1 day. For 363 advertisers / 730 days = ~0.5 returns/day, 1-day latency on a fraction of them is tiny.
 - The size of the "return" cohort doesn't kill the proposal — it justifies the next-day catch-up check.
+
+## Tiered retention — max-gap by spend tier
+
+| Spend tier  | n     | p50 | p75 | p90 | p95 | p99 | max |
+|-------------|------:|----:|----:|----:|----:|----:|----:|
+| $10M+       |     2 |   0 |  12 |  12 |  12 |  12 |  12 |
+| $1M–$10M    |    73 |   2 |  26 |  70 | 120 | 174 | 174 |
+| $100k–$1M   |   664 |   8 |  57 | 137 | 192 | 316 | 518 |
+| $10k–$100k  | 1,663 |   5 |  63 | 198 | 273 | 401 | 631 |
+| <$10k       | 3,064 |   0 |   7 |  46 | 122 | 324 | 652 |
+
+**Reads:**
+- **$1M+ spenders never disappear long.** 75 advertisers, every single one has max gap ≤174 days. **180d retention covers 100% of $1M+.**
+- **$100k–$1M: 200d covers p95, 320d covers p99.** 664 advertisers.
+- **$10k–$100k actually has the worst tail** (p95=273d, p99=401d) — mid-tier advertisers cycle in/out more than top-tier.
+- **<$10k: 3k advertisers; tail of 365d+ returners exists but spend at stake is trivial ($62k over 2 years).**
+
+## Short-flight reality check (Ryan's question)
+
+Last 2 years, flights with `end_time - start_time ≤ 3 days`:
+
+| Duration | n flights | with spend | >$1k | >$10k | Total spend |
+|---------:|----------:|-----------:|-----:|------:|------------:|
+| 0d (same day) | 9,910 | 9,143 | 905 | 46 | $4.6M |
+| 1d            | 8,796 | 7,572 | 1,731 | 163 | $8.9M |
+| 2d            | 5,326 | 4,415 | 1,218 | 123 | $7.2M |
+| 3d            | 4,710 | 3,929 | 1,492 | 151 | $7.3M |
+
+~10 active 0–1d flights/day. Most are <$1k tests but the tail (>$10k) is non-trivial (200+/yr).
+
+**Implication:** advertiser_scores are still useful for short flights because the flight may start AND end before the next-day reconciliation. The fallback model Victor described handles this — keep the scores around, just limit who gets new scores generated each day.
