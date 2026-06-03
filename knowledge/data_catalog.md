@@ -1733,6 +1733,14 @@ the `core_*` tables here.
 | has_audience | BOOLEAN | |
 | testing_type | STRING | A/B testing type |
 | parent_campaign_group_id | INTEGER | For nested campaign groups |
+| update_time | TIMESTAMP | **GREATEST(ui_ui_flights.update_time, campaign_groups_raw.update_time)** — captures both campaign_group AND child flight modifications. Verified 2026-06-03: 98.8% of cgs have update_time ≥ max(flight, cg_raw); the rest are SQLMesh refresh tail. Use for any "campaign was modified" check. |
+| update_time_raw | TIMESTAMP | Raw campaign_group row update_time only (does NOT include flight updates). Use only when you specifically want to detect direct cg-level changes excluding flight edits. |
+
+### update_time semantics (verified 2026-06-03 — TI-ADHOC advertiser scoring filter)
+- `update_time` in `campaign_groups` (and `public_campaign_groups`) is a computed column = `GREATEST(ui_flights.update_time, campaign_groups_raw.update_time)`. Source: Postgres view definition confirmed by Victor Savitskiy.
+- Empirical correlation across 17,499 cgs in last 90 days: 98.8% follow the GREATEST formula exactly. 14.7% have `update_time = flight_max_update` (most recent change was a flight edit); 84.5% have `update_time = cg_raw_update`.
+- **Status changes always bump update_time** — 4,869 status transitions in archive history, 0 with no update_time change.
+- For "advertiser modified anything campaign-related in last 24h" checks (e.g., scoring filter rules), use `update_time`, not `update_time_raw`.
 
 ---
 
