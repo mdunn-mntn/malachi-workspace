@@ -1258,25 +1258,40 @@ displayHTML(html)
 # MAGIC ## CausalImpact (Synthetic Control)
 # MAGIC
 # MAGIC Independent validation of the DiD headline. For each treated tier × metric
-# MAGIC (IVR + CVR), we fit a local-level unobserved-components (UCM / state-space)
-# MAGIC model on the treated tier's daily metric during the pre-period, then
-# MAGIC forecast the counterfactual post-period and compare to actuals.
+# MAGIC (IVR + CVR), we fit a UCM / state-space model on the treated tier's daily
+# MAGIC metric during the pre-period, then forecast the counterfactual post-period
+# MAGIC and compare to actuals.
 # MAGIC
-# MAGIC **Canonical TI-748/849 covariate selection:** VIF → BIC over 7
-# MAGIC candidates per (tier, metric). Control rate + control scale + control
-# MAGIC rate lag are metric-specific (visit-rate analogue for IVR; CVR
-# MAGIC analogue for CVR):
+# MAGIC **Model:** `level="local level"` + `freq_seasonal=[{"period": 7, "harmonics": 2}]`
+# MAGIC + selected `exog`. Weekly seasonality is handled by the state-space
+# MAGIC component (not an `is_weekend` dummy); the local-level state handles
+# MAGIC temporal correlation in `y` (no lags-of-`y` allowed as covariates — that
+# MAGIC would leak post-treatment values into the counterfactual).
+# MAGIC
+# MAGIC **Covariate candidates: VIF → BIC over 4 exogenous-only candidates per
+# MAGIC (tier, metric):**
 # MAGIC - `control_vr` / `control_cvr` — denom-weighted rate across control tiers
 # MAGIC - `control_vr_lag1` / `control_cvr_lag1` — control rate t−1 (momentum)
 # MAGIC - `control_imps` / `control_visits` — control-tier scale covariate (scaled)
 # MAGIC - `holiday` — binary US-holiday flag
-# MAGIC - `is_weekend` — Saturday/Sunday flag
-# MAGIC - `metric_lag1` — treated tier metric t−1
-# MAGIC - `metric_lag7` — treated tier metric t−7 (weekly seasonality)
 # MAGIC
 # MAGIC VIF iteratively drops any covariate with VIF ≥ 10. BIC does a best-subset
 # MAGIC search up to size 5. The winning subset becomes the `exog` matrix for the
 # MAGIC UCM. Selected covariates are surfaced on each tile.
+# MAGIC
+# MAGIC **Inference by simulation, not hand-rolled SE:** the effect's uncertainty
+# MAGIC is the counterfactual's uncertainty (actuals are observed/fixed). We draw
+# MAGIC N=2000 sample paths from the fitted forecast distribution — this carries
+# MAGIC the correct cross-day covariance of the local-level forecast and makes no
+# MAGIC normality assumption. 95% CrI = percentiles of the simulated effect
+# MAGIC distribution; p-value = two-sided tail probability the simulated
+# MAGIC counterfactual beats the observed actual.
+# MAGIC
+# MAGIC **Pre-period fit diagnostic:** R² and MAPE of one-step-ahead in-sample
+# MAGIC predictions vs actual on the pre-period (skipping a short diffuse-init
+# MAGIC burn-in). This is the trust check for the whole method: if the UCM can't
+# MAGIC track the treated series BEFORE the switch, its post-period counterfactual
+# MAGIC is not credible. R² is surfaced on each tile and in each diagnostic chart.
 # MAGIC
 # MAGIC `ci_pre_days` widget controls the pre-period length (default 60d), independent
 # MAGIC of the DiD `lookback_days` widget.
@@ -1411,7 +1426,6 @@ import statsmodels.api as sm
 from itertools import combinations
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-from scipy import stats
 
 # Disable MLflow autologging for this section. Databricks autolog wraps every
 # sm.OLS().fit() (60+ per tier × metric from the BIC best-subset search) and
@@ -1474,18 +1488,21 @@ CI_METRIC_SPECS = [
 ]
 
 def _candidates_for(spec: dict) -> list:
-    # control_rate_lag1 gives the model momentum from the control series —
-    # if control rate moved yesterday, treated rate tends to follow. Especially
-    # helpful for CVR where day-to-day noise drowns out small effects at the
-    # tier-day grain.
+    # 4 candidates per (tier, metric). Deliberately exogenous-only.
+    # - control_rate / control_rate_lag1 / control_scale: come from CONTROL
+    #   tiers, no treatment leakage
+    # - holiday: calendar event, exogenous
+    # Note: NO metric_lag1 / metric_lag7 here. Those are lags of the TREATED
+    # outcome y; conditioning the forecast on them would leak post-treatment
+    # values into the counterfactual and bias the effect toward zero. The
+    # UCM local-level state handles temporal correlation in y without leakage.
+    # Note: NO is_weekend dummy either. Weekly periodicity is captured properly
+    # by the freq_seasonal=[{"period": 7}] component added in run_ci_for_tier.
     return [
         spec["control_rate_name"],
         f"{spec['control_rate_name']}_lag1",
         spec["control_scale_name"],
         "holiday",
-        "is_weekend",
-        "metric_lag1",
-        "metric_lag7",
     ]
 
 def drop_high_vif(features: pd.DataFrame, vif_threshold: float = 10.0) -> list:
@@ -1561,13 +1578,10 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff,
     )
     c[metric_spec["control_scale_name"]] = c[metric_spec["control_scale_col"]] / metric_spec["scale_factor"]
 
-    # Build candidate frame
+    # Build candidate frame — exogenous covariates only (no lags of y).
     df = t.join(c[[metric_spec["control_rate_name"], metric_spec["control_scale_name"]]]).sort_index()
     df[f"{metric_spec['control_rate_name']}_lag1"] = df[metric_spec["control_rate_name"]].shift(1)
     df["holiday"]      = df.index.isin(CI_HOLIDAYS).astype(float)
-    df["is_weekend"]   = (df.index.dayofweek >= 5).astype(float)
-    df["metric_lag1"]  = df["y"].shift(1)
-    df["metric_lag7"]  = df["y"].shift(7)
     df = df.dropna()
 
     pre_period  = [df.index.min().strftime("%Y-%m-%d"),
@@ -1609,34 +1623,93 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff,
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model = UnobservedComponents(y_pre, level="local level", exog=X_pre)
+        # Local level + stochastic weekly seasonality (period=7). harmonics=2
+        # (4 trig states) captures the dominant weekday/weekend swing without
+        # overfitting short pre-windows; full day-of-week would be harmonics=3.
+        # Weekly cycle handled HERE — that's why is_weekend dummy is no longer
+        # a candidate covariate.
+        model = UnobservedComponents(
+            y_pre,
+            level="local level",
+            freq_seasonal=[{"period": 7, "harmonics": 2}],
+            exog=X_pre,
+        )
         res = model.fit(maxiter=50, disp=False)
 
     X_post = X_all[n_pre:n_pre + n_post]
-    forecast = res.get_forecast(steps=n_post, exog=X_post)
-    predicted_post = forecast.predicted_mean
-    ci_post = forecast.conf_int(alpha=0.05)
+    predicted_post = np.asarray(
+        res.get_forecast(steps=n_post, exog=X_post).predicted_mean, dtype=float)
 
-    if hasattr(ci_post, "iloc"):
-        lower_bound = ci_post.iloc[:, 0].values
-        upper_bound = ci_post.iloc[:, 1].values
-    else:
-        ci_arr = np.asarray(ci_post)
-        lower_bound = ci_arr[:, 0]
-        upper_bound = ci_arr[:, 1]
+    # --- Counterfactual uncertainty by simulation ---
+    # The effect's uncertainty is ENTIRELY the counterfactual's uncertainty
+    # (post-period actuals are observed/fixed). Averaging per-day forecast CI
+    # bounds is NOT the SD of the post-period average — it drops the 1/n
+    # scaling AND ignores the strong positive cross-day covariance of a
+    # local-level forecast. Instead, draw N=2000 sample paths from the
+    # forecast distribution (initial-state + state-shock + observation
+    # uncertainty, with the correct cross-day covariance), apply each
+    # summary to each path, and read percentiles. No hand-derived SE, no
+    # ratio-of-bounds blow-up, no normality assumption.
+    N_SIM = 2000
+    np.random.seed(0)  # reproducible: simulate draws random init state + shocks
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        sim = res.simulate(nsimulations=n_post, anchor="end",
+                           repetitions=N_SIM, exog=X_post)
+    sim_paths = np.asarray(sim).reshape(n_post, N_SIM)   # (n_post, N_SIM)
+
+    # Per-day percentile envelope across simulated paths — used by the chart band
+    lower_bound = np.percentile(sim_paths, 2.5, axis=1)
+    upper_bound = np.percentile(sim_paths, 97.5, axis=1)
+
+    # Distribution of the post-period AVERAGE counterfactual (one value per path)
+    avg_cf_dist = sim_paths.mean(axis=0)                 # (N_SIM,)
+
+    # --- Pre-period fit diagnostic ---
+    # One-step-ahead in-sample predictions vs actual on the pre-period. This
+    # is the trust check for the whole method: if the UCM cannot track the
+    # treated series BEFORE the switch, its post-period counterfactual is not
+    # credible. Skip a short burn-in (diffuse state init inflates early error).
+    pre_fitted = np.asarray(res.fittedvalues, dtype=float)
+    burn = min(7, max(1, n_pre // 10))
+    pf_resid = y_pre[burn:] - pre_fitted[burn:]
+    pf_denom = np.where(np.abs(y_pre[burn:]) > 0, np.abs(y_pre[burn:]), np.nan)
+    pre_mape = float(np.nanmean(np.abs(pf_resid) / pf_denom))
+    ss_res   = float(np.sum(pf_resid ** 2))
+    ss_tot   = float(np.sum((y_pre[burn:] - np.mean(y_pre[burn:])) ** 2))
+    pre_r2   = float(1 - ss_res / ss_tot) if ss_tot > 0 else float("nan")
+
+    # Stash full per-day series for the actual-vs-counterfactual diagnostic chart
+    CI_SERIES[(treated_tier, metric_spec["label"])] = {
+        "dates_pre":   df.index[:n_pre],
+        "dates_post":  df.index[n_pre:n_pre + n_post],
+        "actual_pre":  y_pre,
+        "actual_post": y_all[n_pre:n_pre + n_post],
+        "fitted_pre":  pre_fitted,
+        "pred_post":   np.asarray(predicted_post, dtype=float),
+        "lower_post":  lower_bound,
+        "upper_post":  upper_bound,
+        "cutoff":      cutoff,
+    }
 
     avg_actual    = float(np.mean(y_all[n_pre:n_pre + n_post]))
     avg_predicted = float(np.mean(predicted_post))
-    avg_lower     = float(np.mean(lower_bound))
-    avg_upper     = float(np.mean(upper_bound))
 
-    rel_effect    = avg_actual / avg_predicted - 1.0 if avg_predicted else float("nan")
-    rel_ci_lower  = avg_actual / avg_upper - 1.0 if avg_upper else float("nan")
-    rel_ci_upper  = avg_actual / avg_lower - 1.0 if avg_lower else float("nan")
+    # Effect distributions: actual is fixed, so subtract/divide the simulated
+    # counterfactual-average distribution. Point estimate uses the analytic mean.
+    abs_dist = avg_actual - avg_cf_dist
+    rel_dist = np.where(avg_cf_dist != 0.0, avg_actual / avg_cf_dist - 1.0, np.nan)
 
     abs_effect = avg_actual - avg_predicted
-    se = (avg_upper - avg_lower) / (2 * 1.96)
-    p_value = 2 * (1 - stats.norm.cdf(abs(abs_effect) / se)) if se > 0 else 1.0
+    rel_effect = avg_actual / avg_predicted - 1.0 if avg_predicted else float("nan")
+    abs_ci_lower, abs_ci_upper = (float(x) for x in np.percentile(abs_dist, [2.5, 97.5]))
+    rel_ci_lower, rel_ci_upper = (float(x) for x in np.nanpercentile(rel_dist, [2.5, 97.5]))
+
+    # Two-sided tail probability: how often the simulated counterfactual lands
+    # on the wrong side of the observed actual (posterior-predictive analogue).
+    p_value = float(min(1.0, 2.0 * min(
+        float((avg_cf_dist >= avg_actual).mean()),
+        float((avg_cf_dist <= avg_actual).mean()))))
 
     return {
         **base,
@@ -1644,14 +1717,21 @@ def run_ci_for_tier(treated_tier: int, control_tier_list: list, cutoff,
         "selected_covariates": ",".join(selected),
         "n_selected":          len(selected),
         "best_bic":            best_bic,
+        "pre_r2":              pre_r2,
+        "pre_mape":            pre_mape,
         "avg_actual":          avg_actual,
         "avg_predicted":       avg_predicted,
+        "abs_effect":          abs_effect,
+        "abs_ci_95_lower":     abs_ci_lower,
+        "abs_ci_95_upper":     abs_ci_upper,
         "rel_effect":          rel_effect,
         "rel_ci_95_lower":     rel_ci_lower,
         "rel_ci_95_upper":     rel_ci_upper,
         "p_value":             p_value,
+        "n_sim":               N_SIM,
     }
 
+CI_SERIES = {}      # populated inside run_ci_for_tier; used by the diagnostic chart
 ci_rows = []
 for tier in sorted(treated_tiers):
     if tier not in tier_inclusion_dates:
@@ -1670,7 +1750,11 @@ display(ci_results_df)
 
 # COMMAND ----------
 
-# Render CI results as styled tiles consistent with the DiD HTML block above
+# Render CausalImpact results as styled tiles — actual vs counterfactual.
+# Headline is the ABSOLUTE effect (in percentage points): unambiguous in
+# magnitude and direction, doesn't blow up when the counterfactual approaches
+# zero. Relative effect is shown as a secondary metric.
+
 def fmt_pct_signed(x, digits=1):
     if x is None or pd.isna(x):
         return "—"
@@ -1681,20 +1765,45 @@ def fmt_pct(x, digits=2):
         return "—"
     return f"{x * 100:.{digits}f}%"
 
+def fmt_pp(x, digits=2):
+    if x is None or pd.isna(x):
+        return "—"
+    return f"{x * 100:+.{digits}f}pp"
+
 def ci_color(row):
-    if "rel_effect" not in row or pd.isna(row.get("rel_effect")):
-        return "#999"
+    if "abs_effect" not in row or pd.isna(row.get("abs_effect")):
+        return "#9ca3af"
     sig = row.get("p_value", 1.0) < 0.10
-    if row["rel_effect"] > 0:
+    if row["abs_effect"] > 0:
         return "#1a7f37" if sig else "#86a886"
     return "#b91c1c" if sig else "#c98080"
+
+def _effect_bar(row, color):
+    """Horizontal absolute-effect bar: 95% CrI span + point estimate against
+    a zero reference. Auto-scaled per tile, so the visual question is simply
+    'does the interval clear the zero line?' (cleared = effect distinguishable
+    from no-flip counterfactual)."""
+    lo, pt, hi = row.get("abs_ci_95_lower"), row.get("abs_effect"), row.get("abs_ci_95_upper")
+    if any(v is None or pd.isna(v) for v in (lo, pt, hi)):
+        return ""
+    M = (max(abs(lo), abs(hi), abs(pt)) * 1.15) or 1e-9
+    to_pct = lambda v: (v + M) / (2 * M) * 100.0
+    lo_p, pt_p, hi_p = to_pct(lo), to_pct(pt), to_pct(hi)
+    return f"""
+      <div style="position:relative; height:24px; margin-top:8px;">
+        <div style="position:absolute; top:10px; left:0; right:0; height:4px; background:#eef0f2; border-radius:2px;"></div>
+        <div style="position:absolute; top:3px; left:50%; width:1px; height:18px; background:#9ca3af;"></div>
+        <div style="position:absolute; top:8px; left:{lo_p:.1f}%; width:{max(hi_p - lo_p, 0.6):.1f}%; height:8px; background:{color}40; border-radius:4px;"></div>
+        <div style="position:absolute; top:6px; left:{pt_p:.1f}%; width:10px; height:10px; margin-left:-5px; background:{color}; border-radius:50%;"></div>
+      </div>
+    """
 
 def _render_tile(row: dict) -> str:
     metric = row.get("metric", "—")
     sub    = row.get("metric_sub", "")
-    if "rel_effect" not in row:
+    if "abs_effect" not in row or pd.isna(row.get("abs_effect")):
         return f"""
-        <div style="flex:1 1 0; min-width:240px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
+        <div style="flex:1 1 0; min-width:250px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
           <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
             {metric} <span style="color:#9ca3af; font-weight:500;">({sub})</span>
           </div>
@@ -1704,28 +1813,33 @@ def _render_tile(row: dict) -> str:
         </div>
         """
     color = ci_color(row)
+    pre_r2_str = ("%.2f" % row["pre_r2"]) if row.get("pre_r2") == row.get("pre_r2") else "—"
     return f"""
-    <div style="flex:1 1 0; min-width:240px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
+    <div style="flex:1 1 0; min-width:250px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
       <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
         {metric} <span style="color:#9ca3af; font-weight:500;">({sub})</span>
       </div>
-      <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:14px;">
+      <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:13px;">
         <span style="color:#6b7280;">Actual avg</span><span>{fmt_pct(row["avg_actual"])}</span>
       </div>
-      <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:14px;">
-        <span style="color:#6b7280;">Predicted (no flip)</span><span>{fmt_pct(row["avg_predicted"])}</span>
+      <div style="display:flex; justify-content:space-between; margin-top:3px; font-size:13px;">
+        <span style="color:#6b7280;">Counterfactual (no flip)</span><span>{fmt_pct(row["avg_predicted"])}</span>
       </div>
-      <div style="margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; display:flex; justify-content:space-between; font-weight:600; color:{color};">
-        <span>Relative effect</span><span>{fmt_pct_signed(row["rel_effect"])}</span>
+      <div style="margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:baseline; font-weight:700; color:{color};">
+        <span style="font-size:13px;">Absolute effect</span><span style="font-size:18px;">{fmt_pp(row["abs_effect"])}</span>
+      </div>
+      {_effect_bar(row, color)}
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-top:4px;">
+        <span>95% CrI</span><span>[{fmt_pp(row["abs_ci_95_lower"])}, {fmt_pp(row["abs_ci_95_upper"])}]</span>
       </div>
       <div style="display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-top:2px;">
-        <span>95% CrI</span><span>[{fmt_pct_signed(row["rel_ci_95_lower"])}, {fmt_pct_signed(row["rel_ci_95_upper"])}]</span>
+        <span>Relative effect</span><span style="color:{color}; font-weight:600;">{fmt_pct_signed(row["rel_effect"])}</span>
       </div>
       <div style="display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-top:2px;">
         <span>p-value</span><span>{row["p_value"]:.3f}</span>
       </div>
       <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; margin-top:6px;">
-        <span>{row["n_pre"]}d pre · {row["n_post"]}d post</span><span>control: tiers {row["control_tiers"]}</span>
+        <span>{row["n_pre"]}d pre · {row["n_post"]}d post</span><span>pre-fit R² {pre_r2_str}</span>
       </div>
       <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
         covariates: {row.get("selected_covariates", "—")}
@@ -1746,20 +1860,25 @@ for tier in sorted(treated_tiers):
     sections_html.append(f"""
     <div style="margin-bottom:18px;">
       <div style="font-weight:600; color:#374151; margin-bottom:8px; font-size:13px;">
-        Tier {tier} &nbsp;·&nbsp; <span style="color:#6b7280; font-weight:500;">switched {cutoff} · vs control {', '.join(f'Tier {t}' for t in control_tiers)}</span>
+        Tier {tier} &nbsp;·&nbsp; <span style="color:#6b7280; font-weight:500;">switched {cutoff} · actual vs no-flip counterfactual</span>
       </div>
       <div style="display:flex; gap:12px; flex-wrap:wrap;">{tile_html}</div>
     </div>
     """)
 
+_n_sim = next((r.get("n_sim") for r in ci_rows if r.get("n_sim")), 2000)
 ci_html = f"""
 <div style="font-family:-apple-system, BlinkMacSystemFont, sans-serif; width:100%;">
-  <div style="background:#f6f8fa; padding:12px 16px; border-radius:6px; margin-bottom:12px;">
-    <b>CausalImpact</b> &nbsp;·&nbsp;
-    <b>CI window:</b> {ci_window_start} → {window_end} &nbsp;·&nbsp;
-    <b>Metrics:</b> {', '.join(s['label'] for s in CI_METRIC_SPECS)} &nbsp;·&nbsp;
-    <b>Covariates:</b> VIF→BIC over 7 candidates per metric (control rate + control rate lag1, control scale, holiday, is_weekend, metric_lag1, metric_lag7) — selected set shown per tile
-    {(' &nbsp;·&nbsp; <b>Excluded days:</b> ' + ', '.join(EXCLUDE_DATES)) if EXCLUDE_DATES else ''}
+  <div style="background:#f6f8fa; padding:12px 16px; border-radius:6px; margin-bottom:12px; font-size:13px; color:#374151;">
+    <b>CausalImpact — actual vs counterfactual</b> &nbsp;·&nbsp;
+    <b>window:</b> {ci_window_start} → {window_end} &nbsp;·&nbsp;
+    <b>metrics:</b> {', '.join(s['label'] for s in CI_METRIC_SPECS)}
+    <div style="margin-top:6px; color:#6b7280; font-size:12px; line-height:1.5;">
+      Counterfactual = UCM (local level + weekly freq_seasonal) forecast fit on the pre-period; effect = actual − counterfactual.
+      95% CrI &amp; p-value from {_n_sim:,} simulated counterfactual paths (p = two-sided tail prob the counterfactual beats the actual).
+      Control tiers {', '.join(str(t) for t in control_tiers)} enter only as forecast covariates (VIF→BIC over 4 candidates: control rate, control rate lag1, control scale, holiday).
+      {(' · Excluded days: ' + ', '.join(EXCLUDE_DATES)) if EXCLUDE_DATES else ''}
+    </div>
   </div>
   {''.join(sections_html)}
 </div>
@@ -1768,51 +1887,58 @@ displayHTML(ci_html)
 
 # COMMAND ----------
 
-# Diagnostic plot — one panel per (treated tier × metric), actual vs control covariate
+# Diagnostic plot — one panel per (treated tier × metric).
+# Shows the ACTUAL series against the model: in-sample fit during the
+# pre-period (the trust check) and the forecast counterfactual + 95% band
+# during the post-period (the no-treatment baseline). The post-period gap
+# between actual and counterfactual IS the estimated effect.
 import matplotlib.gridspec as gridspec
 
-_spec_by_label = {s["label"]: s for s in CI_METRIC_SPECS}
 ci_panels = [r for r in ci_rows if "rel_effect" in r]
 if ci_panels:
-    fig = plt.figure(figsize=(12, 3.0 * len(ci_panels)))
-    gs = gridspec.GridSpec(len(ci_panels), 1, hspace=0.6)
+    fig = plt.figure(figsize=(12, 3.2 * len(ci_panels)))
+    gs = gridspec.GridSpec(len(ci_panels), 1, hspace=0.7)
 
     for i, row in enumerate(ci_panels):
         tier   = row["treated_tier"]
         metric = row["metric"]
-        spec   = _spec_by_label[metric]
-        target_col       = spec["target"]
-        control_num_col  = spec["control_num"]
-        control_den_col  = spec["control_den"]
-        control_rate_col = spec["control_rate_name"]
-        cutoff = pd.to_datetime(row["cutoff"])
-
-        # Reconstruct the series for plotting
-        t = (ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"] == tier]
-             .set_index("day")[[target_col]].rename(columns={target_col: "y"}))
-        c_raw = ci_tier_daily[ci_tier_daily["fangorn_rollout_tier_num"].isin(control_tiers)]
-        c = c_raw.groupby("day", as_index=True)[[control_num_col, control_den_col]].sum()
-        c[control_rate_col] = np.where(c[control_den_col] > 0,
-                                       c[control_num_col] / c[control_den_col],
-                                       np.nan)
-        df = t.join(c[[control_rate_col]]).dropna().sort_index()
+        s = CI_SERIES.get((tier, metric))
+        if s is None:
+            continue
+        cutoff = pd.to_datetime(s["cutoff"])
+        color  = TIER_COLORS.get(tier, "#5dade2")
 
         ax = fig.add_subplot(gs[i, 0])
-        color = TIER_COLORS.get(tier, "#5dade2")
-        ax.plot(df.index, df["y"], color=color, marker="o", markersize=3,
+
+        # Actual — continuous across pre + post
+        all_dates  = s["dates_pre"].append(s["dates_post"])
+        all_actual = np.concatenate([s["actual_pre"], s["actual_post"]])
+        ax.plot(all_dates, all_actual, color=color, marker="o", markersize=3,
                 label=f"Tier {tier} {metric} actual")
-        ax.plot(df.index, df[control_rate_col], color="#888", linestyle="--",
-                linewidth=1.4, label=f"control {metric} covariate")
+
+        # Pre-period in-sample fit (how well the UCM tracks before the switch)
+        ax.plot(s["dates_pre"], s["fitted_pre"], color="#9aa0a6", linestyle=":",
+                linewidth=1.5, label="model fit (pre)")
+
+        # Post-period counterfactual forecast + 95% band
+        ax.plot(s["dates_post"], s["pred_post"], color="#d0d0d0", linestyle="--",
+                linewidth=1.8, label="counterfactual (no flip)")
+        ax.fill_between(s["dates_post"], s["lower_post"], s["upper_post"],
+                        color="#d0d0d0", alpha=0.15, linewidth=0)
+
         ax.axvline(cutoff, color=SWITCH_COLOR, linestyle="--", linewidth=1.4, alpha=0.9)
         ax.text(cutoff, ax.get_ylim()[1], f" switch: {cutoff.date()}",
                 color=SWITCH_COLOR, va="top", ha="left", fontsize=9, fontweight="semibold")
-        ax.set_title(f"Tier {tier} — {metric}  ·  rel_effect={fmt_pct_signed(row['rel_effect'])} "
-                     f"(95% CrI [{fmt_pct_signed(row['rel_ci_95_lower'])}, {fmt_pct_signed(row['rel_ci_95_upper'])}], "
-                     f"p={row['p_value']:.3f})")
-        style_axis(ax, ylabel=metric.lower(), as_percent=True)
-        ax.legend(loc="upper left", fontsize=8)
 
-    fig.suptitle(f"CausalImpact daily series — {ci_window_start} → {window_end}",
+        pre_r2 = row.get("pre_r2", float("nan"))
+        ax.set_title(
+            f"Tier {tier} — {metric}  ·  effect={fmt_pct_signed(row['rel_effect'])} "
+            f"(95% CrI [{fmt_pct_signed(row['rel_ci_95_lower'])}, {fmt_pct_signed(row['rel_ci_95_upper'])}], "
+            f"p={row['p_value']:.3f})  ·  pre-fit R²={pre_r2:.2f}")
+        style_axis(ax, ylabel=metric.lower(), as_percent=True)
+        ax.legend(loc="upper left", fontsize=8, ncol=3)
+
+    fig.suptitle(f"CausalImpact — actual vs counterfactual — {ci_window_start} → {window_end}",
                  fontsize=14, fontweight="semibold", color="#f5f5f5", y=1.0)
     plt.tight_layout()
     plt.show()

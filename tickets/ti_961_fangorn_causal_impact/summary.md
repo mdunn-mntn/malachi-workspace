@@ -118,6 +118,20 @@ with a new section inserted between "Headline KPIs" and "Executive Summary."
 
 **Outlier-day exclusion (added 2026-06-02 per Alex Knorr):** new `exclude_dates` widget (default `2026-05-29,2026-05-30`) drops named days from `daily_performance_df`, `pacing_df`, and `ci_daily_pd` so all downstream DiD / threshold / pacing / CausalImpact analyses see the same cleaned panel. Used here to remove two days with known pacing issues that would otherwise contaminate the CVR signal.
 
+**Methodology correction — three bugs fixed (2026-06-03, ported from Alex Knorr's RolloutCausalImpact.ipynb review).** The CausalImpact section's results pre-2026-06-03 are deprecated; the methodology had three compounding issues that Alex caught on review:
+
+1. **Target leakage in the counterfactual forecast.** `metric_lag1` and `metric_lag7` were in the candidate set. Those are lags of the *treated* outcome — feeding them into the post-period forecast conditions the "counterfactual" on actual post-treatment values, biasing the estimated effect toward zero. The Brodersen et al. CausalImpact spec explicitly forbids lags of `y` as exog; the UCM local-level state handles temporal correlation in `y` without leaking. **Fix:** removed both lags from candidates and the candidate dataframe.
+
+2. **Naive seasonal handling.** `is_weekend` dummy was a coarse proxy for weekly periodicity. **Fix:** added `freq_seasonal=[{"period": 7, "harmonics": 2}]` to `UnobservedComponents` and dropped the `is_weekend` candidate. Full stochastic weekly cycle, evolves over time, no exog state cost.
+
+3. **Hand-rolled CrI/p-value was wrong.** `SE = (avg_upper - avg_lower) / (2 * 1.96)` was the avg per-day SD, not the SD of the post-period mean — dropped the `1/n` scaling and ignored cross-day covariance. `rel_CI = actual / bound − 1` exploded when the bound approached zero (literal source of TI-961's +681% upper bound on Tier 1 IVR). Gaussian z-test layered on a skewed ratio compounded both. **Fix:** replaced with simulation — draw N=2000 paths from the fitted model via `res.simulate(...)`, take percentiles of the effect distribution for CrI, two-sided tail probability for p-value. Carries correct cross-day covariance, can't explode, no normality assumption.
+
+**Plus two improvements** (Alex):
+- **Pre-period fit diagnostics (R², MAPE)** on one-step-ahead in-sample predictions, surfaced on each tile and in each chart title. Trust check for the whole method.
+- **Updated diagnostic chart:** dotted line = pre-period in-sample model fit; dashed line = post-period counterfactual forecast; shaded band = 95% simulation envelope. Now you can see whether the UCM tracked the pre-period before trusting the post-period gap.
+
+Alex's standalone notebook is at https://github.com/SteelHouse/databricks_targeting/blob/aknorr/fangorn/fangorn/rollout/RolloutCausalImpact.ipynb. Our combined DiD+CI notebook has the same fixes ported in.
+
 ### BQ cost optimization
 The naive approach (re-running Alex's full `daily_performance_query` with `window_start = min_inclusion - ci_pre_days`) processes **~1 TB** for a 60-day pre window. Dry-run ladder (verified 2026-05-28):
 
@@ -186,6 +200,11 @@ Outputs: [`outputs/ti_961_smoke_ci_results.csv`](outputs/ti_961_smoke_ci_results
 ## 8. Open Items / Follow-ups
 
 ### Calendar-time power projection (refreshed 2026-06-02, post EXCLUDE_DATES filter)
+
+⚠️ **These projections are based on the pre-2026-06-03 buggy implementation
+and will shift after Alex re-runs the corrected notebook** (target leakage
+was biasing rel_effect toward zero, so post-correction the effects should
+be larger and resolve sooner). Refresh after the next run.
 
 SE-scaling projection assuming current point estimate is the true effect.
 SE ∝ 1/√n_post (conservative-optimistic — real Kalman filter forecast
