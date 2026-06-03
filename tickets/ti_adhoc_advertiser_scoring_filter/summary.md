@@ -51,6 +51,8 @@ Advertisers with a gap of N+ days, by post-gap spend bucket:
 
 ## Short-flight reality check (Ryan's question)
 
+### Flight-grain view (raw count of short flights)
+
 Last 2 years, flights with `end_time - start_time ≤ 3 days`:
 
 | Duration | n flights | with spend | >$1k | >$10k | Total spend |
@@ -60,6 +62,19 @@ Last 2 years, flights with `end_time - start_time ≤ 3 days`:
 | 2d            | 5,326 | 4,415 | 1,218 | 123 | $7.2M |
 | 3d            | 4,710 | 3,929 | 1,492 | 151 | $7.3M |
 
-~10 active 0–1d flights/day. Most are <$1k tests but the tail (>$10k) is non-trivial (200+/yr).
+### Are there massive one-day blitzes? (advertiser-day grain)
 
-**Implication:** advertiser_scores are still useful for short flights because the flight may start AND end before the next-day reconciliation. The fallback model Victor described handles this — keep the scores around, just limit who gets new scores generated each day.
+Re-framed at advertiser-day level — flight-grain double-counts when an advertiser stacks multiple flights on the same day.
+
+| Cohort | n | p50 | p90 | p99 | max spend | total |
+|---|---:|---:|---:|---:|---:|---:|
+| All active advertiser-days | 915,965 | $119 | $1,031 | $5,545 | **$152,861** | $453M |
+| True 1-day blitz (no spend ±7d) | **74** | $13 | $345 | $26,463 | **$26,463** | $56k |
+| First-ever spend day | 5,466 | $56 | $469 | $2,704 | $42,518 | $1.3M |
+
+**Reads:**
+- Max single-day spend for *any* advertiser in 2 years was $153k — and that's an established advertiser, not a blitz.
+- True 1-day blitzes: **74 in 2 years, $56k combined.** Noise.
+- First-ever spend day cohort (the real "no scores cached" risk): 5,466 events over 2 years (~7.5/day), max $42k, p99 $2.7k — and Victor's rule 3 ("new advertisers <7d") covers them.
+
+**No Super Bowl one-day campaigns exist in MNTN.** The untargeted-day-1 risk is empirically tiny.
