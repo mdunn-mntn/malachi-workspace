@@ -500,6 +500,8 @@ WHERE deleted = FALSE AND is_test = FALSE
 ```
 Missing these filters will include internal test accounts and deleted entities in counts/metrics.
 
+**Caveat — `is_test=TRUE` advertisers can have real production spend.** Verified 2026-06-03 (TI-ADHOC advertiser scoring filter): 8 advertisers flagged `is_test=TRUE` in the `advertisers` table spent **$459k of production media** in a 30-day window (2.8% of total). Either historical mis-flagging never cleaned up, or internal MNTN accounts running real budget. **Implication for any "score this cohort" / "include this cohort" filter:** if you blindly apply `is_test=FALSE`, you silently drop a small live-spend population. For production-spend-driven workflows (scoring, billing, reporting), consider keying off spend or campaign-liveness rather than the `is_test` flag.
+
 ---
 
 ## Advertising Concepts & Domain Logic

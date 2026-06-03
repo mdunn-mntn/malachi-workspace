@@ -1744,6 +1744,35 @@ the `core_*` tables here.
 
 ---
 
+## bronze.integrationprod.archives_campaign_group_archives
+- **Type:** TABLE — version history of every `campaign_groups` row (Datastream-replicated audit trail)
+- **Primary key:** campaign_group_archive_id
+- **Use for:** Reconstructing campaign_group state as-of any historical point in time. One row per version per campaign_group. Same columns as `campaign_groups` plus a `version` integer.
+- **Density:** ~7 versions per campaign_group on average (90-day window). ~106k rows for ~15k campaign_groups in last 90d.
+- **Key columns:** All fields from `campaign_groups` (start_time, end_time, update_time, campaign_group_status_id, budget, etc.) PLUS `version` (monotonic per cg). Use `MAX(version)` or `MAX(update_time)` to find the version effective at a given timestamp.
+- **Pattern — "what was the cg state on day D":**
+  ```sql
+  -- For each campaign_group, the version effective on day D
+  WITH versions AS (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY campaign_group_id ORDER BY version DESC) AS rn
+    FROM `dw-main-bronze.integrationprod.archives_campaign_group_archives`
+    WHERE update_time <= TIMESTAMP(<day_d>)
+  )
+  SELECT * FROM versions WHERE rn = 1
+  ```
+- **Pattern — "any cg modification per day for rule-2-style filtering":**
+  ```sql
+  -- Any cg.update_time within [D-1d, D]
+  SELECT advertiser_id, ANY_VALUE(campaign_group_id) AS cg_id
+  FROM archives_campaign_group_archives
+  WHERE update_time BETWEEN TIMESTAMP_SUB(D, INTERVAL 24 HOUR) AND D
+  GROUP BY advertiser_id
+  ```
+- **Use cases proven:** historical simulation of advertiser scoring filter (TI-ADHOC, 2026-06-03), status-flip detection for rule coverage validation.
+- **Sister table:** `archives_ui_flight_archives` for flight-level version history. **No `archives_advertisers_*` table exists in bronze.integrationprod** — advertiser version history is in `archives.advertiser_archives` in coreDB only.
+
+---
+
 ## bronze.integrationprod.channels
 - **Type:** TABLE (Postgres replica)
 - **Primary key:** channel_id
