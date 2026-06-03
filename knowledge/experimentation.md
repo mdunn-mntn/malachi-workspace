@@ -89,6 +89,19 @@ For the long-form "which one and why" with worked coffee-shop example, strength/
 Shareable artifact — safe to send to anyone on the team or cross-functional
 stakeholders asking "why are you using DiD here and CausalImpact there?"
 
+### Experimental design — apply BEFORE the next major release
+
+The Standard Analysis Protocol above describes HOW to analyze a rollout
+once measurement is done. For HOW TO DESIGN the rollout itself — random
+stratified assignment, permanent holdout, three cadence options matched
+to operational constraints (5-week fast, 12-16-week standard, 7-month
+conservative), pre-flight checklist, canonical references (Kohavi/Tang/Xu,
+CUPED, geo experiments, modern DiD) — see
+[`documentation/docs/feature_rollout_experimental_design.md`](../documentation/docs/feature_rollout_experimental_design.md).
+**Apply this BEFORE the next major release rolls out.** The Fangorn TI-961
+lesson: recovering a clean causal claim after a non-random rollout is
+expensive (one clean tier out of four).
+
 ---
 
 ## Covariate Selection

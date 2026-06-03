@@ -52,6 +52,7 @@ workspace/
 | `documentation/docs/revealjs_guide.md` | **RevealJS layout guide** — config, font sizes, cutoff prevention rules, standalone build process. Read before building any RevealJS deck. |
 | `documentation/docs/causal_impact_did_math_reference.md` | **CausalImpact + DiD math reference** — UCM state-space equations, Kalman filter, MLE, forecasting, VIF/BIC selection, cluster bootstrap, SE/CI/p derivations, worked Tier 2 example. Shareable with the team. |
 | `documentation/docs/did_vs_causalimpact_method_selection.md` | **DiD vs CausalImpact — when to use each** — decision guide with coffee-shop analogy, strength/weakness tables, decision matrix, methods-convergence framing. Companion to the math reference (math = HOW; this = WHEN). Shareable. |
+| `documentation/docs/feature_rollout_experimental_design.md` | **Feature rollout experimental design** — how to DESIGN a rollout for clean causal inference: random stratified assignment, permanent holdout, 3 cadence options (5-week fast / 12-16-week standard / 7-month conservative), pre-flight checklist, canonical references. Apply BEFORE the next major release. Shareable. |
 
 ## Self-Review Entry Guide
 
