@@ -42,36 +42,13 @@ Read: PP is "vertical match, no keyword" → score 8000. MI is "industry match, 
 
 ## Venn (bucket ⊃ vertical, keywords overlay)
 
-ASCII sketch:
+![MM 2.0 scoring tiers Venn](../documentation/architecture/audience_products_venn.png)
 
-```
-   ┌── Bucket (DS13 industry) ──────────────────────────┐
-   │                                                    │
-   │     ┌── Vertical (DS13 subindustry) ──┐            │
-   │     │                                 │            │
-   │     │     ┌──── Keywords (DS19) ──────┼───┐        │
-   │     │     │                           │   │        │
-   │     │     │          HI = 10000       │   │        │
-   │     │     │     (vertical ∩ keywords) │   │        │
-   │     │     │                           │   │        │
-   │     │     └───────────────────────────┘   │        │
-   │     │                                     │        │
-   │     │           PP = 8000                 │        │
-   │     │      (vertical, no keywords)        │        │
-   │     │                                     │        │
-   │     └─────────────────────────────────────┘        │
-   │                                                    │
-   │           MI = 3333–6665                           │
-   │   (bucket only, keywords fire, no vertical)        │
-   │                                                    │
-   └────────────────────────────────────────────────────┘
+- **Vertical is a strict subset of Bucket** (subindustry inside industry).
+- **Keywords overlap both** Vertical and the rest of Bucket — and can extend past Bucket entirely.
+- **HI** = the Vertical ∩ Keywords lens. **PP** = Vertical without Keywords. **MI** = Bucket ∩ Keywords without Vertical. **Max Reach** = the Keywords-outside-Bucket sliver plus all unscored fallback IPs.
 
-   Max Reach = 1–3332 (random)
-   IPs outside bucket and vertical, keywords fire on something generic.
-   No real intent signal — the bidder's broadest fallback.
-```
-
-Reference diagram (graphical): `documentation/architecture/audience_intent_scoring.png`. Confluence equivalent: [Audience and Intent Scoring Venn Diagram](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3567452174/Audience+and+Intent+Scoring+Venn+Diagram).
+Regenerate via `python3 documentation/architecture/audience_products_venn.py`. Companion diagram (Ryan Kleck's earlier sketch) at `documentation/architecture/audience_intent_scoring.png`. Confluence equivalent: [Audience and Intent Scoring Venn Diagram](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3567452174/Audience+and+Intent+Scoring+Venn+Diagram).
 
 ## How the score is produced — Non-Fangorn vs Fangorn
 
