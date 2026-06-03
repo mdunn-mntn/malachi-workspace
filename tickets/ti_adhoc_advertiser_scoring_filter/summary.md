@@ -78,3 +78,36 @@ Re-framed at advertiser-day level — flight-grain double-counts when an adverti
 - First-ever spend day cohort (the real "no scores cached" risk): 5,466 events over 2 years (~7.5/day), max $42k, p99 $2.7k — and Victor's rule 3 ("new advertisers <7d") covers them.
 
 **No Super Bowl one-day campaigns exist in MNTN.** The untargeted-day-1 risk is empirically tiny.
+
+## The campaign-length story (the real frame)
+
+The risk isn't lost dollars on day 1 — it's **degraded targeting performance for a fraction of the flight equal to 1/flight_length**. So a 1-day score lag eats:
+
+- **100% of a 1-day flight**
+- **~3% of a 30-day flight**
+- **~1% of a 90-day flight**
+
+Where MNTN's flight spend actually lives (last 2 years, $477M total):
+
+| Flight length | n flights | Bucket spend | % of all spend | Day-1 spend | Day-1 % of bucket |
+|--------------|----------:|-------------:|---------------:|------------:|------------------:|
+| 1d           |     9,143 |        $4.6M |          0.97% |       $4.6M |          **100%** |
+| 2d           |     7,572 |        $8.9M |          1.87% |       $4.6M |             52%   |
+| 3d           |     4,415 |        $7.2M |          1.50% |       $2.3M |             32%   |
+| 4–7d         |    13,279 |       $32.7M |          6.85% |       $5.6M |             17%   |
+| 8–14d        |    16,207 |       $60.3M |         12.65% |       $5.6M |              9%   |
+| 15–30d       |    27,304 |      $116.0M |         24.32% |       $4.6M |              4%   |
+| 31–60d       |    21,938 |      $156.2M |         32.74% |       $4.4M |              3%   |
+| 61–90d       |     2,830 |       $30.8M |          6.47% |       $0.5M |              1.5% |
+| 91–180d      |     2,681 |       $41.1M |          8.62% |       $0.4M |              0.9% |
+| 181d+        |       850 |       $20.0M |          4.19% |       $0.1M |              0.5% |
+| **Total**    |   106,219 |     **$477.9M** |        100% |   **$32.8M** |          **6.9%** |
+
+### Story
+
+1. **79% of MNTN's spend runs in flights ≥15 days.** For those, even worst-case day-1 lag affects ≤4% of each campaign. Structurally bounded.
+2. **The flights where day-1 lag matters most (1–3 days, 32–100% exposure) are only 4.3% of total spend.**
+3. **Across the whole population, only 6.9% of flight spend lands on a flight day-1** — and that's *before* discounting for advertisers who already had cached scores from prior flights.
+4. The actual at-risk population is much smaller: only flights for advertisers who *weren't* already scored. Sized earlier: ~74 isolated 1-day blitzes total, ~7.5 first-ever-day events per day. The 100% column is dominated by tiny tests.
+
+**The campaign-length distribution is structurally protective.** Long campaigns absorb day-1 lag as a small fraction of total performance; short campaigns expose more % but carry tiny absolute dollars.
