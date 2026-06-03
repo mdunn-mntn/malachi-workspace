@@ -27,18 +27,23 @@ DS19 (MNTN Matched)
 
 The combination of bucket / vertical / keyword membership determines the tier.
 
-## Tier definitions (MM 2.0 state table — locked)
+## Tier definitions (Fangorn — the steady-state model)
 
-| Tier | In bucket? | In vertical? | Keywords fire? | Score | Bid-eligible? |
-|---|:-:|:-:|:-:|---|:-:|
-| **HI** (High Intent) | ✓ | ✓ | ✓ | 10000 | ✓ |
-| **PP** (Peak Performance) | ✓ | ✓ | ✗ | 8000 | ✓ |
-| **MI** (Mid Intent) | ✓ | ✗ | ✓ | 3333–6665 | ✓ |
-| **Max Reach** | ✗ | ✗ | ✓ | 1–3332 (random) | ✓ |
-| — | ✓ | ✗ | ✗ | 3333–6665 | ✗ (keyword fails) |
-| — | ✗ | ✗ | ✗ | NULL | ✗ |
+Fangorn is MNTN's ML scoring model (DS46) and the path the system is converging on. It outputs a single **raw score 0–1 per IP**, and the downstream scoring job maps that raw score onto a tier band using the IP's DS13 vertical ∩ DS19 keywords overlap.
 
-Read: PP is "vertical match, no keyword" → score 8000. MI is "industry match, no vertical, keywords fire." Max Reach is the random-score fallback tier when nothing strong matches.
+| Tier | Fangorn raw | DS13/DS19 overlap | Score band | Within-band shape |
+|---|---|---|---|---|
+| **HI** (High Intent) | > 0.8 | vertical ∩ keywords | **8000–10000** | graduated |
+| **PP** (Peak Performance) | > 0.8 | vertical only (no keyword) | **6666–8000** | graduated |
+| **MI** (Mid Intent) | 0.6–0.8 | any DS membership | **3333–6665** | graduated |
+| **Max Reach** | < 0.6 or no Fangorn score | (any) | **1–3332** | random fallback |
+
+Read:
+- **HI / PP are not Fangorn-internal concepts.** Fangorn produces one number; the tier-mapping step splits HI from PP based on whether keywords fired alongside the vertical match.
+- **MI is band-by-confidence, not DS membership.** Any IP with Fangorn raw 0.6–0.8 lands in MI, regardless of whether it sits in Bucket / Vertical / Keywords.
+- **Max Reach is the random-score fallback** — no Fangorn evaluation. The 1–3332 range has no scoring semantics; it's the broadest tier the bidder has access to when nothing better exists.
+
+(Sources: Ryan Kleck, 2026-06-01; Sean Yang / Ryan, 2026-05-29.)
 
 ## Venn (bucket ⊃ vertical, keywords overlay)
 
@@ -50,42 +55,48 @@ Read: PP is "vertical match, no keyword" → score 8000. MI is "industry match, 
 
 Regenerate via `python3 documentation/architecture/audience_products_venn.py`. Companion diagram (Ryan Kleck's earlier sketch) at `documentation/architecture/audience_intent_scoring.png`. Confluence equivalent: [Audience and Intent Scoring Venn Diagram](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3567452174/Audience+and+Intent+Scoring+Venn+Diagram).
 
-## How the score is produced — Non-Fangorn vs Fangorn
+## How Fangorn scores an IP
 
-Both paths feed the same field (`household_score`, 0–10000) on every impression. The difference is **how the score is generated**.
+```
+   Fangorn ML model (DS46)
+            │
+            ▼
+   raw score ∈ [0, 1]
+            │
+            ▼
+   downstream scoring job — apply DS13 vertical ∩ DS19 keywords overlay
+            │
+   ┌────────┴────────────────────────────────────────────┐
+   │                                                     │
+   raw > 0.8         raw > 0.8         raw 0.6–0.8       raw < 0.6
+   + vertical        + vertical        (any DS)          (or no score)
+   + keywords        (no keywords)                       │
+   │                 │                 │                 │
+   ▼                 ▼                 ▼                 ▼
+   HI band           PP band           MI band           Max Reach
+   8000–10000        6666–8000         3333–6665         1–3332
+   graduated         graduated         graduated         random
+```
 
-### Non-Fangorn (legacy — ~78% of S1 advertisers)
+The result: **a continuous score 1–10000 with within-tier ranking that's meaningful.** Higher = stronger model confidence × stronger DS13/DS19 anchoring.
 
-Discrete point masses inside each tier band:
+### Why the within-tier gradation matters
+
+Under Fangorn, HI #1 and HI #100 carry different scores even though both sit in the HI band. The bidder can rank inside HI, not just choose HI vs PP. That's the product unlock the "Mountain Matched AI" narrative rests on — replacing static tiers with dynamic, graduated scoring.
+
+### Implementation note — Fangorn is an audience overlay
+
+When MNTN switches an advertiser to Fangorn, `audience.audience_segments` is updated to reference DS46, but the base `audience.audiences` row still references DS13 + DS19 (Ryan Kleck, 2026-06-01). A Fangorn-overlaid MM campaign **is still MM** — Fangorn replaces the scoring algorithm, not the audience configuration. The bidder reads the score the same way; what changed is how the score was generated upstream.
+
+### Legacy path (Non-Fangorn) — being phased out
+
+For advertisers not yet on Fangorn (~78% of S1 spend as of 2026-05-31), the scoring is discrete:
 - **HI** = exactly 10000 (point mass).
 - **PP** = exactly 8000 (point mass).
 - **MI** = graduated 3333–6665.
 - **Max Reach** = random 1–3332.
 
-Roughly 6,667 distinct score values total. No continuous gradation within HI or PP.
-
-### Fangorn (~22% of S1 advertisers, rolling out)
-
-Continuous 1–10000 (10,000 distinct values). Mechanics (Ryan Kleck, 2026-06-01):
-
-1. Fangorn (DS46, ML model) produces a single raw score 0–1 per IP.
-2. The downstream scoring job maps that raw score onto an HHST band using DS13 vertical ∩ DS19 keyword overlap:
-
-```
-   if raw > 0.8 and (vertical ∩ keywords)  → HI band   8000–10000  (graduated)
-   elif raw > 0.8 and vertical only         → PP band   6666–8000   (graduated)
-   elif raw in 0.6–0.8 (any membership)     → MI band   3333–6665   (graduated)
-   else (raw < 0.6 or no Fangorn score)    → Max Reach 1–3332      (random)
-```
-
-Key implications:
-- **PP and HI are not Fangorn-internal concepts.** Fangorn outputs one number; the tier-mapping step splits HI from PP based on whether keywords fired.
-- **Max Reach under Fangorn is still random** — "no Fangorn at all" (Ryan). 1–3332 has no scoring semantics either way.
-- **The Fangorn switch is an audience overlay** — `audience.audience_segments` is updated to reference DS46, but the base `audience.audiences` row still references DS13 + DS19. A Fangorn-overlaid MM campaign IS still MM; Fangorn replaces the scoring algorithm, not the audience config.
-
-### Why the picture matters
-
-Non-Fangorn produces big point masses at 8000 and 10000 — most of the volume sits in those two bins. Fangorn smooths that into a continuous distribution, which means within-tier ranking (HI #1 vs HI #1000) becomes meaningful. The product story is "Mountain Matched AI" — replacing static tiers with dynamic, graduated scoring.
+No within-tier ranking inside HI or PP. As Fangorn rolls out, this collapses into the continuous distribution above.
 
 ## When each tier applies (buyer-facing)
 
