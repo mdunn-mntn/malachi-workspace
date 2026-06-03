@@ -29,23 +29,23 @@ The combination of bucket / vertical / keyword membership determines the tier.
 
 ## Tier definitions (Fangorn — the steady-state model)
 
-**Fangorn produces one number per IP.** That's the entire model output — a raw score in [0, 1] from DS46. The HI / PP / MI / Max Reach tier names and the 0–10000 score ranges are how MNTN remaps that single number onto the bidder's scale.
+**Fangorn runs twice per IP — once with the HI model, once with the PP model.** Each pass produces a raw score in [0, 1], so every IP gets **two Fangorn raw scores**. The HI / PP / MI / Max Reach tier names and the 0–10000 score ranges are how MNTN maps those raw scores onto the bidder's scale, gated by DS13 / DS19 membership.
 
 Mapping rule:
 
-| Tier | Fangorn raw qualifies | DS13/DS19 overlay | Score range we map to |
-|---|---|---|---|
-| **HI** (High Intent) | > 0.8 | vertical ∩ keywords | **8000–10000** |
-| **PP** (Peak Performance) | > 0.8 | vertical only (no keyword) | **6666–8000** |
-| **MI** (Mid Intent) | 0.6 – 0.8 | (any DS membership) | **3333–6665** |
-| **Max Reach** | < 0.6 or no Fangorn score | (any) | **1–3332** (random) |
+| Tier | Fangorn pass | Raw qualifies | DS13 / DS19 overlay | Score range we map to |
+|---|---|---|---|---|
+| **HI** (High Intent) | HI model | raw > 0.8 | vertical ∩ keywords | **8000–10000** |
+| **PP** (Peak Performance) | PP model | raw > 0.8 | vertical only (no keyword) | **6666–8000** |
+| **MI** (Mid Intent) | either | raw 0.6 – 0.8 | (any DS membership) | **3333–6665** |
+| **Max Reach** | (neither qualifies) | both raws < 0.6, or no Fangorn score | (any) | **1–3332** (random) |
 
 Read:
-- **One score per IP, not one per tier.** Fangorn raw is the underlying signal; the band is presentation. Higher Fangorn raw within a tier → higher mapped score (so HI #1 and HI #100 are distinguishable).
-- **The > 0.8 threshold is the gate to HI / PP.** Above 0.8 the IP stays in the high-confidence tier; the DS13 / DS19 overlay decides HI vs PP.
-- **HI / PP are not Fangorn-internal concepts.** Fangorn doesn't "know" about HI or PP — it just outputs raw. The HI vs PP split happens in the post-processing step.
-- **MI is gated by raw 0.6 – 0.8, not by DS membership.** Any IP in that raw range lands in MI regardless of which DSes it sits in.
-- **Max Reach is the random-score fallback.** No Fangorn evaluation. The 1–3332 range has no scoring semantics; it's the broadest tier the bidder has access to when nothing better exists.
+- **Two raws, one tier.** Each IP gets a score from the HI model and a score from the PP model. The IP lands in a single tier per impression based on which raw qualifies and which DS overlay fires.
+- **The > 0.8 threshold gates HI and PP.** When the HI-model raw clears 0.8 AND the IP is in vertical ∩ keywords → HI band. When the PP-model raw clears 0.8 AND the IP is in vertical only → PP band. The score within the band is that model's raw, remapped onto the band's range.
+- **HI / PP are not Fangorn-internal concepts.** Fangorn outputs raw values; HI vs PP is a downstream mapping decision (which model run, which DS overlay).
+- **MI is gated by raw 0.6 – 0.8.** Below the HI/PP threshold but above floor — lands in MI regardless of DS membership.
+- **Max Reach is the random-score fallback.** No qualifying Fangorn score. The 1–3332 range has no scoring semantics; it's the broadest tier the bidder has access to when nothing better exists.
 
 (Sources: Ryan Kleck, 2026-06-01; Sean Yang / Ryan, 2026-05-29.)
 
@@ -62,27 +62,29 @@ Regenerate via `python3 documentation/architecture/audience_products_venn.py`. C
 ## How Fangorn scores an IP
 
 ```
-   Fangorn ML model (DS46)
-            │
-            ▼
-   raw score ∈ [0, 1]          ← one number per IP. This is the only ML output.
-            │
-            ▼
-   post-processing step — apply DS13 vertical ∩ DS19 keywords overlay,
-                          remap the raw value onto the bidder's 0–10000 scale
-            │
-   ┌────────┴────────────────────────────────────────────┐
-   │                                                     │
-   raw > 0.8         raw > 0.8         raw 0.6–0.8       raw < 0.6
-   + vertical        + vertical        (any DS)          (or no score)
-   + keywords        (no keywords)                       │
-   │                 │                 │                 │
-   ▼                 ▼                 ▼                 ▼
-   HI                PP                MI                Max Reach
-   8000–10000        6666–8000         3333–6665         1–3332 (random)
+   Fangorn (DS46) — two model passes per IP
+   ┌─────────────────────────┐    ┌─────────────────────────┐
+   │  HI model               │    │  PP model               │
+   │  raw_HI ∈ [0, 1]        │    │  raw_PP ∈ [0, 1]        │
+   └────────────┬────────────┘    └────────────┬────────────┘
+                │                              │
+                └──────────────┬───────────────┘
+                               ▼
+        post-processing — pick the qualifying raw, apply DS13 ∩ DS19 overlay,
+                          remap onto the bidder's 0–10000 scale
+                               │
+   ┌───────────────────────────┼─────────────────────────┐
+   │                           │                         │
+   raw_HI > 0.8       raw_PP > 0.8       either raw      both raws < 0.6
+   + vertical         + vertical          in 0.6–0.8      (or no score)
+   + keywords         (no keywords)       (any DS)        │
+   │                  │                   │               │
+   ▼                  ▼                   ▼               ▼
+   HI                 PP                  MI              Max Reach
+   8000–10000         6666–8000           3333–6665       1–3332 (random)
 ```
 
-**The score within a band is the Fangorn raw, remapped.** Higher raw → higher mapped score. There aren't separate "HI scores" and "PP scores" — there's one Fangorn raw per IP, and HI vs PP is which range we project it onto.
+**Two raws produced per IP, one tier assigned per impression.** The score within a band is the qualifying model's raw, remapped onto the band's range — higher raw → higher mapped score. The HI vs PP split is determined by which model qualifies AND which DS overlay fires.
 
 ### Implementation note — Fangorn is an audience overlay
 
