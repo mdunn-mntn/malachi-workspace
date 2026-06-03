@@ -2768,3 +2768,12 @@ During periods of significantly reduced platform spend, IVR (Incremental Visit R
 <!-- slack-extracted: 2026-06-02 -->
 - **BOS Pipeline Data Corruption from CoreDW Rebase (May 2026):** The data feeding BOS (Budget Optimization System) comes from the DAG table `camperbid_prod__bos__campaign_summary_hourly`. This data was incorrect for the month of May 2026, likely caused by the CoreDW migration/rebase on 2026-05-21 when BER rebased CIL. The corruption caused three distinct failure modes: (1) Some campaigns show Total Spend below CIL, causing BOS to continue overspending because it doesn't recognize the flight spend has been hit. (2) Some campaigns show Total Spend above CIL, causing BOS to underspend because it thinks the campaign has finished. (3) Some campaigns show lower media cost vs. CIL due to take rate adjustments while Total Spend is accurate, causing BOS to send an erroneously low media cost stop signal to the Bidder. A full pipeline refresh of BOS was run to confirm and remediate. (via Johnny, #mission-control, 2026-06-01)
 - **`cost_impression_log` timezone:** The `cost_impression_log` table stores data in UTC timezone. When comparing spend/impression figures against MNTN UI numbers or external reporting that uses Arizona Time (ATZ), timezone conversion must be applied. (via Pratik, #production-ops, 2026-05-27)
+
+<!-- slack-extracted: 2026-06-03 -->
+- ### MNTN SELECT Billing Type — Pending Separation from PTV Fixed CPM
+
+As of 2026-06-02, MNTN SELECT campaigns share `billing_type_id = 2` with PTV Fixed CPM in `core.flight_billing_types`. These are treated as equivalent in the current billing pipeline, but the behaviors are distinct and should be separated. The proposed change is:
+- `billing_type_id = 2` → PTV Fixed CPM
+- `billing_type_id = 3` → MNTN SELECT (native impression cap)
+
+The Gary service (MSS team) is responsible for implementing the change: Gary will need to map SELECT campaign groups to the new billing_type_id = 3 based on product_id. Downstream services that consume billing type (PCS, Pacing Engine, PROUI) will need to be audited for impact. The change should be wrapped in a feature flag and rolled out to test campaigns first given the difficulty of fully validating spend/budget changes in QA. Tracked in PER-6526. (via Mike Allen, #reporting_helpdesk_ask_anything, 2026-06-02)
