@@ -237,6 +237,65 @@ At measurement conclusion:
 
 ---
 
+## Bootstrap variant must match the design
+
+Subtle but important: the **bootstrap is a family of procedures**, not a
+single algorithm. The right version depends on how the original sample
+was drawn. Design and analysis have to match.
+
+| Design | Use this bootstrap | Theoretical foundation |
+|---|---|---|
+| Pure random sample | Classical bootstrap (resample N w/ replacement from everyone) | Bickel-Freedman 1981, Singh 1981 |
+| **Stratified random sample** | **Stratified bootstrap** (resample within each stratum) | Bickel-Freedman 1984, Rao-Wu 1988 |
+| Cluster sample | Cluster bootstrap (resample whole clusters as units) | Field & Welsh 2007 |
+| Time series | Block bootstrap (resample contiguous time blocks) | Künsch 1989 |
+
+**The classical i.i.d. bootstrap consistency theorem assumes i.i.d.
+sampling.** Stratified sampling technically violates that assumption.
+The naive classical bootstrap applied to stratified data **still
+works** (no false claims), but produces **conservative CrIs** — wider
+than they should be. You leave statistical power on the table because
+the naive bootstrap "doesn't know" about the stratification's
+variance-reduction benefit.
+
+The **stratified bootstrap** has its own consistency proof and
+recovers that power: resample within each stratum preserving the
+stratum sizes from the original sample, then concatenate across
+strata for the full resample of N.
+
+**Implementation sketch** (pattern, ~20 lines, for whenever we ship the
+next stratified rollout):
+
+```python
+def _did_bootstrap_stratified(treated, control, num, den, strata_col,
+                               n_boot=1000, seed=42):
+    rng = np.random.default_rng(seed)
+    boot = np.empty(n_boot)
+    for i in range(n_boot):
+        # Resample within each stratum, preserving stratum sizes
+        t_resampled = pd.concat([
+            stratum_df.sample(n=len(stratum_df), replace=True, random_state=rng)
+            for _, stratum_df in treated.groupby(strata_col)
+        ])
+        c_resampled = pd.concat([
+            stratum_df.sample(n=len(stratum_df), replace=True, random_state=rng)
+            for _, stratum_df in control.groupby(strata_col)
+        ])
+        boot[i] = _did_lift_from_wide(t_resampled, c_resampled, num, den)
+    return boot[~np.isnan(boot)]
+```
+
+Defer the actual implementation to the first stratified rollout's
+ticket; document the pattern here so it's not lost.
+
+**Current TI-961 status:** Tier 2 was a pure random sample of 50, so
+the classical i.i.d. bootstrap currently in
+[`RolloutTierEvaluations.py`](../../tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py)
+is the right tool. **No change needed there.** The stratified version
+is for future rollouts designed under this framework.
+
+---
+
 ## Analysis stack reference
 
 The methodology to apply once measurement is done — same as the
@@ -245,8 +304,10 @@ canonical Standard Analysis Protocol in
 
 1. **Power analysis** (also done pre-flight)
 2. **Cohort + flip-date detection** from the inclusion table
-3. **DiD with cluster bootstrap** as primary inference for the
-   holdout-vs-treated comparison (random assignment makes
+3. **DiD with cluster bootstrap** (stratified variant if the design was
+   stratified — see "Bootstrap variant must match the design" above) as
+   primary inference for the holdout-vs-treated comparison (random
+   assignment makes
    parallel-trends defensible)
 4. **CausalImpact with VIF→BIC + simulation inference** as secondary
    inference (corroboration via independent statistical machinery)

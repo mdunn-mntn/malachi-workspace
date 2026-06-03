@@ -1,9 +1,9 @@
 # TI-961: Causal Impact for Fangorn
 
 **Jira:** https://mntn.atlassian.net/browse/TI-961
-**Status:** Complete (infrastructure + interim read); awaiting calendar-time for statistical maturity
+**Status:** Complete (infrastructure + methodology corrected); awaiting calendar-time for statistical maturity. Re-runs auto-refresh as post-period accrues.
 **Date Started:** 2026-05-27
-**Date Completed:** 2026-05-28
+**Date Completed:** 2026-06-03 (methodology corrections per Alex Knorr review)
 **Assignee:** Malachi
 
 ---
@@ -233,9 +233,24 @@ variance grows with horizon, so add 30-50% buffer to dates).
 ### Other follow-ups
 - **TI-1003** ([Jira](https://mntn.atlassian.net/browse/TI-1003)) — stand up a simple TI experimentation archive (one-day scope) so the Fangorn read becomes the first entry stakeholders can bookmark.
 - Variance-weighted lift comparison vs median + impression-weighted is still an open follow-up for Alex's DiD numbers (orthogonal to CI).
-- **TI-1003** ([Jira](https://mntn.atlassian.net/browse/TI-1003)) — stand up a simple TI experimentation archive (one-day scope) so the Fangorn read becomes the first entry stakeholders can bookmark.
-- Variance-weighted lift comparison vs median + impression-weighted is still an open follow-up for Alex's DiD numbers (orthogonal to CI).
+- **Future stratified rollouts:** implement the stratified cluster bootstrap variant per `documentation/docs/feature_rollout_experimental_design.md` ("Bootstrap variant must match the design"). Pattern sketched in that doc; defer code to the first stratified rollout's ticket.
+- **CUPED variance reduction** for future analyses (Deng et al. 2013) — 20-50% sharper effect estimates at same N, ~30 lines of code. Worth retrofitting into the canonical analysis stack.
 
-## 9. Meeting Notes
+## 9. Methodology / Design Documentation Produced
+
+Three shareable methodology docs landed as part of this ticket — they outlive the Fangorn read and become reference material for every future TI experiment:
+
+- [`documentation/docs/causal_impact_did_math_reference.md`](../../documentation/docs/causal_impact_did_math_reference.md) — UCM state-space equations, Kalman filter, MLE, VIF/BIC selection, cluster bootstrap, simulation-based inference. **Math = HOW the methods work.**
+- [`documentation/docs/did_vs_causalimpact_method_selection.md`](../../documentation/docs/did_vs_causalimpact_method_selection.md) — When to use each method, coffee-shop analogy, decision matrix, methods-convergence framing. **When = WHICH method for which problem.**
+- [`documentation/docs/feature_rollout_experimental_design.md`](../../documentation/docs/feature_rollout_experimental_design.md) — How to design a rollout for clean causal inference (random stratified assignment, permanent holdout, three cadence options 5-week/12-16-week/7-month, pre-flight checklist, canonical literature references including Kohavi/Tang/Xu, Vaver/Koehler, Brodersen, Roth/Sant'Anna). **Design = how to set up the experiment BEFORE any flips happen.** Apply to every future Fangorn-scale release.
+
+Plus three memory entries safeguarding the methodological lessons across sessions:
+- `feedback_no_y_lags_in_causalimpact.md` — never use lags of treated y as exog (target leakage)
+- `reference_fangorn_tier_assignment.md` — only Fangorn Tier 2 is random; Tier 2 = gold-standard DiD claim, others CI-only directional
+- `feedback_bootstrap_must_match_design.md` — bootstrap variant must match the sampling design (i.i.d./stratified/cluster/block)
+
+The TI-961 deliverable is the corrected CausalImpact pipeline. The **larger compounding deliverable is the methodology infrastructure** that makes every future experiment cheaper to design and more defensible to report.
+
+## 10. Meeting Notes
 - `meetings/ti_961_01_malachi_alex_catchup_2026_05_27.txt` — 30-min Malachi + Alex catchup; covers both TI-961 (Fangorn CI eval) and the interest-segment scoring scope for TI-956.
 - **Next meeting:** "Early next week" — Alex to add usage notebook to `targeting-infra-ml`; Malachi to read the scoring code before that meeting.
