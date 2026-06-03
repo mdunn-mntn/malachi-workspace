@@ -29,19 +29,23 @@ The combination of bucket / vertical / keyword membership determines the tier.
 
 ## Tier definitions (Fangorn — the steady-state model)
 
-Fangorn is MNTN's ML scoring model (DS46) and the path the system is converging on. It outputs a single **raw score 0–1 per IP**, and the downstream scoring job maps that raw score onto a tier band using the IP's DS13 vertical ∩ DS19 keywords overlap.
+**Fangorn produces one number per IP.** That's the entire model output — a raw score in [0, 1] from DS46. The HI / PP / MI / Max Reach tier names and the 0–10000 score ranges are how MNTN remaps that single number onto the bidder's scale.
 
-| Tier | Fangorn raw | DS13/DS19 overlap | Score band | Within-band shape |
-|---|---|---|---|---|
-| **HI** (High Intent) | > 0.8 | vertical ∩ keywords | **8000–10000** | graduated |
-| **PP** (Peak Performance) | > 0.8 | vertical only (no keyword) | **6666–8000** | graduated |
-| **MI** (Mid Intent) | 0.6–0.8 | any DS membership | **3333–6665** | graduated |
-| **Max Reach** | < 0.6 or no Fangorn score | (any) | **1–3332** | random fallback |
+Mapping rule:
+
+| Tier | Fangorn raw qualifies | DS13/DS19 overlay | Score range we map to |
+|---|---|---|---|
+| **HI** (High Intent) | > 0.8 | vertical ∩ keywords | **8000–10000** |
+| **PP** (Peak Performance) | > 0.8 | vertical only (no keyword) | **6666–8000** |
+| **MI** (Mid Intent) | 0.6 – 0.8 | (any DS membership) | **3333–6665** |
+| **Max Reach** | < 0.6 or no Fangorn score | (any) | **1–3332** (random) |
 
 Read:
-- **HI / PP are not Fangorn-internal concepts.** Fangorn produces one number; the tier-mapping step splits HI from PP based on whether keywords fired alongside the vertical match.
-- **MI is band-by-confidence, not DS membership.** Any IP with Fangorn raw 0.6–0.8 lands in MI, regardless of whether it sits in Bucket / Vertical / Keywords.
-- **Max Reach is the random-score fallback** — no Fangorn evaluation. The 1–3332 range has no scoring semantics; it's the broadest tier the bidder has access to when nothing better exists.
+- **One score per IP, not one per tier.** Fangorn raw is the underlying signal; the band is presentation. Higher Fangorn raw within a tier → higher mapped score (so HI #1 and HI #100 are distinguishable).
+- **The > 0.8 threshold is the gate to HI / PP.** Above 0.8 the IP stays in the high-confidence tier; the DS13 / DS19 overlay decides HI vs PP.
+- **HI / PP are not Fangorn-internal concepts.** Fangorn doesn't "know" about HI or PP — it just outputs raw. The HI vs PP split happens in the post-processing step.
+- **MI is gated by raw 0.6 – 0.8, not by DS membership.** Any IP in that raw range lands in MI regardless of which DSes it sits in.
+- **Max Reach is the random-score fallback.** No Fangorn evaluation. The 1–3332 range has no scoring semantics; it's the broadest tier the bidder has access to when nothing better exists.
 
 (Sources: Ryan Kleck, 2026-06-01; Sean Yang / Ryan, 2026-05-29.)
 
@@ -61,10 +65,11 @@ Regenerate via `python3 documentation/architecture/audience_products_venn.py`. C
    Fangorn ML model (DS46)
             │
             ▼
-   raw score ∈ [0, 1]
+   raw score ∈ [0, 1]          ← one number per IP. This is the only ML output.
             │
             ▼
-   downstream scoring job — apply DS13 vertical ∩ DS19 keywords overlay
+   post-processing step — apply DS13 vertical ∩ DS19 keywords overlay,
+                          remap the raw value onto the bidder's 0–10000 scale
             │
    ┌────────┴────────────────────────────────────────────┐
    │                                                     │
@@ -73,30 +78,25 @@ Regenerate via `python3 documentation/architecture/audience_products_venn.py`. C
    + keywords        (no keywords)                       │
    │                 │                 │                 │
    ▼                 ▼                 ▼                 ▼
-   HI band           PP band           MI band           Max Reach
-   8000–10000        6666–8000         3333–6665         1–3332
-   graduated         graduated         graduated         random
+   HI                PP                MI                Max Reach
+   8000–10000        6666–8000         3333–6665         1–3332 (random)
 ```
 
-The result: **a continuous score 1–10000 with within-tier ranking that's meaningful.** Higher = stronger model confidence × stronger DS13/DS19 anchoring.
-
-### Why the within-tier gradation matters
-
-Under Fangorn, HI #1 and HI #100 carry different scores even though both sit in the HI band. The bidder can rank inside HI, not just choose HI vs PP. That's the product unlock the "Mountain Matched AI" narrative rests on — replacing static tiers with dynamic, graduated scoring.
+**The score within a band is the Fangorn raw, remapped.** Higher raw → higher mapped score. There aren't separate "HI scores" and "PP scores" — there's one Fangorn raw per IP, and HI vs PP is which range we project it onto.
 
 ### Implementation note — Fangorn is an audience overlay
 
-When MNTN switches an advertiser to Fangorn, `audience.audience_segments` is updated to reference DS46, but the base `audience.audiences` row still references DS13 + DS19 (Ryan Kleck, 2026-06-01). A Fangorn-overlaid MM campaign **is still MM** — Fangorn replaces the scoring algorithm, not the audience configuration. The bidder reads the score the same way; what changed is how the score was generated upstream.
+When MNTN switches an advertiser to Fangorn, `audience.audience_segments` is updated to reference DS46, but the base `audience.audiences` row still references DS13 + DS19 (Ryan Kleck, 2026-06-01). A Fangorn-overlaid MM campaign **is still MM** — Fangorn replaces the scoring algorithm, not the audience configuration. The bidder reads the score the same way; what changed is the upstream model.
 
 ### Legacy path (Non-Fangorn) — being phased out
 
-For advertisers not yet on Fangorn (~78% of S1 spend as of 2026-05-31), the scoring is discrete:
+For advertisers not yet on Fangorn (~78% of S1 spend as of 2026-05-31), there's no continuous raw score — the system assigns scores by discrete rule:
 - **HI** = exactly 10000 (point mass).
 - **PP** = exactly 8000 (point mass).
 - **MI** = graduated 3333–6665.
 - **Max Reach** = random 1–3332.
 
-No within-tier ranking inside HI or PP. As Fangorn rolls out, this collapses into the continuous distribution above.
+No within-tier ranking inside HI or PP — every HI IP shares the same 10000. As Fangorn rolls out, this collapses into the continuous distribution above and within-band ranking becomes meaningful.
 
 ## When each tier applies (buyer-facing)
 
