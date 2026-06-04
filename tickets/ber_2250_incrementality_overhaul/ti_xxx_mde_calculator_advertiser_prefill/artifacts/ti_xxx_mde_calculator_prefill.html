@@ -238,7 +238,8 @@
     /* ─── HERO SECTION ─── */
     .hero {
       display: grid;
-      grid-template-columns: auto 1px auto 1fr;
+      grid-template-columns: auto 1px auto auto;
+      justify-content: space-between;
       gap: 0 24px;
       align-items: start;
       padding: 16px 20px;
@@ -363,7 +364,7 @@
       color: var(--t2);
       opacity: 0.5;
       letter-spacing: 0.05em;
-      text-align: right;
+      text-align: center;
     }
 
     /* ─── ADVERTISER PICKER ─── */
@@ -484,7 +485,7 @@
     .basis-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ─── COMPACT-SIZING OVERRIDES + RESPONSIVE ─── */
-    .output       { padding: 14px 18px; gap: 10px; min-width: 0; max-width: 920px; }
+    .output       { padding: 14px 18px; gap: 10px; min-width: 0; max-width: 920px; justify-self: center; width: 100%; }
     .hero         { padding: 12px 16px; gap: 0 18px; }
     .hero-num     { font-size: 42px; }
     .hero-num-sm  { font-size: 26px; }
@@ -644,10 +645,6 @@
         <div class="toggle-row">
           <button class="tog-btn on" id="btn-raw" onclick="setVR('raw')">NONE (RAW)</button>
           <button class="tog-btn" id="btn-stack" onclick="setVR('stack')">FULL STACK</button>
-        </div>
-        <div style="font-size:9px; color:var(--t2); line-height:1.7; margin-top:3px;">
-          STACK = CUPED(0.934) × GHOST-AD(0.75) × STRATIFIED(0.85) = <span style="color:var(--accent)">0.595</span><br>
-          CUPED ρ measured on MNTN data (WGU/Vivint/Ferguson, Apr 2026)
         </div>
       </div>
 
