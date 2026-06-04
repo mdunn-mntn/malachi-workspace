@@ -238,84 +238,101 @@ Three real options. Decision should be made in the early-next-week tech deep-div
 
 ## 5. Solution
 
-### Implementation plan (locked 2026-06-02 after TI-999 close)
+### Implementation plan (revised 2026-06-04 after Victor pushback)
 
-**Architecture:** Databricks scheduled notebook → BQ table. Per the PR #57 investigation, Alex's scoring is Spark-native (Horvitz-Thompson estimator + pairwise Jaccard self-join + multi-stage z-score composite, ~2,000 lines of PySpark). Not SQL-expressible. Databricks is the only realistic host for v1.
+**Architecture:** airflow-ti DAG → Dataproc Serverless PySpark batch → Iceberg table on GCS, BigLake-cataloged for BQ read access.
+
+**Why this and not Databricks** (per Victor 2026-06-04 + agent re-read of PR #57): Alex's code is pure PySpark with zero Databricks lock-in (no `dbutils`, no DBFS, no magic). Data lives in BQ; the BQ → compute → BQ round-trip costs are similar regardless of compute backend (both Databricks and Dataproc run on GCE). Choosing Databricks would mean paying for a second compute platform with no benefit. Dataproc Serverless scales to zero between weekly runs and matches MNTN's existing orchestration patterns.
+
+**Why not SQLMesh:** ~2,000 lines of PySpark including a pairwise Jaccard self-join + HT estimator + multi-stage z-score composites. Multi-week rewrite to SQL and the Jaccard step alone is hard to make cost-competitive in BQ. Would mean throwing out Alex's framework.
+
+**Why Iceberg + BigLake (vs BQ-managed table):** reading ipdsc directly from GCS Parquet skips the BQ external-table overhead per query. Writing output to Iceberg + BigLake gives BQ query access without re-ingest, and Iceberg's partition overwrite semantics make reruns idempotent.
 
 **What's been built (this ticket):**
 
-1. **Operative-3P extraction SQL** — `queries/ti_956_operative_3p_campaign_segments.sql`. Embeds the Pass 26 LCA classifier as a TEMP FUNCTION; returns one row per (campaign × dscid × polarity) tuple where the 3P clause actually drives delivery. Drops bidder-inert theater (MM + 3P-OR-incl). This is the TI-999 contribution to TI-956 — without this filter, the performance layer's segment-quality KPIs would reflect MM-only delivery with a 3P label slapped on, inflating the scores of theater-only segments.
-2. **Databricks notebook** — `artifacts/ti_956_segment_quality_scoring_notebook.py`. End-to-end pipeline:
-   - Reads ipdsc / seg_meta / targetable_ips / performance / campaign_segment_targets from BQ via the Spark connector
+1. **Operative-3P extraction SQL** — `queries/ti_956_operative_3p_campaign_segments.sql`. Embeds the Pass 26 LCA classifier as a TEMP FUNCTION; returns one row per (campaign × dscid × polarity) tuple where the 3P clause actually drives delivery. Drops bidder-inert theater (MM + 3P-OR-incl). The TI-999 contribution — without this filter, the performance layer's segment-quality KPIs would reflect MM-only delivery with a 3P label slapped on.
+2. **Dataproc Serverless PySpark job** — `artifacts/ti_956_segment_quality_scoring_job.py`. End-to-end:
+   - Reads ipdsc from `gs://<ipdsc-bucket>/dt=YYYY-MM-DD/data_source_id=35/*.parquet` (GCS direct, no BQ external-table layer)
+   - Reads seg_meta / targetable_ips / performance / operative_3p (campaign×dscid) from BQ via the Spark connector
    - Calls `build_edges_with_weights_estimator_only` to construct the HT panel
    - Invokes `ThirdPartySegmentQuality(panel).quality_score_per_segment(...)` with the theater-filtered targets
    - Adds `size_distinct_ips`, `quality_rank`, `anti_quality_rank`, `size_rank` (global dense ranks) — UI team requirement
-   - Adds `low_confidence_flag` for downstream de-ranking (HT variance is brutal at p=1e-4 on long-tail segments)
-   - Writes to `dw-main-bronze.household_scoring.segment_quality_daily` partitioned by `as_of_date`, clustered by `dscid`
-   - Smoke validation block (row count, score distribution, rank monotonicity, low-confidence share)
+   - Adds `low_confidence_flag` (`ess_30d < 100`) for downstream de-ranking
+   - Writes via `.writeTo(ICEBERG_TABLE).overwritePartitions()` — idempotent rerun of the same `as_of_date` partition
+   - Smoke validation (row count, score distribution, rank monotonicity, low-confidence share)
+   - Self-contained: SQL inlined; argparse-driven (`--as_of_date`, `--window_days`, `--sample_rate`)
+3. **airflow-ti DAG stub** — `artifacts/ti_956_airflow_ti_dag_stub.py`. Template for Victor to drop into the airflow-ti repo. `DataprocCreateBatchOperator` submits the PySpark batch weekly (Sunday 06:00 UTC) with the right Iceberg + BigLake + BQ-connector jar packages. Connection IDs, service account, subnet config left as placeholders for Victor's conventions.
 
 **What Victor needs to set up:**
 
-1. **Databricks workspace + cluster** — Memory-optimized cluster (per `[[reference_databricks_for_heavy_queries]]` and `[[reference_databricks_node_sizing]]`: prefer more small-core nodes over fewer big-core for shuffle-heavy Spark). The pairwise Jaccard step in uniqueness.py is the killer; cluster needs enough total cores + shuffle bandwidth.
-2. **Install `targeting-infra-ml`** — Either pip-install from the repo (once PR #57 merges) or vendor the package into a workspace folder. The notebook imports `utils.segment_quality_utils.facade.ThirdPartySegmentQuality` and `utils.sampling_logic.build_edges_with_weights_estimator_only`.
-3. **BigQuery Spark connector** — Configure auth (service account on the cluster). Workspace probably already has this.
-4. **GCS temp bucket** — `gs://household-scoring-prod/databricks_temp/segment_quality/` for indirect BQ writes.
-5. **Create the output BQ table** — DDL:
-    ```sql
-    CREATE TABLE `dw-main-bronze.household_scoring.segment_quality_daily` (
-      dscid                INT64,
-      as_of_date           DATE,
-      window_start         DATE,
-      window_end           DATE,
-      quality_score        FLOAT64,
-      size_distinct_ips    INT64,
-      quality_rank         INT64,
-      anti_quality_rank    INT64,
-      size_rank            INT64,
-      z_activity           FLOAT64,
-      z_stability          FLOAT64,
-      z_share              FLOAT64,
-      z_uniqueness         FLOAT64,
-      z_sample             FLOAT64,
-      z_staleness          FLOAT64,
-      z_specificity        FLOAT64,
-      z_targetability     FLOAT64,
-      z_performance        FLOAT64,
-      z_combo              FLOAT64,
-      reach_hat_30d        FLOAT64,
-      cv14                 FLOAT64,
-      avg_share_30d        FLOAT64,
-      mean_topk_jaccard_30d FLOAT64,
-      idf_norm             FLOAT64,
-      staleness_unit_score FLOAT64,
-      pct_targetable_30d   FLOAT64,
-      ess_30d              FLOAT64,
-      sample_rate          FLOAT64,
-      low_confidence_flag  BOOL
-    )
-    PARTITION BY as_of_date
-    CLUSTER BY dscid;
+1. **Upload the job + utils bundle to GCS:**
     ```
-6. **Databricks Workflow / Job schedule** — Weekly, Sunday 06:00 UTC. Notebook path: workspace import of `tickets/ti_956_interest_segment_scoring_schedule/artifacts/ti_956_segment_quality_scoring_notebook.py`.
-7. **Alerts** — Job-failure alert to TI Slack channel. Late-data alert if no rows for >9 days.
+    gs://mntn-targeting-jobs/ti_956/ti_956_segment_quality_scoring_job.py
+    gs://mntn-targeting-jobs/ti_956/utils.zip   # bundled targeting-infra-ml/utils/
+    ```
+2. **Confirm + parameterize the ipdsc GCS path.** Job has placeholder `IPDSC_GCS_BASE = "gs://mntn-ipdsc-prod"`; if real path differs, update the constant.
+3. **BigLake catalog + Iceberg warehouse:**
+    - BigLake Metastore catalog: `household_scoring` in `dw-main-bronze` / `us-central1`
+    - Warehouse path: `gs://household-scoring-prod/iceberg/`
+    - Create the Iceberg table once via Spark SQL:
+        ```sql
+        CREATE TABLE biglake.household_scoring.segment_quality_daily (
+          dscid                BIGINT,
+          as_of_date           DATE,
+          window_start         DATE,
+          window_end           DATE,
+          quality_score        DOUBLE,
+          size_distinct_ips    BIGINT,
+          quality_rank         BIGINT,
+          anti_quality_rank    BIGINT,
+          size_rank            BIGINT,
+          z_activity           DOUBLE,
+          z_stability          DOUBLE,
+          z_share              DOUBLE,
+          z_uniqueness         DOUBLE,
+          z_sample             DOUBLE,
+          z_staleness          DOUBLE,
+          z_specificity        DOUBLE,
+          z_targetability      DOUBLE,
+          z_performance        DOUBLE,
+          z_combo              DOUBLE,
+          reach_hat_30d        DOUBLE,
+          cv14                 DOUBLE,
+          avg_share_30d        DOUBLE,
+          mean_topk_jaccard_30d DOUBLE,
+          idf_norm             DOUBLE,
+          staleness_unit_score DOUBLE,
+          pct_targetable_30d   DOUBLE,
+          ess_30d              DOUBLE,
+          sample_rate          DOUBLE,
+          low_confidence_flag  BOOLEAN
+        )
+        USING iceberg
+        PARTITIONED BY (as_of_date);
+        ```
+    - Verify BQ can read via the BigLake external table.
+4. **Service account + IAM** for the Dataproc batch — read on the ipdsc GCS bucket, BQ jobUser on `dw-main-silver` + `dw-main-bronze`, write on the Iceberg warehouse bucket.
+5. **airflow-ti DAG deploy** — drop `artifacts/ti_956_airflow_ti_dag_stub.py` into `dags/ti/` on a feature branch (per `[[feedback_airflow_prod_safety]]` — never push to main). Ryan reviews + wires deps. First scheduled run after merge.
+6. **Alerts** — DataprocCreateBatchOperator emits failure events through Airflow; route to TI Slack channel. Late-data alert if no Iceberg partition for >9 days.
 
 **Pre-flight checklist:**
 
-- [ ] PR #57 merged in `SteelHouse/targeting-infra-ml` (currently blocked / needs theastrocat review)
-- [ ] Output BQ table created (DDL above)
-- [ ] Cluster sized + tested with a single-run invocation (validate the pairwise Jaccard step doesn't OOM)
-- [ ] Smoke validation passes on the first run
-- [ ] Macie confirms output schema matches what the admin UI needs
+- [ ] PR #57 merged in `SteelHouse/targeting-infra-ml` (currently `mergeable_state: blocked` since 2026-05-14, needs theastrocat / Ryan review)
+- [ ] Alex publishes benchmarks (cluster size, wall-clock at p=1e-4, dscid count) — pairwise Jaccard is the cost hot-path with no published numbers yet
+- [ ] Iceberg table created (DDL above)
+- [ ] First Dataproc batch run end-to-end, smoke validation passes
+- [ ] airflow-ti DAG deployed on feature branch + reviewed
+- [ ] Macie confirms output schema matches admin UI needs
 
 ### Storage plan
 
 | Surface | Location | Refresh | Consumer |
 |---|---|---|---|
-| Primary (BQ) | `dw-main-bronze.household_scoring.segment_quality_daily` | Weekly Sun 06:00 UTC | UI team, Mode dashboards, admin tooling |
-| GCS landing (optional) | `gs://household-scoring-prod/output/segment_quality/year=YYYY/month=MM/day=DD/*.parquet` | Same | Macie / non-BQ consumers — produced by BQ EXPORT from the table partition |
-| Notebook output (raw) | Cluster local DBFS during run | Per run | Debug / re-validate |
+| Primary (Iceberg, GCS-backed) | `gs://household-scoring-prod/iceberg/household_scoring/segment_quality_daily/` | Weekly Sun 06:00 UTC | Dataproc / Spark consumers |
+| BQ read access | `biglake.household_scoring.segment_quality_daily` via BigLake external | Same — no re-ingest | UI team, Mode dashboards, admin tooling |
+| GCS Parquet export (optional, for Macie) | `gs://household-scoring-prod/output/segment_quality/year=YYYY/month=MM/day=DD/*.parquet` | Same | Macie / non-BQ consumers |
 
-GCS export step (optional, for Macie): runs as a downstream BQ scheduled query after the Databricks job completes, exports the latest partition as parquet to GCS. Add to airflow-ti if Macie's consumer pipeline lives there.
+Idempotent reruns: `writeTo(...).overwritePartitions()` replaces just the `as_of_date` partition. Earlier weekly snapshots remain intact for backfill / audit.
 
 ## 6. Questions Answered
 - **Q:** Why does this need a schedule rather than ad-hoc reruns?
