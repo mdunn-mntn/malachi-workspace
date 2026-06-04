@@ -5,6 +5,9 @@
 **Date Started:** 2026-06-04
 **Assignee:** Malachi
 
+**Live URL (secret gist, share via link only):**
+https://gist.githack.com/mdunn-mntn/2d362849df017fa243eef03bb61cdfbb/raw/ti_xxx_mde_calculator_prefill.html
+
 ---
 
 ## 1. Introduction
