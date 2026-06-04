@@ -1029,9 +1029,17 @@ function update() {
   document.getElementById('ci-raw').textContent = ciPct(raw.mdeRel);
   document.getElementById('ci-stk').textContent = ciPct(stk.mdeRel);
 
-  document.getElementById('req-total').textContent   = fmtBudget(req.totalSpend);
-  document.getElementById('req-monthly').textContent = fmtBudget(req.monthlySpend) + ' /mo';
-  document.getElementById('req-detail').textContent  = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''}`;
+  document.getElementById('req-total').textContent = fmtBudget(req.totalSpend);
+  // Hide /mo run-rate for sub-month tests: it exceeds total budget and confuses
+  // the panel. /mo is meaningful only when duration spans roughly a month or more.
+  const monthlyEl = document.getElementById('req-monthly');
+  if (W >= 4) {
+    monthlyEl.textContent = fmtBudget(req.monthlySpend) + ' /mo';
+    monthlyEl.style.display = '';
+  } else {
+    monthlyEl.style.display = 'none';
+  }
+  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''}`;
 
   document.getElementById('sc-spend').textContent     = fmtBudget(raw.totalSpend);
   document.getElementById('sc-spend-s').textContent   = `${W} wk · ${fmtBudget(B)}/mo`;
