@@ -545,9 +545,9 @@
         <div class="sl-wrap">
           <div class="sl-head">
             <span class="sl-lbl">DURATION (WEEKS)</span>
-            <span class="sl-val" id="v-dur">13 wk</span>
+            <span class="sl-val" id="v-dur">8 wk</span>
           </div>
-          <input type="range" id="sl-dur" min="1" max="104" step="1" value="13">
+          <input type="range" id="sl-dur" min="1" max="52" step="1" value="8">
         </div>
       </div>
 
@@ -560,7 +560,7 @@
             <span class="sl-lbl">HOLDOUT %</span>
             <span class="sl-val" id="v-holdout">10%</span>
           </div>
-          <input type="range" id="sl-holdout" min="2" max="30" step="1" value="10">
+          <input type="range" id="sl-holdout" min="2" max="18" step="1" value="10">
         </div>
 
         <div class="sl-wrap">
@@ -818,7 +818,7 @@ const VR_STACK = 0.595; // CUPED(0.934) × ghost-ad(0.75) × stratified(0.85)
 
 const S = {
   monthlyBudget : 200000,
-  durationWk    : 13,       // 13 weeks ≈ 3 months
+  durationWk    : 8,        // 8-week default (cap 52)
   holdoutFrac   : 0.10,
   targetMdeRel  : 0.05,
   baselineRate  : 0.0215,
@@ -1093,28 +1093,29 @@ S.currentOutcome = 'ivr';
 
 function searchAdvertisers(q) {
   q = (q || '').trim().toLowerCase();
-  if (!q) return window.ADVERTISERS.slice(0, 20);
+  if (!q) return { items: window.ADVERTISERS, total: window.ADVERTISERS.length, empty: true };
   const qNum = q.replace(/[^0-9]/g, '');
   const hits = [];
   for (const a of window.ADVERTISERS) {
     const nameLc = a.name.toLowerCase();
     const idStr  = String(a.id);
-    if (nameLc.includes(q) || (qNum && idStr.includes(qNum))) {
-      hits.push(a);
-      if (hits.length >= 50) break;
-    }
+    if (nameLc.includes(q) || (qNum && idStr.includes(qNum))) hits.push(a);
   }
-  return hits;
+  return { items: hits, total: hits.length, empty: false };
 }
 
-function renderAdvResults(items) {
+function renderAdvResults(result) {
   const box = document.getElementById('adv-results');
+  const { items, total, empty } = result;
   if (!items.length) {
     box.innerHTML = '<div class="adv-item" style="cursor:default;opacity:0.55;"><span class="adv-item-name">No match</span></div>';
     box.classList.add('open');
     return;
   }
-  box.innerHTML = items.map(a =>
+  const hint = empty
+    ? `<div class="adv-item" style="cursor:default;opacity:0.7;background:var(--panel-2);"><span class="adv-item-name">ALL ${total} ADVERTISERS · sorted by 30d spend · type to filter</span></div>`
+    : `<div class="adv-item" style="cursor:default;opacity:0.7;background:var(--panel-2);"><span class="adv-item-name">${total} match${total===1?'':'es'}</span></div>`;
+  box.innerHTML = hint + items.map(a =>
     `<div class="adv-item" data-id="${a.id}">
        <span class="adv-item-name">${a.name}</span>
        <span class="adv-item-meta">${a.id} · ${fmtBudget(a.spend30)}/30d</span>
@@ -1218,9 +1219,9 @@ function initAdvertiserPicker() {
   search.addEventListener('blur',  () => setTimeout(() => results.classList.remove('open'), 150));
   search.addEventListener('keydown', e => {
     if (e.key === 'Escape') { results.classList.remove('open'); search.blur(); }
-    if (e.key === 'Enter') {
-      const hits = searchAdvertisers(search.value);
-      if (hits.length) selectAdvertiser(hits[0]);
+    if (e.key === 'Enter' && search.value.trim()) {
+      const { items } = searchAdvertisers(search.value);
+      if (items.length) selectAdvertiser(items[0]);
     }
   });
 
