@@ -263,57 +263,47 @@ Three real options. Decision should be made in the early-next-week tech deep-div
    - Self-contained: SQL inlined; argparse-driven (`--as_of_date`, `--window_days`, `--sample_rate`)
 3. **airflow-ti DAG stub** — `artifacts/ti_956_airflow_ti_dag_stub.py`. Template for Victor to drop into the airflow-ti repo. `DataprocCreateBatchOperator` submits the PySpark batch weekly (Sunday 06:00 UTC) with the right Iceberg + BigLake + BQ-connector jar packages. Connection IDs, service account, subnet config left as placeholders for Victor's conventions.
 
-**What Victor needs to set up:**
+**Resolved values from airflow-ti convention scan (2026-06-04):**
+
+| Concern | Value | Source |
+|---|---|---|
+| **ipdsc GCS path** | `gs://mntn-data-archive-prod/ipdsc/dt={DATE}/data_source_id={DS}/*.parquet` | Confirmed via `bq show --format=prettyjson dw-main-bronze:external.ipdsc__v1` — Hive-partitioned by `dt` + `data_source_id` |
+| **Iceberg catalog type** | `bigquery` (BigQuery Metastore — NOT BLMS) | `airflow-ti/utils_model/base_model/compute_component.py` |
+| **Iceberg catalog name** | `DW_MAIN_BRONZE` (prod) / `MNTN_PRJ_DEV_00` (dev) — uppercased project_id w/ underscores | Same |
+| **Catalog config keys** | `spark.sql.catalog.<NAME>.type=bigquery`, `.gcp.bigquery.project-id=<project>`, `.gcp.bigquery.location=us-central1` | Same |
+| **Iceberg warehouse path** | Per-table via `tableProperty("location", "gs://mntn-data-archive-{env}/airflow_vs/{env}/<layer>/<model_id>/")` — NOT a global warehouse config | `airflow-ti/utils_model/base_model/writer_iceberg.py` |
+| **Iceberg jar versions** | `iceberg-bigquery-1.10.2.jar`, `iceberg-gcp-1.10.2.jar`, `iceberg-gcp-bundle-1.10.2.jar`, `iceberg-spark-runtime-3.5_2.13-1.10.2.jar` — pre-staged in `gs://mntn-data-archive-prod/ti_resources/spark/drivers/` | Same |
+| **Jar loading** | `spark.jars=<GCS uris>` — NOT `spark.jars.packages` (no Maven resolution at runtime) | Same |
+| **Dataproc Serverless runtime** | `"2.3"` (use `"3.0"` with `spark_scala="4.0_2.13"`) | `airflow-ti/utils_runner/dataproc.py` |
+| **Region** | `us-central1` | Same |
+| **Dev project** | `mntn-prj-dev-00` | Same |
+| **Dev service account** | `airflow-ti-dev@mntn-prj-dev-00.iam.gserviceaccount.com` | Same |
+| **Dev subnet** | `projects/mntn-host-ntwrk-nonprod-00/regions/us-central1/subnetworks/mntn-dev-prj-snet-central1` | Same |
+| **Network tags (dev)** | `["dataproc-dev"]` | Same |
+| **Required runtime env** | `MNTN_RUNTIME_ENV` propagated via `spark.dataproc.driverEnv.MNTN_RUNTIME_ENV` + `spark.executorEnv.MNTN_RUNTIME_ENV` | Same |
+| **batch_id format** | `<model-id-dashes>-local-YYYYMMDD-HHMM` | Same |
+| **Labels schema** | `{"team": "ti", "application": "<short_name>"}` | Same |
+| **Path convention** | `gs://mntn-data-archive-{dev\|prod}/airflow_vs/{env}/<layer>/<model_id>/` | Same |
+| **Default landing schema (dev)** | `mntn-prj-dev-00.spark_bq` | Same |
+
+These values are now baked into `artifacts/ti_956_segment_quality_scoring_job.py` and `artifacts/ti_956_airflow_ti_dag_stub.py` — the dev/prod split is driven off `MNTN_RUNTIME_ENV`.
+
+**Still unresolved — confirm with Victor:**
+
+1. **Prod service account + subnet** — agent only found dev values in airflow-ti. What's the prod equivalent of `airflow-ti-dev@mntn-prj-dev-00.iam.gserviceaccount.com` / the dev subnet?
+2. **spark-bigquery connector jar** — NOT pre-staged in `ti_resources/spark/drivers/` for Iceberg jobs. Our job's BQ reads (seg_meta, targetable_ips, performance, operative_3p) need this connector. Options: (a) add `com.google.cloud.spark:spark-3.5-bigquery:0.34.0` via `spark.jars.packages` only for this jar (mixing with `spark.jars`), (b) stage it alongside the Iceberg jars in GCS, (c) refactor those 4 BQ reads to load via the Iceberg catalog if those tables are Iceberg (they're not today).
+3. **Optional refactor onto `IcebergBigqueryMntnPrjDevModel`** — airflow-ti has a base-class + `@compute.dataproc_batch` + `@model_config` decorator pattern that abstracts the Spark/catalog config. More idiomatic but requires familiarity with the framework. The current artifacts use raw `DataprocCreateBatchOperator` submission — both work, Victor's call.
+
+**What Victor still needs to set up:**
 
 1. **Upload the job + utils bundle to GCS:**
-    ```
-    gs://mntn-targeting-jobs/ti_956/ti_956_segment_quality_scoring_job.py
-    gs://mntn-targeting-jobs/ti_956/utils.zip   # bundled targeting-infra-ml/utils/
-    ```
-2. **Confirm + parameterize the ipdsc GCS path.** Job has placeholder `IPDSC_GCS_BASE = "gs://mntn-ipdsc-prod"`; if real path differs, update the constant.
-3. **BigLake catalog + Iceberg warehouse:**
-    - BigLake Metastore catalog: `household_scoring` in `dw-main-bronze` / `us-central1`
-    - Warehouse path: `gs://household-scoring-prod/iceberg/`
-    - Create the Iceberg table once via Spark SQL:
-        ```sql
-        CREATE TABLE biglake.household_scoring.segment_quality_daily (
-          dscid                BIGINT,
-          as_of_date           DATE,
-          window_start         DATE,
-          window_end           DATE,
-          quality_score        DOUBLE,
-          size_distinct_ips    BIGINT,
-          quality_rank         BIGINT,
-          anti_quality_rank    BIGINT,
-          size_rank            BIGINT,
-          z_activity           DOUBLE,
-          z_stability          DOUBLE,
-          z_share              DOUBLE,
-          z_uniqueness         DOUBLE,
-          z_sample             DOUBLE,
-          z_staleness          DOUBLE,
-          z_specificity        DOUBLE,
-          z_targetability      DOUBLE,
-          z_performance        DOUBLE,
-          z_combo              DOUBLE,
-          reach_hat_30d        DOUBLE,
-          cv14                 DOUBLE,
-          avg_share_30d        DOUBLE,
-          mean_topk_jaccard_30d DOUBLE,
-          idf_norm             DOUBLE,
-          staleness_unit_score DOUBLE,
-          pct_targetable_30d   DOUBLE,
-          ess_30d              DOUBLE,
-          sample_rate          DOUBLE,
-          low_confidence_flag  BOOLEAN
-        )
-        USING iceberg
-        PARTITIONED BY (as_of_date);
-        ```
-    - Verify BQ can read via the BigLake external table.
-4. **Service account + IAM** for the Dataproc batch — read on the ipdsc GCS bucket, BQ jobUser on `dw-main-silver` + `dw-main-bronze`, write on the Iceberg warehouse bucket.
-5. **airflow-ti DAG deploy** — drop `artifacts/ti_956_airflow_ti_dag_stub.py` into `dags/ti/` on a feature branch (per `[[feedback_airflow_prod_safety]]` — never push to main). Ryan reviews + wires deps. First scheduled run after merge.
-6. **Alerts** — DataprocCreateBatchOperator emits failure events through Airflow; route to TI Slack channel. Late-data alert if no Iceberg partition for >9 days.
+   ```
+   gs://mntn-data-archive-dev/airflow_vs/dev/code/ti_956/ti_956_segment_quality_scoring_job.py
+   gs://mntn-data-archive-dev/airflow_vs/dev/code/ti_956/utils.zip   # bundled targeting-infra-ml/utils/
+   ```
+2. **Confirm Iceberg table creation idiom.** The job uses `writeTo(...).create()` on first run with `tableProperty("location", <gcs path>)`. Alternative: pre-create via Spark SQL DDL. Pick one; both supported by airflow-ti convention.
+3. **airflow-ti DAG deploy** — drop `artifacts/ti_956_airflow_ti_dag_stub.py` into `dags/ti/` on a feature branch (per `[[feedback_airflow_prod_safety]]`). Ryan reviews + wires deps.
+4. **Alerts** — DataprocCreateBatchOperator emits failure events through Airflow; route to TI Slack. Late-data alert if no Iceberg partition for >9 days.
 
 **Pre-flight checklist:**
 

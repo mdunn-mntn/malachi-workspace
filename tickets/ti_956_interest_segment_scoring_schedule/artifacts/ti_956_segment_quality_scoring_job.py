@@ -40,14 +40,37 @@ from utils.sampling_logic import build_edges_with_weights_estimator_only
 
 
 # -----------------------------------------------------------------------------
-# Constants — Victor to confirm GCS paths + BigLake catalog config
+# Constants — derived from airflow-ti conventions (utils_model/base_model/*).
+# Prod values; dev override below if MNTN_RUNTIME_ENV != "prod".
 # -----------------------------------------------------------------------------
+import os
+
 LR_DS_ID = 35  # LiveRamp data_source_id
 
+# BQ project for read-only sources (audience_segments, sum_by_campaign_by_day, etc.)
 BQ_PROJECT = "dw-main-silver"
-IPDSC_GCS_BASE = "gs://mntn-ipdsc-prod"            # <-- confirm bucket + prefix
-ICEBERG_WAREHOUSE = "gs://household-scoring-prod/iceberg"  # <-- confirm
-ICEBERG_TABLE = "biglake.household_scoring.segment_quality_daily"
+
+# IPDSC GCS layout (confirmed from BQ external table sourceUriPrefix):
+# Hive-partitioned by `dt` and `data_source_id`.
+IPDSC_GCS_BASE = "gs://mntn-data-archive-prod/ipdsc"
+
+# Iceberg catalog config follows airflow-ti convention:
+#   catalog name = uppercased project_id with underscores
+#   type = bigquery (BigQuery Metastore, NOT BLMS)
+# Prod catalog hosts the segment_quality table in dw-main-bronze.
+RUNTIME_ENV       = os.environ.get("MNTN_RUNTIME_ENV", "dev")
+if RUNTIME_ENV == "prod":
+    ICEBERG_CATALOG_NAME    = "DW_MAIN_BRONZE"
+    ICEBERG_METASTORE_PROJ  = "dw-main-bronze"
+    ICEBERG_LOCATION_ROOT   = "gs://mntn-data-archive-prod/airflow_vs/prod/household_scoring/segment_quality_daily"
+    ICEBERG_SCHEMA          = "household_scoring"
+else:
+    ICEBERG_CATALOG_NAME    = "MNTN_PRJ_DEV_00"
+    ICEBERG_METASTORE_PROJ  = "mntn-prj-dev-00"
+    ICEBERG_LOCATION_ROOT   = "gs://mntn-data-archive-dev/airflow_vs/dev/household_scoring/segment_quality_daily"
+    ICEBERG_SCHEMA          = "spark_bq"  # default dev landing per airflow-ti convention
+
+ICEBERG_TABLE_3PART = f"{ICEBERG_METASTORE_PROJ}.{ICEBERG_SCHEMA}.segment_quality_daily"
 
 logger = logging.getLogger("ti_956_scoring")
 
@@ -153,19 +176,25 @@ def parse_args(argv):
 
 
 def build_spark():
-    """SparkSession configured for Iceberg + BigLake + BigQuery."""
+    """SparkSession configured for Iceberg (BigQuery Metastore catalog) + BigQuery reads.
+
+    Catalog config mirrors airflow-ti convention (utils_model/base_model/compute_component.py):
+      - catalog name = uppercased project_id with underscores
+      - type = bigquery (BigQuery Metastore, NOT BLMS)
+      - per-table location set via tableProperty at create time
+    """
+    cat = ICEBERG_CATALOG_NAME
     return (SparkSession.builder
         .appName("ti_956_segment_quality_scoring")
-        # Iceberg + BigLake catalog
-        .config("spark.sql.catalog.biglake",
+        # Iceberg BigQuery Metastore catalog
+        .config(f"spark.sql.catalog.{cat}",
                 "org.apache.iceberg.spark.SparkCatalog")
-        .config("spark.sql.catalog.biglake.catalog-impl",
-                "org.apache.iceberg.gcp.biglake.BigLakeCatalog")
-        .config("spark.sql.catalog.biglake.gcp_project", "dw-main-bronze")
-        .config("spark.sql.catalog.biglake.gcp_location", "us-central1")
-        .config("spark.sql.catalog.biglake.blms_catalog", "household_scoring")
-        .config("spark.sql.catalog.biglake.warehouse", ICEBERG_WAREHOUSE)
-        # BigQuery connector default config
+        .config(f"spark.sql.catalog.{cat}.type", "bigquery")
+        .config(f"spark.sql.catalog.{cat}.gcp.bigquery.project-id", ICEBERG_METASTORE_PROJ)
+        .config(f"spark.sql.catalog.{cat}.gcp.bigquery.location",   "us-central1")
+        # Airflow-ti convention: prevent runtime jar conflicts
+        .config("dataproc.artifacts.remove", "iceberg")
+        # BigQuery connector default project for read-only sources
         .config("spark.bigquery.project", BQ_PROJECT)
         .getOrCreate())
 
@@ -270,15 +299,31 @@ def add_ranks_and_flags(scores_df, as_of_date, window_start, window_end,
                     F.when(F.col("ess_30d") < n_obs_floor, F.lit(True)).otherwise(F.lit(False))))
 
 
-def write_iceberg(ranked_df):
+def write_iceberg(spark, ranked_df):
     """Append (or overwrite) today's `as_of_date` partition into the Iceberg table.
 
-    Idempotent reruns: `overwritePartitions()` replaces just the as_of_date
-    partition we're writing. Other partitions untouched. Requires the table to
-    exist — Victor creates it once via Spark SQL DDL (see summary.md §5).
+    Uses airflow-ti's idiom (utils_model/base_model/writer_iceberg.py):
+      - If the table exists: `overwritePartitions()` replaces just the as_of_date
+        partition we're writing. Other partitions untouched.
+      - Else: create partitioned by `as_of_date` with the per-table `location`
+        property pointing into our GCS warehouse path.
+
+    Table FQN uses the 3-part form `<catalog>.<schema>.<table>` where catalog
+    is the uppercased project id; schema and project follow the dev/prod split
+    from MNTN_RUNTIME_ENV.
     """
-    (ranked_df.writeTo(ICEBERG_TABLE).overwritePartitions())
-    logger.info(f"Wrote {ICEBERG_TABLE} partition (overwritePartitions)")
+    table_fqn = f"{ICEBERG_CATALOG_NAME}.{ICEBERG_SCHEMA}.segment_quality_daily"
+    table_exists = spark.catalog.tableExists(table_fqn)
+    if table_exists:
+        ranked_df.writeTo(table_fqn).overwritePartitions()
+        logger.info(f"Wrote {table_fqn} partition (overwritePartitions)")
+    else:
+        (ranked_df.writeTo(table_fqn)
+            .using("iceberg")
+            .tableProperty("location", ICEBERG_LOCATION_ROOT)
+            .partitionedBy("as_of_date")
+            .create())
+        logger.info(f"Created {table_fqn} (first run) at {ICEBERG_LOCATION_ROOT}")
 
 
 def validate(ranked_df):
@@ -350,8 +395,8 @@ def main(argv):
         args.sample_rate, args.n_obs_floor,
     )
 
-    # 5. Write to Iceberg (BigLake-cataloged)
-    write_iceberg(ranked_df)
+    # 5. Write to Iceberg (BigQuery Metastore)
+    write_iceberg(spark, ranked_df)
 
     # 6. Validate
     validate(ranked_df)
