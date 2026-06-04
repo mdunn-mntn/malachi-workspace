@@ -1,12 +1,16 @@
-# TI-XXX: MDE Calculator — Per-Advertiser Auto-Prefill
+# TI-1019: MDE Calculator — Per-Advertiser Auto-Prefill
 
-**Jira:** TBD
-**Status:** In Progress
+**Jira:** [TI-1019](https://mntn.atlassian.net/browse/TI-1019)
+**Status:** Done (2026-06-04)
 **Date Started:** 2026-06-04
+**Date Completed:** 2026-06-04
+**Story Points:** 2
 **Assignee:** Malachi
 
 **Live URL (secret gist, share via link only):**
 https://gist.githack.com/mdunn-mntn/2d362849df017fa243eef03bb61cdfbb/raw/ti_xxx_mde_calculator_prefill.html
+
+> Filename inside artifacts/ stays `ti_xxx_mde_calculator_prefill.html` (not renamed to ti_1019) so the gist URL above stays valid for everyone the link was already shared with. Folder renamed to `ti_1019_...` per workspace convention.
 
 ---
 
