@@ -1214,7 +1214,12 @@ function initAdvertiserPicker() {
   const search  = document.getElementById('adv-search');
   const results = document.getElementById('adv-results');
 
-  search.addEventListener('focus', () => renderAdvResults(searchAdvertisers(search.value)));
+  search.addEventListener('focus', () => {
+    // On focus, always show the full list — don't filter by the currently-selected
+    // advertiser's label still sitting in the box. Select-all so typing replaces.
+    search.select();
+    renderAdvResults(searchAdvertisers(''));
+  });
   search.addEventListener('input', () => renderAdvResults(searchAdvertisers(search.value)));
   search.addEventListener('blur',  () => setTimeout(() => results.classList.remove('open'), 150));
   search.addEventListener('keydown', e => {
