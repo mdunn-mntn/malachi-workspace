@@ -286,7 +286,8 @@ These were the pre-Victor-meeting standalone approach. Deleted because the airfl
 
 ### Pre-flight checklist
 
-- [ ] PR #57 merged in `SteelHouse/targeting-infra-ml` (currently `mergeable_state: blocked` since 2026-05-14; Ryan / theastrocat needs to review)
+- [x] **PR #57 reviewed + approved** (2026-06-05) — Alex Knorr swapped Malachi onto the reviewer slot after Ryan/theastrocat stayed stale since 2026-05-14. Three blocking comments addressed by Alex; approve posted.
+- [ ] PR #57 merged — pending Alex's merge button (post-approval)
 - [ ] Alex publishes benchmarks (cluster size, wall-clock at p=1e-4)
 - [ ] Cross-repo dependency resolution path picked + tested (Victor — option (a)/(b)/(c) from above)
 - [ ] Model file deployed to airflow-ti feature branch; Ryan reviews
