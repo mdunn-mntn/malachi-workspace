@@ -238,91 +238,69 @@ Three real options. Decision should be made in the early-next-week tech deep-div
 
 ## 5. Solution
 
-### Implementation plan (revised 2026-06-04 after Victor pushback)
+### Implementation plan (revised 2026-06-05 after Victor 1:1)
 
-**Architecture:** airflow-ti DAG → Dataproc Serverless PySpark batch → Iceberg table on GCS, BigLake-cataloged for BQ read access.
+**Architecture:** airflow-ti model class (`IcebergBigqueryDwMainBronzeModel`) → Dataproc Serverless PySpark batch → Iceberg table on GCS, BigQuery Metastore-cataloged for BQ read access.
 
-**Why this and not Databricks** (per Victor 2026-06-04 + agent re-read of PR #57): Alex's code is pure PySpark with zero Databricks lock-in (no `dbutils`, no DBFS, no magic). Data lives in BQ; the BQ → compute → BQ round-trip costs are similar regardless of compute backend (both Databricks and Dataproc run on GCE). Choosing Databricks would mean paying for a second compute platform with no benefit. Dataproc Serverless scales to zero between weekly runs and matches MNTN's existing orchestration patterns.
+**Pattern (per Victor 1:1, 2026-06-05, transcript: `meetings/ti_956_02_malachi_victor_dataproc_2026_06_05.txt`):**
 
-**Why not SQLMesh:** ~2,000 lines of PySpark including a pairwise Jaccard self-join + HT estimator + multi-stage z-score composites. Multi-week rewrite to SQL and the Jaccard step alone is hard to make cost-competitive in BQ. Would mean throwing out Alex's framework.
+Use airflow-ti's model abstractions instead of hand-rolling Spark session + Iceberg jar versions + catalog config. The base class + decorators hide all the version/library complexity ("Iceberg different version of Spark and different version of Scala which you run it on can require different set of libraries and configurations so it can get tricky real fast — we have this addressed behind this model type"). All reads go through `self.read_model(...)`; all writes through `self.df_write(df)`. Compute (DataprocBatch / DataprocWorkflow / Databricks) selectable via the `@compute.*` decorator.
 
-**Why Iceberg + BigLake (vs BQ-managed table):** reading ipdsc directly from GCS Parquet skips the BQ external-table overhead per query. Writing output to Iceberg + BigLake gives BQ query access without re-ingest, and Iceberg's partition overwrite semantics make reruns idempotent.
+Verbatim from the meeting (line 297): *"I'm here just to advise that our latest updates on what we have... you implement the way you see fit."* — Victor didn't block any approach; he showed the more idiomatic path. We're taking it.
 
-**What's been built (this ticket):**
+**Reference patterns** (from airflow-ti `models/`):
+- **`models/machine_learning/fangorn_14day_lookback.py`** — closest template. Same base class (`IcebergBigqueryDwMainBronzeModel`), same `dw-main-bronze.household_scoring` target schema, same partitioned-Iceberg-write idiom (`table_exists()` → `overwritePartitions()` / `create()` with table properties).
+- **`models/ipdsc/ipdsc_ds_47.py`** — BQ read pattern (`self.read_model("bigquery_data.BQ").option("parentProject", ...).option("billingProject", ...).query(...).load()`).
 
-1. **Operative-3P extraction SQL** — `queries/ti_956_operative_3p_campaign_segments.sql`. Embeds the Pass 26 LCA classifier as a TEMP FUNCTION; returns one row per (campaign × dscid × polarity) tuple where the 3P clause actually drives delivery. Drops bidder-inert theater (MM + 3P-OR-incl). The TI-999 contribution — without this filter, the performance layer's segment-quality KPIs would reflect MM-only delivery with a 3P label slapped on.
-2. **Dataproc Serverless PySpark job** — `artifacts/ti_956_segment_quality_scoring_job.py`. End-to-end:
-   - Reads ipdsc from `gs://<ipdsc-bucket>/dt=YYYY-MM-DD/data_source_id=35/*.parquet` (GCS direct, no BQ external-table layer)
-   - Reads seg_meta / targetable_ips / performance / operative_3p (campaign×dscid) from BQ via the Spark connector
-   - Calls `build_edges_with_weights_estimator_only` to construct the HT panel
-   - Invokes `ThirdPartySegmentQuality(panel).quality_score_per_segment(...)` with the theater-filtered targets
-   - Adds `size_distinct_ips`, `quality_rank`, `anti_quality_rank`, `size_rank` (global dense ranks) — UI team requirement
-   - Adds `low_confidence_flag` (`ess_30d < 100`) for downstream de-ranking
-   - Writes via `.writeTo(ICEBERG_TABLE).overwritePartitions()` — idempotent rerun of the same `as_of_date` partition
-   - Smoke validation (row count, score distribution, rank monotonicity, low-confidence share)
-   - Self-contained: SQL inlined; argparse-driven (`--as_of_date`, `--window_days`, `--sample_rate`)
-3. **airflow-ti DAG stub** — `artifacts/ti_956_airflow_ti_dag_stub.py`. Template for Victor to drop into the airflow-ti repo. `DataprocCreateBatchOperator` submits the PySpark batch weekly (Sunday 06:00 UTC) with the right Iceberg + BigLake + BQ-connector jar packages. Connection IDs, service account, subnet config left as placeholders for Victor's conventions.
+### Old artifacts (REMOVED 2026-06-05 — superseded)
 
-**Resolved values from airflow-ti convention scan (2026-06-04):**
+These were the pre-Victor-meeting standalone approach. Deleted because the airflow-ti model class consolidates them:
 
-| Concern | Value | Source |
-|---|---|---|
-| **ipdsc GCS path** | `gs://mntn-data-archive-prod/ipdsc/dt={DATE}/data_source_id={DS}/*.parquet` | Confirmed via `bq show --format=prettyjson dw-main-bronze:external.ipdsc__v1` — Hive-partitioned by `dt` + `data_source_id` |
-| **Iceberg catalog type** | `bigquery` (BigQuery Metastore — NOT BLMS) | `airflow-ti/utils_model/base_model/compute_component.py` |
-| **Iceberg catalog name** | `DW_MAIN_BRONZE` (prod) / `MNTN_PRJ_DEV_00` (dev) — uppercased project_id w/ underscores | Same |
-| **Catalog config keys** | `spark.sql.catalog.<NAME>.type=bigquery`, `.gcp.bigquery.project-id=<project>`, `.gcp.bigquery.location=us-central1` | Same |
-| **Iceberg warehouse path** | Per-table via `tableProperty("location", "gs://mntn-data-archive-{env}/airflow_vs/{env}/<layer>/<model_id>/")` — NOT a global warehouse config | `airflow-ti/utils_model/base_model/writer_iceberg.py` |
-| **Iceberg jar versions** | `iceberg-bigquery-1.10.2.jar`, `iceberg-gcp-1.10.2.jar`, `iceberg-gcp-bundle-1.10.2.jar`, `iceberg-spark-runtime-3.5_2.13-1.10.2.jar` — pre-staged in `gs://mntn-data-archive-prod/ti_resources/spark/drivers/` | Same |
-| **Jar loading** | `spark.jars=<GCS uris>` — NOT `spark.jars.packages` (no Maven resolution at runtime) | Same |
-| **Dataproc Serverless runtime** | `"2.3"` (use `"3.0"` with `spark_scala="4.0_2.13"`) | `airflow-ti/utils_runner/dataproc.py` |
-| **Region** | `us-central1` | Same |
-| **Dev project** | `mntn-prj-dev-00` | Same |
-| **Dev service account** | `airflow-ti-dev@mntn-prj-dev-00.iam.gserviceaccount.com` | Same |
-| **Dev subnet** | `projects/mntn-host-ntwrk-nonprod-00/regions/us-central1/subnetworks/mntn-dev-prj-snet-central1` | Same |
-| **Network tags (dev)** | `["dataproc-dev"]` | Same |
-| **Required runtime env** | `MNTN_RUNTIME_ENV` propagated via `spark.dataproc.driverEnv.MNTN_RUNTIME_ENV` + `spark.executorEnv.MNTN_RUNTIME_ENV` | Same |
-| **batch_id format** | `<model-id-dashes>-local-YYYYMMDD-HHMM` | Same |
-| **Labels schema** | `{"team": "ti", "application": "<short_name>"}` | Same |
-| **Path convention** | `gs://mntn-data-archive-{dev\|prod}/airflow_vs/{env}/<layer>/<model_id>/` | Same |
-| **Default landing schema (dev)** | `mntn-prj-dev-00.spark_bq` | Same |
+- ~~`artifacts/ti_956_segment_quality_scoring_job.py`~~ (standalone Dataproc PySpark job, hand-rolled Spark + Iceberg config) — replaced by the model class which inherits all that config from `IcebergBigqueryDwMainBronzeModel`.
+- ~~`artifacts/ti_956_airflow_ti_dag_stub.py`~~ (raw `DataprocCreateBatchOperator` template) — replaced by airflow-ti's standard model-scheduling operators that take a model alias.
 
-These values are now baked into `artifacts/ti_956_segment_quality_scoring_job.py` and `artifacts/ti_956_airflow_ti_dag_stub.py` — the dev/prod split is driven off `MNTN_RUNTIME_ENV`.
+### What's been built (this ticket)
 
-**Still unresolved — confirm with Victor:**
+1. **Operative-3P extraction SQL** — `queries/ti_956_operative_3p_campaign_segments.sql`. Embeds the Pass 26 LCA classifier as a BQ TEMP FUNCTION; returns one row per (campaign × dscid × polarity) tuple where the 3P clause actually drives delivery. Drops bidder-inert theater (MM + 3P-OR-incl). The TI-999 contribution to TI-956. The same SQL is inlined as `OPERATIVE_3P_QUERY` inside the model file for deployment self-containment.
+2. **airflow-ti model class** — `artifacts/ti_956_segment_quality_scoring_model.py`. End-to-end:
+   - `@compute.dataproc_batch(...)` + `@model_config(alias="ti_956_segment_quality_daily", ...)` decorators
+   - Subclasses `IcebergBigqueryDwMainBronzeModel` (output goes to `dw-main-bronze.household_scoring`)
+   - `__init__` parses `--as_of_date`, builds the SparkSession with Iceberg extensions
+   - `model()` runs the 7-step pipeline (read 5 inputs → build HT panel → score → rank → write → lifecycle hooks → validate)
+   - All BQ reads use `self.read_model("bigquery_data.BQ").query(...).load()` per Victor's preferred pattern
+   - Iceberg write uses `self.df_write(df).overwritePartitions()` (subsequent runs) / `.create()` with table properties (first run) — mirrors Fangorn
+   - Lifecycle: `create_success_file`, `delete_where` (1-year retention), `expire_snapshots`
+   - Smoke validation (row count ≥50k, score range [0, 100], low-confidence share)
 
-1. **Prod service account + subnet** — agent only found dev values in airflow-ti. What's the prod equivalent of `airflow-ti-dev@mntn-prj-dev-00.iam.gserviceaccount.com` / the dev subnet?
-2. **spark-bigquery connector jar** — NOT pre-staged in `ti_resources/spark/drivers/` for Iceberg jobs. Our job's BQ reads (seg_meta, targetable_ips, performance, operative_3p) need this connector. Options: (a) add `com.google.cloud.spark:spark-3.5-bigquery:0.34.0` via `spark.jars.packages` only for this jar (mixing with `spark.jars`), (b) stage it alongside the Iceberg jars in GCS, (c) refactor those 4 BQ reads to load via the Iceberg catalog if those tables are Iceberg (they're not today).
-3. **Optional refactor onto `IcebergBigqueryMntnPrjDevModel`** — airflow-ti has a base-class + `@compute.dataproc_batch` + `@model_config` decorator pattern that abstracts the Spark/catalog config. More idiomatic but requires familiarity with the framework. The current artifacts use raw `DataprocCreateBatchOperator` submission — both work, Victor's call.
+### What Victor needs to do
 
-**What Victor still needs to set up:**
+1. **Cross-repo dependency on `utils.segment_quality_utils`** — the unresolved one. Neither Fangorn nor IPDSC examples show a pattern for importing utilities from another repo (`targeting-infra-ml/utils/`). Options:
+   - (a) **Package targeting-infra-ml as a wheel** — Victor's own suggestion from the meeting (line 153: *"That's pretty cool if we can package this library. Because it can be useful for lots of features."*). Build wheel from `SteelHouse/targeting-infra-ml`, publish to Artifact Registry, install in Dataproc image.
+   - (b) Vendor `utils/segment_quality_utils/*` into airflow-ti's `utils_model/` — fast but bad for maintenance.
+   - (c) Ship via custom `py_files` in the compute decorator — requires the operator to support it.
+   Recommend (a). Open question: does airflow-ti / Dataproc image already have a sanctioned internal-package install path?
+2. **Drop the model file into airflow-ti** — target path: `airflow-ti/models/machine_learning/ti_956_segment_quality_scoring.py`. Per `[[feedback_airflow_prod_safety]]`: feature branch, not main. Ryan reviews + wires DAG.
+3. **Cluster sizing** — first-run `runtime_properties` in the file are scaled to "lighter than Fangorn" (maxExecutors 100 vs 180, no driver memory cranking). Tune after first run sees the pairwise Jaccard step's actual shuffle volume.
+4. **Cadence decision** — Victor suggested weekly is likely fine: *"we don't even get the vendor drop... every two weeks I think we do it... probably only needs to be done once every two weeks"* (line 40). Default to weekly Sunday in the airflow-ti schedule; tune to biweekly if first runs confirm no per-week change.
+5. **Cost vs convenience choice** — Victor noted DataprocBatch (serverless) is more convenient but more expensive than DataprocWorkflow (small persistent cluster). Default to batch; revisit after first runs show actual cost.
 
-1. **Upload the job + utils bundle to GCS:**
-   ```
-   gs://mntn-data-archive-dev/airflow_vs/dev/code/ti_956/ti_956_segment_quality_scoring_job.py
-   gs://mntn-data-archive-dev/airflow_vs/dev/code/ti_956/utils.zip   # bundled targeting-infra-ml/utils/
-   ```
-2. **Confirm Iceberg table creation idiom.** The job uses `writeTo(...).create()` on first run with `tableProperty("location", <gcs path>)`. Alternative: pre-create via Spark SQL DDL. Pick one; both supported by airflow-ti convention.
-3. **airflow-ti DAG deploy** — drop `artifacts/ti_956_airflow_ti_dag_stub.py` into `dags/ti/` on a feature branch (per `[[feedback_airflow_prod_safety]]`). Ryan reviews + wires deps.
-4. **Alerts** — DataprocCreateBatchOperator emits failure events through Airflow; route to TI Slack. Late-data alert if no Iceberg partition for >9 days.
+### Pre-flight checklist
 
-**Pre-flight checklist:**
-
-- [ ] PR #57 merged in `SteelHouse/targeting-infra-ml` (currently `mergeable_state: blocked` since 2026-05-14, needs theastrocat / Ryan review)
-- [ ] Alex publishes benchmarks (cluster size, wall-clock at p=1e-4, dscid count) — pairwise Jaccard is the cost hot-path with no published numbers yet
-- [ ] Iceberg table created (DDL above)
+- [ ] PR #57 merged in `SteelHouse/targeting-infra-ml` (currently `mergeable_state: blocked` since 2026-05-14; Ryan / theastrocat needs to review)
+- [ ] Alex publishes benchmarks (cluster size, wall-clock at p=1e-4)
+- [ ] Cross-repo dependency resolution path picked + tested (Victor — option (a)/(b)/(c) from above)
+- [ ] Model file deployed to airflow-ti feature branch; Ryan reviews
 - [ ] First Dataproc batch run end-to-end, smoke validation passes
-- [ ] airflow-ti DAG deployed on feature branch + reviewed
 - [ ] Macie confirms output schema matches admin UI needs
 
 ### Storage plan
 
 | Surface | Location | Refresh | Consumer |
 |---|---|---|---|
-| Primary (Iceberg, GCS-backed) | `gs://household-scoring-prod/iceberg/household_scoring/segment_quality_daily/` | Weekly Sun 06:00 UTC | Dataproc / Spark consumers |
-| BQ read access | `biglake.household_scoring.segment_quality_daily` via BigLake external | Same — no re-ingest | UI team, Mode dashboards, admin tooling |
-| GCS Parquet export (optional, for Macie) | `gs://household-scoring-prod/output/segment_quality/year=YYYY/month=MM/day=DD/*.parquet` | Same | Macie / non-BQ consumers |
+| Primary (Iceberg) | `gs://household-scoring-prod/data_without_ttl/scoring/ti_956_segment_quality_daily/` (dev: `gs://household-scoring-dev/...`) | Weekly | Spark / Dataproc consumers |
+| BQ read access | `dw-main-bronze.household_scoring.segment_quality_daily` (dev: `dw-main-bronze.test.segment_quality_daily`) via BigQuery Metastore — no re-ingest | Same | UI team, Mode, admin tooling |
 
-Idempotent reruns: `writeTo(...).overwritePartitions()` replaces just the `as_of_date` partition. Earlier weekly snapshots remain intact for backfill / audit.
+Idempotent reruns: `writeTo(...).overwritePartitions()` replaces just the `as_of_date` partition. Other partitions stay intact for backfill / audit. 1-year retention via `delete_where`.
 
 ## 6. Questions Answered
 - **Q:** Why does this need a schedule rather than ad-hoc reruns?

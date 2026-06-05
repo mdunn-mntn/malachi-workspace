@@ -1,0 +1,328 @@
+[00:00] Yeah, so, before I want to ask you a question, is this request, like, model-related?
+[00:18] I mean, like, well, like, my understanding was that the vertex part is mostly for features
+[00:25] model development, right?
+[00:28] But this one, is it more
+[00:29] monitored or is it going to be
+[00:31] in the future you'll see that you need
+[00:33] to run some vertex models here?
+[00:35] Okay, so let me make it clear.
+[00:38] So essentially
+[00:39] all it's going to be, I think,
+[00:41] is a data source
+[00:42] that ranks
+[00:45] the
+[00:47] third-party segments
+[00:49] based on our quality
+[00:51] measurements, right?
+[00:53] It can't be 100%
+[00:55] It probably could be, but it would be difficult to do in SQL.
+[00:59] There's a lot of computations on it that are much easier to do in Python,
+[01:04] so I don't think SQL Mesh would be good.
+[01:07] But essentially, it's just applying a quality metric
+[01:11] to each one of those segments based on how recent an IP has visited,
+[01:16] things like that, right?
+[01:17] And then we're going to load it to a data set, essentially,
+[01:22] that the... I can't remember what Team Alex told me,
+[01:25] But he said that the team that is controlling the UI, essentially, and what gets shown to the client is going to use this as a way to determine what they're going to show to the client when they have access to the third-party segments.
+[01:42] and we treated for example as a feature feature set
+[01:50] so that would potentially be kind of part of feature store yeah we could i don't know if the
+[01:58] alex would be a better person to ask about that because basically alex had done most of the work
+[02:02] about the run the quality store the only part that he was asking me to do was to look into it
+[02:07] and then basically get it automated.
+[02:10] And so the idea is like, I think once a day,
+[02:13] we would just recalculate those scores
+[02:15] on all the segments.
+[02:16] So we've got 200, I think it's 270,000 segments
+[02:20] and their IPs.
+[02:22] So basically, I don't know.
+[02:24] It might be something that doesn't need to be done every day.
+[02:26] It might be something that can be done, honestly, once a...
+[02:30] We don't even get the vendor drop anyways once a day,
+[02:33] I don't think.
+[02:34] I think we do it every two weeks.
+[02:35] So probably only needs to be done once every two weeks on, you know, on an interval.
+[02:39] But yeah, I think that's the idea is that we just update this.
+[02:43] So we have some sort of, um, so it'd just be like, and mostly it's going to be live
+[02:48] ramp anyways.
+[02:48] So you could think about it as pretty much being a live ramp data source that has ranked
+[02:53] live ramp segments based on our own criteria.
+[02:58] Uh, yeah.
+[03:01] Okay.
+[03:01] Okay.
+[03:02] Yeah.
+[03:02] Got it.
+[03:03] Got it.
+[03:03] Yeah.
+[03:03] And I can't open your notebook anymore.
+[03:08] Is it like you deleted it?
+[03:11] No, it should still be there.
+[03:13] Let me make sure you have access to it.
+[03:15] It should still be there.
+[03:19] Yeah, it's here.
+[03:21] I'll send you the link.
+[03:33] Let me see if I can open it.
+[03:38] If you can't, you should have access. I think I give you access to anything inside
+[03:42] my workspace. Anything I create within my workspace, you should automatically get access
+[03:47] to.
+[03:48] Yeah, I'm not sure. Let me see what I'm seeing here. Yeah, it's just going to open
+[03:56] it.
+[03:57] can't okay let me this is weird um let me just artifacts yeah you should be okay i'm gonna re
+[04:06] give you access to everything in this folder um
+[04:11] weird it says you already do have access to it um okay i'll just i'll try to give you access to
+[04:25] this specific file. I don't know why you can't see it. Oh, wait, hold on. Why is it saying
+[04:46] the notebook does not exist. Hold on here. Let me pull it up. 576 artifacts.
+[05:16] Oh, I think it got overwritten because I was making some adjustments to it so that it would
+[05:31] work on it is 956 segment.
+[05:39] Yeah, okay.
+[05:41] It's this one.
+[05:42] Sorry, I have a new link.
+[05:44] You should have access to it.
+[05:45] I'll give you the link.
+[05:46] **** Is it the same link?
+[05:52] **** No, it's a different link. I'll give it to you here. I sent it in Zoom.
+[05:58] **** Oh, Zoom.
+[06:00] **** Yeah, I'll send it to your Slack, too.
+[06:02] **** No, it's fine. Zoom is fine.
+[06:04] **** Yeah, sorry. I deleted the old one because I made some adjustments to it. And
+[06:10] I guess it just gave it a new link. But this is ‑‑ yeah, it's not a notebook anymore.
+[06:15] It's just a Python script.
+[06:17] So, yeah. Here's ‑‑ oh, you're using Iceberg.
+[06:30] Yeah. Yeah. This new one.
+[06:35] **** New one is the iceberg, right?
+[06:40] **** Yep. The new one has the iceberg.
+[06:42] **** Yeah. Just wanted to say that we can run it on the way. Let me check. Where
+[06:54] are the create temporary function? This is Spark function, right? Oh, it's quite different.
+[07:05] Oh, it's creating function in BigQuery, right?
+[07:11] Mm-hmm.
+[07:14] Oh.
+[07:16] Okay.
+[07:18] Yeah.
+[07:20] It builds a Spark session with the Iceberg and BigQuery catalog.
+[07:30] then um after that you read directly from the parquet for ipdsc um and then the other tables
+[07:40] that you need um and then the third part is the building the uh ht panel so that's the uh that's
+[07:54] That's the waiting thing that Alex created.
+[07:57] Which line is that?
+[08:00] The one where it says panel underscore DF.
+[08:04] It should be line...
+[08:05] Yeah.
+[08:06] There you go.
+[08:08] And you essentially do is...
+[08:12] Mm-hmm.
+[08:14] and then
+[08:22] then there's the scoring so there's that
+[08:26] and then there's the scoring
+[08:26] and then one of the things that it's doing
+[08:29] is it's
+[08:30] because there's so many IPs it's sampling
+[08:33] the IPs
+[08:35] from each so that we don't have
+[08:37] to run it on all because it would be
+[08:39] honestly the juice
+[08:41] isn't worth the squeeze
+[08:43] it's it would be we can still get a pretty accurate um quality rank by sampling there so
+[08:50] that's why we do that and then there's the alex scoring thing which is the two so he's got a
+[08:55] scoring thing so we just call alex's thing so we have it's a score equals third party segment
+[09:00] quality and then we put in that panel data frame that we just created
+[09:05] so basically the panel df is just a sample of a data frame where we sample
+[09:13] over 30 days on every segment and then stage four is where we apply the scoring and then stage five
+[09:23] is we have the rank so obviously we got to rank the the scores after that and then stage six is
+[09:29] where we write it to Iceberg.
+[09:31] So...
+[09:32] Nice.
+[09:33] Got it.
+[09:34] It makes it available in BigQuery, right?
+[09:37] Yeah.
+[09:38] That sounds good.
+[09:39] Sounds good to me.
+[09:40] So, and you're saying that where is this library hosted?
+[09:44] I don't know.
+[09:46] Off the top of my head.
+[09:51] Let me see.
+[09:54] Yeah.
+[09:55] Yeah.
+[09:56] Yeah.
+[09:57] Yeah, yeah. So it makes sense. Essentially, you're connecting one library, consuming data from
+[10:05] your reading. But you also have some temporary function in BigQuery, right? You run this in
+[10:14] BigQuery for integration prod campaigns, right? So you run essentially, rely on IPDC,
+[10:24] BigQuery in order to produce output in BigQuery with Iceberg tables. And you have a library.
+[10:32] So, yeah. It looks pretty good. Also be curious because this one, this library.
+[10:39] Oh, that's from Alex's PR. That's in the steel house targeting infra ML.
+[10:46] it is the sampling logic python script um should be this one hold on here this is from alex's i'll
+[10:55] send it to you um this is where it's from
+[11:16] So, it has been ‑‑ yeah. And it hasn't been merged yet. So.
+[11:28] Yeah. That's pretty cool if we can package this library. Because it can be useful
+[11:38] for lots of features. Yeah, it's pretty cool. It's pretty cool. Anyways, what I wanted to
+[11:46] to suggest here, right?
+[11:50] I'll probably, I like the idea of how you implemented
+[11:55] the general flow, right?
+[11:57] I like a lot.
+[11:58] I just want to give couple of comments.
+[12:02] Essentially, this is what in line
+[12:04] what I was going to suggest, right?
+[12:07] So yeah, but you already heard.
+[12:11] So probably this is less useful than this part,
+[12:15] But I still can advise on the packaging of it, right?
+[12:19] So because you see those,
+[12:24] we have libraries already available
+[12:28] to address BigQuery queries, right?
+[12:33] Iceberg catalogs in Airflow already, right?
+[12:37] So it can be much more compact in a sense
+[12:42] to get it up and running.
+[12:44] So I'll just produce a couple of highlights,
+[12:48] how you can utilize our existing infra
+[12:56] and existing tool set in order to make your transformations
+[13:00] a little bit easier and easier to write to Iceberg.
+[13:06] And yeah, so this is what I'm, let me show you that part.
+[13:14] I will be, oh, it's zoom in the way.
+[13:18] So in a sense, we have a couple of,
+[13:23] if you wanted to read the iceberg, right?
+[13:25] We already have models which write into the iceberg.
+[13:29] For example, one of them, Sean's IP,
+[13:37] Fungon 14 days look back, right?
+[13:39] So we have it output into Iceberg currently.
+[13:45] So as you can notice,
+[13:47] we just specify output location in table name, right?
+[13:53] And all of the complexity is hidden behind.
+[14:00] It will be configured for you,
+[14:01] how to save data in the proper location
+[14:06] within an oil libraries and library dependencies complexity here because iceberg different version
+[14:15] of spark and different version of scala which you run it on uh is can require different set of
+[14:26] libraries and configurations so it can get tricky real fast so we have this uh addressed in
+[14:35] behind this model type.
+[14:40] This part.
+[14:41] So this part is how about how to write
+[14:46] into the Iceberg using the existing toolset
+[14:48] that we have in TI data engineering setup.
+[14:52] Okay, and that's, you can see that
+[14:54] from the machine learning.
+[14:55] Oh yeah, okay, I see the Fangorn 14-day look back.
+[14:58] Yeah.
+[15:00] Okay.
+[15:01] And it's already lands into the BigQuery
+[15:03] And you can look at when it's running a prod,
+[15:05] you can go to see it's in GW main bronze house
+[15:09] called scoring, fun going 14 day look back vertical.
+[15:15] Yeah, this part of Iceberg.
+[15:18] And also there is one quality life improvement
+[15:23] in addition to that is the reading from BigQuery table.
+[15:28] Let me show you a couple of examples of that
+[15:30] because there are also tricky parts here,
+[15:33] but we also have it optimized.
+[15:35] And for BigQuery part, I wanted to show
+[15:41] how we do in APD CDS 47, right?
+[15:46] So in a sense that we just specify
+[15:52] which model we're reading and which table we're reading,
+[15:55] and then the regular Spark, right?
+[15:58] Okay.
+[15:59] But you can do also query.
+[16:00] So in a sense, you have flexibility
+[16:02] to specify extra options.
+[16:04] For example, right now,
+[16:05] specifying parent project and billing project,
+[16:08] just to be on the safe side, right?
+[16:10] But other than that, you can use as a DB table or query.
+[16:14] I think we have a query somewhere.
+[16:15] Let me, I don't recall it off my head,
+[16:19] but yeah, we have also query.
+[16:20] We're able to specify instead of DB table,
+[16:24] it means that it relies either physical tables
+[16:29] or if you realize directly on physical table,
+[16:33] it will allow us to stream the data efficiently
+[16:36] and don't incur costs on BigQuery site.
+[16:42] Your use case is slightly different
+[16:44] because you need queries, right?
+[16:47] And some complicated, much more complex functions.
+[16:52] So you can utilize instead of DB table,
+[16:55] use just dot query, right?
+[16:57] and pass the query and you'll be good.
+[17:00] So in a sense, it will be much more concise.
+[17:05] You don't have to configure any of it.
+[17:07] You just specify query and that's it.
+[17:10] Okay.
+[17:11] Yeah, that's pretty, and IPDC,
+[17:14] you can also read directly because we're reading,
+[17:17] like by referencing the model,
+[17:19] you don't even need to worry about locations on anything.
+[17:24] The idea of this approach, which I'm highlighting here in the model setup,
+[17:32] Airflow TI model setup, is that we specify locations only in model which writes.
+[17:42] Model which reads, for example, if we were to look at the set 46, you see,
+[17:51] This one relies on a table, BigQuery table,
+[17:55] I've just showed you not so long ago.
+[17:59] So IDAHead reader will have ability,
+[18:03] don't need to know how to read it, right?
+[18:06] For example, this is a BigQuery table,
+[18:08] but the way we read it, we just specify,
+[18:10] read model and load, and that's it.
+[18:14] And the model file, which produces,
+[18:21] this dataset will instruct this model how to consume it.
+[18:31] That's pretty much it.
+[18:31] So just to summarize this flow,
+[18:39] I guess my main comment,
+[18:43] we can simplify file path management
+[18:48] path management and make, we have also a couple of libraries which you can utilize if you
+[18:56] were to opt for model.
+[18:58] Yeah.
+[18:59] And it will be much more concise for you.
+[19:03] Okay.
+[19:04] Yeah.
+[19:05] This is what I wanted to suggest you consider that.
+[19:07] The short couple of example, with Iceberg and how to read Iceberg and how to read from
+[19:13] BigQuery and all of that.
+[19:15] Thank you for going over this with me.
+[19:19] I will make those changes and I'll take a look at,
+[19:23] I mean, I know you already showed it,
+[19:24] but I'll take a look at those different scripts
+[19:29] that you showed me and then, yeah.
+[19:33] Sounds good.
+[19:34] And yeah, there is also one nice side effect.
+[19:37] And if you were to utilize this model functionality, right,
+[19:41] it's super straightforward to schedule it with Airflow,
+[19:45] we have necessary models, necessary operators to schedule
+[19:51] and it just receive model name and like date
+[19:55] or something like that, right?
+[19:57] And we have ability to specify.
+[20:00] which compute to use.
+[20:02] DataProcBatch, we support three one,
+[20:05] the DataProcBatch, which is a serverless, right?
+[20:09] We have a workflow, if you want a cluster and save on costs,
+[20:14] all examples can be found here.
+[20:20] For example, this is,
+[20:25] we run on DataProc workflow, tiny cluster,
+[20:28] see with i'm specifying here just c2 standard 4 with two more workers right we can use batch
+[20:37] which is more expensive but it's more convenient and we can use databricks too if you want
+[20:43] if you want to run it on databricks we also have this option uh we have it uh
+[20:50] Also, can utilize Databricks.
+[20:58] Yeah. Pretty much it.
+[21:04] Okay. Well, thank you, Victor. Do you care if I just go ahead and, like, make
+[21:15] it start working and stuff? And run it myself? Or do you want me to send you the updated
+[21:20] thing before I do that.
+[21:22] I'm here just to advise that our latest updates on what we have, right? Yeah. But
+[21:31] you implement the way you see fit. If that makes sense.
+[21:37] Yeah. Okay.
+[21:39] Here, I just wanted to highlight a couple of changes which we have recently implemented
+[21:45] with Iceberg stuff, which can simplify things.
+[21:50] But yeah, other than that,
+[21:53] right now we support multiple ways
+[21:55] and you choose which one is better for you.
+[22:01] Okay.
+[22:02] Well, thank you, Victor.
+[22:04] And I appreciate for you letting me record.
+[22:06] I think it's recording on yours, probably.
+[22:09] I don't know, but either way.
+[22:11] If I receive it, I will forward it to you. But, yeah. For me, it asked to record
+[22:19] on your computer. So, I don't know.
+[22:22] Okay. Perfect. Okay. Cool. Well, I will get I'll probably have a little bit of time
+[22:32] to work on this before I head out. So, thank you, Victor.
+[22:35] And yeah, happy to answer any follow-up questions if you have any.
+[22:39] Yeah, so yeah.
+[22:40] And happy to help if you need it.
+[22:44] All right.
+[22:45] Thank you.
+[22:46] Take care.
+[22:47] Bye.
+[22:47] Yeah.
+[22:48] Have a good night.
+[22:49] And have a good weekend, too.
+[22:50] Yeah, to you as well.
+[22:51] Thank you.
+[22:52] Bye.
