@@ -287,7 +287,7 @@ These were the pre-Victor-meeting standalone approach. Deleted because the airfl
 ### Pre-flight checklist
 
 - [x] **PR #57 reviewed + approved** (2026-06-05) — Alex Knorr swapped Malachi onto the reviewer slot after Ryan/theastrocat stayed stale since 2026-05-14. Three blocking comments addressed by Alex; approve posted.
-- [ ] PR #57 merged — pending Alex's merge button (post-approval)
+- [x] **PR #57 merged** (2026-06-05) — `utils.segment_quality_utils` + `utils.sampling_logic` now on `main`
 - [ ] Alex publishes benchmarks (cluster size, wall-clock at p=1e-4)
 - [ ] Cross-repo dependency resolution path picked + tested (Victor — option (a)/(b)/(c) from above)
 - [ ] Model file deployed to airflow-ti feature branch; Ryan reviews
