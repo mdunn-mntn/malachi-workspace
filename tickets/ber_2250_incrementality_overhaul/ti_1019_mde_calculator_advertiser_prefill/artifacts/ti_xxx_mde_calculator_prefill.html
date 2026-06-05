@@ -1052,9 +1052,11 @@ function update() {
 
   document.getElementById('req-total').textContent = fmtBudget(req.totalSpend);
   // Hide /mo run-rate for sub-month tests: it exceeds total budget and confuses
-  // the panel. /mo is meaningful only when duration spans roughly a month or more.
+  // the panel. A calendar month = 52/12 ≈ 4.33 weeks, so W=4 still produces a
+  // /mo > total (~8% higher). W >= 5 is the first integer week count where /mo
+  // is meaningfully below total.
   const monthlyEl = document.getElementById('req-monthly');
-  if (W >= 4) {
+  if (W >= 5) {
     monthlyEl.textContent = fmtBudget(req.monthlySpend) + ' /mo';
     monthlyEl.style.display = '';
   } else {
