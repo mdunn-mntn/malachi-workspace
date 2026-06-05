@@ -1102,7 +1102,16 @@ def _per_aid_pre_post(daily_perf_pd, treated_tier, control_tiers, cutoff, lookba
         index=["advertiser_id", "fangorn_rollout_tier_num"],
         columns="period",
         values=metrics,
-    ).fillna(0.0).reset_index()
+    )
+    # Force both pre + post columns to exist for every metric — protects
+    # against a tier that just flipped having zero post-period days after
+    # the EXCLUDE_DATES filter, which would otherwise drop the _post
+    # columns and trigger KeyError: 'vv_post' downstream in
+    # _did_lift_from_wide. Missing periods get 0.0; the lift function
+    # already returns NaN cleanly when denominators are 0.
+    full_cols = pd.MultiIndex.from_product(
+        [metrics, ["pre", "post"]], names=[None, "period"])
+    wide = wide.reindex(columns=full_cols, fill_value=0.0).reset_index()
     wide.columns = [f"{a}_{b}" if b else a for a, b in wide.columns]
 
     treated = wide[wide["fangorn_rollout_tier_num"] == treated_tier]
