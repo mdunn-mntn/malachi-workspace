@@ -178,7 +178,7 @@ Outputs: [`outputs/ti_961_smoke_ci_results.csv`](outputs/ti_961_smoke_ci_results
 - **Q:** Which Fangorn cohort has the best shot at resolving lift?
   **A:** Tier 2 (~50 advertisers, ~21 days post). Visit rate, not conversion. Confirmed in the live Databricks run.
 - **Q:** Is wave-2 (Tier 4 future-flip) a valid control?
-  **A:** Yes for DiD purposes (parallel-trends assumption); not random assignment but acceptable. In the live notebook the "auto" control widget picks Tier 4 — exactly what we want.
+  **A:** *(Original answer 2026-05-28, now superseded)* Yes for DiD purposes. *(Updated 2026-06-03)* No — Tier 4 has now been re-scheduled to flip 2026-06-04, and the tier composition in `tpa.fangorn_advertiser_inclusion` has evolved. **Use Tier 5 as the control instead** — it's the permanent holdout (sentinel inclusion date 2099-01-01). See §10 below for the corrected tier map.
 - **Q:** Why is conversion-rate / ROAS noisy?
   **A:** Too short a post-period; CTV attribution windows are long (large share of conversions land after campaign exposure).
 - **Q (added 2026-05-28):** Did the data turn out to be enough for CI?
@@ -251,6 +251,34 @@ Plus three memory entries safeguarding the methodological lessons across session
 
 The TI-961 deliverable is the corrected CausalImpact pipeline. The **larger compounding deliverable is the methodology infrastructure** that makes every future experiment cheaper to design and more defensible to report.
 
-## 10. Meeting Notes
+## 10. Canonical Fangorn Tier Map (as of 2026-06-03)
+
+Authoritative source: `tpa.fangorn_advertiser_inclusion` (Postgres, coredb).
+Queried via Databricks 2026-06-03:
+
+| Tier | N | Inclusion date | What it actually is |
+|---|---|---|---|
+| **1** | 3 | 2026-04-30 | First wave — non-random, N=3 (anecdotal only) |
+| **2** | **49** | 2026-05-06 | **Random 50-advertiser sample — gold-standard causal cohort** |
+| **3** | 312 | 2026-05-19 | Wave 3 — non-random |
+| **4** | 362 | 2026-06-04 | Wave 4 — non-random, flips tomorrow (2026-06-04) |
+| **5** | **353** | **2099-01-01 (sentinel)** | **Permanent holdout — never-flipped. Use as CONTROL.** |
+| **99** | 44 | 2026-06-04 10:36:46 | **Auto-enrollment (Express product / auto-verticals)** — already on Fangorn via different mechanism, NOT part of structured rollout. **EXCLUDE from analysis.** |
+
+### How to set the control_tiers widget
+
+- **`control_tiers=5`** is the recommended default. Tier 5 is the permanent holdout. Methodologically cleanest control.
+- **Do NOT use `auto`** with the current tier composition — auto-detection sweeps in Tier 4 (about-to-flip) AND Tier 99 (auto-enrolled, already treated). Mixed populations dilute the comparison.
+- **Exclude Tier 99 from analysis entirely** via the new `exclude_tiers` widget (default `99`). Tier 99 advertisers are on Fangorn via auto-enrollment, not the structured rollout — they shouldn't be in either the treated or control pool for this causal analysis.
+
+### Tier 99 — Express / auto-verticals
+
+Per user 2026-06-03: Tier 99 represents auto-enrollment of the Express product and/or "auto-verticals" — half of the verticals were automatically rolled onto Fangorn outside the structured tier plan. The inclusion-date field stores a record-creation timestamp (2026-06-04 10:36:46), not a flip date — those advertisers are already on Fangorn at the time of the record.
+
+Critical implication: **inclusion-date semantics differ across tiers**. Structured tiers (1-5) use the field as a planned flip date; Tier 99 uses it as record-creation timestamp. Inclusion-date alone can't reliably distinguish treated from control — explicit tier filtering is required.
+
+If the auto-enrolled cohort's behavior matters separately (Express product impact, vertical-specific dynamics), it should be analyzed as its own ticket, not folded into the structured-rollout causal claim.
+
+## 11. Meeting Notes
 - `meetings/ti_961_01_malachi_alex_catchup_2026_05_27.txt` — 30-min Malachi + Alex catchup; covers both TI-961 (Fangorn CI eval) and the interest-segment scoring scope for TI-956.
 - **Next meeting:** "Early next week" — Alex to add usage notebook to `targeting-infra-ml`; Malachi to read the scoring code before that meeting.

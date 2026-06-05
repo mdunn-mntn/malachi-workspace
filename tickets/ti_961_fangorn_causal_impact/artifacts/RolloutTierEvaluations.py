@@ -35,18 +35,21 @@ dbutils = DBUtils(spark)
 dbutils.widgets.dropdown("lookback_days",     "14",   ["14", "21"], "Pre lookback window (days from cutover)")
 dbutils.widgets.text("change_threshold",      "0.10", "Visit-rate change threshold (e.g. 0.10 = 10%)")
 dbutils.widgets.text("min_impressions_floor", "1000", "Min pre+post impressions for Top-N examples")
-dbutils.widgets.text("control_tiers",         "auto", "Control tier nums (comma-sep) or 'auto' = tiers not yet flipped")
+dbutils.widgets.text("control_tiers",         "5",    "Control tier nums (comma-sep) or 'auto' = tiers not yet flipped. Default 5 = permanent holdout. Tier 4 (about-to-flip) and Tier 99 (auto-enrolled) are mixed populations — don't auto-include.")
 dbutils.widgets.text("exclude_dates",         "2026-05-29,2026-05-30", "Days to exclude from all analyses (comma-sep YYYY-MM-DD) — e.g. pacing-issue days")
+dbutils.widgets.text("exclude_tiers",         "99",   "Tier nums to exclude from analysis entirely (comma-sep). Default 99 = Express / auto-vertical advertisers (on Fangorn via auto-enrollment, not the structured rollout — exclude from causal analysis).")
 
 lookback_days         = int(dbutils.widgets.get("lookback_days"))
 CHANGE_THRESHOLD      = float(dbutils.widgets.get("change_threshold"))
 MIN_IMPRESSIONS_FLOOR = int(dbutils.widgets.get("min_impressions_floor"))
 _control_tiers_raw    = dbutils.widgets.get("control_tiers").strip()
 _exclude_dates_raw    = dbutils.widgets.get("exclude_dates").strip()
+_exclude_tiers_raw    = dbutils.widgets.get("exclude_tiers").strip()
 EXCLUDE_DATES         = [d.strip() for d in _exclude_dates_raw.split(",") if d.strip()]
+EXCLUDE_TIERS         = [int(t.strip()) for t in _exclude_tiers_raw.split(",") if t.strip()]
 
 bq_client = bigquery.Client(project="dw-main-gold")
-print(f"lookback: {lookback_days}d · threshold: {CHANGE_THRESHOLD} · min_imps: {MIN_IMPRESSIONS_FLOOR} · control: {_control_tiers_raw} · exclude: {EXCLUDE_DATES or '—'}")
+print(f"lookback: {lookback_days}d · threshold: {CHANGE_THRESHOLD} · min_imps: {MIN_IMPRESSIONS_FLOOR} · control: {_control_tiers_raw} · exclude_dates: {EXCLUDE_DATES or '—'} · exclude_tiers: {EXCLUDE_TIERS or '—'}")
 
 
 # COMMAND ----------
@@ -119,6 +122,12 @@ rollout_tier_query = """
 """
 
 rollout_tier_df = loadPostgresQuery(rollout_tier_query, spark)
+
+if EXCLUDE_TIERS:
+    before_n = rollout_tier_df.count()
+    rollout_tier_df = rollout_tier_df.filter(~F.col("fangorn_rollout_tier_num").isin(EXCLUDE_TIERS))
+    after_n = rollout_tier_df.count()
+    print(f"Excluded tiers {EXCLUDE_TIERS} from rollout_tier_df: dropped {before_n - after_n} advertisers ({before_n} → {after_n})")
 
 display(rollout_tier_df
         .groupBy(F.col("fangorn_rollout_tier_num"), F.col("fangorn_advertiser_inclusion_date"))
