@@ -2781,3 +2781,37 @@ As of 2026-06-02, MNTN SELECT campaigns share `billing_type_id = 2` with PTV Fix
 - `billing_type_id = 3` → MNTN SELECT (native impression cap)
 
 The Gary service (MSS team) is responsible for implementing the change: Gary will need to map SELECT campaign groups to the new billing_type_id = 3 based on product_id. Downstream services that consume billing type (PCS, Pacing Engine, PROUI) will need to be audited for impact. The change should be wrapped in a feature flag and rolled out to test campaigns first given the difficulty of fully validating spend/budget changes in QA. Tracked in PER-6526. (via Mike Allen, #reporting_helpdesk_ask_anything, 2026-06-02)
+
+<!-- slack-extracted: 2026-06-06 -->
+- **Bidder Auction/Bid Data — Massive Volume Increase (May 2026)**
+
+Beginning ~May 28, 2026, bidder auction and bid log data volumes increased **+3–10x**, driven by onboarding new SSPs to the MNTN Bidder in anticipation of the PTV migration. An additional **~10x increase** is expected before volume stabilizes, meaning total growth could reach ~100x from baseline.
+
+**Impact:**
+- A single SQLMesh model was attempting to process **1.8 PB of data daily** — approximately 1.4x the total historical volume of all of CoreDW.
+- Several SQLMesh + BigQuery models dependent on bidder data are timing out or failing to complete.
+- Affected teams include: Identity (ID), BID, and PERML.
+- `augmentor_identity_daily` and `guid_identity_daily` SQLMesh models are directly impacted.
+
+**Recommended mitigation paths:**
+1. Switch to **direct GCS access** via Spark (e.g., Databricks) instead of SQLMesh + BQ.
+2. Use **`raw` layer tables** in `dw-main-bronze.raw` dataset rather than silver SQLMesh models.
+3. **Shared aggregation table strategy:** All teams that need to process auction data agree on a single aggregation format and share one upstream aggregated table, rather than each team independently aggregating raw bidder logs.
+4. **Multi-level aggregation:** Aggregate at hourly granularity first, then roll up to daily, to reduce single-pass query cost.
+
+**Note:** The `raw` data for bidder tables lives in GCS and in the `raw` dataset in `dw-main-bronze`. The volume growth affects only MNTN Bidder tables, not Beeswax exchange tables. (via scotty, Rogus, Jack Barbey, #data-platform, 2026-06-05)
+- **Geo Targeting — Audience Expression is Source of Truth; Bidder Propagation Delay is a Separate Issue**
+
+When evaluating whether a campaign is serving out-of-geo, the **audience expression is the authoritative source of truth**. If a geo is present in the expression, the campaign will serve to that geo.
+
+A known, separate issue exists where the MNTN Bidder buys against **stale/delayed audience data** — meaning that when an audience change is made (e.g., a geo update), it takes longer than expected for that change to propagate to the bidder. This is distinct from serving to a wrong geo permanently; it means the bidder temporarily continues buying against the old audience configuration.
+
+**Key clarification (Zach Schoenberger):** Any reported out-of-geo issues are attributable to the bidder's delayed audience data propagation, not to a targeting system failure. The targeting team itself is not experiencing issues — the root cause is bidder-side processing lag on audience changes. (via Jordan Piepkow, Zach Schoenberger, #targeting-squad, 2026-06-05)
+- **Household Graph — Source Column Migration: String → Int Encoding**
+
+The identity graph is undergoing a schema migration where the `source` column in `household_graph` is being converted from an **array of strings to an array of integers** (source IDs). The migration scope is intentionally limited to reduce blast radius:
+
+- **Only `household_graph`** will use the new `array<int>` format for the `source` column.
+- **`sourceObservations`** and **`ExclusionSource`** columns in intermediate tables will **retain the old string format** to avoid large backfills across many downstream tables.
+- At the final household graph build step, a mapping is applied to convert source name strings → integer source IDs, using mappings defined in `graph.conf`.
+- `sourceObservations` is referenced in many intermediate tables; `ExclusionSource` is used in excluded IDs datasets. Both can be migrated in a future pass but are deferred now. (via Jack Barbey, Weiang Li, #identity_core_dev, 2026-06-05)

@@ -2550,3 +2550,13 @@ A confirmed data inconsistency exists in the `parent_location_id` field between 
 - **Reporting note:** The reporting team (BAE/ray) stopped using `advertisers.billing_type_id` in spend logic — `core.flight_billing_types` is the authoritative source.
 - **Related table:** `core.billing_types` — the lookup/reference table for billing type definitions. New billing type IDs are added here.
 - **Ticket:** PER-6526 tracks the work to introduce billing_type_id = 3 for SELECT. (via Tony Chen, #reporting_helpdesk_ask_anything, 2026-06-02)
+
+<!-- slack-extracted: 2026-06-06 -->
+- **augmentor_identity_daily and guid_identity_daily — Identity Graph Aggregation Models**
+
+- **Location:** `dw-main-silver/aggregates/augmentor_identity_daily.sql` and `dw-main-silver/aggregates/guid_identity_daily.sql` (SQLMesh models)
+- **Owning team:** Identity (ID team, led by Jack Barbey / Weiang Li / Alexander Jerneck)
+- **Purpose:** Aggregates daily bidder auction logs to extract device-to-device connections used as core input to the MNTN identity graph (household graph).
+- **Downstream consumer:** Spark jobs running on Databricks — no downstream SQLMesh dependencies, which is why they appear as leaf nodes in the SQLMesh DAG.
+- **Current status (June 2026):** Running ~6 hours/day and timing out due to bidder data volume explosion (+10x since May 28). Alerts have been added to both jobs.
+- **Performance gotcha:** These models are already running on a large BQ compute reservation. The bottleneck is raw data volume, not compute configuration. The path forward is architectural (Spark/GCS direct access or shared aggregation table), not query tuning. (via Jack Barbey, Weiang Li, scotty, #data-platform, 2026-06-05)

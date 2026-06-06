@@ -1030,3 +1030,26 @@ BUK (leveraging DS19 as an input source) replaces some of the LLM-generated keyw
 
 <!-- slack-extracted: 2026-06-03 -->
 - CoreDW (the legacy Postgres data warehouse) has been officially shut down. All users were removed from the warehouse as of 2026-06-02. The shutdown was confirmed by Mike Dolzer via the engineering-team channel. (via Mike Dolzer, #engineering-team, 2026-06-02)
+
+<!-- slack-extracted: 2026-06-06 -->
+- **SOPS Secrets Management — Policy Change (Security Hardening)**
+
+As of mid-2026, SOPS decryption access has been revoked from all developers. Only DevOps personnel can decrypt secrets when needed. The new secrets management strategy is being rolled out in phases:
+
+1. **Preferred approach:** Minimize secrets by using environment-native identity (e.g., service accounts for workload authentication) instead of raw credentials.
+2. **Fallback (external vendor API keys, etc.):** HashiCorp Vault with DevOps gating.
+3. **SOPS:** Retained only for edge cases beyond the above two approaches.
+
+**Interim guidance:** Use 1Password to share secrets while new processes are finalized. Do not share `.env` files over Slack.
+
+**Longer-term direction (per Rogus/Harvey):** Each team will run its own ArgoCD repo with isolated RBAC, and Kargo will be used for scripted auto-promotions. CODEOWNERS path-based rules will also be added to `mntn-argocd`.
+
+**Branch protection update:** Direct pushes to `main` in `mntn-argocd` are now blocked; a PR is required. Approvals policy and incident-time escalation paths are still being defined. (via Rogus, Harvey Yau, Tasha, #engineering-team, 2026-06-05)
+- **Pause Ads — Manual Operations End-of-Life (Q2 2026)**
+
+Pause Ads campaigns have been managed manually (including app bundle list configuration in Beeswax) since last quarter, primarily by the AdOps/campaign management team. Key operational notes:
+
+- The current sync configuration **disables certain Beeswax settings** for Pause Ad campaigns to prevent the MNTN sync from overriding manual Beeswax configuration.
+- **Automation was deprioritized by the Select team** and has not been implemented.
+- Pause Ads will **no longer be sold as a manual product starting next quarter** (after end of current month). Support is only required through end of the current billing period.
+- A ticket was requested to clarify requirements if deal assignment automation is still needed for any remaining Pause Ads campaigns. (via Meghan Besse, Zafar, Kirsa, #production-ops, 2026-06-05)

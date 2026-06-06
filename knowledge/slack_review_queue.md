@@ -493,3 +493,13 @@ Both were referenced during Grafana/Mode dashboard repair work following the BQ 
 **Confidence:** medium
 
 **Identity Graph — Confidence Score Distribution (Graph version 2026-06-01):** A new identity graph version with confidence scores was released on 2026-06-01. The score distribution has a notable spike at 1.0, representing IDs that are directly in the backbone household graph (these are assigned a score of 1.0 by definition). There is also an unexplained secondary spike at 0.25 that is under investigation. The confidence score is intended to predict the accuracy of assignment to a backbone household.
+
+## 2026-06-06
+
+### [mntn_business] from Varun Jain, Johnny in #mission-control
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+**Bid Rejection Reason: invalidRecency Spike (June 2026)**
+
+A spike in `invalidRecency` bid rejection failures was observed beginning around June 2, 2026, coinciding with the creative sequence feature release on June 1. Investigation (Varun Jain) identified CID 420415 as a primary contributor — this campaign had a large spike in impressions with most bids rejected at stage 4 due to `invalidRecency`. Overall spend and system health appeared stable; the issue appeared isolated to specific campaign(s) rather than platform-wide. This is tracked in system signal audit [632].
