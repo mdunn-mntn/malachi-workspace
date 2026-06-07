@@ -2815,3 +2815,22 @@ The identity graph is undergoing a schema migration where the `source` column in
 - **`sourceObservations`** and **`ExclusionSource`** columns in intermediate tables will **retain the old string format** to avoid large backfills across many downstream tables.
 - At the final household graph build step, a mapping is applied to convert source name strings → integer source IDs, using mappings defined in `graph.conf`.
 - `sourceObservations` is referenced in many intermediate tables; `ExclusionSource` is used in excluded IDs datasets. Both can be migrated in a future pass but are deferred now. (via Jack Barbey, Weiang Li, #identity_core_dev, 2026-06-05)
+
+<!-- slack-extracted: 2026-06-07 -->
+- ## CIL (Cost Impression Log) — Source Tables and Unlinked Logic
+
+CIL is built from two primary sources:
+1. `spend_log`
+2. `win_logs`
+
+Impressions in CIL are flagged `unlinked = false` (good) when the `impression_id` is found in `impression_log`. If the `impression_id` is NOT found in `impression_log`, the row is flagged `unlinked = true` (bad).
+
+`impression_log` itself is a combination of:
+- `dw-main-bronze.external.impression__v1`
+- `dw-main-bronze.external.vastimpression__v1`
+
+The terminology is counterintuitive: `unlinked = false` means the impression WAS successfully linked (found in impression_log); `unlinked = true` means it was NOT found and is therefore missing enrichment.
+
+The current lookback window on `impression_log` is **3 hours**. Late-arriving data beyond that window will not be captured on normal incremental runs and requires a manual restate.
+
+**Source:** Lizz (confirmed in incident triage, 2026-06-06) (via Lizz, #mission-control, 2026-06-06)
