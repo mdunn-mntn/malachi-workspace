@@ -300,7 +300,7 @@ Path is a placeholder — Victor to confirm whether `ti_resources/python/wheels/
 | 7b | ~~Add DAG file~~ — **MERGED 2026-06-08** (branch `TI-956-add-dag`). `dags/machine_learning/segment_quality_scoring_dag.py` uses `ModelPysparkBatchOperator(model_id="segment_quality_scoring")`, scheduled weekly Sunday 06:00 UTC, severity=2, `--as_of_date {{ ds }}` arg. Workflow doc updated with the model+DAG split gotcha. | Malachi | ✅ DONE |
 | 8 | Wire DAG on Astro (find `segment_quality_scoring_weekly` in Astro UI, trigger first run) | Malachi | 15 min |
 | 8a | ~~First trigger attempt failed~~ — batch `seg-qua-sco-gi5-20260608-212616-1` died at 1m26s with `ModuleNotFoundError: No module named 'utils'`. Driver logs confirmed `spark.dataproc.driverPipPackages` was silently ignored — that property expects PyPI package specifiers, not GCS file URLs. | Diagnosed | ❌ FIXED below |
-| 8b | Pivoted to `spark.submit.pyFiles` with a zip of the `utils/` directory uploaded to GCS (same mechanism airflow-ti uses for `utils_model.zip`). PR opened: https://github.com/SteelHouse/airflow-ti/pull/new/TI-956-fix-wheel-install. Workflow doc + memory updated with the gotcha. | Malachi | DONE — awaiting merge |
+| 8b | ~~Pivoted to `spark.submit.pyFiles`~~ — **MERGED 2026-06-08**. Branch `TI-956-fix-wheel-install`. Workflow doc + memory updated with the gotcha. | Malachi | ✅ DONE |
 | 9 | Re-trigger after PR-8b merges + deploys → first Dataproc batch run; smoke validation passes | DAG triggers | 30 min wall |
 | 10 | Tune cluster sizing after seeing the pairwise Jaccard step's actual shuffle volume | Malachi | 1-2h iteration |
 
