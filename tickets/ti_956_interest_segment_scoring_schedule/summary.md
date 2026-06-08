@@ -290,7 +290,7 @@ Path is a placeholder — Victor to confirm whether `ti_resources/python/wheels/
 
 | # | Step | Owner | Effort |
 |---|---|---|---|
-| 1 | Add `pyproject.toml` to `SteelHouse/targeting-infra-ml` — minimal config naming the package, version, deps. PR to Alex. | Malachi | 30 min |
+| 1 | Add `pyproject.toml` to `SteelHouse/targeting-infra-ml` — **PR #68 OPEN 2026-06-08** ([link](https://github.com/SteelHouse/targeting-infra-ml/pull/68)). Build smoke-tested locally; produces `targeting_infra_ml-0.1.0-py3-none-any.whl` (23 KB). Awaiting Alex review. | Malachi → Alex | DONE — awaiting merge |
 | 2 | Build first wheel locally: `python -m build` from the repo root | Anyone | 5 min |
 | 3 | Upload wheel to `gs://mntn-data-archive-prod/ti_resources/python/wheels/` (path TBC with Victor) | Anyone with bucket write | 1 min |
 | 4 | Model file's `@compute.dataproc_batch` already wired to install from that path — bump the version pin in `spark.dataproc.driverPipPackages` if changed | Done in current model file | — |
