@@ -121,9 +121,9 @@ LANGUAGE js AS r'''
   return out;
 ''';
 
-SELECT s.advertiser_id, s.campaign_id, o.dscid, o.polarity, o.is_mm_touching
+SELECT c.advertiser_id, s.campaign_id, o.dscid, o.polarity, o.is_mm_touching
 FROM (
-  SELECT advertiser_id, campaign_id, expression,
+  SELECT campaign_id, expression,
          ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY update_time DESC) AS rn
   FROM `dw-main-silver.audience.audience_segments`
   WHERE expression_type_id = 2 AND is_targeted = TRUE
@@ -152,12 +152,14 @@ WHERE s.rn = 1
         "spark.sql.adaptive.skewJoin.enabled":          "true",
         # Pairwise Jaccard self-join in Alex's uniqueness axis is shuffle-heavy
         "spark.sql.shuffle.partitions":                 "4000",
-        # Add Alex's targeting-infra-ml utils/ directory to PYTHONPATH on driver +
-        # executors. `spark.submit.pyFiles` takes URIs to .py / .zip / .egg files
-        # that Spark unpacks and adds to PYTHONPATH at session init (the same
-        # mechanism airflow-ti's framework uses for utils_model.zip). Re-zip and
-        # re-upload utils.zip when the source repo changes — see docstring.
-        "spark.submit.pyFiles": "gs://mntn-data-archive-prod/ti_resources/python/wheels/utils.zip",
+        # Alex's targeting-infra-ml package is pip-installed at runtime inside
+        # model() (see _install_targeting_infra_ml below). Dataproc Serverless
+        # rejects `spark.submit.pyFiles` and `spark.dataproc.driverPipPackages`
+        # in runtime_properties; the `python_file_uris` field on PySparkBatch is
+        # the only sanctioned wiring but the @compute.dataproc_batch decorator
+        # doesn't expose it. Subprocess install on the driver works because
+        # Alex's code only builds Spark plans (no Python UDFs) → executors don't
+        # need the package, only the driver.
     },
     labels={
         "team":        "ti",
@@ -197,8 +199,17 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
         return self.__spark
 
     def model(self) -> None:
-        # Lazy import: installed by `spark.dataproc.driverPipPackages` at batch
-        # startup. CI's model-compilation pass does not have these available.
+        # Pip-install Alex's targeting-infra-ml wheel onto the driver at runtime.
+        # Dataproc Serverless rejects both driverPipPackages (silently — expects
+        # PyPI specifiers, not GCS URLs) and submit.pyFiles (explicitly 400).
+        # Driver-only install is sufficient because Alex's scoring framework
+        # only builds Spark DataFrame transforms (no Python UDFs that get
+        # shipped to executors).
+        self._install_targeting_infra_ml()
+
+        # Lazy import — must come AFTER the pip install above. Also lives inside
+        # model() so CI's `model_upload.py --dryrun` compile pass doesn't fail
+        # when this package isn't on the build environment's PYTHONPATH.
         from utils.segment_quality_utils.facade import ThirdPartySegmentQuality
         from utils.sampling_logic import build_edges_with_weights_estimator_only
 
@@ -269,6 +280,48 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
             self.spark.stop()
 
     # -----------------------------------------------------------------------
+    # Runtime install of the cross-repo targeting-infra-ml wheel
+    # -----------------------------------------------------------------------
+
+    WHEEL_GCS_URI = (
+        "gs://mntn-data-archive-prod/ti_resources/python/wheels/"
+        "targeting_infra_ml-0.1.0-py3-none-any.whl"
+    )
+
+    def _install_targeting_infra_ml(self) -> None:
+        """Download + pip install the targeting-infra-ml wheel onto the driver.
+
+        Background: Dataproc Serverless rejects both `spark.dataproc.driverPipPackages`
+        (silently — expects PyPI specifiers, not URLs) and `spark.submit.pyFiles`
+        (explicitly returns 400 "Attempted to set unsupported properties"). The
+        sanctioned wiring is the `python_file_uris` field on `PySparkBatch`,
+        which the airflow-ti framework auto-populates with `utils_model.zip`
+        but doesn't expose to model authors. Until @compute.dataproc_batch grows
+        that knob, the most reliable path is to pip-install at runtime from GCS.
+
+        Driver-only is enough: Alex's scoring framework uses
+        `pyspark.sql.functions` and `Window` to build DataFrame transforms;
+        there are no Python UDFs that get serialized to executors, so executors
+        run the Spark plan without needing the package.
+
+        Re-upload the wheel when targeting-infra-ml is tagged with a new version:
+            cd ~/Developer/work/mntn/targeting-infra-ml
+            python -m build
+            gsutil cp dist/*.whl gs://mntn-data-archive-prod/ti_resources/python/wheels/
+        Then bump the WHEEL_GCS_URI version pin above.
+        """
+        import os
+        import subprocess
+        import sys
+
+        local_wheel = os.path.join("/tmp", os.path.basename(self.WHEEL_GCS_URI))
+        print(f"[TI-956] downloading {self.WHEEL_GCS_URI} → {local_wheel}")
+        subprocess.check_call(["gsutil", "-q", "cp", self.WHEEL_GCS_URI, local_wheel])
+        print(f"[TI-956] pip installing {local_wheel}")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", local_wheel])
+        print("[TI-956] targeting-infra-ml install complete")
+
+    # -----------------------------------------------------------------------
     # Input readers — all via airflow-ti `read_model` abstraction per Victor
     # -----------------------------------------------------------------------
 
@@ -285,12 +338,26 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
         gs://mntn-data-archive-prod/ipdsc/dt={DATE}/data_source_id={DS}/*.parquet).
         Going through BQ avoids hand-rolling the GCS layout in this job.
         """
+        # Two parquet/external-table gotchas baked into this query:
+        #   1. `dt` is hive-partitioned as STRING — compare as STRING in WHERE
+        #      (ISO-8601 dates sort lexicographically) and cast to DATE in SELECT.
+        #      Casting in WHERE would defeat partition pruning.
+        #   2. `data_source_category_ids` comes from Parquet legacy LIST encoding
+        #      → BQ surfaces it as `STRUCT<list: ARRAY<STRUCT<element: BIGINT>>>`.
+        #      Alex's sampling_logic expects a plain `ARRAY<BIGINT>`, so we flatten
+        #      with `ARRAY(SELECT element FROM UNNEST(...list))`.
         return self._bq().query(f"""
-            SELECT ip, dt AS event_date, data_source_category_ids
+            SELECT
+                ip,
+                DATE(dt) AS event_date,
+                ARRAY(
+                    SELECT CAST(element AS INT64)
+                    FROM UNNEST(data_source_category_ids.list)
+                ) AS data_source_category_ids
             FROM `dw-main-bronze.external.ipdsc__v1`
             WHERE data_source_id = {LR_DS_ID}
-              AND dt BETWEEN DATE('{window_start}') AND DATE('{window_end}')
-        """).load()
+              AND dt BETWEEN '{window_start}' AND '{window_end}'
+        """)
 
     def _read_seg_meta(self):
         """Segment metadata for staleness axis."""
@@ -299,7 +366,7 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
                    updated_date, created_date, deprecated
             FROM `dw-main-bronze.tpa.categories`
             WHERE data_source_id = {LR_DS_ID}
-        """).load()
+        """)
 
     def _read_targetable_ips(self, window_start, window_end):
         """IPs we actually delivered to in the window — targetability axis denominator."""
@@ -308,25 +375,25 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
             FROM `dw-main-silver.logdata.impression_log`
             WHERE DATE(time) BETWEEN DATE('{window_start}') AND DATE('{window_end}')
               AND bid_ip IS NOT NULL
-        """).load()
+        """)
 
     def _read_performance(self, window_start, window_end):
         """Campaign-window KPI rollup (prospecting only) for the performance axis."""
         return self._bq().query(f"""
             SELECT
-                advertiser_id, campaign_id,
-                SUM(media_spend + data_spend + platform_spend) AS total_spend,
-                SUM(impressions) AS impressions,
-                HLL_COUNT.MERGE(site_visitors) AS visits,
-                SUM(click_conversions + view_conversions) AS conversions,
-                SUM(revenue) AS revenue
+                s.advertiser_id, s.campaign_id,
+                SUM(s.media_spend + s.data_spend + s.platform_spend) AS total_spend,
+                SUM(s.impressions) AS impressions,
+                HLL_COUNT.MERGE(s.site_visitors) AS visits,
+                SUM(s.click_conversions + s.view_conversions) AS conversions,
+                CAST(0 AS FLOAT64) AS revenue  -- TBD: source from a different table; not load-bearing for v1 ranking
             FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
             JOIN `dw-main-bronze.integrationprod.campaigns` c USING (campaign_id)
             WHERE s.day BETWEEN DATE('{window_start}') AND DATE('{window_end}')
               AND c.objective_id IN (1, 5, 6)
             GROUP BY 1, 2
-            HAVING SUM(impressions) > 0
-        """).load()
+            HAVING SUM(s.impressions) > 0
+        """)
 
     def _read_operative_3p(self):
         """Operative (campaign × dscid) tuples — theater-filtered.
@@ -335,7 +402,7 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
         attribute MM-only delivery to 3P segments that aren't actually driving
         delivery, inflating their apparent quality.
         """
-        df = self._bq().query(OPERATIVE_3P_QUERY).load()
+        df = self._bq().query(OPERATIVE_3P_QUERY)
         return df.filter(
             (F.col("polarity") == F.lit("positive")) & (F.col("dscid").isNotNull())
         ).select(
