@@ -294,7 +294,7 @@ Path is a placeholder — Victor to confirm whether `ti_resources/python/wheels/
 | 2 | ~~Build first wheel locally: `python -m build` from the repo root~~ — **DONE 2026-06-08**. Produces `targeting_infra_ml-0.1.0-py3-none-any.whl` (23 KB) | Anyone | ✅ DONE |
 | 3 | ~~Upload wheel to `gs://mntn-data-archive-prod/ti_resources/python/wheels/`~~ — **DONE 2026-06-08**. Path is a sibling to `ti_resources/spark/drivers/` (Iceberg jars); Victor TBC if different preference | Malachi | ✅ DONE |
 | 4 | Model file's `@compute.dataproc_batch` already wired to install from that exact path. Bump version pin in `spark.dataproc.driverPipPackages` when a new wheel is published | Done | ✅ DONE |
-| 5 | Drop model file into `airflow-ti/models/machine_learning/ti_956_segment_quality_scoring.py` on a feature branch. Per `[[feedback_airflow_prod_safety]]`: never main; Ryan reviews + wires DAG. | Malachi → Ryan | 30 min |
+| 5 | ~~Drop model file into airflow-ti~~ — **DONE 2026-06-08**. Branch `TI-956` on `SteelHouse/airflow-ti` adds `models/machine_learning/segment_quality_scoring.py` (renamed to match Fangorn's un-prefixed convention; class `SegmentQualityScoring`). PR to open: https://github.com/SteelHouse/airflow-ti/pull/new/TI-956 → Ryan reviews + wires DAG. | Malachi → Ryan | ✅ DONE — awaiting PR open + Ryan review |
 | 6 | First Dataproc run; smoke validation passes | airflow-ti DAG | 30 min wall |
 | 7 | Tune cluster sizing after seeing the pairwise Jaccard step's actual shuffle volume | TI-956 owner | 1-2h iteration |
 

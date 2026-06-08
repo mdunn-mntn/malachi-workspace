@@ -9,9 +9,9 @@ performance sub-composite — per TI-999 Pass 26 + Ryan Kleck 2026-06-01,
 those 3P clauses are bidder-inert under HHST > 0 and including them would
 attribute MM-only delivery to 3P segments.
 
-**Deploy location**: airflow-ti/models/machine_learning/ti_956_segment_quality_scoring.py
+**Deploy location**: airflow-ti/models/machine_learning/segment_quality_scoring.py
 **Cadence**: weekly (LiveRamp metadata refreshes weekly; daily is overkill)
-**Invocation**: `python ti_956_segment_quality_scoring.py --as_of_date YYYY-MM-DD`
+**Invocation**: `python segment_quality_scoring.py --as_of_date YYYY-MM-DD`
                 Scheduling handled by the @compute.dataproc_batch decorator +
                 airflow-ti's standard model-scheduling operators.
 
@@ -164,7 +164,7 @@ WHERE s.rn = 1
     schema="dw-main-bronze.household_scoring",
     schema_dev="dw-main-bronze.test",
 )
-class TI956SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
+class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
     """TI-956 — weekly LiveRamp segment-quality scoring → Iceberg."""
 
     WINDOW_DAYS  = 30
@@ -375,4 +375,4 @@ class TI956SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
 
 
 if __name__ == "__main__":
-    TI956SegmentQualityScoring().model()
+    SegmentQualityScoring().model()
