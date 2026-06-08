@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "targeting-infra-ml"
+version = "0.1.0"
+description = "MNTN Targeting Infra ML utilities — interest-segment quality scoring and sampling helpers"
+requires-python = ">=3.10"
+license = {text = "Proprietary"}
+authors = [
+    {name = "MNTN Targeting Infra team"},
+]
+classifiers = [
+    "Private :: Do Not Upload",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    # PySpark is provided by the Dataproc runtime — do NOT pin here.
+    # For local dev outside Dataproc: `pip install pyspark>=3.5` separately.
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.0",
+    "twine>=4.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["utils*"]
