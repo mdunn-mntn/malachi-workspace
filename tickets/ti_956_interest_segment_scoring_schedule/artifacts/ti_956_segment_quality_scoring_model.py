@@ -15,12 +15,17 @@ attribute MM-only delivery to 3P segments.
                 Scheduling handled by the @compute.dataproc_batch decorator +
                 airflow-ti's standard model-scheduling operators.
 
-**Open issue** (see summary.md §5): cross-repo Python dependency on
-`utils.segment_quality_utils` from SteelHouse/targeting-infra-ml#57. Neither
-Fangorn nor IPDSC examples show a pattern for this. Options pending Victor:
-  1. Package targeting-infra-ml into a wheel, install in the Dataproc image
-  2. Vendor utils/segment_quality_utils/* into airflow-ti's utils_model/
-  3. Ship via custom `py_files` in the compute decorator
+**Cross-repo dep resolved 2026-06-08 (Brian McAdams):** wheel hosted in GCS,
+installed at Dataproc batch startup via `spark.dataproc.driverPipPackages` +
+`executorPipPackages`. Same pattern Brian uses for the vault wheel on Databricks
+compute. Avoids the Artifact Registry setup overhead for a single-consumer v1.
+Wheel path (mirrors the airflow-ti Iceberg-drivers convention at
+`ti_resources/spark/drivers/`):
+
+    gs://mntn-data-archive-prod/ti_resources/python/wheels/targeting_infra_ml-{VERSION}-py3-none-any.whl
+
+Future graduation to a proper internal AR is tracked in TI-1023 (backlog —
+not blocking).
 """
 
 import argparse
@@ -141,6 +146,10 @@ WHERE s.rn = 1
         "spark.sql.adaptive.skewJoin.enabled":          "true",
         # Pairwise Jaccard self-join in Alex's uniqueness axis is shuffle-heavy
         "spark.sql.shuffle.partitions":                 "4000",
+        # Install Alex's package from GCS-hosted wheel at batch startup (cross-repo dep).
+        # Bump the version pin here when a new wheel is published.
+        "spark.dataproc.driverPipPackages":   "gs://mntn-data-archive-prod/ti_resources/python/wheels/targeting_infra_ml-0.1.0-py3-none-any.whl",
+        "spark.dataproc.executorPipPackages": "gs://mntn-data-archive-prod/ti_resources/python/wheels/targeting_infra_ml-0.1.0-py3-none-any.whl",
     },
     labels={
         "team":        "ti",

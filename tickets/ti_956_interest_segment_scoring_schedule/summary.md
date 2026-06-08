@@ -272,17 +272,40 @@ These were the pre-Victor-meeting standalone approach. Deleted because the airfl
    - Lifecycle: `create_success_file`, `delete_where` (1-year retention), `expire_snapshots`
    - Smoke validation (row count ≥50k, score range [0, 100], low-confidence share)
 
-### What Victor needs to do
+### Cross-repo dependency — RESOLVED 2026-06-08 (Brian McAdams suggestion)
 
-1. **Cross-repo dependency on `utils.segment_quality_utils`** — the unresolved one. Neither Fangorn nor IPDSC examples show a pattern for importing utilities from another repo (`targeting-infra-ml/utils/`). Options:
-   - (a) **Package targeting-infra-ml as a wheel** — Victor's own suggestion from the meeting (line 153: *"That's pretty cool if we can package this library. Because it can be useful for lots of features."*). Build wheel from `SteelHouse/targeting-infra-ml`, publish to Artifact Registry, install in Dataproc image.
-   - (b) Vendor `utils/segment_quality_utils/*` into airflow-ti's `utils_model/` — fast but bad for maintenance.
-   - (c) Ship via custom `py_files` in the compute decorator — requires the operator to support it.
-   Recommend (a). Open question: does airflow-ti / Dataproc image already have a sanctioned internal-package install path?
-2. **Drop the model file into airflow-ti** — target path: `airflow-ti/models/machine_learning/ti_956_segment_quality_scoring.py`. Per `[[feedback_airflow_prod_safety]]`: feature branch, not main. Ryan reviews + wires DAG.
-3. **Cluster sizing** — first-run `runtime_properties` in the file are scaled to "lighter than Fangorn" (maxExecutors 100 vs 180, no driver memory cranking). Tune after first run sees the pairwise Jaccard step's actual shuffle volume.
-4. **Cadence decision** — Victor suggested weekly is likely fine: *"we don't even get the vendor drop... every two weeks I think we do it... probably only needs to be done once every two weeks"* (line 40). Default to weekly Sunday in the airflow-ti schedule; tune to biweekly if first runs confirm no per-week change.
-5. **Cost vs convenience choice** — Victor noted DataprocBatch (serverless) is more convenient but more expensive than DataprocWorkflow (small persistent cluster). Default to batch; revisit after first runs show actual cost.
+Earlier plan was to stand up an internal Artifact Registry Python repo (TI-1023). Brian flagged a simpler v1 pattern he uses for his vault wheel on Databricks compute: **GCS-hosted wheel, installed at compute startup via `pip` properties**.
+
+Dataproc Serverless supports the same pattern via `spark.dataproc.driverPipPackages` + `spark.dataproc.executorPipPackages` — these accept a GCS URI to a wheel file. Pip installs at startup, no AR auth gymnastics, no DevOps dependency.
+
+**Pivoted to GCS-hosted wheel for v1.** AR is the long-term right answer once we have multiple consumers; tracked in TI-1023 (backlog).
+
+**Wheel location** (mirrors airflow-ti's Iceberg-drivers convention at `ti_resources/spark/drivers/`):
+
+    gs://mntn-data-archive-prod/ti_resources/python/wheels/targeting_infra_ml-{VERSION}-py3-none-any.whl
+
+Path is a placeholder — Victor to confirm whether `ti_resources/python/wheels/` is the right subdirectory or something else.
+
+### v1 deployment plan
+
+| # | Step | Owner | Effort |
+|---|---|---|---|
+| 1 | Add `pyproject.toml` to `SteelHouse/targeting-infra-ml` — minimal config naming the package, version, deps. PR to Alex. | Malachi | 30 min |
+| 2 | Build first wheel locally: `python -m build` from the repo root | Anyone | 5 min |
+| 3 | Upload wheel to `gs://mntn-data-archive-prod/ti_resources/python/wheels/` (path TBC with Victor) | Anyone with bucket write | 1 min |
+| 4 | Model file's `@compute.dataproc_batch` already wired to install from that path — bump the version pin in `spark.dataproc.driverPipPackages` if changed | Done in current model file | — |
+| 5 | Drop model file into `airflow-ti/models/machine_learning/ti_956_segment_quality_scoring.py` on a feature branch. Per `[[feedback_airflow_prod_safety]]`: never main; Ryan reviews + wires DAG. | Malachi → Ryan | 30 min |
+| 6 | First Dataproc run; smoke validation passes | airflow-ti DAG | 30 min wall |
+| 7 | Tune cluster sizing after seeing the pairwise Jaccard step's actual shuffle volume | TI-956 owner | 1-2h iteration |
+
+**Optional polish (not v1-blocking):** add a GH Action to `targeting-infra-ml` that auto-builds + uploads to GCS on every `v*` tag. Until then, manual `python -m build && gsutil cp` works fine.
+
+### What Victor + Brian's input still gates
+
+1. **Confirm the wheel GCS path.** Suggested `ti_resources/python/wheels/` to match `ti_resources/spark/drivers/`. Victor may have a different preference. 1 Slack message.
+2. **Cluster sizing on first run.** First-run `runtime_properties` in the model file are scaled to "lighter than Fangorn" (maxExecutors 100 vs 180, no driver memory cranking). Tune after seeing actual shuffle volume.
+3. **Cadence decision** — Victor suggested weekly is likely fine: *"we don't even get the vendor drop... every two weeks I think we do it... probably only needs to be done once every two weeks"* (meeting line 40). Default to weekly Sunday in airflow-ti schedule; tune to biweekly if first runs confirm no per-week change.
+4. **Cost vs convenience choice** — DataprocBatch (serverless) is more convenient but more expensive than DataprocWorkflow (small persistent cluster). Default to batch; revisit after first runs show actual cost.
 
 ### Pre-flight checklist
 
