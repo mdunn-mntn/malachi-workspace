@@ -300,6 +300,17 @@ Path is a placeholder — Victor to confirm whether `ti_resources/python/wheels/
 
 **Optional polish (not v1-blocking):** add a GH Action to `targeting-infra-ml` that auto-builds + uploads to GCS on every `v*` tag. Until then, manual `python -m build && gsutil cp` works fine.
 
+**Graduation path to custom compute image** (long-term, when v1 starts to creak): bake `targeting-infra-ml` into a Dataproc custom image alongside whatever other shared deps emerge. Brian McAdams flagged this 2026-06-08: Fangorn already uses `fangorn-dataproc-runtime` (image family `dataproc-custom-image`, project `mntn-targeting-prj-prod`, last built 2026-05-29) for the same purpose. Either extend that image or build a new one when needed. Trade-off vs the v1 GCS-wheel approach:
+
+| Concern | Wheel-at-startup (v1) | Custom image (graduation) |
+|---|---|---|
+| Iteration speed | Fast — just `gsutil cp` a new wheel | Slow — image rebuild per change |
+| Per-batch startup | +30-60s pip install | Instant — already installed |
+| Cross-job sharing | Each job pins its own wheel URI | One image, many consumers |
+| Maintenance | Zero | DevOps rebuilds per version |
+
+For TI-956 (single weekly batch, single consumer) the startup overhead is negligible. Graduate when we have multiple cross-job shared deps or iteration speed stops mattering.
+
 ### What Victor + Brian's input still gates
 
 1. **Confirm the wheel GCS path.** Suggested `ti_resources/python/wheels/` to match `ti_resources/spark/drivers/`. Victor may have a different preference. 1 Slack message.
