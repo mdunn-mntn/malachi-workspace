@@ -15,17 +15,20 @@ attribute MM-only delivery to 3P segments.
                 Scheduling handled by the @compute.dataproc_batch decorator +
                 airflow-ti's standard model-scheduling operators.
 
-**Cross-repo dep resolved 2026-06-08 (Brian McAdams):** wheel hosted in GCS,
-installed at Dataproc batch startup via `spark.dataproc.driverPipPackages` +
-`executorPipPackages`. Same pattern Brian uses for the vault wheel on Databricks
-compute. Avoids the Artifact Registry setup overhead for a single-consumer v1.
-Wheel path (mirrors the airflow-ti Iceberg-drivers convention at
-`ti_resources/spark/drivers/`):
+**Cross-repo dep (revised 2026-06-08 after first prod run):** `spark.dataproc.driverPipPackages`
+turned out to be silently ignored on Dataproc Serverless when given a GCS URL
+(it expects PyPI package specifiers, not file URLs). Pivoted to the same mechanism
+airflow-ti's framework already uses for `utils_model.zip` — a zip of the `utils/`
+directory dropped on PYTHONPATH via `spark.submit.pyFiles`. Build + upload steps:
 
-    gs://mntn-data-archive-prod/ti_resources/python/wheels/targeting_infra_ml-{VERSION}-py3-none-any.whl
+    cd ~/Developer/work/mntn/targeting-infra-ml
+    zip -r /tmp/utils.zip utils/ -x "utils/**/__pycache__/*" "utils/**/*.pyc"
+    gsutil cp /tmp/utils.zip gs://mntn-data-archive-prod/ti_resources/python/wheels/utils.zip
 
-Future graduation to a proper internal AR is tracked in TI-1023 (backlog —
-not blocking).
+Re-run those steps when targeting-infra-ml's utils/ changes.
+
+Future graduation to a proper internal AR (or custom Dataproc container) is
+tracked in TI-1023 (backlog — not blocking).
 """
 
 import argparse
@@ -149,10 +152,12 @@ WHERE s.rn = 1
         "spark.sql.adaptive.skewJoin.enabled":          "true",
         # Pairwise Jaccard self-join in Alex's uniqueness axis is shuffle-heavy
         "spark.sql.shuffle.partitions":                 "4000",
-        # Install Alex's package from GCS-hosted wheel at batch startup (cross-repo dep).
-        # Bump the version pin here when a new wheel is published.
-        "spark.dataproc.driverPipPackages":   "gs://mntn-data-archive-prod/ti_resources/python/wheels/targeting_infra_ml-0.1.0-py3-none-any.whl",
-        "spark.dataproc.executorPipPackages": "gs://mntn-data-archive-prod/ti_resources/python/wheels/targeting_infra_ml-0.1.0-py3-none-any.whl",
+        # Add Alex's targeting-infra-ml utils/ directory to PYTHONPATH on driver +
+        # executors. `spark.submit.pyFiles` takes URIs to .py / .zip / .egg files
+        # that Spark unpacks and adds to PYTHONPATH at session init (the same
+        # mechanism airflow-ti's framework uses for utils_model.zip). Re-zip and
+        # re-upload utils.zip when the source repo changes — see docstring.
+        "spark.submit.pyFiles": "gs://mntn-data-archive-prod/ti_resources/python/wheels/utils.zip",
     },
     labels={
         "team":        "ti",

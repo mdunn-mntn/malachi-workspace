@@ -156,7 +156,7 @@ class MyModel(IcebergBigqueryDwMainBronzeModel):
 @model_config(...)
 class MyModel(IcebergBigqueryDwMainBronzeModel):
     def model(self):
-        # Installed by spark.dataproc.driverPipPackages at batch startup,
+        # Added to PYTHONPATH at session init by spark.submit.pyFiles,
         # not present in CI's model-compilation environment.
         from utils.segment_quality_utils.facade import ThirdPartySegmentQuality
         scorer = ThirdPartySegmentQuality(...)
@@ -164,23 +164,37 @@ class MyModel(IcebergBigqueryDwMainBronzeModel):
 
 Keep module-level imports limited to stdlib + pyspark + `utils_model.base_model`. Everything else: lazy-import inside the method that uses it.
 
-### 2. Install the wheel via `spark.dataproc.driverPipPackages` at batch startup
+### 2. Add the package to PYTHONPATH via `spark.submit.pyFiles` (NOT `driverPipPackages`)
 
-Pattern Brian McAdams introduced (2026-06-08, originally his Databricks vault-secrets pattern). Upload the wheel to GCS, then pin it in `runtime_properties`:
+**Discovered the hard way during TI-956's first prod run (2026-06-08).** Initial attempt used `spark.dataproc.driverPipPackages` + `spark.dataproc.executorPipPackages` pointing at a GCS wheel URL. Driver logs confirmed the wheel install never ran — turns out these properties expect PyPI package SPECIFIERS (e.g., `numpy==1.21.0`), not file URLs. Our `gs://...whl` URL was parsed as a malformed package name and silently skipped. Result: driver log shows `Generating /home/spark/.pip/pip.conf` then immediately `ModuleNotFoundError: No module named 'utils'` at the lazy import.
+
+**What actually works:** zip the package's source directory and add to PYTHONPATH via `spark.submit.pyFiles`. This is the same mechanism airflow-ti's framework uses for `utils_model.zip` — Spark unpacks the zip at session init and adds it to PYTHONPATH on driver + executors.
+
+```bash
+# Build the zip from the source repo (skip caches)
+cd ~/Developer/work/mntn/<source_repo>
+zip -r /tmp/<name>.zip <package_dir>/ -x "<package_dir>/**/__pycache__/*" "<package_dir>/**/*.pyc"
+
+# Upload to GCS — same convention as the Iceberg drivers
+gsutil cp /tmp/<name>.zip gs://mntn-data-archive-prod/ti_resources/python/wheels/<name>.zip
+```
 
 ```python
 @compute.dataproc_batch(
     timeout=18000,
     runtime_properties={
         # ... cluster sizing ...
-        "spark.dataproc.driverPipPackages":   "gs://mntn-data-archive-prod/ti_resources/python/wheels/<package>-<version>-py3-none-any.whl",
-        "spark.dataproc.executorPipPackages": "gs://mntn-data-archive-prod/ti_resources/python/wheels/<package>-<version>-py3-none-any.whl",
+        "spark.submit.pyFiles": "gs://mntn-data-archive-prod/ti_resources/python/wheels/<name>.zip",
     },
     ...
 )
 ```
 
 GCS path convention: `gs://mntn-data-archive-prod/ti_resources/python/wheels/` (sibling to `ti_resources/spark/drivers/` where Iceberg jars live).
+
+**When the source repo changes:** re-zip and re-upload. There's no "version pinning" with this mechanism — the latest zip at the URL is what gets installed every batch. For multi-consumer prod-grade use, graduate to a custom Dataproc container or internal Artifact Registry (TI-1023 backlog).
+
+**The wheel built from `python -m build` is still useful** — keep it in the same GCS path for the eventual graduation to a custom container that does `pip install <wheel>` at image-build time. Just don't reference it from `driverPipPackages`.
 
 When the wheel updates, bump the version pin here (and re-upload the wheel to GCS).
 
