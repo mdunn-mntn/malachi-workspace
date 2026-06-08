@@ -296,9 +296,10 @@ Path is a placeholder — Victor to confirm whether `ti_resources/python/wheels/
 | 4 | Model file's `@compute.dataproc_batch` already wired to install from that exact path. Bump version pin in `spark.dataproc.driverPipPackages` when a new wheel is published | Done | ✅ DONE |
 | 5 | ~~Drop model file into airflow-ti~~ — **DONE 2026-06-08**. Branch `TI-956` on `SteelHouse/airflow-ti` adds `models/machine_learning/segment_quality_scoring.py` (renamed to match Fangorn's un-prefixed convention; class `SegmentQualityScoring`). PR to open: https://github.com/SteelHouse/airflow-ti/pull/new/TI-956 | Malachi | ✅ DONE — awaiting PR open + review |
 | 6 | ~~Open + merge the PR~~ — **MERGED 2026-06-08** ([PR #190](https://github.com/SteelHouse/airflow-ti/pull/190)). CI surfaced two issues, both fixed in-PR: (a) module-level cross-repo import broke `model_upload.py --dryrun` → moved imports inside `model()`; (b) `dags/model_task_config.json` needed regeneration → ran dryrun locally + committed. Knowledge captured in `documentation/docs/airflow_ti_workflow.md`. | Malachi | ✅ DONE |
-| 7 | Wait for `deploy_prod.yaml` GitHub Action → Astronomer picks up changes (no manual step) | auto | 5-10 min |
-| 8 | Wire the DAG on Astro (open Astronomer UI, find the task, trigger run) | Malachi | 15 min |
-| 9 | First Dataproc batch run; smoke validation passes | airflow-ti DAG | 30 min wall |
+| 7 | ~~Wait for `deploy_prod.yaml` Astronomer deploy~~ — **DONE 2026-06-08**. Deploy commit `2a5ce04` shipped the model file + regenerated config. | auto | ✅ |
+| 7b | Add DAG file `dags/machine_learning/segment_quality_scoring_dag.py` — **PR open** ([compare](https://github.com/SteelHouse/airflow-ti/compare/main...TI-956-add-dag)). Discovered late: adding a model file does NOT auto-create a DAG. Each model needs a corresponding DAG file with `ModelPysparkBatchOperator(model_id=...)`. Workflow doc updated to flag this for future. | Malachi | DONE — awaiting merge |
+| 8 | Wire DAG on Astro (find `segment_quality_scoring_weekly` in Astro UI, trigger first run) | Malachi | 15 min |
+| 9 | First Dataproc batch run; smoke validation passes | DAG triggers | 30 min wall |
 | 10 | Tune cluster sizing after seeing the pairwise Jaccard step's actual shuffle volume | Malachi | 1-2h iteration |
 
 **Optional polish (not v1-blocking):** add a GH Action to `targeting-infra-ml` that auto-builds + uploads to GCS on every `v*` tag. Until then, manual `python -m build && gsutil cp` works fine.

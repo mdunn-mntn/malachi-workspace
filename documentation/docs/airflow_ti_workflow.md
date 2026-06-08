@@ -79,6 +79,58 @@ Spins up 5 Docker containers (Postgres, Scheduler, DAG processor, API server, Tr
 - **`dags/` files** (DAG definitions) — for *adding a new model* you do not need to touch DAG files; the framework auto-wires the task into the right DAG via `model_task_config.json`. For *cross-DAG dependencies* (upstream sensors, etc.) coordinate with Ryan.
 - **Wiring the DAG on Astro** is self-serve for new model additions — open the Astronomer UI for the target deployment, find the new task in the relevant DAG, run it. Ryan's involvement is only for cross-DAG dep wiring.
 
+## Important: model file + DAG file are SEPARATE additions
+
+Discovered the hard way during TI-956 deployment: adding a model file to `models/<category>/` does NOT automatically create a scheduled task. The framework auto-wires the *task config* into `dags/model_task_config.json`, but you still need to write a **DAG file** that references the `model_id` to actually schedule it.
+
+Fangorn's example: `dags/machine_learning/fangorn_14day_lookback_dag.py` defines the DAG and uses `ModelPysparkBatchOperator(model_id="fangorn_14day_lookback", ...)` to link to the model entry.
+
+**Minimum DAG file shape:**
+
+```python
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.empty import EmptyOperator
+from include.job_config import JobTeamConfig
+from include.models.operators import ModelPysparkBatchOperator
+
+TEAM = JobTeamConfig.TGT.value
+ENV = Variable.get("ENV")
+GCP_PROJECT = f"mntn-prj-{ENV}-00"
+
+with DAG(
+    dag_id="<your_dag_id>",
+    description="<one-line description>",
+    start_date=datetime(2026, X, X),   # Past date that aligns with your schedule
+    schedule="<cron>",                  # e.g., "0 6 * * 0" for weekly Sunday 06:00 UTC
+    catchup=False,
+    max_active_runs=1,
+    **TEAM.make_dag_args(
+        severity=2,                     # 1 = page on failure; 2 = non-critical UI/ML jobs
+        tags=["ti-XXX", "<category>", "<feature>"],
+        default_args={"retries": 1},
+    ),
+) as dag:
+
+    run_task = ModelPysparkBatchOperator(
+        task_id="<task_id>",
+        model_id="<matches model_task_config.json entry>",   # ← this is the link
+        project_id=GCP_PROJECT,
+        region="us-central1",
+        pyspark_batch_args=["--<arg>", "{{ ds }}"],          # Airflow templating
+        deferrable=False,
+        polling_interval_seconds=60,
+        timeout=5 * 60 * 60,
+        execution_timeout=timedelta(hours=5),
+    )
+
+    end = EmptyOperator(task_id="end")
+    run_task >> end
+```
+
+Add it as a **separate PR** (or include it in the same PR as the model file — but make sure both files land before you expect anything to schedule). Pure-DAG changes don't require regenerating `model_task_config.json` — but model changes do.
+
 ## Adding a new model that needs an external Python package
 
 Cross-repo Python dependencies (Alex's `targeting-infra-ml`, internal wheels, etc.) require **two specific patterns** — both discovered the hard way during TI-956:
