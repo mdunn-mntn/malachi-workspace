@@ -38,9 +38,12 @@ from utils_model.base_model import compute
 from utils_model.base_model import model_config
 from utils_model.base_model import IcebergBigqueryDwMainBronzeModel
 
-# Alex's scoring package — see "Open issue" above for resolution path
-from utils.segment_quality_utils.facade import ThirdPartySegmentQuality
-from utils.sampling_logic import build_edges_with_weights_estimator_only
+# NOTE: imports from `utils.segment_quality_utils` and `utils.sampling_logic`
+# (Alex's scoring package from SteelHouse/targeting-infra-ml) are done INSIDE
+# `model()` below, NOT at module load. The package is installed via
+# `spark.dataproc.driverPipPackages` at Dataproc batch startup — it is NOT
+# present in CI's model-compilation environment, which imports every model
+# file via `python model_upload.py --dryrun`.
 
 
 LR_DS_ID = 35   # LiveRamp data_source_id
@@ -189,6 +192,11 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
         return self.__spark
 
     def model(self) -> None:
+        # Lazy import: installed by `spark.dataproc.driverPipPackages` at batch
+        # startup. CI's model-compilation pass does not have these available.
+        from utils.segment_quality_utils.facade import ThirdPartySegmentQuality
+        from utils.sampling_logic import build_edges_with_weights_estimator_only
+
         as_of_date   = datetime.date.fromisoformat(self._args.as_of_date)
         window_start = as_of_date - datetime.timedelta(days=self.WINDOW_DAYS)
         window_end   = as_of_date - datetime.timedelta(days=1)
