@@ -73,10 +73,93 @@ Spins up 5 Docker containers (Postgres, Scheduler, DAG processor, API server, Tr
 
 ## Branch + PR conventions
 
-- **Feature branches off `main`.** Pattern: `feature/ti-XXX-short-description`.
-- **Never push to `main`.** Open a PR and let Ryan / framework owner merge. The deploy fires on merge.
-- **Never modify `dags/` files** without explicit ownership — Ryan wires DAG dependencies.
+- **Feature branches off `main`.** Observed pattern in merged PRs (#57, #67, #190): just `TI-XXX` (uppercase ticket, no description suffix). Match that.
+- **Never push to `main`.** Open a PR; merge after review. Deploy fires on merge.
 - **`dags/model_task_config.json` is auto-generated** by `model_upload.py --dryrun`. **Commit it after any model config change** — CI checks freshness.
+- **`dags/` files** (DAG definitions) — for *adding a new model* you do not need to touch DAG files; the framework auto-wires the task into the right DAG via `model_task_config.json`. For *cross-DAG dependencies* (upstream sensors, etc.) coordinate with Ryan.
+- **Wiring the DAG on Astro** is self-serve for new model additions — open the Astronomer UI for the target deployment, find the new task in the relevant DAG, run it. Ryan's involvement is only for cross-DAG dep wiring.
+
+## Adding a new model that needs an external Python package
+
+Cross-repo Python dependencies (Alex's `targeting-infra-ml`, internal wheels, etc.) require **two specific patterns** — both discovered the hard way during TI-956:
+
+### 1. Lazy-import the cross-repo package inside `model()`, NOT at module level
+
+CI's `python model_upload.py --dryrun` step calls `importlib.import_module` on every model file to extract `@model_config` metadata. That import runs everything at module load. If a top-level import references a package not in the CI environment, CI fails with `ModuleNotFoundError`.
+
+```python
+# ❌ BREAKS CI — module-level import of a package only installed at batch runtime
+from utils.segment_quality_utils.facade import ThirdPartySegmentQuality
+
+@compute.dataproc_batch(...)
+@model_config(...)
+class MyModel(IcebergBigqueryDwMainBronzeModel):
+    def model(self):
+        scorer = ThirdPartySegmentQuality(...)
+```
+
+```python
+# ✅ WORKS — lazy import inside model()
+@compute.dataproc_batch(...)
+@model_config(...)
+class MyModel(IcebergBigqueryDwMainBronzeModel):
+    def model(self):
+        # Installed by spark.dataproc.driverPipPackages at batch startup,
+        # not present in CI's model-compilation environment.
+        from utils.segment_quality_utils.facade import ThirdPartySegmentQuality
+        scorer = ThirdPartySegmentQuality(...)
+```
+
+Keep module-level imports limited to stdlib + pyspark + `utils_model.base_model`. Everything else: lazy-import inside the method that uses it.
+
+### 2. Install the wheel via `spark.dataproc.driverPipPackages` at batch startup
+
+Pattern Brian McAdams introduced (2026-06-08, originally his Databricks vault-secrets pattern). Upload the wheel to GCS, then pin it in `runtime_properties`:
+
+```python
+@compute.dataproc_batch(
+    timeout=18000,
+    runtime_properties={
+        # ... cluster sizing ...
+        "spark.dataproc.driverPipPackages":   "gs://mntn-data-archive-prod/ti_resources/python/wheels/<package>-<version>-py3-none-any.whl",
+        "spark.dataproc.executorPipPackages": "gs://mntn-data-archive-prod/ti_resources/python/wheels/<package>-<version>-py3-none-any.whl",
+    },
+    ...
+)
+```
+
+GCS path convention: `gs://mntn-data-archive-prod/ti_resources/python/wheels/` (sibling to `ti_resources/spark/drivers/` where Iceberg jars live).
+
+When the wheel updates, bump the version pin here (and re-upload the wheel to GCS).
+
+### What the base class auto-injects (don't duplicate)
+
+`IcebergBigqueryDwMainBronzeModel` (and siblings) automatically adds Iceberg jars + BigQuery Metastore catalog config to `extra_reader_config`. Confirmed 2026-06-08 by inspecting the regenerated `model_task_config.json` after adding TI-956 (`segment_quality_scoring`) — the generated entry includes:
+
+```json
+"extra_reader_config": {
+  "batch": {"runtime_config": {"properties": {
+    "spark.jars": "gs://mntn-data-archive-prod/ti_resources/spark/drivers/iceberg-bigquery-1.10.2.jar,iceberg-gcp-1.10.2.jar,iceberg-gcp-bundle-1.10.2.jar,iceberg-spark-runtime-3.5_2.13-1.10.2.jar",
+    "spark.sql.catalog.DW_MAIN_BRONZE": "org.apache.iceberg.spark.SparkCatalog",
+    "spark.sql.catalog.DW_MAIN_BRONZE.type": "bigquery",
+    "spark.sql.catalog.DW_MAIN_BRONZE.gcp.bigquery.project-id": "dw-main-bronze",
+    "spark.sql.catalog.DW_MAIN_BRONZE.gcp.bigquery.location": "us-central1",
+    "dataproc.artifacts.remove": "iceberg"
+  }}}
+}
+```
+
+Don't set any of these manually in your model file — they're injected by the base class.
+
+### Local dev environment gotcha
+
+`uv sync --group models` does NOT install everything `model_upload.py --dryrun` needs. The compilation pass imports every model file in the repo, including ones using analytics packages your branch doesn't touch. Hit during TI-956:
+
+```bash
+uv pip install pretty_html_table matplotlib seaborn scipy scikit-learn statsmodels
+```
+
+After that the dryrun completes. If a new model with another exotic dep gets added, you'll hit a different `ModuleNotFoundError` and have to install that too.
 
 ## Naming standards (must follow)
 
