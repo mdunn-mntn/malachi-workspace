@@ -138,15 +138,21 @@ WHERE s.rn = 1
 @compute.dataproc_batch(
     timeout=18000,
     runtime_properties={
-        "spark.driver.memory":                          "8g",
+        # Cluster sizing matched to Alex Knorr's Databricks job config (per
+        # Slack 2026-06-09): c3-standard-22 workers (88g/22-core), 10-45
+        # autoscale → ~3.96TB max memory + ~990 cores. Mirroring on Dataproc
+        # Serverless with bigger workers (64g/16-core × 50 max). Yesterday's
+        # 16g/4-core × 100 ran 3+ hours and didn't finish; Alex's profile
+        # consistently lands at ~1h.
+        "spark.driver.memory":                          "32g",
         "spark.dynamicAllocation.minExecutors":         "10",
-        "spark.dynamicAllocation.maxExecutors":         "100",
+        "spark.dynamicAllocation.maxExecutors":         "50",
         "spark.dynamicAllocation.executorIdleTimeout":  "600s",
         "spark.network.timeout":                        "600s",
         "spark.executor.heartbeatInterval":             "60s",
-        "spark.executor.memory":                        "16g",
-        "spark.executor.memoryOverhead":                "2g",
-        "spark.executor.cores":                         "4",
+        "spark.executor.memory":                        "64g",
+        "spark.executor.memoryOverhead":                "8g",
+        "spark.executor.cores":                         "16",
         "spark.sql.adaptive.enabled":                   "true",
         "spark.sql.adaptive.coalescePartitions.enabled": "true",
         "spark.sql.adaptive.skewJoin.enabled":          "true",
