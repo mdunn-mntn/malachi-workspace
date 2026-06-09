@@ -76,8 +76,25 @@ Spins up 5 Docker containers (Postgres, Scheduler, DAG processor, API server, Tr
 - **Feature branches off `main`.** Observed pattern in merged PRs (#57, #67, #190): just `TI-XXX` (uppercase ticket, no description suffix). Match that.
 - **Never push to `main`.** Open a PR; merge after review. Deploy fires on merge.
 - **`dags/model_task_config.json` is auto-generated** by `model_upload.py --dryrun`. **Commit it after any model config change** — CI checks freshness.
-- **`dags/` files** (DAG definitions) — for *adding a new model* you do not need to touch DAG files; the framework auto-wires the task into the right DAG via `model_task_config.json`. For *cross-DAG dependencies* (upstream sensors, etc.) coordinate with Ryan.
-- **Wiring the DAG on Astro** is self-serve for new model additions — open the Astronomer UI for the target deployment, find the new task in the relevant DAG, run it. Ryan's involvement is only for cross-DAG dep wiring.
+- **`dags/` files** (DAG definitions) — each model needs both: (a) a model file under `models/<category>/` AND (b) a DAG file under `dags/<category>/` that references its `model_id` via `ModelPysparkBatchOperator`. The framework auto-wires the *task config* into `model_task_config.json` but you write the DAG file by hand. (Discovered the hard way during TI-956 — assumed the framework also auto-generated DAGs.)
+- **For *cross-DAG dependencies*** (upstream sensors, etc.) coordinate with Ryan.
+
+## Prod execution discipline — never manually trigger a first run
+
+Per Victor Savitskiy (2026-06-08):
+
+> "We never run manually Dataproc from prod. We design Airflow DAGs if we need to re-run something. If we need to restate, it's done via prod Airflow UI."
+
+Translating that into rules:
+
+- **`model_run.py` is dev-only.** Never invoke it against the prod project. There is no `--env prod` escape hatch; it's structurally dev.
+- **The first prod execution of a new DAG is the next scheduled cron firing.** No manual Astro UI trigger to "validate" the new code. If your DAG is biweekly and you ship it on a Monday, the first prod run is next Sunday's scheduled slot. You wait.
+- **Astro UI triggers are reserved for re-runs and operational restarts**, not for first-time validation of a new DAG. Examples of legitimate UI triggers: clearing a failed task to retry it; backfilling a missed window; re-running after a hotfix.
+- **Therefore: validate end-to-end in dev BEFORE merging the PR.** Local `model_run.py` against dev must be clean. PR + merge only when the dev run lands successfully.
+
+This means a new DAG's lead time from "code complete" → "first prod execution" can be up to one schedule period. For biweekly schedules that's 2 weeks. Plan for that — don't expect a same-day prod validation cycle.
+
+**Anti-pattern**: shipping a PR with un-tested code, then "triggering it in prod just to see if it works." (We did this for TI-956 on 2026-06-08 and burned hours debugging through Astro retries before pivoting to the dev loop. Don't repeat.)
 
 ## Important: model file + DAG file are SEPARATE additions
 
