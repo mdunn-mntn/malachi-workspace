@@ -80,9 +80,23 @@ All numbers drafted from each ticket's `summary.md` and adversarially re-verifie
 attribution, TI-748 publisher count, TI-504 "2 of 5 significant" not generalized).
 
 **Architecture delivered:** manifest-driven (one YAML/experiment) → `build.py` (Python+Jinja2) → static
-multi-page site. Reused the RevealJS deck palette (`assets/ti-archive.css`) and per-ticket `generate_charts.py`
-PNGs. Two-story experiments use `headline_pair`; live ones get a "live data" note. Adding an experiment =
-drop a YAML + a PNG, rebuild.
+multi-page site. Reused the RevealJS deck palette (`assets/ti-archive.css`). Two-story experiments use
+`headline_pair`; live ones get a "live data" note.
+
+**Redesign (post-review feedback "overlapping graphs, takeaways not landing"):**
+- Replaced the reused technical matplotlib PNGs (overlapping CI bands, dense grids) with **built-in inline
+  bar/diverging charts** — `build.py` computes the geometry; one clean chart per experiment that directly
+  carries the headline; dropped where no clean comparison fits. No more image clutter.
+- Each page now shows **every KPI the experiment moved**, with the top 1–2 highlighted (per user: "show all
+  impacted KPIs, highlight the top ones").
+- Landing leads with a **Top results** band (BUK 184x, Fangorn +27%, RCT +41%, 3P $103M) above the full scorecard.
+- Adding an experiment = drop one YAML (with a small `chart:` + `kpis:` block), rebuild. No image assets needed.
+
+**Data-integrity catch:** the chart/KPI extraction agents **fabricated** per-cluster numbers for TI-542
+(Max Reach) — its `summary.md` has no numbers, the notebook outputs were stripped, and the only artifact is a
+**joke placeholder PDF** (`ti_542_mullet_performance_report.pdf` — literal mullet haircuts). Caught by grepping
+the source, reverted TI-542 to an honest "Mixed / no aggregate distilled." The other 7 experiments' numbers
+were spot-checked against their real summaries and all confirmed present.
 
 ## 6. Questions Answered
 - **Q:** Host? **A:** Internal GitHub Pages (private SteelHouse repo, Pages access-controlled).
