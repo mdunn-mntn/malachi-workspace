@@ -175,8 +175,8 @@ WHERE s.rn = 1
 )
 @model_config(
     alias="interest_segment_quality_daily",
-    location_root="gs://mntn-data-archive-prod",
-    location_root_dev="gs://mntn-data-archive-dev",
+    location_root="gs://mntn-data-archive-prod/data_without_ttl",
+    location_root_dev="gs://mntn-data-archive-dev/data_without_ttl",
     schema="dw-main-bronze.external_ti",
     schema_dev="dw-main-bronze.test",
 )
@@ -348,8 +348,11 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
         discovering every partition folder before pruning.
         """
         n_days = (window_end - window_start).days + 1
+        # Per Victor PR #1073 review (2026-06-09): narrow to data_source_id=35
+        # subpath so Spark only reads LiveRamp partitions instead of every DS's
+        # partition under each dt= folder. Alex's notebook scopes the same way.
         dt_relpaths = [
-            f"dt={(window_start + datetime.timedelta(days=i)).isoformat()}"
+            f"dt={(window_start + datetime.timedelta(days=i)).isoformat()}/data_source_id=35"
             for i in range(n_days)
         ]
         df = self.read_model("ipdsc_ds_35.DS35").load(relpath=dt_relpaths, optional=True)
