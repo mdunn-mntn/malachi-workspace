@@ -168,10 +168,10 @@ WHERE s.rn = 1
     },
 )
 @model_config(
-    alias="ti_956_segment_quality_daily",
-    location_root="gs://household-scoring-prod/data_without_ttl/scoring",
-    location_root_dev="gs://household-scoring-dev/data_without_ttl/scoring",
-    schema="dw-main-bronze.household_scoring",
+    alias="interest_segment_quality_daily",
+    location_root="gs://mntn-data-archive-prod",
+    location_root_dev="gs://mntn-data-archive-dev",
+    schema="dw-main-bronze.external_ti",
     schema_dev="dw-main-bronze.test",
 )
 class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
@@ -332,32 +332,32 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
             .option("billingProject", "dw-main-bronze"))
 
     def _read_ipdsc(self, window_start, window_end):
-        """LiveRamp ipdsc rows over the 30d window.
+        """LiveRamp ipdsc rows over the window.
 
-        Read via BQ external table (which sits on top of
-        gs://mntn-data-archive-prod/ipdsc/dt={DATE}/data_source_id={DS}/*.parquet).
-        Going through BQ avoids hand-rolling the GCS layout in this job.
+        Reads via the existing `ipdsc_ds_35.DS35` model output (per Victor 2026-06-09
+        PR review). That model already aggregates LiveRamp IP→segments per day
+        and writes Parquet partitioned by `dt`. Pattern mirrors Fangorn's
+        `read_model(...).load(relpath=dt_relpaths, optional=True)` — passing an
+        explicit list of `dt=YYYY-MM-DD` relpaths avoids the cost of Spark
+        discovering every partition folder before pruning.
         """
-        # Read ipdsc directly from GCS Parquet (NOT via the BQ external table).
-        # Three reasons:
-        #   1. The BQ Spark connector materializes query results to a temp BQ
-        #      table, and 30 days × 103M rows/day exceeds BQ's shuffle limits
-        #      (Resources exceeded error). Direct GCS read bypasses that.
-        #   2. Hive partition pruning via Spark gives the same partition-key
-        #      filter (dt + data_source_id) that the external table provides.
-        #   3. Spark's Parquet reader exposes `data_source_category_ids` as a
-        #      flat ARRAY<BIGINT> directly (NOT the legacy LIST STRUCT that the
-        #      BQ external table wraps it in). Pass it through as-is.
-        ipdsc_path = "gs://mntn-data-archive-prod/ipdsc"
-        return (self.spark.read
-            .parquet(ipdsc_path)
-            .filter(F.col("data_source_id") == LR_DS_ID)
-            .filter(F.col("dt").between(window_start.isoformat(), window_end.isoformat()))
-            .select(
-                F.col("ip"),
-                F.to_date(F.col("dt")).alias("event_date"),
-                F.col("data_source_category_ids"),
-            ))
+        n_days = (window_end - window_start).days + 1
+        dt_relpaths = [
+            f"dt={(window_start + datetime.timedelta(days=i)).isoformat()}"
+            for i in range(n_days)
+        ]
+        df = self.read_model("ipdsc_ds_35.DS35").load(relpath=dt_relpaths, optional=True)
+        if df is None:
+            raise FileNotFoundError(
+                f"No ipdsc_ds_35.DS35 partitions found in window [{window_start}, {window_end}]"
+            )
+        # DS35 output schema: (ip, data_source_category_ids ARRAY<BIGINT>).
+        # The `dt` partition column is auto-discovered by Spark from the load path.
+        return df.select(
+            F.col("ip"),
+            F.to_date(F.col("dt")).alias("event_date"),
+            F.col("data_source_category_ids"),
+        )
 
     def _read_seg_meta(self):
         """Segment metadata for staleness axis."""
