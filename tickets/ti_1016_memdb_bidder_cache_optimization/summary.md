@@ -241,6 +241,8 @@ Done (2026-06-09, from the Abbas sys-design walkthrough + Confluence BP pages):
 ## 8. Open Items / Follow-ups
 
 - [x] ~~Sync with Abbas (bidder team)~~ — done 2026-06-09, transcript filed as `ti_1016_02_abbas_bidder_sys_design_caching_2026_06_09.txt`, §4.2 filled.
+- [x] ~~Extract canonical Confluence pages~~ — BP "Bidder" + "Aerospike Datastore" pages captured into `knowledge/data_knowledge.md` + `data_catalog.md` (2026-06-09); PDF archived at `documentation/docs/bidder_platform_confluence_reference.pdf`.
+- [ ] **Follow-up meeting pending** on the new bidder infra/architecture (Aerospike→ScyllaDB migration, next-gen membership-consumer split into cse/oracle/recency) — owner **Eric** (perf-pacing). When it happens: transcribe → extract into the knowledge docs (the "current vs future state" notes there are the baseline to update).
 - [ ] **New primary thread:** size the "don't write intent scores for IPs with no segments" optimization — how many scoreless-no-segment IPs are we currently writing to GCS/Aerospike? (TI side: query the score dump vs segment membership.)
 - [ ] Confirm conditional-write feasibility on the bidder side with **Eric** (now owns the membership consumer; Abbas moved to perf-pacing). Alkaif is secondary.
 - [ ] Cross-check with the **Victor + Abbas "what we can filter out" follow-up** that happened immediately after this meeting — align so we're not duplicating.
