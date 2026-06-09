@@ -2839,3 +2839,23 @@ The terminology is counterintuitive: `unlinked = false` means the impression WAS
 The current lookback window on `impression_log` is **3 hours**. Late-arriving data beyond that window will not be captured on normal incremental runs and requires a manual restate.
 
 **Source:** Lizz (confirmed in incident triage, 2026-06-06) (via Lizz, #mission-control, 2026-06-06)
+
+<!-- slack-extracted: 2026-06-09 -->
+- **cost_impression_log — `unlinked` flag and `ad_served_id` relationship**
+
+`unlinked = FALSE` means an `impression_id` was found in `impression_log` (linked impression). `unlinked = TRUE` means no matching `impression_id` was found — these rows always have a null `ad_served_id`. Filtering `unlinked = FALSE` is the standard pattern for valid linked impressions; `ad_served_id IS NOT NULL` is not additionally required but causes no harm. Volume reference (June 2026): ~55–61M rows/day with `unlinked = FALSE`; ~141–184K rows/day with `unlinked = TRUE`. (via Sonali, #reporting_helpdesk_ask_anything, 2026-06-08)
+- **geo_version field — closed-loop geo resolution pattern**
+
+`geo_version` represents which MaxMind IP-to-geo resolution version was used at the start of the targeting cycle. The closed loop is: MaxMind resolves IP → geo → audience targeting returns IPs → bidding happens on those IPs → reporting looks up the geo of the winning IP using the same MaxMind version recorded in `geo_version`. This ensures reporting geo matches the geo used for targeting. World Cup targeting bypasses this closed loop, which is why `geo_version` can be empty/null for World Cup inventory — and why empty `geo_version` for those rows does not affect spend or normal reporting. (via ray, #data-platform, 2026-06-08)
+- **device_ip vs device_ipv6 — IPv6 traffic split**
+
+For IPv6 auction wins, the IP address is stored in `device_ipv6` rather than `device_ip`. `device_ip` will be null for these rows. Queries that need a single IP field per impression must coalesce `device_ip` and `device_ipv6`. This split was introduced as part of IPv6 targeting support and affects the CIL pipeline and any downstream model that reads `device_ip` directly. (via Abbas, #data-platform, 2026-06-08)
+- **Spend charging requirements — minimum fields needed**
+
+The only hard requirement for MNTN to charge a customer for an impression is that the impression appears in both (1) the source table (spend_log or win_log) and (2) impression_log. Fields such as `geo_version` and `device_ip` are not required for billing. The BOS service/pacing pipeline still uses `spend_pacing` (with a 24-hour lookback on live spend_log) before switching to the CIL. As long as CIL pipeline issues are resolved within 24 hours of onset, spend is unaffected. (via lizz, #data-platform, 2026-06-08)
+- **Auction log aggregation — reading from GCS vs BigQuery**
+
+For large-scale aggregations over bidder auction/bid logs, reading directly from GCS parquet sources (via Spark) is preferred over reading from BigQuery tables. The BQ-based approach for `auction_events_agg` scanned 13.2 TiB per hour of data and timed out in production. The Identity team's `augmentor_identity_daily` pipeline moved to GCS-based Spark processing for the same reason. When building new aggregations over auction or bid logs, evaluate Spark + GCS first before attempting a BigQuery SQLMesh model. (via scotty, #data-platform, 2026-06-08)
+- **data_source_key — uniqueness requirement and known data quality issue**
+
+The `data_source_key` column in the integrations/data_sources table must be unique and non-null. As of June 2026, at least three records share duplicate `data_source_key` values (DS45 HubSpot and DS48 Tealium share one key; Upwave introduced a third duplicate). Root cause is manual SQL INSERT copy-paste that carries over an existing key. One record in prod (data_source_id = 61, AppsFlyer v2) has `data_source_key` saved as the string `'false'`, which is a known anomaly — this prevents adding a simple unique+not-null constraint without first cleaning up the anomalous value. The key is used by at least one vendor API integration for data delivery. A unique constraint and not-null constraint are being evaluated (ticket AUD-5368). (via Macie Kluting, #targeting-squad, 2026-06-08)

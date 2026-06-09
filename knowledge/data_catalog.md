@@ -2560,3 +2560,39 @@ A confirmed data inconsistency exists in the `parent_location_id` field between 
 - **Downstream consumer:** Spark jobs running on Databricks — no downstream SQLMesh dependencies, which is why they appear as leaf nodes in the SQLMesh DAG.
 - **Current status (June 2026):** Running ~6 hours/day and timing out due to bidder data volume explosion (+10x since May 28). Alerts have been added to both jobs.
 - **Performance gotcha:** These models are already running on a large BQ compute reservation. The bottleneck is raw data volume, not compute configuration. The path forward is architectural (Spark/GCS direct access or shared aggregation table), not query tuning. (via Jack Barbey, Weiang Li, scotty, #data-platform, 2026-06-05)
+
+<!-- slack-extracted: 2026-06-09 -->
+- **silver.logdata.cost_impression_log — `ad_served_id` filter behavior**
+
+The filter `ad_served_id IS NOT NULL` in queries against `cost_impression_log` is intended to keep only valid/won impressions by requiring `ad_served_id` to be present. This filter is most relevant when `unlinked = TRUE` (i.e., no `impression_id` was found in `impression_log`, so the row is 'unlinked'). When filtering on `unlinked = FALSE`, adding `ad_served_id IS NOT NULL` is redundant but harmless — empirically, nearly all `unlinked = FALSE` rows have a non-null `ad_served_id` (spot check for 2026-06-01 through 2026-06-07 showed at most 8 rows per day with `unlinked = FALSE` and null `ad_served_id` out of 54–60M daily impressions). All `unlinked = TRUE` rows have a null `ad_served_id`. (via Sonali, #reporting_helpdesk_ask_anything, 2026-06-08)
+- **bidder_win_notifications — data quality issue: empty `geo_version` and null `device_ip` for STICKYADS rows (2026-06-08)**
+
+On 2026-06-08, rows arriving via the STICKYADS inventory source had an empty `geo_version` and a null `device_ip`. This caused two downstream model failures:
+- `cil__impression_info` errored on a hard `geo_version::INT64` cast ("Bad int64 value").
+- `impression_facts` errored because a null `device_ip` produced a NULL element in its `uniques_arr` array.
+
+**Root cause:** Empty `geo_version` is a product of World Cup targeting requirements (skipping the normal closed-loop geo resolution). Null `device_ip` is expected for IPv6 traffic — for IPv6 auctions, the IP is in `device_ipv6` rather than `device_ip`.
+
+**Fix (PR #1033):** Three model-level defensive changes: (1) `NULLIF(geo_version, '') → NULL`, (2) `IGNORE NULLS` on the `uniques_arr` array agg, (3) `SAFE_CAST` on the `geo_version` cast. Affected rows were patched directly down the live chain (`raw → spend_log → cil__impression_info → cost_impression_log`) to restore pipeline. Remaining work: decide whether to populate `device_ip`/`geo_version` earlier in the bidder ingest.
+
+**Spend impact:** None — geo_version and device_ip are not required to charge a customer. The only hard requirement for charging is that the impression appears in both the source (spend_log/win_log) and impression_log. (via scotty, #data-platform, 2026-06-08)
+- **augmentor_identity_daily — new Spark/GCS pipeline architecture**
+
+The `augmentor_identity_daily` pipeline has been redesigned from a monolithic job to a parallelized Airflow DAG running hourly Dataproc batches:
+- **Processing:** Each hourly batch handles one hour of auction log data. 6 batches run in parallel across 4 waves.
+- **Merge step:** A daily merge step at the end aggregates all hourly outputs into the daily output.
+- **Idempotency:** Each batch safely overwrites its output, so failed hours can be rerun independently.
+- **Runtime:** ~40–50 minutes end-to-end for a full day.
+- **Output location:** `gs://mntn-data-archive-dev/identity/augmentor_identity_daily/YYYY-MM-DD/` (Parquet)
+- **Airflow DAG:** `airflow-ti` repo, branch `augmentor_daily`, file `dags/attribution/augmentor_daily_gcs.py`
+- **Hourly processing job:** `spark/auction_log_augmentor_process_gcs.py`
+- **Daily merge job:** `spark/auction_log_augmentor_merge_gcs.py`
+
+Reads directly from GCS parquet sources (not BigQuery tables) to avoid BQ timeout issues. The previous BigQuery-based `augmentor_identity_daily` SQLMesh model was timing out and has been disabled. (via Weiang Li, #identity_core, 2026-06-08)
+- **bid_events_agg and auction_events_agg — BigQuery aggregation performance benchmarks**
+
+Benchmarks from a June 2026 SQLMesh test run (1 hour of data, 2-hour lookback):
+- **bid_events_agg:** 62.7M rows, 5.6 TiB scanned, completed in ~963 seconds (~16 min). ~140× compression vs. raw.
+- **auction_events_agg:** 580M rows, 13.2 TiB scanned, completed in ~1,875 seconds (~31 min). ~9× compression vs. raw. The high slot time is driven by the identity grain (IP columns) plus distinct timestamp aggregation required by the Identity team.
+
+A 2-hour lookback is required to capture late-arriving data. At these scan volumes, running both jobs in BigQuery is likely too slow for production use; Spark-based processing from GCS parquet sources is under evaluation as an alternative. See PR #1037 for the BQ SQLMesh attempt. (via Jane Brooks, #data-platform, 2026-06-08)

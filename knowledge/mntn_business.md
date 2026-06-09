@@ -1053,3 +1053,29 @@ Pause Ads campaigns have been managed manually (including app bundle list config
 - **Automation was deprioritized by the Select team** and has not been implemented.
 - Pause Ads will **no longer be sold as a manual product starting next quarter** (after end of current month). Support is only required through end of the current billing period.
 - A ticket was requested to clarify requirements if deal assignment automation is still needed for any remaining Pause Ads campaigns. (via Meghan Besse, Zafar, Kirsa, #production-ops, 2026-06-05)
+
+<!-- slack-extracted: 2026-06-09 -->
+- **Creative Upload — known incident: MT creatives stuck in 'Analyzing' state (2026-06-08)**
+
+On 2026-06-08, newly uploaded creatives were not progressing past the 'Analyzing' state, potentially affecting all advertisers uploading creatives. 27 advertiser IDs were identified as potentially impacted. A separate but related incident on the same day caused HTTP 500 errors when attempting to create or save Multi-Touch (MT) eligible creatives. Both issues were resolved the same day (confirmed by Jen Wang). JIRA references: PS-8255 (analyzing state), PS-8264 (MT upload 500 error). (via David Rose, #mission-control, 2026-06-08)
+- **Campaign Creative Group IP Bleed monitor — false positive due to creative sequence feature**
+
+An increase in the 'Campaign Creative Group IP Bleed' system signal (alert [629]) observed since 2026-06-02 is a false positive caused by the 'creative sequence' feature released on 2026-06-01. The existing IP bleed monitor does not account for delivery mode sequencing. A ticket is being opened with the DM (Delivery Management) squad to update the monitor to exclude delivery mode sequencing from IP bleed tracking. The bleed increase is not operationally concerning. (via bermudez, #mission-control, 2026-06-08)
+- **Hard-deleting campaign/audience entities — policy**
+
+MNTN does not hard-delete campaigns or audiences from the database. Due to reporting lineage and activity tracking requirements, entities should not be removed even when unused. For campaigns stuck in broken states (e.g., `ACTION_REQ` from a legacy Express campaign post-PTV migration), the preferred remediation is to update a status field to a hidden/inactive state rather than deleting the record. Audiences tied to such campaigns cannot be deleted from the UI until the campaign relationship is resolved. (via ray, #reporting_helpdesk_ask_anything, 2026-06-08)
+- **Express-to-PTV migration — known gap: legacy Express campaigns inaccessible in PTV UI**
+
+When an advertiser is migrated from Express to PTV, their pre-migration Express campaigns remain in the system but cannot be viewed or modified through the PTV UI. Audiences attached to those legacy Express campaigns continue to appear in the PTV audience selector, but cannot be deleted because the underlying campaign relationship still exists and the campaign is in a broken/inaccessible state. MNTN admin cannot fix or stop these campaigns through normal UI flows if the campaign has a broken budget/schedule state. Workaround: manually update the campaign or audience status in the DB to a hidden state. (via Tyler Rauch, #reporting_helpdesk_ask_anything, 2026-06-08)
+- **Stage 2 / Stage 3 campaign shutdown — no bulk tool currently available**
+
+As of June 2026, there is no built-in bulk tool to shut down Stage 2 and Stage 3 campaigns across many campaign groups for a given advertiser. The current approach requires going through Campaign Controls (CC) one campaign group at a time, which fires the necessary side effects to turn off stages in Beeswax and reallocate budget. Applying advertiser-level defaults only affects future campaign groups, not existing ones. A historical script for bulk stage shutdown has existed but is not standardized. Budget reallocation should be spot-checked after manual shutdowns. (via Jordyn Betzer, #production-ops, 2026-06-08)
+- **SQLMesh prod access guard — Cloud Identity API dependency**
+
+Running `sqlmesh plan` locally requires the Cloud Identity API to be enabled in the GCP project being targeted. If the API is disabled (e.g., in `dw-main-gold`), the prod access guard script (`sqlmesh_prod_access_guard.py`) will throw an `HttpError 403` when checking Google Group membership. Resolution: enable the Cloud Identity API in the relevant GCP project via the Google Cloud Console. Changes may take a few minutes to propagate. (via scotty, #data-platform, 2026-06-08)
+- **Sarah (new EA for Richard) — org update**
+
+Sarah has joined as an executive admin for Richard (executive leadership). She will be running key executive initiatives in addition to admin responsibilities. For scheduling with Richard, both Kiana and Sarah should be included while Sarah gets onboarded. (via richard, #engineering-team, 2026-06-08)
+- **SEL (Select) campaign groups on MNTN Bidder — budget configuration issue**
+
+As of 2026-06-08, SEL campaign groups on the MNTN Bidder have budget set at the campaign group (CG) level but not at the campaign ID (CID) level, causing a 'no spend' state. This was identified in the 'no spend check' report and is being addressed via PER-6472 (targeted for completion EOW 2026-06-08). The Select team actively uses the QA environment for development. (via Johnny, #mission-control, 2026-06-08)
