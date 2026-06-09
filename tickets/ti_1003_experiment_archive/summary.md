@@ -43,13 +43,13 @@ Documentation App (manifest → index + detail pages).
 
 ### Phase 1 steps
 1. ✅ Workspace ticket folder
-2. ⬜ Create SteelHouse repo + internal Pages *(gated on confirmations below)*
-3. 🔄 Scaffold build.py + templates + CSS
-4. 🔄 Seed Fangorn (TI-961) + BUK (TI-804) manifests
-5. ⬜ Author remaining manifests (504, 748, 835, 884, 999, 542) + copy chart PNGs
-6. ⬜ deploy.yml (internal Pages)
-7. ⬜ Verify + access-control check
-8. ⬜ Update Jira with bookmarkable URL
+2. ⬜ Create SteelHouse repo + internal Pages *(gated on confirmations below — only remaining blocker)*
+3. ✅ Scaffold build.py + Jinja2 templates + CSS (+ deploy.yml)
+4. ✅ Seed Fangorn (TI-961) + BUK (TI-804) manifests + portfolio.yaml
+5. ✅ Author remaining 6 manifests (504, 748, 835, 884, 999, 542) — drafted from each summary.md + adversarially verified; chart PNGs + decks copied in
+6. ✅ deploy.yml (internal Pages, Phase-2 cron stubbed)
+7. ✅ Verify: all 8 build, every chart/deck ref resolves, screenshots reviewed
+8. ⬜ Update Jira with bookmarkable URL *(after repo + Pages exist)*
 
 ## 4. Investigation & Findings
 - Experiments to seed (8): TI-961/921 Fangorn rollout (live), TI-504 Fangorn RCT, TI-748 Media Plan,
@@ -59,17 +59,50 @@ Documentation App (manifest → index + detail pages).
   `RolloutTierEvaluations.py` (Phase-2 analyzer); `data_documentation_app.md` (precedent).
 
 ## 5. Solution
-*(in progress)*
+**Phase 1 built and verified locally** — the full static archive is done; only repo creation + Pages
+turn-on remain (gated below). Site source: `/Users/malachi/Developer/work/mntn/ti-experiment-archive/`
+(its own git repo, 2 commits). `python3 build.py` → `dist/` renders 8 experiments.
+
+**8 experiments seeded** (scorecard order by sort_rank):
+| id | Title | Headline | Status |
+|----|-------|----------|--------|
+| ti-961 | Fangorn Rollout | +27% IVR (DiD) | live |
+| ti-835 | CTV Incrementality Holdout | ~0% net-new · 2–8x attributed | ongoing (two-story) |
+| ti-804 | BUK Keyword Value | 184x visit-rate lift | concluded |
+| ti-884 | Incrementality Power Limits | $200k/mo spend threshold | concluded |
+| ti-748 | Media Plan Config | +10–17% (new cfg) · −26 to −31% (old) | concluded |
+| ti-999 | 3P Segment Sizing | $103M/yr on 3P; $55M stale | analysis |
+| ti-504 | Fangorn Intent RCT | +41% IVR (2 of 5 advertisers) | concluded |
+| ti-542 | Max Reach Lift | Mixed (heterogeneous by segment) | concluded |
+
+All numbers drafted from each ticket's `summary.md` and adversarially re-verified against the source
+(workflow `ti1003-author-manifests`; verify stage caught + fixed real overstatements, e.g. TI-748 config
+attribution, TI-748 publisher count, TI-504 "2 of 5 significant" not generalized).
+
+**Architecture delivered:** manifest-driven (one YAML/experiment) → `build.py` (Python+Jinja2) → static
+multi-page site. Reused the RevealJS deck palette (`assets/ti-archive.css`) and per-ticket `generate_charts.py`
+PNGs. Two-story experiments use `headline_pair`; live ones get a "live data" note. Adding an experiment =
+drop a YAML + a PNG, rebuild.
 
 ## 6. Questions Answered
-*(in progress)*
+- **Q:** Host? **A:** Internal GitHub Pages (private SteelHouse repo, Pages access-controlled).
+- **Q:** Scope? **A:** Phased — static archive first; auto-refresh + portfolio-$ = Phase 2.
+- **Q:** Impact framing? **A:** Scorecard + caveated range (Phase 2); Phase 1 shows per-experiment headlines.
 
 ## 7. Data Documentation Updates
-*(pending)*
+None (no schema/business-logic discoveries — this is a presentation/tooling ticket).
 
-## 8. Open Items / Follow-ups — MUST CONFIRM before deploy
+## 8. Open Items / Follow-ups
+**MUST CONFIRM before deploy (only remaining blocker):**
 1. Is SteelHouse on GitHub Enterprise Cloud with **Pages access-control** (private-repo Pages restricted to
    org members)? This is what makes "internal GitHub Pages" actually internal.
 2. Can we create `SteelHouse/ti-experiment-archive` (or who creates it)? Owning team / CODEOWNERS?
 3. Are revenue-$ figures + advertiser names OK behind org-SSO Pages, or need masking? (Legal/IT.)
-4. Phase 2 only: GCP service account / WIF provider for BQ read; exact GCS/BQ path Fangorn results land in.
+
+**Content follow-ups:**
+- **TI-542:** shown as "Mixed — heterogeneous by segment"; no aggregate exists (results in the gitignored
+  `ti_542_mullet_performance_report.pdf`). Distill a per-cluster aggregate → real headline number later.
+- **TI-961:** headline is a frozen 2026-06-03 snapshot. Phase 2 wires the weekly auto-refresh.
+
+**Phase 2 (deferred):** weekly live-refresh GitHub Action (headless `RolloutTierEvaluations.py` → live
+manifest); confidence-discounted $ scorecard + caveated portfolio range. GCP WIF/SA + GCS results path TBD.
