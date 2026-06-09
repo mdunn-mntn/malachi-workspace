@@ -338,26 +338,26 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
         gs://mntn-data-archive-prod/ipdsc/dt={DATE}/data_source_id={DS}/*.parquet).
         Going through BQ avoids hand-rolling the GCS layout in this job.
         """
-        # Two parquet/external-table gotchas baked into this query:
-        #   1. `dt` is hive-partitioned as STRING — compare as STRING in WHERE
-        #      (ISO-8601 dates sort lexicographically) and cast to DATE in SELECT.
-        #      Casting in WHERE would defeat partition pruning.
-        #   2. `data_source_category_ids` comes from Parquet legacy LIST encoding
-        #      → BQ surfaces it as `STRUCT<list: ARRAY<STRUCT<element: BIGINT>>>`.
-        #      Alex's sampling_logic expects a plain `ARRAY<BIGINT>`, so we flatten
-        #      with `ARRAY(SELECT element FROM UNNEST(...list))`.
-        return self._bq().query(f"""
-            SELECT
-                ip,
-                DATE(dt) AS event_date,
-                ARRAY(
-                    SELECT CAST(element AS INT64)
-                    FROM UNNEST(data_source_category_ids.list)
-                ) AS data_source_category_ids
-            FROM `dw-main-bronze.external.ipdsc__v1`
-            WHERE data_source_id = {LR_DS_ID}
-              AND dt BETWEEN '{window_start}' AND '{window_end}'
-        """)
+        # Read ipdsc directly from GCS Parquet (NOT via the BQ external table).
+        # Three reasons:
+        #   1. The BQ Spark connector materializes query results to a temp BQ
+        #      table, and 30 days × 103M rows/day exceeds BQ's shuffle limits
+        #      (Resources exceeded error). Direct GCS read bypasses that.
+        #   2. Hive partition pruning via Spark gives the same partition-key
+        #      filter (dt + data_source_id) that the external table provides.
+        #   3. Spark's Parquet reader exposes `data_source_category_ids` as a
+        #      flat ARRAY<BIGINT> directly (NOT the legacy LIST STRUCT that the
+        #      BQ external table wraps it in). Pass it through as-is.
+        ipdsc_path = "gs://mntn-data-archive-prod/ipdsc"
+        return (self.spark.read
+            .parquet(ipdsc_path)
+            .filter(F.col("data_source_id") == LR_DS_ID)
+            .filter(F.col("dt").between(window_start.isoformat(), window_end.isoformat()))
+            .select(
+                F.col("ip"),
+                F.to_date(F.col("dt")).alias("event_date"),
+                F.col("data_source_category_ids"),
+            ))
 
     def _read_seg_meta(self):
         """Segment metadata for staleness axis."""
