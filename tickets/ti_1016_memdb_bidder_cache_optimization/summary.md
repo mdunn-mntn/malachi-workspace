@@ -233,9 +233,10 @@ So the per-IP record gets marginally smaller (fewer segment entries), but the 39
 
 ## 7. Data Documentation Updates
 
-Done (2026-06-09, from the Abbas sys-design walkthrough):
-- `knowledge/data_knowledge.md` — added full **Bidder System Design & Caching Architecture** section (bid path, Aerospike household profile, cache loaders, membership consumer, spend pipeline, future state).
-- `knowledge/data_catalog.md` — added **Aerospike household profile** (IP-keyed serving store) and **ScyllaDB raw-wins / dedup** entries.
+Done (2026-06-09, from the Abbas sys-design walkthrough + Confluence BP pages):
+- `knowledge/data_knowledge.md` — added **Bidder System Design & Caching Architecture** (Abbas walkthrough) **and** a **CANONICAL reference** section from the Confluence BP "Bidder" page: RTB lifecycle terms, all service repos, the dual Beeswax→MNTN-Bidder architecture, price/threshold logic, GCS log lineage. Corrected the `hhs:*` household-profile bin names and resolved the `holdout_cids` grain (per-IP array of campaign_ids).
+- `knowledge/data_catalog.md` — **Aerospike `rtb` namespace** set schemas (`household-profile` / `spend` / `price` / `recency`) + `aql` access; **bidder price + threshold DW tables** (`summarydata.publisher_adsize_metrics`, `sync.creative_metadata`, `dso.*_thresholds`); **GCS log buckets + BQ lineage** (auction logs→`bidder_auction_events`, bid logs→`bidder_bid_events`); ScyllaDB raw-wins.
+- Archived the Confluence "Bidder" page PDF at `documentation/docs/bidder_platform_confluence_reference.pdf`; pulled the "Aerospike Datastore" page via the Confluence REST API.
 
 ## 8. Open Items / Follow-ups
 
