@@ -144,7 +144,7 @@ WHERE s.rn = 1
         # Serverless with bigger workers (64g/16-core × 50 max). Yesterday's
         # 16g/4-core × 100 ran 3+ hours and didn't finish; Alex's profile
         # consistently lands at ~1h.
-        "spark.driver.memory":                          "32g",
+        "spark.driver.memory":                          "16g",  # 32g blew per-core cap (Dataproc Serverless standard tier limits to 7.4 GB/core; driver is 4 cores)
         "spark.dynamicAllocation.minExecutors":         "10",
         "spark.dynamicAllocation.maxExecutors":         "50",
         "spark.dynamicAllocation.executorIdleTimeout":  "600s",
