@@ -1,0 +1,471 @@
+[00:00] I'm going to hit record now. Yeah, that's basically it. Like, I mean, originally I was
+[00:05] just going to have you go through it with me because I was interested, but I know everybody
+[00:10] else was kind of interested in it as well. So I think that, yeah, probably a high level overview
+[00:15] is totally fine. I was just looking for, you know, the whiteboard system design version of
+[00:22] how Bitter operates. And then, you know, if we had maybe some time, I know you said that there's not
+[00:28] really caching being done.
+[00:37] The household profile stuff, right?
+[00:39] Yeah, yeah, that's exactly.
+[00:41] But yeah, I just kind of, you know, I don't think it was meant to be anything in-depth.
+[00:44] I'm sure maybe there might be some questions, but yeah.
+[00:49] Sure, okay.
+[00:51] Let me show my screen while I'm at it.
+[00:53] so this is where I'm going to start off with this is the
+[01:01] this is the design that we currently use for the bit team it might be slightly outdated but
+[01:10] overall it's still correct and like I told you Malachi we're changing a lot in the membership
+[01:17] consumer side of things like we're instead of using aerospec we're going to start using Scylla
+[01:21] We're going to have some deduplication cache so we don't write all the time.
+[01:25] There's a lot going on, and Eric is working on that.
+[01:29] I've actually switched to the performance pacing team,
+[01:32] so I'm no longer exactly privy to all the changes.
+[01:35] But if you want more details, he can talk to you about it.
+[01:38] Okay, so let's start.
+[01:41] You guys know how Bitter works, right?
+[01:44] We take in auctions from the...
+[01:48] Sorry, give me one second.
+[01:51] I got double booked for this meeting as well.
+[01:54] So for the World Cup stuff.
+[01:56] So I just need to answer a quick message.
+[02:09] Okay.
+[02:10] So, all right.
+[02:12] So yeah, we work with exchanges.
+[02:14] Exchanges, what they do is they send us requests.
+[02:17] they send us millions of requests per second and right now we're integrated with a handful of them
+[02:23] so these are the main ones we're working with these are slightly different from what you might
+[02:29] be aware of in the beeswax world because beeswax is kind of a middleman that sits between the
+[02:34] exchanges and us so they aggregate all these requests that come in from the exchange and then
+[02:41] send them down to us we respond back to them and they send it back to the exchange so they're
+[02:45] literally just a middleman. Now that we handle this ourselves, we have better control, but I'm
+[02:51] not going to talk too much about what melting bidder is. That's just the gist of how we capture
+[02:55] requests from the SSPs. So the first thing that happens is the campaign service, we have to figure
+[03:02] out whether or not we actually want to bid on this IP. So that's where we hit the membership
+[03:06] cache first. So the membership cache sits currently in Aerospike. It's basically a snapshot of what
+[03:15] the audience team targeting team does so we contain the things like the geo version the
+[03:21] intense scores the segment scores the segments themselves and now we also have the holdout ips
+[03:31] for example all this sits instead of an arrow spike cache this is in the magnitude of terabytes
+[03:37] of data so it's like three four five sometimes terabytes depending on what data we're storing
+[03:43] and it's supposed to be single millisecond latency so malachi the reason i was telling you we don't
+[03:51] have an in-memory version of this cache inside of the bidder the campaign service here
+[03:56] is because it's hard to store three terabytes worth of data and in memory right um and given
+[04:04] the fact that we have so many different keys so let's say right now i think we are at 300 million
+[04:11] IPs, the odds of a cache hit is very low, even if we were to store like a subset of
+[04:20] that AeroSpy cache.
+[04:21] So let's say we were to store, I don't know, 100,000 keys.
+[04:26] 100,000 keys out of 300 million is very little and doesn't save us much in terms of how many
+[04:31] round trips we need to do to the AeroSpy cache because they're very evenly distributed.
+[04:35] There are some hot IPs, but in the grand scheme of things, it's just not worth it.
+[04:39] So that's our biggest cache. With the household profiles, the one we have to hit every single
+[04:46] time because we always need up-to-date membership data and audience data. There are other caches,
+[04:54] though, that also live in Aerospike, like the spend data, the recency data, there's
+[04:59] the frequency data for frequency capping. There's things like metadata that were slowly
+[05:05] moving outside of aerospike and into redis so that's where you see caches like this sitting
+[05:09] so this is things like the flight data the flight budgets the um like thresholds and things like
+[05:18] that like things that don't really change on um on a day-to-day basis they just exist and they're
+[05:24] like it's like stale data that just lives in redis the bidder also talks to these guys
+[05:29] it pulls these on a scheduled cron we do have we do have goals of making this more real time
+[05:37] because right now the cron job runs let's say every five to ten minutes and let's say a consumer
+[05:42] customer comes and says hey i want to stop my flight right now well that flight's going to
+[05:47] continue running for another 10 minutes due to the fact that this cache is not going to receive
+[05:52] that update immediately so we're going to do a more notification based um more notification
+[05:58] based updates in the future for metadata like that.
+[06:03] Now, how do we populate
+[06:06] this data? Well, that's where you have things like the
+[06:09] cache loaders. So let's look at those. Those ones are the simplest
+[06:13] because of what they do. So here's the cache loaders.
+[06:18] The cache loaders...
+[06:19] So the cache loaders here, what they do is they take... Well, I mean, they come in different shapes and forms.
+[06:26] We have a lot of different cache holders.
+[06:28] The Python ones are the simplest kinds.
+[06:30] These literally just read out of CoreDB or BigQuery.
+[06:34] They take data almost identically copied into Redis.
+[06:40] So you take a JSON blob, you write a JSON blob.
+[06:43] Not a lot of transformations.
+[06:44] Some things do, like the live schedules, for example, for World Cup.
+[06:48] They do a little bit of transformations.
+[06:49] But in general, read from Progres, write to AeroSpike or Redis.
+[06:53] Done job.
+[06:54] Now you have things like the membership consumer, which you guys might be very familiar with.
+[06:59] The membership consumer reads data from GCS.
+[07:03] It takes in these.
+[07:05] So when you guys, let's say, for example, update scores, you write to a bucket.
+[07:11] The bucket creates a GCS event trigger.
+[07:13] That event trigger goes to PubSub and then afterwards into RabbitMQ.
+[07:18] We consume off of RabbitMQ.
+[07:20] the RabbitMQ
+[07:24] is basically
+[07:27] what
+[07:27] it's just like a bunch of messages
+[07:30] with all the URLs of all the
+[07:32] GCS files that we need to process
+[07:34] so the membership consumer
+[07:36] takes the messages from this
+[07:38] from this RabbitMQ
+[07:41] processes those massive
+[07:44] files and then writes them
+[07:46] to
+[07:47] to Aerospike
+[07:50] so let me know if you want more specific details about that um like the logic inside of the
+[07:59] membership consumer or if that's not of interest for the time being yeah that's that's fine um
+[08:06] one of the things that i was curious about um kind of going back just a little bit so in arrow
+[08:11] spike you say that all the information is there since um caching wouldn't really work in this
+[08:17] situation. So I just was under the impression that something of that scale wouldn't be able to
+[08:24] you know, transmit data that quickly, one millisecond, right? And so that's why I was
+[08:30] thinking that, you know, every single time exactly like what you explained that hot IPs
+[08:36] would be stored in cache, and then that would solve the latency issue. But it sounds like
+[08:41] Aerospike is fast enough that when you get that bid request in, you're able to read from that
+[08:47] that arrow spike and give an answer quick enough.
+[08:59] So we have, like, we have, like, 50 milliseconds, right? These calls are single-digit millisecond
+[09:07] in terms of latency. So that's why we're able to still hit the cache. Wait, sorry. Can you
+[09:13] repeat your question? I'm not sure I understood it correctly.
+[09:15] Yeah, so how I understood is that just the time it would take to, you know, search for a specific IP, right, whether or not we're going to bid on it.
+[09:23] I was under the impression that those types of things would take near 100 milliseconds to do, right, on something of the scale of the amount of IPs that we're looking at, right?
+[09:34] So if that's not the case, it sounds like it's not the case, then that kind of answers why I was asking the question about the caching in the first place.
+[09:44] like you're really talking about the aerospike call here right right yeah this like i said this
+[09:50] is a single digit millisecond so that's why we're able to do all these calls directly to the aerospike
+[09:54] cache without having to obviously we do still time out at times but um usually the loading is
+[10:01] within within a reasonable amount of time especially with beeswax um especially the
+[10:06] mountain bitter which we have like 200 milliseconds to respond beeswax is a bit tighter which is why
+[10:10] we time out much sooner. We give it like a 15
+[10:12] millisecond timeout window, but it's
+[10:14] usually able to respond quick
+[10:16] enough. So that's why we're able to have all of the
+[10:18] fucking three terabytes within a cache
+[10:20] instead of having to have something as
+[10:22] instantaneous as Redis
+[10:23] or in memory, for example.
+[10:26] Gotcha. That makes sense.
+[10:32] So
+[10:33] then we have
+[10:36] so yeah, that kind of answers the membership consumer
+[10:38] side of things.
+[10:40] Finally, I mean, this PCS and campaign metadata service,
+[10:44] these are the performance pacing team.
+[10:46] These things write to the static pacing data.
+[10:51] Basically, what it is is like what I was saying,
+[10:55] flight budgets or thresholds or weights or things like that.
+[10:59] These are things that don't change very often.
+[11:00] They have a separate service that just writes to the Redis cache.
+[11:05] Right now, they write to Aerospike,
+[11:07] but they're going to be writing to the Redis cache very soon.
+[11:10] Any questions there?
+[11:12] No, that makes sense to me.
+[11:15] One of the things that you mentioned on scoring, though, that I was curious about is when we update scores and those get updated,
+[11:28] and I think, is it membership DB that those get updated?
+[11:31] Or I guess I'm wondering where do the scores actually stay?
+[11:34] Because what I understood is that the only thing that you guys actually read from is just the segment.
+[11:40] And then you have the IPs in there, right?
+[11:45] So I'm kind of curious where scores are handled.
+[11:49] Sorry, go ahead, Ryan.
+[11:52] Yeah, sorry.
+[11:54] The scores we just write to GCS, like you said.
+[11:57] And then they pick it up from there with that RabbitMQ membership consumer.
+[12:02] and then also
+[12:04] membership DB
+[12:06] writes all the segments out and I assume
+[12:08] that's handled by membership consumer too
+[12:10] exactly
+[12:13] membership consumer handles anything related
+[12:14] to the household profile
+[12:15] when I'm looking at membership
+[12:18] consumer I just want to make sure I understand
+[12:21] what is that representing like the membership
+[12:22] consumer is that like a
+[12:24] series of scripts like
+[12:26] what is
+[12:27] membership consumer is basically something that just
+[12:30] once again, it reads off of RabbitMQ to get the message itself. Then the message just contains
+[12:37] a GCS URL and the membership consumer then downloads that file locally, processes the GCS
+[12:44] file to extract anything that's important. So there's a lot of logic, for example, don't write
+[12:49] that. I mean, we use a novel write to hold out IPs. If the segment list is empty, that means
+[12:55] It's an IP that is no longer important, so delete it.
+[12:59] Then there's things like the intent scores,
+[13:01] which is like groups them and then writes them in one batch
+[13:04] instead of them being all like individual lines
+[13:06] and things like that.
+[13:06] So the membership consumer just does anything
+[13:08] that's related to the household profile.
+[13:11] Is that in Kubernetes?
+[13:15] Sorry?
+[13:16] Is that in Kubernetes?
+[13:19] I didn't hear which side to repeat.
+[13:21] Is that in Kubernetes?
+[13:22] Is that in Kubernetes?
+[13:23] Oh, yeah, it lives in Kubernetes. It's just like a scalable service, right?
+[13:27] Got it.
+[13:28] So that's kind of the idea of what the membership consumer does.
+[13:45] Any more questions?
+[13:48] I don't have any more about that one, no.
+[13:53] Okay, cool.
+[13:56] So following up on the right side,
+[13:58] now we have the spend pipeline,
+[14:01] something you guys might be familiar with as well.
+[14:03] Spend pipeline captures win notifications
+[14:06] from the exchanges or beeswax
+[14:08] and is deduplicating and aggregating spend in real time.
+[14:13] So this is like a within one minute
+[14:15] from start to finish type of pipeline.
+[14:17] We receive the win notifications.
+[14:19] the win notifications are then split into three different aggregators.
+[14:26] We have the aggregator for frequency, we have the aggregator for spend,
+[14:31] and we have the aggregator for logs that go into GCS
+[14:34] for downstream consumers and downstream teams.
+[14:37] All of this happens within this little box here.
+[14:40] Notification service is a standalone service.
+[14:42] It's just like an HTTP web endpoint that the exchanges hit us with.
+[14:46] It's a web callback, basically, webhook.
+[14:50] We write the data into CilDB.
+[14:53] So these are like raw wins.
+[14:55] The CilDB cluster is there for deduplication.
+[14:57] So we make sure that whenever we receive one win,
+[15:00] we don't process it twice,
+[15:01] because that means we're double counting spend,
+[15:03] which is obviously not good.
+[15:05] And then through Kafka, we then consume it in the aggregators.
+[15:10] So these aggregators write to Aerospike once again.
+[15:12] Soon enough, they'll be writing to Redis,
+[15:13] but that's what they're doing currently.
+[15:16] And the spend pipeline is once again, everything in here lives in Kubernetes.
+[15:24] So if you have any questions on where these things are, everything is a Kubernetes service.
+[15:28] It's a scalable, everything's a scalable service because we have very varying patterns.
+[15:34] Like the fucking UT symbol that is going to be crazy.
+[15:36] And then it dies down throughout the middle of the day.
+[15:38] And then it spikes up sometimes for events like Black Friday and whatnot.
+[15:42] So that's why everything was in Kubernetes currently.
+[15:45] Any more questions there?
+[15:49] No, that makes sense.
+[15:50] I'm curious, though.
+[15:51] So like during certain holidays, right, we probably get like a huge uptick in spend and certain things.
+[16:01] So like Black Friday, certain stuff like that.
+[16:03] So in those instances, that's when we'd see, you know, maybe major scaling up.
+[16:12] Yeah.
+[16:12] yeah so the next uh yeah i think the next big event is probably black friday honestly
+[16:18] um yeah i think that's like a very high level overview of what this is in terms of like the
+[16:28] team so there are there's just like i said there's gonna be some changes to the membership
+[16:31] consumer we're actually splitting out the recency stuff and the membership stuff into different
+[16:36] consumers so they're currently they all live inside of the membership consumer but
+[16:40] we're going to be splitting them out. We're likely going to try to read directly from GCS instead of
+[16:46] having to go through RabbitMQ to skip one of those steps and have a faster loading if we can reach
+[16:52] the PubSub limitations. Aerospike we're trying to move off of. That's why we're, you see, that's
+[16:59] where our future is right as Sensility B. And that's the overall architecture of the BID team.
+[17:07] Very simplified, I know, the way I described it,
+[17:10] but I didn't want to bore you guys
+[17:12] with the more nitty-gritty stuff.
+[17:15] But yeah, if you have any questions,
+[17:17] like a Q&A, we can start into that segment
+[17:19] for the next 10 minutes.
+[17:21] Yeah, so when we want to bid,
+[17:23] we respond with a VAST file, right?
+[17:26] Is that correct?
+[17:27] This is in the Mountain Bidder.
+[17:29] So the Mountain Bidder, we give the exchanges
+[17:32] the VAST markup as part of either the bid response
+[17:36] or as part of the notification response,
+[17:38] the win notification response.
+[17:40] Beeswax, on the other hand,
+[17:42] they hit our add markup service directly.
+[17:46] So the exchanges will hit us.
+[17:49] Beeswax will hit us and give it to the exchange.
+[17:52] So once again, Beeswax is just acting
+[17:54] as a proxy and middleman for us.
+[17:57] Got it.
+[17:58] So for mountain bidder, we push the VAS file.
+[18:01] As in like, we want a bid, here's the VAS file
+[18:03] with like the callbacks you care about.
+[18:05] Correct.
+[18:06] Cool.
+[18:07] What's the motive behind switching from AeroSpike to Redis and ScyllaDB?
+[18:16] AeroSpike's...
+[18:17] Yeah, more or less. AeroSpike's expensive, sucks, bad customer support. Decision
+[18:23] that I don't really make here. I don't really make here. But that's the idea. AeroSpike
+[18:30] as well, but Silly Bee is probably going to be a cheaper solution.
+[18:38] Apologies that this is a really simple question.
+[18:41] But one of the things I was noticing
+[18:44] is just when we have include segments
+[18:48] for our Mountain Match campaigns, we essentially add a bunch
+[18:52] of IPs, but they don't get targeted because none of those
+[18:56] have scores at all. So essentially we make
+[18:59] the audience like the segments in that audience like massive but we're still only targeting the
+[19:05] mountain match ips right um and so one of my first thoughts is well we wouldn't want to remove this
+[19:13] from the ui because it's nice to you know for people to see that they got 30 40 million people
+[19:18] in there um that they can target even though we're still only going to target the mountain match
+[19:23] um my question was well do should we just skip the process of storing those ips at all
+[19:29] right because we don't really need to um we're never going to target them right and so i guess
+[19:35] my question to you is that if we were to do something like optimize that right and what
+[19:40] part of this process would um that type of optimization benefit i guess i'm trying to
+[19:47] visualize it here but so you're saying we don't score or we don't send ips that don't have a score
+[19:55] yeah exactly so basically yeah so none of those have
+[20:00] score at all. So they would be essentially part of the audience expression, but we'd still only
+[20:03] target them out and match IPs because they have scores. So basically we've got however many
+[20:08] additional IPs that they've added. I've seen it go as high as 40 million, but we're still only
+[20:15] ever going to target the 1 million, right? So we don't really need to include the other 39 million
+[20:20] IPs that were added because they just, they can't be targeted. I guess if that makes sense.
+[20:25] dude the primary key in arrow spike or whatever is ip address and it's like a list of segments
+[20:32] it's like just getting or for my opinion just getting rid of them for one
+[20:36] audience or whatever it it doesn't it won't decrease the keys they have an arrow spike
+[20:44] if that makes sense gotcha so since ip is that it doesn't really matter it maybe just remove some
+[20:49] yeah things from the ip i thought it was the other way around if yeah like is it
+[20:54] I actually thought it was the other way around as well.
+[20:56] I thought it was the key is IP
+[20:58] and the values are the segments that the IP belongs to.
+[21:04] Yeah, that is.
+[21:07] Yeah, the key is the IP
+[21:08] and segments is one of the fields inside.
+[21:10] But at the end of the day, we need this data
+[21:12] for a bid request comes in and has one IP.
+[21:14] So we get everything related to that bid request,
+[21:17] all the information related to that bid request
+[21:19] and that one request.
+[21:20] Yeah.
+[21:21] Maybe I didn't understand you, Malachi.
+[21:23] But yeah, if you take one segment away from an IP,
+[21:25] it's not going to change the amount of keys they store.
+[21:28] Yeah.
+[21:28] I mean, do we really have the concept of like an IP that has no scores?
+[21:32] Like I would imagine there's like defaulting somewhere.
+[21:35] An IP that has no scores is called an unscored IP.
+[21:39] And we don't bid on those for, I mean,
+[21:42] like if the second we have a household score threshold,
+[21:46] we will no longer bid on those IPs.
+[21:48] So I guess now Kai's question is like,
+[21:51] Is it beneficial to even send those?
+[21:56] Yes.
+[21:58] Like, because the segments are still, what do you mean send them?
+[22:01] Because the segments are still required, right?
+[22:03] We still need to know that information.
+[22:05] Well, like, okay, so let's say we have an IP that is unscored.
+[22:09] So it's not going to be bid on.
+[22:10] It might be targeted in like certain segments, but like that doesn't matter because the bid answer is always going to be, no, we're not going to bid.
+[22:18] does it make sense to like push that to gcs as part of our like refresh we do every couple hours
+[22:25] like i guess are those ips beneficial still to know about in the bitter pipeline without a score
+[22:33] dude there's like yeah all right there's like three inputs to this so it's hard to know
+[22:39] yeah because like we put scores in membership dp puts segments in and that the threshold you know
+[22:46] sets the threshold.
+[22:50] You'd have to know
+[22:51] can I delete this segment if there's no threshold
+[22:57] set and there's no score, or there's no threshold set, I guess, then
+[23:01] you could delete that segment. I don't know
+[23:05] how much that gets you, per se. I would imagine
+[23:09] having the data there for Bitter to make those decisions is probably the best
+[23:13] approach anyway yeah like am i correct i was i was in the sense that like normally you would
+[23:22] prefer people to like push as much information as they can so the bidder can like make those
+[23:29] decisions versus those decisions actually no i guess i don't know if that's like the proper
+[23:34] approach well i guess what my thought process was i didn't realize that we had every ip available
+[23:41] to be bid on. And so I was saying like, well, we sh whatever, it sounds like it's arrow spike,
+[23:46] right? Um, we should only have IPs in there that are eligible to be bid on.
+[23:51] Right. So my thought process is that when we add a new campaign and that give sends a list of all
+[23:57] the IPs that we possibly can bid on, if we only need to send 1 million of those, that's fine.
+[24:02] But it doesn't sound like it works that way. It sounds like just like every single IP that
+[24:05] possibly can be bid on is stored in arrow spike. And the only adjustment is whether or not
+[24:10] a segment is attached to that IP.
+[24:15] Yeah, they delete them.
+[24:16] If membership consumer
+[24:19] says there's no segments attached to this IP,
+[24:22] it'll delete out of there.
+[24:24] Gotcha. That makes sense.
+[24:25] That answers my question.
+[24:33] Yeah, I was just...
+[24:35] Victor, we actually have a call about this
+[24:37] exactly after this, right?
+[24:39] regarding what we can filter out.
+[24:45] I guess, so you have two minutes left.
+[24:47] I guess my one, like, probably larger question would be, like,
+[24:50] how do you feel about Bitter doing the geo-radius versus it happening?
+[24:56] I'm not, I'm nowhere near the geo-radius stuff right now,
+[24:59] so it's hard for me to say.
+[25:00] Fair.
+[25:01] I don't like it because, or I don't like it because of the ghost bit stuff
+[25:05] we're trying to do.
+[25:06] because I noticed
+[25:06] or yeah because we need that holdout
+[25:10] well there's plenty of
+[25:12] IPs that don't have like
+[25:13] MaxMind geo data attached to it
+[25:16] so it's like and the bid request
+[25:18] does have geo information
+[25:19] I'm correct in that for the most part
+[25:22] right
+[25:22] I mean I think
+[25:26] the bid request having geo
+[25:28] I mean that's my understanding
+[25:29] yeah true
+[25:32] but then we're pushing
+[25:34] all that logic for geo targeting into the bidder seems I don't know.
+[25:39] Yeah.
+[25:41] And then for ghost bids, you know, the holdout logic is a membership DB.
+[25:46] That's why I didn't need to.
+[25:48] If we want to do ghost bids on geo stuff, I need to put that logic in the bidder
+[25:52] or figure out something else.
+[25:55] Yeah.
+[25:56] So I guess.
+[25:58] Yeah, I have a question on the
+[26:01] I had a question on filtering you do with IPs and segments, right?
+[26:08] Because my understanding was you take calculated segments
+[26:18] and see how many IPs are there, right?
+[26:21] And if IP not in any segment, you just filter it out, right?
+[26:26] It's more like if the IP has no segments,
+[26:31] then we just straight up delete it.
+[26:34] And the intent score never does that lookup,
+[26:37] which come to think of it, it probably should.
+[26:40] And I need to look if it even works with,
+[26:42] like, that is one thing we can do that.
+[26:44] If the IP has no segments, aka the IP does not exist,
+[26:47] we should not write intent scores.
+[26:49] So I guess for me, it's not clear
+[26:52] because IP has no segments.
+[26:55] I feel like not trivial thing to figure out, right?
+[26:58] I'm just trying to understand how it's getting figured out.
+[27:01] For you to send it to me from like when it comes to the dump that you do to GCS, correct.
+[27:08] I'm not sure how you can go about that.
+[27:10] But on our side, there's probably some conditions that we can apply when we do the arrow spike writes.
+[27:14] Kind of like a conditional write.
+[27:15] Check if IP has content in the segments field.
+[27:19] If so, write it.
+[27:20] If not, then don't.
+[27:21] So for you, it's much, much easier, right?
+[27:24] Correct.
+[27:24] But there's some additional logic that we need to look into if it's even feasible.
+[27:28] And where you get the information?
+[27:29] Do you receive this information from membership DB?
+[27:32] The segments?
+[27:34] Yes, it's from membership DB.
+[27:38] Do you mean active segments?
+[27:40] Correct, active segments.
+[27:42] Okay.
+[27:43] So where would non-active segments be?
+[27:47] Okay, we'll think about LiveRamp's third-party segment,
+[27:50] and nobody's using it,
+[27:51] which is like 99% of the segments that LiveRamp sends us.
+[27:54] Where are those IPs?
+[27:55] Those IPs just don't ever get added to Aerospike
+[27:57] until somebody creates a campaign and adds them?
+[28:00] Yeah.
+[28:01] If an IP is not...
+[28:02] We only store a certain percentage of the IPs.
+[28:04] We're not storing the entire thing.
+[28:05] We're only storing IPs that are actually being used.
+[28:07] Gotcha.
+[28:10] I hate to cut the call short,
+[28:12] but I do need to hop.
+[28:14] Thank you.
+[28:14] Victor as well.
+[28:15] I'm going to have to push back on our meeting
+[28:17] that we had right now.
+[28:18] I need to focus on the World Cup stuff
+[28:19] more than I thought
+[28:20] because I'm getting pulled into another meeting.
+[28:22] Yeah.
+[28:23] Sounds good.
+[28:23] We can reschedule some other time.
+[28:25] Yeah.
+[28:26] We'll reschedule.
+[28:27] Thank you.
+[28:27] Thank you.
+[28:29] All right.
+[28:29] Thanks a lot, guys.
+[28:30] Let me know if you have any questions.
+[28:31] Just ping me or Alkaif.
+[28:33] If you want to set up another meeting with Eric to get some more context on the next
+[28:35] like the next gen membership consumers, feel free to set that up.
+[28:39] Cool.
+[28:40] Thank you.
+[28:40] Thanks a lot.

@@ -1260,6 +1260,65 @@ The Fangorn-on histogram looks like (a) a high floor below 3,300 (~48M scores pe
 
 3. **The "raw Fangorn distribution would be a smooth curve"** intuition is correct, but the scoring job transforms it. The tier-mapping function is piecewise (different mapping for each tier), which creates the discrete-looking shape. If you plotted Fangorn raw 0-1 directly without the tier transformation, you'd see a smoother distribution.
 
+### Bidder System Design & Caching Architecture (Abbas + Ryan, 2026-06-09, TI-1016)
+
+Full bidder-team sys-design walkthrough. Source: `tickets/ti_1016_memdb_bidder_cache_optimization/meetings/ti_1016_02_abbas_bidder_sys_design_caching_2026_06_09.txt`. Confluence: [Aerospike Datastore — Household Profile](https://mntn.atlassian.net/wiki/spaces/BP/pages/2927263763/Aerospike+Datastore#Household-Profile).
+
+**Authority caveat:** Abbas moved to the **performance-pacing team**; the in-flight membership-consumer rework is owned by **Eric** (secondary: **Alkaif**). Treat "future state" items as directional, not locked.
+
+#### End-to-end flow
+
+```
+SSPs (Magnite, Index Exchange, Freewheel, Pubmatic) — millions req/sec
+  │   direct path = "Mountain Bidder";  Beeswax = proxy/middleman (aggregates
+  │   exchange reqs → forwards to us → relays our response back to the exchange)
+  ▼
+Campaign service  — "do we want to bid on this IP?" → hits the membership cache
+  ▼
+Aerospike (HOUSEHOLD PROFILE)  ── KEY = IP ADDRESS, value = record w/ fields:
+  segments, intent scores, segment scores, geo version, holdout IPs
+  • ~300M IP keys, 3–5 TB, single-digit-ms latency
+  • hit DIRECTLY every bid (no in-bidder in-memory tier: 3TB too big, and with
+    300M evenly-distributed keys a subset cache has ~0 hit rate → not worth it)
+  ▼
+bid decision → VAST markup returned (Mountain Bidder: in bid resp or win-notif
+  resp; Beeswax: hits the ad-markup service directly)
+
+SPEND PIPELINE (right side):
+SSP/Beeswax win-notif → Notification service (HTTP webhook) → raw wins to
+  ScyllaDB (DEDUP — each win once, no double-counted spend) → Kafka →
+  3 aggregators {frequency, spend, logs→GCS}  (whole pipeline ≈ 1 min)
+```
+
+**Latency budgets:** Mountain Bidder ~**200 ms** to respond; **Beeswax tighter, 15 ms** timeout window; Aerospike lookups single-digit ms.
+
+#### Storage tiers — what lives where
+
+- **Aerospike (hot, per-IP, must be fresh):** household profile (segments + intent scores + segment scores + geo + holdout IPs), **spend data, recency data, frequency data** (freq capping), and currently metadata.
+- **Redis (slow-changing "static" data):** flight data, flight budgets, thresholds, weights — anything that doesn't change day-to-day. Bidder pulls Redis metadata on a **cron every 5–10 min** (NOT real-time → a stopped flight can keep spending up to ~10 min until the next pull; roadmap = notification-based updates).
+- **Migration:** Aerospike → **ScyllaDB** ("our future is Scylla") + Redis. Driver: Aerospike is expensive / poor support; Scylla cheaper. Decision above Abbas.
+
+#### How data lands in the caches (loaders)
+
+1. **Python cache loaders (simplest):** read **CoreDB (Postgres) or BigQuery** → write near-identical JSON blobs to Redis/Aerospike. Minimal transforms (live schedules e.g. World Cup do a little).
+2. **Membership consumer (the path TI scores travel):** scoring team writes scores to a **GCS bucket** → GCS event trigger → **PubSub** → **RabbitMQ** (messages carry GCS file URLs). Consumer downloads + processes the (large) file → writes **Aerospike**. Logic: intent scores **batched** (not line-by-line); **IP with empty segment list → deleted** from Aerospike; special handling for holdout IPs. Runs in **Kubernetes**. Handles everything household-profile-related.
+3. **PCS (Pacing Controller Service) + Campaign Metadata Service (CMS):** perf-pacing team write the **static pacing data** (flight budgets/thresholds/weights) via a separate service → currently Aerospike, moving to Redis.
+
+#### Where scores live (resolves a recurring question)
+
+**Intent/MM scores are NOT stored in MembershipDB.** Scoring team → **GCS** (durable source) → membership consumer → **Aerospike** (serving copy). MembershipDB emits the **segments**; the membership consumer writes those too. So: GCS = system of record for scores, Aerospike = bid-time serving store, MembershipDB = segment/membership authority + holdout logic.
+
+#### Holdout logic (ghost-bidding / BER-2250 relevance)
+
+**Holdout logic lives in MembershipDB**; holdout IPs are mirrored into the Aerospike household profile. Ryan flagged that moving **geo-radius targeting into the bidder** would force the ghost-bid holdout logic to move there too (or a new mechanism) — a reason to be cautious about pushing geo logic bidder-side. Many IPs lack MaxMind geo data; the bid request itself carries geo.
+
+#### In-flight / future state (low-confidence — confirm w/ Eric)
+
+- Adding a **dedup cache** on the membership-consumer write path (don't write every time).
+- **Splitting the membership consumer** into separate **recency** and **membership** consumers.
+- Likely **read GCS directly**, skipping RabbitMQ, if PubSub limits allow.
+- Optimization surfaced (TI-1016): **don't write intent scores for IPs that have no segments** — the score-write path currently skips that check; Abbas + Ryan agree it "probably should" (a conditional write). The original "don't store 3P-OR-include IPs" idea is largely inert because key = IP and only in-use IPs are stored.
+
 ### HHST — what it is and what gates it (Ryan Kleck, 2026-06-01)
 
 **HHST = Household Score Threshold.** A campaign-level (or advertiser-level — see below) threshold setting that controls whether the bidder uses MM/RTC/Fangorn scores to gate bidding.
