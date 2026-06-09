@@ -89,8 +89,14 @@ multi-page site. Reused the RevealJS deck palette (`assets/ti-archive.css`). Two
   carries the headline; dropped where no clean comparison fits. No more image clutter.
 - Each page now shows **every KPI the experiment moved**, with the top 1–2 highlighted (per user: "show all
   impacted KPIs, highlight the top ones").
-- Landing leads with a **Top results** band (BUK 184x, Fangorn +27%, RCT +41%, 3P $103M) above the full scorecard.
-- Adding an experiment = drop one YAML (with a small `chart:` + `kpis:` block), rebuild. No image assets needed.
+- Landing is **KPI-centric** ("What TI has moved"): experiments grouped by a canonical `metric` (ivr,
+  incrementality, spend_3p, measurement) — KPI as the card title, each contributing experiment's movement
+  below. Scales as we add experiments: a new ticket just declares `metric: <key>` to join a KPI group.
+- Headline color encodes result type via `tone` (win=red, opportunity=blue, neutral=navy); per-experiment
+  KPI cards are KPI-name-as-title with the movement below; scorecard rows realigned (badge centered).
+- Fixed a real CSS bug: `.big-number` letter-spacing inherited as an absolute length into the small two-story
+  pair labels and jammed the letters — reset to normal.
+- Adding an experiment = drop one YAML (`tone`, `metric`, inline `chart:`, `kpis:`), rebuild. No image assets.
 
 **Data-integrity catch:** the chart/KPI extraction agents **fabricated** per-cluster numbers for TI-542
 (Max Reach) — its `summary.md` has no numbers, the notebook outputs were stripped, and the only artifact is a
