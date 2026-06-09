@@ -302,6 +302,11 @@ astro dev start
 - **Parquet legacy LIST fields** (`pmp`, `iab_categories`, `mntn_segments` in augmentor_log): schema is `struct<list: array<struct<element: T>>>`. `F.size(F.col("pmp.list"))` fails. Use `F.col("pmp").isNotNull()` workaround.
 - **Always check parquet schema** before writing aggregations — silver views and raw parquet have different type representations.
 
+## BQ reader gotchas (TI-956 lessons)
+
+- **`self.read_model("bigquery_data.BQ").query("SELECT ...")` returns a DataFrame directly.** Do NOT chain `.load()` afterwards — that's only for model-registry readers like `read_model("fangorn_vertex_predictions.FangornVertexPredictions").load(...)`. If you accidentally add `.load()` to a `.query(...)` chain you get `AttributeError: 'DataFrame' object has no attribute 'load'` at batch runtime (not at compile — model_upload.py --dryrun passes).
+- **`.query()` materializes via the spark-bigquery connector**, which writes the result to a temp BQ table before reading. For large windows (≥30d of impression-level data) you'll hit BQ's "Resources exceeded during query execution" on the materialization step. For ipdsc specifically, read from raw GCS Parquet instead (see `knowledge/data_knowledge.md` § ipdsc external table for the pattern).
+
 ## Framework gotchas (TI-832 lessons)
 
 - **Always `git pull origin main` before `model_upload.py` on a stacked or rebased branch.** The framework determines which models read from prod-vs-dev by running `git diff main --name-only models/` at compile time. If your local `main` ref is stale and doesn't include a recently-merged PR, every model touched in that PR will look "modified" on your branch — the framework routes their reads to the dev path with your branch suffix (which doesn't exist) and your Dataproc job will crash on `NoneType.select` when an upstream model loads. Symptom: log shows `checking gs://mntn-data-archive-dev/.../<upstream_model>_<your_branch_suffix>/dt=… False` for many days. Fix: `git checkout main && git pull origin main`, switch back to your branch, re-upload, re-run.
