@@ -2402,6 +2402,22 @@ Not BigQuery tables — these are the bidder team's serving stores. Cataloged he
 - **Aerospike — household profile:** the bid-time membership cache. **Primary key = IP address**; value record holds `segments`, intent scores, segment scores, geo version, and holdout IPs. ~300M IP keys, 3–5 TB, single-digit-ms latency, hit on every bid. Populated by the **membership consumer** (GCS→PubSub→RabbitMQ→Aerospike) for household-profile data, and by **Python cache loaders** (CoreDB/BigQuery→Aerospike/Redis) for other data. **Lineage implication:** bid-side BQ tables (`bidder_bid_events`, etc.) do NOT carry segments/scores because those are read from Aerospike at bid time, not logged into the event. Scores' durable system-of-record is **GCS**, not MembershipDB.
 - **ScyllaDB — raw wins (spend pipeline):** the **Notification service** (HTTP webhook hit by SSPs/Beeswax on win) writes **raw wins** into a ScyllaDB cluster used for **deduplication** (each win processed once → no double-counted spend). Downstream via **Kafka** into 3 aggregators — frequency, spend, and a **logs aggregator that writes to GCS** for downstream teams (the upstream of BQ spend/win tables). Whole pipeline ≈ 1 minute. Aggregators currently write Aerospike (→ Redis soon). Distinct from the `partner_sync_by_advertiser_v3` ScyllaDB use above.
 - **Migration note:** the bidder is moving **Aerospike → ScyllaDB** + Redis (cost / support). Treat Aerospike references as current-state, Scylla as future-state.
+- ### Bidder price + threshold tables (Confluence BP "Bidder" page, 2026-06-09)
+
+The DW tables the bidder reads to set bid price and evaluate eligibility. Canonical source: [Bidder (BP space)](https://mntn.atlassian.net/wiki/spaces/BP/pages/1860010029/Bidder) → `documentation/docs/bidder_platform_confluence_reference.pdf`. Architecture detail in `knowledge/data_knowledge.md` § "Bidder — CANONICAL reference".
+
+- **`summarydata.publisher_adsize_metrics`** — the bid-price source. Avg **CPI** = avg of win prices over the **last 3 days**, per publisher × ad size (`site, width, height, duration`). Columns: `site, width, height, duration, avg_cpi, min_cpi, max_cpi, viewability_rate, score`. `avg_cpi` drives bid price (vs Publisher Price Threshold); `score` = publisher performance score. No price for an ad size → fall back to avg CPM for that ad size across all publishers.
+- **`logdata.publisher_adsize_metrics`** — same column shape, used for the **viewability** check (`viewability_rate` vs Viewability Score Threshold). Distinct from the `summarydata` view (price). Don't conflate the two.
+- **`sync.creative_metadata`** — per-creative/campaign bidder config. `pace_multiplier` (numeric, default 1; ×base price → final bid price; updated by DCO). Threshold columns: `recency_threshold`, `recency_floor_threshold`, `household_score_threshold` (HHST), `viewability_score_threshold`, `publisher_price_threshold`. **Null OR zero → threshold not evaluated.**
+- **`dso.*` threshold tables:** `dso.recency_score_thresholds`, `dso.household_score_thresholds` (HHST; IP score value source = `tpa`), `dso.viewability_score_thresholds`, `dso.cpm_thresholds` (publisher price), `dso.publisher_performance_thresholds` + `dso.network_performance_threshold`.
+- **Recency:** epoch of last visit to the campaign's AID, source `vast_impression` / guidv2 Kafka stream. Eligible iff `recency_floor_threshold < recency_duration < recency_threshold`. Recency Threshold = MAX age; Recency Floor = MIN age. UTC unless stated.
+- ### Bidder event logs — GCS buckets + BQ lineage (Confluence BP, 2026-06-09)
+
+- **Auction logs** (fka "augmentor" logs) → `bidder-auction-events-prod-{east,west}` → BQ **`bidder_auction_events`**.
+- **Bid logs** (fka "bid price logs" / "BPL") → `bidder-bid-events-prod-{east,west}` → BQ **`bidder_bid_events`** / `bid_events_log` / `bid_attempted_log`.
+- **Win notifications** → `bidder-win-notifications-{dev,prod}-central` (NURL via HTTP from SSPs/Beeswax).
+- Beeswax-era logs live under `/topics/rtb-bid-events/` and `/topics/rtb-bid-price-events/`; MNTN-Bidder-era logs under `/v2/`. Example: `gs://bidder-bid-events-prod-east/v2/2026-05-11/11/`.
+- Wins are written raw to **`rtb.wins` (ScyllaDB)** by the notification service (dedup), then CDC→Kafka→win-aggregator writes win logs to GCS. So GCS win logs are the upstream of any BQ win/spend table.
 - ### audience.advertiser_configurations — vertical_data_source column
 
 - **Table:** `audience.advertiser_configurations` (Postgres/coredw, replicated to reportingprod and archive)

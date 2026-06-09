@@ -1319,6 +1319,75 @@ SSP/Beeswax win-notif → Notification service (HTTP webhook) → raw wins to
 - Likely **read GCS directly**, skipping RabbitMQ, if PubSub limits allow.
 - Optimization surfaced (TI-1016): **don't write intent scores for IPs that have no segments** — the score-write path currently skips that check; Abbas + Ryan agree it "probably should" (a conditional write). The original "don't store 3P-OR-include IPs" idea is largely inert because key = IP and only in-use IPs are stored.
 
+### Bidder — CANONICAL reference (Confluence BP space, captured 2026-06-09)
+
+Source of truth for the bidder platform. Confluence: [Bidder (BP space)](https://mntn.atlassian.net/wiki/spaces/BP/pages/1860010029/Bidder). Local copy: `documentation/docs/bidder_platform_confluence_reference.pdf`. Where this conflicts with meeting notes above, **this wins** (it's the maintained reference). The Abbas section above adds operational color (latency budgets, current ownership, migration status) not in the wiki.
+
+**What the bidder does:** decides whether MNTN should bid on a given impression, based on (a) the price MNTN is willing to pay and (b) a set of metrics evaluated against thresholds. Built on **OpenRTB 2.5** + Beeswax's proto tweaks (`openrtb.proto`, `openrtb_common.proto`). Historically a custom bidder agent inside Beeswax; being replaced by the in-house **"MNTN Bidder."**
+
+**RTB lifecycle terminology (memorize — used everywhere):**
+1. **Auction** ("bid request") = we're told about an opportunity.
+2. **Bid** ("bid response") = we submit a price for a campaign on that auction.
+3. **Win** = our bid won the auction. **win rate = wins / bids.**
+4. **Impression** ("imp") = the winning creative is actually shown. **use rate = imps / wins.**
+
+#### Three service groups (each is a repo under github.com/SteelHouse)
+
+**A. Cache loaders** — make data from other sources low-latency-accessible to the bidding services (so the hot path never queries Postgres directly). Three:
+
+1. **membership-consumer** — receives household-profile updates (IP → segments) from the targeting team and records them in **Aerospike**; also consumes impression/pixel hits. Deployments:
+   - **cse** = live membership consumer (reads **Kafka** → Aerospike)
+   - **oracle** = batch membership consumer (reads **GCS** → Aerospike)  ← this is the path TI score dumps travel
+   - **recency** = recency consumer (reads Kafka → Aerospike)
+   - *(Reconciles Abbas's "splitting recency vs membership": the repo already has these as distinct deployments; the work is making them independent services.)*
+2. **rtb-cache-loaders** — services that periodically read **Postgres → Aerospike**, fully replacing a data set each run. Caches: `deals` (PMPs + Exclusives — generally MNTN Select / MSS info), `settings` (PMPs + Exclusives), `segment-mapping` (Beeswax segment ids ↔ Mountain segment ids), plus creatives, publisher pricing, "many more." Source Postgres tables are in the repo's queries.
+3. **beeswax-audience-consumer** — pushes audience user-id + segment keys to Beeswax over HTTP (so Beeswax recognizes our segment ids), from Kafka. **Goes away once MNTN Bidder is fully released** (all campaign groups migrated).
+
+Plus a special one owned by **Performance Pacing (PER squad)**: **campaign-metadata-service (CMS)** — writes pacing data calculated by PER, read by the JVM bidder / campaign service.
+
+**B. Bidding services** — billions of daily bid requests → a bidding service → bids on behalf of eligible campaigns. Generate two critical log streams: **"auction" logs (fka "augmentor" logs)** and **"bid" logs (fka "bid price logs" / "BPL")**. Two eras run in parallel during migration:
+
+- **Beeswax era (being retired):**
+  - **rtb-augmentor-service-rs** — reviews the incoming auction request, responds to Beeswax with applicable segment ids + creative specs (single-digit ms, using cache-loader caches). Writes **auction logs**. Caches: `household-profiles` (= segments for IPs), `segment-mapping`.
+  - **rtb-bidder-service (JVM Bidder)** — Beeswax sends it the eligible campaigns; it produces bids/campaign, handling **pacing (IHP = In-House Pacing), fcap, pricing**. **Beeswax quirk: we don't learn win/loss until much later (minutes) via the spend pipeline** — significant downstream implication. Writes **bid logs**. Its `household-profiles` cache = "everything but segments" — `geo_version`, `timestamp`, `is:timestamp`, `is:segment:ttl`, `is:campaign` (~63% of records), `is:advertiser` (~35%), `is:segment` (empty map), `segments` (~4%). Also caches `recency`, `settings`, `spend`, `price`, `bid volume`/`inflight bids` (IHP).
+- **MNTN Bidder era (going forward):**
+  - **rtb-campaign-service (Campaign service)** — the unified bidder. Receives auction notifications, checks IP + creative specs against campaign segments, calculates and returns bids (or no-bid). Effectively the old Augmentor **plus** Bidder collapsed into one (it calls the **Pacing Engine** internally instead of handing off to Beeswax). Writes **both** auction + bid logs (in the `/v2/` GCS folder space). Caches: **Redis** (internal fcap tracking) + **Aerospike** (`frequency` = per-IP wins from the spend pipeline; `household-profiles` = segments for IPs).
+  - **Pacing Engine** = the JVM Bidder re-written as a **Rust crate inside the campaign service**; supports PTV, Select, Media Plan (same pacing behavior reused across products).
+
+**C. Spend pipeline** — records auction wins → tracks spend + frequency (feeds pacing/fcap and "win" logs). Critical; dropping data is very bad. Three services:
+
+1. **rtb-notification-service-rs** — SSPs (incl. Beeswax) fire **win notifications ("NURL")** via HTTP (we hand them the NURL in bid responses). Writes to **ScyllaDB** for **dedup**, and the write triggers **CDC** events onto a Kafka topic. Future: also loss/billing notifications (**LURL** + **BURL**) — not supported by all SSPs (e.g. Magnite doesn't). Cache: **`rtb.wins` (ScyllaDB)** = wins tracking.
+2. **rtb-win-aggregator-service** — consumes the CDC Kafka topic three ways: (i) update **spend in Aerospike** (for IHP), (ii) **write win logs to GCS**, (iii) update **frequency in Aerospike** (for fcap).
+3. **rtb-impression-consumer-service** — listens to the **`vast_impression` Kafka topic** from ad_service (via events service) to learn which wins actually rendered; updates ScyllaDB with `impression_timestamp` for `mntn_auction_id`. **SSP-only** (Beeswax only sends wins that already have impressions). *(This is the diagram's "Impression service / VAST Start consumer.")*
+
+Shared repos: `rtb-rs` (config/logging crates), `rtb-proto` (shared protos; builds python/rust/kotlin), `bidder-automation-core` (e2e test libs), `rtb-performance-test` (Locust).
+
+#### Price + threshold logic — the analyst-facing DW tables (high value)
+
+**Bid price.** Comes from the DW view **`summarydata.publisher_adsize_metrics`** = average CPI (avg of win prices over the **last 3 days**) per publisher × ad size (Height × Width × duration). If no price for the requested ad size → fall back to avg CPM for that ad size across all publishers. The base price is scaled per-campaign by **`pace_multiplier`** in **`sync.creative_metadata`** (default 1; DCO updates the underlying table).
+
+**Eligibility thresholds.** Each creative has thresholds from **`sync.creative_metadata`**: `recency_threshold`, `recency_floor_threshold`, `household_score_threshold`, `viewability_score_threshold`, `publisher_price_threshold`. **A threshold with a null or zero value is not evaluated.** If any evaluated threshold fails, the creative is ineligible for that impression.
+
+| Threshold | Metric it's compared to | Threshold table (`dso.*`) | Rule |
+|-----------|------------------------|---------------------------|------|
+| **Recency** + **Recency Floor** | `recency` = epoch of last visit to the campaign's AID (source: `vast_impression`, guidv2 Kafka stream), converted to a duration | `dso.recency_score_thresholds` | eligible iff `recency_floor < recency_duration < recency_threshold`; missing bound = that side not checked |
+| **Household Score (HHST)** | IP's household score (value source: `tpa`) | `dso.household_score_thresholds` | score ≥ threshold to bid (below → ineligible) |
+| **Viewability Score** | `viewability_rate` in **`logdata.publisher_adsize_metrics`** | `dso.viewability_score_thresholds` | publisher viewability ≥ threshold |
+| **Publisher Price** | `avg_cpi` in `summarydata.publisher_adsize_metrics` (also the value used in bid-price calc) | `dso.cpm_thresholds` | bid only if publisher price ≤ threshold |
+| **Publisher Performance** | `score` in `summarydata.publisher_adsize_metrics` | `dso.publisher_performance_thresholds` + `dso.network_performance_threshold` | performance score ≥ threshold |
+
+`publisher_adsize_metrics` columns: `site, width, height, duration, avg_cpi, min_cpi, max_cpi, viewability_rate, score`. Note the **two views**: `summarydata.publisher_adsize_metrics` (price) and `logdata.publisher_adsize_metrics` (viewability).
+
+**Recency Threshold = MAXIMUM age** ("don't show if last visit older than X"); **Recency Floor = MINIMUM age** ("don't show if visited more recently than Y"). Worked examples: 30-min recency threshold + 15-min-ago visit → eligible; 10-min floor + 5-min-ago visit → ineligible.
+
+**Ghost Bids:** advertisers measure incrementality via **holdout segments** — the bidder logs a **Bid Drop Reason as late as possible** as a `ghost-bid`, so Reporting can query them downstream. (Ties to BER-2250.)
+
+#### GCS log buckets
+
+- Auctions: `bidder-auction-events-prod-{east,west}` ; Bids: `bidder-bid-events-prod-{east,west}` (Beeswax era under `/topics/rtb-bid-events/` & `/topics/rtb-bid-price-events/`; MNTN-Bidder era under `/v2/`).
+- Wins: `bidder-win-notifications-{dev,prod}-central`.
+- **Log-lineage note for BQ:** `bidder_auction_events` ← "auction" logs (fka augmentor logs); `bidder_bid_events` ← "bid" logs (fka bid price logs / BPL). CDC = Change Data Control.
+
 ### HHST — what it is and what gates it (Ryan Kleck, 2026-06-01)
 
 **HHST = Household Score Threshold.** A campaign-level (or advertiser-level — see below) threshold setting that controls whether the bidder uses MM/RTC/Fangorn scores to gate bidding.
