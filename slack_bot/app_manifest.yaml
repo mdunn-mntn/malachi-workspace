@@ -1,0 +1,25 @@
+# Slack app manifest for the Knowledge Extractor bot.
+# Recreate the deleted app in one step:
+#   api.slack.com/apps → Create New App → From a manifest → MNTN workspace → paste this.
+# After creation: Install to Workspace (triggers admin approval), then copy the
+# Bot User OAuth Token (xoxb-...) into ~/slack_bot_env.sh on the Pi as SLACK_BOT_TOKEN.
+display_information:
+  name: Knowledge Extractor
+  description: Read-only daily scraper that extracts engineering knowledge from channels into the TI workspace knowledge base.
+  background_color: "#1f2d3d"
+features:
+  bot_user:
+    display_name: Knowledge Extractor
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - channels:read      # conversations_list (public)
+      - groups:read        # conversations_list (private)
+      - channels:history   # conversations_history / _replies (public)
+      - groups:history     # conversations_history / _replies (private)
+      - users:read         # users_info — resolve IDs to names
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
