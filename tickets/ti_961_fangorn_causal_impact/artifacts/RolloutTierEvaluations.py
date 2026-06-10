@@ -1178,6 +1178,141 @@ def did_inference(treated, control, num, den, n_boot=DID_N_BOOT):
     }
 
 
+# ───────────────────────────────────────────────────────────────────────
+# CUPED variance reduction (Deng, Xu, Kohavi, Walker 2013 — Microsoft)
+# ───────────────────────────────────────────────────────────────────────
+# Uses per-advertiser pre-period rate as a covariate to reduce variance on
+# the post-period estimate. For each advertiser:
+#
+#     adjusted_post_rate = post_rate − θ × (pre_rate − mean(pre_rate))
+#
+# where θ = Cov(post_rate, pre_rate) / Var(pre_rate) estimated on the
+# POOLED treated+control sample (no treatment information used). Variance
+# of the adjusted post-rate = Var(post_rate) × (1 − ρ²) where ρ is the
+# pre/post correlation. Typical CVR/IVR ρ ≈ 0.5-0.8 → 25-65% variance
+# reduction. Free statistical power on existing data, no design change.
+#
+# Important: θ is pooled across treated+control to avoid leaking
+# treatment information. Bias is preserved; variance is reduced.
+
+def _per_aid_rates(wide_df: pd.DataFrame, num: str, den: str):
+    """Per-advertiser pre and post rates (visit-weighted at advertiser level)."""
+    pre  = np.where(wide_df[f"{den}_pre"]  > 0,
+                    wide_df[f"{num}_pre"]  / wide_df[f"{den}_pre"],  np.nan)
+    post = np.where(wide_df[f"{den}_post"] > 0,
+                    wide_df[f"{num}_post"] / wide_df[f"{den}_post"], np.nan)
+    return pre, post
+
+
+def _cuped_theta_and_rho(treated, control, num, den):
+    """Estimate θ (CUPED slope) and ρ (pre/post correlation) on pooled
+    treated+control advertiser-level rates. Returns (theta, rho, mean_pre,
+    n_valid)."""
+    t_pre, t_post = _per_aid_rates(treated, num, den)
+    c_pre, c_post = _per_aid_rates(control, num, den)
+    pre  = np.concatenate([t_pre,  c_pre])
+    post = np.concatenate([t_post, c_post])
+    mask = ~(np.isnan(pre) | np.isnan(post))
+    if mask.sum() < 10:
+        return 0.0, 0.0, 0.0, int(mask.sum())
+    pre_c, post_c = pre[mask], post[mask]
+    var_pre = float(np.var(pre_c, ddof=1))
+    if var_pre <= 0:
+        return 0.0, 0.0, float(np.mean(pre_c)), int(mask.sum())
+    cov_pp = float(np.cov(pre_c, post_c, ddof=1)[0, 1])
+    var_post = float(np.var(post_c, ddof=1))
+    theta = cov_pp / var_pre
+    rho   = cov_pp / float(np.sqrt(var_pre * var_post)) if var_post > 0 else 0.0
+    return theta, rho, float(np.mean(pre_c)), int(mask.sum())
+
+
+def _cuped_adjusted_post_rate(wide_df, num, den, theta, mean_pre):
+    """For each advertiser, adjusted post rate. Falls back to raw post when
+    pre is NaN (no penalty / no boost)."""
+    pre, post = _per_aid_rates(wide_df, num, den)
+    adj = post - theta * (pre - mean_pre)
+    # When pre is NaN, the adjustment is undefined — fall back to raw post
+    adj = np.where(np.isnan(pre), post, adj)
+    return adj
+
+
+def _did_lift_cuped(treated, control, num, den, theta, mean_pre):
+    """CUPED-adjusted DiD lift. θ and mean_pre are pre-computed on the
+    full cohort (passed in so bootstrap resamples don't re-estimate θ)."""
+    t_adj = _cuped_adjusted_post_rate(treated, num, den, theta, mean_pre)
+    c_adj = _cuped_adjusted_post_rate(control, num, den, theta, mean_pre)
+
+    # Visit-weighted means (match pooled-rate semantics)
+    t_weights = treated[f"{den}_post"].values.astype(float)
+    c_weights = control[f"{den}_post"].values.astype(float)
+    t_mask = ~np.isnan(t_adj) & (t_weights > 0)
+    c_mask = ~np.isnan(c_adj) & (c_weights > 0)
+    if t_mask.sum() == 0 or c_mask.sum() == 0:
+        return float("nan")
+
+    t_post_avg = float(np.average(t_adj[t_mask], weights=t_weights[t_mask]))
+    c_post_avg = float(np.average(c_adj[c_mask], weights=c_weights[c_mask]))
+
+    # Pre rates use the standard pooled (sum-num / sum-den) form unchanged
+    t_pre = treated[f"{num}_pre"].sum() / max(treated[f"{den}_pre"].sum(), 1.0)
+    c_pre = control[f"{num}_pre"].sum() / max(control[f"{den}_pre"].sum(), 1.0)
+    if not all([t_pre, c_pre, c_post_avg]):
+        return float("nan")
+    return (t_post_avg / t_pre) / (c_post_avg / c_pre) - 1
+
+
+def _did_bootstrap_cuped(treated, control, num, den, theta, mean_pre,
+                          n_boot=DID_N_BOOT, seed=DID_SEED):
+    """Cluster bootstrap on CUPED-adjusted DiD lift. θ is held FIXED across
+    resamples (estimated once on the full sample) — this preserves the
+    variance-reduction guarantee. Re-estimating θ per resample would
+    inflate variance and defeat the purpose."""
+    rng = np.random.default_rng(seed)
+    n_t, n_c = len(treated), len(control)
+    if n_t == 0 or n_c == 0:
+        return np.array([])
+    t_arr = treated.reset_index(drop=True)
+    c_arr = control.reset_index(drop=True)
+    boot = np.empty(n_boot, dtype=float)
+    for i in range(n_boot):
+        t_idx = rng.integers(0, n_t, n_t)
+        c_idx = rng.integers(0, n_c, n_c)
+        boot[i] = _did_lift_cuped(
+            t_arr.iloc[t_idx], c_arr.iloc[c_idx], num, den, theta, mean_pre
+        )
+    return boot[~np.isnan(boot)]
+
+
+def did_inference_cuped(treated, control, num, den, n_boot=DID_N_BOOT):
+    """CUPED-adjusted DiD inference. Returns same dict as did_inference plus
+    cuped diagnostics: theta, rho, pred_var_reduction_pct (= 1 − ρ²)."""
+    theta, rho, mean_pre, n_valid = _cuped_theta_and_rho(treated, control, num, den)
+    point = _did_lift_cuped(treated, control, num, den, theta, mean_pre)
+    boot  = _did_bootstrap_cuped(treated, control, num, den, theta, mean_pre, n_boot=n_boot)
+    base = {
+        "cuped_theta":              float(theta),
+        "cuped_rho":                float(rho),
+        "cuped_var_reduction_pct":  float((1 - rho ** 2) * 100),
+        "cuped_n_valid_advs":       int(n_valid),
+    }
+    if len(boot) == 0:
+        return {**base, "point": point, "se": float("nan"),
+                "ci_95_lower": float("nan"), "ci_95_upper": float("nan"),
+                "p_value": float("nan"),
+                "n_t_aids": len(treated), "n_c_aids": len(control), "n_boot": 0}
+    return {
+        **base,
+        "point":        point,
+        "se":           float(boot.std()),
+        "ci_95_lower":  float(np.percentile(boot, 2.5)),
+        "ci_95_upper":  float(np.percentile(boot, 97.5)),
+        "p_value":      float(2 * min((boot >= 0).mean(), (boot <= 0).mean())),
+        "n_t_aids":     len(treated),
+        "n_c_aids":     len(control),
+        "n_boot":       int(len(boot)),
+    }
+
+
 # Convert daily_performance_df → pandas ONCE for bootstrap (per-tier cache reuses).
 _daily_perf_pd_did = (
     daily_performance_df
@@ -1237,13 +1372,22 @@ for tier in sorted(treated_tiers):
                       spec["den"] if spec["den"] != "vv" else "visits",
                       tier, control_tiers, cutoff)
         inf = did_inference(treated_aid, control_aid, spec["num"], spec["den"], n_boot=DID_N_BOOT)
+        cup = did_inference_cuped(treated_aid, control_aid, spec["num"], spec["den"], n_boot=DID_N_BOOT)
         t_color    = lift_color(r["t_lift"],   spec["lower_is_better"])
         did_color  = lift_color(r["did_lift"], spec["lower_is_better"])
         # Dim the sig color when underpowered — a p<0.10 at n_post<14 is noise.
-        pval_color = "#9ca3af" if underpowered else sig_color(inf["p_value"], inf["point"], spec["lower_is_better"])
+        pval_color     = "#9ca3af" if underpowered else sig_color(inf["p_value"], inf["point"], spec["lower_is_better"])
+        cup_pval_color = "#9ca3af" if underpowered else sig_color(cup["p_value"], cup["point"], spec["lower_is_better"])
+        cup_did_color  = lift_color(cup["point"], spec["lower_is_better"])
+
+        # CUPED diagnostics — show ρ, θ, and the variance reduction so you can
+        # see whether CUPED is doing meaningful work for this cell
+        rho_pct = f"{cup['cuped_rho']*100:+.0f}%"
+        var_red = cup.get('cuped_var_reduction_pct', 0)
+        cuped_useful = var_red > 10  # < 10% variance reduction isn't worth highlighting
 
         tiles.append(f"""
-        <div style="flex:1 1 0; min-width:200px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;{' opacity:0.75;' if underpowered else ''}">
+        <div style="flex:1 1 0; min-width:220px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;{' opacity:0.75;' if underpowered else ''}">
           {interim_banner}
           <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
             {spec['label']} <span style="color:#9ca3af; font-weight:500;">({spec['sub']})</span>
@@ -1266,8 +1410,20 @@ for tier in sorted(treated_tiers):
           <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:2px; font-weight:600; color:{pval_color};">
             <span>p-value</span><span>{'—' if pd.isna(inf['p_value']) else f"{inf['p_value']:.3f}"}</span>
           </div>
-          <div style="font-size:10px; color:#9ca3af; margin-top:4px;">
-            bootstrap n={inf['n_boot']} · treated={inf['n_t_aids']} aids · control={inf['n_c_aids']} aids
+          <div style="margin-top:8px; padding-top:6px; border-top:1px dashed #f3f4f6; display:flex; justify-content:space-between; font-weight:600; color:{cup_did_color}; font-size:12px;">
+            <span>CUPED-adjusted</span><span>{fmt_lift(cup['point'])}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-top:2px;">
+            <span>CUPED 95% CI</span><span>[{fmt_lift(cup['ci_95_lower'])}, {fmt_lift(cup['ci_95_upper'])}]</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:2px; font-weight:600; color:{cup_pval_color};">
+            <span>CUPED p-value</span><span>{'—' if pd.isna(cup['p_value']) else f"{cup['p_value']:.3f}"}</span>
+          </div>
+          <div style="font-size:10px; color:{'#1a7f37' if cuped_useful else '#9ca3af'}; margin-top:3px;">
+            ρ(pre,post)={rho_pct} · var↓{var_red:.0f}% · θ={cup['cuped_theta']:.2f}{' ✓' if cuped_useful else ''}
+          </div>
+          <div style="font-size:10px; color:#9ca3af; margin-top:3px;">
+            bootstrap n={inf['n_boot']} · treated={inf['n_t_aids']} · control={inf['n_c_aids']}
           </div>
         </div>
         """)
