@@ -1079,3 +1079,49 @@ Sarah has joined as an executive admin for Richard (executive leadership). She w
 - **SEL (Select) campaign groups on MNTN Bidder — budget configuration issue**
 
 As of 2026-06-08, SEL campaign groups on the MNTN Bidder have budget set at the campaign group (CG) level but not at the campaign ID (CID) level, causing a 'no spend' state. This was identified in the 'no spend check' report and is being addressed via PER-6472 (targeted for completion EOW 2026-06-08). The Select team actively uses the QA environment for development. (via Johnny, #mission-control, 2026-06-08)
+
+<!-- slack-extracted: 2026-06-10 -->
+- ## GCP Just-in-Time Access (PAM) Migration
+
+MNTN has migrated GCP privileged access from standing grants to just-in-time (JIT) elevation via Google's Privileged Access Manager (PAM). Standing privileged access has been reduced to near-zero.
+
+**What changed:**
+- Broad standing grants for `gcp-dev-eng@` were removed: project editor, cluster exec (`container.developer`/`clusterAdmin`), node SSH, IAM-admin, and SA impersonation.
+- All engineers now have org-wide browser + PAM viewer baseline (read/metadata access only).
+- Elevated access (deploy, `kubectl exec`, read a secret) must be requested per-project and auto-expires.
+
+**How to request access:**
+- Console: IAM & Admin → Privileged Access Manager → Grant access (pick project + entitlement)
+- CLI: `gcloud pam grants create --entitlement=<ENTITLEMENT_ID> --project=<PROJECT_ID> --location=global --requested-duration=3600s --justification="<ticket / why>"`
+- Approvals go to the DevOps team (per-project approvers to be added over time). All grants are logged and auto-revoked at expiry.
+
+**Gotcha:** Actions that previously "just worked" (e.g., `kubectl exec`, editing resources, reading secret values) will now return permission errors until access is explicitly requested. (via Tim OBrien, #engineering-team, 2026-06-09)
+- ## Secrets Cleanup — Compliance Fire Drill (June 2026)
+
+MNTN underwent a company-wide, all-hands secrets cleanup initiative driven by compliance requirements. All plaintext secrets, API keys, and tokens stored in codebases were required to be rotated and removed.
+
+**Scope:** All secrets found in codebases are tracked in an internal spreadsheet. Engineers were directed to double-check their own repos for additional secrets not caught by the initial scan.
+
+**Clarifications:**
+- This includes DB passwords and service passwords stored in code — those also require rotation.
+- The initiative targets *insecurely stored* plaintext secrets, not the elimination of secrets/keys/tokens altogether (Paulo clarified this distinction).
+- GitHub Actions secrets should be migrated to Vault per the new secrets management SOP: `SteelHouse/mntn-devops/docs/standard_operating_procedures/052-secrets-management-strategy.md`.
+- For secrets exposed in git history, the standard approach is to rotate the exposed secret and ensure Vault is used going forward (not necessarily rewriting git history, which requires DevOps involvement).
+
+**Priority:** All engineering work was paused until 100% of secrets were rotated and removed from source control. (via richard, #engineering-team, 2026-06-09)
+- ## Campaign Sync Issue — Gary/SQS Credential Rotation (June 2026)
+
+A wave of campaign groups (CGIDs) failed to sync to Beeswax following a DevOps credential rotation for the Gary/SQS AWS integration. The issue caused no-spend conditions for affected campaigns.
+
+**Root cause (suspected):** DevOps modified the credentials/keys/permissions for Gary's SNS/SQS AWS integration. This appears to have caused silent failures on some campaign group sync messages, though no explicit errors were observed in Gary-side logs. Only a subset of CGIDs were affected (not all).
+
+**Workaround:** Manual re-sync via Gary causes updates to propagate downstream into Beeswax successfully. Affected CGIDs were identified via a Mode report and re-synced by the PER team.
+
+**Team responsibilities for sync issues:**
+- ProUI team: investigate no-spend root cause per line item.
+- PER (PAC) team: execute re-syncs for CGIDs with confirmed sync failures.
+- Jordyn Betzer (ProUI): owns root cause investigation and Gary logging improvements.
+
+**Related ticket:** CAM-796 (longer-term fix).
+
+**Note:** CGID 127404 was a separate issue (not part of the sync fix) and was resolved independently. (via Jordyn Betzer, #mission-control, 2026-06-09)

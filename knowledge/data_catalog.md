@@ -2624,3 +2624,34 @@ Benchmarks from a June 2026 SQLMesh test run (1 hour of data, 2-hour lookback):
 - **auction_events_agg:** 580M rows, 13.2 TiB scanned, completed in ~1,875 seconds (~31 min). ~9× compression vs. raw. The high slot time is driven by the identity grain (IP columns) plus distinct timestamp aggregation required by the Identity team.
 
 A 2-hour lookback is required to capture late-arriving data. At these scan volumes, running both jobs in BigQuery is likely too slow for production use; Spark-based processing from GCS parquet sources is under evaluation as an alternative. See PR #1037 for the BQ SQLMesh attempt. (via Jane Brooks, #data-platform, 2026-06-08)
+
+<!-- slack-extracted: 2026-06-10 -->
+- ## dw-main-silver.salesforce.accounts_log — Downstream Dependencies
+
+When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill of **3 models and 19 views** downstream. Key affected models/views include:
+
+**Gold models (full refresh):**
+- `dw-main-gold.bae.advertiser_attributes`
+- `dw-main-gold.bae.advertiser_monthly_performance_rating`
+- `dw-main-gold.bae.advertiser_monthly_spend_changes`
+
+**Gold views (recreate):**
+- `dw-main-gold.bae.v_campaign_product_adoption`
+- `dw-main-gold.bae.v_cs_retention_growth_adoption`
+- `dw-main-gold.bae.v_customer_journey`
+- `dw-main-gold.bae.v_fin_revenue_team_override`
+- `dw-main-gold.bae.v_go_live_snapshot_monthly` / `_weekly`
+- `dw-main-gold.bae.v_spend_after_marketing_touchpoint`
+- `dw-main-gold.bae.v_trial_cohort_conversion_rate` / `_cs`
+- `dw-main-gold.bae_finance.v_billable_spend`
+- `dw-main-gold.bae_finance.v_credit_program_invoiced_spend`
+- `dw-main-gold.salesforce.v_accounts_log`
+- `dw-main-gold.tableau.v_advertiser_monthly_spend_changes`
+- `dw-main-gold.tableau.v_client_count_spend_changes`
+- `dw-main-gold.tableau.v_cohort_advertisers_wow_spend`
+- `dw-main-gold.tableau.v_cs_growth_pipeline`
+- `dw-main-gold.tableau.v_marketing_funnel_by_account`
+- `dw-main-gold.tableau.v_sum_by_advertiser_by_day`
+- `dw-main-gold.tableau.v_sum_by_parent_campaign_group_by_day_simple`
+
+**Restate tip:** Coordinate with data platform (DPLAT) before running restate. Command: `sqlmesh plan prod --restate-model "dw-main-silver.salesforce.accounts_log" --start "<date>"` (via Sheetal Ramesh, #data-platform, 2026-06-09)

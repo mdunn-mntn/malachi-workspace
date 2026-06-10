@@ -2987,3 +2987,36 @@ For large-scale aggregations over bidder auction/bid logs, reading directly from
 - **data_source_key — uniqueness requirement and known data quality issue**
 
 The `data_source_key` column in the integrations/data_sources table must be unique and non-null. As of June 2026, at least three records share duplicate `data_source_key` values (DS45 HubSpot and DS48 Tealium share one key; Upwave introduced a third duplicate). Root cause is manual SQL INSERT copy-paste that carries over an existing key. One record in prod (data_source_id = 61, AppsFlyer v2) has `data_source_key` saved as the string `'false'`, which is a known anomaly — this prevents adding a simple unique+not-null constraint without first cleaning up the anomalous value. The key is used by at least one vendor API integration for data delivery. A unique constraint and not-null constraint are being evaluated (ticket AUD-5368). (via Macie Kluting, #targeting-squad, 2026-06-08)
+
+<!-- slack-extracted: 2026-06-10 -->
+- ## Bidder System Architecture — Membership Cache & Bid Path
+
+**Bid path:** SSPs (Magnite, Index, Freewheel, Pubmatic) or Beeswax (as proxy) → Campaign service → membership cache check → bid with VAST. Response budget is ~200ms; Beeswax has a tighter ~15ms limit.
+
+**Membership cache (Aerospike):**
+- Key = IP address; ~300M IP keys; 3–5 TB total; single-digit-ms lookup.
+- Hit on *every* bid request.
+- No in-bidder in-memory tier — cache is too large, and with 300M evenly distributed keys a subset cache provides negligible hit rate benefit.
+- Per-IP record contains: segments, intent scores, geo, holdout IPs, spend, recency, and frequency-cap data.
+
+**Scoring pipeline:**
+- Scores are written to GCS (not MembershipDB directly).
+- Flow: scoring → GCS → membership consumer (GCS → PubSub → RabbitMQ) → Aerospike.
+- MembershipDB owns segment data and holdout logic.
+
+**Spend pipeline:**
+- Win notifications → Notification service → ScyllaDB (deduplication, prevents double-counting) → Kafka → 3 aggregators (frequency, spend, logs → GCS).
+- End-to-end latency: ~1 minute.
+
+**Static/pacing data:**
+- Flight budgets and thresholds live in Redis, pulled on a 5–10 minute cron.
+- A stopped flight can continue spending for up to ~10 minutes until the next Redis pull (roadmap item: switch to notification-based updates).
+
+**Migration in progress:** Team is migrating off Aerospike to ScyllaDB + Redis for cost and support reasons. (via malachi, #tgt-infrastructure-squad, 2026-06-09)
+- ## SQLMesh Plan Best Practice — Always Run Full Environment Plan
+
+When developing SQLMesh models, always run `sqlmesh plan <dev_env>` (full environment plan, without `--select-model`) before submitting a PR. Using `--select-model "+*model*+"` with the `+` selector does not reliably capture all upstream/downstream dependencies and can miss impacts or incorrectly include unrelated models.
+
+**Why:** A full environment plan ensures that any dependency issues (up or downstream) are surfaced before the production plan runs. The `+` selector has been found experimentally to sometimes miss required captures.
+
+**CI verify-impact check:** The CI pipeline runs a `verify-impact` script that compares tree snapshots against baseline. If a new or modified model has not been planned in any environment for the current code tree, CI will fail with a message listing the missing snapshot. Fix: run `sqlmesh plan <dev_env>` locally, which generates the new fingerprint and satisfies the check. (via Dustin Niehoff, #data-platform, 2026-06-09)

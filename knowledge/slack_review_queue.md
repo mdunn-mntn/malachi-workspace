@@ -545,3 +545,25 @@ The targeting team's artifact registry is in the `mntn-targeting-prj-prod` GCP p
 **Household Intent Scoring (HHST) — bid threshold enforcement timing issue**
 
 Campaigns with an HHST threshold (e.g., 6666) may occasionally bid and win on Mid Intent / Max Reach / unscored IPs if the correct HHST score is not propagated to the pacing engine in time. A secondary explanation is that an IP previously had a valid score that has since been updated — the bidder may still see the stale score, causing it to pass the threshold check without triggering the 'unscored' block. The realtime win logs can be queried to see the score at the time of auction for a given IP to confirm which scenario occurred. Root cause investigation requires checking bidder event logs to confirm what HHST value the bidder received for the relevant campaign.
+
+## 2026-06-10
+
+### [data_knowledge] from Jack Barbey in #identity_core_dev
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Identity Graph Metrics — Write Pattern (GCS → BQ via SQLMesh)
+
+Metrics outputs from the identity graph pipeline are written using the standard MNTN pattern: write to GCS via Sparkflow, then load into BigQuery via SQLMesh. This is consistent with how other Spark-computed data is ingested into the warehouse.
+
+**Rationale:** Metrics result sets are small. BigQuery is used as the serving layer (Mode can read from BQ). Writing to Delta/GCS first provides a durable backup in a storage layer the team controls, since BQ tables have occasionally disappeared unexpectedly. Direct Delta-to-BQ writes have had reliability issues historically; the GCS parquet mirror + SQLMesh load pattern avoids those.
+
+**Note:** Sparkflow's parquet mirror functionality needs to support append mode (vs. replace) to accommodate incremental metric writes.
+
+### [data_knowledge] from Jack Barbey in #identity_core
+**Reason:** Medium confidence — needs verification
+**Confidence:** medium
+
+## Identity Graph — Databricks Highmem Instance Availability
+
+The identity graph Spark jobs running on Databricks encountered a "resources exhausted" error when attempting to provision high-memory worker and driver instances. This blocked auction log processing on the graph pipeline. Root cause: highmem instance types were temporarily unavailable for provisioning in the relevant Databricks workspace.
