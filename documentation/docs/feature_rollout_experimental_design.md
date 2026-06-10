@@ -370,6 +370,135 @@ by > MDE for ≥ 5 consecutive days (early-stopping harm signal).
 
 ---
 
+## Variance reduction stack (TI-884 / Lewis-Rao 2015 QJE)
+
+**Applicability note — read first.** The Lewis-Rao 2015 stack was
+derived for *ads-vs-no-ads incremental-lift measurement*, where the
+hard problem is user-side selection (engaged users see more ads →
+look "lifted" without treatment). MNTN's targeting rollouts (Fangorn,
+TI-956) are a different problem: *scoring-model-A vs scoring-model-B*,
+where both groups see ads — the comparison is over which IPs/audiences
+get bid on, not whether ads ran at all.
+
+The components apply differently to each:
+
+| Technique | Ads-vs-no-ads (Lewis-Rao) | Scoring-vs-scoring (Fangorn-style) |
+|---|---|---|
+| **CUPED** | ✅ Fully applies | ✅ Fully applies — outcome-agnostic |
+| **Stratified randomization** | ✅ Fully applies | ✅ Fully applies — design-level |
+| **Ghost-ad** | ✅ Native fit — control sees would-have-been-shown ads | ⚠️ Modified form only — log would-be-scored audience for control, use original. Requires upstream engineering. |
+
+**For TI-961 / Fangorn / TI-956-style scoring rollouts**, the
+practically achievable stack is **CUPED × stratified ≈ 0.934 × 0.85 =
+0.794** (σ ratio) → 1.59× N reduction. The full 0.595 stack with
+ghost-ad only applies when the audience-scoring pipeline is engineered
+to log its decisions for the control arm.
+
+Each of these compounds multiplicatively. The combined effect on the
+standard error is the **product of σ ratios**; combined effect on
+required N is the **square** of that.
+
+| Technique | σ ratio | Variance reduction | Notes |
+|---|---:|---:|---|
+| **CUPED** (Deng et al. 2013) | 0.934 | 12.8% | Pre-period covariate adjustment. ρ ≈ 0.36 baseline; can hit 0.70-0.90 on stable metrics. **Free retrofit on existing analyses — no design change needed.** |
+| **Ghost-ad** (Lewis & Rao 2015) | 0.75 | 43.8% | Ghost-impression methodology — treated and control both see ads, only the audience-scoring differs. Eliminates user-side engagement selection bias. **Must be designed in upstream — can't be retrofitted.** |
+| **Stratified randomization** | 0.85 | 27.8% | Pre-randomization stratification on observables (spend, vertical, channel). **Must be designed in upstream.** |
+| **Combined stack** | **0.595** | **64.6%** | Required N drops by 1/0.595² = **2.83× smaller**. |
+
+**Concretely:** if vanilla DiD on a random rollout needs N=1000 to detect
+a 10% lift at 80% power, the CUPED × ghost-ad × stratified stack needs
+**N = 1000 × 0.595² = 355**. That's the Lewis-Rao result — ad-effectiveness
+measurement isn't hopeless if you stack the right techniques.
+
+### What's actually implementable when
+
+| Technique | TI-961 (post-hoc) | Next major rollout (designed-in) |
+|---|---|---|
+| **CUPED** | ✅ Yes — retrofit on the 60d pre-period | ✅ Yes |
+| **Stratified bootstrap** | Partial — only if we can identify strata observationally | ✅ Yes (full stratification possible) |
+| **Ghost-ad** | ❌ No — requires impression-level design (which "would-have-been" ad was scored for control) | ✅ Yes — engineer into the audience-scoring pipeline so control sees a parallel-context comparison |
+| **Permanent random holdout** | ❌ No — Tier 5 was selected non-randomly (Wave 3 = "manual review hold") | ✅ Yes — mandatory per §"Core principles" above |
+
+### CUPED quick spec (Deng et al. 2013)
+
+For a unit's post-period outcome `Y_post` and a pre-period covariate
+`X_pre` (typically `Y_pre`):
+
+```
+θ̂ = Cov(Y_post, X_pre) / Var(X_pre)        # estimated once, pooled across units
+Y_adj = Y_post − θ̂ × (X_pre − mean(X_pre))  # CUPED-adjusted outcome
+```
+
+`Var(Y_adj) = Var(Y_post) × (1 − ρ²)` where `ρ = corr(Y_pre, Y_post)`.
+
+**Implementation in cluster-bootstrap DiD:** apply CUPED per advertiser
+*before* the bootstrap pooling. ~30 LOC. Free win on every analysis.
+
+### Lewis-Rao ghost-ad framework (2015 QJE)
+
+The paper's central insight: ad-effectiveness measurement is dominated
+by user-side selection (engaged users see more ads → look "lifted" even
+without treatment). The fix is the **ghost-ad design**: for the control
+group, run the entire ad-serving pipeline up to the bid decision, then
+*don't* serve. Record what would have been served. Now both groups have
+the same "would-have-seen-an-ad-here" cohort — the only difference is
+the audience-scoring model.
+
+For MNTN's audience-scoring rollouts (Fangorn-style), this maps to:
+log the Fangorn-scored audience for both treated and control advertisers,
+but only *use* it for treated. The control's logged-but-not-used scores
+are the ghost-ad analog. **Requires bidder/audience-pipeline engineering
+upstream** — has to be designed in, not added after.
+
+---
+
+## Wave 3 selection-bias lesson (TI-961 retrospective)
+
+The Fangorn rollout's "Tier 5" (Wave 3) was used as the holdout for
+TI-961 analysis. But Wave 3 was NOT a random holdout — per the
+Confluence rollout-plan page, it was specifically defined as:
+
+> "Score < 0.70 with at least one blocking flag — Hold for Manual Review."
+
+Blocking flags: HHST low + audience grows, HHST low + audience shrinks,
+audience shrinks >70%, audience grows >5x, no impressions yet.
+
+**Consequence on TI-961 analysis:**
+- Tier 5 pool CVR = 6.5% vs treated tiers 2-4% → DiD CVR comparisons
+  artificially compressed toward zero or negative
+- Specific high-CVR advertisers (Angi 207%, Mountain Mike's 62%,
+  Station Casinos 108%) dragged the control pool CVR up
+- Methods-convergence harder because DiD is more sensitive to baseline
+  selection than CausalImpact
+
+**Lesson for future rollout design:**
+
+**The permanent holdout MUST be stratified random, NOT "the advertisers
+we have concerns about."** Holdout selection by structural concern
+characteristics breaks parallel-trends by construction. Even
+post-hoc CausalImpact-style analyses can't fully recover from this —
+the BIC-selected control covariates inherit the selection bias.
+
+**Recommended stratification variables** for the next major rollout
+(adopted from the Fangorn Wave 3 selection criteria — these are exactly
+the dimensions that would have prevented this problem if used for
+stratification rather than exclusion):
+
+- Spend quartile
+- Vertical (top 8-10, long tail bucketed)
+- Channel mix (CTV/display/multi-touch)
+- Funnel stage
+- **HHST level** (NEW — added per Wave 3 lesson)
+- **Audience size delta under new scoring** (NEW — grow / stable / shrink)
+- **Scoring opportunity** (NEW — current audience score, normalize
+  expected new audience score)
+
+Stratify on ALL of these. Run within-stratum random assignment. Reserve
+10-15% of each stratum as the permanent holdout. Don't carve out a
+"high-risk" cohort and call it the control.
+
+---
+
 ## Canonical references
 
 The literature for this is mature. Standout reads (ordered by relevance
