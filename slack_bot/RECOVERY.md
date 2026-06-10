@@ -1,5 +1,9 @@
 # Slack Knowledge Bot — Recovery Runbook
 
+**Current app (recreated 2026-06-10):** "Knowledge Extractor" — App ID `A0B9MCD6Y6R`
+(api.slack.com/apps/A0B9MCD6Y6R). Install pending admin approval (Jason Whiting).
+
+
 **Why this exists:** On 2026-06-10 the "Knowledge Extractor" Slack app was deleted
 during an IT cleanup of bots owned by departed employees (the same sweep that
 rotated/revoked the `@Airflow Monitor` token). Our token now returns
