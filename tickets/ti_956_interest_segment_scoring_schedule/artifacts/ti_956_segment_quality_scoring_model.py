@@ -216,6 +216,7 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
         # Lazy import — must come AFTER the pip install above. Also lives inside
         # model() so CI's `model_upload.py --dryrun` compile pass doesn't fail
         # when this package isn't on the build environment's PYTHONPATH.
+        from pyspark.storagelevel import StorageLevel
         from utils.segment_quality_utils.facade import ThirdPartySegmentQuality
         from utils.sampling_logic import build_edges_with_weights_estimator_only
 
@@ -238,13 +239,29 @@ class SegmentQualityScoring(IcebergBigqueryDwMainBronzeModel):
             performance_df            = self._read_performance(window_start, window_end)
             campaign_segment_targets  = self._read_operative_3p()
 
-            # 2. Build HT-sampled edge panel (Alex's sampling logic)
+            # 2. Build HT-sampled edge panel (Alex's sampling logic).
+            #
+            # broadcast_weights=False — required at our scale. Default True crashes
+            #   with "Cannot broadcast the table over 357913941 rows: 393903180 rows"
+            #   because the ip-day weights table exceeds Spark's 357M-row broadcast cap.
+            #   Confirmed via 2026-06-09 dev run at batch
+            #   segment-quality-scoring-local-20260609-1544 (failed at 1h 56min).
+            #   Alex's notebook passes False for the same reason.
+            #
+            # storage_level=MEMORY_AND_DISK — function default is DISK_ONLY (slow).
+            #   MEMORY_AND_DISK keeps in memory if it fits, spills to disk otherwise.
+            #   Same as Alex's notebook.
+            #
+            # No outer .persist() — the function already persists internally and
+            # materializes via _ = panel.count() before returning.
             panel_df = build_edges_with_weights_estimator_only(
                 ipdsc_df=ipdsc_df,
                 p=self.SAMPLE_RATE,
                 hash_scope="edge_day",
                 date_col="event_date",
-            ).persist()
+                broadcast_weights=False,
+                storage_level=StorageLevel.MEMORY_AND_DISK,
+            )
 
             # 3. Score (Alex's facade — 9-axis composite, 0-100 per dscid)
             scorer = ThirdPartySegmentQuality(panel_df)
