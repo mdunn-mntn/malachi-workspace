@@ -1206,14 +1206,30 @@ def sig_color(p, point, lower_is_better, threshold=0.10):
     return "#1a7f37" if (p < threshold and expected_dir) else "#6b7280"
 
 
+# Minimum post-period days before we trust a significance read. CVR / ROAS /
+# CPA take 7-14 days minimum to reflect treatment due to CTV attribution lag;
+# 14 days is the threshold below which p-values are dominated by noise and
+# control-side coincidence rather than treatment effect. Tiles with n_post
+# below this threshold get a yellow "INTERIM ONLY" banner and the sig color
+# is dimmed to gray so stakeholders don't read false significance.
+MIN_POST_DAYS_FOR_INFERENCE = 14
+
 sections_html = []
 for tier in sorted(treated_tiers):
     if tier not in tier_inclusion_dates:
         continue
     cutoff = tier_inclusion_dates[tier]
+    n_post_days = max(0, (pd.to_datetime(window_end) - pd.to_datetime(cutoff)).days)
+    underpowered = n_post_days < MIN_POST_DAYS_FOR_INFERENCE
+    interim_banner = (
+        f'<div style="background:#fef3c7; color:#92400e; padding:4px 8px; '
+        f'border-radius:4px; font-size:10px; font-weight:600; margin-bottom:8px; '
+        f'text-align:center;">⚠ INTERIM ONLY · {n_post_days}d post '
+        f'&lt; {MIN_POST_DAYS_FOR_INFERENCE}d min · ignore significance</div>'
+    ) if underpowered else ''
     # Pre-compute per-advertiser pivots once per tier (reused across all 4 KPIs)
     treated_aid, control_aid = _get_aid_pivots(tier, control_tiers, cutoff)
-    print(f"[did-inference] Tier {tier}: bootstrapping {len(treated_aid)} treated × {len(control_aid)} control AIDs across {len(KPI_SPECS)} KPIs...")
+    print(f"[did-inference] Tier {tier}: bootstrapping {len(treated_aid)} treated × {len(control_aid)} control AIDs across {len(KPI_SPECS)} KPIs · n_post={n_post_days}d{' (underpowered)' if underpowered else ''}...")
 
     tiles = []
     for spec in KPI_SPECS:
@@ -1223,10 +1239,12 @@ for tier in sorted(treated_tiers):
         inf = did_inference(treated_aid, control_aid, spec["num"], spec["den"], n_boot=DID_N_BOOT)
         t_color    = lift_color(r["t_lift"],   spec["lower_is_better"])
         did_color  = lift_color(r["did_lift"], spec["lower_is_better"])
-        pval_color = sig_color(inf["p_value"], inf["point"], spec["lower_is_better"])
+        # Dim the sig color when underpowered — a p<0.10 at n_post<14 is noise.
+        pval_color = "#9ca3af" if underpowered else sig_color(inf["p_value"], inf["point"], spec["lower_is_better"])
 
         tiles.append(f"""
-        <div style="flex:1 1 0; min-width:200px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
+        <div style="flex:1 1 0; min-width:200px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;{' opacity:0.75;' if underpowered else ''}">
+          {interim_banner}
           <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
             {spec['label']} <span style="color:#9ca3af; font-weight:500;">({spec['sub']})</span>
           </div>
@@ -1830,10 +1848,18 @@ def _render_tile(row: dict) -> str:
           </div>
         </div>
         """
-    color = ci_color(row)
+    underpowered = row.get("n_post", 999) < MIN_POST_DAYS_FOR_INFERENCE
+    color = "#9ca3af" if underpowered else ci_color(row)
     pre_r2_str = ("%.2f" % row["pre_r2"]) if row.get("pre_r2") == row.get("pre_r2") else "—"
+    interim_banner = (
+        f'<div style="background:#fef3c7; color:#92400e; padding:4px 8px; '
+        f'border-radius:4px; font-size:10px; font-weight:600; margin-bottom:8px; '
+        f'text-align:center;">⚠ INTERIM ONLY · {row["n_post"]}d post '
+        f'&lt; {MIN_POST_DAYS_FOR_INFERENCE}d min · ignore significance</div>'
+    ) if underpowered else ''
     return f"""
-    <div style="flex:1 1 0; min-width:250px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;">
+    <div style="flex:1 1 0; min-width:250px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px;{' opacity:0.75;' if underpowered else ''}">
+      {interim_banner}
       <div style="font-size:11px; font-weight:600; color:#6b7280; letter-spacing:0.04em; text-transform:uppercase;">
         {metric} <span style="color:#9ca3af; font-weight:500;">({sub})</span>
       </div>
@@ -1960,6 +1986,154 @@ if ci_panels:
                  fontsize=14, fontweight="semibold", color="#f5f5f5", y=1.0)
     plt.tight_layout()
     plt.show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Control Composition Diagnostic
+# MAGIC
+# MAGIC Identifies which control-tier advertisers are most influential on the
+# MAGIC pooled control rate. The concern: Tier 5 is a non-random holdout, so a
+# MAGIC single large advertiser with anomalous IVR/CVR can move the pooled
+# MAGIC control rate enough to swing the DiD comparison against treated tiers.
+# MAGIC
+# MAGIC **Leave-one-out impact** — for each control advertiser, recompute the
+# MAGIC pooled control rate (IVR and CVR) with that advertiser excluded. The
+# MAGIC delta from the full-pool rate is the advertiser's influence. Top-N
+# MAGIC influencers (by absolute IVR or CVR delta) get surfaced — these are
+# MAGIC the advertisers worth investigating.
+# MAGIC
+# MAGIC **How to read it:**
+# MAGIC - **High `visit_share`** → this advertiser dominates the pool's denominator
+# MAGIC - **Negative `ivr_delta_pp` or `cvr_delta_pp`** → removing them would
+# MAGIC   LOWER the pool rate (they were ABOVE average → dragging treated lifts down)
+# MAGIC - **Positive delta** → removing them would RAISE the pool rate (they were
+# MAGIC   BELOW average → dragging treated lifts up / making treated look smaller)
+# MAGIC
+# MAGIC Use the most recent treated tier's cutover for the post-period
+# MAGIC definition (configurable via the `composition_diag_tier` widget below).
+
+# COMMAND ----------
+
+# DBTITLE 1,Control composition — leave-one-out analysis
+dbutils.widgets.text(
+    "composition_diag_tier", "2",
+    "Use this treated tier's cutover to define the post-period for control composition diagnostic",
+)
+_diag_tier = int(dbutils.widgets.get("composition_diag_tier"))
+
+if _diag_tier in tier_inclusion_dates and control_tiers:
+    _diag_cutoff = pd.to_datetime(tier_inclusion_dates[_diag_tier])
+    _window_end_ts = pd.to_datetime(window_end)
+    _n_post_diag = max(0, (_window_end_ts - _diag_cutoff).days)
+    print(f"[composition-diag] Cutover from Tier {_diag_tier} ({_diag_cutoff.date()}) "
+          f"· post-period: {_diag_cutoff.date() + pd.Timedelta(days=1)} → {window_end} "
+          f"({_n_post_diag}d)")
+
+    # Pull per-advertiser post-period sums for the control tier(s)
+    _comp_df = (
+        daily_performance_df
+        .filter(F.col("fangorn_rollout_tier_num").isin(control_tiers))
+        .filter(F.col("day") > F.lit(_diag_cutoff.date()))
+        .filter(F.col("day") <= F.lit(_window_end_ts.date()))
+        .groupBy("advertiser_id", "company_name", "vertical_name")
+        .agg(
+            F.sum("impressions").alias("impressions"),
+            F.sum("vv").alias("vv"),
+            F.sum("conversions").alias("conversions"),
+            F.sum("spend").alias("spend"),
+            F.countDistinct("day").alias("n_days"),
+        )
+        .toPandas()
+    )
+
+    if len(_comp_df) > 0:
+        # Pooled control rates (the values DiD/CI actually use)
+        _total_imps  = _comp_df["impressions"].sum()
+        _total_vv    = _comp_df["vv"].sum()
+        _total_conv  = _comp_df["conversions"].sum()
+        _pool_ivr    = _total_vv   / _total_imps if _total_imps  else float("nan")
+        _pool_cvr    = _total_conv / _total_vv   if _total_vv    else float("nan")
+
+        # Leave-one-out: what would the pool rate be without each advertiser?
+        _comp_df["visit_share"]  = _comp_df["vv"]          / _total_vv
+        _comp_df["imp_share"]    = _comp_df["impressions"] / _total_imps
+        _comp_df["adv_ivr"]      = np.where(_comp_df["impressions"] > 0,
+                                            _comp_df["vv"]          / _comp_df["impressions"], np.nan)
+        _comp_df["adv_cvr"]      = np.where(_comp_df["vv"] > 0,
+                                            _comp_df["conversions"] / _comp_df["vv"], np.nan)
+        # Leave-one-out pooled rates
+        _comp_df["loo_ivr"] = ((_total_vv   - _comp_df["vv"])          /
+                               np.where(_total_imps - _comp_df["impressions"] > 0,
+                                        _total_imps - _comp_df["impressions"], np.nan))
+        _comp_df["loo_cvr"] = ((_total_conv - _comp_df["conversions"]) /
+                               np.where(_total_vv   - _comp_df["vv"] > 0,
+                                        _total_vv   - _comp_df["vv"], np.nan))
+        # Delta in percentage points = (loo - pool)
+        _comp_df["ivr_delta_pp"] = (_comp_df["loo_ivr"] - _pool_ivr) * 100
+        _comp_df["cvr_delta_pp"] = (_comp_df["loo_cvr"] - _pool_cvr) * 100
+
+        print(f"[composition-diag] Pool size: {len(_comp_df)} control advertisers · "
+              f"pooled IVR={_pool_ivr*100:.3f}% · pooled CVR={_pool_cvr*100:.3f}%")
+
+        # Top influencers by IVR delta — sort by absolute magnitude
+        _top_ivr = (
+            _comp_df.assign(_abs=lambda d: d["ivr_delta_pp"].abs())
+                    .sort_values("_abs", ascending=False)
+                    .drop(columns="_abs")
+                    .head(20)
+                    .reset_index(drop=True)
+        )
+        _top_ivr_display = _top_ivr[[
+            "advertiser_id", "company_name", "vertical_name",
+            "imp_share", "visit_share", "adv_ivr", "adv_cvr",
+            "loo_ivr", "ivr_delta_pp", "loo_cvr", "cvr_delta_pp",
+        ]].copy()
+        for c in ["imp_share", "visit_share", "adv_ivr", "adv_cvr", "loo_ivr", "loo_cvr"]:
+            _top_ivr_display[c] = (_top_ivr_display[c] * 100).round(3).astype(str) + "%"
+        for c in ["ivr_delta_pp", "cvr_delta_pp"]:
+            _top_ivr_display[c] = _top_ivr_display[c].round(4).astype(str) + "pp"
+
+        print("\nTop 20 control advertisers ranked by absolute IVR leave-one-out impact:")
+        display(_top_ivr_display)
+
+        # Top influencers by CVR delta — separate ranking
+        _top_cvr = (
+            _comp_df.assign(_abs=lambda d: d["cvr_delta_pp"].abs())
+                    .sort_values("_abs", ascending=False)
+                    .drop(columns="_abs")
+                    .head(20)
+                    .reset_index(drop=True)
+        )
+        _top_cvr_display = _top_cvr[[
+            "advertiser_id", "company_name", "vertical_name",
+            "imp_share", "visit_share", "adv_ivr", "adv_cvr",
+            "loo_cvr", "cvr_delta_pp", "loo_ivr", "ivr_delta_pp",
+        ]].copy()
+        for c in ["imp_share", "visit_share", "adv_ivr", "adv_cvr", "loo_ivr", "loo_cvr"]:
+            _top_cvr_display[c] = (_top_cvr_display[c] * 100).round(3).astype(str) + "%"
+        for c in ["ivr_delta_pp", "cvr_delta_pp"]:
+            _top_cvr_display[c] = _top_cvr_display[c].round(4).astype(str) + "pp"
+
+        print("\nTop 20 control advertisers ranked by absolute CVR leave-one-out impact:")
+        display(_top_cvr_display)
+
+        # Concentration check — what % of control visits come from top-5 / top-10 advertisers?
+        _sorted = _comp_df.sort_values("vv", ascending=False)
+        _top5_share  = _sorted.head(5)["vv"].sum()  / _total_vv if _total_vv else 0
+        _top10_share = _sorted.head(10)["vv"].sum() / _total_vv if _total_vv else 0
+        _top20_share = _sorted.head(20)["vv"].sum() / _total_vv if _total_vv else 0
+        print(f"\n[composition-diag] Control visit concentration:")
+        print(f"  Top-5  advertisers = {_top5_share*100:.1f}% of total control visits")
+        print(f"  Top-10 advertisers = {_top10_share*100:.1f}% of total control visits")
+        print(f"  Top-20 advertisers = {_top20_share*100:.1f}% of total control visits")
+        print(f"  → If top-5 > 50%, the control pool is concentration-heavy and any "
+              "single advertiser's behavior dominates the comparison.")
+    else:
+        print("[composition-diag] No control-tier data in the post-period window.")
+else:
+    print(f"[composition-diag] Skipped — diag tier {_diag_tier} not in treated_tiers "
+          f"or no control_tiers configured.")
 
 # COMMAND ----------
 
