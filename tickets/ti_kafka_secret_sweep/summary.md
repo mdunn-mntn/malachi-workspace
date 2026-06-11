@@ -39,7 +39,12 @@ service values.yaml → secretKeyRef {name, key} → K8s Secret, backed by ONE o
 - The Vault-backed ExternalSecrets exist but **nothing references them** — the cutover was never finished.
 - The "add a sasl_jaas_config key" comment in `membership-updates-aggregator/values-qa.yaml` is **stale** — the key already exists in the SOPS secret; the service works today via SOPS. This is a *migration*, not a *fix*.
 
-**The one real decision (JAAS reshaping):** ESO exposes raw `KEY`/`SECRET`; membership-updates-aggregator wants a full `sasl_jaas_config` JAAS string. Either (A) add an ESO `template` that builds `sasl_jaas_config` from Vault `KEY`/`SECRET` (no app change — preferred), or (B) change the app to consume `KEY`/`SECRET` (or `confluent_gcp_api_key`/`secret`) directly. The other 7 targeting services consume `confluent_gcp_api_key`/`secret` and are a straight repoint.
+**Migrated reference (Jordan Piepkow, Staff SWE, 2026-06-11):** `apps-v3/targeting/membership-etl/values-{dev,as-prod}.yml` is already on the target pattern — it consumes the **ESO secret `kafka-prod-rw`** (keys `KEY`/`SECRET`) injected as **separate** `KAFKA_*__SASL_USERNAME`/`SASL_PASSWORD` env vars. No SOPS, no JAAS string. `kafka-prod-rw` is the blessed targeting Kafka secret (it's ESO-synced into both qa-targeting and prod-targeting).
+
+**The one real decision (JAAS reshaping) — confirmed real:** membership-etl is a **librdkafka** app, so it takes `sasl.username`/`sasl.password` natively → KEY/SECRET map 1:1. But membership-updates-aggregator is a **JVM/Java Kafka** app: its `src/main/resources/kafka-gcp.properties` needs a single `sasl.jaas.config` JAAS string (the Java client has *no* separate username/password property). So Jordan's block can't be copied verbatim. Two clean options:
+- **(A) app-side:** change `kafka-gcp.properties` to build the JAAS inline — `sasl.jaas.config=...PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";` — and inject `KAFKA_SASL_USERNAME`/`PASSWORD` from `kafka-prod-rw` `KEY`/`SECRET`. Standardizes on the org pattern; requires an image rebuild + redeploy.
+- **(B) values-only:** add an ESO `template` that emits a ready `sasl_jaas_config` key from Vault KEY/SECRET; point `KAFKA_CLIENT_SASL_JAAS_CONFIG` at it. No app change.
+The other 7 targeting services consume `confluent_gcp_api_key`/`secret` (or `*_CLUSTER_API_KEY/SECRET`) as separate values → straight repoint to `kafka-prod-rw` KEY/SECRET. membership-updates-aggregator is the only JAAS-string consumer = the trickiest of the 8.
 
 ## 4. Cross-team inventory
 
@@ -64,7 +69,7 @@ Shared key across targeting + attribution → coordinate rotation.
 ## 6. Open questions / clarifications for DevOps (Zach)
 
 1. The targeting `kafka-dev-rw`/`kafka-prod-rw` ExternalSecrets expose `KEY`/`SECRET`, but services read SOPS `confluent-cloud-secret`. Is finishing that cutover the remaining work?
-2. For `sasl_jaas_config` consumers (membership-updates-aggregator), should the ExternalSecret **template** the JAAS string from Vault KEY/SECRET (no app change), or should the app change to consume KEY/SECRET?
+2. ~~JAAS templating vs app change~~ → Jordan confirmed the pattern: consume `kafka-prod-rw` `KEY`/`SECRET`. Remaining sub-decision for the JVM aggregator: option **A** (app builds JAAS from KEY/SECRET env vars — needs image rebuild) vs option **B** (ESO templates a `sasl_jaas_config` key — values-only). Lean A for org consistency; confirm Jordan's preference.
 3. Confirm `teams/team-engineering-engineering/kafka-prod-rw` holds the rotated prod credential; what's the qa Vault entry for `crm-integration-consumer`'s `qa_*` keys?
 
 ## 7. Next steps
