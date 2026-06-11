@@ -262,5 +262,13 @@ Deliverable workbook: `artifacts/ti_1026_orange_theory_audience_recommendations.
 - `ipdsc__v1.data_source_category_ids` is `RECORD{ list: REPEATED RECORD{ element: INT } }` — UNNEST `data_source_category_ids.list` and read `.element`.
 
 ## 8. Open Items / Follow-ups
-- Validate recommendation with **Kelly Thurlow** before passing to Sales/Customer (acceptance criterion).
+- **Validate recommendation workbook with Kelly Thurlow** before passing to Sales/Customer (acceptance criterion).
 - Confirm "DAR" = the keyword recommender to compare against (treated as BUK/Behavior-Keyword recs per TI-928).
+  If a live BUK/DAR recommendation for orangetheory.com is available, swap the heuristic keyword bucketing for the
+  tool's actual output (stronger than the curated-list approach).
+- Optional: per-segment **delivered visit rate** to numerically confirm the agency's 8-10× (logs don't separate
+  which audience category matched an impression at the granularity needed — would require a ghost-bid-style split).
+- Reach numbers are national (pre-geo); in-fence proportions assumed similar. Competitor-gym 3P IPs may cluster
+  slightly more in-fence (same metros as OTF) — would marginally raise 3P's in-fence share, not change the verdict.
+- This connects to TI-956/TI-999 (interest-segment quality scoring): OTF is a concrete case for why per-segment
+  scoring + a "drop 3P" recommendation matters. Feed back into that workstream.
