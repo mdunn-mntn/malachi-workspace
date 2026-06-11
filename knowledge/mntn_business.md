@@ -1,5 +1,8 @@
 # MNTN Business Knowledge
 
+## Security policy: no local Slack apps / no local-env API keys (2026-06-10)
+MNTN security (Robin Fox) **no longer allows locally-hosted Slack apps or API keys held in local env files.** Personal/self-hosted bots with tokens on local machines (e.g. a Raspberry Pi) are disallowed and will be disabled and deleted. The sanctioned path for internal AI/Slack integrations is **Compass** (MNTN's internal AI-agent platform on the MNTN Prod MCP — contact Harvey Yau's group). The TI Slack knowledge-extraction bot was decommissioned under this policy; rebuild on Compass instead. (via Robin Fox, 2026-06-10)
+
 ## Peak Performance / Mountain Matched relationship (per TI-896, 2026-04-22)
 
 **Product level:** Mountain Matched is part of the Peak Performance product offering (per user 2026-04-22). They are not independent audience products.

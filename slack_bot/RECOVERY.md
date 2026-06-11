@@ -1,13 +1,30 @@
-# Slack Knowledge Bot — Recovery Runbook
+# Slack Knowledge Bot — DECOMMISSIONED (migrate to Compass)
 
-**Current app (recreated 2026-06-10):** "Knowledge Extractor" — App ID `A0B9MCD6Y6R`
-(api.slack.com/apps/A0B9MCD6Y6R). Install pending admin approval (Jason Whiting).
+> **STATUS 2026-06-10: This local-Pi architecture is retired by security policy. Do NOT recreate it.**
+> Robin Fox (security) confirmed the app deletion was intentional: MNTN is **no longer
+> allowing local Slack apps or API keys held in local env**. The recreated app
+> (App ID `A0B9MCD6Y6R`) was deleted again. The compliant replacement is to rebuild the
+> nightly knowledge-extraction as a **Compass** agent (MNTN's internal AI/MCP platform —
+> contact Harvey Yau's group; see `knowledge/mntn_business.md` "Atlas Code MCP / MNTN Prod MCP").
+>
+> Pi cron disabled 2026-06-10 (line commented in crontab). Code kept as reference for the
+> Compass port. Last good run: 2026-06-10 00:00 (commit `22043f6`). No data lost.
 
+## Migration to Compass (replaces the steps below)
+The pipeline logic is unchanged — only the host + auth model move:
+- **Scrape** ([scraper.py](scraper.py)) → Compass reads Slack via its sanctioned, centrally-managed
+  integration instead of a local bot token. No `xoxb` token in local env.
+- **Extract** ([extractor.py](extractor.py)) → same Claude prompt; runs as a Compass agent task.
+- **Update** ([updater.py](updater.py)) → still commits to `knowledge/*.md` (confirm Compass has repo write access).
+- **Open question:** does Compass support a scheduled (nightly) agent run + git push? Confirm with Harvey Yau.
 
-**Why this exists:** On 2026-06-10 the "Knowledge Extractor" Slack app was deleted
-during an IT cleanup of bots owned by departed employees (the same sweep that
-rotated/revoked the `@Airflow Monitor` token). Our token now returns
-`account_inactive`. Last good run: 2026-06-10 00:00 (commit `22043f6`). No data lost.
+---
+
+## Historical recovery steps (OBSOLETE — kept for reference only; do not follow)
+
+**Original context:** On 2026-06-10 the "Knowledge Extractor" Slack app was deleted.
+Initially believed to be accidental cleanup of departed-employee bots; Robin Fox later
+clarified it was a deliberate policy enforcement (no local Slack apps / no local-env keys).
 
 ## Recovery steps
 
