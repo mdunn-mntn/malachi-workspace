@@ -2121,11 +2121,19 @@ does NOT prune partitions — it scanned **164.9B rows / 85,043 slot-sec / 280s 
 latest date, probe it first (`SELECT DISTINCT dt ... WHERE dt >= recent ORDER BY dt DESC LIMIT 1`), then inline
 the literal. Also prefer `APPROX_COUNT_DISTINCT(ip)` over exact `COUNT(DISTINCT ip)` on full-partition scans.
 
-**⚠ 3P (DS35 LiveRamp / bought) delivery into ipdsc is intermittent and volatile day-to-day** (TI-1026). The
-SAME segment can deliver ~2.1M IPs one day and **0 the next** (e.g. Stirista Fitness cat 1006088981: 2.1M on
-2026-06-08, absent 2026-06-06). On any given day most bought-3P segments deliver nothing. **Use a multi-day
-window (7d union) for 3P reach — a single-day snapshot badly understates it.** MNTN-internal sources (DS19 MNTN
-Matched, etc.) are far more stable daily. Extends TI-999's "most named 3P providers have zero IPDSC volume."
+**⚠ 3P (DS35 LiveRamp / bought) delivery into ipdsc is BURSTY — each category refreshes on only ~2-4 days/month**
+(TI-1026, confirmed by adversarial validation). The SAME segment delivers millions of IPs on its load day and
+**0 on every other day** (e.g. Stirista Fitness cat 1006088981: 2.1M on 2026-06-08, no row 2026-06-06; on any
+given day 8-11 of a campaign's 11 segments deliver nothing). The zeros are NOT a partition artifact — DS35 carries
+102-107M rows every day from *other* categories that loaded that day.
+- **A single-day AND a single-WEEK reach number are both window-luck-dependent.** A 7-day window's 3P reach swung
+  **3M → 19M** just by shifting the right edge one day (one mega-batch falls in or out). **Always measure 3P
+  (DS35) category reach / exclusion footprint over a ≥30-day window**, and report each category's last-delivery dt.
+- **Concrete error this caused (don't repeat):** a single-day query made 7 active LiveRamp income/age *exclusion*
+  categories (matching tens of millions of IPs) look "inert/zero" because that day's rotating load didn't include
+  them. Same for 6 "include" segments that looked dead but deliver 1.3M-6.7M IPs over 30 days.
+- MNTN-internal sources (DS19 MNTN Matched, DS1 Oracle, etc.) behave differently: DS19 is stable daily; DS1/Oracle
+  has *zero* ipdsc presence entirely (genuinely inert). Extends TI-999's "most named 3P providers have zero IPDSC volume."
 
 ---
 

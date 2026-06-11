@@ -132,16 +132,21 @@ Method: distinct-IP reach from `ipdsc__v1` (UNNEST `data_source_category_ids.lis
 → On any given day most of the 11 3P segments deliver **nothing**, and the ones that do swing 10–20×.
 This alone makes them unreliable for targeting.
 
-**7-day windowed reach/overlap (2026-06-04 → 06-10) — HEADLINE numbers:**
+**7-day windowed reach/overlap (2026-06-04 → 06-10):**
 | Layer | 7-day reach (IPs) |
 |---|---:|
-| MNTN Matched (379 kw) | **21,815,337** |
-| 3P (11 segments) | **3,040,269** |
+| MNTN Matched (379 kw) | 21,815,337 |
+| 3P (11 segments) | 3,040,269 |
 | 3P ∩ MM overlap | 386,928 (**12.7%** of 3P) |
-| 3P-only incremental | **2,653,341** (**+12.2%** on MM) |
+| 3P-only incremental | 2,653,341 |
 
-3P adds ~12% incremental weekly reach, but **87% of 3P IPs match NO OTF keyword** — the low-intent cohort
-behind the agency's 8–10× worse visit rate. MM keyword layer is **14× larger** than the 3P layer.
+> **⚠ CORRECTION (validation).** The **absolute 3P reach (3.04M) and "+12% incremental / MM is ~14× larger"
+> framing are NOT robust** — they're a low-volatility-week artifact. On the adjacent week (2026-06-03→06-09) the
+> SAME query gives 3P reach = **19.3M** and MM/3P = **1.13×** (not 14×), because a single 06-03 mega-batch
+> (6.5M+ IPs) falls just outside the original window. **Do not cite the 3P membership reach or "14×" as point
+> estimates** (the volatile range is ~3M–19M/week). The **ROBUST, window-stable fact is: ~87% of 3P IPs match
+> NO OTF keyword** (overlap 12–14% across windows) → low-intent. And this is moot for the recommendation anyway:
+> under the score gate, 3P contributes only **1.5% of actual delivery** (§4.9) regardless of membership size.
 
 ### 4.5 — 3P segment quality scoring (per-segment 7-day reach + redundancy)
 
@@ -158,9 +163,17 @@ segments delivered any IPs over the week; **2 broad segments carry 99% of all 3P
 | 1009501941 / 1011707151 / 1011707271 | Commerce Signals — Yoga / Pilates / Fitness | — | 0 | — |
 | 1000997189 / 1000999629 / 1000999639 | Epsilon — Gym Customers / Spenders | broad | 0 (DEPRECATED) | — |
 
-Reads: (a) every segment is ~87% non-overlapping with the OTF keyword universe — uniformly low intent;
-(b) OTF is a **HIIT** studio, yet the only delivering segments are broad-fitness or **yoga/pilates** (wrong
-modality); (c) the closest competitor signal (F45, also HIIT) delivers ~nothing (978 IPs). **All 11 → DROP.**
+> **⚠ CORRECTION (validation).** "Only 5/11 deliver; 6 deliver ZERO; 3 Epsilon deprecated" is a **single-week
+> timing artifact, NOT segment death.** Over a trailing 30-day window **all 11 segments deliver 1.3M–6.7M IPs**;
+> the 3 "deprecated" Epsilon ids are in fact the **largest** deliverers (3.2M–6.7M). ipdsc 3P delivery is bursty
+> (each refreshes on 2–4 days/month; the 6 "zero" ids' last refresh was 06-03, one day before the snapshot week).
+> Do NOT tell the customer these segments "deliver nothing" or are "dead." Verify the `tpa.categories.deprecated`
+> flag with the segment owner before calling Epsilon dead — the delivery data contradicts it.
+
+Reads (window-stable): (a) every segment is **~87% non-overlapping with the OTF keyword universe — uniformly low
+intent** (this is the robust basis for dropping them); (b) OTF is a **HIIT** studio, yet the delivering segments
+are broad-fitness or **yoga/pilates** (wrong modality). **All 11 → DROP** — but on the robust intent/modality
+grounds + the delivered-share mechanism (§4.9), NOT on a "deliver nothing" claim.
 
 ### 4.7 — Geo-fence sizing impact (reporter's hypothesis)
 
@@ -261,23 +274,30 @@ the other bands and is the bulk of reach. We ARE finding the right, responsive p
   way to *prove* MNTN's incremental contribution (vs visits that would have happened anyway) is a **holdout /
   incrementality test** (BER-2250 method). Recommend one if OTF/Sales want defensible proof of lift.
 
-### 4.8 — The demographic exclusions are inert (zero delivery)
+### 4.8 — The demographic exclusions: Oracle (DS1) inert, LiveRamp (DS35) ACTIVE [CORRECTED after validation]
 
-Query: `queries/ti_1026_exclusion_bite.sql` (2026-06-08, a high-3P day). Include audience (MM ∪ 3P) =
-**7,596,517 IPs** nationally. But:
-| Exclusion group | # cats | IPs in ipdsc | Removed from audience |
-|---|---:|---:|---:|
-| Oracle (DS1) income/age | 13 | **0** | **0** |
-| LiveRamp (DS35) income/age | 7 | **0** | **0** |
+> **⚠ CORRECTION (2026-06-11, independent validation).** The original claim here — "all 20 demographic
+> exclusions are inert / remove nobody" — was **WRONG for the 7 LiveRamp (DS35) categories.** It came from a
+> single-day `exclusion_bite` query (2026-06-08) that landed on a day those categories weren't in ipdsc's
+> rotating daily load. **ipdsc 3P (DS35) delivery is bursty** (each category refreshes on only 2-4 days/month),
+> so a one-day snapshot spuriously reads zero. Multi-day re-measurement shows the DS35 exclusions are active.
 
-The 20 demographic exclude segments (low-income <$35k, elderly 65+/75+, very young 18-20) have **zero ipdsc
-volume → they exclude nobody.** They look like aggressive targeting but are no-ops (consistent with TI-999:
-Oracle DS1 has no ipdsc delivery; same is now confirmed for the Equifax/Experian/TransUnion demographic bands).
-**Implication:** (a) they are NOT shrinking the audience, so relaxing them recovers no size; (b) they aren't
-doing what the advertiser thinks (not actually filtering by income/age) — cosmetic cleanup candidates.
-The exclusions that DO bite: **DS4 CRM suppression** (existing-member lists, advertiser-uploaded — works, keep),
-**DS43 T-Mobile Cellular** (applied at bid time, not via ipdsc — appropriate household-stability hygiene for
-CTV; keep), **DS2 MNTN First Party** (retargeting/past-visitor exclusions — keep).
+| Exclusion group | # cats | Status | Evidence |
+|---|---:|---|---|
+| **Oracle (DS1) income/age** | 13 | **INERT** ✓ | DS1 has **zero ipdsc presence at all** — excludes nobody. (Consistent with TI-999: DS1/Oracle never delivers to ipdsc.) |
+| **LiveRamp (DS35) income/age** | 7 | **ACTIVE** | Each matches **millions-to-tens-of-millions of IPs** on its load days, e.g. cat 1005350999 (TransUnion 65-74) **~15.4M IPs on 2026-06-04** (inside the eval window); 1004602219 ~10.0M, 1005351019 ~9.1M same day; 1004256419 ~24.2M on 06-03. All 7 deliver on ≥1 day in 2026-05-28→06-10. |
+
+**Corrected implications:**
+- The **DS35 income/age exclusions DO shrink the targetable universe** (low-income <$35k, elderly 65+/75+ are
+  actively removed — tens of millions of IPs). So for the sizing question they ARE a real reach lever: relaxing
+  the income/age bands would expand reach. (Whether to is a strategy call — income/age targeting is defensible
+  for a premium ~$159/mo membership; but it is NOT free of reach cost as originally stated.)
+- The **DS1 Oracle exclusions** are genuinely inert (cosmetic) — DS1 never delivers to ipdsc.
+- **Net audience-size impact** (exclusion ∩ scored include set) needs a multi-day intersection to quantify
+  precisely; not recomputed here because the headline recommendation rests on the delivered-impression mechanism
+  (§4.9), not on exclusion sizing.
+- Keep regardless: **DS4 CRM suppression** (existing-member lists — hygiene), **DS43 T-Mobile Cellular** (mobile-
+  carrier IPs aren't household-stable for CTV), **DS2 MNTN First Party** (retargeting/past-visitor exclusions).
 
 ### 4.5 — 3P segment quality scoring — see §4.5 above (per-segment 7d reach)
 

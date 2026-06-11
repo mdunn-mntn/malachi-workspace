@@ -87,9 +87,11 @@ def main():
         ["5. The keyword layer carries the audience — but ~25% of it is off-target.",
          "The 379 keywords are the engine (14x the 3P layer). ~51 are clearly off-target (Above Ground Pools, "
          "Antifreeze, Beer Mugs, Motorcycle Lighting, CPUs); ~43 are over-broad (Class, Power, Experience)."],
-        ["6. Geo is not the bottleneck and the income/age exclusions are inert.",
-         "The fence covers ~half the populated US and applies equally to both layers. The 20 income/age exclude "
-         "segments have zero data delivery — they exclude nobody."],
+        ["6. Geo is not the bottleneck. The LiveRamp income/age exclusions ARE active (a real reach lever).",
+         "The fence covers ~half the populated US and applies equally to both layers. The 7 LiveRamp (DS35) "
+         "income/age exclusions actively remove millions-to-tens-of-millions of IPs (corrected after validation — "
+         "an earlier single-day read wrongly called them inert; the 13 Oracle/DS1 bands ARE inert). So relaxing "
+         "the income/age bands is a genuine reach lever — defensible to keep for a premium membership, but not free."],
         ["", ""],
         ["RECOMMENDATIONS (priority order)", "Expected effect"],
         ["A. Remove all 11 3P interest segments.",
@@ -104,9 +106,10 @@ def main():
          "(3) widen the geo radius (7->10 mi). These add SCORED reach; 3P cannot."],
         ["C. Prune the 51 off-target keywords; review the 43 over-broad terms.",
          "Tightens relevance and raises the quality of the scored pool. See Keywords tab."],
-        ["D. Don't chase size via the income/age exclusions or by blaming geo.",
-         "Those 20 exclusions are no-ops (zero delivery) — cosmetic cleanup only. Geo already covers ~half the US "
-         "and is not the bottleneck."],
+        ["D. Relaxing the LiveRamp income/age exclusions IS a reach lever; geo is not the issue.",
+         "The 7 LiveRamp (DS35) income/age exclusions actively remove millions-to-tens-of-millions of IPs — "
+         "relaxing them (widen income floor / age cap) expands reach (a judgment call for a premium membership). "
+         "The 13 Oracle (DS1) bands are inert (cosmetic). Geo already covers ~half the US — not the bottleneck."],
         ["E. Keep CRM-suppression, T-Mobile-cellular, and MNTN-First-Party exclusions as-is.",
          "Legitimate hygiene (existing-member suppression; mobile-carrier IPs aren't household-stable for CTV)."],
     ]
@@ -165,25 +168,19 @@ def main():
     ws2 = wb.create_sheet("Interest Segments (3P)")
     seg = load_csv("ti_1026_interest_segments_eval.csv")
     cols = ["role", "data_source_category_id", "provider", "segment", "modality_fit",
-            "deprecated", "reach_ips_7d", "pct_matching_otf_keywords", "recommendation", "reason"]
-    hdr = ["Role", "LiveRamp Cat ID", "Provider", "Segment", "Modality fit", "Deprecated",
-           "Reach (IPs, 7d)", "% matching OTF keywords", "Recommendation", "Reason"]
+            "deprecated_flag", "delivery_note", "pct_matching_otf_keywords", "recommendation", "reason"]
+    hdr = ["Role", "LiveRamp Cat ID", "Provider", "Segment", "Modality fit", "Catalog deprecated flag",
+           "Delivery (IPDSC, bursty)", "% matching OTF keywords", "Recommendation", "Reason"]
     ws2.append(hdr); style_header(ws2, 1, len(hdr))
     for row in seg:
         vals = [row[c] for c in cols]
-        # format reach as int with commas
-        if vals[6].isdigit():
-            vals[6] = int(vals[6])
         ws2.append(vals)
         rr = ws2.max_row
-        ws2.cell(rr, 4).alignment = WRAP; ws2.cell(rr, 10).alignment = WRAP
+        ws2.cell(rr, 4).alignment = WRAP; ws2.cell(rr, 7).alignment = WRAP; ws2.cell(rr, 10).alignment = WRAP
         f = action_fill(row["recommendation"])
         if f:
             ws2.cell(rr, 9).fill = f
-        if row["deprecated"] == "TRUE":
-            ws2.cell(rr, 6).font = Font(bold=True, color=RED)
-    ws2.cell(1, 1).comment = None
-    autowidth(ws2, [9, 14, 14, 34, 13, 11, 14, 16, 14, 60])
+    autowidth(ws2, [13, 14, 16, 34, 12, 16, 30, 16, 14, 64])
     ws2.freeze_panes = "A2"
 
     # ---- Tab 3: Keywords ----
@@ -214,20 +211,24 @@ def main():
     rr = ws4.max_row + 1
     ws4.cell(rr, 1, "Demographic exclusion footprint on the audience (2026-06-08)"); ws4.cell(rr, 1).font = TITLE_FONT
     ws4.append(["Include audience (MM ∪ 3P), 2026-06-08", "", 7596517, "national, pre-geo"])
-    ws4.append(["Exclusion group", "Cats", "IPs removed from audience", "Note"])
+    ws4.append(["Exclusion group", "Cats", "Active?", "Note (corrected after validation)"])
     style_header(ws4, ws4.max_row, 4)
-    ws4.append(["LiveRamp income/age bands", 7, 0, "INERT — zero data delivery; excludes nobody"])
-    ws4.append(["Oracle income/age bands", 13, 0, "INERT — zero data delivery; excludes nobody"])
-    ws4.append(["T-Mobile Cellular (ISP type)", 1, "applied at bid time (not in IPDSC)",
+    ws4.append(["LiveRamp (DS35) income/age bands", 7, "ACTIVE",
+                "Removes millions-to-tens-of-millions of IPs (e.g. Ages 65-74 ~15.4M, HHI<$25k ~10.0M on 06-04). "
+                "A real reach lever — relaxing income/age would expand reach (defensible to keep for a premium membership)."])
+    ws4.append(["Oracle (DS1) income/age bands", 13, "INERT",
+                "DS1 has zero IPDSC presence — these 13 exclude nobody. Cosmetic cleanup only."])
+    ws4.append(["T-Mobile Cellular (ISP type)", 1, "active (bid-time)",
                 "KEEP — mobile-carrier IPs aren't household-stable for CTV"])
-    ws4.append(["CRM suppression (existing members)", 2, "advertiser-specific", "KEEP — good hygiene"])
-    ws4.append(["MNTN First Party (past visitors)", 3, "advertiser-specific", "KEEP — retargeting exclusion"])
+    ws4.append(["CRM suppression (existing members)", 2, "active", "KEEP — good hygiene"])
+    ws4.append(["MNTN First Party (past visitors)", 3, "active", "KEEP — retargeting exclusion"])
     ws4.append([])
-    ws4.append(["Read: the 20 income/age exclude segments remove nobody (no IPDSC delivery) — cosmetic, and not "
-                "actually filtering by income/age. Relaxing them gains no size. The CRM / T-Mobile / MNTN-FP "
-                "exclusions are legitimate hygiene — keep."])
+    ws4.append(["Read: the LiveRamp (DS35) income/age exclusions are ACTIVE and materially shrink the targetable "
+                "universe — they are a genuine reach lever (relax to gain reach). The Oracle (DS1) bands are inert. "
+                "NOTE: IPDSC 3P delivery is bursty (each category loads on only 2-4 days/month), so single-day "
+                "measurements understate — these figures are from multi-day windows."])
     ws4.cell(ws4.max_row, 1).alignment = WRAP
-    autowidth(ws4, [46, 8, 28, 50])
+    autowidth(ws4, [38, 8, 14, 66])
 
     # ---- Tab 5: Methodology ----
     ws5 = wb.create_sheet("Methodology")
@@ -248,6 +249,15 @@ def main():
          "rate is not separable from logs; the 87%-non-keyword overlap + agency's 8-10x report are the intent evidence."],
         ["Not a causal claim", "Reach/overlap and keyword relevance are descriptive. They explain WHY 3P underperforms "
          "(low intent, off-modality) but the 8-10x figure is the agency's measured result, not re-derived here."],
+        ["IPDSC 3P is BURSTY", "Each bought-3P (DS35) category refreshes into IPDSC on only ~2-4 days/month, so a "
+         "single-day or single-week reach number is window-luck-dependent (3P weekly reach swings ~3M-19M). Always "
+         "measure 3P category reach/exclusion over a >=30-day window. The recommendation rests on the window-STABLE "
+         "facts (87% of 3P non-keyword; 1.5% delivered share under the gate), not on absolute 3P membership reach."],
+        ["Independently validated", "8 adversarial validators re-derived every load-bearing claim on different "
+         "days/methods. Confirmed: expression decomposition, 3P daily volatility, geo coverage, keyword split, "
+         "campaign perf. Corrected here after validation: LiveRamp income/age exclusions are ACTIVE (not inert); "
+         "3P absolute reach / '14x' framing dropped as window-luck; '6 segments deliver zero / Epsilon deprecated' "
+         "reworded to bursty-delivery. Full report: artifacts/ti_1026_validation_report.md."],
     ]
     for a, b in meth:
         ws5.append([a, b]); rr = ws5.max_row
