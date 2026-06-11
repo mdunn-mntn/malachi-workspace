@@ -1,7 +1,22 @@
 # MNTN Business Knowledge
 
 ## Security policy: no local Slack apps / no local-env API keys (2026-06-10)
-MNTN security (Robin Fox) **no longer allows locally-hosted Slack apps or API keys held in local env files.** Personal/self-hosted bots with tokens on local machines (e.g. a Raspberry Pi) are disallowed and will be disabled and deleted. The sanctioned path for internal AI/Slack integrations is **Compass** (MNTN's internal AI-agent platform on the MNTN Prod MCP — contact Harvey Yau's group). The TI Slack knowledge-extraction bot was decommissioned under this policy; rebuild on Compass instead. (via Robin Fox, 2026-06-10)
+MNTN security (Robin Fox) **no longer allows locally-hosted Slack apps or API keys held in local env files.** Personal/self-hosted bots with tokens on local machines (e.g. a Raspberry Pi) are disallowed and will be disabled and deleted. Secrets are being rotated into **SOPS** (encrypted secrets in the ArgoCD repo), via a Basecamp tool that PRs the re-encrypted secret (KMS Decrypt is disabled for individuals; Vault is optional but unsupported by DevOps). The TI Slack knowledge-extraction bot was decommissioned under this policy. (via Robin Fox + Harvey Yau, 2026-06-10)
+
+## Compass — MNTN's internal AI infrastructure investigator (whitepaper, 2026-03; rollout 2026-06)
+**What it is:** A multi-agent AI system embedded in the Internal Developer Platform (Backstage) that investigates infra problems like a senior engineer — Router decomposes a query, dispatches domain **Advisors** (Infrastructure/Billing/GCP/Knowledge/GitHub) in parallel, each with its own context window and scoped tools. Findings flow into a live **evidence knowledge graph** (8-stage ingestion: normalize→tag→extract facts→link entities→correlate→detect conflicts→project to slots→evaluate readiness) that **detects contradictions** between advisors and tracks **evidence provenance** (every claim cited to a tool call). Answers when info requirements (TaskFrame slots) are satisfied, streaming a provisional answer early. **Read-only** — never mutates infra; remediation via GitOps PRs. Built on MCP + Google A2A + Backstage + Grafana LGTM + ContextForge (IBM MCP gateway). Anti-hallucination: Chain-of-Verification, source attribution, impossible-ratio detection, causation prohibition, IaC-as-truth.
+
+**Access:**
+- **Atlas Code MCP** (300+ tools, full codebase/GCP/docs) → add to Claude Code: `claude mcp add mountain --transport http https://agent-gateway.management.in.mountain.com/mcp/code`. Cursor: `{"mcpServers":{"atlas-code":{"url":"https://agent-gateway.management.in.mountain.com/mcp/code"}}}`
+- **Compass as a service** — 3 protocols, one core: (1) HTTP `POST /api/basecamp-chat/a2a`; (2) MCP `compass-query` tool via ContextForge; (3) Google A2A (`/.well-known/agent-card.json`, `POST /message:send` or `:stream`). Callable by CI/CD, bots, agents.
+- **Extensibility:** add a tool = deploy MCP server + annotate Backstage catalog (auto-registered in ContextForge); add an advisor = register in A2A registry. No code change.
+- Questions: **#dev-basecamp**, Harvey Yau's group.
+
+**Relevance to TI knowledge work:** architecture is domain-agnostic (already searches Confluence via knowledge MCP → BigQuery vector DB). **Slack integration and knowledge-doc authoring are roadmap (§9 "What's Next"), NOT yet shipped** — so Compass does not yet replace a scheduled Slack-scrape→markdown pipeline. (via Harvey Yau, #engineering-team / whitepaper, 2026-06-10)
+
+**Coverage gap — Quickframe (QF) platforms mostly NOT covered.** Compass was built around MNTN's core infrastructure. QF platforms were built outside it, so coverage is thin — you can get billing + some GCP info, but the data is far less rich than for central-platform services. Don't rely on Compass for deep QF investigations. (via Harvey Yau, 2026-06-10)
+
+**Compass is also used for repo/codebase forensics** — e.g. confirming whether a repo is dead/archived. `SteelHouse/audience-loader` was confirmed a dead/archived repo (GitHub 404); its referenced secrets were not found in AWS Secrets Manager. Compass conversations are shareable via `basecamp.in.mountain.com/mcp-chat?join=<uuid>` links. (via Macie Kluting / Jason Whiting, 2026-06-10)
 
 ## Peak Performance / Mountain Matched relationship (per TI-896, 2026-04-22)
 

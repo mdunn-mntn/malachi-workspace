@@ -10,13 +10,20 @@
 > Pi cron disabled 2026-06-10 (line commented in crontab). Code kept as reference for the
 > Compass port. Last good run: 2026-06-10 00:00 (commit `22043f6`). No data lost.
 
-## Migration to Compass (replaces the steps below)
-The pipeline logic is unchanged — only the host + auth model move:
-- **Scrape** ([scraper.py](scraper.py)) → Compass reads Slack via its sanctioned, centrally-managed
-  integration instead of a local bot token. No `xoxb` token in local env.
-- **Extract** ([extractor.py](extractor.py)) → same Claude prompt; runs as a Compass agent task.
-- **Update** ([updater.py](updater.py)) → still commits to `knowledge/*.md` (confirm Compass has repo write access).
-- **Open question:** does Compass support a scheduled (nightly) agent run + git push? Confirm with Harvey Yau.
+## Reality check (2026-06-10, after reading the Compass whitepaper)
+Compass is an **infrastructure investigator**, not a scheduled data pipeline. The two
+capabilities this bot needed are on Compass's roadmap (§9 "What's Next"), **NOT shipped**:
+- **Slack integration** (scrape/participate in channels) — roadmap, not built.
+- **Knowledge-doc authoring** (write findings to a knowledge base) — roadmap, not built.
+
+So there is **no port-the-bot-to-Compass action available today.** Recommendation: do NOT
+rebuild this pipeline. The org is centralizing exactly this (Slack capture + knowledge
+authoring) into Compass; our personal nightly extraction is now both non-compliant and
+soon-redundant. Let Compass's integrations land and adopt them. If a sanctioned knowledge
+pipeline is still wanted later, build it as a Compass advisor/MCP tool consuming
+`compass-query`, with secrets in SOPS (not local env). Discuss in #dev-basecamp.
+
+See `knowledge/mntn_business.md` "Compass" section for full architecture + access details.
 
 ---
 
