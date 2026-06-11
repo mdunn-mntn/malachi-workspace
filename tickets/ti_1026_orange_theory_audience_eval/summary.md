@@ -130,8 +130,37 @@ Method: distinct-IP reach from `ipdsc__v1` (UNNEST `data_source_category_ids.lis
 | 2026-06-10 | Adsquare Yoga Pilates only | 118,690 |
 
 → On any given day most of the 11 3P segments deliver **nothing**, and the ones that do swing 10–20×.
-This alone makes them unreliable for targeting. **7-day windowed reach/overlap (2026-06-04→06-10): PENDING**
-(replaces the single-day snapshot as the headline reach number).
+This alone makes them unreliable for targeting.
+
+**7-day windowed reach/overlap (2026-06-04 → 06-10) — HEADLINE numbers:**
+| Layer | 7-day reach (IPs) |
+|---|---:|
+| MNTN Matched (379 kw) | **21,815,337** |
+| 3P (11 segments) | **3,040,269** |
+| 3P ∩ MM overlap | 386,928 (**12.7%** of 3P) |
+| 3P-only incremental | **2,653,341** (**+12.2%** on MM) |
+
+3P adds ~12% incremental weekly reach, but **87% of 3P IPs match NO OTF keyword** — the low-intent cohort
+behind the agency's 8–10× worse visit rate. MM keyword layer is **14× larger** than the 3P layer.
+
+### 4.5 — 3P segment quality scoring (per-segment 7-day reach + redundancy)
+
+`outputs/ti_1026_interest_segments_eval.csv`, `queries/ti_1026_per_segment_reach_7d.sql`. Only **5 of 11**
+segments delivered any IPs over the week; **2 broad segments carry 99% of all 3P reach**:
+
+| Cat | Provider / Segment | Modality | 7d reach | % match OTF kw |
+|---|---|---|---:|---:|
+| 1006088981 | Stirista — Frequent Purchasers > Fitness | broad | 2,136,648 | 12.9% |
+| 1011732871 | Adsquare — Yoga Pilates app-usage | off (HIIT≠yoga) | 887,558 | 12.3% |
+| 1009019881 | 180byTwo — Club Pilates visitors | off | 20,571 | 13.0% |
+| 1004396389 | 180byTwo — Corepower Yoga visitors | off | 13,663 | 13.3% |
+| 1006035411 | PlaceIQ — F45 Recent visitors | competitor | 978 | 14.2% |
+| 1009501941 / 1011707151 / 1011707271 | Commerce Signals — Yoga / Pilates / Fitness | — | 0 | — |
+| 1000997189 / 1000999629 / 1000999639 | Epsilon — Gym Customers / Spenders | broad | 0 (DEPRECATED) | — |
+
+Reads: (a) every segment is ~87% non-overlapping with the OTF keyword universe — uniformly low intent;
+(b) OTF is a **HIIT** studio, yet the only delivering segments are broad-fitness or **yoga/pilates** (wrong
+modality); (c) the closest competitor signal (F45, also HIIT) delivers ~nothing (978 IPs). **All 11 → DROP.**
 
 ### 4.7 — Geo-fence sizing impact (reporter's hypothesis)
 
@@ -164,8 +193,13 @@ Medical Adhesives", "Guitar Parts And Accessories", "Ignition", "Motorcycle Ligh
 "Montessori", "Outdoor Surveillance Equipment", "Sway Bars", "Suspension Kits", "Transformers" (auto),
 "Townhouse", "Strap-on Vibrators", "Spelling And Reading Programs" — plus over-broad single-word terms
 ("Class", "Power", "Silver", "Experience", "Mirrors", "Pillows", "Socks", "Towels", "Benches", "Hooks").
-These dilute the MNTN-Matched portion's relevance and likely drag visit rate. Full list:
-`outputs/ti_1026_ds19_keywords.csv`. DAR/BUK comparison pending.
+These dilute the MNTN-Matched portion's relevance and likely drag visit rate.
+
+Conservative classification (`artifacts/classify_keywords.py` → `outputs/ti_1026_keyword_classification.csv`,
+default = KEEP, only high-confidence flags): **285 keep (75%), 51 drop off-target (13%), 43 review over-broad (11%)**.
+So ~1 in 4 keywords (94/379) is off-target or over-broad — a real curation gap (the list reads like a generic
+consumer-products template, not a BUK/DAR recommendation for orangetheory.com). The exact keep/drop line is for
+Kelly/Sales to finalize; the workbook surfaces the candidates.
 
 ## 5. Solution
 _(pending)_
