@@ -222,6 +222,45 @@ platform) run HHST = 0 (no gate). Query: `queries/...` (dso.household_score_thre
   CTV campaign; small-n/retargeting noise. Both campaigns are 100% CTV (`display_imps=0`), so the headline VR
   numbers are not a channel artifact, but cross-campaign VR here is not reliable evidence either way.
 
+### 4.10 — Is the low visit rate our targeting or their creative? (the attribution question)
+
+Two analyses, last 30d, campaign 319137. Queries: `ti_1026_visitrate_by_score.sql`, `ti_1026_ctv_vr_benchmark.sql`.
+
+**(a) Does MNTN's score discriminate visit rate for OTF? (per served IP, clickpass_log attribution)**
+| MNTN score band | Served IPs | Visit rate |
+|---|---:|---:|
+| Top (10000, vertical-matched / HI) | 436,739 | **1.354%** |
+| High (6501-9999) | 86,268 | 0.192% |
+| Mid (3333-6500) | 356,250 | 0.198% |
+| Low (0-3332) | 130,893 | 0.063% |
+| Unscored (-1) | 32,405 | 0.463% (small/noisy; likely RTC recent-visitors) |
+
+→ **Our model works.** The score rank-orders responsiveness — the top-intent (10000/HI) band visits **~7-20×**
+the other bands and is the bulk of reach. We ARE finding the right, responsive people.
+
+**(b) Benchmark: OTF vs comparable CTV scored-prospecting campaigns (HHST>0, video≥95%, ≥100K imps, 30d):**
+| | visit rate |
+|---|---:|
+| Peer p10 / p25 / **median** / p75 / p90 | 0.09% / 0.36% / **0.91%** / 1.99% / 4.15% |
+| **OTF 319137 (blended)** | **0.18%** (≈ **15th percentile**, 126 of 814 peers at/below) |
+
+**Reconciliation / verdict (is it us or them?):**
+- **NOT a reach/size/wrong-people problem** — ruled out: paces to budget on the scored audience alone (enough
+  people), score discriminates 7-20× (right people, model works), delivery is in-fence + scored (no targeting error).
+- **OTF's blended VR (0.18%) is genuinely low vs peers (~15th pct; median peer ~5× higher).** Two contributors:
+  1. **Audience MIX (a lever WE control):** ~50% of served IPs are below the 6501 gate (low/mid/unscored — likely
+     RTC bypass and/or the gate having tightened recently), dragging the blend. The quality is concentrated in the
+     **10000/HI band (1.35%)**; note the 6501-9999 band is only 0.19%, so gating at **10000 (HI-only)** rather than
+     6501 would lift blended VR substantially at modest reach cost (drops the 86K high band, keeps the 437K top band).
+  2. **Creative/offer/brand (OTF's lever, the binding ceiling):** even our BEST-targeted segment (1.35%) only reaches
+     the peer **median**. A strong CTV advertiser blends ~0.9% and tops ~2-4%. OTF's best-targeted ≈ a typical peer's
+     average → there's a response ceiling that better targeting cannot lift. That's creative / offer / landing-page /
+     brand-pull — OTF's side, not ours.
+- **3P is irrelevant to this** — it's filtered out by the gate (§4.9); not a VR lever either way.
+- **Caveat:** visit rate is observational and depends on each advertiser's pixel/site-visit definition. The only
+  way to *prove* MNTN's incremental contribution (vs visits that would have happened anyway) is a **holdout /
+  incrementality test** (BER-2250 method). Recommend one if OTF/Sales want defensible proof of lift.
+
 ### 4.8 — The demographic exclusions are inert (zero delivery)
 
 Query: `queries/ti_1026_exclusion_bite.sql` (2026-06-08, a high-3P day). Include audience (MM ∪ 3P) =
