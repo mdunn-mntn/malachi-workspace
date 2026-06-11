@@ -180,6 +180,48 @@ populated US, the in-fence audience is millions of IPs, far more than the ~7.3M 
 campaign delivers. Crucially, **geo applies equally to the MM and 3P layers**, so it is NOT the cause of the
 3P underperformance the agency flagged. (`radii_exclude` not subtracted here — would shave coverage slightly.)
 
+### 4.9 — THE MECHANISM (the "why"): scoring × HHST × OR-include
+
+This is the core causal explanation, with evidence. The audience is **(MNTN Matched keywords OR 11 3P segments)
+AND within 7 mi of a studio** — confirmed OR, one include block with `or:[DS19, DS35]` (§4.1).
+
+**Fact 1 — only the MNTN Matched IPs carry a score.** MNTN's `household_score` (0-10000 fitness-intent quality
+signal) is computed from the DS19 keyword layer. The 3P segments are bought lists; **87% of the IPs they bring in
+match no OTF keyword (§4.4), so they have no score** (household_score = -1).
+
+**Fact 2 — the main campaign gates bidding on score: HHST = 6,501.** `dso.household_score_thresholds`:
+campaign 319137 threshold = **6501** (only IPs scoring ≥6501 are bid on). Other OTF campaigns (and ~64% of the
+platform) run HHST = 0 (no gate). Query: `queries/...` (dso.household_score_thresholds, advertiser_id=39718).
+
+**Evidence — delivered household_score by campaign (last 14d, `cost_impression_log`)**, `queries/ti_1026_delivered_score_dist.sql`:
+| Campaign | HHST | Impressions | Distinct IPs | % scored ≥6501 | % unscored (-1) |
+|---|---:|---:|---:|---:|---:|
+| **319137** (main, $2k/day) | 6501 | 1,521,364 | 463,895 | **82.3%** | **1.5%** |
+| **319133** (tiny, $26/day) | 0 | 34,515 | 5,582 | 0.04% | **99.96%** |
+
+**What this proves:**
+1. **3P contributes ~nothing to the main campaign.** With HHST=6501, unscored 3P-only IPs can't clear the bar —
+   only **1.5%** of delivery is unscored. The campaign reaches its audience and paces to budget almost entirely
+   through the *scored keyword* layer. (This corrects §4.4's "3P adds ~12% reach" — that was national IPDSC
+   *membership*; under the score gate those unscored IPs aren't biddable, so real delivered 3P share ≈ 1.5%.)
+2. **Where 3P delivers, it's garbage.** On a no-gate campaign (HHST=0), the bidder bids on everything — 319133 is
+   **99.96% unscored**. That no-intent traffic is exactly the "non-MNTN matched audience" the agency measured at
+   8-10× worse visit rate.
+3. **So 3P can never be the reach fix:** gate on → filtered out; gate off → unscored garbage. Either way, remove it.
+
+**Is the audience big enough? (the reach question)** — `queries/ti_1026_*pacing*`, daily trend:
+- Budget = $83.41/hr ≈ **$2,002/day**. Main campaign **paces at 1.08-1.31× of budget most days in June** (it CAN
+  spend its budget on the scored, in-fence audience alone — 463,895 distinct scored IPs reached in 14d, no 3P help).
+- BUT it **underdelivered through late May (0.35-0.6× of budget)** and had a 2-day pause (Jun 1-2). So the scored
+  audience within 7 mi of studios is **adequate at the current budget, but not deep** — headroom for scaling is thin.
+- **Verdict:** not currently starved at ~$2k/day; the binding constraint when it bites is the **scored-IP ×
+  7-mi-geo intersection**, NOT the 3P segments. To scale spend, the levers are: (a) **lower HHST** (6501 = top
+  ~third of scores; their own quality dial), (b) **broaden + clean the keyword set** so more fitness households get
+  scored into the pool, (c) **widen the geo radius**. Bought 3P is not on this list.
+- Note: 319133 (HHST=0, 99.96% unscored) shows a higher 90d visit rate than 319137 — but it's a tiny ($26/day)
+  CTV campaign; small-n/retargeting noise. Both campaigns are 100% CTV (`display_imps=0`), so the headline VR
+  numbers are not a channel artifact, but cross-campaign VR here is not reliable evidence either way.
+
 ### 4.8 — The demographic exclusions are inert (zero delivery)
 
 Query: `queries/ti_1026_exclusion_bite.sql` (2026-06-08, a high-3P day). Include audience (MM ∪ 3P) =

@@ -65,34 +65,50 @@ def main():
     ws["A2"].font = Font(italic=True, color=GREY)
     rows = [
         ["", ""],
-        ["THE FINDING", ""],
-        ["1. The 3P 'interest segments' are the problem, not the size.",
-         "All 11 bought 3P segments are low-intent: 87% of their users match NO Orange Theory keyword. "
-         "Over a week they add only ~12% incremental reach (2.65M of 21.8M IPs) — and that 12% is the slice the "
-         "agency already flagged as 8-10x worse on visit rate. 6 of 11 deliver zero users (3 deprecated, 3 no feed); "
-         "the 2 that carry reach are a broad fitness-buyer list and a yoga/pilates app-usage list (off-modality for HIIT)."],
-        ["2. The keyword (MNTN Matched) layer carries the audience — but ~25% is off-target.",
-         "The 379 keywords reach 21.8M IPs/week (14x the 3P layer). ~51 are clearly off-target (e.g. Above Ground "
-         "Pools, Antifreeze, Beer Mugs, Motorcycle Lighting, CPUs) and ~43 are over-broad single words (Class, Power, "
-         "Experience). These dilute relevance and drag visit rate."],
-        ["3. Geo filtering is NOT the bottleneck, and the demographic exclusions are inert.",
-         "The 946 studio fences (7-mi radius) cover ~half the populated US and apply equally to MM and 3P. The 20 "
-         "income/age exclude segments (Oracle + LiveRamp) have zero data delivery — they exclude nobody. So neither "
-         "is the cause of small size, and neither can be 'relaxed' to gain it."],
+        ["THE WHY (how the bidder turns this audience into the problem)", "Evidence (see 'Why — Evidence' tab)"],
+        ["The audience = (MNTN Matched keywords OR 11 bought 3P segments) AND within 7 mi of a studio.",
+         "Confirmed OR-include: one include block, or:[MNTN Matched, 3P]."],
+        ["1. Only the MNTN Matched IPs carry a quality score; the 3P IPs do not.",
+         "MNTN's household score (fitness-intent, 0-10000) is built from the keyword layer. 87% of 3P-segment IPs "
+         "match NO Orange Theory keyword, so they have no score."],
+        ["2. The main campaign only bids on high-scoring IPs (score threshold = 6,501).",
+         "Last 14d: 82% of the main campaign's impressions went to IPs scored >=6,501; only 1.5% were unscored. "
+         "So the unscored 3P-only IPs are filtered out — the 3P segments contribute ~nothing here."],
+        ["3. Where there is NO score threshold, the bidder buys the unscored 3P traffic — and it's the bad traffic.",
+         "A no-threshold OTF campaign delivered 99.96% to UNSCORED IPs. That no-intent traffic is exactly the "
+         "'non-MNTN matched audience' the agency measured at 8-10x worse visit rate."],
+        ["=> So 3P can NEVER be the reach fix: threshold on -> filtered out; threshold off -> unscored garbage. Remove it.",
+         ""],
+        ["4. Is the audience big enough? At the current budget, yes — but headroom is thin.",
+         "The main campaign paces at/above its ~$2,000/day budget most days in June on the scored, in-fence audience "
+         "ALONE (no 3P help) — 463,895 distinct scored IPs reached in 14d. It underdelivered in late May, so the "
+         "scored audience within 7 mi of studios is adequate, not deep. The constraint is the scored-IP x geo "
+         "intersection, NOT the 3P segments."],
+        ["5. The keyword layer carries the audience — but ~25% of it is off-target.",
+         "The 379 keywords are the engine (14x the 3P layer). ~51 are clearly off-target (Above Ground Pools, "
+         "Antifreeze, Beer Mugs, Motorcycle Lighting, CPUs); ~43 are over-broad (Class, Power, Experience)."],
+        ["6. Geo is not the bottleneck and the income/age exclusions are inert.",
+         "The fence covers ~half the populated US and applies equally to both layers. The 20 income/age exclude "
+         "segments have zero data delivery — they exclude nobody."],
         ["", ""],
         ["RECOMMENDATIONS (priority order)", "Expected effect"],
         ["A. Remove all 11 3P interest segments.",
-         "Improves visit rate (drops the lowest-intent ~12% slice). 6 already deliver nothing; the rest are broad/off-modality (yoga/pilates, not HIIT)."],
-        ["B. Prune the 51 clearly off-target keywords; review the 43 over-broad terms.",
-         "Tightens MNTN Matched relevance with little reach loss. See Keywords tab."],
-        ["C. Grow size via the MNTN Matched keyword layer, not bought 3P.",
-         "MM reaches 21.8M IPs/week (14x the 3P layer) and is the quality engine here. Add on-target "
-         "HIIT/strength/cardio/recovery keywords to replace the pruned off-target ones — net-neutral-to-expanding reach at similar intent."],
-        ["D. Don't chase size via exclusions or geo.",
-         "The income/age exclusions are no-ops (cosmetic cleanup only). Geo already covers ~half the US. If a specific "
-         "market under-delivers, widen its radius (7->10 mi) — but the audience is not broadly starved."],
+         "On the score-gated main campaign they already contribute ~nothing (only 1.5% of delivery is unscored); "
+         "on any no-threshold campaign they deliver the unscored, 8-10x-worse traffic. Removing them cleans the "
+         "expression with ~no loss of real delivered reach and removes the worst traffic. (6 of 11 deliver nothing "
+         "at all; the rest are broad/off-modality yoga-pilates, not HIIT.)"],
+        ["B. To scale reach, use the SCORE THRESHOLD and KEYWORDS — not 3P.",
+         "If they need more volume: (1) lower the household-score threshold from 6,501 (it keeps only the top ~third "
+         "of scores — their own quality dial; lowering it opens more scored inventory at a modest, controlled VR "
+         "cost); (2) broaden + clean the keyword set so more fitness households get scored into the pool; "
+         "(3) widen the geo radius (7->10 mi). These add SCORED reach; 3P cannot."],
+        ["C. Prune the 51 off-target keywords; review the 43 over-broad terms.",
+         "Tightens relevance and raises the quality of the scored pool. See Keywords tab."],
+        ["D. Don't chase size via the income/age exclusions or by blaming geo.",
+         "Those 20 exclusions are no-ops (zero delivery) — cosmetic cleanup only. Geo already covers ~half the US "
+         "and is not the bottleneck."],
         ["E. Keep CRM-suppression, T-Mobile-cellular, and MNTN-First-Party exclusions as-is.",
-         "Legitimate hygiene (existing-member suppression; mobile-carrier IPs aren't household-stable for CTV). Leave untouched."],
+         "Legitimate hygiene (existing-member suppression; mobile-carrier IPs aren't household-stable for CTV)."],
     ]
     r = 4
     for a, b in rows:
@@ -106,9 +122,46 @@ def main():
         elif a and a[0] in "ABCDE" and a[1] == ".":
             ws.cell(r, 1).font = Font(bold=True)
         r += 1
-    autowidth(ws, [60, 70])
+    autowidth(ws, [70, 64])
 
-    # ---- Tab 2: Interest Segments ----
+    # ---- Tab 2: Why — Evidence ----
+    wse = wb.create_sheet("Why — Evidence")
+    wse["A1"] = "The mechanism, with evidence"; wse["A1"].font = TITLE_FONT
+    wse.append([])
+    wse.append(["Household-score threshold (HHST) per OTF campaign — dso.household_score_thresholds"])
+    wse.cell(wse.max_row, 1).font = Font(bold=True, color=NAVY)
+    wse.append(["Campaign", "HHST (min score to bid)", "Meaning"])
+    style_header(wse, wse.max_row, 3)
+    wse.append([319137, 6501, "Main campaign — only bids on IPs scored >=6,501 (top ~third). Unscored 3P-only IPs filtered out."])
+    wse.append([328040, 0, "No score gate — bids on everything, scored or not."])
+    wse.append([328041, 0, "No score gate."])
+    wse.append([328042, 0, "No score gate."])
+    wse.append(["(platform)", "~64% at 0", "20,982 of ~30k campaigns run HHST=0 (no score gate)."])
+    for r in range(wse.max_row - 4, wse.max_row + 1):
+        wse.cell(r, 3).alignment = WRAP
+    wse.append([]); wse.append([])
+    wse.append(["Delivered household-score by campaign — last 14 days, cost_impression_log"])
+    wse.cell(wse.max_row, 1).font = Font(bold=True, color=NAVY)
+    wse.append(["Campaign", "HHST", "Impressions", "Distinct IPs", "% scored >=6501", "% unscored (-1)", "Read"])
+    style_header(wse, wse.max_row, 7)
+    wse.append([319137, 6501, 1521364, 463895, "82.3%", "1.5%", "Score gate works — 3P-only (unscored) IPs filtered out; 3P contributes ~nothing."])
+    wse.append([319133, 0, 34515, 5582, "0.04%", "99.96%", "No gate -> bids on unscored IPs = the 8-10x-worse 'non-MNTN matched' traffic."])
+    wse.cell(wse.max_row, 7).alignment = WRAP; wse.cell(wse.max_row - 1, 7).alignment = WRAP
+    wse.append([]); wse.append([])
+    wse.append(["Reach / pacing — is the scored audience big enough?"])
+    wse.cell(wse.max_row, 1).font = Font(bold=True, color=NAVY)
+    wse.append(["Metric", "Value", "Read"])
+    style_header(wse, wse.max_row, 3)
+    wse.append(["Budget (main campaign)", "~$2,002/day", "$83.41/hr x 24"])
+    wse.append(["June daily pacing", "1.08-1.31x of budget", "Paces to budget on the SCORED audience alone (no 3P) — not starved at current budget."])
+    wse.append(["Late-May pacing", "0.35-0.6x of budget", "Soft patch — scored, in-fence audience is adequate but not deep; thin headroom to scale."])
+    wse.append(["Scored reach realized (14d)", "463,895 distinct IPs", "All scored >=6501, in-fence — the real high-value audience."])
+    wse.append(["MNTN Matched vs 3P national reach", "21.8M vs 3.0M /wk", "Keyword layer is 14x the 3P layer; 87% of 3P IPs are unscored (no keyword match)."])
+    for r in range(wse.max_row - 4, wse.max_row + 1):
+        wse.cell(r, 3).alignment = WRAP
+    autowidth(wse, [16, 22, 78])
+
+    # ---- Tab 3: Interest Segments ----
     ws2 = wb.create_sheet("Interest Segments (3P)")
     seg = load_csv("ti_1026_interest_segments_eval.csv")
     cols = ["role", "data_source_category_id", "provider", "segment", "modality_fit",
