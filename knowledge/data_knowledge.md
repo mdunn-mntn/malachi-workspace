@@ -1057,6 +1057,28 @@ Reference diagram: `documentation/architecture/audience_intent_scoring.png`
 
 **Implication:** Per-tier incrementality analysis is not meaningful until continuous scoring replaces the flat 10000. Aggregate analysis (holdout vs targeted, all tiers pooled) is the correct approach.
 
+### The HHST GATE vs the household_score VALUE — and how it filters 3P (TI-1026)
+
+Two distinct things, easy to conflate:
+- **`cost_impression_log.household_score`** = the delivered IP's *score value* (0-10000, or -1 unscored). The HI/MI/PP tiers above describe this value.
+- **`dso.household_score_thresholds`** (VIEW; cols: `advertiser_id, campaign_group_id, campaign_id, threshold`) = the per-campaign **GATE** — the minimum `household_score` an IP must have for the bidder to bid on it. This is the "HHST" Ryan Kleck means by "the score doesn't matter if the HHST is not set." **`threshold = 0` → no gate (bid on everyone, scored or not). ~64% of campaigns (20,982 of ~30k) run threshold=0.** Common non-zero gates: 10000, 6666, 9501.
+
+**Mechanism — why OR-include 3P on an MM campaign usually does nothing (or delivers garbage):**
+MM-prospecting audiences are typically `(MNTN Matched keywords OR bought 3P segments) AND geo`. Only the MNTN
+Matched (DS19 keyword) IPs get scored; **3P-only IPs (those matching a bought segment but no keyword) are unscored
+(household_score = -1).** So:
+- **Campaign with a score gate (threshold > 0):** unscored 3P-only IPs can't clear the gate → **filtered out → the
+  3P segments contribute ~nothing.** Empirical (TI-1026, Orange Theory campaign 319137, threshold=6501, 14d):
+  **82.3% of delivery scored ≥6501, only 1.5% unscored.**
+- **Campaign with no gate (threshold = 0):** the bidder bids on the unscored 3P-only IPs → low-intent traffic.
+  Empirical (OTF campaign 319133, threshold=0): **99.96% of delivery was unscored (-1).** This is the source of
+  "3P / non-MNTN-matched audiences perform far worse" complaints.
+- **Takeaway for audience eval:** bought-3P OR-include is not a usable reach lever — gate on → filtered; gate off →
+  unscored garbage. To add *scored* reach: lower the gate, broaden/clean keywords, or widen geo. Connects to
+  TI-999 Finding 14 (pure-3P delivery is ~74% unscored) and [[reference_rtc_hhst_gating]].
+- **Query delivered scores:** `cost_impression_log` (filter `time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL N DAY)`
+  to prune; it's a 90-day rolling SQLMesh view). Has `campaign_id, ip, household_score, advertiser_household_score, model_params` + geo cols.
+
 ### Special Values
 - **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
 - **8000** = Peak Performance (PP) — **was active Jan-Feb 2026, currently minimal** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. Waterfall: HI → PP. Top advertisers with PP data: 34185, 36232, 37158, 34838. Most PP activity ended by late February. Sporadic single-digit impressions in March-April.
