@@ -1,0 +1,7 @@
+TI-1026 Orange Theory — Audience Evaluation deck
+Shared 2026-06-11 (post-validation; corrected)
+
+Rendered (githack): https://gist.githack.com/mdunn-mntn/020ca0865092bdda9bef84e541a22239/raw/ti_1026_presentation_deck.html
+Gist:               https://gist.github.com/mdunn-mntn/020ca0865092bdda9bef84e541a22239
+
+NOTE: public gist (world-readable). Unshare with:  gh gist delete 020ca0865092bdda9bef84e541a22239
