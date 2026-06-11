@@ -280,7 +280,56 @@ Advertisers who adopt a new feature may be systematically different:
 
 **TI-748 confirmed:** Media Plan beta advertisers are hand-picked by PEX/CS (identified candidates with prior interest) and validated by production ops (Toph) for pacing risk. NOT randomized. This is the strongest form of selection bias short of self-selection.
 
-Mitigation: Use pre-period trends as covariates, document the bias explicitly. For future rollouts, use waitlist control design with randomized wave ordering.
+**TI-961 confirmed (Fangorn Wave 3):** Tier 5 / Wave 3 holdout was selected by structural delivery-concern criteria (HHST low, audience shrink/grow risk, no impressions yet). NOT random. Per Confluence rollout plan, Wave 3 = "Hold for Manual Review" advertisers with score < 0.70 AND at least one blocking flag. Pool CVR ~6.5% vs treated tiers 2-4% reflects structural composition (vertical mix skews casual dining + home services + hospitality with multi-touch-attribution-heavy CVR). See [`reference_wave3_selection_bias`](../../.claude/projects/-Users-malachi-Developer-work-mntn-workspace/memory/reference_wave3_selection_bias.md).
+
+Mitigation: Use pre-period trends as covariates, document the bias explicitly. For future rollouts, use waitlist control design with randomized wave ordering. Use **CausalImpact as primary inference** (builds counterfactual from treated tier's own pre-period structure, more robust to baseline composition differences than DiD).
+
+### CUPED variance reduction requires randomization — don't bolt onto quasi-experiments
+CUPED (Deng, Xu, Kohavi, Walker 2013) reduces variance on the post-period estimate using pre-period as a covariate. Variance reduction = Var(Y_adj) = Var(Y_post) × (1 − ρ²) where ρ = corr(pre, post). **This guarantee holds ONLY when E[pre_T − pre_C] = 0 in expectation** — i.e., when randomized assignment makes baselines equal in expectation.
+
+**For non-randomized designs with deliberate baseline imbalance** (e.g., TI-961 Tier 2 random sample at IVR ~1.5% vs Tier 5 Wave-3 holdout at IVR ~1.0%):
+- Standard CUPED estimator `τ̂_add = ȳ_adj,T − ȳ_adj,C` is biased — pre-period imbalance leaks into post-period comparison via θ
+- Combining CUPED with DiD via `τ̂_add = (ȳ_adj,T − ȳ_adj,C) − (ȳ_pre,T − ȳ_pre,C)` double-counts the pre-period correction. Formula algebraically expands to `(post_T − post_C) − (1+θ)(pre_T − pre_C)`, multiplying baseline imbalance by `(1+θ)` instead of either 1 or θ alone
+- **Verified synthetically (TI-961, 2026-06-10):** when treated and control have pre=post (no real time trend) but baselines differ, the buggy CUPED-DiD formula returns 33.8% spurious lift purely from the baseline imbalance flowing through the multiplier. Bootstrap CIs end up ~70% WIDER than raw additive DiD at ρ ≈ 0.75 instead of the theoretical √(1−ρ²) tightening.
+
+**The three theoretically clean options for non-random designs:**
+
+1. **Raw additive DiD under parallel-trends** — handles baseline imbalance but no CUPED variance reduction (this is the default; what TI-961 ships)
+2. **CUPED on within-unit deltas** `Δ_i = post_i − pre_i` with a DIFFERENT covariate (pre-pre-period rate, advertiser size, vertical) — gets variance reduction with a covariate that isn't already used by the difference
+3. **CUPED only on a properly-randomized sub-comparison** — apply within the random Tier 2, not across Tier 2 vs Tier 5
+
+**Lewis-Rao 2015 stack components are upstream design choices, not retrofits:**
+- CUPED × stratified randomization × ghost-ad = 0.595 σ ratio = 2.83× effective N (per `documentation/docs/feature_rollout_experimental_design.md`)
+- None of the three components retrofit cleanly onto a non-randomized rollout
+- For the NEXT major TI release, design CUPED + stratification + permanent randomized holdout in from the start
+
+Discovered 2026-06-10 via TI-961 multi-agent verification workflow (8 agents, 651k tokens). The first CUPED implementation produced Tier 2 IVR swings from raw +11.3% → CUPED −60.2% — adversarial verifiers caught both the formula bug AND the deeper design mismatch before shipping. See [`feedback_cuped_needs_randomization`](../../.claude/projects/-Users-malachi-Developer-work-mntn-workspace/memory/feedback_cuped_needs_randomization.md).
+
+### Leave-one-out control composition diagnostic
+For any cluster-bootstrap comparison where the control group is non-random (Wave 3-style holdout, future-flip cohort, hand-picked control), run a leave-one-out diagnostic on the control pool to identify advertisers with disproportionate leverage on the pooled rate. This surfaces the structural-composition advertisers driving the comparison.
+
+**Pattern:**
+```python
+# For each control advertiser, recompute pooled rate excluding that advertiser
+total_num, total_den = control_pool["num"].sum(), control_pool["den"].sum()
+pool_rate = total_num / total_den
+
+control_pool["loo_rate"] = (total_num - control_pool["num"]) / (total_den - control_pool["den"])
+control_pool["delta_pp"] = (control_pool["loo_rate"] - pool_rate) * 100  # in percentage points
+
+# Sort by |delta_pp| descending — top advertisers are the leverage outliers
+```
+
+**What to look for:**
+- `|delta_pp| > 0.5pp` on a 1000-advertiser pool with rates ~5% = significant single-advertiser leverage
+- Persistent outliers in the same verticals (casual dining + home services + hospitality for CVR; CTV-heavy verticals for IVR) suggest vertical-mix bias rather than individual advertiser outliers
+- Both directions matter: advertisers pulling pool UP (high adv_rate × high visit_share) make treated comparisons look worse; advertisers pulling DOWN make treated comparisons look better
+
+**Canonical implementation:** [TI-961 control-composition diagnostic cell](../tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py) — the `composition_diag_tier` widget renders top-20 by IVR delta and top-20 by CVR delta with HTML formatting.
+
+**When to use:** any DiD/CI analysis where the control is non-random (Wave 3-style selection-biased holdouts, future-flip cohorts, never-flipped pools). Always run before reporting tier-level effects so you know which specific advertisers' structural characteristics are driving (or distorting) the comparison.
+
+Discovered 2026-06-10 via TI-961 — diagnostic identified Angi (32766, adv_cvr 207%), Cheddar's (34834, adv_cvr 27%), Mountain Mike's Pizza (31297, 63%), Station Casinos (59584, 108%), SpotHero (35872, 48%), Goldfish Swim School (45921, 30%) as Tier 5 CVR-leverage advertisers. Removing Angi alone would drop Tier 5 pool CVR by ~0.57pp → would make treated DiD CVR comparisons look meaningfully better. Confirmed Wave 3 selection bias structurally, didn't change the methodology recommendation (use CausalImpact as primary inference).
 
 ### Staggered Adoption
 When units adopt at different times:

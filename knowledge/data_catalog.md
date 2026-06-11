@@ -1744,6 +1744,38 @@ the `core_*` tables here.
 
 ---
 
+## bronze.integrationprod.audience_audience_segments
+- **Type:** TABLE — per-audience segment overlay rows. Captures *audience-segment-level* expressions, distinct from `audience_audiences.expression` (which captures the audience-level expression).
+- **Primary key:** audience_segment_id
+- **Use for:** Identifying Fangorn-on advertisers from BigQuery (when Postgres `tpa.fangorn_advertiser_inclusion` is not accessible). Per memory `reference_fangorn_audience_overlay`: Fangorn switch uses audience-overlay → adds DS46 segments to `audience_audience_segments` while leaving DS13/DS19 in the base `audience_audiences` table.
+- **Key columns:** audience_segment_id, audience_id (FK → audience_audiences), campaign_id, segment_id, **expression** (STRING — JSON with `"data_source_id":N` references), expression_type_id, is_targeted, update_time, create_time
+- **Density:** ~312k rows total; ~1.6k rows reference DS46 (Fangorn) across ~464 distinct advertisers (BQ snapshot 2026-06-10).
+- **Fangorn-state identification pattern:**
+  ```sql
+  WITH ds46_audiences AS (
+    SELECT DISTINCT audience_id
+    FROM `dw-main-bronze.integrationprod.audience_audience_segments`
+    WHERE expression_type_id = 2
+      AND REGEXP_CONTAINS(expression, r'"data_source_id":46')
+  ),
+  ds46_cgids AS (
+    SELECT DISTINCT cg.campaign_group_id
+    FROM `dw-main-bronze.integrationprod.audience_audience_x_campaign_groups` axcg
+    JOIN ds46_audiences USING (audience_id)
+    JOIN `dw-main-bronze.integrationprod.public_campaign_groups` cg
+      ON cg.campaign_group_id = axcg.campaign_group_id
+      OR cg.parent_campaign_group_id = axcg.campaign_group_id
+  )
+  SELECT DISTINCT c.advertiser_id
+  FROM `dw-main-bronze.integrationprod.campaigns` c
+  JOIN ds46_cgids USING (campaign_group_id)
+  WHERE c.deleted = FALSE AND c.is_test = FALSE
+  ```
+- **Authoritative source caveat:** Postgres `tpa.fangorn_advertiser_inclusion` is authoritative for tier mapping; the BQ DS46-overlay count (464 advertisers) lags Postgres' rolled-out count (770 advertisers across Tiers 1-4) because recently-flipped advertisers may not yet have their audience-segments updated. Use BQ proxy only when Postgres isn't reachable; cross-check counts before claiming exact tier identification.
+- **Discovered 2026-06-10** (TI-961 control-composition diagnostic).
+
+---
+
 ## bronze.integrationprod.archives_campaign_group_archives
 - **Type:** TABLE — version history of every `campaign_groups` row (Datastream-replicated audit trail)
 - **Primary key:** campaign_group_archive_id

@@ -198,6 +198,43 @@ Columns prefixed with `competing_` in visit_facts and conversion_facts represent
 impressions where the advertiser was NOT the attributed touch (i.e., they were "competing"
 for credit). Used in incremental attribution analysis.
 
+### Per-advertiser CVR can exceed 100% (multi-touch attribution artifact)
+When computing per-advertiser CVR = `conversions / visits` from the standard summarydata facts
+(`conversion_facts.click_conversions + view_conversions + competing_view_conversions` divided
+by `visit_facts.clicks + views + competing_views`), you can legitimately get CVR > 1.0
+(>100%) for some advertisers. **This is NOT a bug** — it's the result of multi-touch
+attribution counting the same conversion against multiple advertiser-visits across the
+funnel, while visits are counted once per advertiser-visit.
+
+Empirically observed (BQ run 2026-06-10 over 2026-05-06 → 2026-06-08, MM-prospecting only):
+
+| Advertiser | Vertical | Per-advertiser CVR | Notes |
+|---|---|---|---|
+| **Rafi Law Group** | Legal Services | **1349%** | Extreme MTA — small visit volume with re-credited conversions |
+| **Station Casinos** | Hotels/Resorts | 108% | Casino/hospitality advertisers tend to have MTA-heavy patterns |
+| **Angi (32766)** | Home Services & Repairs | **207%** | Top-25 advertiser by impressions; MTA dominates |
+| **Mountain Mike's Pizza** | Fast Casual Dining | 62% | Restaurant verticals often >50% |
+| **SpotHero, Inc.** | Live Music & Comedy | 48% | High MTA via competing_view_conversions |
+| **LongHorn Steakhouse** | Casual Dining | 44% | |
+| **Goldfish Swim School** | Fitness Studios | 30% | |
+| **Global X ETFs** | Investments | 24% | |
+
+**Practical implications for any analysis that uses per-advertiser CVR:**
+
+1. **Leave-one-out / leverage analyses on control composition** (see [TI-961 control composition diagnostic](../tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py)): these advertisers will dominate the pool's CVR if not winsorized. Single-advertiser leave-one-out impact on a 1000-advertiser pool can exceed 0.5pp.
+2. **CUPED / variance-reduction methods** that estimate `θ = Cov(post, pre) / Var(pre)` on rates will have θ dominated by these advertisers. Winsorize per-advertiser rates at the 99th percentile (or apply a physical cap like CVR ≤ 50%) before computing θ.
+3. **Don't filter these out blindly** — they're real advertisers spending real money. The MTA-amplified CVR reflects how the attribution model credits their conversions across the funnel; it's not a data-quality issue to "clean up." Apply winsorization at the analysis layer for noise control, not at the data layer as a filter.
+4. **For dashboards / business reporting**, prefer the `summarydata.sum_by_advertiser_by_day` aggregates which use the standard attribution model; for incrementality / lift analyses where you care about advertiser-level rates, be explicit about winsorization in the methodology.
+
+Discovered 2026-06-10 via TI-961 leverage diagnostic — Tier 5 (Fangorn-off) pool CVR appeared structurally inflated at 6.5% vs treated tiers at 2-4%; root cause was a handful of these MTA-heavy advertisers dragging the pooled rate up.
+
+### Fangorn-state identification — BQ proxy vs Postgres authoritative
+Identifying which advertisers currently have Fangorn audience scoring ON:
+- **Authoritative source:** `tpa.fangorn_advertiser_inclusion` (Postgres, accessed via Databricks JDBC). One row per advertiser with `fangorn_rollout_tier_num` and `fangorn_advertiser_inclusion_date`. Postgres-only — no BQ mirror exists.
+- **BQ proxy (use when Postgres isn't reachable):** advertisers with at least one DS46 reference in `audience_audience_segments.expression` are Fangorn-on. See [data_catalog.md](data_catalog.md) §audience_audience_segments for the canonical SQL pattern.
+- **Caveat:** the BQ proxy lags by recent flips — BQ snapshot 2026-06-10 showed 464 distinct DS46-overlay advertisers vs Postgres' 770 advertisers across Tiers 1-4. Most likely missing the Tier 4 cohort that flipped on 2026-06-04. For analyses that require exact tier identification (especially tier-level treatment effect estimation), always use Postgres.
+- **The audience-overlay mechanism** itself: Fangorn switch updates `audience_audience_segments` (per-segment overlay) to add DS46 references, while leaving the base `audience_audiences.expression` (per-audience top-level) showing DS13/DS19 (MM). So DS46 in segments → Fangorn-on, DS13/DS19 in segments → MM/non-Fangorn. See [reference_fangorn_audience_overlay](../../.claude/projects/-Users-malachi-Developer-work-mntn-workspace/memory/reference_fangorn_audience_overlay.md).
+
 ### probattr_ prefixed columns
 Columns prefixed with `probattr_` = probabilistic attribution model metrics, as opposed to
 deterministic last-touch or last-tv-touch attribution.
