@@ -109,11 +109,49 @@ broad, and likely heavily overlapping the MNTN Matched keyword layer.
 Visit rate is audience-level (both layers blended) — campaign data can't isolate the 3P-vs-MNTN-Matched
 split on its own; that's what the IPDSC reach/overlap (§4.4) and any per-segment delivery work address.
 
-### 4.4 — Reach & overlap (IPDSC) — PENDING
+### 4.4 — Reach & overlap (IPDSC): MNTN Matched vs 3P
 
-_(MNTN-Matched reach vs 3P reach vs 3P-only incremental reach; per-segment redundancy vs the keyword layer.)_
+Method: distinct-IP reach from `ipdsc__v1` (UNNEST `data_source_category_ids.list`), literal `dt`
+(partition prune). MM = DS19 (379 keywords); 3P = DS35 (11 segments). Queries: `queries/ti_1026_reach_overlap_7d.sql`, `queries/ti_1026_per_segment_reach_7d.sql`.
 
-### 4.5 — 3P segment quality scoring — PENDING
+**Single-day (2026-06-10) — caught a low 3P day, understates 3P:**
+| Layer | Reach (IPs) |
+|---|---:|
+| MNTN Matched (379 kw) | 4,996,020 |
+| 3P (11 segments) | 118,690 |
+| 3P ∩ MM overlap | 3,328 (2.8% of 3P) |
+| 3P-only incremental | 115,362 |
+
+**3P delivery is highly volatile day-to-day** (key data-quality finding). Same 11 segments, raw IP rows:
+| dt | segments present | rows |
+|---|---|---|
+| 2026-06-06 | none | 0 |
+| 2026-06-08 | Stirista Fitness (1006088981) **2,095,515**; Adsquare Yoga Pilates (1011732871) 767,784 | — |
+| 2026-06-10 | Adsquare Yoga Pilates only | 118,690 |
+
+→ On any given day most of the 11 3P segments deliver **nothing**, and the ones that do swing 10–20×.
+This alone makes them unreliable for targeting. **7-day windowed reach/overlap (2026-06-04→06-10): PENDING**
+(replaces the single-day snapshot as the headline reach number).
+
+### 4.7 — Geo-fence sizing impact (reporter's hypothesis)
+
+Geo clause = **946 studio fences, 7-mile radius each** (`radii_include`) + **21 `radii_exclude`** zones
+(10–30 mi, carve out markets). Query: `queries/ti_1026_geo_fence_coverage.sql` (MaxMind blocks within 7mi
+of any studio; 2026-06-11):
+
+| Measure | Fenced | US total | % fenced |
+|---|---:|---:|---:|
+| Geolocated network blocks (population-density proxy) | 2,203,886 | 4,458,870 | **49.4%** |
+| IPv4 address capacity | 401M | 1,613M | 24.9% |
+
+**Read:** the fence covers ~**half the populated US** (block-count is the better population proxy; IP-capacity
+is lower because rural blocks hold huge unused ranges). Geo is a real constraint (it removes ~50–75% of the
+country) but is **not the bottleneck** — with 5.0M national MM IPs and the fence retaining roughly half of the
+populated US, the in-fence audience is millions of IPs, far more than the ~7.3M impressions / 90d the main
+campaign delivers. Crucially, **geo applies equally to the MM and 3P layers**, so it is NOT the cause of the
+3P underperformance the agency flagged. (`radii_exclude` not subtracted here — would shave coverage slightly.)
+
+### 4.5 — 3P segment quality scoring — PENDING (per-segment 7d reach)
 
 ### 4.6 — Keyword (DS19) evaluation vs BUK/DAR — PRELIMINARY
 
