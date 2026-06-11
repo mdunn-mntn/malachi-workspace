@@ -1,7 +1,8 @@
 TI-1026 Orange Theory — Audience Evaluation deck
-Shared 2026-06-11 (post-validation; corrected)
+Shared 2026-06-11 (v2 — adds the sizing funnel: how much each filter removes)
 
-Rendered (githack): https://gist.githack.com/mdunn-mntn/020ca0865092bdda9bef84e541a22239/raw/ti_1026_presentation_deck.html
-Gist:               https://gist.github.com/mdunn-mntn/020ca0865092bdda9bef84e541a22239
+Rendered (githack): https://gist.githack.com/mdunn-mntn/fce8375f3b78031be4ea6411f3876abd/raw/ti_1026_presentation_deck.html
+Gist:               https://gist.github.com/mdunn-mntn/fce8375f3b78031be4ea6411f3876abd
 
-NOTE: public gist (world-readable). Unshare with:  gh gist delete 020ca0865092bdda9bef84e541a22239
+NOTE: public gist (world-readable). Unshare:  gh gist delete fce8375f3b78031be4ea6411f3876abd
+Superseded v1 gist (deleted): 020ca0865092bdda9bef84e541a22239

@@ -187,11 +187,36 @@ of any studio; 2026-06-11):
 | IPv4 address capacity | 401M | 1,613M | 24.9% |
 
 **Read:** the fence covers ~**half the populated US** (block-count is the better population proxy; IP-capacity
-is lower because rural blocks hold huge unused ranges). Geo is a real constraint (it removes ~50–75% of the
-country) but is **not the bottleneck** — with 5.0M national MM IPs and the fence retaining roughly half of the
-populated US, the in-fence audience is millions of IPs, far more than the ~7.3M impressions / 90d the main
-campaign delivers. Crucially, **geo applies equally to the MM and 3P layers**, so it is NOT the cause of the
-3P underperformance the agency flagged. (`radii_exclude` not subtracted here — would shave coverage slightly.)
+is lower because rural blocks hold huge unused ranges).
+
+### 4.7b — The sizing FUNNEL: how much each filter actually removes (the ticket's core question)
+
+Applied the filters to the **actual MM keyword audience** (not just block coverage). MM = DS19 ∩ 379 keywords,
+clean IPv4, 2026-06-09. Queries: `queries/ti_1026_geo_funnel.sql`, `ti_1026_exclusion_bite_on_mm.sql`,
+`ti_1026_full_funnel.sql`. Output: `outputs/ti_1026_funnel.csv`.
+
+| Stage | Households | % of MM | What removed it |
+|---|---:|---:|---|
+| **MM keyword universe** (national, daily) | **4,580,200** | 100% | — |
+| **Inside 7-mi studio fence** | **2,093,631** | **45.7%** | **geo removes ~2.49M (~54%) — the biggest filter** |
+| ...& income/age-eligible (≈) | ~1.49M | ~33% | LiveRamp income/age excl. removes 1,312,378 (28.7% of MM); Oracle = 0 (inert) |
+| Score gate (≥6501) → bidder | (high-intent slice) | — | campaign reaches ~464K distinct IPs / 14d |
+
+Geo-funnel detail: in-fence 2,093,631 (45.7%) · geolocated-outside-fence 1,061,556 (23.2%) · unknown-/24
+1,425,013 (31.1%, coarse/rural maxmind blocks ≈ outside fence). **Among geolocatable MM households, ~66% are
+in-fence; across all MM, ~46%.**
+
+**Answers the ticket's sizing question directly:**
+- **Geo is the single biggest size limiter — it roughly halves the MM audience** (validates the reporter's
+  hypothesis). **Removing it entirely** would ~double the addressable pool (4.6M vs 2.1M), but the added
+  households aren't near a studio → low relevance for a location-based membership. The right lever is **widening
+  the radius (7→10 mi)**, not removing geo.
+- **Income/age exclusions (LiveRamp) are the #2 limiter — ~29% (~1.3M).** Relaxing them is a real reach lever.
+- **3P is NOT on the funnel** — under the score gate it adds ~nothing (§4.9).
+- **Caveats:** /24-string geolocation (31% unmappable, treated ≈ outside); single representative day for MM
+  (DS19 is stable daily); the combined in-fence∩not-excluded (~1.49M) is an estimate (28.7% applied to in-fence) —
+  an exact combined query was running but is unneeded for the headline. (`radii_exclude` not subtracted.)
+- Crucially, **geo applies equally to the MM and 3P layers**, so it is NOT the cause of the 3P underperformance.
 
 ### 4.9 — THE MECHANISM (the "why"): scoring × HHST × OR-include
 

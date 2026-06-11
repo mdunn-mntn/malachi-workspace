@@ -80,3 +80,32 @@ ax.text(0, 0.985, "Delivered impressions by household score, last 14 days. Gate 
 plt.tight_layout(rect=[0, 0, 1, 0.92]); plt.savefig(HERE/"ti_1026_chart_hhst_delivery.png"); plt.close()
 
 print("charts written:", *[p.name for p in HERE.glob("ti_1026_chart_*.png")])
+
+# ---- Chart 4: the sizing funnel — how much each filter removes ----
+fig, ax = plt.subplots(figsize=(9.2, 4.8), dpi=200)
+stages = ["MNTN Matched\nkeyword universe", "Inside 7-mi\nstudio fence", "...& income/age\neligible (≈)", "Score gate keeps\nHigh-Intent → bidder"]
+vals = [4.58, 2.09, 1.49, None]  # millions; last is qualitative
+ypos = list(range(len(stages)))[::-1]
+barcolors = [NAVY, NAVY, "#A9A9A9", BG]
+for i, (st, v) in enumerate(zip(stages, vals)):
+    y = ypos[i]
+    if v is not None:
+        ax.barh(y, v, color=barcolors[i], height=0.6)
+        lbl = f"{v:.2f}M" + ("  (~46%)" if i==1 else ("  (≈)" if i==2 else ""))
+        ax.text(v+0.06, y, lbl, va="center", fontsize=12, fontweight="bold", color=NAVY if i<2 else "#666")
+    ax.text(-0.08, y, st, va="center", ha="right", fontsize=10.5, color="#333")
+# removal annotations — placed in the gaps between bars, left-aligned, no collision
+ax.text(0.05, 2.5, "↓  geo removes ~2.5M  (≈54%) — the biggest filter",
+        fontsize=10.5, color=RED, fontweight="bold", va="center")
+ax.text(0.05, 1.5, "↓  income/age exclusions remove ~1.3M  (≈29%)",
+        fontsize=10.5, color=RED, fontweight="bold", va="center")
+ax.text(2.4, 0, "score gate keeps only high-intent →\ncampaign reaches ~464K IPs / 14d",
+        fontsize=9.5, color="#666", va="center")
+tufte(ax); ax.set_xticks([]); ax.set_yticks([]); ax.set_xlim(-2.2, 5.6); ax.set_ylim(-0.6, 3.7)
+for s in ("bottom",): ax.spines[s].set_visible(False)
+ax.text(-2.2, 1.12, "The sizing funnel: geo halves the audience; income/age exclusions cut another third",
+        transform=ax.transAxes, fontsize=14, fontweight="bold", color=NAVY)
+ax.text(-2.2, 1.05, "MNTN Matched households (national, daily) → after each filter. 3P adds nothing under the score gate. (≈ = combined-stage estimate)",
+        transform=ax.transAxes, fontsize=9.5, color=GREY)
+plt.tight_layout(rect=[0.02, 0, 1, 0.85]); plt.savefig(HERE/"ti_1026_chart_funnel.png"); plt.close()
+print("funnel chart written")

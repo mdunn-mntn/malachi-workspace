@@ -14,6 +14,7 @@ def img(name):
 C_SCORE = img("ti_1026_chart_score_vr.png")
 C_BENCH = img("ti_1026_chart_benchmark.png")
 C_HHST = img("ti_1026_chart_hhst_delivery.png")
+C_FUNNEL = img("ti_1026_chart_funnel.png")
 
 SLIDES = f"""
 <section>
@@ -76,11 +77,17 @@ SLIDES = f"""
 </section>
 
 <section>
+  <h2>How much is each filter actually limiting size?</h2>
+  <img src="{C_FUNNEL}" style="width:90%">
+  <p class="take">Geo is the #1 limiter — it roughly halves the MM audience. Income/age exclusions cut another ~29%. 3P is not on this list.</p>
+</section>
+
+<section>
   <h2>Are we running out of MNTN&nbsp;Matched households?</h2>
   <ul>
-    <li><b>Not at the current budget.</b> The main campaign paces to its ~$2,000/day budget most days in June on the scored, in-fence audience <i>alone</i> — no 3P needed.</li>
-    <li><b>But headroom is thin.</b> It underdelivered in late May (35–60% of budget). The scored × 7-mi-geo pool is adequate, not deep — so scaling spend will hit a ceiling.</li>
-    <li>The binding constraint is the <b>scored-household × studio-geo</b> intersection — <b>not</b> the 3P segments.</li>
+    <li><b>~4.6M</b> MNTN Matched households nationally (daily). Geo keeps <b>~2.1M</b> (46%); income/age exclusions leave <b>~1.5M</b> eligible; the score gate then keeps the high-intent slice the bidder buys.</li>
+    <li><b>Not starved at today's budget</b> — paces to ~$2,000/day in June on this pool alone (no 3P). But it underdelivered in late May → headroom is thin; scaling will hit the ceiling.</li>
+    <li>The binding constraint is <b>geo × score gate × exclusions</b> — every lever to grow is inside MM. <b>Not 3P.</b></li>
   </ul>
 </section>
 
@@ -117,10 +124,10 @@ SLIDES = f"""
 </section>
 
 <section>
-  <h2>Geo &amp; exclusions — not the bottleneck</h2>
+  <h2>Geo &amp; exclusions — the size levers</h2>
   <ul>
-    <li><b>Geo:</b> 946 studios × 7&nbsp;mi covers ~half the populated US, applied to both layers. Not the constraint.</li>
-    <li><b>Income/age exclusions (LiveRamp):</b> <b>active</b> — remove tens of millions of IPs. A real reach lever if relaxed.</li>
+    <li><b>Geo (biggest filter):</b> the 7-mi fence keeps ~46% of MM (~2.1M). Widening to 10 mi is the top reach lever — but geo is appropriate for a studio business and is <i>not</i> the cause of the low VR (it applies to both layers).</li>
+    <li><b>Income/age exclusions (LiveRamp): active</b> — remove ~29% (~1.3M). Relaxing the bands is a real reach lever.</li>
     <li><b>Income/age exclusions (Oracle):</b> inert (no delivery) — cosmetic.</li>
     <li><b>Keep:</b> CRM-suppression, T-Mobile-cellular, past-visitor exclusions (hygiene).</li>
   </ul>
