@@ -2115,6 +2115,42 @@ WHERE t.data_source_id = 4
 
 **Key fact:** `category_id` here = `audience_upload_id` = `data_source_category_id` in integrationprod.audience_uploads.
 
+**⚠ Performance — filter `dt` with a LITERAL, never a subquery.** `WHERE dt = (SELECT MAX(dt) FROM ipdsc__v1)`
+does NOT prune partitions — it scanned **164.9B rows / 85,043 slot-sec / 280s wall** for a single-day COUNT
+(TI-1026). `WHERE dt = '2026-06-10'` prunes to one partition (~70-105M rows per data source). If you need the
+latest date, probe it first (`SELECT DISTINCT dt ... WHERE dt >= recent ORDER BY dt DESC LIMIT 1`), then inline
+the literal. Also prefer `APPROX_COUNT_DISTINCT(ip)` over exact `COUNT(DISTINCT ip)` on full-partition scans.
+
+**⚠ 3P (DS35 LiveRamp / bought) delivery into ipdsc is intermittent and volatile day-to-day** (TI-1026). The
+SAME segment can deliver ~2.1M IPs one day and **0 the next** (e.g. Stirista Fitness cat 1006088981: 2.1M on
+2026-06-08, absent 2026-06-06). On any given day most bought-3P segments deliver nothing. **Use a multi-day
+window (7d union) for 3P reach — a single-day snapshot badly understates it.** MNTN-internal sources (DS19 MNTN
+Matched, etc.) are far more stable daily. Extends TI-999's "most named 3P providers have zero IPDSC volume."
+
+---
+
+## dw-main-silver.geo.* (MaxMind IP geolocation)
+- **Type:** VIEWs over the MaxMind feed. Key tables: `maxmind_blocks_ipv4` (IPv4 CIDR block → lat/long),
+  `network_locations` (CIDR → city/metro/region + lat/long), `maxmind_isp` (CIDR → ISP).
+- **`maxmind_blocks_ipv4` columns:** `network` (CIDR string, e.g. `1.2.3.0/24`), `latitude`, `longitude`,
+  `accuracy_radius`, `postal_code`, `is_anonymous_proxy`, `isp_id`, `domain`. ~4.46M US blocks.
+- **Geo-fence reach pattern (TI-1026)** — count network blocks within R miles of a set of points (e.g. studio
+  locations) via a spatial join (BQ optimizes `ST_DWITHIN`). Cheap (~0.3 GB):
+```sql
+WITH studios AS (SELECT lat, lon FROM UNNEST(<ARRAY<STRUCT<lat,lon>>>)),
+us_blocks AS (
+  SELECT network, latitude, longitude,
+         POW(2, 32 - CAST(SPLIT(network,'/')[OFFSET(1)] AS INT64)) AS ip_capacity
+  FROM `dw-main-silver.geo.maxmind_blocks_ipv4`
+  WHERE latitude BETWEEN 18 AND 72 AND longitude BETWEEN -180 AND -65)  -- US incl AK/HI
+SELECT COUNT(DISTINCT b.network)
+FROM us_blocks b JOIN studios s
+  ON ST_DWITHIN(ST_GEOGPOINT(b.longitude,b.latitude), ST_GEOGPOINT(s.lon,s.lat), 11265.4)  -- 7 mi in m
+```
+  **Block-count** is a decent population-density proxy (blocks cluster in cities); **IP-capacity** (sum of
+  `2^(32-prefix)`) over-weights rural ranges, so it understates population coverage. Reference: a 946-studio ×
+  7-mi fence covered 49.4% of US blocks but only 24.9% of IP capacity.
+
 ---
 
 ## bronze.external.TI_835_prospecting_scores

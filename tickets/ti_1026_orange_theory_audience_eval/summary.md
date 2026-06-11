@@ -180,7 +180,25 @@ populated US, the in-fence audience is millions of IPs, far more than the ~7.3M 
 campaign delivers. Crucially, **geo applies equally to the MM and 3P layers**, so it is NOT the cause of the
 3P underperformance the agency flagged. (`radii_exclude` not subtracted here — would shave coverage slightly.)
 
-### 4.5 — 3P segment quality scoring — PENDING (per-segment 7d reach)
+### 4.8 — The demographic exclusions are inert (zero delivery)
+
+Query: `queries/ti_1026_exclusion_bite.sql` (2026-06-08, a high-3P day). Include audience (MM ∪ 3P) =
+**7,596,517 IPs** nationally. But:
+| Exclusion group | # cats | IPs in ipdsc | Removed from audience |
+|---|---:|---:|---:|
+| Oracle (DS1) income/age | 13 | **0** | **0** |
+| LiveRamp (DS35) income/age | 7 | **0** | **0** |
+
+The 20 demographic exclude segments (low-income <$35k, elderly 65+/75+, very young 18-20) have **zero ipdsc
+volume → they exclude nobody.** They look like aggressive targeting but are no-ops (consistent with TI-999:
+Oracle DS1 has no ipdsc delivery; same is now confirmed for the Equifax/Experian/TransUnion demographic bands).
+**Implication:** (a) they are NOT shrinking the audience, so relaxing them recovers no size; (b) they aren't
+doing what the advertiser thinks (not actually filtering by income/age) — cosmetic cleanup candidates.
+The exclusions that DO bite: **DS4 CRM suppression** (existing-member lists, advertiser-uploaded — works, keep),
+**DS43 T-Mobile Cellular** (applied at bid time, not via ipdsc — appropriate household-stability hygiene for
+CTV; keep), **DS2 MNTN First Party** (retargeting/past-visitor exclusions — keep).
+
+### 4.5 — 3P segment quality scoring — see §4.5 above (per-segment 7d reach)
 
 ### 4.6 — Keyword (DS19) evaluation vs BUK/DAR — PRELIMINARY
 
@@ -201,11 +219,42 @@ So ~1 in 4 keywords (94/379) is off-target or over-broad — a real curation gap
 consumer-products template, not a BUK/DAR recommendation for orangetheory.com). The exact keep/drop line is for
 Kelly/Sales to finalize; the workbook surfaces the candidates.
 
-## 5. Solution
-_(pending)_
+## 5. Solution — recommendations
+
+Deliverable workbook: `artifacts/ti_1026_orange_theory_audience_recommendations.xlsx`
+(tabs: Recommendations · Interest Segments · Keywords · Geo & Exclusions · Methodology). Validate with
+**Kelly Thurlow**, then pass to Sales/Customer.
+
+**Recommendations (priority order):**
+1. **Remove all 11 3P interest segments.** They add ~12% incremental weekly reach but it's the lowest-intent
+   slice (87% match no OTF keyword), it's volatile (6 of 11 deliver nothing; the rest swing 10-20×/day), and
+   it's off-modality (delivering segments are broad-fitness or yoga/pilates; OTF is HIIT). This is the cohort
+   the agency measured at 8-10× worse visit rate. Dropping it raises visit rate at a ~12% reach cost.
+2. **Prune the 51 off-target keywords; review the 43 over-broad terms** (of 379). The keyword list reads like a
+   generic consumer-products template (Above Ground Pools, Antifreeze, Beer Mugs, CPUs, Motorcycle Lighting…),
+   not a BUK/DAR recommendation for orangetheory.com. Tightening it lifts relevance with little reach loss.
+3. **Grow size via the MNTN Matched keyword layer, not bought 3P.** MM reaches 21.8M IPs/week (14× the 3P
+   layer) and is the quality engine here. Add on-target HIIT/strength/cardio/recovery keywords to replace the
+   pruned off-target ones — net-neutral-to-expanding reach at similar intent.
+4. **Geo is not the bottleneck and the demographic exclusions are inert — don't chase either for size.** The
+   946×7-mi fence already covers ~half the populated US; the 20 income/age exclude segments remove nobody.
+   Keep CRM-suppression, T-Mobile-cellular, and MNTN-FP exclusions (legitimate hygiene). Optionally widen geo
+   radius (7→10 mi) only for specifically under-delivering markets.
 
 ## 6. Questions Answered
-_(pending)_
+- **Q:** Is the audience-sizing issue caused by geo filtering (reporter's hypothesis)?
+  **A:** No. The 946-studio × 7-mi fence covers ~49% of US network blocks (~half the populated US) and applies
+  equally to MM and 3P. With 21.8M MM IPs/week nationally, the in-fence audience is millions — not starved.
+- **Q:** Why do the "non-MNTN matched" (3P) segments perform 8-10× worse?
+  **A:** They're low-intent and off-modality: 87% of 3P IPs match no OTF keyword, and the only delivering
+  segments are broad fitness-buyer / yoga-pilates lists (OTF is HIIT). The bidder isn't ranking these by any
+  fitness-intent signal — they're essentially untargeted reach.
+- **Q:** Can OTF drop most 3P segments without hurting size?
+  **A:** Mostly yes. 6 of 11 already deliver nothing; the 5 that do add ~12% weekly reach (the worst slice).
+  Recover/grow size by improving the MNTN Matched keyword set, not by re-adding bought 3P.
+- **Q:** Are the income/age exclusions trimming reach?
+  **A:** No — the 20 Oracle/LiveRamp demographic exclude segments have zero ipdsc delivery; they exclude nobody.
+  They're cosmetic (and not actually filtering by income/age as intended).
 
 ## 7. Data Documentation Updates
 - `audience.audiences` expression schema for `expression_type_id=2`: `{interest:{include:[{or:[{data_source_id,cats[]}]}],exclude:[...]}, geo:{include,exclude,radii_include:[{lat,long,radius,unit}],radii_exclude}}`. Distinct from the `audience_segments` AST parsed in TI-999.

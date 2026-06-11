@@ -75,23 +75,24 @@ def main():
          "The 379 keywords reach 21.8M IPs/week (14x the 3P layer). ~51 are clearly off-target (e.g. Above Ground "
          "Pools, Antifreeze, Beer Mugs, Motorcycle Lighting, CPUs) and ~43 are over-broad single words (Class, Power, "
          "Experience). These dilute relevance and drag visit rate."],
-        ["3. Geo filtering is NOT the bottleneck.",
-         "The 946 studio fences (7-mi radius) cover ~half the populated US. With 21.8M MM IPs/week and the fence "
-         "retaining roughly half, the in-fence audience is millions — far more than the campaign spends against. "
-         "Geo applies equally to MM and 3P, so it does not explain the 3P underperformance."],
+        ["3. Geo filtering is NOT the bottleneck, and the demographic exclusions are inert.",
+         "The 946 studio fences (7-mi radius) cover ~half the populated US and apply equally to MM and 3P. The 20 "
+         "income/age exclude segments (Oracle + LiveRamp) have zero data delivery — they exclude nobody. So neither "
+         "is the cause of small size, and neither can be 'relaxed' to gain it."],
         ["", ""],
         ["RECOMMENDATIONS (priority order)", "Expected effect"],
         ["A. Remove all 11 3P interest segments.",
-         "Improves visit rate (drops the lowest-intent ~12% slice). 6 already deliver nothing; the rest are broad/off-modality."],
+         "Improves visit rate (drops the lowest-intent ~12% slice). 6 already deliver nothing; the rest are broad/off-modality (yoga/pilates, not HIIT)."],
         ["B. Prune the 51 clearly off-target keywords; review the 43 over-broad terms.",
          "Tightens MNTN Matched relevance with little reach loss. See Keywords tab."],
-        ["C. To recover/grow reach, relax the demographic exclusions before re-adding any 3P.",
-         "Low-income (<$35k) and 65+ bands are duplicated across Oracle/Equifax/Experian/TransUnion. "
-         "Consolidate and loosen — pure size add at minimal quality cost. Re-examine the T-Mobile-cellular exclusion. See Geo tab."],
-        ["D. Keep the MNTN Matched keyword layer as the core; add on-target HIIT/strength/cardio keywords.",
-         "MNTN Matched is the quality reach engine here — invest in it, not in bought 3P."],
-        ["E. Keep CRM suppression (existing-member) exclusions as-is.",
-         "Good hygiene — leave untouched."],
+        ["C. Grow size via the MNTN Matched keyword layer, not bought 3P.",
+         "MM reaches 21.8M IPs/week (14x the 3P layer) and is the quality engine here. Add on-target "
+         "HIIT/strength/cardio/recovery keywords to replace the pruned off-target ones — net-neutral-to-expanding reach at similar intent."],
+        ["D. Don't chase size via exclusions or geo.",
+         "The income/age exclusions are no-ops (cosmetic cleanup only). Geo already covers ~half the US. If a specific "
+         "market under-delivers, widen its radius (7->10 mi) — but the audience is not broadly starved."],
+        ["E. Keep CRM-suppression, T-Mobile-cellular, and MNTN-First-Party exclusions as-is.",
+         "Legitimate hygiene (existing-member suppression; mobile-carrier IPs aren't household-stable for CTV). Leave untouched."],
     ]
     r = 4
     for a, b in rows:
@@ -159,15 +160,21 @@ def main():
     ws4.append([]); ws4.append([])
     rr = ws4.max_row + 1
     ws4.cell(rr, 1, "Demographic exclusion footprint on the audience (2026-06-08)"); ws4.cell(rr, 1).font = TITLE_FONT
+    ws4.append(["Include audience (MM ∪ 3P), 2026-06-08", "", 7596517, "national, pre-geo"])
     ws4.append(["Exclusion group", "Cats", "IPs removed from audience", "Note"])
     style_header(ws4, ws4.max_row, 4)
-    # placeholder rows — populated from exclusion-bite query
-    ws4.append(["LiveRamp income/age bands", 7, "{{LR_EXCL_REMOVED}}", "Overlaps Oracle bands — redundant"])
-    ws4.append(["Oracle income/age bands", 13, "{{ORACLE_EXCL_REMOVED}}", "Many duplicate LiveRamp bands"])
-    ws4.append(["T-Mobile Cellular (ISP type)", 1, "not in IPDSC (applied at bid time)",
-                "Excludes a whole carrier's mobile IPs — re-examine"])
+    ws4.append(["LiveRamp income/age bands", 7, 0, "INERT — zero data delivery; excludes nobody"])
+    ws4.append(["Oracle income/age bands", 13, 0, "INERT — zero data delivery; excludes nobody"])
+    ws4.append(["T-Mobile Cellular (ISP type)", 1, "applied at bid time (not in IPDSC)",
+                "KEEP — mobile-carrier IPs aren't household-stable for CTV"])
     ws4.append(["CRM suppression (existing members)", 2, "advertiser-specific", "KEEP — good hygiene"])
-    autowidth(ws4, [46, 8, 26, 46])
+    ws4.append(["MNTN First Party (past visitors)", 3, "advertiser-specific", "KEEP — retargeting exclusion"])
+    ws4.append([])
+    ws4.append(["Read: the 20 income/age exclude segments remove nobody (no IPDSC delivery) — cosmetic, and not "
+                "actually filtering by income/age. Relaxing them gains no size. The CRM / T-Mobile / MNTN-FP "
+                "exclusions are legitimate hygiene — keep."])
+    ws4.cell(ws4.max_row, 1).alignment = WRAP
+    autowidth(ws4, [46, 8, 28, 50])
 
     # ---- Tab 5: Methodology ----
     ws5 = wb.create_sheet("Methodology")
