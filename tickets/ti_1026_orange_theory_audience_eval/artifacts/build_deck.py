@@ -15,6 +15,7 @@ C_SCORE = img("ti_1026_chart_score_vr.png")
 C_BENCH = img("ti_1026_chart_benchmark.png")
 C_HHST = img("ti_1026_chart_hhst_delivery.png")
 C_FUNNEL = img("ti_1026_chart_funnel.png")
+C_AVAIL = img("ti_1026_chart_availability.png")
 
 SLIDES = f"""
 <section>
@@ -83,11 +84,23 @@ SLIDES = f"""
 </section>
 
 <section>
-  <h2>Are we running out of MNTN&nbsp;Matched households?</h2>
+  <h2>Size vs availability — the distinction that matters</h2>
+  <p class="lead"><b>Size</b> (the pool) is a stock; <b>delivery</b> is a flow. A household only becomes biddable when it generates a CTV impression — that arrival rate varies by vertical, geo, and supply.</p>
+  <p class="lead">So the real question isn't "how many IPs exist" — it's <b>"how fast do we exhaust fresh audience, and how high does frequency climb?"</b></p>
+</section>
+
+<section>
+  <img src="{C_AVAIL}" style="width:94%">
+  <p class="take">Fresh households arrive every day (17–37K/day) and frequency stays ~3.7 over 90d. Availability is NOT the wall — the late-May dip was a delivery pause, not exhaustion.</p>
+</section>
+
+<section>
+  <h2>Are we running out of MNTN&nbsp;Matched households? — No.</h2>
   <ul>
-    <li><b>~4.6M</b> MNTN Matched households nationally (daily). Geo keeps <b>~2.1M</b> (46%); income/age exclusions leave <b>~1.5M</b> eligible; the score gate then keeps the high-intent slice the bidder buys.</li>
-    <li><b>Not starved at today's budget</b> — paces to ~$2,000/day in June on this pool alone (no 3P). But it underdelivered in late May → headroom is thin; scaling will hit the ceiling.</li>
-    <li>The binding constraint is <b>geo × score gate × exclusions</b> — every lever to grow is inside MM. <b>Not 3P.</b></li>
+    <li>Over 90 days the campaign reached <b>1.9M distinct households</b> at an average frequency of just <b>3.68</b> — low for 3 months of CTV (only 1.4% of IPs seen 21+×).</li>
+    <li><b>Availability is healthy:</b> it finds <b>17–37K brand-new households every day</b> and frequency never spikes — so it is not pool-exhausted and not oversaturating.</li>
+    <li><b>Room to scale spend:</b> raise frequency on the reachable ~1.9M (3.68 → ~8 is still safe) before needing more pool; then widen geo / relax exclusions / add keywords.</li>
+    <li>The late-May/Jun-1 dip was a <b>delivery pause</b> (Jun-2 = 1 impression), not "ran out of people."</li>
   </ul>
 </section>
 

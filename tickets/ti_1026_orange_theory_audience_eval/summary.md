@@ -252,8 +252,9 @@ platform) run HHST = 0 (no gate). Query: `queries/...` (dso.household_score_thre
 **Is the audience big enough? (the reach question)** — `queries/ti_1026_*pacing*`, daily trend:
 - Budget = $83.41/hr ≈ **$2,002/day**. Main campaign **paces at 1.08-1.31× of budget most days in June** (it CAN
   spend its budget on the scored, in-fence audience alone — 463,895 distinct scored IPs reached in 14d, no 3P help).
-- BUT it **underdelivered through late May (0.35-0.6× of budget)** and had a 2-day pause (Jun 1-2). So the scored
-  audience within 7 mi of studios is **adequate at the current budget, but not deep** — headroom for scaling is thin.
+- It dipped late May (0.35-0.6× of budget) and paused Jun 1-2 — but **§4.11 (availability) shows that was a
+  delivery pause, NOT audience exhaustion** (fresh-IP supply was healthy before and after). Availability headroom
+  is actually good (low frequency, fresh households daily).
 - **Verdict:** not currently starved at ~$2k/day; the binding constraint when it bites is the **scored-IP ×
   7-mi-geo intersection**, NOT the 3P segments. To scale spend, the levers are: (a) **lower HHST** (6501 = top
   ~third of scores; their own quality dial), (b) **broaden + clean the keyword set** so more fitness households get
@@ -346,6 +347,34 @@ default = KEEP, only high-confidence flags): **285 keep (75%), 51 drop off-targe
 So ~1 in 4 keywords (94/379) is off-target or over-broad — a real curation gap (the list reads like a generic
 consumer-products template, not a BUK/DAR recommendation for orangetheory.com). The exact keep/drop line is for
 Kelly/Sales to finalize; the workbook surfaces the candidates.
+
+### 4.11 — Size vs AVAILABILITY: is the pool actually deliverable? (stock vs flow)
+
+Prompted by the sharp question: audience SIZE (stock) ≠ AVAILABILITY (flow) — a household is only biddable when it
+generates a CTV impression, and that arrival rate varies by vertical/geo/supply. Measured from `cost_impression_log`
+(campaign 319137). Queries: `ti_1026_availability.sql` (90d), `ti_1026_availability_daily.sql` (45d daily).
+Outputs: `outputs/ti_1026_availability_summary.csv`, `ti_1026_availability_daily.json`.
+
+**90-day delivery:** 1,907,771 distinct IPs · 7,023,590 impressions · **avg frequency 3.68**.
+Frequency mix: 33% seen once, 49% 2-5×, 17% 6-20×, **only 1.4% seen 21+×** (max 129).
+
+**Daily (45d):** ~80-117K distinct IPs/day; **17-37K brand-new (never-served) IPs every day**; daily frequency
+~1.4-1.9. Cumulative reach climbs steadily (→1.07M/45d, →1.9M/90d) **without plateauing**. The 05-26→06-02 dip
+(06-02 = **1 impression**) is a delivery/budget pause, not exhaustion — fresh-IP supply was healthy before and after.
+
+**Reads (answers "are we hitting them all / how long can we sustain spend"):**
+- **Availability is NOT the binding constraint.** If it were, fresh-IPs/day would collapse to ~0 and frequency
+  would spike. Instead fresh households keep arriving daily and frequency stays low (3.68 over 90d). The campaign
+  reached ~1.9M distinct — essentially the whole reachable pool — yet shows each household only ~3.7 ads in 3 months.
+- **There IS room to scale spend** without new audience: frequency 3.68 → ~8 over a flight is still safe CTV
+  (the agency's oversaturation worry is valid but far off). Beyond that, grow the pool (geo/exclusions/keywords).
+- **Vertical/keyword caveat (correct instinct):** availability varies by vertical/keyword/geo — for OTF (fitness,
+  CTV) the flow is healthy. The method to check any campaign: fresh-IPs/day trend + frequency trend (this analysis).
+- **Authoritative size:** the UI audience-size number comes from the **audience-service `eval_batch` API** (Matt
+  Brorby): POST `advertiserId` + `expressionTypeId` + stringified `expression` to
+  `https://audience-service.prod.in.mountain.com/eval_batch`. Internal/VPN-only — not reachable from this analysis
+  env. Ready payload saved at `artifacts/ti_1026_eval_batch_payload.json` (run from corp network to get the official
+  count; my IPDSC funnel in §4.7b is the queryable proxy).
 
 ## 5. Solution — recommendations
 

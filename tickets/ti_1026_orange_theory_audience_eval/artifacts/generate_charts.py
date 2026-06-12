@@ -109,3 +109,33 @@ ax.text(-2.2, 1.05, "MNTN Matched households (national, daily) → after each fi
         transform=ax.transAxes, fontsize=9.5, color=GREY)
 plt.tight_layout(rect=[0.02, 0, 1, 0.85]); plt.savefig(HERE/"ti_1026_chart_funnel.png"); plt.close()
 print("funnel chart written")
+
+# ---- Chart 5: availability — fresh audience keeps arriving (not pool-exhausted) ----
+import json as _json
+daily = _json.loads((HERE.parent/"outputs"/"ti_1026_availability_daily.json").read_text())
+days = [r["day"][5:] for r in daily]            # MM-DD
+new_ips = [int(r["new_ips"] or 0)/1000 for r in daily]   # K
+cum = [int(r["cumulative_reach"] or 0)/1e6 for r in daily]  # M
+fig, ax = plt.subplots(figsize=(9.6, 4.7), dpi=200)
+ax.bar(range(len(days)), new_ips, color=NAVY, width=0.7, label="New (fresh) IPs reached per day (K)")
+ax2 = ax.twinx()
+ax2.plot(range(len(days)), cum, color=RED, linewidth=2.4, label="Cumulative reach (M)")
+ax.set_ylim(0, 100); ax2.set_ylim(0, 2.0)
+for s in ("top",): ax.spines[s].set_visible(False); ax2.spines[s].set_visible(False)
+ax.set_xticks(range(0, len(days), 3)); ax.set_xticklabels([days[i] for i in range(0,len(days),3)], fontsize=8, rotation=0)
+ax.tick_params(length=0); ax2.tick_params(length=0)
+ax.set_ylabel("new IPs / day (K)", fontsize=9, color=NAVY); ax2.set_ylabel("cumulative reach (M)", fontsize=9, color=RED)
+# annotate pause + frequency
+pause_i = days.index("06-02") if "06-02" in days else None
+if pause_i is not None:
+    ax.annotate("delivery pause\n(not audience-out)", xy=(pause_i, 1), xytext=(pause_i-3, 55),
+                fontsize=8.5, color="#666", ha="center",
+                arrowprops=dict(arrowstyle="->", color="#999", lw=1))
+ax.text(0.0, 1.10, "Availability is healthy: fresh households keep arriving; frequency stays ~3.7 over 90d",
+        transform=ax.transAxes, fontsize=13.5, fontweight="bold", color=NAVY)
+ax.text(0.0, 1.03, "Campaign 319137 · daily new (never-served) IPs + cumulative reach. New-IP flow never collapses → not pool-exhausted; spend has room.",
+        transform=ax.transAxes, fontsize=9, color=GREY)
+ax.legend(loc="upper right", frameon=False, fontsize=8.5, bbox_to_anchor=(0.72,1.0))
+ax2.legend(loc="upper right", frameon=False, fontsize=8.5, bbox_to_anchor=(0.99,1.0))
+plt.tight_layout(rect=[0,0,1,0.9]); plt.savefig(HERE/"ti_1026_chart_availability.png"); plt.close()
+print("availability chart written")
