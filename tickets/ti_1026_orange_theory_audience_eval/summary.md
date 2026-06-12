@@ -214,8 +214,10 @@ in-fence; across all MM, ~46%.**
 - **Income/age exclusions (LiveRamp) are the #2 limiter — ~29% (~1.3M).** Relaxing them is a real reach lever.
 - **3P is NOT on the funnel** — under the score gate it adds ~nothing (§4.9).
 - **Caveats:** /24-string geolocation (31% unmappable, treated ≈ outside); single representative day for MM
-  (DS19 is stable daily); the combined in-fence∩not-excluded (~1.49M) is an estimate (28.7% applied to in-fence) —
-  an exact combined query was running but is unneeded for the headline. (`radii_exclude` not subtracted.)
+  (DS19 is stable daily); the combined in-fence∩not-excluded (~1.49M) is an **estimate** (28.7% applied to
+  in-fence). The exact combined query is intractable at scale (the 10-day DS35 semi-join hit BigQuery's 6-hour
+  limit; abandoned by decision) — but the two individual filter magnitudes are exact (geo −54%, income/age −29%)
+  and sufficient for the headline. (`radii_exclude` not subtracted.)
 - Crucially, **geo applies equally to the MM and 3P layers**, so it is NOT the cause of the 3P underperformance.
 
 ### 4.9 — THE MECHANISM (the "why"): scoring × HHST × OR-include
