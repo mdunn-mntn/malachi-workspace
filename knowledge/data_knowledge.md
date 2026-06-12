@@ -1079,6 +1079,26 @@ Matched (DS19 keyword) IPs get scored; **3P-only IPs (those matching a bought se
 - **Query delivered scores:** `cost_impression_log` (filter `time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL N DAY)`
   to prune; it's a 90-day rolling SQLMesh view). Has `campaign_id, ip, household_score, advertiser_household_score, model_params` + geo cols.
 
+### The bidder uses the SEGMENT expression, not the user's audience expression (TI-1026, Alex Knorr 2026-06-12)
+
+`audience.audiences.expression` = the **user's selections** (keywords DS19, interests DS35, geo). The bidder actually
+evaluates the **per-campaign `audience.audience_segments.expression`** (translated `{select, categories, geos, version}`
+form), which AND-layers platform automation on top. Every MNTN campaign's segment expression adds:
+- **DS14 cat [1] "MNTN Global Data", `op:"any"` — a ~7-DAY AUGMENTOR-LOG ACTIVITY FILTER.** The IP must have appeared
+  in the bidstream (`logdata.v_augmentor_log`, ip/time; ~613 GB/day, ~10-day TTL) in the last ~7 days to be eligible.
+  **DS14 is NOT materialized in IPDSC** (zero ipdsc rows) — computed at bid time. **Distinct from the 30-day RTC/site-
+  visit scoring lookback** — DS14 is an *eligibility/recency* gate, scoring is *quality*. Both apply.
+- **DS34 (Pageview) + DS21 (Conversion), cat = advertiser_id** — the advertiser's own pixels = past-visitor/converter
+  retargeting clauses (prospecting hygiene exclusions).
+- **Holdout/experiment bucket:** `select.count.holdout = bucket(md5{prefix:"<advid>:", num_buckets, bucket_beg/end})`.
+- **Score directive:** `select.score.types=[{score_type, id}]` (id = vertical_id for RTC; gated by HHST).
+
+**Implications:** (1) the **UI audience-size / `eval_batch` on the USER expression OVERSTATES the deliverable** — it
+omits DS14, holdout, and retargeting clauses. (2) Any audience-size/funnel analysis built on `audience.audiences` is
+the user-selection size; the true targetable set is `∩ DS14-active(7d) ∩ not-past-visitor ∩ holdout-bucket`. (3) The
+DS14 filter is the platform's formal "availability" gate — it's why a campaign's deliverable ≈ its recently-active pool.
+To inspect: pull `audience_segments.expression`, `jq '.categories.where'` (root `op:"and"`), look for `data_source_id:14`.
+
 ### Special Values
 - **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
 - **8000** = Peak Performance (PP) — **was active Jan-Feb 2026, currently minimal** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. Waterfall: HI → PP. Top advertisers with PP data: 34185, 36232, 37158, 34838. Most PP activity ended by late February. Sporadic single-digit impressions in March-April.

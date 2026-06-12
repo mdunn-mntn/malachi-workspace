@@ -74,6 +74,35 @@ Expression (`audience.audiences`, expression_type_id=2, 67KB) decomposes to:
 Files: `outputs/ti_1026_audience_34668_expression.json`, `outputs/ti_1026_expression_categories_long.csv`,
 `artifacts/parse_expression.py`.
 
+### 4.1b — IMPORTANT: the BIDDER uses the SEGMENT expression, which adds automated clauses (Alex Knorr, 2026-06-12)
+
+`audience.audiences` (above) is the **user's selections**. The bidder actually evaluates the **segment-level**
+expression in `audience.audience_segments` (campaign 319137, segment 344085) — which layers on platform automation.
+Pulled + parsed (`outputs/ti_1026_segment_344085_expression.json`). Root op = **AND** of:
+- the user `OR(MM keywords DS19, 3P DS35)` and `NOT(excludes DS1/2/4/35/43)` — what §4.1 captured;
+- **DS14 cat [1] ("MNTN Global Data"), op="any" — a 7-DAY AUGMENTOR-LOG ACTIVITY FILTER on EVERY campaign.** The
+  IP must have appeared in the bidstream (`logdata.v_augmentor_log`) in the last ~7 days to be eligible. **This is
+  NOT in IPDSC** (DS14 has zero ipdsc rows) — it's computed at bid time from augmentor. It is **separate from the
+  30-day RTC/scoring site-visit lookback** (a common point of confusion — Malachi's question 2026-06-12).
+- **DS34 [39718] (Pageview) + DS21 [39718] (Conversion)** — OTF's own pixels = past-visitor/converter retargeting
+  clauses (prospecting hygiene).
+- **Holdout bucket:** `select.count.holdout = bucket(md5{prefix:"39718:", num_buckets:1000, buckets 0–99})` — a
+  10% MD5 slice (experiment/holdout assignment).
+- **RTC score directive:** `select.score.types = [{score_type:"rtc", id:113001}]` (id = vertical_id; gated by HHST=6501, §4.9).
+
+**Why this matters (resolves §4.11 size-vs-availability):** the **DS14 7-day activity filter IS the platform's
+formal "availability" gate** — it restricts the targetable audience to recently-biddable IPs before the auction.
+So:
+- My §4.1/§4.7b funnel (built on `audience.audiences`) is the USER-selection size; the **true deliverable audience
+  is smaller** = that ∩ DS14-active(7d) ∩ not-past-visitor ∩ holdout-bucket.
+- **The UI audience-size number (and `eval_batch` on the user expression) OVERSTATES the deliverable size** — it
+  doesn't apply DS14/holdout/retargeting. This is exactly the "size ≠ availability" gap: the platform already
+  encodes availability via DS14.
+- The empirical availability behavior in §4.11 (fresh IPs arriving daily, ~1.9M reached at low frequency) is
+  **exactly what a 7-day augmentor activity filter produces** — corroborates the mechanism.
+- **Not yet quantified:** MM ∩ augmentor-active(7d) = the DS14 bite. Requires a ~4 TB / 7-day `v_augmentor_log`
+  scan (`time` partition prunes ~613 GB/day); deferred (cost) — the realized reach (§4.11) is the empirical net.
+
 ### 4.2 — The 11 included 3P interest segments (DS35 LiveRamp) — the "non-MNTN matched" audiences
 
 | # | Category ID | Provider / Segment | Deprecated? |
