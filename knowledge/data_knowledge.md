@@ -1099,6 +1099,23 @@ the user-selection size; the true targetable set is `∩ DS14-active(7d) ∩ not
 DS14 filter is the platform's formal "availability" gate — it's why a campaign's deliverable ≈ its recently-active pool.
 To inspect: pull `audience_segments.expression`, `jq '.categories.where'` (root `op:"and"`), look for `data_source_id:14`.
 
+### Where the UI audience-size number lives (TI-1026, Nick Martin/Matt Brorby/Jordan Piepkow 2026-06-15)
+
+The "audience size" shown in the UI = the size of the audience_segment for the **stage-1 campaign**. Sources:
+- **`dw-main-silver.perml.flight_cid_day_audience_sizes`** (ACCESSIBLE; cols: `campaign_id, campaign_group_id,
+  rpt_day, funnel_audience_size, total_audience_size, tmul_funnel_audience_size, tmul_total_audience_size`). The
+  **stage-1 campaign** is the one whose `funnel_audience_size = total_audience_size` (no funnel narrowing); that
+  value is the UI number. Deeper-funnel campaigns show a small `funnel_audience_size`. `tmul_*` = TMUL-resolved.
+- **`dw-main-bronze.external_ddm.segment_sizes`** (segment_id, audience_size, campaign_id) — authoritative, but
+  GCS-backed at `gs://mntn-data-monitoring/audience-metrics/segment-sizes/*.parquet` (needs bucket IAM; may be
+  access-denied). Same numbers as the perml table.
+- **`audience-service …/eval_batch`** API (VPN/corp-only) computes it on demand from advertiserId + expression.
+
+**⚠ The UI size OVERSTATES the deliverable audience.** It reflects the raw user expression (≈ MM ∪ 3P **national**)
+and does **not** appear to apply the radii geo fence or the DS14 activity filter — so it can be ~5× the IPs a campaign
+can actually reach (TI-1026: UI 9.7M vs ~1.9M reached). It also **inflates with 3P-OR** even though the score gate
+won't bid those IPs. Don't anchor reach/pacing decisions on the UI size; use realized reach (`cost_impression_log`).
+
 ### Special Values
 - **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
 - **8000** = Peak Performance (PP) — **was active Jan-Feb 2026, currently minimal** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. Waterfall: HI → PP. Top advertisers with PP data: 34185, 36232, 37158, 34838. Most PP activity ended by late February. Sporadic single-digit impressions in March-April.

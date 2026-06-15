@@ -405,6 +405,44 @@ Frequency mix: 33% seen once, 49% 2-5×, 17% 6-20×, **only 1.4% seen 21+×** (m
   env. Ready payload saved at `artifacts/ti_1026_eval_batch_payload.json` (run from corp network to get the official
   count; my IPDSC funnel in §4.7b is the queryable proxy).
 
+### 4.7c — The OFFICIAL UI audience size — and why it's ~5× the deliverable (Nick Martin/Matt Brorby, 2026-06-15)
+
+Found where the UI audience-size number lives. Authoritative source: `dw-main-bronze.external_ddm.segment_sizes`
+(segment_id, audience_size, campaign_id) — GCS-backed (`gs://mntn-data-monitoring/audience-metrics/segment-sizes/`),
+**access-denied to me**. Same numbers are in the **accessible** `dw-main-silver.perml.flight_cid_day_audience_sizes`
+(campaign_id, rpt_day, funnel_audience_size, total_audience_size, tmul_*). Per Nick: UI size = size of the
+audience_segment for the **stage-1 campaign**.
+
+**OTF (audience 34668), latest (2026-06-14):** stage-1 campaign = **319137** (its `funnel_audience_size` =
+`total_audience_size`, i.e. no funnel narrowing → the entry stage):
+| metric | value |
+|---|---:|
+| **total_audience_size (UI number)** | **9,715,500 (~9.7M)** |
+| tmul_total_audience_size | 9,161,323 |
+
+(Other campaigns are deeper stages: 319133 `funnel_audience_size`=6,732 etc.)
+
+**The headline — displayed size ≫ deliverable:**
+| | households |
+|---|---:|
+| **UI displays** | **~9.7M** |
+| MM-only national (my IPDSC, §4.7b) | 4.58M |
+| In-fence MM (after 7-mi geo) | 2.09M |
+| **Actually reached (90d)** | **~1.9M** |
+
+→ **The UI shows ~9.7M but the campaign can only reach ~1.9M — a ~5× overstatement.** This is the concrete proof
+of size ≠ availability the whole thread was circling.
+- **The ~9.7M ≈ MM ∪ 3P *national* (no geo).** My MM national is 4.58M; 9.7M ≈ MM + the 3P-OR contribution. It is
+  **far above the in-fence 2.09M**, so the UI size **does not appear to apply the 946-studio 7-mi geo fence** (radii
+  geo is likely skipped in the size estimate) — nor the DS14 activity filter (§4.1b). So it overstates on multiple axes.
+- **The 3P OR inflates the displayed number.** Dropping 3P would make the UI size *look* smaller (~4.6M MM-only) even
+  though it removes ~nothing deliverable — a likely reason the team is reluctant to drop 3P. Worth flagging: the big
+  UI number is partly 3P padding that the score gate never bids on.
+- **Takeaway for Sales/customer:** don't anchor on the ~9.7M UI figure. The realistic reachable audience is ~2M
+  (geo + activity + score gate), which the campaign already delivers against at low frequency (§4.11).
+- Queryable going forward: `perml.flight_cid_day_audience_sizes` (silver, accessible). The `eval_batch` API
+  (Matt/Jordan) computes the same on demand but is VPN-only.
+
 ## 5. Solution — recommendations
 
 Deliverable workbook: `artifacts/ti_1026_orange_theory_audience_recommendations.xlsx`
