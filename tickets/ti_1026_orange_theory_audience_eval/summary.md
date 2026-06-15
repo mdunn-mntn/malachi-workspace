@@ -496,3 +496,7 @@ Deliverable workbook: `artifacts/ti_1026_orange_theory_audience_recommendations.
   slightly more in-fence (same metros as OTF) — would marginally raise 3P's in-fence share, not change the verdict.
 - This connects to TI-956/TI-999 (interest-segment quality scoring): OTF is a concrete case for why per-segment
   scoring + a "drop 3P" recommendation matters. Feed back into that workstream.
+- **Productization spun off as [TI-1037](https://mntn.atlassian.net/browse/TI-1037)** (sprint 06/15-06/29, parent
+  TI-602): turn this diagnostic into a parameterized tool/query-series so TI can answer stakeholder
+  client-performance questions on demand. Blocked on a deliverability deep-dive with Chris Addy first. The queries
+  in this ticket's `queries/` are the prototype.
