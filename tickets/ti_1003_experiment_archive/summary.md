@@ -1,9 +1,9 @@
 # TI-1003: TI Experiment Archive
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1003
-**Status:** In Progress (Phase 1 build)
+**Status:** Done (Phase 1 archive built + committed). Remaining host/deploy + polish split into **TI-1033** (this sprint, 3 SP).
 **Date Started:** 2026-06-09
-**Date Completed:** —
+**Date Completed:** 2026-06-15
 **Assignee:** Malachi
 **Parent:** TI-602
 
