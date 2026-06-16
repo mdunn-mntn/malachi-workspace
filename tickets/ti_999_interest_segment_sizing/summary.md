@@ -563,6 +563,8 @@ Window: 2026-04-29 → 2026-05-28 (30d). Active = ≥1 impression in window. Que
 
 **Coexistence ≠ AND-intersection semantics.** Pass 1 shows MM + 3P / MM + 1P expressions DO exist. It does NOT yet show whether the bidder treats them as AND-intersection (3P narrows MM's scored set) vs OR-additive (3P adds unscored IPs which only get bid when scored IPs are exhausted). The score-distribution scan in Pass 3 is the empirical test.
 
+**Deduped advertiser-level MM adoption (2026-06-16):** the Venn `Advertisers` column above is intentionally blank in the Total row — per-bucket `n_advertisers` OVERLAP (one advertiser can run MM-only + 3P-only campaigns), so they can't be summed. Re-ran a deduped count to answer "what % of AIDs use MM": **45.7% (923 of 2,020 active advertisers)** target MM (DS13/38/46) in ≥1 campaign, all as positive/inclusion (zero MM-exclusion-only advertisers). Same window/definition as Pass 1. Query: `queries/ti_999_mm_advertiser_pct.sql`. Note the contrast: MM is ~21% of campaign count and ~21% of spend in Pass 1's full universe but **46% of advertiser headcount** — MM-using advertisers run fewer/smaller campaigns on average than the no-clause `nothing` bucket. (The "67.5% touch MM" figure cited elsewhere is from a later, prospecting-scoped pass with a different denominator — not comparable to this advertiser-level rate.)
+
 ### Finding 15 (cont.) — Pass 2: polarity sub-buckets for MM-mixed cohorts
 
 Query: `queries/ti_999_polarity_sub_buckets_pass2.sql`. Output: `outputs/ti_999_polarity_sub_buckets_pass2_2026_05_28.csv`.
