@@ -15,6 +15,7 @@ C_LEV = img("ti_1027_chart_leverage.png")
 C_VENDOR = img("ti_1027_chart_vendor_comparison.png")
 C_SCORE = img("ti_1027_chart_scorecard.png")
 C_VERT = img("ti_1027_chart_vertical_dependence.png")
+C_TIERS = img("ti_1027_chart_score_tiers.png")
 
 SLIDES = f"""
 <section>
@@ -64,6 +65,11 @@ SLIDES = f"""
 <section>
   <img src="{C_VERT}" style="width:80%">
   <p class="take">If we drop 5x5, B2B verticals lose the most fresh domain coverage — exactly the area we're investing to grow.</p>
+</section>
+
+<section>
+  <img src="{C_TIERS}" style="width:88%">
+  <p class="take">Scored ≠ high-value — so we checked. 5x5's households are top-tier: 39% land in High Intent, the highest of any high-volume partner. It's not bringing low-value traffic.</p>
 </section>
 
 <section>

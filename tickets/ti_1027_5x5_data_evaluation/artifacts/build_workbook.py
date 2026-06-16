@@ -180,6 +180,33 @@ def main():
         if f: ws5.cell(ws5.max_row, 7).fill = f
     autowidth(ws5, [14, 14, 8, 14, 7, 14, 44]); ws5.freeze_panes = "A4"
 
+    # ---- Tab: Score Tiers ----
+    wst = wb.create_sheet("Score Tiers")
+    st = load("ti_1027_vendor_score_tiers_7d.csv")
+    st.sort(key=lambda r: int(r["hi_10000"]) / int(r["delivered_ips"]), reverse=True)
+    wst["A1"] = "Score-tier mix of each vendor's IPs (scored ≠ high-value)"; wst["A1"].font = TITLE_FONT
+    wst["A2"] = ("Of each vendor's IPs that MNTN served an impression to (cost_impression_log, 7d), the household-score "
+                 "tier mix. The score is a household property — ~uniform across vendors. % = of delivered IPs.")
+    wst["A2"].font = Font(italic=True, color=GREY); wst["A2"].alignment = WRAP
+    wst.append([]); wst.append(["Vendor", "Vendor IPs", "% delivered", "HI 10000 %", "PP 8000 %",
+                                "High grad %", "Mid %", "Max Reach %", "Unscored %", "% high (>=6666)"])
+    style_header(wst, 4, 10)
+    for row in st:
+        d = int(row["delivered_ips"]); pc = lambda k: round(100 * int(row[k]) / d, 1)
+        wst.append([row["partner"], int(row["vendor_ips"]), float(row["pct_delivered"]),
+                    pc("hi_10000"), pc("pp_8000"), pc("high_grad"), pc("mid"), pc("maxreach"),
+                    pc("unscored_delivered"), float(row["pct_delivered_high"])])
+        rr = wst.max_row
+        wst.cell(rr, 2).number_format = "#,##0"
+        if row["data_source_id"] == "25":
+            wst.cell(rr, 1).font = Font(bold=True, color=RED)
+    wst.append([]); wst.append(["Read: 5x5's IPs are as high-value as any vendor's — 39.4% land in top-tier High "
+                                "Intent (highest among the high-volume sources). No vendor brings low-value households; "
+                                "the differentiation is unique DOMAINS, not IP quality. (Delivered scores; the full "
+                                "all-IP scored universe is 19.4 TB/day and out of scope.)"])
+    wst.cell(wst.max_row, 1).alignment = WRAP
+    autowidth(wst, [16, 13, 12, 11, 11, 12, 8, 13, 11, 14]); wst.freeze_panes = "A5"
+
     # ---- Tab 6: Methodology ----
     ws6 = wb.create_sheet("Methodology")
     meth = [
