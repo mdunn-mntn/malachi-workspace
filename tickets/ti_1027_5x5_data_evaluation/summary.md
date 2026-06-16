@@ -89,12 +89,62 @@ First 6 rows showed:
 
 ### 4.6 Data volumes (windowing decision)
 - Full `site_visit_signal` ≈ **250 GiB/day** (dominated by internal DS23/DS30). Raw 5x5 ≈ **1.48 GiB/day**.
-- Approach: BQ temp external tables reading only `ip`/`url`/`data_source_id`, scoped windows (start ~7–14d for
-  scale/overlap; extend domain-uniqueness to the classifier's 31-day window for the final number). Databricks fallback
-  if a single query gets unwieldy.
+- Approach: BQ temp external tables reading only `ip`/`url`/`data_source_id`, scoped windows. Queries run ~16–80s
+  per scan on reserved capacity. Domain registered via `NET.REG_DOMAIN(url)` (matches the consumer's tldextract
+  eTLD+1). `website_crawl_verticals` = the production domain→vertical table (1,415,814 classified domains).
 
-## 5. Solution
-_TBD — recommendation pending Phases 1–5._
+### 4.7 PHASE 1 — SCALE (one day, 2026-06-15; `outputs/ti_1027_scale_per_ds_2026-06-15.csv`)
+Per-vendor share of `site_visit_signal` (2.57B rows total that day):
+| DS | Partner | rows | distinct IPs | distinct domains | % URLs w/ path |
+|---|---|---:|---:|---:|---:|
+| 28 | 33Across | 834M | 67.5M | 159K | 67.5% |
+| 30 | augmentor (internal) | 797M | 47.7M | 94K | 74.8% |
+| 40 | 33Across API | 373M | 35.8M | 110K | 25.6% |
+| 23 | guid_log (internal) | 305M | 32.9M | 12K | 72.6% |
+| **25** | **5x5** | **93M** | **20.8M** | **93K** | **3.8%** |
+| 26 | Predactiv | 84M | 19.0M | 228K | 73.7% |
+| 33 | Sovrn | 58M | 7.9M | 32K | 89.7% |
+| 24 | Justuno | 19M | 4.1M | 6K | 90.7% |
+| 39 | Klickly | 4.8M | 1.1M | 0.2K | 100% |
+| 36 | Cybba | 1.8M | 0.55M | 5K | 81.9% |
+
+- **5x5 `data_share` ≈ 3.6% of rows** (the leverage-ratio denominator). But ~**20.8M IPs/day** and **93K domains/day**
+  → mid-pack scale, sizable. Low frequency (~4.5 rows/IP vs 33Across 12.4) — many IPs seen once.
+- **"Domain-only" claim CONFIRMED:** only **3.8% of 5x5 URLs carry a path** vs 67–100% for every other vendor.
+  5x5 is the uniquely domain-level feed. (Moot for vertical classification — the consumer strips to domain anyway.)
+
+### 4.8 PHASE 3 — CONTRIBUTION vs SCALE (7-day window 2026-06-09→15; `ti_1027_domain_overlap_7d.csv`)
+Distinct-domain universe = 997,963. 5x5 touches 202,299 (20.3%).
+- **5x5-unique domains (provided by NO other vendor, internal or external): 138,496 = 68.5% of 5x5's domains**,
+  = **13.88% of the entire domain universe.** Also-in-internal(23/30): 45,537; also-in-other-DDP: 57,285.
+- **Leverage ratio (raw unique domains) = 13.9% / 3.6% ≈ 3.85× → OUTSIZED.**
+
+### 4.9 PHASE 2×3 — QUALITY-FILTERED contribution (`website_crawl_verticals` join)
+- 5x5 domains classified to a vertical: **45.0%** (vs 38.8% universe avg — 5x5 is *more* classifiable than average).
+- 5x5 **unique** domains classified: **34.0% → 47,069 unique MM-usable domains** 5x5 alone provides.
+- 47,069 / (38.8%×997,963 ≈ 387K classified universe) ≈ **12.2%** of the classified-domain universe.
+- **Leverage ratio (unique *classified* domains) ≈ 12.2% / 3.6% ≈ 3.4× → still OUTSIZED after quality-filtering.**
+
+### 4.10 PHASE 3 — IP reach (1 day; `ti_1027_ip_overlap_1d.csv`)
+- IP universe 85.3M. 5x5 = 20.9M IPs (24.5% touched). **5x5-only IPs = 4.1M (19.8%); 73.8% of 5x5's IPs are
+  ALREADY seen by internal DS23/30.** → **5x5's value is NOT incremental reach** (we see most IPs ourselves); it is
+  **incremental domains** — 5x5 observes *different sites* (long-tail our bidstream doesn't bid on) for known IPs.
+
+### 4.11 PHASE 4 (vertical impact) — what gets hurt if 5x5 is dropped (`ti_1027_vertical_dependence_7d.csv`)
+% of each vertical's classified domains that are 5x5-unique (7d). **Overwhelmingly B2B:**
+B2B-Hiring 34%, B2B-Logistics 32%, B2B-Data&Analytics 31%, B2B-Workflow 30%, B2B-Sales&Marketing 30% (9,640 domains),
+B2B-Healthcare 30%, B2B-IT&Engineering 25% (11,762 domains) … plus Apparel-Luxury 27%, Industrial Equipment 27%,
+Jewelry 26%, Footwear 26%, Eyewear 24%, Medical Devices 23%, Furniture 22%, Auto Dealers 20%.
+- **Strategic significance:** B2B is MNTN's **#1 Q2 growth theme** (north star Theme 1: B2B Expansion). 5x5
+  disproportionately feeds the exact verticals MNTN is investing to grow → strategic value exceeds raw scale.
+
+## 5. Solution (emerging recommendation)
+**5x5's impact on MNTN Matched is OUTSIZED relative to its scale (~3.4–3.85× on unique classified domains),
+and concentrated in B2B — MNTN's top Q2 growth priority. By Sean's bar ("unique with minimal overlap → keep"),
+5x5 passes clearly: 68.5% of its domains are unique, 47K of them MM-classifiable.** Final keep/renegotiate call
+pending the flat-fee amount (Sherwin) → break-even framing in Phase 5. Caveat: value is domain-signal (B2B vertical
+coverage), not reach; and 5x5 is uniquely domain-only (no URL path), so it adds no value to any URL/keyword-level
+consumer — only the domain→vertical path.
 
 ## 6. Questions Answered
 - **Q:** Where does 5x5 data land / is it separable? **A:** Raw `partners/5x5/ip_to_url/` → `fpa_vendor_log` +
