@@ -138,13 +138,58 @@ Jewelry 26%, Footwear 26%, Eyewear 24%, Medical Devices 23%, Furniture 22%, Auto
 - **Strategic significance:** B2B is MNTN's **#1 Q2 growth theme** (north star Theme 1: B2B Expansion). 5x5
   disproportionately feeds the exact verticals MNTN is investing to grow → strategic value exceeds raw scale.
 
-## 5. Solution (emerging recommendation)
-**5x5's impact on MNTN Matched is OUTSIZED relative to its scale (~3.4–3.85× on unique classified domains),
-and concentrated in B2B — MNTN's top Q2 growth priority. By Sean's bar ("unique with minimal overlap → keep"),
-5x5 passes clearly: 68.5% of its domains are unique, 47K of them MM-classifiable.** Final keep/renegotiate call
-pending the flat-fee amount (Sherwin) → break-even framing in Phase 5. Caveat: value is domain-signal (B2B vertical
-coverage), not reach; and 5x5 is uniquely domain-only (no URL path), so it adds no value to any URL/keyword-level
-consumer — only the domain→vertical path.
+### 4.12 PHASE 3 — VENDOR COMPARISON (answers "how does 5x5 compare to other DDPs?"; 7d; `ti_1027_vendor_uniqueness_comparison_7d.csv`)
+Unique **classified** domains each vendor alone contributes to MM (the MM-usable net-new signal):
+| DS | Partner | billing | unique classified domains | % unique |
+|---|---|---|---:|---:|
+| 26 | Predactiv | flat_fee | **164,627** | 60.1% |
+| **25** | **5x5** | **flat_fee** | **47,069** | **68.5%** |
+| 30 | augmentor (internal) | — | 33,137 | 64.2% |
+| 28 | 33Across | $0.50 CPM | 9,277 | 30.1% |
+| 24 | Justuno | $0.50 CPM | 4,823 | 84.3% |
+| 40 | 33Across API | $0.50 CPM | 2,802 | **3.2%** |
+| 36 | Cybba | $0.50 CPM | 309 | 5.7% |
+| 33 | Sovrn | $0.50 CPM | 293 | 1.6% |
+
+- **5x5 is the #2 unique contributor and the most-unique high-volume vendor (68.5%).** Predactiv (also flat_fee) is #1.
+- **The $0.50-CPM per-use vendors are largely REDUNDANT:** 33Across API 3.2% unique, Sovrn 1.6%, Cybba 5.7%,
+  33Across 30.1%. They add little unique MM signal yet bill per impression. → **They, not 5x5, are the cost-review
+  targets** (directly echoes TI-647's 33Across-is-replaceable finding). Bonus follow-up ticket candidate.
+
+## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
+
+### 5.1 How to estimate the value of MM/Fangorn (Kale's question)
+Value(MM) ≈ **incremental advertiser performance MM targeting produces vs a no-MM baseline, monetized via retention.**
+Measurable inputs:
+- **MM-touched media:** ~$17.5M media / $23.7M platform spend / **2.13B impressions per 30d** (April 2026,
+  `agg__daily_sum_by_campaign`; ~all prospecting is MM-targeted). DS-catalog prospecting anchor: ~$32.1M/30d. →
+  order **$210–385M/yr** of media MM targeting touches.
+- **MM/Fangorn IVR lift (measured, EX50):** HI ≈11.6%, MI ≈9.8%, MI+PP ≈11.2%, PP ≈36%; OKR target ≈10% VR lift.
+- **Interpretation (CPM-priced model):** MM doesn't change spend directly; it drives the **IVR/performance that
+  retains advertisers**. So Value(MM) ≈ the share of the ~$210–385M/yr book whose renewal depends on MM-driven
+  performance. Even conservatively that is **tens of $M/yr**.
+
+### 5.2 5x5's attributable slice
+- 5x5 uniquely supplies **~12% of MM-usable (classified) domain signal** (47K of ~387K classified domains; ~23%
+  counting overlap), **B2B-weighted far higher (25–34% of B2B-vertical domain coverage)**.
+- Honest bound: 5x5's value is **not** 12% of all MM revenue (the head/high-traffic domains survive without it). It
+  is the **marginal degradation in the verticals where 5x5 dominates — B2B (MNTN's #1 Q2 growth bet) + premium
+  retail + industrial/medical**: those verticals lose 20–34% of their fresh domain→vertical coverage if 5x5 is cut.
+- Value is **domain-vertical coverage**, NOT reach (73.8% of 5x5 IPs already seen internally) and NOT URL-level
+  (uniquely domain-only) — only the domain→vertical path benefits.
+
+### 5.3 Break-even & recommendation
+- **Cost:** flat fee $F/yr (pending Sherwin). Marginal cost = 0 (fixed). Peer MM-DDP rate = $0.50 CPM (per-use).
+- **Break-even:** keep 5x5 iff $F < value of its 47K unique, B2B-heavy, MM-classifiable domains. Given MM value is
+  tens of $M/yr and 5x5 contributes ~12% of the unique domain signal (B2B-concentrated), the threshold is high —
+  5x5 is worth a **typical DDP flat fee (tens-to-low-hundreds of $K/yr)** with comfortable margin. It would take an
+  unusually large fee (≳ low-$M/yr) to fail break-even.
+- **RECOMMENDATION → KEEP (renew).** 5x5 passes Sean's bar decisively (68.5% unique, minimal overlap), is **outsized
+  ~3.4–3.85×** vs its 3.6% data scale, is the #2 unique MM-domain contributor, and is **concentrated in B2B** — the
+  exact growth area MNTN is investing in. Confirm the fee with Sherwin to finalize; if the fee is surprisingly large,
+  fall back to **renegotiate** (demand URL paths to fix the domain-only gap, or lower fee).
+- **Bonus:** review the redundant $0.50-CPM DDPs (33Across API, Sovrn, Cybba) for savings — far weaker than 5x5.
+- **Action loop:** deliver to Kale/Alyson → notify **Sean** to keep `25` in `ENABLED_DSIDS` (no DAG change needed).
 
 ## 6. Questions Answered
 - **Q:** Where does 5x5 data land / is it separable? **A:** Raw `partners/5x5/ip_to_url/` → `fpa_vendor_log` +
