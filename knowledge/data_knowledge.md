@@ -1225,6 +1225,25 @@ Yes. Both are MM in the sense that:
 
 The "MM" group `{DS13, DS19, DS38, DS46}` is correct as the union of all things that signal "this is an MM 2.0 campaign," regardless of which scoring algorithm is active.
 
+### MM advertiser adoption — canonical answer + the DS19 swing (TI-999, locked 2026-06-16)
+
+**`DS19` is ALWAYS part of MM (it's the keyword half — "MNTN Matched").** Any "% of advertisers using MM" stat must include DS19. Excluding it cuts the headline roughly in half and is wrong.
+
+Canonical current adoption (window 2026-05-01→06-15, distinct advertisers de-duped from live `audience_segments` expressions, MM = DS13/19/(38)/46):
+
+| Cut | Rate | Counts |
+|---|---|---|
+| **Active advertisers using MM** | **~83%** | 1,756 / 2,119 |
+| Prospecting advertisers (objective 1/5/6) using MM | ~87% | 1,755 / 2,015 |
+| Active **campaigns** (prospecting) using MM | 28% | 3,471 / 12,410 |
+
+The same query with DS19 **excluded** yields only ~47% of advertisers — this is the source of every historical "~half of advertisers use MM" figure, and it is the wrong definition. Query: `tickets/ti_999_interest_segment_sizing/queries/ti_999_mm_adoption_current.sql` (full 2×2×2 sensitivity table).
+
+**Counting gotchas (load-bearing):**
+- Count MM from **live `audience_segments`** (actual per-campaign targeting), NOT `audience_audiences` (templates — not what gets targeted). Matching MM at the campaign-**group** level off the templates table over-counts ~5 pts (~88% vs true ~83%).
+- Venn-bucket `n_advertisers` columns OVERLAP across buckets — never sum them; de-dupe with `LOGICAL_OR(has_mm) GROUP BY advertiser_id`.
+- Advertiser % uses an all-active denominator (any objective); restricting the denominator to prospecting-only drops ~1,700 retargeting/awareness-only (mostly non-MM) advertisers and inflates the rate.
+
 ### Scoring pipeline scope — which campaigns get scored at all (Ryan Kleck, 2026-06-01)
 
 **Scoring happens at the expression level, gated on DS reference:**
