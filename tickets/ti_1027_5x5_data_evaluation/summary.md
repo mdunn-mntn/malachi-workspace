@@ -1,7 +1,7 @@
 # TI-1027: [SPIKE] 5x5 Data Evaluation
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1027
-**Status:** In Progress
+**Status:** In Progress — analysis complete, recommendation KEEP; pending flat-fee from billing for final sign-off
 **Date Started:** 2026-06-16
 **Date Completed:** —
 **Assignee:** Malachi
@@ -191,20 +191,39 @@ Measurable inputs:
 - **Bonus:** review the redundant $0.50-CPM DDPs (33Across API, Sovrn, Cybba) for savings — far weaker than 5x5.
 - **Action loop:** deliver to Kale/Alyson → notify **Sean** to keep `25` in `ENABLED_DSIDS` (no DAG change needed).
 
-## 6. Questions Answered
-- **Q:** Where does 5x5 data land / is it separable? **A:** Raw `partners/5x5/ip_to_url/` → `fpa_vendor_log` +
-  `site_visit_signal` (DS-keyed). Separable by `data_source_id=25`. Confirmed live through 2026-06-16.
-- **Q:** What's the cost structure? **A:** Flat fee (not CPM). Peer MM-DDP rate is $0.50 CPM. Amount pending Sherwin.
-- **Q:** Domain-only? **A:** Partially false — full URLs with paths exist in the raw feed; quantifying share. Moot for
-  the vertical-classification consumer (strips to domain).
+## 6. Questions Answered (the ticket's questions)
+- **Q: How does 5x5 impact MNTN Matched — accuracy, reach?** **A:** It impacts MM via **domain→vertical coverage**,
+  not reach. 68.5% of its domains are unique; 47K unique domains classify to a vertical (~12% of the MM-usable
+  domain universe). Reach impact is small (73.8% of its IPs already seen internally).
+- **Q: If we lose 5x5, how are users affected?** **A:** MM loses ~12% of fresh classified-domain signal, concentrated
+  in **B2B** verticals (20–34% of their domain coverage) + premium retail + industrial/medical. B2B targeting
+  precision degrades most.
+- **Q: Verticals heavily impacted?** **A:** B2B (Hiring, Logistics, Data&Analytics, Workflow, Sales&Marketing,
+  IT&Engineering), Apparel-Luxury, Jewelry, Footwear, Industrial Equipment, Medical Devices, Auto Dealers.
+- **Q: How does it compare to other DDP providers?** **A:** #2 unique contributor (behind Predactiv, also flat-fee);
+  most-unique high-volume vendor (68.5%). The $0.50-CPM vendors (33Across API/Sovrn/Cybba) are largely redundant.
+- **Q: Dollar value / is it worth paying for?** **A:** Outsized ~3.4× its data scale; supplies ~12% of MM's domain
+  signal (B2B-weighted higher). MM is worth tens of $M/yr → 5x5's slice clears a typical DDP flat fee with margin.
+  **Recommend KEEP**; finalize once billing provides the fee.
+- **Q: Domain-only, not extended URL?** **A:** **Confirmed** — 3.8% of 5x5 URLs carry a path vs 67–100% elsewhere.
+  But **moot for MM** (the vertical classifier strips every URL to domain regardless).
 
 ## 7. Data Documentation Updates
-_Pending — will add: 5x5/DDP→site_visit_signal lineage, `direct_data_partners` schema + billing types,
-`zzz_temp.site_visit_signal` manual caveat, vertical-classifier domain-strip; fix stale "DS25 = no current use"._
+Added to `knowledge/data_knowledge.md`: full site-visit-signal lineage (raw vendor drops → `fpa_vendor_log` +
+`site_visit_signal` → vertical classification → `website_crawl_verticals` → feature store → MNTN Matched), the
+`zzz_temp.site_visit_signal` manual-BQ caveat, the vertical-classifier domain-strip behavior, and the
+`tpa.direct_data_partners` registry (billing_type/used_in_mntn_match, MM-DDP roster, $0.50 peer CPM). Fixed stale
+"no current use" labels in `knowledge/ds_catalog.md` for DS24/25/26/28 (active MM site-visit DDPs, not IPDSC).
 
 ## 8. Open Items / Follow-ups
-- **Blocker:** 5x5 flat-fee amount ← Sherwin (billing).
-- **Ask:** Ryan Kleck for TI-647 exact match-rate method (mirror for apples-to-apples).
-- **Deferred (Kale):** full causal ablation (re-run MM with/without DS25 → ΔIVR → ΔRevenue) — only if 5x5 proves
-  outsized/non-redundant.
-- **Action loop:** deliver rec → notify Sean to keep/remove `25` from `ENABLED_DSIDS`.
+- **Blocker:** 5x5 flat-fee amount ← billing. **Draft ask:** *"Quick one for the 5x5 (DS25) renewal eval — what's
+  our current flat-fee with 5x5 (annual or monthly)? Evaluating renewal value before the end-of-June contract end.
+  Also helpful: the fees for the other MM data partners (Predactiv, Cybba, Sovrn, 33Across/33Across API, Justuno,
+  Klickly) for comparison."*
+- **Deferred (Kale):** full causal ablation (re-run MM/vertical classification with vs without DS25 → ΔIVR →
+  ΔRevenue) — only if leadership wants to tighten the estimate beyond the measurable read.
+- **Follow-up ticket candidate:** review the redundant $0.50-CPM DDPs (33Across API 3.2% unique, Sovrn 1.6%, Cybba
+  5.7%) for cost savings — echoes TI-647 (33Across replaceable).
+- **Action loop:** deliver readout → confirm decision → notify Sean (keep `25` in `ENABLED_DSIDS`; no DAG change if KEEP).
+- **Note:** TI-647 method ask to Ryan Kleck no longer needed — the unified `site_visit_signal` table let me compute
+  overlap directly (5x5 vs internal vs all DDPs), superseding the per-vendor match-rate approach.
