@@ -191,6 +191,24 @@ Measurable inputs:
 - **Bonus:** review the redundant $0.50-CPM DDPs (33Across API, Sovrn, Cybba) for savings — far weaker than 5x5.
 - **Action loop:** deliver to Kale/Alyson → notify **Sean** to keep `25` in `ENABLED_DSIDS` (no DAG change needed).
 
+### 5.4 Provider scorecard (extension — rate all MM site-visit DDPs) → `artifacts/ti_1027_vendor_scorecard.md`
+Rated all 8 external MM site-visit DDPs (+2 internal) on net value (unique classified domains) × non-redundancy ×
+signal quality, with cost structure. Composite score + verdict per provider (`outputs/ti_1027_vendor_scorecard.csv`,
+chart `ti_1027_chart_scorecard.png`):
+| Provider | Cost | Unique MM domains | Score | Verdict |
+|---|---|---:|---:|---|
+| Predactiv | flat | 164,627 | 80 | KEEP |
+| **5x5** | **flat** | **47,069** | **72** | **KEEP** |
+| Justuno | $0.50 CPM | 4,823 | 64 | KEEP (efficient) |
+| 33Across | $0.50 CPM | 9,277 | 46 | REVIEW (high CPM volume, 30% unique) |
+| Klickly | flat | 132 | 36 | REVIEW (negligible) |
+| 33Across API | $0.50 CPM | 2,802 | 32 | DROP-CANDIDATE (3% unique) |
+| Cybba | $0.50 CPM | 309 | 22 | REVIEW (6% unique) |
+| Sovrn | $0.50 CPM | 293 | 12 | DROP-CANDIDATE (2% unique) |
+- **Takeaway:** flat-fee feeds (Predactiv, 5x5) are the best value; the per-use $0.50-CPM vendors are where the waste
+  is (33Across API + Sovrn ≈ fully redundant). Cost metric used: billing_type + CPM rate (no absolute $ needed).
+- Interest-segment 3P (LiveRamp/ShareThis/Dstillery) are a different modality → rated by TI-956/TI-999, not here.
+
 ## 6. Questions Answered (the ticket's questions)
 - **Q: How does 5x5 impact MNTN Matched — accuracy, reach?** **A:** It impacts MM via **domain→vertical coverage**,
   not reach. 68.5% of its domains are unique; 47K unique domains classify to a vertical (~12% of the MM-usable
