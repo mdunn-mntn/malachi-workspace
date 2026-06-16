@@ -563,7 +563,21 @@ Window: 2026-04-29 → 2026-05-28 (30d). Active = ≥1 impression in window. Que
 
 **Coexistence ≠ AND-intersection semantics.** Pass 1 shows MM + 3P / MM + 1P expressions DO exist. It does NOT yet show whether the bidder treats them as AND-intersection (3P narrows MM's scored set) vs OR-additive (3P adds unscored IPs which only get bid when scored IPs are exhausted). The score-distribution scan in Pass 3 is the empirical test.
 
-**Deduped advertiser-level MM adoption (2026-06-16):** the Venn `Advertisers` column above is intentionally blank in the Total row — per-bucket `n_advertisers` OVERLAP (one advertiser can run MM-only + 3P-only campaigns), so they can't be summed. Re-ran a deduped count to answer "what % of AIDs use MM": **45.7% (923 of 2,020 active advertisers)** target MM (DS13/38/46) in ≥1 campaign, all as positive/inclusion (zero MM-exclusion-only advertisers). Same window/definition as Pass 1. Query: `queries/ti_999_mm_advertiser_pct.sql`. Note the contrast: MM is ~21% of campaign count and ~21% of spend in Pass 1's full universe but **46% of advertiser headcount** — MM-using advertisers run fewer/smaller campaigns on average than the no-clause `nothing` bucket. (The "67.5% touch MM" figure cited elsewhere is from a later, prospecting-scoped pass with a different denominator — not comparable to this advertiser-level rate.)
+**Deduped advertiser-level MM adoption — the DS19 swing (2026-06-16):** the Venn `Advertisers` column above is intentionally blank in the Total row — per-bucket `n_advertisers` OVERLAP (one advertiser can run MM-only + 3P-only campaigns), so they can't be summed. Re-ran a deduped count to answer "what % of AIDs use MM" and the headline turns out to **swing ~2x on a single definitional choice: does DS19 (MNTN Matched keywords) count as MM?** Query: `queries/ti_999_mm_adoption_current.sql` (full 2×2×2 sensitivity table). Current window 2026-05-01 → 2026-06-15, distinct advertisers from live `audience_segments` expressions:
+
+| MM definition | All-active advertisers | Prospecting advertisers |
+|---|---|---|
+| **Incl. DS19** (canonical corrected MM = DS13/19/38/46) | **82.9%** (1,756 / 2,119) | **87.1%** (1,755 / 2,015) |
+| Excl. DS19 (DS13/38/46 only — vertical + Fangorn) | 46.6% (988 / 2,119) | 49.0% (987 / 2,015) |
+
+Campaign-level (prospecting, incl DS19): 28.0% (3,471 / 12,410); excl DS19: 15.8%.
+
+**Reconciliation of prior numbers:**
+- The earlier Pass 1 figure (45.7%, 923/2,020) and the historical "~50% of advertisers" both used the **excl-DS19** definition — matches the 46.6–49.0% row.
+- The historical "3,200 MM campaigns / 73.1% non-MM" used the **incl-DS19** definition (Pass 17/21) — matches the campaign-level incl-DS19 cut. So the old numbers were internally inconsistent: campaigns counted DS19 as MM, advertisers didn't.
+- Alex Knorr's ~88% (2026-06-16) uses incl-DS19 and is correct in ballpark; it leans ~5 pts above the live-expression 82.9% because it matches MM at the **campaign-group level off `audience_audiences` (templates), not live `audience_segments`** — looser, over-counts. Canonical apples-to-apples on live expressions: **~83% all-active / ~87% prospecting**.
+
+**Bottom line:** with the corrected MM definition (DS19 included — DS19 literally *is* "MNTN Matched"), the vast majority of active advertisers (~83%, or ~87% of prospecting advertisers) run at least one MM campaign. The "~half of advertisers" framing only holds if you exclude DS19 and count vertical (DS13) + Fangorn (DS46) alone.
 
 ### Finding 15 (cont.) — Pass 2: polarity sub-buckets for MM-mixed cohorts
 
