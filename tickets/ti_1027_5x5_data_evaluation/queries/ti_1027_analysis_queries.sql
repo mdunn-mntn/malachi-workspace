@@ -107,3 +107,26 @@ SELECT data_source_id, COUNT(*) AS total_domains, COUNTIF(classified) AS classif
        COUNTIF(n_ds=1) AS unique_domains, COUNTIF(n_ds=1 AND classified) AS unique_classified,
        ROUND(100*COUNTIF(n_ds=1)/COUNT(*),1) AS pct_unique
 FROM dsd2 GROUP BY data_source_id ORDER BY unique_classified DESC;
+
+-- ============================================================
+-- Phase 3b: vendor IP score-tier mix (delivered MM household_score) — 7d svs + cost_impression_log
+-- cost_impression_log = delivered scores (1.75 GB/day). Full universe (prospecting_intent_daily) is 19.4 TB/day.
+-- ============================================================
+WITH scored AS (
+  SELECT ip, MAX(household_score) AS sc
+  FROM `dw-main-silver.logdata.cost_impression_log`
+  WHERE DATE(time) BETWEEN '2026-06-09' AND '2026-06-15'
+  GROUP BY ip
+),
+vip AS (SELECT DISTINCT data_source_id, ip FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%'),
+j AS (SELECT v.data_source_id, v.ip, s.sc FROM vip v LEFT JOIN scored s USING(ip))
+SELECT data_source_id,
+  COUNT(*) AS vendor_ips,
+  COUNTIF(sc IS NOT NULL) AS delivered_ips,
+  ROUND(100*COUNTIF(sc IS NOT NULL)/COUNT(*),1) AS pct_delivered,
+  COUNTIF(sc = 10000) AS hi_10000, COUNTIF(sc = 8000) AS pp_8000,
+  COUNTIF(sc BETWEEN 6666 AND 9999 AND sc <> 8000) AS high_grad,
+  COUNTIF(sc BETWEEN 3333 AND 6665) AS mid, COUNTIF(sc BETWEEN 1 AND 3332) AS maxreach,
+  COUNTIF(sc <= 0) AS unscored_delivered,
+  ROUND(100*COUNTIF(sc>=6666)/NULLIF(COUNTIF(sc IS NOT NULL),0),1) AS pct_of_delivered_high
+FROM j GROUP BY data_source_id ORDER BY vendor_ips DESC;

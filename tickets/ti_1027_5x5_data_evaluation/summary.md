@@ -156,6 +156,31 @@ Unique **classified** domains each vendor alone contributes to MM (the MM-usable
   33Across 30.1%. They add little unique MM signal yet bill per impression. → **They, not 5x5, are the cost-review
   targets** (directly echoes TI-647's 33Across-is-replaceable finding). Bonus follow-up ticket candidate.
 
+### 4.13 PHASE 3b — Score-tier quality of each vendor's IPs ("scored ≠ high-value") → `ti_1027_vendor_score_tiers_7d.csv`, chart `ti_1027_chart_score_tiers.png`
+Joined each vendor's site-visit IPs → **delivered MM `household_score`** (`cost_impression_log`, 7d; the cheap
+realized-score source — full scoring universe `household_scoring.prospecting_intent_daily` is 19.4 TB/day, not
+scanned). Tier mix of **delivered** IPs (those MNTN served an impression to), by household_score:
+
+| Vendor | % of IPs delivered | HI (10000) | PP (8000) | Mid | Max Reach | Unscored |
+|---|---:|---:|---:|---:|---:|---:|
+| **5x5** | **20.9%** | **39.4%** | 12.9% | 4.6% | 3.0% | 36.8% |
+| Predactiv | 29.3% | 39.7% | 11.9% | 4.4% | 3.0% | 37.9% |
+| augmentor (internal) | 28.8% | 35.2% | 14.1% | 4.8% | 3.3% | 39.5% |
+| 33Across | 23.2% | 35.4% | 14.0% | 4.8% | 3.3% | 39.5% |
+| guid_log (internal) | 17.3% | 38.5% | 13.3% | 5.0% | 3.0% | 36.5% |
+| Justuno/Klickly/Cybba (small) | 21–39% | 52–57% | 7–9% | ~3% | ~2% | 28–30% |
+
+- **The tier mix is ~uniform across the high-volume vendors** (35–40% HI, ~12–14% PP, ~37–40% unscored). The
+  household score is a **property of the household, not the vendor** — and the vendors largely observe the same
+  households (recall 73.8% of 5x5 IPs are also internal). So no big vendor brings "garbage" households.
+- **5x5's IPs are as high-value as any vendor's — in fact 39.4% land in top-tier High Intent, the highest among the
+  high-volume sources** (tied with Predactiv; above internal augmentor's 35% and 33Across's 35%). Only ~3% Max Reach.
+- The small vendors (Justuno/Klickly/Cybba) skew higher HI (52–57%) but on tiny IP volumes.
+- **Implication:** confirms 5x5 is not bringing low-value households, and **re-confirms its differentiation is the
+  unique DOMAINS, not IP quality** (which is ~uniform across vendors). Strengthens KEEP.
+- **Caveat:** uses DELIVERED scores (IPs we bid on, post-HHST). "% delivered" mixes scoring with inventory/delivery;
+  the full all-IP scored universe (19.4 TB/day) was out of scope for cost.
+
 ## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
 
 ### 5.1 How to estimate the value of MM/Fangorn (Kale's question)
