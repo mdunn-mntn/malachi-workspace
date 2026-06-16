@@ -691,6 +691,39 @@ Domain-level ecommerce classifier that assigns an `ecommerce_score` to each doma
 - Recommended thresholds: P90 ≈ 0.9181 (whitelist), P10 ≈ 0.0002 (blocklist)
 - Downstream work: TI-200 whitelist/blocklist uses these thresholds
 
+### Site Visit Signal & DDP vendors (TI-1027, 2026-06-16)
+The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domain→vertical layer. Lineage
+(`SteelHouse/airflow-ti`):
+- **Raw vendor drops:** `gs://mntn-data-partners/partners/{5x5,33across,predactiv,cybba}/…` (external) + internal
+  `guid_log`, `augmentor_log`. 5x5's raw path: `partners/5x5/ip_to_url/y=/m=/d=/h=/*.parquet`, cols `_COL_0`=ip,
+  `_COL_1`=url, `_COL_2`=epoch(sec); delivered in ~2-hour batches.
+- **Processing:** `spark/fpa/dsid{NN}_*_processing.py`, DAG `fpa_site_visit_batch_serverless` (`@hourly`, Dataproc
+  serverless). `ENABLED_DSIDS = [23,25,26,28,30,36]`; per-DS lag hours (5x5=5h, augmentor/guid=1h, 33across=8h).
+  Two outputs per vendor: stage-1 `gs://mntn-data-archive-{env}/fpa_vendor_log/data_source_id=NN/` (raw archive),
+  stage-2 `…/signals/site_visit_signal/dt=/hh=/data_source_id=NN/`.
+- **Unified `site_visit_signal` schema** (all vendors): `uid, advertiser_id, ip, url, query_parameters, user_agent,
+  time, data_source_id, dt, hh`. **Separable by `data_source_id`.** ~250 GiB/day total. Query GCS parquet via BQ
+  temp external-table definitions (`NET.REG_DOMAIN(url)` = registered domain, matches consumer tldextract). The BQ
+  table `…zzz_temp.site_visit_signal` is **manual / not auto-populated** (populate DAG trigger commented out).
+- **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
+  **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
+  **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`
+  (cols `domain_name, vertical_id, vertical_name, bucket_id`; ~1.42M classified domains) → feature store
+  `site_visit_signal_advertiser_id_dsc_id` → `mntn_match_incrementals_submit` (MNTN Matched scoring).
+  **Implication:** site-visit DDP value lives in distinct DOMAIN→vertical coverage, not IP reach; and only the domain
+  matters (URL path is stripped), so a domain-only feed loses nothing on this path.
+
+### `tpa.direct_data_partners` (vendor billing/usage registry)
+View `dw-main-silver.tpa.direct_data_partners` (filter `is_current=true`). Key cols: `data_source_id`,
+`data_partner_name`, **`billing_type`** (`flat_fee` | `fixed_cpm` | `variable_cpm`), `fixed_cpm`, `enabled`,
+**`used_in_mntn_match`**, `used_in_interests`, `type`, `valid_from/to`, `notes`. This is the source of truth for
+"what do we pay for which DS and does it feed MM." MM site-visit DDPs (`used_in_mntn_match=true`): 24 Justuno,
+**25 5x5**, 26 Predactiv, 28 33Across, 33 Sovrn, 36 Cybba, 39 Klickly, 40 33Across API (27 LaunchLabs disabled).
+**Peer MM-DDP rate = $0.50 CPM** (28/33/36/24/40); 5x5+26+39 are `flat_fee`. Interest-side (11/35 LiveRamp,
+17 ShareThis $0.95, 18 Dstillery) and CRM (22 Experian flat_fee, 29 deepsync) are separate, not MM.
+**Note:** `ds_catalog.md`'s 0/0/0 "no current use" for these reflects IPDSC/prospecting-expression usage only —
+the MM site-visit path is separate and active. (Corrected in ds_catalog for 24/25/26/28.)
+
 ### Vertical Classification
 `fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)

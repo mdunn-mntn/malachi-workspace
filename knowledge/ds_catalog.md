@@ -188,11 +188,11 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 | 20 | OnAudience | ✓ | 0 | 0 | 0 | 3P provider, buyer-visible but no current uptake |
 | 22 | Experian | ✓ | 0 | 0 | 0 | 3P provider, buyer-visible but no current uptake |
 | 23 | guid_log | ✗ | 0 | 0 | 0 | Internal log reference. `display_name="MNTN Pixel"` — duplicate display name with DS-1. |
-| 24 | Justuno | ✗ | 0 | 0 | 0 | CRM ingestion source (feeds DS4) |
-| 25 | 5x5 | ✗ | 0 | 0 | 0 | Provider, no current use |
-| 26 | sharethis_predactiv | ✗ | 0 | 0 | 0 | ShareThis variant, no current use |
+| 24 | Justuno | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM, `used_in_mntn_match=true`). NOT CRM. Feeds `site_visit_signal`→vertical classification→MNTN Matched, not IPDSC (hence 0/0/0). |
+| 25 | 5x5 | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** (`flat_fee`). Feeds `site_visit_signal`→MNTN Matched, NOT IPDSC/prospecting (hence 0/0/0 here). #2 unique-domain contributor (68.5% unique), B2B-concentrated, domain-only feed. **Contract review TI-1027 → recommend KEEP.** |
+| 26 | sharethis_predactiv | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** (`flat_fee`). #1 unique-domain contributor to MM (164K unique classified, TI-1027). Not IPDSC. |
 | 27 | LaunchLabs | ✗ | 0 | 0 | 0 | Provider, no current use |
-| 28 | 33Across | ✗ | 0 | 0 | 0 | 3P provider, no current use |
+| 28 | 33Across | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM). Feeds `site_visit_signal`→MNTN Matched (not IPDSC). High volume but only 30% unique domains (mostly redundant) — TI-1027. |
 | 29 | deepsync | ✗ | 0 | 0 | 0 | Provider, no current use |
 | 30 | MNTN augmentor_log | ✗ | 0 | 0 | 0 | Internal log reference |
 | 31 | CRM Upload | ✗ | 0 | 0 | 0 | CRM ingestion source (feeds DS4) |
