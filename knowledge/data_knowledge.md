@@ -748,6 +748,17 @@ market-equivalent cost ≈ (impressions its data touches) × CPM / 1000 — meas
 CIL (5x5 touches ~34.35M impr/day → ~$6.3M/yr CPM-equivalent ceiling). Flat-fee vendors (5x5, Predactiv, Klickly)
 pay fixed regardless of volume. Reusable valuation method: `documentation/docs/data_vendor_valuation_framework.md`.
 
+### site_visit_signal has NO TTL; targeting uses a 30-day window — measure uniqueness over 30 days (TI-1027 + Ryan Kleck, 2026-06-17)
+`site_visit_signal` is **daily dt partitions with no TTL** — data goes back to 2025-08-31 and grows unbounded (Ryan:
+"we should probably put a TTL on it"). **But targeting only uses the last ~30 days.** Implications:
+- Any query against `site_visit_signal` must **filter `dt`** or it silently mixes long-expired data.
+- **Vendor uniqueness/overlap must be measured over the 30-day targeting window, not a short snapshot.** A 7-day
+  snapshot *overstates* cross-vendor overlap: vendors deliver on irregular cadences, so a pair "also seen elsewhere"
+  may have been delivered weeks ago and is about to expire. The targeting-truthful metric is **sole-or-freshest
+  within 30 days** (per (ip,domain): does any *other* vendor deliver it within the window, and who's most recent?).
+- 5x5 example: 7-day snapshot = 77% unique pairs; over the 30-day window **69.8% are sole** (no other vendor
+  in-window) and **95.4% sole-or-freshest**. "Overlap ≠ covered." Bake this into any vendor-overlap analysis.
+
 ### Vertical Classification
 `fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)

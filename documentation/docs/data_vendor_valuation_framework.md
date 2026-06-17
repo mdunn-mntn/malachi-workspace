@@ -26,6 +26,13 @@ Measure uniqueness at **three grains**, because they diverge:
 For 5x5: 19.8% / 68.5% / **77.3%** — value is in the events, not the reach.
 Also: **unique metadata** (does it provide columns no one else does, that we actually use?).
 
+**Measure over the TARGETING window (not a snapshot), and account for recency.** Targeting uses the last ~30 days
+(`site_visit_signal` has no TTL, so filter `dt`). Vendors deliver on irregular cadences, so a 7-day-snapshot
+"overlap" *overstates* redundancy — a pair "also seen elsewhere" may be weeks old and about to expire. The
+targeting-truthful metric is **sole-or-freshest within the window**: per (ip,domain), does any *other* vendor deliver
+it within 30 days, and who is most recent? (5x5: 69.8% sole-in-window, 95.4% sole-or-freshest — vs 77% snapshot.)
+"Overlap ≠ covered." This usually *raises* the floor.
+
 ## Step 4 — Is the unique slice valuable?
 - **Classifiable?** % of unique domains that resolve to a vertical (`website_crawl_verticals`) = MM-usable.
 - **High-intent?** Join the vendor's IPs to `cost_impression_log.household_score` → tier mix. (Note: score is a

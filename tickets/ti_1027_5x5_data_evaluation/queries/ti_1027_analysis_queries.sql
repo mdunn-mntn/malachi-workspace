@@ -164,3 +164,26 @@ SELECT COUNTIF(m.in_5x5) AS ips_5x5, COUNTIF(m.in_5x5 AND m.n_ds=1) AS ips_5x5_u
   ROUND(SUM(IF(m.in_5x5,i.media_spend,0)),0) AS media_spend_5x5, ROUND(SUM(IF(m.in_5x5,i.data_spend,0)),0) AS data_spend_5x5,
   SUM(IF(m.in_5x5 AND i.sc>=6666,i.impressions,0)) AS impr_5x5_high
 FROM ipm m JOIN imp i USING(ip);
+
+-- ============================================================
+-- PHASE 3 (recency/spend): per-vendor touched impressions + media/data spend (1 day, CIL × svs; heavy IP overlap → relative only)
+-- ============================================================
+WITH ipm AS (SELECT ip, ARRAY_AGG(DISTINCT data_source_id) AS ds_list
+             FROM (SELECT DISTINCT data_source_id, ip FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%') GROUP BY ip),
+imp AS (SELECT ip, COUNT(*) AS impr, SUM(media_spend) AS media, SUM(data_spend) AS data
+        FROM `dw-main-silver.logdata.cost_impression_log` WHERE DATE(time)='2026-06-15' GROUP BY ip)
+SELECT ds AS data_source_id, SUM(i.impr) AS impr_touched, ROUND(SUM(i.media),0) AS media_spend_day, ROUND(SUM(i.data),0) AS data_spend_day
+FROM imp i JOIN ipm m USING(ip), UNNEST(m.ds_list) AS ds GROUP BY ds ORDER BY impr_touched DESC;
+
+-- PHASE 3: 5x5 30-day recency — sole-in-window vs freshest (targeting window = 30d). svs over 30 daily partitions.
+WITH p AS (
+  SELECT ip, NET.REG_DOMAIN(url) AS domain,
+         MAX(IF(data_source_id=25, dt, NULL)) AS dt_5x5,
+         MAX(IF(data_source_id<>25, dt, NULL)) AS dt_other
+  FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%' AND NET.REG_DOMAIN(url) IS NOT NULL
+  GROUP BY ip, domain)
+SELECT COUNTIF(dt_5x5 IS NOT NULL) AS pairs_5x5_30d,
+       COUNTIF(dt_5x5 IS NOT NULL AND dt_other IS NULL) AS pairs_5x5_sole_30d,
+       ROUND(100*COUNTIF(dt_5x5 IS NOT NULL AND dt_other IS NULL)/COUNTIF(dt_5x5 IS NOT NULL),1) AS pct_sole_30d,
+       ROUND(100*COUNTIF(dt_5x5 IS NOT NULL AND (dt_other IS NULL OR dt_5x5>=dt_other))/COUNTIF(dt_5x5 IS NOT NULL),1) AS pct_sole_or_freshest
+FROM p;

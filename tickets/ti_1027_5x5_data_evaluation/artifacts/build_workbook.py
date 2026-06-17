@@ -264,9 +264,24 @@ def main():
         ("Net-new (IP×domain) event", "~$0.03 / 1,000 events", "The real asset — 9.3B unique events/yr"),
         ("Net-new classified domain", "~$3–13 / domain / yr", "47K unique MM-usable domains, B2B coverage")]:
         wp.append([a, b, c]); wp.cell(wp.max_row, 3).alignment = WRAP; wp.cell(wp.max_row, 1).font = Font(bold=True)
-    wp.append([]); wp.append(["Decision rule", "Renew if fee ≤ ~$600K/yr · renegotiate $600K–$6.3M (demand full URLs) · walk only near $6.3M."])
-    wp.cell(wp.max_row, 1).font = Font(bold=True, color=NAVY); wp.cell(wp.max_row, 2).alignment = WRAP
-    autowidth(wp, [22, 20, 76]);
+    wp.append([]); wp.append(["Pricing — Monthly rate (recommended)", "Value", "Note"]); style_header(wp, wp.max_row, 3)
+    for a, b, c in [
+        ("Floor", "~$3K / mo", "we'd happily pay"),
+        ("FAIR", "$15K–50K / mo", "anchor ask ~$25–30K/mo ($300–360K/yr)"),
+        ("Walk-away", "~$525K / mo", "= the CPM ceiling"),
+        ("Volume minimum", "≥2.5B rows/mo AND ≥25M unique (IP×domain) pairs/day", "so they can't throttle or pad with junk")]:
+        wp.append([a, b, c]); wp.cell(wp.max_row, 3).alignment = WRAP; wp.cell(wp.max_row, 1).font = Font(bold=True)
+    wp.append([]); wp.append(["Pricing — CPM (if per 1,000 impr)", "Value", "Note"]); style_header(wp, wp.max_row, 3)
+    for a, b, c in [
+        ("On MATCHED impr", "≤ $0.50 CPM", "peer parity — fair"),
+        ("On ALL touched impr", "$0.02–0.05 CPM", "~95% redundant; >$0.10 = walk away"),
+        ("Reconciliation", "$25K/mo ≈ $0.024 CPM (all touched) ≈ $0.50 CPM (matched)", "same dollars, three views")]:
+        wp.append([a, b, c]); wp.cell(wp.max_row, 3).alignment = WRAP; wp.cell(wp.max_row, 1).font = Font(bold=True)
+    wp.append([]); wp.append(["Recency strengthens the floor", "Over the 30-day TARGETING window, 69.8% of 5x5's "
+        "(IP×domain) pairs are SOLE (no other vendor in-window) and 95.4% sole-or-freshest — only ~4.6% covered "
+        "fresher elsewhere. 'Overlap' from a 7-day snapshot overstates redundancy."])
+    wp.cell(wp.max_row, 1).font = Font(bold=True, color=RED); wp.cell(wp.max_row, 2).alignment = WRAP
+    autowidth(wp, [24, 20, 74]);
 
     # ---- Tab 6: Methodology ----
     ws6 = wb.create_sheet("Methodology")

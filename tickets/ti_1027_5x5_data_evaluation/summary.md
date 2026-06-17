@@ -200,6 +200,24 @@ Expanded from "MM impact" to a reusable data-vendor valuation + WTP framework. N
 - **Tie-break rubric:** cost → non-redundancy (unique events) → richness → freshness → latency → schema stability.
 - **Recommendation:** renew ≤ ~$600K/yr; renegotiate $600K–$6.3M (demand full URLs); walk only near $6.3M.
 
+### 4.15 PHASE 3 — Spend comparison, 30-day recency, definitive pricing (Kale follow-ups)
+- **Per-vendor touched spend (2026-06-15; `ti_1027_vendor_spend_comparison_2026-06-15.csv`):** 5x5 ranks **5th of 10**
+  ($353K media/day) — and the top 6 vendors all cluster at $264–404K/day because they overlap on the same households.
+  **Touched spend can't differentiate vendors** (all swim in the same pool); only unique contribution + recency can.
+  (Heavy IP overlap → these don't sum to total; relative ranking only.)
+- **30-day recency (`ti_1027_recency_30d_5x5.csv`) — answers "don't other vendors already have it?":** targeting uses
+  the last 30 days (`site_visit_signal` has **no TTL**; data to 2025-08-31). Over the 30-day window, of 5x5's 754.8M
+  (IP×domain) pairs, **69.8% are SOLE** (no other vendor in-window) and **95.4% sole-or-freshest** — only ~4.6%
+  covered fresher elsewhere. The 7-day snapshot (23% overlap) **overstated redundancy**; irregular cadences mean
+  other vendors' copies expire. This raises the floor.
+- **Definitive pricing (two structures, per Kale "monthly rates or CPMs"):**
+  - **Monthly (recommended):** floor ~$3K/mo · **fair $15–50K/mo** (anchor ~$25–30K) · walk-away ~$525K/mo. Attach a
+    **volume minimum** (≥2.5B rows/mo AND ≥25M unique IP×domain pairs/day).
+  - **CPM:** ≤$0.50 on **matched** impressions (peer parity); $0.02–0.05 on **all touched** (~95% redundant);
+    >$0.10 on touched = walk away. **Reconciliation:** $25K/mo ≈ $0.024 CPM (all touched) ≈ $0.50 CPM (matched).
+- Deck updated (spend / recency / pricing slides + charts); `data_vendor_valuation_framework.md` updated with the
+  recency step.
+
 ## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
 
 ### 5.1 How to estimate the value of MM/Fangorn (Kale's question)
