@@ -23,6 +23,7 @@ C_SPEND = img("ti_1027_chart_spend_comparison.png")
 C_PRICING = img("ti_1027_chart_pricing.png")
 C_DEPTH = img("ti_1027_chart_depth.png")
 C_PERIP = img("ti_1027_chart_perip_dist.png")
+C_ADDITIVITY = img("ti_1027_chart_additivity.png")
 
 import csv as _csv
 _d = sorted(_csv.DictReader(open(HERE.parent / "outputs" / "ti_1027_per_ip_depth.csv")),
@@ -100,6 +101,12 @@ SLIDES = f"""
   <h2>How much does 5x5 actually add per household?</h2>
   <img src="{C_PERIP}" style="width:80%">
   <p class="take">The average (1.2) hides the shape. The median IP gets <b>+1</b> net-new domain. For ~85% of households 5x5 adds ≥1 unique domain — but it's broad &amp; shallow (only ~14% get 2+). One more unique data point per household, across ~18M households/day.</p>
+</section>
+
+<section>
+  <h2>Are the vendors additive, or just sharing the same domains?</h2>
+  <img src="{C_ADDITIVITY}" style="width:84%">
+  <p class="take"><b>Additive.</b> 76% of all 447M IP→domain observations come from ONE vendor. For an IP seen by 5 vendors, the best single sees 6.7 sites but all 5 together see 11.1 (1.65×) — only ~29% overlap. Each vendor genuinely adds net-new visits. <b>That's the value of having them.</b></p>
 </section>
 
 <section>

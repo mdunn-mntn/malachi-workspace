@@ -233,6 +233,13 @@ Per-IP depth = how many distinct sites a vendor sees each IP visit, and how many
   IPs on *common* domains) — redundant for classification, useful for per-IP features.
 - Deck: added a **raw-numbers table slide** + **depth scatter** (events vs unique-domains/IP). Workbook: **Per-IP
   Depth** tab.
+- **Per-IP distribution (not mean):** median additional unique domains 5x5 adds = **+1**, p90 +2; **85% of its
+  households get ≥1 net-new domain** but broad-and-shallow (71% get exactly +1). (`ti_1027_perip_additional_domains_dist.csv`.)
+- **Additive vs redundant (the key value test):** **76% of all 447M (IP×domain) pairs come from ONE vendor**; per
+  shared IP, all vendors combined give ~70% more domains than the best single (5-vendor IP: 11.1 vs 6.7 = 1.65×,
+  ~29% overlap). Vendors are **additive, not redundant** — that's the value of running several.
+  (`ti_1027_pair_multiplicity.csv`, `ti_1027_perip_additivity.csv`.) Over-estimation guard: value = distinct
+  (IP,domain) on the UNION, never raw events (~2.8× inflated) or sum (double-counts overlap).
 
 ## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
 

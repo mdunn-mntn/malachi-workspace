@@ -197,3 +197,23 @@ WITH p AS (SELECT DISTINCT data_source_id, ip, NET.REG_DOMAIN(url) AS domain
 pm AS (SELECT ip, domain, COUNT(DISTINCT data_source_id) AS n_ds, MIN(data_source_id) AS sole_ds FROM p GROUP BY ip, domain)
 SELECT sole_ds AS data_source_id, COUNT(*) AS unique_ip_domain_pairs
 FROM pm WHERE n_ds=1 GROUP BY sole_ds ORDER BY unique_ip_domain_pairs DESC;
+
+-- ============================================================
+-- PHASE 5 (additivity): are vendors additive or sharing the same (IP,domain)? (1 day svs)
+-- Q1 pair multiplicity: what % of distinct (ip,domain) pairs come from a single vendor.
+WITH p AS (SELECT DISTINCT data_source_id, ip, NET.REG_DOMAIN(url) AS domain
+           FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%' AND NET.REG_DOMAIN(url) IS NOT NULL),
+pm AS (SELECT ip, domain, COUNT(DISTINCT data_source_id) AS n_ds FROM p GROUP BY ip, domain)
+SELECT COUNT(*) total_distinct_pairs, COUNTIF(n_ds=1) pairs_1_vendor,
+       ROUND(100*COUNTIF(n_ds=1)/COUNT(*),1) pct_single_vendor, ROUND(AVG(n_ds),3) avg_vendors_per_pair
+FROM pm;
+-- Q2 per-IP additivity: union domains vs best-single vendor, by # vendors seeing the IP.
+WITH p AS (SELECT DISTINCT data_source_id, ip, NET.REG_DOMAIN(url) AS domain
+           FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%' AND NET.REG_DOMAIN(url) IS NOT NULL),
+ipv AS (SELECT ip, data_source_id, COUNT(DISTINCT domain) dom_v FROM p GROUP BY ip, data_source_id),
+ipagg AS (SELECT ip, COUNT(*) n_vendors, SUM(dom_v) sum_dom, MAX(dom_v) max_dom FROM ipv GROUP BY ip),
+ipu AS (SELECT ip, COUNT(DISTINCT domain) union_dom FROM p GROUP BY ip)
+SELECT a.n_vendors, COUNT(*) n_ips, ROUND(AVG(u.union_dom),2) avg_union_domains,
+       ROUND(AVG(a.max_dom),2) avg_best_single, ROUND(AVG(u.union_dom)/AVG(a.max_dom),2) lift_vs_best,
+       ROUND(100*(1-AVG(u.union_dom)/AVG(a.sum_dom)),1) pct_overlap
+FROM ipagg a JOIN ipu u USING(ip) WHERE a.n_vendors BETWEEN 1 AND 10 GROUP BY a.n_vendors ORDER BY a.n_vendors;

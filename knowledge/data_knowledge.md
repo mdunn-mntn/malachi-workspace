@@ -759,6 +759,14 @@ pay fixed regardless of volume. Reusable valuation method: `documentation/docs/d
 - 5x5 example: 7-day snapshot = 77% unique pairs; over the 30-day window **69.8% are sole** (no other vendor
   in-window) and **95.4% sole-or-freshest**. "Overlap ≠ covered." Bake this into any vendor-overlap analysis.
 
+### Site-visit vendors are ADDITIVE, not redundant (TI-1027, 2026-06-17)
+Across all ~447M distinct (IP×domain) pairs in a day, **76% come from exactly ONE vendor** (16% from 2, 7% from 3+).
+Per shared IP, stacking vendors *adds* domains: an IP seen by N vendors has ~70% more unique domains than the best
+single vendor provides (e.g. 5-vendor IP: 11.1 union vs 6.7 best-single = 1.65×; overlap only ~15–29%). So the value
+of running multiple site-visit vendors is real — they contribute net-new household→site observations, they don't
+just re-report the same ones. **Value metrics must be on distinct (IP,domain) anchored on the UNION, never raw
+events (inflated ~2.8× by repeats) or the sum-across-vendors (double-counts the ~24% overlap).**
+
 ### Vertical Classification
 `fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)

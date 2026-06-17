@@ -90,6 +90,15 @@ This is the core reframe: uniqueness rises as you go from IP → domain → (IP�
 **Read:** 5x5 mostly sees households we already know (only 20% unique IPs), but the **specific sites those households
 visit are overwhelmingly 5x5-only (77% of events)**. So the unique *data value* is far larger than the unique *reach*.
 
+**Are the vendors additive, or just re-reporting the same domains? — ADDITIVE** (`ti_1027_pair_multiplicity.csv`,
+`ti_1027_perip_additivity.csv`). Across all 447M distinct (IP×domain) pairs, **76.4% come from exactly ONE vendor**
+(16% from 2, 7% from 3+) — three-quarters of household→site observations are unique to a single provider. And per
+shared IP, stacking vendors *adds* domains: an IP seen by 5 vendors gets **11.1 distinct domains vs 6.7 from the best
+single vendor (1.65×), only ~29% overlap**; the lift grows to 1.8× at 10 vendors. So vendors are **~70% additive**,
+not redundant — each contributes net-new visits for shared IPs. (Over-estimation guard: all value metrics are on
+**distinct (IP,domain)** anchored on the **union**, never raw events or the sum — the ~24% overlap is not
+double-counted.)
+
 **Recency matters — "overlap" ≠ "covered" (`ti_1027_recency_30d_5x5.csv`).** We only target the **last 30 days**
 (`site_visit_signal` itself has no TTL — data back to 2025-08-31 — but targeting uses a 30-day window). Vendors
 deliver on **irregular cadences**, so a pair "also seen by another vendor" may have been delivered weeks ago and is
