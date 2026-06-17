@@ -22,6 +22,7 @@ C_RECENCY = img("ti_1027_chart_recency.png")
 C_SPEND = img("ti_1027_chart_spend_comparison.png")
 C_PRICING = img("ti_1027_chart_pricing.png")
 C_DEPTH = img("ti_1027_chart_depth.png")
+C_PERIP = img("ti_1027_chart_perip_dist.png")
 
 import csv as _csv
 _d = sorted(_csv.DictReader(open(HERE.parent / "outputs" / "ti_1027_per_ip_depth.csv")),
@@ -93,6 +94,12 @@ SLIDES = f"""
 <section>
   <img src="{C_DEPTH}" style="width:84%">
   <p class="take">Depth per IP: 33Across is huge but shallowest in unique site-visits/IP (0.65) — basically re-reporting common domains. 5x5 is mid; our own bidstream (augmentor) is deepest. Volume ≠ value.</p>
+</section>
+
+<section>
+  <h2>How much does 5x5 actually add per household?</h2>
+  <img src="{C_PERIP}" style="width:80%">
+  <p class="take">The average (1.2) hides the shape. The median IP gets <b>+1</b> net-new domain. For ~85% of households 5x5 adds ≥1 unique domain — but it's broad &amp; shallow (only ~14% get 2+). One more unique data point per household, across ~18M households/day.</p>
 </section>
 
 <section>

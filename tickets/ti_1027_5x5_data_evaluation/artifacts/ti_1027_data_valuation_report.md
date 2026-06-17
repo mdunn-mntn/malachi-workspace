@@ -64,6 +64,21 @@ are unique to the vendor):
 - **5x5 is thin per IP (1.6 domains/IP) but its visits are unique (77% of pairs).** Its value is unique-domain
   *breadth* for classification, not per-household *depth*.
 
+**Per-IP *distribution* (not the mean — `outputs/ti_1027_perip_additional_domains_dist.csv`).** Averages are crushed
+by the see-once tail, so we measured the distribution of *additional* unique domains 5x5 adds for each IP (vs what
+other vendors already have for that same IP), across the 20.8M IPs 5x5 saw (2026-06-15):
+| Additional unique domains for that IP | IPs | % |
+|---|---:|---:|
+| 0 (redundant for that IP) | 3.04M | 14.6% |
+| **+1** | 14.83M | **71.2%** |
+| +2–3 | 2.34M | 11.2% |
+| +4–9 | 0.48M | 2.3% |
+| +10 or more | 0.13M | 0.6% |
+**Median +1, p90 +2.** So for **~85% of the households it sees, 5x5 adds ≥1 net-new domain** — but it's **broad and
+shallow**: almost always exactly +1, only ~14% of IPs get 2+, ~133K get 10+. 5x5 = "one more unique data point per
+household, across ~18M households/day," not deep per-household profiles. (5x5 is domain-only, so additional *visits*
+≈ additional *domains* for it.)
+
 ## 3. Uniqueness — layered (not just IPs) — `outputs/ti_1027_layered_uniqueness_5x5.csv`
 This is the core reframe: uniqueness rises as you go from IP → domain → (IP×domain) event.
 | Grain | 5x5 total | Unique to 5x5 | % unique | Also seen internally |
