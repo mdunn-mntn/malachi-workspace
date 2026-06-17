@@ -79,7 +79,7 @@ for i, v in enumerate(vals):
 strip(ax); ax.set_xticks([])
 ax.set_title("If 5x5 is dropped, B2B verticals lose the most fresh domain coverage",
              fontsize=13.5, fontweight="bold", loc="left", pad=26)
-ax.text(0, 1.012, "% of each vertical's classified domains that ONLY 5x5 provides · red = B2B (MNTN's #1 Q2 growth theme)",
+ax.text(0, 1.012, "% of each vertical's classified domains that ONLY 5x5 provides · red = B2B-audience verticals (our customers' targeting)",
         transform=ax.transAxes, color="#666", fontsize=9.5, va="top")
 fig.tight_layout(); fig.savefig(os.path.join(ART, "ti_1027_chart_vertical_dependence.png"), dpi=200); plt.close(fig)
 

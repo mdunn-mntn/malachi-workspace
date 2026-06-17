@@ -135,8 +135,10 @@ Distinct-domain universe = 997,963. 5x5 touches 202,299 (20.3%).
 B2B-Hiring 34%, B2B-Logistics 32%, B2B-Data&Analytics 31%, B2B-Workflow 30%, B2B-Sales&Marketing 30% (9,640 domains),
 B2B-Healthcare 30%, B2B-IT&Engineering 25% (11,762 domains) … plus Apparel-Luxury 27%, Industrial Equipment 27%,
 Jewelry 26%, Footwear 26%, Eyewear 24%, Medical Devices 23%, Furniture 22%, Auto Dealers 20%.
-- **Strategic significance:** B2B is MNTN's **#1 Q2 growth theme** (north star Theme 1: B2B Expansion). 5x5
-  disproportionately feeds the exact verticals MNTN is investing to grow → strategic value exceeds raw scale.
+- **Significance (framing correction, Malachi 2026-06-17):** these are **our customers' B2B-audience targeting
+  verticals** — losing 5x5 most degrades targeting for advertisers running B2B campaigns. This is NOT the same as
+  MNTN's own go-to-market goal of "reaching out to mid-market B2B" (acquiring B2B advertisers); the vertical taxonomy
+  is not a proxy for MNTN's customer-acquisition target. (Earlier drafts conflated the two.)
 
 ### 4.12 PHASE 3 — VENDOR COMPARISON (answers "how does 5x5 compare to other DDPs?"; 7d; `ti_1027_vendor_uniqueness_comparison_7d.csv`)
 Unique **classified** domains each vendor alone contributes to MM (the MM-usable net-new signal):
@@ -235,8 +237,9 @@ Measurable inputs:
 - 5x5 uniquely supplies **~12% of MM-usable (classified) domain signal** (47K of ~387K classified domains; ~23%
   counting overlap), **B2B-weighted far higher (25–34% of B2B-vertical domain coverage)**.
 - Honest bound: 5x5's value is **not** 12% of all MM revenue (the head/high-traffic domains survive without it). It
-  is the **marginal degradation in the verticals where 5x5 dominates — B2B (MNTN's #1 Q2 growth bet) + premium
-  retail + industrial/medical**: those verticals lose 20–34% of their fresh domain→vertical coverage if 5x5 is cut.
+  is the **marginal degradation in the (customer-targeting) verticals where 5x5 dominates — B2B-audience verticals +
+  premium retail + industrial/medical**: those verticals lose 20–34% of their fresh domain→vertical coverage if 5x5
+  is cut (a hit to advertisers running those campaigns — not MNTN's own B2B customer-acquisition goal).
 - Value is **domain-vertical coverage**, NOT reach (73.8% of 5x5 IPs already seen internally) and NOT URL-level
   (uniquely domain-only) — only the domain→vertical path benefits.
 
@@ -247,8 +250,8 @@ Measurable inputs:
   5x5 is worth a **typical DDP flat fee (tens-to-low-hundreds of $K/yr)** with comfortable margin. It would take an
   unusually large fee (≳ low-$M/yr) to fail break-even.
 - **RECOMMENDATION → KEEP (renew).** 5x5 passes Sean's bar decisively (68.5% unique, minimal overlap), is **outsized
-  ~3.4–3.85×** vs its 3.6% data scale, is the #2 unique MM-domain contributor, and is **concentrated in B2B** — the
-  exact growth area MNTN is investing in. Confirm the fee with Sherwin to finalize; if the fee is surprisingly large,
+  ~3.4–3.85×** vs its 3.6% data scale, is the #2 unique MM-domain contributor, and is **concentrated in B2B-audience
+  verticals** (our customers' B2B-campaign targeting). Confirm the fee with Sherwin to finalize; if the fee is surprisingly large,
   fall back to **renegotiate** (demand URL paths to fix the domain-only gap, or lower fee).
 - **Bonus:** review the redundant $0.50-CPM DDPs (33Across API, Sovrn, Cybba) for savings — far weaker than 5x5.
 - **Action loop:** deliver to Kale/Alyson → notify **Sean** to keep `25` in `ENABLED_DSIDS` (no DAG change needed).

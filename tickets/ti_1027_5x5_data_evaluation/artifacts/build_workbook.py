@@ -68,7 +68,8 @@ def main():
         ["vs other partners", "#2 unique contributor (Predactiv #1, also flat-fee). The $0.50-CPM per-use vendors "
          "(33Across API/Sovrn/Cybba) are largely redundant -> the real cost-review targets."],
         ["Verticals impacted if dropped", "Overwhelmingly B2B (Hiring, Logistics, Data&Analytics, Sales&Marketing, "
-         "IT&Engineering) + premium retail. B2B is MNTN's #1 Q2 growth theme."],
+         "IT&Engineering) + premium retail — i.e., advertisers running B2B-audience campaigns. These are our "
+         "customers' targeting verticals, NOT MNTN's own mid-market-B2B acquisition target."],
         ["Domain-only complaint?", "CONFIRMED (3.8% of URLs carry a path vs 67-100% elsewhere) but MOOT for MM — the "
          "vertical classifier strips every URL to domain anyway."],
         ["Cost structure", "Flat fee (fixed; marginal cost $0). Peer MM-DDP rate = $0.50 CPM. Absolute $ pending billing."],

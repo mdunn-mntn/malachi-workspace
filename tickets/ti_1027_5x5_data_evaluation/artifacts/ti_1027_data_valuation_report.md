@@ -7,7 +7,8 @@ TI · estimation exercise · windows: scale/pairs 2026-06-15 (1d), uniqueness 20
 ## Bottom line
 - 5x5 is a **flat-fee, ultra-thin feed** (just IP→URL→time) whose value is **not its IPs and not metadata — it's the
   unique household→site observations it alone sees.** 77% of its (IP×domain) events and 69% of its domains are
-  unique to it, concentrated in **B2B** (MNTN's #1 Q2 growth theme).
+  unique to it, concentrated in **B2B-audience verticals** (the targeting our B2B-campaign advertisers rely on — our
+  customers' targeting taxonomy, distinct from MNTN's own goal of acquiring mid-market B2B advertisers).
 - **Fair price ≈ $150K–$600K/yr.** **Floor ≈ $40K/yr** (pure incremental reach). **Walk-away ≈ $6.3M/yr** (what its
   data would cost at the $0.50 peer CPM on all the impressions it touches — we'd never pay more).
 - **Recommend: renew at/below the fair band; renegotiate above it; walk only near the ceiling.** Confirm the actual
@@ -67,7 +68,9 @@ Sales&Marketing 30%, IT&Eng 25%) + premium retail.
 - **Classifiable:** 45% of 5x5 domains (above the 39% universe avg); the unique slice 34% → 47K MM-usable unique domains.
 - **High-intent:** **80.6% of impressions to 5x5-observed households are High-Intent (≥6666)**; 39% of its delivered IPs
   are top-tier (10000) — the highest of any high-volume vendor. 5x5 is not bringing low-value households.
-- **Strategically placed:** its unique contribution is B2B-concentrated — the area MNTN is investing to grow.
+- **Concentrated in B2B-audience verticals:** its unique contribution skews to B2B sites, so losing it most degrades
+  targeting for advertisers running **B2B-audience campaigns** (a customer-performance effect — not MNTN's own
+  mid-market-B2B customer-acquisition target, which the verticals are not a proxy for).
 - **Metadata value: none** (thin feed) — so 100% of 5x5's value rests on the unique (IP×domain)→vertical signal.
 
 ## 5. Willingness to pay

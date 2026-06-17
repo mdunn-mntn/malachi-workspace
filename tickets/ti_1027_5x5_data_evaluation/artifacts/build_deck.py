@@ -43,7 +43,7 @@ SLIDES = f"""
   <h2>Bottom line</h2>
   <p class="lead"><b style="color:#C00000">KEEP (renew).</b></p>
   <p class="lead">5x5 is only <b>3.6%</b> of raw data but contributes <b>~12%</b> of unique MNTN-Matched domain signal — <b>~3.4× outsized.</b></p>
-  <p class="lead">It's the <b>#2 most-unique</b> of all our data partners, concentrated in <b>B2B</b> — our #1 Q2 growth theme — and it's <b>flat-fee</b>, so the cost doesn't scale.</p>
+  <p class="lead">It's the <b>#2 most-unique</b> of all our data partners, concentrated in <b>B2B-audience verticals</b> (the targeting our B2B-campaign advertisers rely on), and it's <b>flat-fee</b>, so the cost doesn't scale.</p>
 </section>
 
 <section>
@@ -74,7 +74,7 @@ SLIDES = f"""
 
 <section>
   <img src="{C_VERT}" style="width:80%">
-  <p class="take">If we drop 5x5, B2B verticals lose the most fresh domain coverage — exactly the area we're investing to grow.</p>
+  <p class="take">If we drop 5x5, B2B-audience verticals lose the most fresh domain coverage — so advertisers running B2B campaigns take the hit. (These are our customers' targeting verticals, not MNTN's own mid-market-B2B acquisition target.)</p>
 </section>
 
 <section>

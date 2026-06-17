@@ -5,7 +5,7 @@ relative to its scale, or in line? *(Estimation exercise — measurable bits fir
 
 ## Bottom line
 **Recommend KEEP (renew).** 5x5 is a **flat-fee** data partner whose impact on MNTN Matched is **outsized — ~3.4×
-its share of raw data** — and is **concentrated in B2B**, MNTN's #1 Q2 growth theme. It is the **#2 most-unique** of
+its share of raw data** — and is **concentrated in B2B-audience verticals** (our customers' B2B-campaign targeting). It is the **#2 most-unique** of
 all site-visit data partners. Final renew/renegotiate sign-off pending the flat-fee amount (with billing).
 
 ---
@@ -46,8 +46,9 @@ into verticals (domain → industry), and feed **MNTN Matched** scoring. 5x5 is 
 ## 4. What we'd lose without 5x5 — B2B coverage → `ti_1027_chart_vertical_dependence.png`
 The verticals most dependent on 5x5-unique domains are **overwhelmingly B2B** — B2B Hiring (34%), Logistics (32%),
 Data & Analytics (31%), Workflow Automation (30%), Sales & Marketing (30%), IT & Engineering (25%) — plus premium
-retail (luxury apparel, jewelry, footwear) and industrial/medical. **B2B is MNTN's #1 Q2 growth theme**, so dropping
-5x5 would most degrade the exact area we're investing to grow.
+retail (luxury apparel, jewelry, footwear) and industrial/medical. So dropping 5x5 most degrades **targeting for
+advertisers running B2B-audience campaigns**. (Important: these are our *customers'* targeting verticals — distinct
+from MNTN's own go-to-market goal of acquiring mid-market B2B advertisers; the verticals are not a proxy for that.)
 
 ## 5. Value & the renew decision
 - **MNTN Matched touches ~$210–385M/yr of media** and drives a measured **~10–36% visit-rate lift** (Fangorn). Its

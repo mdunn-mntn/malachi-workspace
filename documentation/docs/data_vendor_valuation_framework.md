@@ -37,7 +37,8 @@ it within 30 days, and who is most recent? (5x5: 69.8% sole-in-window, 95.4% sol
 - **Classifiable?** % of unique domains that resolve to a vertical (`website_crawl_verticals`) = MM-usable.
 - **High-intent?** Join the vendor's IPs to `cost_impression_log.household_score` → tier mix. (Note: score is a
   household property, ~uniform across vendors — so this checks "not garbage," not differentiation.)
-- **Strategically placed?** Which verticals depend on its unique signal (B2B = MNTN's Q2 growth priority).
+- **Which customer-targeting verticals depend on its unique signal?** (e.g. B2B-audience verticals.) Note: these are
+  the audience-targeting taxonomy our *customers'* campaigns use — not a proxy for MNTN's own go-to-market targets.
 - **Metadata worth it?** Only if a downstream consumer uses it.
 
 ## Step 5 — Willingness to pay (three lenses → a band)
