@@ -1,7 +1,7 @@
 # Data-Vendor Valuation & Willingness-to-Pay — 5x5 (DS 25)
 
 **A reusable framework for "what is a data vendor worth, and what should we pay?", applied to 5x5.**
-TI · estimation exercise · windows: scale/pairs 2026-06-15 (1d), uniqueness 2026-06-09→15 (7d). Source data in
+Audience Intelligence (AUDI) · estimation exercise · windows: scale/pairs 2026-06-15 (1d), uniqueness 2026-06-09→15 (7d). Source data in
 `outputs/`; methods in `queries/ti_1027_analysis_queries.sql`.
 
 ## Bottom line

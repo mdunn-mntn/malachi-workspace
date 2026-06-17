@@ -50,7 +50,7 @@ def main():
     # ---- Tab 1: Summary ----
     ws = wb.active; ws.title = "Summary"
     ws["A1"] = "5x5 (DS 25) Data Evaluation & Provider Scorecard (TI-1027)"; ws["A1"].font = TITLE_FONT
-    ws["A2"] = "Targeting Infrastructure · estimation exercise · 7-day window 2026-06-09→15 (scale: 2026-06-15)"
+    ws["A2"] = "Audience Intelligence (AUDI) · estimation exercise · 7-day window 2026-06-09→15 (scale: 2026-06-15)"
     ws["A2"].font = Font(italic=True, color=GREY)
     rows = [
         ["", ""],
