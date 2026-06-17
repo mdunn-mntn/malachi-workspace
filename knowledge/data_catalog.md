@@ -2404,7 +2404,21 @@ Stores the parent and child keyword associations for a given audience ID. This i
 - `keyword_type` — either `PARENT` (keywords shown in the UI audience builder) or `CHILD` (keywords grouped under a parent)
 - `selected` (boolean) — CHILD keywords where `selected = true` are the ones included in the audience expression JSON blob used by DataSource 19
 
-**Use for:** Identifying which keywords (including AI Recommended Attributes) are associated with an audience. Replication to BigQuery is not confirmed — submit a Data Platform Jira ticket to request replication if needed.
+**Use for:** Identifying which keywords (including AI Recommended Attributes) are associated with an audience. (It IS queryable in BigQuery at `dw-main-silver.ui.audience_keyword_state`.)
+- More columns: `keyword` (text), `data_source_category_id`, `is_custom` (customer-entered vs system), `is_magic` (LLM/"magic" auto-expansion), `is_hidden`, `expanded_from` (JSON — the PARENT seed this CHILD was expanded from), `model_version`.
+
+**⚠ "I see keywords in the expression I can't find in the UI" — RESOLVED (TI-1026, confirmed by Alex Knorr 2026-06-17).**
+The UI audience builder shows **only PARENT keywords** (the customer's seed terms). The **DS19 expression keywords are the
+selected CHILD keywords** — MNTN-Matched's auto-expansion of those seeds — and are NOT individually searchable in the UI
+(they're grouped/nested under parents). So the expression's DS19 set ≠ what the UI lists.
+- Example (OTF, audience 34668): 233 selected PARENT (UI-visible seeds) vs ~374 selected CHILD = the ~379 DS19 expression
+  keywords; 22 are `is_magic` LLM-expansions.
+- **Off-target keywords are usually auto-expanded children, NOT customer choices.** OTF's junk keywords were `is_magic`
+  expansions of good seeds: "Antifreeze" ← "Cold Plunge", "Beer Mugs" ← "Cardiovascular", "Compact Suv" ← "Nutrition",
+  "CPUs" ← "Solidcore", "Above Ground Pools" ← "Metabolic". So keyword-quality issues are an MNTN expansion-model problem,
+  not the advertiser's seed choices — frame accordingly.
+- To list what targets vs what the customer sees: filter `selected = true`; `keyword_type='PARENT'` = UI/seed view,
+  `keyword_type='CHILD'` = the DS19 expansion that actually targets. Cross-check via the shopper-graph API (Alex).
 - ### `ui.audience_x_marketing_objective` (CoreDB / intprod)
 
 Mapping table that associates audience segments with a campaign's marketing objective (strategy), formerly called `objective_id` on `campaign_groups`. Used to enforce alignment between audience segment types and the campaign strategy (Retargeting vs. Prospecting).
