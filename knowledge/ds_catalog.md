@@ -87,6 +87,7 @@ Earlier passes (10-15) called DS14 "MNTN Global Data" and DS16 "MNTN Taxonomy Da
 
 - **DS14 categories** are bid routing destinations (id=1 "Beeswax Bidder", id=150 "Magnite", id=152 "Index Exchange", id=1000 "IP Ends In .0"). Not audience targeting.
 - **DS16 categories** are per-advertiser identifiers (id=1 "AdvertiserID - Eat Clean Bro") plus MNTN-internal event taxonomy (id=2 "PageViews", id=3 "Conversions", id=5 "Prospecting", id=6 "Retargeting", id=7 "MultiTouch", id=8 "VV"). Not audience targeting.
+  - **High-ID DS16 cats carry `advertiser_id` and encode a per-advertiser funnel-stage path** in `display_name`: `AdvertiserID > {Impressions|VV} > {Prospecting|Retargeting} > CampaignGroupID > CampaignID` (e.g. cat 1987685 = `…> Impressions > Prospecting >…`, cat 1987692 = `…> VV > Prospecting >…`, both advertiser_id=37423). These are auto-attached delivery/measurement tags, NOT buyer audience selections. Resolve via `tpa.categories.display_name` (cols are `data_source_category_id`, `display_name`, `advertiser_id` — NOT `category_id`/`full_path`).
 
 Both DS14 and DS16 appear in almost every campaign because they encode bid-side plumbing, not buyer-selected audience choices. They sit in the **Bid mechanics / internal taxonomy** group, not in any targeting family.
 

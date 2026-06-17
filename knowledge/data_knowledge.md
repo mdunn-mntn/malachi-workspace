@@ -745,9 +745,20 @@ Each vendor's RAW feed schema (from the airflow-ti processing jobs) vs what we K
 - **Pixel vendors (Justuno 24, Sovrn 33, Klickly 39, 33Across API 40):** raw `pixel_page_view_signal` carries
   `event_id, mobile, query_str (incl. referer, user_agent, GPP consent), referer, url, user_agent` — but
   **`site_visit_signal` drops event_id/mobile/query_str/referer.**
-- **DISCARD FINDING:** we receive richer metadata than we keep (pixel `query_str/referer/mobile`, Predactiv
-  `user_agent`) — "pay for rich, keep thin." Raw `pixel_page_view_signal` URLs are heavy with RTB/cookie-sync junk
-  (e.g. `cs-rtb.openwebmp.com`). Potential future-use opportunity.
+- **DISCARD FINDING (full magnitude — TI-1027 raw audit 2026-06-17):** `site_visit_signal` keeps only
+  `ip, url, user_agent, time`, but the **raw dumps carry far more** that we drop at ingestion:
+  - **Predactiv = 26 raw cols, we keep 4.** Dropped: `hem_md5/sha1/sha256` (**hashed emails — identity linkage**),
+    full geo (`geo_city/postal/dma/...`), `domain_industries` (**firmographics — B2B**), `concepts`/`keywords`/
+    `entities` (pre-computed topic classification w/ confidence scores), `deviceType`/`os`/`browserFamily`.
+  - **33Across = 32 raw cols (TSV.gz), we keep 4.** Dropped: `PAGE_CATEGORY(_KEYWORDS)` ×2, `TITLE`, geo
+    (`ZIP/DMA/REGION/MAXMIND_GEO_ID`), device client-hints (`SEC_CH_UA_*`), `LANGUAGE`, **consent (`GPP/GPC/US_PRIVACY/DNT`)**.
+  - **Pixel feeds (24/33/39/40):** drop `event_id/mobile/referer/query_str` (incl. GPP consent).
+  - **5x5 (ip/url/epoch) & Cybba (ip/url/time) are genuinely thin** — nothing to tap without asking the vendor.
+  - **So most "more value" is a PIPELINE change (parse cols we already pay for), not new vendor cost.** Also a
+    **compliance flag**: consent fields (GPP/GPC) arrive raw and are dropped — confirm downstream handling.
+  - **Raw dump roots** (Sean Yang): batch `gs://mntn-data-partners/partners/<vendor>/`; streaming
+    `gs://mntn-data-archive-prod/pixel_page_view_signal/` (rawer JSON: `gs://mntn-analytics-raw/topics/pixel-page-view-signal/`).
+    Full audit map + per-vendor columns: `tickets/ti_1027_5x5_data_evaluation/artifacts/ti_1027_raw_data_audit.md`.
 
 ### DDP billing base = per 1,000 **impressions served** (TI-1027, user-confirmed 2026-06-17)
 The `fixed_cpm` (e.g. $0.50 for the MM-DDP peers) is **cost per 1,000 impressions served**, and the per-impression

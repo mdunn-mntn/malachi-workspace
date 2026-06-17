@@ -249,6 +249,17 @@ Per-IP depth = how many distinct sites a vendor sees each IP visit, and how many
 - **Exec deck** (`artifacts/ti_1027_exec_deck.html`, 5 content slides): bottom line → why (net-new-vs-free + recency)
   → what to pay (pricing) → untapped upside + next steps. Pared down per Alyson for Kale.
 
+### 4.18 Raw-data audit map (Malachi/Sean ask, 2026-06-17) → `artifacts/ti_1027_raw_data_audit.md`
+Mapped every raw dump pre-`site_visit_signal`. Roots: batch `gs://mntn-data-partners/partners/<vendor>/` (10 vendors),
+streaming `gs://mntn-data-archive-prod/pixel_page_view_signal/` (rawer JSON in `gs://mntn-analytics-raw/topics/...`),
+internal `guid_log`/`augmentor_log`. **Big finding:** raw dumps carry far more than the 4 cols we keep —
+**Predactiv 26 cols (drops hashed emails, full geo, domain_industries/firmographics, concepts/keywords), 33Across 32
+cols (drops page categories+keywords, geo, device hints, GPP consent)**; pixel feeds drop event_id/mobile/referer/
+query_str(+GPP). 5x5 & Cybba genuinely thin (ip/url/time). → most "more value" is a PIPELINE change, not vendor cost;
++ compliance flag (consent fields dropped). Site-visit feeds: 5x5/33across/cybba/predactiv (batch) +
+Justuno/Sovrn/Klickly/33Across-API (streaming). Non-site-visit: liveramp/sharethis (interests), experian/deepsync
+(CRM/identity), bombora (B2B intent), alliant (transactions).
+
 ## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
 
 ### 5.1 How to estimate the value of MM/Fangorn (Kale's question)
