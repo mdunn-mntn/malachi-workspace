@@ -233,7 +233,7 @@ Tillium, Klaviyo, Ours Privacy, HubSpot V2, Freshman, Bombora. List subject to c
 - Apple's privacy changes (ATT/App Tracking Transparency) obfuscated device identifiers for mobile
 
 ### Lift Testing Partners & External Incrementality Vendors
-- **LiftLab** — primary external partner for incrementality measurement. Keeps coming up with advertisers. Geo-based lift measurement — segments by geography and measures raw metric lift during campaign period.
+- **LiftLab** — primary external partner for incrementality measurement. Keeps coming up with advertisers. Geo-based lift measurement — segments by geography and measures raw metric lift during campaign period. Provides a **self-serve web tool that recommends a test design** (power/holdout/geo) per customer (per Edgar, 2026-06-17); MNTN reviews + tightens those recommendations before offering studies. Reviewing vendor designs → see `knowledge/experimentation.md` § "Reviewing a third-party vendor's lift-test design" + TI-1039.
 - **Kochava** — another incrementality/attribution vendor option.
 - Possibly more vendors in the space.
 - **Strategic shift (Kale, 2026-04-08):** Plan to shutter internal incrementality dashboards and move to approved third-party vendors. Messaging: "We changed the way we do incrementality." Need a dedicated LiftLab liaison/DS on the MNTN side.
