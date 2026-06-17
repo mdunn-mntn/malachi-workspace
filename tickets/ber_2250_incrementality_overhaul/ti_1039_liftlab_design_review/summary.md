@@ -1,6 +1,6 @@
-# TI-xxx: Review LiftLab incrementality test designs for 6 prospective customers
+# TI-1039: Review LiftLab incrementality test designs for 6 prospective customers
 
-**Jira:** (not yet ticketed — see Open Items)
+**Jira:** https://mntn.atlassian.net/browse/TI-1039 (relates to BER-2250, TI-855)
 **Status:** In Progress
 **Date Started:** 2026-06-17
 **Date Completed:**
@@ -26,11 +26,11 @@ Constraints/realities going in:
 
 ## 3. Plan of Action
 1. ✅ Pull existing context: experimentation.md (LiftLab + power), iROAS playbook, Edgar's 6 lessons, customer tracker; confirm TI-855/856/857 status (all Done/Released).
-2. ✅ Build a **test-design review framework + per-design scorecard** → `artifacts/ti_xxx_design_review_framework.md`.
+2. ✅ Build a **test-design review framework + per-design scorecard** → `artifacts/ti_1039_design_review_framework.md`.
 3. ⬜ Request the 6 LiftLab tool outputs + Edgar's tweaks ahead of Tuesday (draft note in framework doc).
 4. ⬜ Pre-score the 6 designs against the scorecard once received; flag any RED levers.
 5. ⬜ Review live Tue 6/23; capture decisions + design changes in `meetings/`.
-6. ⬜ File Jira ticket (under BER-2250 / new, since TI-855 is Released); update self-review.
+6. ✅ Filed Jira ticket TI-1039 (standalone, relates-to BER-2250 + TI-855); ⬜ update self-review after the meeting.
 
 ## 4. Investigation & Findings
 Grounding pulled from existing workspace knowledge (no new queries yet):
@@ -41,7 +41,7 @@ Grounding pulled from existing workspace knowledge (no new queries yet):
 - **Method:** LiftLab = geo-based lift (randomized geo holdout + synthetic control, and/or switchback/time tests). Treated as defensible (TI-856) — review is about design *parameters*, not trust.
 - **Campaign maturity:** exclude first ~4 weeks (TI-780 — only ~89% of steady-state IVR by wk 4).
 
-10 review levers (full detail + questions + fillable scorecard) → `artifacts/ti_xxx_design_review_framework.md`.
+10 review levers (full detail + questions + fillable scorecard) → `artifacts/ti_1039_design_review_framework.md`.
 
 ## 5. Solution
 Deliverable = the review framework + scorecard (above). Three things to land Tuesday: **(1) power/MDE first**, **(2) audience strategy is the biggest controllable swing**, **(3) protect the customer relationship** (no early reads, retest framing).
@@ -56,5 +56,5 @@ None yet (no new schema/data). If the meeting surfaces reusable design-review pa
 ## 8. Open Items / Follow-ups
 - ⬜ **Get the 6 designs from Edgar** before Tuesday (note drafted in framework doc).
 - ⬜ Pre-score the 6 once received.
-- ⬜ File the Jira ticket (pending user confirmation on whether to formalize) and rename `ti_xxx_*` to the real number.
+- ✅ Filed TI-1039 and renamed folder/files to the real number.
 - ⬜ Capture meeting outcomes in `meetings/`.
