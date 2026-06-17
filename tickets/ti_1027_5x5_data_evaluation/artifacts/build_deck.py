@@ -139,7 +139,7 @@ SLIDES = f"""
 <section>
   <h2>"But don't other vendors already have it?" — No.</h2>
   <img src="{C_RECENCY}" style="width:90%">
-  <p class="take">We only target the last 30 days. Within that window, vendors deliver on irregular cadences and their copies expire — so 5x5 is the SOLE source for 70% of its data and the freshest for 95%. Snapshot "overlap" overstated redundancy.</p>
+  <p class="take">We only target the last 30 days, and vendors deliver on irregular cadences. So 5x5 is the <b>sole</b> source for 70% of its data (+1% it delivers freshest) — ~71% has no in-window substitute. 24% is a same-day tie (a copy survives if we drop 5x5); only ~5% does another vendor have fresher. Snapshot "overlap" overstated redundancy.</p>
 </section>
 
 <section>

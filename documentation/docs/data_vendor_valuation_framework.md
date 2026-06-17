@@ -47,8 +47,10 @@ Also: **unique metadata** (does it provide columns no one else does, that we act
 (`site_visit_signal` has no TTL, so filter `dt`). Vendors deliver on irregular cadences, so a 7-day-snapshot
 "overlap" *overstates* redundancy — a pair "also seen elsewhere" may be weeks old and about to expire. The
 targeting-truthful metric is **sole-or-freshest within the window**: per (ip,domain), does any *other* vendor deliver
-it within 30 days, and who is most recent? (5x5: 69.8% sole-in-window, 95.4% sole-or-freshest — vs 77% snapshot.)
-"Overlap ≠ covered." This usually *raises* the floor.
+it within 30 days, and who is most recent? Split it four ways — sole / vendor-freshest / **tied (same-day — a copy
+survives, so NOT a clean win)** / other-fresher. (5x5: 69.8% sole + 1.2% freshest = ~71% irreplaceable; 24.4% tied;
+4.6% other-fresher — vs a 77% one-day snapshot.) "Overlap ≠ covered, but a same-day tie *is* covered." Usually
+*raises* the floor.
 
 ## Step 4 — Is the unique slice valuable?
 - **Classifiable?** % of unique domains that resolve to a vertical (`website_crawl_verticals`) = MM-usable.

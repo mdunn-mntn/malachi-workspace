@@ -764,8 +764,10 @@ pay fixed regardless of volume. Reusable valuation method: `documentation/docs/d
   snapshot *overstates* cross-vendor overlap: vendors deliver on irregular cadences, so a pair "also seen elsewhere"
   may have been delivered weeks ago and is about to expire. The targeting-truthful metric is **sole-or-freshest
   within 30 days** (per (ip,domain): does any *other* vendor deliver it within the window, and who's most recent?).
-- 5x5 example: 7-day snapshot = 77% unique pairs; over the 30-day window **69.8% are sole** (no other vendor
-  in-window) and **95.4% sole-or-freshest**. "Overlap ≠ covered." Bake this into any vendor-overlap analysis.
+- 5x5 example: 7-day snapshot = 77% unique pairs; over the 30-day window, split four ways — **69.8% sole** +
+  **1.2% 5x5-freshest = ~71% irreplaceable**; **24.4% tied** (another vendor same-day — a copy survives, so NOT a
+  clean win); **4.6% other-fresher**. "Overlap ≠ covered, but a same-day tie *is* covered" → honest floor ~71%, not
+  the 95% that lumped ties in. Bake this 4-way split into any vendor-overlap analysis.
 
 ### Site-visit vendors are ADDITIVE, not redundant (TI-1027, 2026-06-17)
 Across all ~447M distinct (IP×domain) pairs in a day, **76% come from exactly ONE vendor** (16% from 2, 7% from 3+).

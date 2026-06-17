@@ -117,10 +117,12 @@ raw IPs and never raw events.
 **Recency matters — "overlap" ≠ "covered" (`ti_1027_recency_30d_5x5.csv`).** We only target the **last 30 days**
 (`site_visit_signal` itself has no TTL — data back to 2025-08-31 — but targeting uses a 30-day window). Vendors
 deliver on **irregular cadences**, so a pair "also seen by another vendor" may have been delivered weeks ago and is
-about to expire. Measured over the **30-day targeting window**, of 5x5's 754.8M (IP×domain) pairs: **69.8% are SOLE
-(no other vendor delivered them in-window)** and **95.4% are sole-or-freshest** — only ~4.6% does another vendor
-deliver more recently. So a 7-day snapshot *overstates* redundancy; within the window that drives targeting, ~70% of
-5x5's data has no substitute. This **raises the floor** — the $40K unique-reach floor understates badly.
+about to expire. Measured over the **30-day targeting window**, of 5x5's 754.8M (IP×domain) pairs, split four ways:
+**69.8% SOLE** (no other vendor in-window) + **1.2% 5x5 delivers freshest** = **~71% with no in-window substitute**;
+**24.4% tied** (another vendor delivers it the same day — a copy survives if 5x5 is dropped, so not a clean win);
+only **4.6% does another vendor deliver fresher**. So a 7-day snapshot *overstates* redundancy, but a same-day tie
+*is* covered — the honest irreplaceable floor is **~71%** (not the 95% that lumped ties in). Still far above the
+snapshot's apparent redundancy, and it **raises the floor** — the $40K unique-reach floor understates badly.
 There is **no unique metadata** (5x5 sends none). Of the unique domains, **47K (34%) classify to a vertical** (MM-usable)
 = ~12% of the whole classified-domain universe — concentrated in **B2B** (Hiring 34%, Logistics 32%, Data&Analytics 31%,
 Sales&Marketing 30%, IT&Eng 25%) + premium retail.
