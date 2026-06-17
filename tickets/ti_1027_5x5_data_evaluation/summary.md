@@ -220,6 +220,20 @@ Expanded from "MM impact" to a reusable data-vendor valuation + WTP framework. N
 - Deck updated (spend / recency / pricing slides + charts); `data_vendor_valuation_framework.md` updated with the
   recency step.
 
+### 4.16 PHASE 4 — Raw numbers & per-IP depth (volume ≠ value) → `ti_1027_per_ip_depth.csv`
+Per-IP depth = how many distinct sites a vendor sees each IP visit, and how many are unique to it. Key reads:
+- **Raw volume is misleading.** 33Across is the **biggest** feed (834M events/day) but among the **shallowest** in
+  unique depth: **0.65 unique domains/IP, only 27% of its pairs unique** — repeat-visits to common domains everyone
+  has. Sovrn worse (0.10). Internal **augmentor is deepest (2.98 unique dom/IP)**.
+- **5x5:** thin per IP (1.6 domains/IP, 1.23 unique) but 77% of its pairs unique — value is unique-domain *breadth*,
+  not per-household *depth*.
+- **Two value lenses, different rankings:** (a) **domain→vertical breadth** (what the MM classifier consumes) →
+  **5x5 leads** on unique domains; (b) **per-IP behavioral depth** (unique pairs/IP) → augmentor > 33Across API >
+  guid > 5x5. 33Across **API** is a case study: decent per-IP depth (1.87) but only 3.2% unique *domains* (different
+  IPs on *common* domains) — redundant for classification, useful for per-IP features.
+- Deck: added a **raw-numbers table slide** + **depth scatter** (events vs unique-domains/IP). Workbook: **Per-IP
+  Depth** tab.
+
 ## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
 
 ### 5.1 How to estimate the value of MM/Fangorn (Kale's question)

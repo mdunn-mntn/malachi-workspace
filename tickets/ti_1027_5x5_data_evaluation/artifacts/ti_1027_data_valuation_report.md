@@ -42,6 +42,28 @@ away. (Separate opportunity; does not affect 5x5, which has no metadata to drop.
 92.7K distinct domains · 33.1M distinct (IP×domain) pairs · 35.1M (IP×url) pairs.** (IP×url ≈ IP×domain confirms it's
 domain-only — only 3.8% of URLs carry a path.) Mid-pack by volume (3.6% of all site-visit records); 5th of 10 by IPs.
 
+**Per-IP depth — raw volume ≠ value (`outputs/ti_1027_per_ip_depth.csv`).** A vendor that sees one IP visit 10 sites
+is worth more than one that sees the same IP visit 1 site. Per-IP depth (distinct domains an IP visits, and how many
+are unique to the vendor):
+| Vendor | events/day | visits/IP | domains/IP | **unique domains/IP** | % pairs unique |
+|---|---:|---:|---:|---:|---:|
+| augmentor (internal) | 797M | 16.7 | 4.8 | **2.98** | 62% |
+| 33Across API | 373M | 10.4 | 3.1 | **1.87** | 61% |
+| guid_log (internal) | 305M | 9.3 | 1.8 | **1.44** | 83% |
+| **5x5** | 93M | 4.5 | 1.6 | **1.23** | 77% |
+| Predactiv | 84M | 4.4 | 1.9 | 0.54 | 29% |
+| 33Across | **834M** | 12.4 | 2.4 | **0.65** | **27%** |
+| Sovrn | 58M | 7.4 | 1.4 | **0.10** | 7% |
+- **Raw volume is misleading:** 33Across is the biggest feed (834M events) but among the *shallowest* in unique depth
+  (0.65 unique domains/IP, 27% unique pairs) — mostly repeat-visits to common domains everyone has. Sovrn is worse
+  (0.10). The internal bidstream (augmentor) is by far the deepest (2.98).
+- **Two value lenses, different rankings:** (a) **domain→vertical breadth** — what the MM classifier consumes (distinct
+  domains) → **5x5 wins** (68.5% unique domains). (b) **per-IP behavioral depth** (unique pairs/IP) → augmentor >
+  33Across API > guid > 5x5. 33Across **API** has decent per-IP depth (1.87) but only 3.2% unique *domains* — it sees
+  different IPs on *common* domains, so it adds little to vertical classification but more to per-IP features.
+- **5x5 is thin per IP (1.6 domains/IP) but its visits are unique (77% of pairs).** Its value is unique-domain
+  *breadth* for classification, not per-household *depth*.
+
 ## 3. Uniqueness — layered (not just IPs) — `outputs/ti_1027_layered_uniqueness_5x5.csv`
 This is the core reframe: uniqueness rises as you go from IP → domain → (IP×domain) event.
 | Grain | 5x5 total | Unique to 5x5 | % unique | Also seen internally |

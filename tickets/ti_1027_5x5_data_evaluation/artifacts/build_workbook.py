@@ -227,6 +227,29 @@ def main():
     wdi.cell(wdi.max_row, 1).alignment = WRAP; wdi.cell(wdi.max_row, 1).font = Font(italic=True, color=GREY)
     autowidth(wdi, [5, 14, 38, 34, 18, 24, 14, 18]); wdi.freeze_panes = "A4"
 
+    # ---- Tab: Per-IP Depth (raw numbers) ----
+    wdd = wb.create_sheet("Per-IP Depth")
+    wdd["A1"] = "Raw numbers + per-IP depth — volume ≠ value"; wdd["A1"].font = TITLE_FONT
+    wdd["A2"] = ("A vendor that sees one IP visit 10 sites beats one that sees it visit 1. 'unique domains/IP' = "
+                 "distinct sites the vendor ALONE contributes per household. 2026-06-15.")
+    wdd["A2"].font = Font(italic=True, color=GREY); wdd["A2"].alignment = WRAP
+    depth = sorted(load("ti_1027_per_ip_depth.csv"), key=lambda r: -int(r["events"]))
+    wdd.append([]); wdd.append(["Vendor", "Events/day", "IPs", "Domains", "IP×domain pairs", "IP×url pairs",
+                                "visits/IP", "domains/IP", "unique dom/IP", "% pairs unique"])
+    style_header(wdd, 4, 10)
+    for r in depth:
+        wdd.append([r["partner"], int(r["events"]), int(r["ips"]), int(r["domains"]), int(r["ip_domain_pairs"]),
+                    int(r["ip_url_pairs"]), float(r["visits_per_ip"]), float(r["domains_per_ip"]),
+                    float(r["unique_domains_per_ip"]), float(r["pct_pairs_unique"])])
+        rr = wdd.max_row
+        for cc in (2, 3, 4, 5, 6): wdd.cell(rr, cc).number_format = "#,##0"
+        if r["data_source_id"] == "25": wdd.cell(rr, 1).font = Font(bold=True, color=RED)
+    wdd.append([]); wdd.append(["Read: 33Across is the biggest feed (834M events) but shallowest in unique depth "
+        "(0.65 unique dom/IP, 27% unique pairs) — repeat-visits to common domains. Two value lenses: domain→vertical "
+        "breadth (MM uses this → 5x5 wins on unique domains) vs per-IP depth (augmentor/33Across-API lead)."])
+    wdd.cell(wdd.max_row, 1).alignment = WRAP; wdd.cell(wdd.max_row, 1).font = Font(italic=True, color=GREY)
+    autowidth(wdd, [14, 13, 12, 10, 16, 14, 9, 10, 13, 12]); wdd.freeze_panes = "A5"
+
     # ---- Tab: Uniqueness Layers ----
     wul = wb.create_sheet("Uniqueness Layers")
     wul["A1"] = "5x5 uniqueness by grain — value is unique DATA, not unique reach"; wul["A1"].font = TITLE_FONT

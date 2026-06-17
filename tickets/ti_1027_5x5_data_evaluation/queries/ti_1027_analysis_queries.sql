@@ -187,3 +187,13 @@ SELECT COUNTIF(dt_5x5 IS NOT NULL) AS pairs_5x5_30d,
        ROUND(100*COUNTIF(dt_5x5 IS NOT NULL AND dt_other IS NULL)/COUNTIF(dt_5x5 IS NOT NULL),1) AS pct_sole_30d,
        ROUND(100*COUNTIF(dt_5x5 IS NOT NULL AND (dt_other IS NULL OR dt_5x5>=dt_other))/COUNTIF(dt_5x5 IS NOT NULL),1) AS pct_sole_or_freshest
 FROM p;
+
+-- ============================================================
+-- PHASE 4 (per-IP depth): per-vendor UNIQUE (IP,domain) pairs (1 day svs). Combine with cardinality for
+-- visits/IP, domains/IP, unique-domains/IP. Shows raw volume != value (33Across huge but shallow/redundant).
+-- ============================================================
+WITH p AS (SELECT DISTINCT data_source_id, ip, NET.REG_DOMAIN(url) AS domain
+           FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%' AND NET.REG_DOMAIN(url) IS NOT NULL),
+pm AS (SELECT ip, domain, COUNT(DISTINCT data_source_id) AS n_ds, MIN(data_source_id) AS sole_ds FROM p GROUP BY ip, domain)
+SELECT sole_ds AS data_source_id, COUNT(*) AS unique_ip_domain_pairs
+FROM pm WHERE n_ds=1 GROUP BY sole_ds ORDER BY unique_ip_domain_pairs DESC;

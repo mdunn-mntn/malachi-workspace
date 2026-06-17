@@ -21,6 +21,23 @@ C_WTP = img("ti_1027_chart_wtp_scale.png")
 C_RECENCY = img("ti_1027_chart_recency.png")
 C_SPEND = img("ti_1027_chart_spend_comparison.png")
 C_PRICING = img("ti_1027_chart_pricing.png")
+C_DEPTH = img("ti_1027_chart_depth.png")
+
+import csv as _csv
+_d = sorted(_csv.DictReader(open(HERE.parent / "outputs" / "ti_1027_per_ip_depth.csv")),
+            key=lambda r: -int(r["events"]))
+def _m(x): return f"{int(x)/1e6:.0f}M"
+def _k(x): return f"{int(x)/1e3:.0f}K"
+_hdr = "".join(f"<th>{h}</th>" for h in
+    ["Vendor","Events/day","IPs","Domains","IP×domain pairs","visits/IP","unique dom/IP","% pairs unique"])
+_body = ""
+for r in _d:
+    hot = ' style="background:#FBE9EC;font-weight:bold"' if r["data_source_id"]=="25" else ""
+    _body += ("<tr%s><td style='text-align:left'>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
+              "<td>%s</td><td>%s</td><td>%s%%</td></tr>") % (
+        hot, r["partner"], _m(r["events"]), _m(r["ips"]), _k(r["domains"]), _m(r["ip_domain_pairs"]),
+        r["visits_per_ip"], r["unique_domains_per_ip"], r["pct_pairs_unique"])
+RAW_TABLE = f"<table class='raw'><thead><tr>{_hdr}</tr></thead><tbody>{_body}</tbody></table>"
 
 SLIDES = f"""
 <section>
@@ -65,6 +82,17 @@ SLIDES = f"""
 <section>
   <img src="{C_SPEND}" style="width:88%">
   <p class="take">On raw "touched spend" every big vendor looks the same (~$350–400K/day) — because they all see the same households. Touched volume can't tell vendors apart; only unique contribution can.</p>
+</section>
+
+<section>
+  <h2>The raw numbers (per vendor, per day)</h2>
+  {RAW_TABLE}
+  <p class="take">33Across is the biggest feed by far (834M events) — but raw volume is mostly repeat-visits to common domains. What matters is the rightmost columns: how much we learn per household.</p>
+</section>
+
+<section>
+  <img src="{C_DEPTH}" style="width:84%">
+  <p class="take">Depth per IP: 33Across is huge but shallowest in unique site-visits/IP (0.65) — basically re-reporting common domains. 5x5 is mid; our own bidstream (augmentor) is deepest. Volume ≠ value.</p>
 </section>
 
 <section>
@@ -165,6 +193,9 @@ HTML = f"""<!doctype html><html><head><meta charset="utf-8">
  .reveal .cols {{ display:flex; gap:1.4em; width:90%; margin:0.4em auto; }}
  .reveal .col {{ flex:1; background:#fff; border:1px solid #E0E0E0; border-radius:8px; padding:0.7em 0.9em; }}
  .reveal .col p {{ font-size:0.6em; line-height:1.45; }}
+ .reveal table.raw {{ font-size:0.46em; width:94%; margin:0.3em auto; border-collapse:collapse; }}
+ .reveal table.raw th {{ background:#1F3864; color:#fff; padding:5px 7px; text-align:right; font-weight:bold; }}
+ .reveal table.raw td {{ padding:4px 7px; text-align:right; border-bottom:1px solid #E6E6E6; }}
 </style></head><body>
 <div class="reveal"><div class="slides">{SLIDES}</div></div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>
