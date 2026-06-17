@@ -16,6 +16,8 @@ C_VENDOR = img("ti_1027_chart_vendor_comparison.png")
 C_SCORE = img("ti_1027_chart_scorecard.png")
 C_VERT = img("ti_1027_chart_vertical_dependence.png")
 C_TIERS = img("ti_1027_chart_score_tiers.png")
+C_LAYERS = img("ti_1027_chart_layered_uniqueness.png")
+C_WTP = img("ti_1027_chart_wtp_scale.png")
 
 SLIDES = f"""
 <section>
@@ -70,6 +72,16 @@ SLIDES = f"""
 <section>
   <img src="{C_TIERS}" style="width:88%">
   <p class="take">Scored ≠ high-value — so we checked. 5x5's households are top-tier: 39% land in High Intent, the highest of any high-volume partner. It's not bringing low-value traffic.</p>
+</section>
+
+<section>
+  <img src="{C_LAYERS}" style="width:74%">
+  <p class="take">The "unique data" question, answered: only 20% of its IPs are unique, but 77% of the specific household→site visits are 5x5-only. The value is the data, not the reach.</p>
+</section>
+
+<section>
+  <img src="{C_WTP}" style="width:92%">
+  <p class="take">$0.50 CPM = per 1,000 impressions. 5x5 touches ~34M impr/day → ~$6.3M/yr if billed like a CPM peer (the ceiling). Fair value ~$150–600K/yr. Place the flat fee here.</p>
 </section>
 
 <section>

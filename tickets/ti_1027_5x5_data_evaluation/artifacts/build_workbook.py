@@ -207,6 +207,67 @@ def main():
     wst.cell(wst.max_row, 1).alignment = WRAP
     autowidth(wst, [16, 13, 12, 11, 11, 12, 8, 13, 11, 14]); wst.freeze_panes = "A5"
 
+    # ---- Tab: Data Inventory (richness + volume) ----
+    wdi = wb.create_sheet("Data Inventory")
+    wdi["A1"] = "What's in the data — raw richness & volume (TI-1027 Phase 2)"; wdi["A1"].font = TITLE_FONT
+    rich = load("ti_1027_vendor_richness.csv"); card = {r["data_source_id"]: r for r in load("ti_1027_cardinality_2026-06-15.csv")}
+    wdi.append([]); wdi.append(["DS", "Partner", "Raw columns", "Metadata beyond ip/url/time", "Profile",
+                                "Schema risk", "Events/day", "(IP×domain) pairs/day"])
+    style_header(wdi, 3, 8)
+    for r in rich:
+        c = card.get(r["data_source_id"], {})
+        wdi.append([int(r["data_source_id"]), r["partner"], r["raw_columns"], r["other_metadata"], r["profile"],
+                    r["schema_risk"], int(c.get("events", 0)), int(c.get("ip_domain_pairs", 0))])
+        rr = wdi.max_row; wdi.cell(rr, 3).alignment = WRAP; wdi.cell(rr, 4).alignment = WRAP
+        wdi.cell(rr, 7).number_format = "#,##0"; wdi.cell(rr, 8).number_format = "#,##0"
+        if r["data_source_id"] == "25": wdi.cell(rr, 2).font = Font(bold=True, color=RED)
+    wdi.append([]); wdi.append(["Discard finding: pixel vendors (24/33/39/40) send event_id/mobile/query_str/referer "
+                                "and Predactiv sends user_agent — all dropped at site_visit_signal. We pay for rich, keep thin."])
+    wdi.cell(wdi.max_row, 1).alignment = WRAP; wdi.cell(wdi.max_row, 1).font = Font(italic=True, color=GREY)
+    autowidth(wdi, [5, 14, 38, 34, 18, 24, 14, 18]); wdi.freeze_panes = "A4"
+
+    # ---- Tab: Uniqueness Layers ----
+    wul = wb.create_sheet("Uniqueness Layers")
+    wul["A1"] = "5x5 uniqueness by grain — value is unique DATA, not unique reach"; wul["A1"].font = TITLE_FONT
+    lay = load("ti_1027_layered_uniqueness_5x5.csv")
+    wul.append([]); wul.append(["Grain", "5x5 total", "Unique to 5x5", "% unique", "Also seen internally", "% internal"])
+    style_header(wul, 3, 6)
+    gmap = {"ip": "IP (reach)", "domain": "Domain", "ip_domain_pair": "(IP×domain) event — the data value"}
+    for r in lay:
+        wul.append([gmap.get(r["grain"], r["grain"]), int(r["total_5x5"]), int(r["unique_to_5x5"]),
+                    float(r["pct_unique"]), int(r["also_internal"]), float(r["pct_internal"])])
+        rr = wul.max_row
+        for cc in (2, 3, 5): wul.cell(rr, cc).number_format = "#,##0"
+        if r["grain"] == "ip_domain_pair":
+            for cc in range(1, 7): wul.cell(rr, cc).font = Font(bold=True, color=RED)
+    wul.append([]); wul.append(["Read: 5x5 mostly sees households we already know (20% unique IPs), but the specific "
+                                "site-visits are 77% 5x5-only. The unique data value >> the unique reach. No unique metadata."])
+    wul.cell(wul.max_row, 1).alignment = WRAP; wul.cell(wul.max_row, 1).font = Font(italic=True, color=GREY)
+    autowidth(wul, [34, 14, 16, 11, 18, 11]); wul.freeze_panes = "A4"
+
+    # ---- Tab: Willingness-to-Pay ----
+    wp = wb.create_sheet("Willingness-to-Pay")
+    wp["A1"] = "What 5x5 is worth per year — and what to pay"; wp["A1"].font = TITLE_FONT
+    wp["A2"] = ("Billing base = $0.50 CPM = per 1,000 impressions served (cost in cost_impression_log). "
+                "5x5 touches ~34.35M impr/day; impr to its UNIQUE IPs = 213.5K/day.")
+    wp["A2"].font = Font(italic=True, color=GREY); wp["A2"].alignment = WRAP
+    wp.append([]); wp.append(["Anchor", "Value", "Basis"]); style_header(wp, 4, 3)
+    for a, b, c, fill in [
+        ("Floor", "~$40K / yr", "Incremental reach only: 77.9M impr/yr to 5x5-unique IPs × $0.50 CPM", "D9EAD3"),
+        ("Fair price", "~$150K–$600K / yr", "5x5 = ~12% of MM unique classified-domain signal, B2B-weighted; typical DDP flat-fee range", "D9EAD3"),
+        ("Walk-away max", "~$6.3M / yr", "CPM-equivalent of all 12.5B/yr touched impressions (upper bound — co-occurrence, not causal)", "F4CCCC")]:
+        wp.append([a, b, c]); rr = wp.max_row; wp.cell(rr, 3).alignment = WRAP
+        wp.cell(rr, 1).font = Font(bold=True); wp.cell(rr, 2).fill = PatternFill("solid", fgColor=fill)
+    wp.append([]); wp.append(["Per-unit rate", "Value", "Note"]); style_header(wp, wp.max_row, 3)
+    for a, b, c in [
+        ("Net-new IP", "~$0.01–0.50 / IP / yr", "Low — reach is NOT where 5x5's value is; don't pay much per net-new IP"),
+        ("Net-new (IP×domain) event", "~$0.03 / 1,000 events", "The real asset — 9.3B unique events/yr"),
+        ("Net-new classified domain", "~$3–13 / domain / yr", "47K unique MM-usable domains, B2B coverage")]:
+        wp.append([a, b, c]); wp.cell(wp.max_row, 3).alignment = WRAP; wp.cell(wp.max_row, 1).font = Font(bold=True)
+    wp.append([]); wp.append(["Decision rule", "Renew if fee ≤ ~$600K/yr · renegotiate $600K–$6.3M (demand full URLs) · walk only near $6.3M."])
+    wp.cell(wp.max_row, 1).font = Font(bold=True, color=NAVY); wp.cell(wp.max_row, 2).alignment = WRAP
+    autowidth(wp, [22, 20, 76]);
+
     # ---- Tab 6: Methodology ----
     ws6 = wb.create_sheet("Methodology")
     meth = [
