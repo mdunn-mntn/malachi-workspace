@@ -19,7 +19,7 @@ TI · estimation exercise · windows: scale/pairs 2026-06-15 (1d), uniqueness 20
 ## 1. What's in the data (content & richness)
 5x5 sends a **positional, schema-less parquet**: `_COL_0` (ip), `_COL_1` (url), `_COL_2` (epoch seconds). **No column
 names, no user-agent, no metadata.** It is the **thinnest and highest-schema-risk** of all 10 site-visit vendors —
-a vendor-side column reorder would silently corrupt ingestion (flag to Sean regardless of the renew decision).
+a vendor-side column reorder would silently corrupt ingestion (worth flagging to the pipeline owner regardless of the renew decision).
 
 Richness ranking (raw feed; `outputs/ti_1027_vendor_richness.csv`):
 | Vendor | Raw columns | Metadata beyond ip/url/time | Profile |
@@ -141,7 +141,7 @@ Sales&Marketing 30%, IT&Eng 25%) + premium retail.
 | **Net-new (IP×domain) event** | **~$0.03 / 1,000 events** (at fair midpoint) | The real asset — 9.3B unique events/yr. |
 | **Net-new classified domain** | **~$3–13 / domain / yr** | 47K unique MM-usable domains; the B2B coverage. |
 
-**Definitive pricing — in the two structures contracts actually use** (Kale: "most are monthly rates or CPMs"):
+**Definitive pricing — in the two structures data contracts actually use** (typically monthly rates or CPMs):
 
 *Monthly rate (recommended — flat fee + volume minimum):*
 - **Floor ~$3K/mo** (we'd happily pay) · **FAIR $15–50K/mo** (anchor ask ~$25–30K/mo = $300–360K/yr) · **walk-away
