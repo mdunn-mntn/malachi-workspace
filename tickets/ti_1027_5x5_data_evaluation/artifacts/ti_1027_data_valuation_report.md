@@ -183,6 +183,12 @@ aggressive. Net: renew at/below the fair band; the fee is almost certainly far b
 - **Already in hand, not used (pipeline lever):** the pixel feeds (Justuno/Sovrn/Klickly/33Across API) and Predactiv
   **already deliver** user-agent / referrer / query params / mobile flag, all dropped at `site_visit_signal`. Tapping
   that metadata = device/context features at **no extra vendor cost** (a pipeline change, not a contract).
+- **How valuable (Predactiv fill rates, sample):** the dropped fields are on **most events** — OS 100%, device 99%,
+  geo 76%, keywords 65%, concepts 65%, hashed-email 60%. Capability map: page categories/keywords → **content
+  classification we currently pay OpenAI to recompute** (richer, page-level); geo → fills the **20–25% of bids lacking
+  geodata**; hashed emails → **identity (IDG)**; `domain_industries` → **B2B firmographics**; device → features + bot
+  filtering. Full map + the raw-dump audit: `ti_1027_raw_data_audit.md`. (Also a **consent/compliance flag** — GPP/GPC
+  arrive raw and are dropped.)
 
 ## 6. How to choose between vendors (tie-break rubric)
 When two vendors deliver comparable data, decide in this order:

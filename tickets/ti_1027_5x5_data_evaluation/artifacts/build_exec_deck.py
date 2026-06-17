@@ -51,6 +51,20 @@ SLIDES = f"""
 </section>
 
 <section>
+  <h2>How valuable is the untapped data?</h2>
+  <table class="vmap">
+    <thead><tr><th>Discarded field (feed)</th><th>On&nbsp;~%&nbsp;of&nbsp;events</th><th>Unlocks</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Page categories + keywords (33Across) · concepts (Predactiv)</td><td>~65%</td><td>Page-level content classification</td><td>We pay OpenAI to classify domains→verticals; this is richer &amp; ~free</td></tr>
+      <tr><td>Geo — city / ZIP / DMA (Predactiv, 33Across)</td><td>~76%</td><td>Geo without MaxMind lookups</td><td>Fills the 20–25% of bids that lack geodata</td></tr>
+      <tr><td>Hashed emails (Predactiv)</td><td>~60%</td><td>Identity resolution</td><td>Feeds the identity graph / CRM match</td></tr>
+      <tr><td>Device / OS / user-agent (most feeds)</td><td>~99%</td><td>Device features + bot filtering</td><td>CTV vs mobile vs desktop</td></tr>
+    </tbody>
+  </table>
+  <p class="take">We <b>already pay</b> for these feeds — tapping it is a <b>pipeline change, not new vendor cost</b>. (5x5/Cybba are thin.) Compliance note: GPP/GPC consent fields are also dropped.</p>
+</section>
+
+<section>
   <h2>Untapped upside — more value is on the table</h2>
   <div class="cols">
     <div class="col">
@@ -91,6 +105,9 @@ HTML = f"""<!doctype html><html><head><meta charset="utf-8">
  .reveal .cols {{ display:flex; gap:1.4em; width:92%; margin:0.4em auto; }}
  .reveal .col {{ flex:1; background:#fff; border:1px solid #E0E0E0; border-radius:8px; padding:0.7em 0.9em; }}
  .reveal .col p {{ font-size:0.6em; line-height:1.45; }}
+ .reveal table.vmap {{ font-size:0.5em; width:96%; margin:0.3em auto; border-collapse:collapse; }}
+ .reveal table.vmap th {{ background:#1F3864; color:#fff; padding:6px 8px; text-align:left; }}
+ .reveal table.vmap td {{ padding:6px 8px; text-align:left; border-bottom:1px solid #E6E6E6; vertical-align:top; }}
 </style></head><body>
 <div class="reveal"><div class="slides">{SLIDES}</div></div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>

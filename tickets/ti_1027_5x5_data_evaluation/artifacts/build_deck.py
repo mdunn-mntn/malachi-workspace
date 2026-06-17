@@ -178,6 +178,21 @@ SLIDES = f"""
 </section>
 
 <section>
+  <h2>How valuable is the untapped data?</h2>
+  <table class="vmap">
+    <thead><tr><th>Discarded field (feed)</th><th>On&nbsp;~%&nbsp;of&nbsp;events</th><th>Unlocks</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Page categories + keywords (33Across) · concepts/keywords (Predactiv)</td><td>~65%</td><td>Page-level content classification</td><td>We pay OpenAI to classify domains→verticals; this is richer (page-level) and ~free</td></tr>
+      <tr><td>Geo — city / ZIP / DMA (Predactiv, 33Across)</td><td>~76%</td><td>Geo without MaxMind lookups</td><td>Fills the 20–25% of bids that lack geodata (known revenue gap)</td></tr>
+      <tr><td>Hashed emails (Predactiv)</td><td>~60%</td><td>Identity resolution</td><td>Feeds the identity graph / CRM match</td></tr>
+      <tr><td>Device / OS / user-agent (most feeds)</td><td>~99%</td><td>Device features + bot filtering</td><td>CTV vs mobile vs desktop; cleaner signal</td></tr>
+      <tr><td>domain_industries (Predactiv)</td><td>—</td><td>Firmographics</td><td>B2B targeting (Q2 growth theme)</td></tr>
+    </tbody>
+  </table>
+  <p class="take">We <b>already pay</b> for these feeds — tapping the metadata is a <b>pipeline change, not new vendor cost</b> (high ROI). 5x5/Cybba are thin (no metadata). Compliance note: GPP/GPC consent fields are also dropped.</p>
+</section>
+
+<section>
   <h2>Untapped data — where more value could come from</h2>
   <div class="cols">
     <div class="col">
@@ -232,6 +247,9 @@ HTML = f"""<!doctype html><html><head><meta charset="utf-8">
  .reveal table.raw {{ font-size:0.46em; width:94%; margin:0.3em auto; border-collapse:collapse; }}
  .reveal table.raw th {{ background:#1F3864; color:#fff; padding:5px 7px; text-align:right; font-weight:bold; }}
  .reveal table.raw td {{ padding:4px 7px; text-align:right; border-bottom:1px solid #E6E6E6; }}
+ .reveal table.vmap {{ font-size:0.5em; width:96%; margin:0.3em auto; border-collapse:collapse; }}
+ .reveal table.vmap th {{ background:#1F3864; color:#fff; padding:6px 8px; text-align:left; }}
+ .reveal table.vmap td {{ padding:6px 8px; text-align:left; border-bottom:1px solid #E6E6E6; vertical-align:top; }}
 </style></head><body>
 <div class="reveal"><div class="slides">{SLIDES}</div></div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>

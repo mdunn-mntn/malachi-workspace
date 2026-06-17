@@ -36,6 +36,20 @@ column below not in that set is **dropped at ingestion**. Sample any dump read-o
   vendor cost. Also a **compliance note**: GPP/GPC/US_PRIVACY/DNT consent fields arrive in the raw feeds but are
   dropped — worth confirming downstream consent handling.
 
+## How valuable is the discarded data? (Predactiv fill rates, 2026-06-17 sample)
+The dropped fields are present on **most events** — Predactiv (~84M events/day): **OS 100% · device 98.8% · geo
+(city/ZIP) 75.8% · keywords 65.5% · concepts 64.7% · hashed-email 60.5%** (`ti_1027_untapped_fill_rates.csv`).
+Mapped to capability:
+| Discarded field | ~% events | Unlocks | Why it matters |
+|---|---|---|---|
+| Page categories + keywords (33Across) · concepts/keywords (Predactiv) | ~65% | Page-level content classification | We pay OpenAI to classify domains→verticals; this is richer (page-level) and ~free |
+| Geo — city/ZIP/DMA (Predactiv, 33Across) | ~76% | Geo without MaxMind lookups | Fills the **20–25% of bids that lack geodata** (known revenue gap, per north star) |
+| Hashed emails (Predactiv) | ~60% | Identity resolution | Feeds the identity graph / CRM match |
+| Device / OS / user-agent (most feeds) | ~99% | Device features + bot filtering | CTV vs mobile vs desktop; cleaner signal |
+| domain_industries (Predactiv) | — | Firmographics | B2B targeting (Q2 growth theme) |
+**Bottom line:** we already pay for these feeds, so tapping the metadata is a **pipeline change, not new vendor cost**
+(high ROI). 5x5/Cybba are thin (nothing to tap). Compliance: GPP/GPC consent fields arrive raw and are dropped.
+
 ## Non-site-visit batch dumps (other pipelines — audit with the same technique)
 | Vendor | Location | Apparent type |
 |---|---|---|
