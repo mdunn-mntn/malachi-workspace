@@ -51,32 +51,13 @@ SLIDES = f"""
 </section>
 
 <section>
-  <h2>How valuable is the untapped data?</h2>
-  <table class="vmap">
-    <thead><tr><th>Discarded field (feed)</th><th>On&nbsp;~%&nbsp;of&nbsp;events</th><th>Unlocks</th><th>Why it matters</th></tr></thead>
-    <tbody>
-      <tr><td>Page categories + keywords (33Across) · concepts (Predactiv)</td><td>~65%</td><td>Page-level content classification</td><td>We pay OpenAI to classify domains→verticals; this is richer &amp; ~free</td></tr>
-      <tr><td>Geo — city / ZIP / DMA (Predactiv, 33Across)</td><td>~76%</td><td>Geo without MaxMind lookups</td><td>Fills the 20–25% of bids that lack geodata</td></tr>
-      <tr><td>Hashed emails (Predactiv)</td><td>~60%</td><td>Identity resolution</td><td>Feeds the identity graph / CRM match</td></tr>
-      <tr><td>Device / OS / user-agent (most feeds)</td><td>~99%</td><td>Device features + bot filtering</td><td>CTV vs mobile vs desktop</td></tr>
-    </tbody>
-  </table>
-  <p class="take">We <b>already pay</b> for these feeds — tapping it is a <b>pipeline change, not new vendor cost</b>. (5x5/Cybba are thin.) Compliance note: GPP/GPC consent fields are also dropped.</p>
-</section>
-
-<section>
-  <h2>Untapped upside — more value is on the table</h2>
-  <div class="cols">
-    <div class="col">
-      <h3 style="color:#1F3864">Ask 5x5 for more (renewal lever)</h3>
-      <p>5x5 sends only <b>IP · URL · timestamp</b> — no device/user-agent, and 96% bare domains. In renewal, ask for <b>extended URLs</b> (page/keyword-level signal) and <b>device/user-agent</b>. Raises value per dollar.</p>
-    </div>
-    <div class="col">
-      <h3 style="color:#375623">Already in hand, not used (pipeline lever)</h3>
-      <p>Our pixel feeds + Predactiv <b>already send</b> user-agent, referrer, query params, mobile flag — we drop them at ingestion. Tapping that = device/context features at <b>no extra vendor cost</b>.</p>
-    </div>
-  </div>
-  <p class="note"><b>Next step:</b> confirm the 5x5 flat fee with billing → place it on the scale above. Renewal asks: extended URLs + device.</p>
+  <h2>Untapped upside — what more could 5x5 give us?</h2>
+  <p class="lead">5x5 sends only <b>IP · URL · timestamp</b> today — no device, no page detail (96% bare domains).</p>
+  <ul>
+    <li>In renewal, ask 5x5 for <b>extended URLs</b> (page- &amp; keyword-level signal, not just the domain) and <b>device / user-agent</b> — more value per dollar, at no extra base cost.</li>
+  </ul>
+  <p class="note"><b>Separately</b> (its own workstream, not part of the 5x5 decision): we already discard rich metadata — geo, content categories, hashed emails — from our <i>other</i> site-visit feeds; capturing it is a pipeline change at no new vendor cost.</p>
+  <p class="note"><b>Next step:</b> confirm the 5x5 flat fee with billing → place it on the pricing scale.</p>
 </section>
 
 <section>
