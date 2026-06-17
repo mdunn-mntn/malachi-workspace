@@ -58,3 +58,29 @@ cost, because the scoring — not the demographic filter — is what's driving p
 *Caveat: third-party delivery is bursty, so provider totals are window-based; the disagreement signal (0.36% three-way
 agreement) is the robust takeaway. Performance comparisons are descriptive — the cleanest proof of "exclusions don't
 help" would be a holdout test.*
+
+---
+
+## The bigger gap (Kelly, 2026-06-17): how do we guide customers on which demo segments to use?
+
+The real problem isn't OTF — it's that **we offer many redundant 3P segments for the same attribute** (e.g. HHI
+$20–29.9K from Equifax, Experian, TransUnion, Oracle…) with **no quality ranking and no recommendation**, so
+customers (and CS) guess. For goals MNTN Matched can't do alone (pure demographic targeting), 3P is the only option —
+so we need to tell them *which* segment.
+
+**Interim guidance rubric (per demographic attribute):**
+1. **Never stack** providers for the same attribute. Exclusions/includes are OR'd, so stacking = the union = you
+   inherit every provider's errors (income example: 3 providers → 18.3M excluded vs 2.9M for the most conservative).
+   **Pick one.**
+2. **Rank the candidates** by: **Coverage** (IPs reached), **Freshness** (recency), **Uniqueness** (not just a dupe of
+   another), and — the real differentiator — **Performance** (do the segment's IPs actually behave as labeled?).
+3. **For exclusions specifically,** prefer the *more conservative* band (fewer, higher-confidence flags) to avoid
+   over-screening — e.g. for "low income," Equifax (2.9M, narrow) over Experian (12.6M, ~4× looser).
+4. **Set expectations:** demographic 3P is a *coarse* filter — the providers disagree (0.36% three-way agreement on
+   income), so it's directional, not precise. Use it only when a real targeting goal requires it; otherwise lean on intent.
+
+**The honest limitation:** by Coverage + Freshness alone there's often **no clear winner** (the OTF income segments are
+all fresh, none deprecated, yet disagree and span 4× in size). The missing ingredient is a **per-segment quality/
+performance score** — which is exactly **[TI-956] interest-segment quality scoring** (sized by **[TI-999]**). The
+durable answer to "what segment should I use?" is MNTN **surfacing a recommended segment per attribute** (ranked by
+that score) in the UI / via the **[TI-1037]** diagnostic — so customers stop choosing blind among duplicates.
