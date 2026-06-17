@@ -130,3 +130,37 @@ SELECT data_source_id,
   COUNTIF(sc <= 0) AS unscored_delivered,
   ROUND(100*COUNTIF(sc>=6666)/NULLIF(COUNTIF(sc IS NOT NULL),0),1) AS pct_of_delivered_high
 FROM j GROUP BY data_source_id ORDER BY vendor_ips DESC;
+
+-- ============================================================
+-- PHASE 2 (data valuation): cardinality — events/IPs/domains/(IP×domain)/(IP×url) per vendor (1 day svs)
+-- ============================================================
+SELECT data_source_id, COUNT(*) AS events,
+  APPROX_COUNT_DISTINCT(ip) AS ips,
+  APPROX_COUNT_DISTINCT(NET.REG_DOMAIN(url)) AS domains,
+  APPROX_COUNT_DISTINCT(CONCAT(ip,'|',IFNULL(NET.REG_DOMAIN(url),''))) AS ip_domain_pairs,
+  APPROX_COUNT_DISTINCT(CONCAT(ip,'|',IFNULL(url,''))) AS ip_url_pairs
+FROM svs GROUP BY data_source_id ORDER BY events DESC;
+
+-- PHASE 2: layered uniqueness — 5x5 (IP×domain) pair uniqueness vs all vendors (1 day svs)
+WITH p AS (SELECT DISTINCT data_source_id, ip, NET.REG_DOMAIN(url) AS domain
+           FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%' AND NET.REG_DOMAIN(url) IS NOT NULL),
+pm AS (SELECT ip, domain, COUNT(DISTINCT data_source_id) AS n_ds,
+              LOGICAL_OR(data_source_id IN (23,30)) AS in_internal, LOGICAL_OR(data_source_id=25) AS in_5x5
+       FROM p GROUP BY ip, domain)
+SELECT COUNT(*) AS universe_pairs, COUNTIF(in_5x5) AS p_5x5, COUNTIF(in_5x5 AND n_ds=1) AS p_5x5_unique,
+       COUNTIF(in_5x5 AND in_internal) AS p_5x5_also_internal,
+       ROUND(100*COUNTIF(in_5x5 AND n_ds=1)/COUNTIF(in_5x5),1) AS pct_5x5_pairs_unique
+FROM pm;
+
+-- PHASE 2 (WTP anchor): impressions + media/data spend + high-intent for 5x5 IPs (all + unique), CIL × svs (1 day)
+WITH ipm AS (
+  SELECT ip, LOGICAL_OR(data_source_id=25) AS in_5x5, COUNT(DISTINCT data_source_id) AS n_ds
+  FROM (SELECT DISTINCT data_source_id, ip FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%') GROUP BY ip),
+imp AS (
+  SELECT ip, COUNT(*) AS impressions, SUM(media_spend) AS media_spend, SUM(data_spend) AS data_spend, MAX(household_score) AS sc
+  FROM `dw-main-silver.logdata.cost_impression_log` WHERE DATE(time) = '2026-06-15' GROUP BY ip)
+SELECT COUNTIF(m.in_5x5) AS ips_5x5, COUNTIF(m.in_5x5 AND m.n_ds=1) AS ips_5x5_unique,
+  SUM(IF(m.in_5x5,i.impressions,0)) AS impr_5x5, SUM(IF(m.in_5x5 AND m.n_ds=1,i.impressions,0)) AS impr_5x5_unique,
+  ROUND(SUM(IF(m.in_5x5,i.media_spend,0)),0) AS media_spend_5x5, ROUND(SUM(IF(m.in_5x5,i.data_spend,0)),0) AS data_spend_5x5,
+  SUM(IF(m.in_5x5 AND i.sc>=6666,i.impressions,0)) AS impr_5x5_high
+FROM ipm m JOIN imp i USING(ip);

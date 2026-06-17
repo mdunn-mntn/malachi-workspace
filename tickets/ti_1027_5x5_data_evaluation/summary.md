@@ -181,6 +181,25 @@ scanned). Tier mix of **delivered** IPs (those MNTN served an impression to), by
 - **Caveat:** uses DELIVERED scores (IPs we bid on, post-HHST). "% delivered" mixes scoring with inventory/delivery;
   the full all-IP scored universe (19.4 TB/day) was out of scope for cost.
 
+### 4.14 PHASE 2 — Full data valuation + willingness-to-pay (Kale's "full report") → `artifacts/ti_1027_data_valuation_report.md`
+Expanded from "MM impact" to a reusable data-vendor valuation + WTP framework. New findings:
+- **What's in the data:** 5x5 = positional `_COL_0/1/2` (ip/url/time), **no metadata, unknown schema** — thinnest +
+  highest-schema-risk of 10 vendors. **Discard finding:** pixel vendors (24/33/39/40) send `query_str/referer/mobile/
+  event_id` and Predactiv sends `user_agent` — **all dropped** at site_visit_signal ("pay for rich, keep thin").
+  (`outputs/ti_1027_vendor_richness.csv`.)
+- **How much (5x5/day):** 1.48 GiB, 93.3M events, 20.8M IPs, 92.7K domains, **33.1M (IP×domain) pairs**, 35.1M
+  (IP×url) pairs (≈ equal → domain-only). (`ti_1027_cardinality_2026-06-15.csv`.)
+- **Layered uniqueness (the reframe):** unique IP **19.8%** → unique domain **68.5%** → **unique (IP×domain) event
+  77.3%** (25.6M/day). The unique *data value* >> unique *reach*. No unique metadata. (`ti_1027_layered_uniqueness_5x5.csv`.)
+- **WTP anchor (CIL × svs):** 5x5 touches **34.35M impr/day** (80.6% High-Intent); impr to 5x5-**unique** IPs =
+  213.5K/day. (`ti_1027_wtp_anchor_5x5.csv`.)
+- **Willingness to pay:** **floor ≈ $40K/yr** (unique-reach: 77.9M impr/yr × $0.50 CPM); **fair ≈ $150K–$600K/yr**
+  (12% of MM unique-domain signal, B2B-weighted; typical DDP flat-fee range); **walk-away ≈ $6.3M/yr** (CPM-equivalent
+  of all 12.5B/yr touched impressions). Per-unit: net-new IP ~$0.01–0.50/yr (reach is NOT the value); net-new
+  (IP×domain) event ~$0.03/1k; net-new classified domain ~$3–13/yr.
+- **Tie-break rubric:** cost → non-redundancy (unique events) → richness → freshness → latency → schema stability.
+- **Recommendation:** renew ≤ ~$600K/yr; renegotiate $600K–$6.3M (demand full URLs); walk only near $6.3M.
+
 ## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
 
 ### 5.1 How to estimate the value of MM/Fangorn (Kale's question)
