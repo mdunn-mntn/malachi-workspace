@@ -18,6 +18,9 @@ C_VERT = img("ti_1027_chart_vertical_dependence.png")
 C_TIERS = img("ti_1027_chart_score_tiers.png")
 C_LAYERS = img("ti_1027_chart_layered_uniqueness.png")
 C_WTP = img("ti_1027_chart_wtp_scale.png")
+C_RECENCY = img("ti_1027_chart_recency.png")
+C_SPEND = img("ti_1027_chart_spend_comparison.png")
+C_PRICING = img("ti_1027_chart_pricing.png")
 
 SLIDES = f"""
 <section>
@@ -60,6 +63,11 @@ SLIDES = f"""
 </section>
 
 <section>
+  <img src="{C_SPEND}" style="width:88%">
+  <p class="take">On raw "touched spend" every big vendor looks the same (~$350–400K/day) — because they all see the same households. Touched volume can't tell vendors apart; only unique contribution can.</p>
+</section>
+
+<section>
   <img src="{C_SCORE}" style="width:86%">
   <p class="take">Rated on value × uniqueness × quality, with cost. The flat-fee feeds (Predactiv, 5x5) are the best deals; the redundant per-use feeds are the waste.</p>
 </section>
@@ -80,8 +88,20 @@ SLIDES = f"""
 </section>
 
 <section>
+  <h2>"But don't other vendors already have it?" — No.</h2>
+  <img src="{C_RECENCY}" style="width:90%">
+  <p class="take">We only target the last 30 days. Within that window, vendors deliver on irregular cadences and their copies expire — so 5x5 is the SOLE source for 70% of its data and the freshest for 95%. Snapshot "overlap" overstated redundancy.</p>
+</section>
+
+<section>
   <img src="{C_WTP}" style="width:92%">
   <p class="take">$0.50 CPM = per 1,000 impressions. 5x5 touches ~34M impr/day → ~$6.3M/yr if billed like a CPM peer (the ceiling). Fair value ~$150–600K/yr. Place the flat fee here.</p>
+</section>
+
+<section>
+  <h2>What we should pay — the definitive answer</h2>
+  <img src="{C_PRICING}" style="width:96%">
+  <p class="take">Anchor on a monthly rate (~$15–50K/mo) with a volume minimum. If they bill CPM, insist it's on matched impressions ($0.50 fair) — not all touched traffic. The recency finding makes the floor firmer: 70% of 5x5's data has no in-window substitute.</p>
 </section>
 
 <section>
@@ -111,7 +131,7 @@ SLIDES = f"""
 <section>
   <h2>Recommendations</h2>
   <ol>
-    <li><b>Keep 5x5</b> (and Predactiv, Justuno) — high unique value, sensible cost.</li>
+    <li><b>Keep 5x5</b> (and Predactiv, Justuno) — high unique value. <b>Renew ≤ ~$50K/mo ($600K/yr)</b> with a volume minimum; or $0.50 CPM on matched impressions.</li>
     <li><b>Review the redundant per-use partners</b> (33Across API, Sovrn, Cybba) for savings — a separate exercise.</li>
     <li><b>Confirm the 5x5 flat fee</b> with billing to finalize keep vs renegotiate.</li>
     <li><b>Re-rate quarterly</b> — uniqueness shifts as our own bidstream coverage grows.</li>
