@@ -102,6 +102,29 @@ CUPED, geo experiments, modern DiD) — see
 lesson: recovering a clean causal claim after a non-random rollout is
 expensive (one clean tier out of four).
 
+### Reviewing a third-party vendor's lift-test design (LiftLab, Haus, Measured…)
+
+A third leg distinct from the two above: when a **vendor** (or a vendor's web
+tool) proposes a lift-test design for a customer and we review it *before it
+ships*. We don't own the method (geo holdout + synthetic control, or
+switchback/time test are defensible — don't relitigate); **our job is to
+confirm the design can detect the effect it claims, and that the inputs MNTN
+controls won't pre-doom the result.** The failure to prevent: a clean-looking
+test that returns "no detectable lift" because it was underpowered or aimed at
+a high-intent audience — the customer reads that as "MNTN doesn't work," which
+is worse than running no test.
+
+**Canonical:** [`tickets/ber_2250_incrementality_overhaul/ti_1039_liftlab_design_review/artifacts/ti_1039_design_review_framework.md`](../tickets/ber_2250_incrementality_overhaul/ti_1039_liftlab_design_review/artifacts/ti_1039_design_review_framework.md) — 10-lever critique guide + fillable per-design G/Y/R scorecard. Reusable for any vendor design review (the 5-external-vendor OKR, the ~25-customer LiftLab beta pipeline).
+
+**The 10 levers** (any RED = design needs a change before it ships): 1. estimand/method named · 2. **power/MDE** · 3. holdout % & assignment · 4. geo concentration · 5. duration/windows · 6. KPI breadth · 7. **audience strategy** · 8. confound hygiene · 9. reporting · 10. CX/churn risk.
+
+**Three non-negotiables (the load-bearing levers):**
+1. **Power first.** Get the pre-registered MDE + holdout per design. **Refuse MDE > ~15%** (iROAS playbook); below 5M impressions it's directional-only, no point estimate without a ±~50pp interval (Lewis-Rao).
+2. **Audience strategy is the biggest swing, and it's ours to set.** High-intent/retargeting/previously-exposed audiences reliably underperform on incremental lift; broad prospecting wins (TI-835 "Two Stories" + Edgar's 50-test review). Flag a high-intent design as expected-weak *before* it runs.
+3. **Protect the customer relationship.** ≥6-week test + 2-week post window, exclude the first ~4 weeks of new-campaign ramp (TI-780), no early readouts, frame a null as a retest input (Edgar Lessons 5-6). Also: vendors paid by the advertiser (LiftLab) skew conservative by construction — expect low numbers.
+
+Established TI-1039 (2026-06-17). Cross-references Edgar's six lessons (below) and the iROAS playbook power section.
+
 ---
 
 ## Covariate Selection

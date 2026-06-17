@@ -908,6 +908,11 @@ Most other named 3P providers (Sovrn, Cybba, Bombora, Captify, 33Across, Klickly
 
 **7. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do NOT compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — apples-to-oranges.
 
+**7b. 3P demographic (income/age) data is unreliable — don't stack providers; pick one, treat as coarse (TI-1026, 2026-06-17).** Multiple LiveRamp (DS35) providers offer the *same* demo attribute (HHI bands from Equifax/IXI, Experian, TransUnion, Oracle), but:
+- They barely agree: the 3 income providers agreed on only **0.36%** of who's "low-income" (Equifax 2.89M / TransUnion 4.45M / Experian 12.60M flagged; all-three overlap = 65,571 of an 18.34M union). IP-level income is an inferred estimate, not verified.
+- **Equifax/IXI "Income 360" is asset/financial-capacity-based and skews affluent** — only 3.6% of households labeled <$30K and 41% labeled $150K+; it **under-counts low-income**. **Experian HHI is the more realistic income signal** (~10.2% <$25K, peak $50–75K). So "Equifax flags 4× fewer low-income" = Equifax under-labeling, not Experian padding.
+- **Never stack providers for one attribute** — exclude/include clauses are OR'd, so stacking = the *union* of flags = you inherit every provider's errors (income example: 3 providers exclude 18.3M vs 2.9M for the most conservative). Pick one; recognize it's a coarse directional filter. The durable fix is per-segment quality scoring (TI-956) + a recommended-segment-per-attribute surface. Data: `tickets/ti_1026_orange_theory_audience_eval/outputs/ti_1026_income_distribution.csv`, `ti_1026_income_provider_agreement.csv`.
+
 **8. Clause-structure bidder semantics + MM-ceiling pacing-overflow (TI-999 Finding 15, 2026-05-28 PM).** Empirically validated via Pass 1-12b over 15,529 active campaigns + cost_impression_log delivery distribution + per-advertiser cross-bucket ceiling test. **Three structurally distinct positive-clause patterns + one exclusion pattern, each with different bidder behavior.**
 
 **A. Clause-structure semantics (verified delivery 2026-05-26):**
