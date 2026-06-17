@@ -32,14 +32,24 @@ Two reasons:
    wrong is common: shared/business IPs, households where the earner differs from the estimate, etc.)
 
 **Q: Then why not stack multiple providers for the same thing (e.g. HHI <$30K) to be safe?**
-It backfires. A household is excluded if **any** provider flags it, so stacking three providers excludes the *union*
-— **18.3M households** — and you inherit **every** provider's false positives. The most aggressive provider (Experian,
-12.6M) flags ~4× as many as the most conservative (Equifax, 2.9M). Stacking maximizes over-exclusion, not accuracy.
-(One of the configured providers also delivers no data at all right now — it's excluding no one.)
+It backfires. A household is excluded if **any** provider flags it, so stacking providers excludes the *union*
+— **18.3M households** — and you inherit **every** provider's errors, even though they agree on only 0.36% of who's
+low-income. Stacking maximizes over-exclusion, not accuracy. (One configured provider, Oracle, delivers no data at
+all right now — it's excluding no one.)
+
+**Q: Why does Experian flag ~4× more low-income than Equifax — is Experian padding?**
+No — it's the opposite of what you'd guess. Looking at each provider's *full* income distribution: **Experian's is
+realistic** — ~10% of households <$25K (slightly below the true US ~18–20%), peaking at $50–75K. **Equifax/IXI is the
+skewed one** — only **3.6%** labeled <$30K and **41% labeled $150K+**, which is implausibly affluent. That's
+consistent with Equifax's "Income 360 (IXI)" being an *asset / financial-capacity* estimate rather than earned income,
+so it under-counts low-income. So Experian flags 4× more simply because **Equifax barely labels anyone low-income**,
+not because Experian pads.
 
 **Q: If we must screen income, which provider?**
-None is authoritative — they barely agree. If income screening is a hard requirement, pick **one** provider with a
-sensible band, apply it once, and accept it's a coarse filter that costs reach. Don't layer several.
+For *low-income screening specifically*, **Experian is the more realistic signal** — Equifax/IXI would exclude almost
+no one (3.6%) and miss genuinely low-income households (it skews affluent). But **at the individual-household level all
+providers are still unreliable** (0.36% three-way agreement), so whichever you pick, apply **one** provider, treat it
+as a coarse directional filter, and don't stack.
 
 **Q: So what should we do instead?**
 Trust the score. The intent model already concentrates spend on the households most likely to convert (the High-Intent
@@ -52,6 +62,9 @@ cost, because the scoring — not the demographic filter — is what's driving p
 - Income/age exclusions remove ~**1.31M / 28.7%** of the intent-qualified (keyword-matched) audience.
 - 3 income providers, "low-income" flag, 14-day window: Equifax 2.89M · TransUnion 4.45M · Experian 12.60M · union 18.34M.
   Pairwise agreement: Eq∩Ex 517K · Eq∩Tu 282K · Ex∩Tu 860K · **all three 65,571 (0.36% of the union).**
+- Full income distributions (`outputs/ti_1026_income_distribution.csv`): **Equifax/IXI** — only **3.6%** <$30K, **41%** $150K+
+  (affluent-skewed; IXI is asset/capacity-based). **Experian** — **10.2%** <$25K, peak $50–75K (realistic). → Experian
+  flags 4× more low-income because Equifax under-labels it, not because Experian pads.
 - Source: `outputs/ti_1026_income_provider_agreement.*`, `ti_1026_exclusion_bite_on_mm.sql`. Income data is IP-level
   third-party (Equifax/IXI, Experian, TransUnion) — an estimate, not verified income.
 
@@ -74,8 +87,10 @@ so we need to tell them *which* segment.
    **Pick one.**
 2. **Rank the candidates** by: **Coverage** (IPs reached), **Freshness** (recency), **Uniqueness** (not just a dupe of
    another), and — the real differentiator — **Performance** (do the segment's IPs actually behave as labeled?).
-3. **For exclusions specifically,** prefer the *more conservative* band (fewer, higher-confidence flags) to avoid
-   over-screening — e.g. for "low income," Equifax (2.9M, narrow) over Experian (12.6M, ~4× looser).
+3. **For exclusions specifically,** pick the provider whose *distribution is realistic*, not the one that flags the
+   fewest. (Counterexample: for "low income," Equifax/IXI labels only 3.6% of households <$30K — it skews affluent
+   (asset-based) and would barely screen / would miss real low-income; Experian's ~10% <$25K is the more realistic
+   signal. "Conservative" ≠ "accurate.")
 4. **Set expectations:** demographic 3P is a *coarse* filter — the providers disagree (0.36% three-way agreement on
    income), so it's directional, not precise. Use it only when a real targeting goal requires it; otherwise lean on intent.
 
