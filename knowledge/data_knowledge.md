@@ -793,6 +793,12 @@ cost is in **`cost_impression_log`** (`media_spend`, `data_spend`, `platform_spe
 market-equivalent cost ≈ (impressions its data touches) × CPM / 1000 — measurable by joining the vendor's IP set to
 CIL (5x5 touches ~34.35M impr/day → ~$6.3M/yr CPM-equivalent ceiling). Flat-fee vendors (5x5, Predactiv, Klickly)
 pay fixed regardless of volume. Reusable valuation method: `documentation/docs/data_vendor_valuation_framework.md`.
+- **Empirical CIL impression economics (2026-06-15, 56.6M impr/day):** **media ≈ $10.74 CPM** ($0.0107/impr — normal
+  CTV), **data ≈ $1.07 CPM** ($0.00107/impr). Confirms `fixed_cpm` is **per 1,000** (per-person would be ~1000×). Use
+  these as the per-impression cost anchors for any "value of impressions" calc.
+- **"Per 1,000 of WHAT" — pin this down in any CPM negotiation:** *impressions served* (the ad-tech CPM, what CIL
+  uses — 5x5 ≈ 34M/day) vs *records delivered* (a data-licensing CPM — 5x5 ≈ 93M rows/day ≈ 2.8B/mo). Same "$0.50 CPM"
+  on records is a far bigger base than on impressions. Flat-fee sidesteps it; CPM quotes must specify the base.
 
 ### site_visit_signal has NO TTL; targeting uses a 30-day window — measure uniqueness over 30 days (TI-1027 + Ryan Kleck, 2026-06-17)
 `site_visit_signal` is **daily dt partitions with no TTL** — data goes back to 2025-08-31 and grows unbounded (Ryan:

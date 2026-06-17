@@ -61,7 +61,10 @@ survives, so NOT a clean win)** / other-fresher. (5x5: 69.8% sole + 1.2% freshes
 - **Metadata worth it?** Only if a downstream consumer uses it.
 
 ## Step 5 — Willingness to pay (three lenses → a band)
-Billing base: **CPM = cost per 1,000 impressions served**; per-impression cost is in `cost_impression_log`.
+Billing base: **CPM = cost per 1,000 impressions served** (CPM = "cost per mille" = per *thousand*, never per person;
+confirmed empirically — CIL data cost ≈ $0.001/impr ≈ $1 CPM, media ≈ $10.74 CPM). **Pin down "per 1,000 of WHAT"**
+in any CPM quote: impressions *served* (what CIL measures) vs records *delivered* (a much larger base) — same rate,
+very different dollars. Per-impression cost is in `cost_impression_log`.
 1. **Market / CPM ceiling (walk-away max):** (impressions the vendor's data touches) × peer CPM ($0.50) / 1000.
    We never pay more than the data costs at market rate. (Co-occurrence, not causal — upper bound.)
 2. **Incremental-reach floor:** (impressions to households *only* this vendor sees) × CPM / 1000.

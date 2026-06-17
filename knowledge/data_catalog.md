@@ -2183,6 +2183,25 @@ Source scoring pipeline: `gs://household-scoring-prod/output/scoring/prospecting
 
 ---
 
+## Production Fangorn score sources (per-IP) — mapped (BQ) vs raw (GCS)
+Where the live Fangorn intent scores actually live. **Two scales:** RAW `model_score` ∈ [0,1] (the model output; raw>0.8 ≈ High-Intent threshold) and MAPPED `household_score` ∈ [0,10000] (the bidder scale; 8001+ HI, 6666–8000 PP, 3333–6665 MI, ≤3332 MR).
+
+| Source | Type | Grain / scale | Notes |
+|---|---|---|---|
+| `bronze.external.household_scoring__prospecting_intent__v1` | EXTERNAL (GCS Parquet) | per-IP × advertiser/campaign; **mapped** `household_score` 0–10000 | Partitions `year`,`month`,`day` are **STRING** — a `year='2026'` filter does **NOT** prune (sweeps the whole year = very slow/expensive). **Don't scan per-advertiser.** Cols: ip, advertiser_id, campaign_group_id, campaign_id, household_score. Sibling: `household_scoring__advertiser_intent__v1` (advertiser-intent variant), `..__prospecting_intent__dniehoff` (dev). |
+| `gs://mntn-data-archive-prod/fangorn_14day_lookback_vertical/dt=<YYYY-MM-DD>` | GCS Parquet (Spark) | per-IP × **vertical_id**; **raw** `model_score` 0–1 | The snapshot the **rollout-priority scorer** reads. Read via Spark/Databricks `parquet.\`gs://…/dt=<snap>\``. 14-day lookback. |
+| `gs://mntn-data-archive-prod/vertical_categorizations/ip_vertical_associations/dt=<YYYY-MM-DD>` | GCS Parquet (Spark) | IP ↔ `data_source_category_id` (vertical_id) | Which IPs are associated with each vertical (used to compute a vertical's `assoc_median_fangorn_score` / high-mid ratio). |
+| `bronze.external.camperbid_prod__intent_score__{intent_score,prospecting_intent,advertiser_intent,…}` | EXTERNAL | per-IP camperbid intent scores | Bidder-side intent-score externals; same family. |
+| `bronze.external.fangorn_score_monitor` | EXTERNAL | score-distribution monitor | Daily Fangorn score distribution (TI-849), not per-IP joins. |
+
+**For "if reactivated, where would advertiser X rank?"** the priority scorer's Score-Opportunity / Size-Stability / HHST-relief are computed at the **vertical** level — so read X's vertical row from the per-vertical aggregate, not a per-advertiser IP scan. Canonical scorer + weights: see `data_knowledge.md` §"Canonical rollout-priority scorer". Authoritative Fangorn inclusion/tier is Postgres `tpa.fangorn_advertiser_inclusion` (no BQ mirror).
+
+## silver.archives.household_score_threshold_archives
+- **Type:** TABLE (archive / change-history of HHST settings; the time-series counterpart to the current-state `dso.household_score_thresholds`).
+- **Use for:** HHST trajectory over time — one row per threshold change. Cols: advertiser_id, campaign_id, campaign_group_id, threshold, update_time. The Fangorn rollout scorer derives each campaign's **lowest *sustained* HHST** (held ≥60 min, `threshold>0`) from this table over an analysis window. An advertiser with no `threshold>0` rows in-window has never run a scored campaign there (e.g. geo-only/Select-Winback advertisers).
+
+---
+
 # bronze.tpa
 
 **Project:** dw-main-bronze | **Dataset:** tpa
@@ -2315,6 +2334,7 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 | datastream_metadata | RECORD | CDC metadata (uuid, source_timestamp) |
 
 **Key facts:**
+- **This is the source of truth for an advertiser's vertical** — the Fangorn rollout scorer joins `type=1` (sub-vertical) as `vertical_id`. `advertisers.advertiser_vertical_id` is frequently NULL even when a vertical exists here, so don't use it (e.g. iMemories 37423: advertiser_vertical_id NULL, but here = sub-vertical 116001 "Gifts & Specialty Stores" / parent 116 "Gifts"). The `type=1` vertical_id also matches the `score.types[].id` (RTC vertical) in the audience expression.
 - Every advertiser has exactly 2 rows: type=0 (parent) + type=1 (sub-vertical)
 - 185 distinct verticals, 184 distinct names (3 parent/child pairs share names)
 - 49 advertiser_ids are orphans (not in advertisers table) — pre-existing source issue
