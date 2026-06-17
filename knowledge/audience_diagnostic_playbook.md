@@ -29,12 +29,26 @@ sources, include/exclude, geo, and the automated clauses. Prototype: `parse_expr
 - **Gotcha:** 3P (DS35) ipdsc delivery is **bursty (~2–4 days/month)** — never judge a segment from one day/week; use a **≥30-day window**. (data_catalog.md ipdsc note.)
 
 **3. Keyword (DS19) evaluation.** *Are the keywords on-target?*
-- Resolve names from `tpa.categories`; compare to what BUK/DAR would recommend for the advertiser's domain. Prototype: `classify_keywords.py`.
-- Read: flag off-target + over-broad terms (curation gap).
+- The targeting keywords are the **selected CHILD keywords** in `ui.audience_keyword_state` (= the DS19 expression);
+  the UI/customer only sees the **~20 PARENT seed keywords**. MNTN-Matched flow: 20 LLM parents → ~200 products →
+  N DS19 children via embedding match (drift happens at the embedding step). Resolve names from `tpa.categories`.
+- **MUST filter `is_magic = false`** — `is_magic` keywords are **untargetable** UI artifacts (exist so the size
+  estimate moves on UI edits); don't count them as off-target targeting. `classify_keywords.py` does NOT know about
+  `is_magic` — join `ui.audience_keyword_state` to exclude them.
+- **Authoritative BUK/DAR comparison:** the 20 parents + BUK recs are at the shopper-graph autopilot endpoint
+  `https://shopper-graph.in.mountain.com/autopilot?advertiser_id=<id>` (VPN-only, per Alex). That's the proper DAR comparison.
+- Read: flag the real (non-magic) off-target/over-broad children (curation gap from the embedding step).
 
-**4. The size funnel.** *How much does each filter remove?*
-- MM keyword universe (ipdsc DS19) → **geo** (MaxMind `ST_DWITHIN`, `geo_funnel.sql`) → **exclusions** (`exclusion_bite_on_mm.sql`) → score gate.
-- Read (TI-1026): geo is usually the **biggest** filter (~halved the audience); income/age exclusions can be material (LiveRamp active, Oracle inert).
+**4. The size funnel + exclusion quality.** *How much does each filter remove, and are the exclusions any good?*
+- Funnel: MM keyword universe (ipdsc DS19) → **geo** (MaxMind `ST_DWITHIN`, `geo_funnel.sql`) → **exclusions**
+  (`exclusion_bite_on_mm.sql`) → score gate. Geo is usually the **biggest** filter (~halved the audience).
+- **Demographic-exclusion quality** (`income_provider_agreement.sql`, `income_distribution.csv`): when multiple
+  providers offer the same attribute (HHI bands from Equifax/Experian/TransUnion/Oracle), check (a) **cross-provider
+  agreement** — they barely agree (0.36% three-way on "low-income") → IP-level demo is unreliable; (b) **distribution
+  realism** — Equifax/IXI skews affluent (3.6% <$30K, asset-based, under-labels low-income), Experian HHI is realistic.
+  Guidance: **never stack** (clauses OR'd → union of every provider's errors); pick the **realistic** provider (not the
+  most conservative); treat demo as a coarse last resort; lean on intent scoring. Inert providers (Oracle = 0 ipdsc)
+  exclude no one. Deliverable pattern: `artifacts/ti_1026_exclusions_talk_track.md`.
 - **Gotcha:** filter ipdsc `dt` with a **literal** (partition prune); use `[.]`/regex for IPv4 parse (NET funcs error on bad/multi IPs, no SAFE). (data_catalog.md.)
 
 **5. Scoring / HHST.** *Does the score gate explain delivery + why 3P fails?*
@@ -59,9 +73,11 @@ that bound what's actually servable beyond the audience definition. To be slotte
 ---
 
 ## Backing knowledge (source of truth for each step)
-- `data_catalog.md`: ipdsc query hygiene (literal dt; 3P burstiness → ≥30d); `geo.*` MaxMind geo-fence `ST_DWITHIN` pattern.
-- `data_knowledge.md`: HHST gate vs score value + OR-include 3P mechanism; bidder-uses-segment-expression (DS14/holdout/RTC); where the UI audience size lives.
-- Full worked example + all queries/charts: `tickets/ti_1026_orange_theory_audience_eval/`.
+- `data_catalog.md`: ipdsc query hygiene (literal dt; 3P burstiness → ≥30d); `geo.*` MaxMind geo-fence `ST_DWITHIN`
+  pattern; `ui.audience_keyword_state` (PARENT-seed vs CHILD-DS19, `is_magic` untargetable, 20→200→N flow, shopper-graph BUK).
+- `data_knowledge.md`: HHST gate vs score value + OR-include 3P mechanism; bidder-uses-segment-expression (DS14/holdout/RTC);
+  where the UI audience size lives (overstates); 3P demographic data quality (provider 0.36% agreement, Equifax/IXI asset-skew, don't-stack).
+- Full worked example + all queries/charts/talk-track: `tickets/ti_1026_orange_theory_audience_eval/`.
 
 ## For TI-1037 (automation)
 Each step above = one module: parameterize by `advertiser_id`/`audience_id`/`campaign_id`, run the query, apply the
