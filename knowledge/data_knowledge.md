@@ -625,6 +625,27 @@ is NOT MNTN Select. Filtering by PMP-deal attachment alone would over-count Sele
 - `core_select_advertiser_margins` / `core_select_margins` — Select-specific pricing
 - `invoice_select_publisher_invoices` — Select publisher invoicing
 
+### campaign_status_id mapping (`core_campaign_statuses`)
+| id | name | Live? |
+|---|---|---|
+| 1 | Ready | not delivering (set up, not started) |
+| 3 | **Live** | yes — delivering |
+| 4 | **Pause By Advertisers** | paused by the advertiser/agency |
+| 5 | Pause By MNTN | paused by MNTN ops |
+| 7 | Inactive | ended / off |
+| 8 | Deleted | — |
+| 9 | Legacy Archived | — |
+
+To find an advertiser's **currently-delivering** campaigns: `campaign_status_id = 3` (or confirm with recent `all_facts` impressions). Don't infer "live" from `deleted=FALSE` alone — paused (4/5) and inactive (7) rows are also non-deleted.
+
+### MNTN Select campaigns are geo-only / unscored → Fangorn is a no-op for them
+Empirically (iMemories AID 37423, TI-Kale-eval 2026-06-17), live **MNTN Select** (`product_id=2`) prospecting campaigns run as **geo-only "all-US" reach**: the audience expression carries only `geos:{location_ids:[237]}` (US) + DS14 bid-routing + DS16 funnel tags + an `rtc` score directive + the 10% holdout bucket — **no MM layer (no DS13/DS19/DS46), no buyer interest segments.** Delivery is therefore **100% unscored** (`cost_impression_log.household_score = -1`, HHST=0); only a handful of `advertiser_household_score>0` rows (RTC firing for the rare recent-site-visitor). This is the "Geo-only / no buyer audience layer" cohort (TI-999 §) and the structural state of MNTN Select today (Select targets all-US until the MM Awareness Audience for Select ships).
+
+**Fangorn candidacy rule (load-bearing):** the `onFangorn` flip swaps **DS13 → DS46** during segment breakdown (audience_products.md). A campaign with **no DS13/DS19 has nothing to swap**, so flipping `onFangorn` changes nothing — Fangorn / Intelligent Intent Scoring only affects campaigns that use the **MM batch scoring layer**. Geo-only Select, pure-3P, pure-1P, and retargeting campaigns are unaffected regardless of rollout tier. So "is advertiser X a Fangorn candidate?" reduces first to **"does X run a live MM (DS13/DS19) prospecting campaign?"** — if not, the rollout criteria are N/A until they do. (iMemories' only real MM-scored prospecting — PTV campaign 466109, DS19 69-keyword + HHST=6666 + RTC — is **paused** since ~Nov 2025; their live campaigns are the geo-only Select Winback test.)
+
+### MNTN Select billing: ~$0 in per-impression spend/cost facts
+For Select campaigns, `summarydata.all_facts` (media/data/platform_spend) and `cost_impression_log.media_cost` are **≈0** despite real impression volume (iMemories: ~895K CTV imps/30d, media_cost ≈ $0.00001). Select is not billed per-impression through the PTV media-spend path — use the Select/PMP invoicing tables (`invoice_select_publisher_invoices`, `mntnselect_offering_versions` CPMs) for Select economics, not `all_facts.media_spend`. Don't read "$0 spend" on a Select advertiser as "no delivery."
+
 ### Pause Ads (PTV feature, not Select)
 "Pause Ads" is a separate product feature that runs on PTV campaign groups (`product_id = 1`) but
 uses PMP deal inventory via `core_campaign_group_x_private_marketplace_deals`. Identifiable by
