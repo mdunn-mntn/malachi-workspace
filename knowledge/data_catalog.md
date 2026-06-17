@@ -2411,14 +2411,25 @@ Stores the parent and child keyword associations for a given audience ID. This i
 The UI audience builder shows **only PARENT keywords** (the customer's seed terms). The **DS19 expression keywords are the
 selected CHILD keywords** — MNTN-Matched's auto-expansion of those seeds — and are NOT individually searchable in the UI
 (they're grouped/nested under parents). So the expression's DS19 set ≠ what the UI lists.
-- Example (OTF, audience 34668): 233 selected PARENT (UI-visible seeds) vs ~374 selected CHILD = the ~379 DS19 expression
-  keywords; 22 are `is_magic` LLM-expansions.
-- **Off-target keywords are usually auto-expanded children, NOT customer choices.** OTF's junk keywords were `is_magic`
-  expansions of good seeds: "Antifreeze" ← "Cold Plunge", "Beer Mugs" ← "Cardiovascular", "Compact Suv" ← "Nutrition",
-  "CPUs" ← "Solidcore", "Above Ground Pools" ← "Metabolic". So keyword-quality issues are an MNTN expansion-model problem,
-  not the advertiser's seed choices — frame accordingly.
-- To list what targets vs what the customer sees: filter `selected = true`; `keyword_type='PARENT'` = UI/seed view,
-  `keyword_type='CHILD'` = the DS19 expansion that actually targets. Cross-check via the shopper-graph API (Alex).
+- Example (OTF, audience 34668): 233 selected PARENT (UI-visible seeds) vs 374 selected CHILD; of the children, **22 are
+  `is_magic` (UNTARGETABLE) and 352 are real targetable DS19 keywords**.
+
+**How MNTN Matched (non-BUK) generates keywords (Alex Knorr 2026-06-17, deck slide-3 flow):** LLM scrapes the
+advertiser site → describes products/services → describes interested customers → generates **20 search-term keywords
+= the PARENT keywords shown in the UI**. Under the hood: LLM generates 10 products/services per parent (≈200) → those
+are **embedding-matched into the DS19 universe → N CHILD keywords** that actually target. So: **20 parents → ~200 →
+N DS19 children**. The off-target drift comes from the embedding-match step.
+
+**⚠ `is_magic` keywords are UNTARGETABLE (Alex 2026-06-17; confirm exact mechanic with Mike Dolt).** They appear in the
+DS19 expression but are a UI construction that exists so the displayed **audience size changes when the customer edits
+the audience** — they do NOT target anyone. **Do not count `is_magic` keywords as off-target targeting.** The flashy junk
+(Beer Mugs, Compact Suv, Above Ground Pools, Coffee Grinders, Montessori, Butter, Motorcycle Lighting, Arcade) are all
+`is_magic` → untargetable. The REAL targetable off-target keywords are the **non-magic** embedding-match drift —
+e.g. "Antifreeze" ← "Cold Plunge", "CPUs" ← "Solidcore", "Abrasives" ← "Polar H10" (OTF: 76 real off-target of 352
+targetable children).
+- To separate: `selected=true AND keyword_type='CHILD' AND is_magic=false` = what actually targets (the DS19 set minus
+  magic). `keyword_type='PARENT'` = the 20 UI/seed keywords. Cross-check parents + BUK recs at the shopper-graph
+  autopilot endpoint: `https://shopper-graph.in.mountain.com/autopilot?advertiser_id=<id>` (VPN-only, per Alex).
 - ### `ui.audience_x_marketing_objective` (CoreDB / intprod)
 
 Mapping table that associates audience segments with a campaign's marketing objective (strategy), formerly called `objective_id` on `campaign_groups`. Used to enforce alignment between audience segment types and the campaign strategy (Retargeting vs. Prospecting).

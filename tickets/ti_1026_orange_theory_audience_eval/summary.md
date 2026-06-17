@@ -358,24 +358,31 @@ the other bands and is the bulk of reach. We ARE finding the right, responsive p
 
 ### 4.5 — 3P segment quality scoring — see §4.5 above (per-segment 7d reach)
 
-### 4.6 — Keyword (DS19) evaluation vs BUK/DAR — PRELIMINARY
+### 4.6 — Keyword (DS19) evaluation vs BUK/DAR — CORRECTED (Alex Knorr 2026-06-17)
 
-The 379 MNTN Matched keywords are largely fitness/wellness-relevant (Fitness*, Yoga*, Pilates*, Protein*,
-Athletic*, Workout*, Strength/Cardio, Nutrition, Recovery, Wellness…) but contain a clear tail of
-**off-target keywords**: "Above Ground Pools", "Abrasives", "Antifreeze", "Arcade And Gaming Machines",
-"Barcode Reader", "Ballasts", "Bathtubs", "Beer Mugs", "Adhesive Tapes", "Advent Calendars", "Analog
-Watches", "Coffee Grinders", "Chef Apparel", "Compact Suv", "Conveyor Belt Products", "Cpus", "Dental And
-Medical Adhesives", "Guitar Parts And Accessories", "Ignition", "Motorcycle Lighting And Electrical",
-"Montessori", "Outdoor Surveillance Equipment", "Sway Bars", "Suspension Kits", "Transformers" (auto),
-"Townhouse", "Strap-on Vibrators", "Spelling And Reading Programs" — plus over-broad single-word terms
-("Class", "Power", "Silver", "Experience", "Mirrors", "Pillows", "Socks", "Towels", "Benches", "Hooks").
-These dilute the MNTN-Matched portion's relevance and likely drag visit rate.
+**How the keywords are generated** (Alex, deck slide-3 flow): LLM scrapes the site → describes products/customers →
+generates **20 search-term keywords = the PARENT keywords in the UI**. Under the hood: ~10 products/service per parent
+(~200) → **embedding-matched into the DS19 universe → N CHILD keywords** that actually target. So **20 parents → ~200
+→ N DS19 children**; the off-target drift is from the embedding step. Customer chose good seeds (Cold Plunge,
+Cardiovascular, Nutrition, Solidcore, La Fitness, Metabolic) — the expansion drifted.
 
-Conservative classification (`artifacts/classify_keywords.py` → `outputs/ti_1026_keyword_classification.csv`,
-default = KEEP, only high-confidence flags): **285 keep (75%), 51 drop off-target (13%), 43 review over-broad (11%)**.
-So ~1 in 4 keywords (94/379) is off-target or over-broad — a real curation gap (the list reads like a generic
-consumer-products template, not a BUK/DAR recommendation for orangetheory.com). The exact keep/drop line is for
-Kelly/Sales to finalize; the workbook surfaces the candidates.
+**⚠ CORRECTION — `is_magic` keywords are UNTARGETABLE (do not count them as off-target targeting).** Of the 374
+selected child keywords, **22 are `is_magic`** — a UI construct that exists so the displayed audience size changes when
+the customer edits the audience; per Alex they **don't target anyone** (confirm exact mechanic with Mike Dolt). My
+earlier flashy examples were mostly magic: **Beer Mugs ← Cardiovascular, Compact Suv ← Nutrition, Above Ground Pools ←
+Metabolic, Coffee Grinders, Montessori, Butter, Motorcycle Lighting, Arcade are all `is_magic` → untargetable**, NOT
+real off-target targeting.
+
+**Corrected counts** (`outputs/ti_1026_keyword_targetability.csv`): 374 selected children = **22 magic (untargetable)
++ 352 real targetable**. Of the 352 targetable, **~76 are real off-target / over-broad** (~22%) — e.g. (non-magic,
+real) "Antifreeze" ← "Cold Plunge", "CPUs" ← "Solidcore", "Abrasives" ← "Polar H10", "Mattress", "Pillows", "Mirrors",
+"Bathtubs", "Ignition", "Barcode Reader". So the curation gap is real but smaller than the original 94 figure
+(16 of those were magic UI artifacts). `classify_keywords.py` did NOT know about `is_magic` — its 51/43 split must be
+filtered to `is_magic=false` (join `ui.audience_keyword_state`).
+
+**Proper BUK/DAR comparison (the ticket's acceptance item):** compare the **20 PARENT keywords + BUK recs** at the
+shopper-graph autopilot endpoint `https://shopper-graph.in.mountain.com/autopilot?advertiser_id=39718` (VPN-only, per
+Alex) — that is the authoritative parent + BUK view. Pull it on VPN to finish the keyword recommendation.
 
 ### 4.11 — Size vs AVAILABILITY: is the pool actually deliverable? (stock vs flow)
 
@@ -454,9 +461,10 @@ Deliverable workbook: `artifacts/ti_1026_orange_theory_audience_recommendations.
    slice (87% match no OTF keyword), it's volatile (6 of 11 deliver nothing; the rest swing 10-20×/day), and
    it's off-modality (delivering segments are broad-fitness or yoga/pilates; OTF is HIIT). This is the cohort
    the agency measured at 8-10× worse visit rate. Dropping it raises visit rate at a ~12% reach cost.
-2. **Prune the 51 off-target keywords; review the 43 over-broad terms** (of 379). The keyword list reads like a
-   generic consumer-products template (Above Ground Pools, Antifreeze, Beer Mugs, CPUs, Motorcycle Lighting…),
-   not a BUK/DAR recommendation for orangetheory.com. Tightening it lifts relevance with little reach loss.
+2. **Prune the ~76 real (non-magic) off-target/over-broad keywords** — the embedding-match drift from the
+   expansion (e.g. Antifreeze ← Cold Plunge, CPUs ← Solidcore, Abrasives ← Polar H10; also Mattress, Pillows,
+   Mirrors, Bathtubs). NOTE: ignore the `is_magic` ones (Beer Mugs, Compact Suv, Above Ground Pools…) — those are
+   untargetable UI artifacts (§4.6). Do the authoritative BUK comparison on the 20 parents via shopper-graph.
 3. **Grow size via the MNTN Matched keyword layer, not bought 3P.** MM reaches 21.8M IPs/week (14× the 3P
    layer) and is the quality engine here. Add on-target HIIT/strength/cardio/recovery keywords to replace the
    pruned off-target ones — net-neutral-to-expanding reach at similar intent.
