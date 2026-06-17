@@ -724,6 +724,30 @@ View `dw-main-silver.tpa.direct_data_partners` (filter `is_current=true`). Key c
 **Note:** `ds_catalog.md`'s 0/0/0 "no current use" for these reflects IPDSC/prospecting-expression usage only —
 the MM site-visit path is separate and active. (Corrected in ds_catalog for 24/25/26/28.)
 
+### Site-visit vendor raw schemas, richness, and the "discard" finding (TI-1027, 2026-06-17)
+Each vendor's RAW feed schema (from the airflow-ti processing jobs) vs what we KEEP in `site_visit_signal`
+(only `ip, url, user_agent, time`):
+- **5x5 (25):** raw parquet `_COL_0`(ip), `_COL_1`(url), `_COL_2`(epoch sec) — **positional, no column names, no
+  metadata, no user_agent.** Thinnest feed + **schema-fragility risk** (a vendor-side column reorder silently
+  corrupts ingestion). url is **96% bare domain** (only 3.8% carry a path).
+- **Cybba (36):** ip/url/time, no user_agent. **Predactiv (26):** sends `userAgent` but the job NULLs it.
+- **33Across (28):** TSV.gz TIMESTAMP/CLIENT_IP/USER_AGENT/PAGE_URL — keeps user_agent.
+- **guid_log (23, internal):** ip/product_referer/query/ua_raw/advertiser_id/time — richest. **augmentor (30,
+  internal):** ip/ua/page/referrer/placement.
+- **Pixel vendors (Justuno 24, Sovrn 33, Klickly 39, 33Across API 40):** raw `pixel_page_view_signal` carries
+  `event_id, mobile, query_str (incl. referer, user_agent, GPP consent), referer, url, user_agent` — but
+  **`site_visit_signal` drops event_id/mobile/query_str/referer.**
+- **DISCARD FINDING:** we receive richer metadata than we keep (pixel `query_str/referer/mobile`, Predactiv
+  `user_agent`) — "pay for rich, keep thin." Raw `pixel_page_view_signal` URLs are heavy with RTB/cookie-sync junk
+  (e.g. `cs-rtb.openwebmp.com`). Potential future-use opportunity.
+
+### DDP billing base = per 1,000 **impressions served** (TI-1027, user-confirmed 2026-06-17)
+The `fixed_cpm` (e.g. $0.50 for the MM-DDP peers) is **cost per 1,000 impressions served**, and the per-impression
+cost is in **`cost_impression_log`** (`media_spend`, `data_spend`, `platform_spend` per impression). A vendor's
+market-equivalent cost ≈ (impressions its data touches) × CPM / 1000 — measurable by joining the vendor's IP set to
+CIL (5x5 touches ~34.35M impr/day → ~$6.3M/yr CPM-equivalent ceiling). Flat-fee vendors (5x5, Predactiv, Klickly)
+pay fixed regardless of volume. Reusable valuation method: `documentation/docs/data_vendor_valuation_framework.md`.
+
 ### Vertical Classification
 `fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)
