@@ -356,6 +356,14 @@ the other bands and is the bulk of reach. We ARE finding the right, responsive p
 - Keep regardless: **DS4 CRM suppression** (existing-member lists — hygiene), **DS43 T-Mobile Cellular** (mobile-
   carrier IPs aren't household-stable for CTV), **DS2 MNTN First Party** (retargeting/past-visitor exclusions).
 
+**Exclusion recommendation + CS talk track (2026-06-17, Kelly request).** The income exclusions remove ~1.31M
+(~29%) of the intent-qualified audience, and the underlying 3P income data is **unreliable**: the three income
+providers agree on only **0.36%** of who's "low-income" (Equifax 2.89M / TransUnion 4.45M / Experian 12.60M flagged;
+all-three overlap = 65,571 of an 18.34M union). Stacking providers = exclude-if-ANY-flags = inherit every provider's
+errors (the union). Recommendation: lean on intent scoring (behavioral, not demographic); if income screening is
+required, use ONE provider, not several. Deliverable: `artifacts/ti_1026_exclusions_talk_track.md` (Q&A for CS);
+data: `outputs/ti_1026_income_provider_agreement.csv`, `queries/ti_1026_income_provider_agreement.sql`.
+
 ### 4.5 — 3P segment quality scoring — see §4.5 above (per-segment 7d reach)
 
 ### 4.6 — Keyword (DS19) evaluation vs BUK/DAR — CORRECTED (Alex Knorr 2026-06-17)

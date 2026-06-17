@@ -51,6 +51,14 @@ This is the core reframe: uniqueness rises as you go from IP → domain → (IP�
 
 **Read:** 5x5 mostly sees households we already know (only 20% unique IPs), but the **specific sites those households
 visit are overwhelmingly 5x5-only (77% of events)**. So the unique *data value* is far larger than the unique *reach*.
+
+**Recency matters — "overlap" ≠ "covered" (`ti_1027_recency_30d_5x5.csv`).** We only target the **last 30 days**
+(`site_visit_signal` itself has no TTL — data back to 2025-08-31 — but targeting uses a 30-day window). Vendors
+deliver on **irregular cadences**, so a pair "also seen by another vendor" may have been delivered weeks ago and is
+about to expire. Measured over the **30-day targeting window**, of 5x5's 754.8M (IP×domain) pairs: **69.8% are SOLE
+(no other vendor delivered them in-window)** and **95.4% are sole-or-freshest** — only ~4.6% does another vendor
+deliver more recently. So a 7-day snapshot *overstates* redundancy; within the window that drives targeting, ~70% of
+5x5's data has no substitute. This **raises the floor** — the $40K unique-reach floor understates badly.
 There is **no unique metadata** (5x5 sends none). Of the unique domains, **47K (34%) classify to a vertical** (MM-usable)
 = ~12% of the whole classified-domain universe — concentrated in **B2B** (Hiring 34%, Logistics 32%, Data&Analytics 31%,
 Sales&Marketing 30%, IT&Eng 25%) + premium retail.
@@ -84,9 +92,22 @@ Sales&Marketing 30%, IT&Eng 25%) + premium retail.
 | **Net-new (IP×domain) event** | **~$0.03 / 1,000 events** (at fair midpoint) | The real asset — 9.3B unique events/yr. |
 | **Net-new classified domain** | **~$3–13 / domain / yr** | 47K unique MM-usable domains; the B2B coverage. |
 
-**Decision rule:** renew if the flat fee ≤ **~$600K/yr**; **renegotiate** in $600K–$6.3M (push for full URLs to fix the
-domain-only gap, or a lower fee); **walk away** only approaching **~$6.3M/yr**. The fee is almost certainly far below
-that ceiling, so 5x5 is very likely a keep.
+**Definitive pricing — in the two structures contracts actually use** (Kale: "most are monthly rates or CPMs"):
+
+*Monthly rate (recommended — flat fee + volume minimum):*
+- **Floor ~$3K/mo** (we'd happily pay) · **FAIR $15–50K/mo** (anchor ask ~$25–30K/mo = $300–360K/yr) · **walk-away
+  ~$525K/mo** (= the CPM ceiling).
+- **Attach a volume minimum:** ≥ **2.5B rows/month** AND ≥ **25M unique (IP×domain) pairs/day** — so they can't
+  throttle delivery or pad with junk while keeping the fee.
+
+*CPM (if billed per 1,000 impressions) — the rate depends entirely on the billing base:*
+- **On matched/incremental impressions: ≤ $0.50 CPM** (peer parity — fair).
+- **On all touched impressions: $0.02–0.05 CPM** (~95% is redundant); **>$0.10 on touched = walk away.**
+- **Insist the contract bills on matched impressions, not all touched.**
+
+*Reconciliation (same dollars, three views):* **$25K/mo ≈ $0.024 CPM on all touched ≈ $0.50 CPM on matched-only.**
+The recency finding (70% of 5x5's data sole in-window) makes the floor firmer, so the fair band is conservative, not
+aggressive. Net: renew at/below the fair band; the fee is almost certainly far below the walk-away ceiling.
 
 ## 6. How to choose between vendors (tie-break rubric)
 When two vendors deliver comparable data, decide in this order:
