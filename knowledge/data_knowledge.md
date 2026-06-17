@@ -775,6 +775,17 @@ of running multiple site-visit vendors is real — they contribute net-new house
 just re-report the same ones. **Value metrics must be on distinct (IP,domain) anchored on the UNION, never raw
 events (inflated ~2.8× by repeats) or the sum-across-vendors (double-counts the ~24% overlap).**
 
+### Value a PAID site-visit vendor against the FREE internal baseline (TI-1027, 2026-06-17)
+Two `site_visit_signal` sources cost nothing: **DS23 guid_log** (MNTN's own pixel) and **DS30 augmentor_log** (the
+bidstream — a free byproduct of being in the auction; SSPs send bid requests, we don't pay for the signal). So the
+correct value test for a *paid* vendor is **net-new vs DS23∪DS30 (the free baseline)** — not "unique vs all vendors"
+(the other DDPs are also costs). For 5x5: of 33.1M daily (IP×domain) pairs, only **17.9% are already in the free
+logs**; **82.1% net-new vs free, 72.5% net-new AND classifiable**. The unit is the **(IP×domain) pair = a site
+visit** — an IP with no domain has no behavioral value; count distinct (IP, classifiable-domain), never raw IPs.
+- **CAVEAT (Ryan Kleck, 2026-06-17):** DS30 augmentor was added to `site_visit_signal` only **~April 2026** — it is
+  **absent in older partitions**, so the free baseline (and any vendor-vs-free comparison) is only valid on recent
+  data. guid_log (DS23) confirmed; augmentor = DS30.
+
 ### Vertical Classification
 `fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)

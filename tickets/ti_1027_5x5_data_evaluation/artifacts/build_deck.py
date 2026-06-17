@@ -24,6 +24,7 @@ C_PRICING = img("ti_1027_chart_pricing.png")
 C_DEPTH = img("ti_1027_chart_depth.png")
 C_PERIP = img("ti_1027_chart_perip_dist.png")
 C_ADDITIVITY = img("ti_1027_chart_additivity.png")
+C_NETNEW = img("ti_1027_chart_netnew_vs_free.png")
 
 import csv as _csv
 _d = sorted(_csv.DictReader(open(HERE.parent / "outputs" / "ti_1027_per_ip_depth.csv")),
@@ -107,6 +108,12 @@ SLIDES = f"""
   <h2>Are the vendors additive, or just sharing the same domains?</h2>
   <img src="{C_ADDITIVITY}" style="width:84%">
   <p class="take"><b>Additive.</b> 76% of all 447M IP→domain observations come from ONE vendor. For an IP seen by 5 vendors, the best single sees 6.7 sites but all 5 together see 11.1 (1.65×) — only ~29% overlap. Each vendor genuinely adds net-new visits. <b>That's the value of having them.</b></p>
+</section>
+
+<section>
+  <h2>The real test: are we paying for what we get free?</h2>
+  <img src="{C_NETNEW}" style="width:90%">
+  <p class="take">We get site-visit data <b>free</b> from our own bidstream (augmentor) and pixel (guid). A paid vendor only earns its fee on what's net-new vs those. For 5x5: only <b>18%</b> is already free; <b>72% is net-new AND classifiable</b> — the data we'd lose with no free substitute. That's the justification to pay.</p>
 </section>
 
 <section>

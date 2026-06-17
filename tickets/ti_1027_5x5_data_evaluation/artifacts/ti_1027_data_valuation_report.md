@@ -99,6 +99,21 @@ not redundant — each contributes net-new visits for shared IPs. (Over-estimati
 **distinct (IP,domain)** anchored on the **union**, never raw events or the sum — the ~24% overlap is not
 double-counted.)
 
+**The decisive value test — net-new vs the FREE internal baseline (`ti_1027_netnew_vs_free_5x5.csv`).** Two of the
+site-visit sources cost us nothing: **augmentor (DS30, our bidstream)** and **guid (DS23, our own pixel)**. So a
+*paid* vendor only earns its fee on what's net-new vs those — "0 reason to pay unless it adds what the free logs
+don't." For 5x5: of its 33.1M daily IP→domain pairs, **only 17.9% are already in the free logs; 82.1% are net-new vs
+free, and 72.5% (24.0M) are net-new AND classify to a vertical** (MM-usable). So 5x5 is overwhelmingly *not*
+re-selling our free data — ~72% is net-new and useful. **This is the right value floor for the pay decision** (and is
+stricter than "unique vs all vendors," since the other DDPs are also costs). *(Note: augmentor was added to
+`site_visit_signal` only ~April 2026, so this free baseline only exists in recent partitions — per Ryan Kleck.)*
+
+**On the unit — why (IP×domain) pairs, not IPs:** a site visit *is* an (IP × domain) pair — "household X visited
+site Y." An IP with no domain is just an identifier with no behavioral signal (worthless to MM, which infers
+intent/vertical from the *sites* a household visits); a domain with no IPs can't be targeted. So the atomic unit of
+value is the **distinct (IP × classifiable domain) pair**, and that is what every value metric here counts — never
+raw IPs and never raw events.
+
 **Recency matters — "overlap" ≠ "covered" (`ti_1027_recency_30d_5x5.csv`).** We only target the **last 30 days**
 (`site_visit_signal` itself has no TTL — data back to 2025-08-31 — but targeting uses a 30-day window). Vendors
 deliver on **irregular cadences**, so a pair "also seen by another vendor" may have been delivered weeks ago and is

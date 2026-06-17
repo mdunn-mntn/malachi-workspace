@@ -217,3 +217,21 @@ SELECT a.n_vendors, COUNT(*) n_ips, ROUND(AVG(u.union_dom),2) avg_union_domains,
        ROUND(AVG(a.max_dom),2) avg_best_single, ROUND(AVG(u.union_dom)/AVG(a.max_dom),2) lift_vs_best,
        ROUND(100*(1-AVG(u.union_dom)/AVG(a.sum_dom)),1) pct_overlap
 FROM ipagg a JOIN ipu u USING(ip) WHERE a.n_vendors BETWEEN 1 AND 10 GROUP BY a.n_vendors ORDER BY a.n_vendors;
+
+-- ============================================================
+-- PHASE 6 (free baseline): 5x5 (IP,domain) pairs net-new vs FREE internal logs (augmentor DS30 + guid DS23) + classifiable.
+-- The right value test for a PAID vendor. (DS30 augmentor added to site_visit_signal ~Apr 2026 — recent partitions only.)
+-- ============================================================
+WITH p AS (SELECT DISTINCT data_source_id, ip, NET.REG_DOMAIN(url) AS domain
+           FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%' AND NET.REG_DOMAIN(url) IS NOT NULL),
+pm AS (SELECT ip, domain, LOGICAL_OR(data_source_id=25) AS in_5x5, LOGICAL_OR(data_source_id IN (23,30)) AS in_free_internal
+       FROM p GROUP BY ip, domain),
+j AS (SELECT pm.ip, pm.domain, in_5x5, in_free_internal, (w.domain_name IS NOT NULL) AS classified
+      FROM pm LEFT JOIN wcv w ON w.domain_name = pm.domain)
+SELECT COUNTIF(in_5x5) p_5x5,
+       COUNTIF(in_5x5 AND in_free_internal) p_5x5_also_free,
+       COUNTIF(in_5x5 AND NOT in_free_internal) p_5x5_netnew_vs_free,
+       COUNTIF(in_5x5 AND NOT in_free_internal AND classified) p_5x5_netnew_classified,
+       ROUND(100*COUNTIF(in_5x5 AND NOT in_free_internal)/COUNTIF(in_5x5),1) pct_netnew_vs_free,
+       ROUND(100*COUNTIF(in_5x5 AND NOT in_free_internal AND classified)/COUNTIF(in_5x5),1) pct_netnew_classified
+FROM j;
