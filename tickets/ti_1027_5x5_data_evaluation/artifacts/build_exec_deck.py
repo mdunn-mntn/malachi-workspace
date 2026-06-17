@@ -83,6 +83,19 @@ SLIDES = f"""
   <h2>Keep 5x5 — it's outsized, net-new, and irreplaceable in-window.</h2>
   <p class="byline">TI-1027 · Targeting Infrastructure</p>
 </section>
+
+<section>
+  <h2>Appendix — how the pay numbers are derived</h2>
+  <ul>
+    <li><b>Two inputs:</b> market rate <b>$0.50 / 1,000 impressions</b> (peer rate; our logs show ~$0.001/impr data cost ≈ $1 CPM) · 5x5 touches <b>34.35M impr/day</b>, of which <b>213.5K/day</b> go to households only it saw.</li>
+    <li><b>Ceiling ~$525K/mo:</b> 34.35M × $0.50 ÷ 1,000 × 365 = $6.3M/yr — peer rate on ALL touched impressions (hard upper bound; 74% of its IPs we already see).</li>
+    <li><b>Floor ~$3K/mo:</b> 213.5K × $0.50 ÷ 1,000 × 365 = $40K/yr — only impressions to households 5x5 uniquely brought.</li>
+    <li><b>Fair $15–50K/mo:</b> ~12% of MM's domain signal × MM's $210–385M/yr touched media, cross-checked vs typical DDP flat fees (5x5 = #2 most-unique → upper end).</li>
+    <li><b>Volume mins:</b> ≥2.5B rows/mo (lock delivery) + ≥25M unique IP×domain pairs/day (anti-padding — 93M events collapse to ~33M distinct).</li>
+    <li><b>CPM caveat:</b> $0.50 only on MATCHED impressions; on ALL touched it's $0.02–0.05 — $0.50 on all-touched = the $6.3M trap.</li>
+  </ul>
+  <p class="note">Floor &amp; ceiling are measured; the fair point is an estimate bounded by them.</p>
+</section>
 """
 
 HTML = f"""<!doctype html><html><head><meta charset="utf-8">
