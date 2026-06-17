@@ -18,6 +18,23 @@ Profile the RAW feed schema (not just the processed table): columns, metadata, s
 Per day/window: bytes, events, distinct IPs, distinct domains, **distinct (IP×domain) pairs**, (IP×url) pairs.
 (IP×url ≈ IP×domain ⇒ domain-only feed.) Source: GCS parquet + `gsutil du`.
 
+**Volume ≠ value — three guards against over-estimating:**
+1. **Never value raw events** — they're inflated by repeat visits (e.g. a vendor's 93M events collapse to 33M distinct
+   (IP×domain); 33Across is the biggest feed at 834M events but the *shallowest* in unique depth). Value distinct
+   (IP×domain), not events.
+2. **Measure the distribution, not the mean** — averages are crushed by the see-once tail. Use median / p90 / buckets.
+   (5x5: mean +1.2 additional domains/IP, but the *median* is +1; ~71% of IPs get exactly +1, only ~14% get 2+.)
+3. **Anchor on the UNION, never the sum across vendors** — summing per-vendor counts double-counts the overlap
+   (~24% of (IP×domain) pairs are seen by 2+ vendors). Use distinct union.
+
+**Per-IP depth (a second value lens).** Two vendors can share an IP yet one is worth more if it sees that IP visit
+more *distinct* sites. Measure **distinct domains per IP** and, for shared IPs, the **additional unique domains** a
+vendor contributes (union vs best-single-vendor). Are vendors additive or redundant? (Across MNTN site-visit vendors:
+**76% of all (IP×domain) pairs come from one vendor**, and stacking vendors gives ~70% more domains per IP than the
+best single — so they are **additive**, not redundant.) Note the two lenses can rank vendors differently: **domain
+breadth** (what the domain→vertical classifier consumes) vs **per-IP behavioral depth** (per-IP features). State which
+the model actually uses.
+
 ## Step 3 — Uniqueness, layered (the key reframe)
 Measure uniqueness at **three grains**, because they diverge:
 1. **Unique IPs** — reach we'd lose (usually small; we see most IPs ourselves).

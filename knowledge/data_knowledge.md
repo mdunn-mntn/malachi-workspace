@@ -702,9 +702,17 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   Two outputs per vendor: stage-1 `gs://mntn-data-archive-{env}/fpa_vendor_log/data_source_id=NN/` (raw archive),
   stage-2 `…/signals/site_visit_signal/dt=/hh=/data_source_id=NN/`.
 - **Unified `site_visit_signal` schema** (all vendors): `uid, advertiser_id, ip, url, query_parameters, user_agent,
-  time, data_source_id, dt, hh`. **Separable by `data_source_id`.** ~250 GiB/day total. Query GCS parquet via BQ
-  temp external-table definitions (`NET.REG_DOMAIN(url)` = registered domain, matches consumer tldextract). The BQ
+  time, data_source_id, dt, hh`. **Separable by `data_source_id`.** ~250 GiB/day total. The BQ
   table `…zzz_temp.site_visit_signal` is **manual / not auto-populated** (populate DAG trigger commented out).
+  - **How to query it (no BQ table, read-only, no DDL):** point a BQ *temporary external table* at the GCS parquet —
+    ```
+    URIS=""; for d in 09 10 ... 15; do URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=2026-06-${d}/*.parquet,"; done; URIS="${URIS%,}"
+    bq query --external_table_definition="svs::PARQUET=${URIS}" 'SELECT ... FROM svs ...'
+    ```
+    Target `*.parquet` (skips `_SUCCESS` markers). List one `dt=` prefix per day to window/prune (no Hive auto-partition
+    needed — `dt`, `hh`, `data_source_id` are real columns in the files). ~1 day ≈ 285 GB / ~16 s scan; ~30 days ≈ 8.5 TB.
+    `NET.REG_DOMAIN(url)` = registered domain (matches the consumer's tldextract eTLD+1). Same pattern works for
+    `fpa_vendor_log` and any GCS-parquet dataset lacking a BQ landing.
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`

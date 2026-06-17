@@ -58,6 +58,18 @@ This protocol will eventually live in a Python package `mntn_experiment_eval/` w
 
 ---
 
+## Experiment results archive (TI-1003 / TI-1033)
+
+Every completed TI experiment is cataloged in the **TI experiment archive** — a manifest-driven internal static site that anyone can browse: a master "what TI has moved" view grouped by KPI (IVR, CVR, incrementality, …) plus one page per experiment (intention → big bold movement → every KPI moved → method → chart).
+
+- **Source:** standalone repo `ti-experiment-archive` (build with `python build.py` → `dist/`). Hosting/deploy tracked in **TI-1033**.
+- **Add a new experiment = drop one YAML** in `manifests/` with: `id`, `tone` (win=red / opportunity=blue / neutral=navy), `metric` (KPI group; `kpi_groups` for multi-KPI), an inline `chart` (bars/diverging — no image files), and `kpis` (every KPI moved, top 1–2 `highlight: true`). No template edits. **Do this whenever an experiment wraps** — it's the durable, shareable record.
+- **Headline framing:** IVR is the proven KPI; CVR is the second target but noisier (firms up with post-period). Color encodes the result, not decoration — reserve red for genuine wins.
+
+**Data caveat — TI-542 (Max Reach):** its results are **not recoverable** in the workspace. The notebook outputs were stripped and the only artifact, `ti_542_mullet_performance_report.pdf`, is a **placeholder/joke document** (literal mullet haircuts) — it contains zero Max Reach data. Do not cite Max Reach numbers or let any tool extract "results" from that PDF; the archive shows it honestly as "Mixed — no aggregate distilled." (An extraction agent fabricated plausible per-cluster numbers from it during TI-1003; caught by grepping the source.)
+
+---
+
 ## Visualization rule for CausalImpact / pre-post results
 
 **Charts: aggregate-only.** Per-advertiser detail belongs in tables, not in the visualizations. Notebooks should be flat and short.
