@@ -175,6 +175,15 @@ Sales&Marketing 30%, IT&Eng 25%) + premium retail.
 The recency finding (70% of 5x5's data sole in-window) makes the floor firmer, so the fair band is conservative, not
 aggressive. Net: renew at/below the fair band; the fee is almost certainly far below the walk-away ceiling.
 
+**Untapped upside — more value is on the table (two levers):**
+- **From 5x5 (renewal lever):** 5x5's raw feed is **only `IP · URL · timestamp`** (confirmed: positional `_COL_0/1/2`,
+  no device/user-agent, 96% bare domains). In renewal, ask for **extended URLs / full paths** (unlocks page- and
+  keyword-level signal, not just domain→vertical) and **device / user-agent** (CTV vs mobile vs desktop). These would
+  raise value-per-dollar and are free to request.
+- **Already in hand, not used (pipeline lever):** the pixel feeds (Justuno/Sovrn/Klickly/33Across API) and Predactiv
+  **already deliver** user-agent / referrer / query params / mobile flag, all dropped at `site_visit_signal`. Tapping
+  that metadata = device/context features at **no extra vendor cost** (a pipeline change, not a contract).
+
 ## 6. How to choose between vendors (tie-break rubric)
 When two vendors deliver comparable data, decide in this order:
 1. **Cost** (flat-fee with fixed cost beats per-use CPM on redundant volume).

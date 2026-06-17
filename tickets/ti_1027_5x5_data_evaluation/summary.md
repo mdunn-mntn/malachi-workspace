@@ -241,6 +241,14 @@ Per-IP depth = how many distinct sites a vendor sees each IP visit, and how many
   (`ti_1027_pair_multiplicity.csv`, `ti_1027_perip_additivity.csv`.) Over-estimation guard: value = distinct
   (IP,domain) on the UNION, never raw events (~2.8× inflated) or sum (double-counts overlap).
 
+### 4.17 Untapped upside + EXEC deck (Alyson ask, 2026-06-17)
+- **Untapped data:** 5x5's raw feed is **only ip/url/timestamp** (positional `_COL_0/1/2`, no device/UA, 96% bare
+  domains) — so no hidden metadata to tap; the lever is **renewal** (ask for extended URLs + device/UA). Separately,
+  the **pixel feeds + Predactiv already send UA/referer/query/mobile that we drop** at site_visit_signal — untapped at
+  no vendor cost (pipeline lever). Added a slide to the big deck + report §5.
+- **Exec deck** (`artifacts/ti_1027_exec_deck.html`, 5 content slides): bottom line → why (net-new-vs-free + recency)
+  → what to pay (pricing) → untapped upside + next steps. Pared down per Alyson for Kale.
+
 ## 5. PHASE 4 — Value of MNTN Matched (the denominator) + PHASE 5 — 5x5 attribution & recommendation
 
 ### 5.1 How to estimate the value of MM/Fangorn (Kale's question)
