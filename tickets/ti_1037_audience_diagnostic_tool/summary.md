@@ -43,11 +43,19 @@ flight length. → **Step 9 = a peer-pacing benchmark, a sibling of Step 7's pee
 selection is the design-sensitive part. Full detail: playbook Step 9 + `data_knowledge.md` ("How deliverability is
 actually set"). Distinct from the Media-Plan `deliverability_classification` guardrail risk bucket.
 
-**Budget field resolved** (verified in `data_catalog.md`, not a research spike): primary cap =
-`bronze.integrationprod.campaign_groups.budget` (NUMERIC, "Total flight budget"; campaign_groups = primary allocation
-unit) via `campaigns.campaign_group_id`; flight-level cap = `core_flights.budget` via `campaign_groups.active_flight_id`;
-as-of historical budget = `archives_campaign_group_archives` (MAX(version) ≤ as_of); DSO-managed override =
-`dso_campaign_group_*budgets` when `campaign_groups.dso_manage_budget=TRUE`. Spend = `spend_log` (nanosecond epoch).
+**Budget field resolved + empirically de-risked on OTF (2026-06-18) — the naive chain was wrong:**
+- **`campaigns.dso_manage_budget=TRUE` for all OTF campaigns** (the common prospecting case) → the operative budget is
+  **DSO-managed**, NOT `campaign_groups.budget` (static 70000) or `core_flights` via `active_flight_id`.
+- **`campaign_groups.active_flight_id` is STALE** (OTF: 344166 → a 2022 flight, budget 2.5). **Never use it.** Get the
+  real current flight from the latest `dso_campaign_group_flight_budgets.flight_id` (OTF: 1041900 = 2026-06-03→07-01,
+  budget 70000) and join THAT to `core_flights` for the window.
+- **Budget resolution order:** `dso_manage_budget` → DSO flight budget (latest by `update_time`) for the cap + its
+  `flight_id`→`core_flights` window, DSO daily (`dso_campaign_group_daily_budgets.budget`, OTF ≈ $1,690/day) for the
+  per-day pace; else `core_flights.budget` for the flight covering `as_of` (by date range) → fallback `campaign_groups.budget`;
+  as-of history = `archives_campaign_group_archives` (MAX(version) ≤ as_of).
+- **Spend numerator:** `logdata.spend_log.win_cost_micros_usd / 1e6` (grain `campaign_group_id`/`campaign_id`; date-filter
+  the `time` partition). Pacing = `spend / (flight_budget × elapsed_days/flight_days)`; "fully delivered" bar = 96%.
+- Full mechanics: `data_catalog.md` ("DSO-managed budget tables" + "logdata.spend_log"). **Step 9 is now fully buildable.**
 
 ## 5. Build plan (steps 0–9 productization) — drafted 2026-06-18 via design panel
 

@@ -1861,6 +1861,44 @@ the `core_*` tables here.
 | create_time / update_time | TIMESTAMP | |
 | datastream_metadata | RECORD | uuid, source_timestamp |
 
+> **⚠ GOTCHA — `campaign_groups.active_flight_id` is often STALE; do NOT use it as the current flight.** Verified
+> TI-1037 2026-06-18: OTF live group 80057's `active_flight_id`=344166 points to a flight with `budget`=2.5 and a
+> **2022-12 → 2023-01** window, while the *actual* current flight is **1041900** (2026-06-03 → 2026-07-01, budget 70000).
+> To get the operative flight, read the latest `dso_campaign_group_flight_budgets.flight_id` (see below) and join THAT
+> to `core_flights` — not `campaign_groups.active_flight_id`.
+
+---
+
+## DSO-managed budget tables (the operative budget for `dso_manage_budget=TRUE` campaigns) — TI-1037 2026-06-18
+For DSO-managed campaigns (the common case for prospecting — all OTF campaigns are DSO-managed), the live operative
+budget is NOT `campaign_groups.budget` (static) or `core_flights` via `active_flight_id` (stale). It is in the DSO
+budget tables (`bronze.integrationprod.dso_*`), **versioned by `update_time`** (DSO writes a new row on each change —
+take the latest). `campaigns.dso_manage_budget` (BOOLEAN) flags whether to use these.
+
+| Table | Grain | Key budget cols | Use |
+|---|---|---|---|
+| `dso_campaign_group_daily_budgets` | campaign_group_id | `budget`, `budget_bx`, `budget_bidder` | **Operative daily $ cap** (OTF latest ≈ $1,690/day). |
+| `dso_campaign_group_flight_budgets` | campaign_group_id | `budget`, **`flight_id`** | **Flight-level allocation** (OTF latest ≈ $44,170) + the REAL current `flight_id` (join → `core_flights` for the true window). |
+| `dso_campaign_group_budgets` | campaign_group_id | `budget`, `duration` (sec) | Hourly/period rate (OTF ≈ $88.96 / `duration`=3600s = ~$89/hr). |
+| `dso_campaign_budgets` / `dso_campaign_flight_budgets` / `dso_daily_budgets` | campaign_id | `budget` | Same, at campaign grain. |
+
+- All carry `advertiser_id`, `transaction_id`, `create_time`, `update_time`. Latest row per group = `QUALIFY ROW_NUMBER() OVER (PARTITION BY campaign_group_id ORDER BY update_time DESC)=1`.
+- **Budget-resolution order (for TI-1037 step 9 deliverability):** if `dso_manage_budget` → DSO flight budget (latest) for the cap + its `flight_id`→`core_flights` for the window, DSO daily for the per-day pace; else `core_flights.budget` for the flight covering `as_of` (by date range, not `active_flight_id`) → fallback `campaign_groups.budget`. As-of history: `archives_campaign_group_archives` (`MAX(version) ≤ as_of`).
+
+## logdata.spend_log (spend numerator for pacing / deliverability) — TI-1037 2026-06-18
+Realized spend per auction win. Use for step-9 pacing (spend ÷ budget) and any spend-vs-budget question.
+
+| Column | Type | Notes |
+|---|---|---|
+| `win_cost_micros_usd` | INTEGER | **Spend in micros USD — ÷ 1e6 = dollars.** SUM for total spend. |
+| `campaign_id` / `campaign_group_id` / `advertiser_id` | INTEGER | Grain for filtering/joining to budget. |
+| `auction_epoch` | INTEGER | **NANOSECONDS** (per the epoch-units gotcha) — prefer the TIMESTAMP cols. |
+| `auction_timestamp` / `impression_timestamp` / `time` | TIMESTAMP | `time` is the partition field — **date-filter on it** (required). |
+| `flight_end_timestamp` | TIMESTAMP | Flight end as seen at win time. |
+| `advertiser_intent_score` / `campaign_intent_score` | INTEGER | Per-win intent scores. |
+
+- Pacing: `pacing_to_date = (SUM(win_cost_micros_usd)/1e6 over [flight_start, min(as_of, flight_end)]) / (flight_budget × elapsed_days/flight_days)`; the "fully delivered" bar is **96%** of budget (Chris Addy, see data_knowledge.md "How deliverability is actually set").
+
 ---
 
 ## bronze.integrationprod.core_creatives
