@@ -155,7 +155,19 @@ honest estimate is 5 with the keyword-classifier descoped; without that descope 
   ipdsc hygiene, ui.audience_keyword_state, UI-size source, 3P demo-data quality, MaxMind geo-fence, budget fields)
 - Full priming detail: `HANDOFF_PROMPT.md`
 
+## 6b. Build progress
+- **2026-06-18 — Step 9 budget de-risk DONE** (§4): operative budget = DSO tables; `active_flight_id` stale; spend = `spend_log.win_cost_micros_usd/1e6`. Captured in `data_catalog.md`.
+- **2026-06-18 — v2 segment-expression walker DONE + golden-filed (the long pole).** `artifacts/diag/expr.py` =
+  unified v1 (`audience.audiences`) + v2 (`audience.audience_segments`) parser. The TI-1026 prototype only read v1
+  (keys on `cats`) and was blind to the v2 op-tree + the automated gates; `expr.py` reads both, classifying every leaf
+  into includes / excludes / **DS14 availability gate** / **DS21·DS34 retargeting** / **holdout** / **RTC score** +
+  geo radii (polarity from `op:not` nesting). Geo radii live under a `value.geo_radii` wrapper; `op:"false"` constant
+  clauses handled. `artifacts/diag/test_expr.py` (golden file) **passes**: matches the frozen OTF decomposition exactly
+  (DS19=379/DS35=11, excl DS1/2/4/35/43, DS14[1], DS21/34@120d, holdout 39718:/10%, RTC 113001, 1175/21 radii), 0 warnings.
+- **Next:** `resolver.py` (advertiser_id → segment_id/audience_id/campaigns/HHST/budget, all from BQ) → templatize the
+  16 SQL files → `interpret.py`/`cohort.py`/`report.py` → step-9 pacing template → CLI → OTF reconciliation + ADV2.
+
 ## 7. Open items
-- **[awaiting go-ahead]** Start the build (subtask 2 → 3 → 4 per §5). v2 segment-expression walker is the long pole — build first.
+- Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
 - Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
-- Keyword classifier (step 3) LLM/embedding generalization → spin out as a fast-follow ticket.
+- Keyword classifier (step 3): full LLM/embedding generalization is IN scope per the 2026-06-18 decision (8 SP).
