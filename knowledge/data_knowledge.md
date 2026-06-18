@@ -1262,6 +1262,34 @@ and does **not** appear to apply the radii geo fence or the DS14 activity filter
 can actually reach (TI-1026: UI 9.7M vs ~1.9M reached). It also **inflates with 3P-OR** even though the score gate
 won't bid those IPs. Don't anchor reach/pacing decisions on the UI size; use realized reach (`cost_impression_log`).
 
+### How deliverability is actually set — peer pacing to 96% of budget (Chris Addy deep-dive, TI-1037, 2026-06-18)
+
+**There is NO predictive targetable-IP model.** The platform does **not** compute "what % of an audience's IPs will be
+biddable during a given period" — no such model exists. So a diagnostic must never promise a targetable-% figure;
+answer deliverability empirically (realized reach/frequency + peer pacing), not by an audience-size calculation.
+
+**The deliverability target is empirical-by-analogy.** The operative method: look at what **comparable campaigns**
+required (over roughly the **last 60–90 days**) to reach **96% of budget** — the platform's de-facto "fully delivered"
+bar — then judge how much *this* campaign should spend by comparing its spend to that peer envelope, scaled by
+**flight (campaign) length**. There is no closed-form "this audience can deliver X impressions"; it's "campaigns
+shaped like this one historically hit 96% of budget at spend level Y over length Z."
+
+**Diagnostic implication (TI-1037 step 9 = a peer-pacing benchmark, sibling of the step-7 peer-VR benchmark):**
+cohort comparable campaigns (CTV, vertical, geo footprint, budget tier, audience shape, HHST on/off) over 60–90d;
+compute the spend/pacing that got peers to ≥96% of budget; place the target campaign in that distribution.
+- Peers at this budget hit 96% but ours doesn't → **not a budget problem**; it's audience/targeting (cross-check the
+  DS14-active pool + realized reach for a delivery pause vs genuine exhaustion).
+- Even peers can't sustain 96% at this budget → **budget too high for the audience shape**: lower budget, lengthen the
+  flight, or grow the pool (geo radius / keyword layer).
+- Queryable in-tool from spend (`spend_log`, **nanosecond epoch**) + budget cap + delivery logs — no external Olympus
+  dependency. The **budget/cap field still needs locating** (campaign config / dso). The comparable-campaign selection
+  is the design-sensitive part — a bad cohort yields a meaningless benchmark.
+
+**Distinct from `deliverability_classification`** (the Media-Plan guardrail risk bucket, high/medium/low — see the
+Media Plan section): that is a *categorical risk classifier* from per-network spend thresholds + audience size +
+blocked networks + budget; it is NOT the campaign-level deliverability *target*, which is the peer-pacing-to-96% method
+above.
+
 ### Special Values
 - **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
 - **8000** = Peak Performance (PP) — **was active Jan-Feb 2026, currently minimal** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. Waterfall: HI → PP. Top advertisers with PP data: 34185, 36232, 37158, 34838. Most PP activity ended by late February. Sporadic single-digit impressions in March-April.

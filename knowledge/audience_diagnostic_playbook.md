@@ -67,8 +67,23 @@ sources, include/exclude, geo, and the automated clauses. Prototype: `parse_expr
 - UI size = `perml.flight_cid_day_audience_sizes` (stage-1 campaign; `funnel=total`) / `external_ddm.segment_sizes` (GCS) / `eval_batch` API.
 - Read: the UI number reflects the raw user expression (≈ MM ∪ 3P national) and **does NOT apply geo, DS14, or holdout** — it can be ~5× the deliverable. Anchor on realized reach, not UI size. (data_knowledge.md "Where the UI audience-size number lives".)
 
-**9. Deliverability.** *(TBD — pending Chris Addy deep-dive, TI-1037.)* Olympus/media-plan + supply-side constraints
-that bound what's actually servable beyond the audience definition. To be slotted in once scoped.
+**9. Deliverability.** *Can the campaign actually spend its budget?* (Scoped via Chris Addy deep-dive, 2026-06-18.)
+- **There is NO predictive targetable-IP model.** The platform does not compute "what % of this audience's IPs will be
+  biddable in period X." Do not promise a targetable-% number — none exists. Answer deliverability via realized
+  reach/frequency (step 6) + peer pacing (this step).
+- **Deliverability = peer-calibrated budget pacing.** The operative target is empirical-by-analogy: what did
+  **comparable campaigns** require (over the last **~60–90 days**) to reach **96% of budget** (the platform's
+  "fully-delivered" bar), then judge this campaign's spend against that, scaled by **flight length**.
+- **Build = a peer-pacing benchmark — a sibling of step 7's peer-VR benchmark.** Cohort comparable campaigns
+  (CTV, vertical, geo footprint, budget tier, audience shape, HHST on/off) over 60–90d; compute the spend/pacing that
+  got peers to ≥96% of budget; place the target campaign in that distribution. Queryable in-tool from spend + budget +
+  delivery logs (no Olympus black box) — reuses step-6 delivery data + the step-7 peer-cohort machinery.
+- Read: peers at this budget hit 96% but ours doesn't → NOT a budget problem; it's audience/targeting (cross-check
+  step 6 for a delivery pause vs exhaustion). Even peers can't sustain 96% at this budget → budget too high for the
+  audience shape (lower budget, lengthen flight, or grow the pool via geo/keywords).
+- **Gotcha:** 96%-of-budget is the "delivered" definition; measure pacing over a window ≥ the flight (or normalize
+  per-day). Spend = `spend_log` (nanosecond epoch); budget/cap field still to be located (campaign config / dso). The
+  comparable-campaign selection is the design-sensitive part — a bad cohort yields a meaningless benchmark.
 
 ---
 
@@ -81,5 +96,6 @@ that bound what's actually servable beyond the audience definition. To be slotte
 
 ## For TI-1037 (automation)
 Each step above = one module: parameterize by `advertiser_id`/`audience_id`/`campaign_id`, run the query, apply the
-interpretation rule, emit a standard report section. Step 9 (deliverability) is the open design input. Steps 0–8 are
-fully prototyped in TI-1026.
+interpretation rule, emit a standard report section. Steps 0–8 are fully prototyped in TI-1026; **step 9
+(deliverability) is now scoped** (peer-pacing-to-96%-of-budget, 2026-06-18) and buildable from spend/budget/delivery
+logs — no external Olympus dependency.
