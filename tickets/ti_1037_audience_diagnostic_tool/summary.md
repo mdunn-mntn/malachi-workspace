@@ -11,20 +11,10 @@
 > the prototyped modules, the load-bearing facts, and next actions.
 
 - **Spec is written:** `knowledge/audience_diagnostic_playbook.md` — the diagnostic as steps 0–9 (each = a tool module:
-  question → query → interpretation → gotcha). **Step 9 (deliverability) is now scoped** (see §4 below).
+  question → query → interpretation → gotcha). **Step 9 (deliverability) is now scoped** (see §4).
 - **Prototype is done:** every step 0–8 is prototyped in `tickets/ti_1026_orange_theory_audience_eval/` (queries/ +
   artifacts/ + a full worked example in its summary.md).
-- **Nothing built here yet** — this folder is scaffolding + handoff. Next is the parameterized build (plan being drafted).
-
-## 4. Step 9 deliverability — scoped (Chris Addy deep-dive, 2026-06-18)
-**There is NO predictive targetable-IP model.** The platform does not compute "what % of an audience's IPs will be
-biddable in period X." So the tool must never promise a targetable-% number — answer deliverability empirically.
-**Deliverability target = peer pacing to 96% of budget:** what did *comparable* campaigns require (last ~60–90 days)
-to hit **96% of budget** (the "fully delivered" bar), then judge this campaign's spend vs that peer envelope, scaled by
-flight length. → **Step 9 = a peer-pacing benchmark, a sibling of Step 7's peer-VR benchmark** — queryable in-tool from
-`spend_log` (nanosecond epoch) + the budget/cap field (TBD: campaign config / dso) + delivery logs. No external Olympus
-dependency. Comparable-cohort selection is the design-sensitive part. Full detail: playbook Step 9 + `data_knowledge.md`
-("How deliverability is actually set"). Distinct from the Media-Plan `deliverability_classification` guardrail risk bucket.
+- **Nothing built here yet** — folder is scaffolding + handoff. **Build plan is drafted (§5)**, ready to start on approval.
 
 ## 1. Introduction
 TI stakeholders repeatedly ask "why is this client performing this way / why is the audience small / which 3P segments
@@ -43,12 +33,121 @@ creative, UI-size-vs-deliverable, and (once scoped) deliverability.
 3. ⏳ Build the query series / tool (productize the TI-1026 queries; parameterize advertiser/audience/campaign).
 4. ⏳ Standardize the output report + validate on a second advertiser.
 
-## 4. Key references
+## 4. Step 9 deliverability — scoped (Chris Addy deep-dive, 2026-06-18)
+**There is NO predictive targetable-IP model.** The platform does not compute "what % of an audience's IPs will be
+biddable in period X." So the tool must never promise a targetable-% number — answer deliverability empirically.
+**Deliverability target = peer pacing to 96% of budget:** what did *comparable* campaigns require (last ~60–90 days)
+to hit **96% of budget** (the "fully delivered" bar), then judge this campaign's spend vs that peer envelope, scaled by
+flight length. → **Step 9 = a peer-pacing benchmark, a sibling of Step 7's peer-VR benchmark** — queryable in-tool from
+`spend_log` (nanosecond epoch) + the budget/cap field + delivery logs. No external Olympus dependency. Comparable-cohort
+selection is the design-sensitive part. Full detail: playbook Step 9 + `data_knowledge.md` ("How deliverability is
+actually set"). Distinct from the Media-Plan `deliverability_classification` guardrail risk bucket.
+
+**Budget field resolved** (verified in `data_catalog.md`, not a research spike): primary cap =
+`bronze.integrationprod.campaign_groups.budget` (NUMERIC, "Total flight budget"; campaign_groups = primary allocation
+unit) via `campaigns.campaign_group_id`; flight-level cap = `core_flights.budget` via `campaign_groups.active_flight_id`;
+as-of historical budget = `archives_campaign_group_archives` (MAX(version) ≤ as_of); DSO-managed override =
+`dso_campaign_group_*budgets` when `campaign_groups.dso_manage_budget=TRUE`. Spend = `spend_log` (nanosecond epoch).
+
+## 5. Build plan (steps 0–9 productization) — drafted 2026-06-18 via design panel
+
+**Approach (recommended): hybrid — SQL templates + a thin importable Python package + a CLI, emitting ONE standard
+markdown report.** Chosen over a full installable package (right end-state but ~8–13 SP — would force step 9 + 2nd-
+advertiser validation out of v1) and a papermill notebook (notebook hidden-state + toolchain friction). The hybrid keeps
+the lean shippable spine but borrows two things the bare CLI lacked: (a) logic lives in an importable `diag/` package so
+the v2 parser + cohort builder are unit-testable, and (b) a **golden-file regression** against the frozen TI-1026 outputs
+as the hard correctness gate. Everything lives under `tickets/ti_1037_audience_diagnostic_tool/`.
+
+**Layout**
+- `queries/ti_1037_*.sql` — TI-1026 SQL with every OTF literal → `{placeholder}` (lowercase, ticket-prefixed).
+- `artifacts/diag/` — `params.py` (DiagContext = input+resolved contract) · `resolver.py` (advertiser_id → all derived
+  ids, ONE place) · `expr.py` (**unified v1 audiences-parser + NEW v2 segment op-tree walker** — highest-risk, golden-filed)
+  · `render.py` (str.format + guard asserting no `{placeholder}` survives; INT64-only id typing) · `bq.py` (shells out to
+  `.claude/scripts/bq_run.sh` → inherits perf logging + literal-dt safety) · `interpret.py` (`interpret_stepN(rows,ctx)→Finding`,
+  rules lifted verbatim from the playbook) · `cohort.py` (**shared comparable-campaign builder for steps 7 AND 9**) ·
+  `report.py` (fixed-section markdown + machine-readable `findings.json`) · `access.py` (VPN/GCS probe + run-or-defer).
+- `artifacts/diagnose.py` — CLI entrypoint: `python diagnose.py --advertiser-id N [--audience-id N] [--campaign-id N…]
+  [--window-days 30] [--as-of YYYY-MM-DD] [--steps 0-9] [--skip-vpn] [--out DIR]`. Resolve → render → run → interpret →
+  report; steps independent given DiagContext; **fail-soft** (a throwing step → ERROR section, pipeline continues).
+
+**Parameter contract / ID resolution (all empirical, nothing hardcoded; chain confirmed vs data_catalog.md):**
+1. `segment_id` + **SEGMENT** expr from `audience.audience_segments` (advertiser, `expression_type_id=2`, `is_targeted`);
+   if `audience_id` given narrow to it, else live+most-recently-updated, list alternatives. 2. user `audience.audiences`
+   expr (for the UI-vs-deliverable gap). 3. DS19 ids+names from `ui.audience_keyword_state` (`is_magic=FALSE` filtered
+   **upstream**). 4. DS35 include + DS1/2/4/35/43 excludes + **the gates** (DS14 cat1 availability, holdout md5 bucket,
+   RTC score_type, DS21/DS34 retargeting) + studio geo radii — all parsed from the v2 segment expr (polarity from `op:not`
+   nesting, gates labelled as gates, geo US-bounded). 5. campaign list from `audience_segments.campaign_id` ∩ live
+   campaigns. 6. stage-1 cid from `perml.flight_cid_day_audience_sizes`. 7. HHST per campaign from
+   `dso.household_score_thresholds` (0 = no gate). 8. budget+flight+vertical from `campaign_groups`/`core_flights`/
+   `fpa.advertiser_verticals`. **Missing-id policy:** resolved/ambiguous/not-found per field; ambiguous → deterministic
+   default + record alternatives; not-found non-spine → step SKIPPED w/ reason; no advertiser/segment → hard fail.
+   Reproducibility fix: `--as-of` pins the date so steps 5/6/7/9 are repeatable (prototype was not).
+
+**The 10 modules (parameterize → emit):**
+- **0 pull expressions** → both expr JSONs (user + bidder-operative) to `outputs/`.
+- **1 decompose** → interest-leaves long table + **a separate gates table** + a geo-radii table (prototype omitted gates+geo).
+- **2 3P quality** → per-segment reach + %-redundant-with-MM + incremental reach; one window-param module (collapse
+  snapshot/_7d dupes; **≥30d** default for burstiness); `NOT IN`→`NOT EXISTS`; 3P-inert-under-gate caveat from HHST.
+- **3 keywords** → 20→200→N funnel + off-target/over-broad shares + prune list. **v1 = curated-fallback + `is_magic`
+  filter + a flagged manual-review section**; LLM/embedding classifier is a fast-follow (the descope that holds 5 SP).
+- **4 size funnel + exclusions** → MM universe → in-fence → not-excluded yield + geo ceiling + provider agreement (~0.36%)
+  + income distribution; one shared studios CTE (kills the 3× duplication), literal MM `dt`, windowed exclusion `dt`.
+- **5 scoring/HHST** → delivered `household_score` dist (cost_impression_log) + "gate-on-but-delivering-unscored" flag;
+  bands keyed off `ctx.hhst_threshold`.
+- **6 availability** → reach/frequency + daily cumulative-reach curve (pool-exhausted vs room-to-scale); one shared window.
+- **7 targeting vs creative** → score→VR gradient (monotone?) + peer-VR percentile via `cohort.py`; `--as-of` kills the
+  CURRENT_TIMESTAMP non-reproducibility.
+- **8 UI size vs deliverable** → BQ `perml` size as primary number + the overstatement multiple vs the step-4 funnel;
+  always generates the 5 eval_batch payloads + runner headlessly, **eval_batch POST deferred behind a VPN probe**.
+- **9 deliverability (NEW)** → peer-pacing-to-96%-of-budget benchmark via `cohort.py`: cohort p10/p25/median/p75/p90 of
+  flight-length-normalized pacing, n_peers, %≥96%, target's percentile, budget-vs-audience verdict. Cohort matched on
+  CTV (video≥0.95), vertical, geo footprint (studio-count/in-fence bucket), budget tier (log-budget), audience shape
+  (DS19:DS35 ratio + HHST on/off). **Guardrail: n_peers≥20 else tiered loosening (drop shape→geo→vertical), record the
+  tier; if still <20 emit LOW-CONFIDENCE, never a false percentile.** `pacing_to_date = spend / (budget × elapsed/flight_days)`.
+
+**Output:** ONE `outputs/<advertiser_id>_<as_of>_diagnostic_report.md` + `<adv>_findings.json` (chart/deck reuse). Fixed
+section order = the 10 steps so it reads identically for any advertiser (internal report — facts-not-presentation, no
+Power Line / three-act). Exec summary = a 10-row Step | Question | Verdict (🟢🟡🔴) | one-line finding table; then per-step
+Finding → Verdict → Evidence (one table) → Caveat; appendix = full tables + exact SQL paths + bq job ids + VPN-deferred
+artifacts. Optional `--deck` clones TI-1026 `build_deck.py` for live share-outs.
+
+**Milestones (mapped to Todoist subtasks):**
+- **Subtask 2 — define the spec:** freeze DiagContext + the 8 resolver queries + the 10-step module table + report
+  template. *Early de-risk task:* confirm `campaign_groups.budget` is populated + dollar-denominated on OTF + a peer
+  sample, and the spend→budget pacing join (settles step 9 before any build). Deliverable = this §5 + verified resolver stubs.
+- **Subtask 3 — build:** templatize the 16 SQL files; build `diag/` + `diagnose.py`; write the new step-9 template +
+  cohort logic. **Build the v2 segment-expression walker FIRST and golden-file it** against `ti_1026_segment_344085_expression.json`
+  (assert gates classified as gates, excludes via `op:not`, holdout via `op:bucket`, RTC in `select[]`) — it's the long pole.
+- **Subtask 4 — standardize + validate:** finalize `report.py`/`findings.json`; **OTF golden-file reconciliation** (in-fence
+  ~45.7%, ~1.9M reach, score→VR ~7–20×, peer ~15th pct, provider agreement ~0.36%); then end-to-end on a **structurally-
+  different 2nd advertiser** — national / non-geo-fenced, opposite HHST state, MM-heavy/few-3P, different vertical (candidate:
+  iMemories AID 37423). Grep ADV2 outputs for OTF leaks (39718/319137/34668); capture any new gotcha in `data_knowledge.md`.
+
+**Effort: 5 SP** (top of band; parameterization + resolver + one new step + glue, not green-field). resolver+DiagContext
+~1.5 · templatize 16 SQL ~1 · runner/render/interpret/report/access ~1 · expr.py v2 walker+gate/geo extractors ~1 ·
+step-9 template+cohort ~0.5 · OTF golden-file + ADV2 validation ~0.5. (Story points on the Jira ticket say 3 — flag: the
+honest estimate is 5 with the keyword-classifier descoped; without that descope it's ~8.)
+
+**Top risks / open questions:**
+- **v2 segment-expression schema variety** — OTF is one op-tree shape; other advertisers may nest `op:not`/`op:bucket`/DS14
+  differently → walker could mislabel a gate as interest. Mitigation: special-case DS14/holdout/RTC/DS21/DS34, fail-soft on
+  unknown ops, golden-file OTF, validate on ADV2. (The single biggest build risk.)
+- **Budget semantics** — campaign vs flight vs campaign_group vs DSO-managed caps may differ; confirm precedence w/ Chris
+  Addy and surface which source was used per campaign in the report.
+- **Step-9 cohort quality** — thin/mismatched peers → meaningless percentile (mitigated by the n≥20 guardrail).
+- **ipdsc literal-dt must survive templating** — a window placeholder rendering as date math triggers the 164B-row scan;
+  resolver emits concrete literal date strings (never SQL date math) + render asserts it; bq_run.sh perf log catches runaways.
+- **Step-3 classifier descoped** to curated-fallback for v1 (non-fitness verticals get weaker step 3 until the fast-follow);
+  flag the limitation in-report. **`is_magic`/keyword-state drift** — pull is dated as-of; report states the snapshot date.
+
+## 6. Key references
 - Spec: `knowledge/audience_diagnostic_playbook.md`
 - Prototype + worked example: `tickets/ti_1026_orange_theory_audience_eval/` (`summary.md`, `queries/`, `artifacts/`)
 - Backing knowledge: `knowledge/data_knowledge.md`, `knowledge/data_catalog.md` (segment-expression/DS14, HHST gate,
-  ipdsc hygiene, ui.audience_keyword_state, UI-size source, 3P demo-data quality, MaxMind geo-fence)
+  ipdsc hygiene, ui.audience_keyword_state, UI-size source, 3P demo-data quality, MaxMind geo-fence, budget fields)
 - Full priming detail: `HANDOFF_PROMPT.md`
 
-## 5–8. Solution / Q&A / Doc updates / Open items
-_(pending build)_ Open items = the 4 plan steps; step 1 (Chris Addy) is the blocker.
+## 7. Open items
+- **[awaiting go-ahead]** Start the build (subtask 2 → 3 → 4 per §5). v2 segment-expression walker is the long pole — build first.
+- Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
+- Keyword classifier (step 3) LLM/embedding generalization → spin out as a fast-follow ticket.
