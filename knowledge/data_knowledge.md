@@ -3326,3 +3326,26 @@ When developing SQLMesh models, always run `sqlmesh plan <dev_env>` (full enviro
 **Why:** A full environment plan ensures that any dependency issues (up or downstream) are surfaced before the production plan runs. The `+` selector has been found experimentally to sometimes miss required captures.
 
 **CI verify-impact check:** The CI pipeline runs a `verify-impact` script that compares tree snapshots against baseline. If a new or modified model has not been planned in any environment for the current code tree, CI will fail with a message listing the missing snapshot. Fix: run `sqlmesh plan <dev_env>` locally, which generates the new fingerprint and satisfies the check. (via Dustin Niehoff, #data-platform, 2026-06-09)
+
+<!-- TI-1044 2026-06-23 -->
+## B2B CVR power floor + ghost-bid holdout bias (TI-1044, ElevenLabs)
+**B2B conversion-lift is effectively unmeasurable.** At a 0.062% CVR (ElevenLabs, AID 51660, B2B), the
+Lewis-Rao MDE to detect a 5% relative lift needs **~$1.8–2.0M/mo** spend (10% holdout, 80% power); 2% needs
+~$11M. The SAME 5% lift on **visits (3.07% base) needs only ~$36K** — a ~50× gap set purely by the base
+rate. Rule of thumb: **lead incrementality on visit rate; treat conversion-lift as directional-only unless
+spend clears the CVR MDE.** "No significant CVR lift" at sub-$2M spend is the expected output of an
+underpowered test, not evidence of no effect. (Reuse `ti_884_mde_calculator.py`.)
+
+**Ghost-bid / holdout negative-lift bias (Matt Brorby, 2026-06-23):** the 10% hash holdout is clean at
+assignment, but after the bidder it skews. Real bids are **frequency-capped**; **ghost bids are not** — so
+the most active (high-frequency, high-visit-rate, often cellular/high-attribution) IPs flow into the
+holdout, inflating it to ~13% and biasing the holdout outcome rate **upward → measured lift biased
+NEGATIVE.** Cannot be stratified away (frequency is post-treatment); only fixable in bidder code. New
+ghost-bidding tables (bid-events-log, "ghost-bid" label) have a **10-day TTL**. Treat ghost-ad lift reads
+as a lower bound.
+
+**Attribution over-credit (Q3):** default advertiser conversion windows are **30-day** click-through,
+view-through, AND conversion (`advertisers.conversion_window` / `view_conversion_window` /
+`click_conversion_window`). The 30-day **view-through** window credits CTV for any conversion within 30
+days of an impression (no click) → reported CVR overstates causal CVR, widening the attribution-vs-
+incrementality gap.

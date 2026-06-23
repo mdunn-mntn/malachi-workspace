@@ -2540,7 +2540,12 @@ Tracks all database-level changes to advertiser records, including the `is_test`
 - **Do NOT replicate `geo.locations` from intprod to BQ** — this would be circular. The source of truth for geo data is the BQ geo pipeline.
 - `geo.locations.location_id` is definitionally unique and can be promoted to a primary key if Datastream replication is needed.
 
-**`tpa.categories`:** Already exists as a view in bronze (`dw-main-bronze.tpa.categories`). It is sourced from BQ/SQLMesh — not from intprod. Do not add it to Datastream replication from intprod as that would be circular. (via Dustin Niehoff, #data-platform, 2026-04-01)
+**`tpa.categories` is where 3P / LiveRamp (DS35) segment NAMES live — NOT `silver.fpa.categories`** (verified TI-1037 2026-06-23). `fpa.categories` only carries DS13/14/16/21; querying it for DS35 ids returns empty. Use `dw-main-bronze.tpa.categories` filtered to `data_source_id=35` for LiveRamp segment metadata: `data_source_category_id`, `name`, `path_from_root`, `partner_id`, `public`, `navigation_only`, `is_leaf_node`, `deprecated`, `created_date`/`updated_date`.
+- **DS35 = "LiveRamp IP"** (`integrationprod.data_sources`). LiveRamp is an aggregator/marketplace — `partner_id` is the underlying provider (one advertiser's 24-segment set spanned **9** distinct partners: demographic, behavioral, interest brands). So "LiveRamp segments" = the source/pipe, not a single provider.
+- **`deprecated=TRUE` does NOT mean "delivers nothing."** Deprecated DS35 segments still delivered 1–51M IPs/30d (same as the TI-1026 Epsilon finding). It means catalog-retired / no longer refreshed — cross-check ipdsc reach before calling a segment dead; a live equivalent usually exists.
+- Segment names are NOT in `eval_batch`/ipdsc; this table (or the VPN audience-service catalog) is the resolution path.
+
+**`tpa.categories` (pipeline):** Already exists as a view in bronze (`dw-main-bronze.tpa.categories`). It is sourced from BQ/SQLMesh — not from intprod. Do not add it to Datastream replication from intprod as that would be circular. (via Dustin Niehoff, #data-platform, 2026-04-01)
 
 <!-- slack-extracted: 2026-04-17 -->
 - **summarydata.offline_conversions — Migrated to BigQuery**

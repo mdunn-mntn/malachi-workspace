@@ -108,24 +108,88 @@ Reconciles scope. Key points:
   carries the **negative-lift bias** (ghost bids not frequency-capped → holdout over-represents
   high-frequency/high-visit IPs). Formal ghost-bid number deferred to that pipeline.
 
-_(Findings from Steps 2–4 appended as work proceeds.)_
+### 4.3 Step 2 — power, two regimes (`artifacts/ti_1044_power_analysis.py`, `outputs/ti_1044_power_table.csv`)
+Reproduces the prefilled calculator exactly (CVR raw MDE 7.36% ≈ 7.4%) and adds the visits regime.
+At ElevenLabs' actual scale (treated 23.1M / holdout 2.6M IPs, CPM $8.58, 4.22 imps/IP, 80% power):
+
+| Outcome | Baseline | Raw MDE | Post-stack MDE | $ to detect 5% | $ to detect 2% | At ~$1M |
+|---|---|---|---|---|---|---|
+| **Visit rate (IVR)** | 3.07% | **1.03%** (well-powered) | 0.61% | **$36K** | $224K | ✅ can detect ~1% |
+| **Conversion rate (CVR)** | 0.062% | **7.36%** (borderline) | 4.38% | **$1.83M** | $11.5M | ❌ floor ~7% |
+
+**Headline:** same 5% lift costs **$36K to detect on visits vs $1.83M on conversions** — a 50× gap driven
+entirely by the 0.062% B2B conversion base rate. At ~$1M spend, CVR lift below ~7% is **invisible**, so
+ElevenLabs' "no significant CVR lift" is the *expected output of an underpowered test, not evidence of no
+effect.* Their own **well-powered country-subscriber read (~0%, p=0.81) is the credible number**; the
+positive-but-underpowered state reads are noise. Charts: `ti_1044_chart_power_contrast.png`,
+`ti_1044_chart_mde_curve.png`, `ti_1044_chart_visit_vs_cvr.png`.
+
+### 4.4 Step 3 — triangulation (what we can/can't run our side)
+- **Descriptive (panel):** spend scaled ~10× (Feb→June); attributed **visit rate rose to ~3%** (real,
+  measurable) while **CVR-per-IP stayed flat at ~0.04–0.06%** — no conversion acceleration. This is the
+  "attribution looks great, topline flat" pattern, on our own data.
+- **Holdout / ghost-ads / PSA (Q2):** no queryable holdout for this Beeswax advertiser
+  (`is_control_group` all false; `bidder_bid_events` MNTN-bidder only/404). The ghost-ad study must run via
+  the **augmentor_log pipeline** (Matt), which carries a **negative-lift bias** (ghost bids aren't
+  frequency-capped → holdout over-represents high-frequency/high-visit IPs → inflates holdout rate). Even a
+  clean holdout would be underpowered for CVR per §4.3. → ghost-ad number deferred; not load-bearing.
+- **Conclusion:** every conversion-based method (theirs and ours) converges on "can't detect," and the
+  power math explains why. Methods-convergence here = the *informative* result.
 
 ## 5. Solution
-_TBD — recommendation + deliverables._
+**We agree with ElevenLabs' conclusion — and can explain it.** The "no incremental CTV lift" finding is
+**correct but underpowered, not informative**: at a 0.062% B2B conversion rate, no method (geo or
+MNTN-side) can resolve a realistic 2–5% lift without ~$2M+ spend. Their well-powered country read (~0%) is
+the credible number; the positive state reads are noise.
+
+**Recommendation (honest, non-defensive):**
+1. **Stop trying to measure CTV incrementality on conversions for this account** — it is statistically
+   impossible at this spend/CVR. Measure **visits** instead (well-powered, $36K detects 5%) if a clean
+   holdout test is wanted; or run a **larger/longer geo test** sized to the $2M+ MDE if conversions are
+   non-negotiable.
+2. **The dilution story is the real lever:** geo tests in high-intent metros (SF, TX, FL) showed lift;
+   the national broad scale dilutes it. Concentrating budget on higher-intent geos/audiences likely
+   improves *attributed* performance — but note (Mike Dolt) we have **no incrementality-trained model**,
+   so any "this will improve incrementality" claim is speculation.
+3. **Reset expectations on attribution vs incrementality** (Q3): 30-day view-through windows over-credit
+   CTV, so platform-reported conversions overstate causal lift — which is *why* a real incremental test
+   looks flat by comparison.
+
+**Deliverables:** this summary; charts in `artifacts/`; ElevenLabs-facing deck
+(`artifacts/ti_1044_elevenlabs_response_deck.html`); pulse-check Jira/Slack post.
 
 ## 6. Questions Answered
-Vendor's four questions (answers populated as analysis completes):
-- **Q1 — Reach & overlap:** How much CTV reach hits audiences already deep in funnel? _(Limit: only
-  pixel site-visitors/RTC are visible — not true funnel depth.)_
-- **Q2 — Incrementality on our side:** Ghost-ads / PSA holdout to triangulate the geo result.
-- **Q3 — Conversion windows:** Attribution / view-through rules behind platform-reported conversions;
-  where is credit over-counted?
-- **Q4 — Creative & targeting:** New-demand vs existing-intent audience; B2B comparables. _(Limit: no
-  incrementality-trained model → makeup changes are speculation.)_
+- **Q1 — Reach & overlap (how much CTV reach hits already-deep-in-funnel audiences?):** On the targeting
+  side, **~100% of ElevenLabs' CTV reach is prospecting** (objective 1: 27.9M imps / $1.38M / 6.1M IPs over
+  30d); **retargeting/Ego ≈ 0** (16 imps). They are *not* deliberately re-serving deep-funnel users.
+  **Limit (Mike Dolt):** the only deep-funnel signal we have is **pixel site-visitors** (RTC); that is not
+  an accurate representation of true funnel depth. We **can block site-visitors** from the buy if they
+  want, but cannot quantify overlap with organic/direct demand.
+- **Q2 — Incrementality on our side (ghost-ads / PSA):** No queryable production holdout exists for this
+  Beeswax advertiser. A ghost-ad/PSA study can be run via the augmentor_log pipeline, **but it carries a
+  known negative-lift bias** (ghost bids aren't frequency-capped) **and is underpowered for CVR** regardless
+  (§4.3). Our descriptive read (visits scale, conversions flat) already **triangulates with their geo null**.
+- **Q3 — Conversion windows / where credit is over-counted:** ElevenLabs runs **30-day** click-through,
+  view-through, AND conversion windows (2-day abandon). The **30-day view-through** window credits CTV for
+  any conversion within 30 days of an *impression* (no click), and **multi-touch attribution can double-count**
+  a conversion across touchpoints (CVR can exceed 100%). Net: platform-reported conversions **overstate
+  causal CVR**, which raises the incremental bar further.
+- **Q4 — Creative & targeting (new demand vs existing intent; B2B comparables):** Audience is built on
+  **stale third-party interest segments** — ElevenLabs is MNTN's **#2 stale-3P prospecting advertiser**
+  ($0.72M/30d, TI-999; prior audience eval TI-928). The geo→national move **diluted** a working high-intent
+  campaign. Levers exist (concentrate geo/intent, frequency/reach, MM/keyword audiences) but **(Mike) no
+  incrementality-trained model exists**, so incrementality gains from audience changes are speculative;
+  attributed-performance gains are plausible. Creative-content review is qualitative → CS/follow-on.
 
 ## 7. Data Documentation Updates
-_TBD — B2B CVR power floor; attribution over-credit; single-advertiser triangulation pattern._
+- `data_catalog.md` — `summarydata.all_facts`: unique columns (`uniques`, `site_visitors`,
+  `new_site_visitors`, `visitors`) are **HLL BYTES sketches** → use `HLL_COUNT.MERGE`; `ctv_spend`/
+  `media_spend`/order-value are **whole USD (not micros)**; `channel_id 8` = CTV. (Added.)
+- _(Pending)_ `data_knowledge.md` — B2B CVR power floor (0.062% → 5% MDE needs ~$2M); ghost-bid holdout
+  negative-lift bias (frequency-cap asymmetry); single-advertiser triangulation pattern (lead with visits).
 
 ## 8. Open Items / Follow-ups
-- Ghost-bid leg pending bidder-coverage gate (expect deferral if Beeswax).
-- Deep dives on Q1/Q3/Q4 may spin into follow-on tickets if they exceed 2 SP.
+- **Ghost-ad/PSA number** deferred to Matt's augmentor_log pipeline (with the negative-lift-bias caveat).
+- **ElevenLabs-facing deck** + internal pulse-check post (Step 5).
+- If they want a real conversion test: **size a geo test to the $2M+ MDE**, or pivot the KPI to visits.
+- Possible follow-on: quantify site-visitor (RTC) overlap with their prospecting reach (Q1 deep-dive).
