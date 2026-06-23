@@ -87,7 +87,28 @@ Reconciles scope. Key points:
   report (visits); tag Mike & Matt. Tone: ElevenLabs is collaborative ("how do we optimize?"), not upset.
   Also asked: did **creative** or the **built audience** change between geo tests and national?
 
-_(Findings from Steps 1–4 appended as work proceeds.)_
+### 4.2 Step 1 — feasibility + delivery panel (`queries/ti_1044_daily_ctv_panel.sql`, `outputs/`)
+- **AID 51660 = ElevenLabs**, US, active, B2B. All campaigns are **"Beeswax Television" (channel_id 8 = CTV)**
+  + display "Multi-Touch" companions (channel_id 1). Test campaigns (group 126226) excluded.
+- **Conversion windows (Q3, from advertisers dim):** **30-day** for conversion, click-through AND
+  view-through; 2-day abandon. The 30-day **view-through** window is the over-credit mechanism the deck
+  flags — any household that merely *saw* a CTV ad and converts within 30d is credited.
+- **Delivery panel (summarydata.all_facts, channel 8, daily, since 2026-02-15):** national ramp is clear —
+  ~75K imps/day (Feb geo) → ~200K (Mar 12) → ~310K (Apr) → **~800K–1.4M from May 7 (national)** → FIFA
+  Select boost June 11. CTV spend now **~$1–1.5M/mo** (ctv_spend is advertiser-billed $, ~$45 CPM; spend_log
+  media cost ~$900K/mo).
+- **Two power regimes confirmed empirically:**
+  - **Visit rate** ramped ~1% (spring) → **~2.5–3.8%** recent (matches 3.07% baseline) — clean, well-powered.
+  - **CVR (attributed conv ÷ advertised uniques)** = **0.004%–0.21%, avg ~0.03–0.06%** (matches 0.062%) —
+    tiny and noisy. **Spend scaled ~4× but CVR-per-IP stayed flat → no conversion acceleration**, exactly
+    the deck's "attribution looks great, topline flat" pattern.
+- **No queryable holdout/ghost cohort for this advertiser:** `clickpass.is_control_group` = 100% false
+  (no holdout configured); `bidder_bid_events` (MNTN-bidder) 404'd and wouldn't cover Beeswax. → The
+  ghost-ads/PSA holdout (Q2) must come from the **augmentor_log pipeline** (Matt is running it), which
+  carries the **negative-lift bias** (ghost bids not frequency-capped → holdout over-represents
+  high-frequency/high-visit IPs). Formal ghost-bid number deferred to that pipeline.
+
+_(Findings from Steps 2–4 appended as work proceeds.)_
 
 ## 5. Solution
 _TBD — recommendation + deliverables._

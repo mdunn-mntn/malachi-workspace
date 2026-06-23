@@ -1016,6 +1016,19 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 - **Key columns include:** All columns from visit_facts + conversion_facts + spend_facts, plus
   display_impressions, ctv_impressions, media_cost, fee_cost, vast_* video metrics,
   uniques (BYTES — HLL), *_arr serialized arrays, probattr_* columns, competing_* columns.
+- **Gotcha (TI-1044, verified 2026-06-23):** the unique-count columns `uniques`, `visitors`,
+  `site_visitors`, `new_site_visitors` are **HLL sketches stored as BYTES** — `SUM()` errors
+  ("cannot coerce BYTES"); use `HLL_COUNT.MERGE(col)` to get a daily unique count, or
+  `HLL_COUNT.MERGE_PARTIAL` to re-aggregate. The `*_arr` variants are STRING-encoded sketches.
+  Scalar INT counts (no HLL): `views`, `clicks`, `view_conversions`, `click_conversions`,
+  `new_visitors`, `raw_visits`, `raw_conversions`, `first_touch_visits`, `bids`,
+  `display_impressions`, `ctv_impressions`.
+- **Spend units (TI-1044):** `ctv_spend`/`media_spend` (BIGNUMERIC) and `view_order_value`/
+  `click_order_value` (NUMERIC) are in **whole USD, NOT micros** — do not ÷1e6. (`ctv_spend` is
+  advertiser-billed CPM spend, ~2× the `spend_log.win_cost_micros_usd` media cost.) `channel_id 8`
+  = CTV (Beeswax Television); `channel_id 1` = display. Per-advertised-unique visit rate =
+  `HLL_COUNT.MERGE(site_visitors)/HLL_COUNT.MERGE(uniques)`; CVR = `(SUM(view_conversions)+
+  SUM(click_conversions))/HLL_COUNT.MERGE(uniques)`.
 
 ---
 
