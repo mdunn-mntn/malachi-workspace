@@ -136,6 +136,33 @@ positive-but-underpowered state reads are noise. Charts: `ti_1044_chart_power_co
 - **Conclusion:** every conversion-based method (theirs and ours) converges on "can't detect," and the
   power math explains why. Methods-convergence here = the *informative* result.
 
+### 4.5 Step 3b — ACTUAL ghost-ad lift from the new bidder logs (`queries/ti_1044_ghost_lift*.sql`)
+**Data-access breakthrough.** ElevenLabs is Beeswax; their ghost bids are NOT in `bidder_bid_events`
+(MNTN-bidder, 404/empty) and the GCS bucket `bidder-price-events-prod-east` is 403-denied to me — **but**
+the Beeswax stream lands in BQ at **`dw-main-bronze.raw.bid_price_log`** (`threshold_failure_reasons='ghostBid'`,
+`is_ctv`, `advertiser_id`, `ip`; ~189K held-out CTV IPs/day for 51660; 10-day TTL, ip-clustered). Ghost
+logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rate estimation as before.
+
+**Served-vs-ghost (TI-837 ATT, cohort Jun 13–22, outcomes Jun 13–23):**
+
+| Group | IPs | Visit rate | Conv rate |
+|---|---|---|---|
+| Treated (served) | 3,466,997 | 2.449% | 0.0618% |
+| Control (ghost-holdout) | 605,031 | 0.651% | 0.0460% |
+
+- **IVR lift +276.2%** (95% CI +264→+288%, p<0.001) — BUT this is **clickpass-attributed** visits, i.e. the
+  attribution signal (north star: clickpass 2–8× vs guid_log ~0%). +276% = 3.76×, squarely in that range →
+  **overstates incrementality**; true total-traffic (guid_log) lift is far smaller.
+- **CVR lift +34.4%** (95% CI +18.6→+52.3%, p<0.001) — positive and statistically distinguishable at these
+  n's (MDE ≈16% here), BUT **confounded**: treated = auction *winners* (higher-value IPs) vs ghost = a
+  pre-auction random holdout (ghostBid logged at would-have-*bid*, not would-have-*won*) → **win-selection
+  bias inflates it UP**; Matt's frequency-cap bias pulls it down. Not a clean causal point estimate.
+- **Reconciliation:** this does NOT overturn ElevenLabs' geo null. Their geo test (country/state totals, no
+  win-selection, no attribution) ≈0% is the *unbiased* incrementality estimate. Our +34% is the same
+  households' raw served-vs-holdout gap, dominated by serving their best (winning) households. The clean
+  **ITT** (targeted-and-bid vs held-out, both pre-auction) is running to confirm the +34% collapses toward
+  the null once win-selection is removed. _(ITT result appended below.)_
+
 ## 5. Solution
 **We agree with ElevenLabs' conclusion — and can explain it.** The "no incremental CTV lift" finding is
 **correct but underpowered, not informative**: at a 0.062% B2B conversion rate, no method (geo or

@@ -34,7 +34,7 @@ slides = f"""
   <h1 style="font-size:2.4em;color:{RED};margin:0.1em 0;">$1.83M</h1>
   <p style="font-size:0.7em;color:#444;">to detect even a 5% conversion lift at 80% power.</p>
   <p style="font-size:0.6em;color:#555;margin-top:0.8em;">You invested <strong>~$1M</strong>. At that spend the test can only<br>
-  see a <strong style="color:{RED};">~7% lift or larger</strong> — bigger than any realistic CTV effect<br>(our individual-targeting clients typically see ~2%).</p>
+  see a <strong style="color:{RED};">~7% lift or larger</strong> — bigger than any realistic CTV effect.</p>
   <p style="font-size:0.48em;color:#999;margin-top:0.7em;">(A visit-rate test, by contrast, resolves a ~1% lift for ~$36K — but conversions are the metric in question.)</p>
 </section>
 

@@ -2832,3 +2832,22 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
 - `dw-main-gold.tableau.v_sum_by_parent_campaign_group_by_day_simple`
 
 **Restate tip:** Coordinate with data platform (DPLAT) before running restate. Command: `sqlmesh plan prod --restate-model "dw-main-silver.salesforce.accounts_log" --start "<date>"` (via Sheetal Ramesh, #data-platform, 2026-06-09)
+
+## bronze.raw.bid_price_log — Beeswax bidder price/ghost-bid log (TI-1044, 2026-06-23)
+- **What:** Beeswax-bidder bid decisions (the `gs://bidder-price-events-prod-east/.../rtb-bid-price-events`
+  stream, ingested to BQ). Row per bid decision. **This is where Beeswax ghost bids are queryable** —
+  `bidder_bid_events` (silver) is MNTN-bidder only and has NO ghost rows; the GCS bucket is access-gated.
+- **Partition:** HOUR on `time`. **Clustered on `ip`** (NOT advertiser_id → advertiser filters scan full
+  partitions; narrow the date window to cut cost). **TTL ~10 days.** ~72B rows/day (all advertisers).
+- **Ghost-bid (holdout) flag:** `threshold_failure_reasons = 'ghostBid'` (Beeswax camelCase). Empty/NULL
+  reason = bid placed (targeted, entered auction). Other values = dropped (missingIntentScore, cappedOrPaced,
+  etc.). Ghost logging live since **2026-05-27** (Ryan Kleck); no backfill. **No ghost-WIN logging** → win
+  estimated via win-rate. (MNTN-bidder equivalent: `bid_dropped_reason='ghost-bid'`.)
+- **Key cols:** `advertiser_id`, `campaign_id`, `campaign_group_id`, `beeswax_campaign_group_id`,
+  `device_ip`/`ip`, `device_ipv6`, `is_ctv` (BOOL), `bid_price`, `threshold_failure_reasons`,
+  `advertiser_intent_score`/`campaign_intent_score`/`segment_intent_score`, `intent_score_threshold`,
+  `household_score_threshold`, `advertiser_household_score`, `conquest_score_threshold` (RTC),
+  `campaign_frequency_cap`, `campaign_impressions`. (`bidder_price_events` has `bid_placed` BOOL but is EMPTY.)
+- **Ghost-ad lift recipe (TI-837):** control = ghostBid IPs; treated = served (`cost_impression_log`,
+  advertiser-clustered, cheap) for ATT, or empty-reason IPs for clean ITT (pre-auction, no win-selection).
+  Outcomes from clickpass_log (visits) / conversion_log (convs) by ip. See `ti_1044_ghost_lift*.sql`.
