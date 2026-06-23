@@ -189,7 +189,14 @@ the credible number; the positive state reads are noise.
   negative-lift bias (frequency-cap asymmetry); single-advertiser triangulation pattern (lead with visits).
 
 ## 8. Open Items / Follow-ups
-- **Ghost-ad/PSA number** deferred to Matt's augmentor_log pipeline (with the negative-lift-bias caveat).
-- **ElevenLabs-facing deck** + internal pulse-check post (Step 5).
+- **Ghost-ad/PSA number → run via Matt's augmentor pipeline** (decided 2026-06-23). Matt already has the
+  ghost-bid pipeline set up; he refreshes + runs it. Handoff inputs: AID **51660**, CTV **prospecting**
+  (channel 8, funnel_level 1, objective 1), national flip **~2026-05-07**, want ghost-ad CVR (+ visit)
+  lift. **Caveat to report with it:** the holdout carries a **negative-lift bias** (ghost bids not
+  frequency-capped → holdout over-represents high-frequency/high-visit IPs) and is **underpowered for CVR**
+  per §4.3 — treat as a lower bound. (Alternative if needed in-hand sooner: reuse the TI-837 augmentor_log
+  queries directly for this single advertiser — "the old way" — but it reproduces the same bias.)
+- **ElevenLabs-facing deck** drafted + shared for internal review (githack); CVR-focused. Route via
+  Edgar/Kale before it reaches the customer.
 - If they want a real conversion test: **size a geo test to the $2M+ MDE**, or pivot the KPI to visits.
 - Possible follow-on: quantify site-visitor (RTC) overlap with their prospecting reach (Q1 deep-dive).
