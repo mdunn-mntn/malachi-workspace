@@ -160,8 +160,25 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 - **Reconciliation:** this does NOT overturn ElevenLabs' geo null. Their geo test (country/state totals, no
   win-selection, no attribution) ≈0% is the *unbiased* incrementality estimate. Our +34% is the same
   households' raw served-vs-holdout gap, dominated by serving their best (winning) households. The clean
-  **ITT** (targeted-and-bid vs held-out, both pre-auction) is running to confirm the +34% collapses toward
-  the null once win-selection is removed. _(ITT result appended below.)_
+  **ITT** (targeted-and-bid vs held-out, both pre-auction) confirms the +34% collapses to the null.
+
+**Clean ITT (targeted-and-bid vs ghost-holdout, both pre-auction → no win-selection):**
+
+| Metric | Treated (bid-placed, 6.04M IPs) | Control (ghost, 603K IPs) | Lift | p |
+|---|---|---|---|---|
+| Conversions (CVR) | 0.04515% | 0.04591% | **−1.7%** | 0.84 (NOT sig) |
+| Visits (clickpass) | 1.585% | 0.652% | +143% | <0.001 |
+
+- **THE NUMBER WE TRUST: clean conversion-rate lift = −1.7%, not significant → incrementality ≈ 0**, matching
+  ElevenLabs' geo null. The served-vs-ghost **+34% ATT was win-selection bias** (serving the highest-value
+  auction-winning households); removing it (ITT) collapses CVR lift to ~0.
+- Clickpass IVR lift stays large (+143% ITT / +276% ATT) because it's **attribution**; the guid_log
+  total-traffic comparison (running) isolates true incremental visits (expected near 0, per TI-835).
+  _(guid result appended.)_
+- **Method = same as TI-837 / TI-933 (Hannah Select lift):** randomized holdout vs served, rate-lift + 95%
+  CI, clickpass/guid/conversion outcomes. **Upgrade:** holdout read directly from the new bidder ghost log
+  (`threshold_failure_reasons='ghostBid'`, live 2026-05-27) instead of reconstructing it via the
+  `MD5(advertiser_id:ip) mod 1000` hash on augmentor_log.
 
 ## 5. Solution
 **We agree with ElevenLabs' conclusion — and can explain it.** The "no incremental CTV lift" finding is
