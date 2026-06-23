@@ -142,7 +142,7 @@ Paulo announced a reorg merging big pieces of the **reporting world** under **Ka
 - **Karen / BAE** — with continued support from Mike Dolzer.
 - **Ray** — as Principal Analyst.
 
-*(Name note: "Mike Dolzer" here is likely the same person documented elsewhere as "Mike Dolt" — full surname Dolzer.)*
+*(Name note: **Mike Dolzer ≠ Mike Dolt** — two different people. **Mike Dolzer** is a Senior Project Manager (the PM on Reporting Experience + continued support for Karen/BAE). **Mike Dolt** is an Engineering Manager on the targeting/AUDI side (covered product leadership for targeting during the GPM search). Do not conflate.)*
 
 ### Key People
 - **Mark** — Executive, drives product direction. Pushed multi-touch elimination (2022), pushes IVR as primary metric.
