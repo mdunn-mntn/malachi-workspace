@@ -133,7 +133,7 @@ html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>TI-1044 Eleve
 </style></head><body>
 <div class="reveal"><div class="slides">{slides}</div></div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
-<script>Reveal.initialize({{ center:false, hash:true, width:1180, height:840, margin:0.05, transition:'none' }});</script>
+<script>Reveal.initialize({{ center:true, hash:true, width:1180, height:840, margin:0.05, transition:'none' }});</script>
 </body></html>"""
 
 out = BASE/"artifacts"/"ti_1044_internal_facts_deck.html"
