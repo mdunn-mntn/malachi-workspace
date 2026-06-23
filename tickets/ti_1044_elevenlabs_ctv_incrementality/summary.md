@@ -63,6 +63,30 @@ Matt Brorby meeting transcript in `meetings/`.
   cannot resolve it. Post-stack 4.4% is achievable only with ghost-ad infra + a stratified/CUPED
   randomized design (dependency, not free).
 
+### 4.1 Matt Brorby meeting (2026-06-23, `meetings/ti_1044_01_...`)
+Reconciles scope. Key points:
+- **Campaign history:** ElevenLabs (AI co., B2B) ran geo tests in **Bay Area, then TX/FL** (tech hubs,
+  high-intent) → saw meaningful lift → triggered the ~$1M/mo **national** campaign (~June 1, 5 weeks).
+  Held out 3 states + international as control (SC + DiD). International also grew → muddies their DiD.
+- **Two power regimes (the central framing):**
+  - **VISITS / IVR** — baseline **~3.07%**, *well-powered*: MDE ~3%, only ~**$40k** needed (no variance
+    reduction). We **can** measure visit lift. A visit lift <1% would be genuinely ~null.
+  - **CONVERSIONS / CVR** — baseline **0.062%**, *hopelessly underpowered*: raw lift would need ~22%;
+    with variance reduction ~13%; at ~$1M/4wk still ≥5% (high for B2B). Budget-for-5%-MDE ≈ **$2M**.
+    The deck's KPIs (CSF, subscribers) are exactly these unmeasurable conversion metrics.
+- **Dilution narrative (non-defensive explanation):** geo tests nailed high-intent metros; national
+  super-broad scale **dilutes** any lift. Real lever, not "MNTN failed." (Cf. Orange Theory: high-spend
+  clients exhaust >8000-scored IPs fast → IVR crashes once they drop below threshold.)
+- **Ghost-bid bias (load-bearing caveat):** holdout is 10% on the hash, but ghost bids are **not
+  frequency-capped** like real bids → the most active (high-frequency, high-visit-rate, often cellular/
+  high-attribution) IPs flow into the holdout → holdout inflates to ~13% and skews high-activity →
+  **inflates holdout rate → biases lift NEGATIVE.** Cannot stratify away (post-treatment); only fixable
+  in code. New ghost-bidding/bid-events tables have a **10-day TTL**. Runnable (own pipeline) but caveat.
+- **Tooling reality:** existing causal-impact/holdout pipeline is **visits-based**; CVR adaptation is hard.
+- **Immediate ask (Matt):** quick pulse-check today — post the MDE calc + run the standard causal-impact
+  report (visits); tag Mike & Matt. Tone: ElevenLabs is collaborative ("how do we optimize?"), not upset.
+  Also asked: did **creative** or the **built audience** change between geo tests and national?
+
 _(Findings from Steps 1–4 appended as work proceeds.)_
 
 ## 5. Solution

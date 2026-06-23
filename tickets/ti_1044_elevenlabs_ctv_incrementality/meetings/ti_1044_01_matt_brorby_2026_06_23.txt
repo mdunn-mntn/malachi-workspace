@@ -1,0 +1,260 @@
+[00:00] **** All right. Sweet. Yeah, lay it on me. Looks like I have something.
+[00:05] **** We had our first descent meeting this morning. Mike was like, well, I have something
+[00:10] to share. Then he shared this whole deck from 11 Labs, which has a million-dollar monthly
+[00:16] campaign running right now. Because they ran so context is 11 Labs is like an AI company.
+[00:26] They ran a test in the Bay Area, geo only to the Bay Area previously.
+[00:33] And then I think they did Texas and Florida.
+[00:36] So they had like two campaigns that were running.
+[00:39] And in running those, they told us that they saw meaningful lift.
+[00:45] And that triggered them to invest in a million dollar national campaign.
+[00:51] And so they did that.
+[00:54] and then they held out i think three states from the national campaign in the u.s they
+[01:00] completely blocked them as well as of course international so they but they have
+[01:06] international customers so then they use the three holdout states and the international
+[01:13] population as like the comparison group and did synthetic controls and difference in differences
+[01:20] on those so if you kind of go through these slides you'll see that and then they just they
+[01:24] have no lift i've seen these i was like yeah i know like malachi you could produce pretty much
+[01:30] these same figures a lot of these same figures using your reports that you have the code that
+[01:35] you have so it's like maybe you can just run what you have if it's automated enough and just produce
+[01:40] something and see what we get yeah the only thing i was going to say is that if if they ran the
+[01:46] whole campaign with our their new tables that'd be great um otherwise well i mean i can still run
+[01:53] it the old way with the um whole augmenter log and all that stuff it just takes longer to query
+[01:58] so i see i see but with one advertiser it should be fine i don't think it would be a crazy
+[02:03] crazy amount um yeah it's just the tables right now like if you're looking at like the ghost
+[02:12] bidding tables, which would be the one layer after the augment or log stuff, bit events
+[02:25] log, that does have the label of ghost bidding on it.
+[02:29] Right.
+[02:30] It has a 10-day lifetime.
+[02:34] So what were you saying about the bias?
+[02:36] I don't really quite understand the bias that you're talking about.
+[02:38] Are you just saying...
+[02:40] Yeah, go ahead and explain that to me.
+[02:44] Basically, you can see it surface in a couple ways. But what happens is the holdout
+[02:51] group is 10%, right? You can check that and see it's 10%, pretty much right on the nose
+[03:00] on the hash. But after they flow through the bidder, that 10% is no longer 10%. Mainly
+[03:11] because one of the logical checks is like a frequency. Well, there's a series of them,
+[03:18] but frequency checks. Like how many times we're bidding on it and across different ways,
+[03:25] right? And the ghost bids, we don't track how many times we bid on it in a way that
+[03:32] we could cap like we do with real bids. And so, then what happens is the most active ones
+[03:41] that would be capped and blocked by the real bid logic are flowing through. And so, you
+[03:51] to see that there's a higher portion, like say 13%, as opposed to 10%. And then the bias you
+[04:06] also see is that there's way more that are like high frequency, meaning you've seen them up here
+[04:11] like 11 times or more in the bid logs for that advertiser in just a couple of days period.
+[04:20] whereas the other one, it's like you don't see
+[04:22] that many bids happening.
+[04:24] Those ones are higher
+[04:26] activity, so they have higher
+[04:28] visit rates typically, so it
+[04:30] inflates the visit rate on the holdout
+[04:32] group.
+[04:34] And you get negative lift.
+[04:38] And there's really no
+[04:40] good way to correct for it because
+[04:41] if you use the
+[04:43] frequency
+[04:45] to stratify, that's like a
+[04:48] post
+[04:48] post-treatment uh thing and it biases your results as well gotcha so so the only way to fix it is
+[05:01] like fix it in the actual code yeah and there's also going to be a weird thing too because
+[05:06] high frequency ips yeah by definition are going to convert more they're probably going to be
+[05:16] cellular ips that have higher attribution so there is an additional thing to where if you're
+[05:21] not capping certain ips that their effect becomes even higher so yeah that makes sense i was thinking
+[05:28] that possibly so just not just to share information that i learned so i was doing something else about
+[05:36] the deliverability trying to understand like if we say that we have 1.5 million ips to
+[05:42] target what percentage of those do we actually see right um and the answer to that is we don't have
+[05:52] one deliverability pacing doesn't do that they actually just look at a previous 60 to 90 day
+[05:57] for a similar campaign and then just adjust their budget to match that to hit 96 percent
+[06:03] so there is no deliverability thing but my thought process would be that because the holdout group
+[06:09] the holdout is random that they should be roughly the same anyways so the only other thing i was
+[06:16] thinking is that maybe the wins of the holdout group would differ from the non but it shouldn't
+[06:23] because they're random so it that's what i was thinking you're going with that but anyways i
+[06:30] just want to let you know that we don't have a consistent pacing thing um side note kevon
+[06:37] there's a meeting on wednesday um that i don't know if you heard about that but it got shared
+[06:42] with me i think you're in that meeting you should be but essentially they want to move targeting
+[06:49] like score type stuff uh away from the pacing deliverability team and back onto audience so
+[06:58] basically you would have different campaigns for different i guess scores i guess you could think
+[07:05] of it that way so that there's not this adjustment that has to be done and so you just allocate spend
+[07:10] between them so anyways i don't know what the solution that's going to be but um uh i thought
+[07:16] you'd think that was interesting but yeah um i've heard that where there's like it's the high intent
+[07:21] campaign and the mid intent campaign yeah yeah that's basically what you're saying but maybe
+[07:27] more granular even yeah and and yeah so there doesn't have to be changes and one of the things
+[07:33] that we are also sorry it's a little off topic but one of the things we are also uh thinking about
+[07:39] is that what happens when you have a really high spend client um this our example this one would
+[07:45] actually be 11 labs would be a good example but um even if they have a pretty large ip like number
+[07:52] of ips right um with when your spend's high enough like thousands of dollars a day you're
+[08:00] going to hit all the high scored ips really quick so in the case of orange theory they
+[08:06] were spending about two thousand dollars a day and it was only going to take them 15 days to hit
+[08:12] 1.5 million ips um of the high scored so what they saw is a performance was really really good
+[08:18] i mean relative right and then it just crashed and the only reason it crashed is that they
+[08:24] literally except for like replacement ips that you're going to get as each day goes on
+[08:28] they just went down into a score threshold that was under 8 000 and then suddenly they had like
+[08:34] no they just their ivr went down a ton right and so my thought process was maybe
+[08:41] again this is probably not going to be solution i talked to allison about it i don't think anybody
+[08:46] would be on board but if you had a way to mix in a if you could estimate how long it was going to
+[08:53] take and how many ips you're going to need to exhaust all their spend then you could strategically
+[08:57] mix a ratio between under 8 000 scored and above 8 000 scored so that their ivr looks consistent
+[09:06] across their whole campaign so you don't see this thing where 10 days it's awesome and then it drop
+[09:09] drops off a cliff sounds like that's not super that's probably won't be viewed nobody will really
+[09:16] like the idea of performance being handicapped but um anyways me on the point um i definitely
+[09:22] think i can run this for uh 11 labs i'll take a look um it's totally possible that we didn't
+[09:28] really have well i mean so what are they 11 labs is like an ai company yeah and they're b2b
+[09:36] oh there's already like things popping up then like okay yeah it's gonna be tricky for them
+[09:43] uh they ran initially in the bay area perfect target group for them and in texas
+[09:52] So it's like, okay, they're hitting like some of the tech hubs.
+[09:56] And then they just did a national campaign across like all the U.S.
+[09:59] Okay, well, that's definitely going to dilute any lift then.
+[10:03] If you're first targeting the highest likelihood people,
+[10:09] and then you go to a national campaign,
+[10:13] yeah, you're probably diluting things, right?
+[10:15] So that's one thing.
+[10:17] and then they saw in their difference in difference analysis i believe they have their
+[10:25] international audience that they're kind of using as part of the control and they saw growth in the
+[10:32] international group as well so it's like okay yeah it's also going to make it tricky because
+[10:35] you're seeing growth on the international side of your company yeah jane are i created that
+[10:43] I'm just curious. 11 labs.
+[10:45] What is there? Yeah, I'm going to pull up
+[10:47] 11 labs right now.
+[10:50] Get them a visit.
+[10:52] Well,
+[10:52] okay, so
+[10:54] I can look at their historical thing here
+[10:59] and they're talking visit
+[11:01] rates. Their baseline
+[11:03] visit rate is, wow, that's actually
+[11:05] decently high. 3%?
+[11:09] And
+[11:09] we shouldn't need a really high budget
+[11:13] according to historical
+[11:15] to
+[11:17] in fact
+[11:19] without any sort of like variance
+[11:21] reduction strategies you only need
+[11:23] $40,000 worth of spend
+[11:25] based on their
+[11:26] budget
+[11:29] and their visit
+[11:31] rates so
+[11:32] yeah I don't know
+[11:39] I'll have to take a look but it does seem
+[11:41] just based off of this thing that I ran earlier this month.
+[11:45] When did 11 Labs do this campaign?
+[11:48] I think it's been running for over a month.
+[11:50] Okay.
+[11:51] I'll take a look, but that's weird that they would detect no lift.
+[11:55] They started it June 1st, basically.
+[11:59] It's a whole month of June that they're running.
+[12:03] Okay.
+[12:03] So here's the thing.
+[12:05] I'm looking at a current lift rate,
+[12:08] historically of their MD, their minimal detectable effect is going to be around 3%.
+[12:14] Yeah. So if they have a lift under 1%, it's possible that there's nothing significant or
+[12:25] that we suck. But I guess the things that you mentioned it being B2B is just, it's just a weird
+[12:34] situation like i could totally see a b2b business doing an ad campaign and
+[12:41] that's just weird like going from a more targeted ad campaign to a national like super broad campaign
+[12:49] and have it like seeing it fall off right yeah but how many businesses is are going to because
+[12:55] that's the thing with b2b is that when you go to the individual like you suddenly have a lot of
+[13:00] people that can convert like there's a lot of but then like you're really nailing it limiting it
+[13:06] down with the b2b sales because like how many businesses are there compared to people it's like
+[13:12] way less obviously it's a huge factor and then how many of those are going to actually convert i mean
+[13:17] it's starts to become very weird yeah i'll take a look at it um i think that i could probably produce
+[13:21] answers relatively quick on it um yeah that would be great if you just run something and see what
+[13:30] you see because they're they're not like acting like they're mad or upset they're just trying to
+[13:37] figure out like optimize for themselves yeah uh so they're like is there anything that we could
+[13:46] change with you guys that would help us or is there something that we're not doing correct
+[13:52] or something like or is it the creative that was another thing like did their creative
+[13:57] change during the national campaign
+[13:59] versus the previous ones because the previous ones
+[14:01] perform well so they change
+[14:03] their creative could tell them that
+[14:05] the audience to the audience that
+[14:07] was built change drastically
+[14:09] oh they did conversions
+[14:11] yeah
+[14:13] conversions okay hold on I was looking
+[14:15] at our visits conversions
+[14:17] might be a completely different story hold on
+[14:19] I that makes
+[14:21] sense one sec here
+[14:23] I just want to see if their conversions
+[14:25] are and then they want to their
+[14:26] We're asking about, like, can we look at geo stuff with the conversions as well?
+[14:31] Oh, yeah.
+[14:32] I can answer you right now.
+[14:34] They don't have enough conversions.
+[14:36] Do you know how much their lift would have to be?
+[14:42] 22%.
+[14:42] Still, they're never going to see it.
+[14:44] It's impossible.
+[14:45] Their CVR is way too low.
+[14:48] Even with all the variance calculations, let's see.
+[14:51] They would have to have a lift of 13% or higher.
+[14:56] with a 720.
+[15:02] How many?
+[15:03] So they said in four weeks,
+[15:04] they did a million dollars.
+[15:06] Yeah.
+[15:09] Okay.
+[15:09] I would have to look at their spend.
+[15:10] If they spent a million dollars in four weeks,
+[15:13] they would still need a lift of at least 5%,
+[15:16] which honestly,
+[15:18] honestly,
+[15:19] for a B2B thing might still be a little bit high
+[15:22] to detect it.
+[15:24] So on this,
+[15:25] this literally might be one of those weird things where conversion rates are so low with b2b
+[15:29] and the lift on them is so low that it's just yeah that makes sense that they found no
+[15:37] significance it's because they're they're convert like their baseline conversion rate is 0.062
+[15:42] percent yeah like what am i what are we supposed to do with that so yeah i'm trying to look at their
+[15:49] numbers here their budget for the target mde is two million dollars by the way
+[15:57] that's why you should run these things before this is why we should have done that here actually
+[16:04] matt let me i'll show you real quick they've run a five yeah it's been running for five weeks it
+[16:08] looks like the campaign actually yep here it is so that's i mean this is it so i can do this what
+[16:15] you're seeing here is there's some variance reduction techniques that you can use so you
+[16:19] can lower the budget so i don't think they probably they probably didn't do those but
+[16:23] just their baseline with a million dollars of spend i mean the weeks doesn't really matter
+[16:27] this is just showing how much spend you would do um in in a month so let's just assume it's like
+[16:33] 1 million um they need 2 million dollars to spend to hit a five percent target for their
+[16:39] minimal detectable effect so we're already talking really high um and even with the
+[16:47] variance reduction it's like 700 something thousand estimated based on historical so
+[16:53] that's i don't know if they ran a campaign if their campaign these calculations are including
+[16:59] what you just said where they're targeted we're really high impact areas like san francisco and
+[17:04] stuff these might be overinflated in fact they might need way more so who wants this is this matt
+[17:12] or not matt sorry mike yeah okay yeah we're trying to just get a pulse check like something
+[17:19] rough by the end of today so i don't even know if i just sent this real quick um i mean i can
+[17:26] run the numbers but if i sent this and tag you and mike into the channel would that be something
+[17:32] that I could put in there?
+[17:34] Yeah. That would be fine. And then if there's a way to just like, yeah, start
+[17:41] running those, whatever your standard report is for this causal impact stuff, that's probably
+[17:46] all we would need right now.
+[17:48] Okay.
+[17:49] Because I'm trying to run the ghost bidding stuff. I have the ghost bid pipeline
+[17:52] kind of set up myself. I just need to refresh and run it now after this four days off. And
+[17:58] then we're gonna see what it says there.
+[18:00] I'm going to post this too.
+[18:02] But then we'll start from there.
+[18:03] But yeah, I'll run the stuff.
+[18:05] So you just want me to do like,
+[18:07] I mean, I could do a causal impact on it and see.
+[18:10] But again, it might actually work better for CBR.
+[18:14] So we'll see.
+[18:15] But yeah, that's a tricky thing.
+[18:17] All my stuff is set up for visits.
+[18:18] And so I don't have it set up for conversions.
+[18:22] And that's going to be really hard in this case.
+[18:25] Yeah.
+[18:26] Okay.
+[18:26] I'll post it in the targeting channel.
+[18:28] I'll tag Mike
+[18:30] and you
+[18:32] thank you
+[18:34] alright
+[18:37] sweet I'll let you know I will actually
+[18:39] I'll get working on it
+[18:40] yeah it's 1130 I could
+[18:43] probably
+[18:43] get something out in a couple
+[18:47] hours so
+[18:48] alright appreciate it
+[18:51] yeah no problem thank you
+[18:53] take care bye
