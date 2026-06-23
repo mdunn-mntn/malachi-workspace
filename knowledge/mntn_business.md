@@ -121,6 +121,29 @@ General knowledge about MNTN as a business — products, strategy, org structure
 
 ## Org Structure & Teams
 
+### Reporting/Data Reorg under Kale (Paulo Black, 2026-06-23 → finalized 2026-07-01)
+
+Paulo announced a reorg merging big pieces of the **reporting world** under **Kale McNaney**. Kale already led **Identity and Measurement**; he now also owns the backbone of how MNTN delivers and demonstrates results to customers (reporting). George's role is **not being backfilled** — that triggered reporting-world adjustments that had been "on ice." Rationale: heavy tech/product-domain overlap between reporting and the data teams; bringing them closer reduces cross-team friction on big data projects. Transition began Tue 2026-06-23, finalized 2026-07-01.
+
+**Teams now under Kale (Director):**
+
+| Team | Manager | TPM | PM |
+|------|---------|-----|-----|
+| **Reporting Experience** | Lauren Gregg | Al Beretta | Mike Dolzer |
+| **Billing** | Tim Kachler | To Be Hired | Michelle Helms |
+| **Pixel Signals** (NEW) | Dako | Karli Taylor | Paul Reitzen |
+| **Measurement** (BER + ATTR merged) | Nate Gardner | Elena Donnely | Luis Chelala |
+
+**Pixel Signals** is a new team owning all back-end services and integrations that consume or produce pixel/related data (pixel service, GA, Rockerbox, etc.). — *Likely supersedes the prior "pixel ops" routing (conversion_log / pixel-firing bugs); confirm whether Ashley Pineda Varela now sits here.*
+
+**Measurement** = the former **BER** team merged with **ATTR** (attribution). BER-2250 (incrementality) work therefore now lives under the Measurement team.
+
+**Reporting directly to Paulo Black:**
+- **Karen / BAE** — with continued support from Mike Dolzer.
+- **Ray** — as Principal Analyst.
+
+*(Name note: "Mike Dolzer" here is likely the same person documented elsewhere as "Mike Dolt" — full surname Dolzer.)*
+
 ### Key People
 - **Mark** — Executive, drives product direction. Pushed multi-touch elimination (2022), pushes IVR as primary metric.
 - **Kirsa** — Experimentation Lead / Product Manager. Owns experiment design, execution, and analysis. Previously PM for data monitoring, then product PM for targeting (Mountain Match). Has a set monthly budget for experiments.
