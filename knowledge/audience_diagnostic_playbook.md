@@ -27,6 +27,14 @@ sources, include/exclude, geo, and the automated clauses. Prototype: `parse_expr
 - Reach + **overlap with the keyword (MM) layer** + deprecation + modality fit. Query: `per_segment_reach_7d.sql`, `reach_overlap_7d.sql`.
 - Read: high keyword-overlap = redundant; low-overlap = low-intent. Off-modality = mistargeted.
 - **Gotcha:** 3P (DS35) ipdsc delivery is **bursty (~2–4 days/month)** — never judge a segment from one day/week; use a **≥30-day window**. (data_catalog.md ipdsc note.)
+- **⚠ Gotcha — overlap-with-MM is only an intent signal when MM is a TARGETED (small) universe; ALWAYS base-rate it.**
+  The overlap % means "redundant/low-intent" only relative to the base rate `MM_distinct / population`. If the advertiser's
+  MM keyword layer is near-universal, *every* segment — even unrelated ones — overlaps it at the base rate, so overlap
+  carries zero intent signal. **Run a control** (overlap of a deliberately-unrelated segment with this advertiser's MM)
+  or compute the base rate before reading overlap. (iMemories 2026-06-23: 211 keywords → **174.5M-IP** MM universe; own 3P
+  overlapped 67–73%, unrelated control segments 67.1–67.5% → overlap uninformative. Contrast OTF: MM ~4.6M → 12% overlap
+  was a real low-intent signal.) A near-universal MM universe is itself a finding: the keyword layer is barely targeting,
+  and the bigger lever is curating MM, not picking 3P.
 
 **3. Keyword (DS19) evaluation.** *Are the keywords on-target?*
 - The targeting keywords are the **selected CHILD keywords** in `ui.audience_keyword_state` (= the DS19 expression);

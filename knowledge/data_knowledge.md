@@ -1290,6 +1290,22 @@ Media Plan section): that is a *categorical risk classifier* from per-network sp
 blocked networks + budget; it is NOT the campaign-level deliverability *target*, which is the peer-pacing-to-96% method
 above.
 
+### 3P-vs-MM overlap is only an intent signal when MM is TARGETED — always base-rate it (TI-1037 iMemories, 2026-06-23)
+When evaluating bought 3P (DS35) interest segments, the "% of the segment's IPs that also match the advertiser's MM
+(DS19) keyword layer" reads as *redundancy / intent alignment* — **but only relative to the base rate**
+`MM_distinct / ipdsc_population`. If the advertiser's MM keyword universe is **near-universal**, every 3P segment —
+including deliberately-unrelated ones — overlaps MM at that base rate, so the metric carries **zero** discriminating
+signal. **Always run a control** (overlap of an unrelated segment with this advertiser's MM) or compute the base rate
+before interpreting overlap.
+- **iMemories (aid 37423):** 211 DS19 keywords → **174.5M-IP** MM universe (≈ most of the US ipdsc population). Its own
+  15 3P segments overlapped MM 67–73%; three unrelated OTF fitness segments overlapped 67.1–67.5% → identical → overlap
+  is base-rate noise, cannot rank the segments.
+- **Contrast OTF (TI-1026):** MM ~4.6M (targeted) → 3P overlap ~12% was a genuine low-intent signal.
+- A near-universal MM universe is itself the headline finding: the keyword layer is **barely targeting**, so the lever
+  is curating MM keywords, not picking 3P. (And under an HHST gate, unscored 3P is filtered regardless — segment choice
+  is moot for delivery until the gate lowers.) ipdsc gives **membership**, not delivered performance — a further reason
+  not to rank 3P on reach/overlap alone.
+
 ### Special Values
 - **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
 - **8000** = Peak Performance (PP) — **was active Jan-Feb 2026, currently minimal** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. Waterfall: HI → PP. Top advertisers with PP data: 34185, 36232, 37158, 34838. Most PP activity ended by late February. Sporadic single-digit impressions in March-April.
