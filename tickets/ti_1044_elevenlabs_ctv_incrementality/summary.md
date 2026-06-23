@@ -181,9 +181,17 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 
 | Outcome | ATT (served vs ghost) | ITT (clean, pre-auction) | Read |
 |---|---|---|---|
-| Conversions (CVR) | +35% (p<.001) | **−2% (CI −13→+11, p=0.79)** | **≈0 — matches geo null** |
-| Attributed visits (clickpass) | +276% | +143% | attribution, not incrementality |
-| Total visits (guid_log) | +36% | (not run) | ATT win-selection-biased |
+| Attributed visits (clickpass) | +276% | +143% (p<.001) | **attribution**, not incrementality |
+| **Total visits (guid_log)** | +36% | **+0% (CI −2→+2, p=0.84)** | **≈0 incremental total traffic** |
+| Conversions (CVR) | +35% | **−1% (CI −13→+12, p=0.84)** | **≈0 — matches geo null** |
+
+- **Corrected headline (do not overstate IVR):** the clean ITT (`ti_1044_ghost_lift_itt_full.json`) shows
+  **≈0 incremental lift for BOTH total visits and conversions.** The +143% is clickpass **attribution**; the
+  +35–36% ATT is **win-selection** (served = auction winners, higher-value). Distinct-IP **win rate ≈57%**, so a
+  true +36% would show ~+21% in the ITT — observed +0% ⇒ true causal lift is small. A clean served-counterfactual
+  (TOT) needs ghost-*wins* (win-rate sampling), not yet logged. So: report ITT (clean of selection) and ATT
+  (selection-confounded) as bounds; conversions ≈0 is solid (corroborated by their geo null + power floor).
+- guid = total visits to ElevenLabs' site only (advertiser_id 51660, all sources).
 
 ### 4.6 Method validation — ghost-bid design doc + Edgar review (`meetings/ti_1044_02_...`)
 - **Ryan's Ghost Bid Design** (Confluence 3600547848) confirms our read: holdout = deterministic

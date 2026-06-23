@@ -19,7 +19,7 @@ def load(name):
     while isinstance(d,list) and d and isinstance(d[0],list): d=d[0]
     return {r["grp"]:r for r in d}
 
-g=load("ti_1044_ghost_lift_itt.json"); t,c=g["treated"],g["control"]
+g=load("ti_1044_ghost_lift_itt_full.json"); t,c=g["treated"],g["control"]
 n_t,n_c=int(t["ips"]),int(c["ips"])
 def stats(key):
     nt,nc=int(t[key]),int(c[key]); p1,p2=nt/n_t,nc/n_c; rel=p1/p2-1
@@ -28,11 +28,12 @@ def stats(key):
     pp=(nt+nc)/(n_t+n_c); z=(p1-p2)/math.sqrt(pp*(1-pp)*(1/n_t+1/n_c)); pv=2*(1-norm.cdf(abs(z)))
     return dict(t=p1*100,c=p2*100,lift=rel*100,lo=lo*100,hi=hi*100,p=pv)
 
-ivr=stats("visitors"); cvr=stats("converters")
-rows=[("Visit rate (IVR)",ivr,MINT),("Conversion rate (CVR)",cvr,RED)]
+rows=[("Attributed visits\n(clickpass)",stats("clickpass_visitors"),GRAY),
+      ("Total site traffic\n(guid — TRUE visit lift)",stats("guid_visitors"),NAVY),
+      ("Conversions (CVR)",stats("converters"),RED)]
 
-fig,ax=plt.subplots(figsize=(9.6,4.2))
-ys=[1,0]
+fig,ax=plt.subplots(figsize=(9.8,4.8))
+ys=[2,1,0]
 for (lbl,r,col),y in zip(rows,ys):
     ax.plot([r["lo"],r["hi"]],[y,y],color=col,lw=3,zorder=2,solid_capstyle="round")
     ax.scatter([r["lift"]],[y],color=col,s=120,zorder=3)
@@ -41,13 +42,13 @@ for (lbl,r,col),y in zip(rows,ys):
             fontsize=18, fontweight="bold", color=col)
     ax.text(r["lift"], y-0.26, pstr, ha="center", va="top", fontsize=10, color=col)
 ax.axvline(0,color="#444",lw=1.3,ls="--")
-ax.set_yticks(ys); ax.set_yticklabels([r[0] for r in rows],fontsize=13)
-ax.set_ylim(-0.7,1.7); ax.set_xlim(-35,185)
+ax.set_yticks(ys); ax.set_yticklabels([r[0] for r in rows],fontsize=12)
+ax.set_ylim(-0.7,2.7); ax.set_xlim(-35,185)
 ax.xaxis.set_major_formatter(FuncFormatter(lambda x,_:f"{x:+.0f}%"))
 ax.set_xlabel("Incremental lift, served vs held-out households (clean ITT, 95% CI)")
-ax.set_title("MNTN drives incremental visits. Conversions are the B2B wall.",
-             fontsize=14.5,fontweight="bold",loc="left",pad=30)
-ax.text(0,1.07,"Household ghost-ad holdout · win-selection removed · ~10 days · 6.6M households",
+ax.set_title("Attribution overstates. True incremental lift ≈ 0 — visits and conversions.",
+             fontsize=14,fontweight="bold",loc="left",pad=30)
+ax.text(0,1.06,"Household ghost-ad holdout · win-selection removed · ~10 days · 6.6M households",
         transform=ax.transAxes,fontsize=9.5,color="#555")
 fig.tight_layout(); fig.savefig(f"{BASE}/artifacts/ti_1044_chart_lift_measurement.png"); plt.close(fig)
 
