@@ -192,9 +192,18 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
   lag): total-visit (guid) lift = **+1.7%, CI [−0%, +4%], p=0.10 — n.s.** (vs +0% on the 10-day cohort). So total
   visits are **~0–2%, not significant** (point estimate below the ~2.6% MDE at the holdout sample) — NOT a flat
   zero, but no detectable lift. Conversions robust at −2.3% (n.s.). Attributed (clickpass) +160% (attribution).
-- **Honest bottom line:** attributed metrics overstate ~80×; true incremental **total-visit lift is small
-  (0–2%, n.s.)**; **conversion lift ≈0** (corroborated by their geo null + power floor). ATT (+36%/+35%) is
-  win-selection. A clean TOT needs ghost-*wins* (win-rate sampling), not yet logged.
+- **Ghost-win simulation + IV-TOT (2026-06-23, `ti_1044_ghost_win_sim.py`):** formed the served-counterfactual
+  two ways. (1) **IV/LATE** TOT = ITT ÷ compliance (0.57): visits ~0–3% (n.s.), conversions ~−2 to −4% (n.s.).
+  (2) **Ghost-win ATT** — simulated ghost *wins* by sampling ghost bids at the per-bid win rate **w=0.27**
+  (10.96M imps ÷ 40.79M real bids), frequency-weighting the control: visits +35%→**+33%**, conversions
+  +32%→**+26%**. The frequency correction is small (~2–6pp) ⇒ **the ATT bias is value-selection, not frequency**
+  (we win impressions for the households we bid highest on, who visit/convert anyway). Uniform win-rate sampling
+  can't remove value-selection; only the randomized ITT / IV-TOT do — and both say **≈0**.
+- **Honest bottom line (triangulated 4 ways):** attributed metrics overstate ~80×; true incremental lift on both
+  total visits and conversions is **≈0 / small and not significant** (randomized ITT and IV-TOT). The +26–35%
+  ATT/ghost-win numbers are **value-selection** (serving the households who'd convert regardless), not media lift.
+  Corroborated by ElevenLabs' geo null + the power floor. (A fully clean ghost-win TOT would need a
+  bid-price-conditional win model — Ryan's `ghost-win-simulation` service intent; would converge on the ITT.)
 - **Validation:** delivery continuous since Feb 15 (national May 7), holdout window Jun 13–22 fully active
   (~1M+ imps/day); sample well-powered (603K control / 6.04M treated IPs; visit MDE ~2.6%); guid = total visits
   to ElevenLabs' site only (advertiser_id 51660, all sources).

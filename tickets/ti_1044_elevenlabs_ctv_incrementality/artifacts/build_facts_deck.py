@@ -67,9 +67,10 @@ slides = f"""
   </table>
   <p style="font-size:0.38em;color:#444;margin-top:0.4em;">Total-visit lift is window-sensitive: with a longer visit-lag
   window (early cohort, 7–10 days) it is <b>+1.7%, p=0.10 — still n.s.</b> So true total-visit lift is <b>~0–2%, not significant</b>,
-  not a flat zero. ATT (served-only vs held-out) is higher — visits +36%, conversions +35% — but that is <b>win-selection</b>
-  (we win impressions for higher-value households who visit/convert more anyway; ~57% win rate). A clean served-counterfactual
-  (TOT) needs ghost-<i>wins</i> (win-rate sampling), not yet logged.</p>
+  not a flat zero. ATT (served-only vs held-out) is higher — visits +35%, conversions +32% — but that is <b>win-selection</b>.
+  We formed the served-counterfactual two ways: <b>IV/LATE TOT</b> (ITT÷0.57) = visits ~0–3%, conversions ~−2 to −4% (both n.s.);
+  and a <b>ghost-win simulation</b> (ghost bids sampled at win rate w=0.27) = +33% / +26% — barely below the raw ATT, so the bias is
+  <b>value-selection</b> (we win the households we bid highest on), not frequency. Only the randomized ITT / IV-TOT remove it → <b>≈0</b>.</p>
 </section>
 
 <section style="text-align:left;">
@@ -103,7 +104,7 @@ slides = f"""
   <h3 style="font-size:0.55em;">7 · Caveats / limitations</h3>
   <ul style="font-size:0.44em;line-height:1.55;">
     <li style="color:{MINT};"><b>Validated:</b> delivery continuous since Feb 15 (national May 7), holdout window fully active (~1M imps/day); sample well-powered (visit MDE ~2.6%); result robust to visit-lag window.</li>
-    <li><b>No ghost-wins yet</b> → can't form a clean served-counterfactual (TOT); we report ITT (clean of selection) + ATT (selection-confounded).</li>
+    <li>Served-counterfactual (TOT) formed via IV/LATE + ghost-win simulation → both ≈0; ATT (+26–35%) is value-selection. A fully clean ghost-win needs a bid-price-conditional win model (Ryan's ghost-win-simulation service).</li>
     <li>ITT is diluted by the 57% win rate — but that argues the true effect is small, not large.</li>
     <li>Holdout window = 10 days (bid_price_log TTL); ghost logging live 2026-05-27, no backfill.</li>
     <li>Held-out households may carry pre–May-27 ad exposure (slight downward bias on lift).</li>
@@ -114,7 +115,7 @@ slides = f"""
 <section style="text-align:left;">
   <h3 style="font-size:0.55em;">8 · What to do going forward</h3>
   <ol style="font-size:0.46em;line-height:1.6;">
-    <li>Stand up the <b>ghost-win simulation</b> (win-rate sampling) → clean visit &amp; conversion TOT.</li>
+    <li>Build the <b>bid-price-conditional ghost-win model</b> (Ryan's service) → fully clean TOT; uniform win-rate sampling leaves value-selection in.</li>
     <li>For low-CVR / B2B advertisers, measure <b>visits</b>, not conversions; don't sanction conversion
         incrementality tests below the MDE spend (~$2M for ElevenLabs).</li>
     <li>ElevenLabs specifically: conversion incrementality is <b>unmeasurable</b> at current spend;
