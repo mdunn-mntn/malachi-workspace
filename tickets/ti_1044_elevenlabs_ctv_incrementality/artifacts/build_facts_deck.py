@@ -65,9 +65,11 @@ slides = f"""
     <tr>{td('Total site traffic (guid)','2.10%','2.10%',f'<b style=color:{NAVY}>+0%</b>','−2…+2%','0.84','n.s.')}</tr>
     <tr>{td('Conversions (CVR)','0.0461%','0.0455%',f'<b style=color:{RED}>−1%</b>','−13…+12%','0.84','n.s.')}</tr>
   </table>
-  <p style="font-size:0.4em;color:#444;margin-top:0.4em;">ATT (served-only vs held-out) is higher — visits +36%, conversions +35% — but that is <b>win-selection</b>
-  (we win impressions for higher-value households who visit/convert more anyway). With a ~57% win rate, a real +36% would
-  show ~+21% in the ITT; we see +0% → true causal lift is small. A clean ATT needs ghost-<i>wins</i> (not yet logged).</p>
+  <p style="font-size:0.38em;color:#444;margin-top:0.4em;">Total-visit lift is window-sensitive: with a longer visit-lag
+  window (early cohort, 7–10 days) it is <b>+1.7%, p=0.10 — still n.s.</b> So true total-visit lift is <b>~0–2%, not significant</b>,
+  not a flat zero. ATT (served-only vs held-out) is higher — visits +36%, conversions +35% — but that is <b>win-selection</b>
+  (we win impressions for higher-value households who visit/convert more anyway; ~57% win rate). A clean served-counterfactual
+  (TOT) needs ghost-<i>wins</i> (win-rate sampling), not yet logged.</p>
 </section>
 
 <section style="text-align:left;">
@@ -100,6 +102,7 @@ slides = f"""
 <section style="text-align:left;">
   <h3 style="font-size:0.55em;">7 · Caveats / limitations</h3>
   <ul style="font-size:0.44em;line-height:1.55;">
+    <li style="color:{MINT};"><b>Validated:</b> delivery continuous since Feb 15 (national May 7), holdout window fully active (~1M imps/day); sample well-powered (visit MDE ~2.6%); result robust to visit-lag window.</li>
     <li><b>No ghost-wins yet</b> → can't form a clean served-counterfactual (TOT); we report ITT (clean of selection) + ATT (selection-confounded).</li>
     <li>ITT is diluted by the 57% win rate — but that argues the true effect is small, not large.</li>
     <li>Holdout window = 10 days (bid_price_log TTL); ghost logging live 2026-05-27, no backfill.</li>

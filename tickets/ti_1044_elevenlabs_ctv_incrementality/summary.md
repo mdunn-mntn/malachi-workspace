@@ -185,13 +185,19 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 | **Total visits (guid_log)** | +36% | **+0% (CI −2→+2, p=0.84)** | **≈0 incremental total traffic** |
 | Conversions (CVR) | +35% | **−1% (CI −13→+12, p=0.84)** | **≈0 — matches geo null** |
 
-- **Corrected headline (do not overstate IVR):** the clean ITT (`ti_1044_ghost_lift_itt_full.json`) shows
-  **≈0 incremental lift for BOTH total visits and conversions.** The +143% is clickpass **attribution**; the
-  +35–36% ATT is **win-selection** (served = auction winners, higher-value). Distinct-IP **win rate ≈57%**, so a
-  true +36% would show ~+21% in the ITT — observed +0% ⇒ true causal lift is small. A clean served-counterfactual
-  (TOT) needs ghost-*wins* (win-rate sampling), not yet logged. So: report ITT (clean of selection) and ATT
-  (selection-confounded) as bounds; conversions ≈0 is solid (corroborated by their geo null + power floor).
-- guid = total visits to ElevenLabs' site only (advertiser_id 51660, all sources).
+- **Corrected headline (do not overstate IVR):** the clean ITT shows **small / not-significant incremental lift
+  for both total visits and conversions.** The +143% is clickpass **attribution**; the +35–36% ATT is
+  **win-selection** (served = winners, higher-value; win rate ≈57%).
+- **Visit-lag robustness** (`ti_1044_ghost_lift_itt_robust.json`, cohort Jun 13–16, visits through Jun 23, 7–10d
+  lag): total-visit (guid) lift = **+1.7%, CI [−0%, +4%], p=0.10 — n.s.** (vs +0% on the 10-day cohort). So total
+  visits are **~0–2%, not significant** (point estimate below the ~2.6% MDE at the holdout sample) — NOT a flat
+  zero, but no detectable lift. Conversions robust at −2.3% (n.s.). Attributed (clickpass) +160% (attribution).
+- **Honest bottom line:** attributed metrics overstate ~80×; true incremental **total-visit lift is small
+  (0–2%, n.s.)**; **conversion lift ≈0** (corroborated by their geo null + power floor). ATT (+36%/+35%) is
+  win-selection. A clean TOT needs ghost-*wins* (win-rate sampling), not yet logged.
+- **Validation:** delivery continuous since Feb 15 (national May 7), holdout window Jun 13–22 fully active
+  (~1M+ imps/day); sample well-powered (603K control / 6.04M treated IPs; visit MDE ~2.6%); guid = total visits
+  to ElevenLabs' site only (advertiser_id 51660, all sources).
 
 ### 4.6 Method validation — ghost-bid design doc + Edgar review (`meetings/ti_1044_02_...`)
 - **Ryan's Ghost Bid Design** (Confluence 3600547848) confirms our read: holdout = deterministic
