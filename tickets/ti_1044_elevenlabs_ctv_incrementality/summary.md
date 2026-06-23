@@ -172,9 +172,18 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 - **THE NUMBER WE TRUST: clean conversion-rate lift = −1.7%, not significant → incrementality ≈ 0**, matching
   ElevenLabs' geo null. The served-vs-ghost **+34% ATT was win-selection bias** (serving the highest-value
   auction-winning households); removing it (ITT) collapses CVR lift to ~0.
-- Clickpass IVR lift stays large (+143% ITT / +276% ATT) because it's **attribution**; the guid_log
-  total-traffic comparison (running) isolates true incremental visits (expected near 0, per TI-835).
-  _(guid result appended.)_
+- Clickpass IVR lift stays large (+143% ITT / +276% ATT) because it's **attribution**. **Total traffic
+  (guid_log) ATT = +36%** (treated 2.83% vs control 2.08%) — far below the +276% attributed lift (attribution
+  inflates ~8×), but still positive because the ATT cohort (served=winners) is win-selection-biased. The one
+  unbiased read we have — the clean conversion ITT (−2%, NS) — is the trustworthy incrementality number.
+- **Final lift table** (`outputs/ti_1044_ghost_lift*.json`, charts `ti_1044_chart_conv_att_vs_itt.png` /
+  `ti_1044_chart_attribution_vs_true.png`):
+
+| Outcome | ATT (served vs ghost) | ITT (clean, pre-auction) | Read |
+|---|---|---|---|
+| Conversions (CVR) | +35% (p<.001) | **−2% (CI −13→+11, p=0.79)** | **≈0 — matches geo null** |
+| Attributed visits (clickpass) | +276% | +143% | attribution, not incrementality |
+| Total visits (guid_log) | +36% | (not run) | ATT win-selection-biased |
 - **Method = same as TI-837 / TI-933 (Hannah Select lift):** randomized holdout vs served, rate-lift + 95%
   CI, clickpass/guid/conversion outcomes. **Upgrade:** holdout read directly from the new bidder ghost log
   (`threshold_failure_reasons='ghostBid'`, live 2026-05-27) instead of reconstructing it via the

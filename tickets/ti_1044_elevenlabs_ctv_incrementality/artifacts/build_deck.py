@@ -5,6 +5,7 @@ def img(name):
     b = base64.b64encode((BASE/"artifacts"/name).read_bytes()).decode()
     return f"data:image/png;base64,{b}"
 POWER, CURVE, TREND = img("ti_1044_chart_power_contrast.png"), img("ti_1044_chart_mde_curve.png"), img("ti_1044_chart_visit_vs_cvr.png")
+CONV = img("ti_1044_chart_conv_att_vs_itt.png")
 
 NAVY, RED, MINT = "#1f3a5f", "#c0392b", "#16a085"
 
@@ -69,10 +70,27 @@ slides = f"""
 </section>
 
 <section>
+  <p style="text-transform:uppercase;letter-spacing:3px;color:#888;font-size:0.45em;">We ran your test, on our side</p>
+  <h2 style="font-size:0.82em;">Our own household ghost-ad holdout agrees: ≈ 0 conversion lift.</h2>
+  <img src="{CONV}" style="width:62%;border:none;box-shadow:none;background:none;">
+  <p class="footer-note">New bidder ghost-ad holdout (same method as our prior lift studies) · 4M+ households · last 10 days</p>
+</section>
+
+<section>
+  <p style="text-transform:uppercase;letter-spacing:3px;color:#888;font-size:0.45em;">What our holdout shows</p>
+  <div style="font-size:0.55em;text-align:left;max-width:84%;margin:0.4em auto;line-height:1.7;">
+    <p>✓ <strong>Conversions:</strong> clean household holdout lift = <strong style="color:{NAVY};">−2% (not significant)</strong> — independently confirms your geo null.</p>
+    <p>⚠ A naive read shows +35%, but that's <strong>win-selection</strong> — we serve your highest-value households, who convert more anyway. Remove it and the lift is ~0.</p>
+    <p>📺 <strong>Attributed</strong> visits look huge (+276%) — but that's <strong>attribution</strong>, not incrementality; total site traffic barely moves.</p>
+    <p style="color:#555;">Two independent methods (your geo test, our household holdout) → the same answer.</p>
+  </div>
+</section>
+
+<section>
   <h2 style="font-size:0.85em;">Your four questions</h2>
   <div style="font-size:0.5em;text-align:left;max-width:88%;margin:0.4em auto;line-height:1.45;">
     <p><strong style="color:{NAVY};">1 · Reach &amp; overlap.</strong> ~100% of your CTV reach is <strong>prospecting</strong>; retargeting ≈ 0. We only "see" deep-funnel via pixel <strong>site-visitors</strong> — we can <strong>block</strong> those, but can't measure true funnel depth.</p>
-    <p><strong style="color:{NAVY};">2 · Incrementality our side.</strong> A ghost-ad / PSA holdout is possible, but it's <strong>underpowered for conversions</strong> and biased low. <strong>Visits</strong> are the clean, measurable path.</p>
+    <p><strong style="color:{NAVY};">2 · Incrementality our side.</strong> <strong>Done</strong> — our household ghost-ad holdout (prior slide) lands at <strong>≈0 conversion lift</strong>, independently confirming your geo result.</p>
     <p><strong style="color:{NAVY};">3 · Conversion windows.</strong> 30-day <strong>view-through</strong> + click + conversion windows. View-through over-credits CTV — which is <em>why</em> attribution looks strong while topline is flat.</p>
     <p><strong style="color:{NAVY};">4 · Creative &amp; targeting.</strong> High-intent geo (SF/TX/FL) worked; the national broad scale <strong>diluted</strong> it. Audience is broad 3rd-party. We have no incrementality-trained model yet, so audience changes are <strong>exploratory</strong>, not guaranteed lift.</p>
   </div>

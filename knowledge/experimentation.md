@@ -1584,3 +1584,19 @@ Experiment design considerations specific to conversion-outcome experiments:
 - **Experiment Advertiser Selection Error — Identity Core Exclusion Rollout**
 
 A methodological error was made during advertiser selection for the Identity Core exclusion experiment: 50 advertisers were selected into the experiment and then split 50/50 into treatment and control, resulting in only 25 treatment-group advertisers. The correct approach was to select 50 advertisers into the treatment arm. The resulting sample is sufficient to detect only larger effects. Correction requires re-submitting the advertiser list to PEX (partner/external team) for re-approval, adding at least one day of delay. Lesson: when designing tiered rollout experiments, clearly distinguish between "experiment inclusion list size" and "treatment arm size" — the inclusion list should be sized to the treatment arm target, not the full experiment. (via Alexander Jerneck, #identity_core_dev, 2026-05-29)
+
+<!-- TI-1044 2026-06-23 -->
+## Ghost-ad lift: ATT (served-vs-ghost) carries win-selection bias — use clean ITT (TI-1044)
+When measuring ghost-ad/holdout lift, **served-vs-ghost is NOT clean**: "served" = auction WINNERS (the
+bidder's highest-value households), "ghost" = a pre-auction random holdout (ghost bids are logged at
+would-have-BID, not would-have-WON — Ryan Kleck). So served > ghost partly because winners are higher-value,
+not because of the ad → **ATT lift biased UP**. (Plus Matt's frequency bias: ghost not freq-capped → control
+over-represents high-frequency IPs → biased down. Opposing, non-cancelling.)
+**Fix:** compute the **clean ITT** = targeted-and-bid (`threshold_failure_reasons IS NULL/''`) vs ghost-holdout,
+both pre-auction random partitions → removes win-selection (lift is diluted by win-rate but unbiased).
+TI-1044 ElevenLabs: ATT conversion lift +35% (p<.001) → **ITT −2% (NS)** — the +35% was entirely win-selection;
+the true incremental conversion lift is ≈0, matching the vendor's geo test. Always report ITT (or win-rate-
+corrected ATT à la TI-837/TI-933), never raw served-vs-ghost, as the incrementality number.
+**Also:** clickpass (attributed) lift hugely overstates (TI-1044 +143–276%) vs guid_log total traffic — always
+pull guid_log for the true visit-incrementality signal (north star / TI-835). Ghost holdout source for Beeswax
+advertisers = `bronze.raw.bid_price_log` (`threshold_failure_reasons='ghostBid'`), live 2026-05-27, 10-day TTL.

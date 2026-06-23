@@ -16,7 +16,10 @@ plt.rcParams.update({"font.family":"Helvetica Neue, Helvetica, Arial, sans-serif
 NAVY,RED,MINT,GRAY="#1f3a5f","#c0392b","#16a085","#9aa0a6"
 
 def load(name):
-    return {r["grp"]: r for r in json.load(open(f"{BASE}/outputs/{name}"))}
+    data = json.load(open(f"{BASE}/outputs/{name}"))
+    while isinstance(data, list) and len(data) and isinstance(data[0], list):  # unwrap [[...]]
+        data = data[0]
+    return {r["grp"]: r for r in data}
 
 def lift_ci(num_t,n_t,num_c,n_c):
     p1,p2=num_t/n_t,num_c/n_c; rel=p1/p2-1
@@ -34,7 +37,7 @@ cv = lift_ci(int(t["converters"]),nt,int(c["converters"]),nc)
 
 # ---- Chart A: attribution vs true visit lift ----
 fig,ax=plt.subplots(figsize=(8.6,5))
-labels=["Attributed visits\n(clickpass)","Total site traffic\n(guid_log — TRUE incrementality)"]
+labels=["Attributed visits\n(clickpass)","Total site traffic\n(guid_log)"]
 vals=[cp[0],gd[0]]; cols=[GRAY,MINT]
 errs=[[cp[0]-cp[1]],[cp[2]-cp[0]]],[[gd[0]-gd[1]],[gd[2]-gd[0]]]
 bars=ax.bar(labels,vals,color=cols,width=0.55,zorder=3)
