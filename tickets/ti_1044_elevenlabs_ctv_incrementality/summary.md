@@ -184,6 +184,22 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 | Conversions (CVR) | +35% (p<.001) | **−2% (CI −13→+11, p=0.79)** | **≈0 — matches geo null** |
 | Attributed visits (clickpass) | +276% | +143% | attribution, not incrementality |
 | Total visits (guid_log) | +36% | (not run) | ATT win-selection-biased |
+
+### 4.6 Method validation — ghost-bid design doc + Edgar review (`meetings/ti_1044_02_...`)
+- **Ryan's Ghost Bid Design** (Confluence 3600547848) confirms our read: holdout = deterministic
+  `advertiser_id + household_id(ip)` hash; ghost filter is the **last gate** (after metadata/fcap/pacing/
+  spend-cap); Beeswax logs `ghostBid` in `threshold_failure_reasons` (what we queried). A separate
+  `ghost-win-simulation` Argo service is meant to model ghost *wins* via win-rate (`hash(auction_id+hh)`)
+  — **not live yet**, so the clean bid-level **ITT is the right estimator now** (Matt confirmed he's building
+  the same). Our `incrementality_enabled` advertisers carry the ghost cohort.
+- **Frequency bias direction (Edgar review + Matt):** ghost bids are NOT impression-fcap'd, so the holdout
+  over-represents high-frequency / cellular / high-attribution IPs → **control made more performative →
+  measured lift biased DOWN**. Our ITT removes win-selection (up) but not this (down); the two partly offset,
+  net effect on the −2% is small → conclusion (≈0) holds.
+- **Independent confirmation:** in the Edgar review the user's own run also lands at **−2% CVR lift for
+  ElevenLabs** — matches our ITT exactly. Agreed framing: *"conversions are not the right KPI when the
+  baseline CVR isn't powered; visits show media did its job, conversions reflect the product."* ElevenLabs
+  drives visits fine (IVR test needs only ~$14k for 5%); the conversion base rate is the wall.
 - **Method = same as TI-837 / TI-933 (Hannah Select lift):** randomized holdout vs served, rate-lift + 95%
   CI, clickpass/guid/conversion outcomes. **Upgrade:** holdout read directly from the new bidder ghost log
   (`threshold_failure_reasons='ghostBid'`, live 2026-05-27) instead of reconstructing it via the

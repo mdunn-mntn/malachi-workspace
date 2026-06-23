@@ -1,0 +1,359 @@
+[00:00] It's going to send a request. Cool. Gotcha. Cool. Yeah, so I don't know that this will
+[00:06] take long or anything. I gave you a little bit of background. Basically,
+[00:11] we were trying to increase the data that we have from incrementality tests so that we can draw
+[00:19] better conclusions of what looks good and how do we make these campaigns more incremental
+[00:26] in third-party measurement partners.
+[00:29] So for this one, we're focusing on LiftLab.
+[00:33] Their primary methodology is a geo-matched methodology holdout,
+[00:40] but they do also synthetic and difference-in-difference
+[00:43] and switchback and a plethora of other testing too.
+[00:46] That just happens to be the main one.
+[00:48] And so we sent them like three years of historical customer data,
+[00:53] performance data from our platform and said like,
+[00:56] okay, based on what you guys know, and from this data, like run some feasibility analysis and tell
+[01:03] us which one of our customers have a high likelihood of having a successful incrementality
+[01:09] test. And so they did that, they ran through like their best fit, all different test types,
+[01:16] and then like what their holdout and controls would be all that kind of stuff. And they sent
+[01:22] us like 75 advertisers. And then we combed through that list of 75. We got rid of anything that was
+[01:29] like super regional, restaurants, businesses that are like more foot traffic based, things like that.
+[01:35] They're just like harder to measure incrementality for us and narrowed that down to like 15.
+[01:40] Extended outreach to customer success teams, owners of these and said like, hey, what do you
+[01:46] know about these customers? Like we're thinking about offering them an incrementality test. Let
+[01:51] know what you think and so then that kind of while we were doing that lift lab built a web tool um
+[02:01] that sort of gives me their test design parameters and then has like a scenario explorer so i can say
+[02:07] like okay what if i crank the budget up here what if i want a bigger iro as or what if i want to run
+[02:12] the test longer and so it kind of gives you all of those like um moving you know gates so to speak so
+[02:19] So anyway, we've done that.
+[02:21] I've now narrowed this down to one, two, three, four, five,
+[02:24] six, seven advertisers total that we want to offer
+[02:30] an incrementality test to.
+[02:33] But with your expertise in this space,
+[02:37] I just wanted to like kind of run through
+[02:40] the testing criteria that I put into it
+[02:45] to see like if you say like, well, why did I do that?
+[02:47] like there's no reason to do it this way or if you have suggestions to do it other way basically
+[02:53] i know that like the best well-designed uh test cannot guarantee lift obviously
+[02:59] we're just trying to put our best foot forward and identify customers that have sufficient budget um
+[03:07] enough conversion volume um are you know we have enough historical data to show that like there's
+[03:13] a trend line that can be predicted things like that so um i'll pause there do you have any
+[03:20] questions to start um no i mean that makes pretty clear sense to me so okay so then i'll share my
+[03:30] screen and show you what what this all looks like okay so um this is the tool that we got from lift
+[03:43] lab um and if i put in just the first one tart for example um
+[03:51] they're recommending like a budget of 29k um there's zero budget shortfall based on the
+[04:03] historical spin that we gave them training data correlation is good best line of best fit
+[04:09] error rate is good all these kinds of indicators are good so what i did is i came here to the
+[04:16] scenario planner and i said okay this is powered at 80 what if i increase the budget to get to 90
+[04:23] um because 90 is better than 80 um and this assumes a break even so i row as of one and then
+[04:36] our best practices with for ctv are a minimum of six week test with a two week post treatment
+[04:43] window there's flexibility there obviously like if you're a consumable product like these guys are
+[04:49] we could maybe shorten that a little bit but i just want to make sure that we are giving ourselves
+[04:55] enough um enough testing data to actually like draw conclusions because i think a lot of the
+[05:01] tests that we've run or that have been run, our customers have run with house in particular are
+[05:07] just too short duration. House is running like three and four week tests. And I just don't think
+[05:12] that that's long enough for, for CTV to really get cooking. So that's kind of the methodology
+[05:18] that I used. And then based on this budget, so like my recommendation is 35 K that gives us an
+[05:25] MDL of 1.5, which seems super reasonable to clear. Break-even revenue, again, 1 IROAS.
+[05:38] This is a match market test, like I said. So this would be 20 pairs. And so then they'd be able to
+[05:47] do whatever they wanted in these other 76 DMAs, which is their, their like average, um, spend with
+[05:55] us is like 70 K a month over the last like six months. So this is like half of that budget.
+[06:01] We're also contributing like 17 grand, um, in added value to like get them to do this.
+[06:09] Uh, so then they could use like the remaining budget. Like it's not like a full, you know,
+[06:14] 50% go dark or anything like that. It's, it's a relatively modest control. Some of these,
+[06:21] however, are like full 98 DMA pairs. So it's like a 50% holdout. I don't know that customers are
+[06:28] going to be, you know, super open to doing that. So just wanted to kind of pick your brain on like,
+[06:34] am I thinking about designing these tests the right way? You know, does it does the the bump
+[06:42] up in power from 80 to 90? Like, does it really move the needle that much? Or am I focusing on,
+[06:48] you know, maybe the wrong metric to drive? Um, yeah, that's, that's where I'm at.
+[06:56] Yeah. Um, well let's just start like, first off I, and lift lab, it looks like they've got a bunch
+[07:02] of different tests that they are calculating power for. Can you go back to that? Yep.
+[07:07] me yeah uh you want to go to like quality or power analysis yeah i think it was the quality gates
+[07:16] yeah that's interesting
+[07:17] oh i see okay so they just have all these different types of tests do you is that like
+[07:26] exclusive to you like you only have access to that is that like on their platform or did they
+[07:30] send something over this is literally a web tool that i got sent via email so it's like just a
+[07:36] static set of customer data and it's like a subset of the total customer data that we sent lift lab
+[07:44] gotcha yeah so these are these are the ones that are um the best testing fit was a matched market
+[07:53] um test and then the ones that had like uh sufficiently low um error uh percent error
+[08:02] so like the the training error was less than 10 and then the holdout error was also less than 10
+[08:10] after they like ran a uh like a placebo test
+[08:15] with that data
+[08:18] it's okay so i just want to answer the question with the power at least like with the power i
+[08:29] think like standard is 80 i don't think that anybody is higher i mean obviously you can go
+[08:34] higher but what do we what are we asking we're basically saying that what is the chance that
+[08:41] if there is lift that will detect it right yeah um i feel like 80 is pretty high it still leaves
+[08:47] like a 20 like i don't want in five chance that we don't detect it but really i think that's only
+[08:52] going to be problematic in situations where our lift percentages are really low so i'll give you
+[09:01] an example too like we just did this for fangorn um that's stupid name we did it for our for our
+[09:08] continuous scoring changes for targeting right and there were improvements like when we rolled
+[09:14] them out but the improvements were like pretty small we're talking 0.25 percent 0.5 percent
+[09:22] which is expected, right? I mean, it wasn't going to be that much better. It's still measurable,
+[09:26] but the problem with it is that those, those two distributions are so close to each other.
+[09:31] It's like super hard to find any significance in it, you know? Um, so it's going to take us a
+[09:35] while to like actually see what was the measurable effect on it. Right. Um, but yeah, like, I don't
+[09:42] know. Like, I guess when I look at these things, I always think about what they're trying to,
+[09:47] um i like like the first thing i think about is just their their ivr their cvr historic rates
+[09:54] like that's usually like the biggest thing that we can't control that is not going to
+[10:01] so like if you take the case for 11 lab labs um i i mean i already did the summary but like their
+[10:08] cvr rates are so low you know so there's like really not much you can do besides spend an
+[10:14] incredible amount of money and then even then without some sort of historic like it's just
+[10:23] weird because it's like so hard to predict anyways you'll have some advertisers where they will have
+[10:30] like 20 percent lift visit rate lift like incremental visit rate lift because there's
+[10:36] some sort of small company that has a good product or something that people don't know about
+[10:41] but then like you'll have like a big advertiser like western you know but wgu right that their
+[10:49] their lift numbers are super small like one percent sometimes less than one percent because
+[10:54] they catch such a high net and so it's like you know it there's so many different variables in it
+[11:00] so i don't know exactly what i could answer for you or what you're looking for like i don't think
+[11:05] there's any reason to maybe change the power um i i would just say that like when you're calculating
+[11:12] these like i have that calculator that i could show you all the uh queries behind it but this
+[11:18] one here yeah in essence though i mean it's just got to be rerun every once in a while i could
+[11:22] actually give you the code for this so you could i mean i could rerun it was ran in what january or
+[11:27] not sorry june 4th i think that's what it says up there in the right hand corner they'll tell you
+[11:32] last time it was ran yeah june 4th yeah so but that's based on historic stuff and so like i went
+[11:40] and if you go up to the advertiser thing and you type in lift lab like
+[11:43] it should come up there now this is based on historic stuff or 11 labs sorry i left 11 lives
+[11:51] not lift lab excuse me yeah that's that's who i got up right now oh do you oh no i not no that's
+[11:56] master class sorry changed it no you're all good like so obviously you can look at the threshold
+[12:01] So you can see what the current MDE is.
+[12:04] That's like what, you know, what the monthly budget you have and then how many weeks you have set, like what MDE you would hit.
+[12:11] Right.
+[12:11] But on the all the way right, like that shows you like what your spend has to be.
+[12:16] So that's kind of like a minimum threshold for spend.
+[12:19] To hit the 5% target, right?
+[12:21] To hit a 5%.
+[12:21] But 5%, again, might be too high.
+[12:25] Yeah.
+[12:25] Like I said, for WGU, it's like sometimes it's only 1%, 2%.
+[12:28] And they're just so, they have such massive spend.
+[12:31] we can detect half a percent change or I think it's even less than that.
+[12:35] But I mean, they're spending $40 million with us.
+[12:38] So it's like those people could do it.
+[12:41] But like for these ones, it's super highly dependent on their conversion rates,
+[12:45] which for a B2B sales thing, it's like, I don't know.
+[12:49] It's kind of hard.
+[12:49] So like, I agree with their sentiment.
+[12:51] Like, I don't know how accurate their numbers are and all that stuff.
+[12:54] But when they look at it and they're like, it looks like it's positive,
+[12:57] but we don't know significance.
+[12:58] It's like, yeah, that's all you're going to be able to calculate
+[13:01] with your cpr visit rate's a different thing though um and what i i guess the last thing i
+[13:08] was going to say is what i was trying to do right now is um with the new bidder stuff that they have
+[13:14] implemented is to run my own lift analysis on this for this campaign and just see um there are some
+[13:21] issues with the uh lift um or not sorry with the ghost bidding there's one aspect that was is not
+[13:32] considered is that in our targeting there's ip target limits so when an ip shows up too many
+[13:41] times we will not target it for certain reasons um i don't know whether or not i'm not sure what
+[13:49] level that limitation occurs um i need i just learned about that today but right now there is
+[13:57] no limit on the ghost bidding methodology so that can be bad because number one i mean it's not the
+[14:07] same so obviously it's not like a a good comparison but the type of ips that show up a lot tend to be
+[14:14] IPs that convert more or they tend to be like revolving IPs that we attribute across a lot
+[14:20] of things.
+[14:20] So we got the cellular IPs.
+[14:22] So we might be accidentally making our ghost bid control group more performative than our
+[14:32] treated group.
+[14:33] I guess you could put it that way.
+[14:34] So when we do the lift calculations, they might be lower than they should be.
+[14:39] But yeah, that's just something I wanted to bring out too.
+[14:41] I didn't know if you knew that.
+[14:43] I did not.
+[14:43] so they're going to be changing that at some point in time but so how does the how does our
+[14:48] ghost bidding architecture work today it's like an automatic 10 percent still or it's an automatic
+[14:55] 10 percent um and or i think it's i think it's 10 i don't know if it's 10 or they just do a ghost bid
+[15:05] every single time
+[15:07] they do a target
+[15:11] I think it's 10% though
+[15:13] let me double check
+[15:15] if they're doing it on every single
+[15:19] target
+[15:21] I feel like that would be really
+[15:25] cost prohibitive wouldn't it?
+[15:27] yeah I think it's 10% you're right
+[15:35] I guess like where I'm struggling just in general is like we ran a whole bunch of
+[15:44] incrementality tests before I even joined the team. So we have like 50 roughly in a tracker
+[15:51] and the tracker is not consistent or complete by any stretch of the imagination. I think there's
+[15:56] like a total of maybe 10 or 12 tests that I actually have like complete, you know, readouts
+[16:03] of what the lift was and stuff. So I'm kind of, I'm kind of trying to fill in blanks, um, just
+[16:09] based on that incomplete information. But what I've drawn is that like, we had five tests that
+[16:13] did show lift. One thing that those five cat in common was that they ran for at least six weeks.
+[16:19] So that's where like my six week minimum recommendation is like being, you know,
+[16:23] informed by. Um, but I think there's also like, I mean, we have this hypothesis that, you know,
+[16:32] mountain matched audiences are, they're already in the funnel. And so like, by definition,
+[16:40] they're not going to be incremental, because it's the same, you know, high intent audience that
+[16:45] you're hitting with your meta campaigns and your Google campaigns and all that kind of stuff to
+[16:50] you, right. But like, at the same time, that's what drives performance. That's what drives like
+[16:58] your actual conversions, your ROAS, all that, at least platform reported. And so it's, I don't
+[17:03] think it's practical for us to like go to a customer who has like embraced Mountain Matched
+[17:09] and like they want to run an incrementality test. And we say like, oh, well, Mountain Matched isn't
+[17:16] good at that. And so like now we need to broaden your audiences to like more interest-based
+[17:21] segments and stuff. So like, yes, there's trade-off between performance and incrementality,
+[17:26] but like we need to figure out a way to do both you know at least at least like without sacrificing
+[17:34] one too much for the other um and so i'm not convinced that the way we bid campaigns
+[17:44] um is really like going to show incremental results uh maybe ever
+[17:54] depends on the advertiser like i said you're you're pretty much right across the board generally
+[18:01] if you were to take our prospecting only campaigns and remove retargeting because
+[18:06] retargeting is awesome but it also skews the number really high and you were just to compare
+[18:11] it by stage so not even retargeting within the same campaign um so we haven't seen them before
+[18:17] but within that campaign we decided to target them again or a third time it could be more than that
+[18:22] actually. If you just do it to the very first impression that they get, and we haven't seen
+[18:28] this IP before, our lift across the board was less than 1% for visits. That's just like where
+[18:38] we're sitting at. Of course, there's going to be some advertisers that skew it really heavy.
+[18:43] That's variance weighted. So higher spend, let's say it's kind of a weird
+[18:47] thing because higher spend clients tend to have more money they tend to be less
+[18:53] able to move the needle like how much are you gonna be able to move the needle on mcdonald's
+[19:00] type things right sure but yeah so the that's that's the true answer that's why when we saw
+[19:07] stuff like for example when we did the um we're still doing it the world cup select yeah stuff
+[19:13] um,
+[19:14] incrementality was a lot higher on those because we're targeting a pool.
+[19:19] That's not determined by our scores or previous site visits.
+[19:23] It's the pool that they give us of,
+[19:24] uh,
+[19:27] I,
+[19:27] I can't remember what it's like.
+[19:28] People are going to be at the world cup or world series or whatever that
+[19:31] targetable audiences.
+[19:32] So just like off the bat,
+[19:33] I think that I just,
+[19:35] I did an analysis,
+[19:36] the same thing.
+[19:36] And their lift numbers were like between three and 4%.
+[19:39] So it's already like three,
+[19:41] three, 400% or higher than our average. So it's like, I don't know, we do, you deal with this
+[19:48] in advertising all the time. And I'm sure you were familiar with the space, but it's like
+[19:52] every advertiser has a different use case and a different goal and you can't optimize against
+[19:59] absolutely
+[20:00] everything. You know what I'm saying? Like mountains optimized against performance.
+[20:04] But when somebody comes to us and says, we want to do incrementality, it's like,
+[20:07] it's a totally different ballgame. Like I always tell people this. I'm like,
+[20:11] yeah, I can make people really incremental. I'll just make sure that they don't target anybody
+[20:15] we've ever seen before. And their performance will be terrible, but it's like, you've never,
+[20:20] ever seen these IPs and they've never visited your website. So of course,
+[20:23] like they're going to be incremental, but then people would complain and say,
+[20:26] like i just had an orange theory so this is what happened with orange theory this is a something
+[20:30] just came up to me right they had a lot of spend like two three thousand dollars a day right and
+[20:36] their audience was one and a half million and basically what happened is their campaign was
+[20:41] going to go for a month it went for two weeks they exhausted all their high scored ips their
+[20:48] performance basically tanked because they went from we literally target a hundred percent of
+[20:53] their high intent audience and then immediately goes to random and so that the visit rates go
+[20:58] down the conversion rates go down and they're like what's wrong and i'm like there's nothing
+[21:01] wrong we literally target everybody now you're getting into max reach area where you're losing
+[21:05] performance but you're getting you know there's other benefits you're getting more incremental
+[21:09] stuff so um again i so i didn't i don't want to ramble on but i just want to make sure like so
+[21:16] the question that you're answering or you're wanting to answer is ultimately like what set
+[21:23] of advertisers should we go to and say, Hey, we can run incremental tests for you. Is that
+[21:29] basically where we're trying to get? Yeah. I mean, we've, we've kind of identified those.
+[21:33] Um, I guess the question for me is, or the question that I had more is like,
+[21:38] so you answered the, the power thing. That's, that's fine. I don't necessarily need to
+[21:44] tell them that we upped it to 90%. I think we can say, you know, it's, it's powered sufficiently
+[21:49] at 80% or above. But it's also based on like spend threshold. I don't think we should really be
+[21:56] even spending time on anybody that's spending less than 25K a month for incrementality. I mean,
+[22:02] again, it depends on the business, but I think like it's just not worth our time for less than
+[22:08] that. If they want to do it independently, then, you know, go ahead and that's on them. But anything
+[22:13] that's sanctioned by us, I think needs to have like a minimum spend threshold there. But it's
+[22:18] really just we've we've seen pretty poor results in our previous incrementality tests and i have
+[22:29] not been able to pinpoint why that is um part of me believes that are specifically with house
+[22:39] they're not running this test long enough like i said um but even with lift lab um
+[22:46] I think they're probably underpowered to some extent.
+[22:51] Uh,
+[22:52] and I think that our product,
+[22:56] our,
+[22:56] our bidding,
+[22:57] uh,
+[22:58] engine is not optimized to incremental results.
+[23:03] Yeah,
+[23:03] it's,
+[23:03] it's not,
+[23:04] um,
+[23:05] it,
+[23:05] it's a totally different thing.
+[23:07] It's something that we're working on where we're going to create more models.
+[23:10] So the next one's going to be based on conversions.
+[23:11] and then the next one's going to be probably based on incremental you know visits and stuff and how
+[23:18] it'll probably work is i'm not sure i mean well we have to do a lot of tests and this is in the
+[23:23] future probably going to take the rest of the year but it either is going to work where one of the
+[23:28] models just performs better than everything else and so it's like okay we're going to use this
+[23:31] model right or we're going to have an incremental model that just performs you know we turn on a
+[23:38] switch and say hey they're going to do an incremental incrementality campaign right or
+[23:43] we're going to do a performance campaign and it's just going to be one of those right where somebody
+[23:47] comes in and they hit a button and then when they create their audience expression that's what's
+[23:51] going to happen so that's probably what's going to be done um but again like i want to show i know
+[23:58] you've seen this and you've used this but like ultimately like i've i've had decent success like
+[24:06] measuring lift um but yeah you're right like if you look at again i know you've already we've
+[24:13] already seen this like 10 times right but if i go to 11 labs it's like they look their ivr i mean
+[24:18] they have such good visit rate that like we only need to spend fourteen thousand dollars
+[24:24] to hit like you know uh five percent target yeah right cvr is changed it's just it's drastically
+[24:31] different so it's like it's not that things aren't powered there's very few that aren't um let me show
+[24:36] Western. Oh yeah. So I was showing you Western union. This is our highest, I mean, 0.3%. We can
+[24:42] detect extremely small CVR. We could still detect really low. Yeah. But you know, for 5%, but this
+[24:51] is how much their spend is. There's, there's this crazy. So they're their number one spending
+[24:54] partner, but like, you notice this is actually filtered by their average spend over 30 days.
+[24:59] So you can see basically less and less spend clients. Like it's just based on like, okay,
+[25:04] their visit rate's really high so this like columbia southern university would be a great
+[25:08] candidate even though they don't spend a ton of money with us i mean decent twenty one thousand
+[25:12] dollars but their cvr is impossible i mean they're never going to spend that much they're spending
+[25:16] 21k a month to even get a five percent you know cvr it's like 1.9 million it's just not possible
+[25:23] but i'm sure that some of these yeah that's not bad like check out gov plus right gov plus right
+[25:28] there 57k yeah five percent target and they're spending like you know that i mean they they'd
+[25:36] be a great target so i mean is this is how i'm calculating it okay um so i mean there's no real
+[25:43] answer because it's like it's totally up to the advertiser it's like i don't even see a better way
+[25:48] than if i were to basically run a query and say hey just return to me anybody who can
+[25:58] whose historic monthly rate is close enough to their budget for a targeted
+[26:07] MDE or something like that.
+[26:09] And that you could get a list of advertisers,
+[26:11] but that's also assuming that a 5% CVR is like a realistic lift,
+[26:16] which I actually don't know what a good,
+[26:22] like minimum,
+[26:23] minimum detectable effect is for CVR.
+[26:25] Actually.
+[26:25] I have no idea for,
+[26:27] for visits.
+[26:27] I know it varies,
+[26:28] between say in the low end like one percent and the high end like some of them are over 20 but i
+[26:34] would say like i wouldn't do anything less than eight percent per visits depending on the client
+[26:40] but yeah so like in the case with 11 labs we're driving visitors but just no one's converting
+[26:47] right yeah so it's and so like so that's not but like that's not a fault of media right like that's
+[26:55] a fault of like the media is working because you're see you're you're reaching people and
+[27:00] then those people are going to your site and checking it out and then they're just like
+[27:04] they're not interested in what they're seeing or whatever for whatever reason so it's almost like
+[27:09] with an incrementality test like conversions are not really the right kpi if your baseline
+[27:19] conversion rate in that channel is not already like sufficiently powered yeah i would say i
+[27:26] would agree with that and you you really brought up a really good point like how there's also as
+[27:32] a balance like we can it's kind of weird but they're like almost directly correlated to where
+[27:40] they it's silly to separate them and we'll probably see this i imagine that when we start
+[27:45] testing for or create a model for conversions it probably will perform very similar if not exactly
+[27:50] the same to be indistinguishable from the visit train model and the truth is is that people who
+[27:56] visit are people who convert right i mean the interest is leads to the conversion how much can
+[28:05] you tweak the dial to where there's some sort of unique property of somebody who converts but is
+[28:12] not a visitor. And like, I could take a really simple, simple example of what would be like,
+[28:19] if you have, Oh, let's take like a gym membership, uh, what elevate or something like that in New
+[28:25] York where it's really expensive, $350 a month, $400 a month. You might take two people who are
+[28:31] both equally likely to visit, but the CV, the person that's likely to convert, like you could
+[28:37] just take household income above 200,000 and one and you know less less than 80,000 or something
+[28:42] like that right and the other one will convert so there are some different like things you can tweak
+[28:47] where someone's more likely to convert but it also gets really difficult because that's also
+[28:53] specific to product and so you would essentially have to build a model conversion model for every
+[28:59] single advertiser for their specific products and it just becomes almost impossible to do
+[29:05] realistically without it costing way more than it's worth to actually implement.
+[29:09] So we'll just be targeting a blanket conversion rate across all advertisers and training on that.
+[29:18] And the only difference will be, I guess, the scores that we apply to each of the advertisers
+[29:25] based on some, you know, site visit criteria. So anyways, at the end of the day, though,
+[29:31] like what you said is that, yeah, I mean, I,
+[29:34] I think visits are the best thing because that shows that we did our job.
+[29:40] Conversion shows, I think a little bit more of how is the product suck.
+[29:46] Does, you know, is it, is there a high barrier to entry or something?
+[29:50] Yeah, exactly. Like the same thing. Like there,
+[29:53] I don't even know what 11 labs is.
+[29:55] I hear it's like an AI business to business thing. It's like, I mean,
+[29:58] there's a billion AI companies out there.
+[30:00] it's probably got a small market and people are interested to click on it.
+[30:04] AI who, and like their visit rates. Great. I mean, we, I, anyways, I'm,
+[30:09] I'm we're way over time, so I'm not sure.
+[30:12] Okay, cool. Well, uh, I really appreciate the time Malachi. Um,
+[30:17] I don't know that, you know, there was necessarily a goal other,
+[30:20] other than just like picking your brain and, and kind of, um, you know,
+[30:24] having another set of eyes go over like the testing criteria here and make sure
+[30:29] I'm not missing anything. So, um, I guess we'll move forward with, with this plan. I've already
+[30:34] started outreach with some of these customers anyway. And like the reality is there's no such
+[30:39] thing as like a guaranteed thing. So like, you just gotta kind of take the leap and see what
+[30:44] happens. So, yeah. Yeah. And I'll show you too. Um, I'm going to just check a couple of things,
+[30:51] but I'll send you my actual results of what lift percentage that I actually saw. Okay. Um,
+[30:57] so 11 labs yeah for 11 labs cool um in fact i further concert it's underpowered because like
+[31:08] i'm getting a lift of negative two percent which is funny for cvr so we'll see but um okay cool
+[31:16] all right thanks malachi yeah take care all right bye
