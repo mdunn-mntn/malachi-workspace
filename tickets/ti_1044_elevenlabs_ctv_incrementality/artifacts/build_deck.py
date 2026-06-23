@@ -6,6 +6,7 @@ def img(name):
     return f"data:image/png;base64,{b}"
 POWER, CURVE, TREND = img("ti_1044_chart_power_contrast.png"), img("ti_1044_chart_mde_curve.png"), img("ti_1044_chart_visit_vs_cvr.png")
 CONV = img("ti_1044_chart_conv_att_vs_itt.png")
+LIFT = img("ti_1044_chart_lift_measurement.png")
 
 NAVY, RED, MINT = "#1f3a5f", "#c0392b", "#16a085"
 
@@ -71,18 +72,51 @@ slides = f"""
 
 <section>
   <p style="text-transform:uppercase;letter-spacing:3px;color:#888;font-size:0.45em;">We ran your test, on our side</p>
-  <h2 style="font-size:0.82em;">Our own household ghost-ad holdout agrees: ≈ 0 conversion lift.</h2>
-  <img src="{CONV}" style="width:62%;border:none;box-shadow:none;background:none;">
-  <p class="footer-note">New bidder ghost-ad holdout (same method as our prior lift studies) · 4M+ households · last 10 days</p>
+  <h2 style="font-size:0.78em;">Our household ghost-ad holdout: visits lift, conversions don't.</h2>
+  <img src="{LIFT}" style="width:74%;border:none;box-shadow:none;background:none;">
+  <p class="footer-note">New bidder ghost-ad holdout · same method as our prior lift studies · clean ITT · 6.6M households · ~10 days</p>
+</section>
+
+<section>
+  <p style="text-transform:uppercase;letter-spacing:3px;color:#888;font-size:0.45em;">The measured lift</p>
+  <table style="margin:0.7em auto;border-collapse:collapse;font-size:0.52em;width:92%;">
+    <tr style="background:{NAVY};color:#fff;">
+      <th style="padding:0.5em 0.6em;text-align:left;">Metric</th>
+      <th style="padding:0.5em 0.6em;">Held-out</th><th style="padding:0.5em 0.6em;">Reached</th>
+      <th style="padding:0.5em 0.6em;">Lift</th><th style="padding:0.5em 0.6em;">95% CI</th>
+      <th style="padding:0.5em 0.6em;">p</th><th style="padding:0.5em 0.6em;">Verdict</th></tr>
+    <tr style="background:#eef6f3;">
+      <td style="padding:0.5em 0.6em;text-align:left;"><strong>Visit rate (IVR)</strong></td>
+      <td style="padding:0.5em 0.6em;text-align:center;">0.65%</td><td style="padding:0.5em 0.6em;text-align:center;">1.59%</td>
+      <td style="padding:0.5em 0.6em;text-align:center;color:{MINT};"><strong>+143%</strong></td>
+      <td style="padding:0.5em 0.6em;text-align:center;">+136% … +151%</td>
+      <td style="padding:0.5em 0.6em;text-align:center;">&lt;0.001</td>
+      <td style="padding:0.5em 0.6em;text-align:center;color:{MINT};">✅ significant</td></tr>
+    <tr style="background:#f9eef0;">
+      <td style="padding:0.5em 0.6em;text-align:left;"><strong>Conversion rate (CVR)</strong></td>
+      <td style="padding:0.5em 0.6em;text-align:center;">0.0459%</td><td style="padding:0.5em 0.6em;text-align:center;">0.0452%</td>
+      <td style="padding:0.5em 0.6em;text-align:center;color:{RED};"><strong>−2%</strong></td>
+      <td style="padding:0.5em 0.6em;text-align:center;">−13% … +11%</td>
+      <td style="padding:0.5em 0.6em;text-align:center;">0.79</td>
+      <td style="padding:0.5em 0.6em;text-align:center;color:{RED};">✕ no lift</td></tr>
+  </table>
+  <p style="font-size:0.5em;color:#555;">IVR is well-powered and clearly significant — <strong>the media is working.</strong> CVR is indistinguishable from zero — the 0.062% B2B conversion base rate is the wall, not the media.</p>
+</section>
+
+<section>
+  <p style="text-transform:uppercase;letter-spacing:3px;color:#888;font-size:0.45em;">Why the conversion number is trustworthy</p>
+  <h2 style="font-size:0.8em;">We removed win-selection. The 'lift' was an artifact.</h2>
+  <img src="{CONV}" style="width:58%;border:none;box-shadow:none;background:none;">
+  <p class="footer-note">A naive served-vs-ghost read shows +35% — but that's serving your highest-value households; the clean ITT is ≈0.</p>
 </section>
 
 <section>
   <p style="text-transform:uppercase;letter-spacing:3px;color:#888;font-size:0.45em;">What our holdout shows</p>
   <div style="font-size:0.55em;text-align:left;max-width:84%;margin:0.4em auto;line-height:1.7;">
-    <p>✓ <strong>Conversions:</strong> clean household holdout lift = <strong style="color:{NAVY};">−2% (not significant)</strong> — independently confirms your geo null.</p>
-    <p>⚠ A naive read shows +35%, but that's <strong>win-selection</strong> — we serve your highest-value households, who convert more anyway. Remove it and the lift is ~0.</p>
-    <p>📺 <strong>Attributed</strong> visits look huge (+276%) — but that's <strong>attribution</strong>, not incrementality; total site traffic barely moves.</p>
-    <p style="color:#555;">Two independent methods (your geo test, our household holdout) → the same answer.</p>
+    <p>📈 <strong style="color:{MINT};">Visits (IVR): +143%, highly significant.</strong> MNTN is driving real, incremental site visits — the media is working.</p>
+    <p>🧱 <strong style="color:{RED};">Conversions (CVR): −2%, not significant.</strong> The 0.062% B2B conversion base rate is the wall — that's the product/funnel, not the media.</p>
+    <p>🤝 <strong>Two independent methods</strong> — your geo test and our household holdout — land on the same conversion answer.</p>
+    <p style="color:#555;">Incrementality testing on conversions isn't the right lens here until the conversion rate is high enough to power it.</p>
   </div>
 </section>
 
