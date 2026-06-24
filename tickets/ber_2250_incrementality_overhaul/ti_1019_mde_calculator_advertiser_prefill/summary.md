@@ -159,9 +159,31 @@ uniques = HLL_COUNT.INIT(CASE WHEN channel_id = 8 OR objective_id IN (5,6) THEN 
 - Sum ≈ 32.46M ≈ the 32.1M HLL. Whole-table distinct `ip` = 15.53M (= our 15.7M); distinct `guid` = 37.1M.
 - Confirmed NOT an event-type double-count: reconstructed from a deduped (1 row/`impression_id`) served log, so no event counted twice; checked all 35 `impression_facts` columns (`unlinked` already FALSE; `new_users_reached`/`existing_users_reached` are a separate is_new split, not summed).
 
-**What the "graph" table is:** R2 metric layer → CHAPI (ClickHouse API) → ClickHouse `summarydata.all_facts_local_daily` (hourly copy of BQ `all_facts`). Owner: model = `ber` team (`SteelHouse/sqlmesh`); CHAPI load = data-platform (`SteelHouse/airflow-reporting`, `dags/chapi/`). Metric-def routing: #reporting_helpdesk_ask_anything (Ray). The CTV "reach_meter" widget is a *separate* table (`info.reach_meters` ← BQ `summarydata.reach_meters`; audience-segment-grained), not the same as per-advertiser `graph.usersreached`.
+**What the "graph" table is:** R2 metric layer → CHAPI (ClickHouse API) → ClickHouse `summarydata.all_facts_local_daily` (hourly copy of BQ `all_facts`). Owner: the **Backend Reporting squad (`ber`)** owns BOTH the SQLMesh model (`SteelHouse/sqlmesh`) AND the CHAPI/ClickHouse load (`SteelHouse/airflow-reporting`, `dags/chapi/`) — verified via `owners.py` + commit authors (Lizz Joslen, Mike Rivera; Aylwin Souza on squad). The CTV "reach_meter" widget is a *separate* table (`info.reach_meters` ← BQ `summarydata.reach_meters`; audience-segment-grained), not the same as per-advertiser `graph.usersreached`.
 
 **Conclusion (unchanged):** `graph.usersreached` blends IP-counts (CTV) + cookie-counts (display) → over-counts ~2× and isn't a per-IP/per-household number. The per-IP MDE baseline (matching the per-IP holdout, §7e) is `count(distinct ip) from cost_impression_log` (15.7M → 10.70%). Queries: `bq_perf_log` 2026-06-24 (impression_facts base 61.9 GB; clickpass ip/ip_raw 1.1 GB; impression_log 320 GB; CIL linkage 11 GB; channel-split reconstructions via workflow agents).
+
+### 7h. The fix — owner, differentiation, and the request (2026-06-24, verified via 2-agent workflow)
+
+**Owner = Backend Reporting squad (`ber`).** GitHub team `backend-reporting`; owns the SQLMesh model AND the airflow-reporting CHAPI load (one team end-to-end). Verified via `owners.py` + model commit authors. Maintainers: **Lizz Joslen, Mike Rivera** (Aylwin Souza on squad). Route: BER Jira ticket, tag Backend Reporting.
+
+**Can we differentiate without a new column? Only for CTV-pure advertisers.**
+- **Channel split works for CTV-only:** `channel_id=8` (and `objective_id IN (5,6)`) uniques is already IP-keyed. WGU CTV uniques 12.94M ≈ CIL served CTV IP 12.78M (~1.2% HLL error). So a CTV-only advertiser gets clean IP reach via a channel filter, no new column.
+- **Mixed CTV+display can't be done by channel:** display is guid-keyed, and you can't sum per-channel IP reaches — WGU CTV-IP 12.79M + display-IP 7.93M = 20.71M summed vs 15.61M distinct → **5.10M (33%) cross-channel overlap** (1 in 4 served IPs see both). Cross-channel-deduped served IP needs a single always-IP HLL (`users_reached_ip`) or a CIL query.
+- **Exact parity with our 10.70% is NOT reachable from graph:** the in-window restriction needs `impression_hour`/`day_number`, which live only in `ber_stg.visit_facts__base` and are GROUPed away before `visit_facts`/`all_facts` (graph layer has neither). The day-bucket visitor arrays that survive encode elapsed-days-from-impression, a different axis — can't reconstruct "impression served in-window."
+
+**WGU IVR reconciliation (denom 15.61M, verified):**
+| numerator | count | IVR | = |
+|---|---:|---:|---|
+| A. all verified visitors (graph `site_visitors`) | 1.922M | **12.31%** | what `sitevisitors/users_reached_ip` gives |
+| B. impression-in-window (`visit_facts__base`) | 1.690M | 10.83% | needs ber_stg, not graph |
+| C. visiting-AND-served-in-window (CIL intersect) | 1.672M | **10.71%** | = our standalone 10.70% ✓ |
+
+**Recommended path:**
+- **Denominator:** add `users_reached_ip = HLL_COUNT.INIT(l.ip)` (always-IP, all channels) to `impression_facts`, additive (leave `uniques`). Only way to get cross-channel-deduped served-IP for mixed advertisers from graph.
+- **Baseline / exact parity:** don't chase it from graph (not reachable). Either **(a) accept the residual** (graph 12.3%, ~1.6pp optimistic — all-VV-visitors incl. pre-window impressions) or **(b) source the calculator baseline from CIL** (exact 10.71%, one scheduled query). Primary rec: (b) for the defensible baseline + the `users_reached_ip` column so the UI headline reach is also IP-correct.
+
+**Request sent to BER:** add `users_reached_ip = HLL_COUNT.INIT(l.ip)` across all channels → expose in graph → backfill ~30d. Problem: `graph.usersreached` counts CTV by IP / display by cookie → ~2× the true served IPs (WGU 32M vs 15.7M); MDE/power calc needs per-IP reach (holdout is per-IP); channel-split can't substitute (mixed-advertiser 33% overlap).
 
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
