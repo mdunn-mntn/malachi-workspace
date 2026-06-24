@@ -47,7 +47,7 @@ No Jira ticket number assigned (ad-hoc PMO request via Slack). Folder uses the `
 - **Which themes already have epic homes vs. gaps?** See table in the artifact; biggest gap = Advertiser Decision Support.
 
 ## Published
-- **Confluence (TAR / Targeting space):** "Audience Intelligence: From Reactive Analysis to Proactive Capabilities (Plan for Review)" — page id 3668312118 — https://mntn.atlassian.net/wiki/spaces/TAR/pages/3668312118 — for incoming TPM review. Source: `artifacts/ti_proactive_plan_confluence.md`; storage XHTML: `artifacts/confluence_body.html`.
+- **Confluence (TAR / Targeting space):** "Audience Intelligence: Recurring Analyses and How to Automate Them" — page id 3668312118 (v2, simplified per Bryce: problem type → tickets/share → what we did → how to automate) — https://mntn.atlassian.net/wiki/spaces/TAR/pages/3668312118 — for incoming TPM review. Source: `artifacts/ti_proactive_plan_confluence.md`; storage XHTML: `artifacts/confluence_body.html`.
 
 ## Open items
 - Decide whether to create the 3 new epics (Bryce/PMO call).
