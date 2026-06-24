@@ -1067,6 +1067,8 @@ Connecting BER-2250 Phase 2 implementation to the literature:
 - If conversions are household-resolved via identity graph → use household-level impressions and spend
 - If conversions are individual-pixel (typical for web purchases) → accept that co-viewing inflates apparent iROAS, apply daypart/genre adjustment or flag the bias
 
+**Corollary for MDE / power-calc baselines (TI-1019, verified 2026-06-24):** the two-proportion binomial MDE engine (`ti_884_mde_calculator.py`) treats each advertised IP as one Bernoulli trial, so the baseline `p` MUST be a per-IP *probability* = distinct visiting-and-served IPs / distinct served IPs. **Never feed it an event-count rate.** `graph.visits` is an *event count* (data_catalog.md), not distinct IPs — `graph.visits / usersReached` inflates the baseline by (visit events per visiting IP) × (visiting-but-unserved leakage). For WGU that was 3.36x (10.70% → 35.95%). Because MDE_rel ∝ sqrt((1−p)/p) — monotonically decreasing in p — an inflated baseline makes the tool report a **smaller, over-optimistic MDE and overstated power**. At WGU the over-optimism factor was 2.16x (0.68% true vs 0.31% naive). Rule: numerator and denominator must be the same unit (distinct IPs over distinct IPs); use `graph.SiteVisitors`-style distinct counts, never `graph.visits`, when prefilling a power calculator. A baseline >1.0-implied (here 0.36 only because events ≈ 3× IPs) is the tell that an event count leaked into a per-trial probability.
+
 ### Triangulation Architecture — The End-State Pattern
 
 The meta-pattern endorsed by Meta, Google, PyMC-Marketing, and the BCG 2025 "trifecta" study (46% of leading marketers):

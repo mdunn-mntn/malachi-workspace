@@ -62,6 +62,21 @@ Additionally, trailing-30d-only spend misrepresents on-off advertisers (seasonal
 ## 7. Data Documentation Updates
 - `knowledge/data_catalog.md` — adding `agg__daily_sum_by_campaign` staleness note (>1mo behind).
 
+## 7b. Baseline-definition verification (graph.visits vs distinct visiting IPs) — 2026-06-24
+
+Chris Franz's proposed UI baseline `IVR = graph.visits / usersReached` is **wrong for the binomial power calc** because `graph.visits` is an *event count*, not a per-IP probability.
+
+- `graph.visits` = event count of Verified Visits (data_catalog.md). `graph.SiteVisitors` is the distinct-IP metric. The MDE engine's unit of analysis is the advertised IP (one Bernoulli trial). The numerator must be **distinct visiting-and-served IPs**, not events.
+- WGU (AID 31357), trailing 30d: distinct served IPs = 15,732,160. Distinct visiting&served IPs = 1,683,382 → **correct IVR = 10.70%**. graph.visits = 5,656,104 → naive = 35.95%. **Inflation = 3.36x** (= 2.92 visit events per visiting IP × 1.15 from visiting-but-not-served IPs in the event count). Confirmed.
+- p=0.3595 is also numerically invalid as a per-IP probability anchored to that denominator — it would only be a valid proportion if every visiting IP visited once.
+
+**MDE direction:** MDE_rel ∝ sqrt((1−p)/p), monotonically decreasing in p. Inflating the baseline (0.1070 → 0.3595) **shrinks** the reported MDE.
+- sqrt((1−0.1070)/0.1070) = 2.8889; sqrt((1−0.3595)/0.3595) = 1.3348.
+- MDE_rel(0.1070)/MDE_rel(0.3595) = **2.1643**. Equivalently the naive baseline reports an MDE **2.16x smaller** than reality (WGU at 90/10 split: 0.314% vs 0.680%).
+- Net: the naive `graph.visits` baseline is **over-optimistic** — it understates the true MDE and overstates statistical power. Claim confirmed on both counts (3.36x inflation, optimistic MDE).
+
+**Recommendation:** UI prefill must use distinct visiting-and-served IPs / distinct served IPs (the ti_1019 `p_visit = visiting_ips_30d / distinct_ips_30d` definition is correct). If Chris's resolver pulls `graph.visits`, switch it to `graph.SiteVisitors`-style distinct-IP-on-served logic before shipping.
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
