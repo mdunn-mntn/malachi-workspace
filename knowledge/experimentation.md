@@ -1525,6 +1525,32 @@ Both directions live in the same calculator file. The variance-reduction stack (
 
 **See also:** [TI-917 combined deck](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/artifacts/ti_917_combined_deck_standalone.html); [revenue MDE per advertiser](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/outputs/ti_917_revenue_mde_per_advertiser.csv).
 
+<!-- ti_1019: 2026-06-24 -->
+### Canonical MDE baseline-rate definition — and the `graph.visits` numerator trap
+
+The MDE engine is a **two-proportion binomial** power calc (`mde_binomial`): σ = √(p(1−p)), MDE_rel = MDE_abs/p. The unit of analysis is the **advertised IP** — each served IP is a Bernoulli trial (visited yes/no). So `p` **must be a per-served-IP probability in [0,1]**, not a rate-per-IP of an event count.
+
+**Canonical baseline (what the team tool + per-advertiser prefill use):**
+```
+IVR = COUNT(DISTINCT served IP with ≥1 verified visit) / COUNT(DISTINCT served IP),  trailing 30d
+CVR = COUNT(DISTINCT served IP with ≥1 conversion)     / COUNT(DISTINCT served IP),  trailing 30d
+```
+Numerator is distinct visiting/converting IPs **intersected with served IPs** (LEFT JOIN on `(advertiser_id, ip)` in `ti_xxx_advertiser_prefill_metrics.sql`); denominator is distinct served IPs from `cost_impression_log`. Both are distinct-IP counts at the **same grain (raw IP)**.
+
+**The trap (load-bearing):** do **not** use `graph.visits` as the numerator. `graph.visits` is an *event count* of verified visits (catalog: it counts repeat visits; `graph.SiteVisitors` is the unique-IP metric). For WGU (31357), trailing 30d, fresh pull 2026-06-24:
+
+| Numerator choice | Value | /15.73M served IPs | vs canonical |
+|---|---:|---:|---|
+| `graph.visits` (events) | 5.66M | **35.95%** | 3.36× too high |
+| distinct visiting IPs (all, not ∩ served) | 1.94M | 12.3% | ~15% too high |
+| **distinct visiting ∩ served IPs (canonical)** | 1.68M | **10.70%** | ✓ baseline |
+
+Each visiting IP fires ~2.9 visit events. For the full derivation of why this is anticonservative (inflated p → smaller σ → reported MDE ~2.16× too optimistic), see the "Corollary for MDE / power-calc baselines" note above (under the "same unit of analysis" rule).
+
+**Premier-UI / gary-ql matching (Chris Franz PR #4445, `Advertiser.mdeInputs`).** The customer wizard historically used `conversions / first_party_audience` — wrong denominator *and* sparse numerator (WGU 2.2% vs our 10.3%). To match the team tool: (1) keep `usersReached` (distinct served IPs) as the denominator — cross-check via imps/IP (WGU 24.7 ≈ our 22.5 confirms same grain); (2) numerator = distinct served IPs that visited, **not** `graph.visits`; (3) default to IVR, gate CVR behind a power warning (usually underpowered — the "$2M wall"); (4) keep numerator/denominator at the same grain (don't mix IP and household — cf. TI-1044, 2.83% same-IP overlap); (5) reconcile `var_reduction` (resolver uses 1.0/raw; standalone shows raw + 0.595 post-stack — show raw-only in the UI and label it).
+
+**Deeper caveat (applies to both tools equally; methodology, not a matching issue):** this served-arm clickpass IVR is the *observed* visit rate among the exposed — fine as a screening magnitude, but it is **not** the holdout/unexposed baseline an incrementality test measures lift against. VV-attributed (clickpass) visits are structurally ~0 for never-served holdout IPs, so the true control-arm rate is far below the served-arm rate. For an honest incrementality estimand the binomial `p` should be the holdout's **total-traffic** visit rate (guid_log), where holdout ≈ served (TI-835 showed ~0% total-traffic lift). Worth formalizing before the customer-facing forecast is final.
+
 ## TI-933 — Per-impression attribution window (lesson learned)
 
 **Issue surfaced 2026-05-07** while building the Select lift deck.

@@ -77,6 +77,21 @@ Chris Franz's proposed UI baseline `IVR = graph.visits / usersReached` is **wron
 
 **Recommendation:** UI prefill must use distinct visiting-and-served IPs / distinct served IPs (the ti_1019 `p_visit = visiting_ips_30d / distinct_ips_30d` definition is correct). If Chris's resolver pulls `graph.visits`, switch it to `graph.SiteVisitors`-style distinct-IP-on-served logic before shipping.
 
+### 7c. Answer sent to Chris's two questions (2026-06-24)
+
+**Q1 — switch UI baseline to per-advertised-IP IVR? → Yes** (binomial unit = advertised IP; IVR is the headline KPI, conversions usually underpowered).
+
+**Q2 — denominator nuance? → Denominator already matches; fix the numerator.**
+- `usersReached` ≈ our distinct served IPs (his imps/IP 24.7 ≈ our 22.5 → same raw-IP grain). Confirm: distinct IPs with ≥1 impression, deduped, trailing 30d.
+- Numerator = distinct visiting ∩ served IPs (see 7b). `graph.SiteVisitors` without the served intersection → ~12.3% for WGU (1.94M/15.73M) vs our 10.70% — still ~15% high; intersect for exact parity.
+
+Additional caveats flagged (beyond 7b):
+- **Grain parity** — keep numerator + denominator at the same grain. If `usersReached` is ever household/graph-deduped, the rate shifts (cf. TI-1044: 2.83% same-IP overlap → IP ≠ household).
+- **var_reduction parity** — resolver uses 1.0/raw; standalone shows raw + 0.595 post-stack. Show raw-only in the UI, labeled, so buyers don't compare raw-UI to post-stack-team numbers.
+- **Incrementality semantics (deeper, both tools)** — served-arm clickpass IVR is the *observed* exposed rate, not the holdout/unexposed baseline an incrementality test measures lift against (clickpass ≈ 0 for never-served holdouts). For an honest incrementality `p`, use holdout total-traffic rate (TI-835: ~0% total-traffic lift → holdout ≈ served). Methodology alignment, not a matching blocker.
+
+Verification: 3-agent adversarial workflow (MDE math / recommendation red-team / citation audit) — all 6 source citations confirmed, MDE direction confirmed.
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
