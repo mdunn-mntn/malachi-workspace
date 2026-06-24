@@ -98,7 +98,7 @@ Chris confirmed what R2 can actually pull (Graph table, same trailing-30d call a
 
 - These = `summarydata.all_facts.site_visitors`/`uniques` (HLL). `uniques` is keyed on **raw `device_ip`** (lineage: PR #1033 — null `device_ip` broke `uniques_arr`; IPv6 in `device_ipv6` dropped). **NOT identity-graph households** despite the label.
 - **WGU trailing-30d (BQ):** `uniques`=32.1M, `site_visitors`=1.90M → platform IVR **5.92%**. Our `cost_impression_log`: distinct `ip`=15.74M (= `partner_ip` exactly) over 355.8M impressions → IVR **10.70%**.
-- Same impressions, 2× denominator: `device_ip` (32.1M) ≈ 2.0× resolved `cost_impression_log.ip` (15.74M). CIL's `ip` is closed-loop-resolved; graph `uniques` is raw device IP.
+- 2× denominator: graph `uniques` = 32.1M vs `cost_impression_log.ip` = 15.74M. **Correction (7f):** this is NOT a raw→resolved IP collapse (initial guess) — `ip` = `ip_raw` in both clickpass and impression_log. It's a cross-table difference (different impression universes/keys): CIL 356M rows→15.7M `ip`, impression_log 935M rows→21.2M `ip`, impression_facts→32.1M `device_ip`. See 7f.
 
 **Implications:**
 - `sitevisitors/usersreached` (5.92%) ≈ **½** our calculator (10.70%) → would ~double the reported MDE. NOT parity. The 7c "denominator already matches" (inferred from imps/IP ≈ 24) was wrong — the real R2 column is a different IP field.
@@ -125,6 +125,20 @@ Holdout IPs are suppressed from serving, so served IPs avoid holdout buckets **o
 Query: `bq_perf_log` 2026-06-24 holdout-field test (0.30 GB).
 
 **Zach Schoenberger confirmed the mechanism (2026-06-24, authority on holdout/targeting):** holdout and VV are *two separate sides of the system*, not one field — (1) **holdout = targeting**, done on the IPs in the targeting system (= the IP that lands in the served event log, `cost_impression_log.ip`); (2) **VV = attribution**, which "doesn't know or care about md5 — it just matches on ip from event log with ip from guid log." Both sides operate on the resolved event-log `ip`; **neither uses the raw `device_ip`** that `graph.uniques` counts. This confirms the holdout-bucket test and settles the denominator: the MDE baseline must use the served event-log `ip` count, not `graph.uniques` (device_ip).
+
+### 7f. Why the 2× denominator — corrected: cross-table, NOT IP cleaning (2026-06-24)
+
+Initial guess (7d) was that `cost_impression_log.ip` is a closed-loop-resolved collapse of raw `device_ip` (~2:1). **Disproven empirically:** `ip` = `ip_raw` exactly in both `clickpass_log` (1.94M, ratio 1.0) and `impression_log` (21.2M) — nothing is merged. The 2× is a **cross-table difference**: three impression tables count different universes on different IP keys and don't reconcile.
+
+Per Malachi (system semantics): `cost_impression_log` = **won** bids (served impressions); `impression_log` = **all** bids (won or not). That explains the universe ordering — we bid on more IPs than we win:
+
+| Table | rows (WGU, 30d) | distinct IPs | key | universe |
+|---|---:|---:|---|---|
+| `cost_impression_log` (our calc) | 356M | **15.7M** | `ip` (= `partner_ip`; unlinked 0.6%) | **won** bids (served) |
+| `impression_log` | 935M | 21.2M | `ip` (= `ip_raw` = `original_ip`; `bid_ip` 21.6M) | **all** bids (won or not) |
+| `impression_facts` → `graph.uniques` (Chris's source) | (1.66B cells) | **32.1M** (base-table confirmed) | `device_ip` | even broader than all-bids — source TBD |
+
+**This sharpens the conclusion:** the baseline denominator must be the **won/served** count (you can't drive a visit from an IP you never served), which is exactly `cost_impression_log` (15.7M → 10.70%). `graph.uniques` (32.1M) over-counts — it's *larger* than even the all-bids `impression_log` (21.2M), so it includes IPs that were never served and never could have visited. Exact source of the 32.1M `device_ip` (more than all-bids) still TBD — needs the `impression_facts` model source. Immaterial to the decision: holdout + attribution run on `cost_impression_log.ip`. Queries: `bq_perf_log` 2026-06-24 (impression_facts base 61.9 GB; clickpass ip/ip_raw 1.1 GB; impression_log ip/bid_ip 320 GB; CIL linkage 11 GB).
 
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
