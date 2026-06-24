@@ -91,8 +91,8 @@ Reconciles scope. Key points:
 - **AID 51660 = ElevenLabs**, US, active, B2B. All campaigns are **"Beeswax Television" (channel_id 8 = CTV)**
   + display "Multi-Touch" companions (channel_id 1). Test campaigns (group 126226) excluded.
 - **Conversion windows (Q3, from advertisers dim):** **30-day** for conversion, click-through AND
-  view-through; 2-day abandon. The 30-day **view-through** window is the over-credit mechanism the deck
-  flags — any household that merely *saw* a CTV ad and converts within 30d is credited.
+  view-through; 2-day abandon. The 30-day **view-through** is the broad credit window the deck flags (Q3) —
+  any household that merely *saw* a CTV ad and converts within 30d is credited (a wide, industry-standard rule).
 - **Delivery panel (summarydata.all_facts, channel 8, daily, since 2026-02-15):** national ramp is clear —
   ~75K imps/day (Feb geo) → ~200K (Mar 12) → ~310K (Apr) → **~800K–1.4M from May 7 (national)** → FIFA
   Select boost June 11. CTV spend now **~$1–1.5M/mo** (ctv_spend is advertiser-billed $, ~$45 CPM; spend_log
@@ -150,9 +150,10 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 | Treated (served) | 3,466,997 | 2.449% | 0.0618% |
 | Control (ghost-holdout) | 605,031 | 0.651% | 0.0460% |
 
-- **IVR lift +276.2%** (95% CI +264→+288%, p<0.001) — BUT this is **clickpass-attributed** visits, i.e. the
-  attribution signal (north star: clickpass 2–8× vs guid_log ~0%). +276% = 3.76×, squarely in that range →
-  **overstates incrementality**; true total-traffic (guid_log) lift is far smaller.
+- **IVR lift +276.2%** (95% CI +264→+288%, p<0.001) — BUT this is the **clickpass-attributed** visit metric,
+  which is impression-gated (a held-out household can't register an attributed visit), so a holdout comparison on
+  it is mechanically large. It is a *different metric* than incremental demand, not an inflated estimate of it —
+  the incrementality question is answered by total traffic (guid_log), which is far smaller (north star pattern).
 - **CVR lift +34.4%** (95% CI +18.6→+52.3%, p<0.001) — positive and statistically distinguishable at these
   n's (MDE ≈16% here), BUT **confounded**: treated = auction *winners* (higher-value IPs) vs ghost = a
   pre-auction random holdout (ghostBid logged at would-have-*bid*, not would-have-*won*) → **win-selection
@@ -172,9 +173,10 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 - **THE NUMBER WE TRUST: clean conversion-rate lift = −1.7%, not significant → incrementality ≈ 0**, matching
   ElevenLabs' geo null. The served-vs-ghost **+34% ATT was win-selection bias** (serving the highest-value
   auction-winning households); removing it (ITT) collapses CVR lift to ~0.
-- Clickpass IVR lift stays large (+143% ITT / +276% ATT) because it's **attribution**. **Total traffic
-  (guid_log) ATT = +36%** (treated 2.83% vs control 2.08%) — far below the +276% attributed lift (attribution
-  inflates ~8×), but still positive because the ATT cohort (served=winners) is win-selection-biased. The one
+- Clickpass IVR lift stays large (+143% ITT / +276% ATT) because the **attributed-visit metric is impression-gated**
+  (a credit metric, not causal). **Total traffic (guid_log) ATT = +36%** (treated 2.83% vs control 2.08%) — a
+  different, causal-style metric (~8× smaller than the attributed number), but still positive because the ATT
+  cohort (served=winners) is win-selection-biased. The one
   unbiased read we have — the clean conversion ITT (−2%, NS) — is the trustworthy incrementality number.
 - **Final lift table** (`outputs/ti_1044_ghost_lift*.json`, charts `ti_1044_chart_conv_att_vs_itt.png` /
   `ti_1044_chart_attribution_vs_true.png`):
@@ -199,9 +201,11 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
   +32%→**+26%**. The frequency correction is small (~2–6pp) ⇒ **the ATT bias is value-selection, not frequency**
   (we win impressions for the households we bid highest on, who visit/convert anyway). Uniform win-rate sampling
   can't remove value-selection; only the randomized ITT / IV-TOT do — and both say **≈0**.
-- **Honest bottom line (triangulated 4 ways):** attributed metrics overstate ~80×; true incremental lift on both
-  total visits and conversions is **≈0 / small and not significant** (randomized ITT and IV-TOT). The +26–35%
-  ATT/ghost-win numbers are **value-selection** (serving the households who'd convert regardless), not media lift.
+- **Honest bottom line (triangulated 4 ways):** attribution (industry-standard last-touch + 30-day view-through)
+  and incrementality are **different metrics, not better/worse** — the large attributed number and the ≈0 incremental
+  number are both correct for what they measure. True incremental lift on both total visits and conversions is
+  **≈0 / small and not significant** (randomized ITT and IV-TOT). The +26–35% ATT/ghost-win numbers are
+  **value-selection** (serving the households who'd convert regardless), not media-caused lift.
   Corroborated by ElevenLabs' geo null + the power floor. (A fully clean ghost-win TOT would need a
   bid-price-conditional win model — Ryan's `ghost-win-simulation` service intent; would converge on the ITT.)
 - **Validation:** delivery continuous since Feb 15 (national May 7), holdout window Jun 13–22 fully active
@@ -243,9 +247,10 @@ the credible number; the positive state reads are noise.
    the national broad scale dilutes it. Concentrating budget on higher-intent geos/audiences likely
    improves *attributed* performance — but note (Mike Dolt) we have **no incrementality-trained model**,
    so any "this will improve incrementality" claim is speculation.
-3. **Reset expectations on attribution vs incrementality** (Q3): 30-day view-through windows over-credit
-   CTV, so platform-reported conversions overstate causal lift — which is *why* a real incremental test
-   looks flat by comparison.
+3. **Frame attribution vs incrementality as two metrics** (Q3): attribution credits CTV by last-touch + a
+   30-day view-through window (industry standard); incrementality asks what CTV *caused*. The reported (attributed)
+   conversions and the ≈0 incremental result are both correct — they answer different questions, which is *why* a
+   real incremental test looks flat next to the attributed numbers. (Not "attribution is wrong/inflated.")
 
 **Deliverables:** this summary; charts in `artifacts/`; ElevenLabs-facing deck
 (`artifacts/ti_1044_elevenlabs_response_deck.html`); pulse-check Jira/Slack post.
@@ -263,9 +268,11 @@ the credible number; the positive state reads are noise.
   (§4.3). Our descriptive read (visits scale, conversions flat) already **triangulates with their geo null**.
 - **Q3 — Conversion windows / where credit is over-counted:** ElevenLabs runs **30-day** click-through,
   view-through, AND conversion windows (2-day abandon). The **30-day view-through** window credits CTV for
-  any conversion within 30 days of an *impression* (no click), and **multi-touch attribution can double-count**
-  a conversion across touchpoints (CVR can exceed 100%). Net: platform-reported conversions **overstate
-  causal CVR**, which raises the incremental bar further.
+  any conversion within 30 days of an *impression* (no click) — a broad, industry-standard credit rule. A genuine
+  *within-attribution* over-count exists: **multi-touch attribution can double-count** a conversion across
+  touchpoints (CVR can exceed 100%). Net: the attributed conversion number is large by construction; it is a
+  credit metric, **not** a causal one, so it is naturally far above the incremental (≈0) result — different
+  questions, not an inflated estimate of incrementality.
 - **Q4 — Creative & targeting (new demand vs existing intent; B2B comparables):** Audience is built on
   **stale third-party interest segments** — ElevenLabs is MNTN's **#2 stale-3P prospecting advertiser**
   ($0.72M/30d, TI-999; prior audience eval TI-928). The geo→national move **diluted** a working high-intent

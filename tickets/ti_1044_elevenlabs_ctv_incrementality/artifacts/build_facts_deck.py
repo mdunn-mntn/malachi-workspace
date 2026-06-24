@@ -39,10 +39,10 @@ slides = f"""
   <h3 style="font-size:0.55em;">2 · What was REPORTED (attribution)</h3>
   <ul style="font-size:0.46em;line-height:1.6;">
     <li>Platform dashboards credit healthy CSF + new-subscriber volume to CTV.</li>
-    <li>Our MNTN-attributed (clickpass) visit-rate holdout lift = <strong>+143%</strong> (p&lt;0.001).</li>
-    <li>Attribution = "saw a CTV ad, then converted → CTV gets credit." Correlational.</li>
+    <li>Attribution = the <b>industry-standard credit rule</b>: last-touch + a 30-day view-through window. Saw a CTV ad, then converted → CTV gets the credit.</li>
+    <li>It is a credit-allocation metric, <b>not a causal one</b> — it doesn't ask whether the conversion would have happened anyway.</li>
   </ul>
-  <p style="font-size:0.42em;color:{GRAY};">Reported performance looks strong. That is attribution, not incrementality.</p>
+  <p style="font-size:0.42em;color:{GRAY};">Attribution and incrementality are <b>different questions</b> — neither is "wrong." This review measures the incremental (causal) one.</p>
 </section>
 
 <section style="text-align:left;">
@@ -89,15 +89,16 @@ slides = f"""
 </section>
 
 <section style="text-align:left;">
-  <h3 style="font-size:0.55em;">6 · How reported vs truth differ</h3>
+  <h3 style="font-size:0.55em;">6 · Two different questions — and why the numbers differ</h3>
   <table style="font-size:0.44em;border-collapse:collapse;width:100%;">
-    <tr>{th('','Reported (attribution)','Truth (incrementality)')}</tr>
-    <tr>{td('Visits','+143% (clickpass)','≈0 incremental total traffic (ITT); ≤+36% unverified')}</tr>
-    <tr>{td('Conversions','credited to CTV','≈0 (our ITT −1%, their geo ~0)')}</tr>
-    <tr>{td('Why','an ad served → visit/convert gets credited','held-out households visit/convert at the same rate')}</tr>
+    <tr>{th('','Attribution (credit rule)','Incrementality (causal)')}</tr>
+    <tr>{td('Question','Did a CTV ad precede the conversion (last-touch / 30-day view)?','Would it have happened without the ad?')}</tr>
+    <tr>{td('Visits','+143% credited','≈0 incremental total traffic')}</tr>
+    <tr>{td('Conversions','credited to CTV','≈0 (our ITT, their geo)')}</tr>
   </table>
-  <p style="font-size:0.44em;color:#444;margin-top:0.5em;">Two independent methods — their geo test and our household holdout — agree: <b>no detectable incremental conversion lift.</b>
-  Attribution re-credits demand that would have happened anyway.</p>
+  <p style="font-size:0.44em;color:#444;margin-top:0.5em;">Both numbers are correct for what they measure. They differ because attribution credits served households who would
+  have visited/converted anyway; incrementality nets that out. Two independent incrementality methods — their geo test and our
+  household holdout — agree: <b>no detectable incremental conversion lift.</b></p>
 </section>
 
 <section style="text-align:left;">

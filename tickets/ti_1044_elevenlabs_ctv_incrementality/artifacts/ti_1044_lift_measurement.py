@@ -46,10 +46,11 @@ ax.set_yticks(ys); ax.set_yticklabels([r[0] for r in rows],fontsize=12)
 ax.set_ylim(-0.7,2.7); ax.set_xlim(-35,185)
 ax.xaxis.set_major_formatter(FuncFormatter(lambda x,_:f"{x:+.0f}%"))
 ax.set_xlabel("Incremental lift, served vs held-out households (clean ITT, 95% CI)")
-ax.set_title("Attribution overstates. True incremental lift ≈ 0 — visits and conversions.",
-             fontsize=14,fontweight="bold",loc="left",pad=30)
-ax.text(0,1.06,"Household ghost-ad holdout · win-selection removed · ~10 days · 6.6M households",
-        transform=ax.transAxes,fontsize=9.5,color="#555")
+ax.set_title("Incremental lift ≈ 0 — total visits and conversions.",
+             fontsize=15,fontweight="bold",loc="left",pad=30)
+ax.text(0,1.06,"Attributed (clickpass) is large only because it requires an impression — a credit metric, not causal. "
+        "Holdout · win-selection removed · 6.6M households.",
+        transform=ax.transAxes,fontsize=8.6,color="#555")
 fig.tight_layout(); fig.savefig(f"{BASE}/artifacts/ti_1044_chart_lift_measurement.png"); plt.close(fig)
 
 with open(f"{BASE}/outputs/ti_1044_lift_measurement.csv","w",newline="") as f:
