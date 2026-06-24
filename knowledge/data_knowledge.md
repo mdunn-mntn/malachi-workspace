@@ -3349,3 +3349,28 @@ view-through, AND conversion (`advertisers.conversion_window` / `view_conversion
 `click_conversion_window`). The 30-day **view-through** window credits CTV for any conversion within 30
 days of an impression (no click) → reported CVR overstates causal CVR, widening the attribution-vs-
 incrementality gap.
+
+---
+
+## graph.usersreached / impression_facts.uniques — the "users reached" mixed-key gotcha (TI-1019, 2026-06-24)
+
+The R2 "Graph" table `graph.usersreached` ("Households Reached", HLL distinct) = `dw-main-silver.summarydata.all_facts.uniques`, whose base table is `summarydata.impression_facts.uniques` (HLL++ sketch). For WGU (advertiser_id 31357, trailing 30d) this is **~32.1M**, ~2x the distinct served-IP count (`cost_impression_log` distinct `ip` ≈ 15.7M). This is NOT a broader/pre-bid impression universe — it is the SAME won/served universe, counted with a **mixed unique key**.
+
+**Source model** (`SteelHouse/sqlmesh`, `models/dw-main-silver/summarydata/impression_facts.sql`): reads `logdata.cost_impression_log` (WON/served only: `unlinked = FALSE AND ad_served_id IS NOT NULL`, dedup 1-row-per impression_id). The `uniques` HLL key is conditional:
+```sql
+hll_count.INIT(CASE WHEN c.channel_id = 8 OR c.objective_id IN (5, 6) THEN l.ip ELSE l.guid END) AS uniques
+```
+- **CTV (channel_id = 8) and objectives 5/6** → unique key = `l.ip` (device IP; CTV has no cookie/guid).
+- **Everything else (display)** → unique key = `l.guid` (browser/cookie identifier).
+
+So `uniques` is a near-disjoint blend of distinct-IPs (CTV legs) + distinct-guids (display legs). guids are ~2.4x more numerous than IPs (multiple cookies/browsers per household IP + cookie churn), so the display half inflates the count far above distinct IPs.
+
+**WGU 30d empirical decomposition** (reproduced the mixed key off `cost_impression_log` → 32.46M, matches the 32.1M base-table HLL):
+- display rows (guid-leg): 138.3M rows → **18.40M distinct guids**
+- CTV/obj-5/6 rows (ip-leg): 205.4M rows → **14.06M distinct IPs**
+- 14.06M + 18.40M ≈ 32.46M (legs barely overlap — different key types)
+- whole-table distinct `ip` = 15.53M (≈ calculator's 15.7M); whole-table distinct `guid` = 37.1M.
+
+**Implication for MDE baseline:** `sitevisitors/usersreached` mixes apples (visitors = guids/IPs) over a guid-inflated denominator for display. For a "you can't drive a visit from an IP you never served" denominator, use distinct SERVED IPs = `count(distinct ip)` from `cost_impression_log` (15.7M), not `impression_facts.uniques`. (`impression_facts.site_visitors` does not exist — site_visitors lives in `visit_facts`; `all_facts` joins them.)
+
+`all_facts.sql` (same repo) FULL OUTER JOINs impression_facts + visit_facts + spend_facts on 19 keys and passes `uniques`/`uniques_arr` straight through — no re-keying. There is NO bid_facts in SQLMesh (`bids = 0`), so the count cannot be "all bids" or a pre-bid/augmentor stream. Zach's "impression_log not usable for ctv" note is consistent: CTV reach must be IP-based (no guid), which is exactly the channel_id=8 branch.
