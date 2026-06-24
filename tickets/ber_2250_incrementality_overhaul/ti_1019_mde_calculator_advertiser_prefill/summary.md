@@ -109,6 +109,21 @@ Chris confirmed what R2 can actually pull (Graph table, same trailing-30d call a
 
 Queries: `bq_perf_log` 2026-06-24 (all_facts grain check 12.2 GB; ip-vs-partner_ip reconciliation 16.1 GB).
 
+### 7e. RESOLVED — experiment unit is the resolved `ip`; our calculator is correct (2026-06-24)
+
+Settled the open decision ourselves instead of waiting on data-eng. Applied the production holdout hash (`MD5(advertiser_id:ip)` → bucket via the `ti_837_augmentor_holdout_bucket_verification.sql` BQ port; 0–99 = holdout) to WGU's **served** IPs in `cost_impression_log`, hashing the resolved `ip`:
+
+- **0 of 2,356,886 served IPs (one day) fell in holdout buckets (0.0%).**
+
+Holdout IPs are suppressed from serving, so served IPs avoid holdout buckets **only if** the holdout is computed on the field being hashed. `MD5(aid:resolved_ip)` ⟂ `MD5(aid:device_ip)`, so 0% (vs ~10% uniform expected) proves **holdout + serving run on the resolved `ip`, not `device_ip`**. `clickpass_log` (VV attribution) keys on the same resolved `ip` (+ has `is_control_group`).
+
+**Conclusions:**
+- Randomization + serving + attribution all on resolved `cost_impression_log.ip` → **our calculator (10.70%) is the correct, internally-consistent baseline.**
+- `graph.uniques` (raw `device_ip`, 32M) is the **wrong denominator**; `sitevisitors/uniques` (5.92%) mixes a resolved-IP numerator with a device_ip denominator → understates ~2×.
+- R2's graph table can supply the right numerator (`site_visitors`, resolved-IP) but NOT the denominator (`uniques` is device_ip). So the fix is **(a)** source the baseline from the `cost_impression_log` grain (our per-advertiser number) or **(b)** data-eng adds a resolved-IP served-unique to the reporting table. Re-deriving from graph columns alone cannot be made correct.
+
+Query: `bq_perf_log` 2026-06-24 holdout-field test (0.30 GB).
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
