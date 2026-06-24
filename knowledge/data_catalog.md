@@ -1029,6 +1029,7 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
   = CTV (Beeswax Television); `channel_id 1` = display. Per-advertised-unique visit rate =
   `HLL_COUNT.MERGE(site_visitors)/HLL_COUNT.MERGE(uniques)`; CVR = `(SUM(view_conversions)+
   SUM(click_conversions))/HLL_COUNT.MERGE(uniques)`.
+- **`uniques` is keyed on RAW `device_ip`, NOT the resolved `cost_impression_log.ip` (TI-1019, verified 2026-06-24).** `uniques`/`uniques_arr` is the HLL distinct of `device_ip` (raw IPv4 bidstream IP; IPv6 lives in `device_ipv6` and is dropped — PR #1033). This is the source of `graph.usersreached` ("Households Reached") and `graph.sitevisitors`. **Despite the "Households Reached" label it is NOT identity-graph / household-resolved** — it is the *rawest* IP count. For WGU (AID 31357) trailing-30d: `uniques`=32.1M, `site_visitors`=1.90M, IVR=5.92%. Over the **same ~356M impressions**, `cost_impression_log` returns only **15.7M distinct `ip` (= `partner_ip` exactly)** → CIL's `ip` collapses ~2.0 raw `device_ip`s into one (closed-loop/geo resolution). **Consequence:** an IVR built as `site_visitors/uniques` (=5.92%) is ~½ the `cost_impression_log`-based per-served-IP IVR (=10.70%) — the gap is entirely the denominator IP-field (raw `device_ip` vs resolved `ip`). Pick ONE IP field for any rate; do not assume `uniques` ≈ a distinct-served-IP count from CIL. Which field is "correct" for incrementality/MDE depends on which IP the holdout hash (`MD5(advertiser_id:ip)`) and VV attribution operate on — open as of 2026-06-24.
 
 ---
 

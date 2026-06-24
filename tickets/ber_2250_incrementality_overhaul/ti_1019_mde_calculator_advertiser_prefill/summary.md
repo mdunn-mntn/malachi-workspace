@@ -92,6 +92,23 @@ Additional caveats flagged (beyond 7b):
 
 Verification: 3-agent adversarial workflow (MDE math / recommendation red-team / citation audit) — all 6 source citations confirmed, MDE direction confirmed.
 
+### 7d. R2 column trace — denominator does NOT match (supersedes 7c's "denominator already matches", 2026-06-24)
+
+Chris confirmed what R2 can actually pull (Graph table, same trailing-30d call as CPM/imps-per-IP): `graph.sitevisitors` + `graph.usersreached`, proposed baseline = `sitevisitors/usersreached`. He couldn't see the upstream definition of "Households Reached." Traced it:
+
+- These = `summarydata.all_facts.site_visitors`/`uniques` (HLL). `uniques` is keyed on **raw `device_ip`** (lineage: PR #1033 — null `device_ip` broke `uniques_arr`; IPv6 in `device_ipv6` dropped). **NOT identity-graph households** despite the label.
+- **WGU trailing-30d (BQ):** `uniques`=32.1M, `site_visitors`=1.90M → platform IVR **5.92%**. Our `cost_impression_log`: distinct `ip`=15.74M (= `partner_ip` exactly) over 355.8M impressions → IVR **10.70%**.
+- Same impressions, 2× denominator: `device_ip` (32.1M) ≈ 2.0× resolved `cost_impression_log.ip` (15.74M). CIL's `ip` is closed-loop-resolved; graph `uniques` is raw device IP.
+
+**Implications:**
+- `sitevisitors/usersreached` (5.92%) ≈ **½** our calculator (10.70%) → would ~double the reported MDE. NOT parity. The 7c "denominator already matches" (inferred from imps/IP ≈ 24) was wrong — the real R2 column is a different IP field.
+- Likely also internally grain-mismatched: numerators ~equal (1.90M ≈ our 1.94M) but denominators differ 2× → `site_visitors` looks resolved-IP-grained, `uniques` raw-device_ip. Confirm how `site_visitors` is keyed.
+- **Twist:** "Households Reached" is the *rawer* count; our `ip` is the more-collapsed one — labels are backwards.
+- **Open decision:** which IP field does the holdout (`MD5(advertiser_id:ip)`) + VV attribution use? Define numerator + denominator + holdout on that one field — may require changing OUR calculator's denominator to `device_ip`, not just the UI. Escalate to `impression_facts`/augmentor IP-resolution owner (data-platform) + BER-2250 holdout owners.
+- API-vs-rederive (Chris's Q): moot until the IP field is agreed — an API can't reconcile a definitional grain difference.
+
+Queries: `bq_perf_log` 2026-06-24 (all_facts grain check 12.2 GB; ip-vs-partner_ip reconciliation 16.1 GB).
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
