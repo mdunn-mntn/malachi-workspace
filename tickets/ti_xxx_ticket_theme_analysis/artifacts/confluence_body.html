@@ -1,0 +1,96 @@
+<ac:structured-macro ac:name="info"><ac:rich-text-body><p><strong>Purpose:</strong> Represent the <em>types</em> of analysis the Audience Intelligence (AUDI) team does, surface the recurring <strong>customer questions</strong> and <strong>tooling gaps</strong> behind them, and lay out a <strong>plan</strong> to shift from answering each question by hand to standing, proactive capabilities.</p><p><strong>Audience:</strong> Incoming TPM (for review), PMO, leadership.</p><p><strong>The outstanding question this doc is meant to drive:</strong> <em>what do we do with this to resolve it</em> &mdash; how to prioritize, sequence, resource, and own the proactive capabilities below.</p><p><strong>Author:</strong> Malachi Dunn &middot; Audience Intelligence (AUDI)</p></ac:rich-text-body></ac:structured-macro>
+
+<h2>TL;DR</h2>
+<ul>
+<li>We analyzed a full quarter of analysis work &mdash; <strong>57 tickets, ~Mar&ndash;Jun 2026.</strong></li>
+<li><strong>75% of it (43 of 57 tickets) is reactively answering four customer questions</strong>, each rebuilt by hand, one advertiser at a time.</li>
+<li><strong>Each question is a product we haven't built yet.</strong> The proactive fix is to turn each into a standing capability that answers it before &mdash; or the moment &mdash; it's asked.</li>
+<li><strong>Three of those capabilities are already in motion</strong> (performance-drop checks, pre-flight power, audience quality scores); <strong>the two biggest gaps are unowned</strong> (automatic always-on incrementality tests, and data-quality monitors).</li>
+</ul>
+
+<h2>1 &middot; The pattern &mdash; four questions customers keep asking</h2>
+<table>
+<tbody>
+<tr><th>The customer question</th><th>Tickets</th><th>Share</th></tr>
+<tr><td><strong>Q1 &middot; Incrementality</strong> &mdash; "did your targeting actually <em>cause</em> this, or would it have happened anyway?"</td><td><strong>16</strong></td><td>28%</td></tr>
+<tr><td><strong>Q4 &middot; Trust</strong> &mdash; "can I <em>trust</em> the numbers you report (households reached, visits, CRM match, NTB)?"</td><td><strong>13</strong></td><td>23%</td></tr>
+<tr><td><strong>Q2 &middot; Audience/Vendor</strong> &mdash; "is the audience / 3P segment / vendor I'm paying for <em>worth</em> it?"</td><td><strong>8</strong></td><td>14%</td></tr>
+<tr><td><strong>Q3 &middot; Performance</strong> &mdash; "why did my performance suddenly <em>drop</em> after your rollout?"</td><td><strong>6</strong></td><td>11%</td></tr>
+<tr><td>Foundational &mdash; targeting signal + durable knowledge (the enablers)</td><td>14</td><td>25%</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>57</strong></td><td>100%</td></tr>
+</tbody>
+</table>
+<p>Named-advertiser escalations make these concrete: ElevenLabs and Root (Q1, ran their own lift tests and found ~0), Orange Theory and 5&times;5 (Q2, "this delivers 8&ndash;10&times; worse"), AutoCamp (Q3, "ROAS fell 8&times;&rarr;2&times; after your flip"), mid-market households-reached reconciling off by up to 66% (Q4).</p>
+
+<h2>2 &middot; The cross-cutting tooling gap</h2>
+<p>The same systematic analysis is rebuilt by hand for one advertiser / experiment / vendor after another. Maturity ladder:</p>
+<p><code>L0 one-off notebook &rarr; L1 rerunnable script &rarr; L2 scheduled pipeline &rarr; L3 self-serve / in-product / alerting</code></p>
+<p>Almost everything sits at <strong>L0&ndash;L1</strong>. The handful that reached <strong>L2</strong> prove the team can productize: TI-253 (daily missing-domain monitor), TI-849&rarr;921 (wave-aware lift pipeline), TI-956 (scheduled segment-quality scoring), TI-1037 (parameterized advertiser diagnostic). The proactive target is <strong>L3</strong>.</p>
+
+<h2>3 &middot; The proactive target &mdash; three moves</h2>
+<blockquote><p><strong>Stop answering these one advertiser at a time. Turn each question into a standing capability.</strong></p></blockquote>
+<ol>
+<li><strong>Get ahead of the #1 churn question (incrementality)</strong> &mdash; always-on holdouts + a pre-flight power gate, so we surface lift <em>before</em> the advertiser's data-science team finds ~0 and churns.</li>
+<li><strong>Put quality where the decision is made (audience/vendor)</strong> &mdash; quality scores in the buyer UI at selection time, not in an analyst's notebook after a complaint.</li>
+<li><strong>Watch the pipes (trust + performance)</strong> &mdash; standing monitors + alerts so we catch drops, drift, and reconciliation gaps before the advertiser does.</li>
+</ol>
+<p>The self-serve <strong>Advertiser Diagnostic</strong> is the connective tissue &mdash; the on-demand report (audience-expression decomposition, size funnel, score gating, peer benchmarking) that answers per-account questions across all three.</p>
+
+<h2>4 &middot; The plan &mdash; current state &amp; sequencing</h2>
+<p>What we're actually doing about it today, and what's still open. <strong>This is the part that needs a TPM to drive.</strong></p>
+<h3>NOW &mdash; in progress</h3>
+<table>
+<tbody>
+<tr><th>Capability</th><th>Answers</th><th>Status</th><th>Owner / notes</th></tr>
+<tr><td><strong>Automatic performance-drop checks</strong> &mdash; monitor campaigns + their audience expression to flag regressions proactively</td><td>Q3</td><td>Building now</td><td>AUDI team</td></tr>
+<tr><td><strong>Pre-flight power / eligibility calc</strong> &mdash; is an advertiser already powered to detect lift before we commit budget?</td><td>Q1 (gate)</td><td>In progress</td><td>Chris Franz</td></tr>
+<tr><td><strong>Audience quality scores + automatic answers</strong> &mdash; surface segment/audience quality, tied to the new campaign changes</td><td>Q2</td><td>In progress</td><td>AUDI; linked to new campaign-objective changes</td></tr>
+</tbody>
+</table>
+<h3>NEXT &mdash; the biggest gap (needs the new bidder)</h3>
+<table>
+<tbody>
+<tr><th>Capability</th><th>Answers</th><th>Status</th><th>Enabler</th></tr>
+<tr><td><strong>Automatic / always-on incrementality tests</strong> &mdash; we do <em>not</em> have these today</td><td>Q1 (test)</td><td>Not built &mdash; gap</td><td>Can be set up on the <strong>new bidder system</strong></td></tr>
+</tbody>
+</table>
+<h3>LATER &mdash; longer-term</h3>
+<table>
+<tbody>
+<tr><th>Capability</th><th>Answers</th><th>Status</th><th>Notes</th></tr>
+<tr><td><strong>Data-quality monitors</strong> &mdash; standing coverage / freshness / reconciliation checks with alerting</td><td>Q4</td><td>Future ticket (~next sprint+)</td><td>Generalize the TI-253 pattern</td></tr>
+</tbody>
+</table>
+
+<h2>5 &middot; How this groups into epics</h2>
+<p>Mapped against the live TI epic backlog (86 epics): feature-store and Fangorn-rollout work is well-covered; incrementality and segment-quality epics exist but are mostly <em>Released/Closed</em> point-deliverables, not standing homes. <strong>Three gaps have no epic home and are candidates for new epics:</strong></p>
+<ul>
+<li><strong>New Epic A &mdash; Advertiser Decision Support &amp; Diagnostics.</strong> Reactive per-advertiser analysis (validate a lift claim, advise a setup, diagnose a drop, evaluate an audience). Home for the ad-hoc tickets (e.g. TI-1044 ElevenLabs, TI-1045 client incrementality direction) plus the diagnostic tool (TI-1037).</li>
+<li><strong>New Epic B &mdash; Rollout &amp; Incrementality Evaluation Tooling.</strong> The reusable measurement harness (DiD + CausalImpact + power gating) and the always-on incrementality tests &mdash; distinct from the feature-rollout epics that ship the features.</li>
+<li><strong>New Epic C &mdash; Data-Quality &amp; Identity Monitoring.</strong> Standing monitors generalized from TI-253.</li>
+</ul>
+<p><em>Full theme-by-theme breakdown and the ticket&rarr;theme map for all 57 tickets live in the team's analysis workspace.</em></p>
+
+<h2>6 &middot; Open questions for the TPM</h2>
+<ol>
+<li><strong>Sequencing &amp; resourcing</strong> &mdash; the three NOW items are moving; who drives them to L3 (self-serve / alerting) vs. stalling at L1?</li>
+<li><strong>Automatic incrementality tests (the big gap)</strong> &mdash; this depends on the new bidder system, so it needs coordination with the bidder team. Who owns that dependency and timeline?</li>
+<li><strong>Data-quality monitors</strong> &mdash; longer-term and currently unowned. Fold into next-sprint planning, or stand up a dedicated workstream?</li>
+<li><strong>Epics</strong> &mdash; do we formalize the three new epics (A/B/C) so future ad-hoc work has a home, instead of landing un-grouped?</li>
+</ol>
+
+<h2>Appendix &middot; ticket counts by theme (each ticket counted once)</h2>
+<table>
+<tbody>
+<tr><th>Theme</th><th>Bucket</th><th>Tickets</th></tr>
+<tr><td>Incrementality Measurement &amp; Power Gating</td><td>Q1</td><td>6</td></tr>
+<tr><td>Rollout / Feature-Lift Evaluation Pipeline</td><td>Q1</td><td>10</td></tr>
+<tr><td>Audience, 3P-Segment &amp; Vendor Quality</td><td>Q2</td><td>8</td></tr>
+<tr><td>Advertiser Decision Support &amp; Diagnostics</td><td>Q3</td><td>4</td></tr>
+<tr><td>RTC &amp; Rollout Performance Monitoring</td><td>Q3</td><td>2</td></tr>
+<tr><td>Identity, Coverage &amp; Metric-Integrity Monitoring</td><td>Q4</td><td>13</td></tr>
+<tr><td>Feature-from-Analysis / Feature Store</td><td>Foundational</td><td>7</td></tr>
+<tr><td>Durable Knowledge, Reference &amp; Infra Hygiene</td><td>Foundational</td><td>7</td></tr>
+</tbody>
+</table>
+<p><strong>Method:</strong> automated read of every ticket's working summary &rarr; structured extraction &rarr; three independent synthesis lenses (customer pain / tooling gaps / analysis taxonomy) &rarr; reconciled into themes &rarr; mapped against the live TI epic backlog.</p>
