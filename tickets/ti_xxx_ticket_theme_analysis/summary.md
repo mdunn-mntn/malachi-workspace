@@ -32,6 +32,11 @@ No Jira ticket number assigned (ad-hoc PMO request via Slack). Folder uses the `
 7. RTC & Rollout Performance Monitoring — partial; fold into #6
 8. Durable Knowledge, Reference & Infra Hygiene — partial (TI-732/602)
 
+**Ticket counts by bucket** (each ticket once; 43/57 = 75% directly answer a customer question):
+- Q1 Incrementality "did you cause it?" — 16 · Q4 Trust "can I trust your numbers?" — 13 · Q2 Audience/vendor worth — 8 · Q3 Performance drop — 6 · Foundational enablers — 14.
+
+**Proactive story:** *Each question is a product we haven't built yet.* Today every answer is reactive (L0–L1 on the maturity ladder); the proactive target is L3 (self-serve / in-product / alerting). Three moves: (1) get ahead of the #1 churn question — always-on incrementality + pre-flight power gate; (2) put audience/vendor quality in the buyer UI at selection time; (3) watch the pipes — standing reconciliation/freshness monitors with alerting. The self-serve Advertiser Diagnostic (Epic A) is the connective tissue. Detail + maturity-ladder table in the artifact.
+
 **Three recommended NEW epics** for homeless-but-recurring work:
 - A. Advertiser Decision Support & Diagnostics (reactive per-advertiser analysis; TI-1044, TI-1045, TI-1026, TI-1027, TI-1017, TI-644, TI-501, TI-896, TI-1037)
 - B. Rollout & Incrementality Evaluation Tooling (the reusable DiD+CausalImpact+power-gating harness)

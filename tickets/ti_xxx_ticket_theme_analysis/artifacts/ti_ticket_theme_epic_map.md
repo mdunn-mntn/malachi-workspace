@@ -45,6 +45,51 @@ The result is analyst-bottlenecked, error-prone, ephemeral work where a self-ser
 
 ---
 
+## Ticket counts by bucket
+
+Each ticket counted once, in its best-fit bucket. **43 of 57 tickets (75%) are reactively answering one of four customer questions.** The remaining 14 are the foundational enablers (signal + knowledge) that make those answers possible.
+
+| Bucket (customer question) | Tickets | Share |
+|----------------------------|:------:|:----:|
+| **Q1 · Incrementality — "did you *cause* it?"** | **16** | 28% |
+| **Q4 · Trust — "can I *trust* your numbers?"** | **13** | 23% |
+| **Q2 · Audience/Vendor — "is it *worth* it?"** | **8** | 14% |
+| **Q3 · Performance — "why did it *drop*?"** | **6** | 11% |
+| Foundational — targeting signal + durable knowledge | 14 | 25% |
+| **Total** | **57** | 100% |
+
+*Q1 = themes 1 (6) + 2 (10). Q2 = theme 3 (8). Q3 = themes 4 (4) + 7 (2). Q4 = theme 6 (13). Foundational = themes 5 (7) + 8 (7).*
+
+---
+
+## From reactive to proactive — the story
+
+> **Each of these four questions is a product we haven't built yet.**
+
+Today every question is answered *after* it's asked, one advertiser at a time, by hand. The proactive move is to turn each recurring question into a **standing capability** that answers it before — or the moment — it's asked. The maturity ladder:
+
+`L0 one-off notebook → L1 rerunnable script → L2 scheduled pipeline → L3 self-serve / in-product / alerting`
+
+Almost everything sits at L0–L1. The proactive target is L3 — and the few L2 tickets (TI-253, TI-849→921, TI-956, TI-1037) are the proof the team can get there.
+
+| Bucket | Tickets | Where we are | Proactive capability (L3 target) | Delivered by | Leverage |
+|--------|:------:|--------------|----------------------------------|--------------|----------|
+| Q1 Incrementality | 16 | L0–L1 (Fangorn lift → L2) | Always-on holdouts + **pre-flight power/MDE gate** + auto-refresh lift dashboard — we surface incrementality *before* the advertiser's data-science team finds ~0 and churns | New Epic B + standing incrementality home | **Retention** (incrementality is the #1 churn driver) + feeds Fangorn training signal |
+| Q2 Audience/Vendor | 8 | L0–L1 (TI-956 → L2) | **Quality scores in the buyer UI at selection time** + vendor renewal scorecard — buyers see quality, not just size, *before* they buy the bad segment | Reuse TI-786/956 + ongoing-eval epic | **Revenue** (~$55M/yr flows to stale segments today) |
+| Q3 Performance | 6 | L0 (TI-1037 → L2) | **Flip-readiness pre-check + transition-shock alerts + self-serve advertiser diagnostic** — the alert fires before the advertiser escalates | **New Epic A** | **Retention** + analyst time saved per escalation |
+| Q4 Trust | 13 | L0–L1 (TI-253 → L2) | **Standing coverage / freshness / reconciliation monitors with alerting** — numbers reconcile *before* reporting, not after a dispute | **New Epic C** (generalize TI-253) | **Retention** + data-credibility floor under everything else |
+
+**Three moves to tell the story around (rule of three):**
+1. **Get ahead of the #1 churn question** — make incrementality always-on and power-gate every test before budget is committed.
+2. **Put quality where the decision is made** — move segment/vendor quality out of an analyst's notebook and into the buyer UI.
+3. **Watch the pipes** — standing monitors + alerts so we catch drift, drops, and reconciliation gaps before the advertiser does.
+
+The self-serve **Advertiser Diagnostic** (New Epic A) is the connective tissue — the on-demand report that answers per-account questions across all three.
+
+**The payoff:** shift from fire-drill to proactive, free the analyst from rebuilding the same analysis, get ahead of churn, and — for incrementality — generate the training signal that makes the targeting models smarter every cycle.
+
+---
+
 ## Candidate epics (ordered by leverage)
 
 Each theme is a candidate epic carrying both a **customer-question** angle and a **tooling-gap** angle. The "Epic home" column maps it against the live TI backlog.
