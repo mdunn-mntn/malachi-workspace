@@ -124,6 +124,8 @@ Holdout IPs are suppressed from serving, so served IPs avoid holdout buckets **o
 
 Query: `bq_perf_log` 2026-06-24 holdout-field test (0.30 GB).
 
+**Zach Schoenberger confirmed the mechanism (2026-06-24, authority on holdout/targeting):** holdout and VV are *two separate sides of the system*, not one field — (1) **holdout = targeting**, done on the IPs in the targeting system (= the IP that lands in the served event log, `cost_impression_log.ip`); (2) **VV = attribution**, which "doesn't know or care about md5 — it just matches on ip from event log with ip from guid log." Both sides operate on the resolved event-log `ip`; **neither uses the raw `device_ip`** that `graph.uniques` counts. This confirms the holdout-bucket test and settles the denominator: the MDE baseline must use the served event-log `ip` count, not `graph.uniques` (device_ip).
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
