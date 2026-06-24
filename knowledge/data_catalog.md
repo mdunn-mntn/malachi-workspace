@@ -2180,6 +2180,14 @@ does NOT prune partitions — it scanned **164.9B rows / 85,043 slot-sec / 280s 
 latest date, probe it first (`SELECT DISTINCT dt ... WHERE dt >= recent ORDER BY dt DESC LIMIT 1`), then inline
 the literal. Also prefer `APPROX_COUNT_DISTINCT(ip)` over exact `COUNT(DISTINCT ip)` on full-partition scans.
 
+**⚠ Wide-window DISTINCT-IP sizing is EXPENSIVE even when partition-pruned.** Sizing ~24 DS35 categories with
+`COUNT(DISTINCT ip)` over a **30-day** window (`dt BETWEEN ... AND ...`, `data_source_id=35`, `UNNEST` + `element IN (...)`)
+billed **~30.5 TB** (TI-1053). The hive partition (`dt`, `data_source_id`) prunes the day/DS folders, but DISTINCT-IP
+across 30 daily partitions of the largest DS still reads enormous Parquet. To size 3P segments cheaply: use a **short
+window (3-7 days)** and accept the burstiness undercount, or `APPROX_COUNT_DISTINCT`, or query a single known load-day
+per segment. Do **not** run wide DISTINCT-IP scans casually. (A 3-day probe's perf-log showed `0.0 GB` but that was a
+parse artifact — verify cost from the job stats, not a possibly-empty perf footer.)
+
 **⚠ 3P (DS35 LiveRamp / bought) delivery into ipdsc is BURSTY — each category refreshes on only ~2-4 days/month**
 (TI-1026, confirmed by adversarial validation). The SAME segment delivers millions of IPs on its load day and
 **0 on every other day** (e.g. Stirista Fitness cat 1006088981: 2.1M on 2026-06-08, no row 2026-06-06; on any

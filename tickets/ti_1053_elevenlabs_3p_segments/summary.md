@@ -58,6 +58,46 @@ Design 1 · EdTech 1.
   AI/ML, audio/video creators) and treats broad B2B/IT as scale-filler only.
 
 ## 6. Open / next
-- If breadth wanted: ~48 strongly-relevant deduped candidates exist beyond the curated 30 (`outputs/scored_deduped.json`); full 7,703-name-positive pool available.
-- If size matters: size only the 30-segment shortlist via ipdsc (1 scoped query) rather than the catalog.
 - Validation: the true incrementality read is the visit-based holdout test (reuse TI-1044 ghost-bid pipeline).
+
+---
+
+## 7. UPDATE — size-aware v2 (FINAL, supersedes the name-only v1 above)
+
+Two challenges drove a rebuild: (a) **buyer vs consumer** — several v1 top picks ("Podcasts & Audiobooks") were
+audio *consumers*, not ElevenLabs' *buyers*; (b) **recall** — we never reviewed all 210K LiveRamp names, and
+(c) **size** — name-only ranking floated tiny segments to the top.
+
+### Coverage profiling (answers "did we really look at 210K?")
+Did NOT eyeball 210K — keyword-filtered to ~7.7K then scored. THEN profiled term coverage across **all** 210K
+non-deprecated DS35 leaves: **0 real voice/speech-tech** (the 8 matches are brand-name/TV-title noise),
+**3 AI/ML**, **0 conversational-AI**, **0 Bombora** (not in DS35), and the "creator/gamer" matches (56/60) are
+almost all **consumers** (YouTube/Twitch viewers, gamers by genre), not buyers. → **LiveRamp DS35 has almost no
+precise inventory for a niche AI-voice product.**
+
+### Buyer lens + 30-day sizing
+Re-scored to buyer-firmographic + technical-interest only (dropped consumer-affinity) → **24 genuine candidates**
+(`outputs/genuine_shortlist.json`). Sized via ipdsc 30d (2026-05-25→06-23, `outputs/sizes_30d.json` — **cost ~30 TB**,
+see data_catalog ipdsc gotcha; do not re-run wide). **Size flips the ranking:** the precise niche segments
+(motion-picture/video production, sound recording, multimedia, graphic design, web-dev title) are real but **tiny
+(137–16K IPs/30d)** → cannot feed ~800K imps/day. Composite = 0.32·relevance + 0.30·incrementality + **0.38·size**
+(size weighted highest = binding constraint). Verdicts: PRIMARY (relevant+≥1M) / SECONDARY / SCALE-FILLER /
+ADDITIVE-ONLY (<250K) / DROP.
+
+### Final result — only ~4 usable 3P segments
+| Verdict | reach 30d | segment |
+|---|---:|---|
+| **PRIMARY** | 14.0M / 10.5M | Machine Learning & AI (interest) — Clickagy / Datasys |
+| **PRIMARY** | 6.8M | Advertising & Marketing (industry) — HCS |
+| **PRIMARY** | 3.6M | Software Developers / Programming — HCS (core ICP + scale) |
+| SECONDARY | 445K / 343K | Programmer/Developer title; IT title (bursty) |
+| SCALE FILLER | 2.5M | IT Consulting (broad → dilution) |
+| ADDITIVE ONLY | <250K | all 16 precise-but-tiny niche firmographic |
+| DROP | 0 | IT Department (no delivery) |
+
+**Bottom line:** 3P (LiveRamp) is a **weak lever** for ElevenLabs. Lead with the 3–4 relevant-at-scale segments
+(AI/ML interest, Software Developers, Advertising industry); treat the rest as additive-only. The bigger win is
+**MM keywords / contextual**, not bought 3P (ElevenLabs = MNTN's #2 stale-3P advertiser, TI-999).
+
+**Deliverable (final):** `outputs/ti_1053_elevenlabs_3p_recommendations.{xlsx,csv}` — size-aware scored table +
+Method & Bottom Line tab. Scorers: `artifacts/score_v2.py`, `artifacts/build_final.py`.
