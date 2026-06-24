@@ -92,7 +92,7 @@ Additional caveats flagged (beyond 7b):
 
 Verification: 3-agent adversarial workflow (MDE math / recommendation red-team / citation audit) — all 6 source citations confirmed, MDE direction confirmed.
 
-### 7d. R2 column trace — denominator does NOT match (supersedes 7c's "denominator already matches", 2026-06-24)
+### 7d. R2 column trace — denominator does NOT match (supersedes 7c's "denominator already matches", 2026-06-24) — ⚠️ IP-FIELD CLAIM ("device_ip") SUPERSEDED BY 7g
 
 Chris confirmed what R2 can actually pull (Graph table, same trailing-30d call as CPM/imps-per-IP): `graph.sitevisitors` + `graph.usersreached`, proposed baseline = `sitevisitors/usersreached`. He couldn't see the upstream definition of "Households Reached." Traced it:
 
@@ -119,16 +119,16 @@ Holdout IPs are suppressed from serving, so served IPs avoid holdout buckets **o
 
 **Conclusions:**
 - Randomization + serving + attribution all on resolved `cost_impression_log.ip` → **our calculator (10.70%) is the correct, internally-consistent baseline.**
-- `graph.uniques` (raw `device_ip`, 32M) is the **wrong denominator**; `sitevisitors/uniques` (5.92%) mixes a resolved-IP numerator with a device_ip denominator → understates ~2×.
+- `graph.uniques` (32M) is the **wrong denominator** (see 7g — it counts display by cookie/`guid`, CTV by IP; NOT `device_ip`); `sitevisitors/uniques` (5.92%) understates ~2×.
 - R2's graph table can supply the right numerator (`site_visitors`, resolved-IP) but NOT the denominator (`uniques` is device_ip). So the fix is **(a)** source the baseline from the `cost_impression_log` grain (our per-advertiser number) or **(b)** data-eng adds a resolved-IP served-unique to the reporting table. Re-deriving from graph columns alone cannot be made correct.
 
 Query: `bq_perf_log` 2026-06-24 holdout-field test (0.30 GB).
 
 **Zach Schoenberger confirmed the mechanism (2026-06-24, authority on holdout/targeting):** holdout and VV are *two separate sides of the system*, not one field — (1) **holdout = targeting**, done on the IPs in the targeting system (= the IP that lands in the served event log, `cost_impression_log.ip`); (2) **VV = attribution**, which "doesn't know or care about md5 — it just matches on ip from event log with ip from guid log." Both sides operate on the resolved event-log `ip`; **neither uses the raw `device_ip`** that `graph.uniques` counts. This confirms the holdout-bucket test and settles the denominator: the MDE baseline must use the served event-log `ip` count, not `graph.uniques` (device_ip).
 
-### 7f. Why the 2× denominator — corrected: cross-table, NOT IP cleaning (2026-06-24)
+### 7f. Why the 2× denominator — corrected: cross-table, NOT IP cleaning (2026-06-24) — ⚠️ "CROSS-TABLE / DIFFERENT UNIVERSE" FRAMING SUPERSEDED BY 7g
 
-Initial guess (7d) was that `cost_impression_log.ip` is a closed-loop-resolved collapse of raw `device_ip` (~2:1). **Disproven empirically:** `ip` = `ip_raw` exactly in both `clickpass_log` (1.94M, ratio 1.0) and `impression_log` (21.2M) — nothing is merged. The 2× is a **cross-table difference**: three impression tables count different universes on different IP keys and don't reconcile.
+Initial guess (7d) was that `cost_impression_log.ip` is a closed-loop-resolved collapse of raw `device_ip` (~2:1). **Disproven empirically:** `ip` = `ip_raw` exactly in both `clickpass_log` (1.94M, ratio 1.0) and `impression_log` (21.2M) — nothing is merged. (This section then guessed "cross-table / different universe" — ALSO wrong; see 7g. `impression_facts` reads the SAME served `cost_impression_log`. The table below is still useful for the won-vs-all-bids universe sizes, but `graph.uniques` is NOT from impression_log and is NOT `device_ip`.)
 
 Per Malachi (system semantics): `cost_impression_log` = **won** bids (served impressions); `impression_log` = **all** bids (won or not). That explains the universe ordering — we bid on more IPs than we win:
 
@@ -139,6 +139,29 @@ Per Malachi (system semantics): `cost_impression_log` = **won** bids (served imp
 | `impression_facts` → `graph.uniques` (Chris's source) | (1.66B cells) | **32.1M** (base-table confirmed) | `device_ip` | even broader than all-bids — source TBD |
 
 **This sharpens the conclusion:** the baseline denominator must be the **won/served** count (you can't drive a visit from an IP you never served), which is exactly `cost_impression_log` (15.7M → 10.70%). `graph.uniques` (32.1M) over-counts — it's *larger* than even the all-bids `impression_log` (21.2M), so it includes IPs that were never served and never could have visited. Exact source of the 32.1M `device_ip` (more than all-bids) still TBD — needs the `impression_facts` model source. Immaterial to the decision: holdout + attribution run on `cost_impression_log.ip`. Queries: `bq_perf_log` 2026-06-24 (impression_facts base 61.9 GB; clickpass ip/ip_raw 1.1 GB; impression_log ip/bid_ip 320 GB; CIL linkage 11 GB).
+
+### 7g. DEFINITIVE — what `graph.usersreached` is, from the SQLMesh model source (2026-06-24)
+
+Read the actual model (`SteelHouse/sqlmesh` → `models/dw-main-silver/summarydata/impression_facts.sql`, owner `ber`) + reconstructed the HLL in BQ. This supersedes the `device_ip` (7d) and cross-table (7f) explanations.
+
+**The mechanism (one line of the model):**
+```sql
+uniques = HLL_COUNT.INIT(CASE WHEN channel_id = 8 OR objective_id IN (5,6) THEN ip ELSE guid END)
+-- FROM logdata.cost_impression_log  WHERE unlinked = FALSE AND ad_served_id IS NOT NULL
+```
+- **CTV/video** (`channel_id 8`, `objective_id 5,6`) → distinct **`ip`**
+- **Display** → distinct **`guid`** (browser cookie)
+- It reads the **SAME served `cost_impression_log`** our calculator uses — NOT `device_ip`, NOT all-bids, NOT augmentor.
+
+**Why 32.1M (WGU 30d), reconstructed exactly off CIL deduped to 1 row/impression:**
+- CTV/video leg (by `ip`) = 14.06M ≈ served CTV `ip` (12.7M) — well-behaved
+- Display leg (by `guid`) = 18.40M — the balloon (cookies fan out ~2.4× per IP)
+- Sum ≈ 32.46M ≈ the 32.1M HLL. Whole-table distinct `ip` = 15.53M (= our 15.7M); distinct `guid` = 37.1M.
+- Confirmed NOT an event-type double-count: reconstructed from a deduped (1 row/`impression_id`) served log, so no event counted twice; checked all 35 `impression_facts` columns (`unlinked` already FALSE; `new_users_reached`/`existing_users_reached` are a separate is_new split, not summed).
+
+**What the "graph" table is:** R2 metric layer → CHAPI (ClickHouse API) → ClickHouse `summarydata.all_facts_local_daily` (hourly copy of BQ `all_facts`). Owner: model = `ber` team (`SteelHouse/sqlmesh`); CHAPI load = data-platform (`SteelHouse/airflow-reporting`, `dags/chapi/`). Metric-def routing: #reporting_helpdesk_ask_anything (Ray). The CTV "reach_meter" widget is a *separate* table (`info.reach_meters` ← BQ `summarydata.reach_meters`; audience-segment-grained), not the same as per-advertiser `graph.usersreached`.
+
+**Conclusion (unchanged):** `graph.usersreached` blends IP-counts (CTV) + cookie-counts (display) → over-counts ~2× and isn't a per-IP/per-household number. The per-IP MDE baseline (matching the per-IP holdout, §7e) is `count(distinct ip) from cost_impression_log` (15.7M → 10.70%). Queries: `bq_perf_log` 2026-06-24 (impression_facts base 61.9 GB; clickpass ip/ip_raw 1.1 GB; impression_log 320 GB; CIL linkage 11 GB; channel-split reconstructions via workflow agents).
 
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
