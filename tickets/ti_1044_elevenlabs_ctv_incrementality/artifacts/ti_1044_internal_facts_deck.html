@@ -98,7 +98,8 @@
     <li>ITT is diluted by the 57% win rate — but that argues the true effect is small, not large.</li>
     <li>Holdout window = 10 days (bid_price_log TTL); ghost logging live 2026-05-27, no backfill.</li>
     <li>Held-out households may carry pre–May-27 ad exposure (slight downward bias on lift).</li>
-    <li>guid = total visits to ElevenLabs' site only (advertiser_id 51660).</li>
+    <li>guid = total visits to ElevenLabs' site only (advertiser_id 51660). Their site is huge — 5.4M visitor IPs / 10d.</li>
+    <li style="color:#c0392b;"><b>Cross-device undercount:</b> we match CTV-impression IP (TV/home router) to web-visit IP (phone/laptop). Cross-device / cellular visits have a different IP → missed. This can bias our visit lift <b>downward</b>. The geo test (device-agnostic) is cleaner here and also ≈0. Fix: household-graph matching.</li>
   </ul>
 </section>
 

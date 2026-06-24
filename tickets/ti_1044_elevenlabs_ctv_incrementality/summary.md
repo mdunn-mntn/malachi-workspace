@@ -211,6 +211,15 @@ logging live since **2026-05-27** (Ryan Kleck). No ghost-WIN logging → win-rat
 - **Validation:** delivery continuous since Feb 15 (national May 7), holdout window Jun 13–22 fully active
   (~1M+ imps/day); sample well-powered (603K control / 6.04M treated IPs; visit MDE ~2.6%); guid = total visits
   to ElevenLabs' site only (advertiser_id 51660, all sources).
+- **Cross-device IP-matching limitation (important, 2026-06-24):** ElevenLabs' site is huge — **5.42M distinct
+  visitor IPs / 5.82M households / 166M pageviews** over Jun 13–23. We served 3.47M IPs; only **~98K overlap
+  (same IP)** = 2.83% of served. The guid join matches the **CTV-impression IP** (TV/home router) to the
+  **web-visit IP** (phone/laptop); cross-device / cellular / away visits have a different IP → **missed**, so
+  the absolute visit rate (2.83%) is an undercount, and (unlike a symmetric loss) it preferentially drops
+  *ad-induced cross-device* visits from the served arm → can bias the measured visit lift **downward**. The
+  device-agnostic **geo test is cleaner here and also ≈0**; conversions ≈0 corroborate. **Refinement:**
+  rebuild the total-visit holdout with **household/identity-graph matching** (IP→household→all visits) to
+  remove the cross-device undercount.
 
 ### 4.6 Method validation — ghost-bid design doc + Edgar review (`meetings/ti_1044_02_...`)
 - **Ryan's Ghost Bid Design** (Confluence 3600547848) confirms our read: holdout = deterministic
