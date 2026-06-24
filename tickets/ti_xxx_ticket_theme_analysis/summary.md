@@ -46,6 +46,9 @@ No Jira ticket number assigned (ad-hoc PMO request via Slack). Folder uses the `
 - **What's the theme of TI-1044/TI-1045?** Advertiser Decision Support — applying incrementality/measurement expertise to one client's decision. They don't fit the *build* epics; they need a new "apply" epic (Epic A above).
 - **Which themes already have epic homes vs. gaps?** See table in the artifact; biggest gap = Advertiser Decision Support.
 
+## Published
+- **Confluence (TAR / Targeting space):** "Audience Intelligence: From Reactive Analysis to Proactive Capabilities (Plan for Review)" — page id 3668312118 — https://mntn.atlassian.net/wiki/spaces/TAR/pages/3668312118 — for incoming TPM review. Source: `artifacts/ti_proactive_plan_confluence.md`; storage XHTML: `artifacts/confluence_body.html`.
+
 ## Open items
 - Decide whether to create the 3 new epics (Bryce/PMO call).
 - TI-1045 has no GitHub workspace folder → create a stub if it should be tracked in this corpus.
