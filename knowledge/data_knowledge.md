@@ -3374,3 +3374,24 @@ So `uniques` is a near-disjoint blend of distinct-IPs (CTV legs) + distinct-guid
 **Implication for MDE baseline:** `sitevisitors/usersreached` mixes apples (visitors = guids/IPs) over a guid-inflated denominator for display. For a "you can't drive a visit from an IP you never served" denominator, use distinct SERVED IPs = `count(distinct ip)` from `cost_impression_log` (15.7M), not `impression_facts.uniques`. (`impression_facts.site_visitors` does not exist — site_visitors lives in `visit_facts`; `all_facts` joins them.)
 
 `all_facts.sql` (same repo) FULL OUTER JOINs impression_facts + visit_facts + spend_facts on 19 keys and passes `uniques`/`uniques_arr` straight through — no re-keying. There is NO bid_facts in SQLMesh (`bids = 0`), so the count cannot be "all bids" or a pre-bid/augmentor stream. Zach's "impression_log not usable for ctv" note is consistent: CTV reach must be IP-based (no guid), which is exactly the channel_id=8 branch.
+
+### What the reporting "graph" table actually IS — R2 / CHAPI / ClickHouse (TI-1019, 2026-06-24)
+
+The reporting "graph" namespace Chris Franz pulls from (`graph.usersreached`, `graph.sitevisitors`, CPM, imps-per-IP, etc.) is **not a standalone table** — it's the metric-name layer of **R2** (`SteelHouse/r2`, the reporting visualization UI; the Infographic/reach widgets live in `apps/r2vl/src/widgets/Infographic/`). R2 reads its metrics from **CHAPI** = "**C**lick**H**ouse **API**" (`SteelHouse/chapi`), the reporting metrics service. **The physical storage layer is ClickHouse, NOT BigQuery and NOT Greenplum r2.** (The `summarydata.reach_meters` Greenplum view in `db_repo` grants `select ... to svc_clickhouse_read` — confirming ClickHouse is the read layer; coredw is only an upstream export source for a few legacy groups.)
+
+**Full lineage (most concrete form found):**
+```
+R2 UI (graph.usersreached / graph.sitevisitors, CPM, imps/IP)
+  → CHAPI reporting service (ClickHouse API)
+  → ClickHouse  summarydata.all_facts_local_daily.uniques / .site_visitors      ← physical storage
+  → [Airflow-reporting DAG load_reporting_data.load_all_facts, @hourly,
+     replace_partitions; export BQ→GCS Parquet → ext view v_ext_all_facts → CH]
+  → BigQuery  dw-main-silver.summarydata.v_all_facts  (= SQLMesh all_facts view, owner 'ber')
+  → BigQuery  summarydata.impression_facts.uniques  (HLL, CTV→ip / display→guid)  +  visit_facts.site_visitors
+  → logdata.cost_impression_log  (served/WON impressions)
+```
+So `graph.usersreached` = ClickHouse `all_facts_local_daily.uniques` = BQ `all_facts.uniques` = `impression_facts.uniques` (the mixed IP/GUID HLL above). `graph.sitevisitors` = `all_facts.site_visitors` = `visit_facts.site_visitors` (resolved-IP-grained). The R2/ClickHouse copy is a faithful copy of BQ `all_facts` — it does NOT re-key, so the 32.1M / 2× mixed-key behavior is inherited verbatim from `impression_facts`.
+
+**reach_meter link (separate widget, same storage pattern):** the CTV "Households Reached" reach_meter widget is a DIFFERENT, audience-segment-grained metric — ClickHouse `info.reach_meters`, loaded hourly (`load_reporting_data_hourly.load_reach_meters`, exchange_tables) from BQ `dw-main-silver.summarydata.reach_meters` (legacy Greenplum twin: `db_repo` `coredw/summarydata/views/reach_meters.sql`, which uses audience-segment `total_audience_reach` + `reach_ips.ips_reached_last_7_days`, CTV channel_id=8, third-party segments). It is NOT the same as per-advertiser `graph.usersreached`. The older Spark `aggregates.audience_hll_by_day` → GCS → CoreDW-external → ClickHouse-copy DAG (PR #1024 disabled it, breaking the UI reach_meter copy DAG; revive under discussion — slack_review_queue.md) is the audience-side reach pipeline, parallel to but distinct from the `all_facts`/CHAPI impression-side reach.
+
+**Ownership / routing:** SQLMesh `all_facts`/`impression_facts` models are `owner 'ber'` (BER = the reporting/analytics-eng group). The CHAPI ClickHouse load DAGs live in `SteelHouse/airflow-reporting` (`dags/chapi/`), owned by the **data-platform / reporting** team — route ClickHouse/CHAPI/R2 reporting-metric questions to **#data-platform** (cross-cutting) or **#reporting_helpdesk_ask_anything** (Ray answers R2/graph metric-definition questions there; cf. the `graph.visits` vs `graph.sitevisitors` clarification, 2026-04-28). Verified-visit / attribution-grain (`site_visitors`, resolved `ip`) authority = Zach Schoenberger.
