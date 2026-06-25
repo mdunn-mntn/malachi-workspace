@@ -185,6 +185,21 @@ uniques = HLL_COUNT.INIT(CASE WHEN channel_id = 8 OR objective_id IN (5,6) THEN 
 
 **Request sent to BER:** add `users_reached_ip = HLL_COUNT.INIT(l.ip)` across all channels → expose in graph → backfill ~30d. Problem: `graph.usersreached` counts CTV by IP / display by cookie → ~2× the true served IPs (WGU 32M vs 15.7M); MDE/power calc needs per-IP reach (holdout is per-IP); channel-split can't substitute (mixed-advertiser 33% overlap).
 
+### 7i. How the graph 30-day reach is actually computed (ClickHouse) + corrected column spec (2026-06-25, agent-verified from chapi/airflow-reporting code)
+
+Ryan Kleck asked: impression_facts/all_facts are hourly grain — for a 30-day MDE reach do we `SUM()`? **No — it's an HLL merge, and the BQ HLL sketch isn't even used.** Verified chain (code-proven):
+- SQLMesh emits `uniques` (BQ HLL++ sketch, BYTES) **and** `uniques_arr` (raw-ID `ARRAY_AGG`). **CHAPI loads only `uniques_arr` — the `uniques` sketch is a dead column** (BQ HLL++ isn't mergeable by ClickHouse).
+- ClickHouse: `all_facts_local_daily.uniques_arr Array(Nullable(String))` (hourly, raw IDs) → MV `all_facts_by_day_mv` does `uniqArrayState(uniques_arr)` → `all_facts_local_by_day(_aggregated).uniques_arr AggregateFunction(uniqArrayState, Array(Nullable(String)))`.
+- **Query time:** `graph.usersreached` (`r2-metadata` `type="HLL" definition="uniques_arr"`) emits `toInt64(uniqArrayMerge(uniques_arr))` over the 30-day window — a true distinct **merge across days, NOT a sum**. (That's why it returns ~32M, not billions. Proven by chapi `HouseholdsReachedQuerySqlTest.kt`.)
+
+**So if we go the graph-column route, the spec changes:** emit **`users_reached_ip_arr = ARRAY_AGG(l.ip IGNORE NULLS)`** (unconditional `l.ip`, vs `uniques_arr`'s CTV/display CASE) — an **array, not an HLL sketch** (the `HLL_COUNT.INIT(l.ip)` sketch would be dead on arrival like `uniques`). It is a **coordinated 3-repo change + backfill**, not one column:
+- `sqlmesh` — `users_reached_ip_arr` in `impression_facts` + `all_facts` passthrough.
+- `chapi` — ClickHouse DDL on 3 tables (`all_facts_local_daily` + two `_by_day` aggregates) + MV (`uniqArrayState(...)`) + `r2-metadata.xml`/`-legacy.xml` metric with `type="HLL"`.
+- `airflow-reporting` — `dags/chapi/conf/reporting_config.json` load select/insert_columns + the BQ export view `v_all_facts`.
+- Backfill ~30d (MVs aren't retroactive).
+
+**Decision impact:** this confirms the graph-column path is substantial (multi-repo, DDL migrations, MV rebuild, backfill) — exactly what the **CIL route avoids** (one small daily query→table we own, exact 10.71%, zero ClickHouse work). Strengthens CIL unless BER wants IP-reach in graph for other uses.
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
