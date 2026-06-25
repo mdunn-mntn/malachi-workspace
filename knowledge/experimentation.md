@@ -1069,6 +1069,18 @@ Connecting BER-2250 Phase 2 implementation to the literature:
 
 **Corollary for MDE / power-calc baselines (TI-1019, verified 2026-06-24):** the two-proportion binomial MDE engine (`ti_884_mde_calculator.py`) treats each advertised IP as one Bernoulli trial, so the baseline `p` MUST be a per-IP *probability* = distinct visiting-and-served IPs / distinct served IPs. **Never feed it an event-count rate.** `graph.visits` is an *event count* (data_catalog.md), not distinct IPs — `graph.visits / usersReached` inflates the baseline by (visit events per visiting IP) × (visiting-but-unserved leakage). For WGU that was 3.36x (10.70% → 35.95%). Because MDE_rel ∝ sqrt((1−p)/p) — monotonically decreasing in p — an inflated baseline makes the tool report a **smaller, over-optimistic MDE and overstated power**. At WGU the over-optimism factor was 2.16x (0.68% true vs 0.31% naive). Rule: numerator and denominator must be the same unit (distinct IPs over distinct IPs); use `graph.SiteVisitors`-style distinct counts, never `graph.visits`, when prefilling a power calculator. A baseline >1.0-implied (here 0.36 only because events ≈ 3× IPs) is the tell that an event count leaked into a per-trial probability.
 
+### Incrementality-test eligibility screen (INCR-75, 2026-06-25)
+
+Reusable funnel for "which advertisers should we run a lift study on?" — fork TI-1019's per-advertiser metrics SQL (`incr_75_advertiser_metrics.sql`: IVR `p_visit`, CVR `p_cvr`, CPM, imps/IP, trailing-30d spend, 12-mo typical-active-month spend, +B2B bucket +56d distinct-IP reach over the full delivering universe) → run TI-884 `ti_884_mde_calculator.py` per advertiser at **var_reduction=1.0** → score/tier → one Excel (funnel waterfall + exhaustive flagged list + tiered final).
+
+- **MDE is RELATIVE** (the question the ticket always asks): `mde_rel = mde_abs/p`. A 5% MDE on a 0.5% IVR = detect 0.525% (a 5% proportional lift), NOT 5.5pp. State this explicitly in any eligibility deliverable.
+- **IVR gates eligibility; CVR is informational.** CVR baseline ~30× lower → ~7–10× harder (5% CVR MDE needs ~$2–5M/mo). Compute both IVR targets (5% credible / 10% realistic); CVR reported at a looser 15% target, never pass/fail.
+- **Hard filters (minimal):** clean/active · not-B2B (`fpa_advertiser_verticals` type=0 bucket = "B2B Software & Services") · measurable IVR (≥100 visiting IPs). Spend / IVR-position / powerability are **scored, not cut** — keeps the list complete and labels Top/Mid/Low.
+- **8-week horizon ≈ 1.84 months** of spend; budget-for-MDE = `spend_required()` total test budget, an **optimistic floor** for large gaps (imps/IP grows with window). Cross-check with a **direct 56-day distinct-IP MDE** (no extrapolation).
+- **Extra-ask bands (label, never cut):** ≤25% easy / 25–50% stretch / >50% unreasonable.
+- **Prior-lift bonus:** TI-933 (Select clickpass visit-rate pp, significant only) + TI-837 (guid total-traffic pp, all-funnel; permissive "has shown lift" signal). Report in **pp not relative** — relative blows up for low-organic-traffic brands.
+- Result (run 2026-06-25): 2,009 delivering → 1,841 non-B2B → **1,287 eligible**; Top 56 / Mid 266 / Low 965; smaller/mid consumer brands ($27k–$172k/mo, IVR 2.5–7.5%) dominate Top. Canonical: `tickets/ber_2250_incrementality_overhaul/incr_75_eligible_advertisers/`.
+
 ### Triangulation Architecture — The End-State Pattern
 
 The meta-pattern endorsed by Meta, Google, PyMC-Marketing, and the BCG 2025 "trifecta" study (46% of leading marketers):

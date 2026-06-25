@@ -37,10 +37,52 @@ The team needs a defensible, ranked shortlist of advertisers to offer lift studi
 ### B2B classification
 `bronze.integrationprod.fpa_advertiser_verticals` type=0 (industry bucket). The bucket **"B2B Software & Services"** (5,575 advertisers org-wide, the largest bucket) is the clean B2B filter. Other buckets are consumer verticals (Apparel, Home Improvement, Healthcare, Food & Beverage, etc.).
 
-*(Funnel counts, tier splits, and the final shortlist will be filled in after the run.)*
+### Funnel (waterfall) — run 2026-06-25
+| Step | Filter (HARD) | Removed | Remaining |
+|---|---|---:|---:|
+| 0 | Starting universe (delivered, trailing 30d) | — | **2,009** |
+| 1 | Clean & active (active=TRUE, named, served) | 0 | 2,009 |
+| 2 | Not B2B (exclude "B2B Software & Services") | 168 | 1,841 |
+| 3 | Measurable IVR (≥100 visiting IPs, IVR>0) | 554 | **1,287 ELIGIBLE** |
+
+Per the user's "score, don't hard-cut" decision, spend / IVR-position / powerability are **scored** (not eliminated) within the eligible set.
+
+### Value tiers (of the 1,287 eligible)
+- **Top = 56** — powered at 5% IVR MDE at normal spend, mid-spend, movable IVR, low saturation. *Run these first.*
+- **Mid = 266** — powered at 10% at normal spend (or 5% with an easy/stretch bump).
+- **Low = 965** — eligible but need a large bump to power, or saturated / spend far from sweet spot.
+- **34** eligible advertisers carry prior demonstrated lift (TI-933 / TI-837). **112** are "close to IVR spend minimum" (a small budget bump unlocks them).
+
+### Top candidates (tier=Top, by value score) — illustrative
+| AID | Advertiser | Spend/mo | IVR | IVR MDE@normal | Prior lift | Vertical |
+|---|---|---:|---:|---:|---:|---|
+| 42097 | Gruns | $80k | 3.88% | 2.72% | 3.6pp | Fitness & Health |
+| 37775 | Zazzle | $172k | 5.71% | 1.81% | 11.6pp | Household Goods |
+| 38422 | Signature Hardware | $95k | 2.91% | 3.15% | 2.1pp | Home Improvement |
+| 30181 | Longines | $38k | 3.83% | 4.47% | 3.2pp | Shopping |
+| 34143 | First Watch | $92k | 3.51% | 3.74% | — | Restaurants |
+| 37115 | Cricut | $55k | 6.77% | 3.27% | — | Entertainment |
+| 34094 | Talkspace | $53k | 5.22% | 4.98% | — | Healthcare |
+| 40521 | Gate 1 Travel | $74k | 4.84% | 3.52% | — | Travel |
+| 31409 | Feeding America | $76k | 3.43% | 3.06% | — | Non-Profits |
+| 41057 | Brooklinen | $41k | 5.17% | 2.99% | — | Household Goods |
+
+Face validity: Zazzle (prior +11.6pp Select lift) lands in Top; the shortlist is mid-spend ($27k–$172k/mo) consumer brands across diverse verticals, all powered at normal spend — exactly the ticket's target profile.
+
+### Query performance
+Metrics SQL: 369 GB processed, 13s wall (logged to `knowledge/bq_perf_log.jsonl`).
 
 ## 5. Solution
-*(Pending — deliverable is `outputs/incr_75_eligible_advertisers.xlsx`.)*
+**Deliverable:** `outputs/incr_75_eligible_advertisers.xlsx` — 5 sheets:
+1. **Funnel Waterfall** — start → remaining per hard filter + tier/power split.
+2. **All Advertisers** (2,009) — every advertiser, per-filter pass/fail flags, `failed_at_filter`, final tier (audit trail).
+3. **Final Eligible (tiered)** (1,287) — row-colored Top/Mid/Low, all user-required columns: IVR, CVR, budget-for-MDE (IVR 5%/10%, CVR 15%), avg monthly spend, can-hit-IVR/CVR-MDE-≤8wk (Y/N), extra $/%/ask-band, close-to-IVR/CVR-min (Y/N), required monthly spend.
+4. **Method & Caveats** — definitions, targets, pitfalls.
+5. **Spend → MDE curve** — achievable MDE vs monthly spend at eligible-cohort medians.
+
+Plus `artifacts/incr_75_chart_funnel.png` (Tufte funnel + tier split, 200 DPI).
+
+**Reproducibility:** `queries/incr_75_advertiser_metrics.sql` → `artifacts/incr_75_score_and_filter.py` → `artifacts/incr_75_build_xlsx.py` + `generate_charts.py`. Reuses TI-884 `ti_884_mde_calculator.py` unchanged (var_reduction=1.0) and TI-1019's settled IP-grain baseline.
 
 ## 6. Questions Answered (the ticket asked these directly)
 
@@ -57,7 +99,9 @@ The team needs a defensible, ranked shortlist of advertisers to offer lift studi
   **A:** Banded: ≤25% over normal = easy, 25–50% = stretch, >50% = unreasonable. Labeled per advertiser; never an elimination criterion.
 
 ## 7. Data Documentation Updates
-*(Pending — eligibility-screen pattern → `knowledge/experimentation.md`; any new schema → `data_catalog.md`.)*
+- `knowledge/experimentation.md` — added "Incrementality-test eligibility screen (INCR-75)" subsection: the reusable funnel (fork TI-1019 metrics → TI-884 calculator), the relative-MDE clarification, IVR-gate / CVR-informational rule, and the prior-lift bonus.
+- B2B classification: `fpa_advertiser_verticals` type=0 bucket = "B2B Software & Services" is the clean B2B flag (already noted; reaffirmed here).
+- No new schema discovered (reused TI-1019 / TI-884 tables).
 
 ## 8. Open Items / Follow-ups
 - Calculator `spend_required` uses 30-day imps/IP and is an optimistic floor for large budget gaps (imps/IP grows with window length); the 56-day direct-measurement MDE is the defensible cross-check.
