@@ -95,7 +95,8 @@ FINAL_COLS = [
     ("extra_spend_ivr_10pct_pct", "Extra spend, % over current", "pctx", 12),
     ("ivr_ask_band", "Budget-ask feasibility", "text", 13),
     ("close_to_ivr_min", "Near IVR spend minimum?", "text", 11),
-    ("can_hit_cvr_15pct_8w", "Can detect 15% CVR lift in ≤8 wks?", "text", 12),
+    ("mde_cvr_at_normal_pct", "Smallest CVR lift detectable at current spend", "pctx", 15),
+    ("can_hit_cvr_15pct_8w", "Can power a loose 15% CVR test in ≤8 wks?", "text", 12),
     ("budget_for_mde_cvr_15pct", "Total test spend to detect 15% CVR lift", "usd", 15),
     ("req_monthly_spend_cvr_15pct", "Monthly spend needed (15% CVR)", "usd", 15),
     ("close_to_cvr_min", "Near CVR spend minimum?", "text", 11),
@@ -267,7 +268,10 @@ def sheet_method(wb, medians):
         ("Reasonable MDE — IVR vs CVR", "h2"),
         ("IVR: both 5% (credible) and 10% (realistic) computed; eligibility tiers on 10%, Top tier requires 5% at "
          "normal spend. CVR is ~7–10x harder (baseline ~30x lower; MDE_rel ∝ √((1−p)/p) explodes as p→0) — a 5% CVR "
-         "MDE needs ~$2–5M/mo, so CVR is INFORMATIONAL only (reported at a looser 15% target), never a gate.", "p"),
+         "MDE needs ~$2–5M/mo, so CVR is INFORMATIONAL only, never a gate. The 15% CVR target is a FEASIBILITY CEILING "
+         "(a tight CVR MDE is unaffordable for nearly all advertisers), NOT a claim that CVR lifts are ~15% — if "
+         "anything CVR's true relative lift is comparable to or smaller than IVR's. Judge CVR on the 'Smallest CVR lift "
+         "detectable at current spend' column, not the 15% yes/no.", "p"),
         ("What counts as 'enough' spend?", "h2"),
         ("Per-advertiser, not a flat number: enough = running 8 weeks at typical spend accumulates enough treated IPs "
          "to push IVR MDE ≤ target. Encoded in the power columns. Low-spend advertisers fail to power and lack the ROI "
@@ -408,12 +412,16 @@ GLOSSARY = [
      "MDE from the real distinct IPs reached in the last 56 days. Should roughly match the modeled column; large gaps flag a frequency/reach quirk."),
 
     ("§", "CVR POWER — informational only (conversions need ~$2M+/mo)", "", ""),
-    ("", "Can detect 15% CVR lift in ≤8 wks?", "Yes = a CVR test is powered at a (looser) 15% bar. Usually No.",
+    ("", "Smallest CVR lift detectable at current spend",
+     "The honest per-advertiser CVR read — judge CVR on THIS, not the 15% bar. Usually large (10s–100s %) because the CVR base rate is ~30× lower than IVR.",
+     "Same Lewis-Rao math as IVR, on the CVR base rate. Lower = better powered. '—' if <50 converting IPs."),
+    ("", "Can power a loose 15% CVR test in ≤8 wks?",
+     "Yes = even a deliberately LOOSE 15% CVR bar is powered (usually No). 15% is a FEASIBILITY CEILING — a tight CVR MDE is unaffordable for nearly all advertisers — NOT a claim that CVR lifts are ~15%.",
      "Yes if current 8-wk spend reaches the IPs for a 15% relative CVR MDE. 'no_data' if <50 converting IPs."),
-    ("", "Total test spend to detect 15% CVR lift", "Total dollars to prove a 15% conversion lift.",
+    ("", "Total test spend to detect 15% CVR lift", "Total dollars to prove even a loose 15% conversion lift.",
      "Same math as IVR, on the CVR baseline. Far higher because CVR is ~30× rarer."),
     ("", "Monthly spend needed (15% CVR)", "The CVR total-test figure as a monthly run-rate.", "Total ÷ 1.84."),
-    ("", "Near CVR spend minimum?", "Yes = around the CVR spend threshold.", "current 8-wk spend is 0.75–1.5× the 15% CVR budget."),
+    ("", "Near CVR spend minimum?", "Yes = close to affording even the loose 15% CVR bar.", "current 8-wk spend is 0.75–1.5× the 15% CVR budget."),
 
     ("§", "PRIOR EVIDENCE", "", ""),
     ("", "Prior measured lift", "A positive lift this advertiser already showed in a past MNTN test (bonus signal).",
