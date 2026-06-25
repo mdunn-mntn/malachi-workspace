@@ -1079,7 +1079,7 @@ Reusable funnel for "which advertisers should we run a lift study on?" — fork 
 - **8-week horizon ≈ 1.84 months** of spend; budget-for-MDE = `spend_required()` total test budget, an **optimistic floor** for large gaps (imps/IP grows with window). Cross-check with a **direct 56-day distinct-IP MDE** (no extrapolation).
 - **Extra-ask bands (label, never cut):** ≤25% easy / 25–50% stretch / >50% unreasonable.
 - **Prior-lift bonus:** TI-933 (Select clickpass visit-rate pp, significant only) + TI-837 (guid total-traffic pp, all-funnel; permissive "has shown lift" signal). Report in **pp not relative** — relative blows up for low-organic-traffic brands.
-- Result (run 2026-06-25): 2,009 delivering → 1,841 non-B2B → **1,287 eligible**; Top 56 / Mid 266 / Low 965; smaller/mid consumer brands ($27k–$172k/mo, IVR 2.5–7.5%) dominate Top. Canonical: `tickets/ber_2250_incrementality_overhaul/incr_75_eligible_advertisers/`.
+- Result (run 2026-06-25): 2,009 delivering → 1,841 non-B2B → **1,287 eligible**; Top 56 / Mid 266 / Low 965; smaller/mid consumer brands ($27k–$172k/mo, IVR 2.5–7.5%) dominate Top. Canonical: `tickets/incr_75_eligible_advertisers/`.
 
 ### Triangulation Architecture — The End-State Pattern
 

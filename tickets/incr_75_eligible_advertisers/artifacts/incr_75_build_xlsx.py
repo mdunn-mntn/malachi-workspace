@@ -22,8 +22,8 @@ from openpyxl.utils import get_column_letter
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "outputs"
-EPIC = ROOT.parent
-sys.path.insert(0, str(EPIC / "ti_884_power_sample_size_analysis" / "artifacts"))
+BER = ROOT.parent / "ber_2250_incrementality_overhaul"  # reused TI-884 engine lives here
+sys.path.insert(0, str(BER / "ti_884_power_sample_size_analysis" / "artifacts"))
 from ti_884_mde_calculator import mde_binomial  # noqa: E402
 
 TEST_MONTHS = 56 / 30.4

@@ -23,10 +23,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent          # incr_75_eligible_advertisers/
 OUT = ROOT / "outputs"
-EPIC = ROOT.parent                                      # ber_2250_incrementality_overhaul/
+BER = ROOT.parent / "ber_2250_incrementality_overhaul"  # reused predecessor assets (TI-884/933/837) live here
 
 # Reuse the TI-884 MDE engine unchanged.
-sys.path.insert(0, str(EPIC / "ti_884_power_sample_size_analysis" / "artifacts"))
+sys.path.insert(0, str(BER / "ti_884_power_sample_size_analysis" / "artifacts"))
 from ti_884_mde_calculator import mde_binomial, spend_required, tier_label  # noqa: E402
 
 # ---------------- constants (one-line re-tunable) ----------------
@@ -45,8 +45,8 @@ IVR_SATURATED = 0.12          # above this = saturated / hard-to-move penalty
 ASK_EASY, ASK_STRETCH = 0.25, 0.50   # extra-spend % bands
 
 METRICS_CSV = OUT / "incr_75_advertiser_metrics.csv"
-TI933_CSV = EPIC / "ti_933_select_lift_analysis" / "outputs" / "ti_933_per_advertiser_lift.csv"
-TI837_JSON = EPIC / "ti_837_implementation_plan" / "outputs" / "ti_837_lift_30adv_7day_v5_2026_04_20_to_26.json"
+TI933_CSV = BER / "ti_933_select_lift_analysis" / "outputs" / "ti_933_per_advertiser_lift.csv"
+TI837_JSON = BER / "ti_837_implementation_plan" / "outputs" / "ti_837_lift_30adv_7day_v5_2026_04_20_to_26.json"
 
 
 # ---------------- prior-demonstrated-lift (bonus signal) ----------------
