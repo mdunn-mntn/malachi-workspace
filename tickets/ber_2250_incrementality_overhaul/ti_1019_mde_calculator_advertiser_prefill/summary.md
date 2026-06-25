@@ -206,6 +206,8 @@ Ryan Kleck asked: impression_facts/all_facts are hourly grain — for a 30-day M
 - `aid` → `WHERE advertiser_id IN (31357)`; `sum=advertiserinfo.id` → `GROUP BY advertiser_id` (joins `info.v_advertisers`); `fullname=true` only renames JSON output keys, no SQL effect; no PREWHERE / data-tier filter in SQL.
 - **Settles both assumptions:** spend/impressions ARE summed; usersreached is merged (cross-day distinct → ~32M) — in one query.
 
+**How to get the REAL runtime SQL for any graph/R2 metric (verified from chapi source, 2026-06-25):** there is **no** curl/debug param — CHAPI's `/apidata` has no `debug`/`explain`/`sql`/`dryrun` param and `format` only accepts Human/Json/Csv/Excel (the built SQL `QueryResult.sql` is never returned in the response). Two ways to capture the literal executed SQL: (1) **easiest — service logs:** every request logs it unconditionally at INFO — `DataService.kt:143` `log.info("Built SQL Command: {} | Params: {}", cmd, ...)` → grep request-data-service / Datadog `service:chapi "Built SQL Command"`. (2) **ClickHouse `system.query_log`** (CHAPI injects no query_id/comment tag, so pin on table + aid): `WHERE type='QueryFinish' AND query LIKE '%all_facts_by_day_ramp_combined%' AND query LIKE '%advertiser_id IN (<aid>)%'`. The query above is a source reconstruction (chapi `SummaryQueryBuilder.kt`); use the INFO log for the verbatim runtime SQL.
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
