@@ -200,6 +200,12 @@ Ryan Kleck asked: impression_facts/all_facts are hourly grain — for a 30-day M
 
 **Decision impact:** this confirms the graph-column path is substantial (multi-repo, DDL migrations, MV rebuild, backfill) — exactly what the **CIL route avoids** (one small daily query→table we own, exact 10.71%, zero ClickHouse work). Strengthens CIL unless BER wants IP-reach in graph for other uses.
 
+**Exact ClickHouse query CHAPI generates** (Ryan Kleck Q, source-verified from `SteelHouse/chapi` `SummaryQueryBuilder.kt` + `r2-metadata.xml`, 2026-06-25) for Chris's params (`data=graph.spend,graph.impressions,graph.usersreached`, `begin=thirty`, `sum=advertiserinfo.id`, `includetoday=false`, `aid=31357`):
+- **Table = `summarydata.all_facts_by_day_ramp_combined`** (daily grain, ClickHouse `Distributed`; no `FINAL`). Time column `day`; predicate is **half-open literal GMT timestamps** `day >= timestamp '<30d-ago>' AND day < timestamp '<today 00:00>'` (30d ending yesterday; not `today()-30`).
+- `graph.spend` = `sum(media_spend)+sum(data_spend)+sum(platform_spend)+sum(legacy_spend)` (SUM); `graph.impressions` = `sum(display_impressions)+sum(ctv_impressions)` (SUM); `graph.usersreached` = inner `uniqArrayMergeState(uniques_arr)` → outer `toInt64(uniqArrayMerge(uniques_arr))` (HLL **MERGE**, gold-tested `HouseholdsReachedQuerySqlTest.kt`).
+- `aid` → `WHERE advertiser_id IN (31357)`; `sum=advertiserinfo.id` → `GROUP BY advertiser_id` (joins `info.v_advertisers`); `fullname=true` only renames JSON output keys, no SQL effect; no PREWHERE / data-tier filter in SQL.
+- **Settles both assumptions:** spend/impressions ARE summed; usersreached is merged (cross-day distinct → ~32M) — in one query.
+
 ## 8. Open Items / Follow-ups
 - Decide refresh cadence — currently a manual rerun. Could schedule a weekly cron via `schedule` skill if useful.
 - Consider hosting the JSON separately so the HTML can fetch fresh (vs baked-in which means the calculator drifts after a few weeks).
