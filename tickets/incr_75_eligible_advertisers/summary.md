@@ -73,12 +73,13 @@ Face validity: Zazzle (prior +11.6pp Select lift) lands in Top; the shortlist is
 Metrics SQL: 369 GB processed, 13s wall (logged to `knowledge/bq_perf_log.jsonl`).
 
 ## 5. Solution
-**Deliverable:** `outputs/incr_75_eligible_advertisers.xlsx` — 5 sheets:
+**Deliverable:** `outputs/incr_75_eligible_advertisers.xlsx` — 6 sheets:
 1. **Funnel Waterfall** — start → remaining per hard filter + tier/power split.
 2. **All Advertisers** (2,009) — every advertiser, per-filter pass/fail flags, `failed_at_filter`, final tier (audit trail).
 3. **Final Eligible (tiered)** (1,287) — row-colored Top/Mid/Low, all user-required columns: IVR, CVR, budget-for-MDE (IVR 5%/10%, CVR 15%), avg monthly spend, can-hit-IVR/CVR-MDE-≤8wk (Y/N), extra $/%/ask-band, close-to-IVR/CVR-min (Y/N), required monthly spend.
 4. **Method & Caveats** — definitions, targets, pitfalls.
 5. **Spend → MDE curve** — achievable MDE vs monthly spend at eligible-cohort medians.
+6. **Column Glossary** — plain-English definition of every column on sheets 2 & 3, grouped by section (appendix). Headers reworded for clarity (e.g. "Smallest IVR lift detectable at current spend" instead of "IVR MDE @ normal spend").
 
 Plus `artifacts/incr_75_chart_funnel.png` (Tufte funnel + tier split, 200 DPI).
 

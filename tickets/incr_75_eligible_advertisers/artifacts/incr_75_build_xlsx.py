@@ -77,34 +77,34 @@ def title_block(ws, ncol, title, subtitle):
 # column spec for the metric sheets: (csv_key, header, fmt, width)
 # fmt: int | usd | pct (raw fraction) | pctx (already *100 -> /100) | pp | num | text
 FINAL_COLS = [
-    ("final_tier", "Tier", "text", 7),
-    ("value_score", "Value score", "num", 10),
-    ("advertiser_id", "AID", "int", 8),
+    ("final_tier", "Value tier", "text", 8),
+    ("value_score", "Value score (0–100)", "num", 11),
+    ("advertiser_id", "Advertiser ID", "int", 11),
     ("advertiser_name", "Advertiser", "text", 26),
-    ("vertical_buckets", "Vertical", "text", 20),
+    ("vertical_buckets", "Industry (vertical)", "text", 20),
     ("avg_monthly_spend", "Avg monthly spend", "usd", 15),
-    ("ivr", "IVR", "pct", 8),
-    ("cvr", "CVR", "pct", 9),
-    ("mde_ivr_at_normal_pct", "IVR MDE @ normal spend", "pctx", 13),
-    ("can_hit_ivr_5pct_8w", "Hit 5% IVR ≤8wk?", "text", 10),
-    ("can_hit_ivr_10pct_8w", "Hit 10% IVR ≤8wk?", "text", 10),
-    ("budget_for_mde_ivr_5pct", "Budget for 5% IVR MDE (test)", "usd", 15),
-    ("budget_for_mde_ivr_10pct", "Budget for 10% IVR MDE (test)", "usd", 15),
-    ("req_monthly_spend_ivr_10pct", "Req. monthly spend (10% IVR)", "usd", 15),
-    ("extra_spend_ivr_10pct_abs", "Extra $ to hit 10% IVR", "usd", 14),
-    ("extra_spend_ivr_10pct_pct", "Extra % over normal", "pctx", 11),
-    ("ivr_ask_band", "Extra-ask band", "text", 12),
-    ("close_to_ivr_min", "Close to IVR min?", "text", 9),
-    ("can_hit_cvr_15pct_8w", "Hit 15% CVR ≤8wk?", "text", 10),
-    ("budget_for_mde_cvr_15pct", "Budget for 15% CVR MDE (test)", "usd", 15),
-    ("req_monthly_spend_cvr_15pct", "Req. monthly spend (15% CVR)", "usd", 15),
-    ("close_to_cvr_min", "Close to CVR min?", "text", 9),
-    ("prior_lift_pp", "Prior lift", "pp", 10),
-    ("prior_lift_source", "Prior-lift source", "text", 13),
-    ("mde_ivr_direct_56d_pct", "IVR MDE (direct 56d)", "pctx", 12),
-    ("cpm", "CPM", "usd", 9),
-    ("imps_per_ip", "Imps/IP", "num", 8),
-    ("distinct_ips_30d", "Reach IPs (30d)", "int", 13),
+    ("ivr", "Visit rate (IVR)", "pct", 11),
+    ("cvr", "Conversion rate (CVR)", "pct", 11),
+    ("mde_ivr_at_normal_pct", "Smallest IVR lift detectable at current spend", "pctx", 15),
+    ("can_hit_ivr_5pct_8w", "Can detect 5% IVR lift in ≤8 wks?", "text", 12),
+    ("can_hit_ivr_10pct_8w", "Can detect 10% IVR lift in ≤8 wks?", "text", 12),
+    ("budget_for_mde_ivr_5pct", "Total test spend to detect 5% IVR lift", "usd", 15),
+    ("budget_for_mde_ivr_10pct", "Total test spend to detect 10% IVR lift", "usd", 15),
+    ("req_monthly_spend_ivr_10pct", "Monthly spend needed (10% IVR)", "usd", 15),
+    ("extra_spend_ivr_10pct_abs", "Extra spend needed (10% IVR)", "usd", 14),
+    ("extra_spend_ivr_10pct_pct", "Extra spend, % over current", "pctx", 12),
+    ("ivr_ask_band", "Budget-ask feasibility", "text", 13),
+    ("close_to_ivr_min", "Near IVR spend minimum?", "text", 11),
+    ("can_hit_cvr_15pct_8w", "Can detect 15% CVR lift in ≤8 wks?", "text", 12),
+    ("budget_for_mde_cvr_15pct", "Total test spend to detect 15% CVR lift", "usd", 15),
+    ("req_monthly_spend_cvr_15pct", "Monthly spend needed (15% CVR)", "usd", 15),
+    ("close_to_cvr_min", "Near CVR spend minimum?", "text", 11),
+    ("prior_lift_pp", "Prior measured lift", "pp", 11),
+    ("prior_lift_source", "Prior-lift source", "text", 14),
+    ("mde_ivr_direct_56d_pct", "IVR lift detectable (measured 8-wk reach)", "pctx", 14),
+    ("cpm", "CPM (cost/1k imps)", "usd", 11),
+    ("imps_per_ip", "Impressions per IP", "num", 10),
+    ("distinct_ips_30d", "Unique IPs reached (30d)", "int", 13),
 ]
 
 
@@ -177,17 +177,17 @@ def sheet_funnel(wb, funnel, tiers, n_prior):
 def sheet_all(wb, rows):
     ws = wb.create_sheet("2. All Advertisers")
     cols = [
-        ("advertiser_id", "AID", "int", 8), ("advertiser_name", "Advertiser", "text", 26),
-        ("vertical_buckets", "Vertical", "text", 20), ("active", "Active", "text", 7),
+        ("advertiser_id", "Advertiser ID", "int", 11), ("advertiser_name", "Advertiser", "text", 26),
+        ("vertical_buckets", "Industry (vertical)", "text", 20), ("active", "Active?", "text", 8),
         ("is_b2b", "B2B?", "text", 6), ("avg_monthly_spend", "Avg monthly spend", "usd", 15),
-        ("ivr", "IVR", "pct", 8), ("cvr", "CVR", "pct", 9),
+        ("ivr", "Visit rate (IVR)", "pct", 11), ("cvr", "Conversion rate (CVR)", "pct", 11),
         ("visiting_ips_30d", "Visiting IPs (30d)", "int", 12),
-        ("distinct_ips_30d", "Reach IPs (30d)", "int", 12),
-        ("pass_f1_clean_active", "F1 clean/active", "bool", 9),
-        ("pass_f2_not_b2b", "F2 not-B2B", "bool", 9),
-        ("pass_f3_measurable_ivr", "F3 measurable IVR", "bool", 9),
+        ("distinct_ips_30d", "Unique IPs reached (30d)", "int", 12),
+        ("pass_f1_clean_active", "Pass: clean & active", "bool", 10),
+        ("pass_f2_not_b2b", "Pass: not B2B", "bool", 9),
+        ("pass_f3_measurable_ivr", "Pass: measurable IVR", "bool", 10),
         ("failed_at_filter", "Disposition", "text", 16),
-        ("final_tier", "Tier", "text", 9), ("value_score", "Value score", "num", 9),
+        ("final_tier", "Value tier", "text", 9), ("value_score", "Value score (0–100)", "num", 11),
     ]
     title_block(ws, len(cols),
                 "INCR-75 — All Advertisers (audit trail)",
@@ -352,6 +352,111 @@ def sheet_curve(wb, medians):
     ws.freeze_panes = "A5"
 
 
+# ---------------- Sheet 6: Column glossary (appendix) ----------------
+# (section, column-as-shown, plain definition, how it's computed / notes)
+GLOSSARY = [
+    ("§", "IDENTITY & RANKING", "", ""),
+    ("", "Value tier", "Priority bucket for running a test. Top = run first; Low = eligible but lowest priority.",
+     "Top = can detect a 5% IVR lift at current spend + mid-spend + movable IVR + unsaturated. Mid = can detect 10% at current spend (or 5% with a small bump). Low = needs a big budget bump or is saturated / off the spend sweet-spot. (EXCLUDED on the All-Advertisers sheet = failed a hard filter.)"),
+    ("", "Value score (0–100)", "Composite ranking score within the eligible set; higher = better candidate.",
+     "Power margin (30) + mid-spend fit (20) + smaller-brand/movability (20) + IVR-band position (15) + low audience saturation (15) + prior-lift bonus (+10)."),
+    ("", "Advertiser ID", "MNTN advertiser_id.", "From core advertiser dimension."),
+    ("", "Advertiser", "Advertiser company name.", "advertisers.company_name."),
+    ("", "Industry (vertical)", "Advertiser's industry bucket(s).", "fpa_advertiser_verticals (type=0 industry bucket)."),
+
+    ("§", "SPEND & UNIT ECONOMICS", "", ""),
+    ("", "Avg monthly spend", "The advertiser's typical monthly budget — the baseline we test against.",
+     "Median monthly media spend across active months (>$1k) over the last 12 months. Robust to on/off & seasonal advertisers."),
+    ("", "CPM (cost/1k imps)", "Advertiser-paid cost per 1,000 impressions.",
+     "(media + data + platform spend) ÷ impressions × 1000, trailing 30d."),
+    ("", "Impressions per IP", "Average ad frequency — impressions delivered per unique IP.",
+     "impressions ÷ distinct served IPs (30d). Higher = more frequency, fewer NEW IPs per dollar."),
+    ("", "Unique IPs reached (30d)", "Reach: distinct IPs served at least one ad in the last 30 days.",
+     "COUNT(DISTINCT ip) from cost_impression_log, 30d."),
+
+    ("§", "RATES (the baseline we measure lift on)", "", ""),
+    ("", "Visit rate (IVR)", "Share of served households (IPs) that then visited the site. The headline KPI.",
+     "distinct visiting-AND-served IPs ÷ distinct served IPs (30d). A per-IP probability, NOT impressions-based."),
+    ("", "Conversion rate (CVR)", "Share of served households (IPs) that converted. ~30× rarer than visits.",
+     "distinct converting-AND-served IPs ÷ distinct served IPs (30d)."),
+
+    ("§", "IVR POWER — can we detect a lift? (this is the eligibility driver)", "", ""),
+    ("", "Smallest IVR lift detectable at current spend",
+     "The minimum lift an 8-week test could prove at the advertiser's current spend. Lower = better powered.",
+     "MDE is RELATIVE: 3% means a 3% proportional lift (e.g. 2.0%→2.06% IVR), NOT 3 percentage points. Computed from current 8-wk reach, no variance reduction."),
+    ("", "Can detect 5% IVR lift in ≤8 wks?", "Yes = an 8-week test at current spend can prove a 5% lift (the credible bar).",
+     "Yes if current 8-wk spend reaches the IPs needed for a 5% relative IVR MDE."),
+    ("", "Can detect 10% IVR lift in ≤8 wks?", "Same, for a 10% lift (the realistic bar — easier to clear).",
+     "Yes if current 8-wk spend reaches the IPs needed for a 10% relative IVR MDE."),
+    ("", "Total test spend to detect 5% / 10% IVR lift",
+     "Total dollars over the whole test needed to prove that lift.",
+     "TI-884 Lewis-Rao: dollars to reach the required distinct served IPs, at the advertiser's own CPM & impressions/IP, no variance reduction. 5% costs ~4× the 10% figure."),
+    ("", "Monthly spend needed (10% IVR)", "The total-test figure expressed as a monthly run-rate.",
+     "Total test spend ÷ 1.84 (an 8-week test ≈ 1.84 months)."),
+    ("", "Extra spend needed (10% IVR)", "Additional dollars beyond what they'd spend anyway, to reach the 10% bar. $0 if already powered.",
+     "max(0, total test spend for 10% − current 8-wk spend)."),
+    ("", "Extra spend, % over current", "That extra as a percentage of their current 8-week spend.",
+     "extra ÷ (current 8-wk spend)."),
+    ("", "Budget-ask feasibility", "How big the budget ask is, in plain terms.",
+     "none = already powered · easy = ≤25% more · stretch = 25–50% more · unreasonable = >50% more."),
+    ("", "Near IVR spend minimum?", "Yes = they sit right around the spend threshold — a small bump unlocks it, or they're only just powered.",
+     "current 8-wk spend is 0.75–1.5× the spend needed for a 10% IVR MDE."),
+    ("", "IVR lift detectable (measured 8-wk reach)",
+     "Cross-check of the 'at current spend' column using ACTUAL reach, no extrapolation.",
+     "MDE from the real distinct IPs reached in the last 56 days. Should roughly match the modeled column; large gaps flag a frequency/reach quirk."),
+
+    ("§", "CVR POWER — informational only (conversions need ~$2M+/mo)", "", ""),
+    ("", "Can detect 15% CVR lift in ≤8 wks?", "Yes = a CVR test is powered at a (looser) 15% bar. Usually No.",
+     "Yes if current 8-wk spend reaches the IPs for a 15% relative CVR MDE. 'no_data' if <50 converting IPs."),
+    ("", "Total test spend to detect 15% CVR lift", "Total dollars to prove a 15% conversion lift.",
+     "Same math as IVR, on the CVR baseline. Far higher because CVR is ~30× rarer."),
+    ("", "Monthly spend needed (15% CVR)", "The CVR total-test figure as a monthly run-rate.", "Total ÷ 1.84."),
+    ("", "Near CVR spend minimum?", "Yes = around the CVR spend threshold.", "current 8-wk spend is 0.75–1.5× the 15% CVR budget."),
+
+    ("§", "PRIOR EVIDENCE", "", ""),
+    ("", "Prior measured lift", "A positive lift this advertiser already showed in a past MNTN test (bonus signal).",
+     "In percentage points (pp). Blank if none."),
+    ("", "Prior-lift source", "Which past study the prior lift came from.",
+     "TI-933 = Select clickpass visit-rate test (significant only). TI-837 = ghost-bid guid total-traffic (all-funnel; permissive 'has shown lift' signal)."),
+
+    ("§", "ALL-ADVERTISERS SHEET — extra columns", "", ""),
+    ("", "Active?", "Whether the advertiser is currently active.", "advertisers.active."),
+    ("", "B2B?", "Whether the advertiser is B2B (these are excluded).", "In the 'B2B Software & Services' vertical bucket."),
+    ("", "Visiting IPs (30d)", "Distinct IPs that visited the site (the IVR numerator).", "COUNT(DISTINCT ip) from clickpass_log ∩ served, 30d."),
+    ("", "Pass: clean & active / not B2B / measurable IVR", "The three hard filters (Y/N).",
+     "clean & active = active, named, served. not B2B = not in the B2B bucket. measurable IVR = ≥100 visiting IPs & IVR>0."),
+    ("", "Disposition", "Outcome: PASSED (eligible) or the first filter it failed.", "PASSED / F1_clean_active / F2_not_b2b / F3_measurable_ivr."),
+]
+
+
+def sheet_glossary(wb):
+    ws = wb.create_sheet("6. Column Glossary")
+    title_block(ws, 3,
+                "Column Glossary (appendix)",
+                "Plain-English definition of every column on the 'All Advertisers' and 'Final Eligible' sheets. "
+                "Key reminder: every lift / MDE figure is RELATIVE — a 5% MDE on a 0.5% visit rate means detecting 0.525%, "
+                "not 5.5%. All budgets assume NO variance reduction; an 8-week test ≈ 1.84 months of spend.")
+    r = 4
+    header_row(ws, ["Column", "What it means", "How it's computed / notes"], r)
+    for tag, col, definition, computed in GLOSSARY:
+        r += 1
+        if tag == "§":
+            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=3)
+            c = ws.cell(r, 1, col); c.font = Font(bold=True, color="FFFFFF", size=10.5)
+            c.fill = PatternFill("solid", fgColor="33506E"); c.alignment = Alignment(vertical="center")
+            ws.row_dimensions[r].height = 18
+            continue
+        cells = [(col, Font(bold=True, size=10, color="1F3A5F")), (definition, Font(size=10, color="222222")),
+                 (computed, Font(size=9, color="555555"))]
+        for j, (val, fnt) in enumerate(cells, 1):
+            c = ws.cell(r, j, val); c.font = fnt; c.alignment = WRAP; c.border = THIN
+        ws.row_dimensions[r].height = max(28, 12 * (1 + max(len(definition) // 48, len(computed) // 58)))
+    for j, wd in enumerate([34, 50, 62], 1):
+        ws.column_dimensions[get_column_letter(j)].width = wd
+    ws.freeze_panes = "A5"
+    ws.sheet_view.showGridLines = False
+
+
 def main():
     all_rows = read_csv("incr_75_all_flagged.csv")
     final_rows = read_csv("incr_75_final_tiered.csv")
@@ -373,6 +478,7 @@ def main():
     sheet_final(wb, final_rows)
     sheet_method(wb, medians)
     sheet_curve(wb, medians)
+    sheet_glossary(wb)
 
     path = OUT / "incr_75_eligible_advertisers.xlsx"
     wb.save(path)
