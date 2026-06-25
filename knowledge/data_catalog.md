@@ -2868,3 +2868,12 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
 - **Ghost-ad lift recipe (TI-837):** control = ghostBid IPs; treated = served (`cost_impression_log`,
   advertiser-clustered, cheap) for ATT, or empty-reason IPs for clean ITT (pre-auction, no win-selection).
   Outcomes from clickpass_log (visits) / conversion_log (convs) by ip. See `ti_1044_ghost_lift*.sql`.
+- **`threshold_failure_reasons` vocabulary (obj=1 prospecting, INCR bias register 2026-06-23):**
+  `missingIntentScore` 57.5%, `invalidCampaignIntentScore` 33.9%, `''` (submitted/placed) 6.0%,
+  `ghostBid` 2.1%, `bidPriceBelowImpressionBidFloor` 0.4%. **`is_submitted = (threshold_failure_reasons = '')`**
+  — submitted bids carry empty-string, NOT NULL (column is never NULL), so treatment is not undercounted.
+  **No fcap tokens appear** → frequency-capping is config-OFF for these prospecting advertisers.
+- **Ghost-lift selection gotcha (INCR, PROVEN 2026-06-23):** distinct-IP `ghost_frac` inflates above the
+  true 0.10 hash (to 0.13–0.47) via **bid-multiplicity** — holdout IPs never win→never exit the pool→re-bid
+  repeatedly→over-weight high-frequency IPs→spurious negative lift. Single-qual-bid IPs split at exactly
+  0.0988. De-bias by gating to `ghost_frac ∈ [.095,.11]`. See experimentation.md "Ghost-bid lift — bias register."

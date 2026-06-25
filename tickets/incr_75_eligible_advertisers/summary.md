@@ -100,11 +100,16 @@ Plus `artifacts/incr_75_chart_funnel.png` (Tufte funnel + tier split, 200 DPI).
   **A:** Banded: ≤25% over normal = easy, 25–50% = stretch, >50% = unreasonable. Labeled per advertiser; never an elimination criterion.
 
 ## 7. Data Documentation Updates
-- `knowledge/experimentation.md` — added "Incrementality-test eligibility screen (INCR-75)" subsection: the reusable funnel (fork TI-1019 metrics → TI-884 calculator), the relative-MDE clarification, IVR-gate / CVR-informational rule, and the prior-lift bonus.
-- B2B classification: `fpa_advertiser_verticals` type=0 bucket = "B2B Software & Services" is the clean B2B flag (already noted; reaffirmed here).
+- `knowledge/experimentation.md` — added "Incrementality-test eligibility screen (INCR-75)" subsection (the reusable funnel + relative-MDE clarification + IVR-gate/CVR-informational + prior-lift bonus), and augmented the existing "Ghost-bid lift — bias register + the persuadables gradient (Matt Brorby)" section with net-new facts (reconciled null on both bidders + publish gate, the >1yr always-on holdout + negative-control balance, rare-outcome reporting rules). Marked the old fcap-boundary-bias note superseded (bias is bid-multiplicity, not fcap).
+- `knowledge/data_catalog.md` — `bid_price_log`: added the `threshold_failure_reasons` vocabulary, `is_submitted=('')` (not NULL), fcap-config-OFF for prospecting, and the ghost_frac bid-multiplicity gotcha + clean-gf gate.
+- B2B classification: `fpa_advertiser_verticals` type=0 bucket = "B2B Software & Services" is the clean B2B flag.
 - No new schema discovered (reused TI-1019 / TI-884 tables).
+
+### External validation — the persuadables gradient (Matt Brorby's ghost-bid bias register, 2026-06-25)
+Matt's population-wide ghost-bid run (`SteelHouse/databricks_targeting` INCR, `ghost_bid_lift_bias_register.md`) independently confirms INCR-75's core thesis. At clean ghost_frac across 100M+ IPs, relative visit lift is **monotonic in intent**: High (top intent) +0.2% / PP +1.6% / Mid +3.3% / MaxReach (low intent) +3.4% / no_score (reach) +0.1%. Top-intent visits anyway (ad adds ~nothing); mid-intent is where the ad moves the outcome; most-saturated IPs (21+ other advertisers bidding) are incrementally dead despite a 1.96% baseline. **This is exactly why INCR-75 down-weights high-IVR/saturated advertisers and rewards measurable-but-movable mid-IVR** — the screen's "movability" and saturation logic is now empirically backed. (Full findings captured in `knowledge/experimentation.md`.)
 
 ## 8. Open Items / Follow-ups
 - Calculator `spend_required` uses 30-day imps/IP and is an optimistic floor for large budget gaps (imps/IP grows with window length); the 56-day direct-measurement MDE is the defensible cross-check.
-- Ghost-bid frequency-cap bias affects the eventual *lift estimate* (conservative), not this *power* screen — eligibility ≠ guaranteed lift.
+- **Ghost-bid lift caveat (corrected per Matt's bias register):** the spurious-negative / inflated-holdout artifact is **bid-multiplicity (win-history-exit) selection, NOT frequency-cap asymmetry** (fcap is config-OFF for prospecting); de-bias by gating to clean `ghost_frac ∈ [.095,.11]`. Either way it affects the eventual *lift estimate*, not this *power* screen — eligibility ≠ guaranteed lift. Internal ghost-bid lift is ~0 (underpowered) today; power is the binding constraint, which is the whole reason this screen exists.
+- Prior-lift signal could be upgraded to Matt's production-ghost-bid FDR candidates (more current/platform-wide) — see Jira follow-up.
 - Hand the Top-tier shortlist to the LiftLab beta pipeline (Edgar von Trotha) / internal ghost-bid tests.

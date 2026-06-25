@@ -292,8 +292,10 @@ def sheet_method(wb, medians):
         ("Pitfalls", "h2"),
         ("• spend_required uses 30d imps/IP and is an OPTIMISTIC floor for large budget gaps (imps/IP grows with window "
          "length); the 'IVR MDE (direct 56d)' column is the no-extrapolation cross-check.\n"
-         "• Ghost-bid frequency-cap bias affects the eventual LIFT estimate (conservative), not this POWER screen — "
-         "eligibility ≠ guaranteed lift.\n"
+         "• Ghost-bid lift artifacts (bid-multiplicity selection; gate to clean ghost_frac) affect the eventual LIFT "
+         "estimate, not this POWER screen — eligibility ≠ guaranteed lift. Matt Brorby's population run shows internal "
+         "lift is ~0 today, monotonically rising from top-intent (≈0) to mid-intent (highest) — i.e. movability lives "
+         "in mid-IVR, which is what this screen rewards.\n"
          "• CVR MDE reported only when ≥50 converting IPs (else small-p noise).\n"
          "• Managed-service advertisers can log ~$0 spend with real delivery; ratios are SAFE-guarded.\n"
          "• Prior lift: TI-933 = Select clickpass visit-rate pp (significant only); TI-837 = guid total-traffic pp "
