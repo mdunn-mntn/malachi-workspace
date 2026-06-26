@@ -314,10 +314,12 @@ the credible number; the positive state reads are noise.
 - `block_conversion` / `block_prospecting` settings live in `integrationprod.advertiser_configurations`
   (cols: `block_conversion`, `block_prospecting`, `block_first_party`, `conversion_lookback_window`,
   `page_view_lookback_window`, `enable_taxonomy_block`). TI-310 = the NTB investigation behind this.
-- **DATA-QUALITY CAVEAT:** `advertiser_configurations` in BQ is **STALE — frozen 2026-01-12** (last
-  update_time) and only stores `block_prospecting=true` rows (0 false). Do NOT use it for current state.
-  Reliable/fresh sources: **`audience_audience_segments`** (operative expressions, fresh to today) and
-  **`archives_advertiser_configuration_archives`** (config history, fresh to today; ElevenLabs = 0 rows).
+- **AUTHORITATIVE FRESH SOURCE = `silver.audience.advertiser_configurations`** (= `integrationprod.audience_
+  advertiser_configurations`), updated daily; 14,582 advertisers (all block_prospecting=true; absence=off).
+  **ElevenLabs absent → blocks off.** NOTE the look-alike `integrationprod.advertiser_configurations` (no
+  prefix) is **STALE — frozen 2026-01-12** (broken BQ sync); that's what initially misled us. Block is applied
+  at the **advertiser level** (bidder reads the config; ~96% of prospecting campaigns carry no per-campaign
+  pageview clause), so the config table is authoritative, not the per-campaign expression.
 - **Operative truth (audience_audience_segments, live):** campaign **608814** (national prospecting) exclusion
   clause = `UserNumPageViews >= 0` (threshold 0, **no lookback**) → disabled; **629615** (FIFA Select) has no
   exclusion clause at all; no conversion-exclusion clause anywhere. Properly-blocked advertisers look like

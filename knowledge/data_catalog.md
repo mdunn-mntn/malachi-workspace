@@ -2897,9 +2897,15 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
   `conversion_lookback_window`, `page_view_lookback_window`, `enable_taxonomy_block`. Keyed `advertiser_id`.
   Booleans are BOOL (use `WHERE block_prospecting` / `= TRUE`, not `='true'`). A row exists ~only when a block
   is ON (0 `block_prospecting=false` rows); absence ≈ off/default.
-- **⚠ STALE IN BIGQUERY:** `update_time` frozen at **2026-01-12** (verified 2026-06-24). Do NOT use for current
-  state. **Use instead:** `audience_audience_segments.expression` (live targeting/exclusion, fresh) and
-  `archives_advertiser_configuration_archives` (config-change history, fresh to today).
+- **⚠ TWO TABLES — use the right one (verified 2026-06-24):**
+  - `integrationprod.advertiser_configurations` (no prefix) = **STALE, frozen 2026-01-12** (broken sync). Do NOT use.
+  - **`silver.audience.advertiser_configurations`** = **`integrationprod.audience_advertiser_configurations`** =
+    **FRESH (updated daily)** — THE authoritative current source for block/lookback settings. Keyed advertiser_id,
+    only `block_prospecting=true` rows exist (absence = block off). 14,582 advertisers as of 2026-06-26.
+  - Block is applied **at the advertiser level** (bidder reads this config and suppresses globally); ~96% of
+    prospecting campaigns have NO per-campaign pageview clause in `audience_audience_segments`, so the config
+    table — not the per-campaign expression — is authoritative. (Archive `archives_advertiser_configuration_archives`
+    is also fresh for change history.)
 - **Operative block = exclusion clause in `audience_audience_segments`** (`is_targeted=false`): proper form
   `UserLastVisitTime >= N,day and UserNumPageViews >= K` (lookback + threshold; K typically 2 or 5). `>= 0` with
   no `UserLastVisitTime` = **disabled** (re-serves prior visitors). Conversion block = a converter-suppression clause.
