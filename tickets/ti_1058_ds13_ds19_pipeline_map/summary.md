@@ -66,7 +66,10 @@ by `data_source_id`.
 
 > Note (Ryan): DS13 *used to* use the same product/keyword flow below (it consumed the `industry` field) but **no
 > longer does** — DS13 today is the domain→vertical homepage-classification path above.
-> **Exact file/DAG locations for the DS13 leg are being confirmed by the discovery sweep (§4 manifest).**
+> **DS13-leg code located (§4):** `airflow-ti/spark/vertical_classification/{distinct_site_visit_signal_domains,
+> prepare_html_content,submit_html_content,fetch_vertical_response,update_website_verticals}.py`,
+> `airflow-ti/dags/targeting/fetch_common_crawl.py`, `airflow-ti/dags/vertical_classification/*`, and
+> `SteelHouse/dbt` `ml_squad/models/vertical_categorization/*`. It is a **separate OpenAI batch** from DS19.
 
 ### DS19 — Keyword (daily, the cost driver)
 All files below are `SteelHouse/shopper_graph` `dbt/models/mntn_matched/` unless noted.
@@ -162,11 +165,31 @@ flowchart TD
 
 ## 4. Complete file manifest
 
-> **Populated from the multi-angle GitHub discovery sweep (background workflow `wf_e8ad4246`).**
-> Pending insertion — every repo/path/purpose mapped to its pipeline step, plus referenced-but-not-found items
-> (notably the DS13 Common-Crawl→OpenAI vertical job).
+**Full manifest → `artifacts/ti_1058_file_manifest.md`** (multi-angle, completeness-gated GitHub sweep, 2026-06-26).
+**222 raw hits → ~95 distinct files across 5 repos**, grouped into 16 data-flow steps (Step 0 ingestion → Step 15
+docs). Raw-hit counts: `shopper_graph` 157, `airflow-ti` 52, `dbt` 5, `airflow` 5 (legacy), `workspace` 2, `sqlmesh` 1.
+> The manifest's per-row `DS` column is discovery-agent inference and is **unreliable** — the authoritative DS split is
+> by leg (below), verified by primary reads in §3/§5.
 
-_Confirmed-by-primary-read so far (commit `4f0fc37`):_
+**The DS13 vertical leg — now located** (earlier exploration couldn't pin it). It's a **separate OpenAI batch** from
+DS19, classifying *homepages* not product URLs:
+- `airflow-ti/spark/vertical_classification/`: `distinct_site_visit_signal_domains.py`, `prepare_html_content.py`,
+  `submit_html_content.py`, `fetch_vertical_response.py` (parses `predicted_subindustry`), `update_website_verticals.py`
+- `airflow-ti/dags/targeting/fetch_common_crawl.py` (weekly Common-Crawl homepage HTML)
+- `airflow-ti/dags/vertical_classification/vertical_classification_{submit,fetch}.py`
+- `SteelHouse/dbt` `ml_squad/models/vertical_categorization/*` (`common_crawl_home_page_content`, `ddp_url_verticals`,
+  `ddp_vertical_classification_api`) → writes `website_crawl_verticals` → feature store.
+
+**Also surfaced beyond the core pipeline:** a serving runtime (`middleware/k8s/api.py` Flask + `shopper_graph_wrapper/*`,
+plus `autopilot/` and a vector-search Lambda) backed by Postgres/Redis (`/autopilot`, `/search_term`, `/vertical`,
+`/domain_map` endpoints); legacy `notebooks/` (the *original* GPT-3.5-turbo product flow); and the **`SteelHouse/airflow`
+repo as an older duplicate** of the vertical-classification jobs — live-vs-deprecated must be confirmed.
+
+**19 remaining unknowns** are listed in the artifact — notably: per-vendor DDP ingestion DS24/27/33/39/40; the
+e-commerce-classifier code; the `household_score` writer; the `website_crawl_verticals` DDL; the airflow vs airflow-ti
+live/deprecated split; and the taxonomy auto-add "≥500×" rule.
+
+_High-confidence core, confirmed by primary read (commit `4f0fc37`):_
 
 | Step | Repo | Path | Purpose |
 |---|---|---|---|
@@ -245,9 +268,12 @@ size, and model/approach, not data_source_id — see [TI-1060](https://mntn.atla
   it's the Common-Crawl homepage→vertical path.
 
 ## 9. Open items
-- **Insert the full §4 manifest** from the discovery sweep; locate the DS13 Common-Crawl→OpenAI vertical job + its DAG.
+- **Manifest delivered** (`artifacts/ti_1058_file_manifest.md`, ~95 files / 5 repos); DS13 vertical leg located. ✅
+- Work the artifact's **19 remaining unknowns** (per-vendor DDP ingestion DS24/27/33/39/40; e-commerce-classifier code;
+  `household_score` writer; `website_crawl_verticals` DDL; airflow vs airflow-ti live/deprecated; taxonomy auto-add
+  ≥500× rule).
 - Confirm the active embedding model (config = `bge_large_en_v1_5`; a commented validation references `gte-large-en-v1.5`).
-- Confirm submit/fetch DAG schedules + exact `submit_batch.py`/`fetch_results.py` internals (from manifest reads).
+- Confirm submit/fetch DAG schedules + exact `submit_batch.py`/`fetch_results.py` internals.
 - People: **Victor** (Common Crawl refresh, taxonomy auto-add rules), **Alex Knorr** (advertiser keywords / DAR).
 
 ## 10. Data documentation updates
