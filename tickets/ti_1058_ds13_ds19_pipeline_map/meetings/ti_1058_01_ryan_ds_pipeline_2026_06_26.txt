@@ -1,0 +1,390 @@
+[00:00] All right, cool. So I'll tell you how I understand. And this is why I got a little bit confused, but I know that our vendors drop in all their data, right? We do some processing and then we just get the domain, the URLs, et cetera.
+[00:13] etc. Now, I was trying to think about how the batch processing is working. And there were two
+[00:18] things that I was confused about, that number one, we are using it to categorize whether or not they
+[00:25] are retail sites, and whether or not what category they are. And I guess my thought process was,
+[00:34] if we're just doing this on all the site visits that we have, I feel like we maybe are
+[00:41] overusing tokens because there's going to be a lot of repeatable sites.
+[00:47] So anyways, that's my thought process,
+[00:48] but I didn't quite understand how the whole pipeline is working.
+[00:51] So that's why I wanted to clarify it with you.
+[00:53] Yeah.
+[00:56] Man, I could show you the code,
+[00:57] but it's best to think about it as two different data sources.
+[01:03] So data source 13, which is the vertical,
+[01:06] and then data source 19, which is the keyword.
+[01:08] So let's talk about the vertical stuff first, Data Source 13.
+[01:17] So that gets – oh, did I freeze up?
+[01:21] No, you're good.
+[01:22] Oh, okay.
+[01:23] So Data Source 13 gets – so both inputs are site visit signal.
+[01:31] And so site visit signal is like you would log plus the other vendor data
+[01:36] plus they added, Sean added Augmenter log there now.
+[01:42] So basically if you have an IP address, a URL, and a timestamp,
+[01:45] you're in, it could go into SiteVisit Signal.
+[01:49] So for Data Source 13, yeah, it takes every day before IPDSC runs,
+[01:55] it preps it, and it takes the last day of SiteVisit Signal,
+[02:00] runs each URL,
+[02:07] the whole URL through the e-commerce classifier.
+[02:11] And it says it's an e-commerce URL, yes or no.
+[02:14] And that's just to cut off or whatever, you know.
+[02:17] If it is e-commerce URL,
+[02:19] then we look up the vertical
+[02:23] using data that we got from Common Crawl
+[02:30] from the the first page html yeah yeah so we try to get the home page from common crawl
+[02:38] get the html and this is already prepped and already done um you know we we haven't we haven't
+[02:44] ran it for a while so we haven't got new sites but anyway you know so so from common crawl we
+[02:50] get the html and we have a a dag that submits those home page content to to uh open ai and it
+[03:00] and gives us back a vertical in return.
+[03:03] So when we do that, I think I looked,
+[03:05] it was like, I don't know, a few million requests.
+[03:10] It's not a lot compared to the keywords.
+[03:15] So does that make sense?
+[03:16] So a batch.
+[03:17] I guess my thought process though is that like...
+[03:21] And this is already done.
+[03:22] We don't do it for each domain.
+[03:23] We don't do it each time we run this.
+[03:26] It's like every few months,
+[03:28] victor and i get the home page common crawl oh open ai gotcha yeah so okay okay so this is data
+[03:37] source 13 specific though okay so for data source 13 you're talking like every like you said every
+[03:45] few months you run a big batch process of all the urls re-get the vertical class class fish okay
+[03:50] gotcha that makes sense i'm like it didn't make sense to me i was like we i was like first off i
+[03:55] like that would be just a lot of repetition you know you just see a lot of the same urls and all
+[04:00] that stuff so that's going to be that'd be ridiculous okay that makes sense so the vertical
+[04:04] is based off the domain name and yeah we we we store that we store that very good we don't send
+[04:09] that we don't send each one of those to opening eyes so we store what opening eyes sends us and
+[04:14] then so yeah and then that's the stuff you worked on where you like have the block list and the
+[04:20] white list of domains and then and there's so there's a little more logic that i'm kind of
+[04:24] glossing over no that's okay i understand so then is keywords very similar than it's scraping those
+[04:32] websites so keywords is way different so keywords now we use site as a signal we take the days
+[04:41] you know one day's worth of urls we take everything after the question mark of the url
+[04:49] off so all the query parameters you know um and so we have you know we have a we have a and that
+[04:59] goes into like product uniques or something there's a tag called product uniques that they
+[05:05] when you see the word product is because like long ago they were classifying i guess like like
+[05:13] urls that pointed to a specific product or you know like how nike has shoot like high top
+[05:19] shoes or they have a bunch of high top shoe or, you know, whatever.
+[05:25] So anyway, so if you see product uniques,
+[05:28] that really means unique URL without the query parameters.
+[05:34] And so those do get sent to open AI every day.
+[05:41] I mean, well, first they're looked up.
+[05:44] We look them up and the one we store the results and we look them up.
+[05:49] and if they're not in there which a lot of times they're not because these are like very unique
+[05:55] urls you know then we send it off to open ai and we send a lot of them to open ai gotcha so in order
+[06:04] to get the keywords then we have to oh so you're pulling keywords off of more than just like the
+[06:12] intro page the main page from common crawl we're pulling it from product okay that makes sense
+[06:17] that was something that I was actually curious about
+[06:19] okay yeah
+[06:23] let me maybe
+[06:25] get you the prompt we send it
+[06:28] and by the way it's very black
+[06:30] boxy we don't know what
+[06:32] what it's doing
+[06:34] or I'll show you
+[06:36] the prompt and we don't know what it does
+[06:37] it just returns something
+[06:40] to us and then we use that
+[06:42] something
+[06:42] I don't know where this is at.
+[06:54] I forget where this is at.
+[06:57] My match keywords.
+[07:03] I might not be able to find this very quickly.
+[07:12] Oh, maybe, okay, sorry.
+[07:21] Maybe we didn't lose.
+[07:23] I don't even know what repo this runs in anymore.
+[07:32] Probably.
+[07:38] Oh, this is a shock.
+[07:40] Man.
+[07:47] Oh.
+[07:55] Right.
+[08:10] I'll show you...
+[08:21] I'll give you some code where...
+[08:27] Okay.
+[08:27] Okay.
+[08:30] Where you kind of see...
+[08:32] Let me share my screen, too.
+[08:40] Let me kind of see what we do.
+[08:45] This is in Shopper Graph, so I forget.
+[08:47] We got our code kind of scattered all over.
+[08:49] Shopper Graph, dbt.
+[08:51] There's this product uniques.
+[08:54] And then, you know, so whatever.
+[08:56] We do a bunch of stuff up here.
+[08:57] We get site visit signal.
+[09:00] We get, well, it says S3 uniques path, but we get the current product uniques.
+[09:06] this is where we store what OpenAI comes back with.
+[09:12] And anyway, so then right here,
+[09:16] we, we filter things that don't have a parsable domain,
+[09:23] blah, blah, blah, whatever that, that doesn't,
+[09:25] that filter doesn't matter too much.
+[09:28] If it contains a query string, so there's a question mark, you know,
+[09:33] we flag that and then we use it right here.
+[09:36] So then we split product refers just the URL
+[09:40] right there. Right. So we get the, we split it on
+[09:45] question mark and then we get, so we get everything before the question mark.
+[09:49] If there's no question mark, we just get the whole URL
+[09:51] and that becomes, that basically becomes
+[09:57] composite key. This is, it's kind of
+[10:01] like over engineer, but yeah, just don't worry about composite
+[10:07] key too much. It just depends. They have, they used to do this
+[10:13] for like product skews and stuff. So that's why you see
+[10:17] like product skew product. This was like repurposed, you know.
+[10:23] So anyway, and then current unique, so then somewhere in
+[10:28] here we do a left anti join or anti join or whatever. Yeah, right here. So we get the
+[10:36] current days uniques, join it against the uniques we have stored using an anti join.
+[10:42] And these are the ones we're going to send off. And then okay, then we Yeah, we group
+[10:47] by like all this junk. Okay, so I guess data source ideas in here. I don't see.
+[10:58] this should be looked at because I don't know why data source ID is in this
+[11:04] group by,
+[11:05] because if one data source gives us,
+[11:09] well,
+[11:11] okay.
+[11:12] I don't quite understand that,
+[11:14] but,
+[11:14] but okay.
+[11:16] Anyway,
+[11:17] so that's that.
+[11:18] And then,
+[11:19] then we send them off.
+[11:25] Okay.
+[11:25] these little pre bashings and then we send them off to open AI and one of these here.
+[11:35] Let me let me get the way about input raw. Okay, take this it'll have the
+[11:43] prompt. Okay, this is the prompt.
+[11:47] Okay.
+[11:48] Oh, this, we give it all this stuff. See, as this, this could be looked at a lot better
+[12:08] and maybe use a lot less tokens and things. But this is Yeah, this is a pretty simple
+[12:13] prompt.
+[12:14] So identify the industry, sub-industry category and sub-category.
+[12:21] And then we use...
+[12:26] I'll just give you this.
+[12:28] It's been a while since I looked at this code, so I don't want to tell you too much that's wrong.
+[12:34] But we used...
+[12:37] Data Source 13 used to use the same process and we used industry from here.
+[12:42] but now
+[12:44] data source 13
+[12:45] doesn't use this at all
+[12:46] and we just use
+[12:47] for data source 19
+[12:49] I think we just use
+[12:49] sub-industry
+[12:50] or sub-category
+[12:51] I can't remember which one
+[12:52] but anyway
+[12:55] so I'll give you this
+[12:55] okay
+[12:57] and then
+[12:57] okay
+[12:59] then there's one
+[12:59] one other step
+[13:00] you know
+[13:00] so then
+[13:01] it can return
+[13:02] a keyword
+[13:02] that's not in our taxonomy
+[13:04] right
+[13:04] and so that's where
+[13:05] the vector
+[13:06] database comes in
+[13:08] where
+[13:09] whatever it returns
+[13:10] we look
+[13:11] we look up if that's a keyword in our taxonomy and if it's not then we try to get it to the
+[13:19] closest keyword possible that's in our taxonomy you know so like if they if it goes back like
+[13:26] high top red shoes and we don't have that as a keyword you know we just have shoes
+[13:32] gotcha so like pretty much every single
+[13:36] combination of like adjective and
+[13:41] noun or something needs to get its own
+[13:44] yeah that's where we store it in the vector database you know
+[13:49] or we store our taxonomy there and then
+[13:53] let me see if I can show you where that happened
+[13:56] so maybe that is
+[13:58] Oh, yeah, product categorization.
+[14:04] Yeah, right here, vector endpoint.
+[14:06] So we get our vector, you know, so in the vector database,
+[14:10] we only have our taxonomy, and then it does some cosine similarity.
+[14:19] I think, or, yeah, it might just be a function or something, but...
+[14:27] Okay.
+[14:28] delete vector search index
+[14:32] anyway but yeah that's kind of the gist of it so does that make sense
+[14:37] yeah that does make sense so I was just thinking about it though because
+[14:41] I wonder how expensive it is
+[14:49] yeah it was very expensive
+[14:50] so I imagine it was just a thought process because I was trying to think
+[14:54] of the whole pipeline that we had and
+[14:57] why we were doing it this way.
+[15:00] Maybe there's a better way for us to
+[15:03] do it
+[15:04] where we use less tokens.
+[15:06] It was just on my mind the other day.
+[15:09] Yeah, there's always room for improvement.
+[15:11] In fact,
+[15:12] just looking at the...
+[15:14] Let me look at the
+[15:16] prompt again.
+[15:18] I don't know why we only need...
+[15:21] The problem with changing the prompt
+[15:23] is like, oh yeah, it's just going to
+[15:24] change things.
+[15:26] you know, but if you change the prompt and, and, you know,
+[15:30] this is also the model we use. So maybe there's a better model now though.
+[15:37] So that's the other thing you could look at. Okay. So, but this,
+[15:42] this basically just builds a big Jason file thing or Jason bunch of Jason
+[15:47] files. You can only have like so many requests.
+[15:51] I think it's like 45,000 for each Jason file.
+[15:54] and then it then uploads this as json you know to open ai and then we use their batch processing
+[16:02] so in the back the batch processing is actually fairly inexpensive for my understanding yeah that
+[16:09] makes sense but dude also eventually if we want to do i'd this would be cool if we did like more
+[16:16] real time you know but i don't know if that but yeah there's lots of stuff to look at to fix this
+[16:24] like even like i don't know why we have a give a product skew these tokens or this one's missing a
+[16:33] space right there same with that i don't know i don't know if that throws it off or anything
+[16:39] there's lots of stuff dude i don't yeah anyway i guess so if i wanted to basically like see
+[16:49] all the steps of this pipeline from, I guess I would have to go look at it.
+[16:53] I just want to,
+[16:54] what I want to do is give enough context to Claude of like each step of the
+[17:01] pipeline. And then just, because I wonder if there's a way.
+[17:08] Yeah, here, I'll give you mountain,
+[17:10] it's mountain match incrementals submit. So this,
+[17:15] so this submits the
+[17:20] URLs for keywords
+[17:23] DS19 and then
+[17:27] so since we're using their batch API it's kind of painful
+[17:32] they have an SLA of like 24 hours and sometimes
+[17:36] it goes beyond that so they tell you like 24
+[17:40] hours later you could check on your or you could check it earlier but you know
+[17:44] it might not be done for 24 hours.
+[17:47] And then, so then we have a separate fetch process.
+[17:50] Okay, gotcha.
+[17:52] And so this fetches the open AI stuff
+[18:00] and does the vector index look up, et cetera.
+[18:09] So if you tell, yeah, Chris,
+[18:11] you're looking at Airflow TI at those two DAGs
+[18:13] and then look at what all they call
+[18:15] it should
+[18:17] be able to tell you
+[18:19] so
+[18:22] so is that cool
+[18:26] yes I really appreciate it thank you
+[18:29] very much for this Ryan it's not something I was
+[18:31] going to work on today
+[18:32] but it was like just yesterday
+[18:35] I was thinking I was like are we sending
+[18:37] like are we just like
+[18:39] literally every day recalculating all this
+[18:41] stuff I was like because I feel like we could
+[18:43] save a lot of tokens if that's how we're doing it but uh it sounds like we're doing it with the
+[18:48] every once in a while but i do definitely it does seem like with keywords there might be some room
+[18:52] for yeah we send a lot of urls though for sure like if we could i don't know tell leadership
+[19:00] hey we could cut down our open ai costs by like half or something that would probably make them
+[19:05] pretty happy so well i'd immediately look at that i don't know why data source id is in that group i
+[19:11] I would immediately look at that
+[19:14] let me see
+[19:15] because if we get the same URL from
+[19:21] multiple data sources we're going to send it off
+[19:25] I think but yeah I don't have time to look at that
+[19:30] but that might be something to look at
+[19:32] I'll send you the line of code
+[19:35] why is data source maybe that's in this group by maybe that's something you can ask claude
+[19:44] okay because like there you tell it because i know once we have the augmenter log you know
+[19:50] there's a lot of duplicate urls and there is you know and there and also keep in mind
+[19:56] there could be
+[19:59] Thank you.
+[20:00] Well, actually, let me double check.
+[20:05] Where's that left anti-join?
+[20:09] Oh, composite key.
+[20:11] It does join on composite key.
+[20:17] Okay, never mind.
+[20:21] Data source ID is in there, so you do billing.
+[20:23] I think it does the left
+[20:26] anti-join or whatever
+[20:28] using just the composite key.
+[20:30] So it does only send out things.
+[20:33] Sorry, I already answered
+[20:34] my question. It does only send out things that
+[20:36] it doesn't do it by data source
+[20:38] ID. But we
+[20:40] have data source ID in there because we
+[20:42] need it for billing to tell
+[20:44] the data providers like, oh,
+[20:46] we're going to pay this much or
+[20:48] whatever.
+[20:50] It's nice to my impression.
+[20:51] but yeah that's a good project for you to work on
+[20:54] I mean for data engineering stuff
+[20:57] that's probably one of our most
+[20:58] complex pipelines
+[21:00] yeah
+[21:01] I
+[21:03] well I
+[21:06] appreciate you going through it
+[21:07] I was just thinking when we have this
+[21:10] incrementality stuff done
+[21:11] there's a couple things that
+[21:13] well this is like sort of related to
+[21:16] DAR
+[21:18] because that's something that's
+[21:20] going to be picked up next and so like my first thought was like well how are we doing keywords
+[21:24] and is there anything we can optimize about that but then the afterwards we'll be dealing with this
+[21:30] so um yeah sure so yeah you should yeah there might be yeah you should work with alex on that
+[21:38] show him because alex is like trying to get keywords for the advertiser or whatever or he
+[21:45] might yeah you might have a better model yeah that that that pipeline be gonna use some love
+[21:53] for sure yeah because well one of the things that comes is i wonder how much certain adjectives help
+[22:00] you know like when there's not a certain number of like
+[22:07] valuable keywords like i don't know like you just take shoes for example let's say some
+[22:14] like red bottom shoes is like one of them right yeah and red bottom shoes only shows up a few
+[22:19] times you know um we won't even be able to get like good quality singles on it anyways so yeah
+[22:28] it might not be beneficial to even send keywords over that aren't seen all the time anyways but um
+[22:38] anyways um cool well i don't want to take too much of your time or anything because i appreciate
+[22:43] No, you know what? I can show you maybe one more thing that might help you.
+[22:49] MountainMatched.
+[22:50] Pra.mountainmatched.
+[22:57] You should have access to this in Databricks.
+[23:01] Let me show you.
+[23:08] And I glossed over some stuff.
+[23:12] you should talk to Victor about some of this stuff because I glossed over
+[23:16] Victor has a way to add keywords
+[23:20] to our taxonomy automatically
+[23:24] which I glossed over
+[23:26] but it has to there's certain rules and I forget where that code's at
+[23:32] it has to be like show up like 500 times or something
+[23:35] but anyway so here if you look at this
+[23:40] you can maybe kind of QA.
+[23:45] So here it thinks the print.in
+[23:48] sport slash soccer West Ham held to draw it home by a palace, blah, blah, blah, blah, blah.
+[23:55] It thinks that's
+[23:57] they returned back
+[23:58] I can't remember which one we used. Soccer news or sports news.
+[24:05] Is the sub industry or subcategory?
+[24:10] so we have to look i guess we'd have to look at what is this um
+[24:19] sorry select star from tpa.category
+[24:28] 19.
+[24:35] so what is this
+[24:36] is online content. Okay.
+[24:44] Let's see. Well, that's
+[24:50] Oh, I wonder if it uses this. Okay, hang on. Now you got me
+[24:55] all now. Now. See,
+[24:56] I forget which one of those we use.
+[25:05] Okay, I think we use product category.
+[25:11] So does that make sense?
+[25:12] So this URL, opening I said that's online publications,
+[25:21] and we looked it up in our vector table.
+[25:29] See, this is an example of maybe not a very accurate one.
+[25:32] And we were seeing this online content,
+[25:35] which is pretty bad for like,
+[25:39] that's definitely a soccer related thing.
+[25:42] You know, we didn't think, I don't know,
+[25:46] cycle trader, motorcycle sales.
+[25:49] Anyway, does that make sense?
+[25:51] Yeah. Yes, it does make sense.
+[25:53] Okay.
+[25:55] I'll let you do it.
+[25:57] Okay, cool.
+[25:59] Well, thank you, Ryan. I will let you know what I find
+[26:01] and stuff, but yeah, the first thing I'm going to do is
+[26:03] just give it all the context and then try to
+[26:05] think of some alternative solutions
+[26:09] for some of this stuff, but like I said,
+[26:11] it's on the back burner. I'm not going to do that
+[26:13] probably even next sprint.
+[26:15] Yeah, or maybe just take a hundred
+[26:17] random rows from that table and see if
+[26:19] there is accurate even because if it's not then it kind of sucks but yeah okay
+[26:26] thank you have a good weekend man yeah you too talk to you later bye
