@@ -308,3 +308,22 @@ the credible number; the positive state reads are noise.
   Edgar/Kale before it reaches the customer.
 - If they want a real conversion test: **size a geo test to the $2M+ MDE**, or pivot the KPI to visits.
 - Possible follow-on: quantify site-visitor (RTC) overlap with their prospecting reach (Q1 deep-dive).
+
+### 4.7 Exclusion/block config — the likely mechanism behind low incrementality (2026-06-24)
+**Finding:** ElevenLabs' prospecting campaigns are NOT suppressing prior converters or pageview visitors.
+- `block_conversion` / `block_prospecting` settings live in `integrationprod.advertiser_configurations`
+  (cols: `block_conversion`, `block_prospecting`, `block_first_party`, `conversion_lookback_window`,
+  `page_view_lookback_window`, `enable_taxonomy_block`). TI-310 = the NTB investigation behind this.
+- **DATA-QUALITY CAVEAT:** `advertiser_configurations` in BQ is **STALE — frozen 2026-01-12** (last
+  update_time) and only stores `block_prospecting=true` rows (0 false). Do NOT use it for current state.
+  Reliable/fresh sources: **`audience_audience_segments`** (operative expressions, fresh to today) and
+  **`archives_advertiser_configuration_archives`** (config history, fresh to today; ElevenLabs = 0 rows).
+- **Operative truth (audience_audience_segments, live):** campaign **608814** (national prospecting) exclusion
+  clause = `UserNumPageViews >= 0` (threshold 0, **no lookback**) → disabled; **629615** (FIFA Select) has no
+  exclusion clause at all; no conversion-exclusion clause anywhere. Properly-blocked advertisers look like
+  `UserLastVisitTime >= 30,day and UserNumPageViews >= 2/5` (camp 42761). Platform-wide: ~18.7K campaigns at
+  `>=5`, 9.3K at `>=2`; ~5,500 at the disabled `>=0` (ElevenLabs is one).
+- **Implication:** "prospecting" re-serves prior visitors/converters → serving existing demand = the
+  **value-selection** that drove our ≈0 incrementality (§4.5–4.6). **Fix:** enable `block_conversion` +
+  `block_prospecting` with a high lookback (90d). Should raise true incrementality + NTB%.
+- Holdout confirmed in the expression: `md5("51660:"+ip) bucket 0–99 / 1000` = 10% (matches the ghost-ad analysis).

@@ -2891,3 +2891,16 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
   true 0.10 hash (to 0.13–0.47) via **bid-multiplicity** — holdout IPs never win→never exit the pool→re-bid
   repeatedly→over-weight high-frequency IPs→spurious negative lift. Single-qual-bid IPs split at exactly
   0.0988. De-bias by gating to `ghost_frac ∈ [.095,.11]`. See experimentation.md "Ghost-bid lift — bias register."
+
+## integrationprod.advertiser_configurations — block/lookback settings + STALE-IN-BQ warning (TI-1044, 2026-06-24)
+- Holds advertiser-level exclusion settings: `block_conversion`, `block_prospecting`, `block_first_party`,
+  `conversion_lookback_window`, `page_view_lookback_window`, `enable_taxonomy_block`. Keyed `advertiser_id`.
+  Booleans are BOOL (use `WHERE block_prospecting` / `= TRUE`, not `='true'`). A row exists ~only when a block
+  is ON (0 `block_prospecting=false` rows); absence ≈ off/default.
+- **⚠ STALE IN BIGQUERY:** `update_time` frozen at **2026-01-12** (verified 2026-06-24). Do NOT use for current
+  state. **Use instead:** `audience_audience_segments.expression` (live targeting/exclusion, fresh) and
+  `archives_advertiser_configuration_archives` (config-change history, fresh to today).
+- **Operative block = exclusion clause in `audience_audience_segments`** (`is_targeted=false`): proper form
+  `UserLastVisitTime >= N,day and UserNumPageViews >= K` (lookback + threshold; K typically 2 or 5). `>= 0` with
+  no `UserLastVisitTime` = **disabled** (re-serves prior visitors). Conversion block = a converter-suppression clause.
+- 10% holdout encoded in the expression: `md5(<advertiser_id>:<ip>) bucket 0–99 of 1000`.
