@@ -2181,6 +2181,20 @@ does NOT prune partitions — it scanned **164.9B rows / 85,043 slot-sec / 280s 
 latest date, probe it first (`SELECT DISTINCT dt ... WHERE dt >= recent ORDER BY dt DESC LIMIT 1`), then inline
 the literal. Also prefer `APPROX_COUNT_DISTINCT(ip)` over exact `COUNT(DISTINCT ip)` on full-partition scans.
 
+**⚠ Authoritative 3P segment SIZE table (use instead of ipdsc DISTINCT-IP):** `dw-main-bronze.external_ddm.data_source_category_sizes`
+(`data_source_id`, `data_source_category_id`, `category_size`, partitioned y/m/d) — this is the per-segment size the **platform UI shows**
+(matches buyer-quoted "15M/12M" numbers). **Access-gated** (GCS `gs://mntn-data-monitoring/audience-metrics/data-source-category-sizes/` —
+`storage.objects.list` denied to malachi@; request **Storage Object Viewer**). Variants `_unfiltered` / `_dev` are also denied. When granted,
+this replaces expensive ipdsc reach scans for sizing. (TI-1053.)
+
+**⚠ `tpa.categories.path_from_root` has TWO formats — do NOT `COALESCE(path_from_root, names, name)` for name-matching.** ~Half of LiveRamp
+(DS35) providers store `path_from_root` as a readable `"A > B > C"` string (HCS, Datasys, Clickagy, AtoZ, Start.io); the **other half store it
+as an unreadable struct** `{"pathFromRoot":[0,124,...]}` (ZoomInfo, Anteriad/180byTwo, Alliant, LBDigital, OnAudience, NetWise, Skydeo, Audigent...
+— i.e. most **premium B2B** providers). `COALESCE` returns the struct first for those → keyword regex matches nothing → **those providers are
+silently dropped** (TI-1053: an ICP filter saw 7.7K of the real ~17K+ relevant; missed Edgar's hand-found segments and all premium B2B intent/role
+inventory). **Fix:** regex on `CONCAT(IFNULL(path_from_root,''),' ',IFNULL(names,''),' ',IFNULL(name,''))`. Readable path also lives in `names`
+(JSON `{"names":["ROOT", <provider>, <path>]}`) and usually in `name`; **provider = `names`[1]**.
+
 **⚠ Wide-window DISTINCT-IP sizing is EXPENSIVE even when partition-pruned.** Sizing ~24 DS35 categories with
 `COUNT(DISTINCT ip)` over a **30-day** window (`dt BETWEEN ... AND ...`, `data_source_id=35`, `UNNEST` + `element IN (...)`)
 billed **~30.5 TB** (TI-1053). The hive partition (`dt`, `data_source_id`) prunes the day/DS folders, but DISTINCT-IP

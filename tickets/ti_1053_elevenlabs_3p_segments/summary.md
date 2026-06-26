@@ -99,5 +99,39 @@ ADDITIVE-ONLY (<250K) / DROP.
 (AI/ML interest, Software Developers, Advertising industry); treat the rest as additive-only. The bigger win is
 **MM keywords / contextual**, not bought 3P (ElevenLabs = MNTN's #2 stale-3P advertiser, TI-999).
 
-**Deliverable (final):** `outputs/ti_1053_elevenlabs_3p_recommendations.{xlsx,csv}` — size-aware scored table +
-Method & Bottom Line tab. Scorers: `artifacts/score_v2.py`, `artifacts/build_final.py`.
+**Deliverable (v2):** size-aware scored table. Scorers: `artifacts/score_v2.py`, `artifacts/build_final.py`.
+
+---
+
+## 8. RECALL FIX (v3, FINAL — supersedes v1/v2; Edgar caught the gap)
+
+Edgar von Trotha found 2 obviously-relevant large segments (Alliant "B2B - Business Software" 15M; LBDigital
+"Machine Learning & AI" 12M) that weren't in my list. **Root cause = a candidate-filter bug**, not a scoring choice.
+
+### The bug
+Candidate filter matched keywords on `COALESCE(path_from_root, names, name)`. `tpa.categories.path_from_root` is
+**readable** (`"A > B > C"`) for some DS35 providers but an **unreadable struct** `{"pathFromRoot":[ids]}` for others
+(ZoomInfo, Anteriad/180byTwo, Alliant, LBDigital, OnAudience, NetWise, Skydeo, Audigent — most **premium B2B**
+providers). COALESCE returns the struct first → regex matches nothing → **those providers were silently dropped.**
+Fix: regex on `CONCAT(path_from_root, names, name)`; provider = `names`[1]. (Now in data_catalog.md gotchas.)
+
+### Impact — flips the earlier conclusion
+- Relevant pool **24 → 1,759**. The corrected universe is RICHER and more on-target than v2.
+- **3P is actually a viable lever for ElevenLabs** (revises v2's "3P is thin/weak" — that was a bug artifact).
+- Curated 44 across themes; sized via ipdsc 7d (2026-06-17→23, cost 6.7TB — LAST ipdsc run; bursty, many load 1/7d).
+- **7 PRIMARY (relevant + scaled):** OnAudience AI/ML (10.0M), OnAudience Computer Software (9.8M) & Business
+  Software (9.6M), Alliant B2B Business Software (15M*), LBDigital Machine Learning & AI (12M*), Audigent Drawing &
+  Animation Software (11.8M), Alike Software Developer/Engineer/Programmer (2.1M). (* = platform size, Edgar.)
+- **9 SCALE (big but weaker fit):** the large b2b-**intent** segments (180byTwo Software Developers 15.5M, Game-Dev
+  Software 15.1M, SDK 14.3M, 3D Animation Software 14.0M; ZoomInfo 3D Animation 16.6M) — relevant + huge but "intent"
+  = closer to demand-harvesting, so docked for incrementality (still strong picks).
+- **3 DROP (not-buyer):** Epsilon "Crime Junkie / Podcast Enthusiasts" (consumers), Aberdeen "Google Remarketing".
+
+### Sizing note (cost lesson)
+ipdsc DISTINCT-IP is expensive (30d=30TB, 7d=6.7TB) and I cannot cancel running BQ jobs (no `jobs.update` perm).
+**Authoritative + cheap source = `external_ddm.data_source_category_sizes`** (matches platform UI), but it's
+access-gated (request Storage Object Viewer on `mntn-data-monitoring`). Switch to it for all future sizing.
+
+**Deliverable (FINAL):** `outputs/ti_1053_elevenlabs_3p_recommendations.{xlsx,csv}` (recall-fixed, size-ranked, verdicts).
+Scripts: `artifacts/build_v3.py` (size + assemble); re-pull + buyer/niche re-score run inline →
+`outputs/{candidate_pool_v2,scored_v3,curated_v3,final_v3_scored}.json`, `outputs/sizes_7d.json`.
