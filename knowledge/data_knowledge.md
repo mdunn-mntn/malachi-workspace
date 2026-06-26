@@ -832,6 +832,35 @@ visit** — an IP with no domain has no behavioral value; count distinct (IP, cl
   **absent in older partitions**, so the free baseline (and any vendor-vs-free comparison) is only valid on recent
   data. guid_log (DS23) confirmed; augmentor = DS30.
 
+### MNTN Matched pipeline — DS13 (vertical) vs DS19 (keyword), verified flow (TI-1058, Ryan Kleck 2026-06-26)
+Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/` Batch job dir; DAGs in
+`SteelHouse/airflow-ti` (`dags/machine_learning/mntn_match_incrementals_{submit,fetch}`). Both DSes read
+`site_visit_signal` but are **two separate flows**:
+- **DS13 (vertical) — cached, refreshed ~every few months, NOT daily.** distinct domains → e-commerce classifier
+  (yes/no cutoff) → Common Crawl homepage HTML (`website_home_pages`) → OpenAI → vertical → stored
+  `vertical_categorizations/website_crawl_verticals/` (domain→vertical, ~1.42M) → feature store
+  `site_visit_signal_advertiser_id_dsc_id`. Run manually by Victor+Ryan. DS13 historically used the DS19 product
+  flow's `industry` field but **no longer does**. (Exact DS13 file/DAG locations still being confirmed.)
+- **DS19 (keyword) — daily, the OpenAI cost driver.** `product_uniques.py` strips query params (URL→`product_name`;
+  `product_sku` hardcoded literal `1`; `composite_key = product_name_1`), **anti-joins on `composite_key`** vs stored
+  → only new URLs → `openai_batch_input_raw.py` groups by (product_name, sku, domain) with
+  `collect_set(data_source_id)`, builds a **gpt-4o-mini** Batch request (strict json_schema:
+  product_industry/subindustry/**category**/subcategory; max_tokens 1000) → `openai_batch_input_formatted.py` keeps
+  `rn=1` per `custom_id` → JSONL (~45K/file) → submit DAG (`submit_batch.py`, OpenAI Files+Batch API,
+  `completion_window=24h`, batch_id→`openai_batch_submissions/`) → ~24h async → fetch DAG (`transition_batch.py` +
+  `fetch_results.py`) → `openai_batch_results_joined.py` (join on `custom_id`) → `product_categorization_temp.py`:
+  **DS19 keyword = the OpenAI `product_category` field**; Step1 exact match vs `product_category_reassignment`, Step2
+  **BGE-large** (`system.ai.bge_large_en_v1_5/3`, 1024-d, local Databricks/free) vector search vs
+  `etl_mm_taxonomy_vector_index` @ threshold 0.6, **Step3 auto-add new keywords is currently COMMENTED OUT**
+  ("post migration" TODO) → `product_categorization` → `tpa_export`/`mntn_matched_taxonomy_bq`/reporting → DS19.
+- **`data_source_id` does NOT multiply OpenAI cost.** Dedup is on `composite_key` (the query-stripped URL); a URL is
+  sent to OpenAI **once** regardless of how many vendors report it. `data_source_id` is retained only for **billing
+  attribution** to the source vendor. (augmentor_log DS30 duplicate URLs are absorbed by the anti-join.)
+- **Known waste (→ TI-1060 cost work):** `product_sku` is always `1` (dead prompt tokens on every request);
+  homepage-description join is hardcoded to `apollaperformance.com` only (enrichment off elsewhere — likely
+  leftover/test); prompt has missing spaces; taxonomy auto-add disabled. BGE-large is free + already in-pipeline →
+  candidate to replace gpt-4o-mini for many URLs.
+
 ### Vertical Classification
 `fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)
