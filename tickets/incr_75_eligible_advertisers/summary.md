@@ -76,7 +76,7 @@ Metrics SQL: 369 GB processed, 13s wall (logged to `knowledge/bq_perf_log.jsonl`
 **Deliverable:** `outputs/incr_75_eligible_advertisers.xlsx` — 6 sheets:
 1. **Funnel Waterfall** — start → remaining per hard filter + tier/power split.
 2. **All Advertisers** (2,009) — every advertiser, per-filter pass/fail flags, `failed_at_filter`, final tier (audit trail).
-3. **Final Eligible (tiered)** (1,287) — row-colored Top/Mid/Low, all user-required columns: IVR, CVR, budget-for-MDE (IVR 5%/10%, CVR 15%), avg monthly spend, can-hit-IVR/CVR-MDE-≤8wk (Y/N), extra $/%/ask-band, close-to-IVR/CVR-min (Y/N), required monthly spend.
+3. **Final Eligible (tiered)** (1,287) — row-colored Top/Mid/Low, all user-required columns: IVR, CVR, budget-for-MDE (IVR 5%/10%, CVR 15%), avg monthly spend, can-hit-IVR/CVR-MDE-≤8wk (Y/N), extra $/%/ask-band, IVR/CVR spend-feasible (Y/N), required monthly spend. **Spend-feasible flag is one-sided:** Yes if already at/over the spend minimum OR a reasonable (≤50%) bump away; No only if it would need an unreasonable (>50%) increase. (Corrected 2026-06-26 — previously a symmetric band wrongly flagged big over-spenders "No.")
 4. **Method & Caveats** — definitions, targets, pitfalls.
 5. **Spend → MDE curve** — achievable MDE vs monthly spend at eligible-cohort medians.
 6. **Column Glossary** — plain-English definition of every column on sheets 2 & 3, grouped by section (appendix). Headers reworded for clarity (e.g. "Smallest IVR lift detectable at current spend" instead of "IVR MDE @ normal spend").

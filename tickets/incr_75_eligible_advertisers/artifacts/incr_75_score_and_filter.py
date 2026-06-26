@@ -176,13 +176,14 @@ def main():
                      for k in IVR_TARGETS}
         # primary tiering target = 10%
         ask = ask_band(extra_pct["10pct"])
-        # "close to spend minimum" — normal 8wk spend within [0.75, 1.5]x the 10% required budget
-        def close_to(b):
+        # Spend-feasible? Yes if already AT/OVER the required minimum, OR within a reasonable
+        # (<= ASK_STRETCH = 50%) bump. No only if it would take an unreasonable (>50%) increase.
+        # (One-sided: spending well over the minimum is feasible — never flag it "No".)
+        def spend_feasible(b):
             if not math.isfinite(b) or b <= 0:
                 return False
-            ratio = test_spend / b
-            return 0.75 <= ratio <= 1.5
-        close_ivr = close_to(budget_ivr["10pct"])
+            return test_spend >= b / (1 + ASK_STRETCH)
+        close_ivr = spend_feasible(budget_ivr["10pct"])
 
         # ---- direct 56-day power cross-check (no extrapolation) ----
         if dips56 > 0 and ivr > 0:
@@ -196,7 +197,7 @@ def main():
         mde_cvr_normal = mde_at_spend(test_spend, cpm, ipi, cvr) if cvr_ok else float("inf")
         budget_cvr = {k: (budget_for(cvr, t, cpm, ipi) if cvr_ok else float("inf")) for k, t in CVR_TARGETS.items()}
         can_hit_cvr15 = cvr_ok and math.isfinite(budget_cvr["15pct"]) and test_spend >= budget_cvr["15pct"]
-        close_cvr = close_to(budget_cvr["15pct"]) if cvr_ok else False
+        close_cvr = spend_feasible(budget_cvr["15pct"]) if cvr_ok else None
 
         # ---- proxies ----
         reach_to_spend = (dips30 / (avg_monthly / 1000.0)) if avg_monthly > 0 else float("inf")  # IPs per $1k
@@ -235,7 +236,7 @@ def main():
             "budget_for_mde_cvr_15pct": budget_cvr["15pct"] if math.isfinite(budget_cvr["15pct"]) else None,
             "req_monthly_spend_cvr_15pct": (budget_cvr["15pct"] / TEST_MONTHS) if (cvr_ok and math.isfinite(budget_cvr["15pct"])) else None,
             "can_hit_cvr_15pct_8w": "Yes" if can_hit_cvr15 else ("No" if cvr_ok else "no_data"),
-            "close_to_cvr_min": "Yes" if close_cvr else "No",
+            "close_to_cvr_min": ("Yes" if close_cvr else "No") if close_cvr is not None else "no_data",
             # proxies / prior lift
             "reach_to_spend_ip_per_1k": reach_to_spend if math.isfinite(reach_to_spend) else None,
             "prior_lift_pp": prior_pp,
