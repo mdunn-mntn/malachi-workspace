@@ -2895,18 +2895,26 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
 ## integrationprod.advertiser_configurations — block/lookback settings + STALE-IN-BQ warning (TI-1044, 2026-06-24)
 - Holds advertiser-level exclusion settings: `block_conversion`, `block_prospecting`, `block_first_party`,
   `conversion_lookback_window`, `page_view_lookback_window`, `enable_taxonomy_block`. Keyed `advertiser_id`.
-  Booleans are BOOL (use `WHERE block_prospecting` / `= TRUE`, not `='true'`). A row exists ~only when a block
-  is ON (0 `block_prospecting=false` rows); absence ≈ off/default.
+  Booleans are BOOL (use `WHERE block_prospecting` / `= TRUE`, not `='true'`).
+- **⚠ ABSENCE ≠ OFF (Zach Schoenberger, 2026-06-24):** a row is written ~only when an advertiser **CHANGES from
+  defaults**; the **defaults are block_conversion/block_prospecting ON at 30/30 days.** So a MISSING advertiser
+  is using the defaults (blocks ON), NOT off. BUT the table also contains many default-looking 30/30 rows, so
+  its semantics are inconsistent — **you cannot reliably infer block status from presence/absence here.** To
+  verify whether an advertiser is actually being blocked, you need another source (bidder effective-config);
+  the per-campaign `audience_audience_segments` expression is also unreliable (~96% carry no pageview clause).
+  Tracked in **TI-1061**. (This corrected a false "ElevenLabs blocks off" read in TI-1044.)
 - **⚠ TWO TABLES — use the right one (verified 2026-06-24):**
   - `integrationprod.advertiser_configurations` (no prefix) = **STALE, frozen 2026-01-12** (broken sync). Do NOT use.
   - **`silver.audience.advertiser_configurations`** = **`integrationprod.audience_advertiser_configurations`** =
-    **FRESH (updated daily)** — THE authoritative current source for block/lookback settings. Keyed advertiser_id,
-    only `block_prospecting=true` rows exist (absence = block off). 14,582 advertisers as of 2026-06-26.
+    **FRESH (updated daily)** — current source for block/lookback settings (with the absence-≠-off caveat above).
+    Keyed advertiser_id; 14,582 advertisers as of 2026-06-26.
   - Block is applied **at the advertiser level** (bidder reads this config and suppresses globally); ~96% of
     prospecting campaigns have NO per-campaign pageview clause in `audience_audience_segments`, so the config
     table — not the per-campaign expression — is authoritative. (Archive `archives_advertiser_configuration_archives`
     is also fresh for change history.)
-- **Operative block = exclusion clause in `audience_audience_segments`** (`is_targeted=false`): proper form
-  `UserLastVisitTime >= N,day and UserNumPageViews >= K` (lookback + threshold; K typically 2 or 5). `>= 0` with
-  no `UserLastVisitTime` = **disabled** (re-serves prior visitors). Conversion block = a converter-suppression clause.
+- **Per-campaign exclusion clause in `audience_audience_segments`** (`is_targeted=false`) can look like
+  `UserLastVisitTime >= N,day and UserNumPageViews >= K` (lookback + threshold) — but this is NOT the
+  authoritative block (block_prospecting is enforced advertiser-level by the bidder; ~96% of campaigns have no
+  such clause). A `>= 0` per-campaign clause does NOT mean blocks are off. The full pageview block excludes
+  **ANY guid pageview** (organic / other-marketer), not just MNTN-attributed VVs (VVs = a subset).
 - 10% holdout encoded in the expression: `md5(<advertiser_id>:<ip>) bucket 0–99 of 1000`.

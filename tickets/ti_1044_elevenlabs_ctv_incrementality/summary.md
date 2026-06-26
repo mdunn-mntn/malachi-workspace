@@ -309,23 +309,22 @@ the credible number; the positive state reads are noise.
 - If they want a real conversion test: **size a geo test to the $2M+ MDE**, or pivot the KPI to visits.
 - Possible follow-on: quantify site-visitor (RTC) overlap with their prospecting reach (Q1 deep-dive).
 
-### 4.7 Exclusion/block config — the likely mechanism behind low incrementality (2026-06-24)
-**Finding:** ElevenLabs' prospecting campaigns are NOT suppressing prior converters or pageview visitors.
-- `block_conversion` / `block_prospecting` settings live in `integrationprod.advertiser_configurations`
-  (cols: `block_conversion`, `block_prospecting`, `block_first_party`, `conversion_lookback_window`,
-  `page_view_lookback_window`, `enable_taxonomy_block`). TI-310 = the NTB investigation behind this.
-- **AUTHORITATIVE FRESH SOURCE = `silver.audience.advertiser_configurations`** (= `integrationprod.audience_
-  advertiser_configurations`), updated daily; 14,582 advertisers (all block_prospecting=true; absence=off).
-  **ElevenLabs absent → blocks off.** NOTE the look-alike `integrationprod.advertiser_configurations` (no
-  prefix) is **STALE — frozen 2026-01-12** (broken BQ sync); that's what initially misled us. Block is applied
-  at the **advertiser level** (bidder reads the config; ~96% of prospecting campaigns carry no per-campaign
-  pageview clause), so the config table is authoritative, not the per-campaign expression.
-- **Operative truth (audience_audience_segments, live):** campaign **608814** (national prospecting) exclusion
-  clause = `UserNumPageViews >= 0` (threshold 0, **no lookback**) → disabled; **629615** (FIFA Select) has no
-  exclusion clause at all; no conversion-exclusion clause anywhere. Properly-blocked advertisers look like
-  `UserLastVisitTime >= 30,day and UserNumPageViews >= 2/5` (camp 42761). Platform-wide: ~18.7K campaigns at
-  `>=5`, 9.3K at `>=2`; ~5,500 at the disabled `>=0` (ElevenLabs is one).
-- **Implication:** "prospecting" re-serves prior visitors/converters → serving existing demand = the
-  **value-selection** that drove our ≈0 incrementality (§4.5–4.6). **Fix:** enable `block_conversion` +
-  `block_prospecting` with a high lookback (90d). Should raise true incrementality + NTB%.
-- Holdout confirmed in the expression: `md5("51660:"+ip) bucket 0–99 / 1000` = 10% (matches the ghost-ad analysis).
+### 4.7 Exclusion/block config — FALSE ALARM (corrected 2026-06-24, via Zach Schoenberger)
+**Initial read (WRONG):** ElevenLabs absent from the block-config table → "blocks off" → re-serving prior
+visitors/converters as the mechanism for ≈0 incrementality.
+**Correction (Zach):** `advertiser_configurations` only stores a row when an advertiser **changes from
+defaults**. The **defaults are block_conversion/block_prospecting ON at 30/30 days.** So **absence = defaults =
+blocks ON** — ElevenLabs most likely *does* have the blocks. The "blocks off" finding is retracted; it does
+**not** explain the ≈0 incrementality. (Mike Dolt: "we should be good here.")
+- **Caveat that remains (→ TI-1061):** the table does NOT reliably store defaults — yet it also holds many
+  default-looking 30/30 rows, so we **cannot infer block status from presence/absence**. Need a reliable
+  alternative to verify blocking (esp. for 3P-segment work). The per-campaign audience expression is NOT
+  reliable (~96% of prospecting campaigns carry no pageview clause). `silver.audience.advertiser_configurations`
+  is the fresh table (`integrationprod.advertiser_configurations` no-prefix is STALE/frozen 2026-01-12 — ignore).
+- **What the block does (Zach):** the full pageview block (block_prospecting) excludes **ANY guid pageview**
+  (organic or other-marketer-driven), not just MNTN-attributed VVs (VVs are a subset; the VV-only block only
+  matters where the full pageview block isn't in place). Block is enforced at the **advertiser level** (bidder
+  reads the config), not per-campaign.
+- **The real, still-valid lever:** increase the page-view lookback beyond the 30-day default (90/180/365) →
+  excludes more prior visitors than MM's prior-30d window → more incremental. Impact analysis = **TI-1061**.
+- Holdout confirmed in the live expression: `md5("51660:"+ip) bucket 0–99 / 1000` = 10% (matches §4.5 ghost-ad).
