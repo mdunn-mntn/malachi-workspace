@@ -209,7 +209,7 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 | 48 | Tealium | ✗ | 0 | 0 | 0 | CRM ingestion source. Shares `data_source_key='ojLY3uGYtq'` AND `create_time=2025-11-25 21:21:41.453456` with DS45 Hubspot — same batch artifact (see DS45 note). |
 | 49 | Publisher Network | ✗ | 0 | 0 | 0 | Internal |
 | 50 | shopify | ✓ | 0 | 0 | 0 | CRM ingestion source, buyer-visible but no current uptake |
-| 51 | Bombora | ✗ | 0 | 0 | 0 | 3P provider, no current use |
+| 51 | Bombora | ✗ | 0 | 0 | 0 | B2B intent/ABM. DS51 is the **legacy registration — 0 volume, but NOT dormant**: live Bombora value flows as custom segments through the **LiveRamp pipe (DS35)**, join key `SegmentID`, ~3-day build→targetable lead time. Platform whitelabel + B2B reporting lands ~July 2026. See `mntn_business.md` § Bombora. |
 | 52 | Liftlab | ✗ | 0 | 0 | 0 | Incrementality vendor, no current use |
 | 53 | GCS Bucket | ✗ | 0 | 0 | 0 | Generic ingestion source |
 | 54 | S3 Bucket | ✗ | 0 | 0 | 0 | Generic ingestion source |
