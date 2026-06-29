@@ -206,6 +206,38 @@ Tillium, Klaviyo, Ours Privacy, HubSpot V2, Freshman, Bombora. List subject to c
 
 ---
 
+## Bombora — B2B Intent & ABM Integration (b2b ascent team, 2026-06)
+
+Bombora is the B2B data partner powering MNTN's push into B2B. It is a **6Sense competitor** but architecturally different: Bombora is a vendor-neutral **data supplier** ("Switzerland" of intent data), not a walled platform — which is exactly why it whitelabels cleanly under MNTN's own audience builder + reporting. (6Sense is a full platform that *uses* data, including Bombora's, and is ~2-4x the price.)
+
+### What is unique about Bombora (the moat)
+- **The Data Co-op** — intent is derived from a cooperative of thousands of B2B publishers, brand sites, and premium data providers. **~86% of co-op data is exclusive to Bombora** — declared, consent-based content-consumption data, **not** bidstream-scraped or modeled. This is the structural moat: competitors relying on bidstream/modeled data can't replicate it.
+- **Company Surge® — account-level intent** — measures aggregated **account/company-level** research over a rolling **3-week window vs a 12-week baseline**; a company "surges" when interest on a topic spikes above its own baseline = in-market buying signal. Analyzes billions of content-consumption events/month.
+- **~21,600+ topic taxonomy** (NLP-derived; exceeded 17,000 in the March 2025 release) — standardized B2B intent topics across industries, technologies, challenges, GTM categories.
+- **Account/domain resolution + firmographics + persona** — resolves intent to the **company (domain)**, enabling ABM, and maps to firmographics (size, revenue, industry, location) and B2B personas (seniority, functional area, professional group). This is the dimension MNTN's consumer/IP/household audience model structurally lacks (cf. Mountain Mesh can't do B2B).
+- **Privacy-durable** — consent-based co-op data survives cookie deprecation.
+- Known limitation in the sales-prospecting world: Bombora tells you *which companies* are surging, not individual contact info. For MNTN ad-targeting this matters less — addressability comes via the **LiveRamp identity graph** (account/person → targetable IDs), which introduces match-rate considerations.
+
+### How it plugs into MNTN — two workstreams
+1. **Audience builder** — MNTN sends B2B dimensions to Bombora via API (ABM domain list, firmographics: company size, vertical/industry; employee title/seniority). Bombora builds a **custom segment** and ships it back via the **same LiveRamp syndicated-audience pipe** used today → targetable in any MNTN account. **Critical join key = SegmentID.** Lead time **~3 days** from building in Bombora to landing targetable in MNTN (Jason Huertas confirmed — bake it in).
+2. **S2S impression enrichment + reporting** — once a Bombora segment serves live impressions, MNTN sends impressions to Bombora (Freshpaint-style S2S path), Bombora enriches with B2B attributes and sends back. New B2B report dimensions: account (company name), domain, company_size, company_revenue, company_industry, seniority, functional_area, professional_group. This workstream is the **platform-level whitelabel** — mid-flight, expected to land later in **July 2026**.
+
+### Status / contacts
+- **DS51** in MNTN's 3P registry is the legacy Bombora registration — currently **0 IPDSC volume** (not yet delivering through that path). Live value comes through the LiveRamp custom-segment pipe (workstream 1).
+- V1 milestones: **Beta 6/30/26, GA 7/14/26**. Billing likely follows the DDP process (like MNTN Match / LiveRamp).
+- Team: Jordan Piepkow (BE), Jeff Capone (FE), Jason Huertas (TPM), Paul Reitzin (PM), Lina Simpson (design). BER/RX advisory.
+- **B2B sizing context:** MNTN projects a conservative ~$50M/yr B2B spend it's missing without a dedicated B2B offering (~$4M/mo net-new revenue potential). ICE score 10 (Impact 10 / Confidence 6 / Effort 6).
+
+### Audience-design lens (AUDI ownership — Paulo, 2026-06-29)
+Paulo asked the AUDI team to **own high-quality Bombora audience design** for a white-glove campaign (ElevenLabs); Jason Huertas owns plumbing. Three levers Bombora unlocks:
+- **ABM** — named target-account domain list.
+- **Intent surge** — accounts surging on buyer-relevant topics.
+- **Firmographic + persona layering** — vertical + seniority/functional-area filters.
+
+**Incrementality caveat (critical, AUDI's lens):** Company Surge = an **in-market** signal, so an intent-only audience risks the *same demand-harvesting problem* flagged on ElevenLabs prospecting (TI-1044/TI-1061: ~0 incrementality, suspected re-serving of existing demand). A white-glove design should **balance net-new ABM accounts (not yet engaged) against pure surge**, and **preserve a holdout / measurement** so Bombora lift is provable — workstream 2's company-level impression reporting makes that measurement feasible.
+
+---
+
 ## Geo-Resolution — Bidder Migration (Q2 2026)
 
 - Currently, targeting does geo-resolution for IPs. IPs without geodata are **not bid on** (risk of geo-violation)
