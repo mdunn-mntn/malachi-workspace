@@ -114,6 +114,13 @@ _(updated as work progresses)_
 ### Deliverable: technical deck
 `artifacts/audi_1070_presentation_deck.html` (+ `_standalone.html`) — claim→evidence RevealJS deck answering all 5 of Kaila's investigation areas. Build: `artifacts/build_deck.py` (embeds the 3 charts). **Note:** contains named advertisers + revenue — do NOT post to a public gist; share via direct file / expiring host / internal channel.
 
+### HHST gate check (follow-up question: "are they spending beyond high intent?")
+Per-campaign household-score-threshold (`bronze.integrationprod.dso_household_score_thresholds`, latest per campaign), 2026 flagship campaigns:
+- **HexClad — NO gate anywhere.** Flagship prospecting 446801 (28M imps, 63% of volume) has **HHST = 0**; every other HexClad campaign has no threshold row. With no gate, "the score doesn't matter" (Ryan Kleck) → the bidder serves unscored/lower-intent freely → the 37% unscored delivery + VR collapse. **HexClad is definitively spending beyond high intent, and it's a config gap.**
+- **Caraway — mixed.** Flagship 439156 (19M) **gated at HHST=10000** (must-be-scored), but ran ungated side campaigns (613551 HHST=0, 439154/613548 absent) and over-scaled the scored pool itself (+119% spend) → VR fell even within the gated pool. ~16% unscored comes from the ungated side campaigns.
+- **Avon (control) — gated at HHST=9501** and not over-scaling → stays in high intent → healthy. (Its ~25% "unscored" is largely retargeting / own-site-visitors, not low-intent prospecting expansion.)
+- **New lever:** set/raise the HHST gate — esp. **HexClad (none today)**. Caveat: a gate trades deliverable volume for intent quality, so at high spend it hits the same ceiling → **pair HHST gating with pacing** (see [[project_intent_tier_pacing]]). Note `advertiser_household_score` is effectively binary (scored≈10000 vs unscored), so HHST 9501 vs 10000 both ≈ "must be MM-scored."
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
