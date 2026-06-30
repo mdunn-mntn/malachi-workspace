@@ -1304,6 +1304,8 @@ v_campaign_group_channel_margins, v_channel_margins, v_icloud_blacklist
 
 **Note:** No `deleted` column on this table (unlike most integrationprod tables).
 
+**⚠️ FIELD-LEVEL HISTORY EXISTS — `bronze.integrationprod.archives_advertiser_setting_archives`** (AUDI-1070). The live `r2_advertiser_settings` row's `update_time` is only the MOST RECENT change; `reporting_style` can flip many times. The archive table has one row per `version` with `reporting_style` + `create_time`/`update_time` — use it to resolve the **effective attribution lens as-of any date** (e.g. during a YoY analysis window). Real example: Avon 31921 & HexClad 34611 oscillated `industry_standard`↔`last_touch` **dozens of times** across 2024-2025; both were effectively `last_touch` during Feb-May 2025 but `industry_standard`(FT) during Feb-May 2026 — so any client-facing YoY for them mixed lenses (LT-2025 vs FT-2026), which alone manufactured ~50pp of an apparent visit/ROAS decline. **Always resolve the as-of lens for BOTH years before comparing.** As-of query pattern: UNION the archive rows + the live row, take `ARRAY_AGG(reporting_style ORDER BY COALESCE(update_time,create_time) DESC LIMIT 1)` where `eff_time <= window_date`.
+
 ---
 
 # silver.aggregates
