@@ -83,6 +83,35 @@ _(updated as work progresses)_
 - **Scored fraction falls as spend scales:** HexClad AHS-scored share ~97% (Jun–Oct 2025) → 54–76% (2026), with sharp dips at the Nov/Dec-2025 holiday spend spikes (65%/54%). Caraway similar. ⇒ scaling pushed a growing share of delivery into **unscored (non-MM-qualified) inventory** — the prospecting expansion, now visible at the score level. Scored users remain ~max quality; there are just proportionally fewer.
 - **Conclusion:** consistent with expansion/saturation, not MM-score degradation. Can't YoY scores directly (baseline null); reach/frequency (Step 1) is the cleaner evidence.
 
+### Investigation 2 — % of impressions served UNDER 8000 score, per advertiser per month (Paulo's #1) (`outputs/q_inv2_pct_under_8000_monthly.csv`, `q_inv2_monthly_spend.csv`; query `queries/audi_1070_inv2_pct_under_8000.sql`)
+
+**Score-logging is a clean LOGGING change, NOT a scoring-pipeline change (resolves Paulo's clue).** Two hard partition-boundary cutovers, both 0%→100% overnight (a real scoring rollout would ramp):
+- **2025-05-06** — scores begin appearing in the `model_params` STRING (`household_score=…`, `advertiser_household_score=…`). 0% on 5/5, 100% on 5/6.
+- **2025-06-01** — the dedicated typed columns (`household_score`, `advertiser_household_score`) begin populating. 0% through 5/31, 100% from 6/1.
+- Both columns are 100% NULL before these dates (not just AHS — `household_score` is null too). The scores **existed upstream before June** (the string proves it), so we recover the time series back to **2025-05-06** by COALESCE-parsing `model_params`. **No CIL score history exists before 2025-05-06** → the July-2025 ROAS inflection is only ~2 months after the data begins; a true pre-inflection score baseline is unavailable. The "logging vs real scoring change" question is settled: **logging.**
+- RTC is absent for all three AIDs (`realtime_conquest_score=-1` everywhere) → nothing to exclude. Earlier "exclude RTC rows containing `realtime_conquest_score`" guidance was a misread — that token is logged on ~100% of rows regardless of RTC.
+
+**Encoding (confirmed):** `household_score` (HS, graduated DS13/19 raw intent) unscored = **-1**; `advertiser_household_score` (AHS, MM/advertiser-qualified) unscored = **NULL/-1**. Values are discrete (-1 / 8000 / 10000 dominate). HS and AHS **diverge**: retargeting/own-site rows have HS=-1 but AHS=10000 (advertiser override). Both reported below.
+
+**(a) Buckets — monthly %-under-8000 by score column** (full table in CSV; headline = HS_under8k / AHS_under8k):
+
+| AID | spend range | 2025-07 (post-inflection) | 2025-11/12 (peak spend) | 2026-02/03 (flat) | corr(spend, HS_u8) |
+|---|---|---|---|---|---|
+| **Avon 31921 (flat)** | $3.5k–$14.3k (4.0×) | 56% / 4% | 82%/97% · 50%/57% | 67%/3% · 66%/5% | **+0.38** |
+| **HexClad 34611** | $34k–$479k (14.2×) | 30% / 3% | 78%/60% · 83%/63% | 65%/44% · 42%/32% | **+0.76** |
+| **Caraway 40341** | $35k–$97k (2.7×) | 2% / 4% | 17%/30% · 71%/75% | 15%/17% · 5%/8% | **+0.36** |
+
+**(b) The rise is SPEND-DRIVEN (pacing), not a systemic supply-shrink floor.** Within EVERY advertiser, %-under-8000 is **positively correlated with that advertiser's own monthly spend/impressions** (HexClad +0.76, Avon +0.38–0.51, Caraway +0.36–0.47). It **rises when spend rises and recedes when spend falls** — e.g. HexClad's HS_u8 went 30%(Jul, $71k) → 78–83%(Nov/Dec, $479k/$259k) → back to 42–65%(2026, ~$82k); Caraway 2%(Jul) → 71%(Dec, peak) → 5–18%(2026). This is the demand/pacing signature: pushing more budget through a fixed high-intent pool forces the bidder down the score curve. It is NOT a fixed audience that shrank.
+
+**(c) July-2025 inflection: NO step-up in %-under-8000 at July.** Jun→Jul→Aug 2025 HS_u8 is *flat or falling* for all three (Avon 61→56→61; HexClad 38→30→30; Caraway 4→2→2). The big step-up is **Nov/Dec 2025**, and it lands exactly on each advertiser's spend spike, not on July. ⇒ the "performance fire from ~July" is **not** explained by a July shift of delivery below high-intent — that shift happens later and tracks spend. (Score data also doesn't reach before May-2025, so July can't be a logging artifact in this series either.)
+
+**(d) Conclusion — delivery shifts below high-intent only for SCALERS, not systemically.** The flat-spend control proves it:
+- **Avon at its true flat baseline (~$3.5–5k, the <$6k months) shows NO systemic collapse below high-intent.** On the MM-qualified **AHS** metric, flat-spend months stay **3–9% under-8000** across the whole span (Jul'25 4% ≈ Feb/Mar'26 3–5%) — no drift. The only Avon elevations (Nov/Dec'25, May'26) sit exactly on its spend pushes. If the HI/MM pool had systemically shrunk, Avon's flat-spend AHS_u8 would have climbed — it didn't.
+- **Honest caveat (one genuine supply-side hint):** on the graduated **HS** (raw DS13/19 intent, not MM-qualified), Avon's flat-spend months drift modestly upward — ~56–61% (Jul–Sep'25) → ~66–78% (Jan–Mar'26) at the SAME ~$3.5–5k spend (≈ +5 to +15pp). So the raw-intent inventory mix got marginally lower-intent at flat spend, but the **MM-qualified gate (AHS) fully absorbs it** (flat-spend AHS_u8 unchanged). Small, and not the driver.
+- **For the scalers, the shift below high-intent is large and spend-locked:** HexClad/Caraway only breach high-intent heavily in their high-spend months, recovering when they pace down. Same saturation law as Steps 1/4/5, now visible at the served-score level.
+
+⇒ **Answer to Paulo #1/#3:** delivery shifting below high-intent is **demand/over-spend driven (the scalers), not a systemic supply-side shrink of the HI/MM pool.** Flat-spend Avon does not breach high-intent at its baseline; the breaches are spend-locked and reversible. (Audience-size table evidence for #3 is a separate workstream; this is the served-side corroboration.)
+
 ### Reporting attribution switch (Confound A — client-side artifact)
 - **MNTN default switched LT→FT historically** (`mntn_business.md`: "Current default: First touch (changed from last touch)"; Johnny: most customers migrated ~2yr ago, some "grandpa" accounts still LT; **HexClad is FT**). All three AIDs' `r2_advertiser_settings` rows were **last modified 2025-12-10** (common date ⇒ likely a bulk attribution migration; no field-level history/archive exists to prove `reporting_style` flipped exactly then — confirm w/ Prod Ops).
 - **My analysis is switch-immune:** `sum_by_advertiser_by_day` headline is the **last-touch-equivalent in BOTH years** (verified: 2026 headline = `last_touch_*`, not FT) — the table does not honor `reporting_style`; the UI applies FT separately. So the measured decline is real, on a consistent lens.
