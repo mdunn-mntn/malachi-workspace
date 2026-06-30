@@ -41,31 +41,31 @@ ul.tight{font-size:0.62em;line-height:1.5;text-align:left;display:inline-block;}
 <section>
 <p class="sub">Bottom line</p>
 <p class="power-line" style="margin-top:0.3em;">Avon reached fewer users —<br>and made <span class="green">more money</span>.</p>
-<p class="lead">At essentially flat spend, Avon served fewer impressions to fewer users, but delivered <b>more conversions, more revenue, and higher ROAS</b>. The "decline" is a volume story, not a performance story.</p>
+<p class="lead">On <b>12% less spend</b>, Avon served fewer impressions to fewer users, but delivered <b>more conversions, more revenue, and higher ROAS</b>. The "decline" is a volume story - a smaller budget at higher CPM - not a performance story.</p>
 </section>
 
 <section>
 <h2>Fewer users, more money</h2>
 <img src="__C1__">
-<p class="note">H1-2025 to H1-2026, last-touch. Volume metrics (gray) fell; the metrics that pay the advertiser (green) all rose.</p>
+<p class="note">Jan-May 2025 vs 2026, last-touch. Volume metrics (gray) fell; money metrics (green) all rose. The only statistically significant changes: conversion rate +22% (up) and visits -16% (down).</p>
 </section>
 
 <section>
 <h2>Performance holds across 30 months</h2>
 <img src="__C2__">
-<p class="note">ROAS never trends down — it stays in a healthy 10-38x band and its yearly H1 average rises. Volume swings with budget; efficiency does not erode.</p>
+<p class="note">ROAS never trends down - it stays in a healthy 10-38x band and its Jan-May average rises 17.3x to 20.7x. Volume swings with budget; efficiency does not erode.</p>
 </section>
 
 <section>
 <h2>Why fewer users: a reach ceiling, not a loss</h2>
 <img src="__C3__">
-<p class="note">Through Q1-2026 each $1k reached ~38k users; in Q2-2026 the same dollars reach ~26k as frequency jumps. Extra budget now buys repetition, not new users - and performance still held.</p>
+<p class="note">Jan-May 2026 each $1k reaches ~31k users vs ~36k in 2025 as frequency rises +13%. Extra delivery now buys repetition, not new users - and performance still held.</p>
 </section>
 
 <section>
 <h2>No audience expansion to blame</h2>
 <img src="__C4__">
-<p class="note">Avon's single prospecting campaign contracted -20% while its ROAS rose; 100% of 2026 impressions came from campaigns also active in 2025. Caraway/HexClad, by contrast, added 31-38M new prospecting impressions.</p>
+<p class="note">Avon's single prospecting campaign contracted -26% while its ROAS rose; 100% of 2026 impressions came from campaigns also active in 2025. Caraway/HexClad, by contrast, added 9-19M net prospecting impressions.</p>
 </section>
 
 <section>
@@ -83,8 +83,8 @@ ul.tight{font-size:0.62em;line-height:1.5;text-align:left;display:inline-block;}
 <section>
 <h2>Three takeaways</h2>
 <ul class="tight">
-<li><span class="navy">1. Avon's performance did not decline.</span> Flat spend, fewer users, but <span class="green">+13% ROAS, +22% conversion rate, +7% revenue</span> YoY.</li>
-<li><span class="navy">2. The drop is reach, not quality.</span> Fewer users because spend paced lower (Q1) and the addressable high-intent pool saturates above ~$60k/quarter (Q2) - the bidder trades reach for frequency instead of dropping into junk.</li>
+<li><span class="navy">1. Avon's performance did not decline.</span> On <b>12% less spend</b>: <span class="green">+19% ROAS, +22% conversion rate, +4% revenue</span>, visit rate flat (Jan-May YoY).</li>
+<li><span class="navy">2. The drop is volume, not quality.</span> Visits fell because spend was cut 12% at +5% CPM; the high-intent pool also reaches fewer users per dollar (frequency up) - the bidder trades reach for frequency, never quality.</li>
 <li><span class="navy">3. Avon is the clean control against "MM degradation."</span> Same campaigns, no expansion, audience refined toward higher intent - quality held while the cookware scalers saturated.</li>
 </ul>
 <p class="claim" style="font-size:0.8em;margin-top:0.7em;">Avon reached fewer users - and made more money.</p>
