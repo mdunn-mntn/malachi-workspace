@@ -36,7 +36,7 @@ ax.set_xscale("log"); ax.set_xticks([9000, 12000, 18000, 27000, 37000])
 ax.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda v, _: f"${v/1000:.0f}k"))
 ax.set_xlabel("Avon monthly spend (log)"); ax.set_ylabel("ROAS (×)")
 ax.set_title("Avon's ROAS is driven by spend, not by year", fontsize=14, fontweight="bold", loc="left", y=1.10)
-ax.text(0, 1.02, "2026 (red) sits on/above the same curve as 2024–25 → no real YoY decline; spend explains it",
+ax.text(0, 1.02, "2026 (red) sits on/above the same curve as 2024–25: no real YoY decline; spend explains it",
         transform=ax.transAxes, color="#666", fontsize=10.5)
 ax.legend(frameon=False, fontsize=10, loc="upper right")
 for sp in ["top", "right"]: ax.spines[sp].set_visible(False)
