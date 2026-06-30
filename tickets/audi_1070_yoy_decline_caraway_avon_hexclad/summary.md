@@ -159,6 +159,41 @@ _(updated as work progresses)_
   3. **Cherry-picked pair** off CV-0.36 noise.
 - **Exact ask to fully reconcile (one question):** *"Which Avon ROAS number, from which screen, for which two date ranges?"* — namely (i) AID (confirm 31921), (ii) First- or Last-Touch (their UI = FT), (iii) the two comparison windows (we suspect 2024 vs 2025), (iv) account-total or a specific campaign. With those four we reproduce their exact figure. Predicted outcome: **2024→2025 under FT = spend-doubling saturation amplified by the attribution-engine break — NOT MM degradation.**
 
+### Investigation 2 — PRODUCT-PREMISE TEST: within-HI degradation vs mix-shift (Paulo's core challenge) (`outputs/inv2_vr_band_funnel_*.csv`, `queries/audi_1070_inv2_vr_by_band_funnel.sql`)
+
+**Method:** join CIL impressions → served `household_score` fine band (unscored≤0 / 1-3332 / 3333-6665 / 6666-7999 / 8000-9999 / 10000) and → campaign funnel role (prospecting = obj_id=1 & funnel_level=1; vs retarget/MT; from `archives_campaign_archives`), then LEFT JOIN forward to clickpass_log visits on `ad_served_id`. VR = visits/impression per band per funnel-role per month, RTC excluded. Window = **Jun 2025 → May 2026** (the only period where `household_score` is populated — 100% NULL Jan-May 2025 for all 3 AIDs, so a true score-band YoY is impossible; this is a within-2025/26 scaling test).
+
+**This PARTIALLY OVERTURNS the prior "pure expansion/mix-shift" conclusion. Paulo is substantially right: there IS real within-high-intent degradation, not only a mix shift.**
+
+**(1) Funnel split dissolves the confound that made expansion look like the whole story.** The high-VR "unscored" band is **retargeting** (known site-visitors, no score needed), not low-intent prospecting. Retarget-unscored VR is 7-18% and STABLE across the window (HexClad ~10%→11%, Avon ~17%→15%). Remove retargeting → the within-prospecting score gradient is the clean test.
+
+**(2) Within-HI prospecting VR FALLS as Caraway/HexClad scale; Avon (didn't scale) RISES.** Early (Jun-Sep 2025) vs Late (Feb-May 2026), within-HI = household_score ≥ 8000, prospecting only:
+
+| Advertiser (gate) | within-HI VR early | within-HI VR late | **ratio** | 10000-band early→late | within-HI prosp imps early→late |
+|---|---|---|---|---|---|
+| **Caraway** (flagship HHST=10000, gated) | 1.144% | 0.611% | **×0.53** | 1.144%→0.587% (×0.51) | 13.8M → 18.8M (scaled) |
+| **HexClad** (flagship HHST=0, no gate) | 1.770% | 1.122% | **×0.63** | 1.770%→1.478% (×0.84) | 17.3M → 19.4M (peaked 32M Nov) |
+| **Avon** (gated HHST=9501, never scaled) | 1.253% | 2.795% | **×2.23** | 1.253%→2.651% (×2.12) | 1.53M → 1.25M (flat/contracted) |
+
+  → **Caraway is decisive: gated at HHST=10000, so prospecting is a near-pure 10000-band series — it never left high intent — yet within-10000 VR HALVED (×0.51) as it scaled ~2M→6-8M imps/mo.** That is within-HI degradation (Paulo's "product is NOT supposed to degrade with scale within high intent"). Mix-shift can't explain Caraway — there's almost no mix to shift.
+  → Avon held in high intent at low spend and within-HI VR *rose* ×2.2 — clean control proving the degradation is **scale-induced within the same tier**, not seasonal.
+
+**(3) Reconciles Paulo objection (1) — "Avon didn't scale yet declined" (Mike Dolt: 'same spend, big ROAS difference').** Prior LT headline showed Avon ROAS +16% (no decline). Reconciliation: Avon's PROSPECTING within-HI VR actually *rose*; "Avon declining" = the **FT vs LT lens** (client UI = first-touch = `industry_standard`) and/or the cohort-wide ROAS drop hitting everyone (Step 5: ×0.57 even flat-spend). On apples-to-apples within-HI prospecting Avon is healthy — so "same spend, big difference" is a lens/period artifact for Avon, but the *premise* it defends (within-HI degradation for scalers) is confirmed by Caraway/HexClad.
+
+**(4) Reconciles objection (3) "not gradual — steep drop-offs"** + Malachi hyp (b). Within-10000 VR is lumpy with steep steps. Caraway 10000-band by month: 1.04→1.27→0.59→1.60→0.80→**1.73 (Nov peak)**→1.05→**0.43 (Jan cliff)**→0.47→0.51→0.73→0.73. HexClad peaks **4.37% Nov 2025** then cliffs to 1.06-1.58% through 2026. Nov spikes = holiday ramps pulling fresh high-intent inventory; post-holiday cliffs = exhaustion. **Lumpy HI-IP replenishment → exhaustion-then-reload (hyp b), NOT a gradual curve.**
+
+**(5) Reconciles objections (4)/(5) — magnitude + "absolute numbers declined as spend went up."** Within-HI VR halving (×0.51-0.53) is a large real effect the pure-reach story understated; absolute visits fell while impressions rose (Step 0) because the within-tier rate collapse outran the impression growth.
+
+**(6) Malachi hyp (a) — do sub-10000 "scored" IPs perform like unscored?** PARTIALLY CONFIRMED. The 8000-9999 band performs WORSE than the 3333-6665 mid-band in several months and barely above prospecting-unscored: HexClad 2026 8000-9999 ≈ 0.35-0.73% vs 10000-band 1.1-2.2% vs prosp-unscored 0.24-0.42%. So an 8000-9999 impression is much closer to unscored than to a 10000 → **"scored" is effectively binary-good (only 10000 carries the signal); the 8000-9999 tier is nearly worthless AND its volume ballooned** (HexClad 0 → 7.3M imps; bidder widened the floor below 10000 starting Oct 2025). Widening-the-floor is a second degradation mechanism distinct from pure reach.
+
+**(7) VERDICT — BOTH mechanisms, but within-HI degradation is real and is what the prior conclusion missed:**
+- **Caraway: ~pure within-HI degradation** (×0.51 inside the 10000 band, gated, minimal mix to shift). Paulo correct.
+- **HexClad: mix-shift AND within-HI degradation.** No gate (HHST=0) → mix-shift into unscored/8000-9999 (prior finding holds), PLUS the 10000 band fell ×0.84 and within-HI overall ×0.63. Both operate.
+- **Avon: neither** — small + gated, within-HI VR rose. Control.
+- **Mechanism:** lumpy high-intent IP replenishment — each scale-up exhausts the addressable 10000-pool faster than it reloads, so the marginal 10000 impression goes to a weaker high-intent household (re-served / lower-recency / freshly-(mis)qualified). Score says 10000, realized VR of the pool drops. Steep steps, not a gradual slide.
+
+**Corrected headline:** the decline is NOT "just expansion with high-intent quality intact." For Caraway especially, **the high-intent pool itself degraded under scale** — the product premise fails empirically for aggressive scalers. Expansion/mix-shift is an *additional* mechanism for ungated HexClad, not the sole cause.
+
 ### Deliverable: technical deck
 `artifacts/audi_1070_presentation_deck.html` (+ `_standalone.html`) — claim→evidence RevealJS deck answering all 5 of Kaila's investigation areas. Build: `artifacts/build_deck.py` (embeds the 3 charts). **Note:** contains named advertisers + revenue — do NOT post to a public gist; share via direct file / expiring host / internal channel.
 
