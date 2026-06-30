@@ -3441,3 +3441,18 @@ So `graph.usersreached` = ClickHouse `all_facts_local_daily.uniques` = BQ `all_f
 **reach_meter link (separate widget, same storage pattern):** the CTV "Households Reached" reach_meter widget is a DIFFERENT, audience-segment-grained metric — ClickHouse `info.reach_meters`, loaded hourly (`load_reporting_data_hourly.load_reach_meters`, exchange_tables) from BQ `dw-main-silver.summarydata.reach_meters` (legacy Greenplum twin: `db_repo` `coredw/summarydata/views/reach_meters.sql`, which uses audience-segment `total_audience_reach` + `reach_ips.ips_reached_last_7_days`, CTV channel_id=8, third-party segments). It is NOT the same as per-advertiser `graph.usersreached`. The older Spark `aggregates.audience_hll_by_day` → GCS → CoreDW-external → ClickHouse-copy DAG (PR #1024 disabled it, breaking the UI reach_meter copy DAG; revive under discussion — slack_review_queue.md) is the audience-side reach pipeline, parallel to but distinct from the `all_facts`/CHAPI impression-side reach.
 
 **Ownership / routing:** SQLMesh `all_facts`/`impression_facts` models are `owner 'ber'` (BER = the reporting/analytics-eng group). The CHAPI ClickHouse load DAGs live in `SteelHouse/airflow-reporting` (`dags/chapi/`), owned by the **data-platform / reporting** team — route ClickHouse/CHAPI/R2 reporting-metric questions to **#data-platform** (cross-cutting) or **#reporting_helpdesk_ask_anything** (Ray answers R2/graph metric-definition questions there; cf. the `graph.visits` vs `graph.sitevisitors` clarification, 2026-04-28). Verified-visit / attribution-grain (`site_visitors`, resolved `ip`) authority = Zach Schoenberger.
+
+## archives_audience_segment_archives.version is NON-MONOTONIC — order by create_time (AUDI-1070, 2026-06-30)
+
+**Gotcha (cost a wrong finding before it was caught by adversarial verification):** the `version` column on `bronze.integrationprod.archives_audience_segment_archives` (and it appears on the other `archives_*` audience/campaign archive tables too) is **NOT a monotonic revision counter** — it wraps/resets. Concretely for Avon campaign 259556: a row stamped `version=113` is dated `create_time = 2024-10-16`, while `version=101` is dated `2025-12-11`; there are even two distinct rows both numbered `v1` on 2025-10-29.
+
+**Consequence:** `QUALIFY ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY version DESC)=1` returns a **stale snapshot** (here an Oct-2024 config), NOT the current one. This silently produces a wrong "latest expression" / wrong data_source_id set.
+
+**Rule:** to get the latest (or as-of-date) targeting expression, **order by `create_time`, never by `version`.**
+```sql
+-- latest config per campaign:
+QUALIFY ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY create_time DESC)=1
+-- as-of a date (point-in-time config):
+... WHERE create_time <= 'YYYY-MM-DD' ... ROW_NUMBER() OVER (ORDER BY create_time DESC)=1
+```
+Note: the campaign **dimension** archive `archives_campaign_archives` (name/objective/funnel_level) appears fine under `ORDER BY version DESC` in practice, but the **audience_segment** archive is the one that bites — when in doubt, order both by `create_time`. The earlier AUDI-1070 finding "Avon flagship audience is pure stable DS13, no DS19, unchanged across years" was an artifact of this trap; the corrected reading shows DS13→DS19 (MNTN Matched) added 2024-10-17 and RTC conquest scoring turned on 2025-09-29.
