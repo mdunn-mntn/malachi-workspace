@@ -111,6 +111,33 @@ _(updated as work progresses)_
   - **Avon:** all campaigns "both" (unchanged config across years) — stable, consistent with no decline.
 - ⇒ **No targeting-logic or data-source change explains the decline.** High-intent/Peak-Performance targeting was not abandoned; the advertisers scaled budget into the **same MM logic** via new broad-prospecting campaigns. (Expression-flag detail is a supporting proxy; the delivery-level score evidence in Step 3 corroborates.)
 
+### Investigation 3 — STEEP DROPS vs GRADUAL + MAGNITUDE (Paulo: "not gradual, steep drop-offs; no way reach increase led to this decline") — `outputs/q_inv3_{weekly,daily,mix}.csv`
+
+**Headline: Paulo is right that the steepest drops are NOT gradual — but they're DATA OUTAGES, not MM degradation. Once outages are removed, the remaining decline IS gradual and is ~100% mix/expansion with ~0% within-campaign degradation.**
+
+**(a/b) The steepest drop-offs are visit-TRACKING OUTAGES (discrete, measurement-side).** Daily scan 2024–2026 found 3 discrete craters where `views`→~0 while impressions/spend are normal:
+- **HexClad 2026-03-03→03-17 (~14 days) — the steepest drop in the entire series.** Visits fell from ~3,000/day to ~20/day (−99.3%); `site_visitors` ~15,000→~50; **but conversions stayed FLAT (~40–80/day) and ROAS stayed 2–5×.** Synchronized across EVERY campaign incl. retargeting 225188 (VR 3.7%→0.05%→4.1%) AND prospecting 446801 — same crater date, same recovery date (instant snap-back 03-18). An advertiser-wide visit-attribution pipeline gap, not audience quality. This single outage drags HexClad's reported Feb–May 2026 VR to 0.516% vs **0.596% outage-excluded** (≈6–13pp of the reported −38% is artifact).
+- **Avon 2024-07-31→08-12 (~13 days):** impressions reported as 0 while views still flow (impressions-pipeline gap) — this is why Avon's summer-2024 weekly VR looks wild (5%→18% swings).
+- **Caraway 2025-11-07→11-13 (~7 days):** visits→~30/day, conversions normal — Black-Friday-ramp tracking gap (outside Feb–May window, so doesn't bias the YoY headline, but corrupts the weekly series a viewer would see).
+- No HHST/config change, campaign launch/pause, or the Dec-2025 LT→FT migration aligns with these craters; they are pure measurement discontinuities (views & site_visitors break together; conversions independent).
+
+**Caraway's drop, by contrast, IS gradual and REAL.** Daily Dec-2025→Jan-2026: VR grinds smoothly 0.25%→0.16%→0.12%→0.09% as imps/day roughly doubled (137K→298K) on the New-Year budget ramp; **conversions fall in lockstep (75/day→~7–10) and ROAS→<1×** (so not a tracking break — genuine saturation). This is the smooth saturation signature, not a step.
+
+**(d) MAGNITUDE DECOMPOSITION (Oaxaca, campaign-grain, outage-excluded) — directly answers Paulo's "no way reach led to this" and "does it degrade within high intent":**
+| AID | YoY VR (outage-excl) | MIX / EXPANSION share | WITHIN-CAMPAIGN share |
+|---|---|---|---|
+| HexClad | 0.919%→0.624% (−32%) | **106%** | **−6%** (same campaigns got *better*) |
+| Caraway | 0.462%→0.158% (−66%) | **100%** | **0%** |
+→ **~100% of the legitimate decline is composition/expansion** (budget poured into new lower-VR prospecting campaigns); **~0% is within-campaign degradation.** Campaigns that ran in BOTH years did not get worse (HexClad's actually improved +0.017pp). This SUPPORTS Paulo's premise that MM does not degrade with scale *within* a campaign — the decline is entirely *which* impressions were bought, not the same impressions getting worse. **Caveat (steelmans Paulo's residual concern):** Caraway has near-zero campaign overlap year-over-year, so "mix" and "the new audiences are genuinely lower-intent MM" are *not separable* from this decomposition alone — the 100%-mix result can't rule out that the new prospecting pools are degraded; it only rules out same-campaign decay.
+
+**(c) HI-replenishment-lumpiness (Malachi's hypothesis) — real but SECONDARY:**
+- Saturation confirmed on levels: corr(VR, reach) = Caraway −0.60, Avon −0.74, HexClad −0.25; log–log −0.54/−0.81/−0.23. Reach up → VR down.
+- Lumpy reload (ΔVR vs Δreach WoW): **Avon −0.62** (strong — Avon's small, bursty budget pauses → VR snaps back to 12–18%, the visible weekly recoveries at 2024-12, 2025-03, 2025-06), **HexClad −0.23, Caraway −0.14** (weak). ⇒ pause-and-reload cycles dominate only for the small/bursty Avon; for the high-volume scalers the smooth saturation gradient dominates and the apparent "steps" are the tracking outages, not HI-pool reload cadence.
+
+**Reconciliation of Paulo's Avon objection (#1):** the prior "Avon = flat-spend healthy control" is a **window artifact.** Avon was flat only in the **Feb–May 2025→2026** comparison (spend −14%, VR −4%, ROAS +16%). On the **2024→2025** comparison the client/Mike Dolt are likely looking at, **Avon scaled +70% (spend $37k→$63k) and VR fell −36%, ROAS −18%** — Avon DID scale and DID decline, fully consistent with the saturation law (not a contradiction of it). Avon's tiny weekly volume (~20K–150K imps) makes its VR hyper-volatile (5%–18%) and any "YoY" extremely window-sensitive — which is also the likely source of Mike Dolt's "same spend, big ROAS difference."
+
+**Net for Investigation 3:** (1) The *steepest* drop-offs Paulo flagged are real and discrete — but they are **visit-tracking outages** (HexClad Mar-2026 the worst), so they argue for a **data-quality root cause on the steep steps, not MM degradation.** (2) The *underlying* decline (outage-excluded) is gradual and is **~100% mix/expansion, ~0% within-campaign** — consistent with "MM doesn't degrade within high intent" but *unable to exclude* that the new prospecting pools are lower-intent. (3) Avon is not a clean flat control. **Action items: (i) re-pull any client-facing YoY excluding the 3 outage windows; (ii) route the HexClad Mar-3-17 and Caraway Nov-7-13 visit-tracking gaps to Pixel Ops (Ashley Pineda Varela) — these likely also affected the client's UI; (iii) the only way to separate "expansion into lower intent" from "degraded new MM pools" is a same-audience holdout, not this observational split.**
+
 ### Deliverable: technical deck
 `artifacts/audi_1070_presentation_deck.html` (+ `_standalone.html`) — claim→evidence RevealJS deck answering all 5 of Kaila's investigation areas. Build: `artifacts/build_deck.py` (embeds the 3 charts). **Note:** contains named advertisers + revenue — do NOT post to a public gist; share via direct file / expiring host / internal channel.
 
