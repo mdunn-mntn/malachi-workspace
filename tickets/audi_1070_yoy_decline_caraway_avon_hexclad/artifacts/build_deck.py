@@ -103,10 +103,9 @@ ul.tight{font-size:0.62em;line-height:1.5;text-align:left;display:inline-block;}
 <section>
 <h2>Recommendations</h2>
 <ul class="tight">
-<li><b>Treat as prospecting pacing / saturation — not "fix Matched."</b> Right-size prospecting budgets to the addressable high-intent pool; marginal scaled impressions are near-zero-VR.</li>
-<li><b>Hold attribution constant</b> in client YoY (FT-vs-FT); confirm the Dec-2025 reporting migration date with Prod Ops.</li>
-<li><b>Separate the market-wide ROAS softness</b> (it hit flat-spend advertisers too) from advertiser action.</li>
-<li><b>Test Fangorn as headroom:</b> does it enlarge the high-intent pool? Measure VR at matched spend — esp. HexClad (not yet on Fangorn).</li>
+<li><b>Pace prospecting to the high-intent pool.</b> Ration HI delivery across the flight so performance stays consistent instead of front-loading then crashing — the direct fix for any high-spend advertiser whose spend outruns HI supply.</li>
+<li><b>Evaluate a full Fangorn rollout for headroom.</b> Fangorn can score a larger high-intent pool, raising the saturation ceiling (EX50 Peak-Performance lift: <b>+36% IVR</b>). Validate the per-advertiser pool gain first — HexClad isn't on Fangorn yet.</li>
+<li><b>Add a saturation guardrail.</b> Alert when an advertiser's scored-impression share falls as spend scales — the early-warning signal before visit-rate craters.</li>
 </ul>
 <p class="claim" style="font-size:0.78em;margin-top:0.8em;">Matched isn't broken — the prospecting pool is saturated.</p>
 </section>
