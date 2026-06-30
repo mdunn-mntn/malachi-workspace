@@ -233,6 +233,60 @@ Per-campaign household-score-threshold (`bronze.integrationprod.dso_household_sc
 - **Avon (control) — gated at HHST=9501** and not over-scaling → stays in high intent → healthy. (Its ~25% "unscored" is largely retargeting / own-site-visitors, not low-intent prospecting expansion.)
 - **New lever:** set/raise the HHST gate — esp. **HexClad (none today)**. Caveat: a gate trades deliverable volume for intent quality, so at high spend it hits the same ceiling → **pair HHST gating with pacing** (see [[project_intent_tier_pacing]]). Note `advertiser_household_score` is effectively binary (scored≈10000 vs unscored), so HHST 9501 vs 10000 both ≈ "must be MM-scored."
 
+### Investigation 3 (Paulo #4) — DID THE MM DATA SOURCES / SCORING INPUTS CHANGE MID-2025? — `outputs/q_inv3_ds_mix_by_month.csv`
+
+**Method:** reconstructed the `data_source_id` mix over 2023-2026 by regex-extracting every `"data_source_id":N` occurrence from `archives_audience_segment_archives.expression`, bucketed by the version's `create_time` month — both **per-AID** (34611/40341/31921) and **platform-wide** (all advertisers). Cross-checked against CIL score-column onset, the HHST-threshold history, and the DS catalog / data_knowledge timeline.
+
+**(a) DS-mix timeline — ONE platform-wide change lands squarely in the mid-2025 inflection window: the LiveRamp DS11→DS35 cutover (May–June 2025).** Platform-wide distinct campaigns referencing each DS by month:
+
+| Month | DS11 LiveRamp **legacy** | DS35 LiveRamp **IP** | DS19 keyword | DS13 vertical | DS46 Fangorn | DS38 BUK |
+|---|---:|---:|---:|---:|---:|---:|
+| 2025-04 | 1,333 | **0** | 1,077 | 55 | 0 | 0 |
+| **2025-05** | 6,805 | **699** (first appearance) | 3,911 | 500 | 0 | 0 |
+| **2025-06** | **4** (collapses) | **7,037** | 6,040 | 952 | 0 | 0 |
+| 2025-07+ | ~0-4 (dead) | 593-3,614 | … | … | 0 | 0 |
+| 2025-12 | 3 | 3,046 | 7,051 | 1,054 | 5 (first trace) | 0 |
+| 2026-06 | 0 | 1,257 | 2,353 | 1,745 | 261 | 0 |
+
+  - **DS11→DS35 is a clean, platform-wide one-month flip** (May overlap, June switch). DS11 (deprecated LiveRamp using **device_id→IP** mapping) replaced by DS35 (LiveRamp delivering **IPs directly**). Confirmed in docs: Zach Schoenberger (#targeting-squad 2026-04-21) "DS11 deprecated, use DS35"; Sean Yang (2026-05-29) same. **Both HexClad and Avon show DS35 first appearing 2025-05** in the per-AID data — they were in the cutover.
+  - **DS46/Fangorn:** NOT a mid-2025 event — first archive trace Dec-2025, real Alpha launch **Apr 30 2026** (3 advertisers), rollout May–Jun 2026. HexClad picks up DS46 only 2026-06 (1 camp); Caraway 2026-05 (2 camps); Avon none. Fangorn is an **MM overlay that raises intent** (35.9% IVR lift) → cannot explain a 2025 decline.
+  - **DS38/BUK:** **never appears** (0 across all months) — confirms BUK queued, not live. Not a factor.
+  - **DS19 (keyword) / DS13 (vertical):** continuous since 2024; no swap or removal. The MM **core scoring substrate (DS13+DS19) was unchanged** across the inflection.
+  - **DS21/DS34 (MNTN Pixel exclusions):** appear in these AIDs from 2025-11/12 — first-party exclusion clauses (`blockFirstParty`), not a targeting/intent source.
+  - **site_visit_signal vendor feeds (the actual MM scoring inputs → DS13/DS19):** only documented change near the window is **DS30 augmentor/bidstream added ~Apr 2026** (Ryan Kleck) — AFTER the inflection, additive. No vendor (5x5/33Across/Predactiv/Cybba/Sovrn/guid_log) added or dropped mid-2025 per docs. BQ `site_visit_signal` floor is 2025-08-31, so a pre-mid-2025 vendor-mix audit isn't directly queryable, but no source records a mid-2025 vendor change.
+
+**(b) The "advertiser_household_score NULL before ~June 2025" clue = a CIL LOGGING change, NOT a scoring turn-on.** Platform-wide weekly CIL (all impressions):
+
+| Week | impressions | `advertiser_household_score` non-null | `household_score` non-null |
+|---|---:|---:|---:|
+| 2025-05-25 | 727M | **0.0%** | **0.0%** |
+| **2025-06-01** | 620M | **100.0%** | **32.5%** |
+| 2025-07-27 | 428M | 100.0% | 35.9% |
+
+  - The jump is a **hard step from exactly 0.0% to exactly 100.0% in a single week** (2025-06-01) across ALL impressions. A genuine scoring turn-on would **ramp** (advertisers enabled progressively); an all-at-once 0→100% step is the signature of a **column added to the CIL write path** (ETL/logging change).
+  - **Decisive corroboration that scoring predates this:** `dso_household_score_thresholds` (HHST score-gates) configured at scale **since July 2024** — 6,026 campaigns / 775 advertisers in 2024-07 alone, a year before AHS appears in CIL. The bidder was already gating on household scores in 2024. ⇒ **scoring existed well before June 2025; CIL merely began persisting the score columns on 2025-06-01.** The clue is a logging artifact.
+  - **"Re-named / re-qualified MM" (stakeholder caveat):** no DS-level relabel at the inflection. MM tiers/state-table (HI=10000 / PP=8000 / MI / Max Reach) and DS13+DS19 substrate are continuous 2024-2026. The PP **product label** surfaced in the UI Oct-2025 but the DS13-vertical tier already existed. The only "re-qualification" that bites analysis is the **CIL score-logging onset (Jun-2025)** — which is why a clean score-level YoY (Feb-May 2025 vs 2026) is impossible (no H1-2025 score baseline). A **measurement** confound (Confound A), not scoring degradation.
+
+**(c) Could the LiveRamp DS11→DS35 switch have SHRUNK / LOWERED-QUALITY the high-intent audience?** Unlikely to be the cause of THESE advertisers' decline:
+  1. **LiveRamp is the 3P interest layer, not MM-core scoring.** DS35 is in the **3P group**; MM scoring (the high-intent household_score) is built from DS13+DS19 via site_visit_signal→IPDSC, which was unchanged. The switch changes which IPs the 3P-overlay clause matches, not how MM scores IPs.
+  2. **For these AIDs the high-intent driver is MM (DS13/DS19), not LiveRamp.** Flagship prospecting is MM/PP-gated; LiveRamp is a minor 3P clause. Caraway (gated HHST=10000, near-pure MM) declined with almost no 3P to shift.
+  3. **Direction:** DS35 (direct-IP) is the *upgrade* (fresher, 104M rows/day, dominant 3P today). The legacy device_id→IP mapping it replaced was lossier, not higher-quality.
+  → Real and platform-wide and in the window, but **not the mechanism** behind the three advertisers' decline (that's spend-driven MM-prospecting expansion, Steps 0-5). It is, however, the best literal answer to "did the data sources change mid-2025?" — **yes, the 3P LiveRamp source was replaced.**
+
+**(d) Timeline of MM data-source / scoring changes vs the mid-2025 inflection:**
+
+| Date | Change | Layer | Aligns w/ inflection? | Causal for the 3 AIDs? |
+|---|---|---|---|---|
+| ongoing 2024 | DS13+DS19 MM scoring live; HHST gates (775 advs by Jul-2024) | MM core | predates | n/a (baseline) |
+| 2024 H2 | DS19 keyword adoption ramps (additive) | MM core | predates | no (additive, quality-positive) |
+| **May–Jun 2025** | **LiveRamp DS11→DS35 cutover (device_id→IP ⇒ direct-IP)** | **3P interest** | **YES (exact window)** | **no — 3P layer, not MM-core; upgrade not downgrade; AIDs are MM-driven** |
+| **2025-06-01** | **CIL begins logging `household_score` + `advertiser_household_score`** | **logging/ETL** | **YES (exact window)** | **no — logging artifact; scoring already existed (HHST since 2024)** |
+| Oct 2025 | "Peak Performance" product label surfaces in UI (tier already existed) | product/UI | after | no (relabel) |
+| ~Apr 2026 | DS30 augmentor/bidstream added to site_visit_signal | MM input | after | no (additive, post-inflection) |
+| Apr 30 2026 | Fangorn (DS46) Alpha launch (3 advs); rollout May-Jun 2026 | MM overlay | after | no (intent-raising; AIDs barely in it) |
+
+  **Conclusion (Inv 3 / Paulo #4):** Two real platform changes land exactly in the mid-2025 window — the **LiveRamp DS11→DS35 cutover** and the **CIL score-logging onset** — which is almost certainly why the inflection *looks* like a data/scoring change. But neither degrades the high-intent MM audience: the LiveRamp switch is a 3P-layer upgrade (not MM-core, not a downgrade), and the score-NULL clue is a logging artifact (scoring predates it by a year, per HHST history). The **MM scoring substrate (DS13+DS19) and tiers were continuous** through the inflection; no MM data-source was deprecated or degraded; BUK never went live; Fangorn (intent-raising) is post-inflection and barely touches these AIDs. ⇒ Inv 3 **does not find a systemic MM data-source/scoring cause** for the July-2025-onward decline — consistent with the spend-driven-expansion verdict (Steps 0-5). The two coincident mid-2025 changes are **confounds that explain the *appearance* of a systemic break**, not its cause.
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
