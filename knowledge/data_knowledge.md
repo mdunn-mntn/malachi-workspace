@@ -1287,6 +1287,17 @@ The "audience size" shown in the UI = the size of the audience_segment for the *
   rpt_day, funnel_audience_size, total_audience_size, tmul_funnel_audience_size, tmul_total_audience_size`). The
   **stage-1 campaign** is the one whose `funnel_audience_size = total_audience_size` (no funnel narrowing); that
   value is the UI number. Deeper-funnel campaigns show a small `funnel_audience_size`. `tmul_*` = TMUL-resolved.
+  **Date floor = 2025-02-01** (the sibling `perml.stg_mmmp_audience_sizes_historical` TABLE also floors at 2025-02-01;
+  the `flight_cid_day_audience_sizes` VIEW runs to current). **No 2024 addressable-pool history exists in either** — a
+  true pre-2025 baseline of the addressable pool is unavailable here (use CIL distinct `ip` as an unscored served-supply
+  proxy back to 2024). Keyed by campaign_id (no advertiser_id) → join `bronze.integrationprod.campaigns` to get
+  advertiser_id; `funnel_level=1` filters to prospecting/stage-1. An advertiser can have multiple stage-1 campaigns incl.
+  small "TV Retargeting" ones (~3M) — the **addressable prospecting pool = MAX(total_audience_size) per day across the
+  AID's stage-1 campaigns** (picks the real prospecting campaign), then average daily across the month. **AUDI-1070 use:
+  monthly addressable-pool trend per advertiser is a valid SUPPLY-SIDE time series** — Avon's stage-1 pool (same campaign
+  259556 throughout) contracted −26% (89.0M Feb'25 → 65.6M Jun'25) into the July-2025 "performance fire," then stabilized
+  ~63-77M; HexClad's pool fell −55% across 2026 (~82M→34M). Combine with the ~5× overstatement caveat below: anchor on the
+  *relative trend* (same-campaign/same-config), not the absolute level.
 - **`dw-main-bronze.external_ddm.segment_sizes`** (segment_id, audience_size, campaign_id) — authoritative, but
   GCS-backed at `gs://mntn-data-monitoring/audience-metrics/segment-sizes/*.parquet` (needs bucket IAM; may be
   access-denied). Same numbers as the perml table.
