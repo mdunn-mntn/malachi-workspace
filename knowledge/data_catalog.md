@@ -1160,6 +1160,18 @@ See entries above.
 - `sum_by_region_by_day` — geographic daily
 - All go back to 2024-01-01.
 
+**⚠️ ATTRIBUTION-VARIANT COLUMNS — the default columns UNDERCOUNT CTV advertisers (verified AUDI-1070, Avon AID 31921, 2026-06-30):** this table carries **multiple parallel attribution variants**, not just one. The columns come in families:
+- **Default:** `views, clicks, view_conversions, click_conversions, view_order_value, click_order_value` — display last-touch only. **Excludes last-TV-touch (CTV) conversions.**
+- **`last_touch_*`:** `last_touch_views/clicks/view_conversions/click_conversions/view_order_value/click_order_value` — empirically ≈ identical to default (default IS last-touch display).
+- **`last_tv_touch_*`:** CTV-attributed conversions/revenue (the "last TV touch" Lilit named). For Avon this was **~$450K/yr revenue + ~8,800 conv** sitting OUTSIDE the default columns.
+- **`conversions_assist_*` / `visits_assist`:** multi-touch assist credit.
+- **`competing_*`:** industry_standard (first-touch) attribution variant.
+- **`probattr_*`:** probabilistic attribution.
+
+**To reconcile to the client UI / CHAPI (= what clients see), use `last_touch_* + last_tv_touch_*` combined.** Avon Jan–May 2025: default revenue $1.27M → ROAS **17.3** (too low); last-touch + last-TV-touch $1.72M → ROAS **23.5** ≈ **UI's 22.1** (within ~6% = BQ-summary vs CHAPI-ClickHouse pipeline diff). Conversions: default 23,962 vs **lt+tv 32,772 ≈ UI's implied ~30,600.** **If you report ROAS for any CTV-running advertiser off the default columns, you will understate it.** Spend & impressions DO match the UI to the dollar (deterministic); attributed revenue/conv/visits do not (pipeline difference).
+
+**SCOPE GOTCHA — the client "Performance Report - MoM" chart is PROSPECTING-ONLY:** the pink-visits/blue-spend/green-ROAS MoM chart in client reporting shows **S1 prospecting only** (`funnel_level=1`), NOT AID-wide. Proof: its monthly spend bars sum to prospecting spend (~$57K/$47K), not the AID-wide $73K/$64K. Prospecting ROAS is structurally low (~9–14×); mid-funnel S2/S3 (`funnel_level` 2/3) re-serve warm audiences at ROAS ~49–68×, so the **AID-wide UI cards blend to ~22–26×**. Join `campaign_id → bronze.integrationprod.campaigns.funnel_level` (PK is `campaign_id`, NOT `id`; table is `bronze.integrationprod.campaigns`, there is no `silver.core.campaigns`).
+
 ## silver.summarydata.sum_by_ctv_network_by_day
 - **Type:** VIEW → `sqlmesh__summarydata`
 - **Partition:** DAY on `day`
