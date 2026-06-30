@@ -388,6 +388,16 @@ Premise: assume the saturation thesis is WRONG and try to break it. Four lines o
 
 **DECK (Jan-May window):** presentation `artifacts/avon_case_deck.html` (+ standalone) uses **Jan-May 2025 vs Jan-May 2026** — 5 complete months, excludes the partial current month (June), the cleanest/least-cherry-pickable window. Jan-May YoY: spend **−12%**, impressions −16%, reach −26%, visits −16%, conversions +3%, revenue +4%, **ROAS +19%**, **conv-rate +22%**, CPM +5%, **visit-rate +0.4% (flat)**. Weekly Welch significance: only **CVR +22% (up), visits −16% (down), CPM +5% (up)** are significant; ROAS/revenue/conversions/visit-rate not significantly changed. ⇒ two stakeholder assumptions explicitly falsified for the deck: **"performance declining" = FALSE** (no outcome metric significantly down; CVR significantly up) and **"spend stayed consistent" = FALSE** (−12%). Charts `artifacts/avon_case_charts.py` → `avon_case_{1..6}_*.png`; build `artifacts/build_avon_case_deck.py`. (Budget-pacing reconciliation — ~99% to DSO cap vs ~38% of nominal — in `data_knowledge.md`.)
 
+### API vs UI vs BigQuery reconciliation (2026-06-30) — `artifacts/audi_1070_api_ui_bq_reconciliation.md`, `outputs/avon_api_ui_bq_reconciliation.csv`
+
+**Why the client UI/API numbers differ from a naive BigQuery pull — and why they tell the SAME story.** Three layers: (1) **Client UI/API = CHAPI → ClickHouse** (Lauren Gregg; `github.com/SteelHouse/chapi`, `make run`/curl, or query prod/qa); (2) **BQ rollup `sum_by_advertiser_by_day`** (last-touch-equivalent, tighter dedup — what a naive pull uses); (3) **BQ raw logs** `clickpass_log`/`conversion_log`.
+
+- **Spend & impressions** match the UI **to the dollar** (same delivery logs).
+- **UI "Total Verified Visits" = `clickpass_log` raw ROW count**, not `sum_by_advertiser` views+clicks: Avon Jan–May UI 692,888 / 598,436 ≈ clickpass `COUNT(*)` 686,963 / 591,016 (**~99%**); rollup views+clicks only 526,929 / 443,049; distinct `page_view_guid` just 252,813 / 240,267 (clickpass ≈2.7 attribution rows / page view).
+- **CHAPI runs ~1.276× the rollup** on visits/conversions/revenue/ROAS, **stable across years ⇒ cancels in YoY.** UI ROAS +19% (22.12→26.36) ≡ rollup ROAS +19% (17.33→20.68) ≡ prospecting-only +10% (9.40→10.37). **Every layer shows Avon UP.**
+- **Q (Mike): first-touch conversion table?** **No** — Lilit (Measurement): conversions use last-touch + last-TV-touch only. FT/LT lens applies to **visits**, not conversions ⇒ revenue/ROAS are last-touch in every system, both years; the FT switch does not move AID-total revenue/ROAS.
+- **Q: source tables to verify client counts?** CHAPI→ClickHouse (run locally / prod-qa); Measurement owns authoritative coredb/BQ tables. Closest BQ analogs: `clickpass_log` (visits, ~99% match), `conversion_log` + attribution join (raw is un-attributed firehose, ~6.8× attributed — Avon 171K orders / $8.7M).
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
