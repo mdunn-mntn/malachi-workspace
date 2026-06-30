@@ -287,6 +287,49 @@ Per-campaign household-score-threshold (`bronze.integrationprod.dso_household_sc
 
   **Conclusion (Inv 3 / Paulo #4):** Two real platform changes land exactly in the mid-2025 window — the **LiveRamp DS11→DS35 cutover** and the **CIL score-logging onset** — which is almost certainly why the inflection *looks* like a data/scoring change. But neither degrades the high-intent MM audience: the LiveRamp switch is a 3P-layer upgrade (not MM-core, not a downgrade), and the score-NULL clue is a logging artifact (scoring predates it by a year, per HHST history). The **MM scoring substrate (DS13+DS19) and tiers were continuous** through the inflection; no MM data-source was deprecated or degraded; BUK never went live; Fangorn (intent-raising) is post-inflection and barely touches these AIDs. ⇒ Inv 3 **does not find a systemic MM data-source/scoring cause** for the July-2025-onward decline — consistent with the spend-driven-expansion verdict (Steps 0-5). The two coincident mid-2025 changes are **confounds that explain the *appearance* of a systemic break**, not its cause.
 
+### Investigation 4 — ADVERSARIAL falsification of the saturation/expansion thesis (Paulo: "completely off") — `outputs/inv4/`
+
+Premise: assume the saturation thesis is WRONG and try to break it. Four lines of attack, all empirical.
+
+**(a) Attribution-lens artifact — the prior MISSED a live lens switch.** The prior claimed the `r2_advertiser_settings` rows were "last modified 2025-12-10 (likely a bulk migration), no field-level history exists." **There IS field-level history: `bronze.integrationprod.archives_advertiser_setting_archives`.** It shows `reporting_style` for HexClad & Avon **oscillated between `industry_standard`(FT) and `last_touch`(LT) dozens of times across 2024-2025** — not a clean migration. Resolving the *effective* value as-of each window:
+
+| AID | FebMay 2025 lens | FebMay 2026 lens |
+|---|---|---|
+| Avon 31921 | **last_touch (LT)** | **industry_standard (FT)** |
+| HexClad 34611 | **last_touch (LT)** | **industry_standard (FT)** |
+| Caraway 40341 | (created Nov-2025) | FT |
+
+⇒ **the client UI genuinely compared 2025-LT vs 2026-FT for Avon and HexClad.** FT-resolvable visit reconstruction from `clickpass_log` (model 1-3, `first_touch_ad_served_id NOT NULL`; FT-null ~62-78% HexClad/Avon, ~0% Caraway):
+
+| AID | consistent-LT YoY | consistent-FT YoY | **MIXED (client view) LT25→FT26** |
+|---|---|---|---|
+| Avon | −9.7% | −11.4% | **−62.1%** |
+| HexClad | −24.0% | −28.4% | **−78.4%** |
+| Caraway | −21.4% | −21.8% | −21.8% |
+
+  → Under a *consistent* lens (either FT or LT both years) the visit decline is **modest (~10% Avon, ~25% HexClad)**. The lens switch alone manufactures **~52pp of Avon's and ~54pp of HexClad's** apparent crash. **This RECONCILES Paulo #1 / Mike Dolt ("Avon — same spend, such a big difference in ROAS"):** Avon's LT data (mine) is healthy (+16% ROAS); Avon's FT client-UI cratered; the entire gap is the LT-2025→FT-2026 reporting switch — not performance. The prior dismissed this as only a "perceived" effect and kept a single-lens (LT-vs-LT) headline — but the *client's complaint IS the FT view*, so the headline should have been the consistent-FT / mixed comparison. Caraway is lens-immaterial (FT≈LT, fully populated FT).
+
+**(b)/(c) Conversion- and visit-tracking BREAKS — steep, non-gradual (confirms Paulo #3 & #5).** Daily scans found discontinuities at *constant impressions/spend*:
+- **HexClad — VISIT-tracking gap Mar 3-17, 2026.** Views collapse ~3,000/day → **20-70/day** while impressions hold 250-345K/day and spend holds full; conversions kept tracking (so it's a VV-pipeline break, not a pixel outage). VR 0.66% → 0.006%, snap-back Mar 18. **Verified HexClad-specific, NOT platform-wide** (platform VR stayed 0.9-1.6% throughout). Sits inside the FebMay window → craters the March monthly (ROAS 3.53) and depresses the 2026 aggregate.
+- **Caraway — CONVERSION-tracking break ~Jan 6, 2026.** Raw pixel `conversion_log` fires dropped **~2,500/day → ~800/day (−68%)** at constant impressions; MNTN-attributed conv 30-90/day → 2-15/day; revenue $20K/day → $1-3K/day; ROAS Dec 5.0 → Jan 0.6. **Advertiser-side pixel/GTM break** (raw pixel volume fell), layered on top of genuinely low VR from scaling. The prior attributed Caraway's Q1-2026 ROAS cliff entirely to saturation — that is **overstated**; a large slice is a conversion-tracking break.
+- **Avon — clean.** Zero anomalously-low days in either window; AOV rock-stable ~$50-57 across all 26 months; conv/visit stable 4-6%. No LT revenue break → confirms Avon's apparent crash is **purely** the lens switch.
+
+**(d) Does MM degrade WITHIN high intent? (Paulo #2's core fear) — YES, evidence FOR.** Score→VR join (CIL `advertiser_household_score` × clickpass visits), HexClad:
+- May 2026, **within prospecting (obj=1)**: scored_hi (AHS≥9000) **0.146%** VR vs unscored 0.046% → scoring beats unscored ~3× (the naive "unscored 1.2%" was a **retargeting confound** — obj=4 VR 1.2-1.9%; controlling for funnel position rescues "scored is better").
+- **But YoY at constant prospecting volume (~8.2M imps both years):** May-2025 prospecting was **all unscored @ 0.419% VR**; May-2026 "scored-hi" prospecting **@ 0.145%** (+ residual unscored 0.273%). ⇒ **2026's AHS-"high-intent" prospecting (0.145%) is ~3× WORSE than 2025's unscored prospecting (0.419%)** — the scoring layer did NOT protect quality; within-prospecting quality genuinely fell. Direct support for Paulo's "MM is degrading, not just expanding" (at least for HexClad).
+- Caraway gated flagship 439156 (HHST=10000, must-be-scored): VR noisy 0.12-0.61%, no clean monotone decay, but absolute VR ~0.15% is very low for "high intent."
+
+**Magnitude check (Paulo #4: "no way reach increase led to this level of decline") — Paulo is RIGHT.** Decomposing ΔVisits into reach-growth vs visits-per-user (`uniques` HLL), the **implied marginal-user visits-per-user is NEGATIVE** for both decliners (HexClad −0.039, Caraway −0.003 vs base 0.027 / 0.014). A pure-expansion model can at worst drive marginal VPU to **zero** (flat total visits); it **cannot** produce a −28% visit drop on **+19% MORE reach** (HexClad). Mathematically, **expansion alone is insufficient** — the existing-user cohort's VR also fell (the within-HI quality drop in (d)) and/or visits were lost to the tracking break in (b).
+
+**Investigation-4 verdict: the saturation/expansion thesis needs MAJOR REVISION (partial-FAIL), not survival as the sole cause.**
+- **What survives:** the *cohort-wide* spend↔VR saturation law (Step 5) is real and directionally holds; Caraway (reach +127%) has a genuine expansion component.
+- **What FAILS / was overstated:**
+  1. **Avon's "decline" is ~entirely an attribution-lens switch (LT→FT), not performance.** The prior's single-lens headline measured the wrong thing relative to the client UI (~52pp artifact).
+  2. **HexClad's magnitude is NOT explainable by expansion** (+19% reach can't yield −28% visits; negative marginal VPU). Dominant non-saturation drivers: a **HexClad-specific visit-tracking gap (Mar 3-17)** and a **genuine within-prospecting quality drop** (0.419%→0.145% at constant volume).
+  3. **Caraway's ROAS cliff is substantially a conversion-pixel break (Jan 2026)**, not pure saturation.
+  4. **MM/scoring quality DID drop within high intent YoY** for HexClad prospecting — contradicting the prior's "scored users remain ~max quality, just fewer of them." The scored-hi pool itself got worse.
+- **Better explanation (composite stack):** (i) an **attribution-lens switch** dominating Avon and inflating HexClad's client view; (ii) **advertiser-specific tracking breaks** (HexClad VV gap, Caraway conversion-pixel break); (iii) a real **within-high-intent quality drop** in scored prospecting (Paulo's MM-degradation concern, ≥HexClad); and (iv) genuine **spend-driven expansion** (strongest for Caraway). Saturation is ONE slice, not THE answer.
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
