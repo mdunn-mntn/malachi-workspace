@@ -330,6 +330,56 @@ Premise: assume the saturation thesis is WRONG and try to break it. Four lines o
   4. **MM/scoring quality DID drop within high intent YoY** for HexClad prospecting — contradicting the prior's "scored users remain ~max quality, just fewer of them." The scored-hi pool itself got worse.
 - **Better explanation (composite stack):** (i) an **attribution-lens switch** dominating Avon and inflating HexClad's client view; (ii) **advertiser-specific tracking breaks** (HexClad VV gap, Caraway conversion-pixel break); (iii) a real **within-high-intent quality drop** in scored prospecting (Paulo's MM-degradation concern, ≥HexClad); and (iv) genuine **spend-driven expansion** (strongest for Caraway). Saturation is ONE slice, not THE answer.
 
+### CASE BUILD — AVON (31921), raw counts → YoY → rates → campaigns → audiences (2026-06-30)
+
+**Purpose:** rebuild the Avon case from the ground up — RAW counts first, then rates — to settle "do we even see a YoY decline?" in the requested range **Jan-2025 → current**. Lens = last-touch (`sum_by_advertiser_by_day` headline). Files: `outputs/avon_case_raw_counts_monthly.csv`, `avon_case_campaigns_h1_yoy.csv`, `avon_case_audience_construction.csv`; queries `queries/audi_1070_case_avon_{raw_counts,campaigns,audience}.sql`. Defs LOCKED empirically: visits=views+clicks, conv=view+click, rev=view+click order_value, spend=media+platform+data, reach=`HLL_COUNT.MERGE(uniques)`; `raw_visits/raw_conversions`=un-attributed firehose (50-100×), not used. `max(day)=2026-06-30` (rollup fresh).
+
+**(1) RAW COUNTS — in-range YoY = H1-2025 (Jan-Jun) vs H1-2026 (Jan-Jun), both inside the window, same calendar months:**
+
+| Raw count | H1-2025 | H1-2026 | Δ |
+|---|---:|---:|---:|
+| Spend | $96,240 | $90,739 | **−5.7% (flat)** |
+| Impressions | 8,122,004 | 7,300,350 | **−10.1%** |
+| Reach (unique users) | 3,263,773 | 2,410,972 | **−26.1%** |
+| Visits | 660,531 | 570,262 | **−13.7%** |
+| Conversions | 30,944 | 32,547 | **+5.2%** |
+| Revenue | $1,630,007 | $1,735,506 | **+6.5%** |
+
+→ **The answer to "is there a YoY decline?" is metric-dependent and that IS the headline.** Volume fell (visits −14%, impr −10%, reach −26%); **money rose** (conversions +5%, revenue +7%) at flat spend. Avon "declined" *only* on visits/reach — never on the metrics that pay the advertiser.
+
+**(2) RATES / PERFORMANCE (H1-2025 → H1-2026):**
+
+| Rate | H1-2025 | H1-2026 | Δ |
+|---|---:|---:|---:|
+| IVR (visits/impr) | 8.13% | 7.81% | **−3.9%** |
+| CVR (conv/visit) | 4.69% | 5.71% | **+21.8%** |
+| ROAS (rev/spend) | 16.94× | 19.13× | **+12.9%** |
+| CPM | $11.85 | $12.43 | +4.9% |
+| AOV | $52.68 | $53.32 | +1.2% |
+| Frequency (impr/user) | 2.49 | 3.03 | +21.7% |
+| Visits/user | 0.202 | 0.237 | **+16.9%** |
+
+→ **Mechanism = CONTRACTION, the inverse of HexClad/Caraway expansion.** Avon reached 26% *fewer* unique users at +22% higher frequency and got +17% *more* visits per user. The −14% visit drop is a volume effect (−10% impr × −4% IVR), not a quality collapse — and the smaller, concentrated buy converted far better (CVR +22%), lifting revenue and ROAS.
+
+**(3) The decline narrative lives in the WRONG window — 2024→2025, not 2025→2026.** H1-2024→H1-2025 Avon SCALED: spend $56,113→$96,240 (**+71%**), impr 3.50M→8.12M (**+132%**), reach 1.34M→3.26M (**+144%**), visits 460k→661k (+44%) — the window where ROAS/VR dipped (saturation). The requested range (2025→2026) is Avon pulling back and recovering. This is why Paulo/Mike see a decline the 2025→2026 table doesn't: they're on the 2024→2025 window and/or the FT client-UI lens. (Confirms Inv-1/Inv-3 + Inv-4(a) lens-switch.)
+
+**(4) CAMPAIGNS — small, STABLE, near-total YoY overlap (the clean-control structure;** full list `avon_case_campaigns_h1_yoy.csv`). 11 campaigns delivered in H1-25/26; the rest are dead 2024 launches. One CTV prospecting campaign dominates, the rest are retargeting/multi-touch:
+
+| campaign | role | imps 25→26 | spend 25→26 | rev 25→26 | ROAS 25→26 |
+|---|---|---|---|---|---|
+| 259556 Beeswax TV Prospecting | prospecting (obj1/fl1/CTV) | 3.15M→2.51M (−20%) | $64.3k→$56.4k | $556k→$519k | 8.65×→9.21× |
+| 259561 TV Retgt MT-Cart | retarget (fl3) | 0.66M→0.81M | $2.6k→$3.5k | $322k→$317k | ~122×→89× |
+| 392281/392282 TV Retgt 5+PV/Cart | retarget | grew | grew | $118k→$201k / $110k→$170k | rose |
+
+→ Avon ran the **same flagship prospecting campaign both years and it CONTRACTED** (−20% impr) with its ROAS *rising* (8.65→9.21×). Blended 17-19× ROAS comes from cheap, very-high-ROAS retargeting. **No new mega-prospecting campaign** — opposite of Caraway (new 19M-imp camp) / HexClad (new 28M-imp camp). For Avon, mix-shift vs within-campaign IS separable, and the verdict is: no expansion.
+
+**(5) AUDIENCE CONSTRUCTION — pure, stable MNTN Matched; no targeting change to blame** (`avon_case_audience_construction.csv`; DS labels via `bronze.integrationprod.audience_data_sources`):
+- **Prospecting 259556 = MNTN Matched vertical.** INCLUDE **DS13 MNTN Vertical Categorization** (beauty/CPG, cat 126000) + **DS14 MNTN Global Data**; EXCLUDE **DS2 MNTN First Party** + **DS4 CRM** + **DS16 MNTN Taxonomy** (customer-suppression hygiene). **No DS35 LiveRamp, no DS46 Fangorn, no keyword** in current config — pure MM high-intent vertical.
+- **Retargeting/MT (259560/61/62/63, 392281/82)** = **DS2 MNTN First Party** + custom segment **DS70968 "31921 - Prospecting Campaign"**, CRM-suppressed. **330397** adds **DS9 MNTN Campaigns** (prior-exposure) + RTC score + the 10% holdout (`md5 '31921:' buckets 0-99`).
+- Config **identical across years** → no data-source/targeting-logic change explains any perceived Avon decline (corroborates Step 2).
+
+**CASE VERDICT (Avon, 2025→2026, requested window): No performance decline.** Visits/reach are down because Avon *contracted* spend-pressure (fewer users, higher frequency), but conversions, revenue, and ROAS all rose and per-user engagement improved — on a stable, pure-MM audience and a stable campaign set. Any "Avon is declining" claim sources to (a) the 2024→2025 window (Avon scaled +71% and dipped = saturation, not degradation) or (b) the first-touch client-UI lens. Avon is the clean control: MM quality held/improved when spend wasn't pushed — direct evidence *against* "general MM degradation over time."
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
