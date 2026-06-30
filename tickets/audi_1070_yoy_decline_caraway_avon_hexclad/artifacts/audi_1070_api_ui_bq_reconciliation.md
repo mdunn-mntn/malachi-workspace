@@ -67,6 +67,23 @@ The level gap is the CHAPI attribution breadth (counts every attributed touch); 
 
 ---
 
+## Section 3 — BigQuery tables used
+
+**Reconciliation core (the UI-vs-BQ comparison):**
+| Table | Grain / role | Attribution | What we pull |
+|---|---|---|---|
+| `silver.summarydata.sum_by_advertiser_by_day` | AID-daily rollup ("naive pull" layer) | last-touch-equiv | spend, impressions, reach (`uniques` HLL), visits (`views+clicks`), conversions, revenue, ROAS |
+| `silver.logdata.clickpass_log` | 1 row per attributed visit-touch | `ad_served_id` (LT) + `first_touch_ad_served_id` (FT) | verified-visit count — reproduces UI "Total Verified Visits" ~99% |
+| `silver.logdata.conversion_log` | all site orders (firehose) | un-attributed raw | `order_amt` revenue — attribution-join before comparing |
+
+**Supporting the broader Avon case:**
+- Performance (other grains): `silver.summarydata.sum_by_campaign_by_day` (prospecting/retargeting split, history to 2024-01), `silver.summarydata.sum_by_campaign_group_by_day`
+- Delivery/scoring: `silver.logdata.cost_impression_log` (CIL — impression-level delivery + served scores)
+- Dims/config (`bronze.integrationprod`): `campaigns` (funnel_level/objective_id), `campaign_groups` (product_id), `archives_campaign_archives`, `archives_audience_segment_archives` (DS13→DS19+RTC targeting history), `dso_campaign_group_daily_budgets`, `dso_campaign_group_flight_budgets`; `archives_advertiser_setting_archives` (reporting_style FT/LT history)
+- Audience sizing: `silver.perml.flight_cid_day_audience_sizes` (HI/PP pool sizes over time)
+
+**Key caveat:** the client never sees any of these — client numbers come from **CHAPI → ClickHouse**. These BQ tables verify/triangulate the UI: `clickpass_log` ≈ UI visits (99%); `sum_by_advertiser_by_day` reproduces the YoY direction but at ~0.78× the UI level.
+
 ## Methodology / reproducibility
 - Queries run live against `dw-main-silver` (clickpass row counts; conversion_log raw). Data: `outputs/avon_api_ui_bq_reconciliation.csv`.
 - clickpass_log: `COUNT(*)` where `advertiser_id = 31921` and `DATE(time)` in each Jan–May window. Note `views`/`clicks` columns are both populated on every row (not a clean view/click split) — use row count for the visit total.
