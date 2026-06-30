@@ -6,6 +6,7 @@ DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
 YOY = b64("audi_1070_avon_yoy_no_change.png")
 CURVE = b64("audi_1070_avon_roas_vs_spend.png")
+WATERFALL = b64("audi_1070_avon_visits_waterfall.png")
 
 # YoY comparison (Jan-May, consistent last-touch). (metric, 2025, 2026, yoy, sig, kind)
 # kind: vol=volume(down ok), good=outcome/rate(flat-up), cost=neutral
@@ -84,6 +85,12 @@ __ROWS__
 </section>
 
 <section>
+<h2>So why are <span class="red">raw visits down −16%</span>? Spend + CPM — not quality</h2>
+<img src="__WATERFALL__">
+<p class="note">Visits = (Spend ÷ CPM) × Visit rate. The −16% is fully accounted for: −65,695 from −12.5% spend, −20,054 from +4.5% CPM, +1,544 from a flat visit rate. We bought less inventory at a higher price — targeting quality (visit rate) did not change.</p>
+</section>
+
+<section>
 <h2>Claim 2: "Spend stayed consistent" — <span class="red">FALSE</span></h2>
 <div style="text-align:left;display:inline-block;margin-top:0.3em;">
 <ul class="tight">
@@ -115,6 +122,6 @@ __ROWS__
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1100,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML = HTML.replace("__ROWS__", trows).replace("__YOY__", YOY).replace("__CURVE__", CURVE)
+HTML = HTML.replace("__ROWS__", trows).replace("__YOY__", YOY).replace("__CURVE__", CURVE).replace("__WATERFALL__", WATERFALL)
 (DIR / "audi_1070_avon_deck.html").write_text(HTML)
-print(f"wrote corrected Avon deck ({len(HTML)//1024} KB, 7 slides)")
+print(f"wrote corrected Avon deck ({len(HTML)//1024} KB, 8 slides)")
