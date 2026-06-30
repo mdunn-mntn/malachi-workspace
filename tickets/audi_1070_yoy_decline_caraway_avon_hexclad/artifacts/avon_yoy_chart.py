@@ -30,8 +30,8 @@ w["ROAS"] = w.rev / w.spend
 w["VR"] = w.visits / w.imps * 100
 w["CVR"] = np.where(w.visits > 0, w.conv / w.visits * 100, np.nan)
 w["AOV"] = np.where(w.conv > 0, w.rev / w.conv, np.nan)
-# Feb-May window each year
-fm = w[w.mo.between(2, 5)]
+# Jan-May window each year (matches client's "Jan 01 - May 31" chart)
+fm = w[w.mo.between(1, 5)]
 a, b = fm[fm.yr == 2025], fm[fm.yr == 2026]
 
 def stars(p): return "ns" if p >= 0.05 else ("*" if p >= .01 else "**")
@@ -64,10 +64,10 @@ def panel(ax, metrics, title):
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5.2))
 panel(ax1, raw_m, "Raw counts — volume tracks spend, outcomes flat")
 panel(ax2, rate_m, "Performance rates — flat to up, none significantly down")
-fig.suptitle("Avon YoY (Feb–May 2026 vs 2025): no significant performance decline",
+fig.suptitle("Avon YoY (Jan–May 2026 vs 2025): no significant performance decline",
              fontsize=15, fontweight="bold", x=0.02, ha="left")
 fig.text(0.02, 0.925, "Consistent last-touch lens (both years). 'ns' = not significant (Welch t-test on weekly values). "
-                      "Spend −14% drags volume; revenue/conversions held and efficiency rose.",
+                      "Volume tracks the lower spend; revenue, conversions and every rate held.",
          color="#666", fontsize=9.5, ha="left")
 fig.text(0.02, 0.01, "Note: the client UI's larger Avon 'decline' is the 2025 last-touch to 2026 first-touch reporting switch, "
                      "not a performance change.", color=RED, fontsize=9, ha="left")

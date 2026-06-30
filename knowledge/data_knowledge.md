@@ -3456,3 +3456,15 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY create_time DESC)=1
 ... WHERE create_time <= 'YYYY-MM-DD' ... ROW_NUMBER() OVER (ORDER BY create_time DESC)=1
 ```
 Note: the campaign **dimension** archive `archives_campaign_archives` (name/objective/funnel_level) appears fine under `ORDER BY version DESC` in practice, but the **audience_segment** archive is the one that bites — when in doubt, order both by `create_time`. The earlier AUDI-1070 finding "Avon flagship audience is pure stable DS13, no DS19, unchanged across years" was an artifact of this trap; the corrected reading shows DS13→DS19 (MNTN Matched) added 2024-10-17 and RTC conquest scoring turned on 2025-09-29.
+
+## Avon / DSO budget pacing — "% to cap" vs "% of nominal" reconciliation (AUDI-1070, 2026-06-30)
+
+The Tableau **Over/Under Spend Monitoring → Daily Pacing Report**, column **"CGID Daily % to Cap"** = daily **media_cost ÷ DSO daily budget cap**, at campaign-group grain (Tofer, 2026-06-30).
+- **DSO daily cap** = `bronze.integrationprod.dso_campaign_group_daily_budgets.budget`, latest per CG by `update_time`. **This table retains only the CURRENT row** (rewritten ~daily) — no reliable historical daily-cap; for history use `dso_campaign_group_flight_budgets` / `core_flights`.
+- **Numerator** = `summarydata.sum_by_campaign_group_by_day.media_cost` (NOT media_spend; "% to cap" is in media-cost terms).
+- **Active CGs only.** Paused groups keep a stale tiny daily cap ($8–38) with **0 delivery**; summing them into the denominator drags the ratio into the "40–60%" range — likely the cause of a wrong manual calc.
+
+**The 99% vs ~40% reconciliation (both are true, different denominators):** for `dso_manage_budget=TRUE` groups DSO auto-sets the operative budget **well below nominal**. Avon (2026-06):
+- CG **69271 "CTV Prospecting 2026"**: nominal `campaign_groups.budget` **$20,455** → DSO flight budget **$7,747 (38% of nominal)**, daily cap **$263**; spent ~$7,791 = **~100% of DSO budget, ~38% of nominal**.
+- CG **69273 "CTV Retargeting 2026"**: nominal **$6,818** → DSO flight **$2,711 (40%)**, daily cap **$91**; spent ~$2,723 = **~100% of DSO, ~40% of nominal**.
+⇒ "Avon is hitting budget" (≈99% to DSO cap) and "Avon delivers ~40% of budget" (% of nominal) are the SAME fact at two denominators. DSO throttles the operative budget to ~38–40% of nominal (deliverability/efficiency-constrained) and Avon then fills ~100% of that. Query: `tickets/audi_1070_.../queries/audi_1070_avon_budget_pacing.sql`.
