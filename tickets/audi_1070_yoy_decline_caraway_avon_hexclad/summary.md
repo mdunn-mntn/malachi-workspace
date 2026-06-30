@@ -104,6 +104,16 @@ _(updated as work progresses)_
 - **Nuance — worse than growth-peers:** Caraway/HexClad VR fell more than the median advertiser at their spend-growth level (Caraway ×0.34 vs peer ×0.90; HexClad ×0.62 vs ×1.03). ⇒ part of their decline is *how* they scaled (concentrated mega-prospecting — Step 1) and possibly cookware-vertical headwinds → **advertiser-specific, still not systemic MM**.
 - **Separate cohort-wide ROAS decline:** ROAS fell for ALL deciles incl. flat-spend (×0.57) — a market/macro/seasonal (and possibly LT→FT-migration) effect on everyone, distinct from the spend-driven VR/saturation component and not MM-specific. Disentangling fully needs an attribution-consistent revenue series.
 
+### Step 2 — Targeting config / data-source change (`outputs/q2_audience_config.csv`) — answers Q3/Q4
+- Per-campaign expression classification (latest version, `archives_audience_segment_archives`), by era:
+  - **HexClad:** 2026 campaigns use **zero DS46/Fangorn** — no targeting-engine swap; still DS13/DS19 MM, some Peak Performance. The expansion is **new mega-prospecting campaigns** on the same logic (446801 = 28M imps @0.16% VR).
+  - **Caraway:** added a little **Fangorn (DS46 on 2/11 new campaigns)** — Fangorn is designed to *raise* intent (PP +36% lift), so it can't explain a decline. Still MM/PP otherwise.
+  - **Avon:** all campaigns "both" (unchanged config across years) — stable, consistent with no decline.
+- ⇒ **No targeting-logic or data-source change explains the decline.** High-intent/Peak-Performance targeting was not abandoned; the advertisers scaled budget into the **same MM logic** via new broad-prospecting campaigns. (Expression-flag detail is a supporting proxy; the delivery-level score evidence in Step 3 corroborates.)
+
+### Deliverable: technical deck
+`artifacts/audi_1070_presentation_deck.html` (+ `_standalone.html`) — claim→evidence RevealJS deck answering all 5 of Kaila's investigation areas. Build: `artifacts/build_deck.py` (embeds the 3 charts). **Note:** contains named advertisers + revenue — do NOT post to a public gist; share via direct file / expiring host / internal channel.
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
