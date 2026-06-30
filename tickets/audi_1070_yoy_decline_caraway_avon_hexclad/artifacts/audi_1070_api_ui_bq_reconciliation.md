@@ -103,6 +103,16 @@ The UI is **CHAPI's live attribution engine** (querying ClickHouse). Our BQ figu
 
 **Three facts:** (1) spend & impressions are identical — the disagreement is purely in **attribution**, not delivery. (2) CHAPI attributes ~1.2-1.3× more outcomes than the rollup default columns (visits scale a bit more than conversions). (3) **The multiplier is stable across years ⇒ it cancels in YoY:** UI prospecting ROAS +10.3% (9.40→10.37) ≈ BQ +8.5% (7.92→8.59); UI account +19.2% ≈ BQ +19.3%. The level is a CHAPI-vs-rollup artifact; the trend is identical and UP in both. Data: `outputs/avon_prospecting_card_reconciliation.csv`.
 
+**⚠️ DECISIVE — the "CTV knob" (default + last_tv_touch → 23.5 ≈ UI 22.1) is a DOUBLE-COUNT (account-level proof, 2026-06-30):**
+| Account conversions | 2025 | 2026 | | revenue 2025 | ROAS |
+|---|---|---|---|---|---|
+| default (views+clicks) | 23,962 | 24,615 | | $1,266,627 | 17.33 |
+| last_touch_* | 23,961 | 24,616 | | ≈default | 17.33 |
+| last_tv_touch_* (SUBSET, already inside default) | 8,810 | 7,771 | | $450,073 | — |
+| default + last_tv_touch (DOUBLE-COUNT) | 32,772 | 32,386 | | $1,716,700 | 23.49 |
+
+`default` ≡ `last_touch` (23,962 ≈ 23,961) = the full last-touch count. `last_tv_touch` (8,810) is the **CTV subset already inside default**, = the prospecting number exactly. **Clincher:** prospecting is 100% CTV ("Beeswax **Television**") and shows **8,810 conversions in the default columns** — if default excluded CTV it would be ~0. ⇒ default already includes CTV; adding `last_tv_touch` re-adds the prospecting $450K. The 23.49 ≈ UI 22.12 match is the double-counted ~$450K coincidentally ≈ the real CHAPI uplift (~1.276×). **Do NOT use `default + last_tv_touch` to reconcile — it overstates CTV advertisers.** The real 17.3→22.1 gap is the CHAPI engine (separate pipeline, ~1.276× broader attribution), not a recoverable BQ column.
+
 **⚠️ Mechanism caveat — you CANNOT cleanly rebuild the UI level from these columns (verified 2026-06-30).** `sum_by_*` carries parallel attribution-variant column families (`default`/`last_touch_*`/`last_tv_touch_*`/`competing_*`(FT)/`*_assist`/`probattr_*`). For Avon (all-CTV: "Beeswax Television"), the default, `last_touch_*`, AND `last_tv_touch_*` columns are the **same conversions three times** (prospecting 8,810 ≈ 8,809 ≈ 8,810): they are parallel *labels*, not additive *buckets*. So **`last_touch_* + last_tv_touch_*` DOUBLE-COUNTS** for CTV advertisers (prospecting → 17,619 conv / ROAS 15.84, which overshoots the UI's 9.40). The UI's number sits *between* default (7.92) and 2×default and matches no single column or clean sum ⇒ it is CHAPI's own engine. **Defensible conclusion:** spend/impressions reconcile exactly; attributed visits/conv/rev are ~1.2-1.3× the default columns but the exact level needs CHAPI itself (Lauren: run locally / query ClickHouse, don't rebuild in BQ); the YoY direction is UP across *every* variant, which is what the case rests on. *(NB: a parallel chat's `knowledge/data_catalog.md` note proposes `last_touch + last_tv_touch` to match the UI — at the account level it lands near 22.1 by coincidence, but it double-counts; flagged for reconciliation.)*
 
 ## Section 3 — BigQuery tables used
