@@ -67,6 +67,42 @@ The level gap is the CHAPI attribution breadth (counts every attributed touch); 
 
 ---
 
+## Section 4 — "The chart doesn't show positive ROAS" — scope + statistic, not an API bug
+
+**The MoM chart is the PROSPECTING campaign group; the UI summary cards are the WHOLE account.** Same data source (CHAPI) — the chart just has a prospecting filter on it. Proven two ways:
+- Chart blue spend bars match the prospecting-group spend **to the dollar**, monthly: Jan $6.4k/$6,375 · Feb $13.8k/$13,845 · Mar $14.5k/$14,542 · Apr $7.3k/$7,308 · May $14.8k/$14,765. Group total $56,833 = Mike's prospecting card $56,833.
+- Account spend ($73,077 / $63,966) matches the UI cards to the dollar.
+
+Avon campaign map (AID 31921): prospecting group = `259556` Beeswax TV Prospecting (S1, obj 1) + Multi-Touch follow-ups `259558/259559/330396/330397` (S2/S3, obj 5/6) + Ego `259557`. Retargeting = obj 4 (`259560-563`, `392281/82`).
+
+**The account split (last-touch BQ rollup; CHAPI scales by a constant ~1.2-1.28×):**
+| Scope | Spend 25 | Rev 25 | ROAS 25 | Spend 26 | Rev 26 | ROAS 26 | ROAS YoY |
+|---|---|---|---|---|---|---|---|
+| Prospecting (chart) | $56,833 | $450,073 | **7.92** | $46,614 | $400,516 | **8.59** | **+8.5%** |
+| Retargeting (hidden) | $16,244 | $816,554 | **50.27** | $17,352 | $922,128 | **53.14** | +5.7% |
+| Account total (cards) | $73,077 | $1,266,627 | **17.33** | $63,966 | $1,322,644 | **20.68** | **+19.3%** |
+| Account, CHAPI/UI level | | | **22.12** | | | **26.36** | **+19.2%** |
+| Prospecting, CHAPI/UI level | | | 9.40 | | | 10.37 | +10% |
+
+**Why prospecting ROAS (~8-10) ≪ account ROAS (17-26):** retargeting spends 22% of budget but earns **64% of all revenue** at **50× ROAS** — the chart cuts it out. Last-touch credits retargeting (warm, about-to-buy users) heavily.
+
+**Why the chart "looks flat/down YoY":** Mike's 8.94→8.74 is the **mean of monthly ROAS ratios** — a broken statistic that weights a $7k month = a $15k month, and 2025's average is propped up by two low-spend ROAS spikes (Apr 16.05, Jul 16.81 on ~$7k). The **correct** ROAS (total rev ÷ total spend, pooled) is UP in both scopes: prospecting +8.5% (CHAPI +10%), account +19%. **Every scope, every correct method, is UP.** Data: `outputs/avon_prospecting_vs_retargeting_split.csv`.
+
+## Section 5 — WHY the UI level ≠ the BQ level (per-metric, prospecting grain)
+
+The UI is **CHAPI's live attribution engine** (querying ClickHouse). Our BQ figures are the **`sum_by_*` rollup** — a separate, more conservative downstream re-aggregation. They agree *exactly* on what was bought, but CHAPI attributes MORE outcomes to the ads.
+
+| Prospecting metric | UI 25 | BQ 25 | UI÷BQ | UI 26 | BQ 26 | UI÷BQ | Why they differ |
+|---|---|---|---|---|---|---|---|
+| Spend | 56,833 | 56,833 | 1.00 | 46,614 | 46,614 | 1.00 | same delivery log (not attributed) |
+| Impressions | 4,479,077 | 4,479,077 | 1.00 | 3,344,501 | 3,344,501 | 1.00 | same delivery log |
+| Verified Visits | 272,218 | 211,970 | 1.28 | 187,200 | 140,722 | 1.33 | UI counts full clickpass multi-touch firehose; rollup dedups tighter |
+| Conversions | 10,475 | 8,810 | 1.19 | 9,396 | 7,771 | 1.21 | CHAPI last-touch engine credits more orders (broader/longer lookback) than rollup |
+| Order Value | 534,230 | 450,073 | 1.19 | 483,387 | 400,516 | 1.21 | tracks conversions |
+| ROAS | 9.40 | 7.92 | 1.19 | 10.37 | 8.59 | 1.21 | same spend ÷ ~1.2× revenue |
+
+**Three facts:** (1) spend & impressions are identical — the disagreement is purely in **attribution**, not delivery. (2) CHAPI attributes ~1.2-1.3× more outcomes than the rollup (visits scale a bit more than conversions because visits use the full multi-touch firehose, conversions are deduped). (3) **The multiplier is stable across years ⇒ it cancels in YoY:** UI prospecting ROAS +10.3% (9.40→10.37) ≈ BQ +8.5% (7.92→8.59); UI account +19.2% ≈ BQ +19.3%. The level is a CHAPI-vs-rollup artifact; the trend is identical and UP in both. Exact lookback/dedup params need CHAPI itself to confirm (Lauren: run locally / query ClickHouse, don't rebuild in BQ). Data: `outputs/avon_prospecting_card_reconciliation.csv`.
+
 ## Section 3 — BigQuery tables used
 
 **Reconciliation core (the UI-vs-BQ comparison):**
