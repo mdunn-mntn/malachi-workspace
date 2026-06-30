@@ -90,8 +90,47 @@ _(updated as work progresses)_
 
 **Preliminary verdict (Steps 0-1, 3):** the decline is **diminishing returns from prospecting/audience expansion** — reaching more, lower-intent users as spend scaled — **not** degradation of MNTN Matched. Avon (flat spend) is the clean control showing no decline; the score-level scored-fraction drop corroborates; the FT lens + likely Dec-2025 LT→FT switch amplify/distort the *client's* view. Remaining steps rule out platform-date synchronization (Step 4) and cohort-abnormality (Step 5 — the definitive falsification of "systemic MM degradation").
 
-## 5. Solution
-_pending — see preliminary verdict above_
+### Step 4 — 18-month timeline (`outputs/q4_monthly_timeline.csv`)
+- **Within each advertiser, VR moves inversely with spend/reach over time** (saturation signature; timing is advertiser-specific):
+  - HexClad VR **recovered** 0.73%→1.80% when it *cut* spend in early-mid 2025, then fell again (0.48–0.70%) when it re-scaled late 2025/2026.
+  - Caraway VR declined monotonically 0.53%→0.10% as reach expanded 0.4M→5.0M (Feb 2025→Jan 2026).
+  - Avon VR stayed high (5–13%) on bounded reach (never scaled).
+- **Decline tracks each advertiser's own spend ramp, NOT a platform date** — no synchronized step at PP launch (Oct 6 2025), Max-Reach-off (Nov 19 2025), or Fangorn (Apr 30 2026; these AIDs aren't in that rollout). ⇒ rules out a platform-synchronized systemic cause.
+
+### Step 5 — Cohort falsification (`artifacts/cohort_analysis.py`, n=294 advertisers)
+- **The saturation law holds across the whole cohort.** Median YoY VR ratio by spend-growth decile is monotonic: advertisers who **shrank** spend saw VR **rise** (decile 0: ×1.49); those who **grew 4×** saw VR **fall** (decile 9: ×0.90). `imp_growth` vs VR_ratio Spearman = **−0.465**.
+- **Systemic MM degradation FALSIFIED:** flat-spend advertisers (0.8–1.25×, n=89) saw **VR rise ×1.26** — if MM were degrading as a system, their VR would fall too. VR decline is specific to spend-growers (×0.95).
+- **The 3 AIDs are aggressive scalers at the severe end:** Caraway spend ×2.19 (90th pctile growth) → VR ×0.34 (4th pctile); HexClad ×1.38 (72nd) → VR ×0.62 (15th); Avon ×0.86 (flat) → VR ×0.97, ROAS ×1.16 (improved, 80th pctile — healthy).
+- **Nuance — worse than growth-peers:** Caraway/HexClad VR fell more than the median advertiser at their spend-growth level (Caraway ×0.34 vs peer ×0.90; HexClad ×0.62 vs ×1.03). ⇒ part of their decline is *how* they scaled (concentrated mega-prospecting — Step 1) and possibly cookware-vertical headwinds → **advertiser-specific, still not systemic MM**.
+- **Separate cohort-wide ROAS decline:** ROAS fell for ALL deciles incl. flat-spend (×0.57) — a market/macro/seasonal (and possibly LT→FT-migration) effect on everyone, distinct from the spend-driven VR/saturation component and not MM-specific. Disentangling fully needs an attribution-consistent revenue series.
+
+## 5. Solution / Verdict
+
+**The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
+
+Evidence chain (each step motivates the next):
+1. Decline magnitude scales monotonically with spend growth; flat-spend **Avon's ROAS rose +16%** (control). [Step 0]
+2. Mechanism = **audience expansion**: reached +19% / +127% more unique users at *flat frequency*; incremental users far lower-intent (visits/user −38% / −68%); growing share of impressions to **unscored** inventory. [Steps 1, 3]
+3. Within each advertiser VR moves inversely with spend over time; **HexClad's VR recovered when it cut spend.** [Step 4]
+4. Cohort-wide, **flat-spend advertisers' VR ROSE (×1.26)**; only spend-growers declined → systemic MM degradation falsified. [Step 5]
+
+Per-AID:
+- **Caraway** — most severe; spend ×2.2 into a single 19M-impression prospecting campaign at 0.15% VR; classic over-scaling, worse than growth-peers.
+- **HexClad** — scaled ×1.4 into mega-prospecting (28M-imp campaign at 0.16% VR); real but milder. **FT lens + likely Dec-2025 LT→FT switch make the client UI look catastrophic (ROAS <1x) vs the consistent-LT reality (~8x).**
+- **Avon** — healthy control: flat spend, ROAS improved, VR flat.
+
+Recommendations:
+1. **Treat as prospecting pacing/saturation, not "fix MM":** right-size prospecting budgets to the addressable high-intent pool; marginal scaled impressions are near-zero-VR.
+2. **Hold attribution constant in any client YoY** (FT-2026 vs FT-2025) and confirm the Dec-2025 reporting-migration date with Prod Ops — part of HexClad's *perceived* collapse is the LT→FT switch, not performance.
+3. **Separate the macro/cohort-wide ROAS decline** from advertiser action — it affects everyone and isn't MM.
+4. (Optional) incrementality/holdout read — a falling *attributed* VR may overstate value loss (TI-835); the truly-incremental question is separate.
+
+## 6. Questions Answered
+- **Q: Is MNTN Matched degrading over time (common root cause)?** A: No. The decline is spend-driven saturation/expansion, advertiser-specific in scale; cohort flat-spend VR rose. Common *pattern* = aggressive prospecting scaling, not a common MM fault.
+- **Q: Is the visit decline a rate or raw drop?** A: Both — for HexClad/Caraway raw visits fell despite +17%/+107% more impressions, because VR collapsed faster (expansion into lower-intent users).
+- **Q: Does attribution (FT vs LT) drive it?** A: It amplifies the *client's* view (industry_standard = FT) and a likely Dec-2025 LT→FT switch may distort their YoY, but the decline is real under a consistent LT lens; root cause is attribution-independent.
+- **Q: Audience quality / targeting-logic change?** A: No config/scoring-engine relabeling needed to explain it; scored users remain ~max quality, there are just proportionally fewer as delivery expands into unscored inventory.
+- **Q: Diminishing returns from spend?** A: Yes — the central mechanism, confirmed cohort-wide.
 
 ## 6. Questions Answered
 _pending_
