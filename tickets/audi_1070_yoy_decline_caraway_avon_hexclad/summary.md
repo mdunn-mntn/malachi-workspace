@@ -46,11 +46,41 @@ Falsification-first diagnostic (attributed metrics only; full plan in `/Users/ma
 
 _(updated as work progresses)_
 
-### Step 0 — Lens reconcile & chart→AID mapping
-- _pending — see `queries/q0_lens_reconcile.sql`, `outputs/`_
+### Step 0 — Lens reconcile, chart→AID mapping, YoY headline (`outputs/q0_*.csv`)
+- **AIDs confirmed primary/complete:** HexClad 34611 ($4.72M '25-'26), Caraway Home 40341 ($2.20M), Avon 31921 ($283k). Only stray match = tiny $24k Avon geo-campaign (ignored).
+- **Chart→AID:** the two "HexClad" charts are **HexClad 34611 under FT vs LT attribution** (Kaila confirmed). No direct Avon screenshot. Chart spend ≈ a subset/scope of the AID total (not exactly media-only); analysis uses authoritative AID-level data regardless.
+- **Attribution config (Confound A):** all three `reporting_style = industry_standard` (last-touch-based, NOT first-touch), stable → internal decline is **not** a lens-change artifact. Page-view lookback: HexClad/Caraway **90d**, Avon 30d. conversion_lookback NULL (default).
+- **YoY Feb–May (common window) — the central result:**
+
+| AID | media/total spend Δ | impr Δ | visits Δ | **VR Δ** | **ROAS Δ** | rev Δ |
+|---|---|---|---|---|---|---|
+| Avon 31921 (flat) | −20% / −14% | −19% | −21% | **−2.8% (flat)** | **+16% (16.83→19.50)** | flat |
+| HexClad 34611 (scaled) | +28% / +38% | +17% | −27% | **−38% (0.942→0.587)** | **−44% (14.46→8.08)** | −23% |
+| Caraway 40341 (scaled) | +108% / +119% | +107% | −29% | **−66% (0.465→0.160)** | **−66% (4.34→1.47)** | −26% |
+
+  → **Decline magnitude scales monotonically with spend growth; flat-spend Avon did not decline (ROAS rose).** Step-4 kill-condition for "MM degraded" fires in Step 0.
+
+### Step 1 — Waterfall + within/between (Simpson) + reach/frequency (`outputs/q1_*.csv`)
+- **Log-decomposition of ΔlnROAS (closes to residual ≈0):**
+  - HexClad (−44%): **VR −0.473 (81%)** + CPM inflation −0.165 (28%), offset by ConvRate **+0.112**, AOV −0.058. → VR collapse is the driver; CPM second; conversion quality of the visits that occurred actually *improved*.
+  - Caraway (−66%): **VR −1.067 (≈99%)**; CPM/ConvRate/AOV all minor. → almost pure VR collapse.
+  - Avon (+16%): driven by ConvRate **+0.208** at flat VR. → control improved.
+- **Reach/frequency (HLL) — the mechanism = audience EXPANSION, not frequency saturation:**
+
+| AID | reach Δ (unique users) | frequency | visits/user Δ |
+|---|---|---|---|
+| Avon (flat) | **−29%** | 2.30→2.63 | **+11%** |
+| HexClad | **+19%** (13.2M→15.7M) | 2.90→2.86 flat | **−38%** |
+| Caraway | **+127%** (4.4M→10.1M) | 2.99→2.72 | **−68%** |
+
+  → The two decliners reached **more unique users at flat frequency**, and the incremental users are far lower-intent (visits/user collapsed). Avon contracted reach → quality *improved*. Not "same users more often" — genuinely **more, lower-quality users**.
+- **Within/between (campaign grain, `q1_campaign_grain.csv`):** the VR collapse is BOTH (a) a **mix shift into massively-scaled low-VR prospecting** (HexClad 2026 flagship prospecting `446801` = 28.0M imps @ 0.163% VR; Caraway `439156` = 19.05M imps @ 0.153% VR) AND (b) **within-prospecting VR decline as it scaled** (HexClad flagship prospecting 0.284%→0.163%; Caraway 0.27–0.52%→0.15%). **Retargeting/multi-touch campaigns (FL2-4) held VR roughly flat across years** → not a system-wide MM-quality drop. New-campaign 4-week ramp (TI-780) is a partial contributor for the 2026 launches.
+- **FT vs LT diagnostic (per Kaila):** decline is present in BOTH lenses (real, not an attribution artifact) but **amplified under FT** — because FT credits the top-of-funnel prospecting impression, which is exactly the layer that ballooned. FT "spotlights" the prospecting expansion; it is not the cause.
+
+**Preliminary verdict (Steps 0-1):** the decline is **diminishing returns from prospecting/audience expansion** — reaching more, lower-intent users as spend scaled — **not** degradation of MNTN Matched. Avon (flat spend) is the clean control showing no decline. Remaining steps confirm at the score level (Step 3) and rule out platform-date synchronization (Step 4) / cohort-abnormality (Step 5).
 
 ## 5. Solution
-_pending_
+_pending — see preliminary verdict above_
 
 ## 6. Questions Answered
 _pending_
