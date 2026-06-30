@@ -51,9 +51,10 @@ ax.set_title("The decline scales with spend growth — flat-spend Avon didn't de
              fontsize=13.5, fontweight="bold", loc="left", y=1.12)
 ax.text(0, 1.025, "Visit-rate & ROAS fall in proportion to how hard each advertiser scaled spend",
         transform=ax.transAxes, color=GRAY, fontsize=10.5)
-ax.legend(frameon=False, ncol=3, loc="lower center", bbox_to_anchor=(0.5, -0.18))
+ax.legend(frameon=False, loc="upper left", fontsize=11, handlelength=1.1)
+ax.set_ylim(min(min(vals[m]) for m in metrics) * 1.18, max(max(vals[m]) for m in metrics) * 1.30)
 for s in ["top", "right"]: ax.spines[s].set_visible(False)
-plt.tight_layout(); plt.savefig(DIR + "artifacts/audi_1070_chart_per_aid_yoy.png", dpi=200); plt.close()
+plt.tight_layout(); plt.savefig(DIR + "artifacts/audi_1070_chart_per_aid_yoy.png", dpi=200, bbox_inches="tight"); plt.close()
 
 # ---- Chart 2: cohort saturation gradient + the 3 AIDs ----
 c = load(DIR + "outputs/q5_cohort.csv").apply(pd.to_numeric, errors="coerce").dropna(subset=["s25","s26","i25","i26","v25","v26"])
