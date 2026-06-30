@@ -576,7 +576,9 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 - **Partition:** DAY on `time`
 - **Clustering:** advertiser_id, impression_id
 - **GCS archive:** **None — BigQuery-only dataset.** Stream from BQ via Spark BigQuery connector (efficient with the table-only mode; SQLMesh physical name resolved at runtime). (via Victor Savitskiy 2026-04-28, TI-837)
-- **Use for:** Impression-level spend enriched with geo, device, segment data. 90-day rolling.
+- **Use for:** Impression-level spend enriched with geo, device, segment data.
+- **⚠️ RETENTION CORRECTION (AUDI-1070, verified 2026-06-30):** NOT 90-day rolling — CIL retains **multi-year history**. Empirically probed back to **2024 and earlier** (82.5M rows on 2024-06-15; 84.7M on 2025-02-01; agent MIN(time)≈2023-10). A Jan-2024→present per-impression analysis IS feasible from CIL. Cost-control: always partition-prune on `time` (one day ≈ 0.68 GB) + exploit `advertiser_id` clustering; a 4-month × 3-AID score scan billed ~12 GB. **MCP `bigquery` tool fails here** (`--location US`; dataset isn't US) — use `bq`/`bq_run.sh`.
+- **⚠️ SCORE COLUMNS (AUDI-1070):** `advertiser_household_score` (MM-tuned per-advertiser) and `household_score` (general) are INT 0–10000 (−1/NULL = unscored). **`advertiser_household_score` is NULL before ~June 2025** (advertiser-level scoring came online then) — verify per-month population before any score YoY; the pre-Jun-2025 baseline doesn't exist. Where populated, scored impressions are nearly all **at/near max (~9,900)** → AHS is effectively **binary (scored vs unscored)**; the meaningful signal is the **scored fraction**, not the level. RTC lives in `model_params` string (`realtime_conquest_score=10000`); exclude it for MM-only score claims.
 
 | Column | Type | Notes |
 |--------|------|-------|

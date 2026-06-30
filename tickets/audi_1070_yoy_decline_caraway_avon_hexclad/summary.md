@@ -135,8 +135,11 @@ Recommendations:
 ## 6. Questions Answered
 _pending_
 
-## 7. Data Documentation Updates
-- To commit at execution: correct `cost_impression_log` "90-day rolling" note in `data_catalog.md` (empirically retains ≥2024: 82.5M rows on 2024-06-15, 84.7M on 2025-02-01); add `advertiser_household_score`+RTC-filter score pattern and Oaxaca within/between mix decomposition to `experimentation.md`; note new Jira tickets are **AUDI-** prefixed (TI project renamed).
+## 7. Data Documentation Updates (committed)
+- `data_catalog.md` — corrected `cost_impression_log` "90-day rolling" → multi-year retention (verified ≥2024); added score-column gotcha (`advertiser_household_score` NULL pre-Jun-2025, scored≈binary-at-max, RTC in `model_params`).
+- `mntn_business.md` — strengthened Attribution Model: `reporting_style="industry_standard"` = **FIRST TOUCH** (inverts MMP convention); `sum_by_*` headline columns are **LT-equivalent regardless of reporting_style** (UI applies FT separately); LT→FT migration confound.
+- `experimentation.md` — new "spend-saturation vs systemic-degradation" observational-diagnosis pattern (waterfall + reach/freq + cohort falsification; flat-spend control as keystone).
+- New Jira tickets are **AUDI-** prefixed (TI project renamed to Audience Intelligence).
 
 ## 8. Open Items / Follow-ups
 - Optional extension (needs greenlight): existing-holdout targeted-vs-holdout VR contrast (the only causal lever w/o new RCT) to resolve "VR decline ≠ value decline" (TI-835).

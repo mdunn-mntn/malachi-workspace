@@ -275,6 +275,16 @@ result.hdi('Difference of means', 0.95)  # 95% credible interval
 
 ## Considerations & Gotchas
 
+### Observational diagnosis: spend-saturation vs systemic-degradation (AUDI-1070)
+
+**Trigger:** an advertiser (or PM) claims "performance/Matched is degrading over time" and points to a YoY visits/ROAS decline. Before accepting a *systemic* cause, run this 3-test decomposition — it cleanly separates **diminishing returns from spend scaling** (expected) from **a systemic targeting/model fault** (the alarming claim).
+
+1. **Funnel waterfall (localize the lever).** `ROAS = (1000/CPM)·VisitRate·ConvRate·AOV`; YoY `Δln(ROAS)` decomposes additively/residual-free into the 4 `Δln` terms. Split aggregate ROAS into **within-stratum vs between-stratum (mix)** via Oaxaca-Blinder midpoint weights: `ΔROAS = Σ w̄ₖ ΔROASₖ (within) + Σ R̄ₖ Δwₖ (mix)`. Run at **campaign grain** to catch Simpson's. If the move is in CPM/AOV or the mix term → not targeting.
+2. **Reach/frequency (expansion vs frequency-saturation).** `HLL_COUNT.MERGE(uniques)` for reach; frequency = imps/reach; visits/user = visits/reach. **Expansion** = reach grew at flat frequency with visits/user falling (incremental users lower-intent). **Frequency saturation** = same users hit more. AUDI-1070: HexClad +19% / Caraway +127% reach at flat freq, visits/user −38% / −68% = expansion.
+3. **Cohort falsification (the decisive test).** Pull the full advertiser cohort active in both periods; compute per-advertiser YoY `VR_ratio` and `spend_growth`; **median `VR_ratio` by spend-growth decile**. If saturation: monotonic gradient (cut spend → VR rises ×1.5; grow 4× → VR falls ×0.9; `imp_growth`↔`VR_ratio` Spearman ≈ −0.47 across n=294). **Systemic degradation is FALSIFIED if flat-spend advertisers' VR did NOT fall** (AUDI-1070: flat-spend VR *rose* ×1.26). Then place the suspect AIDs as percentiles + a residual test (are they worse than peers at the *same* spend-growth level?). Canonical: `tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts/cohort_analysis.py`.
+
+**The flat-spend control is the keystone:** a real "degradation over time" hits everyone regardless of spend; saturation only hits scalers. One flat-spend advertiser in the set (AUDI-1070's Avon: spend −14%, ROAS +16%) is worth more than any single-advertiser deep-dive. Also overlay platform dates (PP launch, Max-Reach-off, Fangorn) on each advertiser's monthly VR — saturation tracks each advertiser's *own* spend ramp (idiosyncratic timing); a platform fault would be synchronized.
+
 ### Campaign Maturity Bias (TI-780 — Empirically Determined)
 
 New prospecting campaigns reach steady-state IVR in approximately **4 weeks** (N=6,917 campaigns, $10K+ spend):
