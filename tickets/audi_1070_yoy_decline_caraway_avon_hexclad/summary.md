@@ -406,6 +406,18 @@ _pending_
 
 **Single most defensible new finding for Paulo:** *The July-2025 "performance fire" was NOT a scoring change (June-2025 score columns = a logging change; scoring ran continuously). At flat spend, Avon's addressable HI/MM prospecting pool genuinely contracted −26% (89M→66M) into the fire — a real supply-side move — driven in part by a DS13 expression drop (Mar-Apr 2025) and, for HexClad, a LiveRamp DS11→DS35 identity-source cutover (May 2025). The comprehensive cause is two superimposed forces: demand-side expansion as spend scaled (dominant for the decliners) + a real, advertiser-specific supply-side HI-pool contraction (Avon mid-2025; HexClad 2026).*
 
+### Cross-cut verification (synthesis session 2026-06-30) — IS THE HI-POOL SHRINK SYSTEMIC OR ADVERTISER-SPECIFIC?
+
+Re-verified the audience-size crux independently and added the decisive systemic test:
+
+1. **Avon −26% is robust and same-campaign.** Avon's funnel-1 pool is dominated by a single campaign **259556** the whole span (the other two funnel-1 campaigns are tiny ~1-3M segments). 259556 `total_audience_size`: **89.0M (Feb'25) → 65.6M (Jun) → 63.4M (Jul, bottom) → stabilizes 63-77M**. Confirms Inv1.
+2. **Resolves the Inv1 vs Inv4 size conflict.** For 259556, `funnel_audience_size == total_audience_size` (100% every month) — there is no separate narrower funnel pool for this campaign; the −26% on `total_audience_size` is the correct figure. (Inv4's "10.8M→8M funnel" came from a different aggregation/campaign set.)
+3. **DECISIVE: the mid-2025 HI-pool shrink is ADVERTISER-SPECIFIC, not systemic.** Platform-wide median funnel-1 `total_audience_size` (`flight_cid_day_audience_sizes`, ~4.5-6K campaigns/mo) was **FLAT through 2025**: 368K (Feb) → 367K (Jul) → 343K (Oct). The platform median only contracts in **2026** (256K Jan → 177K Feb → 163K May, **−56%** off the 2025 plateau). ⇒ There was **no systemic mid-2025 supply shrink**; Avon's Feb→Jul'25 −26% is its own pool, not a platform event. The systemic pool contraction is a **2026** phenomenon (aligns with HexClad 2026 82M→34M and Caraway 2026 collapse), far too late to drive a July-2025 inflection.
+
+**Net:** supply-side HI-pool shrink is real but (a) advertiser-specific in 2025 (Avon), (b) systemic only in 2026. It is a contributing factor for Avon, not the systemic July-2025 cause.
+
+(Queries logged to `knowledge/bq_perf_log.jsonl`; no new .sql file — inline verification of existing `audi_1070_inv1_audience_size_monthly.sql`.)
+
 ## 8. Open Items / Follow-ups
 - **Confirm the HexClad DS11→DS35 LiveRamp cutover (May 2025) and any platform-wide LiveRamp/identity change mid-2025** with Identity/Zach — this is the leading candidate mechanism for a *platform-wide* supply move at the July-2025 fire. (My evidence is per-advertiser expression archives; a platform-wide LiveRamp delivery change would explain a synchronized fire.)
 - **Reconstruct pre-Feb-2025 addressable pool** if a source exists — `perml.flight_cid_day_audience_sizes` floors at 2025-02-01, so a true 2024 baseline of the *addressable* pool is unavailable (served-IP proxy reaches 2024 but is unscored). `external_ddm.segment_sizes` (access-denied) may have longer history.
