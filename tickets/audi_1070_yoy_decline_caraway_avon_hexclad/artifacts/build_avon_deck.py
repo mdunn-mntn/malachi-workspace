@@ -7,6 +7,7 @@ def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_by
 YOY = b64("audi_1070_avon_yoy_no_change.png")
 CURVE = b64("audi_1070_avon_roas_vs_spend.png")
 WATERFALL = b64("audi_1070_avon_visits_waterfall.png")
+MATRIX = b64("audi_1070_avon_attribution_matrix.png")
 
 # YoY comparison (Jan-May, consistent last-touch). (metric, 2025, 2026, yoy, sig, kind)
 # kind: vol=volume(down ok), good=outcome/rate(flat-up), cost=neutral
@@ -75,7 +76,13 @@ ul.tight{font-size:0.62em;line-height:1.5;text-align:left;display:inline-block;}
 <tr><th style="text-align:left">Metric</th><th>2025</th><th>2026</th><th>YoY</th><th>Significant?</th></tr>
 __ROWS__
 </table>
-<p class="note">Significance = Welch t-test on weekly values. Only <span class="red">▼ Visits</span> (volume) and <span class="green">▲ Conversion rate</span> (efficiency) are significant; all else is statistical noise.</p>
+<p class="note">Significance = Welch t-test on weekly values. Only <span class="red">▼ Visits</span> (volume) and <span class="green">▲ Conversion rate</span> (efficiency) are significant; all else is statistical noise. <b>Note: last-touch lens.</b></p>
+</section>
+
+<section>
+<h2>Why the client sees a big "decline": the <span class="red">attribution switch</span></h2>
+<img src="__MATRIX__">
+<p class="note">Same Jan–May window — only the attribution lens varies per year. Avon's reporting flipped <b>last-touch (2025) → first-touch (2026)</b>, so the client's UI compares the top-right cell (<span class="red">−76%</span>). The consistent, apples-to-apples comparisons are <b>−14% (LT)</b> or <b>−33% (FT)</b>. The −76% is the lens switch. (Even the consistent FT −33% is partly inflated by first-touch resolution worsening 36%→28%, a tracking issue — not performance.)</p>
 </section>
 
 <section>
@@ -122,6 +129,6 @@ __ROWS__
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1100,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML = HTML.replace("__ROWS__", trows).replace("__YOY__", YOY).replace("__CURVE__", CURVE).replace("__WATERFALL__", WATERFALL)
+HTML = HTML.replace("__ROWS__", trows).replace("__YOY__", YOY).replace("__CURVE__", CURVE).replace("__WATERFALL__", WATERFALL).replace("__MATRIX__", MATRIX)
 (DIR / "audi_1070_avon_deck.html").write_text(HTML)
-print(f"wrote corrected Avon deck ({len(HTML)//1024} KB, 8 slides)")
+print(f"wrote corrected Avon deck ({len(HTML)//1024} KB, 9 slides)")
