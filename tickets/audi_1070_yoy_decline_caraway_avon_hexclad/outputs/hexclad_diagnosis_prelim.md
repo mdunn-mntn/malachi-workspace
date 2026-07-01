@@ -70,3 +70,6 @@ HexClad scores are 100% discrete (0% in 8001-9999 or 6666-7999 continuous ranges
 - **Fangorn NOT a factor:** HexClad bucketed (0% continuous through May 2026); old-MM→Fangorn hasn't reached it (an "after May" event).
 - **Within-HI quality change NOT measurable:** clickpass_log purged for 2025 (Aug-Oct 2025 HI visit rate query returned 0 — no retained visit rows). Needs Measurement/scoring.
 - **DEFINITIVE CAUSE = spend scaling beyond the keyword-matched HI inventory** → bidder drops HHST, fills budget with PP/Mid (convert 1/3) → OV halved. TI-33 = definition change (secondary); Fangorn = N/A; quality change = unmeasurable.
+
+## WHAT actually changed (TI-33 mechanism — TGT-4018/4019, AUDI-33/34)
+New domain→vertical classifier deployed to PROD **7/14/2025**: each domain → ChatGPT description (hexclad.com → "Pans & Utensils") → embedding/vectorizer → semantic-similarity match to MNTN verticals; PLUS non-ecommerce URL filtering (TGT-4019 "quality"). Source: `prod.ml.ip_vertical_associations` (IP↔vertical, dt-partitioned; s3://mntn-data-archive-prod/vertical_categorizations/). Compared prod(old) vs dev(new). Examples: Current Affairs +largest (sites added); ISPs -largest (yahoo.com etc. blacklisted). IPs inherit verticals from domains visited → re-drawing domain membership re-drew each vertical's IP set. HexClad Kitchen&Cookware +57% / 14% churn.

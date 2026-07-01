@@ -139,6 +139,17 @@ ol.road{font-size:0.6em;line-height:1.55;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>Why "order value should have stayed at $2M" is the wrong intuition</h2>
+<div style="text-align:left;display:inline-block;margin-top:0.15em;">
+<ul class="tight">
+<li><b>The intuition:</b> HI keeps its ~$2M and PP is <i>added on top</i> → order value can only rise; so a drop "can't be a tier shift."</li>
+<li><b>The flaw — HI wasn't added to, it was DISPLACED:</b> High-Intent impressions FELL <b>27.5M → 17.8M</b>. A budget buys a fixed pool of impressions; every PP impression is one that <i>would have been</i> HI. Tiers are substitutive within delivery, not additive.</li>
+<li><b>With AOV flat, order value = conversion COUNT:</b> $2.02M/$405 = <b>4,978</b> → $0.99M/$397 = <b>2,495</b> conversions — exactly halved. Half the HI conversions vanished; PP (⅓ the rate) couldn't replace them.</li>
+</ul></div>
+<p class="claim" style="font-size:0.72em;margin-top:0.35em;">Flat AOV doesn't refute the tier shift — it <span class="red">proves</span> it: a conversion-<i>count</i> problem, not an order-<i>size</i> one.</p>
+</section>
+
+<section>
 <h2>Why did HI share fall — spend, or supply?</h2>
 <img src="__SUPPLY__">
 <p class="note"><b>It's supply, not budget.</b> At near-identical spend, HI swings 2–3×: Jan '26 ($152K → 79% HI) vs Feb '26 ($185K → 30% HI). In Feb the bidder set HHST=10,000 (HI-only) but still got only 30% HI — it <i>wanted</i> High-Intent and couldn't find it. A bigger budget on a fixed pool can't do that.</p>
@@ -151,7 +162,7 @@ ol.road{font-size:0.6em;line-height:1.55;text-align:left;display:inline-block;} 
 <tr><td style="text-align:left">Vertical size (IPs)</td><td>9.53M</td><td>14.98M</td><td style="color:#27496D;font-weight:bold">+57%</td></tr>
 <tr><td style="text-align:left"><b>Original IPs churned OUT</b></td><td>—</td><td>—</td><td style="color:#D63B2F;font-weight:bold">14.1%</td></tr>
 </table>
-<p class="note">On <b>July 21, 2025</b> a new <b>ChatGPT + vectorizer</b> classifier (TI-33) re-drew every vertical. HexClad's vertical grew +57%, but 14% of its proven IPs churned out and ~6.8M new ones came in — so <b>"High-Intent" is anchored on a different set of IPs in 2026 vs 2025.</b> The campaign didn't change; the vertical underneath it did. <b>BUT this is a definition change, not the collapse cause</b> — it GREW, and delivery stayed ~96% HI through Oct 2025. <b>The share collapse is spend (prior slides). Fangorn is NOT involved</b> — HexClad is on bucketed scoring, not Fangorn.</p>
+<p class="note"><b>What changed (deployed to prod 7/14/2025, TI-33):</b> the domain→vertical classifier was replaced — each domain now goes <b>ChatGPT description (hexclad.com → "Pans &amp; Utensils") → embedding → semantic match to MNTN's verticals</b>, plus non-ecommerce URLs filtered out. Since IPs inherit verticals from the domains they visit, this re-drew every vertical's membership. HexClad's Kitchen &amp; Cookware grew +57%, 14% of its domains/IPs churned out. So <b>"High-Intent" is anchored on a different set of IPs YoY</b> — the campaign didn't change; the vertical underneath it did. <b>BUT it's a definition change, not the collapse cause</b> (it GREW; delivery stayed ~96% HI through Oct 2025). The share collapse is <b>spend</b>; Fangorn is NOT involved (HexClad is bucketed).</p>
 </section>
 
 <section>
@@ -195,4 +206,4 @@ __MET__
 HTML=(HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO)
       .replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY))
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
-print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, 15 slides)")
+print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, 16 slides)")
