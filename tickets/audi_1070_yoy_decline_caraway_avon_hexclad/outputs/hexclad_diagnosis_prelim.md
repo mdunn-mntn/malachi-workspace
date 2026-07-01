@@ -99,3 +99,30 @@ Mike: "Avon spend <$15K except 2 months, so bucket choice shouldn't matter, perf
 
 ## ATTRIBUTION (Paulo ask — "changes Johnny is describing")
 reporting_style (bronze.integrationprod.r2_advertiser_settings): all 3 (Caraway/Avon/HexClad) = **industry_standard = FIRST-TOUCH** currently. Historical archive (silver.archives.advertiser_setting_archives) shows heavy same-day CDC churn between industry_standard/last_touch but nets to industry_standard since mid-2024 — not a clean single business change. Lookback (silver.audience.advertiser_configurations): **HexClad page_view_lookback=90d, Caraway=90d, Avon=30d** (conversion_lookback default). The FT + competing_* lens is what drives the API-vs-UI number gaps (per Avon 3-source reconciliation). Attribution differences are a per-advertiser CONFIG lens, not a within-HexClad in-window change that caused the decline.
+
+## GATE BINDING — VERIFIED EMPIRICALLY (answers "after the gate, are there any non-10000 imps?")
+Two independent windows, per-impression exact counts:
+- **Oct 27 - Nov 7 2025** (seasonal camps 485933/485962 held gate=10000 for 12 consecutive days, RTC-excluded): **99.98-99.999% household_score=10000; non-HI positive imps = 0-1/day out of 96K-191K.** Residual is unscored, not PP/MI.
+- **Jan 6 - Feb 4 2026** (446801 gate=10000), split by serving path:
+  - **Normal prospecting (gated) = 92.05% of imps → 99.986% HI (10000)**, 0.003% PP, 0.002% MI, 0.009% unscored. Gate binds ~perfectly; the 0.014% non-HI = ~1-day propagation lag.
+  - **RTC (Real-Time Conquest) = 7.95% of imps → 34.8% HI / 23.2% PP / 15.8% MI / 26.2% unscored.** RTC is a SEPARATE, higher-priority serving path that BYPASSES the HHST intent gate to serve competitor-conquest households regardless of score. Mixed by design, NOT a leak.
+CONCLUSION: the HHST gate binds on household_score essentially perfectly (99.99% HI on the gated path). The "mix under a 10000 gate" = (1) RTC bypass (~8%, by design) + (2) monthly aggregation blending no-gate days with gated days + (3) ~1-day flip-day propagation lag. NO leak mechanism in the gate itself.
+NOTE: RTC was ABSENT for HexClad in 2025 (realtime_conquest_score=-1) but ACTIVE in Jan 2026 (489K RTC imps in the Jan window) — RTC turning on is itself a 2026 change. The gate binds on household_score, NOT advertiser_household_score (the two diverge ~10% in each direction; advertiser_household_score logs ~3500 for ~10% of genuine-HI imps — use household_score for gate reasoning).
+
+## CORRECTION: MaxReach scoring was NOT globally turned off Nov 19 2025
+Prior assumption (from TI-896 context) said MaxReach scoring turned off platform-wide ~Nov 19. Adversarial re-check REFUTES this for HexClad: MaxReach (hs 1-3332) was still 42% of delivery on Nov 19; it fell Nov 20-22 (unscored surged instead), hit exactly 0 on Nov 24-25 ONLY because the gate was 3334 (Mid floor excludes hs<3334), then MaxReach REAPPEARED Nov 26-27 (112K/185K imps) when the gate reverted to -1. So MaxReach's late-Nov absence was a GATE-FLOOR artifact (reversible), not a scoring shutoff. Do not cite "MaxReach off Nov 19" as a scoring-availability change.
+
+## COMPLETE Jun->Dec 2025 TRANSITION TIMELINE (from forensic workflow)
+- Jun: only legacy camp 225087 active, gate 6666, ~100% HI, 1.71-2.57M imps, $52K.
+- Jul 3: handoff 225087 -> 446801 (main camp launches). Gate ~6657, 98% HI. 225087 last day Sep 2.
+- Aug: purest HI-only month. Gate 6666, 99.9% HI, 5.14M imps.
+- Sep 18-27: first sustained non-HI — gate loosened to 6300-6500 (Mid-floor), 6-30% MI for a week, re-tightened Sep 28. Sep 95.3% HI.
+- Oct 4: seasonal pair 485933/485962 LAUNCH; SAME DAY 446801 goes fully DARK (39 consecutive days, through Nov 12). All delivery via seasonal pair.
+- Oct 21-Nov 10: seasonal pair gate raised to 10000, strict HI-only PEAK (99.99% HI). Oct = PEAK HI reach (3.86M distinct, 2.08M net-new).
+- **Nov 11: THE PIVOT — gate REMOVED (485933/485962 -> 0; 446801 -> -100/-1). Delivery floods overnight: 100% HI (Nov 10) -> 57.9% (Nov 11) -> 13.5% HI / 56.4% MaxReach (Nov 12). SOLE root cause of the composition collapse.**
+- Nov 13-14: baton-pass — seasonal pair stops, 446801 resumes at full scale inheriting the no-gate state.
+- Nov 23-25: brief re-gate to 3334 (Mid floor), HI recovers to ~29%, then back to -1.
+- Nov 26-30: gate -1 + Black Friday BLOWOUT — 3.0-4.1M imps/DAY (~20x normal), peak Nov 30 = 4.12M imps / $91.5K.
+- Dec 1-31: 446801-only, gate held -1 (no gate) EVERY day, NO recovery to HI-only. Flat ~11% HI / ~57% unscored. (Anomaly Dec 11-12: unscored ~76% for 2 days, gate unchanged — unexplained.)
+HYPOTHESIS VERDICTS: H1 (HI exhaustion) REFUTED — HI reach ACCELERATED into Oct (peak 3.86M, net-new peaked 2.08M) the month before the gate change; HI fell ONLY when the gate changed, not from supply. H2 (gate change -> couldn't meet reach -> dipped MI) — causality INVERTED: the gate was deliberately REMOVED to chase 20x holiday volume; HI never ran short. H3 (stable mix afterward) — SUPPORTED but it's a NO-GATE (serve-anyone) regime dominated by ~56% unscored, not a deliberate HI+PP+MI targeting choice.
+GENERALIZES: Caraway (40341) replicates exactly — gate removed to -1 on Nov 28 -> Dec 18.6% HI / 54.5% unscored, ~4x volume. Holiday practice (trade quality for reach), not an advertiser one-off.
