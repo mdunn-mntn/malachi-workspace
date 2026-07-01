@@ -73,9 +73,9 @@ for s in ["top"]: ax.spines[s].set_visible(False)
 ax2.spines["top"].set_visible(False)
 
 leg=[Patch(fc=GREEN,label="gated >=6600 (HI)"),Patch(fc=RED,label="no gate (<=0)"),Patch(fc=AMBER,label="mid / continuous (Fangorn ramp)")]
-ax.legend(handles=leg,frameon=False,ncol=3,fontsize=8.5,loc="upper center",bbox_to_anchor=(0.5,1.10))
+ax.legend(handles=leg,frameon=False,ncol=3,fontsize=8.5,loc="upper center",bbox_to_anchor=(0.5,-0.09))
 ax.set_title("HexClad (34611) — the gate was THRASHED, not 'set to 0 and never reverted'",
-             fontsize=13,fontweight="bold",color=NAVY,loc="left",pad=24)
+             fontsize=13,fontweight="bold",color=NAVY,loc="left",pad=10)
 
 plt.tight_layout()
 plt.savefig(D+"artifacts/hexclad_gate_thrash.png",dpi=200,bbox_inches="tight")

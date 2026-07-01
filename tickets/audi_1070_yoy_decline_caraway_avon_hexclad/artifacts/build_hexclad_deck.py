@@ -8,6 +8,7 @@ def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_by
 GANTT=b64("audi_1070_hexclad_campaign_gantt.png"); TIER=b64("audi_1070_hexclad_visit_rate_by_tier.png")
 GATE=b64("hexclad_gate_thrash.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
 PACING=b64("audi_1070_hexclad_pacing.png"); MASTER=b64("audi_1070_hexclad_master_timeline.png")
+FLIGHTS=b64("hexclad_gate_spend_flights.png")
 
 MET=[("Spend","$642,267","$931,422","+45%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
  ("Visit rate","0.362%","0.167%","−54%","bad"),("Conversions","4,978","2,495","−50%","bad"),
@@ -159,6 +160,12 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 </section>
 
 <section>
+<h2>A1b · Gate vs daily spend vs flight boundaries</h2>
+<img src="__FLIGHTS__">
+<p class="note"><b>What moves the gate.</b> 73 flights on the flagship group over the year. <b>Short flights (≤72h) run ungated 45% of their days vs 28% for long flights</b> (14/31 short flights fully ungated) — consistent with the manual "HHST=0 on short flights" practice, a <b>tendency, not a rule</b> (some are missed). The big damage is the <b>Nov–Dec holiday mega-flights</b> ($112k → $165k → <b>$409k</b> → $180k budgets) running while the gate was off and spend exploded to ~$100k/day. <b>Fix: longer flights (≥72h) so the gate stays engaged, and hold the gate through holiday scale-ups.</b></p>
+</section>
+
+<section>
 <h2>A2 · It's not Fangorn — proven</h2>
 <img src="__FANGORN__">
 <p class="note">0% continuous (Fangorn) scores every month Jun 2025–May 2026 = 100% bucketed. Migrated to Fangorn Jun 4–5 2026, after the entire decline window.</p>
@@ -190,6 +197,6 @@ __MET__
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
 HTML=HTML.replace("__MET__",metrows).replace("__GANTT__",GANTT).replace("__TIER__",TIER)\
-    .replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__PACING__",PACING).replace("__MASTER__",MASTER)
+    .replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__PACING__",PACING).replace("__MASTER__",MASTER).replace("__FLIGHTS__",FLIGHTS)
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
 print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
