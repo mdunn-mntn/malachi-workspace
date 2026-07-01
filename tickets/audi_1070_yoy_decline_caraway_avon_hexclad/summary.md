@@ -562,6 +562,24 @@ Re-verified the audience-size crux independently and added the decisive systemic
 
 **RECONCILIATION with §4–§7:** the earlier "within-HI degradation / expansion / supply shrink" for HexClad is subsumed — delivery didn't degrade *within* HI so much as **leave** HI (the gate stopped requiring it). HI is refreshable; the pool didn't collapse. Caraway's gated within-HI ×0.51 finding (§4 Inv 2) still stands but needs the same daily-gate check (Caraway's gate was also removed ~Nov 28) — it may be more gate-driven than pure within-HI degradation than §4 concluded.
 
+## 10. DEFINITIVE CARAWAY FINDINGS — the OVER-SCALING case (2026-07-01)
+
+*Ran the reusable diagnostic pack (`documentation/docs/advertiser_yoy_diagnostic/`) on Caraway. Deck `artifacts/audi_1070_caraway_deck.html`; data `outputs/diag_caraway/`.* **Caraway is the OTHER failure mode from HexClad** — it didn't LEAVE High-Intent, it OVERWHELMED it.
+
+**Rate metrics (Jan–May 25→26):** spend $278K→$809K (**+191%, tripled**), imps 13.2M→36.1M, visits 61,559→52,904 (−14%), **VR 0.465%→0.146% (−69%)**, conv 2,846→2,272 (−20%), AOV $424→$447 (+6% flat), **ROAS 4.34→1.26 (−71%)**, OV −16%.
+
+**The flagship stayed IN High-Intent — the gate HELD.** 439156 "CTV Prospecting" (group 92099, $1.33M, still running) delivered **82% HI over its life**; monthly HI-share held **85–99.9% Jan–Apr 2026**. Per-campaign check: Jul'25–Apr'26 = ONE campaign (no competing/handoff); Dec'25 holiday gate-drop (18.6% HI); **May-13-'26 handoff** flagship→DMA test cells (44–57% HI, the "one off/one on" — explains the May–Jun dip, not the core). So the "same HI-share, half VR" (Mar'26 99.9% HI/0.15% VR vs Jul'25 99% HI/0.37% VR) is a **single campaign over-scaling**, not a blend.
+
+**Mechanism = over-scaling a finite HI pool (SATURATION, confirmed).** Spend tripled but HI frequency stayed flat (~1.5×); distinct HI reach grew +136% (1.66M→3.92M) → reached **deeper into the pool, to weaker marginal HI**. Cumulative distinct HI reached 16.5M; **brand-new share of reach fell 100%→35%, crossing 50% ~Oct–Nov '25** ("running on refresh" — re-serving the lower end of HI). VR steps down permanently from Jan '26 and never recovers even as spend eases.
+
+**Why it's invisible / never recovers — household_score is BINARY and BLIND.** Scored-only avg score is pinned ~10,000 EVERY gated month (Aug'25 9,995/VR 0.13%, Mar'26 10,000/VR 0.15% vs Jul'25 9,968/VR 0.37%) — 99–100% of scored imps are exactly 10,000. The score can't distinguish the best HI from the marginal HI, so the collapse is invisible to score dashboards. **This is what continuous scoring (Fangorn) fixes** — Caraway Fangorn onset May–Jun '26 (after window).
+
+**Ruled out:** Fangorn (0% continuous through Apr, onset May–Jun); audience DS13∩DS19 intact; RTC present but excluded; short-flights (flagship DOES run 18 short ≤72h flights per `core.flights` — CORRECTS earlier "long flights" claim — but the gate held HI, so the manual HHST=0 wasn't applied here; Tofer's gaps). **Caveat:** ROAS −71% additionally carries a **~Jan-'26 conversion-pixel tracking break** (§4 Inv 3); the clean audience signal is **VR −69%**.
+
+**Fix:** pace HI spend to the sustainable rate (don't push 3× budget through a fixed HI pool); widen the addressable pool (keywords / a defined PP tier); adopt continuous scoring so the bidder prioritizes the best HI. **Open:** clean the Jan conversion-break out of the ROAS magnitude; Avon mid-campaign check still pending.
+
+**Short-flight HHST=0 — CORRECTED (Tofer 2026-07-01):** it's a **MANUAL practice** (Tofer sets HHST=0 for every ≤72h launch), **official since early 2025** (unofficial for years), and **inconsistent — he's missed campaigns/flights.** NOT an automated <72h trigger. That inconsistency is why HexClad got zeroed and Caraway (mostly) didn't. Check flights via `silver.core.flights` (start/end times).
+
 ### Reusable assets (do not rebuild)
 - `tickets/ti_896_audience_composition_2025_drop/queries/ti_896_composition_by_week.sql` (LEAD-cap Fix M10 + strict PP detector + cohort CTE)
 - `tickets/ti_896_audience_composition_2025_drop/artifacts/bootstrap_track_c.py`
