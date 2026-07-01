@@ -107,12 +107,12 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <div style="text-align:left;display:inline-block;margin-top:0.3em;">
 <ul class="tight">
 <li><b class="green">Jul–Oct 2025:</b> clean High-Intent regime — gate 6,666–10,000, <b>97.8% HI</b>.</li>
-<li><b class="navy">Oct:</b> a <b>"Scale Up"</b> A/B test pushed spend ~40% over what the HI pool refreshes (~$5K/day) — supply started to strain.</li>
-<li><b class="red">Nov 11:</b> the HHST intent gate was <b>REMOVED</b> (→0/−1) for holiday reach → HI <b>98% → 13%</b> overnight; Black-Friday volume ~20×.</li>
-<li><b class="red">Dec → today:</b> the gate was <b>never turned back.</b> 93373 has run ungated/thrashed ever since → <b>still 31% HI.</b></li>
-<li><b class="navy">Mar '26:</b> a <b>"General Interest"</b> campaign was added (100% unscored) — broadening further beyond HI.</li>
+<li><b class="navy">Oct:</b> a <b>"Scale Up"</b> A/B test pushed spend ~40% over what the HI pool refreshes — supply began to strain.</li>
+<li><b class="red">~Nov:</b> a <b>manual change set the HHST gate to 0</b> on the main campaign to hit spend → HI <b>98% → 13%</b> overnight; Black-Friday volume ~20×.</li>
+<li><b class="red">Short flights force it back:</b> the client runs 1–3 day flights — <b>any flight under 72h auto-sets HHST to 0</b> for deliverability, so the gate keeps getting forced off.</li>
+<li><b class="red">Then forgotten:</b> left at 0 on 93373 and never restored → <b>still 31% HI today.</b> (+ a "General Interest" campaign added Mar '26, 100% unscored.)</li>
 </ul></div>
-<p class="claim" style="font-size:0.66em;margin-top:0.4em;">The decline isn't gradual and it isn't the audience — it's a gate that was switched off and left off.</p>
+<p class="claim" style="font-size:0.66em;margin-top:0.4em;">Not gradual, not the audience — a gate switched off (manually + by short flights) and left off.</p>
 </section>
 
 <!-- 7 QUESTIONS ANSWERED -->
@@ -120,6 +120,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <h2>6 · Questions answered</h2>
 <table class="cmp" style="font-size:0.56em">
 <tr><th style="text-align:left">Question</th><th style="text-align:left">Answer</th></tr>
+<tr><td style="text-align:left"><b>Why did the gate go to 0?</b></td><td style="text-align:left"><b>Short flights (&lt;72h) auto-set HHST to 0 + a manual Nov change, then left/forgotten</b> (PEX to educate client)</td></tr>
 <tr><td style="text-align:left">Is it Fangorn / a scoring change?</td><td style="text-align:left" class="green">No — 0% continuous scores through May; migrated Jun 4–5 (after the window)</td></tr>
 <tr><td style="text-align:left">Did we cut the audience / MM?</td><td style="text-align:left" class="green">No — vertical DS13 ∩ keyword DS19 intact all window</td></tr>
 <tr><td style="text-align:left">Is the "mix under a 10k gate" a bug?</td><td style="text-align:left" class="green">No — gated path is 99.99% HI; mix = monthly blend + RTC (8%, bypasses by design)</td></tr>
@@ -135,12 +136,13 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <h2>7 · Conclusion &amp; the fix</h2>
 <div style="text-align:left;display:inline-block;margin-top:0.2em;">
 <ul class="tight">
-<li><b>Cause:</b> the HHST intent gate on "CTV Prospecting High-Intent" (93373) was removed Nov 11 2025 and never reverted → delivery slid from 98% HI to 31% HI (⅓ the conversion rate) → ROAS 3.1→1.1. Not the audience, model, attribution, or a hard supply wall.</li>
-<li><b class="navy">Restore the gate</b> — re-gate 93373 to HI (10,000), or its clean floor, and hold it.</li>
-<li><b class="navy">Pace HI spend</b> to ~$5K/day sustained (or spread HI across the flight) so a "Scale Up" doesn't drain the ~3.8M live pool like October.</li>
-<li><b class="navy">Revisit "General Interest"</b> — it's 100% unscored; decide if that reach belongs in the High-Intent campaign's numbers.</li>
+<li><b>Cause (confirmed):</b> the HHST gate on 93373 sits at 0 — a manual Nov change to hit spend, then left/forgotten, and repeatedly re-forced by <b>short flights (&lt;72h auto-set the gate to 0)</b>. Delivery slid 98%→31% HI → ROAS 3.1→1.1. Not the audience, model, or attribution.</li>
+<li><b class="navy">PEX: educate the client</b> — run flights ≥72h so the intent gate stays engaged; the short-flight bursts are what auto-drop it.</li>
+<li><b class="navy">Restore &amp; hold the gate</b> on 93373 (HI / clean floor).</li>
+<li><b class="navy">Pace HI spend</b> ~$5K/day sustained so a "Scale Up" doesn't drain the ~3.8M live pool like October.</li>
+<li><b class="navy">Revisit "General Interest"</b> (100% unscored) — decide if it belongs in the High-Intent campaign's numbers.</li>
 </ul></div>
-<p class="claim" style="font-size:0.72em;margin-top:0.4em;">Turn the gate back on.</p>
+<p class="claim" style="font-size:0.72em;margin-top:0.4em;">Turn the gate back on — and stop the short flights that switch it off.</p>
 </section>
 
 <!-- APPENDIX -->
