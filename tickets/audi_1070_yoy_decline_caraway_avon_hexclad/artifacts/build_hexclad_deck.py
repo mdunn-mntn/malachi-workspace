@@ -88,7 +88,7 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 <tr><td style="text-align:left">Holdout / RTC / HHST gate</td><td>yes</td><td>yes</td></tr>
 <tr><td style="text-align:left">3P / geo-narrow overlay</td><td>none</td><td>none</td></tr>
 </table>
-<p class="note">Proper MM prospecting both years. Not a bad overlay, not a keyword cut. The change is in the scoring/gate layer downstream.</p>
+<p class="note">HI substrate (vertical DS13 ∩ keyword DS19) intact through May 2026 — not a keyword/HI cut. Source add/removes did happen (Feb 18: +CRM DS4; Mar 4: −DS1/−DS35 LiveRamp; Jun 3: +DS46 Fangorn), but the HI-defining layers stayed. The decline is in the scoring/gate layer downstream, not the audience.</p>
 </section>
 
 <section>
