@@ -4,6 +4,21 @@ Reusable playbook + query pack to diagnose why an advertiser's prospecting perfo
 between any two periods. Built from AUDI-1070 (HexClad/Avon/Caraway). **The dominant cause is almost always the
 HHST intent gate, not the audience/MM model.**
 
+## The decision tree
+![Diagnostic decision tree](flowchart/diagnostic_flowchart.png)
+
+Walk it top-down (**Q0→Q5**), cheapest-artifact-first: fix the measurement lens & scope, rule out a tracking
+outage, then the delivery spine. The **Q2 gate fork** splits the two failure modes — delivery **left** High-Intent
+(gate removed → HexClad) vs delivery **stayed** in HI but saturated a finite pool (over-scaled → Caraway).
+"Genuine MM degradation" is the verdict only if every kill-condition fails.
+
+- **Interactive / shareable page** (zoomable SVG + a table of every node's exact question and the table/column to
+  query): [`flowchart/diagnostic_flowchart.html`](flowchart/diagnostic_flowchart.html) — rebuild with
+  `python3 flowchart/build_flowchart_html.py`.
+- **Vector + machine-readable:** `flowchart/diagnostic_flowchart.svg`, `.dot`, and
+  `flowchart/diagnostic_tree.json` (full node detail — precise questions, kill-conditions, and confirm tables
+  live here, not in the box labels).
+
 ## Run it
 ```
 bash queries/run_diagnostic.sh <AID> <WIN_START> <WIN_END> <P1_START> <P1_END> <P2_START> <P2_END> [OUTDIR]
@@ -24,7 +39,7 @@ comparison periods for rate metrics (summarydata, back to 2024).
 | 6 | `06_fangorn_rtc_detector` | Continuous (Fangorn) score % + RTC share, monthly | Rule out Fangorn (continuous 8001-9999) & RTC (bypasses gate; conquest population, not fast-HI) |
 | 7 | `07_rate_metrics_yoy` | Visit rate / ROAS / conv / AOV / OV for the two periods | Confirm the decline; flat AOV ⇒ conversion-count (audience-quality) problem |
 
-## Decision logic (see flowchart.html)
+## Decision logic (text form — see the tree above / `flowchart/diagnostic_flowchart.html`)
 1. **Rate metrics** confirm a real decline? (flat AOV → conversion-count problem, not basket).
 2. **Score distribution / monthly composition** → did HI-share fall? If not, look at attribution lens (FT vs LT, lookback) or a tracking outage.
 3. If HI-share fell → **gate timeline + gate events**: was the gate removed/changed? Delivery inverts overnight with the gate ⇒ **gate is the cause**.

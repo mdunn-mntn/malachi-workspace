@@ -76,6 +76,7 @@ So "the gate" decides *which* households a prospecting campaign is allowed to re
 3. **All:** for any client-facing YoY, **hold the attribution lens constant** across both years (the LT→industry_standard migration alone manufactures a large apparent drop).
 
 ## How to verify (queries, tables, graphs)
+- **Diagnostic decision tree** (walk any decline ticket to a named diagnosis + fix): `documentation/docs/advertiser_yoy_diagnostic/flowchart/diagnostic_flowchart.png` (interactive/shareable: `diagnostic_flowchart.html`). Q0→Q5, cheapest-artifact-first; the Q2 gate fork splits the two failure modes (gate-removal / HexClad vs over-scaling / Caraway).
 - **Reusable diagnostic** (any advertiser × any two periods): `documentation/docs/advertiser_yoy_diagnostic/` — 7 parameterized queries + `run_diagnostic.sh <AID> <win_start> <win_end> <p1s> <p1e> <p2s> <p2e>` + playbook.
 - **CHAPI/API exact reproduction:** `queries/avon_chapi_exact_reproduction.sql` (swap advertiser_id).
 - **Change-audit tables** (what changed & when): HHST → `silver.archives.household_score_threshold_archives`; flights (short-flight <72h) → `silver.core.flights`; audience/data sources → `silver.archives.audience_segment_archives`; attribution → `silver.archives.advertiser_setting_archives`; campaigns/groups → `bronze.integrationprod.campaigns`/`campaign_groups`. (Full cheat-sheet with query patterns in `knowledge/data_catalog.md` → "Config-change AUDIT tables".)

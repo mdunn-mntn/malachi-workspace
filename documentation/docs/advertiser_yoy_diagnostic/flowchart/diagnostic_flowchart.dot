@@ -1,0 +1,94 @@
+digraph advertiser_yoy_diagnostic {
+  rankdir=TB;
+  bgcolor="#FAFAFA";
+  fontname="Helvetica";
+  labelloc="t";
+  label="Prospecting ROAS/Visits Declined YoY — Diagnostic Decision Tree (AUDI-1070)\nWalk 0->5: fix the lens & scope, rule out outages, then the delivery spine. 'MM degraded' only if every kill-condition fails.";
+  fontsize=16;
+  nodesep=0.46;
+  ranksep=0.78;
+  node [fontname="Helvetica", fontsize=11, margin="0.14,0.09"];
+  edge [fontname="Helvetica", fontsize=9, color="#6B7280", fontcolor="#6B7280"];
+
+  // ---- Decision nodes: light rounded boxes, navy border; Q2 = bold spine ----
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#1F3556", penwidth=1.3, fontcolor="#2B2F36"];
+  Q0   [label="Q0. Same lens + scope +\ndenominator, both years?"];
+  Q0b  [label="Q0b. Discrete tracking\nOUTAGE in either window?"];
+  Q1   [label="Q1. Waterfall: which factor?\n(within vs mix vs ramp)"];
+  Q2   [label="Q2. Did delivery LEAVE\nHigh-Intent via a GATE FLIP?\n(THE SPINE)", penwidth=2.5, fontsize=12, color="#1F3556"];
+  Q2a  [label="Q2a. Gate restored, or\nstill off (holiday / short-flight)?"];
+  Q3   [label="Q3. Score drop: spend-invariant\nRELABEL, or spend-locked?"];
+  Q4   [label="Q4. Saturation / EXPANSION\nat held HI-share?"];
+  Q5   [label="Q5. Cohort placement\n(spend-growth-matched)"];
+
+  // ---- Diagnosis leaves: filled per category (pale fill + saturated same-hue border) ----
+  // artifact = slate gray-blue
+  node [shape=box, style="rounded,filled", fillcolor="#E7EBEF", color="#5B6B7A", penwidth=1.6, fontcolor="#2B2F36"];
+  D_measurement    [label="MEASUREMENT-LENS /\nWINDOW / SCOPE ARTIFACT\n(Avon)"];
+  D_tracking_outage[label="TRACKING / PIXEL OUTAGE\nroute to Pixel Ops\n(HexClad Mar 3-17 / Caraway Jan)"];
+  D_portfolio      [label="PORTFOLIO / MIX\n2nd 0-HHST campaign drags rollup"];
+  D_score_artifact [label="SCORE-SIDE / REGIME-RELABEL\nspend-invariant mix"];
+
+  // healthy = muted forest green
+  node [fillcolor="#E3EFE7", color="#3E7C59"];
+  D_healthy  [label="HEALTHY / REPRICING\nCPM up, rates hold\n(Avon)"];
+  D_recovery [label="HEALTHY-RECOVERY\ngate dropped on holiday, RE-GATED\n(Avon)"];
+
+  // real-decline = brick red (THE accent)
+  node [fillcolor="#F2DEDC", color="#C4342B"];
+  D_macro        [label="MACRO / PROMO / BASKET /\nCOHORT-WIDE ROAS"];
+  D_gate_removal [label="GATE REMOVAL\ndelivery left High-Intent (HHST=0)\n(HexClad)"];
+  D_over_scaling [label="OVER-SCALING / SATURATION\nexhausted the finite HI pool\n(Caraway)"];
+  D_mm_degraded  [label="GENUINE MM DEGRADATION\n(only if every kill-condition failed)"];
+
+  // needs-more = muted amber
+  node [fillcolor="#F5EAD2", color="#B8863B"];
+  D_cold_start [label="NEW-CAMPAIGN COLD-START\nRAMP (TI-780)"];
+  D_needs_more [label="IDIOSYNCRATIC / NEEDS MORE\n'MM degradation' UNSUPPORTED"];
+
+  // ---- Spine edges (straight vertical chain) ----
+  Q0  -> Q0b [label="persists on fixed lens"];
+  Q0b -> Q1  [label="no outage"];
+  Q1  -> Q2  [label="within-flagship VR/CR\ncollapse, AOV flat"];
+  Q2  -> Q2a [label="HHST flipped to 0/-1"];
+  Q2  -> Q3  [label="no gate flip;\nstayed in HI"];
+  Q3  -> Q4  [label="spend-locked /\nreal within-HI collapse"];
+  Q4  -> Q5  [label="no expansion signature"];
+
+  // ---- Lateral leaf branches ----
+  Q0  -> D_measurement     [label="shrinks / vanishes;\nwrong window; scope mismatch"];
+  Q0b -> D_tracking_outage [label="crater ->0, snap-back"];
+
+  Q1  -> D_healthy    [label="CPM up, rates hold"];
+  Q1  -> D_macro      [label="AOV-driven / cohort-wide\nflat-spend ROAS drop"];
+  Q1  -> D_portfolio  [label="2nd 0-HHST campaign"];
+  Q1  -> D_cold_start [label="new campaign <4wk ramp"];
+
+  Q2a -> D_recovery     [label="re-gated, HI-share recovered"];
+  Q2a -> D_gate_removal [label="never reverted /\nshort-flight re-forced"];
+
+  Q3  -> D_score_artifact [label="spend-invariant relabel;\nmedian stable, gradient intact"];
+
+  Q4  -> D_over_scaling [label="reach up, within-HI VR\ncollapsed at held HI-share"];
+
+  Q5  -> D_mm_degraded [label="worse than growth-peers\n+ MM-share predicts + gradient broke"];
+  Q5  -> D_needs_more  [label="any kill-condition fails"];
+
+  // ---- Legend (4-swatch category key) ----
+  subgraph cluster_legend {
+    label="Category";
+    labelloc="t";
+    fontsize=11;
+    fontname="Helvetica";
+    style="rounded";
+    color="#B0B7BF";
+    node [shape=box, style="rounded,filled", fontsize=10, width=1.9, height=0.32, fixedsize=false, margin="0.06,0.04"];
+    L_artifact  [label="artifact (re-pull / re-baseline)", fillcolor="#E7EBEF", color="#5B6B7A", penwidth=1.6];
+    L_healthy   [label="healthy (no action)", fillcolor="#E3EFE7", color="#3E7C59", penwidth=1.6];
+    L_decline   [label="real decline (fix)", fillcolor="#F2DEDC", color="#C4342B", penwidth=1.6];
+    L_needsmore [label="needs-more (gather / re-open)", fillcolor="#F5EAD2", color="#B8863B", penwidth=1.6];
+    L_artifact -> L_healthy [style=invis];
+    L_healthy -> L_decline [style=invis];
+    L_decline -> L_needsmore [style=invis];
+  }
+}
