@@ -27,14 +27,12 @@ ax.set_xlim(0,100); ax.set_xlabel("% of served households")
 handles=[plt.Rectangle((0,0),1,1,color=c) for _,c in segs]
 ax.legend(handles,[s[0] for s in segs],frameon=False,ncol=4,fontsize=9.5,loc="lower center",bbox_to_anchor=(0.5,-0.5))
 ax.annotate("",xy=(49,1),xytext=(95,0),arrowprops=dict(arrowstyle="->",color=NAVY,lw=1.6))
-ax.text(72,0.5,"High-Intent\n95% → 49%",fontsize=11,color=NAVY,fontweight="bold",ha="center")
-ax.set_title("HexClad did NOT stay in High-Intent — its HI share roughly halved",
-             fontsize=14,fontweight="bold",loc="left",y=1.1,color=NAVY)
-ax.text(0,1.16,"Served-household intent-tier composition, prospecting. (Jan–May 2025 predates score logging; 2025 = the first "
-        "scored months, H2-2025, which ran ~95% High-Intent.)",transform=ax.transAxes,color="#666",fontsize=9)
+ax.text(72,0.5,"High-Intent\n95% → 49%",fontsize=12,color=NAVY,fontweight="bold",ha="center")
+# no matplotlib title/subtitle — the deck h2 + note supply them (avoids header collision)
 for s in ["top","right","left"]: ax.spines[s].set_visible(False)
 ax.tick_params(left=False)
-plt.tight_layout(); plt.savefig(D+"artifacts/audi_1070_hexclad_composition.png",dpi=200,bbox_inches="tight")
+plt.subplots_adjust(top=0.9, bottom=0.28)
+plt.savefig(D+"artifacts/audi_1070_hexclad_composition.png",dpi=200,bbox_inches="tight")
 print("wrote hexclad_composition.png"); plt.close()
 
 # ---- Chart 2: HHST gate trajectory ----

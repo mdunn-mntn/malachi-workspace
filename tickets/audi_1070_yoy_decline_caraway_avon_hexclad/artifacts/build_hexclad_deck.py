@@ -173,7 +173,7 @@ __MET__
 <li><b>Lever 1 — pace to HI capacity:</b> cap prospecting spend to what the High-Intent supply can absorb, not to a budget target.</li>
 <li><b>Lever 2 — grow the HI pool:</b> keep expanding keywords (already 78→89) so more in-vertical IPs qualify as HI (10k) not PP (8k).</li>
 <li><b>Lever 3 — evaluate Fangorn:</b> HexClad is on old bucketed PP; Fangorn-scored PP reportedly performs better.</li>
-<li><b>Open question for Measurement/scoring:</b> did HexClad's vertical HI <i>supply</i> shrink YoY, or is it Q1-vs-Q4 seasonal? Not answerable from retained data — needs the historical per-vertical HI pool.</li>
+<li><b>Why did HI supply fall? Ruled out:</b> vertical reassignment (vertical 120004 stable since 2024), keyword cut (grew 78→89), pure spend (HI swings 2–3× at constant spend). <b>Leading candidate:</b> the platform vertical-classification change (~July 2025, "Jaguar"/DS13) that re-drew which IPs are in each vertical — right timeline, but the vertical-size history isn't retained in BQ. <b>Measurement/scoring must confirm</b> by measuring vertical 120004's HI pool pre-July-2025 vs now (vs Q1-Q4 seasonality).</li>
 </ul></div>
 <p class="claim" style="font-size:0.7em;margin-top:0.5em;">HexClad didn't get worse at the same audience — it ran out of the good one.</p>
 </section>
