@@ -2933,3 +2933,6 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
   such clause). A `>= 0` per-campaign clause does NOT mean blocks are off. The full pageview block excludes
   **ANY guid pageview** (organic / other-marketer), not just MNTN-attributed VVs (VVs = a subset).
 - 10% holdout encoded in the expression: `md5(<advertiser_id>:<ip>) bucket 0–99 of 1000`.
+
+### silver.archives.household_score_threshold_archives (HHST gate change history)
+CDC archive of the per-campaign Household Score Threshold (the intent gate the bidder enforces). Cols: `household_score_threshold_archives_id`, `advertiser_id`, `campaign_group_id`, `campaign_id`, `threshold` (INT; 0 or negative = NO gate / serve anyone; 10000 = HI-only), `transaction_id`, `create_time`, `update_time`, `datastream_metadata`. One row per write (not per change) → collapse with LAG(threshold) OVER (PARTITION BY campaign_id ORDER BY update_time) keeping threshold!=prev. Current live values: `silver.dso.household_score_thresholds`. Join campaigns via `bronze.integrationprod.campaigns` (campaign_id PK; objective_id=1 & funnel_level=1 = Stage-1 prospecting). Use for daily gate event-studies (AUDI-1070: gate flips drive overnight delivery-composition inversions).
