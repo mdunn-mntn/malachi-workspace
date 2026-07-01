@@ -112,6 +112,21 @@ ol.road{font-size:0.6em;line-height:1.55;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>The raw numbers — High-Intent lost <span class="red">volume</span>, not just share</h2>
+<table class="cmp">
+<tr><th style="text-align:left">Tier (score)</th><th>2025 (Jun–Oct)</th><th>2026 (Jan–May)</th><th>YoY imps</th></tr>
+<tr><td style="text-align:left"><b>High-Intent (10,000)</b></td><td>27.5M &nbsp;<b>95.6%</b></td><td>17.8M &nbsp;<b>49.6%</b></td><td style="color:#D63B2F;font-weight:bold">−35%</td></tr>
+<tr><td style="text-align:left">Peak Performance (8,000)</td><td>0.2M &nbsp;0.7%</td><td>7.7M &nbsp;21.6%</td><td>+40×</td></tr>
+<tr><td style="text-align:left">Mid (3,333–6,665)</td><td>0.7M &nbsp;2.5%</td><td>3.2M &nbsp;9.0%</td><td>+4.4×</td></tr>
+<tr><td style="text-align:left">unscored</td><td>0.1M &nbsp;0.5%</td><td>7.0M &nbsp;19.5%</td><td>+49×</td></tr>
+<tr><td style="text-align:left"><b>Total impressions</b></td><td><b>28.7M</b></td><td><b>35.9M</b></td><td>+25%</td></tr>
+<tr><td style="text-align:left">Intent gate (HHST)</td><td>6,666</td><td>as low as 3,333</td><td></td></tr>
+<tr><td style="text-align:left">Avg score (unscored = 0)</td><td>9,769</td><td>7,156</td><td>−27%</td></tr>
+</table>
+<p class="note">Total volume rose +25%, but <b>High-Intent impressions FELL −35%</b> (27.5M→17.8M). The budget growth <i>and</i> the ~10M vanished HI impressions all flowed into PP / Mid / unscored. (2025 = first scored months; Jan–May 2025 predates score logging.)</p>
+</section>
+
+<section>
 <h2>The gate (HHST) loosened to keep spending</h2>
 <img src="__HHST__">
 <p class="note">HHST = the minimum intent score the bidder will serve. Steady at 6,666 in 2025 (HI+PP); in 2026 it swung to 10,000 then <b>collapsed to 3,333–4,500</b>, admitting Mid-intent — the bidder lowering the bar to fill the bigger budget.</p>
@@ -127,6 +142,18 @@ ol.road{font-size:0.6em;line-height:1.55;text-align:left;display:inline-block;} 
 <h2>Why did HI share fall — spend, or supply?</h2>
 <img src="__SUPPLY__">
 <p class="note"><b>It's supply, not budget.</b> At near-identical spend, HI swings 2–3×: Jan '26 ($152K → 79% HI) vs Feb '26 ($185K → 30% HI). In Feb the bidder set HHST=10,000 (HI-only) but still got only 30% HI — it <i>wanted</i> High-Intent and couldn't find it. A bigger budget on a fixed pool can't do that.</p>
+</section>
+
+<section>
+<h2>The definitive answer — four assumptions, all <span class="red">false</span></h2>
+<div style="text-align:left;display:inline-block;margin-top:0.2em;">
+<ul class="tight">
+<li><span class="red">✗ "It's the same campaign YoY"</span> — 2025's campaign (225087) ended Sep 2025; a new "CTV Prospecting High-Intent" campaign (446801) replaced it.</li>
+<li><span class="red">✗ "We only target High-Intent"</span> — 2026 delivery is 49.6% HI, 21.6% PP, 9% Mid, 19.5% unscored; the gate fell to 3,333.</li>
+<li><span class="red">✗ "We target the same % of HI"</span> — 95.6% (2025) → 49.6% (2026).</li>
+<li><span class="red">✗ "The audience was misconfigured / broken"</span> — it's a proper MM campaign both years; keywords GREW (78→89), CRM/visitor/converter exclusions & US-geo are consistent, no bad overlay. What changed is which tiers got <b>served</b>, not the setup.</li>
+</ul></div>
+<p class="claim" style="font-size:0.76em;margin-top:0.4em;">The AOV is flat YoY ($405→$397). HexClad performs worse simply because <span class="red">we reached more people who are less likely to visit or convert</span> — HI 3.84% vs PP 1.19%. Same orders when they buy; fewer of them buy.</p>
 </section>
 
 <section>
@@ -158,4 +185,4 @@ __MET__
 HTML=(HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO)
       .replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY))
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
-print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, 13 slides)")
+print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, 15 slides)")
