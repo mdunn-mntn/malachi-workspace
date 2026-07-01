@@ -78,7 +78,7 @@ ul.tight{font-size:0.6em;line-height:1.5;text-align:left;display:inline-block;} 
 <h2>Why it happened — High-Intent is scarce, Peak Performance is abundant</h2>
 <div style="text-align:left;display:inline-block;margin-top:0.3em;">
 <ul class="tight">
-<li><b>The pool asymmetry (MNTN platform, May 2026):</b> High-Intent = <span class="green">14B IPs</span> vs Peak Performance = <span class="red">33B IPs</span> — PP is 2.4× larger. HI (vertical∩keyword) is scarce; PP (vertical-only) is abundant.</li>
+<li><b>High-Intent is the scarce tier:</b> an IP is High-Intent only if it matches <b>both</b> the vertical <b>and</b> the campaign's keywords — far narrower than Peak Performance (vertical only). Platform-wide, ~<span class="red">2.4× more</span> prospecting scores land in PP than HI. So any campaign's HI pool is limited.</li>
 <li><b>HexClad scaled prospecting spend +45%</b> into a finite High-Intent pool → exhausted it → the bidder fell back into the abundant Peak-Performance pool, which converts a third as well.</li>
 <li><b>The audience also broadened:</b> 2025 = DS13 (Peak-Perf vertical) + DS19 (MM keywords); 2026 = DS46 + DS19 + RTC conquest — a wider net that made the PP fallback easier.</li>
 </ul></div>
