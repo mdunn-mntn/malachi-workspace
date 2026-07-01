@@ -160,3 +160,13 @@ Per Malachi: to the CLIENT, campaign_group_id IS the campaign; campaign_ids are 
 - **111708 "CTV Prospecting - General Interest"** — NEW campaign launched **Mar 6 2026** ($42K, S1=551235). Named GENERAL INTEREST = a DELIBERATE expansion BEYOND High-Intent, same week as the Mar 4 audience DS change (−DS1/−DS35). Part of the 2026 lower-HI mix is an intentional GI expansion, not only the gate.
 - Seasonal retargeting cells 100745/100746 ($33K/$57K, Oct-Jan).
 KEY REFRAME: the "HexClad prospecting decline" the client sees = the **"CTV Prospecting High-Intent" campaign (93373)**. Its decline is driven by: (1) Oct "Scale Up" test pushing spend ~40% over sustainable → HI running on refresh; (2) Nov 11 gate removal (holiday max-reach) — the dominant composition shock; (3) Mar 2026 "General Interest" campaign + DS change broadening beyond HI. The MM/HI substrate (DS13∩DS19) never changed. NOTE: campaign_groups table is full of test/archived junk groups (test-*, Copy 0X, archived/paused) — only the 8 above delivered.
+
+## SCORE DISTRIBUTION + SERVED COUNTS BY CAMPAIGN (the centerpiece — RTC-excluded, whole lifespan)
+The single clearest view. 93373 "High-Intent" split pre/post the Nov-11 gate removal:
+- 56914 early (Jun-Sep): 2.0M imps / 1.23M HH — 100% HI.
+- **93373 High-Intent PRE-gate (Jul-Nov10): 16.3M imps / 6.46M HH — 97.8% HI.** A true HI campaign.
+- **93373 High-Intent POST-gate (Nov11+, STILL RUNNING): 83.1M imps / 21.33M HH — 31.2% HI, 15.8% PP, 14.8% MI, 4% MaxReach, 34.2% unscored.** SAME campaign, still live, 5x the volume, HI collapsed 97.8%→31.2% because the gate was removed Nov 11 and NEVER reverted.
+- 100739 Cell A BAU (Oct-Dec): 4.8M / 2.51M — 86.6% HI (holiday, some MaxReach 7.4%).
+- 100744 Cell B Scale Up (Oct-Jan): 8.5M / 3.33M — 85.9% HI (7.6% MaxReach — the scale-up dipped into MaxReach).
+- **111708 General Interest (Mar26+): 1.6M / 1.21M — 0% HI, 100% UNSCORED.** The deliberate GI expansion serves ENTIRELY unscored inventory by design.
+THE PROBLEM IN ONE LINE: the campaign the client is still in (93373 "High-Intent") went 97.8%→31% HI and stayed there — gate changed Nov 11, never turned back — plus a 100%-unscored "General Interest" campaign was added in March.
