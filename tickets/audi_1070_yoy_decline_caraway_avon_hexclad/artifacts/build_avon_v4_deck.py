@@ -4,7 +4,7 @@ Same outline as HexClad/Caraway v4."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
-GATE=b64("avon_gate.png")
+GATE=b64("avon_gate_timeline.png")
 
 HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>AUDI-1070 — Avon</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
@@ -66,9 +66,9 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 
 <!-- 4 THE GATE STORY -->
 <section>
-<h2>3 · The "mix," explained — same holiday gate-removal, but RE-GATED</h2>
+<h2>3 · The campaigns & the gate over time — same holiday gate-removal, but RE-GATED</h2>
 <img src="__GATE__">
-<p class="note"><b>Avon's prospecting is mostly HI (97–100%) in the base months.</b> The mix appears in three places: <b>Nov 19 '25 the gate was REMOVED (→0/−1)</b> for the holiday spend spike (Dec 8% HI) — the <i>same</i> event as HexClad (Nov 11) and Caraway (~Nov 28); <b>Jan 6 '26 it was RE-GATED to 10,000</b> → recovered to 99.9% HI (Feb–Mar); May–Jun loosening + Fangorn onset. Plus RTC (~11%) bypasses the gate by design. <b>Avon turned the gate back on — HexClad never did. That one decision is the difference.</b></p>
+<p class="note"><b>Prospecting = ONE gated campaign (259556); MT2/MT3/Ego/retargeting carry no gate.</b> The gate held at 6666→10000 (delivery 97–100% HI), then <b>Nov 19 '25 it was REMOVED (→0/−1)</b> for the holiday spend spike — the <i>same</i> event as HexClad (Nov 11) and Caraway (~Nov 28) — and <b>delivery HI-share crashed 100%→8%</b> in lockstep (navy line). Then <b>Jan 6 '26 it was RE-GATED to 10,000</b> → delivery snapped back to 99.9% HI (Feb–Mar). May–Jun is the Fangorn/RTC transition (beyond the Jan–May window). <b>Avon turned the gate back on — HexClad never did. That one decision is the difference.</b></p>
 </section>
 
 <!-- 5 RATE METRICS -->
