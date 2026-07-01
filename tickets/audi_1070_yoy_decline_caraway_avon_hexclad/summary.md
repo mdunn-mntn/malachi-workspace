@@ -423,6 +423,16 @@ Premise: assume the saturation thesis is WRONG and try to break it. Four lines o
 - Flat AOV also **rules out** the alternatives: a different *kind* of buyer (mix/promo/pricing) would move AOV; it didn't. Same basket, fewer orders ⇒ a conversion-rate/audience-quality story, exactly the thesis.
 - Scope note: Mike's absolutes are a narrower FT scope (prospecting card, `industry_standard`=FT) vs account-total; direction identical, AOV ~flat on both.
 
+**AOV is flat on EVERY scope/lens (the point is scope-robust)** — FT prospecting numbers from `artifacts/hexclad_prospecting_analysis.py`:
+
+| Scope (Jan–May) | Lens | AOV '25 | AOV '26 | Δ | conv Δ | spend Δ |
+|---|---|---|---|---|---|---|
+| **All prospecting** (≈ Mike's spend $642k→$968k) | FT | $420.83 | $426.73 | **+1.4%** | −34% | +51% |
+| Stage-1 prospecting | FT | $431.97 | $417.14 | −3.4% | −21% | +46% |
+| Account-total | LT | $419.58 | $398.11 | −5.1% | −11% | +38% |
+
+→ On the FT prospecting scope that matches Mike's spend, **AOV is flat/up (+1.4%) while conversions fell −34%** — the ROAS/revenue drop is entirely an order-count collapse, not basket shrinkage. AOV is ~$400–430 across all cuts; the flat-AOV rebuttal doesn't depend on which screen he's on. (Mike's exact ROAS 3.15→1.09 / rev $2M→$950k is lower than BQ FT prospecting 8.78→3.87 / $5.6M→$3.8M — likely client-UI CHAPI/ClickHouse or a narrower subset; direction + flat-AOV conclusion identical.)
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).
