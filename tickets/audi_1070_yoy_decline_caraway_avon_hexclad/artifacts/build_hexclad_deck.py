@@ -10,6 +10,7 @@ SUPPLY=b64("audi_1070_hexclad_supply.png")
 GATE=b64("audi_1070_hexclad_gate_eventstudy.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
 TRANSITION=b64("audi_1070_hexclad_transition_map.png")
 PACING=b64("audi_1070_hexclad_pacing.png")
+MASTER=b64("audi_1070_hexclad_master_timeline.png")
 
 MET=[("Spend","$642,267","$931,422","+45%","in"),("Impressions","30.7M","40.8M","+33%","in"),
  ("Households reached","11.5M","14.1M","+22%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
@@ -138,6 +139,34 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>The full picture — every change on one timeline</h2>
+<img src="__MASTER__">
+<p class="note">All five levers, Jul 2025–Jun 2026. The <b>audience HI substrate (vertical DS13 ∩ keyword DS19) stayed intact the whole window</b> — the DS add/removes (CRM in Feb, LiveRamp/DS1 out Mar, Fangorn in Jun) never touched it. The one event that flips delivery is the <b>Nov 11 HHST gate removal</b> (red line); Dec is that gate held off, 2026 is it thrashed 51×. Supply tightened in Oct (pacing), but the composition collapse is the gate.</p>
+</section>
+
+<section>
+<h2>Full change log — date · layer · effect</h2>
+<table class="cmp" style="font-size:0.5em">
+<tr><th style="text-align:left">Date</th><th style="text-align:left">Layer</th><th style="text-align:left">Change</th><th style="text-align:left">Delivery effect</th></tr>
+<tr><td style="text-align:left">Jul 2025</td><td style="text-align:left">Audience + Gate</td><td style="text-align:left">DS{1,2,14,19,35}, RTC directive; gate 6,666</td><td style="text-align:left" class="green">clean HI-only (~100% HI)</td></tr>
+<tr><td style="text-align:left">Sep 24</td><td style="text-align:left">Audience</td><td style="text-align:left">+ DS13 (vertical) — HI substrate complete</td><td style="text-align:left">—</td></tr>
+<tr><td style="text-align:left">Sep 18–27</td><td style="text-align:left">Gate</td><td style="text-align:left">loosened to 6,200–6,400 (~1 wk)</td><td style="text-align:left">brief 5–30% MI</td></tr>
+<tr><td style="text-align:left">Oct 4</td><td style="text-align:left">Campaigns</td><td style="text-align:left">seasonal camps launch; 446801 dark 39d</td><td style="text-align:left">delivery via seasonals</td></tr>
+<tr><td style="text-align:left">Oct 21–Nov 10</td><td style="text-align:left">Gate</td><td style="text-align:left">→ 10,000 (strict HI-only)</td><td style="text-align:left" class="green">99.99% HI</td></tr>
+<tr><td style="text-align:left">Late Oct</td><td style="text-align:left">Pacing</td><td style="text-align:left">spend $224K (~40% over sustainable ~$5K/day)</td><td style="text-align:left" class="navy">"running on refresh"; reach/$ rolls over</td></tr>
+<tr style="background:#fbeaea"><td style="text-align:left"><b>Nov 11</b></td><td style="text-align:left"><b>Gate</b></td><td style="text-align:left"><b>HHST REMOVED (→0/−1)</b></td><td style="text-align:left" class="red"><b>100% → 13% HI overnight</b></td></tr>
+<tr><td style="text-align:left">Nov 14</td><td style="text-align:left">Campaigns</td><td style="text-align:left">seasonals stop; 446801 back at max-reach</td><td style="text-align:left">(Alyson's 11/15)</td></tr>
+<tr><td style="text-align:left">Nov 26–30</td><td style="text-align:left">Spend</td><td style="text-align:left">Black-Friday blowout</td><td style="text-align:left" class="red">3.6–4.8M imps/day (~20×), ungated</td></tr>
+<tr><td style="text-align:left">Dec (all)</td><td style="text-align:left">Gate</td><td style="text-align:left">stays −1 (no gate), never re-gated</td><td style="text-align:left" class="red">~11% HI / 57% unscored</td></tr>
+<tr><td style="text-align:left">Jan–May '26</td><td style="text-align:left">Gate + Scoring</td><td style="text-align:left">gate thrashed 51×; RTC starts firing</td><td style="text-align:left">HI-share swings; ~8% conquest bypass</td></tr>
+<tr><td style="text-align:left">Feb 18</td><td style="text-align:left">Audience</td><td style="text-align:left">+ DS4 (CRM), + DS16</td><td style="text-align:left">—</td></tr>
+<tr><td style="text-align:left">Mar 4</td><td style="text-align:left">Audience</td><td style="text-align:left">− DS1, − DS35 (LiveRamp); <b>DS19 stays</b></td><td style="text-align:left" class="green">HI substrate intact</td></tr>
+<tr><td style="text-align:left">Jun 4–5</td><td style="text-align:left">Scoring</td><td style="text-align:left">Fangorn migration (DS46 added Jun 3)</td><td style="text-align:left">bucketed → continuous</td></tr>
+</table>
+<p class="note">Every "change" the team flagged, in one place. Audience source moves (blue) never touched the HI-defining layers; the delivery swings are all gate + campaign-lifecycle. Nov 11 is the pivot.</p>
+</section>
+
+<section>
 <h2>The case for changes, month by month (Jun→Dec 2025)</h2>
 <img src="__TRANSITION__">
 <p class="note">Clean HI-only regime (gate ~6,666, 95–100% HI) June–October — HI reach <b>PEAKED</b> in Oct (3.86M distinct households, 2.08M net-new). <b>Nov 11: the HHST gate was REMOVED</b> (→0/−1) to chase 20× Black-Friday volume → 100% HI to 13% HI overnight. December never re-gated (−1 all month, ~11% HI). Not gradual, not HI exhaustion (HI was still abundant) — one deliberate config flip. Same pattern on Caraway (gate removed Nov 28).</p>
@@ -237,6 +266,6 @@ __MET__
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION).replace("__PACING__",PACING)
+HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION).replace("__PACING__",PACING).replace("__MASTER__",MASTER)
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
 print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
