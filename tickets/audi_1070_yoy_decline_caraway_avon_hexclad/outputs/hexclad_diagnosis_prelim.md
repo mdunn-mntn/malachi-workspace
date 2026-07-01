@@ -51,3 +51,8 @@ HexClad scores are 100% discrete (0% in 8001-9999 or 6666-7999 continuous ranges
 - Month-vs-month: ROAS DOWN every month (all-prosp −30% to −71%); conv rate down every month. (vs Avon: only April down.)
 **Score dist (household_score, stage1):** avg-scored-only 2025 ~9800 (near-pure HI 10k) → 2026 8200–9085 (HI+PP mix); avg-unscored=0 dropped further. Tier VR: HI 3.84% / PP 1.19% / Mid 1.13%.
 **ANSWER:** every lens (FT & LT) and every month shows a real decline; AOV flat; efficiency collapsed. Cause = HI→PP tier shift (0%→34% PP) as +45-51% spend exhausted the scarce HI pool. Not saturation/tracking/AOV/config. Deck: artifacts/audi_1070_hexclad_deck.html.
+
+## WHY did HI share fall — supply, not spend (2026-06-30)
+- **NOT spend alone:** at constant spend, HI share swings 2-3x WITHIN 2026 (Jan $152K→79% HI vs Feb $185K→30% HI). In Feb the bidder set HHST=10000 (HI-only) but got only 30% HI, backfilling via RTC/unscored → HI supply was genuinely insufficient. So the binding constraint is HI SUPPLY, not budget.
+- **NOT a keyword cut:** DS19 keyword count GREW 78 (2025) → 89 (2026).
+- **YoY pool-shrink vs seasonal — CANNOT isolate from retained data.** Jan-May 2025 scores don't exist (CIL onset Jun 2025); scoring pool external (`bronze.external.household_scoring__prospecting_intent__v1`) has 35-day retention; `data_source_category_sizes` is 3P-only (no DS13/19); `TI_835_prospecting_scores` GCS files deleted. Comparable-spend evidence (Oct 2025 96% HI @ $224K vs 2026 30-57% @ less) suggests a smaller pool but is confounded by Q4-vs-Q1 seasonality. To PROVE the YoY shrink: Measurement/scoring team must pull the historical per-vertical HI supply (GCS prospecting_intent/ip_vertical_associations, not retained in BQ).
