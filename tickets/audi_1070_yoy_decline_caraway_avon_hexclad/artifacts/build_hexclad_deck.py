@@ -7,6 +7,7 @@ def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_by
 PARADOX=b64("audi_1070_hexclad_paradox.png"); COMPO=b64("audi_1070_hexclad_composition.png")
 HHST=b64("audi_1070_hexclad_hhst.png"); TIER=b64("audi_1070_hexclad_visit_rate_by_tier.png")
 SUPPLY=b64("audi_1070_hexclad_supply.png")
+GATE=b64("audi_1070_hexclad_gate_eventstudy.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
 
 MET=[("Spend","$642,267","$931,422","+45%","in"),("Impressions","30.7M","40.8M","+33%","in"),
  ("Households reached","11.5M","14.1M","+22%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
@@ -129,9 +130,9 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>The gate (HHST) loosened to keep spending</h2>
-<img src="__HHST__">
-<p class="note">Steady 6,666 in 2025 (HI+PP); 2026 swung to 10,000 then dropped to 3,333–4,500, admitting Mid.</p>
+<h2>The steep drop-offs = the intent gate flipped, overnight</h2>
+<img src="__GATE__">
+<p class="note"><b>"No way reach caused this level of decline" — correct. Reach didn't. The HHST intent gate did.</b> The prospecting gate was changed <b>51 times</b> Jan–May 2026 (0 ↔ 10,000; steady 6,666 all of 2025). Each flip inverts delivery the <b>next day</b>: gate→10,000 (Jan 5, Feb 26) = 100% HI overnight; gate→0 (Feb 5, Mar 6) = 12% HI / 57% unscored overnight. The decline is a config lever thrashed to chase spend — not gradual, not model degradation. When the gate is tight, MM still delivers 100% HI and performs.</p>
 </section>
 
 <section>
@@ -159,13 +160,31 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>The mechanism is universal — Avon confirms it</h2>
+<table class="cmp big">
+<tr><th style="text-align:left"></th><th>HexClad</th><th>Avon</th></tr>
+<tr><td style="text-align:left">Typical monthly spend</td><td>~$150K</td><td>~$9K</td></tr>
+<tr><td style="text-align:left">HI+PP share, base months</td><td class="red">swings 30–79%</td><td class="green">stable 34–45%</td></tr>
+<tr><td style="text-align:left">When spend spikes</td><td>chronic</td><td class="red">Nov $36K → 18.6% HI+PP</td></tr>
+<tr><td style="text-align:left">Post-holiday Dec</td><td>11% HI</td><td class="red">3.3% HI+PP</td></tr>
+</table>
+<p class="note"><b>Same physics.</b> Low spend fits inside the finite HI pool → Avon stays in HI → healthy (this is <i>why</i> Avon is fine). But the instant Avon spends big (Nov $36K), its HI-share collapses to 18.6% — identical to HexClad. Not "MM degraded": it's spend-vs-finite-HI-supply, gated by HHST. Avon didn't stay flat by luck — it's the confirming experiment from the low-spend end.</p>
+</section>
+
+<section>
 <h2>What changed (TI-33, deployed 7/14/2025)</h2>
 <table class="cmp">
 <tr><th style="text-align:left">Vertical "Kitchen &amp; Cookware" (120004)</th><th>2025</th><th>2026</th></tr>
 <tr><td style="text-align:left">Vertical size (IPs)</td><td>9.5M</td><td class="navy" style="font-weight:bold">15.0M (+57%)</td></tr>
 <tr><td style="text-align:left">Original IPs churned out</td><td>—</td><td class="red">14%</td></tr>
 </table>
-<p class="note">New domain classifier: domain → ChatGPT description → embedding → vertical match, + non-ecommerce filter. The vertical <b>grew</b> (not a shrink) — but with vertical-only IPs that score <b>PP not HI</b>. So "High-Intent" is anchored on different IPs YoY, and the pool grew in the <b>wrong tier</b>. Fangorn NOT involved (HexClad is bucketed).</p>
+<p class="note">New domain classifier: domain → ChatGPT description → embedding → vertical match, + non-ecommerce filter. The vertical <b>grew</b> (not a shrink) — but with vertical-only IPs that score <b>PP not HI</b>. So "High-Intent" is anchored on different IPs YoY, and the pool grew in the <b>wrong tier</b>. (And it's not Fangorn — next slide.)</p>
+</section>
+
+<section>
+<h2>It's not Fangorn — proven, not assumed</h2>
+<img src="__FANGORN__">
+<p class="note">Fangorn writes <b>continuous</b> scores (High 8001–9999); bucketed writes <b>discrete</b> (HI = exactly 10,000). HexClad ran <b>0.0% continuous scores every month Jun 2025–May 2026</b> = 100% bucketed. It migrated to Fangorn <b>Jun 4–5, 2026</b> — after the entire decline window, so Fangorn cannot explain Jan–May. It IS live now (38% continuous in June) → June-forward is a new regime, flagged to the scoring team.</p>
 </section>
 
 <section>
@@ -181,8 +200,9 @@ __MET__
 <h2>Conclusion &amp; levers</h2>
 <div style="text-align:left;display:inline-block;margin-top:0.2em;">
 <ul class="tight">
-<li><b>Cause:</b> +45% spend outran the keyword-matched HI supply → delivery slid HI→PP (⅓ the conversion rate) → OV halved. Not saturation, tracking, AOV, or config.</li>
-<li><b>Pace to HI capacity</b> — cap spend to what HI can absorb, not a budget target.</li>
+<li><b>Cause:</b> +45% spend outran the keyword-matched HI supply → delivery slid HI→PP (⅓ the conversion rate) → OV halved. Not saturation, tracking, AOV, config, or Fangorn.</li>
+<li><b>Why it's rapid, not gradual:</b> the HHST intent gate is thrashed 51× (0 ↔ 10,000) to chase spend — each flip inverts delivery overnight. The steep drop-offs ARE the gate.</li>
+<li><b>Pace to HI capacity</b> — cap spend to what HI can absorb, not a budget target; stop flipping the gate to force fill.</li>
 <li><b>Grow the HI pool</b> — expand keywords so more in-vertical IPs qualify as HI (10k) not PP (8k).</li>
 <li><b>Open (scoring team):</b> within-tier HI quality (clickpass purged for 2025) — the one thing not measurable here.</li>
 </ul></div>
@@ -193,6 +213,6 @@ __MET__
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY)
+HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN)
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
 print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
