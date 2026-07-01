@@ -2950,3 +2950,19 @@ Consolidated value semantics for the `threshold` column (the earlier entries lis
 
 ### silver.core.flights (authoritative flight schedule — start/end times)
 The real flight table (Tofer): `flight_id`, `campaign_group_id` (a flight is per client-campaign/GROUP), `start_time`, `end_time`, `budget`, `budget_type_id`, `status_id` (3=active/completed, 8=superseded), `ui_flight_id`. Compute flight length as `TIMESTAMP_DIFF(end_time,start_time,HOUR)`; join advertiser via `campaign_groups.advertiser_id`. Use this for the **short-flight (<72h → manual HHST=0) check** — do NOT infer flight length from consecutive active-days (merges flights). Each budget/schedule EDIT spawns a new flight row, so a <72h "flight" can be a mid-schedule tweak, not a fresh launch. Companion: `silver.dso.campaign_group_flight` (adds local-tz start/end + name).
+
+### Config-change AUDIT tables — "what changed for this advertiser, and when" (AUDI-1070 cheat-sheet)
+To reconstruct why an advertiser's delivery/composition/performance changed (HHST, flights, audience, attribution, campaign structure) — the tables Tofer/Measurement pointed to. All are archive/CDC or source tables; filter by advertiser (some via campaign_id/campaign_group_id join to `bronze.integrationprod.campaigns`/`campaign_groups`, `deleted=FALSE`).
+
+| What changed | Table | Key cols / how |
+|---|---|---|
+| **HHST intent gate** (0/-1=no gate, 6666=HI+PP, 10000=HI-only) | `silver.archives.household_score_threshold_archives` | campaign_id, threshold, update_time. Collapse to change-events with LAG(threshold) OVER(PARTITION BY campaign_id ORDER BY update_time). Live value: `silver.dso.household_score_thresholds`. |
+| **Flight schedule** (short-flight <72h → manual HHST=0) | `silver.core.flights` | campaign_group_id, start_time, end_time, budget, status_id (3=active/completed, 8=superseded). Duration = TIMESTAMP_DIFF(end,start,HOUR). Each budget/schedule edit = new row. Companion: `silver.dso.campaign_group_flight`. |
+| **Audience / data-source (DS) targeting** | `silver.archives.audience_segment_archives` | campaign_id, expression (nested JSON), expression_type_id=2 & is_targeted=TRUE. Extract DS ids: REGEXP_EXTRACT_ALL(expression, r'"data_source_id":([0-9]+)'). **ORDER BY create_time, NOT version (non-monotonic).** Live: `bronze.integrationprod.audience_segments`. |
+| **Attribution / reporting_style** (last_touch vs industry_standard) | `silver.archives.advertiser_setting_archives` | advertiser_id, reporting_style, update_time. LAG to find flips. Live: `bronze.integrationprod.r2_advertiser_settings`. |
+| **Lookback windows** | `silver.audience.advertiser_configurations` | conversion_lookback, page_view_lookback (FRESH; not the stale integrationprod one). |
+| **Campaign / group launches & pauses** | `bronze.integrationprod.campaigns` + `campaign_groups` (+ `sum_by_campaign_by_day` for first/last delivery day) | campaign_group_id=client campaign; campaign_id=internal stage (obj 1 S1 / 5,6 MT / 7 Ego / 4 Retgt). Group NAMES encode intent (Scale-Up / General-Interest / DMA). campaign_groups is full of test/archived junk. |
+| **Scoring engine (Fangorn migration)** | `logdata.cost_impression_log` household_score | continuous 8001-9999 = Fangorn; exactly 10000/8000 = bucketed. Per-advertiser rolling migration. DS46 in the audience expression = Fangorn. |
+| **Delivery composition / VR / craters** | `summarydata.sum_by_campaign_by_day` + `logdata.cost_impression_log` | daily VR (views+clicks)/impressions to spot tracking outages (VR→~0 at normal spend = data gap, NOT audience). |
+
+Reusable one-command runner over most of these: `documentation/docs/advertiser_yoy_diagnostic/queries/run_diagnostic.sh <AID> <win_start> <win_end> <p1s> <p1e> <p2s> <p2e>`.
