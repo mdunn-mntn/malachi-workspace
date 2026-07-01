@@ -535,7 +535,7 @@ Re-verified the audience-size crux independently and added the decisive systemic
 
 ## 9. DEFINITIVE HEXCLAD FINDINGS — THE GATE, CONFIRMED (2026-07-01)
 
-*Supersedes/refines the HexClad framing in §4–§7 (expansion / within-HI degradation / supply shrink). HexClad's decline is now definitively the **HHST intent gate being removed and never reverted** — a config / campaign-management cause, CONFIRMED by Tofer/PEX. Full detail: `outputs/hexclad_diagnosis_prelim.md`; deck `artifacts/audi_1070_hexclad_deck.html` (v4); meeting `meetings/audi_1070_01_tofer_hhst_shortflight_2026_07_01.txt`.*
+*Supersedes/refines the HexClad framing in §4–§7 (expansion / within-HI degradation / supply shrink). HexClad's decline is now definitively the **HHST intent gate being THRASHED** — removed mid-Nov (holiday), restored to 10000 Jan 5 (delivery recovered to ~80% HI), off again Feb 5, oscillating since (66 changes on flagship 446801). NOT "set to 0 and never reverted" (corrected 2026-07-01 per Johnny's pushback + archive pull) — but never durably held at HI, so delivery repeatedly leaves HI; delivery HI-share tracks the gate every time (the Jan recovery = natural experiment). A config / campaign-management cause, CONFIRMED by Tofer/PEX. Evidence: `artifacts/hexclad_gate_thrash.png`, `outputs/hexclad_446801_gate_history_daily.csv` + `_monthly_hishare.csv`. Full detail: `outputs/hexclad_diagnosis_prelim.md`; deck `artifacts/audi_1070_hexclad_deck.html` (v4); meeting `meetings/audi_1070_01_tofer_hhst_shortflight_2026_07_01.txt`.*
 
 **CENTERPIECE — score distribution + served counts by campaign** (RTC-excluded, whole lifespan; `outputs/hexclad_score_dist_by_campaign.csv`):
 

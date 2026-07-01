@@ -1,11 +1,12 @@
 """AUDI-1070 — HexClad deck v4 (TIGHT). Story: campaigns -> assumptions -> score distribution + served
 counts -> rate metrics -> questions answered. Through-line: still in the '93373 High-Intent' campaign;
-gate removed Nov 11 2025 and NEVER reverted. Detail charts moved to an Appendix."""
+the gate has been THRASHED (removed mid-Nov 2025, restored to 10000 Jan 5, off again Feb, oscillating since) —
+delivery HI-share tracks it every time. Detail charts moved to an Appendix."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
 GANTT=b64("audi_1070_hexclad_campaign_gantt.png"); TIER=b64("audi_1070_hexclad_visit_rate_by_tier.png")
-GATE=b64("audi_1070_hexclad_gate_eventstudy.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
+GATE=b64("hexclad_gate_thrash.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
 PACING=b64("audi_1070_hexclad_pacing.png"); MASTER=b64("audi_1070_hexclad_master_timeline.png")
 
 MET=[("Spend","$642,267","$931,422","+45%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
@@ -41,7 +42,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <!-- 1 TITLE -->
 <section>
 <h1>HexClad — the High-Intent campaign that lost its gate</h1>
-<p class="claim" style="font-size:0.8em;margin-top:0.4em;">The gate was removed in November — and never turned back.</p>
+<p class="claim" style="font-size:0.8em;margin-top:0.4em;">The intent gate was thrashed from November on — never durably restored to High-Intent.</p>
 <div class="kpis" style="margin-top:0.8em;">
 <div class="kpi"><div class="n green">97.8%</div><div class="l">HI before (Jul–Oct)</div></div>
 <div class="kpi"><div class="n red">31%</div><div class="l">HI now (still running)</div></div>
@@ -55,7 +56,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <section>
 <h2>1 · The campaigns — to the client, each is a campaign_group</h2>
 <img src="__GANTT__" style="max-height:440px">
-<p class="note"><b>campaign_id</b> = our internal funnel stages (S1 Prospecting / Multi-Touch / Retargeting); the client sees the <b>group</b>. The decline is the flagship <b>"CTV Prospecting High-Intent" (93373, $2.73M)</b> — <b>still running today</b>. It ran clean HI-only Jul–Oct, then on <b>Nov 11 the intent gate was removed</b> (holiday max-reach) and <b>never reverted</b>. Oct was a "Scale Up" A/B test; Mar '26 added a "General Interest" campaign. Retargeting (56957) is a separate, healthy campaign.</p>
+<p class="note"><b>campaign_id</b> = our internal funnel stages (S1 Prospecting / Multi-Touch / Retargeting); the client sees the <b>group</b>. The decline is the flagship <b>"CTV Prospecting High-Intent" (93373, $2.73M)</b> — <b>still running today</b>. It ran clean HI-only Jul–Oct, then <b>mid-Nov the intent gate was removed</b> (holiday max-reach). Since then it's been <b>thrashed</b> — restored to 10000 in Jan (delivery recovered to ~80% HI), off again in Feb, oscillating since — so the campaign spends <b>repeated, extended stretches ungated</b>, and delivery HI-share tracks the gate every time. Oct was a "Scale Up" A/B test; Mar '26 added a "General Interest" campaign. Retargeting (56957) is a separate, healthy campaign.</p>
 </section>
 
 <!-- 3 ASSUMPTIONS -->
@@ -63,7 +64,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <h2>2 · The assumptions everyone holds — all <span class="red">false</span></h2>
 <table class="cmp big">
 <tr><th style="text-align:left">Assumption</th><th>Reality</th><th></th></tr>
-<tr><td style="text-align:left">"Same campaign, so compare directly"</td><td>gate removed mid-flight (Nov 11)</td><td class="red">✗</td></tr>
+<tr><td style="text-align:left">"Same campaign, so compare directly"</td><td>gate thrashed mid-flight (Nov+)</td><td class="red">✗</td></tr>
 <tr><td style="text-align:left">"We target High-Intent"</td><td class="red">now 31% HI (was 97.8%)</td><td class="red">✗</td></tr>
 <tr><td style="text-align:left">"The audience/MM was cut"</td><td class="green">HI substrate (DS13∩DS19) intact</td><td class="red">✗</td></tr>
 <tr><td style="text-align:left">"It's Fangorn / a model change"</td><td class="green">bucketed all window; Fangorn Jun 4</td><td class="red">✗</td></tr>
@@ -84,7 +85,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <tr><td style="text-align:left">100744 · Cell B Scale Up (Oct test)</td><td>8.5M</td><td>3.3M</td><td>85.9%</td><td>3</td><td>3</td><td>8</td><td>1</td></tr>
 <tr style="background:#fbeaea"><td style="text-align:left">111708 · General Interest (Mar '26+)</td><td>1.6M</td><td>1.2M</td><td class="red">0%</td><td>0</td><td>0</td><td>0</td><td class="red">100%</td></tr>
 </table>
-<p class="note"><b>The whole story in one table.</b> The flagship "High-Intent" campaign was <b>97.8% HI</b> — and it's <b>still running, now 31% HI / 34% unscored</b> (same campaign, 5× the volume) because the gate was removed Nov 11 and never turned back. The "General Interest" campaign added in March is <b>100% unscored by design</b>. RTC-excluded; HI = household_score ≥ 8,001.</p>
+<p class="note"><b>The whole story in one table.</b> The flagship "High-Intent" campaign was <b>97.8% HI</b> (Jul–Oct) — and it's <b>still running, averaging ~31% HI / 34% unscored post-November</b> (same campaign, 5× the volume) because the gate was <b>removed mid-Nov and thrashed since</b> (restored Jan → ~80% HI, off again Feb, oscillating). The "General Interest" campaign added in March is <b>100% unscored by design</b>. RTC-excluded; HI = household_score ≥ 8,001.</p>
 </section>
 
 <!-- 5 RATE METRICS -->
@@ -152,9 +153,9 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 </section>
 
 <section>
-<h2>A1 · The gate binds — and flips delivery overnight</h2>
+<h2>A1 · The gate was thrashed — and delivery tracks it every time</h2>
 <img src="__GATE__">
-<p class="note">Daily HI-share, 2026. Every HHST flip inverts delivery the next day: gate→10,000 = ~100% HI; gate→0 = ~12% HI. Verified: under a sustained 10k gate, non-HI = 0–1 imp/day. The "steep drop-offs" are config flips, not gradual decline.</p>
+<p class="note"><b>Not "set to 0 and never reverted" — it was thrashed.</b> Flagship 446801 gate: ~6666 Jul–Oct (93–98% HI) → <b>removed mid-Nov</b> for the holiday (HI → 11–15%, on 28M/19M imps) → <b>restored to 10,000 Jan 5</b> (HI recovers to 80%) → <b>off again Feb 5</b> (31%) → oscillates Mar–Jun (Fangorn-era ramps interrupted by drops to 0). <b>Delivery HI-share follows the gate every time</b> — the Jan recovery is the natural experiment proving the gate is the lever. The damage is the repeated <b>ungated stretches</b>, above all the Nov–Dec holiday blowout when spend & volume also exploded.</p>
 </section>
 
 <section>
@@ -172,7 +173,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <section>
 <h2>A4 · Full change timeline (every lever)</h2>
 <img src="__MASTER__">
-<p class="note">Audience DS moves (blue) never touched the HI substrate. The one event that flips delivery is the Nov 11 gate removal. Dec = gate held off; 2026 = gate thrashed 51×.</p>
+<p class="note">Audience DS moves (blue) never touched the HI substrate. The one thing that flips delivery is the <b>gate</b>: removed mid-Nov (Dec held off), restored Jan (HI→80%), then thrashed through 2026 (66 changes). Delivery HI-share tracks it every time.</p>
 </section>
 
 <section>

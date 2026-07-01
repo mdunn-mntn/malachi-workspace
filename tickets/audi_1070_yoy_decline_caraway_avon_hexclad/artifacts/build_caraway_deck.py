@@ -132,7 +132,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <tr><td style="text-align:left">Failure mode</td><td class="red">gate REMOVED</td><td class="red">OVER-SCALED HI</td></tr>
 <tr><td style="text-align:left">Flagship HI-share</td><td>97.8% → <b>31%</b> (left HI)</td><td class="green">stayed <b>82–99%</b> (held HI)</td></tr>
 <tr><td style="text-align:left">Spend YoY</td><td>+45%</td><td class="red">+191% (tripled)</td></tr>
-<tr><td style="text-align:left">The gate</td><td>removed Nov 11, never reverted</td><td>mostly held (Dec dip only)</td></tr>
+<tr><td style="text-align:left">The gate</td><td>thrashed (removed mid-Nov, restored Jan, off again Feb, oscillating)</td><td>mostly held (Dec dip only)</td></tr>
 <tr><td style="text-align:left">Flights</td><td>short (&lt;72h → auto-0)</td><td>long (82-day avg)</td></tr>
 <tr><td style="text-align:left"><b>Root cause</b></td><td><b>config</b> (gate off + short flights)</td><td><b>pacing</b> (spend outran HI supply)</td></tr>
 </table>
