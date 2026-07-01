@@ -1,5 +1,4 @@
--- Flight-length: runs of consecutive active days per campaign. Short flights (<=3d) auto-trigger HHST=0.
--- Params: {{AID}} {{WIN_START}} {{WIN_END}}
+/* Flight-length: runs of consecutive active days per campaign. Short flights (<=3d) auto-trigger HHST=0. | Params: {{AID}} {{WIN_START}} {{WIN_END}} */
 WITH days AS (
   SELECT campaign_id, day FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
   WHERE advertiser_id={{AID}} AND day>="{{WIN_START}}" AND day<"{{WIN_END}}" AND impressions>0 GROUP BY 1,2),

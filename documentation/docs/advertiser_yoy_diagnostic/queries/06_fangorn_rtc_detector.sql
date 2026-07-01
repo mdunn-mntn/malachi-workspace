@@ -1,4 +1,4 @@
--- Rule-outs: Fangorn (continuous scores 8001-9999) + RTC share, monthly. Params: {{AID}} {{WIN_START}} {{WIN_END}}
+/* Rule-outs: Fangorn (continuous scores 8001-9999) + RTC share, monthly. Params: {{AID}} {{WIN_START}} {{WIN_END}} */
 WITH base AS (
   SELECT FORMAT_DATE("%Y-%m",DATE(time)) mo,
     COALESCE(household_score, SAFE_CAST(REGEXP_EXTRACT(model_params, r"household_score=(-?[0-9]+)") AS INT64)) hs,

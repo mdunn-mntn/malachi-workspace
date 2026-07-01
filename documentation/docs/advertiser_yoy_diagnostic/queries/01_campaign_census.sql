@@ -1,5 +1,4 @@
--- Campaign census: client-facing GROUPS (campaign_group_id) + internal funnel-stage sub-campaigns.
--- Params: {{AID}} {{WIN_START}} {{WIN_END}}
+/* Campaign census: client-facing GROUPS (campaign_group_id) + internal funnel-stage sub-campaigns. | Params: {{AID}} {{WIN_START}} {{WIN_END}} */
 WITH d AS (
   SELECT campaign_id, MIN(day) fd, MAX(day) ld, SUM(impressions) imps,
          ROUND(SUM(media_spend+data_spend+platform_spend),0) spend, COUNT(DISTINCT day) active_days

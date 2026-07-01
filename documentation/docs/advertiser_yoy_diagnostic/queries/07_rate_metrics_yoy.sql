@@ -1,5 +1,4 @@
--- Prospecting rate metrics for two periods (visit rate, ROAS, conv, AOV, OV).
--- Params: {{AID}} {{P1_START}} {{P1_END}} {{P2_START}} {{P2_END}}
+/* Prospecting rate metrics for two periods (visit rate, ROAS, conv, AOV, OV). | Params: {{AID}} {{P1_START}} {{P1_END}} {{P2_START}} {{P2_END}} */
 WITH camp AS (SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id={{AID}} AND objective_id IN (1,5,6) AND deleted=FALSE),
 p AS (

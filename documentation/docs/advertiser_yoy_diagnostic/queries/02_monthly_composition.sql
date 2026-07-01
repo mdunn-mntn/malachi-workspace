@@ -1,5 +1,4 @@
--- Monthly HI/PP/MI/MaxReach/unscored share of PROSPECTING delivery (RTC-excluded). MoM composition swings.
--- HI = hs>=8001 (covers bucketed 10000 + Fangorn High). Params: {{AID}} {{WIN_START}} {{WIN_END}}
+/* Monthly HI/PP/MI/MaxReach/unscored share of PROSPECTING delivery (RTC-excluded). MoM composition swings. | HI = hs>=8001 (covers bucketed 10000 + Fangorn High). Params: {{AID}} {{WIN_START}} {{WIN_END}} */
 WITH camp AS (SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id={{AID}} AND objective_id=1 AND funnel_level=1 AND deleted=FALSE),
 base AS (

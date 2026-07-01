@@ -1,5 +1,4 @@
--- CRUX: daily per-prospecting-campaign delivery composition JOINED to the HHST gate in effect that day.
--- Reveals gate flips + overnight delivery inversion. Params: {{AID}} {{WIN_START}} {{WIN_END}}
+/* CRUX: daily per-prospecting-campaign delivery composition JOINED to the HHST gate in effect that day. | Reveals gate flips + overnight delivery inversion. Params: {{AID}} {{WIN_START}} {{WIN_END}} */
 WITH camp AS (SELECT campaign_id, name FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id={{AID}} AND objective_id=1 AND funnel_level=1 AND deleted=FALSE),
 gate_daily AS (

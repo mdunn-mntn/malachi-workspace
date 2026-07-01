@@ -1,5 +1,4 @@
--- Collapsed HHST gate-change events on prospecting campaigns (0/-1/-100=no gate; 6666=HI+PP; 10000=HI-only).
--- Params: {{AID}} {{WIN_START}} {{WIN_END}}
+/* Collapsed HHST gate-change events on prospecting campaigns (0/-1/-100=no gate; 6666=HI+PP; 10000=HI-only). | Params: {{AID}} {{WIN_START}} {{WIN_END}} */
 WITH h AS (SELECT campaign_id, threshold, update_time,
     LAG(threshold) OVER (PARTITION BY campaign_id ORDER BY update_time) prev
   FROM `dw-main-silver.archives.household_score_threshold_archives`
