@@ -4,7 +4,7 @@ the counterpart to HexClad's gate-removal. Same outline as HexClad v4."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
-SIG=b64("caraway_signature.png"); PACING=b64("audi_1070_hexclad_pacing.png"); GANTT=b64("caraway_gantt.png"); BLIND=b64("caraway_score_blind.png")
+SIG=b64("caraway_signature.png"); PACING=b64("audi_1070_hexclad_pacing.png"); GANTT=b64("caraway_gantt.png"); BLIND=b64("caraway_score_blind.png"); SATUR=b64("caraway_saturation.png")
 
 HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>AUDI-1070 — Caraway</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
@@ -52,7 +52,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <tr><td>123929</td><td style="text-align:left">CTV Prospecting - Low DMA</td><td>Prospecting</td><td>May '26+</td><td>$49K</td></tr>
 <tr><td>88892</td><td style="text-align:left">CTV Prospecting All DMAs</td><td>Prospecting</td><td>Jun–Aug '25</td><td>$29K</td></tr>
 </table>
-<p class="note">One dominant flagship — <b>"CTV Prospecting" (439156, $1.33M, still running)</b> — carries the story. The rest are geographic (High/Low DMA) test cells and an Oct test. The flagship runs <b>long flights (82-day avg)</b> — NOT the short-flight auto-0 pattern HexClad had.</p>
+<p class="note">One dominant flagship — <b>"CTV Prospecting" (439156, $1.33M, still running)</b> — carries the story. The rest are geographic (High/Low DMA) test cells and an Oct test. The flagship actually runs <b>many short flights</b> (18 of 47 ≤72h, per <code>core.flights</code>) — but unlike HexClad, its gate <b>held HI</b> through them (the short-flight HHST=0 wasn't applied here — Tofer's manual practice has gaps). So short-flights are not Caraway's cause.</p>
 </section>
 
 <section>
@@ -100,6 +100,12 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <h2>4b · The score is BLIND to it — maxed while VR halved</h2>
 <img src="__BLIND__">
 <p class="note"><b>Why it never recovers, and why score dashboards don't show it.</b> The scored-only average household_score sits at <b>~10,000 in EVERY gated month</b> — the flag is essentially binary (99–100% of scored impressions are <i>exactly</i> 10,000). <b>Aug '25: score 9,995 (highest) → VR 0.13% (lowest); Mar '26: score 10,000 (perfect) → VR 0.15%.</b> The score can't tell the best HI (0.37% VR) from the marginal HI (0.15% VR) — both read 10,000. So the collapse is invisible to the score, and from the platform's view "nothing degraded." <b>This is exactly what continuous scoring (Fangorn) fixes</b> — it grades within HI. (Caraway's Fangorn onset is May–Jun '26, after the window.)</p>
+</section>
+
+<section>
+<h2>4c · The saturation, confirmed — the HI pool ran dry</h2>
+<img src="__SATUR__">
+<p class="note"><b>Direct confirmation.</b> Cumulative distinct HI households reached climbed to <b>16.5M</b> (a lower bound on the pool). The <b>brand-new share of monthly HI reach fell 100% → 35%</b>, crossing 50% around <b>Oct–Nov '25</b> — from then on the majority of HI reach is <b>re-served</b> HI (the lower end of the tier), and fresh-HI inflow declined through 2026. So spend tripled, the fresh HI ran out ~Oct–Nov, and delivery increasingly recycled marginal HI — exactly what a finite pool under 3× spend produces, and why VR never recovers. (Dec is the gate-off outlier.)</p>
 </section>
 
 <!-- 6 RATE METRICS -->
@@ -171,6 +177,6 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__SIG__",SIG).replace("__PACING__",PACING).replace("__GANTT__",GANTT).replace("__BLIND__",BLIND)
+HTML=HTML.replace("__SIG__",SIG).replace("__PACING__",PACING).replace("__GANTT__",GANTT).replace("__BLIND__",BLIND).replace("__SATUR__",SATUR)
 (DIR/"audi_1070_caraway_deck.html").write_text(HTML)
 print(f"wrote audi_1070_caraway_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
