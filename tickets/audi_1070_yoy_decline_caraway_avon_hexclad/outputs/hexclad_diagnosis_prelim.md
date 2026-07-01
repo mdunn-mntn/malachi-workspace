@@ -33,3 +33,8 @@ HexClad's 2026 prospecting was rebuilt around **Fangorn (DS46) + RTC real-time-c
 2. Score→visit-rate gradient — is the RTC/Fangorn score mis-calibrated (high score, low visits)?
 3. Timeline — does the VR drop coincide with the Fangorn/RTC turn-on date?
 4. First-touch (industry_standard) view — match the client lens.
+
+## UPDATE (2026-06-30) — PP surge confirmed via correct score bands (Confluence TAR/3487891474)
+Score bands: HI=10000 (Vertical DS13 ∩ Keywords DS19), PP=8000 (Vertical NOT Keywords), Mid=3333-6665, unscored=rest.
+HexClad prospecting Peak-Performance (8000) share: 2025 Jun-Oct ~0-2% → 2026 Mar 25.2%, Apr 33.5%, May 34.0%.
+**Mechanism (confirms Mike):** scaled spend +45% exhausted the finite HI (vertical∩keyword) pool → bidder fell back into PP (vertical-only, no keyword match), a larger/lower-intent pool → visit rate & OV halved. HI 10k = vertical AND keyword; PP 8k = vertical only. NOT saturation-with-flat-OV (OV halved because a third of delivery moved HI→PP which converts far worse). NEXT: visit-rate-by-tier to quantify PP<<HI; split DS46(Fangorn) vs DS19(MM) legs.
