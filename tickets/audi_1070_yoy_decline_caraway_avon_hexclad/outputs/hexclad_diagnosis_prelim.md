@@ -62,3 +62,11 @@ HexClad scores are 100% discrete (0% in 8001-9999 or 6666-7999 continuous ranges
 - Keywords GREW 78→89 (not a cut). Config clean. Supply-driven (constant-spend 2-3x HI swings).
 - **Leading candidate: platform "vertical classification change ~July 15/22 2025" (Jaguar/DS13)** — knowledge/data_knowledge.md §Pre/Post + §Jaguar. Re-drew vertical IP membership between the two windows → would resize HexClad's HI pool (HI = vertical∩keyword) without touching its assignment. Matches "Ryan changed what's in the vertical."
 - **NOT provable from retained BQ:** vertical-size history not retained (CIL scores Jun-2025+, scoring external 35d, no vertical-association BQ external, ddp_vertical_classification_api = API logs, Jaguar score absent from HexClad model_params). Targetable-IP comparison only works forward (today measurable, 2025 not). Needs Measurement/scoring to measure vertical 120004 HI pool pre-vs-post July 2025.
+
+## TI-33 vertical reclassification + timing correction (2026-06-30)
+- **TI-33 / AUDI-33 "Review vertical sizes after introduction":** new ChatGPT+vectorizer domain classifier, released **2025-07-21/22**. Re-drew ALL verticals.
+- **HexClad vertical "Kitchen & Cookware" (120004):** 9.53M → 14.98M IPs (**+57%**), retention 85.93% (**14.07% churned OUT**), ~6.8M new IPs in. Source: `tickets/ti_033_vertical_classification_changes/outputs/ti_033_top_churners.csv`.
+- **BUT it's a DEFINITION change, not the collapse cause:** it GREW (+57%), and Aug-Oct 2025 (post-TI-33) stayed ~96% HI. So TI-33 changed WHICH IPs = "HI" (disproves "HI is HI / same audience"), but the SHARE collapse is spend-driven (Nov-2025 spike + 2026 scaling).
+- **Fangorn NOT a factor:** HexClad bucketed (0% continuous through May 2026); old-MM→Fangorn hasn't reached it (an "after May" event).
+- **Within-HI quality change NOT measurable:** clickpass_log purged for 2025 (Aug-Oct 2025 HI visit rate query returned 0 — no retained visit rows). Needs Measurement/scoring.
+- **DEFINITIVE CAUSE = spend scaling beyond the keyword-matched HI inventory** → bidder drops HHST, fills budget with PP/Mid (convert 1/3) → OV halved. TI-33 = definition change (secondary); Fangorn = N/A; quality change = unmeasurable.
