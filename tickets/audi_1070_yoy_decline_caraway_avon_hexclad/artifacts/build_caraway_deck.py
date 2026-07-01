@@ -4,7 +4,7 @@ the counterpart to HexClad's gate-removal. Same outline as HexClad v4."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
-SIG=b64("caraway_signature.png"); PACING=b64("audi_1070_hexclad_pacing.png"); GANTT=b64("caraway_gantt.png")
+SIG=b64("caraway_signature.png"); PACING=b64("audi_1070_hexclad_pacing.png"); GANTT=b64("caraway_gantt.png"); BLIND=b64("caraway_score_blind.png")
 
 HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>AUDI-1070 — Caraway</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
@@ -96,6 +96,12 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <p class="note"><b>The whole case in one chart.</b> HI-share (bars) held ~85–100% through 2026, yet the visit rate (line) fell by half: <b>Jul '25 = 99% HI → 0.37% VR; Mar '26 = 99.9% HI → 0.15% VR.</b> Same HI-share, half the visit rate. The only thing that changed is <b>how hard the pool was pushed</b> — impressions nearly tripled. It wasn't re-serving the same households (HI frequency stayed flat ~1.5); it reached <b>+136% more distinct HI households</b> (1.66M→3.92M) — <b>deeper into the pool, to weaker/marginal HI</b>. "HI" (score 10,000) is a membership flag, not a visit guarantee: at low spend you skim the best HI, at 3× you scrape the marginal HI that convert far worse.</p>
 </section>
 
+<section>
+<h2>4b · The score is BLIND to it — maxed while VR halved</h2>
+<img src="__BLIND__">
+<p class="note"><b>Why it never recovers, and why score dashboards don't show it.</b> The scored-only average household_score sits at <b>~10,000 in EVERY gated month</b> — the flag is essentially binary (99–100% of scored impressions are <i>exactly</i> 10,000). <b>Aug '25: score 9,995 (highest) → VR 0.13% (lowest); Mar '26: score 10,000 (perfect) → VR 0.15%.</b> The score can't tell the best HI (0.37% VR) from the marginal HI (0.15% VR) — both read 10,000. So the collapse is invisible to the score, and from the platform's view "nothing degraded." <b>This is exactly what continuous scoring (Fangorn) fixes</b> — it grades within HI. (Caraway's Fangorn onset is May–Jun '26, after the window.)</p>
+</section>
+
 <!-- 6 RATE METRICS -->
 <section>
 <h2>5 · Rate metrics — spend +191%, but visits & value FELL</h2>
@@ -165,6 +171,6 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__SIG__",SIG).replace("__PACING__",PACING).replace("__GANTT__",GANTT)
+HTML=HTML.replace("__SIG__",SIG).replace("__PACING__",PACING).replace("__GANTT__",GANTT).replace("__BLIND__",BLIND)
 (DIR/"audi_1070_caraway_deck.html").write_text(HTML)
 print(f"wrote audi_1070_caraway_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
