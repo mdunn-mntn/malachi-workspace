@@ -1,20 +1,14 @@
-"""AUDI-1070 — HexClad deck v3: numbers/tables-heavy, assumptions upfront, tight build.
-campaigns->audience->symptom->rule-outs->backbone->gate->clincher->rebuttal->why->what-changed->numbers.
-Last-touch (Mike's report) for perf; tier composition uses H2-2025 (Jan-May 2025 predates scoring). 5 charts."""
+"""AUDI-1070 — HexClad deck v4 (TIGHT). Story: campaigns -> assumptions -> score distribution + served
+counts -> rate metrics -> questions answered. Through-line: still in the '93373 High-Intent' campaign;
+gate removed Nov 11 2025 and NEVER reverted. Detail charts moved to an Appendix."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
-PARADOX=b64("audi_1070_hexclad_paradox.png"); COMPO=b64("audi_1070_hexclad_composition.png")
-HHST=b64("audi_1070_hexclad_hhst.png"); TIER=b64("audi_1070_hexclad_visit_rate_by_tier.png")
-SUPPLY=b64("audi_1070_hexclad_supply.png")
+GANTT=b64("audi_1070_hexclad_campaign_gantt.png"); TIER=b64("audi_1070_hexclad_visit_rate_by_tier.png")
 GATE=b64("audi_1070_hexclad_gate_eventstudy.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
-TRANSITION=b64("audi_1070_hexclad_transition_map.png")
-PACING=b64("audi_1070_hexclad_pacing.png")
-MASTER=b64("audi_1070_hexclad_master_timeline.png")
-GANTT=b64("audi_1070_hexclad_campaign_gantt.png")
+PACING=b64("audi_1070_hexclad_pacing.png"); MASTER=b64("audi_1070_hexclad_master_timeline.png")
 
-MET=[("Spend","$642,267","$931,422","+45%","in"),("Impressions","30.7M","40.8M","+33%","in"),
- ("Households reached","11.5M","14.1M","+22%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
+MET=[("Spend","$642,267","$931,422","+45%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
  ("Visit rate","0.362%","0.167%","−54%","bad"),("Conversions","4,978","2,495","−50%","bad"),
  ("AOV","$405.38","$397.38","−2%","flat"),("Order Value","$2.02M","$0.99M","−51%","bad"),
  ("ROAS","3.14×","1.06×","−66%","bad")]
@@ -32,237 +26,155 @@ HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>AUDI-1070 —
 .reveal h2{margin-top:0;font-size:1.0em;color:var(--navy);margin-bottom:0.25em;}
 .reveal section img{margin:0.05em 0 0;border:0;box-shadow:none;background:#FAFAFA;max-height:600px;}
 .cmp{font-size:0.6em;margin:0.15em auto;border-collapse:collapse;}
-.cmp th{background:var(--navy);color:#fff;padding:0.3em 0.9em;}
-.cmp td{padding:0.26em 0.9em;border-bottom:1px solid #e3e3e3;text-align:right;}
+.cmp th{background:var(--navy);color:#fff;padding:0.3em 0.8em;}
+.cmp td{padding:0.26em 0.8em;border-bottom:1px solid #e3e3e3;text-align:right;}
 .big td{font-size:1.05em;padding:0.3em 1.0em;}
 .claim{font-size:1.0em;color:var(--navy);font-weight:bold;line-height:1.3;}
 .sub{color:var(--tl);font-size:0.58em;} .red{color:var(--red);font-weight:bold;} .green{color:var(--green);font-weight:bold;} .navy{color:var(--navy);font-weight:bold;}
 .note{font-size:0.46em;color:#999;margin-top:0.35em;}
 .kpis{display:flex;justify-content:center;gap:1.4em;margin-top:0.7em;}
 .kpi{text-align:center;} .kpi .n{font-size:1.5em;font-weight:bold;} .kpi .l{font-size:0.5em;color:var(--tl);}
-ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} ul.tight li{margin-bottom:0.3em;}
+ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;} ul.tight li{margin-bottom:0.35em;}
+.divider{color:#bbb;font-size:0.5em;letter-spacing:0.2em;}
 </style></head><body><div class="reveal"><div class="slides">
 
+<!-- 1 TITLE -->
 <section>
-<h1>HexClad — Prospecting ROAS Fell 3×</h1>
-<p class="claim" style="font-size:0.8em;margin-top:0.4em;">It didn't get worse at High-Intent — it ran out of it.</p>
+<h1>HexClad — the High-Intent campaign that lost its gate</h1>
+<p class="claim" style="font-size:0.8em;margin-top:0.4em;">The gate was removed in November — and never turned back.</p>
 <div class="kpis" style="margin-top:0.8em;">
-<div class="kpi"><div class="n navy">+45%</div><div class="l">Spend</div></div>
-<div class="kpi"><div class="n red">−51%</div><div class="l">Order Value</div></div>
+<div class="kpi"><div class="n green">97.8%</div><div class="l">HI before (Jul–Oct)</div></div>
+<div class="kpi"><div class="n red">31%</div><div class="l">HI now (still running)</div></div>
 <div class="kpi"><div class="n red">3.14→1.06</div><div class="l">ROAS</div></div>
-<div class="kpi"><div class="n red">95%→49%</div><div class="l">% High-Intent</div></div>
+<div class="kpi"><div class="n red">−51%</div><div class="l">Order Value</div></div>
 </div>
-<p class="sub" style="margin-top:1.0em;"><b>Malachi Dunn</b> &middot; Audience Intelligence &middot; AUDI-1070 &middot; Jan–May 2025 vs 2026, prospecting</p>
+<p class="sub" style="margin-top:1.0em;"><b>Malachi Dunn</b> &middot; Audience Intelligence &middot; AUDI-1070 &middot; prospecting, Jan–May YoY</p>
 </section>
 
+<!-- 2 CAMPAIGNS -->
 <section>
-<h2>The 4 assumptions everyone holds — all <span class="red">false</span></h2>
-<table class="cmp">
-<tr><th style="text-align:left">Assumption</th><th>2025</th><th>2026</th><th></th></tr>
-<tr><td style="text-align:left">"Same campaign YoY"</td><td>225087</td><td>446801</td><td class="red">✗</td></tr>
-<tr><td style="text-align:left"><b>"We only target High-Intent"</b></td><td><b class="green">95.6% HI</b></td><td><b class="red">49.6% HI</b></td><td class="red">✗</td></tr>
-<tr><td style="text-align:right;color:#888;font-size:0.9em">Peak Performance (8k)</td><td>0.7%</td><td class="red" style="font-weight:bold">21.6%</td><td></td></tr>
-<tr><td style="text-align:right;color:#888;font-size:0.9em">Mid / unscored</td><td>3.0%</td><td>28.5%</td><td></td></tr>
-<tr><td style="text-align:left">"Same % of HI"</td><td>95.6%</td><td class="red" style="font-weight:bold">49.6%</td><td class="red">✗</td></tr>
-<tr><td style="text-align:left">"Audience mis-set / cut"</td><td>MM · 78 kw</td><td>MM · 89 kw</td><td class="red">✗</td></tr>
-</table>
-<p class="note">Same campaigns? No. Only HI? No — 51% is now lower tiers. Same %? No — HI halved. Broken config? No — clean MM, keywords grew. The rest of the deck proves each.</p>
+<h2>1 · The campaigns — to the client, each is a campaign_group</h2>
+<img src="__GANTT__" style="max-height:440px">
+<p class="note"><b>campaign_id</b> = our internal funnel stages (S1 Prospecting / Multi-Touch / Retargeting); the client sees the <b>group</b>. The decline is the flagship <b>"CTV Prospecting High-Intent" (93373, $2.73M)</b> — <b>still running today</b>. It ran clean HI-only Jul–Oct, then on <b>Nov 11 the intent gate was removed</b> (holiday max-reach) and <b>never reverted</b>. Oct was a "Scale Up" A/B test; Mar '26 added a "General Interest" campaign. Retargeting (56957) is a separate, healthy campaign.</p>
 </section>
 
+<!-- 3 ASSUMPTIONS -->
 <section>
-<h2>Campaigns (2 years)</h2>
-<table class="cmp">
-<tr><th style="text-align:left">Group</th><th>obj</th><th>Channel</th><th>2026 ROAS</th><th>Scope</th></tr>
-<tr><td style="text-align:left">Prospecting — Stage 1 (Beeswax TV)</td><td>1</td><td>CTV</td><td>1.06×</td><td class="green">analyzed</td></tr>
-<tr><td style="text-align:left">Prospecting — Multi-Touch</td><td>1</td><td>CTV/disp</td><td>—</td><td class="green">all-stages</td></tr>
-<tr><td style="text-align:left">Retargeting</td><td>4</td><td>CTV/disp</td><td>61.9×</td><td>excluded — healthy</td></tr>
-</table>
-<p class="note">Prospecting = objective_id 1. Retargeting (obj 4) is healthy (ROAS 55→62) → not a tracking/site-wide issue. Analysis = prospecting only.</p>
-</section>
-
-<section>
-<h2>Audience — clean MM, unchanged config</h2>
-<table class="cmp">
-<tr><th style="text-align:left">Layer</th><th>2025</th><th>2026</th></tr>
-<tr><td style="text-align:left">MM keywords (DS19)</td><td>78</td><td class="green">89 (grew)</td></tr>
-<tr><td style="text-align:left">Exclusions (CRM / visitor / converter)</td><td>yes</td><td>yes</td></tr>
-<tr><td style="text-align:left">Geo</td><td>US only</td><td>US only</td></tr>
-<tr><td style="text-align:left">Holdout / RTC / HHST gate</td><td>yes</td><td>yes</td></tr>
-<tr><td style="text-align:left">3P / geo-narrow overlay</td><td>none</td><td>none</td></tr>
-</table>
-<p class="note">HI substrate (vertical DS13 ∩ keyword DS19) intact through May 2026 — not a keyword/HI cut. Source add/removes did happen (Feb 18: +CRM DS4; Mar 4: −DS1/−DS35 LiveRamp; Jun 3: +DS46 Fangorn), but the HI-defining layers stayed. The decline is in the scoring/gate layer downstream, not the audience.</p>
-</section>
-
-<section>
-<h2>The symptom: spend +45%, but visits & order value FELL</h2>
-<img src="__PARADOX__">
-<p class="note"><b>Jan–May 2025 vs Jan–May 2026 — same months, YoY</b> (Last-Touch report, reproduced to the dollar). Why do visits/conversions fall when spend rises? Spend bought +33% impressions, but the <b>visit rate collapsed −54%</b> (delivery shifted to a worse audience) → visits = impressions × visit-rate = <b>−39%</b>. The quality drop outweighs the volume gain. Saturation would hold OV flat; it halved.</p>
-</section>
-
-<section>
-<h2>Rule-outs — one line each</h2>
+<h2>2 · The assumptions everyone holds — all <span class="red">false</span></h2>
 <table class="cmp big">
-<tr><th style="text-align:left">Hypothesis</th><th>Number</th><th></th></tr>
-<tr><td style="text-align:left">Smaller orders?</td><td>AOV $405 → $397 (flat)</td><td class="red">✗</td></tr>
-<tr><td style="text-align:left">Saturation?</td><td>reach 11.5M → 14.1M (<b>+22%</b>)</td><td class="red">✗</td></tr>
-<tr><td style="text-align:left">Tracking break?</td><td>retargeting ROAS 55 → 62</td><td class="red">✗</td></tr>
-<tr><td style="text-align:left"><b>Root cause →</b></td><td><b>visit rate 0.362% → 0.167% (−54%)</b></td><td class="green">✓</td></tr>
+<tr><th style="text-align:left">Assumption</th><th>Reality</th><th></th></tr>
+<tr><td style="text-align:left">"Same campaign, so compare directly"</td><td>gate removed mid-flight (Nov 11)</td><td class="red">✗</td></tr>
+<tr><td style="text-align:left">"We target High-Intent"</td><td class="red">now 31% HI (was 97.8%)</td><td class="red">✗</td></tr>
+<tr><td style="text-align:left">"The audience/MM was cut"</td><td class="green">HI substrate (DS13∩DS19) intact</td><td class="red">✗</td></tr>
+<tr><td style="text-align:left">"It's Fangorn / a model change"</td><td class="green">bucketed all window; Fangorn Jun 4</td><td class="red">✗</td></tr>
+<tr><td style="text-align:left">"High-Intent ran out"</td><td>emerging in Oct; gate is the cause</td><td class="red">✗</td></tr>
 </table>
+<p class="note">Every intuition points at the audience or the model. The data points at one config lever: the household-score gate.</p>
 </section>
 
+<!-- 4 SCORE DISTRIBUTION + COUNTS (centerpiece) -->
 <section>
-<h2>Backbone — did NOT stay in High-Intent</h2>
-<img src="__COMPO__">
-<p class="note">HI = 10,000 (vertical AND keyword); PP = 8,000 (vertical only). 2025 = Jun–Oct (first scored months; Jan–May 2025 predates score logging).</p>
-</section>
-
-<section>
-<h2>Raw counts by tier (impressions)</h2>
-<table class="cmp">
-<tr><th style="text-align:left">Tier</th><th>2025</th><th>2026</th><th>YoY</th></tr>
-<tr><td style="text-align:left"><b>High-Intent (10k)</b></td><td>27.5M &nbsp;95.6%</td><td>17.8M &nbsp;49.6%</td><td class="red" style="font-weight:bold">−35%</td></tr>
-<tr><td style="text-align:left">Peak Performance (8k)</td><td>0.2M &nbsp;0.7%</td><td>7.7M &nbsp;21.6%</td><td>+40×</td></tr>
-<tr><td style="text-align:left">Mid</td><td>0.7M &nbsp;2.5%</td><td>3.2M &nbsp;9.0%</td><td>+4.4×</td></tr>
-<tr><td style="text-align:left">unscored</td><td>0.1M &nbsp;0.5%</td><td>7.0M &nbsp;19.5%</td><td>+49×</td></tr>
-<tr><td style="text-align:left"><b>Total</b></td><td><b>28.7M</b></td><td><b>35.9M</b></td><td>+25%</td></tr>
-<tr><td style="text-align:left">Avg score (unscored=0)</td><td>9,769</td><td>7,156</td><td>−27%</td></tr>
-<tr style="border-top:2px solid var(--navy)"><td style="text-align:left"><b>Addressable HI reached</b> <span style="font-size:0.8em;color:#888">(distinct households)</span></td><td><b>7.0M</b></td><td><b>7.3M</b></td><td class="navy" style="font-weight:bold">+4%</td></tr>
-<tr><td style="text-align:left">HI frequency <span style="font-size:0.8em;color:#888">(impr ÷ households)</span></td><td>3.9×</td><td>2.4×</td><td class="red">−38%</td></tr>
-<tr><td style="text-align:left">Total households reached</td><td>7.4M</td><td>14.8M</td><td class="red" style="font-weight:bold">+100%</td></tr>
+<h2>3 · Score distribution &amp; served volume — by campaign</h2>
+<table class="cmp" style="font-size:0.52em">
+<tr><th style="text-align:left">Client campaign</th><th>Imps</th><th>HH</th><th>HI</th><th>PP</th><th>MI</th><th>MaxR</th><th>Unscored</th></tr>
+<tr><td style="text-align:left">56914 · early prospecting</td><td>2.0M</td><td>1.2M</td><td class="green">100%</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr style="background:#eef7f0"><td style="text-align:left"><b>93373 · High-Intent</b> (Jul–Nov 10)</td><td>16.3M</td><td>6.5M</td><td class="green"><b>97.8%</b></td><td>0</td><td>2</td><td>0</td><td>0.2</td></tr>
+<tr style="background:#fbeaea"><td style="text-align:left"><b>93373 · High-Intent</b> (Nov 11+) <b>← STILL LIVE</b></td><td>83.1M</td><td>21.3M</td><td class="red"><b>31.2%</b></td><td>15.8</td><td>14.8</td><td>4.0</td><td class="red"><b>34.2%</b></td></tr>
+<tr><td style="text-align:left">100739 · Cell A BAU (Oct test)</td><td>4.8M</td><td>2.5M</td><td>86.6%</td><td>2</td><td>3</td><td>7</td><td>1</td></tr>
+<tr><td style="text-align:left">100744 · Cell B Scale Up (Oct test)</td><td>8.5M</td><td>3.3M</td><td>85.9%</td><td>3</td><td>3</td><td>8</td><td>1</td></tr>
+<tr style="background:#fbeaea"><td style="text-align:left">111708 · General Interest (Mar '26+)</td><td>1.6M</td><td>1.2M</td><td class="red">0%</td><td>0</td><td>0</td><td>0</td><td class="red">100%</td></tr>
 </table>
-<p class="note"><b>The tell:</b> HI households reached is FLAT (~7M, maxed both years) while total reach DOUBLED. Not retargeting — Stage-1 prospecting serves each household ~2–4× (frequency). And HexClad served HI <i>less</i> in 2026 (freq 3.9→2.4), redirecting budget to PP/Mid. (2025 = scored ref; Jan–May 2025 predates scoring.)</p>
+<p class="note"><b>The whole story in one table.</b> The flagship "High-Intent" campaign was <b>97.8% HI</b> — and it's <b>still running, now 31% HI / 34% unscored</b> (same campaign, 5× the volume) because the gate was removed Nov 11 and never turned back. The "General Interest" campaign added in March is <b>100% unscored by design</b>. RTC-excluded; HI = household_score ≥ 8,001.</p>
+</section>
+
+<!-- 5 RATE METRICS -->
+<section>
+<h2>4 · Rate metrics — why the mix is the whole game</h2>
+<img src="__TIER__" style="max-height:420px">
+<table class="cmp" style="font-size:0.5em;margin-top:0.1em">
+<tr><th style="text-align:left">YoY (Jan–May)</th><th>2025</th><th>2026</th><th></th></tr>
+<tr><td style="text-align:left">Visit rate</td><td>0.362%</td><td>0.167%</td><td class="red">−54%</td></tr>
+<tr><td style="text-align:left">Conversions</td><td>4,978</td><td>2,495</td><td class="red">−50%</td></tr>
+<tr><td style="text-align:left">AOV</td><td>$405</td><td>$397</td><td class="navy">flat</td></tr>
+<tr><td style="text-align:left">ROAS</td><td>3.14×</td><td>1.06×</td><td class="red">−66%</td></tr>
+</table>
+<p class="note">High-Intent converts <b>~3× better</b> (3.84% vs ~1% for PP/Mid/unscored). Flat AOV → the ROAS drop is a <b>conversion-count</b> problem, and conversions track the HI share. Shift 98%→31% HI and the rate metrics fall exactly as observed.</p>
+</section>
+
+<!-- 6 WHAT HAPPENED -->
+<section>
+<h2>5 · What happened — and why it's still happening</h2>
+<div style="text-align:left;display:inline-block;margin-top:0.3em;">
+<ul class="tight">
+<li><b class="green">Jul–Oct 2025:</b> clean High-Intent regime — gate 6,666–10,000, <b>97.8% HI</b>.</li>
+<li><b class="navy">Oct:</b> a <b>"Scale Up"</b> A/B test pushed spend ~40% over what the HI pool refreshes (~$5K/day) — supply started to strain.</li>
+<li><b class="red">Nov 11:</b> the HHST intent gate was <b>REMOVED</b> (→0/−1) for holiday reach → HI <b>98% → 13%</b> overnight; Black-Friday volume ~20×.</li>
+<li><b class="red">Dec → today:</b> the gate was <b>never turned back.</b> 93373 has run ungated/thrashed ever since → <b>still 31% HI.</b></li>
+<li><b class="navy">Mar '26:</b> a <b>"General Interest"</b> campaign was added (100% unscored) — broadening further beyond HI.</li>
+</ul></div>
+<p class="claim" style="font-size:0.66em;margin-top:0.4em;">The decline isn't gradual and it isn't the audience — it's a gate that was switched off and left off.</p>
+</section>
+
+<!-- 7 QUESTIONS ANSWERED -->
+<section>
+<h2>6 · Questions answered</h2>
+<table class="cmp" style="font-size:0.56em">
+<tr><th style="text-align:left">Question</th><th style="text-align:left">Answer</th></tr>
+<tr><td style="text-align:left">Is it Fangorn / a scoring change?</td><td style="text-align:left" class="green">No — 0% continuous scores through May; migrated Jun 4–5 (after the window)</td></tr>
+<tr><td style="text-align:left">Did we cut the audience / MM?</td><td style="text-align:left" class="green">No — vertical DS13 ∩ keyword DS19 intact all window</td></tr>
+<tr><td style="text-align:left">Is the "mix under a 10k gate" a bug?</td><td style="text-align:left" class="green">No — gated path is 99.99% HI; mix = monthly blend + RTC (8%, bypasses by design)</td></tr>
+<tr><td style="text-align:left">Did High-Intent run out?</td><td style="text-align:left">Emerging in Oct (Scale-Up); refreshable — recovered in 2026 when the gate allowed</td></tr>
+<tr><td style="text-align:left">Attribution changes?</td><td style="text-align:left">All first-touch (industry_standard), both years — not a lens artifact</td></tr>
+<tr><td style="text-align:left">Same pattern elsewhere?</td><td style="text-align:left">Yes — Caraway replicates (gate removed Nov 28); Avon healthy (low spend stays in HI)</td></tr>
+</table>
+<p class="note">Every alternative explanation was tested and ruled out. Detail + charts in the appendix.</p>
+</section>
+
+<!-- 8 CONCLUSION -->
+<section>
+<h2>7 · Conclusion &amp; the fix</h2>
+<div style="text-align:left;display:inline-block;margin-top:0.2em;">
+<ul class="tight">
+<li><b>Cause:</b> the HHST intent gate on "CTV Prospecting High-Intent" (93373) was removed Nov 11 2025 and never reverted → delivery slid from 98% HI to 31% HI (⅓ the conversion rate) → ROAS 3.1→1.1. Not the audience, model, attribution, or a hard supply wall.</li>
+<li><b class="navy">Restore the gate</b> — re-gate 93373 to HI (10,000), or its clean floor, and hold it.</li>
+<li><b class="navy">Pace HI spend</b> to ~$5K/day sustained (or spread HI across the flight) so a "Scale Up" doesn't drain the ~3.8M live pool like October.</li>
+<li><b class="navy">Revisit "General Interest"</b> — it's 100% unscored; decide if that reach belongs in the High-Intent campaign's numbers.</li>
+</ul></div>
+<p class="claim" style="font-size:0.72em;margin-top:0.4em;">Turn the gate back on.</p>
+</section>
+
+<!-- APPENDIX -->
+<section>
+<h2 class="divider">— APPENDIX · backup for the questions —</h2>
+<p class="sub">The gate mechanism, Fangorn rule-out, pacing model, full timeline, and the exact numbers.</p>
 </section>
 
 <section>
-<h2>The steep drop-offs = the intent gate flipped, overnight</h2>
+<h2>A1 · The gate binds — and flips delivery overnight</h2>
 <img src="__GATE__">
-<p class="note"><b>"No way reach caused this level of decline" — correct. Reach didn't. The HHST intent gate did.</b> The prospecting gate was changed <b>51 times</b> Jan–May 2026 (0 ↔ 10,000; steady 6,666 all of 2025). Each flip inverts delivery the <b>next day</b>: gate→10,000 (Jan 5, Feb 26) = 100% HI overnight; gate→0 (Feb 5, Mar 6) = 12% HI / 57% unscored overnight. The decline is a config lever thrashed to chase spend — not gradual, not model degradation. When the gate is tight, MM still delivers 100% HI and performs.</p>
+<p class="note">Daily HI-share, 2026. Every HHST flip inverts delivery the next day: gate→10,000 = ~100% HI; gate→0 = ~12% HI. Verified: under a sustained 10k gate, non-HI = 0–1 imp/day. The "steep drop-offs" are config flips, not gradual decline.</p>
 </section>
 
 <section>
-<h2>The full picture — every change on one timeline</h2>
-<img src="__MASTER__">
-<p class="note">All five levers, Jul 2025–Jun 2026. The <b>audience HI substrate (vertical DS13 ∩ keyword DS19) stayed intact the whole window</b> — the DS add/removes (CRM in Feb, LiveRamp/DS1 out Mar, Fangorn in Jun) never touched it. The one event that flips delivery is the <b>Nov 11 HHST gate removal</b> (red line); Dec is that gate held off, 2026 is it thrashed 51×. Supply tightened in Oct (pacing), but the composition collapse is the gate.</p>
-</section>
-
-<section>
-<h2>Full change log — date · layer · effect</h2>
-<table class="cmp" style="font-size:0.5em">
-<tr><th style="text-align:left">Date</th><th style="text-align:left">Layer</th><th style="text-align:left">Change</th><th style="text-align:left">Delivery effect</th></tr>
-<tr><td style="text-align:left">Jul 2025</td><td style="text-align:left">Audience + Gate</td><td style="text-align:left">DS{1,2,14,19,35}, RTC directive; gate 6,666</td><td style="text-align:left" class="green">clean HI-only (~100% HI)</td></tr>
-<tr><td style="text-align:left">Sep 24</td><td style="text-align:left">Audience</td><td style="text-align:left">+ DS13 (vertical) — HI substrate complete</td><td style="text-align:left">—</td></tr>
-<tr><td style="text-align:left">Sep 18–27</td><td style="text-align:left">Gate</td><td style="text-align:left">loosened to 6,200–6,400 (~1 wk)</td><td style="text-align:left">brief 5–30% MI</td></tr>
-<tr><td style="text-align:left">Oct 4</td><td style="text-align:left">Campaigns</td><td style="text-align:left">seasonal camps launch; 446801 dark 39d</td><td style="text-align:left">delivery via seasonals</td></tr>
-<tr><td style="text-align:left">Oct 21–Nov 10</td><td style="text-align:left">Gate</td><td style="text-align:left">→ 10,000 (strict HI-only)</td><td style="text-align:left" class="green">99.99% HI</td></tr>
-<tr><td style="text-align:left">Late Oct</td><td style="text-align:left">Pacing</td><td style="text-align:left">spend $224K (~40% over sustainable ~$5K/day)</td><td style="text-align:left" class="navy">"running on refresh"; reach/$ rolls over</td></tr>
-<tr style="background:#fbeaea"><td style="text-align:left"><b>Nov 11</b></td><td style="text-align:left"><b>Gate</b></td><td style="text-align:left"><b>HHST REMOVED (→0/−1)</b></td><td style="text-align:left" class="red"><b>100% → 13% HI overnight</b></td></tr>
-<tr><td style="text-align:left">Nov 14</td><td style="text-align:left">Campaigns</td><td style="text-align:left">seasonals stop; 446801 back at max-reach</td><td style="text-align:left">(Alyson's 11/15)</td></tr>
-<tr><td style="text-align:left">Nov 26–30</td><td style="text-align:left">Spend</td><td style="text-align:left">Black-Friday blowout</td><td style="text-align:left" class="red">3.6–4.8M imps/day (~20×), ungated</td></tr>
-<tr><td style="text-align:left">Dec (all)</td><td style="text-align:left">Gate</td><td style="text-align:left">stays −1 (no gate), never re-gated</td><td style="text-align:left" class="red">~11% HI / 57% unscored</td></tr>
-<tr><td style="text-align:left">Jan–May '26</td><td style="text-align:left">Gate + Scoring</td><td style="text-align:left">gate thrashed 51×; RTC starts firing</td><td style="text-align:left">HI-share swings; ~8% conquest bypass</td></tr>
-<tr><td style="text-align:left">Feb 18</td><td style="text-align:left">Audience</td><td style="text-align:left">+ DS4 (CRM), + DS16</td><td style="text-align:left">—</td></tr>
-<tr><td style="text-align:left">Mar 4</td><td style="text-align:left">Audience</td><td style="text-align:left">− DS1, − DS35 (LiveRamp); <b>DS19 stays</b></td><td style="text-align:left" class="green">HI substrate intact</td></tr>
-<tr><td style="text-align:left">Jun 4–5</td><td style="text-align:left">Scoring</td><td style="text-align:left">Fangorn migration (DS46 added Jun 3)</td><td style="text-align:left">bucketed → continuous</td></tr>
-</table>
-<p class="note">Every "change" the team flagged, in one place. Audience source moves (blue) never touched the HI-defining layers; the delivery swings are all gate + campaign-lifecycle. Nov 11 is the pivot.</p>
-</section>
-
-<section>
-<h2>To the client, "the campaign" = the group — HexClad ran 8</h2>
-<table class="cmp">
-<tr><th style="text-align:left">Group</th><th style="text-align:left">Client campaign name</th><th>Role</th><th>Active</th><th>Spend</th></tr>
-<tr style="background:#eef3f8"><td>93373</td><td style="text-align:left"><b>CTV Prospecting High-Intent</b></td><td>Prospecting</td><td>Jul '25–now</td><td class="navy"><b>$2.73M</b></td></tr>
-<tr><td>56957</td><td style="text-align:left">CTV Retargeting</td><td>Retargeting</td><td>Jun '25–now</td><td>$614K</td></tr>
-<tr><td>100744</td><td style="text-align:left">CTV Prospecting <b>Cell B Scale Up</b></td><td>Prospecting</td><td>Oct–Jan</td><td>$245K</td></tr>
-<tr><td>100739</td><td style="text-align:left">CTV Prospecting <b>Cell A BAU</b></td><td>Prospecting</td><td>Oct–Dec</td><td>$140K</td></tr>
-<tr><td>56914</td><td style="text-align:left">CTV Prospecting (early)</td><td>Prospecting</td><td>Jun–Sep</td><td>$69K</td></tr>
-<tr><td>111708</td><td style="text-align:left">CTV Prospecting <b>General Interest</b></td><td>Prospecting</td><td>Mar '26–now</td><td>$42K</td></tr>
-</table>
-<p class="note"><b>campaign_id</b> = our internal funnel stages (S1 Prospecting / S2–S3 Multi-Touch / Ego / Retargeting); the client sees the <b>group</b>. The decline is the flagship <b>"CTV Prospecting High-Intent" (93373, $2.73M)</b>. Retargeting (56957, $614K) is separate & healthy. The names reveal intent: Oct = a <b>"Scale Up"</b> A/B test (the spend that outran the HI pool); Mar = a deliberate <b>"General Interest"</b> expansion beyond HI. (+2 seasonal retargeting cells, ~$90K.)</p>
-</section>
-
-<section>
-<h2>The campaigns by client group — and what each ran</h2>
-<img src="__GANTT__">
-<p class="note">The flagship <b>"High-Intent" (93373)</b> carries the story: clean HI-only Jul–Oct, dark during the Oct Scale-Up test, then max-reach from Nov 11. The <b>"Scale Up" cell</b> drove the October spend that outran the HI pool; <b>"General Interest" (Mar)</b> broadened beyond HI. All the composition swings live in these prospecting groups — retargeting is a separate, healthy campaign.</p>
-</section>
-
-<section>
-<h2>The case for changes, month by month (Jun→Dec 2025)</h2>
-<img src="__TRANSITION__">
-<p class="note">Clean HI-only regime (gate ~6,666, 95–100% HI) June–October — HI reach <b>PEAKED</b> in Oct (3.86M distinct households, 2.08M net-new). <b>Nov 11: the HHST gate was REMOVED</b> (→0/−1) to chase 20× Black-Friday volume → 100% HI to 13% HI overnight. December never re-gated (−1 all month, ~11% HI). Not gradual, not HI exhaustion (HI was still abundant) — one deliberate config flip. Same pattern on Caraway (gate removed Nov 28).</p>
-</section>
-
-<section>
-<h2>"But a 10,000 gate showed a mix" — the gate binds; the mix is 3 other things</h2>
-<table class="cmp big">
-<tr><th style="text-align:left">Jan 2026, gate = 10,000 window</th><th>% of imps</th><th>HI (10k)</th><th>non-HI</th></tr>
-<tr><td style="text-align:left"><b>Normal prospecting (gated)</b></td><td>92.0%</td><td class="green" style="font-weight:bold">99.99%</td><td>0.01%</td></tr>
-<tr><td style="text-align:left">RTC — Real-Time Conquest <span style="font-size:0.8em;color:#888">(bypasses gate by design)</span></td><td>8.0%</td><td>34.8%</td><td class="red" style="font-weight:bold">65.2%</td></tr>
-</table>
-<p class="note"><b>The gate binds essentially perfectly</b> — on the gated path, <b>99.99%</b> of impressions are exactly 10,000 (the 0.01% is ~1-day propagation lag). Verified independently Oct 27–Nov 7 2025: sustained 10k gate = <b>0–1 non-HI imp/day out of ~150K</b>. The apparent "mix" is: <b>(1)</b> RTC conquest (~8%) fires <i>before</i> the intent gate and serves competitors' households regardless of score — a mix by design, not a leak; <b>(2)</b> monthly aggregation blending 5 no-gate days (Jan 1–5, gate −1, ~12% HI) with 26 gated days (Jan 6–31, ~100% HI); <b>(3)</b> flip-day lag. Use household_score for gate reasoning (advertiser_household_score misclassifies ~10%). RTC was OFF in 2025, ON in 2026 — itself a change.</p>
-</section>
-
-<section>
-<h2>Pacing: the ceiling is the ~3.8M live pool, not the 7M lifetime figure</h2>
-<img src="__PACING__">
-<p class="note"><b>You pace against the LIVE 30-day pool, not the 7M cumulative.</b> The instantaneously reachable HI pool tops at <b>~3.8M IPs</b> (~half of 7M; fewer in households after IP churn), set by new-HI inflow (~61K/day) × the 30-day TTL. Sustainable HI spend ≈ <b>$150–160K/mo (~$5K/day)</b>. <b>October is where it bit:</b> spend hit $224K (~40% over sustainable) → brand-new share of reach fell 100%→54%, reach/$ rolled over, cumulative crossed 7M (Oct 26) — the pool began re-serving itself. But it's a <b>refreshable flow limit, not a wall</b>: 2026 reach/$ recovered ABOVE the 2025 baseline at +23% higher spend. Net: supply was the <i>emerging</i> constraint (Oct); the Nov-11 gate removal was the <i>actual</i> cause. <b>Fix:</b> pace HI spend near ~$5K/day sustained, or spread HI IPs across the flight so a spike doesn't drain the pool.</p>
-</section>
-
-<section>
-<h2>The clincher — lower tiers convert ⅓ as well</h2>
-<img src="__TIER__">
-<p class="note">Per-household visit rate, 2026. HI 3.84% is the only tier that performs; PP/Mid/unscored ≈1% or less.</p>
-</section>
-
-<section>
-<h2>Why "OV should've stayed $2M" is wrong</h2>
-<table class="cmp big">
-<tr><th style="text-align:left"></th><th>2025</th><th>2026</th></tr>
-<tr><td style="text-align:left">Order Value</td><td>$2.02M</td><td>$0.99M</td></tr>
-<tr><td style="text-align:left">÷ AOV (flat)</td><td>$405</td><td>$397</td></tr>
-<tr><td style="text-align:left"><b>= Conversions</b></td><td><b>4,978</b></td><td class="red" style="font-weight:bold">2,495 (−50%)</td></tr>
-<tr><td style="text-align:left">HI impressions</td><td>27.5M</td><td class="red">17.8M (−35%)</td></tr>
-</table>
-<p class="note">HI wasn't <i>added to</i>, it was <b>displaced</b> — every PP impression is one that would've been HI. AOV flat → OV = conversion count → conversions halved. Flat AOV <b>proves</b> it's count, not size.</p>
-</section>
-
-<section>
-<h2>Spend or supply? — Supply.</h2>
-<img src="__SUPPLY__">
-<p class="note">Same spend, 2–3× HI swing: Jan '26 $152K→79% HI vs Feb '26 $185K→30% HI. Feb: gate set to HI-only (10,000), still got 30% — wanted HI, couldn't find it.</p>
-</section>
-
-<section>
-<h2>The mechanism is universal — Avon confirms it</h2>
-<table class="cmp big">
-<tr><th style="text-align:left"></th><th>HexClad</th><th>Avon</th></tr>
-<tr><td style="text-align:left">Typical monthly spend</td><td>~$150K</td><td>~$9K</td></tr>
-<tr><td style="text-align:left">HI+PP share, base months</td><td class="red">swings 30–79%</td><td class="green">stable 34–45%</td></tr>
-<tr><td style="text-align:left">When spend spikes</td><td>chronic</td><td class="red">Nov $36K → 18.6% HI+PP</td></tr>
-<tr><td style="text-align:left">Post-holiday Dec</td><td>11% HI</td><td class="red">3.3% HI+PP</td></tr>
-</table>
-<p class="note"><b>Same physics.</b> Low spend fits inside the finite HI pool → Avon stays in HI → healthy (this is <i>why</i> Avon is fine). But the instant Avon spends big (Nov $36K), its HI-share collapses to 18.6% — identical to HexClad. Not "MM degraded": it's spend-vs-finite-HI-supply, gated by HHST. Avon didn't stay flat by luck — it's the confirming experiment from the low-spend end.</p>
-</section>
-
-<section>
-<h2>What changed (TI-33, deployed 7/14/2025)</h2>
-<table class="cmp">
-<tr><th style="text-align:left">Vertical "Kitchen &amp; Cookware" (120004)</th><th>2025</th><th>2026</th></tr>
-<tr><td style="text-align:left">Vertical size (IPs)</td><td>9.5M</td><td class="navy" style="font-weight:bold">15.0M (+57%)</td></tr>
-<tr><td style="text-align:left">Original IPs churned out</td><td>—</td><td class="red">14%</td></tr>
-</table>
-<p class="note">New domain classifier: domain → ChatGPT description → embedding → vertical match, + non-ecommerce filter. The vertical <b>grew</b> (not a shrink) — but with vertical-only IPs that score <b>PP not HI</b>. So "High-Intent" is anchored on different IPs YoY, and the pool grew in the <b>wrong tier</b>. (And it's not Fangorn — next slide.)</p>
-</section>
-
-<section>
-<h2>It's not Fangorn — proven, not assumed</h2>
+<h2>A2 · It's not Fangorn — proven</h2>
 <img src="__FANGORN__">
-<p class="note">Fangorn writes <b>continuous</b> scores (High 8001–9999); bucketed writes <b>discrete</b> (HI = exactly 10,000). HexClad ran <b>0.0% continuous scores every month Jun 2025–May 2026</b> = 100% bucketed. It migrated to Fangorn <b>Jun 4–5, 2026</b> — after the entire decline window, so Fangorn cannot explain Jan–May. It IS live now (38% continuous in June) → June-forward is a new regime, flagged to the scoring team.</p>
+<p class="note">0% continuous (Fangorn) scores every month Jun 2025–May 2026 = 100% bucketed. Migrated to Fangorn Jun 4–5 2026, after the entire decline window.</p>
 </section>
 
 <section>
-<h2>The numbers — prospecting, last-touch, Jan–May (same months YoY)</h2>
+<h2>A3 · Pacing — the ceiling is the ~3.8M live pool, not 7M</h2>
+<img src="__PACING__">
+<p class="note">You pace against the live 30-day pool (~3.8M HI IPs), not the 7M lifetime figure. Sustainable ~$5K/day. October's "Scale Up" ran ~40% over → HI "running on refresh." Refreshable flow limit, not a wall.</p>
+</section>
+
+<section>
+<h2>A4 · Full change timeline (every lever)</h2>
+<img src="__MASTER__">
+<p class="note">Audience DS moves (blue) never touched the HI substrate. The one event that flips delivery is the Nov 11 gate removal. Dec = gate held off; 2026 = gate thrashed 51×.</p>
+</section>
+
+<section>
+<h2>A5 · The numbers — prospecting, last-touch, Jan–May YoY</h2>
 <table class="cmp">
 <tr><th style="text-align:left">Metric</th><th>2025</th><th>2026</th><th>YoY</th></tr>
 __MET__
@@ -270,23 +182,11 @@ __MET__
 <p class="note">First-touch confirms: all-prospecting ROAS 8.78→3.87 (−56%), down every month. Every lens, every month: real decline.</p>
 </section>
 
-<section>
-<h2>Conclusion &amp; levers</h2>
-<div style="text-align:left;display:inline-block;margin-top:0.2em;">
-<ul class="tight">
-<li><b>Cause:</b> +45% spend outran the keyword-matched HI supply → delivery slid HI→PP (⅓ the conversion rate) → OV halved. Not saturation, tracking, AOV, config, or Fangorn.</li>
-<li><b>Why it's rapid, not gradual:</b> the HHST intent gate is thrashed 51× (0 ↔ 10,000) to chase spend — each flip inverts delivery overnight. The steep drop-offs ARE the gate.</li>
-<li><b>Pace to HI capacity</b> — cap spend to what HI can absorb, not a budget target; stop flipping the gate to force fill.</li>
-<li><b>Grow the HI pool</b> — expand keywords so more in-vertical IPs qualify as HI (10k) not PP (8k).</li>
-<li><b>Open (scoring team):</b> within-tier HI quality (clickpass purged for 2025) — the one thing not measurable here.</li>
-</ul></div>
-<p class="claim" style="font-size:0.72em;margin-top:0.4em;">HexClad didn't get worse at the same audience — it ran out of the good one.</p>
-</section>
-
 </div></div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION).replace("__PACING__",PACING).replace("__MASTER__",MASTER).replace("__GANTT__",GANTT)
+HTML=HTML.replace("__MET__",metrows).replace("__GANTT__",GANTT).replace("__TIER__",TIER)\
+    .replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__PACING__",PACING).replace("__MASTER__",MASTER)
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
 print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
