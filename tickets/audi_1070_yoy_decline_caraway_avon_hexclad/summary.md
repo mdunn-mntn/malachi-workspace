@@ -404,6 +404,25 @@ Premise: assume the saturation thesis is WRONG and try to break it. Four lines o
 **First-touch (industry_standard) metrics, Jan–May '25→'26, ALL prospecting (= the UI prospecting card exactly, $56,833/272,218 visits/9.39×):** Spend **−18%** · Impressions −25% · Households −37% · Visits −31% · Conversions −10% · Order Value −9% · **ROAS +10.5%** (9.39→10.37) · **Visit Rate +9.7%** (14.91→16.35%) · **Conv Rate +30.5%** (3.85→5.02%) · **CPA −8.6%** ($5.43→$4.96) · AOV +0.9%. Stage-1-only near-identical (ROAS +9.8%, conv rate +31%). **Month-vs-month:** April is the ONLY down month (spend +89% → ROAS −53%, diminishing returns); conv rate up all 5 months. **Verdict: −18% spend, every efficiency metric up, MM quality (visit rate) up — no decline, no MM degradation.** Data: `outputs/avon_prospecting_ft_full.csv`, `avon_prospecting_ft_aggregate.csv`; analysis `artifacts/avon_prospecting_analysis.py`.
 - **Q: source tables to verify client counts?** CHAPI→ClickHouse (run locally / prod-qa); Measurement owns authoritative coredb/BQ tables. Closest BQ analogs: `clickpass_log` (visits, ~99% match), `conversion_log` + attribution join (raw is un-attributed firehose, ~6.8× attributed — Avon 171K orders / $8.7M).
 
+### HexClad AOV — rebuts Mike's "order value would have stayed the same" objection (`outputs/hexclad_aov_janmay_yoy.csv`, `queries/audi_1070_case_hexclad_aov.sql`)
+
+**Mike's argument:** HexClad Jan–May 2026 vs 2025, ROAS ~3.15→1.09, spend $600k→$900k (+50%), order value ~$2M→$950k. He concludes "stepping outside HI into other buckets doesn't align — otherwise order value would have stayed the same."
+
+**Flaw:** order value is not a fixed pot we harvest; it's `impressions × conv-rate × AOV` — an OUTPUT of who converts. "Stepping outside HI" is **substitution** (budget pulled OUT of a shrinking, ungated HI base into unscored filler — HexClad flagship HHST=0, 63% of volume), not **addition** (HI held constant + low-intent on top). His own numbers falsify the additive model: you cannot LOSE orders by *adding* audience, yet orders fell — so the HI base was cannibalized.
+
+**AOV is the clincher, and it's flat.** Account-total (LT; AOV = rev/conv is **lens-invariant** at AID grain, so it holds on his FT prospecting-card view too):
+
+| Jan–May | conversions | revenue | **AOV** | ROAS |
+|---|---|---|---|---|
+| 2025 | 24,822 | $10.41M | **$419.58** | 13.12 |
+| 2026 | 22,190 | $8.83M | **$398.11** | 8.07 |
+| Δ | −10.6% | −15.2% | **−5.1% (flat)** | −38% |
+
+- Revenue = orders × AOV. AOV flat ⇒ the revenue drop **is** an order-count drop, not basket shrinkage. Account-total: −15% rev = −5% AOV × −11% orders.
+- **On Mike's own figures** (rev $2M→$950k, AOV flat): orders_ratio = 0.475/0.95 = **0.50 → orders halved**, spend +50% ⇒ **CPA tripled.** Same-size baskets, half as many, more money = the audience converts at a fraction of the rate = the intent-dilution fingerprint, in his numbers.
+- Flat AOV also **rules out** the alternatives: a different *kind* of buyer (mix/promo/pricing) would move AOV; it didn't. Same basket, fewer orders ⇒ a conversion-rate/audience-quality story, exactly the thesis.
+- Scope note: Mike's absolutes are a narrower FT scope (prospecting card, `industry_standard`=FT) vs account-total; direction identical, AOV ~flat on both.
+
 ## 5. Solution / Verdict
 
 **The "general degradation in MNTN Matched over time" hypothesis is NOT supported.** The YoY decline is **diminishing returns from prospecting/audience expansion as spend scaled** — a saturation law that holds across 294 advertisers and runs both directions (cut spend → VR rises; grow spend → VR falls).

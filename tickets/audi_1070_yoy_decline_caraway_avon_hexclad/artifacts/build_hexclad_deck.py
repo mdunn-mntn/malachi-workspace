@@ -145,6 +145,17 @@ ol.road{font-size:0.6em;line-height:1.55;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>The root event: TI-33 re-drew HexClad's vertical (July 21, 2025)</h2>
+<table class="cmp">
+<tr><th style="text-align:left">HexClad vertical = "Kitchen &amp; Cookware" (120004)</th><th>Before</th><th>After</th><th>Change</th></tr>
+<tr><td style="text-align:left">Vertical size (IPs)</td><td>9.53M</td><td>14.98M</td><td style="color:#27496D;font-weight:bold">+57%</td></tr>
+<tr><td style="text-align:left">Original IPs retained</td><td>—</td><td>8.19M</td><td>85.9%</td></tr>
+<tr><td style="text-align:left"><b>Original IPs churned OUT</b></td><td>—</td><td>—</td><td style="color:#D63B2F;font-weight:bold">14.1%</td></tr>
+</table>
+<p class="note">On <b>July 21, 2025</b> — between the two windows — a new <b>ChatGPT + vectorizer</b> classifier (TI-33 / AUDI-33) re-drew every vertical. HexClad's "High-Intent" vertical was <b>rebuilt</b>: +57% bigger, but 14% of its <i>proven</i> cookware IPs churned out and ~6.8M new, broadly-classified IPs came in. <b>"High Intent is High Intent" is false — the vertical that defines it was redefined.</b> The campaign didn't change; the platform's vertical underneath it did. (It GREW, so this is a composition/quality change, not a shrink — losing proven IPs and adding unproven ones.)</p>
+</section>
+
+<section>
 <h2>The definitive answer — four assumptions, all <span class="red">false</span></h2>
 <div style="text-align:left;display:inline-block;margin-top:0.2em;">
 <ul class="tight">

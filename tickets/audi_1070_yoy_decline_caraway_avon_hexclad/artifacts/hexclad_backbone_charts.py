@@ -15,7 +15,7 @@ NAVY,RED,GREEN,GRAY,AMBER="#27496D","#D63B2F","#2E8B57","#9AA0A6","#C77B30"
 # tiers: HI, PP, Mid, unscored (MaxReach folded into unscored/low)
 segs=[("High-Intent (10k)",GREEN),("Peak Performance (8k)",RED),("Mid",AMBER),("unscored / low",GRAY)]
 y2025=[95,0,2,3]; y2026=[49,17,10,24]
-fig,ax=plt.subplots(figsize=(12,3.9))
+fig,ax=plt.subplots(figsize=(10,4.0))
 for i,(row,label) in enumerate([(y2025,"2025\n(first scored data)"),(y2026,"2026\n(Jan–May)")]):
     left=0
     for (name,col),v in zip(segs,row):
