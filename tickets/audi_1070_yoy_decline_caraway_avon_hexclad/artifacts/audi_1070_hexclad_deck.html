@@ -145,15 +145,18 @@ ol.road{font-size:0.6em;line-height:1.55;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>The definitive answer — four assumptions, all <span class="red">false</span></h2>
-<div style="text-align:left;display:inline-block;margin-top:0.2em;">
-<ul class="tight">
-<li><span class="red">✗ "It's the same campaign YoY"</span> — 2025's campaign (225087) ended Sep 2025; a new "CTV Prospecting High-Intent" campaign (446801) replaced it.</li>
-<li><span class="red">✗ "We only target High-Intent"</span> — 2026 delivery is 49.6% HI, 21.6% PP, 9% Mid, 19.5% unscored; the gate fell to 3,333.</li>
-<li><span class="red">✗ "We target the same % of HI"</span> — 95.6% (2025) → 49.6% (2026).</li>
-<li><span class="red">✗ "The audience was misconfigured / broken"</span> — it's a proper MM campaign both years; keywords GREW (78→89), CRM/visitor/converter exclusions & US-geo are consistent, no bad overlay. What changed is which tiers got <b>served</b>, not the setup.</li>
-</ul></div>
-<p class="claim" style="font-size:0.76em;margin-top:0.4em;">The AOV is flat YoY ($405→$397). HexClad performs worse simply because <span class="red">we reached more people who are less likely to visit or convert</span> — HI 3.84% vs PP 1.19%. Same orders when they buy; fewer of them buy.</p>
+<h2>The definitive answer — four assumptions, all <span class="red">false</span> (2025 vs 2026)</h2>
+<table class="cmp">
+<tr><th style="text-align:left">Assumption &nbsp;<span style="font-weight:normal">(all FALSE)</span></th><th>2025</th><th>2026</th></tr>
+<tr><td style="text-align:left"><span class="red">✗</span> "Same campaign YoY"</td><td>225087 (ended Sep '25)</td><td>446801 (new "High-Intent")</td></tr>
+<tr><td style="text-align:left"><span class="red">✗</span> "We only target High-Intent"<br><span style="font-size:0.85em;color:#888">→ delivery mix by tier:</span></td><td><b style="color:#2E8B57">95.6% HI</b></td><td><b style="color:#D63B2F">49.6% HI</b></td></tr>
+<tr><td style="text-align:right;color:#888">Peak Performance (8k)</td><td>0.7%</td><td style="color:#D63B2F;font-weight:bold">21.6%</td></tr>
+<tr><td style="text-align:right;color:#888">Mid (3.3k–6.7k)</td><td>2.5%</td><td>9.0%</td></tr>
+<tr><td style="text-align:right;color:#888">unscored</td><td>0.5%</td><td>19.5%</td></tr>
+<tr><td style="text-align:left"><span class="red">✗</span> "Same % of HI"</td><td><b>95.6%</b></td><td style="color:#D63B2F;font-weight:bold">49.6%</td></tr>
+<tr><td style="text-align:left"><span class="red">✗</span> "Audience misconfigured / cut"</td><td>proper MM · 78 keywords</td><td>proper MM · 89 keywords</td></tr>
+</table>
+<p class="claim" style="font-size:0.7em;margin-top:0.25em;">AOV flat ($405→$397). HexClad performs worse simply because <span class="red">we reached more people less likely to visit</span> — HI 3.84% vs PP 1.19%. Same order size; fewer buyers.</p>
 </section>
 
 <section>
@@ -181,7 +184,7 @@ ol.road{font-size:0.6em;line-height:1.55;text-align:left;display:inline-block;} 
 <li><b>Lever 1 — pace to HI capacity:</b> cap prospecting spend to what the High-Intent supply can absorb, not to a budget target.</li>
 <li><b>Lever 2 — grow the HI pool:</b> keep expanding keywords (already 78→89) so more in-vertical IPs qualify as HI (10k) not PP (8k).</li>
 <li><b>Lever 3 — evaluate Fangorn:</b> HexClad is on old bucketed PP; Fangorn-scored PP reportedly performs better.</li>
-<li><b>Why did HI supply fall? Ruled out:</b> vertical reassignment (vertical 120004 stable since 2024), keyword cut (grew 78→89), pure spend (HI swings 2–3× at constant spend). <b>Leading candidate:</b> the platform vertical-classification change (~July 2025, "Jaguar"/DS13) that re-drew which IPs are in each vertical — right timeline, but the vertical-size history isn't retained in BQ. <b>Measurement/scoring must confirm</b> by measuring vertical 120004's HI pool pre-July-2025 vs now (vs Q1-Q4 seasonality).</li>
+<li><b>Did the targetable pool shrink? No — it GREW.</b> Per TI-33, HexClad's vertical went <b>9.5M → 15.0M IPs (+57%)</b>. So the decline is NOT fewer targetable IPs. The catch: the +57% is a broader (ChatGPT/ecommerce-filtered) net that adds mostly <b>vertical-only</b> IPs — which score <b>PP (8k), not HI (10k)</b>. The pool grew in the <i>wrong tier</i>: PP ballooned while the keyword-matched HI core stayed limited, so +45% spend slid off HI into PP.</li>
 </ul></div>
 <p class="claim" style="font-size:0.7em;margin-top:0.5em;">HexClad didn't get worse at the same audience — it ran out of the good one.</p>
 </section>
