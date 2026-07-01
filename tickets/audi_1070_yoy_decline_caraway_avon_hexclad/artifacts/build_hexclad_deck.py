@@ -9,6 +9,7 @@ HHST=b64("audi_1070_hexclad_hhst.png"); TIER=b64("audi_1070_hexclad_visit_rate_b
 SUPPLY=b64("audi_1070_hexclad_supply.png")
 GATE=b64("audi_1070_hexclad_gate_eventstudy.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
 TRANSITION=b64("audi_1070_hexclad_transition_map.png")
+PACING=b64("audi_1070_hexclad_pacing.png")
 
 MET=[("Spend","$642,267","$931,422","+45%","in"),("Impressions","30.7M","40.8M","+33%","in"),
  ("Households reached","11.5M","14.1M","+22%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
@@ -153,6 +154,12 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>Pacing: the ceiling is the ~3.8M live pool, not the 7M lifetime figure</h2>
+<img src="__PACING__">
+<p class="note"><b>You pace against the LIVE 30-day pool, not the 7M cumulative.</b> The instantaneously reachable HI pool tops at <b>~3.8M IPs</b> (~half of 7M; fewer in households after IP churn), set by new-HI inflow (~61K/day) × the 30-day TTL. Sustainable HI spend ≈ <b>$150–160K/mo (~$5K/day)</b>. <b>October is where it bit:</b> spend hit $224K (~40% over sustainable) → brand-new share of reach fell 100%→54%, reach/$ rolled over, cumulative crossed 7M (Oct 26) — the pool began re-serving itself. But it's a <b>refreshable flow limit, not a wall</b>: 2026 reach/$ recovered ABOVE the 2025 baseline at +23% higher spend. Net: supply was the <i>emerging</i> constraint (Oct); the Nov-11 gate removal was the <i>actual</i> cause. <b>Fix:</b> pace HI spend near ~$5K/day sustained, or spread HI IPs across the flight so a spike doesn't drain the pool.</p>
+</section>
+
+<section>
 <h2>The clincher — lower tiers convert ⅓ as well</h2>
 <img src="__TIER__">
 <p class="note">Per-household visit rate, 2026. HI 3.84% is the only tier that performs; PP/Mid/unscored ≈1% or less.</p>
@@ -230,6 +237,6 @@ __MET__
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION)
+HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION).replace("__PACING__",PACING)
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
 print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
