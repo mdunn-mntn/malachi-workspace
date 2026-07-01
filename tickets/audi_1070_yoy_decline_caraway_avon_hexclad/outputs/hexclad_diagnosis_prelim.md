@@ -170,3 +170,13 @@ The single clearest view. 93373 "High-Intent" split pre/post the Nov-11 gate rem
 - 100744 Cell B Scale Up (Oct-Jan): 8.5M / 3.33M — 85.9% HI (7.6% MaxReach — the scale-up dipped into MaxReach).
 - **111708 General Interest (Mar26+): 1.6M / 1.21M — 0% HI, 100% UNSCORED.** The deliberate GI expansion serves ENTIRELY unscored inventory by design.
 THE PROBLEM IN ONE LINE: the campaign the client is still in (93373 "High-Intent") went 97.8%→31% HI and stayed there — gate changed Nov 11, never turned back — plus a 100%-unscored "General Interest" campaign was added in March.
+
+## ROOT CAUSE CONFIRMED (Tofer, 2026-07-01) — WHY the gate went to 0
+The empirical "gate thrashed 51× / removed Nov 11 / never reverted" now has its confirmed cause:
+1. **Short flights auto-trigger 0 HHST.** The client runs short flights — adding spend, running a campaign only 1–3 days at a time. **Anything under 72 hours automatically gets a 0 HHST gate to ensure deliverability.** So the gate is repeatedly forced to 0 by how they run the campaign.
+2. **Manual 0 change ~November** on the main campaign (93373) to make sure they could hit spend.
+3. **Gate forgotten / left at 0** on the main campaign — AND per #1 it would have been re-set to 0 anyway by the short-flight behavior. **PEX needs to educate the client** on proper campaign-running (flights ≥72h) to avoid this.
+4. Original "spending outside HI" claims = CORRECT; the reason is partially the ADDED campaigns (Scale-Up cells, General Interest) AND the increased spend — all records prove this.
+5. Paulo's "not gradual" = CORRECT. The drastic/steep drop-offs are from additional campaigns + short-flight/manual 0-HHST, not gradual reach decline.
+AVON (Tofer): did NOT scale — DECREASED spend, performance INCREASED YoY incl ROAS. The "Avon didn't scale yet declined" premise is FALSE (matches our Avon-healthy finding). Absolute numbers never went down except impressions when spend rose (higher CPM = better/pricier users) — performance actually improved. AOV flat, OV halved because conversions halved.
+OPEN: Avon had drastic MID-campaign changes not yet examined (likely same short-flight/0-HHST answer as HexClad). Caraway not yet examined specifically.
