@@ -125,7 +125,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <tr><td style="text-align:left">Did we cut the audience / MM?</td><td style="text-align:left" class="green">No — vertical DS13 ∩ keyword DS19 intact all window</td></tr>
 <tr><td style="text-align:left">Is the "mix under a 10k gate" a bug?</td><td style="text-align:left" class="green">No — gated path is 99.99% HI; mix = monthly blend + RTC (8%, bypasses by design)</td></tr>
 <tr><td style="text-align:left">Did High-Intent run out?</td><td style="text-align:left">Emerging in Oct (Scale-Up); refreshable — recovered in 2026 when the gate allowed</td></tr>
-<tr><td style="text-align:left">Attribution changes?</td><td style="text-align:left">All first-touch (industry_standard), both years — not a lens artifact</td></tr>
+<tr><td style="text-align:left">Attribution changes?</td><td style="text-align:left">Same lens both years (industry_standard = last-touch + competing) — not a lens artifact</td></tr>
 <tr><td style="text-align:left">Same pattern elsewhere?</td><td style="text-align:left">Yes — Caraway replicates (gate removed Nov 28); Avon healthy (low spend stays in HI)</td></tr>
 </table>
 <p class="note">Every alternative explanation was tested and ruled out. Detail + charts in the appendix.</p>
@@ -181,7 +181,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <tr><th style="text-align:left">Metric</th><th>2025</th><th>2026</th><th>YoY</th></tr>
 __MET__
 </table>
-<p class="note">First-touch confirms: all-prospecting ROAS 8.78→3.87 (−56%), down every month. Every lens, every month: real decline.</p>
+<p class="note">The <b>industry_standard</b> (last-touch + <code>competing_*</code>) lens confirms it: all-prospecting ROAS 8.78→3.87 (−56%), down every month. Every lens, every month: real decline.</p>
 </section>
 
 </div></div>
