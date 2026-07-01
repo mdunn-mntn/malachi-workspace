@@ -1,10 +1,11 @@
 # AUDI-1070: YoY Performance-Decline Diagnosis — Caraway, Avon, HexClad
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1070
-**Status:** In Progress
+**Status:** In Progress — **Avon & HexClad answered** (HexClad root cause CONFIRMED, Tofer/PEX 2026-07-01); Caraway daily-gate analysis pending
 **Date Started:** 2026-06-30
 **Date Completed:** —
 **Assignee:** Malachi
+**Latest deck:** `artifacts/audi_1070_hexclad_deck.html` (HexClad, v4 tight) · `artifacts/avon_case_deck.html` (Avon). **Definitive HexClad findings: see §9 (supersedes/refines the §4–§7 framing).**
 
 ---
 
@@ -459,16 +460,19 @@ Recommendations:
 - **Q: Is the visit decline a rate or raw drop?** A: Both — for HexClad/Caraway raw visits fell despite +17%/+107% more impressions, because VR collapsed faster (expansion into lower-intent users).
 - **Q: Does attribution (FT vs LT) drive it?** A: It amplifies the *client's* view (industry_standard = FT) and a likely Dec-2025 LT→FT switch may distort their YoY, but the decline is real under a consistent LT lens; root cause is attribution-independent.
 - **Q: Audience quality / targeting-logic change?** A: No config/scoring-engine relabeling needed to explain it; scored users remain ~max quality, there are just proportionally fewer as delivery expands into unscored inventory.
-- **Q: Diminishing returns from spend?** A: Yes — the central mechanism, confirmed cohort-wide.
-
-## 6. Questions Answered
-_pending_
+- **Q: Diminishing returns from spend?** A: Yes — a contributor, but for HexClad the dominant cause is the HHST gate removal (§9), not saturation. Supply was only an emerging Oct constraint; HI is refreshable.
 
 ## 7. Data Documentation Updates (committed)
 - `data_catalog.md` — corrected `cost_impression_log` "90-day rolling" → multi-year retention (verified ≥2024); added score-column gotcha (`advertiser_household_score` NULL pre-Jun-2025, scored≈binary-at-max, RTC in `model_params`).
 - `mntn_business.md` — strengthened Attribution Model: `reporting_style="industry_standard"` = **FIRST TOUCH** (inverts MMP convention); `sum_by_*` headline columns are **LT-equivalent regardless of reporting_style** (UI applies FT separately); LT→FT migration confound.
 - `experimentation.md` — new "spend-saturation vs systemic-degradation" observational-diagnosis pattern (waterfall + reach/freq + cohort falsification; flat-spend control as keystone).
 - New Jira tickets are **AUDI-** prefixed (TI project renamed to Audience Intelligence).
+
+**Session 2026-06-30→07-01 additions (committed; confirmed complete by a gap-audit workflow):**
+- `data_knowledge.md` — HHST as a daily-thrashed pacing lever + **short-flight <72h auto-0 rule** (Tofer root cause); gate binds on `household_score` (not AHS); RTC bypasses the gate & is a distinct conquest population (47% never HI); Fangorn continuous-score detector + rolling per-advertiser migration; **HI pool is a FLOW not a stock** (live 30d ≈ half lifetime); vertical-reclassification (TI-33) definition-vs-assignment; CIL score-logging floor 2025-05-06; MaxReach-off-Nov-19 **correction** (gate-floor artifact); campaign_group=client vs campaign_id=stages; DS46/Fangorn-off note stamped superseded.
+- `data_catalog.md` — `household_score_threshold_archives` (+ complete threshold value map); `audience_segment_archives` (DS-timeline parsing; `version` non-monotonic); historical-reconstruction gotchas (`data_source_category_sizes` 3P-only; clickpass purged).
+- `experimentation.md` — live-30d-pool pacing methodology; gate event-study + constant-spend swing test; lookback-window heterogeneity confound; MaxReach-off overlay annotated as a gate-floor artifact.
+- Memory — `reference_hhst_pacing_lever` (+ short-flight rule), `reference_fangorn_detection`, `project_intent_tier_pacing` (live-pool numbers).
 
 ### Investigation 1 (Paulo/Mike supply-side deep-dive) — HI/MM AUDIENCE SIZE OVER TIME
 **Context:** Paulo rejected "spend-scaling saturation" as incomplete. Mike's reframe: Avon spent <$15k/mo except 2 months, so DEMAND saturation can't explain an Avon decline — if Avon declined, the high-intent SUPPLY must have shrunk (or a scoring/data change). This investigation tests the supply side directly. Queries: `queries/audi_1070_inv1_*.sql`; outputs `outputs/q_inv1_*.csv`.
@@ -522,11 +526,41 @@ Re-verified the audience-size crux independently and added the decisive systemic
 (Queries logged to `knowledge/bq_perf_log.jsonl`; no new .sql file — inline verification of existing `audi_1070_inv1_audience_size_monthly.sql`.)
 
 ## 8. Open Items / Follow-ups
-- **Confirm the HexClad DS11→DS35 LiveRamp cutover (May 2025) and any platform-wide LiveRamp/identity change mid-2025** with Identity/Zach — this is the leading candidate mechanism for a *platform-wide* supply move at the July-2025 fire. (My evidence is per-advertiser expression archives; a platform-wide LiveRamp delivery change would explain a synchronized fire.)
-- **Reconstruct pre-Feb-2025 addressable pool** if a source exists — `perml.flight_cid_day_audience_sizes` floors at 2025-02-01, so a true 2024 baseline of the *addressable* pool is unavailable (served-IP proxy reaches 2024 but is unscored). `external_ddm.segment_sizes` (access-denied) may have longer history.
+- **Caraway (40341) daily-gate analysis** — the same per-campaign HHST-gate + flight-length forensic done for HexClad (§9). Caraway's gate was also removed ~Nov 28 2025 (holiday flood → Dec 18.6% HI / 54.5% unscored); likely the same short-flight/gate-removal answer. Not yet examined in depth.
+- **Avon (31921) mid-campaign changes** — Avon is healthy YoY (Tofer confirms: decreased spend, ROAS UP), but it had drastic mid-campaign swings not yet examined; likely the same short-flight/HHST answer as HexClad. Flag if it affects any Avon narrative.
+- **PEX: educate the client on flight length (≥72h)** — the root cause of HexClad's gate-at-0 is short (1–3 day) flights that auto-trigger HHST=0. This is a client campaign-management fix, not an MNTN model change.
 - Optional extension (needs greenlight): existing-holdout targeted-vs-holdout VR contrast (the only causal lever w/o new RCT) to resolve "VR decline ≠ value decline" (TI-835).
 
 ---
+
+## 9. DEFINITIVE HEXCLAD FINDINGS — THE GATE, CONFIRMED (2026-07-01)
+
+*Supersedes/refines the HexClad framing in §4–§7 (expansion / within-HI degradation / supply shrink). HexClad's decline is now definitively the **HHST intent gate being removed and never reverted** — a config / campaign-management cause, CONFIRMED by Tofer/PEX. Full detail: `outputs/hexclad_diagnosis_prelim.md`; deck `artifacts/audi_1070_hexclad_deck.html` (v4); meeting `meetings/audi_1070_01_tofer_hhst_shortflight_2026_07_01.txt`.*
+
+**CENTERPIECE — score distribution + served counts by campaign** (RTC-excluded, whole lifespan; `outputs/hexclad_score_dist_by_campaign.csv`):
+
+| Campaign (client group) | Imps | HH | HI% | PP | MI | MaxR | Unscored |
+|---|---|---|---|---|---|---|---|
+| 93373 **High-Intent** PRE-gate (Jul–Nov 10) | 16.3M | 6.5M | **97.8%** | 0 | 2 | 0 | 0.2 |
+| 93373 **High-Intent** POST-gate (Nov 11+) **← STILL RUNNING** | 83.1M | 21.3M | **31.2%** | 15.8 | 14.8 | 4.0 | **34.2%** |
+| 111708 General Interest (Mar '26+) | 1.6M | 1.2M | **0%** | 0 | 0 | 0 | **100%** |
+
+→ The flagship "CTV Prospecting High-Intent" campaign (93373, $2.73M) was **97.8% HI** — it's **still live at 31% HI / 34% unscored** because the gate was removed Nov 11 and never turned back. The March "General Interest" campaign is 100% unscored by design.
+
+**ROOT CAUSE — CONFIRMED (Tofer/PEX, 2026-07-01):** (1) **short flights <72h auto-set HHST=0** for deliverability — the client runs 1–3 day burst flights, forcing the gate to 0 repeatedly; (2) a **manual 0-change ~Nov** on 93373 to hit spend; (3) the gate was then **forgotten / left at 0**. Fix = PEX educates the client to run flights ≥72h + restore the gate. This resolves the earlier §4 "HexClad HHST=0 config gap" (that was the post-Nov-11 state; §9 adds the *when* and *why*).
+
+**GATE-REMOVAL TIMELINE (daily event-study, `hexclad_daily_campaign_gate_vs_delivery.csv`):** clean HI-only Jul–Oct → **Nov 11: gate REMOVED** (98%→13% HI overnight; Black-Friday ~20× volume) → Dec–today: gate at 0, never reverted; 2026 thrashed 51× (0↔10000, short flights). The gate binds cleanly on `household_score` (99.99% HI on the gated path; sustained-10000 windows = 0–1 non-HI imp/day). RTC (~8%) bypasses by design.
+
+**RULED OUT (empirically):**
+- **Fangorn** — 0% continuous scores every month Jun 2025–May 2026; HexClad migrated Jun 4–5 2026 (after the window). Not a factor.
+- **Audience/MM cut** — HI substrate (vertical DS13 ∩ keyword DS19) intact all window. Feb/Mar 2026 DS moves (+CRM DS4, −DS1/−DS35 LiveRamp) never touched the HI layers (Alyson reconciliation; DS19 STAYED — corrects Alyson's "DS19 removed"). DS46/Fangorn added to the expression Jun 3 = cross-validates the migration date.
+- **RTC** — a distinct conquest population (only 53% ever reach HI, 47% never do); bypasses the gate by design; not "fast HI."
+
+**PACING MODEL (refines "supply shrink," `hexclad_pacing.png`):** pace against the **live 30-day HI pool (~3.8M, ~half the ~7M cumulative)**, not the lifetime figure; new-HI inflow ~61K/day → sustainable HI spend **~$5K/day**. October's **"Scale Up" A/B test** (Cell B, group 100744) ran ~40% over sustainable → HI "running on refresh" (brand-new share fell 100%→54%). But it's a **REFRESHABLE flow limit, not a wall**: 2026 reach/$ recovered ABOVE baseline when the gate allowed. **Supply was the EMERGING constraint (Oct); the gate is the ACTUAL cause.**
+
+**CAMPAIGN STRUCTURE (client view):** `campaign_group_id` = the client campaign, `campaign_id` = internal funnel stages. HexClad ran 8 groups; flagship **93373 "CTV Prospecting High-Intent" ($2.73M, still running)**; Oct = "Cell A BAU"/"Cell B Scale Up" A/B test; Mar '26 = new "General Interest" campaign (deliberate broadening beyond HI); retargeting (56957, $614K) separate & healthy.
+
+**RECONCILIATION with §4–§7:** the earlier "within-HI degradation / expansion / supply shrink" for HexClad is subsumed — delivery didn't degrade *within* HI so much as **leave** HI (the gate stopped requiring it). HI is refreshable; the pool didn't collapse. Caraway's gated within-HI ×0.51 finding (§4 Inv 2) still stands but needs the same daily-gate check (Caraway's gate was also removed ~Nov 28) — it may be more gate-driven than pure within-HI degradation than §4 concluded.
 
 ### Reusable assets (do not rebuild)
 - `tickets/ti_896_audience_composition_2025_drop/queries/ti_896_composition_by_week.sql` (LEAD-cap Fix M10 + strict PP detector + cohort CTE)
