@@ -4,7 +4,7 @@ the counterpart to HexClad's gate-removal. Same outline as HexClad v4."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
-SIG=b64("caraway_signature.png"); PACING=b64("audi_1070_hexclad_pacing.png")
+SIG=b64("caraway_signature.png"); PACING=b64("audi_1070_hexclad_pacing.png"); GANTT=b64("caraway_gantt.png")
 
 HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>AUDI-1070 — Caraway</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
@@ -55,6 +55,12 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <p class="note">One dominant flagship — <b>"CTV Prospecting" (439156, $1.33M, still running)</b> — carries the story. The rest are geographic (High/Low DMA) test cells and an Oct test. The flagship runs <b>long flights (82-day avg)</b> — NOT the short-flight auto-0 pattern HexClad had.</p>
 </section>
 
+<section>
+<h2>1b · Are the campaigns doing the same thing? — run-times &amp; gate</h2>
+<img src="__GANTT__" style="max-height:440px">
+<p class="note"><b>No handoff or competing campaign in the core window.</b> <b>Jul '25–Apr '26 = ONE campaign</b> (the flagship), gate held HI (green) — so the "same HI-share, half VR" is a single campaign genuinely over-scaling, not a HexClad-style blend. Two exceptions: a <b>Dec '25 holiday gate-drop</b> (red, 18.6% HI) and a <b>May 13 '26 handoff</b> — the flagship turned OFF and the new DMA test cells turned ON at 44–57% HI (that's the "one off / one on" pattern, but it explains the May–Jun dip, not the core collapse).</p>
+</section>
+
 <!-- 3 ASSUMPTIONS -->
 <section>
 <h2>2 · The assumptions — all <span class="red">false</span></h2>
@@ -87,7 +93,7 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <section>
 <h2>4 · Stayed in HI — but the visit rate collapsed inside it</h2>
 <img src="__SIG__">
-<p class="note"><b>The whole case in one chart.</b> HI-share (bars) held ~85–100% through 2026, yet the visit rate (line) fell by half: <b>Jul '25 = 99% HI → 0.37% VR; Mar '26 = 99.9% HI → 0.15% VR.</b> Same HI-share, half the visit rate. The only thing that changed is <b>how hard the pool was pushed</b> — impressions nearly tripled. This is within-High-Intent over-scaling, not a mix shift.</p>
+<p class="note"><b>The whole case in one chart.</b> HI-share (bars) held ~85–100% through 2026, yet the visit rate (line) fell by half: <b>Jul '25 = 99% HI → 0.37% VR; Mar '26 = 99.9% HI → 0.15% VR.</b> Same HI-share, half the visit rate. The only thing that changed is <b>how hard the pool was pushed</b> — impressions nearly tripled. It wasn't re-serving the same households (HI frequency stayed flat ~1.5); it reached <b>+136% more distinct HI households</b> (1.66M→3.92M) — <b>deeper into the pool, to weaker/marginal HI</b>. "HI" (score 10,000) is a membership flag, not a visit guarantee: at low spend you skim the best HI, at 3× you scrape the marginal HI that convert far worse.</p>
 </section>
 
 <!-- 6 RATE METRICS -->
@@ -159,6 +165,6 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__SIG__",SIG).replace("__PACING__",PACING)
+HTML=HTML.replace("__SIG__",SIG).replace("__PACING__",PACING).replace("__GANTT__",GANTT)
 (DIR/"audi_1070_caraway_deck.html").write_text(HTML)
 print(f"wrote audi_1070_caraway_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
