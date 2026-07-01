@@ -1,0 +1,373 @@
+[00:00] Would have just sent this all to you, but there's actually a lot of information.
+[00:03] So I figured it would probably be easier just to talk about this.
+[00:06] So, okay.
+[00:07] Context.
+[00:09] Basically got three different advertisers that were sent to me said, hey, their performance
+[00:14] is sucking year over year.
+[00:17] Why?
+[00:17] Right.
+[00:18] Okay.
+[00:19] Hex clad.
+[00:20] I've basically, my initial thought was that there's a lot of assumptions they're making
+[00:25] that are incorrect.
+[00:25] Like they stayed within high intent.
+[00:28] um the spend and change things like that so i already cleared up most of those but i did
+[00:33] identify something that was weird so hex clad i was just grouping by prospecting campaigns
+[00:40] and this is what i saw before this is before um oh let me find the right slide
+[00:48] yeah okay here's an example um something changed i don't worry about the numbers here there's a lot
+[00:55] AI summary here, but basically what was happening is these green bars, they just mean that they're
+[01:00] basically targeting a hundred percent high intent. The only thing that's not is real-time conquesting.
+[01:05] So these are basically a hundred percent high intent. Something happened in October, somewhere
+[01:09] between October and November, where we started not targeting high intent. And then you can see
+[01:14] the actual reach dip down incredibly. Like we were less than a million users when we were averaging
+[01:19] maybe two and a half, then it goes back up to 3 million, et cetera. Right. So something happened
+[01:23] during this time and the campaigns yep and so what i identified is that the
+[01:30] the i call this the there was a more simple one sorry the changes to the deck that were made i
+[01:39] use a deck to store all my visualizations not as like a final thing but um anyways the gate for it
+[01:48] essentially what happened is it went from being at 6,666. Um, this is probably just going to be
+[01:54] confusing. Just take my word for it. So 6,666 for like all the months in that very month that it
+[02:00] changed, it went up to 10,000 for three months. And then we dropped it all the way down to like
+[02:07] zero afterwards. It would be zero. It would likely be zero. Yeah. And so this is what I identified
+[02:14] is I was like, well, why? Well, it turns out what they did is it seems like they have this main
+[02:20] campaign that is their main prospecting campaign, right? During November, which it wasn't exactly
+[02:27] during Black Friday, but it was like the week before, it looks like they had two other campaigns
+[02:32] where they set the gate at zero for those campaigns. So there was actually a period of
+[02:36] time right during that period where we see the change where there was no spend for the main
+[02:41] campaign. These other two campaigns are gated at 10,000. And then all of them, including the main
+[02:46] campaign, which we wanted to stay in high intent, it's literally called prospecting high intent,
+[02:51] never went back to the original gate. Yep. So anyways, the question is, I mean, here's all
+[02:58] the data. The question is why did they mean to do it? Does anybody know why they did it? Is it an
+[03:03] accident? Did they mean to just change the other two? Like, cause what makes sense to me is that
+[03:07] maybe they did another campaign where they're like, because it's black Friday, we just want
+[03:11] to target everybody, no max reach. But then when they went back to their original prospecting
+[03:15] campaign, it's almost, I don't know how HHST works. I thought it was individual to the campaign
+[03:20] group. Maybe it's a advertiser consistent. No, it's yeah. So there's a lot to unpack. It's,
+[03:26] it's good. You came to the right place. I own all of this. I'm very, very familiar with Hexclad
+[03:32] and all of HHST. I have all the reasons why that was zero during that timeframe.
+[03:38] there are a lot of moving parts i'll just start with that but the biggest one to keep in mind
+[03:46] as you're looking at this is our hst process has nothing to do with what the client names their
+[03:55] campaigns or what they set up on their end as to targeting only high intent now we have
+[04:03] illustrations in the UI that are, in my opinion, misleading, that say your campaign is targeting
+[04:10] 100% of high intent, increase your budget, and you can spend even more against only high intent.
+[04:16] Our backend process is not aligned with the front end at all.
+[04:21] Okay.
+[04:21] So the backend HHST process runs individual per campaign, like you thought.
+[04:27] It is a direct derivative of how the campaign is pacing.
+[04:32] And it is a bit sensitive at times. And so the way that it functions, and you saw that with the 6666 to 10,000 to zero, is we're setting a certain threshold on the back end, we being the automated DAG process that runs once per day, or myself.
+[04:54] um so during black friday cyber monday which is where we saw that drip drop down to zero
+[05:00] we were accommodating spend needs for the campaigns and so there's different reasons
+[05:08] why hhst could go all the way to zero but the simplest explanation is we needed to open up
+[05:14] our audience thresholding to that level to deliver the needed budget so just to clarify like it
+[05:22] doesn't have anything to do with what the client is actually doing on their end. It's more
+[05:26] reactionary to how that campaign is pacing, which could be a result of what they've set up,
+[05:34] right? Like if they set up a very small audience in a large budget,
+[05:37] we would need the audience threshold to be opened up all the way so that we could target that full
+[05:43] audience. Okay. So in this case specifically, we can look through the campaigns. There is
+[05:52] a direct reason why we would preset them to zero. If a flight is launched at 72 hours or less in
+[06:02] length, that campaign would get sent to zero. But during that time, there's also a lot of
+[06:10] sensitivity over delivering budgets. And so it's possible, and I can't remember, I'd have to look
+[06:15] through my notes, if a majority of our campaigns were being set to zero just so that we could
+[06:21] deliver that black friday cyber monday budgets gotcha so it was sort of like a safeguard
+[06:28] that makes sense so was the intent to go back to the original gate after that period and maybe it
+[06:37] was just forgotten or is that because they okay and then the other thing too because they did do
+[06:43] a few things too they're also like this is this is why it was a little bit hard to pinpoint is that
+[06:49] they also increased their spend 45 overall and one of the things that's difficult that i was
+[07:01] trying to figure out is i don't know what the exact numbers of like what their high intent
+[07:04] audience was i need to go back and check but there's issues with the team all they i can't
+[07:10] find it i don't we might not have it but basically it looks like they're targeting about seven million
+[07:16] total high intent. So I mean, like, that's the max, we're roughly sitting around 7 million.
+[07:20] And so they are, they hit all of it here. But there's a few things I don't understand. And
+[07:24] this is like, definitely a deliverability and pacing thing. I don't know. So there's a few
+[07:31] things that people misunderstand about retargeting. People tend to think that if it's in prospecting
+[07:36] campaigns, we never send an impression to the same IP again, which is completely false.
+[07:40] correct people also think that if they filter to stage one that that means that you're only going
+[07:47] to get the first impression which is also false because you can still target the same ips within
+[07:52] stage one in fact i can prove it multiple times given that they didn't have a visit so
+[07:58] the only thing that would filter it out would be if they have they should have black prospect
+[08:05] block prospecting and whatever they should have those configs turned on um but if in the good
+[08:13] log there's no visit for that ip it'll keep targeting the ip and i know that there's limits
+[08:18] on how many they can target but i think on average we're targeting close to three times per per ip
+[08:25] yeah and so basically what people this is the what this is what's difficult
+[08:30] is when you get a list of 7 million targetable households, right?
+[08:34] You're balancing multiple things.
+[08:36] So first off, spend.
+[08:37] Let's just make easy numbers.
+[08:39] Let's say I was going to target 500,000 households.
+[08:41] In 14 days, I'm going to exhaust all of those households, right?
+[08:45] But there's two factors involved.
+[08:48] There's a rolling drop of new data,
+[08:52] which also doesn't come on a daily cadence, by the way.
+[08:55] So it comes on sometimes a weekly or bi-weekly cadence.
+[08:58] right like audience refreshing refreshing exactly and so when those things refresh
+[09:05] might coincide with when they're about to hit it and it might not right so there's that aspect
+[09:10] the other aspect is i don't know what the i don't know what the visit rate is and the replacement
+[09:16] rate is so like even if i hit that seven million depending on their spend per day
+[09:21] theoretically right somebody could set their spend perfectly to where they're constantly
+[09:27] hitting 100% high intent, but also if they increase their spend a little bit, you'd have
+[09:32] to lower the threshold in order to hit spend requirements.
+[09:35] So it is possible.
+[09:36] And then there's one more circumstance where because spend adjusts all the time, right?
+[09:41] If somebody spikes up their spend for a holiday season, let's say they hit half of those IPs
+[09:48] in high intent, then they go back to their original campaign spend where if the original
+[09:52] campaign spend was consistent, they'd never hit their threshold of high intent.
+[09:56] but because they exhausted so many so quickly,
+[09:59] then they have a smaller pool.
+[10:01] And now with the spend that they originally,
+[10:03] so there's a lot of factors involved.
+[10:04] And so,
+[10:05] yeah,
+[10:06] it all kind of comes in at the same time.
+[10:08] It's like you're preaching to the choir.
+[10:10] I try to like say the same stuff to the PEX team around why our HHST is
+[10:16] reactive,
+[10:17] why I'm reactive with updating frequency caps.
+[10:20] And it's exactly that in a nutshell,
+[10:23] it's like,
+[10:23] there's a lot of factors that we're considering.
+[10:26] we're talking about the addressable audience of these campaigns it's fluctuating day over day
+[10:30] and like you can't just always set it and forget it now there's you know boundaries where you're
+[10:36] never going to reach all of your high intent based on the settings that we have in place but
+[10:41] i think it's a tough concept to understand sometimes from the client's end or you know
+[10:48] even internally sometimes like well the audience you know like i didn't make any change but for
+[10:53] some reason the system is reacting and that's what we see often with campaigns that quote unquote
+[10:59] don't deliver into all high intent but clients think they are we had a three hundred thousand
+[11:06] like hundred thousand dollar make good this year recently the account GLD a very similar situation
+[11:13] was led to believe they were only spending in high intent and when we pulled reporting after
+[11:20] a performance concern came in, we were not spending only in high intent. And so because
+[11:25] that discrepancy of the front end indicating that and the back end not doing the same stuff,
+[11:32] it was a really bad client experience. And so just to say the Hexcloud one might lead down that same
+[11:41] similar path of they call their campaign high intent, our UI tells them it's high intent,
+[11:46] But in reality, we just don't have that system in place that is talking to the front end.
+[11:52] I definitely feel like there has to be some sort of way to do a forecasting thing that takes in daily values and adjusts it in real time.
+[12:03] Not real time, but like every day, right?
+[12:06] Yes.
+[12:07] So that we do that.
+[12:08] And I don't think that that is an, I actually think that's a quite simple thing.
+[12:13] Like you wouldn't need to really take in much.
+[12:15] you basically would just be like what is how many targetable the most difficult part of this thing
+[12:21] would be attaching every ip to the segment because that is a very expensive join and hard to do and
+[12:32] it's also difficult to along that same train of thought it is difficult to estimate population
+[12:40] in real time for the vast majority of our audiences that we have. And the system we have
+[12:46] in place is to use BPL from the prior day. That has caveats because just what we mentioned,
+[12:54] if we're hitting certain IPs that prior day, then we're not going to necessarily have them
+[12:59] available again. And we are also seeing our bids shaped by beeswax while we're still there. So
+[13:07] until we're on mountain bitter and seeing all the bids come in we're gonna have limitations of like
+[13:14] estimating how much reach we have on them still so just to lift a little bit under the hood of hhst
+[13:20] okay so basically the takeaway because i need to be able to tell mike and allison what's going on so
+[13:25] the answer is twofold um they did have additional campaigns which i assume were for this specific
+[13:36] reason they wanted to just do a max reach campaign to target a lot of people prior to
+[13:41] black friday it appears that way and since they only ran for a period of time so
+[13:49] if we go in here we've got this cell a b a u i don't know what this means cell b scale up
+[13:55] they only ran well i guess it ran way past black friday so maybe that's not the case but it just
+[14:00] coincidentally i'm not sure what the point of these two campaigns are but me neither okay but
+[14:07] this shows that uh it looks you're saying november 11th the high intent removal happened into
+[14:15] max reach yes on all three of their campaigns so they they had one campaign live then they had
+[14:24] three campaigns well two campaigns live then three and then whatever but at yes at november
+[14:32] 11th the gate changed and it seems like it was a spend issue so it's likely that they probably had
+[14:37] some sort of spike in spend around here and you identified that we were not going to be able to
+[14:44] reach spend requirements on there and then it just never got scaled back i'll actually let me show my
+[14:51] screen real quick and I'll give you a better explanation of this. Are you looking at Mountain
+[14:57] UI?
+[14:58] I am, yes.
+[15:00] Okay. Cool. That's weird.
+[15:04] Can you send that link to me as well?
+[15:07] Yes.
+[15:08] Of whatever you're gonna show just so I can reference it.
+[15:11] Yeah. So I logged into this just as a client would. This is the Mountain UI here.
+[15:18] And so what I'm showing you, the reason, there's always, usually always a reason, but in this case specifically, these BAU campaigns, these are the ones that you saw launch in November or right before they were at 10,000 on November 11th.
+[15:33] That gate got removed.
+[15:34] The reason why that happened is because of this.
+[15:39] This client on November 11th launched a flight that was two days long, 48-hour flight.
+[15:47] Okay.
+[15:48] As our rule, we will remove HHST from the campaign by setting it to zero so that we can ensure delivery.
+[15:57] It's called our short flight program.
+[16:00] So this one specifically was brought to zero because of what the client had set up flight-wise.
+[16:08] Additionally, this campaign did not continue live after November 13th.
+[16:14] So I'm not quite sure where your data is coming from,
+[16:19] that they were live after that.
+[16:20] After November 13th.
+[16:21] Yeah, it could be.
+[16:22] If it's visits, that would make sense.
+[16:24] If you're just pulling in like any activity,
+[16:26] but like spend wise, I see November 13th that their flight ended.
+[16:30] For BAU October 2020.
+[16:36] Let me write this down.
+[16:44] So, not impressions. So, attributed visits, obviously. But not impressions.
+[17:00] Right. Yeah. There were no impressions on this campaign after the 13th.
+[17:04] Okay. I'll double check. I believe that's correct.
+[17:07] And then let me just check the other
+[17:09] and it's 11111708 oh sorry excuse me 100744 that's a different campaign so 100744 okay
+[17:21] i'll look at that one too 100744 yeah that's the one that was running during the same time it looks
+[17:27] like yeah both of them so 100744 and 100745 both set short flights and that's why we would bring
+[17:37] HHST down.
+[17:38] But wouldn't that just set it for those two? Why would it have set the HHST to
+[17:46] zero for the main one, which was 93373? That's the only thing that I'm not understanding
+[17:53] is that...
+[17:54] Let's see. All right. One more page. Back to November.
+[18:07] Okay. So the reason we, so it looks like they fired this one back up on the 14th.
+[18:17] It ran pretty short flights during that time. My guess is that it's just around the 72 hour mark,
+[18:26] so it wouldn't have triggered that exactly, but we were likely playing it safe going into that week.
+[18:31] they had pretty short flights it's five day flights if you saw on the 14th that that got
+[18:36] set to zero it could have been that we were playing that um for that reason and then it
+[18:44] just never went back and so that's why we see the chain let me let me look at the whole history of
+[18:53] it it would still be said it never went back which until fangorn which fangorn just got changed
+[18:58] because I think they created Fangorn campaigns.
+[19:01] I think it's still the same campaign group.
+[19:04] I don't even know how that's possible.
+[19:05] I thought you would have to create a new campaign,
+[19:06] but my chart might be misleading.
+[19:09] So this one is going to have...
+[19:12] They do still have this campaign group live.
+[19:14] We'll look at the full trend here,
+[19:16] but I want to point out that a majority of their flights
+[19:20] through December remained very short.
+[19:23] One day flight here in December,
+[19:26] and I'm just going to illustrate.
+[19:27] And I illustrated this to some team at some point about HuxCloud.
+[19:31] But again, the 16th, they ran short flights.
+[19:35] And then let's just jump into this year real quick again, where we see February short flights, three-day flights, March short flights.
+[19:44] So I guess this is what I didn't understand.
+[19:49] When I thought campaigns were set, I thought they was just like, here's a campaign.
+[19:54] Here's the money.
+[19:55] There we go.
+[19:55] Right.
+[19:55] And then when they're done, they got to start a new campaign.
+[19:59] What it sounds like is that...
+[20:00] they can take the same campaign and say, here's some money, run it for this time.
+[20:04] And then it'll stop. And then we can say, here's some money, run it for this time. And just kind
+[20:08] of do that back and forth on the same campaign. Is that what I'm seeing? Absolutely. Yeah. Yeah.
+[20:13] There can be, and I've seen it. Clients haven't been live with us for two years. They jump back
+[20:19] in and they can relaunch that same old campaign. And so that's exactly what Hexclad did here was
+[20:25] in November and I noticed this too so we see it was right here October 2nd October 3rd actually
+[20:34] they paused it down and they had nothing running they actually set a zero dollar flight or this
+[20:42] could be a product of the UI but yeah they didn't run for a month for whatever reason they were
+[20:48] testing out those other campaigns and then the 14th they fired it back up okay and I noticed
+[20:55] and I talked with Forrest about this recently, but there was a campaign.
+[20:59] There's some riskiness with HHST running on non-live campaigns.
+[21:06] And perhaps what also could have happened here on the 14th was when we launched this campaign in the morning,
+[21:13] we ran our DAG later in the afternoon and we were not at pacing of where we wanted to be.
+[21:19] And so we brought that household score threshold down.
+[21:22] So it's just, again, the household score thresholding is its own process, and that can sometimes have conflict with what the UI shows.
+[21:31] But just going through the trend of this year, and I can't remember if I talked with somebody about this one as well, but this is cut and dry why the performance is low, in my opinion.
+[21:43] They are running one-day flights, and we have opened their thresholding up entirely and removed frequencies entirely on the campaign.
+[21:52] Okay. So they are in a very, very non performance setup. And I don't know why they're running campaigns this way. They didn't last year. But if we're looking at why is performance worse this year versus last year, this is a low hanging fruit as to why, and probably the number one reason.
+[22:12] So one day campaigns frequencies with no cap, and then this no score threshold.
+[22:18] yeah and all of that i say is combined because it is what we do for anybody that launches a flight
+[22:27] 72 hours or less yeah my goal to i was kind of working on an adjacent thing with um the just
+[22:36] the audience expressions right because i get a lot of people come to me and say hey why what's up
+[22:44] with these guys like we need to have a higher intent audience and whatever why are they not
+[22:48] being able to hit it and the first thing to check is like there's just a list of things but the very
+[22:52] first thing is like well are they doing huge geo exclusions are they doing this blah and 99 of the
+[22:57] time that's the answer right yeah then the other answer is well they're hitting spend caps you know
+[23:03] so it's like yeah it's truly like they're hitting all their high intent there's no more people to
+[23:07] target based on their spend which is i wouldn't say rare it's just it only happens with you know
+[23:11] big clients are spending a lot of money right um i don't think there's any verticals that are just
+[23:16] absurdly small that would hit on like a really small campaign but so then besides that then you
+[23:24] run into these types of things where there's a lot of ambiguity and what would be really nice is if i
+[23:29] could create some sort of ai workflow not not necessarily ai that orchestrate it but have like
+[23:37] a set set of rules where it's like okay first thing check this second thing check this and just go
+[23:40] through this kind of you know i know not venn diagram but uh you know flow chart essentially
+[23:46] because i think that we could answer a lot of these questions for people right away like just
+[23:52] and you mean like performance concerns yeah like all this stuff because like even all the stuff
+[23:58] that's pretty like elaborate that i've found out the actual solving of it is pretty simple so like
+[24:04] the very first thing that you could check is like for example one of the things paulo said to me
+[24:08] is so when i gave an answer to them they gave me three advertisers to check and i was trying to
+[24:15] just get them an answer real quick i looked at it i go okay here's the problem they are
+[24:19] not spending in high intent right yeah it's reach and basically the answer i got back was no that's
+[24:28] a stupid answer here's why and they give me four things and no it's it's fine that they push back
+[24:33] it's fine but i had to go then and do some extra research just to verify but the answer was like
+[24:37] no so your assumptions are wrong like right ben did change like no we're not only targeting high
+[24:43] intent i don't know why you think that that's you know so there's all these different things and
+[24:47] it's like no these are so anyways i don't know if you got somewhere else to go so i don't want
+[24:50] to keep you too late or yeah no this has been good like this sort of uncovering i'm glad you
+[24:56] came here because i think a lot of people don't know about hst as deep as i do um or you know
+[25:03] the performance team and like it does have a lot of performance implications especially for these
+[25:10] bigger guys like hex glad you know in their eyes they're maybe not changing very much they're you
+[25:14] know we're spending about the same and our site traffic's about the same and like that's all that
+[25:19] they really look at and give us but when we actually lift it up you know the way that they're
+[25:25] running their campaigns is very different this year um you know and that i feel like hasn't got
+[25:31] enough attention from other teams around like educating them and like strategizing with them
+[25:37] on how to run these campaigns they don't need to run those short flights to deliver daily budget
+[25:41] targets you know maybe we work with them to find a better solution in our product but
+[25:47] i think it's just risky to go back to them sometimes with all of this information because
+[25:56] the gld example i'll just go back to that like that's what we did and we're like hey we weren't
+[26:01] spending in high intent this is why performance is down and it caused a lot of a lot of problems
+[26:08] um just from like the here's what we're showing in the ui why aren't we doing that standpoint and i
+[26:14] get that you know and like i'd like to have the system in place to do what the front end is doing
+[26:19] i think we'd have less of these unknowns down the road but we also need to spend money and we don't
+[26:26] have the luxury of like restricting these audiences that tight and leaning that much
+[26:33] on the clients yet. So now if you have like more questions, definitely shoot them over to me. I'm
+[26:38] always happy to look into this stuff. Um, and I'm just, this is like my, my wheelhouse. So it's,
+[26:44] it's super familiar. Um, no, I'm glad. And I think one of the things that's,
+[26:49] it's interesting is that sometimes the stuff is deceptively
+[26:52] more complicated than it appears you know and that's what like a lot of people think so like
+[26:59] one of the first things they did is like just a small one the clients looking at the api right
+[27:04] and or whatever they're getting those charts generated api so the first thing i look at i'm
+[27:08] like dude my numbers don't even look like this right so like what's going on right and so i have
+[27:13] to go into that and so then i have to go like into the code why is the api showing this you know
+[27:16] then i look at reporting i'm like okay my reporting numbers aren't exactly what i see in bigquery and
+[27:20] So there's all these different things.
+[27:22] And it turns out it's like, well, the client, for some reason, the API only shows stage one and prospecting.
+[27:28] And I'm like, well, that's important because if I start comparing stage two and three.
+[27:32] Yeah.
+[27:33] Wait, that's really interesting, too.
+[27:34] And you mentioned that before, but I didn't dig into that because like our average client doesn't know about stages.
+[27:42] Any client doesn't know about stages.
+[27:45] Yeah.
+[27:45] so the numbers like it's not showing them like it's not saying stage one or prospecting but the
+[27:50] numbers that they are seeing are only stage one they're not stage two and stage three at least
+[27:55] that's what it appears in api and i was yeah yeah that's super interesting i wonder if for like the
+[28:00] first touch reasons or something i don't know yeah and so that's what i'm saying is that like even
+[28:05] like there's so many it was so hard i'm glad i did it but zach had me do this new to brand or
+[28:12] not this new to brand thing, basically trying to trace the verified visit back to the original bid
+[28:16] IP. Right. And so I had to learn about stages and they are not straightforward. It sounds so
+[28:22] simple. If I were to just be like, Hey, everything in stage two is this never seen stage three is
+[28:27] this right. It's not that simple. You know what I'm saying? Cause there's a lot of assumptions
+[28:32] you make. Like for example, if I were to say, Oh, there's three stages, the logical conclusion is,
+[28:36] Oh, well, once you're in stage one, you go to stage two. And once you're in stage two,
+[28:40] to go to stage three. It's like, no, it doesn't work that way. You can go from stage one to three,
+[28:43] one to two to three. You can... Are you saying that a user could go straight from eligibility
+[28:52] stage one to stage three because stage two is excluding anybody that has had a verified visit?
+[28:59] Is that why? Stage two does not exclude people that have a verified visit, but the path can go
+[29:07] directly from the verified visit um yeah from the you don't have to go through the the means of like
+[29:17] you don't have to get us you don't have to go from stage two to be in stage three
+[29:20] no you can go so basically you can see an impression have a verified visit that puts
+[29:25] you in stage three and then you can get an impression from stage three and then the path
+[29:33] goes to the verified visit so meaning so so yes the answer is yes you if you get an impression
+[29:38] the first right you go into stage two but that doesn't mean that the connected impression was
+[29:45] from stage two right so there's a lot of nuance there i hear you yeah no that makes that makes a
+[29:50] ton of sense and i yeah like i and i built the stages so like i understand it really well
+[29:55] oh and i like built them but like i am worked on the backbone of how they're gonna be and so like i
+[30:03] You don't have to see an ad to qualify for stage three, but vice versa.
+[30:08] You're still qualified in stage two audience the whole time.
+[30:13] And maybe after 30 days, you're back in that stage one audience too.
+[30:17] Who knows?
+[30:18] Or you can even retarget within the same one.
+[30:21] And so just because it's weird, but you could say somebody has five impressions and there's
+[30:26] no clear way to know how many, which impressions come from what.
+[30:30] and depending on how they break up the spend two and the distribution so you could have
+[30:34] two different ips both five impressions and one of them came four from stage one and one from
+[30:40] stage three and the other one can have like two two three or something like that or whatever right
+[30:43] right and like then it's like is there value to be found within like limiting the amount per stage
+[30:52] right because then it's like okay maybe the one that saw four in stage one and then one in stage
+[30:56] three was a better ip for us but like yeah anyways i digress like the the stages stuff is really
+[31:04] interesting to me for sure yeah and i was also kind of confused too about how it works because
+[31:09] if you get in stage three and you start targeting well it's not confusing but the stage two and
+[31:15] stage three audience expressions are different than stage one so when you look at the audience
+[31:20] expression they the stage two and stage three I believe don't have that don't target if you have
+[31:27] a prior page view or conversion in right that's just our stage one audience just the one yeah and
+[31:34] so again I'm you know like I said or you said I'm preaching to the choir but like these nuances
+[31:40] people don't understand and so like there's a lot of that's why when somebody asked me a really
+[31:44] simple question and they go hey how is mountain match performing i'm like okay well it depends
+[31:50] like how you want to skin the cat because even that's a whole different thing too because
+[31:54] or i get last thing i'll end on but what you call mountain matched like do we call it mountain
+[32:01] matched if someone does a mountain match campaign they limit it to 10 ips and our performance is
+[32:07] terrible like do we call that mountain match like if they add third party audiences and they have a
+[32:12] zero gate and you can you know i'm saying there's a lot of different things like and that's the i
+[32:16] think the zero gate point too it's like if you're opened up to the whole audience where's the value
+[32:22] in and i guess it's the value is like you're targeting or adding specific ips that are
+[32:27] relevant to your brand but at the same time it's like you have 30 million ips you're spending a
+[32:32] thousand dollars we're not likely to be very good at targeting at that point so um yeah anyways all
+[32:40] right well let me know if you need anything else this has been good chatting um i feel like we
+[32:43] will probably be talking more too as we ramp up here yeah for sure for sure yeah
+[32:48] always around for you man cool thanks help appreciate it later
