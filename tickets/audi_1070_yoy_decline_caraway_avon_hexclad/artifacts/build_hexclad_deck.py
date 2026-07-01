@@ -8,6 +8,7 @@ PARADOX=b64("audi_1070_hexclad_paradox.png"); COMPO=b64("audi_1070_hexclad_compo
 HHST=b64("audi_1070_hexclad_hhst.png"); TIER=b64("audi_1070_hexclad_visit_rate_by_tier.png")
 SUPPLY=b64("audi_1070_hexclad_supply.png")
 GATE=b64("audi_1070_hexclad_gate_eventstudy.png"); FANGORN=b64("audi_1070_hexclad_fangorn.png")
+TRANSITION=b64("audi_1070_hexclad_transition_map.png")
 
 MET=[("Spend","$642,267","$931,422","+45%","in"),("Impressions","30.7M","40.8M","+33%","in"),
  ("Households reached","11.5M","14.1M","+22%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
@@ -136,6 +137,22 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>The case for changes, month by month (Jun→Dec 2025)</h2>
+<img src="__TRANSITION__">
+<p class="note">Clean HI-only regime (gate ~6,666, 95–100% HI) June–October — HI reach <b>PEAKED</b> in Oct (3.86M distinct households, 2.08M net-new). <b>Nov 11: the HHST gate was REMOVED</b> (→0/−1) to chase 20× Black-Friday volume → 100% HI to 13% HI overnight. December never re-gated (−1 all month, ~11% HI). Not gradual, not HI exhaustion (HI was still abundant) — one deliberate config flip. Same pattern on Caraway (gate removed Nov 28).</p>
+</section>
+
+<section>
+<h2>"But a 10,000 gate showed a mix" — the gate binds; the mix is 3 other things</h2>
+<table class="cmp big">
+<tr><th style="text-align:left">Jan 2026, gate = 10,000 window</th><th>% of imps</th><th>HI (10k)</th><th>non-HI</th></tr>
+<tr><td style="text-align:left"><b>Normal prospecting (gated)</b></td><td>92.0%</td><td class="green" style="font-weight:bold">99.99%</td><td>0.01%</td></tr>
+<tr><td style="text-align:left">RTC — Real-Time Conquest <span style="font-size:0.8em;color:#888">(bypasses gate by design)</span></td><td>8.0%</td><td>34.8%</td><td class="red" style="font-weight:bold">65.2%</td></tr>
+</table>
+<p class="note"><b>The gate binds essentially perfectly</b> — on the gated path, <b>99.99%</b> of impressions are exactly 10,000 (the 0.01% is ~1-day propagation lag). Verified independently Oct 27–Nov 7 2025: sustained 10k gate = <b>0–1 non-HI imp/day out of ~150K</b>. The apparent "mix" is: <b>(1)</b> RTC conquest (~8%) fires <i>before</i> the intent gate and serves competitors' households regardless of score — a mix by design, not a leak; <b>(2)</b> monthly aggregation blending 5 no-gate days (Jan 1–5, gate −1, ~12% HI) with 26 gated days (Jan 6–31, ~100% HI); <b>(3)</b> flip-day lag. Use household_score for gate reasoning (advertiser_household_score misclassifies ~10%). RTC was OFF in 2025, ON in 2026 — itself a change.</p>
+</section>
+
+<section>
 <h2>The clincher — lower tiers convert ⅓ as well</h2>
 <img src="__TIER__">
 <p class="note">Per-household visit rate, 2026. HI 3.84% is the only tier that performs; PP/Mid/unscored ≈1% or less.</p>
@@ -213,6 +230,6 @@ __MET__
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN)
+HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION)
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
 print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
