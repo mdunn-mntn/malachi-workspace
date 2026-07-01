@@ -65,7 +65,7 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>1 · Campaigns (2 years)</h2>
+<h2>Campaigns (2 years)</h2>
 <table class="cmp">
 <tr><th style="text-align:left">Group</th><th>obj</th><th>Channel</th><th>2026 ROAS</th><th>Scope</th></tr>
 <tr><td style="text-align:left">Prospecting — Stage 1 (Beeswax TV)</td><td>1</td><td>CTV</td><td>1.06×</td><td class="green">analyzed</td></tr>
@@ -76,7 +76,7 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>2 · Audience — clean MM, unchanged config</h2>
+<h2>Audience — clean MM, unchanged config</h2>
 <table class="cmp">
 <tr><th style="text-align:left">Layer</th><th>2025</th><th>2026</th></tr>
 <tr><td style="text-align:left">MM keywords (DS19)</td><td>78</td><td class="green">89 (grew)</td></tr>
@@ -89,13 +89,13 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>3 · The symptom: spend +45%, order value −51%</h2>
+<h2>The symptom: spend +45%, but visits & order value FELL</h2>
 <img src="__PARADOX__">
-<p class="note">Reproduces the Last-Touch report to the dollar. Saturation would hold OV ~flat; it halved.</p>
+<p class="note"><b>Jan–May 2025 vs Jan–May 2026 — same months, YoY</b> (Last-Touch report, reproduced to the dollar). Why do visits/conversions fall when spend rises? Spend bought +33% impressions, but the <b>visit rate collapsed −54%</b> (delivery shifted to a worse audience) → visits = impressions × visit-rate = <b>−39%</b>. The quality drop outweighs the volume gain. Saturation would hold OV flat; it halved.</p>
 </section>
 
 <section>
-<h2>4 · Rule-outs — one line each</h2>
+<h2>Rule-outs — one line each</h2>
 <table class="cmp big">
 <tr><th style="text-align:left">Hypothesis</th><th>Number</th><th></th></tr>
 <tr><td style="text-align:left">Smaller orders?</td><td>AOV $405 → $397 (flat)</td><td class="red">✗</td></tr>
@@ -106,13 +106,13 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>5 · Backbone — did NOT stay in High-Intent</h2>
+<h2>Backbone — did NOT stay in High-Intent</h2>
 <img src="__COMPO__">
 <p class="note">HI = 10,000 (vertical AND keyword); PP = 8,000 (vertical only). 2025 = Jun–Oct (first scored months; Jan–May 2025 predates score logging).</p>
 </section>
 
 <section>
-<h2>6 · Raw counts by tier (impressions)</h2>
+<h2>Raw counts by tier (impressions)</h2>
 <table class="cmp">
 <tr><th style="text-align:left">Tier</th><th>2025</th><th>2026</th><th>YoY</th></tr>
 <tr><td style="text-align:left"><b>High-Intent (10k)</b></td><td>27.5M &nbsp;95.6%</td><td>17.8M &nbsp;49.6%</td><td class="red" style="font-weight:bold">−35%</td></tr>
@@ -128,19 +128,19 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>7 · The gate (HHST) loosened to keep spending</h2>
+<h2>The gate (HHST) loosened to keep spending</h2>
 <img src="__HHST__">
 <p class="note">Steady 6,666 in 2025 (HI+PP); 2026 swung to 10,000 then dropped to 3,333–4,500, admitting Mid.</p>
 </section>
 
 <section>
-<h2>8 · The clincher — lower tiers convert ⅓ as well</h2>
+<h2>The clincher — lower tiers convert ⅓ as well</h2>
 <img src="__TIER__">
 <p class="note">Per-household visit rate, 2026. HI 3.84% is the only tier that performs; PP/Mid/unscored ≈1% or less.</p>
 </section>
 
 <section>
-<h2>9 · Why "OV should've stayed $2M" is wrong</h2>
+<h2>Why "OV should've stayed $2M" is wrong</h2>
 <table class="cmp big">
 <tr><th style="text-align:left"></th><th>2025</th><th>2026</th></tr>
 <tr><td style="text-align:left">Order Value</td><td>$2.02M</td><td>$0.99M</td></tr>
@@ -152,13 +152,13 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
-<h2>10 · Spend or supply? — Supply.</h2>
+<h2>Spend or supply? — Supply.</h2>
 <img src="__SUPPLY__">
 <p class="note">Same spend, 2–3× HI swing: Jan '26 $152K→79% HI vs Feb '26 $185K→30% HI. Feb: gate set to HI-only (10,000), still got 30% — wanted HI, couldn't find it.</p>
 </section>
 
 <section>
-<h2>11 · What changed (TI-33, deployed 7/14/2025)</h2>
+<h2>What changed (TI-33, deployed 7/14/2025)</h2>
 <table class="cmp">
 <tr><th style="text-align:left">Vertical "Kitchen &amp; Cookware" (120004)</th><th>2025</th><th>2026</th></tr>
 <tr><td style="text-align:left">Vertical size (IPs)</td><td>9.5M</td><td class="navy" style="font-weight:bold">15.0M (+57%)</td></tr>
