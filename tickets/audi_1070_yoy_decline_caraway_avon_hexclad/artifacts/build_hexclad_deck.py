@@ -11,6 +11,7 @@ GATE=b64("audi_1070_hexclad_gate_eventstudy.png"); FANGORN=b64("audi_1070_hexcla
 TRANSITION=b64("audi_1070_hexclad_transition_map.png")
 PACING=b64("audi_1070_hexclad_pacing.png")
 MASTER=b64("audi_1070_hexclad_master_timeline.png")
+GANTT=b64("audi_1070_hexclad_campaign_gantt.png")
 
 MET=[("Spend","$642,267","$931,422","+45%","in"),("Impressions","30.7M","40.8M","+33%","in"),
  ("Households reached","11.5M","14.1M","+22%","in"),("Verified Visits","111,053","68,214","−39%","bad"),
@@ -167,6 +168,26 @@ ul.tight{font-size:0.6em;line-height:1.4;text-align:left;display:inline-block;} 
 </section>
 
 <section>
+<h2>To the client, "the campaign" = the group — HexClad ran 8</h2>
+<table class="cmp">
+<tr><th style="text-align:left">Group</th><th style="text-align:left">Client campaign name</th><th>Role</th><th>Active</th><th>Spend</th></tr>
+<tr style="background:#eef3f8"><td>93373</td><td style="text-align:left"><b>CTV Prospecting High-Intent</b></td><td>Prospecting</td><td>Jul '25–now</td><td class="navy"><b>$2.73M</b></td></tr>
+<tr><td>56957</td><td style="text-align:left">CTV Retargeting</td><td>Retargeting</td><td>Jun '25–now</td><td>$614K</td></tr>
+<tr><td>100744</td><td style="text-align:left">CTV Prospecting <b>Cell B Scale Up</b></td><td>Prospecting</td><td>Oct–Jan</td><td>$245K</td></tr>
+<tr><td>100739</td><td style="text-align:left">CTV Prospecting <b>Cell A BAU</b></td><td>Prospecting</td><td>Oct–Dec</td><td>$140K</td></tr>
+<tr><td>56914</td><td style="text-align:left">CTV Prospecting (early)</td><td>Prospecting</td><td>Jun–Sep</td><td>$69K</td></tr>
+<tr><td>111708</td><td style="text-align:left">CTV Prospecting <b>General Interest</b></td><td>Prospecting</td><td>Mar '26–now</td><td>$42K</td></tr>
+</table>
+<p class="note"><b>campaign_id</b> = our internal funnel stages (S1 Prospecting / S2–S3 Multi-Touch / Ego / Retargeting); the client sees the <b>group</b>. The decline is the flagship <b>"CTV Prospecting High-Intent" (93373, $2.73M)</b>. Retargeting (56957, $614K) is separate & healthy. The names reveal intent: Oct = a <b>"Scale Up"</b> A/B test (the spend that outran the HI pool); Mar = a deliberate <b>"General Interest"</b> expansion beyond HI. (+2 seasonal retargeting cells, ~$90K.)</p>
+</section>
+
+<section>
+<h2>The campaigns by client group — and what each ran</h2>
+<img src="__GANTT__">
+<p class="note">The flagship <b>"High-Intent" (93373)</b> carries the story: clean HI-only Jul–Oct, dark during the Oct Scale-Up test, then max-reach from Nov 11. The <b>"Scale Up" cell</b> drove the October spend that outran the HI pool; <b>"General Interest" (Mar)</b> broadened beyond HI. All the composition swings live in these prospecting groups — retargeting is a separate, healthy campaign.</p>
+</section>
+
+<section>
 <h2>The case for changes, month by month (Jun→Dec 2025)</h2>
 <img src="__TRANSITION__">
 <p class="note">Clean HI-only regime (gate ~6,666, 95–100% HI) June–October — HI reach <b>PEAKED</b> in Oct (3.86M distinct households, 2.08M net-new). <b>Nov 11: the HHST gate was REMOVED</b> (→0/−1) to chase 20× Black-Friday volume → 100% HI to 13% HI overnight. December never re-gated (−1 all month, ~11% HI). Not gradual, not HI exhaustion (HI was still abundant) — one deliberate config flip. Same pattern on Caraway (gate removed Nov 28).</p>
@@ -266,6 +287,6 @@ __MET__
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION).replace("__PACING__",PACING).replace("__MASTER__",MASTER)
+HTML=HTML.replace("__MET__",metrows).replace("__PARADOX__",PARADOX).replace("__COMPO__",COMPO).replace("__HHST__",HHST).replace("__TIER__",TIER).replace("__SUPPLY__",SUPPLY).replace("__GATE__",GATE).replace("__FANGORN__",FANGORN).replace("__TRANSITION__",TRANSITION).replace("__PACING__",PACING).replace("__MASTER__",MASTER).replace("__GANTT__",GANTT)
 (DIR/"audi_1070_hexclad_deck.html").write_text(HTML)
 print(f"wrote audi_1070_hexclad_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
