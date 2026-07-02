@@ -46,6 +46,8 @@ def main():
     ap.add_argument("--win-start", default="2025-01-01")
     ap.add_argument("--win-end", default="2026-06-05")
     ap.add_argument("--holiday", nargs=2, default=["2025-11-19", "2026-01-06"])
+    ap.add_argument("--p1", nargs=2, default=["2025-01-01", "2025-06-01"])
+    ap.add_argument("--p2", nargs=2, default=["2026-01-01", "2026-06-01"])
     a = ap.parse_args()
 
     rows = list(csv.DictReader(open(a.csv)))
@@ -105,7 +107,11 @@ def main():
         ax.spines[s].set_visible(False)
     ax.tick_params(left=False)
 
-    ax.axvspan(dn(a.holiday[0]), dn(a.holiday[1]), color=RED, alpha=0.05, zorder=0)
+    # comparison-period bands (like the other modules)
+    for (s, e, lab) in [(a.p1[0], a.p1[1], "P1  Jan–May '25"), (a.p2[0], a.p2[1], "P2  Jan–May '26")]:
+        ax.axvspan(dn(s), dn(e), color=NAVY, alpha=0.05, zorder=0)
+        ax.text(dn(s) + (dn(e) - dn(s)) / 2, n - 0.35, lab, ha="center", fontsize=8, color=NAVY, alpha=0.75)
+    ax.axvspan(dn(a.holiday[0]), dn(a.holiday[1]), color=RED, alpha=0.06, zorder=0)
     ax.text(dn(a.holiday[0]) + (dn(a.holiday[1]) - dn(a.holiday[0])) / 2, n - 0.35, "holiday",
             fontsize=8, color=RED, ha="center", alpha=0.8)
 
@@ -114,12 +120,9 @@ def main():
            Patch(fc=RED, label="NO gate (≤0)")]
     ax.set_title(f"{a.adv} — prospecting campaigns & their intent gate over time",
                  fontsize=13.5, fontweight="bold", color=NAVY, loc="left", pad=10)
-    fig.text(0.5, 0.05, "Each row = a funnel=1/obj=1 stage-1 prospecting campaign; color = its HHST gate "
-             "that day (forward-filled), clipped to the campaign's active delivery. Multi-Touch companions "
-             "(unscored by design) omitted.", ha="center", fontsize=8.2, color="#666")
     fig.legend(handles=leg, frameon=False, ncol=3, fontsize=9, loc="lower center",
                bbox_to_anchor=(0.5, 0.0))
-    plt.tight_layout(rect=[0, 0.09, 1, 0.97])
+    plt.tight_layout(rect=[0, 0.05, 1, 0.97])
     plt.savefig(a.out, dpi=190, bbox_inches="tight")
     print(f"wrote {a.out}")
     print(f"FINDING: gate-ribbon over {n} prospecting campaigns, {sum(tot.values())} delivering-days: "
