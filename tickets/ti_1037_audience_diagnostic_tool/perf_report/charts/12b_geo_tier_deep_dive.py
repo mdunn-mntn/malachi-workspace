@@ -117,47 +117,48 @@ def main():
     # =====================================================================
     # (A) TIER REFERENCE — named DMAs, readable grid
     # =====================================================================
-    fig = plt.figure(figsize=(15, 10.5))
-    ax = fig.add_axes([0.03, 0.02, 0.94, 0.88])
+    fig = plt.figure(figsize=(15, 8.7))
+    ax = fig.add_axes([0.03, 0.02, 0.94, 0.90])
     ax.axis("off")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    fig.text(0.03, 0.965, f"{a.adv} — the 210 US DMAs, sliced into 3 population tiers",
+    fig.text(0.03, 0.975, f"{a.adv} — the 210 US DMAs, sliced into 3 population tiers",
              fontsize=19, fontweight="bold", color="#222")
-    fig.text(0.03, 0.933, f"Prospecting geo-slices ALL 210 Nielsen DMAs into High/Mid/Low population buckets. "
+    fig.text(0.03, 0.945, f"Prospecting geo-slices ALL 210 Nielsen DMAs into High/Mid/Low population buckets. "
              f"\"High Pop\" = the top-20 markets, NOT all-of-US.  ({a.deliv_label} delivery in parens)",
              fontsize=11.5, color=GRAY)
-    RH = 0.0265  # row height
+    RH, HB = 0.038, 0.040  # row height, header-bar height
 
-    def header(y0, tier, extra=""):
+    def header(y_top, tier, extra=""):
+        # bar occupies [y_top-HB, y_top]; content flows DOWN; returns cursor just below the bar
         col = TIER_COLOR[tier]
         n = len(tier_named[tier])
-        ax.add_patch(plt.Rectangle((0.0, y0), 1.0, 0.036, color=col, alpha=0.90, zorder=1))
-        ax.text(0.008, y0 + 0.018, f"{tier}  ·  {n} DMAs{extra}", fontsize=13.5,
+        ax.add_patch(plt.Rectangle((0.0, y_top - HB), 1.0, HB, color=col, alpha=0.92, zorder=1))
+        ax.text(0.008, y_top - HB / 2, f"{tier}  ·  {n} DMAs{extra}", fontsize=13.5,
                 fontweight="bold", color="white", va="center", zorder=2)
-        return y0 - 0.012
+        return y_top - HB - 0.020
 
     def grid(names, ytop, ncols):
         rows_per = -(-len(names) // ncols)
         cw = 1.0 / ncols
         for i, (nm, d) in enumerate(names):
             cidx, ridx = divmod(i, rows_per)
-            x = 0.008 + cidx * cw
+            x = 0.010 + cidx * cw
             y = ytop - ridx * RH
-            dtxt = f"  ({kfmt(d)})" if d else ""
-            ax.text(x, y, f"{i+1}. {nm}", fontsize=10.4, color="#222", va="top")
-            ax.text(x + cw - 0.02, y, dtxt.strip(), fontsize=9.2, color=GRAY, va="top", ha="right")
+            ax.text(x, y, f"{i+1}. {nm}", fontsize=10.6, color="#222", va="top")
+            if d:
+                ax.text(x + cw - 0.022, y, f"({kfmt(d)})", fontsize=9.4, color=GRAY, va="top", ha="right")
         return ytop - rows_per * RH
 
-    y = header(0.885, "HIGH POP", "   ·   the only tier that ran in P1 (Jan–May '25)")
-    y = grid(tier_named["HIGH POP"], y, 4) - 0.022
-    y = header(y, "MID POP", "   ·   launched Feb '26")
-    y = grid(tier_named["MID POP"], y, 4) - 0.022
-    y = header(y, "LOW POP", "   ·   the long tail — launched Aug '25")
+    cur = header(0.905, "HIGH POP", "   ·   the only tier that ran in P1 (Jan–May '25)")
+    cur = grid(tier_named["HIGH POP"], cur, 4) - 0.014
+    cur = header(cur, "MID POP", "   ·   launched Feb '26")
+    cur = grid(tier_named["MID POP"], cur, 4) - 0.014
+    cur = header(cur, "LOW POP", "   ·   the long tail — launched Aug '25")
     low = tier_named["LOW POP"]
     top12 = ", ".join(f"{nm} ({kfmt(d)})" for nm, d in low[:12])
-    ax.text(0.008, y - 0.014, "Largest by delivery: " + top12, fontsize=10.2, color="#222", va="top", wrap=True)
-    ax.text(0.008, y - 0.052, f"+ {len(low) - 12} more small-market DMAs — full ranked list in "
+    ax.text(0.010, cur - 0.010, "Largest by delivery:  " + top12, fontsize=10.4, color="#222", va="top")
+    ax.text(0.010, cur - 0.046, f"+ {len(low) - 12} more small-market DMAs — full ranked list in "
             f"12b_geo_tier_deep_dive.md", fontsize=10, color=GRAY, va="top", style="italic")
     plt.savefig(a.ref_png, dpi=190, bbox_inches="tight")
     print(f"wrote {a.ref_png}")
