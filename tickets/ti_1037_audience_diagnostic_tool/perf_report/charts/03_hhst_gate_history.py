@@ -89,12 +89,12 @@ def main():
         ax.set_xlim(ws, we)
         for sp in ["top", "right"]:
             ax.spines[sp].set_visible(False)
+        # label + change-count in the LEFT MARGIN (no lines there → nothing gets cut off)
         nm = (groups[g]["name"] or "").replace("CTV Prospecting", "").strip()
-        ax.text(-0.013, 0.5, f"{g}\n{nm[:14]}", transform=ax.transAxes, ha="right",
+        ax.text(-0.013, 0.66, f"{g}\n{nm[:14]}", transform=ax.transAxes, ha="right",
                 va="center", fontsize=8, color="#333")
-        ax.text(0.997, 0.93, f"{len(ev)} changes · last={gate_label(ev[-1][1])}",
-                transform=ax.transAxes, ha="right", va="top", fontsize=7.5, color="#555", zorder=8,
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="#FAFAFA", edgecolor="#DDD", lw=0.5, alpha=0.92))
+        ax.text(-0.013, 0.24, f"{len(ev)} chg · last {gate_label(ev[-1][1])}",
+                transform=ax.transAxes, ha="right", va="center", fontsize=6.8, color="#999")
         if i == 0:  # band legend on the top panel only (no gray subtitle)
             ax.text(ws + 6, 9200, "HI zone (≥ 8000)", fontsize=7, color=GREEN, va="center")
             ax.text(ws + 6, -300, "no gate (≤ 0)", fontsize=7, color=RED, va="center")
