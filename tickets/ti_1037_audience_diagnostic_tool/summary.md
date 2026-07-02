@@ -265,9 +265,10 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   (kept for a separate file). Reuses module-07's history CSV (no re-query; incl/excl from the stable DS-role map).
   Emits PNG + committable `.md`. Reveals **platform-wide vs campaign-specific** changes via shared-date rows (Kindred:
   2025-10-29 both live campaigns +DS13, 11-12 both +DS21/34 excl, 12-11 both −DS13). *Approved.*
-- **08 `prospecting_flights`** — **scheduled-flight timeline** from `core_flights` (NOT delivery runs): each flight a bar
-  colored by length (red ≤3d / amber 4-7d / navy 8+), packed into non-overlapping sub-lanes per group, dormant grayed,
-  P1/P2 bands. Source confirmed by Tofer/Prod Ops: pull Start/End from the flights table; `core_flights.campaign_group_id`
+- **08 `prospecting_flights`** — **scheduled-flight timeline** from `core_flights` (NOT delivery runs): each flight a bar,
+  laid out in **3 fixed length-tiers per campaign** (short ≤3d red on top / 4-7d amber middle / long 8+ navy bottom) so
+  short flights line up on their own row; dormant (true gaps) grayed; P1/P2 bands; **short-flight count split P1 vs P2**.
+  (Flights are back-to-back sequential — a `>=` touch test keeps them on one tier; earlier version staircased them.) Source confirmed by Tofer/Prod Ops: pull Start/End from the flights table; `core_flights.campaign_group_id`
   gives the full history (`dso_campaign_group_flight_budgets` is current-only; `active_flight_id` stale). **Kindred: delivery
   is CONTINUOUS but built from many short back-to-back manual flights — High Pop 69 in-window flights (17 ≤3d), LowPop 51
   (13), 193 total / 42 short.** Flights set manually per launch (Tofer), so coverage may be partial pre-2025. Knowledge
