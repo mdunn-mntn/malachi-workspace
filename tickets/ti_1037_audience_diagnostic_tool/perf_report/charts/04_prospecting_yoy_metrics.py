@@ -72,28 +72,28 @@ def main():
 
     # ---- PNG ----
     n = len(table)
-    fig, ax = plt.subplots(figsize=(11.5, 0.7 * n + 1.8))
+    fig, ax = plt.subplots(figsize=(12, 0.46 * n + 1.1))   # tight rows so text fills the space
     ax.axis("off")
-    xL, xP1, xP2, xD = 0.02, 0.52, 0.76, 0.99      # label left; numbers right-aligned at these x
-    yh = n + 0.22
-    ax.text(xL, yh, "Metric", ha="left", va="center", fontsize=14, fontweight="bold", color=NAVY)
-    ax.text(xP1, yh, f"Period 1\n{a.p1_label}", ha="right", va="center", fontsize=13, fontweight="bold", color=NAVY)
-    ax.text(xP2, yh, f"Period 2\n{a.p2_label}", ha="right", va="center", fontsize=13, fontweight="bold", color=NAVY)
-    ax.text(xD, yh, "Δ %", ha="right", va="center", fontsize=14, fontweight="bold", color=NAVY)
-    ax.plot([0, 1], [n - 0.42, n - 0.42], color=NAVY, lw=1.6)
+    xL, xP1, xP2, xD = 0.02, 0.53, 0.77, 0.995     # label left; numbers right-aligned at these x
+    yh = n + 0.28
+    ax.text(xL, yh, "Metric", ha="left", va="center", fontsize=18, fontweight="bold", color=NAVY)
+    ax.text(xP1, yh, f"Period 1\n{a.p1_label}", ha="right", va="center", fontsize=16.5, fontweight="bold", color=NAVY)
+    ax.text(xP2, yh, f"Period 2\n{a.p2_label}", ha="right", va="center", fontsize=16.5, fontweight="bold", color=NAVY)
+    ax.text(xD, yh, "Δ %", ha="right", va="center", fontsize=18, fontweight="bold", color=NAVY)
+    ax.plot([0, 1], [n - 0.40, n - 0.40], color=NAVY, lw=1.8)
 
     for i, (label, s1, s2, ds, color) in enumerate(table):
         y = n - 1 - i
         if i % 2 == 0:
             ax.axhspan(y - 0.5, y + 0.5, xmin=0, xmax=1, color="#000000", alpha=0.03, zorder=0)
-        ax.text(xL, y, label, ha="left", va="center", fontsize=14, color="#222")
-        ax.text(xP1, y, s1, ha="right", va="center", fontsize=14, color="#222")
-        ax.text(xP2, y, s2, ha="right", va="center", fontsize=14, color="#222")
-        ax.text(xD, y, ds, ha="right", va="center", fontsize=14.5, color=color, fontweight="bold")
+        ax.text(xL, y, label, ha="left", va="center", fontsize=18.5, color="#222")
+        ax.text(xP1, y, s1, ha="right", va="center", fontsize=18.5, color="#222")
+        ax.text(xP2, y, s2, ha="right", va="center", fontsize=18.5, color="#222")
+        ax.text(xD, y, ds, ha="right", va="center", fontsize=19, color=color, fontweight="bold")
     ax.set_xlim(0, 1)
-    ax.set_ylim(-0.6, n + 0.9)
+    ax.set_ylim(-0.55, n + 0.95)
     ax.set_title(f"{a.adv} — Prospecting: Period 1 vs Period 2",
-                 fontsize=16.5, fontweight="bold", loc="left", color="#222", pad=14)
+                 fontsize=19, fontweight="bold", loc="left", color="#222", pad=14)
     plt.tight_layout()
     plt.savefig(a.out, dpi=200, bbox_inches="tight")
     print(f"wrote {a.out}")
