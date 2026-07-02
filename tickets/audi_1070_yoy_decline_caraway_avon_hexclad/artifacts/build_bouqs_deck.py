@@ -4,7 +4,7 @@ Same outline as Avon/HexClad/Caraway v4."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
-YOY=b64("bouqs_yoy.png"); POOL=b64("bouqs_pool_health.png"); MONTHLY=b64("bouqs_monthly.png")
+YOY=b64("bouqs_yoy.png"); POOL=b64("bouqs_pool_health.png"); MONTHLY=b64("bouqs_monthly.png"); RIBBON=b64("bouqs_gate_ribbon.png")
 
 HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>AUDI-1070 — The Bouqs</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
@@ -74,6 +74,13 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <p class="note"><b>51 gate changes on the flagship</b> (a one-point-a-day "walking ramp"), a hard removal (0/−1) Nov 11–24 for the holiday blowout, then a clean <b>re-gate to 10,000 in March → HI-share jumped to 77% within days</b> (proof the gate controls composition). But the <b>2026 relaunch reintroduced the leak</b>: the stage-1 fleet (595017) runs ~83% of spend ungated across short flights. Nuance: the gate steers <i>composition</i>, not the blended visit rate directly (they don't co-move month-to-month) — the damage is that delivery walked out of a good pool.</p>
 </section>
 
+<!-- 4b GATE RIBBON -->
+<section>
+<h2>4b · Every prospecting campaign, and its gate on/off over time</h2>
+<img src="__RIBBON__">
+<p class="note">Each row is an obj=1 stage-1 prospecting campaign; color = its HHST gate that day (<span class="green">green</span> = gated HI/Peak, <span style="color:#C77B30;font-weight:bold">amber</span> = mid/continuous "walking ramp", <span class="red">red</span> = <b>no gate</b>). The 2025 flagship <b>398872</b> ran ungated (red) from mid-Nov through Feb; the 2026 relaunch flagship <b>595017</b> goes red again in May. The High/Low/Auto-Frequency variant fleet mostly runs mid/continuous, rarely locked to HI. Multi-Touch (obj 5/6) companions are unscored by design and omitted.</p>
+</section>
+
 <!-- 6 WHAT WE RULED OUT -->
 <section>
 <h2>5 · What we checked — and ruled out</h2>
@@ -119,6 +126,6 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__YOY__",YOY).replace("__POOL__",POOL).replace("__MONTHLY__",MONTHLY)
+HTML=HTML.replace("__YOY__",YOY).replace("__POOL__",POOL).replace("__MONTHLY__",MONTHLY).replace("__RIBBON__",RIBBON)
 (DIR/"audi_1070_bouqs_deck.html").write_text(HTML)
 print(f"wrote audi_1070_bouqs_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")

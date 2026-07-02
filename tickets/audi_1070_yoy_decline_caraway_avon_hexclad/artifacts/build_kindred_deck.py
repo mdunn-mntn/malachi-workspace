@@ -4,7 +4,7 @@ Same outline as Avon/HexClad/Caraway/Bouqs v4."""
 import base64, pathlib
 DIR = pathlib.Path("tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts")
 def b64(n): return "data:image/png;base64," + base64.b64encode((DIR / n).read_bytes()).decode()
-YOY=b64("kindred_yoy.png"); SAT=b64("kindred_not_saturation.png"); GATE=b64("kindred_gate.png"); LENS=b64("kindred_lens.png")
+YOY=b64("kindred_yoy.png"); SAT=b64("kindred_not_saturation.png"); GATE=b64("kindred_gate.png"); LENS=b64("kindred_lens.png"); RIBBON=b64("kindred_gate_ribbon.png")
 
 HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>AUDI-1070 — Kindred Bravely</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
@@ -74,6 +74,13 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <p class="note">The flagship gate <b>held ~55% HI Jun–Oct</b>, then dropped to <b>0/−1 on Nov 19</b> for the holidays (HI-share → 2.6% by December, ungated to Jan 6). In <b>February it oscillated daily</b> (10000 ↔ 0 ↔ 3334 Mid-Intent), then loosened through May. Even in "good" months ~45% of delivery is unscored — the <b>mix-shift</b> that drags blended ROAS: 2026 overall visit rate (0.43%) is <i>half</i> the within-HI rate (0.88%).</p>
 </section>
 
+<!-- 4b GATE RIBBON -->
+<section>
+<h2>4b · Every prospecting campaign, and its gate on/off over time</h2>
+<img src="__RIBBON__">
+<p class="note">Each row is an obj=1 stage-1 prospecting campaign; color = its HHST gate that day (<span class="green">green</span> = gated HI/Peak, <span style="color:#C77B30;font-weight:bold">amber</span> = mid/continuous, <span class="red">red</span> = <b>no gate</b>). Both active campaigns — flagship <b>261318</b> (High Pop) and <b>463188</b> (LowPop) — go <b>red across the holiday</b> (Nov 19–Jan 6), with amber thrash blips in Feb. In late March, Kindred migrated to the Q1 "HiPop" fleet (576256/267/276), which runs gated. Multi-Touch (obj 5/6) companions are unscored by design and omitted.</p>
+</section>
+
 <!-- 6 LENS -->
 <section>
 <h2>5 · The drop is real — not an attribution artifact</h2>
@@ -111,6 +118,6 @@ ul.tight{font-size:0.62em;line-height:1.45;text-align:left;display:inline-block;
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
 <script>Reveal.initialize({hash:true,slideNumber:true,controls:true,progress:true,center:true,transition:'fade',transitionSpeed:'slow',width:1120,height:800,margin:0.01,minScale:0.2,maxScale:1.5});</script>
 </body></html>"""
-HTML=HTML.replace("__YOY__",YOY).replace("__SAT__",SAT).replace("__GATE__",GATE).replace("__LENS__",LENS)
+HTML=HTML.replace("__YOY__",YOY).replace("__SAT__",SAT).replace("__GATE__",GATE).replace("__LENS__",LENS).replace("__RIBBON__",RIBBON)
 (DIR/"audi_1070_kindred_deck.html").write_text(HTML)
 print(f"wrote audi_1070_kindred_deck.html ({len(HTML)//1024} KB, {HTML.count('<section>')} slides)")
