@@ -202,6 +202,17 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
   captured in `data_knowledge.md`. Empirical magnitude on Kindred confounded (spend burst); mechanism is the durable result.
   *Awaiting review.*
 
+- **12 `campaign_audience_deep_dive`** — decodes WHAT each prospecting campaign targets + flags audience-narrowing red
+  flags (the client's "most important piece"). Parses each expression: **geo tier** (included/excluded DMAs, named markets
+  via `geo.location_data` location_type_id=4), **interest logic** (MM DS19 **OR/AND** 3P DS35 — OR=additive, AND=narrowing),
+  3P segments (names via `tpa.categories`). Emits a deep-dive `.md` + summary-table PNG + red flags (AND-narrowing, small
+  limiting 3P, geo footprint/fragmentation, MM narrowing). queries/12 = geo DMA reference. Built from the
+  campaign-audience-deep-dive workflow (4 agents). **Kindred verdict: BROADENING / geo-slicing, NOT narrowing** —
+  6 campaigns geo-slice the 210 US DMAs into Top-20 (majors, ~40% of TV-HH) / Mid-38 / Low-152; MM & 3P are OR'd (additive,
+  no AND-3P); the story is **geo-mix dilution** (P1 100% top-20 → P2 ~48% spend into smaller Mid/Low markets) + top-market
+  flagship wind-down + 3-way HiPop fragmentation. 3P segment SIZES gated (GCS bucket access). Geo-slicing knowledge in
+  `data_knowledge.md`. *Awaiting review.*
+
 ## 7. Open items
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
 - Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
