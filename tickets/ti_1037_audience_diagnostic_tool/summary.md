@@ -167,6 +167,18 @@ honest estimate is 5 with the keyword-classifier descoped; without that descope 
 - **Next:** `resolver.py` (advertiser_id → segment_id/audience_id/campaigns/HHST/budget, all from BQ) → templatize the
   16 SQL files → `interpret.py`/`cohort.py`/`report.py` → step-9 pacing template → CLI → OTF reconciliation + ADV2.
 
+## 6c. Kindred (35094) — findings to flag so far (2026-07-02)
+Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report modules:
+- **Campaign count: 1 prospecting campaign → 6 running simultaneously** (module 01/07 census).
+- **Retargeting** (group 89071) ran alongside only **part** of P1 but the **entire** P2 (module 01/08).
+- **More HHST gate changes in P2 than P1**, and the gate **dropped numerous times** (module 03/03b; holiday gate-OFF).
+- **More campaigns, changing audiences more frequently** in P2 (module 07/07b change-log).
+- **HI% share fell ~100% → 89%.** P1 delivery is "unscored" in the logs (score column pre-2025-06), BUT the **HHST gate
+  was set and mostly consistent in P1**, so delivery was gated to HI ⇒ we can infer P1 ≈ ~100% HI. P2 = 89% (module 06/06b).
+- **Verdict so far:** the HHST drops + HI-share decline are **real but don't fully explain** the performance drop — no
+  single glaring cause. Next: audience **sizes**, **who** we targeted, and **HI coverage / recirculation** (are we
+  exhausting the HI pool and re-serving the same households?).
+
 ## 7. Open items
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
 - Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
