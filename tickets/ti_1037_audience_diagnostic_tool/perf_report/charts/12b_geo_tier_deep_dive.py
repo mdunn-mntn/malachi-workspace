@@ -55,13 +55,15 @@ def geo_sets(e):
 
 
 def shorten(nm):
-    """Trim the noisy Nielsen suffixes so the reference reads cleanly."""
-    nm = nm.split("(")[0].strip()
-    nm = nm.replace("-Daytona Beach-Melbourne", "").replace("-Stockton-Modesto", "")
-    nm = nm.replace("-Ft. Lauderdale", "").replace("-St. Paul", "").replace("-Tacoma", "")
-    nm = nm.replace("-Oakland-San Jose", " Bay Area").replace("-Ft. Worth", "").replace("-Manchester", "")
-    nm = nm.replace("-St. Petersburg", "").replace("-Akron", "")
-    return nm.strip().rstrip(",").strip()
+    """Reduce noisy multi-city Nielsen names to 'Primary City, ST' so columns read cleanly."""
+    state = ""
+    if "(" not in nm and "," in nm:                       # skip parenthetical names (e.g. Washington DC)
+        head, tail = nm.rsplit(",", 1)
+        t = tail.strip()
+        if 2 <= len(t) <= 6 and t.replace(".", "").isalpha():
+            state, nm = ", " + t, head
+    nm = nm.split("(")[0].split("-")[0].strip().rstrip(",").strip()
+    return (nm + state)[:24]
 
 
 def kfmt(v):
@@ -236,7 +238,7 @@ def main():
             col = rc if v.endswith("x") else "#222"
             ax.text(x, y, v, fontsize=10.8, color=col, va="center",
                     fontweight="bold" if v.endswith("x") else "normal")
-        ax.add_patch(plt.Rectangle((0.335, y - 0.011), 0.02, 0.022,
+        ax.add_patch(plt.Rectangle((0.232, y - 0.009), 0.016, 0.018,
                      color=TIER_COLOR[c["tier"]], alpha=0.85))
         y -= 0.0335
     # blended row
