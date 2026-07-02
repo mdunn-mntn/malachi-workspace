@@ -16,7 +16,7 @@ digraph advertiser_yoy_diagnostic {
   Q0b  [label="Q0b. Discrete tracking\nOUTAGE in either window?"];
   Q1   [label="Q1. Waterfall: which factor?\n(within vs mix vs ramp)"];
   Q2   [label="Q2. Did delivery LEAVE\nHigh-Intent via a GATE FLIP?\n(THE SPINE)", penwidth=2.5, fontsize=12, color="#1F3556"];
-  Q2a  [label="Q2a. Gate restored, or\nstill off (holiday / short-flight)?"];
+  Q2a  [label="Q2a. Durably RE-GATED & held,\nor THRASHED / still off?"];
   Q3   [label="Q3. Score drop: spend-invariant\nRELABEL, or spend-locked?"];
   Q4   [label="Q4. Saturation / EXPANSION\nat held HI-share?"];
   Q5   [label="Q5. Cohort placement\n(spend-growth-matched)"];
@@ -37,7 +37,7 @@ digraph advertiser_yoy_diagnostic {
   // real-decline = brick red (THE accent)
   node [fillcolor="#F2DEDC", color="#C4342B"];
   D_macro        [label="MACRO / PROMO / BASKET /\nCOHORT-WIDE ROAS"];
-  D_gate_removal [label="GATE REMOVAL\ndelivery left High-Intent (HHST=0)\n(HexClad)"];
+  D_gate_removal [label="GATE REMOVED / THRASHED\ndelivery keeps leaving HI\n(HexClad)"];
   D_over_scaling [label="OVER-SCALING / SATURATION\nexhausted the finite HI pool\n(Caraway)"];
   D_mm_degraded  [label="GENUINE MM DEGRADATION\n(only if every kill-condition failed)"];
 
@@ -64,8 +64,8 @@ digraph advertiser_yoy_diagnostic {
   Q1  -> D_portfolio  [label="2nd 0-HHST campaign"];
   Q1  -> D_cold_start [label="new campaign <4wk ramp"];
 
-  Q2a -> D_recovery     [label="re-gated, HI-share recovered"];
-  Q2a -> D_gate_removal [label="never reverted /\nshort-flight re-forced"];
+  Q2a -> D_recovery     [label="durably re-gated & HELD"];
+  Q2a -> D_gate_removal [label="thrashed / never durably held"];
 
   Q3  -> D_score_artifact [label="spend-invariant relabel;\nmedian stable, gradient intact"];
 
