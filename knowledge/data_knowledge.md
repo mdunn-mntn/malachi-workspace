@@ -2063,6 +2063,29 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 - **VV attribution = stack model.** Impressions stacked; page view checks top (most recent). Everything behind is ineligible.
 - **VVS cross-device linking (Sharad, confirmed):** The Verified Visit Service links visits to impressions in two layers: (1) **IP match** — find impressions served to the same IP as the page view IP (primary), (2) **GA Client ID expansion** — using the page view's GA Client ID, find all IPs that Client ID has been seen with in the previous few days, then look for impressions on any of those IPs. Validations and filtering applied at each layer. See: Nimeshi Fernando's "Verified Visit Service (VVS) Business Logic" Confluence doc.
 - **VVS determination logic (Nimeshi Fernando, Confluence):** Full decision tree: (1) advertiser_id valid? → (2) IP blocklist check (`segmentation.ip_blocklist`) → (3) GUID blocklist check (`segmentation.guid_blocklist`) → (4) cross-device config check (`vvs.cross_device_config` in Aurora DB) → (5) GUID match (`attribution_model_id=1`) → (6) IP match (`attribution_model_id=2`, includes CTV household_whitelist + iCloud IPv4 filter + GUID-to-IP count check) → (7) repeat with `viewable=false` impressions → (8) GA Client ID match (`attribution_model_id=3`, via `cookie.gaid_ip_mapping`) → eligibility checks (duplicate visit, TTL/acquisition window, advertiser TTL 45-day max) → (12) referral blocking / tamp detection (utm_source, utm_medium, utm_campaign, utm_content, gclid, cid, cmmmc). TRPX fires every page view; only first in session is eligible. VV window = 14-45 days per advertiser.
+- **VV (Verified-Visit) lookback WINDOW — source of truth + change history (TI-1037 workflow, 2026-07-02):** the VV
+  windows live on the **advertiser row** and its version archive `bronze.integrationprod.archives_advertiser_archives`
+  (NOT `advertiser_configurations` — its `page_view_lookback_window` is a taxonomy/RT-membership lookback, a different
+  concept, and `conversion_lookback_window` is NULL for most advertisers; NOT `r2_advertiser_settings` — no window cols).
+  INTERVAL fields, magnitude in the DAY component: **PRO_Window (prospecting VV) = `clickpass_acquisition_ttl`**,
+  **RT_Window (retargeting VV) = `clickpass_click_ttl`**, **conversion window (SEPARATE) = `conversion_window`**
+  (+ `click_/view_/invoice_conversion_window`). Change history: `EXTRACT(DAY FROM ...)`, **ORDER BY `update_time`**
+  (version non-monotonic if unsorted; `create_time` = account-creation stamp, not edit time), LAG-collapse to changes.
+  Reusable change-log = TI-1037 perf_report module 11. Kindred 35094: 45/45 (Oct'23) → **30/14 on 2025-08-08** (matches
+  the "VV Window Change Log" dashboard); conversion window constant 30d its whole life.
+- **A CONVERSION requires a VERIFIED VISIT within the VV window (mechanism, high confidence, TI-1037 workflow 2026-07-02):**
+  a UI-reported conversion (`from_verified_impression=TRUE`) is attributed to the SAME impression that produced a VV, via
+  the SAME VVS engine — **100% of such conversions co-occur with a VV on the same `ad_served_id`** (Kindred 1,133/1,133;
+  21,611 conv across 7 advertisers all 100%), sharing the `attribution_model_id` map above. Since `conversion_lookback_window`
+  is unset and the **VV/page-view window is the only populated per-adv lookback**, **shortening the VV window shrinks the
+  connectable-conversion pool → can lower conversions/CVR/ROAS** — on a **~window-length LAG** (old 31-45d-out attributions
+  stop connecting only after the new window cycles through, so a naive same-day pre/post at the change date sees nothing).
+  So Malachi's mechanism is correct; Mike Dolt's "separate fields" is factually true but does NOT make conversions
+  window-independent. **Caveat (honesty):** the mechanism is proven, but the empirical MAGNITUDE is not cleanly isolated —
+  Kindred's ~Sep'25 CVR move is confounded by a co-timed spend burst (netting it out weakens the window signal), and Bouqs
+  is invalid (account pause 6d after its change); need a natural-experiment advertiser delivering continuously at stable
+  spend 45+ days post-change to quote a number. **Always flag a VV-window change (module 11) before attributing any
+  YoY/MoM visit/conversion/CVR change** — it's a measurement confound. [[reference_attribution_industry_standard_ft]]
 - **VVS attribution_model_id reference:** 1-3 = Last Touch (guid/ip/ga_client_id), 4-6 = Last TV Touch (guid/ip/ga_client_id), 7-8 = Offline Attribution, 9-14 = Competing (guid/ip/ga_client_id variants), 15-16 = Impression-based (ip). Non-competing = 1-8, Competing = 9-14. Competing VVs stored in `competing_vv` Kafka topic.
 - **PV_GUID_LOCK:** VVS stores impression GUID + page view GUID. PV GUID TTL = 30 min of inactivity (resets each TRPX fire). Handles IP changes mid-session. Advertisers with `pv_guid_lock = true` in `advertiser_configs`.
 - **TRPX (tracking pixel):** Installed on advertiser webpages. Fires HTTP POST to VVS on every page view. Sends: ip, guid, gaid (GA Client ID), advertiserId, UTM params, referrer, userAgent, xForwardedFor, epoch. Response: `isSuccessful=true` (Last Touch VV) or `isSuccessful=false` (rejection or Competing VV). TRPX also sends GA data to attribution-consumer → Measurement Protocol → advertiser's GA property → logged in `analytics_request_log`.

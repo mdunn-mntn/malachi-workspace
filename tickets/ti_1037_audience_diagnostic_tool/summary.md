@@ -191,6 +191,16 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
   ~35% across 2026 (65M Jan→42M May'26); cumulative HI reached 5.3M ≈ 63% of the ~8.5M deliverable and rising ⇒ shrinking
   pool + high coverage = limited fresh-HI headroom** (supports the recirculation read). Caveat: total (kw+3P) size,
   not HI-only. *Awaiting review.*
+- **11 `vv_window_change_log`** — flags **VV (verified-visit) lookback window changes** per advertiser (a MEASUREMENT
+  confound). Source = `bronze.integrationprod.archives_advertiser_archives` (PRO=`clickpass_acquisition_ttl`,
+  RT=`clickpass_click_ttl`, conv=`conversion_window`; NOT advertiser_configurations). Step-line of PRO/RT window over time,
+  change markers, P1/P2 bands + red FLAG when the window differs between periods; committable `.md` change-log. **Kindred:
+  45/45 → 30/14 on 2025-08-08 — squarely between P1 (PRO 45d) and P2 (PRO 30d), so P1 visits/conv were measured on a LONGER
+  window (measurement confound on the P1-vs-P2 gap); conversion window constant 30d.** Built from the vv-window-cvr-
+  investigation workflow (10 agents). **Mechanism proven: a conversion requires a VV within the window** (100% co-occurrence
+  on ad_served_id; 7 advertisers) ⇒ shortening the VV window can lower conversions/CVR/ROAS on a ~window-length lag —
+  captured in `data_knowledge.md`. Empirical magnitude on Kindred confounded (spend burst); mechanism is the durable result.
+  *Awaiting review.*
 
 ## 7. Open items
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
