@@ -527,14 +527,16 @@ def sheet_current_lift(wb, final_rows):
         counts[t] = {k: sum(1 for r in sub if r.get("current_lift_confirms") == k)
                      for k in ("CONFIRMED", "CONTRADICTED", "unconfirmed(underpowered)", "no_data")}
     title_block(ws, len(CL_COLS),
-                "INCR-75 — Current Measured Lift (live ghost-bid holdout, MNTN clean leg)",
-                "Actual treatment-vs-holdout visit lift from Matt Brorby's live ghost-bid tables "
-                "(enriched__dev_matthewbrorby.lift__ghost_bid_visits), debiased per his bias register "
-                "(clean ghost_frac gate + single earliest-bid anchor). Window = rolling ~10 days "
-                "(2026-06-22..07-01); logging live since 2026-05-27 so ≥30 days is not yet available. "
-                "Shortlist below = Top/Mid tier advertisers whose current lift CONFIRMS the a-priori score "
-                "(significant positive, ≥20 holdout visits). READ RELATIVE LIFT + DIRECTION, not z (N-inflated); "
-                "absolute pp are bid-grain ITT (diluted by win-rate). Publish as directional, not a point estimate.")
+                "INCR-75 — Current Measured Lift (live ghost-bid holdout)",
+                "Actual treatment-vs-holdout visit ITT from the live ghost-bid tables "
+                "(silver enriched.lift__ghost_bid_visits). Method per Matt Brorby (2026-07-02): entry-anchored at "
+                "first bid per advertiser×campaign×IP, 7-day-from-first-bid visit window, EXCLUDING the 2026-06-22 "
+                "left-edge day (an accumulated stock that inflates the holdout fraction and manufactures a spurious "
+                "negative). On the clean set the holdout fraction lands on 0.10 (design) and pooled lift = +5% (z≈26). "
+                "NB: Matt's gold ghost_bid_rollup is all-time / cannot drop 06-22, so it reads spuriously negative — "
+                "do NOT use it yet. Tables now accumulate (no TTL), so a true ≥30-day window arrives ~late-July. "
+                "Shortlist = Top/Mid tier whose current lift CONFIRMS the score (significant positive, ≥20 holdout visits). "
+                "READ RELATIVE LIFT + DIRECTION; absolute pp are bid-grain ITT (diluted by win-rate). Directional, not a published point estimate.")
     # summary block
     r = 4
     ws.cell(r, 1, "Confirmation vs a-priori tier").font = Font(bold=True, size=11, color="1F3A5F"); r += 1

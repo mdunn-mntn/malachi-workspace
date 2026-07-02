@@ -1,0 +1,408 @@
+[00:00] And yeah, so can you explain?
+[00:02] I had a misconception here.
+[00:04] So I thought that the only way that this bidder was working
+[00:08] was if an advertiser began a new campaign
+[00:12] and then the new system would pick it up.
+[00:14] So obviously I misunderstood that.
+[00:16] Could you guys explain just a little bit how it's working?
+[00:18] Like, I know there's this mountain bidder,
+[00:21] but I don't think I actually quite understand
+[00:23] how it's working.
+[00:26] Brian definitely understands that the most.
+[00:29] like not it doesn't have to be in depth i just i'm kind of understanding like how yeah so um yeah
+[00:35] sorry and i was toxic or sorry what's what's the question how mountain bitter ghost bits work
+[00:41] yeah so i was under the impression that like they had to start a new campaign and then once that
+[00:46] campaign started they would start tracking for new campaigns so yeah i didn't understand how
+[00:52] that was working so is it so currently every single advertiser that's running right now
+[00:58] is getting bids and ghost bids logged.
+[01:02] If they have holdout,
+[01:05] that holdout stuff set up in their audience expression, yes.
+[01:09] And everyone should, right?
+[01:10] Shouldn't 100% have a holdout, 10%?
+[01:13] I believe so.
+[01:16] There might be exceptions like retargeting campaigns.
+[01:19] Oh, yeah.
+[01:20] I mean, that's where my knowledge kind of ends.
+[01:24] But I think like most prospecting ones.
+[01:28] Yeah, when I look in our data at the ghost bids,
+[01:33] I see like 1,700 campaigns, unique campaigns,
+[01:37] which is about how many active campaigns we have
+[01:40] on like prospecting campaigns.
+[01:42] Okay, nice.
+[01:44] I filter it down to prospecting campaigns
+[01:45] or a loose definition of prospecting campaigns.
+[01:49] Yeah.
+[01:49] Yeah, like what about like CRM?
+[01:51] Or, you know, you didn't have to think of like,
+[01:53] I don't know.
+[01:54] so the thing is as long as there's that holdout stuff in their audience expression then yes they
+[02:02] are getting ghostbits so does that answer your question yeah i think so so i should be able to
+[02:09] look at that table and i can calculate lift on it i just i don't know why i thought that there
+[02:13] was a limitation on how many advertisers would see it it still wouldn't change my recommendations
+[02:18] though but then i can actually see the the lift on what we currently have i'm sure there's some
+[02:24] advertisers that spend so little there's not a lot of yeah there's not a lot of meat yeah whatever
+[02:31] in the last yeah so but no that's that's okay that's that's good so i think that's cleared up
+[02:35] so i think matt you're gonna sorry you're gonna go over i think you have a new systematic way of
+[02:40] dealing with the bidding bias is that correct yeah so there are um let me pull it up
+[02:51] so what i have to analyze is the mountain bidder stuff because i don't now with ryan's change
+[03:03] that should eliminate a lot of the weird biases that can happen.
+[03:11] But in this case, on the beeswax side of things,
+[03:16] kind of my high-level indicator on whether things are working
+[03:20] somewhat as expected is this ghost fraction,
+[03:25] which should be close to 10%.
+[03:28] It's typically slightly under.
+[03:30] and that's kind of the main like health one of the main health indicators is looking at that
+[03:35] to be like the number of bids these are number of bids on the treatment which is the real bids and
+[03:42] these are the number of bids on the holdout and so they should be close to 10 percent of the bids
+[03:50] when they get above that when you see more ghost bids like that's indicating that there's a higher
+[04:02] frequency of ghost bids in the holdout group than in the treatment group and that's be that can be
+[04:07] because they're not capped at a certain frequency on the beeswax side so we shouldn't see this too
+[04:14] much on the mountain bitter side hopefully so the thing is like i have to deal with this in some way
+[04:18] So now I think I've got it figured out, which is before when I was just looking at like
+[04:25] the all up data, um, the ghost fraction was higher in many of the instances, but now I
+[04:34] think what's actually happening based on looking at it is I only have 10 days.
+[04:42] I can look back.
+[04:43] and when i do that the very last day so this is like the last day i can look back today
+[04:52] um what has been happening is that a bunch of ips get piled up on that day because of
+[05:01] the logic of what's going on so basically the way that this has to work to do the measurement is
+[05:07] we look at the distinct number the distinct ips in each group because on the ghost bidding side
+[05:19] we don't bid on them therefore the same ip can show up 10 times 20 times 100 times on the same
+[05:27] campaign but we have to just say we only bid like the first time so so that um
+[05:37] leads to i don't know the best way to phrase it but the first time we see an ip
+[05:46] on the ghost bidding side like we can see the crazy active ones on that very first day of the
+[05:54] window and then kind of filter them out so that all these other days are clean it kind of the
+[06:02] purpose here so that uh after that first day i have a cleaner measurement of like these are the
+[06:10] more clean data to go off of and then when i do that the intent to treat effect at a daily grain
+[06:20] becomes cleaner too so like here it's negative and it's negative because of this frequency bias
+[06:27] but after that all of these are close to between nine and ten percent which is what we'd expect
+[06:34] and then the lift become positive but if you aggregate all this 10 days together
+[06:40] then it's negative again slightly negative because of this frequency bias like really
+[06:46] overrides everything, which is
+[06:47] these IPs that show
+[06:50] up in every single bid.
+[06:54] Gotcha.
+[06:54] That makes sense.
+[06:56] You need to filter them out, but you can't
+[06:58] filter them out in a post-hoc way.
+[07:01] This is the cleanest
+[07:02] way I could do it without introducing too much
+[07:04] bias.
+[07:06] Can you copy and paste that query
+[07:08] for me? Thank you.
+[07:11] This one
+[07:12] is specifically for 11 Labs
+[07:14] just to look at it but you can get rid of that and see it at like the the aggregate level too
+[07:20] so as i send this over to you i can so we have a 10-day ttl on the ghost bids table
+[07:29] yeah the price log yeah okay so my question then is since we will be looking at lift right
+[07:39] do you think that it's possible for us to create 30 day rolling aggregate tables
+[07:48] yeah that because there shouldn't be a lot of data if it's aggregate so i mean and then that
+[07:57] would allow us to just look at i mean we wouldn't be able to get very granular which i mean it's not
+[08:02] we're going away from it like we'll still have the 10-day granular but we'd at least have a table
+[08:07] where we could just have all the pre-computed lift for every advertiser that were running
+[08:11] for their prospecting campaigns yeah that's what this that's what i've created basically
+[08:16] so the there's the um let's see in here in the silver layer in rich data set there's two tables
+[08:28] there's the ghost bid that are ghost bid there's ghost bid audiences which is like the new version
+[08:34] of the holdout audiences and the ghost bid visits which is the new version of the holdout visits
+[08:39] using ghost bids instead of the holdout logic now the audiences is basically just tracking the real
+[08:46] bids versus the ghost bids and just tracking the that at the um advertiser campaign ip level
+[08:57] every day so it aggregates that up and like sees how many bids this ip showed up in for this
+[09:05] campaign every day um and then the visits uses that daily grain to look forward
+[09:17] from this date and see if there's a visit in like a seven day window
+[09:24] after that. And then it will record if it sees it, it will, if there's a visit,
+[09:31] and then I also put conversions in there. Seven day window for conversions is not crazy,
+[09:37] but it's not very like generous, but it just is what it is for right now. We can always change
+[09:43] that. So these tables starting from 10 days ago are now going to be populated every day
+[09:51] and will exist for longer.
+[09:56] Like they don't have a TTL on them right now.
+[09:59] So these tables will be good to use.
+[10:03] And then in the gold layer,
+[10:05] we have in the reporting,
+[10:10] which there's a lot,
+[10:11] so I'm going to skip ahead here.
+[10:13] There's two tables on the reporting schema in here,
+[10:19] which are the ghost bid results
+[10:20] and then the ghost bit roll up where the ghost bit roll up is more it's the last thing and it is
+[10:29] going to be showing data um at the advertiser and campaign level so i can also send you this like
+[10:38] this is the logic of how everything's working so these source tables feed into the ghost bit
+[10:44] audience, which feeds into the visits, which feeds into results, which has all of these
+[10:51] strata and things. And then finally, that all gets rolled up in a weighted way to the
+[10:57] advertiser and campaign group, which then can be digested right into the reporting.
+[11:04] Okay.
+[11:05] It's kind of the logic of it. Now, these rollup tables in the gold layer,
+[11:14] They're just going to be pulling in like for an advertiser in a campaign, all the data that is in these silver layers, they aren't like time boxed in any way.
+[11:25] So it's just a accumulation that's happening over time.
+[11:30] ideally what we're going to have is the ability to um put a time box on those things so that you
+[11:40] could be like well what's the what is like the 30 day results from this day to this day for this
+[11:47] advertiser and then you could get that as opposed to like what's their all-time roll-up
+[11:53] um results like accumulating over all time which is not the best way to do it
+[12:00] So there'd be some changes to these gold levels,
+[12:03] but the silver ones will not change right now.
+[12:08] So these are good places to start to get off,
+[12:12] to get what you're looking for.
+[12:15] Yeah, and I think I've seen that.
+[12:17] I actually think I have that page.
+[12:20] Yeah, I think I sent this to you before.
+[12:21] No, I know.
+[12:22] I was going to say, I think I have it pinned,
+[12:24] because I reference it often.
+[12:27] Let's see.
+[12:29] Yeah. In here, then. Yeah, I commented that out. So again, here you can see it. These are the all
+[12:35] up results now. So there's a ton of bids here. And when the ghost fraction is below that 11%,
+[12:44] like where it's reasonable, we see that the intent to treat or the relative percent is positive.
+[12:51] and then it's like strongly negative when uh that bias is allowed to creep in so these should all
+[13:00] be clean results in my opinion and like the z scores for some of these are crazy high because
+[13:06] there's so many results there's so much data but yeah so this is where i was like okay i need to
+[13:14] maybe be a little more careful about thinking about this but it's looking like if we can remove
+[13:19] this bias on the very first day here that these results become more clean and we do see a positive
+[13:27] lift like a meaningful significant positive lift so that's where i was like okay this might be good
+[13:35] news then for us. We can have something here to build off of.
+[13:48] Okay. That makes sense. I will put that into my calculations for finding eligible advertisers
+[14:02] users and run it for a small period of time. Did it take you very long to run this?
+[14:06] No, this is fast. If I click a run right now, it's super fast.
+[14:10] Oh, okay.
+[14:11] Because the tables, these are very fast, yeah. Because they're basically already
+[14:19] populated.
+[14:20] Okay. That makes sense.
+[14:23] Yeah. The big polls have been done on the SQL mesh runs that run every day.
+[14:30] Yeah.
+[14:31] Basically become views, right, Brian?
+[14:35] Yeah.
+[14:36] That's the one thing I should have told you about that with BigQuery.
+[14:41] That's what Victor was telling me.
+[14:43] With SQL, sometimes these are views.
+[14:45] But it looks like you're materializing this one now.
+[14:50] This one is, yes.
+[14:53] These ones in the enriched schema are for sure.
+[14:57] I'm not sure if they can just turn into views.
+[15:00] Yeah.
+[15:01] In the gold layer, from what I think Dustin said,
+[15:04] they kind of become views a lot of times as well.
+[15:08] Yeah.
+[15:09] Okay.
+[15:10] Yeah.
+[15:12] So.
+[15:13] Oh, sorry, go ahead.
+[15:15] No, you're fine.
+[15:15] I was going to ask something unrelated just about the audience stuff.
+[15:19] So go ahead.
+[15:24] Oh, I was going to ask.
+[15:25] Sorry.
+[15:25] Oh, do you have Bidder Source in there?
+[15:29] Not this one, because it's only on BidPriceLog is the source of all this.
+[15:41] Oh, and that's only the JVM Bidder.
+[15:44] Yeah. So now I'm testing out today, I can see the ghost bids coming in, again,
+[15:52] on the mountain bidder side, I just need to see if I can see that level change after your
+[16:00] change and then trying to figure it out. Because now it's all on raw bidder, bid events table
+[16:11] or something like that. That one's huge. There's two or three billion rows an hour or something
+[16:19] crazy. So it's hard to parse that right now. So that's the next thing. And that one has
+[16:30] the partner ID 79 or whatever. I'll likely do that and try to fold it into this. I'm
+[16:40] trying to figure out whether I create two separate audience tables, one for beeswax,
+[16:46] one for mountain better and then at this level the ghost like the visits is where maybe i can
+[16:52] put them start putting them together trying to figure out the best place to do that
+[16:57] because this existing pipeline is built to deal with the
+[17:09] the biases that exist on the beeswax side so like it it does checks on like the ghost bid fraction
+[17:22] um and then other things like it does like the strata cuts so it looks to see that
+[17:30] it's equal across the household scores as well so like high intent mid intent max reach peak
+[17:38] performance that the number is about 10% in each of those as well.
+[17:45] And if not, it can do adjustments.
+[17:50] Yeah.
+[17:51] Which hopefully we won't need on the mountain bidder side.
+[17:55] Hopefully the mountain bidder is just like, are you ghost bid or are you real bid?
+[17:59] And then just put them in those two buckets and you say, what's the visit rate on this
+[18:03] side?
+[18:03] What's the visit rate on that side?
+[18:04] And you're done.
+[18:05] like that's hopefully in most cases like all we need to do on the mountain bitter side but i need
+[18:11] to check yeah dude uh but yeah dude i'm impressed you did a good job with the sequel mesh stuff man
+[18:23] i'm glad you could tackle that so i mean yeah it's like somewhat easy as long as you have some
+[18:31] examples but then when it came to actually pushing the pr and be like oh does the just that that
+[18:37] model part at the top of the query you got to make sure that you're doing that correctly otherwise
+[18:42] the rest because i'm just worried about the actual logic below that that that works and
+[18:47] that was working but now it's like okay how is this going to run every day and yeah that's the
+[18:52] type of stuff i should have helped you with or well actually in malachi maybe i mean malachi
+[18:58] is trying to get into data engineering so maybe that would be a good one for you to kind of pick
+[19:03] up malika but um yeah for sure um and actually that's that's one thing i wanted to bring up
+[19:12] or unless you guys want to talk about that more um then go ahead uh yeah malika i did get
+[19:22] that column added to the BigQuery tables
+[19:26] that she wanted for...
+[19:28] Let me share my screen.
+[19:33] Where's it at?
+[19:37] It's just on it.
+[19:40] I'm not going to be able to...
+[19:43] Is the unique IP
+[19:47] users reached?
+[19:51] That thingy.
+[19:52] Yeah, yeah. And that was for Chris because I think that he was trying to do it in the.
+[19:59] Using chat.
+[20:00] appy or something like that and it we weren't able to do it from there yeah oh here we go
+[20:10] or am i actually on silver i can't remember
+[20:19] yeah okay here uh but i so i don't have this in click house yet though i'm working on a pr for
+[20:28] that. What's funny is like it's not
+[20:32] distinct though. I don't know if I don't think the other column I copied is distinct
+[20:36] either or I see duplicates, but whatever. I think
+[20:40] once we get into ClickHouse
+[20:43] I don't know. I'm hoping the
+[20:47] I'm just modeling it off of that other column that we were using
+[20:52] that said that where you said it wasn't exactly what you wanted because it had the
+[20:56] GUID and all that stuff.
+[20:59] So I don't know if you want to just double check.
+[21:02] Where's my...
+[21:04] I think it would need to be de-duped if I...
+[21:07] I'm not sure why there's the dupe there.
+[21:09] But I think that's kind of the point.
+[21:11] Maybe that it's counting twice the same IP.
+[21:16] Hold on.
+[21:17] I'm sorry.
+[21:18] I really had to use restroom.
+[21:20] Yeah, no problem.
+[21:20] all right but matt so just so you know yeah i basically i basically tried to copy
+[21:30] this column but but he didn't want we don't want you know we basically just wanted just the ips so
+[21:41] there's no distinct here you know i see if you want to distinct i guess you i think you could
+[21:46] but a distinct here,
+[21:48] but I don't know if it would slow this model down,
+[21:51] you know,
+[21:51] because that's a lot of compute,
+[21:55] but I mean,
+[21:56] I guess you're trading compute per storage kind of here.
+[22:01] Right.
+[22:04] But yeah.
+[22:08] And I just,
+[22:08] I wanted to talk to both of you and it is fine.
+[22:11] Malachi is not here that just so you know,
+[22:13] because I might not be able to help much more
+[22:15] on incrementality. I got to focus
+[22:17] on identity.
+[22:19] But this
+[22:20] I got the
+[22:23] data.
+[22:25] So mountain
+[22:27] bitter, I got that pushed through.
+[22:29] So I'm hoping
+[22:29] that looks good.
+[22:33] I don't know how to QA it.
+[22:35] Maybe you can help me QA it.
+[22:36] When you showed that plot
+[22:38] yesterday,
+[22:40] it decreased
+[22:42] which is expected but I wasn't sure if that
+[22:44] actually even aligned with the change
+[22:47] yeah it was
+[22:49] because that's what we expect the ghost bids
+[22:54] should go down
+[22:56] based on that right because they're
+[22:58] but like it's
+[23:00] dependent on so many things
+[23:02] yeah it does
+[23:04] let me go last 24 hours
+[23:06] ghost bid
+[23:07] I deployed
+[23:10] it
+[23:11] around
+[23:13] 2.30 my time.
+[23:16] So that'd be 19.30
+[23:18] UTC-ish.
+[23:22] Actually, let me double check when I
+[23:24] deployed it.
+[23:24] I put
+[23:25] a 1 o'clock my time.
+[23:33] So that'd be
+[23:34] 8.20
+[23:38] 100.
+[23:41] it's hard to tell I don't know
+[23:43] let me look at the last two days
+[23:45] it's so spiky
+[23:47] it's so noisy
+[23:49] yeah
+[23:50] it looks like it got noisier
+[23:53] yeah
+[23:54] but
+[23:56] I don't know
+[23:58] it's also the beginning of a new month
+[24:00] yeah
+[24:01] and going into the weekend maybe where it's
+[24:04] I don't know
+[24:06] so
+[24:07] so yeah that ticket maybe
+[24:10] might need to QA just to make sure
+[24:14] it's still working.
+[24:16] But I haven't
+[24:17] done tests in there and
+[24:19] it should be working
+[24:21] fine from what I understand.
+[24:25] And then this ticket, I marked
+[24:27] as done. There's still
+[24:29] one more.
+[24:32] To get this in prod,
+[24:35] it's in QA, so I think
+[24:37] Macy has what she
+[24:39] needs.
+[24:40] then I gave you that curl command.
+[24:50] I think this is, yes, QA.
+[24:54] So I think if I run this, why not?
+[25:00] I've got to speed results, doesn't it?
+[25:02] Wait, what?
+[25:05] Oh, man.
+[25:08] Dude, oh, man.
+[25:09] Okay, there's weird stuff with when you're using that QA, it's hitting
+[25:15] ClickHouse dev.
+[25:17] So but I'm but all the stuff is in broad.
+[25:24] No.
+[25:26] Yeah.
+[25:27] Okay.
+[25:28] It's in prod.
+[25:29] The dev stuff might have a little bit of let me let me see what's going on
+[25:35] with dev here.
+[25:36] I don't know what happens in dev necessarily.
+[25:38] Oh, it is.
+[25:39] or oh somebody might have
+[25:43] there's weird stuff that happens with QA
+[25:48] like I bet somebody deployed over me or something
+[25:51] anyway the only thing left to get this
+[25:56] into prod would be to
+[25:59] and Lauren Gregg is aware of this is to
+[26:03] get this last PR
+[26:06] right here
+[26:10] this
+[26:12] defines the
+[26:14] metadata
+[26:15] so that the API
+[26:18] can hit it
+[26:19] so like this is
+[26:21] so this has all your column names
+[26:24] and stuff
+[26:25] so anyway
+[26:28] I marked the ticket as done but it's not like
+[26:30] 100% done
+[26:31] anyways I'm back
+[26:32] yeah so that's
+[26:38] kind of that ticket
+[26:39] and I guess if it's
+[26:42] not working in QA though Macy can reach
+[26:44] out to me and I can figure
+[26:46] out
+[26:47] what's going on and then the only thing
+[26:50] left with this ticket is just adding
+[26:53] the columns I got it in SQL
+[26:54] mesh adding it to
+[26:56] Clickhouse
+[26:57] so actually Malachi
+[27:00] if you want it, if you have time, I don't want to take you off your P zero,
+[27:04] but I could kind of maybe show you how click house works.
+[27:08] If you wanted to learn.
+[27:10] I actually really need to get to that task.
+[27:14] Yeah, no problem.
+[27:15] Push it out. But yeah, I mean,
+[27:17] it could be even next week. Yeah.
+[27:20] I don't want to take up more of your time today, but yeah, but that's,
+[27:24] that's yeah. That's kind of my status.
+[27:26] And I was just going through that Malachi cause I might not be able to
+[27:29] go to the Inker mentality stand-ups
+[27:32] and stuff as much or I might, you know.
+[27:34] But you guys can reach out to me.
+[27:36] Okay. Sounds good. Thank you, Ryan.
+[27:39] Yep.
+[27:40] Anyway, hope you guys have a good 4th of July.
+[27:42] Yeah, you as well.
+[27:44] Thank you.
+[27:45] Thanks. Take care.
+[27:47] See you guys.

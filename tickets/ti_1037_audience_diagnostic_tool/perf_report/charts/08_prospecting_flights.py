@@ -65,7 +65,7 @@ def main():
         assign = []
         for s, e, dd in fl:
             for li, le in enumerate(lane_end):
-                if s > le:
+                if s >= le:      # touching (start == prior end) counts as sequential, not overlap
                     lane_end[li] = e
                     assign.append((s, e, dd, li))
                     break
