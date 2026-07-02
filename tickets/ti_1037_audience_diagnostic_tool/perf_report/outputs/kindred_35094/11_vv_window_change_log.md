@@ -6,3 +6,4 @@ Source: `archives_advertiser_archives` (PRO=`clickpass_acquisition_ttl`, RT=`cli
 | 2023-05-05 | 14d | 7d | 30d | initial |
 | 2023-10-03 | 45d | 45d | 30d | PRO 14→45, RT 7→45 |
 | 2025-08-08 | 30d | 14d | 30d | PRO 45→30, RT 45→14 |
+| 2026-04-08 | 14d | 14d | 30d | PRO 30→14, RT 14→14 |

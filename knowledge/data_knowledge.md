@@ -2073,8 +2073,12 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
   **RT_Window (retargeting VV) = `clickpass_click_ttl`**, **conversion window (SEPARATE) = `conversion_window`**
   (+ `click_/view_/invoice_conversion_window`). Change history: `EXTRACT(DAY FROM ...)`, **ORDER BY `update_time`**
   (version non-monotonic if unsorted; `create_time` = account-creation stamp, not edit time), LAG-collapse to changes.
-  Reusable change-log = TI-1037 perf_report module 11. Kindred 35094: 45/45 (Oct'23) → **30/14 on 2025-08-08** (matches
-  the "VV Window Change Log" dashboard); conversion window constant 30d its whole life.
+  Reusable change-log = TI-1037 perf_report module 11. Kindred 35094: 45/45 (Oct'23) → **30/14 (2025-08-08)** →
+  **14/14 (2026-04-08)** — progressive PRO shortening 45→30→14; conversion window constant 30d its whole life.
+  **⚠ The archive LAGS: `archives_advertiser_archives` stopped at v245/2026-03-27 (PRO=30) but the live table had the
+  2026-04-08 PRO 30→14 edit — UNION the live `advertisers` row (its TTL is a STRING 'N days', parse the leading int) to
+  the archive so recent changes aren't missed. Also: two windows per advertiser — PRO (prospecting) vs RT (retargeting) —
+  a P2 window can STRADDLE a mid-period change.**
 - **A CONVERSION requires a VERIFIED VISIT within the VV window (mechanism, high confidence, TI-1037 workflow 2026-07-02):**
   a UI-reported conversion (`from_verified_impression=TRUE`) is attributed to the SAME impression that produced a VV, via
   the SAME VVS engine — **100% of such conversions co-occur with a VV on the same `ad_served_id`** (Kindred 1,133/1,133;

@@ -32,6 +32,16 @@ WITH hist AS (
     EXTRACT(DAY FROM conversion_window)          AS conversion_window_days
   FROM `dw-main-bronze.integrationprod.archives_advertiser_archives`
   WHERE advertiser_id = {{AID}}
+  UNION ALL
+  -- CURRENT LIVE state — the archive LAGS (Kindred: archive stops 2026-03-27 @ PRO=30, but the live
+  -- table has the 2026-04-08 PRO 30->14 change). The live `advertisers` table stores the TTL as a
+  -- STRING ('N days'), so parse the leading integer. Max version so it sorts last within its update_time.
+  SELECT update_time, 2147483647 AS version,
+    CAST(REGEXP_EXTRACT(CAST(clickpass_acquisition_ttl AS STRING), r"([0-9]+)") AS INT64),
+    CAST(REGEXP_EXTRACT(CAST(clickpass_click_ttl        AS STRING), r"([0-9]+)") AS INT64),
+    CAST(REGEXP_EXTRACT(CAST(conversion_window          AS STRING), r"([0-9]+)") AS INT64)
+  FROM `dw-main-bronze.integrationprod.advertisers`
+  WHERE advertiser_id = {{AID}}
 ),
 flagged AS (
   SELECT update_time, pro_window_days, rt_window_days, conversion_window_days,

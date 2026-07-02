@@ -81,14 +81,18 @@ def main():
             ax.text(mdates.date2num(c["date"]) + 5, 47, f"{c['date']}\nPRO->{c['pro']}d  RT->{c['rt']}d",
                     fontsize=8.5, color=RED, va="top", fontweight="bold")
 
-    # P1/P2 flag
-    p1_pro, p2_pro = val_at(changes, "pro", p1m), val_at(changes, "pro", p2m)
-    ax.text(mdates.date2num(p1m), 2, f"P1: PRO {p1_pro}d", ha="center", fontsize=9, color=NAVY, fontweight="bold")
-    ax.text(mdates.date2num(p2m), 2, f"P2: PRO {p2_pro}d", ha="center", fontsize=9, color=NAVY, fontweight="bold")
-    if p1_pro != p2_pro:
-        ax.text(0.5, 1.04, f"FLAG: VV window changed between periods ({p1_pro}d -> {p2_pro}d) — P1 visits/conversions "
-                f"measured on a {'longer' if p1_pro > p2_pro else 'shorter'} window; part of the P1-vs-P2 gap is a "
-                f"measurement change.", transform=ax.transAxes, ha="center", fontsize=9.5, color=RED, fontweight="bold")
+    # P1/P2 flag — PRO window at each period's start & end (P2 may straddle a change)
+    p1s, p1e_ = val_at(changes, "pro", d(a.p1[0])), val_at(changes, "pro", d(a.p1[1]))
+    p2s, p2e_ = val_at(changes, "pro", d(a.p2[0])), val_at(changes, "pro", d(a.p2[1]))
+    p1lbl = f"{p1s}d" if p1s == p1e_ else f"{p1s}-{p1e_}d"
+    p2lbl = f"{p2s}d" if p2s == p2e_ else f"{p2s}-{p2e_}d"
+    ax.text(mdates.date2num(p1m), 2, f"P1: PRO {p1lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
+    ax.text(mdates.date2num(p2m), 2, f"P2: PRO {p2lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
+    if p1e_ != p2e_ or p1s != p1e_ or p2s != p2e_:
+        ax.text(0.5, 1.04, f"FLAG: prospecting VV window shortened  P1 {p1lbl}  ->  P2 {p2lbl}  (progressive) — P1 "
+                f"visits/conversions were measured on a LONGER window; each shortening mechanically reduces measured "
+                f"visits & conversions, so part of the P1-vs-P2 gap is measurement.", transform=ax.transAxes,
+                ha="center", fontsize=9, color=RED, fontweight="bold")
 
     ax.set_ylim(0, 52)
     ax.set_xlim(mdates.date2num(ws) - 10, mdates.date2num(we) + 10)
@@ -117,9 +121,9 @@ def main():
         md.append(f"| {r['change_date']} | {r['pro_window']}d | {r['rt_window']}d | {r['conversion_window']}d | {chg} |")
     open(a.md, "w").write("\n".join(md) + "\n")
     print(f"wrote {a.md}")
-    print(f"FINDING: {len(changes)} VV-window changes. During P1 PRO={p1_pro}d, during P2 PRO={p2_pro}d "
-          f"({'CHANGED between periods -> measurement confound on visits/conv/CVR' if p1_pro != p2_pro else 'unchanged'}). "
-          f"Conversion window constant 30d.")
+    print(f"FINDING: {len(changes)} VV-window changes. Prospecting VV window P1={p1lbl} -> P2={p2lbl} "
+          f"(progressive shortening 45->30->14; P2 straddles the 2026-04-08 change). Measurement confound on the "
+          f"P1-vs-P2 visits/conv/CVR gap. Conversion window constant 30d.")
 
 
 if __name__ == "__main__":
