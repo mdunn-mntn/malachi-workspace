@@ -249,7 +249,14 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   tagged, navy audience_id swaps, gray initial "start"). DS-level only; segment/category detail deliberately omitted
   (kept for a separate file). Reuses module-07's history CSV (no re-query; incl/excl from the stable DS-role map).
   Emits PNG + committable `.md`. Reveals **platform-wide vs campaign-specific** changes via shared-date rows (Kindred:
-  2025-10-29 both live campaigns +DS13, 11-12 both +DS21/34 excl, 12-11 both −DS13). *Awaiting review.*
+  2025-10-29 both live campaigns +DS13, 11-12 both +DS21/34 excl, 12-11 both −DS13). *Approved.*
+- **08 `prospecting_flights`** — **scheduled-flight timeline** from `core_flights` (NOT delivery runs): each flight a bar
+  colored by length (red ≤3d / amber 4-7d / navy 8+), packed into non-overlapping sub-lanes per group, dormant grayed,
+  P1/P2 bands. Source confirmed by Tofer/Prod Ops: pull Start/End from the flights table; `core_flights.campaign_group_id`
+  gives the full history (`dso_campaign_group_flight_budgets` is current-only; `active_flight_id` stale). **Kindred: delivery
+  is CONTINUOUS but built from many short back-to-back manual flights — High Pop 69 in-window flights (17 ≤3d), LowPop 51
+  (13), 193 total / 42 short.** Flights set manually per launch (Tofer), so coverage may be partial pre-2025. Knowledge
+  captured in `data_knowledge.md` (core_flights = flight history). *Awaiting review.*
   **Kindred: HI ~96-100% most months
   BUT unscored spikes to 49% (Nov'25) and 90% (Dec'25)** — the score-level fingerprint of the holiday gate-OFF (cf. 03/03b);
   two-period HI 98.9%→89.6%, unscored 0.1%→8.4% (both windows gate-ON; the big swing is between them). Re-confirmed CIL
