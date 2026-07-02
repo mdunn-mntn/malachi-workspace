@@ -197,4 +197,12 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   LiveRamp breadth** — LowPop 96108 carries 14 segments vs 11 elsewhere. Consistent across all: DS19=255 (account-level MM
   keywords, *not* per-campaign), DS2+DS47 customer suppression, DS14 availability gate, DS21/34 own-site retgt excl @180d,
   10% holdout, RTC id 122000 (in-expression ≠ firing — gated by HHST, cross-ref the gate module). DS16 semantics captured in
-  `data_knowledge.md`. *Awaiting review.*
+  `data_knowledge.md`. *Approved.*
+- **03 `hhst_gate_history`** — every HHST gate-change event per prospecting campaign from
+  `archives.household_score_threshold_archives` (full history to WIN_END to seed the entering value); rendered as a
+  **small-multiple step-line** of threshold over time (green HI-zone ≥8000, red no-gate ≤0 bands). Kindred: **287 changes;
+  flagship 261318 thrashed 180×; the gate is graduated/auto-paced (not on/off).** *Approved.*
+- **03b `hhst_gate_daily_ribbon`** — companion **gate ribbon** (per-campaign lane, each delivering day colored by gate
+  bucket: green ≥6600 / amber 1-6599 / red ≤0), forward-filled + clipped to each campaign's active delivery (fixes 03's
+  forward-fill-past-death). Ported from AUDI-1070 `gate_ribbon_chart.py`, parameterized to read one daily gate×delivery CSV.
+  Kindred: **holiday gate-OFF (Dec–Feb) on flagship + LowPop** reads as red blocks; 98 no-gate days total. *Awaiting review.*
