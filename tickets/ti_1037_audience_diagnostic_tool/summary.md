@@ -218,4 +218,10 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   (one panel per metric, own scale, P1/P2 bands). **05b `_mom_heatmap`** = **MoM %-change flag map** (metric × month,
   diverging red=drop/blue=rise, cells with |Δ|≥40% outlined = "look here"). Kindred: **30 flagged moves; the cluster is
   Nov'25 visits +262% spike → Dec'25→Jan'26 collapse (visits −77%, VR −66%, ROAS −58%/−58%) → Feb'26 rebound; plus a
-  Sep-Oct'25 dip/rebound** — aligns with the holiday gate-OFF (module 03/03b). *Awaiting review.*
+  Sep-Oct'25 dip/rebound** — aligns with the holiday gate-OFF (module 03/03b). *Approved; extended with 05c per review.*
+- **05c `prospecting_baseline_heatmap`** — spike-robust flag map: each month vs the metric's **all-months average**
+  (not the prior month). Fixes MoM's double-count — a one-month spike (Nov'25 VR +115% MoM) manufactures a phantom
+  "drop" the next month (Dec −66% MoM) even though Dec just reverts. Vs-baseline: Nov shows once as a genuine spike
+  (VR +94%), Dec is only −35% (not flagged). Trade-off: because some metrics trend (ROAS 16×→2×), vs-mean also
+  lights up the regime (early-2025 above norm, 2026 below) — that's trend, not a one-month anomaly. Use 05b (local
+  change) + 05c (level-vs-norm) together; a trailing-3mo-baseline detrended variant is available on request. *Awaiting review.*
