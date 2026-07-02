@@ -85,35 +85,35 @@ FINAL_COLS = [
     ("avg_monthly_spend", "Avg monthly spend", "usd", 15),
     ("ivr", "Visit rate (IVR)", "pct", 11),
     ("cvr", "Conversion rate (CVR)", "pct", 11),
-    ("mde_ivr_at_normal_pct", "Smallest IVR lift detectable at current spend", "pctx", 15),
-    ("can_hit_ivr_5pct_8w", "Can detect 5% IVR lift in ≤8 wks?", "text", 12),
-    ("can_hit_ivr_10pct_8w", "Can detect 10% IVR lift in ≤8 wks?", "text", 12),
-    ("budget_for_mde_ivr_5pct", "Total test spend to detect 5% IVR lift", "usd", 15),
-    ("budget_for_mde_ivr_10pct", "Total test spend to detect 10% IVR lift", "usd", 15),
-    ("req_monthly_spend_ivr_10pct", "Monthly spend needed (10% IVR)", "usd", 15),
+    ("mde_ivr_at_normal_pct", "[CAN-DETECT] Smallest IVR lift a test detects", "pctx", 17),
+    ("can_hit_ivr_5pct_8w", "[CAN-DETECT] Powered for a 5% IVR lift, ≤8w?", "text", 14),
+    ("can_hit_ivr_10pct_8w", "[CAN-DETECT] Powered for a 10% IVR lift, ≤8w?", "text", 14),
+    ("budget_for_mde_ivr_5pct", "[CAN-DETECT] Test $ to prove a 5% IVR lift", "usd", 16),
+    ("budget_for_mde_ivr_10pct", "[CAN-DETECT] Test $ to prove a 10% IVR lift", "usd", 16),
+    ("req_monthly_spend_ivr_10pct", "[CAN-DETECT] Monthly $ run-rate (10% IVR)", "usd", 16),
     ("extra_spend_ivr_10pct_abs", "Extra spend needed (10% IVR)", "usd", 14),
     ("extra_spend_ivr_10pct_pct", "Extra spend, % over current", "pctx", 12),
     ("ivr_ask_band", "Budget-ask feasibility", "text", 13),
     ("close_to_ivr_min", "IVR spend feasible (at/near min)?", "text", 12),
-    ("mde_cvr_at_normal_pct", "Smallest CVR lift detectable at current spend", "pctx", 15),
-    ("can_hit_cvr_15pct_8w", "Can power a loose 15% CVR test in ≤8 wks?", "text", 12),
-    ("budget_for_mde_cvr_15pct", "Total test spend to detect 15% CVR lift", "usd", 15),
-    ("req_monthly_spend_cvr_15pct", "Monthly spend needed (15% CVR)", "usd", 15),
+    ("mde_cvr_at_normal_pct", "[CAN-DETECT] Smallest CVR lift a test detects", "pctx", 17),
+    ("can_hit_cvr_15pct_8w", "[CAN-DETECT] Powered for a loose 15% CVR lift?", "text", 14),
+    ("budget_for_mde_cvr_15pct", "[CAN-DETECT] Test $ to prove a 15% CVR lift", "usd", 16),
+    ("req_monthly_spend_cvr_15pct", "[CAN-DETECT] Monthly $ run-rate (15% CVR)", "usd", 16),
     ("close_to_cvr_min", "CVR spend feasible (at/near min)?", "text", 12),
     ("prior_lift_pp", "Prior measured lift", "pp", 11),
     ("prior_lift_source", "Prior-lift source", "text", 14),
-    ("mde_ivr_direct_56d_pct", "IVR lift detectable (measured 8-wk reach)", "pctx", 14),
+    ("mde_ivr_direct_56d_pct", "[CAN-DETECT] Smallest IVR lift: real reach", "pctx", 17),
     ("cpm", "CPM (cost/1k imps)", "usd", 11),
     ("imps_per_ip", "Impressions per IP", "num", 10),
     ("distinct_ips_30d", "Unique IPs reached (30d)", "int", 13),
-    # ---- CURRENT LIFT (live ghost-bid, MNTN clean leg — added 2026-07-02) ----
-    ("in_ghost_table", "In live ghost-bid table?", "text", 10),
-    ("current_lift_confirms", "Does current lift confirm the score?", "text", 16),
-    ("current_lift_signal", "Current-lift signal", "text", 14),
-    ("current_rel_lift", "Current lift (relative)", "relx", 12),
-    ("current_abs_lift_pp", "Current lift (abs, bid-grain ITT)", "pp3", 13),
-    ("ghost_vis_clean", "Holdout visits (power)", "int", 11),
-    ("current_z", "Current-lift z", "num", 9),
+    # ---- [MEASURED NOW] current ghost-bid lift (Beeswax leg; entry-cohort, excl 06-22, 7d window) ----
+    ("in_ghost_table", "[MEASURED NOW] Has live ghost-bid data?", "text", 14),
+    ("current_lift_confirms", "[MEASURED NOW] Does real lift back the score?", "text", 17),
+    ("current_lift_signal", "[MEASURED NOW] Real-lift signal (+/−/thin)", "text", 15),
+    ("current_rel_lift", "[MEASURED NOW] Real lift, relative (lead)", "relx", 15),
+    ("current_abs_lift_pp", "[MEASURED NOW] Real lift, pp (bid-grain ITT)", "pp3", 15),
+    ("ghost_vis_clean", "[MEASURED NOW] Holdout visits (trust weight)", "int", 14),
+    ("current_z", "[MEASURED NOW] Real-lift z (floor only)", "num", 13),
 ]
 
 
@@ -234,11 +234,14 @@ def sheet_final(wb, rows):
     title_block(ws, len(FINAL_COLS),
                 "INCR-75 — Final Eligible Advertisers (tiered Top → Low)",
                 "All must-pass advertisers (not-B2B, active, measurable IVR), ranked by value score. "
-                "MDE is RELATIVE (5% MDE on 2% IVR = detect 2.1%). All budgets at NO variance reduction. "
-                "8-week test ≈ 1.84 months of spend. CVR columns are informational (need ~$2M+/mo). "
+                "TWO column families (see the tag in each header): [CAN-DETECT] = the smallest lift a FUTURE 8-wk test "
+                "COULD prove (test sensitivity — lower is better; NOT a result); [MEASURED NOW] = the ACTUAL lift already "
+                "measured vs a live holdout (judged significant-vs-ZERO, not vs 5%; higher/positive is better). "
+                "MDE is RELATIVE (5% on 2% IVR = detect 2.1%). 8-week test ≈ 1.84 months. "
                 "Highlights: green=Top, amber=Mid, gray=Low; Yes/No green/red.")
     r = 4
     header_row(ws, [h for _, h, _, _ in FINAL_COLS], r)
+    ws.row_dimensions[4].height = 60  # tagged headers wrap to ~3 lines
     for row in rows:
         r += 1
         fill = TIER_FILL.get(row["final_tier"], LOW)
@@ -284,6 +287,17 @@ def sheet_method(wb, medians):
         ("Goal", "h2"),
         ("Identify live MNTN advertisers that are the best candidates for incremental-lift studies: measurable-but-"
          "movable IVR, smaller/lesser-known brands, mostly-net-new audience, powerable within 4–8 weeks.", "p"),
+        ("READ THIS FIRST — two column families (the tag in each header tells you which)", "h2"),
+        ("The workbook has two kinds of “lift %” columns that mean OPPOSITE things — never compare them directly:\n"
+         "• [CAN-DETECT] = test SENSITIVITY. The smallest lift a FUTURE ~8-week test COULD prove at this advertiser's "
+         "spend/reach. LOWER is better. It is NOT a result — nothing has been measured; it just says how fine an "
+         "instrument the budget buys. (This family drives the eligibility score.)\n"
+         "• [MEASURED NOW] = actual RESULT. The real treatment-vs-holdout visit lift already measured from live "
+         "ghost-bid data (~10 days so far). HIGHER/positive is better. Judged SIGNIFICANT-vs-ZERO (is there a real "
+         "effect?), NOT against the 5% detectable floor — a significant +3% is good.\n"
+         "Key trap: an advertiser can be well-powered under [CAN-DETECT] (small floor for a future 8-wk test) yet "
+         "“unconfirmed” under [MEASURED NOW] because the current ~10 days of live data are still too thin — different "
+         "time horizons, different questions.", "p"),
         ("Is MDE relative or absolute?", "h2"),
         ("RELATIVE. MDE_rel = MDE_abs / baseline. For a 0.5% IVR advertiser, a 5% MDE means detecting a 0.525% IVR "
          "(a 5% proportional lift, +0.025 percentage points) — NOT 5.5%. Matches how lift is reported at MNTN.", "p"),
@@ -292,8 +306,8 @@ def sheet_method(wb, medians):
          "normal spend. CVR is ~7–10x harder (baseline ~30x lower; MDE_rel ∝ √((1−p)/p) explodes as p→0) — a 5% CVR "
          "MDE needs ~$2–5M/mo, so CVR is INFORMATIONAL only, never a gate. The 15% CVR target is a FEASIBILITY CEILING "
          "(a tight CVR MDE is unaffordable for nearly all advertisers), NOT a claim that CVR lifts are ~15% — if "
-         "anything CVR's true relative lift is comparable to or smaller than IVR's. Judge CVR on the 'Smallest CVR lift "
-         "detectable at current spend' column, not the 15% yes/no.", "p"),
+         "anything CVR's true relative lift is comparable to or smaller than IVR's. Judge CVR on the "
+         "'[CAN-DETECT] Smallest CVR lift a test detects' column, not the 15% yes/no.", "p"),
         ("What counts as 'enough' spend?", "h2"),
         ("Per-advertiser, not a flat number: enough = running 8 weeks at typical spend accumulates enough treated IPs "
          "to push IVR MDE ≤ target. Encoded in the power columns. Low-spend advertisers fail to power and lack the ROI "
@@ -317,11 +331,11 @@ def sheet_method(wb, medians):
          "reach-to-spend), audience saturation (reach-to-spend), and a prior-demonstrated-lift bonus.", "p"),
         ("Pitfalls", "h2"),
         ("• spend_required uses 30d imps/IP and is an OPTIMISTIC floor for large budget gaps (imps/IP grows with window "
-         "length); the 'IVR MDE (direct 56d)' column is the no-extrapolation cross-check.\n"
-         "• Ghost-bid lift artifacts (bid-multiplicity selection; gate to clean ghost_frac) affect the eventual LIFT "
-         "estimate, not this POWER screen — eligibility ≠ guaranteed lift. Matt Brorby's population run shows internal "
-         "lift is ~0 today, monotonically rising from top-intent (≈0) to mid-intent (highest) — i.e. movability lives "
-         "in mid-IVR, which is what this screen rewards.\n"
+         "length); the '[CAN-DETECT] Smallest IVR lift: real reach' column is the no-extrapolation cross-check.\n"
+         "• The [CAN-DETECT] columns are a POWER screen — eligibility ≠ guaranteed lift; the [MEASURED NOW] columns are "
+         "the actual result. Matt Brorby's clean population read (entry-cohort, exclude 06-22) is a small POSITIVE "
+         "(~+5%), and lift rises from top-intent (≈0) to mid-intent (highest) — movability lives in mid-IVR, which is "
+         "what this screen rewards.\n"
          "• CVR MDE reported only when ≥50 converting IPs (else small-p noise).\n"
          "• Managed-service advertisers can log ~$0 spend with real delivery; ratios are SAFE-guarded.\n"
          "• Prior lift: TI-933 = Select clickpass visit-rate pp (significant only); TI-837 = guid total-traffic pp "
@@ -408,18 +422,18 @@ GLOSSARY = [
     ("", "Conversion rate (CVR)", "Share of served households (IPs) that converted. ~30× rarer than visits.",
      "distinct converting-AND-served IPs ÷ distinct served IPs (30d)."),
 
-    ("§", "IVR POWER — can we detect a lift? (this is the eligibility driver)", "", ""),
-    ("", "Smallest IVR lift detectable at current spend",
-     "The minimum lift an 8-week test could prove at the advertiser's current spend. Lower = better powered.",
-     "MDE is RELATIVE: 3% means a 3% proportional lift (e.g. 2.0%→2.06% IVR), NOT 3 percentage points. Computed from current 8-wk reach, no variance reduction."),
-    ("", "Can detect 5% IVR lift in ≤8 wks?", "Yes = an 8-week test at current spend can prove a 5% lift (the credible bar).",
-     "Yes if current 8-wk spend reaches the IPs needed for a 5% relative IVR MDE."),
-    ("", "Can detect 10% IVR lift in ≤8 wks?", "Same, for a 10% lift (the realistic bar — easier to clear).",
-     "Yes if current 8-wk spend reaches the IPs needed for a 10% relative IVR MDE."),
-    ("", "Total test spend to detect 5% / 10% IVR lift",
-     "Total dollars over the whole test needed to prove that lift.",
-     "TI-884 Lewis-Rao: dollars to reach the required distinct served IPs, at the advertiser's own CPM & impressions/IP, no variance reduction. 5% costs ~4× the 10% figure."),
-    ("", "Monthly spend needed (10% IVR)", "The total-test figure expressed as a monthly run-rate.",
+    ("§", "[CAN-DETECT] IVR POWER — smallest lift a FUTURE test could PROVE (test sensitivity, NOT a measured result)", "", ""),
+    ("", "[CAN-DETECT] Smallest IVR lift a test detects",
+     "The smallest true IVR (visit-rate) lift a FUTURE ~8-week test could statistically prove at this advertiser's current spend/reach. Sensitivity of the measuring instrument, not a result; lower is better.",
+     "RELATIVE MDE: 5% = a 5% proportional lift (2.00%→2.10% IVR), NOT 5pp. TI-884 Lewis-Rao two-proportion z-test (z=2.80, α=.05 two-sided, power=.80), 10% holdout, var_reduction=1.0, from current 8-wk reach. Never a measured outcome."),
+    ("", "[CAN-DETECT] Powered for a 5% IVR lift, ≤8w?", "Yes = a future 8-wk test at today's spend is sensitive enough to PROVE a 5% IVR lift IF one exists (the credible bar). A capability verdict, not a claim a 5% lift was found.",
+     "Yes if current 8-wk spend reaches the distinct served IPs needed for a 5% relative IVR MDE. Green=Yes, red=No. Says nothing about any observed effect."),
+    ("", "[CAN-DETECT] Powered for a 10% IVR lift, ≤8w?", "Same, for a 10% lift (the easier realistic bar). Still test sensitivity, not a measured result.",
+     "Yes if current 8-wk spend reaches the IPs for a 10% relative IVR MDE. This 10% flag is the eligibility/tiering gate; 5% is the tighter stretch bar."),
+    ("", "[CAN-DETECT] Test $ to prove a 5% / 10% IVR lift",
+     "Total future-test dollars needed to make the instrument sensitive enough to prove that lift. A budget to BUY power — not spend already committed, not a lift earned.",
+     "TI-884 Lewis-Rao: dollars to reach the required distinct served IPs at the advertiser's own CPM & impressions/IP, no variance reduction. 5% costs ~4× the 10% figure."),
+    ("", "[CAN-DETECT] Monthly $ run-rate (10% IVR)", "The 10%-IVR total-test budget as a monthly run-rate, comparable to normal monthly spend. A prospective requirement, not a measured lift.",
      "Total test spend ÷ 1.84 (an 8-week test ≈ 1.84 months)."),
     ("", "Extra spend needed (10% IVR)", "Additional dollars beyond what they'd spend anyway, to reach the 10% bar. $0 if already powered.",
      "max(0, total test spend for 10% − current 8-wk spend)."),
@@ -429,20 +443,20 @@ GLOSSARY = [
      "none = already powered · easy = ≤25% more · stretch = 25–50% more · unreasonable = >50% more."),
     ("", "IVR spend feasible (at/near min)?", "Is this advertiser spend-feasible for an IVR test? Yes = already AT/OVER the IVR spend minimum (no ask needed) OR a reasonable (≤50%) bump away. No = would need an unreasonable (>50%) spend increase. Already-spending-plenty advertisers are Yes (not an issue).",
      "Yes if current 8-wk spend ≥ (10% IVR budget) / 1.5. One-sided — spending well over the minimum is never flagged No."),
-    ("", "IVR lift detectable (measured 8-wk reach)",
-     "Cross-check of the 'at current spend' column using ACTUAL reach, no extrapolation.",
-     "MDE from the real distinct IPs reached in the last 56 days. Should roughly match the modeled column; large gaps flag a frequency/reach quirk."),
+    ("", "[CAN-DETECT] Smallest IVR lift: real reach",
+     "Same smallest-detectable IVR lift as the modeled column, but from the ACTUAL distinct IPs reached in the last 56 days instead of a spend projection. A no-extrapolation cross-check — still instrument sensitivity, still NOT a measured lift; lower is better.",
+     "RENAMED to kill the old 'measured 8-wk reach' trap: 'measured' there meant measured REACH (distinct served IPs from impression logs), never a measured lift. Same Lewis-Rao MDE on real 56d reach; a large gap vs the modeled column flags a frequency/reach quirk."),
 
-    ("§", "CVR POWER — informational only (conversions need ~$2M+/mo)", "", ""),
-    ("", "Smallest CVR lift detectable at current spend",
-     "The honest per-advertiser CVR read — judge CVR on THIS, not the 15% bar. Usually large (10s–100s %) because the CVR base rate is ~30× lower than IVR.",
-     "Same Lewis-Rao math as IVR, on the CVR base rate. Lower = better powered. '—' if <50 converting IPs."),
-    ("", "Can power a loose 15% CVR test in ≤8 wks?",
-     "Yes = even a deliberately LOOSE 15% CVR bar is powered (usually No). 15% is a FEASIBILITY CEILING — a tight CVR MDE is unaffordable for nearly all advertisers — NOT a claim that CVR lifts are ~15%.",
-     "Yes if current 8-wk spend reaches the IPs for a 15% relative CVR MDE. 'no_data' if <50 converting IPs."),
-    ("", "Total test spend to detect 15% CVR lift", "Total dollars to prove even a loose 15% conversion lift.",
+    ("§", "[CAN-DETECT] CVR POWER — informational only (conversions need ~$2M+/mo)", "", ""),
+    ("", "[CAN-DETECT] Smallest CVR lift a test detects",
+     "Smallest CVR (conversion-rate) lift a future 8-wk test could prove at today's spend. Usually large (10s–100s %) because CVR is ~30× rarer than IVR. Judge CVR on THIS, not the 15% yes/no; sensitivity, not a result.",
+     "Same relative Lewis-Rao math on the CVR base rate; mde_rel grows as p→0. Lower = better powered. '—' if <50 converting IPs. Informational only; CVR is never a gate."),
+    ("", "[CAN-DETECT] Powered for a loose 15% CVR lift?",
+     "Yes = even a deliberately LOOSE 15% CVR bar is powerable ≤8 wks (usually No). 15% is a feasibility CEILING, NOT a claim CVR lifts are ~15%, and not a result.",
+     "Yes if current 8-wk spend reaches the IPs for a 15% relative CVR MDE; 'no_data' if <50 converting IPs. A tight CVR floor is unaffordable for nearly everyone. Never an elimination criterion."),
+    ("", "[CAN-DETECT] Test $ to prove a 15% CVR lift", "Total future-test dollars to prove even a loose 15% conversion lift.",
      "Same math as IVR, on the CVR baseline. Far higher because CVR is ~30× rarer."),
-    ("", "Monthly spend needed (15% CVR)", "The CVR total-test figure as a monthly run-rate.", "Total ÷ 1.84."),
+    ("", "[CAN-DETECT] Monthly $ run-rate (15% CVR)", "The 15%-CVR total-test figure as a monthly run-rate.", "Total ÷ 1.84."),
     ("", "CVR spend feasible (at/near min)?", "Same as the IVR flag, for the loose 15% CVR bar: Yes = already at/over OR a ≤50% bump away; No = needs >50% more; 'no_data' if <50 converting IPs.", "Yes if current 8-wk spend ≥ (15% CVR budget) / 1.5."),
 
     ("§", "PRIOR EVIDENCE", "", ""),
@@ -451,23 +465,23 @@ GLOSSARY = [
     ("", "Prior-lift source", "Which past study the prior lift came from.",
      "TI-933 = Select clickpass visit-rate test (significant only). TI-837 = ghost-bid guid total-traffic (all-funnel; permissive 'has shown lift' signal)."),
 
-    ("§", "CURRENT LIFT — live ghost-bid holdout (added 2026-07-02)", "", ""),
-    ("", "In live ghost-bid table?", "Whether the advertiser appears in Matt Brorby's live ghost-bid tables (has real holdout-vs-treatment data now).",
-     "Y if present in enriched__dev_matthewbrorby.lift__ghost_bid_visits (rolling ~10-day window; logging live since 2026-05-27). 1,182 advertisers present."),
-    ("", "Does current lift confirm the score?", "The headline reconciliation: does the ACTUAL measured lift agree with the a-priori score? CONFIRMED = Top/Mid tier with significant positive current lift; CONTRADICTED = significant negative; unconfirmed = not yet powered enough to tell.",
-     "CONFIRMED / CONTRADICTED / unconfirmed(underpowered) / no_data. Significance gate: p<0.05 AND ≥20 holdout visits. Green=confirmed, red=contradicted, amber=unconfirmed."),
-    ("", "Current-lift signal", "The raw per-advertiser verdict from the ghost-bid holdout.",
-     "positive_sig / negative_sig (p<0.05 & ≥20 holdout clean visits) or null/underpowered."),
-    ("", "Current lift (relative)", "The measured lift as a % of the holdout baseline — the number to lead with. E.g. +18% = treatment visit rate is 18% above the never-served holdout.",
-     "(treat_vr − ghost_vr) / ghost_vr on the debiased clean set. Directional; z is N-inflated so rank by this, not by z."),
-    ("", "Current lift (abs, bid-grain ITT)", "The same lift in percentage points. Small because it is bid-grain ITT — measured across ALL bid-eligible IPs, diluted by win-rate (scale by win-rate for a served-user ATT figure).",
-     "treat_vr − ghost_vr (percentage points). Earliest-bid-anchored 7d visit window, clean ghost_frac gate."),
-    ("", "Holdout visits (power)", "How many holdout (ghost) IPs actually visited — the binding sample-size for detecting lift. Higher = more trustworthy.",
-     "Distinct holdout IPs with a visit in the clean set. <20 ⇒ underpowered (signal forced to null)."),
-    ("", "Current-lift z / p", "Two-proportion z-test of treatment vs holdout visit rate.",
-     "z inflated by the millions of IPs/advertiser — a large z at a tiny magnitude is the bias floor, not proof of a big effect. Use p only as a floor; judge on relative-lift magnitude + direction."),
-    ("", "Debias & caveats", "Why these numbers are trustworthy AND their limits.",
-     "This is the MNTN bidder leg (clean reference: ghost_frac barely drifts 0.095→0.116 vs Beeswax 0.10→0.47). Debias reproduces the documented negative→positive sign flip (pooled −0.034pp→+0.049pp). Limits: rolling 10-day window (≥30d unavailable), 7d visit window truncates for late-first-bid IPs, bid-grain ITT. Publish as directional per INCR-69 gate."),
+    ("§", "[MEASURED NOW] CURRENT LIFT — actual result vs a live ghost-bid holdout (judged vs ZERO, not vs 5%)", "", ""),
+    ("", "[MEASURED NOW] Has live ghost-bid data?", "Yes = real treatment-vs-holdout data is flowing now, so a measured lift can exist today. No = the measured-lift columns are BLANK, not zero.",
+     "Y if present in silver enriched.lift__ghost_bid_visits (ghost=holdout / submitted=treatment). Rolling ~10-day window; ghost-bid logging live since 2026-05-27. Gate for every other [MEASURED NOW] column being meaningful."),
+    ("", "[MEASURED NOW] Does real lift back the score?", "Headline reconciliation: does the ACTUAL measured lift agree with the a-priori score? CONFIRMED = significantly positive; CONTRADICTED = significantly negative (would-visit-anyway); unconfirmed = today's ~10 days too thin to tell yet.",
+     "Judged SIGNIFICANT-vs-ZERO (two-sided p<.05 on a two-proportion treat-vs-holdout z-test AND ≥20 clean holdout visits), NOT vs the 5% MDE — a significant +3% is CONFIRMED. Only assigned for Top/Mid tiers. Time-horizon gap: an advertiser can be well-powered in [CAN-DETECT] (a small floor for a FUTURE 8-wk test) yet unconfirmed here on ~10 live days. Green=confirmed, red=contradicted, amber=unconfirmed."),
+    ("", "[MEASURED NOW] Real-lift signal (+/−/thin)", "Raw statistical read from the live holdout before tier reconciliation: a real positive effect, a real negative effect, or too-thin-to-call today.",
+     "positive_sig / negative_sig require p<.05 AND ≥20 clean holdout visits; else null/underpowered (or no_data if absent). Tested against 0. Tier-agnostic version of the confirm column. Green=+, red=−."),
+    ("", "[MEASURED NOW] Real lift, relative (lead)", "The actual visit lift measured vs a live never-served holdout, as a % of the holdout baseline — the number to LEAD with. +18% = treated visit rate is 18% above holdout. Higher/positive is better.",
+     "(treat_vr − ghost_vr)/ghost_vr on the clean set. Entry-cohort, EXCLUDE 06-22, 7-day-from-first-bid window (Matt Brorby). Bar is ZERO + significance, NOT 5%. Rank by THIS magnitude+direction; z is N-inflated so a floor, not the headline. ~10 days so far; bid-grain ITT (diluted by win rate)."),
+    ("", "[MEASURED NOW] Real lift, pp (bid-grain ITT)", "The same measured lift in percentage points. Small on purpose: bid-grain ITT across ALL bid-eligible IPs, diluted by win rate; scale by win rate for a served-user (ATT) figure.",
+     "treat_vr − ghost_vr in pp. Entry-anchored 7d-from-first-bid window, exclude 06-22, clean ghost_frac gate (lands on the 0.10 design). NOT comparable to the [CAN-DETECT] pp-style MDE numbers — one is a result, the other is instrument sensitivity."),
+    ("", "[MEASURED NOW] Holdout visits (trust weight)", "How many holdout households actually visited — the sample size that makes the measured lift trustworthy. Higher = more trustworthy; under 20 = can't yet tell.",
+     "Distinct clean holdout (ghost) IPs with a visit. <20 forces the signal to null/underpowered. This is [MEASURED NOW]'s own power/clock — distinct from the [CAN-DETECT] future-test power; it's what makes an advertiser 'unconfirmed' even when its future-test floor is small."),
+    ("", "[MEASURED NOW] Real-lift z (floor only)", "How many standard errors the measured treat-vs-holdout gap sits from zero. Use ONLY to confirm the lift is real (a pass/fail floor), never as how big the effect is.",
+     "z=(VR_t−VR_h)/SE, two-proportion, two-sided vs 0; |z|>1.96 ≈ p<.05. N-inflated by millions of IPs/advertiser — a big z at a tiny magnitude is the bias floor, not a big effect. Judge size on relative lift (INCR-69: directional, not a published point estimate)."),
+    ("", "[MEASURED NOW] Method & caveats", "Why these numbers are trustworthy AND their limits.",
+     "Beeswax/JVM-bidder leg (source bid_price_log); the MNTN Rust-bidder leg isn't folded in yet. Entry-cohort + exclude-06-22 removes the left-edge stock that manufactured a spurious negative; on the clean set ghost_frac lands on the 0.10 design and pooled lift = +5% (z≈26). The gold ghost_bid_rollup is all-time / can't drop 06-22 → reads spuriously negative — don't use it yet. Tables now accumulate (no TTL) → a true ≥30-day window ~late-July. Directional per INCR-69."),
 
     ("§", "ALL-ADVERTISERS SHEET — extra columns", "", ""),
     ("", "Active?", "Whether the advertiser is currently active.", "advertisers.active."),
@@ -511,9 +525,9 @@ def sheet_glossary(wb):
 CL_COLS = [
     ("rank", "#", 5), ("final_tier", "Tier", 6), ("advertiser_id", "Advertiser ID", 11),
     ("advertiser_name", "Advertiser", 26), ("value_score", "Value score", 10),
-    ("ivr", "IVR", 9), ("current_rel_lift", "Current lift (relative)", 12),
-    ("current_abs_lift_pp", "Current lift (abs pp)", 12), ("ghost_vis_clean", "Holdout visits (power)", 12),
-    ("current_z", "z", 7), ("current_p", "p", 8), ("prior_lift_pp", "Prior lift", 9),
+    ("ivr", "IVR baseline", 9), ("current_rel_lift", "Real lift, relative (lead)", 13),
+    ("current_abs_lift_pp", "Real lift, abs pp", 12), ("ghost_vis_clean", "Holdout visits (trust)", 12),
+    ("current_z", "z (floor only)", 9), ("current_p", "p", 8), ("prior_lift_pp", "Prior lift", 9),
 ]
 
 
