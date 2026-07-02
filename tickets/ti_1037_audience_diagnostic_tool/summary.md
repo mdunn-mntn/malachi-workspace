@@ -205,4 +205,10 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
 - **03b `hhst_gate_daily_ribbon`** — companion **gate ribbon** (per-campaign lane, each delivering day colored by gate
   bucket: green ≥6600 / amber 1-6599 / red ≤0), forward-filled + clipped to each campaign's active delivery (fixes 03's
   forward-fill-past-death). Ported from AUDI-1070 `gate_ribbon_chart.py`, parameterized to read one daily gate×delivery CSV.
-  Kindred: **holiday gate-OFF (Dec–Feb) on flagship + LowPop** reads as red blocks; 98 no-gate days total. *Awaiting review.*
+  Kindred: **holiday gate-OFF (Dec–Feb) on flagship + LowPop** reads as red blocks; 98 no-gate days total. *Approved
+  (added P1/P2 comparison bands, dropped bottom caption per review).*
+- **04 `prospecting_yoy_metrics`** — P1-vs-P2 aggregated-metrics **table** (Metric | Period 1 | Period 2 | Δ%) for all
+  prospecting campaigns (funnel=1/obj=1). Query returns raw period sums; render derives every metric (spend, imps, CPM,
+  visits, visit rate, conv, conv-rate, revenue, AOV, ROAS) + %Δ (computed on raw totals), colors %Δ by good/bad direction,
+  emits PNG + committable `.md`. **Kindred: spend +70% / imps +63% but visits −51%, VR −70%, conv −72%, revenue −72%,
+  ROAS 11.40×→1.87× (−84%); AOV flat (−1.7%) ⇒ conversion-COUNT / audience-quality problem, not basket size.** *Awaiting review.*
