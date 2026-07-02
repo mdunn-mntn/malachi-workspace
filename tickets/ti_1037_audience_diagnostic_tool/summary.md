@@ -231,7 +231,9 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   **Hard constraint (empirical, this ticket):** `household_score` is 0% populated before **2025-06** (logging onset), so
   a true P1 (Jan-May'25) score distribution is impossible. Handled by splitting **`notlogged` (hs IS NULL, pre-2025-06)**
   from real **`unscored` (hs=-1)** — so 06b shows the FULL Jan'25→May'26 window with Jan-May'25 as a gray "No score data"
-  band (not falsely red-unscored). 06 (two-period) compares **Jun-Oct'25 (earliest scored) vs Jan-May'26** (labeled).
+  band (not falsely red-unscored). 06 (two-period) uses the **standard Jan-May'25 vs Jan-May'26** (generally correct
+  default) — for THIS client P1 reads 100% "No score data" (pre-2025-06 logging), so only P2 is measurable; for advertisers
+  scored in both windows it's a true side-by-side. Scores read from `cost_impression_log` (won bids).
   **Kindred: HI ~96-100% most months
   BUT unscored spikes to 49% (Nov'25) and 90% (Dec'25)** — the score-level fingerprint of the holiday gate-OFF (cf. 03/03b);
   two-period HI 98.9%→89.6%, unscored 0.1%→8.4% (both windows gate-ON; the big swing is between them). Re-confirmed CIL
