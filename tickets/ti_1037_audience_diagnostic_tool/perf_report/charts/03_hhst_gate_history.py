@@ -92,8 +92,9 @@ def main():
         nm = (groups[g]["name"] or "").replace("CTV Prospecting", "").strip()
         ax.text(-0.013, 0.5, f"{g}\n{nm[:14]}", transform=ax.transAxes, ha="right",
                 va="center", fontsize=8, color="#333")
-        ax.text(0.997, 0.86, f"{len(ev)} changes · last={gate_label(ev[-1][1])}",
-                transform=ax.transAxes, ha="right", va="top", fontsize=7.5, color="#666")
+        ax.text(0.997, 0.93, f"{len(ev)} changes · last={gate_label(ev[-1][1])}",
+                transform=ax.transAxes, ha="right", va="top", fontsize=7.5, color="#555", zorder=8,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="#FAFAFA", edgecolor="#DDD", lw=0.5, alpha=0.92))
         if i == 0:  # band legend on the top panel only (no gray subtitle)
             ax.text(ws + 6, 9200, "HI zone (≥ 8000)", fontsize=7, color=GREEN, va="center")
             ax.text(ws + 6, -300, "no gate (≤ 0)", fontsize=7, color=RED, va="center")
