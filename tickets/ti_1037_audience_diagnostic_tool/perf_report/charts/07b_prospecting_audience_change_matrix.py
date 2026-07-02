@@ -34,15 +34,21 @@ def role(ds):
     return ROLE.get(ds, "?")
 
 
-def dsfmt(dss):
-    return ", ".join(f"DS{ds} {role(ds)}" for ds in sorted(dss))
+_ORDER = ["incl", "excl", "gate", "funnel", "?"]
+
+
+def dsg(dss):             # delta form, same-role grouped: "DS21,DS34 excl" / "DS19 incl"
+    by = {}
+    for ds in sorted(dss):
+        by.setdefault(role(ds), []).append(f"DS{ds}")
+    return " · ".join(f"{','.join(by[r])} {r}" for r in _ORDER if r in by)
 
 
 def dsfmt_grouped(dss):   # compact for the verbose initial set: "incl 19,35 · excl 2,4 · gate 14"
     by = {}
     for ds in sorted(dss):
         by.setdefault(role(ds), []).append(str(ds))
-    return " · ".join(f"{r} {','.join(by[r])}" for r in ["incl", "excl", "gate", "funnel", "?"] if r in by)
+    return " · ".join(f"{r} {','.join(by[r])}" for r in _ORDER if r in by)
 
 
 def main():
@@ -78,35 +84,34 @@ def main():
             if prev_ds is None:
                 lines.append((f"start: {dsfmt_grouped(cur)}", GRAY))
             else:
-                if aud != prev_aud:
-                    lines.append((f"audience_id -> {aud}", NAVY))
                 added, removed = cur - prev_ds, prev_ds - cur
+                if aud != prev_aud:
+                    tag = "" if (added or removed) else "  (same DS)"
+                    lines.append((f"audience_id -> {aud}{tag}", NAVY))
                 if added:
-                    lines.append((f"+ {dsfmt(added)}", GREEN))
+                    lines.append((f"+ {dsg(added)}", GREEN))
                 if removed:
-                    lines.append((f"− {dsfmt(removed)}", RED))
-                if not added and not removed and aud == prev_aud:
-                    lines.append(("(minor)", GRAY))
-            cell[(dt, g)] = lines
+                    lines.append((f"− {dsg(removed)}", RED))
+            # accumulate (a campaign can have >1 version on the same date — never overwrite)
+            cell.setdefault((dt, g), []).extend(lines)
             prev_ds, prev_aud = cur, aud
 
     dates = sorted(dates)
     # row heights = max lines across the row (min 1)
     rheight = [max(1, max((len(cell.get((dt, g), [])) for g in cols), default=1)) for dt in dates]
     total_lines = sum(rheight)
-    fig, ax = plt.subplots(figsize=(3.0 + 2.15 * len(cols), 1.6 + 0.34 * total_lines))
-    ax.axis("off")
     ncol = len(cols)
+    fig, ax = plt.subplots(figsize=(2.6 + 2.85 * ncol, 2.0 + 0.52 * total_lines))
+    ax.axis("off")
     colx = [0.0] + [1.0 + i for i in range(ncol)]   # date col width 1.0, each grp width 1.0 (units)
     xmax = 1.0 + ncol
 
     # header
     ytop = total_lines + 1.0
-    ax.text(0.05, ytop - 0.4, "date", fontsize=10, fontweight="bold", color=NAVY)
+    ax.text(0.05, ytop - 0.4, "date", fontsize=13, fontweight="bold", color=NAVY)
     for i, g in enumerate(cols):
-        nm = (gname[g] or "").replace("Beeswax Television Prospecting", "").strip()
-        ax.text(colx[i + 1] + 0.5, ytop - 0.4, g, ha="center", fontsize=10, fontweight="bold", color=NAVY)
-    ax.plot([0, xmax], [total_lines + 0.55, total_lines + 0.55], color=NAVY, lw=1.3)
+        ax.text(colx[i + 1] + 0.04, ytop - 0.4, g, ha="left", fontsize=13, fontweight="bold", color=NAVY)
+    ax.plot([0, xmax], [total_lines + 0.55, total_lines + 0.55], color=NAVY, lw=1.4)
 
     # rows
     y = total_lines
@@ -114,11 +119,12 @@ def main():
         h = rheight[ri]
         if ri % 2 == 0:
             ax.axhspan(y - h, y, xmin=0, xmax=1, color="#000", alpha=0.03, zorder=0)
-        ax.text(0.05, y - 0.5, dt, fontsize=8.5, va="center", color="#333")
+        ax.text(0.05, y - 0.5, dt, fontsize=12, va="center", color="#333")
         for i, g in enumerate(cols):
             lines = cell.get((dt, g), [])
             for li, (txt, col) in enumerate(lines):
-                ax.text(colx[i + 1] + 0.04, y - 0.5 - li, txt, fontsize=7.6, va="center", color=col,
+                fs = 10 if txt.startswith("start:") else 12
+                ax.text(colx[i + 1] + 0.04, y - 0.5 - li, txt, fontsize=fs, va="center", color=col,
                         fontweight="bold" if col in (GREEN, RED, NAVY) else "normal")
         y -= h
     ax.set_xlim(0, xmax)

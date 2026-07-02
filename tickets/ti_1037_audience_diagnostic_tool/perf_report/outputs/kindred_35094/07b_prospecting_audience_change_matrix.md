@@ -10,8 +10,8 @@ Columns = campaign_group_id. `+` added, `−` removed. incl/excl/gate = the DS r
 | 2025-05-28 | + DS35 incl <br> − DS11 incl |  |  |  |  |  |
 | 2025-08-15 |  | start: incl 19,35 · excl 2,4 · gate 14 |  |  |  |  |
 | 2025-10-29 | + DS13 incl | + DS13 incl |  |  |  |  |
-| 2025-11-12 | + DS21 excl, DS34 excl | + DS21 excl, DS34 excl |  |  |  |  |
+| 2025-11-12 | + DS21,DS34 excl | + DS21,DS34 excl |  |  |  |  |
 | 2025-12-11 | − DS13 incl | − DS13 incl |  |  |  |  |
-| 2026-01-30 |  |  | audience_id -> 57866 |  |  |  |
+| 2026-01-30 |  |  | start: incl 19,35 · excl 2,4,21,34 · gate 14 <br> audience_id -> 57866  (same DS) |  |  |  |
 | 2026-03-23 |  |  |  | start: incl 19,35 · excl 2,4,21,34 · gate 14 | start: incl 19,35 · excl 2,4,21,34 · gate 14 | start: incl 19,35 · excl 2,4,21,34 · gate 14 |
 | 2026-07-01 |  |  |  | + DS16 funnel | + DS16 funnel | + DS16 funnel |
