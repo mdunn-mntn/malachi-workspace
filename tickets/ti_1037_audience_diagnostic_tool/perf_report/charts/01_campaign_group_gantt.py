@@ -129,11 +129,7 @@ def main():
     ax.tick_params(axis="y", length=0)
 
     ax.set_title(f"{a.adv} — Campaign-Group Running Spans", fontsize=14,
-                 fontweight="bold", loc="left", color="#222", pad=22)
-    ax.text(0, 1.02, "Each bar = calendar span a client-facing campaign delivered impressions "
-            "(first-to-last active day).  red '<' = active at window start (may predate it) · "
-            "green '>' = still live at window end.  Source: summarydata.sum_by_campaign_by_day.",
-            transform=ax.transAxes, fontsize=8.5, color="#777", va="bottom")
+                 fontweight="bold", loc="left", color="#222", pad=10)
 
     # legend (direct, minimal)
     handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in seen_roles.values()]
