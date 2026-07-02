@@ -112,13 +112,10 @@ FINAL_COLS = [
     ("imps_per_ip", "Impressions per IP", "num", 10),
     ("distinct_ips_30d", "Unique IPs reached (30d)", "int", 13),
     # ---- [MEASURED NOW] current ghost-bid lift (Beeswax leg; entry-cohort, excl 06-22, 7d window) ----
-    ("in_ghost_table", "[MEASURED NOW] Has live ghost-bid data?", "text", 14),
-    ("current_lift_confirms", "[MEASURED NOW] Does real lift back the score?", "text", 17),
-    ("current_lift_signal", "[MEASURED NOW] Real-lift signal (+/−/thin)", "text", 15),
-    ("current_rel_lift", "[MEASURED NOW] Real lift, relative (lead)", "relx", 15),
-    ("current_abs_lift_pp", "[MEASURED NOW] Real lift, pp (bid-grain ITT)", "pp3", 15),
-    ("ghost_vis_clean", "[MEASURED NOW] Holdout visits (trust weight)", "int", 14),
-    ("current_z", "[MEASURED NOW] Real-lift z (floor only)", "num", 13),
+    # trimmed to 3 cols (full detail — pp/z/p/CI/signal — stays in the CSV + Sheet 7)
+    ("current_lift_confirms", "[MEASURED NOW] Real-lift verdict (10d)", "text", 15),
+    ("current_rel_lift", "[MEASURED NOW] Real lift, relative", "relx", 14),
+    ("ghost_vis_clean", "[MEASURED NOW] Holdout visits (trust)", "int", 13),
 ]
 
 
@@ -176,8 +173,8 @@ def sheet_funnel(wb, funnel, tiers, n_prior):
     ws.cell(r, 1, "Eligible set — value tiers").font = Font(bold=True, size=11, color="1F3A5F"); r += 1
     header_row(ws, ["Tier", "Count", "Definition"], r)
     defns = {
-        "Top": "Clears 5% IVR MDE at normal spend + mid-spend + movable IVR + low saturation (run first)",
-        "Mid": "Clears 10% IVR MDE at normal spend, or 5% with an easy/stretch budget bump",
+        "Top": "Clears 5% IVR MDE + score≥60 + mid-spend + movable IVR + low saturation AND a 'confirmed +' measured lift (run first)",
+        "Mid": "Clears 10% IVR MDE (or a-priori-Top demoted for lacking a confirmed measured lift, pending window maturity)",
         "Low": "Eligible but needs a large budget bump to power, or saturated / spend far from sweet spot",
     }
     for t in ("Top", "Mid", "Low"):
@@ -242,8 +239,11 @@ def sheet_final(wb, rows):
                 "TWO column families (see the tag in each header): [CAN-DETECT] = the smallest lift a FUTURE 8-wk test "
                 "COULD prove (test sensitivity — lower is better; NOT a result); [MEASURED NOW] = the ACTUAL lift already "
                 "measured vs a live holdout (judged significant-vs-ZERO, not vs 5%; higher/positive is better). "
+                "MEASURED-LIFT GATE (staged): advertisers with a significant NEGATIVE measured lift are excluded; "
+                "TOP tier now REQUIRES a 'confirmed +' measured lift (a-priori Tops without it demote to Mid); "
+                "'flat so far' / 'too early' advertisers stay eligible and re-gate as the 10-day window matures toward 30d. "
                 "MDE is RELATIVE (5% on 2% IVR = detect 2.1%). 8-week test ≈ 1.84 months. "
-                "Highlights: green=Top, amber=Mid, gray=Low; Yes/No green/red.")
+                "Highlights: green=Top, amber=Mid, gray=Low.")
     r = 4
     header_row(ws, [h for _, h, _, _ in FINAL_COLS], r)
     ws.row_dimensions[4].height = 60  # tagged headers wrap to ~3 lines
@@ -269,14 +269,8 @@ def sheet_final(wb, rows):
                 c.font = Font(bold=True, color="1F6B2E")
             if key == "current_lift_confirms":
                 v = (row.get(key) or "")
-                c.fill = {"CONFIRMED": GREEN, "positive": GREEN, "CONTRADICTED": RED,
-                          "negative": RED, "unconfirmed(underpowered)": AMBER,
-                          "null": LOW, "no_data": LOW}.get(v, fill)
-            if key == "current_lift_signal":
-                v = (row.get(key) or "")
-                c.fill = {"positive_sig": GREEN, "negative_sig": RED}.get(v, fill)
-            if key == "in_ghost_table":
-                c.fill = GREEN if (row.get(key) == "Y") else LOW
+                c.fill = {"confirmed +": GREEN, "flat so far": LOW,
+                          "too early": LOW, "no data yet": LOW}.get(v, fill)
     for j, (_k, _h, _f, wd) in enumerate(FINAL_COLS, 1):
         ws.column_dimensions[get_column_letter(j)].width = wd
     ws.freeze_panes = "D5"
@@ -331,9 +325,12 @@ def sheet_method(wb, medians):
          f"CPM ${medians['cpm']:.2f}, imps/IP {medians['ipi']:.1f}.", "p"),
         ("Filter funnel", "h2"),
         ("HARD (membership): (1) clean & active; (2) not B2B — exclude the 'B2B Software & Services' vertical bucket; "
-         "(3) measurable IVR — ≥100 visiting IPs and IVR>0. SCORED (tier, not cut): mid-spend sweet spot ($25k–$200k/mo), "
-         "IVR band position (peak 3–6%, >12% = saturated/hard-to-move), powerability at 5%/10%, brand-size (spend rank + "
-         "reach-to-spend), audience saturation (reach-to-spend), and a prior-demonstrated-lift bonus.", "p"),
+         "(3) measurable IVR — ≥100 visiting IPs and IVR>0; (4) measured lift not negative — exclude advertisers whose "
+         "live ghost-bid lift is significantly NEGATIVE (staged gate, 2026-07-02). SCORED (tier, not cut): mid-spend sweet "
+         "spot ($25k–$200k/mo), IVR band position (peak 3–6%, >12% = saturated/hard-to-move), powerability at 5%/10%, "
+         "brand-size (spend rank + reach-to-spend), audience saturation (reach-to-spend), and a prior-demonstrated-lift bonus. "
+         "TIER GATE: Top additionally requires a 'confirmed +' measured lift (a-priori Tops without it demote to Mid until "
+         "the 10-day ghost window matures toward 30d ~late-July).", "p"),
         ("Pitfalls", "h2"),
         ("• spend_required uses 30d imps/IP and is an OPTIMISTIC floor for large budget gaps (imps/IP grows with window "
          "length); the '[CAN-DETECT] Smallest IVR lift: real reach' column is the no-extrapolation cross-check.\n"
@@ -404,7 +401,7 @@ def sheet_curve(wb, medians):
 GLOSSARY = [
     ("§", "IDENTITY & RANKING", "", ""),
     ("", "Value tier", "Priority bucket for running a test. Top = run first; Low = eligible but lowest priority.",
-     "Top = can detect a 5% IVR lift at current spend + mid-spend + movable IVR + unsaturated. Mid = can detect 10% at current spend (or 5% with a small bump). Low = needs a big budget bump or is saturated / off the spend sweet-spot. (EXCLUDED on the All-Advertisers sheet = failed a hard filter.)"),
+     "Top = [CAN-DETECT] can detect a 5% IVR lift at current spend + value-score≥60 + mid-spend + movable IVR + unsaturated, AND (staged gate) a 'confirmed +' [MEASURED NOW] lift. Mid = can detect 10% at current spend (or a-priori-Top demoted for lacking a confirmed lift). Low = needs a big budget bump or is saturated / off the spend sweet-spot. Advertisers with a significant-NEGATIVE measured lift are EXCLUDED (F4). 'apriori_tier' (in the CSV) shows the tier before the measured gate."),
     ("", "Value score (0–100)", "Composite ranking score within the eligible set; higher = better candidate.",
      "Power margin (30) + mid-spend fit (20) + smaller-brand/movability (20) + IVR-band position (15) + low audience saturation (15) + prior-lift bonus (+10)."),
     ("", "Advertiser ID", "MNTN advertiser_id.", "From core advertiser dimension."),
@@ -471,22 +468,14 @@ GLOSSARY = [
      "TI-933 = Select clickpass visit-rate test (significant only). TI-837 = ghost-bid guid total-traffic (all-funnel; permissive 'has shown lift' signal)."),
 
     ("§", "[MEASURED NOW] CURRENT LIFT — actual result vs a live ghost-bid holdout (judged vs ZERO, not vs 5%)", "", ""),
-    ("", "[MEASURED NOW] Has live ghost-bid data?", "Yes = real treatment-vs-holdout data is flowing now, so a measured lift can exist today. No = the measured-lift columns are BLANK, not zero.",
-     "Y if present in silver enriched.lift__ghost_bid_visits (ghost=holdout / submitted=treatment). Rolling ~10-day window; ghost-bid logging live since 2026-05-27. Gate for every other [MEASURED NOW] column being meaningful."),
-    ("", "[MEASURED NOW] Does real lift back the score?", "Headline reconciliation: does the ACTUAL measured lift agree with the a-priori score? CONFIRMED = significantly positive; CONTRADICTED = significantly negative (would-visit-anyway); unconfirmed = today's ~10 days too thin to tell yet.",
-     "Judged SIGNIFICANT-vs-ZERO (two-sided p<.05 on a two-proportion treat-vs-holdout z-test AND ≥20 clean holdout visits), NOT vs the 5% MDE — a significant +3% is CONFIRMED. Only assigned for Top/Mid tiers. Time-horizon gap: an advertiser can be well-powered in [CAN-DETECT] (a small floor for a FUTURE 8-wk test) yet unconfirmed here on ~10 live days. Green=confirmed, red=contradicted, amber=unconfirmed."),
-    ("", "[MEASURED NOW] Real-lift signal (+/−/thin)", "Raw statistical read from the live holdout before tier reconciliation: a real positive effect, a real negative effect, or too-thin-to-call today.",
-     "positive_sig / negative_sig require p<.05 AND ≥20 clean holdout visits; else null/underpowered (or no_data if absent). Tested against 0. Tier-agnostic version of the confirm column. Green=+, red=−."),
-    ("", "[MEASURED NOW] Real lift, relative (lead)", "The actual visit lift measured vs a live never-served holdout, as a % of the holdout baseline — the number to LEAD with. +18% = treated visit rate is 18% above holdout. Higher/positive is better.",
-     "(treat_vr − ghost_vr)/ghost_vr on the clean set. Entry-cohort, EXCLUDE 06-22, 7-day-from-first-bid window (Matt Brorby). Bar is ZERO + significance, NOT 5%. Rank by THIS magnitude+direction; z is N-inflated so a floor, not the headline. ~10 days so far; bid-grain ITT (diluted by win rate)."),
-    ("", "[MEASURED NOW] Real lift, pp (bid-grain ITT)", "The same measured lift in percentage points. Small on purpose: bid-grain ITT across ALL bid-eligible IPs, diluted by win rate; scale by win rate for a served-user (ATT) figure.",
-     "treat_vr − ghost_vr in pp. Entry-anchored 7d-from-first-bid window, exclude 06-22, clean ghost_frac gate (lands on the 0.10 design). NOT comparable to the [CAN-DETECT] pp-style MDE numbers — one is a result, the other is instrument sensitivity."),
-    ("", "[MEASURED NOW] Holdout visits (trust weight)", "How many holdout households actually visited — the sample size that makes the measured lift trustworthy. Higher = more trustworthy; under 20 = can't yet tell.",
-     "Distinct clean holdout (ghost) IPs with a visit. <20 forces the signal to null/underpowered. This is [MEASURED NOW]'s own power/clock — distinct from the [CAN-DETECT] future-test power; it's what makes an advertiser 'unconfirmed' even when its future-test floor is small."),
-    ("", "[MEASURED NOW] Real-lift z (floor only)", "How many standard errors the measured treat-vs-holdout gap sits from zero. Use ONLY to confirm the lift is real (a pass/fail floor), never as how big the effect is.",
-     "z=(VR_t−VR_h)/SE, two-proportion, two-sided vs 0; |z|>1.96 ≈ p<.05. N-inflated by millions of IPs/advertiser — a big z at a tiny magnitude is the bias floor, not a big effect. Judge size on relative lift (INCR-69: directional, not a published point estimate)."),
-    ("", "[MEASURED NOW] Method & caveats", "Why these numbers are trustworthy AND their limits.",
-     "Beeswax/JVM-bidder leg (source bid_price_log); the MNTN Rust-bidder leg isn't folded in yet. Entry-cohort + exclude-06-22 removes the left-edge stock that manufactured a spurious negative; on the clean set ghost_frac lands on the 0.10 design and pooled lift = +5% (z≈26). The gold ghost_bid_rollup is all-time / can't drop 06-22 → reads spuriously negative — don't use it yet. Tables now accumulate (no TTL) → a true ≥30-day window ~late-July. Directional per INCR-69."),
+    ("", "[MEASURED NOW] Real-lift verdict (10d)", "The measured verdict over the current ~10-day ghost-bid window, and the driver of the staged gate. Four values (see the Holdout-visits column to tell 'flat' from 'thin').",
+     "confirmed + = ≥20 holdout visits, two-sided p<.05, POSITIVE (this is what a Top advertiser must have). flat so far = ≥100 holdout visits, not significant (enough data, ~0 effect so far). too early = <100 holdout visits, not significant (thin / window too short). no data yet = not in the ghost-bid table. (A significant-NEGATIVE verdict → advertiser EXCLUDED, so it never appears here.) Judged SIGNIFICANT-vs-ZERO, NOT vs the 5% MDE — a significant +3% is confirmed +. Green = confirmed +. Full stats (pp, z, p, CI) are in the CSV + this sheet."),
+    ("", "[MEASURED NOW] Real lift, relative", "The actual visit lift measured vs a live never-served holdout, as a % of the holdout baseline — the number to LEAD with. +18% = treated visit rate is 18% above holdout. Higher/positive is better.",
+     "(treat_vr − ghost_vr)/ghost_vr on the clean set. Entry-cohort, EXCLUDE 06-22, 7-day-from-first-bid window (Matt Brorby). Bar is ZERO + significance, NOT 5%. Rank by THIS magnitude+direction; the z (in the CSV) is N-inflated so it's a floor, not the headline. ~10 days so far; bid-grain ITT (diluted by win rate). Compare to '[MEASURED NOW] Real lift, pp' in the CSV: relative = pp ÷ holdout baseline (pp is the raw gap, tiny because the denominator is all bid-eligible IPs)."),
+    ("", "[MEASURED NOW] Holdout visits (trust)", "How many holdout households actually visited — the sample size behind the verdict. Read it WITH the verdict: 'flat so far' + a big number = enough data, ~0 so far; 'too early' + a small number = not enough data yet.",
+     "Distinct clean holdout (ghost) IPs with a visit. <20 → can't be significant; <100 → verdict caps at 'too early'. This is [MEASURED NOW]'s own clock (how mature the live window is), distinct from the [CAN-DETECT] future-test power."),
+    ("", "[MEASURED NOW] Method, gate & caveats", "Why these numbers are trustworthy, how the gate uses them, AND the limits.",
+     "STAGED GATE: significant-NEGATIVE advertisers are excluded (F4); TOP requires 'confirmed +'; 'flat so far'/'too early' stay eligible and re-gate as the window grows (chosen because today's 10-day window makes most advertisers inconclusive for lack of TIME, not lack of lift). Beeswax/JVM-bidder leg (source bid_price_log); the MNTN Rust-bidder leg isn't folded in yet. Entry-cohort + exclude-06-22 removes the left-edge stock that manufactured a spurious negative; on the clean set ghost_frac lands on 0.10 and pooled lift = +5% (z≈26). The gold ghost_bid_rollup is all-time / can't drop 06-22 → reads spuriously negative — don't use it yet. Tables now accumulate (no TTL) → a true ≥30-day window ~late-July. Directional per INCR-69."),
 
     ("§", "ALL-ADVERTISERS SHEET — extra columns", "", ""),
     ("", "Active?", "Whether the advertiser is currently active.", "advertisers.active."),
@@ -538,38 +527,35 @@ CL_COLS = [
 
 def sheet_current_lift(wb, final_rows):
     ws = wb.create_sheet("7. Current Lift (ghost-bid)")
-    confirmed = [r for r in final_rows if r.get("current_lift_confirms") == "CONFIRMED"]
+    confirmed = [r for r in final_rows if r.get("current_lift_confirms") == "confirmed +"
+                 and r["final_tier"] in ("Top", "Mid")]
     confirmed.sort(key=lambda r: -(fnum(r.get("current_rel_lift")) or -1e9))
+    VS = ("confirmed +", "flat so far", "too early", "no data yet")
     counts = {}
-    for t in ("Top", "Mid"):
+    for t in ("Top", "Mid", "Low"):
         sub = [r for r in final_rows if r["final_tier"] == t]
-        counts[t] = {k: sum(1 for r in sub if r.get("current_lift_confirms") == k)
-                     for k in ("CONFIRMED", "CONTRADICTED", "unconfirmed(underpowered)", "no_data")}
+        counts[t] = {k: sum(1 for r in sub if r.get("current_lift_confirms") == k) for k in VS}
     title_block(ws, len(CL_COLS),
-                "INCR-75 — Current Measured Lift (live ghost-bid holdout)",
-                "Actual treatment-vs-holdout visit ITT from the live ghost-bid tables "
-                "(silver enriched.lift__ghost_bid_visits). Method per Matt Brorby (2026-07-02): entry-anchored at "
-                "first bid per advertiser×campaign×IP, 7-day-from-first-bid visit window, EXCLUDING the 2026-06-22 "
-                "left-edge day (an accumulated stock that inflates the holdout fraction and manufactures a spurious "
-                "negative). On the clean set the holdout fraction lands on 0.10 (design) and pooled lift = +5% (z≈26). "
-                "NB: Matt's gold ghost_bid_rollup is all-time / cannot drop 06-22, so it reads spuriously negative — "
-                "do NOT use it yet. Tables now accumulate (no TTL), so a true ≥30-day window arrives ~late-July. "
-                "Shortlist = Top/Mid tier whose current lift CONFIRMS the score (significant positive, ≥20 holdout visits). "
-                "READ RELATIVE LIFT + DIRECTION; absolute pp are bid-grain ITT (diluted by win-rate). Directional, not a published point estimate.")
+                "INCR-75 — Current Measured Lift (live ghost-bid holdout) + the staged gate",
+                "Actual treatment-vs-holdout visit ITT from silver enriched.lift__ghost_bid_visits. Method per Matt Brorby "
+                "(2026-07-02): entry-anchored at first bid per advertiser×campaign×IP, 7-day-from-first-bid window, EXCLUDING "
+                "the 2026-06-22 left-edge day. On the clean set the holdout fraction lands on 0.10 (design) and pooled lift = "
+                "+5% (z≈26). STAGED GATE: the 17 significant-NEGATIVE advertisers are EXCLUDED; TOP now requires a 'confirmed +' "
+                "lift (so Top = 21, all confirmed); 'flat so far'/'too early' stay eligible and re-gate as the window grows to "
+                "30d (~late-July). NB: the gold ghost_bid_rollup is all-time / can't drop 06-22 → reads spuriously negative — "
+                "don't use it. READ RELATIVE LIFT + DIRECTION; z is a floor (N-inflated); absolute pp are bid-grain ITT.")
     # summary block
     r = 4
-    ws.cell(r, 1, "Confirmation vs a-priori tier").font = Font(bold=True, size=11, color="1F3A5F"); r += 1
-    header_row(ws, ["Tier", "Confirmed +lift", "Contradicted", "Unconfirmed (underpowered)", "No data"], r)
-    for t in ("Top", "Mid"):
+    ws.cell(r, 1, "Measured-lift verdict by tier (after the gate)").font = Font(bold=True, size=11, color="1F3A5F"); r += 1
+    header_row(ws, ["Tier", "confirmed +", "flat so far", "too early", "no data yet"], r)
+    for t in ("Top", "Mid", "Low"):
         r += 1
-        vals = [t, counts[t]["CONFIRMED"], counts[t]["CONTRADICTED"],
-                counts[t]["unconfirmed(underpowered)"], counts[t]["no_data"]]
+        vals = [t] + [counts[t][k] for k in VS]
         for j, v in enumerate(vals, 1):
             c = ws.cell(r, j, v); c.border = THIN; c.alignment = CTR; c.fill = TIER_FILL[t]
             if j == 2 and v: c.fill = GREEN
-            if j == 3 and v: c.fill = RED
     r += 2
-    ws.cell(r, 1, f"Strongest candidates — high score AND confirmed positive current lift "
+    ws.cell(r, 1, f"Strongest candidates — Top/Mid tier with a 'confirmed +' measured lift "
                   f"({len(confirmed)}), ranked by relative lift").font = Font(bold=True, size=11, color="1F3A5F")
     r += 1
     header_row(ws, [h for _, h, _ in CL_COLS], r)
