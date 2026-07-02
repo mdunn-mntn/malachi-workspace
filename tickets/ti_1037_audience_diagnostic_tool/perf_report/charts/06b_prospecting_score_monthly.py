@@ -23,7 +23,7 @@ plt.rcParams.update({"figure.facecolor": "#FAFAFA", "axes.facecolor": "#FAFAFA",
                      "savefig.facecolor": "#FAFAFA"})
 # stack bottom→top: no-data (gray) at bottom, HI (best) next, unscored (worst) at top so gate-off
 # spikes read at the top. `notlogged` (pre-2025-06) is a data-availability state, not an intent tier.
-STACK = [("notlogged", "No score data (pre-2025-06)", "#C8CCD0"),
+STACK = [("notlogged", "Score column not logged (pre-2025-06)", "#C8CCD0"),
          ("hi", "High Intent (8001–10000)", "#1B6B4F"),
          ("pp", "Peak Perf (6666–8000)", "#5FA88A"),
          ("mi", "Mid Intent (3333–6665)", "#C9A227"),
