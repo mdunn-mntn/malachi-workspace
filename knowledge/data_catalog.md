@@ -571,6 +571,14 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 
 ---
 
+## silver.enriched.lift__ghost_bid_* + gold.reporting.lift__ghost_bid_* (ghost-bid incrementality, Matt Brorby)
+- **Purpose:** Live ghost-bid holdout lift measurement (BER-2250/INCR line). SQLMesh views; the silver ones now **materialize daily and accumulate (no TTL)** — logging live 2026-05-27, so a true ≥30-day window arrives ~late-July.
+- **silver `enriched.lift__ghost_bid_visits`** — the outcomes table. Grain: `dt × advertiser_id × campaign_group_id × campaign_id × ip × arm`. `arm` ∈ {`ghost`=holdout, `submitted`=treatment}; `visited`/`converted` bools over a **7-day-from-first-bid** window; `bid_count`, `first_bid_time`, `won`, `household_score`. `enriched.lift__ghost_bid_audiences` = exposure only (real-vs-ghost bids per IP/day). Identical dev copies in `enriched__dev_matthewbrorby.*` and `enriched__dev_mbrorby_incr66.*`.
+- **gold `reporting.lift__ghost_bid_results`** (per campaign×stratum, with `ghost_frac`/compliance flags) and **`reporting.lift__ghost_bid_rollup`** (per advertiser & campaign_group: `abs_itt`, `se`, CI, `z`, MH stratified estimator, conversions).
+- **CRITICAL gotchas** (full method in `experimentation.md` "Ghost-bid lift is queryable in BQ" + "the staged gate + two-instrument gotcha"): (1) current source is the **Beeswax/JVM leg** (`bronze.raw.bid_price_log`); the MNTN Rust-bidder leg (`bidder_bid_events`, partner ~79) is NOT folded in yet. (2) **Exclude the first window day** (`dt`=window min, e.g. 2026-06-22) — it's a left-censored stock that inflates `ghost_frac` and manufactures a spurious NEGATIVE; use the **entry-cohort anchor** (`ROW_NUMBER() OVER (PARTITION BY advertiser_id, campaign_id, ip ORDER BY dt)`=1). On the clean set `ghost_frac`→0.10 and pooled visit lift = **+5%**. (3) **DO NOT use the gold `ghost_bid_rollup` yet** — it's all-time / can't drop the left edge → reads spuriously negative (Matt is adding time-boxing). (4) Result is **bid-grain ITT** (diluted by win rate; scale by win rate for served-user ATT); z is N-inflated → rank by relative magnitude, treat significance as a floor.
+
+---
+
 ## silver.logdata.cost_impression_log
 - **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical, 71 B rows / 56 TB)
 - **Partition:** DAY on `time`
