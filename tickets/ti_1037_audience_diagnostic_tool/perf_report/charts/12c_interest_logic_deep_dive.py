@@ -124,56 +124,48 @@ def main():
     # =====================================================================
     # PNG 1 — INTEREST-LOGIC DNA TABLE
     # =====================================================================
-    fig, ax = plt.subplots(figsize=(15, 6.6))
+    fig, ax = plt.subplots(figsize=(13, 6.3))
     ax.axis("off")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    fig.text(0.03, 0.945, f"{a.adv} — how narrow is each prospecting audience?",
-             fontsize=17, fontweight="bold", color="#222")
-    fig.text(0.03, 0.905, "Interest is additive everywhere (MM keywords OR 3P segments — never AND). Narrowing comes from two "
-             "other levers: the GEO whitelist (how many of 210 DMAs) and a net-new FUNNEL GATE on the 3 variants.",
-             fontsize=11.5, color="#444")
-    cols = ["Campaign", "Geo · #DMAs", "MM kw", "3P seg", "MM × 3P", "Funnel gate (DS16)", "Narrowing flag"]
-    xs = [0.03, 0.225, 0.375, 0.45, 0.525, 0.66, 0.83]
-    yt = 0.83
+    fig.text(0.03, 0.935, f"{a.adv} — how narrow is each prospecting audience?",
+             fontsize=21, fontweight="bold", color="#222")
+    fig.text(0.03, 0.875, "Interest is additive everywhere (MM OR 3P); narrowing comes from GEO and a net-new funnel gate.",
+             fontsize=13, color="#444")
+    cols = ["Campaign", "Geo · #DMAs", "Interest", "Funnel gate", "Narrowing flag"]
+    xs = [0.03, 0.28, 0.46, 0.60, 0.775]
+    yt = 0.775
     for x, c in zip(xs, cols):
-        ax.text(x, yt, c, fontsize=11.5, fontweight="bold", color=NAVY, va="center")
-    ax.plot([0.03, 0.985], [0.80, 0.80], color=NAVY, lw=1.4)
-    y = 0.745
-    dy = 0.108
+        ax.text(x, yt, c, fontsize=14.5, fontweight="bold", color=NAVY, va="center")
+    ax.plot([0.03, 0.985], [0.735, 0.735], color=NAVY, lw=1.6)
+    y = 0.645
+    dy = 0.118
     for i, g in enumerate(ORDER):
         d = dna[g]
         n = d["geo"]
         if i % 2 == 0:
-            ax.axhspan(y - dy / 2 + 0.006, y + dy / 2 + 0.006, color="#000", alpha=0.03)
-        # geo narrowness colour: top-20 = amber (narrow), long-tail 152 = red (thin), mid = neutral
+            ax.axhspan(y - dy / 2 + 0.005, y + dy / 2 + 0.005, color="#000", alpha=0.035)
         geo_col = AMBER if n <= 25 else (RED if n >= 120 else "#222")
-        gate_txt = "net-new only  (AND'd)" if d["gate"] else "—"
+        gate_txt = "net-new  (AND'd)" if d["gate"] else "—"
         gate_col = RED if d["gate"] else "#999"
-        # combined narrowing flag
         if d["gate"]:
-            flag, fcol = "NARROW: top-20 geo + net-new gate  ->  ¼-size pool", RED
+            flag, fcol = "narrow · geo + funnel gate", RED
         elif n <= 25:
-            flag, fcol = "narrow geo: top-20 only (20/210)", AMBER
+            flag, fcol = "narrow geo · 20/210", AMBER
         elif n >= 120:
-            flag, fcol = "thin: long-tail spread (152/210)", RED
+            flag, fcol = "thin · long-tail 152/210", RED
         else:
-            flag, fcol = "clean: mid geo slice, ungated", GREEN
-        cells = [f"{g}  {GRPNAME[g]}", tier_of(n), str(d["mm"]), str(d["tp"]),
-                 f"{(d['join'] or '?').upper()}  (additive)"]
-        colors = ["#222", geo_col, "#222", "#222", GREEN]
-        weights = ["bold", "bold" if geo_col != "#222" else "normal", "normal", "normal", "normal"]
-        for x, txt, cc, w in zip(xs, cells, colors, weights):
-            ax.text(x, y, txt, fontsize=11, va="center", color=cc, fontweight=w)
-        ax.text(xs[5], y, gate_txt, fontsize=11, va="center", color=gate_col,
+            flag, fcol = "clean · ungated", GREEN
+        ax.text(xs[0], y, f"{g}  {GRPNAME[g]}", fontsize=14, va="center", color="#222", fontweight="bold")
+        ax.text(xs[1], y, tier_of(n), fontsize=14, va="center", color=geo_col,
+                fontweight="bold" if geo_col != "#222" else "normal")
+        ax.text(xs[2], y, f"MM {(d['join'] or '?').upper()} 3P", fontsize=14, va="center", color=GREEN)
+        ax.text(xs[3], y, gate_txt, fontsize=14, va="center", color=gate_col,
                 fontweight="bold" if d["gate"] else "normal")
-        ax.text(xs[6], y, flag, fontsize=10, va="center", color=fcol,
+        ax.text(xs[4], y, flag, fontsize=13.5, va="center", color=fcol,
                 fontweight="bold" if fcol in (RED, AMBER) else "normal")
         y -= dy
-    ax.text(0.03, y + 0.02, "Geo is always an AND-INCLUDE whitelist (never a red flag by itself); flagged only when it is unusually "
-            "narrow (top-20) or thin (long-tail). Shared hygiene (all 6): exclude CRM lists (DS47), own converters (DS21), own "
-            "funnel (DS34); DS14=bidder plumbing.", fontsize=9.6, color="#555", va="center")
-    plt.savefig(a.dna_png, dpi=190, bbox_inches="tight")
+    plt.savefig(a.dna_png, dpi=200, bbox_inches="tight")
     print(f"wrote {a.dna_png}")
     plt.close(fig)
 
