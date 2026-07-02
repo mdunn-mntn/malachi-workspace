@@ -2076,9 +2076,14 @@ Stages are campaign targeting stages, not event types. Each stage targets a diff
 - **A CONVERSION requires a VERIFIED VISIT within the VV window (mechanism, high confidence, TI-1037 workflow 2026-07-02):**
   a UI-reported conversion (`from_verified_impression=TRUE`) is attributed to the SAME impression that produced a VV, via
   the SAME VVS engine — **100% of such conversions co-occur with a VV on the same `ad_served_id`** (Kindred 1,133/1,133;
-  21,611 conv across 7 advertisers all 100%), sharing the `attribution_model_id` map above. Since `conversion_lookback_window`
-  is unset and the **VV/page-view window is the only populated per-adv lookback**, **shortening the VV window shrinks the
-  connectable-conversion pool → can lower conversions/CVR/ROAS** — on a **~window-length LAG** (old 31-45d-out attributions
+  21,611 conv across 7 advertisers all 100%), sharing the `attribution_model_id` map above. **Official chaining (confirmed
+  by Prod Ops Johnny + the internal knowledge app, 2026-07-02): impression →(VV window, from the impression)→ VERIFIED VISIT
+  →(conversion window, 30d default, from the VISIT)→ conversion.** The VV window starts at the impression; the conversion
+  window starts at the VISIT — two distinct clocks. So the VV window gates whether a visit exists AT ALL, and a conversion
+  can only be credited if it follows a VV. Since `conversion_lookback_window`
+  is unset and the **VV/page-view window is the only populated per-adv lookback**, **shortening the VV window yields fewer
+  visits → fewer conversion anchors → can lower conversions/CVR/ROAS even though the conversion window is unchanged/separate**
+  — on a **~window-length LAG** (old 31-45d-out attributions
   stop connecting only after the new window cycles through, so a naive same-day pre/post at the change date sees nothing).
   So Malachi's mechanism is correct; Mike Dolt's "separate fields" is factually true but does NOT make conversions
   window-independent. **Caveat (honesty):** the mechanism is proven, but the empirical MAGNITUDE is not cleanly isolated —
