@@ -212,6 +212,16 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
   no AND-3P); the story is **geo-mix dilution** (P1 100% top-20 → P2 ~48% spend into smaller Mid/Low markets) + top-market
   flagship wind-down + 3-way HiPop fragmentation. 3P segment SIZES gated (GCS bucket access). Geo-slicing knowledge in
   `data_knowledge.md`. *Awaiting review.*
+- **12b `geo_tier_deep_dive`** — the readable, quantified geo/DMA deep-dive (module 12 was too terse/small). Emits **two**
+  PNGs + a committed `.md`: (1) **tier reference** — all 210 US DMAs NAMED, grouped High-20 / Mid-38 / Low-152, each annotated
+  with recent in-window delivery (High & Mid fully named; Low top-12 + full list in `.md`); (2) **tier performance** — the
+  flagship YoY collapse (69884 High Pop, same top-20: ROAS **9.74→2.39x**, VR 11.6→5.1‰, CVR 8.7→5.6%) + the P2 footprint
+  fragmentation (1→6 campaigns, top-20→210 DMAs) with the ROAS gradient by tier. **Blended prospecting ROAS 9.74x (P1, top-20
+  only) → 1.81x (P2)**; ~90% is the flagship collapse, the rest is fragmentation into Mid (1.73x)/Low (1.31x) tiers + 3 new
+  same-geo interest-variants (1.18–1.35x). Confirms **"High Pop" = the top-20 markets, NOT all-of-US.** Sources: geo decode
+  (`geo.location_data`), per-tier metrics (`sum_by_campaign_by_day` by `campaign_group_id`), per-DMA delivery (`CIL.metro_id`
+  → `summarydata.metros`). **Two-id-system bridge (location_id vs Nielsen metro_id) + DMA-grain source constraints in
+  `data_knowledge.md`.** *Awaiting review.*
 
 ## 7. Open items
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
