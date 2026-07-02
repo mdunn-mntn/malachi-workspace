@@ -234,6 +234,9 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   band (not falsely red-unscored). 06 (two-period) uses the **standard Jan-May'25 vs Jan-May'26** (generally correct
   default) — for THIS client P1 reads 100% "No score data" (pre-2025-06 logging), so only P2 is measurable; for advertisers
   scored in both windows it's a true side-by-side. Scores read from `cost_impression_log` (won bids).
+  **06c `_score_threshold_table`** = the same P1-vs-P2 comparison rendered as a **module-04-style TABLE** (Score tier |
+  Period 1 | Period 2 | Δ%), per client request — rows = the 6 score tiers, %Δ colored by good/bad (more HI/PP green,
+  more Unscored/MaxReach red), n/a where P1 share is 0. PNG + committable `.md`. (For Kindred P1=100% "No score data".)
 - **07 `prospecting_audience_change_history` (+ timeline render)** — the period-audience-diff capability: every distinct
   audience config a prospecting campaign ran over time, from `silver.archives.audience_segment_archives` (collapsed to
   DS-set / audience_id changes; active-in-window campaigns only). **07 render** = a **DS-presence-over-time Gantt** for the
