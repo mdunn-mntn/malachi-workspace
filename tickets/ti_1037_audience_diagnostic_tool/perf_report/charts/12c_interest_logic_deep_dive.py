@@ -128,12 +128,13 @@ def main():
     ax.axis("off")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    fig.text(0.03, 0.945, f"{a.adv} — interest logic: additive everywhere; only the 3 Q1 variants gate to net-new",
+    fig.text(0.03, 0.945, f"{a.adv} — how narrow is each prospecting audience?",
              fontsize=17, fontweight="bold", color="#222")
-    fig.text(0.03, 0.905, "No campaign narrows MM with a required 3P segment — all 6 are (MM keywords OR 3P segments) = additive. "
-             "The 3 variants AND a DS16 funnel gate; base/Mid/Low do not.", fontsize=11.5, color=GRAY)
-    cols = ["Campaign", "Geo tier · #DMAs", "MM kw", "3P seg", "MM × 3P", "Funnel gate (DS16)", "Read"]
-    xs = [0.03, 0.235, 0.40, 0.475, 0.55, 0.685, 0.885]
+    fig.text(0.03, 0.905, "Interest is additive everywhere (MM keywords OR 3P segments — never AND). Narrowing comes from two "
+             "other levers: the GEO whitelist (how many of 210 DMAs) and a net-new FUNNEL GATE on the 3 variants.",
+             fontsize=11.5, color="#444")
+    cols = ["Campaign", "Geo · #DMAs", "MM kw", "3P seg", "MM × 3P", "Funnel gate (DS16)", "Narrowing flag"]
+    xs = [0.03, 0.225, 0.375, 0.45, 0.525, 0.66, 0.83]
     yt = 0.83
     for x, c in zip(xs, cols):
         ax.text(x, yt, c, fontsize=11.5, fontweight="bold", color=NAVY, va="center")
@@ -142,24 +143,36 @@ def main():
     dy = 0.108
     for i, g in enumerate(ORDER):
         d = dna[g]
+        n = d["geo"]
         if i % 2 == 0:
             ax.axhspan(y - dy / 2 + 0.006, y + dy / 2 + 0.006, color="#000", alpha=0.03)
+        # geo narrowness colour: top-20 = amber (narrow), long-tail 152 = red (thin), mid = neutral
+        geo_col = AMBER if n <= 25 else (RED if n >= 120 else "#222")
         gate_txt = "net-new only  (AND'd)" if d["gate"] else "—"
-        gate_col = AMBER if d["gate"] else GRAY
-        read = "net-new residual gate" if d["gate"] else ("broad · ungated" if g == "69884" else "clean geo slice")
-        read_col = AMBER if d["gate"] else (NAVY if g == "69884" else GREEN)
-        cells = [f"{g}  {GRPNAME[g]}", tier_of(d["geo"]), str(d["mm"]), str(d["tp"]),
+        gate_col = RED if d["gate"] else "#999"
+        # combined narrowing flag
+        if d["gate"]:
+            flag, fcol = "NARROW: top-20 geo + net-new gate  ->  ¼-size pool", RED
+        elif n <= 25:
+            flag, fcol = "narrow geo: top-20 only (20/210)", AMBER
+        elif n >= 120:
+            flag, fcol = "thin: long-tail spread (152/210)", RED
+        else:
+            flag, fcol = "clean: mid geo slice, ungated", GREEN
+        cells = [f"{g}  {GRPNAME[g]}", tier_of(n), str(d["mm"]), str(d["tp"]),
                  f"{(d['join'] or '?').upper()}  (additive)"]
-        colors = ["#222", "#222", "#222", "#222", GREEN]
-        for x, txt, cc in zip(xs, cells, colors):
-            ax.text(x, y, txt, fontsize=11, va="center", color=cc,
-                    fontweight="bold" if x == xs[0] else "normal")
+        colors = ["#222", geo_col, "#222", "#222", GREEN]
+        weights = ["bold", "bold" if geo_col != "#222" else "normal", "normal", "normal", "normal"]
+        for x, txt, cc, w in zip(xs, cells, colors, weights):
+            ax.text(x, y, txt, fontsize=11, va="center", color=cc, fontweight=w)
         ax.text(xs[5], y, gate_txt, fontsize=11, va="center", color=gate_col,
                 fontweight="bold" if d["gate"] else "normal")
-        ax.text(xs[6], y, read, fontsize=10.2, va="center", color=read_col, style="italic")
+        ax.text(xs[6], y, flag, fontsize=10, va="center", color=fcol,
+                fontweight="bold" if fcol in (RED, AMBER) else "normal")
         y -= dy
-    ax.text(0.03, y + 0.02, "Shared by all 6 (hygiene): exclude CRM-upload lists (DS47) · own converters (DS21) · own funnel (DS34).  "
-            "DS14[1]=Beeswax bidder = plumbing.", fontsize=9.8, color=GRAY, va="center", style="italic")
+    ax.text(0.03, y + 0.02, "Geo is always an AND-INCLUDE whitelist (never a red flag by itself); flagged only when it is unusually "
+            "narrow (top-20) or thin (long-tail). Shared hygiene (all 6): exclude CRM lists (DS47), own converters (DS21), own "
+            "funnel (DS34); DS14=bidder plumbing.", fontsize=9.6, color="#555", va="center")
     plt.savefig(a.dna_png, dpi=190, bbox_inches="tight")
     print(f"wrote {a.dna_png}")
     plt.close(fig)
@@ -179,54 +192,54 @@ def main():
     var_s = series({"115943", "115945", "115946"})
     mid_s = series({"109926"})
 
-    fig = plt.figure(figsize=(15, 7.2))
-    fig.text(0.03, 0.955, f"{a.adv} — the variants' funnel gate: a smaller, net-new, 3-way-split residual pool",
+    fig = plt.figure(figsize=(15, 7.6))
+    fig.text(0.03, 0.955, f"{a.adv} — top-20 prospecting shifted its impressions onto much narrower audiences",
              fontsize=16.5, fontweight="bold", color="#222")
-    fig.text(0.03, 0.915, "Each variant is gated to households Kindred has NOT already impressed — so they fish the residual "
-             "the ungated base skipped.", fontsize=11.5, color=GRAY)
+    fig.text(0.03, 0.912, "The ungated base could reach 1.64M households. Each Q1 variant is gated to ~435K — a quarter the size. "
+             "Through spring, delivery moved OFF the broad base ONTO the narrow gated variants.",
+             fontsize=11.5, color="#444")
 
-    # left: reach bars
-    axL = fig.add_axes([0.05, 0.20, 0.40, 0.60])
-    labs = ["High Pop\n(base, ungated)", "Harter", "Motherhood-J", "Mom-Focus"]
+    # left: reach bars — BROAD base vs NARROW variants
+    axL = fig.add_axes([0.055, 0.28, 0.38, 0.52])
+    labs = ["High Pop base\n(broad, ungated)", "Harter (gated)", "Motherhood-J (gated)", "Mom-Focus (gated)"]
     vals = [reach["base"], reach["115943"], reach["115945"], reach["115946"]]
-    cols_b = [NAVY, AMBER, AMBER, AMBER]
+    cols_b = [NAVY, RED, RED, RED]
     ypos = list(range(len(vals)))[::-1]
-    axL.barh(ypos, vals, color=cols_b, height=0.62)
+    axL.barh(ypos, vals, color=cols_b, height=0.64)
     for yp, v in zip(ypos, vals):
-        axL.text(v + max(vals) * 0.015, yp, kfmt(v), va="center", fontsize=11.5, fontweight="bold", color="#222")
+        axL.text(v + max(vals) * 0.015, yp, kfmt(v), va="center", fontsize=12, fontweight="bold", color="#222")
     axL.set_yticks(ypos)
     axL.set_yticklabels(labs, fontsize=10.5)
-    axL.set_xlim(0, max(vals) * 1.16)
+    axL.set_xlim(0, max(vals) * 1.18)
     axL.set_xticks([])
     for sp in ["top", "right", "bottom"]:
         axL.spines[sp].set_visible(False)
-    axL.set_title("Distinct households reached (Jan–May '26)", fontsize=12, color="#333", loc="left", pad=8)
-    axL.text(0.0, -0.14, "each variant ≈ ¼ of base's reach", transform=axL.transAxes, fontsize=10.5,
-             color=AMBER, fontweight="bold")
+    axL.set_title("Households each audience can reach (Jan–May '26)", fontsize=12.5, color="#222", loc="left", pad=10, fontweight="bold")
+    axL.text(0.5, -0.10, "each gated variant ≈ ¼ of the base's reach", transform=axL.transAxes, fontsize=10.5,
+             color=RED, ha="center", fontweight="bold")
 
-    # right: handoff timeline
-    axR = fig.add_axes([0.56, 0.20, 0.40, 0.60])
+    # right: shift timeline
+    axR = fig.add_axes([0.57, 0.28, 0.39, 0.52])
     mlab = [m[2:] for m in months]
-    axR.plot(mlab, base_s, "-o", color=NAVY, lw=2.6, ms=6, label="High Pop base (ungated)")
-    axR.plot(mlab, var_s, "-o", color=AMBER, lw=2.6, ms=6, label="3 gated variants (Σ)")
-    axR.plot(mlab, mid_s, "--o", color=GRAY, lw=1.8, ms=4, label="Mid Pop")
-    axR.set_title("Monthly impressions — base winds down, gated variants replace it", fontsize=12, color="#333", loc="left", pad=8)
-    axR.set_ylabel("impressions", fontsize=10, color="#555")
-    axR.legend(frameon=False, fontsize=9.5, loc="upper right")
+    axR.plot(mlab, base_s, "-o", color=NAVY, lw=2.8, ms=6, label="broad base (ungated)")
+    axR.plot(mlab, var_s, "-o", color=RED, lw=2.8, ms=6, label="narrow gated variants (Σ)")
+    axR.plot(mlab, mid_s, "--o", color="#B0B0B0", lw=1.6, ms=4, label="Mid Pop (context)")
+    axR.set_title("Monthly impressions: delivery shifts broad -> narrow", fontsize=12.5, color="#222", loc="left", pad=8, fontweight="bold")
+    axR.set_ylabel("impressions", fontsize=10, color="#444")
+    axR.legend(frameon=False, fontsize=9.5, loc="upper center")
     for sp in ["top", "right"]:
         axR.spines[sp].set_visible(False)
     axR.tick_params(labelsize=9.5)
-    axR.annotate("base dark\nby Apr", xy=(3, 0), xytext=(2.4, max(base_s) * 0.33), fontsize=9, color=NAVY,
-                 ha="center", arrowprops=dict(arrowstyle="->", color=NAVY, lw=1.2))
+    axR.text(4, max(base_s) * 0.06, "base dark since Apr", ha="right", va="bottom", fontsize=9.5,
+             color=NAVY, fontweight="bold")
 
-    # caption band with the two overlap facts + rotation implication
-    fig.patches.append(plt.Rectangle((0.03, 0.02), 0.94, 0.11, transform=fig.transFigure,
-                       color=NAVY, alpha=0.06, zorder=0))
-    fig.text(0.05, 0.083, "~72% of each variant's households are NET-NEW vs base   ·   the 3 variants are ~90% MUTUALLY DISJOINT "
-             "(a 3-way creative split of the residual)", fontsize=11.3, color="#222", fontweight="bold")
-    fig.text(0.05, 0.045, "Consequence: top-20 prospecting rotated from the broad, ungated base (ROAS 2.39x) to the gated variants "
-             "fishing the smaller, lower-quality residual (1.18–1.35x). The gate narrows by WHO, not by 3P.",
-             fontsize=10.6, color="#333", style="italic")
+    # bottom explanation (dark text, no shaded band)
+    fig.text(0.05, 0.115, "The switch: delivery moved from the broad base onto audiences ¼ its size — each ~72% NET-NEW households, "
+             "the 3 variants ~90% MUTUALLY DISJOINT (a 3-way creative split of the leftover pool).",
+             fontsize=11.2, color="#222", fontweight="bold")
+    fig.text(0.05, 0.062, "So more impressions now land on narrower, lower-quality audiences — the residual the broad base already "
+             "skipped — and ROAS fell from 2.39x (broad base) to 1.18–1.35x (narrow variants). The narrowing is by WHO, not by 3P.",
+             fontsize=10.6, color="#333")
     plt.savefig(a.gate_png, dpi=190, bbox_inches="tight")
     print(f"wrote {a.gate_png}")
     plt.close(fig)
