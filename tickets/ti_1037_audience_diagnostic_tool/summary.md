@@ -179,6 +179,12 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
   single glaring cause. Next: audience **sizes**, **who** we targeted, and **HI coverage / recirculation** (are we
   exhausting the HI pool and re-serving the same households?).
 
+- **09 `prospecting_reach_recirculation`** — reach/frequency + HI recirculation test. Per month (CIL, prospecting,
+  RTC-excl): reach + freq; HI new-vs-returning (first-HI-month logic); cumulative HI reach; brand-new share. 3-panel
+  render. **Kindred: brand-new HI share 100%(Jun'25)→46%(May'26), returning rose to 54% ⇒ recirculating; BUT cumulative
+  HI reach 5.3M and still climbing (~500k new/mo) ⇒ pool NOT exhausted; frequency low ~1.2-1.7 imps/IP.** HI metrics
+  scored-era only (Jun'25+). Heavy scan (~85GB). *Awaiting review.*
+
 ## 7. Open items
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
 - Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
