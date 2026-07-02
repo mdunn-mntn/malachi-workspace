@@ -224,4 +224,13 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   "drop" the next month (Dec −66% MoM) even though Dec just reverts. Vs-baseline: Nov shows once as a genuine spike
   (VR +94%), Dec is only −35% (not flagged). Trade-off: because some metrics trend (ROAS 16×→2×), vs-mean also
   lights up the regime (early-2025 above norm, 2026 below) — that's trend, not a one-month anomaly. Use 05b (local
-  change) + 05c (level-vs-norm) together; a trailing-3mo-baseline detrended variant is available on request. *Awaiting review.*
+  change) + 05c (level-vs-norm) together; a trailing-3mo-baseline detrended variant is available on request. *Approved.*
+- **06 `prospecting_score_buckets_monthly` (+ two renders)** — `household_score` tier distribution (HI 8001-10000 /
+  PP 6666-8000 / MI 3333-6665 / MaxReach 1-3332 / unscored ≤0) of prospecting delivery from `cost_impression_log`
+  (RTC-excluded). **06 `_score_yoy`** = two-period grouped-bar comparison; **06b `_score_monthly`** = monthly 100%-stacked.
+  **Hard constraint (empirical, this ticket):** `household_score` is 0% populated before **2025-06** (logging onset), so
+  a true P1 (Jan-May'25) score distribution is impossible — P1 would be 100% "unscored" as a pure artifact. So 06 compares
+  **Jun-Oct'25 (earliest scored) vs Jan-May'26** (labeled), and 06b runs Jun'25→May'26. **Kindred: HI ~96-100% most months
+  BUT unscored spikes to 49% (Nov'25) and 90% (Dec'25)** — the score-level fingerprint of the holiday gate-OFF (cf. 03/03b);
+  two-period HI 98.9%→89.6%, unscored 0.1%→8.4% (both windows gate-ON; the big swing is between them). Re-confirmed CIL
+  retains the full window (not 90d-rolling) + score floor 2025-06 (already in data_catalog.md §CIL). *Awaiting review.*
