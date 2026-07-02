@@ -125,6 +125,22 @@ The original score used prior performance + power only, **not actual current lif
 
 **Artifacts:** `queries` via `bq_run.sh` (logged); `artifacts/incr_75_debiased_lift.py` (debias + z-test/CI), `artifacts/incr_75_fold_current_lift.py` (fold onto eligible list), `artifacts/incr_75_ghost_crossref.py` (raw cross-ref). Outputs: `incr_75_eligible_with_current_lift.csv` (1,287 eligible + current-lift columns), `incr_75_ghost_debiased_crossref.csv` (1,179 w/ both arms), `incr_75_ghost_debiased_arm.csv` (arm-level raw+clean counts), `incr_75_ghost_current_lift.csv` (raw).
 
+### Matt Brorby's entry-cohort correction — supersedes my debias, changes the current-lift numbers (2026-07-02)
+Matt shared a per-day entry-cohort SQL (`queries/incr_75_matt_entry_cohort_perday_51660.sql`) that gets a more accurate ITT. It anchors each IP at its **first entry** per (advertiser, campaign, ip), groups by `entry_dt`, and flags truncation. Running it (advertiser 51660 + pooled over all advertisers) exposes **two biases my earlier debias missed**:
+1. **Left-censoring on window day 1 (06-22):** every IP active *before* the 10-day window first-appears on day 1 — a *stock*, not a *flow*. It over-represents accumulated holdout IPs → ghost_frac 0.118 (vs 0.10 design) → **spurious −18.1% (z=−61) pooled**. My "earliest-bid anchor" put most IPs *on this exact day*, so my numbers were still contaminated (the bid_count≤10 gate only partly rescued it).
+2. **Right-truncation (entry ≥ 06-24):** the baked-in ~7d `visited` window runs past the data end (07-01), so VR decays mechanically by entry day.
+
+**Only ONE clean interior cohort survives for a 10-day window: 06-23.** Pooled clean read = **+2.8% rel (z=7.8)** — positive, real, modest. **Direction of my conclusion holds; magnitude & per-advertiser coverage were overstated.**
+
+**Impact on the deliverable (workbook current-lift is now known-overstated):**
+- Powered advertisers drop **619 → 376** (single clean day is thinner).
+- Of my 89 `positive_sig`: only **34 stay clean-day significant-positive, 1 flips negative, 38 go null** (power, not contradiction), 16 now underpowered.
+- Robust confirmed positives (high holdout-visit N *and* clean-day significant): **Zazzle +38% (z=22.6, 4,297 hv), Axos Bank +54% (z=9.6), Opendoor +71% (z=7.3), AG Cole Haan +36% (z=5.3), GoPro +31% (z=4.5), Clayton Homes +39% (z=4.8), Arlo +85% (z=7.8)**.
+- **Action:** Sheet 7 + Sheet 3 current-lift columns should be **regenerated with Matt's entry-cohort method** (or clearly caveated as overstated). Best path to more coverage *now*: a short fixed visit sub-window via `first_visit_time` (include many interior entry days under a consistent un-truncated window) — confirm exact approach with Matt.
+- Compare script: `artifacts/incr_75_clean_cohort_compare.py`; outputs `incr_75_ghost_entry_cohort.csv`, `incr_75_clean_cohort_compare.csv`.
+
+**Meeting note:** the 2026-06-26 recording provided (`meetings/incr_75_01_...`) is actually a Ryan screen-share on the **DS13/DS19 keyword/vertical classification pipeline** (Common Crawl → OpenAI batch → vector taxonomy; token-cost optimization), **not** the Matt ITT discussion — Matt's ITT clarification came via the SQL itself.
+
 ### External validation — the persuadables gradient (Matt Brorby's ghost-bid bias register, 2026-06-25)
 Matt's population-wide ghost-bid run (`SteelHouse/databricks_targeting` INCR, `ghost_bid_lift_bias_register.md`) independently confirms INCR-75's core thesis. At clean ghost_frac across 100M+ IPs, relative visit lift is **monotonic in intent**: High (top intent) +0.2% / PP +1.6% / Mid +3.3% / MaxReach (low intent) +3.4% / no_score (reach) +0.1%. Top-intent visits anyway (ad adds ~nothing); mid-intent is where the ad moves the outcome; most-saturated IPs (21+ other advertisers bidding) are incrementally dead despite a 1.96% baseline. **This is exactly why INCR-75 down-weights high-IVR/saturated advertisers and rewards measurable-but-movable mid-IVR** — the screen's "movability" and saturation logic is now empirically backed. (Full findings captured in `knowledge/experimentation.md`.)
 
