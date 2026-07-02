@@ -184,6 +184,13 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
   render. **Kindred: brand-new HI share 100%(Jun'25)→46%(May'26), returning rose to 54% ⇒ recirculating; BUT cumulative
   HI reach 5.3M and still climbing (~500k new/mo) ⇒ pool NOT exhausted; frequency low ~1.2-1.7 imps/IP.** HI metrics
   scored-era only (Jun'25+). Heavy scan (~85GB). *Awaiting review.*
+- **10 `prospecting_audience_size_coverage`** — the supply-side denominator. Monthly addressable prospecting pool =
+  MAX(`total_audience_size`)/day across stage-1 campaigns, avg monthly, from `perml.flight_cid_day_audience_sizes`
+  (floored 2025-02; ~5× UI overstatement → deliverable ≈ pool/5). 2-panel render overlays module 09's cumulative HI
+  reach for a **HI coverage** view. **Kindred: pool exploded when 3P/DS35 added (May'25, ~1.7M→81M), then contracted
+  ~35% across 2026 (65M Jan→42M May'26); cumulative HI reached 5.3M ≈ 63% of the ~8.5M deliverable and rising ⇒ shrinking
+  pool + high coverage = limited fresh-HI headroom** (supports the recirculation read). Caveat: total (kw+3P) size,
+  not HI-only. *Awaiting review.*
 
 ## 7. Open items
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
