@@ -80,6 +80,7 @@ Metrics SQL: 369 GB processed, 13s wall (logged to `knowledge/bq_perf_log.jsonl`
 4. **Method & Caveats** — definitions, targets, pitfalls.
 5. **Spend → MDE curve** — achievable MDE vs monthly spend at eligible-cohort medians.
 6. **Column Glossary** — plain-English definition of every column on sheets 2 & 3, grouped by section (appendix). Headers reworded for clarity (e.g. "Smallest IVR lift detectable at current spend" instead of "IVR MDE @ normal spend").
+7. **Current Lift (ghost-bid)** *(added 2026-07-02)* — actual measured treatment-vs-holdout lift from Matt's live ghost-bid tables, debiased (clean ghost_frac gate + earliest-bid anchor). Confirmation-vs-tier summary + the "strongest candidates" shortlist (Top/Mid + confirmed positive current lift), ranked by relative lift. Sheet 3 also gains a current-lift column group (`In live ghost-bid table?`, `Does current lift confirm the score?`, signal, relative/abs lift, holdout-visit power, z). **This is the current-lift dimension the original score lacked — re-uploadable.**
 
 Plus `artifacts/incr_75_chart_funnel.png` (Tufte funnel + tier split, 200 DPI).
 

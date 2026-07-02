@@ -106,6 +106,14 @@ FINAL_COLS = [
     ("cpm", "CPM (cost/1k imps)", "usd", 11),
     ("imps_per_ip", "Impressions per IP", "num", 10),
     ("distinct_ips_30d", "Unique IPs reached (30d)", "int", 13),
+    # ---- CURRENT LIFT (live ghost-bid, MNTN clean leg — added 2026-07-02) ----
+    ("in_ghost_table", "In live ghost-bid table?", "text", 10),
+    ("current_lift_confirms", "Does current lift confirm the score?", "text", 16),
+    ("current_lift_signal", "Current-lift signal", "text", 14),
+    ("current_rel_lift", "Current lift (relative)", "relx", 12),
+    ("current_abs_lift_pp", "Current lift (abs, bid-grain ITT)", "pp3", 13),
+    ("ghost_vis_clean", "Holdout visits (power)", "int", 11),
+    ("current_z", "Current-lift z", "num", 9),
 ]
 
 
@@ -128,6 +136,10 @@ def write_value_cell(ws, r, j, key, fmt, row):
         c.value = num / 100.0; c.number_format = PCT2
     elif fmt == "pp":
         c.value = num; c.number_format = PP
+    elif fmt == "pp3":                 # small percentage-point value (bid-grain ITT)
+        c.value = num; c.number_format = '0.000" pp"'
+    elif fmt == "relx":               # already in percent-points (18.0 -> "18.0%")
+        c.value = round(num, 1); c.number_format = '0.0"%"'
     elif fmt == "num":
         c.value = round(num, 1); c.number_format = NUM1
     return c
@@ -247,6 +259,16 @@ def sheet_final(wb, rows):
                 c.fill = {"easy": GREEN, "none": GREEN, "stretch": AMBER, "unreasonable": RED}.get(v, fill)
             if key == "prior_lift_pp" and fnum(row.get(key)) is not None:
                 c.font = Font(bold=True, color="1F6B2E")
+            if key == "current_lift_confirms":
+                v = (row.get(key) or "")
+                c.fill = {"CONFIRMED": GREEN, "positive": GREEN, "CONTRADICTED": RED,
+                          "negative": RED, "unconfirmed(underpowered)": AMBER,
+                          "null": LOW, "no_data": LOW}.get(v, fill)
+            if key == "current_lift_signal":
+                v = (row.get(key) or "")
+                c.fill = {"positive_sig": GREEN, "negative_sig": RED}.get(v, fill)
+            if key == "in_ghost_table":
+                c.fill = GREEN if (row.get(key) == "Y") else LOW
     for j, (_k, _h, _f, wd) in enumerate(FINAL_COLS, 1):
         ws.column_dimensions[get_column_letter(j)].width = wd
     ws.freeze_panes = "D5"
@@ -429,6 +451,24 @@ GLOSSARY = [
     ("", "Prior-lift source", "Which past study the prior lift came from.",
      "TI-933 = Select clickpass visit-rate test (significant only). TI-837 = ghost-bid guid total-traffic (all-funnel; permissive 'has shown lift' signal)."),
 
+    ("§", "CURRENT LIFT — live ghost-bid holdout (added 2026-07-02)", "", ""),
+    ("", "In live ghost-bid table?", "Whether the advertiser appears in Matt Brorby's live ghost-bid tables (has real holdout-vs-treatment data now).",
+     "Y if present in enriched__dev_matthewbrorby.lift__ghost_bid_visits (rolling ~10-day window; logging live since 2026-05-27). 1,182 advertisers present."),
+    ("", "Does current lift confirm the score?", "The headline reconciliation: does the ACTUAL measured lift agree with the a-priori score? CONFIRMED = Top/Mid tier with significant positive current lift; CONTRADICTED = significant negative; unconfirmed = not yet powered enough to tell.",
+     "CONFIRMED / CONTRADICTED / unconfirmed(underpowered) / no_data. Significance gate: p<0.05 AND ≥20 holdout visits. Green=confirmed, red=contradicted, amber=unconfirmed."),
+    ("", "Current-lift signal", "The raw per-advertiser verdict from the ghost-bid holdout.",
+     "positive_sig / negative_sig (p<0.05 & ≥20 holdout clean visits) or null/underpowered."),
+    ("", "Current lift (relative)", "The measured lift as a % of the holdout baseline — the number to lead with. E.g. +18% = treatment visit rate is 18% above the never-served holdout.",
+     "(treat_vr − ghost_vr) / ghost_vr on the debiased clean set. Directional; z is N-inflated so rank by this, not by z."),
+    ("", "Current lift (abs, bid-grain ITT)", "The same lift in percentage points. Small because it is bid-grain ITT — measured across ALL bid-eligible IPs, diluted by win-rate (scale by win-rate for a served-user ATT figure).",
+     "treat_vr − ghost_vr (percentage points). Earliest-bid-anchored 7d visit window, clean ghost_frac gate."),
+    ("", "Holdout visits (power)", "How many holdout (ghost) IPs actually visited — the binding sample-size for detecting lift. Higher = more trustworthy.",
+     "Distinct holdout IPs with a visit in the clean set. <20 ⇒ underpowered (signal forced to null)."),
+    ("", "Current-lift z / p", "Two-proportion z-test of treatment vs holdout visit rate.",
+     "z inflated by the millions of IPs/advertiser — a large z at a tiny magnitude is the bias floor, not proof of a big effect. Use p only as a floor; judge on relative-lift magnitude + direction."),
+    ("", "Debias & caveats", "Why these numbers are trustworthy AND their limits.",
+     "This is the MNTN bidder leg (clean reference: ghost_frac barely drifts 0.095→0.116 vs Beeswax 0.10→0.47). Debias reproduces the documented negative→positive sign flip (pooled −0.034pp→+0.049pp). Limits: rolling 10-day window (≥30d unavailable), 7d visit window truncates for late-first-bid IPs, bid-grain ITT. Publish as directional per INCR-69 gate."),
+
     ("§", "ALL-ADVERTISERS SHEET — extra columns", "", ""),
     ("", "Active?", "Whether the advertiser is currently active.", "advertisers.active."),
     ("", "B2B?", "Whether the advertiser is B2B (these are excluded).", "In the 'B2B Software & Services' vertical bucket."),
@@ -467,9 +507,75 @@ def sheet_glossary(wb):
     ws.sheet_view.showGridLines = False
 
 
+# ---------------- Sheet 7: Current Lift (live ghost-bid) ----------------
+CL_COLS = [
+    ("rank", "#", 5), ("final_tier", "Tier", 6), ("advertiser_id", "Advertiser ID", 11),
+    ("advertiser_name", "Advertiser", 26), ("value_score", "Value score", 10),
+    ("ivr", "IVR", 9), ("current_rel_lift", "Current lift (relative)", 12),
+    ("current_abs_lift_pp", "Current lift (abs pp)", 12), ("ghost_vis_clean", "Holdout visits (power)", 12),
+    ("current_z", "z", 7), ("current_p", "p", 8), ("prior_lift_pp", "Prior lift", 9),
+]
+
+
+def sheet_current_lift(wb, final_rows):
+    ws = wb.create_sheet("7. Current Lift (ghost-bid)")
+    confirmed = [r for r in final_rows if r.get("current_lift_confirms") == "CONFIRMED"]
+    confirmed.sort(key=lambda r: -(fnum(r.get("current_rel_lift")) or -1e9))
+    counts = {}
+    for t in ("Top", "Mid"):
+        sub = [r for r in final_rows if r["final_tier"] == t]
+        counts[t] = {k: sum(1 for r in sub if r.get("current_lift_confirms") == k)
+                     for k in ("CONFIRMED", "CONTRADICTED", "unconfirmed(underpowered)", "no_data")}
+    title_block(ws, len(CL_COLS),
+                "INCR-75 — Current Measured Lift (live ghost-bid holdout, MNTN clean leg)",
+                "Actual treatment-vs-holdout visit lift from Matt Brorby's live ghost-bid tables "
+                "(enriched__dev_matthewbrorby.lift__ghost_bid_visits), debiased per his bias register "
+                "(clean ghost_frac gate + single earliest-bid anchor). Window = rolling ~10 days "
+                "(2026-06-22..07-01); logging live since 2026-05-27 so ≥30 days is not yet available. "
+                "Shortlist below = Top/Mid tier advertisers whose current lift CONFIRMS the a-priori score "
+                "(significant positive, ≥20 holdout visits). READ RELATIVE LIFT + DIRECTION, not z (N-inflated); "
+                "absolute pp are bid-grain ITT (diluted by win-rate). Publish as directional, not a point estimate.")
+    # summary block
+    r = 4
+    ws.cell(r, 1, "Confirmation vs a-priori tier").font = Font(bold=True, size=11, color="1F3A5F"); r += 1
+    header_row(ws, ["Tier", "Confirmed +lift", "Contradicted", "Unconfirmed (underpowered)", "No data"], r)
+    for t in ("Top", "Mid"):
+        r += 1
+        vals = [t, counts[t]["CONFIRMED"], counts[t]["CONTRADICTED"],
+                counts[t]["unconfirmed(underpowered)"], counts[t]["no_data"]]
+        for j, v in enumerate(vals, 1):
+            c = ws.cell(r, j, v); c.border = THIN; c.alignment = CTR; c.fill = TIER_FILL[t]
+            if j == 2 and v: c.fill = GREEN
+            if j == 3 and v: c.fill = RED
+    r += 2
+    ws.cell(r, 1, f"Strongest candidates — high score AND confirmed positive current lift "
+                  f"({len(confirmed)}), ranked by relative lift").font = Font(bold=True, size=11, color="1F3A5F")
+    r += 1
+    header_row(ws, [h for _, h, _ in CL_COLS], r)
+    for i, row in enumerate(confirmed, 1):
+        r += 1
+        fill = TIER_FILL.get(row["final_tier"], LOW)
+        for j, (key, _h, _w) in enumerate(CL_COLS, 1):
+            if key == "rank":
+                c = ws.cell(r, j, i); c.alignment = CTR; c.border = THIN; c.fill = fill; continue
+            fmt = {"advertiser_id": "int", "advertiser_name": "text", "value_score": "num",
+                   "ivr": "pct", "current_rel_lift": "relx", "current_abs_lift_pp": "pp3",
+                   "ghost_vis_clean": "int", "current_z": "num", "current_p": "num",
+                   "prior_lift_pp": "pp", "final_tier": "text"}[key]
+            c = write_value_cell(ws, r, j, key, fmt, row); c.fill = fill
+            if key == "current_rel_lift":
+                c.font = Font(bold=True, color="1F6B2E")
+            if key == "final_tier":
+                c.fill = TIER_FILL.get(row["final_tier"], LOW)
+    for j, (_k, _h, wd) in enumerate(CL_COLS, 1):
+        ws.column_dimensions[get_column_letter(j)].width = wd
+    ws.freeze_panes = "A5"
+    ws.sheet_view.showGridLines = False
+
+
 def main():
     all_rows = read_csv("incr_75_all_flagged.csv")
-    final_rows = read_csv("incr_75_final_tiered.csv")
+    final_rows = read_csv("incr_75_eligible_with_current_lift.csv")  # tiered + current-lift columns
     funnel = read_csv("incr_75_funnel_counts.csv")
     tiers = {t: sum(1 for x in final_rows if x["final_tier"] == t) for t in ("Top", "Mid", "Low")}
     n_prior = sum(1 for x in final_rows if x.get("has_prior_lift", "").upper() == "TRUE")
@@ -489,6 +595,7 @@ def main():
     sheet_method(wb, medians)
     sheet_curve(wb, medians)
     sheet_glossary(wb)
+    sheet_current_lift(wb, final_rows)
 
     path = OUT / "incr_75_eligible_advertisers.xlsx"
     wb.save(path)
