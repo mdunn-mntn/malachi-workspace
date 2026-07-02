@@ -234,6 +234,16 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   band (not falsely red-unscored). 06 (two-period) uses the **standard Jan-May'25 vs Jan-May'26** (generally correct
   default) — for THIS client P1 reads 100% "No score data" (pre-2025-06 logging), so only P2 is measurable; for advertisers
   scored in both windows it's a true side-by-side. Scores read from `cost_impression_log` (won bids).
+- **07 `prospecting_audience_change_history` (+ timeline render)** — the period-audience-diff capability: every distinct
+  audience config a prospecting campaign ran over time, from `silver.archives.audience_segment_archives` (collapsed to
+  DS-set / audience_id changes; active-in-window campaigns only). **07 render** = a **DS-presence-over-time Gantt** for the
+  campaign with the most changes (auto), with audience_id-swap markers + P1/P2 bands. **KEY finding — a campaign's audience
+  mutates under a FIXED campaign_id:** flagship 261318 changed **8×**, audience_id swapped **22666→31114** (Sep'24); **DS19
+  (keyword MM) present across both periods**, DS13 (vertical) absent in P1 (only pre-period + brief Oct-Dec'25), DS35 (3P)
+  added May'25, DS21/34 retgt-excl added Nov'25. So P1's "no scores" = **CIL logging onset (Jun'25), NOT missing MM** (DS19
+  was there). Also confirmed the structural shift: **P1 = 1 prospecting campaign, P2 = 6** (flagship even cut spend
+  $93k→$57k). Gotcha captured in `data_knowledge.md` (audience not stable under a campaign_id). Heavy scan (~39GB, archive
+  not date-prunable). *Awaiting review.*
   **Kindred: HI ~96-100% most months
   BUT unscored spikes to 49% (Nov'25) and 90% (Dec'25)** — the score-level fingerprint of the holiday gate-OFF (cf. 03/03b);
   two-period HI 98.9%→89.6%, unscored 0.1%→8.4% (both windows gate-ON; the big swing is between them). Re-confirmed CIL

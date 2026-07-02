@@ -677,6 +677,17 @@ Empirically (iMemories AID 37423, TI-Kale-eval 2026-06-17), live **MNTN Select**
 
 **DS16 = internal funnel/delivery tags, NOT interest targeting (TI-1037, Kindred 35094, 2026-07-02).** Category names in `fpa.categories` (data_source_id=16): **7291="Impressions", 787280="Wins", and 178328x="CampaignGroupID"** (one per campaign group). A newer campaign-build template injects a DS16 clause that **includes the campaign's own `CampaignGroupID` tag and excludes the `Impressions`+`Wins` tags** — an internal pacing/frequency-suppression construct, not a buyer audience. So a DS16 leaf in an audience expression is a template artifact; do not count it as interest breadth. Older prospecting campaigns lack it, so its presence/absence across a fleet is a clean **template-drift signal** (e.g., Kindred's 3 Q1-2026 HiPop launches carry DS16, the flagship/LowPop/MidPop don't). DS16 names live in `fpa.categories` (which carries DS13/14/16/21); DS35 names live in `bronze.tpa.categories`.
 
+**A campaign's audience is NOT stable under a fixed `campaign_id` (TI-1037, 2026-07-02).** Both the `audience_id`
+AND the data-source composition change over time — the segment expression is versioned in
+`silver.archives.audience_segment_archives`. Example: Kindred prospecting campaign **261318** changed its audience **8×**
+— `audience_id` swapped **22666 → 31114** (2024-09-21), DS13-only(vertical) → DS19(keyword), **DS35 (3P) added 2025-05**,
+**DS13 (vertical) re-added 2025-10** then dropped 2025-12, **DS21/34 (retgt-excl) added 2025-11**. **Implication:** never
+assume the *current* expression reflects a past period — for any period-over-period audience question, reconstruct the
+**as-of-period** expression from the archive (`REGEXP_EXTRACT_ALL(expression, r'"data_source_id":([0-9]+)')`, ORDER BY
+`create_time` — `version` is non-monotonic). Corollary for score analysis: DS19 being present in a period means the
+household was *scoreable* that period; if scores are still missing it's the CIL logging onset (2025-06), not a missing
+MM audience. [[reference_fangorn_audience_overlay]]
+
 **Fangorn candidacy rule (load-bearing):** the `onFangorn` flip swaps **DS13 → DS46** during segment breakdown (audience_products.md). A campaign with **no DS13/DS19 has nothing to swap**, so flipping `onFangorn` changes nothing — Fangorn / Intelligent Intent Scoring only affects campaigns that use the **MM batch scoring layer**. Geo-only Select, pure-3P, pure-1P, and retargeting campaigns are unaffected regardless of rollout tier. So "is advertiser X a Fangorn candidate?" reduces first to **"does X run a live MM (DS13/DS19) prospecting campaign?"** — if not, the rollout criteria are N/A until they do. (iMemories' only real MM-scored prospecting — PTV campaign 466109, DS19 69-keyword + HHST=6666 + RTC — is **paused** since ~Nov 2025; their live campaigns are the geo-only Select Winback test.)
 
 **Canonical rollout-priority scorer (Alex Knorr):** `databricks_targeting` repo, branch `aknorr/fangorn`, `fangorn/rollout/Fangorn Rollout Advertiser Campaign Merge.ipynb`. This is the authoritative implementation of the 4-criteria ranking (supersedes the Slack-paraphrased version). Mechanics worth knowing:
