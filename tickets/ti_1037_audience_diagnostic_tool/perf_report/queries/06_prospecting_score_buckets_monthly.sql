@@ -7,16 +7,18 @@
      - charts/06b : monthly 100%-stacked score distribution
 
    Tiers (household_score `hs`):
-     unscored : hs IS NULL OR hs <= 0      (served with no usable score, e.g. gate-off)
+     notlogged: hs IS NULL                 (score column NOT written — pre-2025-06 logging onset)
+     unscored : hs <= 0  (i.e. -1)         (real: served with no usable score, e.g. gate-off)
      MaxReach : 1 .. 3332
      MI       : 3333 .. 6665               (mid intent)
      PP       : 6666 .. 8000               (Peak Performance floor)
      HI       : 8001 .. 10000              (High Intent / max)
 
-   IMPORTANT — score data floor: household_score is 0% populated before 2025-06
-   (logging onset; AUDI-1070). Run this with WIN_START >= 2025-06-01, else pre-Jun-2025
-   months show as 100% "unscored" purely as a logging artifact. hs is 100% typed-populated
-   from 2025-06, so no model_params COALESCE needed; model_params is used only to drop RTC.
+   SCORE FLOOR handled explicitly: household_score is 0% populated before 2025-06 (logging onset;
+   AUDI-1070). We SEPARATE `notlogged` (hs IS NULL — the pre-2025-06 no-data state) from real
+   `unscored` (hs = -1), so the FULL window (incl. Jan-May 2025) can be shown honestly: pre-Jun-2025
+   months land in `notlogged` (rendered gray "no score data"), NOT falsely in "unscored". hs is 100%
+   typed-populated from 2025-06; model_params is used only to drop RTC.
 
    Source : logdata.cost_impression_log (retains the full window — NOT 90d-rolling; verified
             TI-1037 2026-07-02). No `dt` column → filter on DATE(time).
@@ -39,7 +41,8 @@ base AS (
 SELECT
   mo,
   COUNT(*)                                              AS total,
-  COUNTIF(hs IS NULL OR hs <= 0)                        AS unscored,
+  COUNTIF(hs IS NULL)                                   AS notlogged,
+  COUNTIF(hs <= 0)                                      AS unscored,
   COUNTIF(hs BETWEEN 1 AND 3332)                        AS maxreach,
   COUNTIF(hs BETWEEN 3333 AND 6665)                     AS mi,
   COUNTIF(hs = 8000 OR hs BETWEEN 6666 AND 7999)        AS pp,

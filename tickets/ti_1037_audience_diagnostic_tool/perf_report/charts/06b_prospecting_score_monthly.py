@@ -21,8 +21,10 @@ for fam in ["Helvetica Neue", "Helvetica", "Arial"]:
         break
 plt.rcParams.update({"figure.facecolor": "#FAFAFA", "axes.facecolor": "#FAFAFA",
                      "savefig.facecolor": "#FAFAFA"})
-# stack bottom→top: HI (best) at bottom, unscored (worst) at top so gate-off spikes read at the top
-STACK = [("hi", "High Intent (8001–10000)", "#1B6B4F"),
+# stack bottom→top: no-data (gray) at bottom, HI (best) next, unscored (worst) at top so gate-off
+# spikes read at the top. `notlogged` (pre-2025-06) is a data-availability state, not an intent tier.
+STACK = [("notlogged", "No score data (pre-2025-06)", "#C8CCD0"),
+         ("hi", "High Intent (8001–10000)", "#1B6B4F"),
          ("pp", "Peak Perf (6666–8000)", "#5FA88A"),
          ("mi", "Mid Intent (3333–6665)", "#C9A227"),
          ("maxreach", "MaxReach (1–3332)", "#D98C4A"),
@@ -53,11 +55,12 @@ def main():
         vals = np.array(pct[t])
         ax.bar(x, vals, 0.82, bottom=bottom, color=color, label=lab, zorder=3,
                edgecolor="white", linewidth=0.4)
-        # label a segment when it's big enough to read
+        # label a segment when it's big enough to read (dark text on the light-gray no-data band)
+        tc = "#555" if t == "notlogged" else "white"
         for xi, (v, b) in enumerate(zip(vals, bottom)):
             if v >= 7:
                 ax.text(xi, b + v / 2, f"{v:.0f}", ha="center", va="center", fontsize=7.5,
-                        color="white", fontweight="bold", zorder=5)
+                        color=tc, fontweight="bold", zorder=5)
         bottom += vals
 
     ax.set_xticks(x)
@@ -72,10 +75,10 @@ def main():
     # handles in visual (top→bottom) order for the legend
     h, l = ax.get_legend_handles_labels()
     ax.legend(h[::-1], l[::-1], frameon=False, fontsize=8.5, loc="lower center",
-              bbox_to_anchor=(0.5, -0.2), ncol=5)
+              bbox_to_anchor=(0.5, -0.26), ncol=3)
     ax.set_title(f"{a.adv} — Prospecting score distribution by month",
                  fontsize=14, fontweight="bold", loc="left", color="#222", pad=10)
-    plt.tight_layout(rect=[0, 0.04, 1, 1])
+    plt.tight_layout(rect=[0, 0.1, 1, 1])
     plt.savefig(a.out, dpi=200, bbox_inches="tight")
     print(f"wrote {a.out}")
     worst = max(range(len(months)), key=lambda i: pct["unscored"][i])
