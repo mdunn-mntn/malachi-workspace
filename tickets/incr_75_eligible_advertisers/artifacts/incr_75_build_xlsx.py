@@ -3,9 +3,14 @@
 Sheets:
   1. Funnel Waterfall      — start -> remaining per hard filter + tier/power split
   2. All Advertisers       — every advertiser, per-filter flags, failed_at_filter, tier (audit)
-  3. Final Eligible (tiered)— eligible only, row-colored by tier, all user-required columns
-  4. Method & Caveats      — definitions, targets, pitfalls
+  3. Final Eligible (tiered)— eligible only, row-colored by tier, all user-required columns.
+                             Columns tagged [CAN-DETECT] (future-test sensitivity/MDE) vs
+                             [MEASURED NOW] (actual ghost-bid lift) vs [PRIOR] (past-test evidence).
+  4. Method & Caveats      — definitions, targets, pitfalls, two-family legend
   5. Spend -> MDE curve     — achievable MDE vs monthly spend at INCR-75 eligible-cohort medians
+  6. Column Glossary       — plain-English definition of every column, grouped by section (appendix)
+  7. Current Lift (ghost-bid)— actual measured treat-vs-holdout lift (entry-cohort, exclude 06-22,
+                             7d-from-first-bid window); confirmation-vs-tier + confirmed shortlist
 
 Style cloned from ti_1053 build_deliverable.py (navy header, tier fills, freeze panes).
 Reads ../outputs/incr_75_{all_flagged,final_tiered,funnel_counts}.csv.
@@ -100,8 +105,8 @@ FINAL_COLS = [
     ("budget_for_mde_cvr_15pct", "[CAN-DETECT] Test $ to prove a 15% CVR lift", "usd", 16),
     ("req_monthly_spend_cvr_15pct", "[CAN-DETECT] Monthly $ run-rate (15% CVR)", "usd", 16),
     ("close_to_cvr_min", "CVR spend feasible (at/near min)?", "text", 12),
-    ("prior_lift_pp", "Prior measured lift", "pp", 11),
-    ("prior_lift_source", "Prior-lift source", "text", 14),
+    ("prior_lift_pp", "[PRIOR] Lift from a past MNTN test", "pp", 14),
+    ("prior_lift_source", "[PRIOR] Source of the prior lift", "text", 14),
     ("mde_ivr_direct_56d_pct", "[CAN-DETECT] Smallest IVR lift: real reach", "pctx", 17),
     ("cpm", "CPM (cost/1k imps)", "usd", 11),
     ("imps_per_ip", "Impressions per IP", "num", 10),
@@ -459,10 +464,10 @@ GLOSSARY = [
     ("", "[CAN-DETECT] Monthly $ run-rate (15% CVR)", "The 15%-CVR total-test figure as a monthly run-rate.", "Total ÷ 1.84."),
     ("", "CVR spend feasible (at/near min)?", "Same as the IVR flag, for the loose 15% CVR bar: Yes = already at/over OR a ≤50% bump away; No = needs >50% more; 'no_data' if <50 converting IPs.", "Yes if current 8-wk spend ≥ (15% CVR budget) / 1.5."),
 
-    ("§", "PRIOR EVIDENCE", "", ""),
-    ("", "Prior measured lift", "A positive lift this advertiser already showed in a past MNTN test (bonus signal).",
+    ("§", "[PRIOR] PRIOR EVIDENCE — a result from an EARLIER test (neither a future-test floor nor the current ghost-bid result)", "", ""),
+    ("", "[PRIOR] Lift from a past MNTN test", "A positive lift this advertiser already showed in a PAST MNTN test (a bonus signal in the score). Historical — not the current [MEASURED NOW] ghost-bid result and not a [CAN-DETECT] sensitivity number.",
      "In percentage points (pp). Blank if none."),
-    ("", "Prior-lift source", "Which past study the prior lift came from.",
+    ("", "[PRIOR] Source of the prior lift", "Which past study the prior lift came from.",
      "TI-933 = Select clickpass visit-rate test (significant only). TI-837 = ghost-bid guid total-traffic (all-funnel; permissive 'has shown lift' signal)."),
 
     ("§", "[MEASURED NOW] CURRENT LIFT — actual result vs a live ghost-bid holdout (judged vs ZERO, not vs 5%)", "", ""),

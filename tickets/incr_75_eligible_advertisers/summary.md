@@ -73,7 +73,7 @@ Face validity: Zazzle (prior +11.6pp Select lift) lands in Top; the shortlist is
 Metrics SQL: 369 GB processed, 13s wall (logged to `knowledge/bq_perf_log.jsonl`).
 
 ## 5. Solution
-**Deliverable:** `outputs/incr_75_eligible_advertisers.xlsx` — 6 sheets:
+**Deliverable:** `outputs/incr_75_eligible_advertisers.xlsx` — 7 sheets:
 1. **Funnel Waterfall** — start → remaining per hard filter + tier/power split.
 2. **All Advertisers** (2,009) — every advertiser, per-filter pass/fail flags, `failed_at_filter`, final tier (audit trail).
 3. **Final Eligible (tiered)** (1,287) — row-colored Top/Mid/Low, all user-required columns: IVR, CVR, budget-for-MDE (IVR 5%/10%, CVR 15%), avg monthly spend, can-hit-IVR/CVR-MDE-≤8wk (Y/N), extra $/%/ask-band, IVR/CVR spend-feasible (Y/N), required monthly spend. **Spend-feasible flag is one-sided:** Yes if already at/over the spend minimum OR a reasonable (≤50%) bump away; No only if it would need an unreasonable (>50%) increase. (Corrected 2026-06-26 — previously a symmetric band wrongly flagged big over-spenders "No.")
@@ -107,11 +107,13 @@ Plus `artifacts/incr_75_chart_funnel.png` (Tufte funnel + tier split, 200 DPI).
 - No new schema discovered (reused TI-1019 / TI-884 tables).
 
 ### Current-lift cross-reference — folding Matt's ghost-bid tables into the score (2026-07-02)
+> **⚠ SUPERSEDED — read the "FINAL resolution" block below.** This subsection records the first (hand-rolled) pass: earliest-bid anchor + bid_count≤10 gate, and it **mis-attributed the leg**. Corrections established later the same day: it is the **Beeswax/JVM leg** (not MNTN); the correct method is Matt's **entry-cohort / exclude-06-22 / 7-day-from-first-bid**; pooled clean lift is **+5%** (not the −0.034→+0.049pp shown here); and the confirmed shortlist is **Top 21 + Mid 51 = 72** (the "61 / 20 Top / 41 Mid" figures below are from this superseded pass). Kept verbatim for provenance.
+
 The original score used prior performance + power only, **not actual current lift**. Cross-referenced against Matt Brorby's live ghost-bid tables (`dw-main-silver.enriched__dev_matthewbrorby.lift__ghost_bid_visits`, arms `ghost`=holdout / `submitted`=treatment; identical INCR-66 copy exists).
 
 **Coverage reality:** the tables are a **rolling ~10-day window** (2026-06-22..07-01), TTL-capped by the underlying `bid_price_log` (10-day TTL). Ghost-bid logging only went live 2026-05-27. **So "≥30 days in the table" is not achievable today — the ceiling is 10 distinct days** (958 of 1,182 advertisers have all 10). 1,182 advertisers are present; 812 are in our eligible 1,287.
 
-**This is the MNTN bidder leg (the clean reference), NOT Beeswax.** Empirical `ghost_frac` by bid-multiplicity barely moves here: 0.095 @1 bid → 0.103 @10 → 0.116 @11+ (vs the Beeswax leg's 0.10→0.47 blowup). Confirms the register's claim that the MNTN bidder writes ghost bids to the fcap cache → symmetric exit → multiplicity equalizes. Clean band `[.09,.11]` therefore covers bid-buckets 1–10; only the 11+ tail is dropped.
+**[CORRECTED — this is actually the Beeswax/JVM leg, not MNTN; see FINAL resolution.]** Empirical `ghost_frac` by bid-multiplicity barely moves here: 0.095 @1 bid → 0.103 @10 → 0.116 @11+ (I first read this gentle curve as evidence of the MNTN clean leg, but Matt confirmed the source is `bid_price_log` = Beeswax/JVM bidder; the MNTN Rust leg isn't folded in yet). Confirms the register's claim that the MNTN bidder writes ghost bids to the fcap cache → symmetric exit → multiplicity equalizes. Clean band `[.09,.11]` therefore covers bid-buckets 1–10; only the 11+ tail is dropped.
 
 **Debias replicated (two corrections, per Matt's register):** (1) gate to clean `ghost_frac` (bid-multiplicity ≤10); (2) single **earliest-bid anchor** for `visited` (`ARRAY_AGG(visited ORDER BY first_bid_time LIMIT 1)`) instead of `MAX()` over the window — MAX gives holdout IPs a wider observation window and manufactures spurious negative. **Result reproduces the documented negative→positive sign flip:**
 - RAW (MAX window, all bids): pooled abs lift **−0.034pp** (z=−27) — the artifact.
