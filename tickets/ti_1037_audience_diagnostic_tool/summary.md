@@ -222,6 +222,18 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
   (`geo.location_data`), per-tier metrics (`sum_by_campaign_by_day` by `campaign_group_id`), per-DMA delivery (`CIL.metro_id`
   → `summarydata.metros`). **Two-id-system bridge (location_id vs Nielsen metro_id) + DMA-grain source constraints in
   `data_knowledge.md`.** *Awaiting review.*
+- **12c `interest_logic_deep_dive`** — the per-campaign audience DNA + empirical narrowing check (answers "does any campaign
+  narrow reach, and what's unique about the variants?"). Parses all 6 op-trees + overlays HLL reach. **Finding: NO MM-AND-3P
+  narrowing anywhere** — all 6 share `(MM DS19[255 kw] OR 3P DS35[11–14 maternity/baby segs])` = additive; the suspected
+  "required-3P narrows MM" is absent. **The only differentiator is a DS16 funnel gate on the 3 Q1 variants**
+  (Harter/Motherhood/Mom-Focus): `AND ( NOT DS16[7291 Impressions, 787280 Wins] OR DS16[own campaign-group] )` = a
+  **net-new-reach gate** (target iff never-impressed/won by Kindred, or already owned by this variant). **Empirical (BQ-native
+  HLL on `sum_by_campaign_by_day.uniques`, Jan–May '26):** each variant reaches ~435K households = **~26% of base's 1.64M**,
+  **~72% net-new vs base**, **~90% mutually disjoint** (a 3-way creative split of the residual). **Rotation:** base (ungated,
+  2.39x ROAS) wound down Jan→Mar and went dark by Apr; the 3 gated variants (1.18–1.35x) ramped up to replace it on the
+  smaller, lower-quality residual → the gate narrows by WHO (net-new households), not by 3P. Two PNGs (DNA table +
+  funnel-gate evidence) + committed `.md`. DS16-gate decode + HLL reach/overlap technique in `data_knowledge.md`.
+  *Awaiting review.*
 
 ## 7. Open items
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
