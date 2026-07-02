@@ -171,3 +171,30 @@ honest estimate is 5 with the keyword-classifier descoped; without that descope 
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
 - Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
 - Keyword classifier (step 3): full LLM/embedding generalization is IN scope per the 2026-06-18 decision (8 SP).
+
+## 8. `perf_report/` sub-tool — parameterized client-performance report (Kindred build, started 2026-07-02)
+A second, complementary deliverable under this ticket, built **interactively one module at a time** (Malachi driving,
+reviewing each chart before moving on). Distinct from the steps 0–9 audience diagnostic above: this is the **performance**
+view (current-health **snapshot + YoY diagnosis**), growing on top of the AUDI-1070 reusable YoY engine.
+
+**Module pattern** (each "thing" = a self-contained trio): `queries/NN_*.sql` (parameterized `{{AID}} {{WIN_START}}
+{{WIN_END}} {{P1_*}} {{P2_*}}`) → verified in BQ → `charts/NN_*.py` (reads `outputs/<adv>/NN.csv` → `NN.png` + prints a
+one-line `FINDING:`). A runner (final step, not built yet) loops every module → one assembled report. **Only source is
+versioned** — repo `.gitignore` drops `*.csv`/`*.png`/`*.svg`, so CSVs/PNGs regenerate from committed `.sql`+`.py`.
+Home: `perf_report/{queries,charts,params,outputs/<adv>}`. Params: `params/kindred_35094.env` (P1 Jan–May'25, P2
+Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 35094**. Frame: snapshot + YoY.
+
+**Modules built (approved unless noted):**
+- **01 `campaign_group_gantt`** — every campaign_group's delivery running-span as a Gantt (first→last active day, active
+  days, spend). Reuses the AUDI-1070 census table choice (`summarydata.sum_by_campaign_by_day` → `campaigns` for the group
+  id). Kindred = **7 active groups**; flagship 69884 "CTV Prospecting High Pop" ran the full window ($399k/484d), 4 launched
+  in 2026. *Approved (subtitle removed per review).*
+- **02 `prospecting_audience_expressions`** — per prospecting group (`funnel_level=1 AND objective_id=1`), the latest v2
+  audience expression (`audience.audience_segments`), parsed with `diag/expr.py`, rendered as a **targeting-layer × group
+  fingerprint matrix** that red-outlines every cell deviating from the flagship template. Also emits a decomposition `.md`.
+  **Kindred anomalies:** (a) **DS16 funnel-tag template drift** — the 3 Q1-2026 HiPop launches (115943/45/46) each add
+  DS16 (include own `CampaignGroupID` tag + exclude `Impressions`/`Wins`), which the flagship/LowPop/MidPop lack; (b) **DS35
+  LiveRamp breadth** — LowPop 96108 carries 14 segments vs 11 elsewhere. Consistent across all: DS19=255 (account-level MM
+  keywords, *not* per-campaign), DS2+DS47 customer suppression, DS14 availability gate, DS21/34 own-site retgt excl @180d,
+  10% holdout, RTC id 122000 (in-expression ≠ firing — gated by HHST, cross-ref the gate module). DS16 semantics captured in
+  `data_knowledge.md`. *Awaiting review.*
