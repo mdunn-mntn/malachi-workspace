@@ -211,4 +211,11 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   prospecting campaigns (funnel=1/obj=1). Query returns raw period sums; render derives every metric (spend, imps, CPM,
   visits, visit rate, conv, conv-rate, revenue, AOV, ROAS) + %Δ (computed on raw totals), colors %Δ by good/bad direction,
   emits PNG + committable `.md`. **Kindred: spend +70% / imps +63% but visits −51%, VR −70%, conv −72%, revenue −72%,
-  ROAS 11.40×→1.87× (−84%); AOV flat (−1.7%) ⇒ conversion-COUNT / audience-quality problem, not basket size.** *Awaiting review.*
+  ROAS 11.40×→1.87× (−84%); AOV flat (−1.7%) ⇒ conversion-COUNT / audience-quality problem, not basket size.** *Approved
+  (fonts enlarged + rows tightened per review).*
+- **05 `prospecting_monthly_metrics` (+ two renders)** — monthly time series for all prospecting campaigns (funnel=1/obj=1)
+  across the continuous window, to pinpoint drastic MoM moves. **05 `_monthly_lines`** = small-multiple monthly line charts
+  (one panel per metric, own scale, P1/P2 bands). **05b `_mom_heatmap`** = **MoM %-change flag map** (metric × month,
+  diverging red=drop/blue=rise, cells with |Δ|≥40% outlined = "look here"). Kindred: **30 flagged moves; the cluster is
+  Nov'25 visits +262% spike → Dec'25→Jan'26 collapse (visits −77%, VR −66%, ROAS −58%/−58%) → Feb'26 rebound; plus a
+  Sep-Oct'25 dip/rebound** — aligns with the holiday gate-OFF (module 03/03b). *Awaiting review.*
