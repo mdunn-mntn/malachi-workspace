@@ -105,6 +105,25 @@ Plus `artifacts/incr_75_chart_funnel.png` (Tufte funnel + tier split, 200 DPI).
 - B2B classification: `fpa_advertiser_verticals` type=0 bucket = "B2B Software & Services" is the clean B2B flag.
 - No new schema discovered (reused TI-1019 / TI-884 tables).
 
+### Current-lift cross-reference — folding Matt's ghost-bid tables into the score (2026-07-02)
+The original score used prior performance + power only, **not actual current lift**. Cross-referenced against Matt Brorby's live ghost-bid tables (`dw-main-silver.enriched__dev_matthewbrorby.lift__ghost_bid_visits`, arms `ghost`=holdout / `submitted`=treatment; identical INCR-66 copy exists).
+
+**Coverage reality:** the tables are a **rolling ~10-day window** (2026-06-22..07-01), TTL-capped by the underlying `bid_price_log` (10-day TTL). Ghost-bid logging only went live 2026-05-27. **So "≥30 days in the table" is not achievable today — the ceiling is 10 distinct days** (958 of 1,182 advertisers have all 10). 1,182 advertisers are present; 812 are in our eligible 1,287.
+
+**This is the MNTN bidder leg (the clean reference), NOT Beeswax.** Empirical `ghost_frac` by bid-multiplicity barely moves here: 0.095 @1 bid → 0.103 @10 → 0.116 @11+ (vs the Beeswax leg's 0.10→0.47 blowup). Confirms the register's claim that the MNTN bidder writes ghost bids to the fcap cache → symmetric exit → multiplicity equalizes. Clean band `[.09,.11]` therefore covers bid-buckets 1–10; only the 11+ tail is dropped.
+
+**Debias replicated (two corrections, per Matt's register):** (1) gate to clean `ghost_frac` (bid-multiplicity ≤10); (2) single **earliest-bid anchor** for `visited` (`ARRAY_AGG(visited ORDER BY first_bid_time LIMIT 1)`) instead of `MAX()` over the window — MAX gives holdout IPs a wider observation window and manufactures spurious negative. **Result reproduces the documented negative→positive sign flip:**
+- RAW (MAX window, all bids): pooled abs lift **−0.034pp** (z=−27) — the artifact.
+- DEBIASED (earliest anchor + clean gate): pooled abs lift **+0.049pp** (z=+33).
+
+**Per-advertiser (publish-gated: p<.05 AND ≥20 holdout clean visits):** 92 positive_sig (86 eligible) · 27 negative_sig (26 eligible) · 1,060 null/underpowered. 619 advertisers are minimally powered (≥20 holdout visits).
+
+**Confirmation of the a-priori score:** Top tier (56) → 20 CONFIRMED / 3 CONTRADICTED / 28 unconfirmed(underpowered) / 5 no-data. Mid tier (266) → 41 / 11 / 141 / 73. **61 strongest candidates = Top/Mid tier + confirmed positive current lift.** Face validity: Zazzle current +18% aligns with its prior +11.6pp; Arlo +123%, Axos Bank (val 81.6) +59%, Freedom Debt Relief +56%, GLD +31%, AG Cole Haan +36%.
+
+**Read caveats:** absolute pp are small — this is **bid-grain ITT** (diluted by win rate; scale by win rate `w_c` for served-user ATT). z is **N-inflated** (millions of IPs/advertiser) — **rank by relative-lift magnitude + direction, treat significance as a floor, not a headline** (register: "read magnitude, not z"). The 7d visit window is **truncated** inside a 10-day span for late-first-bid IPs. Publish gate (INCR-69): frame as directional, not a published point estimate.
+
+**Artifacts:** `queries` via `bq_run.sh` (logged); `artifacts/incr_75_debiased_lift.py` (debias + z-test/CI), `artifacts/incr_75_fold_current_lift.py` (fold onto eligible list), `artifacts/incr_75_ghost_crossref.py` (raw cross-ref). Outputs: `incr_75_eligible_with_current_lift.csv` (1,287 eligible + current-lift columns), `incr_75_ghost_debiased_crossref.csv` (1,179 w/ both arms), `incr_75_ghost_debiased_arm.csv` (arm-level raw+clean counts), `incr_75_ghost_current_lift.csv` (raw).
+
 ### External validation — the persuadables gradient (Matt Brorby's ghost-bid bias register, 2026-06-25)
 Matt's population-wide ghost-bid run (`SteelHouse/databricks_targeting` INCR, `ghost_bid_lift_bias_register.md`) independently confirms INCR-75's core thesis. At clean ghost_frac across 100M+ IPs, relative visit lift is **monotonic in intent**: High (top intent) +0.2% / PP +1.6% / Mid +3.3% / MaxReach (low intent) +3.4% / no_score (reach) +0.1%. Top-intent visits anyway (ad adds ~nothing); mid-intent is where the ad moves the outcome; most-saturated IPs (21+ other advertisers bidding) are incrementally dead despite a 1.96% baseline. **This is exactly why INCR-75 down-weights high-IVR/saturated advertisers and rewards measurable-but-movable mid-IVR** — the screen's "movability" and saturation logic is now empirically backed. (Full findings captured in `knowledge/experimentation.md`.)
 
