@@ -253,6 +253,18 @@ Home: `perf_report/{queries,charts,params,outputs/<adv>}`. Params: `params/kindr
 Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 35094**. Frame: snapshot + YoY.
 
 **Modules built (approved unless noted):**
+- **00 `audience_audit`** — **the systematic front-matter (runs FIRST).** Inventories ALL active campaigns, classifies stage
+  by `objective_id` (1=Prospect/4=Retarget/5=MT-S2/6=MT-S3/7=Ego), decodes every audience expression (DS roles/archetype/flags).
+  **Reframing findings:** (1) each *campaign group* is a full funnel → group-level metrics (incl 12b/12c) CONFLATE stages, so
+  audit at campaign×objective grain; (2) **Retargeting (89071) is the revenue engine — 26.5x ROAS, 85% of revenue on 28% of
+  spend, 15,758 conv**; prospecting = 62% of spend / 13% of revenue / 1.9x (top-funnel reach, not the money); (3) prospecting=CTV,
+  Multi-Touch=display; MT-S2 spent ~$18K for ~0 last-touch conv. Two PNGs (stage-map + per-campaign audit) + md. Structural
+  knowledge in `data_knowledge.md`. *Focus stays on prospecting; retargeting kept as headline (per Malachi).*
+- **00b `prospecting_funnel`** — the audience funnel per obj=1 campaign: **max addressable** (`flight_cid_day_audience_sizes`
+  `total_audience_size`, national UI size ~5x-inflated) → **~deliverable** (÷5) → **reached** (CIL distinct ip) → **HI-reached**
+  (`household_score`≥8001) + score-bucket composition. **Refines the decline story: prospecting reaches ~80–88% HI at ~4–12%
+  coverage → no hard HI ceiling, NOT scraping low-score users; the variants' worse ROAS is net-new HI converting worse, not
+  audience-quality erosion.** Base 261318 dark since ~Mar (F1 prospecting stopped; group's later delivery = retargeting). PNG + md.
 - **01 `campaign_group_gantt`** — every campaign_group's delivery running-span as a Gantt (first→last active day, active
   days, spend). Reuses the AUDI-1070 census table choice (`summarydata.sum_by_campaign_by_day` → `campaigns` for the group
   id). Kindred = **7 active groups**; flagship 69884 "CTV Prospecting High Pop" ran the full window ($399k/484d), 4 launched
