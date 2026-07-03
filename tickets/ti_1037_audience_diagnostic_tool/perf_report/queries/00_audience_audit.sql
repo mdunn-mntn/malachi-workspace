@@ -63,8 +63,34 @@ ranked AS (
 SELECT campaign_id, audience_id, expression FROM ranked WHERE rn = 1;
 
 -- ---------------------------------------------------------------------------
--- (C) [next] Audience funnel per prospecting campaign — max addressable -> HI-eligible
---     -> after filters -> reached. Sources: perml.flight_cid_day_audience_sizes
---     (total_audience_size, ~5x UI-overstated); reached = HLL uniques; HI = CIL
---     household_score>=8001 (logdata.cost_impression_log; scored era 2025-06+, 90d TTL).
+-- (C) Audience funnel per prospecting (obj=1) campaign — max addressable -> ~deliverable
+--     -> reached -> HI-reached. Render: 00b_prospecting_funnel. Two pulls:
+--
+--   C1) Addressable UI interest size (national, ~5x-inflated).  -> 00_funnel_sizes.csv
+--       funnel_audience_size == total_audience_size for prospecting (no HI-only subset here).
+       SELECT a.campaign_id,
+         APPROX_QUANTILES(a.total_audience_size,2)[OFFSET(1)] med_total,
+         MAX(a.total_audience_size) max_total
+       FROM `dw-main-silver.perml.flight_cid_day_audience_sizes` a
+       WHERE a.campaign_id IN (<prospecting F1 campaign_ids>)   -- obj=1, one per group
+         AND a.rpt_day BETWEEN "{{WIN_START}}" AND "{{WIN_END}}"
+       GROUP BY 1;
+--
+--   C2) Reached + score-bucket split (HI = household_score>=8001).  -> 00_funnel_hishare.csv
+--       CIL is 90d rolling TTL + scored era (2025-06+), so use a RECENT in-window month.
+--       A prospecting campaign that went dark >90d ago (Kindred base 261318 ~Mar) has no rows.
+       SELECT campaign_id,
+         COUNT(DISTINCT ip)                                        reach_ip,
+         COUNT(DISTINCT IF(household_score>=8001, ip, NULL))       hi_ip,       -- High-Intent
+         COUNT(DISTINCT IF(household_score BETWEEN 6666 AND 8000, ip, NULL)) pp_ip,   -- Purchase-Prone
+         COUNT(DISTINCT IF(household_score BETWEEN 1 AND 6665, ip, NULL))    mid_ip,  -- Mid/MaxReach
+         COUNT(DISTINCT IF(household_score<=0, ip, NULL))          unscored_ip
+       FROM `dw-main-silver.logdata.cost_impression_log`
+       WHERE advertiser_id = {{AID}} AND DATE(time) BETWEEN "{{DELIV_MONTH_START}}" AND "{{DELIV_MONTH_END}}"
+         AND campaign_id IN (<prospecting F1 campaign_ids>)
+       GROUP BY 1;
+--
+--   FINDING (Kindred): prospecting reaches ~80-88% HI at ~4-12% coverage of the (inflated)
+--   national addressable -> no hard HI ceiling, not scraping low-score users. The variants'
+--   worse ROAS is net-new HI converting worse, NOT audience-quality erosion.
 -- ---------------------------------------------------------------------------
