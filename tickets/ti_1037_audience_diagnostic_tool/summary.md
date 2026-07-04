@@ -258,8 +258,11 @@ Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 3509
   **Reframing findings:** (1) each *campaign group* is a full funnel → group-level metrics (incl 12b/12c) CONFLATE stages, so
   audit at campaign×objective grain; (2) **Retargeting (89071) is the revenue engine — 26.5x ROAS, 85% of revenue on 28% of
   spend, 15,758 conv**; prospecting = 62% of spend / 13% of revenue / 1.9x (top-funnel reach, not the money); (3) prospecting=CTV,
-  Multi-Touch=display; MT-S2 spent ~$18K for ~0 last-touch conv. Two PNGs (stage-map + per-campaign audit) + md. Structural
-  knowledge in `data_knowledge.md`. *Focus stays on prospecting; retargeting kept as headline (per Malachi).*
+  Multi-Touch=display; MT-S2 spent ~$18K for ~0 last-touch conv. **ONE coherent front-matter PNG** (folds stage map + the
+  prospecting funnel): TOP = stage map (where the money goes); BOTTOM = per-prospecting-campaign audit with targeting DNA
+  **+ the funnel folded in as columns** (Reached · HI-share [green ≥80%] · Coverage) and flags (narrow/thin geo · net-new gate ·
+  MM-AND-3P · low-HI-share · dark). + md. Structural knowledge in `data_knowledge.md`.
+  *Focus stays on prospecting; retargeting kept as headline (per Malachi).*
 - **00b `prospecting_funnel`** — the audience funnel per obj=1 campaign: **max addressable** (`flight_cid_day_audience_sizes`
   `total_audience_size`, national UI size ~5x-inflated) → **~deliverable** (÷5) → **reached** (CIL distinct ip) → **HI-reached**
   (`household_score`≥8001) + score-bucket composition. **Refines the decline story: prospecting reaches ~80–88% HI at ~4–12%
