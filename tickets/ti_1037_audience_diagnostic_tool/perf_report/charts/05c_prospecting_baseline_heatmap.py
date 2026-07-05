@@ -96,7 +96,7 @@ def main():
     ax.set_title(f"{a.adv} — Prospecting: each month vs its all-months average  "
                  f"(outlined = |Δ| ≥ {a.flag_pct:.0f}%)",
                  fontsize=13.5, fontweight="bold", loc="left", color="#222", x=0.0, y=1.04)
-    ax.text(-3.4, -0.35, "cell = % above/below the metric's 17-month mean · red = below, blue = above · "
+    ax.text(-3.4, -0.35, f"cell = % above/below the metric's {ncol}-month mean · red = below, blue = above · "
             "spike-robust (no phantom revert flag)", fontsize=8.5, color="#777", va="center")
 
     plt.tight_layout()
@@ -105,8 +105,8 @@ def main():
 
     flagged.sort(key=lambda t: -abs(t[2]))
     top = "; ".join(f"{m} {mm} {v:+.0f}%" for m, mm, v in flagged[:6])
-    print(f"FINDING: vs all-months average — {len(flagged)} months beyond ±{a.flag_pct:.0f}%. "
-          f"Biggest: {top}. Nov'25 shows as a genuine spike; Dec'25 no longer a phantom drop.")
+    print(f"FINDING: vs all-months average — {len(flagged)} month-cells beyond ±{a.flag_pct:.0f}%. "
+          f"Biggest: {top}. Spike-robust: a one-off spike shows once, its revert month sits near baseline.")
 
 
 if __name__ == "__main__":

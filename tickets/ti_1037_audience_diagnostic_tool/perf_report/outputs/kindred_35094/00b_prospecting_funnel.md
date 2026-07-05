@@ -4,8 +4,8 @@ Distinct households reached per obj=1 campaign (recent in-TTL month), split by s
 
 | Campaign | Addressable | Reached | HI | HI-share | unscored |
 |---|--:|--:|--:|--:|--:|
-| 540723 Mid Pop | 24.4M | 599K | 512K | 85% | 10% |
-| 576276 HiPop Mom-Focus | 43.1M | 334K | 293K | 88% | 10% |
-| 576267 HiPop Motherhood-Journey | 43.1M | 332K | 287K | 86% | 11% |
-| 576256 HiPop Q1-2026-Harter | 43.1M | 331K | 283K | 85% | 12% |
-| 463188 LowPop | 21.9M | 191K | 152K | 80% | 19% |
+| 540723 Mid Pop | 24.4M | 485K | 399K | 82% | 11% |
+| 576276 HiPop Mom-Focus | 43.1M | 258K | 218K | 84% | 12% |
+| 576267 HiPop Motherhood-Journey | 43.1M | 254K | 210K | 83% | 13% |
+| 576256 HiPop Q1-2026-Harter | 43.1M | 253K | 206K | 81% | 15% |
+| 463188 LowPop | 21.9M | 148K | 107K | 72% | 24% |

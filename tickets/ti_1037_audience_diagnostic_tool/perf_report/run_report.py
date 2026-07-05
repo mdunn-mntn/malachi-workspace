@@ -43,7 +43,7 @@ def sub(text, env):
         if k not in env:
             raise KeyError(f"param {{{{{k}}}}} missing from env")
         return env[k]
-    return re.sub(r"\{\{([A-Z_]+)\}\}", repl, text)
+    return re.sub(r"\{\{([A-Z0-9_]+)\}\}", repl, text)
 
 
 def run_pull(csv, env, outdir, rows=2000):
@@ -64,13 +64,26 @@ def run_pull(csv, env, outdir, rows=2000):
     return ok
 
 
+def _month(d, end=False):
+    """YYYY-MM-DD -> YYYY-MM. For an EXCLUSIVE end date, step back one day first."""
+    if not d:
+        return ""
+    from datetime import date, timedelta
+    y, mo, dy = (int(x) for x in d.split("-"))
+    dt = date(y, mo, dy) - (timedelta(days=1) if end else timedelta())
+    return f"{dt.year:04d}-{dt.month:02d}"
+
+
 def fmt_chart(tmpl, env):
     m = {"OUT": env["OUTDIR"], "ADV": env.get("ADV_LABEL", env.get("ADV_NAME", "")),
          "P1S": env.get("P1_START", ""), "P1E": env.get("P1_END", ""),
          "P2S": env.get("P2_START", ""), "P2E": env.get("P2_END", ""),
          "P1L": env.get("P1_LABEL", ""), "P2L": env.get("P2_LABEL", ""),
          "WINS": env.get("WIN_START", ""), "WINE": env.get("WIN_END", ""),
-         "DMS": env.get("DELIV_MONTH_START", ""), "DME": env.get("DELIV_MONTH_END", "")}
+         "DMS": env.get("DELIV_MONTH_START", ""), "DME": env.get("DELIV_MONTH_END", ""),
+         "HS": env.get("HOLIDAY_START", ""), "HE": env.get("HOLIDAY_END", ""),
+         "P1SM": _month(env.get("P1_START", "")), "P1EM": _month(env.get("P1_END", ""), end=True),
+         "P2SM": _month(env.get("P2_START", "")), "P2EM": _month(env.get("P2_END", ""), end=True)}
     return tmpl.format(**m)
 
 

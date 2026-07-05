@@ -1,29 +1,28 @@
 # Kindred Bravely (35094) — Interest-logic deep-dive (targeting DNA + funnel gate)
 
-**No campaign narrows MM with a required 3P segment.** All 6 prospecting campaigns share the same interest core `(MM DS19[255 kw] OR 3P DS35[11–14 maternity/baby segs])` — OR = additive/broadening. The suspected `MM AND 3P` pattern is absent everywhere.
+**No campaign narrows MM with a required 3P segment.** MM×3P join across campaigns: OR (OR = additive/broadening). The differentiator is a DS16 net-new funnel gate on the gated campaigns, not 3P.
 
 ## Per-campaign targeting DNA
 
-| Campaign | Geo tier · #DMAs | MM kw | 3P seg | MM×3P | Funnel gate (DS16) | Read |
-|---|---|---:|---:|---|---|---|
-| 69884 High Pop (base) | High · 20 | 255 | 11 | OR (additive) | — | broad · ungated |
-| 109926 Mid Pop | Mid · 38 | 255 | 11 | OR (additive) | — | clean geo slice |
-| 96108 Low Pop | Low · 152 | 255 | 14 | OR (additive) | — | clean geo slice |
-| 115943 HiPop Harter | High · 20 | 255 | 11 | OR (additive) | **net-new only (AND'd)** | net-new residual gate |
-| 115945 HiPop Motherhood-J | High · 20 | 255 | 11 | OR (additive) | **net-new only (AND'd)** | net-new residual gate |
-| 115946 HiPop Mom-Focus | High · 20 | 255 | 11 | OR (additive) | **net-new only (AND'd)** | net-new residual gate |
+| Campaign | Geo tier | MM kw | 3P seg | MM×3P | Funnel gate (DS16) | Reach | Net-new vs base | Read |
+|---|---|---:|---:|---|---|---:|---:|---|
+| 69884 CTV Prospecting High Pop | High · 20 | 255 | 11 | OR | — | 6.37M | — | broad · ungated (base) |
+| 109926 CTV Prospecting Mid Pop | Mid · 38 | 255 | 11 | OR | — | 1.06M | 65% | geo slice |
+| 96108 CTV Prospecting LowPop | Low · 152 | 255 | 14 | OR | — | 920K | 79% | geo slice |
+| 115943 CTV Prospecting HiPop Q1-2026-Harter | High · 20 | 255 | 11 | OR | **net-new (AND'd)** | 437K | 64% | net-new residual gate |
+| 115946 CTV Prospecting HiPop Mom-Focus | High · 20 | 255 | 11 | OR | **net-new (AND'd)** | 437K | 60% | net-new residual gate |
+| 115945 CTV Prospecting HiPop Motherhood-Journey | High · 20 | 255 | 11 | OR | **net-new (AND'd)** | 432K | 57% | net-new residual gate |
 
-## The differentiator — the 3 Q1-2026 variants add a DS16 funnel gate
-`AND ( NOT DS16[7291 Impressions, 787280 Wins]  OR  DS16[own campaign-group] )` — decoded via `tpa.categories` (data_source_id=16 = the advertiser's own funnel). Target a household **iff** it was NEVER impressed/won by Kindred **OR** is already owned by this variant = a **net-new-reach gate**.
+## The differentiator — DS16 net-new funnel gate
+`AND ( NOT DS16[own Impressions/Wins]  OR  DS16[own campaign-group tag] )` — decoded via `tpa.categories` (data_source_id=16 = the advertiser's own funnel). Target a household **iff** it was NEVER impressed/won by this advertiser **OR** is already owned by this campaign = a **net-new-reach gate**.
 
-## Empirical narrowing (BQ-native HLL reach on `sum_by_campaign_by_day`, Jan–May '26)
+## Empirical reach & net-new (BQ-native HLL on `sum_by_campaign_by_day`)
 
 | Metric | Value |
 |---|---|
-| Base High Pop reach | 1,643,877 distinct households |
-| Each variant reach | ~435K = **~26% of base** (¼ the pool) |
-| Base ∩ variant | ~27% → **~72% net-new vs base** |
-| Variant ∩ variant | ~9% → **~90% mutually disjoint** (3-way creative split) |
+| Base (69884 High Pop) reach | 6,366,174 distinct households |
+| Gated-variant reach | 432K–437K (3 gated campaigns) |
+| Base ∩ gated variant | **~60% net-new vs base** (avg across gated) |
 
-**Rotation:** base High Pop (ungated, ROAS 2.39x) wound down Jan→Mar and went dark by April; the 3 gated variants (ROAS 1.18–1.35x) ramped up to replace it — so by May, top-20 prospecting is run by the gated variants fishing the smaller, lower-quality residual net-new pool. **The gate narrows by WHO (net-new households), not by 3P.**
+**Read:** the gate narrows by WHO (net-new households), not by 3P — gated campaigns fish the residual net-new pool the ungated base already skipped.
 

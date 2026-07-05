@@ -82,9 +82,12 @@ def main():
     plt.savefig(a.out, dpi=200, bbox_inches="tight")
     print(f"wrote {a.out}")
     worst = max(range(len(months)), key=lambda i: pct["unscored"][i])
-    print(f"FINDING: HI dominates most months (~96–100%); unscored spikes to {pct['unscored'][worst]:.0f}% "
-          f"in {months[worst]} (holiday gate-OFF), and {pct['unscored'][months.index('2025-11')]:.0f}% in "
-          f"2025-11 — the score-level signature of the Dec gate-off (cf. modules 03/03b).")
+    msg = (f"FINDING: HI dominates most months; unscored peaks at {pct['unscored'][worst]:.0f}% "
+           f"in {months[worst]} — the score-level signature of a gate-OFF month (cf. modules 03/03b).")
+    if "2025-11" in months:
+        nov = months.index("2025-11")
+        msg += f" (2025-11 unscored {pct['unscored'][nov]:.0f}%, the Dec gate-off precursor.)"
+    print(msg)
 
 
 if __name__ == "__main__":

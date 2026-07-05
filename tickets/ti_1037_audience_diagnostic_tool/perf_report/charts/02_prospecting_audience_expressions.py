@@ -67,9 +67,19 @@ LAYERS = [
 
 
 def short(gid, name):
-    n = (name or "").replace("CTV Prospecting", "").replace("HiPop", "").strip()
-    n = n.replace("Q1-2026-", "").replace("Motherhood-Journey", "Mother-Journey")
-    return f"{gid}\n{n[:13]}"
+    """Advertiser-agnostic column label: strip boilerplate 'Prospecting'/'CTV' noise,
+    then keep the distinguishing tail so near-identical group names stay distinct."""
+    import re
+    n = (name or "").strip()
+    n = re.sub(r"\bCTV\b", "", n)
+    n = re.sub(r"\bProspecting\b", "", n, flags=re.I)
+    n = re.sub(r"\bProspect\b", "", n, flags=re.I)
+    n = re.sub(r"\b20\d\d\b", "", n)          # drop bare year tokens
+    n = re.sub(r"\bQ[1-4]-?", "", n)          # drop quarter tokens
+    n = re.sub(r"\s+", " ", n).strip(" -")
+    if len(n) > 15:                            # keep the distinguishing tail, not the head
+        n = "…" + n[-14:]
+    return f"{gid}\n{n or '(unnamed)'}"
 
 
 def main():
@@ -143,13 +153,22 @@ def main():
     open(a.md, "w").write("\n".join(lines) + "\n")
     print(f"wrote {a.md}")
 
-    # ---- finding ----
-    ds16_groups = [rows[ci]["campaign_group_id"] for ci in range(ncol) if cmp[2][ci]]
-    ds35_dev = [rows[ci]["campaign_group_id"] for ci in range(ncol) if cmp[1][ci] != cmp[1][0]]
-    print(f"FINDING: {ncol} prospecting groups share one template (DS19 MM kw ×255 acct-level, DS35 "
-          f"maternity 3P, DS2/DS47 customer suppression, DS14 gate, own-site retgt excl, 10% holdout, "
-          f"RTC on). Drift: DS16 funnel tags (CampaignGroupID incl + Impr/Wins excl) only on 2026 "
-          f"launches {ds16_groups}; DS35 breadth differs on {ds35_dev or 'none'}.")
+    # ---- finding (data-driven; no advertiser-specific narrative) ----
+    gids = [rows[ci]["campaign_group_id"] for ci in range(ncol)]
+    # a layer is SHARED when every column matches the flagship AND the flagship has it present
+    shared, drift = [], []
+    for ri, (label, _, _) in enumerate(LAYERS):
+        present0 = disp[ri][0] is not None
+        uniform = all(cmp[ri][ci] == cmp[ri][0] for ci in range(ncol))
+        if uniform and present0:
+            shared.append(label)
+        elif not uniform:
+            dev = [gids[ci] for ci in range(ncol) if cmp[ri][ci] != cmp[ri][0]]
+            drift.append(f"{label} differs on {dev}")
+    shared_txt = "; ".join(shared) if shared else "none"
+    drift_txt = " | ".join(drift) if drift else "none — fully uniform template"
+    print(f"FINDING: {ncol} active prospecting groups. Shared across all: {shared_txt}. "
+          f"Drift: {drift_txt}.")
 
 
 if __name__ == "__main__":

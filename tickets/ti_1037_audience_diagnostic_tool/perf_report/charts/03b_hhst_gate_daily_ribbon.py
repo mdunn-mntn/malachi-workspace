@@ -107,13 +107,20 @@ def main():
         ax.spines[s].set_visible(False)
     ax.tick_params(left=False)
 
-    # comparison-period bands (like the other modules)
-    for (s, e, lab) in [(a.p1[0], a.p1[1], "P1  Jan–May '25"), (a.p2[0], a.p2[1], "P2  Jan–May '26")]:
-        ax.axvspan(dn(s), dn(e), color=NAVY, alpha=0.05, zorder=0)
-        ax.text(dn(s) + (dn(e) - dn(s)) / 2, n - 0.35, lab, ha="center", fontsize=8, color=NAVY, alpha=0.75)
-    ax.axvspan(dn(a.holiday[0]), dn(a.holiday[1]), color=RED, alpha=0.06, zorder=0)
-    ax.text(dn(a.holiday[0]) + (dn(a.holiday[1]) - dn(a.holiday[0])) / 2, n - 0.35, "holiday",
-            fontsize=8, color=RED, ha="center", alpha=0.8)
+    # comparison-period + holiday bands — draw only the portion inside the window so a
+    # single-period window (e.g. a P2-only run) doesn't push labels off-canvas.
+    xlo, xhi = dn(a.win_start), dn(a.win_end)
+
+    def band(s, e, color, alpha, lab, lab_color, lab_alpha):
+        lo, hi = max(dn(s), xlo), min(dn(e), xhi)
+        if hi <= lo:                      # band entirely outside the window → skip
+            return
+        ax.axvspan(lo, hi, color=color, alpha=alpha, zorder=0)
+        ax.text((lo + hi) / 2, n - 0.35, lab, ha="center", fontsize=8, color=lab_color, alpha=lab_alpha)
+
+    band(a.p1[0], a.p1[1], NAVY, 0.05, "P1  Jan–May '25", NAVY, 0.75)
+    band(a.p2[0], a.p2[1], NAVY, 0.05, "P2  Jan–May '26", NAVY, 0.75)
+    band(a.holiday[0], a.holiday[1], RED, 0.06, "holiday", RED, 0.8)
 
     leg = [Patch(fc=GREEN, label="gated HI/Peak (≥6600)"),
            Patch(fc=AMBER, label="mid / continuous (1-6599)"),

@@ -86,7 +86,20 @@ def join_op(node, a=19, b=35):
     return best[0]
 
 
-def tier(n):
+# location_id 237 = "United States" (a national target, NOT a Nielsen DMA). When a campaign's
+# geo include-set is national, geo-tiering is N/A — the advertiser targets all-of-US, not a DMA slice.
+NATIONAL_LOC = "237"
+
+
+def is_national(inc):
+    """True if the include-set is a national target (US as a whole), so geo-tiering does not apply."""
+    return len(inc) == 0 or [str(i) for i in inc] == [NATIONAL_LOC]
+
+
+def tier(inc):
+    if is_national(inc):
+        return "National (US)"
+    n = len(inc)
     if n <= 30:
         return "Top markets"
     if n <= 80:
@@ -123,6 +136,7 @@ def main():
         cw = (e.get("categories") or {}).get("where")
         leaves = ds_leaves(cw)
         jop = join_op(cw)
+        gate = contains(cw, 16)  # DS16 = advertiser's own funnel = net-new-reach gate
         mm, tp = leaves.get(19, 0), leaves.get(35, 0)
         # 3P segment names present
         seg_ids = []
@@ -137,31 +151,51 @@ def main():
                 elif v is not None:
                     collect35(v)
         collect35(cw)
-        markets = [geo.get(str(i), str(i)) for i in inc][:5]
+        natl = is_national(inc)
+        markets = ["United States (national)"] if natl else [geo.get(str(i), str(i)) for i in inc][:5]
         flags = []
         if jop == "and":
             flags.append("AND-NARROWING: 3P required onto MM (throttles reach)")
-        if len(inc) <= 25:
-            flags.append(f"narrow geo: only {len(inc)} of 210 DMAs")
-        if len(inc) >= 120:
-            flags.append(f"thin long-tail: {len(inc)} DMAs (per-DMA delivery near-zero at low $)")
-        if len(setkey[tuple(inc)]) > 1:
-            flags.append(f"fragmentation: {len(setkey[tuple(inc)])} campaigns share this exact DMA set")
+        # geo flags only apply to DMA-sliced campaigns; national targets skip them entirely
+        if not natl:
+            if len(inc) <= 25:
+                flags.append(f"narrow geo: only {len(inc)} of 210 DMAs")
+            if len(inc) >= 120:
+                flags.append(f"thin long-tail: {len(inc)} DMAs (per-DMA delivery near-zero at low $)")
+            if len(setkey[tuple(inc)]) > 1:
+                flags.append(f"fragmentation: {len(setkey[tuple(inc)])} campaigns share this exact DMA set")
+        if gate:
+            flags.append("DS16 net-new gate: fishes residual")
         dive.append({"grp": r["campaign_group_id"], "name": r["group_name"], "n_inc": len(inc), "n_exc": len(exc),
-                     "tier": tier(len(inc)), "markets": markets, "jop": jop, "mm": mm, "tp": tp,
-                     "segs": [segn.get(s, s) for s in seg_ids], "flags": flags})
+                     "natl": natl, "tier": tier(inc), "markets": markets, "jop": jop, "mm": mm, "tp": tp,
+                     "gate": gate, "segs": [segn.get(s, s) for s in seg_ids], "flags": flags})
 
     and_narrowing = any(d["jop"] == "and" for d in dive)
+    n_dive = len(dive) or 1
+    natl_frac = sum(1 for d in dive if d["natl"]) / n_dive
+    mostly_national = natl_frac >= 0.5      # account targets US as a whole (geo-tiering N/A)
+    all_national = natl_frac == 1.0
+    any_gate = any(d["gate"] for d in dive)
+    # geo story only applies when the account actually geo-slices; national accounts get a gate/interest read.
+    if and_narrowing:
+        verdict_md = "AUDIENCE NARROWING (AND-required 3P/segment) — investigate"
+    elif mostly_national:
+        verdict_md = ("NATIONAL — no meaningful geo slicing; " + ("net-new funnel gate present (narrows by WHO, not 3P)"
+                      if any_gate else "additive interest, no structural narrowing"))
+    else:
+        verdict_md = "BROADENING / geo-slicing — NOT audience narrowing"
 
     # ---- markdown deep-dive ----
     md = [f"# {a.adv} — Prospecting campaign audience deep-dive", "",
-          f"**Account red-flag verdict: {'AUDIENCE NARROWING (AND-required 3P/segment) — investigate' if and_narrowing else 'BROADENING / geo-slicing — NOT audience narrowing'}.** "
+          f"**Account red-flag verdict: {verdict_md}.** "
           f"Interest logic across campaigns: {'/'.join(sorted(set((d['jop'] or '?') for d in dive)))} (OR = MM/3P additive; AND = 3P narrows MM). "
-          "Geo `location_ids` decode via `geo.location_data` (Nielsen DMA); 3P names via `tpa.categories` (sizes GCS-gated).", ""]
+          "Geo `location_ids` decode via `geo.location_data` (Nielsen DMA; location 237 = national US); 3P names via `tpa.categories` (sizes GCS-gated).", ""]
     for d in sorted(dive, key=lambda x: x["n_inc"]):
         md.append(f"### {d['grp']} — {d['name']}")
-        md.append(f"- **Geo:** {d['tier']} — **{d['n_inc']} DMAs** (excl {d['n_exc']}). e.g. {', '.join(d['markets'])}"
-                  + (" …" if d["n_inc"] > 5 else ""))
+        geo_line = ("National (US) — targets all-of-US (no DMA slice)" if d["natl"]
+                    else f"{d['tier']} — **{d['n_inc']} DMAs** (excl {d['n_exc']}). e.g. {', '.join(d['markets'])}"
+                    + (" …" if d["n_inc"] > 5 else ""))
+        md.append(f"- **Geo:** {geo_line}")
         md.append(f"- **Interest:** ({d['mm']} MM keywords **{(d['jop'] or '?').upper()}** {d['tp']} LiveRamp 3P segments)"
                   + (" — additive/broadening" if d["jop"] == "or" else " — AND-NARROWING" if d["jop"] == "and" else ""))
         if d["segs"]:
@@ -171,13 +205,15 @@ def main():
     open(a.md, "w").write("\n".join(md) + "\n")
     print(f"wrote {a.md}")
 
-    # ---- PNG summary table ----
-    cols = ["Campaign", "Geo tier", "#DMAs", "Interest logic", "MM kw", "3P seg", "Red flag"]
+    # ---- PNG summary table (adaptive to a variable number of campaigns) ----
+    cols = ["Campaign", "Geo tier", "#DMAs", "Interest logic", "MM kw", "3P seg", "Gate", "Red flag"]
     order = sorted(dive, key=lambda x: x["n_inc"])
     n = len(order)
-    fig, ax = plt.subplots(figsize=(15, 1.1 + 0.62 * n))
+    # name width shrinks the more campaigns there are so long frequency-variant names still fit
+    namew = 32 if n <= 6 else (26 if n <= 10 else 20)
+    fig, ax = plt.subplots(figsize=(15.5, 1.1 + 0.58 * n))
     ax.axis("off")
-    xs = [0.0, 0.30, 0.40, 0.47, 0.66, 0.73, 0.80]
+    xs = [0.0, 0.32, 0.42, 0.50, 0.635, 0.70, 0.755, 0.82]
     yt = n + 0.2
     for x, c in zip(xs, cols):
         ax.text(x, yt, c, fontsize=11, fontweight="bold", color=NAVY, va="center")
@@ -186,28 +222,41 @@ def main():
         y = n - 1 - i
         if i % 2 == 0:
             ax.axhspan(y - 0.5, y + 0.5, color="#000", alpha=0.03)
-        nm = (d["name"] or "").replace("CTV Prospecting", "").strip()
+        nm = (d["name"] or "").strip()
         jc = GREEN if d["jop"] == "or" else (RED if d["jop"] == "and" else GRAY)
-        cells = [f"{d['grp']} {nm[:18]}", d["tier"], str(d["n_inc"]),
+        dma_cell = "US" if d["natl"] else str(d["n_inc"])
+        cells = [f"{d['grp']} {nm[:namew]}", d["tier"], dma_cell,
                  f"MM {(d['jop'] or '?').upper()} 3P", str(d["mm"]), str(d["tp"])]
         for x, txt in zip(xs, cells):
             col = jc if txt.startswith("MM ") else "#222"
-            ax.text(x, y, txt, fontsize=10.5, va="center", color=col,
+            ax.text(x, y, txt, fontsize=10.3, va="center", color=col,
                     fontweight="bold" if txt.startswith("MM ") else "normal")
+        ax.text(xs[6], y, "gated" if d["gate"] else "—", fontsize=10, va="center",
+                color=RED if d["gate"] else GRAY, fontweight="bold" if d["gate"] else "normal")
         fl = d["flags"][0] if d["flags"] else "—"
-        ax.text(xs[6], y, fl[:34], fontsize=9, va="center", color=RED if d["flags"] else GRAY)
+        ax.text(xs[7], y, fl[:30], fontsize=9, va="center", color=RED if d["flags"] else GRAY)
     ax.set_xlim(0, 1)
     ax.set_ylim(-0.6, n + 0.6)
-    verdict = "AUDIENCE NARROWING — investigate" if and_narrowing else "BROADENING / geo-slicing (not narrowing)"
+    if and_narrowing:
+        verdict = "AUDIENCE NARROWING — investigate"
+    elif mostly_national:
+        verdict = "NATIONAL · net-new gate" if any_gate else "NATIONAL · additive (no narrowing)"
+    else:
+        verdict = "BROADENING / geo-slicing (not narrowing)"
     ax.set_title(f"{a.adv} — Campaign audience deep-dive   ·   verdict: {verdict}",
                  fontsize=13.5, fontweight="bold", loc="left", color="#222", pad=12)
     plt.tight_layout()
     plt.savefig(a.png, dpi=190, bbox_inches="tight")
     print(f"wrote {a.png}")
-    print(f"FINDING: {n} prospecting campaigns geo-sliced by DMA (Top-20 / Mid-38 / Low-152). Interest "
-          f"logic = {'/'.join(sorted(set((d['jop'] or '?') for d in dive)))} ⇒ "
-          f"{'AND-narrowing present' if and_narrowing else 'ADDITIVE (no AND-narrowing)'}. "
-          f"Story = geo-mix broadening into smaller markets + top-market flagship wind-down, NOT audience narrowing.")
+    n_natl = sum(1 for d in dive if d["natl"])
+    n_gated = sum(1 for d in dive if d["gate"])
+    geo_desc = (f"{n_natl}/{n} national (US), {n - n_natl} DMA-sliced" if n_natl else
+                f"{n} prospecting campaigns geo-sliced by DMA")
+    print(f"FINDING: {geo_desc}. Interest logic = "
+          f"{'/'.join(sorted(set((d['jop'] or '?') for d in dive)))} ⇒ "
+          f"{'AND-narrowing present' if and_narrowing else 'ADDITIVE (no AND-narrowing)'}; "
+          f"{n_gated}/{n} carry a DS16 net-new funnel gate. "
+          f"{'Narrowing is by WHO (net-new households), not by 3P.' if not and_narrowing else ''}")
 
 
 if __name__ == "__main__":

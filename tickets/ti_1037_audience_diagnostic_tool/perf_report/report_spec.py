@@ -1,19 +1,73 @@
-"""Report manifest — one entry per module. The runner (run_report.py) executes each module's
-`pulls` (clean single-query .sql in queries_exec/, param-substituted -> outputs/<adv>/<csv>.csv)
-then its `chart` command (formatted with the params env). Modules with `pulls: []` reuse another
-module's CSVs. Chart command placeholders: {OUT} {ADV} {P1S} {P1E} {P2S} {P2E} {P1L} {P2L}
-{WINS} {WINE} {DMS} {DME}.
-
-Each pull: {"csv": "<name>"} -> runs queries_exec/<name>.sql, saves <OUT>/<name>.csv. Optional
-"rows" overrides max_rows (default 2000).
-"""
+"""Report manifest — one entry per module (see run_report.py). Generated from the module-
+conversion workflow + hand-maintained. pulls run queries_exec/<csv>.sql (param-substituted)
+-> outputs/<adv>/<csv>.csv; then the chart cmd runs. Empty pulls reuse an earlier module's CSVs.
+Chart tokens: {OUT}{ADV}{P1S}{P1E}{P2S}{P2E}{P1L}{P2L}{WINS}{WINE}{DMS}{DME}{HS}{HE}."""
 
 SPEC = [
     {"id": "00", "title": "Audience audit (front matter)",
-     "pulls": [{"csv": "00_campaign_enum"}, {"csv": "00_all_expressions"},
-               {"csv": "00_funnel_sizes"}, {"csv": "00_funnel_hishare"}],
+     "pulls": [{"csv": "00_campaign_enum"}, {"csv": "00_all_expressions"}, {"csv": "00_funnel_sizes"}, {"csv": "00_funnel_hishare"}],
      "chart": 'charts/00_audience_audit.py --outdir {OUT} --adv "{ADV}"'},
     {"id": "00b", "title": "Prospecting reach by score bucket",
-     "pulls": [],  # reuses module 00 CSVs
+     "pulls": [],
      "chart": 'charts/00b_prospecting_funnel.py --outdir {OUT} --adv "{ADV}"'},
+    {"id": "01", "title": "Campaign-group Gantt",
+     "pulls": [{"csv": "01_campaign_group_gantt"}],
+     "chart": 'charts/01_campaign_group_gantt.py --csv {OUT}/01_campaign_group_gantt.csv --out {OUT}/01_campaign_group_gantt.png --adv "{ADV}" --win-start {WINS} --win-end {WINE} --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "02", "title": "Prospecting audience-expression fingerprint (anomaly view)",
+     "pulls": [{"csv": "02_prospecting_audience_expressions"}],
+     "chart": 'charts/02_prospecting_audience_expressions.py --csv {OUT}/02_prospecting_audience_expressions.csv --out {OUT}/02_prospecting_audience_expressions.png --md {OUT}/02_prospecting_audience_decomposition.md --adv "{ADV}"'},
+    {"id": "03", "title": "HHST gate trajectory (prospecting campaigns)",
+     "pulls": [{"csv": "03_hhst_gate_history"}],
+     "chart": 'charts/03_hhst_gate_history.py --csv {OUT}/03_hhst_gate_history.csv --out {OUT}/03_hhst_gate_history.png --adv "{ADV}" --win-start {WINS} --win-end {WINE} --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "03b", "title": "HHST gate daily ribbon (prospecting campaigns)",
+     "pulls": [{"csv": "03b_hhst_gate_daily_ribbon"}],
+     "chart": 'charts/03b_hhst_gate_daily_ribbon.py --csv {OUT}/03b_hhst_gate_daily_ribbon.csv --out {OUT}/03b_hhst_gate_daily_ribbon.png --adv "{ADV}" --win-start {WINS} --win-end {WINE} --holiday {HS} {HE} --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "04", "title": "Prospecting P1-vs-P2 metrics table (+ %Δ)",
+     "pulls": [{"csv": "04_prospecting_yoy_metrics"}],
+     "chart": 'charts/04_prospecting_yoy_metrics.py --csv {OUT}/04_prospecting_yoy_metrics.csv --out {OUT}/04_prospecting_yoy_metrics.png --md {OUT}/04_prospecting_yoy_metrics.md --adv "{ADV}" --p1-label "{P1L}" --p2-label "{P2L}"'},
+    {"id": "05", "title": "Prospecting monthly metric trends (small-multiple lines)",
+     "pulls": [{"csv": "05_prospecting_monthly_metrics"}],
+     "chart": 'charts/05_prospecting_monthly_lines.py --csv {OUT}/05_prospecting_monthly_metrics.csv --out {OUT}/05_prospecting_monthly_lines.png --adv "{ADV}" --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "05b", "title": "Prospecting MoM % change heatmap (where-to-look flag map)",
+     "pulls": [],
+     "chart": 'charts/05b_prospecting_mom_heatmap.py --csv {OUT}/05_prospecting_monthly_metrics.csv --out {OUT}/05b_prospecting_mom_heatmap.png --adv "{ADV}"'},
+    {"id": "05c", "title": "Prospecting baseline-deviation heatmap (spike-robust flag map)",
+     "pulls": [],
+     "chart": 'charts/05c_prospecting_baseline_heatmap.py --csv {OUT}/05_prospecting_monthly_metrics.csv --out {OUT}/05c_prospecting_baseline_heatmap.png --adv "{ADV}"'},
+    {"id": "06", "title": "Prospecting score distribution: two-period comparison",
+     "pulls": [{"csv": "06_prospecting_score_buckets_monthly"}],
+     "chart": 'charts/06_prospecting_score_yoy.py --csv {OUT}/06_prospecting_score_buckets_monthly.csv --out {OUT}/06_prospecting_score_yoy.png --adv "{ADV}" --pa {P1SM} {P1EM} --pb {P2SM} {P2EM} --pa-label "{P1L}" --pb-label "{P2L}"'},
+    {"id": "06b", "title": "Prospecting score distribution by month (100% stacked)",
+     "pulls": [],
+     "chart": 'charts/06b_prospecting_score_monthly.py --csv {OUT}/06_prospecting_score_buckets_monthly.csv --out {OUT}/06b_prospecting_score_monthly.png --adv "{ADV}"'},
+    {"id": "06c", "title": "Prospecting score-tier distribution: P1 vs P2 table",
+     "pulls": [],
+     "chart": 'charts/06c_prospecting_score_threshold_table.py --csv {OUT}/06_prospecting_score_buckets_monthly.csv --out {OUT}/06c_prospecting_score_threshold_table.png --md {OUT}/06c_prospecting_score_threshold_table.md --adv "{ADV}" --p1 {P1SM} {P1EM} --p2 {P2SM} {P2EM} --p1-label "{P1L}" --p2-label "{P2L}"'},
+    {"id": "07", "title": "Prospecting audience change timeline (data-source presence over time)",
+     "pulls": [{"csv": "07_prospecting_audience_change_history"}],
+     "chart": 'charts/07_prospecting_audience_change_timeline.py --csv {OUT}/07_prospecting_audience_change_history.csv --out {OUT}/07_prospecting_audience_change_timeline.png --adv "{ADV}" --end {P2E} --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "07b", "title": "Prospecting audience change-log MATRIX (campaigns x change-dates)",
+     "pulls": [],
+     "chart": 'charts/07b_prospecting_audience_change_matrix.py --csv {OUT}/07_prospecting_audience_change_history.csv --out {OUT}/07b_prospecting_audience_change_matrix.png --md {OUT}/07b_prospecting_audience_change_matrix.md --adv "{ADV}"'},
+    {"id": "08", "title": "prospecting_flights",
+     "pulls": [{"csv": "08_prospecting_flights"}],
+     "chart": 'charts/08_prospecting_flights.py --csv {OUT}/08_prospecting_flights.csv --out {OUT}/08_prospecting_flights.png --adv "{ADV}" --win-start {WINS} --win-end {WINE} --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "09", "title": "prospecting_reach_recirculation",
+     "pulls": [{"csv": "09_prospecting_reach_recirculation"}],
+     "chart": 'charts/09_prospecting_reach_recirculation.py --csv {OUT}/09_prospecting_reach_recirculation.csv --out {OUT}/09_prospecting_reach_recirculation.png --adv "{ADV}" --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "10", "title": "prospecting_audience_size_coverage",
+     "pulls": [{"csv": "10_prospecting_audience_size_coverage"}],
+     "chart": 'charts/10_prospecting_audience_size_coverage.py --pool-csv {OUT}/10_prospecting_audience_size_coverage.csv --reach-csv {OUT}/09_prospecting_reach_recirculation.csv --out {OUT}/10_prospecting_audience_size_coverage.png --adv "{ADV}" --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "11", "title": "VV lookback window change log (measurement-change flag)",
+     "pulls": [{"csv": "11_vv_window_change_log"}],
+     "chart": 'charts/11_vv_window_change_log.py --csv {OUT}/11_vv_window_change_log.csv --out {OUT}/11_vv_window_change_log.png --md {OUT}/11_vv_window_change_log.md --adv "{ADV}" --win-start {P1S} --win-end {P2E} --p1 {P1S} {P1E} --p2 {P2S} {P2E}'},
+    {"id": "12", "title": "Campaign audience deep dive",
+     "pulls": [{"csv": "12_geo_dma_reference"}, {"csv": "12_ds35_segment_names"}],
+     "chart": 'charts/12_campaign_audience_deep_dive.py --expr {OUT}/02_prospecting_audience_expressions.csv --geo {OUT}/12_geo_dma_reference.csv --segs {OUT}/12_ds35_segment_names.csv --png {OUT}/12_campaign_audience_deep_dive.png --md {OUT}/12_campaign_audience_deep_dive.md --adv "{ADV}"'},
+    {"id": "12b", "title": "Geo tier deep dive",
+     "pulls": [{"csv": "12b_geo_dma_decode"}, {"csv": "12b_geo_tier_metrics"}, {"csv": "12b_per_dma_delivery_may26"}],
+     "chart": 'charts/12b_geo_tier_deep_dive.py --expr {OUT}/02_prospecting_audience_expressions.csv --geo {OUT}/12b_geo_dma_decode.csv --metrics {OUT}/12b_geo_tier_metrics.csv --deliv {OUT}/12b_per_dma_delivery_may26.csv --ref-png {OUT}/12b_geo_tier_reference.png --perf-png {OUT}/12b_geo_tier_performance.png --md {OUT}/12b_geo_tier_deep_dive.md --adv "{ADV}" --deliv-label "{DMS}..{DME}"'},
+    {"id": "12c", "title": "Interest logic deep dive",
+     "pulls": [{"csv": "12c_reach_monthly"}, {"csv": "12c_overlap"}],
+     "chart": 'charts/12c_interest_logic_deep_dive.py --expr {OUT}/02_prospecting_audience_expressions.csv --monthly {OUT}/12c_reach_monthly.csv --overlap {OUT}/12c_overlap.csv --dna-png {OUT}/12c_interest_dna.png --gate-png {OUT}/12c_funnel_gate_evidence.png --md {OUT}/12c_interest_logic_deep_dive.md --adv "{ADV}"'},
 ]

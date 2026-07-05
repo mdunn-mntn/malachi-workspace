@@ -29,7 +29,8 @@ NAVY, GREEN, AMBER, RED, GRAY = "#27496D", "#2E8B57", "#C77B30", "#D63B2F", "#9A
 
 
 def mnum(ym):
-    return mdates.date2num(datetime.strptime(ym, "%Y-%m"))
+    # accept "YYYY-MM" or "YYYY-MM-DD" (truncate to the month)
+    return mdates.date2num(datetime.strptime(ym[:7], "%Y-%m"))
 
 
 def main():
@@ -112,7 +113,9 @@ def main():
     plt.tight_layout(rect=[0, 0, 1, 0.985])
     plt.savefig(a.out, dpi=190, bbox_inches="tight")
     print(f"wrote {a.out}")
-    print(f"FINDING: brand-new HI share {bns[0]:.0f}% (Jun'25) -> {bns[-1]:.0f}% (May'26); returning "
+    fmt_lbl = lambda ym: datetime.strptime(ym, "%Y-%m").strftime("%b'%y")
+    print(f"FINDING: brand-new HI share {bns[0]:.0f}% ({fmt_lbl(hi[0]['mo'])}) -> {bns[-1]:.0f}% "
+          f"({fmt_lbl(hi[-1]['mo'])}); returning "
           f"share rose to {100 - bns[-1]:.0f}%. Cumulative HI reach {cum[-1]:.1f}M and STILL climbing "
           f"(~{[r['new_hi'] for r in hi][-1]/1e3:.0f}k new/mo) -> recirculating but pool not exhausted. "
           f"Frequency ~{np.mean(freq):.1f} imps/IP (low). Need pool size (module 10) for coverage %.")

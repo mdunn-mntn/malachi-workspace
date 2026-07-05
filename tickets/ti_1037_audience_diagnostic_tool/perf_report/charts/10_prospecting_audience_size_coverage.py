@@ -29,7 +29,7 @@ NAVY, GREEN, AMBER, RED, GRAY = "#27496D", "#2E8B57", "#C77B30", "#D63B2F", "#9A
 
 
 def mnum(ym):
-    return mdates.date2num(datetime.strptime(ym, "%Y-%m"))
+    return mdates.date2num(datetime.strptime(ym[:7], "%Y-%m"))  # accepts YYYY-MM or YYYY-MM-DD
 
 
 def main():
@@ -48,17 +48,21 @@ def main():
     addr = np.array([float(p["addressable_pool"]) for p in pool]) / 1e6
     deliv = np.array([float(p["deliverable_est"]) for p in pool]) / 1e6
 
-    # cumulative HI reached from module 09
-    reach = list(csv.DictReader(open(a.reach_csv)))
+    # cumulative HI reached from module 09 (may be absent / all-zero -> panel 2 degrades)
     cum_by_mo, run = {}, 0
-    for r in reach:
-        if int(r["hi_reach"]) > 0:
-            run += int(r["new_hi"])
-            cum_by_mo[r["mo"]] = run / 1e6
+    try:
+        reach = list(csv.DictReader(open(a.reach_csv)))
+        for r in reach:
+            if int(r["hi_reach"]) > 0:
+                run += int(r["new_hi"])
+                cum_by_mo[r["mo"]] = run / 1e6
+    except (FileNotFoundError, KeyError):
+        pass
     hm = [m for m in pm if m in cum_by_mo]
     xh = [mnum(m) for m in hm]
     cum = [cum_by_mo[m] for m in hm]
     deliv_hm = [float(next(p for p in pool if p["mo"] == m)["deliverable_est"]) / 1e6 for m in hm]
+    have_cov = len(hm) >= 1
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 9))
 
@@ -71,30 +75,48 @@ def main():
     ax1.fill_between(xa, addr, color=NAVY, alpha=0.16, zorder=2)
     ax1.plot(xa, addr, color=NAVY, lw=2.4, marker="o", ms=4, zorder=3, label="addressable pool (UI)")
     ax1.plot(xa, deliv, color=NAVY, lw=1.4, ls="--", alpha=0.7, zorder=3, label="deliverable ≈ pool ÷ 5")
-    ax1.annotate("3P (DS35) added\npool jumps", (mnum("2025-05"), addr[pm.index("2025-05")]),
-                 textcoords="offset points", xytext=(6, -6), fontsize=8, color=NAVY)
+    # auto-detect the largest MoM pool jump (>=40% step up) -> likely a 3P/audience-expansion event
+    jump_i = None
+    if len(addr) >= 2:
+        steps = [(addr[i] - addr[i - 1]) / max(addr[i - 1], 1e-9) for i in range(1, len(addr))]
+        bi = int(np.argmax(steps)) + 1
+        if steps[bi - 1] >= 0.40:
+            jump_i = bi
+    if jump_i is not None:
+        ax1.annotate("audience expansion\n(pool jumps)", (xa[jump_i], addr[jump_i]),
+                     textcoords="offset points", xytext=(6, -6), fontsize=8, color=NAVY)
     ax1.annotate(f"{addr[-1]:.0f}M", (xa[-1], addr[-1]), textcoords="offset points", xytext=(4, 4),
                  fontsize=9, color=NAVY, fontweight="bold")
     ax1.set_ylabel("addressable pool (M IPs)", fontsize=9, color="#555")
     ax1.set_ylim(0, max(addr) * 1.15)
-    ax1.set_title("Addressable prospecting pool  (grew when 3P added; contracted ~35% across 2026)",
+    # dynamic contraction/expansion of pool from window peak to last month
+    peak = max(addr)
+    chg = (addr[-1] - peak) / peak * 100
+    trend = f"contracted ~{abs(chg):.0f}% from peak" if chg < -3 else (
+        f"expanded ~{chg:.0f}% from trough" if chg > 3 else "roughly flat")
+    ax1.set_title(f"Addressable prospecting pool  ({trend} across the window)",
                   fontsize=11, fontweight="bold", loc="left", color="#333")
     ax1.legend(frameon=False, fontsize=8.5, loc="upper right")
 
     # ---- Panel 2: coverage ----
     bands(ax2)
-    ax2.plot(xh, deliv_hm, color=NAVY, lw=1.8, ls="--", marker="s", ms=3, label="deliverable HI pool (≈ pool ÷5)")
-    ax2.fill_between(xh, cum, color=GREEN, alpha=0.18, zorder=2)
-    ax2.plot(xh, cum, color=GREEN, lw=2.4, marker="o", ms=4, zorder=3, label="cumulative distinct HI reached")
-    cov = 100 * cum[-1] / deliv_hm[-1]
-    ax2.annotate(f"{cum[-1]:.1f}M reached\n≈ {cov:.0f}% of {deliv_hm[-1]:.1f}M deliverable",
-                 (xh[-1], cum[-1]), textcoords="offset points", xytext=(-8, 6), ha="right",
-                 fontsize=9, color=GREEN, fontweight="bold")
+    cov = None
+    if have_cov:
+        ax2.plot(xh, deliv_hm, color=NAVY, lw=1.8, ls="--", marker="s", ms=3, label="deliverable HI pool (≈ pool ÷5)")
+        ax2.fill_between(xh, cum, color=GREEN, alpha=0.18, zorder=2)
+        ax2.plot(xh, cum, color=GREEN, lw=2.4, marker="o", ms=4, zorder=3, label="cumulative distinct HI reached")
+        cov = 100 * cum[-1] / deliv_hm[-1]
+        ax2.annotate(f"{cum[-1]:.1f}M reached\n≈ {cov:.0f}% of {deliv_hm[-1]:.1f}M deliverable",
+                     (xh[-1], cum[-1]), textcoords="offset points", xytext=(-8, 6), ha="right",
+                     fontsize=9, color=GREEN, fontweight="bold")
+        ax2.set_ylim(0, max(max(cum), max(deliv_hm)) * 1.2)
+        ax2.legend(frameon=False, fontsize=8.5, loc="upper left")
+    else:
+        ax2.text(0.5, 0.5, "No HI (scored) reach data for this window\n(module 09 empty / pre-score era)",
+                 transform=ax2.transAxes, ha="center", va="center", fontsize=11, color=GRAY)
     ax2.set_ylabel("HI households (M)", fontsize=9, color="#555")
-    ax2.set_ylim(0, max(max(cum), max(deliv_hm)) * 1.2)
-    ax2.set_title("HI coverage  (reach nearing the shrinking deliverable pool = little fresh HI left)",
+    ax2.set_title("HI coverage  (cumulative distinct HI reached vs the deliverable pool)",
                   fontsize=11, fontweight="bold", loc="left", color="#333")
-    ax2.legend(frameon=False, fontsize=8.5, loc="upper left")
 
     for ax in (ax1, ax2):
         ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
@@ -106,14 +128,15 @@ def main():
     fig.suptitle(f"{a.adv} — Prospecting audience size & HI coverage", fontsize=15,
                  fontweight="bold", color="#222", x=0.01, ha="left", y=0.995)
     fig.text(0.01, 0.005, "total_audience_size overstates deliverable by ~5x (data_knowledge); it's the TOTAL "
-             "addressable (keyword+3P), not HI-only, so HI coverage % is approximate. Pool floored 2025-02.",
+             f"addressable (keyword+3P), not HI-only, so HI coverage % is approximate. Pool floored {pm[0]}.",
              fontsize=7.5, color="#999")
     plt.tight_layout(rect=[0, 0.02, 1, 0.985])
     plt.savefig(a.out, dpi=190, bbox_inches="tight")
     print(f"wrote {a.out}")
-    print(f"FINDING: addressable pool {addr[pm.index('2026-01')]:.0f}M(Jan'26)->{addr[-1]:.0f}M(May'26) "
-          f"(~35% contraction). Cumulative HI reached {cum[-1]:.1f}M ≈ {cov:.0f}% of the ~{deliv_hm[-1]:.1f}M "
-          f"deliverable — coverage rising as pool shrinks + reach accrues ⇒ limited fresh-HI headroom.")
+    cov_txt = (f" Cumulative HI reached {cum[-1]:.1f}M ≈ {cov:.0f}% of the ~{deliv_hm[-1]:.1f}M deliverable."
+               if have_cov else " (no HI reach data for window.)")
+    print(f"FINDING: addressable pool {addr[0]:.0f}M({pm[0]})->{addr[-1]:.0f}M({pm[-1]}); "
+          f"{trend} (peak {peak:.0f}M).{cov_txt}")
 
 
 if __name__ == "__main__":

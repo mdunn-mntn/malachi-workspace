@@ -59,6 +59,12 @@ def main():
     p1m = d(a.p1[0]) + (d(a.p1[1]) - d(a.p1[0])) / 2
     p2m = d(a.p2[0]) + (d(a.p2[1]) - d(a.p2[0])) / 2
 
+    # adaptive y-scale — headroom above the largest window across PRO/RT/conv (handles
+    # advertisers with windows > the Kindred 45d ceiling); floor at 52 to keep Kindred output identical.
+    ymax = max([52] + [max(c["pro"], c["rt"], c["conv"]) for c in changes]) + 5
+    y_flag = ymax - 5          # change-marker label baseline (was 47 for the 52 ceiling)
+    y_period = ymax * 2 / 52   # P1/P2 label baseline (was 2 for the 52 ceiling)
+
     fig, ax = plt.subplots(figsize=(13, 5.2))
     for s, e in (a.p1, a.p2):
         ax.axvspan(mdates.date2num(d(s)), mdates.date2num(d(e)), color=NAVY, alpha=0.055, zorder=0)
@@ -78,7 +84,7 @@ def main():
     for c in changes:
         if ws < c["date"] <= we:
             ax.axvline(mdates.date2num(c["date"]), color=RED, ls="--", lw=1.3, zorder=2)
-            ax.text(mdates.date2num(c["date"]) + 5, 47, f"{c['date']}\nPRO->{c['pro']}d  RT->{c['rt']}d",
+            ax.text(mdates.date2num(c["date"]) + 5, y_flag, f"{c['date']}\nPRO->{c['pro']}d  RT->{c['rt']}d",
                     fontsize=8.5, color=RED, va="top", fontweight="bold")
 
     # P1/P2 flag — PRO window at each period's start & end (P2 may straddle a change)
@@ -86,15 +92,15 @@ def main():
     p2s, p2e_ = val_at(changes, "pro", d(a.p2[0])), val_at(changes, "pro", d(a.p2[1]))
     p1lbl = f"{p1s}d" if p1s == p1e_ else f"{p1s}-{p1e_}d"
     p2lbl = f"{p2s}d" if p2s == p2e_ else f"{p2s}-{p2e_}d"
-    ax.text(mdates.date2num(p1m), 2, f"P1: PRO {p1lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
-    ax.text(mdates.date2num(p2m), 2, f"P2: PRO {p2lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
+    ax.text(mdates.date2num(p1m), y_period, f"P1: PRO {p1lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
+    ax.text(mdates.date2num(p2m), y_period, f"P2: PRO {p2lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
     if p1e_ != p2e_ or p1s != p1e_ or p2s != p2e_:
         ax.text(0.5, 1.04, f"FLAG: prospecting VV window shortened  P1 {p1lbl}  ->  P2 {p2lbl}  (progressive) — P1 "
                 f"visits/conversions were measured on a LONGER window; each shortening mechanically reduces measured "
                 f"visits & conversions, so part of the P1-vs-P2 gap is measurement.", transform=ax.transAxes,
                 ha="center", fontsize=9, color=RED, fontweight="bold")
 
-    ax.set_ylim(0, 52)
+    ax.set_ylim(0, ymax)
     ax.set_xlim(mdates.date2num(ws) - 10, mdates.date2num(we) + 10)
     ax.set_ylabel("lookback window (days)", fontsize=10, color="#555")
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
@@ -121,9 +127,23 @@ def main():
         md.append(f"| {r['change_date']} | {r['pro_window']}d | {r['rt_window']}d | {r['conversion_window']}d | {chg} |")
     open(a.md, "w").write("\n".join(md) + "\n")
     print(f"wrote {a.md}")
-    print(f"FINDING: {len(changes)} VV-window changes. Prospecting VV window P1={p1lbl} -> P2={p2lbl} "
-          f"(progressive shortening 45->30->14; P2 straddles the 2026-04-08 change). Measurement confound on the "
-          f"P1-vs-P2 visits/conv/CVR gap. Conversion window constant 30d.")
+
+    # ---- data-derived finding (no hardcoded advertiser specifics) ----
+    pro_traj = "->".join(str(c["pro"]) for c in changes) if changes else "n/a"
+    conv_vals = {c["conv"] for c in changes}
+    conv_note = (f"Conversion window constant {next(iter(conv_vals))}d."
+                 if len(conv_vals) == 1 else
+                 f"Conversion window varies ({'->'.join(str(c['conv']) for c in changes)}d).")
+    # does P2 straddle a change (window differs at P2 start vs end)?
+    straddle = " P2 straddles a mid-period change." if p2s != p2e_ else ""
+    if p1lbl == p2lbl and p1s == p1e_ and p2s == p2e_:
+        confound = ("No measurement confound: prospecting VV window identical across P1 and P2 — "
+                    "any P1-vs-P2 visits/conv/CVR gap is NOT a window artifact.")
+    else:
+        confound = (f"Measurement confound on the P1-vs-P2 visits/conv/CVR gap: prospecting VV window "
+                    f"P1={p1lbl} -> P2={p2lbl}.{straddle}")
+    print(f"FINDING: {len(changes)} VV-window change events. Prospecting VV window trajectory {pro_traj}d. "
+          f"{confound} {conv_note}")
 
 
 if __name__ == "__main__":

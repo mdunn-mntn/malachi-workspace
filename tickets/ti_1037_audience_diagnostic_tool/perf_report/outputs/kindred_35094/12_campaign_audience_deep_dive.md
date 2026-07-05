@@ -1,6 +1,6 @@
 # Kindred Bravely (35094) — Prospecting campaign audience deep-dive
 
-**Account red-flag verdict: BROADENING / geo-slicing — NOT audience narrowing.** Interest logic across campaigns: or (OR = MM/3P additive; AND = 3P narrows MM). Geo `location_ids` decode via `geo.location_data` (Nielsen DMA); 3P names via `tpa.categories` (sizes GCS-gated).
+**Account red-flag verdict: BROADENING / geo-slicing — NOT audience narrowing.** Interest logic across campaigns: or (OR = MM/3P additive; AND = 3P narrows MM). Geo `location_ids` decode via `geo.location_data` (Nielsen DMA; location 237 = national US); 3P names via `tpa.categories` (sizes GCS-gated).
 
 ### 69884 — CTV Prospecting High Pop
 - **Geo:** Top markets — **20 DMAs** (excl 190). e.g. Chicago IL, Orlando-Daytona Beach-Melbourne, FL, Charlotte, NC, Denver, CO, Boston, MA-Manchester, NH …
@@ -12,19 +12,19 @@
 - **Geo:** Top markets — **20 DMAs** (excl 190). e.g. Chicago IL, Orlando-Daytona Beach-Melbourne, FL, Charlotte, NC, Denver, CO, Boston, MA-Manchester, NH …
 - **Interest:** (255 MM keywords **OR** 11 LiveRamp 3P segments) — additive/broadening
 - **3P segments:** US > Retail > Intent > Clothing > Maternity; Lifestyle > Life event in last 6 months - Had a baby > Opt-In; In-Market > Purchase Intent In Maternity Care Services (HEM); US > Place Visits > Polygon > Brands > Extended > Motherhood Maternity (Apparel | Women's Clothing | Maternity) …
-- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set
+- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; DS16 net-new gate: fishes residual
 
 ### 115945 — CTV Prospecting HiPop Motherhood-Journey
 - **Geo:** Top markets — **20 DMAs** (excl 190). e.g. Chicago IL, Orlando-Daytona Beach-Melbourne, FL, Charlotte, NC, Denver, CO, Boston, MA-Manchester, NH …
 - **Interest:** (255 MM keywords **OR** 11 LiveRamp 3P segments) — additive/broadening
 - **3P segments:** US > Retail > Intent > Clothing > Maternity; Lifestyle > Life event in last 6 months - Had a baby > Opt-In; In-Market > Purchase Intent In Maternity Care Services (HEM); US > Place Visits > Polygon > Brands > Extended > Motherhood Maternity (Apparel | Women's Clothing | Maternity) …
-- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set
+- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; DS16 net-new gate: fishes residual
 
 ### 115946 — CTV Prospecting HiPop Mom-Focus
 - **Geo:** Top markets — **20 DMAs** (excl 190). e.g. Chicago IL, Orlando-Daytona Beach-Melbourne, FL, Charlotte, NC, Denver, CO, Boston, MA-Manchester, NH …
 - **Interest:** (255 MM keywords **OR** 11 LiveRamp 3P segments) — additive/broadening
 - **3P segments:** US > Retail > Intent > Clothing > Maternity; Lifestyle > Life event in last 6 months - Had a baby > Opt-In; In-Market > Purchase Intent In Maternity Care Services (HEM); US > Place Visits > Polygon > Brands > Extended > Motherhood Maternity (Apparel | Women's Clothing | Maternity) …
-- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set
+- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; DS16 net-new gate: fishes residual
 
 ### 109926 — CTV Prospecting Mid Pop
 - **Geo:** Mid markets — **38 DMAs** (excl 172). e.g. Indianapolis, IN, Albuquerque-Santa Fe, NM, Albany-Schenectady-Troy, NY, Greenville-Spartanburg, SC-Asheville, NC-Anderson, SC, Birmingham, AL …

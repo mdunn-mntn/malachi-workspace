@@ -16,6 +16,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager, colormaps, colors
 from matplotlib.patches import Rectangle
+from collections import Counter
 
 for fam in ["Helvetica Neue", "Helvetica", "Arial"]:
     if any(fam in f.name for f in font_manager.fontManager.ttflist):
@@ -104,8 +105,12 @@ def main():
 
     flagged.sort(key=lambda t: -abs(t[2]))
     top = "; ".join(f"{m} {mm} {v:+.0f}%" for m, mm, v in flagged[:6])
-    print(f"FINDING: {len(flagged)} drastic MoM moves flagged (|Δ|≥{a.flag_pct:.0f}%). Biggest: {top}. "
-          f"Cluster: the Nov'25 spike then Dec'25→Jan'26 collapse in visits/VR/conv/revenue/ROAS.")
+    # Data-derived cluster: the month carrying the most flagged metric-moves.
+    cluster = Counter(mm for _, mm, _ in flagged).most_common(1)
+    cluster_txt = (f" Most-flagged month: {cluster[0][0]} ({cluster[0][1]} metrics)."
+                   if cluster else "")
+    print(f"FINDING: {len(flagged)} drastic MoM moves flagged (|Δ|≥{a.flag_pct:.0f}%). "
+          f"Biggest: {top}.{cluster_txt}")
 
 
 if __name__ == "__main__":

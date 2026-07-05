@@ -1,27 +1,27 @@
 # Kindred Bravely (35094) — Geo / DMA tier deep-dive
 
-**Prospecting slices all 210 US Nielsen DMAs into three population tiers.** "High Pop" is the **top-20 markets, not all-of-US.** P1 (Jan–May '25) ran the High Pop tier ONLY; P2 (Jan–May '26) fragmented into 6 campaigns spanning all 210 DMAs.
+**Prospecting slices US Nielsen DMAs into population tiers.** "High Pop" is the top markets, not all-of-US. P1 ran the top tier; P2 fragmented across more DMAs/campaigns.
 
-## Footprint & performance by tier
+## Footprint & performance by campaign
 
 | Campaign | Tier | #DMAs | Launched | P2 imps | P2 VR | P2 CVR | P2 ROAS |
 |---|---|---:|---|---:|---:|---:|---:|
-| 69884 High Pop | High Pop | 20 | 2026-01 | 4.9M | 5.1‰ | 5.6% | 2.39x |
-| 115946 HiPop Mom-Focus | High Pop | 20 | 2026-03 | 1.0M | 3.3‰ | 4.3% | 1.18x |
-| 115943 HiPop Q1-2026-Harter | High Pop | 20 | 2026-03 | 1.0M | 3.2‰ | 5.1% | 1.35x |
-| 115945 HiPop Motherhood-Journey | High Pop | 20 | 2026-03 | 1.0M | 3.4‰ | 4.5% | 1.21x |
-| 109926 Mid Pop | Mid Pop | 38 | 2026-02 | 4.0M | 4.1‰ | 5.3% | 1.73x |
-| 96108 LowPop | Low Pop | 152 | 2026-01 | 1.3M | 4.3‰ | 3.7% | 1.31x |
+| 69884 CTV Prospecting High Pop | High Pop | 20 | 2026-01 | 4.9M | 5.1‰ | 5.6% | 2.39x |
+| 115946 CTV Prospecting HiPop Mom-Focus | High Pop | 20 | 2026-03 | 1.0M | 3.3‰ | 4.3% | 1.21x |
+| 115943 CTV Prospecting HiPop Q1-2026-Harter | High Pop | 20 | 2026-03 | 1.0M | 3.2‰ | 5.1% | 1.36x |
+| 115945 CTV Prospecting HiPop Motherhood-Journey | High Pop | 20 | 2026-03 | 1.0M | 3.4‰ | 4.5% | 1.22x |
+| 109926 CTV Prospecting Mid Pop | Mid Pop | 38 | 2026-02 | 4.0M | 4.1‰ | 5.3% | 1.74x |
+| 96108 CTV Prospecting LowPop | Low Pop | 152 | 2026-01 | 1.3M | 4.3‰ | 3.7% | 1.31x |
 
-**Flagship (69884 High Pop) YoY:** ROAS 9.74x → 2.39x, VR 11.6→5.1‰, CVR 8.7→5.6%. 
-**Blended P2 ROAS 1.81x** vs **P1 9.74x** (High Pop only). ~90% of the drop is the flagship collapse; the remainder is fragmentation into lower-ROAS tiers/variants.
+**Flagship (69884 CTV Prospecting High Pop) YoY:** ROAS 9.72x -> 2.39x, VR 11.6->5.1‰, CVR 8.7->5.6%.
+**Blended P2 ROAS 1.82x** across all 6 active campaigns.
 
-## HIGH POP — 20 DMAs  (ranked by May '26 delivery)
+## HIGH POP — 20 DMAs  (ranked by 2026-05-01..2026-05-31 delivery)
 Los Angeles, CA (208K), New York, NY (168K), Dallas, TX (130K), Atlanta, GA (109K), Chicago IL (91K), Tampa (78K), Washington, DC (78K), Orlando, FL (76K), Phoenix, AZ (76K), Philadelphia, PA (72K), Houston, TX (71K), Charlotte, NC (68K), Seattle, WA (61K), Miami, FL (58K), San Francisco, CA (57K), Detroit, MI (55K), Denver, CO (55K), Boston, MA, NH (53K), Minneapolis, MN (49K), Sacramento, CA (40K)
 
-## MID POP — 38 DMAs  (ranked by May '26 delivery)
+## MID POP — 38 DMAs  (ranked by 2026-05-01..2026-05-31 delivery)
 Cleveland (60K), Raleigh (49K), Columbus, OH (49K), St. Louis, MO (47K), San Antonio, TX (46K), Indianapolis, IN (45K), Nashville, TN (45K), Las Vegas, NV (42K), Portland, OR (40K), Birmingham, AL (38K), Greenville, SC (37K), Milwaukee, WI (36K), Kansas City, MO (35K), Oklahoma City, OK (33K), Cincinnati, OH (33K), Greensboro, NC (31K), Hartford & New Haven, CT (31K), New Orleans, LA (30K), Pittsburgh, PA (30K), Memphis, TN (30K), Buffalo, NY (29K), Austin, TX (29K), Louisville, KY (28K), Salt Lake City, UT (28K), Baltimore, MD (24K), Albuquerque, NM (23K), Albany, NY (23K), Omaha, NE (22K), Grand Rapids, MI (22K), Norfolk, VA (22K), Jacksonville, FL (21K), San Diego, CA (19K), Ft. Myers, FL (17K), Fresno, CA (17K), West Palm Beach, FL (16K), Providence, RI, MA (15K), Harrisburg, PA (12K), Richmond, VA (10K)
 
-## LOW POP — 152 DMAs  (ranked by May '26 delivery)
+## LOW POP — 152 DMAs  (ranked by 2026-05-01..2026-05-31 delivery)
 Little Rock, AR (8K), Charleston, WV (7K), Florence, SC (7K), Jackson, MS (6K), Columbia, SC (6K), Lexington, KY (5K), Charleston, SC (5K), Huntsville (5K), Mobile, AL (5K), Knoxville, TN (5K), Baton Rouge, LA (4K), Des Moines, IA (4K), Tri (4K), Dayton, OH (4K), Wilmington, NC (4K), Chattanooga, TN (4K), Spokane, WA (4K), Tulsa, OK (4K), Boise, ID (4K), Roanoke, VA (4K), Honolulu, HI (4K), Rochester, NY (4K), Wichita, KS (4K), Savannah, GA (3K), Harlingen, TX (3K), Portland, ME (3K), Davenport, IA, IL (3K), Waco, TX (3K), Greenville, NC (3K), Wilkes Barre, PA (3K), Columbus, MS (3K), Billings, MT (3K), Springfield, MO (3K), Montgomery (3K), Colorado Springs, CO (3K), Youngstown, OH (3K), Evansville, IN (3K), Reno, NV (3K), Tallahassee, FL, GA (3K), Ft. Smith, AR (3K), Tyler (3K), Macon, GA (3K), Paducah, KY, IL (3K), Medford, OR (3K), Flint, MI (3K), Syracuse, NY (3K), Cedar Rapids, IA (3K), El Paso, TX (3K), Toledo, OH (2K), Shreveport, LA (2K), Wichita Falls, TX & Lawt (2K), Tucson (2K), Green Bay, WI (2K), Burlington, VT, NY (2K), Augusta, GA (2K), Ft. Wayne, IN (2K), Columbus, GA (2K), Madison, WI (2K), Eugene, OR (2K), Yakima, WA (2K), Grand Junction, CO (2K), Topeka, KS (2K), Lincoln & Hastings, NE (2K), Sioux Falls (2K), Cheyenne, WY, NE (2K), Lafayette, LA (2K), Bakersfield, CA (2K), Anchorage, AK (2K), Champaign & Springfield, (2K), Traverse City, MI (2K), South Bend, IN (2K), Corpus Christi, TX (2K), Jonesboro, AR (2K), Beaumont, TX (2K), Elmira, NY (2K), Duluth, MN, WI (2K), Amarillo, TX (1K), Rapid City, SD (1K), Peoria, IL (1K), Albany, GA (1K), Utica, NY (1K), Palm Springs, CA (1K), Hattiesburg, MS (1K), La Crosse, WI (1K), Terre Haute, IN (1K), Monroe, LA, AR (1K), Erie, PA (1K), Wausau, WI (1K), Fargo, ND (1K), Columbia, MO (1K), Yuma AZ, CA (1K), Biloxi, MS (1K), Bluefield, WV (1K), Abilene, TX (1K), Panama City, FL (1K), Dothan, AL (1K), Johnstown, PA (1K), Jackson, TN (1K), Joplin, MO, KS (1K), Binghamton, NY (1K), Lansing, MI (1K), Springfield, MA (1K), Alexandria, LA (1K), Idaho Falls, ID (1K), Missoula, MT (1K), Santa Barbara, CA (1K), Chico, CA (1K), Rockford, IL (1K), Harrisonburg, VA (1K), Sioux City, IA (998), Sherman TX, OK (978), Minot (976), Rochester, MN, MN (919), Salisbury, MD (889), Odessa, TX (872), Lubbock, TX (860), Watertown, NY (831), Bowling Green, KY (828), Casper, WY (810), Clarksburg, WV (800), Marquette, MI (795), Bangor, ME (782), Lake Charles, LA (766), Quincy, IL, IA (690), Meridian, MS (687), Gainesville, FL (670), Wheeling, WV, OH (669), Monterey, CA (655), Butte, MT (652), Parkersburg, WV (641), Bend, OR (629), Laredo, TX (591), Lafayette, IN (547), St. Joseph, MO (517), Greenwood, MS (512), Lima, OH (493), Great Falls, MT (470), San Angelo, TX (408), Victoria, TX (387), Ottumwa, IA, MO (385), Zanesville, OH (385), Twin Falls, ID (351), Mankato, MN (341), Charlottesville, VA (276), Eureka, CA (268), North Platte, NE (257), Presque Isle, ME (243), Helena, MT (175), Fairbanks, AK (159), Juneau, AK (129), Alpena, MI (82), Glendive, MT (13)
 

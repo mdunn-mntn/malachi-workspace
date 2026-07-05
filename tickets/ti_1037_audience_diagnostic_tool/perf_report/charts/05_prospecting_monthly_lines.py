@@ -62,9 +62,12 @@ def main():
             for r in csv.DictReader(open(a.csv))]
     x = [mdates.date2num(datetime.strptime(r["month"], "%Y-%m")) for r in rows]
 
+    def _month(s):   # accept YYYY-MM or YYYY-MM-DD (period tokens are full dates)
+        return datetime.strptime(s[:7], "%Y-%m")
+
     def band(p):
-        return (mdates.date2num(datetime.strptime(p[0], "%Y-%m")),
-                mdates.date2num(datetime.strptime(p[1], "%Y-%m")) + 20)
+        return (mdates.date2num(_month(p[0])),
+                mdates.date2num(_month(p[1])) + 20)
 
     fig, axes = plt.subplots(5, 2, figsize=(14, 12.5), sharex=True)
     axes = axes.ravel()
