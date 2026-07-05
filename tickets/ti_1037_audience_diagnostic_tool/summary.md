@@ -247,10 +247,20 @@ view (current-health **snapshot + YoY diagnosis**), growing on top of the AUDI-1
 
 **Module pattern** (each "thing" = a self-contained trio): `queries/NN_*.sql` (parameterized `{{AID}} {{WIN_START}}
 {{WIN_END}} {{P1_*}} {{P2_*}}`) → verified in BQ → `charts/NN_*.py` (reads `outputs/<adv>/NN.csv` → `NN.png` + prints a
-one-line `FINDING:`). A runner (final step, not built yet) loops every module → one assembled report. **Only source is
-versioned** — repo `.gitignore` drops `*.csv`/`*.png`/`*.svg`, so CSVs/PNGs regenerate from committed `.sql`+`.py`.
-Home: `perf_report/{queries,charts,params,outputs/<adv>}`. Params: `params/kindred_35094.env` (P1 Jan–May'25, P2
-Jan–May'26, continuous window Jan'25→May'26). Target: **Kindred Bravely 35094**. Frame: snapshot + YoY.
+one-line `FINDING:`). **Only source is versioned** — repo `.gitignore` drops `*.csv`/`*.png`/`*.svg`, so CSVs/PNGs
+regenerate from committed `.sql`+`.py`. Home: `perf_report/{queries,queries_exec,charts,params,outputs/<adv>}`.
+
+**✅ RUN-IT-ALL ASSEMBLER BUILT + MULTI-ADVERTISER (2026-07-04).** One command regenerates the whole 24-chart report for ANY
+advertiser: `python run_report.py --params params/<adv>.env`. `run_report.py` reads the params env, and per module in
+`report_spec.py` runs its clean single-query param-driven SQL (`queries_exec/<csv>.sql`, `{{AID}} {{WIN_*}} {{P1_*}} {{P2_*}}
+{{DELIV_MONTH_*}}` substituted via `bq_run.sh` → `outputs/<adv>/<csv>.csv`) then its chart cmd (tokens `{OUT}{ADV}{P1S..P2E}
+{P1L}{P2L}{WINS}{WINE}{DMS}{DME}{HS}{HE}{P1SM..P2EM}`), then stitches every PNG into `outputs/<adv>/report.html`. All modules
+generalized advertiser-agnostic: labels from `group_name`, **prospecting derived dynamically (`objective_id=1`, no hardcoded
+ids)**, adaptive layouts, and national-vs-DMA handling (12/12b/12c degrade to a national panel when the advertiser targets
+loc 237=US). Params: `params/kindred_35094.env`, `params/bouqs_32147.env`. Ran end-to-end for **Kindred (35094)** and **The
+Bouqs eCommerce (32147)** — all 24 modules OK for both (Kindred no regression). Two Bouqs units: **32147 eCommerce** (active,
+audited) + **31906 Subscriptions** (dark in 2026, excluded). Bouqs YoY prospecting mirrors Kindred (ROAS 3.18→1.37x, rev −65%,
+AOV +12% = conversion-quality not basket) but the audience profile differs (national low-HI scaling — module 00/00b/12c).
 
 **Modules built (approved unless noted):**
 - **00 `audience_audit`** — **the systematic front-matter (runs FIRST).** Inventories ALL active campaigns, classifies stage
