@@ -34,18 +34,26 @@ def _k(v):   # compact number for y-ticks / annotations
     return f"{v:.0f}"
 
 
+def _sd(a, b):  # safe divide — NaN when the denominator is 0 (intermittent months plot as a gap)
+    return a / b if b else float("nan")
+
+
+def _f(fmt, v):  # safe format — em-dash for NaN/None
+    return "—" if (v is None or v != v) else fmt(v)
+
+
 # (label, value_fn, latest-value formatter)
 METRICS = [
     ("Spend",            lambda r: r["spend"],                                    lambda v: f"${_k(v)}"),
     ("Impressions",      lambda r: r["impressions"],                              lambda v: _k(v)),
-    ("CPM",              lambda r: 1000 * r["spend"] / r["impressions"],          lambda v: f"${v:.0f}"),
+    ("CPM",              lambda r: _sd(1000 * r["spend"], r["impressions"]),      lambda v: f"${v:.0f}"),
     ("Visits",           lambda r: r["visits"],                                   lambda v: _k(v)),
-    ("Visit rate %",     lambda r: 100 * r["visits"] / r["impressions"],          lambda v: f"{v:.2f}%"),
+    ("Visit rate %",     lambda r: _sd(100 * r["visits"], r["impressions"]),      lambda v: f"{v:.2f}%"),
     ("Conversions",      lambda r: r["conversions"],                              lambda v: _k(v)),
-    ("Conv rate /visit %", lambda r: 100 * r["conversions"] / r["visits"],        lambda v: f"{v:.1f}%"),
+    ("Conv rate /visit %", lambda r: _sd(100 * r["conversions"], r["visits"]),    lambda v: f"{v:.1f}%"),
     ("Revenue",          lambda r: r["revenue"],                                  lambda v: f"${_k(v)}"),
-    ("AOV",              lambda r: r["revenue"] / r["conversions"],               lambda v: f"${v:.0f}"),
-    ("ROAS",             lambda r: r["revenue"] / r["spend"],                     lambda v: f"{v:.1f}×"),
+    ("AOV",              lambda r: _sd(r["revenue"], r["conversions"]),           lambda v: f"${v:.0f}"),
+    ("ROAS",             lambda r: _sd(r["revenue"], r["spend"]),                 lambda v: f"{v:.1f}×"),
 ]
 
 
@@ -79,9 +87,9 @@ def main():
             ax.axvspan(s, e, color=NAVY, alpha=0.05, zorder=0)
         ax.plot(x, y, color=NAVY, lw=2, marker="o", ms=4, zorder=3)
         ax.plot(x[-1], y[-1], marker="o", ms=6, color=RED, zorder=4)
-        ax.annotate(fmt(y[-1]), (x[-1], y[-1]), textcoords="offset points", xytext=(4, 4),
+        ax.annotate(_f(fmt, y[-1]), (x[-1], y[-1]), textcoords="offset points", xytext=(4, 4),
                     fontsize=8.5, color=RED, fontweight="bold")
-        ax.annotate(fmt(y[0]), (x[0], y[0]), textcoords="offset points", xytext=(2, 4),
+        ax.annotate(_f(fmt, y[0]), (x[0], y[0]), textcoords="offset points", xytext=(2, 4),
                     fontsize=8, color="#888")
         ax.set_title(label, fontsize=11, fontweight="bold", loc="left", color="#333", pad=4)
         ax.margins(y=0.18)
