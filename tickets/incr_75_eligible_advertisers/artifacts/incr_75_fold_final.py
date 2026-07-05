@@ -75,7 +75,11 @@ def verdict(R):
 # ---- classify + gate ----
 gated = []       # eligible after F4 (measured non-negative)
 excluded_neg = set()
-demoted = 0
+# Score-band tier cutoffs on the lift-adjusted score. TOP_CUT=90 is deliberately set
+# just above the best any UNCONFIRMED advertiser can score (max = 89.7, since only a
+# 'confirmed +' verdict earns the +30..45 bonus) → the Top band is GUARANTEED all-confirmed
+# AND the sheet reads strictly high→low (score-band tiers = monotonic by construction).
+TOP_CUT, MID_CUT = 90.0, 60.0
 for r in elig:
     a = r["advertiser_id"]
     v, is_neg, m = verdict(ex.get(a))
@@ -83,14 +87,7 @@ for r in elig:
         excluded_neg.add(a)
         continue
     d = dict(r)
-    apriori_tier = r["final_tier"]
-    # TOP now requires confirmed-positive measured lift
-    new_tier = apriori_tier
-    if apriori_tier == "Top" and v != "confirmed +":
-        new_tier = "Mid"
-        demoted += 1
-    d["final_tier"] = new_tier
-    d["apriori_tier"] = apriori_tier
+    d["apriori_tier"] = r["final_tier"]          # pre-lift a-priori tier (from the scorer), kept for reference
     inrow = ex.get(a)
     d.update(
         in_ghost_table="Y" if inrow and gi(inrow, "n_h") > 0 else "N",
@@ -104,9 +101,25 @@ for r in elig:
         current_ci_high_pp=(round(m["hi"] * 100, 4) if m.get("hi") is not None else ""),
         current_lift_source="entry_cohort_excl_0622",
     )
+    # ---- fold measured lift into value_score (user 2026-07-04/05) ----
+    # a 'confirmed +' lift adds +30 base + up to +15 scaled by relative-lift magnitude
+    # (capped at rel=30% so small-N huge relatives like Arlo +141% don't dominate); else +0.
+    apri_vs = float(r["value_score"]) if r.get("value_score") else 0.0
+    bonus = (30.0 + 15.0 * min(1.0, m["rel"] / 0.30)) if (v == "confirmed +" and m.get("rel") is not None and m["rel"] > 0) else 0.0
+    vs = round(apri_vs + bonus, 1)
+    d["apriori_value_score"] = round(apri_vs, 1)
+    d["lift_score_bonus"] = round(bonus, 1)
+    d["value_score"] = vs
+    # ---- SCORE-BAND TIER (monotonic; Top guaranteed all-confirmed via the 90 cutoff) ----
+    d["final_tier"] = "Top" if vs >= TOP_CUT else ("Mid" if vs >= MID_CUT else "Low")
     gated.append(d)
 
-cols = list(elig[0].keys()) + ["apriori_tier"] + [c for c in MEAS_COLS if c not in elig[0].keys()]
+# safety: no UNCONFIRMED advertiser should ever reach the Top band (would break the all-confirmed guarantee)
+_bad = [d for d in gated if d["final_tier"] == "Top" and d["current_lift_confirms"] != "confirmed +"]
+if _bad:
+    print(f"WARNING: {len(_bad)} unconfirmed advertisers reached Top (score>=90) — raise TOP_CUT above the max unconfirmed score.")
+
+cols = list(elig[0].keys()) + ["apriori_tier", "apriori_value_score", "lift_score_bonus"] + [c for c in MEAS_COLS if c not in elig[0].keys()]
 with open(os.path.join(BASE, "incr_75_eligible_with_current_lift.csv"), "w", newline="") as fo:
     w = csv.DictWriter(fo, fieldnames=cols)
     w.writeheader()
@@ -147,7 +160,7 @@ with open(os.path.join(BASE, "incr_75_funnel_counts.csv"), "w", newline="") as f
 
 from collections import Counter
 print(f"Excluded (measured negative, F4): {len(excluded_neg)}")
-print(f"A-priori Tops demoted to Mid (not confirmed+): {demoted}")
+print(f"Score-band tiers (lift-adjusted score): Top>={TOP_CUT:.0f} / Mid {MID_CUT:.0f}-{TOP_CUT:.0f} / Low <{MID_CUT:.0f}")
 for t in ("Top", "Mid", "Low"):
     sub = [r for r in gated if r["final_tier"] == t]
     c = Counter(r["current_lift_confirms"] for r in sub)

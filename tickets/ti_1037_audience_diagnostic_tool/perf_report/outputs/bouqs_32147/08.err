@@ -1,0 +1,18 @@
+Waiting on perf_20260704_183616_555 ... (0s) Current status: RUNNING                                                                    Waiting on perf_20260704_183616_555 ... (0s) Current status: DONE   
+
+--- BQ Performance ---
+Bytes: 0.131 GB processed / 0.131 GB billed (tier 1)
+Time: 30.1s slot / 1.4s wall / 998ms exec
+Cache: false | Partitions: 150 | Stages: 7
+Reservation: dw-main-bronze:us-central1.background-jobs
+Optimizations: enhanced_vectorization=applied
+  S01: Input: 542448 rows read → 126 written | 1 workers | slot 185ms | shuffle 2268B
+  S02: Join+: 1820265 rows read → 200 written | 222 workers | slot 10596ms | shuffle 1800B
+  S03: Input: 127924 rows read → 127924 written | 1 workers | slot 369ms | shuffle 5218097B
+  S04: Aggregate: 200 rows read → 9 written | 22 workers | slot 1856ms | shuffle 81B
+  S06: Coalesce: 9 rows read → 9 written | 100 workers | slot 7895ms | shuffle 81B
+  S07: Join+: 1130398 rows read → 82 written | 26 workers | slot 4643ms | shuffle 9167B
+  S08: Output: 82 rows read → 82 written | 1 workers | slot 155ms | shuffle 8429B
+Index: UNUSED — integrationprod.campaign_groups, integrationprod.campaigns, integrationprod.core_flights, sqlmesh__summarydata.summarydata__sum_by_campaign_by_day__3652947641
+Logged to: knowledge/bq_perf_log.jsonl
+----------------------

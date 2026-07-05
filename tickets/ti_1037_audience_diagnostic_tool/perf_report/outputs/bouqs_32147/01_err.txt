@@ -1,0 +1,1 @@
+[bq_run] Warning: could not fetch job stats for dw-main-silver:perf_20260704_183619_1027
