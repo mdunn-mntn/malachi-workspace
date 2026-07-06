@@ -103,6 +103,7 @@ def run_chart(tmpl, env):
 def build_html(env, spec):
     out = env["OUTDIR"]
     pngs = sorted(f for f in os.listdir(out) if f.endswith(".png"))
+    pngs = [p for p in pngs if "overview" in p] + [p for p in pngs if "overview" not in p]  # headline first
     adv = env.get("ADV_LABEL", env.get("ADV_NAME", ""))
     parts = [f"<!doctype html><meta charset=utf-8><title>{adv} — report</title>",
              "<style>body{font-family:Helvetica Neue,Arial,sans-serif;background:#FAFAFA;margin:40px;color:#222}"

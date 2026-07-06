@@ -70,4 +70,8 @@ SPEC = [
     {"id": "12c", "title": "Interest logic deep dive",
      "pulls": [{"csv": "12c_reach_monthly"}, {"csv": "12c_overlap"}],
      "chart": 'charts/12c_interest_logic_deep_dive.py --expr {OUT}/02_prospecting_audience_expressions.csv --monthly {OUT}/12c_reach_monthly.csv --overlap {OUT}/12c_overlap.csv --dna-png {OUT}/12c_interest_dna.png --gate-png {OUT}/12c_funnel_gate_evidence.png --md {OUT}/12c_interest_logic_deep_dive.md --adv "{ADV}"'},
+    # OVERVIEW runs LAST (reads the other modules' CSVs) but DISPLAYS FIRST (build_html leads with it).
+    {"id": "overview", "title": "Flag scorecard + TL;DR (headline)",
+     "pulls": [],
+     "chart": 'charts/aa_overview.py --outdir {OUT} --adv "{ADV}" --p1 {P1S} {P1E} --p2 {P2S} {P2E} --p1-label "{P1L}" --p2-label "{P2L}"'},
 ]

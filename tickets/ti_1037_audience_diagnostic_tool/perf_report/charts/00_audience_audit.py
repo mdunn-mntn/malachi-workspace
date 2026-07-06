@@ -27,8 +27,9 @@ for fam in ["Helvetica Neue", "Helvetica", "Arial"]:
 plt.rcParams.update({"figure.facecolor": "#FAFAFA", "axes.facecolor": "#FAFAFA", "savefig.facecolor": "#FAFAFA"})
 NAVY, GREEN, RED, AMBER, GRAY = "#27496D", "#2E8B57", "#D63B2F", "#C77B30", "#888888"
 
-STAGE = {1: "Prospecting", 4: "Retargeting", 5: "Multi-Touch S2", 6: "Multi-Touch S3", 7: "Ego"}
-STAGE_ORDER = ["Prospecting", "Retargeting", "Multi-Touch S2", "Multi-Touch S3", "Ego"]
+# Multi-Touch S2+S3 grouped together (obj 5 & 6); the stage-1 expression is what the audit reads.
+STAGE = {1: "Prospecting", 4: "Retargeting", 5: "Multi-Touch", 6: "Multi-Touch", 7: "Ego"}
+STAGE_ORDER = ["Prospecting", "Retargeting", "Multi-Touch", "Ego"]
 
 
 US_LOC = 237  # geo.location_data location_id 237 = "United States" (country/national, type 2)
