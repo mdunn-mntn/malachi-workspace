@@ -74,11 +74,11 @@ ribbon). Gate-off periods are when the low-intent/unscored supply enters, consis
 - **Geo** (12b): national account, no DMA slicing — geo mix is not a lever here.
 - **Interest narrowing** (12, 12c): MM and 3P are OR'd everywhere (additive); no MM-AND-3P throttle. The
   DS16 net-new funnel gates on 6–7 campaigns narrow by *who* (net-new households), not by 3P.
-- **Pool exhaustion** (09, 10): cumulative HI reach is 1.3M and **still climbing** (~100K–400K new HI per
-  full month) ≈ **9% of the ~14.3M deliverable pool** — the addressable pool is not exhausted (and
-  contracted only ~15% from peak). Frequency is low (~2.2 imps/IP). Recirculation is rising (brand-new HI
-  share ~100% in Jan → ~34% by the June partial month) but there is ample unreached HI supply — the issue
-  is *reaching* it, not running out of it.
+- **Pool exhaustion** (09, 10): cumulative HI reach is 2.5M and **still climbing** ≈ **18% of the ~14.3M
+  deliverable pool** — the addressable pool is not exhausted (and contracted only ~15% from peak).
+  Frequency is low (~3.3 imps/IP). Recirculation is rising (brand-new HI share ~100% in mid-'25 → ~30% by
+  the June '26 partial month) but there is ample unreached HI supply — the issue is *reaching* it, not
+  running out of it. *(These coverage figures span the full continuous window, Jan '25 → May '26.)*
 
 ## 8. Seasonality & data caveats
 
