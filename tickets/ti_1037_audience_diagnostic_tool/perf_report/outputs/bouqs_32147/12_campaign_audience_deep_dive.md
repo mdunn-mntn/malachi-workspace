@@ -2,7 +2,45 @@
 
 **Account red-flag verdict: NATIONAL — no meaningful geo slicing; net-new funnel gate present (narrows by WHO, not 3P).** Interest logic across campaigns: ?/or (OR = MM/3P additive; AND = 3P narrows MM). Geo `location_ids` decode via `geo.location_data` (Nielsen DMA; location 237 = national US); 3P names via `tpa.categories` (sizes GCS-gated).
 
+### 82074 — CTV Prospecting MNTN 2024
+- **Geo:** National (US) — targets all-of-US (no DMA slice)
+- **Interest:** (59 MM keywords **?** 0 LiveRamp 3P segments)
+- **Red flags:** DS16 net-new gate: fishes residual
+
+### 82075 — CTV Prospecting INTSEG 2024
+- **Geo:** National (US) — targets all-of-US (no DMA slice)
+- **Interest:** (0 MM keywords **?** 0 LiveRamp 3P segments)
+- **Red flags:** DS16 net-new gate: fishes residual
+
+### 82899 — CTV Prospecting IntSeg VDay 2025
+- **Geo:** National (US) — targets all-of-US (no DMA slice)
+- **Interest:** (0 MM keywords **?** 7 LiveRamp 3P segments)
+- **3P segments:** Interests > Seasonal & Events > Wedding Planning; In-Market > Seasonal > Valentine's Day Gifts; Enthusiast > Superbowl_Enthusiast; Lifestage and Lifestyle > Date Night (Entertainment and Dining) …
+- **Red flags:** none structural
+
+### 82900 — CTV Prospecting MM VDay 2025
+- **Geo:** National (US) — targets all-of-US (no DMA slice)
+- **Interest:** (114 MM keywords **?** 0 LiveRamp 3P segments)
+- **Red flags:** none structural
+
+### 82901 — CTV Prospecting VDay CTEST 2025
+- **Geo:** National (US) — targets all-of-US (no DMA slice)
+- **Interest:** (114 MM keywords **?** 0 LiveRamp 3P segments)
+- **Red flags:** none structural
+
 ### 85384 — CTV eComm Prospecting 2026 -old
+- **Geo:** National (US) — targets all-of-US (no DMA slice)
+- **Interest:** (187 MM keywords **OR** 4 LiveRamp 3P segments) — additive/broadening
+- **3P segments:** Retail Shoppers: Purchase Based > Seasonal > Mothers Day Shoppers Spenders; Retail > Shopping > Online Purchase Flowers, Greetings & Gifts Last 3 Months; US > CTV > Shopping - Likely To Be > Behavioral > Holiday Shopping > Mothers Day; Media Source Solutions > Mobile App Users > Online and In-Store Shoppers with Buyer Intent > Gifts & Special Event Items > Flowers
+- **Red flags:** none structural
+
+### 88885 — CTV Prospecting MDAY 2025
+- **Geo:** National (US) — targets all-of-US (no DMA slice)
+- **Interest:** (187 MM keywords **OR** 4 LiveRamp 3P segments) — additive/broadening
+- **3P segments:** Retail Shoppers: Purchase Based > Seasonal > Mothers Day Shoppers Spenders; Retail > Shopping > Online Purchase Flowers, Greetings & Gifts Last 3 Months; US > CTV > Shopping - Likely To Be > Behavioral > Holiday Shopping > Mothers Day; Media Source Solutions > Mobile App Users > Online and In-Store Shoppers with Buyer Intent > Gifts & Special Event Items > Flowers
+- **Red flags:** none structural
+
+### 88962 — MDAY 2025 CTEST Prospecting
 - **Geo:** National (US) — targets all-of-US (no DMA slice)
 - **Interest:** (187 MM keywords **OR** 4 LiveRamp 3P segments) — additive/broadening
 - **3P segments:** Retail Shoppers: Purchase Based > Seasonal > Mothers Day Shoppers Spenders; Retail > Shopping > Online Purchase Flowers, Greetings & Gifts Last 3 Months; US > CTV > Shopping - Likely To Be > Behavioral > Holiday Shopping > Mothers Day; Media Source Solutions > Mobile App Users > Online and In-Store Shoppers with Buyer Intent > Gifts & Special Event Items > Flowers
