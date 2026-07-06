@@ -96,8 +96,9 @@ def main():
     ax.text(mdates.date2num(p2m), y_period, f"P2: PRO {p2lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
     if p1e_ != p2e_ or p1s != p1e_ or p2s != p2e_:
         ax.text(0.5, 1.04, f"FLAG: prospecting VV window shortened  P1 {p1lbl}  ->  P2 {p2lbl}  (progressive) — P1 "
-                f"visits/conversions were measured on a LONGER window; each shortening mechanically reduces measured "
-                f"visits & conversions, so part of the P1-vs-P2 gap is measurement.", transform=ax.transAxes,
+                f"visits/conversions were measured on a LONGER window; shortening reduces absolute connectable "
+                f"visits & conversions (and visit rate). CVR (conv/visit) effect is AMBIGUOUS — depends on how the "
+                f"dropped trailing-window visits converted.", transform=ax.transAxes,
                 ha="center", fontsize=9, color=RED, fontweight="bold")
 
     ax.set_ylim(0, ymax)

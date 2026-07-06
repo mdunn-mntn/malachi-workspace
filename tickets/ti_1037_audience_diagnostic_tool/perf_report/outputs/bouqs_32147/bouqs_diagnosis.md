@@ -57,10 +57,13 @@ buying cheap low-intent inventory**, while the audiences that convert are starve
 ## 5. Contributing measurement confound (module 11)
 
 The prospecting **verified-visit lookback window shortened 30d → 14d** between P1 and P2 (conversion window
-constant 30d). A shorter VV window mechanically connects fewer visits *and* fewer conversions to
-impressions, on a ~window-length lag — so **part of the measured visit/conversion/CVR gap in §3 is a
-measurement change, not a real performance change.** The true decline is smaller than the raw −55% visits
-implies; it cannot be cleanly separated without normalizing the window.
+constant 30d). A shorter VV window mechanically connects fewer *absolute* visits **and** conversions to
+impressions (and lowers **visit rate**, since impressions are unchanged) — so part of the **−55% visits /
+−42% visit-rate / lower conversion-count** in §3 is a measurement change, not real performance. **The CVR
+(conversions ÷ visit) effect is ambiguous, though** (verified w/ Lizz): shortening only lowers CVR if the
+dropped day-15–30 visits converted *better* than day-0–14 visits; if they converted *worse*, shortening
+actually *raises* CVR. So the conversion-**rate** decline is NOT automatically explained by the window and
+may be real. The absolute visit/conversion decline can't be cleanly separated without normalizing the window.
 
 ## 6. Gate behavior (modules 03, 03b, 06b)
 

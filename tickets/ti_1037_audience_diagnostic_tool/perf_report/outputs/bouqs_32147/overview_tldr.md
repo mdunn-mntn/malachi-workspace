@@ -6,7 +6,7 @@
 
 - **Prospecting ROAS** — 3.18x → 1.37x: -57% — the headline decline
 - **Visit rate** — 0.71% → 0.41%: -42%
-- **VV window (prospecting)** — 30d → 14d: shortened -> mechanically lowers measured visits & conversions
+- **VV window (prospecting)** — 30d → 14d: shortened -> fewer connectable visits & conversions + lower visit rate (CVR effect ambiguous)
 - **Short flights (<=3d)** — 30 → 31: short flights auto-drop the gate to 0 (serve anyone)
 - **Broadest campaign wound down** — on → off: 88885 'CTV Prospecting MDAY 2025' ($290K) stopped before period end
 - **Geo restriction** —  → 1/16 DMA-limited: prospecting is geo-restricted (removing geo limits widens the pool)
@@ -20,7 +20,7 @@
 | Prospecting ROAS | 3.18x | 1.37x | 🔴 -57% — the headline decline |
 | Prospecting spend | $648K | $529K | ⚪ -18% |
 | Visit rate | 0.71% | 0.41% | 🔴 -42% |
-| VV window (prospecting) | 30d | 14d | 🔴 shortened -> mechanically lowers measured visits & conversions |
+| VV window (prospecting) | 30d | 14d | 🔴 shortened -> fewer connectable visits & conversions + lower visit rate (CVR effect ambiguous) |
 | Avg HHST gate | 4,267 | 4,832 | 🟢 gate ~held |
 | HHST changes (thrash) | 104 | 76 | ⚪ gate re-set 76x in Jan–May '26 vs 104x in Jan–May '25 |
 | Short flights (<=3d) | 30 | 31 | 🟠 short flights auto-drop the gate to 0 (serve anyone) |

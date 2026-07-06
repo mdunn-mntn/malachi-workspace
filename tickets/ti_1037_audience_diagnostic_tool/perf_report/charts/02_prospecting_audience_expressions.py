@@ -57,7 +57,7 @@ LAYERS = [
      lambda p: (str(ds_count(p.excludes, 47)), ds_count(p.excludes, 47))),
     ("DS14 · availability gate",         "gate",
      lambda p: (("on", 1) if p.availability_gate else (None, 0))),
-    ("DS21/34 · own-site retgt (excl)",  "excl",
+    ("DS21/34 · own conv+pageview (excl)", "excl",
      lambda p: (("180d", 1) if p.retargeting else (None, 0))),
     ("Holdout",                          "holdout",
      lambda p: ((f"{p.holdout.pct:.0f}%", p.holdout.pct) if p.holdout else (None, 0))),

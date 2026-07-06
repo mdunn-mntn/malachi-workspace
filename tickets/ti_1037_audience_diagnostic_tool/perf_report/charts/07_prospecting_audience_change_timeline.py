@@ -34,7 +34,7 @@ DS = {
     14: ("DS14 · Availability gate", AMBER, 6),
     2: ("DS2 · MNTN 1P (excl)", MAROON, 7), 4: ("DS4 · CRM (excl)", MAROON, 8),
     9: ("DS9 · 1P (excl)", MAROON, 9), 47: ("DS47 · CRM idgraph (excl)", MAROON, 10),
-    21: ("DS21 · Retgt PV (excl)", ORANGE, 11), 34: ("DS34 · Retgt Conv (excl)", ORANGE, 12),
+    21: ("DS21 · Conversion (excl)", ORANGE, 11), 34: ("DS34 · Pageview (excl)", ORANGE, 12),
     1: ("DS1 · (excl)", MAROON, 13),
 }
 

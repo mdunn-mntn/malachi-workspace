@@ -154,7 +154,8 @@ def main():
         w1, w2 = val_at(vv, p1e, "pro"), val_at(vv, p2e, "pro")
         add("VV window (prospecting)", f"{w1}d" if w1 else "?", f"{w2}d" if w2 else "?",
             RED if (w1 and w2 and w2 < w1) else GREEN,
-            "shortened -> mechanically lowers measured visits & conversions" if (w1 and w2 and w2 < w1)
+            "shortened -> fewer connectable visits & conversions + lower visit rate (CVR effect ambiguous)"
+            if (w1 and w2 and w2 < w1)
             else ("lengthened" if (w1 and w2 and w2 > w1) else "unchanged"))
 
     # ---------- HHST gate (03) ----------

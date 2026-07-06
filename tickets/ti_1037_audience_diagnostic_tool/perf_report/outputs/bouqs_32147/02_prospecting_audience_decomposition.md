@@ -12,6 +12,6 @@ Group names: 119362=CTV eComm Prospecting 2026 (36% spend); 108055=CTV Prospecti
 | DS2 · MNTN 1P (excl) | 2 | 0 | 2 | 2 | 2 | 0 | 2 | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
 | DS47 · CRM idgraph (excl) | 5 | 7 | 5 | 5 | 5 | 1 | 5 | 5 | 5 | 4 | 4 | 4 | 4 | 4 | 5 | 5 |
 | DS14 · availability gate | on | on | on | on | on | on | on | on | on | on | on | on | on | on | on | on |
-| DS21/34 · own-site retgt (excl) | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d |
+| DS21/34 · own conv+pageview (excl) | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d | 180d |
 | Holdout | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% | 10% |
 | RTC score directive | on | on | on | on | on | on | on | on | on | on | on | on | on | on | on | on |

@@ -6,7 +6,7 @@
 
 - **Prospecting ROAS** — 11.40x → 1.87x: -84% — the headline decline
 - **Visit rate** — 2.38% → 0.72%: -70%
-- **VV window (prospecting)** — 45d → 14d: shortened -> mechanically lowers measured visits & conversions
+- **VV window (prospecting)** — 45d → 14d: shortened -> fewer connectable visits & conversions + lower visit rate (CVR effect ambiguous)
 - **HHST changes (thrash)** — 44 → 120: gate re-set 120x in Jan–May '26 vs 44x in Jan–May '25
 - **Short flights (<=3d)** — 4 → 15: short flights auto-drop the gate to 0 (serve anyone)
 - **Geo restriction** —  → 6/6 DMA-limited: prospecting is geo-restricted (removing geo limits widens the pool)
@@ -21,7 +21,7 @@
 | Prospecting ROAS | 11.40x | 1.87x | 🔴 -84% — the headline decline |
 | Prospecting spend | $93K | $159K | 🟠 +70%  — scaling up while ROAS falls (over-scaling risk) |
 | Visit rate | 2.38% | 0.72% | 🔴 -70% |
-| VV window (prospecting) | 45d | 14d | 🔴 shortened -> mechanically lowers measured visits & conversions |
+| VV window (prospecting) | 45d | 14d | 🔴 shortened -> fewer connectable visits & conversions + lower visit rate (CVR effect ambiguous) |
 | Avg HHST gate | 7,783 | 9,564 | 🟢 gate ~held |
 | HHST changes (thrash) | 44 | 120 | 🔴 gate re-set 120x in Jan–May '26 vs 44x in Jan–May '25 |
 | Short flights (<=3d) | 4 | 15 | 🔴 short flights auto-drop the gate to 0 (serve anyone) |

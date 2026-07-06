@@ -12,6 +12,6 @@ Group names: 69884=CTV Prospecting High Pop (36% spend); 109926=CTV Prospecting 
 | DS2 · MNTN 1P (excl) | 1 | 1 | 1 | 1 | 1 | 1 |
 | DS47 · CRM idgraph (excl) | 39 | 39 | 39 | 39 | 39 | 39 |
 | DS14 · availability gate | on | on | on | on | on | on |
-| DS21/34 · own-site retgt (excl) | 180d | 180d | 180d | 180d | 180d | 180d |
+| DS21/34 · own conv+pageview (excl) | 180d | 180d | 180d | 180d | 180d | 180d |
 | Holdout | 10% | 10% | 10% | 10% | 10% | 10% |
 | RTC score directive | on | on | on | on | on | on |
