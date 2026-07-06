@@ -102,15 +102,8 @@ for r in elig:
         current_ci_high_pp=(round(m["hi"] * 100, 4) if m.get("hi") is not None else ""),
         current_lift_source="entry_cohort_excl_0622",
     )
-    # ---- fold measured lift into value_score (user 2026-07-04/05) ----
-    # a 'confirmed +' lift adds +30 base + up to +15 scaled by relative-lift magnitude
-    # (capped at rel=30% so small-N huge relatives like Arlo +141% don't dominate); else +0.
-    apri_vs = float(r["value_score"]) if r.get("value_score") else 0.0
-    bonus = (30.0 + 15.0 * min(1.0, m["rel"] / 0.30)) if (v == "confirmed +" and m.get("rel") is not None and m["rel"] > 0) else 0.0
-    vs = round(apri_vs + bonus, 1)
-    d["apriori_value_score"] = round(apri_vs, 1)
-    d["lift_score_bonus"] = round(bonus, 1)
-    d["value_score"] = vs
+    # value_score stays the ORIGINAL a-priori 0–100 quality score (user 2026-07-06: reverted the
+    # lift-adjusted "new score" — measured lift lives in the [MEASURED NOW] columns + the tier gate, not the score).
     # ---- TIER = power × confirmed-lift 2x2 (powered-for-5% is a HARD Top gate) ----
     powered5 = (str(r.get("can_hit_ivr_5pct_8w", "")).strip().lower() == "yes")
     is_conf = (v == "confirmed +")
@@ -123,7 +116,7 @@ _bad = [d for d in gated if d["final_tier"] == "Top" and
 if _bad:
     print(f"WARNING: {len(_bad)} Top advertisers are not (powered-5% AND confirmed) — tier logic bug.")
 
-cols = list(elig[0].keys()) + ["apriori_tier", "apriori_value_score", "lift_score_bonus"] + [c for c in MEAS_COLS if c not in elig[0].keys()]
+cols = list(elig[0].keys()) + ["apriori_tier"] + [c for c in MEAS_COLS if c not in elig[0].keys()]
 with open(os.path.join(BASE, "incr_75_eligible_with_current_lift.csv"), "w", newline="") as fo:
     w = csv.DictWriter(fo, fieldnames=cols)
     w.writeheader()
