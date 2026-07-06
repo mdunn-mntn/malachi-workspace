@@ -262,6 +262,22 @@ Bouqs eCommerce (32147)** — all 24 modules OK for both (Kindred no regression)
 audited) + **31906 Subscriptions** (dark in 2026, excluded). Bouqs YoY prospecting mirrors Kindred (ROAS 3.18→1.37x, rev −65%,
 AOV +12% = conversion-quality not basket) but the audience profile differs (national low-HI scaling — module 00/00b/12c).
 
+**✅ OVERVIEW HEADLINE LAYER + DIAGNOSES + 3rd ADVERTISER (2026-07-05).** Added module **`overview`** (`charts/aa_overview.py`) —
+the **flag scorecard + auto-TL;DR** that runs LAST (reads the deep-dive CSVs) but **displays FIRST** in `report.html`
+(build_html leads with it). It computes quick "likely-your-issue" flags with pre/post + a signal dot: prospecting
+ROAS/spend/visit-rate, **VV-window change**, **avg HHST + thrash count**, **short flights before/after**, **campaign count**,
+**geo restriction**, **3P restriction**, HI-share — then auto-writes a plain-language TL;DR that reads like the Slack updates
+(Kindred: REAL DECLINE, 6 red — ROAS 11.4→1.87x, VV 45→14d, thrash 44→120, short flights 4→15, geo-restricted, 1→6 campaigns).
+Also **collapsed Multi-Touch S2+S3 into one "Multi-Touch" stage** in module 00 (audience read still uses the stage-1 expr).
+Reports now = **25 charts**, overview-first, for all advertisers. **Third advertiser wired:** `params/bouqs_subs_31906.env`
+(The Bouqs **Subscriptions**, dark 2026) — full report on its Sep–Dec YoY season (fixed a module-05 CPM ÷0 on its
+0-impression months). **Two committed, adversarially-verified diagnoses:** `outputs/bouqs_32147/bouqs_diagnosis.md` (eCommerce —
+fixable low-HI-scaling decline) + `outputs/bouqs_subs_31906/subscriptions_diagnosis.md` (Subscriptions — persistently
+unprofitable ROAS<1, consistent with a wind-down, not an audience problem). Each verification caught real issues (32147: a
+fabricated ROAS, wrong denominators, an overclaimed cause; 31906: an overclaimed intent framing) — all corrected. **Knowledge
+correction:** CIL is NOT 90d TTL — it retains full history to the 2025-01-01 GCP floor (verified 2026-07-05); the score COLUMN
+onset (2025-06) is the real early limit, not row retention (`data_knowledge.md`).
+
 **Modules built (approved unless noted):**
 - **00 `audience_audit`** — **the systematic front-matter (runs FIRST).** Inventories ALL active campaigns, classifies stage
   by `objective_id` (1=Prospect/4=Retarget/5=MT-S2/6=MT-S3/7=Ego), decodes every audience expression (DS roles/archetype/flags).

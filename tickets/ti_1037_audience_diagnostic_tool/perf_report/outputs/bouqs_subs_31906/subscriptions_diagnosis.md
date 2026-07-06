@@ -9,11 +9,13 @@ wasn't running Jan–May 2024). From `run_report.py --params params/bouqs_subs_3
 
 ## 1. Headline
 
-**This unit was not shut off for a fixable performance problem — it was structurally unprofitable and
-deliberately wound down.** Prospecting **ROAS improved YoY (0.32× → 0.53×)** and efficiency rose
-(visit-rate +96%), but ROAS stayed **below 1.0× even at its best** — every dollar of prospecting returned
-~$0.53. Spend was cut **−57%** ($74K → $32K) and impressions **−58%** through 2025, then the unit went fully
-dark in 2026. Audience quality was **not** the issue (P2 HI-share ~88%, national, no interest-narrowing).
+**The data is consistent with a wind-down of a structurally unprofitable unit — not a fixable audience
+problem.** Prospecting **ROAS improved YoY (0.32× → 0.53×)** and efficiency rose (visit-rate +96%), but
+ROAS stayed **below 1.0× even at its best** — every dollar of prospecting returned ~$0.53. Spend was cut
+**−57%** ($74K → $32K) and impressions **−58%** through 2025, then the unit went fully dark in 2026. Audience
+quality was **not** the issue (P2 HI-share ~88%, national, no interest-narrowing). *(The metrics show* what
+*happened — persistent sub-1× ROAS, spend cut, then dark; they do not record* why *— treat "wind-down /
+intentional" as an inference to confirm with the account team, not a fact in the data.)*
 
 ## 2. Flag scorecard (Sep–Dec '24 → Sep–Dec '25)
 
@@ -30,7 +32,7 @@ dark in 2026. Audience quality was **not** the issue (P2 HI-share ~88%, national
 | Prospecting campaigns | 1 | 1 | ⚪ stable (single campaign 76699) |
 | Geo restriction | — | 0/1 | 🟢 national |
 | 3P restriction | — | 1/1 use 3P (OR) | 🟠 additive, not restrictive |
-| HI-share of reached | no P1 data | ~88% | 🟢 high-intent |
+| HI-share of reached | no P1 data | ~88% (Sep–Nov) | 🟢 high-intent |
 
 ## 3. What happened
 
@@ -57,6 +59,7 @@ dark in 2026. Audience quality was **not** the issue (P2 HI-share ~88%, national
 ## 5. Bottom line vs the eCommerce unit (32147)
 
 Different stories. **eCommerce (32147)** has a *fixable* problem — a real YoY decline driven by scaling
-national prospecting into low-intent inventory (§ its diagnosis). **Subscriptions (31906)** had **no
-fixable audience problem** — it was simply unprofitable (ROAS < 1) and was correctly wound down. No action
-recommended for 31906 beyond confirming the shut-off was intentional.
+national prospecting into low-intent inventory (§ its diagnosis). **Subscriptions (31906)** shows **no
+fixable audience problem** — prospecting was persistently unprofitable (ROAS < 1) and its shut-off is
+consistent with that. **Recommended action: confirm with the account team that the wind-down was
+intentional** (the data supports but cannot prove intent); if so, no prospecting fix applies to 31906.
