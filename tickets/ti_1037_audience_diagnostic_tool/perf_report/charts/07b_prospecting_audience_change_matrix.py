@@ -117,63 +117,78 @@ def main():
             cell.setdefault((dt, g), []).extend(lines)
             prev_ds, prev_aud = cur, aud
 
-    dates = sorted(dates)
-    # row heights = max lines across the row (min 1)
-    rheight = [max(1, max((len(cell.get((dt, g), [])) for g in cols), default=1)) for dt in dates]
-    total_lines = sum(rheight)
-    ncol = len(cols)
-    fig, ax = plt.subplots(figsize=(2.6 + 2.85 * ncol, 2.4 + 0.52 * total_lines))
+    # group names from the shared enum (obj=1 rows) for readable section headers
+    enum_path = os.path.join(os.path.dirname(a.csv), "00_campaign_enum.csv")
+    gname_enum = {}
+    if os.path.exists(enum_path):
+        for r in csv.DictReader(open(enum_path)):
+            if int(r.get("obj") or 0) == 1 and r.get("group_name"):
+                gname_enum[r["grp"]] = r["group_name"]
+
+    def shortname(g):
+        s = (gname_enum.get(g) or gname.get(g) or "").replace("CTV Prospecting", "").replace("CTV", "")
+        s = s.replace("Prospecting", "").replace("Frequency", "Freq").replace("Subscriptions", "Subs")
+        return " ".join(s.split()).strip()
+
+    # ---- flatten to a tall CHANGELOG TABLE: campaign sections (spend-ranked) -> chronological rows ----
+    group_events = {}
+    for (dt, g), lines in cell.items():
+        group_events.setdefault(g, []).append((dt, lines))
+    for g in group_events:
+        group_events[g].sort()
+
+    render = []  # ("hdr", grp, share, name) | ("row", date, txt, color) | ("gap",)
+    for g in cols:
+        render.append(("hdr", g, gshare.get(g, 0.0), shortname(g)))
+        for dt, lines in group_events.get(g, []):
+            for i, (txt, col) in enumerate(lines):
+                render.append(("row", dt if i == 0 else "", txt, col))
+        render.append(("gap",))
+    n = len(render)
+
+    fig, ax = plt.subplots(figsize=(12, 1.4 + 0.31 * n))
     ax.axis("off")
-    colx = [0.0] + [1.0 + i for i in range(ncol)]   # date col width 1.0, each grp width 1.0 (units)
-    xmax = 1.0 + ncol
-
-    # header — group id on top, % of prospecting spend beneath (materiality of each column's changes)
-    ytop = total_lines + 1.4
-    ax.text(0.05, ytop - 0.4, "date", fontsize=13, fontweight="bold", color=NAVY)
-    for i, g in enumerate(cols):
-        ax.text(colx[i + 1] + 0.04, ytop - 0.4, g, ha="left", fontsize=13, fontweight="bold", color=NAVY)
-        sh = gshare.get(g, 0.0)
-        stxt = f"{pctfmt(sh)} spend" if sh > 0 else "— no spend"
-        ax.text(colx[i + 1] + 0.04, ytop - 0.85, stxt, ha="left", fontsize=10.5,
-                color=NAVY if sh > 0 else GRAY, fontweight="bold" if sh > 0 else "normal")
-    ax.plot([0, xmax], [total_lines + 0.55, total_lines + 0.55], color=NAVY, lw=1.4)
-
-    # rows
-    y = total_lines
-    for ri, dt in enumerate(dates):
-        h = rheight[ri]
-        if ri % 2 == 0:
-            ax.axhspan(y - h, y, xmin=0, xmax=1, color="#000", alpha=0.03, zorder=0)
-        ax.text(0.05, y - 0.5, dt, fontsize=12, va="center", color="#333")
-        for i, g in enumerate(cols):
-            lines = cell.get((dt, g), [])
-            for li, (txt, col) in enumerate(lines):
-                fs = 10 if txt.startswith("start:") else 12
-                ax.text(colx[i + 1] + 0.04, y - 0.5 - li, txt, fontsize=fs, va="center", color=col,
-                        fontweight="bold" if col in (GREEN, RED, NAVY) else "normal")
-        y -= h
-    ax.set_xlim(0, xmax)
-    ax.set_ylim(0, ytop + 0.2)
-    ax.set_title(f"{a.adv} — Prospecting audience change-log (DS-level)  ·  green = added, red = removed",
-                 fontsize=13, fontweight="bold", loc="left", color="#222", pad=12)
-    plt.tight_layout()
+    ax.set_xlim(0, 1)
+    ax.set_ylim(-1, n + 2)
+    ax.text(0.0, n + 1.3, f"{a.adv} — prospecting audience change-log (DS-level)", fontsize=15,
+            fontweight="bold", color="#222")
+    ax.text(0.0, n + 0.5, "By campaign, most spend first.  green = added, red = removed.  incl / excl / gate / funnel = the DS role.",
+            fontsize=11, color="#555")
+    xDATE, xCHG = 0.185, 0.31
+    for i, item in enumerate(render):
+        y = n - i
+        if item[0] == "hdr":
+            _, g, sh, gn = item
+            ax.axhspan(y - 0.5, y + 0.5, color=NAVY, alpha=0.08, zorder=0)
+            ax.text(0.008, y, f"{g}  ·  {gn[:34]}" if gn else f"{g}", fontsize=12, fontweight="bold",
+                    color=NAVY, va="center")
+            stxt = f"{pctfmt(sh)} spend" if sh > 0 else "no current spend"
+            ax.text(0.992, y, stxt, fontsize=11, fontweight="bold" if sh > 0 else "normal",
+                    color=NAVY if sh > 0 else GRAY, va="center", ha="right")
+        elif item[0] == "row":
+            _, dt, txt, col = item
+            ax.text(xDATE, y, dt, fontsize=10.5, va="center", color="#666")
+            ax.text(xCHG, y, txt, fontsize=10.5, va="center", color=col,
+                    fontweight="bold" if col in (GREEN, RED, NAVY) else "normal")
     plt.savefig(a.out, dpi=200, bbox_inches="tight")
     print(f"wrote {a.out}")
 
-    # ---- markdown ----
-    def col_hdr(g):
-        sh = gshare.get(g, 0.0)
-        return f"{g}<br>{pctfmt(sh)} spend" if sh > 0 else f"{g}<br>— no spend"
+    # ---- markdown (linear changelog) ----
     md = [f"# {a.adv} — Prospecting audience change-log (DS-level)",
-          "Columns = campaign_group_id, ordered by % of prospecting spend (desc). `+` added, `−` removed. "
-          "incl/excl/gate = the DS role. Segment (category_id) detail intentionally omitted.", "",
-          "| date | " + " | ".join(col_hdr(g) for g in cols) + " |", "|" + "---|" * (len(cols) + 1)]
-    for dt in dates:
-        cells = []
-        for g in cols:
-            txt = " <br> ".join(t for t, _ in cell.get((dt, g), []))
-            cells.append(txt or "")
-        md.append(f"| {dt} | " + " | ".join(cells) + " |")
+          "By campaign (most spend first). `+` added, `−` removed. incl/excl/gate/funnel = the DS role. "
+          "Segment (category_id) detail intentionally omitted.", "",
+          "| Campaign (group) | % spend | Date | Change |", "|---|--:|---|---|"]
+    for g in cols:
+        sh = gshare.get(g, 0.0)
+        spend_s = pctfmt(sh) if sh > 0 else "—"
+        evs = group_events.get(g, [])
+        first_row = True
+        for dt, lines in evs:
+            for i, (txt, _) in enumerate(lines):
+                camp = f"{g} {shortname(g)}" if first_row else ""
+                sp = spend_s if first_row else ""
+                md.append(f"| {camp} | {sp} | {dt if i == 0 else ''} | {txt} |")
+                first_row = False
     open(a.md, "w").write("\n".join(md) + "\n")
     print(f"wrote {a.md}")
 
