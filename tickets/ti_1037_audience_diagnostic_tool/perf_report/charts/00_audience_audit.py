@@ -150,7 +150,7 @@ def main():
     tot = {k: sum(s[k] for s in smap.values()) for k in ("imps", "spend", "conv", "revenue")}
 
     prosp = []
-    for r in sorted([x for x in enum if x["obj"] == 1], key=lambda x: -x["imps"]):
+    for r in sorted([x for x in enum if x["obj"] == 1], key=lambda x: -x["spend"]):  # rank by spend
         cid = r["campaign_id"]
         e = json.loads(expr[cid]) if cid in expr else {}
         cw = (e.get("categories") or {}).get("where")
@@ -190,7 +190,11 @@ def main():
             flags.append(("dark (F1 stopped)", GRAY))
         prosp.append({"cid": cid, "grp": r["grp"], "label": glabel(r.get("group_name"), cid),
                       "ngeo": ngeo, "national": national, "interest": interest, "gate": gate, "reach": reach,
-                      "hs": hs, "us": us, "cov": cov, "roas": roas, "addr": addr, "flags": flags})
+                      "hs": hs, "us": us, "cov": cov, "roas": roas, "addr": addr, "flags": flags,
+                      "spend": r["spend"]})
+    tot_ps = sum(p["spend"] for p in prosp) or 1  # rank/weight prospecting campaigns by % of prospecting spend
+    for p in prosp:
+        p["sshare"] = p["spend"] / tot_ps
 
     # =====================================================================
     # ONE FIGURE — adaptive height (stage map + prospecting audit)
@@ -247,13 +251,14 @@ def main():
     # PROSPECTING AUDIT (geo / net-new gate / HI-share carry the signal; no separate flags column)
     ax.text(0.03, Y(cy), "PROSPECTING AUDIENCE  —  per campaign (obj=1)", fontsize=16, fontweight="bold", color=NAVY)
     cy += 0.42
-    c2 = ["Campaign", "Geo", "Interest", "Net-new gate", "Reached", "HI-share", "ROAS"]
-    x2 = [0.03, 0.30, 0.42, 0.55, 0.70, 0.80, 0.90]
+    c2 = ["Campaign", "% spend", "Geo", "Interest", "Net-new gate", "Reached", "HI-share", "ROAS"]
+    x2 = [0.03, 0.285, 0.40, 0.50, 0.62, 0.735, 0.82, 0.91]
     for x, c in zip(x2, c2):
         ax.text(x, Y(cy), c, fontsize=14, fontweight="bold", color="#555", va="center")
     cy += 0.16
     ax.plot([0.03, 0.985], [Y(cy), Y(cy)], color=NAVY, lw=1.4)
     cy += 0.28
+    maxshare = max((p["sshare"] for p in prosp), default=1) or 1
     for i, p in enumerate(prosp):
         if i % 2 == 0:
             ax.axhspan(Y(cy + RH / 2 - 0.04), Y(cy - RH / 2 + 0.04), color="#000", alpha=0.03)
@@ -265,17 +270,21 @@ def main():
         else:
             hs_txt = f"{p['hs']*100:.0f}%"
             hs_col = GREEN if p["hs"] >= 0.80 else (AMBER if p["hs"] >= 0.60 else RED)
-        ax.text(x2[0], Y(cy), p["label"][:32], fontsize=12.5, va="center", color="#222", fontweight="bold")
-        ax.text(x2[1], Y(cy), geo_txt(p), fontsize=12.5, va="center", color=gcol,
+        ax.text(x2[0], Y(cy), p["label"][:30], fontsize=12.5, va="center", color="#222", fontweight="bold")
+        # % spend: the number + a proportional weight bar to its right, so materiality is visible at a glance
+        ax.text(x2[1], Y(cy), f"{p['sshare']*100:.0f}%", fontsize=12, va="center", color=NAVY, fontweight="bold")
+        bar_w = 0.06 * p["sshare"] / maxshare
+        ax.add_patch(plt.Rectangle((x2[1] + 0.048, Y(cy) - 0.006), bar_w, 0.012, color=NAVY, alpha=0.5, zorder=1))
+        ax.text(x2[2], Y(cy), geo_txt(p), fontsize=12.5, va="center", color=gcol,
                 fontweight="bold" if gcol == AMBER else "normal")
-        ax.text(x2[2], Y(cy), p["interest"], fontsize=12, va="center",
+        ax.text(x2[3], Y(cy), p["interest"], fontsize=12, va="center",
                 color=GREEN if "MM" in p["interest"] else (AMBER if "3P only" in p["interest"] else GRAY))
-        ax.text(x2[3], Y(cy), gate_txt, fontsize=12.5, va="center", color=gate_col,
+        ax.text(x2[4], Y(cy), gate_txt, fontsize=12.5, va="center", color=gate_col,
                 fontweight="bold" if p["gate"] else "normal")
-        ax.text(x2[4], Y(cy), kfmt(p["reach"]) if p["reach"] else "dark", fontsize=12.5, va="center",
+        ax.text(x2[5], Y(cy), kfmt(p["reach"]) if p["reach"] else "dark", fontsize=12.5, va="center",
                 color="#222" if p["reach"] else GRAY)
-        ax.text(x2[5], Y(cy), hs_txt, fontsize=12.5, va="center", color=hs_col, fontweight="bold")
-        ax.text(x2[6], Y(cy), f"{p['roas']:.2f}x" if p["roas"] else "—", fontsize=12.5, va="center",
+        ax.text(x2[6], Y(cy), hs_txt, fontsize=12.5, va="center", color=hs_col, fontweight="bold")
+        ax.text(x2[7], Y(cy), f"{p['roas']:.2f}x" if p["roas"] else "—", fontsize=12.5, va="center",
                 color=roas_col, fontweight="bold")
         cy += RH
     ax.text(0.03, Y(cy + 0.08), "Reached / HI-share from CIL (households scored ≥ 8001), recent month.   "
@@ -296,16 +305,16 @@ def main():
                   f"{dollar(s['revenue'])} | {roas:.1f}x |")
     md += ["", "**Structural:** each campaign group is a full funnel (stage = `objective_id`); group-level metrics conflate "
            "stages. Retargeting is the engine.", "",
-           "## Prospecting audience — targeting + funnel + flags", "",
-           "| Campaign | Geo | Interest | Gate | Reached | HI-share | Coverage | ROAS | Flags |",
-           "|---|---|---|---|--:|--:|--:|--:|---|"]
+           "## Prospecting audience — per campaign (ranked by % of prospecting spend)", "",
+           "| Campaign | % spend | Geo | Interest | Net-new gate | Reached | HI-share | Coverage | ROAS | Flags |",
+           "|---|--:|---|---|---|--:|--:|--:|--:|---|"]
     for p in prosp:
         fl = ", ".join(f[0] for f in p["flags"]) or "—"
         reach_s = kfmt(p["reach"]) if p["reach"] else "— dark"
         hs_s = f"{p['hs']*100:.0f}%" if p["hs"] is not None else "—"
         cov_s = f"{p['cov']*100:.0f}%" if p["cov"] is not None else "—"
         geo_s = "national" if p["national"] else (f"{p['ngeo']}/210 ({tier(p['ngeo'])})" if p["ngeo"] else "—")
-        md.append(f"| {p['label']} | {geo_s} | {p['interest']} | "
+        md.append(f"| {p['label']} | {p['sshare']*100:.0f}% | {geo_s} | {p['interest']} | "
                   f"{'net-new' if p['gate'] else '—'} | {reach_s} | {hs_s} | {cov_s} | {p['roas']:.2f}x | {fl} |")
     open(f"{o}/00_audience_audit.md", "w").write("\n".join(md) + "\n")
     print(f"wrote {o}/00_audience_audit.md")

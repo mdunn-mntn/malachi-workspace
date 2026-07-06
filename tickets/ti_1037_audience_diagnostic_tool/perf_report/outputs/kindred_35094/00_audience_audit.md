@@ -11,13 +11,13 @@
 
 **Structural:** each campaign group is a full funnel (stage = `objective_id`); group-level metrics conflate stages. Retargeting is the engine.
 
-## Prospecting audience — targeting + funnel + flags
+## Prospecting audience — per campaign (ranked by % of prospecting spend)
 
-| Campaign | Geo | Interest | Gate | Reached | HI-share | Coverage | ROAS | Flags |
-|---|---|---|---|--:|--:|--:|--:|---|
-| 261318 High Pop | 20/210 (top-20) | MM OR 3P | — | — dark | — | — | 2.36x | narrow geo 20/210, dark (F1 stopped) |
-| 540723 Mid Pop | 38/210 (mid) | MM OR 3P | — | 485K | 82% | 10% | 1.84x | — |
-| 463188 LowPop | 152/210 (long-152) | MM OR 3P | — | 148K | 72% | 3% | 1.48x | thin geo 152/210 |
-| 576276 HiPop Mom-Focus | 20/210 (top-20) | MM OR 3P | net-new | 258K | 84% | 3% | 1.27x | net-new gate, narrow geo 20/210 |
-| 576256 HiPop Q1-2026-Harter | 20/210 (top-20) | MM OR 3P | net-new | 253K | 81% | 3% | 1.50x | net-new gate, narrow geo 20/210 |
-| 576267 HiPop Motherhood-Journey | 20/210 (top-20) | MM OR 3P | net-new | 254K | 83% | 3% | 1.32x | net-new gate, narrow geo 20/210 |
+| Campaign | % spend | Geo | Interest | Net-new gate | Reached | HI-share | Coverage | ROAS | Flags |
+|---|--:|---|---|---|--:|--:|--:|--:|---|
+| 261318 High Pop | 36% | 20/210 (top-20) | MM OR 3P | — | — dark | — | — | 2.36x | narrow geo 20/210, dark (F1 stopped) |
+| 540723 Mid Pop | 30% | 38/210 (mid) | MM OR 3P | — | 485K | 82% | 10% | 1.84x | — |
+| 463188 LowPop | 10% | 152/210 (long-152) | MM OR 3P | — | 148K | 72% | 3% | 1.48x | thin geo 152/210 |
+| 576267 HiPop Motherhood-Journey | 8% | 20/210 (top-20) | MM OR 3P | net-new | 254K | 83% | 3% | 1.32x | net-new gate, narrow geo 20/210 |
+| 576256 HiPop Q1-2026-Harter | 8% | 20/210 (top-20) | MM OR 3P | net-new | 253K | 81% | 3% | 1.50x | net-new gate, narrow geo 20/210 |
+| 576276 HiPop Mom-Focus | 8% | 20/210 (top-20) | MM OR 3P | net-new | 258K | 84% | 3% | 1.27x | net-new gate, narrow geo 20/210 |
