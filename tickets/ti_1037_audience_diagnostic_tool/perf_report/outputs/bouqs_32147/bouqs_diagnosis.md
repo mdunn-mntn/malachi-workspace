@@ -90,7 +90,7 @@ may be real. The absolute visit/conversion decline can't be cleanly separated wi
 ## 6. HHST gate — a STANDING low gate, not a YoY-worse one (modules 03, 03b, 06b)
 
 Bouqs runs a **persistently low HHST score gate** (time-weighted avg **~4,800** — between Mid and
-Purchase-Prone, well below HI-only 10,000), so it lets non-HI supply in *by design*. **Crucially, this did
+Peak Performance, well below HI-only 10,000), so it lets non-HI supply in *by design*. **Crucially, this did
 NOT get worse this period** — the avg gate actually **rose** (P1 4,267 → P2 4,832) and thrash events
 **fell** (104 → 76). What zeros it out are the **short flights** (≤3d auto-ungate to HHST=0), which are
 **~flat YoY (30 → 31)** — also not a new problem. No-gate days cluster **Dec–Feb** (holiday volume), and the

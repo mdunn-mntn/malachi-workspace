@@ -228,7 +228,8 @@ def main():
     b_cvr = 100 * b_conv / b_vis if b_vis else 0
     b_roas = b_rev / b_spend
 
-    fig, ax = plt.subplots(figsize=(15, 9.2))
+    fig = plt.figure(figsize=(15, 9.2))
+    ax = fig.add_axes([0, 0, 1, 1])  # fill the figure so ax.text and fig.text share one coord system
     ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
     if national_acct:
         subtitle = ("Prospecting targets all-of-US nationally (no DMA tiers). P2 spread across "
@@ -284,8 +285,9 @@ def main():
     for x, c in zip(xg, cols2):
         ax.text(x, yr2, c, fontsize=11, fontweight="bold", color="#444")
     ax.plot([0.03, 0.97], [yr2 - 0.014, yr2 - 0.014], color=NAVY, lw=1.3)
+    # rank by P2 spend desc (materiality) — biggest spender on top
     order = sorted([c for c in camps if (c["grp"], "P2") in metrics],
-                   key=lambda c: (TIER_ORDER.index(c["tier"]), -int(metrics[(c["grp"], "P2")]["imps"])))
+                   key=lambda c: -float(metrics[(c["grp"], "P2")]["spend"] or 0))
     # adaptive row pitch for a variable number of campaigns
     rowdy = min(0.0335, (yr2 - 0.14) / max(len(order) + 2, 1))
     y = yr2 - 0.030

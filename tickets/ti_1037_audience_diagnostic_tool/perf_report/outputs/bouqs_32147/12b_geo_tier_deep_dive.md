@@ -7,14 +7,14 @@
 | Campaign | Tier | #DMAs | Launched | P2 imps | P2 VR | P2 CVR | P2 ROAS |
 |---|---|---:|---|---:|---:|---:|---:|
 | 119362 CTV eComm Prospecting 2026 | National | US | 2026-04 | 15.8M | 1.4‰ | 6.3% | 0.50x |
+| 108055 CTV Prospecting MM VDay 2026 | Low Pop | 84 | 2026-01 | 13.0M | 2.6‰ | 11.4% | 1.91x |
 | 85384 CTV eComm Prospecting 2026 -old | National | US | 2026-01 | 5.5M | 2.4‰ | 8.7% | 0.95x |
-| 119361 CTV eComm Low Frequency v2 Prospecting 2026 | National | US | 2026-04 | 2.4M | 2.0‰ | 8.0% | 0.93x |
 | 119363 CTV eComm High Frequency v2 Prospecting 2026 | National | US | 2026-04 | 2.4M | 1.7‰ | 7.6% | 0.71x |
+| 119361 CTV eComm Low Frequency v2 Prospecting 2026 | National | US | 2026-04 | 2.4M | 2.0‰ | 8.0% | 0.93x |
 | 116732 CTV Subscriptions Prospecting | National | US | 2026-04 | 1.4M | 14.1‰ | 10.2% | 8.56x |
-| 117987 CTV eComm Auto Frequency Prospecting 2026 | National | US | 2026-04 | 537K | 4.8‰ | 6.1% | 1.67x |
 | 117983 CTV eComm High Frequency Prospecting 2026 | National | US | 2026-04 | 471K | 2.0‰ | 7.3% | 0.51x |
 | 117985 CTV eComm Low Frequency Prospecting 2026 | National | US | 2026-04 | 458K | 2.0‰ | 7.0% | 0.59x |
-| 108055 CTV Prospecting MM VDay 2026 | Low Pop | 84 | 2026-01 | 13.0M | 2.6‰ | 11.4% | 1.91x |
+| 117987 CTV eComm Auto Frequency Prospecting 2026 | National | US | 2026-04 | 537K | 4.8‰ | 6.1% | 1.67x |
 
 **Flagship (85384 CTV eComm Prospecting 2026 -old) YoY:** ROAS 4.26x -> 0.95x, VR 6.1->2.4‰, CVR 12.1->8.7%.
 **Blended P2 ROAS 1.26x** across all 9 active campaigns.

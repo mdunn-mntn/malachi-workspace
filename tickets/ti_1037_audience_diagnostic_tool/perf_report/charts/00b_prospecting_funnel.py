@@ -1,9 +1,9 @@
 """Module 00b render — PROSPECTING REACH COMPOSITION by score bucket (funnel detail).
 
 Advertiser-agnostic companion to module 00: for each prospecting (obj=1) campaign, the distinct
-households reached, split by score bucket (High-Intent ≥8001 · Purchase-Prone · Mid/MaxReach ·
-unscored). Shows WHO prospecting actually reaches — the reliable, exact read behind the audit's
-HI-share column. Adaptive height to the campaign count.
+households reached, split by score bucket (unscored · Mid/MaxReach · Peak Performance ·
+High-Intent ≥8001, drawn low->high so High-Intent lands on the right end). Shows WHO prospecting
+actually reaches — the reliable, exact read behind the audit's HI-share column. Adaptive height.
 
 Reads  <outdir>/00_campaign_enum.csv · 00_funnel_sizes.csv · 00_funnel_hishare.csv
 Writes <outdir>/00b_prospecting_funnel.png · 00b_prospecting_funnel.md
@@ -85,26 +85,28 @@ def main():
              "High HI-share = reaching high-intent supply; low HI-share / high unscored = reaching low-intent supply.",
              fontsize=11, color="#444")
 
-    axb = fig.add_axes([0.28, 0.08, 0.60, 1 - (1.55 / H) - 0.08])
+    axb = fig.add_axes([0.30, 0.09, 0.56, 1 - (1.55 / H) - 0.09])
     ypos = list(range(n))[::-1]
     lefts = [0.0] * n
-    for key, col, lab in [("hi", NAVY, "High-Intent (≥8001)"), ("pp", AMBER, "Purchase-Prone"),
-                          ("mid", GRAY, "Mid / MaxReach"), ("unscored", LGRAY, "unscored")]:
+    # stack low->high so High-Intent (blue) lands on the RIGHT end of every bar
+    for key, col, lab in [("unscored", LGRAY, "unscored"), ("mid", GRAY, "Mid / MaxReach"),
+                          ("pp", AMBER, "Peak Perf"), ("hi", NAVY, "High-Intent (≥8001)")]:
         vals = [r["b"][key] for r in rows]
         axb.barh(ypos, vals, left=lefts, color=col, height=0.66, label=lab)
         lefts = [l + v for l, v in zip(lefts, vals)]
     maxr = max(r["reach"] for r in rows)
     for i, r in enumerate(rows):
-        axb.text(r["reach"] + maxr * 0.01, ypos[i],
+        axb.text(r["reach"] + maxr * 0.022, ypos[i],
                  f"{kfmt(r['reach'])} · {r['hs']*100:.0f}% HI · {pctfmt(r['sshare'])} spend",
                  va="center", fontsize=9.8, color=NAVY, fontweight="bold")
     axb.set_yticks(ypos)
     axb.set_yticklabels([f"{r['label'][:34]}  ·  {pctfmt(r['sshare'])}" for r in rows], fontsize=9.8)
-    axb.set_xlim(0, maxr * 1.22)
+    axb.set_xlim(0, maxr * 1.30)
     axb.set_xticks([])
     for sp in ["top", "right", "bottom"]:
         axb.spines[sp].set_visible(False)
-    axb.legend(frameon=False, fontsize=9.5, loc="lower right", ncol=2)
+    # legend as a single horizontal row ABOVE the bars — never overlaps a data row
+    axb.legend(frameon=False, fontsize=9.5, loc="lower center", bbox_to_anchor=(0.5, 1.005), ncol=4)
     plt.savefig(f"{o}/00b_prospecting_funnel.png", dpi=195, bbox_inches="tight")
     print(f"wrote {o}/00b_prospecting_funnel.png")
     plt.close(fig)

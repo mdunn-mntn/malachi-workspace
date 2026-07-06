@@ -10,8 +10,8 @@
 
 **Structural:** each campaign group is a full funnel (stage = `objective_id`); group-level metrics conflate stages. Retargeting is the engine.
 
-## Prospecting audience — targeting + funnel + flags
+## Prospecting audience — per campaign (ranked by % of prospecting spend)
 
-| Campaign | Geo | Interest | Gate | Reached | HI-share | Coverage | ROAS | Flags |
-|---|---|---|---|--:|--:|--:|--:|---|
-| 298079 Subscriptions | national | MM OR 3P | — | 286K | 97% | 3% | 0.53x | — |
+| Campaign | % spend | Geo | Interest | Net-new gate | Reached | HI-share | Coverage | ROAS | Flags |
+|---|--:|---|---|---|--:|--:|--:|--:|---|
+| 76699 Subs | 100% | national | MM OR 3P | — | 286K | 97% | 3% | 0.53x | — |

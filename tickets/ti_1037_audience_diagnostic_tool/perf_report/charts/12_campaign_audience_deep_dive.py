@@ -130,6 +130,12 @@ def prospecting_spend_by_group(enum_path):
 def pctfmt(share):
     return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
 
+
+# compact tier labels for the fixed-width table (full names stay in the .md)
+SHORT_TIER = {"National (US)": "National", "Top markets": "Top mkts",
+              "Mid markets": "Mid mkts", "Long-tail (small mkts)": "Long-tail"}
+
+
 def main():
     ap = argparse.ArgumentParser()
     base = "outputs/kindred_35094/"
@@ -266,7 +272,7 @@ def main():
         ax.text(xs[1], y, f"{pctfmt(d['sshare'])}", fontsize=10.3, va="center", color=NAVY, fontweight="bold")
         bar_w = 0.05 * d["sshare"] / maxshare
         ax.add_patch(Rectangle((xs[1] + 0.038, y - 0.10), bar_w, 0.20, color=NAVY, alpha=0.5, zorder=1))
-        cells = [f"{d['grp']} {nm[:namew]}", d["tier"], dma_cell,
+        cells = [f"{d['grp']} {nm[:namew]}", SHORT_TIER.get(d["tier"], d["tier"]), dma_cell,
                  f"MM {(d['jop'] or '?').upper()} 3P", str(d["mm"]), str(d["tp"])]
         cell_x = [xs[0], xs[2], xs[3], xs[4], xs[5], xs[6]]
         for x, txt in zip(cell_x, cells):

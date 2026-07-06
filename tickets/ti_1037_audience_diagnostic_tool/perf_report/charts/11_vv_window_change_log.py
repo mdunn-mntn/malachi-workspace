@@ -80,12 +80,16 @@ def main():
         ys = [p[1] for p in pts]
         ax.step(xs, ys, where="post", color=color, lw=2.6, marker="o", ms=5, label=lab, zorder=3)
 
-    # change markers + labels
+    # change markers + labels — collapse same-date events (keep the last state that date) so
+    # near-simultaneous changes don't stack their labels on top of each other.
+    by_date = {}
     for c in changes:
         if ws < c["date"] <= we:
-            ax.axvline(mdates.date2num(c["date"]), color=RED, ls="--", lw=1.3, zorder=2)
-            ax.text(mdates.date2num(c["date"]) + 5, y_flag, f"{c['date']}\nPRO->{c['pro']}d  RT->{c['rt']}d",
-                    fontsize=8.5, color=RED, va="top", fontweight="bold")
+            by_date[c["date"]] = c            # later row for the same date wins
+    for dt, c in sorted(by_date.items()):
+        ax.axvline(mdates.date2num(dt), color=RED, ls="--", lw=1.3, zorder=2)
+        ax.text(mdates.date2num(dt) + 5, y_flag, f"{dt}\nPRO->{c['pro']}d  RT->{c['rt']}d",
+                fontsize=8.5, color=RED, va="top", fontweight="bold")
 
     # P1/P2 flag — PRO window at each period's start & end (P2 may straddle a change)
     p1s, p1e_ = val_at(changes, "pro", d(a.p1[0])), val_at(changes, "pro", d(a.p1[1]))
@@ -95,11 +99,10 @@ def main():
     ax.text(mdates.date2num(p1m), y_period, f"P1: PRO {p1lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
     ax.text(mdates.date2num(p2m), y_period, f"P2: PRO {p2lbl}", ha="center", fontsize=9, color=NAVY, fontweight="bold")
     if p1e_ != p2e_ or p1s != p1e_ or p2s != p2e_:
-        ax.text(0.5, 1.04, f"FLAG: prospecting VV window shortened  P1 {p1lbl}  ->  P2 {p2lbl}  (progressive) — P1 "
-                f"visits/conversions were measured on a LONGER window; shortening reduces absolute connectable "
-                f"visits & conversions (and visit rate). CVR (conv/visit) effect is AMBIGUOUS — depends on how the "
-                f"dropped trailing-window visits converted.", transform=ax.transAxes,
-                ha="center", fontsize=9, color=RED, fontweight="bold")
+        ax.text(0.015, 0.96, f"FLAG: VV window shortened  P1 {p1lbl} -> P2 {p2lbl}\n"
+                "fewer connectable visits & conversions,\nlower visit rate  (CVR effect ambiguous).",
+                transform=ax.transAxes, ha="left", va="top", fontsize=9.5, color=RED,
+                fontweight="bold", linespacing=1.35)
 
     ax.set_ylim(0, ymax)
     ax.set_xlim(mdates.date2num(ws) - 10, mdates.date2num(we) + 10)
@@ -111,7 +114,7 @@ def main():
         ax.spines[sp].set_visible(False)
     ax.legend(frameon=False, fontsize=9.5, loc="center left")
     ax.set_title(f"{a.adv} — Verified-Visit lookback window over time", fontsize=14,
-                 fontweight="bold", loc="left", color="#222", pad=26)
+                 fontweight="bold", loc="left", color="#222", pad=12)
     plt.tight_layout()
     plt.savefig(a.out, dpi=200, bbox_inches="tight")
     print(f"wrote {a.out}")

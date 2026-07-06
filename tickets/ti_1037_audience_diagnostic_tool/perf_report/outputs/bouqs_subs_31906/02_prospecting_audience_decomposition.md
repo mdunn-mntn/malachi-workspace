@@ -1,6 +1,7 @@
 # The Bouqs Subscriptions (31906, dark 2026) — Prospecting audience decomposition
 
-Group names: 76699=CTV Prospecting Subscriptions
+Columns ordered by % of prospecting spend (desc); flagship = top spender.
+Group names: 76699=CTV Prospecting Subscriptions (100% spend)
 
 | Targeting layer | 76699 |
 |---|---|
@@ -11,6 +12,6 @@ Group names: 76699=CTV Prospecting Subscriptions
 | DS2 · MNTN 1P (excl) | 0 |
 | DS47 · CRM idgraph (excl) | 1 |
 | DS14 · availability gate | on |
-| DS21/34 · own-site retgt (excl) | 180d |
+| DS21/34 · own conv+pageview (excl) | 180d |
 | Holdout | 10% |
 | RTC score directive | on |

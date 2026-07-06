@@ -82,7 +82,7 @@ SELECT campaign_id, audience_id, expression FROM ranked WHERE rn = 1;
        SELECT campaign_id,
          COUNT(DISTINCT ip)                                        reach_ip,
          COUNT(DISTINCT IF(household_score>=8001, ip, NULL))       hi_ip,       -- High-Intent
-         COUNT(DISTINCT IF(household_score BETWEEN 6666 AND 8000, ip, NULL)) pp_ip,   -- Purchase-Prone
+         COUNT(DISTINCT IF(household_score BETWEEN 6666 AND 8000, ip, NULL)) pp_ip,   -- Peak Performance (PP)
          COUNT(DISTINCT IF(household_score BETWEEN 1 AND 6665, ip, NULL))    mid_ip,  -- Mid/MaxReach
          COUNT(DISTINCT IF(household_score<=0, ip, NULL))          unscored_ip
        FROM `dw-main-silver.logdata.cost_impression_log`

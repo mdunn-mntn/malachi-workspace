@@ -107,11 +107,7 @@ def main():
         plt.setp(ax.get_xticklabels(), rotation=0, fontsize=8)
     fig.suptitle(f"{a.adv} — Prospecting monthly metric trends", fontsize=15,
                  fontweight="bold", color="#222", x=0.01, ha="left", y=0.997)
-    if paused:
-        fig.text(0.01, 0.978, "Red band = paused month (0 impressions/spend): CPM, visit-rate & ROAS are undefined "
-                 "(shown as a gap); any visits/conversions that month are lagged attributions from earlier impressions.",
-                 fontsize=8.5, color=RED, ha="left")
-    plt.tight_layout(rect=[0, 0, 1, 0.972 if paused else 0.985])
+    plt.tight_layout(rect=[0, 0, 1, 0.985])
     plt.savefig(a.out, dpi=190, bbox_inches="tight")
     print(f"wrote {a.out}")
 

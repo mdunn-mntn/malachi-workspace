@@ -7,11 +7,11 @@
 | Campaign | Tier | #DMAs | Launched | P2 imps | P2 VR | P2 CVR | P2 ROAS |
 |---|---|---:|---|---:|---:|---:|---:|
 | 69884 CTV Prospecting High Pop | High Pop | 20 | 2026-01 | 4.9M | 5.1‰ | 5.6% | 2.39x |
-| 115946 CTV Prospecting HiPop Mom-Focus | High Pop | 20 | 2026-03 | 1.0M | 3.3‰ | 4.3% | 1.21x |
-| 115943 CTV Prospecting HiPop Q1-2026-Harter | High Pop | 20 | 2026-03 | 1.0M | 3.2‰ | 5.1% | 1.36x |
-| 115945 CTV Prospecting HiPop Motherhood-Journey | High Pop | 20 | 2026-03 | 1.0M | 3.4‰ | 4.5% | 1.22x |
 | 109926 CTV Prospecting Mid Pop | Mid Pop | 38 | 2026-02 | 4.0M | 4.1‰ | 5.3% | 1.74x |
 | 96108 CTV Prospecting LowPop | Low Pop | 152 | 2026-01 | 1.3M | 4.3‰ | 3.7% | 1.31x |
+| 115945 CTV Prospecting HiPop Motherhood-Journey | High Pop | 20 | 2026-03 | 1.0M | 3.4‰ | 4.5% | 1.22x |
+| 115943 CTV Prospecting HiPop Q1-2026-Harter | High Pop | 20 | 2026-03 | 1.0M | 3.2‰ | 5.1% | 1.36x |
+| 115946 CTV Prospecting HiPop Mom-Focus | High Pop | 20 | 2026-03 | 1.0M | 3.3‰ | 4.3% | 1.21x |
 
 **Flagship (69884 CTV Prospecting High Pop) YoY:** ROAS 9.72x -> 2.39x, VR 11.6->5.1‰, CVR 8.7->5.6%.
 **Blended P2 ROAS 1.82x** across all 6 active campaigns.

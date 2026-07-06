@@ -58,8 +58,8 @@ def main():
             if not r.get("campaign_group_id"):
                 continue
             rows.append(r)
-    # earliest start on top -> plot in reverse so index 0 sits at the top after invert
-    rows.sort(key=lambda r: (r["first_active_day"], -float(r["total_spend"] or 0)))
+    # highest spend on top -> plot inverts (index 0 at top); tie-break earliest start
+    rows.sort(key=lambda r: (-float(r["total_spend"] or 0), r["first_active_day"]))
 
     ws, we = d(a.win_start), d(a.win_end)
     p1s, p1e = d(a.p1[0]), d(a.p1[1])
