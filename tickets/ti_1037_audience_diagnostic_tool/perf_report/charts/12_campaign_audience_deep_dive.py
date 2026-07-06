@@ -107,6 +107,26 @@ def tier(inc):
     return "Long-tail (small mkts)"
 
 
+def prospecting_spend_by_group(enum_path):
+    """grp (campaign_group_id) -> summed prospecting (obj==1) spend from 00_campaign_enum.csv.
+    Advertiser-agnostic: reads the already-summed `spend` column; groups absent -> not in map (spend 0)."""
+    out = {}
+    if not (enum_path and os.path.exists(enum_path)):
+        return out
+    for r in csv.DictReader(open(enum_path)):
+        try:
+            if int(r["obj"]) != 1:
+                continue
+        except (KeyError, ValueError, TypeError):
+            continue
+        try:
+            sp = float(r.get("spend") or 0)
+        except (ValueError, TypeError):
+            sp = 0.0
+        out[r["grp"]] = out.get(r["grp"], 0.0) + sp
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     base = "outputs/kindred_35094/"
@@ -115,10 +135,14 @@ def main():
     ap.add_argument("--segs", default=base + "12_ds35_segment_names.csv")
     ap.add_argument("--png", default=base + "12_campaign_audience_deep_dive.png")
     ap.add_argument("--md", default=base + "12_campaign_audience_deep_dive.md")
+    ap.add_argument("--enum", default=None, help="00_campaign_enum.csv (spend source); default = alongside --expr")
     ap.add_argument("--adv", default="Kindred Bravely (35094)")
     a = ap.parse_args()
 
     csv.field_size_limit(10 ** 7)
+    # spend source (advertiser-agnostic): 00_campaign_enum.csv sits in the same <outdir> as --expr
+    enum_path = a.enum or os.path.join(os.path.dirname(a.expr), "00_campaign_enum.csv")
+    gspend = prospecting_spend_by_group(enum_path)
     geo = {r["location_id"]: r["dma_name"] for r in csv.DictReader(open(a.geo))}
     segn = {r["category_id"]: r["name"] for r in csv.DictReader(open(a.segs))}
     rows = [r for r in csv.DictReader(open(a.expr)) if r.get("expression")]
@@ -168,7 +192,14 @@ def main():
             flags.append("DS16 net-new gate: fishes residual")
         dive.append({"grp": r["campaign_group_id"], "name": r["group_name"], "n_inc": len(inc), "n_exc": len(exc),
                      "natl": natl, "tier": tier(inc), "markets": markets, "jop": jop, "mm": mm, "tp": tp,
-                     "gate": gate, "segs": [segn.get(s, s) for s in seg_ids], "flags": flags})
+                     "gate": gate, "segs": [segn.get(s, s) for s in seg_ids], "flags": flags,
+                     "spend": gspend.get(r["campaign_group_id"], 0.0)})
+
+    # rank by % of prospecting spend (materiality); groups absent from the enum -> 0 -> sort last
+    tot_ps = sum(d["spend"] for d in dive) or 1
+    for d in dive:
+        d["sshare"] = d["spend"] / tot_ps
+    dive_by_spend = sorted(dive, key=lambda x: (-x["spend"], x["n_inc"]))
 
     and_narrowing = any(d["jop"] == "and" for d in dive)
     n_dive = len(dive) or 1
@@ -190,8 +221,8 @@ def main():
           f"**Account red-flag verdict: {verdict_md}.** "
           f"Interest logic across campaigns: {'/'.join(sorted(set((d['jop'] or '?') for d in dive)))} (OR = MM/3P additive; AND = 3P narrows MM). "
           "Geo `location_ids` decode via `geo.location_data` (Nielsen DMA; location 237 = national US); 3P names via `tpa.categories` (sizes GCS-gated).", ""]
-    for d in sorted(dive, key=lambda x: x["n_inc"]):
-        md.append(f"### {d['grp']} — {d['name']}")
+    for d in dive_by_spend:
+        md.append(f"### {d['grp']} — {d['name']}  ·  {d['sshare']*100:.0f}% of prospecting spend")
         geo_line = ("National (US) — targets all-of-US (no DMA slice)" if d["natl"]
                     else f"{d['tier']} — **{d['n_inc']} DMAs** (excl {d['n_exc']}). e.g. {', '.join(d['markets'])}"
                     + (" …" if d["n_inc"] > 5 else ""))
@@ -206,14 +237,17 @@ def main():
     print(f"wrote {a.md}")
 
     # ---- PNG summary table (adaptive to a variable number of campaigns) ----
-    cols = ["Campaign", "Geo tier", "#DMAs", "Interest logic", "MM kw", "3P seg", "Gate", "Red flag"]
-    order = sorted(dive, key=lambda x: x["n_inc"])
+    # ranked by % of prospecting spend (materiality) — biggest spender on top; enum-absent groups (0) last
+    cols = ["Campaign", "% spend", "Geo tier", "#DMAs", "Interest logic", "MM kw", "3P seg", "Gate", "Red flag"]
+    order = dive_by_spend
     n = len(order)
     # name width shrinks the more campaigns there are so long frequency-variant names still fit
-    namew = 32 if n <= 6 else (26 if n <= 10 else 20)
+    namew = 26 if n <= 6 else (22 if n <= 10 else 18)
+    maxshare = max((d["sshare"] for d in order), default=1) or 1
     fig, ax = plt.subplots(figsize=(15.5, 1.1 + 0.58 * n))
     ax.axis("off")
-    xs = [0.0, 0.32, 0.42, 0.50, 0.635, 0.70, 0.755, 0.82]
+    #      Campaign  %spend  Geo    #DMAs  Interest  MM kw  3P seg  Gate   Red flag
+    xs = [0.0, 0.245, 0.37, 0.455, 0.525, 0.655, 0.715, 0.765, 0.825]
     yt = n + 0.2
     for x, c in zip(xs, cols):
         ax.text(x, yt, c, fontsize=11, fontweight="bold", color=NAVY, va="center")
@@ -225,16 +259,21 @@ def main():
         nm = (d["name"] or "").strip()
         jc = GREEN if d["jop"] == "or" else (RED if d["jop"] == "and" else GRAY)
         dma_cell = "US" if d["natl"] else str(d["n_inc"])
+        # % spend: number + tiny proportional weight bar (materiality at a glance, like module 00)
+        ax.text(xs[1], y, f"{d['sshare']*100:.0f}%", fontsize=10.3, va="center", color=NAVY, fontweight="bold")
+        bar_w = 0.05 * d["sshare"] / maxshare
+        ax.add_patch(Rectangle((xs[1] + 0.038, y - 0.10), bar_w, 0.20, color=NAVY, alpha=0.5, zorder=1))
         cells = [f"{d['grp']} {nm[:namew]}", d["tier"], dma_cell,
                  f"MM {(d['jop'] or '?').upper()} 3P", str(d["mm"]), str(d["tp"])]
-        for x, txt in zip(xs, cells):
+        cell_x = [xs[0], xs[2], xs[3], xs[4], xs[5], xs[6]]
+        for x, txt in zip(cell_x, cells):
             col = jc if txt.startswith("MM ") else "#222"
             ax.text(x, y, txt, fontsize=10.3, va="center", color=col,
                     fontweight="bold" if txt.startswith("MM ") else "normal")
-        ax.text(xs[6], y, "gated" if d["gate"] else "—", fontsize=10, va="center",
+        ax.text(xs[7], y, "gated" if d["gate"] else "—", fontsize=10, va="center",
                 color=RED if d["gate"] else GRAY, fontweight="bold" if d["gate"] else "normal")
         fl = d["flags"][0] if d["flags"] else "—"
-        ax.text(xs[7], y, fl[:30], fontsize=9, va="center", color=RED if d["flags"] else GRAY)
+        ax.text(xs[8], y, fl[:28], fontsize=9, va="center", color=RED if d["flags"] else GRAY)
     ax.set_xlim(0, 1)
     ax.set_ylim(-0.6, n + 0.6)
     if and_narrowing:

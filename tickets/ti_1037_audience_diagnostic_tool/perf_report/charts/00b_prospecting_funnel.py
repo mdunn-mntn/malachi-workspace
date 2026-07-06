@@ -53,11 +53,17 @@ def main():
         if reach <= 0:
             continue
         b = {k: int(h[k + "_ip"]) for k in ("hi", "pp", "mid", "unscored")}
-        gname = enum.get(cid, {}).get("group_name")
+        en = enum.get(cid, {})
+        gname = en.get("group_name")
+        # prospecting spend for this campaign_id (obj==1 row in the enum); missing/non-prospecting -> 0
+        spend = float(en["spend"] or 0) if (en.get("obj") == "1" and en.get("spend")) else 0.0
         addr = int(sizes[cid]["med_total"]) if cid in sizes else None
         rows.append({"cid": cid, "label": glabel(gname, cid), "reach": reach, "b": b,
-                     "hs": b["hi"] / reach, "addr": addr})
-    rows.sort(key=lambda r: -r["reach"])
+                     "hs": b["hi"] / reach, "addr": addr, "spend": spend})
+    tot_ps = sum(r["spend"] for r in rows) or 1  # rank/label bars by % of prospecting spend
+    for r in rows:
+        r["sshare"] = r["spend"] / tot_ps
+    rows.sort(key=lambda r: -r["spend"])  # biggest spender first (top bar)
     n = len(rows)
 
     H = 1.9 + 0.42 * n
@@ -78,10 +84,11 @@ def main():
         lefts = [l + v for l, v in zip(lefts, vals)]
     maxr = max(r["reach"] for r in rows)
     for i, r in enumerate(rows):
-        axb.text(r["reach"] + maxr * 0.01, ypos[i], f"{kfmt(r['reach'])} · {r['hs']*100:.0f}% HI",
+        axb.text(r["reach"] + maxr * 0.01, ypos[i],
+                 f"{kfmt(r['reach'])} · {r['hs']*100:.0f}% HI · {r['sshare']*100:.0f}% spend",
                  va="center", fontsize=9.8, color=NAVY, fontweight="bold")
     axb.set_yticks(ypos)
-    axb.set_yticklabels([r["label"][:30] for r in rows], fontsize=9.8)
+    axb.set_yticklabels([f"{r['label'][:30]}  ·  {r['sshare']*100:.0f}%" for r in rows], fontsize=9.8)
     axb.set_xlim(0, maxr * 1.22)
     axb.set_xticks([])
     for sp in ["top", "right", "bottom"]:
@@ -92,12 +99,12 @@ def main():
     plt.close(fig)
 
     md = [f"# {a.adv} — prospecting reach by score bucket", "",
-          "Distinct households reached per obj=1 campaign (recent in-TTL month), split by score bucket. "
-          "Addressable = UI interest size (`total_audience_size`, ~5x-inflated).", "",
-          "| Campaign | Addressable | Reached | HI | HI-share | unscored |",
-          "|---|--:|--:|--:|--:|--:|"]
+          "Distinct households reached per obj=1 campaign (recent in-TTL month), split by score bucket, "
+          "ranked by % of prospecting spend. Addressable = UI interest size (`total_audience_size`, ~5x-inflated).", "",
+          "| Campaign | % spend | Addressable | Reached | HI | HI-share | unscored |",
+          "|---|--:|--:|--:|--:|--:|--:|"]
     for r in rows:
-        md.append(f"| {r['label']} | {kfmt(r['addr']) if r['addr'] else '—'} | {kfmt(r['reach'])} | "
+        md.append(f"| {r['label']} | {r['sshare']*100:.0f}% | {kfmt(r['addr']) if r['addr'] else '—'} | {kfmt(r['reach'])} | "
                   f"{kfmt(r['b']['hi'])} | {r['hs']*100:.0f}% | {r['b']['unscored']/r['reach']*100:.0f}% |")
     open(f"{o}/00b_prospecting_funnel.md", "w").write("\n".join(md) + "\n")
     print(f"wrote {o}/00b_prospecting_funnel.md")

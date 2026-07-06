@@ -15,6 +15,7 @@ Writes 12c_interest_dna.png · 12c_funnel_gate_evidence.png · 12c_interest_logi
 import argparse
 import csv
 import json
+import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -123,6 +124,29 @@ def kfmt(v):
     return f"{v/1e6:.2f}M" if v >= 1e6 else (f"{v/1e3:.0f}K" if v >= 1e3 else f"{v:.0f}")
 
 
+def prospecting_spend_by_group(outdir):
+    """Prospecting (obj==1) spend per campaign_group_id from <outdir>/00_campaign_enum.csv.
+    Advertiser-agnostic: sums each obj==1 campaign's already-summed spend into its group. Groups
+    absent from the enum simply won't appear (caller treats missing -> 0 share, sort last)."""
+    path = os.path.join(outdir, "00_campaign_enum.csv")
+    grp_spend = {}
+    if not os.path.exists(path):
+        return grp_spend
+    for r in csv.DictReader(open(path)):
+        try:
+            obj = int(r.get("obj") or 0)
+        except (TypeError, ValueError):
+            obj = 0
+        if obj != 1:
+            continue
+        try:
+            sp = float(r.get("spend") or 0)
+        except (TypeError, ValueError):
+            sp = 0.0
+        grp_spend[r["grp"]] = grp_spend.get(r["grp"], 0.0) + sp
+    return grp_spend
+
+
 def main():
     ap = argparse.ArgumentParser()
     base = "outputs/kindred_35094/"
@@ -158,18 +182,25 @@ def main():
     def short_name(nm):
         return (nm or "").replace("CTV", "").replace("Prospecting", "").replace("2026", "").strip(" -") or nm
 
+    # prospecting-spend share per group (advertiser-agnostic, from the enum next to --expr)
+    outdir = os.path.dirname(a.expr) or "."
+    grp_spend = prospecting_spend_by_group(outdir)
+    tot_spend = sum(grp_spend.get(g, 0.0) for g in exprs) or 1.0  # denom = groups this chart shows
+
     dna = {}
     for g, r in exprs.items():
         e = json.loads(r["expression"])
         cw = (e.get("categories") or {}).get("where")
         dsc = ds_counts(cw)
         inc = geo_incs(e)
+        sp = grp_spend.get(g, 0.0)  # missing from enum -> 0 spend -> 0 share, sorts last
         dna[g] = {"name": short_name(r["group_name"]), "full": (r["group_name"] or "").strip(),
                   "inc": inc, "natl": is_national(inc), "n_dma": (0 if is_national(inc) else len(inc)),
                   "mm": dsc.get(19, 0), "tp": dsc.get(35, 0), "join": join_op(cw),
-                  "gate": contains(cw, 16), "reach": reach.get(g, 0)}
-    # order: base first, then by reach desc
-    order = sorted(dna, key=lambda g: (g != base_grp, -dna[g]["reach"]))
+                  "gate": contains(cw, 16), "reach": reach.get(g, 0),
+                  "spend": sp, "sshare": sp / tot_spend}
+    # order: by prospecting-spend share desc (biggest spender first; missing-from-enum -> 0, last)
+    order = sorted(dna, key=lambda g: (-dna[g]["sshare"], -dna[g]["reach"]))
     any_gate = any(dna[g]["gate"] for g in order)
     all_or = all((dna[g]["join"] in (None, "or")) for g in order)
 
@@ -186,8 +217,8 @@ def main():
             if any(dna[g]["natl"] for g in order) else
             "Narrowing comes from GEO and a net-new funnel gate.")
     fig.text(0.03, 0.90, sub, fontsize=12.5, color="#444")
-    cols = ["Campaign", "Geo tier", "Interest", "Funnel gate", "Narrowing flag"]
-    xs = [0.03, 0.30, 0.48, 0.615, 0.775]
+    cols = ["Campaign", "% spend", "Geo tier", "Interest", "Funnel gate", "Narrowing flag"]
+    xs = [0.03, 0.235, 0.345, 0.505, 0.635, 0.79]
     yt = 0.82
     for x, c in zip(xs, cols):
         ax.text(x, yt, c, fontsize=13.5, fontweight="bold", color=NAVY, va="center")
@@ -195,6 +226,7 @@ def main():
     ax.plot([0.03, 0.985], [top, top], color=NAVY, lw=1.6)
     dy = (top - 0.05) / n
     y = top - dy * 0.6
+    maxshare = max((dna[g]["sshare"] for g in order), default=1) or 1
     for i, g in enumerate(order):
         d = dna[g]
         if i % 2 == 0:
@@ -211,13 +243,17 @@ def main():
             flag, fcol = f"thin · long-tail {d['n_dma']}/210", RED
         else:
             flag, fcol = "clean · ungated", GREEN
-        ax.text(xs[0], y, f"{g}  {d['name'][:22]}", fontsize=12.5, va="center", color="#222", fontweight="bold")
-        ax.text(xs[1], y, tier_of(d["inc"]), fontsize=12.5, va="center", color=geo_col,
+        ax.text(xs[0], y, f"{g}  {d['name'][:14]}", fontsize=12.5, va="center", color="#222", fontweight="bold")
+        # % of prospecting spend: the number + a proportional weight bar so materiality reads at a glance
+        ax.text(xs[1], y, f"{d['sshare']*100:.0f}%", fontsize=12.5, va="center", color=NAVY, fontweight="bold")
+        bar_w = 0.055 * d["sshare"] / maxshare
+        ax.add_patch(plt.Rectangle((xs[1] + 0.04, y - 0.006), bar_w, 0.012, color=NAVY, alpha=0.5, zorder=1))
+        ax.text(xs[2], y, tier_of(d["inc"]), fontsize=12.5, va="center", color=geo_col,
                 fontweight="bold" if geo_col != "#222" else "normal")
-        ax.text(xs[2], y, f"MM {(d['join'] or '?').upper()} 3P", fontsize=12.5, va="center", color=GREEN)
-        ax.text(xs[3], y, gate_txt, fontsize=12.5, va="center", color=gate_col,
+        ax.text(xs[3], y, f"MM {(d['join'] or '?').upper()} 3P", fontsize=12.5, va="center", color=GREEN)
+        ax.text(xs[4], y, gate_txt, fontsize=12.5, va="center", color=gate_col,
                 fontweight="bold" if d["gate"] else "normal")
-        ax.text(xs[4], y, flag, fontsize=12, va="center", color=fcol,
+        ax.text(xs[5], y, flag, fontsize=12, va="center", color=fcol,
                 fontweight="bold" if fcol in (RED, AMBER) else "normal")
         y -= dy
     plt.savefig(a.dna_png, dpi=200, bbox_inches="tight")
@@ -308,9 +344,9 @@ def main():
              + ("The differentiator is a DS16 net-new funnel gate on the gated campaigns, not 3P."
                 if any_gate else "No net-new funnel gate present."))
     md = [f"# {a.adv} — Interest-logic deep-dive (targeting DNA + funnel gate)", "", lede, "",
-          "## Per-campaign targeting DNA", "",
-          "| Campaign | Geo tier | MM kw | 3P seg | MM×3P | Funnel gate (DS16) | Reach | Net-new vs base | Read |",
-          "|---|---|---:|---:|---|---|---:|---:|---|"]
+          "## Per-campaign targeting DNA (ranked by % of prospecting spend)", "",
+          "| Campaign | % spend | Geo tier | MM kw | 3P seg | MM×3P | Funnel gate (DS16) | Reach | Net-new vs base | Read |",
+          "|---|--:|---|---:|---:|---|---|---:|---:|---|"]
     for g in order:
         d = dna[g]
         gate = "**net-new (AND'd)**" if d["gate"] else "—"
@@ -323,7 +359,7 @@ def main():
         else:
             read = "geo slice"
         nn = f"{net_new_frac(g)*100:.0f}%" if g != base_grp and d["reach"] else "—"
-        md.append(f"| {g} {d['full']} | {tier_of(d['inc'])} | {d['mm']} | {d['tp']} | "
+        md.append(f"| {g} {d['full']} | {d['sshare']*100:.0f}% | {tier_of(d['inc'])} | {d['mm']} | {d['tp']} | "
                   f"{(d['join'] or '?').upper()} | {gate} | {kfmt(d['reach'])} | {nn} | {read} |")
     md += ["", "## The differentiator — DS16 net-new funnel gate",
            "`AND ( NOT DS16[own Impressions/Wins]  OR  DS16[own campaign-group tag] )` — decoded via "

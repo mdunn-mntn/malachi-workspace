@@ -66,6 +66,22 @@ LAYERS = [
 ]
 
 
+def prospecting_spend_by_group(outdir):
+    """Advertiser-agnostic: read 00_campaign_enum.csv and sum obj==1 (prospecting) spend per
+    campaign_group_id. Returns {grp -> prospecting_spend}. Missing enum -> empty dict (all 0)."""
+    path = os.path.join(outdir, "00_campaign_enum.csv")
+    gsp = {}
+    if not os.path.exists(path):
+        return gsp
+    for r in csv.DictReader(open(path)):
+        try:
+            if int(r.get("obj") or 0) == 1:
+                gsp[r["grp"]] = gsp.get(r["grp"], 0.0) + float(r.get("spend") or 0)
+        except (ValueError, KeyError):
+            continue
+    return gsp
+
+
 def short(gid, name):
     """Advertiser-agnostic column label: strip boilerplate 'Prospecting'/'CTV' noise,
     then keep the distinguishing tail so near-identical group names stay distinct."""
@@ -92,6 +108,19 @@ def main():
 
     csv.field_size_limit(10 ** 7)
     rows = [r for r in csv.DictReader(open(a.csv)) if r.get("expression")]
+
+    # order columns by % of PROSPECTING SPEND (descending) so the biggest spender is the
+    # left-most (flagship) column. Spend is advertiser-agnostic: sum obj==1 spend per group
+    # from 00_campaign_enum.csv (in the same outdir as the --csv input). Missing -> 0, sorts last.
+    outdir = os.path.dirname(a.csv)
+    gsp = prospecting_spend_by_group(outdir)
+    for r in rows:
+        r["_pspend"] = gsp.get(r["campaign_group_id"], 0.0)
+    rows.sort(key=lambda r: -r["_pspend"])
+    tot_ps = sum(r["_pspend"] for r in rows) or 1.0
+    for r in rows:
+        r["_sshare"] = r["_pspend"] / tot_ps
+
     parsed = [parse_expression(json.loads(r["expression"])) for r in rows]
     cols = [short(r["campaign_group_id"], r["group_name"]) for r in rows]
     ncol, nrow = len(rows), len(LAYERS)
@@ -123,15 +152,20 @@ def main():
                     color="white" if present else "#AAA",
                     fontweight="bold" if present else "normal", zorder=5)
 
-    # column headers (flagship marked)
+    # column headers (ordered by prospecting-spend share desc; flagship = top spender, col 0)
+    # group label sits just above the grid; the % of prospecting spend stacks above it.
     for ci in range(ncol):
-        ax.text(ci + 0.5, nrow + 0.12, cols[ci] + ("\n(flagship)" if ci == 0 else ""),
-                ha="center", va="bottom", fontsize=8.3, color="#333")
+        share_txt = f"{rows[ci]['_sshare'] * 100:.0f}% spend"
+        tail = " · flagship" if ci == 0 else ""
+        ax.text(ci + 0.5, nrow + 0.14, cols[ci], ha="center", va="bottom",
+                fontsize=8.3, color="#333")
+        ax.text(ci + 0.5, nrow + 0.80, share_txt + tail, ha="center", va="bottom",
+                fontsize=8.2, color=NAVY, fontweight="bold")
     ax.set_xlim(-3.0, ncol + 0.15)
-    ax.set_ylim(-0.9, nrow + 0.95)
+    ax.set_ylim(-0.9, nrow + 1.15)
     ax.axis("off")
     ax.set_title(f"{a.adv} — Prospecting Audience Fingerprint",
-                 fontsize=14, fontweight="bold", loc="left", color="#222", x=-0.0, y=1.06)
+                 fontsize=14, fontweight="bold", loc="left", color="#222", x=-0.0, y=1.10)
     # anomaly legend
     ax.add_patch(Rectangle((-3.0, -0.72), 0.34, 0.34, facecolor="none", edgecolor=RED, lw=2.4))
     ax.text(-2.55, -0.55, "red outline = differs from flagship template   ·   "
@@ -145,7 +179,9 @@ def main():
     hdr = "| Targeting layer | " + " | ".join(r["campaign_group_id"] for r in rows) + " |"
     sep = "|" + "---|" * (ncol + 1)
     lines = [f"# {a.adv} — Prospecting audience decomposition", "",
-             "Group names: " + "; ".join(f"{r['campaign_group_id']}={r['group_name']}" for r in rows),
+             "Columns ordered by % of prospecting spend (desc); flagship = top spender.",
+             "Group names: " + "; ".join(
+                 f"{r['campaign_group_id']}={r['group_name']} ({r['_sshare']*100:.0f}% spend)" for r in rows),
              "", hdr, sep]
     for ri, (label, _, _) in enumerate(LAYERS):
         lines.append("| " + label + " | " +

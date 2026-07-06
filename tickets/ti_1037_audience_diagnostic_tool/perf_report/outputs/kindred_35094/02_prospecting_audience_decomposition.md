@@ -1,11 +1,12 @@
 # Kindred Bravely (35094) — Prospecting audience decomposition
 
-Group names: 69884=CTV Prospecting High Pop; 96108=CTV Prospecting LowPop; 109926=CTV Prospecting Mid Pop; 115943=CTV Prospecting HiPop Q1-2026-Harter; 115945=CTV Prospecting HiPop Motherhood-Journey; 115946=CTV Prospecting HiPop Mom-Focus
+Columns ordered by % of prospecting spend (desc); flagship = top spender.
+Group names: 69884=CTV Prospecting High Pop (36% spend); 109926=CTV Prospecting Mid Pop (30% spend); 96108=CTV Prospecting LowPop (10% spend); 115945=CTV Prospecting HiPop Motherhood-Journey (8% spend); 115943=CTV Prospecting HiPop Q1-2026-Harter (8% spend); 115946=CTV Prospecting HiPop Mom-Focus (8% spend)
 
-| Targeting layer | 69884 | 96108 | 109926 | 115943 | 115945 | 115946 |
+| Targeting layer | 69884 | 109926 | 96108 | 115945 | 115943 | 115946 |
 |---|---|---|---|---|---|---|
 | DS19 · MM keywords (incl) | 255 | 255 | 255 | 255 | 255 | 255 |
-| DS35 · LiveRamp 3P (incl) | 11 | 14 | 11 | 11 | 11 | 11 |
+| DS35 · LiveRamp 3P (incl) | 11 | 11 | 14 | 11 | 11 | 11 |
 | DS16 · CampaignGroupID tag (incl) | – | – | – | 1 | 1 | 1 |
 | DS16 · Impressions+Wins (excl) | – | – | – | 2 | 2 | 2 |
 | DS2 · MNTN 1P (excl) | 1 | 1 | 1 | 1 | 1 | 1 |

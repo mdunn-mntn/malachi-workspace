@@ -10,6 +10,7 @@ Prints a one-line FINDING: for the assembled report.
 """
 import argparse
 import csv
+import os
 from datetime import datetime, date
 import matplotlib
 matplotlib.use("Agg")
@@ -40,6 +41,27 @@ def gate_label(thr):
     return str(thr)
 
 
+def prospecting_spend_by_group(outdir):
+    """Read <outdir>/00_campaign_enum.csv and return {campaign_group_id: prospecting spend}.
+    Prospecting = obj==1; a group's prospecting spend = SUM of spend over its obj==1 rows.
+    Advertiser-agnostic; a group absent here gets 0 (sorts last)."""
+    path = os.path.join(outdir, "00_campaign_enum.csv")
+    spend = {}
+    if not os.path.exists(path):
+        return spend
+    csv.field_size_limit(10 ** 7)
+    for r in csv.DictReader(open(path)):
+        if str(r.get("obj")) != "1":
+            continue
+        g = r.get("grp")
+        try:
+            s = float(r.get("spend") or 0)
+        except ValueError:
+            s = 0.0
+        spend[g] = spend.get(g, 0.0) + s
+    return spend
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/03_hhst_gate_history.csv")
@@ -58,7 +80,17 @@ def main():
         g = r["campaign_group_id"]
         groups.setdefault(g, {"name": r["group_name"], "ev": []})
         groups[g]["ev"].append((ts(r["update_time"]), int(r["threshold"])))
-    order = sorted(groups, key=lambda g: min(t for t, _ in groups[g]["ev"]))
+
+    # prospecting-spend share per group (advertiser-agnostic; from 00_campaign_enum.csv next to --csv).
+    # Total = sum over the groups this chart actually shows; groups absent from the enum -> spend 0 -> share 0.
+    pspend = prospecting_spend_by_group(os.path.dirname(a.csv))
+    for g in groups:
+        groups[g]["spend"] = pspend.get(g, 0.0)
+    tot_ps = sum(groups[g]["spend"] for g in groups) or 1.0
+    for g in groups:
+        groups[g]["sshare"] = groups[g]["spend"] / tot_ps
+    # panels ordered by prospecting-spend share DESC (biggest spender on top); tie-break: earliest change.
+    order = sorted(groups, key=lambda g: (-groups[g]["sshare"], min(t for t, _ in groups[g]["ev"])))
     n = len(order)
 
     ws = mdates.date2num(datetime.strptime(a.win_start, "%Y-%m-%d"))
@@ -89,9 +121,11 @@ def main():
         ax.set_xlim(ws, we)
         for sp in ["top", "right"]:
             ax.spines[sp].set_visible(False)
-        # label + change-count in the LEFT MARGIN (no lines there → nothing gets cut off)
+        # label + spend share + change-count in the LEFT MARGIN (no lines there → nothing gets cut off)
         nm = (groups[g]["name"] or "").replace("CTV Prospecting", "").strip()
-        ax.text(-0.013, 0.66, f"{g}\n{nm[:14]}", transform=ax.transAxes, ha="right",
+        sp = groups[g]["sshare"]
+        sp_txt = f"· {sp*100:.0f}% spend" if sp > 0 else "· 0% spend"
+        ax.text(-0.013, 0.66, f"{g} {sp_txt}\n{nm[:14]}", transform=ax.transAxes, ha="right",
                 va="center", fontsize=8, color="#333")
         ax.text(-0.013, 0.24, f"{len(ev)} chg · last {gate_label(ev[-1][1])}",
                 transform=ax.transAxes, ha="right", va="center", fontsize=6.8, color="#999")

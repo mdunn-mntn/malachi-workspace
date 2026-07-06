@@ -12,6 +12,7 @@ Writes outputs/<adv>/07b_prospecting_audience_change_matrix.png
 """
 import argparse
 import csv
+import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -51,6 +52,20 @@ def dsfmt_grouped(dss):   # compact for the verbose initial set: "incl 19,35 · 
     return " · ".join(f"{r} {','.join(by[r])}" for r in _ORDER if r in by)
 
 
+def prospecting_spend_by_group(outdir):
+    """Per-group prospecting spend (share of total) from the shared campaign enum.
+    Group prospecting spend = SUM of spend over that group's obj==1 rows; share = grp/total.
+    Groups absent from the enum get 0 (share 0 -> sort last)."""
+    path = os.path.join(outdir, "00_campaign_enum.csv")
+    spend = {}
+    if os.path.exists(path):
+        for r in csv.DictReader(open(path)):
+            if int(r.get("obj") or 0) == 1:
+                spend[r["grp"]] = spend.get(r["grp"], 0.0) + float(r.get("spend") or 0)
+    total = sum(spend.values()) or 1.0
+    return spend, {g: s / total for g, s in spend.items()}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/07_prospecting_audience_change_history.csv")
@@ -67,7 +82,10 @@ def main():
         g = r["campaign_group_id"]
         by_grp.setdefault(g, []).append(r)
         gname[g] = r["camp_name"]
-    cols = sorted(by_grp, key=lambda g: min(e["changed_on"] for e in by_grp[g]))
+    # % of PROSPECTING SPEND per group (from the shared enum) — orders columns by materiality.
+    _, gshare = prospecting_spend_by_group(os.path.dirname(a.csv))
+    # columns ordered by prospecting-spend share DESC (biggest spender left); earliest-change tie-break.
+    cols = sorted(by_grp, key=lambda g: (-gshare.get(g, 0.0), min(e["changed_on"] for e in by_grp[g])))
 
     # cell[(date, grp)] = list of (text, color); collect all change dates
     cell = {}
@@ -101,16 +119,20 @@ def main():
     rheight = [max(1, max((len(cell.get((dt, g), [])) for g in cols), default=1)) for dt in dates]
     total_lines = sum(rheight)
     ncol = len(cols)
-    fig, ax = plt.subplots(figsize=(2.6 + 2.85 * ncol, 2.0 + 0.52 * total_lines))
+    fig, ax = plt.subplots(figsize=(2.6 + 2.85 * ncol, 2.4 + 0.52 * total_lines))
     ax.axis("off")
     colx = [0.0] + [1.0 + i for i in range(ncol)]   # date col width 1.0, each grp width 1.0 (units)
     xmax = 1.0 + ncol
 
-    # header
-    ytop = total_lines + 1.0
+    # header — group id on top, % of prospecting spend beneath (materiality of each column's changes)
+    ytop = total_lines + 1.4
     ax.text(0.05, ytop - 0.4, "date", fontsize=13, fontweight="bold", color=NAVY)
     for i, g in enumerate(cols):
         ax.text(colx[i + 1] + 0.04, ytop - 0.4, g, ha="left", fontsize=13, fontweight="bold", color=NAVY)
+        sh = gshare.get(g, 0.0)
+        stxt = f"{sh * 100:.0f}% spend" if sh > 0 else "— no spend"
+        ax.text(colx[i + 1] + 0.04, ytop - 0.85, stxt, ha="left", fontsize=10.5,
+                color=NAVY if sh > 0 else GRAY, fontweight="bold" if sh > 0 else "normal")
     ax.plot([0, xmax], [total_lines + 0.55, total_lines + 0.55], color=NAVY, lw=1.4)
 
     # rows
@@ -136,10 +158,13 @@ def main():
     print(f"wrote {a.out}")
 
     # ---- markdown ----
+    def col_hdr(g):
+        sh = gshare.get(g, 0.0)
+        return f"{g}<br>{sh * 100:.0f}% spend" if sh > 0 else f"{g}<br>— no spend"
     md = [f"# {a.adv} — Prospecting audience change-log (DS-level)",
-          "Columns = campaign_group_id. `+` added, `−` removed. incl/excl/gate = the DS role. "
-          "Segment (category_id) detail intentionally omitted.", "",
-          "| date | " + " | ".join(cols) + " |", "|" + "---|" * (len(cols) + 1)]
+          "Columns = campaign_group_id, ordered by % of prospecting spend (desc). `+` added, `−` removed. "
+          "incl/excl/gate = the DS role. Segment (category_id) detail intentionally omitted.", "",
+          "| date | " + " | ".join(col_hdr(g) for g in cols) + " |", "|" + "---|" * (len(cols) + 1)]
     for dt in dates:
         cells = []
         for g in cols:

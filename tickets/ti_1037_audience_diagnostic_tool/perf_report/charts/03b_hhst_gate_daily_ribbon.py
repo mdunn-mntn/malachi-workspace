@@ -12,6 +12,7 @@ Prints a one-line FINDING: for the assembled report.
 import argparse
 import csv
 import datetime as dt
+import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -38,6 +39,29 @@ def state_color(v):
     return RED if v <= 0 else (GREEN if v >= 6600 else AMBER)
 
 
+def prospecting_spend_share(csv_path):
+    """Per-group share of prospecting spend, from the sibling 00_campaign_enum.csv.
+
+    Prospecting spend for a group = SUM of spend over that group's obj==1 enum rows.
+    Total = sum across all prospecting groups. Returns {group_id: share (0..1)}; a group
+    absent from the enum (or with no obj==1 rows) gets share 0.
+    """
+    enum_path = os.path.join(os.path.dirname(csv_path), "00_campaign_enum.csv")
+    if not os.path.exists(enum_path):
+        return {}
+    by_grp = {}
+    for r in csv.DictReader(open(enum_path)):
+        if str(r.get("obj")) != "1":
+            continue
+        try:
+            sp = float(r.get("spend") or 0)
+        except ValueError:
+            sp = 0.0
+        by_grp[r["grp"]] = by_grp.get(r["grp"], 0.0) + sp
+    tot = sum(by_grp.values()) or 1.0
+    return {g: s / tot for g, s in by_grp.items()}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/03b_hhst_gate_daily_ribbon.csv")
@@ -58,7 +82,10 @@ def main():
         gate = r["gate"]
         by[g]["days"][r["day"]] = int(gate) if gate not in ("", None) else None
 
-    camps = sorted(by.items(), key=lambda kv: min(kv[1]["days"]))
+    share = prospecting_spend_share(a.csv)  # {group_id: % of prospecting spend}
+    # lanes ordered by prospecting-spend share DESC (biggest spender on top); a group missing
+    # from the enum -> share 0 sorts last. Tie-break on earliest active day for determinism.
+    camps = sorted(by.items(), key=lambda kv: (-share.get(kv[0], 0.0), min(kv[1]["days"])))
     n = len(camps)
     fig, ax = plt.subplots(figsize=(15, max(3.2, 0.52 * n + 2.0)))
 
@@ -94,7 +121,9 @@ def main():
                     height=0.62, color=c, edgecolor="white", linewidth=0.3, zorder=3)
         nm = info["name"] or ""
         nm = (nm[:30] + "…") if len(nm) > 31 else nm
-        ylabels.append(f"{grp}  {nm}")
+        sh = share.get(grp)
+        sh_txt = f"  ·  {sh*100:.0f}% spend" if sh is not None else "  ·  — spend"
+        ylabels.append(f"{grp}  {nm}{sh_txt}")
 
     ax.set_yticks(range(n))
     ax.set_yticklabels(ylabels[::-1], fontsize=8)
