@@ -98,6 +98,9 @@ def short(gid, name):
     return f"{gid}\n{n or '(unnamed)'}"
 
 
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/02_prospecting_audience_expressions.csv")
@@ -155,7 +158,7 @@ def main():
     # column headers (ordered by prospecting-spend share desc; flagship = top spender, col 0)
     # group label sits just above the grid; the % of prospecting spend stacks above it.
     for ci in range(ncol):
-        share_txt = f"{rows[ci]['_sshare'] * 100:.0f}% spend"
+        share_txt = f"{pctfmt(rows[ci]['_sshare'])} spend"
         tail = " · flagship" if ci == 0 else ""
         ax.text(ci + 0.5, nrow + 0.14, cols[ci], ha="center", va="bottom",
                 fontsize=8.3, color="#333")
@@ -181,7 +184,7 @@ def main():
     lines = [f"# {a.adv} — Prospecting audience decomposition", "",
              "Columns ordered by % of prospecting spend (desc); flagship = top spender.",
              "Group names: " + "; ".join(
-                 f"{r['campaign_group_id']}={r['group_name']} ({r['_sshare']*100:.0f}% spend)" for r in rows),
+                 f"{r['campaign_group_id']}={r['group_name']} ({pctfmt(r['_sshare'])} spend)" for r in rows),
              "", hdr, sep]
     for ri, (label, _, _) in enumerate(LAYERS):
         lines.append("| " + label + " | " +

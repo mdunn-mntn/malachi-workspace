@@ -113,10 +113,18 @@ def tier(n):
     return "top-20" if n <= 25 else ("mid" if n <= 80 else f"long-{n}")
 
 
-def glabel(gname, cid):
+def glabel(grp, gname, cid, multi=False):
+    # lead with the campaign_GROUP_id (the cross-chart key); append the campaign_id only when a group
+    # has >1 prospecting (obj=1) campaign, so those rows stay distinguishable.
     s = (gname or "").replace("CTV ", "").replace("Prospecting", "").replace(" 2026", "").replace("-old", " (old)")
+    s = s.replace("Frequency", "Freq").replace("Subscriptions", "Subs")
     s = " ".join(s.split()).strip()
-    return f"{cid} {s}" if s else f"{cid}"
+    base = f"{grp} {s}" if s else f"{grp}"
+    return base + (f" (c{cid})" if multi else "")
+
+
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
 
 
 def geo_txt(p):
@@ -149,6 +157,10 @@ def main():
         s["n"] += 1
     tot = {k: sum(s[k] for s in smap.values()) for k in ("imps", "spend", "conv", "revenue")}
 
+    grp_obj1 = {}  # count of prospecting (obj=1) campaigns per group -> disambiguate multi-campaign groups
+    for x in enum:
+        if x["obj"] == 1:
+            grp_obj1[x["grp"]] = grp_obj1.get(x["grp"], 0) + 1
     prosp = []
     for r in sorted([x for x in enum if x["obj"] == 1], key=lambda x: -x["spend"]):  # rank by spend
         cid = r["campaign_id"]
@@ -188,7 +200,7 @@ def main():
             flags.append((f"unscored {us*100:.0f}%", AMBER))
         if h is None:
             flags.append(("dark (F1 stopped)", GRAY))
-        prosp.append({"cid": cid, "grp": r["grp"], "label": glabel(r.get("group_name"), cid),
+        prosp.append({"cid": cid, "grp": r["grp"], "label": glabel(r["grp"], r.get("group_name"), cid, grp_obj1.get(r["grp"], 1) > 1),
                       "ngeo": ngeo, "national": national, "interest": interest, "gate": gate, "reach": reach,
                       "hs": hs, "us": us, "cov": cov, "roas": roas, "addr": addr, "flags": flags,
                       "spend": r["spend"]})
@@ -270,9 +282,9 @@ def main():
         else:
             hs_txt = f"{p['hs']*100:.0f}%"
             hs_col = GREEN if p["hs"] >= 0.80 else (AMBER if p["hs"] >= 0.60 else RED)
-        ax.text(x2[0], Y(cy), p["label"][:30], fontsize=12.5, va="center", color="#222", fontweight="bold")
+        ax.text(x2[0], Y(cy), p["label"][:38], fontsize=12.5, va="center", color="#222", fontweight="bold")
         # % spend: the number + a proportional weight bar to its right, so materiality is visible at a glance
-        ax.text(x2[1], Y(cy), f"{p['sshare']*100:.0f}%", fontsize=12, va="center", color=NAVY, fontweight="bold")
+        ax.text(x2[1], Y(cy), pctfmt(p["sshare"]), fontsize=12, va="center", color=NAVY, fontweight="bold")
         bar_w = 0.06 * p["sshare"] / maxshare
         ax.add_patch(plt.Rectangle((x2[1] + 0.048, Y(cy) - 0.006), bar_w, 0.012, color=NAVY, alpha=0.5, zorder=1))
         ax.text(x2[2], Y(cy), geo_txt(p), fontsize=12.5, va="center", color=gcol,
@@ -314,7 +326,7 @@ def main():
         hs_s = f"{p['hs']*100:.0f}%" if p["hs"] is not None else "—"
         cov_s = f"{p['cov']*100:.0f}%" if p["cov"] is not None else "—"
         geo_s = "national" if p["national"] else (f"{p['ngeo']}/210 ({tier(p['ngeo'])})" if p["ngeo"] else "—")
-        md.append(f"| {p['label']} | {p['sshare']*100:.0f}% | {geo_s} | {p['interest']} | "
+        md.append(f"| {p['label']} | {pctfmt(p['sshare'])} | {geo_s} | {p['interest']} | "
                   f"{'net-new' if p['gate'] else '—'} | {reach_s} | {hs_s} | {cov_s} | {p['roas']:.2f}x | {fl} |")
     open(f"{o}/00_audience_audit.md", "w").write("\n".join(md) + "\n")
     print(f"wrote {o}/00_audience_audit.md")

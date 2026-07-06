@@ -127,6 +127,9 @@ def prospecting_spend_by_group(enum_path):
     return out
 
 
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
 def main():
     ap = argparse.ArgumentParser()
     base = "outputs/kindred_35094/"
@@ -189,7 +192,7 @@ def main():
             if len(setkey[tuple(inc)]) > 1:
                 flags.append(f"fragmentation: {len(setkey[tuple(inc)])} campaigns share this exact DMA set")
         if gate:
-            flags.append("DS16 net-new gate: fishes residual")
+            flags.append("net-new gate (net-new households only)")
         dive.append({"grp": r["campaign_group_id"], "name": r["group_name"], "n_inc": len(inc), "n_exc": len(exc),
                      "natl": natl, "tier": tier(inc), "markets": markets, "jop": jop, "mm": mm, "tp": tp,
                      "gate": gate, "segs": [segn.get(s, s) for s in seg_ids], "flags": flags,
@@ -222,7 +225,7 @@ def main():
           f"Interest logic across campaigns: {'/'.join(sorted(set((d['jop'] or '?') for d in dive)))} (OR = MM/3P additive; AND = 3P narrows MM). "
           "Geo `location_ids` decode via `geo.location_data` (Nielsen DMA; location 237 = national US); 3P names via `tpa.categories` (sizes GCS-gated).", ""]
     for d in dive_by_spend:
-        md.append(f"### {d['grp']} — {d['name']}  ·  {d['sshare']*100:.0f}% of prospecting spend")
+        md.append(f"### {d['grp']} — {d['name']}  ·  {pctfmt(d['sshare'])} of prospecting spend")
         geo_line = ("National (US) — targets all-of-US (no DMA slice)" if d["natl"]
                     else f"{d['tier']} — **{d['n_inc']} DMAs** (excl {d['n_exc']}). e.g. {', '.join(d['markets'])}"
                     + (" …" if d["n_inc"] > 5 else ""))
@@ -260,7 +263,7 @@ def main():
         jc = GREEN if d["jop"] == "or" else (RED if d["jop"] == "and" else GRAY)
         dma_cell = "US" if d["natl"] else str(d["n_inc"])
         # % spend: number + tiny proportional weight bar (materiality at a glance, like module 00)
-        ax.text(xs[1], y, f"{d['sshare']*100:.0f}%", fontsize=10.3, va="center", color=NAVY, fontweight="bold")
+        ax.text(xs[1], y, f"{pctfmt(d['sshare'])}", fontsize=10.3, va="center", color=NAVY, fontweight="bold")
         bar_w = 0.05 * d["sshare"] / maxshare
         ax.add_patch(Rectangle((xs[1] + 0.038, y - 0.10), bar_w, 0.20, color=NAVY, alpha=0.5, zorder=1))
         cells = [f"{d['grp']} {nm[:namew]}", d["tier"], dma_cell,
@@ -273,7 +276,7 @@ def main():
         ax.text(xs[7], y, "gated" if d["gate"] else "—", fontsize=10, va="center",
                 color=RED if d["gate"] else GRAY, fontweight="bold" if d["gate"] else "normal")
         fl = d["flags"][0] if d["flags"] else "—"
-        ax.text(xs[8], y, fl[:28], fontsize=9, va="center", color=RED if d["flags"] else GRAY)
+        ax.text(xs[8], y, fl[:40], fontsize=9, va="center", color=RED if d["flags"] else GRAY)
     ax.set_xlim(0, 1)
     ax.set_ylim(-0.6, n + 0.6)
     if and_narrowing:

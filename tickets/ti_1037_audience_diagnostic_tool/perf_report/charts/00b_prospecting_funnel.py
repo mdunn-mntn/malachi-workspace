@@ -30,10 +30,16 @@ def kfmt(v):
     return f"{v/1e3:.0f}K" if abs(v) >= 1e3 else f"{v:.0f}"
 
 
-def glabel(gname, cid):
+def glabel(grp, gname, cid, multi=False):
     s = (gname or "").replace("CTV ", "").replace("Prospecting", "").replace(" 2026", "").replace("-old", " (old)")
+    s = s.replace("Frequency", "Freq").replace("Subscriptions", "Subs")
     s = " ".join(s.split()).strip()
-    return f"{cid} {s}" if s else f"{cid}"
+    base = f"{grp} {s}" if s else f"{grp}"
+    return base + (f" (c{cid})" if multi else "")
+
+
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
 
 
 def main():
@@ -47,6 +53,10 @@ def main():
     sizes = {r["campaign_id"]: r for r in csv.DictReader(open(f"{o}/00_funnel_sizes.csv"))}
     hishare = {r["campaign_id"]: r for r in csv.DictReader(open(f"{o}/00_funnel_hishare.csv"))}
 
+    grp_obj1 = {}  # prospecting campaigns per group -> disambiguate multi-campaign groups
+    for x in enum.values():
+        if x.get("obj") == "1":
+            grp_obj1[x.get("grp")] = grp_obj1.get(x.get("grp"), 0) + 1
     rows = []
     for cid, h in hishare.items():
         reach = int(h["reach_ip"])
@@ -55,11 +65,12 @@ def main():
         b = {k: int(h[k + "_ip"]) for k in ("hi", "pp", "mid", "unscored")}
         en = enum.get(cid, {})
         gname = en.get("group_name")
+        grp = en.get("grp") or cid
         # prospecting spend for this campaign_id (obj==1 row in the enum); missing/non-prospecting -> 0
         spend = float(en["spend"] or 0) if (en.get("obj") == "1" and en.get("spend")) else 0.0
         addr = int(sizes[cid]["med_total"]) if cid in sizes else None
-        rows.append({"cid": cid, "label": glabel(gname, cid), "reach": reach, "b": b,
-                     "hs": b["hi"] / reach, "addr": addr, "spend": spend})
+        rows.append({"cid": cid, "label": glabel(grp, gname, cid, grp_obj1.get(grp, 1) > 1), "reach": reach,
+                     "b": b, "hs": b["hi"] / reach, "addr": addr, "spend": spend})
     tot_ps = sum(r["spend"] for r in rows) or 1  # rank/label bars by % of prospecting spend
     for r in rows:
         r["sshare"] = r["spend"] / tot_ps
@@ -85,10 +96,10 @@ def main():
     maxr = max(r["reach"] for r in rows)
     for i, r in enumerate(rows):
         axb.text(r["reach"] + maxr * 0.01, ypos[i],
-                 f"{kfmt(r['reach'])} · {r['hs']*100:.0f}% HI · {r['sshare']*100:.0f}% spend",
+                 f"{kfmt(r['reach'])} · {r['hs']*100:.0f}% HI · {pctfmt(r['sshare'])} spend",
                  va="center", fontsize=9.8, color=NAVY, fontweight="bold")
     axb.set_yticks(ypos)
-    axb.set_yticklabels([f"{r['label'][:30]}  ·  {r['sshare']*100:.0f}%" for r in rows], fontsize=9.8)
+    axb.set_yticklabels([f"{r['label'][:34]}  ·  {pctfmt(r['sshare'])}" for r in rows], fontsize=9.8)
     axb.set_xlim(0, maxr * 1.22)
     axb.set_xticks([])
     for sp in ["top", "right", "bottom"]:
@@ -104,7 +115,7 @@ def main():
           "| Campaign | % spend | Addressable | Reached | HI | HI-share | unscored |",
           "|---|--:|--:|--:|--:|--:|--:|"]
     for r in rows:
-        md.append(f"| {r['label']} | {r['sshare']*100:.0f}% | {kfmt(r['addr']) if r['addr'] else '—'} | {kfmt(r['reach'])} | "
+        md.append(f"| {r['label']} | {pctfmt(r['sshare'])} | {kfmt(r['addr']) if r['addr'] else '—'} | {kfmt(r['reach'])} | "
                   f"{kfmt(r['b']['hi'])} | {r['hs']*100:.0f}% | {r['b']['unscored']/r['reach']*100:.0f}% |")
     open(f"{o}/00b_prospecting_funnel.md", "w").write("\n".join(md) + "\n")
     print(f"wrote {o}/00b_prospecting_funnel.md")

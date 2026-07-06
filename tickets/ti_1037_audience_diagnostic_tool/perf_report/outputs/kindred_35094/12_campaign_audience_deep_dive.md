@@ -24,17 +24,17 @@
 - **Geo:** Top markets — **20 DMAs** (excl 190). e.g. Chicago IL, Orlando-Daytona Beach-Melbourne, FL, Charlotte, NC, Denver, CO, Boston, MA-Manchester, NH …
 - **Interest:** (255 MM keywords **OR** 11 LiveRamp 3P segments) — additive/broadening
 - **3P segments:** US > Retail > Intent > Clothing > Maternity; Lifestyle > Life event in last 6 months - Had a baby > Opt-In; In-Market > Purchase Intent In Maternity Care Services (HEM); US > Place Visits > Polygon > Brands > Extended > Motherhood Maternity (Apparel | Women's Clothing | Maternity) …
-- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; DS16 net-new gate: fishes residual
+- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; net-new gate (net-new households only)
 
 ### 115943 — CTV Prospecting HiPop Q1-2026-Harter  ·  8% of prospecting spend
 - **Geo:** Top markets — **20 DMAs** (excl 190). e.g. Chicago IL, Orlando-Daytona Beach-Melbourne, FL, Charlotte, NC, Denver, CO, Boston, MA-Manchester, NH …
 - **Interest:** (255 MM keywords **OR** 11 LiveRamp 3P segments) — additive/broadening
 - **3P segments:** US > Retail > Intent > Clothing > Maternity; Lifestyle > Life event in last 6 months - Had a baby > Opt-In; In-Market > Purchase Intent In Maternity Care Services (HEM); US > Place Visits > Polygon > Brands > Extended > Motherhood Maternity (Apparel | Women's Clothing | Maternity) …
-- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; DS16 net-new gate: fishes residual
+- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; net-new gate (net-new households only)
 
 ### 115946 — CTV Prospecting HiPop Mom-Focus  ·  8% of prospecting spend
 - **Geo:** Top markets — **20 DMAs** (excl 190). e.g. Chicago IL, Orlando-Daytona Beach-Melbourne, FL, Charlotte, NC, Denver, CO, Boston, MA-Manchester, NH …
 - **Interest:** (255 MM keywords **OR** 11 LiveRamp 3P segments) — additive/broadening
 - **3P segments:** US > Retail > Intent > Clothing > Maternity; Lifestyle > Life event in last 6 months - Had a baby > Opt-In; In-Market > Purchase Intent In Maternity Care Services (HEM); US > Place Visits > Polygon > Brands > Extended > Motherhood Maternity (Apparel | Women's Clothing | Maternity) …
-- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; DS16 net-new gate: fishes residual
+- **Red flags:** narrow geo: only 20 of 210 DMAs; fragmentation: 4 campaigns share this exact DMA set; net-new gate (net-new households only)
 

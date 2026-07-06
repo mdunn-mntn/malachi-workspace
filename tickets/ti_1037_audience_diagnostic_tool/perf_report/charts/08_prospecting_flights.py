@@ -38,6 +38,22 @@ def d(s):
     return datetime.strptime(s.strip(), "%Y-%m-%d").date()
 
 
+def prospecting_spend_by_group(csv_path):
+    """Per-campaign_group prospecting spend from the sibling 00_campaign_enum.csv (obj=1 rows)."""
+    import os
+    enum_path = os.path.join(os.path.dirname(csv_path), "00_campaign_enum.csv")
+    out = {}
+    if os.path.exists(enum_path):
+        for r in csv.DictReader(open(enum_path)):
+            if r.get("obj") == "1":
+                out[r["grp"]] = out.get(r["grp"], 0) + float(r["spend"] or 0)
+    return out
+
+
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/08_prospecting_flights.csv")
@@ -58,7 +74,11 @@ def main():
         g = r["campaign_group_id"]
         groups.setdefault(g, {"name": r["group_name"], "fl": []})
         groups[g]["fl"].append((d(r["flight_start"]), d(r["flight_end"]), int(r["flight_days"])))
-    order = sorted(groups, key=lambda g: min(f[0] for f in groups[g]["fl"]))
+    pspend = prospecting_spend_by_group(a.csv)  # rank groups by % of prospecting spend (most -> least)
+    tot_ps = sum(pspend.get(g, 0) for g in groups) or 1
+    for g in groups:
+        groups[g]["sh"] = pspend.get(g, 0) / tot_ps
+    order = sorted(groups, key=lambda g: -groups[g]["sh"])
 
     GH = 3 * SUBH          # group height (3 tiers)
     fig, ax = plt.subplots(figsize=(14.5, 1.6 + len(order) * (GH + 0.34) * 1.05))
@@ -99,7 +119,7 @@ def main():
         p1_short = sum(1 for s, e, dd in fl if p1s <= s < p1e and dd <= 3)
         p2_short = sum(1 for s, e, dd in fl if p2s <= s < p2e and dd <= 3)
         nm = (groups[g]["name"] or "").replace("CTV Prospecting", "").strip()
-        ax.text(mdates.date2num(ws) - 14, ybase + GH / 2, f"{g}\n{nm[:14]}",
+        ax.text(mdates.date2num(ws) - 14, ybase + GH / 2, f"{g} · {pctfmt(groups[g]['sh'])}\n{nm[:14]}",
                 ha="right", va="center", fontsize=9, color="#333")
         ax.text(mdates.date2num(we) + 4, ybase + GH / 2,
                 f"{n} flights\nshort  P1:{p1_short}  P2:{p2_short}", ha="left", va="center",

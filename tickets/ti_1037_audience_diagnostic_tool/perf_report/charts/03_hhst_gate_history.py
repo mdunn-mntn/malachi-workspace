@@ -62,6 +62,9 @@ def prospecting_spend_by_group(outdir):
     return spend
 
 
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/03_hhst_gate_history.csv")
@@ -124,7 +127,7 @@ def main():
         # label + spend share + change-count in the LEFT MARGIN (no lines there → nothing gets cut off)
         nm = (groups[g]["name"] or "").replace("CTV Prospecting", "").strip()
         sp = groups[g]["sshare"]
-        sp_txt = f"· {sp*100:.0f}% spend" if sp > 0 else "· 0% spend"
+        sp_txt = f"· {pctfmt(sp)} spend" if sp > 0 else "· 0% spend"
         ax.text(-0.013, 0.66, f"{g} {sp_txt}\n{nm[:14]}", transform=ax.transAxes, ha="right",
                 va="center", fontsize=8, color="#333")
         ax.text(-0.013, 0.24, f"{len(ev)} chg · last {gate_label(ev[-1][1])}",

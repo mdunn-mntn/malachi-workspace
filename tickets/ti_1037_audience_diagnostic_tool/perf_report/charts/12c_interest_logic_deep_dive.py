@@ -147,6 +147,9 @@ def prospecting_spend_by_group(outdir):
     return grp_spend
 
 
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
 def main():
     ap = argparse.ArgumentParser()
     base = "outputs/kindred_35094/"
@@ -245,7 +248,7 @@ def main():
             flag, fcol = "clean · ungated", GREEN
         ax.text(xs[0], y, f"{g}  {d['name'][:14]}", fontsize=12.5, va="center", color="#222", fontweight="bold")
         # % of prospecting spend: the number + a proportional weight bar so materiality reads at a glance
-        ax.text(xs[1], y, f"{d['sshare']*100:.0f}%", fontsize=12.5, va="center", color=NAVY, fontweight="bold")
+        ax.text(xs[1], y, f"{pctfmt(d['sshare'])}", fontsize=12.5, va="center", color=NAVY, fontweight="bold")
         bar_w = 0.055 * d["sshare"] / maxshare
         ax.add_patch(plt.Rectangle((xs[1] + 0.04, y - 0.006), bar_w, 0.012, color=NAVY, alpha=0.5, zorder=1))
         ax.text(xs[2], y, tier_of(d["inc"]), fontsize=12.5, va="center", color=geo_col,
@@ -359,7 +362,7 @@ def main():
         else:
             read = "geo slice"
         nn = f"{net_new_frac(g)*100:.0f}%" if g != base_grp and d["reach"] else "—"
-        md.append(f"| {g} {d['full']} | {d['sshare']*100:.0f}% | {tier_of(d['inc'])} | {d['mm']} | {d['tp']} | "
+        md.append(f"| {g} {d['full']} | {pctfmt(d['sshare'])} | {tier_of(d['inc'])} | {d['mm']} | {d['tp']} | "
                   f"{(d['join'] or '?').upper()} | {gate} | {kfmt(d['reach'])} | {nn} | {read} |")
     md += ["", "## The differentiator — DS16 net-new funnel gate",
            "`AND ( NOT DS16[own Impressions/Wins]  OR  DS16[own campaign-group tag] )` — decoded via "

@@ -4,14 +4,14 @@ Distinct households reached per obj=1 campaign (recent in-TTL month), split by s
 
 | Campaign | % spend | Addressable | Reached | HI | HI-share | unscored |
 |---|--:|--:|--:|--:|--:|--:|
-| 595017 eComm | 66% | 75.9M | 5.0M | 197K | 4% | 43% |
-| 595011 eComm Low Frequency v2 | 8% | 75.6M | 488K | 56K | 11% | 0% |
-| 595025 eComm High Frequency v2 | 6% | 75.6M | 429K | 25K | 6% | 0% |
-| 580914 Subscriptions | 5% | 48.3M | 378K | 313K | 83% | 1% |
-| 595024 eComm High Frequency v2 | 4% | 75.6M | 224K | 42K | 19% | 96% |
-| 588329 eComm High Frequency | 3% | 74.0M | 7K | 6K | 96% | 1% |
-| 588342 eComm Low Frequency | 3% | 74.0M | 7K | 7K | 96% | 2% |
-| 588353 eComm Auto Frequency | 3% | 74.0M | 4K | 4K | 93% | 3% |
-| 595010 eComm Low Frequency v2 | 2% | 75.6M | 155K | 31K | 20% | 92% |
-| 595021 eComm High Frequency v2 | 0% | 75.6M | 275 | 209 | 76% | 61% |
-| 595009 eComm Low Frequency v2 | 0% | 75.6M | 274 | 206 | 75% | 60% |
+| 119362 eComm | 66% | 75.9M | 5.0M | 197K | 4% | 43% |
+| 119361 eComm Low Freq v2 (c595011) | 8% | 75.6M | 488K | 56K | 11% | 0% |
+| 119363 eComm High Freq v2 (c595025) | 6% | 75.6M | 429K | 25K | 6% | 0% |
+| 116732 Subs | 5% | 48.3M | 378K | 313K | 83% | 1% |
+| 119363 eComm High Freq v2 (c595024) | 4% | 75.6M | 224K | 42K | 19% | 96% |
+| 117983 eComm High Freq | 3% | 74.0M | 7K | 6K | 96% | 1% |
+| 117985 eComm Low Freq | 3% | 74.0M | 7K | 7K | 96% | 2% |
+| 117987 eComm Auto Freq | 3% | 74.0M | 4K | 4K | 93% | 3% |
+| 119361 eComm Low Freq v2 (c595010) | 2% | 75.6M | 155K | 31K | 20% | 92% |
+| 119363 eComm High Freq v2 (c595021) | <1% | 75.6M | 275 | 209 | 76% | 61% |
+| 119361 eComm Low Freq v2 (c595009) | <1% | 75.6M | 274 | 206 | 75% | 60% |

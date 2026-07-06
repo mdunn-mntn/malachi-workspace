@@ -62,6 +62,9 @@ def prospecting_spend_share(csv_path):
     return {g: s / tot for g, s in by_grp.items()}
 
 
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/03b_hhst_gate_daily_ribbon.csv")
@@ -122,7 +125,7 @@ def main():
         nm = info["name"] or ""
         nm = (nm[:30] + "…") if len(nm) > 31 else nm
         sh = share.get(grp)
-        sh_txt = f"  ·  {sh*100:.0f}% spend" if sh is not None else "  ·  — spend"
+        sh_txt = f"  ·  {pctfmt(sh)} spend" if sh is not None else "  ·  — spend"
         ylabels.append(f"{grp}  {nm}{sh_txt}")
 
     ax.set_yticks(range(n))

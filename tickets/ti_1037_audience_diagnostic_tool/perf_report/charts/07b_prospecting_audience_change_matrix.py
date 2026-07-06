@@ -66,6 +66,9 @@ def prospecting_spend_by_group(outdir):
     return spend, {g: s / total for g, s in spend.items()}
 
 
+def pctfmt(share):
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/kindred_35094/07_prospecting_audience_change_history.csv")
@@ -130,7 +133,7 @@ def main():
     for i, g in enumerate(cols):
         ax.text(colx[i + 1] + 0.04, ytop - 0.4, g, ha="left", fontsize=13, fontweight="bold", color=NAVY)
         sh = gshare.get(g, 0.0)
-        stxt = f"{sh * 100:.0f}% spend" if sh > 0 else "— no spend"
+        stxt = f"{pctfmt(sh)} spend" if sh > 0 else "— no spend"
         ax.text(colx[i + 1] + 0.04, ytop - 0.85, stxt, ha="left", fontsize=10.5,
                 color=NAVY if sh > 0 else GRAY, fontweight="bold" if sh > 0 else "normal")
     ax.plot([0, xmax], [total_lines + 0.55, total_lines + 0.55], color=NAVY, lw=1.4)
@@ -160,7 +163,7 @@ def main():
     # ---- markdown ----
     def col_hdr(g):
         sh = gshare.get(g, 0.0)
-        return f"{g}<br>{sh * 100:.0f}% spend" if sh > 0 else f"{g}<br>— no spend"
+        return f"{g}<br>{pctfmt(sh)} spend" if sh > 0 else f"{g}<br>— no spend"
     md = [f"# {a.adv} — Prospecting audience change-log (DS-level)",
           "Columns = campaign_group_id, ordered by % of prospecting spend (desc). `+` added, `−` removed. "
           "incl/excl/gate = the DS role. Segment (category_id) detail intentionally omitted.", "",
