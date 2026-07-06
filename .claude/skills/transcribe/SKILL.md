@@ -30,9 +30,17 @@ ticket. `/transcribe all` → every unprocessed recording. `/transcribe list` �
 1. List `~/Documents/Zoom` folders newest-first (`ls -t`, skip dotfiles and loose root `.m4a`).
 2. Read `knowledge/transcribed_recordings.txt` — the log of already-processed folders (format is
    inconsistent; match on the folder name / date substring, not exact line shape).
-3. The target is the **newest folder not in the log**. If the user named a folder/date in args, use
+3. **The log is a fast-path hint, not the source of truth — it is routinely stale or missing
+   entries.** Before treating any folder as "new," confirm no transcript already exists for it by
+   checking the ticket `meetings/` folders: first by date (`*_YYYY_MM_DD.txt`), then — because
+   pre-convention transcripts use **undated names** (e.g. `matt_and_malachi_meeting_1.txt`) — by
+   file mtime and opening the transcript head to compare content against the meeting title. Only a
+   folder with **no matching transcript on disk** is genuinely new. If you find recordings that
+   were transcribed but never logged, **backfill the log** for them (don't re-transcribe).
+4. The target is the **newest genuinely-new folder**. If the user named a folder/date in args, use
    that instead. If several are new and no arg was given, list them one line each and ask which —
-   or offer to do all. If nothing is new, say so and stop.
+   or offer to do all. If nothing is new, say so and stop — never transcribe a duplicate just to
+   produce output.
 
 ## Step 2 — Decide ticket, name, and sequence number
 
