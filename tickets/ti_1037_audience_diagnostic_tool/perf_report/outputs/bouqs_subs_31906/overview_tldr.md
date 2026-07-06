@@ -1,4 +1,4 @@
-# The Bouqs Subscriptions (31906, dark 2026) — prospecting diagnosis (TL;DR)
+# The Bouqs Subscriptions (31906) — prospecting diagnosis (TL;DR)
 
 **Verdict: watch.** 2 red flag(s), 1 amber. Comparison: Sep–Dec '24 (pre) vs Sep–Dec '25 (post).
 

@@ -174,9 +174,9 @@ def sheet_funnel(wb, funnel, tiers, n_prior):
     ws.cell(r, 1, "Eligible set — value tiers").font = Font(bold=True, size=11, color="1F3A5F"); r += 1
     header_row(ws, ["Tier", "Count", "Definition"], r)
     defns = {
-        "Top": "Lift-adjusted value score ≥ 90 — GUARANTEED a 'confirmed +' measured lift (only a confirmed lift earns the +30–45 bonus, and the best unconfirmed scores 89.7). Run first.",
-        "Mid": "Score 60–90: solid candidates — confirmed-but-lower-quality, or high a-priori quality with the lift not yet confirmed (Gruns sits at the very top of Mid at 89.7).",
-        "Low": "Score < 60: the long tail — modest a-priori quality and no confirmed lift.",
+        "Top": "HARD GATE — Powered for a rigorous 5% test (can-detect 5% IVR lift ≤8w = Yes) AND a 'confirmed +' measured lift. Runnable AND proven — the true 'run first' set.",
+        "Mid": "Powered-for-5% OR a confirmed lift, but NOT both — promising (either testable now, or shows lift but under-powered for a clean 5% test, e.g. Axos +55% at MDE 5.2%).",
+        "Low": "Neither powered for a 5% test nor a confirmed lift.",
     }
     for t in ("Top", "Mid", "Low"):
         r += 1
@@ -240,12 +240,13 @@ def sheet_final(wb, rows):
                 "TWO column families (see the tag in each header): [CAN-DETECT] = the smallest lift a FUTURE 8-wk test "
                 "COULD prove (test sensitivity — lower is better; NOT a result); [MEASURED NOW] = the ACTUAL lift already "
                 "measured vs a live holdout (judged significant-vs-ZERO, not vs 5%; higher/positive is better). "
-                "MEASURED-LIFT GATE: (1) advertisers with a significant NEGATIVE measured lift are EXCLUDED (F4); "
-                "(2) value_score is LIFT-ADJUSTED — a 'confirmed +' lift adds +30–45 — and tiers are SCORE BANDS "
-                "(Top ≥90 / Mid 60–90 / Low <60), so the sheet reads strictly high→low and Top is guaranteed all-confirmed "
-                "(the best unconfirmed scores 89.7). 'A-priori score (pre-lift)' is the score before the lift bonus. "
-                "'flat so far'/'too early' advertisers stay eligible and rise as the window matures toward 30d. "
-                "MDE is RELATIVE (5% on 2% IVR = detect 2.1%). Highlights: green=Top, amber=Mid, gray=Low.")
+                "TIERS = a POWER × CONFIRMED-LIFT 2×2: TOP = 'Powered for a 5% IVR lift ≤8w?'=Yes AND a 'confirmed +' lift "
+                "(runnable AND proven); MID = powered-5% OR confirmed (one, not both); LOW = neither. Advertisers with a "
+                "significant-NEGATIVE measured lift are EXCLUDED (F4). value_score is LIFT-ADJUSTED (a 'confirmed +' lift adds "
+                "+30–45) and ranks candidates WITHIN a tier — because Top is power-gated it is NOT a global high→low sort "
+                "(some unpowered high-lift advertisers, e.g. Axos, score high but sit in Mid — you can't run a clean 5% test on them). "
+                "'A-priori score (pre-lift)' is the score before the lift bonus. MDE is RELATIVE (5% on 2% IVR = detect 2.1%). "
+                "Highlights: green=Top, amber=Mid, gray=Low.")
     r = 4
     header_row(ws, [h for _, h, _, _ in FINAL_COLS], r)
     ws.row_dimensions[4].height = 60  # tagged headers wrap to ~3 lines
@@ -332,9 +333,10 @@ def sheet_method(wb, medians):
          "live ghost-bid lift is significantly NEGATIVE (staged gate, 2026-07-02). SCORED (tier, not cut): mid-spend sweet "
          "spot ($25k–$200k/mo), IVR band position (peak 3–6%, >12% = saturated/hard-to-move), powerability at 5%/10%, "
          "brand-size (spend rank + reach-to-spend), audience saturation (reach-to-spend), and a prior-demonstrated-lift bonus. "
-         "TIERS ARE SCORE BANDS on the lift-adjusted value_score (Top ≥90 / Mid 60–90 / Low <60): a 'confirmed +' measured "
-         "lift adds +30–45, so Top is guaranteed all-confirmed and the list reads strictly high→low. Unconfirmed advertisers "
-         "rise into higher tiers as the ghost window matures toward 30d (~late-July).", "p"),
+         "TIERS = POWER × CONFIRMED-LIFT 2×2: Top = powered-for-a-5%-test (Yes) AND a 'confirmed +' measured lift; Mid = one "
+         "of the two; Low = neither. Power (can we run a rigorous 5% test?) is a HARD Top gate — a current ghost-measured "
+         "lift alone doesn't earn Top if the advertiser can't power the study. value_score (lift-adjusted) ranks within a tier. "
+         "Unconfirmed advertisers can promote as the ghost window matures toward 30d (~late-July).", "p"),
         ("Pitfalls", "h2"),
         ("• spend_required uses 30d imps/IP and is an OPTIMISTIC floor for large budget gaps (imps/IP grows with window "
          "length); the '[CAN-DETECT] Smallest IVR lift: real reach' column is the no-extrapolation cross-check.\n"
@@ -404,8 +406,8 @@ def sheet_curve(wb, medians):
 # (section, column-as-shown, plain definition, how it's computed / notes)
 GLOSSARY = [
     ("§", "IDENTITY & RANKING", "", ""),
-    ("", "Value tier", "Priority bucket for running a test. Top = run first. Tiers are SCORE BANDS on the lift-adjusted value score, so the sheet reads strictly high→low.",
-     "Top = value score ≥ 90 · Mid = 60–90 · Low = < 60. The 90 cutoff is set just above the best any UNCONFIRMED advertiser can score (89.7), so Top is GUARANTEED all-confirmed-lift. Advertisers with a significant-NEGATIVE measured lift are EXCLUDED first (F4). 'apriori_tier' (CSV) shows the pre-lift a-priori tier."),
+    ("", "Value tier", "Priority bucket for running a test — a POWER × CONFIRMED-LIFT 2×2. Top = run first.",
+     "Top = 'Powered for a 5% IVR lift ≤8w?' = Yes AND 'confirmed +' measured lift (runnable AND proven). Mid = powered-5% OR confirmed (one, not both). Low = neither. Advertisers with a significant-NEGATIVE measured lift are EXCLUDED first (F4). NOTE: because Top is power-gated, the value score is a WITHIN-tier quality rank, NOT a global high→low sort — a few unpowered-but-high-lift advertisers (e.g. Axos) score high yet sit in Mid because you can't run a clean 5% test on them. 'apriori_tier' (CSV) shows the pre-lift a-priori tier."),
     ("", "Value score (lift-adjusted)", "Composite ranking; higher = better candidate. = a-priori quality PLUS a measured-lift bonus, so it can exceed 100.",
      "A-priori score (power 30 + mid-spend 20 + smaller-brand 20 + IVR-band 15 + saturation 15 + prior-lift +10) PLUS a [MEASURED NOW] bonus: a 'confirmed +' lift adds +30 base + up to +15 scaled by relative-lift magnitude (capped at rel=30% so tiny-N huge relatives don't dominate); flat/too-early/no-data add +0. This is why confirmed advertisers rank above unconfirmed ones."),
     ("", "A-priori score (pre-lift)", "The value score BEFORE the measured-lift bonus — i.e. the pure 'quality on paper' (power + spend + brand + IVR-band + prior). 0–~100.",

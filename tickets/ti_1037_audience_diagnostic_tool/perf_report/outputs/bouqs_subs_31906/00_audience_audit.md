@@ -6,8 +6,7 @@
 |---|--:|--:|--:|--:|--:|--:|
 | Prospecting | 1 | 1.5M | $32K | 285 | $17K | 0.5x |
 | Retargeting | 6 | 889K | $8K | 187 | $11K | 1.3x |
-| Multi-Touch S2 | 1 | 915K | $4K | 0 | $0 | 0.0x |
-| Multi-Touch S3 | 1 | 440K | $2K | 11 | $653 | 0.4x |
+| Multi-Touch | 2 | 1.4M | $6K | 11 | $653 | 0.1x |
 
 **Structural:** each campaign group is a full funnel (stage = `objective_id`); group-level metrics conflate stages. Retargeting is the engine.
 

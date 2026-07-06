@@ -75,11 +75,12 @@ def verdict(R):
 # ---- classify + gate ----
 gated = []       # eligible after F4 (measured non-negative)
 excluded_neg = set()
-# Score-band tier cutoffs on the lift-adjusted score. TOP_CUT=90 is deliberately set
-# just above the best any UNCONFIRMED advertiser can score (max = 89.7, since only a
-# 'confirmed +' verdict earns the +30..45 bonus) → the Top band is GUARANTEED all-confirmed
-# AND the sheet reads strictly high→low (score-band tiers = monotonic by construction).
-TOP_CUT, MID_CUT = 90.0, 60.0
+# TIER = power × confirmed-lift 2x2 (user 2026-07-05). POWER is a HARD Top gate:
+# Top must be RUNNABLE for a rigorous 5% test (can_hit_ivr_5pct_8w='Yes') AND already
+# show a 'confirmed +' lift. This reinstates power (dropped by the earlier score-band
+# tiers, which let unpowered high-lift advertisers into Top). Trade-off: the lift-adjusted
+# value_score is now a WITHIN-tier quality rank, not a global high→low sort (a few unpowered
+# high-lift advertisers, e.g. Axos, score high but sit in Mid because they can't power a 5% test).
 for r in elig:
     a = r["advertiser_id"]
     v, is_neg, m = verdict(ex.get(a))
@@ -110,14 +111,17 @@ for r in elig:
     d["apriori_value_score"] = round(apri_vs, 1)
     d["lift_score_bonus"] = round(bonus, 1)
     d["value_score"] = vs
-    # ---- SCORE-BAND TIER (monotonic; Top guaranteed all-confirmed via the 90 cutoff) ----
-    d["final_tier"] = "Top" if vs >= TOP_CUT else ("Mid" if vs >= MID_CUT else "Low")
+    # ---- TIER = power × confirmed-lift 2x2 (powered-for-5% is a HARD Top gate) ----
+    powered5 = (str(r.get("can_hit_ivr_5pct_8w", "")).strip().lower() == "yes")
+    is_conf = (v == "confirmed +")
+    d["final_tier"] = "Top" if (powered5 and is_conf) else ("Mid" if (powered5 or is_conf) else "Low")
     gated.append(d)
 
-# safety: no UNCONFIRMED advertiser should ever reach the Top band (would break the all-confirmed guarantee)
-_bad = [d for d in gated if d["final_tier"] == "Top" and d["current_lift_confirms"] != "confirmed +"]
+# safety: every Top must be BOTH powered-for-5% AND confirmed
+_bad = [d for d in gated if d["final_tier"] == "Top" and
+        (d["current_lift_confirms"] != "confirmed +" or str(d.get("can_hit_ivr_5pct_8w", "")).strip().lower() != "yes")]
 if _bad:
-    print(f"WARNING: {len(_bad)} unconfirmed advertisers reached Top (score>=90) — raise TOP_CUT above the max unconfirmed score.")
+    print(f"WARNING: {len(_bad)} Top advertisers are not (powered-5% AND confirmed) — tier logic bug.")
 
 cols = list(elig[0].keys()) + ["apriori_tier", "apriori_value_score", "lift_score_bonus"] + [c for c in MEAS_COLS if c not in elig[0].keys()]
 with open(os.path.join(BASE, "incr_75_eligible_with_current_lift.csv"), "w", newline="") as fo:
@@ -160,7 +164,7 @@ with open(os.path.join(BASE, "incr_75_funnel_counts.csv"), "w", newline="") as f
 
 from collections import Counter
 print(f"Excluded (measured negative, F4): {len(excluded_neg)}")
-print(f"Score-band tiers (lift-adjusted score): Top>={TOP_CUT:.0f} / Mid {MID_CUT:.0f}-{TOP_CUT:.0f} / Low <{MID_CUT:.0f}")
+print("TIER = power x confirmed 2x2: Top = powered-5% AND confirmed / Mid = powered OR confirmed / Low = neither")
 for t in ("Top", "Mid", "Low"):
     sub = [r for r in gated if r["final_tier"] == t]
     c = Counter(r["current_lift_confirms"] for r in sub)
