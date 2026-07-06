@@ -196,8 +196,8 @@ def main():
     # ONE FIGURE — adaptive height (stage map + prospecting audit)
     # =====================================================================
     stages = [s for s in STAGE_ORDER if s in smap]
-    RH = 0.34
-    H = 0.55 + 0.42 + 0.60 + 0.34 + 0.34 + (len(stages) + 1) * RH + 0.85 + 0.34 + 0.34 + len(prosp) * RH + 0.55
+    RH = 0.44
+    H = 4.4 + (len(stages) + 1 + len(prosp)) * RH
     fig = plt.figure(figsize=(15, H))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.axis("off")
@@ -211,82 +211,76 @@ def main():
     cy += 0.42
     rt = smap.get("Retargeting", {})
     rroas = rt["revenue"] / rt["spend"] if rt.get("spend") else 0
-    fig.text(0.03, Y(cy), f"Retargeting is the revenue engine ({rroas:.0f}x, {rt.get('revenue',0)/max(tot['revenue'],1)*100:.0f}% "
-             f"of revenue). Prospecting — the focus below — audited per campaign with its audience funnel.",
-             fontsize=12.5, color="#444")
-    cy += 0.60
+    fig.text(0.03, Y(cy), "Delivery by funnel stage (top); each prospecting campaign's audience (bottom).",
+             fontsize=13.5, color="#555")
+    cy += 0.66
 
     # STAGE MAP
-    ax.text(0.03, Y(cy), "WHERE THE MONEY GOES  ·  all stages (stage = objective_id; each group is a full funnel)",
-            fontsize=13, fontweight="bold", color=NAVY)
-    cy += 0.34
+    ax.text(0.03, Y(cy), "DELIVERY BY STAGE  (objective_id)", fontsize=16, fontweight="bold", color=NAVY)
+    cy += 0.42
     c1 = ["Stage", "Camps", "Impressions", "Spend", "Conversions", "Revenue", "ROAS"]
     x1 = [0.03, 0.25, 0.35, 0.50, 0.61, 0.75, 0.90]
     for x, c in zip(x1, c1):
-        ax.text(x, Y(cy), c, fontsize=12, fontweight="bold", color="#555", va="center")
-    cy += 0.12
-    ax.plot([0.03, 0.97], [Y(cy), Y(cy)], color=NAVY, lw=1.3)
-    cy += 0.22
+        ax.text(x, Y(cy), c, fontsize=14, fontweight="bold", color="#555", va="center")
+    cy += 0.16
+    ax.plot([0.03, 0.97], [Y(cy), Y(cy)], color=NAVY, lw=1.4)
+    cy += 0.28
     for st in stages:
         s = smap[st]
         roas = s["revenue"] / s["spend"] if s["spend"] else 0
         share = s["revenue"] / tot["revenue"] * 100 if tot["revenue"] else 0
         rc = GREEN if roas >= 5 else (NAVY if roas >= 1.8 else RED)
-        hot = st == "Retargeting"
         cells = [st, str(s["n"]), kfmt(s["imps"]), dollar(s["spend"]), f"{s['conv']:,.0f}",
                  f"{dollar(s['revenue'])} ({share:.0f}%)", f"{roas:.1f}x"]
         for x, t in zip(x1, cells):
-            ax.text(x, Y(cy), t, fontsize=12, va="center",
-                    color=(rc if x == x1[6] else (NAVY if hot else "#222")),
-                    fontweight="bold" if (x == x1[0] or x == x1[6] or hot) else "normal")
+            ax.text(x, Y(cy), t, fontsize=14.5, va="center",
+                    color=(rc if x == x1[6] else "#222"),
+                    fontweight="bold" if (x == x1[0] or x == x1[6]) else "normal")
         cy += RH
-    ax.plot([0.03, 0.97], [Y(cy - 0.14), Y(cy - 0.14)], color="#ccc", lw=1)
+    ax.plot([0.03, 0.97], [Y(cy - 0.16), Y(cy - 0.16)], color="#ccc", lw=1)
     troas = tot["revenue"] / tot["spend"] if tot["spend"] else 0
     for x, t in zip(x1, ["TOTAL", str(len(enum)), kfmt(tot["imps"]), dollar(tot["spend"]),
                          f"{tot['conv']:,.0f}", dollar(tot["revenue"]), f"{troas:.1f}x"]):
-        ax.text(x, Y(cy), t, fontsize=12, va="center", color=NAVY, fontweight="bold")
-    cy += RH + 0.55
+        ax.text(x, Y(cy), t, fontsize=14.5, va="center", color=NAVY, fontweight="bold")
+    cy += RH + 0.66
 
-    # PROSPECTING AUDIT
-    ax.text(0.03, Y(cy), f"PROSPECTING AUDIENCE  ·  all {len(prosp)} obj=1 campaigns — targeting + funnel + flags",
-            fontsize=13, fontweight="bold", color=NAVY)
-    cy += 0.34
-    c2 = ["Campaign", "Geo", "Interest", "Gate", "Reached", "HI-share", "ROAS", "Flags"]
-    x2 = [0.03, 0.235, 0.315, 0.42, 0.50, 0.575, 0.665, 0.735]
+    # PROSPECTING AUDIT (geo / net-new gate / HI-share carry the signal; no separate flags column)
+    ax.text(0.03, Y(cy), "PROSPECTING AUDIENCE  —  per campaign (obj=1)", fontsize=16, fontweight="bold", color=NAVY)
+    cy += 0.42
+    c2 = ["Campaign", "Geo", "Interest", "Net-new gate", "Reached", "HI-share", "ROAS"]
+    x2 = [0.03, 0.30, 0.42, 0.55, 0.70, 0.80, 0.90]
     for x, c in zip(x2, c2):
-        ax.text(x, Y(cy), c, fontsize=12, fontweight="bold", color="#555", va="center")
-    cy += 0.12
-    ax.plot([0.03, 0.985], [Y(cy), Y(cy)], color=NAVY, lw=1.3)
-    cy += 0.22
+        ax.text(x, Y(cy), c, fontsize=14, fontweight="bold", color="#555", va="center")
+    cy += 0.16
+    ax.plot([0.03, 0.985], [Y(cy), Y(cy)], color=NAVY, lw=1.4)
+    cy += 0.28
     for i, p in enumerate(prosp):
         if i % 2 == 0:
-            ax.axhspan(Y(cy + RH / 2 - 0.03), Y(cy - RH / 2 + 0.03), color="#000", alpha=0.03)
+            ax.axhspan(Y(cy + RH / 2 - 0.04), Y(cy - RH / 2 + 0.04), color="#000", alpha=0.03)
         gcol = AMBER if (2 <= p["ngeo"] <= 25 or p["ngeo"] >= 120) else "#222"
-        gate_txt, gate_col = ("net-new", RED) if p["gate"] else ("—", GRAY)
+        gate_txt, gate_col = ("yes", RED) if p["gate"] else ("—", GRAY)
         roas_col = GREEN if p["roas"] >= 2.2 else (NAVY if p["roas"] >= 1.5 else (RED if p["roas"] else GRAY))
         if p["hs"] is None:
             hs_txt, hs_col = "dark", GRAY
         else:
             hs_txt = f"{p['hs']*100:.0f}%"
             hs_col = GREEN if p["hs"] >= 0.80 else (AMBER if p["hs"] >= 0.60 else RED)
-        ax.text(x2[0], Y(cy), p["label"][:30], fontsize=10.5, va="center", color="#222", fontweight="bold")
-        ax.text(x2[1], Y(cy), geo_txt(p), fontsize=10.5, va="center", color=gcol,
+        ax.text(x2[0], Y(cy), p["label"][:32], fontsize=12.5, va="center", color="#222", fontweight="bold")
+        ax.text(x2[1], Y(cy), geo_txt(p), fontsize=12.5, va="center", color=gcol,
                 fontweight="bold" if gcol == AMBER else "normal")
-        ax.text(x2[2], Y(cy), p["interest"], fontsize=10, va="center",
+        ax.text(x2[2], Y(cy), p["interest"], fontsize=12, va="center",
                 color=GREEN if "MM" in p["interest"] else (AMBER if "3P only" in p["interest"] else GRAY))
-        ax.text(x2[3], Y(cy), gate_txt, fontsize=10.5, va="center", color=gate_col,
+        ax.text(x2[3], Y(cy), gate_txt, fontsize=12.5, va="center", color=gate_col,
                 fontweight="bold" if p["gate"] else "normal")
-        ax.text(x2[4], Y(cy), kfmt(p["reach"]) if p["reach"] else "dark", fontsize=10.5, va="center",
+        ax.text(x2[4], Y(cy), kfmt(p["reach"]) if p["reach"] else "dark", fontsize=12.5, va="center",
                 color="#222" if p["reach"] else GRAY)
-        ax.text(x2[5], Y(cy), hs_txt, fontsize=10.5, va="center", color=hs_col, fontweight="bold")
-        ax.text(x2[6], Y(cy), f"{p['roas']:.2f}x" if p["roas"] else "—", fontsize=10.5, va="center",
+        ax.text(x2[5], Y(cy), hs_txt, fontsize=12.5, va="center", color=hs_col, fontweight="bold")
+        ax.text(x2[6], Y(cy), f"{p['roas']:.2f}x" if p["roas"] else "—", fontsize=12.5, va="center",
                 color=roas_col, fontweight="bold")
-        fl = ", ".join(f[0] for f in p["flags"]) if p["flags"] else "—"
-        fcol = RED if any(f[1] == RED for f in p["flags"]) else (AMBER if p["flags"] else GRAY)
-        ax.text(x2[7], Y(cy), fl[:44], fontsize=9, va="center", color=fcol)
         cy += RH
-    ax.text(0.03, Y(cy + 0.05), "Reached / HI-share exact (CIL, recent in-TTL month); HI-share = of reached households, "
-            "score ≥ 8001. Low HI-share or high-unscored = reaching low-intent supply.", fontsize=9.3, color=GRAY, va="center")
+    ax.text(0.03, Y(cy + 0.08), "Reached / HI-share from CIL (households scored ≥ 8001), recent month.   "
+            "Net-new gate = DS16 restricts to households the advertiser hasn't already served (≠ the HHST score gate).",
+            fontsize=11, color=GRAY, va="center")
     plt.savefig(f"{o}/00_audience_audit.png", dpi=200, bbox_inches="tight")
     print(f"wrote {o}/00_audience_audit.png")
     plt.close(fig)
