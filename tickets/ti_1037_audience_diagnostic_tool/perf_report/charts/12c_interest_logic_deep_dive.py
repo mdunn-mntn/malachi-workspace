@@ -202,8 +202,9 @@ def main():
                   "mm": dsc.get(19, 0), "tp": dsc.get(35, 0), "join": join_op(cw),
                   "gate": contains(cw, 16), "reach": reach.get(g, 0),
                   "spend": sp, "sshare": sp / tot_spend}
-    # order: by prospecting-spend share desc (biggest spender first; missing-from-enum -> 0, last)
-    order = sorted(dna, key=lambda g: (-dna[g]["sshare"], -dna[g]["reach"]))
+    # order: by prospecting-spend share desc (biggest spender first); omit zero-spend groups (guard)
+    _ordered = sorted(dna, key=lambda g: (-dna[g]["sshare"], -dna[g]["reach"]))
+    order = [g for g in _ordered if dna[g]["sshare"] > 0] or _ordered
     any_gate = any(dna[g]["gate"] for g in order)
     all_or = all((dna[g]["join"] in (None, "or")) for g in order)
 

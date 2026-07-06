@@ -162,7 +162,9 @@ def main():
         if x["obj"] == 1:
             grp_obj1[x["grp"]] = grp_obj1.get(x["grp"], 0) + 1
     prosp = []
-    for r in sorted([x for x in enum if x["obj"] == 1], key=lambda x: -x["spend"]):  # rank by spend
+    _obj1 = [x for x in enum if x["obj"] == 1]
+    _kept = [x for x in _obj1 if x["spend"] > 0] or _obj1  # omit zero-spend campaigns (guard: never empty)
+    for r in sorted(_kept, key=lambda x: -x["spend"]):  # rank by spend, most -> least
         cid = r["campaign_id"]
         e = json.loads(expr[cid]) if cid in expr else {}
         cw = (e.get("categories") or {}).get("where")

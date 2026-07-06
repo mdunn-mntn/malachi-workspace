@@ -71,6 +71,7 @@ def main():
         addr = int(sizes[cid]["med_total"]) if cid in sizes else None
         rows.append({"cid": cid, "label": glabel(grp, gname, cid, grp_obj1.get(grp, 1) > 1), "reach": reach,
                      "b": b, "hs": b["hi"] / reach, "addr": addr, "spend": spend})
+    rows = [r for r in rows if r["spend"] > 0] or rows  # omit zero-spend campaigns (guard: never empty)
     tot_ps = sum(r["spend"] for r in rows) or 1  # rank/label bars by % of prospecting spend
     for r in rows:
         r["sshare"] = r["spend"] / tot_ps
@@ -94,14 +95,18 @@ def main():
         vals = [r["b"][key] for r in rows]
         axb.barh(ypos, vals, left=lefts, color=col, height=0.66, label=lab)
         lefts = [l + v for l, v in zip(lefts, vals)]
-    maxr = max(r["reach"] for r in rows)
+    # anchor labels at the TRUE stacked-bar end (bucket sums can exceed reach when an IP is
+    # re-scored mid-month) so the gap after the bar is identical on every row, incl. the widest.
+    bar_end = lefts
+    maxend = max(bar_end)
+    gap = maxend * 0.02
     for i, r in enumerate(rows):
-        axb.text(r["reach"] + maxr * 0.022, ypos[i],
+        axb.text(bar_end[i] + gap, ypos[i],
                  f"{kfmt(r['reach'])} · {r['hs']*100:.0f}% HI · {pctfmt(r['sshare'])} spend",
                  va="center", fontsize=9.8, color=NAVY, fontweight="bold")
     axb.set_yticks(ypos)
     axb.set_yticklabels([f"{r['label'][:34]}  ·  {pctfmt(r['sshare'])}" for r in rows], fontsize=9.8)
-    axb.set_xlim(0, maxr * 1.30)
+    axb.set_xlim(0, maxend * 1.30)
     axb.set_xticks([])
     for sp in ["top", "right", "bottom"]:
         axb.spines[sp].set_visible(False)

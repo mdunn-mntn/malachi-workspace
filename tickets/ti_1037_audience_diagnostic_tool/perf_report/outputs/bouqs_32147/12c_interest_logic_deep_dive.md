@@ -15,13 +15,6 @@
 | 117983 CTV eComm High Frequency Prospecting 2026 | 2% | National · US | 187 | 4 | OR | **net-new (AND'd)** | 278K | 76% | net-new residual gate |
 | 117985 CTV eComm Low Frequency Prospecting 2026 | 2% | National · US | 187 | 4 | OR | **net-new (AND'd)** | 304K | 76% | net-new residual gate |
 | 117987 CTV eComm Auto Frequency Prospecting 2026 | 1% | National · US | 187 | 4 | OR | **net-new (AND'd)** | 362K | 75% | net-new residual gate |
-| 82900 CTV Prospecting MM VDay 2025 | 0% | National · US | 114 | 0 | ? | — | 2.21M | 68% | national · ungated |
-| 82899 CTV Prospecting IntSeg VDay 2025 | 0% | National · US | 0 | 7 | ? | — | 1.17M | 81% | national · ungated |
-| 88885 CTV Prospecting MDAY 2025 | 0% | National · US | 187 | 4 | OR | — | 1.02M | 39% | national · ungated |
-| 88962 MDAY 2025 CTEST Prospecting | 0% | National · US | 187 | 4 | OR | — | 476K | 24% | national · ungated |
-| 82901 CTV Prospecting VDay CTEST 2025 | 0% | National · US | 114 | 0 | ? | — | 299K | 48% | national · ungated |
-| 82075 CTV Prospecting INTSEG 2024 | 0% | National · US | 0 | 0 | ? | **net-new (AND'd)** | 256K | 85% | net-new residual gate |
-| 82074 CTV Prospecting MNTN 2024 | 0% | National · US | 59 | 0 | ? | **net-new (AND'd)** | 76K | 36% | net-new residual gate |
 
 ## The differentiator — DS16 net-new funnel gate
 `AND ( NOT DS16[own Impressions/Wins]  OR  DS16[own campaign-group tag] )` — decoded via `tpa.categories` (data_source_id=16 = the advertiser's own funnel). Target a household **iff** it was NEVER impressed/won by this advertiser **OR** is already owned by this campaign = a **net-new-reach gate**.
@@ -31,8 +24,8 @@
 | Metric | Value |
 |---|---|
 | Base (85384 eComm   -old) reach | 5,828,969 distinct households |
-| Gated-variant reach | 76K–5.09M (9 gated campaigns) |
-| Base ∩ gated variant | **~69% net-new vs base** (avg across gated) |
+| Gated-variant reach | 278K–5.09M (7 gated campaigns) |
+| Base ∩ gated variant | **~72% net-new vs base** (avg across gated) |
 
 **Read:** the gate narrows by WHO (net-new households), not by 3P — gated campaigns fish the residual net-new pool the ungated base already skipped.
 

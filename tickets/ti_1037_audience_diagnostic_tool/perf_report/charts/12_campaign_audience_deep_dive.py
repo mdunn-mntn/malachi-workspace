@@ -208,7 +208,8 @@ def main():
     tot_ps = sum(d["spend"] for d in dive) or 1
     for d in dive:
         d["sshare"] = d["spend"] / tot_ps
-    dive_by_spend = sorted(dive, key=lambda x: (-x["spend"], x["n_inc"]))
+    _ranked = sorted(dive, key=lambda x: (-x["spend"], x["n_inc"]))
+    dive_by_spend = [d for d in _ranked if d["spend"] > 0] or _ranked  # omit zero-spend groups (guard)
 
     and_narrowing = any(d["jop"] == "and" for d in dive)
     n_dive = len(dive) or 1

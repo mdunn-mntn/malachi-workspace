@@ -86,9 +86,10 @@ def main():
         by[g]["days"][r["day"]] = int(gate) if gate not in ("", None) else None
 
     share = prospecting_spend_share(a.csv)  # {group_id: % of prospecting spend}
-    # lanes ordered by prospecting-spend share DESC (biggest spender on top); a group missing
-    # from the enum -> share 0 sorts last. Tie-break on earliest active day for determinism.
-    camps = sorted(by.items(), key=lambda kv: (-share.get(kv[0], 0.0), min(kv[1]["days"])))
+    # lanes ordered by prospecting-spend share DESC (biggest spender on top); tie-break earliest
+    # active day. Omit zero-spend groups (present-but-0 and absent-from-enum) with an empty-guard.
+    _kept = [kv for kv in by.items() if share.get(kv[0], 0.0) > 0] or list(by.items())
+    camps = sorted(_kept, key=lambda kv: (-share.get(kv[0], 0.0), min(kv[1]["days"])))
     n = len(camps)
     fig, ax = plt.subplots(figsize=(15, max(3.2, 0.52 * n + 2.0)))
 
@@ -124,8 +125,8 @@ def main():
                     height=0.62, color=c, edgecolor="white", linewidth=0.3, zorder=3)
         nm = info["name"] or ""
         nm = (nm[:30] + "…") if len(nm) > 31 else nm
-        sh = share.get(grp)
-        sh_txt = f"  ·  {pctfmt(sh)} spend" if sh is not None else "  ·  — spend"
+        sh = share.get(grp, 0.0)  # surviving lanes all have spend > 0 after the filter
+        sh_txt = f"  ·  {pctfmt(sh)} spend"
         ylabels.append(f"{grp}  {nm}{sh_txt}")
 
     ax.set_yticks(range(n))

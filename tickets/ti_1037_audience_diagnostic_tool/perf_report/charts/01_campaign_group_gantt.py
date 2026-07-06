@@ -58,7 +58,8 @@ def main():
             if not r.get("campaign_group_id"):
                 continue
             rows.append(r)
-    # highest spend on top -> plot inverts (index 0 at top); tie-break earliest start
+    # omit groups with no spend in the period (guard: never empty), then highest spend on top
+    rows = [r for r in rows if float(r["total_spend"] or 0) > 0] or rows
     rows.sort(key=lambda r: (-float(r["total_spend"] or 0), r["first_active_day"]))
 
     ws, we = d(a.win_start), d(a.win_end)

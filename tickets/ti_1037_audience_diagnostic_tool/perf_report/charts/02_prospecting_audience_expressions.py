@@ -120,6 +120,7 @@ def main():
     for r in rows:
         r["_pspend"] = gsp.get(r["campaign_group_id"], 0.0)
     rows.sort(key=lambda r: -r["_pspend"])
+    rows = [r for r in rows if r["_pspend"] > 0] or rows  # omit zero-spend groups (guard: never empty)
     tot_ps = sum(r["_pspend"] for r in rows) or 1.0
     for r in rows:
         r["_sshare"] = r["_pspend"] / tot_ps

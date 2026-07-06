@@ -87,8 +87,9 @@ def main():
         gname[g] = r["camp_name"]
     # % of PROSPECTING SPEND per group (from the shared enum) — orders columns by materiality.
     _, gshare = prospecting_spend_by_group(os.path.dirname(a.csv))
-    # columns ordered by prospecting-spend share DESC (biggest spender left); earliest-change tie-break.
+    # ordered by prospecting-spend share DESC (biggest spender first); earliest-change tie-break.
     cols = sorted(by_grp, key=lambda g: (-gshare.get(g, 0.0), min(e["changed_on"] for e in by_grp[g])))
+    cols = [g for g in cols if gshare.get(g, 0.0) > 0] or cols  # omit zero-spend groups (guard)
 
     # cell[(date, grp)] = list of (text, color); collect all change dates
     cell = {}
@@ -162,9 +163,8 @@ def main():
             ax.axhspan(y - 0.5, y + 0.5, color=NAVY, alpha=0.08, zorder=0)
             ax.text(0.008, y, f"{g}  ·  {gn[:34]}" if gn else f"{g}", fontsize=12, fontweight="bold",
                     color=NAVY, va="center")
-            stxt = f"{pctfmt(sh)} spend" if sh > 0 else "no current spend"
-            ax.text(0.992, y, stxt, fontsize=11, fontweight="bold" if sh > 0 else "normal",
-                    color=NAVY if sh > 0 else GRAY, va="center", ha="right")
+            ax.text(0.992, y, f"{pctfmt(sh)} spend", fontsize=11, fontweight="bold",
+                    color=NAVY, va="center", ha="right")
         elif item[0] == "row":
             _, dt, txt, col = item
             ax.text(xDATE, y, dt, fontsize=10.5, va="center", color="#666")
@@ -180,7 +180,7 @@ def main():
           "| Campaign (group) | % spend | Date | Change |", "|---|--:|---|---|"]
     for g in cols:
         sh = gshare.get(g, 0.0)
-        spend_s = pctfmt(sh) if sh > 0 else "—"
+        spend_s = pctfmt(sh)
         evs = group_events.get(g, [])
         first_row = True
         for dt, lines in evs:

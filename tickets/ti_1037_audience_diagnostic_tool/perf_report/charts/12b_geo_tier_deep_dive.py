@@ -80,6 +80,10 @@ def kfmt(v):
     return f"{v/1e6:.1f}M" if v >= 1e6 else (f"{v/1e3:.0f}K" if v >= 1e3 else f"{v:.0f}")
 
 
+def pctfmt(share):  # share is a 0..1 fraction; tiny-but-positive reads "<1%", never "0%"
+    return "<1%" if 0 < share < 0.01 else f"{share*100:.0f}%"
+
+
 def main():
     ap = argparse.ArgumentParser()
     base = "outputs/kindred_35094/"
@@ -285,9 +289,10 @@ def main():
     for x, c in zip(xg, cols2):
         ax.text(x, yr2, c, fontsize=11, fontweight="bold", color="#444")
     ax.plot([0.03, 0.97], [yr2 - 0.014, yr2 - 0.014], color=NAVY, lw=1.3)
-    # rank by P2 spend desc (materiality) — biggest spender on top
-    order = sorted([c for c in camps if (c["grp"], "P2") in metrics],
-                   key=lambda c: -float(metrics[(c["grp"], "P2")]["spend"] or 0))
+    # omit zero-spend campaigns (guard: never empty), then rank by P2 spend desc — biggest on top
+    _elig = [c for c in camps if (c["grp"], "P2") in metrics]
+    _nz = [c for c in _elig if float(metrics[(c["grp"], "P2")]["spend"] or 0) > 0] or _elig
+    order = sorted(_nz, key=lambda c: -float(metrics[(c["grp"], "P2")]["spend"] or 0))
     # adaptive row pitch for a variable number of campaigns
     rowdy = min(0.0335, (yr2 - 0.14) / max(len(order) + 2, 1))
     y = yr2 - 0.030
@@ -296,10 +301,9 @@ def main():
         roas = float(r["roas"] or 0)
         rc = GREEN if roas >= 2.0 else (AMBER if roas >= 1.5 else RED)
         nm = c["name"] or c["grp"]
-        share = 100 * int(r["imps"]) / b_imps
         cells = [f"{c['grp']} {nm[:22]}", "National" if c["natl"] else c["tier"].title(),
                  "US" if c["natl"] else str(c["n"]), r["first_day"][:7],
-                 kfmt(r["imps"]), f"{share:.0f}%", f"{float(r['vr_permille'] or 0):.1f}‰",
+                 kfmt(r["imps"]), pctfmt(int(r["imps"]) / b_imps), f"{float(r['vr_permille'] or 0):.1f}‰",
                  f"{float(r['cvr_pct'] or 0):.1f}%", f"{roas:.2f}x"]
         for x, v in zip(xg, cells):
             col = rc if v.endswith("x") else "#222"

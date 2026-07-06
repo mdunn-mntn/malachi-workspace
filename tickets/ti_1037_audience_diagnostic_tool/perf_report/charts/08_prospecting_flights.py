@@ -79,6 +79,7 @@ def main():
     for g in groups:
         groups[g]["sh"] = pspend.get(g, 0) / tot_ps
     order = sorted(groups, key=lambda g: -groups[g]["sh"])
+    order = [g for g in order if groups[g]["sh"] > 0] or order  # omit zero-spend groups (guard)
 
     GH = 3 * SUBH          # group height (3 tiers)
     fig, ax = plt.subplots(figsize=(14.5, 1.6 + len(order) * (GH + 0.34) * 1.05))

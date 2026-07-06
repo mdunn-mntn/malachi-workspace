@@ -94,6 +94,7 @@ def main():
         groups[g]["sshare"] = groups[g]["spend"] / tot_ps
     # panels ordered by prospecting-spend share DESC (biggest spender on top); tie-break: earliest change.
     order = sorted(groups, key=lambda g: (-groups[g]["sshare"], min(t for t, _ in groups[g]["ev"])))
+    order = [g for g in order if groups[g]["sshare"] > 0] or order  # omit zero-spend campaigns (guard)
     n = len(order)
 
     ws = mdates.date2num(datetime.strptime(a.win_start, "%Y-%m-%d"))
@@ -127,7 +128,7 @@ def main():
         # label + spend share + change-count in the LEFT MARGIN (no lines there → nothing gets cut off)
         nm = (groups[g]["name"] or "").replace("CTV Prospecting", "").strip()
         sp = groups[g]["sshare"]
-        sp_txt = f"· {pctfmt(sp)} spend" if sp > 0 else "· 0% spend"
+        sp_txt = f"· {pctfmt(sp)} spend"
         ax.text(-0.013, 0.66, f"{g} {sp_txt}\n{nm[:14]}", transform=ax.transAxes, ha="right",
                 va="center", fontsize=8, color="#333")
         ax.text(-0.013, 0.24, f"{len(ev)} chg · last {gate_label(ev[-1][1])}",
