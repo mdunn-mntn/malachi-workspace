@@ -102,8 +102,15 @@ def run_chart(tmpl, env):
 
 def build_html(env, spec):
     out = env["OUTDIR"]
-    pngs = sorted(f for f in os.listdir(out) if f.endswith(".png"))
-    pngs = [p for p in pngs if "overview" in p] + [p for p in pngs if "overview" not in p]  # headline first
+    # headline order: overview (flags) -> 04 (YoY metrics) -> 05/05b/05c (monthly trends) -> then the rest
+    LEAD = ["overview", "04_", "05_", "05b_", "05c_"]
+
+    def prio(p):
+        for i, pre in enumerate(LEAD):
+            if p.startswith(pre):
+                return (i, p)
+        return (len(LEAD), p)
+    pngs = sorted((f for f in os.listdir(out) if f.endswith(".png")), key=prio)
     adv = env.get("ADV_LABEL", env.get("ADV_NAME", ""))
     parts = [f"<!doctype html><meta charset=utf-8><title>{adv} — report</title>",
              "<style>body{font-family:Helvetica Neue,Arial,sans-serif;background:#FAFAFA;margin:40px;color:#222}"

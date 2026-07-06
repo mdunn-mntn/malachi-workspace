@@ -69,6 +69,7 @@ def main():
     rows = [{k: float(v) if k != "month" else v for k, v in r.items()}
             for r in csv.DictReader(open(a.csv))]
     x = [mdates.date2num(datetime.strptime(r["month"], "%Y-%m")) for r in rows]
+    paused = [i for i, r in enumerate(rows) if r["impressions"] == 0]  # 0-impression (paused) months
 
     def _month(s):   # accept YYYY-MM or YYYY-MM-DD (period tokens are full dates)
         return datetime.strptime(s[:7], "%Y-%m")
@@ -85,6 +86,8 @@ def main():
         for p in (a.p1, a.p2):
             s, e = band(p)
             ax.axvspan(s, e, color=NAVY, alpha=0.05, zorder=0)
+        for pi in paused:   # paused month: 0 impressions -> CPM/VR/ROAS undefined (shown as a gap)
+            ax.axvspan(x[pi] - 13, x[pi] + 13, color=RED, alpha=0.09, zorder=0)
         ax.plot(x, y, color=NAVY, lw=2, marker="o", ms=4, zorder=3)
         ax.plot(x[-1], y[-1], marker="o", ms=6, color=RED, zorder=4)
         ax.annotate(_f(fmt, y[-1]), (x[-1], y[-1]), textcoords="offset points", xytext=(4, 4),
@@ -103,8 +106,12 @@ def main():
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%b '%y"))
         plt.setp(ax.get_xticklabels(), rotation=0, fontsize=8)
     fig.suptitle(f"{a.adv} — Prospecting monthly metric trends", fontsize=15,
-                 fontweight="bold", color="#222", x=0.01, ha="left", y=0.995)
-    plt.tight_layout(rect=[0, 0, 1, 0.985])
+                 fontweight="bold", color="#222", x=0.01, ha="left", y=0.997)
+    if paused:
+        fig.text(0.01, 0.978, "Red band = paused month (0 impressions/spend): CPM, visit-rate & ROAS are undefined "
+                 "(shown as a gap); any visits/conversions that month are lagged attributions from earlier impressions.",
+                 fontsize=8.5, color=RED, ha="left")
+    plt.tight_layout(rect=[0, 0, 1, 0.972 if paused else 0.985])
     plt.savefig(a.out, dpi=190, bbox_inches="tight")
     print(f"wrote {a.out}")
 
