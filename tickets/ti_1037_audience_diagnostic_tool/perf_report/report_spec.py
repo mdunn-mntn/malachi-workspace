@@ -5,7 +5,8 @@ Chart tokens: {OUT}{ADV}{P1S}{P1E}{P2S}{P2E}{P1L}{P2L}{WINS}{WINE}{DMS}{DME}{HS}
 
 SPEC = [
     {"id": "00", "title": "Audience audit (front matter)",
-     "pulls": [{"csv": "00_campaign_enum"}, {"csv": "00_all_expressions"}, {"csv": "00_funnel_sizes"}, {"csv": "00_funnel_hishare"}],
+     "pulls": [{"csv": "00_campaign_enum"}, {"csv": "00_all_expressions"}, {"csv": "00_funnel_sizes"},
+               {"csv": "00_funnel_hishare"}, {"csv": "00_funnel_hishare_wide"}],
      "chart": 'charts/00_audience_audit.py --outdir {OUT} --adv "{ADV}"'},
     {"id": "00b", "title": "Prospecting reach by score bucket",
      "pulls": [],

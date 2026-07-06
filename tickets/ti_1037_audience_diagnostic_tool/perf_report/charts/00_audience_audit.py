@@ -5,8 +5,8 @@ objective_id, decodes every audience expression, folds the prospecting audience 
 (addressable -> reached -> HI) + flags into ONE front-matter figure with an adaptive layout.
   · TOP    — STAGE MAP: where impressions / spend / conversions / revenue go.
   · BOTTOM — PROSPECTING AUDIENCE: every obj=1 campaign — targeting DNA + funnel
-             (Reached · HI-share · Coverage) + flags (narrow/thin geo · net-new gate ·
-             MM-AND-3P · low-HI-share · high-unscored · dark).
+             (Reached · HI-share · Coverage) + own-audience exclusions (DS16 net-new /
+             DS21 converters / DS34 pageview). Not-currently-running rows are light-red banded.
 
 Reads  <outdir>/00_campaign_enum.csv · 00_all_expressions.csv · 00_funnel_sizes.csv · 00_funnel_hishare.csv
 Writes <outdir>/00_audience_audit.png · 00_audience_audit.md
@@ -143,6 +143,8 @@ def main():
     expr = {r["campaign_id"]: r["expression"] for r in csv.DictReader(open(f"{o}/00_all_expressions.csv")) if r.get("expression")}
     sizes = {r["campaign_id"]: r for r in csv.DictReader(open(f"{o}/00_funnel_sizes.csv"))} if os.path.exists(f"{o}/00_funnel_sizes.csv") else {}
     hishare = {r["campaign_id"]: r for r in csv.DictReader(open(f"{o}/00_funnel_hishare.csv"))} if os.path.exists(f"{o}/00_funnel_hishare.csv") else {}
+    # P2-wide fallback: reach/HI for campaigns that are dark in the recent month (so they still show numbers)
+    hishare_wide = {r["campaign_id"]: r for r in csv.DictReader(open(f"{o}/00_funnel_hishare_wide.csv"))} if os.path.exists(f"{o}/00_funnel_hishare_wide.csv") else {}
     for r in enum:
         r["obj"] = int(r["obj"])
         r["stage"] = STAGE.get(r["obj"], f"obj{r['obj']}")
@@ -173,8 +175,12 @@ def main():
         gc = geo_class(e)
         ngeo, national = gc["n_dma"], gc["national"]
         jop = join_op(cw) if (19 in ds and 35 in ds) else None
-        gate = contains(cw, 16)
-        h = hishare.get(cid)
+        # own-audience exclusions actually applied (exclude role): DS16 net-new, DS21 converters, DS34 pageview
+        excl = [n for n in (16, 21, 34) if ds.get(n, {}).get("exc", 0) > 0]
+        gate = 16 in excl  # DS16 net-new gate (kept for the flags list)
+        recent_h = hishare.get(cid)
+        dark_now = recent_h is None            # not delivering in the recent month -> winding down
+        h = recent_h or hishare_wide.get(cid)  # fall back to the P2-wide footprint for dark campaigns
         reach = int(h["reach_ip"]) if h else None
         hi = int(h["hi_ip"]) if h else None
         unsc = int(h["unscored_ip"]) if h else None
@@ -200,10 +206,11 @@ def main():
             flags.append((f"low HI {hs*100:.0f}%", RED))
         if us is not None and us > 0.30:
             flags.append((f"unscored {us*100:.0f}%", AMBER))
-        if h is None:
-            flags.append(("dark (F1 stopped)", GRAY))
+        if dark_now:
+            flags.append(("not currently running", RED))
         prosp.append({"cid": cid, "grp": r["grp"], "label": glabel(r["grp"], r.get("group_name"), cid, grp_obj1.get(r["grp"], 1) > 1),
-                      "ngeo": ngeo, "national": national, "interest": interest, "gate": gate, "reach": reach,
+                      "ngeo": ngeo, "national": national, "interest": interest, "gate": gate, "excl": excl,
+                      "dark_now": dark_now, "last_day": r.get("last_day"), "reach": reach,
                       "hs": hs, "us": us, "cov": cov, "roas": roas, "addr": addr, "flags": flags,
                       "spend": r["spend"]})
     tot_ps = sum(p["spend"] for p in prosp) or 1  # rank/weight prospecting campaigns by % of prospecting spend
@@ -262,11 +269,11 @@ def main():
         ax.text(x, Y(cy), t, fontsize=14.5, va="center", color=NAVY, fontweight="bold")
     cy += RH + 0.66
 
-    # PROSPECTING AUDIT (geo / net-new gate / HI-share carry the signal; no separate flags column)
+    # PROSPECTING AUDIT (geo / own-audience exclusions / HI-share carry the signal; no separate flags column)
     ax.text(0.03, Y(cy), "PROSPECTING AUDIENCE  —  per campaign (obj=1)", fontsize=16, fontweight="bold", color=NAVY)
     cy += 0.42
-    c2 = ["Campaign", "% spend", "Geo", "Interest", "Net-new gate", "Reached", "HI-share", "ROAS"]
-    x2 = [0.03, 0.285, 0.40, 0.50, 0.62, 0.735, 0.82, 0.91]
+    c2 = ["Campaign", "% spend", "Geo", "Interest", "Own-aud excl", "Reached", "HI-share", "ROAS"]
+    x2 = [0.03, 0.285, 0.40, 0.50, 0.58, 0.745, 0.835, 0.925]
     for x, c in zip(x2, c2):
         ax.text(x, Y(cy), c, fontsize=14, fontweight="bold", color="#555", va="center")
     cy += 0.16
@@ -274,13 +281,17 @@ def main():
     cy += 0.28
     maxshare = max((p["sshare"] for p in prosp), default=1) or 1
     for i, p in enumerate(prosp):
-        if i % 2 == 0:
+        # light-red band = not currently running (dark in the recent month); else subtle alternating gray
+        if p["dark_now"]:
+            ax.axhspan(Y(cy + RH / 2 - 0.04), Y(cy - RH / 2 + 0.04), color=RED, alpha=0.08)
+        elif i % 2 == 0:
             ax.axhspan(Y(cy + RH / 2 - 0.04), Y(cy - RH / 2 + 0.04), color="#000", alpha=0.03)
         gcol = AMBER if (2 <= p["ngeo"] <= 25 or p["ngeo"] >= 120) else "#222"
-        gate_txt, gate_col = ("yes", RED) if p["gate"] else ("—", GRAY)
+        excl_txt = ", ".join(f"DS{n}" for n in p["excl"]) or "—"
+        excl_col = "#222" if p["excl"] else GRAY
         roas_col = GREEN if p["roas"] >= 2.2 else (NAVY if p["roas"] >= 1.5 else (RED if p["roas"] else GRAY))
         if p["hs"] is None:
-            hs_txt, hs_col = "dark", GRAY
+            hs_txt, hs_col = "—", GRAY
         else:
             hs_txt = f"{p['hs']*100:.0f}%"
             hs_col = GREEN if p["hs"] >= 0.80 else (AMBER if p["hs"] >= 0.60 else RED)
@@ -293,17 +304,13 @@ def main():
                 fontweight="bold" if gcol == AMBER else "normal")
         ax.text(x2[3], Y(cy), p["interest"], fontsize=12, va="center",
                 color=GREEN if "MM" in p["interest"] else (AMBER if "3P only" in p["interest"] else GRAY))
-        ax.text(x2[4], Y(cy), gate_txt, fontsize=12.5, va="center", color=gate_col,
-                fontweight="bold" if p["gate"] else "normal")
-        ax.text(x2[5], Y(cy), kfmt(p["reach"]) if p["reach"] else "dark", fontsize=12.5, va="center",
+        ax.text(x2[4], Y(cy), excl_txt, fontsize=12, va="center", color=excl_col)
+        ax.text(x2[5], Y(cy), kfmt(p["reach"]) if p["reach"] else "—", fontsize=12.5, va="center",
                 color="#222" if p["reach"] else GRAY)
         ax.text(x2[6], Y(cy), hs_txt, fontsize=12.5, va="center", color=hs_col, fontweight="bold")
         ax.text(x2[7], Y(cy), f"{p['roas']:.2f}x" if p["roas"] else "—", fontsize=12.5, va="center",
                 color=roas_col, fontweight="bold")
         cy += RH
-    ax.text(0.03, Y(cy + 0.08), "Reached / HI-share from CIL (households scored ≥ 8001), recent month.   "
-            "Net-new gate = DS16 restricts to households the advertiser hasn't already served (≠ the HHST score gate).",
-            fontsize=11, color=GRAY, va="center")
     plt.savefig(f"{o}/00_audience_audit.png", dpi=200, bbox_inches="tight")
     print(f"wrote {o}/00_audience_audit.png")
     plt.close(fig)
@@ -320,16 +327,17 @@ def main():
     md += ["", "**Structural:** each campaign group is a full funnel (stage = `objective_id`); group-level metrics conflate "
            "stages. Retargeting is the engine.", "",
            "## Prospecting audience — per campaign (ranked by % of prospecting spend)", "",
-           "| Campaign | % spend | Geo | Interest | Net-new gate | Reached | HI-share | Coverage | ROAS | Flags |",
+           "| Campaign | % spend | Geo | Interest | Own-aud excl (DS16/21/34) | Reached | HI-share | Coverage | ROAS | Flags |",
            "|---|--:|---|---|---|--:|--:|--:|--:|---|"]
     for p in prosp:
         fl = ", ".join(f[0] for f in p["flags"]) or "—"
-        reach_s = kfmt(p["reach"]) if p["reach"] else "— dark"
+        reach_s = kfmt(p["reach"]) if p["reach"] else "—"
         hs_s = f"{p['hs']*100:.0f}%" if p["hs"] is not None else "—"
         cov_s = f"{p['cov']*100:.0f}%" if p["cov"] is not None else "—"
         geo_s = "national" if p["national"] else (f"{p['ngeo']}/210 ({tier(p['ngeo'])})" if p["ngeo"] else "—")
+        excl_s = ", ".join(f"DS{n}" for n in p["excl"]) or "—"
         md.append(f"| {p['label']} | {pctfmt(p['sshare'])} | {geo_s} | {p['interest']} | "
-                  f"{'net-new' if p['gate'] else '—'} | {reach_s} | {hs_s} | {cov_s} | {p['roas']:.2f}x | {fl} |")
+                  f"{excl_s} | {reach_s} | {hs_s} | {cov_s} | {p['roas']:.2f}x | {fl} |")
     open(f"{o}/00_audience_audit.md", "w").write("\n".join(md) + "\n")
     print(f"wrote {o}/00_audience_audit.md")
     lohi = sum(1 for p in prosp if p["hs"] is not None and p["hs"] < 0.70)
