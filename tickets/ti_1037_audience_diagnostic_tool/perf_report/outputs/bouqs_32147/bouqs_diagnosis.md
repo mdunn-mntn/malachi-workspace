@@ -8,15 +8,27 @@
 
 ## 1. Headline
 
-Bouqs eCommerce **prospecting** declined YoY — **ROAS 3.18× → 1.37× (−57%), revenue −65%** — on roughly flat
-spend (−18%). The decline is a **conversion-quality / conversion-count problem, not smaller baskets** (AOV
-+12%). Two factors plausibly explain it: (a) in the current period, prospecting **reaches substantial
-low-intent national inventory** (mostly Mid / unscored households), and (b) a **verified-visit
-measurement-window shortening (30→14d)** mechanically shrinks measured visits and conversions.
-**Caveat on (a):** `household_score` logging began 2025-06, so there is **no 2025 audience-quality
-baseline** — the low-intent finding is a current-period (P2) cross-section, not proof that quality
-*worsened* YoY. It is **not** caused by geo, interest-narrowing, or audience-pool exhaustion. The account's
-revenue engine — **retargeting** — is unaffected.
+Bouqs eCommerce **prospecting** declined YoY — **ROAS 3.18× → 1.37× (−57%), revenue −65%** — on *lower*
+spend (−18%). AOV rose (+12%), so it's a **conversion-count / quality** problem, not smaller baskets. The
+notable part: performance got **worse while spend fell** — the opposite of an over-scaling story.
+
+**What actually CHANGED this period (candidate YoY drivers):**
+1. A **new campaign, 595017, now dominates reach** — 5.0M households = **58% of all unique prospecting
+   reach** — at **only 4% High-Intent / 0.54× ROAS**. A large, broad, low-intent campaign that didn't exist
+   in P1 (launched Apr '26).
+2. The **VV measurement window shortened 30 → 14d** — lowers absolute visits/conversions & visit-rate; CVR
+   effect ambiguous (§5).
+3. A **DS16 "net-new" gate was added to the active fleet (early Apr '26)** — excludes any IP already
+   *impressed*, so campaigns only reach never-touched households (more aggressive than standard prospecting; §4b).
+4. **DS21/DS34 exclusions added to 85384 (Oct '25)** — suppress own converters/site-visitors (standard hygiene).
+
+**What is *chronically* suboptimal but did NOT worsen YoY** (a standing condition, not a driver of the
+decline): a **persistently low HHST gate** (~4,800 time-weighted avg — well below HI-only 10,000, and it
+actually *rose* 4,267→4,832 YoY) and **~30 short flights both years** (flat) that zero the gate to 0.
+
+**Caveat:** `household_score` logging began 2025-06, so there's **no 2025 audience-quality baseline** — the
+low-HI finding is a current-period cross-section, not proof quality *worsened* YoY. It is **not** caused by
+geo, interest-narrowing, or pool exhaustion. The revenue engine — **retargeting** — is unaffected.
 
 ## 2. Where the money is (module 00 stage map)
 
@@ -54,7 +66,17 @@ Prospecting is **national** (8/9 campaigns target location_id 237 = all-of-US) w
 So Bouqs's prospecting problem is the mirror image of a narrowing problem: **broad national campaigns
 buying cheap low-intent inventory**, while the audiences that convert are starved of budget.
 
-## 5. Contributing measurement confound (module 11)
+## 4b. The DS16 "net-new" gate — added this period (modules 07/07b/12c)
+
+Added to the **active fleet in early April 2026** (Apr 3 & 14; DS16 has a churny add/remove history —
+removed mid-2025, re-added). Mechanically it **excludes any IP the advertiser has already *impressed***
+(DS16 "Impressions" cat 535 + "Wins" 835567), OR keeps only the campaign's own already-served households
+= a **net-new-reach gate**. This is **more aggressive than standard prospecting hygiene**, which only
+excludes the advertiser's own **converters (DS21)** and **site-visitors (DS34)** — DS16 additionally
+removes anyone merely *impressed*. Effect: campaigns can't re-touch impressed users, so there's **no
+multi-touch/frequency within prospecting**, which tends to lower conversion efficiency (multi-touch
+converts better). **NB: the "net-new gate" (DS16) ≠ the HHST *score* gate — two different mechanisms that
+both get called "gate."**
 
 The prospecting **verified-visit lookback window shortened 30d → 14d** between P1 and P2 (conversion window
 constant 30d). A shorter VV window mechanically connects fewer *absolute* visits **and** conversions to
@@ -65,16 +87,23 @@ dropped day-15–30 visits converted *better* than day-0–14 visits; if they co
 actually *raises* CVR. So the conversion-**rate** decline is NOT automatically explained by the window and
 may be real. The absolute visit/conversion decline can't be cleanly separated without normalizing the window.
 
-## 6. Gate behavior (modules 03, 03b, 06b)
+## 6. HHST gate — a STANDING low gate, not a YoY-worse one (modules 03, 03b, 06b)
 
-The household-score gate is **auto-paced** (graduated thresholds, not on/off); the flagship 85384 thrashed
-144× over the window. **No-gate days cluster in the Dec–Feb holiday window** (gate opened for volume), and
-the **unscored share peaks at 46% in May 2026 — the score-level signature of a gate-off month** (cf. the
-ribbon). Gate-off periods are when the low-intent/unscored supply enters, consistent with §4.
+Bouqs runs a **persistently low HHST score gate** (time-weighted avg **~4,800** — between Mid and
+Purchase-Prone, well below HI-only 10,000), so it lets non-HI supply in *by design*. **Crucially, this did
+NOT get worse this period** — the avg gate actually **rose** (P1 4,267 → P2 4,832) and thrash events
+**fell** (104 → 76). What zeros it out are the **short flights** (≤3d auto-ungate to HHST=0), which are
+**~flat YoY (30 → 31)** — also not a new problem. No-gate days cluster **Dec–Feb** (holiday volume), and the
+**unscored share peaks at 46% in May 2026** (a gate-off month). So the low-HI reach is driven by the *level*
+of the gate + short-flight zeroing — a **chronic condition**, not a YoY tightening/loosening. (85384, the
+long-runner, has thrashed 144× over its whole life; that's lifetime, not this period.)
 
 ## 7. What is NOT the cause (ruled out)
 
-- **Geo** (12b): national account, no DMA slicing — geo mix is not a lever here.
+- **Geo** (12b): **almost entirely national** (loc 237 = all-of-US). The one geo-sliced campaign is
+  **108055 MM VDay 2026** (84 DMAs) — a **seasonal Valentine's** campaign (26% of spend), DMA-sliced by
+  design, not a lever to change. (Several *dead* 0%-spend legacy VDay/MDAY '24–25 campaigns are also
+  DMA-sliced.) So geo is not a driver — but it's not "no DMA slicing" either.
 - **Interest narrowing** (12, 12c): MM and 3P are OR'd everywhere (additive); no MM-AND-3P throttle. The
   DS16 net-new funnel gates on 6–7 campaigns narrow by *who* (net-new households), not by 3P.
 - **Pool exhaustion** (09, 10): cumulative HI reach is 2.5M and **still climbing** ≈ **18% of the ~14.3M
@@ -107,9 +136,14 @@ after improving). CIL retains its Sep–Nov 2025 score data, so its modules popu
 ---
 
 ## Recommended follow-ups
-1. **Rebalance prospecting budget toward the high-HI campaigns** (116732 Subscriptions-prospecting ~8.6×;
-   the original frequency campaigns) and **cap/curtail 595017** (5.0M reach, 4% HI, 0.54× ROAS).
-2. **Normalize the P1-vs-P2 comparison for the 30→14d VV-window change** before attributing the full
-   visit/conversion decline to performance.
-3. **Investigate the gate-off months** (Dec–Feb, May) — that is when low-intent/unscored supply enters;
-   decide whether the holiday-volume tradeoff is worth the quality cost.
+1. **Cap/curtail 595017** (5.0M reach, 4% HI, 0.54× ROAS) and **rebalance toward the high-HI campaigns**
+   (116732 Subscriptions-prospecting ~8.6×; the original frequency campaigns at 93–96% HI).
+2. **Raise HHST toward 10000 (HI-only) and stop the short flights** (≤3d auto-ungate to 0). Note: the
+   audience *already* uses MM (187 keywords) — the lever is the **gate level + short-flight zeroing**, not
+   "adding MM."
+3. **Normalize the P1-vs-P2 comparison for the 30→14d VV-window change** before attributing the full
+   visit/absolute decline to performance (the CVR effect is ambiguous — §5).
+4. **They can keep the DS21/34 exclusions and the shortened VV window** — both are defensible from their
+   side — but understand these make *measured* performance look worse than before it was on. **Reconsider
+   the DS16 net-new gate** (§4b): it blocks multi-touch/frequency within prospecting, which tends to lower
+   conversion efficiency.
