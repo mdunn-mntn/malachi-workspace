@@ -2088,9 +2088,20 @@ Realized spend per auction win. Use for step-9 pacing (spend ÷ budget) and any 
 
 ## bronze.integrationprod.audience_data_sources / data_sources
 - **Type:** TABLE (both present — audience_data_sources is the audience service version)
-- **Use for:** Conversion pixel / data source registry. Joins to conversion_source_id in summarydata.
-- **Key columns:** data_source_id, name, display_name, data_source_key, data_source_type_id,
-  conversion_type_display_name, is_mobile
+- **Use for:** **Authoritative `data_source_id` → name registry — decode the `data_source_id` (DS) leaves in
+  audience expressions.** Also the conversion-pixel registry (joins to conversion_source_id in summarydata).
+- **Key columns:** data_source_id, name, display_name, description, data_source_key, data_source_type_id,
+  conversion_type_display_name, is_mobile. (`datastream_metadata` is a RECORD — breaks CSV export; select scalar cols.)
+- **Query:** `SELECT data_source_id, name, display_name, description FROM audience_data_sources ORDER BY data_source_id`
+- **DS id → name (verified TI-1037 2026-07-06; these are the AUTHORITATIVE names — supersede informal labels):**
+  `-1`=MNTN Pixel · `2`=MNTN First Party (1P) · `3`=MNTN Third Party · `4`=CRM · `8`=IP List · `11`=LiveRamp ·
+  `13`=MNTN Vertical Categorization · `14`=**MNTN Global Data** (the `DS14[1]` availability gate; NOT "Beeswax Bidder"
+  — that's the category name) · `16`=**MNTN Taxonomy Data** (its per-advertiser categories = the advertiser's own
+  **funnel tags** Impressions/Wins/PageViews/Conversions/VV › stage › CampaignGroupID › CampaignID — this is what the
+  "net-new gate" targets; catalog in `bronze.tpa.categories` WHERE data_source_id=16 AND advertiser_id=<AID>) ·
+  `19`=**MNTN Matched** (this is "MM") · `21`=MNTN Conversion · `34`=MNTN Pageview · `35`=**LiveRamp IP** (the "3P"
+  segments) · `46`=ML Audience Intent Scoring Model (RTC scoring) · `47`=CRM Identity Graph Generated · `42`=MNTN Select ·
+  `51`=Bombora · `25`=5x5. Interest sources = DS13/19 (MM) + DS35 (3P); DS16 = funnel gate; DS2/21/34/47 = exclusion/suppression.
 
 ---
 
