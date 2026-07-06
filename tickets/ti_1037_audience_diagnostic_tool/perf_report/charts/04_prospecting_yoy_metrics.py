@@ -39,9 +39,9 @@ METRICS = [
     ("Impressions",     MM,  0, lambda r: r["impressions"]),
     ("CPM",             M2, -1, lambda r: 1000 * r["spend"] / r["impressions"]),
     ("Visits",          CNT, 1, lambda r: r["visits"]),
-    ("Visit rate",      P3,  1, lambda r: 100 * r["visits"] / r["impressions"]),
+    ("Visit rate (IVR)", P3, 1, lambda r: 100 * r["visits"] / r["impressions"]),   # IVR = visits/imp
     ("Conversions",     CNT, 1, lambda r: r["conversions"]),
-    ("Conv rate /visit", P2, 1, lambda r: 100 * r["conversions"] / r["visits"]),
+    ("CVR (per visit)", P2, 1, lambda r: 100 * r["conversions"] / r["visits"]),    # CVR = conv/visit
     ("Revenue",         M,   1, lambda r: r["revenue"]),
     ("AOV",             M2,  1, lambda r: r["revenue"] / r["conversions"]),
     ("ROAS",            X,   1, lambda r: r["revenue"] / r["spend"]),
@@ -108,7 +108,7 @@ def main():
     print(f"wrote {a.md}")
 
     roas = next(t for t in table if t[0] == "ROAS")
-    vr = next(t for t in table if t[0] == "Visit rate")
+    vr = next(t for t in table if t[0] == "Visit rate (IVR)")
     aov = next(t for t in table if t[0] == "AOV")
     print(f"FINDING: prospecting P1→P2 — spend {table[0][3]}, impressions {table[1][3]}, but visits "
           f"{table[3][3]}, visit rate {vr[3]}, ROAS {roas[3]} ({roas[1]}→{roas[2]}). AOV {aov[3]} (flat) ⇒ "
