@@ -1,6 +1,6 @@
 -- =====================================================================
 -- 04 YoY Metrics — prospecting P1-vs-P2 aggregated raw sums.
--- P2 = the selected period ({{ Period_Start }}..{{ Period_End }}, END EXCLUSIVE).
+-- P2 = the selected period (Period_Start .. Period_End, END EXCLUSIVE).
 -- P1 = the same dates one year earlier (DATE_SUB ... INTERVAL 1 YEAR).
 -- The HTML derives the rates (CPM, IVR, CVR, ROAS, AOV) + %Δ from these sums.
 -- Prospecting = objective_id = 1 AND funnel_level = 1.
