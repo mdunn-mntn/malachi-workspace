@@ -35,14 +35,16 @@ X = lambda v: f"{v:.2f}×"
 
 # (label, formatter, good_direction, value_fn)  good: +1 up-is-good, -1 down-is-good, 0 context
 METRICS = [
+    # raw counts — funnel order
     ("Spend",           M,   0, lambda r: r["spend"]),
     ("Impressions",     MM,  0, lambda r: r["impressions"]),
-    ("CPM",             M2, -1, lambda r: 1000 * r["spend"] / r["impressions"]),
     ("Visits",          CNT, 1, lambda r: r["visits"]),
-    ("Visit rate (IVR)", P3, 1, lambda r: 100 * r["visits"] / r["impressions"]),   # IVR = visits/imp
     ("Conversions",     CNT, 1, lambda r: r["conversions"]),
-    ("CVR (per visit)", P2, 1, lambda r: 100 * r["conversions"] / r["visits"]),    # CVR = conv/visit
     ("Revenue",         M,   1, lambda r: r["revenue"]),
+    # calculated rates — funnel order (IVR=visits/imp, CVR=conv/visit)
+    ("CPM",             M2, -1, lambda r: 1000 * r["spend"] / r["impressions"]),
+    ("IVR",             P3,  1, lambda r: 100 * r["visits"] / r["impressions"]),
+    ("CVR",             P2,  1, lambda r: 100 * r["conversions"] / r["visits"]),
     ("AOV",             M2,  1, lambda r: r["revenue"] / r["conversions"]),
     ("ROAS",            X,   1, lambda r: r["revenue"] / r["spend"]),
 ]
@@ -108,7 +110,7 @@ def main():
     print(f"wrote {a.md}")
 
     roas = next(t for t in table if t[0] == "ROAS")
-    vr = next(t for t in table if t[0] == "Visit rate (IVR)")
+    vr = next(t for t in table if t[0] == "IVR")
     aov = next(t for t in table if t[0] == "AOV")
     print(f"FINDING: prospecting P1→P2 — spend {table[0][3]}, impressions {table[1][3]}, but visits "
           f"{table[3][3]}, visit rate {vr[3]}, ROAS {roas[3]} ({roas[1]}→{roas[2]}). AOV {aov[3]} (flat) ⇒ "

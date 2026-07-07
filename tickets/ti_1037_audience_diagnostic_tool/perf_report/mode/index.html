@@ -54,14 +54,16 @@
 
   // metric = [label, fn(row)->value, formatter, goodDir]  (goodDir: +1 up-good, -1 down-good, 0 context)
   var METRICS = [
+    // raw counts — funnel order (spend in -> delivery -> visit -> conversion -> revenue out)
     ["Spend",            function (r){return r.spend;},                       money,                              0],
     ["Impressions",      function (r){return r.impressions;},                 function (v){return fmtK(v);},      0],
-    ["CPM",              function (r){return 1000*r.spend/r.impressions;},     function (v){return "$"+v.toFixed(2);}, -1],
     ["Visits",           function (r){return r.visits;},                      function (v){return fmtK(v);},      1],
-    ["Visit rate (IVR)", function (r){return 100*r.visits/r.impressions;},     function (v){return v.toFixed(3)+"%";}, 1],
     ["Conversions",      function (r){return r.conversions;},                 function (v){return fmtK(v);},      1],
-    ["CVR (per visit)",  function (r){return 100*r.conversions/r.visits;},     function (v){return v.toFixed(2)+"%";}, 1],
     ["Revenue",          function (r){return r.revenue;},                     money,                              1],
+    // calculated rates — funnel order again (CPM -> IVR -> CVR -> AOV -> ROAS)
+    ["CPM",              function (r){return 1000*r.spend/r.impressions;},     function (v){return "$"+v.toFixed(2);}, -1],
+    ["IVR",              function (r){return 100*r.visits/r.impressions;},     function (v){return v.toFixed(3)+"%";}, 1],
+    ["CVR",              function (r){return 100*r.conversions/r.visits;},     function (v){return v.toFixed(2)+"%";}, 1],
     ["AOV",              function (r){return r.revenue/r.conversions;},        function (v){return "$"+v.toFixed(2);}, 1],
     ["ROAS",             function (r){return r.revenue/r.spend;},              function (v){return v.toFixed(2)+"x";}, 1]
   ];
@@ -99,9 +101,9 @@
     var series = [
       ["Spend", rows.map(function(r){return num(r.spend);}), NAVY],
       ["ROAS", rows.map(function(r){var s=num(r.spend);return s?num(r.revenue)/s:null;}), RED],
-      ["Visit rate (IVR) %", rows.map(function(r){var i=num(r.impressions);return i?100*num(r.visits)/i:null;}), NAVY],
+      ["IVR %", rows.map(function(r){var i=num(r.impressions);return i?100*num(r.visits)/i:null;}), NAVY],
       ["Conversions", rows.map(function(r){return num(r.conversions);}), NAVY],
-      ["CVR (per visit) %", rows.map(function(r){var v=num(r.visits);return v?100*num(r.conversions)/v:null;}), RED],
+      ["CVR %", rows.map(function(r){var v=num(r.visits);return v?100*num(r.conversions)/v:null;}), RED],
       ["Revenue", rows.map(function(r){return num(r.revenue);}), NAVY]
     ];
     var html = '<div class="grid">' + series.map(function (s, i) {
