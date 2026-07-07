@@ -99,12 +99,18 @@
     rows = rows.slice().sort(function (a,b){ return a.month < b.month ? -1 : 1; });
     var labels = rows.map(function (r){ return r.month; });
     var series = [
+      // raw counts — funnel order
       ["Spend", rows.map(function(r){return num(r.spend);}), NAVY],
-      ["ROAS", rows.map(function(r){var s=num(r.spend);return s?num(r.revenue)/s:null;}), RED],
-      ["IVR %", rows.map(function(r){var i=num(r.impressions);return i?100*num(r.visits)/i:null;}), NAVY],
+      ["Impressions", rows.map(function(r){return num(r.impressions);}), NAVY],
+      ["Visits", rows.map(function(r){return num(r.visits);}), NAVY],
       ["Conversions", rows.map(function(r){return num(r.conversions);}), NAVY],
+      ["Revenue", rows.map(function(r){return num(r.revenue);}), NAVY],
+      // calculated rates — funnel order
+      ["CPM", rows.map(function(r){var i=num(r.impressions);return i?1000*num(r.spend)/i:null;}), NAVY],
+      ["IVR %", rows.map(function(r){var i=num(r.impressions);return i?100*num(r.visits)/i:null;}), NAVY],
       ["CVR %", rows.map(function(r){var v=num(r.visits);return v?100*num(r.conversions)/v:null;}), RED],
-      ["Revenue", rows.map(function(r){return num(r.revenue);}), NAVY]
+      ["AOV", rows.map(function(r){var c=num(r.conversions);return c?num(r.revenue)/c:null;}), NAVY],
+      ["ROAS", rows.map(function(r){var s=num(r.spend);return s?num(r.revenue)/s:null;}), RED]
     ];
     var html = '<div class="grid">' + series.map(function (s, i) {
       return '<div class="panel"><div class="t">' + s[0] + '</div>'
@@ -116,33 +122,1429 @@
     return html;
   }
 
-  function render() {
-    var root = document.getElementById("cpd");
-    var yoy = ds("04 YoY Metrics", "period"), monthly = ds("05 Monthly Metrics", "month");
-    if (!yoy && !monthly) {
-      var diag = (window.datasets || []).map(function (d) {
-        var cols = withRows(d) ? Object.keys(d.content[0]).join("/")
-                 : (d && Array.isArray(d.content) ? "0 rows — click Run all queries" : "no content");
-        return '"' + ((d && d.name) || "?") + '" [' + cols + "]";
-      }).join("  ·  ") || "(none)";
-      root.innerHTML = '<div class="err">Couldn\'t find the YoY (a <code>period</code> column) or monthly '
-        + '(<code>month</code> column) dataset. Make sure both queries have been <b>Run</b>.</div>'
-        + '<div class="loading">Datasets seen: ' + diag + "</div>";
-      return;
+
+  // ---- shared helpers for ported module renders ----
+  var H = {
+    C: {NAVY:"#27496D", RED:"#D63B2F", GREEN:"#2E8B57", AMBER:"#C77B30", GRAY:"#9AA0A6", LGRAY:"#D7D9DC"},
+    num: function (v){ return (v==null||v==="")?0:+v; },
+    fmtK: function (v){ v=+v||0; var a=Math.abs(v); return a>=1e6?(v/1e6).toFixed(1)+"M":a>=1e3?Math.round(v/1e3)+"k":(""+Math.round(v)); },
+    money: function (v){ return "$"+H.fmtK(v); },
+    pctShare: function (x){ x=+x||0; return (x>0&&x<0.01)?"<1%":Math.round(x*100)+"%"; },
+    uid: (function (){ var n=0; return function (){ return "cpd-u"+(++n); }; })(),
+    esc: function (s){ return String(s==null?"":s).replace(/[&<>\"']/g, function (c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
+  };
+
+  var RENDER = {};
+  RENDER["04 YoY Metrics"] = function (rows, root, H){ root.innerHTML = '<h2>YoY performance</h2>' + renderYoY(rows); };
+  RENDER["05 Monthly Metrics"] = function (rows, root, H){ root.innerHTML = '<h2>Monthly trends</h2>' + renderMonthly(rows); };
+  RENDER["06 Prospecting Score Buckets"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  if (!rows || !rows.length) { root.innerHTML = '<div style="padding:16px;color:#888;font:13px Helvetica Neue,Arial">No prospecting score data for this advertiser/period.</div>'; return; }
+
+  // ----- tier definitions -----
+  var TIERS = [
+    { key: 'notlogged', label: 'No score data (pre-2025-06)', color: '#C8CCD0', good: 0 },
+    { key: 'unscored',  label: 'Unscored (≤0)',           color: C.RED,    good: -1 },
+    { key: 'maxreach',  label: 'MaxReach (1–3332)',       color: '#D98C4A', good: -1 },
+    { key: 'mi',        label: 'Mid Intent (3333–6665)',  color: '#C9A227', good: 0 },
+    { key: 'pp',        label: 'Peak Perf (6666–8000)',   color: '#5FA88A', good: 1 },
+    { key: 'hi',        label: 'High Intent (8001–10000)',color: '#1B6B4F', good: 1 }
+  ];
+  var KEYS = ['notlogged','unscored','maxreach','mi','pp','hi'];
+
+  // ----- normalize rows -----
+  var data = rows.map(function(r){
+    var o = { mo: String(r.mo), total: H.num(r.total) };
+    KEYS.forEach(function(k){ o[k] = H.num(r[k]); });
+    return o;
+  }).sort(function(a,b){ return a.mo < b.mo ? -1 : a.mo > b.mo ? 1 : 0; });
+
+  var p1lo = String(rows[0].p1_start_mo), p1hi = String(rows[0].p1_end_mo);
+  var p2lo = String(rows[0].p2_start_mo), p2hi = String(rows[0].p2_end_mo);
+
+  function moLabel(ym){
+    var p = ym.split('-'); var mi = parseInt(p[1],10)-1;
+    var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mi] || ym;
+    return mn + " '" + p[0].slice(2);
+  }
+  var p1Label = moLabel(p1lo) + '–' + moLabel(p1hi);
+  var p2Label = moLabel(p2lo) + '–' + moLabel(p2hi);
+
+  // ----- aggregate a period into pct shares -----
+  function distFor(lo, hi){
+    var tot = 0, agg = {}; KEYS.forEach(function(k){ agg[k]=0; });
+    data.forEach(function(d){
+      if (d.mo >= lo && d.mo <= hi){ tot += d.total; KEYS.forEach(function(k){ agg[k]+=d[k]; }); }
+    });
+    var pct = {}; KEYS.forEach(function(k){ pct[k] = tot ? 100*agg[k]/tot : 0; });
+    return { pct: pct, tot: tot };
+  }
+  var d1 = distFor(p1lo, p1hi), d2 = distFor(p2lo, p2hi);
+
+  // ===== layout scaffold =====
+  var idBars = H.uid(), idStack = H.uid();
+  var html = '';
+  html += '<div style="font:12px/1.4 Helvetica Neue,Helvetica,Arial;color:#222;background:#FAFAFA;padding:6px 4px">';
+
+  // ---- View 1: P1 vs P2 grouped bars ----
+  html += '<div style="font:700 14px Helvetica Neue,Arial;color:#222;margin:2px 0 2px">Prospecting score distribution: two periods</div>';
+  html += '<div style="font:11px Helvetica Neue,Arial;color:#888;margin-bottom:6px">Share of prospecting impressions per MNTN score tier, RTC-excluded. '+H.esc(p1Label)+' vs '+H.esc(p2Label)+'.</div>';
+  html += '<div style="height:250px;margin-bottom:14px"><canvas id="'+idBars+'"></canvas></div>';
+
+  // ---- View 2: monthly 100% stacked ----
+  html += '<div style="font:700 14px Helvetica Neue,Arial;color:#222;margin:8px 0 2px">Prospecting score distribution by month</div>';
+  html += '<div style="font:11px Helvetica Neue,Arial;color:#888;margin-bottom:6px">100% stacked — unscored spikes (top, red) are the score-level signature of a gate-OFF month.</div>';
+  html += '<div style="height:300px;margin-bottom:14px"><canvas id="'+idStack+'"></canvas></div>';
+
+  // ---- View 3: P1 vs P2 threshold table ----
+  html += '<div style="font:700 14px Helvetica Neue,Arial;color:#222;margin:8px 0 4px">Score-tier distribution: Period 1 vs Period 2</div>';
+  html += '<table style="border-collapse:collapse;width:100%;font:12px Helvetica Neue,Arial">';
+  html += '<thead><tr>'
+        + '<th style="text-align:left;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Score tier</th>'
+        + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Period 1<br>'+H.esc(p1Label)+'</th>'
+        + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Period 2<br>'+H.esc(p2Label)+'</th>'
+        + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Δ %</th>'
+        + '</tr></thead><tbody>';
+  // table rows: HI, PP, MI, MaxReach, Unscored, No-score (worst->best reversed for a scannable read)
+  var TABLE_ORDER = ['hi','pp','mi','maxreach','unscored','notlogged'];
+  TABLE_ORDER.forEach(function(k, i){
+    var t = TIERS.filter(function(x){return x.key===k;})[0];
+    var v1 = d1.pct[k], v2 = d2.pct[k];
+    var delta = v1 ? 100*(v2-v1)/v1 : null;
+    var ds = (delta===null) ? 'n/a' : (delta>=0?'+':'') + delta.toFixed(1) + '%';
+    var dcolor = C.GRAY;
+    if (delta !== null && t.good !== 0) dcolor = (delta * t.good > 0) ? C.GREEN : C.RED;
+    var bg = (i % 2 === 0) ? 'rgba(0,0,0,0.03)' : 'transparent';
+    html += '<tr style="background:'+bg+'">'
+          + '<td style="text-align:left;padding:5px 8px;color:#222">'+H.esc(t.label)+'</td>'
+          + '<td style="text-align:right;padding:5px 8px;color:#222">'+v1.toFixed(1)+'%</td>'
+          + '<td style="text-align:right;padding:5px 8px;color:#222">'+v2.toFixed(1)+'%</td>'
+          + '<td style="text-align:right;padding:5px 8px;font-weight:700;color:'+dcolor+'">'+ds+'</td>'
+          + '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '</div>';
+
+  root.innerHTML = html;
+
+  // ===== Chart.js: View 1 grouped bars =====
+  // draw worst->best left to right (matches tool): notlogged, unscored, maxreach, mi, pp, hi
+  var barTiers = TIERS.slice();
+  var barLabels = barTiers.map(function(t){ return t.label.split(' (')[0]; });
+  new Chart(document.getElementById(idBars).getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: barLabels,
+      datasets: [
+        { label: p1Label, backgroundColor: C.NAVY, data: barTiers.map(function(t){ return +d1.pct[t.key].toFixed(1); }) },
+        { label: p2Label, backgroundColor: C.RED,  data: barTiers.map(function(t){ return +d2.pct[t.key].toFixed(1); }) }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 14 } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#555', maxRotation: 30, minRotation: 0 } },
+        y: { beginAtZero: true, suggestedMax: 100, grid: { color: '#DDD' }, ticks: { font: { size: 10 }, color: '#555', callback: function(v){ return v + '%'; } } }
+      },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12, color: '#333' } },
+        tooltip: { callbacks: { label: function(ctx){ return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'; } } },
+        datalabels: false
+      }
     }
-    var span = monthly && monthly.length ? (monthly[0].month + " → " + monthly[monthly.length-1].month) : "";
-    root.innerHTML =
-      '<h1>Client Performance Diagnostic</h1>'
-      + '<div class="sub">Prospecting (obj=1, funnel=1) · selected period vs same period last year' + (span?" · trend "+span:"") + '</div>'
-      + '<h2>YoY performance</h2>' + (yoy ? renderYoY(yoy) : '<div class="err">04 YoY Metrics missing</div>')
-      + '<h2>Monthly trends</h2>' + (monthly ? renderMonthly(monthly) : '<div class="err">05 Monthly Metrics missing</div>');
+  });
+
+  // ===== Chart.js: View 2 monthly 100% stacked =====
+  // stack bottom->top: notlogged (gray), hi, pp, mi, maxreach, unscored (top/red)
+  var STACK = [
+    { key: 'notlogged', color: '#C8CCD0', label: 'No score data (pre-2025-06)' },
+    { key: 'hi',        color: '#1B6B4F', label: 'High Intent' },
+    { key: 'pp',        color: '#5FA88A', label: 'Peak Perf' },
+    { key: 'mi',        color: '#C9A227', label: 'Mid Intent' },
+    { key: 'maxreach',  color: '#D98C4A', label: 'MaxReach' },
+    { key: 'unscored',  color: C.RED,     label: 'Unscored (≤0)' }
+  ];
+  var months = data.map(function(d){ return d.mo; });
+  var stackDatasets = STACK.map(function(s){
+    return {
+      label: s.label,
+      backgroundColor: s.color,
+      borderColor: '#fff',
+      borderWidth: 0.5,
+      data: data.map(function(d){ return d.total ? +(100*d[s.key]/d.total).toFixed(1) : 0; })
+    };
+  });
+  new Chart(document.getElementById(idStack).getContext('2d'), {
+    type: 'bar',
+    data: { labels: months.map(moLabel), datasets: stackDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, color: '#555' } },
+        y: { stacked: true, min: 0, max: 100, grid: { color: '#EEE' }, ticks: { font: { size: 9 }, color: '#555', stepSize: 25, callback: function(v){ return v + '%'; } } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 11, color: '#333' } },
+        tooltip: { callbacks: { label: function(ctx){ return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'; } } },
+        datalabels: false
+      }
+    }
+  });
+}
+  return render; })();
+  RENDER["08 Flights"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  var RED = C.RED, AMBER = C.AMBER, NAVY = C.NAVY, GRAY = C.LGRAY || C.GRAY;
+
+  // ---- parse dates ----
+  function pd(s){ if(!s) return null; s = String(s).slice(0,10); var p=s.split('-'); if(p.length<3) return null; return Date.UTC(+p[0], +p[1]-1, +p[2]); }
+  var DAY = 86400000;
+
+  if (!rows || !rows.length) { root.innerHTML = '<div style="padding:16px;color:#666;font:13px Helvetica Neue,Helvetica,Arial,sans-serif;">No scheduled prospecting flights in window.</div>'; return; }
+
+  // window + period bounds from first row
+  var r0 = rows[0];
+  var ws = pd(r0.win_start), we = pd(r0.win_end);
+  var p1s = pd(r0.p1_start), p1e = pd(r0.p1_end);
+  var p2s = pd(r0.p2_start), p2e = pd(r0.p2_end);
+
+  // ---- group rows ----
+  var groups = {};
+  rows.forEach(function(r){
+    var g = String(r.campaign_group_id);
+    if(!groups[g]) groups[g] = { id:g, name:(r.group_name||''), spend:H.num(r.group_prosp_spend)||0, fl:[] };
+    var s = pd(r.flight_start), e = pd(r.flight_end), dd = H.num(r.flight_days)||0;
+    if(s==null||e==null) return;
+    groups[g].fl.push({ s:s, e:e, dd:dd });
+  });
+
+  var gkeys = Object.keys(groups);
+  var totSpend = 0; gkeys.forEach(function(g){ totSpend += groups[g].spend; });
+  if(totSpend<=0) totSpend = 1;
+  gkeys.forEach(function(g){ groups[g].sh = groups[g].spend/totSpend; });
+  // rank by spend desc; drop zero-spend groups if any positive exist
+  var order = gkeys.slice().sort(function(a,b){ return groups[b].spend - groups[a].spend; });
+  var withSpend = order.filter(function(g){ return groups[g].spend>0; });
+  if(withSpend.length) order = withSpend;
+
+  function tier(dd){ return dd<=3 ? 0 : (dd<=7 ? 1 : 2); }
+  var TIERCOL = [RED, AMBER, NAVY];
+
+  var span = Math.max(1, we - ws);
+  function x(t){ return ((Math.max(ws,Math.min(we,t)) - ws)/span)*100; }
+
+  // month ticks
+  var ticks = [];
+  var td = new Date(ws); td = new Date(Date.UTC(td.getUTCFullYear(), td.getUTCMonth(), 1));
+  var tm = td.getTime(); if(tm < ws) tm += 0; // start at first-of-month
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var cur = Date.UTC(new Date(ws).getUTCFullYear(), new Date(ws).getUTCMonth(), 1);
+  while(cur <= we){
+    if(cur >= ws){ var dt = new Date(cur); ticks.push({ t:cur, lab: MON[dt.getUTCMonth()] + " '" + String(dt.getUTCFullYear()).slice(2) }); }
+    var nm = new Date(cur); cur = Date.UTC(nm.getUTCFullYear(), nm.getUTCMonth()+1, 1);
   }
 
-  // window.datasets may not be ready on first paint — poll briefly.
+  function overlap(s,e,as,ae){ return Math.min(e,ae) > Math.max(s,as); }
+
+  var TRACK_H = 8, TRACK_GAP = 2, LANE = TRACK_H*3 + TRACK_GAP*2; // 3 tiers stacked
+
+  var esc = H.esc;
+  var html = '';
+  html += '<div style="font:13px Helvetica Neue,Helvetica,Arial,sans-serif;background:#FAFAFA;padding:14px 12px;">';
+  html += '<div style="font-weight:700;font-size:15px;color:#222;margin-bottom:2px;">Scheduled flights per campaign (short / 4-7d / long tiers)</div>';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:12px;">Continuous delivery is built from many back-to-back manual flights; short flights (≤3d) auto-ungate (HHST=0). Ranked by prospecting spend.</div>';
+
+  // legend
+  function chip(col,lab){ return '<span style="display:inline-flex;align-items:center;margin-right:14px;"><span style="width:12px;height:10px;background:'+col+';display:inline-block;margin-right:5px;border-radius:1px;"></span><span style="font-size:11px;color:#555;">'+lab+'</span></span>'; }
+  html += '<div style="margin-bottom:10px;">'+chip(RED,'short (≤3d, auto-ungates)')+chip(AMBER,'4-7 days')+chip(NAVY,'8+ days')+chip(GRAY,'dormant (no active flight)')+'</div>';
+
+  // layout columns: label | timeline | count
+  var LBL_W = 150, CNT_W = 120;
+  var chartUid = H.uid();
+
+  html += '<div style="position:relative;">';
+
+  // month axis header (over the timeline column)
+  html += '<div style="display:flex;align-items:flex-end;">';
+  html += '<div style="width:'+LBL_W+'px;flex:0 0 '+LBL_W+'px;"></div>';
+  html += '<div style="position:relative;flex:1 1 auto;height:22px;">';
+  ticks.forEach(function(tk){
+    var left = x(tk.t);
+    html += '<div style="position:absolute;left:'+left+'%;bottom:0;transform:translateX(-50%);font-size:9px;color:#999;white-space:pre;text-align:center;">'+esc(tk.lab)+'</div>';
+  });
+  html += '</div>';
+  html += '<div style="width:'+CNT_W+'px;flex:0 0 '+CNT_W+'px;"></div>';
+  html += '</div>';
+
+  // period shading + rows share the timeline coordinate space
+  order.forEach(function(g){
+    var G = groups[g];
+    var fl = G.fl.slice().sort(function(a,b){ return a.s-b.s; });
+
+    // merged intervals for dormant gaps
+    var merged = [];
+    fl.forEach(function(f){
+      if(merged.length && f.s <= merged[merged.length-1].e + DAY){
+        merged[merged.length-1].e = Math.max(merged[merged.length-1].e, f.e);
+      } else merged.push({ s:f.s, e:f.e });
+    });
+    var gaps = [];
+    for(var i=0;i<merged.length-1;i++){
+      var gs = Math.max(ws, merged[i].e), ge = Math.min(we, merged[i+1].s);
+      if(ge>gs) gaps.push({ s:gs, e:ge });
+    }
+
+    // counts
+    var n = fl.length;
+    var p1short = fl.filter(function(f){ return f.s>=p1s && f.s<p1e && f.dd<=3; }).length;
+    var p2short = fl.filter(function(f){ return f.s>=p2s && f.s<p2e && f.dd<=3; }).length;
+
+    var nm = (G.name||'').replace('CTV Prospecting','').trim();
+
+    html += '<div style="display:flex;align-items:center;padding:6px 0;border-top:1px solid #ECECEC;">';
+
+    // label
+    html += '<div style="width:'+LBL_W+'px;flex:0 0 '+LBL_W+'px;text-align:right;padding-right:10px;">';
+    html += '<div style="font-size:11px;color:#333;font-weight:600;">'+esc(G.id)+' · '+H.pctShare(G.sh)+'</div>';
+    html += '<div style="font-size:10px;color:#888;">'+esc(nm.slice(0,20))+'</div>';
+    if(G.spend>0) html += '<div style="font-size:9px;color:#aaa;">'+H.money(G.spend)+'</div>';
+    html += '</div>';
+
+    // timeline
+    html += '<div style="position:relative;flex:1 1 auto;height:'+LANE+'px;background:#F2F3F4;border-radius:2px;overflow:hidden;">';
+
+    // period shading (P1 + P2)
+    [[p1s,p1e],[p2s,p2e]].forEach(function(pp){
+      if(pp[0]==null||pp[1]==null) return;
+      var l = x(pp[0]), w = x(pp[1]) - l;
+      if(w>0) html += '<div style="position:absolute;left:'+l+'%;top:0;bottom:0;width:'+w+'%;background:'+NAVY+';opacity:0.05;"></div>';
+    });
+
+    // dormant gaps (full lane height, gray)
+    gaps.forEach(function(gp){
+      var l = x(gp.s), w = x(gp.e) - l;
+      if(w>0) html += '<div style="position:absolute;left:'+l+'%;top:0;bottom:0;width:'+w+'%;background:'+GRAY+';opacity:0.45;"></div>';
+    });
+
+    // flights: tier 0 (short) top, tier 2 (long) bottom
+    fl.forEach(function(f){
+      if(!overlap(f.s,f.e,ws,we)) return;
+      var l = x(f.s), w = x(f.e) - l;
+      if(w<=0) w = 0.4; // keep tiny flights visible
+      var t = tier(f.dd);
+      var top = t*(TRACK_H+TRACK_GAP);
+      var lab = f.dd + 'd flight';
+      html += '<div title="'+esc(lab)+'" style="position:absolute;left:'+l+'%;width:'+w+'%;top:'+top+'px;height:'+TRACK_H+'px;background:'+TIERCOL[t]+';border:0.5px solid #fff;box-sizing:border-box;border-radius:1px;"></div>';
+    });
+
+    html += '</div>';
+
+    // count column
+    html += '<div style="width:'+CNT_W+'px;flex:0 0 '+CNT_W+'px;padding-left:10px;">';
+    html += '<div style="font-size:11px;color:#555;">'+n+' flights</div>';
+    html += '<div style="font-size:10px;color:#999;">short P1:'+p1short+'  P2:'+p2short+'</div>';
+    html += '</div>';
+
+    html += '</div>'; // row
+  });
+
+  html += '</div>'; // timeline block
+
+  // footer finding
+  var totFl = 0, tP1 = 0, tP2 = 0;
+  order.forEach(function(g){
+    groups[g].fl.forEach(function(f){
+      totFl++;
+      if(f.s>=p1s && f.s<p1e && f.dd<=3) tP1++;
+      if(f.s>=p2s && f.s<p2e && f.dd<=3) tP2++;
+    });
+  });
+  html += '<div style="font-size:11px;color:#666;margin-top:12px;border-top:1px solid #E4E4E4;padding-top:8px;">';
+  html += '<b>'+totFl+'</b> scheduled flights across '+order.length+' prospecting group'+(order.length===1?'':'s')+'. ';
+  html += 'Short (≤3d) flights — P1: <b>'+tP1+'</b> vs P2: <b>'+tP2+'</b>. Short flights auto-ungate (HHST=0).';
+  html += '</div>';
+
+  html += '</div>';
+  root.innerHTML = html;
+}
+  return render; })();
+  RENDER["01 Campaign Group Gantt"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  var NAVY = C.NAVY, AMBER = C.AMBER, RED = C.RED, GREEN = C.GREEN, GRAY = C.GRAY, LGRAY = C.LGRAY;
+
+  // ---- coerce + parse ----
+  function pd(s){ if(!s) return null; var t=String(s).slice(0,10).split("-"); if(t.length<3) return null; var dt=new Date(Date.UTC(+t[0],+t[1]-1,+t[2])); return isNaN(dt.getTime())?null:dt; }
+  function dnum(dt){ return dt ? dt.getTime()/86400000 : null; }
+
+  var data = (rows||[]).filter(function(r){ return r && r.campaign_group_id != null; })
+    .map(function(r){
+      var fa = pd(r.first_active_day), la = pd(r.last_active_day);
+      return {
+        gid: String(r.campaign_group_id),
+        name: r.group_name != null ? String(r.group_name) : "",
+        fa: fa, la: la,
+        active_days: H.num(r.active_days),
+        spend: H.num(r.total_spend),
+        ws: pd(r.win_start), we: pd(r.win_end)
+      };
+    })
+    .filter(function(r){ return r.fa && r.la; });
+
+  if (!data.length) { root.innerHTML = '<div style="padding:16px;color:'+GRAY+';font:13px Helvetica Neue,Arial,sans-serif">No campaign-group delivery in window.</div>'; return; }
+
+  // window bounds: prefer SQL-provided, else derive from data
+  var ws = data[0].ws, we = data[0].we;
+  if (!ws) { ws = data.reduce(function(m,r){ return (!m||r.fa<m)?r.fa:m; }, null); }
+  if (!we) { we = data.reduce(function(m,r){ return (!m||r.la>m)?r.la:m; }, null); }
+
+  // keep spend>0, else keep all; rank by spend desc then start
+  var withSpend = data.filter(function(r){ return r.spend > 0; });
+  var rk = withSpend.length ? withSpend : data;
+  rk.sort(function(a,b){ return (b.spend - a.spend) || (dnum(a.fa) - dnum(b.fa)); });
+
+  function role(name){
+    var n = (name||"").toLowerCase();
+    if (n.indexOf("retarget") !== -1) return { color: AMBER, label: "Retargeting" };
+    return { color: NAVY, label: "Prospecting" };
+  }
+
+  var wsN = dnum(ws), weN = dnum(we);
+  var span = Math.max(1, weN - wsN);
+
+  // ---- month tick labels across the window ----
+  var ticks = [];
+  var cur = new Date(Date.UTC(ws.getUTCFullYear(), ws.getUTCMonth(), 1));
+  while (cur.getTime()/86400000 <= weN) {
+    var tn = cur.getTime()/86400000;
+    if (tn >= wsN) {
+      var mo = cur.toLocaleString("en-US",{month:"short",timeZone:"UTC"});
+      var yr = String(cur.getUTCFullYear()).slice(2);
+      ticks.push({ pct: (tn - wsN)/span*100, label: mo+" '"+yr });
+    }
+    cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth()+1, 1));
+  }
+
+  var seenRoles = {};
+  var rowH = 30, labelW = 210, chartMinH = 60;
+
+  var html = '';
+  html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 10px 12px 10px">';
+  html += '<div style="font-size:14px;font-weight:700;color:#222;margin:2px 0 10px 0">Campaign-Group Running Spans</div>';
+
+  // gridline + month header track
+  html += '<div style="position:relative;margin-left:'+labelW+'px;height:16px;border-bottom:1px solid '+LGRAY+';margin-bottom:2px">';
+  ticks.forEach(function(t){
+    html += '<div style="position:absolute;left:'+t.pct.toFixed(2)+'%;top:0;font-size:9px;color:'+GRAY+';transform:translateX(-50%)">'+H.esc(t.label)+'</div>';
+  });
+  html += '</div>';
+
+  // rows track (relative container; quarter guides drawn inside)
+  html += '<div style="position:relative;margin-left:'+labelW+'px">';
+  // faint quarter guides
+  ticks.forEach(function(t, idx){
+    // draw a guide every 3rd month approx
+  });
+  html += '<div style="position:absolute;top:0;bottom:0;left:0;right:0;pointer-events:none">';
+  ticks.forEach(function(t){
+    html += '<div style="position:absolute;left:'+t.pct.toFixed(2)+'%;top:0;bottom:0;border-left:1px solid '+LGRAY+';opacity:0.5"></div>';
+  });
+  html += '</div>';
+
+  rk.forEach(function(r){
+    var rl = role(r.name);
+    seenRoles[rl.label] = rl.color;
+    var s = Math.max(dnum(r.fa), wsN);
+    var e = Math.min(dnum(r.la), weN);
+    var leftPct = (s - wsN)/span*100;
+    var wPct = Math.max(0.6, (e - s)/span*100);
+    var predates = dnum(r.fa) <= wsN;
+    var live = (weN - dnum(r.la)) <= 1;
+    var labSpend = H.money(r.spend);
+    var barLab = labSpend + ' · ' + (r.active_days||0) + 'd';
+    var nearRight = leftPct + wPct > 78; // label inside if near right edge
+
+    var nm = r.name || '';
+    if (nm.length > 30) nm = nm.slice(0,30) + '…';
+
+    // full row
+    html += '<div style="position:relative;height:'+rowH+'px">';
+    // y label (gid + name) in the left gutter
+    html += '<div style="position:absolute;left:-'+labelW+'px;top:0;width:'+(labelW-8)+'px;height:'+rowH+'px;line-height:'+rowH+'px;font-size:10px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="color:'+GRAY+'">'+H.esc(r.gid)+'</span> '+H.esc(nm)+'</div>';
+
+    // predate marker
+    if (predates) {
+      html += '<div style="position:absolute;left:-10px;top:0;height:'+rowH+'px;line-height:'+rowH+'px;font-size:13px;font-weight:700;color:'+RED+'"><</div>';
+    }
+
+    // the bar
+    var barTop = (rowH - 16)/2;
+    html += '<div style="position:absolute;left:'+leftPct.toFixed(2)+'%;top:'+barTop+'px;width:'+wPct.toFixed(2)+'%;height:16px;background:'+rl.color+';opacity:0.9;border-radius:2px"></div>';
+
+    // direct label
+    if (nearRight) {
+      html += '<div style="position:absolute;left:'+leftPct.toFixed(2)+'%;top:'+barTop+'px;width:'+wPct.toFixed(2)+'%;height:16px;line-height:16px;font-size:9px;font-weight:700;color:#fff;text-align:right;padding-right:4px;box-sizing:border-box;white-space:nowrap;overflow:hidden">'+H.esc(barLab)+'</div>';
+    } else {
+      html += '<div style="position:absolute;left:calc('+(leftPct+wPct).toFixed(2)+'% + 6px);top:'+barTop+'px;height:16px;line-height:16px;font-size:9px;color:#555;white-space:nowrap">'+H.esc(barLab)+'</div>';
+    }
+
+    // live marker
+    if (live) {
+      html += '<div style="position:absolute;left:calc('+Math.min(100,leftPct+wPct).toFixed(2)+'% + 2px);top:0;height:'+rowH+'px;line-height:'+rowH+'px;font-size:13px;font-weight:700;color:'+GREEN+'">></div>';
+    }
+
+    html += '</div>'; // row
+  });
+
+  html += '</div>'; // rows track
+
+  // legend + finding
+  var liveN = rk.filter(function(r){ return (weN - dnum(r.la)) <= 1; }).length;
+  var y2026 = rk.filter(function(r){ return r.fa.getUTCFullYear() >= we.getUTCFullYear(); }).length;
+  var top = rk[0];
+
+  html += '<div style="margin-left:'+labelW+'px;margin-top:10px;display:flex;gap:16px;align-items:center;font-size:11px;color:#333">';
+  Object.keys(seenRoles).forEach(function(k){
+    html += '<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:'+seenRoles[k]+'"></span>'+H.esc(k)+'</span>';
+  });
+  html += '<span style="color:'+RED+';font-weight:700"><</span><span style="color:'+GRAY+'">predates window</span>';
+  html += '<span style="color:'+GREEN+';font-weight:700">></span><span style="color:'+GRAY+'">live at window end</span>';
+  html += '</div>';
+
+  html += '<div style="margin-left:'+labelW+'px;margin-top:8px;font-size:11px;color:#555;line-height:1.4">';
+  html += '<strong>'+rk.length+'</strong> campaign-groups; <strong>'+liveN+'</strong> still live at window end; <strong>'+y2026+'</strong> launched in the recent year. ';
+  html += 'Flagship <strong>'+H.esc(top.gid)+'</strong> '+H.esc(top.name||'')+' = <strong>'+H.money(top.spend)+'</strong> ('+(top.active_days||0)+' active days).';
+  html += '</div>';
+
+  html += '</div>';
+
+  root.innerHTML = html;
+}
+  return render; })();
+  RENDER["11 VV Window"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  root.innerHTML = "";
+  if (!rows || !rows.length) {
+    root.innerHTML = '<div style="font:13px Helvetica Neue,Arial,sans-serif;color:'+C.GRAY+';padding:16px">No VV lookback window history for this advertiser.</div>';
+    return;
+  }
+
+  // ---- parse rows into change events (sorted by date) ----
+  function pd(s){ if(!s) return null; var t=String(s).slice(0,10).split("-"); return new Date(Date.UTC(+t[0],+t[1]-1,+t[2])); }
+  var changes = rows.map(function(r){
+    return {
+      date: pd(r.vv_change_date),
+      pro:  H.num(r.pro_window),
+      rt:   H.num(r.rt_window),
+      conv: H.num(r.conversion_window),
+      prev_pro: r.prev_pro
+    };
+  }).filter(function(c){ return c.date; })
+    .sort(function(a,b){ return a.date - b.date; });
+
+  var r0 = rows[0];
+  var ws = pd(r0.win_start), we = pd(r0.win_end);
+  var p1s = pd(r0.p1_start), p1e = pd(r0.p1_end);
+  var p2s = pd(r0.p2_start), p2e = pd(r0.p2_end);
+  // fallback window bounds if params missing
+  if (!ws) ws = changes[0].date;
+  if (!we) we = changes[changes.length-1].date;
+
+  // forward-fill value of a window at a given date
+  function valAt(key, when){
+    var v = null;
+    for (var i=0;i<changes.length;i++){ if (changes[i].date <= when) v = changes[i][key]; }
+    if (v === null && changes.length) v = changes[0][key];
+    return v;
+  }
+
+  // ---- adaptive y-scale ----
+  var maxW = 52;
+  changes.forEach(function(c){ maxW = Math.max(maxW, c.pro||0, c.rt||0, c.conv||0); });
+  var yMax = maxW + 5;
+
+  // ---- build stepped series over [ws, we] ----
+  function buildSteps(key){
+    var pts = [{x: ws, y: valAt(key, ws)}];
+    changes.forEach(function(c){ if (c.date > ws && c.date <= we) pts.push({x: c.date, y: c[key]}); });
+    pts.push({x: we, y: pts[pts.length-1].y});
+    return pts.map(function(p){ return {x: p.x.getTime(), y: p.y}; });
+  }
+  var proPts = buildSteps("pro");
+  var rtPts  = buildSteps("rt");
+
+  // ---- P1/P2 PRO window labels + flag ----
+  var p1_s = valAt("pro", p1s||ws), p1_e = valAt("pro", p1e||we);
+  var p2_s = valAt("pro", p2s||ws), p2_e = valAt("pro", p2e||we);
+  function lbl(a,b){ return (a===b) ? (a+"d") : (a+"-"+b+"d"); }
+  var p1lbl = lbl(p1_s, p1_e), p2lbl = lbl(p2_s, p2_e);
+  var flagged = (p1_e !== p2_e) || (p1_s !== p1_e) || (p2_s !== p2_e);
+  var shortened = (H.num(p2_e) < H.num(p1_e));
+
+  // change markers (collapse same-date)
+  var byDate = {};
+  changes.forEach(function(c){ if (c.date > ws && c.date <= we) byDate[c.date.getTime()] = c; });
+  var markers = Object.keys(byDate).map(function(k){ return byDate[k]; })
+    .sort(function(a,b){ return a.date-b.date; });
+
+  // ---- layout ----
+  var wrap = document.createElement("div");
+  wrap.style.cssText = "font:13px Helvetica Neue,Helvetica,Arial,sans-serif;background:#FAFAFA;padding:12px 14px;color:#222";
+
+  var title = document.createElement("div");
+  title.style.cssText = "font-size:15px;font-weight:700;color:#222;margin-bottom:2px";
+  title.textContent = "Verified-Visit lookback window over time";
+  wrap.appendChild(title);
+
+  var sub = document.createElement("div");
+  sub.style.cssText = "font-size:11px;color:"+C.GRAY+";margin-bottom:8px";
+  sub.textContent = "PRO = prospecting VV lookback (clickpass_acquisition_ttl); RT = retargeting VV lookback (clickpass_click_ttl). A shorter window shrinks connectable visits AND conversions.";
+  wrap.appendChild(sub);
+
+  // flag banner
+  if (flagged) {
+    var flag = document.createElement("div");
+    flag.style.cssText = "font-size:12px;font-weight:700;color:"+C.RED+";background:rgba(214,59,47,0.07);border-left:3px solid "+C.RED+";padding:7px 10px;margin-bottom:10px;line-height:1.35";
+    flag.innerHTML = "FLAG: VV window " + (shortened ? "shortened" : "changed") + "  P1 " + H.esc(p1lbl) + " → P2 " + H.esc(p2lbl) +
+      "<br><span style='font-weight:400'>Part of any P1-vs-P2 visits/conversions gap is a measurement change, not real performance.</span>";
+    wrap.appendChild(flag);
+  } else {
+    var ok = document.createElement("div");
+    ok.style.cssText = "font-size:12px;font-weight:600;color:"+C.GREEN+";margin-bottom:10px";
+    ok.textContent = "No measurement confound: PRO window identical across P1 (" + p1lbl + ") and P2 (" + p2lbl + ").";
+    wrap.appendChild(ok);
+  }
+
+  // chart
+  var cvsWrap = document.createElement("div");
+  cvsWrap.style.cssText = "position:relative;height:230px;width:100%";
+  var cid = H.uid();
+  cvsWrap.innerHTML = '<canvas id="'+cid+'"></canvas>';
+  wrap.appendChild(cvsWrap);
+
+  // P1/P2 badges
+  var badges = document.createElement("div");
+  badges.style.cssText = "display:flex;gap:24px;margin:8px 0 12px 0;font-size:12px";
+  badges.innerHTML =
+    '<span style="color:'+C.NAVY+';font-weight:700">P1 PRO: '+H.esc(p1lbl)+'</span>' +
+    '<span style="color:'+(flagged?C.RED:C.NAVY)+';font-weight:700">P2 PRO: '+H.esc(p2lbl)+'</span>';
+  wrap.appendChild(badges);
+
+  // change log table
+  var tbl = document.createElement("table");
+  tbl.style.cssText = "border-collapse:collapse;width:100%;font-size:11.5px";
+  var head = "<tr style='text-align:left;color:"+C.GRAY+";border-bottom:1px solid #e3e3e3'>" +
+    "<th style='padding:4px 8px 4px 0'>Change date</th>" +
+    "<th style='padding:4px 8px;text-align:right'>PRO</th>" +
+    "<th style='padding:4px 8px;text-align:right'>RT</th>" +
+    "<th style='padding:4px 8px;text-align:right'>Conv</th>" +
+    "<th style='padding:4px 8px'>Change</th></tr>";
+  var body = "";
+  function fmtDate(dt){ if(!dt) return ""; var m=("0"+(dt.getUTCMonth()+1)).slice(-2), day=("0"+dt.getUTCDate()).slice(-2); return dt.getUTCFullYear()+"-"+m+"-"+day; }
+  changes.forEach(function(c){
+    var chg = (c.prev_pro === null || c.prev_pro === undefined || c.prev_pro === "") ? "initial" :
+      ("PRO " + H.num(c.prev_pro) + "→" + c.pro + ", RT " + H.num(rows.find? 0:0));
+    // simpler change text
+    var chgTxt = (c.prev_pro === null || c.prev_pro === undefined || c.prev_pro === "") ? "initial" :
+      ("PRO " + H.num(c.prev_pro) + "→" + c.pro);
+    body += "<tr style='border-bottom:1px solid #f0f0f0'>" +
+      "<td style='padding:4px 8px 4px 0;color:#333'>" + H.esc(fmtDate(c.date)) + "</td>" +
+      "<td style='padding:4px 8px;text-align:right;font-weight:600;color:"+C.NAVY+"'>" + c.pro + "d</td>" +
+      "<td style='padding:4px 8px;text-align:right;color:"+C.AMBER+"'>" + c.rt + "d</td>" +
+      "<td style='padding:4px 8px;text-align:right;color:#666'>" + c.conv + "d</td>" +
+      "<td style='padding:4px 8px;color:#666'>" + chgTxt + "</td></tr>";
+  });
+  tbl.innerHTML = head + body;
+  wrap.appendChild(tbl);
+
+  root.appendChild(wrap);
+
+  // ---- Chart.js stepped line ----
+  var ctx = document.getElementById(cid).getContext("2d");
+
+  // annotation-free: draw change lines via a lightweight plugin
+  var markerPlugin = {
+    id: "vvMarkers_" + cid,
+    afterDraw: function(chart){
+      var x = chart.scales.x, y = chart.scales.y, a = chart.chartArea, cx = chart.ctx;
+      // period shading
+      function band(s,e){
+        if(!s||!e) return;
+        var xs = x.getPixelForValue(s.getTime()), xe = x.getPixelForValue(e.getTime());
+        xs = Math.max(a.left, Math.min(a.right, xs));
+        xe = Math.max(a.left, Math.min(a.right, xe));
+        cx.save(); cx.fillStyle = "rgba(39,73,109,0.055)";
+        cx.fillRect(xs, a.top, xe-xs, a.bottom-a.top); cx.restore();
+      }
+      band(p1s,p1e); band(p2s,p2e);
+      // change markers
+      cx.save();
+      markers.forEach(function(m){
+        var px = x.getPixelForValue(m.date.getTime());
+        if (px < a.left || px > a.right) return;
+        cx.strokeStyle = C.RED; cx.lineWidth = 1.2; cx.setLineDash([4,3]);
+        cx.beginPath(); cx.moveTo(px, a.top); cx.lineTo(px, a.bottom); cx.stroke();
+        cx.setLineDash([]);
+        cx.fillStyle = C.RED; cx.font = "bold 9px Helvetica Neue,Arial";
+        cx.textAlign = "left";
+        cx.fillText("PRO→"+m.pro+"d", Math.min(px+4, a.right-42), a.top+9);
+      });
+      cx.restore();
+    }
+  };
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      datasets: [
+        { label: "PRO window (prospecting VV)", data: proPts, borderColor: C.NAVY,
+          backgroundColor: C.NAVY, stepped: "after", borderWidth: 2.6,
+          pointRadius: 4, pointBackgroundColor: C.NAVY, tension: 0 },
+        { label: "RT window (retargeting VV)", data: rtPts, borderColor: C.AMBER,
+          backgroundColor: C.AMBER, stepped: "after", borderWidth: 2.6,
+          pointRadius: 4, pointBackgroundColor: C.AMBER, tension: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 6, right: 8 } },
+      scales: {
+        x: {
+          type: "time",
+          time: { unit: "month", displayFormats: { month: "MMM ''yy" } },
+          min: ws ? ws.getTime() : undefined,
+          max: we ? we.getTime() : undefined,
+          grid: { display: false },
+          ticks: { font: { size: 9 }, color: "#888", maxRotation: 0 }
+        },
+        y: {
+          min: 0, max: yMax,
+          title: { display: true, text: "lookback window (days)", font: { size: 10 }, color: "#666" },
+          grid: { color: "#eee" },
+          ticks: { font: { size: 9 }, color: "#888" }
+        }
+      },
+      plugins: {
+        legend: { position: "top", align: "start",
+          labels: { boxWidth: 12, font: { size: 10 }, color: "#333", usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            title: function(items){ var d=new Date(items[0].parsed.x); return d.toISOString().slice(0,10); },
+            label: function(it){ return it.dataset.label + ": " + it.parsed.y + "d"; }
+          }
+        }
+      }
+    },
+    plugins: [markerPlugin]
+  });
+}
+  return render; })();
+  RENDER["07 Audience Changelog"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  var GREEN = C.GREEN, RED = C.RED, NAVY = C.NAVY, GRAY = C.GRAY;
+
+  // DS -> role classification (stable per DS; from the tool's known map)
+  var ROLE = {19:"incl",13:"incl",35:"incl",11:"incl",46:"incl",38:"incl",16:"funnel",
+    2:"excl",4:"excl",9:"excl",47:"excl",1:"excl",14:"gate",21:"excl",34:"excl"};
+  function role(ds){ return ROLE[ds] || "?"; }
+  var ORDER = ["incl","excl","gate","funnel","?"];
+
+  // delta form, same-role grouped: "DS21,DS34 excl"
+  function dsg(list){
+    var by = {};
+    list.slice().sort(function(a,b){return a-b;}).forEach(function(ds){
+      (by[role(ds)] = by[role(ds)] || []).push("DS"+ds);
+    });
+    return ORDER.filter(function(r){return by[r];})
+      .map(function(r){return by[r].join(",")+" "+r;}).join("  ·  ");
+  }
+  // compact initial set: "incl 19,35 · excl 2,4 · gate 14"
+  function dsfmtGrouped(list){
+    var by = {};
+    list.slice().sort(function(a,b){return a-b;}).forEach(function(ds){
+      (by[role(ds)] = by[role(ds)] || []).push(String(ds));
+    });
+    return ORDER.filter(function(r){return by[r];})
+      .map(function(r){return r+" "+by[r].join(",");}).join("  ·  ");
+  }
+  function parseDs(s){
+    if(!s) return [];
+    return String(s).split(",").filter(function(x){return x!=="";}).map(function(x){return parseInt(x,10);});
+  }
+
+  // ---- group rows by campaign_group ----
+  var byGrp = {};      // grp -> [row,...]
+  var grpSpend = {};   // grp -> spend
+  var grpName = {};    // grp -> camp_name (fallback)
+  rows.forEach(function(r){
+    var g = String(r.clog_group_id);
+    (byGrp[g] = byGrp[g] || []).push(r);
+    grpSpend[g] = H.num(r.clog_grp_spend);
+    grpName[g] = r.clog_camp_name || "";
+  });
+
+  var totalSpend = 0;
+  Object.keys(grpSpend).forEach(function(g){ totalSpend += grpSpend[g]; });
+  if(totalSpend <= 0) totalSpend = 1;
+
+  function shortname(g){
+    var s = (grpName[g] || "")
+      .replace(/CTV Prospecting/g,"").replace(/CTV/g,"")
+      .replace(/Prospecting/g,"").replace(/Frequency/g,"Freq").replace(/Subscriptions/g,"Subs");
+    return s.replace(/\s+/g," ").trim();
+  }
+
+  // rank sections by spend DESC, earliest-change tie-break
+  function minDate(g){
+    var m = null;
+    byGrp[g].forEach(function(r){ var d=r.clog_changed_on; if(m===null||d<m) m=d; });
+    return m || "";
+  }
+  var cols = Object.keys(byGrp).sort(function(a,b){
+    var sa = grpSpend[a]/totalSpend, sb = grpSpend[b]/totalSpend;
+    if(sb !== sa) return sb - sa;
+    return minDate(a) < minDate(b) ? -1 : 1;
+  });
+  var haveSpend = cols.some(function(g){ return grpSpend[g] > 0; });
+  if(haveSpend) cols = cols.filter(function(g){ return grpSpend[g] > 0; }).concat(
+    cols.filter(function(g){ return grpSpend[g] <= 0; }));
+
+  // ---- build changelog rows per group ----
+  // for each group: sort events by (date, create order), diff DS set vs previous
+  function buildEvents(g){
+    var evs = byGrp[g].slice().sort(function(a,b){
+      if(a.clog_changed_on < b.clog_changed_on) return -1;
+      if(a.clog_changed_on > b.clog_changed_on) return 1;
+      return 0;
+    });
+    var prevDs = null, prevAud = null;
+    // cell keyed by date so multiple versions same day accumulate
+    var cellMap = {};   // date -> [{txt,color}]
+    var dateOrder = [];
+    evs.forEach(function(e){
+      var dt = String(e.clog_changed_on);
+      var cur = parseDs(e.clog_ds_ids);
+      var curSet = {}; cur.forEach(function(x){ curSet[x]=true; });
+      var aud = H.num(e.clog_audience_id);
+      var lines = [];
+      if(prevDs === null){
+        lines.push({txt:"start: "+dsfmtGrouped(cur), color:GRAY});
+      } else {
+        var prevSet = {}; prevDs.forEach(function(x){ prevSet[x]=true; });
+        var added = cur.filter(function(x){ return !prevSet[x]; });
+        var removed = prevDs.filter(function(x){ return !curSet[x]; });
+        if(aud !== prevAud){
+          var tag = (added.length || removed.length) ? "" : "  (same DS)";
+          lines.push({txt:"audience_id → "+aud+tag, color:NAVY});
+        }
+        if(added.length) lines.push({txt:"+ "+dsg(added), color:GREEN});
+        if(removed.length) lines.push({txt:"− "+dsg(removed), color:RED});
+      }
+      if(!cellMap[dt]){ cellMap[dt] = []; dateOrder.push(dt); }
+      cellMap[dt] = cellMap[dt].concat(lines);
+      prevDs = cur; prevAud = aud;
+    });
+    dateOrder.sort();
+    return dateOrder.map(function(dt){ return {date:dt, lines:cellMap[dt]}; });
+  }
+
+  function pctfmt(share){
+    if(share > 0 && share < 0.01) return "<1%";
+    return Math.round(share*100) + "%";
+  }
+
+  // ---- render HTML table ----
+  var html = "";
+  html += '<div style="background:#FAFAFA;padding:14px 16px;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;">';
+  html += '<div style="font-size:16px;font-weight:700;color:#222;">Prospecting audience change-log (DS-level)</div>';
+  html += '<div style="font-size:11px;color:#555;margin:3px 0 12px;">By campaign, most spend first. '
+    + '<span style="color:'+GREEN+';font-weight:700;">green = added</span>, '
+    + '<span style="color:'+RED+';font-weight:700;">red = removed</span>. '
+    + 'incl / excl / gate / funnel = the DS role.</div>';
+
+  if(cols.length === 0){
+    html += '<div style="font-size:12px;color:#888;">No prospecting audience changes in the window.</div>';
+    html += '</div>';
+    root.innerHTML = html;
+    return;
+  }
+
+  cols.forEach(function(g){
+    var sh = grpSpend[g]/totalSpend;
+    var gn = shortname(g);
+    // section header
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;'
+      + 'background:rgba(39,73,109,0.08);padding:6px 8px;margin-top:10px;border-radius:2px;">';
+    html += '<span style="font-size:13px;font-weight:700;color:'+NAVY+';">'
+      + H.esc(g) + (gn ? '  ·  ' + H.esc(gn.slice(0,40)) : '') + '</span>';
+    html += '<span style="font-size:12px;font-weight:700;color:'+NAVY+';">'
+      + (haveSpend ? pctfmt(sh)+' spend' : '') + '</span>';
+    html += '</div>';
+
+    var events = buildEvents(g);
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:2px;">';
+    events.forEach(function(ev){
+      ev.lines.forEach(function(ln, i){
+        var bold = (ln.color===GREEN || ln.color===RED || ln.color===NAVY) ? '700' : '400';
+        html += '<tr>';
+        html += '<td style="width:88px;color:#666;padding:2px 8px 2px 8px;vertical-align:top;white-space:nowrap;">'
+          + (i===0 ? H.esc(ev.date) : '') + '</td>';
+        html += '<td style="color:'+ln.color+';font-weight:'+bold+';padding:2px 4px;vertical-align:top;">'
+          + H.esc(ln.txt) + '</td>';
+        html += '</tr>';
+      });
+    });
+    html += '</table>';
+  });
+
+  html += '</div>';
+  root.innerHTML = html;
+}
+  return render; })();
+  RENDER["03 HHST Gate History"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  if (!rows || !rows.length) {
+    root.innerHTML = '<div style="padding:16px;font:13px Helvetica Neue,Helvetica,Arial;color:#666;background:#FAFAFA">No HHST gate-change history for this advertiser in the window.</div>';
+    return;
+  }
+
+  // ---- window / period bounds (from any row) ----
+  function parseDate(s){ if(!s) return null; var d=new Date(String(s).slice(0,10)+'T00:00:00Z'); return isNaN(d)?null:d; }
+  function parseTs(s){ if(!s) return null; var d=new Date(String(s).replace(' ','T').slice(0,19)+'Z'); return isNaN(d)?null:d; }
+  var r0 = rows[0];
+  var winStart = parseDate(r0.win_start), winEnd = parseDate(r0.win_end);
+  var p1s = parseDate(r0.p1_start), p1e = parseDate(r0.p1_end);
+  var p2s = parseDate(r0.p2_start), p2e = parseDate(r0.p2_end);
+
+  // ---- group change events by campaign_group_id ----
+  var groups = {};
+  rows.forEach(function(r){
+    var g = String(r.campaign_group_id);
+    if (!groups[g]) groups[g] = { id:g, name:(r.group_name||''), spend:H.num(r.grp_prospecting_spend)||0, ev:[] };
+    // spend is constant per group; keep max in case of nulls
+    var sp = H.num(r.grp_prospecting_spend)||0; if (sp>groups[g].spend) groups[g].spend = sp;
+    var t = parseTs(r.update_time);
+    if (t) groups[g].ev.push({ t:t, v:Math.round(H.num(r.gate_threshold)||0) });
+  });
+
+  var gkeys = Object.keys(groups);
+  gkeys.forEach(function(g){ groups[g].ev.sort(function(a,b){ return a.t - b.t; }); });
+
+  // ---- prospecting-spend share ----
+  var totSpend = 0; gkeys.forEach(function(g){ totSpend += groups[g].spend; });
+  if (totSpend <= 0) totSpend = 1;
+  gkeys.forEach(function(g){ groups[g].share = groups[g].spend / totSpend; });
+
+  // panels ordered by spend share desc; tie-break earliest change. Drop zero-spend if any spender exists.
+  var order = gkeys.slice().sort(function(a,b){
+    if (groups[b].share !== groups[a].share) return groups[b].share - groups[a].share;
+    return groups[a].ev[0].t - groups[b].ev[0].t;
+  });
+  var spenders = order.filter(function(g){ return groups[g].share > 0; });
+  if (spenders.length) order = spenders;
+
+  function gateLabel(thr){
+    if (thr <= 0) return 'no gate';
+    if (thr >= 10000) return 'HI-only';
+    if (thr === 6666) return 'HI+PP';
+    return String(thr);
+  }
+
+  // ---- build HTML shell (title + one panel per group) ----
+  var esc = H.esc;
+  var html = '';
+  html += '<div style="background:#FAFAFA;padding:14px 16px 10px;font-family:Helvetica Neue,Helvetica,Arial">';
+  html += '<div style="font-size:16px;font-weight:700;color:#222;margin-bottom:2px">HHST Gate Trajectory <span style="font-weight:400;color:#777;font-size:13px">— prospecting campaigns</span></div>';
+  html += '<div style="font-size:11px;color:#2E8B57;display:inline-block;margin-right:14px">HI zone (≥ 8000)</div>';
+  html += '<div style="font-size:11px;color:'+C.RED+';display:inline-block">no gate (≤ 0)</div>';
+
+  var canvasIds = [];
+  order.forEach(function(g){
+    var gg = groups[g];
+    var cid = H.uid();
+    canvasIds.push({ id:cid, g:g });
+    var nm = (gg.name||'').replace('CTV Prospecting','').trim();
+    if (nm.length > 22) nm = nm.slice(0,22);
+    var shareTxt = H.pctShare(gg.share);
+    var last = gg.ev[gg.ev.length-1].v;
+    html += '<div style="display:flex;align-items:center;border-top:1px solid #ECECEC;padding:2px 0">';
+    html +=   '<div style="width:150px;flex:none;text-align:right;padding-right:10px;font-size:11px;color:#333;line-height:1.25">';
+    html +=     '<div><b>'+esc(g)+'</b> · '+esc(shareTxt)+' spend</div>';
+    html +=     '<div style="color:#8a8a8a">'+esc(nm)+'</div>';
+    html +=     '<div style="color:#aaa;font-size:10px">'+gg.ev.length+' chg · last '+esc(gateLabel(last))+'</div>';
+    html +=   '</div>';
+    html +=   '<div style="flex:1;min-width:0;height:70px;position:relative"><canvas id="'+cid+'"></canvas></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  root.innerHTML = html;
+
+  // ---- draw each panel with Chart.js (stepped line) ----
+  var xMin = winStart ? winStart.getTime() : null;
+  var xMax = winEnd ? winEnd.getTime() : null;
+
+  // shared shading plugin: HI zone, no-gate zone, HI+PP dashed line, P1/P2 vspans
+  function makeBandPlugin(){
+    return {
+      id: 'bands',
+      beforeDatasetsDraw: function(chart){
+        var ctx = chart.ctx, ca = chart.chartArea, ys = chart.scales.y, xs = chart.scales.x;
+        if (!ca || !ys || !xs) return;
+        function yPix(v){ return ys.getPixelForValue(v); }
+        function xPix(ms){ return xs.getPixelForValue(ms); }
+        ctx.save();
+        // HI zone 8000..10600 (clamped to axis top)
+        var yHiTop = yPix(10600), yHiBot = yPix(8000);
+        ctx.fillStyle = 'rgba(46,139,87,0.10)';
+        ctx.fillRect(ca.left, Math.min(yHiTop,ca.top), ca.right-ca.left, yHiBot - Math.min(yHiTop,ca.top));
+        // no-gate zone -600..0
+        var yNgTop = yPix(0), yNgBot = yPix(-600);
+        ctx.fillStyle = 'rgba(214,59,47,0.09)';
+        ctx.fillRect(ca.left, yNgTop, ca.right-ca.left, Math.min(yNgBot,ca.bottom) - yNgTop);
+        // P1 / P2 navy vspans
+        [[p1s,p1e],[p2s,p2e]].forEach(function(pr){
+          if (!pr[0]||!pr[1]) return;
+          var a = xPix(pr[0].getTime()), b = xPix(pr[1].getTime());
+          var lo = Math.max(Math.min(a,b), ca.left), hi = Math.min(Math.max(a,b), ca.right);
+          if (hi>lo){ ctx.fillStyle='rgba(39,73,109,0.05)'; ctx.fillRect(lo, ca.top, hi-lo, ca.bottom-ca.top); }
+        });
+        // HI+PP dotted reference at 6666
+        var y66 = yPix(6666);
+        ctx.strokeStyle = 'rgba(154,160,166,0.6)'; ctx.lineWidth = 0.8; ctx.setLineDash([2,2]);
+        ctx.beginPath(); ctx.moveTo(ca.left, y66); ctx.lineTo(ca.right, y66); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    };
+  }
+
+  canvasIds.forEach(function(item){
+    var gg = groups[item.g];
+    var cv = document.getElementById(item.id);
+    if (!cv) return;
+    // build stepped series: change events + a terminal point at window end holding last value
+    var pts = gg.ev.map(function(e){ return { x:e.t.getTime(), y:e.v }; });
+    var lastV = gg.ev[gg.ev.length-1].v;
+    if (xMax != null) pts.push({ x:xMax, y:lastV });
+
+    new Chart(cv.getContext('2d'), {
+      type: 'line',
+      data: {
+        datasets: [{
+          data: pts,
+          stepped: 'before',
+          borderColor: C.NAVY,
+          borderWidth: 1.6,
+          pointRadius: 0,
+          tension: 0,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        parsing: false,
+        layout: { padding: { top:2, bottom:2, left:0, right:4 } },
+        plugins: {
+          legend: { display:false },
+          tooltip: {
+            callbacks: {
+              title: function(items){ return new Date(items[0].parsed.x).toISOString().slice(0,10); },
+              label: function(it){ return gateLabel(Math.round(it.parsed.y)); }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'linear',
+            min: xMin, max: xMax,
+            ticks: {
+              maxRotation: 0, autoSkip: true, font: { size: 9 }, color: '#888',
+              callback: function(v){ var d=new Date(v); return (d.getUTCMonth()+1)+'/'+String(d.getUTCFullYear()).slice(2); }
+            },
+            grid: { display:false }, border: { display:false }
+          },
+          y: {
+            min: -600, max: 10800,
+            ticks: { font:{ size:9 }, color:'#888',
+              callback: function(v){ if (v===0) return '0'; if (v===10000) return '10k'; return ''; } },
+            grid: { display:false }, border: { display:false }
+          }
+        }
+      },
+      plugins: [ makeBandPlugin() ]
+    });
+  });
+}
+  return render; })();
+  RENDER["03b Gate Ribbon"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  var GATE_GREEN = C.GREEN, GATE_AMBER = C.AMBER, GATE_RED = C.RED, GATE_GRAY = C.GRAY;
+
+  function stateColor(v) {
+    if (v === null || v === undefined || v === "") return GATE_GRAY;
+    var n = H.num(v);
+    if (isNaN(n)) return GATE_GRAY;
+    if (n <= 0) return GATE_RED;
+    if (n >= 6600) return GATE_GREEN;
+    return GATE_AMBER;
+  }
+
+  function toDate(s) { return new Date(String(s).slice(0, 10) + "T00:00:00Z"); }
+  function dayNum(d) { return Math.floor(d.getTime() / 86400000); }
+
+  // group rows by campaign_group_id
+  var groups = {};
+  var minDN = Infinity, maxDN = -Infinity;
+  var totals = { hi: 0, mid: 0, no: 0 };
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var g = String(r.campaign_group_id);
+    if (!groups[g]) {
+      groups[g] = {
+        id: g,
+        name: r.group_name || "",
+        spend: H.num(r.gate_ribbon_grp_spend),
+        days: {}
+      };
+    }
+    var ds = String(r.day).slice(0, 10);
+    var gate = (r.gate === null || r.gate === undefined || r.gate === "") ? null : H.num(r.gate);
+    groups[g].days[ds] = gate;
+    var dn = dayNum(toDate(ds));
+    if (dn < minDN) minDN = dn;
+    if (dn > maxDN) maxDN = dn;
+  }
+
+  var lanes = Object.keys(groups).map(function (k) { return groups[k]; });
+  // keep spend>0 lanes if any; else keep all
+  var kept = lanes.filter(function (l) { return l.spend > 0; });
+  if (kept.length === 0) kept = lanes;
+  // rank by spend DESC, tie-break earliest active day
+  kept.forEach(function (l) {
+    var ks = Object.keys(l.days).sort();
+    l.first = ks.length ? dayNum(toDate(ks[0])) : Infinity;
+  });
+  kept.sort(function (a, b) {
+    if (b.spend !== a.spend) return b.spend - a.spend;
+    return a.first - b.first;
+  });
+
+  if (!isFinite(minDN)) { root.innerHTML = '<div style="padding:16px;color:' + C.GRAY + ';font:13px Helvetica Neue,Arial">No prospecting delivery in window.</div>'; return; }
+
+  var span = Math.max(1, maxDN - minDN + 1);
+
+  // build each lane's forward-filled segments as % positions on [minDN, maxDN+1]
+  function laneSegments(lane) {
+    var keys = Object.keys(lane.days).sort();
+    if (!keys.length) return [];
+    var d0 = dayNum(toDate(keys[0]));
+    var d1 = dayNum(toDate(keys[keys.length - 1]));
+    var segs = [];
+    var cur = null, runStart = null, last = null;
+    for (var d = d0; d <= d1; d++) {
+      var iso = new Date(d * 86400000).toISOString().slice(0, 10);
+      if (Object.prototype.hasOwnProperty.call(lane.days, iso)) {
+        last = lane.days[iso];
+        if (last !== null) {
+          if (last >= 6600) totals.hi++;
+          else if (last <= 0) totals.no++;
+          else totals.mid++;
+        }
+      }
+      var c = stateColor(last);
+      if (c !== cur) {
+        if (cur !== null) segs.push({ s: runStart, e: d, color: cur });
+        cur = c; runStart = d;
+      }
+    }
+    if (cur !== null) segs.push({ s: runStart, e: d1 + 1, color: cur });
+    return segs;
+  }
+
+  var laneData = kept.map(function (l) { return { lane: l, segs: laneSegments(l) }; });
+
+  // month tick labels across span
+  var months = [];
+  var startDate = new Date(minDN * 86400000);
+  var mCursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+  var endDate = new Date((maxDN + 1) * 86400000);
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  while (mCursor < endDate) {
+    var mdn = dayNum(mCursor);
+    if (mdn >= minDN) {
+      months.push({
+        left: ((mdn - minDN) / span) * 100,
+        label: MON[mCursor.getUTCMonth()] + " '" + String(mCursor.getUTCFullYear()).slice(2)
+      });
+    }
+    mCursor = new Date(Date.UTC(mCursor.getUTCFullYear(), mCursor.getUTCMonth() + 1, 1));
+  }
+
+  function pctShareTxt(x) { return H.pctShare(x); }
+  var totalSpend = kept.reduce(function (a, l) { return a + (l.spend || 0); }, 0) || 1;
+
+  var LABEL_W = 260;
+  var html = '';
+  html += '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;background:#FAFAFA;padding:14px 16px;">';
+  html += '<div style="font-size:15px;font-weight:700;color:' + C.NAVY + ';margin-bottom:2px;">Prospecting campaigns & their intent gate over time</div>';
+  html += '<div style="font-size:11px;color:' + C.GRAY + ';margin-bottom:12px;">one lane per campaign group, each delivering day colored by its HHST gate bucket; lanes ranked by prospecting spend</div>';
+
+  // lanes
+  html += '<div style="position:relative;">';
+  laneData.forEach(function (ld) {
+    var l = ld.lane;
+    var nm = l.name || "";
+    if (nm.length > 30) nm = nm.slice(0, 30) + "…";
+    var sh = l.spend / totalSpend;
+    var shTxt = pctShareTxt(sh) + " spend";
+    html += '<div style="display:flex;align-items:center;height:22px;margin-bottom:4px;">';
+    html += '<div style="width:' + LABEL_W + 'px;flex:0 0 ' + LABEL_W + 'px;font-size:10px;color:' + C.NAVY + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;text-align:right;">'
+      + '<span style="color:' + C.GRAY + '">' + H.esc(l.id) + '</span> ' + H.esc(nm)
+      + ' <span style="color:' + C.GRAY + '">· ' + H.esc(shTxt) + '</span></div>';
+    html += '<div style="position:relative;flex:1;height:16px;background:#F0F0F0;border-radius:2px;overflow:hidden;">';
+    ld.segs.forEach(function (sg) {
+      var left = ((sg.s - minDN) / span) * 100;
+      var w = ((sg.e - sg.s) / span) * 100;
+      html += '<div style="position:absolute;top:0;bottom:0;left:' + left + '%;width:' + w + '%;background:' + sg.color + ';border-right:0.5px solid #FAFAFA;"></div>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  // month axis
+  html += '<div style="display:flex;margin-top:2px;">';
+  html += '<div style="width:' + LABEL_W + 'px;flex:0 0 ' + LABEL_W + 'px;"></div>';
+  html += '<div style="position:relative;flex:1;height:14px;">';
+  months.forEach(function (m) {
+    html += '<div style="position:absolute;left:' + m.left + '%;font-size:9px;color:' + C.GRAY + ';transform:translateX(-2px);">' + H.esc(m.label) + '</div>';
+  });
+  html += '</div></div>';
+
+  // legend
+  function chip(color, txt) {
+    return '<span style="display:inline-flex;align-items:center;margin-right:16px;font-size:10px;color:' + C.NAVY + ';">'
+      + '<span style="display:inline-block;width:11px;height:11px;background:' + color + ';border-radius:2px;margin-right:5px;"></span>' + H.esc(txt) + '</span>';
+  }
+  html += '<div style="margin-top:12px;">'
+    + chip(GATE_GREEN, "gated HI/Peak (≥6600)")
+    + chip(GATE_AMBER, "mid / continuous (1-6599)")
+    + chip(GATE_RED, "NO gate (≤0)")
+    + chip(GATE_GRAY, "unknown")
+    + '</div>';
+
+  // finding line
+  var tot = totals.hi + totals.mid + totals.no;
+  html += '<div style="margin-top:10px;font-size:10px;color:' + C.GRAY + ';">'
+    + laneData.length + ' prospecting groups, ' + H.fmtK(tot) + ' delivering-days: '
+    + H.fmtK(totals.hi) + ' gated HI/Peak, ' + H.fmtK(totals.mid) + ' mid, '
+    + '<span style="color:' + GATE_RED + '">' + H.fmtK(totals.no) + ' NO-gate</span>. '
+    + 'No-gate days tend to cluster in the holiday window.</div>';
+
+  html += '</div>';
+  root.innerHTML = html;
+}
+  return render; })();
+  RENDER["00b Reach By Score"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  // ----- normalize rows -----
+  var data = (rows || []).map(function (r) {
+    var reach = H.num(r.reach_ip);
+    var hi = H.num(r.hi_ip), pp = H.num(r.pp_ip), mid = H.num(r.mid_ip), un = H.num(r.unscored_ip);
+    var spend = H.num(r.spend);
+    var gname = (r.group_name == null ? "" : String(r.group_name));
+    var grp = (r.grp == null || r.grp === "") ? String(r.campaign_id) : String(r.grp);
+    var s = gname.replace(/CTV /g, "").replace(/Prospecting/g, "").replace(/ 2026/g, "").replace(/-old/g, " (old)");
+    s = s.replace(/Frequency/g, "Freq").replace(/Subscriptions/g, "Subs");
+    s = s.split(/\s+/).filter(Boolean).join(" ").trim();
+    var label = s ? (grp + " " + s) : grp;
+    if (label.length > 40) label = label.slice(0, 40);
+    return {
+      cid: String(r.campaign_id),
+      label: label,
+      reach: reach,
+      hi: hi, pp: pp, mid: mid, un: un,
+      hs: reach > 0 ? hi / reach : 0,
+      spend: spend
+    };
+  }).filter(function (d) { return d.reach > 0; });
+
+  // omit zero-spend campaigns unless that would empty the set
+  var withSpend = data.filter(function (d) { return d.spend > 0; });
+  if (withSpend.length) data = withSpend;
+
+  data.sort(function (a, b) { return b.spend - a.spend; });
+
+  var totSpend = data.reduce(function (a, d) { return a + d.spend; }, 0) || 1;
+  data.forEach(function (d) { d.sshare = d.spend / totSpend; });
+
+  // ----- header -----
+  var wrap = document.createElement("div");
+  wrap.style.background = "#FAFAFA";
+  wrap.style.fontFamily = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+  wrap.style.padding = "8px 4px";
+  var title = document.createElement("div");
+  title.style.cssText = "font-size:17px;font-weight:700;color:#222;margin-bottom:4px;";
+  title.textContent = "Prospecting reach by score bucket";
+  var sub = document.createElement("div");
+  sub.style.cssText = "font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;";
+  sub.textContent = "Distinct households each prospecting campaign reached (recent in-TTL month), split by score. High HI-share = reaching high-intent supply; low HI-share / high unscored = reaching low-intent supply.";
+  wrap.appendChild(title);
+  wrap.appendChild(sub);
+
+  if (!data.length) {
+    var none = document.createElement("div");
+    none.style.cssText = "font-size:13px;color:#888;";
+    none.textContent = "No prospecting reach in the selected window.";
+    wrap.appendChild(none);
+    root.innerHTML = "";
+    root.appendChild(wrap);
+    return;
+  }
+
+  // legend (single row, low->high left to right)
+  var legend = document.createElement("div");
+  legend.style.cssText = "display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:#333;margin:0 0 6px 2px;";
+  [["unscored", C.LGRAY], ["Mid / MaxReach", C.GRAY], ["Peak Perf", C.AMBER], ["High-Intent (>=8001)", C.NAVY]]
+    .forEach(function (it) {
+      var span = document.createElement("span");
+      span.style.cssText = "display:inline-flex;align-items:center;gap:5px;";
+      span.innerHTML = '<span style="display:inline-block;width:11px;height:11px;background:' + it[1] + ';border-radius:2px;"></span>' + H.esc(it[0]);
+      legend.appendChild(span);
+    });
+  wrap.appendChild(legend);
+
+  var canvasId = H.uid();
+  var barH = 30, chartH = data.length * barH + 46;
+  var cwrap = document.createElement("div");
+  cwrap.style.cssText = "position:relative;height:" + chartH + "px;width:100%;";
+  var canvas = document.createElement("canvas");
+  canvas.id = canvasId;
+  cwrap.appendChild(canvas);
+  wrap.appendChild(cwrap);
+
+  root.innerHTML = "";
+  root.appendChild(wrap);
+
+  var labels = data.map(function (d) { return d.label; });
+  var mk = function (key, color, name) {
+    return { label: name, data: data.map(function (d) { return d[key]; }), backgroundColor: color, borderWidth: 0, categoryPercentage: 0.72, barPercentage: 0.9 };
+  };
+  // stack low->high so High-Intent (navy) lands at the right end
+  var datasets = [
+    mk("un", C.LGRAY, "unscored"),
+    mk("mid", C.GRAY, "Mid / MaxReach"),
+    mk("pp", C.AMBER, "Peak Perf"),
+    mk("hi", C.NAVY, "High-Intent (>=8001)")
+  ];
+
+  var maxEnd = 0;
+  data.forEach(function (d) { var e = d.un + d.mid + d.pp + d.hi; if (e > maxEnd) maxEnd = e; });
+
+  // plugin: direct end-of-bar labels "reach · HI-share · %spend"
+  var endLabelPlugin = {
+    id: "endLabels_" + canvasId,
+    afterDatasetsDraw: function (chart) {
+      var ctx = chart.ctx;
+      var meta = chart.getDatasetMeta(datasets.length - 1); // topmost (hi) segment
+      ctx.save();
+      ctx.font = "bold 10px 'Helvetica Neue', Helvetica, Arial, sans-serif";
+      ctx.fillStyle = C.NAVY;
+      ctx.textBaseline = "middle";
+      data.forEach(function (d, i) {
+        var el = meta.data[i];
+        if (!el) return;
+        var x = el.x; // right end of stacked bar (hi is last dataset)
+        var y = el.y;
+        var pctSpend = H.pctShare(d.sshare);
+        var txt = H.fmtK(d.reach) + "  ." + "  " + Math.round(d.hs * 100) + "% HI  ." + "  " + pctSpend + " spend";
+        // use middle-dot cleanly
+        txt = H.fmtK(d.reach) + " · " + Math.round(d.hs * 100) + "% HI · " + pctSpend + " spend";
+        ctx.fillText(txt, x + 8, y);
+      });
+      ctx.restore();
+    }
+  };
+
+  new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: { labels: labels, datasets: datasets },
+    plugins: [endLabelPlugin],
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 4 } },
+      scales: {
+        x: {
+          stacked: true,
+          beginAtZero: true,
+          max: maxEnd * 1.34,
+          grid: { display: false, drawBorder: false },
+          ticks: { display: false },
+          border: { display: false }
+        },
+        y: {
+          stacked: true,
+          grid: { display: false, drawBorder: false },
+          border: { display: false },
+          ticks: { color: "#333", font: { size: 10 }, autoSkip: false }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var d = data[ctx.dataIndex];
+              return ctx.dataset.label + ": " + H.fmtK(ctx.parsed.x) + "  (reach " + H.fmtK(d.reach) + ", " + Math.round(d.hs * 100) + "% HI, " + H.money(d.spend) + ")";
+            }
+          }
+        }
+      }
+    }
+  });
+}
+  return render; })();
+  var MODULES = [
+    { title: "YoY performance", name: "04 YoY Metrics", sig: "period" },
+    { title: "Monthly trends", name: "05 Monthly Metrics", sig: "month" },
+    { title: "Reach by score bucket", name: "00b Reach By Score", sig: "reach_ip" },
+    { title: "Score-tier distribution", name: "06 Prospecting Score Buckets", sig: "notlogged" },
+    { title: "HHST gate history", name: "03 HHST Gate History", sig: "gate_threshold" },
+    { title: "HHST gate ribbon", name: "03b Gate Ribbon", sig: "gate_ribbon_grp_spend" },
+    { title: "Prospecting flights", name: "08 Flights", sig: "flight_days" },
+    { title: "Verified-visit window", name: "11 VV Window", sig: "vv_change_date" },
+    { title: "Audience change log", name: "07 Audience Changelog", sig: "clog_ds_ids" },
+    { title: "Campaign spans", name: "01 Campaign Group Gantt", sig: "first_active_day" },
+  ];
+
+  function renderAll() {
+    var root = document.getElementById("cpd");
+    root.innerHTML = '<h1>Client Performance Diagnostic</h1>'
+      + '<div class="sub">Prospecting (obj=1, funnel=1) · selected period vs same period last year</div>';
+    MODULES.forEach(function (m) {
+      var rows = ds(m.name, m.sig);
+      var sec = document.createElement("div"); sec.style.margin = "0 0 10px";
+      root.appendChild(sec);
+      if (rows) { try { RENDER[m.name](rows, sec, H); }
+        catch (e) { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">render error: ' + (e && e.message) + '</div>'; } }
+      else { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">' + m.name + ' — no data (Run the query)</div>'; }
+    });
+  }
   var tries = 0;
   (function wait() {
-    if (window.datasets && window.datasets.length) return render();
-    if (++tries > 40) return render();   // give up after ~4s, show diagnostics
+    if (window.datasets && window.datasets.length) return renderAll();
+    if (++tries > 40) return renderAll();
     setTimeout(wait, 100);
   })();
 })();
