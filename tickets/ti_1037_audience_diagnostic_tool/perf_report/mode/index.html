@@ -1,0 +1,135 @@
+<!-- Client Performance Diagnostic — Mode report (PROOF OF CONCEPT).
+     Proves the end-to-end pipeline: params -> SQL queries -> window.datasets -> HTML/JS.
+     Renders (1) the prospecting YoY metrics table and (2) monthly trend charts (Chart.js),
+     both resolved from window.datasets by query name. This is module 04 + 05 only; the
+     remaining ~20 modules follow the same pattern (add a query -> resolve -> render). -->
+<link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+  #cpd { font-family: "Helvetica Neue", Inter, Arial, sans-serif; background:#FAFAFA; color:#222;
+         margin:0; padding:28px 34px; }
+  #cpd h1 { font-size:24px; font-weight:700; margin:0 0 2px; }
+  #cpd .sub { color:#777; font-size:13px; margin-bottom:22px; }
+  #cpd h2 { font-size:16px; color:#27496D; margin:34px 0 10px; border-bottom:1px solid #e2e2e2; padding-bottom:5px; }
+  #cpd table { border-collapse:collapse; width:100%; max-width:820px; }
+  #cpd th { text-align:right; font-size:12px; color:#27496D; font-weight:700; padding:7px 14px; border-bottom:2px solid #27496D; }
+  #cpd th.metric, #cpd td.metric { text-align:left; }
+  #cpd td { text-align:right; font-size:15px; padding:7px 14px; }
+  #cpd tr:nth-child(even) td { background:#00000005; }
+  #cpd .delta { font-weight:700; }
+  #cpd .good { color:#2E8B57; } #cpd .bad { color:#D63B2F; } #cpd .ctx { color:#888; }
+  #cpd .grid { display:grid; grid-template-columns:repeat(3, minmax(240px,1fr)); gap:18px 26px; max-width:1120px; }
+  #cpd .panel { background:#fff; border:1px solid #eee; border-radius:6px; padding:10px 12px 4px; }
+  #cpd .panel .t { font-size:13px; font-weight:700; color:#333; margin:0 0 4px; }
+  #cpd .loading { color:#888; font-size:14px; padding:40px 0; }
+  #cpd .err { color:#D63B2F; font-size:13px; }
+</style>
+
+<div id="cpd"><div class="loading">Loading client performance diagnostic…</div></div>
+
+<script>
+(function () {
+  "use strict";
+  var NAVY = "#27496D", RED = "#D63B2F", GRAY = "#9AA0A6";
+
+  // ---- resolve a Mode dataset by query name (case-insensitive) -> array of row objects ----
+  function ds(name) {
+    var all = window.datasets;
+    if (!all || !all.length) return null;
+    var hit = all.find(function (d) { return d && d.name === name && d.content; })
+           || all.find(function (d) { return d && typeof d.name === "string"
+                && d.name.toLowerCase() === name.toLowerCase() && d.content; });
+    return hit ? hit.content : null;
+  }
+  var num = function (v) { return v == null || v === "" ? 0 : +v; };
+  var fmtK = function (v) { var a = Math.abs(v);
+    return a >= 1e6 ? (v/1e6).toFixed(1)+"M" : a >= 1e3 ? Math.round(v/1e3)+"k" : Math.round(v).toString(); };
+  var money = function (v) { return "$" + fmtK(v); };
+
+  // metric = [label, fn(row)->value, formatter, goodDir]  (goodDir: +1 up-good, -1 down-good, 0 context)
+  var METRICS = [
+    ["Spend",            function (r){return r.spend;},                       money,                              0],
+    ["Impressions",      function (r){return r.impressions;},                 function (v){return fmtK(v);},      0],
+    ["CPM",              function (r){return 1000*r.spend/r.impressions;},     function (v){return "$"+v.toFixed(2);}, -1],
+    ["Visits",           function (r){return r.visits;},                      function (v){return fmtK(v);},      1],
+    ["Visit rate (IVR)", function (r){return 100*r.visits/r.impressions;},     function (v){return v.toFixed(3)+"%";}, 1],
+    ["Conversions",      function (r){return r.conversions;},                 function (v){return fmtK(v);},      1],
+    ["CVR (per visit)",  function (r){return 100*r.conversions/r.visits;},     function (v){return v.toFixed(2)+"%";}, 1],
+    ["Revenue",          function (r){return r.revenue;},                     money,                              1],
+    ["AOV",              function (r){return r.revenue/r.conversions;},        function (v){return "$"+v.toFixed(2);}, 1],
+    ["ROAS",             function (r){return r.revenue/r.spend;},              function (v){return v.toFixed(2)+"x";}, 1]
+  ];
+
+  function renderYoY(rows) {
+    var P = {};
+    rows.forEach(function (r) { P[r.period] = { impressions:num(r.impressions), visits:num(r.visits),
+      spend:num(r.spend), conversions:num(r.conversions), revenue:num(r.revenue) }; });
+    if (!P.P1 || !P.P2) return '<div class="err">YoY table needs both P1 and P2 rows (got: ' + Object.keys(P).join(", ") + ").</div>";
+    var h = '<table><tr><th class="metric">Metric</th><th>Prior year (P1)</th><th>Selected (P2)</th><th>Δ %</th></tr>';
+    METRICS.forEach(function (m) {
+      var v1 = m[1](P.P1), v2 = m[1](P.P2), fmt = m[2], good = m[3];
+      var d = v1 ? 100*(v2/v1 - 1) : null;
+      var cls = (good === 0 || d == null) ? "ctx" : (d*good > 0 ? "good" : "bad");
+      h += '<tr><td class="metric">' + m[0] + "</td><td>" + (isFinite(v1)?fmt(v1):"—")
+        + "</td><td>" + (isFinite(v2)?fmt(v2):"—") + '</td><td class="delta ' + cls + '">'
+        + (d == null ? "n/a" : (d>=0?"+":"") + d.toFixed(1) + "%") + "</td></tr>";
+    });
+    return h + "</table>";
+  }
+
+  // small monthly line chart into a <canvas>
+  function line(canvas, labels, data, color) {
+    new Chart(canvas, { type:"line",
+      data:{ labels:labels, datasets:[{ data:data, borderColor:color, backgroundColor:color,
+             borderWidth:2, pointRadius:2, tension:0.15, spanGaps:true }] },
+      options:{ plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false,
+        scales:{ x:{ ticks:{ maxTicksLimit:6, font:{size:10} }, grid:{display:false} },
+                 y:{ ticks:{ font:{size:10} }, grid:{color:"#eee"} } } } });
+  }
+
+  function renderMonthly(rows) {
+    rows = rows.slice().sort(function (a,b){ return a.month < b.month ? -1 : 1; });
+    var labels = rows.map(function (r){ return r.month; });
+    var series = [
+      ["Spend", rows.map(function(r){return num(r.spend);}), NAVY],
+      ["ROAS", rows.map(function(r){var s=num(r.spend);return s?num(r.revenue)/s:null;}), RED],
+      ["Visit rate (IVR) %", rows.map(function(r){var i=num(r.impressions);return i?100*num(r.visits)/i:null;}), NAVY],
+      ["Conversions", rows.map(function(r){return num(r.conversions);}), NAVY],
+      ["CVR (per visit) %", rows.map(function(r){var v=num(r.visits);return v?100*num(r.conversions)/v:null;}), RED],
+      ["Revenue", rows.map(function(r){return num(r.revenue);}), NAVY]
+    ];
+    var html = '<div class="grid">' + series.map(function (s, i) {
+      return '<div class="panel"><div class="t">' + s[0] + '</div>'
+           + '<div style="height:150px"><canvas id="cpd-c' + i + '"></canvas></div></div>';
+    }).join("") + "</div>";
+    setTimeout(function () { series.forEach(function (s, i) {
+      var c = document.getElementById("cpd-c" + i); if (c) line(c, labels, s[1], s[2]);
+    }); }, 0);
+    return html;
+  }
+
+  function render() {
+    var root = document.getElementById("cpd");
+    var yoy = ds("04 YoY Metrics"), monthly = ds("05 Monthly Metrics");
+    if (!yoy && !monthly) { root.innerHTML =
+      '<div class="err">No datasets found. Name the queries exactly "04 YoY Metrics" and "05 Monthly Metrics" in Mode.</div>'
+      + '<div class="loading">Available: ' + ((window.datasets||[]).map(function(d){return d.name;}).join(", ")||"(none)") + "</div>";
+      return; }
+    var span = monthly && monthly.length ? (monthly[0].month + " → " + monthly[monthly.length-1].month) : "";
+    root.innerHTML =
+      '<h1>Client Performance Diagnostic</h1>'
+      + '<div class="sub">Prospecting (obj=1, funnel=1) · selected period vs same period last year' + (span?" · trend "+span:"") + '</div>'
+      + '<h2>YoY performance</h2>' + (yoy ? renderYoY(yoy) : '<div class="err">04 YoY Metrics missing</div>')
+      + '<h2>Monthly trends</h2>' + (monthly ? renderMonthly(monthly) : '<div class="err">05 Monthly Metrics missing</div>');
+  }
+
+  // window.datasets may not be ready on first paint — poll briefly.
+  var tries = 0;
+  (function wait() {
+    if (window.datasets && window.datasets.length) return render();
+    if (++tries > 40) return render();   // give up after ~4s, show diagnostics
+    setTimeout(wait, 100);
+  })();
+})();
+</script>
