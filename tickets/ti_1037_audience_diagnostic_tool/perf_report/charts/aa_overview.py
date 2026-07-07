@@ -14,7 +14,7 @@ import argparse
 import csv
 import json
 import os
-from datetime import date
+from datetime import date, datetime, timedelta
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -113,6 +113,44 @@ def gate_avg(hist, ps, pe):
     return (num / den) if den else None
 
 
+def short_flight_gate_hits(fl, hist, ps, pe):
+    """Count DISTINCT short flights (<=3d) starting in [ps,pe) that coincide with a big HHST jump
+    within a day — i.e. the gate thrashes in lockstep with a short flight. A "big jump" = the
+    threshold going to <=0 (ungate) or moving by >=3000 vs the prior value, within [start-1d, end+1d].
+    Short flights auto-drop the gate, so this quantifies the flights<->gate coupling directly."""
+    gate = {}
+    for r in hist:
+        gate.setdefault(r["campaign_group_id"], []).append(
+            (datetime.strptime(r["update_time"][:19], "%Y-%m-%d %H:%M:%S"), int(r["threshold"])))
+    for g in gate:
+        gate[g].sort()
+
+    def thr_before(g, when):
+        v = None
+        for t, thr in gate.get(g, []):
+            if t <= when:
+                v = thr
+        return v
+
+    hits = 0
+    for r in fl:
+        if not r.get("flight_days"):
+            continue
+        fs = d(r["flight_start"])
+        if int(r["flight_days"]) > 3 or not (ps <= fs < pe):
+            continue
+        fe = d(r["flight_end"])
+        lo = datetime.combine(fs - timedelta(days=1), datetime.min.time())
+        hi = datetime.combine(fe + timedelta(days=1), datetime.max.time())
+        for t, thr in gate.get(r["campaign_group_id"], []):
+            if lo <= t <= hi:
+                prior = thr_before(r["campaign_group_id"], t - timedelta(seconds=1))
+                if thr <= 0 or abs(thr - (prior if prior is not None else thr)) >= 3000:
+                    hits += 1
+                    break
+    return hits
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--outdir", default="outputs/kindred_35094")
@@ -180,6 +218,15 @@ def main():
         add("Short flights (<=3d)", str(sf1), str(sf2),
             RED if sf2 > sf1 + 5 else (AMBER if sf2 > sf1 else GREEN),
             "short flights auto-drop the gate to 0 (serve anyone)" if sf2 > sf1 else "")
+
+        # ---------- short-flight -> HHST gate-jump coupling (08 x 03) ----------
+        if hist:
+            gj1, gj2 = short_flight_gate_hits(fl, hist, p1s, p1e), short_flight_gate_hits(fl, hist, p2s, p2e)
+            if gj1 or gj2:
+                add("Short-flight gate jumps", str(gj1), str(gj2),
+                    RED if gj2 >= 3 else (AMBER if gj2 else GREEN),
+                    "short flights land within a day of a big HHST jump — the gate is thrashing "
+                    "in lockstep with short flights (auto-ungate/re-gate)")
 
     # ---------- campaign count + broadest-off (01 gantt, prospecting groups from expr) ----------
     exprs = [r for r in rd(f"{o}/02_prospecting_audience_expressions.csv") if r.get("expression")]
