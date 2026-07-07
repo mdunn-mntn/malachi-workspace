@@ -105,7 +105,7 @@ def main():
                  f"{kfmt(r['reach'])} · {r['hs']*100:.0f}% HI · {pctfmt(r['sshare'])} spend",
                  va="center", fontsize=9.8, color=NAVY, fontweight="bold")
     axb.set_yticks(ypos)
-    axb.set_yticklabels([f"{r['label'][:34]}  ·  {pctfmt(r['sshare'])}" for r in rows], fontsize=9.8)
+    axb.set_yticklabels([r["label"][:40] for r in rows], fontsize=9.8)  # spend% shown once, in the bar annotation
     axb.set_xlim(0, maxend * 1.30)
     axb.set_xticks([])
     for sp in ["top", "right", "bottom"]:

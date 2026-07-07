@@ -83,9 +83,18 @@ def main():
     for tmp, new in staged:
         os.rename(tmp, new)
 
+    # drop outputs for EXCLUDED modules (generated but not in --order/--cover) so they don't leak
+    # into the report — anything renamed is in `produced`; stray .png/.md are excluded modules.
+    produced = set(mapping.values())
+    dropped = 0
+    for f in os.listdir(outdir):
+        if (f.endswith(".png") or f.endswith(".md")) and f not in produced:
+            os.remove(os.path.join(outdir, f))
+            dropped += 1
+
     # rebuild report.html — filenames now sort into the intended order
     adv = env.get("ADV_LABEL", "")
-    pngs = sorted(f for f in os.listdir(outdir) if f.endswith(".png"))
+    pngs = sorted(f for f in produced if f.endswith(".png"))
     parts = [f"<!doctype html><meta charset=utf-8><title>{adv} — report</title>",
              "<style>body{font-family:Helvetica Neue,Arial,sans-serif;background:#FAFAFA;margin:40px;color:#222}"
              "h1{font-size:26px}h2{font-size:16px;color:#27496D;margin-top:34px;border-bottom:1px solid #ddd;padding-bottom:4px}"
@@ -98,6 +107,7 @@ def main():
 
     print(f"renumbered {num} modules"
           + (f" + cover '{a.cover}'" if a.cover else "")
+          + (f", dropped {dropped} excluded file(s)" if dropped else "")
           + f" -> {env['OUTDIR']}/report.html")
     if missing:
         print(f"  ! no output files found for: {', '.join(missing)}")
