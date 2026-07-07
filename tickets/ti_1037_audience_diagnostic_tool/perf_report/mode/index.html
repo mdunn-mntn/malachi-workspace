@@ -33,13 +33,18 @@
   "use strict";
   var NAVY = "#27496D", RED = "#D63B2F", GRAY = "#9AA0A6";
 
-  // ---- resolve a Mode dataset by query name (case-insensitive) -> array of row objects ----
-  function ds(name) {
+  // ---- resolve a Mode dataset: by normalized name first, else by a signature column.
+  //      Robust to query naming ("04 YoY Metrics" vs "04_yoy_metrics") and to Mode not
+  //      exposing .name — a dataset is identified by a column only it has (period / month). ----
+  var norm = function (s) { return (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, ""); };
+  function withRows(d) { return d && Array.isArray(d.content) && d.content.length; }
+  function ds(name, sigCol) {
     var all = window.datasets;
     if (!all || !all.length) return null;
-    var hit = all.find(function (d) { return d && d.name === name && d.content; })
-           || all.find(function (d) { return d && typeof d.name === "string"
-                && d.name.toLowerCase() === name.toLowerCase() && d.content; });
+    var hit = all.find(function (d) { return withRows(d) && norm(d.name) === norm(name); });
+    if (!hit && sigCol) hit = all.find(function (d) {
+      return withRows(d) && Object.prototype.hasOwnProperty.call(d.content[0], sigCol);
+    });
     return hit ? hit.content : null;
   }
   var num = function (v) { return v == null || v === "" ? 0 : +v; };
@@ -111,11 +116,18 @@
 
   function render() {
     var root = document.getElementById("cpd");
-    var yoy = ds("04 YoY Metrics"), monthly = ds("05 Monthly Metrics");
-    if (!yoy && !monthly) { root.innerHTML =
-      '<div class="err">No datasets found. Name the queries exactly "04 YoY Metrics" and "05 Monthly Metrics" in Mode.</div>'
-      + '<div class="loading">Available: ' + ((window.datasets||[]).map(function(d){return d.name;}).join(", ")||"(none)") + "</div>";
-      return; }
+    var yoy = ds("04 YoY Metrics", "period"), monthly = ds("05 Monthly Metrics", "month");
+    if (!yoy && !monthly) {
+      var diag = (window.datasets || []).map(function (d) {
+        var cols = withRows(d) ? Object.keys(d.content[0]).join("/")
+                 : (d && Array.isArray(d.content) ? "0 rows — click Run all queries" : "no content");
+        return '"' + ((d && d.name) || "?") + '" [' + cols + "]";
+      }).join("  ·  ") || "(none)";
+      root.innerHTML = '<div class="err">Couldn\'t find the YoY (a <code>period</code> column) or monthly '
+        + '(<code>month</code> column) dataset. Make sure both queries have been <b>Run</b>.</div>'
+        + '<div class="loading">Datasets seen: ' + diag + "</div>";
+      return;
+    }
     var span = monthly && monthly.length ? (monthly[0].month + " → " + monthly[monthly.length-1].month) : "";
     root.innerHTML =
       '<h1>Client Performance Diagnostic</h1>'
