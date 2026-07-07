@@ -109,11 +109,10 @@ def main():
     open(a.md, "w").write("\n".join(md) + "\n")
     print(f"wrote {a.md}")
 
-    roas = next(t for t in table if t[0] == "ROAS")
-    vr = next(t for t in table if t[0] == "IVR")
-    aov = next(t for t in table if t[0] == "AOV")
-    print(f"FINDING: prospecting P1→P2 — spend {table[0][3]}, impressions {table[1][3]}, but visits "
-          f"{table[3][3]}, visit rate {vr[3]}, ROAS {roas[3]} ({roas[1]}→{roas[2]}). AOV {aov[3]} (flat) ⇒ "
+    g = lambda name: next(t for t in table if t[0] == name)  # by-name (robust to metric reorder)
+    spend, imps, visits, roas, vr, aov = g("Spend"), g("Impressions"), g("Visits"), g("ROAS"), g("IVR"), g("AOV")
+    print(f"FINDING: prospecting P1→P2 — spend {spend[3]}, impressions {imps[3]}, but visits "
+          f"{visits[3]}, visit rate {vr[3]}, ROAS {roas[3]} ({roas[1]}→{roas[2]}). AOV {aov[3]} (flat) ⇒ "
           f"the revenue loss is a conversion-COUNT / audience-quality problem, not smaller baskets.")
 
 
