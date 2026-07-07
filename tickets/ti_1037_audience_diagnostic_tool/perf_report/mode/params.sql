@@ -13,20 +13,14 @@
 -- =====================================================================
 SELECT 1 AS ok
 
-;
-
 {% form %}
-
 Advertiser_ID:
-    type: text
-    default: '32147'
-
+  type: text
+  default: 32147
 Period_Start:
-    type: date
-    default: '2026-01-01'
-
+  type: date
+  default: 2026-01-01
 Period_End:
-    type: date
-    default: '2026-06-01'
-
+  type: date
+  default: 2026-06-01
 {% endform %}
