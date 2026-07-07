@@ -6,6 +6,46 @@
 
 ---
 
+## Update 2026-07-07 — Nick walkthrough: port the tool to a Mode dashboard
+
+**The tool IS built** (supersedes the "nothing built yet" note below): `perf_report/` is a parameterized
+YoY client-performance report — `run_report.py` + `report_spec.py` + `charts/` + `queries_exec/` — ~21
+modules + an **overview flag scorecard**, run for Bouqs (32147), Kindred (35094), Bouqs Subs (31906).
+Meeting transcript: `meetings/ti_1037_01_nick_mode_dashboard_2026_07_07.txt`.
+
+**Direction (from Allison): deliver this as a Mode dashboard.** Nick — experimentation team, ex-Criteo
+(built a campaign-troubleshooter there), owns the causal-impact Mode dashboard — gave the porting
+walkthrough. Mechanics captured in memory `[[reference_mode_dashboard_porting]]` /
+`[[project_audi_1037_mode_dashboard]]`. **Load-bearing porting fact: Mode can't render matplotlib PNGs —
+the charts must be rebuilt as HTML/JS.** Keep the (advertiser + period) parameterization; point Claude at
+Nick's causal-impact `index.html` in the `modeassets` repo (AUDI space) for styling.
+
+**The 5 standard reasons a prospecting campaign declines YoY** (Nick independently confirmed the same
+4–5 buckets from his own troubleshooting — this is the tool's diagnostic spine, 1:1 with its modules/flags):
+1. **Audience-size inclusions/filters** (geo or 3P narrowing) — the "shot-yourself-in-the-foot detector"
+   (MM pool 6M filtered to 1M). Not wrong per se, but if new vs before, expect the hit.
+2. **High-intent % dropping** — HHST auto-paces up/down on deliverability; **short flights (<3d) crash the
+   gate to 0** (fallback so the threshold never blocks spend).
+3. **DS16 excludes impressions** (net-new gate) — beyond the standard prospecting exclusion (converters +
+   visitors only); DS16 additionally removes anyone impressed.
+4. **High-intent recirculation** — even at ~100% HI, removing converters each pass funnels out the good and
+   leaves the bad; worse when spend jumps (real client: ~98% HI, perf still fell, spend +150%). Converters
+   return after ~30d (stage-1 block ≈ 30d). NB **prospecting is NOT purely new users** — stage-1 only excludes
+   converters/visitors, so there's multi-touch within prospecting; retargeting is often ~last 20% of budget.
+5. **VV-window change** — a client setting a 14d verified-visit window attributes fewer visits → fewer
+   conversions/ROAS → looks worse though nothing "changed"; a YoY comparison needs extra time to normalize.
+
+**First job of the tool = verify the client's numbers** (origin: a Neon Pixel escalation — client claimed
+flat spend + bad perf; reality was spend −15%, perf +10%). "The Bouqs" is a Neon Pixel account.
+
+**Feature ideas (Nick):** (a) **scope toggle** advertiser-level vs campaign-group-level (+ dropdown
+all / stage-1-only); (b) **overlay campaign-change events on the performance timeline** ("did CPA drop after
+this change?"); (c) guided **decision-tree** framing (Criteo troubleshooter — straightforward question +
+graph, human answers; the machine makes the visual, the human makes the call); (d) the **flags list is the
+headline** (already built = the overview scorecard); (e) shareable with **PECs** to triage/flag.
+
+---
+
 ## Current state (read first if you're a new session)
 > **New chat?** Paste the block in [`HANDOFF_PROMPT.md`](HANDOFF_PROMPT.md). It primes a fresh session with the spec,
 > the prototyped modules, the load-bearing facts, and next actions.

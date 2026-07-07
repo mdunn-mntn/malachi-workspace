@@ -1,0 +1,589 @@
+[00:00] stuff to talk about all right yes so basically what has come up for me and i don't know if it'd
+[00:06] be beneficial to you and your team um but we get a lot of stakeholder requests specifically around
+[00:13] the performance of campaigns and the tldr is people want to know why does my campaign suck
+[00:19] or why is it worse than before and generally i found that the solution to those things are
+[00:24] pretty standard. There are some weird anomalies, nothing's the same. But they usually come down to
+[00:32] the same four or five things. The exact reasons why vary a little bit. But being able to determine
+[00:39] the why still requires looking at those base tables. So anyways, let me show you what I've
+[00:45] done real quick. And I'm going to share my second desktop here. And if I go to
+[00:51] to where do I put it? Oh, okay. Test files. Cool. So here's an example of some stuff that
+[01:00] I've been running. So you can see this is basically what it does. So let me make this
+[01:05] large so you can see. I know it's super tiny. Again, these are generated like images inside.
+[01:12] I think they're React images and stuff that I generate. So it's not how I want to do it.
+[01:17] But you can get an idea.
+[01:19] So basically the premise is that someone selects an advertiser and then they select a period of time.
+[01:25] Okay.
+[01:25] And now we want to do a year over year analysis.
+[01:29] So meaning if somebody selects like January to May 2024, you'd want to see, you know, compared to this year or whatever.
+[01:34] Right.
+[01:35] Yeah.
+[01:38] And then basically between the time of their start period to the time of their end period.
+[01:43] So basically just those two parameters.
+[01:45] What's the advertiser and what time period are we looking at?
+[01:46] Right.
+[01:47] And then just a question.
+[01:50] Yeah, go ahead.
+[01:51] Good question.
+[01:52] Is this for the context of this, is this like internal?
+[01:55] Like I can see this is like the books, which I believe is a Neon Pixel account maybe.
+[02:00] So is this like Richard or Mark or someone that's like, ah, someone on Neon Pixel is
+[02:06] grumpy and we need someone to help figure out why?
+[02:09] Is that kind of like the business?
+[02:11] I just want to get like I'm trying to get my head around the business context of this.
+[02:15] Like I agree. Can't I, a lot of my time in my previous job also, I did, I did a lot of
+[02:20] campaign troubleshooting. Um, and I can totally relate to exactly what you're saying on the four.
+[02:25] Like there's usually a surprisingly, like there's usually like a common set of reasons and like,
+[02:33] I like where you're going with this already, but I just wanted to like, make sure I'm understanding.
+[02:38] You are completely correct. So it was with a neon pixel and it was a leadership that's like,
+[02:43] hey we're freaking out they're saying that they're okay so like first thing they'll say like
+[02:47] i'll give you an example they gave us three advertisers and first advertisers like their
+[02:52] spend hasn't changed and their performance sucks why and i look at it and i'm like not only has
+[02:57] spend definitely changed it's down 15 percent yeah their performance increased so they're doing
+[03:04] yeah they're doing 10 better so yeah you know i'm saying so sometimes clients make claims so
+[03:10] that's kind of the thing is that first thing it's like well let's verify the numbers are these
+[03:14] correct right so yeah that's where i come down to and so this is not perfect but give you an idea
+[03:19] of like what i found so the first thing is looking at performance metrics period one versus period
+[03:22] two what's the percent change so like generating that then generating these charts like what are
+[03:27] their month over month changes so we can identify anything weird right here you could see that's
+[03:33] where they had no campaigns running there was no spend so there's a little red bar there
+[03:38] that explains that um you know things like that right this is pretty cool this is like a
+[03:46] like a heat map and so the top one's like a month over month so it's literally just comparing this
+[03:51] month's numbers to the previous month but the bottom one is a cumulative so basically it compares
+[03:55] that month to all of the previous months so it gives you kind of a better weighted distribution
+[04:01] like where this one is saying more like this is a lot worse compared to everything before where
+[04:06] this is more like you know if if our spend goes way down and our visit rate goes up in the top
+[04:11] one we could huge see wild fluctuations but this one at the bottom kind of shows us more like
+[04:16] general trends so you can kind of see blue to red it is getting worse over time so yeah i mean i
+[04:22] could go through all these things but basically they take out campaign information really what
+[04:26] it comes down to and i'll say like this is pretty much as easy as possible the problems come down to
+[04:32] one of i'm gonna say five there might be a little bit more but one of five it's basically they are
+[04:39] well assuming that they're running mountain matched right um performance outside of that
+[04:46] is going to be really less dependent like it's not going to be that great but yeah um assuming
+[04:51] they're running mountain match they are usually either filtering their campaigns down a lot to
+[04:57] specific geos or they're doing it more than they did before so their mountain match audience
+[05:02] overall six million but then they filter it down to a few they only have a million depending on
+[05:07] how much they're spending things like that right so that's the first one there's any sort of
+[05:10] inclusions that limit their audience size um comparatively now there's nothing wrong with
+[05:14] that i'm not saying there's anything wrong with saying oh i only want to target people near my
+[05:17] stores it's just yeah if you weren't doing that and you're doing it now then it's going to be you
+[05:22] know it's a reasonable yeah yeah like yeah yeah like you you it's the shot yourself in the foot
+[05:29] detector um and like don't be surprised yeah that totally makes sense yeah like yeah yeah
+[05:34] so the other ones have to do with um there's there's a few nuance so the the second one i
+[05:43] would say has to do with their high intent percentage so just because they're in mountain
+[05:47] match doesn't mean that they have a full high intent score now the reason that their high
+[05:51] intent score is going down so you can check here this is the high intent score and it goes all up
+[05:56] and down up and down right there is an automatic thing that moves it up and down based on
+[06:00] deliverability but there's also if they do really short flights it will crash to zero because they're
+[06:06] trying to hit deliverability so you can see here they're like we don't want the threshold to be
+[06:10] the reason that we fail to spend budget ever so that's the fallback exactly and so you can see
+[06:15] here that's what happens and so for example so one of the next thing is like and then this is
+[06:19] like the month over month distribution of scores right so you can kind of see so you can pinpoint
+[06:25] because sometimes you'll see it where it's just one month where for example they went crazy on
+[06:29] spend in november for black friday they did no gate so everything's high intent except for that
+[06:34] one month that has you know so anyways basically there's a lot of things where we can determine it
+[06:38] um these are the short flights so you can see like short flights is anything less than three days
+[06:43] yellow was like four to seven and then blue is seven plus so you can see our short flights
+[06:48] causing them to make their score threshold go up and down.
+[06:53] And then more or less, one of the last things I would say
+[06:56] is there are some data source changes they can make.
+[06:59] Like for example, if they start to,
+[07:01] data source 16 excludes impressions.
+[07:05] So our typical filtering for prospecting
+[07:08] only filters out people that convert or visit.
+[07:10] So let's say you're targeting high intent.
+[07:12] This has a lot of things that people don't understand this.
+[07:14] So I'll explain this just more for your,
+[07:17] you might know this.
+[07:17] So, you know, don't be offended if I'm saying the same stuff.
+[07:21] So we have a prospecting campaign and people think that there's no retargeting and prospecting.
+[07:26] That is completely incorrect.
+[07:28] There's lots of retargeting and prospecting, right?
+[07:30] It's literally the last 20% of the budget or something.
+[07:33] Like just retargeting.
+[07:34] So one of the mistakes that people make is they're stage one, two, and three.
+[07:37] And some people, if they know that they have stages, they know stage two by definition is we've sent them an impression before, right?
+[07:45] But stage three is a verified visit.
+[07:46] So we are absolutely targeting people that have visited before, right?
+[07:50] Within the scope of the campaign, right?
+[07:52] So what people think they can do is filter to stage one and there's no retargeting.
+[07:56] That is also not correct.
+[07:58] In stage one, we will only filter out people who have converted or visited, but not people
+[08:03] who have received an impression.
+[08:04] And so what happens is you get multi-touch within stage one, right?
+[08:08] So sometimes people don't think that.
+[08:10] And so here's a question that actually came up and this was something that I revealed
+[08:13] recently.
+[08:14] we had a client stayed consistently in high in high intent never dropped below their average
+[08:20] high intent was like 98 i think the only reason it wasn't 100 was because real-time conquesting
+[08:25] won't have a score um in the score so anyways it was basically 100 but their performance went down
+[08:32] and we're like okay that is weird why would that happen well the answer is pretty simple
+[08:36] this last chart here now this is for a different client than this one but you'll see is how much
+[08:43] of those high intent are recirculated. So if you think about the circle of all high intent users,
+[08:47] you target them all once, then you remove all the people that converted. Now you have a high
+[08:51] intent bucket of people who all got an ad, but the non converting ones. And so obviously,
+[08:56] even with high intent, if you keep targeting those people, the performance is going to get worse and
+[09:01] worse, even though it's high intent. And so basically what happened is they were at basically
+[09:05] 100% targeting, they increased spend by like 150%. And so they just started targeting those
+[09:11] high intent users and you have to think every single time someone converts we remove them from
+[09:14] the bucket every time someone converts and so basically it's like a you know we're funneling
+[09:19] yeah yeah we're funneling out the people that are good we're leaving behind the people that are bad
+[09:24] over time until 30 days or something comes back then maybe you get lucky and they come back in
+[09:30] again but like you gotta wait a full month and no one is ever patient enough to wait a month
+[09:34] um so yeah yeah and that's basically the case and also that here when it comes down to it there's
+[09:42] only so many people in the united states right and so even then like you might have like that
+[09:47] is true we do get net new ips that show up we do whatever but like after 30 days the people that we
+[09:55] saw from the previous 30 days and the people see when the current 30 days have a very very high
+[09:59] overlap now deliverability does not know that number so i don't know but i would assume it's
+[10:04] like 90 plus right so yeah yeah like yeah yeah my my comment on the 30 days is like i think stage
+[10:12] one blocks i'm sure converters for like some amount of days um but then it's like that number
+[10:19] of days might only be like 30 i think by default i think it's 30 actually um which means that like
+[10:24] if i converted today i'm out of your prospecting audience 30 days later i'll come back into your
+[10:29] prospecting audience assuming i haven't purchased still yeah um but but yeah and i think that's it
+[10:35] yeah yeah but anyways yeah um that that makes sense that makes sense um i think this is cool
+[10:42] i i feel like one thing that's sticking out in my head is like ideas or feedback is i think this
+[10:48] should be both like i think it'd be cool to have this on an advertiser or campaign group toggle
+[10:55] level i think this would be very interesting because i think some people might be like i
+[10:59] only care about this campaign and i only care about like how is this advertiser's health like
+[11:03] i think these are but i think you could maybe configure it to do both like that's my my idea
+[11:07] is like you can say like scope level equals advertiser and then like does the thing for
+[11:13] advertiser levels or like scope level is campaign group yeah like you you could even do a drop down
+[11:19] with the campaigns where you do all or you could do stage one only or and obviously like maybe
+[11:24] someone wants to look at the retargeting i don't i don't really know what you would do with
+[11:27] retargeting campaigns it's retargeting but typically uh advertisers like even for this
+[11:32] one you look at this the total um where are the summaries oh right here um their retargeting is
+[11:37] actually literally like 81 of their total spend so it's the majority of their spend anyways but
+[11:44] yeah i don't know yeah well yeah i'm sorry i didn't want to cut you off i've been doing a
+[11:51] yeah oh no i think this is really cool something else that could be interesting is um like other
+[12:01] ideas in my head like layering in events on top of the time lapse um that's like i guess here's
+[12:11] my background context this reminds me a lot of a tool that was self-developed by analysts at
+[12:19] Criteo like when I had my old job there's this like really talented person built like a web app
+[12:25] that was like a troubleshooter and it was like essentially just a really nicely designed flow
+[12:32] of like decision trees where it was like hey you essentially go like hey I have a problem with
+[12:38] CPA like my CPA is really low why is it so low and then you like click into this thing and that
+[12:44] brings like a whole like decision tree thing this is over engineered but like I'm just giving you
+[12:47] background for like inspiration the whole idea of it was is that it would essentially be like
+[12:53] here's a thing and it's like did you double your spend like yes or no and then you're like okay yes
+[12:59] and it's like well like and it brings up charts to give you infographics about like that campaign
+[13:04] so you're like hey i have cpa issues here's my campaign and it like starts going through decision
+[13:09] trees and giving you a chart as a human to validate like does this it might because the
+[13:15] The machine doesn't have the awareness of the data and you can make a visual, but it can't make the decision off that visual and just automatically answer it for you.
+[13:22] But the idea is that it's like I'm giving you a very straightforward question with a very straightforward graph to help you answer that question and then like go down that point and then be like, here's another thing.
+[13:33] Like, here's your performance of CPA overlaid with all of the campaign changes you've made over the last 30 days.
+[13:40] like do you notice a drop in cpa after you made this change to your campaign yes or no and then
+[13:47] like oh yes it's like okay that's probably the answer like maybe try reverting it and see if
+[13:51] that fixes it um like that was it was essentially really just like a bunch of decision trees and
+[13:57] like like i don't know if that's the way we should i'm not suggesting it's a way that we should go
+[14:01] about or like do it but i'm just thinking like some of the event logs or other things of like
+[14:05] narrowing down like specific questions and having like clear visuals to have that person answer that
+[14:10] for themselves is something that like we could absolutely do in mode i think um with making some
+[14:15] like interactive stuff there so what would be super cool is to be able to share this with like
+[14:21] i don't know there's always a dynamic right like you don't want you want to be valuable in the
+[14:26] organization so if you just like automate everything then i'm not valuable but the thing
+[14:33] about it is it would be cool to share with pecs or somebody if they want to take a quick look at it
+[14:37] and flag anything um because they're already kind of doing that with some stuff so the only other
+[14:42] thing i didn't mention was like a verified visit window that can change and that will ultimately
+[14:47] change other things so sometimes clients are like oh i want a 14-day verified visit window
+[14:51] and now their performance looks worse and it's like well because we're not attributing
+[14:56] retrieving less visits which if we're attributing less visits we're gonna have less conversions
+[15:00] row as all this different stuff. And it's like, it's not that anything has changed. It's that
+[15:03] you said that anything beyond 14 days is no longer valid. Right. Which is like an advertiser
+[15:07] configuration, but that doesn't mean performance is worse. That just means that you, you know,
+[15:12] if you're going to do a year over year comparison, you need to give it extra time because
+[15:16] we're basing it off of two different types of ways of measuring performance.
+[15:21] So yeah. Yeah, totally. Well, this is what I have. And I just wanted to show you, so I'm still
+[15:26] working out the kinks but exactly like that what i would like to have is just at the list of just
+[15:31] like flags you could call it right like flag verified visit changed within our time window
+[15:35] um flag um geo exclusions are higher than average or something like that right yeah anything like
+[15:42] that um but i was talking to allison and she said we will put it in a mode dashboard and i haven't
+[15:48] used mode um but what i hear what i've noticed from mode is at least most of it looks like sql
+[15:55] queries and Python scripts just kind of loaded up in there. And I already kind of have a
+[15:59] lot of those. So this is generating visualizations, right? But if you look here, I have, oh, where
+[16:10] is it? Queries. And so I have these 12 SQL queries I'm using to answer them. And then
+[16:15] I have three different Python scripts. Now these are generating reports in a certain
+[16:20] order. But yeah, I mean, do you think, I don't even know what my question would be for here.
+[16:25] Like, do you think that this would be easy to just throw into a mode dashboard and show?
+[16:31] And then.
+[16:32] Yeah.
+[16:33] Yeah.
+[16:33] And in short, I do.
+[16:36] I can let me if you actually want, I can just give you a very quick debrief of what mode really does.
+[16:43] Absolutely.
+[16:44] I think that might help.
+[16:45] I think, yeah, like the way I see mode and I feel like what's made like my life a lot easier and why I think mode is like objectively way better than Tableau at this point is because of the fact that AI coding and stuff is so much easier now.
+[17:03] And mode is really genuinely just a skeleton of code.
+[17:07] And that's it.
+[17:08] It's a web hosting free tool to host three different forms of code.
+[17:13] Which is like SQL queries has database access.
+[17:17] Python for any advanced data manipulation that SQL doesn't cover.
+[17:22] And then you can use HTML to visualize it.
+[17:25] And like ultimately all of that stuff is just data sets that like both the Python cell output.
+[17:33] Does it rerun in real time? Or how does the mode actual thing work?
+[17:40] It does. Yeah. Here's the let me, like, pull up I'll pull up the causal impact
+[17:49] one. I think this is the biggest one of, like, the this is by far the biggest one. Oh, actually,
+[17:57] maybe a better one that's maybe a bit more narrowed in scope.
+[18:10] Let's see.
+[18:11] No, actually, this does not have the other thing
+[18:13] I wanted to show.
+[18:14] So I'm going to go back to causal impact.
+[18:16] So, within mode, like, the first thing is the data tab, right?
+[18:31] Which is, like, all your queries.
+[18:33] Each of these things are queries.
+[18:36] Normally, what happens is that after you have a query, oh, also within the query, on the right tab here, you can choose what database you want to connect to.
+[18:43] so google bigquery integration prod i don't even know what public warehouse is i've never used that
+[18:51] um like you don't need to do anything it's the important part is that if your query is failing
+[18:56] check that because i've failed a lot of times where it's like i was expecting to write a big
+[19:00] query thing and i had it clicked on core dw and then it's like it's not the right database um but
+[19:05] you can the cool part is that you can query bigquery here and then you can have like a new
+[19:09] query that you add at the bottom here that's like i'm gonna pull in a core dw table um and
+[19:17] essentially the thing is that all of these queries this is the top of the pipeline first thing is uh
+[19:23] your queries from the like your queries are the first form of data that gets pulled into mode
+[19:27] from there you can go to the python notebook python notebook is just a regular old jupyter
+[19:35] notebook yep um it has it has a huge swath of libraries of things you can import i actually
+[19:42] don't think i've ever been blocked by anything that i can import and you can even like like
+[19:49] ask you can even like essentially if you ever did have one you can go to like benny or whoever
+[19:53] like officially supports mode to like add in that library into our personal instance of mode okay
+[20:00] but the main point is that it's a Jupyter notebook
+[20:03] the reason why it's cool
+[20:07] is because this Jupyter notebook
+[20:09] can access the query outputs
+[20:11] and it treats them as Python data frames
+[20:15] so if you have some data output
+[20:20] I'm trying to find
+[20:22] I think it's called data sets
+[20:26] sets. Yeah. Here. You see this here? Daily panel equals data sets daily panel. Like this
+[20:48] line right here. Oh, you're muted.
+[20:52] Oh, yeah. I'm answering. Yes. And it's just loading it from the SQL output.
+[20:57] Yeah. Like, it says that you just literally quote the name of the query that
+[21:01] you have, and now it made a data frame of that query output. And now you can start doing
+[21:09] crazy Python things with it. So, that's, like, step one is that you can, like, bring things
+[21:16] into here. Then, on top of that, like, now you have, you know, data that is accessible.
+[21:24] Like, you have your data here. And you can access the data in Python. So, anything that
+[21:28] you're doing in your personal, like, thing that you're working on, you know, like, you
+[21:32] could essentially probably just take each of your Python scripts, essentially, and put
+[21:37] that into a cell output. And I know you said that you're, like, the outputs of your Python
+[21:43] one thing is making visuals.
+[21:46] But you don't need to do,
+[21:47] that's the part where you don't need to do that.
+[21:49] What you will need to do is just have any of your outputs.
+[21:53] At the very bottom here, I have a giant,
+[21:59] essentially outputs of different data sets.
+[22:01] So let me see if I can, here.
+[22:06] So while all this code is running,
+[22:09] then we make data frames,
+[22:11] and we're storing those as variables.
+[22:13] in the Jupyter notebook, right?
+[22:15] Like the STS per advertiser, the STS cohort aggregate,
+[22:19] the STS daily cohort.
+[22:22] Then if you make a notebook cell that has,
+[22:25] that just says the name of the variable
+[22:28] and you have like Jupyter outputs that,
+[22:29] like the visual output of the data frame like this.
+[22:34] This can now be used as an output to add to the report
+[22:39] and you can put this in the front end.
+[22:41] So the final stage here is the report builder,
+[22:44] which normally when you build reports,
+[22:47] it's normally just adding charts.
+[22:49] Like you're like, I've got this table,
+[22:52] like control panel, naive pre-post.
+[22:55] Let's see.
+[22:56] Yeah, we've got naive pre-post, right?
+[22:58] Like here's some data.
+[22:59] Normally what I've been doing
+[23:01] is you can use pre-built tables
+[23:03] where it's like, I want to make a pie chart with this data.
+[23:05] and I'm going to show the company name by advertiser ID pie chart.
+[23:14] That's beautiful.
+[23:16] Like it's a lot of,
+[23:17] essentially it's just charts that show up off of the data.
+[23:25] The point that I was trying to say is that
+[23:29] the report builder is in this case,
+[23:33] Like I've moved away from using modes, prebuilt stuff to just full on index dot HTML or like
+[23:41] writing HTML code, um, to visualize everything.
+[23:44] And like Claude has literally not failed me once on the delivery and pickup and handoff
+[23:50] between the two.
+[23:52] So when, let me, let me understand how the mode dashboard works, right?
+[23:56] So maybe I get this part, but when you're actually loading code to it, is this connected
+[24:02] to GitHub?
+[24:03] in any way how are you basically getting this code and getting claude to do this for you
+[24:10] yes there's two stages essentially i there is it is connected to github like when you
+[24:17] i guess what i do first is like i've talked to claude about this exhaustively about like
+[24:22] what is mode how does it work you know it has the sql queries and then it has a jupyter notebook
+[24:27] and then the Jupyter Notebook goes into HTML.
+[24:31] I've educated my clod, essentially, on how mode works.
+[24:37] And from there, I usually...
+[24:40] Because there is a GitHub code repo called modeassets.
+[24:45] Let me open the folder.
+[24:49] Modeassets.
+[24:53] And this literally mimics the exact structure
+[24:56] of like within mode there's a bunch of folded like spaces for every team i think you guys have a
+[25:01] space as well in mode so whenever you're making something you will probably by default be adding
+[25:06] something into your uh i believe let's see audience intelligence now i think audience
+[25:15] intelligence yeah so you'll all of your stuff like if you have any mode dashboards they'll show up
+[25:21] here okay and the structure each so within the space you can like click on you know and i don't
+[25:27] know any of these so i'm going to look at experimentation which is the stuff that i've built
+[25:29] but you can see here that this is actually the exact same code layout
+[25:35] in mode like there's the control panel the daily panel the experiment config population like all
+[25:41] of this is just a one for one.
+[25:46] You cannot edit this directly, like locally.
+[25:50] You cannot edit these files here and push to mode production.
+[25:54] The only way to push to mode production is when you're
+[25:58] editing in here, I say push changes to GitHub
+[26:01] within the UI here, within mode.
+[26:06] Okay.
+[26:07] so what I do is I have
+[26:10] Claude I give Claude a task
+[26:12] like of what I want
+[26:14] let me go back to my
+[26:16] let me close my
+[26:19] no
+[26:21] I was working on it oh well
+[26:23] um
+[26:24] see I have like my
+[26:28] personal
+[26:28] um
+[26:31] code
+[26:35] repos ad hoc
+[26:39] analysis.
+[26:45] I have this
+[26:46] here, essentially.
+[26:50] What I've done is I make a thing within mode
+[26:54] or Claude so it understands I'm doing a thing right now.
+[26:59] Here's all the queries and the queries are
+[27:02] whatever then uh i have a um this one does not have a let me look at the causal analysis one
+[27:12] this is like the actual work that i have on causal analysis within the mode there's the queries and
+[27:17] there's the notebook just it's a jupiter notebook and it literally does just read the outputs
+[27:22] of the queries um because also my bf code i've also given it query credentials so claude can
+[27:29] execute, examine, evaluate queries on my behalf to run things completely locally.
+[27:37] So, it actually does have a local test that it also does. It'll output the CSV files, save them.
+[27:43] It essentially just has a way to offline run it locally until it feels like it's like,
+[27:49] I did a good job. And then when it's done and I think, okay, everything that we've done here seems
+[27:55] to look good. I just take the queries, go here, do reviews, of course, but go here and
+[28:03] then copy and you can paste them into here. All the editing and pushing to mode UI itself
+[28:09] has to be done by hand of moving copy pasting from your VS Code local version to the mode
+[28:16] UI.
+[28:19] Mm-hmm.
+[28:20] Okay.
+[28:22] So it's like, you know, adding queries,
+[28:24] querying, running, whatever,
+[28:27] going to the Jupyter notebook,
+[28:29] you know,
+[28:30] doing whatever, like adding all the cells.
+[28:33] I think
+[28:34] the first time when you're adding Jupyter notebooks,
+[28:36] you can actually just import the Jupyter notebook
+[28:38] file, but otherwise it is a very painful
+[28:40] copying and pasting of each cell by cell.
+[28:43] Mode is not an octa.
+[28:46] Yeah.
+[28:46] I think it's actually just like a login.
+[28:49] Yeah, I don't have any.
+[28:51] Can you just send me that mode notebook
+[28:52] that you got right there? I'll just throw it in there.
+[28:55] I'm just going to
+[28:56] try to see. It's been a while. I logged into
+[28:58] mode probably a couple
+[29:00] months into me. Well, besides, you've
+[29:02] sent me some stuff.
+[29:04] See if you can access this.
+[29:07] I should be able to.
+[29:09] At least, I think so.
+[29:11] Enter your email
+[29:12] and your password.
+[29:13] A few more sign-in options.
+[29:16] Through Google.
+[29:18] All right.
+[29:19] Give it a try.
+[29:22] I wonder if I have edit access to just create my own.
+[29:25] Yeah, it looks like I'm in it.
+[29:27] So if I go to the, I'm in experimentation,
+[29:30] but if I go to the folders here.
+[29:32] Yeah, I think you probably have edit rights
+[29:33] within your workspace.
+[29:36] Because I think the edit rights is limited
+[29:37] to the space that you're in.
+[29:39] Okay, I'm trying to see, sorry, I'm looking for.
+[29:43] So if I want to go to, okay,
+[29:46] go under collections and then look at audience intelligence and then oh join collection
+[29:53] oh i just add it okay gotcha and then i can start creating stuff there by hitting the plus
+[29:59] yeah you click the plus on the top right and then what would you start by saying
+[30:04] yeah let me let's see so yeah i like if i was going to make a new dashboard right now
+[30:10] i click the plus click right sql
+[30:13] this gives you a blank space and it's technically in your personal dashboard which is like not in
+[30:21] anyone's space so you can like mess around with things and not worry that someone's gonna think
+[30:25] this is like trustworthy yet um like you can write queries whatever like
+[30:38] you know you like run a query you're like i've made all my cool changes and like
+[30:43] you name the dashboard and then you can actually click report move to when you're done like
+[30:53] experimenting with it and then you can move it into the space that you want to move it into
+[31:13] Okay. Yeah, I see that. That's cool.
+[31:18] Yeah. And here's the last part about the dashboarding thing that I wanted to add
+[31:23] to make it even cooler. So, there's also scheduling. You can schedule dashboards to run on their
+[31:30] own with an asterisk. Let me pull up this one. If your dashboard does not use parameters,
+[31:41] And by that, I mean, like, if the code and everything is too complex and heavy for you to just pull everything from everyone of all time, right?
+[31:54] Like, if your scope is, you know, any amount of time duration, or it's technically every campaign under the sun, and you're trying to pull daily logs, like, obviously, you can't just run that batch every day.
+[32:06] You can't just import cost impression log into mode every day, you know?
+[32:11] And like you might need to use parameters, which is like what I did for for causal impact, where I'm saying like you give me an experiment key and then I run all this crazy statistics live.
+[32:23] Like when you press that button, like let me show you.
+[32:30] Essentially just parameters, if you don't need to use parameters, if the size and scope of the data is small enough and you don't need to use parameters, then great.
+[32:39] You can schedule it.
+[32:39] If not, what essentially happens is you can go here, you make parameters.
+[32:44] I have an explicit.
+[32:46] How you get parameters and whatever, we can get into in another point.
+[32:50] But essentially, it's like you can make parameters to, like, set fields and then click run.
+[32:56] And then it, like, does a fresh run right there and live pulls all the data.
+[32:59] um the other option if you don't need to use parameters because that means that like everything
+[33:07] that you're doing is like limited enough in scope of data crunching that like it's
+[33:12] every day um like this experiment budget tracker you can just click a schedule
+[33:18] and just say hey rerun this dashboard at 1 p.m utc like that's what i have this set to so just
+[33:26] every day just refreshes the dashboard so that like all the data connections it executes the
+[33:32] queries runs the notebook displays the data whatever luckily most of the things i'm running
+[33:36] are actually don't take that long um well i wonder if it would for every advertiser but still like
+[33:43] yeah that's right yeah like if it's but you yeah if you don't need to then
+[33:47] yeah they are aggregations huh i'll figure out how to solve it
+[33:53] the data you're pulling is like if the out i think it's mostly the output like mode actually does the
+[33:58] one downside of mode is that it does have some very stinky constraints on like you can't the
+[34:04] dad the the output of any given data set or something like has to be like less than like
+[34:09] 10 megabytes or something yeah that makes sense though because i think i mean what ends up
+[34:16] happening if i mean you've been a data analyst for a while so you know this but like when you
+[34:21] build something out for people then they just want more and more granular data until pretty
+[34:26] much what you're doing is you're just like yeah you're basically just putting throwing yeah
+[34:32] throwing cost and pressure log into uh into a dashboard and it's like super like why is there
+[34:38] why does why is it so slow and it's like yeah because you're doing a join on like your second
+[34:43] biggest table like what are you talking about but yeah no that's uh totally true um so if your
+[34:50] outputs are limited like i think you can probably just do a test and see um and then you can like
+[34:55] create filters um to like filters are snappy because it's just building off of the data so
+[35:01] you can like run everything and then say filter to the campaign um and that can be done either in
+[35:06] mode um or probably honestly the html like the like a lot of the causal impact stuff is like
+[35:13] you know just filtering stuff the html just like live is modifying the data and filtering the data
+[35:19] based off of what you click um so so yeah i think you you probably like it's worth testing out and
+[35:26] trying to avoid parameters where you can um first because then you can just have a really cool
+[35:30] snappy scheduled thing that uploads has brand new fresh cool data um and then like it's easily
+[35:38] quickly filterable too and also though if just for your knowledge and for anyone else's knowledge as
+[35:45] you educate people about mode.
+[35:47] You can also, if you're like, hey, this
+[35:49] runs once a day, but I want to know what's
+[35:51] happening right now, you can just click refresh
+[35:52] right here, and it just reruns everything
+[35:54] to get the current data as of
+[35:57] today, whatever the query is
+[35:59] querying.
+[36:01] Thank you very much, Nick.
+[36:05] This has been extremely helpful.
+[36:06] I will, I mean, I'm
+[36:08] probably going to be tweaking it for a while, just kind of like
+[36:10] how your causal impact dash, you've been tweaking it,
+[36:12] but I'm going to try to get it into
+[36:14] mode and then start working from there because i think i've got some pretty good like ideas of
+[36:19] what it should look like and then i can start tweaking it from mode itself so um yeah my advice
+[36:26] for you is i know that your python output was like visuals like claude won't be able to do anything
+[36:34] like mode can't support like putting a png from um like from the python notebook into this dashboard
+[36:43] like you need to rely on like the html code to visualize the the charts and data um but claude
+[36:53] has been like kick spot at it genuinely yeah it's so good at writing a pretty website it's an html
+[37:02] it's insane um like my honest recommendation and what i've been doing when i've been making
+[37:07] new dashboards um actually let me show you this is something i was doing i was literally
+[37:12] trying to do a facelift for this
+[37:14] experiment budget tracker like right now
+[37:16] and in my initial
+[37:18] prompt I gave it
+[37:20] let's see
+[37:24] can I control F my own
+[37:26] yeah index
+[37:28] I said there's a lot
+[37:30] of really good index HTML files
+[37:32] of other work we've done within
+[37:34] mode to help you find color palettes and styles
+[37:36] to make this work
+[37:37] so you can and then I guess the reason
+[37:40] why I'm saying index.html is because
+[37:42] let me open the files.
+[37:47] Let me open up the mode assets
+[37:48] again.
+[37:54] In the mode code repo,
+[37:58] within each of these things, there's
+[38:02] an index.html
+[38:04] file.
+[38:06] This is the mode assets one.
+[38:08] Okay.
+[38:08] Okay.
+[38:09] And that is literally it's just called index.html. There's no way to change the
+[38:15] name. But essentially, like, every dashboard, when you go into report builder, you click
+[38:22] this button here and it just reveals the HTML.
+[38:24] Oh, so that makes sense.
+[38:27] So, like, essentially, like, the index.html is literally just this file. And it's pulling
+[38:33] from everything and then creates this visual down below um so what i'm trying to say is that like
+[38:39] when you're making this honestly you can just probably prompt claude to be like here's the
+[38:45] data sets and here's the outputs like you look at these other nice index html you could i'd
+[38:52] honestly just recommend pointing it at my causal impact one because it's been the most robust and
+[38:55] has some of the like fanciest coolest tricks in the book um and just say like look at this causal
+[39:02] impact index.html file for inspiration on how to style and get things to work within
+[39:09] mode. So I would recommend pointing it to this one here.
+[39:15] Okay. I will do that. I wonder I have done a ton of front-end development, but
+[39:23] obviously under the hood of everything is HTML, CSS, JavaScript, all that stuff. But
+[39:29] the stuff I've been doing is using React. But I'll have to see. I'll see what Bode is
+[39:35] capable of.
+[39:36] **** It's genuinely shocking. I will say the HTML side is something that's like the
+[39:45] way I've been validating it is you can always look at the outputs that it's giving, essentially.
+[39:52] Like whenever it's making a chart or an illustration of anything. You can go back and look at the
+[39:57] database to be like, okay, is this.
+[40:00] Like, did the HTML, like, hallucinate something to be like, oh, did it, like, make up a random number?
+[40:05] Like, you know, but if the chart is interactive and it's flowing and, like, the data is all connecting, then, you know, I haven't had it drop the ball in terms of the front end layer at all.
+[40:16] And, like, I'm pretty hands off with touching the HTML.
+[40:19] Like, I know it, but I'm not.
+[40:22] I'm by far more of a data person at this point than a front end developer, obviously.
+[40:25] So, yeah.
+[40:29] So, yeah.
+[40:30] Yeah, probably spend some time having Claude, like, just understand the mode assets code
+[40:39] repo.
+[40:42] My other final personal life hack is whenever you make changes, like, my loop of development
+[40:48] is having Claude work on it, test it locally.
+[40:52] I try making, you know, manually copy, like, paste over the changes over to here.
+[40:57] then I'll push the changes to GitHub and then I'll tell Claude like hey go check out the mode assets
+[41:02] repo I just pushed it into production like does this look good and is it matching what you're
+[41:06] expecting it to have been doing um and it's been able to figure that out fine and like in case if
+[41:12] there was some lost in translation thing or whatever it's like easier to help it like
+[41:16] have a real frame of reference of what's happening in the real world beyond like its local environment
+[41:21] um
+[41:24] but yeah
+[41:27] it's so cool mode is amazing tableau is dead yeah i like tableau i am ready for the death
+[41:37] of tableau officially i think it's here i remember doing something for pinterest
+[41:42] where they so many things wrong somebody had created like i can't remember what it's called
+[41:50] in tableau but they created like a new data set join for every single visualization they had
+[41:58] so they had like 12 of them and then you would have to go in and like refresh it was just so
+[42:04] bad it was so dumb i remember telling them because they brought me in as a contractor to fix some
+[42:08] stuff and i'm like it literally would be a quicker use of your time to just literally trash every
+[42:13] single thing on this and then build it from scratch again like it's gonna take more time to like
+[42:17] fix what it's familiar yeah yeah no tab i think every other dash because the fact that i i think
+[42:25] that the ai generating of front end is like the nail in the coffin for like you know ai can just
+[42:31] spit out data visualizations like it's nothing um and you are genuinely only limited to your
+[42:36] creativity to like what visuals you want it to try to make um so yeah it's it's so much easier now
+[42:44] um well nick i this is super appreciated i'm gonna take a look at this and i will create a
+[42:50] mode dashboard and then i might send you some links and be like hey man what do you think
+[42:54] and then yeah yeah hopefully it'd be useful too maybe at some point in time because you work in
+[42:59] experimentation and i mean i'm sure that you might get some use out of it just like we're
+[43:03] gonna get some use out of your causal impact thing so yeah yeah that's cool yeah i appreciate
+[43:08] it um yeah hope it goes well let me know if you have questions about it um and yeah um okay cool
+[43:16] all right thank you very much nick all the we'll talk soon i'm i'm sure so are you going to las
+[43:22] vegas by the way yes yeah i am going to vegas yeah cool well are you gonna be there yes i will
+[43:29] be there i know it's like a little over a month out but um excited i like going to all of them
+[43:34] the mountain meets are always fun.
+[43:36] So,
+[43:36] yeah,
+[43:36] I'm always,
+[43:37] I've always just been like,
+[43:38] ah,
+[43:38] like there's a lot of places that I've like,
+[43:40] haven't been to or like,
+[43:42] it's fun to just,
+[43:43] yeah,
+[43:43] I enjoy it.
+[43:44] So I'm excited for it.
+[43:45] Yeah,
+[43:45] for sure.
+[43:46] Um,
+[43:46] all right.
+[43:47] Take care,
+[43:47] Nick.
+[43:48] Cool.
+[43:48] Right.
+[43:48] It was good seeing you.
+[43:49] See ya.
+[43:49] Bye.
