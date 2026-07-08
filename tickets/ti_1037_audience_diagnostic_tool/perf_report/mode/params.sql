@@ -1,8 +1,9 @@
 -- Params — advertiser + period for the Client Performance Diagnostic.
 -- The SQL feeds the Advertiser_ID dropdown: every non-test advertiser with delivery
 -- spend in the last 18 months (the diagnostic is meaningless without delivery),
--- ranked by spend DESC so the biggest accounts survive if Mode truncates dynamic
--- options (documented cap for dynamic params: 1,000 options / 1MB).
+-- sorted A-Z by company name (unnamed last). If the dropdown ever loses its tail
+-- (Mode documents a 1,000-option / 1MB cap on dynamic params), check for a "Z"
+-- advertiser — the fallback is re-ranking by spend DESC so big accounts survive.
 -- Dropdown label = "id · name" — the filter box matches EITHER, so users can type
 -- an advertiser_id or a company name; the bare advertiser_id is what substitutes
 -- into consumer queries (labels vs values).
@@ -23,7 +24,7 @@ JOIN (
   HAVING spend > 0
 ) s USING (advertiser_id)
 WHERE a.deleted = FALSE AND a.is_test = FALSE
-ORDER BY s.spend DESC
+ORDER BY (NULLIF(TRIM(a.company_name), '') IS NULL), LOWER(TRIM(a.company_name)), a.advertiser_id
 
 {% form %}
 Advertiser_ID:
