@@ -18,14 +18,16 @@ WITH camp AS (
     )
 ),
 grp_spend AS (
-  -- per campaign_group prospecting spend over the trend window (obj=1 rows only)
-  SELECT c.campaign_group_id, SUM(s.media_spend + s.data_spend + s.platform_spend) AS grp_spend
+  -- WHOLE-GROUP window spend (all funnel stages, retargeting excluded) — the UNIFIED
+  -- % basis shared by every module. Changelog events stay stage-1.
+  SELECT c2.campaign_group_id, SUM(s.media_spend + s.data_spend + s.platform_spend) AS grp_spend
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
-  JOIN camp c ON c.campaign_id = s.campaign_id
+  JOIN `dw-main-bronze.integrationprod.campaigns` c2 ON c2.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
     AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
     AND s.day <  DATE('{{ Period_End }}')
-  GROUP BY c.campaign_group_id
+    AND c2.deleted = FALSE AND c2.objective_id != 4
+  GROUP BY 1
 ),
 v AS (
   SELECT

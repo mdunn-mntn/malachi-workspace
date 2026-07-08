@@ -18,9 +18,9 @@ chg AS (
   FROM `dw-main-silver.archives.household_score_threshold_archives`
   WHERE advertiser_id = {{ Advertiser_ID }} AND update_time < TIMESTAMP(DATE('{{ Period_End }}'))
 ),
--- Prospecting spend per campaign group over the FULL trend window (P1 start -> P2 end).
--- Standard basis: every group-ranked module (03/03b/07/08/00b) uses this same window so
--- their % spend agree. P2-only spend would drop P1-season campaigns (88885, 82900).
+-- WHOLE-GROUP window spend (all funnel stages, retargeting excluded) — the UNIFIED
+-- % basis shared by every module (00b/03/03b/07/08). Gate events stay stage-1; only
+-- the ranking spend is whole-group.
 grp_spend AS (
   SELECT c.campaign_group_id,
          SUM(s.media_spend + s.data_spend + s.platform_spend) AS grp_prospecting_spend
@@ -29,7 +29,7 @@ grp_spend AS (
   WHERE s.advertiser_id = {{ Advertiser_ID }}
     AND DATE(s.day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
     AND DATE(s.day) <  DATE('{{ Period_End }}')
-    AND c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
+    AND c.deleted = FALSE AND c.objective_id != 4
   GROUP BY 1
 )
 SELECT

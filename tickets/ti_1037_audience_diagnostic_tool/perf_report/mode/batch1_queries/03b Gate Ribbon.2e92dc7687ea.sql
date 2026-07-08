@@ -58,10 +58,17 @@ grp_day AS (
   FROM camp_day
   GROUP BY campaign_group_id, day
 ),
+-- WHOLE-GROUP window spend (all funnel stages, retargeting excluded) — the UNIFIED
+-- % basis shared by every module. Lanes still show stage-1 delivery/gates only.
 grp_spend AS (
-  SELECT campaign_group_id, SUM(day_spend) AS grp_spend
-  FROM grp_day
-  GROUP BY campaign_group_id
+  SELECT c.campaign_group_id, SUM(s.media_spend + s.data_spend + s.platform_spend) AS grp_spend
+  FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+  JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
+  WHERE s.advertiser_id = {{ Advertiser_ID }}
+    AND DATE(s.day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND DATE(s.day) <  DATE('{{ Period_End }}')
+    AND c.deleted = FALSE AND c.objective_id != 4
+  GROUP BY 1
 )
 SELECT
   gd.campaign_group_id,
