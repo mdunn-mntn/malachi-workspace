@@ -2142,14 +2142,14 @@ function render(rows, root, H) {
   // table
   var th = 'text-align:right;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
   html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
-  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP med (avg)</th><th style="' + th + '">HI served</th><th style="' + th + '">Net-new HI</th><th style="' + th + '">Re-touched HI</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
+  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP med (avg)</th><th style="' + th + '">HI served</th><th style="' + th + '">Net-new HI</th><th style="' + th + '">Re-touched HI</th><th style="' + th + '">Re-touch %</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
   M.forEach(function (r, i) {
     var bg = (i % 2 === 0) ? "rgba(0,0,0,0.03)" : "transparent";
     var td = 'text-align:right;padding:4px 8px;color:#222;white-space:nowrap';
     if (!r.reach) { // window month with no RT delivery — keep the row, muted
       html += '<tr style="background:' + bg + '">'
         + '<td style="text-align:left;padding:4px 8px;white-space:nowrap;color:#bbb">' + H.esc(moLbl(r.mo)) + '</td>'
-        + '<td colspan="6" style="text-align:left;padding:4px 8px;color:#bbb;font-size:11px">no prospecting delivery</td>'
+        + '<td colspan="7" style="text-align:left;padding:4px 8px;color:#bbb;font-size:11px">no prospecting delivery</td>'
         + '<td style="' + td + ';color:#bbb">' + (cumSeries[i] == null ? '—' : H.fmtK(cumSeries[i])) + '</td>'
         + '<td style="' + td + ';color:#bbb">—</td>'
         + '</tr>';
@@ -2163,10 +2163,11 @@ function render(rows, root, H) {
       + '<td style="' + td + '">' + (r.freqMed ? H.fmtK(r.freqMed) : (r.reach ? (r.imps / r.reach).toFixed(1) : "—"))
         + (r.reach ? ' <span style="color:#aaa;font-size:10px">(' + (r.imps / r.reach).toFixed(1) + ')</span>' : '') + '</td>'
       + (preScore
-        ? '<td colspan="4" style="text-align:center;padding:4px 8px;color:#bbb;font-size:11px">no score data (pre-2025-06)</td>'
+        ? '<td colspan="5" style="text-align:center;padding:4px 8px;color:#bbb;font-size:11px">no score data (pre-2025-06)</td>'
         : '<td style="' + td + '">' + H.fmtK(r.hi) + '</td>'
           + '<td style="' + td + ';color:' + C.GREEN + ';font-weight:700">' + H.fmtK(r.newHi) + '</td>'
           + '<td style="' + td + '">' + H.fmtK(r.retHi) + '</td>'
+          + '<td style="' + td + ';font-weight:700;color:' + C.AMBER + '">' + (r.hi ? Math.round(100 * r.retHi / r.hi) + '%' : '—') + '</td>'
           + '<td style="' + td + ';font-weight:700;color:' + C.NAVY + '">' + H.fmtK(cumSeries[i]) + '</td>')
       + '<td style="' + td + ';color:#777">' + H.fmtK(r.brandNew) + '</td>'
       + '</tr>';
