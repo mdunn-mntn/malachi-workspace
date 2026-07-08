@@ -2106,9 +2106,13 @@ Realized spend per auction win. Use for step-9 pacing (spend ÷ budget) and any 
   — that's the category name) · `16`=**MNTN Taxonomy Data** (its per-advertiser categories = the advertiser's own
   **funnel tags** Impressions/Wins/PageViews/Conversions/VV › stage › CampaignGroupID › CampaignID — this is what the
   "net-new gate" targets; catalog in `bronze.tpa.categories` WHERE data_source_id=16 AND advertiser_id=<AID>) ·
+  `17`=ShareThis (3P; decoded TI-1037 2026-07-08) · `18`=Dstillery (3P) ·
   `19`=**MNTN Matched** (this is "MM") · `21`=MNTN Conversion · `34`=MNTN Pageview · `35`=**LiveRamp IP** (the "3P"
   segments) · `46`=ML Audience Intent Scoring Model (RTC scoring) · `47`=CRM Identity Graph Generated · `42`=MNTN Select ·
-  `51`=Bombora · `25`=5x5. Interest sources = DS13/19 (MM) + DS35 (3P); DS16 = funnel gate; DS2/21/34/47 = exclusion/suppression.
+  `51`=Bombora · `25`=5x5. Interest sources = DS13/19 (MM) + DS35/17/18 (3P); DS16 = funnel gate; DS2/21/34/47 = exclusion/suppression.
+- **DS13/19/46 co-occurrence gotcha (TI-1037 2026-07-08):** at segment level DS46 NEVER co-occurs with DS13 (the
+  `onFangorn` flip swaps 13→46); DS19 survives the flip. "MM = has DS19" undercounts the MM-scored layer by ~7.6% of
+  prospecting spend (DS46-only + DS13-only cells) — full 8-cell table in data_knowledge.md § `"MM = has DS19" is an undercount`.
 
 ## bronze.integrationprod.core_advertiser_conversion_types
 - **Type:** TABLE — **auto-registered conversion-type registry** (one row per advertiser × conversion_type × conversion_source_id)
