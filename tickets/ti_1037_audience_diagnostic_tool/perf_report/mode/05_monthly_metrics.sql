@@ -23,7 +23,7 @@ SELECT
   SUM(click_order_value + view_order_value)              AS revenue
 FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
 WHERE campaign_id IN (SELECT campaign_id FROM camp)
-  AND DATE(day) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
-  AND DATE(day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
+  AND DATE(day) >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+  AND DATE(day) <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
 GROUP BY month
 ORDER BY month

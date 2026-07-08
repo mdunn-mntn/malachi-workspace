@@ -38,8 +38,8 @@ buckets AS (
   FROM `dw-main-silver.logdata.cost_impression_log` l
   JOIN scope_camps sc ON sc.campaign_id = l.campaign_id
   WHERE l.advertiser_id = {{ Advertiser_ID }}
-    AND DATE(l.time) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
-    AND DATE(l.time) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    AND DATE(l.time) >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND DATE(l.time) <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
   GROUP BY 1
 ),
 grp_enum AS (
@@ -58,8 +58,8 @@ grp_enum AS (
   LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g ON g.campaign_group_id = sc.campaign_group_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
     -- window (P1 start -> P2 end): the standard trend window
-    AND s.day >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
-    AND s.day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    AND s.day >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
   GROUP BY 1
 ),
 -- Denominator: TOTAL window spend over the SAME scope (whole groups, RT excluded),
@@ -69,8 +69,8 @@ tot AS (
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
   JOIN scope_camps sc ON sc.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    AND s.day >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
-    AND s.day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    AND s.day >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
 )
 SELECT
   e.grp AS campaign_group_id,

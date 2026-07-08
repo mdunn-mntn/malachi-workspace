@@ -37,7 +37,7 @@ ORDER BY ord
 {% form %}
 Period_Start:
   type: select
-  default: 1900-01-01
+  default: '1900-01-01'
   label: "Period start"
   description: "Compared against the same dates one year earlier (YoY)"
   options:
@@ -45,7 +45,7 @@ Period_Start:
     values: start_value
 Period_End:
   type: select
-  default: 2099-01-01
+  default: '2099-01-01'
   label: "Period end"
   description: "Full months only; Auto = through the most recent completed month"
   options:

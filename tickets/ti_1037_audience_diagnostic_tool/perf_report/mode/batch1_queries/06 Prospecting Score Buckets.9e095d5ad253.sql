@@ -22,8 +22,8 @@ base AS (
   SELECT FORMAT_DATE("%Y-%m", DATE(time)) AS mo, household_score AS hs
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
-    AND time >= TIMESTAMP(DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR))
-    AND time <  TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
+    AND time >= TIMESTAMP(DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR))
+    AND time <  TIMESTAMP(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)))
     AND campaign_id IN (SELECT campaign_id FROM camp)
     AND (model_params IS NULL OR model_params NOT LIKE "%realtime_conquest_score=10000%")
 )
@@ -36,10 +36,10 @@ SELECT
   COUNTIF(hs BETWEEN 3333 AND 6665)               AS mi,
   COUNTIF(hs = 8000 OR hs BETWEEN 6666 AND 7999)  AS pp,
   COUNTIF(hs = 10000 OR hs BETWEEN 8001 AND 9999) AS hi,
-  FORMAT_DATE("%Y-%m", DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)) AS p1_start_mo,
-  FORMAT_DATE("%Y-%m", DATE_SUB(DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY), INTERVAL 1 YEAR)) AS p1_end_mo,
-  FORMAT_DATE("%Y-%m", IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}'))) AS p2_start_mo,
-  FORMAT_DATE("%Y-%m", DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY)) AS p2_end_mo
+  FORMAT_DATE("%Y-%m", DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)) AS p1_start_mo,
+  FORMAT_DATE("%Y-%m", DATE_SUB(DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY), INTERVAL 1 YEAR)) AS p1_end_mo,
+  FORMAT_DATE("%Y-%m", IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10)))) AS p2_start_mo,
+  FORMAT_DATE("%Y-%m", DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY)) AS p2_end_mo
 FROM base
 GROUP BY mo, p1_start_mo, p1_end_mo, p2_start_mo, p2_end_mo
 ORDER BY mo

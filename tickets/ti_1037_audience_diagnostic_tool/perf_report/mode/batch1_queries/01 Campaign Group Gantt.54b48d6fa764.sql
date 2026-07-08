@@ -18,8 +18,8 @@ WITH camp_day AS (
   WHERE d.advertiser_id = {{ Advertiser_ID }}
     AND c.advertiser_id = {{ Advertiser_ID }}
     AND c.deleted = FALSE
-    AND DATE(d.day) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
-    AND DATE(d.day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    AND DATE(d.day) >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND DATE(d.day) <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
 )
 SELECT
   cd.campaign_group_id,
@@ -30,8 +30,8 @@ SELECT
   COUNT(DISTINCT cd.day)                             AS active_days,
   ROUND(SUM(cd.spend), 0)                            AS total_spend,
   ROUND(SUM(cd.imps) / 1e6, 3)                       AS imps_m,
-  DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR) AS win_start,
-  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                           AS win_end
+  DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR) AS win_start,
+  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))                           AS win_end
 FROM camp_day cd
 LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g
   ON g.campaign_group_id = cd.campaign_group_id
