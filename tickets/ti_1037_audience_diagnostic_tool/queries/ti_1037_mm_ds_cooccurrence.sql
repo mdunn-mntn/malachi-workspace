@@ -104,6 +104,46 @@ GROUP BY 1,2,3 ORDER BY spend_45d DESC;
 ---------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------------
+   Variant 3 (2026-07-08): v1 vs v2 DELIVERED SCORE DISTRIBUTION — proves the
+   scoring-generation difference. 7d CIL, RTC excluded. Result:
+   v1 (DS13) = fixed points ONLY (exactly 8000 / exactly 10000; ZERO imps at
+   6666-7999 or 8001-9999). v2 (DS46) = two continuous bands with a pin at each
+   top: PP pass 6666-7999 (1,206 distinct) + 8000 pin; HI pass 8001-9999
+   (1,868 distinct) + 10000 pin. Split by DS19: 100% of the >8000 HI band sits
+   on DS19-carrying campaigns — DS46-only ("vertical only") tops out at 8000.
+   Methodology: Confluence 3414917161 (0.6/0.8 -> 3333/6666 transform).
+
+WITH anchored AS (
+  SELECT s.campaign_id,
+    LOGICAL_OR(REGEXP_CONTAINS(s.expression, r"\"data_source_id\":13[^0-9]")) AS ds13,
+    LOGICAL_OR(REGEXP_CONTAINS(s.expression, r"\"data_source_id\":19[^0-9]")) AS ds19,
+    LOGICAL_OR(REGEXP_CONTAINS(s.expression, r"\"data_source_id\":46[^0-9]")) AS ds46
+  FROM `dw-main-silver.audience.audience_segments` s
+  JOIN `dw-main-bronze.integrationprod.campaigns` c USING (campaign_id)
+  WHERE s.expression_type_id = 2 AND s.is_targeted = TRUE
+    AND c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
+  GROUP BY s.campaign_id
+  HAVING ds13 OR ds46
+)
+SELECT
+  IF(a.ds46, "v2 (DS46 Fangorn)", "v1 (DS13 legacy)") AS anchor,  -- add a.ds19 to split the HI band
+  CASE WHEN l.household_score <= 0 THEN "a. unscored (<=0)"
+       WHEN l.household_score BETWEEN 1 AND 3332 THEN "b. 1-3332 (MaxReach band)"
+       WHEN l.household_score BETWEEN 3333 AND 6665 THEN "c. 3333-6665 (MI band)"
+       WHEN l.household_score BETWEEN 6666 AND 7999 THEN "d. 6666-7999"
+       WHEN l.household_score = 8000 THEN "e. exactly 8000"
+       WHEN l.household_score BETWEEN 8001 AND 9999 THEN "f. 8001-9999"
+       WHEN l.household_score = 10000 THEN "g. exactly 10000" END AS band,
+  COUNT(*) AS imps,
+  COUNT(DISTINCT l.household_score) AS distinct_scores
+FROM `dw-main-silver.logdata.cost_impression_log` l
+JOIN anchored a USING (campaign_id)
+WHERE l.time >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+  AND (l.model_params IS NULL OR l.model_params NOT LIKE "%realtime_conquest_score=10000%")
+GROUP BY 1, 2 ORDER BY 1, 2;
+---------------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------------
    Companion: what does the "no DS13/19/46 at all" cell (26.8% of spend) run?
    Top DS sets by spend. Answer: DS14-only run-of-network ($2.5M / 42 adv),
    3P-only (DS35 LiveRamp IP / DS18 Dstillery / DS17 ShareThis), IP lists (DS8),
