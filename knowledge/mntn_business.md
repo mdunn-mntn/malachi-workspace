@@ -30,6 +30,8 @@ MNTN security (Robin Fox) **no longer allows locally-hosted Slack apps or API ke
 
 Config space = 2×3 grid (keyword layer y/n × anchor none/DS13/DS46). Live prospecting footprint (45d, 2026-07-08): Keyword-Only 42.7% of spend · MM Core+PP v2 flagship 18.9% · MM Core+PP v1 4.0% · PP v2 only 6.5% · PP v1 only 1.1% · non-MM 26.8%. "MM = has DS19" undercounts MM-scored spend by ~7.6%. Full logic + tier table: `data_knowledge.md` § `"MM = has DS19" is an undercount` · Confluence: https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511
 
+**Scoring difference between the generations (verified 2026-07-08):** PP v1 assigns tiers categorically (fixed points 8000/10000); PP v2 (Fangorn) scores continuously — two model passes per IP, the tier label follows the score, and **a keyword-less ("vertical only") v2 advertiser's ceiling is the PP band (8000)** — the v2 HI band requires the keyword layer. Product implication: flipping a vertical-only advertiser to v2 removes their access to 10000-scored delivery. Methodology: Confluence 3414917161.
+
 ## Peak Performance / Mountain Matched relationship (per TI-896, 2026-04-22)
 
 > **Terminology superseded 2026-07-08** by the component taxonomy above (PP = the vertical-anchor component *within* MM, not the other way around; and "MM detection by DS2" was that analysis's proxy — DS2 is MNTN First Party in the registry). The empirical overlap numbers below remain valid as a record of that analysis.

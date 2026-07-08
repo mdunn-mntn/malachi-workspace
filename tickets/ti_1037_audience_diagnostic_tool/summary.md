@@ -25,6 +25,15 @@ query `queries/ti_1037_mm_ds_cooccurrence.sql`. Load-bearing facts for THIS dash
 - **Published:** Confluence page "MNTN Matched (MM) Taxonomy: Components, Configs, and Score Tiers"
   (TAR space, under TI Projects): https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511 ·
   Slack-pasteable PNG: `artifacts/ti_1037_mm_taxonomy.png` (regen via `ti_1037_mm_taxonomy_image.py`).
+- **v1 vs v2 SCORING VERIFIED (page updated to v2 w/ new §2b):** v1 = fixed points ONLY (zero imps
+  6666-7999/8001-9999); v2 = two continuous passes w/ band-top pins (PP→6666-8000, HI→8001-10000);
+  **v2 HI band requires DS19** — "vertical only" v2 tops out at 8000. Label follows the SCORE
+  (below-bar structural matches → MI/MaxReach). Evidence: variant 3 in `ti_1037_mm_ds_cooccurrence.sql`
+  (7d CIL, RTC-excl). Methodology source: Confluence 3414917161 (0.6/0.8 → 3333/6666 transform;
+  Fangorn+BUK blend = proposal; HI-vs-PP split under continuous scoring = open there).
+- **Open Qs:** exact per-pass production cutoffs undocumented (band mapping = empirical read — confirm
+  w/ Matt/Ryan if needed authoritative); v2 campaigns' unscored share ran 61% of 7d imps vs v1's 14%
+  (uninvestigated — could be advertiser mix/HHST settings, don't read as a Fangorn defect).
 
 ## Update 2026-07-08 (night) — Module 13 pixel-monitor AUDIT (22-agent adversarial verification)
 
