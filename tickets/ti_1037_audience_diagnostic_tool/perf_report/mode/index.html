@@ -1427,12 +1427,11 @@ function render(rows, root, H) {
   RENDER["00b Reach By Score"] = (function () {
 function render(rows, root, H) {
   var C = H.C;
-  // Window-wide summary of every stage-1 prospecting campaign (durable summarydata
-  // metrics) — in-TTL reach + HI-share appended only where still measurable (CIL 90d).
+  // Window-wide summary per CAMPAIGN GROUP (the client-facing campaign; durable
+  // summarydata metrics) — in-TTL reach + HI-share only where still measurable (CIL 90d).
   var data = (rows || []).map(function (r) {
     return {
-      cid: String(r.campaign_id),
-      grp: (r.grp == null || r.grp === "") ? "" : String(r.grp),
+      grp: String(r.campaign_group_id),
       name: r.group_name == null ? "" : String(r.group_name),
       first: r.first_day ? String(r.first_day).slice(0, 10) : "",
       last: r.last_day ? String(r.last_day).slice(0, 10) : "",
@@ -1460,7 +1459,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Prospecting campaign summary — full window</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every stage-1 prospecting campaign that spent in the P1→P2 window, spend-ranked; metrics are whole-window totals. % spend = share of window prospecting spend (same basis as every module). Reach + HI-share are only measurable for the recent in-TTL month (impression log keeps 90 days) — dormant campaigns show “expired”.</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every prospecting campaign that spent in the P1→P2 window, spend-ranked; metrics are whole-window totals per campaign group. % spend = share of window prospecting spend (same basis as every module). Reach + HI-share are only measurable for the recent in-TTL month (impression log keeps 90 days) — dormant campaigns show “expired”.</div>';
 
   if (!data.length) {
     html += '<div style="font-size:13px;color:#888;">No prospecting spend in the window.</div></div>';
@@ -1490,7 +1489,7 @@ function render(rows, root, H) {
   data.forEach(function (d, i) {
     var nm = d.name.replace(/CTV /g, "").replace(/Prospecting/g, "").replace(/Frequency/g, "Freq")
       .replace(/Subscriptions/g, "Subs").replace(/\s+/g, " ").trim();
-    var label = d.grp ? (d.grp + " · " + d.cid + (nm ? " " + nm : "")) : d.cid;
+    var label = d.grp + (nm ? " " + nm : "");
     if (label.length > 46) label = label.slice(0, 46);
     var sh = d.spend / tot;
     var roas = d.spend > 0 ? d.revenue / d.spend : null;

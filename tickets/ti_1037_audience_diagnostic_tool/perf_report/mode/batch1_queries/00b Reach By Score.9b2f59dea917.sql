@@ -1,33 +1,30 @@
--- Module 00b: prospecting campaign summary over the FULL P1->P2 window (stage-1).
--- One row per campaign with window spend: durable summarydata funnel metrics
--- (spend / imps / visits / convs / revenue, active span) so EVERY campaign in the
--- period appears — plus in-TTL score-split reach where still measurable
--- (cost_impression_log keeps 90 days; scores logged since 2025-06).
--- % basis = total_win_prosp_spend, the shared window denominator all modules use.
+-- Module 00b: prospecting campaign summary over the FULL P1->P2 window.
+-- One row per CAMPAIGN GROUP (the client-facing campaign), aggregating its
+-- prospecting delivery (obj=1, funnel=1 — same scope as every module):
+-- durable summarydata funnel metrics (spend / imps / visits / convs / revenue,
+-- active span) so EVERY campaign in the period appears — plus in-TTL score-split
+-- reach where still measurable (cost_impression_log keeps 90 days; scores logged
+-- since 2025-06). % basis = total_win_prosp_spend, the shared window denominator.
 WITH buckets AS (
   SELECT
-    campaign_id,
-    COUNT(DISTINCT ip) AS reach_ip,
-    COUNT(DISTINCT IF(household_score >= 8001, ip, NULL)) AS hi_ip,
-    COUNT(DISTINCT IF(household_score BETWEEN 6666 AND 8000, ip, NULL)) AS pp_ip,
-    COUNT(DISTINCT IF(household_score BETWEEN 1 AND 6665, ip, NULL)) AS mid_ip,
-    COUNT(DISTINCT IF(household_score <= 0, ip, NULL)) AS unscored_ip
-  FROM `dw-main-silver.logdata.cost_impression_log`
-  WHERE advertiser_id = {{ Advertiser_ID }}
-    AND DATE(time) BETWEEN DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 45 DAY) AND DATE('{{ Period_End }}')
-    AND campaign_id IN (
-      SELECT campaign_id
-      FROM `dw-main-bronze.integrationprod.campaigns`
-      WHERE advertiser_id = {{ Advertiser_ID }} AND deleted = FALSE
-        AND objective_id = 1 AND funnel_level = 1
-    )
+    c.campaign_group_id AS grp,
+    COUNT(DISTINCT l.ip) AS reach_ip,
+    COUNT(DISTINCT IF(l.household_score >= 8001, l.ip, NULL)) AS hi_ip,
+    COUNT(DISTINCT IF(l.household_score BETWEEN 6666 AND 8000, l.ip, NULL)) AS pp_ip,
+    COUNT(DISTINCT IF(l.household_score BETWEEN 1 AND 6665, l.ip, NULL)) AS mid_ip,
+    COUNT(DISTINCT IF(l.household_score <= 0, l.ip, NULL)) AS unscored_ip
+  FROM `dw-main-silver.logdata.cost_impression_log` l
+  JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = l.campaign_id
+  WHERE l.advertiser_id = {{ Advertiser_ID }}
+    AND DATE(l.time) BETWEEN DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 45 DAY) AND DATE('{{ Period_End }}')
+    AND c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
+    AND c.objective_id = 1 AND c.funnel_level = 1
   GROUP BY 1
 ),
-camp_enum AS (
+grp_enum AS (
   SELECT
-    c.campaign_id,
     c.campaign_group_id AS grp,
-    g.name AS group_name,
+    ANY_VALUE(g.name) AS group_name,
     MIN(IF(s.impressions > 0, DATE(s.day), NULL)) AS first_day,
     MAX(IF(s.impressions > 0, DATE(s.day), NULL)) AS last_day,
     ROUND(SUM(s.media_spend + s.data_spend + s.platform_spend), 0) AS spend,
@@ -44,7 +41,7 @@ camp_enum AS (
     AND s.day <  DATE('{{ Period_End }}')
     AND c.deleted = FALSE
     AND c.objective_id = 1 AND c.funnel_level = 1
-  GROUP BY 1, 2, 3
+  GROUP BY 1
 ),
 -- Denominator: TOTAL window prospecting spend — identical to modules 03/03b/07/08.
 tot AS (
@@ -57,8 +54,7 @@ tot AS (
     AND c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
 )
 SELECT
-  e.campaign_id,
-  e.grp,
+  e.grp AS campaign_group_id,
   e.group_name,
   e.first_day,
   e.last_day,
@@ -73,8 +69,8 @@ SELECT
   COALESCE(b.mid_ip, 0)      AS mid_ip,
   COALESCE(b.unscored_ip, 0) AS unscored_ip,
   t.total_win_prosp_spend
-FROM camp_enum e
-LEFT JOIN buckets b ON b.campaign_id = e.campaign_id
+FROM grp_enum e
+LEFT JOIN buckets b ON b.grp = e.grp
 CROSS JOIN tot t
 WHERE COALESCE(e.spend, 0) > 0 OR COALESCE(b.reach_ip, 0) > 0
 ORDER BY e.spend DESC, reach_ip DESC
