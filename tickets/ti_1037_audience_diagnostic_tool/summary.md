@@ -6,6 +6,30 @@
 
 ---
 
+## Update 2026-07-07 (later) — Mode batch-1 debug: stale datasets + VV chart date-adapter fix
+
+Continuation of the batch-1 Mode deploy (commit 8d13650 / mode-assets PR #9). Two symptoms in the live report, both diagnosed:
+
+1. **"Gate trajectory shows 4 dead zero-spend groups, missing 85384" → STALE DATASETS, not a SQL bug.**
+   The synced `03 HHST Gate History` SQL is correct — run in BQ with the report params (32147,
+   2026-01-01→2026-06-01) it returns **21 groups, 9 with spend** (85384 $103k, 119362 $199k, 108055 $144k …).
+   The rendered dataset (only 64534/64544/80969/80970, all $0, and "20 chg" where the SQL yields 25) can only
+   have come from an earlier draft run. **Mode's `window.datasets` = the last report Run; a git push updates
+   query definitions but NOT the data → always hit Run in the Mode UI after a deploy.** Ribbon/flights showing
+   "only one campaign" = same staleness (fresh: ribbon 21 groups, flights 16 groups / 88 flights for 85384).
+2. **"Verified-visit window: render error … complete date adapter" → real HTML bug, fixed.** Module 11 used a
+   Chart.js `type:"time"` x-scale; the report loads only `chart.umd.min.js` (no date adapter). Fixed by
+   switching to the proven module-03 pattern: `type:"linear"` over epoch-ms + month tick callback. Gotcha
+   comment added at the Chart.js include. **Deploy: mode-assets PR #10 — pending review** (main is protected;
+   review requested from Alex Knorr, who approved #9). After merge → Run the report.
+
+**Real client finding queued behind the fix:** Bouqs (32147) **PRO VV lookback cut 30d→14d on 2025-11-18**
+(archives_advertiser_archives; also RT 30→7→14 same day). P1 (Jan-Jun'25) measured at 30d, P2 (Jan-Jun'26) at
+14d → module 11 will (correctly) flag a measurement confound in any P1-vs-P2 visits/conversions comparison —
+this is Nick's decline-reason #5 live on the pilot account.
+
+---
+
 ## Update 2026-07-07 — Nick walkthrough: port the tool to a Mode dashboard
 
 **The tool IS built** (supersedes the "nothing built yet" note below): `perf_report/` is a parameterized

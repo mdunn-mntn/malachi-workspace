@@ -15,6 +15,14 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   **derived** in SQL as "same dates − 1 year" (matches "just two parameters: advertiser + period").
 - **Mode can NOT render matplotlib PNGs** → every chart is rebuilt as HTML/JS (Chart.js / tables / CSS).
 - **Constraint:** each dataset output must be < ~10 MB.
+- **GOTCHA — datasets are the LAST RUN, not the current SQL.** Pushing query edits to `main` updates the
+  query definitions in Mode, but `window.datasets` still holds whatever the last report Run produced (drafts
+  included). After every git deploy: open the report and hit **Run**, or the HTML renders against stale data
+  (symptom seen 2026-07-07: gate trajectory showed 4 dead zero-spend groups from a draft-era run while the
+  synced SQL correctly returns 21 groups with 85384/119362/108055 on top).
+- **GOTCHA — no Chart.js date adapter.** Only `chart.umd.min.js` is loaded; a scale with `type:"time"` throws
+  `This method is not implemented: Check that a complete date adapter is provided.` Use `type:"linear"` with
+  epoch-ms x values + a `ticks.callback` that formats the month (pattern in modules 03 and 11).
 - **GitHub sync is TWO-WAY** (repo README — contradicts Nick's "UI-only push"): commits to **`main` auto-sync to
   Mode**; a **branch does NOT sync**. So we can develop on a branch and "deploy" by merging to main. Repo is
   cloned at `~/Developer/work/mntn/mode-assets`; AUDI space = `Mode/mntn/spaces/🗂️ Audience Intelligence/`.

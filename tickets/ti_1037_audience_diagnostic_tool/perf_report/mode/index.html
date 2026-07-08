@@ -4,6 +4,9 @@
      both resolved from window.datasets by query name. This is module 04 + 05 only; the
      remaining ~20 modules follow the same pattern (add a query -> resolve -> render). -->
 <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Chart.js only — NO date adapter is loaded, so scales must never use type:"time"
+     (throws "This method is not implemented: Check that a complete date adapter is provided").
+     For date axes use type:"linear" with ms values + a tick callback (see modules 03 / 11). -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <style>
@@ -814,12 +817,14 @@ function render(rows, root, H) {
       layout: { padding: { top: 6, right: 8 } },
       scales: {
         x: {
-          type: "time",
-          time: { unit: "month", displayFormats: { month: "MMM ''yy" } },
+          // linear ms axis, NOT type:"time" — no date adapter is loaded in this report
+          // (time scale throws "This method is not implemented"). Same pattern as module 03.
+          type: "linear",
           min: ws ? ws.getTime() : undefined,
           max: we ? we.getTime() : undefined,
           grid: { display: false },
-          ticks: { font: { size: 9 }, color: "#888", maxRotation: 0 }
+          ticks: { font: { size: 9 }, color: "#888", maxRotation: 0, autoSkip: true,
+            callback: function(v){ var d=new Date(v); return (d.getUTCMonth()+1)+"/"+String(d.getUTCFullYear()).slice(2); } }
         },
         y: {
           min: 0, max: yMax,
