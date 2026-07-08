@@ -309,6 +309,28 @@ plausibly a ~$1M cap; mechanism/location not found). So bronze ⊃ silver ⊃ ui
 begin mid-Oct 2025; Sep 2025 fully absent) — NOT a 10–90d TTL. Silver `conversion_log` floor ≈ **2024-01**
 (no partitions exist before that). Any bronze-vs-silver comparison older than ~9 months is impossible.
 
+### Detecting an advertiser pixel/tag change from OUR side (playbook, WGU-REV 2026-07-08)
+We can't see the client's tag manager (per Kevin Cipriani, changes happen in Adobe Launch/GTM we have no
+access to) — but every fire lands in conversion_log with its full payload, so changes are reconstructable
+from the receiving side. Escalating steps, each pins one dimension:
+1. **Date new event types** — `core_advertiser_conversion_types` WHERE advertiser_id=X ORDER BY create_time.
+   Auto-registered at FIRST fire (verified to the second). Junk/SQLi strings here = pixel fuzzing/pentest.
+2. **Monthly shape scan** — conversion_log per month: COUNT, DISTINCT ip, COUNTIF(order_amt IS NOT NULL),
+   SUM(order_amt), n_types. Red flags: `sum == count` ($1 placeholder), n_amt→0 (amount param broke),
+   rows 2–3× at flat spend (firing scope changed), n_types spike (test/pentest).
+3. **Daily zoom** on the suspect window by IFNULL(conversion_type,'<NULL>') → exact cutover day + overlap.
+4. **Page breakdown** — NET.HOST(referer) + `REGEXP_EXTRACT(referer, r'[?&]step=([^&]+)')` + path, pre vs
+   post → where each tag fires; also surfaces stage/dev/qa hosts counted as conversions.
+5. **Payload diff** — TO_JSON_STRING(query) samples pre vs post → which params changed (type/shoamt/shoid),
+   unfilled template macros (literal `shoamt=ORDER AMOUNT`), pixel host (`px.steelhousemedia.com` = legacy
+   SteelHouse-era tag vs `px.mountain.com` = current).
+6. **Rogue/legacy-AID sweep** — GROUP BY advertiser_id over `NET.HOST(referer) LIKE '%<domain>%'` for one
+   month, then check each AID exists in `integrationprod.advertisers`. No row = dead account; its fires are
+   dark (no attribution, no reporting) — how WGU's lead event went missing (AID 10942).
+7. **Rule out MNTN-side** — core_pixel_integrations update_time, archives_advertiser_setting_archives,
+   VV windows via archives_advertiser_archives (live `advertisers.conversion_window` is a STRING in
+   HOURS, '720:00:00' = 30d — normalize before comparing to the archive's day-grain interval).
+
 ### WGU (31357) "revenue" — it was NEVER real, and the Sep-Oct 2025 cliff is a client-side retag (WGU-REV, 2026-07-08)
 Full investigation of the "WGU revenue → 0 after Sep 2025" chart (TI-1037 dashboard, prospecting obj=1/fl=1
 scope). Key facts, all verified in BQ:
@@ -353,7 +375,12 @@ scope). Key facts, all verified in BQ:
    reporting — WGU's lead conversions are dark, not gone.** Rows exist in conversion_log under 10942 if
    historical recovery is ever wanted. Meanwhile 31357's `lead` order_id is a residual ~114/mo.
 Neither pixel version ever sent email/phone. Route pixel-ingest validation gap + pentest question to
-**Ashley Pineda Varela** (Pixel Ops).
+**Ashley Pineda Varela** (Pixel Ops). Related: § "WGU (31357) YoY comparisons are confounded by two 2025
+tracking breaks" (adds the **Jul 2025 visit-tracking step** — visits re-based ~1.2%→2.2% IVR, separate from
+this conversion-pixel story) and the pixel-registry forensics section (core_advertiser_conversion_types
+sentinels, data_sources id 23). WGU stance (Imani Clark, 2026-07-08): **lead-focused — revenue tracking is
+not a WGU priority**; open items are event taxonomy (lead vs app-submitted vs status-check), re-pointing the
+10942 lead pixel to 31357, and CPA-goal resets when firing scope is fixed.
 
 ### attribution_model_id
 - `attribution_model_type_id = 0` should be treated as `1` (last-touch) — known business rule.
@@ -3790,6 +3817,10 @@ cumulative distinct 10000-IPs 2.54M. CPD dashboard module 09rt.
 - Detection recipe: single-day burst of many distinct `conversion_type` values + `oastify.com`/injection strings + one IP → pentest, exclude from revenue. Check `TO_JSON_STRING(query)` → `shoamt` key for the raw payload.
 
 ## Conversion-pixel CONFIG registry — core_advertiser_conversion_types is AUTO-REGISTERED, data_source 23 = guid_log "MNTN Pixel" (WGU-REV, 2026-07-08)
+
+**No MNTN table tracks advertiser-side pixel/tag changes** (edits live in their site/tag manager) — confirmed
+by Kevin Cipriani 2026-07-08. Receiving-side reconstruction (conversion_log shape + this registry's
+create_time) is the only detection path; dashboarded as CPD query "13 Pixel Health" + scorecard flag (TI-1037).
 Where conversion config actually lives in `bronze.integrationprod` (no `conversion_sources` table exists):
 - **`core_advertiser_conversion_types`** (advertiser_id, conversion_type, conversion_source_id, create_time; NO
   user_id, NO deleted col) — rows are **auto-created the instant a new `conversion_type` string first appears in
@@ -3816,6 +3847,11 @@ anomaly = a PENTEST**: 74 SQL-injection/XSS/Burp-Collaborator (oastify.com) payl
 2026-02-07 19:38–22:27, with bogus order_amts summing $222.9M in conversion_log. WGU onboarded
 "orca-integration" 2026-04-29 + Tealium CRM list mappings 2026-04-30 (offline_attribution=false) right before
 the May 2026 conversion-volume spike (125,940 rows) — correlation, not verified causation.
+**Deeper payload-level findings (WGU-REV, same day)** live in § "WGU (31357) revenue — it was NEVER real":
+the new tag's amount param is the literal unfilled macro `shoamt=ORDER AMOUNT` (100% of fires); the LEAD
+event now fires under **dead AID 10942** (legacy SteelHouse tag, ~18K/mo dark); the May spike = an untyped
+LP tag that cycled off 05-16 and **resurged 06-24** (~1.8–2.5K/day, ongoing); the Feb pentest reconciles
+bronze $71.7T → silver $222.9M → attributed **$833,883.40** to the dollar.
 
 ## WGU (31357) YoY comparisons are confounded by two 2025 tracking breaks (TI-1037, 2026-07-08)
 Anyone comparing WGU across mid-2025 must know: (1) **Oct 2025 conversion-pixel change** — conversions
@@ -3825,3 +3861,7 @@ conversions +252%" is the pixel, not performance. (2) **Jul 2025 visit-tracking 
 MoM at flat spend AND flat impressions; IVR re-based from ~1.2% to ~2.2% permanently. VV lookback ruled out
 (PRO = 14d unchanged since 2020). Treat pre-Jul'25 visit levels and pre-Oct'25 conversion/revenue levels as
 different measurement regimes.
+Also (TI-1037, 2026-07-08): **WGU runs UNGATED** — its 5 core prospecting campaigns spent every delivering
+day Jan'25–Jun'26 at HHST≤0 (905 campaign-days per half; the "905 of 925" scorecard row = 5 camps × 181d
+plus new campaign **127483, WGU's first-ever gated campaign** — 20 gated days by Jun'26). And a third
+tag-scope step: **May'26 pixel fires 2.8x** (44.7k→125.9k/mo) on top of the Jul'25/Oct'25 breaks.

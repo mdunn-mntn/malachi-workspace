@@ -136,6 +136,8 @@ Paulo announced a reorg merging big pieces of the **reporting world** under **Ka
 
 **Pixel Signals** is a new team owning all back-end services and integrations that consume or produce pixel/related data (pixel service, GA, Rockerbox, etc.). — *Likely supersedes the prior "pixel ops" routing (conversion_log / pixel-firing bugs); confirm whether Ashley Pineda Varela now sits here.*
 
+**Client-side pixel QA chain (observed 2026-07-08, WGU thread):** **Jessica DeLeon** (CS) runs the customer-facing "Conversion Pixel QA" docs — convention: content *below the green highlight* in the PIXEL QA doc tab is customer-facing; ticket-summary tabs and internal notes are not. **Kevin Cipriani** owns the pixel ticket summaries / internal QA notes. **Imani Clark** = Senior Director, Platform (owns the client conversion-pixel-strategy conversation). Kevin's framing: tag changes happen in client tag managers we can't access — true for *rules*, but our logs reconstruct *what/when* (see data_knowledge § "Detecting an advertiser pixel/tag change").
+
 **Measurement** = the former **BER** team merged with **ATTR** (attribution). BER-2250 (incrementality) work therefore now lives under the Measurement team.
 
 **Reporting directly to Paulo Black:**

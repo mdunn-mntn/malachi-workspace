@@ -6,6 +6,63 @@
 
 ---
 
+## Update 2026-07-08 (later) — WGU-REV spin-out validates the dashboard; module 11 units fix
+
+The WGU revenue-to-zero anomaly (spotted on this dashboard) was investigated end-to-end same-day
+("WGU-REV" queries in bq_perf_log; full case study in `knowledge/data_knowledge.md` § "WGU (31357)
+revenue" + "Detecting an advertiser pixel/tag change"). Relevant to THIS ticket:
+
+- **Chart scope independently validated:** reproducing `05_monthly_metrics` scope (obj=1 AND fl=1 AND
+  deleted=FALSE from `integrationprod.campaigns`) matches the rendered WGU revenue series month-for-month,
+  incl. the Sep '25 tooltip **2,488 exact**. No other scope (obj≠4, fl=1-any-obj, obj=4, all) comes close.
+- **Module 11 units bug FIXED (needs re-paste into Mode):** live `advertisers` row stores
+  `conversion_window` as `'720:00:00'` (**HOURS**; = 30d) while the archive is day-grain — the live-row
+  fallback regex read 720 as days and manufactured a phantom "conv 30→720" change stamped at the live
+  update_time. Fix in `batch1_queries/11 VV Window...sql`: normalize `^\d+:` strings via DIV(...,24).
+- **Pixel-health (query 13) future enhancement candidate:** a rogue/legacy-AID sweep (GROUP BY
+  advertiser_id over NET.HOST(referer) LIKE advertiser domain, then anti-join `advertisers`) — WGU's lead
+  event fires under **dead AID 10942** (~18K/mo dark), invisible to any per-AID query the dashboard runs.
+- CS pixel-QA internal note (Jessica DeLeon) independently confirmed from conversion_log to the day:
+  untyped LP-tag bursts 04-30→05-16 and 06-24→present — the "possible tracking changes" flag's WGU
+  validation pattern is real and recurring.
+
+## Update 2026-07-08 (evening) — params finalized, flags v3 (15 signals, impact-banded), pixel detection, CIL floor 2023-10
+
+- **Params final design:** Advertiser = query-backed searchable dropdown ("id · name", 4,962 advertisers with
+  18-mo spend; `options: labels/values` so consumer queries are untouched). Periods = free DATE PICKERS (the
+  dropdown experiment was built and REVERTED — Malachi wants arbitrary dates): start sentinel 1900-01-01 →
+  Jan 1 of current year; end EXCLUSIVE, clamped `LEAST(end, first-of-current-month)`, default 2027-01-01 =
+  "through the last full month" all year. All queries parse params as `DATE(LEFT(p,10))`. **Mode landmines:**
+  select defaults must be QUOTED (unquoted YYYY-MM-DD YAML-datifies → matches no option → param EMPTY); an
+  undefined/broken param substitutes as empty string and kills EVERY consumer query at once ("no data
+  everywhere" incident); date params take only static defaults.
+- **09rt final semantics:** prospecting = obj 1/5/6 (all stages); RTC serves count (still a targeted touch);
+  HI = 10000 at bid time; `rt_prosp_first` feeds the score-agnostic **IP Recirculation tab** (full window, no
+  score floor); HI tab gained a Re-touch % column. Module 06 tier shares are now of SCORE-LOGGED impressions
+  + a coverage row (a P1 straddling the logging onset read "4.5% HI" when ~98% of scored imps were HI), and
+  deltas are in percentage POINTS (relative % on near-zero shares printed +2,021,727%).
+- **Flags v3 — 15 signals from Malachi's 11-check spec, impact-ordered in three bands:** outcomes (spend,
+  metric moves ≥15% direction-aware) → drivers most-impactful-first (avg HI share <90%/−3pp bars → no-gate
+  campaign-days → avg HHST → high-spend low-gate w/ holiday attribution → short flights → MM usage →
+  geo/3P restriction of MM → DS16/21/34 adds → HI then all-IP re-touch at 50%/80% bars) → **measurement
+  confounds quarantined at the bottom** (VV lookback; MoM tracking-change detector: visits/convs steps ≥1.5x
+  at ±33% flat spend + order-values-stop; pixel/tag changes). A node smoke harness (scratchpad
+  `flags_smoke*.js`) renders the scorecard against fabricated datasets and asserts row presence AND band
+  ordering — reused each flags edit.
+- **New query "13 Pixel Health"** (conversion_log monthly shape + `core_advertiser_conversion_types`
+  registry): advertiser-side tag changes reconstructed from the receiving side — **no MNTN table tracks
+  their tag manager (Kevin Cipriani, 2026-07-08)**. WGU validation reads the whole case: Sep'25
+  `app_submitted` registered → Oct'25 fires 2.4x + order values collapse → Nov'25 stop → **Feb'26 75-type
+  SQL-injection burst (pentest — full forensics in WGU-REV: Burp Suite, IP 136.60.22.42)** → May'26 fires
+  2.8x. Injection bursts are promoted ahead of the flag row's 4-item display cap.
+- **CIL floor corrected to 2023-10-01 FIXED** (~33 months and growing; partitions + 53–92M rows/day
+  verified) — 2-year all-IP cumulative works TODAY; HI cumulative is floored at the Jun'25 score onset
+  (2 years of HI history arrives Jun 2027). Cumulative counts are window-relative (left-censored at window
+  start). **WGU runs ungated:** 5 core campaigns at HHST≤0 every delivering day both halves; first gated
+  campaign ever = 127483 (Apr'26+).
+- Layout: 820px table cap scoped to the YoY table; narrow tables capped 900–1000px; flags/summary tables and
+  the monthly grid fill the width. Low-gate flag reworded (gate SETTING below 6666, P2-only check).
+
 ## Update 2026-07-08 — Retargeting tab + Geo + flags scorecard; HI & frequency semantics settled
 
 Batch-1 completion via the paste-deploy workflow (index = 5 tabs: Overview / Audience & Scores / Gate &

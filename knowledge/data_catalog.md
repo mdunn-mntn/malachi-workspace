@@ -33,7 +33,7 @@ This confirms `bronze.integrationprod` is a Postgres replica via GCP Datastream 
 
 **Project:** dw-main-silver | **Dataset:** logdata
 All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
-**Retention:** Earliest data is 2025-01-01 for most tables (event_log, impression_log). viewability_log starts 2025-04-08. No BQ layer (silver or bronze.raw) has data before 2025-01-01. Pre-2025 data only in Greenplum coreDW (deprecated April 30, 2026). Per-physical-table retention details in `data_knowledge.md` under "Partition Filter Best Practice".
+**Retention:** Earliest data is 2025-01-01 for most tables (event_log, impression_log). viewability_log starts 2025-04-08. **Exceptions (verified 2026-07-08): `cost_impression_log` back to 2023-10-01 (fixed floor, window grows) and silver `conversion_log` to ~2024-01 — the old "no BQ data before 2025-01-01" blanket claim is false for these.** Pre-2025 data only in Greenplum coreDW (deprecated April 30, 2026). Per-physical-table retention details in `data_knowledge.md` under "Partition Filter Best Practice".
 
 ---
 
