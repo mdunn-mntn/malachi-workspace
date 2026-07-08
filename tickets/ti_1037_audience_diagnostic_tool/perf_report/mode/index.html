@@ -1925,14 +1925,17 @@ function render(rows, root, H) {
   var cum = 0;
   var cumSeries = M.map(function (r) { cum += r.newHi; return cum; });
 
-  var idHi = H.uid(), idFq = H.uid();
+  var idHi = H.uid(), idCum = H.uid(), idFq = H.uid();
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Retargeting reach & HI recirculation</div>';
   html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Monthly retargeting (obj=4) delivery. HI = the IP scored ≥8001 on ANY impression in the window (retargeting rows carry no score — scores ride prospecting, logged since 2025-06). New = first month that HI IP was retargeted; cumulative = running distinct retargeted HI IPs. Brand-new = first-ever contact with this advertiser on any campaign. Empty months = no RT delivery.</div>';
 
-  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Retargeted HI IPs — new vs returning, with cumulative distinct</div>';
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Retargeted HI IPs: new vs returning — falling new-share = recirculation</div>';
   html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idHi + '"></canvas></div>';
+  var cumFinal = cumSeries.length ? cumSeries[cumSeries.length - 1] : 0;
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Cumulative distinct retargeted HI — ' + H.fmtK(cumFinal) + ' so far (still climbing = pool not exhausted)</div>';
+  html += '<div style="height:200px;margin-bottom:14px"><canvas id="' + idCum + '"></canvas></div>';
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Reach & frequency — gray bars = distinct IPs, red = imps per IP</div>';
   html += '<div style="height:220px;margin-bottom:14px"><canvas id="' + idFq + '"></canvas></div>';
 
@@ -1992,8 +1995,9 @@ function render(rows, root, H) {
           data: M.map(function (r) { return r.newHi; }) },
         { label: 'returning HI (recirculated)', backgroundColor: C.AMBER,
           data: M.map(function (r) { return r.retHi; }) },
-        { type: 'line', label: 'cumulative distinct HI', borderColor: C.RED, backgroundColor: C.RED,
-          borderWidth: 2, pointRadius: 2, tension: 0.15, yAxisID: 'y2', order: 0, data: cumSeries }
+        { type: 'line', label: 'new share of HI (%)', borderColor: C.NAVY, backgroundColor: C.NAVY,
+          borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false, yAxisID: 'y2', order: 0,
+          data: M.map(function (r) { return r.hi ? +(100 * r.newHi / r.hi).toFixed(0) : null; }) }
       ]
     },
     options: {
@@ -2001,10 +2005,21 @@ function render(rows, root, H) {
       scales: {
         x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, color: '#666' } },
         y: { stacked: true, beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } },
-        y2: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 }, color: C.RED } }
+        y2: { position: 'right', beginAtZero: true, suggestedMax: 100, grid: { display: false },
+              ticks: { font: { size: 9 }, color: C.NAVY, callback: function (v) { return v + '%'; } } }
       },
       plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 11 } } }
     }
+  });
+  chartSafe(idCum, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ label: 'cumulative distinct HI', borderColor: C.NAVY,
+      backgroundColor: 'rgba(39,73,109,0.10)', fill: true, borderWidth: 2, pointRadius: 2, tension: 0.15,
+      data: cumSeries }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#666' } },
+                y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } } } }
   });
   chartSafe(idFq, {
     type: 'bar',
