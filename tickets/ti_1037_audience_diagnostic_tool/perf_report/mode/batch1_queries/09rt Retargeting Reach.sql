@@ -23,6 +23,8 @@
 --   rt_new_hi         -> first-ever month the IP was served at 10000
 --   rt_returning_hi   -> re-touched: also served at 10000 in an earlier month
 --   rt_brand_new      -> first-ever contact on ANY campaign is this month
+--   rt_prosp_first    -> first month PROSPECTING served this IP (feeds the
+--                        all-IP recirculation tab's cumulative-distinct line)
 WITH prosp AS (
   SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id = {{ Advertiser_ID }} AND deleted = FALSE
@@ -54,7 +56,8 @@ pim AS (
   FROM all_base
   WHERE campaign_id IN (SELECT campaign_id FROM prosp) AND not_rtc
   GROUP BY ip, mo
-)
+),
+prosp_first AS (SELECT ip, MIN(mo) AS first_p_mo FROM pim GROUP BY ip)
 SELECT
   pim.mo                                                  AS rt_mo,
   COUNT(*)                                                AS rt_reach,
@@ -64,6 +67,7 @@ SELECT
   COUNTIF(pim.hi_now AND hf.first_hi_mo = pim.mo)         AS rt_new_hi,
   COUNTIF(pim.hi_now AND hf.first_hi_mo < pim.mo)         AS rt_returning_hi,
   COUNTIF(fs.first_mo = pim.mo)                           AS rt_brand_new,
+  COUNTIF(pf.first_p_mo = pim.mo)                         AS rt_prosp_first,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)   AS p1_start,
   DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR)   AS p1_end,
   DATE('{{ Period_Start }}')                              AS p2_start,
@@ -71,5 +75,6 @@ SELECT
 FROM pim
 LEFT JOIN hi_first hf USING (ip)
 LEFT JOIN first_seen fs USING (ip)
+LEFT JOIN prosp_first pf USING (ip)
 GROUP BY rt_mo
 ORDER BY rt_mo

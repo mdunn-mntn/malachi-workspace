@@ -2048,10 +2048,153 @@ function render(rows, root, H) {
   });
 }
   return render; })();
+  // ---- All-IP recirculation (_iprec): the score-agnostic version of the HI tab.
+  //      Same 09rt dataset; net-new = first-ever advertiser contact (any campaign),
+  //      re-touched = served before. No score dependency -> full window measurable. ----
+  RENDER["_iprec"] = (function () {
+function render(rowsIgnored, root, H) {
+  var C = H.C;
+  var rows = ds("09rt Retargeting Reach", "rt_reach");
+  if (!rows) {
+    var known = (window.datasets || []).find(function (d) { return d && norm(d.name) === norm("09rt Retargeting Reach"); });
+    if (known) rows = [];
+    else { root.innerHTML = '<h2>IP recirculation</h2><div class="err">09rt Retargeting Reach — no data (Run the query)</div>'; return; }
+  }
+  if (!rows.length) {
+    root.innerHTML = '<div style="padding:16px;color:#888;font:13px Helvetica Neue,Arial">No prospecting delivery in the window.</div>';
+    return;
+  }
+  var by = {};
+  rows.forEach(function (r) { by[String(r.rt_mo).slice(0, 7)] = r; });
+  var keys = Object.keys(by).sort();
+  var r0b = rows[0] || {};
+  var startK = r0b.p1_start ? String(r0b.p1_start).slice(0, 7) : keys[0];
+  var endK = keys[keys.length - 1];
+  if (r0b.p2_end) {
+    var pe = String(r0b.p2_end).slice(0, 10);
+    var ey = +pe.slice(0, 4), em = +pe.slice(5, 7);
+    if (pe.slice(8, 10) === "01") { em -= 1; if (em === 0) { em = 12; ey -= 1; } }
+    endK = ey + "-" + ("0" + em).slice(-2);
+  }
+  var months = [];
+  (function () {
+    var y = +startK.slice(0, 4), m = +startK.slice(5, 7);
+    var ye = +endK.slice(0, 4), me = +endK.slice(5, 7);
+    while (y < ye || (y === ye && m <= me)) {
+      months.push(y + "-" + ("0" + m).slice(-2));
+      if (++m > 12) { m = 1; y++; }
+    }
+  })();
+  var MONN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function moLbl(k) { return MONN[+k.slice(5, 7) - 1] + " '" + k.slice(2, 4); }
+  var M = months.map(function (k) {
+    var r = by[k] || {};
+    var reach = H.num(r.rt_reach), bn = H.num(r.rt_brand_new);
+    return { mo: k, reach: reach, imps: H.num(r.rt_imps), freqMed: H.num(r.rt_freq_median),
+             brandNew: bn, reTouched: Math.max(0, reach - bn), prospFirst: H.num(r.rt_prosp_first) };
+  });
+  // cumulative distinct prospecting-served IPs; fallback to brand-new cumsum if the
+  // dataset predates the rt_prosp_first column (older Run)
+  var haveFirst = M.some(function (r) { return r.prospFirst > 0; });
+  var cum = 0;
+  var cumSeries = M.map(function (r) { cum += (haveFirst ? r.prospFirst : r.brandNew); return cum; });
+
+  var idIp = H.uid(), idCum = H.uid();
+  var html = '';
+  html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
+  html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">IP recirculation — all served IPs, any score</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">The score-agnostic version of the HI tab: every IP served by prospecting (all stages, RTC-excluded). Net-new = first-ever contact from this advertiser on ANY campaign; re-touched = served before. Unless DS16 (net-new gate) is on, prospecting re-serves touched IPs — VV/conversion excludes only remove visitors/converters. No score dependency, so the FULL window is measurable (no Jun-2025 floor). Cumulative = distinct IPs ever served by prospecting. Empty months = no prospecting delivery.</div>';
+
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">IPs served: net-new vs re-touched — rising re-touch share = pool recirculating</div>';
+  html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idIp + '"></canvas></div>';
+  var cumFinal = 0;
+  cumSeries.forEach(function (v) { if (v != null) cumFinal = v; });
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Cumulative distinct IPs served by prospecting — ' + H.fmtK(cumFinal) + ' so far (flattening = pool exhausted)</div>';
+  html += '<div style="height:200px;margin-bottom:14px"><canvas id="' + idCum + '"></canvas></div>';
+
+  var th = 'text-align:right;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
+  html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
+  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP med (avg)</th><th style="' + th + '">Net-new IPs</th><th style="' + th + '">Re-touched IPs</th><th style="' + th + '">Re-touch %</th><th style="' + th + '">Cum. distinct IPs</th></tr></thead><tbody>';
+  M.forEach(function (r, i) {
+    var bg = (i % 2 === 0) ? "rgba(0,0,0,0.03)" : "transparent";
+    var td = 'text-align:right;padding:4px 8px;color:#222;white-space:nowrap';
+    if (!r.reach) {
+      html += '<tr style="background:' + bg + '">'
+        + '<td style="text-align:left;padding:4px 8px;white-space:nowrap;color:#bbb">' + H.esc(moLbl(r.mo)) + '</td>'
+        + '<td colspan="6" style="text-align:left;padding:4px 8px;color:#bbb;font-size:11px">no prospecting delivery</td>'
+        + '<td style="' + td + ';color:#bbb">' + H.fmtK(cumSeries[i]) + '</td>'
+        + '</tr>';
+      return;
+    }
+    html += '<tr style="background:' + bg + '">'
+      + '<td style="text-align:left;padding:4px 8px;white-space:nowrap">' + H.esc(moLbl(r.mo)) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(r.reach) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(r.imps) + '</td>'
+      + '<td style="' + td + '">' + (r.freqMed ? H.fmtK(r.freqMed) : "—")
+        + ' <span style="color:#aaa;font-size:10px">(' + (r.imps / r.reach).toFixed(1) + ')</span></td>'
+      + '<td style="' + td + ';color:' + C.GREEN + ';font-weight:700">' + H.fmtK(r.brandNew) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(r.reTouched) + '</td>'
+      + '<td style="' + td + ';font-weight:700;color:' + C.AMBER + '">' + Math.round(100 * r.reTouched / r.reach) + '%</td>'
+      + '<td style="' + td + ';font-weight:700;color:' + C.NAVY + '">' + H.fmtK(cumSeries[i]) + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  root.innerHTML = html;
+
+  var labels = months.map(moLbl);
+  function chartSafe(id, cfg) {
+    try {
+      var el = root.querySelector('#' + id) || document.getElementById(id);
+      if (!el) throw new Error('canvas #' + id + ' not found');
+      new Chart(el.getContext('2d'), cfg);
+    } catch (e) {
+      var box = document.createElement('div');
+      box.className = 'err';
+      box.textContent = 'chart error (' + id + '): ' + (e && e.message);
+      root.appendChild(box);
+    }
+  }
+  chartSafe(idIp, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'net-new IPs (first-ever contact)', backgroundColor: C.GREEN,
+          data: M.map(function (r) { return r.brandNew; }) },
+        { label: 're-touched IPs (served before)', backgroundColor: C.AMBER,
+          data: M.map(function (r) { return r.reTouched; }) },
+        { type: 'line', label: 're-touch share (%)', borderColor: C.NAVY, backgroundColor: C.NAVY,
+          borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false, yAxisID: 'y2', order: 0,
+          data: M.map(function (r) { return r.reach ? +(100 * r.reTouched / r.reach).toFixed(0) : null; }) }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, color: '#666' } },
+        y: { stacked: true, beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } },
+        y2: { position: 'right', beginAtZero: true, suggestedMax: 100, grid: { display: false },
+              ticks: { font: { size: 9 }, color: C.NAVY, callback: function (v) { return v + '%'; } } }
+      },
+      plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 11 } } }
+    }
+  });
+  chartSafe(idCum, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ label: 'cumulative distinct IPs', borderColor: C.NAVY,
+      backgroundColor: 'rgba(39,73,109,0.10)', fill: true, borderWidth: 2, pointRadius: 2, tension: 0.15,
+      data: cumSeries }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#666' } },
+                y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } } } }
+  });
+}
+  return render; })();
   // Modules grouped into tabs by diagnostic category. A module's `tab` decides where it
   // renders; tab panels are lazy-rendered on first activation so Chart.js always sizes
   // against a visible container (charts built inside display:none get 0-width canvases).
-  var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement", "HI Recirculation"];
+  var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement", "IP Recirculation", "HI Recirculation"];
   var MODULES = [
     { title: "Diagnostic flags", name: "_flags", sig: "", tab: "Overview", multi: true },
     { title: "YoY performance", name: "04 YoY Metrics", sig: "period", tab: "Overview" },
@@ -2065,6 +2208,7 @@ function render(rows, root, H) {
     { title: "Prospecting flights", name: "08 Flights", sig: "flight_days", tab: "Gate & Flights" },
     { title: "Campaign spans", name: "01 Campaign Group Gantt", sig: "first_active_day", tab: "Delivery & Measurement" },
     { title: "Verified-visit window", name: "11 VV Window", sig: "vv_change_date", tab: "Delivery & Measurement" },
+    { title: "IP recirculation (all IPs)", name: "_iprec", sig: "", tab: "IP Recirculation", multi: true },
     { title: "HI recirculation (prospecting)", name: "09rt Retargeting Reach", sig: "rt_reach", tab: "HI Recirculation" },
   ];
 
