@@ -19,6 +19,11 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   report Run produced (drafts included). After pasting any query/HTML change, hit **Run**, or the HTML renders
   against stale data (symptom seen 2026-07-07: gate trajectory showed 4 dead zero-spend groups from a
   draft-era run while the correct SQL returns 21 groups with 119362/108055/85384 on top).
+- **GOTCHA — undefined Liquid params render as EMPTY STRING.** Pasting a query that references a param the
+  report doesn't define (e.g. the old tool's `{{AID}}` / `{{WIN_START}}`) doesn't error at parse time — the tag
+  just vanishes, leaving broken SQL and a cryptic error like `Unexpected keyword AND at [24:26]`
+  (= `WHERE advertiser_id =  AND …`). Only paste from `mode/batch1_queries/` (params `{{ Advertiser_ID }}`,
+  `{{ Period_Start }}`, `{{ Period_End }}`) — never from the old tool's `perf_report/queries/`.
 - **GOTCHA — no Chart.js date adapter.** Only `chart.umd.min.js` is loaded; a scale with `type:"time"` throws
   `This method is not implemented: Check that a complete date adapter is provided.` Use `type:"linear"` with
   epoch-ms x values + a `ticks.callback` that formats the month (pattern in modules 03 and 11).
