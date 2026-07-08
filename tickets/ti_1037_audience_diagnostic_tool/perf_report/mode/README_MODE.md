@@ -24,6 +24,9 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   just vanishes, leaving broken SQL and a cryptic error like `Unexpected keyword AND at [24:26]`
   (= `WHERE advertiser_id =  AND …`). Only paste from `mode/batch1_queries/` (params `{{ Advertiser_ID }}`,
   `{{ Period_Start }}`, `{{ Period_End }}`) — never from the old tool's `perf_report/queries/`.
+- **GOTCHA — Mode injects the HTML component into the page TWICE.** `document.getElementById` can
+  resolve to the hidden duplicate, so charts "render" invisibly with no error. Always resolve elements
+  within your own section (`root.querySelector('#id')`) — see chartSafe in the 09rt render.
 - **GOTCHA — no Chart.js date adapter.** Only `chart.umd.min.js` is loaded; a scale with `type:"time"` throws
   `This method is not implemented: Check that a complete date adapter is provided.` Use `type:"linear"` with
   epoch-ms x values + a `ticks.callback` that formats the month (pattern in modules 03 and 11).

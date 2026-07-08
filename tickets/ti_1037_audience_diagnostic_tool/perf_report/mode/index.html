@@ -1941,9 +1941,17 @@ function render(rows, root, H) {
   html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
   html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP</th><th style="' + th + '">HI reach</th><th style="' + th + '">New HI</th><th style="' + th + '">Returning HI</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
   M.forEach(function (r, i) {
-    if (!r.reach) return;
     var bg = (i % 2 === 0) ? "rgba(0,0,0,0.03)" : "transparent";
     var td = 'text-align:right;padding:4px 8px;color:#222;white-space:nowrap';
+    if (!r.reach) { // window month with no RT delivery — keep the row, muted
+      html += '<tr style="background:' + bg + '">'
+        + '<td style="text-align:left;padding:4px 8px;white-space:nowrap;color:#bbb">' + H.esc(moLbl(r.mo)) + '</td>'
+        + '<td colspan="6" style="text-align:left;padding:4px 8px;color:#bbb;font-size:11px">no retargeting delivery</td>'
+        + '<td style="' + td + ';color:#bbb">' + H.fmtK(cumSeries[i]) + '</td>'
+        + '<td style="' + td + ';color:#bbb">—</td>'
+        + '</tr>';
+      return;
+    }
     html += '<tr style="background:' + bg + '">'
       + '<td style="text-align:left;padding:4px 8px;white-space:nowrap">' + H.esc(moLbl(r.mo)) + '</td>'
       + '<td style="' + td + '">' + H.fmtK(r.reach) + '</td>'
