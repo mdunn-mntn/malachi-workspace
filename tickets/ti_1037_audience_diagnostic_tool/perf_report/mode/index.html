@@ -1922,18 +1922,20 @@ function render(rows, root, H) {
     return { mo: k, reach: H.num(r.rt_reach), imps: H.num(r.rt_imps), hi: H.num(r.rt_hi_reach),
              newHi: H.num(r.rt_new_hi), retHi: H.num(r.rt_returning_hi), brandNew: H.num(r.rt_brand_new) };
   });
+  var SCORE_FLOOR = "2025-06"; // household_score logged into CIL from this month
   var cum = 0;
-  var cumSeries = M.map(function (r) { cum += r.newHi; return cum; });
+  var cumSeries = M.map(function (r) { if (r.mo < SCORE_FLOOR) return null; cum += r.newHi; return cum; });
 
   var idHi = H.uid(), idCum = H.uid(), idFq = H.uid();
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Retargeting reach & HI recirculation</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Monthly retargeting (obj=4) delivery. HI = the IP scored ≥8001 on ANY impression in the window (retargeting rows carry no score — scores ride prospecting, logged since 2025-06). New = first month that HI IP was retargeted; cumulative = running distinct retargeted HI IPs. Brand-new = first-ever contact with this advertiser on any campaign. Empty months = no RT delivery.</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Monthly retargeting (obj=4) delivery. HI = the IP scored ≥8001 on an impression AT OR BEFORE that month — the same no-future-borrowing rule as the score-tier charts (RT rows carry no score; scores ride prospecting, logged since Jun 2025, so HI metrics start there and earlier months read “no score data”). New = first month a known-HI IP was retargeted; cumulative = running distinct. Brand-new = first-ever contact on any campaign. Empty months = no RT delivery.</div>';
 
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Retargeted HI IPs: new vs returning — falling new-share = recirculation</div>';
   html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idHi + '"></canvas></div>';
-  var cumFinal = cumSeries.length ? cumSeries[cumSeries.length - 1] : 0;
+  var cumFinal = 0;
+  cumSeries.forEach(function (v) { if (v != null) cumFinal = v; });
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Cumulative distinct retargeted HI — ' + H.fmtK(cumFinal) + ' so far (still climbing = pool not exhausted)</div>';
   html += '<div style="height:200px;margin-bottom:14px"><canvas id="' + idCum + '"></canvas></div>';
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Reach & frequency — gray bars = distinct IPs, red = imps per IP</div>';
@@ -1950,20 +1952,23 @@ function render(rows, root, H) {
       html += '<tr style="background:' + bg + '">'
         + '<td style="text-align:left;padding:4px 8px;white-space:nowrap;color:#bbb">' + H.esc(moLbl(r.mo)) + '</td>'
         + '<td colspan="6" style="text-align:left;padding:4px 8px;color:#bbb;font-size:11px">no retargeting delivery</td>'
-        + '<td style="' + td + ';color:#bbb">' + H.fmtK(cumSeries[i]) + '</td>'
+        + '<td style="' + td + ';color:#bbb">' + (cumSeries[i] == null ? '—' : H.fmtK(cumSeries[i])) + '</td>'
         + '<td style="' + td + ';color:#bbb">—</td>'
         + '</tr>';
       return;
     }
+    var preScore = r.mo < SCORE_FLOOR;
     html += '<tr style="background:' + bg + '">'
       + '<td style="text-align:left;padding:4px 8px;white-space:nowrap">' + H.esc(moLbl(r.mo)) + '</td>'
       + '<td style="' + td + '">' + H.fmtK(r.reach) + '</td>'
       + '<td style="' + td + '">' + H.fmtK(r.imps) + '</td>'
       + '<td style="' + td + '">' + (r.reach ? (r.imps / r.reach).toFixed(1) : "—") + '</td>'
-      + '<td style="' + td + '">' + H.fmtK(r.hi) + '</td>'
-      + '<td style="' + td + ';color:' + C.GREEN + ';font-weight:700">' + H.fmtK(r.newHi) + '</td>'
-      + '<td style="' + td + '">' + H.fmtK(r.retHi) + '</td>'
-      + '<td style="' + td + ';font-weight:700;color:' + C.NAVY + '">' + H.fmtK(cumSeries[i]) + '</td>'
+      + (preScore
+        ? '<td colspan="4" style="text-align:center;padding:4px 8px;color:#bbb;font-size:11px">no score data (pre-2025-06)</td>'
+        : '<td style="' + td + '">' + H.fmtK(r.hi) + '</td>'
+          + '<td style="' + td + ';color:' + C.GREEN + ';font-weight:700">' + H.fmtK(r.newHi) + '</td>'
+          + '<td style="' + td + '">' + H.fmtK(r.retHi) + '</td>'
+          + '<td style="' + td + ';font-weight:700;color:' + C.NAVY + '">' + H.fmtK(cumSeries[i]) + '</td>')
       + '<td style="' + td + ';color:#777">' + H.fmtK(r.brandNew) + '</td>'
       + '</tr>';
   });
