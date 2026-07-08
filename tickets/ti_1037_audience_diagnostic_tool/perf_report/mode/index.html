@@ -1601,6 +1601,7 @@ function render(rowsIgnored, root, H) {
   var flights = ds("08 Flights", "flight_days");
   var rt = ds("09rt Retargeting Reach", "rt_reach");
   var geo = ds("12 Geo Changes", "n_dma");
+  var px = ds("13 Pixel Health", "px_rows");
 
   // period bounds from whichever dataset carries them
   var bsrc = (flights && flights[0]) || (vv && vv[0]) || (clog && clog[0]) || (rt && rt[0]) || (geo && geo[0]) || null;
@@ -1720,6 +1721,39 @@ function render(rowsIgnored, root, H) {
       hits.length ? "flag" : "ok",
       hits.length ? "metric re-based at flat spend — verify pixel/site changes before trusting YoY" : "");
   } else add("Possible tracking changes (MoM steps)", "—", "—", "", "na", "run query 05");
+
+  // ---- 2c) advertiser-side PIXEL/TAG changes, reconstructed from conversion_log
+  //      shape (no MNTN table tracks their tag manager — confirmed w/ Kevin Cipriani):
+  //      new conversion types, fire-volume steps, order values stopping, $1 placeholders ----
+  if (px && px.length && p1s) {
+    var pxm = px.map(function (r) { return { mo: String(r.px_mo).slice(0, 7), rows: H.num(r.px_rows),
+      nAmt: H.num(r.px_n_amt), sumAmt: H.num(r.px_sum_amt),
+      newTypes: H.num(r.px_new_types), added: r.px_types_added ? String(r.px_types_added) : "" }; })
+      .sort(function (a, b) { return a.mo < b.mo ? -1 : 1; });
+    var pxHits = [], plc = false;
+    for (var pi = 0; pi < pxm.length; pi++) {
+      var pc = pxm[pi], pv = pi ? pxm[pi - 1] : null;
+      if (pc.mo + "-01" < p1s) continue; // history months before the window: context only
+      if (pc.newTypes > 0)
+        pxHits.push(moLbl(pc.mo) + " +" + pc.newTypes + " new type" + (pc.newTypes > 1 ? "s" : "")
+          + (pc.added && pc.newTypes <= 3 ? " (" + pc.added.slice(0, 40) + ")" : "")
+          + (pc.newTypes >= 10 ? " — injection-like burst, likely pixel fuzzing/pentest" : ""));
+      if (pv && pv.rows > 1000) {
+        var vr = pc.rows / pv.rows;
+        if (vr >= 2) pxHits.push(moLbl(pc.mo) + " fires " + vr.toFixed(1) + "x");
+        else if (vr <= 0.5) pxHits.push(moLbl(pc.mo) + " fires \u00f7" + (1 / vr).toFixed(1));
+        var cov0 = pv.rows ? pv.nAmt / pv.rows : 0, cov1 = pc.rows ? pc.nAmt / pc.rows : 0;
+        if (cov0 >= 0.5 && cov1 < 0.1) pxHits.push(moLbl(pc.mo) + " order values STOP");
+      }
+      if (!plc && pc.nAmt > 100 && Math.abs(pc.sumAmt - pc.nAmt) <= 0.02 * pc.nAmt) {
+        plc = true; pxHits.push("amounts are $1 placeholders (thru " + moLbl(pc.mo) + ")");
+      }
+    }
+    var pxTxt = pxHits.slice(0, 4).join(" · ") + (pxHits.length > 4 ? " · +" + (pxHits.length - 4) + " more" : "");
+    add("Pixel/tag changes (conversion_log)", "", "", pxHits.length ? pxTxt : "none",
+      pxHits.length ? "flag" : "ok",
+      pxHits.length ? "advertiser-side tag changes reconstructed from raw pixel fires — no config table exists for these" : "");
+  } else add("Pixel/tag changes (conversion_log)", "—", "—", "", "na", "run query 13");
 
   // ---- 3) MM usage (DS19 keyword / DS13 vertical / DS46 Fangorn) P1 -> P2 ----
   if (grpDs) {
