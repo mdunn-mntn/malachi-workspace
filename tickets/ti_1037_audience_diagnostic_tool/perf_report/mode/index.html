@@ -1762,8 +1762,10 @@ function render(rowsIgnored, root, H) {
     if (topM && n2 && byMoNG[topM] >= 0.5 * n2) drvNG += (drvNG ? " · " : "") + "mostly " + moLbl(topM);
     var pr1 = t1 ? 100 * n1 / t1 : 0, pr2 = t2 ? 100 * n2 / t2 : 0;
     var stg = (pr2 >= 15 && pr2 > pr1 + 5) ? "flag" : (n2 > n1 ? "watch" : "ok");
+    var dpp = pr2 - pr1;
     add("No-gate (HHST≤0) delivering days", n1 + " of " + t1 + " (" + pr1.toFixed(0) + "%)",
-      n2 + " of " + t2 + " (" + pr2.toFixed(0) + "%)", "", stg, drvNG);
+      n2 + " of " + t2 + " (" + pr2.toFixed(0) + "%)",
+      (dpp >= 0 ? "+" : "") + dpp.toFixed(0) + "pp", stg, drvNG);
   } else add("No-gate (HHST≤0) delivering days", "—", "—", "", "na", "run query 03b");
 
   // ---- render ----
