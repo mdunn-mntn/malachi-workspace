@@ -1960,17 +1960,27 @@ function render(rows, root, H) {
   root.innerHTML = html;
 
   var labels = months.map(moLbl);
-  new Chart(document.getElementById(idHi).getContext('2d'), {
-    type: 'bar', // mixed chart: per-dataset types override this default
+  // charts wrapped individually: a failure prints its error in place instead of
+  // silently blanking the canvas (and without nuking the table via the outer catch)
+  function chartSafe(id, cfg) {
+    try { new Chart(document.getElementById(id).getContext('2d'), cfg); }
+    catch (e) {
+      var el = document.getElementById(id);
+      if (el && el.parentNode) el.parentNode.innerHTML =
+        '<div class="err">chart error: ' + (e && e.message) + '</div>';
+    }
+  }
+  chartSafe(idHi, {
+    type: 'bar',
     data: {
       labels: labels,
       datasets: [
-        { type: 'bar', label: 'new HI (first month retargeted)', backgroundColor: C.GREEN, stack: 's',
+        { label: 'new HI (first month retargeted)', backgroundColor: C.GREEN,
           data: M.map(function (r) { return r.newHi; }) },
-        { type: 'bar', label: 'returning HI', backgroundColor: C.NAVY, stack: 's',
+        { label: 'returning HI', backgroundColor: C.NAVY,
           data: M.map(function (r) { return r.retHi; }) },
         { type: 'line', label: 'cumulative distinct HI', borderColor: C.RED, backgroundColor: C.RED,
-          borderWidth: 2, pointRadius: 2, tension: 0.15, yAxisID: 'y2', data: cumSeries }
+          borderWidth: 2, pointRadius: 2, tension: 0.15, yAxisID: 'y2', order: 0, data: cumSeries }
       ]
     },
     options: {
@@ -1983,7 +1993,7 @@ function render(rows, root, H) {
       plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 11 } } }
     }
   });
-  new Chart(document.getElementById(idFq).getContext('2d'), {
+  chartSafe(idFq, {
     type: 'line',
     data: { labels: labels, datasets: [{ label: 'imps per IP', borderColor: C.NAVY, backgroundColor: C.NAVY,
       borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false,
