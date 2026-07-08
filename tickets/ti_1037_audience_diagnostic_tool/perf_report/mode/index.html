@@ -27,6 +27,12 @@
   #cpd .panel .t { font-size:13px; font-weight:700; color:#333; margin:0 0 4px; }
   #cpd .loading { color:#888; font-size:14px; padding:40px 0; }
   #cpd .err { color:#D63B2F; font-size:13px; }
+  #cpd .tabbar { display:flex; gap:2px; border-bottom:2px solid #27496D; margin:14px 0 18px;
+                 position:sticky; top:0; background:#FAFAFA; z-index:5; }
+  #cpd .tabbtn { font:600 13px "Helvetica Neue", Inter, Arial, sans-serif; color:#555; background:transparent;
+                 border:none; padding:9px 16px 7px; cursor:pointer; border-radius:4px 4px 0 0; }
+  #cpd .tabbtn:hover { background:rgba(39,73,109,0.08); color:#27496D; }
+  #cpd .tabbtn.active { background:#27496D; color:#fff; }
 </style>
 
 <div id="cpd"><div class="loading">Loading client performance diagnostic…</div></div>
@@ -1520,31 +1526,71 @@ function render(rows, root, H) {
   });
 }
   return render; })();
+  // Modules grouped into tabs by diagnostic category. A module's `tab` decides where it
+  // renders; tab panels are lazy-rendered on first activation so Chart.js always sizes
+  // against a visible container (charts built inside display:none get 0-width canvases).
+  var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement"];
   var MODULES = [
-    { title: "YoY performance", name: "04 YoY Metrics", sig: "period" },
-    { title: "Monthly trends", name: "05 Monthly Metrics", sig: "month" },
-    { title: "Reach by score bucket", name: "00b Reach By Score", sig: "reach_ip" },
-    { title: "Score-tier distribution", name: "06 Prospecting Score Buckets", sig: "notlogged" },
-    { title: "HHST gate history", name: "03 HHST Gate History", sig: "gate_threshold" },
-    { title: "HHST gate ribbon", name: "03b Gate Ribbon", sig: "gate_ribbon_grp_spend" },
-    { title: "Prospecting flights", name: "08 Flights", sig: "flight_days" },
-    { title: "Verified-visit window", name: "11 VV Window", sig: "vv_change_date" },
-    { title: "Audience change log", name: "07 Audience Changelog", sig: "clog_ds_ids" },
-    { title: "Campaign spans", name: "01 Campaign Group Gantt", sig: "first_active_day" },
+    { title: "YoY performance", name: "04 YoY Metrics", sig: "period", tab: "Overview" },
+    { title: "Monthly trends", name: "05 Monthly Metrics", sig: "month", tab: "Overview" },
+    { title: "Reach by score bucket", name: "00b Reach By Score", sig: "reach_ip", tab: "Audience & Scores" },
+    { title: "Score-tier distribution", name: "06 Prospecting Score Buckets", sig: "notlogged", tab: "Audience & Scores" },
+    { title: "Audience change log", name: "07 Audience Changelog", sig: "clog_ds_ids", tab: "Audience & Scores" },
+    { title: "HHST gate history", name: "03 HHST Gate History", sig: "gate_threshold", tab: "Gate & Flights" },
+    { title: "HHST gate ribbon", name: "03b Gate Ribbon", sig: "gate_ribbon_grp_spend", tab: "Gate & Flights" },
+    { title: "Prospecting flights", name: "08 Flights", sig: "flight_days", tab: "Gate & Flights" },
+    { title: "Campaign spans", name: "01 Campaign Group Gantt", sig: "first_active_day", tab: "Delivery & Measurement" },
+    { title: "Verified-visit window", name: "11 VV Window", sig: "vv_change_date", tab: "Delivery & Measurement" },
   ];
+
+  function renderModule(m, sec) {
+    var rows = ds(m.name, m.sig);
+    if (rows) { try { RENDER[m.name](rows, sec, H); }
+      catch (e) { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">render error: ' + (e && e.message) + '</div>'; } }
+    else { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">' + m.name + ' — no data (Run the query)</div>'; }
+  }
 
   function renderAll() {
     var root = document.getElementById("cpd");
     root.innerHTML = '<h1>Client Performance Diagnostic</h1>'
       + '<div class="sub">Prospecting (obj=1, funnel=1) · selected period vs same period last year</div>';
-    MODULES.forEach(function (m) {
-      var rows = ds(m.name, m.sig);
-      var sec = document.createElement("div"); sec.style.margin = "0 0 10px";
-      root.appendChild(sec);
-      if (rows) { try { RENDER[m.name](rows, sec, H); }
-        catch (e) { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">render error: ' + (e && e.message) + '</div>'; } }
-      else { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">' + m.name + ' — no data (Run the query)</div>'; }
+
+    var bar = document.createElement("div"); bar.className = "tabbar";
+    root.appendChild(bar);
+
+    var panels = {}, rendered = {}, buttons = {};
+    TABS.forEach(function (t) {
+      var p = document.createElement("div");
+      p.style.display = "none";
+      root.appendChild(p);
+      panels[t] = p;
     });
+
+    function activate(t) {
+      TABS.forEach(function (x) {
+        panels[x].style.display = (x === t) ? "" : "none";
+        buttons[x].className = "tabbtn" + (x === t ? " active" : "");
+      });
+      if (!rendered[t]) {
+        rendered[t] = true;
+        MODULES.forEach(function (m) {
+          if (m.tab !== t) return;
+          var sec = document.createElement("div"); sec.style.margin = "0 0 10px";
+          panels[t].appendChild(sec);
+          renderModule(m, sec);
+        });
+      }
+    }
+
+    TABS.forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "tabbtn"; b.textContent = t;
+      b.onclick = function () { activate(t); };
+      bar.appendChild(b);
+      buttons[t] = b;
+    });
+
+    activate(TABS[0]);
   }
   var tries = 0;
   (function wait() {
