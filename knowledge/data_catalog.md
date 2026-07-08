@@ -586,7 +586,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 ---
 
 ## silver.logdata.cost_impression_log
-- **Retention: NOT 90 days** — empirically holds ≥17 months (RT reach query returned 2025-02 rows on 2026-07-07, TI-1037); effective floor ≈ the GCP floor 2025-01-01. The old "CIL 90d TTL" note was wrong — distinct-IP reach IS computable over a full YoY trend window.
+- **Retention: NOT 90 days — floor is 2023-10-01 (fixed, so the window GROWS)**: the live table (`sqlmesh__logdata.logdata__cost_impression_log__2498930125`) has 1,012 contiguous daily partitions 20231001→today, verified with row counts (2023-10-15 = 53.6M rows; 2024-09-15 = 92M) on 2026-07-08 (TI-1037). ~33 months of history today, +1 month per month. Supersedes both the old "90d TTL" note and the 2026-07-07 "floor ≈ 2025-01-01" estimate. `household_score` is NULL on ALL pre-2025-06 rows (verified same check) — IP reach is computable to Oct 2023, HI/score analysis only from Jun 2025.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical, 71 B rows / 56 TB)
 - **Partition:** DAY on `time`
 - **Clustering:** advertiser_id, impression_id
