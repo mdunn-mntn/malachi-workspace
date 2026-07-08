@@ -23,9 +23,16 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
 - **GOTCHA — no Chart.js date adapter.** Only `chart.umd.min.js` is loaded; a scale with `type:"time"` throws
   `This method is not implemented: Check that a complete date adapter is provided.` Use `type:"linear"` with
   epoch-ms x values + a `ticks.callback` that formats the month (pattern in modules 03 and 11).
-- **GitHub sync is TWO-WAY** (repo README — contradicts Nick's "UI-only push"): commits to **`main` auto-sync to
-  Mode**; a **branch does NOT sync**. So we can develop on a branch and "deploy" by merging to main. Repo is
-  cloned at `~/Developer/work/mntn/mode-assets`; AUDI space = `Mode/mntn/spaces/🗂️ Audience Intelligence/`.
+- **GitHub → main is ruleset-protected** (verified 2026-07-07: direct push rejected). Every change lands via
+  **branch → PR → review by ANOTHER engineer → Malachi merges** (precedent reviewers: Alex Knorr `Knorra416`,
+  Ryan Kleck `rkleck-mntn`; required TruffleHog check; no auto-merge). The Mode UI "Push to GitHub" works
+  because the `modeanalytics[bot]` bypasses the ruleset.
+- **git → Mode EDIT sync is UNVERIFIED.** Repo README claims commits to `main` auto-sync to Mode; Nick (and
+  Malachi) believe Mode only accepts changes made in the UI first. The batch-1 screenshot can't settle it
+  (datasets are last-run either way). **Decisive 30-second test:** after merging a PR that edits `index.html`,
+  open the report's HTML component and look for the new content (e.g. the "NO date adapter" comment); if
+  absent → git is archive/review only and DEPLOY = paste from the staging files into the UI.
+  Repo cloned at `~/Developer/work/mntn/mode-assets`; AUDI space = `Mode/mntn/spaces/🗂️ Audience Intelligence/`.
   Reference report to copy styling/patterns from: `🗂️ Experimentation/Causal Impact.05e2091da8ee/index.html`.
 
 ## What's here (proof-of-concept = modules 04 + 05)
