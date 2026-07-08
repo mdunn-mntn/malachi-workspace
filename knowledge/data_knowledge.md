@@ -263,11 +263,16 @@ Any code with `SELECT *` followed by an explicit `*_cost` projection will crash.
 campaign / campaign_group views: `raw_conversions`, `raw_order_value`, `raw_visits`,
 `raw_new_site_visitors`, `raw_existing_site_visitors`. Plus `new_to_file` and `visitors`.
 
-### conversion_log: silver SQLMesh hides bronze.raw corruption (TI-832, 2026-05-06)
+### conversion_log: silver SQLMesh hides bronze.raw corruption (TI-832, 2026-05-06; mechanism corrected 2026-07-08)
 Bronze (`dw-main-bronze.raw.conversion_log`) and silver (`dw-main-silver.logdata.conversion_log`)
-diverge: silver SQLMesh strips rows with corrupt `order_amt` while bronze surfaces them as-is.
-Confirmed 30-day window (2026-04-05 → 2026-05-04): bronze had **7,366 rows / 4 advertisers /
-6,405 IPs** with `order_amt > $1B` (max $7.4T); silver had **0 rows** in the same filter.
+diverge on **amounts, not rows**: the silver view wraps `order_amt`/`order_amt_usd` in
+`CASE WHEN abs(...) >= 100000000 THEN NULL` — **any per-row amount ≥ $100M is NULLed but the row
+is KEPT** (verified 2026-07-08: Harley May–Jun 2026 bronze 8,619 rows = silver 8,619 rows, all
+silver `order_amt` NULL). The earlier "silver strips these rows" reading was imprecise — the
+original TI-832 evidence (bronze 7,366 rows with `order_amt > $1B`, silver 0 rows *matching that
+amount filter*) is consistent with NULLing: the rows are in silver, they just no longer match an
+amount predicate. Row-count analyses are bronze≡silver; amount aggregates are not — a ≥$100M
+injected fire shows in silver as an amount-coverage DROP, never a sum spike.
 
 The 4 advertisers with corrupt `order_amt`:
 - **34957 Harley Mid Funnel (Agency: MediaHub)** — 5,499 rows, ~$1.78T cluster (magnitude

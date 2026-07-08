@@ -6,6 +6,60 @@
 
 ---
 
+## Update 2026-07-08 (night) — Module 13 pixel-monitor AUDIT (22-agent adversarial verification)
+
+Full audit of `13 Pixel Health.sql` + its `_flags` 2c consumer. **The SQL contract is sound** — schema/typing,
+partition pruning through the re-versioned UNION-ALL view (~831 GB/refresh, verified), Liquid hygiene,
+module-12 param parity, and a month-for-month WGU ground-truth replay all pass; every detection branch fires
+where it should (Oct'25 STOP check: cov 0.994→0.032, no threshold slip). Verified findings, worst first:
+
+- **FLAG (SQL, 1-line fix): sentinel exclusion incomplete.** Six bare-negative-integer platform pseudo-types
+  exist, not two: `-100/-101/-102/-105/-106/-107`. The unexcluded four produce ~46 fake "+1 new type (-1xx)"
+  flags in the default window (verified live: 39667 renders "+1 new type (-102)" Aug'25; 20 of 21 `-102`
+  advertisers affected). Fix: `AND NOT REGEXP_CONTAINS(conversion_type, r'^-[0-9]+$')` — regex verified to
+  match exactly the six and no genuine/pentest type.
+- **FLAG (SQL+JS): zero-fire months emit no row → total pixel death fails OPEN.** No month scaffold; JS
+  compares adjacent ARRAY rows, so a boundary-aligned complete stop, a stop in the clamped-out current month,
+  or any sub-1000-rows/mo advertiser's death renders "none/ok"; a multi-month outage w/ similar-volume resume
+  is invisible at both ends. Platform prevalence: 7.8% of advertisers (1,189/15,306) have ≥1 mid-history
+  zero-fire month; 705 miss ≥3. Fix: GENERATE_DATE_ARRAY spine emitting zero rows (also fixes gap-straddling
+  ratios), or calendar-adjacency in JS.
+- **FLAG (JS): `slice(0,4)` digest truncation buries the flagship hit.** WGU default replay = 7 hits; "Oct'25
+  order values STOP" (THE receiving-side explanation of revenue→$0) is item 5, hidden behind "+3 more". No
+  severity ranking inside pxHits; only ≥10-type bursts get promoted. (Oct volume step is 2.4x in raw fires —
+  the 3.2x figure is attributed convs.)
+- **FLAG (JS): Feb'26 fake pentest revenue ($222.9M in px_sum_amt) surfaces NOWHERE** — sumAmt is only read
+  by the $1-placeholder check; no sum-spike check, and dataset 13 has no other consumer. A $0-placeholder
+  variant (sum=0, n_amt>0) is equally invisible. Both are JS-only fixes on columns already shipped.
+- **WATCH (JS): "$1 placeholders (thru Jan '25)" mislabels era START as END** (latch fires on first match;
+  WGU's era ran through Oct 2 '25) — internally contradictory line, since the same row correctly shows the
+  Oct'25 signals. Track last matching month or say "from".
+- **WATCH (JS): `pv.rows > 1000` guard** disables volume+STOP checks entirely for ≤1000-fires/mo advertisers
+  and is one-sided (999→50,000 spike silent if sustained/last-month). `cov0>=0.5` floor misses sub-50%-baseline
+  coverage collapses (mixed purchase+lead pixels); `cov1<0.1` misses 100%→15% partial collapses.
+- **WATCH (SQL): mid-month Period_Start/End fabricate volume steps on BOTH ends** (partial month vs full
+  month; start needs day ≥~17th + >1000-row stub to cross 2x; a past mid-month End has NO JS skip — e.g.
+  end 06-15 → "fires ÷2.2"). Fix: month-truncate scan bounds.
+- **WATCH (JS): bsrc bounds chain omits px** — module 13 emits p1_start..p2_end but nothing reads them; if
+  query 11 ever errors (the only realistic bsrc-null path — 11 always returns ≥1 row otherwise), the px row
+  lies "run query 13". One-term fix: append px to bsrc.
+- **WATCH (substrate): silver NULLs order_amt ≥$100M (rows kept)** — a ≥$100M injection reads as a coverage
+  drop, never a sum spike; WGU-class sub-$100M fake sums remain visible. data_catalog/knowledge corrected
+  ("strips rows" → "NULLs amounts").
+- **Notes:** px_ips/px_n_types are dead columns (px_ips would catch single-IP floods <10 types — Feb'26 was
+  1 IP; px_n_types would catch type-consolidation); stale header comment (claims 1900/2099 defaults; real
+  Mode defaults 2026/2027-01-01, sentinel branches dead-but-safe — same in module 12); driver text
+  overstates ("raw pixel fires" = silver, advertiser-scoped, 2024-01 floor — dead-AID fires like WGU 10942
+  invisible by design); types_added 40-char JS cut has no ellipsis; LEFT-JOIN registry drop is empirically
+  nil (2/40,437, both source-31 offline batch regs).
+- **Refuted by verification (do not act on):** "new advertisers get a guaranteed first-month Purchase false
+  flag" — the 2026-03-31 Purchase-registration wave lives in a 50M+ advertiser_id namespace absent from the
+  advertisers dim (never selectable in the dashboard); real new advertisers get first-month Purchase regs at
+  0.19%. Platform-level registry stats ARE inflated by it (now in data_catalog).
+- Registry otherwise validated: 141,431 rows, zero dup triples, zero NULL types, create_time=first-fire holds
+  for pixel sources; re-registration under a new source_id negligible (26 pairs); WGU months reproduce
+  exactly (1 real type Sep'25, 75 junk Feb'26, migration burst 100% `-101`-absorbed).
+
 ## Update 2026-07-08 (later) — WGU-REV spin-out validates the dashboard; module 11 units fix
 
 The WGU revenue-to-zero anomaly (spotted on this dashboard) was investigated end-to-end same-day
