@@ -334,8 +334,11 @@ scope). Key facts, all verified in BQ:
    shows $0 for Feb. Treat as fake; whether the pentest was WGU-sanctioned is unknown (→ Pixel Ops).
 5. **May 2026 volume spike (125,940 rows) = untyped landing-page pixel burst**: NULL-type pixel deployed on
    `www.wgu.edu` lead LPs 2026-04-30 → 05-16 (~4.4–5.4K real distinct-IP rows/day, IPs≈guids≈0.93×rows, not
-   refires), then scoped down to ~100–300/day (still running). Timing-correlated with orca-integration
-   (2026-04-29) + Tealium CRM mappings (2026-04-30) onboarding — causality unverified.
+   refires), then scoped down to ~100–300/day. **RESURGED 2026-06-24** (805 fires) → ~1,800–2,500/day from
+   06-25, still running as of 2026-07-08 — confirms CS pixel-QA internal note ("increased raw conversions
+   returned from 6/24 to present"); both windows = the same untyped LP tag cycling on/off in WGU's Adobe
+   Launch. Timing of the Apr 30 onset correlated with orca-integration (2026-04-29) + Tealium CRM mappings
+   (2026-04-30) onboarding — causality unverified.
 6. **Non-prod pollution**: ~692 Jun 2026 "conversions" from `apply.stage/development/local.wgu.edu` +
    `inquiryv4.qa.wgu.edu` referers count as real conversions. Platform-wide filter question open.
 7. **WGU's core LEAD event now reports to a DEAD advertiser ID (10942)** — found 2026-07-08 after a CS
