@@ -1887,10 +1887,21 @@ function render(rows, root, H) {
   var by = {};
   rows.forEach(function (r) { by[String(r.rt_mo).slice(0, 7)] = r; });
   var keys = Object.keys(by).sort();
+  // axis spans the FULL P1->P2 window (bounds ride every row), so months with no RT
+  // delivery (e.g. the Dec-Jan holiday pause) appear as visible gaps, not get skipped
+  var r0b = rows[0] || {};
+  var startK = r0b.p1_start ? String(r0b.p1_start).slice(0, 7) : keys[0];
+  var endK = keys[keys.length - 1];
+  if (r0b.p2_end) {
+    var pe = String(r0b.p2_end).slice(0, 10);
+    var ey = +pe.slice(0, 4), em = +pe.slice(5, 7);
+    if (pe.slice(8, 10) === "01") { em -= 1; if (em === 0) { em = 12; ey -= 1; } }
+    endK = ey + "-" + ("0" + em).slice(-2);
+  }
   var months = [];
   (function () {
-    var y = +keys[0].slice(0, 4), m = +keys[0].slice(5, 7);
-    var ye = +keys[keys.length - 1].slice(0, 4), me = +keys[keys.length - 1].slice(5, 7);
+    var y = +startK.slice(0, 4), m = +startK.slice(5, 7);
+    var ye = +endK.slice(0, 4), me = +endK.slice(5, 7);
     while (y < ye || (y === ye && m <= me)) {
       months.push(y + "-" + ("0" + m).slice(-2));
       if (++m > 12) { m = 1; y++; }
@@ -1942,6 +1953,7 @@ function render(rows, root, H) {
 
   var labels = months.map(moLbl);
   new Chart(document.getElementById(idHi).getContext('2d'), {
+    type: 'bar', // mixed chart: per-dataset types override this default
     data: {
       labels: labels,
       datasets: [
