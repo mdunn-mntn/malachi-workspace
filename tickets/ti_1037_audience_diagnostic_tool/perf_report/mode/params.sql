@@ -7,9 +7,11 @@
 -- Dropdown label = "id · name" — the filter box matches EITHER, so users can type
 -- an advertiser_id or a company name; the bare advertiser_id is what substitutes
 -- into consumer queries (labels vs values).
--- Period_Start / Period_End live in the separate 'period options' query — dropdowns
--- whose Auto option carries the SQL-mapped sentinel, so the picker shows words
--- (never 1900/2099) and the defaults never go stale.
+-- Period_Start / Period_End are free date pickers (users pick any two dates).
+-- End is EXCLUSIVE and every query clamps it to the first of the current month, so
+-- the 2027-01-01 default = "through the last full month" all year with no edits;
+-- only the start default needs a bump each January. (The 1900-01-01/2099-01-01
+-- sentinel mappings remain in the SQL — harmless, nobody types them.)
 -- NOTE: this query now hits BigQuery — its DB connection must be BigQuery
 -- (dw-main-silver), not the default core dw.
 -- IMPORTANT: keep Liquid tags OUT of comments. Mode parses parameter/form tags
@@ -37,4 +39,14 @@ Advertiser_ID:
   options:
     labels: advertiser_label
     values: advertiser_id
+Period_Start:
+  type: date
+  default: 2026-01-01
+  label: "Period start"
+  description: "Compared against the same dates one year earlier (YoY)"
+Period_End:
+  type: date
+  default: 2027-01-01
+  label: "Period end (exclusive)"
+  description: "First day AFTER the period. Future dates are capped to the last completed month - so the default means: through the last full month"
 {% endform %}

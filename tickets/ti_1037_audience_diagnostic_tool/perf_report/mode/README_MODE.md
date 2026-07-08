@@ -19,6 +19,11 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   report Run produced (drafts included). After pasting any query/HTML change, hit **Run**, or the HTML renders
   against stale data (symptom seen 2026-07-07: gate trajectory showed 4 dead zero-spend groups from a
   draft-era run while the correct SQL returns 21 groups with 119362/108055/85384 on top).
+- **Period params are plain date pickers (the dropdown experiment was reverted 2026-07-08):** a
+  query-backed "period options" select worked but lost free date-picking and its labels rendered oddly —
+  if you see a stray Mode query named "period options", DELETE it (a second form defining the same params
+  conflicts with the params query). Lesson kept: a param left UNDEFINED (form removed before its replacement
+  exists) substitutes as EMPTY STRING and kills every consumer query at once.
 - **Period_End is clamped in SQL** — every query wraps it as `LEAST(Period_End, DATE_TRUNC(CURRENT_DATE(),
   MONTH))`, so the far-future default (2099-01-01) means "through the last FULL month" automatically (Mode
   date params only support static defaults). A user-picked earlier date is honored as-is. Period_End stays
@@ -56,8 +61,7 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
 
 | File | → Mode | Status |
 |---|---|---|
-| `params.sql` | query "params" (Advertiser_ID dropdown: form + SQL) | ready |
-| `period_options.sql` | query **"period options"** (Period_Start/End month dropdowns; Auto = sentinel values mapped in every consumer query) | ready |
+| `params.sql` | query "params" (Advertiser dropdown + Period date pickers) | ready |
 | `04_yoy_metrics.sql` | query **"04 YoY Metrics"** | ✅ validated vs tool (P1 $647,864 / P2 $528,728) |
 | `05_monthly_metrics.sql` | query **"05 Monthly Metrics"** | ready |
 | `index.html` | the report HTML (YoY table + monthly Chart.js) | ready |

@@ -1066,14 +1066,23 @@ function render(rows, root, H) {
       + (haveSpend ? pctfmt(sh)+' spend' : '') + '</span>';
     html += '</div>';
 
-    // headline: net DS difference, start-of-window set vs final set (the P1 vs P2 story)
+    // headline: net DS difference — additions and removals stacked in two columns,
+    // one DS per line (a busy changelog was unreadable as one long line)
     html += '<div style="padding:5px 8px 3px;font-size:11.5px;">';
     if(!st.netAdd.length && !st.netDrop.length){
       html += '<span style="color:'+GREEN+';font-weight:700;">No net DS change P1 → P2</span>';
     } else {
-      html += '<span style="font-weight:700;color:#333;">Net P1 → P2:</span>';
-      if(st.netAdd.length)  html += '  <span style="color:'+GREEN+';font-weight:700;">+ '+H.esc(dsg(st.netAdd))+'</span>';
-      if(st.netDrop.length) html += '  <span style="color:'+RED+';font-weight:700;">− '+H.esc(dsg(st.netDrop))+'</span>';
+      html += '<div style="font-weight:700;color:#333;margin-bottom:2px;">Net P1 → P2</div>';
+      html += '<div style="display:flex;gap:36px;align-items:flex-start;">';
+      [[st.netAdd, GREEN, '+ '], [st.netDrop, RED, '− ']].forEach(function(col){
+        if(!col[0].length) return;
+        html += '<div style="min-width:180px;">';
+        col[0].slice().sort(function(a,b){return a-b;}).forEach(function(d){
+          html += '<div style="color:'+col[1]+';font-weight:700;line-height:1.5;">'+col[2]+H.esc(dsName(d))+'</div>';
+        });
+        html += '</div>';
+      });
+      html += '</div>';
     }
     html += '</div>';
 
