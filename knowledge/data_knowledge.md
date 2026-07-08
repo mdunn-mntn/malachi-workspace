@@ -3795,3 +3795,12 @@ anomaly = a PENTEST**: 74 SQL-injection/XSS/Burp-Collaborator (oastify.com) payl
 2026-02-07 19:38–22:27, with bogus order_amts summing $222.9M in conversion_log. WGU onboarded
 "orca-integration" 2026-04-29 + Tealium CRM list mappings 2026-04-30 (offline_attribution=false) right before
 the May 2026 conversion-volume spike (125,940 rows) — correlation, not verified causation.
+
+## WGU (31357) YoY comparisons are confounded by two 2025 tracking breaks (TI-1037, 2026-07-08)
+Anyone comparing WGU across mid-2025 must know: (1) **Oct 2025 conversion-pixel change** — conversions
+jumped 2,556→8,707/mo (3.4x overnight at flat spend) and order values stopped; before Oct'25 WGU passed
+exactly **$1 order value per lead** (revenue == conversion count), after it $0 — so YoY "revenue −100% /
+conversions +252%" is the pixel, not performance. (2) **Jul 2025 visit-tracking step** — visits 934k→1.65M
+MoM at flat spend AND flat impressions; IVR re-based from ~1.2% to ~2.2% permanently. VV lookback ruled out
+(PRO = 14d unchanged since 2020). Treat pre-Jul'25 visit levels and pre-Oct'25 conversion/revenue levels as
+different measurement regimes.
