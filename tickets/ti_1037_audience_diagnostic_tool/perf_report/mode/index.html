@@ -859,20 +859,23 @@ function render(rows, root, H) {
   var C = H.C;
   var GREEN = C.GREEN, RED = C.RED, NAVY = C.NAVY, GRAY = C.GRAY;
 
-  // DS -> role classification (stable per DS; from the tool's known map)
-  var ROLE = {19:"incl",13:"incl",35:"incl",11:"incl",46:"incl",38:"incl",16:"funnel",
-    2:"excl",4:"excl",9:"excl",47:"excl",1:"excl",14:"gate",21:"excl",34:"excl"};
+  // DS -> role + human name (integrationprod.data_sources + the tool's chart-07 map).
+  // "gate" here = audience-level delivery gate (DS14 availability, DS16 net-new) — NOT the HHST score gate.
+  var ROLE = {19:"incl",13:"incl",35:"incl",11:"incl",46:"incl",38:"incl",18:"incl",
+    14:"gate",16:"gate",
+    2:"excl",4:"excl",9:"excl",47:"excl",1:"excl",21:"excl",34:"excl"};
+  var DSN = {19:"Keyword (MM)",13:"Vertical (MM)",35:"LiveRamp 3P",11:"LiveRamp legacy",
+    46:"Fangorn scoring",38:"UI keywords",18:"Dstillery 3P",
+    14:"availability gate",16:"net-new gate",
+    2:"MNTN 1P excl",4:"CRM excl",9:"1P-campaigns excl",47:"CRM-idgraph excl",1:"Oracle excl",
+    21:"conversion excl",34:"pageview excl"};
   function role(ds){ return ROLE[ds] || "?"; }
-  var ORDER = ["incl","excl","gate","funnel","?"];
+  function dsName(ds){ return DSN[ds] ? "DS"+ds+" "+DSN[ds] : "DS"+ds; }
+  var ORDER = ["incl","excl","gate","?"];
 
-  // delta form, same-role grouped: "DS21,DS34 excl"
+  // delta form: every DS spelled out — "DS16 net-new gate,  DS21 conversion excl"
   function dsg(list){
-    var by = {};
-    list.slice().sort(function(a,b){return a-b;}).forEach(function(ds){
-      (by[role(ds)] = by[role(ds)] || []).push("DS"+ds);
-    });
-    return ORDER.filter(function(r){return by[r];})
-      .map(function(r){return by[r].join(",")+" "+r;}).join("  ·  ");
+    return list.slice().sort(function(a,b){return a-b;}).map(dsName).join(",  ");
   }
   // compact initial set: "incl 19,35 · excl 2,4 · gate 14"
   function dsfmtGrouped(list){
@@ -935,28 +938,31 @@ function render(rows, root, H) {
     var A = {}; a.forEach(function(x){ A[x] = true; });
     return b.filter(function(x){ return !A[x]; });
   }
+  // Mode serializes DATE columns as full timestamps — always trim to YYYY-MM-DD before
+  // comparing or displaying ("2026-04-14T00:00:00" > "2026-06-01" lexicographically!).
+  function dstr(v){ return String(v).slice(0, 10); }
 
   // ---- per-group state analysis ----
   // start = DS set in effect ENTERING the window (forward-filled from pre-window history);
   // events = only in-window changes; fin = final in-window set; net = start vs fin (the P1->P2 story).
   function analyze(g){
     var evs = byGrp[g].slice().sort(function(a,b){
-      if(a.clog_changed_on < b.clog_changed_on) return -1;
-      if(a.clog_changed_on > b.clog_changed_on) return 1;
+      if(dstr(a.clog_changed_on) < dstr(b.clog_changed_on)) return -1;
+      if(dstr(a.clog_changed_on) > dstr(b.clog_changed_on)) return 1;
       return 0;
     });
     var pre = [], post = [];
-    evs.forEach(function(e){ (wS && String(e.clog_changed_on) <= wS ? pre : post).push(e); });
+    evs.forEach(function(e){ (wS && dstr(e.clog_changed_on) <= wS ? pre : post).push(e); });
     var created = null, base, startDate;
     if(pre.length){ base = pre[pre.length-1]; startDate = wS; }
-    else { base = evs[0]; created = String(base.clog_changed_on); startDate = created; post = evs.slice(1); }
-    var inWin = post.filter(function(e){ return !wE || String(e.clog_changed_on) <= wE; });
+    else { base = evs[0]; created = dstr(base.clog_changed_on); startDate = created; post = evs.slice(1); }
+    var inWin = post.filter(function(e){ return !wE || dstr(e.clog_changed_on) <= wE; });
     var start = parseDs(base.clog_ds_ids);
     var prevDs = start.slice(), prevAud = H.num(base.clog_audience_id);
     // cell keyed by date so multiple versions same day accumulate
     var cellMap = {}, dateOrder = [];
     inWin.forEach(function(e){
-      var dt = String(e.clog_changed_on);
+      var dt = dstr(e.clog_changed_on);
       var cur = parseDs(e.clog_ds_ids);
       var aud = H.num(e.clog_audience_id);
       var added = setDiff(prevDs, cur), removed = setDiff(cur, prevDs);
@@ -990,12 +996,20 @@ function render(rows, root, H) {
   var html = "";
   html += '<div style="background:#FAFAFA;padding:14px 16px;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;">';
   html += '<div style="font-size:16px;font-weight:700;color:#222;">Prospecting audience change-log (DS-level)</div>';
-  html += '<div style="font-size:11px;color:#555;margin:3px 0 12px;">By campaign, most spend first. '
+  html += '<div style="font-size:11px;color:#555;margin:3px 0 4px;">By campaign, most spend first. '
     + 'Start = DS set in effect entering the window; then only in-window changes; final = set at window end. '
     + '<span style="font-weight:700;">Net P1 → P2</span> compares start vs final. '
     + '<span style="color:'+GREEN+';font-weight:700;">green = added</span>, '
     + '<span style="color:'+RED+';font-weight:700;">red = removed</span>. '
-    + 'incl / excl / gate / funnel = the DS role.</div>';
+    + 'Roles: <b>incl</b> = who to target, <b>excl</b> = who to remove, '
+    + '<b>gate</b> = a must-pass filter that only shrinks delivery '
+    + '(DS14 = reachable households, DS16 = not-yet-served) — not the HHST score gate.</div>';
+  // DS decoder — every DS id appearing anywhere in this advertiser's changelog
+  var seenDs = {};
+  rows.forEach(function(r){ parseDs(r.clog_ds_ids).forEach(function(x){ seenDs[x] = true; }); });
+  var legendIds = Object.keys(seenDs).map(Number).sort(function(a,b){ return a - b; });
+  html += '<div style="font-size:10.5px;color:#888;margin:0 0 12px;">'
+    + legendIds.map(function(d){ return H.esc(dsName(d)); }).join('  ·  ') + '</div>';
 
   if(cols.length === 0){
     html += '<div style="font-size:12px;color:#888;">No prospecting audience changes in the window.</div>';
