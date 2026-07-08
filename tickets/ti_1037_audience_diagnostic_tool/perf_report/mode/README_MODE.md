@@ -15,11 +15,10 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   **derived** in SQL as "same dates − 1 year" (matches "just two parameters: advertiser + period").
 - **Mode can NOT render matplotlib PNGs** → every chart is rebuilt as HTML/JS (Chart.js / tables / CSS).
 - **Constraint:** each dataset output must be < ~10 MB.
-- **GOTCHA — datasets are the LAST RUN, not the current SQL.** Pushing query edits to `main` updates the
-  query definitions in Mode, but `window.datasets` still holds whatever the last report Run produced (drafts
-  included). After every git deploy: open the report and hit **Run**, or the HTML renders against stale data
-  (symptom seen 2026-07-07: gate trajectory showed 4 dead zero-spend groups from a draft-era run while the
-  synced SQL correctly returns 21 groups with 85384/119362/108055 on top).
+- **GOTCHA — datasets are the LAST RUN, not the current SQL.** `window.datasets` holds whatever the last
+  report Run produced (drafts included). After pasting any query/HTML change, hit **Run**, or the HTML renders
+  against stale data (symptom seen 2026-07-07: gate trajectory showed 4 dead zero-spend groups from a
+  draft-era run while the correct SQL returns 21 groups with 119362/108055/85384 on top).
 - **GOTCHA — no Chart.js date adapter.** Only `chart.umd.min.js` is loaded; a scale with `type:"time"` throws
   `This method is not implemented: Check that a complete date adapter is provided.` Use `type:"linear"` with
   epoch-ms x values + a `ticks.callback` that formats the month (pattern in modules 03 and 11).
@@ -27,11 +26,11 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   **branch → PR → review by ANOTHER engineer → Malachi merges** (precedent reviewers: Alex Knorr `Knorra416`,
   Ryan Kleck `rkleck-mntn`; required TruffleHog check; no auto-merge). The Mode UI "Push to GitHub" works
   because the `modeanalytics[bot]` bypasses the ruleset.
-- **git → Mode EDIT sync is UNVERIFIED.** Repo README claims commits to `main` auto-sync to Mode; Nick (and
-  Malachi) believe Mode only accepts changes made in the UI first. The batch-1 screenshot can't settle it
-  (datasets are last-run either way). **Decisive 30-second test:** after merging a PR that edits `index.html`,
-  open the report's HTML component and look for the new content (e.g. the "NO date adapter" comment); if
-  absent → git is archive/review only and DEPLOY = paste from the staging files into the UI.
+- **DEPLOY = paste into the Mode UI, manually.** git→Mode edit-sync does not apply changes that weren't made
+  in Mode first (Nick's claim, confirmed by Malachi 2026-07-07 — mode-assets PR #10 closed unmerged for this
+  reason). The staging files here are the SOURCE; deploying a change = paste the file's full contents into the
+  Mode query / HTML component and Run. To keep the mode-assets archive in sync afterwards, use the report's
+  **Push to GitHub** (the `modeanalytics[bot]` bypasses the ruleset — no PR/review needed on that path).
   Repo cloned at `~/Developer/work/mntn/mode-assets`; AUDI space = `Mode/mntn/spaces/🗂️ Audience Intelligence/`.
   Reference report to copy styling/patterns from: `🗂️ Experimentation/Causal Impact.05e2091da8ee/index.html`.
 
