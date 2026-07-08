@@ -1945,8 +1945,9 @@ function render(rowsIgnored, root, H) {
     });
     if (worst13) {
       add("High-spend low-gate campaign", "", "",
-        worst13.g + " · " + Math.round(100 * worst13.sh) + "% spend · " + Math.round(100 * worst13.lowPct) + "% days below HI+PP",
-        "flag", worst13.hol >= 0.5 ? "mostly Nov–Jan (holiday) — drags the period average down" : "drags the period average down");
+        worst13.g + " · " + Math.round(100 * worst13.sh) + "% spend · gate set BELOW the HI+PP bar (HHST<6666) on " + Math.round(100 * worst13.lowPct) + "% of its P2 days",
+        "flag", (worst13.hol >= 0.5 ? "mostly Nov–Jan (holiday) — " : "")
+          + "on those days delivery isn't restricted to HI/PP intent, dragging the period's average gate down");
     } else {
       add("High-spend low-gate campaign", "", "", "none", "ok", "");
     }
