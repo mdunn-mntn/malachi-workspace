@@ -2074,6 +2074,13 @@ function render(rows, root, H) {
       return;
     }
     var rows = ds(m.name, m.sig);
+    if (!rows) {
+      // distinguish "query ran but returned ZERO rows" (a real answer — e.g. an
+      // advertiser with no retargeting) from "query missing / never Run": resolve by
+      // name only and let the module render its own empty-state message.
+      var known = (window.datasets || []).find(function (d) { return d && norm(d.name) === norm(m.name); });
+      if (known) rows = [];
+    }
     if (rows) { try { RENDER[m.name](rows, sec, H); }
       catch (e) { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">render error: ' + (e && e.message) + '</div>'; } }
     else { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">' + m.name + ' — no data (Run the query)</div>'; }
