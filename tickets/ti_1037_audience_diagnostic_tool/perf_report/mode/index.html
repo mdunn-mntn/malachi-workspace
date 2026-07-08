@@ -1724,7 +1724,10 @@ function render(rowsIgnored, root, H) {
 
   // ---- 2c) advertiser-side PIXEL/TAG changes, reconstructed from conversion_log
   //      shape (no MNTN table tracks their tag manager — confirmed w/ Kevin Cipriani):
-  //      new conversion types, fire-volume steps, order values stopping, $1 placeholders ----
+  //      new types, fire steps/deaths, order values stopping, $1/$0 placeholders,
+  //      amount-injection spikes. CRITICAL signals (pixel death, values-stop, injection
+  //      burst, sum spike) rank ahead of the 4-item display cap. Query 13's month spine
+  //      emits zero-fire months, so a complete pixel stop fails CLOSED here. ----
   if (px && px.length && p1s) {
     var pxm = px.map(function (r) { return { mo: String(r.px_mo).slice(0, 7), rows: H.num(r.px_rows),
       nAmt: H.num(r.px_n_amt), sumAmt: H.num(r.px_sum_amt),
