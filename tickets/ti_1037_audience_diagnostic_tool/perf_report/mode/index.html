@@ -1493,7 +1493,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Prospecting campaign summary — full window</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every prospecting campaign that spent in the P1→P2 window, spend-ranked. Metrics are whole-window, whole-group totals — all funnel stages, retargeting excluded — the same % basis as every module, and it sums to 100% here. Reach + HI-share are only measurable for the recent in-TTL month (impression log keeps 90 days) — dormant campaigns show “expired”.</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every prospecting campaign that spent in the P1→P2 window, spend-ranked. Metrics are whole-window, whole-group totals — all funnel stages, retargeting excluded — the same % basis as every module, and it sums to 100% here. Reach = distinct households served over the FULL window; HI-share uses scored impressions only (scores logged since 2025-06), so early-window reach skews unscored.</div>';
 
   if (!data.length) {
     html += '<div style="font-size:13px;color:#888;">No prospecting spend in the window.</div></div>';
@@ -1513,7 +1513,7 @@ function render(rows, root, H) {
     + '<th style="' + th + '">Visits</th>'
     + '<th style="' + th + '">Convs</th>'
     + '<th style="' + th + '">ROAS</th>'
-    + '<th style="' + th + '">In-TTL reach</th>'
+    + '<th style="' + th + '">Window reach</th>'
     + '<th style="' + th + '">HI</th>'
     + '</tr></thead><tbody>';
 
@@ -1540,7 +1540,7 @@ function render(rows, root, H) {
       + '<td style="' + td + '">' + H.fmtK(d.visits) + '</td>'
       + '<td style="' + td + '">' + H.fmtK(d.convs) + '</td>'
       + '<td style="' + td + '">' + (roas == null ? "—" : roas.toFixed(2) + "x") + '</td>'
-      + '<td style="' + td + (d.reach > 0 ? '' : ';color:#aaa') + '">' + (d.reach > 0 ? H.fmtK(d.reach) : "expired") + '</td>'
+      + '<td style="' + td + (d.reach > 0 ? '' : ';color:#aaa') + '">' + (d.reach > 0 ? H.fmtK(d.reach) : "none") + '</td>'
       + '<td style="' + td + ';font-weight:700;color:' + hiCol + '">' + (hiPct == null ? "—" : hiPct + "%") + '</td>'
       + '</tr>';
   });
@@ -1797,10 +1797,188 @@ function render(rowsIgnored, root, H) {
   root.innerHTML = html;
 }
   return render; })();
+  // ---- Geo targeting change history (12): changelog-style per group — national vs N/210 DMAs ----
+  RENDER["12 Geo Changes"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  function dstr(v) { return String(v).slice(0, 10); }
+  function geoTxt(r) {
+    var nd = H.num(r.n_dma), us = (r.has_us === true || r.has_us === "true"), ni = H.num(r.n_ids);
+    if (nd > 0) return nd + "/210 DMAs";
+    if (us) return "US (national)";
+    if (ni > 0) return ni + " geo ids";
+    return "unset (defaults national)";
+  }
+  var r0 = rows[0] || {};
+  var wS = r0.win_start ? dstr(r0.win_start) : null;
+  var wE = r0.win_end ? dstr(r0.win_end) : null;
+
+  var byG = {}, gSp = {}, gNm = {};
+  rows.forEach(function (r) {
+    var g = String(r.geo_group_id);
+    (byG[g] = byG[g] || []).push(r);
+    gSp[g] = H.num(r.geo_grp_spend);
+    gNm[g] = r.group_name || "";
+  });
+  var totSp = 0;
+  Object.keys(gSp).forEach(function (g) { totSp += gSp[g]; });
+  if (totSp <= 0) totSp = 1;
+  var order = Object.keys(byG).sort(function (a, b) { return gSp[b] - gSp[a]; });
+  var spenders = order.filter(function (g) { return gSp[g] > 0; });
+  if (spenders.length) order = spenders;
+
+  var html = '';
+  html += '<div style="background:#FAFAFA;padding:14px 16px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;">';
+  html += '<div style="font-size:16px;font-weight:700;color:#222;">Geo targeting changes</div>';
+  html += '<div style="font-size:11px;color:#555;margin:3px 0 12px;">Geo whitelist per prospecting campaign — "US (national)" or an N/210 DMA slice. Start = state entering the window → in-window changes → final. Narrowing geo shrinks the audience (decline cause #1).</div>';
+
+  order.forEach(function (g) {
+    var evs = byG[g].slice().sort(function (a, b) { return dstr(a.geo_changed_on) < dstr(b.geo_changed_on) ? -1 : 1; });
+    var pre = evs.filter(function (e) { return wS && dstr(e.geo_changed_on) <= wS; });
+    var created = null, base, startDate;
+    if (pre.length) { base = pre[pre.length - 1]; startDate = wS; }
+    else { base = evs[0]; created = dstr(base.geo_changed_on); startDate = created; }
+    var inWin = evs.filter(function (e) {
+      var d = dstr(e.geo_changed_on);
+      if (created) return d > created && (!wE || d <= wE);
+      return d > wS && (!wE || d <= wE);
+    });
+    var fin = inWin.length ? inWin[inWin.length - 1] : base;
+    var startTxt = geoTxt(base), finTxt = geoTxt(fin);
+    var changed = startTxt !== finTxt;
+    var narrowed = H.num(fin.n_dma) > 0 && H.num(base.n_dma) === 0;
+
+    var nm = (gNm[g] || "").replace(/CTV /g, "").replace(/Prospecting/g, "").replace(/\s+/g, " ").trim();
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(39,73,109,0.08);padding:6px 8px;margin-top:10px;border-radius:2px;">'
+      + '<span style="font-size:13px;font-weight:700;color:' + C.NAVY + ';">' + H.esc(g) + (nm ? '  ·  ' + H.esc(nm.slice(0, 40)) : '') + '</span>'
+      + '<span style="font-size:12px;font-weight:700;color:' + C.NAVY + ';">' + H.pctShare(gSp[g] / totSp) + ' spend</span></div>';
+
+    html += '<div style="padding:5px 8px 3px;font-size:11.5px;">';
+    if (!changed) {
+      html += '<span style="color:' + C.GREEN + ';font-weight:700;">No geo change P1 → P2</span>'
+        + '<span style="color:#777;">  ·  ' + H.esc(startTxt) + ' throughout</span>';
+    } else {
+      html += '<span style="font-weight:700;color:' + (narrowed ? C.RED : "#333") + ';">'
+        + (narrowed ? 'NARROWED: ' : 'Changed: ') + H.esc(startTxt) + ' → ' + H.esc(finTxt) + '</span>';
+    }
+    html += '</div>';
+
+    if (inWin.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">';
+      inWin.forEach(function (e) {
+        html += '<tr><td style="width:88px;color:#666;padding:2px 8px;white-space:nowrap;">' + H.esc(dstr(e.geo_changed_on)) + '</td>'
+          + '<td style="color:#333;padding:2px 4px;">→ ' + H.esc(geoTxt(e)) + '</td></tr>';
+      });
+      html += '</table>';
+    }
+  });
+  html += '</div>';
+  root.innerHTML = html;
+}
+  return render; })();
+  // ---- Retargeting reach, frequency & HI recirculation (09rt) ----
+  RENDER["09rt Retargeting Reach"] = (function () {
+function render(rows, root, H) {
+  var C = H.C;
+  if (!rows || !rows.length) {
+    root.innerHTML = '<div style="padding:16px;color:#888;font:13px Helvetica Neue,Arial">No retargeting delivery in the window.</div>';
+    return;
+  }
+  var by = {};
+  rows.forEach(function (r) { by[String(r.rt_mo).slice(0, 7)] = r; });
+  var keys = Object.keys(by).sort();
+  var months = [];
+  (function () {
+    var y = +keys[0].slice(0, 4), m = +keys[0].slice(5, 7);
+    var ye = +keys[keys.length - 1].slice(0, 4), me = +keys[keys.length - 1].slice(5, 7);
+    while (y < ye || (y === ye && m <= me)) {
+      months.push(y + "-" + ("0" + m).slice(-2));
+      if (++m > 12) { m = 1; y++; }
+    }
+  })();
+  var MONN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function moLbl(k) { return MONN[+k.slice(5, 7) - 1] + " '" + k.slice(2, 4); }
+  var M = months.map(function (k) {
+    var r = by[k] || {};
+    return { mo: k, reach: H.num(r.rt_reach), imps: H.num(r.rt_imps), hi: H.num(r.rt_hi_reach),
+             newHi: H.num(r.rt_new_hi), retHi: H.num(r.rt_returning_hi), brandNew: H.num(r.rt_brand_new) };
+  });
+  var cum = 0;
+  var cumSeries = M.map(function (r) { cum += r.newHi; return cum; });
+
+  var idHi = H.uid(), idFq = H.uid();
+  var html = '';
+  html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
+  html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Retargeting reach & HI recirculation</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Monthly retargeting (obj=4) delivery. HI = the IP scored ≥8001 on ANY impression in the window (retargeting rows carry no score — scores ride prospecting, logged since 2025-06). New = first month that HI IP was retargeted; cumulative = running distinct retargeted HI IPs. Brand-new = first-ever contact with this advertiser on any campaign. Empty months = no RT delivery.</div>';
+
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Retargeted HI IPs — new vs returning, with cumulative distinct</div>';
+  html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idHi + '"></canvas></div>';
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Frequency — impressions per retargeted IP</div>';
+  html += '<div style="height:180px;margin-bottom:14px"><canvas id="' + idFq + '"></canvas></div>';
+
+  // table
+  var th = 'text-align:right;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
+  html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
+  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP</th><th style="' + th + '">HI reach</th><th style="' + th + '">New HI</th><th style="' + th + '">Returning HI</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
+  M.forEach(function (r, i) {
+    if (!r.reach) return;
+    var bg = (i % 2 === 0) ? "rgba(0,0,0,0.03)" : "transparent";
+    var td = 'text-align:right;padding:4px 8px;color:#222;white-space:nowrap';
+    html += '<tr style="background:' + bg + '">'
+      + '<td style="text-align:left;padding:4px 8px;white-space:nowrap">' + H.esc(moLbl(r.mo)) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(r.reach) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(r.imps) + '</td>'
+      + '<td style="' + td + '">' + (r.reach ? (r.imps / r.reach).toFixed(1) : "—") + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(r.hi) + '</td>'
+      + '<td style="' + td + ';color:' + C.GREEN + ';font-weight:700">' + H.fmtK(r.newHi) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(r.retHi) + '</td>'
+      + '<td style="' + td + ';font-weight:700;color:' + C.NAVY + '">' + H.fmtK(cumSeries[i]) + '</td>'
+      + '<td style="' + td + ';color:#777">' + H.fmtK(r.brandNew) + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  root.innerHTML = html;
+
+  var labels = months.map(moLbl);
+  new Chart(document.getElementById(idHi).getContext('2d'), {
+    data: {
+      labels: labels,
+      datasets: [
+        { type: 'bar', label: 'new HI (first month retargeted)', backgroundColor: C.GREEN, stack: 's',
+          data: M.map(function (r) { return r.newHi; }) },
+        { type: 'bar', label: 'returning HI', backgroundColor: C.NAVY, stack: 's',
+          data: M.map(function (r) { return r.retHi; }) },
+        { type: 'line', label: 'cumulative distinct HI', borderColor: C.RED, backgroundColor: C.RED,
+          borderWidth: 2, pointRadius: 2, tension: 0.15, yAxisID: 'y2', data: cumSeries }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, color: '#666' } },
+        y: { stacked: true, beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } },
+        y2: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 }, color: C.RED } }
+      },
+      plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 11 } } }
+    }
+  });
+  new Chart(document.getElementById(idFq).getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: [{ label: 'imps per IP', borderColor: C.NAVY, backgroundColor: C.NAVY,
+      borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false,
+      data: M.map(function (r) { return r.reach ? +(r.imps / r.reach).toFixed(1) : null; }) }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#666' } },
+                y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } } } }
+  });
+}
+  return render; })();
   // Modules grouped into tabs by diagnostic category. A module's `tab` decides where it
   // renders; tab panels are lazy-rendered on first activation so Chart.js always sizes
   // against a visible container (charts built inside display:none get 0-width canvases).
-  var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement"];
+  var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement", "Retargeting"];
   var MODULES = [
     { title: "Diagnostic flags", name: "_flags", sig: "", tab: "Overview", multi: true },
     { title: "YoY performance", name: "04 YoY Metrics", sig: "period", tab: "Overview" },
@@ -1808,11 +1986,13 @@ function render(rowsIgnored, root, H) {
     { title: "Campaign summary (window)", name: "00b Reach By Score", sig: "reach_ip", tab: "Audience & Scores" },
     { title: "Score-tier distribution", name: "06 Prospecting Score Buckets", sig: "notlogged", tab: "Audience & Scores" },
     { title: "Audience change log", name: "07 Audience Changelog", sig: "clog_ds_ids", tab: "Audience & Scores" },
+    { title: "Geo targeting changes", name: "12 Geo Changes", sig: "n_dma", tab: "Audience & Scores" },
     { title: "HHST gate history", name: "03 HHST Gate History", sig: "gate_threshold", tab: "Gate & Flights" },
     { title: "HHST gate ribbon", name: "03b Gate Ribbon", sig: "gate_ribbon_grp_spend", tab: "Gate & Flights" },
     { title: "Prospecting flights", name: "08 Flights", sig: "flight_days", tab: "Gate & Flights" },
     { title: "Campaign spans", name: "01 Campaign Group Gantt", sig: "first_active_day", tab: "Delivery & Measurement" },
     { title: "Verified-visit window", name: "11 VV Window", sig: "vv_change_date", tab: "Delivery & Measurement" },
+    { title: "Retargeting reach & recirculation", name: "09rt Retargeting Reach", sig: "rt_reach", tab: "Retargeting" },
   ];
 
   function renderModule(m, sec) {

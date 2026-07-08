@@ -20,6 +20,9 @@ scope_camps AS (
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
     AND c.objective_id != 4
 ),
+-- FULL-WINDOW reach (empirically CIL retains well over a year — the old "90d TTL"
+-- note was wrong). HI/score split only exists on scored impressions (since 2025-06,
+-- prospecting rows) — earlier reach counts as unscored.
 buckets AS (
   SELECT
     sc.campaign_group_id AS grp,
@@ -31,7 +34,8 @@ buckets AS (
   FROM `dw-main-silver.logdata.cost_impression_log` l
   JOIN scope_camps sc ON sc.campaign_id = l.campaign_id
   WHERE l.advertiser_id = {{ Advertiser_ID }}
-    AND DATE(l.time) BETWEEN DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 45 DAY) AND DATE('{{ Period_End }}')
+    AND DATE(l.time) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND DATE(l.time) <  DATE('{{ Period_End }}')
   GROUP BY 1
 ),
 grp_enum AS (

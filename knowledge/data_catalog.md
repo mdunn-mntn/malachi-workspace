@@ -580,6 +580,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 ---
 
 ## silver.logdata.cost_impression_log
+- **Retention: NOT 90 days** — empirically holds ≥17 months (RT reach query returned 2025-02 rows on 2026-07-07, TI-1037); effective floor ≈ the GCP floor 2025-01-01. The old "CIL 90d TTL" note was wrong — distinct-IP reach IS computable over a full YoY trend window.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical, 71 B rows / 56 TB)
 - **Partition:** DAY on `time`
 - **Clustering:** advertiser_id, impression_id
