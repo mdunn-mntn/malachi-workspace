@@ -1586,8 +1586,9 @@ function render(rowsIgnored, root, H) {
   function inP(d, s, e) { return s && e && d >= s && d < e; }
 
   var frows = [];
-  function add(name, p1, p2, delta, status, driver) {
-    frows.push({ name: name, p1: p1, p2: p2, delta: delta, status: status, driver: driver || "" });
+  function add(name, p1, p2, delta, status, driver, deltaHtml) {
+    frows.push({ name: name, p1: p1, p2: p2, delta: delta, status: status,
+                 driver: driver || "", deltaHtml: deltaHtml || null });
   }
 
   // ---- 1) prospecting spend P1 -> P2 (single-month driver via monthly data) ----
@@ -1704,13 +1705,20 @@ function render(rowsIgnored, root, H) {
       if (addl.filter(function (x) { return x !== 16; }).length ||
           dropl.filter(function (x) { return x !== 16; }).length) otherChg++;
     });
-    var parts = [];
-    if (ds16add.length) parts.push("+DS16 net-new on " + ds16add.join(", "));
-    if (ds16drop.length) parts.push("−DS16 on " + ds16drop.join(", "));
+    var parts = [], partsH = [];
+    if (ds16add.length) {
+      parts.push("+DS16 net-new on " + ds16add.join(", "));
+      partsH.push('<span style="color:' + C.GREEN + '">+DS16 net-new on ' + H.esc(ds16add.join(", ")) + '</span>');
+    }
+    if (ds16drop.length) {
+      parts.push("−DS16 on " + ds16drop.join(", "));
+      partsH.push('<span style="color:' + C.RED + '">−DS16 on ' + H.esc(ds16drop.join(", ")) + '</span>');
+    }
     var st16 = (ds16add.length || ds16drop.length) ? "flag" : (otherChg ? "watch" : "ok");
     add("Audience DS changes", "", "",
       parts.length ? parts.join(" · ") : (otherChg ? otherChg + " groups changed other DSs" : "none"),
-      st16, (parts.length && otherChg) ? ("+ " + otherChg + " groups with other DS changes") : "");
+      st16, (parts.length && otherChg) ? ("+ " + otherChg + " groups with other DS changes") : "",
+      partsH.length ? partsH.join('  ·  ') : null);
   } else add("Audience DS changes", "—", "—", "", "na", "run query 07");
 
   // ---- 5) short flights (<=3d auto-ungate) P1 vs P2 ----
@@ -1789,7 +1797,7 @@ function render(rowsIgnored, root, H) {
       + '<td style="text-align:center;padding:5px 8px"><span style="display:inline-block;padding:1px 8px;border-radius:8px;font-size:10px;font-weight:700;background:' + ch2.bg + ';color:' + ch2.col + '">' + ch2.txt + '</span></td>'
       + '<td style="text-align:right;padding:5px 8px;color:#444;white-space:nowrap">' + H.esc(f.p1) + '</td>'
       + '<td style="text-align:right;padding:5px 8px;color:#444;white-space:nowrap">' + H.esc(f.p2) + '</td>'
-      + '<td style="text-align:left;padding:5px 8px;font-weight:700;color:' + (f.status === "flag" ? C.RED : (f.status === "watch" ? C.AMBER : "#333")) + '">' + H.esc(f.delta) + '</td>'
+      + '<td style="text-align:left;padding:5px 8px;font-weight:700;color:' + (f.deltaHtml ? "#333" : (f.status === "flag" ? C.RED : (f.status === "watch" ? C.AMBER : "#333"))) + '">' + (f.deltaHtml ? f.deltaHtml : H.esc(f.delta)) + '</td>'
       + '<td style="text-align:left;padding:5px 8px;color:#777;font-size:11px">' + H.esc(f.driver) + '</td>'
       + '</tr>';
   });
