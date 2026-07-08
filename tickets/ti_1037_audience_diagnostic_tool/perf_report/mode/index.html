@@ -1994,6 +1994,36 @@ function render(rowsIgnored, root, H) {
     add("High-spend low-gate campaign", "—", "—", "", "na", "run query 03b");
   }
 
+  // ---- order: outcomes -> performance drivers (most impactful first; HI on top)
+  //      -> measurement confounds (huge APPARENT movers, zero real performance).
+  //      Ranking is from the workspace's own findings: within-HI VR is the
+  //      discriminator (AUDI-1070); gate levers are what move HI share; restriction
+  //      chokes reach; recirculation drags slowly (Caraway x0.51 at scale). ----
+  var RANK = {
+    "Prospecting spend": 1,
+    "Metric moves \u226515% (YoY)": 2,
+    "Avg HI share (scored imps)": 10,
+    "No-gate (HHST\u22640) campaign-days": 11,
+    "Avg HHST (campaign-days)": 12,
+    "High-spend low-gate campaign": 13,
+    "Short flights \u22643d (auto-ungate)": 14,
+    "MM usage (DS19/13/46)": 15,
+    "MM audience restricted (geo/3P)": 16,
+    "Gates added (DS16/21/34)": 17,
+    "Re-touch share (HI 10000)": 18,
+    "Re-touch share (all IPs)": 19,
+    "VV lookback (PRO)": 30,
+    "Possible tracking changes (MoM steps)": 31,
+    "Pixel/tag changes (conversion_log)": 32
+  };
+  function bandOf(r) {
+    return r < 10 ? "What happened (P1 \u2192 P2 outcomes)"
+      : r < 30 ? "Performance drivers \u2014 most impactful first"
+      : "Measurement confounds \u2014 not performance; verify before trusting the numbers";
+  }
+  frows.forEach(function (f, i) { f._r = (RANK[f.name] != null ? RANK[f.name] : 99) * 100 + i; });
+  frows.sort(function (a, b) { return a._r - b._r; });
+
   // ---- render ----
   var CHIP = {
     flag:  { txt: "FLAG",  bg: "rgba(214,59,47,0.12)",  col: C.RED },
@@ -2021,7 +2051,13 @@ function render(rowsIgnored, root, H) {
     + '<th style="text-align:left;' + fth + '">Δ / change</th>'
     + '<th style="text-align:left;' + fth + '">Driver / note</th>'
     + '</tr></thead><tbody>';
+  var lastBand = null;
   frows.forEach(function (f, i) {
+    var band = bandOf(Math.floor(f._r / 100));
+    if (band !== lastBand) {
+      lastBand = band;
+      html += '<tr><td colspan="6" style="padding:9px 8px 3px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#999;border-bottom:1px solid #e8e8e8">' + H.esc(band) + '</td></tr>';
+    }
     var ch2 = CHIP[f.status] || CHIP.na;
     var bg = (i % 2 === 0) ? "rgba(0,0,0,0.02)" : "transparent";
     html += '<tr style="background:' + bg + '">'
