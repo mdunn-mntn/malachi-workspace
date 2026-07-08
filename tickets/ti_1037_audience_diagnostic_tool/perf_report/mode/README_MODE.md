@@ -19,6 +19,12 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   report Run produced (drafts included). After pasting any query/HTML change, hit **Run**, or the HTML renders
   against stale data (symptom seen 2026-07-07: gate trajectory showed 4 dead zero-spend groups from a
   draft-era run while the correct SQL returns 21 groups with 119362/108055/85384 on top).
+- **Dynamic (query-backed) dropdown params:** the `{% form %}` block must live in the SAME query whose
+  result feeds the options; `options: labels: <col> / values: <col>` shows the label but substitutes the
+  value (so consumer queries are untouched). Mode documents a cap of ~1,000 options / 1MB for dynamic
+  params — our params query returns advertisers ranked by 18-month spend DESC so any truncation drops the
+  smallest accounts. The params query's DB connection must be **BigQuery** now (it queries `advertisers` +
+  `sum_by_campaign_by_day`). Precedent: Archive report "Network Blocks by CGID" → `AIDs` query.
 - **GOTCHA — undefined Liquid params render as EMPTY STRING.** Pasting a query that references a param the
   report doesn't define (e.g. the old tool's `{{AID}}` / `{{WIN_START}}`) doesn't error at parse time — the tag
   just vanishes, leaving broken SQL and a cryptic error like `Unexpected keyword AND at [24:26]`
@@ -46,7 +52,7 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
 
 | File | → Mode | Status |
 |---|---|---|
-| `params.sql` | query "params" (the `{% form %}`) | ready |
+| `params.sql` | query "params" (the `{% form %}` + the Advertiser_ID dropdown SQL) | ready |
 | `04_yoy_metrics.sql` | query **"04 YoY Metrics"** | ✅ validated vs tool (P1 $647,864 / P2 $528,728) |
 | `05_monthly_metrics.sql` | query **"05 Monthly Metrics"** | ready |
 | `index.html` | the report HTML (YoY table + monthly Chart.js) | ready |
