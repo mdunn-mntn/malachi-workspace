@@ -1,6 +1,7 @@
--- Period_End is CLAMPED to the first day of the current month (exclusive end ->
--- data through the last FULL month). The far-future param default relies on this;
--- any user-picked earlier date is honored as-is.
+-- Dynamic param defaults (Mode date params are static-only, so sentinels map in SQL):
+--   Period_Start = 1900-01-01 (the default) -> Jan 1 of the CURRENT year; any other date honored.
+--   Period_End is CLAMPED to the first day of the current month (exclusive end ->
+--   data through the last FULL month); the far-future default (2099-01-01) relies on this.
 -- Module 09rt -- PROSPECTING HI recirculation (monthly). NOT obj=4 retargeting:
 -- this measures how much of prospecting's HI delivery is re-touching IPs the
 -- advertiser already served. Unless DS16 (net-new gate) is on, prospecting will
@@ -37,7 +38,7 @@ all_base AS (
          (model_params IS NULL OR model_params NOT LIKE '%realtime_conquest_score=10000%') AS not_rtc
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
-    AND time >= TIMESTAMP(DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR))
+    AND time >= TIMESTAMP(DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR))
     AND time <  TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
     AND ip IS NOT NULL AND ip != '0.0.0.0'
 ),
@@ -68,9 +69,9 @@ SELECT
   COUNTIF(pim.hi_now AND hf.first_hi_mo < pim.mo)         AS rt_returning_hi,
   COUNTIF(fs.first_mo = pim.mo)                           AS rt_brand_new,
   COUNTIF(pf.first_p_mo = pim.mo)                         AS rt_prosp_first,
-  DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)   AS p1_start,
+  DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)   AS p1_start,
   DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR)   AS p1_end,
-  DATE('{{ Period_Start }}')                              AS p2_start,
+  IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}'))                              AS p2_start,
   LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                                AS p2_end
 FROM pim
 LEFT JOIN hi_first hf USING (ip)

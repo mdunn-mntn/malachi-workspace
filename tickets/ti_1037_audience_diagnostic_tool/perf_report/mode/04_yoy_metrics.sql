@@ -1,6 +1,7 @@
--- Period_End is CLAMPED to the first day of the current month (exclusive end ->
--- data through the last FULL month). The far-future param default relies on this;
--- any user-picked earlier date is honored as-is.
+-- Dynamic param defaults (Mode date params are static-only, so sentinels map in SQL):
+--   Period_Start = 1900-01-01 (the default) -> Jan 1 of the CURRENT year; any other date honored.
+--   Period_End is CLAMPED to the first day of the current month (exclusive end ->
+--   data through the last FULL month); the far-future default (2099-01-01) relies on this.
 -- =====================================================================
 -- 04 YoY Metrics — prospecting P1-vs-P2 aggregated raw sums.
 -- P2 = the selected period (Period_Start .. Period_End, END EXCLUSIVE).
@@ -16,9 +17,9 @@ WITH camp AS (
 )
 SELECT
   CASE
-    WHEN DATE(day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    WHEN DATE(day) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
      AND DATE(day) <  DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR) THEN 'P1'
-    WHEN DATE(day) >= DATE('{{ Period_Start }}')
+    WHEN DATE(day) >= IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}'))
      AND DATE(day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              THEN 'P2'
   END                                                    AS period,
   SUM(impressions)                                       AS impressions,
@@ -29,10 +30,10 @@ SELECT
 FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
 WHERE campaign_id IN (SELECT campaign_id FROM camp)
   AND (
-    (DATE(day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    (DATE(day) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
      AND DATE(day) < DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 YEAR))
     OR
-    (DATE(day) >= DATE('{{ Period_Start }}') AND DATE(day) < LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
+    (DATE(day) >= IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')) AND DATE(day) < LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
   )
 GROUP BY period
 HAVING period IS NOT NULL

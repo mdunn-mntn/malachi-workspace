@@ -1,6 +1,7 @@
--- Period_End is CLAMPED to the first day of the current month (exclusive end ->
--- data through the last FULL month). The far-future param default relies on this;
--- any user-picked earlier date is honored as-is.
+-- Dynamic param defaults (Mode date params are static-only, so sentinels map in SQL):
+--   Period_Start = 1900-01-01 (the default) -> Jan 1 of the CURRENT year; any other date honored.
+--   Period_End is CLAMPED to the first day of the current month (exclusive end ->
+--   data through the last FULL month); the far-future default (2099-01-01) relies on this.
 -- Module 03 -- HHST gate history (prospecting campaigns)
 -- Every HHST gate-change event for each prospecting campaign group (funnel_level=1 AND objective_id=1),
 -- from the type-2 archive. Returns ALL history up to the window end (not filtered to start) so the
@@ -30,7 +31,7 @@ grp_spend AS (
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    AND DATE(s.day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND DATE(s.day) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
     AND DATE(s.day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND c.deleted = FALSE AND c.objective_id != 4
   GROUP BY 1
@@ -43,11 +44,11 @@ SELECT
   chg.update_time,
   chg.threshold AS gate_threshold,
   COALESCE(gs.grp_prospecting_spend, 0) AS grp_prospecting_spend,
-  DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS p1_start,
+  DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR) AS p1_start,
   DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR) AS p1_end,
-  DATE('{{ Period_Start }}') AS p2_start,
+  IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')) AS p2_start,
   LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))   AS p2_end,
-  DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS win_start,
+  DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR) AS win_start,
   LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))   AS win_end
 FROM chg
 JOIN camp c USING (campaign_id)

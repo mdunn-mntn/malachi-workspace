@@ -1,6 +1,7 @@
--- Period_End is CLAMPED to the first day of the current month (exclusive end ->
--- data through the last FULL month). The far-future param default relies on this;
--- any user-picked earlier date is honored as-is.
+-- Dynamic param defaults (Mode date params are static-only, so sentinels map in SQL):
+--   Period_Start = 1900-01-01 (the default) -> Jan 1 of the CURRENT year; any other date honored.
+--   Period_End is CLAMPED to the first day of the current month (exclusive end ->
+--   data through the last FULL month); the far-future default (2099-01-01) relies on this.
 -- Module 11 -- VV (Verified-Visit) lookback window change log
 -- One row per change event to an advertiser's VV lookback windows (a MEASUREMENT change).
 -- Source of truth: archives_advertiser_archives (version history) + live advertisers row.
@@ -55,11 +56,11 @@ SELECT
   rt_window,
   conversion_window,
   prev_pro, prev_rt, prev_conv,
-  DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS p1_start,
+  DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR) AS p1_start,
   DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR) AS p1_end,
-  DATE('{{ Period_Start }}')                            AS p2_start,
+  IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}'))                            AS p2_start,
   LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              AS p2_end,
-  DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS win_start,
+  DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR) AS win_start,
   LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              AS win_end
 FROM changes
 ORDER BY vv_update_time

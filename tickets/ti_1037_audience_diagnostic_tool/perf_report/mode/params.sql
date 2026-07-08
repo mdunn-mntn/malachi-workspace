@@ -36,9 +36,9 @@ Advertiser_ID:
     values: advertiser_id
 Period_Start:
   type: date
-  default: 2026-01-01
+  default: 1900-01-01
   label: "Period start (P2)"
-  description: "Start of the recent period; P1 = the same dates one year earlier"
+  description: "Leave at 1900-01-01 = automatically Jan 1 of the current year; any other date is honored. P1 = the same dates one year earlier"
 Period_End:
   type: date
   default: 2099-01-01

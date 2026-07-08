@@ -1,6 +1,7 @@
--- Period_End is CLAMPED to the first day of the current month (exclusive end ->
--- data through the last FULL month). The far-future param default relies on this;
--- any user-picked earlier date is honored as-is.
+-- Dynamic param defaults (Mode date params are static-only, so sentinels map in SQL):
+--   Period_Start = 1900-01-01 (the default) -> Jan 1 of the CURRENT year; any other date honored.
+--   Period_End is CLAMPED to the first day of the current month (exclusive end ->
+--   data through the last FULL month); the far-future default (2099-01-01) relies on this.
 -- Module 06 -- Monthly score-bucket counts of prospecting delivery.
 -- Per month, count of prospecting impressions (obj=1, funnel=1) in each MNTN household-score tier, RTC-excluded.
 -- Tiers on household_score hs:
@@ -21,7 +22,7 @@ base AS (
   SELECT FORMAT_DATE("%Y-%m", DATE(time)) AS mo, household_score AS hs
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
-    AND time >= TIMESTAMP(DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR))
+    AND time >= TIMESTAMP(DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR))
     AND time <  TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
     AND campaign_id IN (SELECT campaign_id FROM camp)
     AND (model_params IS NULL OR model_params NOT LIKE "%realtime_conquest_score=10000%")
@@ -35,9 +36,9 @@ SELECT
   COUNTIF(hs BETWEEN 3333 AND 6665)               AS mi,
   COUNTIF(hs = 8000 OR hs BETWEEN 6666 AND 7999)  AS pp,
   COUNTIF(hs = 10000 OR hs BETWEEN 8001 AND 9999) AS hi,
-  FORMAT_DATE("%Y-%m", DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)) AS p1_start_mo,
+  FORMAT_DATE("%Y-%m", DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)) AS p1_start_mo,
   FORMAT_DATE("%Y-%m", DATE_SUB(DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY), INTERVAL 1 YEAR)) AS p1_end_mo,
-  FORMAT_DATE("%Y-%m", DATE('{{ Period_Start }}')) AS p2_start_mo,
+  FORMAT_DATE("%Y-%m", IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}'))) AS p2_start_mo,
   FORMAT_DATE("%Y-%m", DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY)) AS p2_end_mo
 FROM base
 GROUP BY mo, p1_start_mo, p1_end_mo, p2_start_mo, p2_end_mo

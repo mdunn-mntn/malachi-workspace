@@ -1,6 +1,7 @@
--- Period_End is CLAMPED to the first day of the current month (exclusive end ->
--- data through the last FULL month). The far-future param default relies on this;
--- any user-picked earlier date is honored as-is.
+-- Dynamic param defaults (Mode date params are static-only, so sentinels map in SQL):
+--   Period_Start = 1900-01-01 (the default) -> Jan 1 of the CURRENT year; any other date honored.
+--   Period_End is CLAMPED to the first day of the current month (exclusive end ->
+--   data through the last FULL month); the far-future default (2099-01-01) relies on this.
 -- Module 03b: daily HHST gate per prospecting campaign group, over delivering days.
 -- One row per prospecting campaign-group per day it delivered, carrying the forward-filled
 -- HHST gate in effect that day (latest gate change on or before that day). Rows exist only for
@@ -19,7 +20,7 @@ delivery AS (
   SELECT d.campaign_id, DATE(d.day) AS day, d.impressions, (d.media_spend + d.data_spend + d.platform_spend) AS spend
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` d
   WHERE d.advertiser_id = {{ Advertiser_ID }}
-    AND DATE(d.day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND DATE(d.day) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
     AND DATE(d.day) < LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND d.campaign_id IN (SELECT campaign_id FROM camp)
 ),
@@ -68,7 +69,7 @@ grp_spend AS (
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    AND DATE(s.day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND DATE(s.day) >= DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR)
     AND DATE(s.day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND c.deleted = FALSE AND c.objective_id != 4
   GROUP BY 1
