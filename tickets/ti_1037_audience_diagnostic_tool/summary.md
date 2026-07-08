@@ -20,8 +20,14 @@ Continuation of the batch-1 Mode deploy (commit 8d13650 / mode-assets PR #9). Tw
 2. **"Verified-visit window: render error … complete date adapter" → real HTML bug, fixed.** Module 11 used a
    Chart.js `type:"time"` x-scale; the report loads only `chart.umd.min.js` (no date adapter). Fixed by
    switching to the proven module-03 pattern: `type:"linear"` over epoch-ms + month tick callback. Gotcha
-   comment added at the Chart.js include. **Deploy: mode-assets PR #10 — pending review** (main is protected;
-   review requested from Alex Knorr, who approved #9). After merge → Run the report.
+   comment added at the Chart.js include.
+
+**RESOLVED 2026-07-07 (evening):** PR #10 closed unmerged — git→Mode edit-sync doesn't apply outside-Mode
+changes, so **deploy = paste into the Mode UI** (workflow settled; see README_MODE.md + memory). Malachi pasted
+the fixed `index.html` (VV module renders) and re-Ran the report — datasets refreshed and all modules now show
+the full picture (the Mode queries were already current; only the Run was missing). Also added a **tabbed
+layout** to `index.html` (Overview / Audience & Scores / Gate & Flights / Delivery & Measurement; lazy-render
+per tab so Chart.js sizes against visible containers) — modules declare a `tab` in the registry.
 
 **Real client finding queued behind the fix:** Bouqs (32147) **PRO VV lookback cut 30d→14d on 2025-11-18**
 (archives_advertiser_archives; also RT 30→7→14 same day). P1 (Jan-Jun'25) measured at 30d, P2 (Jan-Jun'26) at
