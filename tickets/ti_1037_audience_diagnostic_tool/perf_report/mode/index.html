@@ -860,24 +860,27 @@ function render(rows, root, H) {
   var GREEN = C.GREEN, RED = C.RED, NAVY = C.NAVY, GRAY = C.GRAY;
 
   // DS -> role + human name (integrationprod.data_sources + the tool's chart-07 map).
-  // "gate" here = audience-level delivery gate (DS14 availability, DS16 net-new) — NOT the HHST score gate.
+  // and-incl = ANDed include: adds no one, the audience must ALSO match it (DS16 net-new).
+  // DS14 (availability gate) is on essentially every campaign — hygiene — so it is HIDDEN
+  // from this module entirely (sets, deltas, net, legend).
+  var HIDE = {14: true};
   var ROLE = {19:"incl",13:"incl",35:"incl",11:"incl",46:"incl",38:"incl",18:"incl",
-    14:"gate",16:"gate",
+    16:"and-incl",
     2:"excl",4:"excl",9:"excl",47:"excl",1:"excl",21:"excl",34:"excl"};
-  var DSN = {19:"Keyword (MM)",13:"Vertical (MM)",35:"LiveRamp 3P",11:"LiveRamp legacy",
+  var DSN = {19:"Keyword",13:"Vertical",35:"LiveRamp 3P",11:"LiveRamp legacy",
     46:"Fangorn scoring",38:"UI keywords",18:"Dstillery 3P",
-    14:"availability gate",16:"net-new gate",
+    16:"net-new",
     2:"MNTN 1P excl",4:"CRM excl",9:"1P-campaigns excl",47:"CRM-idgraph excl",1:"Oracle excl",
     21:"conversion excl",34:"pageview excl"};
   function role(ds){ return ROLE[ds] || "?"; }
   function dsName(ds){ return DSN[ds] ? "DS"+ds+" "+DSN[ds] : "DS"+ds; }
-  var ORDER = ["incl","excl","gate","?"];
+  var ORDER = ["incl","and-incl","excl","?"];
 
-  // delta form: every DS spelled out — "DS16 net-new gate,  DS21 conversion excl"
+  // delta form: every DS spelled out — "DS16 net-new,  DS21 conversion excl"
   function dsg(list){
     return list.slice().sort(function(a,b){return a-b;}).map(dsName).join(",  ");
   }
-  // compact initial set: "incl 19,35 · excl 2,4 · gate 14"
+  // compact set: "incl 13,19,35 · and-incl 16 · excl 1,2,4"
   function dsfmtGrouped(list){
     var by = {};
     list.slice().sort(function(a,b){return a-b;}).forEach(function(ds){
@@ -888,7 +891,9 @@ function render(rows, root, H) {
   }
   function parseDs(s){
     if(!s) return [];
-    return String(s).split(",").filter(function(x){return x!=="";}).map(function(x){return parseInt(x,10);});
+    return String(s).split(",").filter(function(x){return x!=="";})
+      .map(function(x){return parseInt(x,10);})
+      .filter(function(x){return !HIDE[x];});
   }
 
   // ---- group rows by campaign_group ----
@@ -997,19 +1002,15 @@ function render(rows, root, H) {
   html += '<div style="background:#FAFAFA;padding:14px 16px;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;">';
   html += '<div style="font-size:16px;font-weight:700;color:#222;">Prospecting audience change-log (DS-level)</div>';
   html += '<div style="font-size:11px;color:#555;margin:3px 0 4px;">By campaign, most spend first. '
-    + 'Start = DS set in effect entering the window; then only in-window changes; final = set at window end. '
-    + '<span style="font-weight:700;">Net P1 → P2</span> compares start vs final. '
-    + '<span style="color:'+GREEN+';font-weight:700;">green = added</span>, '
-    + '<span style="color:'+RED+';font-weight:700;">red = removed</span>. '
-    + 'Roles: <b>incl</b> = who to target, <b>excl</b> = who to remove, '
-    + '<b>gate</b> = a must-pass filter that only shrinks delivery '
-    + '(DS14 = reachable households, DS16 = not-yet-served) — not the HHST score gate.</div>';
-  // DS decoder — every DS id appearing anywhere in this advertiser's changelog
+    + 'Start = DS set entering the window → in-window changes → final set; '
+    + '<span style="font-weight:700;">Net P1 → P2</span> = start vs final.</div>';
+  // DS decoder — every DS id appearing in this advertiser's changelog
   var seenDs = {};
   rows.forEach(function(r){ parseDs(r.clog_ds_ids).forEach(function(x){ seenDs[x] = true; }); });
   var legendIds = Object.keys(seenDs).map(Number).sort(function(a,b){ return a - b; });
   html += '<div style="font-size:10.5px;color:#888;margin:0 0 12px;">'
-    + legendIds.map(function(d){ return H.esc(dsName(d)); }).join('  ·  ') + '</div>';
+    + legendIds.map(function(d){ return H.esc(dsName(d)); }).join('  ·  ')
+    + '  ·  and-incl = ANDed include (must also match)  ·  DS14 availability hidden (on every campaign)</div>';
 
   if(cols.length === 0){
     html += '<div style="font-size:12px;color:#888;">No prospecting audience changes in the window.</div>';
