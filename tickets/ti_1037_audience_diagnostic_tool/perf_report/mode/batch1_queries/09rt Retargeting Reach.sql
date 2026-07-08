@@ -4,10 +4,15 @@
 -- re-serve previously-touched IPs -- the VV (pageview) and conversion excludes
 -- only remove visitors/converters. A client that scales spend while holding
 -- HHST=10000 exhausts the net-new HI pool and ends up re-touching ~99%.
--- Rules (per Malachi): HI counts ONLY at a FULL 10000, and re-touch requires
--- 10000 BOTH times -- served at 10000 this month AND at 10000 in a prior month
--- (no future borrowing; scores logged since 2025-06, earlier months read
--- "no score data" in the render). Scope mirrors module 06: obj=1 / funnel=1,
+-- Rules (per Malachi): HI = household_score = 10000 ON THE BID -- the score
+-- logged with each impression, NOT a monthly status. With HHST held at 10000 the
+-- bidder only serves an IP while it scores 10000 (an IP that fell to 8000 is not
+-- served unless the gate fell too). Re-touch = the IP's first-ever 10000 bid
+-- predates this month -- 10000 at bid time on both touches. Month grain is an
+-- approximation: scores carry a 30-day TTL that does not align to calendar
+-- months, and within-month re-serves are not split out (they show in frequency).
+-- Scores logged since 2025-06 (earlier months read "no score data" in the
+-- render). Scope mirrors module 06: obj=1 / funnel=1,
 -- RTC-excluded. Column aliases keep the legacy rt_ prefix so the HTML resolver
 -- and render plumbing are unchanged.
 --   rt_reach / rt_imps / rt_freq_median -> prospecting reach + MEDIAN imps/IP
@@ -33,8 +38,8 @@ all_base AS (
 ),
 first_seen AS (SELECT ip, MIN(mo) AS first_mo FROM all_base GROUP BY ip),
 hi_first AS (
-  -- first month each IP was served at a FULL 10000 (RTC rows excluded so a
-  -- realtime-conquest 10000 does not mark an IP as HI)
+  -- first month each IP had a bid at a FULL 10000 (score on the impression row;
+  -- RTC rows excluded so a realtime-conquest 10000 does not mark an IP as HI)
   SELECT ip, MIN(mo) AS first_hi_mo
   FROM all_base
   WHERE hs = 10000 AND not_rtc

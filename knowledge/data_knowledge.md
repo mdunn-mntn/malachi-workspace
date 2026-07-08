@@ -3687,7 +3687,10 @@ appears after a Fangorn flip, so `hs = 10000` vs `hs >= 8001` give identical res
 Prospecting re-serves IPs the advertiser already touched unless **DS16 (net-new gate)** is on the campaign —
 the VV/pageview (DS34) and conversion (DS21) excludes only remove visitors/converters, NOT previously-served
 IPs. Clients that scale spend while holding HHST=10000 exhaust the net-new HI pool and end up re-touching up
-to ~99% of previously-served IPs (per Malachi). Measure it: per month, IPs served at hs=10000 split by whether
-their first-ever 10000 service was an earlier month ("10000 both times" rule — a prior touch at 8000 doesn't
-count). Bouqs (Jan'25–May'26): re-touch share 0%→75%, dipping when new campaigns/geo open fresh pools;
+to ~99% of previously-served IPs (per Malachi). Measure it: HI is the score ON THE BID
+(each impression row's household_score = 10000 at bid time, NOT a monthly status — with HHST at 10000 the
+bidder only serves an IP while it currently scores 10000); per month, split 10000-served IPs by whether their
+first-ever 10000 bid predates the month ("10000 both times" — a prior touch at 8000 doesn't count). Month
+grain is approximate: the 30-day score TTL doesn't align to calendar months, and within-month re-serves land
+in frequency, not the new/re-touch split. Bouqs (Jan'25–May'26): re-touch share 0%→75%, dipping when new campaigns/geo open fresh pools;
 cumulative distinct 10000-IPs 2.54M. CPD dashboard module 09rt.
