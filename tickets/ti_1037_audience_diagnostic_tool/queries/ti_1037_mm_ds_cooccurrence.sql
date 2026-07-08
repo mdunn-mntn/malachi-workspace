@@ -61,6 +61,49 @@ GROUP BY 1, 2, 3
 ORDER BY spend_45d DESC;
 
 /* ----------------------------------------------------------------------------
+   Variant 2 (2026-07-08): bucket/vertical split INSIDE the DS13/DS46 leaves.
+   Old MM 2.0 sheet: bucket = 3-digit DS13 segment id (industry), vertical =
+   6-digit (subindustry). Result: ZERO live leaves contain a 3-digit bucket id —
+   every DS13/DS46 leaf is {"data_source_id":13|46,"category_ids":[<6-digit
+   vertical>]}, the SAME id as the campaign's score_type:rtc block. Bucket vs
+   vertical is scoring-side only (bucket-not-vertical => MI tier), never a
+   config axis. Config space = 2x3: DS19 y/n x anchor (none/DS13/DS46).
+
+WITH deliv AS (... as above ...), camp AS (...),
+seg AS (
+  SELECT s.campaign_id,
+    LOGICAL_OR(REGEXP_CONTAINS(s.expression, r"\"data_source_id\":13[^0-9]")) AS ds13,
+    LOGICAL_OR(REGEXP_CONTAINS(s.expression, r"\"data_source_id\":19[^0-9]")) AS ds19,
+    LOGICAL_OR(REGEXP_CONTAINS(s.expression, r"\"data_source_id\":46[^0-9]")) AS ds46,
+    ARRAY_CONCAT_AGG(REGEXP_EXTRACT_ALL(s.expression, r"\"data_source_id\":13,\"category_ids\":\[([0-9,]+)\]")) AS l13,
+    ARRAY_CONCAT_AGG(REGEXP_EXTRACT_ALL(s.expression, r"\"data_source_id\":46,\"category_ids\":\[([0-9,]+)\]")) AS l46
+  FROM `dw-main-silver.audience.audience_segments` s
+  JOIN camp USING (campaign_id)
+  WHERE s.expression_type_id = 2 AND s.is_targeted = TRUE
+  GROUP BY s.campaign_id
+),
+cls AS (
+  SELECT campaign_id, ds13, ds19, ds46,
+    COALESCE((SELECT LOGICAL_OR(LENGTH(TRIM(id)) = 3) FROM UNNEST(l13) l, UNNEST(SPLIT(l, ",")) id), FALSE) AS b13,
+    COALESCE((SELECT LOGICAL_OR(LENGTH(TRIM(id)) = 6) FROM UNNEST(l13) l, UNNEST(SPLIT(l, ",")) id), FALSE) AS v13,
+    COALESCE((SELECT LOGICAL_OR(LENGTH(TRIM(id)) = 3) FROM UNNEST(l46) l, UNNEST(SPLIT(l, ",")) id), FALSE) AS b46,
+    COALESCE((SELECT LOGICAL_OR(LENGTH(TRIM(id)) = 6) FROM UNNEST(l46) l, UNNEST(SPLIT(l, ",")) id), FALSE) AS v46
+  FROM seg
+)
+SELECT
+  CASE WHEN NOT ds13 THEN "no DS13" WHEN b13 AND v13 THEN "DS13 bucket+vertical"
+       WHEN v13 THEN "DS13 vertical only" WHEN b13 THEN "DS13 bucket only"
+       ELSE "DS13 other-form" END AS ds13_kind,
+  CASE WHEN NOT ds46 THEN "no DS46" WHEN b46 AND v46 THEN "DS46 bucket+vertical"
+       WHEN v46 THEN "DS46 vertical only" WHEN b46 THEN "DS46 bucket only"
+       ELSE "DS46 other-form" END AS ds46_kind,
+  ds19, COUNT(*) n_campaigns, COUNT(DISTINCT c.advertiser_id) n_advertisers,
+  ROUND(SUM(c.spend)) spend_45d
+FROM cls JOIN camp c USING (campaign_id)
+GROUP BY 1,2,3 ORDER BY spend_45d DESC;
+---------------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------------
    Companion: what does the "no DS13/19/46 at all" cell (26.8% of spend) run?
    Top DS sets by spend. Answer: DS14-only run-of-network ($2.5M / 42 adv),
    3P-only (DS35 LiveRamp IP / DS18 Dstillery / DS17 ShareThis), IP lists (DS8),
