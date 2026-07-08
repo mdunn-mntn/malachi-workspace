@@ -269,15 +269,15 @@ function render(rows, root, H) {
         + '<th style="text-align:left;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Score tier</th>'
         + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Period 1<br>'+H.esc(p1Label)+'</th>'
         + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Period 2<br>'+H.esc(p2Label)+'</th>'
-        + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Δ %</th>'
+        + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Δ pp</th>'
         + '</tr></thead><tbody>';
   // table rows: HI, PP, MI, MaxReach, Unscored (best->worst for a scannable read)
   var TABLE_ORDER = ['hi','pp','mi','maxreach','unscored'];
   TABLE_ORDER.forEach(function(k, i){
     var t = TIERS.filter(function(x){return x.key===k;})[0];
     var v1 = d1.pct[k], v2 = d2.pct[k];
-    var delta = v1 ? 100*(v2-v1)/v1 : null;
-    var ds = (delta===null) ? 'n/a' : (delta>=0?'+':'') + delta.toFixed(1) + '%';
+    var delta = (d1.logged && d2.logged) ? (v2 - v1) : null;
+    var ds = (delta===null) ? 'n/a' : (delta>=0?'+':'') + delta.toFixed(1) + 'pp';
     var dcolor = C.GRAY;
     if (delta !== null && t.good !== 0) dcolor = (delta * t.good > 0) ? C.GREEN : C.RED;
     var bg = (i % 2 === 0) ? 'rgba(0,0,0,0.03)' : 'transparent';
