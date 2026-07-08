@@ -1920,6 +1920,7 @@ function render(rows, root, H) {
   var M = months.map(function (k) {
     var r = by[k] || {};
     return { mo: k, reach: H.num(r.rt_reach), imps: H.num(r.rt_imps), hi: H.num(r.rt_hi_reach),
+             freqMed: H.num(r.rt_freq_median),
              newHi: H.num(r.rt_new_hi), retHi: H.num(r.rt_returning_hi), brandNew: H.num(r.rt_brand_new) };
   });
   var SCORE_FLOOR = "2025-06"; // household_score logged into CIL from this month
@@ -1938,13 +1939,13 @@ function render(rows, root, H) {
   cumSeries.forEach(function (v) { if (v != null) cumFinal = v; });
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Cumulative distinct retargeted HI — ' + H.fmtK(cumFinal) + ' so far (still climbing = pool not exhausted)</div>';
   html += '<div style="height:200px;margin-bottom:14px"><canvas id="' + idCum + '"></canvas></div>';
-  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Reach & frequency — gray bars = distinct IPs, red = imps per IP</div>';
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Reach & frequency — gray bars = distinct IPs, red = MEDIAN imps per IP (means are inflated by shared/CGNAT IPs)</div>';
   html += '<div style="height:220px;margin-bottom:14px"><canvas id="' + idFq + '"></canvas></div>';
 
   // table
   var th = 'text-align:right;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
   html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
-  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP</th><th style="' + th + '">HI reach</th><th style="' + th + '">New HI</th><th style="' + th + '">Returning HI</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
+  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP med (avg)</th><th style="' + th + '">HI reach</th><th style="' + th + '">New HI</th><th style="' + th + '">Returning HI</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
   M.forEach(function (r, i) {
     var bg = (i % 2 === 0) ? "rgba(0,0,0,0.03)" : "transparent";
     var td = 'text-align:right;padding:4px 8px;color:#222;white-space:nowrap';
@@ -1962,7 +1963,8 @@ function render(rows, root, H) {
       + '<td style="text-align:left;padding:4px 8px;white-space:nowrap">' + H.esc(moLbl(r.mo)) + '</td>'
       + '<td style="' + td + '">' + H.fmtK(r.reach) + '</td>'
       + '<td style="' + td + '">' + H.fmtK(r.imps) + '</td>'
-      + '<td style="' + td + '">' + (r.reach ? (r.imps / r.reach).toFixed(1) : "—") + '</td>'
+      + '<td style="' + td + '">' + (r.freqMed ? H.fmtK(r.freqMed) : (r.reach ? (r.imps / r.reach).toFixed(1) : "—"))
+        + (r.reach ? ' <span style="color:#aaa;font-size:10px">(' + (r.imps / r.reach).toFixed(1) + ')</span>' : '') + '</td>'
       + (preScore
         ? '<td colspan="4" style="text-align:center;padding:4px 8px;color:#bbb;font-size:11px">no score data (pre-2025-06)</td>'
         : '<td style="' + td + '">' + H.fmtK(r.hi) + '</td>'
@@ -2031,9 +2033,9 @@ function render(rows, root, H) {
     data: { labels: labels, datasets: [
       { label: 'reach (distinct IPs)', backgroundColor: C.LGRAY,
         data: M.map(function (r) { return r.reach; }) },
-      { type: 'line', label: 'frequency (imps / IP)', borderColor: C.RED, backgroundColor: C.RED,
+      { type: 'line', label: 'median imps / IP', borderColor: C.RED, backgroundColor: C.RED,
         borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false, yAxisID: 'y2', order: 0,
-        data: M.map(function (r) { return r.reach ? +(r.imps / r.reach).toFixed(1) : null; }) }
+        data: M.map(function (r) { return r.freqMed ? r.freqMed : (r.reach ? +(r.imps / r.reach).toFixed(1) : null); }) }
     ] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 11 } } },

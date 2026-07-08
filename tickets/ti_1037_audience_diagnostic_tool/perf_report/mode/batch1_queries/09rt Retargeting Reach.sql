@@ -51,6 +51,7 @@ SELECT
   im.mo                                                          AS rt_mo,
   COUNT(*)                                                       AS rt_reach,
   SUM(im.imps)                                                   AS rt_imps,
+  APPROX_QUANTILES(im.imps, 100)[OFFSET(50)]                     AS rt_freq_median,
   COUNTIF(h.first_hi_mo IS NOT NULL AND h.first_hi_mo <= im.mo)  AS rt_hi_reach,
   COUNTIF(rhf.first_hi_rt_mo = im.mo)                            AS rt_new_hi,
   COUNTIF(rhf.first_hi_rt_mo < im.mo)                            AS rt_returning_hi,

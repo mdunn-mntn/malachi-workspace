@@ -3671,3 +3671,9 @@ Prod Ops (Johnny) loosely called reporting_style `industry_standard` "first touc
 - **What `industry_standard`/"new" reporting actually is:** last-touch conversions **+ the `competing_*` columns** (competitive-scenario / more-inclusive credit; exact definition is a Measurement/Compass question — confirm before repeating). This is what makes the client UI ROAS higher than a naive last-touch BQ pull, NOT a first-touch re-attribution. Avon prospecting: competing adds ~19% conversions / ~28% order-value on top of last-touch (LT ROAS 17.3 → industry_standard 22.1, reproduced to the dollar).
 - **For CTV advertisers, last_touch == last_tv_touch** (every touch is a TV touch), so those columns coincide.
 - **Relabel anywhere it says "first-touch (FT)" for the UI/industry_standard lens → "industry_standard = last-touch + competing_*".** The reconciliation and every YoY-decline conclusion are unchanged (both the plain-last-touch and industry_standard views decline); only the LABEL was wrong. Supersedes the earlier §5e-bis/§5g "first-touch (competing_*)" framing on the FIRST-TOUCH wording (the competing_* mechanism itself is correct). Ref: [[reference_attribution_industry_standard_ft]] (name kept, content corrected).
+
+## Per-IP frequency: report MEDIANS, never means (CGNAT skew)
+Mean imps/IP is dominated by shared/CGNAT IPs (one IP = hotel/apartment/carrier NAT = many devices).
+Verified TI-1037 (Bouqs RT, Feb 2026-checked-2025 month): mean 46.8 vs **median 8** imps/IP; single worst
+IP logged 8,020 imps in one month; top-100 IPs = 6.4% of all impressions from 0.09% of IPs. Use
+`APPROX_QUANTILES(per_ip_imps, 100)[OFFSET(50)]` for frequency; show the mean only as parenthetical context.
