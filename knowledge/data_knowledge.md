@@ -3677,3 +3677,8 @@ Mean imps/IP is dominated by shared/CGNAT IPs (one IP = hotel/apartment/carrier 
 Verified TI-1037 (Bouqs RT, Feb 2026-checked-2025 month): mean 46.8 vs **median 8** imps/IP; single worst
 IP logged 8,020 imps in one month; top-100 IPs = 6.4% of all impressions from 0.09% of IPs. Use
 `APPROX_QUANTILES(per_ip_imps, 100)[OFFSET(50)]` for frequency; show the mean only as parenthetical context.
+Monthly frequency norms (Bouqs, Apr–May 2026): **prospecting median 1–2 / mean 1.6–1.7** (the familiar
+"1–4 imps/IP"); **retargeting median 8–9 / mean 24–31, p90 66–94** — RT is inherently high-frequency
+(small pool of site visitors hit repeatedly), so an RT mean of 25–47 is normal-with-skew, not a bug.
+Also: non-Fangorn advertisers' household_score HI is EXACTLY 10000 — the graduated 8001–9999 band only
+appears after a Fangorn flip, so `hs = 10000` vs `hs >= 8001` give identical results pre-Fangorn.

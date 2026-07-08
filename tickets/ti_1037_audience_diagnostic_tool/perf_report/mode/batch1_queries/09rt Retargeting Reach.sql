@@ -2,8 +2,8 @@
 -- Per month over retargeting delivery (objective_id = 4):
 --   rt_reach / rt_imps          -> frequency (imps per IP)
 --   rt_hi_reach                 -> RT-served IPs KNOWN to be HI as of that month:
---                                  the IP scored >= 8001 on some impression AT OR
---                                  BEFORE the month (no borrowing from the future —
+--                                  the IP scored a FULL 10000 on some impression AT
+--                                  OR BEFORE the month (no borrowing from the future —
 --                                  the SAME rule as the score-tier charts). RT rows
 --                                  carry no score; scores ride prospecting and are
 --                                  logged since 2025-06, so HI metrics start there
@@ -28,10 +28,12 @@ all_base AS (
 ),
 first_seen AS (SELECT ip, MIN(mo) AS first_mo FROM all_base GROUP BY ip),
 hi_scored AS (
-  -- first month each IP was OBSERVED scoring HI (scores exist since 2025-06)
+  -- first month each IP was OBSERVED at a FULL 10000 (max score / the HI-only bar).
+  -- 8001-9999 deliberately do NOT qualify here: for retargeting recirculation we only
+  -- care about IPs that hit the top score (scores exist since 2025-06).
   SELECT ip, MIN(mo) AS first_hi_mo
   FROM all_base
-  WHERE hs = 10000 OR hs BETWEEN 8001 AND 9999
+  WHERE hs = 10000
   GROUP BY ip
 ),
 im AS (
