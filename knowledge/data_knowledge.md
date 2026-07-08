@@ -803,16 +803,19 @@ MM audience. [[reference_fangorn_audience_overlay]]
 
 **"MM = has DS19" is an undercount — empirical DS13/DS19/DS46 co-occurrence (TI-1037, 2026-07-08).** Alyson's working definition (MM = DS19 present) vs the segment-level reality. Measured on live prospecting campaigns (`objective_id=1 AND funnel_level=1`, delivered impressions>0 in the trailing 45d) at the **bidder-facing segment level** (`dw-main-silver.audience.audience_segments`, `expression_type_id=2 AND is_targeted=TRUE`, DS ids regex-extracted). Query: `tickets/ti_1037_audience_diagnostic_tool/queries/ti_1037_mm_ds_cooccurrence.sql`.
 
-| DS13 | DS19 | DS46 | campaigns | advertisers | 45d spend | % spend |
-|---|---|---|---|---|---|---|
-| — | ✓ | — | 1,559 | 859 | $18.7M | 42.7% |
-| — | — | — | 1,042 | 450 | $11.7M | 26.8% |
-| — | ✓ | ✓ | 1,314 | 606 | $8.3M | 18.9% |
-| — | — | ✓ | 235 | 115 | $2.8M | 6.5% |
-| ✓ | ✓ | — | 403 | 286 | $1.7M | 4.0% |
-| ✓ | — | — | 57 | 42 | $0.5M | 1.1% |
-| ✓ | — | ✓ | **0** | 0 | — | — |
-| ✓ | ✓ | ✓ | **0** | 0 | — | — |
+| DS13 | DS19 | DS46 | campaigns | advertisers | 45d spend | % spend | product classification |
+|---|---|---|---|---|---|---|---|
+| — | ✓ | — | 1,559 | 859 | $18.7M | 42.7% | **MM 2.0 (keyword MM)** — bids IP states 2/4/6 (MaxReach/MI/HI); CANNOT bid pure-PP IPs (state 5 matches only on DS13) |
+| — | — | — | 1,042 | 450 | $11.7M | 26.8% | **Not MM** — 3P-only / 1P / IP-list / CRM / DS14-only run-of-network |
+| — | ✓ | ✓ | 1,314 | 606 | $8.3M | 18.9% | **MM 2.0 + Fangorn** — keyword substrate kept; DS46 replaced the DS13 tier scoring |
+| — | — | ✓ | 235 | 115 | $2.8M | 6.5% | **Fangorn-only** — ex-vertical-only, flip swapped 13→46; MM-scored, no keyword layer |
+| ✓ | ✓ | — | 403 | 286 | $1.7M | 4.0% | **Peak Performance config** — vertical+keyword hybrid; the only config bidding ALL IP states incl. the 8000 PP tier (canonical detector = DS13+DS19+RTC, TI-896) |
+| ✓ | — | — | 57 | 42 | $0.5M | 1.1% | **Legacy vertical-only ("MM 1.0"/Interest)** — bids only state-5 PP IPs (8000); not yet flipped |
+| ✓ | — | ✓ | **0** | 0 | — | — | impossible — Fangorn flip swaps 13→46 |
+| ✓ | ✓ | ✓ | **0** | 0 | — | — | impossible — same reason |
+
+- **The OLD MM 2.0 IP-state table (Alyson's sheet, pre-Fangorn) decodes the product names.** An IP's state = (in bucket?, in vertical?, has keywords?) → tier: state 6 = **HI 10000** (vertical ∩ keywords), state 5 = **PP 8000** (vertical, no keywords), state 4 = **MI 3333–6665** (bucket-not-vertical + keywords), state 3 = MI **not biddable** (bucket, no keywords — no DS leaf matches), state 2 = **MaxReach** (keywords outside bucket; sheet logs score NULL, Venn says 1–3332 random), state 1 = not in audience. **Biddability = the expression contains a DS leaf matching the state**: keyword states need DS19, bucket/vertical states need DS13. That is WHY "Peak Performance" is the DS13+DS19 config — DS13 is required to reach the 8000-tier (vertical-no-keyword) IPs. HI/PP/MI/MaxReach are **IP score tiers, not campaign types**; only PP doubles as a product name.
+- **Bucket vs vertical inside DS13**: bucket = **3-digit** DS13 segment ids (industry), vertical = **6-digit** DS13 segment ids (subindustry). (Same sheet; matches [[reference_fangorn_two_model_passes]] — Fangorn's HI + PP passes replace these two membership tests with continuous scores.)
 
 - **The two empty cells are exactly DS13∧DS46** — empirical confirmation of the candidacy rule above: the `onFangorn` flip SWAPS DS13→DS46 at segment level, so they never coexist. **DS19 survives the flip** (DS19+DS46 = 18.9% of spend).
 - **Every other combination exists**: DS46 without DS19 (235 campaigns / 115 advertisers — former vertical-only audiences now Fangorn-flipped), DS19 without DS13 (the dominant state), DS13 without DS19 (57 campaigns — legacy vertical-only, not yet flipped).
