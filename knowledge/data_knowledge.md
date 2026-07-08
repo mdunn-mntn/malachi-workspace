@@ -3702,3 +3702,31 @@ cumulative distinct 10000-IPs 2.54M. CPD dashboard module 09rt.
 - Impact chain (Feb 2026, advertiser 31357): bronze.raw 34 amt rows summing **$71.68T** → silver strips the 4 largest (\$621,621,621 / \$1.08T / \$14.7T / \$55.9T; rows kept, amt nulled — row counts identical 43,653) → silver 30 amt rows **$222,892,625.40** → attribution keeps 23 of 30 (all ≤$590,132; the 7 rows ≥$5,736,771 never appear in `ui_conversions`) → **$833,883.40** fake "Revenue" on the client dashboard via `sum_by_campaign_by_day`. Exact reconciliation: $222,892,625.40 − $222,058,742 (7 largest) = $833,883.40.
 - **Silver corrupt-amount strip threshold sits between $69,576,964 (kept) and $621,621,621 (stripped)** — plausibly ≥$100M, exact rule unverified. A second, lower cap (between ~$590K and ~$5.7M) appears to exist in the summarydata conversions/attribution pipeline — mechanism unverified.
 - Detection recipe: single-day burst of many distinct `conversion_type` values + `oastify.com`/injection strings + one IP → pentest, exclude from revenue. Check `TO_JSON_STRING(query)` → `shoamt` key for the raw payload.
+
+## Conversion-pixel CONFIG registry — core_advertiser_conversion_types is AUTO-REGISTERED, data_source 23 = guid_log "MNTN Pixel" (WGU-REV, 2026-07-08)
+Where conversion config actually lives in `bronze.integrationprod` (no `conversion_sources` table exists):
+- **`core_advertiser_conversion_types`** (advertiser_id, conversion_type, conversion_source_id, create_time; NO
+  user_id, NO deleted col) — rows are **auto-created the instant a new `conversion_type` string first appears in
+  conversion_log** (WGU `app_submitted` registry create_time 2025-09-30 22:57:04 == MIN(time) of first log event
+  to the second). It records WHEN a new event fired, not WHO configured it — a new row here means the change was
+  made in the CLIENT's website tag, not MNTN platform config.
+- **Sentinel conversion_types**: `-100` (source -1, 93,180 advertisers) and `-101` (source 23, 7,546 advertisers)
+  = "default/unnamed pixel conversion". All `-101` rows created ≥ 2025-01-10 — the platform-wide cutover of
+  conversion_log.conversion_source_id NULL→23.
+- **`data_sources` registry**: id **23 = name `guid_log`, display_name "MNTN Pixel", conversion_type_display_name
+  "Website Event"** (created 2024-10-04, visible=false). Both -1 and 23 display to clients as "MNTN Pixel".
+- `core_pixel_integrations`/`core_pixel_integration_types` = e-commerce integrations (shopify etc.; type 4 =
+  "manual"); `ui_advertiser_pixel_infos` = pixel notes/conversion_point_url; `attr_advertiser_waypoints_event_mapping`
+  + `attr_advertiser_selective_performance_config` = event-name classification (deleted flag on waypoints).
+- `advertisers` row carries pixel flags: `populate_order_on_conversion`, `conv_pixel_opt_out`, `pixel_isolation`,
+  `allow_duplicate_orders`, conversion windows.
+- `core_advertisers_x_changes`+`core_changes` is a change-audit trail but can be EMPTY for an advertiser (WGU: 0 rows).
+
+WGU (31357) specifics: revenue-drop root cause is CLIENT-SIDE tag change — old untyped $1-placeholder conversion
+(type NULL, order_amt=1) last fired 2025-10-02; new `app_submitted` event (NO order_amt at all) went live
+2025-09-30 22:57 (3-day overlap). No MNTN config change near the cutover (settings last touched 2025-05-15,
+reporting_style=industry_standard since then; pixel_integrations untouched since 2020). **Feb 2026 "revenue"
+anomaly = a PENTEST**: 74 SQL-injection/XSS/Burp-Collaborator (oastify.com) payload conversion_types registered
+2026-02-07 19:38–22:27, with bogus order_amts summing $222.9M in conversion_log. WGU onboarded
+"orca-integration" 2026-04-29 + Tealium CRM list mappings 2026-04-30 (offline_attribution=false) right before
+the May 2026 conversion-volume spike (125,940 rows) — correlation, not verified causation.
