@@ -1960,14 +1960,19 @@ function render(rows, root, H) {
   root.innerHTML = html;
 
   var labels = months.map(moLbl);
-  // charts wrapped individually: a failure prints its error in place instead of
-  // silently blanking the canvas (and without nuking the table via the outer catch)
+  // charts wrapped individually; canvas resolved INSIDE this section (root.querySelector)
+  // so duplicate ids from Mode injecting the HTML twice can't hijack the draw target.
+  // Every failure path reports visibly instead of silently blanking the canvas.
   function chartSafe(id, cfg) {
-    try { new Chart(document.getElementById(id).getContext('2d'), cfg); }
-    catch (e) {
-      var el = document.getElementById(id);
-      if (el && el.parentNode) el.parentNode.innerHTML =
-        '<div class="err">chart error: ' + (e && e.message) + '</div>';
+    try {
+      var el = root.querySelector('#' + id) || document.getElementById(id);
+      if (!el) throw new Error('canvas #' + id + ' not found');
+      new Chart(el.getContext('2d'), cfg);
+    } catch (e) {
+      var box = document.createElement('div');
+      box.className = 'err';
+      box.textContent = 'chart error (' + id + '): ' + (e && e.message);
+      root.appendChild(box);
     }
   }
   chartSafe(idHi, {
