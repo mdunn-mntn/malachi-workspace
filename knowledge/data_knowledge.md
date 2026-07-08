@@ -3682,3 +3682,12 @@ Monthly frequency norms (Bouqs, Apr–May 2026): **prospecting median 1–2 / me
 (small pool of site visitors hit repeatedly), so an RT mean of 25–47 is normal-with-skew, not a bug.
 Also: non-Fangorn advertisers' household_score HI is EXACTLY 10000 — the graduated 8001–9999 band only
 appears after a Fangorn flip, so `hs = 10000` vs `hs >= 8001` give identical results pre-Fangorn.
+
+## Prospecting re-touch (recirculation) — DS16 is the only net-new gate (TI-1037, 2026-07-08)
+Prospecting re-serves IPs the advertiser already touched unless **DS16 (net-new gate)** is on the campaign —
+the VV/pageview (DS34) and conversion (DS21) excludes only remove visitors/converters, NOT previously-served
+IPs. Clients that scale spend while holding HHST=10000 exhaust the net-new HI pool and end up re-touching up
+to ~99% of previously-served IPs (per Malachi). Measure it: per month, IPs served at hs=10000 split by whether
+their first-ever 10000 service was an earlier month ("10000 both times" rule — a prior touch at 8000 doesn't
+count). Bouqs (Jan'25–May'26): re-touch share 0%→75%, dipping when new campaigns/geo open fresh pools;
+cumulative distinct 10000-IPs 2.54M. CPD dashboard module 09rt.

@@ -30,6 +30,15 @@ Flights / Delivery & Measurement / Retargeting). Deploy queue at close: 09rt SQL
   Apr–May '26): prospecting median 1–2 / mean 1.6–1.7 (the familiar "1–4"); RT median 8–9 / mean 24–31 /
   p90 66–94 — retargeting is inherently ~5× hotter, that's the product not a bug. `rt_freq_median` added to
   the 09rt SQL (`APPROX_QUANTILES`); table shows `med (avg)`.
+- **09rt REDEFINED (2026-07-08, later — supersedes the obj=4 version above):** "retargeting reach" is NOT
+  obj=4 campaigns; it's the **re-touch rate inside prospecting** — without DS16 prospecting re-serves
+  already-touched IPs (VV/conversion excludes only remove visitors/converters). New semantics: base =
+  prospecting (obj=1/funnel=1, RTC-excluded, mirrors module 06); HI = served at a FULL 10000 that month;
+  re-touched = also served at 10000 in a prior month ("10000 both times"). Same rt_* column aliases so the
+  render plumbing survived; tab renamed Retargeting → HI Recirculation. Bouqs validated: prosp median freq
+  1–4 ✓; re-touch share 0% (Jun'25) → 75% (May'26), dips when fresh pools open (Jan/Mar '26 new campaigns);
+  cum distinct 10000-IPs 2.54M. Also fixed: zero-row datasets now render the module's empty-state instead of
+  "no data (Run the query)" (hit on 40341 — zero RT campaigns); flags No-gate row now shows its pp delta.
 - **Tooling gotcha:** SQL passed to `bq query` as a positional arg must not START with a `--` comment — bq
   parses it as a CLI flag (`FATAL Flags parsing error`). Strip leading comment-only lines when templating
   staged .sql files into a shell arg.

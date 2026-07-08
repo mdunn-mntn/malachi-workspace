@@ -1886,19 +1886,20 @@ function render(rows, root, H) {
   root.innerHTML = html;
 }
   return render; })();
-  // ---- Retargeting reach, frequency & HI recirculation (09rt) ----
+  // ---- Prospecting HI recirculation (09rt): re-touch of already-served 10000-IPs.
+  //      NOT obj=4 retargeting — without DS16 prospecting re-serves touched IPs. ----
   RENDER["09rt Retargeting Reach"] = (function () {
 function render(rows, root, H) {
   var C = H.C;
   if (!rows || !rows.length) {
-    root.innerHTML = '<div style="padding:16px;color:#888;font:13px Helvetica Neue,Arial">No retargeting delivery in the window.</div>';
+    root.innerHTML = '<div style="padding:16px;color:#888;font:13px Helvetica Neue,Arial">No prospecting delivery in the window.</div>';
     return;
   }
   var by = {};
   rows.forEach(function (r) { by[String(r.rt_mo).slice(0, 7)] = r; });
   var keys = Object.keys(by).sort();
-  // axis spans the FULL P1->P2 window (bounds ride every row), so months with no RT
-  // delivery (e.g. the Dec-Jan holiday pause) appear as visible gaps, not get skipped
+  // axis spans the FULL P1->P2 window (bounds ride every row), so months with no
+  // prospecting delivery (e.g. a holiday pause) appear as visible gaps, not get skipped
   var r0b = rows[0] || {};
   var startK = r0b.p1_start ? String(r0b.p1_start).slice(0, 7) : keys[0];
   var endK = keys[keys.length - 1];
@@ -1932,29 +1933,29 @@ function render(rows, root, H) {
   var idHi = H.uid(), idCum = H.uid(), idFq = H.uid();
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
-  html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Retargeting reach & HI recirculation</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Monthly retargeting (obj=4) delivery. HI = the IP scored a FULL 10000 on an impression AT OR BEFORE that month — no future borrowing, and 8001–9999 deliberately do NOT count (stricter than the score-tier HI band: recirculation only counts top-scored IPs). RT rows carry no score; scores ride prospecting, logged since Jun 2025, so HI metrics start there and earlier months read “no score data”. New = first month a known-HI IP was retargeted; cumulative = running distinct. Brand-new = first-ever contact on any campaign. Frequency = MEDIAN imps/IP (means are inflated by shared/CGNAT IPs — one IP peaked at 8k imps in a month). Empty months = no RT delivery.</div>';
+  html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Prospecting HI recirculation — re-touching already-served IPs</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Monthly PROSPECTING delivery (stage 1, RTC-excluded — same scope as the score-tier charts). Unless DS16 (net-new gate) is on, prospecting re-serves IPs the advertiser already touched — the VV/conversion excludes only remove visitors and converters. HI counts ONLY at a full 10000, and re-touch requires 10000 BOTH times: served at 10000 this month AND at 10000 in a prior month (no future borrowing; scores logged since Jun 2025, earlier months read “no score data”). A client scaling spend while holding HHST=10000 exhausts the net-new pool — re-touch share can approach 99%. Brand-new = first-ever contact on any campaign. Frequency = MEDIAN imps/IP (means are inflated by shared/CGNAT IPs). Empty months = no prospecting delivery.</div>';
 
-  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Retargeted HI IPs: new vs returning — falling new-share = recirculation</div>';
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">HI (10000) IPs served: net-new vs re-touched — rising re-touch share = pool recirculating</div>';
   html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idHi + '"></canvas></div>';
   var cumFinal = 0;
   cumSeries.forEach(function (v) { if (v != null) cumFinal = v; });
-  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Cumulative distinct retargeted HI — ' + H.fmtK(cumFinal) + ' so far (still climbing = pool not exhausted)</div>';
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Cumulative distinct HI (10000) IPs served — ' + H.fmtK(cumFinal) + ' so far (flattening = pool exhausted)</div>';
   html += '<div style="height:200px;margin-bottom:14px"><canvas id="' + idCum + '"></canvas></div>';
-  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Reach & frequency — gray bars = distinct IPs, red = MEDIAN imps per IP (means are inflated by shared/CGNAT IPs)</div>';
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Prospecting reach & frequency — gray bars = distinct IPs, red = MEDIAN imps per IP (means are inflated by shared/CGNAT IPs)</div>';
   html += '<div style="height:220px;margin-bottom:14px"><canvas id="' + idFq + '"></canvas></div>';
 
   // table
   var th = 'text-align:right;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
   html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
-  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP med (avg)</th><th style="' + th + '">HI reach</th><th style="' + th + '">New HI</th><th style="' + th + '">Returning HI</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
+  html += '<thead><tr><th style="text-align:left;' + th + '">Month</th><th style="' + th + '">Reach</th><th style="' + th + '">Imps</th><th style="' + th + '">Imps/IP med (avg)</th><th style="' + th + '">HI served</th><th style="' + th + '">Net-new HI</th><th style="' + th + '">Re-touched HI</th><th style="' + th + '">Cum. distinct HI</th><th style="' + th + '">Brand-new IPs</th></tr></thead><tbody>';
   M.forEach(function (r, i) {
     var bg = (i % 2 === 0) ? "rgba(0,0,0,0.03)" : "transparent";
     var td = 'text-align:right;padding:4px 8px;color:#222;white-space:nowrap';
     if (!r.reach) { // window month with no RT delivery — keep the row, muted
       html += '<tr style="background:' + bg + '">'
         + '<td style="text-align:left;padding:4px 8px;white-space:nowrap;color:#bbb">' + H.esc(moLbl(r.mo)) + '</td>'
-        + '<td colspan="6" style="text-align:left;padding:4px 8px;color:#bbb;font-size:11px">no retargeting delivery</td>'
+        + '<td colspan="6" style="text-align:left;padding:4px 8px;color:#bbb;font-size:11px">no prospecting delivery</td>'
         + '<td style="' + td + ';color:#bbb">' + (cumSeries[i] == null ? '—' : H.fmtK(cumSeries[i])) + '</td>'
         + '<td style="' + td + ';color:#bbb">—</td>'
         + '</tr>';
@@ -2000,13 +2001,13 @@ function render(rows, root, H) {
     data: {
       labels: labels,
       datasets: [
-        { label: 'new HI (first month retargeted)', backgroundColor: C.GREEN,
+        { label: 'net-new HI (first-ever 10000 touch)', backgroundColor: C.GREEN,
           data: M.map(function (r) { return r.newHi; }) },
-        { label: 'returning HI (recirculated)', backgroundColor: C.AMBER,
+        { label: 're-touched HI (served at 10000 before)', backgroundColor: C.AMBER,
           data: M.map(function (r) { return r.retHi; }) },
-        { type: 'line', label: 'new share of HI (%)', borderColor: C.NAVY, backgroundColor: C.NAVY,
+        { type: 'line', label: 're-touch share of HI (%)', borderColor: C.NAVY, backgroundColor: C.NAVY,
           borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false, yAxisID: 'y2', order: 0,
-          data: M.map(function (r) { return r.hi ? +(100 * r.newHi / r.hi).toFixed(0) : null; }) }
+          data: M.map(function (r) { return r.hi ? +(100 * r.retHi / r.hi).toFixed(0) : null; }) }
       ]
     },
     options: {
@@ -2050,7 +2051,7 @@ function render(rows, root, H) {
   // Modules grouped into tabs by diagnostic category. A module's `tab` decides where it
   // renders; tab panels are lazy-rendered on first activation so Chart.js always sizes
   // against a visible container (charts built inside display:none get 0-width canvases).
-  var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement", "Retargeting"];
+  var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement", "HI Recirculation"];
   var MODULES = [
     { title: "Diagnostic flags", name: "_flags", sig: "", tab: "Overview", multi: true },
     { title: "YoY performance", name: "04 YoY Metrics", sig: "period", tab: "Overview" },
@@ -2064,7 +2065,7 @@ function render(rows, root, H) {
     { title: "Prospecting flights", name: "08 Flights", sig: "flight_days", tab: "Gate & Flights" },
     { title: "Campaign spans", name: "01 Campaign Group Gantt", sig: "first_active_day", tab: "Delivery & Measurement" },
     { title: "Verified-visit window", name: "11 VV Window", sig: "vv_change_date", tab: "Delivery & Measurement" },
-    { title: "Retargeting reach & recirculation", name: "09rt Retargeting Reach", sig: "rt_reach", tab: "Retargeting" },
+    { title: "HI recirculation (prospecting)", name: "09rt Retargeting Reach", sig: "rt_reach", tab: "HI Recirculation" },
   ];
 
   function renderModule(m, sec) {
