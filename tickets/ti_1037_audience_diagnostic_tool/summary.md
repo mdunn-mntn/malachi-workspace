@@ -29,6 +29,14 @@ the full picture (the Mode queries were already current; only the Run was missin
 layout** to `index.html` (Overview / Audience & Scores / Gate & Flights / Delivery & Measurement; lazy-render
 per tab so Chart.js sizes against visible containers) — modules declare a `tab` in the registry.
 
+**DS16 / DS46 timeline (from audience_segment_archives, 2026-07-07):** DS16 (net-new gate) was added to
+Bouqs' 2026 prospecting campaigns starting **2026-04-14** (v2 campaigns got it same-day as creation) —
+changelog shows NET +DS16 for groups 117983/119361/119362/119363; 85384 (old flagship) instead DROPPED
+DS16 in-window (net −16, matches audit "—"). Then on **2026-06-15/16 the same campaigns got +DS46 (Fangorn
+overlay) and dropped DS13** → Bouqs' Fangorn flip is mid-June 2026 (post-Period_End, so visible in the
+changelog only with a later Period_End; the live audit shows it). Changelog = state as of Period_End;
+audit (module 00, batch 2) = live state — they answer different questions.
+
 **Real client finding queued behind the fix:** Bouqs (32147) **PRO VV lookback cut 30d→14d on 2025-11-18**
 (archives_advertiser_archives; also RT 30→7→14 same day). P1 (Jan-Jun'25) measured at 30d, P2 (Jan-Jun'26) at
 14d → module 11 will (correctly) flag a measurement confound in any P1-vs-P2 visits/conversions comparison —
