@@ -338,6 +338,17 @@ scope). Key facts, all verified in BQ:
    (2026-04-29) + Tealium CRM mappings (2026-04-30) onboarding — causality unverified.
 6. **Non-prod pollution**: ~692 Jun 2026 "conversions" from `apply.stage/development/local.wgu.edu` +
    `inquiryv4.qa.wgu.edu` referers count as real conversions. Platform-wide filter question open.
+7. **WGU's core LEAD event now reports to a DEAD advertiser ID (10942)** — found 2026-07-08 after a CS
+   pixel QA flagged an "AID 10942" pixel. AID 10942 has NO row in `integrationprod.advertisers` (orphaned/
+   legacy account), yet its pixel fires at scale on WGU's site: Jun 2026 = 18,016 fires / 16,865 IPs on
+   `inquiryv4.wgu.edu/?step=whatAreYourGoals` (the exact page where 31357's lead pixel lived pre-retag)
+   + 3,727 on the older `inquiry.wgu.edu` form. It is the legacy SteelHouse-era tag: `shaid=10942`,
+   hardcoded `shoamt=1`, no `type`/`shoid`, `mnthst=px.steelhousemedia.com` (new 31357 tag uses
+   `px.mountain.com`), and passes `shopid=<Salesforce record id>` per lead. History: ~4K/mo on
+   inquiry.wgu.edu Jan–Aug 2025 → expanded at the Sep-2025 retag (19.5K Sep, spread to apply.* + stage/dev)
+   → ~18–24K/mo since. **≈226K fires since Jan 2025 land on a nonexistent account: no attribution, no
+   reporting — WGU's lead conversions are dark, not gone.** Rows exist in conversion_log under 10942 if
+   historical recovery is ever wanted. Meanwhile 31357's `lead` order_id is a residual ~114/mo.
 Neither pixel version ever sent email/phone. Route pixel-ingest validation gap + pentest question to
 **Ashley Pineda Varela** (Pixel Ops).
 
