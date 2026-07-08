@@ -1604,7 +1604,7 @@ function render(rowsIgnored, root, H) {
   var px = ds("13 Pixel Health", "px_rows");
 
   // period bounds from whichever dataset carries them
-  var bsrc = (flights && flights[0]) || (vv && vv[0]) || (clog && clog[0]) || (rt && rt[0]) || (geo && geo[0]) || null;
+  var bsrc = (flights && flights[0]) || (vv && vv[0]) || (clog && clog[0]) || (rt && rt[0]) || (geo && geo[0]) || (px && px[0]) || null;
   var p1s = bsrc ? dstr(bsrc.p1_start) : null, p1e = bsrc ? dstr(bsrc.p1_end) : null;
   var p2s = bsrc ? dstr(bsrc.p2_start) : null, p2e = bsrc ? dstr(bsrc.p2_end) : null;
 
@@ -1733,7 +1733,7 @@ function render(rowsIgnored, root, H) {
       nAmt: H.num(r.px_n_amt), sumAmt: H.num(r.px_sum_amt),
       newTypes: H.num(r.px_new_types), added: r.px_types_added ? String(r.px_types_added) : "" }; })
       .sort(function (a, b) { return a.mo < b.mo ? -1 : 1; });
-    var pxHits = [], pxCrit = [], plc = false;
+    var pxHits = [], pxCrit = [], plcFirst = null, plcLast = null, z0First = null, z0Last = null;
     for (var pi = 0; pi < pxm.length; pi++) {
       var pc = pxm[pi], pv = pi ? pxm[pi - 1] : null;
       if (pc.mo + "-01" < p1s) continue; // history months before the window: context only
@@ -1743,21 +1743,40 @@ function render(rowsIgnored, root, H) {
         pxHits.push(moLbl(pc.mo) + " +" + pc.newTypes + " new type" + (pc.newTypes > 1 ? "s" : "")
           + (pc.added ? " (" + pc.added.slice(0, 40) + ")" : ""));
       if (pv && pv.rows > 1000) {
-        var vr = pc.rows / pv.rows;
-        if (vr >= 2) pxHits.push(moLbl(pc.mo) + " fires " + vr.toFixed(1) + "x");
-        else if (vr <= 0.5) pxHits.push(moLbl(pc.mo) + " fires \u00f7" + (1 / vr).toFixed(1));
-        var cov0 = pv.rows ? pv.nAmt / pv.rows : 0, cov1 = pc.rows ? pc.nAmt / pc.rows : 0;
-        if (cov0 >= 0.5 && cov1 < 0.1) pxHits.push(moLbl(pc.mo) + " order values STOP");
+        if (pc.rows === 0) {
+          pxCrit.push(moLbl(pc.mo) + " fires STOP (0 all month) — pixel dead or removed");
+        } else {
+          var vr = pc.rows / pv.rows;
+          if (vr >= 2) pxHits.push(moLbl(pc.mo) + " fires " + vr.toFixed(1) + "x");
+          else if (vr <= 0.5) pxHits.push(moLbl(pc.mo) + " fires \u00f7" + (1 / vr).toFixed(1));
+          var cov0 = pv.nAmt / pv.rows, cov1 = pc.nAmt / pc.rows;
+          if (cov0 >= 0.5 && cov1 < 0.1) pxCrit.push(moLbl(pc.mo) + " order values STOP");
+        }
+      } else if (pv && pv.rows === 0 && pc.rows > 1000) {
+        pxHits.push(moLbl(pc.mo) + " fires RESUME after dead month(s)");
       }
-      if (!plc && pc.nAmt > 100 && Math.abs(pc.sumAmt - pc.nAmt) <= 0.02 * pc.nAmt) {
-        plc = true; pxHits.push("amounts are $1 placeholders (thru " + moLbl(pc.mo) + ")");
+      // amount injection: a lone sum spike (>= $1M and >= 10x prior month) under
+      // existing type names — the Feb'26 WGU pentest shape ($222.9M vs ~$0 neighbors)
+      if (pv && pc.sumAmt >= 1e6 && pc.sumAmt >= 10 * (pv.sumAmt || 0))
+        pxCrit.push(moLbl(pc.mo) + " order-value spike $" + H.fmtK(pc.sumAmt) + " — possible amount injection, verify before trusting");
+      if (pc.nAmt > 100 && Math.abs(pc.sumAmt - pc.nAmt) <= 0.02 * pc.nAmt) {
+        if (plcFirst === null) plcFirst = pc.mo;
+        plcLast = pc.mo;
+      }
+      if (pc.nAmt > 100 && pc.sumAmt === 0) {
+        if (z0First === null) z0First = pc.mo;
+        z0Last = pc.mo;
       }
     }
+    if (plcFirst !== null)
+      pxHits.push("amounts are $1 placeholders (" + moLbl(plcFirst) + "–" + moLbl(plcLast) + ")");
+    if (z0First !== null)
+      pxHits.push("amount param sent but $0 (" + moLbl(z0First) + "–" + moLbl(z0Last) + ")");
     var pxAll = pxCrit.concat(pxHits);
     var pxTxt = pxAll.slice(0, 4).join(" · ") + (pxAll.length > 4 ? " · +" + (pxAll.length - 4) + " more" : "");
     add("Pixel/tag changes (conversion_log)", "", "", pxAll.length ? pxTxt : "none",
       pxAll.length ? "flag" : "ok",
-      pxAll.length ? "advertiser-side tag changes reconstructed from raw pixel fires — no config table exists for these" : "");
+      pxAll.length ? "advertiser-side tag changes reconstructed from silver conversion_log (advertiser-scoped — fires under dead/legacy AIDs are invisible) — no config table exists for these" : "");
   } else add("Pixel/tag changes (conversion_log)", "—", "—", "", "na", "run query 13");
 
   // ---- 3) MM usage (DS19 keyword / DS13 vertical / DS46 Fangorn) P1 -> P2 ----
