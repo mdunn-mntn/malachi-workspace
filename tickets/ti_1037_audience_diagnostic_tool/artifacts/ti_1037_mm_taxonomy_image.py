@@ -5,6 +5,9 @@ Renders the settled MM component/config taxonomy (Matt Brorby, 2026-07-08) as a
 single shareable image: components, IP score tiers, the six live configs with
 footprint, and the generating rules. Data source: ti_1037_mm_ds_cooccurrence.sql
 (live prospecting obj=1/funnel=1, delivered in trailing 45d, 4,610 campaigns).
+
+Paste into Slack: load the PNG onto the macOS clipboard first —
+  osascript -e 'set the clipboard to (read (POSIX file "<abs path>.png") as «class PNGf»)'
 """
 import textwrap
 

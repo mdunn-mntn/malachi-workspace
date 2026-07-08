@@ -18,9 +18,23 @@ MNTN security (Robin Fox) **no longer allows locally-hosted Slack apps or API ke
 
 **Compass is also used for repo/codebase forensics** — e.g. confirming whether a repo is dead/archived. `SteelHouse/audience-loader` was confirmed a dead/archived repo (GitHub 404); its referenced secrets were not found in AWS Secrets Manager. Compass conversations are shareable via `basecamp.in.mountain.com/mcp-chat?join=<uuid>` links. (via Macie Kluting / Jason Whiting, 2026-06-10)
 
+## MNTN Matched (MM) — official component taxonomy (Matt Brorby, SETTLED 2026-07-08)
+
+**MM is the umbrella; the components are named for the IP score tier each one unlocks.** Endorsed by Matt Brorby (TI) for internal naming consistency, 2026-07-08:
+
+- **DS19 = "MM Core" / Keyword-Only** — the keyword layer (unlocks the Max Reach tier)
+- **DS13 = "Peak Performance" (v1)** — the vertical anchor, legacy tier scoring (unlocks the PP 8000 tier)
+- **DS46 = "Peak Performance v2"** — Fangorn; the v2 of the same vertical-anchor slot (DS13 and DS46 never co-occur — the flip swaps 13→46)
+- **"Expanded Peak Performance"** — DS13 with bucket (industry) ids; named but never shipped (would unlock the MI tier; zero live campaigns)
+- **"Vertical only"** (Matt's colloquialism) = a PP-only / PP-v2-only campaign with no keyword layer
+
+Config space = 2×3 grid (keyword layer y/n × anchor none/DS13/DS46). Live prospecting footprint (45d, 2026-07-08): Keyword-Only 42.7% of spend · MM Core+PP v2 flagship 18.9% · MM Core+PP v1 4.0% · PP v2 only 6.5% · PP v1 only 1.1% · non-MM 26.8%. "MM = has DS19" undercounts MM-scored spend by ~7.6%. Full logic + tier table: `data_knowledge.md` § `"MM = has DS19" is an undercount` · Confluence: https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511
+
 ## Peak Performance / Mountain Matched relationship (per TI-896, 2026-04-22)
 
-**Product level:** Mountain Matched is part of the Peak Performance product offering (per user 2026-04-22). They are not independent audience products.
+> **Terminology superseded 2026-07-08** by the component taxonomy above (PP = the vertical-anchor component *within* MM, not the other way around; and "MM detection by DS2" was that analysis's proxy — DS2 is MNTN First Party in the registry). The empirical overlap numbers below remain valid as a record of that analysis.
+
+**Product level:** Mountain Matched is part of the Peak Performance product offering (per user 2026-04-22). They are not independent audience products. *(superseded — see above)*
 
 **Database / expression level:** mostly separable, but with partial overlap. Empirical sample of 100 random PP segment expressions (`score_type=rtc + DS13 + DS19`) since Oct 15 2025:
 - **24 of 100 also contain DS2** (the "MM" detector flag)
