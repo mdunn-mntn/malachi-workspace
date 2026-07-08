@@ -760,19 +760,7 @@ function render(rows, root, H) {
   sub.textContent = "PRO = prospecting VV lookback (clickpass_acquisition_ttl); RT = retargeting VV lookback (clickpass_click_ttl). A shorter window shrinks connectable visits AND conversions.";
   wrap.appendChild(sub);
 
-  // flag banner
-  if (flagged) {
-    var flag = document.createElement("div");
-    flag.style.cssText = "font-size:12px;font-weight:700;color:"+C.RED+";background:rgba(214,59,47,0.07);border-left:3px solid "+C.RED+";padding:7px 10px;margin-bottom:10px;line-height:1.35";
-    flag.innerHTML = "FLAG: VV window " + (shortened ? "shortened" : "changed") + "  P1 " + H.esc(p1lbl) + " → P2 " + H.esc(p2lbl) +
-      "<br><span style='font-weight:400'>Part of any P1-vs-P2 visits/conversions gap is a measurement change, not real performance.</span>";
-    wrap.appendChild(flag);
-  } else {
-    var ok = document.createElement("div");
-    ok.style.cssText = "font-size:12px;font-weight:600;color:"+C.GREEN+";margin-bottom:10px";
-    ok.textContent = "No measurement confound: PRO window identical across P1 (" + p1lbl + ") and P2 (" + p2lbl + ").";
-    wrap.appendChild(ok);
-  }
+  // (the P1-vs-P2 VV flag lives in the Overview diagnostic scorecard now — chart + badges only here)
 
   // chart
   var cvsWrap = document.createElement("div");
@@ -1572,11 +1560,249 @@ function render(rows, root, H) {
   root.innerHTML = html;
 }
   return render; })();
+  // ---- Overview diagnostic flags: cross-dataset P1-vs-P2 scorecard of the standard
+  // decline causes (spend, HI mix, VV window, DS changes, short flights, no-gate days).
+  // Computed CLIENT-SIDE from the other modules' datasets — no extra query. Each row
+  // carries a driver note when one campaign/month is responsible for most of the change.
+  RENDER["_flags"] = (function () {
+function render(rowsIgnored, root, H) {
+  var C = H.C;
+  function dstr(v) { return String(v).slice(0, 10); }
+  var yoy = ds("04 YoY Metrics", "period");
+  var monthly = ds("05 Monthly Metrics", "month");
+  var buckets = ds("06 Prospecting Score Buckets", "notlogged");
+  var vv = ds("11 VV Window", "vv_change_date");
+  var clog = ds("07 Audience Changelog", "clog_ds_ids");
+  var ribbon = ds("03b Gate Ribbon", "gate_ribbon_grp_spend");
+  var flights = ds("08 Flights", "flight_days");
+
+  // period bounds from whichever dataset carries them
+  var bsrc = (flights && flights[0]) || (vv && vv[0]) || (clog && clog[0]) || null;
+  var p1s = bsrc ? dstr(bsrc.p1_start) : null, p1e = bsrc ? dstr(bsrc.p1_end) : null;
+  var p2s = bsrc ? dstr(bsrc.p2_start) : null, p2e = bsrc ? dstr(bsrc.p2_end) : null;
+
+  var MONN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function moLbl(k) { if (!k) return "?"; return MONN[+k.slice(5, 7) - 1] + " '" + k.slice(2, 4); }
+  function inP(d, s, e) { return s && e && d >= s && d < e; }
+
+  var frows = [];
+  function add(name, p1, p2, delta, status, driver) {
+    frows.push({ name: name, p1: p1, p2: p2, delta: delta, status: status, driver: driver || "" });
+  }
+
+  // ---- 1) prospecting spend P1 -> P2 (single-month driver via monthly data) ----
+  if (yoy && yoy.length) {
+    var P = {};
+    yoy.forEach(function (r) { P[String(r.period)] = { spend: H.num(r.spend) }; });
+    if (P.P1 && P.P2) {
+      var dpct = P.P1.spend ? 100 * (P.P2.spend / P.P1.spend - 1) : null;
+      var st = dpct == null ? "na" : (Math.abs(dpct) >= 30 ? "flag" : (Math.abs(dpct) >= 10 ? "watch" : "ok"));
+      var drv = "";
+      if (monthly && monthly.length && dpct != null) {
+        var bym = {};
+        monthly.forEach(function (r) { bym[dstr(r.month).slice(0, 7)] = H.num(r.spend); });
+        var best = null, tot = P.P2.spend - P.P1.spend;
+        Object.keys(bym).forEach(function (k) {
+          if (!inP(k + "-01", p2s, p2e)) return;
+          var prevK = (+k.slice(0, 4) - 1) + k.slice(4);
+          var d = bym[k] - (bym[prevK] || 0);
+          if (best === null || Math.abs(d) > Math.abs(best.d)) best = { k: k, d: d };
+        });
+        if (best && tot && Math.abs(best.d) >= 0.5 * Math.abs(tot))
+          drv = moLbl(best.k) + " alone " + (best.d >= 0 ? "+" : "−") + "$" + H.fmtK(Math.abs(best.d)) + " YoY";
+      }
+      add("Prospecting spend", H.money(P.P1.spend), H.money(P.P2.spend),
+        dpct == null ? "" : (dpct >= 0 ? "+" : "") + dpct.toFixed(0) + "%", st, drv);
+    }
+  } else add("Prospecting spend", "—", "—", "", "na", "run query 04");
+
+  // ---- 2) average HI share of SCORED impressions P1 -> P2 (worst-month driver) ----
+  if (buckets && buckets.length) {
+    var b0 = buckets[0];
+    var p1lo = String(b0.p1_start_mo), p1hi = String(b0.p1_end_mo);
+    var p2lo = String(b0.p2_start_mo), p2hi = String(b0.p2_end_mo);
+    function hiFor(lo, hi) {
+      var hiN = 0, scored = 0;
+      buckets.forEach(function (r) {
+        var mo = String(r.mo);
+        if (mo >= lo && mo <= hi) { hiN += H.num(r.hi); scored += H.num(r.total) - H.num(r.notlogged); }
+      });
+      return scored > 0 ? { pct: 100 * hiN / scored } : null;
+    }
+    var h1 = hiFor(p1lo, p1hi), h2 = hiFor(p2lo, p2hi);
+    var worst = null;
+    buckets.forEach(function (r) {
+      var mo = String(r.mo);
+      if (mo >= p2lo && mo <= p2hi) {
+        var sc = H.num(r.total) - H.num(r.notlogged);
+        if (sc > 0) { var p = 100 * H.num(r.hi) / sc; if (worst === null || p < worst.p) worst = { mo: mo, p: p }; }
+      }
+    });
+    var drv = "";
+    if (h2 && worst && (h2.pct - worst.p) >= 10) drv = "lowest: " + moLbl(worst.mo) + " (" + worst.p.toFixed(0) + "% HI)";
+    if (!h1) drv = (drv ? drv + " · " : "") + "P1 predates score logging (2025-06)";
+    var dd = (h1 && h2) ? h2.pct - h1.pct : null;
+    var st = !h2 ? "na" : (!h1 ? "watch" : (dd <= -10 ? "flag" : (dd <= -3 ? "watch" : "ok")));
+    add("Avg HI share (scored imps)", h1 ? h1.pct.toFixed(0) + "%" : "no score data",
+      h2 ? h2.pct.toFixed(0) + "%" : "no score data",
+      dd == null ? "" : (dd >= 0 ? "+" : "") + dd.toFixed(0) + "pp", st, drv);
+  } else add("Avg HI share (scored imps)", "—", "—", "", "na", "run query 06");
+
+  // ---- 3) VV lookback window P1 -> P2 (measurement confound) ----
+  if (vv && vv.length && p1s) {
+    var ch = vv.map(function (r) { return { d: dstr(r.vv_change_date), pro: H.num(r.pro_window), rt: H.num(r.rt_window) }; })
+      .sort(function (a, b) { return a.d < b.d ? -1 : 1; });
+    function at(key, when) {
+      var v = null;
+      ch.forEach(function (c) { if (c.d <= when) v = c[key]; });
+      if (v === null && ch.length) v = ch[0][key];
+      return v;
+    }
+    function lbl(a, b) { return a === b ? a + "d" : a + "→" + b + "d"; }
+    var a1 = at("pro", p1s), b1 = at("pro", p1e), a2 = at("pro", p2s), b2 = at("pro", p2e);
+    var changed = (b1 !== b2) || (a1 !== b1) || (a2 !== b2);
+    var shortened = b2 < b1;
+    var r1 = at("rt", p1e), r2 = at("rt", p2e);
+    var drv = changed ? "attribution window differs — part of any visit/conv gap is measurement" : "";
+    if (r1 !== r2) drv += (drv ? " · " : "") + "RT lookback " + r1 + "d→" + r2 + "d too";
+    add("VV lookback (PRO)", lbl(a1, b1), lbl(a2, b2),
+      changed ? (shortened ? "SHORTENED" : "changed") : "same", changed ? "flag" : "ok", drv);
+  } else add("VV lookback (PRO)", "—", "—", "", "na", "run query 11");
+
+  // ---- 4) audience DS changes P1 -> P2 (DS16 net-new emphasized; groups >=2% spend) ----
+  if (clog && clog.length && p1s) {
+    var HIDE16 = { 14: true };
+    function pds(s) {
+      if (!s) return [];
+      return String(s).split(",").filter(function (x) { return x !== ""; }).map(Number)
+        .filter(function (x) { return !HIDE16[x]; });
+    }
+    var byG = {}, gSp = {};
+    clog.forEach(function (r) {
+      var g = String(r.clog_group_id);
+      (byG[g] = byG[g] || []).push(r);
+      gSp[g] = H.num(r.clog_grp_spend);
+    });
+    var totSp = 0;
+    Object.keys(gSp).forEach(function (g) { totSp += gSp[g]; });
+    if (totSp <= 0) totSp = 1;
+    var ds16add = [], ds16drop = [], otherChg = 0;
+    Object.keys(byG).forEach(function (g) {
+      if (gSp[g] / totSp < 0.02) return; // ignore trace-spend groups
+      var evs = byG[g].slice().sort(function (a, b) { return dstr(a.clog_changed_on) < dstr(b.clog_changed_on) ? -1 : 1; });
+      var pre = evs.filter(function (e) { return dstr(e.clog_changed_on) <= p1s; });
+      var base = pre.length ? pre[pre.length - 1] : evs[0];
+      var upto = evs.filter(function (e) { return dstr(e.clog_changed_on) <= p2e; });
+      var start = pds(base.clog_ds_ids);
+      var fin = upto.length ? pds(upto[upto.length - 1].clog_ds_ids) : start.slice();
+      var S = {}; start.forEach(function (x) { S[x] = 1; });
+      var F = {}; fin.forEach(function (x) { F[x] = 1; });
+      var addl = fin.filter(function (x) { return !S[x]; });
+      var dropl = start.filter(function (x) { return !F[x]; });
+      if (addl.indexOf(16) !== -1) ds16add.push(g);
+      if (dropl.indexOf(16) !== -1) ds16drop.push(g);
+      if (addl.filter(function (x) { return x !== 16; }).length ||
+          dropl.filter(function (x) { return x !== 16; }).length) otherChg++;
+    });
+    var parts = [];
+    if (ds16add.length) parts.push("+DS16 net-new on " + ds16add.join(", "));
+    if (ds16drop.length) parts.push("−DS16 on " + ds16drop.join(", "));
+    var st16 = (ds16add.length || ds16drop.length) ? "flag" : (otherChg ? "watch" : "ok");
+    add("Audience DS changes", "", "",
+      parts.length ? parts.join(" · ") : (otherChg ? otherChg + " groups changed other DSs" : "none"),
+      st16, (parts.length && otherChg) ? ("+ " + otherChg + " groups with other DS changes") : "");
+  } else add("Audience DS changes", "—", "—", "", "na", "run query 07");
+
+  // ---- 5) short flights (<=3d auto-ungate) P1 vs P2 ----
+  if (flights && flights.length) {
+    var s1 = 0, s2 = 0;
+    flights.forEach(function (r) {
+      if (H.num(r.flight_days) > 3) return;
+      var fs = dstr(r.flight_start);
+      if (inP(fs, p1s, p1e)) s1++;
+      else if (inP(fs, p2s, p2e)) s2++;
+    });
+    var stf = (s2 >= 5 && s2 >= 2 * Math.max(s1, 1)) ? "flag" : (s2 > s1 ? "watch" : "ok");
+    add("Short flights ≤3d (auto-ungate)", String(s1), String(s2),
+      (s2 - s1 >= 0 ? "+" : "") + (s2 - s1), stf, "");
+  } else add("Short flights ≤3d (auto-ungate)", "—", "—", "", "na", "run query 08");
+
+  // ---- 6) no-gate (HHST<=0) delivering days P1 vs P2 (group + month drivers) ----
+  if (ribbon && ribbon.length && p1s) {
+    var n1 = 0, t1 = 0, n2 = 0, t2 = 0;
+    var byGrpNG = {}, byMoNG = {};
+    ribbon.forEach(function (r) {
+      var day = dstr(r.day);
+      var hasGate = !(r.gate === null || r.gate === undefined || r.gate === "");
+      var isNo = hasGate && H.num(r.gate) <= 0;
+      if (inP(day, p1s, p1e)) { t1++; if (isNo) n1++; }
+      else if (inP(day, p2s, p2e)) {
+        t2++;
+        if (isNo) {
+          n2++;
+          var gg = String(r.campaign_group_id);
+          byGrpNG[gg] = (byGrpNG[gg] || 0) + 1;
+          var mo = day.slice(0, 7);
+          byMoNG[mo] = (byMoNG[mo] || 0) + 1;
+        }
+      }
+    });
+    var drvNG = "";
+    var topG = Object.keys(byGrpNG).sort(function (a, b) { return byGrpNG[b] - byGrpNG[a]; })[0];
+    var topM = Object.keys(byMoNG).sort(function (a, b) { return byMoNG[b] - byMoNG[a]; })[0];
+    if (topG && n2 && byGrpNG[topG] >= 0.5 * n2) drvNG = topG + " drives " + byGrpNG[topG] + "/" + n2;
+    if (topM && n2 && byMoNG[topM] >= 0.5 * n2) drvNG += (drvNG ? " · " : "") + "mostly " + moLbl(topM);
+    var pr1 = t1 ? 100 * n1 / t1 : 0, pr2 = t2 ? 100 * n2 / t2 : 0;
+    var stg = (pr2 >= 15 && pr2 > pr1 + 5) ? "flag" : (n2 > n1 ? "watch" : "ok");
+    add("No-gate (HHST≤0) delivering days", n1 + " of " + t1 + " (" + pr1.toFixed(0) + "%)",
+      n2 + " of " + t2 + " (" + pr2.toFixed(0) + "%)", "", stg, drvNG);
+  } else add("No-gate (HHST≤0) delivering days", "—", "—", "", "na", "run query 03b");
+
+  // ---- render ----
+  var CHIP = {
+    flag:  { txt: "FLAG",  bg: "rgba(214,59,47,0.12)",  col: C.RED },
+    watch: { txt: "WATCH", bg: "rgba(199,123,48,0.14)", col: C.AMBER },
+    ok:    { txt: "OK",    bg: "rgba(46,139,87,0.12)",  col: C.GREEN },
+    na:    { txt: "—",bg: "transparent",           col: "#999" }
+  };
+  var html = '';
+  html += '<div style="background:#fff;border:1px solid #e4e4e4;border-radius:6px;padding:14px 16px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;margin-bottom:6px">';
+  html += '<div style="font-size:16px;font-weight:700;color:#222;">Diagnostic flags — P1 vs P2</div>';
+  html += '<div style="font-size:11px;color:#888;margin:2px 0 10px;">P1 ' + H.esc(p1s || "?") + ' → ' + H.esc(p1e || "?")
+    + ' · P2 ' + H.esc(p2s || "?") + ' → ' + H.esc(p2e || "?")
+    + ' · the changes most likely to explain a performance gap, with the responsible campaign/month where one dominates</div>';
+  html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
+  var fth = 'padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
+  html += '<thead><tr>'
+    + '<th style="text-align:left;' + fth + '">Signal</th>'
+    + '<th style="text-align:center;' + fth + '">Status</th>'
+    + '<th style="text-align:right;' + fth + '">P1</th>'
+    + '<th style="text-align:right;' + fth + '">P2</th>'
+    + '<th style="text-align:left;' + fth + '">Δ / change</th>'
+    + '<th style="text-align:left;' + fth + '">Driver</th>'
+    + '</tr></thead><tbody>';
+  frows.forEach(function (f, i) {
+    var ch2 = CHIP[f.status] || CHIP.na;
+    var bg = (i % 2 === 0) ? "rgba(0,0,0,0.02)" : "transparent";
+    html += '<tr style="background:' + bg + '">'
+      + '<td style="text-align:left;padding:5px 8px;color:#222;white-space:nowrap">' + H.esc(f.name) + '</td>'
+      + '<td style="text-align:center;padding:5px 8px"><span style="display:inline-block;padding:1px 8px;border-radius:8px;font-size:10px;font-weight:700;background:' + ch2.bg + ';color:' + ch2.col + '">' + ch2.txt + '</span></td>'
+      + '<td style="text-align:right;padding:5px 8px;color:#444;white-space:nowrap">' + H.esc(f.p1) + '</td>'
+      + '<td style="text-align:right;padding:5px 8px;color:#444;white-space:nowrap">' + H.esc(f.p2) + '</td>'
+      + '<td style="text-align:left;padding:5px 8px;font-weight:700;color:' + (f.status === "flag" ? C.RED : (f.status === "watch" ? C.AMBER : "#333")) + '">' + H.esc(f.delta) + '</td>'
+      + '<td style="text-align:left;padding:5px 8px;color:#777;font-size:11px">' + H.esc(f.driver) + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  root.innerHTML = html;
+}
+  return render; })();
   // Modules grouped into tabs by diagnostic category. A module's `tab` decides where it
   // renders; tab panels are lazy-rendered on first activation so Chart.js always sizes
   // against a visible container (charts built inside display:none get 0-width canvases).
   var TABS = ["Overview", "Audience & Scores", "Gate & Flights", "Delivery & Measurement"];
   var MODULES = [
+    { title: "Diagnostic flags", name: "_flags", sig: "", tab: "Overview", multi: true },
     { title: "YoY performance", name: "04 YoY Metrics", sig: "period", tab: "Overview" },
     { title: "Monthly trends", name: "05 Monthly Metrics", sig: "month", tab: "Overview" },
     { title: "Campaign summary (window)", name: "00b Reach By Score", sig: "reach_ip", tab: "Audience & Scores" },
@@ -1590,6 +1816,11 @@ function render(rows, root, H) {
   ];
 
   function renderModule(m, sec) {
+    if (m.multi) { // cross-dataset module: resolves its own datasets via ds()
+      try { RENDER[m.name](null, sec, H); }
+      catch (e) { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">render error: ' + (e && e.message) + '</div>'; }
+      return;
+    }
     var rows = ds(m.name, m.sig);
     if (rows) { try { RENDER[m.name](rows, sec, H); }
       catch (e) { sec.innerHTML = '<h2>' + m.title + '</h2><div class="err">render error: ' + (e && e.message) + '</div>'; } }
@@ -1599,7 +1830,7 @@ function render(rows, root, H) {
   function renderAll() {
     var root = document.getElementById("cpd");
     root.innerHTML = '<h1>Client Performance Diagnostic</h1>'
-      + '<div class="sub">Prospecting (obj=1, funnel=1) · selected period vs same period last year</div>';
+      + '<div class="sub">Prospecting diagnostic · selected period (P2) vs same period last year (P1) · % spend = whole campaign group, retargeting excluded</div>';
 
     var bar = document.createElement("div"); bar.className = "tabbar";
     root.appendChild(bar);
