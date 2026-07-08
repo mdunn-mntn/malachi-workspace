@@ -19,12 +19,20 @@ WITH hist AS (
   WHERE advertiser_id = {{ Advertiser_ID }}
   UNION ALL
   -- CURRENT LIVE state -- the archive lags the live edit. The live advertisers table stores
-  -- the TTL as a STRING (like 'N days'), so parse the leading integer. Max version sorts last
-  -- within its update_time.
+  -- these as STRINGs in MIXED UNITS: '14 days' (days) but also '720:00:00' (HOURS —
+  -- 720:00:00 = 30 days, verified on WGU 31357). Normalize hh:mm:ss to days, else the
+  -- fallback manufactures a phantom window "change" stamped at the live update_time.
+  -- Max version sorts last within its update_time.
   SELECT update_time, 2147483647 AS version,
-    CAST(REGEXP_EXTRACT(CAST(clickpass_acquisition_ttl AS STRING), r"([0-9]+)") AS INT64),
-    CAST(REGEXP_EXTRACT(CAST(clickpass_click_ttl        AS STRING), r"([0-9]+)") AS INT64),
-    CAST(REGEXP_EXTRACT(CAST(conversion_window          AS STRING), r"([0-9]+)") AS INT64)
+    IF(REGEXP_CONTAINS(CAST(clickpass_acquisition_ttl AS STRING), r"^[0-9]+:"),
+       DIV(CAST(REGEXP_EXTRACT(CAST(clickpass_acquisition_ttl AS STRING), r"([0-9]+)") AS INT64), 24),
+       CAST(REGEXP_EXTRACT(CAST(clickpass_acquisition_ttl AS STRING), r"([0-9]+)") AS INT64)),
+    IF(REGEXP_CONTAINS(CAST(clickpass_click_ttl AS STRING), r"^[0-9]+:"),
+       DIV(CAST(REGEXP_EXTRACT(CAST(clickpass_click_ttl AS STRING), r"([0-9]+)") AS INT64), 24),
+       CAST(REGEXP_EXTRACT(CAST(clickpass_click_ttl AS STRING), r"([0-9]+)") AS INT64)),
+    IF(REGEXP_CONTAINS(CAST(conversion_window AS STRING), r"^[0-9]+:"),
+       DIV(CAST(REGEXP_EXTRACT(CAST(conversion_window AS STRING), r"([0-9]+)") AS INT64), 24),
+       CAST(REGEXP_EXTRACT(CAST(conversion_window AS STRING), r"([0-9]+)") AS INT64))
   FROM `dw-main-bronze.integrationprod.advertisers`
   WHERE advertiser_id = {{ Advertiser_ID }}
 ),
