@@ -1427,171 +1427,104 @@ function render(rows, root, H) {
   RENDER["00b Reach By Score"] = (function () {
 function render(rows, root, H) {
   var C = H.C;
-  // ----- normalize rows -----
+  // Window-wide summary of every stage-1 prospecting campaign (durable summarydata
+  // metrics) — in-TTL reach + HI-share appended only where still measurable (CIL 90d).
   var data = (rows || []).map(function (r) {
-    var reach = H.num(r.reach_ip);
-    var hi = H.num(r.hi_ip), pp = H.num(r.pp_ip), mid = H.num(r.mid_ip), un = H.num(r.unscored_ip);
-    var spend = H.num(r.spend);
-    var gname = (r.group_name == null ? "" : String(r.group_name));
-    var grp = (r.grp == null || r.grp === "") ? String(r.campaign_id) : String(r.grp);
-    var s = gname.replace(/CTV /g, "").replace(/Prospecting/g, "").replace(/ 2026/g, "").replace(/-old/g, " (old)");
-    s = s.replace(/Frequency/g, "Freq").replace(/Subscriptions/g, "Subs");
-    s = s.split(/\s+/).filter(Boolean).join(" ").trim();
-    var label = s ? (grp + " " + s) : grp;
-    if (label.length > 40) label = label.slice(0, 40);
     return {
       cid: String(r.campaign_id),
-      label: label,
-      reach: reach,
-      hi: hi, pp: pp, mid: mid, un: un,
-      hs: reach > 0 ? hi / reach : 0,
-      spend: spend
+      grp: (r.grp == null || r.grp === "") ? "" : String(r.grp),
+      name: r.group_name == null ? "" : String(r.group_name),
+      first: r.first_day ? String(r.first_day).slice(0, 10) : "",
+      last: r.last_day ? String(r.last_day).slice(0, 10) : "",
+      spend: H.num(r.spend),
+      imps: H.num(r.imps),
+      visits: H.num(r.visits),
+      convs: H.num(r.conversions),
+      revenue: H.num(r.revenue),
+      reach: H.num(r.reach_ip),
+      hi: H.num(r.hi_ip)
     };
-  }).filter(function (d) { return d.reach > 0 || d.spend > 0; });
-
-  // omit zero-spend campaigns unless that would empty the set
-  var withSpend = data.filter(function (d) { return d.spend > 0; });
-  if (withSpend.length) data = withSpend;
-
+  }).filter(function (d) { return d.spend > 0 || d.reach > 0; });
   data.sort(function (a, b) { return b.spend - a.spend; });
 
-  // denominator = TOTAL window prospecting spend from SQL — the ONE % basis every
-  // module shares — falls back to displayed sum if the column is missing.
-  var totSpend = H.num(rows && rows[0] && rows[0].total_win_prosp_spend)
+  var tot = H.num(rows && rows[0] && rows[0].total_win_prosp_spend)
     || data.reduce(function (a, d) { return a + d.spend; }, 0) || 1;
-  data.forEach(function (d) { d.sshare = d.spend / totSpend; });
 
-  // ----- header -----
-  var wrap = document.createElement("div");
-  wrap.style.background = "#FAFAFA";
-  wrap.style.fontFamily = "'Helvetica Neue', Helvetica, Arial, sans-serif";
-  wrap.style.padding = "8px 4px";
-  var title = document.createElement("div");
-  title.style.cssText = "font-size:17px;font-weight:700;color:#222;margin-bottom:4px;";
-  title.textContent = "Prospecting reach by score bucket";
-  var sub = document.createElement("div");
-  sub.style.cssText = "font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;";
-  sub.textContent = "Distinct households each prospecting campaign reached, split by score. Reach is only measurable for the recent in-TTL month (impression log keeps 90 days; scores logged since 2025-06) — every window spender is listed, dormant ones without a bar. % spend = share of P1→P2 window prospecting spend, same basis as every module.";
-  wrap.appendChild(title);
-  wrap.appendChild(sub);
+  function mo(s) {
+    if (!s) return "?";
+    var p = s.split("-");
+    var M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return M[+p[1] - 1] + " '" + p[0].slice(2);
+  }
+
+  var html = '';
+  html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
+  html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Prospecting campaign summary — full window</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every stage-1 prospecting campaign that spent in the P1→P2 window, spend-ranked; metrics are whole-window totals. % spend = share of window prospecting spend (same basis as every module). Reach + HI-share are only measurable for the recent in-TTL month (impression log keeps 90 days) — dormant campaigns show “expired”.</div>';
 
   if (!data.length) {
-    var none = document.createElement("div");
-    none.style.cssText = "font-size:13px;color:#888;";
-    none.textContent = "No prospecting reach in the selected window.";
-    wrap.appendChild(none);
-    root.innerHTML = "";
-    root.appendChild(wrap);
+    html += '<div style="font-size:13px;color:#888;">No prospecting spend in the window.</div></div>';
+    root.innerHTML = html;
     return;
   }
 
-  // legend (single row, low->high left to right)
-  var legend = document.createElement("div");
-  legend.style.cssText = "display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:#333;margin:0 0 6px 2px;";
-  [["unscored", C.LGRAY], ["Mid / MaxReach", C.GRAY], ["Peak Perf", C.AMBER], ["High-Intent (>=8001)", C.NAVY]]
-    .forEach(function (it) {
-      var span = document.createElement("span");
-      span.style.cssText = "display:inline-flex;align-items:center;gap:5px;";
-      span.innerHTML = '<span style="display:inline-block;width:11px;height:11px;background:' + it[1] + ';border-radius:2px;"></span>' + H.esc(it[0]);
-      legend.appendChild(span);
-    });
-  wrap.appendChild(legend);
+  var th = 'text-align:right;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
+  var thl = 'text-align:left;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
+  html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
+  html += '<thead><tr>'
+    + '<th style="' + thl + '">Campaign</th>'
+    + '<th style="' + thl + '">Active</th>'
+    + '<th style="' + th + '">Spend</th>'
+    + '<th style="' + th + '">% spend</th>'
+    + '<th style="' + th + '">Imps</th>'
+    + '<th style="' + th + '">Visits</th>'
+    + '<th style="' + th + '">Convs</th>'
+    + '<th style="' + th + '">ROAS</th>'
+    + '<th style="' + th + '">In-TTL reach</th>'
+    + '<th style="' + th + '">HI</th>'
+    + '</tr></thead><tbody>';
 
-  var canvasId = H.uid();
-  var barH = 30, chartH = data.length * barH + 46;
-  var cwrap = document.createElement("div");
-  cwrap.style.cssText = "position:relative;height:" + chartH + "px;width:100%;";
-  var canvas = document.createElement("canvas");
-  canvas.id = canvasId;
-  cwrap.appendChild(canvas);
-  wrap.appendChild(cwrap);
-
-  root.innerHTML = "";
-  root.appendChild(wrap);
-
-  var labels = data.map(function (d) { return d.label; });
-  var mk = function (key, color, name) {
-    return { label: name, data: data.map(function (d) { return d[key]; }), backgroundColor: color, borderWidth: 0, categoryPercentage: 0.72, barPercentage: 0.9 };
-  };
-  // stack low->high so High-Intent (navy) lands at the right end
-  var datasets = [
-    mk("un", C.LGRAY, "unscored"),
-    mk("mid", C.GRAY, "Mid / MaxReach"),
-    mk("pp", C.AMBER, "Peak Perf"),
-    mk("hi", C.NAVY, "High-Intent (>=8001)")
-  ];
-
-  var maxEnd = 0;
-  data.forEach(function (d) { var e = d.un + d.mid + d.pp + d.hi; if (e > maxEnd) maxEnd = e; });
-
-  // plugin: direct end-of-bar labels "reach · HI-share · %spend"
-  var endLabelPlugin = {
-    id: "endLabels_" + canvasId,
-    afterDatasetsDraw: function (chart) {
-      var ctx = chart.ctx;
-      var meta = chart.getDatasetMeta(datasets.length - 1); // topmost (hi) segment
-      ctx.save();
-      ctx.font = "bold 10px 'Helvetica Neue', Helvetica, Arial, sans-serif";
-      ctx.fillStyle = C.NAVY;
-      ctx.textBaseline = "middle";
-      data.forEach(function (d, i) {
-        var el = meta.data[i];
-        if (!el) return;
-        var x = el.x; // right end of stacked bar (hi is last dataset)
-        var y = el.y;
-        var pctSpend = H.pctShare(d.sshare);
-        var txt;
-        if (d.reach > 0) {
-          ctx.fillStyle = C.NAVY;
-          txt = H.fmtK(d.reach) + " · " + Math.round(d.hs * 100) + "% HI · " + pctSpend + " spend";
-        } else {
-          ctx.fillStyle = C.GRAY;
-          txt = "no in-TTL reach · " + pctSpend + " spend";
-        }
-        ctx.fillText(txt, x + 8, y);
-      });
-      ctx.restore();
-    }
-  };
-
-  new Chart(canvas.getContext("2d"), {
-    type: "bar",
-    data: { labels: labels, datasets: datasets },
-    plugins: [endLabelPlugin],
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { right: 4 } },
-      scales: {
-        x: {
-          stacked: true,
-          beginAtZero: true,
-          max: maxEnd * 1.34,
-          grid: { display: false, drawBorder: false },
-          ticks: { display: false },
-          border: { display: false }
-        },
-        y: {
-          stacked: true,
-          grid: { display: false, drawBorder: false },
-          border: { display: false },
-          ticks: { color: "#333", font: { size: 10 }, autoSkip: false }
-        }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function (ctx) {
-              var d = data[ctx.dataIndex];
-              return ctx.dataset.label + ": " + H.fmtK(ctx.parsed.x) + "  (reach " + H.fmtK(d.reach) + ", " + Math.round(d.hs * 100) + "% HI, " + H.money(d.spend) + ")";
-            }
-          }
-        }
-      }
-    }
+  var td = 'text-align:right;padding:4px 8px;color:#222;white-space:nowrap';
+  var tdl = 'text-align:left;padding:4px 8px;color:#222;white-space:nowrap';
+  var T = { spend: 0, imps: 0, visits: 0, convs: 0, revenue: 0 };
+  data.forEach(function (d, i) {
+    var nm = d.name.replace(/CTV /g, "").replace(/Prospecting/g, "").replace(/Frequency/g, "Freq")
+      .replace(/Subscriptions/g, "Subs").replace(/\s+/g, " ").trim();
+    var label = d.grp ? (d.grp + " · " + d.cid + (nm ? " " + nm : "")) : d.cid;
+    if (label.length > 46) label = label.slice(0, 46);
+    var sh = d.spend / tot;
+    var roas = d.spend > 0 ? d.revenue / d.spend : null;
+    var hiPct = d.reach > 0 ? Math.round(100 * d.hi / d.reach) : null;
+    var hiCol = hiPct == null ? "#aaa" : (hiPct >= 50 ? C.GREEN : (hiPct >= 20 ? C.AMBER : C.RED));
+    T.spend += d.spend; T.imps += d.imps; T.visits += d.visits; T.convs += d.convs; T.revenue += d.revenue;
+    var bg = (i % 2 === 0) ? "rgba(0,0,0,0.03)" : "transparent";
+    html += '<tr style="background:' + bg + '">'
+      + '<td style="' + tdl + '">' + H.esc(label) + '</td>'
+      + '<td style="' + tdl + ';color:#777;font-size:11px">' + H.esc(mo(d.first)) + '–' + H.esc(mo(d.last)) + '</td>'
+      + '<td style="' + td + '">' + H.money(d.spend) + '</td>'
+      + '<td style="' + td + ';font-weight:700;color:' + C.NAVY + '">' + H.pctShare(sh) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(d.imps) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(d.visits) + '</td>'
+      + '<td style="' + td + '">' + H.fmtK(d.convs) + '</td>'
+      + '<td style="' + td + '">' + (roas == null ? "—" : roas.toFixed(2) + "x") + '</td>'
+      + '<td style="' + td + (d.reach > 0 ? '' : ';color:#aaa') + '">' + (d.reach > 0 ? H.fmtK(d.reach) : "expired") + '</td>'
+      + '<td style="' + td + ';font-weight:700;color:' + hiCol + '">' + (hiPct == null ? "—" : hiPct + "%") + '</td>'
+      + '</tr>';
   });
+
+  var troas = T.spend > 0 ? T.revenue / T.spend : null;
+  html += '<tr style="border-top:2px solid ' + C.NAVY + '">'
+    + '<td style="' + tdl + ';font-weight:700;color:' + C.NAVY + '">TOTAL — ' + data.length + ' campaigns</td>'
+    + '<td style="' + tdl + '"></td>'
+    + '<td style="' + td + ';font-weight:700">' + H.money(T.spend) + '</td>'
+    + '<td style="' + td + ';font-weight:700;color:' + C.NAVY + '">' + H.pctShare(T.spend / tot) + '</td>'
+    + '<td style="' + td + ';font-weight:700">' + H.fmtK(T.imps) + '</td>'
+    + '<td style="' + td + ';font-weight:700">' + H.fmtK(T.visits) + '</td>'
+    + '<td style="' + td + ';font-weight:700">' + H.fmtK(T.convs) + '</td>'
+    + '<td style="' + td + ';font-weight:700">' + (troas == null ? "—" : troas.toFixed(2) + "x") + '</td>'
+    + '<td style="' + td + '"></td><td style="' + td + '"></td></tr>';
+  html += '</tbody></table></div>';
+  root.innerHTML = html;
 }
   return render; })();
   // Modules grouped into tabs by diagnostic category. A module's `tab` decides where it
@@ -1601,7 +1534,7 @@ function render(rows, root, H) {
   var MODULES = [
     { title: "YoY performance", name: "04 YoY Metrics", sig: "period", tab: "Overview" },
     { title: "Monthly trends", name: "05 Monthly Metrics", sig: "month", tab: "Overview" },
-    { title: "Reach by score bucket", name: "00b Reach By Score", sig: "reach_ip", tab: "Audience & Scores" },
+    { title: "Campaign summary (window)", name: "00b Reach By Score", sig: "reach_ip", tab: "Overview" },
     { title: "Score-tier distribution", name: "06 Prospecting Score Buckets", sig: "notlogged", tab: "Audience & Scores" },
     { title: "Audience change log", name: "07 Audience Changelog", sig: "clog_ds_ids", tab: "Audience & Scores" },
     { title: "HHST gate history", name: "03 HHST Gate History", sig: "gate_threshold", tab: "Gate & Flights" },

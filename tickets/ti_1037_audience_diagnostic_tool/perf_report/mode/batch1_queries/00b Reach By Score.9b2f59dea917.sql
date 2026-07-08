@@ -1,9 +1,9 @@
--- Module 00b: prospecting reach composition by score bucket.
--- Per prospecting campaign (obj=1, funnel=1), distinct households reached over the
--- recent in-TTL month (45d before Period_End — scores only live in-TTL), split into
--- score buckets. SPEND = P1->P2 window prospecting spend with the window total as
--- denominator — the ONE % basis every module shares (119362 reads 13% here too).
--- Bars need not sum to 100%: dormant window spenders with no recent reach aren't shown.
+-- Module 00b: prospecting campaign summary over the FULL P1->P2 window (stage-1).
+-- One row per campaign with window spend: durable summarydata funnel metrics
+-- (spend / imps / visits / convs / revenue, active span) so EVERY campaign in the
+-- period appears — plus in-TTL score-split reach where still measurable
+-- (cost_impression_log keeps 90 days; scores logged since 2025-06).
+-- % basis = total_win_prosp_spend, the shared window denominator all modules use.
 WITH buckets AS (
   SELECT
     campaign_id,
@@ -28,12 +28,18 @@ camp_enum AS (
     c.campaign_id,
     c.campaign_group_id AS grp,
     g.name AS group_name,
-    ROUND(SUM(s.media_spend + s.data_spend + s.platform_spend), 0) AS spend
+    MIN(IF(s.impressions > 0, DATE(s.day), NULL)) AS first_day,
+    MAX(IF(s.impressions > 0, DATE(s.day), NULL)) AS last_day,
+    ROUND(SUM(s.media_spend + s.data_spend + s.platform_spend), 0) AS spend,
+    SUM(s.impressions) AS imps,
+    SUM(s.views + s.clicks) AS visits,
+    SUM(s.click_conversions + s.view_conversions) AS conversions,
+    ROUND(SUM(s.click_order_value + s.view_order_value), 0) AS revenue
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g ON g.campaign_group_id = c.campaign_group_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    -- window spend (P1 start -> P2 end): the standard % basis shared by all modules
+    -- window (P1 start -> P2 end): the standard basis shared by all modules
     AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
     AND s.day <  DATE('{{ Period_End }}')
     AND c.deleted = FALSE
@@ -50,21 +56,25 @@ tot AS (
     AND s.day <  DATE('{{ Period_End }}')
     AND c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
 )
--- EVERY window spender gets a row (reach 0 = dormant in the recent in-TTL month, or
--- pre-score-logging) so the chart accounts for ~100% of window prospecting spend.
 SELECT
   e.campaign_id,
   e.grp,
   e.group_name,
+  e.first_day,
+  e.last_day,
+  e.spend,
+  e.imps,
+  e.visits,
+  e.conversions,
+  e.revenue,
   COALESCE(b.reach_ip, 0)    AS reach_ip,
   COALESCE(b.hi_ip, 0)       AS hi_ip,
   COALESCE(b.pp_ip, 0)       AS pp_ip,
   COALESCE(b.mid_ip, 0)      AS mid_ip,
   COALESCE(b.unscored_ip, 0) AS unscored_ip,
-  COALESCE(e.spend, 0) AS spend,
   t.total_win_prosp_spend
 FROM camp_enum e
 LEFT JOIN buckets b ON b.campaign_id = e.campaign_id
 CROSS JOIN tot t
 WHERE COALESCE(e.spend, 0) > 0 OR COALESCE(b.reach_ip, 0) > 0
-ORDER BY COALESCE(e.spend, 0) DESC, reach_ip DESC
+ORDER BY e.spend DESC, reach_ip DESC
