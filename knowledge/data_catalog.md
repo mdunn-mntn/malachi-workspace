@@ -2986,3 +2986,10 @@ To reconstruct why an advertiser's delivery/composition/performance changed (HHS
 | **Delivery composition / VR / craters** | `summarydata.sum_by_campaign_by_day` + `logdata.cost_impression_log` | daily VR (views+clicks)/impressions to spot tracking outages (VR→~0 at normal spend = data gap, NOT audience). |
 
 Reusable one-command runner over most of these: `documentation/docs/advertiser_yoy_diagnostic/queries/run_diagnostic.sh <AID> <win_start> <win_end> <p1s> <p1e> <p2s> <p2e>`.
+
+## bq CLI — SQL positional arg must not START with a `--` comment (TI-1037, 2026-07-08)
+
+`bq query ... '<sql>'` treats a leading `--` in the SQL string as a command-line flag →
+`FATAL Flags parsing error: Unknown command line flag`. Strip leading comment-only lines (or start the
+string at the first SQL keyword) when passing templated .sql files as a shell argument; `--` comments
+inside the body are fine.

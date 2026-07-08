@@ -6,6 +6,34 @@
 
 ---
 
+## Update 2026-07-08 — Retargeting tab + Geo + flags scorecard; HI & frequency semantics settled
+
+Batch-1 completion via the paste-deploy workflow (index = 5 tabs: Overview / Audience & Scores / Gate &
+Flights / Delivery & Measurement / Retargeting). Deploy queue at close: 09rt SQL (v5) + index pending paste.
+
+- **New modules:** `_flags` Overview scorecard (client-side cross-dataset P1-vs-P2: spend Δ w/ single-month
+  driver, avg HI share of scored imps, VV window, DS16/audience changes, short flights, no-gate days — FLAG/
+  WATCH/OK chips); `12 Geo Changes` (changelog-style, REGEXP `location_ids` → "US (national)" vs N/210 DMAs;
+  finding: **108055 narrowed US→84/210 DMAs on 2026-01-27**); `09rt Retargeting Reach` (dedicated RT tab, 3
+  panels: new-vs-returning HI + new-share line / cumulative distinct HI / reach + median frequency). 00b
+  re-scoped to a **whole-window campaign-group summary** (durable summarydata funnel metrics + full-window CIL
+  reach & score split; every campaign visible; sums to 100%). Monthly trends: revenue-connected metrics red,
+  $0-spend months shaded.
+- **HI semantics (consistency directive):** an IP counts as HI only from the month a qualifying score was
+  actually observed — no borrowing from the future; same rule as module 06. For 09rt recirculation the bar is
+  **full hs=10000 only** (8001–9999 deliberately excluded, per Malachi: retargeting an 8000-scored IP is not
+  recirculating a top-scored one). Bouqs is still bucketed (non-Fangorn ⇒ HI is EXACTLY 10000), so the stricter
+  bar changes nothing there — validated **cum distinct retargeted HI = 176,274** by May '26 (vs the rejected
+  278k future-borrowing figure); it will matter on Fangorn-flipped advertisers.
+- **Frequency = MEDIAN imps/IP, never mean (CGNAT skew):** Bouqs RT Feb'25 mean 46.8 vs **median 8**; worst
+  single IP 8,020 imps/mo; top-100 IPs = 6.4% of impressions from 0.09% of IPs. Norms (same advertiser,
+  Apr–May '26): prospecting median 1–2 / mean 1.6–1.7 (the familiar "1–4"); RT median 8–9 / mean 24–31 /
+  p90 66–94 — retargeting is inherently ~5× hotter, that's the product not a bug. `rt_freq_median` added to
+  the 09rt SQL (`APPROX_QUANTILES`); table shows `med (avg)`.
+- **Tooling gotcha:** SQL passed to `bq query` as a positional arg must not START with a `--` comment — bq
+  parses it as a CLI flag (`FATAL Flags parsing error`). Strip leading comment-only lines when templating
+  staged .sql files into a shell arg.
+
 ## Update 2026-07-07 (later) — Mode batch-1 debug: stale datasets + VV chart date-adapter fix
 
 Continuation of the batch-1 Mode deploy (commit 8d13650 / mode-assets PR #9). Two symptoms in the live report, both diagnosed:
@@ -29,13 +57,13 @@ the full picture (the Mode queries were already current; only the Run was missin
 layout** to `index.html` (Overview / Audience & Scores / Gate & Flights / Delivery & Measurement; lazy-render
 per tab so Chart.js sizes against visible containers) — modules declare a `tab` in the registry.
 
-**Spend-% design standard (settled 2026-07-07 after cross-module contradictions):** every group-ranked
-module (03/03b/07/08) uses **P1→P2 window prospecting spend** (obj=1, funnel=1) as its % basis — P2-only
-spend silently dropped P1-season campaigns (88885, 82900) from the trajectory. Exception: **00b reach**
-is a recent-snapshot chart, so its reach AND spend both cover the same 45d in-TTL window with the same-window
-total as denominator (bars sum to ~100%). Rule: **a chart's % must be based on exactly the aggregate it
-displays, and the basis is stated in its subtitle.** Retargeting is excluded from every module (stage-1 only);
-RT appears only in future summary modules or via the planned Campaign scope dropdown.
+**Spend-% design standard (superseded 2026-07-08 — basis now UNIFIED):** the initial 2026-07-07 standard
+gave modules their own bases (prospecting-only obj=1/funnel=1 spend for 03/03b/07/08; a 45d in-TTL window for
+00b) — the cross-module %s contradicted each other and Malachi called it ("unify"). Final rule: **every
+module's % spend = whole campaign-group spend over the full P1→P2 window — ALL funnel stages, retargeting
+(obj=4) excluded** — one denominator everywhere, stated in each subtitle; 00b displays exactly that scope so
+its table sums to 100%. RT delivery appears only in the dedicated Retargeting tab (09rt) and the planned
+Campaign scope dropdown.
 
 **DS16 / DS46 timeline (from audience_segment_archives, 2026-07-07):** DS16 (net-new gate) was added to
 Bouqs' 2026 prospecting campaigns starting **2026-04-14** (v2 campaigns got it same-day as creation) —

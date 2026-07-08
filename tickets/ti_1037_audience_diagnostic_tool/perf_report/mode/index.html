@@ -1462,7 +1462,7 @@ function render(rows, root, H) {
 function render(rows, root, H) {
   var C = H.C;
   // Window-wide summary per CAMPAIGN GROUP (the client-facing campaign; durable
-  // summarydata metrics) — in-TTL reach + HI-share only where still measurable (CIL 90d).
+  // summarydata metrics) — full-window CIL reach + HI-share (CIL retains >=17 months; scores since 2025-06).
   var data = (rows || []).map(function (r) {
     return {
       grp: String(r.campaign_group_id),

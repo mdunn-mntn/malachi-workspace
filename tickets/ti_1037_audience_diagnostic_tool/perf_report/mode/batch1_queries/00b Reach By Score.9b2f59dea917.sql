@@ -3,8 +3,8 @@
 -- has a prospecting (obj=1, funnel=1) campaign; its metrics then aggregate the WHOLE
 -- group across ALL funnel stages (retargeting obj=4 excluded, per report scope).
 -- Durable summarydata funnel metrics (spend / imps / visits / convs / revenue, active
--- span) so EVERY campaign in the period appears — plus in-TTL score-split reach where
--- still measurable (cost_impression_log keeps 90 days; scores logged since 2025-06).
+-- span) so EVERY campaign in the period appears — plus FULL-WINDOW score-split reach
+-- from cost_impression_log (retains >= 17 months; scores logged since 2025-06).
 -- % basis = total_win_spend: the same whole-group scope, so the table sums to 100%.
 WITH prosp_groups AS (
   SELECT DISTINCT campaign_group_id
