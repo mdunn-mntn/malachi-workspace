@@ -774,6 +774,24 @@ MM audience. [[reference_fangorn_audience_overlay]]
 
 **Fangorn candidacy rule (load-bearing):** the `onFangorn` flip swaps **DS13 → DS46** during segment breakdown (audience_products.md). A campaign with **no DS13/DS19 has nothing to swap**, so flipping `onFangorn` changes nothing — Fangorn / Intelligent Intent Scoring only affects campaigns that use the **MM batch scoring layer**. Geo-only Select, pure-3P, pure-1P, and retargeting campaigns are unaffected regardless of rollout tier. So "is advertiser X a Fangorn candidate?" reduces first to **"does X run a live MM (DS13/DS19) prospecting campaign?"** — if not, the rollout criteria are N/A until they do. (iMemories' only real MM-scored prospecting — PTV campaign 466109, DS19 69-keyword + HHST=6666 + RTC — is **paused** since ~Nov 2025; their live campaigns are the geo-only Select Winback test.)
 
+**"MM = has DS19" is an undercount — empirical DS13/DS19/DS46 co-occurrence (TI-1037, 2026-07-08).** Alyson's working definition (MM = DS19 present) vs the segment-level reality. Measured on live prospecting campaigns (`objective_id=1 AND funnel_level=1`, delivered impressions>0 in the trailing 45d) at the **bidder-facing segment level** (`dw-main-silver.audience.audience_segments`, `expression_type_id=2 AND is_targeted=TRUE`, DS ids regex-extracted). Query: `tickets/ti_1037_audience_diagnostic_tool/queries/ti_1037_mm_ds_cooccurrence.sql`.
+
+| DS13 | DS19 | DS46 | campaigns | advertisers | 45d spend | % spend |
+|---|---|---|---|---|---|---|
+| — | ✓ | — | 1,559 | 859 | $18.7M | 42.7% |
+| — | — | — | 1,042 | 450 | $11.7M | 26.8% |
+| — | ✓ | ✓ | 1,314 | 606 | $8.3M | 18.9% |
+| — | — | ✓ | 235 | 115 | $2.8M | 6.5% |
+| ✓ | ✓ | — | 403 | 286 | $1.7M | 4.0% |
+| ✓ | — | — | 57 | 42 | $0.5M | 1.1% |
+| ✓ | — | ✓ | **0** | 0 | — | — |
+| ✓ | ✓ | ✓ | **0** | 0 | — | — |
+
+- **The two empty cells are exactly DS13∧DS46** — empirical confirmation of the candidacy rule above: the `onFangorn` flip SWAPS DS13→DS46 at segment level, so they never coexist. **DS19 survives the flip** (DS19+DS46 = 18.9% of spend).
+- **Every other combination exists**: DS46 without DS19 (235 campaigns / 115 advertisers — former vertical-only audiences now Fangorn-flipped), DS19 without DS13 (the dominant state), DS13 without DS19 (57 campaigns — legacy vertical-only, not yet flipped).
+- **Implication: "MM = DS19" misses DS46-only (6.5% of spend) + DS13-only (1.1%) — ~7.6% of prospecting spend / ~157 advertisers that ARE MM-batch-scored.** The robust segment-level MM test is `DS19 ∪ DS13 ∪ DS46` (the TI-1037 dashboard rule). Layer matters too: the TEMPLATE level (`audience.audiences`) still shows DS13/DS19 after a Fangorn flip, so a template-level DS19 check and a segment-level one disagree on flipped advertisers.
+- **No-MM cell (26.8% of spend) composition**, top sets by spend: DS14-only run-of-network ($2.5M / 42 adv / 128 campaigns), 3P-only (DS35 LiveRamp IP, DS18 Dstillery, **DS17 = ShareThis** — newly decoded), IP lists (DS8), 1P (DS2), CRM excludes (DS4/47), own-funnel excludes (DS21/34 — 198 campaigns run bare DS14+21+34, i.e. untargeted reach with visitor/converter suppression).
+
 **Canonical rollout-priority scorer (Alex Knorr):** `databricks_targeting` repo, branch `aknorr/fangorn`, `fangorn/rollout/Fangorn Rollout Advertiser Campaign Merge.ipynb`. This is the authoritative implementation of the 4-criteria ranking (supersedes the Slack-paraphrased version). Mechanics worth knowing:
 - **Universe / gating** (an advertiser is only *rankable* if they pass all of these): `campaign_groups.campaign_group_status='LIVE'` AND `objective_id IN (1,3,5)` AND `campaigns.campaign_status_id IN (1,3)`, then the campaign must have a **sustained `threshold > 0`** (held ≥60 min) in `silver.archives.household_score_threshold_archives` over the analysis window (e.g. 2026-03-01→2026-06-02). **No sustained HHST>0 in the window ⇒ no row ⇒ unrankable.** This is why a geo-only/HHST=0 advertiser (iMemories) simply doesn't appear — confirmed: their HHST archive in-window is empty.
 - **Vertical source = `integrationprod.fpa_advertiser_verticals` WHERE type=1** (NOT `advertisers.advertiser_vertical_id`, which is often NULL even when a vertical exists). iMemories = vertical **116001 "Gifts & Specialty Stores"** there (matches the `rtc id:116001` in their expressions).
