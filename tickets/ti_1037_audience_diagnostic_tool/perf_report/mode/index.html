@@ -1455,7 +1455,10 @@ function render(rows, root, H) {
 
   data.sort(function (a, b) { return b.spend - a.spend; });
 
-  var totSpend = data.reduce(function (a, d) { return a + d.spend; }, 0) || 1;
+  // denominator = TOTAL window prospecting spend from SQL (same basis as the other
+  // modules), not just the campaigns displayed here — falls back to displayed sum.
+  var totSpend = H.num(rows && rows[0] && rows[0].total_win_prosp_spend)
+    || data.reduce(function (a, d) { return a + d.spend; }, 0) || 1;
   data.forEach(function (d) { d.sshare = d.spend / totSpend; });
 
   // ----- header -----

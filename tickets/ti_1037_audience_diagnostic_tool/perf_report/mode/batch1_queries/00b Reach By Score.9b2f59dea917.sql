@@ -35,6 +35,18 @@ camp_enum AS (
     AND c.deleted = FALSE
     AND c.objective_id = 1
   GROUP BY 1, 2, 3
+),
+-- Total window prospecting spend (obj=1 funnel=1) — the SAME denominator as modules
+-- 03/03b/07/08, so this chart's % spend agrees with the rest of the report even though
+-- only recent-reach campaigns are displayed here.
+tot AS (
+  SELECT SUM(s.media_spend + s.data_spend + s.platform_spend) AS total_win_prosp_spend
+  FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+  JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
+  WHERE s.advertiser_id = {{ Advertiser_ID }}
+    AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND s.day <  DATE('{{ Period_End }}')
+    AND c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
 )
 SELECT
   b.campaign_id,
@@ -45,8 +57,10 @@ SELECT
   b.pp_ip,
   b.mid_ip,
   b.unscored_ip,
-  COALESCE(e.spend, 0) AS spend
+  COALESCE(e.spend, 0) AS spend,
+  t.total_win_prosp_spend
 FROM buckets b
 LEFT JOIN camp_enum e ON e.campaign_id = b.campaign_id
+CROSS JOIN tot t
 WHERE b.reach_ip > 0
 ORDER BY COALESCE(e.spend, 0) DESC, b.reach_ip DESC
