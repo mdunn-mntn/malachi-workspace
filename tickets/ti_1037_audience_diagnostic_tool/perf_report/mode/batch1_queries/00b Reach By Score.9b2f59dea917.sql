@@ -29,7 +29,9 @@ camp_enum AS (
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g ON g.campaign_group_id = c.campaign_group_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    AND s.day BETWEEN DATE('{{ Period_Start }}') AND DATE('{{ Period_End }}')
+    -- window spend (P1 start -> P2 end): the standard % basis shared by modules 03/03b/07/08
+    AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND s.day <  DATE('{{ Period_End }}')
     AND c.deleted = FALSE
     AND c.objective_id = 1
   GROUP BY 1, 2, 3

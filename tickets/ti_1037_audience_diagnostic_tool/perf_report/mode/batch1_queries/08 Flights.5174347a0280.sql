@@ -19,6 +19,7 @@ grp_name AS (
   SELECT campaign_group_id, name AS group_name
   FROM `dw-main-bronze.integrationprod.campaign_groups`
 ),
+-- Window spend (P1 start -> P2 end) — the standard % basis shared by modules 03/03b/07/00b.
 grp_spend AS (
   SELECT c.campaign_group_id, SUM(d.media_spend + d.data_spend + d.platform_spend) AS prosp_spend
   FROM `dw-main-bronze.integrationprod.campaigns` c
@@ -26,7 +27,7 @@ grp_spend AS (
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
     AND c.objective_id = 1 AND c.funnel_level = 1
     AND d.advertiser_id = {{ Advertiser_ID }}
-    AND d.day >= DATE('{{ Period_Start }}')
+    AND d.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
     AND d.day <  DATE('{{ Period_End }}')
   GROUP BY c.campaign_group_id
 )

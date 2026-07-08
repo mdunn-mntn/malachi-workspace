@@ -364,7 +364,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="font:13px Helvetica Neue,Helvetica,Arial,sans-serif;background:#FAFAFA;padding:14px 12px;">';
   html += '<div style="font-weight:700;font-size:15px;color:#222;margin-bottom:2px;">Scheduled flights per campaign (short / 4-7d / long tiers)</div>';
-  html += '<div style="font-size:11px;color:#888;margin-bottom:12px;">Continuous delivery is built from many back-to-back manual flights; short flights (≤3d) auto-ungate (HHST=0). Ranked by prospecting spend.</div>';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:12px;">Continuous delivery is built from many back-to-back manual flights; short flights (≤3d) auto-ungate (HHST=0). Ranked by P1→P2 window prospecting spend.</div>';
 
   // legend
   function chip(col,lab){ return '<span style="display:inline-flex;align-items:center;margin-right:14px;"><span style="width:12px;height:10px;background:'+col+';display:inline-block;margin-right:5px;border-radius:1px;"></span><span style="font-size:11px;color:#555;">'+lab+'</span></span>'; }
@@ -1132,7 +1132,8 @@ function render(rows, root, H) {
   html += '<div style="background:#FAFAFA;padding:14px 16px 10px;font-family:Helvetica Neue,Helvetica,Arial">';
   html += '<div style="font-size:16px;font-weight:700;color:#222;margin-bottom:2px">HHST Gate Trajectory <span style="font-weight:400;color:#777;font-size:13px">— prospecting campaigns</span></div>';
   html += '<div style="font-size:11px;color:#2E8B57;display:inline-block;margin-right:14px">HI zone (≥ 8000)</div>';
-  html += '<div style="font-size:11px;color:'+C.RED+';display:inline-block">no gate (≤ 0)</div>';
+  html += '<div style="font-size:11px;color:'+C.RED+';display:inline-block;margin-right:14px">no gate (≤ 0)</div>';
+  html += '<div style="font-size:11px;color:#999;display:inline-block">% spend = share of P1→P2 window prospecting spend</div>';
 
   var canvasIds = [];
   order.forEach(function(g){
@@ -1366,7 +1367,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;background:#FAFAFA;padding:14px 16px;">';
   html += '<div style="font-size:15px;font-weight:700;color:' + C.NAVY + ';margin-bottom:2px;">Prospecting campaigns & their intent gate over time</div>';
-  html += '<div style="font-size:11px;color:' + C.GRAY + ';margin-bottom:12px;">one lane per campaign group, each delivering day colored by its HHST gate bucket; lanes ranked by prospecting spend</div>';
+  html += '<div style="font-size:11px;color:' + C.GRAY + ';margin-bottom:12px;">one lane per campaign group, each delivering day colored by its HHST gate bucket; lanes ranked by P1→P2 window prospecting spend</div>';
 
   // lanes
   html += '<div style="position:relative;">';
@@ -1467,7 +1468,7 @@ function render(rows, root, H) {
   title.textContent = "Prospecting reach by score bucket";
   var sub = document.createElement("div");
   sub.style.cssText = "font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;";
-  sub.textContent = "Distinct households each prospecting campaign reached (recent in-TTL month), split by score. High HI-share = reaching high-intent supply; low HI-share / high unscored = reaching low-intent supply.";
+  sub.textContent = "Distinct households each prospecting campaign reached (recent in-TTL month), split by score. High HI-share = reaching high-intent supply; low HI-share / high unscored = reaching low-intent supply. % spend = share of P1→P2 window prospecting spend.";
   wrap.appendChild(title);
   wrap.appendChild(sub);
 
