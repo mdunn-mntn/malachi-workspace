@@ -30,13 +30,18 @@ ORDER BY (NULLIF(TRIM(a.company_name), '') IS NULL), LOWER(TRIM(a.company_name))
 Advertiser_ID:
   type: select
   default: 32147
+  label: "Advertiser"
   options:
     labels: advertiser_label
     values: advertiser_id
 Period_Start:
   type: date
   default: 2026-01-01
+  label: "Period start (P2)"
+  description: "Start of the recent period; P1 = the same dates one year earlier"
 Period_End:
   type: date
-  default: 2026-06-01
+  default: 2099-01-01
+  label: "Period end (exclusive)"
+  description: "Leave at 2099-01-01 = automatically through the last FULL month; any earlier date is honored"
 {% endform %}

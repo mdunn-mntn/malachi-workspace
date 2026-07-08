@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- Module 11 -- VV (Verified-Visit) lookback window change log
 -- One row per change event to an advertiser's VV lookback windows (a MEASUREMENT change).
 -- Source of truth: archives_advertiser_archives (version history) + live advertisers row.
@@ -53,10 +56,10 @@ SELECT
   conversion_window,
   prev_pro, prev_rt, prev_conv,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS p1_start,
-  DATE_SUB(DATE('{{ Period_End }}'),   INTERVAL 1 YEAR) AS p1_end,
+  DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR) AS p1_end,
   DATE('{{ Period_Start }}')                            AS p2_start,
-  DATE('{{ Period_End }}')                              AS p2_end,
+  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              AS p2_end,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS win_start,
-  DATE('{{ Period_End }}')                              AS win_end
+  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              AS win_end
 FROM changes
 ORDER BY vv_update_time

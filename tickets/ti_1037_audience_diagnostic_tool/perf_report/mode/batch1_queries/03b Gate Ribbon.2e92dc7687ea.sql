@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- Module 03b: daily HHST gate per prospecting campaign group, over delivering days.
 -- One row per prospecting campaign-group per day it delivered, carrying the forward-filled
 -- HHST gate in effect that day (latest gate change on or before that day). Rows exist only for
@@ -17,7 +20,7 @@ delivery AS (
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` d
   WHERE d.advertiser_id = {{ Advertiser_ID }}
     AND DATE(d.day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND DATE(d.day) < DATE('{{ Period_End }}')
+    AND DATE(d.day) < LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND d.campaign_id IN (SELECT campaign_id FROM camp)
 ),
 gate_daily AS (
@@ -27,7 +30,7 @@ gate_daily AS (
                               ORDER BY update_time DESC) AS rn
     FROM `dw-main-silver.archives.household_score_threshold_archives`
     WHERE advertiser_id = {{ Advertiser_ID }}
-      AND update_time < TIMESTAMP(DATE('{{ Period_End }}'))
+      AND update_time < TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
   ) WHERE rn = 1
 ),
 -- per campaign-day gate (forward-filled), keeping only delivering days
@@ -66,7 +69,7 @@ grp_spend AS (
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
     AND DATE(s.day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND DATE(s.day) <  DATE('{{ Period_End }}')
+    AND DATE(s.day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND c.deleted = FALSE AND c.objective_id != 4
   GROUP BY 1
 )

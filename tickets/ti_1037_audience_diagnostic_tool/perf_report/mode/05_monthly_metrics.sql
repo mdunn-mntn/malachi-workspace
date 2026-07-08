@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- =====================================================================
 -- 05 Monthly Metrics — monthly prospecting raw sums over the continuous
 -- trend window: from one year before the selected period start, through
@@ -20,6 +23,6 @@ SELECT
 FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
 WHERE campaign_id IN (SELECT campaign_id FROM camp)
   AND DATE(day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-  AND DATE(day) <  DATE('{{ Period_End }}')
+  AND DATE(day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
 GROUP BY month
 ORDER BY month

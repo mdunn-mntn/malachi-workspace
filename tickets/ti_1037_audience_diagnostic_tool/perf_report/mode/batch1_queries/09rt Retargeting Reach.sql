@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- Module 09rt -- PROSPECTING HI recirculation (monthly). NOT obj=4 retargeting:
 -- this measures how much of prospecting's HI delivery is re-touching IPs the
 -- advertiser already served. Unless DS16 (net-new gate) is on, prospecting will
@@ -12,9 +15,9 @@
 -- approximation: scores carry a 30-day TTL that does not align to calendar
 -- months, and within-month re-serves are not split out (they show in frequency).
 -- Scores logged since 2025-06 (earlier months read "no score data" in the
--- render). Scope mirrors module 06: obj=1 / funnel=1,
--- RTC-excluded. Column aliases keep the legacy rt_ prefix so the HTML resolver
--- and render plumbing are unchanged.
+-- render). Scope = ALL prospecting stages (obj 1/5/6 -- S1 + MT-S2 + MT-S3),
+-- RTC-excluded, retargeting (4) and Ego (7) out. Column aliases keep the legacy
+-- rt_ prefix so the HTML resolver and render plumbing are unchanged.
 --   rt_reach / rt_imps / rt_freq_median -> prospecting reach + MEDIAN imps/IP
 --   rt_hi_reach       -> IPs served at 10000 this month
 --   rt_new_hi         -> first-ever month the IP was served at 10000
@@ -23,7 +26,7 @@
 WITH prosp AS (
   SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id = {{ Advertiser_ID }} AND deleted = FALSE
-    AND objective_id = 1 AND funnel_level = 1
+    AND objective_id IN (1, 5, 6)
 ),
 all_base AS (
   -- advertiser-wide (ANY campaign): supplies first-ever-contact + prior-10000 history
@@ -33,7 +36,7 @@ all_base AS (
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
     AND time >= TIMESTAMP(DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR))
-    AND time <  TIMESTAMP(DATE('{{ Period_End }}'))
+    AND time <  TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
     AND ip IS NOT NULL AND ip != '0.0.0.0'
 ),
 first_seen AS (SELECT ip, MIN(mo) AS first_mo FROM all_base GROUP BY ip),
@@ -46,7 +49,7 @@ hi_first AS (
   GROUP BY ip
 ),
 pim AS (
-  -- prospecting (obj=1, funnel=1, RTC-excluded) delivery per ip x month
+  -- prospecting (obj 1/5/6, RTC-excluded) delivery per ip x month
   SELECT ip, mo, COUNT(*) AS imps, LOGICAL_OR(hs = 10000) AS hi_now
   FROM all_base
   WHERE campaign_id IN (SELECT campaign_id FROM prosp) AND not_rtc
@@ -62,9 +65,9 @@ SELECT
   COUNTIF(pim.hi_now AND hf.first_hi_mo < pim.mo)         AS rt_returning_hi,
   COUNTIF(fs.first_mo = pim.mo)                           AS rt_brand_new,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)   AS p1_start,
-  DATE_SUB(DATE('{{ Period_End }}'),   INTERVAL 1 YEAR)   AS p1_end,
+  DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR)   AS p1_end,
   DATE('{{ Period_Start }}')                              AS p2_start,
-  DATE('{{ Period_End }}')                                AS p2_end
+  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                                AS p2_end
 FROM pim
 LEFT JOIN hi_first hf USING (ip)
 LEFT JOIN first_seen fs USING (ip)

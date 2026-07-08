@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- =====================================================================
 -- 04 YoY Metrics — prospecting P1-vs-P2 aggregated raw sums.
 -- P2 = the selected period (Period_Start .. Period_End, END EXCLUSIVE).
@@ -14,9 +17,9 @@ WITH camp AS (
 SELECT
   CASE
     WHEN DATE(day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-     AND DATE(day) <  DATE_SUB(DATE('{{ Period_End }}'),   INTERVAL 1 YEAR) THEN 'P1'
+     AND DATE(day) <  DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR) THEN 'P1'
     WHEN DATE(day) >= DATE('{{ Period_Start }}')
-     AND DATE(day) <  DATE('{{ Period_End }}')                              THEN 'P2'
+     AND DATE(day) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              THEN 'P2'
   END                                                    AS period,
   SUM(impressions)                                       AS impressions,
   SUM(views + clicks)                                    AS visits,
@@ -27,9 +30,9 @@ FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
 WHERE campaign_id IN (SELECT campaign_id FROM camp)
   AND (
     (DATE(day) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-     AND DATE(day) < DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 1 YEAR))
+     AND DATE(day) < DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 YEAR))
     OR
-    (DATE(day) >= DATE('{{ Period_Start }}') AND DATE(day) < DATE('{{ Period_End }}'))
+    (DATE(day) >= DATE('{{ Period_Start }}') AND DATE(day) < LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
   )
 GROUP BY period
 HAVING period IS NOT NULL

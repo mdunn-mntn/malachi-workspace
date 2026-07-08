@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- Module 06 -- Monthly score-bucket counts of prospecting delivery.
 -- Per month, count of prospecting impressions (obj=1, funnel=1) in each MNTN household-score tier, RTC-excluded.
 -- Tiers on household_score hs:
@@ -19,7 +22,7 @@ base AS (
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
     AND time >= TIMESTAMP(DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR))
-    AND time <  TIMESTAMP(DATE('{{ Period_End }}'))
+    AND time <  TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
     AND campaign_id IN (SELECT campaign_id FROM camp)
     AND (model_params IS NULL OR model_params NOT LIKE "%realtime_conquest_score=10000%")
 )
@@ -33,9 +36,9 @@ SELECT
   COUNTIF(hs = 8000 OR hs BETWEEN 6666 AND 7999)  AS pp,
   COUNTIF(hs = 10000 OR hs BETWEEN 8001 AND 9999) AS hi,
   FORMAT_DATE("%Y-%m", DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)) AS p1_start_mo,
-  FORMAT_DATE("%Y-%m", DATE_SUB(DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 1 DAY), INTERVAL 1 YEAR)) AS p1_end_mo,
+  FORMAT_DATE("%Y-%m", DATE_SUB(DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY), INTERVAL 1 YEAR)) AS p1_end_mo,
   FORMAT_DATE("%Y-%m", DATE('{{ Period_Start }}')) AS p2_start_mo,
-  FORMAT_DATE("%Y-%m", DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 1 DAY)) AS p2_end_mo
+  FORMAT_DATE("%Y-%m", DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY)) AS p2_end_mo
 FROM base
 GROUP BY mo, p1_start_mo, p1_end_mo, p2_start_mo, p2_end_mo
 ORDER BY mo

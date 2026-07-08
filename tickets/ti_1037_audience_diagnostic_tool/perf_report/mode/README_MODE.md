@@ -19,6 +19,10 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   report Run produced (drafts included). After pasting any query/HTML change, hit **Run**, or the HTML renders
   against stale data (symptom seen 2026-07-07: gate trajectory showed 4 dead zero-spend groups from a
   draft-era run while the correct SQL returns 21 groups with 119362/108055/85384 on top).
+- **Period_End is clamped in SQL** — every query wraps it as `LEAST(Period_End, DATE_TRUNC(CURRENT_DATE(),
+  MONTH))`, so the far-future default (2099-01-01) means "through the last FULL month" automatically (Mode
+  date params only support static defaults). A user-picked earlier date is honored as-is. Period_End stays
+  EXCLUSIVE everywhere.
 - **Dynamic (query-backed) dropdown params:** the `{% form %}` block must live in the SAME query whose
   result feeds the options; `options: labels: <col> / values: <col>` shows the label but substitutes the
   value (so consumer queries are untouched). Mode documents a cap of ~1,000 options / 1MB for dynamic

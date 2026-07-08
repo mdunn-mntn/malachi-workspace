@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- Module 00b: campaign summary over the FULL P1->P2 window.
 -- One row per CAMPAIGN GROUP (the client-facing campaign). A group qualifies if it
 -- has a prospecting (obj=1, funnel=1) campaign; its metrics then aggregate the WHOLE
@@ -35,7 +38,7 @@ buckets AS (
   JOIN scope_camps sc ON sc.campaign_id = l.campaign_id
   WHERE l.advertiser_id = {{ Advertiser_ID }}
     AND DATE(l.time) >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND DATE(l.time) <  DATE('{{ Period_End }}')
+    AND DATE(l.time) <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
   GROUP BY 1
 ),
 grp_enum AS (
@@ -55,7 +58,7 @@ grp_enum AS (
   WHERE s.advertiser_id = {{ Advertiser_ID }}
     -- window (P1 start -> P2 end): the standard trend window
     AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND s.day <  DATE('{{ Period_End }}')
+    AND s.day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
   GROUP BY 1
 ),
 -- Denominator: TOTAL window spend over the SAME scope (whole groups, RT excluded),
@@ -66,7 +69,7 @@ tot AS (
   JOIN scope_camps sc ON sc.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
     AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND s.day <  DATE('{{ Period_End }}')
+    AND s.day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
 )
 SELECT
   e.grp AS campaign_group_id,

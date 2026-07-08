@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- Module 07 / 07b -- Prospecting audience-expression CHANGE HISTORY (per campaign).
 -- Every distinct audience config a prospecting campaign (obj=1, funnel=1) ran over the trend window,
 -- from the type-2 archive, collapsed to the moments the DS set OR the audience_id changed.
@@ -13,7 +16,7 @@ WITH camp AS (
       FROM `dw-main-silver.summarydata.sum_by_campaign_by_day`
       WHERE advertiser_id = {{ Advertiser_ID }}
         AND day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-        AND day <  DATE('{{ Period_End }}')
+        AND day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
         AND impressions > 0
     )
 ),
@@ -25,7 +28,7 @@ grp_spend AS (
   JOIN `dw-main-bronze.integrationprod.campaigns` c2 ON c2.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
     AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND s.day <  DATE('{{ Period_End }}')
+    AND s.day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND c2.deleted = FALSE AND c2.objective_id != 4
   GROUP BY 1
 ),
@@ -39,7 +42,7 @@ v AS (
   JOIN camp c USING (campaign_id)
   WHERE a.expression_type_id = 2 AND a.is_targeted = TRUE
     -- cap at window end so the last row per campaign IS the final in-window state
-    AND a.create_time < TIMESTAMP(DATE('{{ Period_End }}'))
+    AND a.create_time < TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
 ),
 chg AS (
   SELECT v.*,
@@ -57,11 +60,11 @@ SELECT
   chg.ds_ids                                        AS clog_ds_ids,
   COALESCE(gs.grp_spend, 0)                         AS clog_grp_spend,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS p1_start,
-  DATE_SUB(DATE('{{ Period_End }}'),   INTERVAL 1 YEAR) AS p1_end,
+  DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR) AS p1_end,
   DATE('{{ Period_Start }}')                            AS p2_start,
-  DATE('{{ Period_End }}')                              AS p2_end,
+  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              AS p2_end,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS win_start,
-  DATE('{{ Period_End }}')                              AS win_end
+  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                              AS win_end
 FROM chg
 JOIN camp c ON c.campaign_id = chg.campaign_id
 LEFT JOIN grp_spend gs ON gs.campaign_group_id = c.campaign_group_id

@@ -1,3 +1,6 @@
+-- Period_End is CLAMPED to the first day of the current month (exclusive end ->
+-- data through the last FULL month). The far-future param default relies on this;
+-- any user-picked earlier date is honored as-is.
 -- Module 08 -- Scheduled FLIGHTS per prospecting campaign_group (from core_flights)
 -- Scheduled flights (Start/End) set manually per campaign. NOT delivery -- a group can
 -- deliver continuously yet be many short back-to-back flights. Short flights auto-ungate.
@@ -12,7 +15,7 @@ WITH prosp_groups AS (
     AND c.objective_id = 1 AND c.funnel_level = 1
     AND d.advertiser_id = {{ Advertiser_ID }}
     AND d.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND d.day <  DATE('{{ Period_End }}')
+    AND d.day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND d.impressions > 0
 ),
 grp_name AS (
@@ -29,7 +32,7 @@ grp_spend AS (
     AND c.objective_id != 4
     AND d.advertiser_id = {{ Advertiser_ID }}
     AND d.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
-    AND d.day <  DATE('{{ Period_End }}')
+    AND d.day <  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))
   GROUP BY c.campaign_group_id
 )
 SELECT
@@ -43,15 +46,15 @@ SELECT
   f.status_id,
   COALESCE(s.prosp_spend, 0)                               AS group_prosp_spend,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)    AS win_start,
-  DATE('{{ Period_End }}')                                 AS win_end,
+  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                                 AS win_end,
   DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)    AS p1_start,
-  DATE_SUB(DATE('{{ Period_End }}'),   INTERVAL 1 YEAR)    AS p1_end,
+  DATE_SUB(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR)    AS p1_end,
   DATE('{{ Period_Start }}')                               AS p2_start,
-  DATE('{{ Period_End }}')                                 AS p2_end
+  LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH))                                 AS p2_end
 FROM `dw-main-bronze.integrationprod.core_flights` f
 JOIN prosp_groups p USING (campaign_group_id)
 LEFT JOIN grp_name  g USING (campaign_group_id)
 LEFT JOIN grp_spend s USING (campaign_group_id)
-WHERE f.start_time <  TIMESTAMP(DATE('{{ Period_End }}'))
+WHERE f.start_time <  TIMESTAMP(LEAST(DATE('{{ Period_End }}'), DATE_TRUNC(CURRENT_DATE(), MONTH)))
   AND f.end_time  >= TIMESTAMP(DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR))
 ORDER BY f.campaign_group_id, f.start_time

@@ -39,6 +39,13 @@ Flights / Delivery & Measurement / Retargeting). Deploy queue at close: 09rt SQL
   1–4 ✓; re-touch share 0% (Jun'25) → 75% (May'26), dips when fresh pools open (Jan/Mar '26 new campaigns);
   cum distinct 10000-IPs 2.54M. Also fixed: zero-row datasets now render the module's empty-state instead of
   "no data (Run the query)" (hit on 40341 — zero RT campaigns); flags No-gate row now shows its pp delta.
+- **Params v3 + end-date clamp (2026-07-08, later):** Advertiser_ID = searchable query-backed dropdown
+  (A–Z, "id · name", 4,962 spenders in last 18 mo; labels/values so consumers untouched). Every query now
+  clamps Period_End to first-of-current-month (`LEAST`), so the new far-future default (2099-01-01) means
+  "through the last full month" automatically — Mode date params can't do dynamic defaults. 09rt scope
+  widened to ALL prospecting stages (obj 1/5/6) per Malachi; Bouqs re-validated (cum 2.62M, re-touch 75%
+  May '26; June '26 HI-served collapses to 31k partly by construction — the mid-June Fangorn flip ends
+  exactly-10000 scoring, and the recirculation bar is 10000-only). WGU 09rt dry-run: ~1.7TB.
 - **Tooling gotcha:** SQL passed to `bq query` as a positional arg must not START with a `--` comment — bq
   parses it as a CLI flag (`FATAL Flags parsing error`). Strip leading comment-only lines when templating
   staged .sql files into a shell arg.
