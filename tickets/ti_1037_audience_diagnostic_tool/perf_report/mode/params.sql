@@ -7,6 +7,9 @@
 -- Dropdown label = "id · name" — the filter box matches EITHER, so users can type
 -- an advertiser_id or a company name; the bare advertiser_id is what substitutes
 -- into consumer queries (labels vs values).
+-- Period_Start / Period_End live in the separate 'period options' query — dropdowns
+-- whose Auto option carries the SQL-mapped sentinel, so the picker shows words
+-- (never 1900/2099) and the defaults never go stale.
 -- NOTE: this query now hits BigQuery — its DB connection must be BigQuery
 -- (dw-main-silver), not the default core dw.
 -- IMPORTANT: keep Liquid tags OUT of comments. Mode parses parameter/form tags
@@ -34,14 +37,4 @@ Advertiser_ID:
   options:
     labels: advertiser_label
     values: advertiser_id
-Period_Start:
-  type: date
-  default: 1900-01-01
-  label: "Period start (P2)"
-  description: "Leave at 1900-01-01 = automatically Jan 1 of the current year; any other date is honored. P1 = the same dates one year earlier"
-Period_End:
-  type: date
-  default: 2099-01-01
-  label: "Period end (exclusive)"
-  description: "Leave at 2099-01-01 = automatically through the last FULL month; any earlier date is honored"
 {% endform %}

@@ -56,7 +56,8 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
 
 | File | → Mode | Status |
 |---|---|---|
-| `params.sql` | query "params" (the `{% form %}` + the Advertiser_ID dropdown SQL) | ready |
+| `params.sql` | query "params" (Advertiser_ID dropdown: form + SQL) | ready |
+| `period_options.sql` | query **"period options"** (Period_Start/End month dropdowns; Auto = sentinel values mapped in every consumer query) | ready |
 | `04_yoy_metrics.sql` | query **"04 YoY Metrics"** | ✅ validated vs tool (P1 $647,864 / P2 $528,728) |
 | `05_monthly_metrics.sql` | query **"05 Monthly Metrics"** | ready |
 | `index.html` | the report HTML (YoY table + monthly Chart.js) | ready |

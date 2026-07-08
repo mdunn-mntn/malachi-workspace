@@ -16,8 +16,10 @@
 -- approximation: scores carry a 30-day TTL that does not align to calendar
 -- months, and within-month re-serves are not split out (they show in frequency).
 -- Scores logged since 2025-06 (earlier months read "no score data" in the
--- render). Scope = ALL prospecting stages (obj 1/5/6 -- S1 + MT-S2 + MT-S3),
--- RTC-excluded, retargeting (4) and Ego (7) out. Column aliases keep the legacy
+-- render). Scope = ALL prospecting stages (obj 1/5/6 -- S1 + MT-S2 + MT-S3);
+-- retargeting (4) and Ego (7) out. RTC serves COUNT here (an RTC-conquest serve
+-- is still a targeted IP / a touch -- per Malachi; module 06's score DISTRIBUTION
+-- stays RTC-excluded, different question). Column aliases keep the legacy
 -- rt_ prefix so the HTML resolver and render plumbing are unchanged.
 --   rt_reach / rt_imps / rt_freq_median -> prospecting reach + MEDIAN imps/IP
 --   rt_hi_reach       -> IPs served at 10000 this month
@@ -34,8 +36,7 @@ WITH prosp AS (
 all_base AS (
   -- advertiser-wide (ANY campaign): supplies first-ever-contact + prior-10000 history
   SELECT ip, FORMAT_DATE('%Y-%m', DATE(time)) AS mo, campaign_id,
-         household_score AS hs,
-         (model_params IS NULL OR model_params NOT LIKE '%realtime_conquest_score=10000%') AS not_rtc
+         household_score AS hs
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
     AND time >= TIMESTAMP(DATE_SUB(IF(DATE('{{ Period_Start }}') = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE('{{ Period_Start }}')), INTERVAL 1 YEAR))
@@ -44,18 +45,17 @@ all_base AS (
 ),
 first_seen AS (SELECT ip, MIN(mo) AS first_mo FROM all_base GROUP BY ip),
 hi_first AS (
-  -- first month each IP had a bid at a FULL 10000 (score on the impression row;
-  -- RTC rows excluded so a realtime-conquest 10000 does not mark an IP as HI)
+  -- first month each IP had a bid at a FULL 10000 (score on the impression row)
   SELECT ip, MIN(mo) AS first_hi_mo
   FROM all_base
-  WHERE hs = 10000 AND not_rtc
+  WHERE hs = 10000
   GROUP BY ip
 ),
 pim AS (
-  -- prospecting (obj 1/5/6, RTC-excluded) delivery per ip x month
+  -- prospecting (obj 1/5/6) delivery per ip x month
   SELECT ip, mo, COUNT(*) AS imps, LOGICAL_OR(hs = 10000) AS hi_now
   FROM all_base
-  WHERE campaign_id IN (SELECT campaign_id FROM prosp) AND not_rtc
+  WHERE campaign_id IN (SELECT campaign_id FROM prosp)
   GROUP BY ip, mo
 ),
 prosp_first AS (SELECT ip, MIN(mo) AS first_p_mo FROM pim GROUP BY ip)
