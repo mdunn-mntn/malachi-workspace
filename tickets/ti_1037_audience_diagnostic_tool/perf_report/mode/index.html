@@ -1570,29 +1570,33 @@ function render(rows, root, H) {
 }
   return render; })();
   // ---- Overview diagnostic flags: cross-dataset P1-vs-P2 scorecard of the standard
-  // decline causes (spend, HI mix, VV window, DS changes, short flights, no-gate days).
-  // Computed CLIENT-SIDE from the other modules' datasets — no extra query. Each row
-  // carries a driver note when one campaign/month is responsible for most of the change.
+  // decline causes — spend + all-metric moves, MM usage, HI share (<90% bar), VV window,
+  // MM restriction (geo/3P), gate adds (DS16/21/34), re-touch shares (50%/80% bars),
+  // short flights, HHST=0 days, avg HHST, high-spend low-gate campaign. Computed
+  // CLIENT-SIDE from the other modules' datasets — no extra query.
   RENDER["_flags"] = (function () {
 function render(rowsIgnored, root, H) {
   var C = H.C;
   function dstr(v) { return String(v).slice(0, 10); }
   var yoy = ds("04 YoY Metrics", "period");
-  var monthly = ds("05 Monthly Metrics", "month");
   var buckets = ds("06 Prospecting Score Buckets", "notlogged");
   var vv = ds("11 VV Window", "vv_change_date");
   var clog = ds("07 Audience Changelog", "clog_ds_ids");
   var ribbon = ds("03b Gate Ribbon", "gate_ribbon_grp_spend");
   var flights = ds("08 Flights", "flight_days");
+  var rt = ds("09rt Retargeting Reach", "rt_reach");
+  var geo = ds("12 Geo Changes", "n_dma");
 
   // period bounds from whichever dataset carries them
-  var bsrc = (flights && flights[0]) || (vv && vv[0]) || (clog && clog[0]) || null;
+  var bsrc = (flights && flights[0]) || (vv && vv[0]) || (clog && clog[0]) || (rt && rt[0]) || (geo && geo[0]) || null;
   var p1s = bsrc ? dstr(bsrc.p1_start) : null, p1e = bsrc ? dstr(bsrc.p1_end) : null;
   var p2s = bsrc ? dstr(bsrc.p2_start) : null, p2e = bsrc ? dstr(bsrc.p2_end) : null;
 
   var MONN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   function moLbl(k) { if (!k) return "?"; return MONN[+k.slice(5, 7) - 1] + " '" + k.slice(2, 4); }
   function inP(d, s, e) { return s && e && d >= s && d < e; }
+  function pct0(x) { return (x >= 0 ? "+" : "") + x.toFixed(0) + "%"; }
+  function pp0(x) { return (x >= 0 ? "+" : "") + x.toFixed(0) + "pp"; }
 
   var frows = [];
   function add(name, p1, p2, delta, status, driver, deltaHtml) {
@@ -1600,33 +1604,104 @@ function render(rowsIgnored, root, H) {
                  driver: driver || "", deltaHtml: deltaHtml || null });
   }
 
-  // ---- 1) prospecting spend P1 -> P2 (single-month driver via monthly data) ----
-  if (yoy && yoy.length) {
-    var P = {};
-    yoy.forEach(function (r) { P[String(r.period)] = { spend: H.num(r.spend) }; });
-    if (P.P1 && P.P2) {
-      var dpct = P.P1.spend ? 100 * (P.P2.spend / P.P1.spend - 1) : null;
-      var st = dpct == null ? "na" : (Math.abs(dpct) >= 30 ? "flag" : (Math.abs(dpct) >= 10 ? "watch" : "ok"));
-      var drv = "";
-      if (monthly && monthly.length && dpct != null) {
-        var bym = {};
-        monthly.forEach(function (r) { bym[dstr(r.month).slice(0, 7)] = H.num(r.spend); });
-        var best = null, tot = P.P2.spend - P.P1.spend;
-        Object.keys(bym).forEach(function (k) {
-          if (!inP(k + "-01", p2s, p2e)) return;
-          var prevK = (+k.slice(0, 4) - 1) + k.slice(4);
-          var d = bym[k] - (bym[prevK] || 0);
-          if (best === null || Math.abs(d) > Math.abs(best.d)) best = { k: k, d: d };
-        });
-        if (best && tot && Math.abs(best.d) >= 0.5 * Math.abs(tot))
-          drv = moLbl(best.k) + " alone " + (best.d >= 0 ? "+" : "−") + "$" + H.fmtK(Math.abs(best.d)) + " YoY";
+  // ---- shared: per-group start/final DS sets from the changelog (sig-spend groups) ----
+  var grpDs = null; // [{g, spend, share, start:[], fin:[]}]
+  if (clog && clog.length && p1s) {
+    var byG = {}, gSp = {};
+    clog.forEach(function (r) {
+      var g = String(r.clog_group_id);
+      (byG[g] = byG[g] || []).push(r);
+      gSp[g] = H.num(r.clog_grp_spend);
+    });
+    var totSp = 0;
+    Object.keys(gSp).forEach(function (g) { totSp += gSp[g]; });
+    if (totSp <= 0) totSp = 1;
+    grpDs = [];
+    Object.keys(byG).forEach(function (g) {
+      var share = gSp[g] / totSp;
+      if (share < 0.02) return; // trace-spend groups ignored
+      var evs = byG[g].slice().sort(function (a, b) { return dstr(a.clog_changed_on) < dstr(b.clog_changed_on) ? -1 : 1; });
+      var pre = evs.filter(function (e) { return dstr(e.clog_changed_on) <= p1s; });
+      var base = pre.length ? pre[pre.length - 1] : evs[0];
+      var upto = evs.filter(function (e) { return dstr(e.clog_changed_on) <= p2e; });
+      function pds(s) {
+        if (!s) return [];
+        return String(s).split(",").filter(function (x) { return x !== ""; }).map(Number)
+          .filter(function (x) { return x !== 14; });
       }
-      add("Prospecting spend", H.money(P.P1.spend), H.money(P.P2.spend),
-        dpct == null ? "" : (dpct >= 0 ? "+" : "") + dpct.toFixed(0) + "%", st, drv);
-    }
+      grpDs.push({ g: g, spend: gSp[g], share: share, start: pds(base.clog_ds_ids),
+                   fin: upto.length ? pds(upto[upto.length - 1].clog_ds_ids) : pds(base.clog_ds_ids) });
+    });
+  }
+  function hasAny(list, ids) { return list.some(function (x) { return ids.indexOf(x) !== -1; }); }
+
+  // ---- 1) prospecting spend P1 -> P2 ----
+  var P = {};
+  if (yoy && yoy.length) {
+    yoy.forEach(function (r) { P[String(r.period)] = { spend: H.num(r.spend), imps: H.num(r.impressions),
+      visits: H.num(r.visits), convs: H.num(r.conversions), rev: H.num(r.revenue) }; });
+  }
+  if (P.P1 && P.P2) {
+    var dpct = P.P1.spend ? 100 * (P.P2.spend / P.P1.spend - 1) : null;
+    var stS = dpct == null ? "na" : (Math.abs(dpct) >= 30 ? "flag" : (Math.abs(dpct) >= 10 ? "watch" : "ok"));
+    add("Prospecting spend", H.money(P.P1.spend), H.money(P.P2.spend),
+      dpct == null ? "" : pct0(dpct), stS, "");
   } else add("Prospecting spend", "—", "—", "", "na", "run query 04");
 
-  // ---- 2) average HI share of SCORED impressions P1 -> P2 (worst-month driver) ----
+  // ---- 2) significant moves across ALL core metrics (direction-aware) ----
+  if (P.P1 && P.P2) {
+    function rate(o, f) { return f(o); }
+    var METS = [
+      ["Imps", function (o) { return o.imps; }, 0],
+      ["Visits", function (o) { return o.visits; }, 1],
+      ["Convs", function (o) { return o.convs; }, 1],
+      ["Revenue", function (o) { return o.rev; }, 1],
+      ["CPM", function (o) { return o.imps ? 1000 * o.spend / o.imps : 0; }, -1],
+      ["IVR", function (o) { return o.imps ? o.visits / o.imps : 0; }, 1],
+      ["CVR", function (o) { return o.visits ? o.convs / o.visits : 0; }, 1],
+      ["AOV", function (o) { return o.convs ? o.rev / o.convs : 0; }, 1],
+      ["ROAS", function (o) { return o.spend ? o.rev / o.spend : 0; }, 1]
+    ];
+    var partsH = [], worst = "ok";
+    METS.forEach(function (m) {
+      var v1 = rate(P.P1, m[1]), v2 = rate(P.P2, m[1]);
+      if (!v1) return;
+      var d = 100 * (v2 / v1 - 1);
+      if (Math.abs(d) < 15) return;
+      var adverse = m[2] !== 0 && d * m[2] < 0;
+      var col = m[2] === 0 ? "#666" : (adverse ? C.RED : C.GREEN);
+      partsH.push('<span style="color:' + col + '">' + H.esc(m[0] + " " + pct0(d)) + '</span>');
+      if (adverse && Math.abs(d) >= 30) worst = "flag";
+      else if (adverse && worst !== "flag") worst = "watch";
+      else if (worst === "ok" && Math.abs(d) >= 30) worst = "watch";
+    });
+    add("Metric moves ≥15% (YoY)", "", "", partsH.length ? "" : "none", worst,
+      partsH.length ? "red = adverse direction" : "", partsH.length ? partsH.join("  ·  ") : null);
+  } else add("Metric moves ≥15% (YoY)", "—", "—", "", "na", "run query 04");
+
+  // ---- 3) MM usage (DS19 keyword / DS13 vertical / DS46 Fangorn) P1 -> P2 ----
+  if (grpDs) {
+    var MM = [19, 13, 46];
+    var tot2 = 0, mm2 = 0, noMM = [], lost = [], gained = [];
+    grpDs.forEach(function (o) {
+      tot2 += o.spend;
+      var m1 = hasAny(o.start, MM), m2 = hasAny(o.fin, MM);
+      if (m2) mm2 += o.spend; else noMM.push(o.g);
+      if (m1 && !m2) lost.push(o.g);
+      if (!m1 && m2) gained.push(o.g);
+    });
+    var mmShare = tot2 ? 100 * mm2 / tot2 : 0;
+    var stM = noMM.length && (tot2 - mm2) / (tot2 || 1) >= 0.2 ? "flag" : ((lost.length || gained.length || noMM.length) ? "watch" : "ok");
+    var drvM = [];
+    if (noMM.length) drvM.push("no MM: " + noMM.join(", "));
+    if (lost.length) drvM.push("lost MM: " + lost.join(", "));
+    if (gained.length) drvM.push("gained MM: " + gained.join(", "));
+    add("MM usage (DS19/13/46)", "", Math.round(mmShare) + "% of spend on MM",
+      lost.length ? "LOST on " + lost.length + " grp" : (gained.length ? "gained" : (noMM.length ? "partial" : "all MM")),
+      stM, drvM.join(" · "));
+  } else add("MM usage (DS19/13/46)", "—", "—", "", "na", "run query 07");
+
+  // ---- 4) avg HI share of scored imps: <90% either period OR decreased ----
   if (buckets && buckets.length) {
     var b0 = buckets[0];
     var p1lo = String(b0.p1_start_mo), p1hi = String(b0.p1_end_mo);
@@ -1637,28 +1712,21 @@ function render(rowsIgnored, root, H) {
         var mo = String(r.mo);
         if (mo >= lo && mo <= hi) { hiN += H.num(r.hi); scored += H.num(r.total) - H.num(r.notlogged); }
       });
-      return scored > 0 ? { pct: 100 * hiN / scored } : null;
+      return scored > 0 ? 100 * hiN / scored : null;
     }
     var h1 = hiFor(p1lo, p1hi), h2 = hiFor(p2lo, p2hi);
-    var worst = null;
-    buckets.forEach(function (r) {
-      var mo = String(r.mo);
-      if (mo >= p2lo && mo <= p2hi) {
-        var sc = H.num(r.total) - H.num(r.notlogged);
-        if (sc > 0) { var p = 100 * H.num(r.hi) / sc; if (worst === null || p < worst.p) worst = { mo: mo, p: p }; }
-      }
-    });
-    var drv = "";
-    if (h2 && worst && (h2.pct - worst.p) >= 10) drv = "lowest: " + moLbl(worst.mo) + " (" + worst.p.toFixed(0) + "% HI)";
-    if (!h1) drv = (drv ? drv + " · " : "") + "P1 predates score logging (2025-06)";
-    var dd = (h1 && h2) ? h2.pct - h1.pct : null;
-    var st = !h2 ? "na" : (!h1 ? "watch" : (dd <= -10 ? "flag" : (dd <= -3 ? "watch" : "ok")));
-    add("Avg HI share (scored imps)", h1 ? h1.pct.toFixed(0) + "%" : "no score data",
-      h2 ? h2.pct.toFixed(0) + "%" : "no score data",
-      dd == null ? "" : (dd >= 0 ? "+" : "") + dd.toFixed(0) + "pp", st, drv);
+    var dd = (h1 != null && h2 != null) ? h2 - h1 : null;
+    var below = (h1 != null && h1 < 90) || (h2 != null && h2 < 90);
+    var stH = h2 == null ? "na" : ((below || (dd != null && dd <= -3)) ? "flag" : ((dd != null && dd < 0) ? "watch" : (h1 == null ? "watch" : "ok")));
+    var drvH = [];
+    if (below) drvH.push("HI share <90%");
+    if (h1 == null) drvH.push("P1 predates score logging (2025-06)");
+    add("Avg HI share (scored imps)", h1 != null ? h1.toFixed(0) + "%" : "no score data",
+      h2 != null ? h2.toFixed(0) + "%" : "no score data",
+      dd == null ? "" : pp0(dd), stH, drvH.join(" · "));
   } else add("Avg HI share (scored imps)", "—", "—", "", "na", "run query 06");
 
-  // ---- 3) VV lookback window P1 -> P2 (measurement confound) ----
+  // ---- 5) VV lookback window decreased ----
   if (vv && vv.length && p1s) {
     var ch = vv.map(function (r) { return { d: dstr(r.vv_change_date), pro: H.num(r.pro_window), rt: H.num(r.rt_window) }; })
       .sort(function (a, b) { return a.d < b.d ? -1 : 1; });
@@ -1679,58 +1747,88 @@ function render(rowsIgnored, root, H) {
       changed ? (shortened ? "SHORTENED" : "changed") : "same", changed ? "flag" : "ok", drv);
   } else add("VV lookback (PRO)", "—", "—", "", "na", "run query 11");
 
-  // ---- 4) audience DS changes P1 -> P2 (DS16 net-new emphasized; groups >=2% spend) ----
-  if (clog && clog.length && p1s) {
-    var HIDE16 = { 14: true };
-    function pds(s) {
-      if (!s) return [];
-      return String(s).split(",").filter(function (x) { return x !== ""; }).map(Number)
-        .filter(function (x) { return !HIDE16[x]; });
+  // ---- 6) MM audience restricted by geo slice or 3P intersect (>20% proxy) ----
+  if (grpDs) {
+    var parts6 = [];
+    // geo: final state per sig group; DMA-count share is a PROXY (not population-weighted)
+    if (geo && geo.length) {
+      var lastGeo = {};
+      geo.forEach(function (r) {
+        var g = String(r.geo_group_id);
+        var d = dstr(r.geo_changed_on);
+        if (!lastGeo[g] || d >= lastGeo[g].d) lastGeo[g] = { d: d, n: H.num(r.n_dma) };
+      });
+      grpDs.forEach(function (o) {
+        var lg = lastGeo[o.g];
+        if (lg && lg.n > 0 && lg.n / 210 < 0.8) parts6.push(o.g + " geo " + lg.n + "/210 DMAs");
+      });
     }
-    var byG = {}, gSp = {};
-    clog.forEach(function (r) {
-      var g = String(r.clog_group_id);
-      (byG[g] = byG[g] || []).push(r);
-      gSp[g] = H.num(r.clog_grp_spend);
+    grpDs.forEach(function (o) {
+      if (hasAny(o.fin, [19, 13, 46]) && hasAny(o.fin, [35, 18, 11])) parts6.push(o.g + " 3P∩MM");
     });
-    var totSp = 0;
-    Object.keys(gSp).forEach(function (g) { totSp += gSp[g]; });
-    if (totSp <= 0) totSp = 1;
-    var ds16add = [], ds16drop = [], otherChg = 0;
-    Object.keys(byG).forEach(function (g) {
-      if (gSp[g] / totSp < 0.02) return; // ignore trace-spend groups
-      var evs = byG[g].slice().sort(function (a, b) { return dstr(a.clog_changed_on) < dstr(b.clog_changed_on) ? -1 : 1; });
-      var pre = evs.filter(function (e) { return dstr(e.clog_changed_on) <= p1s; });
-      var base = pre.length ? pre[pre.length - 1] : evs[0];
-      var upto = evs.filter(function (e) { return dstr(e.clog_changed_on) <= p2e; });
-      var start = pds(base.clog_ds_ids);
-      var fin = upto.length ? pds(upto[upto.length - 1].clog_ds_ids) : start.slice();
-      var S = {}; start.forEach(function (x) { S[x] = 1; });
-      var F = {}; fin.forEach(function (x) { F[x] = 1; });
-      var addl = fin.filter(function (x) { return !S[x]; });
-      var dropl = start.filter(function (x) { return !F[x]; });
-      if (addl.indexOf(16) !== -1) ds16add.push(g);
-      if (dropl.indexOf(16) !== -1) ds16drop.push(g);
-      if (addl.filter(function (x) { return x !== 16; }).length ||
-          dropl.filter(function (x) { return x !== 16; }).length) otherChg++;
-    });
-    var parts = [], partsH = [];
-    if (ds16add.length) {
-      parts.push("+DS16 net-new on " + ds16add.join(", "));
-      partsH.push('<span style="color:' + C.GREEN + '">+DS16 net-new on ' + H.esc(ds16add.join(", ")) + '</span>');
-    }
-    if (ds16drop.length) {
-      parts.push("−DS16 on " + ds16drop.join(", "));
-      partsH.push('<span style="color:' + C.RED + '">−DS16 on ' + H.esc(ds16drop.join(", ")) + '</span>');
-    }
-    var st16 = (ds16add.length || ds16drop.length) ? "flag" : (otherChg ? "watch" : "ok");
-    add("Audience DS changes", "", "",
-      parts.length ? parts.join(" · ") : (otherChg ? otherChg + " groups changed other DSs" : "none"),
-      st16, (parts.length && otherChg) ? ("+ " + otherChg + " groups with other DS changes") : "",
-      partsH.length ? partsH.join('  ·  ') : null);
-  } else add("Audience DS changes", "—", "—", "", "na", "run query 07");
+    add("MM audience restricted (geo/3P)", "", "", parts6.length ? parts6.join(" · ") : "none",
+      parts6.length ? "flag" : "ok",
+      parts6.length ? "geo % is a DMA-count proxy, not population-weighted; 3P include NARROWS MM to the intersection" : "");
+  } else add("MM audience restricted (geo/3P)", "—", "—", "", "na", "run query 07/12");
 
-  // ---- 5) short flights (<=3d auto-ungate) P1 vs P2 ----
+  // ---- 7) restriction gates ADDED in P2 window: DS16 net-new / DS21 conv excl / DS34 pageview excl ----
+  if (grpDs) {
+    var GNAME = { 16: "DS16 net-new", 21: "DS21 conv-excl", 34: "DS34 pageview-excl" };
+    var adds = {}, drop16 = [];
+    grpDs.forEach(function (o) {
+      var S = {}; o.start.forEach(function (x) { S[x] = 1; });
+      var F = {}; o.fin.forEach(function (x) { F[x] = 1; });
+      [16, 21, 34].forEach(function (gid) {
+        if (F[gid] && !S[gid]) (adds[gid] = adds[gid] || []).push(o.g);
+      });
+      if (S[16] && !F[16]) drop16.push(o.g);
+    });
+    var parts7 = [], parts7H = [];
+    Object.keys(adds).forEach(function (gid) {
+      parts7.push("+" + GNAME[gid] + " on " + adds[gid].join(", "));
+      parts7H.push('<span style="color:' + C.RED + '">+' + H.esc(GNAME[gid] + " on " + adds[gid].join(", ")) + '</span>');
+    });
+    if (drop16.length) {
+      parts7.push("−DS16 on " + drop16.join(", "));
+      parts7H.push('<span style="color:' + C.GREEN + '">−DS16 on ' + H.esc(drop16.join(", ")) + '</span>');
+    }
+    add("Gates added (DS16/21/34)", "", "", parts7.length ? "" : "none",
+      Object.keys(adds).length ? "flag" : (drop16.length ? "watch" : "ok"),
+      Object.keys(adds).length ? "each gate shrinks the reachable audience vs P1" : "",
+      parts7H.length ? parts7H.join("  ·  ") : null);
+  } else add("Gates added (DS16/21/34)", "—", "—", "", "na", "run query 07");
+
+  // ---- 8/9) re-touch (recirculation) share, all IPs + HI — thresholds 50% watch / 80% flag ----
+  if (rt && rt.length && p1s) {
+    function agg(lo, hi) {
+      var R = { reach: 0, bn: 0, hi: 0, ret: 0 };
+      rt.forEach(function (r) {
+        var mk = String(r.rt_mo).slice(0, 7) + "-01";
+        if (inP(mk, lo, hi)) { R.reach += H.num(r.rt_reach); R.bn += H.num(r.rt_brand_new);
+          R.hi += H.num(r.rt_hi_reach); R.ret += H.num(r.rt_returning_hi); }
+      });
+      return R;
+    }
+    var A1 = agg(p1s, p1e), A2 = agg(p2s, p2e);
+    var all1 = A1.reach ? 100 * (A1.reach - A1.bn) / A1.reach : null;
+    var all2 = A2.reach ? 100 * (A2.reach - A2.bn) / A2.reach : null;
+    function stRt(v) { return v == null ? "na" : (v >= 80 ? "flag" : (v >= 50 ? "watch" : "ok")); }
+    add("Re-touch share (all IPs)", all1 == null ? "—" : all1.toFixed(0) + "%",
+      all2 == null ? "—" : all2.toFixed(0) + "%",
+      (all1 != null && all2 != null) ? pp0(all2 - all1) : "", stRt(all2),
+      all2 != null && all2 >= 50 ? "mostly re-serving already-touched IPs, not net-new" : "");
+    var hi1 = A1.hi ? 100 * A1.ret / A1.hi : null;
+    var hi2 = A2.hi ? 100 * A2.ret / A2.hi : null;
+    add("Re-touch share (HI 10000)", hi1 == null ? "no score data" : hi1.toFixed(0) + "%",
+      hi2 == null ? "no score data" : hi2.toFixed(0) + "%",
+      (hi1 != null && hi2 != null) ? pp0(hi2 - hi1) : "", stRt(hi2),
+      hi2 != null && hi2 >= 50 ? "HI pool recirculating — spend scaled past the net-new HI supply" : "");
+  } else {
+    add("Re-touch share (all IPs)", "—", "—", "", "na", "run query 09rt");
+    add("Re-touch share (HI 10000)", "—", "—", "", "na", "run query 09rt");
+  }
+
+  // ---- 10) short flights (any in P2 = watch; increase = flag) ----
   if (flights && flights.length) {
     var s1 = 0, s2 = 0;
     flights.forEach(function (r) {
@@ -1739,57 +1837,99 @@ function render(rowsIgnored, root, H) {
       if (inP(fs, p1s, p1e)) s1++;
       else if (inP(fs, p2s, p2e)) s2++;
     });
-    var stf = (s2 >= 5 && s2 >= 2 * Math.max(s1, 1)) ? "flag" : (s2 > s1 ? "watch" : "ok");
+    var stf = s2 > s1 && s2 > 0 ? "flag" : (s2 > 0 ? "watch" : "ok");
     add("Short flights ≤3d (auto-ungate)", String(s1), String(s2),
-      (s2 - s1 >= 0 ? "+" : "") + (s2 - s1), stf, "");
+      (s2 - s1 >= 0 ? "+" : "") + (s2 - s1), stf, s2 > 0 ? "each short flight resets HHST to 0" : "");
   } else add("Short flights ≤3d (auto-ungate)", "—", "—", "", "na", "run query 08");
 
-  // ---- 6) no-gate (HHST<=0) delivering days P1 vs P2 (group + month drivers) ----
+  // ---- 11) HHST=0 days + 12) average HHST + 13) high-spend low-gate campaign ----
   if (ribbon && ribbon.length && p1s) {
-    var n1 = 0, t1 = 0, n2 = 0, t2 = 0;
+    var n1 = 0, t1 = 0, n2 = 0, t2 = 0, sum1 = 0, c1 = 0, sum2 = 0, c2 = 0;
     var byGrpNG = {}, byMoNG = {};
+    var gStat = {}; // g -> {spend, d2, low2, hol2}
     ribbon.forEach(function (r) {
       var day = dstr(r.day);
       var hasGate = !(r.gate === null || r.gate === undefined || r.gate === "");
-      var isNo = hasGate && H.num(r.gate) <= 0;
-      if (inP(day, p1s, p1e)) { t1++; if (isNo) n1++; }
+      if (!hasGate) return;
+      var gv = H.num(r.gate);
+      var isNo = gv <= 0;
+      if (inP(day, p1s, p1e)) { t1++; sum1 += gv; c1++; if (isNo) n1++; }
       else if (inP(day, p2s, p2e)) {
-        t2++;
+        t2++; sum2 += gv; c2++;
+        var g = String(r.campaign_group_id);
+        if (!gStat[g]) gStat[g] = { spend: H.num(r.gate_ribbon_grp_spend), d2: 0, low2: 0, hol2: 0 };
+        gStat[g].d2++;
+        if (gv < 6666) {
+          gStat[g].low2++;
+          var mn = +day.slice(5, 7);
+          if (mn === 11 || mn === 12 || mn === 1) gStat[g].hol2++;
+        }
         if (isNo) {
           n2++;
-          var gg = String(r.campaign_group_id);
-          byGrpNG[gg] = (byGrpNG[gg] || 0) + 1;
-          var mo = day.slice(0, 7);
-          byMoNG[mo] = (byMoNG[mo] || 0) + 1;
+          byGrpNG[g] = (byGrpNG[g] || 0) + 1;
+          byMoNG[day.slice(0, 7)] = (byMoNG[day.slice(0, 7)] || 0) + 1;
         }
       }
     });
+    // 11: no-gate days
     var drvNG = "";
     var topG = Object.keys(byGrpNG).sort(function (a, b) { return byGrpNG[b] - byGrpNG[a]; })[0];
     var topM = Object.keys(byMoNG).sort(function (a, b) { return byMoNG[b] - byMoNG[a]; })[0];
     if (topG && n2 && byGrpNG[topG] >= 0.5 * n2) drvNG = topG + " drives " + byGrpNG[topG] + "/" + n2;
     if (topM && n2 && byMoNG[topM] >= 0.5 * n2) drvNG += (drvNG ? " · " : "") + "mostly " + moLbl(topM);
     var pr1 = t1 ? 100 * n1 / t1 : 0, pr2 = t2 ? 100 * n2 / t2 : 0;
-    var stg = (pr2 >= 15 && pr2 > pr1 + 5) ? "flag" : (n2 > n1 ? "watch" : "ok");
-    var dpp = pr2 - pr1;
+    var stg = (pr2 >= 15 && pr2 > pr1 + 5) ? "flag" : (n2 > 0 ? "watch" : "ok");
     add("No-gate (HHST≤0) delivering days", n1 + " of " + t1 + " (" + pr1.toFixed(0) + "%)",
-      n2 + " of " + t2 + " (" + pr2.toFixed(0) + "%)",
-      (dpp >= 0 ? "+" : "") + dpp.toFixed(0) + "pp", stg, drvNG);
-  } else add("No-gate (HHST≤0) delivering days", "—", "—", "", "na", "run query 03b");
+      n2 + " of " + t2 + " (" + pr2.toFixed(0) + "%)", pp0(pr2 - pr1), stg, drvNG);
+    // 12: average HHST across delivering days
+    var g1 = c1 ? sum1 / c1 : null, g2 = c2 ? sum2 / c2 : null;
+    var stAvg = (g1 != null && g2 != null) ? (g2 < g1 - 500 ? "flag" : (g2 < g1 ? "watch" : "ok")) : "na";
+    add("Avg HHST (delivering days)", g1 == null ? "—" : String(Math.round(g1)),
+      g2 == null ? "—" : String(Math.round(g2)),
+      (g1 != null && g2 != null) ? ((g2 - g1 >= 0 ? "+" : "") + Math.round(g2 - g1)) : "", stAvg,
+      (g2 != null && g1 != null && g2 < g1) ? "lower average gate = more low-intent delivery in the mix" : "");
+    // 13: high-spend low-gate campaign (holiday-aware)
+    var totRSp = 0;
+    Object.keys(gStat).forEach(function (g) { totRSp += gStat[g].spend; });
+    if (totRSp <= 0) totRSp = 1;
+    var worst13 = null;
+    Object.keys(gStat).forEach(function (g) {
+      var o = gStat[g];
+      var sh = o.spend / totRSp, lowPct = o.d2 ? o.low2 / o.d2 : 0;
+      if (sh >= 0.15 && o.d2 >= 10 && lowPct >= 0.3 && (!worst13 || sh > worst13.sh)) {
+        worst13 = { g: g, sh: sh, lowPct: lowPct, hol: o.low2 ? o.hol2 / o.low2 : 0 };
+      }
+    });
+    if (worst13) {
+      add("High-spend low-gate campaign", "", "",
+        worst13.g + " · " + Math.round(100 * worst13.sh) + "% spend · " + Math.round(100 * worst13.lowPct) + "% days below HI+PP",
+        "flag", worst13.hol >= 0.5 ? "mostly Nov–Jan (holiday) — drags the period average down" : "drags the period average down");
+    } else {
+      add("High-spend low-gate campaign", "", "", "none", "ok", "");
+    }
+  } else {
+    add("No-gate (HHST≤0) delivering days", "—", "—", "", "na", "run query 03b");
+    add("Avg HHST (delivering days)", "—", "—", "", "na", "run query 03b");
+    add("High-spend low-gate campaign", "—", "—", "", "na", "run query 03b");
+  }
 
   // ---- render ----
   var CHIP = {
     flag:  { txt: "FLAG",  bg: "rgba(214,59,47,0.12)",  col: C.RED },
     watch: { txt: "WATCH", bg: "rgba(199,123,48,0.14)", col: C.AMBER },
     ok:    { txt: "OK",    bg: "rgba(46,139,87,0.12)",  col: C.GREEN },
-    na:    { txt: "—",bg: "transparent",           col: "#999" }
+    na:    { txt: "—", bg: "transparent", col: "#999" }
   };
+  var nf = frows.filter(function (f) { return f.status === "flag"; }).length;
+  var nw = frows.filter(function (f) { return f.status === "watch"; }).length;
   var html = '';
   html += '<div style="background:#fff;border:1px solid #e4e4e4;border-radius:6px;padding:14px 16px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;margin-bottom:6px">';
-  html += '<div style="font-size:16px;font-weight:700;color:#222;">Diagnostic flags — P1 vs P2</div>';
+  html += '<div style="font-size:16px;font-weight:700;color:#222;">Diagnostic flags — P1 vs P2'
+    + '  <span style="font-size:12px;font-weight:700;color:' + (nf ? C.RED : C.GREEN) + '">' + nf + ' flag' + (nf === 1 ? '' : 's') + '</span>'
+    + '<span style="font-size:12px;font-weight:700;color:' + C.AMBER + '">  ·  ' + nw + ' watch</span></div>';
   html += '<div style="font-size:11px;color:#888;margin:2px 0 10px;">P1 ' + H.esc(p1s || "?") + ' → ' + H.esc(p1e || "?")
     + ' · P2 ' + H.esc(p2s || "?") + ' → ' + H.esc(p2e || "?")
-    + ' · the changes most likely to explain a performance gap, with the responsible campaign/month where one dominates</div>';
+    + ' · the standard decline causes, each with the responsible campaign/month where one dominates</div>';
   html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
   var fth = 'padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
   html += '<thead><tr>'
@@ -1798,7 +1938,7 @@ function render(rowsIgnored, root, H) {
     + '<th style="text-align:right;' + fth + '">P1</th>'
     + '<th style="text-align:right;' + fth + '">P2</th>'
     + '<th style="text-align:left;' + fth + '">Δ / change</th>'
-    + '<th style="text-align:left;' + fth + '">Driver</th>'
+    + '<th style="text-align:left;' + fth + '">Driver / note</th>'
     + '</tr></thead><tbody>';
   frows.forEach(function (f, i) {
     var ch2 = CHIP[f.status] || CHIP.na;

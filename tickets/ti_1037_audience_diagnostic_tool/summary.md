@@ -46,6 +46,14 @@ Flights / Delivery & Measurement / Retargeting). Deploy queue at close: 09rt SQL
   widened to ALL prospecting stages (obj 1/5/6) per Malachi; Bouqs re-validated (cum 2.62M, re-touch 75%
   May '26; June '26 HI-served collapses to 31k partly by construction — the mid-June Fangorn flip ends
   exactly-10000 scoring, and the recirculation bar is 10000-only). WGU 09rt dry-run: ~1.7TB.
+- **Flags scorecard v2 (2026-07-08, later — Malachi's 11-check spec):** Overview scorecard expanded from 6
+  to 13 signals, all client-side from existing datasets (no new queries): spend Δ; ALL-metric moves ≥15%
+  (direction-aware, red=adverse); MM usage (DS19/13/46, flag if ≥20% of spend without MM); avg HI share
+  (<90% either period OR ≥3pp drop = flag); VV shortened; MM restricted by geo slice (<80% of DMAs,
+  count-proxy) or 3P∩MM; gates ADDED (DS16/21/34) in-window; re-touch share all-IP + HI (50% watch / 80%
+  flag); short flights (any in P2 = watch, increase = flag); HHST=0 days (any = watch); avg HHST (drop
+  >500 = flag); high-spend low-gate campaign (≥15% spend, ≥30% days below HI+PP, holiday-aware). Header
+  shows flag/watch counts. Smoke-tested via node harness with fabricated datasets (13 rows, 11 flags).
 - **Tooling gotcha:** SQL passed to `bq query` as a positional arg must not START with a `--` comment — bq
   parses it as a CLI flag (`FATAL Flags parsing error`). Strip leading comment-only lines when templating
   staged .sql files into a shell arg.
