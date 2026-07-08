@@ -1,8 +1,9 @@
--- Module 00b: prospecting reach composition by score bucket (stage-1 only).
+-- Module 00b: prospecting reach composition by score bucket.
 -- Per prospecting campaign (obj=1, funnel=1), distinct households reached over the
--- recent in-TTL month (45d before Period_End), split into score buckets.
--- COHERENT AGGREGATE: spend covers the SAME 45-day window as the reach, and
--- total_45d_prosp_spend is the denominator — so displayed % spend sums to ~100%.
+-- recent in-TTL month (45d before Period_End — scores only live in-TTL), split into
+-- score buckets. SPEND = P1->P2 window prospecting spend with the window total as
+-- denominator — the ONE % basis every module shares (119362 reads 13% here too).
+-- Bars need not sum to 100%: dormant window spenders with no recent reach aren't shown.
 WITH buckets AS (
   SELECT
     campaign_id,
@@ -32,20 +33,21 @@ camp_enum AS (
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g ON g.campaign_group_id = c.campaign_group_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    -- SAME 45-day window as the reach snapshot — one coherent aggregate for this chart
-    AND s.day BETWEEN DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 45 DAY) AND DATE('{{ Period_End }}')
+    -- window spend (P1 start -> P2 end): the standard % basis shared by all modules
+    AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND s.day <  DATE('{{ Period_End }}')
     AND c.deleted = FALSE
     AND c.objective_id = 1 AND c.funnel_level = 1
   GROUP BY 1, 2, 3
 ),
--- Denominator: TOTAL stage-1 prospecting spend over the same 45 days, so the displayed
--- campaigns' % spend sums to ~100% (a campaign with spend but zero reach is the only leak).
+-- Denominator: TOTAL window prospecting spend — identical to modules 03/03b/07/08.
 tot AS (
-  SELECT SUM(s.media_spend + s.data_spend + s.platform_spend) AS total_45d_prosp_spend
+  SELECT SUM(s.media_spend + s.data_spend + s.platform_spend) AS total_win_prosp_spend
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    AND s.day BETWEEN DATE_SUB(DATE('{{ Period_End }}'), INTERVAL 45 DAY) AND DATE('{{ Period_End }}')
+    AND s.day >= DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR)
+    AND s.day <  DATE('{{ Period_End }}')
     AND c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
 )
 SELECT
@@ -58,7 +60,7 @@ SELECT
   b.mid_ip,
   b.unscored_ip,
   COALESCE(e.spend, 0) AS spend,
-  t.total_45d_prosp_spend
+  t.total_win_prosp_spend
 FROM buckets b
 LEFT JOIN camp_enum e ON e.campaign_id = b.campaign_id
 CROSS JOIN tot t
