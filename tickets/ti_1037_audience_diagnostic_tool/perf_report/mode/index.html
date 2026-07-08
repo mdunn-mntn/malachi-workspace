@@ -1447,7 +1447,7 @@ function render(rows, root, H) {
       hs: reach > 0 ? hi / reach : 0,
       spend: spend
     };
-  }).filter(function (d) { return d.reach > 0; });
+  }).filter(function (d) { return d.reach > 0 || d.spend > 0; });
 
   // omit zero-spend campaigns unless that would empty the set
   var withSpend = data.filter(function (d) { return d.spend > 0; });
@@ -1471,7 +1471,7 @@ function render(rows, root, H) {
   title.textContent = "Prospecting reach by score bucket";
   var sub = document.createElement("div");
   sub.style.cssText = "font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;";
-  sub.textContent = "Distinct households each prospecting campaign reached (recent in-TTL month), split by score. High HI-share = reaching high-intent supply; low HI-share / high unscored = reaching low-intent supply. % spend = share of P1→P2 window prospecting spend (same basis as every module); dormant window spenders with no recent reach aren't shown.";
+  sub.textContent = "Distinct households each prospecting campaign reached, split by score. Reach is only measurable for the recent in-TTL month (impression log keeps 90 days; scores logged since 2025-06) — every window spender is listed, dormant ones without a bar. % spend = share of P1→P2 window prospecting spend, same basis as every module.";
   wrap.appendChild(title);
   wrap.appendChild(sub);
 
@@ -1540,9 +1540,14 @@ function render(rows, root, H) {
         var x = el.x; // right end of stacked bar (hi is last dataset)
         var y = el.y;
         var pctSpend = H.pctShare(d.sshare);
-        var txt = H.fmtK(d.reach) + "  ." + "  " + Math.round(d.hs * 100) + "% HI  ." + "  " + pctSpend + " spend";
-        // use middle-dot cleanly
-        txt = H.fmtK(d.reach) + " · " + Math.round(d.hs * 100) + "% HI · " + pctSpend + " spend";
+        var txt;
+        if (d.reach > 0) {
+          ctx.fillStyle = C.NAVY;
+          txt = H.fmtK(d.reach) + " · " + Math.round(d.hs * 100) + "% HI · " + pctSpend + " spend";
+        } else {
+          ctx.fillStyle = C.GRAY;
+          txt = "no in-TTL reach · " + pctSpend + " spend";
+        }
         ctx.fillText(txt, x + 8, y);
       });
       ctx.restore();

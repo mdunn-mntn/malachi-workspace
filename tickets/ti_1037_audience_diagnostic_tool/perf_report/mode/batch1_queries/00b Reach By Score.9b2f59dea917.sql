@@ -50,19 +50,21 @@ tot AS (
     AND s.day <  DATE('{{ Period_End }}')
     AND c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
 )
+-- EVERY window spender gets a row (reach 0 = dormant in the recent in-TTL month, or
+-- pre-score-logging) so the chart accounts for ~100% of window prospecting spend.
 SELECT
-  b.campaign_id,
+  e.campaign_id,
   e.grp,
   e.group_name,
-  b.reach_ip,
-  b.hi_ip,
-  b.pp_ip,
-  b.mid_ip,
-  b.unscored_ip,
+  COALESCE(b.reach_ip, 0)    AS reach_ip,
+  COALESCE(b.hi_ip, 0)       AS hi_ip,
+  COALESCE(b.pp_ip, 0)       AS pp_ip,
+  COALESCE(b.mid_ip, 0)      AS mid_ip,
+  COALESCE(b.unscored_ip, 0) AS unscored_ip,
   COALESCE(e.spend, 0) AS spend,
   t.total_win_prosp_spend
-FROM buckets b
-LEFT JOIN camp_enum e ON e.campaign_id = b.campaign_id
+FROM camp_enum e
+LEFT JOIN buckets b ON b.campaign_id = e.campaign_id
 CROSS JOIN tot t
-WHERE b.reach_ip > 0
-ORDER BY COALESCE(e.spend, 0) DESC, b.reach_ip DESC
+WHERE COALESCE(e.spend, 0) > 0 OR COALESCE(b.reach_ip, 0) > 0
+ORDER BY COALESCE(e.spend, 0) DESC, reach_ip DESC
