@@ -228,13 +228,18 @@ function render(rows, root, H) {
   var p2Label = moLabel(p2lo) + '–' + moLabel(p2hi);
 
   // ----- aggregate a period into pct shares -----
+  // Tier shares are of SCORE-LOGGED impressions (hs present, incl unscored<=0).
+  // Pre-2025-06 "notlogged" rows are EXCLUDED from the denominator and reported as a
+  // separate coverage number — otherwise a period straddling the logging onset reads
+  // "4.5% HI" when nearly every scored impression was HI.
   function distFor(lo, hi){
     var tot = 0, agg = {}; KEYS.forEach(function(k){ agg[k]=0; });
     data.forEach(function(d){
       if (d.mo >= lo && d.mo <= hi){ tot += d.total; KEYS.forEach(function(k){ agg[k]+=d[k]; }); }
     });
-    var pct = {}; KEYS.forEach(function(k){ pct[k] = tot ? 100*agg[k]/tot : 0; });
-    return { pct: pct, tot: tot };
+    var logged = tot - agg.notlogged;
+    var pct = {}; KEYS.forEach(function(k){ pct[k] = logged ? 100*agg[k]/logged : 0; });
+    return { pct: pct, tot: tot, logged: logged, cov: tot ? 100*logged/tot : 0 };
   }
   var d1 = distFor(p1lo, p1hi), d2 = distFor(p2lo, p2hi);
 
@@ -245,7 +250,10 @@ function render(rows, root, H) {
 
   // ---- View 1: P1 vs P2 grouped bars ----
   html += '<div style="font:700 14px Helvetica Neue,Arial;color:#222;margin:2px 0 2px">Prospecting score distribution: two periods</div>';
-  html += '<div style="font:11px Helvetica Neue,Arial;color:#888;margin-bottom:6px">Share of prospecting impressions per MNTN score tier, RTC-excluded. '+H.esc(p1Label)+' vs '+H.esc(p2Label)+'.</div>';
+  html += '<div style="font:11px Helvetica Neue,Arial;color:#888;margin-bottom:6px">Share of SCORE-LOGGED prospecting impressions per MNTN score tier, RTC-excluded. '+H.esc(p1Label)+' vs '+H.esc(p2Label)+'.'
+    + ((d1.cov < 99.5 || d2.cov < 99.5)
+      ? ' Score data covers <b>'+d1.cov.toFixed(0)+'%</b> of P1 imps and <b>'+d2.cov.toFixed(0)+'%</b> of P2 (logging began 2025-06).'
+      : '') + '</div>';
   html += '<div style="height:250px;margin-bottom:14px"><canvas id="'+idBars+'"></canvas></div>';
 
   // ---- View 2: monthly 100% stacked ----
@@ -255,15 +263,16 @@ function render(rows, root, H) {
 
   // ---- View 3: P1 vs P2 threshold table ----
   html += '<div style="font:700 14px Helvetica Neue,Arial;color:#222;margin:8px 0 4px">Score-tier distribution: Period 1 vs Period 2</div>';
-  html += '<table style="border-collapse:collapse;width:100%;font:12px Helvetica Neue,Arial">';
+  html += '<div style="font:11px Helvetica Neue,Arial;color:#888;margin-bottom:6px">% of score-logged impressions; the coverage row shows how much of each period has scores at all.</div>';
+  html += '<table style="border-collapse:collapse;width:100%;max-width:900px;font:12px Helvetica Neue,Arial">';
   html += '<thead><tr>'
         + '<th style="text-align:left;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Score tier</th>'
         + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Period 1<br>'+H.esc(p1Label)+'</th>'
         + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Period 2<br>'+H.esc(p2Label)+'</th>'
         + '<th style="text-align:right;padding:5px 8px;color:'+C.NAVY+';border-bottom:2px solid '+C.NAVY+'">Δ %</th>'
         + '</tr></thead><tbody>';
-  // table rows: HI, PP, MI, MaxReach, Unscored, No-score (worst->best reversed for a scannable read)
-  var TABLE_ORDER = ['hi','pp','mi','maxreach','unscored','notlogged'];
+  // table rows: HI, PP, MI, MaxReach, Unscored (best->worst for a scannable read)
+  var TABLE_ORDER = ['hi','pp','mi','maxreach','unscored'];
   TABLE_ORDER.forEach(function(k, i){
     var t = TIERS.filter(function(x){return x.key===k;})[0];
     var v1 = d1.pct[k], v2 = d2.pct[k];
@@ -279,14 +288,18 @@ function render(rows, root, H) {
           + '<td style="text-align:right;padding:5px 8px;font-weight:700;color:'+dcolor+'">'+ds+'</td>'
           + '</tr>';
   });
+  html += '<tr><td style="text-align:left;padding:5px 8px;color:#888">Score-data coverage (share of ALL imps)</td>'
+        + '<td style="text-align:right;padding:5px 8px;color:#888">'+d1.cov.toFixed(1)+'%</td>'
+        + '<td style="text-align:right;padding:5px 8px;color:#888">'+d2.cov.toFixed(1)+'%</td>'
+        + '<td style="text-align:right;padding:5px 8px;color:#aaa">context</td></tr>';
   html += '</tbody></table>';
   html += '</div>';
 
   root.innerHTML = html;
 
   // ===== Chart.js: View 1 grouped bars =====
-  // draw worst->best left to right (matches tool): notlogged, unscored, maxreach, mi, pp, hi
-  var barTiers = TIERS.slice();
+  // draw worst->best left to right; notlogged excluded (bars are % of score-logged imps)
+  var barTiers = TIERS.filter(function(t){ return t.key !== 'notlogged'; });
   var barLabels = barTiers.map(function(t){ return t.label.split(' (')[0]; });
   new Chart(document.getElementById(idBars).getContext('2d'), {
     type: 'bar',
@@ -780,7 +793,7 @@ function render(rows, root, H) {
 
   // change log table
   var tbl = document.createElement("table");
-  tbl.style.cssText = "border-collapse:collapse;width:100%;font-size:11.5px";
+  tbl.style.cssText = "border-collapse:collapse;width:100%;max-width:900px;font-size:11.5px";
   var head = "<tr style='text-align:left;color:"+C.GRAY+";border-bottom:1px solid #e3e3e3'>" +
     "<th style='padding:4px 8px 4px 0'>Change date</th>" +
     "<th style='padding:4px 8px;text-align:right'>PRO</th>" +
@@ -1087,7 +1100,7 @@ function render(rows, root, H) {
     }
     html += '</div>';
 
-    html += '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">';
+    html += '<table style="width:100%;max-width:1000px;border-collapse:collapse;font-size:11.5px;">';
     function stateRow(date, label, set, color, weight){
       html += '<tr>';
       html += '<td style="width:88px;color:#666;padding:2px 8px 2px 8px;vertical-align:top;white-space:nowrap;">'
@@ -2053,7 +2066,7 @@ function render(rows, root, H) {
     html += '</div>';
 
     if (inWin.length) {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">';
+      html += '<table style="width:100%;max-width:1000px;border-collapse:collapse;font-size:11.5px;">';
       inWin.forEach(function (e) {
         html += '<tr><td style="width:88px;color:#666;padding:2px 8px;white-space:nowrap;">' + H.esc(dstr(e.geo_changed_on)) + '</td>'
           + '<td style="color:#333;padding:2px 4px;">→ ' + H.esc(geoTxt(e)) + '</td></tr>';
