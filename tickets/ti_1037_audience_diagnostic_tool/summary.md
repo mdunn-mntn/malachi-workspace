@@ -22,6 +22,9 @@ query `queries/ti_1037_mm_ds_cooccurrence.sql`. Load-bearing facts for THIS dash
   7.6% of live prospecting spend (PP-only + PP-v2-only cells). Vertical-only configs bid HI+PP tiers
   only; keyword-only configs cannot deliver the PP 8000 tier. Optional cosmetic: relabel module 07 DSN
   map to official names (deferred — Mode file under active edit).
+- **Published:** Confluence page "MNTN Matched (MM) Taxonomy: Components, Configs, and Score Tiers"
+  (TAR space, under TI Projects): https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511 ·
+  Slack-pasteable PNG: `artifacts/ti_1037_mm_taxonomy.png` (regen via `ti_1037_mm_taxonomy_image.py`).
 
 ## Update 2026-07-08 (night) — Module 13 pixel-monitor AUDIT (22-agent adversarial verification)
 
