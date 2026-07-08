@@ -2113,6 +2113,10 @@ Realized spend per auction win. Use for step-9 pacing (spend ÷ budget) and any 
 - **DS13/19/46 co-occurrence gotcha (TI-1037 2026-07-08):** at segment level DS46 NEVER co-occurs with DS13 (the
   `onFangorn` flip swaps 13→46); DS19 survives the flip. "MM = has DS19" undercounts the MM-scored layer by ~7.6% of
   prospecting spend (DS46-only + DS13-only cells) — full 8-cell table in data_knowledge.md § `"MM = has DS19" is an undercount`.
+- **Official product names for the MM components (Matt Brorby 2026-07-08):** DS19 = **"MM Core"** (Keyword-Only) ·
+  DS13 vertical anchor = **"Peak Performance"** · DS46 = **"Peak Performance v2"** (Fangorn) · DS13-with-bucket-ids =
+  "Expanded Peak Performance" (named, unshipped — zero live campaigns carry bucket ids). Live DS13/DS46 leaves hold ONLY
+  the 6-digit vertical id (= the RTC id); config space = 2×3 grid (DS19 y/n × anchor none/13/46).
 
 ## bronze.integrationprod.core_advertiser_conversion_types
 - **Type:** TABLE — **auto-registered conversion-type registry** (one row per advertiser × conversion_type × conversion_source_id)
