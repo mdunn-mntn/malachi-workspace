@@ -29,6 +29,14 @@ the full picture (the Mode queries were already current; only the Run was missin
 layout** to `index.html` (Overview / Audience & Scores / Gate & Flights / Delivery & Measurement; lazy-render
 per tab so Chart.js sizes against visible containers) — modules declare a `tab` in the registry.
 
+**Spend-% design standard (settled 2026-07-07 after cross-module contradictions):** every group-ranked
+module (03/03b/07/08) uses **P1→P2 window prospecting spend** (obj=1, funnel=1) as its % basis — P2-only
+spend silently dropped P1-season campaigns (88885, 82900) from the trajectory. Exception: **00b reach**
+is a recent-snapshot chart, so its reach AND spend both cover the same 45d in-TTL window with the same-window
+total as denominator (bars sum to ~100%). Rule: **a chart's % must be based on exactly the aggregate it
+displays, and the basis is stated in its subtitle.** Retargeting is excluded from every module (stage-1 only);
+RT appears only in future summary modules or via the planned Campaign scope dropdown.
+
 **DS16 / DS46 timeline (from audience_segment_archives, 2026-07-07):** DS16 (net-new gate) was added to
 Bouqs' 2026 prospecting campaigns starting **2026-04-14** (v2 campaigns got it same-day as creation) —
 changelog shows NET +DS16 for groups 117983/119361/119362/119363; 85384 (old flagship) instead DROPPED
