@@ -15,14 +15,15 @@
   #cpd h1 { font-size:24px; font-weight:700; margin:0 0 2px; }
   #cpd .sub { color:#777; font-size:13px; margin-bottom:22px; }
   #cpd h2 { font-size:16px; color:#27496D; margin:34px 0 10px; border-bottom:1px solid #e2e2e2; padding-bottom:5px; }
-  #cpd table { border-collapse:collapse; width:100%; max-width:820px; }
+  #cpd table { border-collapse:collapse; width:100%; }
+  #cpd table.yoy { max-width:820px; }
   #cpd th { text-align:right; font-size:12px; color:#27496D; font-weight:700; padding:7px 14px; border-bottom:2px solid #27496D; }
   #cpd th.metric, #cpd td.metric { text-align:left; }
   #cpd td { text-align:right; font-size:15px; padding:7px 14px; }
   #cpd tr:nth-child(even) td { background:#00000005; }
   #cpd .delta { font-weight:700; }
   #cpd .good { color:#2E8B57; } #cpd .bad { color:#D63B2F; } #cpd .ctx { color:#888; }
-  #cpd .grid { display:grid; grid-template-columns:repeat(3, minmax(240px,1fr)); gap:18px 26px; max-width:1120px; }
+  #cpd .grid { display:grid; grid-template-columns:repeat(3, minmax(240px,1fr)); gap:18px 26px; }
   #cpd .panel { background:#fff; border:1px solid #eee; border-radius:6px; padding:10px 12px 4px; }
   #cpd .panel .t { font-size:13px; font-weight:700; color:#333; margin:0 0 4px; }
   #cpd .loading { color:#888; font-size:14px; padding:40px 0; }
@@ -82,7 +83,7 @@
     rows.forEach(function (r) { P[r.period] = { impressions:num(r.impressions), visits:num(r.visits),
       spend:num(r.spend), conversions:num(r.conversions), revenue:num(r.revenue) }; });
     if (!P.P1 || !P.P2) return '<div class="err">YoY table needs both P1 and P2 rows (got: ' + Object.keys(P).join(", ") + ").</div>";
-    var h = '<table><tr><th class="metric">Metric</th><th>Prior year (P1)</th><th>Selected (P2)</th><th>Δ %</th></tr>';
+    var h = '<table class="yoy"><tr><th class="metric">Metric</th><th>Prior year (P1)</th><th>Selected (P2)</th><th>Δ %</th></tr>';
     METRICS.forEach(function (m) {
       var v1 = m[1](P.P1), v2 = m[1](P.P2), fmt = m[2], good = m[3];
       var d = v1 ? 100*(v2/v1 - 1) : null;
