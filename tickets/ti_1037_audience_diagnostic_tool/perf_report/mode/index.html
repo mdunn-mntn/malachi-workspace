@@ -925,43 +925,60 @@ function render(rows, root, H) {
   if(haveSpend) cols = cols.filter(function(g){ return grpSpend[g] > 0; }).concat(
     cols.filter(function(g){ return grpSpend[g] <= 0; }));
 
-  // ---- build changelog rows per group ----
-  // for each group: sort events by (date, create order), diff DS set vs previous
-  function buildEvents(g){
+  // ---- window bounds (YYYY-MM-DD strings; lexicographic compare works) ----
+  // win_start = P1 start, win_end = P2 end. Absent on pre-bounds datasets -> degrade to full history.
+  var r0 = rows[0] || {};
+  var wS = r0.win_start ? String(r0.win_start).slice(0,10) : null;
+  var wE = r0.win_end   ? String(r0.win_end).slice(0,10)   : null;
+
+  function setDiff(a, b){ // items of b not in a
+    var A = {}; a.forEach(function(x){ A[x] = true; });
+    return b.filter(function(x){ return !A[x]; });
+  }
+
+  // ---- per-group state analysis ----
+  // start = DS set in effect ENTERING the window (forward-filled from pre-window history);
+  // events = only in-window changes; fin = final in-window set; net = start vs fin (the P1->P2 story).
+  function analyze(g){
     var evs = byGrp[g].slice().sort(function(a,b){
       if(a.clog_changed_on < b.clog_changed_on) return -1;
       if(a.clog_changed_on > b.clog_changed_on) return 1;
       return 0;
     });
-    var prevDs = null, prevAud = null;
+    var pre = [], post = [];
+    evs.forEach(function(e){ (wS && String(e.clog_changed_on) <= wS ? pre : post).push(e); });
+    var created = null, base, startDate;
+    if(pre.length){ base = pre[pre.length-1]; startDate = wS; }
+    else { base = evs[0]; created = String(base.clog_changed_on); startDate = created; post = evs.slice(1); }
+    var inWin = post.filter(function(e){ return !wE || String(e.clog_changed_on) <= wE; });
+    var start = parseDs(base.clog_ds_ids);
+    var prevDs = start.slice(), prevAud = H.num(base.clog_audience_id);
     // cell keyed by date so multiple versions same day accumulate
-    var cellMap = {};   // date -> [{txt,color}]
-    var dateOrder = [];
-    evs.forEach(function(e){
+    var cellMap = {}, dateOrder = [];
+    inWin.forEach(function(e){
       var dt = String(e.clog_changed_on);
       var cur = parseDs(e.clog_ds_ids);
-      var curSet = {}; cur.forEach(function(x){ curSet[x]=true; });
       var aud = H.num(e.clog_audience_id);
+      var added = setDiff(prevDs, cur), removed = setDiff(cur, prevDs);
       var lines = [];
-      if(prevDs === null){
-        lines.push({txt:"start: "+dsfmtGrouped(cur), color:GRAY});
-      } else {
-        var prevSet = {}; prevDs.forEach(function(x){ prevSet[x]=true; });
-        var added = cur.filter(function(x){ return !prevSet[x]; });
-        var removed = prevDs.filter(function(x){ return !curSet[x]; });
-        if(aud !== prevAud){
-          var tag = (added.length || removed.length) ? "" : "  (same DS)";
-          lines.push({txt:"audience_id → "+aud+tag, color:NAVY});
-        }
-        if(added.length) lines.push({txt:"+ "+dsg(added), color:GREEN});
-        if(removed.length) lines.push({txt:"− "+dsg(removed), color:RED});
+      if(aud !== prevAud){
+        var tag = (added.length || removed.length) ? "" : "  (same DS)";
+        lines.push({txt:"audience_id → "+aud+tag, color:NAVY});
       }
+      if(added.length) lines.push({txt:"+ "+dsg(added), color:GREEN});
+      if(removed.length) lines.push({txt:"− "+dsg(removed), color:RED});
       if(!cellMap[dt]){ cellMap[dt] = []; dateOrder.push(dt); }
       cellMap[dt] = cellMap[dt].concat(lines);
       prevDs = cur; prevAud = aud;
     });
     dateOrder.sort();
-    return dateOrder.map(function(dt){ return {date:dt, lines:cellMap[dt]}; });
+    var events = dateOrder.map(function(dt){ return {date:dt, lines:cellMap[dt]}; })
+      .filter(function(ev){ return ev.lines.length; });
+    return {
+      start: start, startDate: startDate, created: created,
+      events: events, fin: prevDs,
+      netAdd: setDiff(start, prevDs), netDrop: setDiff(prevDs, start)
+    };
   }
 
   function pctfmt(share){
@@ -974,6 +991,8 @@ function render(rows, root, H) {
   html += '<div style="background:#FAFAFA;padding:14px 16px;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;">';
   html += '<div style="font-size:16px;font-weight:700;color:#222;">Prospecting audience change-log (DS-level)</div>';
   html += '<div style="font-size:11px;color:#555;margin:3px 0 12px;">By campaign, most spend first. '
+    + 'Start = DS set in effect entering the window; then only in-window changes; final = set at window end. '
+    + '<span style="font-weight:700;">Net P1 → P2</span> compares start vs final. '
     + '<span style="color:'+GREEN+';font-weight:700;">green = added</span>, '
     + '<span style="color:'+RED+';font-weight:700;">red = removed</span>. '
     + 'incl / excl / gate / funnel = the DS role.</div>';
@@ -988,6 +1007,7 @@ function render(rows, root, H) {
   cols.forEach(function(g){
     var sh = grpSpend[g]/totalSpend;
     var gn = shortname(g);
+    var st = analyze(g);
     // section header
     html += '<div style="display:flex;justify-content:space-between;align-items:center;'
       + 'background:rgba(39,73,109,0.08);padding:6px 8px;margin-top:10px;border-radius:2px;">';
@@ -997,9 +1017,32 @@ function render(rows, root, H) {
       + (haveSpend ? pctfmt(sh)+' spend' : '') + '</span>';
     html += '</div>';
 
-    var events = buildEvents(g);
-    html += '<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:2px;">';
-    events.forEach(function(ev){
+    // headline: net DS difference, start-of-window set vs final set (the P1 vs P2 story)
+    html += '<div style="padding:5px 8px 3px;font-size:11.5px;">';
+    if(!st.netAdd.length && !st.netDrop.length){
+      html += '<span style="color:'+GREEN+';font-weight:700;">No net DS change P1 → P2</span>';
+    } else {
+      html += '<span style="font-weight:700;color:#333;">Net P1 → P2:</span>';
+      if(st.netAdd.length)  html += '  <span style="color:'+GREEN+';font-weight:700;">+ '+H.esc(dsg(st.netAdd))+'</span>';
+      if(st.netDrop.length) html += '  <span style="color:'+RED+';font-weight:700;">− '+H.esc(dsg(st.netDrop))+'</span>';
+    }
+    html += '</div>';
+
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">';
+    function stateRow(date, label, set, color, weight){
+      html += '<tr>';
+      html += '<td style="width:88px;color:#666;padding:2px 8px 2px 8px;vertical-align:top;white-space:nowrap;">'
+        + H.esc(date) + '</td>';
+      html += '<td style="color:'+color+';font-weight:'+weight+';padding:2px 4px;vertical-align:top;">'
+        + H.esc(label + dsfmtGrouped(set)) + '</td>';
+      html += '</tr>';
+    }
+    stateRow(st.startDate, st.created ? 'created — start: ' : 'start (entering window): ', st.start, GRAY, '400');
+    if(!st.events.length){
+      html += '<tr><td style="width:88px;padding:2px 8px;"></td>'
+        + '<td style="color:#999;padding:2px 4px;">no DS / audience changes in window</td></tr>';
+    }
+    st.events.forEach(function(ev){
       ev.lines.forEach(function(ln, i){
         var bold = (ln.color===GREEN || ln.color===RED || ln.color===NAVY) ? '700' : '400';
         html += '<tr>';
@@ -1010,6 +1053,7 @@ function render(rows, root, H) {
         html += '</tr>';
       });
     });
+    stateRow(wE || '', 'final: ', st.fin, NAVY, '600');
     html += '</table>';
   });
 

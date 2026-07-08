@@ -36,6 +36,8 @@ v AS (
   FROM `dw-main-silver.archives.audience_segment_archives` a
   JOIN camp c USING (campaign_id)
   WHERE a.expression_type_id = 2 AND a.is_targeted = TRUE
+    -- cap at window end so the last row per campaign IS the final in-window state
+    AND a.create_time < TIMESTAMP(DATE('{{ Period_End }}'))
 ),
 chg AS (
   SELECT v.*,
@@ -51,7 +53,13 @@ SELECT
   chg.audience_id                                   AS clog_audience_id,
   chg.segment_id                                    AS clog_segment_id,
   chg.ds_ids                                        AS clog_ds_ids,
-  COALESCE(gs.grp_spend, 0)                         AS clog_grp_spend
+  COALESCE(gs.grp_spend, 0)                         AS clog_grp_spend,
+  DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS p1_start,
+  DATE_SUB(DATE('{{ Period_End }}'),   INTERVAL 1 YEAR) AS p1_end,
+  DATE('{{ Period_Start }}')                            AS p2_start,
+  DATE('{{ Period_End }}')                              AS p2_end,
+  DATE_SUB(DATE('{{ Period_Start }}'), INTERVAL 1 YEAR) AS win_start,
+  DATE('{{ Period_End }}')                              AS win_end
 FROM chg
 JOIN camp c ON c.campaign_id = chg.campaign_id
 LEFT JOIN grp_spend gs ON gs.campaign_group_id = c.campaign_group_id
