@@ -94,39 +94,85 @@
     return h + "</table>";
   }
 
-  // small monthly line chart into a <canvas>
-  function line(canvas, labels, data, color) {
+  // small monthly line chart into a <canvas>; zeroIdx = month indices with $0 spend,
+  // shaded light red so gaps/weird rates are explainable at a glance
+  function line(canvas, labels, data, color, zeroIdx) {
+    var shade = {
+      id: "zeroShade",
+      beforeDatasetsDraw: function (chart) {
+        if (!zeroIdx || !zeroIdx.length) return;
+        var x = chart.scales.x, a = chart.chartArea, ctx = chart.ctx;
+        if (!x || !a) return;
+        ctx.save();
+        ctx.fillStyle = "rgba(214,59,47,0.08)";
+        zeroIdx.forEach(function (i) {
+          var c = x.getPixelForValue(i);
+          var l = i > 0 ? (x.getPixelForValue(i - 1) + c) / 2 : a.left;
+          var r = i < labels.length - 1 ? (x.getPixelForValue(i + 1) + c) / 2 : a.right;
+          ctx.fillRect(l, a.top, r - l, a.bottom - a.top);
+        });
+        ctx.restore();
+      }
+    };
     new Chart(canvas, { type:"line",
       data:{ labels:labels, datasets:[{ data:data, borderColor:color, backgroundColor:color,
              borderWidth:2, pointRadius:2, tension:0.15, spanGaps:true }] },
       options:{ plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false,
         scales:{ x:{ ticks:{ maxTicksLimit:6, font:{size:10} }, grid:{display:false} },
-                 y:{ ticks:{ font:{size:10} }, grid:{color:"#eee"} } } } });
+                 y:{ ticks:{ font:{size:10} }, grid:{color:"#eee"} } } },
+      plugins: [shade] });
   }
 
   function renderMonthly(rows) {
-    rows = rows.slice().sort(function (a,b){ return a.month < b.month ? -1 : 1; });
-    var labels = rows.map(function (r){ return r.month; });
+    // continuous month axis: fill missing months so gaps are visible, not skipped
+    var by = {};
+    rows.forEach(function (r) { by[String(r.month).slice(0, 7)] = r; });
+    var keys = Object.keys(by).sort();
+    if (!keys.length) return '<div class="err">No monthly data.</div>';
+    var months = [];
+    (function () {
+      var y = +keys[0].slice(0, 4), m = +keys[0].slice(5, 7);
+      var ye = +keys[keys.length - 1].slice(0, 4), me = +keys[keys.length - 1].slice(5, 7);
+      while (y < ye || (y === ye && m <= me)) {
+        months.push(y + "-" + ("0" + m).slice(-2));
+        if (++m > 12) { m = 1; y++; }
+      }
+    })();
+    var M = months.map(function (k) {
+      var r = by[k] || {};
+      return { spend: num(r.spend), impressions: num(r.impressions), visits: num(r.visits),
+               conversions: num(r.conversions), revenue: num(r.revenue) };
+    });
+    var zeroIdx = [];
+    M.forEach(function (r, i) { if (r.spend === 0) zeroIdx.push(i); });
+    // color rule: revenue-derived metrics (Revenue, AOV, ROAS) draw RED, all else navy
     var series = [
       // raw counts — funnel order
-      ["Spend", rows.map(function(r){return num(r.spend);}), NAVY],
-      ["Impressions", rows.map(function(r){return num(r.impressions);}), NAVY],
-      ["Visits", rows.map(function(r){return num(r.visits);}), NAVY],
-      ["Conversions", rows.map(function(r){return num(r.conversions);}), NAVY],
-      ["Revenue", rows.map(function(r){return num(r.revenue);}), NAVY],
-      // calculated rates — funnel order
-      ["CPM", rows.map(function(r){var i=num(r.impressions);return i?1000*num(r.spend)/i:null;}), NAVY],
-      ["IVR %", rows.map(function(r){var i=num(r.impressions);return i?100*num(r.visits)/i:null;}), NAVY],
-      ["CVR %", rows.map(function(r){var v=num(r.visits);return v?100*num(r.conversions)/v:null;}), RED],
-      ["AOV", rows.map(function(r){var c=num(r.conversions);return c?num(r.revenue)/c:null;}), NAVY],
-      ["ROAS", rows.map(function(r){var s=num(r.spend);return s?num(r.revenue)/s:null;}), RED]
+      ["Spend", M.map(function(r){return r.spend;}), NAVY],
+      ["Impressions", M.map(function(r){return r.impressions;}), NAVY],
+      ["Visits", M.map(function(r){return r.visits;}), NAVY],
+      ["Conversions", M.map(function(r){return r.conversions;}), NAVY],
+      ["Revenue", M.map(function(r){return r.revenue;}), RED],
+      // calculated rates — funnel order; null where the denominator is 0
+      ["CPM", M.map(function(r){return r.impressions?1000*r.spend/r.impressions:null;}), NAVY],
+      ["IVR %", M.map(function(r){return r.impressions?100*r.visits/r.impressions:null;}), NAVY],
+      ["CVR %", M.map(function(r){return r.visits?100*r.conversions/r.visits:null;}), NAVY],
+      ["AOV", M.map(function(r){return r.conversions?r.revenue/r.conversions:null;}), RED],
+      ["ROAS", M.map(function(r){return r.spend?r.revenue/r.spend:null;}), RED]
     ];
     var html = '<div class="grid">' + series.map(function (s, i) {
-      return '<div class="panel"><div class="t">' + s[0] + '</div>'
+      return '<div class="panel"><div class="t' + (s[2] === RED ? '" style="color:' + RED : '') + '">' + s[0] + '</div>'
            + '<div style="height:150px"><canvas id="cpd-c' + i + '"></canvas></div></div>';
     }).join("") + "</div>";
+    var notes = ['<span style="color:' + RED + ';font-weight:700;">red</span> = revenue-based (Revenue, AOV, ROAS)'];
+    if (zeroIdx.length) {
+      notes.push('<span style="display:inline-block;width:11px;height:11px;background:rgba(214,59,47,0.25);border-radius:2px;vertical-align:-1px;"></span> '
+        + 'shaded months = $0 prospecting spend (' + zeroIdx.map(function(i){ return months[i]; }).join(", ")
+        + ') — rate metrics there are blank, and adjacent partial months can look extreme');
+    }
+    html += '<div style="font-size:11px;color:#888;margin-top:8px;">' + notes.join('  ·  ') + '</div>';
     setTimeout(function () { series.forEach(function (s, i) {
-      var c = document.getElementById("cpd-c" + i); if (c) line(c, labels, s[1], s[2]);
+      var c = document.getElementById("cpd-c" + i); if (c) line(c, months, s[1], s[2], zeroIdx);
     }); }, 0);
     return html;
   }
@@ -1446,7 +1492,7 @@ function render(rows, root, H) {
   }).filter(function (d) { return d.spend > 0 || d.reach > 0; });
   data.sort(function (a, b) { return b.spend - a.spend; });
 
-  var tot = H.num(rows && rows[0] && rows[0].total_win_prosp_spend)
+  var tot = H.num(rows && rows[0] && (rows[0].total_win_spend != null ? rows[0].total_win_spend : rows[0].total_win_prosp_spend))
     || data.reduce(function (a, d) { return a + d.spend; }, 0) || 1;
 
   function mo(s) {
@@ -1459,7 +1505,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Prospecting campaign summary — full window</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every prospecting campaign that spent in the P1→P2 window, spend-ranked; metrics are whole-window totals per campaign group. % spend = share of window prospecting spend (same basis as every module). Reach + HI-share are only measurable for the recent in-TTL month (impression log keeps 90 days) — dormant campaigns show “expired”.</div>';
+  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every prospecting campaign that spent in the P1→P2 window, spend-ranked. Metrics are whole-window, whole-group totals — all funnel stages, retargeting excluded — so % spend sums to 100% here (mechanism charts rank by stage-1 spend only, so their % can differ slightly). Reach + HI-share are only measurable for the recent in-TTL month (impression log keeps 90 days) — dormant campaigns show “expired”.</div>';
 
   if (!data.length) {
     html += '<div style="font-size:13px;color:#888;">No prospecting spend in the window.</div></div>';
