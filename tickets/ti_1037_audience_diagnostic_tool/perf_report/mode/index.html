@@ -1933,8 +1933,8 @@ function render(rows, root, H) {
 
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Retargeted HI IPs — new vs returning, with cumulative distinct</div>';
   html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idHi + '"></canvas></div>';
-  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Frequency — impressions per retargeted IP</div>';
-  html += '<div style="height:180px;margin-bottom:14px"><canvas id="' + idFq + '"></canvas></div>';
+  html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">Reach & frequency — gray bars = distinct IPs, red = imps per IP</div>';
+  html += '<div style="height:220px;margin-bottom:14px"><canvas id="' + idFq + '"></canvas></div>';
 
   // table
   var th = 'text-align:right;padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
@@ -1990,7 +1990,7 @@ function render(rows, root, H) {
       datasets: [
         { label: 'new HI (first month retargeted)', backgroundColor: C.GREEN,
           data: M.map(function (r) { return r.newHi; }) },
-        { label: 'returning HI', backgroundColor: C.NAVY,
+        { label: 'returning HI (recirculated)', backgroundColor: C.AMBER,
           data: M.map(function (r) { return r.retHi; }) },
         { type: 'line', label: 'cumulative distinct HI', borderColor: C.RED, backgroundColor: C.RED,
           borderWidth: 2, pointRadius: 2, tension: 0.15, yAxisID: 'y2', order: 0, data: cumSeries }
@@ -2007,14 +2007,19 @@ function render(rows, root, H) {
     }
   });
   chartSafe(idFq, {
-    type: 'line',
-    data: { labels: labels, datasets: [{ label: 'imps per IP', borderColor: C.NAVY, backgroundColor: C.NAVY,
-      borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false,
-      data: M.map(function (r) { return r.reach ? +(r.imps / r.reach).toFixed(1) : null; }) }] },
+    type: 'bar',
+    data: { labels: labels, datasets: [
+      { label: 'reach (distinct IPs)', backgroundColor: C.LGRAY,
+        data: M.map(function (r) { return r.reach; }) },
+      { type: 'line', label: 'frequency (imps / IP)', borderColor: C.RED, backgroundColor: C.RED,
+        borderWidth: 2, pointRadius: 2, tension: 0.15, spanGaps: false, yAxisID: 'y2', order: 0,
+        data: M.map(function (r) { return r.reach ? +(r.imps / r.reach).toFixed(1) : null; }) }
+    ] },
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 11 } } },
       scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#666' } },
-                y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } } } }
+                y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: { size: 9 }, color: '#666' } },
+                y2: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9 }, color: C.RED } } } }
   });
 }
   return render; })();
