@@ -3694,3 +3694,11 @@ first-ever 10000 bid predates the month ("10000 both times" — a prior touch at
 grain is approximate: the 30-day score TTL doesn't align to calendar months, and within-month re-serves land
 in frequency, not the new/re-touch split. Bouqs (Jan'25–May'26): re-touch share 0%→75%, dipping when new campaigns/geo open fresh pools;
 cumulative distinct 10000-IPs 2.54M. CPD dashboard module 09rt.
+
+## Pentest / scanner pollution in conversion_log revenue (WGU Feb 2026 case)
+
+- **Third-party security scans of client sites fire the MNTN pixel with fuzzed params** and those rows land in `logdata.conversion_log` as real conversions. Canonical case: advertiser 31357 (WGU), **2026-02-07 19:38–21:52 UTC, single IP 136.60.22.42**, Burp Suite active scan (payload callbacks to `oastify.com` = Burp Collaborator) run against `https://apply.wgu.edu/duplicate` — the scanner fuzzed the outbound `px.mountain.com` pixel GET.
+- Symptoms: **75 junk `conversion_type` values** (SQLi/XXE/SSTI/path-traversal strings, count=1 each, one day only) + **order_amt values fabricated by digit-extraction** from injection payloads in the `shoamt` param (e.g. `' and 6957=6964--` → $69,576,964; `sleep(20)` → $20). The pixel ingest strips non-digits and concatenates the rest into a NUMERIC amount.
+- Impact chain (Feb 2026, advertiser 31357): bronze.raw 34 amt rows summing **$71.68T** → silver strips the 4 largest (\$621,621,621 / \$1.08T / \$14.7T / \$55.9T; rows kept, amt nulled — row counts identical 43,653) → silver 30 amt rows **$222,892,625.40** → attribution keeps 23 of 30 (all ≤$590,132; the 7 rows ≥$5,736,771 never appear in `ui_conversions`) → **$833,883.40** fake "Revenue" on the client dashboard via `sum_by_campaign_by_day`. Exact reconciliation: $222,892,625.40 − $222,058,742 (7 largest) = $833,883.40.
+- **Silver corrupt-amount strip threshold sits between $69,576,964 (kept) and $621,621,621 (stripped)** — plausibly ≥$100M, exact rule unverified. A second, lower cap (between ~$590K and ~$5.7M) appears to exist in the summarydata conversions/attribution pipeline — mechanism unverified.
+- Detection recipe: single-day burst of many distinct `conversion_type` values + `oastify.com`/injection strings + one IP → pentest, exclude from revenue. Check `TO_JSON_STRING(query)` → `shoamt` key for the raw payload.
