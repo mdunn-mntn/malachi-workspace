@@ -287,6 +287,60 @@ The 4 advertisers with corrupt `order_amt`:
 3. Pixel ops owns conversion-pixel integration: route to **Ashley Pineda Varela** (per Zach
    2026-05-06). Surfaced via TI-832 outlier sheet.
 
+### Conversion pixel payload anatomy — how order_amt/order_id/conversion_type are born (WGU-REV, 2026-07-08)
+`conversion_log.query` (JSON) holds the raw pixel GET params; three of them are the direct source of the
+structured columns:
+- **`shoamt`** → `order_amt`. The ingest parser (upstream of bronze — bronze `order_amt` is already
+  final) **digit-extracts** whatever string arrives: `shoamt=1` → 1; `"' and 6957=6964--"` → 69,576,964;
+  a no-digit string like the literal unreplaced macro `"ORDER AMOUNT"` → NULL. There is NO validation —
+  garbage with digits becomes plausible-looking revenue (this is how the WGU pentest polluted Feb 2026).
+- **`shoid`** → `order_id`. Advertisers often send a page slug or a constant (WGU: `lead`,
+  `application-status`) — do not assume it's a transaction ID.
+- **`type`** → `conversion_type`. Absent param → NULL in conversion_log, but **`ui_conversions` renders
+  NULL conversion_type as the string sentinel `'-101'`** (matches the `core_advertiser_conversion_types`
+  sentinel row) — never filter `conversion_type IS NULL` in ui_conversions.
+
+**Amount guardrails, empirically bounded (WGU pentest rows, Feb 2026):** silver SQLMesh nulls `order_amt`
+(keeps the row) somewhere between $69.6M (kept) and $621.6M (stripped); the attribution layer
+(`ui_conversions`) additionally drops amounts somewhere between $590,132 (kept) and $5,736,771 (dropped —
+plausibly a ~$1M cap; mechanism/location not found). So bronze ⊃ silver ⊃ ui_conversions on extreme amounts.
+
+**Retention corrections (verified 2026-07-08):** `bronze.raw.conversion_log` holds ~**9 months** (WGU rows
+begin mid-Oct 2025; Sep 2025 fully absent) — NOT a 10–90d TTL. Silver `conversion_log` floor ≈ **2024-01**
+(no partitions exist before that). Any bronze-vs-silver comparison older than ~9 months is impossible.
+
+### WGU (31357) "revenue" — it was NEVER real, and the Sep-Oct 2025 cliff is a client-side retag (WGU-REV, 2026-07-08)
+Full investigation of the "WGU revenue → 0 after Sep 2025" chart (TI-1037 dashboard, prospecting obj=1/fl=1
+scope). Key facts, all verified in BQ:
+1. **The pre-cliff "revenue" was a $1-per-lead placeholder**: WGU's old untyped pixel (conversion_type NULL,
+   fired on the `inquiryv4.wgu.edu` inquiry form) hardcoded `shoid=lead&shoamt=1`. For ALL queryable history
+   (2024-01 → 2025-10-02), `order_amt=1` is the only value, and `sum_by_campaign_by_day` revenue ==
+   conversions EXACTLY every month. WGU dashboard "Revenue" has never represented dollars.
+2. **Cutover = client-side tag replacement, 2025-09-30 → 10-02 (3-day overlap)**: new
+   `conversion_type='app_submitted'` auto-registered 2025-09-30 22:57:04; last $1 flowed 2025-10-02. Zero
+   MNTN-side config changes (pixel_integrations untouched since 2020; settings archive quiet; source id 23
+   unchanged). The new tag ships the **literal unreplaced macro `shoamt=ORDER%20AMOUNT`** on 100% of rows
+   (all 57,785 Jun 2026 rows) → order_amt NULL → revenue $0 from 2025-10-03.
+3. **Event semantics changed too — the bigger integrity issue**: `app_submitted` fires on `apply.wgu.edu`
+   portal PAGEVIEWS (application-status checks 28K/mo, transcript requests 2K/mo, form steps), not just
+   submissions. Attributed conversions jumped 3.2× overnight (ui_conversions 8,226 Sep → 25,935 Oct 2025).
+   WGU has **no ROAS goals** (54+ CPA goal groups, $2–600), so $0 revenue breaks nothing operationally —
+   but any **CPA/conversion trend spanning Oct 2025 is apples-to-oranges** (denominator = leads before,
+   portal pageviews after).
+4. **Feb 2026 $833,883.40 "revenue" = pentest pollution**: Burp Suite scan (callbacks to oastify.com) from
+   single IP 136.60.22.42 on 2026-02-07 fuzzed the pixel on `apply.wgu.edu/duplicate` → 75 junk injection
+   conversion_types + 34 digit-extracted fake amounts (bronze $71.68T → silver $222.9M → attributed
+   $833,883.40, reconciles to the dollar). Confined to obj=4 retargeting campaigns; the prospecting chart
+   shows $0 for Feb. Treat as fake; whether the pentest was WGU-sanctioned is unknown (→ Pixel Ops).
+5. **May 2026 volume spike (125,940 rows) = untyped landing-page pixel burst**: NULL-type pixel deployed on
+   `www.wgu.edu` lead LPs 2026-04-30 → 05-16 (~4.4–5.4K real distinct-IP rows/day, IPs≈guids≈0.93×rows, not
+   refires), then scoped down to ~100–300/day (still running). Timing-correlated with orca-integration
+   (2026-04-29) + Tealium CRM mappings (2026-04-30) onboarding — causality unverified.
+6. **Non-prod pollution**: ~692 Jun 2026 "conversions" from `apply.stage/development/local.wgu.edu` +
+   `inquiryv4.qa.wgu.edu` referers count as real conversions. Platform-wide filter question open.
+Neither pixel version ever sent email/phone. Route pixel-ingest validation gap + pentest question to
+**Ashley Pineda Varela** (Pixel Ops).
+
 ### attribution_model_id
 - `attribution_model_type_id = 0` should be treated as `1` (last-touch) — known business rule.
   See `ui_visits` column description comment.

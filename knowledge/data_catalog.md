@@ -182,6 +182,12 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 **Caveat — silver hides corrupt order_amt** (TI-832, 2026-05-06). Bronze (`dw-main-bronze.raw.conversion_log`) contains thousands of rows from 4 advertisers (34957 Harley, 33903 Bioharvest, 32023 Tarte, 63746 Networking Today) with corrupt `order_amt` in the $1B–$7.4T range — likely timestamp leakage / unit-conversion bugs at the pixel layer. Silver SQLMesh strips these. **If investigating data quality on conversions, query `bronze.raw.conversion_log` not silver — or you'll see zero issues that absolutely exist upstream.** Pixel ops (Ashley Pineda Varela) flagged via TI-832 outlier sheet.
 
+**Payload → column mapping (WGU-REV, 2026-07-08):** the `query` JSON holds the raw pixel GET params; `shoamt` → `order_amt` (ingest **digit-extracts** the string, pre-bronze; no digits → NULL — bronze `order_amt` is already final, silver casting is NOT the parse point), `shoid` → `order_id` (often a page slug, not a transaction ID), `type` → `conversion_type` (absent → NULL). `order_curr` defaults to `'USD'` even when no amount is sent. See data_knowledge.md "Conversion pixel payload anatomy".
+
+**Retention (verified 2026-07-08):** bronze.raw.conversion_log ≈ **9 months** (not 10–90d); silver floor ≈ **2024-01** (no earlier partitions). Full-history silver scan for one advertiser ≈ 564 GB / ~40 s.
+
+**ui_conversions gotcha:** NULL `conversion_type` is rendered as string sentinel **`'-101'`** in `summarydata.ui_conversions` — never filter `conversion_type IS NULL` there. Attribution layer also drops extreme amounts (empirically between $590K kept and $5.7M dropped; plausibly a ~$1M cap).
+
 ---
 
 ## feature_store/feature_group_1_source/conv_log_ip (parquet, daily)
@@ -2103,6 +2109,15 @@ Realized spend per auction win. Use for step-9 pacing (spend ÷ budget) and any 
   `19`=**MNTN Matched** (this is "MM") · `21`=MNTN Conversion · `34`=MNTN Pageview · `35`=**LiveRamp IP** (the "3P"
   segments) · `46`=ML Audience Intent Scoring Model (RTC scoring) · `47`=CRM Identity Graph Generated · `42`=MNTN Select ·
   `51`=Bombora · `25`=5x5. Interest sources = DS13/19 (MM) + DS35 (3P); DS16 = funnel gate; DS2/21/34/47 = exclusion/suppression.
+
+## bronze.integrationprod.core_advertiser_conversion_types
+- **Type:** TABLE — **auto-registered conversion-type registry** (one row per advertiser × conversion_type × conversion_source_id)
+- **Use for:** dating client-side pixel/tag changes. `create_time` = the FIRST occurrence of that conversion_type in conversion_log (verified to the second: WGU `app_submitted` registry 2025-09-30 22:57:04 == MIN(time) in the log). A new row here means the advertiser's tag started sending a new `type` param — a client-side change, not an MNTN config action.
+- **Columns:** advertiser_conversion_type_id, advertiser_id, conversion_type, conversion_source_id, create_time. No user_id, no deleted.
+- **Sentinels:** `-100` (source `-1`, legacy MNTN Pixel unnamed conversion) and `-101` (source `23`, since the platform-wide 2025-01-10 NULL→23 source migration). `ui_conversions` renders untyped conversions with the `-101` string.
+- **Gotcha:** because registration is automatic from the log, junk types pollute it — WGU has 74 SQL-injection/XSS payload rows from a 2026-02-07 pentest (Burp/oastify.com).
+- **conversion_source_id decode** (via `data_sources`): `-1`='MNTN Pixel', `23`='guid_log' (display 'MNTN Pixel'/'Website Event', created 2024-10-04 — the post-2025-01-10 standard for website pixel events), `21`='MNTN Conversion'.
+- **Related pixel-config tables (no separate `conversion_sources` table exists):** `core_pixel_integrations`(+`_types`) (e-commerce integrations), `ui_advertiser_pixel_infos` (pixel notes/URLs), `attr_advertiser_waypoints_event_mapping` + `attr_advertiser_selective_performance_config` (event classification), `advertisers` pixel flags (`populate_order_on_conversion`, `conv_pixel_opt_out`, `pixel_isolation`, `allow_duplicate_orders`).
 
 ---
 
