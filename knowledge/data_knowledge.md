@@ -813,9 +813,9 @@ MM audience. [[reference_fangorn_audience_overlay]]
 | — | ✓ | — | 1,559 | 859 | $18.7M | 42.7% | **Keyword-Only / "MM Core"** (Matt's tier association: Max Reach) — bids IP states 2/4/6; CANNOT bid pure-PP IPs (state 5 matches only on a vertical anchor) |
 | — | — | — | 1,042 | 450 | $11.7M | 26.8% | **Not MM** — 3P-only / 1P / IP-list / CRM / DS14-only run-of-network |
 | — | ✓ | ✓ | 1,314 | 606 | $8.3M | 18.9% | **MM Core + Peak Performance v2** — the Fangorn flagship; keyword layer kept, vertical anchor on PP v2 scoring |
-| — | — | ✓ | 235 | 115 | $2.8M | 6.5% | **Peak Performance v2 only** — ex-vertical-only, flip swapped 13→46; no keyword layer |
+| — | — | ✓ | 235 | 115 | $2.8M | 6.5% | **Peak Performance v2 only** ("vertical only") — ex-vertical-only, flip swapped 13→46; no keyword layer; bids all in-vertical IPs → HI + PP tiers only |
 | ✓ | ✓ | — | 403 | 286 | $1.7M | 4.0% | **MM Core + Peak Performance (v1)** — the config that shipped as the Oct-2025 PP product (canonical detector = DS13+DS19+RTC, TI-896); only DS19-bearing config that also bids the 8000 tier |
-| ✓ | — | — | 57 | 42 | $0.5M | 1.1% | **Peak Performance (v1) only** — bids only state-5 PP IPs (8000); not yet flipped to v2 |
+| ✓ | — | — | 57 | 42 | $0.5M | 1.1% | **Peak Performance (v1) only** ("vertical only") — bids ALL in-vertical IPs → HI 10000 + PP 8000 tiers, no MI/MaxReach (HI IPs are vertical members, so they match the anchor leaf too); not yet flipped to v2 |
 | ✓ | — | ✓ | **0** | 0 | — | — | impossible — Fangorn flip swaps 13→46 |
 | ✓ | ✓ | ✓ | **0** | 0 | — | — | impossible — same reason |
 

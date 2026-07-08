@@ -6,6 +6,23 @@
 
 ---
 
+## Update 2026-07-08 — MM taxonomy SETTLED (Alyson question → Matt Brorby endorsement)
+
+"Is MM = has DS19?" (Alyson) resolved empirically + named officially. Full record (8-cell table, 2×3
+grid, component names, tier logic): `knowledge/data_knowledge.md` § `"MM = has DS19" is an undercount`;
+query `queries/ti_1037_mm_ds_cooccurrence.sql`. Load-bearing facts for THIS dashboard:
+
+- **Config space = 2×3**: keyword layer (DS19 y/n) × vertical anchor (none / DS13 / DS46). DS13 and DS46
+  are ONE slot (identical leaf, same 6-digit vertical id = the RTC id) — the Fangorn flip swaps 13→46,
+  so they never co-occur. Bucket ids appear in ZERO live leaves ("Expanded PP" — named, unshipped).
+- **Official names (Matt Brorby, endorsed 2026-07-08):** DS19 = "MM Core"/Keyword-Only · DS13 = Peak
+  Performance (v1) · DS46 = PP v2 (Fangorn) · no-DS19 configs = "vertical only" colloquially. Product
+  names = tier names applied to the unlocking component.
+- **Dashboard implications:** module 07's MM rule (DS19∪DS13∪DS46) is CORRECT — a DS19-only test misses
+  7.6% of live prospecting spend (PP-only + PP-v2-only cells). Vertical-only configs bid HI+PP tiers
+  only; keyword-only configs cannot deliver the PP 8000 tier. Optional cosmetic: relabel module 07 DSN
+  map to official names (deferred — Mode file under active edit).
+
 ## Update 2026-07-08 (night) — Module 13 pixel-monitor AUDIT (22-agent adversarial verification)
 
 Full audit of `13 Pixel Health.sql` + its `_flags` 2c consumer. **The SQL contract is sound** — schema/typing,
