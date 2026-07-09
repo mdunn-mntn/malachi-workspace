@@ -56,6 +56,12 @@ folder holds its interpretation, vendor-specific queries, and verdict.
 - **Take rates sensitive/private (ray):** shareable artifacts use base cost only — media_spend
   (advertiser-agnostic, inventory/deal-based) + data_spend. No platform_spend / billed / take-rate math
   in anything shared.
+- **Performance over cost as the value metric (ray, 2nd reply — adopted):** "we get paid no matter what…
+  the value is whether the end-to-end generated value to the customer, so that they keep paying us —
+  lean towards the performance metrics, not the raw/net costs." → the per-vendor case LEADS with
+  performance (VR of impressions to vendor-sole IPs vs same-score-band multi-source IPs); the media/data
+  cost lenses remain as the willingness-to-pay anchor ("how much would we pay for these IPs"), not the
+  headline. Quality ≈ does the vendor's unique signal find IPs that perform.
 - **Paulo:** believes payment is "waterfall style on usage basis" — registry says Klickly `flat_fee`;
   reconcile against the renewal schedule when it lands. He'll act on our recs, including keep-alls.
   Redundancy may have validity value (his point) → priced via the recency tied-share (coverage-if-down).
