@@ -339,6 +339,25 @@ Added to `knowledge/data_knowledge.md`: full site-visit-signal lineage (raw vend
 "no current use" labels in `knowledge/ds_catalog.md` for DS24/25/26/28 (active MM site-visit DDPs, not IPDSC).
 
 ## 8. Open Items / Follow-ups
+
+### Status check 2026-07-09 (Paulo's renewal-season ask)
+Paulo (Slack, 2026-07-09) asked for the value of the data sources feeding Matched (Klickly, 5x5, etc.), whether we
+still use last year's sources, and keep/drop guidance — contract renewal season. Re-verified current state:
+- **All 8 external MM DDPs still enabled and delivering** (site_visit_signal partitions dt=2026-07-07 and 07-08
+  carry DS 23,24,25,26,28,30,33,36,39,40 — identical roster to the June analysis; LaunchLabs 27 still disabled).
+- **5x5 is still dropping data through today (2026-07-09, d=09 h=16)** — ~9 days PAST the end-of-June contract
+  end. No renewal decision is recorded in Jira (last comment 06-23: "being reviewed by Kale"). **Open: confirm
+  whether the 5x5 renewal was actually signed, or data should have stopped.**
+- **Flat-fee $ amounts still never obtained from billing** (any vendor). Related: BAE-2358 "5x5 Billing Usage
+  Reporting Setup" was Canceled 2025-01-15 — likely why no fee/usage reporting exists.
+- **AUDI-1051** (review redundant $0.50-CPM DDPs: 33Across API 3.2% / Sovrn 1.6% / Cybba 5.7% unique) still
+  **Backlog** — renewal season is the trigger to pull it forward.
+- Deck share links created (public gists via share_deck.sh):
+  exec: https://gist.githack.com/mdunn-mntn/a63336f861d55f52534b8307efcb3b3c/raw/ti_1027_exec_deck.html
+  full: https://gist.githack.com/mdunn-mntn/5e058531bd357e81c02f7d6c840ac7ec/raw/ti_1027_presentation_deck.html
+- Registry gotcha found while verifying: `tpa.direct_data_partners` has CDC duplicate rows even at
+  `is_current=true`, and DS26 has 4 conflicting current rows (broken SCD — take latest `valid_from`). Documented
+  in `knowledge/data_knowledge.md`.
 - **Blocker:** 5x5 flat-fee amount ← billing. **Draft ask:** *"Quick one for the 5x5 (DS25) renewal eval — what's
   our current flat-fee with 5x5 (annual or monthly)? Evaluating renewal value before the end-of-June contract end.
   Also helpful: the fees for the other MM data partners (Predactiv, Cybba, Sovrn, 33Across/33Across API, Justuno,

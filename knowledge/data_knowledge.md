@@ -962,6 +962,11 @@ View `dw-main-silver.tpa.direct_data_partners` (filter `is_current=true`). Key c
 17 ShareThis $0.95, 18 Dstillery) and CRM (22 Experian flat_fee, 29 deepsync) are separate, not MM.
 **Note:** `ds_catalog.md`'s 0/0/0 "no current use" for these reflects IPDSC/prospecting-expression usage only —
 the MM site-visit path is separate and active. (Corrected in ds_catalog for 24/25/26/28.)
+**Gotchas (verified 2026-07-09):** rows appear in **duplicate pairs even with `is_current=true`** (CDC dupes —
+`SELECT DISTINCT` or dedupe on `data_source_id`+`valid_from`). **DS26 (Predactiv) has a broken SCD:** FOUR
+`is_current=true` rows with conflicting `used_in_mntn_match` (two true @ valid_from 2025-10-17, two false @
+2025-01-01) — take the row with the latest `valid_from` (MM=true is correct; DS26 delivers into site_visit_signal
+daily). Column is `data_partner_name`, not `partner_name`.
 
 ### Site-visit vendor raw schemas, richness, and the "discard" finding (TI-1027, 2026-06-17)
 Each vendor's RAW feed schema (from the airflow-ti processing jobs) vs what we KEEP in `site_visit_signal`
