@@ -250,10 +250,7 @@ function render(rows, root, H) {
 
   // ---- View 1: P1 vs P2 grouped bars ----
   html += '<div style="font:700 14px Helvetica Neue,Arial;color:#222;margin:2px 0 2px">Prospecting score distribution: two periods</div>';
-  html += '<div style="font:11px Helvetica Neue,Arial;color:#888;margin-bottom:6px">Share of SCORE-LOGGED prospecting impressions per MNTN score tier, RTC-excluded. '+H.esc(p1Label)+' vs '+H.esc(p2Label)+'.'
-    + ((d1.cov < 99.5 || d2.cov < 99.5)
-      ? ' Score data covers <b>'+d1.cov.toFixed(0)+'%</b> of P1 imps and <b>'+d2.cov.toFixed(0)+'%</b> of P2 (logging began 2025-06).'
-      : '') + '</div>';
+  html += '<div style="font:11px Helvetica Neue,Arial;color:#888;margin-bottom:6px">% of score-logged imps, RTC-excluded · '+H.esc(p1Label)+' vs '+H.esc(p2Label)+((d1.cov < 99.5 || d2.cov < 99.5) ? ' · coverage P1 '+d1.cov.toFixed(0)+'% / P2 '+d2.cov.toFixed(0)+'%' : '')+'</div>';
   html += '<div style="height:250px;margin-bottom:14px"><canvas id="'+idBars+'"></canvas></div>';
 
   // ---- View 2: monthly 100% stacked ----
@@ -424,7 +421,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="font:13px Helvetica Neue,Helvetica,Arial,sans-serif;background:#FAFAFA;padding:14px 12px;">';
   html += '<div style="font-weight:700;font-size:15px;color:#222;margin-bottom:2px;">Scheduled flights per campaign (short / 4-7d / long tiers)</div>';
-  html += '<div style="font-size:11px;color:#888;margin-bottom:12px;">Continuous delivery is built from many back-to-back manual flights; short flights (≤3d) auto-ungate (HHST=0). Ranked by P1→P2 window campaign spend (whole group, RT excluded).</div>';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:12px;">Short flights (≤3d) auto-ungate (HHST=0) · ranked by window spend.</div>';
 
   // legend
   function chip(col,lab){ return '<span style="display:inline-flex;align-items:center;margin-right:14px;"><span style="width:12px;height:10px;background:'+col+';display:inline-block;margin-right:5px;border-radius:1px;"></span><span style="font-size:11px;color:#555;">'+lab+'</span></span>'; }
@@ -771,7 +768,7 @@ function render(rows, root, H) {
 
   var sub = document.createElement("div");
   sub.style.cssText = "font-size:11px;color:"+C.GRAY+";margin-bottom:8px";
-  sub.textContent = "PRO = prospecting VV lookback (clickpass_acquisition_ttl); RT = retargeting VV lookback (clickpass_click_ttl). A shorter window shrinks connectable visits AND conversions.";
+  sub.textContent = "PRO/RT = prospecting/retargeting VV lookback · a shorter window shrinks connectable visits and conversions.";
   wrap.appendChild(sub);
 
   // (the P1-vs-P2 VV flag lives in the Overview diagnostic scorecard now — chart + badges only here)
@@ -1049,9 +1046,7 @@ function render(rows, root, H) {
   var html = "";
   html += '<div style="background:#FAFAFA;padding:14px 16px;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;">';
   html += '<div style="font-size:16px;font-weight:700;color:#222;">Prospecting audience change-log (DS-level)</div>';
-  html += '<div style="font-size:11px;color:#555;margin:3px 0 4px;">By campaign, most spend first. '
-    + 'Start = DS set entering the window → in-window changes → final set; '
-    + '<span style="font-weight:700;">Net P1 → P2</span> = start vs final.</div>';
+  html += '<div style="font-size:11px;color:#888;margin:3px 0 4px;">Most spend first · start set → in-window changes → final · Net P1→P2 = start vs final.</div>';
   // DS decoder — every DS id appearing in this advertiser's changelog
   var seenDs = {};
   rows.forEach(function(r){ parseDs(r.clog_ds_ids).forEach(function(x){ seenDs[x] = true; }); });
@@ -1424,7 +1419,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;background:#FAFAFA;padding:14px 16px;">';
   html += '<div style="font-size:15px;font-weight:700;color:' + C.NAVY + ';margin-bottom:2px;">Prospecting campaigns & their intent gate over time</div>';
-  html += '<div style="font-size:11px;color:' + C.GRAY + ';margin-bottom:12px;">one lane per campaign group, each delivering day colored by its HHST gate bucket; lanes ranked by P1→P2 window campaign spend (whole group, RT excluded)</div>';
+  html += '<div style="font-size:11px;color:' + C.GRAY + ';margin-bottom:12px;">One lane per campaign, days colored by HHST gate · ranked by window spend.</div>';
 
   // lanes
   html += '<div style="position:relative;">';
@@ -1516,7 +1511,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Prospecting campaign summary — full window</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Every prospecting campaign that spent in the P1→P2 window, spend-ranked. Metrics are whole-window, whole-group totals — all funnel stages, retargeting excluded — the same % basis as every module, and it sums to 100% here. Reach = distinct households served over the FULL window; HI-share uses scored impressions only (scores logged since 2025-06), so early-window reach skews unscored.</div>';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:10px;">Whole-window, whole-group totals (RT excluded) · % spend sums to 100% · HI share = scored imps only (since Jun 2025).</div>';
 
   if (!data.length) {
     html += '<div style="font-size:13px;color:#888;">No prospecting spend in the window.</div></div>';
@@ -2128,7 +2123,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="background:#FAFAFA;padding:14px 16px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;">';
   html += '<div style="font-size:16px;font-weight:700;color:#222;">Geo targeting changes</div>';
-  html += '<div style="font-size:11px;color:#555;margin:3px 0 12px;">Geo whitelist per prospecting campaign — "US (national)" or an N/210 DMA slice. Start = state entering the window → in-window changes → final. Narrowing geo shrinks the audience (decline cause #1).</div>';
+  html += '<div style="font-size:11px;color:#888;margin:3px 0 12px;">Geo whitelist per campaign — “US (national)” or N/210 DMAs; narrowing shrinks the audience.</div>';
 
   order.forEach(function (g) {
     var evs = byG[g].slice().sort(function (a, b) { return dstr(a.geo_changed_on) < dstr(b.geo_changed_on) ? -1 : 1; });
@@ -2222,7 +2217,7 @@ function render(rows, root, H) {
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">Prospecting HI recirculation — re-touching already-served IPs</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">Monthly PROSPECTING delivery — all stages (obj 1/5/6); retargeting and Ego out; RTC serves count (still a targeted IP). Unless DS16 (net-new gate) is on, prospecting re-serves IPs the advertiser already touched — the VV/conversion excludes only remove visitors and converters. HI = a score of 10000 ON THE BID (the score logged with each impression, not a monthly status; with HHST at 10000 the bidder only serves an IP while it scores 10000). Re-touched = the IP’s first-ever 10000 bid predates the month — 10000 at bid time on both touches. Month grain is approximate: the 30-day score TTL doesn’t align to calendar months, and within-month re-serves aren’t split out (they appear in frequency). Scores logged since Jun 2025 — earlier months read “no score data”. A client scaling spend while holding HHST=10000 exhausts the net-new pool — re-touch share can approach 99%. Brand-new = first-ever contact on any campaign. Frequency = MEDIAN imps/IP (means are inflated by shared/CGNAT IPs). Empty months = no prospecting delivery.</div>';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:10px;">Re-touched = served at a 10000 bid before AND again this month (prospecting obj 1/5/6; RTC counts) · scores exist since Jun 2025 · frequency = median imps/IP.</div>';
 
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">HI (10000) IPs served: net-new vs re-touched — rising re-touch share = pool recirculating</div>';
   html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idHi + '"></canvas></div>';
@@ -2392,7 +2387,7 @@ function render(rowsIgnored, root, H) {
   var html = '';
   html += '<div style="background:#FAFAFA;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;padding:8px 4px">';
   html += '<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:4px;">IP recirculation — all served IPs, any score</div>';
-  html += '<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.3;">The score-agnostic version of the HI tab: every IP served by prospecting (all stages; RTC serves count — still a targeted IP). Net-new = first-ever contact from this advertiser on ANY campaign; re-touched = served before. Unless DS16 (net-new gate) is on, prospecting re-serves touched IPs — VV/conversion excludes only remove visitors/converters. No score dependency, so the FULL window is measurable (no Jun-2025 floor). Cumulative = distinct IPs ever served by prospecting. Empty months = no prospecting delivery.</div>';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:10px;">Net-new = first-ever contact on any campaign; re-touched = served before · score-free, so the full window is measurable.</div>';
 
   html += '<div style="font:700 13px Helvetica Neue,Arial;color:#222;margin:2px 0 4px">IPs served: net-new vs re-touched — rising re-touch share = pool recirculating</div>';
   html += '<div style="height:260px;margin-bottom:14px"><canvas id="' + idIp + '"></canvas></div>';
