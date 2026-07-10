@@ -25,9 +25,15 @@ the advertiser's own retargeting pixel, MM max-reach (no svs needed), 3P segment
 ShareThis), and plain auction presence (Magnite bids on any browsing IP). Of Klickly's 3,674 sole-IP
 wins, only **26 were MM-score-gated serves** that provably required Klickly's signal. Hence the range:
 
-- **T1 floor (26 imps/wk, $13/yr):** provable "could not serve without."
+- **T1 floor (26 imps/wk, $13/yr):** provable "could not serve without" (score-gated).
 - **T2 ceiling (3,674 imps/wk, $2,205/yr):** every win on their IPs credited to them — generous.
-- True dependence lies in [T1, T2], plausibly nearer T1. We never publish a fake midpoint.
+- True dependence lies in [T1, T2]. **Refinement (user challenge, 2026-07-10): max-reach serves inside
+  MM PROSPECTING campaigns are also vendor-dependent** — the IP is only in the MM membership because the
+  vendor loaded it (MemDB membership ← targeted_signal ← svs). Retargeting serves are NOT (audience =
+  the advertiser's own pixel, independent of svs); 3P only where the client's audience includes it.
+  So true dependency = T1 + the prospecting/max-reach slice of T2 — measured empirically by **q6b**
+  (sole-IP impressions split by campaign funnel_level), which replaces "plausibly nearer T1" with a
+  per-vendor number.
 
 **Performance, joined on the same IPs.** 1 visit on the week's 3,674 sole wins → VR 0.0272% vs the
 0.0223% no-svs baseline — statistically indistinguishable. Annualized ~52 expected visits/yr, but the
