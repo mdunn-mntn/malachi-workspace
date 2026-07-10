@@ -154,7 +154,7 @@ were score-gated AND to vendor-sole IPs — the impressions that could not have 
 {img("audi_1089_chart_sole_quality.png")}
 
 <h2>Delivery consistency (liveness)</h2>
-{img("audi_1089_chart_scale_sparklines.png")}
+{img("audi_1089_table_daily_delivery.png")}
 
 <h2>Klickly (DS39) deep dive — verdict: PASS (drop) unless effectively free</h2>
 {img("audi_1089_chart_klickly_dependency_ladder.png")}
