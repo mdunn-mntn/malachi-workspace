@@ -104,23 +104,35 @@ def table_daily_delivery():
         a["ips"] += float(r["ips"])
         a["domains"] += float(r["domains"])
         a["days"] += 1 if float(r["n_rows"]) > 0 else 0
-    order = sorted(agg, key=lambda d: -agg[d]["ips"] / max(agg[d]["days"], 1))
+    for a in agg.values():
+        n = a["days"] or 1
+        a["ips_d"], a["rows_d"], a["dom_d"] = a["ips"] / n, a["rows"] / n, a["domains"] / n
+    tot_ips = sum(a["ips_d"] for a in agg.values())
+    tot_rows = sum(a["rows_d"] for a in agg.values())
+    tot_dom = sum(a["dom_d"] for a in agg.values())
+    order = sorted(agg, key=lambda d: -agg[d]["ips_d"])
     cells, row_colors = [], []
     for d in order:
         a = agg[d]
-        n = a["days"] or 1
-        cells.append([DS_NAME[d], fmt(a["ips"] / n), fmt(a["rows"] / n),
-                      fmt(a["domains"] / n), f"{a['days']}/30"])
+        cells.append([DS_NAME[d],
+                      fmt(a["ips_d"]), f"{100*a['ips_d']/tot_ips:.0f}%",
+                      fmt(a["rows_d"]), f"{100*a['rows_d']/tot_rows:.0f}%",
+                      f"{a['rows_d']/a['ips_d']:.1f}",
+                      fmt(a["dom_d"]), f"{100*a['dom_d']/tot_dom:.0f}%",
+                      f"{a['days']}/30"])
         row_colors.append("#eef1f4" if d in INTERNAL else "white")
-    cols = ["Source", "Avg IPs / Day", "Avg Rows / Day", "Avg Domains / Day", "Days Delivered"]
-    fig, ax = plt.subplots(figsize=(8.6, 4.6))
+    cols = ["Source", "Avg IPs / Day", "%", "Avg Rows / Day", "%", "Rows / IP",
+            "Avg Domains / Day", "%", "Days"]
+    fig, ax = plt.subplots(figsize=(11.2, 4.6))
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(10)
     tbl.scale(1, 1.5)
+    widths = [0.20, 0.11, 0.06, 0.12, 0.06, 0.08, 0.14, 0.06, 0.07]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
         if r == 0:
             cell.set_text_props(fontweight="bold", color="white")
             cell.set_facecolor(NAVY)
@@ -128,10 +140,14 @@ def table_daily_delivery():
             cell.set_facecolor(row_colors[r - 1])
             if c == 0:
                 cell.set_text_props(ha="left")
+            if c in (2, 4, 7):
+                cell.set_text_props(color="#666")
     ax.set_title("Daily Delivery by Source", fontsize=13.5, fontweight="bold", loc="left", pad=16)
-    fig.tight_layout(rect=[0, 0.06, 1, 1])
+    fig.tight_layout(rect=[0, 0.08, 1, 1])
     save(fig, "audi_1089_table_daily_delivery.png",
-         f"Average per-day volumes in site_visit_signal, ranked by IPs per day, {SIGNAL_WINDOW}.")
+         f"Average per-day volumes in site_visit_signal, ranked by IPs per day, {SIGNAL_WINDOW}. "
+         "A row is one site-visit event (IP, URL, timestamp). Percentages are shares of the column total; "
+         "sources overlap, so IP and domain totals overstate the distinct universe.")
 
 
 # ---- 2. Window reach ----
