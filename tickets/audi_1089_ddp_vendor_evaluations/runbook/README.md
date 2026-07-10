@@ -81,10 +81,22 @@ strip webmail/ad-infra rows at source (33Across, 33A API).
 - D — T1 gated sole imps, log-normalized (hard dependency)
 - P — sole-IP VR ÷ no-svs baseline (0.0223%), capped 2×, halved; <5K sole imps → neutral 0.5
 
-**Scores this run (2026-07-10, raw-pair R — usable-restricted q3 refresh in flight):**
-5x5 **70.4** · Predactiv **61.5** · 33Across **57.7** · Justuno **56.9** · Klickly **51.1** ·
-33A API **49.8** · Cybba **49.7** · Sovrn **35.5**.
-Score ranks data quality; the VERDICT = score × cost position (a 57.7 at 4–7× over band still
+**THE INDEX (this run, 2026-07-10 — raw-pair R; usable-restricted q3 refresh in flight):**
+
+| # | Source | Score | WTP $/yr (pay up to) | Bill run-rate | vs band | Verdict |
+|--:|---|--:|---|---|---|---|
+| 1 | 5x5 | 70.4 | $150K–600K (TI-1027 fair) | flat fee, pending | — | KEEP |
+| 2 | Predactiv | 61.5 | $0.7M–3M | flat fee, pending | — | KEEP, lock price |
+| 3 | 33Across | 57.7 | $30K–100K | $422K/yr | 4.2× top | NEGOTIATE cap ≤$100K |
+| 4 | Justuno | 56.9 | $14K–60K | $77K/yr | 1.3× top | KEEP-trim |
+| 5 | Klickly | 51.1 | $0.1K–1.5K | flat fee, pending | — | DROP unless ~free |
+| 6 | 33A API | 49.8 | $10K–40K | $176K/yr | 4.4× top | DROP / renegotiate |
+| 7 | Cybba | 49.7 | $1.1K–4.7K | $21.5K/yr | 4.6× top | DROP |
+| 8 | Sovrn | 35.5 | $0.5K–2.4K | $116K/yr | 48× top | DROP |
+
+WTP = the defensible fee band from section 3 (V sole-classified-domain value + D dependency media);
+"pay up to" = band top. Bill color rule on the chart: green ≤ band top, amber ≤ 3×, red > 3×.
+Score ranks data quality; the VERDICT = score × cost position (a 57.7 at 4× over band still
 negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 
 ## 5. Open items

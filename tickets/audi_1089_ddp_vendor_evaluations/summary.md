@@ -155,7 +155,8 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   (running), flat fees, composite score.
 - **q9b composite ranking + runbook/README.md — BUILT 2026-07-10.** Composite (V40/R15/Q15/D10/P20):
   **5x5 70.4 > Predactiv 61.5 > 33Across 57.7 > Justuno 56.9 > Klickly 51.1 > 33A API 49.8 > Cybba 49.7 >
-  Sovrn 35.5.** `runbook/README.md` = the logic document: value ladder, why sole media is tiny (adverse
+  Sovrn 35.5.** WTP bands added to `q9b_quality_ranking.png` (pay-up-to = band top; bill colored vs 3x
+  rule) and THE INDEX table saved in `runbook/README.md` section 4. `runbook/README.md` = the logic document: value ladder, why sole media is tiny (adverse
   selection), fee-band/3x verdict rule, per-vendor negotiation targets + leverage + improvement asks,
   score formula, chart index, open items (q7b per-bucket performance matrix queued; HI-pool union;
   flat fees; Athena). q3/q4 CSVs+SQL canonicalized (raw pairs; usable refresh running).
