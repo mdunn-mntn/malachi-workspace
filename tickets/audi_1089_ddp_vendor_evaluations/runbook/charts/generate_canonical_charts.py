@@ -581,7 +581,7 @@ def q2(rdir):
     cells = [[SHORT[d], fmtn(rows_day.get(d, 0) / days), fmtn(reach[d]["ips_30d"]),
               fmtn(reach[d]["domains_30d"]), fmtn(reach[d]["ip_domain_pairs_30d"])]
              for d in order]
-    cols = ["Source", "Avg rows/day", "IPs (30d)", "Domains (30d)", "IP x domain pairs (30d)"]
+    cols = ["Source", "Avg rows/day (total)", "Unique IPs (30d)", "Unique domains (30d)", "Unique IP x domain pairs (30d)"]
 
     fig = plt.figure(figsize=(8.6, 3.4))
     fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
@@ -591,7 +591,7 @@ def q2(rdir):
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9.5)
     tbl.scale(1, 1.5)
-    widths = [0.16, 0.14, 0.13, 0.15, 0.21]
+    widths = [0.15, 0.16, 0.14, 0.16, 0.23]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
@@ -633,7 +633,7 @@ def q2b(rdir):
                       fmtn(bot) if bot else "0"])
         hard.append(float(r["pct_hard_dropped"]))
         soft.append((float(r["pct_blocked_ds13"]), bot / int(r["rows_day"]) * 100))
-    cols = ["Source", "Rows/day", "Hard-dropped", "% hard", "IPs/day",
+    cols = ["Source", "Rows/day", "Hard-dropped", "% hard", "Unique IPs/day",
             "IPs dropped", "DS13-blocked rows", "Bot-UA rows"]
 
     fig = plt.figure(figsize=(10.6, 3.4))
