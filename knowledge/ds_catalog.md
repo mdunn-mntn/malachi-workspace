@@ -193,12 +193,12 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 | 25 | 5x5 | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** (`flat_fee`). Feeds `site_visit_signal`→MNTN Matched, NOT IPDSC/prospecting (hence 0/0/0 here). #2 unique-domain contributor (68.5% unique), B2B-concentrated, domain-only feed. **Contract review TI-1027 → recommend KEEP.** |
 | 26 | sharethis_predactiv | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** (`flat_fee`). #1 unique-domain contributor to MM (164K unique classified, TI-1027). Not IPDSC. |
 | 27 | LaunchLabs | ✗ | 0 | 0 | 0 | Provider, no current use |
-| 28 | 33Across | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM). Feeds `site_visit_signal`→MNTN Matched (not IPDSC). High volume but only 30% unique domains (mostly redundant) — TI-1027. |
+| 28 | 33Across | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM). Feeds `site_visit_signal`→MNTN Matched (not IPDSC). High volume but only 30% unique domains (mostly redundant) — TI-1027. Per Ryan Kleck (unverified, 2026-07-10): likely resells the same Magnite auction data we already get; 25% of feed = mail.yahoo.com, which the DS13 vertical path hard-excludes (BLOCKED_DOMAIN_NAMES). |
 | 29 | deepsync | ✗ | 0 | 0 | 0 | Provider, no current use |
 | 30 | MNTN augmentor_log | ✗ | 0 | 0 | 0 | Internal log reference |
 | 31 | CRM Upload | ✗ | 0 | 0 | 0 | CRM ingestion source (feeds DS4) |
 | 32 | CDK | ✗ | 0 | 0 | 0 | Provider, no current use |
-| 33 | Sovrn | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM, live 2025-05-27). **77% of URLs malformed** (doubled protocol `https://Xhttps://X`) → fail `NET.REG_DOMAIN` — only ~23% classifier-usable (AUDI-1089 q1c). AUDI-1089 verdict: DROP (~50-200× over band). |
+| 33 | Sovrn | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM, live 2025-05-27). **77% of URLs malformed** (doubled protocol `https://Xhttps://X`) → fail `NET.REG_DOMAIN` — only ~23% classifier-usable (AUDI-1089 q1c). Billing is usage-metered (junk never billed) — the DROP case rests on near-zero sole value vs bill, not junk waste. AUDI-1089 verdict: DROP (~50-200× over band). |
 | 36 | Cybba | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM). Smallest feed (~1.7M rows/day); 6.2% URL parse-fail; top IP = 3.5% of rows (AUDI-1089 q1c). AUDI-1089 verdict: DROP (~5-20× over band). |
 | 37 | CallRail | ✗ | 0 | 0 | 0 | Provider, no current use |
 | 39 | Klickly | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** (flat fee, live 2025-07-01). Shopify-checkout network: **94% of URLs = myshopify.com** (98% top-5); 117 reg-domains/hr but 629 distinct store hosts/hr (subdomains collapse) — extreme niche (AUDI-1089 q1c). Renewal-focal vendor of AUDI-1089. |

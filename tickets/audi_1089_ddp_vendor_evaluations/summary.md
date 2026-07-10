@@ -96,6 +96,23 @@ domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
   provide report but only impression counts - unknown if shared with customer". meter_check_ok passes
   vs each source's own registry rate, all fixed-CPM sources, Jan–Jun 2026.
 
+## 4c. Ryan Kleck thread (2026-07-10) — consumption filters, billing semantics, next step
+
+Slack with Ryan (Sean out). Verified in airflow-ti where possible:
+- **Billing follows USE:** vendors only credited when their data lands on MM-targeted serves — junk that
+  never scores is never billed. **Reframe: junk % discounts VALUE, not COST** (Sovrn's $9.7K/mo bill is
+  already for its usable ~23%; the DROP case = near-zero sole value vs that bill).
+- **DS13 vertical path excludes junk domains:** `BLOCKED_DOMAIN_NAMES = (yahoo.com, aol.com, easybrain.com)`
+  + ecommerce blocklist (verified in `aug_log_ip_vertical_id_hourly.py`). 33Across's 25% mail.yahoo.com
+  never reaches DS13. **OPEN: does DS19 (keywords) use yahoo.com?** Ryan unsure ("we might use it???").
+- **svs feature model** drops steelhouse/googlesyndication/gtm URLs; urlsplit does NOT drop Sovrn's doubled
+  URLs (garbage hosts survive to classification, then die vs wcv).
+- **MemDB membership log** = `gs://mntn-data-tpa-prod/tpa_membership_update_log/v2/` ("what actually goes in").
+- **33Across (per Ryan, unverified):** likely resells the Magnite auction data we already receive.
+- **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
+  per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
+  should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
+
 ## 5. Constraints & context (from the Slack thread, 2026-07-09)
 
 - **Take rates sensitive/private (ray):** shareable artifacts use base cost only — media_spend

@@ -962,6 +962,26 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   `outbrain.com` (widget network) + 1.6% Googlebot IPs. 33Across (DS28): 6.4% of rows from Googlebot IPs
   (66.249.x) + 5.7% bot UAs. 33A API (DS40): top-5 domains 58% incl. openwebmp.com RTB endpoints. Clean
   everywhere: uid ~unique per row, no timestamp batch-stamping, private/reserved IPs ~0.
+- **Consumer-side filters (what junk actually survives — Ryan Kleck Slack + airflow-ti code, 2026-07-10):**
+  - **Vertical/DS13 path:** `aug_log_ip_vertical_id_hourly.py` hard-excludes `BLOCKED_DOMAIN_NAMES =
+    ("yahoo.com", "aol.com", "easybrain.com")` (applied to registrable domain post-tldextract) + an
+    ecommerce blocklist CSV (`…/vertical_categorizations/ecommerce_domain_whitelist/ecommerce_blocklist.csv`).
+    So 33Across's 25% mail.yahoo.com never reaches DS13. **DS19 (keywords) treatment of yahoo.com is
+    UNVERIFIED** — Ryan: "we might use it???" — check the MM keyword path.
+  - **svs feature model** (`site_visit_signal_advertiser_id_dsc_id.py`): excludes DS23, drops
+    steelhouse.com / googlesyndication.com / gtm-msr.appspot.com URLs, keys on `urlsplit().hostname`.
+    NOTE: urlsplit does NOT validate TLDs — Sovrn's doubled-protocol URLs are NOT dropped here; they
+    produce garbage hosts like `mail.yahoo.comhttps` (they die later at classification, since garbage
+    never enters wcv).
+  - **MemDB membership log** ("what we actually put into MemDB", per Ryan):
+    `gs://mntn-data-tpa-{env}/tpa_membership_update_log/v2/dt=/hh=/` (monitored by
+    `dags/monitor_memdb_batch_output.py`).
+  - **Billing follows USE, not delivery (Ryan, confirms the meter semantics):** vendors are only credited
+    when their data is used on MM-targeted serves — junk rows that never score are never billed. Eval
+    implication: junk % ≠ wasted dollars; it discounts VALUE (fewer usable domains) not COST. An "Invalid
+    URL Alert" email also exists for parse failures (not found in airflow-ti clone — lives elsewhere).
+  - **33Across provenance (Ryan, UNVERIFIED):** believed to resell the same Magnite auction/bidstream data
+    we already receive — would explain its webmail-heavy, low-uniqueness profile (30% unique domains).
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`
