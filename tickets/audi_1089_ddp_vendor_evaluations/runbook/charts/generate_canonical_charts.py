@@ -80,8 +80,8 @@ def q0(rdir):
     sep_at = len(mm)
     cols = ["Source", "DS", "Billing", "Rate", *mlbl, "6-mo total"]
 
-    fig = plt.figure(figsize=(13.4, 4.5))
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.87, bottom=0.03)
+    fig = plt.figure(figsize=(11.2, 4.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.86, bottom=0.05)
     ax = fig.add_subplot(111)
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
@@ -106,7 +106,7 @@ def q0(rdir):
             if r > sep_at:
                 cell.set_text_props(color="#888")
     ax.set_title("DDP Roster and Actual Metered Bills by Month, Jan to Jun 2026",
-                 fontsize=13.5, fontweight="bold", loc="left", pad=10)
+                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q0_roster_cost.png")
 
 
@@ -145,18 +145,18 @@ def q1(rdir):
                       f"{med[d]:,}", f"{100 * minv[0] / med[d]:.0f}%  ({dlbl(mind)})",
                       f"{ipv6:.1f}%", gate])
         flags.append((bool(partial), gate))
-    cols = ["Source", "DS", "Days delivered", "Partial days (<50% of median)",
-            "Median rows/day", "Weakest day (% of median)", "IPv6 share", "Liveness gate"]
+    cols = ["Source", "DS", "Days", "Partial days (<50% med)",
+            "Median rows/day", "Weakest (% of med)", "IPv6", "Gate"]
 
-    fig = plt.figure(figsize=(13.4, 3.15))
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.02)
+    fig = plt.figure(figsize=(10.2, 3.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
     ax = fig.add_subplot(111)
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9.5)
     tbl.scale(1, 1.5)
-    widths = [0.17, 0.05, 0.09, 0.19, 0.14, 0.16, 0.09, 0.10]
+    widths = [0.19, 0.06, 0.075, 0.22, 0.155, 0.15, 0.075, 0.075]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
@@ -179,7 +179,7 @@ def q1(rdir):
             if r > sep_at:
                 cell.set_text_props(color="#888")
     ax.set_title(f"DDP Feed Liveness and Daily Scale, {dlbl(days[0])} to {dlbl(days[-1])} {days[-1][:4]}",
-                 fontsize=13.5, fontweight="bold", loc="left", pad=10)
+                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q1_scale_by_day.png")
 
 
