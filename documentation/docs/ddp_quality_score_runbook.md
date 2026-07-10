@@ -160,6 +160,16 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   gate: yahoo (33Across) and malformed hosts (Sovrn 90.9%!) categorize and can bill. DS13-classified spans
   Klickly 99.8% → Sovrn 8.9%.
 
+### Step 2d — Share of the usable pool — **BUILT 2026-07-10** (chart-only over q2c)
+- **Claim:** "Of everything usable we receive in a day, source V supplies X% of rows / IPs / classified domains."
+- **Query:** none — composition over `q2c_funnel.csv` (used rows exact/additive; IP and domain shares are of
+  summed per-source counts, cross-source overlap NOT deduped — credit competition means only one source is
+  paid per overlap).
+- **Visual:** `--step 2d` → `q2d_usable_share.png` (counts + % of usable total, TOTAL row, internal grayed).
+- **First-run findings:** internal free sources supply 43.7% of usable rows (augmentor 32.8 + guid 10.9);
+  33Across 35.7% of rows but only 19.8% of classified domains; **Predactiv is the #1 classified-domain
+  supplier at 34.3%** on 2.4% of rows; Klickly 0.04% of classified domains.
+
 ### Step 3 — Uniqueness & recency (pairs)
 - **Claim:** "X% of V's pairs are irreplaceable in-window; Y% are same-day-redundant (insurance)."
 - **Query** `q3_pair_recency.sql`: per (ip,domain) per ds MAX(dt) → per ds: sole / freshest / tied / stale +

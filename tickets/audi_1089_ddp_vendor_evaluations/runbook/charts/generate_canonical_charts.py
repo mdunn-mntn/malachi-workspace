@@ -744,7 +744,69 @@ def q2c(rdir):
     save(fig, "q2c_funnel.png")
 
 
-STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e, "2": q2, "2b": q2b, "2c": q2c}
+# ---- Step 2d: share of the usable pool by source (chart-only view over q2c) ----
+def q2d(rdir):
+    fun = {}
+    with open(os.path.join(rdir, "q2c_funnel.csv")) as f:
+        for r in csv.DictReader(f):
+            fun[int(r["ds"])] = r
+    tot = {k: sum(int(fun[d][k]) for d in fun)
+           for k in ("rows_used", "ips_used", "domains_classified")}
+    order = sorted(fun, key=lambda d: -int(fun[d]["rows_used"]))
+
+    def share(v, t):
+        p = 100 * v / t
+        return f"{p:.2f}%" if p < 0.1 else f"{p:.1f}%"
+
+    cells = []
+    for d in order:
+        r = fun[d]
+        cells.append([SHORT[d],
+                      fmtn(r["rows_used"]), share(int(r["rows_used"]), tot["rows_used"]),
+                      fmtn(r["ips_used"]), share(int(r["ips_used"]), tot["ips_used"]),
+                      fmtn(r["domains_classified"]), share(int(r["domains_classified"]), tot["domains_classified"])])
+    cells.append(["TOTAL usable", fmtn(tot["rows_used"]), "100%",
+                  fmtn(tot["ips_used"]), "100%", fmtn(tot["domains_classified"]), "100%"])
+    cols = ["Source", "Used rows/day", "% of usable", "Used IPs/day", "% of usable",
+            "Classified domains/day", "% of usable"]
+
+    fig = plt.figure(figsize=(9.8, 3.7))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.83, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.5)
+    widths = [0.13, 0.115, 0.095, 0.105, 0.095, 0.155, 0.095]
+    n = len(order)
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8.5)
+            cell.set_facecolor(NAVY)
+        elif r == n + 1:
+            cell.set_facecolor(HILITE)
+            cell.set_text_props(fontweight="bold", color=NAVY)
+            if c == 0:
+                cell.set_text_props(ha="left", fontweight="bold", color=NAVY)
+        else:
+            internal = order[r - 1] in (23, 30)
+            cell.set_facecolor("#f4f5f7" if internal else "white")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c in (2, 4, 6):
+                cell.set_text_props(fontweight="bold", color="#888" if internal else NAVY)
+            if internal and c not in (2, 4, 6):
+                cell.set_text_props(color="#888")
+    ax.set_title("Who Supplies the Usable Pool: Source Share of Used Rows, IPs, Classified Domains",
+                 fontsize=12.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q2d_usable_share.png")
+
+
+STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

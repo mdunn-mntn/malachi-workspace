@@ -142,6 +142,11 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   the most permissive path (DS19 today) defines each vendor's billable pool; DS13 hygiene never protects
   the wallet. Fix belongs at pc/DS19 intake (parse gate + blocklist parity). DS13-classified alone: Klickly 99.8 →
   Justuno 94.7 → 5x5 90.7 → 33Across 52.2 → Predactiv 48.2 → 33A API 36.3 → Sovrn 8.9.
+- **q2d usable-pool composition — BUILT 2026-07-10.** `q2d_usable_share.png` (chart-only over q2c).
+  Of the daily USABLE pool: rows — 33Across 35.7%, **internal free 43.7%** (augmentor 32.8 + guid 10.9),
+  33A API 10.0%, 5x5 5.0%, rest ≤2.4%. Used IPs — 33Across 32.2%, 5x5 10.6%. Classified domains —
+  **Predactiv 34.3% (the #1 supplier on just 2.4% of rows)**, 33Across 19.8%, 33A API 13.9%, 5x5 12.0%,
+  Klickly 0.04%. Shares of summed per-source counts (overlap not deduped; rows exact).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
