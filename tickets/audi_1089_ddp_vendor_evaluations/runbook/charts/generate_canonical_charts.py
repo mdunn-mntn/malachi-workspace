@@ -27,8 +27,9 @@ def run_dir(name=None):
     return os.path.join(OUTROOT, runs[-1])
 
 
-def save(fig, fname, caption):
-    fig.text(0.01, 0.015, caption, fontsize=9, color="#888", wrap=True)
+def save(fig, fname, caption=""):
+    if caption:
+        fig.text(0.01, 0.015, caption, fontsize=9, color="#888", wrap=True)
     fig.savefig(os.path.join(HERE, fname), dpi=200)
     plt.close(fig)
     print("wrote", fname)
@@ -75,14 +76,12 @@ def q0(rdir):
         + sorted([d for d in mm if not vendors[d]["months"] and vendors[d]["enabled"]]) \
         + sorted([d for d in mm if not vendors[d]["months"] and not vendors[d]["enabled"]])
 
-    cells = [row(d) for d in mm]
-    sep_at = len(cells)
-    cells.append(["Outside MM scope (interests / CRM)"] + [""] * (4 + len(months)))
-    cells += [row(d) for d in ctx]
+    cells = [row(d) for d in mm] + [row(d) for d in ctx]
+    sep_at = len(mm)
     cols = ["Source", "DS", "Billing", "Rate", *mlbl, "6-mo total"]
 
-    fig = plt.figure(figsize=(13.4, 5.8))
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.86, bottom=0.12)
+    fig = plt.figure(figsize=(13.4, 4.5))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.87, bottom=0.03)
     ax = fig.add_subplot(111)
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
@@ -96,9 +95,6 @@ def q0(rdir):
         if r == 0:
             cell.set_text_props(fontweight="bold", color="white")
             cell.set_facecolor(NAVY)
-        elif r == sep_at + 1:
-            cell.set_facecolor("#eef1f4")
-            cell.set_text_props(color="#666", fontsize=8.5, fontweight="bold", ha="left")
         else:
             cell.set_facecolor("white" if r <= sep_at else "#f4f5f7")
             if c == 0:
@@ -107,17 +103,11 @@ def q0(rdir):
                 cell.set_text_props(color="#666")
             if c == len(widths) - 1:
                 cell.set_text_props(fontweight="bold")
-            if r > sep_at + 1:
+            if r > sep_at:
                 cell.set_text_props(color="#888")
     ax.set_title("DDP Roster and Actual Metered Bills by Month, Jan to Jun 2026",
-                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
-    save(fig, "q0_roster_cost.png",
-         "Registry roster (tpa.direct_data_partners, CDC deduped) joined to the billing meter "
-         "(coredw.usage_reporting_data). Metered usage equals impressions x contract CPM, credited 1/N "
-         "across vendors sharing an IP; meter check passes against each source's registry rate. Flat fee "
-         "amounts are not in our data and come from the renewal schedule. Grey sources share the meter but "
-         "are interests or CRM vendors, outside this evaluation. ShareThis rate dropped from $1.20 to "
-         "$0.95 CPM with May usage per registry notes.")
+                 fontsize=13.5, fontweight="bold", loc="left", pad=10)
+    save(fig, "q0_roster_cost.png")
 
 
 STEPS = {"0": q0}
