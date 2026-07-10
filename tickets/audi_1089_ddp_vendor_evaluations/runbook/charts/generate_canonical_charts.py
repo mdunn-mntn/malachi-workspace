@@ -493,7 +493,76 @@ def q1d(rdir):
     save(fig2, "q1d_billed_domains.png")
 
 
-STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d}
+# ---- Step 1e: columns MM consumes today vs latent value (synthesis, no query) ----
+# Sources: airflow-ti code audit 2026-07-10 (site_visit_signal_advertiser_id_dsc_id.py,
+# distinct_site_visit_signal_domains.py, AP-3779 targeted_signal) + q1b/q1c population stats.
+def q1e(rdir):
+    rows = [
+        ("ip", "used",
+         "THE household key: feature rollups, MM scoring unit,\nbilling credit key (first reporter of ip+url+day)",
+         "", "all sources, 100%"),
+        ("url - domain", "used",
+         "DS13: domain to wcv verticals; DS19: domain to product\ncategories; the billing credit key with ip",
+         "", "all sources, ~100%"),
+        ("time", "used",
+         "First-reporter-wins ordering; day-grain recency",
+         "Hour-grain recency decay, dayparting features", "all sources, 100%"),
+        ("uid", "used",
+         "Row identity: dedup + lineage into targeted_signal",
+         "", "all sources, 100%"),
+        ("dt / hh / data_source_id", "used",
+         "Partitioning, ingestion lag config, payout attribution",
+         "", "all sources (partition keys)"),
+        ("url - path + query", "STRIPPED",
+         "",
+         "BUK/DS38 keyword extraction: product + search paths are\nhigh-intent tokens; page-type (checkout vs content)",
+         "Klickly 100, Sovrn 92, Justuno 91,\nCybba 79, Predactiv 75, 33Across 68 (% w/ path)"),
+        ("user_agent", "unused",
+         "",
+         "Bot filtering BEFORE credit (33Across: 6.4% Googlebot IPs\n+ 5.7% bot UAs get paid today); device/OS features",
+         "33Across, Sovrn, 33A API + internal (~100%)"),
+        ("query_parameters", "empty",
+         "",
+         "Search terms / SKUs / UTM = highest-intent BUK input;\nvendor ask (Klickly checkout params would be gold)",
+         "nobody today - a vendor ask"),
+        ("advertiser_id", "internal",
+         "guid_log path: advertiser-pixel features",
+         "External vendors cannot supply it", "guid_log only (100%)"),
+    ]
+    cells = [[f, u, t if t else b, p] for f, u, t, b, p in rows]
+    cols = ["Field", "Status", "MM today / latent benefit", "Populated by"]
+
+    fig = plt.figure(figsize=(12.6, 4.6))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.87, bottom=0.04)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="left")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.5)
+    tbl.scale(1, 2.35)
+    widths = [0.135, 0.06, 0.46, 0.275]
+    used_flags = [r[1] for r in rows]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", ha="left")
+            cell.set_facecolor(NAVY)
+        else:
+            flag = used_flags[r - 1]
+            cell.set_facecolor("white" if flag == "used" else "#fdf6ee")
+            if c == 0:
+                cell.set_text_props(fontweight="bold")
+            if c == 1:
+                cell.set_text_props(color=GREEN if flag == "used" else AMBER, fontweight="bold")
+            if c == 2 and flag not in ("used", "internal"):
+                cell.set_text_props(color="#7a5a1e")
+    ax.set_title("svs Columns: What MM Consumes Today vs What the Rest Could Unlock",
+                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q1e_column_value.png")
+
+
+STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

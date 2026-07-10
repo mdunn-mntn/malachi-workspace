@@ -119,6 +119,15 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   33A API's top billed domains are cookie-sync endpoints (9.2% + 8.2%); www.yahoo.com billed for 33Across
   (1.9%) despite the DS13 domain block — DS19-path question OPEN.
 
+### Step 1e — Column consumption vs latent value — **BUILT 2026-07-10** (synthesis, no query)
+- **Claim:** "MM consumes ip + domain + time + uid today; path/query, user_agent, and query_parameters are
+  latent value."
+- **Query:** none — synthesis of q1b/q1c stats + airflow-ti code audit (svs feature model, domain
+  classifier, AP-3779). **Visual:** `--step 1e` → `q1e_column_value.png` (field × status × today/latent ×
+  who supplies).
+- **Key latents:** url path/query → BUK/DS38 keywords; user_agent → pre-credit bot filtering (we PAY for
+  ~6% bot rows on 33Across today) + device features; query_parameters → vendor ask.
+
 ### Step 2 — Window reach — **BUILT 2026-07-10** (`runbook/queries/q2_window_reach.sql`)
 - **Claim:** "Over the actual targeting window, vendor V reaches N IPs / M domains / P pairs."
 - **Query** `q2_window_reach.sql`: per ds, window-cumulative distinct IP / domain / (ip|domain), IPv4-only.

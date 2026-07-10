@@ -1014,9 +1014,17 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   drops: **33Across −$19K, 33A API −$9.7K** (first fully-displaced month after 30d signal aging). The
   Magnite-resell overlap is real and already partially defunded. AUDI-647 method: match svs rows to
   augmentor by ip + canonical page/referrer (strip query string).
-- **ENABLED_DSIDS gotcha:** the consolidated ingestion DAG (`fpa_vendor_log_batch_ingestion_consolidated.py`)
-  runs [23,25,26,28,30,36] as of the Jun 9 clone, yet DS33/39/40 appear in svs — a second ingestion path
-  exists for Sovrn/Klickly/33A API (UNVERIFIED which).
+- **TWO svs ingestion families (RESOLVED 2026-07-10):** (a) batch vendor drops via
+  `fpa_vendor_log_batch_ingestion_consolidated.py`, ENABLED_DSIDS=[23,25,26,28,30,36]; (b) **Kafka pixel
+  streams** for DS24 Justuno / DS33 Sovrn / DS39 Klickly / DS40 33A API via
+  `gcp_pixel_page_view_signal_<vendor>_dsid<NN>_backfill_workflow.py` — Kafka → BQ `fpa_dsid{NN}_kafka_log`
+  → GCS `fpa_vendor_log/pixel_page_view_signal_ingestion/`. The kafka-path vendors have BQ landing tables.
+- **svs columns MM consumes TODAY (code audit 2026-07-10):** `ip` (household key, features, scoring, credit),
+  `url` reduced to hostname/domain (DS13 wcv verticals; DS19 product categories), `time` (first-reporter
+  ordering, day grain), `uid` (dedup + targeted_signal lineage), `dt/hh/data_source_id` (plumbing + payout).
+  **NOT consumed: url path+query (stripped), user_agent, query_parameters.** Latent value: path/query →
+  BUK/DS38 keyword extraction (Klickly 100% path share); user_agent → bot filtering BEFORE credit (33Across
+  pays for ~6% bot rows today) + device features; query_parameters → vendor ask (search terms/SKUs).
 - **"Monthly Summary by DDP.xlsx"** (from Maya via Ryan — **SENSITIVE: local only, gitignored, never post
   to Jira**): usage_reporting_data rollup Dec 2025–Mar 2026, metered vendors only (LiveRamp reported as
   DS(11,35) combined). Confirms the meter IS the payment basis; flat fees (25/26/39) still not in any table.

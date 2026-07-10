@@ -118,6 +118,12 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   despite the DS13 block (→ DS19 path?). So "junk never billed" is FALSE in practice — parse-garbage that
   survives urlsplit gets scored and paid. Flat-fee vendors (5x5/Predactiv/Klickly) pay regardless of use.
   q2 window reach also canonicalized (`q2_window_reach.sql`, reused Jul 9 pull).
+- **q1e column consumption vs latent value — BUILT 2026-07-10.** `runbook/charts/q1e_column_value.png`
+  (synthesis; no query). MM today = ip + url-domain + time + uid (+plumbing). Unused: **url path+query**
+  (BUK/DS38 keyword extraction — Klickly 100%/Justuno 91% path share), **user_agent** (bot filtering
+  BEFORE billing credit — 33Across's ~6% bot rows get PAID today; device/OS features), **query_parameters**
+  (dead — vendor ask; Klickly checkout params). Ingestion mystery RESOLVED: DS24/33/39/40 arrive via Kafka
+  pixel streams (`fpa_dsid{NN}_kafka_log` BQ landing tables), rest via batch drops.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
