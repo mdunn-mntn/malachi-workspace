@@ -986,7 +986,11 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     block → reaches billing via another path (DS19?). "Fail to parse → not paid" only holds for
     NET.REG_DOMAIN-style parsing; urlsplit-surviving garbage is scored and PAID. An "Invalid URL Alert"
     email also exists for parse failures (not found in airflow-ti clone — lives elsewhere).
-  - **Meter grain gotcha:** `usage_reporting_data.dt` = month-end snapshot ONLY (last day of
+  - **Meter has NO consumer split for MM vendors:** `usage_reporting_data.data_source_category_id` is NULL
+  on ALL MM site-visit vendor rows (verified 33Across June 2026: 4,261 rows, all NULL) — the DS13-vs-DS19
+  decomposition of billed usage is NOT available in BQ; it requires `targeted_signal`/`mntn_matched_reporting`
+  (Athena). dsc_id in the meter presumably serves interests vendors (segment-billed) only.
+- **Meter grain gotcha:** `usage_reporting_data.dt` = month-end snapshot ONLY (last day of
     reporting_month) — mid-month dt filters return zero rows. `domains.list` (billed domains RECORD) is
     populated only for MM site-visit CPM vendors (24/28/33/36/40); imps-with-domain-attribution: Justuno
     80%, Cybba 86%, but only ~48–55% for 28/33/40 (rest = unattributed aggregate credit rows).

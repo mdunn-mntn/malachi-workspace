@@ -133,6 +133,9 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   33Across's declining bill is partly OUR doing, not their volume.
 - **AUDI-647 method** (for re-use): match svs to augmentor_log by ip + canonical page/referrer, query-string
   stripped; grain ip × composite_key × day.
+- **Meter cannot split DS13 vs DS19 (verified):** data_source_category_id NULL on all 33Across June rows —
+  the consumer-level decomposition of billed usage is Athena-only. Draft ask to Victor ready (see chat
+  2026-07-10): one-time targeted_signal aggregate by source_data_source_id × data_source_id for June.
 - **Open questions:** (1) targeted_signal needs Athena access (or Data Eng MCP / Victor) — would give exact
   per-vendor used-row counts + definitively answer the yahoo/DS19 question via source_data_source_id;
   (2) flat fees (5x5/Predactiv/Klickly) still unknown — Maya Triman has the payout schedule;
