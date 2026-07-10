@@ -426,13 +426,13 @@ def q1d(rdir):
             cells.append([SHORT[d], fmtn(raw[d]), fmtn(dom), fmtn(bi),
                           f"{100 * bi / raw[d]:.2f}%", f"{bd:,}",
                           f"{100 * bd / dom:.2f}%" if dom else "-",
-                          money(float(b["billed_usd"]))])
+                          money(float(b["billed_usd"])), money(float(b["billed_usd"]) * 12) + "/yr"])
         else:
-            cells.append([SHORT[d], fmtn(raw[d]), fmtn(dom), "-", "-", "-", "-", "flat fee"])
+            cells.append([SHORT[d], fmtn(raw[d]), fmtn(dom), "-", "-", "-", "-", "flat fee", "renewal sched."])
     cols = ["Source", "Rows delivered (30d)", "Domains (30d)", "Imps billed (Jun)",
-            "% rows billed", "Domains billed", "% domains billed", "Jun bill"]
+            "% rows billed", "Domains billed", "% domains billed", "Jun bill", "Run rate"]
 
-    fig = plt.figure(figsize=(11.0, 3.1))
+    fig = plt.figure(figsize=(12.0, 3.1))
     fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
     ax = fig.add_subplot(111)
     ax.axis("off")
@@ -440,7 +440,7 @@ def q1d(rdir):
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9)
     tbl.scale(1, 1.5)
-    widths = [0.11, 0.135, 0.105, 0.125, 0.10, 0.105, 0.115, 0.09]
+    widths = [0.10, 0.125, 0.095, 0.115, 0.095, 0.10, 0.11, 0.085, 0.115]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
@@ -455,6 +455,8 @@ def q1d(rdir):
                 cell.set_text_props(fontweight="bold", color=NAVY)
             if cells[r - 1][7] == "flat fee" and c >= 3:
                 cell.set_text_props(color="#888")
+            if c == 8:
+                cell.set_text_props(fontweight="bold")
     ax.set_title("What We Actually Pay For: Delivered Feed vs Billed Usage, June 2026",
                  fontsize=13.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q1d_used_vs_delivered.png")
