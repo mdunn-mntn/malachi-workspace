@@ -47,17 +47,45 @@ ekster…) → Klickly = a Shopify-network product-page-view feed, mostly long-t
 - **Conclusion: no hard dependency rescues a drop.** Off-switch is vendor-side (streaming), not a DAG change —
   DS39 isn't in ENABLED_DSIDS (that's the batch DAG); ingestion stops when their pixel stops sending.
 
-### 2. Scale + freshness (30d)
-- pending
+### 2. Scale + freshness (30d: 2026-06-02 → 07-01) — DONE
+- Delivers **every day, no gaps**: ~4.1M rows/day, ~1.0M IPs/day, **~160 domains/day**. 100% of URLs carry paths.
+- 30d window reach: **12.4M IPs · 257 domains · 13.3M (ip,domain) pairs.** IPv6 share 0.02% (exclusion immaterial).
+- Recency: 98.0% of its pairs are sole-in-window, 99.6% sole-or-freshest — maximally "unique," but on a
+  domain base of 257 (the uniqueness is an artifact of nobody else covering long-tail myshopify shops).
 
-### 3. Uniqueness (30d)
-- pending
+### 3. Uniqueness (30d) — DONE
+- Domains: 257 total → 176 sole → **126 sole+classified**. That is ~0.03% of MM's classified-domain universe
+  (5x5 for scale: 86,084 sole classified). 98.7% of pairs are net-new vs internal — again, tiny base.
+- **Method validated**: DS25 cross-checks pass (69.3% pairs sole vs TI-1027's 69.8%; sole-or-freshest 95.7%
+  vs 95.4%) — same pipeline, trustworthy numbers.
 
-### 4. Quality (delivered score tiers, junk check, IPv6)
-- pending
+### 4. Quality (delivered score tiers, junk check, IPv6) — DONE
+- Klickly-touched IPs look great (29.6% delivered, 37.1% HI) — **pure co-occurrence**: those IPs are
+  multi-source; every big vendor "touches" the same delivered households.
+- **Klickly-SOLE IPs (its actual unique contribution): 338K IPs → 666 delivered (0.2%), 91.4% unscored,
+  3 IPs at HI.** Its unique reach is adversely selected — effectively unbiddable/unscorable.
+- Check A (svs-necessity): 99.95% of scored delivered IPs have svs signal (r=0.05%) — the causal chain
+  "no site-visit signal → no score" holds; T1 needs no discount.
 
-### 5. Value anchor (media/data-cost lens, tiered)
-- pending
+### 5. Value anchor (media/data-cost lens, tiered; CIL week 07-02 → 07-08) — DONE
+| Tier | Imps/week | Media $/week | Meaning |
+|---|---:|---:|---|
+| T3 all touched (ceiling, co-occurrence) | 224.2M | $1.63M | meaningless for credit — 99.98% shared IPs |
+| T2 all imps to sole IPs | **3,674** | **$42.40** | upper bound of real dependency |
+| T1 scored (≥6666) non-RTC to sole IPs | **26** | $0.25 | "could not have served without Klickly" |
+- **Performance (the headline, per ray):** 1 visit across all 3,674 sole impressions all week (VR 0.03%);
+  the 10000-band sole cell has THREE impressions. There is no measurable performance because there is no
+  volume — which is itself the verdict.
+- BUK training upside: 0.05 source weight × 5% sample of <1% of the data — negligible.
 
-### 6. Verdict
-- pending
+### 6. Verdict — **PASS (do not renew) unless effectively free**
+- **Implied max defensible fee: ~$0.1-1.5K/yr** (generous): 126 sole classified domains × TI-1027's $3-13/yr
+  per net-new classified domain ≈ $0.4-1.6K/yr; sole-impression lens ≈ $8/mo at the $0.50 peer CPM;
+  T1 lens < $1/mo. Any typical DDP flat fee (tens of $K/yr) fails break-even by 10-100×.
+- Both value lenses (domain coverage AND unique delivered impressions) independently land at ~zero —
+  Klickly has neither 5x5's domain breadth (86K sole classified) nor any unique deliverable reach.
+- No dependency rescue (§1): MM path + negligible BUK enrichment only; off-switch is vendor-side.
+- **If keeping relationships matters:** counter at a $0.50 CPM on impressions to Klickly-sole IPs
+  (≈ $100/yr at current volumes) — i.e., renew only if ~free.
+- Caveats stated: fee unknown (registry notes NULL — compare band against Paulo's renewal schedule);
+  one-week valuation window; sole-set judged on 37d union (temporal ordering held: signal precedes serve).

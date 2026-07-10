@@ -43,7 +43,7 @@ folder holds its interpretation, vendor-specific queries, and verdict.
 
 | Vendor | DS | Billing | Prior (TI-1027) | Status | Verdict |
 |---|---|---|---|---|---|
-| Klickly | 39 | flat_fee | 132 unique classified domains (7d), score 36, REVIEW | **IN PROGRESS — due 07-13** | — |
+| Klickly | 39 | flat_fee | 132 unique classified domains (7d), score 36, REVIEW | **DONE 2026-07-09** | **PASS (drop) unless ~free — max defensible fee ~$0.1-1.5K/yr; 126 sole classified domains; 26 gated sole imps/week; 1 visit/week on sole IPs** |
 | Justuno | 24 | $0.50 CPM | 4,823 unique classified, 84% unique, KEEP-efficient | pending | — |
 | Predactiv | 26 | flat_fee | #1 unique (164,627), KEEP; rich metadata dropped; broken registry SCD | pending | — |
 | 33Across | 28 | $0.50 CPM | 9,277 unique (30%), REVIEW; ~38.6% redundant vs augmentor (AUDI-647) | pending | — |
@@ -73,6 +73,27 @@ folder holds its interpretation, vendor-specific queries, and verdict.
 ## 6. Investigation & Findings
 
 *(per-vendor findings live in each vendor subfolder's summary.md; cross-vendor results summarized here)*
+
+### Cross-vendor 30d outputs (2026-07-09) — reusable by all remaining evals
+All in `outputs/` (all 10 DS): `audi_1089_scale_by_day_30d.csv`, `window_reach_30d`, `recency_pairs_30d`,
+`uniqueness_domains_30d`, `score_tiers_sole_vs_touched`, `value_tiers`, `check_scored_no_svs`,
+`vr_by_membership` (Klickly-focal), `vr_sole_by_ds`. Windows: svs 06-02→07-01 (30d), CIL week 07-02→07-08,
+soleness on the 37d union. **Method validated: DS25 recency 69.3% sole vs TI-1027's 69.8% ✓.**
+
+Cross-vendor early reads (for the remaining six):
+- **Sole-IP delivered value is small for EVERY vendor** (even 5x5: 19.6K sole delivered IPs, 94.8% unscored)
+  — re-confirms TI-1027: vendor value = domain→vertical coverage, not IP reach.
+- Sole classified domains (30d): Predactiv 226.8K > 5x5 86.1K > augmentor 47.5K > Justuno 4.6K > 33Across 6.8K
+  > 33Across API 2.8K > Cybba 362 > Sovrn 181 > **Klickly 126**.
+- Sovrn is 80.1% tied (redundant-but-fresh) — its "insurance" framing case; 33Across carries the largest pair
+  base (2.3B) at 30.8% sole — bigger than the 7d picture suggested (worth care in its eval).
+- **Justuno is 19.6% IPv6** — the IPv4-only method materially undercounts it; flag for its eval.
+- Check A: svs signal is necessary for scoring (r=0.05%) — strengthens every vendor's T1 logic.
+
+### Scan-recovery note (methodology)
+The 9 scan jobs (15-158 min) outlived their client shells; results were recovered from BQ's 24h anonymous
+destination tables via `bq show -j <id>` → `SELECT * FROM` the anon table (5 jobs were in location
+us-central1 — `bq show -j` needs `--location` for those). No re-scan needed.
 
 ## 7. Data Documentation Updates
 
