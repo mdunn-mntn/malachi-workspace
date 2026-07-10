@@ -51,6 +51,14 @@ folder holds its interpretation, vendor-specific queries, and verdict.
 | Cybba | 36 | $0.50 CPM | 309 unique (5.7%), REVIEW | **DONE 2026-07-10** | **DROP** — bill $1.8K/mo ≈ $21.5K/yr vs $1.1-4.7K/yr band = ~5-20× over; needs Sean DAG change (ENABLED_DSIDS) |
 | 33Across API | 40 | $0.50 CPM | 2,802 unique (3.2%), DROP-CANDIDATE; ~13.5% match (AUDI-647) | **DONE 2026-07-10** | **DROP/renegotiate** — bill $14.7K/mo ≈ $176K/yr vs $10-40K/yr band = ~4-18× over; 2% domain-unique; ~81% of pixel-topic infra load |
 
+## 4b. Repeatable quality-score pipeline (2026-07-10 →)
+
+The methodology is being canonicalized into **`documentation/docs/ddp_quality_score_runbook.md`** — 10 steps,
+one parameterized query + one visual each, composite score (V 40% / R 15% / Q 15% / D 10% / P 20% × liveness
+gate) → defensible fee band vs actual metered bill → verdict. Canonical SQL will live in `queries/canonical/`
+(q0–q7), built one step per session. Build order: q0 roster+cost → q1-q2 scale/reach → q3-q4 pair recency +
+domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
+
 ## 5. Constraints & context (from the Slack thread, 2026-07-09)
 
 - **Take rates sensitive/private (ray):** shareable artifacts use base cost only — media_spend
