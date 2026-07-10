@@ -1097,8 +1097,142 @@ def q9b(rdir):
     save(fig, "q9b_quality_ranking.png")
 
 
+
+# ---- Step 9c: dependency-ceiling valuation (stock -> flow -> performance -> dollars) ----
+# Synthesis over q3/q6/q7/q4 + q1d; methodology: runbook/dependency_valuation.md. No query.
+def money2(v):
+    return f"${v:,.0f}" if abs(v) < 1000 else money(v)
+
+
+def _poisson_ci(k):
+    """Garwood 95% CI for a Poisson count via Wilson-Hilferty chi2 approximation."""
+    z = 1.959964
+
+    def chi2_q(pz, df):
+        if df == 0:
+            return 0.0
+        return df * (1 - 2.0 / (9 * df) + pz * (2.0 / (9 * df)) ** 0.5) ** 3
+
+    lo = 0.0 if k == 0 else 0.5 * chi2_q(-z, 2 * k)
+    hi = 0.5 * chi2_q(z, 2 * k + 2)
+    return lo, hi
+
+
+def q9c(rdir):
+    def by_ds(f, key):
+        return {int(r[key]): r for r in csv.DictReader(open(os.path.join(rdir, f)))}
+    vt = by_ds("q6_value_tiers.csv", "data_source_id")
+    q3u = by_ds("q3_usable_uniqueness.csv", "ds")
+    vr = by_ds("q7_sole_vr.csv", "data_source_id")
+    dom = by_ds("q4_domain_value.csv", "data_source_id")
+    billed = by_ds("q1d_billed_usage.csv", "ds")
+
+    EXT = [24, 25, 26, 28, 33, 36, 39, 40]
+    order = sorted(EXT, key=lambda d: -float(vt[d]["media_sole"]))
+
+    cells = []
+    for d in order:
+        imps_wk = float(vt[d]["imps_sole"])
+        media_wk = float(vt[d]["media_sole"])
+        data_wk = float(vt[d]["data_sole"])
+        t1_media_wk = float(vt[d]["media_sole_scored"])
+        sole_ips = int(q3u[d]["sole_ips"])
+        visits_wk = int(float(vr[d]["sole_visits"]))
+        sc = float(dom[d]["sole_classified"])
+
+        bids_yr = imps_wk * 52
+        base = media_wk * 52
+        c_yr = data_wk * 52
+        vlo, vhi = _poisson_ci(visits_wk)
+        wtp30, wtp50 = 0.30 * base - c_yr, 0.50 * base - c_yr
+        b = billed.get(d)
+        bill = money(float(b["billed_usd"]) * 12) + "/yr" if b else "flat fee"
+
+        cells.append([SHORT[d], fmtn(sole_ips),
+                      f"{fmtn(bids_yr)}\n({fmtn(bids_yr * 0.5)}-{fmtn(bids_yr * 1.5)})",
+                      f"{bids_yr / sole_ips:.2f}",
+                      f"{fmtn(visits_wk * 52)}\n({fmtn(vlo * 52)}-{fmtn(vhi * 52)})",
+                      f"{money2(base)}\n({money2(base * 0.4)}-{money2(base * 1.8)})",
+                      money2(t1_media_wk * 52),
+                      f"{money2(max(wtp30, 0))}-{money2(max(wtp50, 0))}",
+                      f"{money2(sc * 3)}-{money2(sc * 13)}", bill])
+    cols = ["Source", "Sole usable\nIPs (stock)", "Won bids/yr\n(0.5-1.5x)", "Yield\n/IP/yr",
+            "Visits/yr\n(95% CI)", "T2 revenue $/yr\n(0.4-1.8x)", "T1 floor\n$/yr",
+            "WTP @30-50%\nmargin (net)", "Domain axis\n$/yr (band)", "Bill\nrun rate"]
+
+    fig = plt.figure(figsize=(12.6, 4.4))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.86, bottom=0.04)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.4)
+    tbl.scale(1, 2.3)
+    widths = [0.085, 0.09, 0.115, 0.06, 0.10, 0.135, 0.075, 0.115, 0.115, 0.085]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=7.8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 0:
+                cell.set_text_props(ha="left", fontweight="bold")
+            if c == 5:
+                cell.set_facecolor(HILITE)
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if c == 7:
+                cell.set_text_props(fontweight="bold", color=GREEN)
+            if c == 8:
+                cell.set_text_props(color="#666")
+    ax.set_title("Dependency Ceiling by Vendor: Sole Stock, Annual Won-Bid Flow, Performance, and the Most It Can Be Worth",
+                 fontsize=11.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q9c_dependency_ceiling.png")
+
+    # Klickly margin ladder
+    d = 39
+    base = float(vt[d]["media_sole"]) * 52
+    c_yr = float(vt[d]["data_sole"]) * 52
+    rows_l = []
+    for m in (0.10, 0.30, 0.50, 1.00):
+        net = m * base - c_yr
+        rows_l.append([f"{m:.0%}" + ("  (hard ceiling)" if m == 1.0 else ""),
+                       money2(m * base), (money2(net) if net >= 0 else f"-{money2(-net)}  NEGATIVE")])
+    rows_l.append([f"break-even margin = {c_yr / base:.1%}", "covers other data costs", money2(0)])
+    cols_l = ["Gross margin scenario", f"Gross value (base {money2(base)}/yr)",
+              f"Net WTP (minus {money2(c_yr)}/yr data cost)"]
+    fig2 = plt.figure(figsize=(8.2, 2.6))
+    fig2.subplots_adjust(left=0.03, right=0.97, top=0.78, bottom=0.06)
+    ax2 = fig2.add_subplot(111)
+    ax2.axis("off")
+    tbl2 = ax2.table(cellText=rows_l, colLabels=cols_l, loc="center", cellLoc="right")
+    tbl2.auto_set_font_size(False)
+    tbl2.set_fontsize(9)
+    tbl2.scale(1, 1.6)
+    widths2 = [0.30, 0.28, 0.32]
+    for (r, c), cell in tbl2.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths2[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8.2)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if r == 1 and c == 2:
+                cell.set_text_props(color=RED, fontweight="bold")
+            if r == len(rows_l):
+                cell.set_facecolor(HILITE)
+                cell.set_text_props(fontweight="bold", color=NAVY, ha="left" if c == 0 else "right")
+    ax2.set_title("Klickly: Pay No More Than About \\$4.0K/yr (Absolute Ceiling); \\$420-860/yr at Realistic Margins",
+                  fontsize=11, fontweight="bold", loc="left", pad=12)
+    save(fig2, "q9c_klickly_ladder.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "9": q9, "9b": q9b}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "9": q9, "9b": q9b, "9c": q9c}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

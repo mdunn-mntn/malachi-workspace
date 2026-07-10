@@ -165,6 +165,13 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   raw — its uniqueness was garbage; 80% of pairs same-day tied with other PAID vendors (99.7% net-new vs
   free = it duplicates vendors, not our internal logs). Density (pairs/IP): 33Across 15.6 ... Klickly 1.07.
   Scorecard "Sole usable IPs" column refreshed from q3.
+- **q9c dependency-ceiling valuation — BUILT 2026-07-10** (`runbook/dependency_valuation.md` + 2 charts).
+  User-designed bottom-up model: sole stock → won-bid flow ×52 → performance → $ at observed eCPM ×
+  margin ladder, net of data costs; T1/T2 attribution range; envelope not CI (N=1 week). **Klickly:
+  ceiling ~$4.0K/yr, realistic 30-50% margin WTP $418-859/yr, T1 floor $13/yr, break-even margin 11%**
+  — confirms drop-unless-~free on a second independent lens. 33Across dependency base $270K/yr
+  (largest); 5x5/Predactiv invert between lenses (small dependency, huge domain value) — lenses stay
+  side-by-side, never summed (double-count rule).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

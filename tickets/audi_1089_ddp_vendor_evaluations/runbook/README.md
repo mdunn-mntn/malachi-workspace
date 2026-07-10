@@ -52,6 +52,14 @@ Override: high quality score + over-band bill → renegotiate, don't drop (good 
 Under first-reporter-wins, credit competition (esp. our free augmentor, added to svs 2026-05-12)
 erodes redundant vendors' bills on its own — June already fell $19K (33Across) / $9.7K (33A API).
 
+### The dependency-ceiling lens (side-by-side second model — see `dependency_valuation.md`)
+
+Bottom-up hard bound: stock (sole usable IPs) → flow (weekly sole won bids × 52) → performance (visits,
+Poisson CI) → dollars (observed eCPM ~$11.5 × margin ladder, net of other data costs). T1 floor (score-gated,
+provably dependent) to T2 ceiling (all sole-IP wins). Charts: `q9c_dependency_ceiling.png` +
+`q9c_klickly_ladder.png`. Klickly: ceiling ~$4.0K/yr, realistic-margin WTP $420-860/yr, T1 floor $13/yr,
+break-even margin 11%. Never sum with the fee band's imp term (double-count rule).
+
 ### The WTP arithmetic (from `fee_bands()` in the eval chart script)
 
 `band_low = sole_classified × $3/yr` · `band_high = sole_classified × $13/yr + weekly_sole_imps × 52 × $0.0005`
@@ -138,6 +146,7 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 5. Athena `targeted_signal` access → exact per-vendor used-rows + row-level DS13/DS19 split.
 
 ## 6. Chart index (charts/)
+- `q9c_dependency_ceiling.png` / `q9c_klickly_ladder.png` — dependency-ceiling valuation (stock/flow/performance/$)
 - `q0_roster_cost.png` — roster + monthly metered bills (wide table)
 - `q1_scale_by_day.png` — liveness: days delivered, partial days, IPv6
 - `q1b_schema_fields.png` / `q1b_url_richness.png` — field population + URL path share

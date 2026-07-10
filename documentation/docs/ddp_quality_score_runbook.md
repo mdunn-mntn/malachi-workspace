@@ -233,6 +233,12 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   with the **actual-bill marker** placed on it. Flat-fee vendors: band + "fee pending" marker.
 - **Score input:** the verdict multiplier (KEEP / NEGOTIATE+target / DROP).
 
+### Step 8b — Dependency-ceiling valuation — **BUILT 2026-07-10** (no query; `runbook/dependency_valuation.md`)
+- Stock → flow → performance → dollars: sole usable IPs → weekly sole won bids × 52 (scenario envelope,
+  NOT a CI) → visits w/ Poisson CI → observed eCPM × margin ladder net of other data costs. T1/T2 range;
+  three-zone decision rule; metered vendors get the per-imp test instead. Complements (never replaces)
+  the fee band; double-count rule applies. Visuals: `q9c_dependency_ceiling.png` + `q9c_klickly_ladder.png`.
+
 ### Step 9 — Composite scorecard — **v1 BUILT 2026-07-10** (`q9_vendor_scorecard.png`)
 - **Claim:** one row per vendor: score components → quality score → bill → verdict.
 - **Also built:** `q9b_quality_ranking.png` — the composite V/R/Q/D/P score computed in the canonical

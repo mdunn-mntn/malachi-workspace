@@ -99,3 +99,17 @@ ekster…) → Klickly = a Shopify-network product-page-view feed, mostly long-t
   (≈ $100/yr at current volumes) — i.e., renew only if ~free.
 - Caveats stated: fee unknown (registry notes NULL — compare band against Paulo's renewal schedule);
   one-week valuation window; sole-set judged on 37d union (temporal ordering held: signal precedes serve).
+
+
+## Dependency-ceiling valuation (2026-07-10, second lens — runbook/dependency_valuation.md)
+
+Stock -> flow -> performance -> dollars, valuation week Jul 2-8 x52:
+- Stock: 324,019 sole usable IPs (2.6% of its usable footprint). Flow: 3,674 sole won bids/wk ->
+  ~191K/yr (envelope 95K-287K); ~5.5 wins per delivered IP; yield 0.59 wins/sole-IP/yr.
+- Performance on those IPs: 1 visit/wk -> ~52/yr (Poisson 95% CI ~1-290); VR 0.0272% vs 0.0223%
+  no-svs baseline — no detectable lift.
+- Dollars: eCPM $11.54 -> T2 base $2,205/yr (envelope $882-$3,969); T1 provable floor $13/yr;
+  break-even margin 11%; **WTP at realistic 30-50% margins: $418-859/yr; absolute ceiling ~$4.0K/yr.**
+- Verdict unchanged, now double-confirmed: **drop unless ~free** (fee-band lens said $0.1-1.5K/yr;
+  this lens says a flat fee above ~$4K/yr guarantees a net loss even at 100% margin and maximal
+  attribution). Charts: ../runbook/charts/q9c_dependency_ceiling.png, q9c_klickly_ladder.png.
