@@ -160,6 +160,11 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   selection), fee-band/3x verdict rule, per-vendor negotiation targets + leverage + improvement asks,
   score formula, chart index, open items (q7b per-bucket performance matrix queued; HI-pool union;
   flat fees; Athena). q3/q4 CSVs+SQL canonicalized (raw pairs; usable refresh running).
+- **q3 usable uniqueness — LANDED 2026-07-10 (~1h scan, anchor held: 5x5 69.3% sole).** R unchanged vs
+  raw for all sources → composite/curved scores stand. NEW: **Sovrn sole IPs = 15,660 (0.08%)** vs 2.7M
+  raw — its uniqueness was garbage; 80% of pairs same-day tied with other PAID vendors (99.7% net-new vs
+  free = it duplicates vendors, not our internal logs). Density (pairs/IP): 33Across 15.6 ... Klickly 1.07.
+  Scorecard "Sole usable IPs" column refreshed from q3.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

@@ -170,11 +170,20 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   33Across 35.7% of rows but only 19.8% of classified domains; **Predactiv is the #1 classified-domain
   supplier at 34.3%** on 2.4% of rows; Klickly 0.04% of classified domains.
 
-### Step 3 — Uniqueness & recency (pairs)
+### Step 3 — Uniqueness & recency (pairs) — **BUILT 2026-07-10, USABLE-RESTRICTED** (`runbook/queries/q3_usable_uniqueness.sql`)
 - **Claim:** "X% of V's pairs are irreplaceable in-window; Y% are same-day-redundant (insurance)."
 - **Query** `q3_pair_recency.sql`: per (ip,domain) per ds MAX(dt) → per ds: sole / freshest / tied / stale +
   netnew-vs-free (not in DS23/30). The 2.6 h scan — launch first.
-- **Canonicalize from:** `audi_1089_q2_pair_master_30d.sql` query A. Cross-check anchor: DS25 ≈ 69–70% sole.
+- **Canonical:** `q3_usable_uniqueness.sql` — 30d pair scan RESTRICTED to usable domains (wcv∪pc,
+  OR-semantics), internal free sources included as competitors; adds sole-IP counts + pairs-per-IP
+  density. ~8.9B pair rows, ran ~1h. Anchor held: DS25 69.3% sole (= raw run).
+  **Visual:** `--step 3` → `q3_usable_uniqueness.png`.
+- **First-run findings:** R (sole+freshest) ≈ unchanged vs raw for every source → composite scores stand.
+  NEW: **Sovrn's sole IPs collapse to 15,660 (0.08% of its usable IPs)** vs 2.7M raw — its "uniqueness"
+  was the garbage; 80% of its pairs are same-day TIED with other paid vendors. Density (pairs/IP):
+  33Across 15.6 > 33A API 9.9 > Predactiv 5.9 > 5x5 4.7 > Sovrn 4.2 > Justuno 1.8 > Cybba 1.4 >
+  Klickly 1.07. Predactiv: best freshest share (8.3%) but worst stale (25.9%). Sole IPs: 33Across 30.8M
+  (20.6%) > 5x5 29.3M (18.7%) > 33A API 9.1M > Justuno 5.7M (12%) > Predactiv 5.3M.
 - **Output:** `q3_pair_recency.csv`. **Visual:** 100% stacked recency mix (exists: `chart_recency_mix`).
 - **Score input:** **R** = pct_sole + pct_freshest. Tied share doubles as the coverage-if-down (insurance) metric.
 

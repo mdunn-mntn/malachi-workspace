@@ -805,6 +805,66 @@ def q2d(rdir):
     save(fig, "q2d_usable_share.png")
 
 
+# ---- Step 3: uniqueness + freshness + density of the usable pool ----
+def q3(rdir):
+    data = {}
+    with open(os.path.join(rdir, "q3_usable_uniqueness.csv")) as f:
+        for r in csv.DictReader(f):
+            data[int(r["ds"])] = r
+    ext = sorted((d for d in data if d not in (23, 30)), key=lambda d: -int(data[d]["sole_pairs"]))
+    order = ext + sorted((d for d in (23, 30) if d in data), key=lambda d: -int(data[d]["sole_pairs"]))
+
+    cells, mix = [], []
+    for d in order:
+        r = data[d]
+        ips, sole_ips = int(r["usable_ips"]), int(r["sole_ips"])
+        pairs = int(r["usable_pairs"])
+        pcts = {k: 100 * int(r[k]) / pairs for k in
+                ("sole_pairs", "freshest_pairs", "tied_pairs", "stale_pairs", "netnew_vs_free_pairs")}
+        cells.append([SHORT[d], fmtn(ips), f"{fmtn(sole_ips)}  ({100 * sole_ips / ips:.1f}%)",
+                      fmtn(pairs), r["pairs_per_ip"],
+                      f"{pcts['sole_pairs']:.1f}%", f"{pcts['freshest_pairs']:.1f}%",
+                      f"{pcts['tied_pairs']:.1f}%", f"{pcts['stale_pairs']:.1f}%",
+                      f"{pcts['netnew_vs_free_pairs']:.1f}%"])
+        mix.append(pcts)
+    cols = ["Source", "Usable IPs", "Sole IPs (pct)", "Pairs", "Pairs\nper IP",
+            "Sole", "Freshest", "Tied", "Stale", "Net-new\nvs free"]
+
+    fig = plt.figure(figsize=(11.2, 3.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.8)
+    tbl.scale(1, 1.5)
+    widths = [0.10, 0.085, 0.135, 0.075, 0.065, 0.075, 0.078, 0.07, 0.07, 0.08]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8.2)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(ext) else "#f4f5f7")
+            m = mix[r - 1]
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c == 5:
+                cell.set_text_props(fontweight="bold",
+                                    color=GREEN if m["sole_pairs"] >= 60 else
+                                    (NAVY if m["sole_pairs"] >= 30 else RED))
+            if c == 7 and m["tied_pairs"] >= 50:
+                cell.set_text_props(color=AMBER, fontweight="bold")
+            if c == 8 and m["stale_pairs"] >= 20:
+                cell.set_text_props(color=RED, fontweight="bold")
+            if r > len(ext):
+                cell.set_text_props(color="#888")
+    ax.set_title("Uniqueness, Freshness, Density of the USABLE Pool, 30-Day Window (pair = IP x domain)",
+                 fontsize=12.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q3_usable_uniqueness.png")
+
+
 # ---- Step 5: score-tier quality of delivered IPs (sole vs touched) ----
 def q5(rdir):
     data = {}
@@ -882,6 +942,13 @@ def q9(rdir):
     with open(os.path.join(rdir, "q5_score_tiers.csv")) as f:
         for r in csv.DictReader(f):
             st[(int(r["data_source_id"]), r["cohort"])] = r
+    q3u = {}
+    try:
+        with open(os.path.join(rdir, "q3_usable_uniqueness.csv")) as f:
+            for r in csv.DictReader(f):
+                q3u[int(r["ds"])] = r
+    except FileNotFoundError:
+        pass
 
     META = {  # worth $/mo band, verdict, key ask — from eval section 4 + q1b-q2c findings
         28: ("$2.5-8.3K", "NEGOTIATE\ncap or drop", "strip webmail/bot rows;\njustify vs our Magnite feed"),
@@ -903,10 +970,11 @@ def q9(rdir):
         bill = f"{money(float(b['billed_usd']))}\n{money(float(b['billed_usd']) * 12)}/yr" if b \
             else "flat fee\nrenewal sched."
         w, verdict, ask = META[d]
-        cells.append([SHORT[d], f"{u:.0f}%", fmtn(st[(d, 'sole')]['vendor_ips']),
+        sole_src = fmtn(q3u[d]["sole_ips"]) if d in q3u else fmtn(st[(d, 'sole')]['vendor_ips'])
+        cells.append([SHORT[d], f"{u:.0f}%", sole_src,
                       money(float(vt[d]["media_touched"])), money(float(vt[d]["media_sole"])),
                       f"{t['pct_of_delivered_high']}%", bill, w, verdict, ask])
-    cols = ["Source", "Usable", "Sole IPs", "Media $/wk\ntouched", "Media $/wk\nsole",
+    cols = ["Source", "Usable", "Sole usable\nIPs", "Media $/wk\ntouched", "Media $/wk\nsole",
             "HIGH score\n(of delivered)", "Jun bill /\nrun rate", "Worth $/mo", "Verdict", "Key ask"]
 
     fig = plt.figure(figsize=(13.2, 4.6))
@@ -1030,7 +1098,7 @@ def q9b(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "5": q5, "9": q9, "9b": q9b}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "9": q9, "9b": q9b}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

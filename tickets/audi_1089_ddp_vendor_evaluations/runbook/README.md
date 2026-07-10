@@ -108,7 +108,8 @@ so the top source = 100 and the rest read as % of best. Chart color: green ≥80
 - D — T1 gated sole imps, log-normalized (hard dependency)
 - P — sole-IP VR ÷ no-svs baseline (0.0223%), capped 2×, halved; <5K sole imps → neutral 0.5
 
-**THE INDEX (this run, 2026-07-10 — raw-pair R; usable-restricted q3 refresh in flight).**
+**THE INDEX (this run, 2026-07-10 — q3 usable refresh LANDED: R unchanged, scores stand; Sovrn's
+sole IPs collapsed to 15,660 under the usable restriction).**
 Scores are CURVED to best-in-roster = 100 (the best source is the best we'll get; raw in parens):
 
 | # | Source | Curved (raw) | WTP $/yr (pay up to) | Bill run-rate | vs band | Verdict |
@@ -128,7 +129,7 @@ Score ranks data quality; the VERDICT = score × cost position (a 57.7 at 4× ov
 negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 
 ## 5. Open items
-1. q3 usable-restricted uniqueness/freshness scan — running (refreshes R + sole IP counts).
+1. ~~q3 usable-restricted scan~~ — LANDED: R unchanged, Sovrn sole-IP collapse, density measured.
 2. **q7b (queued): performance matrix per score-bucket × source** — imps, VR, media averages for every
    vendor × tier (generalizes q7's Klickly-only membership split); the user-requested
    "performance by bucket and source with an aggregate".
