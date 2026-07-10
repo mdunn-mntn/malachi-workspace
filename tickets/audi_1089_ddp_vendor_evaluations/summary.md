@@ -138,7 +138,9 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   collapse to 0.2–7% billed is first-reporter credit competition + demand, not junk filters. **DS19 path
   is permissive (no blocklist, no parse gate): 33Across's yahoo = DS19-eligible (RESOLVED how yahoo bills);
   Sovrn's malformed hosts = 90.9% DS19-categorized (product_categorization contains the garbage keys)** —
-  a pc data-quality issue worth raising alongside the Sovrn bug. DS13-classified alone: Klickly 99.8 →
+  a pc data-quality issue worth raising alongside the Sovrn bug. **Credit semantics = OR across consumers:**
+  the most permissive path (DS19 today) defines each vendor's billable pool; DS13 hygiene never protects
+  the wallet. Fix belongs at pc/DS19 intake (parse gate + blocklist parity). DS13-classified alone: Klickly 99.8 →
   Justuno 94.7 → 5x5 90.7 → 33Across 52.2 → Predactiv 48.2 → 33A API 36.3 → Sovrn 8.9.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)

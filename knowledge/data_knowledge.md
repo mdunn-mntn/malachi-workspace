@@ -1041,7 +1041,9 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   (garbage-inflated), Predactiv 90.4, 33Across 77.6, 33A API 63.9. DS13-classified alone: Klickly 99.8,
   Justuno 94.7, 5x5 90.7, 33Across 52.2, Predactiv 48.2, 33A API 36.3, Sovrn 8.9. **Eligibility is high
   everywhere — the raw→billed collapse (0.2–7%) is credit competition (first-reporter-wins) + targeting
-  demand, NOT junk filtering.**
+  demand, NOT junk filtering.** **CREDIT SEMANTICS ARE AN OR ACROSS CONSUMERS:** a row is creditable if
+  DS13 *or* DS19 accepts it — the most permissive consumer sets the billable pool. DS13's blocklist/parse
+  hygiene protects features, NOT payments; de-junking that saves money must happen at DS19/pc intake.
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`
