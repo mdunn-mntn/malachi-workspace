@@ -76,7 +76,10 @@ domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
   classifier-usable** (strengthens the DROP case; also a vendor bug report). **Klickly = 94% myshopify.com**
   (98% top-5; 117 reg-domains/hr but 629 distinct store hosts — niche by design, subdomains collapse).
   Sovrn malformation pattern: `https://<bare-domain>` + full URL concatenated; second half valid —
-  recoverable by splitting on the 2nd protocol (bug report / negotiation leverage).
+  recoverable by splitting on the 2nd protocol (bug report / negotiation leverage). **OPEN: augmentor
+  (internal) shows the same pattern at 1.2% — check Sovrn's RAW drop before filing the vendor bug**
+  (could be shared svs-processing). Cybba: 6.2% truncated hosts. Exhibits: `q1c_unparsed_examples.png`;
+  hosts-vs-domains column added to `q1c_content_quality.png`.
   **5x5 = 53% outbrain.com** (widget network). **33Across: 6.4% Googlebot IPs, 5.7% bot UAs** (webmail+bots).
   33A API top-5 domains 58% (openwebmp RTB). Clean checks: uids ~unique, timestamps real, private IPs ~0
   everywhere — no batch-stamping artifacts.

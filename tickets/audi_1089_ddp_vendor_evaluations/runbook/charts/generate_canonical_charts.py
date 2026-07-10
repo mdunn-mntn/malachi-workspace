@@ -315,16 +315,16 @@ def q1c(rdir):
                       pct(r["ua_bot_pct"]), pct(r["top_ip_share"]),
                       pct(r["url_parse_fail_pct"]), pct(r["url_malformed_pct"]),
                       dom_cell, f"{float(r['top5_domain_share']):.0f}%",
-                      f"{int(r['dom_distinct']):,}"])
+                      f"{int(r['dom_distinct']):,}", f"{int(r['host_distinct']):,}"])
         junk = [max(0.0, float(r[k] or 0)) for k in
                 ("pct_googlebot_ip", "ua_bot_pct", "top_ip_share",
                  "url_parse_fail_pct", "url_malformed_pct")]
         conc = [float(r["top_domain_share"]), float(r["top5_domain_share"])]
         marks.append((junk, conc))
-    cols = ["Source", "Rows (hr)", "Googlebot IP", "Bot UA", "Top IP",
-            "URL parse fail", "URL malformed", "Top domain (share)", "Top-5 share", "Domains (hr)"]
+    cols = ["Source", "Rows (hr)", "Googlebot IP", "Bot UA", "Top IP", "URL parse fail",
+            "URL malformed", "Top domain (share)", "Top-5 share", "Domains (hr)", "Hosts (hr)"]
 
-    fig = plt.figure(figsize=(11.8, 3.4))
+    fig = plt.figure(figsize=(12.4, 3.4))
     fig.subplots_adjust(left=0.03, right=0.97, top=0.83, bottom=0.05)
     ax = fig.add_subplot(111)
     ax.axis("off")
@@ -332,7 +332,7 @@ def q1c(rdir):
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9)
     tbl.scale(1, 1.5)
-    widths = [0.115, 0.10, 0.09, 0.07, 0.07, 0.095, 0.095, 0.185, 0.075, 0.09]
+    widths = [0.105, 0.09, 0.082, 0.062, 0.062, 0.088, 0.088, 0.175, 0.072, 0.088, 0.088]
     JCOL = {2: 0, 3: 1, 4: 2, 5: 3, 6: 4}
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
@@ -356,6 +356,40 @@ def q1c(rdir):
     ax.set_title("Content Quality: Junk and Concentration Markers by Source, One-Hour Slice",
                  fontsize=13.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q1c_content_quality.png")
+
+    bad = [d for d in order if float(data[d]["url_parse_fail_pct"] or 0) >= 0.5]
+    bad.sort(key=lambda d: -float(data[d]["url_parse_fail_pct"]))
+    cells_ex = [[SHORT[d], f"{float(data[d]['url_parse_fail_pct']):.1f}%",
+                 f"{max(0.0, float(data[d]['url_malformed_pct'] or 0)):.1f}%",
+                 (data[d]["unparsed_example"] or "-")[:80]] for d in bad]
+    cols_ex = ["Source", "Parse fail", "Malformed", "Example URL that fails domain parsing"]
+    fig2 = plt.figure(figsize=(9.6, 0.85 + 0.34 * len(bad)))
+    fig2.subplots_adjust(left=0.03, right=0.97, top=0.72, bottom=0.06)
+    ax2 = fig2.add_subplot(111)
+    ax2.axis("off")
+    tbl2 = ax2.table(cellText=cells_ex, colLabels=cols_ex, loc="center", cellLoc="right")
+    tbl2.auto_set_font_size(False)
+    tbl2.set_fontsize(9)
+    tbl2.scale(1, 1.5)
+    widths2 = [0.11, 0.09, 0.10, 0.68]
+    for (r, c), cell in tbl2.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths2[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white")
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if bad[r - 1] not in (23, 30) else "#f4f5f7")
+            if c in (0, 3):
+                cell.set_text_props(ha="left")
+            if c == 1:
+                v = float(data[bad[r - 1]]["url_parse_fail_pct"])
+                cell.set_text_props(color=RED if v >= 25 else AMBER, fontweight="bold")
+            if bad[r - 1] in (23, 30):
+                cell.set_text_props(color="#888")
+    ax2.set_title("Unparseable URLs: Sources Over 0.5% Parse Fail, With a Live Example",
+                  fontsize=12.5, fontweight="bold", loc="left", pad=12)
+    save(fig2, "q1c_unparsed_examples.png")
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c}

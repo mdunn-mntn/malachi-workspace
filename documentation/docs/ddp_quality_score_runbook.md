@@ -93,13 +93,15 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 - **Query** `q1c_content_quality.sql` (same hour slice as q1b): per source — Googlebot-IP % (66.249.x),
   bot-UA %, top-IP share, private-IP %, uid dup %, timestamp-stamping share, URL parse-fail %
   (NET.REG_DOMAIN NULL), URL malformed % (doubled protocol), top/top-5 domain concentration, distinct domains.
-- **Output:** `q1c_content_quality.csv`. **Visual:** `--step 1c` → junk-marker table, amber ≥3% / red ≥25%
-  (concentration: amber ≥40 / red ≥70).
+- **Output:** `q1c_content_quality.csv`. **Visuals:** `--step 1c` → TWO PNGs: `q1c_content_quality.png`
+  (junk-marker table incl. distinct hosts vs reg-domains, amber ≥3% / red ≥25%; concentration amber ≥40 /
+  red ≥70) + `q1c_unparsed_examples.png` (every source over 0.5% parse-fail with a live example URL).
 - **Score input:** feeds Q qualitatively; parse-fail directly discounts V (unparseable rows never classify).
 - **First-run findings:** **Sovrn 77% of URLs malformed+unparseable** (doubled protocol — only ~23% of the
   feed is usable); **Klickly 94% myshopify.com** (117 distinct domains/hr); **5x5 53% outbrain.com**;
   **33Across 6.4% Googlebot IPs + 5.7% bot UAs**; 33A API top-5 domains = 58% (RTB infra). Clean everywhere:
-  uid ~unique, timestamps real (no batch stamping), private IPs ~0.
+  uid ~unique, timestamps real (no batch stamping), private IPs ~0. Doubled-protocol pattern ALSO in internal
+  augmentor at 1.2% → possibly shared-pipeline, verify raw drop before blaming the vendor.
 
 ### Step 2 — Window reach
 - **Claim:** "Over the actual targeting window, vendor V reaches N IPs / M domains / P pairs."

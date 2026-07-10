@@ -956,9 +956,9 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   doubled protocol — and fail `NET.REG_DOMAIN`; only ~23% of the feed is usable by the
   domain classifier** (vendor-side bug, not sporadic). Pattern: `https://<bare-domain>` + the full URL
   concatenated (e.g. `https://mail.yahoo.comhttps://mail.yahoo.com/?n=1`) — the second half is a VALID url,
-  recoverable by splitting on the second `https://`. Klickly (DS39) = 94% `myshopify.com` reg-domain (98%
+  recoverable by splitting on the second `https://`. **CAUTION: internal augmentor (DS30) shows the SAME doubled-protocol pattern at 1.2%** (e.g. tripadvisor.com doubled) — the malformation may be introduced in shared MNTN-side svs processing rather than (or in addition to) vendor-side; check the raw vendor drop (`gs://mntn-data-partners/partners/…`) before filing the vendor bug report. Cybba (DS36) fails differently: 6.2% truncated hosts (`https://www.drudgerep/`); Predactiv 0.7% embedded whitespace. Klickly (DS39) = 94% `myshopify.com` reg-domain (98%
   top-5; 117 distinct reg-domains but **629 distinct store hosts**/hr — NET.REG_DOMAIN collapses
-  Shopify store subdomains, so host-level diversity is ~5x the reg-domain count). 5x5 (DS25) = 53%
+  Shopify store subdomains, so host-level diversity is ~5x the reg-domain count). Hosts-vs-reg-domains ratio per source is now a standing q1c metric (hosts >> domains ⇒ subdomain-structured feed). 5x5 (DS25) = 53%
   `outbrain.com` (widget network) + 1.6% Googlebot IPs. 33Across (DS28): 6.4% of rows from Googlebot IPs
   (66.249.x) + 5.7% bot UAs. 33A API (DS40): top-5 domains 58% incl. openwebmp.com RTB endpoints. Clean
   everywhere: uid ~unique per row, no timestamp batch-stamping, private/reserved IPs ~0.

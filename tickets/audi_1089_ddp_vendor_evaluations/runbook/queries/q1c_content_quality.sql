@@ -6,9 +6,10 @@
 --          % in 66.249.x = Google crawler (crude bot marker)
 --   uid  — duplicate share (0 => unique per row; high => repeated/stamped)
 --   time — top-1 timestamp share (high => batch-stamped, not real event time)
---   url  — % that fail NET.REG_DOMAIN parse, % malformed (double protocol, the Sovrn bug),
---          top domain + share, top-5 domain share (concentration => narrow feed),
---          distinct domains in the hour
+--   url  — % that fail NET.REG_DOMAIN parse (+ a live example of an unparseable URL),
+--          % malformed (double protocol, the Sovrn bug), top domain + share, top-5 domain
+--          share (concentration => narrow feed), distinct reg-domains AND distinct hosts in
+--          the hour (hosts >> reg-domains exposes subdomain collapse, e.g. Klickly's Shopify stores)
 --   ua   — % of populated user_agents matching bot/crawl/spider/slurp/headless
 -- All *_share/*_pct use APPROX_* where noted (±1-2% at this scale) — junk detection, not accounting.
 --
@@ -42,6 +43,8 @@ WITH agg AS (
     COUNTIF(url IS NOT NULL AND REGEXP_CONTAINS(url, r'https?://.+https?://')) AS url_malformed,
     APPROX_TOP_COUNT(NET.REG_DOMAIN(url), 5) AS dom_top5,
     APPROX_COUNT_DISTINCT(NET.REG_DOMAIN(url)) AS dom_distinct,
+    APPROX_COUNT_DISTINCT(NET.HOST(url)) AS host_distinct,
+    MAX(IF(url != '' AND NET.REG_DOMAIN(url) IS NULL, SUBSTR(url, 1, 90), NULL)) AS unparsed_example,
     COUNTIF(user_agent IS NOT NULL AND user_agent != '') AS ua_n,
     COUNTIF(REGEXP_CONTAINS(LOWER(user_agent), r'bot|crawl|spider|slurp|headless')) AS ua_bot
   FROM svs
@@ -63,6 +66,8 @@ SELECT
   ROUND(100 * dom_top5[SAFE_OFFSET(0)].count / NULLIF(url_n, 0), 1) AS top_domain_share,
   ROUND(100 * (SELECT SUM(x.count) FROM UNNEST(dom_top5) x) / NULLIF(url_n, 0), 1) AS top5_domain_share,
   dom_distinct,
+  host_distinct,
+  unparsed_example,
   ROUND(100 * ua_bot / NULLIF(ua_n, 0), 2) AS ua_bot_pct
 FROM agg
 ORDER BY n DESC;
