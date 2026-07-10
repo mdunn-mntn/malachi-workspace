@@ -52,6 +52,31 @@ Override: high quality score + over-band bill → renegotiate, don't drop (good 
 Under first-reporter-wins, credit competition (esp. our free augmentor, added to svs 2026-05-12)
 erodes redundant vendors' bills on its own — June already fell $19K (33Across) / $9.7K (33A API).
 
+### The WTP arithmetic (from `fee_bands()` in the eval chart script)
+
+`band_low = sole_classified × $3/yr` · `band_high = sole_classified × $13/yr + weekly_sole_imps × 52 × $0.0005`
+
+| Vendor | Sole classified | ×$3 | ×$13 | + sole imps $/yr | Band |
+|---|--:|--:|--:|--:|---|
+| Predactiv | 226,826 | $680K | $2.95M | $710 | $0.7M–3M |
+| 5x5 | 86,084 | $258K | $1.12M | $2.6K | formula; index quotes TI-1027 fair $150–600K |
+| 33Across | 6,849 | $20.5K | $89K | $11.6K | $30K–100K |
+| Justuno | 4,605 | $13.8K | $59.9K | $311 | $14K–60K |
+| 33A API | 2,780 | $8.3K | $36.1K | $2.5K | $10K–40K |
+| Cybba | 362 | $1.1K | $4.7K | $121 | $1.1K–4.7K |
+| Sovrn | 181 | $543 | $2.4K | $114 | $0.5K–2.4K |
+| Klickly | 126 | $378 | $1.6K | $96 | $0.1K–1.5K |
+
+**Anchor caveat:** $3–13/domain-yr are calibration constants ($3 ≈ roster aggregate spend per sole
+classified domain today; $13 ≈ generous 4x ceiling for indirect value). Right order of magnitude,
+stress-testable: even at $30/domain Sovrn tops out ~$5.5K vs its $116K bill.
+
+**Why bills >> worth:** the meter pays volume × overlap × first-reporter ($0.50 per credited
+MM-targeted impression, even when 9 other sources had the identical row); worth is uniqueness ×
+classifiability × performance (the counterfactual). No shared variables — nothing forces convergence.
+Pre-augmentor (before 2026-05-12) it was worse: vendors won "first" on rows our own Magnite bidstream
+already contained.
+
 ### What we're negotiating, per vendor
 - **33Across** ($422K/yr vs $30–100K band): cap ≤$100K/yr, i.e. CPM $0.50 → ~$0.10–0.15 or a billing cap.
   Leverage: augmentor displacement trend; 29% of feed is blocklisted webmail; 6.4% Googlebot IPs;
