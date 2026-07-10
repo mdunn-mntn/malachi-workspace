@@ -65,8 +65,8 @@ domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
   (wide table, one month per column, via `runbook/charts/generate_canonical_charts.py`).
   Per-step deliverables are the SQL + the PNG only — no ad-hoc exports (user preference 2026-07-10).
 - **q1b column richness — BUILT 2026-07-10.** `runbook/queries/q1b_column_richness.sql` (33 GB hour-slice scan) →
-  `outputs/run_2026_07_10/q1b_column_richness.csv` + `runbook/charts/q1b_column_richness.png` (field-population
-  matrix + URL-richness panel). Findings: shared 10-col schema; `query_parameters` dead everywhere;
+  `outputs/run_2026_07_10/q1b_column_richness.csv` + `runbook/charts/q1b_schema_fields.png` (field-population
+  matrix) + `runbook/charts/q1b_url_richness.png` (path-share ranking + modal URL). Findings: shared 10-col schema; `query_parameters` dead everywhere;
   `advertiser_id` = guid_log only; `user_agent` = 33Across/Sovrn/33A API + internal only; URL path share
   Klickly 100% (Shopify) → 33A API 26% (RTB endpoints) → 5x5 4% (domain-only); Sovrn modal URL malformed
   (doubled protocol). Full details in data_knowledge.md § Site Visit Signal.

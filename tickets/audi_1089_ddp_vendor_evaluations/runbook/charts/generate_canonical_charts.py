@@ -213,7 +213,7 @@ def q1b(rdir):
         ("ip", "50.148.233.82"),
         ("time", "2026-07-01 12:00:30.901+00"),
         ("uid", "01KWF42SNX0H1CZ7V22A3JXY44  (ULID)"),
-        ("url", "varies by source, see URL richness below"),
+        ("url", "varies by source, see the URL richness chart"),
         ("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit..."),
         ("advertiser_id", "49489  (internal guid_log only)"),
         ("query_parameters", "never populated by any source"),
@@ -232,15 +232,13 @@ def q1b(rdir):
 
     b_ext = sorted(ext, key=lambda d: -path_med[d])
     b_int = sorted((d for d in (23, 30) if d in nrows), key=lambda d: -path_med[d])
-    cells_bot = [[SHORT[d], f"{path_med[d]:.0f}%", strip_url(prof[(d, 'url')][1])]
+    cells_bot = [[SHORT[d], f"{path_med[d]:.0f}%", strip_url(prof[(d, 'url')][1]) or "-"]
                  for d in b_ext + b_int]
     cols_bot = ["Source", "URLs w/ path", "Modal URL in the hour slice"]
 
-    fig = plt.figure(figsize=(12.2, 6.1))
-    gs = fig.add_gridspec(2, 1, height_ratios=[1.05, 1.0], hspace=0.30,
-                          left=0.03, right=0.97, top=0.90, bottom=0.04)
-
-    ax = fig.add_subplot(gs[0])
+    fig = plt.figure(figsize=(12.2, 3.3))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.85, bottom=0.05)
+    ax = fig.add_subplot(111)
     ax.axis("off")
     tbl = ax.table(cellText=cells_top, colLabels=cols_top, loc="center", cellLoc="right")
     tbl.auto_set_font_size(False)
@@ -262,15 +260,18 @@ def q1b(rdir):
             if c >= 2 + n_ext or r > sep_top:
                 cell.set_text_props(color="#888")
     ax.set_title("Drop Schema: Every Source Ships the Same 10 Columns, Populated Differently",
-                 fontsize=13.5, fontweight="bold", loc="left", pad=12)
+                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q1b_schema_fields.png")
 
-    ax2 = fig.add_subplot(gs[1])
+    fig2 = plt.figure(figsize=(7.6, 3.3))
+    fig2.subplots_adjust(left=0.03, right=0.97, top=0.85, bottom=0.05)
+    ax2 = fig2.add_subplot(111)
     ax2.axis("off")
     tbl2 = ax2.table(cellText=cells_bot, colLabels=cols_bot, loc="center", cellLoc="right")
     tbl2.auto_set_font_size(False)
     tbl2.set_fontsize(9)
     tbl2.scale(1, 1.4)
-    widths2 = [0.12, 0.10, 0.55]
+    widths2 = [0.16, 0.14, 0.68]
     for (r, c), cell in tbl2.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths2[c])
@@ -283,9 +284,9 @@ def q1b(rdir):
                 cell.set_text_props(ha="left")
             if r > len(b_ext):
                 cell.set_text_props(color="#888")
-    ax2.set_title("URL Richness: % of Rows with a Path After the Domain (30d median) + Modal URL",
-                  fontsize=11.5, fontweight="bold", loc="left", pad=10)
-    save(fig, "q1b_column_richness.png")
+    ax2.set_title("URL Richness: % of Rows with a Path (30d median) + Modal URL",
+                  fontsize=12, fontweight="bold", loc="left", pad=14)
+    save(fig2, "q1b_url_richness.png")
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b}

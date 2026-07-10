@@ -80,8 +80,9 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 - **Claim:** "All drops share one 10-column schema; richness = which fields each vendor populates + what values look like."
 - **Query** `q1b_column_richness.sql`: one HOUR slice (SAMPLE_DT × SAMPLE_HH in the external-table URI), per
   `data_source_id × field`: % populated (non-null, non-empty) + modal example (APPROX_TOP_COUNT, 80 chars).
-- **Output:** `q1b_column_richness.csv`. **Visual:** `--step 1b` → two-panel table: field-population matrix
-  (field, example, % per source) + URL-richness ranking (30d median % with path from q1 + modal URL).
+- **Output:** `q1b_column_richness.csv`. **Visuals:** `--step 1b` → TWO PNGs: `q1b_schema_fields.png`
+  (field-population matrix: field, example, % per source) + `q1b_url_richness.png` (30d median % with
+  path from q1 + modal URL, ranked).
 - **Score input:** context for Q (a vendor whose url is ad-infra or domain-only classifies fewer domains).
 - **First-run findings:** `query_parameters` dead everywhere; `advertiser_id` internal-only (guid_log);
   `user_agent` only 33Across/Sovrn/33A API + internal; URL path share: Klickly 100% (Shopify) vs
