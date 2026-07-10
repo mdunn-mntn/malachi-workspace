@@ -185,11 +185,17 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 - **Output:** `q4_domain_value.csv`. **Visual:** ranked sole-classified bars (exists: `chart_sole_classified_domains`).
 - **Score input:** **V** (40%) + half of **Q** (% domains classified). Dollarized: sole classified × $3–13/yr.
 
-### Step 5 — Quality of unique reach (adverse selection)
+### Step 5 — Quality of unique reach (adverse selection) — **BUILT 2026-07-10** (`runbook/queries/q5_score_tiers.sql`)
 - **Claim:** "V's unique IPs do/don't survive contact with delivery — uniqueness ≠ usefulness."
 - **Query** `q5_sole_quality.sql`: IP membership (union window) × CIL valuation week: per ds × {touched, sole}:
   delivered %, score-tier mix (tiers per TI-1027: 10000 / 8000 / 6666-9999 / mid / maxreach / unscored).
-- **Canonicalize from:** `audi_1089_q3_score_tiers.sql`. Cross-check: DS25 touched HI ≈ 35–40%.
+- **Canonical copy of** `audi_1089_q3_score_tiers.sql`; output `q5_score_tiers.csv` (reused Jul 9 pull).
+  **Visual:** `--step 5` → `q5_score_tiers.png` (tier mix touched vs sole, ranked by HIGH total).
+  Tier note: "HIGH" = HI 10000 + PP 8000 + graduated band (the graduated band is where Fangorn DS46
+  continuous scores land — ≥6666 counts as high-value).
+- **First-run findings:** touched HIGH: Cybba 52.9 > Klickly 52.3 > Justuno 46.1 > Sovrn 39.0 > others
+  34-37. **Sole HIGH is 1.7-4.5% everywhere — vendors' unique IPs are overwhelmingly unscored** (adverse
+  selection: the IPs only one vendor sees are the ones MM can't score).
 - **Output:** `q5_sole_quality.csv`. **Visual:** sole-quality two-panel (exists: `chart_sole_quality`).
 - **Score input:** other half of **Q** = (1 − sole unscored share).
 
@@ -218,10 +224,12 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   with the **actual-bill marker** placed on it. Flat-fee vendors: band + "fee pending" marker.
 - **Score input:** the verdict multiplier (KEEP / NEGOTIATE+target / DROP).
 
-### Step 9 — Composite scorecard
+### Step 9 — Composite scorecard — **v1 BUILT 2026-07-10** (`q9_vendor_scorecard.png`)
 - **Claim:** one row per vendor: score components → quality score → bill → verdict.
-- **Query:** none — `build_quality_score.py` reads q0–q7 CSVs, computes V/R/Q/D/P × liveness gate,
-  writes `quality_scorecard.csv`.
+- **Query:** none — v1 synthesizes q2c (usable), q5 (score mix), q6 (media $ touched/sole), q1d (bill)
+  + eval verdicts/fee bands into `q9_vendor_scorecard.png` (usable %, sole IPs, $/wk, HIGH %, bill,
+  worth $/mo, verdict, key vendor ask). Pending for v2: q3 usable-uniqueness refresh, flat fees
+  (renewal schedule / Maya Triman), `build_quality_score.py` composite.
 - **Visual (new):** scorecard table + **score-vs-annualized-bill quadrant scatter** (top-left = underpriced
   keepers; bottom-right = overpaid drops) — the one-slide summary for leadership.
 - **Also:** lineage blast radius is per-vendor MANUAL diligence (GitHub sweep) — required before any DROP

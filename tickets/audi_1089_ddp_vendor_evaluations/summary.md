@@ -147,6 +147,12 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   33A API 10.0%, 5x5 5.0%, rest ≤2.4%. Used IPs — 33Across 32.2%, 5x5 10.6%. Classified domains —
   **Predactiv 34.3% (the #1 supplier on just 2.4% of rows)**, 33Across 19.8%, 33A API 13.9%, 5x5 12.0%,
   Klickly 0.04%. Shares of summed per-source counts (overlap not deduped; rows exact).
+- **q5 score tiers + q9 scorecard v1 — BUILT 2026-07-10.** q5/q6/q7 CSVs+SQLs canonicalized from Jul 9
+  pulls. `q5_score_tiers.png`: touched HIGH (HI+PP+grad): Cybba 52.9 > Klickly 52.3 > Justuno 46.1 >
+  Sovrn 39.0 > rest 34-37; **sole HIGH 1.7-4.5% across all vendors — unique IPs are overwhelmingly
+  unscored (adverse selection)**. `q9_vendor_scorecard.png`: per-vendor usable %, sole IPs, media $/wk
+  touched/sole, HIGH %, bill/run-rate, worth $/mo band, verdict, key ask. Pending v2: q3 refresh
+  (running), flat fees, composite score.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

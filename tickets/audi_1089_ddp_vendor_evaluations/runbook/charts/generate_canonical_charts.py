@@ -805,8 +805,143 @@ def q2d(rdir):
     save(fig, "q2d_usable_share.png")
 
 
+# ---- Step 5: score-tier quality of delivered IPs (sole vs touched) ----
+def q5(rdir):
+    data = {}
+    with open(os.path.join(rdir, "q5_score_tiers.csv")) as f:
+        for r in csv.DictReader(f):
+            data[(int(r["data_source_id"]), r["cohort"])] = r
+    dss = sorted({d for d, _ in data})
+    ext = sorted((d for d in dss if d not in (23, 30)),
+                 key=lambda d: -float(data[(d, "touched")]["pct_of_delivered_high"]))
+    order = ext + sorted((d for d in dss if d in (23, 30)),
+                         key=lambda d: -float(data[(d, "touched")]["pct_of_delivered_high"]))
+
+    cells = []
+    for d in order:
+        t, s = data[(d, "touched")], data[(d, "sole")]
+        cells.append([SHORT[d], fmtn(t["vendor_ips"]),
+                      f"{fmtn(t['delivered_ips'])}  ({t['pct_delivered']}%)",
+                      f"{t['pct_hi']}%", f"{t['pct_pp']}%", f"{t['pct_high_grad']}%",
+                      f"{t['pct_mid']}%", f"{t['pct_maxreach']}%", f"{t['pct_unscored_delivered']}%",
+                      f"{t['pct_of_delivered_high']}%",
+                      f"{fmtn(s['delivered_ips'])}  ({s['pct_delivered']}%)",
+                      f"{s['pct_of_delivered_high']}%"])
+    cols = ["Source", "IPs touched", "Delivered (pct)", "HI 10000", "PP 8000", "High grad",
+            "Mid", "Max reach", "Unscored", "HIGH total", "Sole delivered (pct)", "Sole HIGH"]
+
+    fig = plt.figure(figsize=(12.8, 3.4))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.6)
+    tbl.scale(1, 1.5)
+    widths = [0.09, 0.085, 0.135, 0.065, 0.065, 0.072, 0.055, 0.072, 0.07, 0.075, 0.135, 0.068]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(ext) else "#f4f5f7")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c == 3:
+                cell.set_text_props(fontweight="bold", color=GREEN)
+            if c == 9:
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if c == 11:
+                v = float(cells[r - 1][11].rstrip("%"))
+                cell.set_text_props(color=RED if v < 10 else "#444", fontweight="bold")
+            if r > len(ext):
+                cell.set_text_props(color="#888")
+    ax.set_title("Score Quality of Delivered IPs: Tier Mix for Touched vs Sole, Valuation Week Jul 2-8",
+                 fontsize=12.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q5_score_tiers.png")
+
+
+# ---- Step 9 (v1): per-vendor scorecard — usable, money, quality, worth, verdict, asks ----
+# Synthesis of q2c (usable), q5/q6 (score + money, valuation week), q1d (bill), and the
+# AUDI-1089 eval verdicts/fee bands (root summary section 4). q3 usable-uniqueness refresh
+# and flat-fee amounts (renewal schedule / Maya Triman) slot in when available.
+def q9(rdir):
+    fun, billed, vt = {}, {}, {}
+    with open(os.path.join(rdir, "q2c_funnel.csv")) as f:
+        for r in csv.DictReader(f):
+            fun[int(r["ds"])] = r
+    with open(os.path.join(rdir, "q1d_billed_usage.csv")) as f:
+        for r in csv.DictReader(f):
+            billed[int(r["ds"])] = r
+    with open(os.path.join(rdir, "q6_value_tiers.csv")) as f:
+        for r in csv.DictReader(f):
+            vt[int(r["data_source_id"])] = r
+    st = {}
+    with open(os.path.join(rdir, "q5_score_tiers.csv")) as f:
+        for r in csv.DictReader(f):
+            st[(int(r["data_source_id"]), r["cohort"])] = r
+
+    META = {  # worth $/mo band, verdict, key ask — from eval section 4 + q1b-q2c findings
+        28: ("$2.5-8.3K", "NEGOTIATE\ncap or drop", "strip webmail/bot rows;\njustify vs our Magnite feed"),
+        40: ("$0.8-3.3K", "DROP /\nrenegotiate", "remove cookie-sync urls;\nsend real page paths"),
+        33: ("$40-200", "DROP", "fix doubled-protocol\nurls (77% of feed)"),
+        24: ("$1.2-5K", "KEEP-trim", "grow scale; add\nuser_agent"),
+        36: ("$90-390", "DROP", "fix truncated urls;\nscale too small"),
+        26: ("$58-250K", "KEEP\n(lock price)", "restore dropped metadata;\nkeep HEM feed"),
+        25: ("see TI-1027", "KEEP", "add url paths + UA\n(domain-only today)"),
+        39: ("$10-125", "DROP unless\n~free", "populate query_params\n(checkout); non-Shopify"),
+    }
+    order = [28, 40, 33, 24, 36, 26, 25, 39]
+
+    cells = []
+    for d in order:
+        u = 100 * int(fun[d]["rows_used"]) / int(fun[d]["rows_raw"])
+        t = st[(d, "touched")]
+        b = billed.get(d)
+        bill = f"{money(float(b['billed_usd']))}\n{money(float(b['billed_usd']) * 12)}/yr" if b \
+            else "flat fee\nrenewal sched."
+        w, verdict, ask = META[d]
+        cells.append([SHORT[d], f"{u:.0f}%", fmtn(st[(d, 'sole')]['vendor_ips']),
+                      money(float(vt[d]["media_touched"])), money(float(vt[d]["media_sole"])),
+                      f"{t['pct_of_delivered_high']}%", bill, w, verdict, ask])
+    cols = ["Source", "Usable", "Sole IPs", "Media $/wk\ntouched", "Media $/wk\nsole",
+            "HIGH score\n(of delivered)", "Jun bill /\nrun rate", "Worth $/mo", "Verdict", "Key ask"]
+
+    fig = plt.figure(figsize=(13.2, 4.6))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.86, bottom=0.04)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.4)
+    tbl.scale(1, 2.35)
+    widths = [0.085, 0.055, 0.075, 0.085, 0.08, 0.095, 0.095, 0.085, 0.10, 0.20]
+    VCOL = {"KEEP": GREEN, "KEEP-trim": GREEN, "KEEP\n(lock price)": GREEN,
+            "NEGOTIATE\ncap or drop": AMBER}
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 0:
+                cell.set_text_props(ha="left", fontweight="bold")
+            if c == 8:
+                v = cells[r - 1][8]
+                cell.set_text_props(fontweight="bold", color=VCOL.get(v, RED))
+            if c == 9:
+                cell.set_text_props(ha="left", fontsize=7.8, color="#555")
+    ax.set_title("Vendor Scorecard v1: Usable Share, Money, Score Quality, Worth, Verdict",
+                 fontsize=13, fontweight="bold", loc="left", pad=14)
+    save(fig, "q9_vendor_scorecard.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "5": q5, "9": q9}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
