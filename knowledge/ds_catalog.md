@@ -201,7 +201,7 @@ Registered DSes with negligible or zero use in the 30d prospecting window. Liste
 | 33 | Sovrn | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM, live 2025-05-27). **77% of URLs malformed** (doubled protocol `https://Xhttps://X`) → fail `NET.REG_DOMAIN` — only ~23% classifier-usable (AUDI-1089 q1c). AUDI-1089 verdict: DROP (~50-200× over band). |
 | 36 | Cybba | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM). Smallest feed (~1.7M rows/day); 6.2% URL parse-fail; top IP = 3.5% of rows (AUDI-1089 q1c). AUDI-1089 verdict: DROP (~5-20× over band). |
 | 37 | CallRail | ✗ | 0 | 0 | 0 | Provider, no current use |
-| 39 | Klickly | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** (flat fee, live 2025-07-01). Shopify-checkout network: **94% of URLs = myshopify.com** (98% top-5), only ~117 distinct reg-domains/hr — extreme niche (AUDI-1089 q1c). Renewal-focal vendor of AUDI-1089. |
+| 39 | Klickly | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** (flat fee, live 2025-07-01). Shopify-checkout network: **94% of URLs = myshopify.com** (98% top-5); 117 reg-domains/hr but 629 distinct store hosts/hr (subdomains collapse) — extreme niche (AUDI-1089 q1c). Renewal-focal vendor of AUDI-1089. |
 | 40 | 33Across API | ✗ | 0 | 0 | 0 | **ACTIVE MM site-visit DDP** ($0.50 CPM, live 2025-07-01). Modal URL = openwebmp.com RTB endpoint (17.8%; top-5 domains 58%) — ad-infra heavy, 26% path share (AUDI-1089 q1b/q1c). AUDI-1089 verdict: DROP/renegotiate (~4-18× over band). |
 | 41 | Freshpaint | ✗ | 0 | 0 | 0 | CRM ingestion source |
 | 44 | Captify | ✗ | 0 | 0 | 0 | 3P provider, no current use |

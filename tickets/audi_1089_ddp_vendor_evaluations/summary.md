@@ -74,7 +74,9 @@ domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
   `outputs/run_2026_07_10/q1c_content_quality.csv` + `runbook/charts/q1c_content_quality.png`. Beyond counts:
   **Sovrn 77% of URLs malformed (doubled protocol) AND unparseable — only ~23% of the $116K/yr feed is
   classifier-usable** (strengthens the DROP case; also a vendor bug report). **Klickly = 94% myshopify.com**
-  (98% top-5; 117 distinct domains/hr — niche by design, reg-domain collapses store subdomains).
+  (98% top-5; 117 reg-domains/hr but 629 distinct store hosts — niche by design, subdomains collapse).
+  Sovrn malformation pattern: `https://<bare-domain>` + full URL concatenated; second half valid —
+  recoverable by splitting on the 2nd protocol (bug report / negotiation leverage).
   **5x5 = 53% outbrain.com** (widget network). **33Across: 6.4% Googlebot IPs, 5.7% bot UAs** (webmail+bots).
   33A API top-5 domains 58% (openwebmp RTB). Clean checks: uids ~unique, timestamps real, private IPs ~0
   everywhere — no batch-stamping artifacts.

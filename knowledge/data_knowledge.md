@@ -953,9 +953,12 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   protocol `https://mail.yahoo.comhttps://…`**), Justuno 91, Cybba 79, Predactiv 75, 33Across 68 (webmail-heavy),
   **33A API 26 (modal = openwebmp.com RTB endpoint — ad-infra, not user browsing), 5x5 4 (domain-only feed)**.
 - **Content quality by source (AUDI-1089 q1c, same hour slice):** **Sovrn (DS33): 77% of URLs malformed —
-  doubled protocol `https://Xhttps://X` — and fail `NET.REG_DOMAIN`; only ~23% of the feed is usable by the
-  domain classifier** (vendor-side bug, not sporadic). Klickly (DS39) = 94% `myshopify.com` reg-domain (98%
-  top-5; ~117 distinct domains/hr — NET.REG_DOMAIN collapses Shopify store subdomains). 5x5 (DS25) = 53%
+  doubled protocol — and fail `NET.REG_DOMAIN`; only ~23% of the feed is usable by the
+  domain classifier** (vendor-side bug, not sporadic). Pattern: `https://<bare-domain>` + the full URL
+  concatenated (e.g. `https://mail.yahoo.comhttps://mail.yahoo.com/?n=1`) — the second half is a VALID url,
+  recoverable by splitting on the second `https://`. Klickly (DS39) = 94% `myshopify.com` reg-domain (98%
+  top-5; 117 distinct reg-domains but **629 distinct store hosts**/hr — NET.REG_DOMAIN collapses
+  Shopify store subdomains, so host-level diversity is ~5x the reg-domain count). 5x5 (DS25) = 53%
   `outbrain.com` (widget network) + 1.6% Googlebot IPs. 33Across (DS28): 6.4% of rows from Googlebot IPs
   (66.249.x) + 5.7% bot UAs. 33A API (DS40): top-5 domains 58% incl. openwebmp.com RTB endpoints. Clean
   everywhere: uid ~unique per row, no timestamp batch-stamping, private/reserved IPs ~0.
