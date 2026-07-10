@@ -944,6 +944,14 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     needed — `dt`, `hh`, `data_source_id` are real columns in the files). ~1 day ≈ 285 GB / ~16 s scan; ~30 days ≈ 8.5 TB.
     `NET.REG_DOMAIN(url)` = registered domain (matches the consumer's tldextract eTLD+1). Same pattern works for
     `fpa_vendor_log` and any GCS-parquet dataset lacking a BQ landing.
+- **Field population by source (AUDI-1089 q1b, hour slice 2026-07-01 hh=12):** `ip`/`time`/`uid` = 100% for
+  every source; `url` ~100% everywhere except guid_log 79.9% (33A API 97.9%, Cybba 99.6%);
+  **`query_parameters` = 0% for ALL sources (dead column)**; **`advertiser_id` populated ONLY by DS23 guid_log**
+  (internal, 100%) — every external vendor sends 0; **`user_agent` only from 33Across/Sovrn/33A API (~100%) +
+  internal guid_log/augmentor (~99.5%)** — Justuno/5x5/Predactiv/Cybba/Klickly send none. URL richness (30d median
+  % with path): Klickly 100 (all Shopify product/checkout URLs), Sovrn 92 (**modal URL malformed — doubled
+  protocol `https://mail.yahoo.comhttps://…`**), Justuno 91, Cybba 79, Predactiv 75, 33Across 68 (webmail-heavy),
+  **33A API 26 (modal = openwebmp.com RTB endpoint — ad-infra, not user browsing), 5x5 4 (domain-only feed)**.
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`

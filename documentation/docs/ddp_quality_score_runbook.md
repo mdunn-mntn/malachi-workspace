@@ -76,6 +76,17 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 - **First-run findings (Jun 2–Jul 1 2026):** all 10 sources 30/30 days — every gate PASS. Partial-day
   incidents: 33Across Jun 20 at ~8% of median; Klickly Jun 24–26 3-day sag (weakest 24%).
 
+### Step 1b — Column richness of the drops — **BUILT 2026-07-10** (`runbook/queries/q1b_column_richness.sql`)
+- **Claim:** "All drops share one 10-column schema; richness = which fields each vendor populates + what values look like."
+- **Query** `q1b_column_richness.sql`: one HOUR slice (SAMPLE_DT × SAMPLE_HH in the external-table URI), per
+  `data_source_id × field`: % populated (non-null, non-empty) + modal example (APPROX_TOP_COUNT, 80 chars).
+- **Output:** `q1b_column_richness.csv`. **Visual:** `--step 1b` → two-panel table: field-population matrix
+  (field, example, % per source) + URL-richness ranking (30d median % with path from q1 + modal URL).
+- **Score input:** context for Q (a vendor whose url is ad-infra or domain-only classifies fewer domains).
+- **First-run findings:** `query_parameters` dead everywhere; `advertiser_id` internal-only (guid_log);
+  `user_agent` only 33Across/Sovrn/33A API + internal; URL path share: Klickly 100% (Shopify) vs
+  33A API 26% (RTB endpoints) vs 5x5 4% (domain-only); Sovrn modal URL malformed (doubled protocol).
+
 ### Step 2 — Window reach
 - **Claim:** "Over the actual targeting window, vendor V reaches N IPs / M domains / P pairs."
 - **Query** `q2_window_reach.sql`: per ds, window-cumulative distinct IP / domain / (ip|domain).

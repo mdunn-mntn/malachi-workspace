@@ -5,6 +5,7 @@ writes PNGs alongside this script. Style matches audi_1089_generate_charts.py:
 plain descriptive titles, one-line caption below, no annotations, no em-dashes."""
 import argparse
 import csv
+import re
 import os
 import matplotlib
 matplotlib.use("Agg")
@@ -183,7 +184,111 @@ def q1(rdir):
     save(fig, "q1_scale_by_day.png")
 
 
-STEPS = {"0": q0, "1": q1}
+# ---- Step 1b: column richness of each vendor's drop ----
+SHORT = {23: "guid_log", 24: "Justuno", 25: "5x5", 26: "Predactiv", 28: "33Across",
+         30: "augmentor", 33: "Sovrn", 36: "Cybba", 39: "Klickly", 40: "33A API"}
+
+
+def q1b(rdir):
+    prof, nrows = {}, {}
+    with open(os.path.join(rdir, "q1b_column_richness.csv")) as f:
+        for r in csv.DictReader(f):
+            d = int(r["data_source_id"])
+            prof[(d, r["field"])] = (float(r["pct_populated"]), r["example_modal"])
+            nrows[d] = int(r["n_rows"])
+    path_pct = {}
+    with open(os.path.join(rdir, "q1_scale_by_day.csv")) as f:
+        for r in csv.DictReader(f):
+            path_pct.setdefault(int(r["data_source_id"]), []).append(float(r["pct_with_path"]))
+    path_med = {d: sorted(v)[len(v) // 2] for d, v in path_pct.items()}
+
+    ext = sorted((d for d in nrows if d not in (23, 30)), key=lambda d: -nrows[d])
+    order = ext + sorted((d for d in (23, 30) if d in nrows), key=lambda d: -nrows[d])
+    n_ext = len(ext)
+
+    def pfmt(p):
+        return "-" if p == 0 else (f"{p:.0f}" if round(p, 1).is_integer() else f"{p:.1f}")
+
+    FIELDS = [
+        ("ip", "50.148.233.82"),
+        ("time", "2026-07-01 12:00:30.901+00"),
+        ("uid", "01KWF42SNX0H1CZ7V22A3JXY44  (ULID)"),
+        ("url", "varies by source, see URL richness below"),
+        ("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit..."),
+        ("advertiser_id", "49489  (internal guid_log only)"),
+        ("query_parameters", "never populated by any source"),
+    ]
+    PART = [("dt", "2026-07-01  (partition key)"), ("hh", "12  (partition key)"),
+            ("data_source_id", "39  (partition key)")]
+
+    cells_top = [[f, ex] + [pfmt(prof[(d, f)][0]) for d in order] for f, ex in FIELDS]
+    cells_top += [[f, ex] + ["100"] * len(order) for f, ex in PART]
+    sep_top = len(FIELDS)
+    cols_top = ["Field", "Example"] + [SHORT[d] for d in order]
+
+    def strip_url(u):
+        u = re.sub(r"^https?://", "", u)
+        return u[:58] + ("..." if len(u) > 58 else "")
+
+    b_ext = sorted(ext, key=lambda d: -path_med[d])
+    b_int = sorted((d for d in (23, 30) if d in nrows), key=lambda d: -path_med[d])
+    cells_bot = [[SHORT[d], f"{path_med[d]:.0f}%", strip_url(prof[(d, 'url')][1])]
+                 for d in b_ext + b_int]
+    cols_bot = ["Source", "URLs w/ path", "Modal URL in the hour slice"]
+
+    fig = plt.figure(figsize=(12.2, 6.1))
+    gs = fig.add_gridspec(2, 1, height_ratios=[1.05, 1.0], hspace=0.30,
+                          left=0.03, right=0.97, top=0.90, bottom=0.04)
+
+    ax = fig.add_subplot(gs[0])
+    ax.axis("off")
+    tbl = ax.table(cellText=cells_top, colLabels=cols_top, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.4)
+    widths = [0.115, 0.325] + [0.056] * len(order)
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= sep_top else "#f4f5f7")
+            if c == 0:
+                cell.set_text_props(ha="left", fontweight="bold")
+            if c == 1:
+                cell.set_text_props(ha="left", color="#666")
+            if c >= 2 + n_ext or r > sep_top:
+                cell.set_text_props(color="#888")
+    ax.set_title("Drop Schema: Every Source Ships the Same 10 Columns, Populated Differently",
+                 fontsize=13.5, fontweight="bold", loc="left", pad=12)
+
+    ax2 = fig.add_subplot(gs[1])
+    ax2.axis("off")
+    tbl2 = ax2.table(cellText=cells_bot, colLabels=cols_bot, loc="center", cellLoc="right")
+    tbl2.auto_set_font_size(False)
+    tbl2.set_fontsize(9)
+    tbl2.scale(1, 1.4)
+    widths2 = [0.12, 0.10, 0.55]
+    for (r, c), cell in tbl2.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths2[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white")
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(b_ext) else "#f4f5f7")
+            if c in (0, 2):
+                cell.set_text_props(ha="left")
+            if r > len(b_ext):
+                cell.set_text_props(color="#888")
+    ax2.set_title("URL Richness: % of Rows with a Path After the Domain (30d median) + Modal URL",
+                  fontsize=11.5, fontweight="bold", loc="left", pad=10)
+    save(fig, "q1b_column_richness.png")
+
+
+STEPS = {"0": q0, "1": q1, "1b": q1b}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
