@@ -131,6 +131,15 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   (yahoo/aol) + 52.7M bot-UA rows/day**; 33A API 66M/day (18%) blocked; Predactiv 8.7M/day (14%);
   guid_log 19% empty urls (internal); Klickly zero drops. IPs dropped/day: Sovrn 5.5M, 33A API 351K,
   5x5 91K, Cybba 19K, 33Across 18K.
+- **q2c survival funnel — BUILT 2026-07-10 (ANSWERS the DS13/DS19 question).** `runbook/queries/q2c_funnel.sql`
+  (day scan × wcv × product_categorization) → `q2c_funnel.png` pivot (sources across, stages down, % per
+  cell, billed at bottom). **USED (DS13∪DS19-eligible) % of raw rows: Klickly 100.0, Justuno 99.4, Cybba
+  97.4, 5x5 96.5, Sovrn 92.8, Predactiv 90.4, 33Across 77.6, 33A API 63.9** — eligibility is HIGH; the
+  collapse to 0.2–7% billed is first-reporter credit competition + demand, not junk filters. **DS19 path
+  is permissive (no blocklist, no parse gate): 33Across's yahoo = DS19-eligible (RESOLVED how yahoo bills);
+  Sovrn's malformed hosts = 90.9% DS19-categorized (product_categorization contains the garbage keys)** —
+  a pc data-quality issue worth raising alongside the Sovrn bug. DS13-classified alone: Klickly 99.8 →
+  Justuno 94.7 → 5x5 90.7 → 33Across 52.2 → Predactiv 48.2 → 33A API 36.3 → Sovrn 8.9.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

@@ -975,8 +975,8 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   - **svs feature model** (`site_visit_signal_advertiser_id_dsc_id.py`): excludes DS23, drops
     steelhouse.com / googlesyndication.com / gtm-msr.appspot.com URLs, keys on `urlsplit().hostname`.
     NOTE: urlsplit does NOT validate TLDs — Sovrn's doubled-protocol URLs are NOT dropped here; they
-    produce garbage hosts like `mail.yahoo.comhttps` (they die later at classification, since garbage
-    never enters wcv).
+    produce garbage hosts like `mail.yahoo.comhttps`. They die on the DS13 path (garbage never enters
+    wcv) but SURVIVE on the DS19 path — see product_categorization permissiveness below.
   - **MemDB membership log** ("what we actually put into MemDB", per Ryan):
     `gs://mntn-data-tpa-{env}/tpa_membership_update_log/v2/dt=/hh=/` (monitored by
     `dags/monitor_memdb_batch_output.py`).
@@ -1032,6 +1032,16 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
 - **"Monthly Summary by DDP.xlsx"** (from Maya via Ryan — **SENSITIVE: local only, gitignored, never post
   to Jira**): usage_reporting_data rollup Dec 2025–Mar 2026, metered vendors only (LiveRamp reported as
   DS(11,35) combined). Confirms the meter IS the payment basis; flat fees (25/26/39) still not in any table.
+- **product_categorization is PERMISSIVE — the DS19 path has no blocklist and no domain-parse gate
+  (AUDI-1089 q2c day-level join, 2026-07-01):** `shopper_graph/product_categorization` contains composite
+  keys for googlesyndication safeframes, malformed Sovrn hosts, and webmail — so **Sovrn's garbage is 90.9%
+  DS19-categorized** and **33Across's yahoo rows are DS19-eligible (61.4% of its feed categorizes)**, which
+  is definitively how yahoo/garbage reach billing. Row-level eligibility (USED = DS13-classified OR
+  DS19-categorized, % of raw rows/day): Klickly 100.0, Justuno 99.4, Cybba 97.4, 5x5 96.5, Sovrn 92.8
+  (garbage-inflated), Predactiv 90.4, 33Across 77.6, 33A API 63.9. DS13-classified alone: Klickly 99.8,
+  Justuno 94.7, 5x5 90.7, 33Across 52.2, Predactiv 48.2, 33A API 36.3, Sovrn 8.9. **Eligibility is high
+  everywhere — the raw→billed collapse (0.2–7%) is credit competition (first-reporter-wins) + targeting
+  demand, NOT junk filtering.**
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`

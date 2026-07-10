@@ -147,6 +147,19 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   33Across hard-drops only 0.03% but 29% of rows (316M/day) are DS13-blocked yahoo/aol + 52.7M bot-UA
   rows/day; 33A API 18% DS13-blocked; Predactiv 14%; guid_log 19% empty urls; Klickly 0 drops.
 
+### Step 2c — Survival funnel pivot: raw → DS13/DS19 → billed — **BUILT 2026-07-10** (`runbook/queries/q2c_funnel.sql`)
+- **Claim:** "Follow each source's rows/IPs/domains through every filter to MM eligibility and the bill."
+- **Query** `q2c_funnel.sql`: ONE day of svs joined to `wcv` (DS13: reg domain classified) and
+  `product_categorization` (DS19: composite_key with dsc≥900000) — per source: raw / kept / DS13-input /
+  DS13-classified / DS19-categorized / USED rows + unique IPs and domains at raw and used.
+- **Output:** `q2c_funnel.csv`. **Visual:** `--step 2c` → `q2c_funnel.png` — PIVOT: sources across,
+  funnel stages down, count + % per cell; billed reality (q1d) as the bottom rows.
+- **Score input:** the USED% is the honest "signal MM can consume" rate; DS19 permissiveness caveat applies.
+- **First-run findings:** USED 64–100% of raw across the roster — eligibility is NOT the bottleneck; the
+  raw→billed collapse (0.2–7%) is first-reporter credit competition + demand. DS19 has no blocklist/parse
+  gate: yahoo (33Across) and malformed hosts (Sovrn 90.9%!) categorize and can bill. DS13-classified spans
+  Klickly 99.8% → Sovrn 8.9%.
+
 ### Step 3 — Uniqueness & recency (pairs)
 - **Claim:** "X% of V's pairs are irreplaceable in-window; Y% are same-day-redundant (insurance)."
 - **Query** `q3_pair_recency.sql`: per (ip,domain) per ds MAX(dt) → per ds: sole / freshest / tied / stale +

@@ -668,7 +668,83 @@ def q2b(rdir):
     save(fig, "q2b_daily_drops.png")
 
 
-STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e, "2": q2, "2b": q2b}
+# ---- Step 2c: the survival funnel pivot — raw feed to DS13/DS19 to billed ----
+def q2c(rdir):
+    fun = {}
+    with open(os.path.join(rdir, "q2c_funnel.csv")) as f:
+        for r in csv.DictReader(f):
+            fun[int(r["ds"])] = r
+    billed = {}
+    with open(os.path.join(rdir, "q1d_billed_usage.csv")) as f:
+        for r in csv.DictReader(f):
+            billed[int(r["ds"])] = r
+    rows30 = {}
+    with open(os.path.join(rdir, "q1_scale_by_day.csv")) as f:
+        for r in csv.DictReader(f):
+            d = int(r["data_source_id"])
+            rows30[d] = rows30.get(d, 0) + int(r["n_rows"])
+
+    ext = sorted((d for d in fun if d not in (23, 30)), key=lambda d: -int(fun[d]["rows_raw"]))
+
+    def cp(d, key, base_key):
+        v, b = int(fun[d][key]), int(fun[d][base_key])
+        return f"{fmtn(v)}\n{100 * v / b:.1f}%"
+
+    STAGES = [
+        ("Raw rows/day", lambda d: fmtn(fun[d]["rows_raw"])),
+        ("Kept: url parses,\nnot empty/infra", lambda d: cp(d, "rows_kept", "rows_raw")),
+        ("DS13 input\n(after blocklist)", lambda d: cp(d, "rows_ds13_input", "rows_raw")),
+        ("DS13 classified\n(domain in wcv)", lambda d: cp(d, "rows_ds13_class", "rows_raw")),
+        ("DS19 categorized\n(url in product cat)", lambda d: cp(d, "rows_ds19_cat", "rows_raw")),
+        ("USED: DS13 or DS19\n(creditable)", lambda d: cp(d, "rows_used", "rows_raw")),
+        ("Unique IPs/day", lambda d: fmtn(fun[d]["ips_raw"])),
+        ("IPs on used rows", lambda d: cp(d, "ips_used", "ips_raw")),
+        ("Unique domains/day", lambda d: fmtn(fun[d]["domains_raw"])),
+        ("Domains classified", lambda d: cp(d, "domains_classified", "domains_raw")),
+        ("Billed imps (June,\nserve grain)", lambda d:
+            f"{fmtn(float(billed[d]['billed_imps']))}\n{100 * float(billed[d]['billed_imps']) / rows30[d]:.2f}% of 30d rows"
+            if d in billed else "flat fee\n-"),
+        ("June bill / run rate", lambda d:
+            f"{money(float(billed[d]['billed_usd']))}\n{money(float(billed[d]['billed_usd']) * 12)}/yr"
+            if d in billed else "not metered\nrenewal sched."),
+    ]
+    cells = [[label] + [fn(d) for d in ext] for label, fn in STAGES]
+    cols = ["Funnel stage"] + [SHORT[d] for d in ext]
+
+    fig = plt.figure(figsize=(13.0, 7.2))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.03)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.8)
+    tbl.scale(1, 2.6)
+    widths = [0.155] + [0.1056] * len(ext)
+    USED_ROW, BILL_ROWS = 6, (11, 12)
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white")
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 0:
+                cell.set_text_props(ha="left", fontweight="bold", color="#444", fontsize=8.2)
+            if r == USED_ROW:
+                cell.set_facecolor(HILITE)
+                if c > 0:
+                    cell.set_text_props(fontweight="bold", color=NAVY)
+            if r in BILL_ROWS:
+                cell.set_facecolor("#f4f5f7")
+                if c > 0 and r == BILL_ROWS[1]:
+                    cell.set_text_props(fontweight="bold")
+    ax.set_title("The Survival Funnel: What Each Source Delivers, What MM Can Use, What We Pay",
+                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q2c_funnel.png")
+
+
+STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e, "2": q2, "2b": q2b, "2c": q2c}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
