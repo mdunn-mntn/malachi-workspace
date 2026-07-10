@@ -153,6 +153,12 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   unscored (adverse selection)**. `q9_vendor_scorecard.png`: per-vendor usable %, sole IPs, media $/wk
   touched/sole, HIGH %, bill/run-rate, worth $/mo band, verdict, key ask. Pending v2: q3 refresh
   (running), flat fees, composite score.
+- **q9b composite ranking + runbook/README.md — BUILT 2026-07-10.** Composite (V40/R15/Q15/D10/P20):
+  **5x5 70.4 > Predactiv 61.5 > 33Across 57.7 > Justuno 56.9 > Klickly 51.1 > 33A API 49.8 > Cybba 49.7 >
+  Sovrn 35.5.** `runbook/README.md` = the logic document: value ladder, why sole media is tiny (adverse
+  selection), fee-band/3x verdict rule, per-vendor negotiation targets + leverage + improvement asks,
+  score formula, chart index, open items (q7b per-bucket performance matrix queued; HI-pool union;
+  flat fees; Athena). q3/q4 CSVs+SQL canonicalized (raw pairs; usable refresh running).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

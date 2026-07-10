@@ -940,8 +940,78 @@ def q9(rdir):
     save(fig, "q9_vendor_scorecard.png")
 
 
+# ---- Step 9b: composite quality score + ranking (weights per runbook) ----
+def q9b(rdir):
+    import math
+    def by_ds(f):
+        return {int(r["data_source_id"]): r for r in csv.DictReader(open(os.path.join(rdir, f)))}
+    dom, rec = by_ds("q4_domain_value.csv"), by_ds("q3_pair_recency.csv")
+    val, vr = by_ds("q6_value_tiers.csv"), by_ds("q7_sole_vr.csv")
+    tier = {}
+    with open(os.path.join(rdir, "q5_score_tiers.csv")) as f:
+        for r in csv.DictReader(f):
+            tier.setdefault(int(r["data_source_id"]), {})[r["cohort"]] = r
+    billed = by_ds_safe = {}
+    with open(os.path.join(rdir, "q1d_billed_usage.csv")) as f:
+        for r in csv.DictReader(f):
+            billed[int(r["ds"])] = r
+    EXT = [24, 25, 26, 28, 33, 36, 39, 40]
+    NO_SVS_BASELINE_VR = 0.0223
+    max_sc = max(float(dom[d]["sole_classified"]) for d in EXT)
+    max_t1 = max(float(val[d]["imps_sole_scored_nonrtc"]) for d in EXT)
+    comp = {}
+    for d in EXT:
+        V = math.log10(float(dom[d]["sole_classified"]) + 1) / math.log10(max_sc + 1)
+        R = (float(rec[d]["pct_sole"]) + float(rec[d]["pct_freshest"])) / 100
+        Q = 0.5 * float(dom[d]["pct_classified"]) / 100 \
+            + 0.5 * (1 - float(tier[d]["sole"]["pct_unscored_delivered"]) / 100)
+        D = math.log10(float(val[d]["imps_sole_scored_nonrtc"]) + 1) / math.log10(max_t1 + 1)
+        P = min(float(vr[d]["vr_overall_pct"]) / NO_SVS_BASELINE_VR, 2) / 2 \
+            if float(vr[d]["sole_imps"]) >= 5000 else 0.5
+        comp[d] = (V, R, Q, D, P, 100 * (0.40 * V + 0.15 * R + 0.15 * Q + 0.10 * D + 0.20 * P))
+    order = sorted(EXT, key=lambda d: -comp[d][5])
+
+    cells = []
+    for i, d in enumerate(order):
+        V, R, Q, D, P, S = comp[d]
+        b = billed.get(d)
+        bill = money(float(b["billed_usd"]) * 12) + "/yr" if b else "flat fee"
+        cells.append([f"#{i + 1}", SHORT[d], f"{V:.2f}", f"{R:.2f}", f"{Q:.2f}",
+                      f"{D:.2f}", f"{P:.2f}", f"{S:.1f}", bill])
+    cols = ["Rank", "Source", "V unique\nvalue (40%)", "R non-\nredund (15%)", "Q signal\nqual (15%)",
+            "D depend-\nency (10%)", "P perform-\nance (20%)", "SCORE\n(0-100)", "Bill\nrun rate"]
+
+    fig = plt.figure(figsize=(9.6, 3.5))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.6)
+    widths = [0.055, 0.115, 0.095, 0.095, 0.095, 0.095, 0.095, 0.09, 0.11]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=7.8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            s = float(cells[r - 1][7])
+            if c == 1:
+                cell.set_text_props(ha="left", fontweight="bold")
+            if c == 7:
+                cell.set_facecolor(HILITE)
+                cell.set_text_props(fontweight="bold",
+                                    color=GREEN if s >= 60 else (AMBER if s >= 45 else RED))
+    ax.set_title("Composite Quality Score: Components and Ranking (score = data quality; verdict = score x cost)",
+                 fontsize=12, fontweight="bold", loc="left", pad=14)
+    save(fig, "q9b_quality_ranking.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "5": q5, "9": q9}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "5": q5, "9": q9, "9b": q9b}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

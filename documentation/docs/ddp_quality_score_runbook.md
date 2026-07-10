@@ -226,6 +226,10 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 
 ### Step 9 — Composite scorecard — **v1 BUILT 2026-07-10** (`q9_vendor_scorecard.png`)
 - **Claim:** one row per vendor: score components → quality score → bill → verdict.
+- **Also built:** `q9b_quality_ranking.png` — the composite V/R/Q/D/P score computed in the canonical
+  chart script (--step 9b) from q3/q4/q5/q6/q7 CSVs: 5x5 70.4 > Predactiv 61.5 > 33Across 57.7 >
+  Justuno 56.9 > Klickly 51.1 > 33A API 49.8 > Cybba 49.7 > Sovrn 35.5 (raw-pair R; usable q3 refresh
+  pending). Logic explainer + negotiation targets: `runbook/README.md`.
 - **Query:** none — v1 synthesizes q2c (usable), q5 (score mix), q6 (media $ touched/sole), q1d (bill)
   + eval verdicts/fee bands into `q9_vendor_scorecard.png` (usable %, sole IPs, $/wk, HIGH %, bill,
   worth $/mo, verdict, key vendor ask). Pending for v2: q3 usable-uniqueness refresh, flat fees
