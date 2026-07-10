@@ -88,6 +88,19 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   `user_agent` only 33Across/Sovrn/33A API + internal; URL path share: Klickly 100% (Shopify) vs
   33A API 26% (RTB endpoints) vs 5x5 4% (domain-only); Sovrn modal URL malformed (doubled protocol).
 
+### Step 1c — Content quality (junk markers) — **BUILT 2026-07-10** (`runbook/queries/q1c_content_quality.sql`)
+- **Claim:** "Population % says a field is filled, not that it's worth anything — measure junk directly."
+- **Query** `q1c_content_quality.sql` (same hour slice as q1b): per source — Googlebot-IP % (66.249.x),
+  bot-UA %, top-IP share, private-IP %, uid dup %, timestamp-stamping share, URL parse-fail %
+  (NET.REG_DOMAIN NULL), URL malformed % (doubled protocol), top/top-5 domain concentration, distinct domains.
+- **Output:** `q1c_content_quality.csv`. **Visual:** `--step 1c` → junk-marker table, amber ≥3% / red ≥25%
+  (concentration: amber ≥40 / red ≥70).
+- **Score input:** feeds Q qualitatively; parse-fail directly discounts V (unparseable rows never classify).
+- **First-run findings:** **Sovrn 77% of URLs malformed+unparseable** (doubled protocol — only ~23% of the
+  feed is usable); **Klickly 94% myshopify.com** (117 distinct domains/hr); **5x5 53% outbrain.com**;
+  **33Across 6.4% Googlebot IPs + 5.7% bot UAs**; 33A API top-5 domains = 58% (RTB infra). Clean everywhere:
+  uid ~unique, timestamps real (no batch stamping), private IPs ~0.
+
 ### Step 2 — Window reach
 - **Claim:** "Over the actual targeting window, vendor V reaches N IPs / M domains / P pairs."
 - **Query** `q2_window_reach.sql`: per ds, window-cumulative distinct IP / domain / (ip|domain).

@@ -952,6 +952,13 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   % with path): Klickly 100 (all Shopify product/checkout URLs), Sovrn 92 (**modal URL malformed — doubled
   protocol `https://mail.yahoo.comhttps://…`**), Justuno 91, Cybba 79, Predactiv 75, 33Across 68 (webmail-heavy),
   **33A API 26 (modal = openwebmp.com RTB endpoint — ad-infra, not user browsing), 5x5 4 (domain-only feed)**.
+- **Content quality by source (AUDI-1089 q1c, same hour slice):** **Sovrn (DS33): 77% of URLs malformed —
+  doubled protocol `https://Xhttps://X` — and fail `NET.REG_DOMAIN`; only ~23% of the feed is usable by the
+  domain classifier** (vendor-side bug, not sporadic). Klickly (DS39) = 94% `myshopify.com` reg-domain (98%
+  top-5; ~117 distinct domains/hr — NET.REG_DOMAIN collapses Shopify store subdomains). 5x5 (DS25) = 53%
+  `outbrain.com` (widget network) + 1.6% Googlebot IPs. 33Across (DS28): 6.4% of rows from Googlebot IPs
+  (66.249.x) + 5.7% bot UAs. 33A API (DS40): top-5 domains 58% incl. openwebmp.com RTB endpoints. Clean
+  everywhere: uid ~unique per row, no timestamp batch-stamping, private/reserved IPs ~0.
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`

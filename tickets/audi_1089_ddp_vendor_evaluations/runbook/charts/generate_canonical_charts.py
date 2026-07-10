@@ -289,7 +289,76 @@ def q1b(rdir):
     save(fig2, "q1b_url_richness.png")
 
 
-STEPS = {"0": q0, "1": q1, "1b": q1b}
+# ---- Step 1c: content quality — junk markers ----
+def q1c(rdir):
+    rows = []
+    with open(os.path.join(rdir, "q1c_content_quality.csv")) as f:
+        for r in csv.DictReader(f):
+            rows.append(r)
+    data = {int(r["ds"]): r for r in rows}
+    ext = sorted((d for d in data if d not in (23, 30)), key=lambda d: -int(data[d]["n"]))
+    order = ext + sorted((d for d in (23, 30) if d in data), key=lambda d: -int(data[d]["n"]))
+
+    def pct(v, nd=1):
+        if v in ("", None):
+            return "-"
+        x = max(0.0, float(v))
+        return "0" if x < 0.05 else f"{x:.{nd}f}%"
+
+    cells, marks = [], []
+    for d in order:
+        r = data[d]
+        top_dom = r["top_domain"] or "(unparsed)" if float(r["url_parse_fail_pct"] or 0) > 5 \
+            else (r["top_domain"] or "(empty)")
+        dom_cell = f"{top_dom}  ({float(r['top_domain_share']):.0f}%)"
+        cells.append([SHORT[d], f"{int(r['n']):,}", pct(r["pct_googlebot_ip"]),
+                      pct(r["ua_bot_pct"]), pct(r["top_ip_share"]),
+                      pct(r["url_parse_fail_pct"]), pct(r["url_malformed_pct"]),
+                      dom_cell, f"{float(r['top5_domain_share']):.0f}%",
+                      f"{int(r['dom_distinct']):,}"])
+        junk = [max(0.0, float(r[k] or 0)) for k in
+                ("pct_googlebot_ip", "ua_bot_pct", "top_ip_share",
+                 "url_parse_fail_pct", "url_malformed_pct")]
+        conc = [float(r["top_domain_share"]), float(r["top5_domain_share"])]
+        marks.append((junk, conc))
+    cols = ["Source", "Rows (hr)", "Googlebot IP", "Bot UA", "Top IP",
+            "URL parse fail", "URL malformed", "Top domain (share)", "Top-5 share", "Domains (hr)"]
+
+    fig = plt.figure(figsize=(11.8, 3.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.83, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.5)
+    widths = [0.115, 0.10, 0.09, 0.07, 0.07, 0.095, 0.095, 0.185, 0.075, 0.09]
+    JCOL = {2: 0, 3: 1, 4: 2, 5: 3, 6: 4}
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8.5)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(ext) else "#f4f5f7")
+            junk, conc = marks[r - 1]
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c in JCOL and junk[JCOL[c]] >= 3:
+                cell.set_text_props(color=RED if junk[JCOL[c]] >= 25 else AMBER, fontweight="bold")
+            if c == 7 and conc[0] >= 40:
+                cell.set_text_props(color=RED if conc[0] >= 70 else AMBER, fontweight="bold")
+            if c == 8 and conc[1] >= 40:
+                cell.set_text_props(color=RED if conc[1] >= 70 else AMBER, fontweight="bold")
+            if r > len(ext):
+                cell.set_text_props(color="#888")
+    ax.set_title("Content Quality: Junk and Concentration Markers by Source, One-Hour Slice",
+                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q1c_content_quality.png")
+
+
+STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

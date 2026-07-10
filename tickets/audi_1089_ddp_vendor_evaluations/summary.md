@@ -70,6 +70,14 @@ domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
   `advertiser_id` = guid_log only; `user_agent` = 33Across/Sovrn/33A API + internal only; URL path share
   Klickly 100% (Shopify) → 33A API 26% (RTB endpoints) → 5x5 4% (domain-only); Sovrn modal URL malformed
   (doubled protocol). Full details in data_knowledge.md § Site Visit Signal.
+- **q1c content quality — BUILT 2026-07-10.** `runbook/queries/q1c_content_quality.sql` (33 GB hour slice) →
+  `outputs/run_2026_07_10/q1c_content_quality.csv` + `runbook/charts/q1c_content_quality.png`. Beyond counts:
+  **Sovrn 77% of URLs malformed (doubled protocol) AND unparseable — only ~23% of the $116K/yr feed is
+  classifier-usable** (strengthens the DROP case; also a vendor bug report). **Klickly = 94% myshopify.com**
+  (98% top-5; 117 distinct domains/hr — niche by design, reg-domain collapses store subdomains).
+  **5x5 = 53% outbrain.com** (widget network). **33Across: 6.4% Googlebot IPs, 5.7% bot UAs** (webmail+bots).
+  33A API top-5 domains 58% (openwebmp RTB). Clean checks: uids ~unique, timestamps real, private IPs ~0
+  everywhere — no batch-stamping artifacts.
 - **q1 scale+liveness — BUILT 2026-07-10.** `runbook/queries/q1_scale_by_day.sql` →
   `outputs/run_2026_07_10/q1_scale_by_day.csv` (reused Jul 9 pull — identical query + window) +
   `runbook/charts/q1_scale_by_day.png` (liveness table). Findings: **no source missed a day** —
