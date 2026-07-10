@@ -105,3 +105,87 @@ IPs — high-traffic households everyone else also serves through other doors.
    at 2%/mo erosion, −21%/yr at 4%/mo); a replacement vendor could also cover the sole set.
 5. **Never double-count with the fee band** — domain term + max(ONE imp-priced term); the same
    impressions can't be priced at media CPM and data CPM simultaneously.
+
+
+# Leave-one-out and billing reassignment (the "sole data providers" problem)
+
+Soleness is **portfolio-relative**: remove a vendor and every survivor's sole rate rises (their shared
+pairs become sole). And under first-reporter-wins, **dropping a metered vendor does not save its bill**
+— its credited (ip,url,day) wins reassign to the next reporter, at the same $0.50 CPM if that reporter
+is another metered vendor. Real savings exist only where the next holder is a FREE internal log,
+a flat-fee vendor (no marginal cost), or nobody.
+
+## Framing correction
+
+A survivor's rising sole rate is NOT a benefit — it is our **dependency on them rising**, which is
+their walk-away leverage in the next negotiation. It enters the drop decision as a cost:
+
+`net value of dropping v = (bill saved net of reassignment) − (margin on v's sole media forfeited)`
+
+## Toy-example corrections (from the design discussion)
+
+- CPM is per 1,000 **impressions**, not per 1,000 IPs — 1,000 sole IPs ≈ ~5,500 won bids at the
+  observed ~5.5 wins per delivered IP.
+- The ~$11.5–12 eCPM on these serves is media **revenue we earn**; the $0.50 CPM is data **cost we
+  pay** — opposite directions, ~23x apart. Use the observed blended eCPM, not the $10–50 CTV list range.
+- Arithmetic: $1,300 × 50% = $650.
+
+## Bounded savings (v1 — from existing q3 data)
+
+Decompose each vendor's usable pairs: `s` = sole share, `f` = free-log-co-held share
+(1 − pct_netnew_vs_free), `q` = paid-only-co-held share (s+f+q = 1).
+
+- **savings_floor = bill × s** — sole credits vanish outright (valid floor: credits over-concentrate
+  in sole pairs, where v wins every day).
+- **savings_ceiling = bill × (s + f)** — assumes the free logs win every re-race they can enter.
+- `q`-share credits reassign inside the paid pool → no savings (unless the co-holder is flat-fee —
+  the wildcard q3b resolves).
+
+| Vendor | Bill $/yr | s sole | f free-co-held | q paid-only | Drop saves (floor–ceiling) |
+|---|--:|--:|--:|--:|--:|
+| 33Across | $422K | 30.8% | 54.7% | 14.6% | **$130K – $361K** |
+| 33A API | $176K | 45.3% | 32.7% | 22.0% | **$80K – $137K** |
+| Sovrn | $116K | 12.4% | 0.3% | 87.3% | **$14.3K – $14.7K** |
+| Justuno | $77K | 91.6% | 5.0% | 3.4% | **$71K – $75K** |
+| Cybba | $21.5K | 68.5% | 29.8% | 1.7% | **$14.7K – $21.1K** |
+
+Assumption ledger: (A1) credit mix ∝ pair mix — true sole-credit share is HIGHER than s, so the floor
+holds; (A2) ceiling is approximate — q credits co-held by flat-fee vendors would also be free to
+reabsorb (q3b measures this); (A3) freshness degradation on surviving pairs is second-order;
+(A4) all metered rates equal ($0.50) — under negotiated unequal rates, reassignment direction matters.
+
+## What this changes
+
+- **Sovrn: DROP survives, but the savings claim restates 8x down.** We pay $116K/yr for ~$2.4K of
+  value (the indictment stands) — but dropping it recovers only **~$14.5K/yr**; the other ~$102K
+  relabels to other paid vendors (its ties are 80% with paid, 0.3% with free). Wildcard: if much of its
+  87% paid-only overlap is with flat-fee 5x5/Predactiv rather than 33Across, real savings rise — q3b
+  answers this.
+- **33Across becomes the biggest REAL savings opportunity**: $130–361K/yr of its bill is recoverable
+  because its duplication is with our FREE logs (f = 54.7%; guid_log alone is bigger than 33Across at
+  pair grain).
+- **Justuno**: 91.6% sole — reassignment logic barely applies; it remains a pure coverage-vs-price call.
+- **Cybba**: DROP strengthens (floor already ≥ its value band).
+- **Non-additivity**: these figures do NOT sum across multi-vendor drops (jointly-held pairs vanish
+  together) — the q3b holder-signature histogram enables exact evaluation of all 2^8 keep-sets.
+
+## Sequencing rules (order of operations is money)
+
+1. **Renegotiate before you drop** — dropping alternatives destroys our BATNA.
+2. **33Across rate first, Sovrn drop second**: dropping Sovrn first pushes ~$8.5K/mo of credits INTO
+   33Across (raising its bill and its measured dependency right before the negotiation); done in the
+   right order, reassigned credits land at the negotiated rate.
+3. Never execute a drop that reassigns credits into a vendor mid-negotiation; refresh the index after
+   every executed change.
+4. Structural: the metered pool is ~$68K/mo — metered-to-metered drops barely shrink it. The only real
+   levers are (a) credits the free logs can absorb (33Across), (b) rate cuts, (c) accepting sole-coverage
+   loss.
+
+## Portfolio construction (the user's "start big, add if worth it")
+
+The instinct is right — it is greedy optimization of margin(coverage) − cost. Formally the objective is
+a difference of submodular functions (no constant-factor guarantee; mutual-duplication traps exist —
+two vendors covering each other both look droppable, dropping both loses the joint coverage, exactly
+the recompute-after-each-removal concern). At n=8 this doesn't matter: with q3b's holder-signature
+histogram we evaluate ALL 256 keep-sets exactly and publish the spend-vs-coverage frontier, including
+the "free logs + flat-fee + 33Across only" corner and negotiated-rate scenarios.

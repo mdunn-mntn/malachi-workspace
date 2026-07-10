@@ -1231,8 +1231,65 @@ def q9c(rdir):
     save(fig2, "q9c_klickly_ladder.png")
 
 
+
+# ---- Step 9d: leave-one-out — what dropping each metered vendor ACTUALLY saves ----
+# Synthesis over q3_usable_uniqueness.csv + q1d bills + q9c dependency WTP.
+# floor = bill x sole share; ceiling = bill x (sole + free-co-held); the rest reassigns to paid.
+def q9d(rdir):
+    q3u = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q3_usable_uniqueness.csv")))}
+    billed = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
+    vt = {int(r["data_source_id"]): r for r in csv.DictReader(open(os.path.join(rdir, "q6_value_tiers.csv")))}
+
+    METERED = [28, 40, 33, 24, 36]
+    rows_d = []
+    for d in METERED:
+        pairs = int(q3u[d]["usable_pairs"])
+        s_sh = int(q3u[d]["sole_pairs"]) / pairs
+        netnew = int(q3u[d]["netnew_vs_free_pairs"]) / pairs
+        f_sh = 1 - netnew
+        bill = float(billed[d]["billed_usd"]) * 12
+        floor, ceil = bill * s_sh, bill * (s_sh + f_sh)
+        wtp50 = 0.50 * float(vt[d]["media_sole"]) * 52 - float(vt[d]["data_sole"]) * 52
+        rows_d.append((d, bill, floor, ceil, s_sh, f_sh, wtp50))
+    rows_d.sort(key=lambda r: -r[1])
+
+    fig, ax = plt.subplots(figsize=(10.6, 4.2))
+    fig.subplots_adjust(left=0.11, right=0.77, top=0.84, bottom=0.12)
+    ys = range(len(rows_d))[::-1]
+    for y, (d, bill, floor, ceil, s_sh, f_sh, wtp50) in zip(ys, rows_d):
+        ax.barh(y, bill, height=0.62, color="#e4e6ea", edgecolor="#c9ccd2")
+        ax.barh(y, floor, height=0.62, color=GREEN)
+        ax.barh(y, ceil - floor, left=floor, height=0.62, color=GREEN, alpha=0.38)
+        ax.plot([wtp50], [y], marker="D", color=RED, markersize=7, zorder=5)
+        ax.text(bill, y, f"  bill {money(bill)}", va="center", fontsize=9, color="#555")
+        big = floor > bill * 0.18
+        ax.text(floor / 2 if big else ceil + rows_d[0][1] * 0.008, y + (0 if big else 0.32),
+                money(floor) + ("" if big else " floor"), va="center",
+                ha="center" if big else "left", fontsize=8.5, fontweight="bold",
+                color="white" if big else GREEN)
+    ax.set_yticks(list(ys))
+    ax.set_yticklabels([SHORT[r[0]] for r in rows_d], fontsize=10)
+    ax.set_xlabel("$/yr", fontsize=9, color="#666")
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"${v/1e3:,.0f}K"))
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    ax.tick_params(left=False, bottom=False, labelsize=8.5)
+    ax.set_title("Dropping a Vendor Does Not Save Its Bill: Guaranteed Savings (solid green),\n"
+                 "Possible If Free Logs Win Re-Races (light green), Rest Reassigns to Paid Vendors (gray)",
+                 fontsize=12, fontweight="bold", loc="left", pad=14)
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    ax.legend(handles=[Patch(color=GREEN, label="savings floor (sole share)"),
+                       Patch(color=GREEN, alpha=0.38, label="savings ceiling (+free co-held)"),
+                       Patch(color="#e4e6ea", label="reassigns to other paid vendors"),
+                       Line2D([0], [0], marker="D", color="w", markerfacecolor=RED,
+                              markersize=7, label="value forfeited (WTP @50% margin)")],
+              loc="center left", bbox_to_anchor=(1.005, 0.5), fontsize=8, frameon=False)
+    save(fig, "q9d_one_out.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "9": q9, "9b": q9b, "9c": q9c}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

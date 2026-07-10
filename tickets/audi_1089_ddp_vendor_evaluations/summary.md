@@ -172,6 +172,15 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   — confirms drop-unless-~free on a second independent lens. 33Across dependency base $270K/yr
   (largest); 5x5/Predactiv invert between lenses (small dependency, huge domain value) — lenses stay
   side-by-side, never summed (double-count rule).
+- **q9d leave-one-out + q3b launched — 2026-07-10 (user's "sole data providers" insight formalized).**
+  Dropping a metered vendor reassigns credits to the next reporter — bill ≠ savings. Bounds (floor =
+  bill×sole, ceiling = bill×(sole+free-co-held)): 33Across saves $130–361K/yr (dup with FREE logs —
+  biggest real pool), 33A API $80–137K, Justuno $71–75K, Cybba $15–21K, **Sovrn only $14.3–14.7K of
+  $116K (87% paid-overlap — money relabels into 33Across)**. **SEQUENCING: renegotiate 33Across rate
+  BEFORE dropping Sovrn** (else its credits inflate 33Across's bill + measured dependency pre-negotiation).
+  Survivor sole-rate increase = leverage COST not benefit. q3b scan (holder-signature histogram → exact
+  256-subset frontier; first-reporter classes; flat-fee wildcard) running in background. Full logic +
+  toy-example corrections in `runbook/dependency_valuation.md`.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

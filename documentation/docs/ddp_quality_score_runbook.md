@@ -170,6 +170,16 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   33Across 35.7% of rows but only 19.8% of classified domains; **Predactiv is the #1 classified-domain
   supplier at 34.3%** on 2.4% of rows; Klickly 0.04% of classified domains.
 
+### Step 3b — Credit reassignment / leave-one-out — **v1 BUILT + q3b scan launched 2026-07-10**
+- **Claim:** "Dropping a metered vendor reassigns its credits to the next reporter — savings only where
+  that's a free log or nobody." v1 bounds from q3 shares (floor = bill × sole; ceiling = bill ×
+  (sole + free-co-held)); **q3b** (`runbook/queries/q3b_credit_reassignment.sql`, 30d scan) adds the
+  holder-signature histogram (exact all-subset simulation), first-reporter-weighted reassignment classes
+  (resolves the flat-fee wildcard), and the co-first tie matrix. Visual: `q9d_one_out.png`.
+- **Key v1 findings:** Sovrn drop recovers only ~$14.5K of its $116K/yr (87% paid-overlap); 33Across is
+  the real savings pool ($130–361K/yr, free-log dup). Sequencing: renegotiate 33Across before dropping
+  Sovrn. Full logic: `runbook/dependency_valuation.md`.
+
 ### Step 3 — Uniqueness & recency (pairs) — **BUILT 2026-07-10, USABLE-RESTRICTED** (`runbook/queries/q3_usable_uniqueness.sql`)
 - **Claim:** "X% of V's pairs are irreplaceable in-window; Y% are same-day-redundant (insurance)."
 - **Query** `q3_pair_recency.sql`: per (ip,domain) per ds MAX(dt) → per ds: sole / freshest / tied / stale +

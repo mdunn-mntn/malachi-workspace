@@ -133,6 +133,14 @@ Scores are CURVED to best-in-roster = 100 (the best source is the best we'll get
 
 WTP = the defensible fee band from section 3 (V sole-classified-domain value + D dependency media);
 "pay up to" = band top. Bill color rule on the chart: green ≤ band top, amber ≤ 3×, red > 3×.
+
+**LEAVE-ONE-OUT CAVEAT (dependency_valuation.md § leave-one-out): dropping a metered vendor does NOT
+recover its bill** — credits reassign to the next reporter. Actual drop savings (floor–ceiling):
+33Across **$130–361K/yr** (dup is with FREE logs — the biggest real savings), 33A API $80–137K,
+Justuno $71–75K, Cybba $15–21K, **Sovrn only $14.3–14.7K of its $116K** (87% of its overlap is with
+paid vendors — the money relabels, mostly into 33Across). **Sequencing: renegotiate 33Across's rate
+BEFORE dropping Sovrn.** Chart: `q9d_one_out.png`. Exact reassignment (incl. flat-fee wildcard + all
+256 roster subsets) lands with the q3b scan.
 Score ranks data quality; the VERDICT = score × cost position (a 57.7 at 4× over band still
 negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 
@@ -147,6 +155,7 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 
 ## 6. Chart index (charts/)
 - `q9c_dependency_ceiling.png` / `q9c_klickly_ladder.png` — dependency-ceiling valuation (stock/flow/performance/$)
+- `q9d_one_out.png` — leave-one-out: what dropping each metered vendor actually saves vs reassigns
 - `q0_roster_cost.png` — roster + monthly metered bills (wide table)
 - `q1_scale_by_day.png` — liveness: days delivered, partial days, IPv6
 - `q1b_schema_fields.png` / `q1b_url_richness.png` — field population + URL path share
