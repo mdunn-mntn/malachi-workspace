@@ -126,35 +126,37 @@ def q1(rdir):
     days = sorted(days)
     dlbl = lambda dt: f"{MON[int(dt[5:7])]} {int(dt[8:10])}"
 
-    ext = sorted(d for d in by_ds if d not in (23, 30))
-    order = ext + [d for d in (23, 30) if d in by_ds]
+    med = {}
+    for d, m in by_ds.items():
+        vals = sorted(v[0] for v in m.values())
+        med[d] = vals[len(vals) // 2]
+    ext = sorted((d for d in by_ds if d not in (23, 30)), key=lambda d: -med[d])
+    order = ext + sorted((d for d in (23, 30) if d in by_ds), key=lambda d: -med[d])
     sep_at = len(ext)
     cells, flags = [], []
     for d in order:
         m = by_ds[d]
-        vals = sorted(v[0] for v in m.values())
-        med = vals[len(vals) // 2]
-        partial = sorted(x for x, v in m.items() if v[0] < 0.5 * med)
+        partial = sorted(x for x, v in m.items() if v[0] < 0.5 * med[d])
         mind, minv = min(m.items(), key=lambda kv: kv[1][0])
         ipv6 = sum(v[1] for v in m.values()) / len(m)
         gate = "PASS" if len(m) >= 0.95 * len(days) else "FAIL"
         plbl = f"{len(partial)}:  " + ", ".join(dlbl(x) for x in partial) if partial else "0"
         cells.append([NAMES.get(d, f"DS{d}"), f"DS{d}", f"{len(m)}/{len(days)}", plbl,
-                      f"{med:,}", f"{100 * minv[0] / med:.0f}%  ({dlbl(mind)})",
+                      f"{med[d]:,}", f"{100 * minv[0] / med[d]:.0f}%  ({dlbl(mind)})",
                       f"{ipv6:.1f}%", gate])
         flags.append((bool(partial), gate))
     cols = ["Source", "DS", "Days delivered", "Partial days (<50% of median)",
             "Median rows/day", "Weakest day (% of median)", "IPv6 share", "Liveness gate"]
 
-    fig = plt.figure(figsize=(13.4, 3.9))
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.84, bottom=0.03)
+    fig = plt.figure(figsize=(13.4, 3.15))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.02)
     ax = fig.add_subplot(111)
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9.5)
     tbl.scale(1, 1.5)
-    widths = [0.16, 0.05, 0.10, 0.22, 0.13, 0.16, 0.08, 0.10]
+    widths = [0.17, 0.05, 0.09, 0.19, 0.14, 0.16, 0.09, 0.10]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
