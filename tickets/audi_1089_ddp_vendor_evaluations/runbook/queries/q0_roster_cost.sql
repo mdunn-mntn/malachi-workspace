@@ -27,7 +27,7 @@
 -- the statement text to stdout, contaminating the CSV.
 --   bash .claude/scripts/bq_run.sh --ticket AUDI-1089 --label "canonical q0 roster+cost" \
 --     --use_legacy_sql=false --format=csv --max_rows=200 --project_id=dw-main-silver \
---     "$(grep -v '^[[:space:]]*--' tickets/audi_1089_ddp_vendor_evaluations/queries/canonical/q0_roster_cost.sql)" \
+--     "$(grep -v '^[[:space:]]*--' tickets/audi_1089_ddp_vendor_evaluations/runbook/queries/q0_roster_cost.sql)" \
 --     > tickets/audi_1089_ddp_vendor_evaluations/outputs/run_<YYYY_MM_DD>/q0_roster_cost.csv
 --
 -- Parameters (inlined literals, marked with PARAM comments for the runner to substitute):

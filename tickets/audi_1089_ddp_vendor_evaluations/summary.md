@@ -55,14 +55,15 @@ folder holds its interpretation, vendor-specific queries, and verdict.
 
 The methodology is being canonicalized into **`documentation/docs/ddp_quality_score_runbook.md`** — 10 steps,
 one parameterized query + one visual each, composite score (V 40% / R 15% / Q 15% / D 10% / P 20% × liveness
-gate) → defensible fee band vs actual metered bill → verdict. Canonical SQL lives in `queries/canonical/`
-(q0–q7), built one step per session. Build order: q0 roster+cost → q1-q2 scale/reach → q3-q4 pair recency +
+gate) → defensible fee band vs actual metered bill → verdict. All canonical materials live under `runbook/`:
+SQL in `runbook/queries/` (q0–q7), chart script + PNGs in `runbook/charts/`, built one step per session. Build order: q0 roster+cost → q1-q2 scale/reach → q3-q4 pair recency +
 domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
 
 **Progress:**
-- **q0 roster+cost — BUILT 2026-07-10.** `queries/canonical/q0_roster_cost.sql` →
-  `outputs/run_2026_07_10/q0_roster_cost.csv` + `artifacts/canonical/q0_roster_cost.png`
-  (table + small-multiple bill trends via `artifacts/canonical/generate_canonical_charts.py`).
+- **q0 roster+cost — BUILT 2026-07-10.** `runbook/queries/q0_roster_cost.sql` →
+  `outputs/run_2026_07_10/q0_roster_cost.csv` (+ Excel-friendly `q0_roster_cost_wide.csv/.tsv/.html`)
+  + `runbook/charts/q0_roster_cost.png` (table + small-multiple bill trends via
+  `runbook/charts/generate_canonical_charts.py`).
   Findings: the meter spans ALL CPM DDPs — **DS35 LiveRamp IP (interests) bills $243–446K/mo ≈ $3.4M/yr,
   ~4× the entire site-visit CPM roster**; DS17 ShareThis @ $0.95 (rate cut from $1.20 "starting May usage"
   per registry notes, but meter implies $0.95 for all Jan–Jun — history likely restated); DS29 deepsync

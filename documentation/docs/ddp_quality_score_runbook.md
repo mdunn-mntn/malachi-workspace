@@ -48,7 +48,7 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 
 ## Steps (build order — one session each)
 
-### Step 0 — Roster & actual cost — **BUILT 2026-07-10** (`queries/canonical/q0_roster_cost.sql`)
+### Step 0 — Roster & actual cost — **BUILT 2026-07-10** (`runbook/queries/q0_roster_cost.sql`)
 - **Claim:** "These are the vendors, what they bill, and what we ACTUALLY paid each month."
 - **Query** `q0_roster_cost.sql`: registry dedup (`QUALIFY ROW_NUMBER() OVER (PARTITION BY data_source_id ORDER BY valid_from DESC)=1`
   — CDC dupes; DS26 broken SCD) + monthly `SUM(impressions), SUM(usage)` from
@@ -57,7 +57,7 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   ShareThis @ $0.95, LiveRamp IP variable), so the check uses each source's own rate (`meter_check_ok`).
   Scope = MM roster (incl. disabled, e.g. DS27 LaunchLabs) + any other metered source as context rows.
 - **Output:** `q0_roster_cost.csv` — one row per source × reporting_month; flat-fee/unmetered keep one
-  NULL-month row. **Visual:** `artifacts/canonical/generate_canonical_charts.py --step 0` → cost table +
+  NULL-month row. **Visual:** `runbook/charts/generate_canonical_charts.py --step 0` → cost table +
   small-multiple monthly-bill trends (built).
 - **Score input:** the verdict denominator (cost position). Flat fees stay `pending` until the renewal schedule.
 - **Run-pattern gotchas (apply to all canonical steps):** pass SQL with full-line comments stripped
@@ -139,8 +139,9 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 ---
 
 ## Repeatability mechanics
-- Canonical SQL lives in `tickets/audi_1089_ddp_vendor_evaluations/queries/canonical/` (q0–q7), each with the
-  parameter block at top; outputs land in `outputs/<run_date>/`.
+- Everything canonical lives under `tickets/audi_1089_ddp_vendor_evaluations/runbook/`: SQL in
+  `runbook/queries/` (q0–q7, each with the parameter block at top), chart script + PNGs in
+  `runbook/charts/`; output CSVs land in `outputs/<run_date>/` (gitignored — raw data stays local).
 - `run_quality_score.sh <SIGNAL_START>` launches q1–q7 in parallel (background), waits, recovers from anon
   tables if needed; then `audi_1089_generate_charts.py` + `build_quality_score.py` + `audi_1089_build_report.py`
   regenerate the full evidence report; share via share_deck.sh.
