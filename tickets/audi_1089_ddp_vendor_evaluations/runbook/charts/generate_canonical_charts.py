@@ -970,6 +970,7 @@ def q9b(rdir):
             if float(vr[d]["sole_imps"]) >= 5000 else 0.5
         comp[d] = (V, R, Q, D, P, 100 * (0.40 * V + 0.15 * R + 0.15 * Q + 0.10 * D + 0.20 * P))
     order = sorted(EXT, key=lambda d: -comp[d][5])
+    best = max(comp[d][5] for d in EXT)
 
     WTP = {25: ("$150K-600K", 600e3), 26: ("$0.7M-3M", 3e6), 28: ("$30K-100K", 100e3),
            24: ("$14K-60K", 60e3), 39: ("$0.1K-1.5K", 1.5e3), 40: ("$10K-40K", 40e3),
@@ -977,6 +978,7 @@ def q9b(rdir):
     cells, billcol = [], []
     for i, d in enumerate(order):
         V, R, Q, D, P, S = comp[d]
+        C = 100 * S / best
         b = billed.get(d)
         wtp_lbl, wtp_top = WTP[d]
         if b:
@@ -987,12 +989,12 @@ def q9b(rdir):
             bill = "flat fee"
             billcol.append("#888")
         cells.append([f"#{i + 1}", SHORT[d], f"{V:.2f}", f"{R:.2f}", f"{Q:.2f}",
-                      f"{D:.2f}", f"{P:.2f}", f"{S:.1f}", wtp_lbl, bill])
+                      f"{D:.2f}", f"{P:.2f}", f"{S:.1f}", f"{C:.0f}", wtp_lbl, bill])
     cols = ["Rank", "Source", "V unique\nvalue (40%)", "R non-\nredund (15%)", "Q signal\nqual (15%)",
-            "D depend-\nency (10%)", "P perform-\nance (20%)", "SCORE\n(0-100)",
-            "WTP $/yr\n(pay up to)", "Bill\nrun rate"]
+            "D depend-\nency (10%)", "P perform-\nance (20%)", "Raw\nscore",
+            "CURVED\n(best=100)", "WTP $/yr\n(pay up to)", "Bill\nrun rate"]
 
-    fig = plt.figure(figsize=(10.8, 3.5))
+    fig = plt.figure(figsize=(11.6, 3.5))
     fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
     ax = fig.add_subplot(111)
     ax.axis("off")
@@ -1000,7 +1002,7 @@ def q9b(rdir):
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9)
     tbl.scale(1, 1.6)
-    widths = [0.05, 0.105, 0.088, 0.088, 0.088, 0.088, 0.088, 0.082, 0.115, 0.10]
+    widths = [0.048, 0.10, 0.084, 0.084, 0.084, 0.084, 0.084, 0.066, 0.082, 0.11, 0.095]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
@@ -1009,18 +1011,20 @@ def q9b(rdir):
             cell.set_facecolor(NAVY)
         else:
             cell.set_facecolor("white")
-            s = float(cells[r - 1][7])
+            cv = float(cells[r - 1][8])
             if c == 1:
                 cell.set_text_props(ha="left", fontweight="bold")
             if c == 7:
+                cell.set_text_props(color="#888")
+            if c == 8:
                 cell.set_facecolor(HILITE)
                 cell.set_text_props(fontweight="bold",
-                                    color=GREEN if s >= 60 else (AMBER if s >= 45 else RED))
-            if c == 8:
-                cell.set_text_props(fontweight="bold", color=NAVY)
+                                    color=GREEN if cv >= 80 else (AMBER if cv >= 65 else RED))
             if c == 9:
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if c == 10:
                 cell.set_text_props(fontweight="bold", color=billcol[r - 1])
-    ax.set_title("Composite Quality Score: Components and Ranking (score = data quality; verdict = score x cost)",
+    ax.set_title("Composite Quality Score, Curved to Best-in-Roster = 100 (verdict pairs the curve with cost position)",
                  fontsize=12, fontweight="bold", loc="left", pad=14)
     save(fig, "q9b_quality_ranking.png")
 

@@ -99,25 +99,28 @@ strip webmail/ad-infra rows at source (33Across, 33A API).
 
 ## 4. Composite quality score (0–100)
 
-`score = 100 × (0.40·V + 0.15·R + 0.15·Q + 0.10·D + 0.20·P)`, liveness gate ×0/1 (all PASS this run).
+`raw = 100 × (0.40·V + 0.15·R + 0.15·Q + 0.10·D + 0.20·P)`, liveness gate ×0/1 (all PASS this run).
+`curved = 100 × raw / max(raw)` — graded against the best source in the roster (the best we'll get),
+so the top source = 100 and the rest read as % of best. Chart color: green ≥80, amber ≥65, red <65.
 - V — sole classified domains, log-normalized (the durable unique value)
 - R — % of (ip,domain) pairs sole-or-freshest (non-redundancy under first-reporter-wins)
 - Q — ½·(% domains classified) + ½·(1 − sole unscored share) (signal quality)
 - D — T1 gated sole imps, log-normalized (hard dependency)
 - P — sole-IP VR ÷ no-svs baseline (0.0223%), capped 2×, halved; <5K sole imps → neutral 0.5
 
-**THE INDEX (this run, 2026-07-10 — raw-pair R; usable-restricted q3 refresh in flight):**
+**THE INDEX (this run, 2026-07-10 — raw-pair R; usable-restricted q3 refresh in flight).**
+Scores are CURVED to best-in-roster = 100 (the best source is the best we'll get; raw in parens):
 
-| # | Source | Score | WTP $/yr (pay up to) | Bill run-rate | vs band | Verdict |
+| # | Source | Curved (raw) | WTP $/yr (pay up to) | Bill run-rate | vs band | Verdict |
 |--:|---|--:|---|---|---|---|
-| 1 | 5x5 | 70.4 | $150K–600K (TI-1027 fair) | flat fee, pending | — | KEEP |
-| 2 | Predactiv | 61.5 | $0.7M–3M | flat fee, pending | — | KEEP, lock price |
-| 3 | 33Across | 57.7 | $30K–100K | $422K/yr | 4.2× top | NEGOTIATE cap ≤$100K |
-| 4 | Justuno | 56.9 | $14K–60K | $77K/yr | 1.3× top | KEEP-trim |
-| 5 | Klickly | 51.1 | $0.1K–1.5K | flat fee, pending | — | DROP unless ~free |
-| 6 | 33A API | 49.8 | $10K–40K | $176K/yr | 4.4× top | DROP / renegotiate |
-| 7 | Cybba | 49.7 | $1.1K–4.7K | $21.5K/yr | 4.6× top | DROP |
-| 8 | Sovrn | 35.5 | $0.5K–2.4K | $116K/yr | 48× top | DROP |
+| 1 | 5x5 | 100 (70.4) | $150K–600K (TI-1027 fair) | flat fee, pending | — | KEEP |
+| 2 | Predactiv | 87 (61.5) | $0.7M–3M | flat fee, pending | — | KEEP, lock price |
+| 3 | 33Across | 82 (57.7) | $30K–100K | $422K/yr | 4.2× top | NEGOTIATE cap ≤$100K |
+| 4 | Justuno | 81 (56.9) | $14K–60K | $77K/yr | 1.3× top | KEEP-trim |
+| 5 | Klickly | 73 (51.1) | $0.1K–1.5K | flat fee, pending | — | DROP unless ~free |
+| 6 | 33A API | 71 (49.8) | $10K–40K | $176K/yr | 4.4× top | DROP / renegotiate |
+| 7 | Cybba | 71 (49.7) | $1.1K–4.7K | $21.5K/yr | 4.6× top | DROP |
+| 8 | Sovrn | 50 (35.5) | $0.5K–2.4K | $116K/yr | 48× top | DROP |
 
 WTP = the defensible fee band from section 3 (V sole-classified-domain value + D dependency media);
 "pay up to" = band top. Bill color rule on the chart: green ≤ band top, amber ≤ 3×, red > 3×.
