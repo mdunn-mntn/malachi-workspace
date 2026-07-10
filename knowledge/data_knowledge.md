@@ -962,6 +962,11 @@ View `dw-main-silver.tpa.direct_data_partners` (filter `is_current=true`). Key c
 17 ShareThis $0.95, 18 Dstillery) and CRM (22 Experian flat_fee, 29 deepsync) are separate, not MM.
 **Note:** `ds_catalog.md`'s 0/0/0 "no current use" for these reflects IPDSC/prospecting-expression usage only —
 the MM site-visit path is separate and active. (Corrected in ds_catalog for 24/25/26/28.)
+**Notes-field finds (2026-07-10):** 5x5 (DS25): "we provide report but only impression counts - unknown if
+this was shared with the customer" (relevant to its renewal); ShareThis (DS17): "(starting May usage,
+previously $1.2)" — a live rate cut recorded only in `notes`. Other columns: `go_live_date`,
+`external_reporting_required`, `report_under_data_source_id`, `primary_data_source_id`.
+Canonical roster+cost query: `tickets/audi_1089_ddp_vendor_evaluations/queries/canonical/q0_roster_cost.sql`.
 **Gotchas (verified 2026-07-09):** rows appear in **duplicate pairs even with `is_current=true`** (CDC dupes —
 `SELECT DISTINCT` or dedupe on `data_source_id`+`valid_from`). **DS26 (Predactiv) has a broken SCD:** FOUR
 `is_current=true` rows with conflicting `used_in_mntn_match` (two true @ valid_from 2025-10-17, two false @
@@ -970,8 +975,15 @@ daily). Column is `data_partner_name`, not `partner_name`.
 
 ### `coredw.usage_reporting_data` — the DDP metered-billing table (AUDI-1089, 2026-07-10)
 `dw-main-bronze.coredw.usage_reporting_data` (cols: `dt`, `data_source_id`, `impressions`, `usage` ($),
-`reporting_month`, `domains` RECORD, `segment_name`, …) is **the actual DDP usage meter** — what MNTN pays the
-$0.50-CPM site-visit vendors. Verified: **`usage = impressions × $0.0005` exactly** ($0.50 CPM). The meter
+`reporting_month`, `domains` RECORD, `segment_name`, …) is **the actual DDP usage meter — for ALL CPM-billed
+DDPs, not just MM site-visit** (corrected 2026-07-10, canonical q0): MM 24/28/33/36/40 @ $0.50; interests
+**17 ShareThis @ $0.95** and **35 LiveRamp IP (variable_cpm, implied $1.19–1.32/CPM, $243–446K/mo ≈ $3.4M/yr
+run-rate — the single largest DDP bill, ~4× the whole site-visit CPM roster)**; CRM 29 deepsync @ $0.50.
+Generalized meter math: **`usage = impressions × (registry fixed_cpm / 1000)` exactly** per month (Jan–Jun
+2026, every fixed-CPM source); `impressions` carries decimals = 1/N credit shares. ShareThis registry notes
+say the rate dropped $1.20 → $0.95 "starting May usage", yet the meter implies $0.95 for ALL of Jan–Jun 2026 —
+history appears restated at the current rate (or the note's timing is off); don't trend ShareThis dollars
+across the rate change without checking. The meter
 (bae-sql-utility "ddp/usage reporting") credits vendors on **MM-targeted serves** (via targeted_signal DS13/19,
 30-day lookback) with a **1/N credit split across co-matching vendors** — i.e. per-use billing accrues on
 SHARED IPs ("waterfall on usage basis", per Paulo). Monthly per-domain reports are emailed to each vendor from

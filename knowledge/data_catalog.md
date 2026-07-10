@@ -2185,6 +2185,13 @@ Small internal dataset for data usage reporting/auditing.
 ## bronze.coredw.usage_reporting_data
 - **Type:** TABLE
 - **Use for:** Detailed data source usage by day (underlying data for usage_reporting_audits).
+- **Scope (verified 2026-07-10, AUDI-1089 q0):** meters ALL CPM-billed DDPs, not just MM site-visit —
+  MM (24/28/33/36/40 @ $0.50), interests (17 ShareThis @ $0.95; 35 LiveRamp IP variable_cpm, implied
+  $1.19–1.32), CRM (29 deepsync @ $0.50). Flat-fee vendors (25/26/39) never appear.
+- **Meter math:** `usage = impressions × (registry fixed_cpm / 1000)` — exact per month for every
+  fixed-CPM source Jan–Jun 2026. `impressions` carries decimals (1/N credit shares on shared IPs).
+- **Join to registry:** `data_source_id` here is INTEGER; `tpa.direct_data_partners.data_source_id`
+  is STRING — cast one side. Use `reporting_month` for month rollups; closed months have `status='Complete'`.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -3020,3 +3027,8 @@ Reusable one-command runner over most of these: `documentation/docs/advertiser_y
 `FATAL Flags parsing error: Unknown command line flag`. Strip leading comment-only lines (or start the
 string at the first SQL keyword) when passing templated .sql files as a shell argument; `--` comments
 inside the body are fine.
+
+**DECLARE contaminates CSV stdout (AUDI-1089, 2026-07-10):** a `DECLARE` turns the query into a
+multi-statement script and bq then echoes the statement text (ending `-- at [N:1]`) to stdout BEFORE the
+result rows — any `--format=csv > file.csv` redirect captures the SQL too. Keep queries meant for CSV
+capture single-statement; inline parameters as literals with a `-- PARAM` marker for runner substitution.

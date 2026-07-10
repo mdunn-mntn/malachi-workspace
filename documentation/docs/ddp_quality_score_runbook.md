@@ -48,15 +48,21 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 
 ## Steps (build order — one session each)
 
-### Step 0 — Roster & actual cost
+### Step 0 — Roster & actual cost — **BUILT 2026-07-10** (`queries/canonical/q0_roster_cost.sql`)
 - **Claim:** "These are the vendors, what they bill, and what we ACTUALLY paid each month."
 - **Query** `q0_roster_cost.sql`: registry dedup (`QUALIFY ROW_NUMBER() OVER (PARTITION BY data_source_id ORDER BY valid_from DESC)=1`
   — CDC dupes; DS26 broken SCD) + monthly `SUM(impressions), SUM(usage)` from
-  `dw-main-bronze.coredw.usage_reporting_data` by `reporting_month` (last 6 months). Verify `usage = imps × 0.0005`.
-- **Canonicalize from:** the AUDI-1089 registry query + `audi_1089_metered_usage_by_month.csv` pull.
-- **Output:** `q0_roster_cost.csv` (ds, name, billing_type, rate, enabled, mm_flag, notes, bill by month).
-- **Visual:** cost table + small-multiple monthly-bill trend lines per CPM vendor (flat-fee = "unknown" row).
+  `dw-main-bronze.coredw.usage_reporting_data` by `reporting_month` (last 6 months).
+  Verify `usage = imps × (registry fixed_cpm / 1000)` — the meter spans ALL CPM DDPs (MM @ $0.50,
+  ShareThis @ $0.95, LiveRamp IP variable), so the check uses each source's own rate (`meter_check_ok`).
+  Scope = MM roster (incl. disabled, e.g. DS27 LaunchLabs) + any other metered source as context rows.
+- **Output:** `q0_roster_cost.csv` — one row per source × reporting_month; flat-fee/unmetered keep one
+  NULL-month row. **Visual:** `artifacts/canonical/generate_canonical_charts.py --step 0` → cost table +
+  small-multiple monthly-bill trends (built).
 - **Score input:** the verdict denominator (cost position). Flat fees stay `pending` until the renewal schedule.
+- **Run-pattern gotchas (apply to all canonical steps):** pass SQL with full-line comments stripped
+  (`"$(grep -v '^[[:space:]]*--' <file>)"` — bq parses a leading `--` as a flag) and keep each file
+  single-statement with `-- PARAM` inline literals (a DECLARE makes bq echo the script text into CSV stdout).
 
 ### Step 1 — Scale & liveness (+IPv6)
 - **Claim:** "Every source delivered every day; here's each feed's true size and IPv6 exposure."
