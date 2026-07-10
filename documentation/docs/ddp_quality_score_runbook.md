@@ -131,9 +131,21 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 ### Step 2 — Window reach — **BUILT 2026-07-10** (`runbook/queries/q2_window_reach.sql`)
 - **Claim:** "Over the actual targeting window, vendor V reaches N IPs / M domains / P pairs."
 - **Query** `q2_window_reach.sql`: per ds, window-cumulative distinct IP / domain / (ip|domain), IPv4-only.
-- **Output:** `q2_window_reach.csv` (first run reused the Jul 9 pull — identical query + window). Reach
-  numbers surface inside the q1d funnel table (domains delivered vs billed); no standalone visual yet.
+- **Output:** `q2_window_reach.csv` (first run reused the Jul 9 pull). **Visual:** `--step 2` →
+  `q2_window_reach.png`: ranked raw counts (avg rows/day, IPs, domains, pairs), ranked by distinct IPs.
 - **Score input:** context only (raw supply ≠ value) — displayed, not weighted.
+
+### Step 2b — Rows/IPs dropped per day — **BUILT 2026-07-10** (`runbook/queries/q2b_daily_drops.sql`)
+- **Claim:** "Of what each source delivers daily, this much never survives the consumer filters."
+- **Query** `q2b_daily_drops.sql`: ONE full day (SAMPLE_DT, ~285 GB), per source — HARD drops (empty url /
+  unparseable domain / infra URLs) + SOFT (DS13 blocklist; bot UA) + IPs appearing only on dropped rows.
+  Filters mirror the code (svs feature model + BLOCKED_DOMAIN_NAMES). Rates are structural — apply to q1
+  medians for other days.
+- **Output:** `q2b_daily_drops.csv`. **Visual:** `--step 2b` → drops table (amber ≥3% / red ≥25%).
+- **Score input:** context for Q/V; DS13-blocked and bot shares also feed the negotiation narrative.
+- **First-run findings (Jul 1):** Sovrn hard-drops 71.4% of rows AND 70% of its daily IPs (5.5M/7.9M);
+  33Across hard-drops only 0.03% but 29% of rows (316M/day) are DS13-blocked yahoo/aol + 52.7M bot-UA
+  rows/day; 33A API 18% DS13-blocked; Predactiv 14%; guid_log 19% empty urls; Klickly 0 drops.
 
 ### Step 3 — Uniqueness & recency (pairs)
 - **Claim:** "X% of V's pairs are irreplaceable in-window; Y% are same-day-redundant (insurance)."

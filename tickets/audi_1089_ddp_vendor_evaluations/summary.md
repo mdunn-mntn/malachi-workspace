@@ -124,6 +124,13 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   BEFORE billing credit — 33Across's ~6% bot rows get PAID today; device/OS features), **query_parameters**
   (dead — vendor ask; Klickly checkout params). Ingestion mystery RESOLVED: DS24/33/39/40 arrive via Kafka
   pixel streams (`fpa_dsid{NN}_kafka_log` BQ landing tables), rest via batch drops.
+- **q2 visual + q2b daily drops — BUILT 2026-07-10.** `q2_window_reach.png` (ranked raw counts: 5x5 has
+  the most external IPs, 157M/30d; Klickly smallest domains, 257) + `runbook/queries/q2b_daily_drops.sql`
+  (full-day scan Jul 1) → `q2b_daily_drops.png`. Drops/day: **Sovrn 71.4% of rows and 5.5M of its 7.9M
+  IPs never survive the hard filters**; 33Across 0.03% hard BUT **316M rows/day (29%) DS13-blocked
+  (yahoo/aol) + 52.7M bot-UA rows/day**; 33A API 66M/day (18%) blocked; Predactiv 8.7M/day (14%);
+  guid_log 19% empty urls (internal); Klickly zero drops. IPs dropped/day: Sovrn 5.5M, 33A API 351K,
+  5x5 91K, Cybba 19K, 33Across 18K.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

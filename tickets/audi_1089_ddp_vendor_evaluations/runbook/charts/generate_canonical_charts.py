@@ -562,7 +562,113 @@ def q1e(rdir):
     save(fig, "q1e_column_value.png")
 
 
-STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e}
+# ---- Step 2: window reach — ranked raw counts ----
+def q2(rdir):
+    reach = {}
+    with open(os.path.join(rdir, "q2_window_reach.csv")) as f:
+        for r in csv.DictReader(f):
+            reach[int(r["data_source_id"])] = r
+    rows_day = {}
+    with open(os.path.join(rdir, "q1_scale_by_day.csv")) as f:
+        for r in csv.DictReader(f):
+            d = int(r["data_source_id"])
+            rows_day[d] = rows_day.get(d, 0) + int(r["n_rows"])
+    days = 30
+
+    key = lambda d: -int(reach[d]["ips_30d"])
+    ext = sorted((d for d in reach if d not in (23, 30)), key=key)
+    order = ext + sorted((d for d in (23, 30) if d in reach), key=key)
+    cells = [[SHORT[d], fmtn(rows_day.get(d, 0) / days), fmtn(reach[d]["ips_30d"]),
+              fmtn(reach[d]["domains_30d"]), fmtn(reach[d]["ip_domain_pairs_30d"])]
+             for d in order]
+    cols = ["Source", "Avg rows/day", "IPs (30d)", "Domains (30d)", "IP x domain pairs (30d)"]
+
+    fig = plt.figure(figsize=(8.6, 3.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9.5)
+    tbl.scale(1, 1.5)
+    widths = [0.16, 0.14, 0.13, 0.15, 0.21]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white")
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(ext) else "#f4f5f7")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c == 2:
+                cell.set_text_props(fontweight="bold")
+            if r > len(ext):
+                cell.set_text_props(color="#888")
+    ax.set_title("Raw Reach Over the 30-Day Targeting Window, Ranked by Distinct IPs",
+                 fontsize=13, fontweight="bold", loc="left", pad=14)
+    save(fig, "q2_window_reach.png")
+
+
+# ---- Step 2b: rows/IPs dropped per day ----
+def q2b(rdir):
+    data = {}
+    with open(os.path.join(rdir, "q2b_daily_drops.csv")) as f:
+        for r in csv.DictReader(f):
+            data[int(r["ds"])] = r
+    key = lambda d: -int(data[d]["rows_day"])
+    ext = sorted((d for d in data if d not in (23, 30)), key=key)
+    order = ext + sorted((d for d in (23, 30) if d in data), key=key)
+
+    cells, hard, soft = [], [], []
+    for d in order:
+        r = data[d]
+        bot = int(r["rows_bot_ua"])
+        cells.append([SHORT[d], fmtn(r["rows_day"]), fmtn(r["rows_hard_dropped"]),
+                      f"{float(r['pct_hard_dropped']):.2f}%", fmtn(r["ips_day"]),
+                      fmtn(r["ips_hard_dropped"]),
+                      f"{fmtn(r['rows_blocked_ds13'])}  ({float(r['pct_blocked_ds13']):.0f}%)"
+                      if int(r["rows_blocked_ds13"]) > 0 else "0",
+                      fmtn(bot) if bot else "0"])
+        hard.append(float(r["pct_hard_dropped"]))
+        soft.append((float(r["pct_blocked_ds13"]), bot / int(r["rows_day"]) * 100))
+    cols = ["Source", "Rows/day", "Hard-dropped", "% hard", "IPs/day",
+            "IPs dropped", "DS13-blocked rows", "Bot-UA rows"]
+
+    fig = plt.figure(figsize=(10.6, 3.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.5)
+    widths = [0.115, 0.10, 0.105, 0.085, 0.095, 0.105, 0.155, 0.10]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8.5)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(ext) else "#f4f5f7")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c in (2, 3) and hard[r - 1] >= 3:
+                cell.set_text_props(color=RED if hard[r - 1] >= 25 else AMBER, fontweight="bold")
+            if c == 6 and soft[r - 1][0] >= 10:
+                cell.set_text_props(color=AMBER, fontweight="bold")
+            if c == 7 and soft[r - 1][1] >= 3:
+                cell.set_text_props(color=AMBER, fontweight="bold")
+            if r > len(ext):
+                cell.set_text_props(color="#888")
+    ax.set_title("Rows and IPs Dropped Per Day by Consumer Filters, Full Day Jul 1 2026",
+                 fontsize=13, fontweight="bold", loc="left", pad=14)
+    save(fig, "q2b_daily_drops.png")
+
+
+STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e, "2": q2, "2b": q2b}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

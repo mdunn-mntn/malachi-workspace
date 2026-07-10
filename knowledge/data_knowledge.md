@@ -962,6 +962,10 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   `outbrain.com` (widget network) + 1.6% Googlebot IPs. 33Across (DS28): 6.4% of rows from Googlebot IPs
   (66.249.x) + 5.7% bot UAs. 33A API (DS40): top-5 domains 58% incl. openwebmp.com RTB endpoints. Clean
   everywhere: uid ~unique per row, no timestamp batch-stamping, private/reserved IPs ~0.
+- **Daily drop volumes (AUDI-1089 q2b, full day 2026-07-01):** hard-drop share of daily rows (empty /
+  unparseable / infra urls): Sovrn 71.4% (37.4M rows AND 5.5M of 7.9M daily IPs lost), Cybba 4.7%,
+  33A API 2.3%, guid_log 19.1% (60M empty urls), others <1%. DS13-blocklist share: 33Across 29% (316M
+  rows/day yahoo/aol!), 33A API 18%, Predactiv 14%. Bot-UA rows/day: 33Across 52.7M (4.9%). Klickly: zero drops.
 - **Consumer-side filters (what junk actually survives — Ryan Kleck Slack + airflow-ti code, 2026-07-10):**
   - **Vertical/DS13 path:** `aug_log_ip_vertical_id_hourly.py` hard-excludes `BLOCKED_DOMAIN_NAMES =
     ("yahoo.com", "aol.com", "easybrain.com")` (applied to registrable domain post-tldextract) + an
