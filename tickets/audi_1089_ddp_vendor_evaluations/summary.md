@@ -181,6 +181,10 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   Survivor sole-rate increase = leverage COST not benefit. q3b scan (holder-signature histogram → exact
   256-subset frontier; first-reporter classes; flat-fee wildcard) running in background. Full logic +
   toy-example corrections in `runbook/dependency_valuation.md`.
+- **DS28 + DS40 = ONE VENDOR (Ryan, 2026-07-10):** 33Across batch vs real-time-ish feeds. Combined bill
+  ~$598K/yr — the single negotiation covers both; feeds separable operationally (drop-the-API-feed is a
+  viable outcome). Exact combined/union soleness + savings land with q3b masks (pairs held only by
+  {28,40} jointly are invisible to per-DS soleness).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

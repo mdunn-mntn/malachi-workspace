@@ -1240,51 +1240,82 @@ def q9d(rdir):
     billed = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
     vt = {int(r["data_source_id"]): r for r in csv.DictReader(open(os.path.join(rdir, "q6_value_tiers.csv")))}
 
+    esc = lambda t: t.replace("$", "\\$")
     METERED = [28, 40, 33, 24, 36]
-    rows_d = []
-    for d in METERED:
+    FLAT = [25, 26, 39]
+
+    def shares(d):
         pairs = int(q3u[d]["usable_pairs"])
         s_sh = int(q3u[d]["sole_pairs"]) / pairs
-        netnew = int(q3u[d]["netnew_vs_free_pairs"]) / pairs
-        f_sh = 1 - netnew
+        f_sh = 1 - int(q3u[d]["netnew_vs_free_pairs"]) / pairs
+        return s_sh, f_sh
+
+    rows_d = []
+    for d in METERED:
+        s_sh, f_sh = shares(d)
         bill = float(billed[d]["billed_usd"]) * 12
-        floor, ceil = bill * s_sh, bill * (s_sh + f_sh)
         wtp50 = 0.50 * float(vt[d]["media_sole"]) * 52 - float(vt[d]["data_sole"]) * 52
-        rows_d.append((d, bill, floor, ceil, s_sh, f_sh, wtp50))
+        rows_d.append((d, bill, bill * s_sh, bill * (s_sh + f_sh), wtp50))
     rows_d.sort(key=lambda r: -r[1])
 
-    fig, ax = plt.subplots(figsize=(10.6, 4.2))
-    fig.subplots_adjust(left=0.11, right=0.77, top=0.84, bottom=0.12)
-    ys = range(len(rows_d))[::-1]
-    for y, (d, bill, floor, ceil, s_sh, f_sh, wtp50) in zip(ys, rows_d):
-        ax.barh(y, bill, height=0.62, color="#e4e6ea", edgecolor="#c9ccd2")
-        ax.barh(y, floor, height=0.62, color=GREEN)
-        ax.barh(y, ceil - floor, left=floor, height=0.62, color=GREEN, alpha=0.38)
-        ax.plot([wtp50], [y], marker="D", color=RED, markersize=7, zorder=5)
-        ax.text(bill, y, f"  bill {money(bill)}", va="center", fontsize=9, color="#555")
-        big = floor > bill * 0.18
-        ax.text(floor / 2 if big else ceil + rows_d[0][1] * 0.008, y + (0 if big else 0.32),
-                money(floor) + ("" if big else " floor"), va="center",
-                ha="center" if big else "left", fontsize=8.5, fontweight="bold",
-                color="white" if big else GREEN)
-    ax.set_yticks(list(ys))
-    ax.set_yticklabels([SHORT[r[0]] for r in rows_d], fontsize=10)
-    ax.set_xlabel("$/yr", fontsize=9, color="#666")
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"${v/1e3:,.0f}K"))
+    n_m, n_f = len(rows_d), len(FLAT)
+    fig, ax = plt.subplots(figsize=(11.4, 5.6))
+    fig.subplots_adjust(left=0.13, right=0.99, top=0.85, bottom=0.11)
+    ax.set_ylim(-0.75, 7.9)
+    xmax = rows_d[0][1]
+    ys = list(range(n_m + n_f))[::-1]
+
+    for y, (d, bill, floor, ceil, wtp50) in zip(ys[:n_m], rows_d):
+        ax.barh(y, bill, height=0.55, color="#e4e6ea", edgecolor="#c9ccd2")
+        ax.barh(y, floor, height=0.55, color=GREEN)
+        ax.barh(y, ceil - floor, left=floor, height=0.55, color=GREEN, alpha=0.38)
+        big = floor > xmax * 0.10
+        if big:
+            ax.text(floor / 2, y, esc(f"saves {money(floor)}-{money(ceil)}"), va="center",
+                    ha="center", fontsize=8.5, fontweight="bold", color="white")
+            ax.text(bill + xmax * 0.008, y, esc(f"bill {money(bill)}"), va="center",
+                    fontsize=9, color="#555")
+        else:
+            x0 = max(bill, ceil) + xmax * 0.008
+            ax.text(x0, y + 0.17, esc(f"bill {money(bill)}"), va="center", fontsize=8.5, color="#555")
+            ax.text(x0, y - 0.19, esc(f"saves {money(floor)}-{money(ceil)}"), va="center",
+                    fontsize=8.5, fontweight="bold", color=GREEN)
+        ax.plot([wtp50, wtp50], [y - 0.34, y + 0.34], color=RED, lw=2, zorder=5)
+        ax.text(wtp50, y + 0.42, esc(f"value {money(wtp50)}"), ha="center", va="bottom",
+                fontsize=7.5, color=RED)
+
+    for y, d in zip(ys[n_m:], FLAT):
+        s_sh, f_sh = shares(d)
+        wtp = 0.50 * float(vt[d]["media_sole"]) * 52 - float(vt[d]["data_sole"]) * 52
+        ax.text(xmax * 0.006, y, esc(
+            f"flat fee (amount pending) - drop saves the fee; sole coverage {s_sh:.0%}; "
+            f"dependency value {money(max(wtp, 0))}/yr @50% margin"),
+            va="center", fontsize=8.5, color="#555")
+
+    labels = []
+    for r in rows_d:
+        if r[0] == 28:
+            labels.append("33Across (batch)")
+        elif r[0] == 40:
+            labels.append("33A API (RT)")
+        else:
+            labels.append(SHORT[r[0]])
+    ax.set_yticks(ys)
+    ax.set_yticklabels(labels + [SHORT[d] for d in FLAT], fontsize=10)
+    y28 = ys[[r[0] for r in rows_d].index(28)]
+    y40 = ys[[r[0] for r in rows_d].index(40)]
+    ax.annotate(esc("same vendor - one contract, combined bill $597.9K/yr"),
+                xy=(xmax * 0.55, (y28 + y40) / 2 + 0.55), fontsize=8, color=NAVY,
+                style="italic")
+    ax.set_xlim(0, xmax * 1.17)
+    ax.set_xlabel(esc("$/yr"), fontsize=9, color="#666")
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"\\${v/1e3:,.0f}K"))
     for sp in ax.spines.values():
         sp.set_visible(False)
     ax.tick_params(left=False, bottom=False, labelsize=8.5)
-    ax.set_title("Dropping a Vendor Does Not Save Its Bill: Guaranteed Savings (solid green),\n"
-                 "Possible If Free Logs Win Re-Races (light green), Rest Reassigns to Paid Vendors (gray)",
-                 fontsize=12, fontweight="bold", loc="left", pad=14)
-    from matplotlib.lines import Line2D
-    from matplotlib.patches import Patch
-    ax.legend(handles=[Patch(color=GREEN, label="savings floor (sole share)"),
-                       Patch(color=GREEN, alpha=0.38, label="savings ceiling (+free co-held)"),
-                       Patch(color="#e4e6ea", label="reassigns to other paid vendors"),
-                       Line2D([0], [0], marker="D", color="w", markerfacecolor=RED,
-                              markersize=7, label="value forfeited (WTP @50% margin)")],
-              loc="center left", bbox_to_anchor=(1.005, 0.5), fontsize=8, frameon=False)
+    ax.set_title("Dropping a Vendor Does Not Save Its Bill  -  solid green = guaranteed savings (sole share),\n"
+                 "light green = possible if free logs win re-races, gray = reassigns to other paid vendors, red = value forfeited",
+                 fontsize=11.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q9d_one_out.png")
 
 

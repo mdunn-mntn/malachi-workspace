@@ -1000,6 +1000,10 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     80%, Cybba 86%, but only ~48–55% for 28/33/40 (rest = unattributed aggregate credit rows).
   - **33Across provenance (Ryan, UNVERIFIED):** believed to resell the same Magnite auction/bidstream data
     we already receive — would explain its webmail-heavy, low-uniqueness profile (30% unique domains).
+  - **DS28 33Across and DS40 33Across API are the SAME VENDOR** (Ryan Kleck 2026-07-10): DS28 = batch
+    delivery, DS40 = real-time-ish. Treat as one vendor/contract in evaluations — combined June bill
+    ~$49.8K/mo (~$598K/yr). Feeds are separable operationally (different ingestion paths: batch drop vs
+    kafka pixel), so 'drop the API feed, keep batch' is a viable negotiation outcome.
 - **BILLING HARD LOGIC (AP-3779 + Victor via Ryan Kleck, 2026-07-10):** credit goes to the **FIRST DDP to
   report an (ip, url/composite_key) for a given date — paid only if the signal is used for targeting**
   (grain per Ryan on AUDI-647: one ip × composite_key per day). The row-level "used" table is
