@@ -61,9 +61,9 @@ domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
 
 **Progress:**
 - **q0 roster+cost — BUILT 2026-07-10.** `runbook/queries/q0_roster_cost.sql` →
-  `outputs/run_2026_07_10/q0_roster_cost.csv` (+ Excel-friendly `q0_roster_cost_wide.csv/.tsv/.html`)
-  + `runbook/charts/q0_roster_cost.png` (table + small-multiple bill trends via
-  `runbook/charts/generate_canonical_charts.py`).
+  `outputs/run_2026_07_10/q0_roster_cost.csv` + `runbook/charts/q0_roster_cost.png`
+  (wide table, one month per column, via `runbook/charts/generate_canonical_charts.py`).
+  Per-step deliverables are the SQL + the PNG only — no ad-hoc exports (user preference 2026-07-10).
   Findings: the meter spans ALL CPM DDPs — **DS35 LiveRamp IP (interests) bills $243–446K/mo ≈ $3.4M/yr,
   ~4× the entire site-visit CPM roster**; DS17 ShareThis @ $0.95 (rate cut from $1.20 "starting May usage"
   per registry notes, but meter implies $0.95 for all Jan–Jun — history likely restated); DS29 deepsync

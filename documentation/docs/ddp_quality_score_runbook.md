@@ -57,8 +57,8 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   ShareThis @ $0.95, LiveRamp IP variable), so the check uses each source's own rate (`meter_check_ok`).
   Scope = MM roster (incl. disabled, e.g. DS27 LaunchLabs) + any other metered source as context rows.
 - **Output:** `q0_roster_cost.csv` — one row per source × reporting_month; flat-fee/unmetered keep one
-  NULL-month row. **Visual:** `runbook/charts/generate_canonical_charts.py --step 0` → cost table +
-  small-multiple monthly-bill trends (built).
+  NULL-month row. **Visual:** `runbook/charts/generate_canonical_charts.py --step 0` → wide cost table,
+  one month per column + 6-mo total; table only, no trend panels (built).
 - **Score input:** the verdict denominator (cost position). Flat fees stay `pending` until the renewal schedule.
 - **Run-pattern gotchas (apply to all canonical steps):** pass SQL with full-line comments stripped
   (`"$(grep -v '^[[:space:]]*--' <file>)"` — bq parses a leading `--` as a flag) and keep each file
