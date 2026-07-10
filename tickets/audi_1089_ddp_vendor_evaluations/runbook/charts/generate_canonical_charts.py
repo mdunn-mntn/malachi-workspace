@@ -392,7 +392,106 @@ def q1c(rdir):
     save(fig2, "q1c_unparsed_examples.png")
 
 
-STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c}
+# ---- Step 1d: what we actually paid for (billed usage vs delivered) ----
+def fmtn(v):
+    v = float(v)
+    if v >= 1e9:
+        return f"{v/1e9:.1f}B"
+    if v >= 1e6:
+        return f"{v/1e6:.1f}M"
+    return f"{v:,.0f}"
+
+
+def q1d(rdir):
+    billed = {}
+    with open(os.path.join(rdir, "q1d_billed_usage.csv")) as f:
+        for r in csv.DictReader(f):
+            billed[int(r["ds"])] = r
+    raw = {}
+    with open(os.path.join(rdir, "q1_scale_by_day.csv")) as f:
+        for r in csv.DictReader(f):
+            raw[int(r["data_source_id"])] = raw.get(int(r["data_source_id"]), 0) + int(r["n_rows"])
+    reach = {}
+    with open(os.path.join(rdir, "q2_window_reach.csv")) as f:
+        for r in csv.DictReader(f):
+            reach[int(r["data_source_id"])] = int(r["domains_30d"])
+
+    ext = sorted((d for d in raw if d not in (23, 30)), key=lambda d: -raw[d])
+    cells = []
+    for d in ext:
+        b = billed.get(d)
+        dom = reach.get(d, 0)
+        if b:
+            bi, bd = float(b["billed_imps"]), int(b["billed_domains"] or 0)
+            cells.append([SHORT[d], fmtn(raw[d]), fmtn(dom), fmtn(bi),
+                          f"{100 * bi / raw[d]:.2f}%", f"{bd:,}",
+                          f"{100 * bd / dom:.2f}%" if dom else "-",
+                          money(float(b["billed_usd"]))])
+        else:
+            cells.append([SHORT[d], fmtn(raw[d]), fmtn(dom), "-", "-", "-", "-", "flat fee"])
+    cols = ["Source", "Rows delivered (30d)", "Domains (30d)", "Imps billed (Jun)",
+            "% rows billed", "Domains billed", "% domains billed", "Jun bill"]
+
+    fig = plt.figure(figsize=(11.0, 3.1))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.5)
+    widths = [0.11, 0.135, 0.105, 0.125, 0.10, 0.105, 0.115, 0.09]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8.5)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c in (4, 6):
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if cells[r - 1][7] == "flat fee" and c >= 3:
+                cell.set_text_props(color="#888")
+    ax.set_title("What We Actually Pay For: Delivered Feed vs Billed Usage, June 2026",
+                 fontsize=13.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q1d_used_vs_delivered.png")
+
+    metered = [d for d in ext if d in billed]
+    cells2 = [[SHORT[d], f"{float(billed[d]['pct_imps_domain_attributed']):.0f}%",
+               f"{int(billed[d]['billed_domains'] or 0):,}",
+               billed[d]["top5_billed_domains"][:95]] for d in metered]
+    cols2 = ["Source", "Imps w/ domain", "Billed domains", "Top billed domains (share of attributed imps)"]
+    fig2 = plt.figure(figsize=(11.6, 0.9 + 0.34 * len(metered)))
+    fig2.subplots_adjust(left=0.03, right=0.97, top=0.76, bottom=0.06)
+    ax2 = fig2.add_subplot(111)
+    ax2.axis("off")
+    tbl2 = ax2.table(cellText=cells2, colLabels=cols2, loc="center", cellLoc="right")
+    tbl2.auto_set_font_size(False)
+    tbl2.set_fontsize(8.5)
+    tbl2.scale(1, 1.5)
+    widths2 = [0.09, 0.10, 0.10, 0.69]
+    BADDOM = re.compile(r"https |https,|https$|cookies\.|sync\.|csync\.|cs\.|cs-server|\.ai ")
+    for (r, c), cell in tbl2.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths2[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white")
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c in (0, 3):
+                cell.set_text_props(ha="left")
+            if c == 3 and BADDOM.search(cells2[r - 1][3]):
+                cell.set_text_props(color=RED)
+    ax2.set_title("Billed Domains Include Junk: Malformed Hosts and Cookie-Sync Endpoints Get Paid",
+                  fontsize=12.5, fontweight="bold", loc="left", pad=12)
+    save(fig2, "q1d_billed_domains.png")
+
+
+STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

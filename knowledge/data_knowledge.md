@@ -976,10 +976,20 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   - **MemDB membership log** ("what we actually put into MemDB", per Ryan):
     `gs://mntn-data-tpa-{env}/tpa_membership_update_log/v2/dt=/hh=/` (monitored by
     `dags/monitor_memdb_batch_output.py`).
-  - **Billing follows USE, not delivery (Ryan, confirms the meter semantics):** vendors are only credited
-    when their data is used on MM-targeted serves — junk rows that never score are never billed. Eval
-    implication: junk % ≠ wasted dollars; it discounts VALUE (fewer usable domains) not COST. An "Invalid
-    URL Alert" email also exists for parse failures (not found in airflow-ti clone — lives elsewhere).
+  - **Billing follows USE, not delivery (Ryan) — but junk DOES get billed (empirical, AUDI-1089 q1d):**
+    vendors are credited only when their data lands on MM-targeted serves, and the consumption funnel is
+    tiny (June 2026: 0.23–6.8% of delivered rows billed; 0.57–7.9% of delivered domains billed). HOWEVER
+    the billed-domain lists prove junk survives to billing: **Sovrn's top billed "domains" ARE the
+    malformed garbage hosts** (msn.comhttps 3.3%, biblegateway.comhttps 2.3%, yahoo.comhttps 2.2% of
+    attributed imps); **33A API's top billed domains are cookie-sync endpoints** (cookies.nextmillmedia.com
+    9.2%, sync.programmaticx.ai 8.2%); **www.yahoo.com IS billed for 33Across** (1.9%) despite the DS13
+    block → reaches billing via another path (DS19?). "Fail to parse → not paid" only holds for
+    NET.REG_DOMAIN-style parsing; urlsplit-surviving garbage is scored and PAID. An "Invalid URL Alert"
+    email also exists for parse failures (not found in airflow-ti clone — lives elsewhere).
+  - **Meter grain gotcha:** `usage_reporting_data.dt` = month-end snapshot ONLY (last day of
+    reporting_month) — mid-month dt filters return zero rows. `domains.list` (billed domains RECORD) is
+    populated only for MM site-visit CPM vendors (24/28/33/36/40); imps-with-domain-attribution: Justuno
+    80%, Cybba 86%, but only ~48–55% for 28/33/40 (rest = unattributed aggregate credit rows).
   - **33Across provenance (Ryan, UNVERIFIED):** believed to resell the same Magnite auction/bidstream data
     we already receive — would explain its webmail-heavy, low-uniqueness profile (30% unique domains).
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;

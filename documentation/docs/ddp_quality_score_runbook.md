@@ -103,12 +103,27 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   uid ~unique, timestamps real (no batch stamping), private IPs ~0. Doubled-protocol pattern ALSO in internal
   augmentor at 1.2% → possibly shared-pipeline, verify raw drop before blaming the vendor.
 
-### Step 2 — Window reach
+### Step 1d — Billed usage: what we actually pay for — **BUILT 2026-07-10** (`runbook/queries/q1d_billed_usage.sql`)
+- **Claim:** "Billing follows use — here is the delivered-vs-billed funnel, and what the billed domains contain."
+- **Query** `q1d_billed_usage.sql`: `coredw.usage_reporting_data` for BILL_MONTH — per source: billed imps,
+  billed $, % imps domain-attributed, distinct billed domains, top-5 billed domains w/ share.
+  Meter gotchas: dt = month-end snapshot only; domains.list populated only for MM CPM vendors;
+  ~half of 28/33/40 imps are unattributed aggregate rows.
+- **Output:** `q1d_billed_usage.csv`. **Visuals:** `--step 1d` → `q1d_used_vs_delivered.png` (funnel:
+  rows/domains delivered vs billed, % billed, bill) + `q1d_billed_domains.png` (top billed domains;
+  junk patterns flagged red).
+- **Score input:** verdict context — the bill already reflects use, so junk discounts V, not cost; BUT
+  billed-domain junk (garbage hosts, sync endpoints) means even the bill overpays vs real value.
+- **First-run findings (June 2026):** billed rows = 0.23% (33Across) – 6.8% (Cybba) of delivered; billed
+  domains = 0.6–7.9% of delivered. Sovrn's billed domains include its malformed hosts (msn.comhttps 3.3%);
+  33A API's top billed domains are cookie-sync endpoints (9.2% + 8.2%); www.yahoo.com billed for 33Across
+  (1.9%) despite the DS13 domain block — DS19-path question OPEN.
+
+### Step 2 — Window reach — **BUILT 2026-07-10** (`runbook/queries/q2_window_reach.sql`)
 - **Claim:** "Over the actual targeting window, vendor V reaches N IPs / M domains / P pairs."
-- **Query** `q2_window_reach.sql`: per ds, window-cumulative distinct IP / domain / (ip|domain).
-- **Canonicalize from:** `audi_1089_q1_scale_30d.sql` query B.
-- **Output:** `q2_window_reach.csv`. **Visual (new):** grouped reach bars, IPs vs domains side-by-side —
-  makes the "big IPs, tiny domains" shape (Klickly, 33Across API) visible at a glance.
+- **Query** `q2_window_reach.sql`: per ds, window-cumulative distinct IP / domain / (ip|domain), IPv4-only.
+- **Output:** `q2_window_reach.csv` (first run reused the Jul 9 pull — identical query + window). Reach
+  numbers surface inside the q1d funnel table (domains delivered vs billed); no standalone visual yet.
 - **Score input:** context only (raw supply ≠ value) — displayed, not weighted.
 
 ### Step 3 — Uniqueness & recency (pairs)

@@ -109,6 +109,15 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   URLs (garbage hosts survive to classification, then die vs wcv).
 - **MemDB membership log** = `gs://mntn-data-tpa-prod/tpa_membership_update_log/v2/` ("what actually goes in").
 - **33Across (per Ryan, unverified):** likely resells the Magnite auction data we already receive.
+- **q1d billed usage — BUILT 2026-07-10 (CORRECTS the reframe above).** `runbook/queries/q1d_billed_usage.sql`
+  → `q1d_billed_usage.csv` + `q1d_used_vs_delivered.png` (funnel) + `q1d_billed_domains.png` (exhibit).
+  June consumption funnel: **we bill on 0.23% (33Across) to 6.8% (Cybba) of delivered rows; 0.6–7.9% of
+  delivered domains.** BUT junk survives to billing: **Sovrn's billed domains ARE the garbage hosts**
+  (msn.comhttps 3.3%, yahoo.comhttps 2.2%); **33A API's top billed domains = cookie-sync endpoints**
+  (cookies.nextmillmedia.com 9.2%, sync.programmaticx.ai 8.2%); **www.yahoo.com billed for 33Across 1.9%**
+  despite the DS13 block (→ DS19 path?). So "junk never billed" is FALSE in practice — parse-garbage that
+  survives urlsplit gets scored and paid. Flat-fee vendors (5x5/Predactiv/Klickly) pay regardless of use.
+  q2 window reach also canonicalized (`q2_window_reach.sql`, reused Jul 9 pull).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
