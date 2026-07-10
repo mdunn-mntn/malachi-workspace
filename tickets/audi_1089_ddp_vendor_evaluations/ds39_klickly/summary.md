@@ -13,6 +13,16 @@ lens; ceiling = T2 (all impressions to sole IPs) × media lens; peer anchor $0.5
 priors: band near $0 — decision-ready even before the actual fee arrives. The only possible rescue: a non-MM
 consumer of DS39 (lineage blast-radius check) or a 30d uniqueness picture materially better than the 7d one.
 
+## Supporting artifacts
+
+- Charts (also attached to AUDI-1089 in Jira; generator `../artifacts/audi_1089_generate_charts.py`, data
+  from `../outputs/*.csv`):
+  - `../artifacts/audi_1089_chart_sole_classified_domains.png` — cross-vendor: Klickly's 126 vs Predactiv's 226,826
+  - `../artifacts/audi_1089_chart_klickly_dependency_ladder.png` — 224M touched → 3,674 sole → 26 gated
+  - `../artifacts/audi_1089_chart_klickly_adverse_selection.png` — sole IPs: 0.2% delivered, 91% unscored
+- Evidence tables: `../outputs/` CSVs (all 10 sources — reused by the other six evals)
+- SQL: `../queries/audi_1089_q1..q5*.sql`
+
 ## Findings
 
 *(filled as steps complete — steps per ticket-root summary.md §3)*
