@@ -122,6 +122,23 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
 
+## 4d. Billing hard logic (AUDI-647 + AP-3779 deep-read, 2026-07-10)
+
+- **Credit rule (Victor via Ryan):** first DDP to report an (ip, url) per day gets the credit, paid only
+  if used for targeting. Row-level used table: `data_archive_prod.targeted_signal` (**Athena only** —
+  uid/ip/dsc_id/time/data_source_id/**source_data_source_id**/dt). Chain: svs → targeted_signal →
+  mntn_matched_reporting → usage_reporting_data → Maya Triman pays monthly.
+- **Augmentor displacement confirmed:** DS30 entered svs 2026-05-07/12 (airflow-ti git). June = first
+  fully-displaced month → 33Across bill −$19K vs May, 33A API −$9.7K (Ryan's AUDI-647 estimates: $17K/$4K).
+  33Across's declining bill is partly OUR doing, not their volume.
+- **AUDI-647 method** (for re-use): match svs to augmentor_log by ip + canonical page/referrer, query-string
+  stripped; grain ip × composite_key × day.
+- **Open questions:** (1) targeted_signal needs Athena access (or Data Eng MCP / Victor) — would give exact
+  per-vendor used-row counts + definitively answer the yahoo/DS19 question via source_data_source_id;
+  (2) flat fees (5x5/Predactiv/Klickly) still unknown — Maya Triman has the payout schedule;
+  (3) how 1/N impression decimals interact with first-reporter-wins; (4) DS33/39/40 svs ingestion path
+  (not in ENABLED_DSIDS). Sensitive: "Monthly Summary by DDP.xlsx" stays local/gitignored, never on Jira.
+
 ## 5. Constraints & context (from the Slack thread, 2026-07-09)
 
 - **Take rates sensitive/private (ray):** shareable artifacts use base cost only — media_spend

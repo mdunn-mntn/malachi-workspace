@@ -992,6 +992,30 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     80%, Cybba 86%, but only ~48–55% for 28/33/40 (rest = unattributed aggregate credit rows).
   - **33Across provenance (Ryan, UNVERIFIED):** believed to resell the same Magnite auction/bidstream data
     we already receive — would explain its webmail-heavy, low-uniqueness profile (30% unique domains).
+- **BILLING HARD LOGIC (AP-3779 + Victor via Ryan Kleck, 2026-07-10):** credit goes to the **FIRST DDP to
+  report an (ip, url/composite_key) for a given date — paid only if the signal is used for targeting**
+  (grain per Ryan on AUDI-647: one ip × composite_key per day). The row-level "used" table is
+  **`data_archive_prod.targeted_signal` — ATHENA/AWS only, no BQ/GCS copy**: `uid, ip,
+  data_source_category_id, time, data_source_id, source_data_source_id, dt`; a subset of svs where dsc_id
+  is derivable (via `product_categorization`); svs→ts is 1:many; prod since 2025-05-02, DS19 backfilled
+  from 2025-04-20. Billing chain: svs → targeted_signal (used rows, source_data_source_id = credited DDP)
+  → `prod.mntn_matched.mntn_matched_reporting` (Athena) → `coredw.usage_reporting_data` (BQ, month-end
+  snapshots) → monthly vendor payout (contact: **Maya Triman**). The "1/N split on shared IPs" note may be
+  a different layer (serve-level credit split) — impressions decimals exist; exact interplay with
+  first-reporter-wins UNVERIFIED.
+- **Augmentor displacement (AUDI-647 + airflow-ti git, 2026-07-10):** DS30 augmentor_log added to svs
+  2026-05-07 (re-enabled with dedupe 05-12, `fpa_vendor_log_batch_ingestion_consolidated.py`). Under
+  first-reporter-wins, our free Magnite-derived augmentor rows now displace DDP credits for overlapping
+  (ip,url) — Ryan's Apr estimate: save ~$17K/mo (33Across) + ~$4K/mo (33A API); actual June-vs-May bill
+  drops: **33Across −$19K, 33A API −$9.7K** (first fully-displaced month after 30d signal aging). The
+  Magnite-resell overlap is real and already partially defunded. AUDI-647 method: match svs rows to
+  augmentor by ip + canonical page/referrer (strip query string).
+- **ENABLED_DSIDS gotcha:** the consolidated ingestion DAG (`fpa_vendor_log_batch_ingestion_consolidated.py`)
+  runs [23,25,26,28,30,36] as of the Jun 9 clone, yet DS33/39/40 appear in svs — a second ingestion path
+  exists for Sovrn/Klickly/33A API (UNVERIFIED which).
+- **"Monthly Summary by DDP.xlsx"** (from Maya via Ryan — **SENSITIVE: local only, gitignored, never post
+  to Jira**): usage_reporting_data rollup Dec 2025–Mar 2026, metered vendors only (LiveRamp reported as
+  DS(11,35) combined). Confirms the meter IS the payment basis; flat fees (25/26/39) still not in any table.
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`
