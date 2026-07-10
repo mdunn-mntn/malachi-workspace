@@ -79,22 +79,24 @@ which is why their bills exceed any dependency value.
 
 ## 3. All vendors — annual dependency numbers (valuation week × 52)
 
-| Vendor | Sole usable IPs (stock) | Won bids/yr (0.5–1.5×) | Yield /IP/yr | Visits/yr (95% CI) | T2 $/yr (0.4–1.8×) | T1 $/yr | WTP @30–50% (net) | Domain axis $/yr |
-|---|--:|--:|--:|--:|--:|--:|--:|--:|
-| 33Across | 30.8M | 23.2M | 0.75 | 6,032 (4.9K–7.1K) | $270K ($108–485K) | $1,716 | $51K–105K | $20.5K–89K |
-| 5x5 | 29.3M | 5.2M | 0.18 | 1,300 (0.8K–1.9K) | $61.4K ($24.5–110K) | $678 | $11.8K–24.1K | $258K–1.12M |
-| 33A API | 9.1M | 5.0M | 0.55 | 780 (437–1,286) | $58.6K ($23.4–105K) | $291 | $11.2K–23.0K | $8.3K–36.1K |
-| Predactiv | 5.3M | 1.4M | 0.27 | 208 (57–533) | $16.6K ($6.6–29.9K) | $123 | $3.2K–6.5K | $680K–2.95M |
-| Justuno | 5.7M | 622K | 0.11 | 52 (1–290) | $7.5K ($3.0–13.5K) | $83 | $1.5K–2.9K | $13.8K–59.9K |
-| Cybba | 172K | 243K | 1.41 | 0 (0–192) | $2.8K ($1.1–5.0K) | $18 | $539–1,100 | $1.1K–4.7K |
-| Sovrn | 15.7K | 228K | 14.5 | 0 (0–192) | $2.7K ($1.1–4.8K) | $21 | $498–1,030 | $543–2.4K |
-| Klickly | 324K | 191K | 0.59 | 52 (1–290) | $2.2K ($0.9–4.0K) | $13 | $418–859 | $378–1.6K |
+The revenue chain per vendor: sole stock → unique IPs actually served (won ≥1 bid that week) →
+total won bids → media revenue (Σ per-impression price). Visits/performance live in q5/q7, not here.
 
-Reading notes: **visits do NOT drive the revenue column** — revenue = impressions served × eCPM
-(advertisers pay per serve, CPM model; 33Across: 446,628 imps/wk × $11.61 = $5,186/wk × 52 = $269.7K/yr);
-visits are the independent performance grade on those same impressions (33Across: 116/wk → 6,032/yr,
-VR 0.026% ≈ the no-data baseline). Dividing them gives the advertiser's cost-per-visit (~$45 on
-33Across-sole IPs), not our revenue. 33Across dominates the dependency axis exactly as it dominates volume; 5x5 and Predactiv
+| Vendor | Sole usable IPs (stock) | IPs served /wk (% of stock) | Won bids /wk (per served IP) | Won bids/yr (0.5–1.5×) | T2 $/yr (0.4–1.8×) | T1 $/yr | WTP @30–50% (net) | Domain axis $/yr |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| 33Across | 30.8M | 99.0K (0.32%) | 446.6K (4.5) | 23.2M | $270K ($108–485K) | $1,716 | $51K–105K | $20.5K–89K |
+| 5x5 | 29.3M | 19.6K (0.07%) | 99.3K (5.1) | 5.2M | $61.4K ($24.5–110K) | $678 | $11.8K–24.1K | $258K–1.12M |
+| 33A API | 9.1M | 19.1K (0.21%) | 96.5K (5.0) | 5.0M | $58.6K ($23.4–105K) | $291 | $11.2K–23.0K | $8.3K–36.1K |
+| Predactiv | 5.3M | 5.6K (0.11%) | 27.3K (4.9) | 1.4M | $16.6K ($6.6–29.9K) | $123 | $3.2K–6.5K | $680K–2.95M |
+| Justuno | 5.7M | 2.4K (0.04%) | 12.0K (5.0) | 622K | $7.5K ($3.0–13.5K) | $83 | $1.5K–2.9K | $13.8K–59.9K |
+| Cybba | 172K | 738 (0.43%) | 4.7K (6.3) | 243K | $2.8K ($1.1–5.0K) | $18 | $539–1,100 | $1.1K–4.7K |
+| Sovrn | 15.7K | 866 (5.5%) | 4.4K (5.1) | 228K | $2.7K ($1.1–4.8K) | $21 | $498–1,030 | $543–2.4K |
+| Klickly | 324K | 666 (0.21%) | 3.7K (5.5) | 191K | $2.2K ($0.9–4.0K) | $13 | $418–859 | $378–1.6K |
+
+Reading notes: revenue = Σ per-impression media price (advertisers pay per SERVE, CPM model —
+33Across: 446,628 imps/wk at eCPM $11.61 = $5,186/wk × 52 = $269.7K/yr); visits are tracked separately
+in q5/q7 as the performance grade (33Across sole VR 0.026% ≈ no-data baseline; ~$45 media per visit).
+33Across dominates the dependency axis exactly as it dominates volume; 5x5 and Predactiv
 INVERT between the two lenses (small dependency, huge domain value) — which is why the lenses must never
 be merged; Sovrn's absurd yield (14.5 wins/IP/yr) is 228K wins concentrated on just 15.7K genuinely-unique
 IPs — high-traffic households everyone else also serves through other doors.

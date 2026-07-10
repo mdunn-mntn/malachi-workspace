@@ -1143,21 +1143,21 @@ def q9c(rdir):
         bids_yr = imps_wk * 52
         base = media_wk * 52
         c_yr = data_wk * 52
-        vlo, vhi = _poisson_ci(visits_wk)
+        served_wk = int(float(vr[d]["sole_ips_delivered"]))
         wtp30, wtp50 = 0.30 * base - c_yr, 0.50 * base - c_yr
         b = billed.get(d)
         bill = money(float(b["billed_usd"]) * 12) + "/yr" if b else "flat fee"
 
         cells.append([SHORT[d], fmtn(sole_ips),
+                      f"{fmtn(served_wk)}\n({100 * served_wk / sole_ips:.2f}% of stock)",
+                      f"{fmtn(imps_wk)}\n({imps_wk / max(served_wk, 1):.1f} per served IP)",
                       f"{fmtn(bids_yr)}\n({fmtn(bids_yr * 0.5)}-{fmtn(bids_yr * 1.5)})",
-                      f"{bids_yr / sole_ips:.2f}",
-                      f"{fmtn(visits_wk * 52)}\n({fmtn(vlo * 52)}-{fmtn(vhi * 52)})",
                       f"{money2(base)}\n({money2(base * 0.4)}-{money2(base * 1.8)})",
                       money2(t1_media_wk * 52),
                       f"{money2(max(wtp30, 0))}-{money2(max(wtp50, 0))}",
                       f"{money2(sc * 3)}-{money2(sc * 13)}", bill])
-    cols = ["Source", "Sole usable\nIPs (stock)", "Won bids/yr\n(0.5-1.5x)", "Yield\n/IP/yr",
-            "Visits/yr\n(95% CI)", "T2 revenue $/yr\n(0.4-1.8x)", "T1 floor\n$/yr",
+    cols = ["Source", "Sole usable\nIPs (stock)", "Unique IPs\nserved /wk", "Won bids /wk\n(per served IP)",
+            "Won bids/yr\n(0.5-1.5x)", "T2 revenue $/yr\n(0.4-1.8x)", "T1 floor\n$/yr",
             "WTP @30-50%\nmargin (net)", "Domain axis\n$/yr (band)", "Bill\nrun rate"]
 
     fig = plt.figure(figsize=(12.6, 4.4))
@@ -1168,7 +1168,7 @@ def q9c(rdir):
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(8.4)
     tbl.scale(1, 2.3)
-    widths = [0.085, 0.09, 0.115, 0.06, 0.10, 0.135, 0.075, 0.115, 0.115, 0.085]
+    widths = [0.082, 0.088, 0.105, 0.105, 0.105, 0.13, 0.07, 0.11, 0.11, 0.082]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
