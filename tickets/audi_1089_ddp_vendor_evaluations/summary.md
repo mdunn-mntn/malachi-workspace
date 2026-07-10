@@ -64,6 +64,12 @@ domain value → q5-q6 CIL joins → q7 performance → bands/scorecard/runner.
   `outputs/run_2026_07_10/q0_roster_cost.csv` + `runbook/charts/q0_roster_cost.png`
   (wide table, one month per column, via `runbook/charts/generate_canonical_charts.py`).
   Per-step deliverables are the SQL + the PNG only — no ad-hoc exports (user preference 2026-07-10).
+- **q1 scale+liveness — BUILT 2026-07-10.** `runbook/queries/q1_scale_by_day.sql` →
+  `outputs/run_2026_07_10/q1_scale_by_day.csv` (reused Jul 9 pull — identical query + window) +
+  `runbook/charts/q1_scale_by_day.png` (liveness table). Findings: **no source missed a day** —
+  all 10 feeds 30/30 days Jun 2–Jul 1, every liveness gate PASS. Two partial-volume incidents:
+  **33Across Jun 20 at ~8% of median** (1.08B → 86M rows); **Klickly Jun 24–26 3-day sag**
+  (24–46% of its 4.3M median). IPv6: Justuno 19.7%, 33Across 8.3%, Predactiv 7.9%, rest ~0.
   Findings: the meter spans ALL CPM DDPs — **DS35 LiveRamp IP (interests) bills $243–446K/mo ≈ $3.4M/yr,
   ~4× the entire site-visit CPM roster**; DS17 ShareThis @ $0.95 (rate cut from $1.20 "starting May usage"
   per registry notes, but meter implies $0.95 for all Jan–Jun — history likely restated); DS29 deepsync

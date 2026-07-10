@@ -110,7 +110,78 @@ def q0(rdir):
     save(fig, "q0_roster_cost.png")
 
 
-STEPS = {"0": q0}
+# ---- Step 1: scale & liveness ----
+NAMES = {23: "guid_log (internal)", 24: "Justuno", 25: "5x5", 26: "Predactiv", 28: "33Across",
+         30: "augmentor (internal)", 33: "Sovrn", 36: "Cybba", 39: "Klickly", 40: "33Across API"}
+MON = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+def q1(rdir):
+    by_ds, days = {}, set()
+    with open(os.path.join(rdir, "q1_scale_by_day.csv")) as f:
+        for r in csv.DictReader(f):
+            days.add(r["dt"])
+            by_ds.setdefault(int(r["data_source_id"]), {})[r["dt"]] = \
+                (int(r["n_rows"]), float(r["pct_ipv6"]))
+    days = sorted(days)
+    dlbl = lambda dt: f"{MON[int(dt[5:7])]} {int(dt[8:10])}"
+
+    ext = sorted(d for d in by_ds if d not in (23, 30))
+    order = ext + [d for d in (23, 30) if d in by_ds]
+    sep_at = len(ext)
+    cells, flags = [], []
+    for d in order:
+        m = by_ds[d]
+        vals = sorted(v[0] for v in m.values())
+        med = vals[len(vals) // 2]
+        partial = sorted(x for x, v in m.items() if v[0] < 0.5 * med)
+        mind, minv = min(m.items(), key=lambda kv: kv[1][0])
+        ipv6 = sum(v[1] for v in m.values()) / len(m)
+        gate = "PASS" if len(m) >= 0.95 * len(days) else "FAIL"
+        plbl = f"{len(partial)}:  " + ", ".join(dlbl(x) for x in partial) if partial else "0"
+        cells.append([NAMES.get(d, f"DS{d}"), f"DS{d}", f"{len(m)}/{len(days)}", plbl,
+                      f"{med:,}", f"{100 * minv[0] / med:.0f}%  ({dlbl(mind)})",
+                      f"{ipv6:.1f}%", gate])
+        flags.append((bool(partial), gate))
+    cols = ["Source", "DS", "Days delivered", "Partial days (<50% of median)",
+            "Median rows/day", "Weakest day (% of median)", "IPv6 share", "Liveness gate"]
+
+    fig = plt.figure(figsize=(13.4, 3.9))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.84, bottom=0.03)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9.5)
+    tbl.scale(1, 1.5)
+    widths = [0.16, 0.05, 0.10, 0.22, 0.13, 0.16, 0.08, 0.10]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white")
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= sep_at else "#f4f5f7")
+            has_partial, gate = flags[r - 1]
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c == 1:
+                cell.set_text_props(color="#666")
+            if c == 3 and has_partial:
+                cell.set_text_props(color=AMBER, fontweight="bold")
+            if c == 5 and has_partial:
+                cell.set_text_props(color=AMBER)
+            if c == 7:
+                cell.set_text_props(color=GREEN if gate == "PASS" else RED, fontweight="bold")
+            if r > sep_at:
+                cell.set_text_props(color="#888")
+    ax.set_title(f"DDP Feed Liveness and Daily Scale, {dlbl(days[0])} to {dlbl(days[-1])} {days[-1][:4]}",
+                 fontsize=13.5, fontweight="bold", loc="left", pad=10)
+    save(fig, "q1_scale_by_day.png")
+
+
+STEPS = {"0": q0, "1": q1}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

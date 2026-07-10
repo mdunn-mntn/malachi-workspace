@@ -64,12 +64,17 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
   (`"$(grep -v '^[[:space:]]*--' <file>)"` — bq parses a leading `--` as a flag) and keep each file
   single-statement with `-- PARAM` inline literals (a DECLARE makes bq echo the script text into CSV stdout).
 
-### Step 1 — Scale & liveness (+IPv6)
+### Step 1 — Scale & liveness (+IPv6) — **BUILT 2026-07-10** (`runbook/queries/q1_scale_by_day.sql`)
 - **Claim:** "Every source delivered every day; here's each feed's true size and IPv6 exposure."
 - **Query** `q1_scale_by_day.sql`: per `dt × data_source_id`: rows, IPv6 rows, distinct IPs, domains, % URLs with path.
-- **Canonicalize from:** `audi_1089_q1_scale_30d.sql` (works as-is; parameterize dates).
-- **Output:** `q1_scale_by_day.csv`. **Visual:** sparkline grid (exists: `chart_scale_sparklines`).
+  The date window lives entirely in the external-table URIS list (no date predicate in the SQL) —
+  parameterizing a run = regenerating URIS for SIGNAL_START..SIGNAL_END (loop in the header).
+- **Output:** `q1_scale_by_day.csv`. **Visual:** `runbook/charts/generate_canonical_charts.py --step 1` →
+  liveness table: days delivered, partial days (<50% of vendor median, amber), median rows/day, weakest
+  day, IPv6 share, gate (table only, internal baselines grayed).
 - **Score input:** liveness gate (≥95% days) + IPv6-undercount flag (Justuno 19.6% → footprint ×~1.24).
+- **First-run findings (Jun 2–Jul 1 2026):** all 10 sources 30/30 days — every gate PASS. Partial-day
+  incidents: 33Across Jun 20 at ~8% of median; Klickly Jun 24–26 3-day sag (weakest 24%).
 
 ### Step 2 — Window reach
 - **Claim:** "Over the actual targeting window, vendor V reaches N IPs / M domains / P pairs."
