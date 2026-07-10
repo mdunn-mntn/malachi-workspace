@@ -123,6 +123,13 @@ def table_daily_delivery():
         row_colors.append("#eef1f4" if d in INTERNAL else "white")
     cols = ["Source", "Avg IPs / Day", "%", "Avg Rows / Day", "%", "Rows / IP",
             "Avg Domains / Day", "%", "Days"]
+    # row index of the max per metric; % cells pair with their value column
+    max_ips = max(range(len(order)), key=lambda i: agg[order[i]]["ips_d"])
+    max_rows = max(range(len(order)), key=lambda i: agg[order[i]]["rows_d"])
+    max_rpi = max(range(len(order)), key=lambda i: agg[order[i]]["rows_d"] / agg[order[i]]["ips_d"])
+    max_dom = max(range(len(order)), key=lambda i: agg[order[i]]["dom_d"])
+    hi_cells = {(max_ips + 1, 1), (max_ips + 1, 2), (max_rows + 1, 3), (max_rows + 1, 4),
+                (max_rpi + 1, 5), (max_dom + 1, 6), (max_dom + 1, 7)}
     fig, ax = plt.subplots(figsize=(11.2, 4.6))
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
@@ -142,6 +149,9 @@ def table_daily_delivery():
                 cell.set_text_props(ha="left")
             if c in (2, 4, 7):
                 cell.set_text_props(color="#666")
+            if (r, c) in hi_cells:
+                cell.set_facecolor("#dbe4ee")
+                cell.set_text_props(fontweight="bold", color=NAVY)
     ax.set_title("Daily Delivery by Source", fontsize=13.5, fontweight="bold", loc="left", pad=16)
     fig.tight_layout(rect=[0, 0.08, 1, 1])
     save(fig, "audi_1089_table_daily_delivery.png",
