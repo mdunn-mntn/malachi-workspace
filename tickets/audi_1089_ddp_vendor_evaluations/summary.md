@@ -44,12 +44,12 @@ folder holds its interpretation, vendor-specific queries, and verdict.
 | Vendor | DS | Billing | Prior (TI-1027) | Status | Verdict |
 |---|---|---|---|---|---|
 | Klickly | 39 | flat_fee | 132 unique classified domains (7d), score 36, REVIEW | **DONE 2026-07-09** | **PASS (drop) unless ~free — max defensible fee ~$0.1-1.5K/yr; 126 sole classified domains; 26 gated sole imps/week; 1 visit/week on sole IPs** |
-| Justuno | 24 | $0.50 CPM | 4,823 unique classified, 84% unique, KEEP-efficient | pending | — |
-| Predactiv | 26 | flat_fee | #1 unique (164,627), KEEP; rich metadata dropped; broken registry SCD | pending | — |
-| 33Across | 28 | $0.50 CPM | 9,277 unique (30%), REVIEW; ~38.6% redundant vs augmentor (AUDI-647) | pending | — |
-| Sovrn | 33 | $0.50 CPM | 293 unique (1.6%), DROP-CANDIDATE | pending | — |
-| Cybba | 36 | $0.50 CPM | 309 unique (5.7%), REVIEW | pending | — |
-| 33Across API | 40 | $0.50 CPM | 2,802 unique (3.2%), DROP-CANDIDATE; ~13.5% match (AUDI-647) | pending | — |
+| Justuno | 24 | $0.50 CPM | 4,823 unique classified, 84% unique, KEEP-efficient | **DONE 2026-07-10** | **KEEP-trim** — 4,605 sole classified; bill $6.4K/mo (Jun) ≈ $77K/yr vs $14-60K/yr band → just over; trim meter |
+| Predactiv | 26 | flat_fee | #1 unique (164,627), KEEP; rich metadata dropped; broken registry SCD | **DONE 2026-07-10** | **KEEP (renew)** — 226,826 sole classified (2.2× all other externals combined), value $0.7-3M/yr; HARD non-MM dependency (HEM→CRM/identity); metadata lever; lock price now |
+| 33Across | 28 | $0.50 CPM | 9,277 unique (30%), REVIEW; ~38.6% redundant vs augmentor (AUDI-647) | **DONE 2026-07-10** | **NEGOTIATE** — bill $35.2K/mo (Jun) ≈ $422K/yr vs $30-100K/yr band = **4-7× over**; cap ≤$100K/yr or drop |
+| Sovrn | 33 | $0.50 CPM | 293 unique (1.6%), DROP-CANDIDATE | **DONE 2026-07-10** | **DROP** — bill $9.7K/mo ≈ $116K/yr vs $0.5-2.4K/yr band = **~50-200× over**; 80% same-day tied; 0 visits/wk on sole IPs |
+| Cybba | 36 | $0.50 CPM | 309 unique (5.7%), REVIEW | **DONE 2026-07-10** | **DROP** — bill $1.8K/mo ≈ $21.5K/yr vs $1.1-4.7K/yr band = ~5-20× over; needs Sean DAG change (ENABLED_DSIDS) |
+| 33Across API | 40 | $0.50 CPM | 2,802 unique (3.2%), DROP-CANDIDATE; ~13.5% match (AUDI-647) | **DONE 2026-07-10** | **DROP/renegotiate** — bill $14.7K/mo ≈ $176K/yr vs $10-40K/yr band = ~4-18× over; 2% domain-unique; ~81% of pixel-topic infra load |
 
 ## 5. Constraints & context (from the Slack thread, 2026-07-09)
 
@@ -89,6 +89,37 @@ Cross-vendor early reads (for the remaining six):
   base (2.3B) at 30.8% sole — bigger than the 7d picture suggested (worth care in its eval).
 - **Justuno is 19.6% IPv6** — the IPv4-only method materially undercounts it; flag for its eval.
 - Check A: svs signal is necessary for scoring (r=0.05%) — strengthens every vendor's T1 logic.
+
+### THE MONEY FINDING (2026-07-10): actual metered bills exist and are queryable
+`dw-main-bronze.coredw.usage_reporting_data` holds the DDP waterfall meter — **usage = impressions × $0.0005
+exactly** ($0.50 CPM confirmed), credited on MM-targeted serves via targeted_signal DS13/19 with a 30d lookback,
+**1/N split across co-matching vendors** (we pay per-use on SHARED IPs — Paulo's "waterfall on usage basis"
+confirmed). Monthly per-domain reports emailed to each vendor from partnerbilling@ (`bae-sql-utility`
+ddpmonthlyusageemail-*.py). Actuals (`outputs/audi_1089_metered_usage_by_month.csv`):
+
+| Vendor | Apr '26 | May '26 | Jun '26 | Jun run-rate | Defensible band | Position |
+|---|---:|---:|---:|---:|---|---|
+| Justuno 24 | $8,571 | $7,833 | $6,426 | ~$77K/yr | $14-60K/yr | ~1.3× over top — trim |
+| 33Across 28 | $55,163 | $54,241 | $35,169 | ~$422K/yr | $30-100K/yr | **4-7× over** |
+| Sovrn 33 | $13,272 | $10,324 | $9,657 | ~$116K/yr | $0.5-2.4K/yr | **~50-200× over** |
+| Cybba 36 | $1,872 | $1,814 | $1,792 | ~$21.5K/yr | $1.1-4.7K/yr | ~5-20× over |
+| 33Across API 40 | $27,586 | $24,415 | $14,657 | ~$176K/yr | $10-40K/yr | ~4-18× over |
+| **CPM total** | **$106.5K/mo** | **$98.6K/mo** | **$67.7K/mo** | **~$812K/yr** | | |
+
+**Savings case: dropping Sovrn + Cybba + 33Across API ≈ $313K/yr run-rate against ≤$47K/yr of defensible
+value; renegotiating 33Across to its band saves another ~$320K+/yr.** (Bills declining Apr→Jun — meter tracks
+MM-targeted delivery; annualizations use Jun run-rate, the conservative end.) Flat-fee vendors (5x5, Predactiv,
+Klickly) are NOT in this table — their amounts still must come from Paulo's renewal schedule.
+
+### Cross-vendor corrections captured (from the six lineage sweeps)
+- **Predactiv HEM correction to TI-1027:** DS26 hashed emails are NOT dropped — `hashed_email_ds_26_signals`
+  (hourly, severity-1) feeds hashed_email_signal → CRM/identity resolution. Predactiv is the only site-visit DDP
+  with a hard non-MM production dependency.
+- **Justuno ingest:** now a dedicated hourly S3 file-drop (s3://mntn-data-partner-justuno → EMR → fpa_vendor_log),
+  not the pixel topic (legacy). Off-switch = pause justuno_dsid24_ingestion DAG.
+- **Sovrn (FMX) is separately a PMP inventory vendor** (gary-ql core.partners id 68) — dropping the DS33 data
+  feed does not touch inventory deals; don't conflate in the renewal conversation.
+- **33Across device-ID side-feed (DS28)** exists only in the legacy AWS stack (unscheduled) — no GCP consumer.
 
 ### Scan-recovery note (methodology)
 The 9 scan jobs (15-158 min) outlived their client shells; results were recovered from BQ's 24h anonymous

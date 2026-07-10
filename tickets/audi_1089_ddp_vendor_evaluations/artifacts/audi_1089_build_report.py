@@ -14,15 +14,27 @@ BILLING = {24: "$0.50 CPM", 25: "flat fee", 26: "flat fee", 28: "$0.50 CPM", 33:
            36: "$0.50 CPM", 39: "flat fee", 40: "$0.50 CPM", 23: "internal", 30: "internal"}
 # verdict, one-liner  (updated as evals complete)
 VERDICTS = {
-    25: ("KEEP", "TI-1027: #2 unique contributor, 3.4x leverage, B2B-concentrated (renewed eval not needed)"),
-    39: ("PASS — drop unless ~free", "126 sole classified domains; 26 gated sole imps/wk; max defensible fee ~$0.1–1.5K/yr"),
-    24: ("pending", "eval in progress"),
-    26: ("pending", "eval in progress"),
-    28: ("pending", "eval in progress"),
-    33: ("pending", "eval in progress"),
-    36: ("pending", "eval in progress"),
-    40: ("pending", "eval in progress"),
+    25: ("KEEP", "TI-1027: #2 unique contributor, 3.4x leverage, B2B-concentrated; fair band $15–50K/mo"),
+    39: ("DROP unless ~free", "126 sole classified domains; 26 gated sole imps/wk; max defensible fee ~$0.1–1.5K/yr"),
+    24: ("KEEP — trim meter", "4,605 sole classified (least-redundant CPM vendor; 19.6% IPv6 undercounts it); bill ~$77K/yr vs $14–60K/yr band — just over the top"),
+    26: ("KEEP (renew, lock price)", "226,826 sole classified = 2.2× all other externals combined ($0.7–3M/yr value); HARD non-MM dependency (HEM→CRM/identity); dropped metadata = negotiation lever"),
+    28: ("NEGOTIATE — cap ≤$100K/yr", "bill ~$422K/yr vs $30–100K/yr band = 4–7× over; 54% tied; 38.6% augmentor-match corroboration (AUDI-647)"),
+    33: ("DROP", "bill ~$116K/yr vs $0.5–2.4K/yr band = 50–200× over; 80% same-day tied; 0 visits/wk on sole IPs; PMP inventory relationship unaffected"),
+    36: ("DROP", "bill ~$21.5K/yr vs $1.1–4.7K/yr band; 362 sole classified; off-switch = Sean removes 36 from ENABLED_DSIDS"),
+    40: ("DROP / renegotiate", "bill ~$176K/yr vs $10–40K/yr band; 2% domain-unique (pair-depth ≠ classification value); ~81% of pixel-topic infra load"),
 }
+
+# Jun-2026 metered bill (from audi_1089_metered_usage_by_month.csv); flat-fee = None
+def bills():
+    b = {}
+    with open(os.path.join(OUT, "audi_1089_metered_usage_by_month.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["mo"] == "2026-06":
+                b[int(r["data_source_id"])] = float(r["usage_dollars"])
+    return b
+
+
+BILLS = None
 
 
 def rows(name):
@@ -61,10 +73,15 @@ INTERNAL = [30, 23]
 def master_row(d):
     v, note = VERDICTS.get(d, ("—", ""))
     cls = "keep" if v.startswith("KEEP") else ("drop" if v.startswith(("PASS", "DROP")) else "pend")
+    if v.startswith("NEGOTIATE"):
+        cls = "pend"
     sole_del = tier[d]["sole"]["delivered_ips"]
+    bill = BILLS.get(d)
+    bill_txt = f"${bill:,.0f} (~${bill*12/1e3:,.0f}K/yr)" if bill else ("unknown (flat fee)" if d not in (23, 30) else "—")
     return f"""<tr>
       <td class="l"><b>{DS_NAME[d]}</b> <span class="ds">DS{d}</span></td>
       <td>{BILLING[d]}</td>
+      <td>{bill_txt}</td>
       <td>{fnum(float(reach[d]['ips_30d'])/1e6,1)}M</td>
       <td>{fnum(reach[d]['domains_30d'])}</td>
       <td><b>{fnum(dom[d]['sole_classified'])}</b></td>
@@ -78,17 +95,22 @@ def master_row(d):
     </tr>"""
 
 
+BILLS = bills()
+
 table = f"""<table>
 <thead><tr>
-  <th class="l">Source</th><th>Billing</th><th>IPs (30d)</th><th>Domains (30d)</th>
+  <th class="l">Source</th><th>Billing</th><th>Jun '26 bill (metered)</th><th>IPs (30d)</th><th>Domains (30d)</th>
   <th>Sole classified domains</th><th>% pairs sole</th><th>% tied (insurance)</th>
   <th>Sole IPs delivered /wk</th><th>Sole imps /wk (T2)</th><th>Gated sole imps /wk (T1)</th>
   <th>Sole-IP VR</th><th class="l">Verdict</th>
 </tr></thead><tbody>
 {''.join(master_row(d) for d in EXTERNAL)}
-<tr class="int-sep"><td colspan="12" class="l">Internal (free) baseline</td></tr>
+<tr class="int-sep"><td colspan="13" class="l">Internal (free) baseline</td></tr>
 {''.join(master_row(d) for d in INTERNAL)}
-</tbody></table>"""
+</tbody></table>
+<div class="sub"><b>Metered spend reality (coredw.usage_reporting_data — $0.50 CPM confirmed: usage = imps × $0.0005):</b>
+CPM-vendor total ≈ $67.7K/mo (Jun) ≈ $812K/yr run-rate. Dropping Sovrn + Cybba + 33Across API ≈ <b>$313K/yr</b>
+against ≤$47K/yr defensible value; renegotiating 33Across to its band saves another ~$320K+/yr.</div>"""
 
 html = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>AUDI-1089 — DDP Vendor Renewal Evidence</title><style>

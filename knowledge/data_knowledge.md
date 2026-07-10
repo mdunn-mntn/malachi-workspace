@@ -968,6 +968,20 @@ the MM site-visit path is separate and active. (Corrected in ds_catalog for 24/2
 2025-01-01) — take the row with the latest `valid_from` (MM=true is correct; DS26 delivers into site_visit_signal
 daily). Column is `data_partner_name`, not `partner_name`.
 
+### `coredw.usage_reporting_data` — the DDP metered-billing table (AUDI-1089, 2026-07-10)
+`dw-main-bronze.coredw.usage_reporting_data` (cols: `dt`, `data_source_id`, `impressions`, `usage` ($),
+`reporting_month`, `domains` RECORD, `segment_name`, …) is **the actual DDP usage meter** — what MNTN pays the
+$0.50-CPM site-visit vendors. Verified: **`usage = impressions × $0.0005` exactly** ($0.50 CPM). The meter
+(bae-sql-utility "ddp/usage reporting") credits vendors on **MM-targeted serves** (via targeted_signal DS13/19,
+30-day lookback) with a **1/N credit split across co-matching vendors** — i.e. per-use billing accrues on
+SHARED IPs ("waterfall on usage basis", per Paulo). Monthly per-domain reports are emailed to each vendor from
+partnerbilling@ (`ddpmonthlyusageemail-<Vendor>.py`). **Jun 2026 run-rates:** 33Across $35.2K/mo, 33Across API
+$14.7K/mo, Sovrn $9.7K/mo, Justuno $6.4K/mo, Cybba $1.8K/mo ≈ **$812K/yr total CPM-vendor spend** (declining
+Apr→Jun). Flat-fee vendors (5x5/Predactiv/Klickly) are NOT here. Use `reporting_month` for month rollups.
+Other notes: **Justuno DS24 ingest is now a dedicated hourly S3 file-drop** (s3://mntn-data-partner-justuno →
+EMR → fpa_vendor_log), pixel-topic path is legacy. **Sovrn (FMX) is separately a PMP inventory partner**
+(gary-ql core.partners id 68) — DS33 data-feed decisions don't touch inventory deals.
+
 ### Site-visit vendor raw schemas, richness, and the "discard" finding (TI-1027, 2026-06-17)
 Each vendor's RAW feed schema (from the airflow-ti processing jobs) vs what we KEEP in `site_visit_signal`
 (only `ip, url, user_agent, time`):
@@ -983,9 +997,14 @@ Each vendor's RAW feed schema (from the airflow-ti processing jobs) vs what we K
   **`site_visit_signal` drops event_id/mobile/query_str/referer.**
 - **DISCARD FINDING (full magnitude — TI-1027 raw audit 2026-06-17):** `site_visit_signal` keeps only
   `ip, url, user_agent, time`, but the **raw dumps carry far more** that we drop at ingestion:
-  - **Predactiv = 26 raw cols, we keep 4.** Dropped: `hem_md5/sha1/sha256` (**hashed emails — identity linkage**),
-    full geo (`geo_city/postal/dma/...`), `domain_industries` (**firmographics — B2B**), `concepts`/`keywords`/
-    `entities` (pre-computed topic classification w/ confidence scores), `deviceType`/`os`/`browserFamily`.
+  - **Predactiv = 26 raw cols, we keep 4** in site_visit_signal. Dropped THERE: full geo (`geo_city/postal/dma/...`),
+    `domain_industries` (**firmographics — B2B**), `concepts`/`keywords`/`entities` (pre-computed topic
+    classification w/ confidence scores), `deviceType`/`os`/`browserFamily`.
+    **CORRECTION (AUDI-1089 lineage sweep, 2026-07-10): the hashed emails are NOT dropped** — a separate
+    severity-1 hourly DAG (`hashed_email_ds_26_signals`) explodes `hem_sha256` from the raw Predactiv feed into
+    `hashed_email_signal`; `HEMSignalReader` hardcodes DS26 among 5 HEM sources feeding tpa_export/IPDSC
+    CRM-identity resolution. **Predactiv is the only site-visit DDP with a hard non-MM production dependency** —
+    dropping it breaks a CRM/identity input, not just MM signal.
   - **33Across = 32 raw cols (TSV.gz), we keep 4.** Dropped: `PAGE_CATEGORY(_KEYWORDS)` ×2, `TITLE`, geo
     (`ZIP/DMA/REGION/MAXMIND_GEO_ID`), device client-hints (`SEC_CH_UA_*`), `LANGUAGE`, **consent (`GPP/GPC/US_PRIVACY/DNT`)**.
   - **Pixel feeds (24/33/39/40):** drop `event_id/mobile/referer/query_str` (incl. GPP consent).
