@@ -90,7 +90,11 @@ which is why their bills exceed any dependency value.
 | Sovrn | 15.7K | 228K | 14.5 | 0 (0–192) | $2.7K ($1.1–4.8K) | $21 | $498–1,030 | $543–2.4K |
 | Klickly | 324K | 191K | 0.59 | 52 (1–290) | $2.2K ($0.9–4.0K) | $13 | $418–859 | $378–1.6K |
 
-Reading notes: 33Across dominates the dependency axis exactly as it dominates volume; 5x5 and Predactiv
+Reading notes: **visits do NOT drive the revenue column** — revenue = impressions served × eCPM
+(advertisers pay per serve, CPM model; 33Across: 446,628 imps/wk × $11.61 = $5,186/wk × 52 = $269.7K/yr);
+visits are the independent performance grade on those same impressions (33Across: 116/wk → 6,032/yr,
+VR 0.026% ≈ the no-data baseline). Dividing them gives the advertiser's cost-per-visit (~$45 on
+33Across-sole IPs), not our revenue. 33Across dominates the dependency axis exactly as it dominates volume; 5x5 and Predactiv
 INVERT between the two lenses (small dependency, huge domain value) — which is why the lenses must never
 be merged; Sovrn's absurd yield (14.5 wins/IP/yr) is 228K wins concentrated on just 15.7K genuinely-unique
 IPs — high-traffic households everyone else also serves through other doors.
