@@ -146,7 +146,37 @@ their walk-away leverage in the next negotiation. It enters the drop decision as
   pay** — opposite directions, ~23x apart. Use the observed blended eCPM, not the $10–50 CTV list range.
 - Arithmetic: $1,300 × 50% = $650.
 
-## Bounded savings (v1 — from existing q3 data)
+## EXACT savings (v2 — q3b first-reporter classes; SUPERSEDES the v1 bounds below)
+
+q3b measured, per pair, WHO the earliest other holder is. Result: **almost nothing reassigns
+metered-to-metered** (0.03–8.6%, plus 18.7% between the two 33Across sibling feeds). The v1 fear that
+"Sovrn's bill just relabels to 33Across" was wrong — **Sovrn's overlap is 81% with flat-fee vendors**
+(5x5/Predactiv), which absorb reassigned credits at zero marginal cost.
+
+| Vendor | Bill $/yr | Drop saves (EXACT) | sole / →flat-fee / →free / →metered |
+|---|--:|--:|---|
+| 33Across | $422.0K | **$385.7K (91.4%)** | 31% / 8% / 53% / 8.6% |
+| 33A API | $175.9K | **$142.9K (81.3%)** | 45% / 7% / 29% / 18.7% (sibling DS28) |
+| Sovrn | $115.9K | **$109.0K (94.1%)** | 12% / 81% / 0% / 5.9% |
+| Justuno | $77.1K | **$77.1K (100%)** | 92% / 3% / 5% / 0.03% |
+| Cybba | $21.5K | **$21.2K (98.4%)** | 69% / 1% / 29% / 1.6% |
+
+Dropping both 33Across feeds together recovers the full combined $598K (their mutual overlap drops too).
+Caveats: reassignment to flat-fee vendors is $0 marginal cost TODAY but grows those vendors' measured
+value/leverage at renewal; validation anchor passed (mask sole counts = q3 exactly, all 10 sources).
+
+## Roster frontier (exact, all 2^8 subsets, free logs always kept) — `q9e_roster_frontier.png`
+
+Coverage = usable (ip,domain) pairs reachable, % of today's full roster:
+- free logs only: **60.4%** · +33Across combined: **87.3%** (k=2 DS)
+- **3 vendors (33A-combined + 5x5 + Predactiv): 98.1%**
+- 4 vendors (+Justuno): **99.5%** · drop just Sovrn+Cybba: **99.7%**
+- Combined 33Across union: 1.43B sole-to-union pairs (24% of the whole universe; 166M pairs held ONLY
+  by the two feeds jointly — invisible to per-DS soleness).
+Caveat: pair coverage is unweighted — classified/scored/delivered quality varies by pair; the dependent-
+revenue-at-risk column (q6b) is the value-weighted check.
+
+## Bounded savings (v1 — from existing q3 data; SUPERSEDED by the exact table above)
 
 Decompose each vendor's usable pairs: `s` = sole share, `f` = free-log-co-held share
 (1 − pct_netnew_vs_free), `q` = paid-only-co-held share (s+f+q = 1).
@@ -185,12 +215,13 @@ reabsorb (q3b measures this); (A3) freshness degradation on surviving pairs is s
 - **Non-additivity**: these figures do NOT sum across multi-vendor drops (jointly-held pairs vanish
   together) — the q3b holder-signature histogram enables exact evaluation of all 2^8 keep-sets.
 
-## Sequencing rules (order of operations is money)
+## Sequencing rules (order of operations is money) — REVISED after q3b
 
-1. **Renegotiate before you drop** — dropping alternatives destroys our BATNA.
-2. **33Across rate first, Sovrn drop second**: dropping Sovrn first pushes ~$8.5K/mo of credits INTO
-   33Across (raising its bill and its measured dependency right before the negotiation); done in the
-   right order, reassigned credits land at the negotiated rate.
+1. **Renegotiate before you drop** — dropping alternatives destroys our BATNA (unchanged).
+2. ~~"Sovrn's credits flow into 33Across"~~ — q3b showed only 5.9% of Sovrn's pairs reassign to metered
+   vendors; 81% go to flat-fee (free absorption). The Sovrn drop is now sequencing-safe and recovers
+   ~$109K/yr. The remaining ordering concern: dropped vendors' credits absorbed by FLAT-FEE vendors
+   inflate those vendors' measured value before their renewals — lock flat prices first.
 3. Never execute a drop that reassigns credits into a vendor mid-negotiation; refresh the index after
    every executed change.
 4. Structural: the metered pool is ~$68K/mo — metered-to-metered drops barely shrink it. The only real

@@ -189,6 +189,14 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   ran through prospecting-family (MM-gated, vendor-dependent incl. max-reach) campaigns; retargeting
   1–3%. **True dependency ≈ T2 — the ceilings are the real numbers.** Klickly $2.16K/yr dependent
   (97.6% of T2); 33Across $266.6K/yr. Caveat queued: MM-vs-3P audience split within prospecting.
+- **q3b LANDED — exact reassignment + roster frontier (2026-07-10, validation anchor perfect).**
+  **CORRECTION to v1: Sovrn drop saves $109K (94%), not $14.5K** — its overlap is 81% with flat-fee
+  vendors (5x5/Predactiv), not metered. Exact drop savings: 33Across $385.7K (91%), 33A API $142.9K
+  (81%; 18.7% metered = its sibling), Justuno $77.1K (100%), Cybba $21.2K (98%). Metered-to-metered
+  reassignment is negligible roster-wide. **Frontier (all 256 subsets exact): 3 vendors = 98.1%
+  coverage (33A-comb+5x5+Predactiv); 4 = 99.5% (+Justuno); free logs alone 60.4%; combined-33Across
+  union sole = 1.43B pairs incl 166M jointly-only.** Charts: q9d (exact), q9e_roster_frontier.
+  Sequencing revised: Sovrn drop is safe now; lock flat-fee prices before drops (they absorb coverage).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

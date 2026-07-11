@@ -134,13 +134,13 @@ Scores are CURVED to best-in-roster = 100 (the best source is the best we'll get
 WTP = the defensible fee band from section 3 (V sole-classified-domain value + D dependency media);
 "pay up to" = band top. Bill color rule on the chart: green ≤ band top, amber ≤ 3×, red > 3×.
 
-**LEAVE-ONE-OUT CAVEAT (dependency_valuation.md § leave-one-out): dropping a metered vendor does NOT
-recover its bill** — credits reassign to the next reporter. Actual drop savings (floor–ceiling):
-33Across **$130–361K/yr** (dup is with FREE logs — the biggest real savings), 33A API $80–137K,
-Justuno $71–75K, Cybba $15–21K, **Sovrn only $14.3–14.7K of its $116K** (87% of its overlap is with
-paid vendors — the money relabels, mostly into 33Across). **Sequencing: renegotiate 33Across's rate
-BEFORE dropping Sovrn.** Chart: `q9d_one_out.png`. Exact reassignment (incl. flat-fee wildcard + all
-256 roster subsets) lands with the q3b scan.
+**LEAVE-ONE-OUT — EXACT (q3b landed): drop savings** — 33Across $385.7K (91%), 33A API $142.9K (81%),
+**Sovrn $109.0K (94% — v1's $14.5K was wrong: its overlap is 81% with FLAT-FEE vendors, which absorb
+credits free)**, Justuno $77.1K (100%), Cybba $21.2K (98%). Both 33Across feeds together = full $598K.
+**Frontier (all subsets exact): 3 vendors (33A-combined + 5x5 + Predactiv) retain 98.1% of pair
+coverage; +Justuno = 99.5%; free logs alone = 60.4%.** Charts: `q9d_one_out.png`,
+`q9e_roster_frontier.png`. Sequencing: renegotiate-before-drop still holds (BATNA); lock flat-fee
+prices before drops (they absorb the reassigned coverage).
 Score ranks data quality; the VERDICT = score × cost position (a 57.7 at 4× over band still
 negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 

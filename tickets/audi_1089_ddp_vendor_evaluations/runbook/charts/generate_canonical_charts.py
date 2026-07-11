@@ -1236,85 +1236,65 @@ def q9c(rdir):
 # Synthesis over q3_usable_uniqueness.csv + q1d bills + q9c dependency WTP.
 # floor = bill x sole share; ceiling = bill x (sole + free-co-held); the rest reassigns to paid.
 def q9d(rdir):
-    q3u = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q3_usable_uniqueness.csv")))}
+    """Exact one-out savings from q3b reassignment classes (v2 — supersedes the s/f/q bounds)."""
+    reassign = {}
+    with open(os.path.join(rdir, "q3b_credit_reassignment.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["rec"] == "reassign":
+                reassign.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n_pairs"])
     billed = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
-    vt = {int(r["data_source_id"]): r for r in csv.DictReader(open(os.path.join(rdir, "q6_value_tiers.csv")))}
+    q6bf = {}
+    with open(os.path.join(rdir, "q6b_sole_by_funnel.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["obj_bucket"] == "prospecting_family":
+                q6bf[int(r["ds"])] = q6bf.get(int(r["ds"]), 0.0) + float(r["media"]) * 52
 
     esc = lambda t: t.replace("$", "\\$")
-    METERED = [28, 40, 33, 24, 36]
-    FLAT = [25, 26, 39]
-
-    def shares(d):
-        pairs = int(q3u[d]["usable_pairs"])
-        s_sh = int(q3u[d]["sole_pairs"]) / pairs
-        f_sh = 1 - int(q3u[d]["netnew_vs_free_pairs"]) / pairs
-        return s_sh, f_sh
-
     rows_d = []
-    for d in METERED:
-        s_sh, f_sh = shares(d)
+    for d in [28, 40, 33, 24, 36]:
+        rr = reassign[d]
+        tot = sum(rr.values())
         bill = float(billed[d]["billed_usd"]) * 12
-        wtp50 = 0.50 * float(vt[d]["media_sole"]) * 52 - float(vt[d]["data_sole"]) * 52
-        rows_d.append((d, bill, bill * s_sh, bill * (s_sh + f_sh), wtp50))
+        save_sh = 1 - rr.get("metered", 0) / tot
+        rows_d.append((d, bill, bill * save_sh,
+                       rr.get("none", 0) / tot, rr.get("flat_fee", 0) / tot,
+                       (rr.get("free_first", 0) + rr.get("free_later", 0)) / tot,
+                       q6bf.get(d, 0.0)))
     rows_d.sort(key=lambda r: -r[1])
 
-    n_m, n_f = len(rows_d), len(FLAT)
-    fig, ax = plt.subplots(figsize=(11.4, 5.6))
-    fig.subplots_adjust(left=0.13, right=0.99, top=0.85, bottom=0.11)
-    ax.set_ylim(-0.75, 7.9)
+    fig, ax = plt.subplots(figsize=(11.4, 5.2))
+    fig.subplots_adjust(left=0.11, right=0.99, top=0.87, bottom=0.09)
+    ax.set_ylim(-1.1, 8.1)
     xmax = rows_d[0][1]
-    ys = list(range(n_m + n_f))[::-1]
-
-    for y, (d, bill, floor, ceil, wtp50) in zip(ys[:n_m], rows_d):
-        ax.barh(y, bill, height=0.55, color="#e4e6ea", edgecolor="#c9ccd2")
-        ax.barh(y, floor, height=0.55, color=GREEN)
-        ax.barh(y, ceil - floor, left=floor, height=0.55, color=GREEN, alpha=0.38)
-        big = floor > xmax * 0.10
-        if big:
-            ax.text(floor / 2, y, esc(f"saves {money(floor)}-{money(ceil)}"), va="center",
-                    ha="center", fontsize=8.5, fontweight="bold", color="white")
-            ax.text(bill + xmax * 0.008, y, esc(f"bill {money(bill)}"), va="center",
-                    fontsize=9, color="#555")
+    ys = [i * 1.7 for i in range(len(rows_d))][::-1]
+    for y, (d, bill, saved, p_none, p_flat, p_free, dep) in zip(ys, rows_d):
+        ax.barh(y, bill, height=0.75, color="#e4e6ea", edgecolor="#c9ccd2")
+        ax.barh(y, saved, height=0.75, color=GREEN)
+        ax.text(bill + xmax * 0.008, y, esc(f"bill {money(bill)}"), va="center", fontsize=9, color="#555")
+        lbl = esc(f"drop saves {money(saved)}  ({p_none:.0%} sole + {p_flat:.0%} to flat-fee + {p_free:.0%} to free)")
+        if saved > xmax * 0.55:
+            ax.text(saved / 2, y, lbl, va="center", ha="center", fontsize=8.3,
+                    fontweight="bold", color="white")
         else:
-            x0 = max(bill, ceil) + xmax * 0.008
-            ax.text(x0, y + 0.17, esc(f"bill {money(bill)}"), va="center", fontsize=8.5, color="#555")
-            ax.text(x0, y - 0.19, esc(f"saves {money(floor)}-{money(ceil)}"), va="center",
-                    fontsize=8.5, fontweight="bold", color=GREEN)
-        ax.plot([wtp50, wtp50], [y - 0.34, y + 0.34], color=RED, lw=2, zorder=5)
-        ax.text(wtp50, y + 0.42, esc(f"value {money(wtp50)}"), ha="center", va="bottom",
+            ax.text(xmax * 0.004, y - 0.58, lbl, va="top", ha="left", fontsize=8.3,
+                    fontweight="bold", color=GREEN)
+        ax.plot([dep, dep], [y - 0.42, y + 0.42], color=RED, lw=2, zorder=5)
+        ax.text(dep, y + 0.50, esc(f"dependent rev {money(dep)}"), ha="left", va="bottom",
                 fontsize=7.5, color=RED)
-
-    for y, d in zip(ys[n_m:], FLAT):
-        s_sh, f_sh = shares(d)
-        wtp = 0.50 * float(vt[d]["media_sole"]) * 52 - float(vt[d]["data_sole"]) * 52
-        ax.text(xmax * 0.006, y, esc(
-            f"flat fee (amount pending) - drop saves the fee; sole coverage {s_sh:.0%}; "
-            f"dependency value {money(max(wtp, 0))}/yr @50% margin"),
-            va="center", fontsize=8.5, color="#555")
-
+    ax.set_yticks(ys)
     labels = []
     for r in rows_d:
-        if r[0] == 28:
-            labels.append("33Across (batch)")
-        elif r[0] == 40:
-            labels.append("33A API (RT)")
-        else:
-            labels.append(SHORT[r[0]])
-    ax.set_yticks(ys)
-    ax.set_yticklabels(labels + [SHORT[d] for d in FLAT], fontsize=10)
-    y28 = ys[[r[0] for r in rows_d].index(28)]
-    y40 = ys[[r[0] for r in rows_d].index(40)]
-    ax.annotate(esc("same vendor - one contract, combined bill $597.9K/yr"),
-                xy=(xmax * 0.55, (y28 + y40) / 2 + 0.55), fontsize=8, color=NAVY,
-                style="italic")
+        labels.append("33Across (batch)" if r[0] == 28 else
+                      ("33A API (RT)" if r[0] == 40 else SHORT[r[0]]))
+    ax.set_yticklabels(labels, fontsize=10)
     ax.set_xlim(0, xmax * 1.17)
     ax.set_xlabel(esc("$/yr"), fontsize=9, color="#666")
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"\\${v/1e3:,.0f}K"))
     for sp in ax.spines.values():
         sp.set_visible(False)
     ax.tick_params(left=False, bottom=False, labelsize=8.5)
-    ax.set_title("Dropping a Vendor Does Not Save Its Bill  -  solid green = guaranteed savings (sole share),\n"
-                 "light green = possible if free logs win re-races, gray = reassigns to other paid vendors, red = value forfeited",
+    ax.set_title("EXACT One-Out Savings (q3b first-reporter classes): green = recovered on drop,\n"
+                 "gray = reassigns to other METERED vendors, red line = vendor-dependent revenue at risk (q6b)",
                  fontsize=11.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q9d_one_out.png")
 
@@ -1378,8 +1358,110 @@ def q6b(rdir):
     save(fig, "q6b_sole_by_funnel.png")
 
 
+
+# ---- Step 9e: roster frontier — exact coverage of every keep-set (q3b masks) ----
+def q9e(rdir):
+    BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
+    FREE_MASK = (1 << 0) | (1 << 5)
+    masks, reassign = {}, {}
+    with open(os.path.join(rdir, "q3b_credit_reassignment.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["rec"] == "mask":
+                masks[int(r["k1"])] = int(r["n_pairs"])
+            elif r["rec"] == "reassign":
+                reassign.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n_pairs"])
+    billed = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
+    q6bf = {}
+    with open(os.path.join(rdir, "q6b_sole_by_funnel.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["obj_bucket"] == "prospecting_family":
+                q6bf[int(r["ds"])] = q6bf.get(int(r["ds"]), 0.0) + float(r["media"]) * 52
+
+    def cov(keep):
+        km = FREE_MASK
+        for d in keep:
+            km |= (1 << BITSQ[d])
+        return sum(p for m, p in masks.items() if m & km)
+
+    full = cov([24, 25, 26, 28, 33, 36, 39, 40])
+
+    def saved(dropped):
+        out = 0.0
+        for d in dropped:
+            if d not in reassign:
+                continue
+            rr = reassign[d]
+            tot = sum(rr.values())
+            sh = 1 - rr.get("metered", 0) / tot
+            if d in (28, 40) and 28 in dropped and 40 in dropped:
+                sh = 1.0
+            out += float(billed[d]["billed_usd"]) * 12 * sh
+        return out
+
+    ALL = [24, 25, 26, 28, 33, 36, 39, 40]
+    SC = [
+        ("Today (all 8)", ALL),
+        ("Drop Sovrn + Cybba", [24, 25, 26, 28, 39, 40]),
+        ("+ drop Klickly", [24, 25, 26, 28, 40]),
+        ("+ drop Justuno", [25, 26, 28, 40]),
+        ("3 vendors: 33A-comb + flats", [25, 26, 28, 40]),
+        ("33Across combined only", [28, 40]),
+        ("Flat-fee only (5x5+Predactiv)", [25, 26]),
+        ("Free logs only", []),
+    ]
+    seen = set()
+    cells = []
+    for label, keep in SC:
+        key = tuple(sorted(keep))
+        if key in seen and label.startswith("3 vendors"):
+            continue
+        seen.add(key)
+        dropped = [d for d in ALL if d not in keep]
+        c = cov(keep)
+        met_kept = sum(float(billed[d]["billed_usd"]) * 12 for d in keep if d in billed)
+        rec = saved(dropped)
+        dep_risk = sum(q6bf.get(d, 0.0) for d in dropped)
+        names = "+".join(SHORT[d] for d in sorted(keep, key=lambda x: -int(billed.get(x, {"billed_usd": 0}) if False else 0) if False else x)) if keep else "(none)"
+        names = "+".join(SHORT[d] for d in keep) if keep else "(none)"
+        cells.append([label, names, f"{100 * c / full:.2f}%",
+                      money(met_kept) if met_kept else "-",
+                      money(rec) if rec else "-",
+                      money2(dep_risk) if dep_risk else "-"])
+    cols = ["Scenario", "Paid vendors kept", "Pair coverage\n(% of today)",
+            "Metered bills\nkept $/yr", "Exact recovery\nfrom drops $/yr", "Dependent rev\nat risk $/yr"]
+
+    fig = plt.figure(figsize=(11.8, 3.6))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.8)
+    tbl.scale(1, 1.65)
+    widths = [0.17, 0.30, 0.105, 0.105, 0.12, 0.115]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c in (0, 1):
+                cell.set_text_props(ha="left")
+            if c == 2:
+                v = float(cells[r - 1][2].rstrip("%"))
+                cell.set_text_props(fontweight="bold",
+                                    color=GREEN if v >= 98 else (AMBER if v >= 90 else RED))
+            if c == 4:
+                cell.set_text_props(fontweight="bold", color=GREEN)
+    ax.set_title("Roster Frontier (exact, all subsets evaluated): Coverage vs Cost per Keep-Set — free logs always kept",
+                 fontsize=11.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q9e_roster_frontier.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
