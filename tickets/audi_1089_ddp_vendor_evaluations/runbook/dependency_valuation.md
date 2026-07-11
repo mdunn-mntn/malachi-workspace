@@ -31,9 +31,13 @@ wins, only **26 were MM-score-gated serves** that provably required Klickly's si
   MM PROSPECTING campaigns are also vendor-dependent** — the IP is only in the MM membership because the
   vendor loaded it (MemDB membership ← targeted_signal ← svs). Retargeting serves are NOT (audience =
   the advertiser's own pixel, independent of svs); 3P only where the client's audience includes it.
-  So true dependency = T1 + the prospecting/max-reach slice of T2 — measured empirically by **q6b**
-  (sole-IP impressions split by campaign funnel_level), which replaces "plausibly nearer T1" with a
-  per-vendor number.
+  So true dependency = T1 + the prospecting/max-reach slice of T2. **MEASURED (q6b, 2026-07-10):
+  97–99% of every vendor's sole-IP impressions came through prospecting-family campaigns — true
+  dependency ≈ T2.** Klickly: 97.6% prospecting → dependent revenue ~$2.16K/yr of its $2.2K T2; the
+  retargeting (vendor-independent) slice is 1–3% everywhere. The T2 "ceiling" is effectively the real
+  number. Remaining refinement: prospecting campaigns can also target 3P audiences (LiveRamp/ShareThis)
+  rather than MM — an MM-vs-3P expression split would trim further, but billing corroborates dependence
+  (vendors earn credits on these serves). Chart: `q6b_sole_by_funnel.png`.
 
 **Performance, joined on the same IPs.** 1 visit on the week's 3,674 sole wins → VR 0.0272% vs the
 0.0223% no-svs baseline — statistically indistinguishable. Annualized ~52 expected visits/yr, but the

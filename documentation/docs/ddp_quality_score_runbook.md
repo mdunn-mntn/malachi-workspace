@@ -227,6 +227,13 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 - **Output:** `q6_value_tiers.csv`. **Visual:** dependency bars T2 with T1 overlay (exists: `chart_dependency_by_vendor`).
 - **Score input:** **D** (10%), dollarized into the band: T2 × $0.50 CPM + T1 media.
 
+### Step 6b — Sole imps by campaign funnel (attribution) — **BUILT 2026-07-10** (`runbook/queries/q6b_sole_by_funnel.sql`)
+- **Claim:** "Which sole-IP serves actually depended on the vendor?" Prospecting-family campaigns are
+  MM-audience-gated (membership ← targeted_signal ← vendor) → vendor-dependent, INCLUDING max-reach;
+  retargeting = advertiser pixel → independent.
+- **Result:** 97–99% prospecting across all vendors → **true dependency ≈ T2**; retargeting 1–3%.
+  Visual: `q6b_sole_by_funnel.png`. Caveat: 3P-audience prospecting not yet split out.
+
 ### Step 7 — Performance parity (the headline lens)
 - **Claim:** "Impressions to V-sole IPs convert at/below/above the no-signal baseline."
 - **Query** `q7_sole_vr.sql`: per ds: sole imps, visits, VR overall + by band; plus the four-way membership

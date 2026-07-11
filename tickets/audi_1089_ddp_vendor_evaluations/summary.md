@@ -185,6 +185,10 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   ~$598K/yr — the single negotiation covers both; feeds separable operationally (drop-the-API-feed is a
   viable outcome). Exact combined/union soleness + savings land with q3b masks (pairs held only by
   {28,40} jointly are invisible to per-DS soleness).
+- **q6b attribution — LANDED 2026-07-10 (user's challenge VINDICATED).** 97–99% of sole-IP impressions
+  ran through prospecting-family (MM-gated, vendor-dependent incl. max-reach) campaigns; retargeting
+  1–3%. **True dependency ≈ T2 — the ceilings are the real numbers.** Klickly $2.16K/yr dependent
+  (97.6% of T2); 33Across $266.6K/yr. Caveat queued: MM-vs-3P audience split within prospecting.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

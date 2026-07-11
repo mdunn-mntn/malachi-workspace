@@ -1319,8 +1319,67 @@ def q9d(rdir):
     save(fig, "q9d_one_out.png")
 
 
+
+# ---- Step 6b: attribution resolved — sole-IP imps by campaign funnel ----
+def q6b(rdir):
+    agg = {}
+    with open(os.path.join(rdir, "q6b_sole_by_funnel.csv")) as f:
+        for r in csv.DictReader(f):
+            d = int(r["ds"])
+            a = agg.setdefault(d, {"prosp": 0, "rt": 0, "prosp_m": 0.0, "rt_m": 0.0, "t1": 0})
+            if r["obj_bucket"] == "prospecting_family":
+                a["prosp"] += int(r["imps"]); a["prosp_m"] += float(r["media"])
+            elif r["obj_bucket"] == "retargeting":
+                a["rt"] += int(r["imps"]); a["rt_m"] += float(r["media"])
+            a["t1"] += int(r["imps_scored_nonrtc"])
+    ext = sorted((d for d in agg if d not in (23, 30)),
+                 key=lambda d: -(agg[d]["prosp"] + agg[d]["rt"]))
+    order = ext + [d for d in (23, 30) if d in agg]
+
+    cells = []
+    for d in order:
+        a = agg[d]
+        tot = a["prosp"] + a["rt"]
+        dep_yr = a["prosp_m"] * 52
+        cells.append([SHORT[d], fmtn(tot), f"{100 * a['prosp'] / tot:.1f}%",
+                      f"{100 * a['rt'] / tot:.1f}%", fmtn(a["t1"]),
+                      money2(dep_yr), money2(0.30 * dep_yr), money2(0.50 * dep_yr)])
+    cols = ["Source", "Sole imps\n/wk", "Prospecting\n(vendor-dep)", "Retargeting\n(indep)",
+            "T1 scored\n/wk", "Dependent\nrevenue $/yr", "kept @30%\nmargin", "kept @50%\nmargin"]
+
+    fig = plt.figure(figsize=(9.8, 3.5))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.6)
+    widths = [0.105, 0.095, 0.115, 0.105, 0.09, 0.12, 0.10, 0.10]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(ext) else "#f4f5f7")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c == 2:
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if c == 5:
+                cell.set_facecolor(HILITE)
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if r > len(ext):
+                cell.set_text_props(color="#888")
+    ax.set_title("Attribution Resolved: 97-99% of Sole-IP Serves Came Through Vendor-Dependent Prospecting Campaigns",
+                 fontsize=11.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q6b_sole_by_funnel.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
