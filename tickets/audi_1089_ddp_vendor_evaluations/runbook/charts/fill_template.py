@@ -491,8 +491,10 @@ SPEC = [
     R("Asks / weird things (full text in notes)", "txt", lambda d: "see notes" if d in ASKS else None),
 ]
 
-FMT = {"int": "#,##0", "pct0": '0"%"', "pct": '0.0"%"', "pct2": '0.00"%"',
-       "pct3": '0.000"%"', "pct4": '0.0000"%"', "usd": "$#,##0", "usd2": "$#,##0.00",
+# pct* store the FRACTION (0.218) with a true percent format so Excel/Sheets
+# recognize the cell as a percentage; the writer divides percent numbers by 100.
+FMT = {"int": "#,##0", "pct0": "0%", "pct": "0.0%", "pct2": "0.00%",
+       "pct3": "0.000%", "pct4": "0.0000%", "usd": "$#,##0", "usd2": "$#,##0.00",
        "usd4": "$#,##0.0000", "dec1": "0.0", "dec2": "0.00", "x2": '0.00"x"', "txt": None}
 
 
@@ -542,7 +544,10 @@ def main():
                 cell.value = v
                 filled += 1
             else:
-                cell.value = round(float(v), 6)
+                v = float(v)
+                if fmt and fmt.startswith("pct"):
+                    v /= 100.0          # store fraction; percent format displays it
+                cell.value = round(v, 8)
                 if FMT.get(fmt):
                     cell.number_format = FMT[fmt]
                 filled += 1
@@ -553,33 +558,72 @@ def main():
     ws.freeze_panes = "B2"
 
     # ---- notes sheet ----
+    from openpyxl.styles import Border, Side
+
     ns = wb.create_sheet("notes")
     hdr = ["Vendor", "DS", "Scope", "Billing / rate", "Renewal / contract status",
            "Ingestion + off-switch", "Blast radius (non-MM prod deps)",
            "Verdict (full)", "Asks / weird things to raise with the vendor"]
+    ncols = len(hdr)
+    thin = Side(style="thin", color="D9D9D9")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    band_fill = PatternFill("solid", fgColor="F2F2F2")
+    verdict_color = {"KEEP": "1E7A1E", "NEGO": "B26B00", "DROP": "B00020"}
+
     ns.append(hdr)
-    for d in DS_COLS:
+    for c in range(1, ncols + 1):
+        cell = ns.cell(row=1, column=c)
+        cell.font = section_font
+        cell.fill = section_fill
+        cell.alignment = Alignment(vertical="center", wrap_text=True)
+        cell.border = border
+    ns.row_dimensions[1].height = 22
+
+    for i, d in enumerate(DS_COLS):
         reg = q0.get(d, {}).get("reg", {})
         vf = (reg.get("valid_from") or "")[:10]
         renewal = RENEWAL_NOTE.get(
             d, f"Contract valid_from {vf}; renewal date pending (Maya / renewal schedule)" if vf else "pending")
-        ns.append([HDR_NAMES[d], d, SCOPE.get(d, ""), RATE_NOTE.get(d, ""), renewal,
-                   INGEST_NOTE.get(d, ""), BLAST_NOTE.get(d, ""),
-                   VERDICT_FULL.get(d, NA), ASKS.get(d, NA)])
-    ns.append([])
-    ns.append(["CONVENTIONS"])
-    for c in CONVENTIONS:
-        ns.append(["", "", c])
+        vals = [HDR_NAMES[d], d, SCOPE.get(d, ""), RATE_NOTE.get(d, ""), renewal,
+                INGEST_NOTE.get(d, ""), BLAST_NOTE.get(d, ""),
+                VERDICT_FULL.get(d, NA), ASKS.get(d, NA)]
+        r_i = 2 + i
+        for c, v in enumerate(vals, start=1):
+            cell = ns.cell(row=r_i, column=c, value=v)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.border = border
+            if i % 2 == 1:
+                cell.fill = band_fill
+        ns.cell(row=r_i, column=1).font = bold
+        vcell = ns.cell(row=r_i, column=8)
+        vword = str(vcell.value or "")[:4].upper()
+        if vword in verdict_color:
+            vcell.font = Font(bold=True, color=verdict_color[vword])
+        ns.row_dimensions[r_i].height = 44
 
-    for c in range(1, len(hdr) + 1):
-        ns.cell(row=1, column=c).font = bold
-    ns.cell(row=len(DS_COLS) + 3, column=1).font = bold
+    # CONVENTIONS block: section bar + one merged full-width row per item
+    conv_hdr_row = len(DS_COLS) + 3
+    ns.cell(row=conv_hdr_row, column=1, value="CONVENTIONS — how to read this workbook")
+    ns.merge_cells(start_row=conv_hdr_row, start_column=1, end_row=conv_hdr_row, end_column=ncols)
+    hc = ns.cell(row=conv_hdr_row, column=1)
+    hc.font = section_font
+    hc.fill = section_fill
+    hc.alignment = Alignment(vertical="center")
+    ns.row_dimensions[conv_hdr_row].height = 20
+    for j, ctext in enumerate(CONVENTIONS):
+        r_j = conv_hdr_row + 1 + j
+        ns.cell(row=r_j, column=1, value=f"{j + 1}. {ctext}")
+        ns.merge_cells(start_row=r_j, start_column=1, end_row=r_j, end_column=ncols)
+        cc = ns.cell(row=r_j, column=1)
+        cc.alignment = Alignment(vertical="top", wrap_text=True)
+        cc.border = border
+        if j % 2 == 1:
+            cc.fill = band_fill
+        ns.row_dimensions[r_j].height = 28
+
     widths = [16, 5, 46, 34, 42, 46, 44, 62, 70]
     for i, w in enumerate(widths, start=1):
         ns.column_dimensions[get_column_letter(i)].width = w
-    for row in ns.iter_rows(min_row=2):
-        for cell in row:
-            cell.alignment = Alignment(vertical="top", wrap_text=True)
     ns.freeze_panes = "A2"
 
     wb.save(OUT)
