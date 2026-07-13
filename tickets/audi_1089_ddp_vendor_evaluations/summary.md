@@ -272,6 +272,20 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d3. Free-log credit preemption gap (Sean Yang, 2026-07-13) — AUDI-1093
+
+Sean Yang confirms DS30 augmentor_log IS implemented in svs — but the meter still awards paid
+vendors credit for (ip x domain x date) signals our own free logs (DS23 guid, DS30 augmentor) also
+capture: **we pay for data we already have.** Mechanism: first-reporter timing only displaces a
+vendor when the free log reports FIRST, and day-grain credit hands vendors fresh credit for new
+dates on pairs we already track. **Rough recoverable if free sources preempt paid credit
+(pair-grain proxy from q3b free-cohold shares x June bills): ≈$284K/yr** — 33Across $224K (53%
+free-cohold), 33A API $50K (28.5%), Cybba $6.2K, Justuno $3.9K, Sovrn ~$0.3K. Exact triple-grain
+number comes from q3c. Filed **AUDI-1093** (confirm dbt behavior, quantify exactly, spec
+free-preemption rule for the owning team). Note interplay with drops: preemption and dropping are
+substitutes on the overlap slice — preemption recovers the free-cohold share while KEEPING the
+vendor's unique contribution.
+
 ## 4e. Team review meeting 2026-07-13 (meetings/audi_1089_01_discuss_vendor_value_quality_2026_07_13.txt)
 
 Walked the team (Alex, Allison +) through the valuation model and the workbook. Outcomes:
