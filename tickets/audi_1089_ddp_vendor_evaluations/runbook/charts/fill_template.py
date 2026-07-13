@@ -922,13 +922,15 @@ def main():
     dec.merge_cells("A1:M1")
     t = dec.cell(row=1, column=1, value=(
         f"VENDOR DECISIONS — ranked by composite score. Bills = {BILL_MONTH} x12. "
-        "Free logs (guid, augmentor) always kept. DS28+DS40 = ONE vendor: negotiate combined."))
+        "Free logs (guid, augmentor) always kept. DS28+DS40 = ONE vendor: negotiate combined. "
+        "Savings VALIDATED 2026-07-13 (AUDI-1092): meter is single-credit since 2026-05; "
+        "figures exact under first-reporter, conservative floors under free-priority."))
     t.font = section_font
     t.fill = section_fill
     dec.row_dimensions[1].height = 20
 
     hdr = ["Vendor", "DS", "Score (best=100)", "Bill $/yr", "Pay up to (WTP band)",
-           "T1 provable floor $/yr", "T2 fair-ceiling $/yr", "Exact drop savings $/yr",
+           "T1 provable floor $/yr", "T2 fair-ceiling $/yr", "Drop savings $/yr (validated; exact-to-floor)",
            "Coverage lost (pp)", "Dep. revenue at risk $/yr", "DECISION",
            "Negotiation plan / target", "Top asks to improve their data"]
     ri = put_row(dec, 2, hdr, header=True)
@@ -974,7 +976,7 @@ def main():
     t.fill = section_fill
     ri += 1
     sc_hdr = ["Scenario", "Paid vendors kept", "Coverage (% of today)",
-              "Metered bills kept $/yr", "Metered recovery from drops $/yr (flat-fee savings ADDITIONAL, amounts pending)",
+              "Metered bills kept $/yr", "Metered recovery from drops $/yr (validated exact-to-floor; flat-fee savings ADDITIONAL, amounts pending)",
               "Dep. revenue at risk $/yr (T2, prospecting-attributed)", "", "", "", "", "", "", ""]
     ri = put_row(dec, ri, sc_hdr, header=True)
     sfmt = {3: "0.00%", 4: "$#,##0", 5: "$#,##0", 6: "$#,##0"}
