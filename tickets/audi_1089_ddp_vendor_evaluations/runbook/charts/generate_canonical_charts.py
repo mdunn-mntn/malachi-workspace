@@ -1559,11 +1559,21 @@ def q9e2(rdir):
     BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
     FREE_MASK = (1 << 0) | (1 << 5)
     PAIDL = [24, 25, 26, 28, 33, 36, 39, 40]
-    masks = {}
+    FLAT = {25, 26, 39}
+    masks, reassign = {}, {}
     with open(os.path.join(rdir, "q3b_credit_reassignment.csv")) as f:
         for r in csv.DictReader(f):
             if r["rec"] == "mask":
                 masks[int(r["k1"])] = int(r["n_pairs"])
+            elif r["rec"] == "reassign":
+                reassign.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n_pairs"])
+    billed = {int(r["ds"]): float(r["billed_usd"]) * 12
+              for r in csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
+    dep = {}
+    with open(os.path.join(rdir, "q6b_sole_by_funnel.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["obj_bucket"] == "prospecting_family":
+                dep[int(r["ds"])] = dep.get(int(r["ds"]), 0.0) + float(r["media"]) * 52
 
     def cov(keep):
         km = FREE_MASK
@@ -1571,36 +1581,55 @@ def q9e2(rdir):
             km |= (1 << BITSQ[d])
         return sum(p for m, p in masks.items() if m & km)
 
+    def recovered(dropped):
+        out = 0.0
+        for d in dropped:
+            if d not in reassign:
+                continue
+            rr = reassign[d]
+            sh = 1.0 if (d in (28, 40) and 28 in dropped and 40 in dropped) \
+                else 1 - rr.get("metered", 0) / sum(rr.values())
+            out += billed[d] * sh
+        return out
+
     full = cov(PAIDL)
     cells, prev, prev_set = [], cov([]), set()
     for k in range(0, 9):
-        scored = sorted(((cov(list(K)), K) for K in combinations(PAIDL, k)), reverse=True)
-        c, K = scored[0]
-        gap = (c - scored[1][0]) / full * 100 if len(scored) > 1 else 0.0
+        c, K = max(((cov(list(K)), K) for K in combinations(PAIDL, k)))
+        dropped = [d for d in PAIDL if d not in K]
+        rec = recovered(dropped)
+        dv = sum(dep.get(d, 0.0) for d in dropped)
+        nfees = sum(1 for d in dropped if d in FLAT)
+        net_hi, net_lo = rec - 0.30 * dv, rec - 0.50 * dv
+        flags = (f"+{nfees} flat fee{'s' if nfees > 1 else ''}" if nfees else "")
+        if 26 in dropped:
+            flags += "  HEM RISK"
         added = set(K) - prev_set
         cells.append([str(k),
                       "+".join(SHORT[d] for d in K) if K else "free logs only",
                       f"{100 * c / full:.2f}%",
-                      f"+{100 * (c - prev) / full:.2f}pp" + (f"  ({SHORT[list(added)[0]]})" if len(added) == 1 else ""),
-                      f"{gap:.2f}pp"])
+                      f"+{100 * (c - prev) / full:.2f}pp" + (f" ({SHORT[list(added)[0]]})" if len(added) == 1 else ""),
+                      money(rec) if rec else "-",
+                      money2(dv) if dv else "-",
+                      (f"{money(net_lo)}-{money(net_hi)}" if rec else "-") + (f"\n{flags}" if flags else "")])
         prev, prev_set = c, set(K)
-    cols = ["k", "Best keep-set (exhaustive over all C(8,k))", "Coverage\n(% of today)",
-            "Marginal gain\n(vendor added)", "Runner-up\ngap"]
+    cols = ["k", "Best keep-set (all 256 evaluated)", "Coverage\n(% of today)", "Marginal gain\n(vendor added)",
+            "Metered $\nrecovered/yr", "Dep. revenue\nat risk $/yr", "NET $/yr\n@50-30% margin"]
 
-    fig = plt.figure(figsize=(10.6, 3.6))
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.05)
+    fig = plt.figure(figsize=(12.6, 4.1))
+    fig.subplots_adjust(left=0.015, right=0.985, top=0.84, bottom=0.04)
     ax = fig.add_subplot(111)
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
     tbl.auto_set_font_size(False)
-    tbl.set_fontsize(8.8)
-    tbl.scale(1, 1.55)
-    widths = [0.035, 0.475, 0.10, 0.155, 0.09]
+    tbl.set_fontsize(8.6)
+    tbl.scale(1, 1.9)
+    widths = [0.03, 0.37, 0.09, 0.135, 0.10, 0.10, 0.145]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
         if r == 0:
-            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_text_props(fontweight="bold", color="white", fontsize=7.8)
             cell.set_facecolor(NAVY)
         else:
             cell.set_facecolor("white")
@@ -1610,10 +1639,15 @@ def q9e2(rdir):
                 v = float(cells[r - 1][2].rstrip("%"))
                 cell.set_text_props(fontweight="bold",
                                     color=GREEN if v >= 98 else (AMBER if v >= 87 else RED))
+            if c == 4:
+                cell.set_text_props(color=GREEN, fontweight="bold")
+            if c == 6:
+                cell.set_text_props(fontweight="bold",
+                                    color=RED if "HEM" in cells[r - 1][6] else NAVY)
             if r in (5, 6):
                 cell.set_facecolor(HILITE)
-    ax.set_title("Exhaustive Frontier: Best Subset at Every Size (all 256 combinations evaluated; optimal sets are NESTED\n"
-                 "so the add-order is the marginal-coverage ranking; knee at k=4-5; free logs always kept)",
+    ax.set_title("Exhaustive Frontier with Money: Coverage, Exact Recovery, Value at Risk, and NET per Roster Size\n"
+                 "(nested optima; flat-fee savings additional and pending amounts; HEM = Predactiv prod dependency outside MM)",
                  fontsize=10.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q9e_frontier_by_k.png")
 
