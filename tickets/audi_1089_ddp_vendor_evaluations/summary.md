@@ -223,6 +223,19 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   order_amt) and **q7d_platform_week.sql** (platform week anchors: 398.3M won imps / 28.03M served IPs /
   $3.53M media). Margin ladder updated to **15/20/30%** (user: blended margin ~15-30%). Row->source
   manifest = runbook/README.md §7. Verification workflow ran per-section recomputes vs source CSVs.
+- **q7b + q7c findings (both landed 2026-07-12 evening; anchors exact — q7c imps = q7b imps per
+  (ds,cohort); q7b sole imps = q6 exactly):**
+  - **Touched-cohort performance is a platform mirror, NOT a vendor discriminator** — every vendor's
+    touched pool covers 12-97% of platform served IPs, so touched CVR ~3.0%, AOV ~$360, IVR 1.6-2.4%
+    are nearly identical across all 10 sources. Vendor differentiation lives in the SOLE rows.
+  - **Sole-IP serves produced ~zero conversions in the valuation week:** 33Across 4 conv ($26.50),
+    33A API 1 ($224), all six other paid vendors 0. Only guid_log's sole pool converts (97/wk,
+    $2.7K). Sole ROAS: 0.01x (33Across) / 0.20x (33A API) / 0.00x elsewhere vs touched ~19-36x.
+    Strengthens every DROP verdict: the sole tail these vendors uniquely contribute doesn't convert.
+  - **Sole avg household score much weaker than touched** (touched ~8,200-9,000 vs sole 2,842-6,420;
+    Klickly worst at 2,842, Cybba 4,161, Sovrn 4,994) with only 1-6% of sole imps scored at all
+    (touched: 28-31%) — the sole tail is mostly max-reach/unscored inventory.
+  - Sole-cohort conversion counts are Poisson-tiny; read the 0s as "<~1/wk", not exactly zero.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
