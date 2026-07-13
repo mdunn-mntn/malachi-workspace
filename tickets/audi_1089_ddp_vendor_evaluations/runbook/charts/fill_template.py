@@ -1075,20 +1075,21 @@ def main():
         f"NET-OF-FREE VALUE LADDER — guid_log + augmentor ALWAYS excluded from the universe first "
         f"({NOF_U / 1e9:.2f}B pairs = {100 * NOF_U / FULL_COV:.0f}% of usable that free logs do NOT cover). "
         "Standalone = vendor as the ONLY paid source; marginal = what it adds at its ladder position. "
-        "$ = DEPENDENT REVENUE (pairs x measured T2-per-sole-pair density; assumes marginal pairs perform like sole pairs). PAY-UP-TO = x15/20/30% margin on these figures."))
+        "$ = DEPENDENT REVENUE, the FULL media CPM on those serves - not our cut. PAY RANGE columns apply the 10-30% blended margin (avg ~20%): that is what the data is worth TO US and the number to negotiate with. Worth/bill ratios stay revenue-basis (generous to the vendor)."))
     t.font = section_font
     t.fill = section_fill
     ri += 1
     lad_hdr = ["Step", "Vendor", "Standalone net-of-free pairs", "Standalone % of universe",
                "Marginal pairs at this step", "Marginal visit-days (recency-crediting grain)",
                "Cumulative % of universe", "Bill $/yr",
-               "STANDALONE dependent REVENUE $/yr (vs free logs only)", "STANDALONE worth / bill",
+               "STANDALONE dependent REVENUE $/yr (vs free logs only)",
+               "STANDALONE PAY RANGE $/yr (10-30% margin)", "STANDALONE worth / bill (revenue basis)",
                "MARGINAL dependent REVENUE $/yr (pair density)",
                "MARGINAL dependent REVENUE $/yr (visit-day density — credits refreshes)",
-               "MARGINAL worth / bill"]
+               "MARGINAL PAY RANGE $/yr (10-30% margin)", "MARGINAL worth / bill (revenue basis)"]
     ri = put_row(dec, ri, lad_hdr, header=True)
     lfmt = {3: "#,##0", 4: "0.0%", 5: "#,##0", 6: "#,##0", 7: "0.0%", 8: "$#,##0",
-            9: "$#,##0", 10: '0.00"x"', 11: "$#,##0", 12: "$#,##0", 13: '0.00"x"'}
+            9: "$#,##0", 11: '0.00"x"', 12: "$#,##0", 13: "$#,##0", 15: '0.00"x"'}
     order, cur_p, cur_t = [], 0, 0
     rem = [d for d in EXT if d in dens]
     for step in range(1, len(rem) + 1 + len(order)):
@@ -1108,7 +1109,8 @@ def main():
         ri = put_row(dec, ri, [
             step, HDR_NAMES[nxt], nof_cov([nxt], NOF_P), nof_cov([nxt], NOF_P) / NOF_U,
             mp, mt, newp / NOF_U, bill if isinstance(bill, float) else bill,
-            round(aval), aratio, round(mval), round(mval_t), ratio,
+            round(aval), f"{money(aval * 0.10)} - {money(aval * 0.30)}", aratio,
+            round(mval), round(mval_t), f"{money(mval * 0.10)} - {money(mval * 0.30)}", ratio,
         ], fmts=lfmt, band_row=(step % 2 == 0))
         order.append(nxt)
         rem.remove(nxt)

@@ -1520,11 +1520,14 @@ def q9g(rdir):
         aratio_col.append(aratio)
         cells.append([f"#{step}", SHORT[d], f"{100 * alone / U:.1f}%", fmtn(mp), f"{cum:.1f}%",
                       money(bill) if bill else "flat",
-                      money(aval), f"{aratio:.2f}x" if aratio else "-",
-                      money(mval), money(mval_t), f"{ratio:.2f}x" if ratio else "-"])
-    cols = ["Add\norder", "Vendor", "ALONE vs free logs\nonly: % of universe", "Marginal\npairs",
-            "Cumul. %\nof universe", "Bill\n$/yr", "ALONE dep.\nrevenue $/yr", "ALONE worth\n/ bill",
-            "Marginal $/yr\n(pair dens.)", "Marginal $/yr\n(visit-day dens.)", "Marg. worth\n/ bill"]
+                      money(aval), f"{money(aval * 0.10)}-{money(aval * 0.30)}",
+                      f"{aratio:.2f}x" if aratio else "-",
+                      money(mval), f"{money(mval * 0.10)}-{money(mval * 0.30)}",
+                      f"{ratio:.2f}x" if ratio else "-"])
+    cols = ["Add\norder", "Vendor", "ALONE vs free\nlogs: % of univ.", "Marginal\npairs",
+            "Cumul. %\nof universe", "Bill\n$/yr", "ALONE dep.\nrevenue $/yr",
+            "ALONE PAY range\n(10-30% margin)", "ALONE worth\n/ bill",
+            "Marginal dep.\nrevenue $/yr", "MARGINAL PAY range\n(10-30% margin)", "Marg. worth\n/ bill"]
 
     fig = plt.figure(figsize=(12.2, 4.4))
     fig.subplots_adjust(left=0.03, right=0.97, top=0.76, bottom=0.05)
@@ -1534,7 +1537,7 @@ def q9g(rdir):
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9)
     tbl.scale(1, 1.6)
-    widths = [0.05, 0.10, 0.098, 0.082, 0.082, 0.082, 0.088, 0.082, 0.096, 0.108, 0.082]
+    widths = [0.045, 0.095, 0.085, 0.07, 0.075, 0.075, 0.082, 0.105, 0.07, 0.082, 0.105, 0.07]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
@@ -1545,14 +1548,14 @@ def q9g(rdir):
             cell.set_facecolor("white")
             if c == 1:
                 cell.set_text_props(ha="left", fontweight="bold")
-            if c in (8, 9):
+            if c in (7, 10):
                 cell.set_text_props(fontweight="bold", color=NAVY)
-            if c == 7:
+            if c == 8:
                 rt = aratio_col[r - 1]
                 if rt is not None:
                     cell.set_text_props(fontweight="bold",
                                         color=GREEN if rt >= 0.9 else (AMBER if rt >= 0.4 else RED))
-            if c == 10:
+            if c == 11:
                 rt = ratio_col[r - 1]
                 if rt is not None:
                     cell.set_text_props(fontweight="bold",
