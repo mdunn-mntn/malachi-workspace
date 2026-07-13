@@ -213,6 +213,16 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   lenses). q7b (avg HH score + touched VR) running; **q7c (conversions/ROAS join) explicitly deferred
   ("not yet")**; q11 mega-pivot builds when q7b lands. Klickly Slack answer drafted (observed $11.54 eCPM
   version). Flat-fee-vs-metered contract explainer given (renewal date = only lever on flat).
+- **Status 2026-07-12 (later): TEMPLATE FILL SHIPPED.** User delivered the final question template as
+  `outputs/audi_1089_quality_template.xlsx` (106 rows x 14 vendor columns, incl. LaunchLabs DS27
+  disabled + out-of-MM LiveRamp IP DS35 / ShareThis DS17 / deepsync DS29 context columns) and un-deferred
+  q7c. Built `runbook/charts/fill_template.py` -> `outputs/audi_1089_quality_template_filled.xlsx`
+  (every cell answered; "% of column total" rows note source overlap). New canonical queries:
+  **q7c_conversions.sql** (ui_conversions joined by ad_served_id to valuation-week CIL, deduped to one
+  row per conversion event preferring last-touch — type 0 treated as 1; assists + disputed excluded;
+  order_amt) and **q7d_platform_week.sql** (platform week anchors: 398.3M won imps / 28.03M served IPs /
+  $3.53M media). Margin ladder updated to **15/20/30%** (user: blended margin ~15-30%). Row->source
+  manifest = runbook/README.md §7. Verification workflow ran per-section recomputes vs source CSVs.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
