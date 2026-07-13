@@ -1386,6 +1386,8 @@ def q9e(rdir):
     full = cov([24, 25, 26, 28, 33, 36, 39, 40])
 
     def saved(dropped):
+        METERED = [24, 28, 33, 36, 40]
+        metered_left = [x for x in METERED if x not in dropped]
         out = 0.0
         for d in dropped:
             if d not in reassign:
@@ -1394,6 +1396,8 @@ def q9e(rdir):
             tot = sum(rr.values())
             sh = 1 - rr.get("metered", 0) / tot
             if d in (28, 40) and 28 in dropped and 40 in dropped:
+                sh = 1.0
+            if not metered_left:
                 sh = 1.0
             out += float(billed[d]["billed_usd"]) * 12 * sh
         return out

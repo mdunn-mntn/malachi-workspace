@@ -1017,6 +1017,8 @@ def main():
             vcell.font = Font(bold=True, color=verdict_color[vword])
 
     def saved(dropped):
+        # metered->metered deduction only applies while a metered DESTINATION survives
+        metered_left = [x for x in METERED if x not in dropped]
         out = 0.0
         for d in dropped:
             if d not in reassign or d not in q1d:
@@ -1024,6 +1026,8 @@ def main():
             rr = reassign[d]
             sh = 1 - rr.get("metered", 0) / sum(rr.values())
             if d in (28, 40) and 28 in dropped and 40 in dropped:
+                sh = 1.0
+            if not metered_left:
                 sh = 1.0
             out += float(q1d[d]["billed_usd"]) * 12 * sh
         return out
