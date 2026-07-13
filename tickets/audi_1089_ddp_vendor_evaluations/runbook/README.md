@@ -139,7 +139,9 @@ WTP = the defensible fee band from section 3 (V sole-classified-domain value + D
 credits free)**, Justuno $77.1K (100%), Cybba $21.2K (98%). Both 33Across feeds together = full $598K.
 **Frontier (all subsets exact): 3 vendors (33A-combined + 5x5 + Predactiv) retain 98.1% of pair
 coverage; +Justuno = 99.5%; free logs alone = 60.4%.** Charts: `q9d_one_out.png`,
-`q9e_roster_frontier.png`. Sequencing: renegotiate-before-drop still holds (BATNA); lock flat-fee
+`q9e_roster_frontier.png`, `q9e_frontier_by_k.png` (EXHAUSTIVE: best subset at every size k=0..8, all
+256 combinations; optimal sets are NESTED so the add-order = marginal-coverage ranking:
+33Across > 33A API > 5x5 > Predactiv > Justuno > Klickly > Sovrn > Cybba; knee at k=4-5). Sequencing: renegotiate-before-drop still holds (BATNA); lock flat-fee
 prices before drops (they absorb the reassigned coverage).
 Score ranks data quality; the VERDICT = score × cost position (a 57.7 at 4× over band still
 negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).

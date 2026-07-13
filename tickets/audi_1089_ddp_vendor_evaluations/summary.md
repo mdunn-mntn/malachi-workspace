@@ -200,6 +200,10 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
 - **q10 master waterfall — BUILT 2026-07-12.** Consolidated one-row-per-source table (user request):
   feed -> usable -> sole -> served/won -> HI -> performance, all grains labeled. Caveat: serving data =
   WON impressions (CIL); lost bids not tracked here (bid_logs extension possible, 90d TTL).
+- **q9e2 exhaustive frontier — BUILT 2026-07-12.** All 256 subsets, best per size k: free-only 60.4% ->
+  +33Across 78.1 -> +33A API 87.3 -> +5x5 95.9 -> +Predactiv 98.1 -> +Justuno 99.5 -> then <=0.22pp each
+  for Klickly/Sovrn/Cybba. **Optimal sets NESTED** (greedy = exact optimum at every k) -> add-order is
+  THE marginal-coverage ranking. Knee at k=4-5. `q9e_frontier_by_k.png`.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

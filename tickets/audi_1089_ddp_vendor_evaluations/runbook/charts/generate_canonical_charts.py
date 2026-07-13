@@ -1552,8 +1552,74 @@ def q10(rdir):
     save(fig, "q10_master_waterfall.png")
 
 
+
+# ---- Step 9e2: exhaustive frontier by k (all 256 subsets, best per size) ----
+def q9e2(rdir):
+    from itertools import combinations
+    BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
+    FREE_MASK = (1 << 0) | (1 << 5)
+    PAIDL = [24, 25, 26, 28, 33, 36, 39, 40]
+    masks = {}
+    with open(os.path.join(rdir, "q3b_credit_reassignment.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["rec"] == "mask":
+                masks[int(r["k1"])] = int(r["n_pairs"])
+
+    def cov(keep):
+        km = FREE_MASK
+        for d in keep:
+            km |= (1 << BITSQ[d])
+        return sum(p for m, p in masks.items() if m & km)
+
+    full = cov(PAIDL)
+    cells, prev, prev_set = [], cov([]), set()
+    for k in range(0, 9):
+        scored = sorted(((cov(list(K)), K) for K in combinations(PAIDL, k)), reverse=True)
+        c, K = scored[0]
+        gap = (c - scored[1][0]) / full * 100 if len(scored) > 1 else 0.0
+        added = set(K) - prev_set
+        cells.append([str(k),
+                      "+".join(SHORT[d] for d in K) if K else "free logs only",
+                      f"{100 * c / full:.2f}%",
+                      f"+{100 * (c - prev) / full:.2f}pp" + (f"  ({SHORT[list(added)[0]]})" if len(added) == 1 else ""),
+                      f"{gap:.2f}pp"])
+        prev, prev_set = c, set(K)
+    cols = ["k", "Best keep-set (exhaustive over all C(8,k))", "Coverage\n(% of today)",
+            "Marginal gain\n(vendor added)", "Runner-up\ngap"]
+
+    fig = plt.figure(figsize=(10.6, 3.6))
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8.8)
+    tbl.scale(1, 1.55)
+    widths = [0.035, 0.475, 0.10, 0.155, 0.09]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 1:
+                cell.set_text_props(ha="left")
+            if c == 2:
+                v = float(cells[r - 1][2].rstrip("%"))
+                cell.set_text_props(fontweight="bold",
+                                    color=GREEN if v >= 98 else (AMBER if v >= 87 else RED))
+            if r in (5, 6):
+                cell.set_facecolor(HILITE)
+    ax.set_title("Exhaustive Frontier: Best Subset at Every Size (all 256 combinations evaluated; optimal sets are NESTED\n"
+                 "so the add-order is the marginal-coverage ranking; knee at k=4-5; free logs always kept)",
+                 fontsize=10.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q9e_frontier_by_k.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "10": q10}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9e2": q9e2, "10": q10}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
