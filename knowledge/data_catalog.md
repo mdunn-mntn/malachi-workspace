@@ -2561,6 +2561,7 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 | `impression_log` | logdata | All bid attempts (won + lost) | ip (INET), ip_raw, bid_ip, original_ip, campaign_id |
 | `ui_visits` | summarydata | Verified visits — `ip` is INET type; use `host(ip)` to strip /32 | ip (INET), impression_time, is_new |
 | `ui_conversions` | summarydata | Conversions — use `order_amt`, NOT `order_amt_usd` (which is NULL) | order_amt, advertiser_id |
+| `ui_visits` | summarydata | Visit events fanned out PER ATTRIBUTION MODEL (15+ ids; dedup by (advertiser_id, guid, epoch) preferring type 0→1 last-touch, lowest model id). Deduped ≈ `clickpass_log` 1:1 (+0.5%, verified week 2026-07-02..10: 9.81M vs 9.76M); is_pa adds only ~14K/wk — clickpass IS the visit source of truth at event grain. sum_by_* views are campaign/advertiser-day aggregates (no IP grain). | ad_served_id, ip/ip_raw |
 
 <!-- slack-extracted: 2026-04-08-full -->
 - ### `tpa.dim_vertical` (CoreDB)
