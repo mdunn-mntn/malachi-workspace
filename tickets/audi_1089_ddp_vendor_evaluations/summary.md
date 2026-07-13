@@ -197,6 +197,9 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   coverage (33A-comb+5x5+Predactiv); 4 = 99.5% (+Justuno); free logs alone 60.4%; combined-33Across
   union sole = 1.43B pairs incl 166M jointly-only.** Charts: q9d (exact), q9e_roster_frontier.
   Sequencing revised: Sovrn drop is safe now; lock flat-fee prices before drops (they absorb coverage).
+- **q10 master waterfall — BUILT 2026-07-12.** Consolidated one-row-per-source table (user request):
+  feed -> usable -> sole -> served/won -> HI -> performance, all grains labeled. Caveat: serving data =
+  WON impressions (CIL); lost bids not tracked here (bid_logs extension possible, 90d TTL).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

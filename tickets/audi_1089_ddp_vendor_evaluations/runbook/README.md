@@ -154,6 +154,9 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 5. Athena `targeted_signal` access → exact per-vendor used-rows + row-level DS13/DS19 split.
 
 ## 6. Chart index (charts/)
+- `q10_master_waterfall.png` — THE consolidated table: one row per source, feed size -> usability ->
+  uniqueness -> served/won -> HI share -> sole performance (grains per column header; "served (won)" =
+  CIL impressions — lost bids not in pipeline, bid_logs extension possible)
 - `q9c_dependency_ceiling.png` / `q9c_klickly_ladder.png` — dependency-ceiling valuation (stock/flow/performance/$)
 - `q9d_one_out.png` — leave-one-out: what dropping each metered vendor actually saves vs reassigns
 - `q0_roster_cost.png` — roster + monthly metered bills (wide table)

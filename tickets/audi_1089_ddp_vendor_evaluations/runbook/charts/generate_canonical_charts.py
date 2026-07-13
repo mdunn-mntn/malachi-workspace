@@ -1460,8 +1460,100 @@ def q9e(rdir):
     save(fig, "q9e_roster_frontier.png")
 
 
+
+# ---- Step 10: master waterfall — one row per source, feed to won bids to HI ----
+# Consolidates q1 (rows/day, IPv6), q2 (30d uniques), q2c (usable %), q4 (classified %),
+# q3 (sole stock), q5 (touched/served/HI, 37d union x valuation week), q7 (sole served, VR),
+# q6 (sole won bids). Grains noted in headers. "Served (won)" = CIL impressions; lost bids
+# are not in this pipeline (bid_logs extension possible, 90d TTL).
+def q10(rdir):
+    def by_ds(f, key="data_source_id"):
+        return {int(r[key]): r for r in csv.DictReader(open(os.path.join(rdir, f)))}
+    q2 = by_ds("q2_window_reach.csv")
+    q2c = by_ds("q2c_funnel.csv", "ds")
+    q4 = by_ds("q4_domain_value.csv")
+    q3u = by_ds("q3_usable_uniqueness.csv", "ds")
+    vr = by_ds("q7_sole_vr.csv")
+    vt = by_ds("q6_value_tiers.csv")
+    tier = {}
+    with open(os.path.join(rdir, "q5_score_tiers.csv")) as f:
+        for r in csv.DictReader(f):
+            tier.setdefault(int(r["data_source_id"]), {})[r["cohort"]] = r
+    q1m, q1v6 = {}, {}
+    with open(os.path.join(rdir, "q1_scale_by_day.csv")) as f:
+        rowsd = {}
+        for r in csv.DictReader(f):
+            d = int(r["data_source_id"])
+            rowsd.setdefault(d, []).append((int(r["n_rows"]), float(r["pct_ipv6"])))
+    for d, v in rowsd.items():
+        v.sort()
+        q1m[d] = v[len(v) // 2][0]
+        q1v6[d] = sum(x[1] for x in v) / len(v)
+
+    ext = sorted((d for d in q1m if d not in (23, 30)), key=lambda d: -q1m[d])
+    order = ext + sorted((d for d in (23, 30) if d in q1m), key=lambda d: -q1m[d])
+
+    cells = []
+    for d in order:
+        t = tier[d]["touched"]
+        used_pct = 100 * int(q2c[d]["rows_used"]) / int(q2c[d]["rows_raw"])
+        sole_ips = int(q3u[d]["sole_ips"])
+        usable_ips = int(q3u[d]["usable_ips"])
+        served_sole = int(float(vr[d]["sole_ips_delivered"]))
+        cells.append([
+            SHORT[d],
+            fmtn(q1m[d]),
+            f"{q1v6[d]:.1f}%",
+            fmtn(q2[d]["ips_30d"]),
+            fmtn(q2[d]["domains_30d"]),
+            f"{used_pct:.0f}%",
+            f"{float(q4[d]['pct_classified']):.0f}%",
+            f"{fmtn(sole_ips)}\n{100 * sole_ips / usable_ips:.1f}%",
+            fmtn(t["vendor_ips"]),
+            f"{fmtn(t['delivered_ips'])}\n{t['pct_delivered']}%",
+            f"{fmtn(t['hi_10000'])}\n{t['pct_hi']}%",
+            f"{fmtn(served_sole)}\n{100 * served_sole / max(sole_ips, 1):.2f}%",
+            fmtn(float(vt[d]["imps_sole"])),
+            f"{float(vr[d]['vr_overall_pct']):.3f}%",
+        ])
+    cols = ["Source", "Rows/day\n(median)", "IPv6", "Unique IPs\n(30d)", "Unique doms\n(30d)",
+            "Rows\nusable", "Doms\nclassified", "Sole usable\nIPs (pct)", "Touched IPs\n(37d union)",
+            "Served-won\nIPs (pct)", "of which HI\n10000 (pct)", "Sole IPs\nserved/wk (pct)",
+            "Sole won\nbids/wk", "Sole VR\n(base .022)"]
+
+    fig = plt.figure(figsize=(14.4, 4.2))
+    fig.subplots_adjust(left=0.015, right=0.985, top=0.85, bottom=0.03)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8)
+    tbl.scale(1, 2.05)
+    widths = [0.068, 0.075, 0.045, 0.07, 0.07, 0.052, 0.062, 0.082, 0.075,
+              0.082, 0.082, 0.088, 0.066, 0.062]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=7.2)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white" if r <= len(ext) else "#f4f5f7")
+            if c == 0:
+                cell.set_text_props(ha="left", fontweight="bold")
+            if c == 7:
+                cell.set_text_props(color=NAVY, fontweight="bold")
+            if c == 10:
+                cell.set_text_props(color=GREEN)
+            if r > len(ext):
+                cell.set_text_props(color="#888")
+    ax.set_title("Master Waterfall: Feed Size, Usability, Uniqueness, Serving, Score Quality, Performance — One Row Per Source",
+                 fontsize=12, fontweight="bold", loc="left", pad=14)
+    save(fig, "q10_master_waterfall.png")
+
+
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "10": q10}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

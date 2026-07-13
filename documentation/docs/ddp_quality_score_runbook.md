@@ -273,6 +273,11 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 
 ---
 
+### Step 10 — Master waterfall table — **BUILT 2026-07-12** (chart-only, `q10_master_waterfall.png`)
+- One row per source consolidating q1/q2/q2c/q3/q4/q5/q6/q7: rows/day, IPv6, 30d uniques, % rows usable,
+  % domains classified, sole stock (+%), touched IPs, served-won (+%), HI share, sole served/wk (+%),
+  sole won bids/wk, sole VR. The single-table summary for reviews.
+
 ## Repeatability mechanics
 - Everything canonical lives under `tickets/audi_1089_ddp_vendor_evaluations/runbook/`: SQL in
   `runbook/queries/` (q0–q7, each with the parameter block at top), chart script + PNGs in
