@@ -284,6 +284,11 @@ pairs perform like its current sole pairs). Findings:
 - **Marginal ladder (value AT each roster position):** #1 33Across $397K → #2 33A API $59K (0.34x
   bill) → #3 5x5 $62K (flat) → #4 Predactiv $18K (flat) → #5 Justuno $7.5K (0.10x) → #6 Klickly
   $2.2K → #7 Sovrn $2.7K (0.02x) → #8 Cybba $2.8K (0.13x).
+- **Recency robustness check (user q, 2026-07-13): the ladder now carries BOTH valuations —
+  pair-density and visit-day-density (the refresh-crediting lens). They agree within 6% at every
+  step (33Across $397K pair vs $375K visit-day; all others within ~1%), because vendors rarely beat
+  augmentor to a fresh date (free visit-grain coverage 59.4% AFTER crediting vendors all their
+  fresher days). Conclusions are grain-robust.**
 - **Reading: no metered vendor is worth its bill at any position after #1.** The ladder is the
   negotiation sheet: pay each vendor at most its marginal value at its position; the only near-fair
   contract on the roster is 33Across-as-primary — and only if the rest are dropped or repriced.
