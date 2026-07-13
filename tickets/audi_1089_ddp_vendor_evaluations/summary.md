@@ -236,6 +236,16 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
     Klickly worst at 2,842, Cybba 4,161, Sovrn 4,994) with only 1-6% of sole imps scored at all
     (touched: 28-31%) — the sole tail is mostly max-reach/unscored inventory.
   - Sole-cohort conversion counts are Poisson-tiny; read the 0s as "<~1/wk", not exactly zero.
+- **q7e/q7f (2026-07-12 late): sole visit rates ADJUDICATED — real darkness, not attribution breakage.**
+  User challenged 116 visits/wk on 446.6K sole 33Across imps as impossibly low. q7e (platform VR by
+  bucket, same join): retargeting 2.89% / unscored prospecting 1.11% / scored prospecting 0.72% — so
+  sole cohorts at 0.01-0.03% are ~40x below even the coldest campaign bucket, demanding adjudication.
+  q7f (unconditional clickpass activity on sole IPs, NO impression join): of 99,041 served sole
+  33Across IPs, only 25 (0.025%) had ANY clickpass event for ANY advertiser that week (29 events);
+  guid_log served-sole IPs: 1.43% active — 57x more, measured identically. Verdict: the vendors'
+  unique IPs are genuinely dark households (rotating/low-activity tail), and since the ad_served_id
+  join credits cross-device visits, 116/wk is generous if anything. Sole VR rows and all DROP
+  verdicts stand. Canonical queries: q7e_vr_baseline.sql, q7f_sole_ip_activity.sql.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

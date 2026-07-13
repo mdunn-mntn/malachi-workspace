@@ -308,6 +308,7 @@ CONVENTIONS = [
     "T2 envelope = T2 x0.4..x1.8 (volume x0.5-1.5, CPM x0.8-1.2) — scenario range, not a confidence interval.",
     "Exact drop savings = annual bill x share of credits NOT reassigning to another metered vendor (q3b first-reporter classes). Flat vendors: savings = the flat fee itself.",
     "Sole-cohort conversion/visit counts are Poisson-tiny — read 0 as '<~1/wk', not exactly zero. CVR-sole is '—' when sole visits = 0.",
+    "Sole-IP visit rates are REAL, not an attribution artifact (q7f): of 33Across's 99K served sole IPs, only 25 showed ANY clickpass event for ANY advertiser that week (0.025%), vs 1.43% for guid_log's sole IPs measured identically. The households are genuinely dark; the ad_served_id visit join even credits cross-device visits, so 116/wk is if anything generous.",
     "Touched-cohort performance mirrors the platform (pools cover 12-97% of served IPs) — vendor differentiation lives in the SOLE rows.",
     "Conversions (q7c): ui_conversions deduped to one row per conversion event preferring last-touch; assists + disputed excluded; revenue = order_amt.",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
