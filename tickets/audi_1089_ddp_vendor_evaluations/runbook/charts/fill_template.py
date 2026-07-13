@@ -311,6 +311,7 @@ CONVENTIONS = [
     "Sole-IP visit rates are REAL, not an attribution artifact (q7f): of 33Across's 99K served sole IPs, only 25 showed ANY clickpass event for ANY advertiser that week (0.025%), vs 1.43% for guid_log's sole IPs measured identically. The households are genuinely dark; the ad_served_id visit join even credits cross-device visits, so 116/wk is if anything generous.",
     "Touched-cohort performance mirrors the platform (pools cover 12-97% of served IPs) — vendor differentiation lives in the SOLE rows.",
     "Conversions (q7c): ui_conversions deduped to one row per conversion event preferring last-touch; assists + disputed excluded; revenue = order_amt.",
+    "AUDI-1093 (Sean Yang 2026-07-13): free logs do NOT preempt paid credit today - vendors earn day-grain credit on signals guid/augmentor also capture. 'Recoverable if free logs preempt' rows = bill x free-cohold share (~$284K/yr roster-wide, pair-grain proxy) - a fix that KEEPS vendors' unique data, stacks with renegotiation, substitutes for drops on the overlap slice.",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
 ]
 
@@ -491,6 +492,10 @@ SPEC = [
     R("% credits -> free logs", "pct0", lambda d: 100 * (reassign[d].get("free_first", 0) + reassign[d].get("free_later", 0)) / sum(reassign[d].values())),
     R("% credits -> other metered (still paid)", "pct", lambda d: 100 * reassign[d].get("metered", 0) / sum(reassign[d].values())),
     R("Coverage lost if dropped (pp of pair coverage)", "dec2", lambda d: -coverage_lost[d] if d in coverage_lost else None),
+    R("% of credits co-held by our free logs", "pct0", lambda d: None if d in FREE or d not in reassign else
+      100 * (reassign[d].get("free_first", 0) + reassign[d].get("free_later", 0)) / sum(reassign[d].values())),
+    R("Recoverable $/yr if free logs preempt credit (AUDI-1093)", "usd", lambda d: None if d in FREE or d not in reassign or d not in q1d else
+      float(q1d[d]["billed_usd"]) * 12 * (reassign[d].get("free_first", 0) + reassign[d].get("free_later", 0)) / sum(reassign[d].values())),
 
     S("VERDICT"),
     R("Composite quality score (curved, best=100)", "int", lambda d: CURVE[d][1] if d in CURVE else None),
@@ -559,6 +564,8 @@ DIR = {
     "Fee band, domain axis — high (sole classified x $13)": 1,
     "Exact drop savings $/yr": 1, "Drop savings as % of bill": 1,
     "Coverage lost if dropped (pp of pair coverage)": 1,
+    "% of credits co-held by our free logs": 1,
+    "Recoverable $/yr if free logs preempt credit (AUDI-1093)": 1,
     "Composite quality score (curved, best=100)": 1, "Composite quality score (raw)": 1,
 }
 DIR.update({
@@ -715,6 +722,8 @@ DEF = {
     "% credits -> free logs": ("Credits our own logs absorb - saved.", "q3b"),
     "% credits -> other metered (still paid)": ("Credits that just move to another $0.50 meter - NOT saved.", "q3b"),
     "Coverage lost if dropped (pp of pair coverage)": ("Usable-pair coverage the roster loses if this vendor alone is dropped.", "q3b masks"),
+    "% of credits co-held by our free logs": ("Share of the vendor's credited pairs that our own guid_log/augmentor_log ALSO capture - data we pay for but already have (free logs do not preempt paid credit today; Sean Yang 2026-07-13).", "q3b"),
+    "Recoverable $/yr if free logs preempt credit (AUDI-1093)": ("Bill x free-cohold share: what a free-source-preemption billing rule would recover WITHOUT dropping the vendor (keeps their unique contribution). Pair-grain proxy; exact triple-grain number from q3c.", "q3b/q0"),
     "Composite quality score (curved, best=100)": ("100 x (0.40 unique value + 0.15 non-redundancy + 0.15 signal quality + 0.10 dependency + 0.20 performance), curved to best-in-roster = 100.", "q9b formula"),
     "Composite quality score (raw)": ("Same before curving.", "q9b formula"),
     "Verdict": ("The call. Full reasoning on the notes sheet and decisions sheet.", "eval"),
