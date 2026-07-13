@@ -122,10 +122,11 @@ for r in rows_of("q5_score_tiers.csv"):
 q6b = {}
 for r in rows_of("q6b_sole_by_funnel.csv"):
     d = int(r["ds"])
-    a = q6b.setdefault(d, {"prosp": 0, "tot": 0})
+    a = q6b.setdefault(d, {"prosp": 0, "tot": 0, "prosp_media": 0.0})
     a["tot"] += int(r["imps"])
     if r["obj_bucket"] == "prospecting_family":
         a["prosp"] += int(r["imps"])
+        a["prosp_media"] += float(r["media"])
 
 q7bd = {}
 for r in rows_of("q7b_perf_by_cohort.csv"):
@@ -378,7 +379,7 @@ SPEC = [
     R("Unique domains used (classified)", "int", lambda d: int(q2c[d]["domains_classified"])),
     R("% of domains classified (within vendor)", "pct", lambda d: 100 * int(q2c[d]["domains_classified"]) / int(q2c[d]["domains_raw"])),
     R("Usable IP x domain pairs", "int", lambda d: int(q3[d]["usable_pairs"])),
-    R("% of pairs usable", "pct", lambda d: 100 * int(q3[d]["usable_pairs"]) / int(q2[d]["ip_domain_pairs_30d"])),
+    R("% of pairs usable", "pct", lambda d: min(100.0, 100 * int(q3[d]["usable_pairs"]) / int(q2[d]["ip_domain_pairs_30d"]))),
     R("% of rows used — share of column total", "pct", lambda d: share(d, q2c, "rows_used")),
     R("% of IPs used — share of column total", "pct", lambda d: share(d, q2c, "ips_used")),
     R("% of domains used — share of column total", "pct", lambda d: share(d, q2c, "domains_classified")),
@@ -559,36 +560,220 @@ DIR = {
     "Coverage lost if dropped (pp of pair coverage)": 1,
     "Composite quality score (curved, best=100)": 1, "Composite quality score (raw)": 1,
 }
+DIR.update({
+    "% mid": 1,
+    "% of sole serves via prospecting (vendor-dependent)": 1,
+    "% credits vanish (were sole)": 1,          # vanished credits = saved on drop
+    "% credits -> flat-fee vendors": 1,          # absorbed free = saved on drop
+    "% credits -> free logs": 1,                 # absorbed free = saved on drop
+    "% credits -> other metered (still paid)": -1,
+})
 # Bill rows (labels are f-strings on BILL_MONTH): lower bill = green.
 DIR[f"Meter bill ({BILL_MONTH})"] = -1
 DIR[f"Run-rate $/yr ({BILL_MONTH} x12)"] = -1
 
+# Scale-visibility-only rows (no good/bad direction): white -> steel-blue scale.
+NEUTRAL = {"CPM — touched", "CPM — sole",
+           "Contract rate ($ CPM; flat amounts pending)",
+           f"Billed domains ({BILL_MONTH})"}
+
+
+def money(v):
+    v = float(v)
+    if abs(v) >= 1e6:
+        return f"${v / 1e6:.2f}M"
+    if abs(v) >= 1e3:
+        return f"${v / 1e3:.1f}K"
+    return f"${v:,.0f}"
+
+
+
+# ---------------- index-sheet definitions: label -> (what it means / how computed, source) ----------------
+DEF = {
+    "Data source ID": ("MNTN's internal id for the feed in site_visit_signal and the billing registry. DS28+DS40 are the SAME vendor (batch vs real-time).", "q0"),
+    "Billing type": ("metered CPM = pay $0.50 per USED signal impression; flat fee = fixed price regardless of use; free = internal MNTN log.", "q0"),
+    "Contract rate ($ CPM; flat amounts pending)": ("$ per 1,000 used signal impressions (metered). Flat amounts pending Maya / renewal schedule.", "q0"),
+    "Renewal status": ("Contract state. Only lever on flat-fee vendors is the renewal date.", "q0"),
+    "Ingestion path": ("batch = daily file drop into the ingest DAG; Kafka RT = real-time pixel stream. Determines the off-switch owner.", "code audit"),
+    "Non-MM blast radius": ("Production systems OUTSIDE MM that depend on this feed - check before any drop (Predactiv HEM feeds CRM/identity).", "code audit"),
+    "Total rows delivered": ("Raw events landed in site_visit_signal over the 30d window (2026-06-02..07-01).", "q1"),
+    "Median rows/day": ("Typical daily delivery volume (median of 30 daily counts).", "q1"),
+    "Weakest day (% of median)": ("Worst delivery day as % of the median day - feed reliability.", "q1"),
+    "Days <50% of median (count)": ("Partial-day incidents: days delivering under half the median.", "q1"),
+    "Days delivered (of 30)": ("Liveness: days with any delivery. Gate = 29+/30.", "q1"),
+    "% IPv6 rows": ("Rows with IPv6 addresses - EXCLUDED from all IP analyses (footprint undercount flag for that vendor).", "q1"),
+    "Unique IPs delivered": ("Distinct IPv4 households seen in 30d.", "q2"),
+    "Unique domains delivered": ("Distinct registered domains (eTLD+1) in 30d.", "q2"),
+    "Unique IP x domain pairs delivered": ("Distinct (IP, domain) combinations = site-visit facts. THE unit of billing credit and uniqueness analysis.", "q2"),
+    "% URLs unparseable": ("URL fails host extraction entirely.", "q1c"),
+    "% URLs malformed": ("URL structurally broken (e.g. Sovrn's host-doubled concat bug).", "q1c"),
+    "% Googlebot IPs": ("Rows from Google crawler IPs - bot traffic that can bill through DS19.", "q1c"),
+    "% bot user-agents": ("Rows whose user_agent identifies a bot (only measurable where UA is sent).", "q1c"),
+    "Top-1 domain": ("Most frequent domain - is the feed one site in a trenchcoat?", "q1c"),
+    "Top-1 domain share": ("% of rows on that single domain.", "q1c"),
+    "Top-5 domain share": ("% of rows on the top five domains (concentration).", "q1c"),
+    "% private IPs": ("RFC1918 unroutable addresses (10.x etc.) - junk.", "q1c"),
+    "% uid duplicates (clamped >=0)": ("Repeated event uids. ~0 within sketch error; negative HLL estimates clamped to 0.", "q1c"),
+    "Top-1 timestamp share (stamping check)": ("% of rows sharing one exact timestamp - batch re-stamping red flag.", "q1c"),
+    "% user_agent populated": ("Field richness: does the vendor send user_agent (enables bot filtering BEFORE we get billed).", "q1b"),
+    "% url populated": ("Rows with a URL at all.", "q1b"),
+    "% URLs with path": ("URLs deeper than the homepage - page-level signal (BUK/DS38 input).", "q1"),
+    "% query_parameters populated": ("Query-string capture (checkout tokens etc.) - nobody sends it today.", "q1b"),
+    "% advertiser_id populated": ("Vendor tags which advertiser the visit belongs to (only guid_log).", "q1b"),
+    "Rows used": ("Rows surviving to a consumer: DS13 vertical classification OR DS19 product categorization. The OR defines usable = billable.", "q2c"),
+    "% of rows used (within vendor)": ("Survival rate of the vendor's own feed.", "q2c"),
+    "% rows hard-dropped": ("Dropped before any consumer: unparseable / empty / infra URLs.", "q2b"),
+    "% rows DS13-blocklisted": ("On DS13's domain blocklist (webmail: yahoo/aol/easybrain) - still billable via DS19 (no blocklist there).", "q2b"),
+    "% rows bot-UA": ("Bot user-agent rows entering the pipeline.", "q2b"),
+    "Unique IPs used": ("Distinct IPs on used rows.", "q2c"),
+    "% of unique IPs used (within vendor)": ("IP-grain survival rate.", "q2c"),
+    "Unique domains used (classified)": ("Domains the classifiers can actually consume.", "q2c"),
+    "% of domains classified (within vendor)": ("Domain-grain survival rate.", "q2c"),
+    "Usable IP x domain pairs": ("(IP, domain) facts surviving to consumers - the credit-eligible pool.", "q3"),
+    "% of pairs usable": ("Usable pairs / delivered pairs (capped at 100%; q3-vs-q2 scans differ <1%).", "q3/q2"),
+    "% of rows used — share of column total": ("This vendor's slice of ALL sources' used rows. Sources overlap, so the row sums >100% across vendors.", "q2c"),
+    "% of IPs used — share of column total": ("Same, IP grain (overlapping).", "q2c"),
+    "% of domains used — share of column total": ("Same, domain grain (overlapping).", "q2c"),
+    "Sole usable IPs": ("Usable IPs seen by NO other source (incl. our free logs) in 30d - the vendor's unique household contribution.", "q3"),
+    "% of usable IPs sole": ("Unique share of its usable footprint.", "q3"),
+    "Sole usable domains": ("Domains only this vendor delivers.", "q4"),
+    "Sole CLASSIFIED domains (fee-band axis)": ("Unique domains MM can consume - the durable value unit; drives the $3-13 fee band.", "q4"),
+    "Pairs per IP (visit density)": ("Site-visit depth per household (usable pairs / usable IPs).", "q3"),
+    "% pairs sole": ("Pairs where this vendor is the ONLY holder.", "q3 pair recency"),
+    "% pairs freshest": ("Shared pairs where this vendor reported most recently.", "q3 pair recency"),
+    "% pairs tied": ("Shared pairs reported same-day by another source.", "q3 pair recency"),
+    "% pairs stale": ("Shared pairs where another source is fresher.", "q3 pair recency"),
+    "% net-new vs free logs": ("Pairs our own guid/augmentor logs did NOT already have - what we could not collect ourselves.", "q3 pair recency"),
+    "Marginal coverage when added (pp)": ("Usable-pair coverage the vendor adds at its position in the greedy best-first add order (free logs always in).", "q3b masks"),
+    "Frontier add-order rank": ("Position in that greedy order; 1 = most additive vendor.", "q3b masks"),
+    "Touched IPs (37d union)": ("Every IP the vendor delivered in the 37d union window - all it could have influenced.", "q5"),
+    "Served-won IPs": ("Touched IPs that WON at least one impression in the valuation week (2026-07-02..08). Won imps = cost_impression_log.", "q5"),
+    "% of touched IPs served-won": ("How much of the footprint the bidder actually reaches.", "q5"),
+    "Sole IPs served-won": ("Unique-to-vendor IPs that served - the dependency stock that mattered this week.", "q6"),
+    "% of sole stock served-won": ("Serve rate of the unique stock (0.2-0.3% - sole IPs barely appear in auctions).", "q6/q3"),
+    "Shared IPs served-won": ("Served IPs other sources also delivered - replaceable coverage.", "q6"),
+    "% of served IPs shared": ("Share of its served footprint that is replaceable (99.6%+ everywhere).", "q6"),
+    "Sole won bids / wk": ("Won impressions on sole IPs per week - the dependent media flow.", "q6"),
+    "Sole won bids per served sole IP": ("Frequency on those households (~4.5-5.5 everywhere).", "q6"),
+    "Sole won bids annualized (x52)": ("Yearly expected won bids IF the weekly flow persists. Flow x52 - never annualize the IP stock.", "q6"),
+    "% of platform served IPs touched (week)": ("Vendor footprint vs ALL 28.03M distinct served IPs that week (honest, non-overlapping denominator).", "q6/q7d"),
+    "HI 10000 count": ("Served IPs pinned HI (highest-intent tier).", "q5"),
+    "% HI (within vendor)": ("HI share of ITS served IPs.", "q5"),
+    "% HI — share of column total": ("Slice of all sources' HI pools (overlapping - sums >100%).", "q5"),
+    "PP 8000 count": ("Served IPs pinned PP (positive-prospect tier).", "q5"),
+    "% PP (within vendor)": ("PP share of its served IPs.", "q5"),
+    "% PP — share of column total": ("Overlapping share of the PP pool.", "q5"),
+    "High-graduated count (Fangorn band)": ("Scores 6666-9999 excl. 8000 - the Fangorn continuous high band.", "q5"),
+    "% high-graduated": ("Its share in that band.", "q5"),
+    "% mid": ("Scores 3333-6665.", "q5"),
+    "% max-reach": ("Scores 1-3332 - lowest scored tier.", "q5"),
+    "% unscored": ("Served IPs with no score (<=0) - untargetable beyond max-reach.", "q5"),
+    "Avg household score — touched (scored imps)": ("Mean household_score on the cohort's SCORED impressions only (RT rows carry HS=-1 and are excluded).", "q7b"),
+    "% imps scored — touched": ("How much of the cohort's inventory carries any score.", "q7b"),
+    "Avg household score — sole (scored imps)": ("Same for the unique-IP cohort - reads much lower (adverse selection).", "q7b"),
+    "% imps scored — sole": ("Scored share of sole imps (1-6% vs 28-31% touched).", "q7b"),
+    "Spend (media $) — touched": ("Weekly media on ALL its served IPs. Touched rows MIRROR THE PLATFORM (pools overlap) - context only, not a discriminator.", "q6"),
+    "Impressions (won bids) — touched": ("Weekly won imps, touched cohort.", "q6"),
+    "Visits — touched": ("Clickpass visits joined per ad_served_id (trail to 07-10).", "q7b"),
+    "Conversions — touched": ("Attributed conversions (last-touch dedup, no assists/disputed).", "q7c"),
+    "Revenue — touched": ("order_amt on those conversions.", "q7c"),
+    "CPM — touched": ("media / imps x 1000.", "q6"),
+    "IVR — touched": ("visits / imps.", "q7b"),
+    "CVR (conv/visits) — touched": ("conversions / visits.", "q7c/q7b"),
+    "AOV — touched": ("revenue / conversions.", "q7c"),
+    "ROAS — touched": ("revenue / media spend.", "q7c/q6"),
+    "Spend (media $) — sole": ("Weekly media on its UNIQUE IPs only - the true vendor discriminator; the counterfactual spend at risk.", "q6"),
+    "Impressions (won bids) — sole": ("Weekly won imps on sole IPs.", "q6"),
+    "Visits — sole": ("Clickpass visits on sole-IP serves (q7 canonical measurement).", "q7"),
+    "Visits — sole, 95% CI": ("Poisson (Garwood) 95% interval on that count - these are small numbers.", "q7"),
+    "Conversions — sole": ("Attributed conversions on sole-IP serves. Poisson-tiny: read 0 as under ~1/wk.", "q7c"),
+    "Revenue — sole": ("order_amt on those conversions.", "q7c"),
+    "CPM — sole": ("Sole media / sole imps x 1000 (~$11.5-12 everywhere).", "q6"),
+    "IVR — sole": ("Sole visits / sole imps.", "q7"),
+    "IVR — sole, x of 0.0223% baseline": ("Multiple of the no-svs-data sole-serve baseline. ~1x = behaves like inventory nobody had data on.", "q7"),
+    "CVR (conv/visits) — sole": ("Conversions per sole visit ('-' when 0 visits). Roughly platform-normal where measurable - the collapse is at the VISIT step.", "q7c/q7"),
+    "AOV — sole": ("Revenue / conversions on sole serves.", "q7c"),
+    "ROAS — sole": ("Sole revenue / sole media.", "q7c/q6"),
+    "% of delivered rows billed": ("Billed imps / delivered rows - how little of the feed we pay for (first-reporter credit + used gate).", "q1d/q1"),
+    "% of sole serves via prospecting (vendor-dependent)": ("Sole-IP serves through MM-audience-gated prospecting (incl. max-reach) - the share that genuinely required the vendor's data (97-99%).", "q6b"),
+    "Max justified CPM — on 100% of delivered rows": ("Break-even CPM if we paid for EVERY delivered row: (T2 x 30% margin) / annual rows x 1000. Shows why per-row pricing must be fractions of a cent.", "computed"),
+    "Max justified CPM — on used/billed imps (vs $0.50)": ("Same value spread over only billed/used imps - compare directly to the $0.50 we pay (flat vendors: hypothetical meter on used rows).", "computed"),
+    "Flat equivalent — floor (T1 x 15%)": ("Flat fee justified by PROVABLE dependency at conservative margin.", "computed"),
+    "Flat equivalent — fair (T2 x 20%)": ("Flat fee justified by the full dependency ceiling at mid margin.", "computed"),
+    "Flat equivalent — ceiling (T2 x 30%)": ("Never-pay-more line: full ceiling at top margin.", "computed"),
+    "T2 dependent revenue $/yr (sole-won media x52)": ("THE dependency ceiling: media revenue on sole-won imps, annualized. What could vanish if the vendor left (97-99% prospecting-attributed).", "q6"),
+    "T2 envelope low (x0.4)": ("Stress band bottom (volume x0.5, CPM x0.8). Scenario range, NOT a confidence interval.", "computed"),
+    "T2 envelope high (x1.8)": ("Stress band top (volume x1.5, CPM x1.2).", "computed"),
+    "T1 provable floor $/yr (score-gated)": ("Media on sole imps that were SCORED and non-RTC - serves provably enabled by the vendor's signal.", "q6"),
+    "Fee band, domain axis — low (sole classified x $3)": ("Domain-axis worth: unique classified domains x $3/domain-yr (roster-calibrated).", "q4"),
+    "Fee band, domain axis — high (sole classified x $13)": ("Same at the generous $13/domain-yr ceiling.", "q4"),
+    "Exact drop savings $/yr": ("Bill x share of its credits that do NOT re-race to another metered vendor (first-reporter reassignment, measured over 30d). Flat vendors: savings = the fee itself.", "q3b"),
+    "Drop savings as % of bill": ("Recovery rate of the bill if dropped.", "q3b"),
+    "% credits vanish (were sole)": ("Credits nobody else re-reports - saved.", "q3b"),
+    "% credits -> flat-fee vendors": ("Credits absorbed by flat vendors at no marginal cost - saved.", "q3b"),
+    "% credits -> free logs": ("Credits our own logs absorb - saved.", "q3b"),
+    "% credits -> other metered (still paid)": ("Credits that just move to another $0.50 meter - NOT saved.", "q3b"),
+    "Coverage lost if dropped (pp of pair coverage)": ("Usable-pair coverage the roster loses if this vendor alone is dropped.", "q3b masks"),
+    "Composite quality score (curved, best=100)": ("100 x (0.40 unique value + 0.15 non-redundancy + 0.15 signal quality + 0.10 dependency + 0.20 performance), curved to best-in-roster = 100.", "q9b formula"),
+    "Composite quality score (raw)": ("Same before curving.", "q9b formula"),
+    "Verdict": ("The call. Full reasoning on the notes sheet and decisions sheet.", "eval"),
+    "Asks / weird things (full text in notes)": ("What to demand from the vendor - full text on notes/decisions sheets.", "eval"),
+}
+DEF["Renewal status"] = DEF["Renewal status"]
+DEF[f"Billed domains ({BILL_MONTH})"] = ("Distinct domains credited on the meter in the bill month (closest measure of 'domains we pay for').", "q1d")
+DEF[f"Meter bill ({BILL_MONTH})"] = ("What the meter actually charged that month (usage_reporting_data month-end snapshot).", "q0")
+DEF[f"Run-rate $/yr ({BILL_MONTH} x12)"] = ("That bill annualized.", "q0")
+
+# WTP bands from the eval index (q9b chart) - the official pay-up-to ranges.
+WTP = {25: "$150K-600K", 26: "$0.7M-3M", 28: "$30K-100K", 24: "$14K-60K",
+       39: "$0.1K-1.5K", 40: "$10K-40K", 36: "$1.1K-4.7K", 33: "$0.5K-2.4K"}
+
+NEGOTIATION = {
+    28: "ONE combined deal with DS40 (~$598K/yr today): cap the pair at <=$130-140K/yr, i.e. CPM $0.50 -> ~$0.10-0.15 or a billing cap. Leverage: 53% of its credits re-race to our FREE logs; 29% of feed is DS13-blocklisted webmail; 6.4% Googlebot IPs we currently pay for; augmentor displacement is already eroding the bill month-over-month.",
+    40: "Fold into the DS28 negotiation - same vendor. Standalone worth $10-40K/yr; its billed domains are cookie-sync infra junk (strong discount evidence).",
+    33: "Do NOT renegotiate - drop. Fair value $0.5-2.4K/yr vs $116K bill; a ~98% discount is not a negotiation. Exact recovery $109K/yr (sequencing-safe: only 5.9% re-races to other meters). Bug report available if they want to re-pitch after fixing URLs.",
+    24: "Keep, trim toward the $14-60K band (bill $77K/yr): ask ~20-25% rate cut or a monthly cap. Cleanest feed on the roster, 91.6% sole pairs - worth keeping at the right price.",
+    36: "Drop ($21.6K/yr bill vs $1.1-4.7K band). 700x below siblings in scale. Needs the ENABLED_DSIDS config change (Data Eng).",
+    25: "Keep; lock the flat price at renewal. TI-1027 fair value $150-600K/yr - accept anything inside the band. Ask for URL paths + user_agent (domain-only feed today).",
+    26: "Keep; lock the flat price. Band $0.7-3M/yr - #1 unique classified domain contributor. HEM feeds CRM/identity in PROD: run the blast-radius check before ANY contract change.",
+    39: "Renewal is LIVE: pay <=$1.6K/yr (fee band top) or walk; alternatively convert to the $0.50 meter (~$2.1K/yr at current usable volume). T2 ceiling says its unique IPs made us at most ~$2.2K revenue last year-equivalent.",
+}
+
 
 def main():
     import openpyxl
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.formatting.rule import ColorScaleRule
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "numbers"
+    idx = wb.active
+    idx.title = "index"
+    dec = wb.create_sheet("decisions")
+    ws = wb.create_sheet("numbers")
+    ns = wb.create_sheet("notes")
 
     bold = Font(bold=True)
     section_fill = PatternFill("solid", fgColor="1F3864")
     section_font = Font(bold=True, color="FFFFFF")
+    thin = Side(style="thin", color="D9D9D9")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    band_fill = PatternFill("solid", fgColor="F2F2F2")
+    verdict_color = {"KEEP": "1E7A1E", "NEGO": "B26B00", "DROP": "B00020"}
 
+    # ================= numbers =================
     ws.cell(row=1, column=1, value="Question").font = bold
     for i, d in enumerate(DS_COLS):
         c = ws.cell(row=1, column=2 + i, value=HDR_NAMES[d])
         c.font = bold
         c.alignment = Alignment(horizontal="right")
 
-    filled = err = 0
+    filled = 0
     r = 1
     for label, fmt, fn, oos_ok in SPEC:
         r += 1
         a = ws.cell(row=r, column=1, value=label)
-        if fn is None:                       # section header
+        if fn is None:
             a.font = section_font
             a.fill = section_fill
             for i in range(len(DS_COLS)):
@@ -612,15 +797,12 @@ def main():
             else:
                 v = float(v)
                 if fmt and fmt.startswith("pct"):
-                    v /= 100.0          # store fraction; percent format displays it
+                    v /= 100.0
                 cell.value = round(v, 8)
                 if FMT.get(fmt):
                     cell.number_format = FMT[fmt]
                 filled += 1
 
-    # Per-row heat scale across vendor columns (direction from DIR; text cells
-    # like "—"/"pending" are ignored by Excel color scales automatically).
-    from openpyxl.formatting.rule import ColorScaleRule
     RED, YEL, GRN = "F8696B", "FFEB84", "63BE7B"
     last_col = get_column_letter(1 + len(DS_COLS))
     r = 1
@@ -628,36 +810,169 @@ def main():
         r += 1
         if fn is None:
             continue
+        rng = f"B{r}:{last_col}{r}"
+        if label in NEUTRAL:
+            ws.conditional_formatting.add(rng, ColorScaleRule(
+                start_type="min", start_color="EFF6FC",
+                end_type="max", end_color="7FB2E5"))
+            continue
         direction = DIR.get(label)
         if not direction:
             continue
         lo, hi = (RED, GRN) if direction > 0 else (GRN, RED)
-        ws.conditional_formatting.add(
-            f"B{r}:{last_col}{r}",
-            ColorScaleRule(start_type="min", start_color=lo,
-                           mid_type="percentile", mid_value=50, mid_color=YEL,
-                           end_type="max", end_color=hi))
+        ws.conditional_formatting.add(rng, ColorScaleRule(
+            start_type="min", start_color=lo,
+            mid_type="percentile", mid_value=50, mid_color=YEL,
+            end_type="max", end_color=hi))
 
     ws.column_dimensions["A"].width = 48
     for c in range(2, 2 + len(DS_COLS)):
         ws.column_dimensions[get_column_letter(c)].width = 16
     ws.freeze_panes = "B2"
 
-    # ---- notes sheet ----
-    from openpyxl.styles import Border, Side
+    # ================= index =================
+    idx_hdr = ["Section", "Question", "What it means / how computed", "Source"]
+    idx.append(idx_hdr)
+    for c in range(1, 5):
+        cell = idx.cell(row=1, column=c)
+        cell.font = section_font
+        cell.fill = section_fill
+        cell.border = border
+    missing_defs = []
+    section = ""
+    ri = 1
+    band = False
+    for label, fmt, fn, oos_ok in SPEC:
+        if fn is None:
+            section = label
+            band = not band
+            continue
+        meaning, src = DEF.get(label, ("", ""))
+        if not meaning:
+            missing_defs.append(label)
+        ri += 1
+        vals = [section, label, meaning, src]
+        for c, v in enumerate(vals, start=1):
+            cell = idx.cell(row=ri, column=c, value=v)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.border = border
+            if band:
+                cell.fill = band_fill
+        idx.cell(row=ri, column=2).font = bold
+    for i, w in enumerate([34, 40, 92, 12], start=1):
+        idx.column_dimensions[get_column_letter(i)].width = w
+    idx.freeze_panes = "A2"
 
-    ns = wb.create_sheet("notes")
+    # ================= decisions =================
+    def put_row(sheet, ri, vals, fmts=None, header=False, band_row=False):
+        for c, v in enumerate(vals, start=1):
+            cell = sheet.cell(row=ri, column=c, value=v)
+            cell.border = border
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            if header:
+                cell.font = section_font
+                cell.fill = section_fill
+            elif band_row:
+                cell.fill = band_fill
+            if fmts and not header and isinstance(v, (int, float)):
+                f = fmts.get(c)
+                if f:
+                    cell.number_format = f
+        return ri + 1
+
+    dep_risk = {d: q6b[d]["prosp_media"] * 52 for d in q6b}
+
+    dec.merge_cells("A1:M1")
+    t = dec.cell(row=1, column=1, value=(
+        f"VENDOR DECISIONS — ranked by composite score. Bills = {BILL_MONTH} x12. "
+        "Free logs (guid, augmentor) always kept. DS28+DS40 = ONE vendor: negotiate combined."))
+    t.font = section_font
+    t.fill = section_fill
+    dec.row_dimensions[1].height = 20
+
+    hdr = ["Vendor", "DS", "Score (best=100)", "Bill $/yr", "Pay up to (WTP band)",
+           "T1 provable floor $/yr", "T2 fair-ceiling $/yr", "Exact drop savings $/yr",
+           "Coverage lost (pp)", "Dep. revenue at risk $/yr", "DECISION",
+           "Negotiation plan / target", "Top asks to improve their data"]
+    ri = put_row(dec, 2, hdr, header=True)
+    dfmt = {3: "0", 4: "$#,##0", 6: "$#,##0", 8: "$#,##0", 9: "0.00", 10: "$#,##0"}
+    for n, d in enumerate(sorted(EXT, key=lambda x: -CURVE[x][1])):
+        jb = q0.get(d, {}).get("june_usd")
+        bill = jb * 12 if jb is not None else "pending (flat)"
+        t2 = t2_ann(d)
+        if d in FLAT:
+            savings = "= flat fee"
+        else:
+            rr = reassign[d]
+            savings = float(q1d[d]["billed_usd"]) * 12 * (1 - rr.get("metered", 0) / sum(rr.values()))
+        ri = put_row(dec, ri, [
+            HDR_NAMES[d], d, round(CURVE[d][1]), bill, WTP[d], round(t1_ann(d)),
+            f"{money(t2 * 0.20)} - {money(t2 * 0.30)}", savings,
+            round(-coverage_lost[d], 2), round(dep_risk.get(d, 0)),
+            VERDICT_SHORT[d], NEGOTIATION[d], ASKS[d],
+        ], fmts=dfmt, band_row=(n % 2 == 1))
+        vcell = dec.cell(row=ri - 1, column=11)
+        vword = str(vcell.value or "")[:4].upper()
+        if vword in verdict_color:
+            vcell.font = Font(bold=True, color=verdict_color[vword])
+        dec.row_dimensions[ri - 1].height = 60
+
+    def saved(dropped):
+        out = 0.0
+        for d in dropped:
+            if d not in reassign or d not in q1d:
+                continue
+            rr = reassign[d]
+            sh = 1 - rr.get("metered", 0) / sum(rr.values())
+            if d in (28, 40) and 28 in dropped and 40 in dropped:
+                sh = 1.0
+            out += float(q1d[d]["billed_usd"]) * 12 * sh
+        return out
+
+    ri += 1
+    dec.merge_cells(start_row=ri, start_column=1, end_row=ri, end_column=13)
+    t = dec.cell(row=ri, column=1, value=(
+        "ROSTER SCENARIOS — every keep-set evaluated EXACTLY from the q3b holder masks "
+        "(coverage = usable (IP,domain) pairs reachable; free logs always kept)"))
+    t.font = section_font
+    t.fill = section_fill
+    ri += 1
+    sc_hdr = ["Scenario", "Paid vendors kept", "Coverage (% of today)",
+              "Metered bills kept $/yr", "Metered recovery from drops $/yr (flat-fee savings ADDITIONAL, amounts pending)",
+              "Dep. revenue at risk $/yr (T2, prospecting-attributed)", "", "", "", "", "", "", ""]
+    ri = put_row(dec, ri, sc_hdr, header=True)
+    sfmt = {3: "0.00%", 4: "$#,##0", 5: "$#,##0", 6: "$#,##0"}
+    ALL8 = [24, 25, 26, 28, 33, 36, 39, 40]
+    SC = [
+        ("Today (all 8)", ALL8),
+        ("Drop Sovrn + Cybba", [24, 25, 26, 28, 39, 40]),
+        ("+ drop Klickly", [24, 25, 26, 28, 40]),
+        ("+ drop Justuno (knee k=4)", [25, 26, 28, 40]),
+        ("33Across combined only", [28, 40]),
+        ("Flat-fee only (5x5 + Predactiv)", [25, 26]),
+        ("Free logs only", []),
+    ]
+    for n, (label, keep) in enumerate(SC):
+        dropped = [d for d in ALL8 if d not in keep]
+        met_kept = sum(float(q1d[d]["billed_usd"]) * 12 for d in keep if d in q1d and q1d[d].get("billed_usd"))
+        ri = put_row(dec, ri, [
+            label, " + ".join(SHORT[d] for d in keep) if keep else "(none)",
+            cov(keep) / FULL_COV, round(met_kept) if met_kept else 0,
+            round(saved(dropped)), round(sum(dep_risk.get(d, 0) for d in dropped)),
+            "", "", "", "", "", "", "",
+        ], fmts=sfmt, band_row=(n % 2 == 1))
+
+    widths = [24, 26, 9, 12, 14, 12, 15, 14, 10, 12, 18, 60, 55]
+    for i, w in enumerate(widths, start=1):
+        dec.column_dimensions[get_column_letter(i)].width = w
+    dec.freeze_panes = "A3"
+
+    # ================= notes =================
     hdr = ["Vendor", "DS", "Scope", "Billing / rate", "Renewal / contract status",
            "Ingestion + off-switch", "Blast radius (non-MM prod deps)",
            "Verdict (full)", "Asks / weird things to raise with the vendor"]
-    ncols = len(hdr)
-    thin = Side(style="thin", color="D9D9D9")
-    border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    band_fill = PatternFill("solid", fgColor="F2F2F2")
-    verdict_color = {"KEEP": "1E7A1E", "NEGO": "B26B00", "DROP": "B00020"}
-
     ns.append(hdr)
-    for c in range(1, ncols + 1):
+    for c in range(1, len(hdr) + 1):
         cell = ns.cell(row=1, column=c)
         cell.font = section_font
         cell.fill = section_fill
@@ -687,19 +1002,17 @@ def main():
             vcell.font = Font(bold=True, color=verdict_color[vword])
         ns.row_dimensions[r_i].height = 44
 
-    # CONVENTIONS block: section bar + one merged full-width row per item
     conv_hdr_row = len(DS_COLS) + 3
     ns.cell(row=conv_hdr_row, column=1, value="CONVENTIONS — how to read this workbook")
-    ns.merge_cells(start_row=conv_hdr_row, start_column=1, end_row=conv_hdr_row, end_column=ncols)
+    ns.merge_cells(start_row=conv_hdr_row, start_column=1, end_row=conv_hdr_row, end_column=len(hdr))
     hc = ns.cell(row=conv_hdr_row, column=1)
     hc.font = section_font
     hc.fill = section_fill
-    hc.alignment = Alignment(vertical="center")
     ns.row_dimensions[conv_hdr_row].height = 20
     for j, ctext in enumerate(CONVENTIONS):
         r_j = conv_hdr_row + 1 + j
         ns.cell(row=r_j, column=1, value=f"{j + 1}. {ctext}")
-        ns.merge_cells(start_row=r_j, start_column=1, end_row=r_j, end_column=ncols)
+        ns.merge_cells(start_row=r_j, start_column=1, end_row=r_j, end_column=len(hdr))
         cc = ns.cell(row=r_j, column=1)
         cc.alignment = Alignment(vertical="top", wrap_text=True)
         cc.border = border
@@ -713,9 +1026,11 @@ def main():
     ns.freeze_panes = "A2"
 
     wb.save(OUT)
-    nrows = sum(1 for s in SPEC if s[2] is not None)
+    nrows = sum(1 for x in SPEC if x[2] is not None)
     print(f"wrote {OUT}")
-    print(f"numbers sheet: {nrows} question rows x {len(DS_COLS)} vendors, {filled} values")
+    print(f"sheets: index ({nrows} definitions), decisions (8 vendors + {len(SC)} scenarios), "
+          f"numbers ({nrows} rows x {len(DS_COLS)}), notes")
+    print("missing index definitions:", missing_defs if missing_defs else "none")
     empty = []
     r = 1
     for label, fmt, fn, oos_ok in SPEC:
@@ -725,7 +1040,7 @@ def main():
         for i, d in enumerate(DS_COLS):
             if ws.cell(row=r, column=2 + i).value in (None, ""):
                 empty.append((label, d))
-    print("empty:", empty if empty else "none")
+    print("empty numbers cells:", empty if empty else "none")
 
 
 if __name__ == "__main__":
