@@ -163,6 +163,17 @@ def trip_free_cohold(d):
     return sum(n for m, n in masks3c.items() if (m & (1 << BITSQ[d])) and (m & FREE_MASK))
 
 
+# ---- net-of-free universe (free-log-touched pairs removed entirely) ----
+NOF_P = {m: n for m, n in masks.items() if not (m & FREE_MASK)}
+NOF_T = {m: n for m, n in masks3c.items() if not (m & FREE_MASK)}
+NOF_U = sum(NOF_P.values())
+
+
+def nof_cov(S, universe):
+    sm = sum(1 << BITSQ[d] for d in S)
+    return sum(n for m, n in universe.items() if m & sm)
+
+
 # ---------------- derived ----------------
 def cov(keep, fm=FREE_MASK):
     km = fm
@@ -329,6 +340,8 @@ CONVENTIONS = [
     "Conversions (q7c): ui_conversions deduped to one row per conversion event preferring last-touch; assists + disputed excluded; revenue = order_amt.",
     "AUDI-1093 (Sean Yang 2026-07-13): free logs do NOT preempt paid credit today - vendors earn day-grain credit on signals guid/augmentor also capture. 'Recoverable if free logs preempt' rows = bill x visit-day free-cohold share, EXACT at (ip,domain,date) grain from q3c: roster total ~$274K/yr (33Across $222K, 33A API $42K). The fix KEEPS vendors' unique data - stacks with renegotiation, substitutes for drops on the overlap slice.",
     "Visit-grain rows (q3c, 13.29B visit-days/30d): the true value unit is (IP x domain x DATE) - new date on a known pair = recency refresh (real value: 30d scoring window + the meter pays per day); same date from two sources = duplication. Free coverage at visit grain: guid 10.7% / augmentor 48.8% / both 59.4% (pair grain: 60.4%) - augmentor DS30 is the dominant free source and is INCLUDED in every free-log number in this workbook.",
+    "NET-OF-FREE LADDER (decisions sheet): the universe first drops every pair guid_log/augmentor touch (2.37B pairs remain = 39.6% of usable); each vendor's standalone value = its net-of-free pairs x its measured T2-per-sole-pair density; the ladder adds vendors greedily (optima verified nested) and prices each STEP - marginal value is what that vendor is worth AT THAT ROSTER POSITION. Key: 33Across standalone ~ 0.94x its bill, but every later addition is worth 0.02-0.34x its bill.",
+    "Grains: pair = IP x domain (visited ever in window); visit = IP x domain x DATE (each day = distinct event; the meter's grain); IP-alone only used for stock counts.",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
 ]
 
@@ -1043,7 +1056,49 @@ def main():
             "", "", "", "", "", "", "",
         ], fmts=sfmt, band_row=(n % 2 == 1))
 
-    widths = [30, 32, 10, 14, 17, 14, 18, 16, 11, 14, 21, 64, 60]
+    # ---- net-of-free value ladder ----
+    dens = {d: t2_ann(d) / float(q3[d]["sole_pairs"]) for d in EXT if d in q3 and d in q6}
+    ri += 1
+    dec.merge_cells(start_row=ri, start_column=1, end_row=ri, end_column=13)
+    t = dec.cell(row=ri, column=1, value=(
+        f"NET-OF-FREE VALUE LADDER — guid_log + augmentor ALWAYS excluded from the universe first "
+        f"({NOF_U / 1e9:.2f}B pairs = {100 * NOF_U / FULL_COV:.0f}% of usable that free logs do NOT cover). "
+        "Standalone = vendor as the ONLY paid source; marginal = what it adds at its ladder position. "
+        "$ = pairs x vendor's measured T2-per-sole-pair density (assumes marginal pairs perform like its sole pairs)."))
+    t.font = section_font
+    t.fill = section_fill
+    ri += 1
+    lad_hdr = ["Step", "Vendor", "Standalone net-of-free pairs", "Standalone % of universe",
+               "Standalone value $/yr", "Marginal pairs at this step", "Marginal visit-days",
+               "Cumulative % of universe", "MARGINAL VALUE $/yr (pay up to here)",
+               "Bill $/yr", "Marginal worth / bill", "", ""]
+    ri = put_row(dec, ri, lad_hdr, header=True)
+    lfmt = {3: "#,##0", 4: "0.0%", 5: "$#,##0", 6: "#,##0", 7: "#,##0", 8: "0.0%",
+            9: "$#,##0", 10: "$#,##0", 11: '0.00"x"'}
+    order, cur_p, cur_t = [], 0, 0
+    rem = [d for d in EXT if d in dens]
+    for step in range(1, len(rem) + 1 + len(order)):
+        if not rem:
+            break
+        nxt = max(rem, key=lambda d: nof_cov(order + [d], NOF_P))
+        newp = nof_cov(order + [nxt], NOF_P)
+        newt = nof_cov(order + [nxt], NOF_T)
+        mp, mt = newp - cur_p, newt - cur_t
+        mval = mp * dens[nxt]
+        jb = q0.get(nxt, {}).get("june_usd")
+        bill = jb * 12 if jb is not None else "flat (pending)"
+        ratio = (mval / bill) if isinstance(bill, float) else NA
+        ri = put_row(dec, ri, [
+            step, HDR_NAMES[nxt], nof_cov([nxt], NOF_P), nof_cov([nxt], NOF_P) / NOF_U,
+            round(nof_cov([nxt], NOF_P) * dens[nxt]), mp, mt, newp / NOF_U,
+            round(mval), bill if isinstance(bill, float) else bill, ratio,
+            "", "",
+        ], fmts=lfmt, band_row=(step % 2 == 0))
+        order.append(nxt)
+        rem.remove(nxt)
+        cur_p, cur_t = newp, newt
+
+    widths = [30, 32, 13, 14, 17, 14, 18, 16, 13, 14, 21, 64, 60]
     for i, w in enumerate(widths, start=1):
         dec.column_dimensions[get_column_letter(i)].width = w
     dec.freeze_panes = "A3"
