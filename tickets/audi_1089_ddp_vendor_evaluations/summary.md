@@ -272,6 +272,19 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d8. Slack thread outcomes (#? — "Removing aug_log/guid_log from IPs we pay for", 2026-07-13)
+
+Sean Yang + Alyson + Matt Brorby engaged on the preemption finding: (1) Sean CONFIRMS svs feeds
+DS13/DS19 only; both free logs are in targeted_signal → the AUDI-1093 exclusion is implementable
+there; **Sherwin = crediting/billing contact**; Sean endorses adding the exclusion logic.
+(2) **Matt Brorby: DS46 Fangorn uses guid_log ONLY today; post-retrain it moves to feature-store
+data from aug_log + guid_log** — augmentor's role expands (relevant to AUDI-1091 value case).
+(3) Alyson proposes a self-test validation (visit a customer site, trace guid_log vs vendor feeds).
+(4) NUMBER HYGIENE for the thread: "cut our bill by 60%" conflates pair COVERAGE (60.4%) with
+credit share — the exact preemption recovery is **$273.7K/yr = ~34% of the $812K metered bills**
+(per-vendor: 33Across 52.5% of its bill, 33A API 23.8%, Cybba 28.2%, Justuno 4.9%, Sovrn 0.2%) —
+because vendor credit concentrates precisely on the signals free logs DON'T co-hold.
+
 ## 4d7. Roster P&L at kept-margin + the two-axis flat-vendor tension (2026-07-13, late)
 
 Ladder now shows Bill | STANDALONE | MARGINAL side by side with **PAY RANGE columns at the 10-30%
