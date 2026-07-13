@@ -1048,6 +1048,9 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   demand, NOT junk filtering.** **CREDIT SEMANTICS ARE AN OR ACROSS CONSUMERS:** a row is creditable if
   DS13 *or* DS19 accepts it — the most permissive consumer sets the billable pool. DS13's blocklist/parse
   hygiene protects features, NOT payments; de-junking that saves money must happen at DS19/pc intake.
+- **Sole-IP serves are 97–99% prospecting (AUDI-1089 q6b, valuation week):** i.e. MM-membership-gated —
+  the IP was biddable only because the vendor loaded it (max-reach included); retargeting (advertiser
+  pixel, vendor-independent) is 1–3%. Vendor dependency ≈ the full sole-serve set, not just score-gated.
 - **Consumers:** `distinct_site_visit_signal_domains.py` (31-day read; regex-strips url to `protocol+domain`;
   **excludes DS23**, includes DS25) → OpenAI `ddp_vertical_classification_api` → `update_website_verticals.py` →
   **production domain→vertical table** `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/`

@@ -2192,6 +2192,16 @@ Small internal dataset for data usage reporting/auditing.
   fixed-CPM source Jan–Jun 2026. `impressions` carries decimals (1/N credit shares on shared IPs).
 - **Join to registry:** `data_source_id` here is INTEGER; `tpa.direct_data_partners.data_source_id`
   is STRING — cast one side. Use `reporting_month` for month rollups; closed months have `status='Complete'`.
+- **`dt` = MONTH-END SNAPSHOT ONLY** (last day of reporting_month) — mid-month dt filters silently return
+  zero rows (AUDI-1089, 2026-07-10). `domains` RECORD (`domains.list[].element`) = the billed-credit
+  domains, populated ONLY for MM site-visit CPM vendors (24/28/33/36/40); ~50% of 28/33/40 imps sit on
+  unattributed aggregate rows (Justuno 80% / Cybba 86% attributed). `data_source_category_id` is NULL for
+  ALL MM-vendor rows — no DS13/DS19 split in the meter (that lives in Athena `targeted_signal`).
+- **Credit semantics:** first DDP to report (ip,url) per DATE, paid only if used (DS13 OR DS19 path);
+  see data_knowledge § Site Visit Signal for the full billing chain.
+- **Kafka-path svs vendors have BQ landing tables:** `fpa_dsid{24,33,39,40}_kafka_log` (per
+  `gcp_pixel_page_view_signal_*_backfill_workflow.py` DAGs) — queryable raw landings for
+  Justuno/Sovrn/Klickly/33A API before GCS.
 
 | Column | Type | Notes |
 |--------|------|-------|

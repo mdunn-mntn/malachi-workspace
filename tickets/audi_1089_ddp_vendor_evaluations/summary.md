@@ -208,6 +208,11 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   recovery, dependent revenue at risk, NET @30-50% margin (+flat-fee count; HEM flag when Predactiv
   dropped). Knee economics: k=5 (drop Cybba+Sovrn+Klickly) nets ~$124-128K/yr for 0.53pp coverage;
   k=4 (+Justuno) nets ~$200-203K/yr for 1.86pp; k<=3 flags HEM prod risk.
+- **Status 2026-07-12:** mega-pivot row list FINALIZED (user's Google-Sheet list + audit additions;
+  full performance set Spend/Imps/Visits/Conv/Revenue/CPM/IVR/CVR/AOV/ROAS per cohort; 3-tier pricing
+  lenses). q7b (avg HH score + touched VR) running; **q7c (conversions/ROAS join) explicitly deferred
+  ("not yet")**; q11 mega-pivot builds when q7b lands. Klickly Slack answer drafted (observed $11.54 eCPM
+  version). Flat-fee-vs-metered contract explainer given (renewal date = only lever on flat).
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.

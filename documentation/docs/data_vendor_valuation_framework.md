@@ -91,3 +91,21 @@ Full report: `tickets/ti_1027_5x5_data_evaluation/artifacts/ti_1027_data_valuati
 - Impression→vendor attribution is co-occurrence, not causal — bound it (floor/ceiling), don't over-claim.
 - For a causal value, run an add/remove model ablation (re-run MM with vs without the vendor → ΔIVR → ΔRevenue).
 - Pair-grain uniqueness is heavy — window/sketch; push to Databricks if a single scan is too large.
+
+---
+
+## 2026-07 extension (AUDI-1089): dependency ceiling, leave-one-out, roster frontier
+
+Three lenses added on top of this framework — full methodology with worked Klickly example in
+`tickets/audi_1089_ddp_vendor_evaluations/runbook/dependency_valuation.md`:
+1. **Dependency-ceiling valuation**: stock (sole usable IPs) → flow (weekly sole won bids × 52 = expected
+   annual won bids; never annualize unique IPs) → performance (visits, Poisson CI) → dollars (observed
+   eCPM × margin ladder, net of other data costs). T1 provable floor ↔ T2 ceiling; scenario envelope, not CI.
+2. **Leave-one-out billing reassignment**: under first-reporter-wins, dropping a metered vendor saves
+   bill × (share of its pairs whose earliest other holder is nobody/flat-fee/free) — measure destinations
+   per pair (pair-mix proxies were 8× wrong for Sovrn); metered↔metered overlap proved negligible.
+3. **Exhaustive roster frontier**: per-pair holder-bitmask histogram (≤1,024 rows) makes every keep-subset
+   an exact lookup-sum — coverage, exact recovery, revenue-at-risk, and NET per roster size; optima may
+   nest (then add-order = marginal-coverage ranking).
+Negotiation translation: justified CPM on ALL delivered rows / on USED (credited) imps vs the rate paid /
+flat-contract equivalent band.
