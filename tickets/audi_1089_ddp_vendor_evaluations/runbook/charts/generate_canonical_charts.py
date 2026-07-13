@@ -1461,6 +1461,103 @@ def q9e(rdir):
 
 
 
+
+# ---- Step 9g: net-of-free value ladder (free logs counted first; all 2^8 subsets exact) ----
+def q9g(rdir):
+    import csv as _csv
+    BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
+    FREE = (1 << 0) | (1 << 5)
+    EXT = [24, 25, 26, 28, 33, 36, 39, 40]
+
+    def loadmask(f, nk):
+        out = {}
+        for r in _csv.DictReader(open(os.path.join(rdir, f))):
+            if r["rec"] == "mask":
+                out[int(r["k1"])] = int(r[nk])
+        return out
+
+    pmask = loadmask("q3b_credit_reassignment.csv", "n_pairs")
+    tmask = loadmask("q3c_visit_grain_uniqueness.csv", "n")
+    vend = {}
+    for r in _csv.DictReader(open(os.path.join(rdir, "q3c_visit_grain_uniqueness.csv"))):
+        if r["rec"] == "vendor":
+            vend.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n"])
+    q3 = {int(r["ds"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q3_usable_uniqueness.csv")))}
+    q6 = {int(r["data_source_id"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q6_value_tiers.csv")))}
+    q1d = {int(r["ds"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
+
+    nof_p = {m: n for m, n in pmask.items() if not (m & FREE)}
+    nof_t = {m: n for m, n in tmask.items() if not (m & FREE)}
+    U = sum(nof_p.values())
+    TOT = sum(pmask.values())
+
+    def cov(S, uni):
+        sm = sum(1 << BITSQ[d] for d in S)
+        return sum(n for m, n in uni.items() if m & sm)
+
+    dens = {d: float(q6[d]["media_sole"]) * 52 / float(q3[d]["sole_pairs"]) for d in EXT}
+    dens_t = {d: float(q6[d]["media_sole"]) * 52 / (vend[d]["sole_new_pair"] + vend[d]["sole_refresh"]) for d in EXT}
+
+    order, rows, cur_p, cur_t = [], [], 0, 0
+    rem = list(EXT)
+    while rem:
+        nxt = max(rem, key=lambda d: cov(order + [d], nof_p))
+        np_, nt_ = cov(order + [nxt], nof_p), cov(order + [nxt], nof_t)
+        mp, mt = np_ - cur_p, nt_ - cur_t
+        alone = cov([nxt], nof_p)
+        bill = float(q1d[nxt]["billed_usd"]) * 12 if nxt in q1d and q1d[nxt].get("billed_usd") else None
+        rows.append((len(order) + 1, nxt, alone, alone * dens[nxt], mp, mp * dens[nxt],
+                     mt * dens_t[nxt], bill, 100 * np_ / U))
+        order.append(nxt)
+        rem.remove(nxt)
+        cur_p, cur_t = np_, nt_
+
+    cells, ratio_col = [], []
+    for step, d, alone, aval, mp, mval, mval_t, bill, cum in rows:
+        ratio = (mval / bill) if bill else None
+        ratio_col.append(ratio)
+        cells.append([f"#{step}", SHORT[d], f"{100 * alone / U:.1f}%", money(aval),
+                      fmtn(mp), money(mval), money(mval_t),
+                      money(bill) if bill else "flat", f"{ratio:.2f}x" if ratio else "-",
+                      f"{cum:.1f}%"])
+    cols = ["Add\norder", "Vendor", "Alone: % of\nuniverse", "Alone value\n$/yr",
+            "Marginal\npairs", "Marginal $/yr\n(pair dens.)", "Marginal $/yr\n(visit-day dens.)",
+            "Bill\n$/yr", "Marg. worth\n/ bill", "Cumul. %\nof universe"]
+
+    fig = plt.figure(figsize=(11.4, 4.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.76, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.6)
+    widths = [0.055, 0.105, 0.09, 0.10, 0.09, 0.105, 0.115, 0.09, 0.09, 0.09]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 1:
+                cell.set_text_props(ha="left", fontweight="bold")
+            if c in (5, 6):
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if c == 8:
+                rt = ratio_col[r - 1]
+                if rt is not None:
+                    cell.set_text_props(fontweight="bold",
+                                        color=GREEN if rt >= 0.9 else (AMBER if rt >= 0.4 else RED))
+    ax.set_title("Net-of-Free Value Ladder: what each vendor is worth AFTER our free logs are counted first\n"
+                 f"Universe = {U / 1e9:.2f}B usable pairs free logs do NOT cover ({100 * U / TOT:.0f}% of all; "
+                 "free logs alone cover 60.4% of pairs / 59.4% of visit-days). "
+                 "$ = vendor's measured T2 density; two right-hand lenses agree within 6%.",
+                 fontsize=10.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q9g_net_of_free_ladder.png")
+
+
 # ---- Step 10: master waterfall — one row per source, feed to won bids to HI ----
 # Consolidates q1 (rows/day, IPv6), q2 (30d uniques), q2c (usable %), q4 (classified %),
 # q3 (sole stock), q5 (touched/served/HI, 37d union x valuation week), q7 (sole served, VR),
@@ -1657,7 +1754,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9e2": q9e2, "10": q10}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
