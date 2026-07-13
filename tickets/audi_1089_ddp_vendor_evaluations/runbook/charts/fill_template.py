@@ -340,7 +340,7 @@ CONVENTIONS = [
     "Conversions (q7c): ui_conversions deduped to one row per conversion event preferring last-touch; assists + disputed excluded; revenue = order_amt.",
     "AUDI-1093 (Sean Yang 2026-07-13): free logs do NOT preempt paid credit today - vendors earn day-grain credit on signals guid/augmentor also capture. 'Recoverable if free logs preempt' rows = bill x visit-day free-cohold share, EXACT at (ip,domain,date) grain from q3c: roster total ~$274K/yr (33Across $222K, 33A API $42K). The fix KEEPS vendors' unique data - stacks with renegotiation, substitutes for drops on the overlap slice.",
     "Visit-grain rows (q3c, 13.29B visit-days/30d): the true value unit is (IP x domain x DATE) - new date on a known pair = recency refresh (real value: 30d scoring window + the meter pays per day); same date from two sources = duplication. Free coverage at visit grain: guid 10.7% / augmentor 48.8% / both 59.4% (pair grain: 60.4%) - augmentor DS30 is the dominant free source and is INCLUDED in every free-log number in this workbook.",
-    "NET-OF-FREE LADDER (decisions sheet): the universe first drops every pair guid_log/augmentor touch (2.37B pairs remain = 39.6% of usable); each vendor's standalone value = its net-of-free pairs x its measured T2-per-sole-pair density; the ladder adds vendors greedily (optima verified nested) and prices each STEP - marginal value is what that vendor is worth AT THAT ROSTER POSITION. Key: 33Across standalone ~ 0.94x its bill, but every later addition is worth 0.02-0.34x its bill.",
+    "NET-OF-FREE LADDER (decisions sheet): universe first drops every pair guid_log/augmentor touched AT ANY DATE in the window (date-blind pair cut; the visit-day $ column is the date-aware lens - they agree within 6%). Standalone = vendor as the ONLY PAID source (overlap with other paid vendors still counts for it); the strictly-nobody-else number is its sole/T2 row. Ladder $ figures are DEPENDENT REVENUE, not kept profit: pay-up-to = x15/20/30% margin. 33Across standalone: $397K revenue -> pay-up-to $60-119K/yr vs $422K bill - converges with its independently-derived WTP band ($30-100K).",
     "Grains: pair = IP x domain (visited ever in window); visit = IP x domain x DATE (each day = distinct event; the meter's grain); IP-alone only used for stock counts. RECENCY IS CREDITED AT VISIT GRAIN: a vendor delivering a FRESHER date for a pair free logs saw earlier counts to the VENDOR (sole_refresh), not to free - free visit-grain coverage is 59.4% AFTER that credit (barely below the 60.4% pair figure, because augmentor re-observes active households daily). Within-day frequency collapses: same pair, same day, N events = one billable/valuable unit.",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
 ]
@@ -1066,15 +1066,15 @@ def main():
         f"NET-OF-FREE VALUE LADDER — guid_log + augmentor ALWAYS excluded from the universe first "
         f"({NOF_U / 1e9:.2f}B pairs = {100 * NOF_U / FULL_COV:.0f}% of usable that free logs do NOT cover). "
         "Standalone = vendor as the ONLY paid source; marginal = what it adds at its ladder position. "
-        "$ = pairs x vendor's measured T2-per-sole-pair density (assumes marginal pairs perform like its sole pairs)."))
+        "$ = DEPENDENT REVENUE (pairs x measured T2-per-sole-pair density; assumes marginal pairs perform like sole pairs). PAY-UP-TO = x15/20/30% margin on these figures."))
     t.font = section_font
     t.fill = section_fill
     ri += 1
     lad_hdr = ["Step", "Vendor", "Standalone net-of-free pairs", "Standalone % of universe",
-               "Standalone value $/yr", "Marginal pairs at this step",
+               "Standalone dependent REVENUE $/yr", "Marginal pairs at this step",
                "Marginal visit-days (recency-crediting grain)",
-               "Cumulative % of universe", "MARGINAL VALUE $/yr (pair density)",
-               "MARGINAL VALUE $/yr (visit-day density — credits refreshes)",
+               "Cumulative % of universe", "MARGINAL dependent REVENUE $/yr (pair density)",
+               "MARGINAL dependent REVENUE $/yr (visit-day density — credits refreshes)",
                "Bill $/yr", "Marginal worth / bill (pair-density)", ""]
     ri = put_row(dec, ri, lad_hdr, header=True)
     lfmt = {3: "#,##0", 4: "0.0%", 5: "$#,##0", 6: "#,##0", 7: "#,##0", 8: "0.0%",
