@@ -130,3 +130,13 @@ flat-contract equivalent band.
   vendors whose verdict scaling could flip (Cybba) and exposes junk-uniqueness artifacts (Sovrn:
   #1 usable-basis, #4 raw-basis). Flat-fee vendors: scaling is free upside; metered vendors:
   scaling multiplies the loss unless repriced.
+
+- **Kept-margin, not revenue, is the pay number** — show revenue AND a pay-range column
+  (x blended-margin range, e.g. 10-30%) side by side with the bill; roster P&L = Σ bills vs
+  Σ kept margin is the single strongest renegotiation exhibit.
+- **Dependent-revenue undervalues BREADTH vendors — always run both axes:** a vendor whose unique
+  contribution is classifier domain coverage (many sole classified domains, high same-day-dup IPs)
+  shows near-zero sole-serve revenue while carrying large infrastructure value. If the
+  dependent-revenue break-even fee and the domain-axis WTP band disagree by >10x, the vendor is a
+  breadth vendor: price it as classifier coverage, not media performance (AUDI-1089: Predactiv
+  $3.7-11K revenue basis vs $0.7-3M domain basis).

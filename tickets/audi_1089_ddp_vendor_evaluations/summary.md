@@ -272,6 +272,26 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d7. Roster P&L at kept-margin + the two-axis flat-vendor tension (2026-07-13, late)
+
+Ladder now shows Bill | STANDALONE | MARGINAL side by side with **PAY RANGE columns at the 10-30%
+blended margin** (user's range; avg ~20%). The revenue columns are FULL CPM flowing through us;
+PAY RANGE = what we keep = the negotiating number. **Roster P&L: metered bills ~$812K/yr buy
+~$470K of dependent revenue = $47-141K of kept margin → net -$670 to -$765K/yr at current prices.
+One-liner for the memo: "we pay data costs as if we kept 100% of the CPM, but we keep ~20%."**
+No metered vendor covers its bill from kept margin — even 33Across standalone keeps $40-119K vs
+$422K paid. **User independently replicated the standalone test and reached the same conclusion**
+(all vendors under water) — methods convergence, cite in the room.
+**Two-axis tension for FLAT vendors (do NOT let dependent-revenue alone kill them):**
+dependent-revenue break-even flat fees (5x5 $6.7-20K, Predactiv $3.7-11K, Klickly $0.2-0.7K) vs
+domain-axis WTP bands ($150-600K / $0.7-3M / $0.1-1.5K) disagree 30-300x for the breadth vendors —
+because their unique contribution is CLASSIFIER DOMAIN COVERAGE (Predactiv 226.8K sole classified;
+69% of its IPs same-day duplicated), infrastructure value that never appears as sole-serve revenue.
+TI-1027 two-axes lesson at full strength. Tuesday framing = three tiers: (1) metered priced
+5-150x above margin-adjusted value → drops + AUDI-1093 preemption + cap 33Across-combined at
+~$60-140K; (2) flats = two-axis call, easy renew if fees near revenue break-even, else price as
+classifier coverage explicitly; (3) system fix: the $0.50 meter rate assumes we keep the full CPM.
+
 ## 4d6. Scale-normalized (same-scale hypothetical) per-unit ranking (2026-07-13, user q)
 
 Standalone $ per 1M delivered usable pairs (= netnew-vs-free rate x T2 density): **Sovrn $255 /
