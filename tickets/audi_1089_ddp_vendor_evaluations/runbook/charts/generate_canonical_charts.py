@@ -1601,9 +1601,9 @@ def q9e2(rdir):
         dv = sum(dep.get(d, 0.0) for d in dropped)
         nfees = sum(1 for d in dropped if d in FLAT)
         net_hi, net_lo = rec - 0.30 * dv, rec - 0.50 * dv
-        flags = (f"+{nfees} flat fee{'s' if nfees > 1 else ''}" if nfees else "")
+        flags = (f"+{nfees} fee{'s' if nfees > 1 else ''}" if nfees else "")
         if 26 in dropped:
-            flags += "  HEM RISK"
+            flags += ("  " if flags else "") + "HEM-X"
         added = set(K) - prev_set
         cells.append([str(k),
                       "+".join(SHORT[d] for d in K) if K else "free logs only",
@@ -1611,20 +1611,22 @@ def q9e2(rdir):
                       f"+{100 * (c - prev) / full:.2f}pp" + (f" ({SHORT[list(added)[0]]})" if len(added) == 1 else ""),
                       money(rec) if rec else "-",
                       money2(dv) if dv else "-",
-                      (f"{money(net_lo)}-{money(net_hi)}" if rec else "-") + (f"\n{flags}" if flags else "")])
+                      f"{money(net_lo)}-{money(net_hi)}" if rec else "-",
+                      flags if flags else "-"])
         prev, prev_set = c, set(K)
     cols = ["k", "Best keep-set (all 256 evaluated)", "Coverage\n(% of today)", "Marginal gain\n(vendor added)",
-            "Metered $\nrecovered/yr", "Dep. revenue\nat risk $/yr", "NET $/yr\n@50-30% margin"]
+            "Data spend SAVED\n$/yr (bills stop)", "Ad revenue LOST\n$/yr (their sole IPs)",
+            "NET SAVED $/yr\n(saved - 50-30% of lost)", "Also"]
 
-    fig = plt.figure(figsize=(12.6, 4.1))
-    fig.subplots_adjust(left=0.015, right=0.985, top=0.84, bottom=0.04)
+    fig = plt.figure(figsize=(13.2, 4.4))
+    fig.subplots_adjust(left=0.015, right=0.985, top=0.80, bottom=0.04)
     ax = fig.add_subplot(111)
     ax.axis("off")
     tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(8.6)
     tbl.scale(1, 1.9)
-    widths = [0.03, 0.37, 0.09, 0.135, 0.10, 0.10, 0.145]
+    widths = [0.028, 0.30, 0.082, 0.12, 0.112, 0.112, 0.15, 0.085]
     for (r, c), cell in tbl.get_celld().items():
         cell.set_edgecolor("#e2e2e2")
         cell.set_width(widths[c])
@@ -1642,12 +1644,14 @@ def q9e2(rdir):
             if c == 4:
                 cell.set_text_props(color=GREEN, fontweight="bold")
             if c == 6:
-                cell.set_text_props(fontweight="bold",
-                                    color=RED if "HEM" in cells[r - 1][6] else NAVY)
+                cell.set_text_props(fontweight="bold", color=NAVY)
+            if c == 7 and "HEM" in cells[r - 1][7]:
+                cell.set_text_props(fontweight="bold", color=RED)
             if r in (5, 6):
                 cell.set_facecolor(HILITE)
-    ax.set_title("Exhaustive Frontier with Money: Coverage, Exact Recovery, Value at Risk, and NET per Roster Size\n"
-                 "(nested optima; flat-fee savings additional and pending amounts; HEM = Predactiv prod dependency outside MM)",
+    ax.set_title("Exhaustive Frontier with Money: what each roster size KEEPS in coverage, SAVES in data spend, and LOSES in ad revenue\n"
+                 "(SAVED = dropped bills minus credits that reassign to kept paid vendors; LOST = revenue on dropped vendors' unique IPs;\n"
+                 "Also: +N fees = N flat-fee contracts also cancelled, amounts pending | HEM-X = breaks Predactiv hashed-email feed used by CRM/identity in PROD)",
                  fontsize=10.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q9e_frontier_by_k.png")
 
