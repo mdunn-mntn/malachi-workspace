@@ -1071,14 +1071,14 @@ def main():
     t.fill = section_fill
     ri += 1
     lad_hdr = ["Step", "Vendor", "Standalone net-of-free pairs", "Standalone % of universe",
-               "Standalone dependent REVENUE $/yr", "Marginal pairs at this step",
-               "Marginal visit-days (recency-crediting grain)",
+               "Standalone dependent REVENUE $/yr", "STANDALONE worth / bill (vs free logs only)",
+               "Marginal pairs at this step", "Marginal visit-days (recency-crediting grain)",
                "Cumulative % of universe", "MARGINAL dependent REVENUE $/yr (pair density)",
                "MARGINAL dependent REVENUE $/yr (visit-day density — credits refreshes)",
-               "Bill $/yr", "Marginal worth / bill (pair-density)", ""]
+               "Bill $/yr", "Marginal worth / bill (pair-density)"]
     ri = put_row(dec, ri, lad_hdr, header=True)
-    lfmt = {3: "#,##0", 4: "0.0%", 5: "$#,##0", 6: "#,##0", 7: "#,##0", 8: "0.0%",
-            9: "$#,##0", 10: "$#,##0", 11: "$#,##0", 12: '0.00"x"'}
+    lfmt = {3: "#,##0", 4: "0.0%", 5: "$#,##0", 6: '0.00"x"', 7: "#,##0", 8: "#,##0", 9: "0.0%",
+            10: "$#,##0", 11: "$#,##0", 12: "$#,##0", 13: '0.00"x"'}
     order, cur_p, cur_t = [], 0, 0
     rem = [d for d in EXT if d in dens]
     for step in range(1, len(rem) + 1 + len(order)):
@@ -1093,11 +1093,12 @@ def main():
         bill = jb * 12 if jb is not None else "flat (pending)"
         ratio = (mval / bill) if isinstance(bill, float) else NA
         mval_t = mt * dens_t[nxt]
+        aval = nof_cov([nxt], NOF_P) * dens[nxt]
+        aratio = (aval / bill) if isinstance(bill, float) else NA
         ri = put_row(dec, ri, [
             step, HDR_NAMES[nxt], nof_cov([nxt], NOF_P), nof_cov([nxt], NOF_P) / NOF_U,
-            round(nof_cov([nxt], NOF_P) * dens[nxt]), mp, mt, newp / NOF_U,
+            round(aval), aratio, mp, mt, newp / NOF_U,
             round(mval), round(mval_t), bill if isinstance(bill, float) else bill, ratio,
-            "",
         ], fmts=lfmt, band_row=(step % 2 == 0))
         order.append(nxt)
         rem.remove(nxt)
