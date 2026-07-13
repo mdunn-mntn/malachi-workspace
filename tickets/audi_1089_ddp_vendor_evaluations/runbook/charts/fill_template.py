@@ -740,6 +740,32 @@ NEGOTIATION = {
 }
 
 
+def disp_len(v, fmt):
+    if v is None:
+        return 1
+    if isinstance(v, str):
+        return len(v)
+    v = float(v)
+    if fmt == "int":
+        t = f"{v:,.0f}"
+    elif fmt and fmt.startswith("pct"):
+        d = {"pct0": 0, "pct": 1, "pct2": 2, "pct3": 3, "pct4": 4}[fmt]
+        t = f"{v * 100:,.{d}f}%"
+    elif fmt == "usd":
+        t = f"${v:,.0f}"
+    elif fmt == "usd2":
+        t = f"${v:,.2f}"
+    elif fmt == "usd4":
+        t = f"${v:,.4f}"
+    elif fmt == "x2":
+        t = f"{v:.2f}x"
+    elif fmt in ("dec1", "dec2"):
+        t = f"{v:.1f}" if fmt == "dec1" else f"{v:.2f}"
+    else:
+        t = str(v)
+    return len(t)
+
+
 def main():
     import openpyxl
     from openpyxl.formatting.rule import ColorScaleRule
@@ -825,9 +851,16 @@ def main():
             mid_type="percentile", mid_value=50, mid_color=YEL,
             end_type="max", end_color=hi))
 
-    ws.column_dimensions["A"].width = 48
-    for c in range(2, 2 + len(DS_COLS)):
-        ws.column_dimensions[get_column_letter(c)].width = 16
+    ws.column_dimensions["A"].width = max(len(x[0]) for x in SPEC) + 3
+    for i, d in enumerate(DS_COLS):
+        m = len(HDR_NAMES[d])
+        r2 = 1
+        for label, fmt, fn, oos_ok in SPEC:
+            r2 += 1
+            if fn is None:
+                continue
+            m = max(m, disp_len(ws.cell(row=r2, column=2 + i).value, fmt))
+        ws.column_dimensions[get_column_letter(2 + i)].width = round(m * 1.1) + 2
     ws.freeze_panes = "B2"
 
     # ================= index =================
@@ -859,7 +892,10 @@ def main():
             if band:
                 cell.fill = band_fill
         idx.cell(row=ri, column=2).font = bold
-    for i, w in enumerate([34, 40, 92, 12], start=1):
+    sec_w = max(len(x[0]) for x in SPEC if x[2] is None) + 3
+    q_w = max(len(x[0]) for x in SPEC if x[2] is not None) + 3
+    src_w = max(len(v[1]) for v in DEF.values()) + 3
+    for i, w in enumerate([sec_w, q_w, 95, max(src_w, len("Source") + 2)], start=1):
         idx.column_dimensions[get_column_letter(i)].width = w
     idx.freeze_panes = "A2"
 
@@ -915,7 +951,6 @@ def main():
         vword = str(vcell.value or "")[:4].upper()
         if vword in verdict_color:
             vcell.font = Font(bold=True, color=verdict_color[vword])
-        dec.row_dimensions[ri - 1].height = 60
 
     def saved(dropped):
         out = 0.0
@@ -962,7 +997,7 @@ def main():
             "", "", "", "", "", "", "",
         ], fmts=sfmt, band_row=(n % 2 == 1))
 
-    widths = [24, 26, 9, 12, 14, 12, 15, 14, 10, 12, 18, 60, 55]
+    widths = [30, 32, 10, 14, 17, 14, 18, 16, 11, 14, 21, 64, 60]
     for i, w in enumerate(widths, start=1):
         dec.column_dimensions[get_column_letter(i)].width = w
     dec.freeze_panes = "A3"
@@ -1000,7 +1035,6 @@ def main():
         vword = str(vcell.value or "")[:4].upper()
         if vword in verdict_color:
             vcell.font = Font(bold=True, color=verdict_color[vword])
-        ns.row_dimensions[r_i].height = 44
 
     conv_hdr_row = len(DS_COLS) + 3
     ns.cell(row=conv_hdr_row, column=1, value="CONVENTIONS — how to read this workbook")
@@ -1018,7 +1052,7 @@ def main():
         cc.border = border
         if j % 2 == 1:
             cc.fill = band_fill
-        ns.row_dimensions[r_j].height = 28
+        ns.row_dimensions[r_j].height = max(16, (len(f"{j + 1}. {ctext}") // 300 + 1) * 15 + 3)
 
     widths = [16, 5, 46, 34, 42, 46, 44, 62, 70]
     for i, w in enumerate(widths, start=1):
