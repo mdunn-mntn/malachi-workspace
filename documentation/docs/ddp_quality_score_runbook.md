@@ -295,3 +295,19 @@ High score + over-band bill = renegotiate, don't drop (the data is good, the pri
 4. **Step 5–6** (CIL joins — Q and D)
 5. **Step 7** (performance — P)
 6. **Step 8–9** (no new queries — bands, scorecard, quadrant chart, runner script)
+
+## Final deliverable: the vendor-quality workbook (AUDI-1089 format, LOCKED)
+
+The runbook's terminal artifact is a two-sheet xlsx answering every eval question —
+**one question per row** (131 rows: CONTRACT & IDENTITY → FEED SCALE → DATA QUALITY →
+USABLE FUNNEL → UNIQUENESS & FRESHNESS → SERVING & WON BIDS → SCORE QUALITY →
+PERFORMANCE touched/sole → ECONOMICS COST/WORTH → PORTFOLIO → VERDICT), vendors as
+columns, real typed values (percents stored as fractions with true % formats), per-row
+red-yellow-green heat scales (direction-aware: green = low for junk/cost metrics), and
+all text (scope, verdicts, vendor asks, conventions) on a styled `notes` sheet.
+
+Generator + canonical question order: `tickets/audi_1089_ddp_vendor_evaluations/runbook/`
+`charts/fill_template.py` (`SPEC` list = the order; `DIR` dict = heat directions). Exact
+reproduction steps: that folder's `README.md` §7 "Reproduce the workbook from scratch"
+(run q0→q7d per query headers into `outputs/run_<date>/`, then
+`python3 fill_template.py run_<date> <bill YYYY-MM>`; must print `empty: none`).

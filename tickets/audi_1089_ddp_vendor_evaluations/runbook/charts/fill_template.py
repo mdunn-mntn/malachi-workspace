@@ -14,15 +14,21 @@ with compound rows split so each row carries exactly one metric. Sources per
 section: runbook/README.md (Template map). Economics formulas:
 runbook/dependency_valuation.md; margin ladder 15/20/30% (blended estimate).
 
-Usage: python3 fill_template.py
+Usage: python3 fill_template.py [run_dir] [bill_month]
+  run_dir    outputs/ subfolder holding the q*.csv files (default run_2026_07_10)
+  bill_month YYYY-MM whose meter bills fill the COST rows (default 2026-06;
+             must exist as a month-end reporting_month snapshot in q0/q1d)
 """
 import csv
 import math
 import os
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TICKET = os.path.dirname(os.path.dirname(HERE))
-RDIR = os.path.join(TICKET, "outputs", "run_2026_07_10")
+RUN = sys.argv[1] if len(sys.argv) > 1 else "run_2026_07_10"
+BILL_MONTH = sys.argv[2] if len(sys.argv) > 2 else "2026-06"
+RDIR = os.path.join(TICKET, "outputs", RUN)
 OUT = os.path.join(TICKET, "outputs", "audi_1089_quality_template_filled.xlsx")
 
 DS_COLS = [28, 40, 33, 24, 36, 25, 26, 39, 27, 30, 23, 35, 17, 29]
@@ -80,7 +86,7 @@ q0 = {}
 for r in rows_of("q0_roster_cost.csv"):
     d = int(r["data_source_id"])
     ent = q0.setdefault(d, {"reg": r, "june_usd": None})
-    if r.get("reporting_month", "").startswith("2026-06"):
+    if r.get("reporting_month", "").startswith(BILL_MONTH):
         ent["june_usd"] = float(r["usage_dollars"])
         ent["reg"] = r
 
@@ -402,7 +408,7 @@ SPEC = [
     R("Sole won bids / wk", "int", lambda d: float(q6[d]["imps_sole"])),
     R("Sole won bids per served sole IP", "dec1", lambda d: float(q6[d]["imps_sole"]) / float(q6[d]["ips_sole"])),
     R("Sole won bids annualized (x52)", "int", lambda d: float(q6[d]["imps_sole"]) * 52),
-    R("Billed domains (June)", "int", lambda d: int(q1d[d]["billed_domains"]) if d in q1d and q1d[d].get("billed_domains") else None),
+    R(f"Billed domains ({BILL_MONTH})", "int", lambda d: int(q1d[d]["billed_domains"]) if d in q1d and q1d[d].get("billed_domains") else None),
     R("% of platform served IPs touched (week)", "pct", lambda d: 100 * float(q6[d]["ips_touched"]) / PLAT_IPS),
 
     S("SCORE QUALITY (of served/delivered IPs, touched cohort)"),
@@ -449,9 +455,9 @@ SPEC = [
     R("ROAS — sole", "x2", lambda d: g7c(d, "sole", "revenue") / float(q6[d]["media_sole"])),
 
     S("ECONOMICS — COST"),
-    R("June bill", "usd", lambda d: 0.0 if d in FREE or d == 27 else
+    R(f"Meter bill ({BILL_MONTH})", "usd", lambda d: 0.0 if d in FREE or d == 27 else
       (q0[d]["june_usd"] if q0.get(d, {}).get("june_usd") is not None else ("pending" if d in FLAT else None)), True),
-    R("Run-rate $/yr (June x12)", "usd", lambda d: 0.0 if d in FREE or d == 27 else
+    R(f"Run-rate $/yr ({BILL_MONTH} x12)", "usd", lambda d: 0.0 if d in FREE or d == 27 else
       (q0[d]["june_usd"] * 12 if q0.get(d, {}).get("june_usd") is not None else ("pending" if d in FLAT else None)), True),
     R("% of delivered rows billed", "pct2", lambda d: None if d in FREE or d in FLAT else
       100 * float(q1d[d]["billed_imps"]) / (q1[d]["rows"] * (365.0 / 12) / 30.0)),
@@ -496,6 +502,66 @@ SPEC = [
 FMT = {"int": "#,##0", "pct0": "0%", "pct": "0.0%", "pct2": "0.00%",
        "pct3": "0.000%", "pct4": "0.0000%", "usd": "$#,##0", "usd2": "$#,##0.00",
        "usd4": "$#,##0.0000", "dec1": "0.0", "dec2": "0.00", "x2": '0.00"x"', "txt": None}
+
+# Per-row heat direction for the color scale across vendor columns:
+# +1 green = highest, -1 green = lowest, absent = no shading (identity/neutral rows).
+DIR = {
+    "Total rows delivered": 1, "Median rows/day": 1, "Weakest day (% of median)": 1,
+    "Days <50% of median (count)": -1, "Days delivered (of 30)": 1, "% IPv6 rows": -1,
+    "Unique IPs delivered": 1, "Unique domains delivered": 1, "Unique IP x domain pairs delivered": 1,
+    "% URLs unparseable": -1, "% URLs malformed": -1, "% Googlebot IPs": -1,
+    "% bot user-agents": -1, "Top-1 domain share": -1, "Top-5 domain share": -1,
+    "% private IPs": -1, "% uid duplicates (clamped >=0)": -1,
+    "Top-1 timestamp share (stamping check)": -1,
+    "% user_agent populated": 1, "% url populated": 1, "% URLs with path": 1,
+    "% query_parameters populated": 1, "% advertiser_id populated": 1,
+    "Rows used": 1, "% of rows used (within vendor)": 1, "% rows hard-dropped": -1,
+    "% rows DS13-blocklisted": -1, "% rows bot-UA": -1, "Unique IPs used": 1,
+    "% of unique IPs used (within vendor)": 1, "Unique domains used (classified)": 1,
+    "% of domains classified (within vendor)": 1, "Usable IP x domain pairs": 1,
+    "% of pairs usable": 1, "% of rows used — share of column total": 1,
+    "% of IPs used — share of column total": 1, "% of domains used — share of column total": 1,
+    "Sole usable IPs": 1, "% of usable IPs sole": 1, "Sole usable domains": 1,
+    "Sole CLASSIFIED domains (fee-band axis)": 1, "Pairs per IP (visit density)": 1,
+    "% pairs sole": 1, "% pairs freshest": 1, "% pairs tied": -1, "% pairs stale": -1,
+    "% net-new vs free logs": 1, "Marginal coverage when added (pp)": 1,
+    "Frontier add-order rank": -1,
+    "Touched IPs (37d union)": 1, "Served-won IPs": 1, "% of touched IPs served-won": 1,
+    "Sole IPs served-won": 1, "% of sole stock served-won": 1,
+    "% of served IPs shared": -1, "Sole won bids / wk": 1,
+    "Sole won bids per served sole IP": 1, "Sole won bids annualized (x52)": 1,
+    "% of platform served IPs touched (week)": 1,
+    "HI 10000 count": 1, "% HI (within vendor)": 1, "% HI — share of column total": 1,
+    "PP 8000 count": 1, "% PP (within vendor)": 1, "% PP — share of column total": 1,
+    "High-graduated count (Fangorn band)": 1, "% high-graduated": 1,
+    "% max-reach": -1, "% unscored": -1,
+    "Avg household score — touched (scored imps)": 1, "% imps scored — touched": 1,
+    "Avg household score — sole (scored imps)": 1, "% imps scored — sole": 1,
+    "Spend (media $) — touched": 1, "Impressions (won bids) — touched": 1,
+    "Visits — touched": 1, "Conversions — touched": 1, "Revenue — touched": 1,
+    "IVR — touched": 1, "CVR (conv/visits) — touched": 1, "AOV — touched": 1,
+    "ROAS — touched": 1,
+    "Spend (media $) — sole": 1, "Impressions (won bids) — sole": 1, "Visits — sole": 1,
+    "Conversions — sole": 1, "Revenue — sole": 1, "IVR — sole": 1,
+    "IVR — sole, x of 0.0223% baseline": 1, "CVR (conv/visits) — sole": 1,
+    "AOV — sole": 1, "ROAS — sole": 1,
+    "% of delivered rows billed": -1,
+    "Max justified CPM — on 100% of delivered rows": 1,
+    "Max justified CPM — on used/billed imps (vs $0.50)": 1,
+    "Flat equivalent — floor (T1 x 15%)": 1, "Flat equivalent — fair (T2 x 20%)": 1,
+    "Flat equivalent — ceiling (T2 x 30%)": 1,
+    "T2 dependent revenue $/yr (sole-won media x52)": 1,
+    "T2 envelope low (x0.4)": 1, "T2 envelope high (x1.8)": 1,
+    "T1 provable floor $/yr (score-gated)": 1,
+    "Fee band, domain axis — low (sole classified x $3)": 1,
+    "Fee band, domain axis — high (sole classified x $13)": 1,
+    "Exact drop savings $/yr": 1, "Drop savings as % of bill": 1,
+    "Coverage lost if dropped (pp of pair coverage)": 1,
+    "Composite quality score (curved, best=100)": 1, "Composite quality score (raw)": 1,
+}
+# Bill rows (labels are f-strings on BILL_MONTH): lower bill = green.
+DIR[f"Meter bill ({BILL_MONTH})"] = -1
+DIR[f"Run-rate $/yr ({BILL_MONTH} x12)"] = -1
 
 
 def main():
@@ -551,6 +617,26 @@ def main():
                 if FMT.get(fmt):
                     cell.number_format = FMT[fmt]
                 filled += 1
+
+    # Per-row heat scale across vendor columns (direction from DIR; text cells
+    # like "—"/"pending" are ignored by Excel color scales automatically).
+    from openpyxl.formatting.rule import ColorScaleRule
+    RED, YEL, GRN = "F8696B", "FFEB84", "63BE7B"
+    last_col = get_column_letter(1 + len(DS_COLS))
+    r = 1
+    for label, fmt, fn, oos_ok in SPEC:
+        r += 1
+        if fn is None:
+            continue
+        direction = DIR.get(label)
+        if not direction:
+            continue
+        lo, hi = (RED, GRN) if direction > 0 else (GRN, RED)
+        ws.conditional_formatting.add(
+            f"B{r}:{last_col}{r}",
+            ColorScaleRule(start_type="min", start_color=lo,
+                           mid_type="percentile", mid_value=50, mid_color=YEL,
+                           end_type="max", end_color=hi))
 
     ws.column_dimensions["A"].width = 48
     for c in range(2, 2 + len(DS_COLS)):

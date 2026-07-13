@@ -214,3 +214,31 @@ Conventions: "% of column total" rows (33-35, 54-55 overall shares) sum >100% be
 sources overlap — stated in each cell. Valuation week = 2026-07-02..08; svs window =
 30d (q1-q4) or 37d union (q5-q7c); annualization = x52 on weekly flows, x365/30 on 30d
 stocks, x12 on June bills. Margin ladder 15/20/30% per blended-margin estimate (2026-07-12).
+
+### Reproduce the workbook from scratch (quarterly pass / renewals)
+
+1. `mkdir tickets/audi_1089_ddp_vendor_evaluations/outputs/run_<YYYY_MM_DD>`
+2. Update the PARAM window lines in each query header:
+   - q1-q4: 30d delivery window (`dt <start>..<start+29>`)
+   - q5-q7c: 37d svs union window + valuation week (last full week inside it)
+   - q0/q1d: bill month — use the latest month-end snapshot in `coredw.usage_reporting_data`
+     (its `dt` values are month-end ONLY; mid-month dates return empty)
+3. Run q0 -> q7d per the "Run" block in each header (bq_run.sh wrapper; svs = temp external
+   table over GCS parquet). `q4_domain_value.sql` query A also emits `q3_pair_recency.csv`.
+   Background class, ~1h each: q3, q3b, q5, q6, q7, q7b, q7c. The rest are minutes.
+4. `python3 runbook/charts/fill_template.py run_<YYYY_MM_DD> <YYYY-MM>` — writes
+   `outputs/audi_1089_quality_template_filled.xlsx`; the run must print `empty: none`.
+5. Constants to re-derive on a major refresh (top of fill_template.py):
+   `BASELINE_VR` (0.0223 = no-svs sole-serve IVR, from the q7 run of 2026-07) and the
+   margin ladder 15/20/30%. Verdict/asks/scope text banks are in the script — update
+   them when verdicts change.
+
+The question ORDER and format are canonical in `fill_template.py`'s `SPEC` list:
+one question per row (131 rows), sections CONTRACT & IDENTITY -> FEED SCALE -> DATA
+QUALITY -> USABLE FUNNEL -> UNIQUENESS & FRESHNESS -> SERVING & WON BIDS -> SCORE
+QUALITY -> PERFORMANCE (touched) -> PERFORMANCE (sole) -> ECONOMICS COST -> ECONOMICS
+WORTH -> PORTFOLIO -> VERDICT; vendor columns in order 33Across, 33Across API, Sovrn,
+Justuno, Cybba, 5x5, sharethis_predactiv, Klickly, LaunchLabs, augmentor_log, guid_log,
+LiveRamp IP, ShareThis, deepsync. Percent cells store FRACTIONS with true `%` number
+formats (Sheets/Excel-native); counts `#,##0`; money `$#,##0`; CPMs 2dp; ROAS `0.00"x"`.
+Text answers live on the styled `notes` sheet (per-vendor rows + CONVENTIONS block).
