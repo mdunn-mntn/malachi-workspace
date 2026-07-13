@@ -272,6 +272,21 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d4. q3c visit-grain uniqueness LANDED (2026-07-13) — the (ip x domain x DATE) decomposition
+
+13.29B unique visit-days over 30d (usable). Validation anchor exact (vendor rows = mask holders).
+**Free coverage at VISIT grain: guid 10.7% / augmentor 48.8% / both 59.4%** (vs 60.4% pair grain —
+refreshes barely move the floor). **Augmentor DS30 is the dominant free source** and is included in
+every free-log number (user q; meeting's "guid only" line was a misstatement). Per-vendor visit-day
+split (new-pair / refresh / same-day-dup): 33Across 20.0/14.2/**65.9** — two-thirds of its feed is
+same-day duplicated; Sovrn 11.2/4.9/**83.9** (worst); Predactiv 18.8/11.6/69.5; 33A API
+**58.7**/1.6/39.7 (RT feed = genuinely new pairs); Klickly **94.2**/5.2/0.5 and Justuno
+**90.7**/1.3/8.0 (cleanest uniqueness, tiny scale). 33Across's recency-refresh value is real but
+modest (14.2%) — doesn't overturn NEGOTIATE. **Exact AUDI-1093 preemption recoverable at visit
+grain: $273.7K/yr** (33Across $221.7K, 33A API $41.9K, Cybba $6.1K, Justuno $3.8K, Sovrn $0.3K) —
+pair proxy $284K held up. Workbook now 137 rows (visit-day rows + exact preemption rows) + 9
+scenarios (added "augmentor only" 46.4% and "guid only" 14.2% pair-coverage rows).
+
 ## 4d3. Free-log credit preemption gap (Sean Yang, 2026-07-13) — AUDI-1093
 
 Sean Yang confirms DS30 augmentor_log IS implemented in svs — but the meter still awards paid

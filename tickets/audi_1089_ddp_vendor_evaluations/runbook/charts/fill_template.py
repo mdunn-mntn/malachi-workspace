@@ -146,10 +146,26 @@ for r in rows_of("q3b_credit_reassignment.csv"):
     elif r["rec"] == "reassign":
         reassign.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n_pairs"])
 
+masks3c, vend3c = {}, {}
+for r in rows_of("q3c_visit_grain_uniqueness.csv"):
+    if r["rec"] == "mask":
+        masks3c[int(r["k1"])] = int(r["n"])
+    else:
+        vend3c.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n"])
+TRIP_TOTAL = sum(masks3c.values())
+
+
+def trip_holder(d):
+    return sum(n for m, n in masks3c.items() if m & (1 << BITSQ[d]))
+
+
+def trip_free_cohold(d):
+    return sum(n for m, n in masks3c.items() if (m & (1 << BITSQ[d])) and (m & FREE_MASK))
+
 
 # ---------------- derived ----------------
-def cov(keep):
-    km = FREE_MASK
+def cov(keep, fm=FREE_MASK):
+    km = fm
     for d in keep:
         km |= (1 << BITSQ[d])
     return sum(p for m, p in masks.items() if m & km)
@@ -311,7 +327,8 @@ CONVENTIONS = [
     "Sole-IP visit rates are REAL, not an attribution artifact (q7f): of 33Across's 99K served sole IPs, only 25 showed ANY clickpass event for ANY advertiser that week (0.025%), vs 1.43% for guid_log's sole IPs measured identically. The households are genuinely dark; the ad_served_id visit join even credits cross-device visits, so 116/wk is if anything generous.",
     "Touched-cohort performance mirrors the platform (pools cover 12-97% of served IPs) — vendor differentiation lives in the SOLE rows.",
     "Conversions (q7c): ui_conversions deduped to one row per conversion event preferring last-touch; assists + disputed excluded; revenue = order_amt.",
-    "AUDI-1093 (Sean Yang 2026-07-13): free logs do NOT preempt paid credit today - vendors earn day-grain credit on signals guid/augmentor also capture. 'Recoverable if free logs preempt' rows = bill x free-cohold share (~$284K/yr roster-wide, pair-grain proxy) - a fix that KEEPS vendors' unique data, stacks with renegotiation, substitutes for drops on the overlap slice.",
+    "AUDI-1093 (Sean Yang 2026-07-13): free logs do NOT preempt paid credit today - vendors earn day-grain credit on signals guid/augmentor also capture. 'Recoverable if free logs preempt' rows = bill x visit-day free-cohold share, EXACT at (ip,domain,date) grain from q3c: roster total ~$274K/yr (33Across $222K, 33A API $42K). The fix KEEPS vendors' unique data - stacks with renegotiation, substitutes for drops on the overlap slice.",
+    "Visit-grain rows (q3c, 13.29B visit-days/30d): the true value unit is (IP x domain x DATE) - new date on a known pair = recency refresh (real value: 30d scoring window + the meter pays per day); same date from two sources = duplication. Free coverage at visit grain: guid 10.7% / augmentor 48.8% / both 59.4% (pair grain: 60.4%) - augmentor DS30 is the dominant free source and is INCLUDED in every free-log number in this workbook.",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
 ]
 
@@ -399,6 +416,10 @@ SPEC = [
     R("% net-new vs free logs", "pct", lambda d: None if d in FREE else float(q3r[d]["pct_netnew_vs_free"])),
     R("Marginal coverage when added (pp)", "dec2", lambda d: add_gain.get(d)),
     R("Frontier add-order rank", "int", lambda d: add_order.index(d) + 1 if d in add_order else None),
+    R("Unique visit-days delivered (ip x domain x date, 30d)", "int", lambda d: sum(vend3c[d].values())),
+    R("% visit-days sole — new pair", "pct", lambda d: 100 * vend3c[d]["sole_new_pair"] / sum(vend3c[d].values())),
+    R("% visit-days sole — recency refresh", "pct", lambda d: 100 * vend3c[d]["sole_refresh"] / sum(vend3c[d].values())),
+    R("% visit-days duplicated same-day", "pct", lambda d: 100 * vend3c[d]["shared_same_day"] / sum(vend3c[d].values())),
 
     S("SERVING & WON BIDS (valuation week; served = won impression)"),
     R("Touched IPs (37d union)", "int", lambda d: int(q5[d]["touched"]["vendor_ips"])),
@@ -492,10 +513,11 @@ SPEC = [
     R("% credits -> free logs", "pct0", lambda d: 100 * (reassign[d].get("free_first", 0) + reassign[d].get("free_later", 0)) / sum(reassign[d].values())),
     R("% credits -> other metered (still paid)", "pct", lambda d: 100 * reassign[d].get("metered", 0) / sum(reassign[d].values())),
     R("Coverage lost if dropped (pp of pair coverage)", "dec2", lambda d: -coverage_lost[d] if d in coverage_lost else None),
-    R("% of credits co-held by our free logs", "pct0", lambda d: None if d in FREE or d not in reassign else
-      100 * (reassign[d].get("free_first", 0) + reassign[d].get("free_later", 0)) / sum(reassign[d].values())),
-    R("Recoverable $/yr if free logs preempt credit (AUDI-1093)", "usd", lambda d: None if d in FREE or d not in reassign or d not in q1d else
-      float(q1d[d]["billed_usd"]) * 12 * (reassign[d].get("free_first", 0) + reassign[d].get("free_later", 0)) / sum(reassign[d].values())),
+    R("% of visit-days co-held by our free logs", "pct0", lambda d: None if d in FREE or d not in vend3c else
+      100 * trip_free_cohold(d) / trip_holder(d)),
+    R("Recoverable $/yr if free logs preempt credit (AUDI-1093, exact visit grain)", "usd",
+      lambda d: None if d in FREE or d not in vend3c or d not in q1d or not q1d[d].get("billed_usd") else
+      float(q1d[d]["billed_usd"]) * 12 * trip_free_cohold(d) / trip_holder(d)),
 
     S("VERDICT"),
     R("Composite quality score (curved, best=100)", "int", lambda d: CURVE[d][1] if d in CURVE else None),
@@ -564,8 +586,12 @@ DIR = {
     "Fee band, domain axis — high (sole classified x $13)": 1,
     "Exact drop savings $/yr": 1, "Drop savings as % of bill": 1,
     "Coverage lost if dropped (pp of pair coverage)": 1,
-    "% of credits co-held by our free logs": 1,
-    "Recoverable $/yr if free logs preempt credit (AUDI-1093)": 1,
+    "% of visit-days co-held by our free logs": 1,
+    "Recoverable $/yr if free logs preempt credit (AUDI-1093, exact visit grain)": 1,
+    "Unique visit-days delivered (ip x domain x date, 30d)": 1,
+    "% visit-days sole — new pair": 1,
+    "% visit-days sole — recency refresh": 1,
+    "% visit-days duplicated same-day": -1,
     "Composite quality score (curved, best=100)": 1, "Composite quality score (raw)": 1,
 }
 DIR.update({
@@ -722,8 +748,12 @@ DEF = {
     "% credits -> free logs": ("Credits our own logs absorb - saved.", "q3b"),
     "% credits -> other metered (still paid)": ("Credits that just move to another $0.50 meter - NOT saved.", "q3b"),
     "Coverage lost if dropped (pp of pair coverage)": ("Usable-pair coverage the roster loses if this vendor alone is dropped.", "q3b masks"),
-    "% of credits co-held by our free logs": ("Share of the vendor's credited pairs that our own guid_log/augmentor_log ALSO capture - data we pay for but already have (free logs do not preempt paid credit today; Sean Yang 2026-07-13).", "q3b"),
-    "Recoverable $/yr if free logs preempt credit (AUDI-1093)": ("Bill x free-cohold share: what a free-source-preemption billing rule would recover WITHOUT dropping the vendor (keeps their unique contribution). Pair-grain proxy; exact triple-grain number from q3c.", "q3b/q0"),
+    "% of visit-days co-held by our free logs": ("Share of the vendor's (ip,domain,date) visit-days that guid_log or augmentor ALSO delivered - data we pay for but already have (free logs do not preempt paid credit; Sean Yang 2026-07-13).", "q3c"),
+    "Recoverable $/yr if free logs preempt credit (AUDI-1093, exact visit grain)": ("Bill x visit-day free-cohold share: what a free-source-preemption rule recovers WITHOUT dropping the vendor (keeps their unique contribution). Roster total ~$274K/yr.", "q3c/q0"),
+    "Unique visit-days delivered (ip x domain x date, 30d)": ("Distinct visit events at the TRUE value grain - each (IP, domain, DATE) triple; a new date on a known pair is a distinct visit.", "q3c"),
+    "% visit-days sole — new pair": ("Visit-days on pairs ONLY this vendor holds - brand-new signal (strongest contribution).", "q3c"),
+    "% visit-days sole — recency refresh": ("Dates unique to this vendor on pairs other sources also hold - refreshes the 30d recency window MM scores on; the meter pays per (ip,url,day) so these ARE billed.", "q3c"),
+    "% visit-days duplicated same-day": ("Same (ip,domain,date) delivered by another source too - pure duplication, worth ~zero.", "q3c"),
     "Composite quality score (curved, best=100)": ("100 x (0.40 unique value + 0.15 non-redundancy + 0.15 signal quality + 0.10 dependency + 0.20 performance), curved to best-in-roster = 100.", "q9b formula"),
     "Composite quality score (raw)": ("Same before curving.", "q9b formula"),
     "Verdict": ("The call. Full reasoning on the notes sheet and decisions sheet.", "eval"),
@@ -997,14 +1027,18 @@ def main():
         ("+ drop Justuno (knee k=4)", [25, 26, 28, 40]),
         ("33Across combined only", [28, 40]),
         ("Flat-fee only (5x5 + Predactiv)", [25, 26]),
-        ("Free logs only", []),
+        ("Free logs only (guid + augmentor)", []),
+        ("Free: augmentor DS30 only", [], 1 << 5),
+        ("Free: guid_log DS23 only", [], 1 << 0),
     ]
-    for n, (label, keep) in enumerate(SC):
+    for n, sc_row in enumerate(SC):
+        label, keep = sc_row[0], sc_row[1]
+        fm = sc_row[2] if len(sc_row) > 2 else FREE_MASK
         dropped = [d for d in ALL8 if d not in keep]
         met_kept = sum(float(q1d[d]["billed_usd"]) * 12 for d in keep if d in q1d and q1d[d].get("billed_usd"))
         ri = put_row(dec, ri, [
             label, " + ".join(SHORT[d] for d in keep) if keep else "(none)",
-            cov(keep) / FULL_COV, round(met_kept) if met_kept else 0,
+            cov(keep, fm) / FULL_COV, round(met_kept) if met_kept else 0,
             round(saved(dropped)), round(sum(dep_risk.get(d, 0) for d in dropped)),
             "", "", "", "", "", "", "",
         ], fmts=sfmt, band_row=(n % 2 == 1))
