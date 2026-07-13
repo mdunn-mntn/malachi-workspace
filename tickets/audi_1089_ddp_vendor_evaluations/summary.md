@@ -272,6 +272,22 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d5. Net-of-free value ladder (2026-07-13, user-requested) — decisions sheet table 3
+
+Universe first drops EVERY pair guid_log/augmentor touch → **2.37B pairs remain (39.6% of usable)**;
+all 2^8 paid-vendor subsets evaluated exactly on that universe (optima nested → clean add-order
+ladder). $ = pairs x each vendor's measured T2-per-sole-pair density (assumption disclosed: marginal
+pairs perform like its current sole pairs). Findings:
+- **Standalone (as the ONLY paid vendor): 33Across covers 44.7% of the net-of-free universe, worth
+  ~$397K/yr vs its $422K bill → 0.94x — near break-even as sole provider.** Everyone else standalone
+  is far under bill: 33A API $87K/0.50x, Sovrn $21K/0.18x, Justuno $7.8K/0.10x, Cybba $2.9K/0.13x.
+- **Marginal ladder (value AT each roster position):** #1 33Across $397K → #2 33A API $59K (0.34x
+  bill) → #3 5x5 $62K (flat) → #4 Predactiv $18K (flat) → #5 Justuno $7.5K (0.10x) → #6 Klickly
+  $2.2K → #7 Sovrn $2.7K (0.02x) → #8 Cybba $2.8K (0.13x).
+- **Reading: no metered vendor is worth its bill at any position after #1.** The ladder is the
+  negotiation sheet: pay each vendor at most its marginal value at its position; the only near-fair
+  contract on the roster is 33Across-as-primary — and only if the rest are dropped or repriced.
+
 ## 4d4. q3c visit-grain uniqueness LANDED (2026-07-13) — the (ip x domain x DATE) decomposition
 
 13.29B unique visit-days over 30d (usable). Validation anchor exact (vendor rows = mask holders).
