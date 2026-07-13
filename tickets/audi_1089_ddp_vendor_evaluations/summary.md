@@ -272,6 +272,22 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d10. Fangorn migration reframes the endgame (Matt Brorby, Slack 2026-07-13 3:49 PM)
+
+Matt confirms: (1) vendor removal has NO impact on Fangorn; (2) **most active advertisers are
+ALREADY migrated to DS46**; (3) no hesitation forcing the remaining DS13 advertisers to DS46 —
+Alex is working solutions for the tail. Since DS13 XOR DS46 per audience and DS46 = guid-only
+(then aug+guid feature store), **the vendor-dependent DS13 vertical-audience path is actively
+being sunset platform-wide.** User's take: "not seeing any reason to keep any vendors for MM."
+**Structural caveat for the memo: DS19 (MM Core) still consumes vendor svs** — DS13→DS46 kills
+the vertical-audience dependency, not the MM-Core one; vendor coverage loss would still shrink
+DS19 audience sizes (39.6% of usable pairs are vendor-only). But the measured serve-revenue
+dependency (T2, which already includes DS19-driven serves) is tiny, so the remaining question is
+pure reach/audience-size (q3d in flight). **Tuesday framing upgrade: we are paying $812K/yr of
+meters largely for a targeting system MNTN is actively migrating off of. Ask Alex for the DS13
+tail-migration timeline → schedule the vendor sunset to that date; interim = AUDI-1093 preemption
++ 33Across repricing.**
+
 ## 4d9. Roster P&L sent to leadership (2026-07-13)
 
 User sent boss the ladder's Bill | Standalone revenue | Pay range (10-30%) block with the two
