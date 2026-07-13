@@ -267,7 +267,7 @@ ASKS = {
     40: "Billed domains are cookie-sync infra junk (nextmillmedia 9%, programmaticx 8%) — send real page URLs, not sync pixels",
     33: "Fix the URL-doubling bug: 77% of URLs malformed (host concatenated twice, e.g. 'msn.comhttps') — even billed domains are corrupted",
     24: "Cleanest feed of the roster — asks: populate user_agent and advertiser_id (both 0%)",
-    36: "Scale is the problem (1.5M rows/day, ~700x below siblings); also one IP = 3.5% of all rows — dedupe server-side",
+    36: "Scale is the problem (1.5M rows/day, ~700x below siblings) — but per-unit economics are TOP-2 genuine on the roster: offer to KEEP if they 50-100x the feed at a flat/capped price; also dedupe server-side (one IP = 3.5% of rows)",
     25: "outbrain.com widget URLs = 52.7% of rows — send the publisher page URL, not the widget iframe URL",
     26: "Filter adult content at source (explicit domains in sample); otherwise strongest domain breadth on the roster",
     39: "94% of rows are *.myshopify.com checkout — diversify beyond Shopify or price accordingly; tiny scale (169K rows/day)",
@@ -515,6 +515,8 @@ SPEC = [
     R("T1 provable floor $/yr (score-gated)", "usd", lambda d: t1_ann(d)),
     R("Fee band, domain axis — low (sole classified x $3)", "usd", lambda d: None if d in FREE else float(q4[d]["sole_classified"]) * 3),
     R("Fee band, domain axis — high (sole classified x $13)", "usd", lambda d: None if d in FREE else float(q4[d]["sole_classified"]) * 13),
+    R("Scale-normalized: standalone revenue per 1M delivered usable pairs", "usd", lambda d: None if d in FREE else
+      (float(q3r[d]["pct_netnew_vs_free"]) / 100) * (t2_ann(d) / float(q3[d]["sole_pairs"])) * 1e6),
 
     S("PORTFOLIO (leave-one-out, exact from q3b)"),
     R("Exact drop savings $/yr", "usd", lambda d: None if d in FREE else
@@ -597,6 +599,7 @@ DIR = {
     "T1 provable floor $/yr (score-gated)": 1,
     "Fee band, domain axis — low (sole classified x $3)": 1,
     "Fee band, domain axis — high (sole classified x $13)": 1,
+    "Scale-normalized: standalone revenue per 1M delivered usable pairs": 1,
     "Exact drop savings $/yr": 1, "Drop savings as % of bill": 1,
     "Coverage lost if dropped (pp of pair coverage)": 1,
     "% of visit-days co-held by our free logs": 1,
@@ -754,6 +757,7 @@ DEF = {
     "T1 provable floor $/yr (score-gated)": ("Media on sole imps where a HIGH score (>=6666, non-RTC) GATED the serve - the narrowest dependency claim. Note: ANY score on a sole IP is vendor-derived (~1-6% of sole imps), and membership itself (97-99% of sole serves, q6b) already required the vendor - which is why T2, not T1, is the decision number.", "q6"),
     "Fee band, domain axis — low (sole classified x $3)": ("Domain-axis worth: unique classified domains x $3/domain-yr (roster-calibrated).", "q4"),
     "Fee band, domain axis — high (sole classified x $13)": ("Same at the generous $13/domain-yr ceiling.", "q4"),
+    "Scale-normalized: standalone revenue per 1M delivered usable pairs": ("The same-scale hypothetical: net-new-vs-free rate x measured revenue density - what 1M of this vendor's pairs would be worth standalone if all vendors delivered equal volume. CAVEATS: Sovrn's rank is junk-uniqueness-inflated (malformed URLs are 'unique'; only 181 sole classified domains); small vendors' densities are Poisson-noisy ($40-55/wk media); densities revert as vendors scale (marginal pairs overlap more).", "q3/q3r/q6"),
     "Exact drop savings $/yr": ("Bill x share of its credits that do NOT re-race to another metered vendor (first-reporter reassignment, measured over 30d). Flat vendors: savings = the fee itself.", "q3b"),
     "Drop savings as % of bill": ("Recovery rate of the bill if dropped.", "q3b"),
     "% credits vanish (were sole)": ("Credits nobody else re-reports - saved.", "q3b"),

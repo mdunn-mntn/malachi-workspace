@@ -272,6 +272,22 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d6. Scale-normalized (same-scale hypothetical) per-unit ranking (2026-07-13, user q)
+
+Standalone $ per 1M delivered usable pairs (= netnew-vs-free rate x T2 density): **Sovrn $255 /
+Cybba $247 / 33Across $170 / Klickly $167 / 5x5 $91 / Justuno $89 / 33A API $73 / Predactiv $72.**
+Reads: (1) **Sovrn's #1 is an ARTIFACT** — 99.7% "netnew" is malformation-driven uniqueness (181
+sole classified domains only) + Poisson-noisy density ($51/wk media). (2) **Cybba's #2 is REAL** —
+70% netnew, highest genuine density, clean feed, 362 sole classified on 8x less volume than Sovrn:
+the one DROP that scaling could flip → ask added: keep if they 50-100x at flat/capped price.
+(3) 33Across has top-tier per-unit AND scale — why it wins the ladder. (4) Predactiv ranks LAST at
+pair grain but its axis is domain breadth (226.8K sole classified, 33x anyone) — two value axes
+rank differently (TI-1027 lesson holds). **Scaling viability asymmetry: flat vendors = free upside
+(ask 5x5/Klickly/Predactiv for more data, costs $0); metered vendors = scaling multiplies the LOSS
+at $0.50 (max justified used-imp CPM ~$0.10) — only accretive with repricing.** Densities revert as
+vendors scale (marginal pairs overlap more) — the hypothetical is an upper bound. Workbook: new
+scale-normalized row in ECONOMICS-WORTH.
+
 ## 4d5. Net-of-free value ladder (2026-07-13, user-requested) — decisions sheet table 3
 
 Universe first drops EVERY pair guid_log/augmentor touch → **2.37B pairs remain (39.6% of usable)**;
