@@ -267,10 +267,11 @@ Walked the team (Alex, Allison +) through the valuation model and the workbook. 
   unaffected (flat fee, tiny value under any model). 33Across/Sovrn drop-savings numbers are
   model-dependent — VERIFY BEFORE TUESDAY.** Verification path: targeted_signal row grain (Athena
   only) or the matched-reporting pipeline code; mntn_matched_reporting is NOT in BQ (checked —
-  coredw has only usage_reporting_data + usage_reporting_audits). Question drafted for Victor/Ryan.
+  coredw has only usage_reporting_data + usage_reporting_audits). Question drafted for Victor/Ryan. **Filed as AUDI-1092** (verify credit model in targeted_signal,
+  recompute sole-credit shares, re-derive drop savings, reconcile vs June bills).
 - **Augmentor display rows = site visits with URLs** (Alex) — a bigger free source than the current
-  svs augmentor subset; integration ≈ a couple sprints (Data Eng). Action: scope a q-series analysis
-  of full augmentor as a vendor-displacement lever.
+  svs augmentor subset; integration ≈ a couple sprints (Data Eng). **Filed as AUDI-1091** (spike:
+  quantify full augmentor vs DS30, vendor displacement estimate, ingestion scope).
 - **Klickly Shopify nuance (Alex):** myshopify URLs are DISTINCT storefronts, each categorized
   separately (shoe store vs dress store) — softens the "94% one domain" concentration critique;
   matches our 117 reg-domains / 629 distinct hosts finding. Doesn't change the verdict (scale+value).
