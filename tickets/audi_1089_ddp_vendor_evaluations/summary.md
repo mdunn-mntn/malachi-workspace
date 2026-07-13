@@ -272,6 +272,16 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d9. Roster P&L sent to leadership (2026-07-13)
+
+User sent boss the ladder's Bill | Standalone revenue | Pay range (10-30%) block with the two
+punchlines: (1) no vendor generates more kept-margin value than it costs; (2) no metered vendor
+generates more than its bill EVEN at full-CPM revenue (33Across $397K < $422K, best case).
+Pushback-prep documented: density-extrapolation caveat (measured-only fallback: 33Across $270K
+observed < $422K still wins), two-axis breadth caveat for flats (Predactiv/5x5 = classifier
+coverage + HEM, don't kill on this lens), reach/option value excluded (needs 6-17x to close gap),
+annualization bases (week x52, June x12, single-credit regime verified).
+
 ## 4d8. Slack thread outcomes (#? — "Removing aug_log/guid_log from IPs we pay for", 2026-07-13)
 
 Sean Yang + Alyson + Matt Brorby engaged on the preemption finding: (1) Sean CONFIRMS svs feeds
