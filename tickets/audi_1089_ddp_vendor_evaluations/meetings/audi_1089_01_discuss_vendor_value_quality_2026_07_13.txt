@@ -1,0 +1,322 @@
+[00:00] Sweet. Okay. So to measure the quality of a vendor, right? At like basic math terms,
+[00:09] it's the total money the vendor provides minus the cost of the vendor.
+[00:14] It's pretty much what it's right. So the, in the case of advertising, the value of vendor provides
+[00:22] is in the IPS that we need to target. So for mountain matched, we care about things like
+[00:26] recency and the site that they visited right um this allows us to categorize ips into verticals
+[00:32] and you know the recency score for mountain match okay so in other words you can even break it down
+[00:38] further and say what we charge for our advertisers for x amount of impressions minus the cost of the
+[00:43] ip to acquire plus the cost of the ip to bid on is essentially the the value at least the maximum
+[00:51] value that these can come off of. Right. Um, so these types of things are pretty private,
+[00:57] but I can take ranges and estimates to us, like, you know, make guesses about how much we're making.
+[01:05] Right. So typical upcharge on our CPMs, it's not like a flat rate. It's typically like a
+[01:12] percentage somewhere between 10 and 30%. And, um, now that we're a public company, they actually
+[01:18] don't show the specifics, but you can gauge that it's about, we change charge of dynamics. So our
+[01:23] really large clients probably play closer to 10 and everybody else probably plays close. The average
+[01:28] is probably going to be around 20 CPM, right? Or sorry, not the CPM, but 20% upcharge on the CPM,
+[01:35] right? So obviously higher CPM is more valuable for us, right? Simply because we're going to make
+[01:44] more money. Even though it's a flat percentage rate, we're going to make more dollars per
+[01:49] person we bid on. Let's see here. With a blended CPM, we're typically around like $10 to $30,
+[02:01] which is, I would say it typically leans a little bit closer to 10.
+[02:06] So there is some value to having a certain number of reachable IPs. So I know we were
+[02:11] really big about reach. And there's a whole thing with deliverability about like, how many of those
+[02:17] IPs do we actually see in a given period of time, we don't have those answers, I don't believe at
+[02:21] all. That was kind of something I was alluding to when I talked to I brought that thing up with you
+[02:25] and Matt in that chat a little bit ago, but the more that we have, essentially, the more that
+[02:31] we'll be able to target and the more we have in each vertical. So for simplicity sake, the value
+[02:35] of a vendor is directly related to how much money its unique IPs provide us. Okay. So I'm going to
+[02:42] be simple here. If we have one vendor, it's very easy to calculate this. Okay. So let's just deal
+[02:49] with one vendor for now. Okay. If that same vendor provides us with 1 million IPs, but we only use,
+[02:55] so this is something I found out. We only pay for what we use, which I don't even know
+[02:58] how that happened, but that's crazy. Okay. But we only use 500,000, say half of the million that
+[03:04] they give us. We now have a pool of 500,000 IPs to target. However, not all IPs are the same.
+[03:10] Of these 500K, some are going to be highly scored, some low, some may never be seen during the
+[03:15] entirety of the advertising campaign during bid times. So we're going to be getting a lot of IPs
+[03:20] that we actually never, ever bid on ever, right? The number of IPs that we see in the augmenter log
+[03:26] and impression log shows us the ones that we bid on, right? Including the ones we didn't win.
+[03:31] And then finally, there's the win logs that shows us exactly which IPs won.
+[03:35] So in the end, the number of, I'm reading off a thing I wrote,
+[03:39] the number of IPs that we won exclusively from that vendor is the value we received.
+[03:44] So let's say this vendor's unique IPs alone provided us a total of 10,000 bids in one week.
+[03:51] So every single IP could be traced to them, right?
+[03:54] Assuming an average CPM of $10 to $30,
+[03:56] we can conclude that these vendors cost us $20 per thousand bids. Okay. So 10,000 bids or $200.
+[04:07] Okay. Then we upcharge 20%. So we made $40 from this vendor in one week, minus the CPM cost of
+[04:15] purchasing it in the first place, which this is where we get into the complexity of answering
+[04:19] this question, because some are on contract, some are on a flat fee, some are, you know, CPM,
+[04:24] summer variable cpm right it varies so for the year if we were to multiply this for the week
+[04:29] we'd end up with 2080 dollars that's how much money we made just the value that's the cap though
+[04:35] so if we're paying 2080 dollars we've met nothing because we basically wiped it out i know this
+[04:41] sounds really basic but like the point of bringing this up is now this is good to go through yeah
+[04:46] because i was like trying to do this without going through this and i'm like okay so now we have the
+[04:52] other logs where you can collect information. So if we saw an IP provided by this vendor in our
+[04:57] own good log in the last 30 days, it's not valuable because we could have just got it ourselves,
+[05:01] right? Same thing with Augmentor log, but I don't think we're doing anything with that yet.
+[05:07] Now let's add some complexity. So this is where it actually gets a little bit complex. So let's
+[05:10] say we want to add more vendors. Each vendor is not going to add 100% net new IPs. So for the
+[05:15] overlap, luckily we only pay for the IP that was freshest from each vendor. So we don't overpay.
+[05:21] I don't know if that's universally true though.
+[05:24] Like I don't know if that's the case, but I digress, right?
+[05:28] However, how valuable that vendor gets is more complex.
+[05:32] So if we're trying to maximize profit, we would want to choose a single vendor with
+[05:36] the most data.
+[05:37] So there's no overlap.
+[05:38] However, the value of every vendor then starts to become what unique sole IPs provided by
+[05:44] that specific vendor ended up making us money.
+[05:47] So in other words, if you have two vendors and they have 99% overlap, right?
+[05:51] There's obviously intrinsic value that both of them provided, but the sole individual value is just going to be the unique IPs that this one, one vendor versus the other provided you, right?
+[06:02] Because what happens is if there's overlap, what we're really gaining by adding another vendor is only the 1% that we actually won that the other one couldn't.
+[06:14] So in other words, it's only valuable to us if the leftover IPs, the cost that we pay for them is less than that.
+[06:28] Otherwise, we might be gaining some money, but we're probably going to be overpaying for those because we already get it all from one vendor.
+[06:35] So we don't need to essentially...
+[06:38] So like I'm saying, it depends, right?
+[06:40] If we're only specifically paying for what we use, use is like kind of an interesting word because use doesn't necessarily mean we got value from it, right?
+[06:51] That just means we scored it.
+[06:53] Okay.
+[06:54] So it's, anyways, so I'll get to that.
+[07:01] So basically, there's a couple things we can do, but hold on, where am I at here?
+[07:10] Okay, so our goal to maximize this matters.
+[07:13] We want the least number of vendors that can provide us with the most data.
+[07:18] Or we can try and get as many vendors as possible and renegotiate prices with them.
+[07:22] That's the other thing we can do.
+[07:23] I don't think that that's a super valid method because the amount of overlap with some of our vendors is so high
+[07:29] that if we were to come with them in a number and say, you're only worth this much, they'd laugh at us, right?
+[07:36] So then the last, I'm kind of scheming through this here.
+[07:38] The last piece of the puzzle is percentage. So higher performance IPs, those that scored
+[07:43] 8,000 plus, 10,000 being the best, et cetera, are typically they're going to be worth a little bit
+[07:48] more to us, not because of a bid thing, but just simply because there's this arbitrary value on
+[07:55] performance and how much more value is something that's more performed than others. It's hard to
+[07:59] quantify. And I don't think that for the sake of this, it even matters, but there is some value,
+[08:05] intrinsic value there. But we could say that something that has a higher percentage of high
+[08:10] intent IPs that we used, they're going to be higher CPM. We're going to make more money from
+[08:14] it. So for some weird reason, let's say we had two vendors and the sole IPs from one vendor versus
+[08:19] the sole IPs of the other, one was like 50% high intent and their CPMs was $20. And the other one
+[08:25] was 10. We're going to be making more. And so there's some value there. So when we factor all
+[08:34] those together, we can calculate basically the vendor value. And I guess, let me just show you
+[08:42] the numbers now. So I've talked a lot and I'm almost done here, but these, this is every number
+[08:49] you could probably want to know with quality. But basically when it comes down to it is,
+[08:55] if you look here, these are the metered bills. So this is how much we're actually paying. And so
+[09:00] this is like how much it costs us to basically keep all these vendors this is the coverage and
+[09:05] ips that they have and then this is how much we would save if we were to drop these vendors so
+[09:12] if we drop justino clickly silver and siba we are still hitting 98 of our coverage and
+[09:22] we saved 207 000 and we only actually gained 14 000 worth of value from them
+[09:29] right now this is where it gets a little bit complex and this is why it's not simply a simple
+[09:36] answer right technically from the free logs alone our coverage goes way down right we're at 60
+[09:45] but the value that we get from adding these additional ips is actually like half the value
+[09:56] we're paying for them in total, if that makes sense. So we are getting a bunch of additional
+[10:02] IPs and there's value in the reach there. But from what I can see, at least what we're paying
+[10:08] for these, it doesn't supersede it. And otherwise we're paying $800,000 to get $400,000 in return.
+[10:15] so there's some things to discuss here i like for right now i just i i don't we don't necessarily
+[10:29] have to go too deep into that but my recommendation is that we drop these four because we basically
+[10:37] get all the coverage without them and it makes our bill away cheaper um and i mean 98 percent
+[10:42] coverage is already, I mean, it's not going to make a difference. We're talking, we're going to
+[10:48] basically lose out on $14,000 worth of sole IPs that would have provided us. This is not factoring
+[10:55] the value of just having those IPs available in the bid log or whatever, having information on
+[11:01] them. But, um, that's kind of where we're at now. So basically what, what I want to gain from
+[11:07] everybody is that number one, there is extreme value in the GUID logs, and then we're not getting
+[11:15] anything from the Augmentor log. So we could be basically providing a ton of value without
+[11:21] spending money on it. The second one is, I didn't know the answer to this. Maybe this could be a
+[11:28] really quick question here, but LiveRamp share this in DeepSync. We pay a ton of money for,
+[11:32] but is there a reason why we're not being able to use those for the site visits
+[11:37] do we have site visits or those i know live ramp and share this our intro segments
+[11:44] deep sync i think is crm um did you see site visits for them no i didn't but what i was saying
+[11:52] is if we already have contracts with them if they can provide us site visits like recency
+[11:57] it might be more valuable to just go with somebody who already has a contract.
+[12:02] I mean, it might not be possible. Maybe they don't have recency data.
+[12:05] So at least with column eight, share this productive, I think
+[12:09] basically that's what's going on there.
+[12:15] Okay. Oh, I see. Share this, share this. Yep. That makes sense. Okay.
+[12:21] But LiveRamp, I don't know, Alex, you've had more interactions with them than I have.
+[12:27] Do they have site visit data we could buy?
+[12:31] I don't, at least the stuff I've interacted with, I don't think so.
+[12:35] I think they are an aggregator of segment data from other partners.
+[12:42] So they have like, you know, 200 partners that have all their different methodologies
+[12:46] for building interest segments.
+[12:48] And then they are like a marketplace for that data.
+[12:50] So their partners probably have visit data that they're using to build the interest segments that end up in LiveRamp.
+[13:01] Okay.
+[13:04] So I think that what I really wanted to bring out, and this is why it's hard because I don't get full contract numbers and I'm only basing this off of these like old Excel files or base CPMs.
+[13:16] but basically they're the more vendors we add together, the less valuable the vendors become,
+[13:23] right? Because, um, just, there's just so much overlap for it. And so even though we pulled the
+[13:31] data into DS 13, whatever, um, it doesn't mean it's valuable, um, because we, we might not end
+[13:40] up using it at all. So if we were to, so I did basically this leave one out method. So what
+[13:45] you're seeing here, actually, I took the Cartesian product of every possible combination of vendors
+[13:50] and what value they provide individually. And one of the reasons is like, let's just imagine we have
+[13:55] all eight vendors and I'm taking the sole unique IPs that that vendor provides, right? None of the
+[14:02] other ones have, and they got bid on and we won and stuff. So we made money off of them. That was
+[14:06] unique. Every time you remove a vendor, that sole value changes, right? So if I'd like suddenly take
+[14:12] out quickly there's going to be less overlap and so the sole value goes up and so basically i took
+[14:16] out i basically did every cartesian product to figure out which provides the most value with
+[14:22] the least amount of change um and that's where you get this number where you are only keeping
+[14:28] these four vendors isn't there an asterisk or or an asterisk on the coverage value that way
+[14:35] You're doing this at the IP level, but the way we use this data is at the IP URL.
+[14:45] So even if an IP overlaps 100% between vendors, but it's for different visits, wouldn't those be net add for us from a scoring perspective?
+[14:56] That is true.
+[14:59] That's way harder to evaluate.
+[15:01] Yeah, and I also have this number here.
+[15:05] which is the IP slash domain share.
+[15:12] And, oh, where is it?
+[15:15] Yeah, unique IP and domains pairs delivered.
+[15:18] I do believe I did calculate that somewhere in here.
+[15:20] But you can see, like, so we're getting 30 billion rows for 33 across,
+[15:25] which is still a lot.
+[15:26] I mean, this is our biggest one.
+[15:28] But we're only keeping 2.3 billion after all is said and done.
+[15:32] there are some like kind of low level things that might I don't know how much it's going to optimize
+[15:38] but like for example we could be like hey stop sending us youtube don't or yahoo domains because
+[15:42] we just filter them out it's like 25 of everything you guys send it's like here like that's a lot of
+[15:48] data you know if we tell them to stop sending us that stuff we could probably save some money by
+[15:53] that um shopify clickly is basically like look it's like 94 shopify so I don't know how super
+[16:01] valuable it is um well because those are all unique storefronts right so we categorize all
+[16:08] the different shopify urls separately like you could have a shopify domain that's like a shoe
+[16:18] sales versus a shopify domain that's dresses this is great the shopify i thought that you
+[16:23] yeah they all they're like shopify.com slash like id oh i didn't know that i thought that
+[16:29] there was a way to obfuscate it because like i know i'm aware that there's shopify but i thought
+[16:32] that it was like kind of like a redirect link type thing so the url would come through i've just seen
+[16:38] same thing looking at like bottom of keywords of how we're classifying this stuff i've seen a lot
+[16:42] of like shopify urls but they all go to different places so um not like not totally confirmed but i
+[16:50] think pretty sure that's how the data comes through um yeah so let me let me get to i guess
+[16:59] the question here. So what I basically want to tell Paulo is that Clickly is not valuable,
+[17:05] at least with all the other vendors. There's no reason for us to keep it. So basically,
+[17:09] unless they're like free, just drop it. So for example, this is how much department revenue
+[17:14] we're, we're, we're risking to lose if we drop quickly. So with the sole IPs that Clickly
+[17:19] provided and also the scale, it's mostly scale thing. It's not just with IPs, $2,159 is how much
+[17:26] the max amount of money that they're making us. So they're not making us, I mean, they are making
+[17:31] us some money. It's $2,000. So I basically am saying is, well, unless Clickly is essentially
+[17:35] free, it's not worth to include them because all the other IPs pretty much, all the other vendors
+[17:41] already provide all the IPs or the value. So wait, if this one is the Shopify though, then
+[17:48] um are you sure about that well because if you it depends on what you're where you're valuing
+[17:56] evaluating it because if you take only the clicky clickly ips and for the last 30 days and the sole
+[18:04] ips that they won so none of the other vendors got it they only provided us at most 2159 dollars
+[18:10] worth of value so if we were to remove quickly yeah so like because that's the thing is that
+[18:16] That's not valued just Clickly alone.
+[18:19] Like if I were to remove every vendor,
+[18:20] Clickly becomes much more valuable
+[18:22] because then they're the sole provider of those IPs.
+[18:27] But yeah, that's basically where this comes down to.
+[18:31] So I have a question.
+[18:34] So, you know, this analysis is based off of,
+[18:37] you know, our current Mountain Match high intent thinking.
+[18:42] What if we were to think of this
+[18:43] in terms of incrementality?
+[18:45] how might this evaluation be different because i think as we're going into the next year um
+[18:50] that's going to be important and we should consider that also that is true
+[18:57] i actually don't think that's going to make much of a difference because i am not giving these
+[19:09] revenue numbers dependent on how what what they bid on um so this is 2159 dollars just
+[19:20] regardless of whether or not it was scored high intent or low or mid or anything so the only
+[19:26] additional change is like this is the maximum amount of money they're worth um because this
+[19:32] is essentially what our margin would have been on assumed margin would have been on the cpm that
+[19:37] they provided so i don't i don't remember the name of this table on this is the unfortunately
+[19:44] i think victor built this maybe you know allison but like is it a targeted signal yeah are the
+[19:50] cost numbers based on targeted signal of like how we attributed uh two different partners
+[19:56] because that'll tell you that'll you won't have to build
+[20:00] logic of like who got paid for which ip yeah yeah so my only limitations here is that knowing
+[20:07] exactly what the billing um and what we're paying for each of these vendors which i know is
+[20:13] classified information a lot of times um and exactly that like the credit mine i'm just assuming
+[20:20] that one got the credit across the board and i know that we said that we only pay for what we use
+[20:27] but I don't know if that's consistent for every vendor and how that logic goes in exactly
+[20:33] I think we have a table with all the credit so then that part's taken care of okay yeah it might
+[20:41] it actually might be in that um yeah I don't know if cost like the dollar amount is in there
+[20:47] what's it called uh
+[20:48] I don't remember where it is.
+[20:56] Whatever.
+[20:56] Anyway, it might have the CPMs in it.
+[21:01] But yeah, I think it's worth looking at that targeted signal table with an assumption of like some CPM.
+[21:08] because I believe what they do is they moved from whoever is the cheapest that was associated with
+[21:15] the impression to like every big everybody gets a piece of the pie if you know you gave us the
+[21:21] information to make that impression so like if I see a site visit and I assign someone to a certain
+[21:29] keyword or vertical or whatever and then I bid on that IP if I got that information from quickly
+[21:36] just uno and 33 across it gets the what we pay gets split three ways gotcha okay
+[21:44] yeah because you might be able to leverage that to do this similar analysis but then look for
+[21:51] like your clickly example how often is clickly the only thing getting credit
+[21:56] because it's fractional credit for the same thing then it doesn't matter i don't even think it
+[22:04] matters even with them. I mean, cause if you just look at the sheer dollars that we're getting from
+[22:09] Clickly, it's so negligible. Um, so, and then CPMs are another ones too. Cause I know that
+[22:15] some of them have CPMs, but I'm like, is that CPM based on only what they pay as well?
+[22:21] What do you mean? Or sorry, what we use, excuse me. Is that only? Yeah. So the CP CPM is based on
+[22:27] what we use. That's some awesome, that was the best contract ever. How did they plan that?
+[22:34] Um, okay. Well, here's one more thing I want to kind of bring up here is like, still, this is
+[22:40] still true, right? So if I basically, this is good logs only, I don't think I did augmenter log. Um,
+[22:49] I don't know if augmenter log, would you mean be valuable? Cause there's not like, I guess there's
+[22:52] the visit. If it's in the augmenter log, it means they're on somewhere that you can be delivered.
+[22:55] So there's probably the URL in there, but yeah. So if you look at the display, um, option, uh,
+[23:02] yeah display augmenter logs um those are site visits yes okay that would be perfect so here
+[23:10] here's what i want to bring up but this is where i'm hesitant right i know we had a huge thing with
+[23:15] reach with mountain match so again i don't know what the value is of the ips being literally there
+[23:23] scored ready to go in the in the bid or uh like if we already have a scored ip and we're looking
+[23:30] the augmenter log for bidder, we need to have more IPs than we're actually going to bid on,
+[23:35] right? We can't just, so having those additional IPs that don't get used, there is some sort of
+[23:40] inherent value of them being there, even if they didn't get bid on in one, right? But if you look
+[23:46] here at the free logs, so we're not paying any money for it. We do only get 60% coverage. So
+[23:53] that's terrible. I wouldn't recommend that we go down to 60% coverage, but I think there's an
+[23:57] argument to me made here that we're, we would lose about half a million dollars worth a year in, um,
+[24:05] sole IPs that came from vendors, but what we're paying, or at least what I understand we're paying
+[24:11] from across all our advertisers, we would save like $800,000 a year. So like the, it looks net
+[24:18] negative from like a pure financial standpoint. Now this is assuming that I have all the numbers
+[24:24] correct for the vendors. But like, this is kind of what I'm saying is that with mountain match,
+[24:28] it's like, yeah, we were going to lose 40% of the IPS that we currently have and able to target,
+[24:33] but we only made $416,000 and we paid 800,000, but that is not factoring in the fact that,
+[24:40] you know, those IPS had to be available and be able to be bid on. So I don't think that it's
+[24:46] necessarily like a direct one-to-one translation. We will save, I think it would have a larger
+[24:51] impact but it's just something to consider um because it looks like on paper that we could
+[24:59] just drop all the vendors and still be profitable um and save four hundred thousand dollars a year
+[25:03] something where's the where's the eight hundred thousand come from like how's that calculated
+[25:08] from the the current s so with all the contracts because i actually have the contract numbers of
+[25:13] how much we're paying per year for the vendors because some of them are just on flat fee like
+[25:16] Like if I look, I think I put them here.
+[25:22] Where are they?
+[25:25] It's in a different table, I think.
+[25:27] But anyways, Ryan shared with me the vendor contracting.
+[25:31] And then the other ones are just assumed CPM.
+[25:34] So 50 cent CPM of what we used.
+[25:36] So that's how I got that number.
+[25:37] I just added all the contracts together.
+[25:39] And then the ones that are based on a CPM,
+[25:41] I just estimated based on the IPs that they had.
+[25:44] So this number is not maybe exact,
+[25:47] but it does kind of show us that, you know,
+[25:49] cut all the vendors, save $100,000.
+[25:51] But I don't think that's a good idea
+[25:53] because I don't know if the big impact,
+[25:55] it would probably have a huge impact on Mountain Match
+[25:57] if we suddenly had 40% less IPs in there.
+[26:09] And I think Clickly is low risk, by the way.
+[26:11] Like, I wouldn't change my opinion on Clickly.
+[26:14] I could definitely do the other analysis, but I don't think they're providing us much value.
+[26:18] So I think I would still probably say to Apollo, we could drop quickly unless they're essentially free.
+[26:35] Here's my thinking.
+[26:37] So this is just based on good luck, correct?
+[26:39] Mm-hmm.
+[26:40] I think we need to take a look at Augmenta log and do a similar kind of analysis with the caveat being that we haven't done the work to integrate any of this yet.
+[26:53] And it would take us like, you know, a couple of sprints to get everything into the pipelines that we currently have or something like that.
+[27:00] I think you should also take a look at the targeted signal table and see how often these vendors are contributing to impressions.
+[27:13] Just to like, you know, maybe double check the math that you did here in a different way.
+[27:18] um and i don't know i feel like it's worth also you know taking another look at the domains and
+[27:28] seeing like what unique information we would lose across these different vendors like i don't care
+[27:34] if if one of the vendors is providing like a million yahoo.com you know like news articles
+[27:42] if they're browsing that kind of stuff but if it's like the shopify pages and they're buying
+[27:47] things like that has a different value. Well, would you say, what value would you say? Because
+[27:55] like I, again, I already went, I went to the wind logs and saw like how much value they actually
+[27:59] made from for us. What would you say that is the value of an IP that we, let's say it's very highly
+[28:07] scored. It's a retail page, you know, nike.com or something like that, but it never gets bid on.
+[28:12] that's a that's a hard one for me to understand is like what value do they provide there's
+[28:19] potential value there um if it never gets bid on is it just an i mean you'd have to assume they
+[28:28] don't own a tv or they're outside of the u.s uh i would assume the answer is they're outside of
+[28:36] the U S in which case they're probably still valuable for modeling, um, behavior, but not
+[28:46] for like, you know, actual bidding, if that makes sense. Okay. Um, I know Paula wants an,
+[28:56] well, I think it was more of like a best case scenario on Monday today for an answer for
+[29:03] clickly because they're going to do that um i guess what recommendations you have i mean what
+[29:07] i can tell that clickly is not providing a lot of value but i could also let paulo know that
+[29:11] maybe we could just recontinue the contract for x amount of dollars or something
+[29:15] yeah i mean if you you're the you looked at the numbers if you really think they're not valuable
+[29:25] and we're gonna save money like and they're only contributing like less than one percent of the
+[29:31] IPs that we have access to, that's fine.
+[29:36] Okay, cool.
+[29:36] All right.
+[29:37] I would just sanity, the only sanity check extra I would see, want to see is the targeted
+[29:43] signals, just to say like, how often are they getting sole credit?
+[29:49] Because if it's always fractional credit with our other vendors, then I think it validates
+[29:52] what you're showing here of super high overlap.
+[29:56] We're getting it from other places and they're getting fractional credit.
+[29:59] if it's like, yeah, they're only Shopify, but 80% of the time, they're the only one getting credit
+[30:05] on these used IPs, then that changes the answer. Cool. Well, let's jump into brainstorming. Thank
+[30:10] you guys very much. Talk soon. Yeah. See you there.

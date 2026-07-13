@@ -246,6 +246,46 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   unique IPs are genuinely dark households (rotating/low-activity tail), and since the ad_served_id
   join credits cross-device visits, 116/wk is generous if anything. Sole VR rows and all DROP
   verdicts stand. Canonical queries: q7e_vr_baseline.sql, q7f_sole_ip_activity.sql.
+
+## 4e. Team review meeting 2026-07-13 (meetings/audi_1089_01_discuss_vendor_value_quality_2026_07_13.txt)
+
+Walked the team (Alex, Allison +) through the valuation model and the workbook. Outcomes:
+- **Klickly answer APPROVED for Paulo today: drop unless ~free** ("if they're only contributing <1%
+  of the IPs... that's fine"). Requested sanity check: targeted_signal — how often does Klickly get
+  SOLE credit vs fractional (if always fractional alongside others, overlap conclusion validated).
+- **BILLING MODEL CHALLENGE — possibly FRACTIONAL, not first-reporter-wins.** Teammate: credit
+  "moved from whoever is cheapest... to everybody gets a piece of the pie" — split across ALL
+  vendors contributing the signal behind an impression (e.g. 3-way split). **Corroborating evidence
+  found post-meeting:** (a) usage_reporting_data per-vendor impressions are DECIMAL (Justuno June
+  19,528,654.53 — impossible under integer first-reporter counting); (b) coredw.usage_reporting_audits
+  carries ONE platform-wide impressions total per month (1.41B for 2025-05) identical across vendor
+  rows, with only usage $ differing — consistent with per-vendor fractional shares x $0.50.
+  **Impact if fractional:** q3b LOO drop-savings change — under a fixed split pie, dropping a vendor
+  saves only its SOLE-credit fraction (shared fractions redistribute to surviving contributors);
+  whether free/flat sources count in the divisor determines how much redistributes to meters.
+  Sovrn's savings could revert toward the v1 ~$14.5K figure instead of $109K. **Klickly verdict
+  unaffected (flat fee, tiny value under any model). 33Across/Sovrn drop-savings numbers are
+  model-dependent — VERIFY BEFORE TUESDAY.** Verification path: targeted_signal row grain (Athena
+  only) or the matched-reporting pipeline code; mntn_matched_reporting is NOT in BQ (checked —
+  coredw has only usage_reporting_data + usage_reporting_audits). Question drafted for Victor/Ryan.
+- **Augmentor display rows = site visits with URLs** (Alex) — a bigger free source than the current
+  svs augmentor subset; integration ≈ a couple sprints (Data Eng). Action: scope a q-series analysis
+  of full augmentor as a vendor-displacement lever.
+- **Klickly Shopify nuance (Alex):** myshopify URLs are DISTINCT storefronts, each categorized
+  separately (shoe store vs dress store) — softens the "94% one domain" concentration critique;
+  matches our 117 reg-domains / 629 distinct hosts finding. Doesn't change the verdict (scale+value).
+- **IP x URL grain point (Alex):** IP-level overlap understates net-add (same IP, different URLs =
+  new scoring signal) — CONFIRMED already handled: q3/q3b coverage is (ip,domain)-pair grain.
+- **Margin/CPM color:** upcharge 10-30%, large clients ~10%, average ~20%; blended media CPM $10-30
+  leaning ~$10 — supports the 15/20/30% ladder with fair = T2 x 20%.
+- **LiveRamp site-visit question:** LiveRamp = aggregator/marketplace of partner segments; likely no
+  direct raw site-visit product (their PARTNERS hold the visit data). ShareThis-the-3P-vendor is the
+  same company as sharethis_predactiv's ShareThis half. deepsync = CRM.
+- **Domain-type value follow-up:** differentiate junk browsing (yahoo articles) vs commercial pages
+  (shopify checkout) when valuing unique domains lost per vendor.
+- **"Drop everything" boundary case:** all-vendors-dropped saves ~$800K/yr contracts vs ~$416K/yr
+  dependent value on paper, BUT costs ~40% of MM's targetable IPs — reach/liveness value isn't in
+  the dependent-revenue number; not recommended, framing only.
 - **Ryan's recommended trace = runbook steps 4-6** (svs → classified (wcv) → scored/delivered): measure
   per-vendor survival through the DS13/DS19 consumers, not raw-feed junk. Next runbook session (q3/q4)
   should add the consumption funnel: raw rows → parseable → survives consumer filters → classified → scored.
