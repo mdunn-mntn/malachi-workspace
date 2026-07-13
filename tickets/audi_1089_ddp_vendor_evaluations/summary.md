@@ -247,6 +247,31 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
   join credits cross-device visits, 116/wk is generous if anything. Sole VR rows and all DROP
   verdicts stand. Canonical queries: q7e_vr_baseline.sql, q7f_sole_ip_activity.sql.
 
+## 4d2. AUDI-1092 RESOLVED same-day (2026-07-13): billing regime change found — cost analysis VALID
+
+**Decisive evidence (residue analysis, `usage_reporting_data` MM vendors 24/28/33/36/40):** the
+table is row-per-(vendor, domain/segment, month); Jan-Apr 2026 rows are ~100% FRACTIONAL impressions
+(clean 1/N fractions: .5, .33, .25, .67, .83 = halves/thirds/quarters/sixths — equal credit SPLIT
+across contributing vendors), then **May-Jun 2026 rows are 100% INTEGER — single-vendor credit.**
+The meter changed regimes at reporting month 2026-05 (coincides with the augmentor-into-svs release
+2026-05-07/12). Both accounts were right at different times: teammate's "everybody gets a piece" =
+the Jan-Apr era; AP-3779 first-reporter = the current era.
+
+**Implications:**
+- **June-bill-based cost analysis (q3b LOO) is VALID** — it modeled the current single-credit regime.
+  Winner-rule nuance: savings are EXACT under first-reporter; under cheapest/free-priority (the only
+  alternative) free logs win every overlapping re-race, so savings only go UP — q3b figures are
+  floors either way: Sovrn ≥$109K, 33Across ≥$386K, 33A API ≥$143K, Justuno ≥$77K, Cybba ≥$21K/yr.
+- **Value ranges (T1/T2/WTP) never depended on the credit model — unchanged.**
+- **Never use Jan-Apr 2026 bills for LOO** — fractional regime, different arithmetic.
+- Total billed MM imps fell 36% Apr→Jun (212.9M → 135.4M): regime switch + augmentor displacement.
+- Pair-grain model fit is confounded by serve-volume weighting (both models TV ~20pp) — side-finding:
+  **Sovrn collects 14.3% of billed imps on a 1.9% credited-pair share** — its credits concentrate on
+  high-serve-volume signals (active junk-domain IPs), explaining its stubborn bill.
+- Remaining (minor, still open in AUDI-1092): confirm the winner rule (first-reporter vs
+  free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
+  (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
+
 ## 4e. Team review meeting 2026-07-13 (meetings/audi_1089_01_discuss_vendor_value_quality_2026_07_13.txt)
 
 Walked the team (Alex, Allison +) through the valuation model and the workbook. Outcomes:
