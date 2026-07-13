@@ -1219,3 +1219,7 @@ A wave of campaign groups (CGIDs) failed to sync to Beeswax following a DevOps c
 **Related ticket:** CAM-796 (longer-term fix).
 
 **Note:** CGID 127404 was a separate issue (not part of the sync fix) and was resolved independently. (via Jordyn Betzer, #mission-control, 2026-06-09)
+
+- **LiveRamp (3P interests, DS35) is an AGGREGATOR/marketplace** of ~200 partners' segment data,
+  not a raw-data originator — its partners hold the underlying site-visit data; LiveRamp itself
+  likely has no direct site-visit product to buy (Alex, AUDI-1089 team meeting 2026-07-13).

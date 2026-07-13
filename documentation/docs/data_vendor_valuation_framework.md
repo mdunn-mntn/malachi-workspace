@@ -109,3 +109,24 @@ Three lenses added on top of this framework — full methodology with worked Kli
    nest (then add-order = marginal-coverage ranking).
 Negotiation translation: justified CPM on ALL delivered rows / on USED (credited) imps vs the rate paid /
 flat-contract equivalent band.
+
+
+## 2026-07-13 extensions (AUDI-1089): portfolio lenses beyond leave-one-out
+
+- **Net-of-free value ladder:** drop every unit your OWN free sources capture from the universe
+  first; then (a) STANDALONE value per vendor = its net-of-free units × its measured revenue
+  density (vendor as your only paid source), and (b) MARGINAL ladder = greedy add-order pricing
+  each roster seat (verify optima nest). Standalone vs marginal is the negotiation: a vendor can be
+  near-fair alone and worth 2% of its bill at seat 7. Label $ as DEPENDENT REVENUE; pay-up-to =
+  × margin (15/20/30%).
+- **Visit-grain (unit × date) accounting:** the value/billing unit is (ip, domain, DATE) — new date
+  on a known pair = recency refresh (real, billed); same-date co-delivery = waste. Run coverage at
+  both grains; if they agree (ours: within 6%), conclusions are grain-robust.
+- **Free-preemption lens (substitutes for drops):** if billing lets paid vendors earn credit on
+  units your free sources also capture, quantify bill × free-cohold share = recoverable WITHOUT
+  losing the vendor's unique data. Compare against drop savings before recommending drops.
+- **Scale-normalized per-unit value:** netnew-vs-free rate × revenue density, per 1M USABLE units
+  and per 1M RAW shipped units (dirty feeds deflate on the raw basis). Finds "good but tiny"
+  vendors whose verdict scaling could flip (Cybba) and exposes junk-uniqueness artifacts (Sovrn:
+  #1 usable-basis, #4 raw-basis). Flat-fee vendors: scaling is free upside; metered vendors:
+  scaling multiplies the loss unless repriced.

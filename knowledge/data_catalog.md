@@ -2189,7 +2189,10 @@ Small internal dataset for data usage reporting/auditing.
   MM (24/28/33/36/40 @ $0.50), interests (17 ShareThis @ $0.95; 35 LiveRamp IP variable_cpm, implied
   $1.19–1.32), CRM (29 deepsync @ $0.50). Flat-fee vendors (25/26/39) never appear.
 - **Meter math:** `usage = impressions × (registry fixed_cpm / 1000)` — exact per month for every
-  fixed-CPM source Jan–Jun 2026. `impressions` carries decimals (1/N credit shares on shared IPs).
+  fixed-CPM source Jan–Jun 2026. **REGIME CHANGE at reporting_month 2026-05 (AUDI-1092 residue
+  analysis, 2026-07-13):** Jan–Apr 2026 `impressions` are ~100% FRACTIONAL (clean 1/N fractions =
+  credit split across contributing vendors); May 2026+ are 100% INTEGER (single-vendor credit).
+  Never mix the regimes in savings arithmetic.
 - **Join to registry:** `data_source_id` here is INTEGER; `tpa.direct_data_partners.data_source_id`
   is STRING — cast one side. Use `reporting_month` for month rollups; closed months have `status='Complete'`.
 - **`dt` = MONTH-END SNAPSHOT ONLY** (last day of reporting_month) — mid-month dt filters silently return
@@ -2197,8 +2200,14 @@ Small internal dataset for data usage reporting/auditing.
   domains, populated ONLY for MM site-visit CPM vendors (24/28/33/36/40); ~50% of 28/33/40 imps sit on
   unattributed aggregate rows (Justuno 80% / Cybba 86% attributed). `data_source_category_id` is NULL for
   ALL MM-vendor rows — no DS13/DS19 split in the meter (that lives in Athena `targeted_signal`).
-- **Credit semantics:** first DDP to report (ip,url) per DATE, paid only if used (DS13 OR DS19 path);
-  see data_knowledge § Site Visit Signal for the full billing chain.
+- **Credit semantics (current, May 2026+):** single-vendor credit per used (ip,url,DATE) —
+  first-reporter (AP-3779) or cheapest/free-priority (winner rule unconfirmed; dbt
+  `targeted_signal_ds_13/19`); paid only if used (DS13 OR DS19 path). **Free logs do NOT preempt
+  paid credit (Sean Yang 2026-07-13, AUDI-1093).** Jan–Apr 2026 was fractional-split. See
+  data_knowledge § Site Visit Signal.
+- **Sibling `bronze.coredw.usage_reporting_audits`:** monthly anomaly-gate table — per vendor-month:
+  usage, prior_usage, usage_diff_pct, gate1/2/3 flags, final pass/override. Its `impressions` column
+  is the PLATFORM total (identical across vendor rows in a month) — a gate stat, NOT per-vendor credit.
 - **Kafka-path svs vendors have BQ landing tables:** `fpa_dsid{24,33,39,40}_kafka_log` (per
   `gcp_pixel_page_view_signal_*_backfill_workflow.py` DAGs) — queryable raw landings for
   Justuno/Sovrn/Klickly/33A API before GCS.

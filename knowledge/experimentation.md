@@ -1727,3 +1727,19 @@ When a delivery-composition / HI-share shift needs a cause, the HHST intent gate
 
 ### Lookback-window heterogeneity is a hidden confound when pooling advertisers (AUDI-1070)
 Before pooling advertisers for a YoY / cohort / DiD visit-rate or conversion analysis, confirm they share the same lookback window. Per-advertiser windows differ (conversion default 30d, but 90d page-view is common) — see `silver.audience.advertiser_configurations` (`page_view_lookback`, `conversion_lookback`). A mixed 30d-vs-90d set makes VR/conversion LEVELS non-comparable across advertisers and can distort the effect. Also reproduce any decline under BOTH first-touch (`industry_standard`) and last_touch, and resolve the lens as-of BOTH years (advertiser_setting_archives) — a lens/window mismatch alone can manufacture a large apparent decline.
+
+
+## Adjudication patterns from AUDI-1089 (2026-07-13) — reusable beyond vendor evals
+
+- **Impossibly-low attributed rate? Run the unconditional-activity check.** When a cohort's
+  attributed metric (visits per imp) looks too low to believe, count the cohort's UNCONDITIONAL
+  events (any clickpass row on those IPs, any advertiser, no attribution join). If unconditional ≈ 0
+  too, the cohort is genuinely dark; if unconditional is rich, your attribution join is dropping
+  real events. (q7f: 33Across sole IPs dark both ways → 0.026% IVR is real.)
+- **Calibration buckets before disbelief:** compute the platform-wide metric split by the cohort's
+  structural drivers (funnel × scored: 2.89 / 1.11 / 0.72% VR) — tells you whether an outlier cohort
+  is outside the plausible envelope or just in a cold bucket.
+- **Decimal-residue analysis detects billing/credit regime changes:** metered tables whose unit
+  counts show clean 1/N fractions (.5, .33, .25...) imply split-credit; all-integer months imply
+  winner-takes-all. The Jan→May 2026 DDP meter switch was found purely from residues — check
+  residues BEFORE building cost models on metered data.
