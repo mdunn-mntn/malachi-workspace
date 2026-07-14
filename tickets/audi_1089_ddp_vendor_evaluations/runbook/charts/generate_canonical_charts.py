@@ -1466,6 +1466,116 @@ def q9e(rdir):
 
 
 
+
+# ---- Step 3d: HI/PP coverage per scenario + vertical audience-size impact ----
+def q3d(rdir):
+    import csv as _csv
+    BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
+    FREE = (1 << 0) | (1 << 5)
+    hi, pp, vert = {}, {}, {}
+    for r in _csv.DictReader(open(os.path.join(rdir, "q3d_score_vertical_coverage.csv"))):
+        if r["rec"] == "hi":
+            hi[int(r["k1"])] = int(r["n"])
+        elif r["rec"] == "pp":
+            pp[int(r["k1"])] = int(r["n"])
+        elif r["rec"] == "vert":
+            vert.setdefault(r["k1"], {})[r["k2"]] = int(r["n"])
+    pairs = {}
+    for r in _csv.DictReader(open(os.path.join(rdir, "q3b_credit_reassignment.csv"))):
+        if r["rec"] == "mask":
+            pairs[int(r["k1"])] = int(r["n_pairs"])
+
+    def cov(masks, keep, fm=FREE):
+        km = fm | sum(1 << BITSQ[d] for d in keep)
+        return 100 * sum(n for m, n in masks.items() if m & km) / sum(masks.values())
+
+    SC = [("Today (all 8)", [24, 25, 26, 28, 33, 36, 39, 40], FREE),
+          ("k=4: 5x5+Predactiv+33Across+API", [25, 26, 28, 40], FREE),
+          ("33Across combined only", [28, 40], FREE),
+          ("Flat-fee only (5x5+Predactiv)", [25, 26], FREE),
+          ("Free logs only (guid+augmentor)", [], FREE),
+          ("augmentor DS30 only", [], 1 << 5),
+          ("guid_log DS23 only", [], 1 << 0)]
+    cells = []
+    for name, keep, fm in SC:
+        cells.append([name, f"{cov(pairs, keep, fm):.1f}%", f"{cov(hi, keep, fm):.2f}%",
+                      f"{cov(pp, keep, fm):.2f}%"])
+    cols = ["Scenario", "Usable-pair\ncoverage", "HI-IP\ncoverage", "PP-IP\ncoverage"]
+    fig = plt.figure(figsize=(7.8, 3.4))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.78, bottom=0.05)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9.5)
+    tbl.scale(1, 1.7)
+    widths = [0.42, 0.16, 0.16, 0.16]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=9)
+            cell.set_facecolor(NAVY)
+        else:
+            cell.set_facecolor("white")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c in (2, 3):
+                v = float(cells[r - 1][c].rstrip("%"))
+                cell.set_text_props(fontweight="bold",
+                                    color=GREEN if v >= 99 else (AMBER if v >= 95 else RED))
+    ax.set_title("Scored audiences are vendor-independent: HI/PP coverage barely moves in ANY scenario\n"
+                 "Every (ip x score-tier) holder-set evaluated exactly (q3d masks; HI anchor = q5 to 1.000). "
+                 "Pinned households are active - our own logs see them.",
+                 fontsize=10.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q3d_score_coverage.png")
+
+    ranked = sorted(vert.items(), key=lambda x: -x[1].get("all", 0))
+    biggest = ranked[:12]
+    worst = sorted(vert.items(), key=lambda x: x[1].get("free", 0) / max(1, x[1].get("all", 1)))[:10]
+    cells, sect_rows = [], []
+    for label, group in (("12 LARGEST VERTICALS", biggest), ("10 WORST-HIT UNDER FREE-ONLY", worst)):
+        sect_rows.append(len(cells))
+        cells.append([label, "", "", ""])
+        for name, d in group:
+            a = d.get("all", 0)
+            cells.append([name[:40], fmtn(a), f"{100 * d.get('free', 0) / a:.1f}%",
+                          f"{100 * d.get('k4', 0) / a:.1f}%"])
+    cols = ["Vertical", "IPs today\n(all sources)", "% retained:\nfree logs only", "% retained:\nk=4 keep-set"]
+    fig = plt.figure(figsize=(8.6, 7.2))
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.86, bottom=0.03)
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    tbl = ax.table(cellText=cells, colLabels=cols, loc="center", cellLoc="right")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 1.35)
+    widths = [0.46, 0.15, 0.16, 0.15]
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#e2e2e2")
+        cell.set_width(widths[c])
+        if r == 0:
+            cell.set_text_props(fontweight="bold", color="white", fontsize=8.5)
+            cell.set_facecolor(NAVY)
+        elif r - 1 in sect_rows:
+            cell.set_facecolor("#dce6f1")
+            cell.set_text_props(fontweight="bold", ha="left", fontsize=8.5)
+        else:
+            cell.set_facecolor("white")
+            if c == 0:
+                cell.set_text_props(ha="left")
+            if c in (2, 3) and cells[r - 1][c]:
+                v = float(cells[r - 1][c].rstrip("%"))
+                cell.set_text_props(fontweight="bold",
+                                    color=GREEN if v >= 90 else (AMBER if v >= 50 else RED))
+    ax.set_title("Where vendor reach actually lives: vertical audience-size before/after\n"
+                 "svs-reachable IPs per DS13 vertical (proxy for audience size). k=4 is a non-event (>=94% kept\n"
+                 "everywhere); free-only losses CONCENTRATE in ad-invisible verticals - health/beauty/travel\n"
+                 "checkout pages carry no programmatic ads, so augmentor never sees them.",
+                 fontsize=10.5, fontweight="bold", loc="left", pad=14)
+    save(fig, "q3d_vertical_impact.png")
+
+
 # ---- Step 9g: net-of-free value ladder (free logs counted first; all 2^8 subsets exact) ----
 def q9g(rdir):
     import csv as _csv
@@ -1768,7 +1878,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
