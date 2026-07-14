@@ -1,7 +1,7 @@
 # AUDI-1089 Query Manifest — validate every number in the vendor-eval workbook
 
 Every value in `outputs/audi_1089_quality_template_filled.xlsx` (and every runbook PNG) traces to
-one of the 25 SQL files in this folder, or to an arithmetic combination of their outputs (formulas
+one of the 27 SQL files in this folder, or to an arithmetic combination of their outputs (formulas
 printed on the workbook's **index** sheet; combination code = `../charts/fill_template.py`).
 Run the queries in the order below; each file's header states its claim, grain, windows, and exact
 run command. All queries are **read-only** (temp external tables over GCS parquet; no DDL/DML).
@@ -54,6 +54,8 @@ Cost class: **cheap** = seconds-minutes, console-friendly · **BIG** = 5-15 TB s
 | 23 | `q7f_sole_ip_activity.sql` | Adjudication: sole IPs are genuinely DARK (unconditional clickpass activity, no attribution join — 25 of 33Across's 99K served sole IPs active vs 1.43% guid-sole). | **BIG** |
 | 24 | `v01_visits_source_validation.sql` | VALIDATION: deduped ui_visits == clickpass_log within +0.5% (visit basis is sound). | cheap, console |
 | 25 | `v02_conversion_model_fanout.sql` | VALIDATION: ui_conversions fans out per attribution model (~3-4x) — why q7c dedups. | cheap, console |
+| 26 | `q8a_solo_stock.sql` | SOLO sheet stock rows: each vendor as the ONLY paid source (overlap counted vs free logs only) — solo pairs/IPs/domains/classified + freshness-vs-free splits (pair + visit-day grain). | **BIG** (svs 30d + wcv + pc) |
+| 27 | `q8b_solo_perf.sql` | SOLO sheet measured serving/performance: solo cohort (V's IPs neither free log touched) served IPs, imps, media, T1/T2 inputs, visits, conversions, HI/PP tier counts. | **BIG** (svs 37d + CIL wk + clickpass + ui_conversions) |
 
 ## Computed rows (no additional SQL — arithmetic over the CSVs above)
 
@@ -69,6 +71,12 @@ Formulas are printed per-row on the workbook's **index** sheet; implementation =
   (optima verified nested = exhaustive); $ = pairs (or visit-days) × vendor's T2 density; pay range = ×10-30%.
 - **Composite score (q9b):** 0.40·V + 0.15·R + 0.15·Q + 0.10·D + 0.20·P, curved to best=100
   (components from q4/q3_pair_recency/q5/q6/q7).
+- **SOLO sheet:** counterfactual keep-set = {vendor} + free logs. Mask-exact rows = Σ q3b/q3c/q3d
+  mask records with the vendor's bit set and the OTHER-free bits clear (other_free(23)=bit5,
+  other_free(30)=bit0, else bits 0|5). T2_solo = q8b media×52; T1_solo = q8b media_scored×52;
+  pay range = T2_solo ×10–30%. Solo bill is a bounded estimate: low = today's run-rate (credit is
+  monotone in roster shrinkage), high = total metered bills × vendor's share of paid-held
+  visit-days (q3c masks; proportional-consumption assumption, all metered CPMs $0.50).
 
 ## Reproduction & validation anchors
 
@@ -76,4 +84,7 @@ Full rebuild: run 1-23 into `outputs/run_<date>/`, then `python3 ../charts/fill_
 run_<date> <bill-YYYY-MM>` (must print `empty: none`). Anchors a reviewer can check independently:
 q0 meter check (imps×CPM=usage exactly); q3b single-bit masks = q3 sole_pairs; q3c vendor rows =
 its mask totals; q3d HI-with-33Across = q5 touched hi_10000 (ratio 1.000); q7b sole imps = q6
-exactly; q7c imps = q7b imps exactly; v01 within +0.5%.
+exactly; q7c imps = q7b imps exactly; v01 within +0.5%. SOLO anchors: q8a solo_pairs == Σ q3b
+solo masks == q3 netnew_vs_free_pairs (paid vendors, exact; wcv/pc snapshot drift tolerated
+<0.1%); q8b media/ips/imps ≥ q6 sole (solo ⊇ sole); q8b tier hi/pp == Σ q3d solo masks;
+q8a fresh_day solo_new_pair + refresh == Σ q3c solo masks.
