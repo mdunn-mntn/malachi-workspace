@@ -272,6 +272,29 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d11. q3d landed + reconciliation fixes + shareable query package (2026-07-13 eve - 07-14)
+
+- **q3d results (charts q3d_score_coverage.png / q3d_vertical_impact.png; scenario table gained
+  HI/PP columns; anchor = q5 exact):** scored audiences are VENDOR-INDEPENDENT — k=4 keeps
+  **99.9991% of HI (exactly 53 of 5,959,159 HI IPs lost** = dropped vendors' sole-HI singletons
+  36+8+3+1 plus 5 combination-only IPs); free-only keeps 99.94% HI / 99.25% PP. Vertical
+  audience-size loss under free-only concentrates in ~10 ad-invisible verticals (health/personal
+  care 0-26%, cosmetics/pharmacy ~25%, airlines 23% retained); k=4 ≥94% everywhere. User caught
+  the 2-decimal display reading "100.00%" at k=4 → HI/PP columns now 3-decimal.
+- **User-caught reconciliation bug in `saved()`:** drop-ALL-metered recovery showed $805,161 vs
+  $812,397 bills — the metered-to-metered deduction was applied even when the destination meters
+  were dropped too. Fixed (deduction only while a metered destination survives); boundary identity
+  now holds exactly: drop-every-meter recovery == total metered bills.
+- **SCORE QUALITY gained sole-cohort rows** (HI/PP counts + % on vendor-unique served IPs; rows
+  92-95) — the per-vendor decomposition of scenario HI losses. Workbook now 143 rows.
+- **Shareable validation package: `runbook/queries/MANIFEST.md`** — all 25 queries in run order
+  mapped to workbook sections/charts, standalone bq instructions (no workspace tooling needed),
+  computed-row formulas, and independent validation anchors. Gaps closed: q0b output saved;
+  **v01_visits_source_validation.sql** (ui_visits dedup == clickpass +0.5%) and
+  **v02_conversion_model_fanout.sql** (per-model row fan-out justifying q7c dedup) saved + executed.
+- Housekeeping: bq_perf_log.jsonl slimmed 52.6→7.5MB (per-second timeline + plan steps stripped);
+  bq_run.sh now logs compact records and auto-rotates at 40MB to knowledge/archive/.
+
 ## 4d10. Fangorn migration reframes the endgame (Matt Brorby, Slack 2026-07-13 3:49 PM)
 
 Matt confirms: (1) vendor removal has NO impact on Fangorn; (2) **most active advertisers are

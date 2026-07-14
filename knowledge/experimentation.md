@@ -1739,6 +1739,10 @@ Before pooling advertisers for a YoY / cohort / DiD visit-rate or conversion ana
 - **Calibration buckets before disbelief:** compute the platform-wide metric split by the cohort's
   structural drivers (funnel × scored: 2.89 / 1.11 / 0.72% VR) — tells you whether an outlier cohort
   is outside the plausible envelope or just in a cold bucket.
+- **Boundary-identity checks catch cost-model bugs:** every savings/attribution model has degenerate
+  cases with known-exact answers (drop ALL meters -> recovery must equal total bills; keep ALL ->
+  savings 0). Assert them — a $7.2K reconciliation gap in AUDI-1089's LOO came from applying a
+  reassignment deduction whose destination had also been dropped (user-caught, 2026-07-14).
 - **Decimal-residue analysis detects billing/credit regime changes:** metered tables whose unit
   counts show clean 1/N fractions (.5, .33, .25...) imply split-credit; all-integer months imply
   winner-takes-all. The Jan→May 2026 DDP meter switch was found purely from residues — check
