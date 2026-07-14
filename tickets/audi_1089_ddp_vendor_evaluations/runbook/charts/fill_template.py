@@ -146,6 +146,15 @@ for r in rows_of("q3b_credit_reassignment.csv"):
     elif r["rec"] == "reassign":
         reassign.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n_pairs"])
 
+hi3d, pp3d, vert3d = {}, {}, {}
+for r in rows_of("q3d_score_vertical_coverage.csv"):
+    if r["rec"] == "hi":
+        hi3d[int(r["k1"])] = int(r["n"])
+    elif r["rec"] == "pp":
+        pp3d[int(r["k1"])] = int(r["n"])
+    elif r["rec"] == "vert":
+        vert3d.setdefault(r["k1"], {})[r["k2"]] = int(r["n"])
+
 masks3c, vend3c = {}, {}
 for r in rows_of("q3c_visit_grain_uniqueness.csv"):
     if r["rec"] == "mask":
@@ -342,6 +351,7 @@ CONVENTIONS = [
     "Visit-grain rows (q3c, 13.29B visit-days/30d): the true value unit is (IP x domain x DATE) - new date on a known pair = recency refresh (real value: 30d scoring window + the meter pays per day); same date from two sources = duplication. Free coverage at visit grain: guid 10.7% / augmentor 48.8% / both 59.4% (pair grain: 60.4%) - augmentor DS30 is the dominant free source and is INCLUDED in every free-log number in this workbook.",
     "NET-OF-FREE LADDER (decisions sheet): universe first drops every pair guid_log/augmentor touched AT ANY DATE in the window (date-blind pair cut; the visit-day $ column is the date-aware lens - they agree within 6%). Standalone = vendor as the ONLY PAID source (overlap with other paid vendors still counts for it); the strictly-nobody-else number is its sole/T2 row. Ladder $ figures are DEPENDENT REVENUE, not kept profit: pay-up-to = x15/20/30% margin. 33Across standalone: $397K revenue -> pay-up-to $60-119K/yr vs $422K bill - converges with its independently-derived WTP band ($30-100K).",
     "Grains: pair = IP x domain (visited ever in window); visit = IP x domain x DATE (each day = distinct event; the meter's grain); IP-alone only used for stock counts. RECENCY IS CREDITED AT VISIT GRAIN: a vendor delivering a FRESHER date for a pair free logs saw earlier counts to the VENDOR (sole_refresh), not to free - free visit-grain coverage is 59.4% AFTER that credit (barely below the 60.4% pair figure, because augmentor re-observes active households daily). Within-day frequency collapses: same pair, same day, N events = one billable/valuable unit.",
+    "q3d (HI/PP + verticals): scored-audience coverage is vendor-independent (free-only keeps 99.9% HI / 99.3% PP - pinned households are active, our logs see them). Vendor reach value concentrates in ad-invisible verticals: health/personal-care 0-26%, cosmetics/pharmacy ~25%, airlines 23% retained under free-only. k=4 keep-set: >=94% everywhere. Vertical size = svs-reachable IPs on the vertical's domains (proxy; audience builder layers recency on top).",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
 ]
 
@@ -1041,10 +1051,16 @@ def main():
     t.fill = section_fill
     ri += 1
     sc_hdr = ["Scenario", "Paid vendors kept", "Coverage (% of today)",
+              "HI-IP coverage %", "PP-IP coverage %",
               "Metered bills kept $/yr", "Metered recovery from drops $/yr (validated exact-to-floor; flat-fee savings ADDITIONAL, amounts pending)",
-              "Dep. revenue at risk $/yr (T2, prospecting-attributed)", "", "", "", "", "", "", ""]
+              "Dep. revenue at risk $/yr (T2, prospecting-attributed)", "", "", "", "", ""]
     ri = put_row(dec, ri, sc_hdr, header=True)
-    sfmt = {3: "0.00%", 4: "$#,##0", 5: "$#,##0", 6: "$#,##0"}
+    sfmt = {3: "0.00%", 4: "0.00%", 5: "0.00%", 6: "$#,##0", 7: "$#,##0", 8: "$#,##0"}
+
+    def scov(tier_masks, keep, fm=FREE_MASK):
+        km = fm | sum(1 << BITSQ[d] for d in keep)
+        tot = sum(tier_masks.values())
+        return sum(n for m, n in tier_masks.items() if m & km) / tot if tot else 0
     ALL8 = [24, 25, 26, 28, 33, 36, 39, 40]
     SC = [
         ("Today (all 8)", ALL8),
@@ -1064,9 +1080,10 @@ def main():
         met_kept = sum(float(q1d[d]["billed_usd"]) * 12 for d in keep if d in q1d and q1d[d].get("billed_usd"))
         ri = put_row(dec, ri, [
             label, " + ".join(SHORT[d] for d in keep) if keep else "(none)",
-            cov(keep, fm) / FULL_COV, round(met_kept) if met_kept else 0,
+            cov(keep, fm) / FULL_COV, scov(hi3d, keep, fm), scov(pp3d, keep, fm),
+            round(met_kept) if met_kept else 0,
             round(saved(dropped)), round(sum(dep_risk.get(d, 0) for d in dropped)),
-            "", "", "", "", "", "", "",
+            "", "", "", "", "",
         ], fmts=sfmt, band_row=(n % 2 == 1))
 
     # ---- net-of-free value ladder ----
