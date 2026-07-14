@@ -176,6 +176,9 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 - `q5_score_tiers.png` — score-tier mix, touched vs sole (adverse selection)
 - `q9_vendor_scorecard.png` — per-vendor wrap-up: usable, money, worth band, verdict, asks
 - `q9b_quality_ranking.png` — composite score components + final ranking
+- `q9g_net_of_free_ladder.png` — net-of-free ladder: Bill | standalone | marginal + pay ranges
+- `q3d_score_coverage.png` — HI/PP coverage per scenario (scored audiences vendor-independent)
+- `q3d_vertical_impact.png` — vertical audience-size before/after (12 largest + 10 worst-hit)
 
 ## 7. Template map — the filled question table (final deliverable)
 

@@ -1498,8 +1498,8 @@ def q3d(rdir):
           ("guid_log DS23 only", [], 1 << 0)]
     cells = []
     for name, keep, fm in SC:
-        cells.append([name, f"{cov(pairs, keep, fm):.1f}%", f"{cov(hi, keep, fm):.2f}%",
-                      f"{cov(pp, keep, fm):.2f}%"])
+        cells.append([name, f"{cov(pairs, keep, fm):.1f}%", f"{cov(hi, keep, fm):.3f}%",
+                      f"{cov(pp, keep, fm):.3f}%"])
     cols = ["Scenario", "Usable-pair\ncoverage", "HI-IP\ncoverage", "PP-IP\ncoverage"]
     fig = plt.figure(figsize=(7.8, 3.4))
     fig.subplots_adjust(left=0.03, right=0.97, top=0.78, bottom=0.05)
@@ -1525,7 +1525,7 @@ def q3d(rdir):
                 cell.set_text_props(fontweight="bold",
                                     color=GREEN if v >= 99 else (AMBER if v >= 95 else RED))
     ax.set_title("Scored audiences are vendor-independent: HI/PP coverage barely moves in ANY scenario\n"
-                 "Every (ip x score-tier) holder-set evaluated exactly (q3d masks; HI anchor = q5 to 1.000). "
+                 "Exact holder-set evaluation (q3d masks; HI anchor = q5 to 1.000).\n"
                  "Pinned households are active - our own logs see them.",
                  fontsize=10.5, fontweight="bold", loc="left", pad=14)
     save(fig, "q3d_score_coverage.png")

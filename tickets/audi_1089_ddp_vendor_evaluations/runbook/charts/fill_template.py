@@ -351,7 +351,7 @@ CONVENTIONS = [
     "Visit-grain rows (q3c, 13.29B visit-days/30d): the true value unit is (IP x domain x DATE) - new date on a known pair = recency refresh (real value: 30d scoring window + the meter pays per day); same date from two sources = duplication. Free coverage at visit grain: guid 10.7% / augmentor 48.8% / both 59.4% (pair grain: 60.4%) - augmentor DS30 is the dominant free source and is INCLUDED in every free-log number in this workbook.",
     "NET-OF-FREE LADDER (decisions sheet): universe first drops every pair guid_log/augmentor touched AT ANY DATE in the window (date-blind pair cut; the visit-day $ column is the date-aware lens - they agree within 6%). Standalone = vendor as the ONLY PAID source (overlap with other paid vendors still counts for it); the strictly-nobody-else number is its sole/T2 row. Ladder $ figures are DEPENDENT REVENUE, not kept profit: pay-up-to = x15/20/30% margin. 33Across standalone: $397K revenue -> pay-up-to $60-119K/yr vs $422K bill - converges with its independently-derived WTP band ($30-100K).",
     "Grains: pair = IP x domain (visited ever in window); visit = IP x domain x DATE (each day = distinct event; the meter's grain); IP-alone only used for stock counts. RECENCY IS CREDITED AT VISIT GRAIN: a vendor delivering a FRESHER date for a pair free logs saw earlier counts to the VENDOR (sole_refresh), not to free - free visit-grain coverage is 59.4% AFTER that credit (barely below the 60.4% pair figure, because augmentor re-observes active households daily). Within-day frequency collapses: same pair, same day, N events = one billable/valuable unit.",
-    "q3d (HI/PP + verticals): scored-audience coverage is vendor-independent (free-only keeps 99.9% HI / 99.3% PP - pinned households are active, our logs see them). Vendor reach value concentrates in ad-invisible verticals: health/personal-care 0-26%, cosmetics/pharmacy ~25%, airlines 23% retained under free-only. k=4 keep-set: >=94% everywhere. Vertical size = svs-reachable IPs on the vertical's domains (proxy; audience builder layers recency on top).",
+    "q3d (HI/PP + verticals): scored-audience coverage is vendor-independent (k=4 keeps 99.9991% of HI - exactly 53 of 5,959,159 HI IPs lost, the dropped vendors' sole-HI singletons + 5 combination-only IPs; free-only keeps 99.94% HI / 99.25% PP - pinned households are active, our logs see them). Vendor reach value concentrates in ad-invisible verticals: health/personal-care 0-26%, cosmetics/pharmacy ~25%, airlines 23% retained under free-only. k=4 keep-set: >=94% everywhere. Vertical size = svs-reachable IPs on the vertical's domains (proxy; audience builder layers recency on top).",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
 ]
 
@@ -1055,7 +1055,7 @@ def main():
               "Metered bills kept $/yr", "Metered recovery from drops $/yr (validated exact-to-floor; flat-fee savings ADDITIONAL, amounts pending)",
               "Dep. revenue at risk $/yr (T2, prospecting-attributed)", "", "", "", "", ""]
     ri = put_row(dec, ri, sc_hdr, header=True)
-    sfmt = {3: "0.00%", 4: "0.00%", 5: "0.00%", 6: "$#,##0", 7: "$#,##0", 8: "$#,##0"}
+    sfmt = {3: "0.00%", 4: "0.000%", 5: "0.000%", 6: "$#,##0", 7: "$#,##0", 8: "$#,##0"}
 
     def scov(tier_masks, keep, fm=FREE_MASK):
         km = fm | sum(1 << BITSQ[d] for d in keep)
