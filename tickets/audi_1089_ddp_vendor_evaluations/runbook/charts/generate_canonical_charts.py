@@ -1682,6 +1682,106 @@ def q9g(rdir):
     save(fig, "q9g_net_of_free_ladder.png")
 
 
+# ---- Step 11: SOLO P&L — each vendor as the ONLY paid source (vs free logs only) ----
+# Bill = bounded estimate [today's run-rate, max(that, visit-day-proportional share of the
+# metered pool)]; value = measured T2_solo (q8b, if landed) vs density estimate (= ladder
+# standalone); pay band = 10-30% blended margin on the value basis.
+def q11(rdir):
+    import csv as _csv
+    BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
+    FREEM = (1 << 0) | (1 << 5)
+    EXT = [24, 25, 26, 28, 33, 36, 39, 40]
+    METER = [24, 28, 33, 36, 40]
+    FLATV = [25, 26, 39]
+
+    def loadmask(f):
+        out = {}
+        nk = None
+        for r in _csv.DictReader(open(os.path.join(rdir, f))):
+            if r["rec"] == "mask":
+                nk = nk or ("n_pairs" if "n_pairs" in r else "n")
+                out[int(r["k1"])] = int(r[nk])
+        return out
+
+    pmask = loadmask("q3b_credit_reassignment.csv")
+    tmask = loadmask("q3c_visit_grain_uniqueness.csv")
+    q3u = {int(r["ds"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q3_usable_uniqueness.csv")))}
+    q6v = {int(r["data_source_id"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q6_value_tiers.csv")))}
+    q1db = {int(r["ds"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
+    q8bp = os.path.join(rdir, "q8b_solo_perf.csv")
+    meas = {}
+    if os.path.exists(q8bp) and os.path.getsize(q8bp):
+        for r in _csv.DictReader(open(q8bp)):
+            if r["rec"] == "serve" and r["k"] == "media":
+                meas[int(r["ds"])] = float(r["v"]) * 52
+
+    def solo_pairs(d):
+        b = 1 << BITSQ[d]
+        return sum(n for m, n in pmask.items() if (m & b) and not (m & FREEM))
+
+    paid_bits = sum(1 << BITSQ[d] for d in EXT)
+    paid_tr = sum(n for m, n in tmask.items() if m & paid_bits)
+    tot_bill = sum(float(q1db[d]["billed_usd"]) * 12 for d in METER if d in q1db)
+    dens = {d: float(q6v[d]["media_sole"]) * 52 / float(q3u[d]["sole_pairs"]) for d in EXT}
+
+    rows = []
+    for d in EXT:
+        lo = float(q1db[d]["billed_usd"]) * 12 if d in METER and d in q1db else None
+        if lo is not None:
+            share = sum(n for m, n in tmask.items() if m & (1 << BITSQ[d])) / paid_tr
+            hi = max(lo, tot_bill * share)
+        else:
+            hi = None
+        est = solo_pairs(d) * dens[d]
+        rows.append((d, lo, hi, est, meas.get(d)))
+    rows.sort(key=lambda r: -(r[1] or 0))
+    rows = [r for r in rows if r[0] not in FLATV] + [r for r in rows if r[0] in FLATV]
+
+    fig, ax = plt.subplots(figsize=(11.5, 5.6))
+    fig.subplots_adjust(left=0.13, right=0.97, top=0.84, bottom=0.13)
+    ys = list(range(len(rows)))[::-1]
+    for y, (d, lo, hi, est, ms) in zip(ys, rows):
+        base = ms if ms is not None else est
+        ax.barh(y, base * 0.30 - base * 0.10, left=base * 0.10, height=0.62,
+                color=GREEN, alpha=0.25, edgecolor="none", zorder=1)
+        if lo is not None:
+            ax.plot([lo, hi], [y, y], color=RED, lw=5, solid_capstyle="butt", zorder=2)
+            ax.plot([lo], [y], marker="|", ms=14, color=RED, mew=2.5, zorder=3)
+        ax.plot([est], [y], marker="D", ms=7, mfc="white", mec=NAVY, mew=1.6, zorder=4)
+        if ms is not None:
+            ax.plot([ms], [y], marker="o", ms=8, color=NAVY, zorder=5)
+    for y, (d, lo, hi, est, ms) in zip(ys, rows):
+        if lo is None:
+            base = ms if ms is not None else est
+            ax.text(max(max(base * 0.30, est) * 1.15, 14000), y, "flat fee pending", fontsize=8,
+                    color=GRAY, va="center", ha="left", zorder=3)
+    ax.set_yticks(ys)
+    ax.set_yticklabels([SHORT[r[0]] for r in rows], fontsize=10)
+    ax.set_xlabel("$ / yr", fontsize=9, color="#555")
+    ax.xaxis.set_major_formatter(lambda v, _: money(v) if v else "$0")
+    ax.tick_params(axis="x", labelsize=8.5, colors="#555")
+    for s in ax.spines.values():
+        s.set_visible(False)
+    ax.grid(axis="x", color="#e4e4e4", lw=0.7, zorder=0)
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    ax.legend(handles=[
+        Line2D([], [], color=RED, lw=5, label="Solo bill range (today's run-rate to visit-day-proportional ceiling)"),
+        Line2D([], [], marker="o", color=NAVY, lw=0, ms=8, label="T2_solo dependent revenue, MEASURED (q8b)"),
+        Line2D([], [], marker="D", mfc="white", mec=NAVY, lw=0, ms=7, label="T2_solo, density estimate (= ladder standalone)"),
+        Patch(facecolor=GREEN, alpha=0.25, label="Pay range: 10-30% blended margin on T2_solo"),
+    ], loc="lower right", fontsize=8.2, frameon=False)
+    meas_note = "" if meas else " Measured (q8b) markers pending."
+    ax.set_title("Solo P&L: each vendor as the ONLY paid source, overlap counted vs our free logs only\n"
+                 "Even standalone, no metered pay range reaches its bill; solo bills only RISE."
+                 + meas_note,
+                 fontsize=10.5, fontweight="bold", loc="left", pad=12)
+    save(fig, "q11_solo_pnl.png",
+         caption="Bill LOW = June 2026 x12 (hard floor: survivor keeps all current credit). Bill HIGH = max(LOW, "
+                 "total metered bills x vendor share of paid-held visit-days); junk-billed credit is uncontested, so "
+                 "small meters collapse to LOW. Flats: fee pending (Maya). Revenue basis = full media CPM, not our cut.")
+
+
 # ---- Step 10: master waterfall — one row per source, feed to won bids to HI ----
 # Consolidates q1 (rows/day, IPv6), q2 (30d uniques), q2c (usable %), q4 (classified %),
 # q3 (sole stock), q5 (touched/served/HI, 37d union x valuation week), q7 (sole served, VR),
@@ -1878,7 +1978,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
