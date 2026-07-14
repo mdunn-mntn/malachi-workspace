@@ -110,18 +110,12 @@ if [[ -n "$JOB_JSON" ]]; then
             write_ms_max:       (.writeMsMax // "0" | tonumber),
             wait_ms_max:        (.waitMsMax // "0" | tonumber),
             shuffle_bytes:      (.shuffleOutputBytes // "0" | tonumber),
-            shuffle_spill:      (.shuffleOutputBytesSpilled // "0" | tonumber),
-            steps:              [.steps[]? | {kind, substeps}]
+            shuffle_spill:      (.shuffleOutputBytesSpilled // "0" | tonumber)
         }],
 
-        # --- timeline (slot utilization over time) ---
-        timeline: [.statistics.query.timeline[]? | {
-            elapsed_ms:     (.elapsedMs // "0" | tonumber),
-            total_slot_ms:  (.totalSlotMs // "0" | tonumber),
-            active_units:   (.activeUnits // 0),
-            pending_units:  (.pendingUnits // 0),
-            completed_units: (.completedUnits // 0)
-        }],
+        # --- timeline summary (full per-second timeline is huge; keep scalars only) ---
+        timeline_samples: ([.statistics.query.timeline[]?] | length),
+        timeline_peak_active_units: ([.statistics.query.timeline[]?.activeUnits // 0] | max // 0),
 
         # --- optimizations applied ---
         optimizations: [.statistics.query.queryInfo.optimizationDetails.optimizations[]? | to_entries[] | "\(.key)=\(.value)"],
@@ -141,6 +135,12 @@ if [[ -n "$JOB_JSON" ]]; then
         }]
     }')
 
+    # rotate at 40MB so the log never trips GitHub's size limits
+    if [ -f "$LOG_FILE" ] && [ "$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE")" -gt 41943040 ]; then
+        mkdir -p "${WORKSPACE}/knowledge/archive"
+        gzip -c "$LOG_FILE" > "${WORKSPACE}/knowledge/archive/bq_perf_log_$(date +%Y%m%d).jsonl.gz"
+        : > "$LOG_FILE"
+    fi
     echo "$LOG_ENTRY" >> "$LOG_FILE"
 
     # Print human-readable summary to stderr

@@ -42,7 +42,7 @@ workspace/
 | `tickets/_template/presentation_template.md` | Copy this when starting a new ticket — external-facing narrative for sharing |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
 | `.claude/scripts/transcribe.sh` | Meeting transcription — runs both OpenAI (whisper-1) and local mlx-whisper, merges best of both (OpenAI accuracy backbone + local coverage patches). Use `--provider openai` or `--provider local` to force one. `--keep-both` saves individual provider files. |
-| `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits) |
+| `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits). Compact records (full timeline/plan-steps excluded since 2026-07-14); auto-rotates at 40MB to `knowledge/archive/*.jsonl.gz` |
 | `knowledge/slack_review_queue.md` | Medium-confidence Slack extractions needing manual review |
 | `slack_bot/` | Slack knowledge extraction bot — scraper, extractor, updater. Runs on Pi 5 at midnight PST. Add bot to channels via `/invite @Knowledge Extractor` |
 | `self_review/summary.md` | Self-review guide — workflow, rubric, leadership direction (Paulo/Kale/Alyson), how to write rationales |
