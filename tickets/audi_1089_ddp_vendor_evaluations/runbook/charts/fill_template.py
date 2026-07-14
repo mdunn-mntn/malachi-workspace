@@ -163,6 +163,45 @@ for r in rows_of("q3c_visit_grain_uniqueness.csv"):
         vend3c.setdefault(int(r["k1"]), {})[r["k2"]] = int(r["n"])
 TRIP_TOTAL = sum(masks3c.values())
 
+# ---- SOLO counterfactual (each vendor as the ONLY paid source; free logs kept) ----
+q8a, q8b = {}, {}
+for r in rows_of("q8a_solo_stock.csv"):
+    q8a.setdefault(int(r["ds"]), {}).setdefault(r["rec"], {})[r["k"]] = float(r["v"])
+for r in rows_of("q8b_solo_perf.csv"):
+    q8b.setdefault(int(r["ds"]), {}).setdefault(r["rec"], {})[r["k"]] = float(r["v"])
+Q8A, Q8B = bool(q8a), bool(q8b)
+PENDING = "pending scan (q8)"
+
+# other_free(d): the free-log bits that count as overlap for d — both free logs for
+# a paid vendor, the OTHER free log for a free column (guid vs augmentor).
+OTHERFREE = {d: FREE_MASK & ~(1 << b) for d, b in BITSQ.items()}
+
+
+def solo_sum(d, universe):
+    b, of = 1 << BITSQ[d], OTHERFREE[d]
+    return sum(n for m, n in universe.items() if (m & b) and not (m & of))
+
+
+def keep_cov(d, universe):
+    km = FREE_MASK | (1 << BITSQ[d])
+    return sum(n for m, n in universe.items() if m & km)
+
+
+def g8a(d, rec, k):
+    return q8a[d].get(rec, {}).get(k, 0.0)
+
+
+def g8b(d, rec, k):
+    return q8b[d][rec][k]
+
+
+def t2_solo(d):
+    return g8b(d, "serve", "media") * 52
+
+
+def t1_solo(d):
+    return g8b(d, "serve", "media_scored") * 52
+
 
 def trip_holder(d):
     return sum(n for m, n in masks3c.items() if m & (1 << BITSQ[d]))
@@ -176,6 +215,13 @@ def trip_free_cohold(d):
 NOF_P = {m: n for m, n in masks.items() if not (m & FREE_MASK)}
 NOF_T = {m: n for m, n in masks3c.items() if not (m & FREE_MASK)}
 NOF_U = sum(NOF_P.values())
+
+FREE_COV_P = sum(n for m, n in masks.items() if m & FREE_MASK)
+FREE_COV_T = sum(n for m, n in masks3c.items() if m & FREE_MASK)
+PAID_BITS = sum(1 << BITSQ[d] for d in EXT)
+PAID_TRIPLES = sum(n for m, n in masks3c.items() if m & PAID_BITS)
+TOT_METERED_BILL = sum(q0[d]["june_usd"] * 12 for d in METERED
+                       if q0.get(d, {}).get("june_usd") is not None)
 
 
 def nof_cov(S, universe):
@@ -211,6 +257,10 @@ def t2_ann(d):
 
 def t1_ann(d):
     return float(q6[d]["media_sole_scored"]) * 52
+
+
+# measured T2-per-sole-pair density (the ladder's standalone-$ multiplier)
+DENS = {d: t2_ann(d) / float(q3[d]["sole_pairs"]) for d in EXT if d in q3 and d in q6}
 
 
 def curved_scores():
@@ -254,6 +304,18 @@ def share(d, table, field):
 
 def tier_tot(f):
     return sum(float(q5[x]["touched"][f]) for x in ACTIVE if x in q5 and "touched" in q5[x])
+
+
+def solo_share(d, table, field):
+    wset = {d, 23, 30}
+    tot = sum(float(table[x][field]) for x in wset if x in table)
+    return 100 * float(table[d][field]) / tot
+
+
+def solo_tier_share(d, f):
+    wset = {d, 23, 30}
+    tot = sum(float(q5[x]["touched"][f]) for x in wset if x in q5 and "touched" in q5[x])
+    return 100 * float(q5[d]["touched"][f]) / tot
 
 
 # ---------------- text banks (notes sheet) ----------------
@@ -353,6 +415,9 @@ CONVENTIONS = [
     "Grains: pair = IP x domain (visited ever in window); visit = IP x domain x DATE (each day = distinct event; the meter's grain); IP-alone only used for stock counts. RECENCY IS CREDITED AT VISIT GRAIN: a vendor delivering a FRESHER date for a pair free logs saw earlier counts to the VENDOR (sole_refresh), not to free - free visit-grain coverage is 59.4% AFTER that credit (barely below the 60.4% pair figure, because augmentor re-observes active households daily). Within-day frequency collapses: same pair, same day, N events = one billable/valuable unit.",
     "q3d (HI/PP + verticals): scored-audience coverage is vendor-independent (k=4 keeps 99.9991% of HI - exactly 53 of 5,959,159 HI IPs lost, the dropped vendors' sole-HI singletons + 5 combination-only IPs; free-only keeps 99.94% HI / 99.25% PP - pinned households are active, our logs see them). Vendor reach value concentrates in ad-invisible verticals: health/personal-care 0-26%, cosmetics/pharmacy ~25%, airlines 23% retained under free-only. k=4 keep-set: >=94% everywhere. Vertical size = svs-reachable IPs on the vertical's domains (proxy; audience builder layers recency on top).",
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
+    "SOLO sheet: the whole numbers grid recomputed under the counterfactual that the column's vendor is the ONLY paid source - overlap counts only vs our free logs (guid_log DS23 + augmentor DS30; the free-log columns measure vs the OTHER free log). 'Solo' >= 'sole' everywhere (sole excludes ALL 9 other sources); solo == the decisions-ladder 'standalone' at pair grain. Rows that don't change under the counterfactual (feed scale, quality, funnel, touched-cohort) are copied so the sheet reads standalone; LOO/portfolio rows are replaced by {free+vendor} coverage rows.",
+    "SOLO bill is a BOUNDED ESTIMATE, not a quote: LOW = today's run-rate (removing competitors can only ADD credit to the survivor - hard floor); HIGH = max(LOW, total metered bills x the vendor's share of paid-held visit-days) (q3c masks; proportional-consumption assumption; all metered CPMs $0.50 so imp share = $ share). The proportional term under-runs junk-billing vendors (Sovrn/Cybba/Justuno credit sits on domains outside the usable universe, uncontested by other vendors) - their bounds collapse to today's bill; only 33Across (+8%) and 33A API (+75%) have material solo-bill upside. Flat vendors: fee pending either way.",
+    "'pending scan (q8)' cells = measured solo serving/performance awaiting the q8a/q8b background scans; mask-derived, rebased and copied cells are final. Rerun fill_template.py after the q8 CSVs land (the pending count must print 0; anchors: q8a solo pairs == q3b mask solo pairs == q3 net-new-vs-free, q8b >= q6 sole everywhere, q8b HI/PP tier counts == q3d mask solo counts).",
 ]
 
 
@@ -558,6 +623,306 @@ SPEC = [
     R("Asks / weird things (full text in notes)", "txt", lambda d: "see notes" if d in ASKS else None),
 ]
 
+
+# ---------------- SOLO sheet: SPEC mirrored under the solo counterfactual ----------------
+# kind: copy (no entry) | derive (rebased to {vendor+free} world, exact, phase 1)
+#       | mask (exact from q3b/q3c/q3d holder masks, phase 1)
+#       | est (labeled bound/estimate, phase 1) | scan (q8a/q8b-fed; PENDING till CSVs land)
+def _scan(need, fn):
+    def wrapped(d):
+        if ("a" in need and not Q8A) or ("b" in need and not Q8B):
+            return PENDING
+        return fn(d)
+    return wrapped
+
+
+def _fresh_share(d, k):
+    tot = sum(g8a(d, "fresh_pair", c) for c in ("fresher_than_free", "tied_with_free", "stale_vs_free"))
+    return 100 * g8a(d, "fresh_pair", k) / tot if tot else None
+
+
+def _fday_share(d, k):
+    tot = sum(g8a(d, "fresh_day", c)
+              for c in ("solo_new_pair", "refresh_of_free_pair", "same_day_dup_with_free"))
+    return 100 * g8a(d, "fresh_day", k) / tot if tot else None
+
+
+def _solo_bill_low(d):
+    if d in FREE or d == 27:
+        return 0.0
+    if d in METERED and q0.get(d, {}).get("june_usd") is not None:
+        return q0[d]["june_usd"] * 12
+    return "pending" if d in FLAT else None
+
+
+def _solo_bill_bounds(d):
+    lo = q0[d]["june_usd"] * 12
+    # clamp: LOW is a hard floor (survivor keeps all current credit); the proportional
+    # estimate under-runs junk-billing vendors (credit on domains outside the usable
+    # universe is uncontested, so their solo bill ~ today's bill)
+    hi = max(lo, TOT_METERED_BILL * trip_holder(d) / PAID_TRIPLES)
+    return lo, hi
+
+
+def _solo_bill_high(d):
+    if d in FREE or d == 27:
+        return 0.0
+    if d in METERED and q0.get(d, {}).get("june_usd") is not None:
+        return _solo_bill_bounds(d)[1]
+    return "pending" if d in FLAT else None
+
+
+def _solo_pay_range(d):
+    if d in FREE:
+        return None
+    if Q8B:
+        base, tag = t2_solo(d), ""
+    elif d in DENS:
+        base, tag = solo_sum(d, masks) * DENS[d], " (est)"
+    else:
+        return None
+    return f"{money(base * 0.10)} - {money(base * 0.30)}{tag}"
+
+
+def _solo_worth_bill(d):
+    if d in FREE:
+        return None
+    if d in FLAT:
+        return "flat (pending)"
+    if d not in METERED or q0.get(d, {}).get("june_usd") is None:
+        return None
+    lo, hi = _solo_bill_bounds(d)
+    t = t2_solo(d)
+    if hi == lo:
+        return f"{t / lo:.2f}x"
+    return f"{t / hi:.2f}x - {t / lo:.2f}x"
+
+
+SOLO_OVERRIDE = {
+    # ---- USABLE FUNNEL: shares rebased to the {vendor + free logs} world ----
+    "% of rows used — share of column total": ("derive", "% of rows used — share of {vendor+free} world", None,
+        lambda d: solo_share(d, q2c, "rows_used")),
+    "% of IPs used — share of column total": ("derive", "% of IPs used — share of {vendor+free} world", None,
+        lambda d: solo_share(d, q2c, "ips_used")),
+    "% of domains used — share of column total": ("derive", "% of domains used — share of {vendor+free} world", None,
+        lambda d: solo_share(d, q2c, "domains_classified")),
+
+    # ---- UNIQUENESS & FRESHNESS ----
+    "Sole usable IPs": ("scan", "Solo usable IPs (vs free logs only)", None,
+        _scan("a", lambda d: g8a(d, "stock", "solo_ips"))),
+    "% of usable IPs sole": ("scan", "% of usable IPs solo", None,
+        _scan("a", lambda d: 100 * g8a(d, "stock", "solo_ips") / int(q3[d]["usable_ips"]))),
+    "Sole usable domains": ("scan", "Solo domains (vs free logs only)", None,
+        _scan("a", lambda d: g8a(d, "stock", "solo_domains"))),
+    "Sole CLASSIFIED domains (fee-band axis)": ("scan", "Solo CLASSIFIED domains (fee-band axis, vs free)", None,
+        _scan("a", lambda d: g8a(d, "stock", "solo_classified"))),
+    "% pairs sole": ("mask", "% usable pairs solo (vs free logs only)", None,
+        lambda d: 100 * solo_sum(d, masks) / int(q3[d]["usable_pairs"])),
+    "% pairs freshest": ("scan", "% co-held-with-free pairs where vendor fresher", None,
+        _scan("a", lambda d: _fresh_share(d, "fresher_than_free"))),
+    "% pairs tied": ("scan", "% co-held-with-free pairs tied same-day", None,
+        _scan("a", lambda d: _fresh_share(d, "tied_with_free"))),
+    "% pairs stale": ("scan", "% co-held-with-free pairs where free fresher", None,
+        _scan("a", lambda d: _fresh_share(d, "stale_vs_free"))),
+    "Marginal coverage when added (pp)": ("mask", "Pair-coverage gain over free-only (pp)", None,
+        lambda d: 100 * (keep_cov(d, masks) - FREE_COV_P) / FULL_COV),
+    "Frontier add-order rank": ("mask", "Solo share of net-of-free universe", "pct",
+        lambda d: 100 * solo_sum(d, masks) / NOF_U),
+    "% visit-days sole — new pair": ("scan", "% visit-days solo — new pair (vs free)", None,
+        _scan("a", lambda d: _fday_share(d, "solo_new_pair"))),
+    "% visit-days sole — recency refresh": ("scan", "% visit-days solo — refresh of free-held pair", None,
+        _scan("a", lambda d: _fday_share(d, "refresh_of_free_pair"))),
+    "% visit-days duplicated same-day": ("scan", "% visit-days duplicated same-day with free logs", None,
+        _scan("a", lambda d: _fday_share(d, "same_day_dup_with_free"))),
+
+    # ---- SERVING & WON BIDS ----
+    "Sole IPs served-won": ("scan", "Solo IPs served-won (vs free logs only)", None,
+        _scan("b", lambda d: g8b(d, "serve", "ips_solo"))),
+    "% of sole stock served-won": ("scan", "% of solo stock served-won", None,
+        _scan("ab", lambda d: 100 * g8b(d, "serve", "ips_solo") / g8a(d, "stock", "solo_ips"))),
+    "Shared IPs served-won": ("scan", "Served IPs shared with free logs", None,
+        _scan("b", lambda d: float(q6[d]["ips_touched"]) - g8b(d, "serve", "ips_solo"))),
+    "% of served IPs shared": ("scan", "% of served IPs shared with free logs", None,
+        _scan("b", lambda d: 100 * (float(q6[d]["ips_touched"]) - g8b(d, "serve", "ips_solo"))
+              / float(q6[d]["ips_touched"]))),
+    "Sole won bids / wk": ("scan", "Solo won bids / wk", None,
+        _scan("b", lambda d: g8b(d, "serve", "imps"))),
+    "Sole won bids per served sole IP": ("scan", "Solo won bids per served solo IP", None,
+        _scan("b", lambda d: g8b(d, "serve", "imps") / g8b(d, "serve", "ips_solo"))),
+    "Sole won bids annualized (x52)": ("scan", "Solo won bids annualized (x52)", None,
+        _scan("b", lambda d: g8b(d, "serve", "imps") * 52)),
+
+    # ---- SCORE QUALITY ----
+    "% HI — share of column total": ("derive", "% HI — share of {vendor+free} world", None,
+        lambda d: solo_tier_share(d, "hi_10000")),
+    "% PP — share of column total": ("derive", "% PP — share of {vendor+free} world", None,
+        lambda d: solo_tier_share(d, "pp_8000")),
+    "HI 10000 count — SOLE IPs (vendor-unique, served)": ("mask", "HI 10000 count — SOLO IPs (vs free logs only)", None,
+        lambda d: solo_sum(d, hi3d)),
+    "% HI of sole served IPs": ("scan", "% HI of solo served IPs", None,
+        _scan("b", lambda d: 100 * g8b(d, "tier", "hi") / g8b(d, "serve", "ips_solo"))),
+    "PP 8000 count — SOLE IPs (vendor-unique, served)": ("mask", "PP 8000 count — SOLO IPs (vs free logs only)", None,
+        lambda d: solo_sum(d, pp3d)),
+    "% PP of sole served IPs": ("scan", "% PP of solo served IPs", None,
+        _scan("b", lambda d: 100 * g8b(d, "tier", "pp") / g8b(d, "serve", "ips_solo"))),
+    "Avg household score — sole (scored imps)": ("scan", "Avg household score — solo (scored imps)", None,
+        _scan("b", lambda d: g8b(d, "serve", "avg_hs"))),
+    "% imps scored — sole": ("scan", "% imps scored — solo", None,
+        _scan("b", lambda d: 100 * g8b(d, "serve", "imps_hs_pos") / g8b(d, "serve", "imps"))),
+
+    # ---- PERFORMANCE — SOLO COHORT ----
+    "Spend (media $) — sole": ("scan", "Spend (media $) — solo (vs free logs only)", None,
+        _scan("b", lambda d: g8b(d, "serve", "media"))),
+    "Impressions (won bids) — sole": ("scan", "Impressions (won bids) — solo", None,
+        _scan("b", lambda d: g8b(d, "serve", "imps"))),
+    "Visits — sole": ("scan", "Visits — solo", None,
+        _scan("b", lambda d: g8b(d, "perf", "visits"))),
+    "Visits — sole, 95% CI": ("scan", "Visits — solo, 95% CI", None,
+        _scan("b", lambda d: "{:.0f}-{:.0f}".format(*_poisson_ci(int(g8b(d, "perf", "visits")))))),
+    "Conversions — sole": ("scan", "Conversions — solo", None,
+        _scan("b", lambda d: g8b(d, "perf", "conversions"))),
+    "Revenue — sole": ("scan", "Revenue — solo", None,
+        _scan("b", lambda d: g8b(d, "perf", "revenue"))),
+    "CPM — sole": ("scan", "CPM — solo", None,
+        _scan("b", lambda d: 1000 * g8b(d, "serve", "media") / g8b(d, "serve", "imps"))),
+    "IVR — sole": ("scan", "IVR — solo", None,
+        _scan("b", lambda d: 100 * g8b(d, "perf", "visits") / g8b(d, "serve", "imps"))),
+    "IVR — sole, x of 0.0223% baseline": ("scan", "IVR — solo, x of 0.0223% baseline", None,
+        _scan("b", lambda d: (100 * g8b(d, "perf", "visits") / g8b(d, "serve", "imps")) / BASELINE_VR)),
+    "CVR (conv/visits) — sole": ("scan", "CVR (conv/visits) — solo", None,
+        _scan("b", lambda d: 100 * g8b(d, "perf", "conversions") / g8b(d, "perf", "visits")
+              if g8b(d, "perf", "visits") else None)),
+    "AOV — sole": ("scan", "AOV — solo", None,
+        _scan("b", lambda d: g8b(d, "perf", "revenue") / g8b(d, "perf", "conversions")
+              if g8b(d, "perf", "conversions") else None)),
+    "ROAS — sole": ("scan", "ROAS — solo", None,
+        _scan("b", lambda d: g8b(d, "perf", "revenue") / g8b(d, "serve", "media"))),
+
+    # ---- ECONOMICS — COST (solo bill = bounded estimate, see notes) ----
+    f"Meter bill ({BILL_MONTH})": ("est", "Solo bill $/yr — LOW bound (= today's run-rate)", "usd",
+        _solo_bill_low),
+    f"Run-rate $/yr ({BILL_MONTH} x12)": ("est", "Solo bill $/yr — HIGH bound (visit-day share of consumed credit)", "usd",
+        _solo_bill_high),
+    "% of delivered rows billed": ("est", "% of delivered rows billed — solo HIGH bound", None,
+        lambda d: None if d not in METERED else
+        100 * (_solo_bill_bounds(d)[1] * 2000) / (q1[d]["rows"] * ANN30)),
+
+    # ---- ECONOMICS — WORTH (T2_solo = measured solo-won media x52) ----
+    "Max justified CPM — on 100% of delivered rows": ("scan", "Max justified CPM — on 100% of delivered rows (solo)", None,
+        _scan("b", lambda d: None if d in FREE else 1000 * t2_solo(d) * 0.30 / (q1[d]["rows"] * ANN30))),
+    "Max justified CPM — on used/billed imps (vs $0.50)": ("scan", "Max justified CPM — on used/billed imps (solo, vs $0.50)", None,
+        _scan("b", lambda d: None if d in FREE else
+              (1000 * t2_solo(d) * 0.30 / (float(q1d[d]["billed_imps"]) * 12)
+               if d in q1d and q1d[d].get("billed_imps")
+               else 1000 * t2_solo(d) * 0.30 / (float(q2c[d]["rows_used"]) * ANN30)))),
+    "Flat equivalent — floor (T1 x 15%)": ("scan", "Flat equivalent — floor (T1_solo x 15%)", None,
+        _scan("b", lambda d: None if d in FREE else t1_solo(d) * 0.15)),
+    "Flat equivalent — fair (T2 x 20%)": ("scan", "Flat equivalent — fair (T2_solo x 20%)", None,
+        _scan("b", lambda d: None if d in FREE else t2_solo(d) * 0.20)),
+    "Flat equivalent — ceiling (T2 x 30%)": ("scan", "Flat equivalent — ceiling (T2_solo x 30%)", None,
+        _scan("b", lambda d: None if d in FREE else t2_solo(d) * 0.30)),
+    "T2 dependent revenue $/yr (sole-won media x52)": ("scan", "T2_solo dependent revenue $/yr (solo-won media x52, MEASURED)", None,
+        _scan("b", lambda d: t2_solo(d))),
+    "T2 envelope low (x0.4)": ("scan", "T2_solo envelope low (x0.4)", None,
+        _scan("b", lambda d: t2_solo(d) * 0.4)),
+    "T2 envelope high (x1.8)": ("scan", "T2_solo envelope high (x1.8)", None,
+        _scan("b", lambda d: t2_solo(d) * 1.8)),
+    "T1 provable floor $/yr (score-gated)": ("scan", "T1_solo provable floor $/yr (score-gated)", None,
+        _scan("b", lambda d: t1_solo(d))),
+    "Fee band, domain axis — low (sole classified x $3)": ("scan", "Fee band, domain axis — low (solo classified x $3)", None,
+        _scan("a", lambda d: None if d in FREE else g8a(d, "stock", "solo_classified") * 3)),
+    "Fee band, domain axis — high (sole classified x $13)": ("scan", "Fee band, domain axis — high (solo classified x $13)", None,
+        _scan("a", lambda d: None if d in FREE else g8a(d, "stock", "solo_classified") * 13)),
+    "Scale-normalized: standalone revenue per 1M delivered usable pairs": ("est",
+        "T2_solo $/yr — DENSITY ESTIMATE (= ladder standalone)", "usd",
+        lambda d: None if d in FREE or d not in DENS else solo_sum(d, masks) * DENS[d]),
+    "Scale-normalized: standalone revenue per 1M RAW delivered pairs": ("est",
+        "SOLO PAY RANGE $/yr (10-30% margin on T2_solo; density est until scan lands)", "txt",
+        _solo_pay_range),
+
+    # ---- PORTFOLIO -> SOLO coverage block (LOO concepts don't exist solo) ----
+    "Exact drop savings $/yr": ("mask", "Pair coverage under {free + vendor} (% of full roster)", "pct2",
+        lambda d: 100 * keep_cov(d, masks) / FULL_COV),
+    "Drop savings as % of bill": ("mask", "Visit-day coverage under {free + vendor}", "pct2",
+        lambda d: 100 * keep_cov(d, masks3c) / TRIP_TOTAL),
+    "% credits vanish (were sole)": ("mask", "Visit-day coverage gain over free-only (pp)", "dec2",
+        lambda d: 100 * (keep_cov(d, masks3c) - FREE_COV_T) / TRIP_TOTAL),
+    "% credits -> flat-fee vendors": ("mask", "HI-IP coverage under {free + vendor}", "pct3",
+        lambda d: 100 * keep_cov(d, hi3d) / sum(hi3d.values())),
+    "% credits -> free logs": ("mask", "PP-IP coverage under {free + vendor}", "pct3",
+        lambda d: 100 * keep_cov(d, pp3d) / sum(pp3d.values())),
+    "% credits -> other metered (still paid)": ("mask", "Solo visit-days (vs free logs only)", "int",
+        lambda d: solo_sum(d, masks3c)),
+    "Coverage lost if dropped (pp of pair coverage)": ("mask", "Share of paid-held visit-days (solo-bill HIGH-bound driver)", "pct",
+        lambda d: None if d in FREE else 100 * trip_holder(d) / PAID_TRIPLES),
+
+    # ---- VERDICT ----
+    "Composite quality score (curved, best=100)": ("scan", "Solo worth / bill — MEASURED (T2_solo vs bill LOW-HIGH)", "txt",
+        _scan("b", _solo_worth_bill)),
+    "Composite quality score (raw)": ("est", "Solo worth / bill — DENSITY EST (vs today's bill)", "x2",
+        lambda d: None if d not in METERED or d not in DENS or q0.get(d, {}).get("june_usd") is None
+        else (solo_sum(d, masks) * DENS[d]) / (q0[d]["june_usd"] * 12)),
+}
+
+
+def build_solo_spec():
+    out, kinds = [], {}
+    unmatched = set(SOLO_OVERRIDE)
+    for label, fmt, fn, oos_ok in SPEC:
+        if fn is None:
+            out.append(S(label))
+            continue
+        ov = SOLO_OVERRIDE.get(label)
+        if ov is None:
+            out.append((label, fmt, fn, oos_ok))
+            kinds[label] = "copy"
+            continue
+        unmatched.discard(label)
+        kind, nl, nf, nfn = ov
+        lbl2, fmt2 = (nl or label), (nf or fmt)
+        if lbl2 != label and label in DIR and lbl2 not in DIR:
+            DIR[lbl2] = DIR[label]
+        out.append((lbl2, fmt2, nfn, oos_ok))
+        kinds[lbl2] = kind
+    assert not unmatched, f"SOLO_OVERRIDE keys not in SPEC: {unmatched}"
+    assert len(out) == len(SPEC), f"SOLO_SPEC length {len(out)} != SPEC {len(SPEC)}"
+    return out, kinds
+
+
+def solo_anchor_checks():
+    for d in EXT:
+        a, b = solo_sum(d, masks), int(q3[d]["netnew_vs_free_pairs"])
+        assert a == b, f"anchor1 FAIL ds{d}: mask solo pairs {a} != q3 netnew_vs_free {b}"
+    tot = sum(masks.values())
+    parts = (solo_sum(23, masks) + solo_sum(30, masks)
+             + sum(n for m, n in masks.items() if (m & FREE_MASK) == FREE_MASK)
+             + sum(n for m, n in masks.items() if not (m & FREE_MASK)))
+    assert parts == tot, f"anchor6 FAIL: free-partition {parts} != mask total {tot}"
+    if Q8A:
+        for d in ACTIVE:
+            qa, ms = g8a(d, "stock", "solo_pairs"), solo_sum(d, masks)
+            if ms and abs(qa - ms) / ms > 0.001:
+                raise AssertionError(f"anchor3 FAIL ds{d}: q8a solo_pairs {qa:.0f} vs mask {ms}")
+            if qa != ms:
+                print(f"anchor3 drift ds{d}: q8a {qa:.0f} vs mask {ms} ({100 * (qa - ms) / ms:+.4f}%)")
+            fd = g8a(d, "fresh_day", "solo_new_pair") + g8a(d, "fresh_day", "refresh_of_free_pair")
+            mt = solo_sum(d, masks3c)
+            if mt and abs(fd - mt) / mt > 0.001:
+                raise AssertionError(f"anchor7 FAIL ds{d}: fresh_day solo {fd:.0f} vs mask {mt}")
+    if Q8B:
+        for d in ACTIVE:
+            assert g8b(d, "serve", "media") >= float(q6[d]["media_sole"]) - 0.01, f"anchor4 media ds{d}"
+            assert g8b(d, "serve", "ips_solo") >= float(q6[d]["ips_sole"]), f"anchor4 ips ds{d}"
+            assert g8b(d, "serve", "imps") >= float(q6[d]["imps_sole"]), f"anchor4 imps ds{d}"
+            for tk, uni in (("hi", hi3d), ("pp", pp3d)):
+                qb, ms = g8b(d, "tier", tk), solo_sum(d, uni)
+                if ms and abs(qb - ms) / ms > 0.005:
+                    raise AssertionError(f"anchor5 FAIL ds{d} {tk}: q8b {qb:.0f} vs q3d mask {ms}")
+                if qb != ms:
+                    print(f"anchor5 drift ds{d} {tk}: q8b {qb:.0f} vs q3d mask {ms} "
+                          f"({100 * (qb - ms) / max(ms, 1):+.3f}%)")
+
+
 # pct* store the FRACTION (0.218) with a true percent format so Excel/Sheets
 # recognize the cell as a percentage; the writer divides percent numbers by 100.
 FMT = {"int": "#,##0", "pct0": "0%", "pct": "0.0%", "pct2": "0.00%",
@@ -648,6 +1013,30 @@ DIR[f"Run-rate $/yr ({BILL_MONTH} x12)"] = -1
 NEUTRAL = {"CPM — touched", "CPM — sole",
            "Contract rate ($ CPM; flat amounts pending)",
            f"Billed domains ({BILL_MONTH})"}
+
+# Build the SOLO spec AFTER DIR/NEUTRAL exist (renamed rows inherit direction here),
+# then override directions for replacement rows whose meaning flipped.
+SOLO_SPEC, SOLO_KIND = build_solo_spec()
+DIR.update({
+    "Solo bill $/yr — LOW bound (= today's run-rate)": -1,
+    "Solo bill $/yr — HIGH bound (visit-day share of consumed credit)": -1,
+    "% of delivered rows billed — solo HIGH bound": -1,
+    "% co-held-with-free pairs where vendor fresher": 1,
+    "% co-held-with-free pairs tied same-day": -1,
+    "% co-held-with-free pairs where free fresher": -1,
+    "Solo share of net-of-free universe": 1,
+    "Pair-coverage gain over free-only (pp)": 1,
+    "Pair coverage under {free + vendor} (% of full roster)": 1,
+    "Visit-day coverage under {free + vendor}": 1,
+    "Visit-day coverage gain over free-only (pp)": 1,
+    "HI-IP coverage under {free + vendor}": 1,
+    "PP-IP coverage under {free + vendor}": 1,
+    "Solo visit-days (vs free logs only)": 1,
+    "Share of paid-held visit-days (solo-bill HIGH-bound driver)": -1,
+    "T2_solo $/yr — DENSITY ESTIMATE (= ladder standalone)": 1,
+    "Solo worth / bill — DENSITY EST (vs today's bill)": 1,
+})
+NEUTRAL.add("CPM — solo")
 
 
 def money(v):
@@ -808,6 +1197,78 @@ DEF[f"Billed domains ({BILL_MONTH})"] = ("Distinct domains credited on the meter
 DEF[f"Meter bill ({BILL_MONTH})"] = ("What the meter actually charged that month (usage_reporting_data month-end snapshot).", "q0")
 DEF[f"Run-rate $/yr ({BILL_MONTH} x12)"] = ("That bill annualized.", "q0")
 
+# ---- SOLO sheet definitions (non-copy rows only; copied rows share the numbers-sheet DEF) ----
+SOLO_DEF = {
+    "% of rows used — share of {vendor+free} world": ("Vendor's slice of used rows if the world were just {vendor + both free logs}. Sums can exceed 100% down the column only via overlap with free.", "q2c"),
+    "% of IPs used — share of {vendor+free} world": ("Same, IP grain.", "q2c"),
+    "% of domains used — share of {vendor+free} world": ("Same, domain grain.", "q2c"),
+    "Solo usable IPs (vs free logs only)": ("Usable IPs the vendor delivers that NEITHER free log delivers (other paid vendors ignored). The IP-grain solo stock - measured, not mask-derivable.", "q8a"),
+    "% of usable IPs solo": ("Solo IPs / its usable IPs.", "q8a/q3"),
+    "Solo domains (vs free logs only)": ("Delivered domains neither free log delivers (all parsed domains, q4B grain).", "q8a"),
+    "Solo CLASSIFIED domains (fee-band axis, vs free)": ("Solo domains present in wcv - the durable classifier-coverage unit under the solo counterfactual.", "q8a"),
+    "% usable pairs solo (vs free logs only)": ("Usable pairs held by the vendor and no free log - EXACT from q3b masks; equals q3 net-new-vs-free (anchor).", "q3b masks"),
+    "% co-held-with-free pairs where vendor fresher": ("Of raw pairs BOTH the vendor and a free log hold: vendor's MAX(dt) strictly newer - its recency contribution on shared ground.", "q8a"),
+    "% co-held-with-free pairs tied same-day": ("Same MAX(dt) as the free log.", "q8a"),
+    "% co-held-with-free pairs where free fresher": ("Free log newer - the vendor's copy is stale.", "q8a"),
+    "Pair-coverage gain over free-only (pp)": ("Usable-pair coverage {free + vendor} adds over free logs alone (free-only = 60.4%).", "q3b masks"),
+    "Solo share of net-of-free universe": ("Share of the 2.37B net-of-free pairs the vendor reaches alone = the ladder's standalone coverage.", "q3b masks"),
+    "% visit-days solo — new pair (vs free)": ("Its (ip,domain,date) triples on pairs no free log holds at all - brand-new signal vs our own logs.", "q8a"),
+    "% visit-days solo — refresh of free-held pair": ("Dates the vendor alone delivered on pairs a free log also holds - recency refreshes we could not have collected that day.", "q8a"),
+    "% visit-days duplicated same-day with free logs": ("Same (ip,domain,date) a free log also captured - duplication vs our own collection.", "q8a"),
+    "Solo IPs served-won (vs free logs only)": ("Served IPs in the SOLO cohort (vendor delivered, neither free log did; other paid vendors ignored). Superset of the sole cohort by construction.", "q8b"),
+    "% of solo stock served-won": ("Served solo IPs / solo usable stock.", "q8b/q8a"),
+    "Served IPs shared with free logs": ("Its served IPs a free log also delivered = replaceable by our own collection.", "q6/q8b"),
+    "% of served IPs shared with free logs": ("Share of its served footprint our free logs already cover.", "q6/q8b"),
+    "Solo won bids / wk": ("Won impressions on solo-cohort IPs per week - the media flow only this vendor (vs our own logs) enabled.", "q8b"),
+    "Solo won bids per served solo IP": ("Frequency on those households.", "q8b"),
+    "Solo won bids annualized (x52)": ("Yearly expected if the weekly flow persists.", "q8b"),
+    "% HI — share of {vendor+free} world": ("HI-pool slice within {vendor + free logs}.", "q5"),
+    "% PP — share of {vendor+free} world": ("PP-pool slice within {vendor + free logs}.", "q5"),
+    "HI 10000 count — SOLO IPs (vs free logs only)": ("Served HI IPs the vendor delivered that no free log did - EXACT from q3d masks (q8b tier counts must match; anchor).", "q3d masks"),
+    "% HI of solo served IPs": ("HI share of the solo served cohort.", "q8b"),
+    "PP 8000 count — SOLO IPs (vs free logs only)": ("Served PP IPs no free log delivered.", "q3d masks"),
+    "% PP of solo served IPs": ("PP share of the solo served cohort.", "q8b"),
+    "Avg household score — solo (scored imps)": ("Mean household_score on solo-cohort scored impressions (hs>0 only).", "q8b"),
+    "% imps scored — solo": ("Scored share of solo-cohort impressions.", "q8b"),
+    "Spend (media $) — solo (vs free logs only)": ("Weekly media on solo-cohort IPs - the solo counterfactual's dependent-revenue flow.", "q8b"),
+    "Impressions (won bids) — solo": ("Weekly won imps, solo cohort.", "q8b"),
+    "Visits — solo": ("Clickpass visits on solo-cohort serves (q7b join pattern).", "q8b"),
+    "Visits — solo, 95% CI": ("Poisson (Garwood) 95% interval.", "q8b"),
+    "Conversions — solo": ("Attributed conversions (q7c dedup) on solo-cohort serves.", "q8b"),
+    "Revenue — solo": ("order_amt on those conversions.", "q8b"),
+    "CPM — solo": ("Solo media / solo imps x 1000.", "q8b"),
+    "IVR — solo": ("Solo visits / solo imps.", "q8b"),
+    "IVR — solo, x of 0.0223% baseline": ("Multiple of the no-svs-data baseline.", "q8b"),
+    "CVR (conv/visits) — solo": ("Conversions per solo visit.", "q8b"),
+    "AOV — solo": ("Revenue / conversions.", "q8b"),
+    "ROAS — solo": ("Solo revenue / solo media.", "q8b"),
+    "Solo bill $/yr — LOW bound (= today's run-rate)": ("If the vendor were the only paid source it keeps at least its current credit (removing competitors only adds credit) - so today's run-rate is a hard FLOOR on the solo bill.", "q0"),
+    "Solo bill $/yr — HIGH bound (visit-day share of consumed credit)": ("CEILING estimate: max(today's bill, total metered bills x the vendor's share of paid-held visit-days). The proportional term assumes consumption distributes with visit-day holdings (all metered CPMs $0.50); it under-runs junk-billing vendors (their credit sits on domains outside the usable universe, uncontested) so the bound clamps to today's bill - only the two 33Across feeds have real solo-bill upside. Flat vendors: fee pending.", "q3c masks/q0"),
+    "% of delivered rows billed — solo HIGH bound": ("High-bound billed imps (HIGH bill / $0.50 x 1000) over annual delivered rows.", "computed"),
+    "Max justified CPM — on 100% of delivered rows (solo)": ("(T2_solo x 30%) spread over every delivered row.", "q8b/q1"),
+    "Max justified CPM — on used/billed imps (solo, vs $0.50)": ("Same over billed/used imps - compare to the $0.50 meter.", "q8b/q1d"),
+    "Flat equivalent — floor (T1_solo x 15%)": ("Flat fee justified by provable solo dependency at conservative margin.", "q8b"),
+    "Flat equivalent — fair (T2_solo x 20%)": ("Fair flat fee on the solo dependency ceiling.", "q8b"),
+    "Flat equivalent — ceiling (T2_solo x 30%)": ("Never-pay-more line under the solo counterfactual.", "q8b"),
+    "T2_solo dependent revenue $/yr (solo-won media x52, MEASURED)": ("THE solo decision number: measured media on solo-cohort won imps, annualized. Sits between T2-sole (measured, vs all sources) and the ladder's density-estimated standalone.", "q8b"),
+    "T2_solo envelope low (x0.4)": ("Stress band bottom.", "computed"),
+    "T2_solo envelope high (x1.8)": ("Stress band top.", "computed"),
+    "T1_solo provable floor $/yr (score-gated)": ("Media on solo imps where a high score gated the serve.", "q8b"),
+    "Fee band, domain axis — low (solo classified x $3)": ("Domain-axis worth on SOLO classified domains.", "q8a"),
+    "Fee band, domain axis — high (solo classified x $13)": ("Same at the $13 ceiling.", "q8a"),
+    "T2_solo $/yr — DENSITY ESTIMATE (= ladder standalone)": ("The decisions-ladder standalone number reproduced on this sheet: solo pairs x measured T2-per-sole-pair density. Compare with the MEASURED row above - the gap is the density-extrapolation error (33Across precedent: $397K est vs $270K measured-sole).", "q3b masks/q6"),
+    "SOLO PAY RANGE $/yr (10-30% margin on T2_solo; density est until scan lands)": ("What to actually pay: 10-30% blended margin on T2_solo revenue. THE negotiating range under the solo counterfactual.", "q8b"),
+    "Pair coverage under {free + vendor} (% of full roster)": ("Usable-pair coverage if the roster were just this vendor + free logs (the scenario-table lens, per vendor).", "q3b masks"),
+    "Visit-day coverage under {free + vendor}": ("Same at (ip,domain,date) grain.", "q3c masks"),
+    "Visit-day coverage gain over free-only (pp)": ("Visit-day coverage added over free logs alone (free-only = 59.4%).", "q3c masks"),
+    "HI-IP coverage under {free + vendor}": ("Share of all HI IPs reachable with just this vendor + free logs (free-only = 99.94%).", "q3d masks"),
+    "PP-IP coverage under {free + vendor}": ("Share of all PP IPs (free-only = 99.25%).", "q3d masks"),
+    "Solo visit-days (vs free logs only)": ("Visit-day triples held by the vendor and no free log (count).", "q3c masks"),
+    "Share of paid-held visit-days (solo-bill HIGH-bound driver)": ("The vendor's share of all visit-days any paid vendor holds - the multiplier behind the solo-bill HIGH bound.", "q3c masks"),
+    "Solo worth / bill — MEASURED (T2_solo vs bill LOW-HIGH)": ("Measured T2_solo divided by the solo-bill range (worst case first). >1x = would cover even the high-bound bill on a revenue basis.", "q8b/q0/q3c"),
+    "Solo worth / bill — DENSITY EST (vs today's bill)": ("Density-estimated standalone revenue / today's run-rate (the ladder's standalone worth/bill, reproduced per vendor).", "q3b masks/q0"),
+}
+
 # WTP bands from the eval index (q9b chart) - the official pay-up-to ranges.
 WTP = {25: "$150K-600K", 26: "$0.7M-3M", 28: "$30K-100K", 24: "$14K-60K",
        39: "$0.1K-1.5K", 40: "$10K-40K", 36: "$1.1K-4.7K", 33: "$0.5K-2.4K"}
@@ -856,11 +1317,14 @@ def main():
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
+    solo_anchor_checks()
+
     wb = openpyxl.Workbook()
     idx = wb.active
     idx.title = "index"
     dec = wb.create_sheet("decisions")
     ws = wb.create_sheet("numbers")
+    ss = wb.create_sheet("solo")
     ns = wb.create_sheet("notes")
 
     bold = Font(bold=True)
@@ -871,81 +1335,82 @@ def main():
     band_fill = PatternFill("solid", fgColor="F2F2F2")
     verdict_color = {"KEEP": "1E7A1E", "NEGO": "B26B00", "DROP": "B00020"}
 
-    # ================= numbers =================
-    ws.cell(row=1, column=1, value="Question").font = bold
-    for i, d in enumerate(DS_COLS):
-        c = ws.cell(row=1, column=2 + i, value=HDR_NAMES[d])
-        c.font = bold
-        c.alignment = Alignment(horizontal="right")
-
-    filled = 0
-    r = 1
-    for label, fmt, fn, oos_ok in SPEC:
-        r += 1
-        a = ws.cell(row=r, column=1, value=label)
-        if fn is None:
-            a.font = section_font
-            a.fill = section_fill
-            for i in range(len(DS_COLS)):
-                ws.cell(row=r, column=2 + i).fill = section_fill
-            continue
+    # ================= numbers + solo (same grid renderer) =================
+    def render_grid(sheet, spec):
+        sheet.cell(row=1, column=1, value="Question").font = bold
         for i, d in enumerate(DS_COLS):
-            cell = ws.cell(row=r, column=2 + i)
-            cell.alignment = Alignment(horizontal="right")
-            if d in OOS and not oos_ok:
-                cell.value = NA
+            c = sheet.cell(row=1, column=2 + i, value=HDR_NAMES[d])
+            c.font = bold
+            c.alignment = Alignment(horizontal="right")
+
+        r = 1
+        for label, fmt, fn, oos_ok in spec:
+            r += 1
+            a = sheet.cell(row=r, column=1, value=label)
+            if fn is None:
+                a.font = section_font
+                a.fill = section_fill
+                for i in range(len(DS_COLS)):
+                    sheet.cell(row=r, column=2 + i).fill = section_fill
                 continue
-            try:
-                v = fn(d)
-            except Exception:
-                v = None
-            if v is None:
-                cell.value = NA
-            elif isinstance(v, str):
-                cell.value = v
-                filled += 1
-            else:
-                v = float(v)
-                if fmt and fmt.startswith("pct"):
-                    v /= 100.0
-                cell.value = round(v, 8)
-                if FMT.get(fmt):
-                    cell.number_format = FMT[fmt]
-                filled += 1
+            for i, d in enumerate(DS_COLS):
+                cell = sheet.cell(row=r, column=2 + i)
+                cell.alignment = Alignment(horizontal="right")
+                if d in OOS and not oos_ok:
+                    cell.value = NA
+                    continue
+                try:
+                    v = fn(d)
+                except Exception:
+                    v = None
+                if v is None:
+                    cell.value = NA
+                elif isinstance(v, str):
+                    cell.value = v
+                else:
+                    v = float(v)
+                    if fmt and fmt.startswith("pct"):
+                        v /= 100.0
+                    cell.value = round(v, 8)
+                    if FMT.get(fmt):
+                        cell.number_format = FMT[fmt]
 
-    RED, YEL, GRN = "F8696B", "FFEB84", "63BE7B"
-    last_col = get_column_letter(1 + len(DS_COLS))
-    r = 1
-    for label, fmt, fn, oos_ok in SPEC:
-        r += 1
-        if fn is None:
-            continue
-        rng = f"B{r}:{last_col}{r}"
-        if label in NEUTRAL:
-            ws.conditional_formatting.add(rng, ColorScaleRule(
-                start_type="min", start_color="EFF6FC",
-                end_type="max", end_color="7FB2E5"))
-            continue
-        direction = DIR.get(label)
-        if not direction:
-            continue
-        lo, hi = (RED, GRN) if direction > 0 else (GRN, RED)
-        ws.conditional_formatting.add(rng, ColorScaleRule(
-            start_type="min", start_color=lo,
-            mid_type="percentile", mid_value=50, mid_color=YEL,
-            end_type="max", end_color=hi))
-
-    ws.column_dimensions["A"].width = max(len(x[0]) for x in SPEC) + 3
-    for i, d in enumerate(DS_COLS):
-        m = len(HDR_NAMES[d])
-        r2 = 1
-        for label, fmt, fn, oos_ok in SPEC:
-            r2 += 1
+        RED, YEL, GRN = "F8696B", "FFEB84", "63BE7B"
+        last_col = get_column_letter(1 + len(DS_COLS))
+        r = 1
+        for label, fmt, fn, oos_ok in spec:
+            r += 1
             if fn is None:
                 continue
-            m = max(m, disp_len(ws.cell(row=r2, column=2 + i).value, fmt))
-        ws.column_dimensions[get_column_letter(2 + i)].width = round(m * 1.1) + 2
-    ws.freeze_panes = "B2"
+            rng = f"B{r}:{last_col}{r}"
+            if label in NEUTRAL:
+                sheet.conditional_formatting.add(rng, ColorScaleRule(
+                    start_type="min", start_color="EFF6FC",
+                    end_type="max", end_color="7FB2E5"))
+                continue
+            direction = DIR.get(label)
+            if not direction:
+                continue
+            lo, hi = (RED, GRN) if direction > 0 else (GRN, RED)
+            sheet.conditional_formatting.add(rng, ColorScaleRule(
+                start_type="min", start_color=lo,
+                mid_type="percentile", mid_value=50, mid_color=YEL,
+                end_type="max", end_color=hi))
+
+        sheet.column_dimensions["A"].width = max(len(x[0]) for x in spec) + 3
+        for i, d in enumerate(DS_COLS):
+            m = len(HDR_NAMES[d])
+            r2 = 1
+            for label, fmt, fn, oos_ok in spec:
+                r2 += 1
+                if fn is None:
+                    continue
+                m = max(m, disp_len(sheet.cell(row=r2, column=2 + i).value, fmt))
+            sheet.column_dimensions[get_column_letter(2 + i)].width = round(m * 1.1) + 2
+        sheet.freeze_panes = "B2"
+
+    render_grid(ws, SPEC)
+    render_grid(ss, SOLO_SPEC)
 
     # ================= index =================
     idx_hdr = ["Section", "Question", "What it means / how computed", "Source"]
@@ -976,9 +1441,45 @@ def main():
             if band:
                 cell.fill = band_fill
         idx.cell(row=ri, column=2).font = bold
-    sec_w = max(len(x[0]) for x in SPEC if x[2] is None) + 3
-    q_w = max(len(x[0]) for x in SPEC if x[2] is not None) + 3
-    src_w = max(len(v[1]) for v in DEF.values()) + 3
+
+    # ---- SOLO sheet: banner + definitions for its recomputed (non-copy) rows ----
+    ri += 1
+    ban = idx.cell(row=ri, column=1, value=(
+        "SOLO SHEET — counterfactual: each column assumes that vendor is the ONLY paid source; "
+        "free logs (guid_log + augmentor) always kept. 'Solo' = touched by the vendor and by "
+        "NEITHER free log (free-log columns: vs the OTHER free log). Differs from 'sole' "
+        "(vs ALL 9 other sources) and equals the decisions-ladder 'standalone' at pair grain. "
+        "Rows below = only the solo sheet's recomputed rows; all others copy the numbers sheet."))
+    idx.merge_cells(start_row=ri, start_column=1, end_row=ri, end_column=4)
+    ban.font = section_font
+    ban.fill = section_fill
+    ban.alignment = Alignment(vertical="top", wrap_text=True)
+    idx.row_dimensions[ri].height = 42
+    section = ""
+    band = False
+    for label, fmt, fn, oos_ok in SOLO_SPEC:
+        if fn is None:
+            section = label
+            band = not band
+            continue
+        if SOLO_KIND.get(label) == "copy":
+            continue
+        meaning, src = SOLO_DEF.get(label, ("", ""))
+        if not meaning:
+            missing_defs.append("SOLO: " + label)
+        ri += 1
+        vals = ["SOLO: " + section, label, meaning, src]
+        for c, v in enumerate(vals, start=1):
+            cell = idx.cell(row=ri, column=c, value=v)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.border = border
+            if band:
+                cell.fill = band_fill
+        idx.cell(row=ri, column=2).font = bold
+
+    sec_w = max(len(x[0]) for x in SPEC if x[2] is None) + 3 + len("SOLO: ")
+    q_w = max(len(x[0]) for x in list(SPEC) + list(SOLO_SPEC) if x[2] is not None) + 3
+    src_w = max(len(v[1]) for v in list(DEF.values()) + list(SOLO_DEF.values())) + 3
     for i, w in enumerate([sec_w, q_w, 95, max(src_w, len("Source") + 2)], start=1):
         idx.column_dimensions[get_column_letter(i)].width = w
     idx.freeze_panes = "A2"
@@ -1099,7 +1600,7 @@ def main():
         ], fmts=sfmt, band_row=(n % 2 == 1))
 
     # ---- net-of-free value ladder ----
-    dens = {d: t2_ann(d) / float(q3[d]["sole_pairs"]) for d in EXT if d in q3 and d in q6}
+    dens = DENS
     dens_t = {d: t2_ann(d) / (vend3c[d]["sole_new_pair"] + vend3c[d]["sole_refresh"])
               for d in EXT if d in vend3c and d in q6}
     ri += 1
@@ -1215,18 +1716,24 @@ def main():
     nrows = sum(1 for x in SPEC if x[2] is not None)
     print(f"wrote {OUT}")
     print(f"sheets: index ({nrows} definitions), decisions (8 vendors + {len(SC)} scenarios), "
-          f"numbers ({nrows} rows x {len(DS_COLS)}), notes")
+          f"numbers ({nrows} rows x {len(DS_COLS)}), solo ({nrows} rows, "
+          f"q8a {'loaded' if Q8A else 'PENDING'} / q8b {'loaded' if Q8B else 'PENDING'}), notes")
     print("missing index definitions:", missing_defs if missing_defs else "none")
-    empty = []
-    r = 1
-    for label, fmt, fn, oos_ok in SPEC:
-        r += 1
-        if fn is None:
-            continue
-        for i, d in enumerate(DS_COLS):
-            if ws.cell(row=r, column=2 + i).value in (None, ""):
-                empty.append((label, d))
-    print("empty numbers cells:", empty if empty else "none")
+    for name, sheet, spec in (("numbers", ws, SPEC), ("solo", ss, SOLO_SPEC)):
+        empty, pending = [], 0
+        r = 1
+        for label, fmt, fn, oos_ok in spec:
+            r += 1
+            if fn is None:
+                continue
+            for i, d in enumerate(DS_COLS):
+                v = sheet.cell(row=r, column=2 + i).value
+                if v in (None, ""):
+                    empty.append((label, d))
+                elif v == PENDING:
+                    pending += 1
+        print(f"empty {name} cells:", empty if empty else "none")
+        print(f"{name} pending-scan cells: {pending}")
 
 
 if __name__ == "__main__":
