@@ -1012,9 +1012,39 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   is derivable (via `product_categorization`); svs→ts is 1:many; prod since 2025-05-02, DS19 backfilled
   from 2025-04-20. Billing chain: svs → targeted_signal (used rows, source_data_source_id = credited DDP)
   → `prod.mntn_matched.mntn_matched_reporting` (Athena) → `coredw.usage_reporting_data` (BQ, month-end
-  snapshots) → monthly vendor payout (contact: **Maya Triman**). The "1/N split on shared IPs" note may be
-  a different layer (serve-level credit split) — impressions decimals exist; exact interplay with
-  first-reporter-wins UNVERIFIED.
+  snapshots) → monthly vendor payout (contact: **Maya Triman**).
+  **CREDIT REGIME CHANGED at reporting_month 2026-05 (RESOLVED 2026-07-13, AUDI-1092 residue
+  analysis):** Jan–Apr 2026 usage rows are ~100% FRACTIONAL impressions (clean 1/N fractions —
+  equal split across contributing vendors, "everybody gets a piece"); May 2026+ rows are 100%
+  INTEGER (single-vendor credit — first-reporter per AP-3779, or cheapest/free-priority; winner
+  rule unconfirmed, lives in dbt `targeted_signal_ds_13/19`, DAG `keyword_ddp_reporting`). LOO
+  math on May+ bills is exact-to-conservative; NEVER mix Jan–Apr bills into single-credit
+  arithmetic. Billed MM imps fell 36% Apr→Jun (regime switch + augmentor displacement).
+  **FREE LOGS DO NOT PREEMPT PAID CREDIT (Sean Yang 2026-07-13 — AUDI-1093):** vendors earn
+  day-grain credit on signals guid/augmentor also capture; exact recoverable with a
+  free-preemption rule = **$273.7K/yr** at (ip,domain,date) grain (33Across $221.7K). Both free
+  logs are confirmed IN targeted_signal → exclusion implementable there; **Sherwin = crediting/
+  billing contact**; Sean endorses the fix. Preemption substitutes for drops on the overlap slice.
+  **svs consumers (Sean Yang): DS13 and DS19 ONLY. DS46 Fangorn = guid_log only today; post-retrain
+  it moves to feature-store data from aug_log + guid_log (Matt Brorby). Fangorn migration status:
+  most active advertisers ALREADY on DS46; forcing the DS13 tail is uncontroversial (Alex owns
+  solutions)** → 3P svs vendors have zero Fangorn impact; vendor dependency = DS19 MM Core +
+  shrinking DS13 tail.
+  **Visit-grain facts (q3c, 30d, 2026-07-13):** 13.29B unique usable (ip×domain×DATE) visit-days;
+  free logs cover 59.4% at visit grain (60.4% pair grain) — **augmentor DS30 alone = 48.8%, guid
+  10.7%**. Per-vendor visit-day mix (new-pair/refresh/same-day-dup): 33Across 20/14/66, Sovrn
+  11/5/84 (worst), 33A API 59/2/40, Klickly 94/5/1, Justuno 91/1/8.
+  **Scored audiences are vendor-independent (q3d):** free-only retains 99.94% HI / 99.25% PP
+  served-scored IPs (k=4: 99.9991% HI — 53 of 5.96M lost). Vendor reach value concentrates in
+  ~10 ad-invisible verticals (health/personal-care 0–26% retained free-only, cosmetics/pharmacy
+  ~25%, airlines 23%) — checkout/health pages carry no programmatic ads so augmentor never sees
+  them. `wcv` columns: domain_name, vertical_id, vertical_name, bucket_id, is_manual_override.
+  **Platform VR calibration (q7e, week 2026-07-02..08):** retargeting 2.89% / unscored prospecting
+  1.11% / scored prospecting 0.72% — baselines for any cohort VR sanity check; vendor sole-IP
+  cohorts (0.01–0.03%) are real darkness, not attribution loss (q7f: 25 of 33Across's 99K served
+  sole IPs had ANY clickpass event vs 1.43% guid-sole).
+  **Klickly myshopify nuance:** *.myshopify.com URLs are distinct storefronts categorized
+  separately — host-level distinct stores is the right lens for Shopify-type feeds.
 - **Augmentor displacement (AUDI-647 + airflow-ti git, 2026-07-10):** DS30 augmentor_log added to svs
   2026-05-07 (re-enabled with dedupe 05-12, `fpa_vendor_log_batch_ingestion_consolidated.py`). Under
   first-reporter-wins, our free Magnite-derived augmentor rows now displace DDP credits for overlapping
