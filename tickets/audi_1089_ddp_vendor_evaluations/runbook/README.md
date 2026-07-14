@@ -1,6 +1,7 @@
 # DDP Runbook — Logic, Rankings, and How to Read the Charts
 
-One folder, two halves: `queries/` (canonical SQL, one per step, re-runnable each quarter/renewal)
+One folder, two halves: `queries/` (canonical SQL, one per step, re-runnable each quarter/renewal —
+**`queries/MANIFEST.md` = the ordered, shareable run list mapping every query to the workbook rows/charts it answers**)
 and `charts/` (the PNG per step + this doc). Data CSVs land in `../outputs/run_<date>/` (gitignored).
 Full step definitions: `documentation/docs/ddp_quality_score_runbook.md`.
 
