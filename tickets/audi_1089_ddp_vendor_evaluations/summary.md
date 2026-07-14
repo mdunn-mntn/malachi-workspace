@@ -272,6 +272,59 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d12. SOLO sheet — each vendor as the ONLY paid source (user-requested 2026-07-14)
+
+**Ask:** the numbers grid measures every vendor against all other sources, so paid-vendor
+overlap depresses everyone's individual numbers; recompute the whole grid per vendor as if it
+were the sole paid vendor, sharing IPs only with augmentor_log + guid_log — "a cleaner example
+of their individual impact."
+
+**Three counterfactuals now live in the workbook — don't conflate:**
+1. **sole** (numbers sheet) = touched by NO other source among all 10 (the strictest cohort);
+2. **solo** (new sheet) = touched by the vendor and by NEITHER free log — other paid vendors
+   ignored (free-log columns: vs the OTHER free log; one formula `other_free(d)`);
+3. **ladder standalone** (decisions sheet) = solo at pair grain with density-estimated $ — the
+   solo sheet reproduces it as its DENSITY ESTIMATE row and adds the measured version.
+
+**Implementation:** `solo` sheet inserted between numbers and notes — the same 143 rows/14
+columns, built from SPEC via a `SOLO_OVERRIDE` annotation dict (no duplicate row list; length
+and key-membership guards). Treatment mix: **75 copy** (feed scale/quality/funnel/touched-cohort
+rows don't change under the counterfactual), **5 rebased shares** (share-of-column-total →
+share of the {vendor+free} world), **12 mask-exact** (solo pairs/visit-days/HI/PP counts +
+{free+vendor} coverage from the q3b/q3c/q3d 10-bit holder masks — LOO/portfolio rows replaced
+by these), **6 bounded estimates** (solo bill LOW/HIGH, density-est revenue, worth/bill est),
+**45 scan-fed** (measured solo-cohort serving/perf from two new queries; cells print
+"pending scan (q8)" until the CSVs land — 450 pending cells in phase 1).
+
+**New queries (MANIFEST rows 26-27):** `q8a_solo_stock.sql` (svs 30d + wcv/pc: solo usable
+IPs — the one stock masks can't give at IP grain — solo domains/classified, freshness-vs-free
+at pair grain [fresher/tied/stale on co-held pairs] and visit-day grain [new-pair / refresh /
+same-day-dup vs free only]); `q8b_solo_perf.sql` (svs 37d raw membership + CIL week + clickpass
++ ui_conversions with q7c's dedup verbatim: solo-cohort served IPs/imps/media/T1 inputs/visits/
+conversions + per-IP HI/PP tier counts for the mask cross-check). Both dry-run validated,
+launched in parallel ~16:34.
+
+**Solo bill = bounded estimate, not a quote:** LOW = today's run-rate (hard floor — removing
+competitors only ADDS credit to the survivor); HIGH = max(LOW, total metered bills × vendor's
+share of paid-held visit-days). First cut of HIGH came out BELOW today's bill for
+Sovrn/Justuno/Cybba — their billed credit sits on junk domains outside the usable universe,
+uncontested by other vendors, so the proportional model under-runs them and the bound clamps
+to LOW. Only the 33Across feeds have real solo-bill upside: DS28 $422K→$456K (+8%),
+DS40 $176K→$308K (+75%, it inherits credit currently lost to DS28 batch).
+
+**Anchors:** mask solo pairs == q3 netnew_vs_free_pairs EXACT for all 8 paid vendors
+(33Across 1,057,407,760 both sides); free-partition identity exact; phase-2 asserts (in
+fill_template): q8a solo pairs == masks (<0.1% wcv/pc snapshot drift tolerated), q8b ≥ q6
+sole everywhere (superset), q8b HI/PP == q3d mask solo counts (<0.5%; raw-vs-usable membership
+gate — q3d↔q5 precedent ratio 1.000).
+
+**Phase-1 spot values (density-est basis):** 33Across solo = 45.3% of its usable pairs,
+solo HI 2,727 IPs (vs 92 sole-HI — the paid-overlap distortion the sheet strips), standalone
+$397K est → pay range $40-119K vs $422-456K bill (0.94x revenue basis, unchanged conclusion);
+Sovrn 99.7% pairs solo (junk-driven uniqueness) but $21K est vs $116K bill (0.18x). New chart
+`q11_solo_pnl.png` (bill bracket vs measured/est T2_solo + pay band; measured markers fill in
+when q8b lands).
+
 ## 4d11. q3d landed + reconciliation fixes + shareable query package (2026-07-13 eve - 07-14)
 
 - **q3d results (charts q3d_score_coverage.png / q3d_vertical_impact.png; scenario table gained
