@@ -21,11 +21,12 @@
 --               (free + 5x5 + Predactiv + 33Across + 33A API = mask 573)
 --   rec='cat'   k1 = data_source_category_id, k2 = keyword name (taxonomy join; '' if
 --               unmapped), v1/v2/v3 = member IPs under all / free-only / k4
---   rec='ds'    k1 = vendor ds, v1 = DS19-matched rows (EXACT q2c ds19_cat replica:
---               NO ip filter) -> anchor vs q2c rows_ds19_cat
+--   rec='ds'    k1 = vendor ds, v1 = DS19-matched rows over the 30d window (EXACT q2c
+--               ds19_cat FLAG replica, NO ip filter). NOTE: q2c itself is a ONE-DAY
+--               sample -> anchor compares v1/30 to q2c rows_ds19_cat with day-variance
+--               tolerance, not exact equality
 --
--- Validation anchors: rec ds == q2c rows_ds19_cat per vendor (same 30d window; pc is a
--- live snapshot - tolerate <0.5%); free coverage from 'pair' vs 'path' = the domain-vs-
+-- Validation anchors: rec ds /30 ~= q2c rows_ds19_cat per vendor (q2c = 1-day sample); free coverage from 'pair' vs 'path' = the domain-vs-
 -- path grain-fidelity gap (report, expect same order); Sigma cat v1 >= path v1 (fan-out).
 --
 -- BIG SCAN — PRICED HONESTLY (adversarial review 2026-07-15): 5 svs root-to-leaf reads

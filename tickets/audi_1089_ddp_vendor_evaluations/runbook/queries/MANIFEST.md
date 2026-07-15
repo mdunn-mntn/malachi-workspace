@@ -96,7 +96,8 @@ solo masks == q3 netnew_vs_free_pairs (paid vendors, exact; wcv/pc snapshot drif
 q8b tier hi/pp vs Σ q3d solo masks is a DIAGNOSTIC comparison, not an equality — raw vs
 usable membership lenses (clean vendors 3-10% low in q8b; Sovrn +55-68% HIGH = junk-carried
 IPs on malformed URLs that never reach a usable domain);
-q8a fresh_day solo_new_pair + refresh == Σ q3c solo masks. DS19 anchors: q13a rec `ds` ==
-q2c rows_ds19_cat per vendor (<0.5% pc snapshot drift); q13a CSV must contain all 5 rec types
+q8a fresh_day solo_new_pair + refresh == Σ q3c solo masks. DS19 anchors: q13a rec `ds` /30 ~=
+q2c rows_ds19_cat per vendor (q2c is a ONE-DAY sample - per-day average vs sample day,
+day-variance tolerated); q13a CSV must contain all 5 rec types
 (ds/path/pair/trip/cat — bq truncates silently); q13b free_covered member share ~ q13a IP-grain
 coverage; q13b tier `hi` free share >= 99% (q3d consistency).

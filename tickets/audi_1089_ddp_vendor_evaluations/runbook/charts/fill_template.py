@@ -547,15 +547,15 @@ SPEC = [
     R("% query_parameters populated", "pct0", lambda d: q1b[d].get("query_parameters", 0.0)),
     R("% advertiser_id populated", "pct0", lambda d: q1b[d].get("advertiser_id", 0.0)),
 
-    S("USABLE FUNNEL (survives to DS13/DS19)"),
-    R("Rows used", "int", lambda d: int(q2c[d]["rows_used"])),
+    S("USABLE FUNNEL (survives to DS13/DS19) — counts are PER DAY (1-day sample 2026-07-01); pairs row is 30d"),
+    R("Rows used (per day; 1-day sample)", "int", lambda d: int(q2c[d]["rows_used"])),
     R("% of rows used (within vendor)", "pct", lambda d: 100 * int(q2c[d]["rows_used"]) / int(q2c[d]["rows_raw"])),
     R("% rows hard-dropped", "pct", lambda d: float(q2b[d]["pct_hard_dropped"])),
     R("% rows DS13-blocklisted", "pct", lambda d: float(q2b[d]["pct_blocked_ds13"])),
     R("% rows bot-UA", "pct", lambda d: 100 * int(q2b[d]["rows_bot_ua"]) / int(q2b[d]["rows_day"])),
-    R("Unique IPs used", "int", lambda d: int(q2c[d]["ips_used"])),
+    R("Unique IPs used (per day)", "int", lambda d: int(q2c[d]["ips_used"])),
     R("% of unique IPs used (within vendor)", "pct", lambda d: 100 * int(q2c[d]["ips_used"]) / int(q2c[d]["ips_raw"])),
-    R("Unique domains used (classified)", "int", lambda d: int(q2c[d]["domains_classified"])),
+    R("Unique domains used (per day, classified)", "int", lambda d: int(q2c[d]["domains_classified"])),
     R("% of domains classified (within vendor)", "pct", lambda d: 100 * int(q2c[d]["domains_classified"]) / int(q2c[d]["domains_raw"])),
     R("Usable IP x domain pairs", "int", lambda d: int(q3[d]["usable_pairs"])),
     R("% of pairs usable", "pct", lambda d: min(100.0, 100 * int(q3[d]["usable_pairs"]) / int(q2[d]["ip_domain_pairs_30d"]))),
@@ -1059,9 +1059,14 @@ def solo_anchor_checks():
         for d in ACTIVE:
             if d not in q13a_ds or d not in q2c:
                 continue
-            qa, qc = q13a_ds[d], int(q2c[d]["rows_ds19_cat"])
-            if qc and abs(qa - qc) / qc > 0.005:
-                raise AssertionError(f"q13a ds-anchor FAIL ds{d}: {qa} vs q2c {qc}")
+            # q2c is a ONE-DAY sample (2026-07-01); q13a spans 30d -> compare per-day
+            # average with day-to-day variance tolerance (warn 25%, fail 60%)
+            qa, qc = q13a_ds[d] / 30.0, int(q2c[d]["rows_ds19_cat"])
+            if qc and abs(qa - qc) / qc > 0.60:
+                raise AssertionError(f"q13a ds-anchor FAIL ds{d}: {qa:,.0f}/day vs q2c sample-day {qc:,}")
+            if qc and abs(qa - qc) / qc > 0.25:
+                print(f"q13a ds-anchor day-variance ds{d}: {qa:,.0f}/day avg vs q2c sample-day {qc:,} "
+                      f"({100 * (qa - qc) / qc:+.0f}%)")
         pcov = ds19_cov([], q13a_pair)
         tcov = ds19_cov([], q13a_trip)
         pathcov = Q13A_PATH[1] / Q13A_PATH[0]
@@ -1123,9 +1128,9 @@ DIR = {
     "Top-1 timestamp share (stamping check)": -1,
     "% user_agent populated": 1, "% url populated": 1, "% URLs with path": 1,
     "% query_parameters populated": 1, "% advertiser_id populated": 1,
-    "Rows used": 1, "% of rows used (within vendor)": 1, "% rows hard-dropped": -1,
-    "% rows DS13-blocklisted": -1, "% rows bot-UA": -1, "Unique IPs used": 1,
-    "% of unique IPs used (within vendor)": 1, "Unique domains used (classified)": 1,
+    "Rows used (per day; 1-day sample)": 1, "% of rows used (within vendor)": 1, "% rows hard-dropped": -1,
+    "% rows DS13-blocklisted": -1, "% rows bot-UA": -1, "Unique IPs used (per day)": 1,
+    "% of unique IPs used (within vendor)": 1, "Unique domains used (per day, classified)": 1,
     "% of domains classified (within vendor)": 1, "Usable IP x domain pairs": 1,
     "% of pairs usable": 1, "% of rows used — share of column total": 1,
     "% of IPs used — share of column total": 1, "% of domains used — share of column total": 1,
@@ -1283,14 +1288,14 @@ DEF = {
     "% URLs with path": ("URLs deeper than the homepage - page-level signal (BUK/DS38 input).", "q1"),
     "% query_parameters populated": ("Query-string capture (checkout tokens etc.) - nobody sends it today.", "q1b"),
     "% advertiser_id populated": ("Vendor tags which advertiser the visit belongs to (only guid_log).", "q1b"),
-    "Rows used": ("Rows surviving to a consumer: DS13 vertical classification OR DS19 product categorization. The OR defines usable = billable.", "q2c"),
+    "Rows used (per day; 1-day sample)": ("Rows surviving to a consumer on the SAMPLE DAY (2026-07-01): DS13 vertical classification OR DS19 product categorization. The OR defines usable = billable. PER-DAY number - compare to Median rows/day, NOT to the 30d total (839M/day used of 1.08B/day delivered = 77.6%, for 33Across).", "q2c"),
     "% of rows used (within vendor)": ("Survival rate of the vendor's own feed.", "q2c"),
     "% rows hard-dropped": ("Dropped before any consumer: unparseable / empty / infra URLs.", "q2b"),
     "% rows DS13-blocklisted": ("On DS13's domain blocklist (webmail: yahoo/aol/easybrain) - still billable via DS19 (no blocklist there).", "q2b"),
     "% rows bot-UA": ("Bot user-agent rows entering the pipeline.", "q2b"),
-    "Unique IPs used": ("Distinct IPs on used rows.", "q2c"),
+    "Unique IPs used (per day)": ("Distinct IPs on used rows, sample day.", "q2c"),
     "% of unique IPs used (within vendor)": ("IP-grain survival rate.", "q2c"),
-    "Unique domains used (classified)": ("Domains the classifiers can actually consume.", "q2c"),
+    "Unique domains used (per day, classified)": ("Domains the classifiers can actually consume, sample day.", "q2c"),
     "% of domains classified (within vendor)": ("Domain-grain survival rate.", "q2c"),
     "Usable IP x domain pairs": ("(IP, domain) facts surviving to consumers - the credit-eligible pool.", "q3"),
     "% of pairs usable": ("Usable pairs / delivered pairs (capped at 100%; q3-vs-q2 scans differ <1%).", "q3/q2"),
