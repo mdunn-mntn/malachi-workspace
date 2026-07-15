@@ -646,7 +646,7 @@ for _d in (28, 40, 33, 24, 36, 25, 39):
 CONVENTIONS = [
     "One question per row; one value per cell. '—' = not applicable for that column (free log, flat fee with no meter, disabled, or out-of-scope source — see Scope).",
     "Numbers are real Excel values (sortable); % cells store the percent number (21.8 = 21.8%).",
-    "'share of column total' rows: sources overlap, so these sum >100% down a row... across vendors.",
+    "'share of column total' rows use the SUMMED (overlapping) pool, NOT distinct coverage - the avg HI household is delivered by ~7.5 of 10 sources, so a source can read 13% here while covering 99.9% of DISTINCT households (free_logs does exactly that). Relative delivery weight only; distinct coverage lives in the scenario table / DS19 block.",
     "'% of pairs usable' can read slightly >100%: q3 usable pairs marginally exceed q2 delivered pairs (<1% window mismatch between scans).",
     "'% of platform served IPs': denominator = 28.03M distinct served IPs in the valuation week (q7d).",
     "Windows: delivery metrics = 30d (2026-06-02..07-01); serving/performance = 37d svs union x valuation week 2026-07-02..08.",
@@ -1514,7 +1514,7 @@ DEF = {
     "% of platform served IPs touched (week)": ("Vendor footprint vs ALL 28.03M distinct served IPs that week (honest, non-overlapping denominator).", "q6/q7d"),
     "HI 10000 count": ("Served IPs pinned HI (highest-intent tier).", "q5"),
     "% HI (within vendor)": ("HI share of ITS served IPs.", "q5"),
-    "% HI — share of column total": ("Slice of all sources' HI pools (overlapping - sums >100%).", "q5"),
+    "% HI — share of column total": ("Slice of the SUMMED (overlapping) HI pool - NOT distinct-household coverage. The avg HI household is delivered by ~7.5 of 10 sources, so the summed denominator (~45M) is ~7.5x the distinct pool (5.96M): free_logs reads 13.3% here while covering 99.9% of DISTINCT HI households (the q3d/scenario number). Every big source reads ~13% on this row for the same reason. Use this row for relative delivery weight only.", "q5"),
     "PP 8000 count": ("Served IPs pinned PP (positive-prospect tier).", "q5"),
     "% PP (within vendor)": ("PP share of its served IPs.", "q5"),
     "% PP — share of column total": ("Overlapping share of the PP pool.", "q5"),
