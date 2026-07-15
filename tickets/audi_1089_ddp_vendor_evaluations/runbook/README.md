@@ -186,6 +186,10 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
   (amber, bounds x (1 - free-cohold)) — post-preemption the 33Across feeds reach the pay-band edge
 - `q12_post_preemption.png` — bills before/after free-log preemption (AUDI-1093) vs the
   portfolio + ceiling pay bands: -$274K/yr, keeps the data, flips no vendor on the portfolio lens
+- `q13_ds19_scenarios.png` — DS19-only coverage per keep-set + score-tier split of the lost
+  slice: free logs keep 64% of keyword signal and 99%+ of every scored tier incl. Max Reach
+- `q13_ds19_categories.png` — keyword-category retention under free-only (taxonomy names):
+  collapsing categories are ad-infra junk; real categories hold
 - `q14_ingest_waste.png` — ingestion waste per vendor: measured GB/day (gsutil on the
   data_source_id partitions) split used / junk-that-bills / thrown-away; paid roster ~156 GB/day,
   39.3 TB no-TTL footprint, storage floor ~$9.4K/yr

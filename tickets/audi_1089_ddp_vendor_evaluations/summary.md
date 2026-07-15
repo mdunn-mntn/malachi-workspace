@@ -333,8 +333,30 @@ single mem pass; q13a cost priced honestly at ~40TB/5 svs reads).
 hypothesis resolves as: vendors do own ~30% of keyword MEMBERSHIP (UI audience counts shrink), but
 the scored/servable keyword audience is vendor-independent like everything else. Media envelope on
 the lost slice $21.3K/wk (~$1.1M/yr) — ALL media on those IPs, NOT MM-dependent spend; at 0.061% VR
-it is the platform's least productive spend. q13a (pair/visit-day coverage, per-category sizes with
-taxonomy names, scenario columns) still scanning.
+it is the platform's least productive spend.
+
+**q13a RESULTS (landed ~14:30; all 5 rec types survived the raised cap — 25,060 categories):**
+- **DS19-only free coverage: 64.3% pair / 64.2% visit-day / 61.6% true path-grain** — HIGHER than
+  the union anchors (60.4/59.4): free logs cover the keyword universe slightly better than the
+  DS13∪DS19 union. Scenario columns (now in the decisions table): k=4 98.1%, 33Across-combined
+  90.2%, flat-only 75.2%, free-only 64.3%, augmentor-only 50.5%, guid-only 14.0%.
+- **The collapsing keyword categories under free-only are AD-INFRA JUNK**: Paid Advertising 0.2%
+  retained (66M IPs!), Ad Platforms 0.3%, Advertising 2.8%, Ad Tech 9.2%, Marketing Solutions 4.3%
+  — cookie-sync/ad-tech URLs categorized into advertising-ish keywords nobody targets. Real
+  categories hold: Search Engines 98%, Software 87%, Online Services 86%, Online News 81%.
+  **Baked Goods (45.9M IPs, 16.8% retained) is the one legit-looking vendor-dependent category** —
+  suspiciously large; likely recipe/content-farm URL volume (worth a spot-check before anyone
+  cites it as reach value).
+- ds-anchor passed (per-day average vs q2c sample-day within day variance); charts
+  q13_ds19_scenarios.png + q13_ds19_categories.png.
+
+**CONSOLIDATED ANSWER (the user's question):** dropping all vendors and keeping only free logs
+costs ~36% of DS19 keyword SIGNAL (pair/visit grain) and ~30% of keyword member IPs — but the
+lost slice is dark (0.48% serve rate, VR 0.061%, 92% unscored), every scored tier INCLUDING Max
+Reach stays >=99% covered, and the biggest category losses are ad-infra junk classifications.
+Keyword UI audience COUNTS shrink visibly (~30%); effective (servable/scored) keyword audiences
+are vendor-independent, like everything else measured in this eval. The DS19 lens does NOT
+rescue the vendor roster.
 
 **Grain fix (user-caught):** q2c is a ONE-DAY funnel sample — the numbers sheet displayed daily
 "Rows used" (839M) beside 30d "Total delivered" (30.4B) with no grain marker, inviting 839M/30.4B ≈
