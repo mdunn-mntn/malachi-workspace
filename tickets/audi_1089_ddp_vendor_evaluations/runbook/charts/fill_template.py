@@ -224,6 +224,17 @@ TOT_METERED_BILL = sum(q0[d]["june_usd"] * 12 for d in METERED
                        if q0.get(d, {}).get("june_usd") is not None)
 
 
+# AUDI-1093 post-preemption: if free logs preempt credit on co-held (ip,domain,DATE)
+# visit-days, the vendor's bill drops by its free-cohold share; its unique value is
+# untouched by construction (sole/solo cohorts exclude free-coheld signal).
+def preempt_cut(d):
+    return q0[d]["june_usd"] * 12 * trip_free_cohold(d) / trip_holder(d)
+
+
+def bill_after_preempt(d):
+    return q0[d]["june_usd"] * 12 - preempt_cut(d)
+
+
 def nof_cov(S, universe):
     sm = sum(1 << BITSQ[d] for d in S)
     return sum(n for m, n in universe.items() if m & sm)
@@ -418,6 +429,7 @@ CONVENTIONS = [
     "SOLO sheet: the whole numbers grid recomputed under the counterfactual that the column's vendor is the ONLY paid source - overlap counts only vs our free logs (guid_log DS23 + augmentor DS30; the free-log columns measure vs the OTHER free log). 'Solo' >= 'sole' everywhere (sole excludes ALL 9 other sources); solo == the decisions-ladder 'standalone' at pair grain. Rows that don't change under the counterfactual (feed scale, quality, funnel, touched-cohort) are copied so the sheet reads standalone; LOO/portfolio rows are replaced by {free+vendor} coverage rows.",
     "SOLO bill is a BOUNDED ESTIMATE, not a quote: LOW = today's run-rate (removing competitors can only ADD credit to the survivor - hard floor); HIGH = max(LOW, total metered bills x the vendor's share of paid-held visit-days) (q3c masks; proportional-consumption assumption; all metered CPMs $0.50 so imp share = $ share). The proportional term under-runs junk-billing vendors (Sovrn/Cybba/Justuno credit sits on domains outside the usable universe, uncontested by other vendors) - their bounds collapse to today's bill; only 33Across (+8%) and 33A API (+75%) have material solo-bill upside. Flat vendors: fee pending either way.",
     "'pending scan (q8)' cells = measured solo serving/performance awaiting the q8a/q8b background scans; mask-derived, rebased and copied cells are final. Rerun fill_template.py after the q8 CSVs land (the pending count must print 0; anchors: q8a solo pairs == q3b mask solo pairs == q3 net-new-vs-free, q8b >= q6 sole everywhere; q8b HI/PP vs q3d-mask gap is DIAGNOSTIC, not an error - raw vs usable membership lenses: clean vendors read 3-10% low in q8b, Sovrn reads +55-68% HIGH because its malformed-URL rows carry IPs that never reach a usable domain).",
+    "POST-PREEMPTION (AUDI-1093 applied): if free logs preempt co-held credit, the meter stops paying for (ip,domain,DATE) visit-days guid_log/augmentor also captured - bills drop by each vendor's free-cohold share, roster $812K -> $539K (-$274K, -33.7%), while vendors KEEP their unique data (pay ranges unchanged by construction: sole/solo value never included free-coheld signal). Visit grain = the fair version (vendor still credited for FRESHER dates on known pairs); strict pair-grain version is barely larger (~$284K proxy). VERDICT: nobody flips on the portfolio lens; 33A API lands exactly AT its measured-solo ceiling top ($134K == $134K), 33Across inside its ceiling range near the top - preemption and renegotiation STACK; Sovrn/Justuno bills are nearly untouched (their credit is junk/unique, not free-coheld).",
     "SOLO NON-ADDITIVITY + measured-vs-estimate: NEVER sum T2_solo (or any solo column) across vendors - solo cohorts overlap heavily (the same multi-paid-vendor IP is 'solo' for every vendor vs free logs); the ladder's MARGINAL column is the only additive lens. Measured T2_solo runs 3-5x ABOVE the density estimate everywhere (33Across $724K vs $397K est) because the estimate inherits sole-cohort adverse selection (dark households) while the solo cohort includes livelier multi-vendor IPs. Even so, no metered vendor's 10-30% pay range reaches its bill on the measured basis. T2_solo is a generous ceiling: the solo cohort's prospecting-attribution share is unmeasured (sole cohort's was 97-99%; the livelier solo IPs likely include more retargeting-driven serves that never needed the vendor).",
 ]
 
@@ -616,6 +628,9 @@ SPEC = [
     R("Recoverable $/yr if free logs preempt credit (AUDI-1093, exact visit grain)", "usd",
       lambda d: None if d in FREE or d not in vend3c or d not in q1d or not q1d[d].get("billed_usd") else
       float(q1d[d]["billed_usd"]) * 12 * trip_free_cohold(d) / trip_holder(d)),
+    R("Post-preemption bill $/yr (AUDI-1093 applied)", "usd", lambda d: 0.0 if d in FREE else
+      ("= flat fee (no meter)" if d in FLAT else
+       (bill_after_preempt(d) if d in METERED and q0.get(d, {}).get("june_usd") is not None else None))),
 
     S("VERDICT"),
     R("Composite quality score (curved, best=100)", "int", lambda d: CURVE[d][1] if d in CURVE else None),
@@ -683,6 +698,20 @@ def _solo_pay_range(d):
     else:
         return None
     return f"{money(base * 0.10)} - {money(base * 0.30)}{tag}"
+
+
+def _solo_post_preempt(d):
+    if d in FREE:
+        return "$0"
+    if d in FLAT:
+        return "= flat fee (no meter)"
+    if d not in METERED or q0.get(d, {}).get("june_usd") is None:
+        return None
+    lo, hi = _solo_bill_bounds(d)
+    f = 1 - trip_free_cohold(d) / trip_holder(d)
+    if hi == lo:
+        return money(lo * f)
+    return f"{money(lo * f)} - {money(hi * f)}"
 
 
 def _solo_worth_bill(d):
@@ -856,6 +885,8 @@ SOLO_OVERRIDE = {
         lambda d: solo_sum(d, masks3c)),
     "Coverage lost if dropped (pp of pair coverage)": ("mask", "Share of paid-held visit-days (solo-bill HIGH-bound driver)", "pct",
         lambda d: None if d in FREE else 100 * trip_holder(d) / PAID_TRIPLES),
+    "Post-preemption bill $/yr (AUDI-1093 applied)": ("est", "Post-preemption SOLO bill (bounds x (1 - free-cohold))", "txt",
+        _solo_post_preempt),
 
     # ---- VERDICT ----
     "Composite quality score (curved, best=100)": ("scan", "Solo worth / bill — MEASURED (T2_solo vs bill LOW-HIGH)", "txt",
@@ -899,6 +930,23 @@ def solo_anchor_checks():
              + sum(n for m, n in masks.items() if (m & FREE_MASK) == FREE_MASK)
              + sum(n for m, n in masks.items() if not (m & FREE_MASK)))
     assert parts == tot, f"anchor6 FAIL: free-partition {parts} != mask total {tot}"
+    # AUDI-1093 regression tripwire: total preemption cut must stay at the published ~$273.7K
+    tot_cut = sum(preempt_cut(d) for d in METERED if q0.get(d, {}).get("june_usd") is not None)
+    assert 265_000 < tot_cut < 285_000, f"preemption total drifted: ${tot_cut:,.0f}"
+    print(f"preemption total: ${tot_cut:,.0f}/yr of ${TOT_METERED_BILL:,.0f} "
+          f"({100 * tot_cut / TOT_METERED_BILL:.1f}%)")
+    if Q8A:
+        # cross-scan convergence: q8a same-day-dup share must reproduce the q3c cohold share
+        for d in METERED:
+            fd_tot = sum(g8a(d, "fresh_day", c) for c in
+                         ("solo_new_pair", "refresh_of_free_pair", "same_day_dup_with_free"))
+            if not fd_tot:
+                continue
+            dup = g8a(d, "fresh_day", "same_day_dup_with_free") / fd_tot
+            ch = trip_free_cohold(d) / trip_holder(d)
+            if abs(dup - ch) > 0.005:
+                print(f"WARN preemption-share divergence ds{d}: q8a dup {100 * dup:.2f}% "
+                      f"vs q3c cohold {100 * ch:.2f}%")
     if Q8A:
         for d in ACTIVE:
             qa, ms = g8a(d, "stock", "solo_pairs"), solo_sum(d, masks)
@@ -1040,6 +1088,7 @@ DIR.update({
     "T2_solo $/yr — DENSITY ESTIMATE (= ladder standalone)": 1,
     "Solo worth / bill — DENSITY EST (vs today's bill)": 1,
 })
+DIR["Post-preemption bill $/yr (AUDI-1093 applied)"] = -1
 NEUTRAL.add("CPM — solo")
 
 
@@ -1187,6 +1236,7 @@ DEF = {
     "Coverage lost if dropped (pp of pair coverage)": ("Usable-pair coverage the roster loses if this vendor alone is dropped.", "q3b masks"),
     "% of visit-days co-held by our free logs": ("Share of the vendor's (ip,domain,date) visit-days that guid_log or augmentor ALSO delivered - data we pay for but already have (free logs do not preempt paid credit; Sean Yang 2026-07-13).", "q3c"),
     "Recoverable $/yr if free logs preempt credit (AUDI-1093, exact visit grain)": ("Bill x visit-day free-cohold share: what a free-source-preemption rule recovers WITHOUT dropping the vendor (keeps their unique contribution). Roster total ~$274K/yr.", "q3c/q0"),
+    "Post-preemption bill $/yr (AUDI-1093 applied)": ("The bill IF free logs preempted co-held credit: today's run-rate x (1 - free-cohold share). Cost-only change - the vendor's unique value is untouched by construction. Roster: $812K -> $539K (-33.7%). Nobody flips on the portfolio lens; see the decisions POST-PREEMPTION block.", "q3c/q0"),
     "Unique visit-days delivered (ip x domain x date, 30d)": ("Distinct visit events at the TRUE value grain - each (IP, domain, DATE) triple; a new date on a known pair is a distinct visit.", "q3c"),
     "% visit-days sole — new pair": ("Visit-days on pairs ONLY this vendor holds - brand-new signal (strongest contribution).", "q3c"),
     "% visit-days sole — recency refresh": ("Dates unique to this vendor on pairs other sources also hold - refreshes the 30d recency window MM scores on; the meter pays per (ip,url,day) so these ARE billed.", "q3c"),
@@ -1270,6 +1320,7 @@ SOLO_DEF = {
     "Solo visit-days (vs free logs only)": ("Visit-day triples held by the vendor and no free log (count).", "q3c masks"),
     "Share of paid-held visit-days (solo-bill HIGH-bound driver)": ("The vendor's share of all visit-days any paid vendor holds - the multiplier behind the solo-bill HIGH bound.", "q3c masks"),
     "Solo worth / bill — MEASURED (T2_solo vs bill LOW-HIGH)": ("Measured T2_solo divided by the solo-bill range (worst case first). >1x = would cover even the high-bound bill on a revenue basis.", "q8b/q0/q3c"),
+    "Post-preemption SOLO bill (bounds x (1 - free-cohold))": ("The solo-bill LOW-HIGH bounds with the AUDI-1093 free-cohold share removed - what the solo counterfactual would bill if free logs preempted co-held credit.", "q3c/q0"),
     "Solo worth / bill — DENSITY EST (vs today's bill)": ("Density-estimated standalone revenue / today's run-rate (the ladder's standalone worth/bill, reproduced per vendor).", "q3b masks/q0"),
 }
 
@@ -1629,6 +1680,7 @@ def main():
     lfmt = {3: "#,##0", 4: "0.0%", 5: "#,##0", 6: "#,##0", 7: "0.0%", 8: "$#,##0",
             9: "$#,##0", 11: '0.00"x"', 12: "$#,##0", 13: "$#,##0", 15: '0.00"x"'}
     order, cur_p, cur_t = [], 0, 0
+    marg_val = {}
     rem = [d for d in EXT if d in dens]
     for step in range(1, len(rem) + 1 + len(order)):
         if not rem:
@@ -1652,7 +1704,76 @@ def main():
         ], fmts=lfmt, band_row=(step % 2 == 0))
         order.append(nxt)
         rem.remove(nxt)
+        marg_val[nxt] = mval
         cur_p, cur_t = newp, newt
+
+    # ---- post-preemption economics (AUDI-1093 applied) ----
+    ri += 1
+    dec.merge_cells(start_row=ri, start_column=1, end_row=ri, end_column=13)
+    t = dec.cell(row=ri, column=1, value=(
+        "POST-PREEMPTION ECONOMICS — bills IF free logs preempt co-held credit (AUDI-1093 fix): "
+        "the meter stops paying for (ip,domain,DATE) visit-days guid_log/augmentor also captured; "
+        "vendors KEEP their unique data, so the PAY RANGES are unchanged by construction. Visit "
+        "grain = fair version (vendor still credited for fresher dates; strict pair-grain barely "
+        "larger, ~$284K proxy). Combined-33Across ceiling range is <= the sum (solo cohorts "
+        "overlap). VERDICT: a cost fix, not a valuation flip — stack with renegotiation."))
+    t.font = section_font
+    t.fill = section_fill
+    ri += 1
+    pp_hdr = ["Vendor", "Bill today $/yr", "Preemption cut $/yr", "Cut % of bill",
+              "Bill AFTER $/yr", "PAY RANGE sole-T2 (portfolio lens)",
+              "PAY RANGE marginal (ladder position)", "PAY RANGE solo MEASURED (ceiling)",
+              "Worth/bill AFTER (portfolio, pay-top)", "Worth/bill AFTER (ceiling, pay-top)",
+              "VERDICT FLIP?", "", ""]
+    ri = put_row(dec, ri, pp_hdr, header=True)
+    pfmt = {2: "$#,##0", 3: "$#,##0", 4: "0.0%", 5: "$#,##0",
+            9: '0.00"x"', 10: '0.00"x"'}
+    FLIP_NOTE = {
+        28: "NO on portfolio — but lands INSIDE its ceiling range near the top; preemption + renegotiation together reach fair",
+        40: "NO on portfolio — lands exactly AT its ceiling top; same combined negotiation as DS28",
+        33: "NO — cut is negligible (0.2%: its credit is junk/unique, not free-coheld); still DROP",
+        24: "NO — cut 4.9% barely moves it; still DROP/trim",
+        36: "NO — still ~5x the ceiling top; still DROP",
+    }
+    pp_rows = [28, 40, 33, 24, 36]
+    for n, d in enumerate(pp_rows):
+        bill = q0[d]["june_usd"] * 12
+        cut = preempt_cut(d)
+        after = bill - cut
+        t2 = t2_ann(d)
+        mv = marg_val.get(d, 0)
+        t2s = t2_solo(d) if Q8B else None
+        ceil_ratio = (t2s * 0.30 / after) if t2s else NA
+        ri = put_row(dec, ri, [
+            HDR_NAMES[d], round(bill), round(cut), cut / bill, round(after),
+            f"{money(t2 * 0.10)} - {money(t2 * 0.30)}",
+            f"{money(mv * 0.10)} - {money(mv * 0.30)}",
+            f"{money(t2s * 0.10)} - {money(t2s * 0.30)}" if t2s else "pending scan (q8)",
+            t2 * 0.30 / after, ceil_ratio,
+            FLIP_NOTE[d], "", "",
+        ], fmts=pfmt, band_row=(n % 2 == 1))
+    b_pair = q0[28]["june_usd"] * 12 + q0[40]["june_usd"] * 12
+    c_pair = preempt_cut(28) + preempt_cut(40)
+    a_pair = b_pair - c_pair
+    t2_pair, mv_pair = t2_ann(28) + t2_ann(40), marg_val.get(28, 0) + marg_val.get(40, 0)
+    t2s_pair = (t2_solo(28) + t2_solo(40)) if Q8B else None
+    ri = put_row(dec, ri, [
+        "33Across COMBINED (one vendor)", round(b_pair), round(c_pair), c_pair / b_pair,
+        round(a_pair), f"{money(t2_pair * 0.10)} - {money(t2_pair * 0.30)}",
+        f"{money(mv_pair * 0.10)} - {money(mv_pair * 0.30)}",
+        (f"<= {money(t2s_pair * 0.10)} - {money(t2s_pair * 0.30)} (cohorts overlap)"
+         if t2s_pair else "pending scan (q8)"),
+        t2_pair * 0.30 / a_pair, (t2s_pair * 0.30 / a_pair) if t2s_pair else NA,
+        "the negotiation unit: bill lands at the TOP of the ceiling pay range after preemption",
+        "", "",
+    ], fmts=pfmt)
+    tot_bill = sum(q0[d]["june_usd"] * 12 for d in pp_rows)
+    tot_cut = sum(preempt_cut(d) for d in pp_rows)
+    ri = put_row(dec, ri, [
+        "ROSTER TOTAL (metered)", round(tot_bill), round(tot_cut), tot_cut / tot_bill,
+        round(tot_bill - tot_cut), NA, NA, "non-additive (see notes)", NA, NA,
+        "cost fix, not a valuation flip — flats unaffected (no meter)", "", "",
+    ], fmts=pfmt)
 
     widths = [30, 32, 13, 14, 17, 14, 18, 16, 13, 14, 21, 64, 60]
     for i, w in enumerate(widths, start=1):
