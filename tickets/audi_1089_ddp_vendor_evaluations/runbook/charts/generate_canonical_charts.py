@@ -1724,33 +1724,44 @@ def q11(rdir):
     tot_bill = sum(float(q1db[d]["billed_usd"]) * 12 for d in METER if d in q1db)
     dens = {d: float(q6v[d]["media_sole"]) * 52 / float(q3u[d]["sole_pairs"]) for d in EXT}
 
+    def cohold(d):
+        b = 1 << BITSQ[d]
+        hold = sum(n for m, n in tmask.items() if m & b)
+        co = sum(n for m, n in tmask.items() if (m & b) and (m & FREEM))
+        return co / hold
+
     rows = []
     for d in EXT:
         lo = float(q1db[d]["billed_usd"]) * 12 if d in METER and d in q1db else None
         if lo is not None:
             share = sum(n for m, n in tmask.items() if m & (1 << BITSQ[d])) / paid_tr
             hi = max(lo, tot_bill * share)
+            keep = 1 - cohold(d)
         else:
-            hi = None
+            hi, keep = None, None
         est = solo_pairs(d) * dens[d]
-        rows.append((d, lo, hi, est, meas.get(d)))
+        rows.append((d, lo, hi, est, meas.get(d), keep))
     rows.sort(key=lambda r: -(r[1] or 0))
     rows = [r for r in rows if r[0] not in FLATV] + [r for r in rows if r[0] in FLATV]
 
-    fig, ax = plt.subplots(figsize=(11.5, 5.6))
-    fig.subplots_adjust(left=0.13, right=0.97, top=0.84, bottom=0.13)
+    fig, ax = plt.subplots(figsize=(11.5, 5.9))
+    fig.subplots_adjust(left=0.13, right=0.97, top=0.84, bottom=0.18)
     ys = list(range(len(rows)))[::-1]
-    for y, (d, lo, hi, est, ms) in zip(ys, rows):
+    for y, (d, lo, hi, est, ms, keep) in zip(ys, rows):
         base = ms if ms is not None else est
         ax.barh(y, base * 0.30 - base * 0.10, left=base * 0.10, height=0.62,
                 color=GREEN, alpha=0.25, edgecolor="none", zorder=1)
         if lo is not None:
-            ax.plot([lo, hi], [y, y], color=RED, lw=5, solid_capstyle="butt", zorder=2)
-            ax.plot([lo], [y], marker="|", ms=14, color=RED, mew=2.5, zorder=3)
+            ax.plot([lo, hi], [y + 0.14, y + 0.14], color=RED, lw=5,
+                    solid_capstyle="butt", zorder=2)
+            ax.plot([lo], [y + 0.14], marker="|", ms=12, color=RED, mew=2.5, zorder=3)
+            ax.plot([lo * keep, hi * keep], [y - 0.16, y - 0.16], color=AMBER, lw=5,
+                    solid_capstyle="butt", zorder=2, linestyle=(0, (2, 1)))
+            ax.plot([lo * keep], [y - 0.16], marker="|", ms=12, color=AMBER, mew=2.5, zorder=3)
         ax.plot([est], [y], marker="D", ms=7, mfc="white", mec=NAVY, mew=1.6, zorder=4)
         if ms is not None:
             ax.plot([ms], [y], marker="o", ms=8, color=NAVY, zorder=5)
-    for y, (d, lo, hi, est, ms) in zip(ys, rows):
+    for y, (d, lo, hi, est, ms, keep) in zip(ys, rows):
         if lo is None:
             base = ms if ms is not None else est
             ax.text(max(max(base * 0.30, est) * 1.15, 14000), y, "flat fee pending", fontsize=8,
@@ -1766,20 +1777,24 @@ def q11(rdir):
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
     ax.legend(handles=[
-        Line2D([], [], color=RED, lw=5, label="Solo bill range (today's run-rate to visit-day-proportional ceiling)"),
+        Line2D([], [], color=RED, lw=5, label="Solo bill range TODAY (run-rate to visit-day-proportional ceiling)"),
+        Line2D([], [], color=AMBER, lw=5, linestyle=(0, (2, 1)),
+               label="Solo bill range AFTER free-log preemption (AUDI-1093, x (1 - free-cohold))"),
         Line2D([], [], marker="o", color=NAVY, lw=0, ms=8, label="T2_solo dependent revenue, MEASURED (q8b)"),
         Line2D([], [], marker="D", mfc="white", mec=NAVY, lw=0, ms=7, label="T2_solo, density estimate (= ladder standalone)"),
         Patch(facecolor=GREEN, alpha=0.25, label="Pay range: 10-30% blended margin on T2_solo"),
     ], loc="lower right", fontsize=8.2, frameon=False)
     meas_note = "" if meas else " Measured (q8b) markers pending."
     ax.set_title("Solo P&L: each vendor as the ONLY paid source, overlap counted vs our free logs only\n"
-                 "Even standalone, no metered pay range reaches its bill; solo bills only RISE."
-                 + meas_note,
+                 "No metered pay range reaches its bill today; after AUDI-1093 preemption the "
+                 "33Across feeds reach the pay-band edge." + meas_note,
                  fontsize=10.5, fontweight="bold", loc="left", pad=12)
     save(fig, "q11_solo_pnl.png",
          caption="Bill LOW = June 2026 x12 (hard floor: survivor keeps all current credit). Bill HIGH = max(LOW, "
                  "total metered bills x vendor share of paid-held visit-days); junk-billed credit is uncontested, so "
-                 "small meters collapse to LOW. Flats: fee pending (Maya). Revenue basis = full media CPM, not our cut.")
+                 "small meters collapse to LOW. Amber = theoretical bills if free logs preempt co-held credit "
+                 "(33Across -52.5%, API -23.8%, Cybba -28.2%, Justuno -4.9%, Sovrn -0.2%). "
+                 "Flats: fee pending (Maya). Revenue basis = full media CPM, not our cut.")
 
 
 # ---- Step 12: post-preemption economics — bills if free logs preempt co-held credit ----
