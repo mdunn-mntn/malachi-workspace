@@ -1782,6 +1782,84 @@ def q11(rdir):
                  "small meters collapse to LOW. Flats: fee pending (Maya). Revenue basis = full media CPM, not our cut.")
 
 
+# ---- Step 12: post-preemption economics — bills if free logs preempt co-held credit ----
+# AUDI-1093 applied: per metered vendor, bill today -> bill after (cut = visit-day free-cohold
+# share, q3c masks), against the portfolio (sole-T2) and ceiling (measured solo, q8b) pay bands.
+def q12(rdir):
+    import csv as _csv
+    BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
+    FREEM = (1 << 0) | (1 << 5)
+    METER = [28, 40, 33, 24, 36]
+
+    tmask = {}
+    for r in _csv.DictReader(open(os.path.join(rdir, "q3c_visit_grain_uniqueness.csv"))):
+        if r["rec"] == "mask":
+            tmask[int(r["k1"])] = int(r["n"])
+    q3u = {int(r["ds"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q3_usable_uniqueness.csv")))}
+    q6v = {int(r["data_source_id"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q6_value_tiers.csv")))}
+    q1db = {int(r["ds"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q1d_billed_usage.csv")))}
+    meas = {}
+    q8bp = os.path.join(rdir, "q8b_solo_perf.csv")
+    if os.path.exists(q8bp) and os.path.getsize(q8bp):
+        for r in _csv.DictReader(open(q8bp)):
+            if r["rec"] == "serve" and r["k"] == "media":
+                meas[int(r["ds"])] = float(r["v"]) * 52
+
+    def cohold(d):
+        b = 1 << BITSQ[d]
+        hold = sum(n for m, n in tmask.items() if m & b)
+        co = sum(n for m, n in tmask.items() if (m & b) and (m & FREEM))
+        return co / hold
+
+    rows = []
+    for d in METER:
+        bill = float(q1db[d]["billed_usd"]) * 12
+        after = bill * (1 - cohold(d))
+        t2 = float(q6v[d]["media_sole"]) * 52
+        rows.append((d, bill, after, t2, meas.get(d)))
+
+    fig, ax = plt.subplots(figsize=(11.5, 5.4))
+    fig.subplots_adjust(left=0.11, right=0.97, top=0.84, bottom=0.14)
+    ys = list(range(len(rows)))[::-1]
+    for y, (d, bill, after, t2, ms) in zip(ys, rows):
+        ax.barh(y + 0.17, bill, height=0.3, color=GRAY, alpha=0.45, zorder=2)
+        ax.barh(y - 0.17, after, height=0.3, color=RED, zorder=2)
+        ax.text(bill + 6000, y + 0.17, f"{money(bill)} today".replace("$", "\\$"),
+                fontsize=8, color="#666", va="center")
+        ax.text(after + 6000, y - 0.17, f"{money(after)} after  (-{money(bill - after)})".replace("$", "\\$"),
+                fontsize=8, color=RED, va="center", fontweight="bold")
+        ax.plot([t2 * 0.10, t2 * 0.30], [y, y], color=NAVY, lw=3, alpha=0.9, zorder=3,
+                solid_capstyle="butt")
+        if ms is not None:
+            ax.plot([ms * 0.10, ms * 0.30], [y, y], color=GREEN, lw=8, alpha=0.35, zorder=1,
+                    solid_capstyle="butt")
+    ax.set_yticks(ys)
+    ax.set_yticklabels([SHORT[r[0]] for r in rows], fontsize=10)
+    ax.set_xlim(0, max(r[1] for r in rows) * 1.22)
+    ax.set_xlabel("$ / yr", fontsize=9, color="#555")
+    ax.xaxis.set_major_formatter(lambda v, _: money(v) if v else "$0")
+    ax.tick_params(axis="x", labelsize=8.5, colors="#555")
+    for s in ax.spines.values():
+        s.set_visible(False)
+    ax.grid(axis="x", color="#e4e4e4", lw=0.7, zorder=0)
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    ax.legend(handles=[
+        Patch(facecolor=GRAY, alpha=0.45, label="Bill today ($812K roster)"),
+        Patch(facecolor=RED, label="Bill AFTER free-log preemption ($539K roster, -33.7%)"),
+        Line2D([], [], color=NAVY, lw=3, label="Pay range, portfolio lens (sole-T2 x 10-30%)"),
+        Patch(facecolor=GREEN, alpha=0.35, label="Pay range, ceiling lens (measured solo T2 x 10-30%)"),
+    ], loc="lower right", fontsize=8.2, frameon=False)
+    ax.set_title("Post-preemption bills (AUDI-1093): stop paying for visit-days our own logs capture\n"
+                 "Cuts $274K/yr and KEEPS the data - but flips no vendor on the portfolio lens; "
+                 "33Across pair reaches its ceiling range top.",
+                 fontsize=10.5, fontweight="bold", loc="left", pad=12)
+    save(fig, "q12_post_preemption.png",
+         caption="Cut = bill x visit-day free-cohold share (q3c masks; 33Across 52.5%, API 23.8%, Cybba 28.2%, "
+                 "Justuno 4.9%, Sovrn 0.2% - cross-validated by q8a same-day-dup splits). Pay ranges unchanged by "
+                 "construction (unique value excludes free-coheld signal). Flats unaffected (no meter).")
+
+
 # ---- Step 10: master waterfall — one row per source, feed to won bids to HI ----
 # Consolidates q1 (rows/day, IPv6), q2 (30d uniques), q2c (usable %), q4 (classified %),
 # q3 (sole stock), q5 (touched/served/HI, 37d union x valuation week), q7 (sole served, VR),
@@ -1978,7 +2056,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "12": q12}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

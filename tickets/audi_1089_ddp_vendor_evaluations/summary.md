@@ -272,6 +272,40 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d13. Post-preemption economics — bills if free logs stopped paying for co-held data (user question 2026-07-15)
+
+**Question:** we supposedly pay only for used data, but the meter doesn't exclude signals
+guid_log/augmentor already capture (AUDI-1093). If we stopped paying for anything in those logs,
+how much do bills drop — and do any vendors become worth paying for again?
+
+**Answer (no new scans — q3c cohold shares × bills, cross-validated by q8a same-day-dup splits;
+anchor: total == $273,671 == the published AUDI-1093 figure):**
+
+| Vendor | Bill/yr | Cut | Bill AFTER | Pay portfolio (sole-T2) | Pay ceiling (solo meas.) | Ceiling worth/bill AFTER |
+|---|---|---|---|---|---|---|
+| 33Across | $422.0K | −$221.7K (52.5%) | $200.4K | $27–81K | $72–217K | **1.08x** |
+| 33A API | $175.9K | −$41.9K (23.8%) | $134.0K | $6–18K | $45–134K | **1.0001x — exactly AT fair** |
+| Sovrn | $115.9K | −$0.3K (0.2%) | $115.6K | $0–1K | $11–34K | 0.29x |
+| Justuno | $77.1K | −$3.8K (4.9%) | $73.3K | $1–2K | $4–11K | 0.15x |
+| Cybba | $21.5K | −$6.1K (28.2%) | $15.4K | $0–1K | $1–3K | 0.19x |
+| **Roster** | **$812.4K** | **−$273.7K (33.7%)** | **$538.7K** | | | |
+
+- **Bills drop $274K/yr (−33.7%) and we KEEP the data** — pay ranges are unchanged by
+  construction (sole/solo value never included free-coheld signal). Visit grain = the fair
+  version (vendor still credited for fresher dates); strict pair-grain is barely larger (~$284K
+  proxy). Flats unaffected (no meter).
+- **"Worth paying again?" — nobody flips on the portfolio lens** (0.007–0.40x pay-top vs bill).
+  On the most generous lens (measured-solo ceiling, top of the 10–30% band): **33A API lands
+  exactly AT fair ($134.0K == $134K)**, 33Across inside its range near the top (1.08x), the
+  combined pair $334.4K vs ≤$117–351K (1.05x, sum overstates — cohorts overlap). **Preemption
+  moves the 33Across deal from ~4x rich to ceiling-defensible; preemption + renegotiation STACK.**
+- **Sovrn (−0.2%) and Justuno (−4.9%) are nearly untouched** — their bills aren't overlap-driven
+  (junk/unique credit survives preemption). Preemption does NOT rescue them; verdicts unchanged.
+- Landed in the workbook: numbers/solo row "Post-preemption bill $/yr (AUDI-1093 applied)"
+  (144 rows now), decisions block 5 (per-meter + combined + roster, 3 pay-range lenses, flip
+  verdicts), notes convention, chart `q12_post_preemption.png`. Anchor tripwire in fill_template
+  (total must stay ~$273.7K; q8a-vs-q3c share convergence warns past 0.5% — currently silent).
+
 ## 4d12. SOLO sheet — each vendor as the ONLY paid source (user-requested 2026-07-14)
 
 **Ask:** the numbers grid measures every vendor against all other sources, so paid-vendor

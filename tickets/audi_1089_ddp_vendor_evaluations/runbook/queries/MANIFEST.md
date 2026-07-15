@@ -71,6 +71,9 @@ Formulas are printed per-row on the workbook's **index** sheet; implementation =
   (optima verified nested = exhaustive); $ = pairs (or visit-days) × vendor's T2 density; pay range = ×10-30%.
 - **Composite score (q9b):** 0.40·V + 0.15·R + 0.15·Q + 0.10·D + 0.20·P, curved to best=100
   (components from q4/q3_pair_recency/q5/q6/q7).
+- **Post-preemption (AUDI-1093 applied):** bill_after = bill × (1 − visit-day free-cohold share)
+  (q3c masks; cross-validated by q8a fresh_day same-day-dup splits). Roster $812K → $539K
+  (−$273.7K, −33.7%). Pay ranges unchanged by construction. Decisions block 5 + numbers/solo row.
 - **SOLO sheet:** counterfactual keep-set = {vendor} + free logs. Mask-exact rows = Σ q3b/q3c/q3d
   mask records with the vendor's bit set and the OTHER-free bits clear (other_free(23)=bit5,
   other_free(30)=bit0, else bits 0|5). T2_solo = q8b media×52; T1_solo = q8b media_scored×52;

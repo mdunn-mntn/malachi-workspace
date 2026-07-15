@@ -182,15 +182,17 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 - `q3d_vertical_impact.png` — vertical audience-size before/after (12 largest + 10 worst-hit)
 - `q11_solo_pnl.png` — solo P&L: per-vendor bill range (today -> proportional ceiling) vs
   T2_solo (measured + density est) with the 10-30% pay band — the solo sheet's headline
+- `q12_post_preemption.png` — bills before/after free-log preemption (AUDI-1093) vs the
+  portfolio + ceiling pay bands: -$274K/yr, keeps the data, flips no vendor on the portfolio lens
 
 ## 7. Template map — the filled question table (final deliverable)
 
 `outputs/audi_1089_quality_template_filled.xlsx` answers every question in the template
-(compound questions split so it's ONE question per row — 143 rows x 14 vendor columns).
+(compound questions split so it's ONE question per row — 144 rows x 14 vendor columns).
 Five sheets: **index** (per-row definitions + formulas), **decisions** (vendor calls,
 9 roster scenarios with HI/PP coverage, net-of-free ladder, vertical-impact block),
 **numbers** (real numeric values with Excel formats — counts, %, $, decimals — sortable;
-"—" = not applicable), **solo** (the same 143 rows recomputed under the counterfactual
+"—" = not applicable), **solo** (the same 144 rows recomputed under the counterfactual
 that the column's vendor is the ONLY paid source — overlap counted vs free logs only;
 mask-exact + rebased rows immediate, measured serving/perf rows fed by q8a/q8b, solo bill
 as a bounded LOW/HIGH estimate) and **notes** (per-vendor text: scope, billing detail,
@@ -253,7 +255,7 @@ stocks, x12 on June bills. Margin ladder 15/20/30% per blended-margin estimate (
    them when verdicts change.
 
 The question ORDER and format are canonical in `fill_template.py`'s `SPEC` list:
-one question per row (143 rows), sections CONTRACT & IDENTITY -> FEED SCALE -> DATA
+one question per row (144 rows), sections CONTRACT & IDENTITY -> FEED SCALE -> DATA
 QUALITY -> USABLE FUNNEL -> UNIQUENESS & FRESHNESS -> SERVING & WON BIDS -> SCORE
 QUALITY -> PERFORMANCE (touched) -> PERFORMANCE (sole) -> ECONOMICS COST -> ECONOMICS
 WORTH -> PORTFOLIO -> VERDICT; vendor columns in order 33Across, 33Across API, Sovrn,
