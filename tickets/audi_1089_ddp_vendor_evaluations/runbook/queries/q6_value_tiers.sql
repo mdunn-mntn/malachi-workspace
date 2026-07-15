@@ -1,3 +1,14 @@
+-- Claim: the T1/T2 dependency-value tiers per vendor — touched / sole / sole+scored
+-- IPs, imps, media, data on the CIL valuation week x 37d svs membership. THE source of
+-- t2_ann/t1_ann and every WORTH row. Output q6_value_tiers.csv (statement 1 of 2).
+-- Run (from workspace root; svs 37d union external table + internal CIL):
+--   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
+--     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
+--   bash .claude/scripts/bq_run.sh --ticket AUDI-1089 --label "<label>" \
+--     --external_table_definition="svs::PARQUET=${URIS}" \
+--     --use_legacy_sql=false --format=csv --max_rows=100 --project_id=dw-main-silver \
+--     "$(grep -v '^[[:space:]]*--' <this file>)" > outputs/run_<YYYY_MM_DD>/<output>.csv
+--
 -- CANONICAL runbook copy of queries/audi_1089_q4_value_tiers.sql (AUDI-1089 eval, windows per runbook params).
 -- Output: outputs/run_<date>/q6_value_tiers.csv. Full run pattern in the original header below.
 --

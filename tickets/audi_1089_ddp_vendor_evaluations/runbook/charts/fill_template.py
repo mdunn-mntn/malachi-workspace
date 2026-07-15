@@ -539,7 +539,14 @@ def tier_tot(f):
 
 def solo_share(d, table, field):
     if d == FREEC:
-        return 100.0  # the combined free column IS the {vendor+free} world
+        # the combined free column's {vendor+free} world degenerates to itself (a
+        # trivial 100% that reads as "free logs have all vendor IPs" - it doesn't);
+        # show its share of the ALL-SOURCES world instead. Exact only for row
+        # events (disjoint); IP/domain unions aren't measurable at this grain.
+        if field != "rows_used":
+            return None
+        tot = sum(float(table[x][field]) for x in ACTIVE if x in table)
+        return 100 * (float(table[23][field]) + float(table[30][field])) / tot
     wset = {d, 23, 30}
     tot = sum(float(table[x][field]) for x in wset if x in table and field in table[x])
     return 100 * float(table[d][field]) / tot
@@ -547,7 +554,11 @@ def solo_share(d, table, field):
 
 def solo_tier_share(d, f):
     if d == FREEC:
-        return 100.0
+        # measured UNION tier count (q15) over the all-sources overlapping total -
+        # same semantics as every other column's share row
+        if FREEC in q5 and "touched" in q5.get(FREEC, {}):
+            return 100 * float(q5[FREEC]["touched"][f]) / tier_tot(f)
+        return None
     wset = {d, 23, 30}
     tot = sum(float(q5[x]["touched"][f]) for x in wset if x in q5 and "touched" in q5[x])
     return 100 * float(q5[d]["touched"][f]) / tot
@@ -2272,7 +2283,7 @@ def main():
     wb.save(OUT)
     nrows = sum(1 for x in SPEC if x[2] is not None)
     print(f"wrote {OUT}")
-    print(f"sheets: index ({nrows} definitions), decisions (8 vendors + {len(SC)} scenarios), "
+    print(f"sheets: index ({nrows} numbers defs + solo/waste defs), decisions (8 vendors + {len(SC)} scenarios), "
           f"numbers ({nrows} rows x {len(DS_COLS)}), solo ({nrows} rows, "
           f"q8a {'loaded' if Q8A else 'PENDING'} / q8b {'loaded' if Q8B else 'PENDING'}), "
           f"waste ({sum(1 for x in WASTE_SPEC if x[2] is not None)} rows x {len(WASTE_COLS)}), notes")

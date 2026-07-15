@@ -9,7 +9,7 @@
 -- usage = dollars (impressions x tv_cpm/1000); domains RECORD = billed domain list;
 -- dt = month-end snapshot dates ONLY (mid-month queries return empty).
 --
--- Copy/paste into the BigQuery console as-is (standard SQL).
+-- Run (console-pasteable, standard SQL): Copy/paste into the BigQuery console as-is (standard SQL).
 -- ============================================================================
 
 SELECT

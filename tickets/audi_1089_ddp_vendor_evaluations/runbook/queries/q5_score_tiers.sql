@@ -1,3 +1,14 @@
+-- Claim: score-tier mix (HI 10000 / PP 8000 / high-grad / mid / max-reach / unscored)
+-- per vendor for the TOUCHED and SOLE served cohorts — CIL valuation-week per-IP
+-- MAX(household_score) on the 37d svs membership. Output q5_score_tiers.csv.
+-- Run (from workspace root; svs 37d union external table + internal CIL):
+--   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
+--     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
+--   bash .claude/scripts/bq_run.sh --ticket AUDI-1089 --label "<label>" \
+--     --external_table_definition="svs::PARQUET=${URIS}" \
+--     --use_legacy_sql=false --format=csv --max_rows=100 --project_id=dw-main-silver \
+--     "$(grep -v '^[[:space:]]*--' <this file>)" > outputs/run_<YYYY_MM_DD>/<output>.csv
+--
 -- CANONICAL runbook copy of queries/audi_1089_q3_score_tiers.sql (AUDI-1089 eval, windows per runbook params).
 -- Output: outputs/run_<date>/q5_score_tiers.csv. Full run pattern in the original header below.
 --

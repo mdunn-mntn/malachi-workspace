@@ -1,3 +1,16 @@
+-- Claim: domain-grain uniqueness per vendor (sole domains, sole CLASSIFIED domains =
+-- the fee-band axis) + RAW pair-grain recency (sole/freshest/tied/stale + net-new vs
+-- free) — Query A emits q3_pair_recency.csv, Query B emits q4_domain_value.csv.
+-- Run (from workspace root; svs 30d + wcv external tables):
+--   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(30)))"); do \
+--     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
+--   bash .claude/scripts/bq_run.sh --ticket AUDI-1089 --label "<label>" \
+--     --external_table_definition="svs::PARQUET=${URIS}" \
+--     --external_table_definition="wcv::PARQUET=gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/*.parquet" \
+--     --use_legacy_sql=false --format=csv --max_rows=100 --project_id=dw-main-silver \
+--     "<ONE statement from this file>" > outputs/run_<YYYY_MM_DD>/<output>.csv
+-- NOTE: this file holds TWO statements — run each separately (grep-strip comments first).
+--
 -- CANONICAL runbook copy of queries/audi_1089_q2_pair_master_30d.sql (query A -> q3_pair_recency.csv RAW
 -- pairs; query B -> q4_domain_value.csv). The usable-restricted q3 variant is q3_usable_uniqueness.sql.
 --

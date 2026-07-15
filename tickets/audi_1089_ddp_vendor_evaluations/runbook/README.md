@@ -190,9 +190,23 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
   slice: free logs keep 64% of keyword signal and 99%+ of every scored tier incl. Max Reach
 - `q13_ds19_categories.png` — keyword-category retention under free-only (taxonomy names):
   collapsing categories are ad-infra junk; real categories hold
+- `q15_free_union_value.png` — the free logs as ONE vendor: $603K/yr sole-T2 vs every paid
+  vendor (33Across $270K max) — the eval's closing chart
+- `q3_usable_uniqueness.png` — sole IPs/pairs + net-new vs free per vendor (usable grain)
+- `q6b_sole_by_funnel.png` — sole-serve funnel attribution (97-99% prospecting-family)
 - `q14_ingest_waste.png` — ingestion waste per vendor: measured GB/day (gsutil on the
   data_source_id partitions) split used / junk-that-bills / thrown-away; paid roster ~156 GB/day,
   39.3 TB no-TTL footprint, storage floor ~$9.4K/yr
+
+## 6b. Durable homes for binary deliverables (all gitignored by design)
+
+Every binary in this ticket is REGENERABLE from committed sources — that is the durability
+model (nothing binary is version-controlled): the filled workbook = `fill_template.py
+[run_dir] [bill_month]`; every chart PNG = `generate_canonical_charts.py --step N`; every
+run CSV = its query file (MANIFEST run order); the boss zip = `zip -j` over queries/ +
+MANIFEST. Hand-collected inputs are embedded in their scripts (q14's monthly GCS samples +
+integration arithmetic live in the q14 header). If a binary must outlive this repo (e.g.
+sharing), put it on Drive and list the path in summary.md under Drive Files.
 
 ## 7. Template map — the filled question table (final deliverable)
 

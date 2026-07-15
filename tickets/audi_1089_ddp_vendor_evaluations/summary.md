@@ -295,7 +295,9 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   (exact). q15c: union concentration DILUTES (top-1 msn.com 6.0% vs guid's 25.2% empty-URL
   bucket / aug's 8.0%). GRAIN CAVEAT (notes): union reach is URL-parseable-basis (186.9M)
   and reads below guid's raw 195M (20% of guid rows carry no URL). Boss zip regenerated:
-  34 files (33 queries + MANIFEST).
+  34 files (33 queries + MANIFEST). Closing chart: **q15_free_union_value.png** (free union
+  $603K/yr sole-T2 > any paid vendor; exceeds guid+aug summed $445K by design — co-held
+  free pairs count only in the union).
 
 ## 4d15. WASTE tab + measured ingestion footprint (boss ask via user, 2026-07-15)
 
@@ -404,7 +406,8 @@ anchor: total == $273,671 == the published AUDI-1093 figure):**
   (junk/unique credit survives preemption). Preemption does NOT rescue them; verdicts unchanged.
 - Landed in the workbook: numbers/solo row "Post-preemption bill $/yr (AUDI-1093 applied)"
   (144 rows now), decisions block 5 (per-meter + combined + roster, 3 pay-range lenses, flip
-  verdicts), notes convention, chart `q12_post_preemption.png`. Anchor tripwire in fill_template
+  verdicts), notes convention, charts `q12_post_preemption.png` +
+  `q11b_solo_pnl_post_preemption.png` (q11 with the theoretical amber bill bracket). Anchor tripwire in fill_template
   (total must stay ~$273.7K; q8a-vs-q3c share convergence warns past 0.5% — currently silent).
 
 ## 4d12. SOLO sheet — each vendor as the ONLY paid source (user-requested 2026-07-14)

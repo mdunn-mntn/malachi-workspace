@@ -1,3 +1,13 @@
+-- Claim: sole-cohort visit performance — visits, IVR (vs the 0.0223% no-svs baseline)
+-- and Poisson CI inputs on sole-IP serves. Output q7_sole_vr.csv.
+-- Run (from workspace root; svs 37d union external table + internal CIL):
+--   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
+--     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
+--   bash .claude/scripts/bq_run.sh --ticket AUDI-1089 --label "<label>" \
+--     --external_table_definition="svs::PARQUET=${URIS}" \
+--     --use_legacy_sql=false --format=csv --max_rows=100 --project_id=dw-main-silver \
+--     "$(grep -v '^[[:space:]]*--' <this file>)" > outputs/run_<YYYY_MM_DD>/<output>.csv
+--
 -- CANONICAL runbook copy of queries/audi_1089_q5_vr_membership.sql (AUDI-1089 eval, windows per runbook params).
 -- Output: outputs/run_<date>/q7_sole_vr.csv. Full run pattern in the original header below.
 --
@@ -23,7 +33,7 @@
 --   membership: 1_klickly_sole (DS39 only) / 2_klickly_shared (DS39 + others)
 --               / 3_other_svs (svs, no DS39) / 4_no_svs (delivered IP absent from svs 37d)
 --   bands: 1_10000 / 2_8000_9999 / 3_6666_7999 / 4_1_6665 / 5_unscored (HS NULL or <=0; RT rows HS=-1)
--- Output: outputs/audi_1089_vr_by_membership.csv
+-- Output: outputs/run_<date>/q7_sole_vr.csv
 -- ============================================================
 WITH svs_ip AS (
   SELECT ip,
@@ -77,7 +87,7 @@ ORDER BY membership, band;
 -- Query B: per-ds SOLE-IP VR for all 10 ds (seeds the other six vendor evals).
 -- sole_ds = the single ds that saw the IP in the 37d window (MIN over n_ds=1, per TI-1027 pattern).
 -- One row per ds: sole delivered IPs, sole imps, visits, VR overall + at band 10000.
--- Output: outputs/audi_1089_vr_sole_by_ds.csv
+-- Output: outputs/run_<date>/q7_sole_vr.csv
 -- ============================================================
 WITH svs_ip AS (
   SELECT ip,
