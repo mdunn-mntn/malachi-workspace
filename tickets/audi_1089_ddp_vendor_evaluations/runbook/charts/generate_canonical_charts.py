@@ -1895,6 +1895,120 @@ def q12(rdir):
                  "construction (unique value excludes free-coheld signal). Flats unaffected (no meter).")
 
 
+# ---- Step 13: DS19-only exposure — scenario coverage + the lost slice's tier mix ----
+def q13(rdir):
+    import csv as _csv
+    pair, trip = {}, {}
+    for r in _csv.DictReader(open(os.path.join(rdir, "q13a_ds19_universe.csv"))):
+        if r["rec"] == "pair":
+            pair[int(r["k1"])] = int(float(r["v1"]))
+        elif r["rec"] == "trip":
+            trip[int(r["k1"])] = int(float(r["v1"]))
+    q13b = {}
+    for r in _csv.DictReader(open(os.path.join(rdir, "q13b_ds19_perf.csv"))):
+        q13b.setdefault(r["k1"], {}).setdefault(r["rec"], {})[r["k2"]] = float(r["v"])
+    BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
+    FREEM = 33
+
+    def cov(keep, uni, fm=FREEM):
+        km = fm | sum(1 << BITSQ[d] for d in keep)
+        return sum(n for m, n in uni.items() if m & km) / sum(uni.values())
+
+    SC = [("Today (all 8)", [24, 25, 26, 28, 33, 36, 39, 40], FREEM),
+          ("k=4 (5x5+Pred+33A+API)", [25, 26, 28, 40], FREEM),
+          ("33Across combined only", [28, 40], FREEM),
+          ("Flat-fee only", [25, 26], FREEM),
+          ("FREE LOGS ONLY", [], FREEM),
+          ("augmentor only", [], 32),
+          ("guid_log only", [], 1)]
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(12.4, 5.5), width_ratios=[1.5, 1])
+    fig.subplots_adjust(left=0.16, right=0.97, top=0.80, bottom=0.17, wspace=0.32)
+    ys = list(range(len(SC)))[::-1]
+    for y, (label, keep, fm) in zip(ys, SC):
+        p_ = cov(keep, pair, fm)
+        t_ = cov(keep, trip, fm)
+        c = RED if "FREE LOGS" in label else (NAVY if keep else GRAY)
+        ax.barh(y, 100 * p_, height=0.6, color=c, alpha=0.85 if keep or "FREE" in label else 0.5)
+        ax.plot([100 * t_], [y], marker="D", ms=6, mfc="white", mec="#333", mew=1.2)
+        ax.text(max(100 * p_, 100 * t_) + 2.5, y, f"{100 * p_:.1f}%", fontsize=8.5,
+                va="center", color="#333")
+    ax.set_yticks(ys)
+    ax.set_yticklabels([x[0] for x in SC], fontsize=9.5)
+    ax.set_xlim(0, 112)
+    ax.set_xlabel("DS19-only usable pair coverage (diamond = visit-day grain)", fontsize=9, color="#555")
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    ax.grid(axis="x", color="#e4e4e4", lw=0.7, zorder=0)
+    ax.tick_params(axis="x", labelsize=8.5, colors="#555")
+
+    tiers = ["hi", "pp", "hg", "mid", "maxreach", "unscored"]
+    names = ["HI", "PP", "high-grad", "mid", "MAX REACH", "unscored"]
+    fc = [q13b["free_covered"]["tier"][t] for t in tiers]
+    vo = [q13b["vendor_only"]["tier"][t] for t in tiers]
+    ys2 = list(range(len(tiers)))[::-1]
+    for y, n, f, v in zip(ys2, names, fc, vo):
+        share = 100 * f / (f + v) if f + v else 0
+        ax2.barh(y, share, height=0.6, color=GREEN, alpha=0.75)
+        ax2.barh(y, 100 - share, left=share, height=0.6, color=RED, alpha=0.8)
+        ax2.text(101, y, f"{share:.1f}% free-covered", fontsize=8, va="center", color="#333")
+    ax2.set_yticks(ys2)
+    ax2.set_yticklabels(names, fontsize=9.5)
+    ax2.set_xlim(0, 145)
+    ax2.set_xticks([0, 50, 100])
+    ax2.set_xlabel("served DS19 members by score tier", fontsize=9, color="#555")
+    for sp in ax2.spines.values():
+        sp.set_visible(False)
+    ax2.tick_params(axis="x", labelsize=8.5, colors="#555")
+
+    fig.suptitle("DS19 (MM Core / keywords): free logs alone keep 64% of the signal and 99%+ of every SCORED tier\n"
+                 "Vendor-only membership (30% of member IPs) is dark: 0.48% serve rate, VR 0.061%, 92% unscored when served.",
+                 fontsize=10.5, fontweight="bold", x=0.02, ha="left")
+    save(fig, "q13_ds19_scenarios.png",
+         caption="Left: DS19-only universe coverage per keep-set (q13a holder masks; true path-grain free coverage 61.6%). "
+                 "Right: score-tier split of served DS19 members, free-covered vs vendor-only (q13b). Even MAX REACH - "
+                 "the tier DS19 unlocks - is 99.4% free-covered; keyword UI audience COUNTS shrink ~30%, the scored/servable "
+                 "audience barely moves.")
+
+
+# ---- Step 13cats: DS19 keyword categories — size + free-only retention ----
+def q13cats(rdir):
+    import csv as _csv
+    cats = []
+    for r in _csv.DictReader(open(os.path.join(rdir, "q13a_ds19_universe.csv"))):
+        if r["rec"] == "cat" and float(r["v1"]) >= 1e6:
+            cats.append((float(r["v1"]), float(r["v2"]) / float(r["v1"]), r["k2"] or r["k1"]))
+    biggest = sorted(cats, reverse=True)[:12]
+    worst = sorted(cats, key=lambda x: x[1])[:10]
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(12.6, 5.9))
+    fig.subplots_adjust(left=0.22, right=0.97, top=0.82, bottom=0.16, wspace=0.55)
+    for axx, data, title in ((ax, biggest, "12 largest keyword categories"),
+                             (ax2, worst, "10 worst-hit (>=1M IPs) under free-only")):
+        ys = list(range(len(data)))[::-1]
+        for y, (n, fr, name) in zip(ys, data):
+            axx.barh(y, 100 * fr, height=0.62, color=GREEN if fr > 0.5 else (AMBER if fr > 0.15 else RED))
+            axx.text(100 * fr + 1.5, y, f"{100 * fr:.0f}%  ({n / 1e6:.0f}M IPs)", fontsize=8, va="center", color="#444")
+        axx.set_yticks(ys)
+        axx.set_yticklabels([x[2][:26] for x in data], fontsize=8.5)
+        axx.set_xlim(0, 135)
+        axx.set_xticks([0, 50, 100])
+        axx.set_title(title, fontsize=9.5, loc="left", color="#333")
+        axx.set_xlabel("% of member IPs retained free-only", fontsize=8.5, color="#555")
+        for sp in axx.spines.values():
+            sp.set_visible(False)
+        axx.tick_params(axis="x", labelsize=8.5, colors="#555")
+        axx.grid(axis="x", color="#e4e4e4", lw=0.7, zorder=0)
+    fig.suptitle("DS19 keyword categories: what free-logs-only keeps - the collapsing categories are ad-infra junk\n"
+                 "Paid Advertising 0.2% / Ad Platforms 0.3% / Advertising 3% retained = cookie-sync & ad-tech URLs nobody targets; "
+                 "real categories hold (Search 98%, News 81%, Software 87%).",
+                 fontsize=10.5, fontweight="bold", x=0.02, ha="left")
+    save(fig, "q13_ds19_categories.png",
+         caption="q13a per-category member IPs (composite-key grain) with taxonomy names (tpa__mntn_matched_taxonomy__v2); "
+                 "retention = IPs still members via guid/augmentor alone. Baked Goods (46M, 17%) is the one legit-looking "
+                 "vendor-dependent category - likely recipe/content-farm URL volume.")
+
+
 # ---- Step 14: ingestion waste — measured GB/day used vs thrown away, per vendor ----
 # Feeds the boss ask "how much data are we throwing away + what does ingestion cost".
 # Bytes measured via q14_gcs_ingest_bytes.sh (gsutil on the data_source_id partitions);
@@ -2152,7 +2266,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "11b": q11b, "12": q12, "14": q14}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "11b": q11b, "12": q12, "13": q13, "13cats": q13cats, "14": q14}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
