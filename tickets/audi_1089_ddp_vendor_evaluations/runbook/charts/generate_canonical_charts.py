@@ -1686,7 +1686,7 @@ def q9g(rdir):
 # Bill = bounded estimate [today's run-rate, max(that, visit-day-proportional share of the
 # metered pool)]; value = measured T2_solo (q8b, if landed) vs density estimate (= ladder
 # standalone); pay band = 10-30% blended margin on the value basis.
-def q11(rdir):
+def _q11_render(rdir, preempt):
     import csv as _csv
     BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
     FREEM = (1 << 0) | (1 << 5)
@@ -1744,20 +1744,23 @@ def q11(rdir):
     rows.sort(key=lambda r: -(r[1] or 0))
     rows = [r for r in rows if r[0] not in FLATV] + [r for r in rows if r[0] in FLATV]
 
-    fig, ax = plt.subplots(figsize=(11.5, 5.9))
-    fig.subplots_adjust(left=0.13, right=0.97, top=0.84, bottom=0.18)
+    fig, ax = plt.subplots(figsize=(11.5, 5.9) if preempt else (11.5, 5.6))
+    fig.subplots_adjust(left=0.13, right=0.97, top=0.84, bottom=0.18 if preempt else 0.13)
     ys = list(range(len(rows)))[::-1]
     for y, (d, lo, hi, est, ms, keep) in zip(ys, rows):
         base = ms if ms is not None else est
         ax.barh(y, base * 0.30 - base * 0.10, left=base * 0.10, height=0.62,
                 color=GREEN, alpha=0.25, edgecolor="none", zorder=1)
-        if lo is not None:
+        if lo is not None and preempt:
             ax.plot([lo, hi], [y + 0.14, y + 0.14], color=RED, lw=5,
                     solid_capstyle="butt", zorder=2)
             ax.plot([lo], [y + 0.14], marker="|", ms=12, color=RED, mew=2.5, zorder=3)
             ax.plot([lo * keep, hi * keep], [y - 0.16, y - 0.16], color=AMBER, lw=5,
                     solid_capstyle="butt", zorder=2, linestyle=(0, (2, 1)))
             ax.plot([lo * keep], [y - 0.16], marker="|", ms=12, color=AMBER, mew=2.5, zorder=3)
+        elif lo is not None:
+            ax.plot([lo, hi], [y, y], color=RED, lw=5, solid_capstyle="butt", zorder=2)
+            ax.plot([lo], [y], marker="|", ms=14, color=RED, mew=2.5, zorder=3)
         ax.plot([est], [y], marker="D", ms=7, mfc="white", mec=NAVY, mew=1.6, zorder=4)
         if ms is not None:
             ax.plot([ms], [y], marker="o", ms=8, color=NAVY, zorder=5)
@@ -1776,25 +1779,42 @@ def q11(rdir):
     ax.grid(axis="x", color="#e4e4e4", lw=0.7, zorder=0)
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
-    ax.legend(handles=[
-        Line2D([], [], color=RED, lw=5, label="Solo bill range TODAY (run-rate to visit-day-proportional ceiling)"),
-        Line2D([], [], color=AMBER, lw=5, linestyle=(0, (2, 1)),
-               label="Solo bill range AFTER free-log preemption (AUDI-1093, x (1 - free-cohold))"),
+    handles = [Line2D([], [], color=RED, lw=5,
+                      label="Solo bill range TODAY (run-rate to visit-day-proportional ceiling)")]
+    if preempt:
+        handles.append(Line2D([], [], color=AMBER, lw=5, linestyle=(0, (2, 1)),
+                       label="Solo bill range AFTER free-log preemption (AUDI-1093, x (1 - free-cohold))"))
+    handles += [
         Line2D([], [], marker="o", color=NAVY, lw=0, ms=8, label="T2_solo dependent revenue, MEASURED (q8b)"),
         Line2D([], [], marker="D", mfc="white", mec=NAVY, lw=0, ms=7, label="T2_solo, density estimate (= ladder standalone)"),
         Patch(facecolor=GREEN, alpha=0.25, label="Pay range: 10-30% blended margin on T2_solo"),
-    ], loc="lower right", fontsize=8.2, frameon=False)
+    ]
+    ax.legend(handles=handles, loc="lower right", fontsize=8.2, frameon=False)
     meas_note = "" if meas else " Measured (q8b) markers pending."
+    if preempt:
+        sub = ("No metered pay range reaches its bill today; after AUDI-1093 preemption the "
+               "33Across feeds reach the pay-band edge.")
+    else:
+        sub = "Even standalone, no metered pay range reaches its bill; solo bills only RISE."
     ax.set_title("Solo P&L: each vendor as the ONLY paid source, overlap counted vs our free logs only\n"
-                 "No metered pay range reaches its bill today; after AUDI-1093 preemption the "
-                 "33Across feeds reach the pay-band edge." + meas_note,
+                 + sub + meas_note,
                  fontsize=10.5, fontweight="bold", loc="left", pad=12)
-    save(fig, "q11_solo_pnl.png",
-         caption="Bill LOW = June 2026 x12 (hard floor: survivor keeps all current credit). Bill HIGH = max(LOW, "
-                 "total metered bills x vendor share of paid-held visit-days); junk-billed credit is uncontested, so "
-                 "small meters collapse to LOW. Amber = theoretical bills if free logs preempt co-held credit "
-                 "(33Across -52.5%, API -23.8%, Cybba -28.2%, Justuno -4.9%, Sovrn -0.2%). "
-                 "Flats: fee pending (Maya). Revenue basis = full media CPM, not our cut.")
+    cap = ("Bill LOW = June 2026 x12 (hard floor: survivor keeps all current credit). Bill HIGH = max(LOW, "
+           "total metered bills x vendor share of paid-held visit-days); junk-billed credit is uncontested, so "
+           "small meters collapse to LOW. ")
+    if preempt:
+        cap += ("Amber = theoretical bills if free logs preempt co-held credit "
+                "(33Across -52.5%, API -23.8%, Cybba -28.2%, Justuno -4.9%, Sovrn -0.2%). ")
+    cap += "Flats: fee pending (Maya). Revenue basis = full media CPM, not our cut."
+    save(fig, "q11b_solo_pnl_post_preemption.png" if preempt else "q11_solo_pnl.png", caption=cap)
+
+
+def q11(rdir):
+    _q11_render(rdir, preempt=False)
+
+
+def q11b(rdir):
+    _q11_render(rdir, preempt=True)
 
 
 # ---- Step 12: post-preemption economics — bills if free logs preempt co-held credit ----
@@ -2071,7 +2091,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "12": q12}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "11b": q11b, "12": q12}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

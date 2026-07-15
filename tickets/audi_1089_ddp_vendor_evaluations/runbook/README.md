@@ -180,10 +180,10 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
 - `q9g_net_of_free_ladder.png` — net-of-free ladder: Bill | standalone | marginal + pay ranges
 - `q3d_score_coverage.png` — HI/PP coverage per scenario (scored audiences vendor-independent)
 - `q3d_vertical_impact.png` — vertical audience-size before/after (12 largest + 10 worst-hit)
-- `q11_solo_pnl.png` — solo P&L: per-vendor bill range TODAY (red) AND after AUDI-1093
-  free-log preemption (amber, theoretical) vs T2_solo (measured + density est) with the
-  10-30% pay band — the solo sheet's headline; post-preemption the 33Across feeds reach
-  the pay-band edge
+- `q11_solo_pnl.png` — solo P&L: per-vendor bill range (today -> proportional ceiling) vs
+  T2_solo (measured + density est) with the 10-30% pay band — the solo sheet's headline
+- `q11b_solo_pnl_post_preemption.png` — same view PLUS the theoretical AUDI-1093 bill bracket
+  (amber, bounds x (1 - free-cohold)) — post-preemption the 33Across feeds reach the pay-band edge
 - `q12_post_preemption.png` — bills before/after free-log preemption (AUDI-1093) vs the
   portfolio + ceiling pay bands: -$274K/yr, keeps the data, flips no vendor on the portfolio lens
 
