@@ -287,6 +287,15 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   with row-height growth — the waste tab's stop-sending asks no longer stretch columns.
 - **"% of pairs usable" DEF clarified** (user question): the filter is on DOMAINS (wcv∪pc
   membership), not IPs; <100% = pairs on domains neither classifier knows.
+- **q15 + q15b LANDED — column COMPLETE (2026-07-15 eve):** union touched = 220.4M IPs /
+  $3.49M media/wk (platform mirror); **SOLE vs paid = 61.8M member IPs (37d) / 44.0M usable
+  (30d) / 2.15B pairs / 50.8K classified domains → T2-free $602.9K/yr** — bigger than any
+  single vendor's sole-T2 ($270K max). Freshness: fresher-or-tied vs paid on 89.7% of shared
+  pairs; visit-days 51% new-pair / 15% refresh / 34% same-day-dup. q15b mask anchor -0.008%
+  (exact). q15c: union concentration DILUTES (top-1 msn.com 6.0% vs guid's 25.2% empty-URL
+  bucket / aug's 8.0%). GRAIN CAVEAT (notes): union reach is URL-parseable-basis (186.9M)
+  and reads below guid's raw 195M (20% of guid rows carry no URL). Boss zip regenerated:
+  34 files (33 queries + MANIFEST).
 
 ## 4d15. WASTE tab + measured ingestion footprint (boss ask via user, 2026-07-15)
 
