@@ -262,6 +262,14 @@ def _synth_free_combo():
                                     "pct_googlebot_ip", "pct_private_ip", "uid_dup_pct",
                                     "time_top1_share")
                           if k in q1c[a] and k in q1c[b]}
+        q15c = rows_of("q15c_free_union_hour_quality.csv")
+        if q15c:
+            q1c.setdefault(FREEC, {}).update({
+                "top_domain": q15c[0]["top_domain"],
+                "top_domain_share": q15c[0]["top_domain_share"],
+                "top5_domain_share": q15c[0]["top5_domain_share"],
+                "ua_bot_pct": q15c[0]["ua_bot_pct"],
+            })
         if a in q2b and b in q2b:
             ra, rb = int(q2b[a]["rows_day"]), int(q2b[b]["rows_day"])
             q2b[FREEC] = {
@@ -697,7 +705,7 @@ SPEC = [
     R("% URLs malformed", "pct2", lambda d: float(q1c[d]["url_malformed_pct"])),
     R("% Googlebot IPs", "pct2", lambda d: float(q1c[d]["pct_googlebot_ip"])),
     R("% bot user-agents", "pct", lambda d: float(q1c[d]["ua_bot_pct"]) if q1c[d].get("ua_bot_pct") else None),
-    R("Top-1 domain", "txt", lambda d: q1c[d]["top_domain"] or NA),
+    R("Top-1 domain", "txt", lambda d: q1c[d]["top_domain"] or "(empty url)"),
     R("Top-1 domain share", "pct", lambda d: float(q1c[d]["top_domain_share"])),
     R("Top-5 domain share", "pct", lambda d: float(q1c[d]["top5_domain_share"])),
     R("% private IPs", "pct3", lambda d: float(q1c[d]["pct_private_ip"])),
@@ -1444,7 +1452,7 @@ DEF = {
     "% URLs malformed": ("URL structurally broken (e.g. Sovrn's host-doubled concat bug).", "q1c"),
     "% Googlebot IPs": ("Rows from Google crawler IPs - bot traffic that can bill through DS19.", "q1c"),
     "% bot user-agents": ("Rows whose user_agent identifies a bot (only measurable where UA is sent).", "q1c"),
-    "Top-1 domain": ("Most frequent domain - is the feed one site in a trenchcoat?", "q1c"),
+    "Top-1 domain": ("Most frequent domain - is the feed one site in a trenchcoat? '(empty url)' = the modal bucket is rows with no/unparseable URL (guid_log: ~25% of its rows).", "q1c"),
     "Top-1 domain share": ("% of rows on that single domain.", "q1c"),
     "Top-5 domain share": ("% of rows on the top five domains (concentration).", "q1c"),
     "% private IPs": ("RFC1918 unroutable addresses (10.x etc.) - junk.", "q1c"),
