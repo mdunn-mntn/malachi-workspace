@@ -1546,7 +1546,7 @@ def main():
     verdict_color = {"KEEP": "1E7A1E", "NEGO": "B26B00", "DROP": "B00020"}
 
     # ================= numbers + solo + waste (same grid renderer) =================
-    def render_grid(sheet, spec, cols=DS_COLS):
+    def render_grid(sheet, spec, cols=DS_COLS, max_w=36):
         sheet.cell(row=1, column=1, value="Question").font = bold
         for i, d in enumerate(cols):
             c = sheet.cell(row=1, column=2 + i, value=HDR_NAMES[d])
@@ -1577,6 +1577,9 @@ def main():
                     cell.value = NA
                 elif isinstance(v, str):
                     cell.value = v
+                    if len(v) > max_w:
+                        cell.alignment = Alignment(horizontal="left", vertical="top",
+                                                   wrap_text=True)
                 else:
                     v = float(v)
                     if fmt and fmt.startswith("pct"):
@@ -1616,7 +1619,20 @@ def main():
                 if fn is None:
                     continue
                 m = max(m, disp_len(sheet.cell(row=r2, column=2 + i).value, fmt))
-            sheet.column_dimensions[get_column_letter(2 + i)].width = round(m * 1.1) + 2
+            # cap: long text wraps inside the cell instead of blowing the column wide
+            sheet.column_dimensions[get_column_letter(2 + i)].width = min(round(m * 1.1) + 2, max_w)
+        r2 = 1
+        for label, fmt, fn, oos_ok in spec:
+            r2 += 1
+            if fn is None:
+                continue
+            lines = 1
+            for i in range(len(cols)):
+                v = sheet.cell(row=r2, column=2 + i).value
+                if isinstance(v, str) and len(v) > max_w:
+                    lines = max(lines, -(-len(v) // (max_w - 2)))
+            if lines > 1:
+                sheet.row_dimensions[r2].height = min(lines, 10) * 13 + 4
         sheet.freeze_panes = "B2"
 
     render_grid(ws, SPEC)
