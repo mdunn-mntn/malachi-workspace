@@ -2162,6 +2162,51 @@ def main():
         "cost fix, not a valuation flip — flats unaffected (no meter)", "", "",
     ], fmts=pfmt)
 
+    # ---- DS19 (MM Core / keywords) exposure block ----
+    if Q13A and Q13B:
+        ri += 1
+        dec.merge_cells(start_row=ri, start_column=1, end_row=ri, end_column=13)
+        t = dec.cell(row=ri, column=1, value=(
+            "DS19 (MM CORE / KEYWORDS) EXPOSURE — free-logs-only keeps 64.3% of keyword pairs / "
+            "64.2% of visit-days (61.6% true path grain; scenario columns above). The lost 30.3% "
+            "of member IPs is DARK (0.48% serve rate vs 14.4% kept; VR 0.061% = 26x below kept; "
+            "92% unscored when served). Every scored tier stays >=99% free-covered INCLUDING Max "
+            "Reach - the tier DS19 exists to unlock. Collapsing keyword categories are AD-INFRA "
+            "JUNK (cookie-sync/ad-tech URLs); keyword UI audience COUNTS shrink ~30%, the "
+            "servable/scored keyword audience is vendor-independent. The DS19 lens does NOT "
+            "rescue the roster. Charts: q13_ds19_scenarios / q13_ds19_categories."))
+        t.font = section_font
+        t.fill = section_fill
+        ri += 1
+        ri = put_row(dec, ri, ["Score tier (served DS19 members)", "free-covered IPs",
+                               "vendor-only IPs", "% free-covered", "", "", "", "", "", "",
+                               "", "", ""], header=True)
+        tfmt = {2: "#,##0", 3: "#,##0", 4: "0.00%"}
+        for n, (tk, tn) in enumerate([("hi", "HI 10000"), ("pp", "PP 8000"),
+                                      ("hg", "High-graduated"), ("mid", "Mid"),
+                                      ("maxreach", "MAX REACH (the DS19 tier)"),
+                                      ("unscored", "Unscored")]):
+            f = q13b["free_covered"][tk]
+            v = q13b["vendor_only"][tk]
+            ri = put_row(dec, ri, [tn, round(f), round(v), f / (f + v) if f + v else 0,
+                                   "", "", "", "", "", "", "", "", ""],
+                         fmts=tfmt, band_row=(n % 2 == 1))
+        ri += 1
+        ri = put_row(dec, ri, ["Keyword category (taxonomy name)", "member IPs",
+                               "% retained FREE-ONLY", "% retained k=4",
+                               "12 largest, then 10 worst-hit (>=1M IPs)", "", "", "", "",
+                               "", "", "", ""], header=True)
+        cfmt = {2: "#,##0", 3: "0.0%", 4: "0.0%"}
+        cats = [(v["all"], v["free"] / v["all"], v["k4"] / v["all"], v["name"] or str(k))
+                for k, v in q13a_cat.items() if v["all"] >= 1e6]
+        big = sorted(cats, reverse=True)[:12]
+        worst = sorted(cats, key=lambda x: x[1])[:10]
+        for n, (tot, fr, k4r, name) in enumerate(big + worst):
+            tag = " (worst-hit)" if n >= len(big) else ""
+            ri = put_row(dec, ri, [name + tag, round(tot), fr, k4r,
+                                   "", "", "", "", "", "", "", "", ""],
+                         fmts=cfmt, band_row=(n % 2 == 1))
+
     widths = [30, 32, 13, 14, 17, 14, 18, 16, 13, 14, 21, 64, 60]
     for i, w in enumerate(widths, start=1):
         dec.column_dimensions[get_column_letter(i)].width = w
