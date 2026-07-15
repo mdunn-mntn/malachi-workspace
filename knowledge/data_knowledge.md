@@ -831,6 +831,13 @@ MM audience. [[reference_fangorn_audience_overlay]]
 | ✓ | ✓ | ✓ | **0** | 0 | — | — | impossible — same reason |
 
 - **AUTHORITATIVE component naming (Matt Brorby, TI team, 2026-07-08).** Products are named per COMPONENT, and each product name is the IP-tier name applied to the component that unlocks that tier: **DS19 = "MM Core" / Keyword-Only** (unlocks the Max Reach tier — Matt: "Max Reach but I would call it Keyword Only campaigns or MM Core"); **DS13 vertical anchor = "Peak Performance"** (unlocks the 8000 PP tier); **DS13 with bucket ids = "Expanded Peak Performance"** — named but UNSHIPPED (would unlock the MI tier; confirmed zero live campaigns carry bucket ids); **DS46 = "Peak Performance v2"** (Fangorn — the v2 of the vertical-scoring component). HI needs no component of its own — reachable via keywords or the vertical anchor. Combo configs read compositionally: DS13+DS19 = "MM Core + PP", DS19+DS46 = "MM Core + PP v2" (the flagship). MI is the only tier whose product (Expanded PP) never shipped. **Matt endorsed the 2×3 grid + these labels for internal naming consistency (2026-07-08) and notes he colloquially says "vertical only" for the PP-only (no-DS19) campaigns** — so "vertical-only" in conversation = a DS13- or DS46-anchored campaign with no keyword layer. **Published as a Confluence page (TAR space, under TI Projects):** https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511 — the org-shareable version of this section; update BOTH if the taxonomy changes.
+- **Vendor contribution to DS19 ("MM Core"/Keyword-Only) is unscored dark breadth, not scored audience
+  (AUDI-1089 q13b, 2026-07-15):** of 271.3M DS19-member IPs (37d), free logs alone keep 69.7%; the
+  vendor-only 30.3% (82.3M IPs) has a 0.48% serve rate (vs 14.4% free-covered), VR 0.061% (26x below
+  the kept slice, ~12x below the coldest platform bucket), and is 92.4% unscored when served. EVERY
+  scored tier is >=99% free-covered INSIDE DS19 — including Max Reach at 99.4% (HI 99.92%, PP 98.97%,
+  mid 99.84%). Keyword AUDIENCE COUNTS (UI sizing) would shrink ~30% under free-logs-only; the
+  effective (servable, scored) keyword audience barely moves.
 - **SCORING GENERATIONS — v1 = categorical fixed points, v2 = score bands where THE LABEL FOLLOWS THE SCORE (verified 2026-07-08, 7d of delivered CIL, RTC-excluded, all live v1/v2 prospecting).** Per the Fangorn methodology page (https://mntn.atlassian.net/wiki/spaces/TAR/pages/3414917161): Fangorn = continuous 0–1 intent score; raw boundaries 0.6/0.8 divide MaxReach/MI/HI, transformed onto the legacy 3333/6666 pacing points. Empirical delivered-score distribution:
   - **v1 (DS13): fixed points ONLY** — exactly 8000 (3.1M imps) and exactly 10000 (4.5M) + MaxReach 1–3332 (full random band) + MI 3333–6665; **ZERO impressions at 6666–7999 or 8001–9999**.
   - **v2 (DS46): two model passes per IP, each a continuous band with a pin at its top** — PP pass → **6666–8000** (3.8M imps over 1,206 distinct values + 2.1M pinned exactly 8000); HI pass → **8001–10000** (11.0M over 1,868 values + 2.0M pinned exactly 10000). An IP that structurally matches vertical/keywords but scores <0.8 raw lands in MI/MaxReach — **qualifying criteria feed the model; only the score puts an IP in the HI/PP groups** (Malachi's "two scores, only above-bar counts" reading, confirmed).
@@ -944,6 +951,20 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     needed — `dt`, `hh`, `data_source_id` are real columns in the files). ~1 day ≈ 285 GB / ~16 s scan; ~30 days ≈ 8.5 TB.
     `NET.REG_DOMAIN(url)` = registered domain (matches the consumer's tldextract eTLD+1). Same pattern works for
     `fpa_vendor_log` and any GCS-parquet dataset lacking a BQ landing.
+  - **bq-CLI gotchas for these external-table queries (AUDI-1089, 2026-07-15):** (1) `--max_rows`
+    TRUNCATES SILENTLY — no error, no marker; for multi-rec-type outputs ORDER small/critical rec
+    types FIRST and assert all rec types are present post-run (a 25,861-category output nearly lost
+    its validation anchors to a 25,000 cap). (2) **WITH-CTE re-references RE-READ external tables**
+    (BQ does not materialize CTEs) — count root-to-leaf paths to the external scan before launching;
+    a 3-reference layout tripled one scan to ~30TB, fixed by pre-aggregating to one reference.
+    (3) Dry runs over many URIs + huge wildcards can exceed 2 min — extend the timeout, don't skip.
+- **svs has NO TTL and is byte-measurable per vendor (AUDI-1089 q14, 2026-07-15):** first partition
+  `dt=2025-08-31`, everything since is on disk (`dt=/hh=/data_source_id=N/` layout → `gsutil du`
+  per vendor; script `tickets/audi_1089_ddp_vendor_evaluations/runbook/queries/q14_gcs_ingest_bytes.sh`).
+  Measured GB/day (avg 2026-06-15+07-01): 33Across 106, augmentor 79, guid 48, 33A API 29, Predactiv 7,
+  Sovrn 6.6, 5x5 4.6, Justuno 2.5, Klickly 0.26, Cybba 0.09 — paid roster ~156 GB/day (~57 TB/yr);
+  accumulated paid footprint 39.3 TB → storage floor ~$9.4K/yr at GCS list. Lifecycling old partitions
+  to Coldline is an easy ~4x cut on that line (raised with Data Eng).
 - **Field population by source (AUDI-1089 q1b, hour slice 2026-07-01 hh=12):** `ip`/`time`/`uid` = 100% for
   every source; `url` ~100% everywhere except guid_log 79.9% (33A API 97.9%, Cybba 99.6%);
   **`query_parameters` = 0% for ALL sources (dead column)**; **`advertiser_id` populated ONLY by DS23 guid_log**
@@ -1078,6 +1099,8 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   demand, NOT junk filtering.** **CREDIT SEMANTICS ARE AN OR ACROSS CONSUMERS:** a row is creditable if
   DS13 *or* DS19 accepts it — the most permissive consumer sets the billable pool. DS13's blocklist/parse
   hygiene protects features, NOT payments; de-junking that saves money must happen at DS19/pc intake.
+  **Scale (2026-07-15):** pc holds ~10.28B composite keys, ~1.08TB per full BQ read (NOT a small
+  classifier table — budget it like a fact scan), and 25,861 distinct DS19 category ids >= 900000.
 - **Sole-IP serves are 97–99% prospecting (AUDI-1089 q6b, valuation week):** i.e. MM-membership-gated —
   the IP was biddable only because the vendor loaded it (max-reach included); retargeting (advertiser
   pixel, vendor-independent) is 1–3%. Vendor dependency ≈ the full sole-serve set, not just score-gated.
@@ -2784,7 +2807,7 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - ~20,000 keywords representing product categories (e.g., "Dog Beds" = 905072, "Pet Accessories" = 922262)
 - Used in audience expressions for both MM V2 and BUK
 - In `ipdsc__v1`: each IP has an array of DS19 `data_source_category_ids` it's been matched to
-- NOTE: DS19 category IDs do NOT have rows in the `categories` table with `data_source_id = 19`. They share IDs with DS16 ("MNTN Taxonomy Data") in the `categories` table. The human-readable product category names (e.g., "Dog Beds" for ID 905072) come from the URL classification pipeline: advertiser URLs are classified via LLM/embedding into a product category name + DS19 `data_source_category_id`. These name mappings live in the BUK feature store (Databricks/Airflow pipeline output), not in a BQ dimension table
+- NOTE: DS19 category IDs do NOT have rows in the `categories` table with `data_source_id = 19`. They share IDs with DS16 ("MNTN Taxonomy Data") in the `categories` table. The human-readable product category names (e.g., "Dog Beds" for ID 905072) come from the URL classification pipeline: advertiser URLs are classified via LLM/embedding into a product category name + DS19 `data_source_category_id`. The id->name mapping IS queryable in BQ (verified 2026-07-15, AUDI-1089): `dw-main-bronze.external.tpa__mntn_matched_taxonomy__v2` (data_source_category_id INT64, name STRING, parent_id, partner_id; covers the >=900000 space — 900000='Electrolyte Supplements'). (superseded 2026-07-15: earlier note said names lived only in the BUK feature store, not BQ)
 - DS38 ("MNTN UI Audience Keywords") in `keyword_categories` contains user-facing keyword strings (~40M rows) but uses different `data_source_category_id` values than DS19
 
 ### DS16: "MNTN Taxonomy Data"

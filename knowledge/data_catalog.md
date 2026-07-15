@@ -2236,6 +2236,15 @@ External tables backed by GCS (Parquet/ORC files). Not managed by SQLMesh.
 
 ---
 
+## bronze.external.tpa__mntn_matched_taxonomy__v2
+- **Type:** EXTERNAL TABLE — the DS19 ("MM Core") keyword-name dimension (verified 2026-07-15, AUDI-1089)
+- **Columns:** `data_source_category_id` (INTEGER, the >=900000 DS19 keyword space), `name` (STRING,
+  human-readable product-category keyword, e.g. 900000='Electrolyte Supplements'), `parent_id`, `partner_id`,
+  `description`
+- **Use for:** joining DS19 `data_source_category_id`s (from `product_categorization` GCS parquet or
+  `targeted_signal`) to keyword names. NOTE: DS19 ids share the `integrationprod.categories` id space with
+  DS16 — do NOT resolve DS19 names through `categories`; use this table.
+
 ## bronze.external.ipdsc__v1
 - **Type:** EXTERNAL TABLE (GCS-backed Parquet)
 - **GCS path:** `gs://mntn-data-archive-prod/ipdsc/dt=<date>/data_source_id=<id>/`

@@ -298,6 +298,34 @@ data_source_id so bytes are directly measurable):
   cookie-sync URLs; Sovrn URL-doubling fix; 5x5 outbrain widget URLs; Predactiv adult filter;
   Justuno none (cleanest; add user_agent); Klickly/Cybba immaterial volume.
 
+## 4d14. DS19-only exposure — q13b landed; q13a in flight (2026-07-15)
+
+**Question (user):** vendor removal can't touch Fangorn (DS46 guid-only) and barely touches HI/PP —
+the exposure is keyword-only/max-reach (DS19). Size + performance impact of free-logs-only on DS19?
+
+**Premises validated against docs:** DS19 = "MM Core"/Keyword-Only, documented Max Reach unlock;
+nuance: DS19 also feeds HI (v2 HI band requires it) but HI is already free-covered. No prior query
+ever split coverage by consumer (60.4%/59.4% are UNION figures). Two scans built (q13a universe/
+categories ~40TB, q13b membership/perf), 3-lens adversarial review pre-launch (caught: bq --max_rows
+SILENT truncation vs 25,861 DS19 categories; q13b 3x cost from CTE re-references — restructured to
+single mem pass; q13a cost priced honestly at ~40TB/5 svs reads).
+
+**q13b RESULTS (landed ~13:30):** of 271.3M DS19-member IPs (37d): free-covered 69.7% / vendor-only
+30.3% (82.3M). The lost slice is DARK: serve rate 0.48% vs 14.4% free-covered (30x); VR 0.061% vs
+1.563% (26x; ~12x below the coldest q7e bucket); 92.4% unscored among served. **Every scored tier
+>=99% free-covered inside DS19 — max-reach 99.39%, HI 99.92%, PP 98.97%, mid 99.84%.** The max-reach
+hypothesis resolves as: vendors do own ~30% of keyword MEMBERSHIP (UI audience counts shrink), but
+the scored/servable keyword audience is vendor-independent like everything else. Media envelope on
+the lost slice $21.3K/wk (~$1.1M/yr) — ALL media on those IPs, NOT MM-dependent spend; at 0.061% VR
+it is the platform's least productive spend. q13a (pair/visit-day coverage, per-category sizes with
+taxonomy names, scenario columns) still scanning.
+
+**Grain fix (user-caught):** q2c is a ONE-DAY funnel sample — the numbers sheet displayed daily
+"Rows used" (839M) beside 30d "Total delivered" (30.4B) with no grain marker, inviting 839M/30.4B ≈
+2.8% misreads of the true 77.6%. Section header + row labels + DEFs now carry grain markers; the
+q13a ds-anchor was also corrected (per-day-average vs sample-day, day-variance tolerance) before it
+could false-fail at 30x.
+
 ## 4d13. Post-preemption economics — bills if free logs stopped paying for co-held data (user question 2026-07-15)
 
 **Question:** we supposedly pay only for used data, but the meter doesn't exclude signals

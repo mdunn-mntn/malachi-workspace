@@ -1739,6 +1739,12 @@ Before pooling advertisers for a YoY / cohort / DiD visit-rate or conversion ana
 - **Calibration buckets before disbelief:** compute the platform-wide metric split by the cohort's
   structural drivers (funnel × scored: 2.89 / 1.11 / 0.72% VR) — tells you whether an outlier cohort
   is outside the plausible envelope or just in a cold bucket.
+- **Adversarial pre-launch review pays for itself on expensive scans (2026-07-15):** before launching
+  a multi-TB/multi-hour query, run 2-3 independent reviewers with DISTINCT lenses (arithmetic/masks,
+  replication-fidelity vs the reference query, execution mechanics+cost). The mechanics lens must
+  verify output caps against EMPIRICAL cardinality (a COUNT DISTINCT beats an assumption — bq
+  truncates silently) and count external-table re-reads (CTEs re-execute per reference). One such
+  review caught a silent-truncation blocker AND a 3x cost bug before a ~40TB launch.
 - **Boundary-identity checks catch cost-model bugs:** every savings/attribution model has degenerate
   cases with known-exact answers (drop ALL meters -> recovery must equal total bills; keep ALL ->
   savings 0). Assert them — a $7.2K reconciliation gap in AUDI-1089's LOO came from applying a
