@@ -1,7 +1,7 @@
 # AUDI-1089 Query Manifest — validate every number in the vendor-eval workbook
 
 Every value in `outputs/audi_1089_quality_template_filled.xlsx` (and every runbook PNG) traces to
-one of the 27 SQL files in this folder, or to an arithmetic combination of their outputs (formulas
+one of the 29 SQL files in this folder, or to an arithmetic combination of their outputs (formulas
 printed on the workbook's **index** sheet; combination code = `../charts/fill_template.py`).
 Run the queries in the order below; each file's header states its claim, grain, windows, and exact
 run command. All queries are **read-only** (temp external tables over GCS parquet; no DDL/DML).
@@ -56,6 +56,8 @@ Cost class: **cheap** = seconds-minutes, console-friendly · **BIG** = 5-15 TB s
 | 25 | `v02_conversion_model_fanout.sql` | VALIDATION: ui_conversions fans out per attribution model (~3-4x) — why q7c dedups. | cheap, console |
 | 26 | `q8a_solo_stock.sql` | SOLO sheet stock rows: each vendor as the ONLY paid source (overlap counted vs free logs only) — solo pairs/IPs/domains/classified + freshness-vs-free splits (pair + visit-day grain). | **BIG** (svs 30d + wcv + pc) |
 | 27 | `q8b_solo_perf.sql` | SOLO sheet measured serving/performance: solo cohort (V's IPs neither free log touched) served IPs, imps, media, T1/T2 inputs, visits, conversions, HI/PP tier counts. | **BIG** (svs 37d + CIL wk + clickpass + ui_conversions) |
+| 28 | `q13a_ds19_universe.sql` | DS19-ONLY universe ("MM Core"/Keyword-Only, the Max Reach unlock): holder masks (pair + visit-day), true path-grain coverage, per-keyword-category audience sizes under all/free/k4; rec `ds` anchors q2c rows_ds19_cat. | **BIG** (~40TB: svs 30d x5 reads + pc x6; 2-3h) |
+| 29 | `q13b_ds19_perf.sql` | DS19-member IPs split free-covered vs vendor-only: sizes, serving, media, visits + per-IP score-tier mix (hi/pp/hg/mid/MAXREACH/unscored) — tests "vendor loss lands in max-reach" + measures the lost slice's performance. | **BIG** (svs 37d + pc + CIL wk + clickpass; single-pass design) |
 
 ## Computed rows (no additional SQL — arithmetic over the CSVs above)
 
@@ -93,4 +95,7 @@ solo masks == q3 netnew_vs_free_pairs (paid vendors, exact; wcv/pc snapshot drif
 q8b tier hi/pp vs Σ q3d solo masks is a DIAGNOSTIC comparison, not an equality — raw vs
 usable membership lenses (clean vendors 3-10% low in q8b; Sovrn +55-68% HIGH = junk-carried
 IPs on malformed URLs that never reach a usable domain);
-q8a fresh_day solo_new_pair + refresh == Σ q3c solo masks.
+q8a fresh_day solo_new_pair + refresh == Σ q3c solo masks. DS19 anchors: q13a rec `ds` ==
+q2c rows_ds19_cat per vendor (<0.5% pc snapshot drift); q13a CSV must contain all 5 rec types
+(ds/path/pair/trip/cat — bq truncates silently); q13b free_covered member share ~ q13a IP-grain
+coverage; q13b tier `hi` free share >= 99% (q3d consistency).
