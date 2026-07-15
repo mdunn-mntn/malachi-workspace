@@ -272,6 +272,22 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d16. free_logs combined column + readability fixes (2026-07-15 pm)
+
+- **`free_logs (guid+aug)` pseudo-vendor column** (ds 99) added to numbers+solo sheets after
+  guid_log (user ask: see the two internal logs as ONE vendor next to the paid columns).
+  UNION semantics, never sums: usable pairs 3.605B (vs 3.62B naive sum — overlap visible).
+  Combination rules per row class: exact sums (rows 31.84B/30d, GB/day 126.5, weighted shares —
+  combined 88.8% used), mask-exact unions (pairs/visit-days/sole-vs-paid), em-dash where union
+  uniques aren't derivable (raw reach, funnel IPs, freshness), MEASURED union cohorts from
+  **q15_free_union_perf.sql** (launched; touched = either log, sole = no paid vendor; loader
+  injects under ds 99 into q5/q6/q7b/q7c/q7/q8b so every row formula works unchanged; solo-sheet
+  column = the free-only counterfactual). share() denominators exclude ds 99 (double-count guard).
+- **Column-width/wrap rule** (user ask): render_grid caps columns at 36 chars; long text wraps
+  with row-height growth — the waste tab's stop-sending asks no longer stretch columns.
+- **"% of pairs usable" DEF clarified** (user question): the filter is on DOMAINS (wcv∪pc
+  membership), not IPs; <100% = pairs on domains neither classifier knows.
+
 ## 4d15. WASTE tab + measured ingestion footprint (boss ask via user, 2026-07-15)
 
 **Asks:** (1) how much delivered vendor data we throw away + what to request vendors stop
