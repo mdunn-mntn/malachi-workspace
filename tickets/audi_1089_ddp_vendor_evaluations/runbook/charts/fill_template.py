@@ -701,17 +701,22 @@ SPEC = [
     R("Sole usable domains", "int", lambda d: int(q4[d]["sole_domains"])),
     R("Sole CLASSIFIED domains (fee-band axis)", "int", lambda d: int(q4[d]["sole_classified"])),
     R("Pairs per IP (visit density)", "dec1", lambda d: float(q3[d]["pairs_per_ip"])),
-    R("% pairs sole", "pct", lambda d: float(q3r[d]["pct_sole"])),
+    R("% pairs sole", "pct", lambda d: 100 * int(q3[d]["sole_pairs"]) / int(q3[d]["usable_pairs"])
+      if d == FREEC else float(q3r[d]["pct_sole"])),
     R("% pairs freshest", "pct", lambda d: float(q3r[d]["pct_freshest"])),
     R("% pairs tied", "pct", lambda d: float(q3r[d]["pct_tied"])),
     R("% pairs stale", "pct", lambda d: float(q3r[d]["pct_stale"])),
     R("% net-new vs free logs", "pct", lambda d: None if d in FREE else float(q3r[d]["pct_netnew_vs_free"])),
-    R("Marginal coverage when added (pp)", "dec2", lambda d: add_gain.get(d)),
-    R("Frontier add-order rank", "int", lambda d: add_order.index(d) + 1 if d in add_order else None),
+    R("Marginal coverage when added (pp)", "dec2", lambda d:
+      100.0 * FREE_COV_P / FULL_COV if d == FREEC else add_gain.get(d)),
+    R("Frontier add-order rank", "int", lambda d: 0 if d == FREEC else
+      (add_order.index(d) + 1 if d in add_order else None)),
     R("Unique visit-days delivered (ip x domain x date, 30d)", "int", lambda d: sum(vend3c[d].values())),
     R("% visit-days sole — new pair", "pct", lambda d: 100 * vend3c[d]["sole_new_pair"] / sum(vend3c[d].values())),
     R("% visit-days sole — recency refresh", "pct", lambda d: 100 * vend3c[d]["sole_refresh"] / sum(vend3c[d].values())),
-    R("% visit-days duplicated same-day", "pct", lambda d: 100 * vend3c[d]["shared_same_day"] / sum(vend3c[d].values())),
+    R("% visit-days duplicated same-day", "pct", lambda d:
+      100 * (trip_holder(d) - solo_sum(d, masks3c)) / trip_holder(d)
+      if d == FREEC else 100 * vend3c[d]["shared_same_day"] / sum(vend3c[d].values())),
 
     S("SERVING & WON BIDS (valuation week; served = won impression)"),
     R("Touched IPs (37d union)", "int", lambda d: int(q5[d]["touched"]["vendor_ips"])),
