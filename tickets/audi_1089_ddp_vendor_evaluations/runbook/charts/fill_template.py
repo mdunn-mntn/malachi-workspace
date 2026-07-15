@@ -551,7 +551,7 @@ SCOPE = {
     25: "Active MM site-visit DDP (batch, flat fee).",
     26: "Active MM site-visit DDP (batch, flat fee).",
     39: "Active MM site-visit DDP (real-time Kafka, flat fee).",
-    99: "COMBINED pseudo-vendor: guid_log + augmentor treated as ONE source. Unique counts are the UNION (not the sum of the two columns — the logs overlap heavily). Raw-reach and funnel-unique cells are '—' (union not derivable from per-source scans); serving/performance cells are MEASURED union cohorts (q15).",
+    99: "COMBINED pseudo-vendor: guid_log + augmentor treated as ONE source. Unique counts are the UNION (not the sum of the two columns — the logs overlap heavily). Percentage rows are ROW-WEIGHTED by volume: augmentor is 71.5% of combined rows, so e.g. % advertiser_id populated reads 28.5% (guid 100% x 28.5% share + aug 0% x 71.5% share) — the column describes the COMBINED feed, not its best half; use the per-log columns for per-log capabilities. Raw-reach and funnel-unique cells are '—' (union not derivable from per-source scans); serving/performance cells are MEASURED union cohorts (q15).",
     23: "Internal free log (MNTN guid pixel) — always kept; $0.",
     30: "Internal free log (bid-time augmentor) — always kept; $0. In svs since 2026-05-12.",
     27: "Registered metered vendor, DISABLED (enabled=false) — no feed, no bill. Feed rows are '—'.",
