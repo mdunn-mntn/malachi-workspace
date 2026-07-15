@@ -357,6 +357,18 @@ malformed-URL rows carry IPs that never reach a usable domain — junk-carried "
 Converted from abort-threshold to always-printed comparison; both lenses stay on the sheet
 (count row = usable/q3d, % rows = raw/q8b, each internally consistent).
 
+**q8a landed (~18:20) — SOLO SHEET COMPLETE (pending 0 / empty 0, both grids).** Anchor 3:
+solo pairs == q3b masks exact for 5 sources, worst drift +0.0058% (wcv/pc snapshot);
+anchor 7 (fresh-day vs q3c masks) passed. Stock: 33Across 43.5M solo IPs (vs 30.8M sole,
++41% once paid overlap is ignored); Predactiv 294K solo classified domains (vs 227K sole —
+still the breadth king). Freshness vs free on co-held pairs: 33Across fresher only 8.6% /
+tied 76.9% / stale 14.5%; Klickly the outlier at 73.4% fresher (checkout timing, tiny scale).
+**Convergence check passed:** visit-day same-day-dup-with-free per vendor (33Across 52.5%,
+Cybba 28.2%) equals the AUDI-1093 per-vendor preemption shares exactly — two independent
+routes to the same free-cohold quantity. Visit-day mix vs free: 33Across only 47.5% solo
+(34.2% new-pair + 13.3% refresh); Sovrn/Justuno/Klickly 95%+ new-pair (uniqueness real at
+visit grain — value low for other reasons: junk, scale, darkness).
+
 ## 4d11. q3d landed + reconciliation fixes + shareable query package (2026-07-13 eve - 07-14)
 
 - **q3d results (charts q3d_score_coverage.png / q3d_vertical_impact.png; scenario table gained
