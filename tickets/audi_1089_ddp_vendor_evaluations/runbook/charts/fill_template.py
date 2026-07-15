@@ -2189,9 +2189,9 @@ def main():
         t.font = section_font
         t.fill = section_fill
         ri += 1
-        ri = put_row(dec, ri, ["Score tier (served DS19 members)", "free-covered IPs",
-                               "vendor-only IPs", "% free-covered", "", "", "", "", "", "",
-                               "", "", ""], header=True)
+        ri = put_row(dec, ri, ["Score tier — SERVED members only (IPs that won an impression; the targeting reality)",
+                               "free-covered IPs", "vendor-only IPs", "% free-covered",
+                               "", "", "", "", "", "", "", "", ""], header=True)
         tfmt = {2: "#,##0", 3: "#,##0", 4: "0.00%"}
         for n, (tk, tn) in enumerate([("hi", "HI 10000"), ("pp", "PP 8000"),
                                       ("hg", "High-graduated"), ("mid", "Mid"),
@@ -2203,10 +2203,10 @@ def main():
                                    "", "", "", "", "", "", "", "", ""],
                          fmts=tfmt, band_row=(n % 2 == 1))
         ri += 1
-        ri = put_row(dec, ri, ["Keyword category (taxonomy name)", "member IPs",
-                               "% retained FREE-ONLY", "% retained k=4",
-                               "12 largest, then 10 worst-hit (>=1M IPs)", "", "", "", "",
-                               "", "", "", ""], header=True)
+        ri = put_row(dec, ri, ["Keyword category — ALL member IPs (the audience-COUNT lens; incl. never-served)",
+                               "member IPs", "% retained FREE-ONLY", "% retained k=4",
+                               "12 largest, then 10 worst-hit (>=1M IPs). Retention here is the UI-size effect; the SERVED reality is the tier table above",
+                               "", "", "", "", "", "", "", ""], header=True)
         cfmt = {2: "#,##0", 3: "0.0%", 4: "0.0%"}
         cats = [(v["all"], v["free"] / v["all"], v["k4"] / v["all"], v["name"] or str(k))
                 for k, v in q13a_cat.items() if v["all"] >= 1e6]
