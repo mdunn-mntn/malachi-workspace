@@ -1298,7 +1298,7 @@ DEF = {
     "Unique domains used (per day, classified)": ("Domains the classifiers can actually consume, sample day.", "q2c"),
     "% of domains classified (within vendor)": ("Domain-grain survival rate.", "q2c"),
     "Usable IP x domain pairs": ("(IP, domain) facts surviving to consumers - the credit-eligible pool.", "q3"),
-    "% of pairs usable": ("Usable pairs / delivered pairs (capped at 100%; q3-vs-q2 scans differ <1%).", "q3/q2"),
+    "% of pairs usable": ("Usable pairs / ALL delivered pairs. The filter is on DOMAINS, not IPs: a pair is usable only if its domain is in the consumable universe (wcv verticals UNION pc product categories). <100% = the vendor ships pairs on domains NEITHER classifier knows (ad-infra, sync endpoints, never-categorized sites) - ingested but can never classify or bill. Capped at 100 (q3-vs-q2 scans differ <1%).", "q3/q2"),
     "% of rows used — share of column total": ("This vendor's slice of ALL sources' used rows. Sources overlap, so the row sums >100% across vendors.", "q2c"),
     "% of IPs used — share of column total": ("Same, IP grain (overlapping).", "q2c"),
     "% of domains used — share of column total": ("Same, domain grain (overlapping).", "q2c"),
