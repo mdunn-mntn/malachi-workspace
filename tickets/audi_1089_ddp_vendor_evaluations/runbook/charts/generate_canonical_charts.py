@@ -2009,6 +2009,46 @@ def q13cats(rdir):
                  "vendor-dependent category - likely recipe/content-farm URL volume.")
 
 
+# ---- Step 15: the free logs as a vendor — sole-T2 vs every paid vendor ----
+def q15chart(rdir):
+    import csv as _csv
+    q6v = {int(r["data_source_id"]): r for r in _csv.DictReader(open(os.path.join(rdir, "q6_value_tiers.csv")))}
+    union_media = None
+    fp = os.path.join(rdir, "q15_free_union_perf.csv")
+    if os.path.exists(fp):
+        for r in _csv.DictReader(open(fp)):
+            if r["k1"] == "sole" and r["rec"] == "serve" and r["k2"] == "media":
+                union_media = float(r["v"])
+    rows = [(float(q6v[d]["media_sole"]) * 52, SHORT[d], NAVY) for d in [24, 25, 26, 28, 33, 36, 39, 40]]
+    rows += [(float(q6v[d]["media_sole"]) * 52, SHORT[d] + " (free)", GRAY) for d in (23, 30)]
+    if union_media is not None:
+        rows.append((union_media * 52, "free_logs UNION (guid+aug)", GREEN))
+    rows.sort(reverse=True)
+
+    fig, ax = plt.subplots(figsize=(11.0, 5.6))
+    fig.subplots_adjust(left=0.24, right=0.95, top=0.84, bottom=0.12)
+    ys = list(range(len(rows)))[::-1]
+    for y, (v, name, c) in zip(ys, rows):
+        ax.barh(y, v / 1e3, height=0.62, color=c, alpha=0.9 if c != GRAY else 0.55)
+        ax.text(v / 1e3 + 6, y, f"\\${v / 1e3:,.0f}K", fontsize=8.5, va="center", color="#333")
+    ax.set_yticks(ys)
+    ax.set_yticklabels([r[1] for r in rows], fontsize=9.5)
+    ax.set_xlabel("sole-T2 dependent revenue, $K/yr (media on IPs ONLY that source delivers, x52)", fontsize=9, color="#555")
+    ax.set_xlim(0, max(r[0] for r in rows) / 1e3 * 1.18)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    ax.grid(axis="x", color="#e4e4e4", lw=0.7, zorder=0)
+    ax.tick_params(axis="x", labelsize=8.5, colors="#555")
+    ax.set_title("The free logs are the roster's biggest vendor\n"
+                 "guid+augmentor as ONE source carry more sole dependent revenue than any paid vendor - at $0.",
+                 fontsize=10.5, fontweight="bold", loc="left", pad=12)
+    save(fig, "q15_free_union_value.png",
+         caption="Sole = IPs no other source delivers (union row: no PAID vendor delivers; q15 measured cohort). "
+                 "Same T2 basis as the vendor evals (CIL valuation week x52, media lens). The union ($603K) EXCEEDS "
+                 "guid+aug summed ($445K) by design: per-log sole rows are vs ALL sources, so IPs both free logs "
+                 "co-hold count in neither - only the union credits them.")
+
+
 # ---- Step 14: ingestion waste — measured GB/day used vs thrown away, per vendor ----
 # Feeds the boss ask "how much data are we throwing away + what does ingestion cost".
 # Bytes measured via q14_gcs_ingest_bytes.sh (gsutil on the data_source_id partitions);
@@ -2266,7 +2306,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "11b": q11b, "12": q12, "13": q13, "13cats": q13cats, "14": q14}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "11b": q11b, "12": q12, "13": q13, "13cats": q13cats, "14": q14, "15": q15chart}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
