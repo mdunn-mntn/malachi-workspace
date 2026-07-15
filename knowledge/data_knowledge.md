@@ -847,6 +847,11 @@ MM audience. [[reference_fangorn_audience_overlay]]
   the free logs (our own pixel + bid-time log) see auction-active households by construction, so
   SERVED members are 97.6-99.9% free-covered in every tier. Any "audience size" number shrinks ~30%
   without vendors; delivery barely notices. Distinguish the two populations in every readout.
+  Third population trap (same day, same user): **share-of-SUMMED-pool ≠ distinct coverage** — the
+  average HI household is delivered by ~7.5 of 10 sources, so summed per-source HI counts run ~7.5x
+  the distinct pool; a source can hold 13% of the summed pool while covering 99.9% of distinct
+  households (every big source reads ~13% there). Summed-pool shares measure relative delivery
+  weight only.
 - **SCORING GENERATIONS — v1 = categorical fixed points, v2 = score bands where THE LABEL FOLLOWS THE SCORE (verified 2026-07-08, 7d of delivered CIL, RTC-excluded, all live v1/v2 prospecting).** Per the Fangorn methodology page (https://mntn.atlassian.net/wiki/spaces/TAR/pages/3414917161): Fangorn = continuous 0–1 intent score; raw boundaries 0.6/0.8 divide MaxReach/MI/HI, transformed onto the legacy 3333/6666 pacing points. Empirical delivered-score distribution:
   - **v1 (DS13): fixed points ONLY** — exactly 8000 (3.1M imps) and exactly 10000 (4.5M) + MaxReach 1–3332 (full random band) + MI 3333–6665; **ZERO impressions at 6666–7999 or 8001–9999**.
   - **v2 (DS46): two model passes per IP, each a continuous band with a pin at its top** — PP pass → **6666–8000** (3.8M imps over 1,206 distinct values + 2.1M pinned exactly 8000); HI pass → **8001–10000** (11.0M over 1,868 values + 2.0M pinned exactly 10000). An IP that structurally matches vertical/keywords but scores <0.8 raw lands in MI/MaxReach — **qualifying criteria feed the model; only the score puts an IP in the HI/PP groups** (Malachi's "two scores, only above-bar counts" reading, confirmed).

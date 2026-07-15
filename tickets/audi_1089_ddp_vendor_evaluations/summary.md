@@ -272,6 +272,25 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d17. Org-wide validation package (user ask, 2026-07-15 night)
+
+- **`runbook/queries/VALIDATION_GUIDE.md`** — the read-first doc for outside validators:
+  30-second context, full glossary (incl. MM, RTC, Fangorn, VR, metered/flat/free classes),
+  windows, bq_run.sh→bq query substitution, 6 independent anchor checks, snapshot-drift guidance.
+- **Outsider-lens header review (4-agent fan-out, all 33 files)** caught and fixed real rot:
+  q0/q1d still described the pre-May 1/N credit split as CURRENT (a validator would have "found
+  a discrepancy"); q8b stated the tier-vs-mask anchor as an EQUALITY (would have failed the
+  package on Sovrn's +68% diagnostic gap); q3d's k4 definition omitted the free bits; q7e claimed
+  a column absent from its output; stale output filenames (q4/q6/q7); dead internal-doc refs
+  inlined (q7c); v01/v02 windows+outputs; jargon centralized in the guide. Lesson: headers rot
+  when mid-ticket facts change (regime, anchors) — sweep them before any share.
+- **MANIFEST margin literals genericized** (internal-only rule) — validators check query
+  outputs, not pricing parameters.
+- Share zip final: **35 files** (33 queries + MANIFEST + GUIDE), byte-verified vs repo.
+- Third population misread documented at point of use: share-of-summed-pool (13.3%) vs distinct
+  coverage (99.9%) — avg HI household delivered by ~7.5/10 sources; DEF + conventions carry the
+  worked example.
+
 ## 4d16. free_logs combined column + readability fixes (2026-07-15 pm)
 
 - **`free_logs (guid+aug)` pseudo-vendor column** (ds 99) added to numbers+solo sheets after
