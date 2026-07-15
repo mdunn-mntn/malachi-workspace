@@ -1,7 +1,7 @@
 # AUDI-1089 Query Manifest — validate every number in the vendor-eval workbook
 
 Every value in `outputs/audi_1089_quality_template_filled.xlsx` (and every runbook PNG) traces to
-one of the 29 SQL files in this folder, or to an arithmetic combination of their outputs (formulas
+one of the 30 query/measurement files in this folder, or to an arithmetic combination of their outputs (formulas
 printed on the workbook's **index** sheet; combination code = `../charts/fill_template.py`).
 Run the queries in the order below; each file's header states its claim, grain, windows, and exact
 run command. All queries are **read-only** (temp external tables over GCS parquet; no DDL/DML).
@@ -58,6 +58,7 @@ Cost class: **cheap** = seconds-minutes, console-friendly · **BIG** = 5-15 TB s
 | 27 | `q8b_solo_perf.sql` | SOLO sheet measured serving/performance: solo cohort (V's IPs neither free log touched) served IPs, imps, media, T1/T2 inputs, visits, conversions, HI/PP tier counts. | **BIG** (svs 37d + CIL wk + clickpass + ui_conversions) |
 | 28 | `q13a_ds19_universe.sql` | DS19-ONLY universe ("MM Core"/Keyword-Only, the Max Reach unlock): holder masks (pair + visit-day), true path-grain coverage, per-keyword-category audience sizes under all/free/k4; rec `ds` anchors q2c rows_ds19_cat. | **BIG** (~40TB: svs 30d x5 reads + pc x6; 2-3h) |
 | 29 | `q13b_ds19_perf.sql` | DS19-member IPs split free-covered vs vendor-only: sizes, serving, media, visits + per-IP score-tier mix (hi/pp/hg/mid/MAXREACH/unscored) — tests "vendor loss lands in max-reach" + measures the lost slice's performance. | **BIG** (svs 37d + pc + CIL wk + clickpass; single-pass design) |
+| 30 | `q14_gcs_ingest_bytes.sh` | WASTE sheet volume/cost rows: measured GCS bytes per vendor (gsutil, svs partitioned by data_source_id) — GB/day + accumulated no-TTL footprint (since 2025-08-31) -> storage-floor $. NOT SQL; output q14_gcs_ingest_bytes.csv. | cheap (gsutil listings) |
 
 ## Computed rows (no additional SQL — arithmetic over the CSVs above)
 

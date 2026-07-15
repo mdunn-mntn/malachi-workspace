@@ -1895,6 +1895,67 @@ def q12(rdir):
                  "construction (unique value excludes free-coheld signal). Flats unaffected (no meter).")
 
 
+# ---- Step 14: ingestion waste — measured GB/day used vs thrown away, per vendor ----
+# Feeds the boss ask "how much data are we throwing away + what does ingestion cost".
+# Bytes measured via q14_gcs_ingest_bytes.sh (gsutil on the data_source_id partitions);
+# used share from q2c. Webmail/Googlebot are NOT in 'thrown away' (they pass the
+# permissive DS19 gate and BILL) — hatched slice shows the junk-that-bills volume.
+def q14(rdir):
+    q14b = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q14_gcs_ingest_bytes.csv")))}
+    q2cx = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q2c_funnel.csv")))}
+    q2bx = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q2b_daily_drops.csv")))}
+    q1cx = {int(r["ds"]): r for r in csv.DictReader(open(os.path.join(rdir, "q1c_content_quality.csv")))}
+    order = [28, 30, 23, 40, 26, 33, 25, 24, 39, 36]
+    FREE = (23, 30)
+
+    rows = []
+    for d in order:
+        gb = float(q14b[d]["gb_day"])
+        used = int(q2cx[d]["rows_used"]) / int(q2cx[d]["rows_raw"])
+        junk = 0.0
+        if d not in FREE:
+            junk = (float(q2bx[d]["pct_blocked_ds13"]) + float(q1cx[d]["pct_googlebot_ip"])) / 100
+        junk = min(junk, used)  # junk-that-bills lives inside the used share
+        rows.append((d, gb, used, junk))
+
+    fig, ax = plt.subplots(figsize=(11.5, 5.6))
+    fig.subplots_adjust(left=0.11, right=0.96, top=0.83, bottom=0.16)
+    ys = list(range(len(rows)))[::-1]
+    for y, (d, gb, used, junk) in zip(ys, rows):
+        clean = gb * (used - junk)
+        ax.barh(y, clean, height=0.62, color=NAVY, alpha=0.75, zorder=2)
+        ax.barh(y, gb * junk, left=clean, height=0.62, color=AMBER, hatch="//",
+                edgecolor="white", zorder=2)
+        ax.barh(y, gb * (1 - used), left=gb * used, height=0.62, color=RED, alpha=0.85, zorder=2)
+        lab = f"{gb:.1f} GB/d, {100 * (1 - used):.0f}% thrown away"
+        if junk > 0.01:
+            lab += f" + {100 * junk:.0f}% junk-that-bills"
+        ax.text(gb + 1.5, y, lab, fontsize=8, color="#555", va="center")
+    ax.set_yticks(ys)
+    ax.set_yticklabels([SHORT[r[0]] + (" (free)" if r[0] in FREE else "") for r in rows], fontsize=10)
+    ax.set_xlim(0, max(r[1] for r in rows) * 1.42)
+    ax.set_xlabel("GB per day ingested (measured on the GCS partitions)", fontsize=9, color="#555")
+    ax.tick_params(axis="x", labelsize=8.5, colors="#555")
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    ax.grid(axis="x", color="#e4e4e4", lw=0.7, zorder=0)
+    from matplotlib.patches import Patch
+    ax.legend(handles=[
+        Patch(facecolor=NAVY, alpha=0.75, label="Used cleanly (reaches DS13/DS19, non-junk)"),
+        Patch(facecolor=AMBER, hatch="//", label="Junk that BILLS (webmail + Googlebot: passes the DS19 gate)"),
+        Patch(facecolor=RED, alpha=0.85, label="Thrown away (never reaches a consumer)"),
+    ], loc="lower right", fontsize=8.5, frameon=False)
+    ax.set_title("Ingestion waste: what we ingest vs what we actually use, per vendor\n"
+                 "Paid vendors ship ~156 GB/day (~57 TB/yr); the red is pure waste, the amber is "
+                 "worse - junk we ingest AND pay for.",
+                 fontsize=10.5, fontweight="bold", loc="left", pad=12)
+    save(fig, "q14_ingest_waste.png",
+         caption="Bytes: q14_gcs_ingest_bytes.sh (gsutil, avg 2026-06-15 + 07-01). Used share: q2c (row grain). "
+                 "Junk-that-bills = DS13-blocklisted webmail + Googlebot IPs - NOT counted in thrown-away because "
+                 "DS19 has no blocklist. svs has NO TTL (since 2025-08-31): paid-vendor footprint 39.3 TB, storage "
+                 "floor ~$9.4K/yr; Kafka/DAG/classifier compute excluded (Data Eng numbers needed).")
+
+
 # ---- Step 10: master waterfall — one row per source, feed to won bids to HI ----
 # Consolidates q1 (rows/day, IPv6), q2 (30d uniques), q2c (usable %), q4 (classified %),
 # q3 (sole stock), q5 (touched/served/HI, 37d union x valuation week), q7 (sole served, VR),
@@ -2091,7 +2152,7 @@ def q9e2(rdir):
 
 
 STEPS = {"0": q0, "1": q1, "1b": q1b, "1c": q1c, "1d": q1d, "1e": q1e,
-         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "11b": q11b, "12": q12}
+         "2": q2, "2b": q2b, "2c": q2c, "2d": q2d, "3": q3, "3d": q3d, "5": q5, "6b": q6b, "9": q9, "9b": q9b, "9c": q9c, "9d": q9d, "9e": q9e, "9g": q9g, "9e2": q9e2, "10": q10, "11": q11, "11b": q11b, "12": q12, "14": q14}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

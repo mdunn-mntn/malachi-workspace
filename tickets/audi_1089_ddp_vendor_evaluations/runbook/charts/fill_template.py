@@ -201,6 +201,36 @@ def ds19_cov(keep, universe, fm=None):
     tot = sum(universe.values())
     return sum(n for m, n in universe.items() if m & km) / tot if tot else 0
 
+
+# ---- WASTE sheet inputs: measured GCS bytes per vendor (svs is partitioned by
+# data_source_id). Method: gsutil du "gs://mntn-data-archive-prod/signals/
+# site_visit_signal/dt=<D>/hh=*/data_source_id=*/*" summed per ds; GB_DAY = avg of
+# 2026-06-15 and 2026-07-01. svs has NO TTL — first partition dt=2025-08-31; GB_ACCUM
+# = accumulated footprint integrated from monthly 1st-of-month samples (Sep'25-Jul'26).
+GB_DAY, GB_ACCUM = {}, {}
+for r in rows_of("q14_gcs_ingest_bytes.csv"):
+    GB_DAY[int(r["ds"])] = float(r["gb_day"])
+    GB_ACCUM[int(r["ds"])] = float(r["gb_accum"])
+STORAGE_RATE = 0.02 * 12  # $/GB-YEAR, GCS standard list price ($0.020/GB-month)
+WASTE_COLS = [28, 40, 33, 24, 36, 25, 26, 39, 30, 23]
+
+
+def used_frac(d):
+    return int(q2c[d]["rows_used"]) / int(q2c[d]["rows_raw"])
+
+
+STOP_SENDING = {
+    28: "STOP webmail (yahoo/aol ~29% of rows) + Googlebot IPs (6.4%) -> ~35% ingest-volume cut. NOTE: most of this is NOT in the thrown-away 22% - it passes the DS19 gate and BILLS; stopping it at source cuts ingestion AND junk billing",
+    40: "STOP cookie-sync / ad-infra pixel URLs (nextmillmedia, programmaticx - its top BILLED domains are sync junk)",
+    33: "FIX the URL-doubling bug (77% of rows malformed 'msn.comhttps://...') or stop sending until fixed - most of the feed is unclassifiable garbage we ingest and store",
+    24: "None - cleanest feed on the roster. Ask to ADD user_agent instead (enables bot filtering before we pay)",
+    36: "Dedupe server-side (one IP = 3.5% of rows); feed is tiny so waste cost is negligible",
+    25: "STOP outbrain.com widget-iframe URLs (52.7% of rows) - send the publisher page URL instead",
+    26: "Filter adult-content domains at source; otherwise strongest breadth on the roster",
+    39: "94% is *.myshopify.com checkout - volume is tiny (0.26 GB/day) so waste is immaterial",
+    30: "internal free log - n/a", 23: "internal free log - n/a",
+}
+
 # other_free(d): the free-log bits that count as overlap for d — both free logs for
 # a paid vendor, the OTHER free log for a free column (guid vs augmentor).
 OTHERFREE = {d: FREE_MASK & ~(1 << b) for d, b in BITSQ.items()}
@@ -950,6 +980,52 @@ def build_solo_spec():
     return out, kinds
 
 
+WASTE_SPEC = [
+    S("VOLUME DELIVERED (what we ingest)"),
+    R("Rows/day (median)", "int", lambda d: _med(d)),
+    R("Rows / 30d", "int", lambda d: q1[d]["rows"]),
+    R("GB/day on disk (measured, GCS)", "dec1", lambda d: GB_DAY.get(d)),
+    R("TB/yr ingest rate", "dec1", lambda d: GB_DAY[d] * 365 / 1000),
+    S("USED vs THROWN AWAY"),
+    R("% of rows USED (reaches DS13 or DS19)", "pct", lambda d: 100 * used_frac(d)),
+    R("% of rows THROWN AWAY", "pct", lambda d: 100 * (1 - used_frac(d))),
+    R("Wasted rows/day", "int", lambda d: _med(d) * (1 - used_frac(d))),
+    R("Wasted GB/day", "dec1", lambda d: GB_DAY[d] * (1 - used_frac(d))),
+    R("Wasted TB/yr", "dec2", lambda d: GB_DAY[d] * (1 - used_frac(d)) * 365 / 1000),
+    S("WHY IT'S THROWN AWAY (single-day shares; categories overlap - see index)"),
+    R("% hard-dropped (empty/unparseable/infra URL)", "pct", lambda d: float(q2b[d]["pct_hard_dropped"])),
+    R("% bot user-agents", "pct", lambda d: 100 * int(q2b[d]["rows_bot_ua"]) / int(q2b[d]["rows_day"])),
+    S("USED BUT SHOULDN'T BE (not in 'thrown away' - these rows PASS the permissive DS19 gate and BILL)"),
+    R("% webmail rows (DS13-blocked, USED + BILLED via DS19)", "pct", lambda d: float(q2b[d]["pct_blocked_ds13"])),
+    R("% Googlebot IPs (bot traffic that bills via DS19)", "pct2", lambda d: float(q1c[d]["pct_googlebot_ip"])),
+    R("% URLs malformed (junk; mostly DS19-categorized anyway)", "pct2", lambda d: float(q1c[d]["url_malformed_pct"])),
+    R("Top-1 domain share (concentration)", "pct", lambda d: float(q1c[d]["top_domain_share"])),
+    S("COST OF THE WASTE (measurable floor; processing compute needs Data Eng)"),
+    R("Data fee $/yr (meter bill, context)", "usd", lambda d: 0.0 if d in FREE else
+      (q0[d]["june_usd"] * 12 if d in METERED and q0.get(d, {}).get("june_usd") is not None else "flat (pending)")),
+    R("Accumulated on disk GB (no TTL since 2025-08-31)", "int", lambda d: GB_ACCUM.get(d)),
+    R("Storage floor $/yr (current footprint x $0.02/GB-mo)", "usd", lambda d:
+      GB_ACCUM[d] * STORAGE_RATE if d in GB_ACCUM else None),
+    R("Wasted-share storage floor $/yr", "usd", lambda d:
+      GB_ACCUM[d] * STORAGE_RATE * (1 - used_frac(d)) if d in GB_ACCUM else None),
+    S("STOP-SENDING REQUEST (cut needless ingestion at source)"),
+    R("The ask", "txt", lambda d: STOP_SENDING.get(d)),
+]
+
+WASTE_DEF = {
+    "GB/day on disk (measured, GCS)": ("Actual parquet bytes landing per day in site_visit_signal (gsutil du on the data_source_id partitions; avg of 2026-06-15 and 2026-07-01).", "gsutil"),
+    "% of rows USED (reaches DS13 or DS19)": ("A row is 'used' if it survives to either consumer (DS13 vertical classification OR DS19 product categorization). Everything else is ingested, stored, and never used. CAUTION: low thrown-away does NOT mean clean data - DS19's permissive gate USES junk (Sovrn throws away only 7.2% because its malformed rows pass DS19 and BILL; the fix-it ask matters more than the waste number there).", "q2c"),
+    "% webmail rows (DS13-blocked, USED + BILLED via DS19)": ("NOT part of 'thrown away': webmail is blocked from DS13 only - DS19 has no blocklist, so yahoo/aol rows are USED and BILL (the documented route junk reaches the meter). This is why 33Across can throw away 22% while the stop-sending ask targets ~35%: the ask also kills junk we currently USE and PAY FOR.", "q2b"),
+    "WHY IT'S THROWN AWAY (single-day shares; categories overlap - see index)": ("", ""),
+    "Accumulated on disk GB (no TTL since 2025-08-31)": ("svs has NO TTL - every day since 2025-08-31 is still on disk. Integrated from 1st-of-month partition-size samples.", "gsutil"),
+    "Storage floor $/yr (current footprint x $0.02/GB-mo)": ("GCS standard list price on today's accumulated footprint. A FLOOR on ingestion cost: excludes Kafka cluster share (real-time vendors), ingest DAG compute, DS13/DS19 classifier compute, and BQ processing - those need Data Eng numbers.", "computed"),
+    "The ask": ("What to request the vendor stop sending so we do not ingest/store/process data we never use. Volume shares from the DATA QUALITY evidence.", "q1c/q2b"),
+}
+
+# waste reason-shares overlap note: hard-drop, blocklist, bot and malformed are not
+# mutually exclusive and blocklisted rows may still be USED via DS19 - the decomposition
+# is indicative, only '% thrown away' is exact.
+
 def solo_anchor_checks():
     for d in EXT:
         a, b = solo_sum(d, masks), int(q3[d]["netnew_vs_free_pairs"])
@@ -1144,6 +1220,25 @@ DIR.update({
 })
 DIR["Post-preemption bill $/yr (AUDI-1093 applied)"] = -1
 NEUTRAL.add("CPM — solo")
+
+# WASTE sheet heat directions (defined here, after DIR/NEUTRAL exist)
+DIR.update({
+    "Rows/day (median)": 1, "Rows / 30d": 1,
+    "% of rows USED (reaches DS13 or DS19)": 1,
+    "% of rows THROWN AWAY": -1,
+    "Wasted rows/day": -1, "Wasted GB/day": -1, "Wasted TB/yr": -1,
+    "% hard-dropped (empty/unparseable/infra URL)": -1,
+    "% webmail rows (DS13-blocked, USED + BILLED via DS19)": -1,
+    "% Googlebot IPs (bot traffic that bills via DS19)": -1,
+    "% URLs malformed (junk; mostly DS19-categorized anyway)": -1,
+    "Top-1 domain share (concentration)": -1,
+    "Data fee $/yr (meter bill, context)": -1,
+    "Accumulated on disk GB (no TTL since 2025-08-31)": -1,
+    "Storage floor $/yr (current footprint x $0.02/GB-mo)": -1,
+    "Wasted-share storage floor $/yr": -1,
+})
+NEUTRAL.add("GB/day on disk (measured, GCS)")
+NEUTRAL.add("TB/yr ingest rate")
 
 
 def money(v):
@@ -1432,6 +1527,7 @@ def main():
     idx = wb.active
     idx.title = "index"
     dec = wb.create_sheet("decisions")
+    wt = wb.create_sheet("waste")
     ws = wb.create_sheet("numbers")
     ss = wb.create_sheet("solo")
     ns = wb.create_sheet("notes")
@@ -1444,10 +1540,10 @@ def main():
     band_fill = PatternFill("solid", fgColor="F2F2F2")
     verdict_color = {"KEEP": "1E7A1E", "NEGO": "B26B00", "DROP": "B00020"}
 
-    # ================= numbers + solo (same grid renderer) =================
-    def render_grid(sheet, spec):
+    # ================= numbers + solo + waste (same grid renderer) =================
+    def render_grid(sheet, spec, cols=DS_COLS):
         sheet.cell(row=1, column=1, value="Question").font = bold
-        for i, d in enumerate(DS_COLS):
+        for i, d in enumerate(cols):
             c = sheet.cell(row=1, column=2 + i, value=HDR_NAMES[d])
             c.font = bold
             c.alignment = Alignment(horizontal="right")
@@ -1459,10 +1555,10 @@ def main():
             if fn is None:
                 a.font = section_font
                 a.fill = section_fill
-                for i in range(len(DS_COLS)):
+                for i in range(len(cols)):
                     sheet.cell(row=r, column=2 + i).fill = section_fill
                 continue
-            for i, d in enumerate(DS_COLS):
+            for i, d in enumerate(cols):
                 cell = sheet.cell(row=r, column=2 + i)
                 cell.alignment = Alignment(horizontal="right")
                 if d in OOS and not oos_ok:
@@ -1485,7 +1581,7 @@ def main():
                         cell.number_format = FMT[fmt]
 
         RED, YEL, GRN = "F8696B", "FFEB84", "63BE7B"
-        last_col = get_column_letter(1 + len(DS_COLS))
+        last_col = get_column_letter(1 + len(cols))
         r = 1
         for label, fmt, fn, oos_ok in spec:
             r += 1
@@ -1507,7 +1603,7 @@ def main():
                 end_type="max", end_color=hi))
 
         sheet.column_dimensions["A"].width = max(len(x[0]) for x in spec) + 3
-        for i, d in enumerate(DS_COLS):
+        for i, d in enumerate(cols):
             m = len(HDR_NAMES[d])
             r2 = 1
             for label, fmt, fn, oos_ok in spec:
@@ -1520,6 +1616,7 @@ def main():
 
     render_grid(ws, SPEC)
     render_grid(ss, SOLO_SPEC)
+    render_grid(wt, WASTE_SPEC, WASTE_COLS)
 
     # ================= index =================
     idx_hdr = ["Section", "Question", "What it means / how computed", "Source"]
@@ -1578,6 +1675,40 @@ def main():
             missing_defs.append("SOLO: " + label)
         ri += 1
         vals = ["SOLO: " + section, label, meaning, src]
+        for c, v in enumerate(vals, start=1):
+            cell = idx.cell(row=ri, column=c, value=v)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.border = border
+            if band:
+                cell.fill = band_fill
+        idx.cell(row=ri, column=2).font = bold
+
+    # ---- WASTE sheet: banner + definitions ----
+    ri += 1
+    ban2 = idx.cell(row=ri, column=1, value=(
+        "WASTE SHEET — how much delivered vendor data we throw away, why, what it costs to "
+        "ingest/store, and what to ask each vendor to STOP sending. '% thrown away' is exact "
+        "(1 - used share, q2c); the reason rows are indicative single-day shares and OVERLAP "
+        "(a blocklisted webmail row can still be USED - and billed - via DS19). Storage floor "
+        "= GCS list price on the measured no-TTL footprint; Kafka/DAG/classifier compute needs "
+        "Data Eng numbers and is NOT included."))
+    idx.merge_cells(start_row=ri, start_column=1, end_row=ri, end_column=4)
+    ban2.font = section_font
+    ban2.fill = section_fill
+    ban2.alignment = Alignment(vertical="top", wrap_text=True)
+    idx.row_dimensions[ri].height = 42
+    section = ""
+    band = False
+    for label, fmt, fn, oos_ok in WASTE_SPEC:
+        if fn is None:
+            section = label
+            band = not band
+            continue
+        meaning, src = WASTE_DEF.get(label, ("", ""))
+        if not meaning:
+            continue
+        ri += 1
+        vals = ["WASTE: " + section, label, meaning, src]
         for c, v in enumerate(vals, start=1):
             cell = idx.cell(row=ri, column=c, value=v)
             cell.alignment = Alignment(vertical="top", wrap_text=True)
@@ -1901,16 +2032,18 @@ def main():
     print(f"wrote {OUT}")
     print(f"sheets: index ({nrows} definitions), decisions (8 vendors + {len(SC)} scenarios), "
           f"numbers ({nrows} rows x {len(DS_COLS)}), solo ({nrows} rows, "
-          f"q8a {'loaded' if Q8A else 'PENDING'} / q8b {'loaded' if Q8B else 'PENDING'}), notes")
+          f"q8a {'loaded' if Q8A else 'PENDING'} / q8b {'loaded' if Q8B else 'PENDING'}), "
+          f"waste ({sum(1 for x in WASTE_SPEC if x[2] is not None)} rows x {len(WASTE_COLS)}), notes")
     print("missing index definitions:", missing_defs if missing_defs else "none")
-    for name, sheet, spec in (("numbers", ws, SPEC), ("solo", ss, SOLO_SPEC)):
+    for name, sheet, spec, ccols in (("numbers", ws, SPEC, DS_COLS), ("solo", ss, SOLO_SPEC, DS_COLS),
+                                     ("waste", wt, WASTE_SPEC, WASTE_COLS)):
         empty, pending = [], 0
         r = 1
         for label, fmt, fn, oos_ok in spec:
             r += 1
             if fn is None:
                 continue
-            for i, d in enumerate(DS_COLS):
+            for i, d in enumerate(ccols):
                 v = sheet.cell(row=r, column=2 + i).value
                 if v in (None, ""):
                     empty.append((label, d))

@@ -186,6 +186,9 @@ negotiates down or drops; a 51.1 at ~$0 flat fee could be fine).
   (amber, bounds x (1 - free-cohold)) — post-preemption the 33Across feeds reach the pay-band edge
 - `q12_post_preemption.png` — bills before/after free-log preemption (AUDI-1093) vs the
   portfolio + ceiling pay bands: -$274K/yr, keeps the data, flips no vendor on the portfolio lens
+- `q14_ingest_waste.png` — ingestion waste per vendor: measured GB/day (gsutil on the
+  data_source_id partitions) split used / junk-that-bills / thrown-away; paid roster ~156 GB/day,
+  39.3 TB no-TTL footprint, storage floor ~$9.4K/yr
 
 ## 7. Template map — the filled question table (final deliverable)
 
