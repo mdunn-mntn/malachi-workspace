@@ -31,20 +31,22 @@ BILL_MONTH = sys.argv[2] if len(sys.argv) > 2 else "2026-06"
 RDIR = os.path.join(TICKET, "outputs", RUN)
 OUT = os.path.join(TICKET, "outputs", "audi_1089_quality_template_filled.xlsx")
 
-DS_COLS = [28, 40, 33, 24, 36, 25, 26, 39, 27, 30, 23, 35, 17, 29]
+FREEC = 99  # pseudo-vendor: guid_log + augmentor treated as ONE source ("free_logs")
+DS_COLS = [28, 40, 33, 24, 36, 25, 26, 39, 27, 30, 23, FREEC, 35, 17, 29]
 ACTIVE = [28, 40, 33, 24, 36, 25, 26, 39, 30, 23]
 EXT = [24, 25, 26, 28, 33, 36, 39, 40]
-FREE = [23, 30]
+FREE = [23, 30, FREEC]
 METERED = [24, 28, 33, 36, 40]
 FLAT = [25, 26, 39]
 OOS = [27, 35, 17, 29]
 SHORT = {23: "guid_log", 24: "Justuno", 25: "5x5", 26: "Predactiv", 27: "LaunchLabs",
          28: "33Across", 30: "augmentor", 33: "Sovrn", 36: "Cybba", 39: "Klickly",
-         40: "33A API", 35: "LiveRamp IP", 17: "ShareThis", 29: "deepsync"}
+         40: "33A API", 35: "LiveRamp IP", 17: "ShareThis", 29: "deepsync",
+         99: "free_logs"}
 HDR_NAMES = {28: "33Across", 40: "33Across API", 33: "Sovrn", 24: "Justuno", 36: "Cybba",
              25: "5x5", 26: "sharethis_predactiv", 39: "Klickly", 27: "LaunchLabs",
-             30: "augmentor_log", 23: "guid_log", 35: "LiveRamp IP", 17: "ShareThis",
-             29: "deepsync"}
+             30: "augmentor_log", 23: "guid_log", 99: "free_logs (guid+aug)",
+             35: "LiveRamp IP", 17: "ShareThis", 29: "deepsync"}
 BITSQ = {23: 0, 24: 1, 25: 2, 26: 3, 28: 4, 30: 5, 33: 6, 36: 7, 39: 8, 40: 9}
 FREE_MASK = (1 << 0) | (1 << 5)
 ANN30 = 365.0 / 30.0
@@ -219,6 +221,121 @@ def used_frac(d):
     return int(q2c[d]["rows_used"]) / int(q2c[d]["rows_raw"])
 
 
+# ---- q15: free_logs COMBINED pseudo-vendor (guid+aug as ONE source) injection ----
+q15 = {}
+for r in rows_of("q15_free_union_perf.csv"):
+    q15.setdefault(r["k1"], {}).setdefault(r["rec"], {})[r["k2"]] = float(r["v"])
+Q15 = bool(q15)
+
+
+def _synth_free_combo():
+    """Populate pseudo-ds 99 wherever the combination rule is exact.
+    Additive: rows/GB (events are disjoint per source). Row-weighted: quality shares.
+    Mask-exact: usable pair/visit-day union, sole-vs-paid. Union-unique counts (raw
+    reach, funnel IPs/domains) are NOT derivable -> left absent (render as em-dash)
+    until/unless measured. q15 injects measured serving/perf cohorts when it lands."""
+    a, b = 23, 30
+    q0[FREEC] = {"reg": {"billing_type": "free", "fixed_cpm": 0, "valid_from": ""},
+                 "june_usd": 0.0}
+    if a in q1 and b in q1 and len(q1[a]["days"]) == len(q1[b]["days"]):
+        q1[FREEC] = {"days": [x + y for x, y in zip(q1[a]["days"], q1[b]["days"])],
+                     "rows": q1[a]["rows"] + q1[b]["rows"],
+                     "ipv6": q1[a]["ipv6"] + q1[b]["ipv6"],
+                     "path": q1[a]["path"] + q1[b]["path"]}
+        wa, wb = q1[a]["rows"], q1[b]["rows"]
+
+        def _wavg(fa, fb):
+            return (fa * wa + fb * wb) / (wa + wb)
+
+        if a in q1b and b in q1b:
+            q1b[FREEC] = {k: _wavg(q1b[a].get(k, 0.0), q1b[b].get(k, 0.0)) for k in q1b[a]}
+        if a in q1c and b in q1c:
+            # row-share metrics combine exactly as row-weighted averages; concentration
+            # metrics (top_domain*) do NOT (union top-1 unknown) -> omitted
+            q1c[FREEC] = {k: str(_wavg(float(q1c[a][k] or 0), float(q1c[b][k] or 0)))
+                          for k in ("url_parse_fail_pct", "url_malformed_pct",
+                                    "pct_googlebot_ip", "pct_private_ip", "uid_dup_pct",
+                                    "time_top1_share")
+                          if k in q1c[a] and k in q1c[b]}
+        if a in q2b and b in q2b:
+            ra, rb = int(q2b[a]["rows_day"]), int(q2b[b]["rows_day"])
+            q2b[FREEC] = {
+                "rows_day": str(ra + rb),
+                "rows_bot_ua": str(int(q2b[a]["rows_bot_ua"]) + int(q2b[b]["rows_bot_ua"])),
+                "pct_hard_dropped": str((float(q2b[a]["pct_hard_dropped"]) * ra
+                                         + float(q2b[b]["pct_hard_dropped"]) * rb) / (ra + rb)),
+                "pct_blocked_ds13": str((float(q2b[a]["pct_blocked_ds13"]) * ra
+                                         + float(q2b[b]["pct_blocked_ds13"]) * rb) / (ra + rb)),
+            }
+    if a in q2c and b in q2c:
+        q2c[FREEC] = {k: str(int(q2c[a][k]) + int(q2c[b][k]))
+                      for k in ("rows_raw", "rows_kept", "rows_ds13_input",
+                                "rows_ds13_class", "rows_ds19_cat", "rows_used")}
+    if masks:
+        q3[FREEC] = {
+            "usable_pairs": str(sum(n for m, n in masks.items() if m & FREE_MASK)),
+            "sole_pairs": str(sum(n for m, n in masks.items()
+                                  if (m & FREE_MASK) and not (m & ~FREE_MASK & 1023))),
+            "netnew_vs_free_pairs": "0",
+        }
+    if masks3c:
+        vend3c[FREEC] = {"all_triples": sum(n for m, n in masks3c.items() if m & FREE_MASK)}
+    if a in GB_DAY and b in GB_DAY:
+        GB_DAY[FREEC] = GB_DAY[a] + GB_DAY[b]
+    if a in GB_ACCUM and b in GB_ACCUM:
+        GB_ACCUM[FREEC] = GB_ACCUM[a] + GB_ACCUM[b]
+    if Q15:
+        # measured union cohorts -> the existing per-ds dicts, so every row fn just works.
+        # touched = guid OR aug delivered; sole = touched AND no paid vendor.
+        def _pcts(c):
+            served = q15[c]["serve"]
+            tier = q15[c]["tier"]
+            mem = q15[c]["mem"]["member_ips"]
+            ips = served["ips_served"]
+            out = {"vendor_ips": mem, "delivered_ips": ips,
+                   "pct_delivered": 100 * ips / mem if mem else 0,
+                   "hi_10000": tier["hi"], "pp_8000": tier["pp"], "high_grad": tier["hg"],
+                   "mid": tier["mid"], "maxreach": tier["maxreach"],
+                   "unscored_delivered": tier["unscored"]}
+            for t, key in (("hi", "pct_hi"), ("pp", "pct_pp"), ("hg", "pct_high_grad"),
+                           ("mid", "pct_mid"), ("maxreach", "pct_maxreach"),
+                           ("unscored", "pct_unscored_delivered")):
+                out[key] = 100 * tier[t] / ips if ips else 0
+            return {k: str(v) for k, v in out.items()}
+        q5[FREEC] = {"touched": _pcts("touched"), "sole": _pcts("sole")}
+        st, ss = q15["touched"]["serve"], q15["sole"]["serve"]
+        q6[FREEC] = {"ips_touched": st["ips_served"], "ips_sole": ss["ips_served"],
+                     "imps_touched": st["imps"], "imps_sole": ss["imps"],
+                     "media_touched": st["media"], "media_sole": ss["media"],
+                     "data_touched": st["data"], "data_sole": ss["data"],
+                     "imps_sole_scored_nonrtc": ss["imps_scored_nonrtc"],
+                     "media_sole_scored": ss["media_scored"],
+                     "data_sole_scored": ss["data_scored"]}
+        for c in ("touched", "sole"):
+            sv, pf = q15[c]["serve"], q15[c]["perf"]
+            q7bd.setdefault(FREEC, {})[c] = {
+                "imps": sv["imps"], "ips_served": sv["ips_served"],
+                "visits": pf["visits"],
+                "vr_pct": 100 * pf["visits"] / sv["imps"] if sv["imps"] else 0,
+                "avg_hs_scored": sv["avg_hs"],
+                "pct_scored": 100 * sv["imps_hs_pos"] / sv["imps"] if sv["imps"] else 0,
+                "media": sv["media"]}
+            q7cd.setdefault(FREEC, {})[c] = {
+                "imps": sv["imps"], "conversions": pf["conversions"],
+                "revenue": pf["revenue"]}
+        q7[FREEC] = {"sole_ips_delivered": ss["ips_served"], "sole_imps": ss["imps"],
+                     "sole_visits": q15["sole"]["perf"]["visits"],
+                     "vr_overall_pct": 100 * q15["sole"]["perf"]["visits"] / ss["imps"]
+                     if ss["imps"] else 0}
+        # solo sheet: for the combined free column, "solo (vs free logs only)" = its
+        # FULL cohort (there is no other free log to exclude) -> touched cohort.
+        q8b[FREEC] = {"serve": dict(q15["touched"]["serve"]),
+                      "perf": dict(q15["touched"]["perf"]),
+                      "tier": dict(q15["touched"]["tier"])}
+
+
+_synth_free_combo()
+
 STOP_SENDING = {
     28: "STOP webmail (yahoo/aol ~29% of rows) + Googlebot IPs (6.4%) -> ~35% ingest-volume cut. NOTE: most of this is NOT in the thrown-away 22% - it passes the DS19 gate and BILLS; stopping it at source cuts ingestion AND junk billing",
     40: "STOP cookie-sync / ad-infra pixel URLs (nextmillmedia, programmaticx - its top BILLED domains are sync junk)",
@@ -234,15 +351,20 @@ STOP_SENDING = {
 # other_free(d): the free-log bits that count as overlap for d — both free logs for
 # a paid vendor, the OTHER free log for a free column (guid vs augmentor).
 OTHERFREE = {d: FREE_MASK & ~(1 << b) for d, b in BITSQ.items()}
+OTHERFREE[99] = 0  # the combined free column has no OTHER free log
+
+
+def bits_of(d):
+    return FREE_MASK if d == FREEC else (1 << BITSQ[d])
 
 
 def solo_sum(d, universe):
-    b, of = 1 << BITSQ[d], OTHERFREE[d]
+    b, of = bits_of(d), OTHERFREE[d]
     return sum(n for m, n in universe.items() if (m & b) and not (m & of))
 
 
 def keep_cov(d, universe):
-    km = FREE_MASK | (1 << BITSQ[d])
+    km = FREE_MASK | bits_of(d)
     return sum(n for m, n in universe.items() if m & km)
 
 
@@ -263,11 +385,11 @@ def t1_solo(d):
 
 
 def trip_holder(d):
-    return sum(n for m, n in masks3c.items() if m & (1 << BITSQ[d]))
+    return sum(n for m, n in masks3c.items() if m & bits_of(d))
 
 
 def trip_free_cohold(d):
-    return sum(n for m, n in masks3c.items() if (m & (1 << BITSQ[d])) and (m & FREE_MASK))
+    return sum(n for m, n in masks3c.items() if (m & bits_of(d)) and (m & FREE_MASK))
 
 
 # ---- net-of-free universe (free-log-touched pairs removed entirely) ----
@@ -368,7 +490,7 @@ def g7c(d, c, f):
 
 
 def share(d, table, field):
-    tot = sum(float(r[field]) for r in table.values())
+    tot = sum(float(r[field]) for k, r in table.items() if k != FREEC and field in r)
     return 100 * float(table[d][field]) / tot
 
 
@@ -377,12 +499,16 @@ def tier_tot(f):
 
 
 def solo_share(d, table, field):
+    if d == FREEC:
+        return 100.0  # the combined free column IS the {vendor+free} world
     wset = {d, 23, 30}
-    tot = sum(float(table[x][field]) for x in wset if x in table)
+    tot = sum(float(table[x][field]) for x in wset if x in table and field in table[x])
     return 100 * float(table[d][field]) / tot
 
 
 def solo_tier_share(d, f):
+    if d == FREEC:
+        return 100.0
     wset = {d, 23, 30}
     tot = sum(float(q5[x]["touched"][f]) for x in wset if x in q5 and "touched" in q5[x])
     return 100 * float(q5[d]["touched"][f]) / tot
@@ -391,7 +517,8 @@ def solo_tier_share(d, f):
 # ---------------- text banks (notes sheet) ----------------
 VERDICT_SHORT = {28: "NEGOTIATE (w/ DS40)", 40: "NEGOTIATE (w/ DS28)", 33: "DROP",
                  24: "KEEP-trim", 36: "DROP", 25: "KEEP", 26: "KEEP (HEM)",
-                 39: "DROP unless ~free", 23: "KEEP (free)", 30: "KEEP (free)"}
+                 39: "DROP unless ~free", 23: "KEEP (free)", 30: "KEEP (free)",
+                 99: "KEEP (free, the baseline)"}
 VERDICT_FULL = {
     28: "NEGOTIATE — one deal with DS40 (~$598K/yr combined); target rate cut, cite free-log overlap",
     40: "NEGOTIATE — same vendor as DS28; fold into one combined renegotiation",
@@ -413,6 +540,7 @@ ASKS = {
     26: "Filter adult content at source (explicit domains in sample); otherwise strongest domain breadth on the roster",
     39: "94% of rows are *.myshopify.com checkout — diversify beyond Shopify or price accordingly; tiny scale (169K rows/day)",
     23: "internal log — n/a", 30: "internal log — n/a",
+    99: "internal logs combined — n/a",
 }
 SCOPE = {
     28: "Active MM site-visit DDP (batch). Same vendor as DS40 (batch vs real-time feeds, per Ryan) — one combined negotiation (~$598K/yr).",
@@ -423,6 +551,7 @@ SCOPE = {
     25: "Active MM site-visit DDP (batch, flat fee).",
     26: "Active MM site-visit DDP (batch, flat fee).",
     39: "Active MM site-visit DDP (real-time Kafka, flat fee).",
+    99: "COMBINED pseudo-vendor: guid_log + augmentor treated as ONE source. Unique counts are the UNION (not the sum of the two columns — the logs overlap heavily). Raw-reach and funnel-unique cells are '—' (union not derivable from per-source scans); serving/performance cells are MEASURED union cohorts (q15).",
     23: "Internal free log (MNTN guid pixel) — always kept; $0.",
     30: "Internal free log (bid-time augmentor) — always kept; $0. In svs since 2026-05-12.",
     27: "Registered metered vendor, DISABLED (enabled=false) — no feed, no bill. Feed rows are '—'.",
@@ -435,7 +564,7 @@ RATE_NOTE = {24: "$0.50 CPM metered (pay per used signal imp)", 28: "$0.50 CPM m
              25: "Flat fee — amount pending (Maya / renewal schedule)",
              26: "Flat fee — amount pending (Maya / renewal schedule)",
              39: "Flat fee — amount pending (Maya / renewal schedule)",
-             23: "Free — internal", 30: "Free — internal",
+             23: "Free — internal", 30: "Free — internal", 99: "Free — internal (combined)",
              27: "$0.50 CPM registered, disabled",
              35: "Variable CPM, ~$1.19-1.32 realized", 17: "$0.95 CPM (was $1.20 until May)",
              29: "$0.50 CPM metered"}
@@ -444,7 +573,7 @@ RENEWAL_NOTE = {39: "Renewal LIVE NOW — pass/play answer due Mon 2026-07-13 (P
                 26: "Contract valid_from 2025-10-17; renewal date pending (Maya / renewal schedule)",
                 35: "Contract valid_from 2025-05-01; renewal date pending",
                 27: "Disabled since delivery never scaled",
-                23: "n/a — internal", 30: "n/a — internal"}
+                23: "n/a — internal", 30: "n/a — internal", 99: "n/a — internal"}
 INGEST_NOTE = {}
 for _d in (23, 25, 26, 28, 30, 36):
     INGEST_NOTE[_d] = "Batch drop -> daily ingest DAG (ENABLED_DSIDS); off-switch: Data Eng DAG config"
@@ -453,8 +582,10 @@ for _d in (24, 33, 39, 40):
 INGEST_NOTE[27] = "Was metered batch; disabled"
 INGEST_NOTE[35] = INGEST_NOTE[17] = "3P interests pipeline (not svs)"
 INGEST_NOTE[29] = "CRM ingestion pipeline (not svs)"
+INGEST_NOTE[99] = "guid: batch pixel log; augmentor: batch bid-time log — combined view"
 BLAST_NOTE = {26: "HEM (hashed-email) feed powers CRM/identity matching in PROD — hard drop blocker beyond MM",
               23: "Internal platform log — never drop", 30: "Internal platform log — never drop",
+              99: "Internal platform logs — never drop",
               35: "3P interests targeting layer (outside MM scope here)",
               17: "3P interests targeting layer (outside MM scope here)",
               29: "CRM audience ingestion (outside MM scope here)",
@@ -487,6 +618,7 @@ CONVENTIONS = [
     "Row sources: runbook/README.md 'Template map' (q0..q7d, one SQL + one CSV each).",
     "SOLO sheet: the whole numbers grid recomputed under the counterfactual that the column's vendor is the ONLY paid source - overlap counts only vs our free logs (guid_log DS23 + augmentor DS30; the free-log columns measure vs the OTHER free log). 'Solo' >= 'sole' everywhere (sole excludes ALL 9 other sources); solo == the decisions-ladder 'standalone' at pair grain. Rows that don't change under the counterfactual (feed scale, quality, funnel, touched-cohort) are copied so the sheet reads standalone; LOO/portfolio rows are replaced by {free+vendor} coverage rows.",
     "SOLO bill is a BOUNDED ESTIMATE, not a quote: LOW = today's run-rate (removing competitors can only ADD credit to the survivor - hard floor); HIGH = max(LOW, total metered bills x the vendor's share of paid-held visit-days) (q3c masks; proportional-consumption assumption; all metered CPMs $0.50 so imp share = $ share). The proportional term under-runs junk-billing vendors (Sovrn/Cybba/Justuno credit sits on domains outside the usable universe, uncontested by other vendors) - their bounds collapse to today's bill; only 33Across (+8%) and 33A API (+75%) have material solo-bill upside. Flat vendors: fee pending either way.",
+    "free_logs (guid+aug) COLUMN: the two internal logs treated as ONE pseudo-vendor (union semantics). Unique counts are the UNION, NOT guid+aug summed (the logs overlap heavily); '\u2014' cells = union-uniques not derivable from per-source scans (raw 30d reach, funnel IPs/domains, freshness). Rows/GB/bytes are exact sums; quality shares are row-weighted; pair/visit-day/tier rows are mask-exact; SERVING/SCORE/PERFORMANCE are MEASURED union cohorts (q15: touched = either log delivered; sole = no paid vendor delivered). On the solo sheet this column reads as the free-only counterfactual (nothing to exclude).",
     "'pending scan (q8)' cells = measured solo serving/performance awaiting the q8a/q8b background scans; mask-derived, rebased and copied cells are final. Rerun fill_template.py after the q8 CSVs land (the pending count must print 0; anchors: q8a solo pairs == q3b mask solo pairs == q3 net-new-vs-free, q8b >= q6 sole everywhere; q8b HI/PP vs q3d-mask gap is DIAGNOSTIC, not an error - raw vs usable membership lenses: clean vendors read 3-10% low in q8b, Sovrn reads +55-68% HIGH because its malformed-URL rows carry IPs that never reach a usable domain).",
     "POST-PREEMPTION (AUDI-1093 applied): if free logs preempt co-held credit, the meter stops paying for (ip,domain,DATE) visit-days guid_log/augmentor also captured - bills drop by each vendor's free-cohold share, roster $812K -> $539K (-$274K, -33.7%), while vendors KEEP their unique data (pay ranges unchanged by construction: sole/solo value never included free-coheld signal). Visit grain = the fair version (vendor still credited for FRESHER dates on known pairs); strict pair-grain version is barely larger (~$284K proxy). VERDICT: nobody flips on the portfolio lens; 33A API lands exactly AT its measured-solo ceiling top ($134K == $134K), 33Across inside its ceiling range near the top - preemption and renegotiation STACK; Sovrn/Justuno bills are nearly untouched (their credit is junk/unique, not free-coheld).",
     "SOLO NON-ADDITIVITY + measured-vs-estimate: NEVER sum T2_solo (or any solo column) across vendors - solo cohorts overlap heavily (the same multi-paid-vendor IP is 'solo' for every vendor vs free logs); the ladder's MARGINAL column is the only additive lens. Measured T2_solo runs 3-5x ABOVE the density estimate everywhere (33Across $724K vs $397K est) because the estimate inherits sole-cohort adverse selection (dark households) while the solo cohort includes livelier multi-vendor IPs. Even so, no metered vendor's 10-30% pay range reaches its bill on the measured basis. T2_solo is a generous ceiling: the solo cohort's prospecting-attribution share is unmeasured (sole cohort's was 97-99%; the livelier solo IPs likely include more retargeting-driven serves that never needed the vendor).",
@@ -516,8 +648,8 @@ SPEC = [
     R("Ingestion path", "txt", lambda d: "batch" if d in (23, 25, 26, 28, 30, 36) else
       ("Kafka RT" if d in (24, 33, 39, 40) else ("disabled" if d == 27 else NA)), True),
     R("Non-MM blast radius", "txt", lambda d: {26: "HEM -> CRM prod", 23: "internal",
-      30: "internal", 35: "3P interests", 17: "3P interests", 29: "CRM", 27: "none"}
-      .get(d, "none known"), True),
+      30: "internal", 99: "internal", 35: "3P interests", 17: "3P interests", 29: "CRM",
+      27: "none"}.get(d, "none known"), True),
 
     S("FEED SCALE (30d)"),
     R("Total rows delivered", "int", lambda d: q1[d]["rows"]),
@@ -816,7 +948,7 @@ SOLO_OVERRIDE = {
     "Marginal coverage when added (pp)": ("mask", "Pair-coverage gain over free-only (pp)", None,
         lambda d: 100 * (keep_cov(d, masks) - FREE_COV_P) / FULL_COV),
     "Frontier add-order rank": ("mask", "Solo share of net-of-free universe", "pct",
-        lambda d: 100 * solo_sum(d, masks) / NOF_U),
+        lambda d: None if d in FREE else 100 * solo_sum(d, masks) / NOF_U),
     "% visit-days sole — new pair": ("scan", "% visit-days solo — new pair (vs free)", None,
         _scan("a", lambda d: _fday_share(d, "solo_new_pair"))),
     "% visit-days sole — recency refresh": ("scan", "% visit-days solo — refresh of free-held pair", None,
