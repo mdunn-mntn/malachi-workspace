@@ -172,6 +172,35 @@ for r in rows_of("q8b_solo_perf.csv"):
 Q8A, Q8B = bool(q8a), bool(q8b)
 PENDING = "pending scan (q8)"
 
+# ---- DS19-only universe (q13a) + membership split (q13b) ----
+q13a_pair, q13a_trip, q13a_cat, q13a_ds = {}, {}, {}, {}
+Q13A_PATH = None
+for r in rows_of("q13a_ds19_universe.csv"):
+    if r["rec"] == "pair":
+        q13a_pair[int(r["k1"])] = int(float(r["v1"]))
+    elif r["rec"] == "trip":
+        q13a_trip[int(r["k1"])] = int(float(r["v1"]))
+    elif r["rec"] == "path":
+        Q13A_PATH = (int(float(r["v1"])), int(float(r["v2"])), int(float(r["v3"])))
+    elif r["rec"] == "cat":
+        q13a_cat[int(r["k1"])] = {"name": r["k2"], "all": int(float(r["v1"])),
+                                  "free": int(float(r["v2"])), "k4": int(float(r["v3"]))}
+    elif r["rec"] == "ds":
+        q13a_ds[int(r["k1"])] = int(float(r["v1"]))
+Q13A = bool(q13a_pair)
+PENDING13 = "pending scan (q13a)"
+
+q13b = {}
+for r in rows_of("q13b_ds19_perf.csv"):
+    q13b.setdefault(r["k1"], {})[r["k2"]] = float(r["v"])
+Q13B = bool(q13b)
+
+
+def ds19_cov(keep, universe, fm=None):
+    km = (fm if fm is not None else FREE_MASK) | sum(1 << BITSQ[d] for d in keep)
+    tot = sum(universe.values())
+    return sum(n for m, n in universe.items() if m & km) / tot if tot else 0
+
 # other_free(d): the free-log bits that count as overlap for d — both free logs for
 # a paid vendor, the OTHER free log for a free column (guid vs augmentor).
 OTHERFREE = {d: FREE_MASK & ~(1 << b) for d, b in BITSQ.items()}
@@ -947,6 +976,31 @@ def solo_anchor_checks():
             if abs(dup - ch) > 0.005:
                 print(f"WARN preemption-share divergence ds{d}: q8a dup {100 * dup:.2f}% "
                       f"vs q3c cohold {100 * ch:.2f}%")
+    if Q13A:
+        # truncation guard: all 5 rec types must have survived --max_rows
+        assert q13a_ds and Q13A_PATH and q13a_pair and q13a_trip and q13a_cat, \
+            "q13a CSV missing rec types (silent bq truncation?)"
+        for d in ACTIVE:
+            if d not in q13a_ds or d not in q2c:
+                continue
+            qa, qc = q13a_ds[d], int(q2c[d]["rows_ds19_cat"])
+            if qc and abs(qa - qc) / qc > 0.005:
+                raise AssertionError(f"q13a ds-anchor FAIL ds{d}: {qa} vs q2c {qc}")
+        pcov = ds19_cov([], q13a_pair)
+        tcov = ds19_cov([], q13a_trip)
+        pathcov = Q13A_PATH[1] / Q13A_PATH[0]
+        print(f"DS19-only free coverage: pair {100 * pcov:.1f}% / visit-day {100 * tcov:.1f}% / "
+              f"true-path {100 * pathcov:.1f}% (union anchors: 60.4 / 59.4)")
+    if Q13B:
+        mf = q13b.get("free_covered", {}).get("member_ips", 0)
+        mv = q13b.get("vendor_only", {}).get("member_ips", 0)
+        if mf + mv:
+            print(f"DS19 members: free-covered {100 * mf / (mf + mv):.1f}% / "
+                  f"vendor-only {100 * mv / (mf + mv):.1f}% of {mf + mv:,.0f} IPs")
+        th = q13b.get("free_covered", {}).get("hi", 0)
+        tv = q13b.get("vendor_only", {}).get("hi", 0)
+        if th + tv:
+            print(f"DS19 served-HI free-covered share: {100 * th / (th + tv):.2f}% (expect >=99)")
     if Q8A:
         for d in ACTIVE:
             qa, ms = g8a(d, "stock", "solo_pairs"), solo_sum(d, masks)
@@ -1620,10 +1674,13 @@ def main():
     ri += 1
     sc_hdr = ["Scenario", "Paid vendors kept", "Coverage (% of today)",
               "HI-IP coverage %", "PP-IP coverage %",
+              "DS19-only pair coverage % (MM Core / Max Reach universe)",
+              "DS19-only visit-day coverage %",
               "Metered bills kept $/yr", "Metered recovery from drops $/yr (validated exact-to-floor; flat-fee savings ADDITIONAL, amounts pending)",
-              "Dep. revenue at risk $/yr (T2, prospecting-attributed)", "", "", "", "", ""]
+              "Dep. revenue at risk $/yr (T2, prospecting-attributed)", "", "", ""]
     ri = put_row(dec, ri, sc_hdr, header=True)
-    sfmt = {3: "0.00%", 4: "0.000%", 5: "0.000%", 6: "$#,##0", 7: "$#,##0", 8: "$#,##0"}
+    sfmt = {3: "0.00%", 4: "0.000%", 5: "0.000%", 6: "0.0%", 7: "0.0%",
+            8: "$#,##0", 9: "$#,##0", 10: "$#,##0"}
 
     def scov(tier_masks, keep, fm=FREE_MASK):
         km = fm | sum(1 << BITSQ[d] for d in keep)
@@ -1649,9 +1706,11 @@ def main():
         ri = put_row(dec, ri, [
             label, " + ".join(SHORT[d] for d in keep) if keep else "(none)",
             cov(keep, fm) / FULL_COV, scov(hi3d, keep, fm), scov(pp3d, keep, fm),
+            ds19_cov(keep, q13a_pair, fm) if Q13A else PENDING13,
+            ds19_cov(keep, q13a_trip, fm) if Q13A else PENDING13,
             round(met_kept) if met_kept else 0,
             round(saved(dropped)), round(sum(dep_risk.get(d, 0) for d in dropped)),
-            "", "", "", "", "",
+            "", "", "",
         ], fmts=sfmt, band_row=(n % 2 == 1))
 
     # ---- net-of-free value ladder ----
