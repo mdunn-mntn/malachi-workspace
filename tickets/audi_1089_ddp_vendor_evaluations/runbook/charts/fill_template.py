@@ -227,6 +227,11 @@ for r in rows_of("q15_free_union_perf.csv"):
     q15.setdefault(r["k1"], {}).setdefault(r["rec"], {})[r["k2"]] = float(r["v"])
 Q15 = bool(q15)
 
+q15b = {}
+for r in rows_of("q15b_free_union_stock.csv"):
+    q15b.setdefault(r["rec"], {})[r["k1"]] = float(r["v"])
+Q15B = bool(q15b)
+
 
 def _synth_free_combo():
     """Populate pseudo-ds 99 wherever the combination rule is exact.
@@ -284,6 +289,31 @@ def _synth_free_combo():
         GB_DAY[FREEC] = GB_DAY[a] + GB_DAY[b]
     if a in GB_ACCUM and b in GB_ACCUM:
         GB_ACCUM[FREEC] = GB_ACCUM[a] + GB_ACCUM[b]
+    if Q15B:
+        # union stock/reach/freshness vs the PAID roster (q15b) -> per-ds dicts
+        rch, stk, dms = q15b["reach"], q15b["stock"], q15b["doms"]
+        fp, fd = q15b["fresh_pair"], q15b["fresh_day"]
+        q2[FREEC] = {k: str(int(rch[k])) for k in
+                     ("ips_30d", "domains_30d", "ip_domain_pairs_30d")}
+        q3[FREEC].update({
+            "usable_ips": str(int(stk["usable_ips"])),
+            "sole_ips": str(int(stk["sole_ips"])),
+            "pairs_per_ip": str(round(stk["usable_pairs"] / stk["usable_ips"], 1)),
+        })
+        # anchor: measured union usable pairs must match the mask-derived value
+        mask_up = int(q3[FREEC]["usable_pairs"])
+        if mask_up and abs(stk["usable_pairs"] - mask_up) / mask_up > 0.001:
+            raise AssertionError(
+                f"q15b usable_pairs {stk['usable_pairs']:.0f} vs masks {mask_up}")
+        q4[FREEC] = {"sole_domains": str(int(dms["sole_domains"])),
+                     "sole_classified": str(int(dms["sole_classified"]))}
+        tot_raw = rch["ip_domain_pairs_30d"]
+        q3r[FREEC] = {"pct_freshest": str(round(100 * fp["fresher_than_paid"] / tot_raw, 1)),
+                      "pct_tied": str(round(100 * fp["tied_with_paid"] / tot_raw, 1)),
+                      "pct_stale": str(round(100 * fp["stale_vs_paid"] / tot_raw, 1))}
+        vend3c[FREEC] = {"sole_new_pair": int(fd["sole_new_pair"]),
+                         "sole_refresh": int(fd["refresh_of_paid_pair"]),
+                         "shared_same_day": int(fd["same_day_dup_with_paid"])}
     if Q15:
         # measured union cohorts -> the existing per-ds dicts, so every row fn just works.
         # touched = guid OR aug delivered; sole = touched AND no paid vendor.

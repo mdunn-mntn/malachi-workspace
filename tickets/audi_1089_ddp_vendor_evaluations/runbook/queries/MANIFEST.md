@@ -1,7 +1,7 @@
 # AUDI-1089 Query Manifest — validate every number in the vendor-eval workbook
 
 Every value in `outputs/audi_1089_quality_template_filled.xlsx` (and every runbook PNG) traces to
-one of the 31 query/measurement files in this folder, or to an arithmetic combination of their outputs (formulas
+one of the 32 query/measurement files in this folder, or to an arithmetic combination of their outputs (formulas
 printed on the workbook's **index** sheet; combination code = `../charts/fill_template.py`).
 Run the queries in the order below; each file's header states its claim, grain, windows, and exact
 run command. All queries are **read-only** (temp external tables over GCS parquet; no DDL/DML).
@@ -60,6 +60,7 @@ Cost class: **cheap** = seconds-minutes, console-friendly · **BIG** = 5-15 TB s
 | 29 | `q13b_ds19_perf.sql` | DS19-member IPs split free-covered vs vendor-only: sizes, serving, media, visits + per-IP score-tier mix (hi/pp/hg/mid/MAXREACH/unscored) — tests "vendor loss lands in max-reach" + measures the lost slice's performance. | **BIG** (svs 37d + pc + CIL wk + clickpass; single-pass design) |
 | 30 | `q14_gcs_ingest_bytes.sh` | WASTE sheet volume/cost rows: measured GCS bytes per vendor (gsutil, svs partitioned by data_source_id) — GB/day + accumulated no-TTL footprint (since 2025-08-31) -> storage-floor $. NOT SQL; output q14_gcs_ingest_bytes.csv. | cheap (gsutil listings) |
 | 31 | `q15_free_union_perf.sql` | free_logs COMBINED column (guid+aug as ONE pseudo-vendor, ds 99): measured UNION touched/sole cohorts (q5/q6/q7b/q7c-equivalent fields) — unique counts are unions, never sums. | **BIG** (svs 37d + CIL wk + clickpass + ui_conversions) |
+| 32 | `q15b_free_union_stock.sql` | free_logs combined column stock: union raw reach (IPs/domains/pairs), sole stock vs the PAID roster, sole/classified domains, freshness-vs-paid (pair + visit-day splits). q8a mirrored (roles reversed). | **BIG** (svs 30d + wcv + pc; ~2h) |
 
 ## Computed rows (no additional SQL — arithmetic over the CSVs above)
 
