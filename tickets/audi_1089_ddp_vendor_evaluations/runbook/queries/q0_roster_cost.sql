@@ -13,7 +13,9 @@
 -- Registry gotchas: CDC duplicate rows (dedupe by valid_from DESC; DS26 SCD is broken
 --   so is_current is not trusted); registry data_source_id is STRING (cast to INT64).
 -- Meter: dw-main-bronze.coredw.usage_reporting_data. usage = impressions x (cpm/1000)
---   credited on MM-targeted serves with 1/N split on shared IPs (30d lookback).
+--   credited on MM-targeted serves (30d lookback). Credit regime changed May 2026:
+--   1/N fractional split on shared IPs BEFORE, single-vendor integer credit AFTER —
+--   evidence in q0b; never mix regimes in arithmetic.
 --   implied_cpm is printed per month and checked against the registry fixed_cpm
 --   (meter_check_ok; NULL where billing is flat fee / variable or nothing was metered).
 --

@@ -9,7 +9,8 @@
 -- one row per billed unit with a domains.list RECORD naming the domain(s) that
 -- drove the credit (populated ONLY for MM site-visit CPM vendors 24/28/33/36/40;
 -- empty for interests/CRM). Large rows with empty domains.list = unattributed
--- aggregate credits. impressions carry decimals (1/N credit share on shared IPs).
+-- aggregate credits. impressions carried decimals (1/N split) only through Apr 2026; May 2026+
+-- (including this BILL_MONTH) is integer single-vendor credit — see q0b.
 --
 -- Output per source: billed imps, billed $, % of imps domain-attributed,
 -- distinct billed domains, top-5 billed domains w/ share of attributed imps.

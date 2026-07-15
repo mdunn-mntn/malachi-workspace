@@ -1,6 +1,6 @@
 -- ============================================================================
 -- DDP quality-score runbook, STEP 7c: conversions + revenue per vendor x cohort
--- Claim: fills the mega-pivot conversion rows — per source, for TOUCHED (all its
+-- Claim: fills the workbook SCORE QUALITY / PERFORMANCE conversion rows — per source, for TOUCHED (all its
 -- IPs that served) and SOLE (its unique IPs) cohorts: attributed conversions and
 -- order revenue. Join = ui_conversions.ad_served_id -> valuation-week CIL imps
 -- (same pattern as q7b's visit join; conversion trail truncated uniformly at
@@ -9,9 +9,9 @@
 -- Attribution dedup: ui_conversions carries one row PER attribution model per
 -- conversion event (models 1-16 observed 2026-07-06). Dedup to one row per
 -- (advertiser_id, guid, event_epoch), preferring last-touch
--- (attribution_model_type_id 0 treated as 1 per data_knowledge), lowest model id
+-- (attribution_model_type_id 0 treated as 1 = last-touch), lowest model id
 -- as tiebreak. Assists (conversion_assist) and disputed rows excluded.
--- Revenue = order_amt (order_amt_usd is NULL in ui_conversions — data_catalog).
+-- Revenue = order_amt (order_amt_usd is empirically NULL in ui_conversions; order_amt is the populated field).
 --
 -- Grain: data_source_id x cohort {touched, sole}. Membership = 37d svs union;
 -- CIL = valuation week. imps column = anchor vs q7b/q6 (must match q7b).

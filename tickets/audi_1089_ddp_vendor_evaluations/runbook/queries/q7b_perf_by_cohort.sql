@@ -1,6 +1,6 @@
 -- ============================================================================
 -- DDP quality-score runbook, STEP 7b: performance + avg score per vendor x cohort
--- Claim: fills the mega-pivot performance rows — per source, for TOUCHED (all its IPs
+-- Claim: fills the workbook SCORE QUALITY / PERFORMANCE performance rows — per source, for TOUCHED (all its IPs
 -- that served) and SOLE (its unique IPs) cohorts: won imps, visits, VR, average
 -- household score (scored imps only), % scored, media. Visit join = the AUDI-1070
 -- validated pattern (CIL LEFT JOIN clickpass per ad_served_id; trail truncated

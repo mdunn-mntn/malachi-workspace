@@ -29,7 +29,7 @@
 -- free_covered VR vs q7e platform baselines (2.89/1.11/0.72%) = the performance answer;
 -- vendor_only media x52 = DS19-lens dependent revenue at risk.
 --
--- BIG SCAN (svs 37d + pc + CIL week x2 + clickpass 8d; ~1h) — background, never preempt.
+-- BIG SCAN (svs 37d + pc + CIL week + clickpass 8d; ~1h) — background, never preempt.
 --
 -- Run (from workspace root):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \

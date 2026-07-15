@@ -28,7 +28,7 @@
 -- Reference: ti_1027_analysis_queries.sql PHASE 2 WTP anchor (lines 156-166), generalized per-ds.
 
 -- ============================================================
--- Q4a: per-ds value tiers → outputs/audi_1089_value_tiers.csv
+-- Q4a: per-ds value tiers → outputs/run_<date>/q6_value_tiers.csv (canonical name)
 -- "touched" = delivered (CIL week) IPs seen by the ds in the 37d svs window (INNER JOIN, matches TI-1027 anchor).
 -- "sole"    = touched AND the IP appears under exactly one data_source_id in the window (n_ds = 1).
 -- ============================================================
@@ -78,7 +78,7 @@ ORDER BY ds;
 -- ============================================================
 -- Q4b (check A): of DELIVERED IPs in the CIL week with household_score >= 6666,
 -- what fraction r has NO svs membership at all (any ds, 37d union window)?
--- → outputs/audi_1089_check_scored_no_svs.csv
+-- → (diagnostic statement — not part of the canonical run dirs; run ad hoc if desired)
 -- ============================================================
 WITH mem AS (
   SELECT DISTINCT ip FROM svs WHERE ip IS NOT NULL AND ip NOT LIKE '%:%'

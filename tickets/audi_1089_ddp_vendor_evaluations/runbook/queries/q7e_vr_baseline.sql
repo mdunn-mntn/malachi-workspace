@@ -1,8 +1,9 @@
 -- ============================================================================
 -- DDP quality-score runbook, STEP 7e: platform VR calibration by funnel x scored
 -- Claim: sanity-calibrates the sole-cohort visit rates (q7/q7b). Computes the
--- valuation week's PLATFORM-WIDE visit rate split by campaign funnel bucket
--- (public_campaigns.funnel_level authoritative; objective bucket shown) and by
+-- valuation week's PLATFORM-WIDE visit rate split by campaign OBJECTIVE bucket
+-- (obj_bucket in the output — prospecting-family per objective ids; funnel_level
+-- does NOT appear in the result) and by
 -- whether the impression carried a household score. If cold unscored prospecting
 -- inventory platform-wide sits near the no-svs baseline (~0.02%), then vendor
 -- sole-IP VRs of 0.01-0.03% are normal for that inventory class — not a join bug.

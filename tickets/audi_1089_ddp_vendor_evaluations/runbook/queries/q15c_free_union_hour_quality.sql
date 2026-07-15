@@ -8,7 +8,9 @@
 -- Slice: dt=2026-07-01 hh=12 (the q1c sample). Bot regex identical to q1c.
 -- '(empty url)' = the modal domain bucket is rows with no/unparseable URL (guid ~25%).
 --
--- Output: ONE row -> injected as q1c[99] fields by fill_template.
+-- Output: ONE row (n = union rows in slice; top_domain STRING; top_domain_share,
+-- top5_domain_share = % of rows; ua_bot_pct = % of populated user_agents matching
+-- bot regex) -> injected as q1c[99] fields by fill_template.
 --
 -- CHEAP (one svs hour slice, ~12 GB) — console-friendly with the external table.
 --

@@ -4,7 +4,7 @@
 -- what is actually eligible for MM consumption (DS13 verticals, DS19 product
 -- categories) — the "filter criteria" that decide whether we ever use (and pay for) a row.
 --
--- Stages (row-level flags, filters mirror airflow-ti code):
+-- Stages (row-level flags, filters mirror the internal ingestion-pipeline code (airflow-ti repo)):
 --   raw            — everything delivered that day
 --   kept           — survives HARD filters: url non-empty, NET.REG_DOMAIN parses,
 --                    not infra (steelhouse/googlesyndication/gtm)

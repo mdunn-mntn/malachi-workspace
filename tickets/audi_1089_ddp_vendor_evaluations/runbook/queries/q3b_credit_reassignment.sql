@@ -14,7 +14,8 @@
 -- Output: ONE CSV, three record types (rec column):
 --   rec='mask'     k1=holder bitmask (bit order ds 23,24,25,26,28,30,33,36,39,40 = bits 0..9)
 --                  n_pairs, n_ips  -> the sufficient statistic for all-subset simulation
---   rec='reassign' k1=metered vendor ds, k2=earliest-other-holder class
+--   rec='reassign' k1=metered vendor ds (metered = 24,28,33,36,40; flat-fee =
+--                  25,26,39; free = 23,30 — see guide glossary), k2=earliest-other-holder class
 --                  {none, free_first, free_later, flat_fee, metered}, n_pairs
 --   rec='tie'      k1=ds a, k2=ds b, n_pairs where a and b share the same min_dt (co-first)
 --

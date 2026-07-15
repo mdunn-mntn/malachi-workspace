@@ -9,7 +9,7 @@
 --      sources that delivered the IP in the 37d union -> ANY keep-set's HI/PP
 --      coverage = mask-histogram lookup (q3b machinery at score grain).
 --   2. Vertical sizes: per wcv vertical_name, unique svs IPs reachable under
---      {all sources | free logs only | k4 keep-set (5x5+Predactiv+33Across+33A API)}.
+--      {all sources | free logs only | k4 keep-set (free logs + 5x5+Predactiv+33Across+33A API)}.
 --      Proxy for DS13 vertical audience size (svs-reachable IPs on the vertical's domains).
 --
 -- Output: ONE CSV, record types (rec, k1 STRING, k2 STRING, n):

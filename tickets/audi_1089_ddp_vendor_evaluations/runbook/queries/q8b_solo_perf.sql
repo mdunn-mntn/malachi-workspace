@@ -24,8 +24,9 @@
 --                                       hi=10000, pp=8000, hg=6666-9999 excl 8000
 --
 -- Validation anchors: serve metrics >= q6 sole per ds (superset monotonicity);
--- tier hi/pp == Σ q3d hi/pp mask rows with bit_V set & other-free bits clear
--- (independent check that cohort construction matches the mask machinery).
+-- tier hi/pp vs Σ q3d solo-mask rows is a DIAGNOSTIC comparison, NOT an equality —
+-- raw (here) vs usable-gated (q3d) membership lenses differ by 3-10% for clean
+-- vendors and +55-68% for Sovrn (junk-carried IPs); see MANIFEST anchors.
 --
 -- BIG SCAN (svs 37d ip-only pass + CIL week x2 + clickpass 8d + ui_conversions 8d;
 -- ~45-60min) — background, never preempt.

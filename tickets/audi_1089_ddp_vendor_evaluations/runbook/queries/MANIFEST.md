@@ -68,13 +68,14 @@ Cost class: **cheap** = seconds-minutes, console-friendly · **BIG** = 5-15 TB s
 Formulas are printed per-row on the workbook's **index** sheet; implementation =
 `../charts/fill_template.py` (deterministic; rerun = identical workbook). The main ones:
 - **ECONOMICS WORTH:** T2 = q6 `media_sole`×52; T1 = q6 `media_sole_scored`×52; max justified CPMs =
-  T2×30% ÷ (q1 rows or q1d billed imps, annualized); flat equivalents = T1×15% / T2×20% / T2×30%;
+  T2 × internal margin parameter ÷ (q1 rows or q1d billed imps, annualized); flat equivalents =
+  T1/T2 × internal margin parameters (values in fill_template.py — internal);
   fee band = q4 `sole_classified` × $3-13; scale-normalized $/1M pairs = netnew% × T2/sole_pairs.
 - **PORTFOLIO:** drop savings = q1d bill×12 × (1 − metered-reassignment share from q3b), with the
   metered deduction waived when no metered destination survives; preemption recoverable = bill ×
   visit-day free-cohold share (q3c masks).
 - **Decisions ladder:** net-of-free universe = q3b/q3c masks with free bits removed; greedy add-order
-  (optima verified nested = exhaustive); $ = pairs (or visit-days) × vendor's T2 density; pay range = ×10-30%.
+  (optima verified nested = exhaustive); $ = pairs (or visit-days) × vendor's T2 density; pay range = × internal margin band (fill_template.py).
 - **Composite score (q9b):** 0.40·V + 0.15·R + 0.15·Q + 0.10·D + 0.20·P, curved to best=100
   (components from q4/q3_pair_recency/q5/q6/q7).
 - **Post-preemption (AUDI-1093 applied):** bill_after = bill × (1 − visit-day free-cohold share)
@@ -83,7 +84,7 @@ Formulas are printed per-row on the workbook's **index** sheet; implementation =
 - **SOLO sheet:** counterfactual keep-set = {vendor} + free logs. Mask-exact rows = Σ q3b/q3c/q3d
   mask records with the vendor's bit set and the OTHER-free bits clear (other_free(23)=bit5,
   other_free(30)=bit0, else bits 0|5). T2_solo = q8b media×52; T1_solo = q8b media_scored×52;
-  pay range = T2_solo ×10–30%. Solo bill is a bounded estimate: low = today's run-rate (credit is
+  pay range = T2_solo × internal margin band. Solo bill is a bounded estimate: low = today's run-rate (credit is
   monotone in roster shrinkage), high = total metered bills × vendor's share of paid-held
   visit-days (q3c masks; proportional-consumption assumption, all metered CPMs $0.50).
 

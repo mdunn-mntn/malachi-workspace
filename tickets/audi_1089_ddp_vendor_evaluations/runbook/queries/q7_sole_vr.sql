@@ -1,3 +1,5 @@
+-- NOTE: file holds TWO statements; the shipped q7_sole_vr.csv holds Query B's
+-- per-ds rows (run statements separately).
 -- Claim: sole-cohort visit performance — visits, IVR (vs the 0.0223% no-svs baseline)
 -- and Poisson CI inputs on sole-IP serves. Output q7_sole_vr.csv.
 -- Run (from workspace root; svs 37d union external table + internal CIL):
@@ -11,7 +13,7 @@
 -- CANONICAL runbook copy of queries/audi_1089_q5_vr_membership.sql (AUDI-1089 eval, windows per runbook params).
 -- Output: outputs/run_<date>/q7_sole_vr.csv. Full run pattern in the original header below.
 --
--- AUDI-1089 Q5: PERFORMANCE — do impressions to Klickly-sole (DS39) IPs produce visits at parity?
+-- AUDI-1089 legacy step Q5 (UNRELATED to runbook q5_score_tiers.sql): PERFORMANCE — do impressions to Klickly-sole (DS39) IPs produce visits at parity?
 -- Visit join pattern reused EXACTLY from AUDI-1070 inv2 (validated): cost_impression_log LEFT JOIN
 -- clickpass_log aggregated per ad_served_id; visit window trails the impression window; RTC rows
 -- excluded via model_params NOT LIKE '%realtime_conquest_score=10000%' so band 10000 = Fangorn pins.

@@ -38,7 +38,7 @@
 --   netnew_vs_free = pair absent from BOTH internal free logs (ds 23 guid_log, 30 augmentor)
 -- Invariant: sole + freshest + tied + stale = total.
 -- TI-1027 comparable "pct_sole_or_freshest" (>= semantics, includes ties) = pct_sole_freshest_tied.
--- Output: outputs/audi_1089_recency_pairs_30d.csv
+-- Output: outputs/run_<date>/q3_pair_recency.csv (canonical name)
 -- ============================================================
 WITH p AS (
   SELECT ip, NET.REG_DOMAIN(url) AS domain, data_source_id, MAX(dt) AS dtm
@@ -82,7 +82,7 @@ ORDER BY data_source_id;
 --   sole_domains     = domains no other ds contributes
 --   sole_classified  = sole domains present in website_crawl_verticals
 --   total_classified = all of this ds's domains present in website_crawl_verticals
--- Output: outputs/audi_1089_uniqueness_domains_30d.csv
+-- Output: outputs/run_<date>/q4_domain_value.csv (canonical name)
 -- ============================================================
 WITH dsd AS (
   SELECT DISTINCT data_source_id, NET.REG_DOMAIN(url) AS domain
