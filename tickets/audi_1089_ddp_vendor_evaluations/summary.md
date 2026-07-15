@@ -325,6 +325,38 @@ Sovrn 99.7% pairs solo (junk-driven uniqueness) but $21K est vs $116K bill (0.18
 `q11_solo_pnl.png` (bill bracket vs measured/est T2_solo + pay band; measured markers fill in
 when q8b lands).
 
+**q8b MEASURED results (landed 2026-07-14 ~17:05; anchor 4 monotonicity passed all 10 sources):**
+
+| Vendor | T2_solo measured | density est | bill LOW-HIGH | pay range 10-30% | worth/bill (rev basis) |
+|---|---|---|---|---|---|
+| 33Across | **$724K** | $397K | $422-456K | $72-217K | 1.59-1.72x |
+| 33A API | **$447K** | $87K | $176-308K | $45-134K | 1.45-2.54x |
+| Sovrn | $112K | $21K | $116K | $11-34K | 0.97x |
+| Justuno | $37K | $8K | $77K | $4-11K | 0.48x |
+| Cybba | $10K | $3K | $22K | $1-3K | 0.45x |
+| 5x5 | $281K | $67K | flat pending | $28-84K | — |
+| Predactiv | $202K | $37K | flat pending | $20-61K | — |
+| Klickly | $13K | $2K | flat pending | $1-4K | — |
+
+Three takeaways: (1) **measured T2_solo runs 3-5x ABOVE the density estimate everywhere** —
+the estimate inherits sole-cohort adverse selection (dark households), while the solo cohort
+includes livelier multi-paid-vendor IPs. The ladder's standalone $ are therefore FLOORS under
+the solo lens. (2) **The decision conclusion survives the rehabilitation: no metered vendor's
+10-30% PAY RANGE reaches its bill even measured** (33Across tops out $217K vs $422K+). The
+33Across feeds now clear their bills on a REVENUE basis (1.6-2.5x) — expect the vendor to argue
+that lens; the answer stays "we keep ~20% of the CPM." (3) **NON-ADDITIVITY: never sum solo
+columns across vendors** — solo cohorts overlap heavily (the same multi-vendor IP is solo for
+every vendor vs free logs); the ladder's marginal column is the only additive lens. Caveat:
+T2_solo is a generous ceiling — the solo cohort's prospecting-attribution share is unmeasured
+(sole cohort's was 97-99%; livelier solo IPs likely include more retargeting serves).
+
+**Anchor-5 became a finding, not a check:** q8b tier counts (raw 37d membership, q5/q6
+convention) vs q3d mask counts (usable-gated) differ DIAGNOSTICALLY — clean vendors read 3-10%
+low in q8b (free-log webmail sightings only count raw), **Sovrn reads +55-68% HIGH** (its
+malformed-URL rows carry IPs that never reach a usable domain — junk-carried "solo HI").
+Converted from abort-threshold to always-printed comparison; both lenses stay on the sheet
+(count row = usable/q3d, % rows = raw/q8b, each internally consistent).
+
 ## 4d11. q3d landed + reconciliation fixes + shareable query package (2026-07-13 eve - 07-14)
 
 - **q3d results (charts q3d_score_coverage.png / q3d_vertical_impact.png; scenario table gained

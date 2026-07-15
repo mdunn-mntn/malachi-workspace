@@ -86,5 +86,8 @@ q0 meter check (imps×CPM=usage exactly); q3b single-bit masks = q3 sole_pairs; 
 its mask totals; q3d HI-with-33Across = q5 touched hi_10000 (ratio 1.000); q7b sole imps = q6
 exactly; q7c imps = q7b imps exactly; v01 within +0.5%. SOLO anchors: q8a solo_pairs == Σ q3b
 solo masks == q3 netnew_vs_free_pairs (paid vendors, exact; wcv/pc snapshot drift tolerated
-<0.1%); q8b media/ips/imps ≥ q6 sole (solo ⊇ sole); q8b tier hi/pp == Σ q3d solo masks;
+<0.1%); q8b media/ips/imps ≥ q6 sole (solo ⊇ sole — passed all 10 sources 2026-07-14);
+q8b tier hi/pp vs Σ q3d solo masks is a DIAGNOSTIC comparison, not an equality — raw vs
+usable membership lenses (clean vendors 3-10% low in q8b; Sovrn +55-68% HIGH = junk-carried
+IPs on malformed URLs that never reach a usable domain);
 q8a fresh_day solo_new_pair + refresh == Σ q3c solo masks.
