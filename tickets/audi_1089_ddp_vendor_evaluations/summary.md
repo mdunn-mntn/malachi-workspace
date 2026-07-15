@@ -272,6 +272,32 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d15. WASTE tab + measured ingestion footprint (boss ask via user, 2026-07-15)
+
+**Asks:** (1) how much delivered vendor data we throw away + what to request vendors stop
+sending; (2) roughly what we pay to INGEST the data (infra, not data fees).
+
+**New `waste` tab** (position 3; 20 rows x 10 sources; chart `q14_ingest_waste.png`;
+measurement script `q14_gcs_ingest_bytes.sh`, MANIFEST row 30 — svs is GCS-partitioned by
+data_source_id so bytes are directly measurable):
+- **Volumes (measured):** paid vendors ship ~156 GB/day (~57 TB/yr); 33Across alone 106 GB/day
+  (68%). Free logs: augmentor 79, guid 48.
+- **Thrown away** (never reaches DS13 or DS19): 33Across 22.4% (8.7 TB/yr), 33A API 36.1%
+  (3.8 TB/yr), Predactiv 9.6%, Sovrn 7.2%, others <5%.
+- **USED-BUT-SHOULDN'T-BE (user-caught framing):** webmail (~29% of 33Across) and Googlebot
+  (6.4%) are NOT in thrown-away — DS19 has no blocklist, so they pass the gate and BILL.
+  The 33Across stop-sending ask (~35% volume cut) mostly targets junk we currently USE and
+  PAY FOR, not the waste. Sovrn inverse caveat: only 7.2% thrown away BECAUSE the permissive
+  DS19 gate accepts its malformed rows (90.9% DS19-categorized) — low waste != clean.
+- **Ingestion cost, measurable floor:** svs has NO TTL (first partition 2025-08-31);
+  accumulated paid-vendor footprint 39.3 TB (33Across 22.8 TB) -> storage floor ~$9.4K/yr
+  at GCS list ($0.02/GB-mo). EXCLUDED (needs Data Eng): Kafka cluster share (RT vendors
+  24/33/39/40), batch ingest DAG compute, DS13/DS19 classifier compute per TB. Draft ask
+  sent to user for Sean Yang's team.
+- **Stop-sending asks** (per vendor, on the tab): 33Across webmail+Googlebot; 33A API
+  cookie-sync URLs; Sovrn URL-doubling fix; 5x5 outbrain widget URLs; Predactiv adult filter;
+  Justuno none (cleanest; add user_agent); Klickly/Cybba immaterial volume.
+
 ## 4d13. Post-preemption economics — bills if free logs stopped paying for co-held data (user question 2026-07-15)
 
 **Question:** we supposedly pay only for used data, but the meter doesn't exclude signals
