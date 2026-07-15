@@ -1745,6 +1745,12 @@ Before pooling advertisers for a YoY / cohort / DiD visit-rate or conversion ana
   verify output caps against EMPIRICAL cardinality (a COUNT DISTINCT beats an assumption — bq
   truncates silently) and count external-table re-reads (CTEs re-execute per reference). One such
   review caught a silent-truncation blocker AND a 3x cost bug before a ~40TB launch.
+- **Cohort algebra: "sole" cohorts do not sum, and a union's sole can EXCEED its components'
+  soles summed (2026-07-15).** Per-source sole = vs ALL other sources; a two-source union's sole =
+  vs the rest only — items the two sources co-hold count in the union's sole but in NEITHER
+  per-source sole (free-logs union $603K vs guid $278K + aug $167K). Corollary: degenerate cells
+  (a group's share of a world that contains only itself) must display a meaningful alternative or
+  an em-dash, never the trivially-true 100%.
 - **Boundary-identity checks catch cost-model bugs:** every savings/attribution model has degenerate
   cases with known-exact answers (drop ALL meters -> recovery must equal total bills; keep ALL ->
   savings 0). Assert them — a $7.2K reconciliation gap in AUDI-1089's LOO came from applying a

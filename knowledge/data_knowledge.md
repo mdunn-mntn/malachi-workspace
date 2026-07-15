@@ -832,12 +832,21 @@ MM audience. [[reference_fangorn_audience_overlay]]
 
 - **AUTHORITATIVE component naming (Matt Brorby, TI team, 2026-07-08).** Products are named per COMPONENT, and each product name is the IP-tier name applied to the component that unlocks that tier: **DS19 = "MM Core" / Keyword-Only** (unlocks the Max Reach tier — Matt: "Max Reach but I would call it Keyword Only campaigns or MM Core"); **DS13 vertical anchor = "Peak Performance"** (unlocks the 8000 PP tier); **DS13 with bucket ids = "Expanded Peak Performance"** — named but UNSHIPPED (would unlock the MI tier; confirmed zero live campaigns carry bucket ids); **DS46 = "Peak Performance v2"** (Fangorn — the v2 of the vertical-scoring component). HI needs no component of its own — reachable via keywords or the vertical anchor. Combo configs read compositionally: DS13+DS19 = "MM Core + PP", DS19+DS46 = "MM Core + PP v2" (the flagship). MI is the only tier whose product (Expanded PP) never shipped. **Matt endorsed the 2×3 grid + these labels for internal naming consistency (2026-07-08) and notes he colloquially says "vertical only" for the PP-only (no-DS19) campaigns** — so "vertical-only" in conversation = a DS13- or DS46-anchored campaign with no keyword layer. **Published as a Confluence page (TAR space, under TI Projects):** https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511 — the org-shareable version of this section; update BOTH if the taxonomy changes.
 - **Vendor contribution to DS19 ("MM Core"/Keyword-Only) is unscored dark breadth, not scored audience
-  (AUDI-1089 q13b, 2026-07-15):** of 271.3M DS19-member IPs (37d), free logs alone keep 69.7%; the
+  (AUDI-1089 q13a+q13b, 2026-07-15):** of 271.3M DS19-member IPs (37d), free logs alone keep 69.7%; the
   vendor-only 30.3% (82.3M IPs) has a 0.48% serve rate (vs 14.4% free-covered), VR 0.061% (26x below
   the kept slice, ~12x below the coldest platform bucket), and is 92.4% unscored when served. EVERY
   scored tier is >=99% free-covered INSIDE DS19 — including Max Reach at 99.4% (HI 99.92%, PP 98.97%,
-  mid 99.84%). Keyword AUDIENCE COUNTS (UI sizing) would shrink ~30% under free-logs-only; the
-  effective (servable, scored) keyword audience barely moves.
+  mid 99.84%). DS19-only signal coverage (q13a, first consumer-split numbers): free-only keeps
+  **64.3% pair / 64.2% visit-day / 61.6% true composite-key grain** — slightly ABOVE the 60.4/59.4
+  union figures. Per-keyword-category: the categories that COLLAPSE under free-only are ad-infra junk
+  (Paid Advertising 0.2% retained of 66M IPs, Ad Platforms 0.3%, Advertising 2.8% — cookie-sync/ad-tech
+  URLs categorized as keywords); real categories hold (Search 98%, Software 87%, News 81%); Baked Goods
+  (46M, 17%) is the one legit-looking dependent — likely content-farm volume, spot-check before citing.
+  **THE POPULATION PRINCIPLE (generalizes beyond DS19): vendors inflate audience-COUNT denominators,
+  not deliverable audience** — membership tables count ALL member IPs (never-served included), while
+  the free logs (our own pixel + bid-time log) see auction-active households by construction, so
+  SERVED members are 97.6-99.9% free-covered in every tier. Any "audience size" number shrinks ~30%
+  without vendors; delivery barely notices. Distinguish the two populations in every readout.
 - **SCORING GENERATIONS — v1 = categorical fixed points, v2 = score bands where THE LABEL FOLLOWS THE SCORE (verified 2026-07-08, 7d of delivered CIL, RTC-excluded, all live v1/v2 prospecting).** Per the Fangorn methodology page (https://mntn.atlassian.net/wiki/spaces/TAR/pages/3414917161): Fangorn = continuous 0–1 intent score; raw boundaries 0.6/0.8 divide MaxReach/MI/HI, transformed onto the legacy 3333/6666 pacing points. Empirical delivered-score distribution:
   - **v1 (DS13): fixed points ONLY** — exactly 8000 (3.1M imps) and exactly 10000 (4.5M) + MaxReach 1–3332 (full random band) + MI 3333–6665; **ZERO impressions at 6666–7999 or 8001–9999**.
   - **v2 (DS46): two model passes per IP, each a continuous band with a pin at its top** — PP pass → **6666–8000** (3.8M imps over 1,206 distinct values + 2.1M pinned exactly 8000); HI pass → **8001–10000** (11.0M over 1,868 values + 2.0M pinned exactly 10000). An IP that structurally matches vertical/keywords but scores <0.8 raw lands in MI/MaxReach — **qualifying criteria feed the model; only the score puts an IP in the HI/PP groups** (Malachi's "two scores, only above-bar counts" reading, confirmed).
@@ -965,6 +974,14 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   Sovrn 6.6, 5x5 4.6, Justuno 2.5, Klickly 0.26, Cybba 0.09 — paid roster ~156 GB/day (~57 TB/yr);
   accumulated paid footprint 39.3 TB → storage floor ~$9.4K/yr at GCS list. Lifecycling old partitions
   to Coldline is an easy ~4x cut on that line (raised with Data Eng).
+- **The free logs, measured as ONE vendor (AUDI-1089 q15/q15b/q15c, 2026-07-15), are the roster's
+  biggest:** union sole-vs-paid = 44.0M usable IPs / 2.15B pairs / 50.8K classified domains ->
+  **T2 $602.9K/yr** — more than any paid vendor's sole-T2 (33Across $270K max), at $0. Union sole
+  EXCEEDS guid+aug per-log soles summed ($445K) by design: per-log soles are vs ALL sources, so pairs
+  both free logs co-hold count in neither. Freshness vs paid: fresher-or-tied on 89.7% of shared
+  pairs. Union domain concentration DILUTES (top-1 msn.com 6.0% vs guid's 25.2% empty-URL modal
+  bucket / augmentor's 8.0%). Union reach caveat: URL-parseable basis (186.9M IPs) reads BELOW
+  guid's raw 195M because ~20% of guid rows carry no URL.
 - **Field population by source (AUDI-1089 q1b, hour slice 2026-07-01 hh=12):** `ip`/`time`/`uid` = 100% for
   every source; `url` ~100% everywhere except guid_log 79.9% (33A API 97.9%, Cybba 99.6%);
   **`query_parameters` = 0% for ALL sources (dead column)**; **`advertiser_id` populated ONLY by DS23 guid_log**

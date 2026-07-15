@@ -298,6 +298,13 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   34 files (33 queries + MANIFEST). Closing chart: **q15_free_union_value.png** (free union
   $603K/yr sole-T2 > any paid vendor; exceeds guid+aug summed $445K by design — co-held
   free pairs count only in the union).
+- **Completeness audit (3-lens workflow, 2026-07-15 eve): PASSED after fixes** — queries↔MANIFEST↔zip
+  byte-verified (33 files); xlsx all six sheets verified cell-by-cell; charts registry complete.
+  Fixed: q14 accumulation samples+arithmetic embedded in the script (was the ONLY non-regenerable
+  artifact), 4 legacy headers retrofitted, durable-homes policy in README §6b (all binaries
+  regenerate from committed sources). User-caught display fixes: FREEC share rows (degenerate 100%
+  → all-sources share) and DS19 block table headers now label their populations (SERVED vs ALL
+  members — the audience-count vs delivery-reality distinction).
 
 ## 4d15. WASTE tab + measured ingestion footprint (boss ask via user, 2026-07-15)
 

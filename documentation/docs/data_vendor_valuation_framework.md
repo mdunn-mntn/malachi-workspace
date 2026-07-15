@@ -111,6 +111,19 @@ Negotiation translation: justified CPM on ALL delivered rows / on USED (credited
 flat-contract equivalent band.
 
 
+## 2026-07-15 extension (AUDI-1089): audience-count vs delivery-reality populations
+
+When a vendor's value claim is "audience size", split the population before pricing it:
+**ALL members** (everything in the membership table, never-served included — the number UIs
+display) vs **SERVED members** (IPs that actually win impressions — the number campaigns feel).
+First-party logs see auction-active households by construction (pixel + bid-time collection),
+so vendor-unique members concentrate in the never-served tail: in AUDI-1089, keyword audience
+COUNTS shrank ~30% without vendors while served members stayed 97.6-99.9% covered per score
+tier, and vendor-only members served at 0.48% with 26x-below-par visit rates. Price the
+delivery-reality population; treat count-only contribution as denominator inflation, not reach.
+Also verify WHAT the vendor-dependent categories are — here the collapsing ones were
+ad-infrastructure junk classifications (cookie-sync URLs as "Paid Advertising" keywords).
+
 ## 2026-07-13 extensions (AUDI-1089): portfolio lenses beyond leave-one-out
 
 - **Net-of-free value ladder:** drop every unit your OWN free sources capture from the universe
