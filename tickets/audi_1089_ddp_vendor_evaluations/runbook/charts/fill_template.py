@@ -330,11 +330,12 @@ def _synth_free_combo():
             tier = q15[c]["tier"]
             mem = q15[c]["mem"]["member_ips"]
             ips = served["ips_served"]
-            out = {"vendor_ips": mem, "delivered_ips": ips,
+            out = {"vendor_ips": int(mem), "delivered_ips": int(ips),
                    "pct_delivered": 100 * ips / mem if mem else 0,
-                   "hi_10000": tier["hi"], "pp_8000": tier["pp"], "high_grad": tier["hg"],
-                   "mid": tier["mid"], "maxreach": tier["maxreach"],
-                   "unscored_delivered": tier["unscored"]}
+                   "hi_10000": int(tier["hi"]), "pp_8000": int(tier["pp"]),
+                   "high_grad": int(tier["hg"]), "mid": int(tier["mid"]),
+                   "maxreach": int(tier["maxreach"]),
+                   "unscored_delivered": int(tier["unscored"])}
             for t, key in (("hi", "pct_hi"), ("pp", "pct_pp"), ("hg", "pct_high_grad"),
                            ("mid", "pct_mid"), ("maxreach", "pct_maxreach"),
                            ("unscored", "pct_unscored_delivered")):
