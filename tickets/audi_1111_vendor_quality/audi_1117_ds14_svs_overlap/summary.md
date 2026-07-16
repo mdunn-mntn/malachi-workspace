@@ -48,11 +48,29 @@ Lag distributions decay smoothly (no cliff at 1d/4d/7d). So DS14 is NOT a hard u
 filter at the documented windows across all delivery — either some paths bypass it
 (retargeting = own visitor lists; display = cookie-based) or exemptions exist.
 
-### 4b. Q2 cohort split in flight (launched 2026-07-16 ~17:25)
+### 4b. Q2 cohort split (MEASURED 2026-07-16 — `audi_1117_ds14_gate_lag_by_cohort.csv`)
 
-Same histogram per channel (ctv/display) × funnel (prospecting/retargeting) via
-public_campaigns (funnel_level authoritative). If the gate is real, CTV-prospecting should
-show a hard edge and the bypass cohorts should absorb the Q1 residual.
+Funnel mapping note: funnel_level values are 1/2/3 (prospecting / stage-2 / stage-3) — there
+is no funnel_level 4 (objective_id 4 = retargeting is a different code space).
+
+| Cohort | Imps (07-01) | aug≤1 OR guid≤4 | neither log 11d |
+|---|---|---|---|
+| display (all funnels) | 20.2M | **100.00%** | 0.00% |
+| ctv / stage-3 | 1.2M | 98.4% | 0.25% |
+| ctv / stage-2 | 4.6M | 91.7% | 2.5% |
+| ctv / prospecting | 28.6M | **87.8%** | **4.3%** |
+
+**Display is a same-day echo, not gate evidence:** 100.00% of display imps have a SAME-DAY
+augmentor row — aug_log mirrors the display bid stream by construction ("we can only bid on
+what's in the augmentor_log" is literally true for display). The DS14 gate question is a CTV
+question, and there the edge is SOFT: 12.2% of CTV-prospecting imps land outside
+aug(1d)|guid(4d), 4.3% outside both logs entirely (11d).
+
+Candidate mechanisms for the CTV soft edge (unresolved): household-graph expansion (gate
+satisfied by a graph-sibling IP, serving IP differs), bid-time vs partition-day fuzz
+(bounded small: aug≤2|guid≤4 only adds ~1.9pp), CTV IP churn between qualification and
+serve. Needs MemDB/audience-service inspection or Zach/Sean to adjudicate. The "~7d
+augmentor window" reading is NOT supported as a hard bound in any cohort.
 
 ## 5. Solution
 
