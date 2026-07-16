@@ -66,9 +66,8 @@ Stages:
   description: "ALL = every prospecting stage; 1 = Prospecting, 2/3 = Mid-funnel. Applies to every campaign-scoped module"
   options: ['ALL', '1', '2', '3']
 Min_Spend_Pct:
-  type: select
-  default: '0'
-  label: "Min campaign spend %"
-  description: "Hide campaigns below this share of total window spend (whole-group basis)"
-  options: ['0', '1', '2', '5', '10']
+  type: text
+  default: 0
+  label: "Min campaign spend % (0-100)"
+  description: "Hide campaigns below this share of total window spend (whole-group basis); any number 0-100, e.g. 1 or 2.5"
 {% endform %}
