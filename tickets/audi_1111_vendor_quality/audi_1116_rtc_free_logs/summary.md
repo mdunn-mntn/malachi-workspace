@@ -49,11 +49,30 @@ vendor delivery is fresh enough to matter at RTC's hourly cadence.
 
 **The free logs are the only real-time sources; every vendor delivers hours late.** For the
 RTC hourly batch, a vendor row arriving 8.6h post-visit has lost most of its conquest value.
-Tight p10–p90 bands (±25 min) suggest fixed batch schedules. Full-day profile in flight.
 
-### 4b. Scans in flight
+### 4b. Full-day hourly profile (MEASURED, dt=2026-07-01, all 24 hh — `audi_1116_hourly_arrival.csv`)
 
-- hourly arrival (launched 2026-07-16 ~17:00)
+| Source | Rows/day | Median ingest lag (min–max across event hours) | Pattern |
+|---|---|---|---|
+| 33Across | 1,081,178,668 | 515.6 – 521.4 | flat ~8.6h delay, all day |
+| augmentor_log | 835,062,598 | **0.0 – 0.0** | streaming |
+| 33Across API | 368,193,962 | 172.6 – 180.1 | flat ~2.9h |
+| guid_log | 323,819,051 | **0.0 – 0.0** | streaming |
+| 5x5 | 122,923,712 | 330.9 – 335.0 | flat ~5.5h |
+| Predactiv | 63,195,691 | 157.1 – 724.9 | overnight events wait ~8h for a morning drop; daytime ~2.7h |
+| Sovrn | 52,455,805 | 170.6 – 179.6 | flat ~2.9h |
+| Justuno | 18,964,906 | 171.0 – 178.7 | flat ~2.9h |
+| Klickly | 4,297,562 | 169.9 – 180.4 | flat ~2.9h |
+| Cybba | 1,484,434 | 142.3 – 175.3 | flat ~2.4–2.9h |
+
+Lags are constant by event hour → continuous-but-delayed vendor pipelines (fixed processing/
+delivery delay), not once-daily batches (Predactiv's overnight bucket excepted). Implication:
+**every vendor row reaches the RTC hourly batch 2.4–8.6h stale; free-log rows reach it within
+the hour.** "Real-time conquest" on vendor signal is structurally impossible at current
+delivery cadences — a renegotiation point (freshness SLA) as much as a drop argument.
+
+### 4c. Scans in flight
+
 - RTC vendor share (launched 2026-07-16 ~17:00; CIL week ~123GB + svs 37d)
 
 ## 5. Solution
