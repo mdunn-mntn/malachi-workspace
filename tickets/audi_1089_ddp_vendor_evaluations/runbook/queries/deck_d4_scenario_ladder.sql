@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D4 of 7: the 9 drop-scenarios — kept coverage + HI/PP
+-- AUDI-1089 DECK QUERY D4 of 8: the 9 drop-scenarios — kept coverage + HI/PP
 -- FILLS: deck workbook SCENARIO table (block 4, identified by column titles —
 --        row positions shift as the sheet evolves): "Total triples kept (of N
 --        possible today)", "Coverage (% of today)", "Triples LOST vs today"

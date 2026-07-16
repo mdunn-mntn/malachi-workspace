@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D2 of 7: won impressions on IPs each source touched
+-- AUDI-1089 DECK QUERY D2 of 8: won impressions on IPs each source touched
 -- FILLS: deck workbook BLOCK 1 cols "Touched won imps (valuation wk)" and
 --        "Share of ALL our won imps that landed on this source's IPs"
 --        (denominator = the rec='platform' row). NOTE the share is a REACH

@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D5 of 7: free-vs-vendor-only IP coverage by score tier —
+-- AUDI-1089 DECK QUERY D5 of 8: free-vs-vendor-only IP coverage by score tier —
 -- ALL member IPs (audience-size lens)
 -- FILLS: deck workbook table "Of ALL member IPs, served or not (audience-size
 --        coverage)" (block 5): "free-covered IPs", "vendor-only IPs", "% free

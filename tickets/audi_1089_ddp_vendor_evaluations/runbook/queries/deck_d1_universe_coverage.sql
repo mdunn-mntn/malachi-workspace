@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D1 of 7: per-source coverage of the visit-day universe
+-- AUDI-1089 DECK QUERY D1 of 8: per-source coverage of the visit-day universe
 -- FILLS: deck workbook COVERAGE table (block 1 — 10 source rows + the free_logs
 --        UNION row, identified by column titles, which are stable; row positions
 --        shift as the sheet evolves): "Total IP x Domain x Date triples (usable,

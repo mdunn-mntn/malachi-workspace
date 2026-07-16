@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D3 of 7: what each vendor bills — CPM and annualized cost
+-- AUDI-1089 DECK QUERY D3 of 8: what each vendor bills — CPM and annualized cost
 -- FILLS: deck workbook CPM & BILLS table (block 2, identified by column titles):
 --        "Vendor contract CPM ($)" and "Bill / yr cost" (its media CPMs come
 --        from q6/q15 media+imps, not this query). The PREEMPTION table's

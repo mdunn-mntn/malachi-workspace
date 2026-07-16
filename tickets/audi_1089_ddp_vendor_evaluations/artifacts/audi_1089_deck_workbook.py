@@ -108,6 +108,8 @@ def load_tier_csv(name):
 
 d5 = load_tier_csv("deck_d5_tier_free_coverage_all_ips.csv")
 d6 = load_tier_csv("deck_d6_tier_free_coverage_bid_ips.csv")
+d8 = read_csv("deck_d8_signal_volume_served.csv")
+d8 = {r["tier_row"]: r for r in d8} if d8 else None
 
 # q3d: score-tier holder masks (hi/pp/hg) at scored-IP grain, 37d window — the
 # ALREADY-MEASURED source for HI/PP coverage; used until the deck_d4/d6 scans
@@ -430,6 +432,37 @@ if d4:
          " rows — no separate query.", 5)
     gap()
 
+# ---------------------------------- signal volume on SERVED IPs only (deck_d8)
+D8_ROWS = [("2_hi_10000", "HI10000 IPs' triples"),
+           ("3_pp_8000", "PP8000 IPs' triples"),
+           ("4_served_other_tiers", "Other served tiers' triples"),
+           ("5_not_served_this_week", "Not served this week (context)")]
+header(["SIGNAL VOLUME on SERVED IPs only — triples on IPs that actually got won"
+        " impressions (valuation wk)", "Triples (all sources)",
+        "Free-covered triples", "Vendor-only triples (LOST under free-only)",
+        "% free covered"])
+fmtsS8 = {2: N0, 3: N0, 4: N0, 5: PCT2}
+if d8:
+    served_tot = served_free = 0
+    for key, label in D8_ROWS:
+        r8 = d8[key]
+        tot, free = float(r8["triples_total"]), float(r8["triples_free_covered"])
+        if key != "5_not_served_this_week":
+            served_tot += tot
+            served_free += free
+        emit([label, tot, free, tot - free, free / tot], fmtsS8)
+    emit(["ALL SERVED IPs' triples", served_tot, served_free,
+          served_tot - served_free, served_free / served_tot], fmtsS8)
+else:
+    for key, label in D8_ROWS + [("all_served", "ALL SERVED IPs' triples")]:
+        emit([label, PENDING, PENDING, PENDING, PENDING], fmtsS8)
+note("* Same lens as the table above, restricted to IPs we actually spent money on"
+     " (the served population of block 6). Splits deck_d4's mixed 'other' bucket into"
+     " served-other vs never-served. HI/PP rows should match the table above within"
+     " snapshot drift (scored IPs are served by definition). ALL SERVED = the three"
+     " served tiers summed (sheet arithmetic). Query: deck_d8.", 5)
+gap()
+
 for c, m in col_max.items():
     cap = 38 if c == 1 else 30
     ws.column_dimensions[get_column_letter(c)].width = max(min(m + 3, cap), 11)
@@ -449,7 +482,9 @@ qrow = [["Block", "Supporting query (runbook/queries/)", "What it computes", "St
          "landed — all cells measured" if d5 else "scan running"],
         ["6", "deck_d6_tier_free_coverage_bid_ips.sql", "same split, only IPs with won impressions",
          "landed — all cells measured" if d6 else "scan running"],
-        ["SIGNAL VOLUME table", "deck_d4_scenario_ladder.sql (today + free_logs_only rows)", "triple-grain (ip x domain x date) free coverage per tier — the signal lens next to blocks 5/6's membership lens; sheet arithmetic over d4's output", "derived (d4 landed)"]]
+        ["SIGNAL VOLUME table", "deck_d4_scenario_ladder.sql (today + free_logs_only rows)", "triple-grain (ip x domain x date) free coverage per tier — the signal lens next to blocks 5/6's membership lens; sheet arithmetic over d4's output", "derived (d4 landed)"],
+        ["SIGNAL VOLUME, SERVED IPs", "deck_d8_signal_volume_served.sql", "same triple-grain lens restricted to IPs with won impressions; splits d4's 'other' into served-other vs never-served",
+         "landed — all cells measured" if d8 else "scan running"]]
 for i, rr in enumerate(qrow, 1):
     for c, v in enumerate(rr, 1):
         cell = qs.cell(row=i, column=c, value=v)

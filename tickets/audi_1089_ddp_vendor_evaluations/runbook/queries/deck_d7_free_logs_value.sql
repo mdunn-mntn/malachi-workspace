@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D7 of 7: the FREE LOGS' value beyond ALL paid vendors
+-- AUDI-1089 DECK QUERY D7 of 8: the FREE LOGS' value beyond ALL paid vendors
 -- FILLS: deck workbook FREE LOGS table ("FREE LOGS — value beyond ALL 8 paid
 --        vendors combined"): "Media $/yr on IPs no paid vendor covers"
 --        (= media_annualized), the profit band (media x internal margin, offline),
