@@ -272,6 +272,23 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d18. Deck-support coverage table (user ask, 2026-07-16)
+
+- **`artifacts/audi_1089_deck_coverage.md`** (generator `audi_1089_deck_coverage.py`, reads
+  `outputs/run_2026_07_10/`, deterministic, in-script mask-anchor asserts) — the one-place
+  big-picture coverage table for the deck: per source (10 + free union), ranked by standalone
+  visit-days: bill $/yr, raw rows 30d (q1 summed — NOT q2c's one-day sample), standalone +
+  strictly-unique visit-days with % of the 13.29B universe, won imps on touched (q6) and
+  standalone (q8b) IPs vs the 398.3M platform week; second table: raw IPs, standalone pairs
+  vs the 5.97B pair universe, served-IP platform share. Every column cites its query file +
+  field; reading-notes cover the population traps (non-additive columns, standalone-vs-sole,
+  union ≠ sum, parse-gated union reach).
+- **3-lens adversarial verify (workflow)**: all arithmetic reproduced independently (masks,
+  serving, citations). Catches fixed pre-share: q2c one-day grain mislabeled 30d (26-35x);
+  q15b union reach is parse-gated → cell blanked (186.9M < guid's 195.0M raw would read as
+  impossible); serving cohorts are RAW-grain (windows line now says so); avg served household
+  held by ~6.7/10 (7.5 = HI-only figure); "(exact)" anchors relabeled <0.01% snapshot drift.
+
 ## 4d17. Org-wide validation package (user ask, 2026-07-15 night)
 
 - **`runbook/queries/VALIDATION_GUIDE.md`** — the read-first doc for outside validators:
