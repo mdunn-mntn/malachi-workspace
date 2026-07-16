@@ -345,9 +345,12 @@ note(f"* The union row (${union_w * 52:,.0f}) EXCEEDS guid+aug summed"
 gap()
 
 # ---------------------------------------------------------------- block 4
-header(["Scenario", "Paid vendors kept", "Total triples kept", "Coverage (% of today)",
+TODAY_TRIPS = float(d4["today_all_8_paid"]["trips_kept"]) if d4 else UNIVERSE
+header(["Scenario", "Paid vendors kept",
+        f"Total triples kept (of {TODAY_TRIPS:,.0f} possible today)",
+        "Coverage (% of today)", "Triples LOST vs today",
         "HI triples kept", "HI-IP coverage %", "PP triples kept", "PP-IP coverage %"])
-fmts4b = {3: N0, 4: PCT2, 5: N0, 6: PCT4, 7: N0, 8: PCT4}
+fmts4b = {3: N0, 4: PCT2, 5: N0, 6: N0, 7: PCT4, 8: N0, 9: PCT4}
 for label, kept_txt, keepmask, key in SCEN:
     if d4 and key in d4:
         # every block-4 cell from the ONE supporting query once it lands
@@ -361,7 +364,8 @@ for label, kept_txt, keepmask, key in SCEN:
         pct = kept / UNIVERSE
         hi_t = pp_t = PENDING
         hi_p, pp_p = q3d_cov("hi", keepmask), q3d_cov("pp", keepmask)
-    emit([label, kept_txt, kept, pct, hi_t, hi_p, pp_t, pp_p], fmts4b)
+    emit([label, kept_txt, kept, pct, TODAY_TRIPS - kept,
+          hi_t, hi_p, pp_t, pp_p], fmts4b)
 if not d4:
     note("* HI/PP coverage % = the already-measured q3d masks (37d window, IP grain) —"
          " deck_d4 (running) replaces them at the sheet's 30d grain; expect <0.1pp"
