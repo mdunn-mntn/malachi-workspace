@@ -72,9 +72,34 @@ satisfied by a graph-sibling IP, serving IP differs), bid-time vs partition-day 
 serve. Needs MemDB/audience-service inspection or Zach/Sean to adjudicate. The "~7d
 augmentor window" reading is NOT supported as a hard bound in any cohort.
 
+### 4c. Q3 overlap + pool-expansion sizing (MEASURED — `audi_1117_ds14_overlap_sizing.csv`, 30d, gate ref 2026-07-01)
+
+- **svs 30d universe: 301.5M IPv4 IPs; only 108.8M (36.1%) are in-gate** (biddable under the
+  documented aug-1d|guid-4d proxy) — the "what's in svs that's not in DS14" answer: 192.7M
+  IPs (63.9%).
+- **The expansion splits almost exactly in half:**
+  - `expansion_free_stale` = **97.0M** — out-of-gate IPs the FREE logs delivered within 30d.
+    This growth needs NO vendors — just widen the free-log gate windows.
+  - `expansion_vendor_only` = **95.7M** — only vendors delivered them in 30d; growth that
+    actually requires paying vendors.
+- **Per-source biddable share of delivered IPs** (in-gate %): Cybba 81.6, Klickly 78.5,
+  Sovrn 72.7, augmentor 70.2, Predactiv 66.8, Justuno 60.0, 33A API 59.6, guid 54.8,
+  5x5 52.2, **33Across 50.0** — half of what our biggest vendor sends is not even biddable
+  under today's gate (the meeting's "vendors don't seem very fresh" hypothesis, quantified;
+  also the answer to "what are the other ~40/50%?" — IPs absent from the recent auction
+  stream).
+- Caveats: snapshot at one reference day (gate membership churns daily); stock-vs-flow —
+  the 30d IP stock naturally exceeds any recency-gated pool; IPv4 only.
+
 ## 5. Solution
 
-*(pending)*
+*(analysis complete pending verification pass; recommendation draft below)*
+
+**If audience size is the concern, widen the free-log gate windows before paying vendors:**
+half the possible pool growth (97.0M of 192.7M IPs) is already in the free logs, just
+outside the current 1d/4d windows. The vendor-only half (95.7M) is dominated by IPs that are
+demonstrably stale (2.4–8.6h delivery lag, AUDI-1116) and 50% non-biddable at arrival
+(33Across). Pool expansion via vendors buys mostly low-liveness inventory.
 
 ## 6. Questions Answered
 
