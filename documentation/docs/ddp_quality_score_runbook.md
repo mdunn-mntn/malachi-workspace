@@ -33,6 +33,10 @@ results are recoverable for 24 h from BQ anonymous destination tables (`bq show 
 identical query routes through `dw-main-bronze:us-central1.background-jobs` and bills $0 in bytes
 (verified 2026-07-16). The bucket is us-central1, so there is no compatibility penalty. `bq_run.sh` now
 injects this default automatically; the flag only needs to be explicit when running plain `bq query`.
+Trade-off (Alek Piasecki, 2026-07-16): on the reservation these scans now compete for the org's
+intentionally-small slot pool — expect queueing/longer wall-times when slots are maxed (the 15 min–2.6 h
+estimates above were partly on-demand timings). Prefer staggering the biggest scans over full parallel
+launch; if queueing becomes genuinely problematic, escalate to Alek rather than reverting to US/on-demand.
 
 ---
 

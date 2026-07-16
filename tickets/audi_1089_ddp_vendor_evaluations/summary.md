@@ -284,6 +284,11 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
 - **Fixes:** `~/.bigqueryrc` `location = us-central1`; `bq_run.sh` injects `--location=us-central1`
   default; `.mcp.json` bigquery server US → us-central1; runbook doc + data_catalog.md updated.
   Detail: `knowledge/data_catalog.md` § "BQ job location & slot-reservation routing".
+- **Resolved with Alek same-day:** confirmed us-central1 is the ask; spend disappears from billing.
+  Caveat from Alek: reservation jobs may queue/throttle when the slot pool is maxed — acceptable,
+  escalate to him if problematic (never revert to US/on-demand). Post-fix audit: zero new US-region
+  jobs; one pre-fix straggler (`perf_20260716_132925_55088`, wcv scan launched 13:29) still bills
+  on-demand — the last one.
 
 ## 4d21. Deck final additions (user asks, 2026-07-16 pm)
 

@@ -2878,6 +2878,7 @@ Four raw tables exist for household ID enrichment across event types:
   GROUP BY 1,2 ORDER BY 1 DESC
   ```
   Anything `ON_DEMAND` with real `tib` in `region-us` is a routing leak.
+- **Trade-off of correct routing (Alek Piasecki, 2026-07-16):** reservation jobs share the intentionally-small org slot pool — heavy scans that ran fast on-demand may queue/throttle when slots are maxed. Expected and acceptable; stagger the biggest scans (see the existing "never run large queries simultaneously" rule) and escalate to Alek if queueing becomes genuinely problematic. Never revert to US/on-demand as a workaround.
 - **`dso.campaign_group_daily_budgets` and `archives.campaign_group_daily_budget_archives` — Daily Budget Source**
 
 Real-time campaign budget data is sourced by unioning `dso.campaign_group_daily_budgets` (current) with `archives.campaign_group_daily_budget_archives` (historical). The union is then deduplicated using `DISTINCT ON (advertiser_id, campaign_group_id, hour(update_time))` to get one budget record per advertiser/campaign-group/hour. Rows where `billing_type_id = 2` are excluded (these represent a specific billing type that should not be included in budget reporting). This pattern is used in at least one real-time Mode report for monitoring budget vs. spend. (via Benny, #production-ops, 2026-05-29)
