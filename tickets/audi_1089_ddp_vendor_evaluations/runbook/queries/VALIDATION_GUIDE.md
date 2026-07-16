@@ -35,7 +35,7 @@ against the vendor's bill.
 | **RTC** | Realtime Conquest — a bid path that stamps score 10000 via `model_params` (`realtime_conquest_score=10000`). "Scored non-RTC" excludes it so T1 only counts organically high-scored serves. |
 | **Fangorn / DS46** | "Peak Performance v2" — the newer vertical-scoring component. Built from guid_log only (vendor-insulated); relevant to claims about what vendor removal cannot affect. |
 | **VR / IVR** | Visit rate: site visits per won impression (from `clickpass_log` joined per ad_served_id). |
-| **household_score tiers** | HI = 10000, PP = 8000, high-graduated 6666–9999 (excl. 8000), mid 3333–6665, max-reach 1–3332, unscored <= 0. RT rows carry −1. |
+| **household_score tiers** | HI = 10000, PP = 8000, high-graduated 6666–9999 (excl. 8000), mid 3333–6665, max-reach 1–3332, unscored <= 0. RT rows carry −1. "High-graduated" is NOT a product tier: legacy scoring pins HI/PP at exactly 10000/8000, while Fangorn (the newer scoring) emits GRADUATED scores filling 8001–9999 (HI band) and 6666–7999 (PP band). HI + PP + high-graduated together ≈ the HI/PP audiences across both scoring generations. |
 
 ## Windows (identical across the whole package)
 
