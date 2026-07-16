@@ -419,7 +419,7 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
   <ul class="tight">
     <li><span class="mono">sources</span> — paid metered: 24 Justuno, 28 33Across, 33 Sovrn, 36 Cybba, 40 33A API ($0.50 CPM). Flat: 25 5x5, 26 Predactiv, 39 Klickly. Free internal: 23 guid_log, 30 augmentor.</li>
     <li><span class="mono">triple</span> — distinct (IP, REG_DOMAIN(url), date); usable = domain consumable by DS13 or DS19. IPv4 only.</li>
-    <li><span class="mono">touched</span> — won imps (CIL, val wk) on IPs the source delivered in 37d. Overlapping, non-additive.</li>
+    <li><span class="mono">touched</span> — won imps (CIL, val wk) on IPs the source delivered in 37d. Cohorts overlap: the same imp counts under every source that delivered its IP (avg served IP held by ~6.7 of 10 sources), so the column cannot be summed — Σ across the 8 paid = 6.39× actual imps.</li>
     <li><span class="mono">unique / I&#7525;</span> — won imps on IPs neither free log delivered (q8b solo cohort = vendor as only paid source).</li>
     <li><span class="mono">tier</span> — per-IP MAX(household_score), val wk: HI=10000, PP=8000, high-grad 6666–9999 (Fangorn DS46 graduated bands; DS13 v1 pins the constants), mid, max-reach, unscored ≤0.</li>
   </ul>
@@ -502,17 +502,6 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
 </section>
 
 <section>
-  <h2>Caveats</h2>
-  <ul class="tight">
-    <li>I&#7525; valued in media dollars; conversion-level attribution not used (sole-cohort visit rates run ~40× below the coldest platform baseline — the unique IPs are largely dark).</li>
-    <li>Tier assignment from the valuation week's CIL only; IPs unserved that week have no score.</li>
-    <li>30d vs 37d window moves IP-coverage ~0.2pp (HI); wcv/pc are live snapshots, reruns drift &lt;0.1%.</li>
-    <li>Meter regime changed 2026-05 (fractional 1/N → integer single-credit); all bill math is June-only, never mixed.</li>
-    <li>D&#7525; excludes ingestion compute (Kafka/DAG/classifier — Data Eng numbers pending); storage floor measured at $9.4K/yr.</li>
-  </ul>
-</section>
-
-<section>
   <h2>Reproduction</h2>
   <table>
     <tr><th>Query</th><th>Measures</th></tr>
@@ -526,15 +515,6 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
   </table>
   <p class="ctx">Copy-paste run blocks; headers state expected outputs, windows, prereqs. I&#7525; media: q8b_solo_perf.sql.</p>
   <p class="foot">audi_1089_deck_queries_2026_07_16.zip · audi_1089_deck_sheet.xlsx (queries sheet = table→query map)</p>
-</section>
-
-<section>
-  <h2>Open</h2>
-  <ul class="tight">
-    <li>Flat fees (finance) → 5x5 / Predactiv / Klickly net; break-evens already computed</li>
-    <li>Preemption fix (AUDI-1093): −$273,671/yr</li>
-    <li>Ingestion compute (Data Eng) → adds to every D&#7525;</li>
-  </ul>
 </section>
 
 </div></div>
