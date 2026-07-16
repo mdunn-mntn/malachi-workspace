@@ -272,6 +272,26 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d19. Deck 6-query validation set (user ask, 2026-07-16)
+
+- **`runbook/queries/deck_d1..d6_*.sql`** — user's deck sheet has 6 blocks; one consolidated
+  query per block so validators run 6 files, not 33: d1 universe/coverage/cumulative-union +
+  free-cohold (block 1 B-D + block 3 input), d2 touched won imps + % of platform (block 1
+  E-F), d3 roster/CPM/June-bill x12 (blocks 1G, 2; block 3 = sheet formula), d4 9-scenario
+  ladder w/ HI/PP (block 4), d5/d6 tier-split free-vs-vendor-only IP coverage, all-members /
+  served-members (blocks 5/6 — the population-principle pair). MANIFEST §deck lists them.
+- **3-lens pre-share review caught pre-run**: d1's correlated-subquery layout would have
+  re-scanned the externals ~17x (50-150TB!) → rebuilt as single-pass array-arithmetic chain;
+  d4's HI/PP coverage was triple-grain (would print ~60% and contradict the 99%+ IP-grain
+  workbook claims) → GROUPING SETS dual-histogram (triples for E/G, IP-grain for F/H);
+  d2/d5/d6 double-scan branches → single-pass spec-array / GROUPING SETS; d3 filter-before-
+  dedupe would resurrect dropped vendors on rerun → q0's dedupe-then-filter; plus header
+  fixes (sheet col F is share-of-platform NOT win rate; DS27 context row; $1 meter
+  tolerance; run-path fixes). All 6 dry-run clean; d1/d4 mask logic simulated against the
+  measured q3c histogram — reproduces every anchor exactly.
+- **Status**: d1/d2/d3 reproduce already-measured numbers (fillable today from existing
+  CSVs); d4 F/H (IP-grain HI/PP at 30d) and d5/d6 tier splits are NEW — need runs.
+
 ## 4d18. Deck-support coverage table (user ask, 2026-07-16)
 
 - **`artifacts/audi_1089_deck_coverage.md`** (generator `audi_1089_deck_coverage.py`, reads
