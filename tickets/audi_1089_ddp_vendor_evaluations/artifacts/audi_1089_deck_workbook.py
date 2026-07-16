@@ -61,8 +61,10 @@ PLAT_IMPS = float(q7d["imps_week"])
 q15s = {(r["k1"], r["k2"]): float(r["v"]) for r in read_csv("q15_free_union_perf.csv")
         if r["rec"] == "serve"}
 q15_touched_imps = q15s[("touched", "imps")]
-q8b_media = {int(r["ds"]): float(r["v"]) for r in read_csv("q8b_solo_perf.csv")
-             if r["rec"] == "serve" and r["k"] == "media"}
+q8b_serve = {}
+for r in read_csv("q8b_solo_perf.csv"):
+    if r["rec"] == "serve":
+        q8b_serve.setdefault(int(r["ds"]), {})[r["k"]] = float(r["v"])
 
 MARGIN_LO, MARGIN_HI = 0.10, 0.30  # blended margin band (internal)
 
@@ -76,7 +78,14 @@ def touched_media_imps(ds):
 def standalone_media(ds):
     """weekly media on the vendor-as-only-paid-source cohort (q8b solo; union:
     q15 sole-vs-paid)"""
-    return q15s[("sole", "media")] if ds == 99 else q8b_media[ds]
+    return q15s[("sole", "media")] if ds == 99 else q8b_serve[ds]["media"]
+
+
+def unique_cpm(ds):
+    """media CPM on the UNIQUE imps only (IPs outside guid+aug; q8b solo)"""
+    if ds == 99:
+        return q15s[("sole", "media")] / q15s[("sole", "imps")] * 1000
+    return q8b_serve[ds]["media"] / q8b_serve[ds]["imps"] * 1000
 
 
 def profit_band(media_week):
@@ -183,6 +192,19 @@ PCT2 = "0.00%"
 PCT4 = "0.0000%"
 
 row = 1
+col_max = {}  # data-driven column widths, collected while emitting
+
+
+def _track(c, v, cap=46):
+    if v is None or v == "":
+        return
+    if isinstance(v, float):
+        s = f"{v:,.2f}"
+    elif isinstance(v, int):
+        s = f"{v:,}"
+    else:
+        s = str(v)
+    col_max[c] = max(col_max.get(c, 0), min(len(s), cap))
 
 
 def header(cells):
@@ -190,7 +212,9 @@ def header(cells):
     for c, text in enumerate(cells, 1):
         cell = ws.cell(row=row, column=c, value=text)
         cell.fill, cell.font, cell.alignment = HDR_FILL, HDR_FONT, WRAP
-    ws.row_dimensions[row].height = 30
+        # headers wrap over 2-3 lines — contribute half their length to width
+        _track(c, text[: max(len(text) // 2, 14)])
+    ws.row_dimensions[row].height = 40
     row += 1
 
 
@@ -201,6 +225,21 @@ def emit(cells, fmts=None):
         cell.alignment = Alignment(wrap_text=True, vertical="top")
         if fmts and fmts.get(c) and isinstance(v, (int, float)):
             cell.number_format = fmts[c]
+        _track(c, v)
+    row += 1
+
+
+def note(text, span):
+    """footnote merged across the block's width so it wraps inside the table
+    instead of blowing out column A"""
+    global row
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=span)
+    cell = ws.cell(row=row, column=1, value=text)
+    cell.font = Font(italic=True, color="666666", size=9)
+    cell.alignment = Alignment(wrap_text=True, vertical="top")
+    est_chars_per_line = span * 14
+    lines = max(1, -(-len(text) // est_chars_per_line))
+    ws.row_dimensions[row].height = lines * 12 + 4
     row += 1
 
 
@@ -228,7 +267,8 @@ def bill_label(ds):
 # ---------------------------------------------------------------- block 1
 header(["Vendor", "Total IP x Domain x Date triples (usable, 30d)", "% of total universe",
         "Cumulative % of universe (union, top-N by total)",
-        "Touched won imps (valuation wk)", "% of platform won imps (NOT a win rate)",
+        "Touched won imps (valuation wk)",
+        "Share of ALL our won imps that landed on this source's IPs",
         "Media CPM on touched won imps ($)"])
 fmts1 = {2: N0, 3: PCT2, 4: PCT2, 5: N0, 6: PCT1, 7: "0.00"}
 km = 0
@@ -245,20 +285,22 @@ emit([NAME[99], FU_TOTAL, FU_TOTAL / UNIVERSE, "—",
 gap()
 
 # ---------------------------------------------------------------- block 2
-header(["Vendor", "Media CPM (touched, $)", "Bill / yr cost",
+header(["Vendor", "Media CPM (touched, $)", "Media CPM (UNIQUE imps only, $)",
+        "Bill / yr cost",
         "Profit on UNIQUE media — won imps on IPs outside guid_log+augmentor — "
         "x 10-30% margin ($/yr)",
         "Vendor contract CPM ($)"])
-fmts2 = {2: "0.00", 3: MONEY}
+fmts2 = {2: "0.00", 3: "0.00", 4: MONEY}
 b2_order = sorted(METERED, key=lambda d: -float(d3[d]["bill_annualized"])) + sorted(FLAT)
 for ds in b2_order:
     media, imps = touched_media_imps(ds)
-    emit([NAME[ds], media / imps * 1000, bill_label(ds),
+    emit([NAME[ds], media / imps * 1000, unique_cpm(ds), bill_label(ds),
           profit_band(standalone_media(ds)), cpm_label(ds)], fmts2)
-emit(["* UNIQUE = the vendor's value beyond the free logs: media on won imps whose IP"
-      " neither guid_log nor augmentor delivered (measured, q8b solo cohort), x52, x"
-      " 10-30% blended margin. The free logs' own value is a DIFFERENT cohort — see the"
-      " FREE LOGS table below."])
+note("* UNIQUE = the vendor's value beyond the free logs: won imps whose IP neither"
+     " guid_log nor augmentor delivered (measured, q8b solo cohort). UNIQUE CPM = media"
+     " / imps x 1000 on that cohort alone; profit = its media x52 x 10-30% blended"
+     " margin. The free logs' own value is a DIFFERENT cohort — see the FREE LOGS table"
+     " below.", 6)
 gap()
 
 # ---------------------------------------------------------------- block 3
@@ -281,22 +323,26 @@ gap()
 # ------------------------------------------------ free-logs value block (own query: d7)
 header(["FREE LOGS — value beyond ALL 8 paid vendors combined",
         "Media $/yr on IPs no paid vendor covers",
-        "Profit x 10-30% margin ($/yr)", "Cohort measured"])
-fmtsF = {2: MONEY}
+        "Profit x 10-30% margin ($/yr)", "Media CPM on this cohort ($)",
+        "Cohort measured"])
+fmtsF = {2: MONEY, 4: "0.00"}
 guid_w = float(q6[23]["media_sole"])
 aug_w = float(q6[30]["media_sole"])
 union_w = q15s[("sole", "media")]
 emit([NAME[23], guid_w * 52, profit_band(guid_w),
+      guid_w / float(q6[23]["imps_sole"]) * 1000,
       "IPs ONLY guid_log holds (no paid vendor, no augmentor)"], fmtsF)
 emit([NAME[30], aug_w * 52, profit_band(aug_w),
+      aug_w / float(q6[30]["imps_sole"]) * 1000,
       "IPs ONLY augmentor holds (no paid vendor, no guid_log)"], fmtsF)
 emit([NAME[99], union_w * 52, profit_band(union_w),
+      union_w / q15s[("sole", "imps")] * 1000,
       "IPs NO paid vendor holds (either free log has them)"], fmtsF)
-emit([f"* The union row (${union_w * 52:,.0f}) EXCEEDS guid+aug summed"
-      f" (${(guid_w + aug_w) * 52:,.0f}) — IPs BOTH free logs hold with no paid co-holder"
-      " count only in the union row (measured cohort algebra, q6/q15; single query:"
-      " deck_d7). This is what the free logs alone protect — no paid roster money"
-      " currently buys this slice."])
+note(f"* The union row (${union_w * 52:,.0f}) EXCEEDS guid+aug summed"
+     f" (${(guid_w + aug_w) * 52:,.0f}) — IPs BOTH free logs hold with no paid co-holder"
+     " count only in the union row (measured cohort algebra, q6/q15; single query:"
+     " deck_d7). This is what the free logs alone protect — no paid roster money"
+     " currently buys this slice.", 5)
 gap()
 
 # ---------------------------------------------------------------- block 4
@@ -315,9 +361,9 @@ for label, kept_txt, keepmask, key in SCEN:
         hi_p, pp_p = q3d_cov("hi", keepmask), q3d_cov("pp", keepmask)
     emit([label, kept_txt, kept, kept / UNIVERSE, hi_t, hi_p, pp_t, pp_p], fmts4b)
 if not d4:
-    emit(["* HI/PP coverage % = the already-measured q3d masks (37d window, IP grain) —"
-          " deck_d4 (running) replaces them at the sheet's 30d grain; expect <0.1pp movement."
-          " HI/PP triple counts have no prior measurement (pending d4)."])
+    note("* HI/PP coverage % = the already-measured q3d masks (37d window, IP grain) —"
+         " deck_d4 (running) replaces them at the sheet's 30d grain; expect <0.1pp"
+         " movement. HI/PP triple counts have no prior measurement (pending d4).", 8)
 gap()
 
 # ---------------------------------------------------------------- blocks 5 & 6
@@ -343,13 +389,15 @@ for title, data, allow_q3d in [
         else:
             emit([label, PENDING, PENDING, PENDING], fmts56)
     if used_q3d:
-        emit(["* HI/PP/High-Graduated rows = the already-measured q3d masks (37d, scored-IP"
-              " grain); deck_d6 (running) replaces at sheet-exact grain. Mid/MAX REACH/"
-              "Unscored have no prior measurement at this population."])
+        note("* HI/PP/High-Graduated rows = the already-measured q3d masks (37d, scored-IP"
+             " grain); deck_d6 (running) replaces at sheet-exact grain. Mid/MAX REACH/"
+             "Unscored have no prior measurement at this population.", 4)
     gap()
 
-for c, w in enumerate([34, 22, 13, 16, 18, 16, 18, 16], 1):
-    ws.column_dimensions[get_column_letter(c)].width = w
+# data-driven widths: wide enough that nothing clips, capped so no column hogs
+for c, m in col_max.items():
+    cap = 38 if c == 1 else 30
+    ws.column_dimensions[get_column_letter(c)].width = max(min(m + 3, cap), 11)
 
 # ---------------------------------------------------------------- queries sheet
 qs = wb.create_sheet("queries")
@@ -381,7 +429,8 @@ notes = [
     "Universe = 13,286,670,656 distinct usable (ip x domain x date) triples across all 10 sources. 'Usable' = domain consumable by DS13 or DS19.",
     "Block 1 rows are ranked by total triples desc (matches deck_d1's rank order); cumulative % = deduplicated UNION coverage of the top-N rows, NOT a running sum of column C.",
     "Free-log rows' numbers are their own totals; the free_logs UNION row is measured on the union (never a sum of the two rows). A component can exceed the union on 'standalone'-type cuts — see artifacts/audi_1089_deck_coverage.md for that decomposition.",
-    "Column 'Touched won imps' is NOT additive across rows (an IP delivered by several sources counts for each). % col = share of the platform's 398,301,655 won imps (val wk) — it is NOT 'of touched bids, % that won'.",
+    "Column 'Touched won imps' is NOT additive across rows (an IP delivered by several sources counts for each). Its % column = share of ALL 398,301,655 won imps (val wk) that landed on the source's IPs — a reach share, not a win rate.",
+    "Block 2 has THREE CPMs: touched media CPM (revenue rate on everything the source touched), UNIQUE media CPM (revenue rate on just the imps landing on IPs outside guid+aug — the slice the profit column values), and the vendor's contract CPM ($0.50 = what we PAY per billed impression).",
     "Blocks 2/3 Profit = the vendor's UNIQUE contribution: media on won imps whose IP neither free log delivered (q8b solo cohort = 'the vendor as our only paid source'), annualized x52, x 10-30% blended margin (INTERNAL — do not quote the margin band outside the team). Touched-media profit is deliberately NOT shown: every large vendor touches ~90-98% of platform imps, so touched bands overlap almost entirely and misread as huge per-vendor value.",
     "FREE LOGS table = the REVERSE cohort of blocks 2/3: free-side media on IPs no PAID vendor covers (guid strictly-sole $277.5K/yr, augmentor strictly-sole $167.5K/yr, union-no-paid $602.9K/yr, each x margin). The union exceeds the two summed because IPs both free logs hold (no paid) count only in the union. Supporting query: deck_d7 (values already measured by q6/q15).",
     f"Block 3: preemption applies to METERED vendors only (flat fees don't meter). bill_after = bill x (1 - free co-hold share of the vendor's visit-days), the AUDI-1093 fix. Metered total falls $812,397 -> ${POST_TOTAL:,.0f} (-${812397 - POST_TOTAL:,.0f}/yr).",
@@ -395,6 +444,7 @@ ns.cell(row=1, column=1, value="Reading notes").font = Font(bold=True, size=12)
 for i, t in enumerate(notes, 3):
     cell = ns.cell(row=i, column=1, value="• " + t)
     cell.alignment = WRAP
+    ns.row_dimensions[i].height = max(1, -(-len(t) // 110)) * 13 + 4
 ns.column_dimensions["A"].width = 120
 
 wb.save(OUT)
