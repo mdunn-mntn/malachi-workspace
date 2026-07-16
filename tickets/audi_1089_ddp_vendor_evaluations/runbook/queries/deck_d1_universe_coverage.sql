@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D1 of 6: per-source coverage of the visit-day universe
+-- AUDI-1089 DECK QUERY D1 of 7: per-source coverage of the visit-day universe
 -- FILLS: deck sheet BLOCK 1 (rows 1-7) cols B "Total IP x Domain x Date Pairs",
 --        C "% of total universe", D "cumulative % of the universe";
 --        plus the free-cohold % that BLOCK 3 (rows 18-24) multiplies against D3's

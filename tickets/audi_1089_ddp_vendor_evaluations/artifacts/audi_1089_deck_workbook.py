@@ -359,9 +359,12 @@ qrow = [["Block", "Supporting query (runbook/queries/)", "What it computes", "St
         ["1 col G, 2", "deck_d3_bills_cpm.sql", "registry roster, contract/implied CPM, June 2026 meter bill x 12", "run 2026-07-16"],
         ["3", "deck_d3 x deck_d1", "bill_after = bill x (1 - free-cohold share); sheet formula, inputs in this workbook", "computed"],
         ["FREE LOGS table", "deck_d7_free_logs_value.sql", "the reverse cohort: free-side media on IPs OUTSIDE the paid roster (guid strictly-sole / augmentor strictly-sole / union-no-paid); union > sum of the two by cohort algebra", "measured (q6 sole + q15; d7 = optional independent re-run)"],
-        ["4", "deck_d4_scenario_ladder.sql", "9 keep-set scenarios: triples kept, % of today, HI/PP triples + IP-grain coverage", "triples measured; HI/PP: scan running"],
-        ["5", "deck_d5_tier_free_coverage_all_ips.sql", "ALL member IPs by score tier: free-covered vs vendor-only", "scan running"],
-        ["6", "deck_d6_tier_free_coverage_bid_ips.sql", "same split, only IPs with won impressions", "scan running"]]
+        ["4", "deck_d4_scenario_ladder.sql", "9 keep-set scenarios: triples kept, % of today, HI/PP triples + IP-grain coverage",
+         "landed — all cells measured" if d4 else "triples measured; HI/PP coverage shown from q3d (37d) until the d4 scan lands"],
+        ["5", "deck_d5_tier_free_coverage_all_ips.sql", "ALL member IPs by score tier: free-covered vs vendor-only",
+         "landed — all cells measured" if d5 else "scan running"],
+        ["6", "deck_d6_tier_free_coverage_bid_ips.sql", "same split, only IPs with won impressions",
+         "landed — all cells measured" if d6 else "scan running"]]
 for i, rr in enumerate(qrow, 1):
     for c, v in enumerate(rr, 1):
         cell = qs.cell(row=i, column=c, value=v)

@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D4 of 6: the 9 drop-scenarios — kept coverage + HI/PP
+-- AUDI-1089 DECK QUERY D4 of 7: the 9 drop-scenarios — kept coverage + HI/PP
 -- FILLS: deck sheet BLOCK 4 (rows 26-35): C "Total Pairs" (= ip x domain x date
 --        triples kept), D "Coverage (% of today)", E "Total HI IPs x Domain x
 --        Dates" (HI-IP triples kept), F "HI-IP coverage %" (IP-GRAIN — see grain

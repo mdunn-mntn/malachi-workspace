@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDI-1089 DECK QUERY D6 of 6: free-vs-vendor-only IP coverage by score tier —
+-- AUDI-1089 DECK QUERY D6 of 7: free-vs-vendor-only IP coverage by score tier —
 -- only IPs that actually got bid on (delivery-reality lens)
 -- FILLS: deck sheet BLOCK 6 (rows 46-53) "Of IPs things that actually got bid
 --        on": B "free-covered IPs", C "vendor-only IPs", D "% free covered".
