@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DDP Vendor Evaluation — TLDR</title>
+<title>DDP Vendor Evaluation — AUDI-1089</title>
 <style>/*!
 * reveal.js 5.1.0
 * https://revealjs.com
@@ -372,30 +372,24 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
   }
 }</style>
 <style>
-:root {
-  --navy: #1B2A4A; --blue: #2E5090; --mid: #5A7DB5; --light: #A8BDD9;
-  --muted: #C8CDD4; --red: #D63B2F; --text: #222; --text-light: #666;
-}
-.reveal { font-size: 32px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--text); }
-.reveal h1 { margin-top: 0; font-size: 1.7em; color: var(--navy); }
-.reveal h2 { margin-top: 0; font-size: 1.15em; color: var(--navy); margin-bottom: 0.6em; }
-.reveal h3 { margin-top: 0; font-size: 0.9em; color: var(--navy); }
-.reveal p { font-size: 0.75em; }
-.reveal .big { font-size: 2.4em; font-weight: 700; color: var(--red); margin: 0.25em 0; }
-.reveal .bigsub { font-size: 0.65em; color: var(--text-light); }
-.reveal .ctx { font-size: 0.7em; color: var(--text-light); }
-.reveal table { font-size: 0.55em; margin: 0 auto; border-collapse: collapse; }
-.reveal table th { background: var(--navy); color: #fff; padding: 0.35em 0.6em; font-weight: 600; }
-.reveal table td { padding: 0.35em 0.6em; border-bottom: 1px solid #ddd; }
-.reveal table td.n { text-align: right; font-variant-numeric: tabular-nums; }
-.reveal .neg { color: var(--red); font-weight: 700; }
-.reveal .formula { font-family: "SF Mono", Menlo, monospace; font-size: 0.85em; color: var(--navy);
-  background: #F4F6FA; padding: 0.6em 0.9em; border-radius: 6px; display: inline-block; margin: 0.4em 0; }
-.reveal .defs { font-size: 0.55em; color: var(--text-light); text-align: left; display: inline-block; line-height: 1.5; }
-.reveal .foot { font-size: 0.42em; color: #AAA; margin-top: 0.6em; }
-.reveal .steps { font-size: 0.62em; text-align: left; display: inline-block; line-height: 1.55; max-width: 30em; }
-.reveal .steps li { margin-bottom: 0.5em; }
-.reveal .navyline { color: var(--navy); font-weight: 700; }
+:root { --navy: #1B2A4A; --red: #D63B2F; --text: #222; --text-light: #666; }
+.reveal { font-size: 30px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--text); }
+.reveal h1 { margin-top: 0; font-size: 1.5em; color: var(--navy); }
+.reveal h2 { margin-top: 0; font-size: 1.0em; color: var(--navy); margin-bottom: 0.5em; }
+.reveal p { font-size: 0.65em; }
+.reveal .ctx { font-size: 0.58em; color: var(--text-light); }
+.reveal table { font-size: 0.5em; margin: 0 auto; border-collapse: collapse; }
+.reveal table th { background: var(--navy); color: #fff; padding: 0.3em 0.55em; font-weight: 600; text-align: left; }
+.reveal table th.n, .reveal table td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.reveal table td { padding: 0.3em 0.55em; border-bottom: 1px solid #ddd; }
+.reveal .neg { color: var(--red); }
+.reveal .formula { font-family: "SF Mono", Menlo, monospace; font-size: 0.75em; color: var(--navy);
+  background: #F4F6FA; padding: 0.5em 0.8em; border-radius: 5px; display: inline-block; margin: 0.3em 0; }
+.reveal .mono { font-family: "SF Mono", Menlo, monospace; }
+.reveal .defs { font-size: 0.5em; color: var(--text); text-align: left; display: inline-block; line-height: 1.5; }
+.reveal .foot { font-size: 0.4em; color: #AAA; margin-top: 0.5em; }
+.reveal .tight { font-size: 0.56em; text-align: left; display: inline-block; line-height: 1.5; max-width: 34em; margin: 0; }
+.reveal .tight li { margin-bottom: 0.35em; }
 </style>
 </head>
 <body>
@@ -403,178 +397,143 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
 
 <section>
   <h1>DDP Vendor Evaluation</h1>
-  <p class="ctx">What the third-party data vendors are worth — TLDR</p>
-  <p class="ctx">Malachi Dunn · AUDI-1089 · July 2026</p>
-  <p class="foot">Every number here traces to one of 8 shareable queries. Windows: signal 30d (Jun 2 – Jul 1) · serving week Jul 2–8 · bills June 2026 ×12.</p>
+  <p class="ctx">AUDI-1089 · Malachi Dunn · 2026-07-16</p>
+  <p class="ctx">Signal window: svs dt 2026-06-02..07-01 (30d) / membership 37d · valuation week: CIL 2026-07-02..08 · bills: June 2026 meter ×12</p>
+  <p class="ctx">8 queries reproduce every number here (deck_d1..d8; headers carry expected outputs)</p>
 </section>
 
 <section>
-  <h2>HOW WE VALUE A DATA VENDOR</h2>
-  <p class="navyline" style="font-size: 0.95em;">A vendor is worth the margin its data lets us keep,<br>minus what the data costs us.</p>
-</section>
-
-<section>
-  <h2>The logic</h2>
-  <ol class="steps">
-    <li>A vendor makes us money one way: its data lets us serve impressions we bill to clients.</li>
-    <li><b>Only incremental impressions count.</b> If we would have served the impression anyway — from our own free sources or another vendor already on the roster — the vendor gets no credit for it.</li>
-    <li>Revenue = volume × price. We keep only the margin M. From that, subtract the data cost.</li>
-  </ol>
-</section>
-
-<section>
-  <h2>The formula</h2>
+  <h2>Valuation model</h2>
+  <p class="ctx" style="text-align:left; max-width: 34em; margin: 0 auto 0.5em;">A vendor is worth the margin its data lets us keep, minus what the data costs us. A vendor makes us money one way: its data lets us serve impressions we bill to clients. Only incremental impressions count — if we would have served the impression anyway (own free sources, or another vendor already on the roster), the vendor gets no credit. Counting everything a vendor "touches" lets every vendor claim the same impression; measured, the 8 paid vendors' touched claims sum to <b>6.39×</b> the impressions actually served.</p>
   <div class="formula">Net Kept Margin&#7525; = (I&#7525; ÷ 1,000) × CPM × M − D&#7525;</div><br>
   <div class="defs">
     I&#7525; &nbsp;&nbsp;— unique (IP × Domain × Date) impressions served only because of vendor v<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(net of free sources; leave-one-out against the rest of the paid roster)<br>
-    CPM — client-facing price per 1,000 served impressions<br>
-    M &nbsp;&nbsp;&nbsp;— gross margin as a % of revenue<br>
-    D&#7525; &nbsp;&nbsp;— data cost paid to vendor v over the same window
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(net of free sources; leave-one-out against the rest of the paid roster)<br>
+    CPM — client-facing price per 1,000 served impressions&nbsp;&nbsp;·&nbsp;&nbsp;M — gross margin, % of revenue<br>
+    D&#7525; &nbsp;&nbsp;— data cost paid to vendor v, same window&nbsp;&nbsp;·&nbsp;&nbsp;positive → pays for itself
   </div>
-  <p class="ctx">Positive → the vendor pays for itself. Negative → we pay more for the data than the margin it creates.</p>
 </section>
 
 <section>
-  <h2>Why incremental-only is non-negotiable</h2>
-  <div class="big">6.4×</div>
-  <p class="bigsub">The 8 paid vendors' "touched" impression claims sum to 6.4× all impressions we actually served.</p>
-  <p class="ctx">Each vendor touches 52–99% of the same served IPs. Credit everything a vendor touches, and every vendor claims the same impression.</p>
-  <p class="foot">deck_d2_touched_won_bids.sql</p>
-</section>
-
-<section>
-  <h2>The signal universe</h2>
-  <div class="big" style="color: var(--navy);">13.29B</div>
-  <p class="bigsub">unique IP × Domain × Date signal points across all 10 sources, 30 days</p>
-  <p class="foot">deck_d1_universe_coverage.sql · deck_d4_scenario_ladder.sql</p>
-</section>
-
-<section>
-  <h2>Our free logs are the baseline</h2>
-  <div class="big" style="color: var(--navy);">59.4%</div>
-  <p class="bigsub">of all signal is already in guid_log + augmentor — sources we own, at $0</p>
-  <p class="ctx">And 98.8% of the IPs we actually served last week are known to the free logs.</p>
-  <p class="foot">deck_d1 · deck_d6_tier_free_coverage_bid_ips.sql</p>
-</section>
-
-<section>
-  <h2>Scored audiences don't need the vendors</h2>
-  <table>
-    <tr><th>Audience tier</th><th>IPs covered by free logs alone</th></tr>
-    <tr><td>High Intent (10000)</td><td class="n">99.95%</td></tr>
-    <tr><td>Peak Performance (8000)</td><td class="n">99.29%</td></tr>
-    <tr><td>High-Graduated (Fangorn bands)</td><td class="n">100.00%</td></tr>
-    <tr><td>Mid</td><td class="n">99.91%</td></tr>
-    <tr><td>Max Reach</td><td class="n">99.55%</td></tr>
-  </table>
-  <p class="foot">deck_d5 / deck_d6 — identical in both the audience-size and served-IP lenses</p>
-</section>
-
-<section>
-  <h2>Audience vs signal — two different losses</h2>
-  <p class="navyline">Free logs alone keep 99.76% of High Intent households…</p>
-  <p class="navyline">…but only 65.7% of the signal volume on them.</p>
-  <p class="ctx">Membership survives because it needs some qualifying signal, not all of it.</p>
-  <p class="foot">deck_d4 · deck_d8_signal_volume_served.sql</p>
-</section>
-
-<section>
-  <h2>I&#7525; measured — incremental revenue per vendor</h2>
-  <p class="ctx">Media billed on impressions served only because of that vendor (outside both free logs), annualized</p>
-  <table>
-    <tr><th>Vendor</th><th>Incremental revenue / yr</th></tr>
-    <tr><td>33Across</td><td class="n">$724K</td></tr>
-    <tr><td>33Across API</td><td class="n">$447K</td></tr>
-    <tr><td>5x5</td><td class="n">$281K</td></tr>
-    <tr><td>Predactiv</td><td class="n">$202K</td></tr>
-    <tr><td>Sovrn · Justuno · Klickly · Cybba</td><td class="n">$112K · $37K · $13K · $10K</td></tr>
-  </table>
-  <p class="foot">deck_d2 basis + q8b_solo_perf.sql (unique cohort media × 52)</p>
-</section>
-
-<section>
-  <h2>The formula, applied (M = 10–30%)</h2>
-  <table>
-    <tr><th>Vendor</th><th>Kept margin / yr</th><th>D&#7525; (bill / yr)</th><th>Net</th></tr>
-    <tr><td>33Across</td><td class="n">$72K – $217K</td><td class="n">$422K</td><td class="n neg">−$205K to −$350K</td></tr>
-    <tr><td>33Across API</td><td class="n">$45K – $134K</td><td class="n">$176K</td><td class="n neg">−$42K to −$131K</td></tr>
-    <tr><td>Sovrn</td><td class="n">$11K – $34K</td><td class="n">$116K</td><td class="n neg">−$82K to −$105K</td></tr>
-    <tr><td>Justuno</td><td class="n">$4K – $11K</td><td class="n">$77K</td><td class="n neg">−$66K to −$73K</td></tr>
-    <tr><td>Cybba</td><td class="n">$1K – $3K</td><td class="n">$22K</td><td class="n neg">−$19K to −$21K</td></tr>
-  </table>
-  <p class="foot">deck_d3_bills_cpm.sql (D&#7525;) · q8b (I&#7525; media) — flat-fee vendors on the next slide</p>
-</section>
-
-<section>
-  <h2>Net Kept Margin</h2>
-  <div class="big">Negative</div>
-  <p class="bigsub">for every metered vendor — even at the top of the margin band</p>
-  <p class="ctx">Best case on the roster: 33Across API at −$42K/yr.</p>
-</section>
-
-<section>
-  <h2>Flat-fee vendors — verdict pending D&#7525;</h2>
-  <table>
-    <tr><th>Vendor</th><th>Kept margin / yr</th><th>D&#7525;</th></tr>
-    <tr><td>5x5</td><td class="n">$28K – $84K</td><td class="n">fee pending (finance)</td></tr>
-    <tr><td>Predactiv</td><td class="n">$20K – $61K</td><td class="n">fee pending (finance)</td></tr>
-    <tr><td>Klickly</td><td class="n">$1.3K – $3.8K</td><td class="n">fee pending (finance)</td></tr>
-  </table>
-  <p class="ctx">The break-even fee for each is now a known number.</p>
-</section>
-
-<section>
-  <h2>We also pay for data we already have</h2>
-  <div class="big">$273,671 / yr</div>
-  <p class="bigsub">recoverable by not crediting vendors for signal the free logs already delivered</p>
-  <p class="ctx">Metered bills: $812,397 → $538,726 with no roster change at all.</p>
-  <p class="foot">deck_d1 free-cohold shares × deck_d3 bills (AUDI-1093)</p>
-</section>
-
-<section>
-  <h2>What the free logs alone protect</h2>
-  <div class="big" style="color: var(--navy);">$602,897 / yr</div>
-  <p class="bigsub">of billed media stands on IPs no paid vendor delivers</p>
-  <p class="foot">deck_d7_free_logs_value.sql</p>
-</section>
-
-<section>
-  <h2>Drop scenarios — signal kept vs High Intent kept</h2>
-  <table>
-    <tr><th>Scenario</th><th>Signal kept</th><th>HI IPs covered</th></tr>
-    <tr><td>Today (all 8 paid)</td><td class="n">100%</td><td class="n">100%</td></tr>
-    <tr><td>Drop Sovrn + Cybba</td><td class="n">99.75%</td><td class="n">99.9998%</td></tr>
-    <tr><td>+ drop Klickly + Justuno</td><td class="n">98.69%</td><td class="n">99.9975%</td></tr>
-    <tr><td>33Across pair only</td><td class="n">89.57%</td><td class="n">99.98%</td></tr>
-    <tr><td>Free logs only</td><td class="n">59.36%</td><td class="n">99.76%</td></tr>
-  </table>
-  <p class="foot">deck_d4_scenario_ladder.sql</p>
-</section>
-
-<section>
-  <h2>The first four drops</h2>
-  <div class="big" style="color: var(--navy);">$214,495 / yr</div>
-  <p class="bigsub">saved by dropping Sovrn, Cybba, Justuno (+ Klickly's flat fee)</p>
-  <p class="ctx">Cost: 1.31% of signal · High Intent coverage stays at 99.9975%.</p>
-</section>
-
-<section>
-  <h2>Everything here is reproducible</h2>
-  <ul class="steps">
-    <li>8 self-contained BigQuery files — one per table in the workbook</li>
-    <li>Copy-paste run blocks; each header states what it fills and the exact values it should return</li>
-    <li>Workbook "queries" sheet maps every table to its query</li>
+  <h2>Definitions</h2>
+  <ul class="tight">
+    <li><span class="mono">sources</span> — paid metered: 24 Justuno, 28 33Across, 33 Sovrn, 36 Cybba, 40 33A API ($0.50 CPM). Flat: 25 5x5, 26 Predactiv, 39 Klickly. Free internal: 23 guid_log, 30 augmentor.</li>
+    <li><span class="mono">triple</span> — distinct (IP, REG_DOMAIN(url), date); usable = domain consumable by DS13 or DS19. IPv4 only.</li>
+    <li><span class="mono">touched</span> — won imps (CIL, val wk) on IPs the source delivered in 37d. Overlapping, non-additive.</li>
+    <li><span class="mono">unique / I&#7525;</span> — won imps on IPs neither free log delivered (q8b solo cohort = vendor as only paid source).</li>
+    <li><span class="mono">tier</span> — per-IP MAX(household_score), val wk: HI=10000, PP=8000, high-grad 6666–9999 (Fangorn DS46 graduated bands; DS13 v1 pins the constants), mid, max-reach, unscored ≤0.</li>
   </ul>
-  <p class="foot">audi_1089_deck_queries_2026_07_16.zip + audi_1089_deck_sheet.xlsx</p>
 </section>
 
 <section>
-  <h2>Open items</h2>
-  <ul class="steps">
-    <li>Flat-fee amounts (finance) → 5x5 / Predactiv / Klickly verdicts</li>
-    <li>Billing preemption fix → $273,671/yr (AUDI-1093)</li>
-    <li>Ingestion compute costs (Data Eng) → adds to every D&#7525;</li>
+  <h2>Coverage by source — 13,286,674,041 usable triples, 30d</h2>
+  <table>
+    <tr><th>Source</th><th class="n">Triples</th><th class="n">% universe</th><th class="n">Standalone (vs free logs)</th><th class="n">Share of won imps touched</th></tr>
+    <tr><td>augmentor (free)</td><td class="n">6,483,729,112</td><td class="n">48.80</td><td class="n">48.65*</td><td class="n">97.98</td></tr>
+    <tr><td>33Across</td><td class="n">4,536,095,662</td><td class="n">34.14</td><td class="n">16.21</td><td class="n">98.80</td></tr>
+    <tr><td>33Across API</td><td class="n">3,063,501,154</td><td class="n">23.06</td><td class="n">17.57</td><td class="n">96.99</td></tr>
+    <tr><td>guid_log (free)</td><td class="n">1,423,008,262</td><td class="n">10.71</td><td class="n">10.56*</td><td class="n">96.33</td></tr>
+    <tr><td>5x5</td><td class="n">1,191,595,872</td><td class="n">8.97</td><td class="n">7.35</td><td class="n">95.33</td></tr>
+    <tr><td>Predactiv</td><td class="n">891,938,315</td><td class="n">6.71</td><td class="n">3.81</td><td class="n">87.77</td></tr>
+    <tr><td>Sovrn</td><td class="n">135,104,290</td><td class="n">1.02</td><td class="n">1.01</td><td class="n">83.97</td></tr>
+    <tr><td>Justuno</td><td class="n">119,976,283</td><td class="n">0.90</td><td class="n">0.86</td><td class="n">67.96</td></tr>
+    <tr><td>Klickly</td><td class="n">30,219,517</td><td class="n">0.23</td><td class="n">0.23</td><td class="n">56.29</td></tr>
+    <tr><td>Cybba</td><td class="n">16,543,711</td><td class="n">0.12</td><td class="n">0.09</td><td class="n">51.59</td></tr>
+    <tr><td>free union (23∪30)</td><td class="n">7,887,061,977</td><td class="n">59.36</td><td class="n">39.12 (vs all paid)</td><td class="n">99.18</td></tr>
+  </table>
+  <p class="foot">deck_d1, deck_d2. *free-log standalone = vs the other free log. Columns overlap — do not sum.</p>
+</section>
+
+<section>
+  <h2>Free-log coverage by tier — two populations + signal grain</h2>
+  <table>
+    <tr><th>Tier</th><th class="n">All member IPs<br>% free-covered</th><th class="n">Served member IPs<br>% free-covered</th><th class="n">Triples on tier IPs<br>% free-covered</th></tr>
+    <tr><td>HI 10000</td><td class="n">99.95</td><td class="n">99.95</td><td class="n">65.74</td></tr>
+    <tr><td>PP 8000</td><td class="n">99.29</td><td class="n">99.29</td><td class="n">59.21</td></tr>
+    <tr><td>High-graduated</td><td class="n">100.00</td><td class="n">100.00</td><td class="n" rowspan="4" style="vertical-align:middle">57.62<br>(all non-HI/PP<br>combined)</td></tr>
+    <tr><td>Mid</td><td class="n">99.91</td><td class="n">99.91</td></tr>
+    <tr><td>Max reach</td><td class="n">99.55</td><td class="n">99.55</td></tr>
+    <tr><td>Unscored</td><td class="n">64.74</td><td class="n">97.92</td></tr>
+    <tr><td>ALL</td><td class="n">66.05</td><td class="n">98.78</td></tr>
+  </table>
+  <p class="ctx">Scored tiers identical across populations (scored ⇒ served). Membership survives signal thinning: needs some qualifying signal, not all.</p>
+  <p class="foot">deck_d5, deck_d6 (IP grain) · deck_d4, deck_d8 (triple grain). Vendor-only members: 113.3M, 99.9% unscored; vendor-only served IPs: 339K.</p>
+</section>
+
+<section>
+  <h2>I&#7525; and Net Kept Margin (M = 0.10–0.30)</h2>
+  <table>
+    <tr><th>Vendor</th><th class="n">I&#7525; imps/wk</th><th class="n">I&#7525; revenue/yr (media×52)</th><th class="n">× M</th><th class="n">D&#7525;/yr</th><th class="n">Net</th></tr>
+    <tr><td>33Across</td><td class="n">1,164,956</td><td class="n">$724,209</td><td class="n">$72,421 – 217,263</td><td class="n">$422,024</td><td class="n neg">−$204,761 to −$349,603</td></tr>
+    <tr><td>33Across API</td><td class="n">710,402</td><td class="n">$446,727</td><td class="n">$44,673 – 134,018</td><td class="n">$175,879</td><td class="n neg">−$41,861 to −$131,206</td></tr>
+    <tr><td>Sovrn</td><td class="n">178,606</td><td class="n">$111,930</td><td class="n">$11,193 – 33,579</td><td class="n">$115,880</td><td class="n neg">−$82,301 to −$104,687</td></tr>
+    <tr><td>Justuno</td><td class="n">57,020</td><td class="n">$36,954</td><td class="n">$3,695 – 11,086</td><td class="n">$77,111</td><td class="n neg">−$66,025 to −$73,416</td></tr>
+    <tr><td>Cybba</td><td class="n">15,968</td><td class="n">$9,692</td><td class="n">$969 – 2,908</td><td class="n">$21,504</td><td class="n neg">−$18,596 to −$20,535</td></tr>
+    <tr><td>5x5</td><td class="n">446,563</td><td class="n">$281,246</td><td class="n">$28,125 – 84,374</td><td class="n">fee pending</td><td class="n">break-even known</td></tr>
+    <tr><td>Predactiv</td><td class="n">320,647</td><td class="n">$201,913</td><td class="n">$20,191 – 60,574</td><td class="n">fee pending</td><td class="n">break-even known</td></tr>
+    <tr><td>Klickly</td><td class="n">20,379</td><td class="n">$12,582</td><td class="n">$1,258 – 3,775</td><td class="n">fee pending</td><td class="n">break-even known</td></tr>
+  </table>
+  <p class="ctx">Net &lt; 0 for every metered vendor at both ends of the margin band. I&#7525; revenue = measured media on the unique cohort (= (I&#7525;/1000)×CPM realized).</p>
+  <p class="foot">q8b_solo_perf (I&#7525;) · deck_d3 (D&#7525;). Unique-cohort media CPM ≈ $11.4–12.5 across all sources vs $7.2–8.9 touched.</p>
+</section>
+
+<section>
+  <h2>Two roster-independent findings</h2>
+  <ul class="tight">
+    <li><b>Meter preemption:</b> vendors are credited for triples the free logs also delivered. Free co-hold of billed visit-days: 33Across 52.5%, 33A API 23.8%, Cybba 28.2%, Justuno 4.9%, Sovrn 0.2%. Crediting free-first: metered bills $812,397 → $538,726 (<b>−$273,671/yr</b>, no roster change).</li>
+    <li><b>Free-log floor:</b> $602,897/yr of billed media stands on IPs no paid vendor delivers (guid strictly-sole $277,503 + augmentor strictly-sole $167,489 + both-free-no-paid; union &gt; sum because shared-free IPs count once).</li>
+  </ul>
+  <p class="foot">deck_d1 co-hold shares × deck_d3 bills (AUDI-1093) · deck_d7</p>
+</section>
+
+<section>
+  <h2>Drop scenarios</h2>
+  <table>
+    <tr><th>Keep set</th><th class="n">Triples kept</th><th class="n">%</th><th class="n">HI-IP cov %</th><th class="n">PP-IP cov %</th><th class="n">Metered $ removed/yr</th></tr>
+    <tr><td>Today (all 8 paid + free)</td><td class="n">13,286,674,041</td><td class="n">100.00</td><td class="n">100.0000</td><td class="n">100.0000</td><td class="n">0</td></tr>
+    <tr><td>− Sovrn, Cybba</td><td class="n">13,253,390,573</td><td class="n">99.75</td><td class="n">99.9998</td><td class="n">99.9959</td><td class="n">137,384</td></tr>
+    <tr><td>− Klickly</td><td class="n">13,223,332,052</td><td class="n">99.52</td><td class="n">99.9994</td><td class="n">99.9920</td><td class="n">137,384 + fee</td></tr>
+    <tr><td>− Justuno (k=4)</td><td class="n">13,112,901,988</td><td class="n">98.69</td><td class="n">99.9975</td><td class="n">99.9774</td><td class="n">214,495 + fee</td></tr>
+    <tr><td>33Across pair only</td><td class="n">11,900,428,654</td><td class="n">89.57</td><td class="n">99.9803</td><td class="n">99.8477</td><td class="n">214,495 + 3 fees</td></tr>
+    <tr><td>Flat-fee pair only</td><td class="n">9,366,675,050</td><td class="n">70.50</td><td class="n">99.9318</td><td class="n">99.3369</td><td class="n">812,397 + 1 fee</td></tr>
+    <tr><td>Free logs only</td><td class="n">7,887,062,821</td><td class="n">59.36</td><td class="n">99.7579</td><td class="n">98.4920</td><td class="n">812,397 + 3 fees</td></tr>
+  </table>
+  <p class="foot">deck_d4. IP coverage = per-tier member IPs still held by ≥1 kept source (30d usable masks; ~0.2pp below the 37d q3d figures — window effect).</p>
+</section>
+
+<section>
+  <h2>Caveats</h2>
+  <ul class="tight">
+    <li>I&#7525; valued in media dollars; conversion-level attribution not used (sole-cohort visit rates run ~40× below the coldest platform baseline — the unique IPs are largely dark).</li>
+    <li>Tier assignment from the valuation week's CIL only; IPs unserved that week have no score.</li>
+    <li>30d vs 37d window moves IP-coverage ~0.2pp (HI); wcv/pc are live snapshots, reruns drift &lt;0.1%.</li>
+    <li>Meter regime changed 2026-05 (fractional 1/N → integer single-credit); all bill math is June-only, never mixed.</li>
+    <li>D&#7525; excludes ingestion compute (Kafka/DAG/classifier — Data Eng numbers pending); storage floor measured at $9.4K/yr.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Reproduction</h2>
+  <table>
+    <tr><th>Query</th><th>Measures</th></tr>
+    <tr><td class="mono">deck_d1_universe_coverage</td><td>triple holder-mask histogram → coverage, cumulative union, free co-hold</td></tr>
+    <tr><td class="mono">deck_d2_touched_won_bids</td><td>won imps on touched IPs vs platform</td></tr>
+    <tr><td class="mono">deck_d3_bills_cpm</td><td>registry + meter → contract CPM, D&#7525;</td></tr>
+    <tr><td class="mono">deck_d4_scenario_ladder</td><td>keep-set scenarios: triples + HI/PP IP coverage</td></tr>
+    <tr><td class="mono">deck_d5 / deck_d6</td><td>tier coverage, all members / served members</td></tr>
+    <tr><td class="mono">deck_d7_free_logs_value</td><td>free-side sole cohorts (media, imps)</td></tr>
+    <tr><td class="mono">deck_d8_signal_volume_served</td><td>triple coverage on served IPs by tier</td></tr>
+  </table>
+  <p class="ctx">Copy-paste run blocks; headers state expected outputs, windows, prereqs. I&#7525; media: q8b_solo_perf.sql.</p>
+  <p class="foot">audi_1089_deck_queries_2026_07_16.zip · audi_1089_deck_sheet.xlsx (queries sheet = table→query map)</p>
+</section>
+
+<section>
+  <h2>Open</h2>
+  <ul class="tight">
+    <li>Flat fees (finance) → 5x5 / Predactiv / Klickly net; break-evens already computed</li>
+    <li>Preemption fix (AUDI-1093): −$273,671/yr</li>
+    <li>Ingestion compute (Data Eng) → adds to every D&#7525;</li>
   </ul>
 </section>
 
