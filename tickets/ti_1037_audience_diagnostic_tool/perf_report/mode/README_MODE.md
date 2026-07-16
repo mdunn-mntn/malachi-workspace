@@ -83,8 +83,23 @@ The query **names matter** — `index.html` resolves datasets by the exact names
    query's DB connection to **BigQuery** (`dw-main-silver` / `integrationprod`). Run — the param inputs appear.
 3. Report builder → add an **HTML** component → paste `index.html`. Run. You should see the YoY table + 6
    monthly trend charts for Advertiser 32147 (The Bouqs).
-4. Once it renders, **Report → Push to GitHub** — that creates the report folder + tokens under the AUDI space,
-   and from then on we can edit locally on a branch and merge to `main` to deploy.
+4. Once it renders, **Report → Push to GitHub** — that creates the report folder + tokens under the AUDI space.
+   (NOT a deploy path: git-side edits never sync INTO Mode — settled 2026-07-07. It only archives UI state.)
+
+## Programmatic deploy — `deploy_mode.sh` (Mode REST API)
+
+Replaces the paste relay for QUERIES: the Mode API supports `PATCH …/queries/{token}` with `raw_query`
+(report token `6c4fc72afcfb`, workspace `mntn`, base `https://app.mode.com/api`).
+
+- **Credentials:** `export MODE_API_TOKEN=… / MODE_API_SECRET=…` (`~/.zshrc`). Create under
+  **Workspace Settings → Personal → My API Keys** — requires a Mode admin to have enabled
+  **Features → API Keys → Member keys** (personal tokens were sunset Feb 2025; workspace tokens are admin-only).
+- **Usage:** `./deploy_mode.sh check` (auth + match staging files→live queries) → `diff` → `apply` → `apply --run`
+  (triggers a report Run and polls — required, since `window.datasets` = last run). Remote SQL is backed up to
+  `~/.cache/mode_deploy/<ts>/` before each PATCH; every PATCH is verified by re-GET.
+- Matching = staging filename minus `.sql`/token suffix vs live query name, case- and underscore/space-insensitive.
+- **HTML limit:** the report layout is NOT a documented PATCH field. `apply` attempts `{"report":{"layout":…}}`
+  and verifies; if Mode ignores it, `index.html` still needs one UI paste (queries go via API regardless).
 
 ## Roadmap — remaining modules (same pattern each: add query → resolve in HTML → render)
 
