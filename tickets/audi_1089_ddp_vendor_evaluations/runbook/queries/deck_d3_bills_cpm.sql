@@ -1,13 +1,14 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D3 of 7: what each vendor bills — CPM and annualized cost
--- FILLS: deck sheet BLOCK 2 (rows 10-16): contract CPM and "Bill / yr cost"
---        (block 2's media CPMs come from q6/q15 media+imps, not this query);
---        BLOCK 3 (rows 18-24) col B "Bill/yr cost if we
---        removed free_logs from billing" is a SHEET FORMULA, not a query:
---        bill_annualized x (1 - free_cohold_pct/100), free_cohold_pct from D1.
---        The two Profit columns are also sheet formulas (CPM/value x the internal
---        margin range — margin parameters are internal-only and intentionally NOT
---        embedded in any shareable query).
+-- FILLS: deck workbook CPM & BILLS table (block 2, identified by column titles):
+--        "Vendor contract CPM ($)" and "Bill / yr cost" (its media CPMs come
+--        from q6/q15 media+imps, not this query). The PREEMPTION table's
+--        "Bill/yr if free_logs preempted from billing" column is computed
+--        OFFLINE from this query's bills x D1's free-cohold shares — the sheet
+--        holds hardcoded values, not live formulas; they reconcile at full
+--        precision (total $812,397 -> $538,726). The Profit columns are likewise
+--        offline: q8b solo media x 52 x the internal margin band (margin values
+--        are internal-only and intentionally NOT embedded in any shared query).
 --
 -- Claim: the vendor roster comes from the registry (never hardcoded) and the bill
 -- from the meter: usage = billed impressions x contract CPM / 1000, credited on
@@ -33,7 +34,8 @@
 --
 -- Run: paste the SQL into the BigQuery console (project dw-main-silver) — no
 -- external tables needed — or run the block below in a terminal in the folder
--- holding this file:
+-- holding this file. Needs BQ read on BOTH dw-main-bronze (coredw meter) and
+-- dw-main-silver (tpa registry):
 --   bq query --use_legacy_sql=false --format=csv --max_rows=50 --project_id=dw-main-silver \
 --     "$(grep -v '^[[:space:]]*--' deck_d3_bills_cpm.sql)" \
 --     > deck_d3_bills_cpm.csv

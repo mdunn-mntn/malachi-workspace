@@ -51,9 +51,12 @@ against the vendor's bill.
 - Queries using `svs`/`wcv`/`pc` need the bq CLI with temp external table definitions —
   the exact command is in each file's header (`-- Run` block); the generic pattern is in
   MANIFEST §"How to run". You need GCS read access to `gs://mntn-data-archive-prod/`.
-- **The headers invoke `bq_run.sh` — an internal wrapper you don't have.** It only adds
-  perf logging around `bq query`. To run any command: substitute `bq query` for
-  `bash .claude/scripts/bq_run.sh`, drop the `--ticket`/`--label` flags, and point the
+- **The `deck_d1..d7` files are the fast path**: seven self-contained queries, one per
+  deck-sheet block, whose Run blocks use plain `bq query` and run AS-IS from the folder
+  holding the files (prereqs stated per file). Start there if you're validating the deck.
+- **The q*.sql headers invoke `bq_run.sh` — an internal wrapper you don't have.** It only
+  adds perf logging around `bq query`. To run any q*.sql command: substitute `bq query`
+  for `bash .claude/scripts/bq_run.sh`, drop the `--ticket`/`--label` flags, and point the
   `.sql`/output paths at your copy of this folder. Nothing else changes.
 - Cost classes are in MANIFEST — the **BIG** ones scan 5–40 TB and take 1–3 hours; dry-run
   first (`bq query --dry_run ...`) and run them deliberately.

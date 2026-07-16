@@ -1,9 +1,14 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D1 of 7: per-source coverage of the visit-day universe
--- FILLS: deck sheet BLOCK 1 (rows 1-7) cols B "Total IP x Domain x Date Pairs",
---        C "% of total universe", D "cumulative % of the universe";
---        plus the free-cohold % that BLOCK 3 (rows 18-24) multiplies against D3's
---        bills: bill_after = bill_annualized x (1 - free_cohold_pct/100).
+-- FILLS: deck workbook COVERAGE table (block 1 — 10 source rows + the free_logs
+--        UNION row, identified by column titles, which are stable; row positions
+--        shift as the sheet evolves): "Total IP x Domain x Date triples (usable,
+--        30d)", "% of total universe", "Cumulative % of universe (union, top-N
+--        by total)". Also feeds the PREEMPTION table ("Bill/yr if free_logs
+--        preempted from billing"): bill_after = bill_annualized x
+--        (1 - free_cohold_pct/100). NOTE: the sheet computes with full-precision
+--        fractions; this query rounds percents to 2dp — expect agreement to the
+--        query's rounding (e.g. bill_after may differ by <$1).
 --
 -- Claim: ONE 30d scan builds the triple-grain (ip x REG_DOMAIN(url) x date)
 -- holder-mask histogram over USABLE domains (consumable by DS13 or DS19 —
@@ -44,7 +49,8 @@
 -- background.
 --
 -- Run: paste this whole block into a terminal, in the folder holding this
--- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
+-- file (prereqs: gcloud auth login; bq CLI; python3; GCS read on
+-- mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(30)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query \

@@ -26,14 +26,17 @@
 -- Grain: RAW 37d svs membership (IPv4 both sides, NO usable-domain gate — the
 -- serving-cohort convention shared with the workbook's q6/q8b/q15).
 --
--- Expected reconciliation vs the measured outputs/run_2026_07_10: platform week
--- 398,301,655; augmentor touched 390,253,648 (98.0%); free-union 395,021,931
--- (99.2%); Cybba 205,469,975 (51.6%).
+-- Expected reconciliation vs the measured outputs/run_2026_07_10 (these values
+-- live in q7d_platform_week.csv, q6_value_tiers.csv imps_touched, and
+-- q15_free_union_perf.csv serve/touched/imps): platform week 398,301,655;
+-- augmentor touched 390,253,648 (98.0%); free-union 395,021,931 (99.2%);
+-- Cybba 205,469,975 (51.6%).
 --
 -- BIG SCAN (svs 37d ip pass + CIL week; ~30-45min) — background.
 --
 -- Run: paste this whole block into a terminal, in the folder holding this
--- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
+-- file (prereqs: gcloud auth login; bq CLI; python3; GCS read on
+-- mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query --external_table_definition="svs::PARQUET=${URIS}" \

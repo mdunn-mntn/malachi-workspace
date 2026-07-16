@@ -349,16 +349,19 @@ header(["Scenario", "Paid vendors kept", "Total triples kept", "Coverage (% of t
         "HI triples kept", "HI-IP coverage %", "PP triples kept", "PP-IP coverage %"])
 fmts4b = {3: N0, 4: PCT2, 5: N0, 6: PCT4, 7: N0, 8: PCT4}
 for label, kept_txt, keepmask, key in SCEN:
-    kept = msum(lambda m: m & keepmask)
     if d4 and key in d4:
+        # every block-4 cell from the ONE supporting query once it lands
         r4 = d4[key]
+        kept, pct = float(r4["trips_kept"]), float(r4["pct_of_today"]) / 100
         hi_t, hi_p = float(r4["hi_trips_kept"]), float(r4["hi_ip_coverage_pct"]) / 100
         pp_t, pp_p = float(r4["pp_trips_kept"]), float(r4["pp_ip_coverage_pct"]) / 100
     else:
-        # already-measured fallback: q3d score-tier masks (37d window, IP grain)
+        # pre-landing: triples from the q3c masks; HI/PP coverage from q3d (37d)
+        kept = msum(lambda m: m & keepmask)
+        pct = kept / UNIVERSE
         hi_t = pp_t = PENDING
         hi_p, pp_p = q3d_cov("hi", keepmask), q3d_cov("pp", keepmask)
-    emit([label, kept_txt, kept, kept / UNIVERSE, hi_t, hi_p, pp_t, pp_p], fmts4b)
+    emit([label, kept_txt, kept, pct, hi_t, hi_p, pp_t, pp_p], fmts4b)
 if not d4:
     note("* HI/PP coverage % = the already-measured q3d masks (37d window, IP grain) —"
          " deck_d4 (running) replaces them at the sheet's 30d grain; expect <0.1pp"
@@ -406,6 +409,7 @@ qrow = [["Block", "Supporting query (runbook/queries/)", "What it computes", "St
         ["2", "deck_d3_bills_cpm.sql", "registry roster, contract/implied CPM, June 2026 meter bill x 12; media CPMs from q6/q15 media+imps", "run 2026-07-16"],
         ["3", "deck_d3 x deck_d1", "bill_after = bill x (1 - free-cohold share); sheet formula, inputs in this workbook", "computed"],
         ["FREE LOGS table", "deck_d7_free_logs_value.sql", "the reverse cohort: free-side media on IPs OUTSIDE the paid roster (guid strictly-sole / augmentor strictly-sole / union-no-paid); union > sum of the two by cohort algebra", "measured (q6 sole + q15; d7 = optional independent re-run)"],
+        ["2/3 Profit cols", "q8b_solo_perf.sql (serve media per ds); union: q15_free_union_perf.sql (sole media)", "profit band = weekly UNIQUE media x 52 x 10-30% margin — computed offline; margin band internal, never in shared queries", "measured"],
         ["4", "deck_d4_scenario_ladder.sql", "9 keep-set scenarios: triples kept, % of today, HI/PP triples + IP-grain coverage",
          "landed — all cells measured" if d4 else "triples measured; HI/PP coverage shown from q3d (37d) until the d4 scan lands"],
         ["5", "deck_d5_tier_free_coverage_all_ips.sql", "ALL member IPs by score tier: free-covered vs vendor-only",

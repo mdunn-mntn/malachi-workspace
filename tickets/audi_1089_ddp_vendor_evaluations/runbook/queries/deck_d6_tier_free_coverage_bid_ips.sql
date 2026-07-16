@@ -1,10 +1,13 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D6 of 7: free-vs-vendor-only IP coverage by score tier —
 -- only IPs that actually got bid on (delivery-reality lens)
--- FILLS: deck sheet BLOCK 6 (rows 46-53) "Of IPs things that actually got bid
---        on": B "free-covered IPs", C "vendor-only IPs", D "% free covered".
---        tier='1_all_ips' row = the "Free Logs ONLY" line; tier rows = HI10000
---        .. Unscored.
+-- FILLS: deck workbook table "Of member IPs that actually got bid on (won
+--        impressions)" (block 6): "free-covered IPs", "vendor-only IPs", "% free
+--        covered". tier_row='1_all_ips' = the "Free Logs ONLY (all IPs)" line;
+--        tier rows = HI10000 .. Unscored.
+--        LANDED-CSV NOTE: outputs/run_2026_07_10's CSV predates the alias fix
+--        below — its column is named `tier` and the all-IPs row's label is an
+--        EMPTY string. A re-run emits tier_row='1_all_ips'. Counts identical.
 --
 -- Claim: same split as D5 (free-covered vs vendor-only member IPs) restricted to
 -- IPs that received at least one WON impression in the valuation week (INNER JOIN
@@ -37,7 +40,8 @@
 -- exactly one supporting query.
 --
 -- Run: paste this whole block into a terminal, in the folder holding this
--- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
+-- file (prereqs: gcloud auth login; bq CLI; python3; GCS read on
+-- mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query --external_table_definition="svs::PARQUET=${URIS}" \

@@ -74,18 +74,23 @@ are single-external-scan by construction (see each ARCHITECTURE NOTE).
 | File | Fills (deck sheet) | Cost |
 |------|--------------------|------|
 | `deck_d1_universe_coverage.sql` | Block 1 cols B-D (per-source triples, % of universe, cumulative union %) + the free-cohold % that Block 3's bill formula needs | **BIG** (svs 30d + wcv + pc, 1 pass) |
-| `deck_d2_touched_won_bids.sql` | Block 1 cols E-F (won imps on touched IPs, % of platform won imps — NOT a win rate; retitle sheet col F) | **BIG** (svs 37d + CIL wk, 1 pass) |
-| `deck_d3_bills_cpm.sql` | Block 1 col G + Block 2 (contract/implied CPM, June bill x12); Block 3 = sheet formula bill x (1 - D1 free_cohold) | cheap, console |
+| `deck_d2_touched_won_bids.sql` | Block 1 (won imps on touched IPs + share of ALL won imps — a reach share; never present as a win rate) | **BIG** (svs 37d + CIL wk, 1 pass) |
+| `deck_d3_bills_cpm.sql` | Block 2 (contract CPM, June bill x12; `implied_cpm` is a meter cross-check, not a sheet cell); Block 3 bills = computed offline as bill x (1 - D1 free_cohold) | cheap, console |
 | `deck_d4_scenario_ladder.sql` | Block 4 (9 scenarios: triples kept, % of today, HI/PP triples kept, HI/PP IP-grain coverage %) | **BIG** (svs 30d + wcv + pc + CIL wk, 1 pass) |
 | `deck_d5_tier_free_coverage_all_ips.sql` | Block 5 (ALL member IPs by score tier: free-covered vs vendor-only) | **BIG** (svs 37d + CIL wk, 1 pass) |
 | `deck_d6_tier_free_coverage_bid_ips.sql` | Block 6 (same split, only IPs that received won imps) | **BIG** (svs 37d + CIL wk, 1 pass) |
 | `deck_d7_free_logs_value.sql` | FREE LOGS table: the reverse cohort — free-side media on IPs outside the PAID roster (guid/aug strictly-sole + union-no-paid; union > sum by cohort algebra). Values already measured by q6/q15 — running is optional | **BIG** (svs 37d + CIL wk, 1 pass) |
 
-Pre-share verification (2026-07-16): all six dry-run clean; D1/D4's mask arithmetic was
-simulated against the measured q3c histogram and reproduces the workbook numbers exactly
-(universe 13,286,670,656; augmentor 6,483,729,112; free-union 59.36%; full scenario ladder).
-D1/D2/D3 reproduce ALREADY-MEASURED values; D4's IP-grain HI/PP columns and D5/D6's tier
-splits are NEW measurements (not yet run as of 2026-07-16).
+Pre-share verification (2026-07-16): the six BIG scans dry-run clean (D3 is console-cheap);
+every Run block was executed VERBATIM from a clean folder holding only the .sql files
+(copy-paste proven); D1/D4's mask arithmetic simulated against the measured q3c histogram
+reproduces the workbook numbers exactly (universe 13,286,670,656; augmentor 6,483,729,112;
+free-union 59.36%; full scenario ladder). Status: D1/D2/D3/D7 reproduce already-measured
+values (D3 CSV landed 2026-07-16); D5/D6 measured and LANDED 2026-07-16 (their
+run_2026_07_10 CSVs predate a label-alias fix — column `tier` with an empty all-IPs label;
+re-runs emit `tier_row='1_all_ips'`, counts identical); D4 LANDED 2026-07-16 pm (today = 13,286,674,041 triples, == the q3c
+mask universe within 0.00003% snapshot drift; free-only HI-IP coverage 99.7579 — ~0.2pp
+below q3d's 37d figure, a window effect documented in the d4 header).
 
 ## Computed rows (no additional SQL — arithmetic over the CSVs above)
 

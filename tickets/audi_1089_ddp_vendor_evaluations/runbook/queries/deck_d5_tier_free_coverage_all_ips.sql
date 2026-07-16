@@ -1,11 +1,14 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D5 of 7: free-vs-vendor-only IP coverage by score tier —
 -- ALL member IPs (audience-size lens)
--- FILLS: deck sheet BLOCK 5 (rows 37-44) "Of all IPs regardless of whether they
---        actually got bid on (audience size coverage)": B "free-covered IPs",
---        C "vendor-only IPs", D "% free covered". The tier='1_all_ips' row fills
---        the "Free Logs ONLY" line (= the whole-population split under the free-
---        logs-only scenario); the tier rows fill HI10000 .. Unscored.
+-- FILLS: deck workbook table "Of ALL member IPs, served or not (audience-size
+--        coverage)" (block 5): "free-covered IPs", "vendor-only IPs", "% free
+--        covered". The tier_row='1_all_ips' row fills the "Free Logs ONLY (all
+--        IPs)" line (= the whole-population split under free-logs-only); the
+--        tier rows fill HI10000 .. Unscored.
+--        LANDED-CSV NOTE: outputs/run_2026_07_10's CSV predates the alias fix
+--        below — its column is named `tier` and the all-IPs row's label is an
+--        EMPTY string. A re-run emits tier_row='1_all_ips'. Counts identical.
 --
 -- Claim: every IP any source delivered in the 37d window is either free-covered
 -- (guid_log or augmentor delivered it — kept under free-logs-only) or vendor-only
@@ -37,7 +40,8 @@
 -- re-scan the external table; ~30-45min) — background.
 --
 -- Run: paste this whole block into a terminal, in the folder holding this
--- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
+-- file (prereqs: gcloud auth login; bq CLI; python3; GCS read on
+-- mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query --external_table_definition="svs::PARQUET=${URIS}" \

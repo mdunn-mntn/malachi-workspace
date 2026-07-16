@@ -1,7 +1,9 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D7 of 7: the FREE LOGS' value beyond ALL paid vendors
--- FILLS: deck sheet FREE LOGS table (below block 3): media $/yr and profit band
---        on the slice of delivery only the free logs cover.
+-- FILLS: deck workbook FREE LOGS table ("FREE LOGS — value beyond ALL 8 paid
+--        vendors combined"): "Media $/yr on IPs no paid vendor covers"
+--        (= media_annualized), the profit band (media x internal margin, offline),
+--        and "Media CPM on this cohort ($)" (= media_week / imps_week x 1000).
 --
 -- Claim: this measures a DIFFERENT cohort family than the vendor blocks. Vendor
 -- profit (deck_d2/blocks 2-3 via q8b) = the vendor's media on IPs OUTSIDE the
@@ -30,7 +32,8 @@
 -- BIG SCAN (svs 37d ip pass + CIL week; ~30-45min) — background.
 --
 -- Run: paste this whole block into a terminal, in the folder holding this
--- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
+-- file (prereqs: gcloud auth login; bq CLI; python3; GCS read on
+-- mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query --external_table_definition="svs::PARQUET=${URIS}" \

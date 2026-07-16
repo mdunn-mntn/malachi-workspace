@@ -1,9 +1,9 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D4 of 7: the 9 drop-scenarios — kept coverage + HI/PP
--- FILLS: deck sheet BLOCK 4 (rows 26-35): C "Total Pairs" (= ip x domain x date
---        triples kept), D "Coverage (% of today)", E "Total HI IPs x Domain x
---        Dates" (HI-IP triples kept), F "HI-IP coverage %" (IP-GRAIN — see grain
---        note), G "Total PP IPs x Domain x Dates", H "PP-IP coverage %".
+-- FILLS: deck workbook SCENARIO table (block 4, identified by column titles —
+--        row positions shift as the sheet evolves): "Total triples kept",
+--        "Coverage (% of today)", "HI triples kept", "HI-IP coverage %"
+--        (IP-GRAIN — see grain note), "PP triples kept", "PP-IP coverage %".
 --
 -- Claim: one scan builds BOTH histograms every scenario needs:
 --   triple grain — (ip x domain x date) holder masks, split by the IP's score
@@ -19,7 +19,9 @@
 -- (the workbook's q3d result: free-only keeps 99.94% of HI / 99.25% of PP IPs
 -- on the 37d window; this query's 30d window lands within ~0.1pp). Audience
 -- membership is IP-grain — F/H are the "does the audience shrink" columns;
--- E/G measure signal volume on those IPs, not audience size.
+-- E/G measure signal volume on those IPs, not audience size. (The 30d window
+-- reads HI/PP IP coverage ~0.2-0.8pp below q3d's 37d figures — see the
+-- reconciliation note.)
 --
 -- HI/PP tier is assigned at IP grain: per-IP MAX(household_score) over the CIL
 -- valuation week (HI = 10000 exactly, PP = 8000 exactly — the score pipeline
@@ -31,7 +33,8 @@
 -- 0..9; free logs = bits 0+5 = 33, kept in every paid scenario):
 --   1023 today: all 8 paid + free            831 drop Sovrn(33)+Cybba(36)
 --    575 + drop Klickly(39)                  573 + drop Justuno(24) = the k=4 knee
---    561 33Across(28)+33A API(40) only        45 flat-fee only: 5x5(25)+Predactiv(26)
+--    561 33Across(28)+33A API(40) only        45 flat-fee survivors: 5x5(25)+
+--        Predactiv(26) (Klickly is also flat-fee but already dropped at step 3)
 --     33 free logs only                        32 augmentor ds30 alone
 --      1 guid_log ds23 alone
 --
@@ -40,15 +43,20 @@
 -- hist -> final references each svs-reading CTE EXACTLY ONCE; both histograms
 -- come out of ONE GROUPING SETS aggregation. Externals scanned once.
 --
--- Expected reconciliation vs outputs/run_2026_07_10: free_logs_only trips_kept
--- = 7,887,061,977 (59.4% of today); free-only hi_ip_coverage_pct ~99.9 (q3d
--- 37d-window measured 99.94), pp ~99.3; k4 hi ~99.999.
+-- Expected reconciliation vs the landed run (deck_d4_scenario_ladder.csv,
+-- 2026-07-16): today 13,286,674,041 triples (== q3c mask universe within
+-- 0.00003% live-snapshot drift); free_logs_only trips_kept 7,887,062,821
+-- (59.36%), hi_ip_coverage 99.7579, pp 98.4920; k4 hi 99.9975. WINDOW NOTE:
+-- these IP coverages sit slightly below q3d's 37d-window numbers (HI 99.94,
+-- PP 99.25) because this query's IP masks use the 30d window — a real,
+-- expected gap, same conclusion (every paid-drop scenario keeps 99.9%+ of HI).
 --
 -- BIG SCAN (svs 30d + wcv + pc single pass + CIL week; shuffle-heavy; ~1.5-2h)
 -- — dry-run, background.
 --
 -- Run: paste this whole block into a terminal, in the folder holding this
--- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
+-- file (prereqs: gcloud auth login; bq CLI; python3; GCS read on
+-- mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(30)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query \

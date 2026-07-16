@@ -272,6 +272,26 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d20. Deck share-readiness + d4 landed — workbook COMPLETE (2026-07-16 pm)
+
+- **Copy-paste proven**: every deck query's Run block executed VERBATIM from a clean
+  folder holding only the .sql files (dry-run injected) — all 7 exit 0, redirects work.
+  Output redirects moved to same-folder (were ../../outputs/, which validators lack).
+- **2-agent outsider readiness check: 22 findings, all fixed.** Chief lesson: hardcoded
+  sheet ROW NUMBERS in FILLS lines rotted as the workbook evolved (d6's stale range
+  pointed at block 4's 99% cells — a wrong-table paste waiting to happen) → all FILLS now
+  reference tables/columns by TITLE only. Also: d3 unstated dw-main-bronze read; python3
+  prereq; landed-CSV-vs-alias-fix transition notes on d5/d6; "sheet formula" wording →
+  "computed offline, hardcoded"; queries-sheet row mapping the Profit columns to q8b/q15;
+  guide now points deck validators at the d-set fast path.
+- **deck_d4 LANDED (~85min)**: today = 13,286,674,041 triples (== q3c mask universe,
+  0.00003% snapshot drift); free-only keeps 59.36% of triples / 65.7% of HI triples but
+  99.7579% of HI member IPs / 98.49% of PP; k4 99.9975% HI. WINDOW EFFECT: 30d IP masks
+  read ~0.2pp (HI) / ~0.8pp (PP) below q3d's 37d figures — real, documented in the d4
+  header; conclusion unchanged. Block 4 now single-sourced from d4; workbook 0 PENDING.
+- **Share zip**: outputs/audi_1089_deck_queries_2026_07_16.zip (7 SQL + MANIFEST +
+  VALIDATION_GUIDE).
+
 ## 4d19. Deck 6-query validation set (user ask, 2026-07-16)
 
 - **`runbook/queries/deck_d1..d6_*.sql`** — user's deck sheet has 6 blocks; one consolidated
