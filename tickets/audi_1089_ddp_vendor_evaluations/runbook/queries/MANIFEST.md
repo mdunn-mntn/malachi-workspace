@@ -63,10 +63,10 @@ Cost class: **cheap** = seconds-minutes, console-friendly · **BIG** = 5-15 TB s
 | 32 | `q15b_free_union_stock.sql` | free_logs combined column stock: union raw reach (IPs/domains/pairs), sole stock vs the PAID roster, sole/classified domains, freshness-vs-paid (pair + visit-day splits). q8a mirrored (roles reversed). | **BIG** (svs 30d + wcv + pc; ~2h) |
 | 33 | `q15c_free_union_hour_quality.sql` | free_logs combined column concentration: union Top-1/Top-5 domain share + bot-UA on the q1c hour slice (union top domain is not derivable from per-log rows). | cheap (1h slice) |
 
-## Deck queries (deck_d1 .. deck_d6) — the 6-query validation set for the deck sheet
+## Deck queries (deck_d1 .. deck_d7) — the per-block validation set for the deck sheet
 
 Self-contained consolidations of the numbers above, one query per deck-sheet block, so a
-validator runs SIX files instead of 33. Each header states exactly which sheet block/columns
+validator runs SEVEN files instead of 33. Each header states exactly which sheet block/columns
 it fills, its expected reconciliation values against `outputs/run_2026_07_10`, and its cost.
 They reuse the proven patterns verbatim (q3c masks, q6 touched cohorts, q0 roster+meter) and
 are single-external-scan by construction (see each ARCHITECTURE NOTE).
@@ -79,6 +79,7 @@ are single-external-scan by construction (see each ARCHITECTURE NOTE).
 | `deck_d4_scenario_ladder.sql` | Block 4 (9 scenarios: triples kept, % of today, HI/PP triples kept, HI/PP IP-grain coverage %) | **BIG** (svs 30d + wcv + pc + CIL wk, 1 pass) |
 | `deck_d5_tier_free_coverage_all_ips.sql` | Block 5 (ALL member IPs by score tier: free-covered vs vendor-only) | **BIG** (svs 37d + CIL wk, 1 pass) |
 | `deck_d6_tier_free_coverage_bid_ips.sql` | Block 6 (same split, only IPs that received won imps) | **BIG** (svs 37d + CIL wk, 1 pass) |
+| `deck_d7_free_logs_value.sql` | FREE LOGS table: the reverse cohort — free-side media on IPs outside the PAID roster (guid/aug strictly-sole + union-no-paid; union > sum by cohort algebra). Values already measured by q6/q15 — running is optional | **BIG** (svs 37d + CIL wk, 1 pass) |
 
 Pre-share verification (2026-07-16): all six dry-run clean; D1/D4's mask arithmetic was
 simulated against the measured q3c histogram and reproduces the workbook numbers exactly
