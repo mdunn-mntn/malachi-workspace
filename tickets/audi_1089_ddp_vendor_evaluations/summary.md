@@ -311,6 +311,12 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
 - **Capture additions**: BQ correlated-subquery re-read multiplier + 3 single-pass patterns
   + GROUPING SETS alias shadow → data_knowledge; population principle 4th lens (IP-grain vs
   signal-grain; 6.39x touched sum) → data_knowledge; Net Kept Margin → valuation framework.
+- **d1 new-convention relaunch LANDED (2026-07-16 ~18:30)**: aug standalone-vs-paid
+  3,843,784,070 (28.93%) / guid 1,360,242,463 (10.24%) — match the simulated header
+  expectations to <1K triples; all paid rows + universe byte-identical to the old-convention
+  run; free rows sum = union + 6.01M shared-no-paid triples as documented. aug free_cohold
+  40.72% / guid 4.41%. Workbook regenerated: 0 pending, tripwire $538,726/$273,671 passed.
+  Landed CSV now matches the shipped SQL — zip unchanged; deck values (10.24/28.93) confirmed.
 
 ## 4d21. Deck final additions (user asks, 2026-07-16 pm)
 
