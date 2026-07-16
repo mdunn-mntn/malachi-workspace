@@ -1,0 +1,694 @@
+[00:00] All right. Looks like we started. Cool. All right. So I'm going to go over the basically the data vendor quality stuff that I've been doing.
+[00:10] I know that I've met with a lot of you guys individually. How I'd like to do it is I'm going to give you guys all the information that I have.
+[00:19] And then what I'm going to do is leave it open for lots of discussion and questions. And yeah, I'll just go from there.
+[00:27] So also there's a Slack in Slack. I posted the new sheets and the zip file of all the queries
+[00:34] to check afterwards. So just a reference. So everything you see here, we can validate later.
+[00:40] I'm going to share my screen and then we'll go from there. Okay. Can you guys see this? All right.
+[00:49] so too small too big it's good okay cool all right so i'm gonna talk about how i decided to
+[00:58] value a data vendor um i'm not going to necessarily walk through all this but the big thing here i
+[01:04] want to take out is that a vendor's value at least that we can really empirically measure
+[01:10] is related to how much profit we make from all the ips that they they give us essentially um and so
+[01:17] I created this cool formula because I like math. But basically, the total number of impressions
+[01:23] that we serve divided by 1,000 times the CPM times the margin we charge in the CPM minus the total
+[01:29] cost of the data is essentially the value. I'd say this vendor is how much they give us.
+[01:36] Now, when I did this, I filtered out the free logs and the augmenter logs to see what the
+[01:43] individual vendor's value provides us. Now, there are some issues with looking at it that way.
+[01:52] Namely, we have more than one vendor. So there's overlap between vendors. So for all the overlap
+[01:58] that we have, we're paying a fractional credit to each vendor that's touched that. And then the
+[02:04] only real value that an additional vendor will provide is just going to be the unique IPs that
+[02:10] that vendor has that no other vendor has. Right. Um, so yeah, that's how I measured it. Now let's
+[02:17] just actually just jump into some numbers. So this first thing, there's like a thousand ways to skin
+[02:21] a cat and this table has a ton of different things there. Um, I have most of the queries for this,
+[02:29] but I kind of generalized, um, I just wanted to bring this up. I just,
+[02:34] there's more stuff to look at in here. Um, I'm not going to go through all this cause I don't
+[02:38] think it's all valuable, at least the most important stuff. But I took out some of those
+[02:44] things and I summarize in this deck here. So let's just go over that. On the left hand side here,
+[02:52] you see the vendors. And then this total IPs is basically the number of unique IP domain date
+[03:00] combinations that that vendor provided us, right? Over 30 days. So you can see the augmented log is
+[03:08] about 6.4 billion. 33 across, this is our biggest vendor, is 4.5 billion. So there's some percentages
+[03:15] here, and we can see that the Augmentor log alone covers 48% of everything. And both the free logs,
+[03:23] the Aug log and the GUID log cover about 60%. That's 60% of everything we saw. So that does
+[03:31] not mean that they were bid on or anything. That's just, these are the number of IP domain
+[03:36] dates that we basically ingested across the bat. So this is just a little bit of an interesting
+[03:43] number. This is like cumulative. So like we could see here, if we only had these vendors from here,
+[03:51] we would have about 96% coverage. And on the data quality sheet, I just want to point this out real
+[03:57] quick. I pointed this out before, but we could drop basically four vendors and still get like
+[04:06] 98% of the total coverage. So that's on the other sheet. Some of those interesting numbers there,
+[04:14] just to point that out. But yeah, then let me talk a little bit about the touched impression.
+[04:19] So this is just, did they provide us an IP that we ended up bidding on because of that vendor?
+[04:25] So there's a lot of overlap here, but this just kind of gives us an overall amount.
+[04:29] So you can kind of see right off the bat that the free logs actually have the largest coverage.
+[04:35] And here's where it gets really interesting. If you look at the share of all our one impressions,
+[04:42] right? Meaning that if you just had this vendor in this row, how many of the impressions would
+[04:48] they have touched of the ones that we actually bid on? And so with the free logs, that's like
+[04:53] 99.2% of every single thing that we've touched, not even including any other vendors. So we're
+[04:59] already getting almost all coverage from just our free and our augmenter logs alone. Okay.
+[05:07] I know you guys have questions. We'll save it till the end of most of, I'll spend most of this
+[05:11] time so you guys can talk, but I wanted to throw in some things here. So basically here's the
+[05:18] vendor and here's the CPM of everything that they touched. Now this media CPM, this is unique
+[05:23] impressions. So this is to say, if I were to take out all the touched impressions, meaning that
+[05:29] like only the unique to 33 across IPs that no other vendor or free log had, what would be their
+[05:35] CPM? I just decided to throw it in there. Just an interesting point. But this is where, this is
+[05:41] what's interesting. This is the total bill, at least that I have from current data of how much
+[05:46] we are paying these vendors per year. If you were to take that CPM of everything they touch times
+[05:54] the amount of impressions they touched, excluding what we see in the free log, right? So this is
+[06:01] just unique to them. Of course, they touch way more IPs of this. This is not every single IP
+[06:05] that they possibly have the overlap in. This is just the unique IPs that they touched
+[06:10] that are not in our free log so we can get it for free.
+[06:14] This is the range of assuming that we only have a 10% to 30% margin.
+[06:19] This is how much money they actually generated for us.
+[06:24] So let's just take 33 Cross, for example.
+[06:30] Of all the unique IPs that 33 Cross provided for us
+[06:33] that weren't in our free logs already,
+[06:35] we would have made, based on the CPM and the volume,
+[06:38] somewhere between $72,000 and $217,000 this year. We paid $422,000 for them, meaning that
+[06:46] we at best are getting roughly 50% of our money's worth back from that vendor,
+[06:54] from things we could have already got from the free logs. It's pretty much the same case for
+[06:59] every single vendor. And I'm just going to call it one thing. So we are currently not filtering out
+[07:05] things that we already see in the free log and the augmenter log, which means we paid for things that
+[07:10] we already had in the free log and augmenter log. So then I decided to estimate, meaning how many
+[07:18] of these were in the free log and augmenter, like if we were to not pay for the credit for those,
+[07:22] what would be the adjusted cost essentially? So the 422,000 you're seeing here is us still
+[07:29] paying for things that are already in the log and free log. Here is how much the bill would
+[07:35] be adjusted if we were to exclude those, assuming a certain CPM of whatever. I think it's 50 cents.
+[07:44] It's slightly different for all of them. Some of them are sliding. They're not like a static CPM.
+[07:50] You can see here that it's now 200,000 and 33 across is technically within the range,
+[07:56] though on the high side of it being valuable, both of 33 across. The rest of the vendors are
+[08:05] not. And part of the reason I think that has to do with volume, this is not an apples to apples
+[08:10] comparison because 33 across sends us way more data than everything else. So obviously it's going
+[08:14] to have more overlap, more opportunity to have IPs that nobody else has touched, et cetera.
+[08:21] But that being said, even with the filtering out, if we were to somehow start filtering out
+[08:27] OGLOG and et cetera, it does seem like 33-cross might be kind of valuable, right?
+[08:36] So last few things. So the question would be, well, what if we were to remove all the vendors,
+[08:41] right? What would happen? Well, the first question is like, well, how would that impact
+[08:45] MountainMatched, right? Well, Fangorn only uses the GUID log from what I understand. And so that
+[08:54] want to impact anything at all because we're not even using vendor data for Panagorn. For data
+[08:58] source 13, that's going to be, of course, our high intent, peak performance, things like that.
+[09:04] So the next logical question is, well, how many of these, like if we were to remove the vendors,
+[09:09] what would be our coverage of these? So this is the overall coverage and percentage of what we
+[09:17] would have if we just had this vendor. So if we had all eight, obviously we're at 100%.
+[09:20] If we had only the free logs, we'd get about 60%.
+[09:25] But I want to put an asterisk there.
+[09:27] That's 60% of all the IPs that we just store.
+[09:31] That does not include the IPs that we actually end up bidding on.
+[09:35] So if we filter this to just the high intent score,
+[09:39] if we look at just the free logs, so let's see, 53,
+[09:45] we still have 99.75% coverage.
+[09:49] of our high intent,
+[09:53] we still get 98% coverage for peak performance.
+[09:56] So pretty much,
+[09:57] it basically seems that the Augmentor log
+[10:01] and the GUID log
+[10:03] end up being pretty much the only IPs
+[10:05] that we end up bidding on at all.
+[10:07] So it doesn't seem like we lose very much volume,
+[10:10] if in anything.
+[10:11] And again, that's only for all of data source 13.
+[10:13] That's not including Fangorn,
+[10:15] which wouldn't be affected at all.
+[10:16] So it doesn't seem like volume would change at all.
+[10:18] Wait, can I just jump in with a quick question here?
+[10:22] Yeah, go ahead.
+[10:23] Because something that you said just kind of made me think.
+[10:25] So you're saying that the IPs that we bid on are only the ones that appear in Augmenta log.
+[10:32] Is that an artifact of us having data source 14 where we're only bidding on IPs that appeared in Augmenta log to begin with?
+[10:43] I was wondering that same thing.
+[10:46] Yes.
+[10:46] Yes. So if let me answer. Okay. Let me think about that for a second.
+[10:53] Yeah. It's not, it's not anything. Or yeah.
+[10:56] I wonder if we should add the other site business signal IPs to data source
+[11:00] 14. Yeah. Yeah. I like that idea.
+[11:06] Sorry. I keep going with, no, you're all good. You're all good.
+[11:08] You're all good. I was just thinking about that. Yeah.
+[11:10] That's something I did think about too, but
+[11:12] it depends one of the things that's included in here is the date like how how often it comes up
+[11:22] and i did do something separate where i looked at what was the most recent um
+[11:27] what was the most recent domain like the um ip domain date um field that we got from all the
+[11:38] vendors and most of the time the augmenter log and the good log was the freshest so there were
+[11:43] some situations where it wasn't and so anyways i still think that the og log and the good log would
+[11:47] have won compared to other vendors um but yeah um we will i'll i'll think about that a little bit
+[11:58] more um don't worry i'm almost done this is pretty much at the end of it here so the only question
+[12:04] that this has essentially is this would affect match max reach, right? Cause max reach is going
+[12:10] to be the keywords that aren't in the vertical, et cetera. And so that would affect it. And so
+[12:16] if you look at all the IPS, what is our, what is going to be our coverage? So this is just looking
+[12:22] at IPS. I didn't do the domain, all that stuff. So this is just unique IPS right here. So this is
+[12:27] the actual counts of what's in the free logs and what's in the vendor and separated by score.
+[12:34] and you'll see here that we have 99.95% coverage in high intent, peak performance,
+[12:41] high graduated. That's a fancy term for the Fangorn score range. That's a continuous it's
+[12:49] 6,000 something to 9,999. It's just because we have data source 13 and we have Fangorn currently.
+[12:56] So that's why we got this weird one here. But still it's like a hundred percent coverage.
+[13:00] so the only situation is the unscored where we would get 64 coverage and so that would be scary
+[13:06] right like let's say we just suddenly cut off 40 of our targetable ips however if you look at the
+[13:13] total number of ips that actually get bid on um so we basically hit every single one from the
+[13:23] dog log and the good log, meaning these existed in there at least once. So we would see some
+[13:31] keyword, I guess, audiences go down, but of the actual ones that end up getting bid on in the end,
+[13:39] we wouldn't lose those, I guess. So like the total volume would go down. We might see something
+[13:46] where we've got 10 million users and it goes down to 6 million or something. Um, but the 6 million
+[13:56] that we're still left with are the only ones that we'd actually bid on the ones that we're losing.
+[13:59] I don't think. Um, so yeah, I have some raw numbers here, but that's basically the TLDR.
+[14:07] There's kind of everything there. Um, I think that we could probably could drop all our vendors.
+[14:13] my only really big concern is maybe the thing that you just mentioned Allison and then the other one
+[14:21] is the huge audience size decrease for keywords but as far as high intent peak performance
+[14:31] mountain match fangorn I don't see there being any sort of issue and then the last thing is
+[14:40] it does seem like we would gain roughly around $830,000 worth of cost that we give to the
+[14:47] vendors. So that's what we seek to gain is a huge savings in how much we're paying vendors.
+[14:54] Yeah, that's it. Sean?
+[14:58] Yeah, great analysis. I think it makes sense, but I just have a couple of call out.
+[15:04] one is the I think it also affects the site visit signal also affects RTC if I'm correct me if I'm
+[15:12] wrong but I think RTC look at site visit signal tables and see every hour or near real time right
+[15:20] to see if there's new signals coming in and they bid right away like they sent 10,000 for those
+[15:25] so I think it but your your analysis looks like you only look at the date right at the date like
+[15:33] IP URL combination per date, not per hour, right? So I think the timing and the frequency,
+[15:40] like I think I mentioned that before. So it's the timing and frequency also plays a role here.
+[15:44] Like if let's say Siba send us the signal multiple times a day, and it's more up to date,
+[15:53] actually it puts that IP in a higher priority as compared to others. So if you,
+[15:59] how do I say that so but by looking at the day the daily coverage only doesn't give us a full
+[16:07] answer on that because RTC does work kind of near real time and look at the side business signal
+[16:13] table as an input for those signals so that's one thing another thing is so instead of maybe
+[16:20] dropping these vendors all together because I saw you have a tab the notes tab and there's a
+[16:25] verdict column, which I really like it because instead of dropping them all together, maybe
+[16:31] we should renegotiate the rate.
+[16:34] So basically, the question is, they do have value, it looks like, but it's just the cost
+[16:39] outweighs the benefit.
+[16:41] So if we can go back to them and say, OK, instead of paying you 0.5 CPM, we should pay
+[16:49] maybe 0.2 or something to make sense of the cost, right?
+[16:54] I mean, they do still seem to have value to our overall pipelines, but just like not at the current rate.
+[17:00] So maybe that's something we can talk about, like going back to renegotiate a rate that makes sense for Mountain to continue to use them instead of like dropping them completely.
+[17:13] That's the two things that kind of came into my mind.
+[17:17] I definitely think that that would be valid.
+[17:20] But the only thing about that is that when we have lots of vendors, the amount of data that becomes usable becomes really, really small.
+[17:34] Like, for example, Clickly is really small.
+[17:37] So we can see here there's 30 million.
+[17:40] It seems like a lot.
+[17:41] But the amount of actual IPs that we end up bidding on and using is a fraction of that.
+[17:47] And it wasn't generating us very much money.
+[17:50] I think literally it was like $2,000 a year or something.
+[17:54] So I would agree, except for probably, yeah, there's other things to discuss.
+[18:01] But yeah, I think that's a really good point that you made, Sean.
+[18:06] I made a note here in my notes here to look at.
+[18:08] Yeah, because the other thing regarding the biddable IP is, like Allison mentioned, that's because we have a filter of data source 14.
+[18:16] that's the mountain global data to restrict to only you know ips from augmented log and grid
+[18:24] log to be biddable that's why maybe one option is to add these ips to ds14 to make it like a
+[18:32] larger pool maybe that's an option that's why like you see 99 of the uh ips biddable ips are coming
+[18:39] from Augmenta log or Grid log is because of that filter.
+[18:43] So we might need to...
+[18:46] I'm not sure why that filter was in place at the first place,
+[18:49] but maybe because we want to make sure those IPs are active IPs
+[18:53] or maybe that's the reason.
+[18:56] But that's definitely something we can work on
+[19:00] to make that a larger pool.
+[19:03] I have a quick question, though.
+[19:06] If something isn't in the Augmenta log,
+[19:09] can it even be bid on? Because that's all the traffic that we get.
+[19:12] Is that what I was going to say? I don't know if, yeah.
+[19:20] That was my question. So where, like, if it's not in the augmenter log,
+[19:25] then it hasn't shown up in the auctions in whatever time period that you're
+[19:32] looking at. So it's not biddable in the past.
+[19:35] so what's these other 40 percent of the ips are they international ips are they something else
+[19:46] that's like not a biddable ip are they stale ips um that's kind of my question like if
+[19:55] if we're basically just getting rid of all the truly not
+[20:00] on biddable IPs, then that makes sense too.
+[20:03] Yeah, my thought process is they're just not biddable
+[20:05] because they're not showing up in the augmenter log.
+[20:09] Right.
+[20:11] It basically makes the data vendors not seem very fresh, I guess.
+[20:18] Like maybe they're not sending very fresh data
+[20:19] because they're sending us a lot of data.
+[20:21] Regarding the RTC thing, that was going to be my other thing.
+[20:26] what is the main driver of RTC?
+[20:30] Is it GUID log?
+[20:31] Or is it actually these other vendors
+[20:34] in the site visit signals?
+[20:36] Because that would be like,
+[20:37] that would also tell us the effect of RTC.
+[20:39] Because my assumption was that RTC
+[20:41] was mainly our own first party,
+[20:44] like pixel data.
+[20:45] We saw something and we're like,
+[20:47] okay, someone looked at this.
+[20:50] But my assumption may be wrong there.
+[20:52] Yeah, there's two processes for RTC.
+[20:55] one that Zach basically runs,
+[20:57] which is the GUID log.
+[21:01] That's
+[21:01] a Kafka streaming app,
+[21:03] and that's pretty much real-time.
+[21:05] Then there's the hourly one that
+[21:07] we run that grabs
+[21:09] everything from SiteVisit Signal that's
+[21:11] not GUID log, and
+[21:13] it does it in an hourly batch.
+[21:16] So, I mean, yeah, it is.
+[21:17] It does drive some of those
+[21:19] impressions.
+[21:21] That's good to know, because
+[21:23] yeah, that's important.
+[21:25] Is there a way to vet this?
+[21:29] Like, without making the changes, could we do some kind of an experiment?
+[21:34] You know, I guess I'm assuming that we don't have to spit up identical infrastructure,
+[21:39] but is there a way for us to, like, actually run an experiment to say,
+[21:45] oh, these things that are actually happening, if we were to move this data,
+[21:49] we'd still have the same output?
+[21:50] Because I think if we're talking about risk versus reward,
+[21:54] yes that's a lot of recurring revenue but at the same time we have to be very careful that we can
+[22:00] actually prove that it's not worth it right and to even renegotiate a contract requires that we
+[22:07] have some sense of you know like sean said what our what our ask is and then the potential that
+[22:13] they could say no screw you and we go oops okay well we're either paying all of that money or we
+[22:18] have to choose to say no and i feel like if the decision is pull the plug entirely and see what
+[22:25] happens that's going to be a really really hard sell regardless of how much money it saves
+[22:30] yeah it's a it's a difficult thing one of the things too is like i said with scale um the only
+[22:39] way to get an apples apples comparison on the vendors and their value is also going to be if
+[22:43] they had similar scale of how much data they're sending us so that we could see which one is the
+[22:49] best and most performative. But like when you have a vendor that's sending us a very small amount of
+[22:53] data, I can calculate what their sole value is going to be, but I can't really understand what
+[22:59] their quality changes as you send more data and the performance changes. So even looking at things
+[23:07] like, like I could pull up and show that Clickly, for example, had much higher IVR than the rest of
+[23:12] the other ones, which it does. Um, but Clickly also sends us a small amount of data, which,
+[23:17] you know, we know how that works. So, um, there is one more thing to, um, that I did want to throw
+[23:27] just, just to consider things we could fix even before we cut them is we are throwing away a lot
+[23:32] of data. So either sharing the, and again, I know this is all super small. You guys have all these
+[23:40] links so you guys need to check them um but like right off the bat we're just throwing away like
+[23:48] 22 of everything that 33 across sends us um and there's there's a few some of them we're keeping
+[23:54] all of them so we don't worry but we could just make these requests and 33 crosses our biggest
+[23:58] one so if we tell them like hey stop doing this um i know this is probably negligible in terms of
+[24:04] score storage and stuff but it is a few thousand dollars and stuff so there are some things where
+[24:07] we could be like, hey, don't send us Yahoo mail.
+[24:11] We literally just throw it away type of thing.
+[24:13] So there are some improvements we could do with that as well.
+[24:16] And that's in the waste column here on the numbers deck.
+[24:22] Is there an opportunity to leverage the ID graph
+[24:25] to identify the quality of the IPs that we're getting in some way?
+[24:30] I don't know if that would work,
+[24:31] but if the ID graph is looking at households
+[24:35] and trying to map identifiers of which ones are good
+[24:37] and which ones are busy, unusable IPs.
+[24:41] If those busy and unusual IPs are coming in
+[24:43] through these third-party vendors,
+[24:45] that might be a way to signal,
+[24:47] hey, this is a lot of not helpful traffic,
+[24:49] something like that.
+[24:51] I don't know if it works that way.
+[24:54] Yeah, we could.
+[24:56] I think eventually we might call the ID service
+[24:59] to map whatever IP they give us to AppSold.
+[25:03] But I don't know if we could tell them
+[25:06] to stop sending certain ones without well just from an announced perspective of like
+[25:12] yeah if there is an x yeah like what is the quality of the uh the 40 percent
+[25:19] yeah basically the other one i'm wondering and this is like not a fully formed idea but
+[25:26] there's some the the uh the scoring and like the impression served metrics is there some
+[25:34] selection bias here of how like the sources we're using to to get keywords and verticals are aligned
+[25:44] better with good logs so it's more likely that we score them higher and bid on them something like
+[25:49] that as well that is driving some of that analysis um it's possible um i wanted to pull up something
+[26:01] here.
+[26:02] That's my concern is there's some other hidden feedback loop here that if we cut
+[26:06] this all out, then there's like a house of cards situation. It all comes collapsing down.
+[26:12] I don't see it, but I'm trying to see if it is there. I don't know if anyone else is seeing
+[26:18] anything or getting a weird...
+[26:20] It's a big call. That's why I was like I sent all the SQL queries because it would
+[26:25] be really cool to get a second set of opinions and if something comes out. There is something
+[26:30] I wanted to call out is this is the keyword categories. And so you can see here, like,
+[26:36] this is how many IPs are in there. And then this is how many would, this is the percentage that
+[26:40] would be retained. So like we would see some massive changes, like 85 million being cut by 78%,
+[26:46] right? Some of the worst ones here, advertising for some example, would be cut like
+[26:51] almost everything, right? These are keywords too though.
+[26:56] Yeah, but what I'm saying, yeah, exactly. But what I'm saying is that these numbers would go down, right? But from what I can see from the coverage, I mean, we'd still, of everything we actually bid on, I mean, we would still have almost all the coverage.
+[27:11] So we're only losing two and a half percent, you know, of,
+[27:16] cause like that's correct me if I'm wrong here, but like keywords,
+[27:20] not vertical, that's going to be unscored.
+[27:22] So we're just talking this right here.
+[27:26] So this is the thing I'm concerned about.
+[27:29] As Matt said that there's some unidentified,
+[27:33] like extra mechanism that's going on here.
+[27:38] You could test this too.
+[27:40] maybe just go into
+[27:41] DS13, DS19
+[27:44] you know where we do all that
+[27:46] prep work and then just say
+[27:48] data source ID or you know add
+[27:50] 33 across or just like
+[27:52] stop sending that in to IP
+[27:54] DSC and then
+[27:55] I guess you have to wait 30 days
+[27:58] kind of
+[28:00] that might be a pain but yeah
+[28:02] is there
+[28:04] is there a companion
+[28:06] report to this about how much these
+[28:08] keywords are used like if you
+[28:10] were to get rid of them, how many campaigns
+[28:12] or audiences or whatever
+[28:14] would be affected by this?
+[28:18] I don't have that
+[28:20] currently.
+[28:23] Because
+[28:23] what if, so for example, you're
+[28:26] talking about advertising, growth 71.
+[28:28] So if we get rid of that, but
+[28:30] if it's used in, say, 50% of
+[28:32] the campaigns, well then that doesn't
+[28:34] seem right.
+[28:35] A trade-off is what I'm trying to call out
+[28:38] about what customers actually use and then what's effective in getting bid on.
+[28:44] Yeah.
+[28:45] Well, I think that what it actually gets bid on tells the story, though,
+[28:50] because the customers can add whatever they want,
+[28:53] but a lot of those are like...
+[28:57] Honestly, my biggest concern as far as the UI is concerned
+[29:00] is if they get some sort of audience size or something,
+[29:03] and then suddenly it says 84 million.
+[29:07] I don't know if that would change though.
+[29:09] The UI, once they create the audience,
+[29:11] they're not going to go back and see that their keyword audience changed size.
+[29:14] I don't think we have a big number that comes up there.
+[29:16] It's more of just when they're selecting the segments
+[29:18] that you see that displayed number.
+[29:22] So unless one of you guys knows the UI a little better than me,
+[29:26] when they go in there and use it,
+[29:28] they just wouldn't see those numbers?
+[29:31] I also definitely have complained when audience sizes have changed on them.
+[29:35] So this is definitely going to be a concern if we decide to just shrink everyone's audience by 40%.
+[29:42] Agreed.
+[29:45] Well, one thing I think that we could do without much concern is remove these four vendors.
+[29:54] Because we still, even with that included, still have like 98% coverage.
+[29:58] So it would be a really small amount of vendors.
+[29:59] that's only really a concern if we cut i believe 33 across which is our biggest vendor where the
+[30:06] majority of the additional coverage is lost you can see here um 33 across combined only so this
+[30:13] would be 33 across with um free logs so we still have 87 coverage but then if you had five by five
+[30:20] productive 33 across you get like 98 so um this is i think the sweet spot where there's really no
+[30:28] risk it seems even with the keywords um you mean to keep these four right these four the top yeah
+[30:37] right here yeah so this looks like a no or very very low risk thing even with the keywords um
+[30:43] the data source 19 visit a coverage is like 98 so even our keywords won't change then we could
+[30:49] drop these four they are some of our smallest ones but that does save us some money um
+[30:54] $200,000.
+[30:57] Really the big,
+[30:58] the big one is the 33 across,
+[31:00] um,
+[31:01] that.
+[31:02] And these cover,
+[31:03] I know you said it earlier for some of the,
+[31:05] uh,
+[31:05] the other analyses,
+[31:06] but these are IP domain level,
+[31:10] IP domain date.
+[31:11] Yes.
+[31:12] It's a row level,
+[31:13] right?
+[31:13] So it's not like we're saying we wouldn't be losing certain like visits of an
+[31:19] IP,
+[31:19] even though we saw,
+[31:20] you know,
+[31:21] if an IP visited 10 domains and we get one of them from good log and the
+[31:24] other nine from here that's not what you're saying you're saying we see all 10 of those
+[31:30] ip domain dates across multiple sources right am i understanding that right way if i yeah i think i
+[31:37] think yes yes that is correct so
+[31:43] yep it is it is at that at that grain because it would be valid you know you couldn't just check
+[31:50] IP domain because recency also matters, right? If I get a domain from today and I get it from,
+[31:55] you know, Oglog had it yesterday, but then Siba had it today, technically Siba is a day
+[32:00] sooner. So that is valid, even if it's the exact same domain IP combination,
+[32:04] because it's more recent. So that is what we're checking. So it's not just checking IP,
+[32:09] not just checking domain, it's checking recency as well. And so that's where the coverage you're
+[32:12] looking at is based on like, not everything though. If it says, I just want to make it clear,
+[32:18] Some of these are IPs only, and it says IPs.
+[32:23] But it will tell you if it's not.
+[32:25] And all these up here, this is talking about the combination of all those.
+[32:31] So yes.
+[32:34] So I guess going from here, I wrote down something.
+[32:43] I did send some of those queries.
+[32:45] it would be interesting if maybe we could have like second set of eyes on some things.
+[32:50] I wrote down that I'm going to want to look at the RTC stuff because I only checked it by day.
+[32:55] I didn't check it by hour.
+[32:56] So I can maybe just take a day sample and see the impact of RTC on there.
+[33:03] One thing that I would thought about too,
+[33:05] that when I'm looking for coverage per day,
+[33:11] I should probably be checking if that IP in the AUG log existed in the 30 days prior
+[33:22] and not necessarily in the same day that the IP was there
+[33:26] because we wouldn't have had it in our bid logs had it not come before,
+[33:30] if that makes sense.
+[33:31] So if I'm checking today's Augmentor log,
+[33:35] of course it has to be there for us to bid on it,
+[33:37] but we wouldn't have information to bid on it unless it was in the Augmentor log.
+[33:41] for a day before and i'm not i don't know if i did a trailing day i want to double check i think i
+[33:50] did but i want to double check that i did make sure there's a trailing day for the last 30 days
+[33:55] just to make sure i'm not over exaggerating the um coverage of augmenter log yeah yeah the other
+[34:07] thing um i saw you mentioned that if we do like um exclude those ips that we that we got for uh for
+[34:17] free right from the uh vendors we do quite save quite a bit yeah that that chart right there
+[34:23] that's something we can pursue like with the because basically we determine how much we pay
+[34:28] the vendor sounds like they don't there's no audit or anything like they don't we we run the targeted
+[34:33] signal table i think sherwin's team does some right uh like a compute and then we we produce
+[34:39] a report and say okay this is how much we pay you this month so there's definitely room that we can
+[34:44] you know we can kind of do to make sure the numbers make sense to us right if we can i wonder
+[34:50] if that's like the that's the safer start right is you make it more like waterfall where we check
+[34:57] everything in the oglog first
+[34:59] and if
+[35:00] well actually I don't know I have to think through
+[35:03] if that logic even makes sense but it's like first
+[35:05] we assign credit to ourself if it's
+[35:07] in the free logs
+[35:08] then we'll give you credit
+[35:11] if it's not in there right now
+[35:13] do that it's all like
+[35:15] equally shared
+[35:16] I think that's a good if it appears in five
+[35:19] sources we just say okay yeah all
+[35:21] five get credit
+[35:22] is it I thought
+[35:25] Victor told me that whatever
+[35:27] IP URL shows up
+[35:29] first in the date
+[35:32] partition.
+[35:33] Maybe it's by the date.
+[35:35] Okay.
+[35:36] Sorry.
+[35:40] It's partial credit given.
+[35:42] Yeah.
+[35:43] I set up a meeting for us
+[35:45] to talk through this on Monday
+[35:47] so we could ask these questions then.
+[35:52] I like that idea.
+[35:53] I think that's really great low-hanging fruit that we could...
+[35:55] sorry, I make myself cringe when I use the company jargon. I just said low hanging fruit
+[36:00] without thinking about it. Um, I think that that would be the best thing that we could do first
+[36:05] though, is start filtering out the free logs and good logs, which it's like not terrible. I mean,
+[36:09] I know this is not great cause this is like kind of net zero it looks like, but it is within the
+[36:15] range of the margins. So I don't know what the exact margins are. My assumption is our larger
+[36:20] clients probably have better margins, but the average is probably somewhere around 20%.
+[36:24] these are all just estimated values.
+[36:27] I don't know what the margins we actually make here,
+[36:29] but I think these are good conservative estimates here.
+[36:32] But it does look like 33 across is fine.
+[36:34] One other thing to consider too is we could consider,
+[36:40] I don't know.
+[36:41] I mean, it depends on what vendors
+[36:43] are willing to give us what prices,
+[36:46] but if they're able to all send us the same scale of data too,
+[36:50] it doesn't necessarily mean that 33 across is the best.
+[36:53] Like we might find that if just, just do know, or, you know, productive or something can give us just as much data. It might be better to just switch them out. So that's also something to consider. But like I said, it's really hard for me to estimate because if I go over to these numbers thing, and I pull up, you know, their performance, well, performance, we know is very, very closely connected to how many things you're touching. And so, you know, that's the whole reach versus performance thing.
+[37:20] so there's really no great way to know um which one would be better without having the same scale
+[37:27] but it is something to consider if one of them is like hey i'll give you the data for half the
+[37:31] price of your competitor i'm like shoot okay i'll take it um but yeah here's this like a point like
+[37:36] yeah like you can see uh clickly's got 2.2 percent ivr got 2.4 percent with siba
+[37:44] and 33 crosses 1.5 but again i think that's a scale thing yeah that's interesting
+[37:49] By the way, is Kale asking you to look into this?
+[37:54] Because I always thought Kale was interested in getting more data from these people.
+[38:00] But I'm just curious.
+[38:02] I'm not there.
+[38:03] Yeah.
+[38:04] So it's interesting.
+[38:04] Kale asked me a while ago to do 5x5 and just kind of look into it.
+[38:09] And then Paulo sent something recently.
+[38:11] And he was like, hey, we're going to renew our contract with Clickly.
+[38:14] Can you tell us?
+[38:15] Eventually, I want it for all vendors.
+[38:18] and so i just ran it for all and i was like yeah when you could quickly basically sends us no data
+[38:23] and it's no value and we pay like i think that one's a flat rate but still um just to be clear
+[38:30] too um like i said there's a thousand ways to skin a cat so there's a lot of things here the solo here
+[38:36] is telling us what is the value of this vendor alone as if it was the sole vendor not considering
+[38:44] overlap and it doesn't affect every single row but some rows on the numbers column or sorry the
+[38:50] number sheet it's considering overlap so it's saying like what does this vendor uniquely provide
+[38:55] but it depends on which question is being asked so just if you're wondering why is there two
+[38:59] different sheets there's like a minor difference between the two and it only affects certain
+[39:04] questions in there if you're looking through it and you're like i want to know why it's different
+[39:08] dude yeah i'm impressed you pulled that much data because this this is a big analysis
+[39:13] for sure
+[39:15] another thing I was just thinking
+[39:19] what about when we
+[39:21] I don't know if we want to
+[39:25] what happens when we go to like IPv6
+[39:29] or you know using the graph
+[39:30] I wonder if some of these vendors can give us IPv6
+[39:33] stuff too but
+[39:34] I don't know if we want to like
+[39:36] maybe we should
+[39:38] just talk to them to be like
+[39:41] you know
+[39:42] I don't know tell them we're thinking about canceling you I don't know whatever
+[39:48] just or just ask them what other data they got before you decide to do whatever
+[39:54] yeah I did include the IPv6 volume so 33 across just do not
+[40:00] and share this productive actually do send us quite a bit of ipv6 so that is a great call out
+[40:06] there was one more thing i wanted to bring up so it looks like share this obviously we already have
+[40:11] this here but we already do pay a lot of money for live ramp ip and deep sync and i wonder if those
+[40:17] two which we're already spending a lot of money on can send us this type of data that these other
+[40:23] ones are doing because like i said is that it's usually better to go through one vendor to get us
+[40:28] a lot of data than it is to mix and match a ton of vendors.
+[40:34] Yeah, and I think those three at the end,
+[40:36] or DeepSync at least, and maybe LiveRamp,
+[40:38] they're using the identity graph, so we wouldn't, yeah.
+[40:43] So those will never go away, right?
+[40:44] Those last three or whatever, maybe.
+[40:48] Yeah, so that's another avenue of like,
+[40:50] maybe we could cut out 33 across if we could just say,
+[40:54] hey, LiveRamp, we're already spending money with you.
+[40:56] can we scrape site visits or something but i don't know the cadence of how often they deliver data
+[41:01] and i don't know if it's recent or anything but it's just something that also is a path we could
+[41:07] take yeah i'm impressed man that's a lot of data to pull yeah it's a lot
+[41:15] so i think this analysis like very clear from this perspective of like
+[41:24] bidding on IPs and how we assign credit and whether any of these are actually worth
+[41:30] maintaining and using. But do they get like, so I know like 33 across appears in our
+[41:39] interest segments, probably via wherever, I don't know if it's via live rant, but
+[41:45] they appear in there for the interest segment portion as well. I'm just wondering if these get
+[41:52] used anywhere else?
+[41:56] I shouldn't have even mentioned, because I don't want to confuse with that.
+[42:00] But like, does the site visit signals?
+[42:02] Let me just say that.
+[42:03] Site visit signals, is it consumed by many other things and get used for many other things
+[42:10] beyond just like what we're using it for here?
+[42:13] is it being used to significant well like the keywords to like significantly
+[42:21] improve or expand or maintain our product categorization part or any other aspect of
+[42:30] the business that we kind of don't really think about see that often i i don't think so yes i
+[42:38] visit signals the downstream is mainly just data source 13 and 19 which is what ti owns yeah live
+[42:46] ramp it's a it's a whole separate pipeline so live live ramp even though yeah live ramp is a
+[42:51] is a collection of many other data vendors so you will see 33 across you'll see like distillery
+[42:56] like many other vendors kind of get aggregated in live ramp and they're like the middleman
+[43:01] as far as i know they yeah yeah so you will see those interest segment in through live ramp also
+[43:07] But LiveRamp sends us data in a separate bucket
+[43:10] and it goes through a separate data ingestion pipeline.
+[43:14] Yeah, not through a site visit.
+[43:18] Yeah, I don't think any of these affect interest segments at all.
+[43:21] So we could cut out all the use vendors on this side
+[43:23] and it wouldn't change anything.
+[43:27] But speaking of benefit,
+[43:29] I know we pay LiveRamp a ton load of money,
+[43:33] but I don't know if you've even been used,
+[43:36] like the interest segment.
+[43:37] Part is even generating enough revenue to cover the costs.
+[43:41] You know, so if you want to,
+[43:43] maybe we can do another analysis on LiveRamp, right,
+[43:45] all together, because, you know, speaking of cost,
+[43:48] a lot of things sometimes just doesn't make sense.
+[43:52] Like, but I think probably the middle ground is to,
+[43:55] like I said, renegotiate a rate that works for us, right,
+[43:59] while keeping them, trying to keep them in our system.
+[44:02] And the data quality is another perspective.
+[44:04] We can definitely, before site visit,
+[44:07] we can probably add some data quality checkpoints or filters
+[44:10] to get rid of the bad data that go into our pipelines
+[44:14] to save cost on the compute and storage.
+[44:18] And also we can reach out to the vendor
+[44:20] to cut out those bad stuff before they even send to us.
+[44:24] So yeah, those two things can go in parallel, I think.
+[44:28] But I just feel like dropping them all together is a big risk.
+[44:31] um you know i just feel like um there are a lot of things might backfire later on if we drop them
+[44:39] yeah i think the high level recommendation that you had is like
+[44:43] we can get rid of these four it's not really high risk we don't pay a lot it's not a ton of data
+[44:51] it's not our like biggest it's not 33 across or the like five by five or whatever it was
+[44:56] So it's a lower risk to not renew with those, I would say.
+[45:01] Unless like, I don't know,
+[45:04] like what was the point of onboarding these data providers
+[45:09] than was just to expand audience?
+[45:12] And then there was some analysis that was done to be like,
+[45:15] hey, it's going to grow our audience by this much.
+[45:18] We can never bid on them, but it will grow the audience.
+[45:22] That's what I'm trying to think about.
+[45:24] Okay, what got us to this point?
+[45:26] Is there a reason that we're not seeing?
+[45:29] Or was it just kind of like expand, expand, expand?
+[45:33] Because we needed to grow the audiences first
+[45:35] and then we can kind of narrow them down.
+[45:38] I think it's expand.
+[45:40] Richard was involved.
+[45:42] Yeah.
+[45:42] Like Richard and Phil.
+[45:44] They were big on expanding.
+[45:46] I think they were very ambitious.
+[45:48] They were like talking about integrating
+[45:49] with a hundred data provider or something like that
+[45:52] on the roadmap last year.
+[45:54] Something that makes sense to me
+[45:55] where like but some of these don't right and ryan you looked at this too it was just they're just
+[46:01] sending us the auction data we have that if it was something like what i what we just looked at
+[46:09] with proxima right like that's like actually useful data because it's the shopping data that's
+[46:15] not the advertisers that we work with so it's other conversion data that we don't have access
+[46:20] too and that makes sense yeah conversion data would be oh yeah that'd be gold if we conversion data
+[46:26] right um yeah i i think how do you phil did i know phil did a lot of analysis and he
+[46:34] some of the smaller ones they might not send us a lot but they send us like unique things
+[46:39] but i mean i know you analyze like things like we bid on and maybe we bid on them anyway
+[46:44] it but is it valuable to have are you know right now we turn url as a dick keyword later on
+[46:51] could we target by like a unique url maybe i don't know there might be value
+[46:57] and keeping them even though we don't pay that much you know so i don't say 33 across is the
+[47:05] wanted to dump but i don't know and maybe yeah so i think talking about next steps because i know
+[47:16] we're getting kind of close to time um it sounds like we need to have a discussion about um and
+[47:24] and throw it into the pipelines where we remove augmenter log and good log from um so we're not
+[47:31] paying for those that we already see so that seems to be a step that we need to take in the right
+[47:35] direction um i can figure out maybe what the exact cpms we're willing to pay for these different
+[47:43] ones are just to give a range and see if that's valuable and i will just be like based on percent
+[47:49] used versus just if we were to pay for 100 um i don't know who this would we would talk to about
+[47:55] this. Sovereign, the biggest two call outs here is that 33 across sends us like 22% of their data
+[48:02] is like Yahoo mail and we throw it away. So it's like one URL we could just throw away and tell
+[48:07] them to stop doing it. They also have Google bot IPs we could remove. But I mean, that might be a
+[48:12] little bit harder. Sovereign has this double URL bug where there's the URL field has the URL doubled
+[48:20] up and so it's messed up so it'll be like right here msn.com and then it'll say msn.com again
+[48:26] and so it messes it up um the rest of them i think there's one more i share this is sending
+[48:33] us a lot of adult ips which i think is but um besides that i think those are the big call outs
+[48:40] those are those are it so whoever needs to talk about that um and then i will look into the rtc
+[48:47] stuff, I'm going to verify the OGLOG is not doing it would be silly for me to declude the same day.
+[48:55] Well, it came out in the bid, but did we have it prior to be able to bid on? I'll just make sure
+[48:59] that I have the one-day lag for the OGLOG just to make sure the coverage is correct.
+[49:05] And then whatever we said about data service 14, we're restricting only IPs the OGLOG good log.
+[49:11] I think we discussed that a little bit, but I don't know if there's an action plan.
+[49:13] Yeah, so that's a filter being added at, I think, MembershipDB or one of the audience services as a filter, like a global filter, to only allow bidding happen on the active IPs shown in Grid and Augmentor log.
+[49:33] So either we should make it bigger or make a bigger filter or, I don't know, there are things we can do to make it big or small.
+[49:41] but yeah
+[49:44] maybe just query what's in site visit signal
+[49:46] that's not in DS14
+[49:48] or you know
+[49:49] maybe do an overlap
+[49:52] analysis on
+[49:55] DS14 versus
+[49:56] outside of DS14 and see
+[49:58] what's the
+[49:59] overlap there
+[50:02] so I would
+[50:04] say Malachi when you have your
+[50:06] consolidated list of
+[50:08] suggestions or next
+[50:10] steps or whatever it is that you want to do the next people to run that through would be
+[50:14] mike and allison and kale hopefully a pre-read again for allison but then include mike and kale
+[50:22] as the department leads and then after that um then we can try and push for a discussion with paulo
+[50:29] okay um for these smaller tasks just some of the stuff should we should i create an epic
+[50:38] for it or maybe just a series of tickets under something?
+[50:42] Yeah, make an epic for it. And then anything that you've done already, this
+[50:46] 1089, put that in that
+[50:50] epic. But then be really clear about the epic description that it's
+[50:55] research for a proposal around doing it, that the implementation
+[50:58] would have to be a separate work stream.
+[51:03] Okay. Sounds good to me.
+[51:06] because I know Allison is also working on,
+[51:09] she and I have been looking at a list of vendors
+[51:11] that are vendor ops.
+[51:14] And so there could be things on that list
+[51:17] that we should look at as well
+[51:18] or things that we should ignore.
+[51:20] Maybe we prepaid a contract or whatever.
+[51:22] So it would be good to also have her and Kale's read
+[51:25] on kind of what you're proposing and next steps.
+[51:31] Okay, that sounds good to me.
+[51:34] Anything else from anybody?
+[51:36] good job man that's a lot of work yeah it's a good analysis yeah well it'll be cool i'd like
+[51:45] to be able to say that wouldn't be cool if we took what alice and say it was like eight hundred
+[51:51] thirty thousand dollars we just throw it to our data proc budget hell yeah cool all right guys
+[52:00] well thanks I'll post the
+[52:03] summary stuff in that little
+[52:05] slack channel and we'll go from there
+[52:07] sounds good
+[52:09] thank you
+[52:10] see ya
