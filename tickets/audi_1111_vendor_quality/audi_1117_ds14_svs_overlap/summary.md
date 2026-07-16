@@ -32,11 +32,27 @@ from the free logs (Allison's question on the call). Parent epic: AUDI-1111.
 
 ## 4. Investigation & Findings
 
-### 4a. Gate-lag scan in flight (launched 2026-07-16 ~17:00)
+### 4a. Q1 all-impressions lag histogram (MEASURED 2026-07-16 — `audi_1117_ds14_gate_lag.csv`)
 
-Expected read: if gate = aug(1d) OR guid(4d), (nearly) all served IPs show aug_lag ≤ 1 OR
-guid_lag ≤ 4 (±1 day partition fuzz). Mass at aug_lag 2–7 with guid_lag > 4 would support
-the ~7d augmentor reading instead.
+Served IPs on 2026-07-01: 9,589,296 (54.6M imps). **No hard gate edge over ALL impressions:**
+
+| Hypothesis | % served IPs | % imps |
+|---|---|---|
+| aug same-day | 68.6% | 82.9% |
+| aug ≤ 1d | 77.0% | 87.2% |
+| gate = aug(1d) OR guid(4d) | **85.5%** | **92.9%** |
+| gate = aug(7d) OR guid(4d) | 92.7% | 96.4% |
+| NEITHER free log in 11d | **5.1%** | 2.5% |
+
+Lag distributions decay smoothly (no cliff at 1d/4d/7d). So DS14 is NOT a hard universal
+filter at the documented windows across all delivery — either some paths bypass it
+(retargeting = own visitor lists; display = cookie-based) or exemptions exist.
+
+### 4b. Q2 cohort split in flight (launched 2026-07-16 ~17:25)
+
+Same histogram per channel (ctv/display) × funnel (prospecting/retargeting) via
+public_campaigns (funnel_level authoritative). If the gate is real, CTV-prospecting should
+show a hard edge and the bypass cohorts should absorb the Q1 residual.
 
 ## 5. Solution
 
