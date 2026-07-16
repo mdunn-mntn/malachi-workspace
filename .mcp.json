@@ -24,7 +24,7 @@
         "--project-id",
         "dw-main-silver",
         "--location",
-        "US"
+        "us-central1"
       ],
       "env": {}
     }

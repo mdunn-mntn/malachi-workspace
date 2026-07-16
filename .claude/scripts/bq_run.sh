@@ -15,6 +15,7 @@ LOG_FILE="${WORKSPACE}/knowledge/bq_perf_log.jsonl"
 TICKET=""
 LABEL=""
 PROJECT_ID="dw-main-silver"
+LOCATION_SET=false
 BQ_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -29,10 +30,24 @@ while [[ $# -gt 0 ]]; do
         --project_id)
             PROJECT_ID="$2"
             BQ_ARGS+=("$1" "$2"); shift 2 ;;
+        --location=*)
+            LOCATION_SET=true
+            BQ_ARGS+=("$1"); shift ;;
+        --location)
+            LOCATION_SET=true
+            BQ_ARGS+=("$1" "$2"); shift 2 ;;
         *)
             BQ_ARGS+=("$1"); shift ;;
     esac
 done
+
+# Default to us-central1: MNTN's slot reservation (dw-main-bronze:us-central1.background-jobs)
+# only covers jobs in us-central1. Queries with no dataset reference (e.g. inline
+# --external_table_definition over GCS) otherwise default to the US multi-region and
+# bill on-demand ($6.25/TiB). All MNTN datasets + gs://mntn-data-archive-prod are us-central1.
+if [[ "$LOCATION_SET" == false ]]; then
+    BQ_ARGS=(--location=us-central1 "${BQ_ARGS[@]}")
+fi
 
 # Generate a unique job ID
 JOB_ID="perf_$(date +%Y%m%d_%H%M%S)_$$"

@@ -272,6 +272,19 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d22. BQ cost incident: runbook external-table queries billed on-demand in US multi-region (2026-07-16, fixed)
+
+- **Alek Piasecki flagged ~$720/wk of on-demand BQ spend in dw-main-silver.** Verified: the runbook's
+  svs/wcv/pc queries (inline `--external_table_definition` over GCS parquet, no BQ dataset referenced)
+  defaulted the JOB to the **US multi-region**, where the org reservation
+  (`dw-main-bronze:us-central1.background-jobs`) has no assignment → on-demand $6.25/TiB.
+  Jul 9–15 = ~140 TiB ≈ $875. Regular table queries were unaffected (datasets are us-central1 → auto-route).
+- **Proof:** identical svs COUNT with `--location=us-central1` → reservation hit, 0 bytes billed.
+  `gs://mntn-data-archive-prod` is US-CENTRAL1, so no compatibility issue.
+- **Fixes:** `~/.bigqueryrc` `location = us-central1`; `bq_run.sh` injects `--location=us-central1`
+  default; `.mcp.json` bigquery server US → us-central1; runbook doc + data_catalog.md updated.
+  Detail: `knowledge/data_catalog.md` § "BQ job location & slot-reservation routing".
+
 ## 4d21. Deck final additions (user asks, 2026-07-16 pm)
 
 - **Scenario table**: total-possible in the kept-column header + "Triples LOST vs today"

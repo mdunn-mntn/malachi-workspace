@@ -26,6 +26,14 @@ svs access: temp external tables over `gs://mntn-data-archive-prod/signals/site_
 pattern in the SQL headers). Jobs run 15 min–2.6 h — launch in parallel, never preempt. If a client dies,
 results are recoverable for 24 h from BQ anonymous destination tables (`bq show -j <id>`, mind `--location`).
 
+**⚠️ ALWAYS run these with `--location=us-central1`.** Queries whose only inputs are inline
+`--external_table_definition` GCS tables reference no BQ dataset, so the job location defaults to the
+**US multi-region — where MNTN has no reservation assignment — and bills on-demand at $6.25/TiB**
+(the July 2026 run billed ~140 TiB ≈ $875 this way before it was caught). Pinned to us-central1, the
+identical query routes through `dw-main-bronze:us-central1.background-jobs` and bills $0 in bytes
+(verified 2026-07-16). The bucket is us-central1, so there is no compatibility penalty. `bq_run.sh` now
+injects this default automatically; the flag only needs to be explicit when running plain `bq query`.
+
 ---
 
 ## The score (composite 0–100, then verdict = score × cost position)
