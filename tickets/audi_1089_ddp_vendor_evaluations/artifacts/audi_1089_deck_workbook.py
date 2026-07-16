@@ -401,6 +401,35 @@ for title, data, allow_q3d in [
     gap()
 
 # data-driven widths: wide enough that nothing clips, capped so no column hogs
+# ------------------------------------------- signal-volume lens (from deck_d4)
+if d4:
+    t_row, f_row = d4["today_all_8_paid"], d4["free_logs_only"]
+    hi_tot, hi_free = float(t_row["hi_trips_kept"]), float(f_row["hi_trips_kept"])
+    pp_tot, pp_free = float(t_row["pp_trips_kept"]), float(f_row["pp_trips_kept"])
+    all_tot, all_free = float(t_row["trips_kept"]), float(f_row["trips_kept"])
+    ot_tot = all_tot - hi_tot - pp_tot
+    ot_free = all_free - hi_free - pp_free
+    header(["SIGNAL VOLUME by tier — IP x Domain x Date triples (usable, 30d), "
+            "free logs vs vendors", "Triples today (all sources)",
+            "Free-covered triples (kept under free-only)",
+            "Vendor-only triples (LOST under free-only)", "% free covered"])
+    fmtsS = {2: N0, 3: N0, 4: N0, 5: PCT2}
+    for label, tot, free in [("HI10000 IPs' triples", hi_tot, hi_free),
+                             ("PP8000 IPs' triples", pp_tot, pp_free),
+                             ("All other tiers' triples", ot_tot, ot_free),
+                             ("ALL triples", all_tot, all_free)]:
+        emit([label, tot, free, tot - free, free / tot], fmtsS)
+    note("* The THIRD lens: blocks 5/6 count IPs (membership — would we still know the"
+         " household?); this table counts triples (signal — would we still have the same"
+         " domain-and-date evidence about it?). Both are true at once: free-only keeps"
+         " 99.76% of HI member IPs but only 65.7% of the signal volume on them — the"
+         " scores survive because membership needs SOME qualifying signal, not ALL of it."
+         " Tier assignment = per-IP MAX(household_score), CIL valuation week; rows split"
+         " hi / pp / everything-else because deck_d4's histogram carries exactly those"
+         " three tiers at triple grain. Derived from deck_d4's today + free_logs_only"
+         " rows — no separate query.", 5)
+    gap()
+
 for c, m in col_max.items():
     cap = 38 if c == 1 else 30
     ws.column_dimensions[get_column_letter(c)].width = max(min(m + 3, cap), 11)
@@ -419,7 +448,8 @@ qrow = [["Block", "Supporting query (runbook/queries/)", "What it computes", "St
         ["5", "deck_d5_tier_free_coverage_all_ips.sql", "ALL member IPs by score tier: free-covered vs vendor-only",
          "landed — all cells measured" if d5 else "scan running"],
         ["6", "deck_d6_tier_free_coverage_bid_ips.sql", "same split, only IPs with won impressions",
-         "landed — all cells measured" if d6 else "scan running"]]
+         "landed — all cells measured" if d6 else "scan running"],
+        ["SIGNAL VOLUME table", "deck_d4_scenario_ladder.sql (today + free_logs_only rows)", "triple-grain (ip x domain x date) free coverage per tier — the signal lens next to blocks 5/6's membership lens; sheet arithmetic over d4's output", "derived (d4 landed)"]]
 for i, rr in enumerate(qrow, 1):
     for c, v in enumerate(rr, 1):
         cell = qs.cell(row=i, column=c, value=v)
