@@ -55,7 +55,8 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   **branch → PR → review by ANOTHER engineer → Malachi merges** (precedent reviewers: Alex Knorr `Knorra416`,
   Ryan Kleck `rkleck-mntn`; required TruffleHog check; no auto-merge). The Mode UI "Push to GitHub" works
   because the `modeanalytics[bot]` bypasses the ruleset.
-- **DEPLOY = paste into the Mode UI, manually.** git→Mode edit-sync does not apply changes that weren't made
+- **DEPLOY = `deploy_mode.sh` via the Mode REST API** (see the Programmatic deploy section — proven 2026-07-16,
+  queries AND HTML; the paste flow below is the fallback). git→Mode edit-sync does not apply changes that weren't made
   in Mode first (Nick's claim, confirmed by Malachi 2026-07-07 — mode-assets PR #10 closed unmerged for this
   reason). The staging files here are the SOURCE; deploying a change = paste the file's full contents into the
   Mode query / HTML component and Run. To keep the mode-assets archive in sync afterwards, use the report's
@@ -98,8 +99,11 @@ Replaces the paste relay for QUERIES: the Mode API supports `PATCH …/queries/{
   (triggers a report Run and polls — required, since `window.datasets` = last run). Remote SQL is backed up to
   `~/.cache/mode_deploy/<ts>/` before each PATCH; every PATCH is verified by re-GET.
 - Matching = staging filename minus `.sql`/token suffix vs live query name, case- and underscore/space-insensitive.
-- **HTML limit:** the report layout is NOT a documented PATCH field. `apply` attempts `{"report":{"layout":…}}`
-  and verifies; if Mode ignores it, `index.html` still needs one UI paste (queries go via API regardless).
+- **HTML too:** `{"report":{"layout":…}}` PATCH is undocumented but WORKS (proven 2026-07-16, verified by
+  re-GET) — the report is fully zero-paste. HTML-only changes render on page refresh (no Run needed);
+  SQL changes need a Run (`apply --run`).
+- `POST …/runs` accepts `{"parameters": {...}}` (multiselects as arrays) — runs with explicit params, used
+  to test filter behavior end-to-end without touching the UI.
 
 ## Roadmap — remaining modules (same pattern each: add query → resolve in HTML → render)
 
