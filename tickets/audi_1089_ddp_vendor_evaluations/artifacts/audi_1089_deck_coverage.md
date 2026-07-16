@@ -19,11 +19,11 @@ Windows: delivery/uniqueness = 30d svs, `dt 2026-06-02..07-01`; serving = 37d me
 
 | Source | Bill $/yr | Raw rows 30d | Standalone visit-days (ip x dom x date) | % of universe | Strictly-unique visit-days | % of universe | Won imps, touched IPs (wk) | % of platform | Won imps, standalone IPs (wk) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| augmentor (free, bid-time) | $0 (internal) | 22,749,952,266 | 6,464,053,715 | 48.7% | 3,837,770,788 | 28.9% | 390,253,648 | 98.0% | 11,353,176 |
-| free_logs UNION (guid+aug) | $0 (internal) | 31,837,861,005 | 5,198,013,246 | 39.1% | 5,198,013,246 | 39.1% | 395,021,931 | 99.2% | 992,467 |
+| augmentor (free, bid-time) | $0 (internal) | 22,749,952,266 | 6,464,053,715 *(vs guid only)* | 48.7% | 3,837,770,788 | 28.9% | 390,253,648 | 98.0% | 11,353,176 |
+| free_logs UNION (guid+aug) | $0 (internal) | 31,837,861,005 | 5,198,013,246 *(vs all 8 paid)* | 39.1% | 5,198,013,246 | 39.1% | 395,021,931 | 99.2% | 992,467 |
 | 33Across API | $175,879 | 10,901,155,513 | 2,334,167,188 | 17.6% | 1,847,772,635 | 13.9% | 386,328,342 | 97.0% | 710,402 |
 | 33Across | $422,024 | 30,373,665,364 | 2,153,592,512 | 16.2% | 1,548,459,061 | 11.7% | 393,538,731 | 98.8% | 1,164,956 |
-| guid_log (free, MNTN pixel) | $0 (internal) | 9,087,908,739 | 1,403,332,865 | 10.6% | 1,354,230,011 | 10.2% | 383,668,714 | 96.3% | 4,768,240 |
+| guid_log (free, MNTN pixel) | $0 (internal) | 9,087,908,739 | 1,403,332,865 *(vs aug only)* | 10.6% | 1,354,230,011 | 10.2% | 383,668,714 | 96.3% | 4,768,240 |
 | 5x5 | flat (pending) | 3,489,668,425 | 976,138,945 | 7.3% | 912,444,872 | 6.9% | 379,710,969 | 95.3% | 446,563 |
 | Predactiv | flat (pending) | 2,222,627,220 | 506,884,655 | 3.8% | 271,601,271 | 2.0% | 349,578,000 | 87.8% | 320,647 |
 | Sovrn | $115,880 | 1,681,665,782 | 134,798,905 | 1.0% | 21,689,577 | 0.2% | 334,442,315 | 84.0% | 178,606 |
@@ -35,11 +35,11 @@ Windows: delivery/uniqueness = 30d svs, `dt 2026-06-02..07-01`; serving = 37d me
 
 | Source | Unique IPs 30d (raw) | Standalone (ip, domain) pairs | % of pair universe | Distinct served IPs, touched (wk) | % of platform served IPs |
 |---|---:|---:|---:|---:|---:|
-| augmentor (free, bid-time) | 105,698,754 | 2,757,407,162 | 46.2% | 26,970,068 | 96.2% |
-| free_logs UNION (guid+aug) | — (see notes) | 2,147,190,060 | 36.0% | 27,413,105 | 97.8% |
+| augmentor (free, bid-time) | 105,698,754 | 2,757,407,162 *(vs guid only)* | 46.2% | 26,970,068 | 96.2% |
+| free_logs UNION (guid+aug) | — (see notes) | 2,147,190,060 *(vs all 8 paid)* | 36.0% | 27,413,105 | 97.8% |
 | 33Across API | 121,008,985 | 807,169,858 | 13.5% | 26,327,573 | 93.9% |
 | 33Across | 149,856,954 | 1,057,413,640 | 17.7% | 27,209,189 | 97.1% |
-| guid_log (free, MNTN pixel) | 195,031,329 | 835,390,424 | 14.0% | 25,489,045 | 90.9% |
+| guid_log (free, MNTN pixel) | 195,031,329 | 835,390,424 *(vs aug only)* | 14.0% | 25,489,045 | 90.9% |
 | 5x5 | 157,180,245 | 563,743,864 | 9.4% | 24,783,469 | 88.4% |
 | Predactiv | 88,220,495 | 265,702,737 | 4.4% | 21,905,985 | 78.1% |
 | Sovrn | 59,907,734 | 83,702,215 | 1.4% | 17,193,195 | 61.3% |
@@ -67,6 +67,7 @@ All files in `../runbook/queries/` (headers carry the exact run command; `MANIFE
 ## Reading notes (the traps a validator will hit)
 
 - **Columns overlap — never sum a column across sources.** The same visit-day or IP is typically held by several sources (the average served household is held by ~6.7 of 10 sources; ~7.5 for HI households). Only the strictly-unique column is disjoint across sources; standalone slices of two paid vendors can overlap each other (each is a separate vs-free counterfactual), and touched columns overlap heavily by construction.
+- **Why augmentor's standalone (48.7%) exceeds the union's (39.1%)**: different comparison sets. The free-log rows are measured vs the OTHER free log only (paid ignored); the union row vs the paid roster. Of augmentor's 6,464,053,715 not-in-guid visit-days, 2,626,282,927 are ALSO held by a paid vendor and drop out of the union's vs-paid count: 5,198,013,246 = aug-only 3,837,770,788 + guid-only 1,354,230,011 + guid-and-aug-no-paid 6,012,447 (exact, q3c masks).
 - **Standalone != strictly-unique for paid vendors**: standalone ignores the other 7 paid feeds (the renewal counterfactual: free logs stay either way); strictly-unique is the hardest "only this source has it" cut. Dropping ONE vendor while keeping the rest loses only its strictly-unique slice; dropping ALL paid loses universe minus free coverage (see anchors), NOT the sum of standalone columns.
 - **The union row is not the sum of guid + aug rows** for any distinct-count column (visit-days, pairs) — it is measured directly on the union (`q15*`).
 - **The union row's raw unique-IP cell is blank on purpose**: `q15b` measures the union's reach only on rows with a parseable domain (186.9M), which is NOT comparable to the ungated per-source `q2` column — the true raw union is at least guid's 195.0M and at most guid+aug's 300.7M. Don't quote 186.9M as raw union reach.

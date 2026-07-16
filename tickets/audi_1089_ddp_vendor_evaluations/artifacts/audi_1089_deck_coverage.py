@@ -169,6 +169,12 @@ for ds in BITSQ + [FREEC]:
     })
 rows.sort(key=lambda r: r["trips_standalone"], reverse=True)
 
+# what each free row's standalone is measured against — annotated in-cell because the
+# comparison set differs from the paid rows (a component can exceed the union otherwise)
+VS = {23: " *(vs aug only)*", 30: " *(vs guid only)*", FREEC: " *(vs all 8 paid)*"}
+AUG_COHELD = trips_standalone(30) - trips_sole(30)  # aug-not-guid triples paid also holds
+MASK_BOTH_FREE = q3c_masks.get(FREE_MASK, 0.0)      # guid AND aug, no paid
+
 
 # ---------------------------------------------------------------- render
 def n0(v):
@@ -228,7 +234,8 @@ L.append("| Source | Bill $/yr | Raw rows 30d | Standalone visit-days (ip x dom 
 L.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
 for r in rows:
     L.append(f"| {r['name']} | {money(r)} | {n0(r['raw_rows'])} "
-             f"| {n0(r['trips_standalone'])} | {r['trips_standalone_pct']:.1f}% "
+             f"| {n0(r['trips_standalone'])}{VS.get(r['ds'], '')} "
+             f"| {r['trips_standalone_pct']:.1f}% "
              f"| {n0(r['trips_sole'])} | {r['trips_sole_pct']:.1f}% "
              f"| {n0(r['imps_touched'])} | {r['imps_touched_pct']:.1f}% "
              f"| {n0(r['imps_standalone'])} |")
@@ -240,7 +247,8 @@ L.append("| Source | Unique IPs 30d (raw) | Standalone (ip, domain) pairs "
 L.append("|---|---:|---:|---:|---:|---:|")
 for r in rows:
     ips30_cell = n0(r["ips30"]) if r["ips30"] is not None else "— (see notes)"
-    L.append(f"| {r['name']} | {ips30_cell} | {n0(r['pairs_standalone'])} "
+    L.append(f"| {r['name']} | {ips30_cell} "
+             f"| {n0(r['pairs_standalone'])}{VS.get(r['ds'], '')} "
              f"| {100 * r['pairs_standalone'] / PAIR_UNIVERSE:.1f}% "
              f"| {n0(r['ips_served_touched'])} | {r['ips_served_pct']:.1f}% |")
 L.append("")
@@ -284,6 +292,14 @@ L.append("- **Columns overlap — never sum a column across sources.** The same 
          "disjoint across sources; "
          "standalone slices of two paid vendors can overlap each other (each is a separate "
          "vs-free counterfactual), and touched columns overlap heavily by construction.")
+L.append(f"- **Why augmentor's standalone ({100 * trips_standalone(30) / TRIP_UNIVERSE:.1f}%) "
+         f"exceeds the union's ({100 * trips_standalone(FREEC) / TRIP_UNIVERSE:.1f}%)**: "
+         f"different comparison sets. The free-log rows are measured vs the OTHER free log "
+         f"only (paid ignored); the union row vs the paid roster. Of augmentor's "
+         f"{n0(trips_standalone(30))} not-in-guid visit-days, {n0(AUG_COHELD)} are ALSO held "
+         f"by a paid vendor and drop out of the union's vs-paid count: "
+         f"{n0(trips_standalone(FREEC))} = aug-only {n0(trips_sole(30))} + guid-only "
+         f"{n0(trips_sole(23))} + guid-and-aug-no-paid {n0(MASK_BOTH_FREE)} (exact, q3c masks).")
 L.append("- **Standalone != strictly-unique for paid vendors**: standalone ignores the other "
          "7 paid feeds (the renewal counterfactual: free logs stay either way); strictly-"
          "unique is the hardest \"only this source has it\" cut. Dropping ONE vendor while "

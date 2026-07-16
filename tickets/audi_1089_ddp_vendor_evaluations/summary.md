@@ -288,6 +288,13 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   q15b union reach is parse-gated → cell blanked (186.9M < guid's 195.0M raw would read as
   impossible); serving cohorts are RAW-grain (windows line now says so); avg served household
   held by ~6.7/10 (7.5 = HI-only figure); "(exact)" anchors relabeled <0.01% snapshot drift.
+- **User-caught (2026-07-16): component > union confusion** — aug standalone 48.7% vs union
+  39.1% read as impossible. Cause: per-row comparison sets (free rows measured vs the OTHER
+  free log, paid ignored; union row vs the paid roster). 2.626B of aug's 6.464B not-in-guid
+  visit-days are paid-coheld and leave the vs-paid count (39.1% = aug-only 28.9% + guid-only
+  10.2% + both-free-no-paid 0.05%, exact q3c mask identity). Fix at point of use: in-cell
+  "(vs guid only / vs aug only / vs all 8 paid)" annotations on the three free rows in BOTH
+  tables + a reading note carrying the exact decomposition.
 
 ## 4d17. Org-wide validation package (user ask, 2026-07-15 night)
 
