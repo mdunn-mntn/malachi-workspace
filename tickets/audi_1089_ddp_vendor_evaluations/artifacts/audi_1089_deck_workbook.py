@@ -472,10 +472,10 @@ for c, m in col_max.items():
 qs = wb.create_sheet("queries")
 qrow = [["Block", "Supporting query (runbook/queries/)", "What it computes", "Status"],
         ["1 cols B-D", "deck_d1_universe_coverage.sql", "triple holder-mask histogram -> totals, % of universe, cumulative union % (numbers here derive from the identical measured q3c histogram)", "measured (q3c run_2026_07_10)"],
-        ["1 cols E-F", "deck_d2_touched_won_bids.sql", "won imps on touched IPs + % of platform won imps (RETITLED col F: share of platform, NOT a win rate)", "measured (q6/q15/q7d)"],
+        ["1 cols E-F", "deck_d2_touched_won_bids.sql", "won imps on touched IPs + % of platform won imps (RETITLED col F: share of platform, NOT a win rate)", "landed 2026-07-16 — reconciles q6/q7d/q15 (drift <0.00002%)"],
         ["2", "deck_d3_bills_cpm.sql", "registry roster, contract/implied CPM, June 2026 meter bill x 12; media CPMs from q6/q15 media+imps", "run 2026-07-16"],
         ["3", "deck_d3 x deck_d1", "bill_after = bill x (1 - free-cohold share); sheet formula, inputs in this workbook", "computed"],
-        ["FREE LOGS table", "deck_d7_free_logs_value.sql", "the reverse cohort: free-side media on IPs OUTSIDE the paid roster (guid strictly-sole / augmentor strictly-sole / union-no-paid); union > sum of the two by cohort algebra", "measured (q6 sole + q15; d7 = optional independent re-run)"],
+        ["FREE LOGS table", "deck_d7_free_logs_value.sql", "the reverse cohort: free-side media on IPs OUTSIDE the paid roster (guid strictly-sole / augmentor strictly-sole / union-no-paid); union > sum of the two by cohort algebra", "landed 2026-07-16 — matches q6/q15 to the dollar"],
         ["2/3 Profit cols", "q8b_solo_perf.sql (serve media per ds); union: q15_free_union_perf.sql (sole media)", "profit band = weekly UNIQUE media x 52 x 10-30% margin — computed offline; margin band internal, never in shared queries", "measured"],
         ["4", "deck_d4_scenario_ladder.sql", "9 keep-set scenarios: triples kept, % of today, triples LOST (= today row minus scenario, sheet arithmetic), HI/PP triples + IP-grain coverage",
          "landed — all cells measured" if d4 else "triples measured; HI/PP coverage shown from q3d (37d) until the d4 scan lands"],
