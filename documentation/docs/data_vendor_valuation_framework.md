@@ -124,6 +124,27 @@ delivery-reality population; treat count-only contribution as denominator inflat
 Also verify WHAT the vendor-dependent categories are — here the collapsing ones were
 ad-infrastructure junk classifications (cookie-sync URLs as "Paid Advertising" keywords).
 
+## 2026-07-16 extension (AUDI-1089): Net Kept Margin — the one-formula statement
+
+The whole framework compresses to a stakeholder-ready formula (Malachi's formulation):
+
+    Net Kept Margin_v = (I_v / 1,000) x CPM x M − D_v
+
+    I_v  — unique (IP x Domain x Date) impressions served only because of vendor v
+           (net of free sources; leave-one-out against the rest of the paid roster)
+    CPM  — client-facing price per 1,000 served impressions
+    M    — gross margin as a % of revenue
+    D_v  — data cost paid to vendor v over the same window
+
+Positive → the vendor pays for itself; negative → the data costs more than the margin it
+creates. Two implementation notes that make it defensible in a room:
+- **(I_v/1000) x CPM is directly measurable** as billed media dollars on the unique cohort —
+  no CPM assumption needed (realized CPM lands ~40% ABOVE the touched-cohort rate on unique
+  slices; low-overlap IPs get fewer, pricier serves).
+- **Incremental-only is empirically forced, not a modeling taste**: counting everything a
+  vendor "touches" let the 8 paid vendors claim 6.39x the impressions actually served —
+  touched-based values sum to more than the business.
+
 ## 2026-07-13 extensions (AUDI-1089): portfolio lenses beyond leave-one-out
 
 - **Net-of-free value ladder:** drop every unit your OWN free sources capture from the universe

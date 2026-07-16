@@ -290,6 +290,28 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   jobs; one pre-fix straggler (`perf_20260716_132925_55088`, wcv scan launched 13:29) still bills
   on-demand — the last one.
 
+## 4d22. Stakeholder deck + proof runs + d8 (2026-07-16 late pm)
+
+- **TLDR deck (RevealJS)**: v1 (playbook-style) rejected by user — "way too much filler,
+  reads like a presentation deck"; audience is DS/DA/MLE. v2 = 9 dense technical slides:
+  user's Net Kept Margin formula verbatim (NKM_v = (I_v/1000)xCPMxM − D_v), definitions,
+  full tables, exact values, per-slide query citations; Open + Caveats slides removed on
+  request. artifacts/audi_1089_tldr_deck{,_standalone}.html; share via share_deck.sh gist
+  (new gist per revision — githack caches).
+- **Free-row standalone convention → vs ALL 8 PAID everywhere** (user ask): guid 10.24% /
+  aug 28.93% / union 39.12% — each free row now ⊆ union (kills the component>union trap).
+  deck_d1 freebits 990 for ds23/30; deck slide + workbook src_stats aligned. In-flight d1
+  (old convention) to be relaunched on landing.
+- **deck_d8 LANDED**: served-IPs signal volume — ALL SERVED triples 63.66% free-covered
+  (HI 65.74 / PP 59.21 / served-other 61.49); never-served 56.34%. HI/PP rows == d4 EXACT;
+  4 rows sum to universe exact. Answers "coverage of things that ACTUALLY got bid on".
+- **Proof runs d2/d7 LANDED**: d2 reconciles q6/q7d/q15 (platform + union exact; per-vendor
+  drift <0.00002% = late-arriving svs rows); d7 matches q6/q15 to the dollar. Both xlsx
+  verified current (main workbook rebuilt: 0 empty/pending); zip byte-verified vs repo.
+- **Capture additions**: BQ correlated-subquery re-read multiplier + 3 single-pass patterns
+  + GROUPING SETS alias shadow → data_knowledge; population principle 4th lens (IP-grain vs
+  signal-grain; 6.39x touched sum) → data_knowledge; Net Kept Margin → valuation framework.
+
 ## 4d21. Deck final additions (user asks, 2026-07-16 pm)
 
 - **Scenario table**: total-possible in the kept-column header + "Triples LOST vs today"

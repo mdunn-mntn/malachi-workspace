@@ -170,6 +170,7 @@ Paulo announced a reorg merging big pieces of the **reporting world** under **Ka
 - **Jack** — Engineering manager for identity team (took over role ~March 2026).
 - **Alex Bloore** — VP Engineering. Covering product leadership for targeting during GPM search (alongside Mike Dolt and Kale). Approved Mike's Q2 roadmap ("Mike, you killed it").
 - **Mike Dolt** — Acting as himself + Ellison + RTPM for Q2 roadmap/product. Covering product leadership for targeting during GPM search (alongside Alex Bloore and Kale). Presented Q2 Targeting Roadmap (2026-04-17).
+- **Alek Piasecki** — Data platform: owns BQ slot reservations, query-cost routing, and billing monitoring. Watches per-project on-demand spend and flags anomalies (caught the AUDI-1089 US-multi-region routing leak, 2026-07-16). Escalation contact for reservation queueing/throttling issues.
 
 ### Empirical Incrementality Lift (Alyson Lefkowitz to Malachi, 2026-06-01)
 

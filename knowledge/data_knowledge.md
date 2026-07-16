@@ -157,6 +157,8 @@ The adhoc BQ reservation has limited slots. Running two 4+ TB queries concurrent
 
 **Learned from TI-650 (2026-03-18):** Two 18 TB queries run simultaneously took 12+ hours each instead of ~2 hours solo. The adhoc reservation does not auto-scale — concurrent jobs compete for the same fixed slot pool.
 
+**This rule now also covers the DDP GCS external-table scans (2026-07-16):** they previously ran on-demand in the US multi-region (unlimited slots, $6.25/TiB — the AUDI-1089 cost leak) and now route through the same us-central1 reservation via the `--location=us-central1` default. Their old 15 min–2.6 h wall-times were partly on-demand timings; stagger them like any other large scan. Full routing detail: `data_catalog.md` § "BQ job location & slot-reservation routing".
+
 **Rule:** One large query at a time. Queue the next after the previous completes. For small queries (<1 TB), concurrent execution is fine.
 
 ### Upstream Source Systems
@@ -851,7 +853,11 @@ MM audience. [[reference_fangorn_audience_overlay]]
   average HI household is delivered by ~7.5 of 10 sources, so summed per-source HI counts run ~7.5x
   the distinct pool; a source can hold 13% of the summed pool while covering 99.9% of distinct
   households (every big source reads ~13% there). Summed-pool shares measure relative delivery
-  weight only.
+  weight only. Fourth lens (2026-07-16): **IP-grain coverage ≠ signal-grain coverage** — free-only
+  keeps 99.76% of HI member IPs but only 65.7% of the (ip,domain,date) triples ON those IPs
+  (all-tier signal ~58-66%, near-uniform): membership survives signal thinning because tier
+  qualification needs SOME qualifying signal, not ALL of it. Related non-additivity number worth
+  quoting: the 8 paid vendors' "touched" won-imp claims sum to **6.39x** actual served imps.
 - **SCORING GENERATIONS — v1 = categorical fixed points, v2 = score bands where THE LABEL FOLLOWS THE SCORE (verified 2026-07-08, 7d of delivered CIL, RTC-excluded, all live v1/v2 prospecting).** Per the Fangorn methodology page (https://mntn.atlassian.net/wiki/spaces/TAR/pages/3414917161): Fangorn = continuous 0–1 intent score; raw boundaries 0.6/0.8 divide MaxReach/MI/HI, transformed onto the legacy 3333/6666 pacing points. Empirical delivered-score distribution:
   - **v1 (DS13): fixed points ONLY** — exactly 8000 (3.1M imps) and exactly 10000 (4.5M) + MaxReach 1–3332 (full random band) + MI 3333–6665; **ZERO impressions at 6666–7999 or 8001–9999**.
   - **v2 (DS46): two model passes per IP, each a continuous band with a pin at its top** — PP pass → **6666–8000** (3.8M imps over 1,206 distinct values + 2.1M pinned exactly 8000); HI pass → **8001–10000** (11.0M over 1,868 values + 2.0M pinned exactly 10000). An IP that structurally matches vertical/keywords but scores <0.8 raw lands in MI/MaxReach — **qualifying criteria feed the model; only the score puts an IP in the HI/PP groups** (Malachi's "two scores, only above-bar counts" reading, confirmed).
@@ -972,6 +978,19 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     (BQ does not materialize CTEs) — count root-to-leaf paths to the external scan before launching;
     a 3-reference layout tripled one scan to ~30TB, fixed by pre-aggregating to one reference.
     (3) Dry runs over many URIs + huge wildcards can exceed 2 min — extend the timeout, don't skip.
+    (4) **Correlated scalar subqueries over an external-reading CTE MULTIPLY the re-reads** — a
+    layout with ~9 textual references (each scalar subquery counts) expands to ~17 executions of
+    the external subtree (est. 50-150TB; caught in review before launch, 2026-07-16). Single-pass
+    rewrite patterns that fix this, all verified live: (a) collapse the small aggregate into ONE
+    array-carrying row (`ARRAY_AGG(STRUCT(...))`) and thread it through a LINEAR CTE chain — all
+    downstream math is array ops, each CTE referenced exactly once; (b) `GROUP BY GROUPING SETS`
+    emits two histograms (e.g. triple-grain + IP-grain) from one aggregation instead of two
+    branches; (c) a spec-array CROSS JOIN with a NULL-sentinel row makes per-source + total rows
+    in one pass (NULL mask = matches everything = the denominator row).
+    (5) **GROUPING SETS alias shadow:** if the SELECT aliases an expression to the SAME name as
+    the grouped column (`COALESCE(tier,'all') AS tier ... GROUP BY GROUPING SETS ((tier),())`),
+    GROUP BY binds to the alias and the superaggregate row prints EMPTY instead of the COALESCE
+    label. Name the output alias differently (`tier_row`). Verified 2026-07-16 (two landed CSVs).
 - **svs has NO TTL and is byte-measurable per vendor (AUDI-1089 q14, 2026-07-15):** first partition
   `dt=2025-08-31`, everything since is on disk (`dt=/hh=/data_source_id=N/` layout → `gsutil du`
   per vendor; script `tickets/audi_1089_ddp_vendor_evaluations/runbook/queries/q14_gcs_ingest_bytes.sh`).
