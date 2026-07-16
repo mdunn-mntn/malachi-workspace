@@ -71,9 +71,28 @@ delivery delay), not once-daily batches (Predactiv's overnight bucket excepted).
 the hour.** "Real-time conquest" on vendor signal is structurally impossible at current
 delivery cadences — a renegotiation point (freshness SLA) as much as a drop argument.
 
-### 4c. Scans in flight
+### 4c. RTC vendor-dependence (MEASURED — `audi_1116_rtc_vendor_share.csv`, week 2026-07-02..08)
 
-- RTC vendor share (launched 2026-07-16 ~17:00; CIL week ~123GB + svs 37d)
+Total RTC-fired: 30,604,353 imps on 4,004,751 IPs.
+
+| Split | Share of RTC imps |
+|---|---|
+| free_covered (guid or aug delivered the IP, 37d) | **99.99%** |
+| vendor_only | **0.01%** (3,040 imps / 2,184 IPs) |
+| guid-covered (Kafka real-time path could qualify) | 99.59% |
+| hourly-batch-only reachable (svs member, no guid) | 0.41% |
+| no svs membership | 0 |
+
+**RTC is effectively vendor-independent.** Dropping all 8 vendors risks ~0.01% of realized
+RTC volume — consistent with the latency finding (vendor rows arrive 2.4–8.6h stale while
+guid streams in real time, so free logs virtually always qualify the IP first or equally).
+Per-source "touched" rows are non-additive (RTC IPs are heavily multi-held: 33Across touches
+99.89%, but so does augmentor at 99.87%).
+
+Caveat: free_covered proves the free logs DELIVERED the IP in-window, not that they were
+first for the specific qualifying visit; the strict irreplaceable share is the vendor_only
+0.01% bound, which is the renewal-relevant number. Intra-day priority effects (Sean's
+timing point) are second-order given 99.59% guid-real-time coverage.
 
 ## 5. Solution
 
