@@ -141,8 +141,9 @@ def msum(pred):
 
 
 def src_stats(ds):
+    # "other side" mask: paid vendors vs both free logs; free logs vs all 8 paid
     b = 1 << BIT[ds]
-    fb = {23: 1 << BIT[30], 30: 1 << BIT[23]}.get(ds, FREE_MASK)
+    fb = PAID_MASK if ds in (23, 30) else FREE_MASK
     total = msum(lambda m: m & b)
     cohold = msum(lambda m: (m & b) and (m & fb))
     return total, cohold

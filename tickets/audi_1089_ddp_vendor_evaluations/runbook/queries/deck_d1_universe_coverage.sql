@@ -20,11 +20,15 @@
 --                        trips_total desc, ties broken by ds (deduplicated —
 --                        NOT a running sum of pct_universe, which would
 --                        double-count overlap)
---   trips_standalone   = triples held by the source and NEITHER free log (free
---                        logs themselves: vs the other free log) — the renewal
---                        counterfactual column
---   free_cohold_pct    = % of the source's triples a free log ALSO holds — the
---                        AUDI-1093 preemption share (feeds BLOCK 3)
+--   trips_standalone   = triples held by the source and by NO source on the
+--                        other side of the paid/free divide: paid vendors are
+--                        measured vs BOTH free logs (the renewal counterfactual);
+--                        the free logs are measured vs ALL 8 PAID vendors (what
+--                        money can't currently buy) — so each free row is a
+--                        subset of the free-union row
+--   free_cohold_pct    = % of the source's triples the other side ALSO holds —
+--                        for paid vendors this is the AUDI-1093 preemption
+--                        share (feeds the preemption table; metered rows only)
 -- rec='free_union' = guid+augmentor as ONE source (fills the free_logs row: its
 -- total = free coverage of the universe; standalone = held by NO paid vendor).
 -- rec='universe' = the denominator row.
@@ -42,8 +46,11 @@
 --
 -- Expected reconciliation vs the measured outputs/run_2026_07_10 (live wcv/pc
 -- snapshots drift <0.1% between run days): universe 13,286,670,656; augmentor
--- total 6,483,729,112 / standalone 6,464,053,715; 33Across standalone
--- 2,153,592,512; free-union total 7,887,061,977 (59.4%).
+-- total 6,483,729,112 / standalone-vs-paid 3,843,783,235 (28.93%); guid_log
+-- standalone-vs-paid 1,360,242,458 (10.24%); 33Across standalone 2,153,592,512;
+-- free-union total 7,887,061,977 (59.4%) / standalone-vs-paid 5,198,013,246
+-- (39.12%). The two free rows sum to slightly MORE than the union row (by the
+-- 6.0M triples both free logs share with no paid co-holder) — expected.
 --
 -- BIG SCAN (svs 30d + wcv + pc, single pass; ~1-1.5h) — dry-run first, run in
 -- background.
@@ -126,8 +133,10 @@ per AS (
          WHERE ((x.m >> s.bit) & 1) = 1 AND (x.m & s.freebits) = 0) AS standalone,
         (SELECT SUM(x.n) FROM UNNEST(h) x
          WHERE ((x.m >> s.bit) & 1) = 1 AND (x.m & s.freebits) != 0) AS free_cohold
-      FROM UNNEST([STRUCT(23 AS ds, 0 AS bit, 32 AS freebits), (24, 1, 33), (25, 2, 33),
-                   (26, 3, 33), (28, 4, 33), (30, 5, 1), (33, 6, 33), (36, 7, 33),
+      -- freebits = the "other side" mask: paid vendors vs both free logs (33);
+      -- each free log vs all 8 paid vendors (990)
+      FROM UNNEST([STRUCT(23 AS ds, 0 AS bit, 990 AS freebits), (24, 1, 33), (25, 2, 33),
+                   (26, 3, 33), (28, 4, 33), (30, 5, 990), (33, 6, 33), (36, 7, 33),
                    (39, 8, 33), (40, 9, 33)]) s
     ) AS pds
   FROM hist
