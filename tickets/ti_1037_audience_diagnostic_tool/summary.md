@@ -517,12 +517,16 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
 - Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
 - Keyword classifier (step 3): full LLM/embedding generalization is IN scope per the 2026-06-18 decision (8 SP).
-- **Mode API deploy (2026-07-16):** `perf_report/mode/deploy_mode.sh` staged (check/diff/apply/run vs report
-  `6c4fc72afcfb`; PATCH raw_query + POST runs) — replaces the 16-paste relay once credentials exist. BLOCKED on a
-  Mode API key: Member keys need admin enablement (Features → API Keys → Member keys). Asked in Slack; Johnny =
-  likely admin (per Robin Fox), #dev-mode-support = the channel; Benny confirmed mode-assets sync is one-way
-  (Mode→repo). Brian Gereke also wants access. Mid-flight paste deploy (Nick's filters): 2/16 done
-  (params + campaign options) — resume relay only if the key stalls.
+- **Mode API deploy — LIVE (2026-07-16):** `perf_report/mode/deploy_mode.sh` proven end-to-end same day the
+  Member API key landed (creds in `~/.zshrc` as MODE_API_TOKEN/SECRET): PATCH raw_query verified by re-GET
+  (campaign_options relabel deployed), POST runs + poll succeeded. **The 16-paste relay is dead — deploy =
+  `./deploy_mode.sh diff` → `apply --run`.** Findings: member keys can't call `/account` (report GET = auth
+  probe); live query names are underscored (name-match is case/underscore-insensitive); UI pastes add a
+  trailing blank line (comparisons normalize trailing newlines); report payload HAS `layout` and it round-trips
+  (PATCH of layout untested — staging index.html already matched). Nick's-filters deploy complete: Malachi had
+  hand-pasted all 13 queries + index before the key arrived; API diff confirmed same, then patched the one
+  remaining file. Slack context: Johnny = likely Mode admin, #dev-mode-support = channel, Benny confirmed
+  one-way sync, Brian Gereke also wants API access.
 
 ## 8. `perf_report/` sub-tool — parameterized client-performance report (Kindred build, started 2026-07-02)
 A second, complementary deliverable under this ticket, built **interactively one module at a time** (Malachi driving,

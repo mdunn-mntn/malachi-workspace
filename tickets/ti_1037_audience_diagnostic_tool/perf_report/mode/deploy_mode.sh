@@ -55,6 +55,10 @@ mcurl() {
   cat "$out"; rm -f "$out"
 }
 
+# same_content <fileA> <fileB>: equality ignoring trailing newlines only (Mode pastes
+# often carry an extra final blank line; that's not a real diff)
+same_content() { [[ "$(cat "$1")" == "$(cat "$2")" ]]; }
+
 # staging .sql files -> "name<TAB>path" (name = basename minus .sql minus trailing .hextoken)
 staging_files() {
   find "$DIR" "$DIR/batch1_queries" -maxdepth 1 -name '*.sql' -type f 2>/dev/null | sort |
@@ -79,22 +83,22 @@ find_tok() {
 }
 
 cmd_check() {
-  echo "== auth =="
-  mcurl GET "/account" | jq -r '"authenticated as: \(.username // .name)"'
-  echo "== report =="
+  echo "== auth + report ==   (member API keys can't call /account — the report GET doubles as the auth probe)"
   mcurl GET "/${WORKSPACE}/reports/${REPORT}" | jq -r '"\(.name)  (last run: \(.last_run_at // "never"))"'
   echo "== match (staging file -> live Mode query) =="
   local remote; remote="$(fetch_remote_queries)"
-  local matched=0 missing=0
+  local matched=0 missing=0 matched_toks=""
   while IFS=$'\t' read -r name path; do
     tok="$(find_tok "$name" "$remote")"
-    if [[ -n "$tok" ]]; then echo "  OK   ${name}  ->  ${tok}"; ((matched+=1))
+    if [[ -n "$tok" ]]; then echo "  OK   ${name}  ->  ${tok}"; matched_toks+=" ${tok}"; ((matched+=1))
     else echo "  MISS ${name}  (no Mode query with this exact name)"; ((missing+=1)); fi
   done < <(staging_files)
   echo "== live queries with NO staging file (left untouched) =="
+  local any=0
   while IFS=$'\t' read -r tok name; do
-    staging_files | cut -f1 | grep -qxF "$name" || echo "  ${name} (${tok})"
+    [[ " ${matched_toks} " == *" ${tok} "* ]] || { echo "  ${name} (${tok})"; any=1; }
   done <<<"$remote"
+  [[ "$any" == 0 ]] && echo "  (none)"
   echo "matched=${matched} missing=${missing}"
 }
 
@@ -104,7 +108,7 @@ cmd_diff() {
     tok="$(find_tok "$name" "$remote")"
     [[ -z "$tok" ]] && { echo "MISS   ${name}"; continue; }
     mcurl GET "/${WORKSPACE}/reports/${REPORT}/queries/${tok}" | jq -r '.raw_query' > /tmp/mode_remote_q.sql
-    if diff -q /tmp/mode_remote_q.sql "$path" >/dev/null 2>&1; then echo "same   ${name}"
+    if same_content /tmp/mode_remote_q.sql "$path"; then echo "same   ${name}"
     else echo "DIFFER ${name}  ($(diff /tmp/mode_remote_q.sql "$path" | grep -c '^[<>]') changed lines)"; fi
   done < <(staging_files)
 }
@@ -117,7 +121,7 @@ cmd_apply() {
     tok="$(find_tok "$name" "$remote")"
     [[ -z "$tok" ]] && { echo "SKIP (no match): ${name}"; ((skipped+=1)); continue; }
     mcurl GET "/${WORKSPACE}/reports/${REPORT}/queries/${tok}" | jq -r '.raw_query' > "${backup}/${name}.sql"
-    if diff -q "${backup}/${name}.sql" "$path" >/dev/null 2>&1; then
+    if same_content "${backup}/${name}.sql" "$path"; then
       echo "same: ${name}"; continue
     fi
     body="$(mktemp)"; jq -n --rawfile sql "$path" '{query: {raw_query: $sql}}' > "$body"
@@ -125,7 +129,7 @@ cmd_apply() {
     rm -f "$body"
     # verify: re-GET and compare
     mcurl GET "/${WORKSPACE}/reports/${REPORT}/queries/${tok}" | jq -r '.raw_query' > /tmp/mode_verify_q.sql
-    if diff -q /tmp/mode_verify_q.sql "$path" >/dev/null 2>&1; then
+    if same_content /tmp/mode_verify_q.sql "$path"; then
       echo "PATCHED+verified: ${name}"; ((patched+=1))
     else
       echo "ERROR: PATCH accepted but re-GET differs: ${name}" >&2; exit 1
@@ -138,14 +142,14 @@ cmd_apply() {
     mcurl GET "/${WORKSPACE}/reports/${REPORT}" > /tmp/mode_report.json
     if jq -e 'has("layout")' /tmp/mode_report.json >/dev/null; then
       jq -r '.layout // ""' /tmp/mode_report.json > "${backup}/layout.html"
-      if diff -q "${backup}/layout.html" "${DIR}/index.html" >/dev/null 2>&1; then
+      if same_content "${backup}/layout.html" "${DIR}/index.html"; then
         echo "html: same"
       else
         body="$(mktemp)"; jq -n --rawfile h "${DIR}/index.html" '{report: {layout: $h}}' > "$body"
         mcurl PATCH "/${WORKSPACE}/reports/${REPORT}" "$body" > /dev/null || true
         rm -f "$body"
         mcurl GET "/${WORKSPACE}/reports/${REPORT}" | jq -r '.layout // ""' > /tmp/mode_verify_l.html
-        if diff -q /tmp/mode_verify_l.html "${DIR}/index.html" >/dev/null 2>&1; then
+        if same_content /tmp/mode_verify_l.html "${DIR}/index.html"; then
           echo "html: PATCHED+verified (undocumented layout field works)"
         else
           echo "html: NOT updated — Mode ignored the layout PATCH; paste index.html in the UI (1 paste)."
@@ -156,7 +160,7 @@ cmd_apply() {
     fi
   fi
 
-  [[ "${1:-}" == "--run" ]] && cmd_run
+  if [[ "${1:-}" == "--run" ]]; then cmd_run; fi
 }
 
 cmd_run() {
