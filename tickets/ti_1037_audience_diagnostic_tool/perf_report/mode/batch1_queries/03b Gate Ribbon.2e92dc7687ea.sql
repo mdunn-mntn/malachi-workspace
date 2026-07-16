@@ -23,7 +23,7 @@ WITH sel AS (
       AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
     GROUP BY 1
   )
-  WHERE ('ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}))
+  WHERE (CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}) OR (SELECT LOGICAL_AND(v = 'ALL') FROM UNNEST([{{ Campaign_Groups }}]) v))
     AND (ts <= 0 OR gs / ts >= LEAST(GREATEST(IFNULL(SAFE_CAST('{{ Min_Spend_Pct }}' AS FLOAT64), 0), 0), 100) / 100)
 ),
 camp AS (
@@ -33,7 +33,7 @@ camp AS (
     ON g.campaign_group_id = c.campaign_group_id
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
     AND c.objective_id IN (1, 5, 6)
-    AND ('ALL' IN ({{ Stages }}) OR CAST(c.funnel_level AS STRING) IN ({{ Stages }}))
+    AND (CAST(c.funnel_level AS STRING) IN ({{ Stages }}) OR (SELECT LOGICAL_AND(v = 'ALL') FROM UNNEST([{{ Stages }}]) v))
     AND c.campaign_group_id IN (SELECT campaign_group_id FROM sel)
 ),
 delivery AS (

@@ -21,7 +21,7 @@ WITH sel AS (
       AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
     GROUP BY 1
   )
-  WHERE ('ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}))
+  WHERE (CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}) OR (SELECT LOGICAL_AND(v = 'ALL') FROM UNNEST([{{ Campaign_Groups }}]) v))
     AND (ts <= 0 OR gs / ts >= LEAST(GREATEST(IFNULL(SAFE_CAST('{{ Min_Spend_Pct }}' AS FLOAT64), 0), 0), 100) / 100)
 ),
 camp_day AS (

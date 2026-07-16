@@ -29,7 +29,7 @@ Campaign_Groups:
   type: multiselect
   default: ['ALL']
   label: "Campaign groups"
-  description: "campaign_group_id grain — '- Multi-Touch' rows are the platform's separate MT groups. Keep ALL, or select specific groups; the list refreshes after changing advertiser + Run"
+  description: "campaign_group_id grain — '- Multi-Touch' rows are the platform's separate MT groups. Specific picks OVERRIDE ALL; the list refreshes after changing advertiser + Run"
   options:
     labels: cg_label
     values: cg_value

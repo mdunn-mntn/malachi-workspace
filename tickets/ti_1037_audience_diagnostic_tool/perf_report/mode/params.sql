@@ -63,7 +63,7 @@ Stages:
   type: multiselect
   default: ['ALL']
   label: "Funnel stage"
-  description: "ALL = every prospecting stage; 1 = Prospecting, 2/3 = Mid-funnel. Applies to every campaign-scoped module"
+  description: "1 = Prospecting, 2/3 = Mid-funnel. Specific picks OVERRIDE ALL (ALL only means everything when it is the only box checked). Applies to every campaign-scoped module"
   options: ['ALL', '1', '2', '3']
 Min_Spend_Pct:
   type: text
