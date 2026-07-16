@@ -88,10 +88,17 @@ d3 = {int(r["data_source_id"]): r for r in read_csv("deck_d3_bills_cpm.csv")
 
 d4 = read_csv("deck_d4_scenario_ladder.csv")
 d4 = {r["scenario"]: r for r in d4} if d4 else None
-d5 = read_csv("deck_d5_tier_free_coverage_all_ips.csv")
-d5 = {r["tier"]: r for r in d5} if d5 else None
-d6 = read_csv("deck_d6_tier_free_coverage_bid_ips.csv")
-d6 = {r["tier"]: r for r in d6} if d6 else None
+def load_tier_csv(name):
+    rows = read_csv(name)
+    if not rows:
+        return None
+    # superaggregate row: '' in the first-run CSVs (alias-shadow), '1_all_ips' after
+    key = "tier_row" if "tier_row" in rows[0] else "tier"
+    return {(r[key] or "1_all_ips"): r for r in rows}
+
+
+d5 = load_tier_csv("deck_d5_tier_free_coverage_all_ips.csv")
+d6 = load_tier_csv("deck_d6_tier_free_coverage_bid_ips.csv")
 
 # q3d: score-tier holder masks (hi/pp/hg) at scored-IP grain, 37d window — the
 # ALREADY-MEASURED source for HI/PP coverage; used until the deck_d4/d6 scans

@@ -81,12 +81,13 @@ lab AS (
   LEFT JOIN ip_score s USING (ip)
 )
 
--- one aggregation: the () superaggregate is the all-IPs row (tier NULL — the
--- CASE always yields a label, so COALESCE cannot collide)
-SELECT COALESCE(tier, '1_all_ips') AS tier,
+-- one aggregation: the () superaggregate is the all-IPs row. The output alias
+-- must NOT be named `tier` — it would shadow the column in GROUP BY and the
+-- superaggregate row would print empty instead of '1_all_ips'.
+SELECT COALESCE(tier, '1_all_ips') AS tier_row,
        COUNTIF(has_free) AS free_covered_ips,
        COUNTIF(has_paid AND NOT has_free) AS vendor_only_ips,
        ROUND(100 * COUNTIF(has_free) / COUNT(*), 2) AS pct_free_covered
 FROM lab
 GROUP BY GROUPING SETS ((tier), ())
-ORDER BY tier;
+ORDER BY tier_row;

@@ -291,6 +291,22 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   measured q3c histogram — reproduces every anchor exactly.
 - **Status**: d1/d2/d3 reproduce already-measured numbers (fillable today from existing
   CSVs); d4 F/H (IP-grain HI/PP at 30d) and d5/d6 tier splits are NEW — need runs.
+- **d5/d6 LANDED (2026-07-16 ~12:20)** — anchors exact: d6 all-row free-covered =
+  27,413,105 == q15 union served; d5 all-row = 220,417,049 == q15 member IPs. THE
+  population-principle pair measured universe-wide: audience-size lens 66.05% free-covered
+  (113.3M vendor-only members, 99.9% of them unscored) vs delivery-reality lens 98.78%
+  (339K vendor-only served IPs). Every scored tier >= 99.29% free-covered in BOTH lenses
+  (HI 99.95, PP 99.29, HG 100.00, Mid 99.91, MaxReach 99.55); served-unscored 97.92%.
+  Gotcha fixed: GROUPING SETS superaggregate printed empty label because the COALESCE
+  output alias `tier` shadowed the column in GROUP BY — alias renamed tier_row for future
+  runs, loader accepts both. deck workbook regenerated: blocks 5/6 complete, 18 PENDING
+  cells left (d4 HI/PP triple counts, scan running).
+- **Deck sheet evolution (user asks, same day)**: profit = UNIQUE contribution only
+  (q8b solo media x 52 x 10-30%; touched band removed as misleading ceiling); FREE LOGS
+  value split to its own table + deck_d7 query (reverse cohort: guid strictly-sole
+  $277.5K / aug $167.5K / union-no-paid $602.9K media/yr; union > sum by cohort algebra);
+  percent cells stored as fractions with % formats (survive Excel re-typing); media CPM
+  on touched won imps per source (~$7.2-8.9).
 
 ## 4d18. Deck-support coverage table (user ask, 2026-07-16)
 
