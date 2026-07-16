@@ -238,27 +238,28 @@ emit([NAME[99], FU_TOTAL, FU_TOTAL / UNIVERSE, "—",
 gap()
 
 # ---------------------------------------------------------------- block 2
-header(["Vendor", "Media CPM (touched, $)",
-        "Profit on TOUCHED media x 10-30% margin ($/yr) — NON-ADDITIVE ceiling",
-        "Bill / yr cost",
-        "Profit on STANDALONE media x 10-30% margin ($/yr) — vendor as only paid source",
+header(["Vendor", "Media CPM (touched, $)", "Bill / yr cost",
+        "Profit on UNIQUE media — won imps on IPs outside guid_log+augmentor — "
+        "x 10-30% margin ($/yr)",
         "Vendor contract CPM ($)"])
-fmts2 = {2: "0.00", 4: MONEY}
+fmts2 = {2: "0.00", 3: MONEY}
 b2_order = sorted(METERED, key=lambda d: -float(d3[d]["bill_annualized"])) + sorted(FLAT) + [23, 30, 99]
 for ds in b2_order:
     media, imps = touched_media_imps(ds)
-    emit([NAME[ds], media / imps * 1000, profit_band(media), bill_label(ds),
-          profit_band(standalone_media(ds)), cpm_label(ds)], fmts2)
-emit(["* TOUCHED profit is a shared ceiling, NOT additive: every large vendor touches"
-      " ~90-98% of platform imps, so these bands overlap almost entirely — they cannot be"
-      " summed or credited to one vendor. The STANDALONE column (media on IPs neither free"
-      " log knew, x52, x margin) is the defensible per-vendor number to hold against the"
-      " bill."])
+    if ds in (23, 30):
+        uniq = "—  (baseline — the free logs are what vendors are measured against)"
+    else:
+        uniq = profit_band(standalone_media(ds))
+    emit([NAME[ds], media / imps * 1000, bill_label(ds), uniq, cpm_label(ds)], fmts2)
+emit(["* UNIQUE = the vendor's value beyond the free logs: media on won imps whose IP"
+      " neither guid_log nor augmentor delivered (measured, q8b solo cohort), x52, x"
+      " 10-30% blended margin. free_logs row = media on IPs NO PAID vendor delivered"
+      " (q15 sole cohort, $602.9K/yr media) — the slice only the free logs protect."])
 gap()
 
 # ---------------------------------------------------------------- block 3
 header(["Vendor", "Bill/yr if free_logs preempted from billing",
-        "Profit on STANDALONE media x 10-30% margin ($/yr) — unchanged by preemption",
+        "Profit on UNIQUE media (outside free logs) x 10-30% ($/yr) — unchanged by preemption",
         "free co-hold % (share of vendor's visit-days a free log also holds)"])
 fmts3 = {2: MONEY, 4: PCT1}
 for ds in b2_order:
@@ -269,8 +270,10 @@ for ds in b2_order:
     elif ds in FLAT:
         emit([NAME[ds], "flat (pending) — preemption does not change flat fees",
               profit_band(standalone_media(ds)), ""], fmts3)
-    else:
+    elif ds == 99:
         emit([NAME[ds], 0, profit_band(standalone_media(ds)), ""], fmts3)
+    else:
+        emit([NAME[ds], 0, "—", ""], fmts3)
 emit(["TOTAL metered (today $812,397)", POST_TOTAL, "",
       f"savings ${812397 - POST_TOTAL:,.0f}/yr = the AUDI-1093 preemption"], fmts3)
 gap()
@@ -354,7 +357,8 @@ notes = [
     "Block 1 rows are ranked by total triples desc (matches deck_d1's rank order); cumulative % = deduplicated UNION coverage of the top-N rows, NOT a running sum of column C.",
     "Free-log rows' numbers are their own totals; the free_logs UNION row is measured on the union (never a sum of the two rows). A component can exceed the union on 'standalone'-type cuts — see artifacts/audi_1089_deck_coverage.md for that decomposition.",
     "Column 'Touched won imps' is NOT additive across rows (an IP delivered by several sources counts for each). % col = share of the platform's 398,301,655 won imps (val wk) — it is NOT 'of touched bids, % that won'.",
-    "Blocks 2/3 Profit columns are intentionally blank: margin parameters are internal-only; apply your own sheet formula.",
+    "Blocks 2/3 Profit = the vendor's UNIQUE contribution: media on won imps whose IP neither free log delivered (q8b solo cohort = 'the vendor as our only paid source'), annualized x52, x 10-30% blended margin (INTERNAL — do not quote the margin band outside the team). Touched-media profit is deliberately NOT shown: every large vendor touches ~90-98% of platform imps, so touched bands overlap almost entirely and misread as huge per-vendor value.",
+    "free_logs UNION profit = media on IPs NO paid vendor delivered ($602.9K/yr) x margin — what the free logs alone protect. guid_log/augmentor rows show '—': they are the baseline vendors are measured against, not feeds we value against a bill.",
     f"Block 3: preemption applies to METERED vendors only (flat fees don't meter). bill_after = bill x (1 - free co-hold share of the vendor's visit-days), the AUDI-1093 fix. Metered total falls $812,397 -> ${POST_TOTAL:,.0f} (-${812397 - POST_TOTAL:,.0f}/yr).",
     "Block 4: 'HI/PP triples kept' counts signal volume on HI/PP IPs (drops roughly with column C); 'HI/PP-IP coverage %' counts audience MEMBERS still covered (stays 99%+ in every paid-drop scenario). Different grains on purpose — audience size is the IP-grain number.",
     "Blocks 5 vs 6 are the same split over two populations: ALL member IPs (audience-size lens) vs only IPs that got won impressions (delivery-reality lens). Coverage % can differ sharply between them — that gap is the point.",
