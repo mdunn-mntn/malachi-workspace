@@ -1,8 +1,10 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D4 of 7: the 9 drop-scenarios — kept coverage + HI/PP
 -- FILLS: deck workbook SCENARIO table (block 4, identified by column titles —
---        row positions shift as the sheet evolves): "Total triples kept",
---        "Coverage (% of today)", "HI triples kept", "HI-IP coverage %"
+--        row positions shift as the sheet evolves): "Total triples kept (of N
+--        possible today)", "Coverage (% of today)", "Triples LOST vs today"
+--        (= the today row's trips_kept minus the scenario's — sheet arithmetic
+--        over this query's output), "HI triples kept", "HI-IP coverage %"
 --        (IP-GRAIN — see grain note), "PP triples kept", "PP-IP coverage %".
 --
 -- Claim: one scan builds BOTH histograms every scenario needs:
