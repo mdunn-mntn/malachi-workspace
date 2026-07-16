@@ -58,8 +58,30 @@ UNIVERSE = sum(mh.values())
 q6 = {int(r["data_source_id"]): r for r in read_csv("q6_value_tiers.csv")}
 q7d = read_csv("q7d_platform_week.csv")[0]
 PLAT_IMPS = float(q7d["imps_week"])
-q15_touched_imps = next(float(r["v"]) for r in read_csv("q15_free_union_perf.csv")
-                        if r["rec"] == "serve" and r["k1"] == "touched" and r["k2"] == "imps")
+q15s = {(r["k1"], r["k2"]): float(r["v"]) for r in read_csv("q15_free_union_perf.csv")
+        if r["rec"] == "serve"}
+q15_touched_imps = q15s[("touched", "imps")]
+q8b_media = {int(r["ds"]): float(r["v"]) for r in read_csv("q8b_solo_perf.csv")
+             if r["rec"] == "serve" and r["k"] == "media"}
+
+MARGIN_LO, MARGIN_HI = 0.10, 0.30  # blended margin band (internal)
+
+
+def touched_media_imps(ds):
+    if ds == 99:
+        return q15s[("touched", "media")], q15s[("touched", "imps")]
+    return float(q6[ds]["media_touched"]), float(q6[ds]["imps_touched"])
+
+
+def standalone_media(ds):
+    """weekly media on the vendor-as-only-paid-source cohort (q8b solo; union:
+    q15 sole-vs-paid)"""
+    return q15s[("sole", "media")] if ds == 99 else q8b_media[ds]
+
+
+def profit_band(media_week):
+    lo, hi = media_week * 52 * MARGIN_LO, media_week * 52 * MARGIN_HI
+    return f"${lo:,.0f} - ${hi:,.0f}"
 
 d3 = {int(r["data_source_id"]): r for r in read_csv("deck_d3_bills_cpm.csv")
       if r["data_source_id"] and int(r["data_source_id"]) != 27}  # DS27 = context row
@@ -70,6 +92,27 @@ d5 = read_csv("deck_d5_tier_free_coverage_all_ips.csv")
 d5 = {r["tier"]: r for r in d5} if d5 else None
 d6 = read_csv("deck_d6_tier_free_coverage_bid_ips.csv")
 d6 = {r["tier"]: r for r in d6} if d6 else None
+
+# q3d: score-tier holder masks (hi/pp/hg) at scored-IP grain, 37d window — the
+# ALREADY-MEASURED source for HI/PP coverage; used until the deck_d4/d6 scans
+# land at the sheet-exact grain (values differ only by window, <0.1pp)
+q3d = {"hi": {}, "pp": {}, "hg": {}}
+for r in read_csv("q3d_score_vertical_coverage.csv"):
+    if r["rec"] in q3d:
+        q3d[r["rec"]][int(r["k1"])] = int(float(r["n"]))
+
+
+def q3d_cov(tier, keepmask):
+    tot = sum(q3d[tier].values())
+    kept = sum(n for m, n in q3d[tier].items() if m & keepmask)
+    return kept / tot
+
+
+def q3d_split(tier):
+    free = sum(n for m, n in q3d[tier].items() if m & FREE_MASK)
+    vonly = sum(n for m, n in q3d[tier].items() if not (m & FREE_MASK))
+    return free, vonly, free / (free + vonly)
+
 
 PENDING = "PENDING (scan running)"
 
@@ -125,9 +168,12 @@ HDR_FILL = PatternFill("solid", fgColor="203864")
 HDR_FONT = Font(bold=True, color="FFFFFF", size=10)
 WRAP = Alignment(wrap_text=True, vertical="top")
 N0 = "#,##0"
-P1 = "0.0"
-P2 = "0.00"
 MONEY = "$#,##0"
+# percent columns store TRUE FRACTIONS (0.488) with a percent number format —
+# they render 48.8% and survive the user re-applying Excel's percent data type
+PCT1 = "0.0%"
+PCT2 = "0.00%"
+PCT4 = "0.0000%"
 
 row = 1
 
@@ -175,41 +221,56 @@ def bill_label(ds):
 # ---------------------------------------------------------------- block 1
 header(["Vendor", "Total IP x Domain x Date triples (usable, 30d)", "% of total universe",
         "Cumulative % of universe (union, top-N by total)",
-        "Touched won imps (valuation wk)", "% of platform won imps (NOT a win rate)", "CPM"])
-fmts1 = {2: N0, 3: P2, 4: P2, 5: N0, 6: P1}
+        "Touched won imps (valuation wk)", "% of platform won imps (NOT a win rate)",
+        "Media CPM on touched won imps ($)"])
+fmts1 = {2: N0, 3: PCT2, 4: PCT2, 5: N0, 6: PCT1, 7: "0.00"}
 km = 0
 for ds in order:
     total, _ = stats[ds]
     km |= 1 << BIT[ds]
     cum = msum(lambda m: m & km)
-    imps = float(q6[ds]["imps_touched"])
-    emit([NAME[ds], total, 100 * total / UNIVERSE, 100 * cum / UNIVERSE,
-          imps, 100 * imps / PLAT_IMPS, cpm_label(ds)], fmts1)
-emit([NAME[99], FU_TOTAL, 100 * FU_TOTAL / UNIVERSE, "—",
-      q15_touched_imps, 100 * q15_touched_imps / PLAT_IMPS, "$0 (internal)"], fmts1)
+    media, imps = touched_media_imps(ds)
+    emit([NAME[ds], total, total / UNIVERSE, cum / UNIVERSE,
+          imps, imps / PLAT_IMPS, media / imps * 1000], fmts1)
+media99, imps99 = touched_media_imps(99)
+emit([NAME[99], FU_TOTAL, FU_TOTAL / UNIVERSE, "—",
+      imps99, imps99 / PLAT_IMPS, media99 / imps99 * 1000], fmts1)
 gap()
 
 # ---------------------------------------------------------------- block 2
-header(["Vendor", "CPM", "Profit (CPM x margin range) — your sheet formula", "Bill / yr cost"])
-fmts2 = {4: MONEY}
+header(["Vendor", "Media CPM (touched, $)",
+        "Profit on TOUCHED media x 10-30% margin ($/yr) — NON-ADDITIVE ceiling",
+        "Bill / yr cost",
+        "Profit on STANDALONE media x 10-30% margin ($/yr) — vendor as only paid source",
+        "Vendor contract CPM ($)"])
+fmts2 = {2: "0.00", 4: MONEY}
 b2_order = sorted(METERED, key=lambda d: -float(d3[d]["bill_annualized"])) + sorted(FLAT) + [23, 30, 99]
 for ds in b2_order:
-    emit([NAME[ds], cpm_label(ds), "", bill_label(ds)], fmts2)
+    media, imps = touched_media_imps(ds)
+    emit([NAME[ds], media / imps * 1000, profit_band(media), bill_label(ds),
+          profit_band(standalone_media(ds)), cpm_label(ds)], fmts2)
+emit(["* TOUCHED profit is a shared ceiling, NOT additive: every large vendor touches"
+      " ~90-98% of platform imps, so these bands overlap almost entirely — they cannot be"
+      " summed or credited to one vendor. The STANDALONE column (media on IPs neither free"
+      " log knew, x52, x margin) is the defensible per-vendor number to hold against the"
+      " bill."])
 gap()
 
 # ---------------------------------------------------------------- block 3
 header(["Vendor", "Bill/yr if free_logs preempted from billing",
-        "Profit (CPM x margin range) — your sheet formula",
+        "Profit on STANDALONE media x 10-30% margin ($/yr) — unchanged by preemption",
         "free co-hold % (share of vendor's visit-days a free log also holds)"])
-fmts3 = {2: MONEY, 4: P1}
+fmts3 = {2: MONEY, 4: PCT1}
 for ds in b2_order:
     if ds in METERED:
         total, cohold = stats[ds]
-        emit([NAME[ds], bill_after[ds], "", 100 * cohold / total], fmts3)
+        emit([NAME[ds], bill_after[ds], profit_band(standalone_media(ds)),
+              cohold / total], fmts3)
     elif ds in FLAT:
-        emit([NAME[ds], "flat (pending) — preemption does not change flat fees", "", ""], fmts3)
+        emit([NAME[ds], "flat (pending) — preemption does not change flat fees",
+              profit_band(standalone_media(ds)), ""], fmts3)
     else:
-        emit([NAME[ds], 0, "", ""], fmts3)
+        emit([NAME[ds], 0, profit_band(standalone_media(ds)), ""], fmts3)
 emit(["TOTAL metered (today $812,397)", POST_TOTAL, "",
       f"savings ${812397 - POST_TOTAL:,.0f}/yr = the AUDI-1093 preemption"], fmts3)
 gap()
@@ -217,32 +278,50 @@ gap()
 # ---------------------------------------------------------------- block 4
 header(["Scenario", "Paid vendors kept", "Total triples kept", "Coverage (% of today)",
         "HI triples kept", "HI-IP coverage %", "PP triples kept", "PP-IP coverage %"])
-fmts4 = {3: N0, 4: P2, 5: N0, 6: P2, 7: N0, 8: P2}
+fmts4b = {3: N0, 4: PCT2, 5: N0, 6: PCT4, 7: N0, 8: PCT4}
 for label, kept_txt, keepmask, key in SCEN:
     kept = msum(lambda m: m & keepmask)
     if d4 and key in d4:
         r4 = d4[key]
-        hi_t, hi_p = float(r4["hi_trips_kept"]), float(r4["hi_ip_coverage_pct"])
-        pp_t, pp_p = float(r4["pp_trips_kept"]), float(r4["pp_ip_coverage_pct"])
+        hi_t, hi_p = float(r4["hi_trips_kept"]), float(r4["hi_ip_coverage_pct"]) / 100
+        pp_t, pp_p = float(r4["pp_trips_kept"]), float(r4["pp_ip_coverage_pct"]) / 100
     else:
-        hi_t = hi_p = pp_t = pp_p = PENDING
-    emit([label, kept_txt, kept, 100 * kept / UNIVERSE, hi_t, hi_p, pp_t, pp_p], fmts4)
+        # already-measured fallback: q3d score-tier masks (37d window, IP grain)
+        hi_t = pp_t = PENDING
+        hi_p, pp_p = q3d_cov("hi", keepmask), q3d_cov("pp", keepmask)
+    emit([label, kept_txt, kept, kept / UNIVERSE, hi_t, hi_p, pp_t, pp_p], fmts4b)
+if not d4:
+    emit(["* HI/PP coverage % = the already-measured q3d masks (37d window, IP grain) —"
+          " deck_d4 (running) replaces them at the sheet's 30d grain; expect <0.1pp movement."
+          " HI/PP triple counts have no prior measurement (pending d4)."])
 gap()
 
 # ---------------------------------------------------------------- blocks 5 & 6
-for title, data in [
-    ("Of ALL member IPs, served or not (audience-size coverage)", d5),
-    ("Of member IPs that actually got bid on (won impressions)", d6),
+Q3D_TIER = {"2_hi_10000": "hi", "3_pp_8000": "pp", "4_high_graduated": "hg"}
+for title, data, allow_q3d in [
+    ("Of ALL member IPs, served or not (audience-size coverage)", d5, False),
+    ("Of member IPs that actually got bid on (won impressions)", d6, True),
 ]:
     header([title, "free-covered IPs", "vendor-only IPs", "% free covered"])
-    fmts56 = {2: N0, 3: N0, 4: P2}
+    fmts56 = {2: N0, 3: N0, 4: PCT2}
+    used_q3d = False
     for key, label in TIER_ROWS:
         if data and key in data:
             r56 = data[key]
             emit([label, float(r56["free_covered_ips"]), float(r56["vendor_only_ips"]),
-                  float(r56["pct_free_covered"])], fmts56)
+                  float(r56["pct_free_covered"]) / 100], fmts56)
+        elif allow_q3d and key in Q3D_TIER:
+            # q3d's scored-IP population IS this block's population for scored
+            # tiers (scored in CIL week => served)
+            free, vonly, pct = q3d_split(Q3D_TIER[key])
+            emit([label, free, vonly, pct], fmts56)
+            used_q3d = True
         else:
             emit([label, PENDING, PENDING, PENDING], fmts56)
+    if used_q3d:
+        emit(["* HI/PP/High-Graduated rows = the already-measured q3d masks (37d, scored-IP"
+              " grain); deck_d6 (running) replaces at sheet-exact grain. Mid/MAX REACH/"
+              "Unscored have no prior measurement at this population."])
     gap()
 
 for c, w in enumerate([34, 22, 13, 16, 18, 16, 18, 16], 1):
