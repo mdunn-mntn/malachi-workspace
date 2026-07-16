@@ -1,7 +1,8 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D3 of 7: what each vendor bills — CPM and annualized cost
--- FILLS: deck sheet BLOCK 1 col G "CPM"; BLOCK 2 (rows 10-16) cols B "CPM" and
---        D "Bill / yr cost"; BLOCK 3 (rows 18-24) col B "Bill/yr cost if we
+-- FILLS: deck sheet BLOCK 2 (rows 10-16): contract CPM and "Bill / yr cost"
+--        (block 2's media CPMs come from q6/q15 media+imps, not this query);
+--        BLOCK 3 (rows 18-24) col B "Bill/yr cost if we
 --        removed free_logs from billing" is a SHEET FORMULA, not a query:
 --        bill_annualized x (1 - free_cohold_pct/100), free_cohold_pct from D1.
 --        The two Profit columns are also sheet formulas (CPM/value x the internal

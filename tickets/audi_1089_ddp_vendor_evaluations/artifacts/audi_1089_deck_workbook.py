@@ -268,9 +268,8 @@ def bill_label(ds):
 header(["Vendor", "Total IP x Domain x Date triples (usable, 30d)", "% of total universe",
         "Cumulative % of universe (union, top-N by total)",
         "Touched won imps (valuation wk)",
-        "Share of ALL our won imps that landed on this source's IPs",
-        "Media CPM on touched won imps ($)"])
-fmts1 = {2: N0, 3: PCT2, 4: PCT2, 5: N0, 6: PCT1, 7: "0.00"}
+        "Share of ALL our won imps that landed on this source's IPs"])
+fmts1 = {2: N0, 3: PCT2, 4: PCT2, 5: N0, 6: PCT1}
 km = 0
 for ds in order:
     total, _ = stats[ds]
@@ -278,10 +277,10 @@ for ds in order:
     cum = msum(lambda m: m & km)
     media, imps = touched_media_imps(ds)
     emit([NAME[ds], total, total / UNIVERSE, cum / UNIVERSE,
-          imps, imps / PLAT_IMPS, media / imps * 1000], fmts1)
+          imps, imps / PLAT_IMPS], fmts1)
 media99, imps99 = touched_media_imps(99)
 emit([NAME[99], FU_TOTAL, FU_TOTAL / UNIVERSE, "—",
-      imps99, imps99 / PLAT_IMPS, media99 / imps99 * 1000], fmts1)
+      imps99, imps99 / PLAT_IMPS], fmts1)
 gap()
 
 # ---------------------------------------------------------------- block 2
@@ -404,7 +403,7 @@ qs = wb.create_sheet("queries")
 qrow = [["Block", "Supporting query (runbook/queries/)", "What it computes", "Status"],
         ["1 cols B-D", "deck_d1_universe_coverage.sql", "triple holder-mask histogram -> totals, % of universe, cumulative union % (numbers here derive from the identical measured q3c histogram)", "measured (q3c run_2026_07_10)"],
         ["1 cols E-F", "deck_d2_touched_won_bids.sql", "won imps on touched IPs + % of platform won imps (RETITLED col F: share of platform, NOT a win rate)", "measured (q6/q15/q7d)"],
-        ["1 col G, 2", "deck_d3_bills_cpm.sql", "registry roster, contract/implied CPM, June 2026 meter bill x 12", "run 2026-07-16"],
+        ["2", "deck_d3_bills_cpm.sql", "registry roster, contract/implied CPM, June 2026 meter bill x 12; media CPMs from q6/q15 media+imps", "run 2026-07-16"],
         ["3", "deck_d3 x deck_d1", "bill_after = bill x (1 - free-cohold share); sheet formula, inputs in this workbook", "computed"],
         ["FREE LOGS table", "deck_d7_free_logs_value.sql", "the reverse cohort: free-side media on IPs OUTSIDE the paid roster (guid strictly-sole / augmentor strictly-sole / union-no-paid); union > sum of the two by cohort algebra", "measured (q6 sole + q15; d7 = optional independent re-run)"],
         ["4", "deck_d4_scenario_ladder.sql", "9 keep-set scenarios: triples kept, % of today, HI/PP triples + IP-grain coverage",
