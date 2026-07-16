@@ -26,13 +26,49 @@ evidence base lives in `tickets/audi_1089_ddp_vendor_evaluations/` (Done, standa
 
 ## 3. Meeting decisions driving this epic (2026-07-16 readout)
 
+- **Scope directive: research for a proposal** — implementation is a separate workstream;
+  epic description must say so (it does).
+- **Routing:** consolidated proposal → pre-read for Alyson → Mike + Kale (department leads) →
+  then push for discussion with Paulo.
 - Flow filter for free-log coverage credit: applies to **both** free logs (no same-day credit —
-  the bid stream is circular; lagged 30d window).
+  the bid stream is circular; lagged 30d window). (Malachi self-flagged this on the call:
+  "make sure there's a trailing day for the last 30 days" — AUDI-1115 L2 implements it.)
 - Outreach = one ticket, 5-vendor checklist (Bryce one-spike convention).
 - Non-Malachi tickets created unassigned; owners settled at grooming.
 - WTP = 3 CPM numbers per vendor: all-ingested / actually-used (flow-filtered unique) /
-  bid-and-won. Effective CPM today AND WTP ceiling per lens.
+  bid-and-won. Effective CPM today AND WTP ceiling per lens. Sean's framing: renegotiate the
+  rate (e.g. $0.50 → $0.20 CPM) rather than drop — vendors have value, just not at current price.
 - Meeting transcript: `../audi_1089_ddp_vendor_evaluations/meetings/audi_1089_02_stakeholder_readout_2026_07_16.txt`
+
+## 3b. Facts + concerns raised on the call (beyond the to-do list)
+
+- **RTC = two pipelines** (→ AUDI-1116, also in data_knowledge §RTC): guid_log Kafka streaming
+  (~real-time, Zach's) + TI-run HOURLY batch over svs-minus-guid — vendors DO drive RTC.
+  Per-day analysis understates vendor timing effects (Sean).
+- **DS14 filter lives at MembershipDB / audience-service level** as a global filter (Sean);
+  "add other svs IPs to DS14" liked by Allison + Sean (→ AUDI-1117 option sizing).
+- **Billing is self-reported**: we run targeted_signal compute (Sherwin's team) and tell
+  vendors what we owe — no audit; preemption needs no vendor cooperation. Credit rule
+  ambiguity (fractional vs Victor's "first reporter in date partition wins") — **meeting
+  Monday 2026-07-20**.
+- **Selection-bias / feedback-loop concern (Matt):** keyword/vertical sources may align with
+  free logs → we score free-covered IPs higher → coverage numbers partly self-fulfilling
+  ("house of cards" risk). Ryan's proposed test: remove 33Across from IPDSC input (DS13/DS19
+  prep), wait ~30d, measure. **Candidate follow-up ticket — not yet created.**
+- **Companion report ask:** how many campaigns/audiences actually use the keyword categories
+  that shrink under free-only (e.g. 85M-IP category cut 78%)? Audience-size UI shrink WILL
+  generate advertiser complaints (Allison has fielded these before). **Candidate follow-up —
+  not yet created.**
+- **LiveRamp is a separate pipeline** (separate bucket + ingestion; aggregates 33Across,
+  Dstillery, etc. for interest segments) — svs vendor drops do NOT touch interest segments.
+  Sean floated a LiveRamp-wide cost/value analysis as a future item; also the idea of asking
+  LiveRamp/DeepSync to supply site-visit-type data instead of the small svs vendors.
+- **ID-graph IP-quality idea (Allison):** use the identity graph to flag busy/unusable IPs
+  arriving from vendors (ties to Identity ID-164 toxic-hub scoring — extend, don't rebuild).
+- **Context:** vendor expansion era was Richard + Phil ("integrate 100 data providers");
+  Proxima-style shopping/conversion data is the kind of 3P worth paying for (Ryan/Matt).
+- **Vendor-ops list:** Alyson + Alex maintain a vendor list; check prepaid contracts before
+  proposing drops.
 
 ## 4. Cross-cutting facts
 
@@ -45,5 +81,9 @@ evidence base lives in `tickets/audi_1089_ddp_vendor_evaluations/` (Done, standa
 ## 5. Open Items
 
 - [ ] AUDI-1113/1114 owner assignment at grooming
+- [ ] Monday 2026-07-20 meeting: billing credit-assignment rule (fractional vs first-reporter)
+- [ ] Proposal routing: pre-read Alyson → Mike + Kale → Paulo (after analyses land)
+- [ ] Candidate tickets to raise with Malachi: selection-bias/IPDSC-removal test;
+      keyword-category campaign-usage companion report
 - [ ] Flat-fee amounts from Maya (carried from AUDI-1089)
 - [ ] Data Eng ingestion costs (Sean Yang's team, carried from AUDI-1089)

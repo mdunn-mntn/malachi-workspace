@@ -903,6 +903,14 @@ as households actively watching competitors based on real-time data.
 **IVR, CPM, CPV** are the primary KPIs for RTC monitoring. RTC impressions generally show higher
 IVR than non-RTC on the same campaign segment.
 
+**RTC ingestion = TWO pipelines (2026-07-16 AUDI-1089 stakeholder readout):**
+1. **guid_log path** — Kafka streaming app (Zach Schoenberger's), ~real-time.
+2. **Hourly batch path** (TI-run) — ingests everything from `site_visit_signal` EXCEPT guid_log
+   on an hourly cadence. So **metered 3P vendors DO drive RTC firings** via this path, and
+   per-day coverage analyses understate vendor timing effects: a vendor delivering intraday can
+   put an IP into RTC priority sooner than a free log that only sees it later (Sean Yang's
+   callout). Vendor-dependence of RTC quantified in AUDI-1116.
+
 ### NTB (New-to-Brand) — Definitive Clarification
 `is_new = TRUE` means the IP/household has not had a prior page view or purchase for that advertiser
 **within the client-side JavaScript pixel's lookback window.**
@@ -1087,6 +1095,11 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   free-preemption rule = **$273.7K/yr** at (ip,domain,date) grain (33Across $221.7K). Both free
   logs are confirmed IN targeted_signal → exclusion implementable there; **Sherwin = crediting/
   billing contact**; Sean endorses the fix. Preemption substitutes for drops on the overlap slice.
+  **Bills are self-reported, no vendor audit (2026-07-16 readout, Sean Yang):** MNTN runs the
+  targeted_signal compute (Sherwin's team), produces the monthly usage report, and TELLS the
+  vendor what we owe — full unilateral control of the meter, so preemption needs no vendor
+  cooperation. Credit-assignment rule still ambiguous in-house: fractional shared credit vs
+  Victor's "first IP×URL reporter in the date partition wins" — follow-up meeting 2026-07-20.
   **svs consumers (Sean Yang): DS13 and DS19 ONLY. DS46 Fangorn = guid_log only today; post-retrain
   it moves to feature-store data from aug_log + guid_log (Matt Brorby). Fangorn migration status:
   most active advertisers ALREADY on DS46; forcing the DS13 tail is uncontroversial (Alex owns
@@ -3711,7 +3724,7 @@ Then LEFT JOIN to `guid_log` (causal lift) and/or `clickpass_log` (attribution w
 
 - **DS1:** Legacy Oracle data source. No longer present in IPDSC but still available in the taxonomy/UI. ~553 active prospecting campaigns reference it. May have been disabled by the AUD team — status should be confirmed.
 - **DS11:** Legacy Liveramp data source (deprecated). Used device_id to map to IP for targeting. Retained in the TPA taxonomy because reporting still requires it, but not used for active targeting.
-- **DS14:** MNTN global data — automatically added to all audience expressions to filter down to only IPs seen in `guid_log` (4-day window) and `augmentor_log` (1-day window). Functions as an activity recency filter.
+- **DS14:** MNTN global data — automatically added to all audience expressions to filter down to only IPs seen in `guid_log` (4-day window) and `augmentor_log` (1-day window). Functions as an activity recency filter. Implemented as a **global filter at MembershipDB / audience-service level** (Sean Yang, 2026-07-16 readout); expanding the pool by admitting other site_visit_signal IPs into DS14 was floated at the readout — overlap + option sizing in AUDI-1117. (NOTE: window claims conflict with the ~7-day augmentor-log reading at the audience-expression decode (§DS14 cat [1]) — AUDI-1117 resolves empirically.)
 - **DS19:** Used as an input source for the BUK model (see BUK/DAR entry).
 - **DS35:** Current Liveramp data source. Liveramp now sends IP addresses directly (replacing the older device_id mapping approach of DS11).
 - **DS46:** Mountain Match Peak Performance feature flag data source. Impressions associated with DS46 should be reported as Peak Performance in audience segment reporting, equivalent to how DS13 is handled (clean swap of DS46 in place of DS13).
