@@ -43,7 +43,8 @@
 -- BIG SCAN (svs 30d + wcv + pc, single pass; ~1-1.5h) — dry-run first, run in
 -- background.
 --
--- Run (from this folder — queries and outputs paths are relative to it):
+-- Run: paste this whole block into a terminal, in the folder holding this
+-- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(30)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query \
@@ -52,7 +53,7 @@
 --     --external_table_definition="pc::PARQUET=gs://mntn-data-archive-prod/shopper_graph/product_categorization/*.parquet" \
 --     --use_legacy_sql=false --format=csv --max_rows=50 --project_id=dw-main-silver \
 --     "$(grep -v '^[[:space:]]*--' deck_d1_universe_coverage.sql)" \
---     > ../../outputs/run_<YYYY_MM_DD>/deck_d1_universe_coverage.csv
+--     > deck_d1_universe_coverage.csv
 --
 -- Parameters: SIGNAL_START = 2026-06-02, SIGNAL_DAYS = 30
 -- Bit order (house convention): ds 23,24,25,26,28,30,33,36,39,40 = bits 0..9;

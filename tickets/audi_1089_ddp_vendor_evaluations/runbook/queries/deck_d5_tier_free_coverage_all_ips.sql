@@ -36,13 +36,14 @@
 -- a GROUPING SETS superaggregate, NOT a second read; CTE re-references would
 -- re-scan the external table; ~30-45min) — background.
 --
--- Run (from this folder — queries and outputs paths are relative to it):
+-- Run: paste this whole block into a terminal, in the folder holding this
+-- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query --external_table_definition="svs::PARQUET=${URIS}" \
 --     --use_legacy_sql=false --format=csv --max_rows=20 --project_id=dw-main-silver \
 --     "$(grep -v '^[[:space:]]*--' deck_d5_tier_free_coverage_all_ips.sql)" \
---     > ../../outputs/run_<YYYY_MM_DD>/deck_d5_tier_free_coverage_all_ips.csv
+--     > deck_d5_tier_free_coverage_all_ips.csv
 --
 -- Parameters: SIGNAL_START = 2026-06-02, SIGNAL_DAYS = 37; VALUE week 2026-07-02..08
 -- ============================================================================

@@ -59,6 +59,12 @@ P1_End:
   default: 1900-01-01
   label: "Period 1 end (optional, exclusive)"
   description: "Leave at 1900-01-01 = auto: Period 2 end minus one year"
+Stages:
+  type: multiselect
+  default: ['ALL']
+  label: "Funnel stage"
+  description: "ALL = every prospecting stage; 1 = Prospecting, 2/3 = Mid-funnel. Applies to every campaign-scoped module"
+  options: ['ALL', '1', '2', '3']
 Min_Spend_Pct:
   type: select
   default: '0'

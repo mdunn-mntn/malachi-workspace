@@ -31,11 +31,12 @@
 --
 -- CHEAP, console-pasteable (internal tables only, no external definitions).
 --
--- Run: paste into the BigQuery console (project dw-main-silver), or from this
--- folder:
+-- Run: paste the SQL into the BigQuery console (project dw-main-silver) — no
+-- external tables needed — or run the block below in a terminal in the folder
+-- holding this file:
 --   bq query --use_legacy_sql=false --format=csv --max_rows=50 --project_id=dw-main-silver \
 --     "$(grep -v '^[[:space:]]*--' deck_d3_bills_cpm.sql)" \
---     > ../../outputs/run_<YYYY_MM_DD>/deck_d3_bills_cpm.csv
+--     > deck_d3_bills_cpm.csv
 --
 -- Parameters: METER_MONTH = 2026-06-01
 -- ============================================================================

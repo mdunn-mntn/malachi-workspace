@@ -32,7 +32,8 @@ camp AS (
   LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g
     ON g.campaign_group_id = c.campaign_group_id
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
-    AND c.objective_id = 1 AND c.funnel_level = 1
+    AND c.objective_id IN (1, 5, 6)
+    AND ('ALL' IN ({{ Stages }}) OR CAST(c.funnel_level AS STRING) IN ({{ Stages }}))
     AND c.campaign_group_id IN (SELECT campaign_group_id FROM sel)
 ),
 delivery AS (

@@ -41,6 +41,7 @@ scope_camps AS (
   JOIN prosp_groups p ON p.campaign_group_id = c.campaign_group_id
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
     AND c.objective_id != 4
+    AND ('ALL' IN ({{ Stages }}) OR CAST(c.funnel_level AS STRING) IN ({{ Stages }}))
     AND c.campaign_group_id IN (SELECT campaign_group_id FROM sel)
 ),
 -- FULL-WINDOW reach (empirically CIL retains well over a year — the old "90d TTL"

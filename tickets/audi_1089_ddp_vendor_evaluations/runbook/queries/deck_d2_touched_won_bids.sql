@@ -1,13 +1,11 @@
 -- ============================================================================
 -- AUDI-1089 DECK QUERY D2 of 7: won impressions on IPs each source touched
--- FILLS: deck sheet BLOCK 1 (rows 1-7) cols E "total number of touched bids that
---        won" and F. IMPORTANT — RENAME sheet col F: the metric here is
---        "% of the PLATFORM's won impressions that landed on touched IPs"
---        (denominator = rec='platform' row), NOT a win rate. A column titled
---        "% of touched bids that won" would misread as bids-won/bids-touched —
---        a metric this package cannot compute (bid-request grain lives in
---        bidder_bid_events, 90d TTL, out of scope). Retitle the sheet column
---        "% of platform won imps on touched IPs" or footnote the denominator.
+-- FILLS: deck workbook BLOCK 1 cols "Touched won imps (valuation wk)" and
+--        "Share of ALL our won imps that landed on this source's IPs"
+--        (denominator = the rec='platform' row). NOTE the share is a REACH
+--        share, NOT a win rate: bids-won/bids-touched is not computable from
+--        this package (bid-request grain lives in bidder_bid_events, 90d TTL,
+--        out of scope) — don't retitle the column to anything win-rate-like.
 --
 -- Claim: "touched bids that won" = WON impressions (cost_impression_log rows) in
 -- the valuation week landing on IPs the source delivered at least once in the
@@ -34,13 +32,14 @@
 --
 -- BIG SCAN (svs 37d ip pass + CIL week; ~30-45min) — background.
 --
--- Run (from this folder — queries and outputs paths are relative to it):
+-- Run: paste this whole block into a terminal, in the folder holding this
+-- file (prereqs: gcloud auth login; bq CLI; GCS read on mntn-data-archive-prod):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \
 --     URIS="${URIS}gs://mntn-data-archive-prod/signals/site_visit_signal/dt=${d}/*.parquet,"; done; URIS="${URIS%,}"
 --   bq query --external_table_definition="svs::PARQUET=${URIS}" \
 --     --use_legacy_sql=false --format=csv --max_rows=50 --project_id=dw-main-silver \
 --     "$(grep -v '^[[:space:]]*--' deck_d2_touched_won_bids.sql)" \
---     > ../../outputs/run_<YYYY_MM_DD>/deck_d2_touched_won_bids.csv
+--     > deck_d2_touched_won_bids.csv
 --
 -- Parameters: SIGNAL_START = 2026-06-02, SIGNAL_DAYS = 37; VALUE week 2026-07-02..08
 -- Spec masks below = 1 << bit for the house bit order (ds 23,24,25,26,28,30,33,

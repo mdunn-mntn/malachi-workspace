@@ -2519,7 +2519,7 @@ function render(rowsIgnored, root, H) {
   function renderAll() {
     var root = document.getElementById("cpd");
     root.innerHTML = '<h1>Client Performance Diagnostic</h1>'
-      + '<div class="sub">Prospecting diagnostic · Period 2 vs Period 1 (default: same period last year) · % spend = whole campaign group, RT excluded · campaign + min-spend filters apply to every module</div>';
+      + '<div class="sub">Prospecting diagnostic · Period 2 vs Period 1 (default: same period last year) · % spend = whole campaign group, RT excluded · campaign, stage + min-spend filters apply to every module</div>';
 
     var bar = document.createElement("div"); bar.className = "tabbar";
     root.appendChild(bar);

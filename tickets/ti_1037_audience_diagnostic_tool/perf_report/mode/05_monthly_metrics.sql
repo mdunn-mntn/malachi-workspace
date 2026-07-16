@@ -30,7 +30,8 @@ camp AS (
   SELECT campaign_id
   FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id = {{ Advertiser_ID }} AND deleted = FALSE
-    AND objective_id = 1 AND funnel_level = 1
+    AND objective_id IN (1, 5, 6)
+    AND ('ALL' IN ({{ Stages }}) OR CAST(funnel_level AS STRING) IN ({{ Stages }}))
     AND campaign_group_id IN (SELECT campaign_group_id FROM sel)
 )
 SELECT
