@@ -6,6 +6,10 @@
 --        (= the today row's trips_kept minus the scenario's — sheet arithmetic
 --        over this query's output), "HI triples kept", "HI-IP coverage %"
 --        (IP-GRAIN — see grain note), "PP triples kept", "PP-IP coverage %".
+--        ALSO fills the workbook's "SIGNAL VOLUME by tier" table: triple-grain
+--        free coverage per tier = free_logs_only row / today row, per column
+--        (hi 65.74%, pp 59.21%, other = all-minus-hi-minus-pp 57.62%) — sheet
+--        arithmetic over the same two output rows, no separate query.
 --
 -- Claim: one scan builds BOTH histograms every scenario needs:
 --   triple grain — (ip x domain x date) holder masks, split by the IP's score

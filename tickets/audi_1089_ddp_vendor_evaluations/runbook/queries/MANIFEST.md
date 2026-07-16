@@ -76,7 +76,7 @@ are single-external-scan by construction (see each ARCHITECTURE NOTE).
 | `deck_d1_universe_coverage.sql` | Block 1 cols B-D (per-source triples, % of universe, cumulative union %) + the free-cohold % that Block 3's bill formula needs | **BIG** (svs 30d + wcv + pc, 1 pass) |
 | `deck_d2_touched_won_bids.sql` | Block 1 (won imps on touched IPs + share of ALL won imps — a reach share; never present as a win rate) | **BIG** (svs 37d + CIL wk, 1 pass) |
 | `deck_d3_bills_cpm.sql` | Block 2 (contract CPM, June bill x12; `implied_cpm` is a meter cross-check, not a sheet cell); Block 3 bills = computed offline as bill x (1 - D1 free_cohold) | cheap, console |
-| `deck_d4_scenario_ladder.sql` | Block 4 (9 scenarios: triples kept, % of today, HI/PP triples kept, HI/PP IP-grain coverage %) | **BIG** (svs 30d + wcv + pc + CIL wk, 1 pass) |
+| `deck_d4_scenario_ladder.sql` | Block 4 (9 scenarios: triples kept, % of today, triples LOST, HI/PP triples kept, HI/PP IP-grain coverage %) + the SIGNAL VOLUME table (triple-grain free coverage per tier — sheet arithmetic over the today + free_logs_only rows) | **BIG** (svs 30d + wcv + pc + CIL wk, 1 pass) |
 | `deck_d5_tier_free_coverage_all_ips.sql` | Block 5 (ALL member IPs by score tier: free-covered vs vendor-only) | **BIG** (svs 37d + CIL wk, 1 pass) |
 | `deck_d6_tier_free_coverage_bid_ips.sql` | Block 6 (same split, only IPs that received won imps) | **BIG** (svs 37d + CIL wk, 1 pass) |
 | `deck_d7_free_logs_value.sql` | FREE LOGS table: the reverse cohort — free-side media on IPs outside the PAID roster (guid/aug strictly-sole + union-no-paid; union > sum by cohort algebra). Values already measured by q6/q15 — running is optional | **BIG** (svs 37d + CIL wk, 1 pass) |
