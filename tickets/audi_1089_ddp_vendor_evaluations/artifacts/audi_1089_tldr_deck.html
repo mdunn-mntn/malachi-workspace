@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDP Vendor Evaluation — TLDR</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+<style>
+:root {
+  --navy: #1B2A4A; --blue: #2E5090; --mid: #5A7DB5; --light: #A8BDD9;
+  --muted: #C8CDD4; --red: #D63B2F; --text: #222; --text-light: #666;
+}
+.reveal { font-size: 32px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--text); }
+.reveal h1 { margin-top: 0; font-size: 1.7em; color: var(--navy); }
+.reveal h2 { margin-top: 0; font-size: 1.15em; color: var(--navy); margin-bottom: 0.6em; }
+.reveal h3 { margin-top: 0; font-size: 0.9em; color: var(--navy); }
+.reveal p { font-size: 0.75em; }
+.reveal .big { font-size: 2.4em; font-weight: 700; color: var(--red); margin: 0.25em 0; }
+.reveal .bigsub { font-size: 0.65em; color: var(--text-light); }
+.reveal .ctx { font-size: 0.7em; color: var(--text-light); }
+.reveal table { font-size: 0.55em; margin: 0 auto; border-collapse: collapse; }
+.reveal table th { background: var(--navy); color: #fff; padding: 0.35em 0.6em; font-weight: 600; }
+.reveal table td { padding: 0.35em 0.6em; border-bottom: 1px solid #ddd; }
+.reveal table td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.reveal .neg { color: var(--red); font-weight: 700; }
+.reveal .formula { font-family: "SF Mono", Menlo, monospace; font-size: 0.85em; color: var(--navy);
+  background: #F4F6FA; padding: 0.6em 0.9em; border-radius: 6px; display: inline-block; margin: 0.4em 0; }
+.reveal .defs { font-size: 0.55em; color: var(--text-light); text-align: left; display: inline-block; line-height: 1.5; }
+.reveal .foot { font-size: 0.42em; color: #AAA; margin-top: 0.6em; }
+.reveal .steps { font-size: 0.62em; text-align: left; display: inline-block; line-height: 1.55; max-width: 30em; }
+.reveal .steps li { margin-bottom: 0.5em; }
+.reveal .navyline { color: var(--navy); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<section>
+  <h1>DDP Vendor Evaluation</h1>
+  <p class="ctx">What the third-party data vendors are worth — TLDR</p>
+  <p class="ctx">Malachi Dunn · AUDI-1089 · July 2026</p>
+  <p class="foot">Every number here traces to one of 8 shareable queries. Windows: signal 30d (Jun 2 – Jul 1) · serving week Jul 2–8 · bills June 2026 ×12.</p>
+</section>
+
+<section>
+  <h2>HOW WE VALUE A DATA VENDOR</h2>
+  <p class="navyline" style="font-size: 0.95em;">A vendor is worth the margin its data lets us keep,<br>minus what the data costs us.</p>
+</section>
+
+<section>
+  <h2>The logic</h2>
+  <ol class="steps">
+    <li>A vendor makes us money one way: its data lets us serve impressions we bill to clients.</li>
+    <li><b>Only incremental impressions count.</b> If we would have served the impression anyway — from our own free sources or another vendor already on the roster — the vendor gets no credit for it.</li>
+    <li>Revenue = volume × price. We keep only the margin M. From that, subtract the data cost.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>The formula</h2>
+  <div class="formula">Net Kept Margin&#7525; = (I&#7525; ÷ 1,000) × CPM × M − D&#7525;</div><br>
+  <div class="defs">
+    I&#7525; &nbsp;&nbsp;— unique (IP × Domain × Date) impressions served only because of vendor v<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(net of free sources; leave-one-out against the rest of the paid roster)<br>
+    CPM — client-facing price per 1,000 served impressions<br>
+    M &nbsp;&nbsp;&nbsp;— gross margin as a % of revenue<br>
+    D&#7525; &nbsp;&nbsp;— data cost paid to vendor v over the same window
+  </div>
+  <p class="ctx">Positive → the vendor pays for itself. Negative → we pay more for the data than the margin it creates.</p>
+</section>
+
+<section>
+  <h2>Why incremental-only is non-negotiable</h2>
+  <div class="big">6.4×</div>
+  <p class="bigsub">The 8 paid vendors' "touched" impression claims sum to 6.4× all impressions we actually served.</p>
+  <p class="ctx">Each vendor touches 52–99% of the same served IPs. Credit everything a vendor touches, and every vendor claims the same impression.</p>
+  <p class="foot">deck_d2_touched_won_bids.sql</p>
+</section>
+
+<section>
+  <h2>The signal universe</h2>
+  <div class="big" style="color: var(--navy);">13.29B</div>
+  <p class="bigsub">unique IP × Domain × Date signal points across all 10 sources, 30 days</p>
+  <p class="foot">deck_d1_universe_coverage.sql · deck_d4_scenario_ladder.sql</p>
+</section>
+
+<section>
+  <h2>Our free logs are the baseline</h2>
+  <div class="big" style="color: var(--navy);">59.4%</div>
+  <p class="bigsub">of all signal is already in guid_log + augmentor — sources we own, at $0</p>
+  <p class="ctx">And 98.8% of the IPs we actually served last week are known to the free logs.</p>
+  <p class="foot">deck_d1 · deck_d6_tier_free_coverage_bid_ips.sql</p>
+</section>
+
+<section>
+  <h2>Scored audiences don't need the vendors</h2>
+  <table>
+    <tr><th>Audience tier</th><th>IPs covered by free logs alone</th></tr>
+    <tr><td>High Intent (10000)</td><td class="n">99.95%</td></tr>
+    <tr><td>Peak Performance (8000)</td><td class="n">99.29%</td></tr>
+    <tr><td>High-Graduated (Fangorn bands)</td><td class="n">100.00%</td></tr>
+    <tr><td>Mid</td><td class="n">99.91%</td></tr>
+    <tr><td>Max Reach</td><td class="n">99.55%</td></tr>
+  </table>
+  <p class="foot">deck_d5 / deck_d6 — identical in both the audience-size and served-IP lenses</p>
+</section>
+
+<section>
+  <h2>Audience vs signal — two different losses</h2>
+  <p class="navyline">Free logs alone keep 99.76% of High Intent households…</p>
+  <p class="navyline">…but only 65.7% of the signal volume on them.</p>
+  <p class="ctx">Membership survives because it needs some qualifying signal, not all of it.</p>
+  <p class="foot">deck_d4 · deck_d8_signal_volume_served.sql</p>
+</section>
+
+<section>
+  <h2>I&#7525; measured — incremental revenue per vendor</h2>
+  <p class="ctx">Media billed on impressions served only because of that vendor (outside both free logs), annualized</p>
+  <table>
+    <tr><th>Vendor</th><th>Incremental revenue / yr</th></tr>
+    <tr><td>33Across</td><td class="n">$724K</td></tr>
+    <tr><td>33Across API</td><td class="n">$447K</td></tr>
+    <tr><td>5x5</td><td class="n">$281K</td></tr>
+    <tr><td>Predactiv</td><td class="n">$202K</td></tr>
+    <tr><td>Sovrn · Justuno · Klickly · Cybba</td><td class="n">$112K · $37K · $13K · $10K</td></tr>
+  </table>
+  <p class="foot">deck_d2 basis + q8b_solo_perf.sql (unique cohort media × 52)</p>
+</section>
+
+<section>
+  <h2>The formula, applied (M = 10–30%)</h2>
+  <table>
+    <tr><th>Vendor</th><th>Kept margin / yr</th><th>D&#7525; (bill / yr)</th><th>Net</th></tr>
+    <tr><td>33Across</td><td class="n">$72K – $217K</td><td class="n">$422K</td><td class="n neg">−$205K to −$350K</td></tr>
+    <tr><td>33Across API</td><td class="n">$45K – $134K</td><td class="n">$176K</td><td class="n neg">−$42K to −$131K</td></tr>
+    <tr><td>Sovrn</td><td class="n">$11K – $34K</td><td class="n">$116K</td><td class="n neg">−$82K to −$105K</td></tr>
+    <tr><td>Justuno</td><td class="n">$4K – $11K</td><td class="n">$77K</td><td class="n neg">−$66K to −$73K</td></tr>
+    <tr><td>Cybba</td><td class="n">$1K – $3K</td><td class="n">$22K</td><td class="n neg">−$19K to −$21K</td></tr>
+  </table>
+  <p class="foot">deck_d3_bills_cpm.sql (D&#7525;) · q8b (I&#7525; media) — flat-fee vendors on the next slide</p>
+</section>
+
+<section>
+  <h2>Net Kept Margin</h2>
+  <div class="big">Negative</div>
+  <p class="bigsub">for every metered vendor — even at the top of the margin band</p>
+  <p class="ctx">Best case on the roster: 33Across API at −$42K/yr.</p>
+</section>
+
+<section>
+  <h2>Flat-fee vendors — verdict pending D&#7525;</h2>
+  <table>
+    <tr><th>Vendor</th><th>Kept margin / yr</th><th>D&#7525;</th></tr>
+    <tr><td>5x5</td><td class="n">$28K – $84K</td><td class="n">fee pending (finance)</td></tr>
+    <tr><td>Predactiv</td><td class="n">$20K – $61K</td><td class="n">fee pending (finance)</td></tr>
+    <tr><td>Klickly</td><td class="n">$1.3K – $3.8K</td><td class="n">fee pending (finance)</td></tr>
+  </table>
+  <p class="ctx">The break-even fee for each is now a known number.</p>
+</section>
+
+<section>
+  <h2>We also pay for data we already have</h2>
+  <div class="big">$273,671 / yr</div>
+  <p class="bigsub">recoverable by not crediting vendors for signal the free logs already delivered</p>
+  <p class="ctx">Metered bills: $812,397 → $538,726 with no roster change at all.</p>
+  <p class="foot">deck_d1 free-cohold shares × deck_d3 bills (AUDI-1093)</p>
+</section>
+
+<section>
+  <h2>What the free logs alone protect</h2>
+  <div class="big" style="color: var(--navy);">$602,897 / yr</div>
+  <p class="bigsub">of billed media stands on IPs no paid vendor delivers</p>
+  <p class="foot">deck_d7_free_logs_value.sql</p>
+</section>
+
+<section>
+  <h2>Drop scenarios — signal kept vs High Intent kept</h2>
+  <table>
+    <tr><th>Scenario</th><th>Signal kept</th><th>HI IPs covered</th></tr>
+    <tr><td>Today (all 8 paid)</td><td class="n">100%</td><td class="n">100%</td></tr>
+    <tr><td>Drop Sovrn + Cybba</td><td class="n">99.75%</td><td class="n">99.9998%</td></tr>
+    <tr><td>+ drop Klickly + Justuno</td><td class="n">98.69%</td><td class="n">99.9975%</td></tr>
+    <tr><td>33Across pair only</td><td class="n">89.57%</td><td class="n">99.98%</td></tr>
+    <tr><td>Free logs only</td><td class="n">59.36%</td><td class="n">99.76%</td></tr>
+  </table>
+  <p class="foot">deck_d4_scenario_ladder.sql</p>
+</section>
+
+<section>
+  <h2>The first four drops</h2>
+  <div class="big" style="color: var(--navy);">$214,495 / yr</div>
+  <p class="bigsub">saved by dropping Sovrn, Cybba, Justuno (+ Klickly's flat fee)</p>
+  <p class="ctx">Cost: 1.31% of signal · High Intent coverage stays at 99.9975%.</p>
+</section>
+
+<section>
+  <h2>Everything here is reproducible</h2>
+  <ul class="steps">
+    <li>8 self-contained BigQuery files — one per table in the workbook</li>
+    <li>Copy-paste run blocks; each header states what it fills and the exact values it should return</li>
+    <li>Workbook "queries" sheet maps every table to its query</li>
+  </ul>
+  <p class="foot">audi_1089_deck_queries_2026_07_16.zip + audi_1089_deck_sheet.xlsx</p>
+</section>
+
+<section>
+  <h2>Open items</h2>
+  <ul class="steps">
+    <li>Flat-fee amounts (finance) → 5x5 / Predactiv / Klickly verdicts</li>
+    <li>Billing preemption fix → $273,671/yr (AUDI-1093)</li>
+    <li>Ingestion compute costs (Data Eng) → adds to every D&#7525;</li>
+  </ul>
+</section>
+
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  hash: true, slideNumber: true, controls: true, progress: true, center: true,
+  transition: 'fade', transitionSpeed: 'slow',
+  width: 1100, height: 800, margin: 0.01, minScale: 0.2, maxScale: 1.5,
+});
+</script>
+</body>
+</html>
