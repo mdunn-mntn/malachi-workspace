@@ -8,14 +8,33 @@
 -- Scope: groups running a live prospecting campaign in the window; flights overlapping it.
 -- Prospecting derived dynamically as objective_id=1, funnel_level=1, deleted=FALSE.
 -- Spend per group joined from sum_by_campaign_by_day over the recent period, used to rank groups.
-WITH prosp_groups AS (
+WITH sel AS (
+  -- FILTERS (Nick): campaign multiselect ('ALL' keeps everything) + minimum share of
+  -- window spend (whole-group basis; total computed BEFORE selection so shares are
+  -- of the advertiser's full window spend, not of the kept subset)
+  SELECT campaign_group_id FROM (
+    SELECT c.campaign_group_id,
+           SUM(s.media_spend + s.data_spend + s.platform_spend) AS gs,
+           SUM(SUM(s.media_spend + s.data_spend + s.platform_spend)) OVER () AS ts
+    FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+    JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
+    WHERE s.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE AND c.objective_id != 4
+      AND s.day >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
+      AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    GROUP BY 1
+  )
+  WHERE ('ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}))
+    AND (ts <= 0 OR gs / ts >= CAST('{{ Min_Spend_Pct }}' AS FLOAT64) / 100)
+),
+prosp_groups AS (
   SELECT DISTINCT c.campaign_group_id
   FROM `dw-main-bronze.integrationprod.campaigns` c
   JOIN `dw-main-silver.summarydata.sum_by_campaign_by_day` d ON d.campaign_id = c.campaign_id
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
     AND c.objective_id = 1 AND c.funnel_level = 1
+    AND c.campaign_group_id IN (SELECT campaign_group_id FROM sel)
     AND d.advertiser_id = {{ Advertiser_ID }}
-    AND d.day >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND d.day >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
     AND d.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND d.impressions > 0
 ),
@@ -32,7 +51,7 @@ grp_spend AS (
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
     AND c.objective_id != 4
     AND d.advertiser_id = {{ Advertiser_ID }}
-    AND d.day >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND d.day >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
     AND d.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
   GROUP BY c.campaign_group_id
 )
@@ -46,10 +65,10 @@ SELECT
   f.budget,
   f.status_id,
   COALESCE(s.prosp_spend, 0)                               AS group_prosp_spend,
-  DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)    AS win_start,
+  IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))    AS win_start,
   LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))                                 AS win_end,
-  DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)    AS p1_start,
-  DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR)    AS p1_end,
+  IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))    AS p1_start,
+  IF(DATE(LEFT('{{ P1_End }}', 10)) = DATE '1900-01-01', DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 YEAR), LEAST(DATE(LEFT('{{ P1_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)))    AS p1_end,
   IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10)))                               AS p2_start,
   LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))                                 AS p2_end
 FROM `dw-main-bronze.integrationprod.core_flights` f
@@ -57,5 +76,5 @@ JOIN prosp_groups p USING (campaign_group_id)
 LEFT JOIN grp_name  g USING (campaign_group_id)
 LEFT JOIN grp_spend s USING (campaign_group_id)
 WHERE f.start_time <  TIMESTAMP(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)))
-  AND f.end_time  >= TIMESTAMP(DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR))
+  AND f.end_time  >= TIMESTAMP(IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10))))
 ORDER BY f.campaign_group_id, f.start_time

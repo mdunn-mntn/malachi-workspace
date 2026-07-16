@@ -12,17 +12,36 @@
 -- Source: logdata.cost_impression_log (retains full window; filter DATE(time)/time).
 -- Bounded P1_START..P2_END (P2_END EXCLUSIVE) so the full comparison span is covered.
 -- Period bounds are emitted per-row so the render can split months into Period 1 vs Period 2.
-WITH camp AS (
+WITH sel AS (
+  -- FILTERS (Nick): campaign multiselect ('ALL' keeps everything) + minimum share of
+  -- window spend (whole-group basis; total computed BEFORE selection so shares are
+  -- of the advertiser's full window spend, not of the kept subset)
+  SELECT campaign_group_id FROM (
+    SELECT c.campaign_group_id,
+           SUM(s.media_spend + s.data_spend + s.platform_spend) AS gs,
+           SUM(SUM(s.media_spend + s.data_spend + s.platform_spend)) OVER () AS ts
+    FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+    JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
+    WHERE s.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE AND c.objective_id != 4
+      AND s.day >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
+      AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    GROUP BY 1
+  )
+  WHERE ('ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}))
+    AND (ts <= 0 OR gs / ts >= CAST('{{ Min_Spend_Pct }}' AS FLOAT64) / 100)
+),
+camp AS (
   SELECT campaign_id
   FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id = {{ Advertiser_ID }} AND deleted = FALSE
     AND objective_id = 1 AND funnel_level = 1
+    AND campaign_group_id IN (SELECT campaign_group_id FROM sel)
 ),
 base AS (
   SELECT FORMAT_DATE("%Y-%m", DATE(time)) AS mo, household_score AS hs
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
-    AND time >= TIMESTAMP(DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR))
+    AND time >= TIMESTAMP(IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10))))
     AND time <  TIMESTAMP(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)))
     AND campaign_id IN (SELECT campaign_id FROM camp)
     AND (model_params IS NULL OR model_params NOT LIKE "%realtime_conquest_score=10000%")
@@ -36,8 +55,8 @@ SELECT
   COUNTIF(hs BETWEEN 3333 AND 6665)               AS mi,
   COUNTIF(hs = 8000 OR hs BETWEEN 6666 AND 7999)  AS pp,
   COUNTIF(hs = 10000 OR hs BETWEEN 8001 AND 9999) AS hi,
-  FORMAT_DATE("%Y-%m", DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)) AS p1_start_mo,
-  FORMAT_DATE("%Y-%m", DATE_SUB(DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY), INTERVAL 1 YEAR)) AS p1_end_mo,
+  FORMAT_DATE("%Y-%m", IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))) AS p1_start_mo,
+  FORMAT_DATE("%Y-%m", DATE_SUB(IF(DATE(LEFT('{{ P1_End }}', 10)) = DATE '1900-01-01', DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 YEAR), LEAST(DATE(LEFT('{{ P1_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))), INTERVAL 1 DAY)) AS p1_end_mo,
   FORMAT_DATE("%Y-%m", IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10)))) AS p2_start_mo,
   FORMAT_DATE("%Y-%m", DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 DAY)) AS p2_end_mo
 FROM base

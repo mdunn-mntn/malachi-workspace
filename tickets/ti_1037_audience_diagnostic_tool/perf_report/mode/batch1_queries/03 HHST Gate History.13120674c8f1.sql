@@ -8,13 +8,32 @@
 -- chart can forward-fill the gate value in effect entering the window. Each row is denormalized with
 -- the campaign group's prospecting spend over the recent period so the render can spend-rank the panels.
 -- Params: Advertiser_ID, Period_Start, Period_End (Period_End EXCLUSIVE).
-WITH camp AS (
+WITH sel AS (
+  -- FILTERS (Nick): campaign multiselect ('ALL' keeps everything) + minimum share of
+  -- window spend (whole-group basis; total computed BEFORE selection so shares are
+  -- of the advertiser's full window spend, not of the kept subset)
+  SELECT campaign_group_id FROM (
+    SELECT c.campaign_group_id,
+           SUM(s.media_spend + s.data_spend + s.platform_spend) AS gs,
+           SUM(SUM(s.media_spend + s.data_spend + s.platform_spend)) OVER () AS ts
+    FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+    JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
+    WHERE s.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE AND c.objective_id != 4
+      AND s.day >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
+      AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    GROUP BY 1
+  )
+  WHERE ('ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}))
+    AND (ts <= 0 OR gs / ts >= CAST('{{ Min_Spend_Pct }}' AS FLOAT64) / 100)
+),
+camp AS (
   SELECT c.campaign_id, c.name AS camp_name, c.campaign_group_id, g.name AS group_name
   FROM `dw-main-bronze.integrationprod.campaigns` c
   LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g
     ON g.campaign_group_id = c.campaign_group_id
   WHERE c.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE
     AND c.objective_id = 1 AND c.funnel_level = 1
+    AND c.campaign_group_id IN (SELECT campaign_group_id FROM sel)
 ),
 chg AS (
   SELECT campaign_id, update_time, threshold,
@@ -31,7 +50,7 @@ grp_spend AS (
   FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
   JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
   WHERE s.advertiser_id = {{ Advertiser_ID }}
-    AND DATE(s.day) >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND DATE(s.day) >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
     AND DATE(s.day) <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
     AND c.deleted = FALSE AND c.objective_id != 4
   GROUP BY 1
@@ -44,11 +63,11 @@ SELECT
   chg.update_time,
   chg.threshold AS gate_threshold,
   COALESCE(gs.grp_prospecting_spend, 0) AS grp_prospecting_spend,
-  DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR) AS p1_start,
-  DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR) AS p1_end,
+  IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10))) AS p1_start,
+  IF(DATE(LEFT('{{ P1_End }}', 10)) = DATE '1900-01-01', DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 YEAR), LEAST(DATE(LEFT('{{ P1_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))) AS p1_end,
   IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))) AS p2_start,
   LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))   AS p2_end,
-  DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR) AS win_start,
+  IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10))) AS win_start,
   LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))   AS win_end
 FROM chg
 JOIN camp c USING (campaign_id)

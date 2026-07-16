@@ -24,6 +24,12 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
   if you see a stray Mode query named "period options", DELETE it (a second form defining the same params
   conflicts with the params query). Lesson kept: a param left UNDEFINED (form removed before its replacement
   exists) substitutes as EMPTY STRING and kills every consumer query at once.
+- **Nick's filters (2026-07-16):** every campaign-scoped query starts with a shared `sel` CTE =
+  campaign multiselect (`'ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN (...)`)
+  + min-spend-% (share of the advertiser's FULL window spend, computed before selection). P1 is now
+  independently settable (P1_Start/P1_End date pickers; 1900-01-01 default = auto YoY); overlap isn't
+  blockable in Mode — the flags header shows a red OVERLAP warning instead. 11/13 are advertiser-level
+  (no campaign filter, periods only).
 - **Period_End is clamped in SQL** — every query wraps it as `LEAST(Period_End, DATE_TRUNC(CURRENT_DATE(),
   MONTH))`, so the far-future default (2099-01-01) means "through the last FULL month" automatically (Mode
   date params only support static defaults). A user-picked earlier date is honored as-is. Period_End stays
@@ -61,7 +67,8 @@ from Nick, 2026-07-07 — see `../../meetings/ti_1037_01_nick_mode_dashboard_202
 
 | File | → Mode | Status |
 |---|---|---|
-| `params.sql` | query "params" (Advertiser dropdown + Period date pickers) | ready |
+| `params.sql` | query "params" (Advertiser dropdown + P2/P1 date pickers + Min_Spend_Pct) | ready |
+| `campaign_options.sql` | query **"campaign options"** (Campaign_Groups MULTISELECT; 'ALL' sentinel; list refreshes on Run after advertiser change) | ready |
 | `04_yoy_metrics.sql` | query **"04 YoY Metrics"** | ✅ validated vs tool (P1 $647,864 / P2 $528,728) |
 | `05_monthly_metrics.sql` | query **"05 Monthly Metrics"** | ready |
 | `index.html` | the report HTML (YoY table + monthly Chart.js) | ready |

@@ -83,7 +83,7 @@
     rows.forEach(function (r) { P[r.period] = { impressions:num(r.impressions), visits:num(r.visits),
       spend:num(r.spend), conversions:num(r.conversions), revenue:num(r.revenue) }; });
     if (!P.P1 || !P.P2) return '<div class="err">YoY table needs both P1 and P2 rows (got: ' + Object.keys(P).join(", ") + ").</div>";
-    var h = '<table class="yoy"><tr><th class="metric">Metric</th><th>Prior year (P1)</th><th>Selected (P2)</th><th>Δ %</th></tr>';
+    var h = '<table class="yoy"><tr><th class="metric">Metric</th><th>Period 1</th><th>Period 2</th><th>Δ %</th></tr>';
     METRICS.forEach(function (m) {
       var v1 = m[1](P.P1), v2 = m[1](P.P2), fmt = m[2], good = m[3];
       var d = v1 ? 100*(v2/v1 - 1) : null;
@@ -1686,9 +1686,9 @@ function render(rowsIgnored, root, H) {
       else if (adverse && worst !== "flag") worst = "watch";
       else if (worst === "ok" && Math.abs(d) >= 30) worst = "watch";
     });
-    add("Metric moves ≥15% (YoY)", "", "", partsH.length ? "" : "none", worst,
+    add("Metric moves ≥15% (P1→P2)", "", "", partsH.length ? "" : "none", worst,
       partsH.length ? "red = adverse direction" : "", partsH.length ? partsH.join("  ·  ") : null);
-  } else add("Metric moves ≥15% (YoY)", "—", "—", "", "na", "run query 04");
+  } else add("Metric moves ≥15% (P1→P2)", "—", "—", "", "na", "run query 04");
 
   // ---- 2b) possible TRACKING changes: MoM step in visits/convs at ~flat spend,
   //      or order values stopping — the WGU pattern (Jul'25 visit step, Oct'25 pixel) ----
@@ -2018,7 +2018,7 @@ function render(rowsIgnored, root, H) {
   //      chokes reach; recirculation drags slowly (Caraway x0.51 at scale). ----
   var RANK = {
     "Prospecting spend": 1,
-    "Metric moves \u226515% (YoY)": 2,
+    "Metric moves \u226515% (P1\u2192P2)": 2,
     "Avg HI share (scored imps)": 10,
     "No-gate (HHST\u22640) campaign-days": 11,
     "Avg HHST (campaign-days)": 12,
@@ -2057,7 +2057,8 @@ function render(rowsIgnored, root, H) {
     + '<span style="font-size:12px;font-weight:700;color:' + C.AMBER + '">  ·  ' + nw + ' watch</span></div>';
   html += '<div style="font-size:11px;color:#888;margin:2px 0 10px;">P1 ' + H.esc(p1s || "?") + ' → ' + H.esc(p1e || "?")
     + ' · P2 ' + H.esc(p2s || "?") + ' → ' + H.esc(p2e || "?")
-    + ' · the standard decline causes, each with the responsible campaign/month where one dominates</div>';
+    + ' · the standard decline causes, each with the responsible campaign/month where one dominates'
+    + ((p1s && p2s && p1e > p2s && p2e > p1s) ? ' · <span style="color:' + C.RED + ';font-weight:700">P1 AND P2 OVERLAP — comparison invalid</span>' : '') + '</div>';
   html += '<table style="border-collapse:collapse;width:100%;font-size:12px">';
   var fth = 'padding:5px 8px;color:' + C.NAVY + ';border-bottom:2px solid ' + C.NAVY + ';font-size:11px;white-space:nowrap';
   html += '<thead><tr>'
@@ -2518,7 +2519,7 @@ function render(rowsIgnored, root, H) {
   function renderAll() {
     var root = document.getElementById("cpd");
     root.innerHTML = '<h1>Client Performance Diagnostic</h1>'
-      + '<div class="sub">Prospecting diagnostic · selected period (P2) vs same period last year (P1) · % spend = whole campaign group, retargeting excluded</div>';
+      + '<div class="sub">Prospecting diagnostic · Period 2 vs Period 1 (default: same period last year) · % spend = whole campaign group, RT excluded · campaign + min-spend filters apply to every module</div>';
 
     var bar = document.createElement("div"); bar.className = "tabbar";
     root.appendChild(bar);

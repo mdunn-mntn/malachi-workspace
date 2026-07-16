@@ -42,11 +42,27 @@ Advertiser_ID:
 Period_Start:
   type: date
   default: 2026-01-01
-  label: "Period start"
-  description: "Compared against the same dates one year earlier (YoY)"
+  label: "Period 2 start"
+  description: "Period 2 = the recent period under diagnosis"
 Period_End:
   type: date
   default: 2027-01-01
-  label: "Period end (exclusive)"
-  description: "First day AFTER the period. Future dates are capped to the last completed month - so the default means: through the last full month"
+  label: "Period 2 end (exclusive)"
+  description: "First day AFTER the period; future dates cap to the last completed month, so the default = through the last full month"
+P1_Start:
+  type: date
+  default: 1900-01-01
+  label: "Period 1 start (optional)"
+  description: "Leave at 1900-01-01 = auto: Period 2 minus one year (YoY). Periods must NOT overlap."
+P1_End:
+  type: date
+  default: 1900-01-01
+  label: "Period 1 end (optional, exclusive)"
+  description: "Leave at 1900-01-01 = auto: Period 2 end minus one year"
+Min_Spend_Pct:
+  type: select
+  default: '0'
+  label: "Min campaign spend %"
+  description: "Hide campaigns below this share of total window spend (whole-group basis)"
+  options: ['0', '1', '2', '5', '10']
 {% endform %}

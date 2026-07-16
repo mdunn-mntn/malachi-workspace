@@ -28,10 +28,29 @@
 --   rt_brand_new      -> first-ever contact on ANY campaign is this month
 --   rt_prosp_first    -> first month PROSPECTING served this IP (feeds the
 --                        all-IP recirculation tab's cumulative-distinct line)
-WITH prosp AS (
+WITH sel AS (
+  -- FILTERS (Nick): campaign multiselect ('ALL' keeps everything) + minimum share of
+  -- window spend (whole-group basis; total computed BEFORE selection so shares are
+  -- of the advertiser's full window spend, not of the kept subset)
+  SELECT campaign_group_id FROM (
+    SELECT c.campaign_group_id,
+           SUM(s.media_spend + s.data_spend + s.platform_spend) AS gs,
+           SUM(SUM(s.media_spend + s.data_spend + s.platform_spend)) OVER () AS ts
+    FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+    JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
+    WHERE s.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE AND c.objective_id != 4
+      AND s.day >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
+      AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    GROUP BY 1
+  )
+  WHERE ('ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}))
+    AND (ts <= 0 OR gs / ts >= CAST('{{ Min_Spend_Pct }}' AS FLOAT64) / 100)
+),
+prosp AS (
   SELECT campaign_id FROM `dw-main-bronze.integrationprod.campaigns`
   WHERE advertiser_id = {{ Advertiser_ID }} AND deleted = FALSE
     AND objective_id IN (1, 5, 6)
+    AND campaign_group_id IN (SELECT campaign_group_id FROM sel)
 ),
 all_base AS (
   -- advertiser-wide (ANY campaign): supplies first-ever-contact + prior-10000 history
@@ -39,7 +58,7 @@ all_base AS (
          household_score AS hs
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = {{ Advertiser_ID }}
-    AND time >= TIMESTAMP(DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR))
+    AND time >= TIMESTAMP(IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10))))
     AND time <  TIMESTAMP(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)))
     AND ip IS NOT NULL AND ip != '0.0.0.0'
 ),
@@ -69,8 +88,8 @@ SELECT
   COUNTIF(pim.hi_now AND hf.first_hi_mo < pim.mo)         AS rt_returning_hi,
   COUNTIF(fs.first_mo = pim.mo)                           AS rt_brand_new,
   COUNTIF(pf.first_p_mo = pim.mo)                         AS rt_prosp_first,
-  DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)   AS p1_start,
-  DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)),   INTERVAL 1 YEAR)   AS p1_end,
+  IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))   AS p1_start,
+  IF(DATE(LEFT('{{ P1_End }}', 10)) = DATE '1900-01-01', DATE_SUB(LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)), INTERVAL 1 YEAR), LEAST(DATE(LEFT('{{ P1_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH)))   AS p1_end,
   IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10)))                              AS p2_start,
   LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))                                AS p2_end
 FROM pim

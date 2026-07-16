@@ -6,7 +6,25 @@
 -- One row per campaign_group_id: delivery span first to last active day, active-day
 -- count, total spend, impressions. Bars clipped to the trend window by the chart.
 -- Grain: campaign_group_id. Source: summarydata.sum_by_campaign_by_day (daily).
-WITH camp_day AS (
+WITH sel AS (
+  -- FILTERS (Nick): campaign multiselect ('ALL' keeps everything) + minimum share of
+  -- window spend (whole-group basis; total computed BEFORE selection so shares are
+  -- of the advertiser's full window spend, not of the kept subset)
+  SELECT campaign_group_id FROM (
+    SELECT c.campaign_group_id,
+           SUM(s.media_spend + s.data_spend + s.platform_spend) AS gs,
+           SUM(SUM(s.media_spend + s.data_spend + s.platform_spend)) OVER () AS ts
+    FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+    JOIN `dw-main-bronze.integrationprod.campaigns` c ON c.campaign_id = s.campaign_id
+    WHERE s.advertiser_id = {{ Advertiser_ID }} AND c.deleted = FALSE AND c.objective_id != 4
+      AND s.day >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
+      AND s.day <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
+    GROUP BY 1
+  )
+  WHERE ('ALL' IN ({{ Campaign_Groups }}) OR CAST(campaign_group_id AS STRING) IN ({{ Campaign_Groups }}))
+    AND (ts <= 0 OR gs / ts >= CAST('{{ Min_Spend_Pct }}' AS FLOAT64) / 100)
+),
+camp_day AS (
   SELECT
     c.campaign_group_id                              AS campaign_group_id,
     d.day                                            AS day,
@@ -18,7 +36,8 @@ WITH camp_day AS (
   WHERE d.advertiser_id = {{ Advertiser_ID }}
     AND c.advertiser_id = {{ Advertiser_ID }}
     AND c.deleted = FALSE
-    AND DATE(d.day) >= DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR)
+    AND c.campaign_group_id IN (SELECT campaign_group_id FROM sel)
+    AND DATE(d.day) >= IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10)))
     AND DATE(d.day) <  LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))
 )
 SELECT
@@ -30,7 +49,7 @@ SELECT
   COUNT(DISTINCT cd.day)                             AS active_days,
   ROUND(SUM(cd.spend), 0)                            AS total_spend,
   ROUND(SUM(cd.imps) / 1e6, 3)                       AS imps_m,
-  DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR) AS win_start,
+  IF(DATE(LEFT('{{ P1_Start }}', 10)) = DATE '1900-01-01', DATE_SUB(IF(DATE(LEFT('{{ Period_Start }}', 10)) = DATE '1900-01-01', DATE_TRUNC(CURRENT_DATE(), YEAR), DATE(LEFT('{{ Period_Start }}', 10))), INTERVAL 1 YEAR), DATE(LEFT('{{ P1_Start }}', 10))) AS win_start,
   LEAST(DATE(LEFT('{{ Period_End }}', 10)), DATE_TRUNC(CURRENT_DATE(), MONTH))                           AS win_end
 FROM camp_day cd
 LEFT JOIN `dw-main-bronze.integrationprod.campaign_groups` g
