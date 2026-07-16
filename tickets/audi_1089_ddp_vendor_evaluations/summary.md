@@ -290,7 +290,7 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   jobs; one pre-fix straggler (`perf_20260716_132925_55088`, wcv scan launched 13:29) still bills
   on-demand — the last one.
 
-## 4d22. Stakeholder deck + proof runs + d8 (2026-07-16 late pm)
+## 4d23. Stakeholder deck + proof runs + d8 (2026-07-16 late pm)
 
 - **TLDR deck (RevealJS)**: v1 (playbook-style) rejected by user — "way too much filler,
   reads like a presentation deck"; audience is DS/DA/MLE. v2 = 9 dense technical slides:
