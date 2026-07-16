@@ -517,6 +517,12 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
 - Build in progress (§5 milestones; §6b log). Next module = `resolver.py`, then the SQL templatization.
 - Confirm budget-source precedence (DSO-managed vs flight) with Chris Addy when step 9 lands.
 - Keyword classifier (step 3): full LLM/embedding generalization is IN scope per the 2026-06-18 decision (8 SP).
+- **Mode API deploy (2026-07-16):** `perf_report/mode/deploy_mode.sh` staged (check/diff/apply/run vs report
+  `6c4fc72afcfb`; PATCH raw_query + POST runs) — replaces the 16-paste relay once credentials exist. BLOCKED on a
+  Mode API key: Member keys need admin enablement (Features → API Keys → Member keys). Asked in Slack; Johnny =
+  likely admin (per Robin Fox), #dev-mode-support = the channel; Benny confirmed mode-assets sync is one-way
+  (Mode→repo). Brian Gereke also wants access. Mid-flight paste deploy (Nick's filters): 2/16 done
+  (params + campaign options) — resume relay only if the key stalls.
 
 ## 8. `perf_report/` sub-tool — parameterized client-performance report (Kindred build, started 2026-07-02)
 A second, complementary deliverable under this ticket, built **interactively one module at a time** (Malachi driving,
