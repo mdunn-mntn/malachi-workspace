@@ -2565,4 +2565,49 @@ function render(rowsIgnored, root, H) {
     setTimeout(wait, 100);
   })();
 })();
+
+/* Exclusive-ALL for the multiselect params (Funnel stage / Campaign groups): clicking
+   any specific option auto-unchecks ALL. Mode's widget has no native exclusive option;
+   this reaches into the param popover from the report page. The SQL already makes
+   specific picks OVERRIDE ALL, so this is visual consistency only — if Mode ever
+   sandboxes this HTML away from the param widgets it silently no-ops. */
+(function () {
+  if (window.__cpdExclusiveAll) return;   // HTML is injected twice — install once
+  window.__cpdExclusiveAll = true;
+  function rowFor(el, stopAt) {
+    // nearest ancestor wrapping exactly one checkbox = the option row
+    var n = el;
+    while (n && n !== stopAt && n !== document.body) {
+      if (n.querySelectorAll && n.querySelectorAll('input[type="checkbox"]').length === 1) return n;
+      n = n.parentElement;
+    }
+    return null;
+  }
+  function txt(el) { return el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : ''; }
+  function isAllRow(t) { return t === 'ALL' || t.indexOf('ALL campaign') === 0; }
+  document.addEventListener('click', function (e) {
+    try {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      // find the smallest enclosing param popover: has a "(Select All)" row + >2 checkboxes
+      var pop = null, n = t;
+      while (n && n !== document.body) {
+        if (n.querySelectorAll && n.querySelectorAll('input[type="checkbox"]').length > 2 &&
+            (n.textContent || '').indexOf('(Select All)') !== -1) { pop = n; break; }
+        n = n.parentElement;
+      }
+      if (!pop) return;
+      var clicked = rowFor(t, pop);
+      var label = txt(clicked);
+      if (!clicked || !label || isAllRow(label) || label.indexOf('(Select All)') !== -1) return;
+      setTimeout(function () {   // let Mode register the user's click first
+        var boxes = pop.querySelectorAll('input[type="checkbox"]');
+        for (var i = 0; i < boxes.length; i++) {
+          var r = rowFor(boxes[i], pop), rt = txt(r);
+          if (r && isAllRow(rt) && boxes[i].checked) { boxes[i].click(); break; }
+        }
+      }, 0);
+    } catch (err) { /* never break the report over a UX nicety */ }
+  }, true);
+})();
 </script>

@@ -523,7 +523,7 @@ Structural changes P1 (Jan–May'25) → P2 (Jan–May'26), from the perf_report
   `./deploy_mode.sh diff` → `apply --run`.** Findings: member keys can't call `/account` (report GET = auth
   probe); live query names are underscored (name-match is case/underscore-insensitive); UI pastes add a
   trailing blank line (comparisons normalize trailing newlines); report payload HAS `layout` and it round-trips
-  (PATCH of layout untested — staging index.html already matched). Nick's-filters deploy complete: Malachi had
+  (layout PATCH PROVEN 2026-07-16 later same day: exclusive-ALL JS deployed via API, verified by re-GET — the report is fully zero-paste, HTML included). Nick's-filters deploy complete: Malachi had
   hand-pasted all 13 queries + index before the key arrived; API diff confirmed same, then patched the one
   remaining file. Slack context: Johnny = likely Mode admin, #dev-mode-support = channel, Benny confirmed
   one-way sync, Brian Gereke also wants API access.
