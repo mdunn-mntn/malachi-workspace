@@ -272,6 +272,21 @@ the Jan-Apr era; AP-3779 first-reporter = the current era.
   free-priority) via targeted_signal (Athena) or the dbt models `targeted_signal_ds_13/19`
   (Databricks dbt repo — DAG `keyword_ddp_reporting` located in airflow-ti; models not cloned locally).
 
+## 4d21. Deck final additions (user asks, 2026-07-16 pm)
+
+- **Scenario table**: total-possible in the kept-column header + "Triples LOST vs today"
+  column (free-only loses 5.40B of 13.29B; first three drops cost 33M-174M).
+- **SIGNAL VOLUME table** (user: "does IP coverage overstate?") — YES at signal grain:
+  triple-grain free coverage from d4: HI 65.74% / PP 59.21% / other 57.62% vs 99%+ IP
+  coverage; third-lens note explains both are true (membership needs SOME signal, not ALL).
+- **deck_d8 (set now 8 queries)**: SIGNAL VOLUME on SERVED IPs — splits d4's mixed "other"
+  into served-other vs never-served (launched 12:57, running; workbook table PENDING).
+- **High-Graduated explained at point of use** (user question): score-VALUE bucket, not a
+  product tier — DS13-based v1 pins 10000/8000, DS46 Fangorn emits graduated 6666-9999
+  band scores; both live (rolling migration). Guide glossary + notes sheet.
+- **Table→query completeness verified programmatically**: 9 deck tables, all mapped on the
+  workbook queries sheet; zip = 8 queries + MANIFEST + GUIDE.
+
 ## 4d20. Deck share-readiness + d4 landed — workbook COMPLETE (2026-07-16 pm)
 
 - **Copy-paste proven**: every deck query's Run block executed VERBATIM from a clean
