@@ -80,6 +80,10 @@ ULID semantics caveat (verify-pass): the free logs' 0.0 proves the uid is minted
 capture (streaming corroborated by the confirmed guid Kafka path; augmentor inferred); for
 vendors, the ULID lag is a LOWER bound on RTC-visible staleness whether uids are minted
 vendor-side or at MNTN ingest.
+Config corroboration (data_knowledge §svs): the ingestion DAG `fpa_site_visit_batch_serverless`
+carries CONFIGURED per-DS lag hours — 5x5=5h, aug/guid=1h, 33across=8h — matching the measured
+ULID lags almost exactly. The pipeline deliberately waits for vendor delivery completeness;
+the staleness is structural, not incidental.
 
 ### 4c. RTC vendor-dependence (MEASURED — `audi_1116_rtc_vendor_share.csv`, week 2026-07-02..08)
 

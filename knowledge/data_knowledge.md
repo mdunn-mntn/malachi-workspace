@@ -906,10 +906,13 @@ IVR than non-RTC on the same campaign segment.
 **RTC ingestion = TWO pipelines (2026-07-16 AUDI-1089 stakeholder readout):**
 1. **guid_log path** — Kafka streaming app (Zach Schoenberger's), ~real-time.
 2. **Hourly batch path** (TI-run) — ingests everything from `site_visit_signal` EXCEPT guid_log
-   on an hourly cadence. So **metered 3P vendors DO drive RTC firings** via this path, and
-   per-day coverage analyses understate vendor timing effects: a vendor delivering intraday can
-   put an IP into RTC priority sooner than a free log that only sees it later (Sean Yang's
-   callout). Vendor-dependence of RTC quantified in AUDI-1116.
+   on an hourly cadence. So metered 3P vendors CAN drive RTC firings via this path — but
+   **measured dependence is negligible (AUDI-1116, 2026-07-16): 99.99% of RTC-fired imps land
+   on free-covered IPs; vendor-only = 0.01%** (3,040 imps/wk; coverage-based bound, valuation
+   week × 37d membership, IPv4). 99.59% of RTC volume is on guid-delivered IPs (the real-time
+   Kafka path). Root cause: vendor rows arrive hours stale (2.4–8.6h typical, up to ~12h —
+   see the svs ULID latency instrument), so free logs virtually always qualify the IP first.
+   **RTC is effectively vendor-independent.**
 
 ### NTB (New-to-Brand) — Definitive Clarification
 `is_new = TRUE` means the IP/household has not had a prior page view or purchase for that advertiser
@@ -968,7 +971,14 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   Two outputs per vendor: stage-1 `gs://mntn-data-archive-{env}/fpa_vendor_log/data_source_id=NN/` (raw archive),
   stage-2 `…/signals/site_visit_signal/dt=/hh=/data_source_id=NN/`.
 - **Unified `site_visit_signal` schema** (all vendors): `uid, advertiser_id, ip, url, query_parameters, user_agent,
-  time, data_source_id, dt, hh`. **Separable by `data_source_id`.** ~250 GiB/day total. The BQ
+  time, data_source_id, dt, hh`. **Separable by `data_source_id`.** ~250 GiB/day total.
+  **`uid` is a ULID → a free ingest-latency instrument (AUDI-1116, 2026-07-16):** first 10 Crockford-base32
+  chars = ms mint timestamp; `mint − time` = delivery lag. Decode in BQ:
+  `(SELECT SUM(CAST((STRPOS('0123456789ABCDEFGHJKMNPQRSTVWXYZ', SUBSTR(uid,i,1))-1) * CAST(POW(32,10-i) AS INT64) AS INT64)) FROM UNNEST(GENERATE_ARRAY(1,10)) i)`
+  (guard `LENGTH(uid)=26`). Measured (full day 2026-07-01): **free logs 0.0 min (mint at event — streaming);
+  vendors hours stale** — 33Across ~8.6h flat, 5x5 ~5.5h, most others ~2.9h, Predactiv bimodal 2.6–12.1h —
+  matching the CONFIGURED per-DS lag hours in `fpa_site_visit_batch_serverless` (above). Also: 5x5 event
+  times are 2h-bucketed before ~14:00 (only even `hh` partitions exist in the morning). The BQ
   table `…zzz_temp.site_visit_signal` is **manual / not auto-populated** (populate DAG trigger commented out).
   - **How to query it (no BQ table, read-only, no DDL):** point a BQ *temporary external table* at the GCS parquet —
     ```
