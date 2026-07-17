@@ -2204,7 +2204,29 @@ Small internal dataset for data usage reporting/auditing.
   first-reporter (AP-3779) or cheapest/free-priority (winner rule unconfirmed; dbt
   `targeted_signal_ds_13/19`); paid only if used (DS13 OR DS19 path). **Free logs do NOT preempt
   paid credit (Sean Yang 2026-07-13, AUDI-1093).** Jan–Apr 2026 was fractional-split. See
-  data_knowledge § Site Visit Signal.
+  data_knowledge § Site Visit Signal. **NUANCE (2026-07-17, AUDI-1115 §4f): the upstream gold
+  winners table shows CROSS-PATH fractional splitting is alive in June** — an impression matching
+  both a 3P segment path (e.g. DS17) and the MM path carries `impression_cnt=0.5` on the MM row;
+  the "integer May+" reading applies to this table's `impressions` field, not the allocation upstream.
+  Also: NO simple aggregation of the winners table reproduces this meter exactly (±7–42% by vendor,
+  directions vary) — the exact BAE downstream allocation is a 2026-07-20 billing-sync question.
+
+## dw-main-gold.reporting.ddp_* — BAE billing table family (BQ-migrated; Alyson pointer 2026-07-17)
+- **Monthly series since ~2025-09/10** + unsuffixed current + `_w_select` variants:
+  - `ddp_all_matches_cpm[_YYYYMM]` — per (ad_served_id × data_source_id × data_source_category_id ×
+    and_seq/or_seq): ALL matched billable paths incl. 3P segments; columns `time, ip, tv_cpm,
+    segment_name, mm_dsids` (matched MM dsids). **`tv_cpm` = the path's billing rate: DS17 ShareThis
+    segments $0.95, MM $0.50** — per-impression rate visibility.
+  - `ddp_mm_winners_imp[_YYYYMM]` — the MM slice: per impression-row `mm_dsids_winner ARRAY<INT64>`
+    (co-winning svs sources incl. free logs 23/30), `impression_cnt FLOAT` (~90% =1.0; fractional =
+    cross-PATH split, e.g. 0.5 when a 3P segment path also matched — NOT 1/n_winners), `tv_cpm`
+    (**=0 on 100% of free-only-winner rows — free logs never bill; =$0.50 on 91.7% of mixed
+    free+paid rows — the AUDI-1093 preemption gap, 291.1M imps in 202606**). June: 530.7M rows.
+  - `ddp_mm_winners_domains[_YYYYMM]` — domain-grain winners.
+- **Gotchas:** `data_source_id` here = the CONSUMER (13/19 in winners_imp; 17/35/etc. in
+  all_matches), NOT the vendor — vendors live in the arrays; winner-array order is effectively
+  uniform (first-element sums == equal-split sums); same ad_served_id appears on multiple
+  slot/category rows. Canonical recon query: AUDI-1115 `audi_1115_l0b_bae_winners_recon.sql`.
 - **Sibling `bronze.coredw.usage_reporting_audits`:** monthly anomaly-gate table — per vendor-month:
   usage, prior_usage, usage_diff_pct, gate1/2/3 flags, final pass/override. Its `impressions` column
   is the PLATFORM total (identical across vendor rows in a month) — a gate stat, NOT per-vendor credit.

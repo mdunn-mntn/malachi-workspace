@@ -121,6 +121,43 @@ flat-fee bill amounts (Maya).
 `artifacts/audi_1115_generate_charts.py`. Also in the epic workbook
 `../outputs/audi_1111_findings.xlsx`.
 
+### 4f. BAE billing table cross-check (Alyson's pointer, 2026-07-17) — `dw-main-gold.reporting.ddp_mm_winners_imp_202606`
+
+A full gold table family exists (BQ-migrated): `ddp_all_matches_cpm[_YYYYMM]` (all matched
+paths, per-category, with `segment_name` + `tv_cpm`), `ddp_mm_winners_imp[_YYYYMM]` (MM slice
+with `mm_dsids_winner`), `ddp_mm_winners_domains[_YYYYMM]`, `_w_select` variants; monthly
+since ~2025-09/10. Query: `queries/audi_1115_l0b_bae_winners_recon.sql` → landed
+`outputs/audi_1115_l0b_bae_winners_recon.csv`.
+
+**Measured semantics (this changes the billing picture):**
+1. **Credit splits across matched DATA PATHS, not just MM winners.** Proof impression
+   `f05c2bac…`: matched DS17 (ShareThis 3P interest segments, 6 category rows, tv_cpm
+   **$0.95**) AND DS19 (MM, winner 33Across, tv_cpm $0.50) → `impression_cnt = 0.5` on the
+   MM row. The winners table shows only the MM slice; the denominator includes 3P segment
+   paths. ⇒ the AUDI-1092 "May+ integer single-credit" reading is INCOMPLETE: cross-path
+   fractional splitting is alive in June (~10% of DS19 rows fractional).
+2. **3P interest segments bill at ~$0.95 CPM — nearly 2× the svs vendors' $0.50.** Directly
+   relevant to "what CPM should we charge" and to the LiveRamp-analysis idea from the readout.
+3. **`tv_cpm` encodes the billing rule:** =0 on 100% of free-only-winner rows (free logs
+   never bill) but $0.50 on 91.7% of MIXED rows (free log co-won with a paid vendor) —
+   **291.1M imps/mo of AUDI-1093 preemption gap, visible in the billing table itself.**
+4. **Reconciliation vs `coredw.usage_reporting_data` June meters — ballpark yes, exact no:**
+
+| Vendor | Actual meter | equal-split | DS19-only split | union-dedupe |
+|---|---|---|---|---|
+| 33Across | 70.34M | 81.75M (+16%) | 75.60M (+7%) | 84.90M (+21%) |
+| 33A API | 29.31M | 40.52M (+38%) | 39.03M (+33%) | 41.68M (+42%) |
+| Sovrn | 19.31M | 16.94M (−12%) | 16.66M (−14%) | 17.28M (−11%) |
+| Justuno | 12.85M | 12.20M (−5%) | 9.95M (−23%) | 12.44M (−3%) |
+| Cybba | 3.58M | 3.29M (−8%) | 3.12M (−13%) | 3.37M (−6%) |
+
+No simple aggregation reproduces the meter (directions vary by vendor); the exact downstream
+allocation lives in BAE/Sherwin's compute — **agenda item for the 2026-07-20 billing sync**
+(exhibit: the `f05c2bac…` impression).
+**Impact on conclusions: NONE.** Even at the most vendor-favorable candidate (±40%), no
+metered vendor approaches break-even at $0.50 — the WTP verdicts are robust to the meter
+ambiguity.
+
 ## 5. Solution
 
 *(pending)*
