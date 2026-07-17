@@ -116,6 +116,11 @@ closest (1.3× over vs 33Across 1.9×, Sovrn 3.4×, Justuno 6.9×, Cybba 7.4×).
 the L0 verdicts — the conclusion is lens-invariant. xlsx: 24 remaining PENDING cells are all
 flat-fee bill amounts (Maya).
 
+**Charts:** `artifacts/audi_1115_wtp_vs_contract.png` (break-even bands vs the $0.50 line) +
+`artifacts/audi_1115_flow_coverage_drop.png` (59.4%→44.1%); regenerate via
+`artifacts/audi_1115_generate_charts.py`. Also in the epic workbook
+`../outputs/audi_1111_findings.xlsx`.
+
 ## 5. Solution
 
 *(pending)*

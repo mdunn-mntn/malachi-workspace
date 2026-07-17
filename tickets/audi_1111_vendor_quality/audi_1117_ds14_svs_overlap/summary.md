@@ -100,6 +100,10 @@ bound on true at-bid-time gate coverage — which strengthens the soft-edge find
   97,010,109 + 95,654,923 = 192,665,032 = expansion_all_out_of_gate EXACTLY — no
   unlisted-data_source_id leakage through the maskless CASE.
 
+**Chart:** `artifacts/audi_1117_ds14_pool.png` (per-source biddable share + expansion split;
+regenerate via `artifacts/audi_1117_generate_charts.py`). Also in
+`../outputs/audi_1111_findings.xlsx`.
+
 ## 5. Solution
 
 *(analysis complete pending verification pass; recommendation draft below)*

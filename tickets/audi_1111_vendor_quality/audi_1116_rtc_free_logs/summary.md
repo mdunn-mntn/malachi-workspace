@@ -85,6 +85,9 @@ carries CONFIGURED per-DS lag hours — 5x5=5h, aug/guid=1h, 33across=8h — mat
 ULID lags almost exactly. The pipeline deliberately waits for vendor delivery completeness;
 the staleness is structural, not incidental.
 
+**Chart:** `artifacts/audi_1116_ingest_latency.png` (regenerate via
+`artifacts/audi_1116_generate_charts.py`). Also in `../outputs/audi_1111_findings.xlsx`.
+
 ### 4c. RTC vendor-dependence (MEASURED — `audi_1116_rtc_vendor_share.csv`, week 2026-07-02..08)
 
 Total RTC-fired: 30,604,353 imps on 4,004,751 IPs (IPv4 only, house convention).

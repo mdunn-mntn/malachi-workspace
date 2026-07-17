@@ -103,6 +103,19 @@ real-time layers don't need the vendors at all.**
 Cross-cutting: AUDI-1113 preemption ($273,671/yr) needs no vendor cooperation — billing is
 self-reported (we run the meter). Full detail + caveats in each child's summary.md.
 
+## 4c. Where everything lives (deliverables map)
+
+| What | Where |
+|---|---|
+| **Consolidated workbook (ALL new tables, one file)** | `outputs/audi_1111_findings.xlsx` — 7 sheets: wtp_L0_renegotiation, L2_flow_coverage, rtc_vendor_share, ingest_latency, ds14_gate_by_cohort, ds14_overlap_sizing, queries (maps every sheet+chart to its query) |
+| Full 4-lens WTP table (canonical) | `audi_1115_wtp_cpm/outputs/audi_1115_wtp_cpm.xlsx` (24 pending cells = Maya flat fees) |
+| Charts (4) | `audi_1115_wtp_cpm/artifacts/audi_1115_wtp_vs_contract.png` + `audi_1115_flow_coverage_drop.png`; `audi_1116_rtc_free_logs/artifacts/audi_1116_ingest_latency.png`; `audi_1117_ds14_svs_overlap/artifacts/audi_1117_ds14_pool.png` (each with a `generate_charts.py` beside it) |
+| Raw measured CSVs | each child's `outputs/` (L2 merged + 4 shards; hourly arrival; rtc share; 3 DS14 CSVs) |
+| Queries (copy-paste runnable, headers with claims/windows/run blocks) | each child's `queries/` (7 SQL files) |
+| Narratives + caveats (verified) | each child's `summary.md` §4; this file §4b for the snapshot |
+| Jira | epic AUDI-1111 (comments 596088 + desc); results comments AUDI-1115 #596162, AUDI-1116 #596106, AUDI-1117 #596107 |
+| Durable knowledge | `knowledge/data_knowledge.md`: §RTC (two pipelines + measured 0.01%), §svs (ULID latency instrument), §DS14 (MembershipDB + AUDI-1117 pointers), billing (self-reported meter) |
+
 ## 5. Open Items
 
 - [ ] AUDI-1113/1114 owner assignment at grooming
