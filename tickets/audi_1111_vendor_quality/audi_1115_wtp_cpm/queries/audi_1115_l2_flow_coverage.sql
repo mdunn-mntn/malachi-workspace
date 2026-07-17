@@ -1,6 +1,11 @@
 -- ============================================================================
 -- AUDI-1115 L2: flow-filtered free-log coverage → vendor-unique triples
 --
+-- *** SUPERSEDED 2026-07-16: this single-query variant hit BigQuery's hard
+-- *** 6-hour job limit (the per-(ip,dom) RANGE-window sort over ~27B rows).
+-- *** Use audi_1115_l2_flow_shard.sql (day-bitmask + 4 IP-hash shards) +
+-- *** artifacts/audi_1115_l2_merge.py — identical definitions and output.
+--
 -- Claim: ONE 60d svs scan (30d measurement window 2026-06-02..2026-07-01 +
 -- 30d lookback runway 2026-05-03..2026-06-01) computes, per paid vendor, the
 -- unique usable triples (ip x REG_DOMAIN(url) x date) under THREE free-log
