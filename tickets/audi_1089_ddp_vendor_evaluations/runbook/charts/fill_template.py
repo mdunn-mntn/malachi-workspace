@@ -2282,6 +2282,11 @@ def main():
         ns.column_dimensions[get_column_letter(i)].width = w
     ns.freeze_panes = "A2"
 
+    # AUDI-1115 fractional-credit CPM sheet (shared builder; reads l0f/q2b/deck_d3)
+    sys.path.insert(0, os.path.join(TICKET, "artifacts"))
+    from cpm_fractional_sheet import add_cpm_fractional_sheet
+    add_cpm_fractional_sheet(wb, RDIR)
+
     wb.save(OUT)
     nrows = sum(1 for x in SPEC if x[2] is not None)
     print(f"wrote {OUT}")

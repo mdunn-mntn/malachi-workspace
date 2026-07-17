@@ -523,6 +523,10 @@ for i, t in enumerate(notes, 3):
     ns.row_dimensions[i].height = max(1, -(-len(t) // 110)) * 13 + 4
 ns.column_dimensions["A"].width = 120
 
+# AUDI-1115 fractional-credit CPM sheet (shared builder; reads l0f/q2b/deck_d3)
+from cpm_fractional_sheet import add_cpm_fractional_sheet
+add_cpm_fractional_sheet(wb, RUN)
+
 wb.save(OUT)
 pend = 0
 for sheet in wb.worksheets:
