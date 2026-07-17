@@ -158,6 +158,31 @@ allocation lives in BAE/Sherwin's compute — **agenda item for the 2026-07-20 b
 metered vendor approaches break-even at $0.50 — the WTP verdicts are robust to the meter
 ambiguity.
 
+### 4g. L0p — WTP on the POST-PREEMPTION meter (user ask, 2026-07-17)
+
+Q: "is that CPM assuming we aren't giving credit for free_logs? We should consider the CPM
+of just the unique of the vendor exclusively." A: the VALUE side already excludes free logs
+in every lens (q8b solo cohort = media on IPs neither free log delivered). L0p now removes
+free-covered credit from the DENOMINATOR too: units = meter × (1 − free co-hold share,
+deck_d1) — the price per exclusively-unique credited imp, i.e. the contract CPM that is fair
+AFTER AUDI-1113 preemption ships.
+
+| Vendor | Co-hold | Post-preemption meter/yr | Break-even CPM (10–30% margin) |
+|---|---|---|---|
+| 33Across | 52.5% | 400.8M | **$0.181 – $0.542** |
+| 33A API | 23.8% | 268.0M | **$0.167 – $0.500** |
+| Sovrn | 0.2% | 231.2M | $0.048 – $0.145 |
+| Justuno | 4.9% | 146.6M | $0.025 – $0.076 |
+| Cybba | 28.2% | 30.9M | $0.031 – $0.094 |
+
+**On this lens the 33Across family reaches fair at the top of the margin band** (33Across
+HIGH $0.542 > $0.50; 33A API HIGH exactly $0.50) — preemption + renegotiation STACK to fair
+for the 33Across pair ONLY; the other three stay far under (their co-hold is tiny — their
+credit is junk/unique, not overlap, so preemption barely helps them). Independently
+reproduces the AUDI-1089 post-preemption ladder finding. The renegotiation sentence:
+*"post-preemption we'd pay $0.50 only if we believe 30% margin; at 20% it's ~$0.36 for
+33Across — and the other three vendors don't clear $0.15 under any assumption."*
+
 ## 5. Solution
 
 *(pending)*

@@ -656,6 +656,7 @@ CONVENTIONS = [
     "Flat-contract equivalent rows: floor = T1 x 15%, fair = T2 x 20%, ceiling = T2 x 30%.",
     "T2 envelope = T2 x0.4..x1.8 (volume x0.5-1.5, CPM x0.8-1.2) — scenario range, not a confidence interval.",
     "Exact drop savings = annual bill x share of credits NOT reassigning to another metered vendor (q3b). RESOLVED 2026-07-13 (AUDI-1092): the meter switched regimes at reporting month 2026-05 - Jan-Apr rows are ~100% FRACTIONAL imps (1/N split credit), May-Jun rows are 100% INTEGER (single-vendor credit). June bills = current single-credit regime = what q3b modeled; savings are EXACT if the winner rule is first-reporter (AP-3779) and CONSERVATIVE FLOORS if it is cheapest/free-priority (free logs then displace even more). Do not use Jan-Apr bills for LOO. Flat vendors: savings = the flat fee itself either way.",
+    "NUANCE 2026-07-17 (AUDI-1115 s4f, BAE gold table dw-main-gold.reporting.ddp_mm_winners_imp): the May+ integer reading applies to the usage-report field; UPSTREAM, credit still splits fractionally across matched DATA PATHS (3P segment paths like DS17 ShareThis @ $0.95 CPM share the denominator with MM). Free-only-winner rows bill $0 (100%); mixed free+paid rows still bill $0.50 (91.7%) = 291.1M imps/mo of AUDI-1093 preemption gap visible in the billing table. Does not change any number in this workbook.",
     "Sole-cohort conversion/visit counts are Poisson-tiny — read 0 as '<~1/wk', not exactly zero. CVR-sole is '—' when sole visits = 0.",
     "Sole-IP visit rates are REAL, not an attribution artifact (q7f): of 33Across's 99K served sole IPs, only 25 showed ANY clickpass event for ANY advertiser that week (0.025%), vs 1.43% for guid_log's sole IPs measured identically. The households are genuinely dark; the ad_served_id visit join even credits cross-device visits, so 116/wk is if anything generous.",
     "Touched-cohort performance mirrors the platform (pools cover 12-97% of served IPs) — vendor differentiation lives in the SOLE rows.",
@@ -1955,7 +1956,8 @@ def main():
     t = dec.cell(row=1, column=1, value=(
         f"VENDOR DECISIONS — ranked by composite score. Bills = {BILL_MONTH} x12. "
         "Free logs (guid, augmentor) always kept. DS28+DS40 = ONE vendor: negotiate combined. "
-        "Savings VALIDATED 2026-07-13 (AUDI-1092): meter is single-credit since 2026-05; "
+        "Savings VALIDATED 2026-07-13 (AUDI-1092): meter is single-credit since 2026-05 "
+        "(cross-path fractional persists upstream, see notes 12b); "
         "figures exact under first-reporter, conservative floors under free-priority."))
     t.font = section_font
     t.fill = section_fill

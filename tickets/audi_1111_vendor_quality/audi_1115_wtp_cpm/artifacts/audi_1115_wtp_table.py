@@ -70,6 +70,14 @@ def load_inputs():
         if r["rec"] == "ds" and int(r["ds"]) in v:
             v[int(r["ds"])]["l3_units_yr"] = float(r["imps_touched"]) * WEEKS_YR
 
+    # free co-hold share (deck_d1): the credit slice preemption removes from the meter
+    for r in read_csv(A1089 / "deck_d1_universe_coverage.csv"):
+        if r["rec"] == "source" and int(r["ds"]) in v and r["free_cohold_pct"]:
+            ds = int(r["ds"])
+            cohold = float(r["free_cohold_pct"]) / 100
+            if v[ds].get("l0_units_yr"):
+                v[ds]["l0p_units_yr"] = v[ds]["l0_units_yr"] * (1 - cohold)
+
     for r in read_csv(A1089 / "q8b_solo_perf.csv"):
         ds = int(r["ds"]) if r["ds"].isdigit() else None
         if ds in v and r["rec"] == "serve":
@@ -113,6 +121,9 @@ def build(v):
         ("L0 contract CPM today", "$0.00", 10),
         ("L0 WTP CPM LOW", "$0.000", 11),
         ("L0 WTP CPM HIGH", "$0.000", 11),
+        ("L0p units/yr (POST-PREEMPTION meter: free-covered credit removed)", "#,##0", 15),
+        ("L0p WTP CPM LOW", "$0.000", 11),
+        ("L0p WTP CPM HIGH", "$0.000", 11),
         ("L1 units/yr (rows ingested)", "#,##0", 16),
         ("L1 effective CPM", "$0.00000", 12),
         ("L1 WTP CPM LOW", "$0.00000", 12),
@@ -150,6 +161,8 @@ def build(v):
             bill, val_lo, val_hi,
             d.get("l0_units_yr"), d.get("contract_cpm"),
             per_mille(val_lo, d.get("l0_units_yr")), per_mille(val_hi, d.get("l0_units_yr")),
+            d.get("l0p_units_yr"),
+            per_mille(val_lo, d.get("l0p_units_yr")), per_mille(val_hi, d.get("l0p_units_yr")),
             d.get("l1_units_yr"), per_mille(bill, d.get("l1_units_yr")),
             per_mille(val_lo, d.get("l1_units_yr")), per_mille(val_hi, d.get("l1_units_yr")),
             d.get("l2_units_yr"), per_mille(bill, d.get("l2_units_yr")),
@@ -185,8 +198,14 @@ def build(v):
         "margin. Bill above value (or effective CPM above WTP HIGH) = vendor is net-negative.",
         "L0 = the RENEGOTIATION lens: the vendor's own billing meter (deck_d3 billed credited "
         "imps x 12, current regime). L0 WTP = the contract CPM at which the vendor breaks even — "
-        "compare directly against the $0.50 contract rate. NOTE: if free-log credit preemption "
-        "(AUDI-1113) ships, the meter shrinks and L0 WTP rises accordingly — recompute then.",
+        "compare directly against the $0.50 contract rate.",
+        "L0p = L0 on the POST-PREEMPTION meter: units x (1 - free co-hold share, deck_d1) — the "
+        "meter if we stop crediting vendors for signal the free logs also captured (AUDI-1113). "
+        "The VALUE side already excludes free logs in every lens (q8b solo cohort); L0p removes "
+        "them from the DENOMINATOR too, i.e. price per exclusively-unique credited imp. On this "
+        "lens the 33Across family reaches fair at the top of the margin band (33Across HIGH "
+        "~$0.54 > $0.50; 33A API HIGH ~$0.50) — preemption + renegotiation STACK to fair for the "
+        "33Across pair ONLY; Sovrn/Justuno/Cybba stay far under (tiny co-hold, junk/unique credit).",
         "Flat-fee vendors (5x5, sharethis_predactiv, Klickly): bill amounts pending finance (Maya) "
         "-> Bill and effective-CPM cells PENDING; WTP ceilings computed from the value side alone.",
         "Windows: q1/q8b/deck_d2 measured on outputs/run_2026_07_10 (svs 30d 2026-06-02..07-01, "
