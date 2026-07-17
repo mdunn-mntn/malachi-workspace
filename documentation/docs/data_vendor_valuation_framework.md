@@ -174,3 +174,34 @@ creates. Two implementation notes that make it defensible in a room:
   dependent-revenue break-even fee and the domain-axis WTP band disagree by >10x, the vendor is a
   breadth vendor: price it as classifier coverage, not media performance (AUDI-1089: Predactiv
   $3.7-11K revenue basis vs $0.7-3M domain basis).
+
+## 2026-07-17 extensions (AUDI-1115): the CPM-per-billing-unit layer
+
+Once you know the billing STRUCTURE (per credited WON impression — confirm empirically, e.g.
+the BAE `ddp_mm_winners_imp` table keyed on `ad_served_id`), the "what CPM should we pay"
+question decomposes cleanly. Lessons:
+
+- **A CPM is meaningless without its billing UNIT — always match the numerator population to
+  the denominator.** The naïve trap (L0/L0p): divide a *marginal* value (media on the sole/unique
+  cohort, ~5.6M imps) by the *full* meter (~70M credited imps) → an artificially low CPM that
+  mixes two populations. The clean ratio (L0f): value and units on the SAME cohort. Compute both
+  numerator and denominator on identical impressions or don't form the ratio.
+- **The per-credited-impression media CPM is ≈ vendor-INDEPENDENT** — it's just the platform's
+  media rate (CTV ~$10.7 CPM), because the media is what the *advertiser* pays for the impression,
+  not a function of which vendor's signal won it. So break-even CPM = media CPM × margin ≈ the
+  same $1–3 for every vendor. **The vendor differentiator is RESIDUAL VOLUME (how much unique,
+  non-overlap signal survives preemption), not the per-impression rate.**
+- **Preemption vs rate-cut are two ROUTES to the same fair total, not additive.** Preempt the
+  free-log overlap (removes ~90% of billed volume at the impression grain) OR cut the rate on the
+  full meter — doing both double-discounts. Cleaner: preempt, keep the rate (it's below break-even
+  on the residual); the savings are volume, not rate.
+- **A per-impression pricing lens is NOT a keep/drop test.** Valuing each credited impression at
+  full media (fractionally split across co-winners) over-credits — it counts impressions we'd win
+  anyway via other paid vendors or free-log membership on the same IP. Use the SOLO/marginal cohort
+  for keep/drop; use the per-impression cohort only to price a rate you've decided to pay.
+- **Incrementality is the load-bearing unstated assumption.** "media × margin" as value assumes the
+  vendor's signal is WHY the impression was served. If we'd serve that household anyway, the value
+  is lower. State it; don't cut a rate below break-even without an incrementality read.
+- **The two grains of "vendor-unique"** (IP-membership = marginal ~5.6M/mo; impression-winner =
+  credited ~27.5M/mo for 33Across; ~5× apart, same per-impression economics) — see
+  data_knowledge § billing. Confirm which grain the crediting system uses before quoting totals.

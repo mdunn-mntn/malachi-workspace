@@ -1110,6 +1110,27 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   vendor what we owe — full unilateral control of the meter, so preemption needs no vendor
   cooperation. Credit-assignment rule still ambiguous in-house: fractional shared credit vs
   Victor's "first IP×URL reporter in the date partition wins" — follow-up meeting 2026-07-20.
+  **BILLING IS AT THE WON IMPRESSION — single charge, NOT ingestion (CONFIRMED 2026-07-17,
+  AUDI-1115 via the BAE gold table `ddp_mm_winners_imp`, keyed on `ad_served_id`):** the meter =
+  credited WON impressions × contract CPM. A vendor is NOT billed for rows ingested, nor
+  separately for use in DS13/DS19 scoring — DS13/DS19 usage is the eligibility GATE (data must
+  feed a scored/matched audience path), the won impression is the billable EVENT. Only **~0.2%
+  of ingested rows ever bill** (33Across 1.08B rows/day → 70.3M billed imps/mo). Ingestion cost
+  is ours internally (storage + Data Eng compute, the WASTE lens), not a vendor charge. Flat-fee
+  vendors (25/26/39) never meter. DS13+DS19 on one impression is NOT double-billed — total
+  `impression_cnt` per impression ≈ 1.0 (credit is split across paths, not duplicated).
+  **TWO GRAINS OF "VENDOR-UNIQUE" — the load-bearing distinction for CPM work (AUDI-1115):** when
+  asking "how much did a vendor uniquely get us, net of free logs," the answer swings ~5× on the
+  grain: **(a) IP-MEMBERSHIP grain** = won imps on IPs *neither free log ever delivered* in the
+  window (strict; the q8b SOLO / AUDI-1089 cohort; 33Across ~5.6M/mo) = the true **marginal /
+  keep-drop** value ("what we'd lose if we dropped them, having only free logs"); **(b)
+  IMPRESSION-WINNER grain** = impressions a free log *didn't win that specific bid* (loose; free
+  logs may still hold the IP at membership level; 33Across ~27.5M/mo) = the **credited / pricing**
+  value. Won impressions concentrate on active IPs free logs almost always carry, so membership
+  grain excludes most volume, impression grain keeps it. **Same per-impression economics, ~5×
+  different volume/total.** Which grain the fractional-credit system uses (the 07-20 sync
+  question) sets how much bill survives preemption. Never quote the impression-grain (pricing)
+  number as a keep/drop verdict — it over-credits impressions free-log membership would cover.
   **svs consumers (Sean Yang): DS13 and DS19 ONLY. DS46 Fangorn = guid_log only today; post-retrain
   it moves to feature-store data from aug_log + guid_log (Matt Brorby). Fangorn migration status:
   most active advertisers ALREADY on DS46; forcing the DS13 tail is uncontroversial (Alex owns
