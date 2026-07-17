@@ -87,6 +87,35 @@ possible (read-only access), so restructured instead:
 - Files: `queries/audi_1115_l2_flow_shard.sql` (canonical), original marked SUPERSEDED.
 Relaunched ~22:20 as 4 parallel jobs + auto-merge.
 
+### 4e. L2 LANDED (2026-07-17 early am) — anchors EXACT, table complete
+
+**All 8 vendor same-day anchors EXACT vs deck_d1 trips_standalone; universe EXACT
+(13,286,674,041; drift 0.00000%).** The sharded rework reproduces the single-query
+semantics to the digit — and finished in <1h vs the 6h timeout.
+
+**Flow-filter effect on free coverage (the meeting's rule):** free-union coverage drops
+59.36% (same-day credit) → **44.09%** (prior-30d credit only); augmentor alone 38.63%,
+guid alone 5.83%. Vendor flow-unique vs same-day-unique moves BOTH directions as the
+header warned (33Across 18.14% vs 16.21% — up; Predactiv 3.55% vs 3.81% — down).
+
+**L2 lens (flow-filtered unique triples, annualized ×365/30):**
+
+| Vendor | L2 units/yr | Effective CPM | WTP ceiling CPM |
+|---|---|---|---|
+| 33Across | 29.33B | $0.0144 | $0.0025 – $0.0074 |
+| 33A API | 29.23B | $0.0060 | $0.0015 – $0.0046 |
+| Sovrn | 1.64B | $0.0707 | $0.0068 – $0.0205 |
+| Justuno | 1.42B | $0.0541 | $0.0026 – $0.0078 |
+| Cybba | 0.16B | $0.1329 | $0.0060 – $0.0180 |
+| 5x5 | 12.76B | (flat fee) | $0.0022 – $0.0066 |
+| Predactiv | 5.75B | (flat fee) | $0.0035 – $0.0105 |
+| Klickly | 0.35B | (flat fee) | $0.0036 – $0.0107 |
+
+Every metered vendor's effective L2 cost exceeds its WTP-high ceiling; 33A API is again the
+closest (1.3× over vs 33Across 1.9×, Sovrn 3.4×, Justuno 6.9×, Cybba 7.4×). Consistent with
+the L0 verdicts — the conclusion is lens-invariant. xlsx: 24 remaining PENDING cells are all
+flat-fee bill amounts (Maya).
+
 ## 5. Solution
 
 *(pending)*

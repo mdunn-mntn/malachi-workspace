@@ -78,6 +78,31 @@ evidence base lives in `tickets/audi_1089_ddp_vendor_evaluations/` (Done, standa
 - RTC = realtime_conquest_score=10000, recent site visitors, hourly batch, first check in
   bidder waterfall; independent pipeline from MM batch scoring. AUDI-1116 traces its feed.
 
+## 4b. Findings snapshot (all three analyses measured + adversarially verified, 2026-07-16/17)
+
+**The proposal's one-line spine: the price, not the data, is the problem — and the platform's
+real-time layers don't need the vendors at all.**
+
+1. **AUDI-1115 (WTP):** no metered vendor breaks even at the $0.50 contract on ANY lens.
+   L0 break-even (renegotiation number, vendor's own meter): 33Across $0.086–0.257,
+   33A API $0.127–0.381 (closest), Sovrn $0.048–0.145, Justuno $0.024–0.072, Cybba
+   $0.023–0.068. L2 (meeting's flow-filter rule) confirms: effective cost 1.3×–7.4× over
+   ceiling. Free-union coverage under the flow rule: 44.1% (vs 59.4% same-day). Anchors
+   exact vs deck_d1. Flat-fee bills pending Maya.
+2. **AUDI-1116 (RTC):** effectively vendor-independent — 99.99% of RTC-fired imps
+   free-covered; vendor-only 0.01%. Root cause measured with the new svs ULID latency
+   instrument: free logs stream at 0 min; vendors arrive 2.4–8.6h stale (Predactiv to
+   ~12h), matching the pipeline's CONFIGURED per-DS lag hours. Freshness SLA = second
+   renegotiation lever.
+3. **AUDI-1117 (DS14):** the gate is real but soft on CTV (87.8% upper bound, 4.3% outside
+   both logs; display is a same-day-aug echo, not evidence). Pool math: only 36.1% of
+   301.5M svs IPs are in-gate; expansion splits 97.0M free-stale (widen free windows —
+   costs nothing) vs 95.7M vendor-only (and 50% of 33Across's IPs arrive non-biddable).
+   Recommendation drafted: widen free-log windows before paying vendors for reach.
+
+Cross-cutting: AUDI-1113 preemption ($273,671/yr) needs no vendor cooperation — billing is
+self-reported (we run the meter). Full detail + caveats in each child's summary.md.
+
 ## 5. Open Items
 
 - [ ] AUDI-1113/1114 owner assignment at grooming
