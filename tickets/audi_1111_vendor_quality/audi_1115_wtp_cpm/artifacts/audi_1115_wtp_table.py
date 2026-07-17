@@ -195,6 +195,12 @@ def build(v):
         "July 4th US holiday - value likely UNDERSTATED, i.e. conservative); meter = June 2026 x 12 "
         "(first full month of the integer-credit regime). Point-in-time ranges - re-measure on a "
         "non-holiday week before quoting in a renegotiation.",
+        "Meter cross-check (2026-07-17): L0 meter ballpark-confirmed against the BAE billing table "
+        "(dw-main-gold.reporting.ddp_mm_winners_imp_202606); no simple aggregation reproduces it "
+        "exactly (+-7-42% by vendor; credit splits across matched data paths incl. 3P segments - "
+        "exact BAE rule pending the 2026-07-20 billing sync). Verdicts are ROBUST to this: even the "
+        "most vendor-favorable candidate leaves every metered vendor far under $0.50 break-even. "
+        "Recon: queries/audi_1115_l0b_bae_winners_recon.sql + the epic workbook's bae_billing_recon sheet.",
     ]
     nrow = len(order) + 3
     for note in notes:
