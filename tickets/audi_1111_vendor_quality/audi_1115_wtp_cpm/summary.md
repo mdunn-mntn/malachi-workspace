@@ -72,11 +72,20 @@ non-holiday week before quoting in an actual negotiation.
 Bill $422,024 vs value $72,421–$217,263 — matches the numbers presented in the 2026-07-16
 meeting to the dollar (same q8b machinery).
 
-### 4d. L2 scan
+### 4d. L2 scan — 6h timeout → sharded rework (2026-07-16)
 
-In flight (launched 2026-07-16 ~16:15, 60d svs single pass + per-pair 30d-lookback analytic;
-`queries/audi_1115_l2_flow_coverage.sql`). Anchors on landing: sameday_cnt per vendor ==
-deck_d1 trips_standalone; universe ≈ 13,286,674,041.
+The single-query variant (launched 16:07) hit **BigQuery's hard 6-hour job limit** at ~22:07 —
+the per-(ip,dom) RANGE-window sort over ~27B daily rows was the bottleneck. No staging tables
+possible (read-only access), so restructured instead:
+- **Day-bitmask formulation**: days indexed 0..59 from 2026-05-03; per-pair guid/aug delivery
+  days collapse to one INT64 bitmask; flow credit for day di = mask & bits [di−30, di−1].
+  Pure hash aggregation — the window sort is gone entirely.
+- **4 IP-hash shards** (`MOD(ABS(FARM_FINGERPRINT(ip)),4)`) run in parallel; every histogram
+  cell is additive across shards (all rows of a pair share a shard). `artifacts/
+  audi_1115_l2_merge.py` sums them, emits the same final CSV, and gates on the deck_d1
+  anchors (sameday_cnt == trips_standalone per vendor; universe ≈ 13,286,674,041).
+- Files: `queries/audi_1115_l2_flow_shard.sql` (canonical), original marked SUPERSEDED.
+Relaunched ~22:20 as 4 parallel jobs + auto-merge.
 
 ## 5. Solution
 
