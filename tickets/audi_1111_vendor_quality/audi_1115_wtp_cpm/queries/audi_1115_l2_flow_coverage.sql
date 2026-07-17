@@ -119,7 +119,9 @@ mh AS (
          (IFNULL(guid_prior, 0) * 1 + IFNULL(aug_prior, 0) * 32) AS ff,
          COUNT(*) AS n
   FROM flow
-  WHERE dt >= DATE '2026-06-02'
+  -- explicit upper bound (verify-pass): semantics identical for the documented
+  -- URI set (externals end at 2026-07-01) but reuse-safe if URIs ever widen
+  WHERE dt BETWEEN DATE '2026-06-02' AND DATE '2026-07-01'
   GROUP BY 1, 2, 3
 ),
 

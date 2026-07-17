@@ -15,8 +15,11 @@
 -- free logs are the only real-time sources.
 --
 -- Grain/hygiene: IPv4 for ip counts; rows counted regardless. ULID decode
--- restricted to LENGTH(uid)=26. Lag can be slightly negative on clock skew —
--- reported as-is.
+-- guarded to LENGTH(uid)=26 (malformed uids -> NULL, excluded from quantiles;
+-- rows still counted in rows_evt_hour). NOTE: the landed 2026-07-16 CSV
+-- predates this guard — all observed uids were canonical 26-char ULIDs (tight
+-- source-consistent bands), results indistinguishable. Lag can be slightly
+-- negative on clock skew — reported as-is.
 --
 -- MODERATE (one svs day, all sources; single pass) — dry-run then run.
 --
@@ -36,9 +39,11 @@ WITH s AS (
     CAST(data_source_id AS INT64) AS ds,
     CAST(hh AS INT64) AS hh,
     ip,
-    (SELECT SUM(CAST((STRPOS('0123456789ABCDEFGHJKMNPQRSTVWXYZ', SUBSTR(uid, i, 1)) - 1)
-                     * CAST(POW(32, 10 - i) AS INT64) AS INT64))
-     FROM UNNEST(GENERATE_ARRAY(1, 10)) i) AS ulid_ms,
+    IF(LENGTH(uid) = 26,
+       (SELECT SUM(CAST((STRPOS('0123456789ABCDEFGHJKMNPQRSTVWXYZ', SUBSTR(uid, i, 1)) - 1)
+                        * CAST(POW(32, 10 - i) AS INT64) AS INT64))
+        FROM UNNEST(GENERATE_ARRAY(1, 10)) i),
+       NULL) AS ulid_ms,
     CAST(time AS DATETIME) AS evt
   FROM svs
 )

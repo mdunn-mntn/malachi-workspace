@@ -30,6 +30,9 @@
 --
 -- BIG SCAN (svs 37d ip-only pass + CIL week x2 + clickpass 8d + ui_conversions 8d;
 -- ~45-60min) — background, never preempt.
+-- KNOWN COST DEBT (2026-07-16 verify-pass): the `solo` CTE (transitively reads the
+-- svs externals) is referenced TWICE (main + tiers) → externals re-read 2x. Results
+-- unaffected (deterministic scan); fold tiers into main's join before the next rerun.
 --
 -- Run (from workspace root):
 --   URIS=""; for d in $(python3 -c "import datetime as t; s=t.date(2026,6,2); print(' '.join(str(s+t.timedelta(i)) for i in range(37)))"); do \

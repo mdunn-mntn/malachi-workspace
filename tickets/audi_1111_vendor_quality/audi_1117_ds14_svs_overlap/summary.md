@@ -50,8 +50,10 @@ filter at the documented windows across all delivery — either some paths bypas
 
 ### 4b. Q2 cohort split (MEASURED 2026-07-16 — `audi_1117_ds14_gate_lag_by_cohort.csv`)
 
-Funnel mapping note: funnel_level values are 1/2/3 (prospecting / stage-2 / stage-3) — there
-is no funnel_level 4 (objective_id 4 = retargeting is a different code space).
+Funnel mapping note (corrected by verify-pass): funnel_level 4 (retargeting) EXISTS but
+delivered only 603 imps / 148 served IPs on 2026-07-01 (98.5% in-gate) — far too small to
+test any bypass hypothesis, which is why it fell below the table's 100K-imp floor. The
+material funnels are 1/2/3 (prospecting / stage-2 / stage-3).
 
 | Cohort | Imps (07-01) | aug≤1 OR guid≤4 | neither log 11d |
 |---|---|---|---|
@@ -72,6 +74,10 @@ satisfied by a graph-sibling IP, serving IP differs), bid-time vs partition-day 
 serve. Needs MemDB/audience-service inspection or Zach/Sean to adjudicate. The "~7d
 augmentor window" reading is NOT supported as a hard bound in any cohort.
 
+Direction-of-bias note (verify-pass): same-day free-log rows can POSTDATE the impression
+(ad served, visit later, still lag 0), so the 87.8% CTV-prospecting figure is an UPPER
+bound on true at-bid-time gate coverage — which strengthens the soft-edge finding.
+
 ### 4c. Q3 overlap + pool-expansion sizing (MEASURED — `audi_1117_ds14_overlap_sizing.csv`, 30d, gate ref 2026-07-01)
 
 - **svs 30d universe: 301.5M IPv4 IPs; only 108.8M (36.1%) are in-gate** (biddable under the
@@ -90,6 +96,9 @@ augmentor window" reading is NOT supported as a hard bound in any cohort.
   stream).
 - Caveats: snapshot at one reference day (gate membership churns daily); stock-vs-flow —
   the 30d IP stock naturally exceeds any recency-gated pool; IPv4 only.
+- Invariant check (verify-pass): expansion_free_stale + expansion_vendor_only =
+  97,010,109 + 95,654,923 = 192,665,032 = expansion_all_out_of_gate EXACTLY — no
+  unlisted-data_source_id leakage through the maskless CASE.
 
 ## 5. Solution
 

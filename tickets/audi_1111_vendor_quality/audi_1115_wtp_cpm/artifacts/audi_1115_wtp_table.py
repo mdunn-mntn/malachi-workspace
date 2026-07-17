@@ -138,7 +138,7 @@ def build(v):
     pending_cells = 0
     order = sorted(
         PAID_DS,
-        key=lambda d: -(v[d].get("bill_yr") or -1),
+        key=lambda d: -(v[d]["bill_yr"] if v[d].get("bill_yr") is not None else -1),
     )
     for i, ds in enumerate(order, start=2):
         d = v[ds]
@@ -171,8 +171,9 @@ def build(v):
 
     notes = [
         "Value band = q8b solo-cohort media $/wk x 52 x internal margin band (10-30%). Solo cohort "
-        "= IPs the vendor delivered that neither the free logs nor any other vendor delivered "
-        "(37d membership); the measured $ the vendor uniquely generates, unchanged by preemption.",
+        "= IPs the vendor delivered that NEITHER FREE LOG delivered (37d membership); other PAID "
+        "vendors are NOT excluded, so value bands OVERLAP across paid vendors - do not sum them. "
+        "This makes each break-even verdict conservative in the vendor's favor.",
         "L1 = median rows/day over the 30d q1 window x 365 (all rows ingested, pre-filter).",
         "L2 = flow-filtered unique usable triples (ip x REG_DOMAIN x date, 30d x 365/30): free-log "
         "credit requires the pair in that log during [D-30, D-1]; same-day-only presence earns no "
@@ -190,6 +191,10 @@ def build(v):
         "-> Bill and effective-CPM cells PENDING; WTP ceilings computed from the value side alone.",
         "Windows: q1/q8b/deck_d2 measured on outputs/run_2026_07_10 (svs 30d 2026-06-02..07-01, "
         "37d membership, CIL week 2026-07-02..08); L2 scan adds a 30d lookback (2026-05-03+).",
+        "Extrapolation caveat: value = ONE week of media x 52 (the 07-02..08 week contains the "
+        "July 4th US holiday - value likely UNDERSTATED, i.e. conservative); meter = June 2026 x 12 "
+        "(first full month of the integer-credit regime). Point-in-time ranges - re-measure on a "
+        "non-holiday week before quoting in a renegotiation.",
     ]
     nrow = len(order) + 3
     for note in notes:

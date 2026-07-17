@@ -25,8 +25,10 @@ denominators change the picture by orders of magnitude:
    Applies to BOTH free logs.
 3. **L3 — data we bid on and won**: vendor triples intersecting won impressions.
 
-Value side: unique-contribution media × internal margin band (q8b machinery; margin
-parameters never embedded in shared queries).
+Value side: solo-cohort media × internal margin band (q8b machinery; margin parameters
+never embedded in shared queries). Solo cohort = vendor-delivered IPs that NEITHER FREE LOG
+delivered — other paid vendors are NOT excluded, so value bands overlap across vendors
+(don't sum them); each break-even verdict is conservative in the vendor's favor.
 
 ## 3. Plan of Action
 
@@ -60,7 +62,10 @@ Break-even contract CPM (value band = q8b solo media ×52 × 10–30% margin) vs
 No metered vendor breaks even at $0.50 under any margin assumption. 33A API is the closest
 (consistent with AUDI-1089's NKM finding). Flat-fee vendors (5x5, Predactiv, Klickly): WTP
 ceilings computed on the value side; meter/bill cells PENDING (Maya).
-NOTE: if AUDI-1113 preemption ships, the meter shrinks → break-even CPM rises; recompute then.
+Caveats: if AUDI-1113 preemption ships, the meter shrinks → break-even CPM rises; recompute
+then. Value = one week × 52 (the 07-02..08 week contains July 4th — value likely understated,
+conservative); meter = June 2026 × 12 (first full integer-credit month). Re-measure on a
+non-holiday week before quoting in an actual negotiation.
 
 ### 4c. Value/33Across sanity vs the readout
 

@@ -50,7 +50,12 @@ vendor delivery is fresh enough to matter at RTC's hourly cadence.
 **The free logs are the only real-time sources; every vendor delivers hours late.** For the
 RTC hourly batch, a vendor row arriving 8.6h post-visit has lost most of its conquest value.
 
-### 4b. Full-day hourly profile (MEASURED, dt=2026-07-01, all 24 hh — `audi_1116_hourly_arrival.csv`)
+### 4b. Full-day hourly profile (MEASURED, dt=2026-07-01 — `audi_1116_hourly_arrival.csv`)
+
+Hour coverage note (verify-pass): 5x5's event timestamps are 2-hour-bucketed before ~14:00
+(only even hh partitions exist 00–13, each carrying ~2 hours of volume; hourly after) — rows
+are complete, binned coarsely. Cybba has zero rows in hh=19 (1.5M/day source, plausible
+empty hour). All other sources cover all 24 hours.
 
 | Source | Rows/day | Median ingest lag (min–max across event hours) | Pattern |
 |---|---|---|---|
@@ -58,22 +63,27 @@ RTC hourly batch, a vendor row arriving 8.6h post-visit has lost most of its con
 | augmentor_log | 835,062,598 | **0.0 – 0.0** | streaming |
 | 33Across API | 368,193,962 | 172.6 – 180.1 | flat ~2.9h |
 | guid_log | 323,819,051 | **0.0 – 0.0** | streaming |
-| 5x5 | 122,923,712 | 330.9 – 335.0 | flat ~5.5h |
-| Predactiv | 63,195,691 | 157.1 – 724.9 | overnight events wait ~8h for a morning drop; daytime ~2.7h |
+| 5x5 | 122,923,712 | 330.9 – 335.0 | flat ~5.5h (event times 2h-bucketed pre-14:00) |
+| Predactiv | 63,195,691 | 157.1 – 724.9 | two interleaved streams: ~2.5h continuous feed + a batched drop; per-hour medians swing 2.6h–12.1h (worst: evening hh18–23) |
 | Sovrn | 52,455,805 | 170.6 – 179.6 | flat ~2.9h |
 | Justuno | 18,964,906 | 171.0 – 178.7 | flat ~2.9h |
 | Klickly | 4,297,562 | 169.9 – 180.4 | flat ~2.9h |
 | Cybba | 1,484,434 | 142.3 – 175.3 | flat ~2.4–2.9h |
 
-Lags are constant by event hour → continuous-but-delayed vendor pipelines (fixed processing/
-delivery delay), not once-daily batches (Predactiv's overnight bucket excepted). Implication:
-**every vendor row reaches the RTC hourly batch 2.4–8.6h stale; free-log rows reach it within
-the hour.** "Real-time conquest" on vendor signal is structurally impossible at current
-delivery cadences — a renegotiation point (freshness SLA) as much as a drop argument.
+Lags are constant by event hour for every vendor EXCEPT Predactiv (its batched stream makes
+per-hour medians swing) → continuous-but-delayed vendor pipelines, not once-daily batches.
+Implication: **vendor rows reach the RTC hourly batch 2.4–8.6h stale typically, up to ~12.1h
+for Predactiv's evening buckets; free-log rows reach it within the hour.** "Real-time
+conquest" on vendor signal is structurally impossible at current delivery cadences — a
+renegotiation point (freshness SLA) as much as a drop argument.
+ULID semantics caveat (verify-pass): the free logs' 0.0 proves the uid is minted at EVENT
+capture (streaming corroborated by the confirmed guid Kafka path; augmentor inferred); for
+vendors, the ULID lag is a LOWER bound on RTC-visible staleness whether uids are minted
+vendor-side or at MNTN ingest.
 
 ### 4c. RTC vendor-dependence (MEASURED — `audi_1116_rtc_vendor_share.csv`, week 2026-07-02..08)
 
-Total RTC-fired: 30,604,353 imps on 4,004,751 IPs.
+Total RTC-fired: 30,604,353 imps on 4,004,751 IPs (IPv4 only, house convention).
 
 | Split | Share of RTC imps |
 |---|---|
@@ -84,15 +94,19 @@ Total RTC-fired: 30,604,353 imps on 4,004,751 IPs.
 | no svs membership | 0 |
 
 **RTC is effectively vendor-independent.** Dropping all 8 vendors risks ~0.01% of realized
-RTC volume — consistent with the latency finding (vendor rows arrive 2.4–8.6h stale while
-guid streams in real time, so free logs virtually always qualify the IP first or equally).
+RTC volume — consistent with the latency finding (vendor rows arrive hours stale — 2.4–8.6h
+typical, up to ~12h — while guid streams in real time, so free logs virtually always qualify
+the IP first or equally).
 Per-source "touched" rows are non-additive (RTC IPs are heavily multi-held: 33Across touches
 99.89%, but so does augmentor at 99.87%).
 
 Caveat: free_covered proves the free logs DELIVERED the IP in-window, not that they were
-first for the specific qualifying visit; the strict irreplaceable share is the vendor_only
-0.01% bound, which is the renewal-relevant number. Intra-day priority effects (Sean's
-timing point) are second-order given 99.59% guid-real-time coverage.
+first for the specific qualifying visit — and the membership window runs through 07-08 while
+impressions start 07-02, so rows dated AFTER an impression also count toward coverage. Both
+splits therefore measure in-window coverage, not pre-impression causal qualification;
+vendor_only 0.01% is a coverage-based (not strictly causal) bound, and it is the
+renewal-relevant number. Intra-day priority effects (Sean's timing point) are second-order
+given 99.59% guid-real-time coverage.
 
 ## 5. Solution
 
