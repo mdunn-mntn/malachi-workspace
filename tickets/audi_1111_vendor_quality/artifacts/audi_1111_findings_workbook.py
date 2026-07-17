@@ -194,7 +194,43 @@ def build():
          "IPv4. expansion_free_stale (97.0M) + expansion_vendor_only (95.7M) = out-of-gate total "
          "EXACTLY (invariant verified). Query: audi_1117_ds14_overlap_sizing.sql.")
 
-    # --- 7. queries + charts map ---------------------------------------------
+    # --- 7. BAE billing table recon ------------------------------------------
+    METER = {"28": 70337329, "40": 29313195, "33": 19313324, "24": 12851766, "36": 3583966}
+    BILL_MO = {"28": 35168.66, "40": 14656.60, "33": 9656.66, "24": 6425.88, "36": 1791.98}
+    bae = list(csv.DictReader(open(A1115 / "audi_1115_l0b_bae_winners_recon.csv")))
+    ws = sheet(wb, "bae_billing_recon",
+               ["Row", "Key", "Full credit (imps)", "Equal-split credit", "DS19-only split",
+                "$ at tv_cpm (split)", "Actual June meter (imps)", "Actual June bill $",
+                "Split vs meter"],
+               [9, 22, 14, 14, 14, 13, 15, 13, 11])
+    i = 2
+    for r in bae:
+        if r["rec"] != "winner":
+            continue
+        ds = r["key"]
+        meter, bill = METER.get(ds), BILL_MO.get(ds)
+        split = float(r["v2"])
+        put(ws, i, ["winner", NAMES.get(int(ds), ds), float(r["v1"]), split, float(r["v3"]),
+                    float(r["v4"]), meter, bill,
+                    (split / meter - 1) if meter else None],
+            [None, None, INT0, INT0, INT0, "#,##0", INT0, "#,##0", "+0.0%;-0.0%"])
+        i += 1
+    for r in bae:
+        if r["rec"] != "mix":
+            continue
+        put(ws, i, ["mix", r["key"], float(r["v1"]), float(r["v2"]), None,
+                    float(r["v3"]), None, None, float(r["v4"])],
+            [None, None, INT0, INT0, None, "$0.0000", None, None, PCT2])
+        i += 1
+    note(ws, i + 1, 9,
+         "Source: dw-main-gold.reporting.ddp_mm_winners_imp_202606 (Alyson, 2026-07-17). mix rows: "
+         "col C=rows, D=imps, F=avg tv_cpm, I=share tv_cpm=0. Free-only winners bill $0 (100%); "
+         "mixed free+paid rows bill $0.50 on 91.7% = 291.1M imps/mo preemption gap (AUDI-1093). "
+         "Credit splits across matched DATA PATHS (3P segments in the denominator, DS17 @ $0.95); "
+         "no simple aggregation reproduces the coredw meter exactly (+-7-42%) — exact BAE rule = "
+         "2026-07-20 billing sync. Query: audi_1115_l0b_bae_winners_recon.sql.")
+
+    # --- 8. queries + charts map ---------------------------------------------
     ws = sheet(wb, "queries", ["Sheet / chart", "Producing query / script", "Status"],
                [34, 62, 10])
     qmap = [
@@ -204,6 +240,7 @@ def build():
         ("ingest_latency", "audi_1116_rtc_free_logs/queries/audi_1116_hourly_arrival.sql", "LANDED"),
         ("ds14_gate_by_cohort", "audi_1117_ds14_svs_overlap/queries/audi_1117_ds14_gate_lag(_by_cohort).sql", "LANDED"),
         ("ds14_overlap_sizing", "audi_1117_ds14_svs_overlap/queries/audi_1117_ds14_overlap_sizing.sql", "LANDED"),
+        ("bae_billing_recon", "audi_1115_wtp_cpm/queries/audi_1115_l0b_bae_winners_recon.sql", "LANDED"),
         ("chart: audi_1115_wtp_vs_contract.png", "audi_1115_wtp_cpm/artifacts/audi_1115_generate_charts.py", "BUILT"),
         ("chart: audi_1115_flow_coverage_drop.png", "audi_1115_wtp_cpm/artifacts/audi_1115_generate_charts.py", "BUILT"),
         ("chart: audi_1116_ingest_latency.png", "audi_1116_rtc_free_logs/artifacts/audi_1116_generate_charts.py", "BUILT"),
