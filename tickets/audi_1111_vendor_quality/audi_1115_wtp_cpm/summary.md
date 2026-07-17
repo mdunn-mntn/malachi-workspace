@@ -116,6 +116,48 @@ closest (1.3× over vs 33Across 1.9×, Sovrn 3.4×, Justuno 6.9×, Cybba 7.4×).
 the L0 verdicts — the conclusion is lens-invariant. xlsx: 24 remaining PENDING cells are all
 flat-fee bill amounts (Maya).
 
+### 4h. L0f — fractional-credit CPM on the post-preemption residual (2026-07-17, 3-agent VERIFIED)
+
+Billing structure CONFIRMED empirically (BAE `ddp_mm_winners_imp`, keyed on `ad_served_id`):
+**vendors are credited at the WON impression, single charge, gated by DS13/DS19 usage.** No
+ingestion charge (that's our internal WASTE-tab cost). Query `audi_1115_l0f_fractional_credit_cpm.sql`
+splits each won impression's media across its paid co-winners; free-log winners preempt.
+
+**Verified findings (verdicts: query=sound, reconciliation=sound):**
+- **Per-credited-impression media CPM ~$10.7 is TRUSTWORTHY and grain-robust** (CIL join
+  99.999%, no double-count; `media_cpm_frac` $10.74 ≈ `media_cpm_elig_full` $10.68 = weights
+  cancel; CPM on preempted vs eligible matches within 3–8%). So break-even vendor CPM =
+  media CPM × margin = **~$1.0–$3.3 for EVERY vendor** — because it's just MNTN's CTV media
+  rate, essentially vendor-independent. $0.50 sits below break-even on the residual.
+- **~88–97% of every vendor's won impressions have a free-log winner** (33Across 90.5%) — the
+  preemption gap, impression-grain (higher than the 52.5% visit-day grain because impression
+  volume concentrates on live IPs free logs almost always carry).
+- **CRITICAL CAVEAT (steelman): l0f is a PRICING lens, NOT a keep/drop test.** It attributes
+  full impression media (fractionally) to the vendor, valuing impressions we'd win anyway (via
+  other paid vendors, or free-log membership on the same IP). The marginal/drop value is the
+  AUDI-1089 solo cohort (~$60K/mo for 33Across vs l0f's $217K/mo — 3.6× gap, entirely the
+  denominator/grain, not the rate). **Do NOT quote l0f as "the vendor is worth $0.50 on the
+  current full meter" — it over-credits and would greenlight the current deal.** It only
+  prices the post-preemption residual.
+- **The two tickets CONVERGE post-preemption** (verifier): AUDI-1089 §4d13 puts 33Across at
+  ~1.08× post-preemption (ceiling-defensible); l0f's residual view agrees.
+
+**Reconciled recommendation (the user's "preempt then price" plan):**
+1. Preemption is THE lever — removes ~90% of billed volume (the free overlap). Savings come
+   from volume, not a rate cut.
+2. On the residual, $0.50 is already below break-even (~$1–3) → **keep the ~$0.50 rate.**
+3. Vendors differ by RESIDUAL VOLUME (fractional, monthly): 33Across 20.2M ≫ 33A API 9.2M >
+   Justuno 4.1M > Sovrn 2.3M > Cybba 0.56M — this ranks keep-priority, not the per-imp rate.
+4. **Incrementality caveat is mandatory:** $1–3 assumes the vendor's signal is *why* we won;
+   if not fully incremental, the residual is worth less and $0.50 nears break-even — so do NOT
+   cut below $0.50 without an incrementality read.
+
+**Open (07-20 billing sync):** the preemption GRAIN the eng team's fractional-credit system
+uses (impression-winner vs IP-membership) sets residual VOLUME (33Across 27.5M vs ~5.6M/mo),
+not the per-impression rate. `frac_credit_imps` (20.2M) undercounts the current June meter
+(70.3M) ~3.5× — expected for a residual-only, post-preemption count; totals are provisional
+until the exact rule is confirmed.
+
 **Charts:** `artifacts/audi_1115_wtp_vs_contract.png` (break-even bands vs the $0.50 line) +
 `artifacts/audi_1115_flow_coverage_drop.png` (59.4%→44.1%); regenerate via
 `artifacts/audi_1115_generate_charts.py`. Also in the epic workbook
