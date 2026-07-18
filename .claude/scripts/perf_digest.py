@@ -12,6 +12,16 @@ Usage:
 import argparse, collections, json, os, sys
 
 
+def _clean(ref):
+    """SQLMesh physical `sqlmesh__ds.ds__table__hash` -> clean `ds.table`; pass others through."""
+    ds, _, tbl = ref.partition(".")
+    if ds.startswith("sqlmesh__"):
+        parts = tbl.split("__")
+        if len(parts) >= 2:
+            return f"{parts[0]}.{parts[1]}"
+    return ref
+
+
 def load(log, since, only_table):
     rows = []
     if not os.path.exists(log):
@@ -25,6 +35,14 @@ def load(log, since, only_table):
                 r = json.loads(line)
             except Exception:
                 continue
+            # Normalize the workspace perf-log schema -> the fields this tool reads, and derive
+            # sql_tables from referenced_tables for historical records that predate the sql_tables field.
+            if not r.get("ts"):
+                r["ts"] = r.get("timestamp", "")
+            if r.get("wall_ms") is None:
+                r["wall_ms"] = r.get("elapsed_ms")
+            if not r.get("sql_tables"):
+                r["sql_tables"] = list(dict.fromkeys(_clean(t) for t in (r.get("referenced_tables") or [])))
             if since and (r.get("ts", "") < since):
                 continue
             if only_table and only_table not in (r.get("sql_tables") or []):
