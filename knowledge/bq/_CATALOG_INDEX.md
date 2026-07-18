@@ -6,4 +6,27 @@ Load this first. Find the tables you need, then open ONLY those docs.
 
 | table | coverage | grain / summary | partition | time_unit | verified | doc |
 |-------|----------|-----------------|-----------|-----------|----------|-----|
-| _(none yet — run scripts/bq_introspect.sh)_ | | | | | | |
+| `logdata.auction_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/auction_log.md) |
+| `logdata.bid_events_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/bid_events_log.md) |
+| `logdata.bid_logs` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/bid_logs.md) |
+| `logdata.bidder_auction_events` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/bidder_auction_events.md) |
+| `logdata.bidder_bid_events` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/bidder_bid_events.md) |
+| `logdata.bidder_bid_events_test_optimized` | skeleton | one row per <FILL grain> — <what it's for> | none | unknown | — | [doc](logdata/bidder_bid_events_test_optimized.md) |
+| `logdata.click_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/click_log.md) |
+| `logdata.clickpass_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/clickpass_log.md) |
+| `logdata.conversion_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/conversion_log.md) |
+| `logdata.conversion_signal_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/conversion_signal_log.md) |
+| `logdata.cost_impression_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/cost_impression_log.md) |
+| `logdata.event_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/event_log.md) |
+| `logdata.guid_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/guid_log.md) |
+| `logdata.icloud_vv_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/icloud_vv_log.md) |
+| `logdata.impression_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/impression_log.md) |
+| `logdata.page_view_signal_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/page_view_signal_log.md) |
+| `logdata.realtime_spend_last_3d` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/realtime_spend_last_3d.md) |
+| `logdata.spend_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/spend_log.md) |
+| `logdata.spend_log_tmp` | skeleton | one row per <FILL grain> — <what it's for> | none | unknown | — | [doc](logdata/spend_log_tmp.md) |
+| `logdata.spend_pacing` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/spend_pacing.md) |
+| `logdata.v_augmentor_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/v_augmentor_log.md) |
+| `logdata.v_viewability_log_pub_metric` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/v_viewability_log_pub_metric.md) |
+| `logdata.viewability_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/viewability_log.md) |
+| `logdata.win_logs` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/win_logs.md) |

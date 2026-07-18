@@ -2,3 +2,29 @@
 # BQ Topics — tables by domain
 
 Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a domain.
+
+### (unassigned)
+- [`logdata.auction_log`](logdata/auction_log.md) — <what this view provides>
+- [`logdata.bid_events_log`](logdata/bid_events_log.md) — <what this view provides>
+- [`logdata.bid_logs`](logdata/bid_logs.md) — <what this view provides>
+- [`logdata.bidder_auction_events`](logdata/bidder_auction_events.md) — <what this view provides>
+- [`logdata.bidder_bid_events`](logdata/bidder_bid_events.md) — <what this view provides>
+- [`logdata.bidder_bid_events_test_optimized`](logdata/bidder_bid_events_test_optimized.md) — one row per <FILL grain> — <what it's for>
+- [`logdata.click_log`](logdata/click_log.md) — <what this view provides>
+- [`logdata.clickpass_log`](logdata/clickpass_log.md) — <what this view provides>
+- [`logdata.conversion_log`](logdata/conversion_log.md) — <what this view provides>
+- [`logdata.conversion_signal_log`](logdata/conversion_signal_log.md) — <what this view provides>
+- [`logdata.cost_impression_log`](logdata/cost_impression_log.md) — <what this view provides>
+- [`logdata.event_log`](logdata/event_log.md) — <what this view provides>
+- [`logdata.guid_log`](logdata/guid_log.md) — <what this view provides>
+- [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — <what this view provides>
+- [`logdata.impression_log`](logdata/impression_log.md) — <what this view provides>
+- [`logdata.page_view_signal_log`](logdata/page_view_signal_log.md) — <what this view provides>
+- [`logdata.realtime_spend_last_3d`](logdata/realtime_spend_last_3d.md) — <what this view provides>
+- [`logdata.spend_log`](logdata/spend_log.md) — <what this view provides>
+- [`logdata.spend_log_tmp`](logdata/spend_log_tmp.md) — one row per <FILL grain> — <what it's for>
+- [`logdata.spend_pacing`](logdata/spend_pacing.md) — <what this view provides>
+- [`logdata.v_augmentor_log`](logdata/v_augmentor_log.md) — <what this view provides>
+- [`logdata.v_viewability_log_pub_metric`](logdata/v_viewability_log_pub_metric.md) — <what this view provides>
+- [`logdata.viewability_log`](logdata/viewability_log.md) — <what this view provides>
+- [`logdata.win_logs`](logdata/win_logs.md) — <what this view provides>

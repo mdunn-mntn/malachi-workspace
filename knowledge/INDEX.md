@@ -6,3 +6,29 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 
 ## Start here
 - [START HERE — how to find anything (MNTN workspace)](START_HERE.md) — task → the minimal set of docs to open; bridges the prose knowledge base and the new per-table catalog  ·  _verified 2026-07-17_
+
+## BigQuery tables
+- [logdata.auction_log](bq/logdata/auction_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.bid_events_log](bq/logdata/bid_events_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.bid_logs](bq/logdata/bid_logs.md) — <what this view provides>  ·  _skeleton_
+- [logdata.bidder_auction_events](bq/logdata/bidder_auction_events.md) — <what this view provides>  ·  _skeleton_
+- [logdata.bidder_bid_events](bq/logdata/bidder_bid_events.md) — <what this view provides>  ·  _skeleton_
+- [logdata.bidder_bid_events_test_optimized](bq/logdata/bidder_bid_events_test_optimized.md) — one row per <FILL grain> — <what it's for>  ·  _skeleton_
+- [logdata.click_log](bq/logdata/click_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.clickpass_log](bq/logdata/clickpass_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.conversion_log](bq/logdata/conversion_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.conversion_signal_log](bq/logdata/conversion_signal_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.cost_impression_log](bq/logdata/cost_impression_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.event_log](bq/logdata/event_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.guid_log](bq/logdata/guid_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.icloud_vv_log](bq/logdata/icloud_vv_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.impression_log](bq/logdata/impression_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.page_view_signal_log](bq/logdata/page_view_signal_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.realtime_spend_last_3d](bq/logdata/realtime_spend_last_3d.md) — <what this view provides>  ·  _skeleton_
+- [logdata.spend_log](bq/logdata/spend_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.spend_log_tmp](bq/logdata/spend_log_tmp.md) — one row per <FILL grain> — <what it's for>  ·  _skeleton_
+- [logdata.spend_pacing](bq/logdata/spend_pacing.md) — <what this view provides>  ·  _skeleton_
+- [logdata.v_augmentor_log](bq/logdata/v_augmentor_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.v_viewability_log_pub_metric](bq/logdata/v_viewability_log_pub_metric.md) — <what this view provides>  ·  _skeleton_
+- [logdata.viewability_log](bq/logdata/viewability_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.win_logs](bq/logdata/win_logs.md) — <what this view provides>  ·  _skeleton_
