@@ -10,7 +10,7 @@ grain: "one row per bidder decision on an auction candidate (a placed bid OR a n
 partition_by: time
 require_partition_filter: false
 cluster_by: []
-time_unit: HOUR
+time_unit: unknown
 ttl_days: 10
 approx_rows: null
 approx_logical_bytes: null

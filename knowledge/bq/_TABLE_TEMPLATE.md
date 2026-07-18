@@ -29,7 +29,9 @@ tags: []
   · physical_table   'self' for base tables; the sqlmesh__* table for a view (recover partition/cluster/TTL there)
   · partition_by     a resolved column | none | unknown   (VIEW default = unknown, an actionable gap)
   · cluster_by       SOURCE ORDER IS MEANINGFUL — never reorder; the index preserves it
-  · time_unit        epoch unit of the primary time column: ns | us | ms | s | timestamp | na | unknown
+  · time_unit        epoch unit of the INT time column: ns | us | ms | s | timestamp | na | unknown
+                     (the epoch column's unit e.g. microseconds — NOT partition granularity; DAY/HOUR
+                      belong in the physical_table note + cost section, never here)
   · schema_synced    MACHINE date — bumped by bq_introspect on AUTO:SCHEMA regen
   · last_verified    HUMAN date — set ONLY when prose is confirmed vs source; null until then
   · coverage_state   skeleton | enriched | verified

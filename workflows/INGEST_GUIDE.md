@@ -39,8 +39,26 @@ If the doc claims something not supported by the source, it's a bug. Reviewers a
    are built from these; a wrong `doc_type` makes the doc invisible.
 2. **Explain meaning, not type.** "`user_id STRING`" is not knowledge. "`user_id` is NULL for
    anonymous pre-login events" is.
+   - **Column-meanings ⊆ AUTO:SCHEMA.** Every column you explain in `## Column meanings` MUST exist in
+     THIS doc's AUTO:SCHEMA block. Never carry over a column from a sibling table or a stale prose
+     schema (this is how a non-existent `original_ip` slipped into cost_impression_log). If prose names
+     a column live schema doesn't have, that's drift — drop it and note "not on this table."
+   - **Epoch units: resolve, never hedge.** For any INT epoch/time column, resolve its unit with ONE
+     query and state the anchor (`= UNIX_MICROS/MILLIS/SECONDS(time)`). Never write "unit unverified /
+     don't assume", and never group multiple epoch columns under one unit without confirming each — in
+     the same table `epoch` can be µs while `batch_epoch` is seconds (cost_impression_log), and units
+     differ across tables (spend_log=ns, win_logs=µs, bidder_bid_events=ms).
 3. **Name the grain** for anything table-shaped. If you can't state the grain, you don't understand
    the table yet — go read the source.
+   - **Every join names the PARTNER's grain.** For each documented join, state the partner table's
+     grain (1:1 vs 1:N) and the fan-out risk — a key being unique in THIS table does not make it unique
+     in the partner (spend_log↔bidder_bid_events fans out; win_logs↔bid_logs fans out). Verify with
+     `COUNT(*)` vs `COUNT(DISTINCT key)` on one day, on the partner side.
+   - **Partner mid-rebuild → prose for the SAFE direction.** When a join-partner/verification table's
+     view resolves to a missing SQLMesh hash or its physical is 0 rows (mid-rebuild), fall back to the
+     prose oracle for the fan-out-warning direction and write "live unverifiable this session" in the
+     Changelog — do NOT assert an unverified equality, and do NOT block the doc. Leave the doc at
+     `enriched` (not `verified`) if its own core claims couldn't be live-checked (see bidder_bid_events).
 4. **Cost notes for BQ tables**: partition column (+ its timezone), cluster keys, approx size, and the
    one filter you must always apply. **Every GB/TB figure must come from an actual `bq_run.sh
    --dry_run` — never hand-compute logical bytes — and must be LABELED with the exact column set it

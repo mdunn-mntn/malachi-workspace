@@ -10,7 +10,7 @@ grain: "one row per pixel conversion fire (advertiser site conversion event) —
 partition_by: time
 require_partition_filter: false
 cluster_by: []
-time_unit: DAY
+time_unit: microseconds
 ttl_days: null
 approx_rows: 18638938795
 approx_logical_bytes: 26012244150982

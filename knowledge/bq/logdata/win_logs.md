@@ -10,7 +10,7 @@ grain: "one row per won impression (Beeswax win notification); ~0.2% dup on auct
 partition_by: time
 require_partition_filter: false
 cluster_by: []
-time_unit: DAY
+time_unit: microseconds
 ttl_days: null
 approx_rows: 43480511735
 approx_logical_bytes: 133099401141417

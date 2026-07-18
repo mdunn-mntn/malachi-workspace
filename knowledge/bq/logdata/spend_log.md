@@ -10,7 +10,7 @@ grain: "one row per won auction (auction_id is 1:1 with rows)"
 partition_by: auction_timestamp
 require_partition_filter: false
 cluster_by: []
-time_unit: HOUR
+time_unit: nanoseconds
 ttl_days: null
 approx_rows: 10263432887
 approx_logical_bytes: 7301912877964

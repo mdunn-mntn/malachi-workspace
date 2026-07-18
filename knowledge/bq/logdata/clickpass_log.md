@@ -10,7 +10,7 @@ grain: "one row per MNTN-attributed verified visit (click or VV)"
 partition_by: time
 require_partition_filter: false
 cluster_by: []
-time_unit: DAY
+time_unit: microseconds
 ttl_days: null
 approx_rows: 1382147359
 approx_logical_bytes: 4100642740785

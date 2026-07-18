@@ -10,7 +10,7 @@ grain: "one row per won/served, customer-charged impression (impression_id uniqu
 partition_by: time
 require_partition_filter: false
 cluster_by: [advertiser_id, impression_id]
-time_unit: DAY
+time_unit: microseconds
 ttl_days: null
 approx_rows: 75950052647
 approx_logical_bytes: 61810191009584
