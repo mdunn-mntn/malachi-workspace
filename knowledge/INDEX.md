@@ -12,23 +12,23 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 - [logdata.bid_events_log](bq/logdata/bid_events_log.md) — <what this view provides>  ·  _skeleton_
 - [logdata.bid_logs](bq/logdata/bid_logs.md) — <what this view provides>  ·  _skeleton_
 - [logdata.bidder_auction_events](bq/logdata/bidder_auction_events.md) — <what this view provides>  ·  _skeleton_
-- [logdata.bidder_bid_events](bq/logdata/bidder_bid_events.md) — <what this view provides>  ·  _skeleton_
+- [logdata.bidder_bid_events](bq/logdata/bidder_bid_events.md) — Every bid decision (bid attempt + no-bid/drop reason) emitted by the MNTN (Rust) bidder — the canonical BQ surface for ghost-bid holdouts, bid-eligibility failures, and incrementality cohorts. MNTN-bidder ONLY (~22 advertisers); Beeswax stream lands elsewhere.  ·  _enriched_
 - [logdata.bidder_bid_events_test_optimized](bq/logdata/bidder_bid_events_test_optimized.md) — one row per <FILL grain> — <what it's for>  ·  _skeleton_
 - [logdata.click_log](bq/logdata/click_log.md) — <what this view provides>  ·  _skeleton_
-- [logdata.clickpass_log](bq/logdata/clickpass_log.md) — <what this view provides>  ·  _skeleton_
-- [logdata.conversion_log](bq/logdata/conversion_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.clickpass_log](bq/logdata/clickpass_log.md) — Verified-visit (VV) log — one row per MNTN-attributed visit (clicks + VVs, CTV and display), matched back to a served impression within the lookback window. 'clickpass' is the legacy term for verified visit. Now a 3-branch UNION view (raw ≥2026-01-01 + competing_vv ≥2026-01-01 + history ≤2025-12-31).  ·  _verified_  ·  _verified 2026-07-17_
+- [logdata.conversion_log](bq/logdata/conversion_log.md) — Pixel-fire conversion events (advertiser site conversions) — the un-attributed conversion firehose. Physical is a UNION ALL of bronze raw (rows >= 2026-01-01) + history (rows <= 2025-12-31), DAY-partitioned on `time` in BOTH branches; always filter DATE(time). order_amt = conversion value in LOCAL currency (the one to use); order_amt_usd is sparse; refires are real signal (no dedup).  ·  _verified_  ·  _verified 2026-07-17_
 - [logdata.conversion_signal_log](bq/logdata/conversion_signal_log.md) — <what this view provides>  ·  _skeleton_
-- [logdata.cost_impression_log](bq/logdata/cost_impression_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.cost_impression_log](bq/logdata/cost_impression_log.md) — Customer-centric, impression-grain spend enriched with geo/device/segment/score fields. THE big history+cost table (~76B rows / 62 TB, fixed floor 2023-10-01, still growing). PSAs excluded. Partition DAY on time; cluster advertiser_id, impression_id.  ·  _verified_  ·  _verified 2026-07-17_
 - [logdata.event_log](bq/logdata/event_log.md) — <what this view provides>  ·  _skeleton_
-- [logdata.guid_log](bq/logdata/guid_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.guid_log](bq/logdata/guid_log.md) — MNTN's own first-party site pixel (DS23). One row per page-view EVENT on an advertiser site by a tracked household — fires on every page view whether or not MNTN served an ad. The honest total-traffic signal vs clickpass_log's attributed visits. UNION of recent-raw (2026+, HOUR) and a permanent history archive (<=2025, DAY).  ·  _verified_  ·  _verified 2026-07-17_
 - [logdata.icloud_vv_log](bq/logdata/icloud_vv_log.md) — <what this view provides>  ·  _skeleton_
 - [logdata.impression_log](bq/logdata/impression_log.md) — One row per served/rendered ad impression (display + CTV, won-and-served). ad_served_id = unique PK; join to visits/conversions. Partition on `time`; epoch is MICROSECONDS.  ·  _verified_  ·  _verified 2026-07-17_
 - [logdata.page_view_signal_log](bq/logdata/page_view_signal_log.md) — <what this view provides>  ·  _skeleton_
 - [logdata.realtime_spend_last_3d](bq/logdata/realtime_spend_last_3d.md) — <what this view provides>  ·  _skeleton_
-- [logdata.spend_log](bq/logdata/spend_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.spend_log](bq/logdata/spend_log.md) — Won-auction / billable-impression log — MNTN bidder's realized spend (win_cost_micros_usd, micros USD). Source of truth for spend, pacing, and deliverability. One row per won auction, HOUR-partitioned on auction_timestamp.  ·  _verified_  ·  _verified 2026-07-17_
 - [logdata.spend_log_tmp](bq/logdata/spend_log_tmp.md) — one row per <FILL grain> — <what it's for>  ·  _skeleton_
 - [logdata.spend_pacing](bq/logdata/spend_pacing.md) — <what this view provides>  ·  _skeleton_
 - [logdata.v_augmentor_log](bq/logdata/v_augmentor_log.md) — <what this view provides>  ·  _skeleton_
 - [logdata.v_viewability_log_pub_metric](bq/logdata/v_viewability_log_pub_metric.md) — <what this view provides>  ·  _skeleton_
 - [logdata.viewability_log](bq/logdata/viewability_log.md) — <what this view provides>  ·  _skeleton_
-- [logdata.win_logs](bq/logdata/win_logs.md) — <what this view provides>  ·  _skeleton_
+- [logdata.win_logs](bq/logdata/win_logs.md) — Beeswax win-notification log — one row per won impression from the external DSP/exchange perspective; win/clearing/bid prices in micros USD. IDs are Beeswax-internal (use *_alt_id to reach MNTN).  ·  _verified_  ·  _verified 2026-07-17_
