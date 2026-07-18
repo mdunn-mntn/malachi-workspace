@@ -18,7 +18,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`logdata.event_log`](logdata/event_log.md) — <what this view provides>
 - [`logdata.guid_log`](logdata/guid_log.md) — <what this view provides>
 - [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — <what this view provides>
-- [`logdata.impression_log`](logdata/impression_log.md) — <what this view provides>
+- [`logdata.impression_log`](logdata/impression_log.md) — One row per served/rendered ad impression (display + CTV, won-and-served). ad_served_id = unique PK; join to visits/conversions. Partition on `time`; epoch is MICROSECONDS.
 - [`logdata.page_view_signal_log`](logdata/page_view_signal_log.md) — <what this view provides>
 - [`logdata.realtime_spend_last_3d`](logdata/realtime_spend_last_3d.md) — <what this view provides>
 - [`logdata.spend_log`](logdata/spend_log.md) — <what this view provides>

@@ -42,7 +42,13 @@ If the doc claims something not supported by the source, it's a bug. Reviewers a
 3. **Name the grain** for anything table-shaped. If you can't state the grain, you don't understand
    the table yet — go read the source.
 4. **Cost notes for BQ tables**: partition column (+ its timezone), cluster keys, approx size, and the
-   one filter you must always apply.
+   one filter you must always apply. **Every GB/TB figure must come from an actual `bq_run.sh
+   --dry_run` — never hand-compute logical bytes — and must be LABELED with the exact column set it
+   measured** (`SELECT *` vs a 7-col pull vs one narrow column differ by 10–50×). Only same-column-set
+   figures may be compared as a "prunes vs doesn't-prune" diff; mixing `SELECT *` against a
+   single-column estimate produces an incoherent, misleading comparison (the impression_log pilot's
+   original "2 TB / 1.36 GB / 4 TB" bug). `approx_logical_bytes` = the object's real backing storage
+   (`bq show` numBytes, summed across a UNION view's physicals) or `null` — never a one-column size.
 5. **No stubs.** Don't write "unknown / TODO / see source." Determine it or leave the section out with
    a one-line note on what's needed to fill it. A paragraph justifying a workaround = the doc is wrong.
 6. **Cross-link** with relative paths (`knowledge/…`) so `build_index.sh` and humans can traverse.

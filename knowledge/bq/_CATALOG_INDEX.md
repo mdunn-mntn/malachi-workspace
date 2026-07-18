@@ -20,7 +20,7 @@ Load this first. Find the tables you need, then open ONLY those docs.
 | `logdata.event_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/event_log.md) |
 | `logdata.guid_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/guid_log.md) |
 | `logdata.icloud_vv_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/icloud_vv_log.md) |
-| `logdata.impression_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/impression_log.md) |
+| `logdata.impression_log` | verified | One row per served/rendered ad impression (display + CTV, won-and-served). ad_served_id = unique PK; join to visits/conversions. Partition on `time`; epoch is MICROSECONDS. | time | microseconds | 2026-07-17 | [doc](logdata/impression_log.md) |
 | `logdata.page_view_signal_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/page_view_signal_log.md) |
 | `logdata.realtime_spend_last_3d` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/realtime_spend_last_3d.md) |
 | `logdata.spend_log` | skeleton | <what this view provides> | unknown | unknown | — | [doc](logdata/spend_log.md) |

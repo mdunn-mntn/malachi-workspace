@@ -22,7 +22,7 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 - [logdata.event_log](bq/logdata/event_log.md) — <what this view provides>  ·  _skeleton_
 - [logdata.guid_log](bq/logdata/guid_log.md) — <what this view provides>  ·  _skeleton_
 - [logdata.icloud_vv_log](bq/logdata/icloud_vv_log.md) — <what this view provides>  ·  _skeleton_
-- [logdata.impression_log](bq/logdata/impression_log.md) — <what this view provides>  ·  _skeleton_
+- [logdata.impression_log](bq/logdata/impression_log.md) — One row per served/rendered ad impression (display + CTV, won-and-served). ad_served_id = unique PK; join to visits/conversions. Partition on `time`; epoch is MICROSECONDS.  ·  _verified_  ·  _verified 2026-07-17_
 - [logdata.page_view_signal_log](bq/logdata/page_view_signal_log.md) — <what this view provides>  ·  _skeleton_
 - [logdata.realtime_spend_last_3d](bq/logdata/realtime_spend_last_3d.md) — <what this view provides>  ·  _skeleton_
 - [logdata.spend_log](bq/logdata/spend_log.md) — <what this view provides>  ·  _skeleton_
