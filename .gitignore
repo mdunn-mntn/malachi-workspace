@@ -58,3 +58,8 @@ tickets/ti_650_stage_3_vv_audit/outputs/ti_650_trace_table_amsoil.json
 tickets/ti_832_feature_store_roas_cpa/outputs/ti_832_training_data.csv
 tickets/**/meetings/*.m4a
 *.zip
+
+# AI Workflow Kit transient state
+knowledge/bq/perf_archive/
+knowledge/_staging/
+.claude/.session_state
