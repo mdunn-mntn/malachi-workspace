@@ -50,4 +50,4 @@ bqq "SELECT table_name, view_definition
 python3 "$HERE/_render_table_doc.py" "$DATASET" "$ROOT/knowledge/bq/$DATASET" \
         "$TMP/columns.json" "$TMP/storage.json" "$TMP/tables.json" "$TMP/views.json"
 
-echo "Done. Enrich the human sections, then run: $ROOT/scripts/build_index.sh"
+echo "Done. Enrich the human sections, then run: $HERE/build_index.sh"
