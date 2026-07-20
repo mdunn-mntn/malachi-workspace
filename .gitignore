@@ -75,3 +75,9 @@ _temporary/
 
 # BQ run-capture noise
 *.err
+
+# Claude session/memory tree — belongs in global ~/.claude, never in-repo
+.claude/projects/
+
+# Vendored Todoist MCP tool — kept on disk for the MCP server, not part of the analytics repo
+todoist-mcp-transfer/
