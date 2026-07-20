@@ -22,10 +22,15 @@ table reaches `enriched`/`verified` in `bq/_COVERAGE.md`, its `data_catalog.md` 
 (regenerates schema, preserves human sections + view-resolved partition/cluster).
 
 **Deterministic layer (`.claude/`, runs itself):** the existing `bq_run.sh` wrapper now also logs
-`sql_tables` (clean names). Four hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
-wrapper), flag net-new tables to `knowledge/bq/_UNDOCUMENTED.queue`, print routing/coverage at
-SessionStart, and remind to `/capture` at Stop. `.claude/scripts/build_index.sh` regenerates every
-index from front-matter (run after any `knowledge/` change). `perf_digest.py` mines the perf log.
+`sql_tables` (clean names). Five hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
+wrapper), flag net-new tables to `knowledge/bq/_UNDOCUMENTED.queue`, print routing/coverage +
+health at SessionStart, log a keyword-only record of each prompt at UserPromptSubmit, and remind to
+`/capture` at Stop. `.claude/scripts/build_index.sh` regenerates every index from front-matter (run
+after any `knowledge/` change). `perf_digest.py` mines the perf log. **Self-improvement (read/append-only,
+no delete authority):** `health_scorecard.py` prints days-since-`/capture` + orphan-doc + dup-title
+signals into the SessionStart block; `request_digest.py` mines `knowledge/.request_log.jsonl` (the
+gitignored, keyword-only prompt log) for recurring work shapes and PROPOSES a `/skill` — a human decides,
+nothing is auto-created or auto-deleted.
 
 **Agents (`.claude/agents/`), one job each:** cataloger (skeleton→enriched), reviewer-adversarial ×2
 (fresh context, "assume it's wrong"), fixer, synthesizer, perf-analyst, curator (`/capture`). The

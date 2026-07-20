@@ -21,5 +21,8 @@ L="$ROOT/knowledge/bq_perf_log.jsonl"
 if [[ -f "$L" ]]; then
   echo "Perf log : $(grep -c . "$L" 2>/dev/null) queries logged — mine with scripts/perf_digest.py --mode all"
 fi
+
+HS="$ROOT/.claude/scripts/health_scorecard.py"
+[[ -f "$HS" ]] && python3 "$HS" 2>/dev/null
 echo "────────────────────────────────────────────────────────────────"
 exit 0

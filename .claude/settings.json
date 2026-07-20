@@ -16,6 +16,13 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/log_request.py" }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [

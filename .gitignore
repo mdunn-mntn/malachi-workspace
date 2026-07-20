@@ -63,3 +63,6 @@ tickets/**/meetings/*.m4a
 knowledge/bq/perf_archive/
 knowledge/_staging/
 .claude/.session_state
+
+# Request-mining telemetry — LOCAL ONLY, keyword-only, never pushed (self-improvement kernel)
+knowledge/.request_log.jsonl
