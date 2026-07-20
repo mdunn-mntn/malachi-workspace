@@ -1,24 +1,24 @@
 ---
 doc_type: bq_table
 title: logdata.event_log
-summary: "<what this view provides>"
+summary: "CTV VAST video-event firehose — one row per VAST beacon (impression / 4 quartiles / complete) per served CTV impression; the source of the gold denormalized bid_ip and the VAST-playback ip for IP-lineage tracing and video-completion reporting. Display/mobile impressions are NOT present (they fire no VAST beacons)."
 dataset: logdata
 table: event_log
 object_type: VIEW
 physical_table: sqlmesh__logdata.logdata__event_log__3357255076
-grain: "N/A — derived view"
-partition_by: unknown
-require_partition_filter: unknown
+grain: "one row per served CTV impression x VAST beacon event_type (6 beacon rows per completed impression)"
+partition_by: time
+require_partition_filter: false
 cluster_by: []
-time_unit: unknown
+time_unit: milliseconds
 ttl_days: null
-approx_rows: null
-approx_logical_bytes: null
+approx_rows: 296347866480
+approx_logical_bytes: 153230123495003
 schema_synced: 2026-07-17
-last_verified: null
-coverage_state: skeleton
-domain: []
-keywords: []
+last_verified: 2026-07-19
+coverage_state: verified
+domain: [ctv, impressions, ip-lineage, attribution]
+keywords: [event_log, vast, vast_impression, vast_complete, bid_ip, ip lineage, ctv, video completion, ad_served_id, td_impression_id, epoch milliseconds, cidr]
 source: INFORMATION_SCHEMA+human
 tags: []
 ---
@@ -26,11 +26,22 @@ tags: []
 # logdata.event_log
 
 ## Purpose
-<Fill: why this table exists and when to reach for it.>
+CTV **VAST video-event firehose**. One row per VAST beacon fired during CTV ad playback — the served impression plus its four quartiles and completion. Empirically (2026-07-15 and 2025-06-15) the table contains **only six VAST event types and nothing else** — no display pixels, clicks, conversions, or win rows. Display/mobile impressions fire no VAST beacons, so they never appear here (use `impression_log`/`viewability_log` for those). `el_matched = false` in a verified-visit trace = the inventory was non-CTV.
+
+Reach for it for: (a) **IP-at-VAST-playback** (`ip`) for CTV IP-lineage tracing; (b) the denormalized **`bid_ip`** — the gold targeting IP that equals `win_log.ip`/`cost_impression_log.ip` at ≈100% (99.9999% on a 38.2M-row check — 47 rows differ), so you skip the CIL/win_log join; (c) a **bid_ip fallback** when `bid_logs` has aged out (90d TTL); (d) **video-completion reporting** (`event_type_raw = 'vast_complete'` — CIL does not carry completion data).
+
+**View resolution:** silver `logdata.event_log` → view `sqlmesh__logdata.logdata__event_log__3357255076` → **UNION ALL of two bronze physicals**:
+- `dw-main-bronze.sqlmesh__raw.raw__event_log__2961306213` (TABLE, DAY-partitioned on `time`, **365d TTL**, ~31.5 TB / 51.9B rows) for `time >= 2026-01-01`. `event_type_id` on this side is a LEFT JOIN onto `dw-main-bronze.external.event_types`.
+- `dw-main-bronze.history.event_log_physical` (TABLE, DAY-partitioned on `time`, **no TTL**, ~121.7 TB / 244.4B rows) for `date_column <= 2025-12-31`.
+
+Continuous coverage from **2025-01-01** (no BQ data before that — pre-2025 lived only in deprecated Greenplum). Prose drift reconciled: the history side now resolves to `history.event_log_physical`, not the old `sqlmesh__history.history__event_log__1601996237` hash.
+
+**Forward-looking retention gap:** the raw physical has a **365d TTL** (expirationMs 31536000000 verified) and holds `time >= 2026-01-01`, while the history physical is capped at `date_column <= 2025-12-31` with **no 2026 backfill**. Coverage is continuous *today* (all 2026 raw partitions are <365d old), but once early-2026 raw partitions age out (~2027-01 onward) a rolling hole opens in the 2026 window that history does not fill. Budget a re-backfill or accept the gap for long 2026 lookbacks run in 2027+.
 
 ## Grain & keys
-- **Grain:** one row per <fill me>.
-- **Key(s) / join columns:** <fill me>.
+- **Grain:** one row per **served CTV impression × VAST beacon event_type**. A **fully-completed** CTV impression emits **up to 6 rows** (vast_impression, vast_start, vast_firstQuartile, vast_midpoint, vast_thirdQuartile, vast_complete), each sharing the same `ad_served_id` / `td_impression_id`; impressions abandoned before completion emit **fewer** beacons. The count is up-to-6 = number of beacons that fired, not exactly 6. Empirically the funnel drops monotonically (distinct `ad_served_id`, 2026-07-15): vast_impression 46,810,524 → vast_start 46,796,954 → firstQuartile 46,442,360 → midpoint 46,266,658 → thirdQuartile 46,164,433 → vast_complete 45,982,687 (~1.8% incompletes). Not perfectly 1:1 even within one beacon — vast_impression is ~99.6% unique on `ad_served_id` (46,810,524 distinct / 47,001,485 rows), and `td_impression_id` cardinality is slightly lower than `ad_served_id` (~0.16% of ad_served_id share a td_impression_id). Volume: ~47M rows per event_type per day (2026), ~68M per event_type per day (2025).
+- **Dedup to one row per impression:** `ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time)` filtered to a single `event_type_raw` (usually `'vast_impression'`), take rn=1. Skipping this fans out any 1:1 join 6×.
+- **Key / join columns:** `ad_served_id` (→ clickpass_log, cost_impression_log), `td_impression_id` (→ cost_impression_log.impression_id, win_logs.auction_id). `bid_ip`/`ip` are IP join keys for cross-stage lineage.
 
 <!-- AUTO:SCHEMA START — regenerated by scripts/bq_introspect.sh; do NOT hand-edit inside markers -->
 | column | type | nullable | partition | cluster# |
@@ -76,21 +87,61 @@ tags: []
 <!-- AUTO:SCHEMA END -->
 
 ## Column meanings (only the non-obvious ones)
-<Fill: what columns MEAN — units, encodings, NULL semantics. Not their types.>
+- **`epoch`** — event time in **MILLISECONDS** since Unix epoch (= `UNIX_MILLIS(time)`). **Corrects prior "seconds" prose.** Verified both sides: 2026-07-15 `epoch=1784073728042` vs `UNIX_MILLIS=1784073728000`, `UNIX_SECONDS=1784073728`; 2025-06-15 `epoch=1749945695336` vs `UNIX_MILLIS=1749945695000`. 13 digits ⇒ ms. `epoch` carries sub-second precision that `time` (stored truncated to the second) drops — prefer `epoch` if you need millisecond ordering.
+- **`time`** — TIMESTAMP, **the partition column** (DAY). Stored truncated to the second (millisecond component always 000).
+- **`bid_ip`** — auction/win IP; **the gold targeting IP** = `win_log.ip` = `cost_impression_log.ip` at ≈100% (30,502/30,502 in TI-650; 99.9999% on a larger 38.2M-row check — 47 rows differ, 0.0001%), eliminating the CIL/win_log join. **Never carries a CIDR suffix.** Fully populated in-table: **0 NULL/`0.0.0.0`** across all 6 beacons — 279M rows on 2026-07-15 and per prior check on 2025-06-15. The `0.0.0.0` placeholder is a *downstream* VV-resolution artifact (data_knowledge), not an in-table bid_ip value — treat as NULL where it surfaces there.
+- **`ip`** — **VAST playback IP** (the CTV device's IP during playback). Differs from `bid_ip` ~1–3.5% (CGNAT /24 rotation). **Pre-2026 CIDR suffix:** 100% of rows before 2026-01-01 carry a `/32` (IPv4) or `/128` (IPv6) suffix (verified 68,975,331/68,975,331 on 2025-06-15); post-2026 is bare (0 of 47M on 2026-07-15). Strip with `SPLIT(ip,'/')[SAFE_OFFSET(0)]` for cross-period matching. This is event_log-specific — other log tables never carry the suffix; `bid_ip` never does.
+- **`ip_raw`** — raw IP before MNTN enrichment, usually identical to `ip`.
+- **`original_ip`** — pre-iCloud-Private-Relay raw connection IP (x-forwarded-for header) before MNTN's enrichment override. Use `ip` for analysis; `original_ip` for audit/debug only.
+- **`event_type_raw`** — the **event discriminator**, but only **six VAST beacon values ever observed**: `vast_impression`, `vast_start`, `vast_firstQuartile`, `vast_midpoint`, `vast_thirdQuartile`, `vast_complete`. Filter `'vast_impression'` for the impression/IP trace, `'vast_complete'` for completion reporting. There is no display/click/conversion event type here.
+- **`event_type_id`** — INT 1–6 mapping 1:1 to the six `event_type_raw` values (1=vast_impression, 2=vast_start, 3=vast_firstQuartile, 4=vast_midpoint, 5=vast_thirdQuartile, 6=vast_complete). Populated on the raw side via LEFT JOIN to `dw-main-bronze.external.event_types`, so an unmapped `event_type_raw` would yield NULL — but all 6 live values are mapped (0 NULLs observed).
+- **`device_type`** — STRING in silver (already enriched, e.g. "CTV"); INTEGER in `bronze.raw`.
+- **`td_impression_id`** — TradeDesk/auction impression id; = `cost_impression_log.impression_id` (100% populated, 38.7M/38.7M one day, TI-650) and = `win_logs.auction_id` (~96% same-day match — see Joins). Shared across the beacons of one impression.
+- **`ad_served_id`** — primary join key to `clickpass_log` and `cost_impression_log`; shared across the (up-to-6) beacon rows of one impression.
+- **`group_id`** — NOT the campaign_group_id. Verified 2026-07-15 it equals neither `win_logs.campaign_alt_id` (0 / 45.1M matched rows) nor `campaigns.campaign_group_id` (0 / 21,938 campaign_id×group_id pairs). For campaign-group, go `campaign_id → campaigns.campaign_group_id`; do not use `group_id` as a campaign-group key.
 
 ## Joins & relationships
-<Fill: how it connects to other tables; fan-out warnings.>
+- **cost_impression_log (CIL)** via `td_impression_id = cost_impression_log.impression_id` — CIL is **1:1 per impression**, but event_log has **6 beacon rows per impression** → dedup event_log to one event_type first, or you fan out 6×. (`event_log.bid_ip = CIL.ip` at 100%.)
+- **clickpass_log** (verified visits) via `ad_served_id` — 1 impression : **0–N visits**; ~60% guid overlap. Cross-stage VV lineage uses `ip` (VAST playback IP), not `bid_ip` — see gotchas.
+- **win_logs** (Beeswax) via `td_impression_id = win_logs.auction_id` — **~96% same-day match** (45,112,430 / 46,944,107 event_log vast_impression rows on 2026-07-15); win_logs is Beeswax-only + same-day, so ~4% of event_log impressions have no same-day win row. Not a guaranteed 100% equi-join — do not assume every impression joins. Also `CAST(win_logs.line_item_alt_id AS INT64) = campaign_id` (99.7% of matched rows; data_knowledge win_logs Beeswax→MNTN mapping). **No campaign-group join off event_log:** there is no `campaign_group_id` column, and `group_id` is NOT `win_logs.campaign_alt_id` (0 / 45.1M) nor `campaigns.campaign_group_id` (0 / 21,938) — resolve campaign-group via `campaign_id → campaigns.campaign_group_id`. win_logs is ~1 row per impression → dedup event_log first (up-to-6× fan-out risk).
+- **bid_logs** — `event_log.bid_ip` was intentionally designed to equal `bid_logs.ip`, so it is a safe **fallback when bid_logs is purged** (90d TTL): `COALESCE(NULLIF(bid_logs.ip,'0.0.0.0'), impression_log.bid_ip, event_log.bid_ip, viewability_log.bid_ip)`.
+- **impression_log** — the display/non-CTV counterpart. For full IP lineage, `COALESCE(event_log.bid_ip, impression_log.bid_ip)` (event_log preferred for CTV, impression_log fallback for non-viewable display).
+- **Fan-out rule:** any join from a 1:1 partner (CIL, win_logs, impression_log) to *raw* event_log multiplies **up to 6×** (one row per beacon fired — fully-completed = 6, abandoned plays = fewer). Always dedup to a single `event_type_raw` or `GROUP BY ad_served_id` before joining or counting impressions.
 
 ## Gotchas
-<Fill: late-arriving data, duplicates, partition-column timezone, soft-deletes.>
+- **CTV-only / VAST-only.** Only the 6 VAST beacons exist — no display, mobile, click, or conversion rows (verified 2025 and 2026). Display/mobile impressions have no event_log row. Corrects data_catalog prose that mentioned "general pixel events" — none observed. Use `impression_log` for display.
+- **`epoch` is MILLISECONDS, not seconds** (prose drift corrected — see column meanings).
+- **`ip` CIDR suffix on ALL pre-2026 rows** (`/32`/`/128`); post-2026 bare. Exact string match (`ip = 'x.x.x.x'`) misses pre-2026 rows — use `SPLIT(ip,'/')[SAFE_OFFSET(0)]` across time periods. `bid_ip` is unaffected.
+- **Up to 6 rows per impression** (only fully-completed impressions emit all 6; abandoned plays emit fewer) — dedup with `ROW_NUMBER()` before counting impressions or joining 1:1 tables.
+- **`bid_ip`/`ip` are fully populated in-table** — 0 NULL/`0.0.0.0` across 279M rows on 2026-07-15 (and per prior 2025-06-15 check). The `0.0.0.0` placeholder appears *downstream* in VV resolution (data_knowledge), not as an in-table value — treat as NULL there, not here.
+- **30-day impression→visit lookback.** A clickpass VV can occur up to 30 days after its VAST event (100% of 3.25M VVs within 30 days). Use ≥30d lookback when joining impressions to visits; 20d causes a +3–5pp offset.
+- **Filter on `time` (the partition column) — `TIMESTAMP()` range or `DATE(time)` both work.** Both forms prune to a single partition and bill **identically**: verified 2026-07-19 dry-run, `bid_ip` one-day = **10,856,155,135 B** (2026-07-15) and **12,751,842,570 B** (2025-06-15), byte-for-byte equal whether written as `time >= TIMESTAMP('…') AND time < TIMESTAMP('…')` or `DATE(time) = '…'`. (Corrects prior prose here and in `data_catalog.md` that claimed `DATE(time)` defeats pruning — it does not on either physical.) The history side internally filters on `date_column` while the partition is `time`; irrelevant to callers who filter the silver view on `time`.
 
 ## Cost & partitioning notes
-- Partition `unknown`, cluster []. Always filter the partition column; avoid SELECT *.
-- If this is a VIEW, resolve the physical `sqlmesh__logdata.logdata__event_log__3357255076` table to recover the real partition/cluster/TTL (cataloger's job); `partition_by: unknown` is an actionable gap, not a claim of "no partition."
+- **Partition = `time` (TIMESTAMP, DAY)** on both physicals — confirmed empirically via dry-run diff on the silver view (`bid_ip` column only): one-day `time` filter = **10.86 GB** vs full scan = **7,669.8 GB (7.67 TB)** → 99.86% prune. A non-partition candidate (`advertiser_id` filter, no time filter) does **not** prune (**10.04 TB** — higher than full because it adds the `advertiser_id` column to the read).
+- **No clustering** on either physical — there is no IP index, so single-IP full-history scans are extremely expensive.
+- **The one filter to always apply:** `WHERE time >= TIMESTAMP('<start>') AND time < TIMESTAMP('<end>')` (or `WHERE DATE(time) = '<day>'` — both prune to a single partition and bill identically).
+- **Labeled cost figures** (dry-run = lower-bound estimate; actual = billed; each labeled with its exact column set — only same-column-set figures are comparable):
+  - `bid_ip`, 1 day (2026-07-15): **10.86 GB** (dry-run).
+  - `bid_ip`, full / all partitions: **7,669.8 GB / 7.67 TB** (dry-run).
+  - `bid_ip` with `advertiser_id` filter, no time filter: **10.04 TB** (dry-run) — does not prune.
+  - 4 cols (`event_type_raw`, `event_type_id`, `bid_ip`, `ip`), 1 day 2026-07-15: **14.03 GB** actual; same 4 cols, 1 day 2025-06-15 (history side): **25.11 GB** actual (2025 partitions ~1.5× denser).
+  - `epoch`+`time`, 1 day: **8.4 GB** actual.
+  - `SELECT *`, full history: **146,361,232,609,111 B = 146.36 TB** (dry-run 2026-07-19) — all-column set. **Supersedes the stale TI-650 2026-03-16 figure of 14,677 GB**, which was measured against the pre-migration ~12 TB history physical the view has since drifted off (`~10× low` today, and internally inconsistent with the 7.67 TB single-`bid_ip` full scan). Do NOT compare to the single-column figures above.
+- **Backing storage (bq show numBytes, summed across UNION physicals):** raw ~31.5 TB / 51.9B rows (365d TTL) + history ~121.7 TB / 244.4B rows (no TTL) ≈ **153 TB / 296B rows**, continuous from 2025-01-01, no upper expiry.
 
 ## Example queries
 ```sql
-SELECT <cols> FROM `logdata.event_log` WHERE <partition_col> BETWEEN '<start>' AND '<end>'
+-- Dedup to one vast_impression per CTV impression for IP lineage, one day
+SELECT ad_served_id, td_impression_id, bid_ip,
+       SPLIT(ip, '/')[SAFE_OFFSET(0)] AS vast_ip, advertiser_id, campaign_id
+FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY ad_served_id ORDER BY time) AS rn
+  FROM `logdata.event_log`
+  WHERE time >= TIMESTAMP('2026-07-15') AND time < TIMESTAMP('2026-07-16')
+    AND event_type_raw = 'vast_impression'
+)
+WHERE rn = 1;
 ```
 
 ## Observed cost
@@ -106,6 +157,8 @@ SELECT <cols> FROM `logdata.event_log` WHERE <partition_col> BETWEEN '<start>' A
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-19: skeleton→enriched. View resolved to UNION ALL of `sqlmesh__raw.raw__event_log__2961306213` (≥2026-01-01, 365d TTL) + `history.event_log_physical` (≤2025-12-31, no TTL) — history side drifted off the old `sqlmesh__history.history__event_log__1601996237` hash. Partition confirmed empirically = `time` DAY (dry-run: 1-day bid_ip 10.86 GB vs full 7.67 TB; advertiser_id does not prune). No clustering. Drift corrected vs prose: `epoch` is MILLISECONDS not seconds (= UNIX_MILLIS(time), verified both physicals); table is VAST-CTV-only (6 event types, no "general pixel events" as data_catalog implied). Confirmed pre-2026 `ip` CIDR suffix (100% on 2025-06-15), bid_ip fully populated + never CIDR, 6 beacon rows per impression fan-out. approx_rows/logical_bytes set from summed physical numBytes.
+- 2026-07-19: enriched→verified (fixer, 2 adversarial reviews reconciled against live source). **Corrected:** (1) `SELECT *` full history re-derived by dry-run = **146.36 TB**, not the stale 14,677 GB (10× low; old figure was vs the pre-migration ~12 TB history physical). (2) `DATE(time)` does **NOT** defeat partition pruning — bills byte-identically to bare TIMESTAMP on both physicals (10,856,155,135 B / 12,751,842,570 B, verified). (3) win_logs join clause `campaign_alt_id = campaign_group_id` **removed** — event_log has no `campaign_group_id`, and `group_id` ≠ win_logs.campaign_alt_id (0/45.1M) and ≠ campaigns.campaign_group_id (0/21,938); campaign-group goes via `campaign_id → campaigns.campaign_group_id`. (4) `td_impression_id = win_logs.auction_id` qualified to **~96% same-day** (45.1M/46.9M) — join works (reviewer's 0/50 caveat was misattributed to `bid_events_log`, a different table). (5) fan-out softened to **up-to-6** (monotonic funnel 46.81M→45.98M, ~1.8% incompletes; vast_impression ~99.6% unique on ad_served_id). (6) bid_ip=win/CIL qualified ≈100% → 99.9999% (47/38.2M differ). (7) in-table `0.0.0.0` placeholder claim removed — 0/279M on 2026-07-15; the 0.0.0.0 case is downstream VV-resolution only. (8) forward-looking retention gap flagged (raw 365d TTL vs history capped ≤2025-12-31 with no 2026 backfill → rolling 2026 hole opens ~2027-01).
 <!-- CHANGELOG END -->
 
 ## View definition

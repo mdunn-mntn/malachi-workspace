@@ -3,44 +3,163 @@
 
 Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a domain.
 
+### ad_serving
+- [`logdata.click_log`](logdata/click_log.md) — Raw ad-click events — one row per exchange-level ad click (CTV + display), distinct from clickpass_log (verified visits). 2-branch UNION view (raw >=2026-01-01 + history <=2025-12-31). LIVE DATA GAP: 2026-01-01 through ~2026-04-20 currently returns ZERO rows because the raw branch's 90-day partition TTL outran the history branch's 2025-12-31 cap.
+
 ### adtech
 - [`logdata.bidder_bid_events`](logdata/bidder_bid_events.md) — Every bid decision (bid attempt + no-bid/drop reason) emitted by the MNTN (Rust) bidder — the canonical BQ surface for ghost-bid holdouts, bid-eligibility failures, and incrementality cohorts. MNTN-bidder ONLY (~22 advertisers); Beeswax stream lands elsewhere.
+- [`logdata.bidder_bid_events_test_optimized`](logdata/bidder_bid_events_test_optimized.md) — Frozen, unpartitioned physical copy of ~2 hours (2026-05-28 11:35-13:40 UTC) of bidder_bid_events — a one-shot 'optimized-layout' test snapshot (~884M rows / ~4.06 TB), created 2026-06-02 and never updated. Schema identical to bidder_bid_events. Not production; use the live bidder_bid_events view for real analysis.
 
 ### attribution
+- [`logdata.click_log`](logdata/click_log.md) — Raw ad-click events — one row per exchange-level ad click (CTV + display), distinct from clickpass_log (verified visits). 2-branch UNION view (raw >=2026-01-01 + history <=2025-12-31). LIVE DATA GAP: 2026-01-01 through ~2026-04-20 currently returns ZERO rows because the raw branch's 90-day partition TTL outran the history branch's 2025-12-31 cap.
 - [`logdata.clickpass_log`](logdata/clickpass_log.md) — Verified-visit (VV) log — one row per MNTN-attributed visit (clicks + VVs, CTV and display), matched back to a served impression within the lookback window. 'clickpass' is the legacy term for verified visit. Now a 3-branch UNION view (raw ≥2026-01-01 + competing_vv ≥2026-01-01 + history ≤2025-12-31).
+- [`logdata.conversion_signal_log`](logdata/conversion_signal_log.md) — Batch-ingested feed of offline / third-party conversion signals (mobile-app/MMP events, CRM lead lists, call-tracking) carrying a rich identity graph (hashed email/phone, device id, IP) — the pre-attribution counterpart to the pixel-based conversion_log.
+- [`logdata.event_log`](logdata/event_log.md) — CTV VAST video-event firehose — one row per VAST beacon (impression / 4 quartiles / complete) per served CTV impression; the source of the gold denormalized bid_ip and the VAST-playback ip for IP-lineage tracing and video-completion reporting. Display/mobile impressions are NOT present (they fire no VAST beacons).
+- [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — iCloud Private Relay verified-visit (VV) log — the clickpass_log analog for Apple iCloud Private Relay traffic. One row per attributed view-through/visit event served to an Apple relay IP, matched back to a served impression via ad_served_id. Small single-source view (~165K rows) over bronze raw.icloud_vv; NOT one of clickpass_log's UNION branches.
+- [`summarydata.advertiser_sales_cycle_by_day`](summarydata/advertiser_sales_cycle_by_day.md) — Event-level view (NOT advertiser x day despite the name): one row per pixel-tracked conversion x matched visitor identity ((advertiser_id x ip x conversion_epoch) ~unique; guid near-unique too). sales_cycle_time = seconds from the visitor's first page view to the conversion, populated ONLY for new-visitor conversions with a matched first page view (~3% of rows; 97% NULL). day is the DAY partition, not the grain.
+- [`summarydata.all_facts`](summarydata/all_facts.md) — Kitchen-sink hourly reporting fact table (UNION ALL of impression+visit+spend, conversion, and site legs) at an 18-column grain (hour + 17 dims); source of the R2/CHAPI graph metrics and the exact BQ<->UI ROAS/visit reproduction. 180 wide columns.
+- [`summarydata.conversion_facts`](summarydata/conversion_facts.md) — Hourly pre-aggregated conversion fact table — conversions + order value bucketed by attribution model (click/view, last-touch, last-TV-touch, assist, competing, probabilistic) across campaign/geo/device/creative dims.
+- [`summarydata.conversions`](summarydata/conversions.md) — Row-level, attribution-credited conversion events (one row per attributed conversion touch), joined to the verified impression that earned the credit; order_amt is the revenue column.
+- [`summarydata.icloud_guids`](summarydata/icloud_guids.md) — Reference map of Apple iCloud Private Relay egress IPv4 addresses to a derived v3 (name-based MD5) GUID token — a strict 1:1 bijection (~120.7K pairs), all-time distinct across daily snapshots.
+- [`summarydata.last_tv_touch_visits`](summarydata/last_tv_touch_visits.md) — Row-level site visits credited to the LAST CTV (TV) ad touch — a standalone attribution-model variant of the visit stream, NOT additive with last_touch/default. One row per TV-attributed visit; partitioned DAY on `time`; full history from 2023-08-15.
+- [`summarydata.offline_conversions`](summarydata/offline_conversions.md) — Offline / CRM-uploaded conversion events matched to ad exposure; deduped UNION ALL of a static historical archive plus the live BQ-native pipeline. Unpartitioned, small (~3.6M rows / ~1.7GB), current to today.
+- [`summarydata.offline_facts`](summarydata/offline_facts.md) — Fully-dimensioned hourly aggregate of offline/uploaded (CRM) conversions. Each conversion is materialized TWICE — once bucketed by conversion hour (offline_primary_*) and once by impression hour (cohort_offline_primary_*) — via a UNION ALL of two branches; never sum the two.
+- [`summarydata.site_facts`](summarydata/site_facts.md) — Hourly per-advertiser aggregate of site-visit events and pixel conversions, carrying deduped visitor identity sets (GUID) + IP-based new/existing-visitor splits as arrays and HLL++ sketches.
+- [`summarydata.sum_by_campaign_by_day`](summarydata/sum_by_campaign_by_day.md) — Daily campaign x day rollup of delivery, multi-model attribution, spend and HLL reach; history back to 2024-01-01, fresh through current day. Best long-pre-period source for CausalImpact.
+- [`summarydata.sum_by_ctv_network_by_day`](summarydata/sum_by_ctv_network_by_day.md) — Daily advertiser x campaign x CTV-network rollup — impressions, spend (media/data/platform), VAST quartiles, and full attribution measure families (default, last_touch, last_tv_touch, competing, probattr) keyed by human-readable network name in `domain`.
+- [`summarydata.ui_visits`](summarydata/ui_visits.md) — UI-facing verified-visit view — a UNION ALL of standard visits (retargeting/TVO campaigns) + TV-last-touch visits (prospecting campaigns), all forced from_verified_impression=TRUE. This is the row-level source behind the client UI's Verified Visits.
+- [`summarydata.visit_facts`](summarydata/visit_facts.md) — Pre-aggregated visit / view-through-attribution fact table: one row per hour x campaign x geo x device x pa_model tuple (18 dimension keys). Partition DAY on hour, clustered advertiser_id/campaign_id. Fresh through current hour; primary reporting source for visits.
+- [`summarydata.visits`](summarydata/visits.md) — Row-level Verified Visit (VV) records — the headline visit-rate KPI source. One row per site visit attributed to a served MNTN impression via ad_served_id (last-touch). Thin view over one physical DAY-partitioned table; full history to 2023-01-01.
+
+### auction
+- [`logdata.auction_log`](logdata/auction_log.md) — UNION ALL of two live pre-bid/auction event streams — the augmentor service (raw.augmentor_log) and the bidder (bidder_auction_events); not a single deduplicated auction grain.
+
+### auctions
+- [`logdata.bidder_auction_events`](logdata/bidder_auction_events.md) — Auction-grain firehose from the MNTN bidder — one row per auction seen (including dropped/no-bid); ~99.99% carry auction_dropped=TRUE. HOUR-partitioned on time, ~10-day silver retention, ~2.3B rows/hr.
+
+### audience
+- [`summarydata.site_facts`](summarydata/site_facts.md) — Hourly per-advertiser aggregate of site-visit events and pixel conversions, carrying deduped visitor identity sets (GUID) + IP-based new/existing-visitor splits as arrays and HLL++ sketches.
 
 ### bidding
+- [`logdata.auction_log`](logdata/auction_log.md) — UNION ALL of two live pre-bid/auction event streams — the augmentor service (raw.augmentor_log) and the bidder (bidder_auction_events); not a single deduplicated auction grain.
+- [`logdata.bid_events_log`](logdata/bid_events_log.md) — Analytics view over the Beeswax bid-price firehose (bronze.raw.bid_price_log, partner_id=8). One row per bid-price evaluation event; ~98% are FAILED bid attempts. 10-day TTL, HOUR-partitioned, ~2.9B rows/hour. The MNTN Rust-bidder branch (partner_id=79 / bidder_bid_events) was REMOVED as disabled — this is now Beeswax-only.
+- [`logdata.bid_logs`](logdata/bid_logs.md) — Beeswax (external DSP) per-bid decision log — one row per candidate campaign bid in an auction. VIEW = raw(2026+)+history(pre-2026) UNION on DIFFERENT partition cols; prune with BOTH date_column AND time.
+- [`logdata.bidder_auction_events`](logdata/bidder_auction_events.md) — Auction-grain firehose from the MNTN bidder — one row per auction seen (including dropped/no-bid); ~99.99% carry auction_dropped=TRUE. HOUR-partitioned on time, ~10-day silver retention, ~2.3B rows/hr.
 - [`logdata.bidder_bid_events`](logdata/bidder_bid_events.md) — Every bid decision (bid attempt + no-bid/drop reason) emitted by the MNTN (Rust) bidder — the canonical BQ surface for ghost-bid holdouts, bid-eligibility failures, and incrementality cohorts. MNTN-bidder ONLY (~22 advertisers); Beeswax stream lands elsewhere.
+- [`logdata.bidder_bid_events_test_optimized`](logdata/bidder_bid_events_test_optimized.md) — Frozen, unpartitioned physical copy of ~2 hours (2026-05-28 11:35-13:40 UTC) of bidder_bid_events — a one-shot 'optimized-layout' test snapshot (~884M rows / ~4.06 TB), created 2026-06-02 and never updated. Schema identical to bidder_bid_events. Not production; use the live bidder_bid_events view for real analysis.
+- [`logdata.spend_log_tmp`](logdata/spend_log_tmp.md) — Frozen one-shot staging snapshot of spend_log won-auction rows for a SINGLE advertiser (32167), auctions Jan 16 – Feb 2 2026 — created 2026-02-03 and never updated since. Do NOT use for analysis; use logdata.spend_log.
 - [`logdata.win_logs`](logdata/win_logs.md) — Beeswax win-notification log — one row per won impression from the external DSP/exchange perspective; win/clearing/bid prices in micros USD. IDs are Beeswax-internal (use *_alt_id to reach MNTN).
+
+### billing
+- [`logdata.realtime_spend_last_3d`](logdata/realtime_spend_last_3d.md) — Rolling ~3-day, impression-grain realtime spend view for pacing. Recomputes the last 24h live from spend_log + impression_log + margin history, then UNIONs finalized cost_impression_log for the 24h-to-3d tail. Computed on read (view over views); not for historical analysis.
+- [`logdata.spend_pacing`](logdata/spend_pacing.md) — Live, impression-grain spend for pacing — only YESTERDAY + TODAY (self-scoped to CURRENT_DATE-1). UNION of near-real-time bidder-win-notifications ('bwn', ~72M rows/day) + a tiny cost_impression_log gap-fill ('cil', ~6K/day), deduped so impression_id is unique. Non-materialized VIEW (recomputed each query); NOT for history — use cost_impression_log for that. PSA (adv 9090) & unlinked already excluded.
+
+### clicks
+- [`logdata.click_log`](logdata/click_log.md) — Raw ad-click events — one row per exchange-level ad click (CTV + display), distinct from clickpass_log (verified visits). 2-branch UNION view (raw >=2026-01-01 + history <=2025-12-31). LIVE DATA GAP: 2026-01-01 through ~2026-04-20 currently returns ZERO rows because the raw branch's 90-day partition TTL outran the history branch's 2025-12-31 cap.
 
 ### conversions
 - [`logdata.conversion_log`](logdata/conversion_log.md) — Pixel-fire conversion events (advertiser site conversions) — the un-attributed conversion firehose. Physical is a UNION ALL of bronze raw (rows >= 2026-01-01) + history (rows <= 2025-12-31), DAY-partitioned on `time` in BOTH branches; always filter DATE(time). order_amt = conversion value in LOCAL currency (the one to use); order_amt_usd is sparse; refires are real signal (no dedup).
+- [`logdata.conversion_signal_log`](logdata/conversion_signal_log.md) — Batch-ingested feed of offline / third-party conversion signals (mobile-app/MMP events, CRM lead lists, call-tracking) carrying a rich identity graph (hashed email/phone, device id, IP) — the pre-attribution counterpart to the pixel-based conversion_log.
+- [`summarydata.advertiser_sales_cycle_by_day`](summarydata/advertiser_sales_cycle_by_day.md) — Event-level view (NOT advertiser x day despite the name): one row per pixel-tracked conversion x matched visitor identity ((advertiser_id x ip x conversion_epoch) ~unique; guid near-unique too). sales_cycle_time = seconds from the visitor's first page view to the conversion, populated ONLY for new-visitor conversions with a matched first page view (~3% of rows; 97% NULL). day is the DAY partition, not the grain.
+- [`summarydata.conversion_facts`](summarydata/conversion_facts.md) — Hourly pre-aggregated conversion fact table — conversions + order value bucketed by attribution model (click/view, last-touch, last-TV-touch, assist, competing, probabilistic) across campaign/geo/device/creative dims.
+- [`summarydata.conversions`](summarydata/conversions.md) — Row-level, attribution-credited conversion events (one row per attributed conversion touch), joined to the verified impression that earned the credit; order_amt is the revenue column.
+- [`summarydata.offline_conversions`](summarydata/offline_conversions.md) — Offline / CRM-uploaded conversion events matched to ad exposure; deduped UNION ALL of a static historical archive plus the live BQ-native pipeline. Unpartitioned, small (~3.6M rows / ~1.7GB), current to today.
+- [`summarydata.offline_facts`](summarydata/offline_facts.md) — Fully-dimensioned hourly aggregate of offline/uploaded (CRM) conversions. Each conversion is materialized TWICE — once bucketed by conversion hour (offline_primary_*) and once by impression hour (cohort_offline_primary_*) — via a UNION ALL of two branches; never sum the two.
+- [`summarydata.site_facts`](summarydata/site_facts.md) — Hourly per-advertiser aggregate of site-visit events and pixel conversions, carrying deduped visitor identity sets (GUID) + IP-based new/existing-visitor splits as arrays and HLL++ sketches.
+
+### ctv
+- [`logdata.event_log`](logdata/event_log.md) — CTV VAST video-event firehose — one row per VAST beacon (impression / 4 quartiles / complete) per served CTV impression; the source of the gold denormalized bid_ip and the VAST-playback ip for IP-lineage tracing and video-completion reporting. Display/mobile impressions are NOT present (they fire no VAST beacons).
+- [`logdata.v_viewability_log_pub_metric`](logdata/v_viewability_log_pub_metric.md) — Unified impression+viewability event stream for publisher viewability metrics: CTV impressions (from cost_impression_log, channel_id=8) stamped as BOTH measurable and viewable, UNION'd with display viewable events (from viewability_log, viewable-only). exchange_id is a hardcoded literal 131 on every row.
+- [`summarydata.last_tv_touch_visits`](summarydata/last_tv_touch_visits.md) — Row-level site visits credited to the LAST CTV (TV) ad touch — a standalone attribution-model variant of the visit stream, NOT additive with last_touch/default. One row per TV-attributed visit; partitioned DAY on `time`; full history from 2023-08-15.
+- [`summarydata.sum_by_ctv_network_by_day`](summarydata/sum_by_ctv_network_by_day.md) — Daily advertiser x campaign x CTV-network rollup — impressions, spend (media/data/platform), VAST quartiles, and full attribution measure families (default, last_touch, last_tv_touch, competing, probattr) keyed by human-readable network name in `domain`.
 
 ### ctv-display
 - [`logdata.win_logs`](logdata/win_logs.md) — Beeswax win-notification log — one row per won impression from the external DSP/exchange perspective; win/clearing/bid prices in micros USD. IDs are Beeswax-internal (use *_alt_id to reach MNTN).
 
 ### delivery
 - [`logdata.cost_impression_log`](logdata/cost_impression_log.md) — Customer-centric, impression-grain spend enriched with geo/device/segment/score fields. THE big history+cost table (~76B rows / 62 TB, fixed floor 2023-10-01, still growing). PSAs excluded. Partition DAY on time; cluster advertiser_id, impression_id.
+- [`logdata.spend_pacing`](logdata/spend_pacing.md) — Live, impression-grain spend for pacing — only YESTERDAY + TODAY (self-scoped to CURRENT_DATE-1). UNION of near-real-time bidder-win-notifications ('bwn', ~72M rows/day) + a tiny cost_impression_log gap-fill ('cil', ~6K/day), deduped so impression_id is unique. Non-materialized VIEW (recomputed each query); NOT for history — use cost_impression_log for that. PSA (adv 9090) & unlinked already excluded.
+- [`summarydata.sum_by_campaign_by_day`](summarydata/sum_by_campaign_by_day.md) — Daily campaign x day rollup of delivery, multi-model attribution, spend and HLL reach; history back to 2024-01-01, fresh through current day. Best long-pre-period source for CausalImpact.
+
+### display
+- [`logdata.viewability_log`](logdata/viewability_log.md) — Display-only IAB viewability events (measurable + viewable) — the display equivalent of event_log for tracing viewable display impressions back through the pipeline.
 
 ### geo
 - [`logdata.cost_impression_log`](logdata/cost_impression_log.md) — Customer-centric, impression-grain spend enriched with geo/device/segment/score fields. THE big history+cost table (~76B rows / 62 TB, fixed floor 2023-10-01, still growing). PSAs excluded. Partition DAY on time; cluster advertiser_id, impression_id.
 
+### icloud_relay
+- [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — iCloud Private Relay verified-visit (VV) log — the clickpass_log analog for Apple iCloud Private Relay traffic. One row per attributed view-through/visit event served to an Apple relay IP, matched back to a served impression via ad_served_id. Small single-source view (~165K rows) over bronze raw.icloud_vv; NOT one of clickpass_log's UNION branches.
+
 ### identity
 - [`logdata.guid_log`](logdata/guid_log.md) — MNTN's own first-party site pixel (DS23). One row per page-view EVENT on an advertiser site by a tracked household — fires on every page view whether or not MNTN served an ad. The honest total-traffic signal vs clickpass_log's attributed visits. UNION of recent-raw (2026+, HOUR) and a permanent history archive (<=2025, DAY).
+- [`logdata.page_view_signal_log`](logdata/page_view_signal_log.md) — Thin silver VIEW over bronze.raw.page_view_signal_log — one row per pixel-vendor page-view signal (currently 100% DS41 Freshpaint), keyed on first-party guid + url. NOT the MNTN guid_log first-party pixel.
+- [`summarydata.advertiser_sales_cycle_by_day`](summarydata/advertiser_sales_cycle_by_day.md) — Event-level view (NOT advertiser x day despite the name): one row per pixel-tracked conversion x matched visitor identity ((advertiser_id x ip x conversion_epoch) ~unique; guid near-unique too). sales_cycle_time = seconds from the visitor's first page view to the conversion, populated ONLY for new-visitor conversions with a matched first page view (~3% of rows; 97% NULL). day is the DAY partition, not the grain.
+- [`summarydata.guid_ip_log_visitors`](summarydata/guid_ip_log_visitors.md) — Per-advertiser guid<->ip visitor mapping distilled from guid_log page-view events; DAY-partitioned on time, ~120-day TTL, ~30B rows / 2.37 TB.
+- [`summarydata.icloud_guids`](summarydata/icloud_guids.md) — Reference map of Apple iCloud Private Relay egress IPv4 addresses to a derived v3 (name-based MD5) GUID token — a strict 1:1 bijection (~120.7K pairs), all-time distinct across daily snapshots.
+- [`summarydata.icloud_ipv4`](summarydata/icloud_ipv4.md) — Distinct iCloud Private Relay egress IPv4 addresses (~120.7K, all Cloudflare/Akamai relay ranges) that Targeting excludes from bidding so relay IPs never enter MembershipDB; consumed by the ipdsc job.
+- [`summarydata.icloud_ipv6`](summarydata/icloud_ipv6.md) — Reference list of Apple iCloud Private Relay IPv6 egress CIDR blocks (~407K distinct ::/NN networks) with progressively-coarser prefix keys (first hextet / two hextets / three hextets). DISTINCT union of a curated external table plus every daily raw snapshot. Used to flag or exclude Private Relay traffic via subnet/prefix match — never an equi-join on the CIDR string.
 
 ### impressions
+- [`logdata.event_log`](logdata/event_log.md) — CTV VAST video-event firehose — one row per VAST beacon (impression / 4 quartiles / complete) per served CTV impression; the source of the gold denormalized bid_ip and the VAST-playback ip for IP-lineage tracing and video-completion reporting. Display/mobile impressions are NOT present (they fire no VAST beacons).
+- [`logdata.v_viewability_log_pub_metric`](logdata/v_viewability_log_pub_metric.md) — Unified impression+viewability event stream for publisher viewability metrics: CTV impressions (from cost_impression_log, channel_id=8) stamped as BOTH measurable and viewable, UNION'd with display viewable events (from viewability_log, viewable-only). exchange_id is a hardcoded literal 131 on every row.
+- [`logdata.viewability_log`](logdata/viewability_log.md) — Display-only IAB viewability events (measurable + viewable) — the display equivalent of event_log for tracing viewable display impressions back through the pipeline.
 - [`logdata.win_logs`](logdata/win_logs.md) — Beeswax win-notification log — one row per won impression from the external DSP/exchange perspective; win/clearing/bid prices in micros USD. IDs are Beeswax-internal (use *_alt_id to reach MNTN).
+- [`summarydata.impression_facts`](summarydata/impression_facts.md) — Primary hourly impressions fact table — one row per full dimension tuple (campaign/geo/device/domain/supply) per hour; served/won impressions only, with additive impression/cost/VAST/viewability measures and channel-conditional HLL reach sketches.
 
 ### incrementality
 - [`logdata.bidder_bid_events`](logdata/bidder_bid_events.md) — Every bid decision (bid attempt + no-bid/drop reason) emitted by the MNTN (Rust) bidder — the canonical BQ surface for ghost-bid holdouts, bid-eligibility failures, and incrementality cohorts. MNTN-bidder ONLY (~22 advertisers); Beeswax stream lands elsewhere.
+- [`logdata.bidder_bid_events_test_optimized`](logdata/bidder_bid_events_test_optimized.md) — Frozen, unpartitioned physical copy of ~2 hours (2026-05-28 11:35-13:40 UTC) of bidder_bid_events — a one-shot 'optimized-layout' test snapshot (~884M rows / ~4.06 TB), created 2026-06-02 and never updated. Schema identical to bidder_bid_events. Not production; use the live bidder_bid_events view for real analysis.
 - [`logdata.guid_log`](logdata/guid_log.md) — MNTN's own first-party site pixel (DS23). One row per page-view EVENT on an advertiser site by a tracked household — fires on every page view whether or not MNTN served an ad. The honest total-traffic signal vs clickpass_log's attributed visits. UNION of recent-raw (2026+, HOUR) and a permanent history archive (<=2025, DAY).
+
+### ip-intelligence
+- [`summarydata.icloud_ipv6`](summarydata/icloud_ipv6.md) — Reference list of Apple iCloud Private Relay IPv6 egress CIDR blocks (~407K distinct ::/NN networks) with progressively-coarser prefix keys (first hextet / two hextets / three hextets). DISTINCT union of a curated external table plus every daily raw snapshot. Used to flag or exclude Private Relay traffic via subnet/prefix match — never an equi-join on the CIDR string.
+
+### ip-lineage
+- [`logdata.event_log`](logdata/event_log.md) — CTV VAST video-event firehose — one row per VAST beacon (impression / 4 quartiles / complete) per served CTV impression; the source of the gold denormalized bid_ip and the VAST-playback ip for IP-lineage tracing and video-completion reporting. Display/mobile impressions are NOT present (they fire no VAST beacons).
+
+### measurement
+- [`logdata.viewability_log`](logdata/viewability_log.md) — Display-only IAB viewability events (measurable + viewable) — the display equivalent of event_log for tracing viewable display impressions back through the pipeline.
+- [`summarydata.visits`](summarydata/visits.md) — Row-level Verified Visit (VV) records — the headline visit-rate KPI source. One row per site visit attributed to a served MNTN impression via ad_served_id (last-touch). Thin view over one physical DAY-partitioned table; full history to 2023-01-01.
+
+### offline
+- [`logdata.conversion_signal_log`](logdata/conversion_signal_log.md) — Batch-ingested feed of offline / third-party conversion signals (mobile-app/MMP events, CRM lead lists, call-tracking) carrying a rich identity graph (hashed email/phone, device id, IP) — the pre-attribution counterpart to the pixel-based conversion_log.
+- [`summarydata.offline_conversions`](summarydata/offline_conversions.md) — Offline / CRM-uploaded conversion events matched to ad exposure; deduped UNION ALL of a static historical archive plus the live BQ-native pipeline. Unpartitioned, small (~3.6M rows / ~1.7GB), current to today.
+- [`summarydata.offline_facts`](summarydata/offline_facts.md) — Fully-dimensioned hourly aggregate of offline/uploaded (CRM) conversions. Each conversion is materialized TWICE — once bucketed by conversion hour (offline_primary_*) and once by impression hour (cohort_offline_primary_*) — via a UNION ALL of two branches; never sum the two.
+
+### pacing
+- [`logdata.realtime_spend_last_3d`](logdata/realtime_spend_last_3d.md) — Rolling ~3-day, impression-grain realtime spend view for pacing. Recomputes the last 24h live from spend_log + impression_log + margin history, then UNIONs finalized cost_impression_log for the 24h-to-3d tail. Computed on read (view over views); not for historical analysis.
+- [`logdata.spend_pacing`](logdata/spend_pacing.md) — Live, impression-grain spend for pacing — only YESTERDAY + TODAY (self-scoped to CURRENT_DATE-1). UNION of near-real-time bidder-win-notifications ('bwn', ~72M rows/day) + a tiny cost_impression_log gap-fill ('cil', ~6K/day), deduped so impression_id is unique. Non-materialized VIEW (recomputed each query); NOT for history — use cost_impression_log for that. PSA (adv 9090) & unlinked already excluded.
 
 ### pixel
 - [`logdata.conversion_log`](logdata/conversion_log.md) — Pixel-fire conversion events (advertiser site conversions) — the un-attributed conversion firehose. Physical is a UNION ALL of bronze raw (rows >= 2026-01-01) + history (rows <= 2025-12-31), DAY-partitioned on `time` in BOTH branches; always filter DATE(time). order_amt = conversion value in LOCAL currency (the one to use); order_amt_usd is sparse; refires are real signal (no dedup).
 - [`logdata.guid_log`](logdata/guid_log.md) — MNTN's own first-party site pixel (DS23). One row per page-view EVENT on an advertiser site by a tracked household — fires on every page view whether or not MNTN served an ad. The honest total-traffic signal vs clickpass_log's attributed visits. UNION of recent-raw (2026+, HOUR) and a permanent history archive (<=2025, DAY).
+- [`logdata.page_view_signal_log`](logdata/page_view_signal_log.md) — Thin silver VIEW over bronze.raw.page_view_signal_log — one row per pixel-vendor page-view signal (currently 100% DS41 Freshpaint), keyed on first-party guid + url. NOT the MNTN guid_log first-party pixel.
+
+### pre-bid
+- [`logdata.auction_log`](logdata/auction_log.md) — UNION ALL of two live pre-bid/auction event streams — the augmentor service (raw.augmentor_log) and the bidder (bidder_auction_events); not a single deduplicated auction grain.
+
+### programmatic
+- [`logdata.bid_logs`](logdata/bid_logs.md) — Beeswax (external DSP) per-bid decision log — one row per candidate campaign bid in an auction. VIEW = raw(2026+)+history(pre-2026) UNION on DIFFERENT partition cols; prune with BOTH date_column AND time.
+- [`logdata.bidder_auction_events`](logdata/bidder_auction_events.md) — Auction-grain firehose from the MNTN bidder — one row per auction seen (including dropped/no-bid); ~99.99% carry auction_dropped=TRUE. HOUR-partitioned on time, ~10-day silver retention, ~2.3B rows/hr.
+
+### reach
+- [`summarydata.impression_facts`](summarydata/impression_facts.md) — Primary hourly impressions fact table — one row per full dimension tuple (campaign/geo/device/domain/supply) per hour; served/won impressions only, with additive impression/cost/VAST/viewability measures and channel-conditional HLL reach sketches.
+
+### reporting
+- [`summarydata.all_facts`](summarydata/all_facts.md) — Kitchen-sink hourly reporting fact table (UNION ALL of impression+visit+spend, conversion, and site legs) at an 18-column grain (hour + 17 dims); source of the R2/CHAPI graph metrics and the exact BQ<->UI ROAS/visit reproduction. 180 wide columns.
+- [`summarydata.conversion_facts`](summarydata/conversion_facts.md) — Hourly pre-aggregated conversion fact table — conversions + order value bucketed by attribution model (click/view, last-touch, last-TV-touch, assist, competing, probabilistic) across campaign/geo/device/creative dims.
+- [`summarydata.conversions`](summarydata/conversions.md) — Row-level, attribution-credited conversion events (one row per attributed conversion touch), joined to the verified impression that earned the credit; order_amt is the revenue column.
+- [`summarydata.impression_facts`](summarydata/impression_facts.md) — Primary hourly impressions fact table — one row per full dimension tuple (campaign/geo/device/domain/supply) per hour; served/won impressions only, with additive impression/cost/VAST/viewability measures and channel-conditional HLL reach sketches.
+- [`summarydata.sum_by_campaign_by_day`](summarydata/sum_by_campaign_by_day.md) — Daily campaign x day rollup of delivery, multi-model attribution, spend and HLL reach; history back to 2024-01-01, fresh through current day. Best long-pre-period source for CausalImpact.
+- [`summarydata.sum_by_ctv_network_by_day`](summarydata/sum_by_ctv_network_by_day.md) — Daily advertiser x campaign x CTV-network rollup — impressions, spend (media/data/platform), VAST quartiles, and full attribution measure families (default, last_touch, last_tv_touch, competing, probattr) keyed by human-readable network name in `domain`.
+- [`summarydata.ui_visits`](summarydata/ui_visits.md) — UI-facing verified-visit view — a UNION ALL of standard visits (retargeting/TVO campaigns) + TV-last-touch visits (prospecting campaigns), all forced from_verified_impression=TRUE. This is the row-level source behind the client UI's Verified Visits.
+- [`summarydata.visit_facts`](summarydata/visit_facts.md) — Pre-aggregated visit / view-through-attribution fact table: one row per hour x campaign x geo x device x pa_model tuple (18 dimension keys). Partition DAY on hour, clustered advertiser_id/campaign_id. Fresh through current hour; primary reporting source for visits.
 
 ### revenue
 - [`logdata.conversion_log`](logdata/conversion_log.md) — Pixel-fire conversion events (advertiser site conversions) — the un-attributed conversion firehose. Physical is a UNION ALL of bronze raw (rows >= 2026-01-01) + history (rows <= 2025-12-31), DAY-partitioned on `time` in BOTH branches; always filter DATE(time). order_amt = conversion value in LOCAL currency (the one to use); order_amt_usd is sparse; refires are real signal (no dedup).
+
+### rtb
+- [`logdata.bid_events_log`](logdata/bid_events_log.md) — Analytics view over the Beeswax bid-price firehose (bronze.raw.bid_price_log, partner_id=8). One row per bid-price evaluation event; ~98% are FAILED bid attempts. 10-day TTL, HOUR-partitioned, ~2.9B rows/hour. The MNTN Rust-bidder branch (partner_id=79 / bidder_bid_events) was REMOVED as disabled — this is now Beeswax-only.
 
 ### scoring
 - [`logdata.cost_impression_log`](logdata/cost_impression_log.md) — Customer-centric, impression-grain spend enriched with geo/device/segment/score fields. THE big history+cost table (~76B rows / 62 TB, fixed floor 2023-10-01, still growing). PSAs excluded. Partition DAY on time; cluster advertiser_id, impression_id.
@@ -48,15 +167,45 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 ### site_traffic
 - [`logdata.guid_log`](logdata/guid_log.md) — MNTN's own first-party site pixel (DS23). One row per page-view EVENT on an advertiser site by a tracked household — fires on every page view whether or not MNTN served an ad. The honest total-traffic signal vs clickpass_log's attributed visits. UNION of recent-raw (2026+, HOUR) and a permanent history archive (<=2025, DAY).
 
+### site_visit_signal
+- [`logdata.page_view_signal_log`](logdata/page_view_signal_log.md) — Thin silver VIEW over bronze.raw.page_view_signal_log — one row per pixel-vendor page-view signal (currently 100% DS41 Freshpaint), keyed on first-party guid + url. NOT the MNTN guid_log first-party pixel.
+
+### site_visits
+- [`summarydata.site_facts`](summarydata/site_facts.md) — Hourly per-advertiser aggregate of site-visit events and pixel conversions, carrying deduped visitor identity sets (GUID) + IP-based new/existing-visitor splits as arrays and HLL++ sketches.
+
 ### spend
 - [`logdata.cost_impression_log`](logdata/cost_impression_log.md) — Customer-centric, impression-grain spend enriched with geo/device/segment/score fields. THE big history+cost table (~76B rows / 62 TB, fixed floor 2023-10-01, still growing). PSAs excluded. Partition DAY on time; cluster advertiser_id, impression_id.
+- [`logdata.realtime_spend_last_3d`](logdata/realtime_spend_last_3d.md) — Rolling ~3-day, impression-grain realtime spend view for pacing. Recomputes the last 24h live from spend_log + impression_log + margin history, then UNIONs finalized cost_impression_log for the 24h-to-3d tail. Computed on read (view over views); not for historical analysis.
+- [`logdata.spend_log_tmp`](logdata/spend_log_tmp.md) — Frozen one-shot staging snapshot of spend_log won-auction rows for a SINGLE advertiser (32167), auctions Jan 16 – Feb 2 2026 — created 2026-02-03 and never updated since. Do NOT use for analysis; use logdata.spend_log.
+- [`logdata.spend_pacing`](logdata/spend_pacing.md) — Live, impression-grain spend for pacing — only YESTERDAY + TODAY (self-scoped to CURRENT_DATE-1). UNION of near-real-time bidder-win-notifications ('bwn', ~72M rows/day) + a tiny cost_impression_log gap-fill ('cil', ~6K/day), deduped so impression_id is unique. Non-materialized VIEW (recomputed each query); NOT for history — use cost_impression_log for that. PSA (adv 9090) & unlinked already excluded.
 - [`logdata.win_logs`](logdata/win_logs.md) — Beeswax win-notification log — one row per won impression from the external DSP/exchange perspective; win/clearing/bid prices in micros USD. IDs are Beeswax-internal (use *_alt_id to reach MNTN).
+- [`summarydata.all_facts`](summarydata/all_facts.md) — Kitchen-sink hourly reporting fact table (UNION ALL of impression+visit+spend, conversion, and site legs) at an 18-column grain (hour + 17 dims); source of the R2/CHAPI graph metrics and the exact BQ<->UI ROAS/visit reproduction. 180 wide columns.
+
+### staging
+- [`logdata.spend_log_tmp`](logdata/spend_log_tmp.md) — Frozen one-shot staging snapshot of spend_log won-auction rows for a SINGLE advertiser (32167), auctions Jan 16 – Feb 2 2026 — created 2026-02-03 and never updated since. Do NOT use for analysis; use logdata.spend_log.
+
+### summarydata
+- [`summarydata.guid_ip_log_visitors`](summarydata/guid_ip_log_visitors.md) — Per-advertiser guid<->ip visitor mapping distilled from guid_log page-view events; DAY-partitioned on time, ~120-day TTL, ~30B rows / 2.37 TB.
+
+### targeting
+- [`summarydata.icloud_ipv4`](summarydata/icloud_ipv4.md) — Distinct iCloud Private Relay egress IPv4 addresses (~120.7K, all Cloudflare/Akamai relay ranges) that Targeting excludes from bidding so relay IPs never enter MembershipDB; consumed by the ipdsc job.
+- [`summarydata.icloud_ipv6`](summarydata/icloud_ipv6.md) — Reference list of Apple iCloud Private Relay IPv6 egress CIDR blocks (~407K distinct ::/NN networks) with progressively-coarser prefix keys (first hextet / two hextets / three hextets). DISTINCT union of a curated external table plus every daily raw snapshot. Used to flag or exclude Private Relay traffic via subnet/prefix match — never an equi-join on the CIDR string.
 
 ### verified_visit
 - [`logdata.clickpass_log`](logdata/clickpass_log.md) — Verified-visit (VV) log — one row per MNTN-attributed visit (clicks + VVs, CTV and display), matched back to a served impression within the lookback window. 'clickpass' is the legacy term for verified visit. Now a 3-branch UNION view (raw ≥2026-01-01 + competing_vv ≥2026-01-01 + history ≤2025-12-31).
+- [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — iCloud Private Relay verified-visit (VV) log — the clickpass_log analog for Apple iCloud Private Relay traffic. One row per attributed view-through/visit event served to an Apple relay IP, matched back to a served impression via ad_served_id. Small single-source view (~165K rows) over bronze raw.icloud_vv; NOT one of clickpass_log's UNION branches.
+
+### viewability
+- [`logdata.v_viewability_log_pub_metric`](logdata/v_viewability_log_pub_metric.md) — Unified impression+viewability event stream for publisher viewability metrics: CTV impressions (from cost_impression_log, channel_id=8) stamped as BOTH measurable and viewable, UNION'd with display viewable events (from viewability_log, viewable-only). exchange_id is a hardcoded literal 131 on every row.
+- [`logdata.viewability_log`](logdata/viewability_log.md) — Display-only IAB viewability events (measurable + viewable) — the display equivalent of event_log for tracing viewable display impressions back through the pipeline.
 
 ### visits
 - [`logdata.clickpass_log`](logdata/clickpass_log.md) — Verified-visit (VV) log — one row per MNTN-attributed visit (clicks + VVs, CTV and display), matched back to a served impression within the lookback window. 'clickpass' is the legacy term for verified visit. Now a 3-branch UNION view (raw ≥2026-01-01 + competing_vv ≥2026-01-01 + history ≤2025-12-31).
+- [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — iCloud Private Relay verified-visit (VV) log — the clickpass_log analog for Apple iCloud Private Relay traffic. One row per attributed view-through/visit event served to an Apple relay IP, matched back to a served impression via ad_served_id. Small single-source view (~165K rows) over bronze raw.icloud_vv; NOT one of clickpass_log's UNION branches.
+- [`summarydata.last_tv_touch_visits`](summarydata/last_tv_touch_visits.md) — Row-level site visits credited to the LAST CTV (TV) ad touch — a standalone attribution-model variant of the visit stream, NOT additive with last_touch/default. One row per TV-attributed visit; partitioned DAY on `time`; full history from 2023-08-15.
+- [`summarydata.ui_visits`](summarydata/ui_visits.md) — UI-facing verified-visit view — a UNION ALL of standard visits (retargeting/TVO campaigns) + TV-last-touch visits (prospecting campaigns), all forced from_verified_impression=TRUE. This is the row-level source behind the client UI's Verified Visits.
+- [`summarydata.visit_facts`](summarydata/visit_facts.md) — Pre-aggregated visit / view-through-attribution fact table: one row per hour x campaign x geo x device x pa_model tuple (18 dimension keys). Partition DAY on hour, clustered advertiser_id/campaign_id. Fresh through current hour; primary reporting source for visits.
+- [`summarydata.visits`](summarydata/visits.md) — Row-level Verified Visit (VV) records — the headline visit-rate KPI source. One row per site visit attributed to a served MNTN impression via ad_served_id (last-touch). Thin view over one physical DAY-partitioned table; full history to 2023-01-01.
 
 ### (unassigned)
 - [`aggregates.agg__daily_sum_by_campaign`](aggregates/agg__daily_sum_by_campaign.md) — <what this view provides>
@@ -143,28 +292,11 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.v_campaign_group_channel_margins`](core/v_campaign_group_channel_margins.md) — <what this view provides>
 - [`core.v_channel_margins`](core/v_channel_margins.md) — <what this view provides>
 - [`core.v_icloud_blacklist`](core/v_icloud_blacklist.md) — <what this view provides>
-- [`logdata.auction_log`](logdata/auction_log.md) — <what this view provides>
-- [`logdata.bid_events_log`](logdata/bid_events_log.md) — <what this view provides>
-- [`logdata.bid_logs`](logdata/bid_logs.md) — <what this view provides>
-- [`logdata.bidder_auction_events`](logdata/bidder_auction_events.md) — <what this view provides>
-- [`logdata.bidder_bid_events_test_optimized`](logdata/bidder_bid_events_test_optimized.md) — one row per <FILL grain> — <what it's for>
-- [`logdata.click_log`](logdata/click_log.md) — <what this view provides>
-- [`logdata.conversion_signal_log`](logdata/conversion_signal_log.md) — <what this view provides>
-- [`logdata.event_log`](logdata/event_log.md) — <what this view provides>
-- [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — <what this view provides>
 - [`logdata.impression_log`](logdata/impression_log.md) — One row per served/rendered ad impression (display + CTV, won-and-served). ad_served_id = unique PK; join to visits/conversions. Partition on `time`; epoch is MICROSECONDS.
-- [`logdata.page_view_signal_log`](logdata/page_view_signal_log.md) — <what this view provides>
-- [`logdata.realtime_spend_last_3d`](logdata/realtime_spend_last_3d.md) — <what this view provides>
 - [`logdata.spend_log`](logdata/spend_log.md) — Won-auction / billable-impression log — MNTN bidder's realized spend (win_cost_micros_usd, micros USD). Source of truth for spend, pacing, and deliverability. One row per won auction, HOUR-partitioned on auction_timestamp.
-- [`logdata.spend_log_tmp`](logdata/spend_log_tmp.md) — one row per <FILL grain> — <what it's for>
-- [`logdata.spend_pacing`](logdata/spend_pacing.md) — <what this view provides>
-- [`logdata.v_augmentor_log`](logdata/v_augmentor_log.md) — <what this view provides>
-- [`logdata.v_viewability_log_pub_metric`](logdata/v_viewability_log_pub_metric.md) — <what this view provides>
-- [`logdata.viewability_log`](logdata/viewability_log.md) — <what this view provides>
+- [`logdata.v_augmentor_log`](logdata/v_augmentor_log.md) — Silver view over bronze.raw.augmentor_log — the pre-bid augmentation log. One row per upstream bid-request the augmentor evaluated, carrying IP/geo/device/inventory context plus the MNTN segments that evaluated that IP. Thin passthrough that also parses the raw geo string into a geo_parsed struct. HOUR-partitioned on time, 10-day TTL, partition filter REQUIRED, clustered by ip.
 - [`summarydata.advertiser_audience_tooling_change_log`](summarydata/advertiser_audience_tooling_change_log.md) — <what this view provides>
 - [`summarydata.advertiser_pa_toggle_change_log`](summarydata/advertiser_pa_toggle_change_log.md) — <what this view provides>
-- [`summarydata.advertiser_sales_cycle_by_day`](summarydata/advertiser_sales_cycle_by_day.md) — <what this view provides>
-- [`summarydata.all_facts`](summarydata/all_facts.md) — <what this view provides>
 - [`summarydata.audience_keyword_parent_history`](summarydata/audience_keyword_parent_history.md) — <what this view provides>
 - [`summarydata.audience_keyword_state_history`](summarydata/audience_keyword_state_history.md) — <what this view provides>
 - [`summarydata.budget_changes`](summarydata/budget_changes.md) — <what this view provides>
@@ -180,43 +312,29 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`summarydata.cohort_visit_facts`](summarydata/cohort_visit_facts.md) — <what this view provides>
 - [`summarydata.cohort_visit_facts_pivoted`](summarydata/cohort_visit_facts_pivoted.md) — <what this view provides>
 - [`summarydata.competing_source_facts`](summarydata/competing_source_facts.md) — <what this view provides>
-- [`summarydata.conversion_facts`](summarydata/conversion_facts.md) — <what this view provides>
 - [`summarydata.conversion_signal_impressions`](summarydata/conversion_signal_impressions.md) — <what this view provides>
 - [`summarydata.conversion_sources`](summarydata/conversion_sources.md) — <what this view provides>
-- [`summarydata.conversions`](summarydata/conversions.md) — <what this view provides>
 - [`summarydata.conversions__copy_data`](summarydata/conversions__copy_data.md) — <what this view provides>
 - [`summarydata.freshpaint_advertisers`](summarydata/freshpaint_advertisers.md) — <what this view provides>
 - [`summarydata.ga_client_id_x_ip_counts`](summarydata/ga_client_id_x_ip_counts.md) — <what this view provides>
 - [`summarydata.ga_client_id_x_ip_map`](summarydata/ga_client_id_x_ip_map.md) — <what this view provides>
-- [`summarydata.guid_ip_log_visitors`](summarydata/guid_ip_log_visitors.md) — <what this view provides>
-- [`summarydata.icloud_guids`](summarydata/icloud_guids.md) — <what this view provides>
-- [`summarydata.icloud_ipv4`](summarydata/icloud_ipv4.md) — <what this view provides>
-- [`summarydata.icloud_ipv6`](summarydata/icloud_ipv6.md) — <what this view provides>
-- [`summarydata.impression_facts`](summarydata/impression_facts.md) — <what this view provides>
-- [`summarydata.last_tv_touch_conversions`](summarydata/last_tv_touch_conversions.md) — <what this view provides>
+- [`summarydata.last_tv_touch_conversions`](summarydata/last_tv_touch_conversions.md) — Row-level conversions credited to the advertiser's LAST TV (CTV) touch; one row per attributed conversion event, partition DAY on time, ~58M rows back to 2023-10-01, fresh through current day.
 - [`summarydata.last_tv_touch_conversions__copy_data`](summarydata/last_tv_touch_conversions__copy_data.md) — <what this view provides>
-- [`summarydata.last_tv_touch_visits`](summarydata/last_tv_touch_visits.md) — <what this view provides>
 - [`summarydata.metros`](summarydata/metros.md) — one row per <FILL grain> — <what it's for>
-- [`summarydata.offline_conversions`](summarydata/offline_conversions.md) — <what this view provides>
-- [`summarydata.offline_facts`](summarydata/offline_facts.md) — <what this view provides>
 - [`summarydata.pa_navigation_guide`](summarydata/pa_navigation_guide.md) — <what this view provides>
 - [`summarydata.publisher_adsize_metrics`](summarydata/publisher_adsize_metrics.md) — <what this view provides>
 - [`summarydata.publisher_adsize_metrics_v1`](summarydata/publisher_adsize_metrics_v1.md) — <what this view provides>
 - [`summarydata.rolling_conversion_metrics`](summarydata/rolling_conversion_metrics.md) — <what this view provides>
 - [`summarydata.sales_cycle_averages_by_advertiser_id`](summarydata/sales_cycle_averages_by_advertiser_id.md) — <what this view provides>
-- [`summarydata.site_facts`](summarydata/site_facts.md) — <what this view provides>
-- [`summarydata.spend_facts`](summarydata/spend_facts.md) — <what this view provides>
+- [`summarydata.spend_facts`](summarydata/spend_facts.md) — Hourly pre-aggregated ad-spend fact table: one row per hour x full dimension tuple (advertiser/campaign/geo/device/domain/supply_vendor), with five whole-USD spend measures (media, data, platform, ctv, unlinked).
 - [`summarydata.sum_by_advertiser_by_day`](summarydata/sum_by_advertiser_by_day.md) — <what this view provides>
-- [`summarydata.sum_by_campaign_by_day`](summarydata/sum_by_campaign_by_day.md) — <what this view provides>
 - [`summarydata.sum_by_campaign_group_by_day`](summarydata/sum_by_campaign_group_by_day.md) — <what this view provides>
 - [`summarydata.sum_by_campaign_group_by_hour`](summarydata/sum_by_campaign_group_by_hour.md) — <what this view provides>
 - [`summarydata.sum_by_creative_by_day`](summarydata/sum_by_creative_by_day.md) — <what this view provides>
 - [`summarydata.sum_by_creative_group_by_day`](summarydata/sum_by_creative_group_by_day.md) — <what this view provides>
-- [`summarydata.sum_by_ctv_network_by_day`](summarydata/sum_by_ctv_network_by_day.md) — <what this view provides>
 - [`summarydata.sum_by_region_by_day`](summarydata/sum_by_region_by_day.md) — <what this view provides>
 - [`summarydata.tvo_prospecting_campaign_groups`](summarydata/tvo_prospecting_campaign_groups.md) — <what this view provides>
 - [`summarydata.ui_conversions`](summarydata/ui_conversions.md) — <what this view provides>
-- [`summarydata.ui_visits`](summarydata/ui_visits.md) — <what this view provides>
 - [`summarydata.unstable_all_facts`](summarydata/unstable_all_facts.md) — <what this view provides>
 - [`summarydata.unstable_conversion_facts`](summarydata/unstable_conversion_facts.md) — <what this view provides>
 - [`summarydata.unstable_cost_impression_log`](summarydata/unstable_cost_impression_log.md) — <what this view provides>
@@ -227,9 +345,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`summarydata.unstable_visit_facts`](summarydata/unstable_visit_facts.md) — <what this view provides>
 - [`summarydata.v_all_facts`](summarydata/v_all_facts.md) — <what this view provides>
 - [`summarydata.v_campaign_group_segment_history`](summarydata/v_campaign_group_segment_history.md) — <what this view provides>
-- [`summarydata.visit_facts`](summarydata/visit_facts.md) — <what this view provides>
 - [`summarydata.visit_sources`](summarydata/visit_sources.md) — <what this view provides>
-- [`summarydata.visits`](summarydata/visits.md) — <what this view provides>
 - [`summarydata.waypoint_event_mapping`](summarydata/waypoint_event_mapping.md) — <what this view provides>
 - [`summarydata.waypoints`](summarydata/waypoints.md) — <what this view provides>
 - [`summarydata.waypoints__optimizable_event_aggregated`](summarydata/waypoints__optimizable_event_aggregated.md) — <what this view provides>
