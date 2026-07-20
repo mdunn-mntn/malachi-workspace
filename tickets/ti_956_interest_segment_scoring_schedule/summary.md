@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-956: Scheduled Interest Segment Scoring Job"
+status: in_progress
+date: 2026-06-09
+summary: "Run LiveRamp interest-segment quality scoring weekly, output to GCS and BigQuery"
+result: "in progress — airflow-ti model + DAG merged; first Dataproc run pending wheel-fix deploy"
+---
+
 # TI-956: Scheduled Interest Segment Scoring Job
 
 **Jira:** https://mntn.atlassian.net/browse/TI-956

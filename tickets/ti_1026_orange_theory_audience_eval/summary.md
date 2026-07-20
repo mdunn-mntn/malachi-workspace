@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1026: Orange Theory National — Audience Evaluation"
+status: in_progress
+date: 2026-06-17
+summary: "Diagnose OTF audience sizing + why 3P segments underperform; recommend fixes"
+result: "Drop all 11 3P segments (score-gated out); grow reach via MNTN keywords, not bought 3P"
+---
+
 # TI-1026: Orange Theory National — Audience Evaluation
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1026

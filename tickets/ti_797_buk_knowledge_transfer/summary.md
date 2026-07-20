@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-797: Bottoms Up Keywords (BUK) Knowledge Transfer & Action Plan"
+status: done
+date: 2026-05-06
+summary: "BUK ALS keyword-model knowledge transfer from Alex Knorr; roadmap + DCG validation"
+result: "DCG keyword score validated monotonic (771x top-bin lift); 5-priority roadmap drafted"
+---
+
 # TI-797: Bottoms Up Keywords (BUK) — Knowledge Transfer & Action Plan
 
 **Jira:** https://mntn.atlassian.net/browse/TI-797

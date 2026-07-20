@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-790: Bidstream Feature Inventory & Quality Assessment"
+status: done
+date: 2026-05-06
+summary: "Catalog + rank IP-level log-table features for Fangorn feature store by SHAP"
+result: "46 pre-visit features cataloged; XGBoost AUC 0.831, top 1% of IPs = 10x visit lift"
+---
+
 # TI-790: Feature Inventory & Quality Assessment
 
 **Jira:** https://mntn.atlassian.net/browse/TI-790

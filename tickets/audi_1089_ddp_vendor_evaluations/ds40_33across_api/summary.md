@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1089: 33Across API (DS40) Renewal Pass/Play"
+status: done
+date: 2026-07-10
+summary: "Renewal eval of 33Across API (DS40) metered 3P data vendor at $0.50/1k CPM"
+result: "NEGOTIATE: cap/re-paper meter to <=$10-40K/yr else DROP; no lens breaks even at usage"
+---
+
 # AUDI-1089 / 33Across API (DS40) — Renewal Pass/Play
 
 **Status:** DONE 2026-07-10 — verdict below (§6)

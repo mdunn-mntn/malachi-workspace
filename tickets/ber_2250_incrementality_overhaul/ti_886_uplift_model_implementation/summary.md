@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-886: Uplift Model Implementation — T-learner with Platt Scaling"
+status: in_progress
+date: 2026-04-20
+summary: "Productionize Matt Brorby's T-learner impression-uplift model (Qini + Platt scaling)."
+result: "in progress — reproducing Matt's Qini eval; needs Databricks access + airflow-ti port"
+---
+
 # TI-886: Uplift model implementation — T-learner with Platt Scaling (based on Matt Brorby prototype)
 
 **Jira:** https://mntn.atlassian.net/browse/TI-886

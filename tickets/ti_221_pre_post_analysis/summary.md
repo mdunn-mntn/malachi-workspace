@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-221: Pre-Post Vertical Classification Analysis"
+status: done
+date: 2026-03-04
+summary: "Pre/post campaign-performance analysis around a vertical classification change"
+result: "Delivered pre/post metrics comparison across campaigns; full results in Drive spreadsheet"
+---
+
 # TI-221: Pre-Post Vertical Classification Analysis
 
 **Jira:** https://mntn.atlassian.net/browse/TI-221

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-748: Causal Impact — Media Plan Feature"
+status: done
+date: 2026-05-06
+summary: "Did Media Plan adopters see improved prospecting performance? Causal-impact study"
+result: "Aggregate IVR ~zero; config version (max_networks 25 to 15) predicts who benefits"
+---
+
 # TI-748: Causal Impact — Media Plan Feature
 
 **Jira:** https://mntn.atlassian.net/browse/TI-748

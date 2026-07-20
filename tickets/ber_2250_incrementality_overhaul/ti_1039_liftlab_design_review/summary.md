@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1039: LiftLab Incrementality Test Design Review (6 customers)"
+status: in_progress
+date: 2026-06-17
+summary: "Expert review of 6 LiftLab incrementality test designs before customer offers firm up."
+result: "in progress — review framework/scorecard built; awaiting 6 designs + 6/23 review"
+---
+
 # TI-1039: Review LiftLab incrementality test designs for 6 prospective customers
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1039 (relates to BER-2250, TI-855)

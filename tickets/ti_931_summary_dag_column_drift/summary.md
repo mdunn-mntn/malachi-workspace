@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-931: feature_store summary_* tasks failing on dropped *_cost columns"
+status: done
+date: 2026-05-05
+summary: "Fix feature_store_setup_model summary_* tasks crashing after BQ cost-to-spend drop"
+result: "Dropped stale *_cost cols from Layer-1 models + shared const; PR #1024 merged, DAG green"
+---
+
 # TI-931: feature_store_setup_model summary_* tasks failing — *_cost cols dropped post-BQ migration
 
 **Jira:** https://mntn.atlassian.net/browse/TI-931

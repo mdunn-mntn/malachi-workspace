@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1053: ElevenLabs 3P Segment Recommendations"
+status: done
+date: 2026-06-26
+summary: "Recommend 3P interest segments for ElevenLabs' incrementality-focused CTV campaign"
+result: "v3 final: 7 relevant-at-scale 3P picks; 3P viable but MM keywords the bigger win"
+---
+
 # TI-1053: ElevenLabs (51660) — 3P segment recommendations for incrementality-focused CTV
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1053 (1 SP) · Relates To TI-1044

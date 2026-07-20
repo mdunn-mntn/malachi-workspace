@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-270: Pre-Post Analysis — GA (Jaguar) Release"
+status: done
+date: 2026-03-04
+summary: "Pre/post analysis of campaign KPIs around the Jaguar IP-scoring GA release"
+result: "Delivered pre/post performance comparison for Jaguar GA (results in Drive sheet)"
+---
+
 # TI-270: Pre-Post Analysis — GA (Jaguar) Release
 
 **Jira:** https://mntn.atlassian.net/browse/TI-270

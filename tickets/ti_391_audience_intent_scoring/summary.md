@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-391: Pre/Post Analysis of Audience Intent Scoring Changes"
+status: done
+date: 2026-03-03
+summary: "Measure whether the updated Audience Intent Scoring model improved campaign performance"
+result: "Complete — pre/post analysis done; findings documented in Drive gdoc/gsheet"
+---
+
 # TI-391: Analyze Pre-Post of Audience Intent Scoring Changes
 
 **Jira:** https://mntn.atlassian.net/browse/TI-391

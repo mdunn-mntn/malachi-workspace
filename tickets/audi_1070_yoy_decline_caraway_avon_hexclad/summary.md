@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1070: YoY Performance-Decline Diagnosis — Caraway, Avon, HexClad"
+status: in_progress
+date: 2026-07-07
+summary: "Diagnose YoY visits/ROAS decline for 3 advertisers — is MNTN Matched degrading?"
+result: "Spend-driven saturation, not systemic MM degradation; within-HI VR halves for scalers"
+---
+
 # AUDI-1070: YoY Performance-Decline Diagnosis — Caraway, Avon, HexClad
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1070

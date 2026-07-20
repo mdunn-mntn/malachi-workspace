@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "Ticket Theme Analysis — Q2 Customer Pain Points & Epic Grouping"
+status: done
+date: 2026-06-24
+summary: "Cluster last quarter's tickets into recurring customer-question themes for epic planning"
+result: "8 themes / 4 recurring customer questions; 3 new epics proposed; published to Confluence"
+---
+
 # Ticket Theme Analysis — summary
 
 ## Introduction

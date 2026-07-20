@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1037: Automated Client-Performance Diagnostic Tool"
+status: in_progress
+date: 2026-07-16
+summary: "Parameterized on-demand client audience + performance diagnostic tool, ported to Mode."
+result: "in progress — perf_report tool built, porting to Mode dashboard; modules under review"
+---
+
 # TI-1037: Automate client-performance diagnostics (audience-expression-driven)
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1037

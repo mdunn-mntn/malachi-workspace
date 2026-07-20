@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-542: Max Reach Causal Impact Analysis"
+status: done
+date: 2026-05-06
+summary: "Causal-impact analysis of the Max Reach targeting-expansion feature's incremental lift"
+result: "Causal impact analysis delivered; Max Reach incremental performance quantified"
+---
+
 # TI-542: Max Reach Causal Impact Analysis
 
 **Jira:** https://mntn.atlassian.net/browse/TI-542

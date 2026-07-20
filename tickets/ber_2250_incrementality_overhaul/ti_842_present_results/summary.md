@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-842: Present Incrementality Results"
+status: backlog
+date: 2026-04-07
+summary: "Build leadership/all-hands presentation of incrementality experiment results (TI-839)"
+result: "Not started — depends on TI-839 (results measurement) completing first"
+---
+
 # TI-842: Present Incrementality Results
 
 **Jira:** https://mntn.atlassian.net/browse/TI-842

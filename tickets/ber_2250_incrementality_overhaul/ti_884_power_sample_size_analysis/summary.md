@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-884: Power & Sample Size Analysis for iROAS Measurement"
+status: in_progress
+date: 2026-04-30
+summary: "Per-advertiser MDE / statistical power to detect incremental lift"
+result: "Visit-rate power needs ~$200k/mo, conversions ~$2M+/mo; most advertisers underpowered"
+---
+
 # TI-884: Power & sample size analysis — iROAS measurement capacity by advertiser
 
 **Jira:** https://mntn.atlassian.net/browse/TI-884

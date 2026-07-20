@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1117: DS14 Availability Gate vs site_visit_signal Overlap"
+status: in_progress
+date: 2026-07-17
+summary: "How much vendor signal is biddable under DS14 gate; size the add-svs-to-DS14 pool option"
+result: "In progress — expansion splits ~half free-stale (97M) vs vendor-only (95.7M IPs)"
+---
+
 # AUDI-1117: DS14 availability gate vs site_visit_signal overlap
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1117

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1017: Autocamp Fangorn HHST Collapse + Performance Diagnostic"
+status: done
+date: 2026-06-02
+summary: "Diagnose Autocamp HHST collapse and perceived performance drop after Fangorn flip"
+result: "Not a Fangorn regression — IVR doubled; HHST collapse a rare one-off from YoY scaling"
+---
+
 # TI-1017: Autocamp Fangorn HHST collapse + performance diagnostic
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1017 (Done)

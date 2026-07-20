@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-810: Adapt Feature Store Pipeline for New Bidstream Features"
+status: done
+date: 2026-04-17
+summary: "Add IP-level bidstream features to the feature-store pipeline for Fangorn training"
+result: "7 Layer-1 PySpark models live in prod daily since 2026-04-09 (PR #962); Layer 2 next"
+---
+
 # TI-810: Adapt Feature Store Pipeline for New Bidstream Features
 
 **Jira:** https://mntn.atlassian.net/browse/TI-810

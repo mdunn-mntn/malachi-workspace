@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-253: TPA Monitor — Missing Domains"
+status: done
+date: 2026-03-04
+summary: "Find domains missing from the TPA IP-to-vertical pipeline and monitor future gaps"
+result: "Built a monitor for missing TPA domains; created IP-vertical associations to fill gaps"
+---
+
 # TI-253: TPA Monitor — Missing Domains
 
 **Jira:** https://mntn.atlassian.net/browse/TI-253

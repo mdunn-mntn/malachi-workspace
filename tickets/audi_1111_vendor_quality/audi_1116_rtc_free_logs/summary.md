@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1116: RTC x Free Logs — Feed, Timing, Hourly-Grain Check"
+status: in_progress
+date: 2026-07-17
+summary: "Whether vendor delivery timing lets RTC firings depend on paid vendor feeds"
+result: "RTC vendor-independent — vendors 2.4-8.6h stale, only 0.01% of RTC volume vendor-only"
+---
+
 # AUDI-1116: RTC × free logs — feed, timing, hourly-grain check
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1116

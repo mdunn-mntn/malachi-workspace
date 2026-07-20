@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-684: Missing IPs from IPDSC"
+status: in_progress
+date: 2026-03-04
+summary: "Trace why some expected IPs are absent from the IPDSC targeting pipeline"
+result: "in progress — added ipdsc__v1 catalog entry; root cause not yet determined"
+---
+
 # TI-684: Missing IPs from IPDSC
 
 **Jira:** https://mntn.atlassian.net/browse/TI-684

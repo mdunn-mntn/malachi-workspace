@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "DM-3188: Comparison of Real-Time vs Non-Real-Time IPs"
+status: done
+date: 2026-03-03
+summary: "Compare performance and IP-level behavior of RTC vs non-RTC impressions and visits"
+result: "Delivered RT vs non-RT comparison CSV export and reusable monitoring SQL"
+---
+
 # DM-3188: Comparison of Real-Time vs. Non-Real-Time IPs
 
 **Jira:** https://mntn.atlassian.net/browse/DM-3188

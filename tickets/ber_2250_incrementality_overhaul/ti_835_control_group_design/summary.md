@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-835: Observational Incrementality via Existing 10% Holdout"
+status: in_progress
+date: 2026-04-17
+summary: "Baseline CTV incrementality using the existing per-advertiser 10% holdout (ITT)"
+result: "CTV ads: ~0% net-new traffic lift (guid), but 2-8x lift in MNTN-attributed visits"
+---
+
 # TI-835: Observational Incrementality Analysis Using Existing 10% Holdout
 
 **Jira:** https://mntn.atlassian.net/browse/TI-835

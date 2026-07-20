@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-837: Ghost Bidding Incrementality Experiment"
+status: in_progress
+date: 2026-05-06
+summary: "Ghost-bidding ATT framework to measure incremental lift of intent-tier targeting"
+result: "Retargeting drives lift (+21pp); Stage 1 prospecting ~0; combined views hide both"
+---
+
 # TI-837: Ghost Bidding Incrementality Experiment — Implementation Plan
 
 **Jira:** https://mntn.atlassian.net/browse/TI-837

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-813: Scale BUK Keyword Visit Rate Analysis to 500 Advertisers"
+status: done
+date: 2026-05-06
+summary: "Scale BUK keyword visit-rate lift analysis from 50 to 500 advertisers."
+result: "BUK ranking holds at 500 advs: 72x aggregate / 82x median lift; Fangorn eval confirms."
+---
+
 # TI-813: Scale BUK Keyword Visit Rate Analysis to 500 Advertisers
 
 **Jira:** https://mntn.atlassian.net/browse/TI-813

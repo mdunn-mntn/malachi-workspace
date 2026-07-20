@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-885: Mid-Intent Treatment Experiment Setup"
+status: in_progress
+date: 2026-04-20
+summary: "Design a mid-intent-only treatment campaign to validate ghost-bidding lift methodology"
+result: "in progress — design + Kirsa experiments-team alignment pending; Kirsa sync is blocker"
+---
+
 # TI-885: Mid-intent treatment experiment setup — coordinate with experiments team
 
 **Jira:** https://mntn.atlassian.net/browse/TI-885

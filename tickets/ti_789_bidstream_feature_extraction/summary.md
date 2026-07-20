@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-789: Bidstream Feature Extraction & Audience Augmentation"
+status: in_progress
+date: 2026-04-07
+summary: "Extract predictive bidstream features + augment DS13/DS19 audience pools for targeting."
+result: "in progress — pre-visit XGBoost AUC ~0.896; DS13/19 augmentation experiment pending"
+---
+
 # TI-789: Bidstream Feature Extraction & Audience Augmentation
 
 **Jira:** https://mntn.atlassian.net/browse/TI-789

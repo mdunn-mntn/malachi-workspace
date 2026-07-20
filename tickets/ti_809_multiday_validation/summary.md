@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-809: Multi-Day Validation of Feature Rankings"
+status: done
+date: 2026-04-01
+summary: "Run XGBoost/SHAP on 7 date pairs to test top-feature rank stability before TI-810 pipeline"
+result: "Rankings stable enough to proceed; AUC 0.843±0.008; win_logs/BAE stable, augmentor noisy"
+---
+
 # TI-809: Multi-Day Validation of Feature Rankings
 
 **Jira:** https://mntn.atlassian.net/browse/TI-809

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1089: Klickly (DS39) DDP Renewal Evaluation"
+status: done
+date: 2026-07-10
+summary: "Renewal pass/play evaluation of Klickly (DS39) Shopify product-view data vendor."
+result: "Drop / do not renew unless ~free — value ~$0-4K/yr; any DDP fee fails break-even."
+---
+
 # AUDI-1089 / Klickly (DS39) — Renewal Pass/Play
 
 **Status:** IN PROGRESS — verdict due **2026-07-13** (renewal is live; Paulo needs pass/play Monday)

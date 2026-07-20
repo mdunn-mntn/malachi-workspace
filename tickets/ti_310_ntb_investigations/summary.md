@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-310: NTB Investigations"
+status: done
+date: 2026-03-03
+summary: "New-to-Brand misclassification investigation — returning visitors classed as new"
+result: "NTB misclassification: missing page views + cross-device tracking (TI-650 quantified)"
+---
+
 # TI-310: NTB Investigations
 
 **Jira:** https://mntn.atlassian.net/browse/TI-310

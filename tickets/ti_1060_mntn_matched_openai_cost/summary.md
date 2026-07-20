@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1060: Reduce OpenAI Cost in the MNTN Matched (DS19) Keyword Pipeline"
+status: backlog
+date: 2026-06-26
+summary: "Find levers to cut OpenAI spend on the DS19 daily keyword classification pipeline"
+result: "in progress — ranked 7 levers; biggest bet is BGE-large embedding to replace gpt-4o-mini"
+---
+
 # TI-1060 — Reduce OpenAI Cost in the MNTN Matched (DS19) Keyword Pipeline
 
 **Jira:** [TI-1060](https://mntn.atlassian.net/browse/TI-1060) · **Blocked by:** [TI-1058](https://mntn.atlassian.net/browse/TI-1058) (pipeline map)

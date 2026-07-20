@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "DM-3118: RTC Monitor — Real-Time Conquest Impressions vs Visits"
+status: done
+date: 2026-03-03
+summary: "Repeatable query to monitor RTC campaign performance vs standard targeting"
+result: "Delivered monitoring SQL segmenting RTC vs non-RTC impressions by IVR, CPM, CPV"
+---
+
 # DM-3118: RTC Monitor — Real-Time Conquest Impressions vs. Visits
 
 **Jira:** https://mntn.atlassian.net/browse/DM-3118

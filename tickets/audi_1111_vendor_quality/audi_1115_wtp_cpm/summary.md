@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1115: True willingness-to-pay CPM per vendor"
+status: in_progress
+date: 2026-07-17
+summary: "Compute effective CPM and willingness-to-pay ceiling per data vendor across lenses"
+result: "No metered vendor breaks even at $0.50 under any lens; 33Across API closest"
+---
+
 # AUDI-1115: True willingness-to-pay CPM per vendor — 3 lenses
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1115

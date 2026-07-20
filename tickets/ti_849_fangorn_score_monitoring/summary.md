@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-849: Monitor Fangorn Score Lift & Visit Rate Improvements"
+status: done
+date: 2026-05-01
+summary: "Pre/post KPI monitoring infra for the May-1 Fangorn rollout (3 Tier-1 advertisers)"
+result: "Pre/post KPI monitoring built for 3 Tier-1 flips; infra-complete, eval in TI-921"
+---
+
 # TI-849: Monitor Fangorn score lift and visit rate improvements
 
 **Jira:** https://mntn.atlassian.net/browse/TI-849

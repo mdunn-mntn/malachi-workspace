@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1089: Cybba (DS36) DDP Renewal Evaluation"
+status: done
+date: 2026-07-10
+summary: "Renewal evaluation of Cybba (DS36) DDP vendor for the MNTN match pipeline"
+result: "DROP unless effectively free; ~zero unique value at the metered $0.50 CPM per-use bill"
+---
+
 # AUDI-1089 / Cybba (DS36) — Renewal Pass/Play
 
 **Status:** DONE 2026-07-10

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-933: MNTN Select Campaign Lift Analysis"
+status: done
+date: 2026-06-04
+summary: "Does MNTN Select drive incremental lift? Pooled holdout lift across Select advertisers"
+result: "MNTN Select drives +2.06 pp visit-rate lift (pooled, significant); it is incremental"
+---
+
 # TI-933: Lift analysis on MNTN Select campaigns
 
 **Jira:** https://mntn.atlassian.net/browse/TI-933

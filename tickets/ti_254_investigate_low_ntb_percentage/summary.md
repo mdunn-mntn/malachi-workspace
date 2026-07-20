@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-254: Investigate Low NTB Percentage"
+status: done
+date: 2026-03-03
+summary: "Investigation into why New-to-Brand (NTB) percentages were lower than expected."
+result: "Answered via TI-650: cross-device events (61% IP mutation) drive NTB misclassification."
+---
+
 # TI-254: Investigate Low NTB Percentage
 
 **Jira:** https://mntn.atlassian.net/browse/TI-254

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1058: Document the DS13/DS19 (MNTN Matched) OpenAI Pipeline"
+status: in_progress
+date: 2026-06-26
+summary: "Map the DS13/DS19 MNTN Matched OpenAI pipeline end-to-end (files, diagram, why)"
+result: "Verified end-to-end map; DS19 keyword daily = cost driver; one OpenAI call per URL"
+---
+
 # TI-1058 — Document the DS13/DS19 (MNTN Matched) OpenAI Pipeline
 
 **Jira:** [TI-1058](https://mntn.atlassian.net/browse/TI-1058) · **Blocks:** [TI-1060](https://mntn.atlassian.net/browse/TI-1060) (OpenAI cost optimization)

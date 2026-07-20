@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-839: Measure Incrementality Results"
+status: backlog
+date: 2026-04-07
+summary: "Measure intent-score shuffling experiment results via ITT after it runs"
+result: "not started — depends on TI-837 implementation and the experiment running first"
+---
+
 # TI-839: Measure Incrementality Results
 
 **Jira:** https://mntn.atlassian.net/browse/TI-839

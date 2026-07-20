@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-999: Interest-Segment Portfolio Sizing — Usage, Freshness, Spend Exposure"
+status: in_progress
+date: 2026-06-16
+summary: "Size 3P interest-segment usage, staleness, and spend exposure across MNTN campaigns"
+result: "34.6% of prospecting spend uses 3P (~$103M/yr); no-3P converts 2.1x better; validating"
+---
+
 # TI-999: Interest-segment portfolio sizing — usage, freshness, spend exposure
 
 **Jira:** https://mntn.atlassian.net/browse/TI-999

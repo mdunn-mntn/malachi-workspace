@@ -1,3 +1,12 @@
+---
+doc_type: epic
+title: "AUDI-1111: Vendor Data Quality & Valuation"
+status: in_progress
+date: 2026-07-17
+summary: "Epic: set a 3P data-quality bar and true willingness-to-pay price per vendor"
+result: "No metered vendor breaks even at $0.50; RTC vendor-independent; preemption $274K/yr"
+---
+
 # AUDI-1111: Vendor Data Quality & Valuation (EPIC)
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1111

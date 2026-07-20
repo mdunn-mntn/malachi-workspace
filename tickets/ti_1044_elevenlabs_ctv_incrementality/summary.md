@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1044: ElevenLabs CTV Incrementality — CVR-Lift Triangulation + Power Review"
+status: in_progress
+date: 2026-06-26
+summary: "Measure whether ElevenLabs US CTV drove incremental CVR lift + why it's unmeasurable"
+result: "Incremental lift ~0 (clean ITT CVR -1.7%, n.s.); test underpowered at 0.062% CVR base"
+---
+
 # TI-1044: ElevenLabs CTV Incrementality — CVR-lift triangulation + power review
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1044

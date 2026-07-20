@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-780: Campaign Ramp-Up Research"
+status: done
+date: 2026-03-27
+summary: "How long until new prospecting campaigns reach steady-state IVR?"
+result: "New campaigns take ~4 weeks to reach steady state; exclude first 4 weeks from analysis"
+---
+
 # TI-780: Campaign Ramp-Up Research — How Long Until New Campaigns Reach Steady State?
 
 **Jira:** https://mntn.atlassian.net/browse/TI-780

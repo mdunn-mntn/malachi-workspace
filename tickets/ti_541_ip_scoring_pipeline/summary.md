@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-541: IP Scoring Pipeline — Architecture & Documentation"
+status: done
+date: 2026-03-04
+summary: "End-to-end documentation of the DS13 IP scoring pipeline + unscored-IP investigation."
+result: "IP scoring pipeline documented end-to-end + unscored-IP investigation completed."
+---
+
 # TI-541: IP Scoring Pipeline — Architecture & Documentation
 
 **Jira:** https://mntn.atlassian.net/browse/TI-541

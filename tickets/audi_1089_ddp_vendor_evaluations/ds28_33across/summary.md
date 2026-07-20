@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1089: 33Across (DS28) DDP Renewal Evaluation"
+status: done
+date: 2026-07-10
+summary: "33Across DS28 vendor renewal eval: defensible value vs the $0.50/CPM usage meter"
+result: "NEGOTIATE cap-or-drop: value ~$30-100K/yr; renew only if metered cost caps ≤$100K/yr"
+---
+
 # AUDI-1089 / 33Across (DS28) — Renewal Evaluation
 
 **Status:** DONE 2026-07-10

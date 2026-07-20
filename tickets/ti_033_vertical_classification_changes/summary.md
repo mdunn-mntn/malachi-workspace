@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-033: Vertical Classification Changes — Size Analysis"
+status: done
+date: 2026-05-06
+summary: "Measured how many domains shifted verticals after a classification taxonomy change"
+result: "Delivered vertical size comparison + top-churner analysis (results in Drive)"
+---
+
 # TI-033: Vertical Classification Changes — Size Analysis
 
 **Jira:** https://mntn.atlassian.net/browse/TI-033

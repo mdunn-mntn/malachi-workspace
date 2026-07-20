@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1027: 5x5 Data Evaluation"
+status: in_progress
+date: 2026-07-09
+summary: "Renew/drop/renegotiate eval of 5x5 (DS25) MNTN Matched site-visit data vendor"
+result: "KEEP — 5x5 outsized ~3.4x its scale, #2 unique MM-domain contributor; fee pending billing"
+---
+
 # TI-1027: [SPIKE] 5x5 Data Evaluation
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1027

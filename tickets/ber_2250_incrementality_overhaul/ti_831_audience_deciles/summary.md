@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-831: Audience Deciles for Advertiser Experimentation"
+status: backlog
+date: 2026-04-07
+summary: "Build random decile buckets of US IPs to enable clean A/B testing for advertisers"
+result: "Clarified as random bucketing (not intent-stratified); implementation not yet started"
+---
+
 # TI-831: Audience Deciles for Advertiser Experimentation
 
 **Jira:** https://mntn.atlassian.net/browse/TI-831

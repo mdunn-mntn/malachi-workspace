@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1033: TI Experiment Archive — Host, Ship, Polish"
+status: in_progress
+date: 2026-06-15
+summary: "Host and ship the built TI experiment archive at an access-controlled internal URL"
+result: "in progress — archive built; hosting, deploy, access-control and polish still pending"
+---
+
 # TI-1033: TI Experiment Archive — Host, Ship, Polish
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1033

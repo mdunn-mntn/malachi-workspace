@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1016: MemDB → Bidder cache — bidder-inert IP storage"
+status: in_progress
+date: 2026-06-09
+summary: "Investigate whether MemDB→Bidder caches bidder-inert 3P-OR-include IPs wastefully"
+result: "Cache-shrink idea killed (key=IP); new lever: skip score writes for segmentless IPs"
+---
+
 # TI-1016: MemDB → Bidder cache — investigate bidder-inert IP storage
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1016

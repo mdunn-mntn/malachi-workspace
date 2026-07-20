@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-803: Prove BUK Keyword Value"
+status: in_progress
+date: 2026-04-23
+summary: "Multi-phase analysis proving BUK keyword rankings are valuable, size-independent"
+result: "Phase 1 done: per-advertiser BUK ranking = 184x visit-rate lift vs 3x global; P2-4 open"
+---
+
 # TI-803: Prove BUK Keyword Value — Rigorous Analysis for Management
 
 **Jira:** https://mntn.atlassian.net/browse/TI-803

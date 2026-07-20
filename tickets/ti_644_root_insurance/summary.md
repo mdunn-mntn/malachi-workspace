@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-644: Root Insurance CRM Audience Match Investigation"
+status: done
+date: 2026-05-06
+summary: "Why Root matched only ~8% of MNTN conversions to their CRM test/control split"
+result: "Config correct; low match = IP/household gap, not attribution error (5M HHs = 23M HEMs)"
+---
+
 # TI-644: Root Insurance — CRM Audience Match Investigation
 
 **Jira:** https://mntn.atlassian.net/browse/TI-644

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-923: Review Scout Incrementality-Feasibility Metrics"
+status: in_progress
+date: 2026-05-05
+summary: "Validate Edgar's Scout lift-test feasibility metrics against MNTN incrementality priors"
+result: "Review done (3 corrections + ITT-holdout gate added); delivery to Edgar pending doc URL"
+---
+
 # TI-923: Review Scout Incrementality-Feasibility Metrics
 
 **Jira:** https://mntn.atlassian.net/browse/TI-923

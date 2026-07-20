@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "Ad-hoc: Returning-Advertiser Sizing for Victor's Score-Filter Proposal"
+status: done
+date: 2026-06-03
+summary: "Sizing advertisers who go dark then resume spend — risk for Victor's daily score-filter"
+result: "Return/day-1-lag risk tiny; 79% of spend in flights >=15d; next-day catch-up covers it"
+---
+
 # Returning-advertiser sizing for Victor's score-filter proposal
 
 **Question:** how many advertisers spend substantial $$$, go dark for a long stretch, then resume meaningful spend? (Brian's risk re: Victor's daily score-filter.)

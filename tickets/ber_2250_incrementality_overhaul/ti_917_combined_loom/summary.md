@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-917: Combined Loom — Incrementality Findings + Power Analysis Primer"
+status: done
+date: 2026-05-08
+summary: "Combined Loom teaching ghost-bid lift + power/MDE + advertiser measurability rule"
+result: "Delivered 28-slide combined deck + word-for-word talk track + iROAS MDE extension"
+---
+
 # TI-917: Combined Loom — incrementality findings + power analysis primer
 
 **Jira:** https://mntn.atlassian.net/browse/TI-917

@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-811: Add Advertiser-Side Features to Model"
+status: backlog
+date: 2026-04-01
+summary: "Add advertiser features + genre-by-vertical interactions to the XGBoost match model"
+result: "not started — tests whether content genre helps match IPs to specific advertisers"
+---
+
 # TI-811: Add Advertiser-Side Features to Model
 
 **Jira:** https://mntn.atlassian.net/browse/TI-811

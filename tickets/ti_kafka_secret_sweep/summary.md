@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "Kafka Secret Sweep — ArgoCD (mntn-argocd)"
+status: in_progress
+date: 2026-06-11
+summary: "Audit Kafka services in mntn-argocd; migrate secrets off SOPS-in-git to Vault/ESO"
+result: "39 Kafka services / 9 squads inventoried; 38 need migration; targeting cutover half-done"
+---
+
 # Kafka Secret Sweep — ArgoCD (mntn-argocd) — Working Summary
 
 **Jira:** _not yet created — assign a TI number and rename this folder (`ti_xxx_kafka_secret_sweep`) at grooming._

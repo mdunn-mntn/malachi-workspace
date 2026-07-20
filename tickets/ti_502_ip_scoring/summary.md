@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-502: IP Scoring — How We Use Scores"
+status: done
+date: 2026-03-03
+summary: "Document how MNTN uses IP scores across the bidding and targeting pipeline"
+result: "Reference doc created; scores live in cost_impression_log.model_params + membership DB"
+---
+
 # TI-502: IP Scoring — How We Use Scores
 
 **Jira:** https://mntn.atlassian.net/browse/TI-502

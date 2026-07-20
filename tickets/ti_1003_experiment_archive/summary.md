@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1003: TI Experiment Archive"
+status: done
+date: 2026-06-15
+summary: "Manifest-driven internal static site: portfolio scorecard of TI's measured impact"
+result: "Phase 1 built + verified — 8 experiments seeded; repo/Pages deploy split to TI-1033"
+---
+
 # TI-1003: TI Experiment Archive
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1003

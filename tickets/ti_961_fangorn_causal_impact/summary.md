@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-961: Causal Impact for Fangorn"
+status: done
+date: 2026-06-10
+summary: "Add CausalImpact validation to the Fangorn tiered-rollout lift analysis."
+result: "CI pipeline + methodology corrected; ~+27% Tier-2 lift, awaiting post-period for power."
+---
+
 # TI-961: Causal Impact for Fangorn
 
 **Jira:** https://mntn.atlassian.net/browse/TI-961

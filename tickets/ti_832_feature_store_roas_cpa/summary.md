@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-832: Update Feature Store with ROAS/CPA-Specific Features"
+status: in_progress
+date: 2026-05-06
+summary: "Add IP-grain conversion/spend features to the Feature Store for Fangorn V2"
+result: "4 PRs merged + deployed adding conv_log_derived_ip; awaiting nightly/monthly verify"
+---
+
 # TI-832: Update Feature Store with ROAS/CPA-specific features
 
 **Jira:** https://mntn.atlassian.net/browse/TI-832

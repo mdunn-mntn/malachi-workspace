@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-34: Identity Sync Freshness — IP Blocklist Freshness Measures"
+status: done
+date: 2026-03-03
+summary: "Freshness monitoring for the IP identity graph and blocklist sync pipeline"
+result: "Delivered freshness SQL monitoring max(update_time) on tpa.membership_updates_logs"
+---
+
 # TI-34: Identity Sync Freshness — IP Blocklist Freshness Measures
 
 **Jira:** https://mntn.atlassian.net/browse/TI-34

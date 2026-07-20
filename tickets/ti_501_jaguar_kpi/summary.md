@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-501: Jaguar KPI Analysis"
+status: done
+date: 2026-05-06
+summary: "KPI + causal-impact analysis of the Jaguar IP scoring system by score tier"
+result: "Jaguar improves IVR/conversion; score-tier breakdown shows which tiers drive most lift"
+---
+
 # TI-501: Jaguar KPI Analysis
 
 **Jira:** https://mntn.atlassian.net/browse/TI-501

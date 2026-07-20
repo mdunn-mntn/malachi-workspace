@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-896: Audience composition shift analysis — 2025 performance drop"
+status: done
+date: 2026-04-22
+summary: "War-room analysis of audience-type mix shift during the late-2025 conversion drop"
+result: "Two shifts: Peak Performance 0→12% adoption; MM spend share cliffed 75%→44% Oct 2025"
+---
+
 # TI-896: Audience composition shift analysis — 2025 performance drop war room
 
 **Jira:** https://mntn.atlassian.net/browse/TI-896

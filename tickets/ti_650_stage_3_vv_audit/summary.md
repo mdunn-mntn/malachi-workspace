@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-650: Stage 3 VV IP Lineage Audit"
+status: done
+date: 2026-03-24
+summary: "Audit Stage 3 verified-visit IP lineage — trace each VV back to its bid"
+result: "Audit complete — 99.97% of S3 VVs resolved via bid_ip; SQLMesh v12 model update pending"
+---
+
 # TI-650: Stage 3 VV IP Lineage Audit
 
 **Jira:** [TI-650](https://mntn.atlassian.net/browse/TI-650) — Create Stage 3 Audit Script

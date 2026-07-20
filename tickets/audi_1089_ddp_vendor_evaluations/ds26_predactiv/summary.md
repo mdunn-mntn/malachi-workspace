@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1089: Predactiv (DS26) Renewal Evaluation"
+status: done
+date: 2026-07-10
+summary: "Renewal evaluation of the Predactiv (DS26) data vendor for MNTN Matched signal"
+result: "KEEP/renew — #1 classified-domain source (226,826 sole), domain value $0.68M-$2.95M/yr"
+---
+
 # AUDI-1089 / Predactiv (DS26, registry `sharethis_predactiv`) — Renewal Evaluation
 
 **Status:** DONE 2026-07-10

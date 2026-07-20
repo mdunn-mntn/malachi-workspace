@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-921: Fangorn Lift Evaluation + Mode Dashboard"
+status: in_progress
+date: 2026-05-28
+summary: "Build a wave-aware durable Fangorn lift evaluation system and Mode dashboard"
+result: "in progress — reproduced Tier-1 positive lift (+20-24%); DiD control + dashboard pending"
+---
+
 # TI-921: Fangorn lift evaluation + Mode dashboard
 
 **Jira:** https://mntn.atlassian.net/browse/TI-921

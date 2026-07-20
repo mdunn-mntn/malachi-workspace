@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "Power Analysis Workshop — Pedagogical Deck + Calculator"
+status: in_progress
+date: 2026-05-15
+summary: "Build a workshop deck and live MDE calculator teaching statistical power at MNTN"
+result: "Built and published deck + calculator; awaiting dry run and Jira ticket creation"
+---
+
 # TI-XXX: Power Analysis Workshop — Pedagogical Deck + Calculator
 
 **Jira:** TBD — ticket creation deferred until return from OOO

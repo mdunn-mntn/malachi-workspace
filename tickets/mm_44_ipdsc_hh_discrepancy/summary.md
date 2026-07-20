@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "MM-44: IPDSC Household Discrepancy Investigation"
+status: done
+date: 2026-03-04
+summary: "Trace household-count discrepancies in the IPDSC / MES IP-to-household pipeline"
+result: "HH-count divergence traced through MES/IPDSC enrichment stages; see investigation doc"
+---
+
 # MM-44: IPDSC Household Discrepancy Investigation
 
 **Jira:** https://mntn.atlassian.net/browse/MM-44

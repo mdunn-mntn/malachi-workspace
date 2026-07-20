@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TGT-4103: Common Crawl Coverage Analysis"
+status: done
+date: 2026-05-06
+summary: "Common Crawl data coverage analysis for MNTN's domain classification pipeline."
+result: "Coverage analysis delivered; full results in tgt_4103_coverage.ipynb notebook."
+---
+
 # TGT-4103: Common Crawl Coverage Analysis
 
 **Jira:** https://mntn.atlassian.net/browse/TGT-4103

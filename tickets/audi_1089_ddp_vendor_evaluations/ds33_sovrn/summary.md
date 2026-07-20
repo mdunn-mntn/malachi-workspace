@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1089: Sovrn (DS33) Renewal Evaluation"
+status: done
+date: 2026-07-10
+summary: "Renewal pass/play eval of Sovrn (DS33) $0.50-CPM MNTN Matched data vendor"
+result: "DROP — do not renew per-use; keep only if re-papered to a nominal flat insurance fee"
+---
+
 # AUDI-1089 / Sovrn (DS33) — Renewal Pass/Play
 
 **Status:** DONE 2026-07-10 — verdict below (§6)

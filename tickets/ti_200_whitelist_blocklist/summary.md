@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-200: Adding Domains to Whitelist / Blocklist"
+status: done
+date: 2026-05-06
+summary: "Maintenance: manual overrides of ecommerce domain classifier via whitelist/blocklist"
+result: "Delivered updated ecommerce whitelist and blocklist domain lists (CSV exports)"
+---
+
 # TI-200: Adding Domains to Whitelist / Blocklist
 
 **Jira:** https://mntn.atlassian.net/browse/TI-200

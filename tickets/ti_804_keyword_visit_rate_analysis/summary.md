@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-804: Keyword-Level Visit Rate Analysis — Prove Keyword Selection Matters"
+status: done
+date: 2026-04-02
+summary: "Quantify visit-rate gap between well-chosen and poorly-chosen DS19/BUK keywords"
+result: "Keyword selection matters — 184x visit-rate lift top-5 vs bottom, and advertiser-specific"
+---
+
 # TI-804: Keyword-Level Visit Rate Analysis — Prove Keyword Selection Matters
 
 **Jira:** https://mntn.atlassian.net/browse/TI-804

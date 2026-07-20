@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-390: Investigate MMv3 Performance"
+status: done
+date: 2026-03-03
+summary: "Verify MMv3 audience-membership model change improved targeting without regressions"
+result: "Investigation complete; findings documented in Drive gdoc and gsheet"
+---
+
 # TI-390: Investigate MMv3 Performance
 
 **Jira:** https://mntn.atlassian.net/browse/TI-390

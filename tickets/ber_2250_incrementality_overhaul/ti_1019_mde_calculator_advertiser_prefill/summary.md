@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-1019: MDE Calculator — Per-Advertiser Auto-Prefill"
+status: done
+date: 2026-06-25
+summary: "Add per-advertiser auto-prefill to the MDE power calculator from 30d performance"
+result: "Shipped calculator w/ advertiser picker; correct IVR baseline is CIL distinct-ip 10.70%"
+---
+
 # TI-1019: MDE Calculator — Per-Advertiser Auto-Prefill
 
 **Jira:** [TI-1019](https://mntn.atlassian.net/browse/TI-1019)

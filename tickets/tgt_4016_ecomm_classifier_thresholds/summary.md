@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TGT-4016: Ecommerce Classifier Thresholds"
+status: done
+date: 2026-05-06
+summary: "Tune and evaluate ecommerce domain classifier thresholds for precision/recall"
+result: "Delivered threshold analysis with a recommended value; full results in the notebook"
+---
+
 # TGT-4016: Ecommerce Classifier Thresholds
 
 **Jira:** https://mntn.atlassian.net/browse/TGT-4016

@@ -1,3 +1,12 @@
+---
+doc_type: epic
+title: "BER-2250: Incrementality Overhaul"
+status: in_progress
+date: 2026-06-25
+summary: "Prove whether MNTN intent-tier targeting drives incremental lift"
+result: "In progress — CTV adds ~0% total traffic but 2-8x attributed visits; now ghost bidding"
+---
+
 # BER-2250: Incrementality Overhaul
 
 **Jira:** https://mntn.atlassian.net/browse/BER-2250

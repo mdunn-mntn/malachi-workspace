@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-737: Validate fpa.advertiser_verticals in BQ"
+status: done
+date: 2026-03-16
+summary: "CoreDW→BQ migration parity validation of silver.fpa.advertiser_verticals"
+result: "PASSED: perfect field parity on 39,944 rows; found advertiser_name regression 2025-12-23"
+---
+
 # TI-737: Validate fpa.advertiser_verticals in BQ
 
 **Jira:** https://mntn.atlassian.net/browse/TI-737

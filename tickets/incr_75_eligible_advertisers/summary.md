@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "INCR-75: Find Eligible Advertisers for Incrementality Lift Tests"
+status: in_progress
+date: 2026-07-06
+summary: "Screen live advertiser base for best incrementality lift-test candidates"
+result: "Shipped workbook; Top 28/Mid 152/Low 1,090 of 1,270 eligible; tier=power×confirmed-lift"
+---
+
 # INCR-75: Find Eligible Advertisers for Incrementality Lift Tests
 
 **Jira:** [INCR-75](https://mntn.atlassian.net/browse/INCR-75)
