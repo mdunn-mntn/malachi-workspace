@@ -34,6 +34,12 @@ Read these two files:
 
 10. **Greene's Laws Check** — Is it bold or hedging? Is it saying more than necessary? Where should it say less?
 
-**Output format:** For each of the 10 areas, give a score (1-5), the specific violations, and a concrete fix. End with a prioritized top-5 list of changes that would have the biggest impact.
+11. **De-Slop Pass (Part 10 — warn-only)** — Run the Part 10 slop grep against the presentation file:
+    ```bash
+    grep -inE '\b(very|really|extremely|incredibly|massively|hugely|substantial|dramatic(ally)?|powerful|seamless|cutting.edge|world.class|best.in.class|game.chang(er|ing)|revolutionary|groundbreaking|unprecedented|several|various|numerous|a lot of|a number of|a wide range of|arguably|essentially|basically|somewhat|fairly|leverage[sd]?|utiliz(e|es|ed|ing)|delve|needless to say|at the end of the day|in order to|this slide shows|dive in|without further ado)\b' [PATH TO PRESENTATION FILE]
+    ```
+    List each hit as a **warning, not a blocker** (some are legitimate — a "robust" SE is fine). For each real hit, give the specific rewrite: replace the vague word with the number/name it stands in for, or delete it. Remember the scope note — do NOT push a technical/internal deck toward hype or hero-number titles; only remove filler from its existing register.
+
+**Output format:** For areas 1–10, give a score (1-5), the specific violations, and a concrete fix. For area 11, list the grep hits with rewrites (advisory — it does not get a 1-5 score). End with a prioritized top-5 list of changes that would have the biggest impact.
 
 Do NOT be nice. The goal is to make this presentation powerful, not comfortable.

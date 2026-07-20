@@ -434,3 +434,30 @@ Your current TI-790 presentation is a strong analytical document. To make it a *
 3. **Reduce the table:** Show only the top 10 features live. Put the full table in an appendix.
 4. **Three Takeaways** structure is already perfect — keep it.
 5. **Close:** "The current system works. But there are 30 features we're leaving on the table. The richest signal is in content data — what people watch, where they watch it, and on what device. That's the feature store."
+
+---
+
+## Part 10: The De-Slop Pass — Specificity Is Proof of Work
+
+Run this last, after the deck already says the right things. It removes the words that make a deck sound like anyone — or any model — could have written it. **The principle: specificity is proof of work.** A specific number, name, date, or mechanism proves you did the analysis; a vague intensifier proves nothing and is the tell of thin work dressed up big. This playbook's strongest lines are all specific — "at 2am," "row 363,749," "a single Samsung TV in Boise," "6 out of 25 tables," "0.842 AUC." Slop is the opposite: words you could delete with zero loss of information.
+
+**The test for any word:** *If I deleted it, would the sentence lose information? If I know the specific number or name, is this word a vague stand-in for it?* If yes → cut it or replace it with the specific.
+
+**Scope — read this before applying it.** This pass removes empty words; it does **not** add hype and it does **not** mandate a style. It applies to every deck, technical or business, and it does **not** override the facts-not-presentation rule for internal data work — plain register stays plain. You are removing filler from whatever register you're already in, never injecting drama or forcing hero-number titles onto a technical deck.
+
+### The slop list (grep these — warn-only)
+
+- **Empty intensifiers / hype** — very, really, extremely, incredibly, massively, hugely, substantial, dramatic, powerful, seamless, cutting-edge, world-class, best-in-class, game-changer, revolutionary, groundbreaking, unprecedented. *An intensifier is not evidence: "massive lift" → "3.2x lift."* (`robust`, `significant` are fine in their statistical sense — "robust SE," "significant at p<0.05" — slop only when decorative.)
+- **Vague quantifiers when a number exists** — many, several, various, numerous, a lot of, a number of, a wide range of, considerably. *If you know it's 6, say 6: "several tables had signal" → "6 of 25 tables had signal."*
+- **LLM connective filler** — it's important to note, it's worth noting, as we can see, needless to say, at the end of the day, in today's fast-paced world, when it comes to, in order to (→ to), leverage (→ use), utilize (→ use), delve, and furthermore / moreover / additionally used as slide glue.
+- **Hedge / weasel** — arguably, essentially, basically, kind of, sort of, somewhat, fairly, quite, generally speaking, more or less. *Greene's law: hedging reads as low conviction. Either you found it or you didn't.*
+- **Throat-clearing openers** — "So today I'm going to talk about," "In this presentation," "I'd like to," "Let's dive in," "Without further ado," "This slide shows." *Act 1 already bans these — open with a stat, question, story, claim, or contrast.*
+- **Metric-not-finding titles** — "Overview," "Results," "Analysis," "Visit Rate by Bucket." *The title states the finding: "Top-Ranked Keywords Drive 184x More Visits."*
+
+### One-line grep (advisory)
+
+```bash
+grep -inE '\b(very|really|extremely|incredibly|massively|hugely|substantial|dramatic(ally)?|powerful|seamless|cutting.edge|world.class|best.in.class|game.chang(er|ing)|revolutionary|groundbreaking|unprecedented|several|various|numerous|a lot of|a number of|a wide range of|arguably|essentially|basically|somewhat|fairly|leverage[sd]?|utiliz(e|es|ed|ing)|delve|needless to say|at the end of the day|in order to|this slide shows|dive in|without further ado)\b' your_deck.md
+```
+
+Every hit is a **warning, not a blocker** — read each and either replace it with the specific it stands in for or delete it. A deck with zero hits isn't automatically good, but a deck with many hits is almost always hiding thin work behind big words.
