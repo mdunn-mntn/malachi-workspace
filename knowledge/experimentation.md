@@ -1,5 +1,5 @@
 # Experimentation & Causal Inference — Knowledge Base
-Last updated: 2026-05-28 | Started from TI-748 (Media Plan Causal Impact)
+Last updated: 2026-07-20 | Started from TI-748 (Media Plan Causal Impact)
 
 This is a living document. Add to it every time we learn something new about experimental design, covariate selection, test methodology, or edge cases at MNTN.
 
@@ -55,6 +55,47 @@ If the methods give materially different point estimates:
 ### Future-state framework (not yet built)
 
 This protocol will eventually live in a Python package `mntn_experiment_eval/` with config-driven runners. Until then, copy the canonical implementations referenced above into each new ticket's `artifacts/` folder. **As we build new experiments, capture any patterns that don't fit this protocol in a new subsection here — that's how we discover what the framework needs.**
+
+---
+
+## ⭐ Before you report a number — the null, the gate, the checklist
+
+This applies to **every reported number, not just causal experiments** — a COUNT, a rate, a "184x", a "$274K/yr". The Standard Analysis Protocol above is for *"did this move a KPI?"*; this is the discipline for *"is this number real, and am I about to mislead someone with it?"* All three are cheap, unenforced, and high-leverage — the payoff is not shipping a confident wrong headline.
+
+### 1. Write the null first (before you run the query)
+
+Before writing the SQL, write two lines in the ticket `summary.md`:
+- **Null:** what the number would be under the boring explanation (no effect / it's an artifact / it's mechanical). E.g. *"if keyword rank doesn't matter, top-vs-bottom VR ratio ≈ 1x."*
+- **Signal:** what the hypothesis predicts. E.g. *"if selection matters, ratio ≫ 1x."*
+
+**Why:** without a pre-committed null, every result confirms the hypothesis — a big number "proves the effect," a small one "proves it's subtle." Writing the null first turns the query into a *test* instead of a search for confirmation, and front-loads the power question: if the null and signal predictions are indistinguishable at your sample size, stop and do a power analysis (§ pipeline step 1) before spending the query. TI-804's "184x" persuades precisely because the null *"rank shouldn't matter → 1x"* was stated first; a 184x with no null is just a big number.
+
+### 2. The Shocking-Number Gate
+
+**Trigger: any number surprising enough that you'd lead a slide with it** — a huge lift, a suspiciously round result, a near-zero where you expected signal, an order-of-magnitude ratio. Before it leaves your hands, clear four gates:
+
+1. **Triangulate — get it a second, independent way.** A different table, grain, or method that should land in the same ballpark. Methods convergence is the strongest informal-causal argument (Non-negotiables above); for a descriptive number, a second source is the equivalent. Can't reproduce it a second way → it's a lead, not a finding.
+2. **Uncertainty on BOTH, always.** SE / CI / p on every point estimate, on both methods — never a bare DiD point next to a CI with full uncertainty. For a rate, carry the denominator: a dramatic-looking rate resting on 1 visit is a power statement, not a performance estimate (the DS24 sole-IP VR — 1 visit / 11,919 imps).
+3. **Sign the bias — one sentence, in the summary.** Which way is this number wrong, and does that help or hurt the claim? (DS24 IPv4-only undercounts IPv6 ~20% → understates the vendor → *conservative for KEEP*.) A number whose bias you can't sign isn't understood yet.
+4. **One adversarial pass — fresh context, "assume it's wrong."** For an expensive or headline result, have an independent reviewer (or a fresh-context agent) try to refute it before you present it. Cheap vs. shipping a wrong headline; on multi-TB scans it also catches cost/truncation bugs (AUDI-1089 patterns below).
+
+First reflex for a shocking number is one of the existing adjudication checks: **impossibly-low rate → unconditional-activity check; outlier cohort → calibration buckets before disbelief** (see *"Adjudication patterns from AUDI-1089"* at the end of this doc).
+
+### 3. Consolidated sanity checklist (scan before you report)
+
+One place for the checks otherwise scattered across CLAUDE.md, `data_knowledge.md`, and this doc. Not all apply every time — scan, run what's relevant:
+
+- **Null written first?** (§1) **Bias direction signed?** (§2.3)
+- **Low-volume denominators removed** — weeks < 1,000 impressions produce extreme rates; filter them.
+- **IPv4-only method?** IPv6 is ~20% of some vendor feeds (DS24), near-0 for others — an IPv4-keyed join undercounts *unevenly*. Sign the direction.
+- **Epoch units per table** — spend_log=ns, bidder_bid_events=ms, bidder_auction_events=µs. A units slip is a 10³–10⁹ error.
+- **Holdout = ITT** — `MD5('{AID}:{IP}') mod 1000`, 0–99 = holdout, per-adv per-IP; report intent-to-treat, not treated-only.
+- **Stage from `funnel_level`, not `objective_id`** (objective_id is unreliable for stage).
+- **Boundary-identity check** — assert every savings/attribution/cost model's degenerate cases against their known-exact answers (drop ALL → recovery = total; keep ALL → savings 0). See *"Adjudication patterns from AUDI-1089"* below.
+- **Cohort algebra** — "sole" cohorts don't sum; a degenerate 100% → an alternative or an em-dash, never the trivially-true 100% (see *"Adjudication patterns from AUDI-1089"*).
+- **Outlier advertiser?** WGU (AID 31357) ≈ 30% of MNTN spend — check whether one advertiser drives the result.
+
+The point isn't to run all nine every time — it's that a shocking number should never ship without a deliberate scan of the list.
 
 ---
 
