@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 2719
 approx_logical_bytes: 438994
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [pricing, margins, campaign_groups]
 keywords: [budget_margin, platform_fee, target_cpm, ad_buying_cpm, data_margin, channel_margin, margin_source, audit_history, campaign_group, ctv, version_snapshot]

@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 651
 approx_logical_bytes: 242678
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [billing, advertiser]
 keywords: [billing type, stripe, invoice, billing change request, command center, approval workflow, advertiser billing]

@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [advertising, impressions, cost]
 keywords: [impression, display, ad_served_id, impression_log, cost_impression_log, cil, bid_ip, cpm, gcs, external, parquet, beeswax, bidder]

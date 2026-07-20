@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [bidding, spend, auctions]
 keywords: [win notification, nurl, beeswax, mntn-native bidder, gcs archive, mntn_auction_id, bid_price, win_price, ctv, spend pipeline]

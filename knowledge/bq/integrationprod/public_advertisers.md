@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 38461
 approx_logical_bytes: 24768976
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [advertiser, dimension, account_config, attribution]
 keywords: [advertisers, public_advertisers, advertiser_id, company_name, advertiser_dim, account_manager_user_id, billing_type_id, conversion_window, clickpass, dpp_enabled, is_test, exclusion_reason_id, control_group_percentage]

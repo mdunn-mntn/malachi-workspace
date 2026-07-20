@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 1585655
 approx_logical_bytes: 220384845
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [creatives, beeswax, dsp, bridge]
 keywords: [beeswax, creative_id, beeswax_creative_id, beeswax_line_item, media_size_id, creative_type, ctv, third_party, dsp_id_mapping, bridge_table]

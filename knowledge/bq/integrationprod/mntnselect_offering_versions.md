@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 895
 approx_logical_bytes: 1008143
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [mntn_select, pmp, catalog]
 keywords: [mntn select, offering, offering version, private marketplace, pmp deal, cpm rate card, impression cap, ptv vendor, flash sale, request inventory, is_published]

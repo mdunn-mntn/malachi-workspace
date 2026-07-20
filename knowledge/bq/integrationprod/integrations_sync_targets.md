@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 2987
 approx_logical_bytes: 300668
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [integrations, audience-sync, crm]
 keywords: [integrations_sync_targets, sync target, hubspot list, audience sync, connection_id, target_key, advertiser integration, integrations_advertiser_integrations, crm, datastream cdc]

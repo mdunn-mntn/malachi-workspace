@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 933551068
 approx_logical_bytes: 1048468977845
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [reporting, delivery]
 keywords: [budget-change, unstable, cost_impression_log, cil, change-impact, post-change, ber_stg, staging, delivery]

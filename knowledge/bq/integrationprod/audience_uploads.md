@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 21236
 approx_logical_bytes: 5673433
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, crm, targeting]
 keywords: [audience_uploads, crm upload, match_rate, data_source_category_id, ipdsc, hashed emails, entry_count, ip list, advertiser list upload, offline attribution]

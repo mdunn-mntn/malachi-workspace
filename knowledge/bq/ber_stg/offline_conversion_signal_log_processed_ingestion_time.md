@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 1
 approx_logical_bytes: 8
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [offline-conversions, pipeline-internal, reporting]
 keywords: [watermark, checkpoint, bookmark, high-water-mark, incremental-ingestion, offline-conversion-signal, ingestion-time]

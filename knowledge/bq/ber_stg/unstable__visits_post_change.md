@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 22854495
 approx_logical_bytes: 10921496518
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [backend-reporting, attribution, visits, change-impact]
 keywords: [ber_stg, visits, post_change, change_id, budget_change, attribution, last_tv_touch, competing, staging, pre_post_change]

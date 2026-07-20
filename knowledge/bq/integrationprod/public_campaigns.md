@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 548767
 approx_logical_bytes: 136149944
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [campaigns, targeting-config, dims]
 keywords: [campaign_id, campaign_group_id, funnel_level, objective_id, channel_id, stage, prospecting, retargeting, cdc, datastream, line-item, dim]

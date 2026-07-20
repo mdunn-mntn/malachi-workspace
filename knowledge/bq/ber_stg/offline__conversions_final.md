@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 707977
 approx_logical_bytes: 324833970
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: ["conversions", "attribution", "offline-conversions"]
 keywords: ["offline conversions", "call tracking", "view-through attribution", "guid", "hashed_value", "ber staging", "conversions pipeline", "attribution model"]

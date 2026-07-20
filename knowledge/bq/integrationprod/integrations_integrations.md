@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 34
 approx_logical_bytes: 7019
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [integrations, measurement, attribution]
 keywords: [integration, connector, callrail, google_analytics, klaviyo, mparticle, mntn_audience, attribution, mmp, data_source_id, integration_type_id, advertiser_integrations]

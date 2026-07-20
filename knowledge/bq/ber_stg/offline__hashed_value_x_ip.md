@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 11238
 approx_logical_bytes: 1984606
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [offline_conversions, identity_resolution, attribution]
 keywords: [offline conversions, hashed value, ip resolution, identity graph, partner_id_list, conversion_window, ber staging, crm upload, call tracking]

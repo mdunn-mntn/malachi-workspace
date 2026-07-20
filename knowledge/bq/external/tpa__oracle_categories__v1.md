@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 161969
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, targeting, taxonomy]
 keywords: [oracle, bluekai, oracle data cloud, 3p taxonomy, audience categories, data_source_category_id, path_from_root, names, steelhouse dmp, ds1, tpa]

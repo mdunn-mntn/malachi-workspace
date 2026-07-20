@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 8323
 approx_logical_bytes: 692307
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [offline_conversions, reporting, ingestion_monitor]
 keywords: [offline conversions, upload, experian match, ip match, xdd cross-device, clickhouse, ingestion watermark, ber staging]

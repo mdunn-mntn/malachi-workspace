@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 120482
 approx_logical_bytes: 1887160
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [identity, targeting]
 keywords: [icloud, private_relay, apple, ipv4, ip_exclusion, membershipdb, bidding, ip_list, geo_targeting]

@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 57770
 approx_logical_bytes: 7310285
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [advertiser_dim, vertical_taxonomy, targeting]
 keywords: [advertiser_verticals, vertical_id, vertical_name, type_1_subvertical, rtc, fangorn, industry_classification, advertiser_name_unreliable, bucket_lookup]

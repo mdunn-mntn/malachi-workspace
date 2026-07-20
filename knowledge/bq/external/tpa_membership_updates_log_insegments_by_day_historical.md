@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 16449116829
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, holdout, incrementality, membership]
 keywords: [tpa, membership, holdout, insegments, ds3, mntn_third_party, historical, backfill, gcs_parquet, external, hive_partition, segment_membership, ip_segment, legacy_union]

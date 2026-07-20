@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 44689
 approx_logical_bytes: 13706351
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [offline-conversions, attribution]
 keywords: [offline conversion, conversion signal, call tracking, hashed identifiers, ingestion pipeline, ber_stg, upload]

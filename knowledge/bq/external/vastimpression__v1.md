@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [impressions, ctv, identity, billing]
 keywords: [vast, ctv, impression, ad_served_id, impression_log, cil, cost_impression_log, vast_impression, guid, bid_ip, ttd_impression_id, gcs, external, parquet, hive-partition]

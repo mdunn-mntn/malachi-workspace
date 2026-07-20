@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 40972060
 approx_logical_bytes: 19343999939
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [ber, visits, attribution, change_impact]
 keywords: [visits, attribution, change_impact, pre_change, snapshot, ber_stg, staging, change_id, batch_source, re_attribution]

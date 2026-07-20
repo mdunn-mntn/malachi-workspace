@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 352868
 approx_logical_bytes: 46735160
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [flights, campaign-management, budget]
 keywords: [flight, ui_flight, flight_id, campaign_group_id, budget, budget_type, monthly, flighted, daily, start_time, end_time, status_id, superseded, core_flights, ui_flight_id, update_time, campaign_groups, datastream, cdc]

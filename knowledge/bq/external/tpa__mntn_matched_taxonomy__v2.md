@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 231953
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, taxonomy]
 keywords: [ds19, mntn matched, mm core, keyword taxonomy, data_source_category_id, shoppergraph, product category, id to name, ipdsc, category resolver]

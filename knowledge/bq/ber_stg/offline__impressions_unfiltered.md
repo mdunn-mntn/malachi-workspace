@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 20445
 approx_logical_bytes: 8390852
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [offline_conversions, attribution, staging]
 keywords: [offline_conversion, hashed_value, identity_resolution, impression_match, unfiltered, ber_stg, staging, attribution, upload_id]

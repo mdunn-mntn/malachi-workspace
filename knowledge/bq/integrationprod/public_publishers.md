@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 262631
 approx_logical_bytes: 24403420
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [publishers, ctv, inventory, dimensions, cdc]
 keywords: [publisher_id, is_lrq, living_room_quality, lrq, publisher_type_id, ctv, network, channel, logo, datastream, cdc, postgres_mirror, public_publisher_types, ctv_ctv_sites]

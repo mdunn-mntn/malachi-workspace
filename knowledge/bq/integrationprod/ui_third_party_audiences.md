@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 11
 approx_logical_bytes: 13416
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audiences, third_party_data, b2b]
 keywords: [bombora, b2beacon, third_party_audience, abm, firmographic, custom_audience, data_sources, ds51, mntn_select_b2b]

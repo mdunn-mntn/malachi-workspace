@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 473
 approx_logical_bytes: 70858
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [attribution, pixel-config, advertiser-config]
 keywords: [waypoints, funnel, journey, event mapping, pattern_type, url, dlv, dataLayer, event_group, event_group_order, pixel config, attr, selective performance]

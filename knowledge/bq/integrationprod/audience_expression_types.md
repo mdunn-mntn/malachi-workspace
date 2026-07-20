@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 3
 approx_logical_bytes: 201
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, targeting]
 keywords: [expression_type_id, opm, tpa, sga, audience_expression, audience_segments, lookup_dimension, is_targeted]

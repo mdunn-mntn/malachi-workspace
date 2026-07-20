@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 2020272
 approx_logical_bytes: 619636313
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, targeting]
 keywords: [categories, data_source_id, data_source_category_id, DS13, DS16, DS21, DS14, taxonomy, verticals, funnel-tree, path_from_root, mntn_id_type, hierarchy]

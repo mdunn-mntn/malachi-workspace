@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 416
 approx_logical_bytes: 90288
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [mntn_select, orders, sales_ops]
 keywords: [mntnselect, order items, order_item_id, order_id, offering_version, target_cpm, ad_buying_cpm, contracted impressions, fulfillment_notify_status, campaign_groups junction, datastream cdc]

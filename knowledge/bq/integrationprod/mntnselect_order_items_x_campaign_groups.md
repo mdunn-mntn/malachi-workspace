@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 590
 approx_logical_bytes: 46612
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [mntn_select, orders, campaign_groups]
 keywords: [mntnselect, order_items, campaign_groups, junction, bridge, order_item_id, campaign_group_id, product_id_2, select]

@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 17
 approx_logical_bytes: 1611
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [offline-conversions, attribution, ber-staging]
 keywords: [offline conversions, upload eligibility, conversion window, hashed value, ip attribution, prep deadline, ber_stg, staging worklist]

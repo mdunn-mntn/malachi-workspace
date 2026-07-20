@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 13
 approx_logical_bytes: 598
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [auth, platform_ui]
 keywords: [roles, rbac, permissions, role_id, user_role_id, scope, super_admin, performance_analyst, advertiser_admin, ui_roles]

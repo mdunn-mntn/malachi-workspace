@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 9779
 approx_logical_bytes: 1287930
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [pricing, margins, advertiser, cdc-archive]
 keywords: [advertiser_channel_margin, margin, cpm, platform_fee, budget_margin, data_margin, target_cpm, ad_buying_cpm, channel_id, versioned-history, datastream, cdc, ctv, display, sensitive]

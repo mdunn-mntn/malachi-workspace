@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 6
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [ctv, video, impressions, reference]
 keywords: [event_type, event_type_id, event_type_raw, vast, vast_impression, video_quartile, ctv, lookup, event_log, dimension]

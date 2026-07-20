@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 5022391
 approx_logical_bytes: 793600845
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain:
   - audience

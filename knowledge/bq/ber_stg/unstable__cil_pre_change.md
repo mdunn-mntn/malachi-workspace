@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 2463919735
 approx_logical_bytes: 2720232506992
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [reporting, experiment, cost]
 keywords: [cil, cost_impression_log, budget_change, unstable, pre_change, change_impact, ber, snapshot, impressions, pct_unstable]

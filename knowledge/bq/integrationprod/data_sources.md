@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 86729
 approx_logical_bytes: 6173933
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, taxonomy, reference, conversion, targeting]
 keywords: [data_source_id, DS, DSxx taxonomy, data_source_type_id, MM, DS19, DS13, DS46, conversion_source_id, pixel registry, per-advertiser container, data_source_null_key_id, sentinel]

@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 4905105
 approx_logical_bytes: 875205217
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [audience, targeting, keywords]
 keywords: [audience_keyword_state, keyword, DS19, MM Core, MNTN Matched, parent, child, is_magic, expanded_from, archive, CDC, version history]

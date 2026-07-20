@@ -15,7 +15,7 @@ ttl_days: null
 approx_rows: 1072
 approx_logical_bytes: 190307
 schema_synced: 2026-07-20
-last_verified: 2026-07-19
+last_verified: 2026-07-20
 coverage_state: enriched
 domain: [pmp, ctv, inventory, deals]
 keywords: [private_marketplace, pmp, deal, ctv, floor_price, exchange, magnite, freewheel, index_exchange, partner_deal_id, ssp, dsp]
