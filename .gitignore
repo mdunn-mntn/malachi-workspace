@@ -72,3 +72,6 @@ _SUCCESS
 _started_*
 _committed_*
 _temporary/
+
+# BQ run-capture noise
+*.err
