@@ -7,7 +7,7 @@ ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}
 echo "── AI Workflow Kit ─────────────────────────────────────────────"
 echo "Retrieval: CLAUDE.md → knowledge/START_HERE.md → _ROUTING.md (keyword→doc) /"
 echo "           bq/_TOPICS.md (by domain) / bq/_CATALOG_INDEX.md → the one doc. Load indexes, not the tree."
-echo "BigQuery : ALWAYS via .claude/scripts/bq_run.sh (dry-run gate + cost log). Sample first. Raw 'bq query' is blocked."
+echo "BigQuery : ALWAYS via .claude/scripts/bq_run.sh (perf+provenance log, us-central1 reservation). Sample first; dry-run unfamiliar SQL. Raw 'bq query' is blocked."
 
 COV="$ROOT/knowledge/bq/_COVERAGE.md"
 [[ -f "$COV" ]] && grep -m1 '^Rollup:' "$COV" | sed 's/\*\*//g; s/^Rollup:/Coverage :/'

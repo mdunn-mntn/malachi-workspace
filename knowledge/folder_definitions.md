@@ -67,6 +67,10 @@ ti_xxx_name/
 └── artifacts/     ← everything else: notebooks, PDFs, Python scripts, Word docs, PNGs
 ```
 
+**Scaffold it in one command:** `.claude/scripts/new_ticket.sh <folder_name> [--summary "..."]`
+(validates the name, creates the subdirs, prefills lint-passing front-matter, refreshes `tickets/INDEX.md`).
+Add `--parent <epic_folder>` for an epic child, `--epic` for an epic folder itself. See the script header for flags.
+
 ### `summary.md`
 The single written record of the ticket. Covers: what the problem was, what was done, what was found, what questions were answered, what data docs were updated. Required before the ticket is considered complete.
 

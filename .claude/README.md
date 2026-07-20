@@ -21,6 +21,9 @@ Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the 
 | `SessionStart` | `session_start_routing.sh` | prints the retrieval map + coverage rollup + doc-debt count + perf-log size + the `health_scorecard.py` line so a fresh chat orients without full ingestion | no |
 | `Stop` | `capture_reminder.sh` | advisory: if the queue is non-empty or a knowledge doc changed since the last index build, reminds you to `/capture` + `build_index.sh` | no (advisory) |
 
+**Workflow scripts:**
+- `scripts/new_ticket.sh <folder_name> [--title ..] [--summary ..] [--status ..] [--parent <epic>] [--epic] [--jira <url>]` — scaffold a conforming ticket folder in one command: validates the name (lowercase+underscores), creates `queries/ outputs/ meetings/ artifacts/`, writes `summary.md` with prefilled front-matter that passes `lint_tickets`, and refreshes `tickets/INDEX.md`.
+
 **Self-improvement scripts (read/append-only — no delete authority):**
 - `scripts/health_scorecard.py [--verbose]` — days-since-`/capture` (the `: capture` ritual commit), orphan docs (knowledge docs untouched in git > 120d), and duplicate-H1-title count. Prints one line into the SessionStart block; `--verbose` names the offenders.
 - `scripts/request_digest.py [--min N]` — mines `.request_log.jsonl` for recurring verb+noun shapes and **proposes** a `/skill` for anything that recurs ≥ N times. Proposal only — a human decides; skills are never auto-created (and knowledge is never auto-deleted).
