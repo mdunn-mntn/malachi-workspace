@@ -29,11 +29,14 @@ def _git(*args, timeout=15):
 def days_since_capture():
     """Days since the last /capture ritual commit.
 
-    Matches the ritual subject signature `<TICKET>: capture — …` (a colon-space before the word), not a
-    bare mention: this rejects false positives like `CDC-capture` in a schema note or `capture reminder`
-    in the hook-install commit, which are not knowledge-consolidation events.
+    Matches the full ritual signature `<TICKET>: capture — …` (colon-space-capture-space-em-dash), not a
+    bare mention of the word. This rejects three kinds of false positive seen in the wild: `CDC-capture` in
+    a schema note, `capture reminder` in the hook-install commit, and — the subtle one — a commit *about*
+    this detector whose body quotes the string `: capture` while describing the mechanism. Requiring the
+    trailing ` — ` pins it to the actual consolidation commits. If the convention ever changes, this
+    degrades safely to "no /capture commits" (which nudges a capture) rather than a false "0d ago".
     """
-    ts = _git("log", "-1", "--format=%ct", "-i", "-E", "--grep=: capture").strip()
+    ts = _git("log", "-1", "--format=%ct", "-i", "-E", "--grep=: capture —").strip()
     if not ts.isdigit():
         return None
     return int((time.time() - int(ts)) // DAY)
