@@ -110,6 +110,14 @@ if [[ -n "$JOB_JSON" ]]; then
         # --- referenced tables (resolved through views to underlying SQLMesh tables) ---
         referenced_tables: [.statistics.query.referencedTables[]? | "\(.datasetId).\(.tableId)"],
 
+        # --- sql_tables: clean dataset.table names (SQLMesh physical sqlmesh__ds.ds__tbl__hash -> ds.tbl) ---
+        # feeds the net-new-table doc-debt hook + perf_digest by-table keying
+        sql_tables: ([.statistics.query.referencedTables[]? |
+            if (.datasetId | startswith("sqlmesh__"))
+            then ((.tableId | split("__")) as $p |
+                  if ($p | length) >= 2 then "\($p[0]).\($p[1])" else "\(.datasetId).\(.tableId)" end)
+            else "\(.datasetId).\(.tableId)" end] | unique),
+
         # --- query plan stages (compact: per-stage performance) ---
         query_plan: [.statistics.query.queryPlan[]? | {
             stage:              .name,

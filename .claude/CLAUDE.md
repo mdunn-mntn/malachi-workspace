@@ -2,6 +2,36 @@
 
 See global `~/.claude/CLAUDE.md` for the full operating rules (always-on behaviors, naming conventions, commit protocol, empirical analysis protocol, BQ safety rules). This file adds project-specific paths and structure.
 
+## Self-Documenting System (adopted from the AI Workflow Kit)
+
+This workspace runs a two-layer self-documenting system. Design: `workflows/ARCHITECTURE.md`. Operator
+guide for the deterministic layer: `.claude/README.md`. **This ADDS to the existing rules — nothing is
+removed.** The mature prose knowledge (`data_catalog.md`, `data_knowledge.md`, `mntn_business.md`, …)
+remains the source of truth; the structured per-table catalog is being **crawled from it**, and until a
+table reaches `enriched`/`verified` in `bq/_COVERAGE.md`, its `data_catalog.md` section is the fallback.
+
+**Retrieval (load indexes, not the tree):** start at `knowledge/START_HERE.md` → the generated maps
+`_ROUTING.md` (keyword→doc), `bq/_TOPICS.md` (by domain), `bq/_CATALOG_INDEX.md`, `bq/_COVERAGE.md`
+(depth) → the one doc, or one `##` section of it. See `START_HERE.md` for the task→doc map.
+
+**Per-table catalog + coverage:** each table gets `knowledge/bq/<dataset>/<table>.md` (YAML front-matter
++ AUTO:SCHEMA + curated sections + append-only `## Observed cost/facts` + `## Changelog`). Two dates:
+`schema_synced` (machine, auto) vs `last_verified` (human, only when confirmed vs source);
+`coverage_state` = skeleton→enriched→verified. `.claude/scripts/lint_coverage.py` blocks a doc with
+`<Fill:>` stubs from being marked verified. Refresh a doc: `.claude/scripts/bq_introspect.sh <dataset>`
+(regenerates schema, preserves human sections + view-resolved partition/cluster).
+
+**Deterministic layer (`.claude/`, runs itself):** the existing `bq_run.sh` wrapper now also logs
+`sql_tables` (clean names). Four hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
+wrapper), flag net-new tables to `knowledge/bq/_UNDOCUMENTED.queue`, print routing/coverage at
+SessionStart, and remind to `/capture` at Stop. `.claude/scripts/build_index.sh` regenerates every
+index from front-matter (run after any `knowledge/` change). `perf_digest.py` mines the perf log.
+
+**Agents (`.claude/agents/`), one job each:** cataloger (skeleton→enriched), reviewer-adversarial ×2
+(fresh context, "assume it's wrong"), fixer, synthesizer, perf-analyst, curator (`/capture`). The
+corpus crawl runs this loop (implementer → 2 reviewers → fixer) per unit — see
+`workflows/agent_pass_runbook.md` + `INGEST_GUIDE.md`.
+
 ## Workspace Structure
 
 ```

@@ -156,6 +156,30 @@ Typical entries include:
 
 **Neither file is ever "done."** Every ticket that touches a table should update both files if new knowledge was found. This is not optional — it is part of completing a ticket. The summary template has a dedicated section for it (Section 7: Data Documentation Updates).
 
+### The structured catalog: `knowledge/bq/` + `glossary.md` + `decisions/` (self-documenting layer)
+
+The prose files above remain the source of truth, but a **structured, chunk-loadable layer** now sits
+alongside them so a fresh chat can find one fact without ingesting a 465 KB file. It was crawled from
+the prose + live BigQuery schema (adversarially verified), and it maintains itself via `.claude/` hooks
++ generated indexes.
+
+- **`knowledge/bq/<dataset>/<table>.md`** — one doc per table (204 tables across logdata, summarydata,
+  core, aggregates, integrationprod). Each has YAML front-matter + auto-synced schema + curated
+  Purpose / Grain / Column-meanings / Joins / Gotchas / Cost sections + append-only Observed-cost /
+  Changelog. Two dates: `schema_synced` (machine) vs `last_verified` (human); `coverage_state` =
+  skeleton → enriched → verified.
+- **Generated indexes** (rebuild with `.claude/scripts/build_index.sh`): `knowledge/START_HERE.md`
+  (task → doc map), `_ROUTING.md` (keyword → doc), `bq/_CATALOG_INDEX.md`, `bq/_TOPICS.md`,
+  `bq/_COVERAGE.md` (depth + worst-first enrichment queue).
+- **`knowledge/glossary.md`** — term/acronym/concept → 1-line def + pointer to the authoritative doc.
+- **`knowledge/decisions/`** — settled cross-cutting disambiguations (ADR-style).
+- **How it stays true:** every BQ query runs through `.claude/scripts/bq_run.sh` (dry-run gate + cost
+  log + net-new-table detection); a table's `bq_introspect.sh` refresh re-syncs schema without touching
+  curated prose; `lint_coverage.py` blocks a doc from claiming `verified` while stubs remain. See
+  `.claude/CLAUDE.md` § Self-Documenting System and `workflows/ARCHITECTURE.md`.
+
+**Start at [`knowledge/START_HERE.md`](knowledge/START_HERE.md)** — load indexes, not the tree.
+
 ---
 
 ## Tickets: `tickets/`
