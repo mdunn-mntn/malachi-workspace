@@ -102,6 +102,14 @@ def check_file(path):
             v.append(f"has <Fill:> stubs but coverage_state={cov!r} (must be 'skeleton')")
         if not lv_empty:
             v.append(f"has <Fill:> stubs but last_verified={lv!r} (must be empty/null)")
+    # coverage_state is a required, valid field on every bq_table doc (a dropped field silently
+    # defaults to 'skeleton' in build_index and corrupts the rollup — see the 20-doc enrich regression)
+    if cov in (None, ""):
+        v.append("missing coverage_state (required on every bq_table doc)")
+    elif cov not in ("skeleton", "enriched", "verified"):
+        v.append(f"coverage_state={cov!r} not in skeleton|enriched|verified")
+    elif cov == "verified" and lv_empty:
+        v.append("coverage_state=verified but last_verified is empty (verified means confirmed vs source on a date)")
     ready = (not has_stub and cov == "skeleton")
     return v, ("stubs gone but still coverage_state:skeleton — ready to advance to enriched" if ready else None)
 
