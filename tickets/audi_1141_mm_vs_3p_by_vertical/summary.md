@@ -93,11 +93,12 @@ A naive "campaigns using MM vs campaigns using 3P" split is wrong: **~72% of cam
 ---
 
 ## 5. Deliverables
+- **`outputs/audi_1141_mm_vs_3p_scorecard.xlsx`** — the shareable workbook (upload to Google Sheets): Read-me · MM-vs-3P-by-vertical headline · Full scorecard · Overall · Campaign detail (5,965 rows w/ advertiser names, pivotable). Rebuild: `artifacts/audi_1141_build_xlsx.py`.
 - `outputs/audi_1141_campaign_grain.csv` — 8,217-campaign cohort with all flags + KPIs
-- `outputs/audi_1141_scorecard_overall.csv`, `outputs/audi_1141_scorecard_by_vertical.csv`
+- `outputs/audi_1141_scorecard_overall.csv`, `outputs/audi_1141_scorecard_by_vertical.csv`, `outputs/audi_1141_advertiser_names.csv`
 - `artifacts/audi_1141_chart_overall.png` (VR + CPV + gate story), `..._vr_by_vertical.png`, `..._cpv_by_vertical.png`
-- `artifacts/audi_1141_findings.md` — Jon-facing findings doc
-- `queries/audi_1141_cohort_scorecard.sql`, `artifacts/audi_1141_aggregate.py`, `artifacts/generate_charts.py`
+- `artifacts/audi_1141_findings.md` — Jon-facing findings doc (markdown)
+- `queries/audi_1141_cohort_scorecard.sql`, `artifacts/audi_1141_aggregate.py`, `artifacts/generate_charts.py`, `artifacts/audi_1141_build_xlsx.py`
 
 ## 6. Questions Answered
 - **Q: MM vs 3P performance by vertical, 6mo?** A: MM (gated) wins VR & CPV in every vertical; scorecard delivered.
