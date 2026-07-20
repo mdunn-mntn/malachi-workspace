@@ -38,10 +38,9 @@ Cross-reference linking a **LiveRamp 3P audience category** (`data_source_catego
 | column | type | nullable | partition | cluster# |
 |--------|------|----------|-----------|----------|
 | data_source_category_id | INT64 | YES |  |  |
-| advertiser_id | INT64 | YES |  |  |
+| advertiser_id | STRING | YES |  |  |
 | created_date | DATE | YES |  |  |
 | updated_date | DATE | YES |  |  |
-| datastream_metadata | STRUCT<uuid STRING, source_timestamp INT64> | YES |  |  |
 <!-- AUTO:SCHEMA END -->
 
 > ⚠ **The AUTO:SCHEMA block above is STALE — it describes the `integrationprod` CDC landing table, not this `tpa` table.** Verified live via `bq show --schema dw-main-bronze:tpa.liveramp_categories_advertiser_mapping` (2026-07-20): this table has **4 columns only**, `advertiser_id` is **STRING** (not INT64), and **`datastream_metadata` does not exist here**. Re-introspect the `tpa` dataset to correct it. Actual live columns: `data_source_category_id` (INT64), `advertiser_id` (STRING), `created_date` (DATE), `updated_date` (DATE).
