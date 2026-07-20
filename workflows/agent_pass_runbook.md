@@ -124,3 +124,48 @@ reviews + fix ≈ 4 model turns. Estimate: `units × ~4 turns × avg tokens`. **
 token spend, multiply by (total_units / pilot_units)** before launching the full pass. Bun's was
 $165k at 64-agent/11-day scale; yours should be orders of magnitude smaller — keep it that way by
 piloting and sharding, not by running 24/7.
+
+---
+
+## Lessons from the live corpus crawl (2026-07 — the factory ran; these are blessed as doctrine)
+
+The loop above is not theoretical — it crawled **263 tables to 57 verified / 206 enriched** on `main`, and
+then ran the ticket-front-matter backfill (83 cards, 8 shards). Six operational lessons from those runs,
+folded back so the next crawl inherits them:
+
+1. **Resume, don't restart.** A long crawl WILL hit a usage limit or a bad shard mid-run. Re-launch with
+   `Workflow({scriptPath, resumeFromRunId})` — the longest unchanged prefix of `agent()` calls replays from
+   cache; only the edited/failed call and everything after it re-runs (same script + same args → 100% hit).
+   Before diagnosing an empty result, **read the run's `journal.jsonl`** — never assume a cached result was
+   non-empty.
+
+2. **The physical-name split keeps `__`.** SQLMesh physical = `<schema>__<table>__<hash>`, and the *table*
+   can itself contain `__` (`agg__daily_sum_by_campaign`). Split as `parts[1:-1]` joined by `__`, never
+   `parts[1]` — the naive split truncated `agg__daily_sum_by_campaign` → `agg` and mis-attributed cost.
+   (Fixed in `perf_digest.py` + `bq_run.sh`'s `sql_tables`.)
+
+3. **Lint every invariant a batch agent can silently drop.** A batch of ~20 enrich agents dropped
+   `coverage_state` from the front-matter and inflated the rollup 12→31. A one-line `lint_coverage.py` gate
+   (front-matter must carry `coverage_state`) now blocks it. Rule: if a field drives a generated rollup,
+   lint its *presence* — don't trust N parallel agents to all preserve it. (Same rule birthed
+   `lint_tickets.py` for the ticket front-matter: `status:done ⇒ real result`.)
+
+4. **The prose oracle is READ-ONLY during a crawl.** A crawl agent "corrected" `bidder_bid_events` TTL
+   directly in `data_catalog.md`; it was reverted. Crawl agents READ the prose source-of-truth and WRITE
+   only the per-table `knowledge/bq/**` docs. Reconciling the oracle itself is a human `/capture` step,
+   never an unattended agent edit. (Also in `INGEST_GUIDE.md`.)
+
+5. **`schema_synced` (machine) ≠ `last_verified` (human) — and a missing `last_verified` is not "stale."**
+   Stale = `schema_synced > last_verified`. Guard that comparison against an empty `last_verified` (treat it
+   as "never human-verified," not as an ancient date that flags every doc stale) — that fallback was the
+   source of a false-stale flood.
+
+6. **Seed AUTO:SCHEMA from the RIGHT project.** `tpa` exists in three projects; introspecting the wrong one
+   aligned the schema block to the wrong table and contradicted the human-written body. `bq_introspect.sh`
+   takes a `GCP_PROJECT` override — set it to the project the doc body describes (e.g. `dw-main-bronze` for
+   tpa) and diff AUTO:SCHEMA against the prose before committing.
+
+**The engine is blessed as the standard factory.** The 7-agent roster + this runbook + `INGEST_GUIDE.md` +
+the linters (`lint_coverage.py`, `lint_tickets.py`) + manifest-as-queue are THE way to do a corpus pass or a
+bulk front-matter backfill. Do not build a parallel `RESTRUCTURE_GUIDE.md` or a whole-workspace bulk port —
+**pilot, shard, resume, and fix-the-process-not-the-artifact.**
