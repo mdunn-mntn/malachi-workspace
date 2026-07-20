@@ -183,12 +183,50 @@ Naming: `zoom_yyyy_mm_dd_topic/`
 
 ## Root level
 
-**Only these items belong at root:**
-- `.claude/` — Claude project settings and CLAUDE.md
+**Items that belong at root:**
+
+*Core (the original spec):*
+- `.claude/` — Claude project settings, CLAUDE.md, hooks, scripts, skills, agents
 - `.gitignore`
 - `knowledge/`
 - `tickets/`
 - `documentation/`
 - `claude-prompts/`
 
-**Nothing else.** No stray folders, no one-off files at root level.
+*Blessed additions (post-date the original spec; all referenced in CLAUDE.md):*
+- `README.md` — workspace structure + how-to (required, read at session start)
+- `.mcp.json` — MCP server registrations
+- `workflows/` — the self-documenting-system design (`ARCHITECTURE.md`, `INGEST_GUIDE.md`, agent runbook)
+- `self_review/` — performance self-assessment (**gitignored**, never committed)
+- `slack_bot/` — the Slack knowledge-extraction bot (runs on the Pi)
+
+*Under review (not yet ruled on):*
+- `todoist-mcp-transfer/` — a vendored MCP tool (~55 MB). Candidate to relocate out of the analytics repo.
+
+**Nothing else** — no stray one-off files or folders at root. `.DS_Store`, `.vscode/`, `__pycache__/`,
+`*.pyc`, and Spark write-markers (`_SUCCESS`/`_started_*`/`_committed_*`) are gitignored and must never
+be tracked.
+
+---
+
+## Naming — carve-outs to the lowercase/underscore rule
+
+The rule is **all lowercase, underscores only** (`ti_650_stage_3_vv_audit`). These are the sanctioned
+exceptions — the structure audit (`.claude/scripts/audit_structure.py`) treats them as conformant, not
+violations:
+
+- **Conventional/generated doc names** (uppercase is standard): `README.md`, `MEMORY.md`, `CLAUDE.md`,
+  `ARCHITECTURE.md`, `START_HERE.md`, `INGEST_GUIDE.md`; the generated `INDEX.md` and `_ROUTING.md` /
+  `_TOPICS.md` / `_CATALOG_INDEX.md` / `_COVERAGE.md`; skill files `SKILL.md`.
+- **Sanctioned dashed directories**: `claude-prompts/` (a blessed root folder — the dash *is* its name),
+  and vendored external tool trees (`todoist-mcp-transfer/`, `mcp-server/`, `claude-memory/`) whose
+  naming is the upstream tool's, not ours. Agent/prompt files may use dashes (`reviewer-adversarial.md`).
+- **Machine round-trip exports**: files whose exact name (spaces/hashes and all) is required to sync with
+  an external system — e.g. Mode dashboard query exports (`00b Reach By Score.9b2f59dea917.sql`). Renaming
+  breaks the round-trip; leave them as the tool wrote them.
+- **A self-contained query pack** may carry its own `MANIFEST.md` / `README.md` / runner `.sh` alongside
+  the `.sql` (e.g. `audi_1089/runbook/queries/`), even though `queries/` is otherwise SQL-only — the pack
+  is a deliberate handoff unit.
+
+**Enforcement:** run `python3 .claude/scripts/audit_structure.py` to list any drift from this standard
+(read-only; proposes actions, executes nothing).
