@@ -1,1 +1,5 @@
 external.targeted_signal
+geo.location_data
+integrationprod.archives_household_score_threshold_archives
+integrationprod.dso_household_score_thresholds
+reporting.ddp_mm_winners_imp_202606
