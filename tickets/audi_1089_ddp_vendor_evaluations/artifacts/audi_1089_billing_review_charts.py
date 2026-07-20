@@ -82,7 +82,7 @@ def chart_waterfall():
             fontsize=14, fontweight="bold", color=NAVY)
     ax.text(1, (total_after + cut) / 1000 + 12, f"−\\${cut/1000:,.0f}K", ha="center",
             fontsize=14, fontweight="bold", color=RED)
-    ax.text(1, (total_after + cut / 2) / 1000, "33.7%", ha="center", va="center",
+    ax.text(1, (total_after + cut / 2) / 1000, f"{cut/total_bill*100:.0f}%", ha="center", va="center",
             fontsize=11, color="white", fontweight="bold")
     ax.text(2, total_after / 1000 + 12, f"\\${total_after/1000:,.0f}K", ha="center",
             fontsize=14, fontweight="bold", color=NAVY)
@@ -96,6 +96,33 @@ def chart_waterfall():
     print("wrote", p)
 
 
+def chart_augmentor_correction():
+    """Same-day (bid-stream tautology) vs fair prior-day-dominant free coverage, per vendor."""
+    rows = load("audi_1089_augmentor_correction.csv")
+    rows.sort(key=lambda r: float(r["sameday_pct"]), reverse=True)
+    labels = [r["vendor"] for r in rows]
+    old = [float(r["sameday_pct"]) for r in rows]
+    new = [float(r["fair_prior_dominant_pct"]) for r in rows]
+    fig, ax = plt.subplots(figsize=(9.2, 4.6))
+    y = range(len(labels))
+    h = 0.36
+    ax.barh([i + h/2 for i in y], old, height=h, color=MUTED, label="same-day (counts bid-stream)")
+    ax.barh([i - h/2 for i in y], new, height=h, color=NAVY, label="fair: prior-day & free still as fresh")
+    ax.set_yticks(list(y)); ax.set_yticklabels(labels, fontsize=12); ax.invert_yaxis()
+    ax.set_xlabel("% of vendor's credited signal a free log already covers", fontsize=11, color="#555")
+    ax.set_xlim(0, max(old) * 1.22)
+    for i, (o, n) in enumerate(zip(old, new)):
+        ax.text(o + 0.6, i + h/2, f"{o:.0f}%", va="center", fontsize=10.5, color="#888")
+        ax.text(n + 0.6, i - h/2, f"{n:.0f}%", va="center", fontsize=10.5, color=NAVY, fontweight="bold")
+    ax.legend(loc="lower right", frameon=False, fontsize=10.5)
+    ax.tick_params(length=0)
+    fig.tight_layout()
+    p = os.path.join(HERE, "audi_1089_billing_review_augmentor.png")
+    fig.savefig(p, dpi=200, bbox_inches="tight"); plt.close(fig)
+    print("wrote", p)
+
+
 if __name__ == "__main__":
     chart_preemption_proof()
     chart_waterfall()
+    chart_augmentor_correction()

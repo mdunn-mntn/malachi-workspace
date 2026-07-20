@@ -551,7 +551,38 @@ rescue the vendor roster.
 q13a ds-anchor was also corrected (per-day-average vs sample-day, day-variance tolerance) before it
 could false-fail at 30x.
 
+## 4g. Billing-team review deck + AUGMENTOR CORRECTION to the preemption number (2026-07-20)
+
+Built a focused deck + audit pack for the DDP billing team (Sherwin/Maya) whose claim was "the meter
+already avoids paying for free-log-covered signal — nothing to recover." Deliverables in `artifacts/`:
+`audi_1089_billing_review_deck_standalone.html` (13-slide RevealJS), `audi_1089_billing_review.md` (talk
+track), `audi_1089_audit_map.md` (every claim → query → expected number). Spine proof (verified live):
+`ddp_mm_winners_imp` `tv_cpm` = $0.50 whenever ANY paid vendor wins, $0 only when none does — free
+co-presence is IGNORED (268.9M June imps billed $0.50 despite a free log co-winning). The meter does NOT preempt.
+
+**AUGMENTOR CORRECTION (user challenge — supersedes the §4d13 same-day $273.7K):** augmentor (DS30) is the
+SSP bid stream, so it necessarily logs an IP the day it's bid on. A same-day free-cohold (q3c, the basis of
+$273.7K) is therefore CIRCULAR for augmentor. Fair test (`q3e_v2_free_prior_lookback.sql`, 37d scan / 7d
+measure = full 30d lookback, ALL IPs): did a free log have the (ip×domain) on a PRIOR day within the window
+AND is it still at least as fresh (`free_prior_dominant`)? Results: 33Across same-day **52.9% → fair 38.4%**;
+API 23.7→18.8; Cybba 28.3→17.7; 5x5 18.6→8.3; Justuno 4.4→1.7; Sovrn 0.2→0.1. Cross-checks: (a) q3e_v2
+reproduces the same-day 52.9% exactly; (b) a naive in-window prior undercounts via edge effect (33Across
+38.3% in-window → 47.1% with full lookback → 38.4% after the recency filter); (c) a 10% IP-sample matched
+the full 30d scan to 0.1pp.
+
+**Fair preemption = $200.4K/yr (−24.7%), roster $812.4K → $612.0K** (conservative/free-dominant; upper
+bound $243.5K incl. the vendor-fresher slice). Per vendor recoverable: 33Across $162.1K, API $33.1K, Cybba
+$3.8K, Justuno $1.3K, Sovrn $0.1K. Because preemption recovers LESS than the same-day figure, residual bills
+are HIGHER → the repricing case STRENGTHENS: worth ÷ bill-after (most-generous, best-of-both-lenses) is now
+**< 1.0× for EVERY metered vendor** — API 0.94×, 33Across 0.83×, Justuno 0.79× (domain-driven), Sovrn 0.29×,
+Cybba 0.27×. Recommendation: preempt (−$200K) → renegotiate 33Across pair toward ≤fair → drop Sovrn + Cybba.
+Also fixed a two-lens bug (Justuno/Cybba are domain-driven; dependency-only ratio understated them) and a
+$0.1K footing rounding, both caught by an adversarial-verification workflow.
+
 ## 4d13. Post-preemption economics — bills if free logs stopped paying for co-held data (user question 2026-07-15)
+> **SUPERSEDED for the billing deck (2026-07-20):** the table below uses SAME-DAY free-cohold ($273.7K).
+> The augmentor bid-stream tautology inflates that; the fair prior-day number is **$200.4K** (see §4g).
+> Keep this table only as the same-day upper reference.
 
 **Question:** we supposedly pay only for used data, but the meter doesn't exclude signals
 guid_log/augmentor already capture (AUDI-1093). If we stopped paying for anything in those logs,

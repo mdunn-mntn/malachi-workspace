@@ -47,14 +47,15 @@ GROUP BY 1,2 ORDER BY consumer_dsid, n_rows DESC;
 | 2 | Free logs cover the visit-day universe | **59.4%** (7.89B / 13.29B) | `deck_d1_universe_coverage.sql` / `q3c_visit_grain_uniqueness.sql` masks | BIG |
 | 3 | Free logs cover the pair universe | **60.4%** (3.60B / 5.97B) | `q3b_credit_reassignment.sql` masks | BIG |
 | 4 | Meter charges $0.50 on free-covered imps | **268.9M imps, 100% @ $0.50** | **P1** above | ~18 GB |
-| 5 | Preemptable $ (bill × free-co-held share) | **−$273.7K/yr (−33.7%)** | `q3c` free-co-held × `q0` bills (combine offline) | derived |
-| 5a | · 33Across | −$221.7K (52.5%) | same | |
-| 5b | · 33Across API | −$41.9K (23.8%) | same | |
-| 5c | · Cybba | −$6.1K (28.2%) | same | |
-| 5d | · Justuno | −$3.8K (4.9%) | same | |
-| 5e | · Sovrn | −$0.3K (0.2%) | same | |
-| 6 | Roster after preemption | **$538.7K/yr** | $812.4K − $273.7K | derived |
-| 7 | Post-preempt worth ÷ bill (generous ceiling) | 33A 1.08× · API 1.00× · Sovrn 0.29× · Justuno 0.15× · Cybba 0.19× | `q8b_solo_perf.sql` (solo media ×52) ÷ bill-after | BIG |
+| 5 | **Fair** preemptable $ (bill × prior-day-dominant share) | **−$200.4K/yr (−24.7%)** | **`q3e_v2_free_prior_lookback.sql`** (`free_prior_dominant`) × `q0` bills | BIG (37d) |
+| 5a | · 33Across | −$162.1K (38.4%) | same | |
+| 5b | · 33Across API | −$33.1K (18.8%) | same | |
+| 5c | · Cybba | −$3.8K (17.7%) | same | |
+| 5d | · Justuno | −$1.3K (1.7%) | same | |
+| 5e | · Sovrn | −$0.1K (0.1%) | same | |
+| 5f | Same-day (naive, augmentor-inflated) / upper bound | $273.7K / $243.5K | `q3e_v2` `free_sameday` / `free_prior30` cols | context |
+| 6 | Roster after preemption | **$612.0K/yr** | $812.4K − $200.4K | derived |
+| 7 | Post-preempt worth ÷ bill (most-generous, best lens) | API 0.94× · 33A 0.83× · Justuno 0.79× · Sovrn 0.29× · Cybba 0.27× | max(`q8b` dependency ceiling, `q4` domain band) ÷ bill-after | BIG |
 | 8 | Dependency ceiling (media on sole serves ×52) | per-vendor T1/T2 | `q6_value_tiers.sql` + `q6b_sole_by_funnel.sql` | BIG |
 | 9 | Fee-band / unique-domain value | per-vendor $ band | `q4_domain_value.sql` (sole classified domains × band) | BIG |
 | 10 | Sole-serve performance ≈ no-data baseline | VR 0.026% vs 0.022% | `q7_sole_vr.sql` + `q7e_vr_baseline.sql` | BIG |
@@ -64,13 +65,13 @@ GROUP BY 1,2 ORDER BY consumer_dsid, n_rows DESC;
 
 ## Fair value & recommendation (per vendor)
 
-| Vendor | DS | Bill/yr | After preempt | Fair range | Rec | Backing |
+| Vendor | DS | Bill/yr | After preempt | Cap at fair (best lens) | Rec | Backing |
 |---|---|--:|--:|--:|---|---|
-| 33Across | 28 | $422.0K | $200.4K | $30–100K | Renegotiate ≤~$100K or drop | q6/q4/q3b |
-| 33Across API | 40 | $175.9K | $134.0K | $10–40K | Drop / renegotiate | q6/q4/q3b |
-| Sovrn | 33 | $115.9K | $115.6K | $0.5–2.4K | **Drop** | q6/q7/q3b |
-| Justuno | 24 | $77.1K | $73.3K | $14–60K | Trim meter | q6/q4 |
-| Cybba | 36 | $21.5K | $15.4K | $1.1–4.7K | **Drop** | q6/q4 |
+| 33Across | 28 | $422.0K | $259.9K | ≤$217K | Renegotiate — biggest lever | q6/q4/q3e_v2 |
+| 33Across API | 40 | $175.9K | $142.8K | ≤$134K | Renegotiate / drop | q6/q4/q3e_v2 |
+| Sovrn | 33 | $115.9K | $115.8K | ≤$34K | **Drop** | q6/q7/q3e_v2 |
+| Justuno | 24 | $77.1K | $75.8K | ≤$60K (domain) | Trim meter | q4/q6 |
+| Cybba | 36 | $21.5K | $17.7K | ≤$4.7K (domain) | **Drop** | q4/q6 |
 | Klickly | 39 | flat (pending) | — | $0.1–1.5K | Drop unless ~free | q4/q6/dependency_valuation.md |
 | Predactiv | 26 | flat (pending) | — | high (domain) | Keep / lock (HEM→CRM dep.) | q4 + TI-1027 |
 | 5x5 | 25 | flat (pending) | — | high (domain) | Keep | TI-1027 |

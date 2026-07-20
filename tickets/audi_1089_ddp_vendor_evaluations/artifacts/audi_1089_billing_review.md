@@ -15,9 +15,9 @@ Windows (identical everywhere): delivery/uniqueness = 30-day svs `dt 2026-06-02.
 > (guid_log DS23, augmentor DS30) also capture — so there's nothing to recover."
 
 **The data says the opposite.** The meter does **not** preempt. It pays $0.50 CPM on impressions our
-own free logs already cover, to the tune of **$273.7K/yr** — and it's visible three independent ways,
-each reproducible by you. That's the spine of this review. Everything after it is: *how I know each
-vendor's fair value, and what we should actually pay.*
+own free logs already had — **~$200K/yr** on a fair, conservative test (prior-day, recency-credited) —
+and it's visible three independent ways, each reproducible by you. That's the spine of this review.
+Everything after it is: *how I know each vendor's fair value, and what we should actually pay.*
 
 ---
 
@@ -78,7 +78,7 @@ Distinct (IP × domain × date), 30 days, usable rows only:
 
 So a **majority** of every billable signal is already ours at $0. *(deck_d1 / q3c)*
 
-### 3.2 The meter pays vendors for that free-covered signal anyway — $273.7K/yr
+### 3.2 The meter pays vendors for that free-covered signal anyway — ~$200K/yr (fair)
 Three independent proofs, each runnable by you:
 
 **Proof 1 — the billing table itself (`gold.reporting.ddp_mm_winners_imp_202606`, verified live).** The
@@ -96,41 +96,54 @@ charged the full $0.50** — a preemptive meter would show $0 there. Co-presence
 effect on the charge. *(This proves the mechanism/rate — see the caveat below on why these impression
 counts are NOT multiplied into the dollar figure.)*
 
-**Proof 2 — per-vendor dollars (bill × free-co-held share, q3c/q3b masks).** Of the $812.4K/yr metered
-bill, **$273.7K (33.7%)** sits on visit-days the free logs also hold:
+**Proof 2 — per-vendor dollars, on the FAIR prior-day test (q3e-v2).** *(Methodology note — this is the
+number to get right.)* augmentor (DS30) is the SSP bid stream, so it necessarily logs an IP the day it's
+bid on. A naive **same-day** free-cohold therefore over-credits the free logs — of course augmentor "had"
+the impression the day it was bid. The fair test: did a free log have the (ip × domain) on a **prior day**
+within the 30-day targeting window, **and is the free log still at least as fresh** as the vendor (if the
+vendor is the freshest source, we credit *it*). Measured with a full 30-day lookback, all IPs (q3e-v2):
 
-| Vendor | Bill $/yr | Free-co-held | Recoverable by preemption |
+| Vendor | Bill $/yr | Fair prior-day share | Recoverable by preemption |
 |---|--:|--:|--:|
-| 33Across | $422.0K | 52.5% | **$221.7K** |
-| 33Across API | $175.9K | 23.8% | **$41.9K** |
-| Cybba | $21.5K | 28.2% | **$6.1K** |
-| Justuno | $77.1K | 4.9% | **$3.8K** |
-| Sovrn | $115.9K | 0.2% | **$0.3K** |
-| **Roster** | **$812.4K** | **33.7%** | **$273.7K** |
+| 33Across | $422.0K | 38.4% | **$162.1K** |
+| 33Across API | $175.9K | 18.8% | **$33.1K** |
+| Cybba | $21.5K | 17.7% | **$3.8K** |
+| Justuno | $77.1K | 1.7% | **$1.3K** |
+| Sovrn | $115.9K | 0.1% | **$0.1K** |
+| **Roster** | **$812.4K** | **24.7%** | **$200.4K** |
+
+**~$200.4K/yr is the conservative (free-dominant) figure.** The naive same-day test says $273.7K — it's
+inflated by the augmentor bid-stream tautology (33Across same-day 52.9% → fair 38.4%). Upper bound ~$243.5K
+if you don't credit vendor recency at all. The full-lookback scan reproduces the same-day 52.9% for 33Across
+as a sanity check before applying the prior-day rule.
 
 **Proof 3 — the source table, now self-serve (`bronze.external.targeted_signal`).** The row-level
 "used-signal" table is a BQ external table (was believed Athena-only), hive-partitioned on
-`source_data_source_id` — so you can directly count vendor-credited (ip × dscid × date) rows that the
-free logs (23/30) also delivered on the same day. The mechanism, auditable at the row level.
+`source_data_source_id` — so you can directly count vendor-credited (ip × dscid × date) rows and compare
+their dates to the free logs' (23/30). The prior-day mechanism, auditable at the row level.
 
 **Why it happens (mechanism, not a mystery):** credit is first-reporter-wins per (ip × url × date). A
 free log only displaces a vendor when the free log reports *first* that day; and each new date on an
 already-tracked pair is a fresh billable event. So free logs, in practice, do **not** preempt. Confirmed
 in AUDI-1093.
 
-### 3.3 Even after preemption, most residual bills exceed fair value
-Preemption keeps every vendor's data — it only stops paying for the free-covered slice. After it:
+### 3.3 Even after preemption, NO metered vendor is worth its residual bill
+Preemption keeps every vendor's data — it only stops paying for the prior-day free-covered slice. After it,
+compared against the **most generous** fair value (the higher of the two never-merged lenses — dependency
+ceiling or unique-domain fee-band; §1):
 
 | Vendor | Bill AFTER preempt | Fair value (most generous) | Worth ÷ bill | Read |
 |---|--:|--:|--:|---|
-| 33Across | $200.4K | $72–217K | **1.08×** | defensible only at the ceiling |
-| 33Across API | $134.0K | $45–134K | **1.00×** | exactly at the fair ceiling |
-| Sovrn | $115.6K | $11–34K | **0.29×** | ~3× over even at the ceiling |
-| Justuno | $73.3K | $4–11K | **0.15×** | ~7× over |
-| Cybba | $15.4K | $1–3K | **0.19×** | ~5× over |
+| 33Across API | $142.8K | $134K (dependency) | **0.94×** | just under, even at ceiling |
+| 33Across | $259.9K | $217K (dependency) | **0.83×** | ~1.2× over |
+| Justuno | $75.8K | $60K (domain) | **0.79×** | ~1.3× over |
+| Sovrn | $115.8K | $34K (dependency) | **0.29×** | ~3× over |
+| Cybba | $17.7K | $4.7K (domain) | **0.27×** | ~4× over |
 
-Preemption fixes the double-pay; it does **not** by itself make Sovrn / Justuno / Cybba worth their
-bill. Those need repricing or dropping.
+Every metered vendor is **< 1.0×** — the residual bill exceeds even its most generous value. (Justuno and
+Cybba are *domain*-driven, not dependency-driven — using only the dependency lens understates them, which is
+why the fair value takes the higher of the two.) Preemption fixes the double-pay; the residual needs
+repricing or dropping.
 
 ---
 
@@ -139,19 +152,19 @@ bill. Those need repricing or dropping.
 Two moves, in order. **Renegotiate before you drop** — dropping a vendor first destroys the BATNA and
 can reassign its credits into another paid vendor mid-negotiation.
 
-**Move 1 — implement free-log preemption (stop billing on free-covered signals).** Roster **$812.4K →
-$538.7K/yr, −$273.7K (−33.7%), and we keep all the data.** This is the direct answer to the dispute and
-needs no vendor cooperation (we own the meter).
+**Move 1 — implement prior-day free-log preemption (stop billing signal a free log already had).** Roster
+**$812.4K → $612.0K/yr, −$200.4K (−24.7%), and we keep all the data.** This is the direct answer to the
+dispute and needs no vendor cooperation (we own the meter). (Upper bound −$243.5K if vendor recency isn't credited.)
 
-**Move 2 — reprice / drop the residual to fair value:**
+**Move 2 — reprice / drop the residual toward fair value (cap = most-generous fair):**
 
-| Vendor | DS | Current | After preempt | Fair range | Recommendation |
+| Vendor | DS | Current | After preempt | Cap at fair | Recommendation |
 |---|---|--:|--:|--:|---|
-| 33Across | 28 | $422.0K | $200.4K | $30–100K | **Renegotiate** — cap ≤ ~$100K or drop; biggest single lever |
-| 33Across API | 40 | $175.9K | $134.0K | $10–40K | **Drop / renegotiate** (same vendor as DS28; batch vs real-time) |
-| Sovrn | 33 | $115.9K | $115.6K | $0.5–2.4K | **Drop** — not overlap-driven; preemption won't help |
-| Justuno | 24 | $77.1K | $73.3K | $14–60K | **Trim** the meter toward the band |
-| Cybba | 36 | $21.5K | $15.4K | $1.1–4.7K | **Drop** |
+| 33Across | 28 | $422.0K | $259.9K | ≤$217K | **Renegotiate** — biggest single lever |
+| 33Across API | 40 | $175.9K | $142.8K | ≤$134K | **Renegotiate / drop** (same vendor as DS28; batch vs real-time) |
+| Sovrn | 33 | $115.9K | $115.8K | ≤$34K | **Drop** — not overlap-driven; preemption won't help |
+| Justuno | 24 | $77.1K | $75.8K | ≤$60K | **Trim** the meter toward the band |
+| Cybba | 36 | $21.5K | $17.7K | ≤$4.7K | **Drop** |
 | Klickly | 39 | flat (pending) | — | $0.1–1.5K | **Drop** unless renewal is ~free |
 | Predactiv | 26 | flat (pending) | — | high (domain axis) | **Keep / lock price** — hard non-MM (HEM→CRM/identity) dependency |
 | 5x5 | 25 | flat (pending) | — | high (domain axis) | **Keep** (TI-1027) |
@@ -170,15 +183,19 @@ $0 marginal cost today, inflating their measured value before renewal) → preem
 
 The fast path is 8 self-contained queries (`runbook/queries/deck_d1..d8`), plain `bq query`, run as-is.
 The billing-table and source-table proofs run on `dw-main-gold.reporting.ddp_mm_winners_imp` and
-`dw-main-bronze.external.targeted_signal`. Every claim above → its query → its expected number is in
-**`audi_1089_audit_map.md`**. `VALIDATION_GUIDE.md` lists the internal consistency anchors (meter
-identity, mask consistency, boundary identity) you can check without trusting any of my outputs.
+`dw-main-bronze.external.targeted_signal`; the fair preemption number is `q3e_v2_free_prior_lookback.sql`.
+Every claim above → its query → its expected number is in **`audi_1089_audit_map.md`**. `VALIDATION_GUIDE.md`
+lists the internal consistency anchors (meter identity, mask consistency, boundary identity).
 
 **Caveats disclosed up front:**
-- **The $273.7K is meter-anchored, not derived from Proof 1's impression counts.** The winners table
-  (`ddp_mm_winners_imp`) has multiple path-rows per impression, so its impression totals over-count the
-  final meter (`usage_reporting_data`) — it proves the *rate behavior* (no preemption), not the dollars.
-  The dollar figure is each vendor's free-co-held **share** applied to its **actual** June meter bill.
+- **The ~$200K is the FAIR, conservative figure.** It counts only signal a free log had on a *prior* day
+  within the 30-day window AND is still at least as fresh as the vendor (`free_prior_dominant`, q3e-v2).
+  A naive *same-day* test gives $273.7K but over-credits free (augmentor is the bid stream → trivially
+  "has" every impression the day it's bid). The upper bound (~$243.5K) also preempts where the vendor is
+  merely the freshest source. Measured with a full 30-day lookback and **all IPs** (no sampling).
+- **The dollar figure is meter-anchored, not derived from Proof 1's impression counts.** The winners table
+  over-counts the final meter (multiple path-rows per impression) — it proves the *rate behavior* (no
+  preemption); the dollars are each vendor's fair prior-day **share** × its **actual** June meter bill.
 - Valuation week is N=1 (July, a seasonal trough) → dependency figures are a stated scenario envelope,
   not a confidence interval.
 - The meter's credit regime changed May 2026 (fractional → integer) — never mix pre/post-May bills.
