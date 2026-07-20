@@ -54,7 +54,7 @@ bqq "SELECT table_name, total_rows, total_logical_bytes
 
 bqq "SELECT table_name, table_type
      FROM ${INFO}.TABLES\`
-     WHERE table_type IN ('BASE TABLE', 'VIEW', 'MATERIALIZED VIEW') ${AND_FILTER}
+     WHERE table_type IN ('BASE TABLE', 'VIEW', 'MATERIALIZED VIEW', 'EXTERNAL') ${AND_FILTER}
      ORDER BY table_name"                                           > "$TMP/tables.json"
 
 # Logical-view SQL definitions (empty array if the dataset has none).

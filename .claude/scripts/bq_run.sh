@@ -115,7 +115,11 @@ if [[ -n "$JOB_JSON" ]]; then
         sql_tables: ([.statistics.query.referencedTables[]? |
             if (.datasetId | startswith("sqlmesh__"))
             then ((.tableId | split("__")) as $p |
-                  if ($p | length) >= 2 then "\($p[0]).\($p[1])" else "\(.datasetId).\(.tableId)" end)
+                  # physical name = <schema>__<table>__<fingerprint>; the TABLE can itself contain "__"
+                  # (agg__daily_sum_by_campaign), so it's everything between the first and last segment.
+                  if   ($p | length) >= 3 then "\($p[0]).\($p[1:-1] | join("__"))"
+                  elif ($p | length) == 2 then "\($p[0]).\($p[1])"
+                  else "\(.datasetId).\(.tableId)" end)
             else "\(.datasetId).\(.tableId)" end] | unique),
 
         # --- query plan stages (compact: per-stage performance) ---

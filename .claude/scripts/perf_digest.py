@@ -13,11 +13,15 @@ import argparse, collections, json, os, sys
 
 
 def _clean(ref):
-    """SQLMesh physical `sqlmesh__ds.ds__table__hash` -> clean `ds.table`; pass others through."""
+    """SQLMesh physical `sqlmesh__ds.ds__table__hash` -> clean `ds.table`; pass others through.
+    The table itself can contain `__` (agg__daily_sum_by_campaign), so it is everything between the
+    first segment (schema) and the last (fingerprint)."""
     ds, _, tbl = ref.partition(".")
     if ds.startswith("sqlmesh__"):
         parts = tbl.split("__")
-        if len(parts) >= 2:
+        if len(parts) >= 3:
+            return f"{parts[0]}.{'__'.join(parts[1:-1])}"
+        if len(parts) == 2:
             return f"{parts[0]}.{parts[1]}"
     return ref
 
