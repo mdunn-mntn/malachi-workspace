@@ -1,0 +1,88 @@
+---
+doc_type: glossary
+title: Glossary — MNTN terms, acronyms & concepts → where the authority lives
+summary: "business term / acronym / concept → one-line definition + pointer to the authoritative doc or data_knowledge.md section. Load this instead of grepping 465 KB of prose."
+last_verified: 2026-07-19
+keywords: [glossary, terms, acronyms, definitions, VV, HHST, HI, PP, MM, RTC, DS, BUK, funnel_level, holdout, attribution, waypoint, fangorn, ghost-bid]
+---
+
+# Glossary
+
+Term / acronym / concept → a one-line definition + **→ pointer** to the authoritative source (a
+per-table doc under `bq/`, a `data_knowledge.md` `##` section, `ds_catalog.md`, or `mntn_business.md`).
+This is a **routing index, not the source of truth** — follow the pointer for the full, nuanced version.
+For a table's schema/grain/cost, start at [`bq/_CATALOG_INDEX.md`](bq/_CATALOG_INDEX.md).
+
+## Identity, IPs & households
+- **VV (Verified Visit)** — an ad-attributed site visit (the headline funnel event); "clickpass" is the legacy name. → [`bq/logdata/clickpass_log.md`](bq/logdata/clickpass_log.md), [`bq/summarydata/visits.md`](bq/summarydata/visits.md)
+- **`ip` vs `ip_raw`** — two IP columns on log tables; in most current views `ip_raw` is a literal alias of `ip` (NOT a distinct pre-enrichment IP). Use `bid_ip` for the public IP (~14% of `ip` are internal 10.x NAT). → [`bq/logdata/impression_log.md`](bq/logdata/impression_log.md), `data_knowledge.md` § Stage 3 VV Pipeline
+- **CIL (cost_impression_log)** — the 33-month impression+cost+score history table (floor 2023-10-01; scores NULL before 2025-06). Not a proxy for source IPs. → [`bq/logdata/cost_impression_log.md`](bq/logdata/cost_impression_log.md)
+- **guid** — MNTN first-party cookie/device id; `guid_log` = the honest total-traffic pixel (fires on every page view). → [`bq/logdata/guid_log.md`](bq/logdata/guid_log.md)
+- **CGNAT / NAT** — carrier-grade NAT means many households share one IP → report per-IP frequency as **medians, never means**. → `data_knowledge.md` § Per-IP frequency
+- **iCloud Private Relay** — Apple relay IPs; mapped via `summarydata.icloud_*` + `logdata.icloud_vv_log`. → [`bq/summarydata/icloud_guids.md`](bq/summarydata/icloud_guids.md)
+- **No IP→IP bridging in BQ** — graph_ips self-joins are expensive + CGNAT-limited; identity bridging is external. → `data_knowledge.md` § Architecture
+
+## Funnel, campaign & entity structure
+- **funnel_level** — authoritative field for campaign stage (on `campaigns`). `objective_id` is UNRELIABLE for stage. → [`bq/integrationprod/campaigns.md`](bq/integrationprod/campaigns.md)
+- **objective_id** — 1=Prospecting / 4=Retargeting / 5=MT-S2 / 6=MT-S3 / 7=Ego; prospecting = `objective_id IN (1,5,6)`. → [`bq/integrationprod/objectives.md`](bq/integrationprod/objectives.md)
+- **product_id** — on `campaign_groups`: 1=PTV / 2=Select / 3=QuickFrame (immutable since 2025-07-31). → [`bq/integrationprod/campaign_groups.md`](bq/integrationprod/campaign_groups.md)
+- **campaign_group vs campaign** — `campaign_group_id` = the CLIENT-facing campaign; `campaign_id` = internal funnel-stage sub-campaigns. → `data_knowledge.md` § "campaign_group_id = the CLIENT-facing campaign"
+- **`*_alt_id` remap** — in `win_logs`, `campaign_alt_id` = campaign_group_id and `line_item_alt_id` = campaign_id (names map to a DIFFERENT id level). → [`bq/logdata/win_logs.md`](bq/logdata/win_logs.md)
+- **channel_id** — 1=display / 8=CTV. → [`bq/integrationprod/channels.md`](bq/integrationprod/channels.md)
+- **Entity hierarchy** — advertiser → campaign_group → campaign → flight; creative_group → creative. → `data_knowledge.md` § Entity Hierarchy
+- **flights** — authoritative flight schedule (start/end); short flights (<72 h) push a 0 HHST gate. → [`bq/core/flights.md`](bq/core/flights.md)
+
+## Audience, targeting & scoring
+- **DS (data_source_id)** — the audience/data-source taxonomy (DSxx). Full catalog → [`ds_catalog.md`](ds_catalog.md); live graph → [`bq/integrationprod/audience_data_sources.md`](bq/integrationprod/audience_data_sources.md)
+- **MM (Model Match)** — MNTN-derived, scored audience. Components: **DS19 = MM Core, DS13 = PP v1, DS46 = PP v2** (one slot). → `data_knowledge.md` § Audience System, MEMORY `reference_mm_component_taxonomy`
+- **1P / 3P / MM** — 1P (uploaded) + 3P (bought interest) are unscored; MM (MNTN-derived) is scored. → `data_knowledge.md` § Advertising Concepts
+- **HI (High Intent) / PP (Purchase Propensity) / MI (Mid Intent)** — Fangorn intent tiers from the household scoring pass. → `data_knowledge.md` § Intent Scoring Architecture
+- **HHST (household_score threshold)** — the intent gate; a **pacing lever** thrashed daily that drives delivery composition. RTC bypasses it. `household_score` is BINARY (10000 or unscored). → `data_knowledge.md` § Intent Scoring, § HHST intent gate
+- **RTC (Real-Time Conquest)** — a distinct conquest population that BYPASSES the HHST gate; ~47% of RTC IPs never reach HI. `model_params ~ 'realtime_conquest_score=10000'`, DS19. → `data_knowledge.md` § RTC
+- **Fangorn** — the two-pass (HI + PP) household scoring system; detect via score-band continuity. → `data_knowledge.md` § Fangorn vs bucketed scoring
+- **CRM exclusion** — prospecting excludes DS4 (CRM) / DS8 (IP List) / DS47 (CRM-IDG). → MEMORY `feedback_crm_excluded_from_prospecting`
+- **within-HI visit rate** — THE discriminator between gate-removal (VR holds) and over-scaling (VR falls). → `data_knowledge.md` § within-HI visit rate
+
+## Keywords / BUK
+- **BUK (Bottoms-Up Keywords)** — MNTN's keyword-targeting product; internal name. Exec/buyer rebrand = "Behavior Keywords". → `data_knowledge.md` § Keyword Targeting & BUK
+- **term / term_id** — a keyword; campaign-scoped numeric-STRING id in `aggregates.win_rate_*_by_term_hour` (NULL term_id = separate no-term bucket). → [`bq/aggregates/win_rate_bq_bids_by_term_hour.md`](bq/aggregates/win_rate_bq_bids_by_term_hour.md)
+
+## Attribution & measurement
+- **attribution_model_type_id** — {1=Last Touch, 2=Last TV Touch, 3=Last Touch Competing, 4=Last TV Touch Competing}; use IN (3,4) for competing. Distinct from `attribution_model_id`. → [`bq/summarydata/ui_visits.md`](bq/summarydata/ui_visits.md)
+- **competing_\*** — cross-vendor "competing" attribution legs; NEVER SUM across attribution models (they are separate, overlapping views). → [`bq/summarydata/all_facts.md`](bq/summarydata/all_facts.md)
+- **industry_standard attribution** — a MISNOMER; it's last-touch + competing_*, not first-touch. → `data_knowledge.md` § CORRECTION "industry_standard"
+- **order_amt** — the conversion value column (`order_amt_usd` is NULL/sparse — use `order_amt`). → [`bq/summarydata/ui_conversions.md`](bq/summarydata/ui_conversions.md), [`bq/logdata/conversion_log.md`](bq/logdata/conversion_log.md)
+- **10% holdout** — `MD5('{AID}:{IP}') mod 1000`, 0–99 = holdout (per-advertiser per-IP). Use ITT. → `data_knowledge.md` § Campaign Holdout
+- **usersreached (graph)** — mixed-key HLL (IP for CTV / cookie for display) → ~2× served IPs; use CIL distinct ip instead. → `data_knowledge.md` § graph.usersreached gotcha
+- **Waypoint** — MNTN's funnel/event product (`summarydata.waypoints_*`); a waypoint = a tracked funnel event/stage. → [`bq/summarydata/waypoints.md`](bq/summarydata/waypoints.md)
+
+## Bidding & delivery
+- **ghost-bid** — a suppressed/non-emitted bid; `threshold_failure_reasons='ghost-bid'` (~753K/day); bias register for lift studies. → `data_knowledge.md` § B2B CVR power floor + ghost-bid; MEMORY `reference_ghost_bid_lift_register`
+- **has_price / price** — on bidder aggregates, `price` is the computed candidate bid (populated even when `has_price=false`); isolate emitted bids via `has_price=TRUE`, not `price>0`. → [`bq/aggregates/campaign_group_log_aggregation.md`](bq/aggregates/campaign_group_log_aggregation.md)
+- **win_cost_micros_usd** — Beeswax clearing price in micros USD (÷1e6 → $ CPM after ×1000). → [`bq/logdata/spend_log.md`](bq/logdata/spend_log.md), [`bq/logdata/win_logs.md`](bq/logdata/win_logs.md)
+- **bid_logs vs win_logs** — `bid_logs` is bid-grain (fans out); `win_logs` is impression-grain. Dedup bid_logs before joining. → [`bq/logdata/bid_logs.md`](bq/logdata/bid_logs.md)
+
+## Epoch units (per-table — the recurring trap)
+- Units differ PER COLUMN and per table: impression_log/cost_impression_log/clickpass/conversion/win_logs `epoch` = **µs**; `spend_log.auction_epoch` = **ns**; `bidder_bid_events` = **ms**; `cost_impression_log.batch_epoch` = **seconds**. `datastream_metadata.source_timestamp` (integrationprod) = **ms** CDC-capture, not business time. → each table's doc; `time_unit` front-matter field.
+
+## Experiment methodology
+- **DiD (Difference-in-Differences)** — report with cluster-bootstrap SE/CI/p, matched to the design. → `experimentation.md` § Standard Analysis Protocol
+- **CausalImpact (UCM)** — Bayesian structural time-series counterfactual; VIF→BIC covariate selection, no treated-y lags. → `experimentation.md`; `documentation/docs/causal_impact_did_math_reference.md`
+- **CUPED** — variance reduction needing randomization (not on non-random cohorts). → `data_knowledge.md` § CUPED ρ
+- **Methods convergence** — when DiD and CI agree, that's the strongest informal-causal argument. → `experimentation.md` § Standard Analysis Protocol
+
+## Architecture & data stack
+- **SQLMesh** — silver.logdata/summarydata/aggregates are VIEWs over versioned `sqlmesh__*` physicals (hash drifts on rebuild → re-resolve from the view DDL). `silver.core` = thin views over `bronze.integrationprod.core_*`. → `data_knowledge.md` § Architecture, § Datastream Replication
+- **Datastream / CDC** — `bronze.integrationprod` = Postgres CDC dims; filter `deleted=FALSE AND is_test=FALSE` (when those columns exist). → `data_knowledge.md` § is_test/deleted Filters
+- **TTL floors** — cost_impression_log 2023-10-01 (fixed); bidder_bid_events 10-day (not 90); event_log_filtered 60-day; augmentor/bid_price 10-day. → `data_knowledge.md` § TTL / Retention Summary; each table's Cost notes
+- **BQ job location** — must be us-central1 (slot reservation); dataset-less/external-table queries default to US = on-demand $. → `data_catalog.md`, `.claude/CLAUDE.md` § BigQuery
+
+## Where to go next
+| I need… | open |
+|---|---|
+| a table's schema/grain/cost | [`bq/_CATALOG_INDEX.md`](bq/_CATALOG_INDEX.md) → the table doc |
+| the full nuance behind a term above | the **→ pointer** on that entry |
+| a data-source `DSxx` | [`ds_catalog.md`](ds_catalog.md) |
+| business logic / a metric definition | [`data_knowledge.md`](data_knowledge.md) § (see pointers) |
+| experiment / causal method | [`experimentation.md`](experimentation.md) § Standard Analysis Protocol |
+| products / org / industry | [`mntn_business.md`](mntn_business.md) |
