@@ -20,6 +20,11 @@ TABLES="$(tail -n1 "$LOG" | jq -r '.sql_tables[]?' 2>/dev/null)" || exit 0
 new=()
 while IFS= read -r t; do
   [[ -z "$t" ]] && continue
+  # Skip metadata pseudo-tables + view-backing physicals (documented via their parent silver view):
+  # INFORMATION_SCHEMA.* / region-* metadata; sqlmesh__* versioned physicals; raw.*/history.* UNION legs.
+  case "$t" in
+    *INFORMATION_SCHEMA*|region-*|sqlmesh__*.*|raw.*|history.*) continue ;;
+  esac
   ds="${t%%.*}"; tbl="${t#*.}"
   [[ -f "$ROOT/knowledge/bq/$ds/$tbl.md" ]] || new+=("$t")
 done <<< "$TABLES"

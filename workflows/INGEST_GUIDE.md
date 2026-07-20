@@ -19,6 +19,13 @@ A produced doc is **correct only if it matches its source**. The source of truth
 - for a prior ticket → its `README.md` + `outputs/`.
 If the doc claims something not supported by the source, it's a bug. Reviewers assume it's wrong.
 
+**The prose oracle is READ-ONLY.** `data_catalog.md`, `data_knowledge.md`, `mntn_business.md`,
+`ds_catalog.md`, `experimentation.md` are source — **never edit them** during a crawl. When live
+BigQuery contradicts the prose, record the correction in the **per-table doc + its Changelog** (which
+cross-links back), not by rewriting the monolith. (A pilot agent edited `data_catalog.md`'s
+bidder_bid_events TTL 90→10; it was reverted — the corrected value lives in the table doc.) Retiring or
+slimming the monoliths is a separate, human-approved decision.
+
 ## Source → target mapping
 
 | Source type | Target knowledge doc(s) | Extract |
