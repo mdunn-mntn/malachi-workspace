@@ -10,9 +10,18 @@ result: "v3 final: 7 relevant-at-scale 3P picks; 3P viable but MM keywords the b
 # TI-1053: ElevenLabs (51660) — 3P segment recommendations for incrementality-focused CTV
 
 **Jira:** https://mntn.atlassian.net/browse/TI-1053 (1 SP) · Relates To TI-1044
-**Status:** Deliverable v1 done
+**Status:** DONE — v3 FINAL delivered (recall-fixed, size-ranked). See §7 (v2) and §8 (v3) below.
 **For:** Edgar von Trotha & Lauren Reedy
 **Assignee:** Malachi
+
+> **Canonical files (v3 = FINAL; supersedes v1/v2 — 2026-07-20 audit note).**
+> - **Deliverable:** `outputs/ti_1053_elevenlabs_3p_recommendations.{xlsx,csv}`
+> - **Builder:** `artifacts/build_v3.py` (self-contained); `artifacts/build_deliverable.py` is a shared
+>   util reused by INCR-75, keep. `artifacts/score_segments.py` = v1 base scorer.
+> - **v3 outputs:** `outputs/{candidate_pool_v2,scored_v3,curated_v3,final_v3_scored}.json`, `sizes_7d.json`.
+> - **Archived (superseded v2):** `artifacts/_archive/{score_v2.py,build_final.py}`.
+> - The remaining `outputs/*.json` (final_ranked, scored_v2, scored_by_name, scored_deduped, …) are v1/v2
+>   iteration history — untracked/gitignored, kept locally for provenance, not the deliverable.
 
 ---
 

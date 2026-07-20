@@ -52,6 +52,13 @@ Additional outputs (local, gitignored):
 - `outputs/ti_200_ecommerce_whitelist_2.csv.gz` — updated whitelist version
 - `outputs/ti_200_ecommerce_blocklist_2.csv` — updated blocklist version
 
+> **Canonical vs duplicates (2026-07-20 audit note).** The `_2` files above are the **latest/blessed**
+> versions (this is a maintenance ticket — the newest export is what shipped). The blocklist appears three
+> times **byte-identical** (`ecomm_blocklist_export.csv` = `ecommerce_blocklist.csv` = `_2.csv`, all 22,351 B),
+> and `whitelist_2.csv.gz` is just the gzipped `ecommerce_whitelist.csv`. **All are untracked/gitignored** —
+> none are in the repo, so there was nothing to prune here; the copies are harmless local history. If tidying
+> locally, keep the `_2` pair and the categorized whitelist; the other blocklist copies are exact duplicates.
+
 Analysis notebook: `artifacts/ti_200_output.ipynb`
 
 ---
