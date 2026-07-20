@@ -878,9 +878,20 @@ Walked the team (Alex, Allison +) through the valuation model and the workbook. 
 ## 4d. Billing hard logic (AUDI-647 + AP-3779 deep-read, 2026-07-10)
 
 - **Credit rule (Victor via Ryan):** first DDP to report an (ip, url) per day gets the credit, paid only
-  if used for targeting. Row-level used table: `data_archive_prod.targeted_signal` (**Athena only** —
-  uid/ip/dsc_id/time/data_source_id/**source_data_source_id**/dt). Chain: svs → targeted_signal →
-  mntn_matched_reporting → usage_reporting_data → Maya Triman pays monthly.
+  if used for targeting. Chain: svs → targeted_signal → mntn_matched_reporting → usage_reporting_data →
+  Maya Triman pays monthly.
+- **CORRECTION (verified live 2026-07-20): the row-level used table is queryable in BigQuery, NOT
+  Athena-only.** `dw-main-bronze.external.targeted_signal` is a BQ external table over the same
+  GCS-archived parquet (`gs://mntn-data-archive-prod/signals/targeted_signal/`), **hive-partitioned on
+  `data_source_id` (CONSUMER: 4=CRM, 13=MM verticals, 19=MM product-cats), `dt` (daily, 2025-07-31 →
+  current), and `source_data_source_id` (ORIGINATING vendor)** — so the exact per-vendor used-row split
+  is directly available. A GROUP BY on those partition columns bills **$0** (reads parquet metadata only;
+  1-day run ~110s wall). Query: `queries/audi_1089_targeted_signal_bq_per_vendor_split.sql`; 2026-07-18
+  snapshot: `outputs/audi_1089_targeted_signal_bq_probe_2026_07_18.csv`. **CAVEAT:** those counts are RAW
+  used-signal rows (uid×ip×dscid event grain — 33Across ~591M/day) — **not billed impressions** (~70M/mo)
+  and not deduped to billing grain; converting to $ still needs the first-reporter/credit-split logic.
+  Cols: uid/ip/data_source_category_id/source_time/time/signal_type_id/ip_to_dscid_link_number/
+  data_source_id/dt/source_data_source_id. Companion `external.targeted_signal_domain` (uid→domain, join on uid).
 - **Augmentor displacement confirmed:** DS30 entered svs 2026-05-07/12 (airflow-ti git). June = first
   fully-displaced month → 33Across bill −$19K vs May, 33A API −$9.7K (Ryan's AUDI-647 estimates: $17K/$4K).
   33Across's declining bill is partly OUR doing, not their volume.
@@ -889,8 +900,9 @@ Walked the team (Alex, Allison +) through the valuation model and the workbook. 
 - **Meter cannot split DS13 vs DS19 (verified):** data_source_category_id NULL on all 33Across June rows —
   the consumer-level decomposition of billed usage is Athena-only. Draft ask to Victor ready (see chat
   2026-07-10): one-time targeted_signal aggregate by source_data_source_id × data_source_id for June.
-- **Open questions:** (1) targeted_signal needs Athena access (or Data Eng MCP / Victor) — would give exact
-  per-vendor used-row counts + definitively answer the yahoo/DS19 question via source_data_source_id;
+- **Open questions:** (1) ~~targeted_signal needs Athena access~~ **RESOLVED 2026-07-20** — it's a BQ
+  external table (`dw-main-bronze.external.targeted_signal`), self-serve, partitioned by
+  source_data_source_id → per-vendor used-row counts + the yahoo/DS19 question are now answerable in BQ;
   (2) flat fees (5x5/Predactiv/Klickly) still unknown — Maya Triman has the payout schedule;
   (3) how 1/N impression decimals interact with first-reporter-wins; (4) DS33/39/40 svs ingestion path
   (not in ENABLED_DSIDS). Sensitive: "Monthly Summary by DDP.xlsx" stays local/gitignored, never on Jira.
@@ -946,6 +958,21 @@ the meter counts **F1/CTV impressions on MM-targeted (DS13/19) or CRM (DS4) serv
 co-matching vendors — so any "value of a vendor" / keep-drop / WTP number must be read against *this*
 billed base, not raw served impressions. Cross-refs: §4d (billing hard logic), the `usage_reporting_data`
 meter note, and the DDP-billing-base note in `data_knowledge.md`.
+
+**Live-BQ schema verification (2026-07-20) — all input tables confirmed except one:**
+- ✅ `integrationprod.direct_data_partners` (23-row TABLE; `data_source_id` is **STRING** here; raw behind
+  the `tpa.direct_data_partners` view) · `tpa.categories` (VIEW, 18 cols) · `tpa.liveramp_categories`
+  (719K-row TABLE — carries `digital_cpm`+`tv_cpm`, the LiveRamp variable CPM) · `external.sharethis_categories`
+  (CSV EXTERNAL, categories only — no CPM col; ShareThis rate comes from the registry $0.95).
+- ✅ `summarydata.v_campaign_group_segment_history` (VIEW) — actual cols: **`campaign_group_id`,
+  `audience_id`, `start_time`, `end_time`, `data_source_id`, `data_source_category_id` (REPEATED array),
+  `category_info`**. (Keyed on campaign_group_id+audience_id; dscid is an array — minor delta vs the doc's
+  "campaign / DSID / DSCID".)
+- ✅ **`external.targeted_signal` is BQ-queryable (NOT Athena-only) — the standing open question is
+  resolved** (see §4d correction above).
+- ⛔ **`mntn-analytics-prod-01.analytics_curated.enriched_impressions` — Access Denied.** Cross-project;
+  locked down by a recent security change (confirmed w/ Sherwin, 2026-07-20). **Route to read it: request
+  PAM temp access.** Can't self-serve today, so its schema stays unverified until PAM is granted.
 
 ## 5. Constraints & context (from the Slack thread, 2026-07-09)
 

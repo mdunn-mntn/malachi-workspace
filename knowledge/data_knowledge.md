@@ -1072,8 +1072,10 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     email also exists for parse failures (not found in airflow-ti clone — lives elsewhere).
   - **Meter has NO consumer split for MM vendors:** `usage_reporting_data.data_source_category_id` is NULL
   on ALL MM site-visit vendor rows (verified 33Across June 2026: 4,261 rows, all NULL) — the DS13-vs-DS19
-  decomposition of billed usage is NOT available in BQ; it requires `targeted_signal`/`mntn_matched_reporting`
-  (Athena). dsc_id in the meter presumably serves interests vendors (segment-billed) only.
+  decomposition is absent from the *meter*, **but IS available in BQ via `external.targeted_signal`**
+  (corrected 2026-07-20: that table is partitioned on `data_source_id` 4/13/19 × `source_data_source_id`
+  vendor — see the billing-hard-logic block below). dsc_id in the meter presumably serves interests
+  vendors (segment-billed) only.
 - **Meter grain gotcha:** `usage_reporting_data.dt` = month-end snapshot ONLY (last day of
     reporting_month) — mid-month dt filters return zero rows. `domains.list` (billed domains RECORD) is
     populated only for MM site-visit CPM vendors (24/28/33/36/40); imps-with-domain-attribution: Justuno
@@ -1087,12 +1089,18 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
 - **BILLING HARD LOGIC (AP-3779 + Victor via Ryan Kleck, 2026-07-10):** credit goes to the **FIRST DDP to
   report an (ip, url/composite_key) for a given date — paid only if the signal is used for targeting**
   (grain per Ryan on AUDI-647: one ip × composite_key per day). The row-level "used" table is
-  **`data_archive_prod.targeted_signal` — ATHENA/AWS only, no BQ/GCS copy**: `uid, ip,
-  data_source_category_id, time, data_source_id, source_data_source_id, dt`; a subset of svs where dsc_id
-  is derivable (via `product_categorization`); svs→ts is 1:many; prod since 2025-05-02, DS19 backfilled
-  from 2025-04-20. Billing chain: svs → targeted_signal (used rows, source_data_source_id = credited DDP)
-  → `prod.mntn_matched.mntn_matched_reporting` (Athena) → `coredw.usage_reporting_data` (BQ, month-end
-  snapshots) → monthly vendor payout (contact: **Maya Triman**).
+  **`targeted_signal` — and it IS queryable in BQ (CORRECTED 2026-07-20; previously logged Athena/AWS-only
+  with "no BQ/GCS copy" — that was wrong).** It's `dw-main-bronze.external.targeted_signal`, a BQ external
+  table over `gs://mntn-data-archive-prod/signals/targeted_signal/*.parquet`, **hive-partitioned on
+  `data_source_id` (4/13/19) × `dt` (2025-07-31 → current) × `source_data_source_id` (credited DDP)**, and
+  partition-column aggregations bill **$0**. Cols: `uid, ip, data_source_category_id, source_time, time,
+  signal_type_id, ip_to_dscid_link_number, data_source_id, dt, source_data_source_id`; a subset of svs where
+  dsc_id is derivable (via `product_categorization`); svs→ts is 1:many; prod since 2025-05-02, DS19
+  backfilled from 2025-04-20. **⚠ its rows are RAW used-signal events (uid×ip×dscid), not billed impressions
+  — decomposition only; $ still needs the first-reporter/credit-split.** Billing chain: svs → targeted_signal
+  (used rows, source_data_source_id = credited DDP) → `prod.mntn_matched.mntn_matched_reporting` (Athena —
+  not re-checked for a BQ copy) → `coredw.usage_reporting_data` (BQ, month-end snapshots) → monthly vendor
+  payout (contact: **Maya Triman**).
   **CREDIT REGIME CHANGED at reporting_month 2026-05 (RESOLVED 2026-07-13, AUDI-1092 residue
   analysis):** Jan–Apr 2026 usage rows are ~100% FRACTIONAL impressions (clean 1/N fractions —
   equal split across contributing vendors, "everybody gets a piece"); May 2026+ rows are 100%

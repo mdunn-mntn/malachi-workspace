@@ -2199,7 +2199,8 @@ Small internal dataset for data usage reporting/auditing.
   zero rows (AUDI-1089, 2026-07-10). `domains` RECORD (`domains.list[].element`) = the billed-credit
   domains, populated ONLY for MM site-visit CPM vendors (24/28/33/36/40); ~50% of 28/33/40 imps sit on
   unattributed aggregate rows (Justuno 80% / Cybba 86% attributed). `data_source_category_id` is NULL for
-  ALL MM-vendor rows — no DS13/DS19 split in the meter (that lives in Athena `targeted_signal`).
+  ALL MM-vendor rows — no DS13/DS19 split in the meter (that split lives in `external.targeted_signal`,
+  which IS BQ-queryable — see the DDP-pipeline input-tables section below; corrected 2026-07-20).
 - **Credit semantics (current, May 2026+):** single-vendor credit per used (ip,url,DATE) —
   first-reporter (AP-3779) or cheapest/free-priority (winner rule unconfirmed; dbt
   `targeted_signal_ds_13/19`); paid only if used (DS13 OR DS19 path). **Free logs do NOT preempt
@@ -2251,24 +2252,39 @@ Small internal dataset for data usage reporting/auditing.
 
 ---
 
-## DDP usage-reporting pipeline — input tables (billing-team doc, 2026-07-20; schema not yet BQ-verified)
+## DDP usage-reporting pipeline — input tables (billing-team doc 2026-07-20; schemas BQ-VERIFIED 2026-07-20)
 The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.xlsx`; full step map in
-`data_knowledge.md` § "Canonical DDP usage-reporting pipeline" + AUDI-1089 summary §4f). Roles/locations are
-authoritative from the billing team; **column schemas below are stated by the doc, not yet confirmed via
-`bq show` — verify before querying.**
-- **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the whole
-  pipeline hinges on: each F1 impression joined to its targeted audience segments (impression IP → IPDSC over a
-  **30-day lookback**, matched to the campaign's targets effective at impression time). Produced by the **UI
-  Audience Segment Reporting pipeline** (not the DDP script — moved out for perf). **Cross-project** (`mntn-analytics-prod-01`, not `dw-main-*`) → mind the job location/billing. Grain ≈ impression × targeted DSID/DSCID.
-- **`dw-main-silver.summarydata.v_campaign_group_segment_history`** — SCD **view** over `audience.audience_segments`; per campaign an effective start/end window with the **INCLUDE** DSID/DSCID targeted then. The audience-target
-  side of step 3's match. (Already referenced elsewhere in the catalog.)
-- **DDP taxonomy (segment names + variable CPM):** `dw-main-bronze.tpa.categories`,
-  `dw-main-bronze.tpa.liveramp_categories`, `dw-main-bronze.external.sharethis_categories`.
-- **CRM/MM → originating-DDP mapping:** `dw-main-bronze.external.targeted_signal`,
-  `dw-main-bronze.external.targeted_signal_domain` (resolves CRM=DS4, MM=DS13/DS19 to the source vendor).
-- **DDP reference registry:** `dw-main-bronze.integrationprod.direct_data_partners` — the raw table behind the
-  `dw-main-silver.tpa.direct_data_partners` view (fee structures + per-partner reporting requirements).
-- **Audit:** `dw-main-bronze.coredw.usage_reporting_audits` (documented above). Scripts: `SteelHouse/bae-sql-utility/ddp/`.
+`data_knowledge.md` § "Canonical DDP usage-reporting pipeline" + AUDI-1089 summary §4f). All confirmed via
+`bq show` on 2026-07-20 except `enriched_impressions` (access-denied — see below).
+- **`dw-main-bronze.external.targeted_signal`** — ⭐ **the row-level "used-signal" table, and it's queryable
+  in BigQuery (was long believed Athena-only — corrected).** BQ external table over
+  `gs://mntn-data-archive-prod/signals/targeted_signal/*.parquet`, **hive-partitioned (CUSTOM) on
+  `data_source_id` (CONSUMER: 4=CRM, 13=MM verticals, 19=MM product-cats), `dt` (STRING, daily,
+  2025-07-31 → current), `source_data_source_id` (ORIGINATING vendor: 21/22/23/26/29 CRM+free,
+  24/25/26/28/33/36/39/40 DDPs, 23/30 free logs)**. Cols: `uid, ip, data_source_category_id, source_time,
+  time, signal_type_id, ip_to_dscid_link_number, data_source_id, dt, source_data_source_id`. **A GROUP BY on
+  the partition columns bills $0** (reads parquet metadata only; 1-day probe ~110s wall, 0 GB). Prune on `dt`.
+  **⚠ grain caveat:** rows = raw used-signal events (uid×ip×dscid×time — 33Across ~591M/day), **NOT billed
+  impressions** (~70M/mo) and not deduped to billing grain; use for the DS13/DS19 × vendor *decomposition*,
+  then apply first-reporter/credit-split to get $. Companion **`external.targeted_signal_domain`** (`uid,
+  domain, dt`; partitioned on `dt`; join on `uid`). Probe query + snapshot in AUDI-1089 `queries/`+`outputs/`.
+- **`dw-main-silver.summarydata.v_campaign_group_segment_history`** — SCD **VIEW** over
+  `audience.audience_segments`. Cols: `campaign_group_id, audience_id, start_time, end_time, data_source_id,
+  data_source_category_id` (**REPEATED** array), `category_info`. Keyed on campaign_group_id+audience_id; the
+  audience-target side of step-3's impression match (holds the INCLUDE dsid/dscid effective per window).
+- **`dw-main-bronze.integrationprod.direct_data_partners`** — DDP reference registry (16 cols, 23 rows; **`data_source_id`
+  is STRING** here); the raw table behind the `dw-main-silver.tpa.direct_data_partners` view (fee structures +
+  per-partner reporting requirements). Full column list under that view's entry in `data_knowledge.md`.
+- **DDP taxonomy (segment names + variable CPM):** `dw-main-bronze.tpa.categories` (VIEW, 18 cols),
+  `dw-main-bronze.tpa.liveramp_categories` (719K-row TABLE — **carries `digital_cpm` + `tv_cpm` NUMERIC**, the
+  LiveRamp variable-CPM source), `dw-main-bronze.external.sharethis_categories` (CSV EXTERNAL, categories only —
+  **no CPM column**; ShareThis's $0.95 comes from the registry, not here).
+- **`dw-main-bronze.coredw.usage_reporting_audits`** — audit/anomaly-gate table (documented above; 20 cols, 99 rows).
+- ⛔ **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the meter
+  consumes (F1 impression ⋈ targeted segments ⋈ IPDSC, 30-day lookback; produced by the UI Audience Segment
+  Reporting pipeline). **Access Denied as of 2026-07-20** — cross-project (`mntn-analytics-prod-01`), locked by a
+  recent security change. **Read path: request PAM temp access.** Schema unverified until then.
+- Scripts: `SteelHouse/bae-sql-utility/ddp/`.
 
 ---
 
