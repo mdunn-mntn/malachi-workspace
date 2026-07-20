@@ -14,6 +14,7 @@ LOG_FILE="${WORKSPACE}/knowledge/bq_perf_log.jsonl"
 # Parse our custom flags and extract project_id from bq args
 TICKET=""
 LABEL=""
+PHASE=""            # optional sample|full|<free-text> label for the est->actual accuracy loop
 PROJECT_ID="dw-main-silver"
 LOCATION_SET=false
 BQ_ARGS=()
@@ -24,6 +25,10 @@ while [[ $# -gt 0 ]]; do
             TICKET="$2"; shift 2 ;;
         --label)
             LABEL="$2"; shift 2 ;;
+        --phase)
+            PHASE="$2"; shift 2 ;;
+        --phase=*)
+            PHASE="${1#--phase=}"; shift ;;
         --project_id=*)
             PROJECT_ID="${1#--project_id=}"
             BQ_ARGS+=("$1"); shift ;;
@@ -68,12 +73,25 @@ for LOCATION in us-central1 US; do
     JOB_JSON=""
 done
 
+# --- provenance: bind this run to the exact SQL + repo state (the "how did you get this number?" trust chain) ---
+# The SQL is the final positional arg by convention (…bq flags… 'SQL'). Fingerprint it + stamp the commit.
+# Pure instrumentation: NO cost gate, NO warning, NO preemption (per the standing bq-workflow rule).
+# (macOS ships bash 3.2 — no negative array indices; index the last element the portable way)
+if [[ ${#BQ_ARGS[@]} -gt 0 ]]; then SQL="${BQ_ARGS[$(( ${#BQ_ARGS[@]} - 1 ))]}"; else SQL=""; fi
+SQL_SHA256=$(printf '%s' "$SQL" | shasum -a 256 | awk '{print $1}')
+SQL_PREVIEW=$(printf '%s' "$SQL" | tr '\n\t' '  ' | cut -c1-160)
+GIT_COMMIT=$(git -C "$WORKSPACE" rev-parse --short HEAD 2>/dev/null || echo "")
+
 if [[ -n "$JOB_JSON" ]]; then
     # Use a single jq invocation to extract everything from the job JSON
     LOG_ENTRY=$(echo "$JOB_JSON" | jq -c \
         --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         --arg ticket "$TICKET" \
         --arg label "$LABEL" \
+        --arg phase "$PHASE" \
+        --arg sql_sha256 "$SQL_SHA256" \
+        --arg sql_preview "$SQL_PREVIEW" \
+        --arg git_commit "$GIT_COMMIT" \
         --arg full_job_id "${PROJECT_ID}:${JOB_ID}" \
         --argjson exit_code "$EXIT_CODE" \
     '{
@@ -81,8 +99,14 @@ if [[ -n "$JOB_JSON" ]]; then
         timestamp: $ts,
         ticket: $ticket,
         label: $label,
+        phase: $phase,
         job_id: $full_job_id,
         exit_code: $exit_code,
+
+        # --- provenance (binds a reported number to the exact SQL + repo state; job_id recovers full SQL via `bq show -j`) ---
+        sql_sha256: $sql_sha256,
+        sql_preview: $sql_preview,
+        git_commit: $git_commit,
 
         # --- cost ---
         bytes_processed:  (.statistics.totalBytesProcessed  // "0" | tonumber),
@@ -116,7 +140,7 @@ if [[ -n "$JOB_JSON" ]]; then
             if (.datasetId | startswith("sqlmesh__"))
             then ((.tableId | split("__")) as $p |
                   # physical name = <schema>__<table>__<fingerprint>; the TABLE can itself contain "__"
-                  # (agg__daily_sum_by_campaign), so it's everything between the first and last segment.
+                  # (agg__daily_sum_by_campaign), so it is everything between the first and last segment.
                   if   ($p | length) >= 3 then "\($p[0]).\($p[1:-1] | join("__"))"
                   elif ($p | length) == 2 then "\($p[0]).\($p[1])"
                   else "\(.datasetId).\(.tableId)" end)
