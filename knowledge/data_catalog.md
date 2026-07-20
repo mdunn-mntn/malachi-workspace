@@ -2251,6 +2251,27 @@ Small internal dataset for data usage reporting/auditing.
 
 ---
 
+## DDP usage-reporting pipeline — input tables (billing-team doc, 2026-07-20; schema not yet BQ-verified)
+The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.xlsx`; full step map in
+`data_knowledge.md` § "Canonical DDP usage-reporting pipeline" + AUDI-1089 summary §4f). Roles/locations are
+authoritative from the billing team; **column schemas below are stated by the doc, not yet confirmed via
+`bq show` — verify before querying.**
+- **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the whole
+  pipeline hinges on: each F1 impression joined to its targeted audience segments (impression IP → IPDSC over a
+  **30-day lookback**, matched to the campaign's targets effective at impression time). Produced by the **UI
+  Audience Segment Reporting pipeline** (not the DDP script — moved out for perf). **Cross-project** (`mntn-analytics-prod-01`, not `dw-main-*`) → mind the job location/billing. Grain ≈ impression × targeted DSID/DSCID.
+- **`dw-main-silver.summarydata.v_campaign_group_segment_history`** — SCD **view** over `audience.audience_segments`; per campaign an effective start/end window with the **INCLUDE** DSID/DSCID targeted then. The audience-target
+  side of step 3's match. (Already referenced elsewhere in the catalog.)
+- **DDP taxonomy (segment names + variable CPM):** `dw-main-bronze.tpa.categories`,
+  `dw-main-bronze.tpa.liveramp_categories`, `dw-main-bronze.external.sharethis_categories`.
+- **CRM/MM → originating-DDP mapping:** `dw-main-bronze.external.targeted_signal`,
+  `dw-main-bronze.external.targeted_signal_domain` (resolves CRM=DS4, MM=DS13/DS19 to the source vendor).
+- **DDP reference registry:** `dw-main-bronze.integrationprod.direct_data_partners` — the raw table behind the
+  `dw-main-silver.tpa.direct_data_partners` view (fee structures + per-partner reporting requirements).
+- **Audit:** `dw-main-bronze.coredw.usage_reporting_audits` (documented above). Scripts: `SteelHouse/bae-sql-utility/ddp/`.
+
+---
+
 # bronze.external
 
 **Project:** dw-main-bronze | **Dataset:** external

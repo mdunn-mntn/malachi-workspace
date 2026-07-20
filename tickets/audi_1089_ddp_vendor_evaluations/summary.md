@@ -2,7 +2,7 @@
 doc_type: epic
 title: "AUDI-1089: DDP Vendor Data Evaluations (renewal pass/play)"
 status: in_progress
-date: 2026-07-17
+date: 2026-07-20
 summary: "Per-vendor keep/drop + max defensible fee for MM site-visit data vendors (renewal season)"
 result: "In progress — per-vendor verdicts rolling in (see children); 5x5 KEEP, Klickly drop approved"
 ---
@@ -894,6 +894,58 @@ Walked the team (Alex, Allison +) through the valuation model and the workbook. 
   (2) flat fees (5x5/Predactiv/Klickly) still unknown — Maya Triman has the payout schedule;
   (3) how 1/N impression decimals interact with first-reporter-wins; (4) DS33/39/40 svs ingestion path
   (not in ENABLED_DSIDS). Sensitive: "Monthly Summary by DDP.xlsx" stays local/gitignored, never on Jira.
+
+## 4f. Canonical DDP usage-reporting & billing pipeline (BAE billing-team walkthrough, 2026-07-20)
+
+Source: `artifacts/audi_1089_ddp_steps.xlsx` (from the billing/reporting team, meeting 2026-07-20;
+transcript to be added to `meetings/`). This is the **authoritative end-to-end structure** of how DDP
+usage is metered and billed — it ties together the tables already documented below. Sheets: *Steps
+Summary*, *Resources*, *notes*. **The billing base is Prospecting-Funnel-1 (CTV) impressions ONLY.**
+
+**The 8 steps (script mirrors this order — `SteelHouse/bae-sql-utility/ddp/usage reporting`):**
+
+1. **DDP Data Source Reference** — `dw-main-bronze.integrationprod.direct_data_partners` (the raw table
+   behind the `tpa.direct_data_partners` view we already use). Central registry of eligible DDPs +
+   per-partner reporting requirements + fee structures. Built to *reduce hard-coded logic* in the script.
+2. **DDP Taxonomy** — maps audience targets → taxonomy records to get reporting segment names + variable
+   CPM. Tables: `dw-main-bronze.tpa.categories`, `dw-main-bronze.tpa.liveramp_categories`,
+   `dw-main-bronze.external.sharethis_categories`.
+3. **Impression–IPDSC-matched audience targets** — matches each impression's IP to the campaign's
+   targeted segments in IPDSC over a **30-day lookback**. Inputs: `cost_impression_log` (campaign, IP,
+   impression time); `dw-main-silver.summarydata.v_campaign_group_segment_history` (campaign, effective
+   start/end, DSID, DSCID — a view over `audience.audience_segments` that captures SCD history and parses
+   the **INCLUDE** dsid/dscid); IPDSC (IP, DSID, DSCID, date). **Output: `mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — a *persisted intermediate* now produced by the UI Audience
+   Segment Reporting pipeline. This heavy join used to live inside the DDP script; it was moved out (with
+   the former Data Team) and DDP reporting now **consumes** enriched_impressions instead of rebuilding it.
+4. **DDP Business Logic** — the attribution rules. **Filters to Prospecting Funnel 1 impressions only**;
+   evaluates each impression against the AND/OR targeting structure; applies CPM where applicable; applies
+   attribution when multiple DDPs are present on one impression. **Why F1-only:** F1 is where campaigns
+   target households directly on the selected audience segments. F2 targets households already served an
+   F1 impression for that campaign; F3 further narrows to households that got an F1 impression *and*
+   visited the advertiser site. F2/F3 (and RT) run on **first-party engagement**, not the original 3P
+   audience signal — so they're excluded from DDP billing. *(This is the scoping rule behind "CTV-only".)*
+5. **DDP CRM/MM Signals Mapping** — extra lookup that resolves **CRM (DS4)** and **MM (DS13 & DS19)**
+   targets to the *originating DDP(s)*, because targeting/taxonomy carry internal DSIDs, not the source
+   vendor. Tables: `dw-main-bronze.external.targeted_signal`, `dw-main-bronze.external.targeted_signal_domain`. (This is the "paid-if-used OR DS13/DS19" attribution we already track — here it's Step 5.)
+6. **DDP Reporting** — aggregates usage to each partner's required granularity (segment / campaign /
+   domain) and applies partner-specific formats → the monthly usage report.
+7. **DDP Audit** — compares the current month vs prior month against internal variance thresholds; flags
+   DDPs outside band; investigates targeting / composition / signal-availability / IPDSC changes. Table:
+   `dw-main-bronze.coredw.usage_reporting_audits` (query by `reporting_month`). Script:
+   `bae-sql-utility/ddp/usage_reporting_audits.sql`.
+8. **Report Distribution** — emails the finalized per-DDP reports from `partnerbilling@mountain.com`
+   (`bae-sql-utility/ddp/ddpmonthlyemail.py`).
+
+**Resources (from the *Resources* sheet):** scripts folder `github.com/SteelHouse/bae-sql-utility/ddp/`;
+Finance-facing **Tableau "DDP Monthly Usage Report"**; audit sample + shared-credit business-rule Google
+Sheets; example inquiry — LiveRamp sent a payout update stating **we underpaid by $160** (illustrates the
+distribution/reconciliation loop). Detail lives in the xlsx (gitignored — stays local).
+
+**Why this matters for AUDI-1089:** it confirms the metering path our vendor-value work sits on top of —
+the meter counts **F1/CTV impressions on MM-targeted (DS13/19) or CRM (DS4) serves**, credit-split across
+co-matching vendors — so any "value of a vendor" / keep-drop / WTP number must be read against *this*
+billed base, not raw served impressions. Cross-refs: §4d (billing hard logic), the `usage_reporting_data`
+meter note, and the DDP-billing-base note in `data_knowledge.md`.
 
 ## 5. Constraints & context (from the Slack thread, 2026-07-09)
 

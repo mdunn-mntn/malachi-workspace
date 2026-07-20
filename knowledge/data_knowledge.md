@@ -1239,6 +1239,28 @@ Other notes: **Justuno DS24 ingest is now a dedicated hourly S3 file-drop** (s3:
 EMR → fpa_vendor_log), pixel-topic path is legacy. **Sovrn (FMX) is separately a PMP inventory partner**
 (gary-ql core.partners id 68) — DS33 data-feed decisions don't touch inventory deals.
 
+### Canonical DDP usage-reporting pipeline — 8 steps, billed on **Funnel-1/CTV only** (BAE billing team, 2026-07-20)
+Authoritative end-to-end structure of how DDP usage is metered/billed (source: billing-team doc
+`tickets/audi_1089_ddp_vendor_evaluations/artifacts/audi_1089_ddp_steps.xlsx`; script mirrors it at
+`github.com/SteelHouse/bae-sql-utility/ddp/`). Order = (1) **DDP reference** `integrationprod.direct_data_partners`
+(fee structures + reporting reqs; the raw table behind the `tpa.direct_data_partners` view) → (2) **taxonomy**
+`tpa.categories` / `tpa.liveramp_categories` / `external.sharethis_categories` (segment names + variable CPM) →
+(3) **impression↔audience↔IPDSC match** (`cost_impression_log` × `summarydata.v_campaign_group_segment_history`
+[SCD view over `audience.audience_segments`, parses INCLUDE dsid/dscid] × IPDSC, **30-day lookback**) →
+persisted intermediate **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** (moved OUT of the DDP
+script into the UI Audience Segment Reporting pipeline for perf; DDP reporting now *consumes* it, doesn't rebuild
+the join) → (4) **business logic** (attribution + CPM) → (5) **CRM/MM→DDP mapping** (`external.targeted_signal` /
+`external.targeted_signal_domain`, resolves CRM=DS4 and MM=DS13/DS19 to the originating vendor) → (6) **reporting**
+(aggregate to partner granularity: segment/campaign/domain) → (7) **audit** (`coredw.usage_reporting_audits`,
+current-vs-prior-month variance thresholds) → (8) **distribution** (email from `partnerbilling@mountain.com`).
+Finance sees it as the Tableau **"DDP Monthly Usage Report."**
+**KEY billing-scope rule:** step 4 **filters to Prospecting Funnel 1 (CTV) impressions ONLY.** F1 targets
+households directly on the selected audience segments; **F2** (households already served an F1 imp for that
+campaign), **F3** (F1-served AND site-visited), and **RT** run on **first-party engagement, not the original 3P
+audience signal → all excluded from DDP billing.** So the billed base is *F1/CTV serves on MM(DS13/19)- or
+CRM(DS4)-targeted impressions*, credit-split across co-matching vendors — NOT raw served impressions. Any
+vendor-value / keep-drop / WTP number (AUDI-1089/1111) must be read against this base. See summary.md §4f.
+
 ### Site-visit vendor raw schemas, richness, and the "discard" finding (TI-1027, 2026-06-17)
 Each vendor's RAW feed schema (from the airflow-ti processing jobs) vs what we KEEP in `site_visit_signal`
 (only `ip, url, user_agent, time`):
