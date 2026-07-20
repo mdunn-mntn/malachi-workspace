@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "TI-504: CausalImpact analysis for the Experimentation team"
+status: done
+date: 2026-03-31
+summary: "Build a CausalImpact analysis/framework for the Experimentation team"
+result: "Delivered DiD + CausalImpact framework (two complementary methods applied)"
+---
+
 # TI-504: Create Causal Impact Analysis for Experimentation Team
 
 **Jira:** https://mntn.atlassian.net/browse/TI-504

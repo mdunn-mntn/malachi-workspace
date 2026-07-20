@@ -1,3 +1,12 @@
+---
+doc_type: ticket
+title: "AUDI-1089 / Justuno (DS24) — renewal evaluation"
+status: done
+date: 2026-07-10
+summary: "Justuno (DS24) MM site-visit vendor renewal: keep/drop + fee band"
+result: "KEEP (monitor metered bill) — 91.6% sole domains, ~$14-60K/yr value vs $0.50 CPM"
+---
+
 # AUDI-1089 / Justuno (DS24) — Renewal Evaluation
 
 **Status:** DONE 2026-07-10

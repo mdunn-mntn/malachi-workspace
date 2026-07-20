@@ -1,3 +1,12 @@
+---
+doc_type: epic
+title: "AUDI-1089: DDP Vendor Data Evaluations (renewal pass/play)"
+status: in_progress
+date: 2026-07-17
+summary: "Per-vendor keep/drop + max defensible fee for MM site-visit data vendors (renewal season)"
+result: "In progress — per-vendor verdicts rolling in (see children); 5x5 KEEP, Klickly drop approved"
+---
+
 # AUDI-1089: [SPIKE] DDP Vendor Data Evaluations — Renewal Pass/Play per Vendor
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1089

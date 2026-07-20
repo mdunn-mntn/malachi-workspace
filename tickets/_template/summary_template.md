@@ -1,3 +1,12 @@
+---
+doc_type: ticket        # ticket | epic  (epic = this folder holds 2+ child ticket folders)
+title: "{TICKET-ID}: {Short Title}"
+status: in_progress     # backlog | in_progress | blocked | done
+date: {YYYY-MM-DD}      # last meaningful update — tickets/INDEX.md sorts newest-first on this
+summary: "{one line: what this ticket is about — <= 90 chars}"
+result: "{one line: the blessed final answer/finding — <= 90 chars; leave as '' until done}"
+---
+
 # {TICKET-ID}: {Title}
 
 **Jira:** {link}

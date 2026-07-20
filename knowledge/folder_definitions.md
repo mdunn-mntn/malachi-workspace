@@ -70,6 +70,21 @@ ti_xxx_name/
 ### `summary.md`
 The single written record of the ticket. Covers: what the problem was, what was done, what was found, what questions were answered, what data docs were updated. Required before the ticket is considered complete.
 
+**YAML front-matter (required) — this is the machine-readable ticket card `tickets/INDEX.md` is generated from.** Prepend this block (mirrors the knowledge-side coverage front-matter; `build_index.sh` reads it):
+
+```yaml
+---
+doc_type: ticket        # ticket | epic  (epic = the folder holds 2+ child ticket folders)
+title: "TI-XXXX: Short Title"
+status: in_progress     # backlog | in_progress | blocked | done
+date: 2026-07-20        # last meaningful update — INDEX sorts newest-first on this
+summary: "one line: what this ticket is about (<= 90 chars)"
+result: "one line: the blessed final answer/finding (<= 90 chars; '' until done)"
+---
+```
+
+`result` surfaces the blessed answer in the index so nobody re-reads the whole folder to find it. Keep it current as the ticket progresses; `status: done` requires a real `result`. New tickets get this from `_template/summary_template.md`.
+
 ### `queries/`
 **Only `.sql` files.** One query per file, named descriptively.
 - `queries/impression_visit_join.sql` ✓
@@ -81,6 +96,12 @@ The single written record of the ticket. Covers: what the problem was, what was 
 - JSON result files
 - Intermediate data that feeds into further analysis
 - Subdirectories allowed (e.g., `outputs/by_campaign/`) for large result sets
+
+**Blessed-output convention:** when a ticket produces many iterations of a result (e.g. `scored_v2.json`,
+`final_ranked.json`, `final_v3_scored.json` — the `ti_1053` sprawl), put THE one blessed output in
+`outputs/final/` (or name it `final_<thing>`). The `final/` copy is what other work + the `result:`
+front-matter point to; the iterations stay alongside. This is a **convention, not an enforced ban** on
+`_v2`/`_final` names (those are legitimate mid-iteration).
 
 **Not** raw source data delivered by a third party — that goes in `artifacts/`.
 

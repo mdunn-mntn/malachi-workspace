@@ -274,15 +274,15 @@ if os.path.isdir(tdir):
         entries.append(fm)
 
     out = [GEN, "# Tickets Index", "",
-           "Prior work, newest first. Read a ticket's README before re-reading its folder.", "",
-           "| date | ticket | summary | status | doc |",
-           "|------|--------|---------|--------|-----|"]
+           "Prior work, newest first. `result` = the blessed one-line answer (skip re-reading the folder).", "",
+           "| date | ticket | summary | status | result | doc |",
+           "|------|--------|---------|--------|--------|-----|"]
     for d in sorted(entries, key=lambda x: g(x, "date"), reverse=True):
         out.append(f"| {g(d,'date','—')} | {g(d,'title')} | {g(d,'summary')} | "
-                   f"{g(d,'status','—')} | [doc]({link(tdir, d)}) |")
+                   f"{g(d,'status','—')} | {g(d,'result','—')} | [doc]({link(tdir, d)}) |")
         for c in sorted(d.get("_children", []), key=lambda x: g(x, "date"), reverse=True):
             out.append(f"| {g(c,'date','—')} | ↳ {g(c,'title')} | {g(c,'summary')} | "
-                       f"{g(c,'status','—')} | [doc]({link(tdir, c)}) |")
+                       f"{g(c,'status','—')} | {g(c,'result','—')} | [doc]({link(tdir, c)}) |")
     if not entries:
         out.append("| _(none yet)_ | | | | |")
     write(os.path.join(tdir, "INDEX.md"), "\n".join(out) + "\n")
