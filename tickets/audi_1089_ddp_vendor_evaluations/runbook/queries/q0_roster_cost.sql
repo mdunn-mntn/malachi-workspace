@@ -7,8 +7,8 @@
 --   (a) every used_in_mntn_match = TRUE vendor (the eval roster, including disabled
 --       ones such as DS27 LaunchLabs), and
 --   (b) any other data source with metered usage in the window, as context rows:
---       interests/CRM DDPs share the same meter (DS35 LiveRamp IP ~$280K/mo,
---       DS17 ShareThis at $0.95 CPM, DS29 Deepsync).
+--       interests/CRM DDPs share the same meter but are OUT OF SCOPE for this
+--       site-visit vendor eval (their bills read straight from the registry x meter).
 --
 -- Registry gotchas: CDC duplicate rows (dedupe by valid_from DESC; DS26 SCD is broken
 --   so is_current is not trusted); registry data_source_id is STRING (cast to INT64).
