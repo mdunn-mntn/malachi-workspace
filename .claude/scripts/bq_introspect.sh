@@ -25,27 +25,41 @@ bqq() { bq query --project_id="$GCP_PROJECT" --location="$LOCATION" --use_legacy
                  --format=prettyjson --max_rows=100000 "$1"; }
 
 INFO="\`${GCP_PROJECT}.${DATASET}.INFORMATION_SCHEMA"
-echo "Introspecting ${GCP_PROJECT}.${DATASET} (location=$LOCATION) ..."
+
+# Optional 2nd arg = comma-separated table allow-list (for big datasets like integrationprod's 375
+# tables — seed only the ones you name). Empty = whole dataset.
+TABLES_ARG="${2:-}"
+COL_FILTER=""; AND_FILTER=""; VIEW_FILTER=""
+if [ -n "$TABLES_ARG" ]; then
+  IN_LIST=$(printf '%s' "$TABLES_ARG" | awk -F, '{for(i=1;i<=NF;i++) printf "%s%c%s%c", (i>1?",":""), 39, $i, 39}')
+  COL_FILTER="WHERE table_name IN ($IN_LIST)"
+  AND_FILTER="AND table_name IN ($IN_LIST)"
+  VIEW_FILTER="WHERE table_name IN ($IN_LIST)"
+  echo "Introspecting ${GCP_PROJECT}.${DATASET} (location=$LOCATION, ${TABLES_ARG//,/ }) ..."
+else
+  echo "Introspecting ${GCP_PROJECT}.${DATASET} (location=$LOCATION) ..."
+fi
 
 bqq "SELECT table_name, column_name, ordinal_position, data_type, is_nullable,
             is_partitioning_column, clustering_ordinal_position
      FROM ${INFO}.COLUMNS\`
+     ${COL_FILTER}
      ORDER BY table_name, ordinal_position"                         > "$TMP/columns.json"
 
 # TABLE_STORAGE is NOT a dataset-scoped view — it only exists at region/project scope.
 # Query it region-scoped and filter to this dataset. (Views return no storage rows; that's fine.)
 bqq "SELECT table_name, total_rows, total_logical_bytes
      FROM \`${GCP_PROJECT}.${BQ_REGION}.INFORMATION_SCHEMA.TABLE_STORAGE\`
-     WHERE table_schema = '${DATASET}'"                            > "$TMP/storage.json"
+     WHERE table_schema = '${DATASET}' ${AND_FILTER}"              > "$TMP/storage.json"
 
 bqq "SELECT table_name, table_type
      FROM ${INFO}.TABLES\`
-     WHERE table_type IN ('BASE TABLE', 'VIEW', 'MATERIALIZED VIEW')
+     WHERE table_type IN ('BASE TABLE', 'VIEW', 'MATERIALIZED VIEW') ${AND_FILTER}
      ORDER BY table_name"                                           > "$TMP/tables.json"
 
 # Logical-view SQL definitions (empty array if the dataset has none).
 bqq "SELECT table_name, view_definition
-     FROM ${INFO}.VIEWS\`" > "$TMP/views.json" 2>/dev/null || echo "[]" > "$TMP/views.json"
+     FROM ${INFO}.VIEWS\` ${VIEW_FILTER}" > "$TMP/views.json" 2>/dev/null || echo "[]" > "$TMP/views.json"
 
 python3 "$HERE/_render_table_doc.py" "$DATASET" "$ROOT/knowledge/bq/$DATASET" \
         "$TMP/columns.json" "$TMP/storage.json" "$TMP/tables.json" "$TMP/views.json"
