@@ -218,20 +218,24 @@ file is the single source of truth for each role (no drift). A headless driver
 
 ## 9. Deterministic backbone: hooks + wrappers
 
-`.claude/settings.json` registers **4 hooks** (all defensive: missing file / non-match → silent exit 0):
+`.claude/settings.json` registers **5 hooks** (all defensive: missing file / non-match → silent exit 0):
 - **PreToolUse : Bash** → `enforce_bq_wrapper.sh` — blocks a raw `bq … query` (exit 2) unless it goes
   through `bq_run.sh`, is a `--dry_run`, or is an `INFORMATION_SCHEMA` read. The teeth behind G3.
 - **PostToolUse : Bash** → `flag_net_new_tables.sh` — after a `bq_run.sh` call, append any referenced
   `dataset.table` lacking a catalog doc to `knowledge/bq/_UNDOCUMENTED.queue` (sort -u). G2/G4 detection.
 - **SessionStart** → `session_start_routing.sh` — print a ~15-line orientation: tiered-retrieval
   reminder, coverage rollup (counted by `coverage_state`, never by `last_verified`), doc-debt queue
-  size, perf-log size. G1 cold-start.
+  size, perf-log size, and the `health_scorecard.py` line (days-since-`/capture`, orphan docs, dup
+  titles). G1 cold-start.
+- **UserPromptSubmit** → `log_request.py` — append ONE keyword-only record (verb + ≤10 nouns +
+  one-way hash; never the raw prompt) to the gitignored `knowledge/.request_log.jsonl`; feeds
+  `request_digest.py`, which PROPOSES a `/skill` for recurring shapes. Silent, always exit 0.
 - **Stop** → `capture_reminder.sh` — advisory: if the queue is non-empty OR any `knowledge/**.md` is
   newer than `INDEX.md`, print "capture due → run /capture then scripts/build_index.sh" (exit 0).
 
 Documented **opt-in** add-ons in `.claude/README.md` (off by default to avoid noise): `SubagentStop`
-(queue-growth reminder), `PreCompact` (snapshot pending knowledge to `_staging/`), `UserPromptSubmit`
-(inline routing), and a "hard mode" flip of the Stop hook to exit 2.
+(queue-growth reminder), `PreCompact` (snapshot pending knowledge to `_staging/`), and a "hard mode"
+flip of the Stop hook to exit 2. (`UserPromptSubmit` is now a live hook — see above — not an add-on.)
 
 ## 10. Idempotency invariants (do not break — the whole kit rests on these)
 
