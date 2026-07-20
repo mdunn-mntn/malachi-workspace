@@ -16,6 +16,7 @@ approx_rows: 462873
 approx_logical_bytes: 17691000
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [attribution, advertiser_metrics]
 keywords: [sales cycle, time to conversion, first page view, rolling average, trailing window, advertiser, seconds]
 source: INFORMATION_SCHEMA+human

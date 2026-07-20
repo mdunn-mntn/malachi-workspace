@@ -16,6 +16,7 @@ approx_rows: 608
 approx_logical_bytes: 47424
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [private_marketplace, mntn_select, campaign_groups]
 keywords: [pmp, private marketplace, deal group, mntn select, pause ads, campaign group bridge, ptv, cdc dimension]
 source: INFORMATION_SCHEMA+human

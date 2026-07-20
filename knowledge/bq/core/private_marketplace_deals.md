@@ -16,6 +16,7 @@ approx_rows: 1072
 approx_logical_bytes: 239619
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [pmp, deals, supply, inventory, ctv]
 keywords: [private marketplace, pmp, deal, beeswax, exchange, floor price, publisher, ssp, pub_direct, partner, dsp]
 source: INFORMATION_SCHEMA+human

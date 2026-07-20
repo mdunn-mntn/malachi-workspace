@@ -16,6 +16,7 @@ approx_rows: null
 approx_logical_bytes: 42537927068
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [waypoints]
 keywords: [funnel, waypoint, sequential, full_volume, event_group, funnel_stage, transition, ga_client_id, on_site_events, customer_journey, from_verified_impression]
 source: INFORMATION_SCHEMA+human

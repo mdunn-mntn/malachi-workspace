@@ -16,6 +16,7 @@ approx_rows: 777461
 approx_logical_bytes: 181201413
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [creative, video, transcode]
 keywords: [creative_id, bitrate, transcode, rendition, video, 1080p, abr_ladder, duration_in_sec, fps, steelhouse_cdn]
 source: INFORMATION_SCHEMA+human

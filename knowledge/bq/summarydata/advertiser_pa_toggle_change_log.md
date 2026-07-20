@@ -16,6 +16,7 @@ approx_rows: 248
 approx_logical_bytes: 50904
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [attribution, audit-log, advertiser-settings]
 keywords: [probabilistic_attribution, statistical_modeling, toggle, cdc, change_log, audit, advertiser, attribution]
 source: INFORMATION_SCHEMA+human

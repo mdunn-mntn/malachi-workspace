@@ -16,6 +16,7 @@ approx_rows: 369754829
 approx_logical_bytes: 407338394403
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [attribution, visits, referral, tamp-detection]
 keywords: [verified visits, VV, referral blocking, tamp detection, competing source, utm_source, utm_medium, utm_campaign, gclid, gbraid, wbraid, cm_mmc, referer, parent_referer, uuid, source_type, last_tv_touch_visits, from_verified_impression, key value fanout]
 source: INFORMATION_SCHEMA+human

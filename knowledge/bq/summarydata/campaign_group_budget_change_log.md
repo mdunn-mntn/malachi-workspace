@@ -16,6 +16,7 @@ approx_rows: 243776
 approx_logical_bytes: 28002520
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [budget, campaign_management, audit_log]
 keywords: [budget, campaign group, flight, flighted, monthly, pacing, budget amount, change log, audit, cdc, prior value, current value, budget increase, budget decrease, end date, user_id]
 source: INFORMATION_SCHEMA+human

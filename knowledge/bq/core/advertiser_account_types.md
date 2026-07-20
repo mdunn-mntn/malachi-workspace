@@ -16,6 +16,7 @@ approx_rows: 16
 approx_logical_bytes: 1120
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [advertiser, dimension, account-classification]
 keywords: [account_type, account_type_id, advertiser classification, B2B, Mobile, Ecommerce, Gaming, Agency, CDC dimension, datastream]
 source: INFORMATION_SCHEMA+human

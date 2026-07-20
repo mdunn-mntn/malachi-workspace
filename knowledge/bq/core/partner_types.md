@@ -16,6 +16,7 @@ approx_rows: 3
 approx_logical_bytes: 236
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [dimension, partners, enum]
 keywords: [partner_type, partner_type_id, dsp, ssp, mobile_attribution, lookup, enum, core_partners]
 source: INFORMATION_SCHEMA+human

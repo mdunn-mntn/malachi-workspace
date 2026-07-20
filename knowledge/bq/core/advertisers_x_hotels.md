@@ -16,6 +16,7 @@ approx_rows: 41214
 approx_logical_bytes: 2706053
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [advertiser, account-hierarchy, dimension]
 keywords: [hotel, portfolio, account-group, agency, advertiser, bridge, junction, parent, child, portfolio-role]
 source: INFORMATION_SCHEMA+human

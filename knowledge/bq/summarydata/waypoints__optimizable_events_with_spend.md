@@ -16,6 +16,7 @@ approx_rows: 76724722
 approx_logical_bytes: 23104383689
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [waypoints, site-events, attribution, spend, optimization]
 keywords: [waypoints, optimizable_event, ad_served_id, total_spend, ga_client_id, guid, from_verified_impression, event_type, DLV, URL, site-visit, pageview]
 source: INFORMATION_SCHEMA+human

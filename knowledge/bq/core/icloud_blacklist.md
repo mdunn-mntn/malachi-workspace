@@ -16,6 +16,7 @@ approx_rows: 2
 approx_logical_bytes: 138
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [advertiser, privacy, dimension]
 keywords: [icloud, apple, private relay, blacklist, advertiser, verified_visits, audience_targeting, conversion_attribution, cdc, datastream]
 source: INFORMATION_SCHEMA+human

@@ -16,6 +16,7 @@ approx_rows: 34410
 approx_logical_bytes: 2408700
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [advertiser, beta, dimension, cdc]
 keywords: [beta_advertisers, beta program, advertiser flag, enrollment, membership, datastream cdc, advertiser dimension]
 source: INFORMATION_SCHEMA+human

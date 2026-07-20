@@ -16,6 +16,7 @@ approx_rows: 13
 approx_logical_bytes: 1008
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [audience, reference]
 keywords: [segment_type, segment_type_id, audience, enum, dimension, segmentation_default, intent_tier, control_group, ego, cart]
 source: INFORMATION_SCHEMA+human

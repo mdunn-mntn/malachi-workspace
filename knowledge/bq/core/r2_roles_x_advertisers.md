@@ -16,6 +16,7 @@ approx_rows: 230067
 approx_logical_bytes: 16104690
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [access-control, advertiser-dimension, account-management]
 keywords: [r2_roles, rbac, roles, permissions, advertiser, access-control, chapi, junction-table, bridge]
 source: INFORMATION_SCHEMA+human

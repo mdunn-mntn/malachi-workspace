@@ -16,6 +16,7 @@ approx_rows: null
 approx_logical_bytes: 42537927068
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [waypoints, funnel, attribution, conversion]
 keywords: [waypoints_funnel_by_day, sequential funnel, funnel stage, event_group, event_group_order, transition_count, current_event_count_flag, ga_client_id, session_key, waypoints_fact, funnel reach, step conversion]
 source: INFORMATION_SCHEMA+human

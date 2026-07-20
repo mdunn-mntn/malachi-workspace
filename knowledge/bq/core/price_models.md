@@ -16,6 +16,7 @@ approx_rows: 18
 approx_logical_bytes: 6860
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [billing, pricing, reference-dim]
 keywords: [price_model, billing, cpm, cpc, cpa, revenue-share, formula-price-model, calculator, campaign-billing, steelhouse-statistics]
 source: INFORMATION_SCHEMA+live-sample

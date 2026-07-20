@@ -16,6 +16,7 @@ approx_rows: 39190
 approx_logical_bytes: 5504200
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [audience, campaign_group, audit_log]
 keywords: [audience association, change log, cdc audit, campaign group, audience swap, entity_id, audience_id, user_id, prior_value, current_value]
 source: INFORMATION_SCHEMA+human

@@ -16,6 +16,7 @@ approx_rows: 26067209
 approx_logical_bytes: 3830518346
 schema_synced: 2026-07-19
 last_verified: 2026-07-19
+coverage_state: enriched
 domain: [waypoints, selective_performance, impressions]
 keywords: [waypoints, selective_performance, sp, impressions, total_spend, ad_served_id, guid, cost_impression_log, attribution]
 source: INFORMATION_SCHEMA+human
