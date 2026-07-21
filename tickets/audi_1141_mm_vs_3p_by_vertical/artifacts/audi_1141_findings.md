@@ -1,89 +1,77 @@
-# MNTN Matched vs 3P Segments — Prospecting Performance by Vertical
+# MNTN Matched vs 3P Segments: Prospecting Performance by Vertical
 
-*Prepared for Jon Zucker · trailing 6 months · S1 prospecting · AUDI-1141 · 2026-07-20*
+Trailing 6 months. Stage-1 prospecting. AUDI-1141. 2026-07-20.
 
----
+## What this compares
 
-## What you asked for
+MNTN Matched (MM) vs 3P-segment prospecting performance across the 8 sales verticals. Every campaign
+is classified from its live bidder audience expression into one of four groups:
 
-MM vs 3P-segment performance, by the 8 sales verticals, last 6 months. The wrinkle you and Malachi
-flagged is real, so here's how it's handled up front:
+- **MM (gated):** MNTN scoring (DS13/19/38/46) with an intent score threshold active. Any 3P segment is
+  joined by OR (additive reach only), and the geo is broad.
+- **MM (no gate):** MM with no intent score threshold set.
+- **MM restricted:** MM whose audience is narrowed by an AND-required 3P clause, or by a sub-DMA geo
+  (zip, city, or radius).
+- **3P:** bought interest segments only (ShareThis, Dstillery, LiveRamp), no MM signal.
 
-- **"MM vs 3P" is not campaigns-that-use-each** — ~72% of campaigns carrying a 3P segment *also* carry
-  an MM signal, and MM is doing the scoring underneath. So I split every campaign into three clean buckets:
-  **MM** (MNTN scoring only), **3P** (bought interest only — ShareThis/Dstillery/LiveRamp), and **Mixed** (both).
-- **Score-limited MM** is broken out separately: **MM (gated)** = an intent score threshold is on;
-  **MM (no gate)** = MM is on but not gating. This is the "MM tuned down behaves like 3P" case.
-- **Zip-code campaigns** are dropped everywhere **except Auto and ProServ** (your call).
-- **Advertiser-weighted** so one huge account can't set the story (more on that below).
-
----
+The OR vs AND distinction matters: about 85% of campaigns that carry a 3P segment join it with OR, which
+only adds reach and leaves MM doing the scoring. Only an AND-required 3P actually narrows the audience.
+Grouping all 3P-carrying campaigns as "3P" would misread additive 3P as restrictive.
 
 ## The one thing to remember
 
-> **For the typical advertiser, gated MNTN Matched drives ~4× the visit rate of 3P at ~⅓ the cost per
-> visit — and wins in every vertical. Turn MM's score gate off and it collapses toward 3P.**
+For the typical (median) advertiser, gated MNTN Matched drives about 6x the visit rate of 3P at roughly
+one quarter the cost per visit, and it leads visit rate in every vertical. Remove the intent gate, or
+narrow the audience, and most of that edge goes away.
 
 ![Overall](audi_1141_chart_overall.png)
 
-| Bucket | Visit rate (per 1k imps) | Cost per visit | 
+| Group | Visit rate (visits/imps) | Cost per visit |
 |---|---|---|
-| **MM (gated)** | **3.9** | **$9.69** |
-| MM (no gate) | 1.3 | $18.38 |
-| Mixed | 2.5 | $16.56 |
-| 3P | 0.9 | $29.92 |
+| **MM (gated)** | **0.46%** | **$9** |
+| MM (no gate) | 0.13% | $22 |
+| MM restricted | 0.18% | $19 |
+| 3P | 0.07% | $37 |
 
-*Median advertiser. The gate matters: un-gated MM (1.3) is barely better than 3P (0.9) — the intent
-score is what makes MM work.*
-
----
+Median advertiser. IVR = visits/impressions, CVR = conversions/impressions (both rates are over impressions).
 
 ## By vertical
 
-MM (gated) beats 3P on **both** visit rate and cost-per-visit in **all 8 verticals**:
+MM (gated) beats 3P on visit rate and cost per visit in all 8 verticals:
 
-| Sales vertical | MM (gated) VR | 3P VR | MM VR advantage | MM (gated) CPV | 3P CPV |
+| Sales vertical | MM (gated) IVR | 3P IVR | IVR advantage | MM (gated) CPV | 3P CPV |
 |---|---|---|---|---|---|
-| Auto, Travel & Hospitality | 7.8 | 1.0 | **8.1x** | $6 | $39 |
-| CPG & Health | 2.1 | 0.2 | **12.4x** | $16 | $126 |
-| Education | 5.0 | 1.8 | **2.8x** | $12 | $20 |
-| Gaming / Entertainment | 9.4 | 1.4 | **6.8x** | $3 | $20 |
-| ProServ | 4.5 | 1.0 | **4.6x** | $9 | $24 |
-| Restaurants / Dining | 3.4 | 1.2 | **2.8x** | $9 | $36 |
-| Retail / Ecom | 4.5 | 1.5 | **3.1x** | $9 | $20 |
-| Telco & Tech | 2.3 | 0.5 | **4.7x** | $24 | $51 |
+| CPG & Health | 0.28% | 0.02% | **17.0x** | $12 | $93 |
+| Gaming / Entertainment | 1.19% | 0.14% | **8.3x** | $3 | $17 |
+| Auto, Travel & Hospitality | 0.78% | 0.10% | **8.1x** | $6 | $39 |
+| Retail / Ecom | 0.46% | 0.06% | **7.7x** | $9 | $46 |
+| Telco & Tech | 0.29% | 0.05% | **5.9x** | $18 | $48 |
+| ProServ | 0.42% | 0.09% | **4.7x** | $9 | $22 |
+| Restaurants / Dining | 0.21% | 0.05% | **4.1x** | $16 | $47 |
+| Education | 0.67% | 0.21% | **3.2x** | $8 | $19 |
 
-*Median advertiser, visits per 1,000 impressions.*
+Median advertiser.
 
-![VR by vertical](audi_1141_chart_vr_by_vertical.png)
+![IVR by vertical](audi_1141_chart_ivr_by_vertical.png)
 
 ![CPV by vertical](audi_1141_chart_cpv_by_vertical.png)
 
----
+## Caveats (please read before quoting these)
 
-## Honest caveats (please read before quoting these)
-
-1. **3P *can* look good in aggregate — but it's one account.** If you pool all impressions together,
-   3P's visit rate actually beats MM. That's almost entirely **WGU**: a single account is ~39% of all
-   3P impressions with an unusually high visit rate. It's a known outlier (~30% of MNTN spend). Strip
-   it out and look per-advertiser — which is what a sales conversation is about — and MM wins clearly.
-   Use the per-advertiser numbers above, not pooled totals.
-2. **These are prospecting numbers only** (top-funnel S1). Revenue/ROAS mostly lands in retargeting,
-   which is excluded — so treat ROAS here as **directional**, not absolute (some verticals also have
-   bad conversion pixels that throw ROAS off entirely). **Visit rate and cost-per-visit are the solid
-   metrics.**
-3. **Vertical grouping is my mapping**, rolling MNTN's 37 internal verticals into your 8. If RevOps has
-   an official crosswalk, send it and I'll swap it in (it's a one-line change). B2B, Food & Beverage,
-   and a few others are judgment calls.
-4. **"MM (no gate)" is a small group** (74 advertisers) — directionally clear, but thinner than the rest.
-
----
+1. **3P can look competitive in aggregate, but it is one account.** If all impressions are pooled, 3P
+   visit rate rises, because roughly 39% of 3P impressions come from a single large, non-representative
+   account. The per-advertiser (median) numbers above are the ones to use.
+2. **These are prospecting numbers only** (top-funnel Stage 1). Revenue mostly lands in retargeting,
+   which is excluded, so treat ROAS as directional, not absolute. Some verticals also have unreliable
+   conversion pixels. Visit rate and cost per visit are the solid metrics.
+3. **Vertical grouping is an interim mapping** of the 37 MNTN internal verticals into the 8 sales
+   verticals. If RevOps has an official crosswalk, send it and it is a one-line swap.
+4. **MM restricted is expected for local businesses.** Auto and ProServ legitimately use local (zip,
+   radius) targeting, so their restricted share is high by design. In other verticals it flags narrowing.
 
 ## Bottom line for the pitch
 
-- Lead with **visit rate and cost-per-visit** — MM wins both, in every vertical, and it's not close.
-- The strongest verticals for the MM story: **CPG & Health, Auto, Gaming**.
-- If a prospect says "we use 3P segments," the honest counter is: *MM gets you ~4× the site visits at a
-  fraction of the cost — as long as you leave the intent gate on.*
-
-*Questions or want a different cut (channel, specific advertiser, add a vertical) — ping Malachi.*
+- Lead with visit rate and cost per visit. MM wins both, in every vertical, and it is not close.
+- Strongest verticals for the MM story: CPG & Health, Auto, Gaming, Retail.
+- If a prospect says they use 3P segments, the honest counter is that MM gets about 6x the site visits at
+  a fraction of the cost, as long as the intent gate stays on and the audience is not over-narrowed.

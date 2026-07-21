@@ -1,185 +1,189 @@
 #!/usr/bin/env python3
-"""AUDI-1141 — build the shareable .xlsx scorecard (openpyxl).
-Tabs: Read me · MM vs 3P by vertical · Full scorecard · Overall · Campaign detail (pivotable).
-Reproducible: reads outputs/*.csv only. Google-Sheets friendly (autofilter, freeze panes, number fmts)."""
+"""AUDI-1141 shareable .xlsx. Tabs: Read me / MM vs 3P by vertical / Full scorecard / Overall /
+Campaign detail / Queries. Rates stored as decimals, formatted as % and $. Content-sized columns."""
 import pandas as pd, numpy as np
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from openpyxl.utils.dataframe import dataframe_to_rows
 
 OUT = "tickets/audi_1141_mm_vs_3p_by_vertical/outputs/"
-DEST = "tickets/audi_1141_mm_vs_3p_by_vertical/outputs/audi_1141_mm_vs_3p_scorecard.xlsx"
+DEST = OUT + "audi_1141_mm_vs_3p_scorecard.xlsx"
+SQLFILE = "tickets/audi_1141_mm_vs_3p_by_vertical/queries/audi_1141_cohort_scorecard.sql"
 ADV_MIN_IMPS = 20000
-ZIP_KEEP = {"Auto, Travel & Hospitality", "ProServ"}
-BO = ["MM (gated)", "MM (no gate)", "Mixed", "3P"]
+BO = ["MM (gated)", "MM (no gate)", "MM restricted", "3P"]
 
-# ---- styles ----
-NAVY = "1a3c5e"; TEAL = "1a6e6a"; HEAD = "1a3c5e"; BAND = "eef3f4"; GREY = "666666"
-HFONT = Font(bold=True, color="FFFFFF", size=11, name="Calibri")
-TITLE = Font(bold=True, size=15, color=NAVY, name="Calibri")
-SUB = Font(italic=True, size=10, color=GREY, name="Calibri")
-BOLD = Font(bold=True, name="Calibri")
-HFILL = PatternFill("solid", fgColor=HEAD)
-BANDF = PatternFill("solid", fgColor=BAND)
-CEN = Alignment(horizontal="center", vertical="center")
-LFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
-THIN = Side(style="thin", color="CCCCCC")
-BORD = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+HEAD="1a3c5e"; BAND="eef3f4"; GREY="666666"
+HFONT=Font(bold=True,color="FFFFFF",size=11); TITLE=Font(bold=True,size=15,color=HEAD)
+SUB=Font(italic=True,size=10,color=GREY); BOLD=Font(bold=True); MONO=Font(name="Consolas",size=9)
+HFILL=PatternFill("solid",fgColor=HEAD); BANDF=PatternFill("solid",fgColor=BAND)
+CEN=Alignment(horizontal="center",vertical="center",wrap_text=True)
+LFT=Alignment(horizontal="left",vertical="top",wrap_text=True)
+THIN=Side(style="thin",color="CCCCCC"); BORD=Border(left=THIN,right=THIN,top=THIN,bottom=THIN)
+PCT2="0.00%"; PCT3="0.000%"; USD="\"$\"#,##0.00"; USD0="\"$\"#,##0"; NUM2="0.00"; INT="#,##0"
 
-wb = Workbook()
+wb=Workbook()
 
-def style_header(ws, row, ncols):
-    for c in range(1, ncols+1):
-        cell = ws.cell(row=row, column=c); cell.font = HFONT; cell.fill = HFILL
-        cell.alignment = CEN; cell.border = BORD
+def autosize(ws, df, fmt_lens=None):
+    """Width from max(header, formatted values). fmt_lens = {col: display_len} override for numeric cols."""
+    fmt_lens = fmt_lens or {}
+    for j,col in enumerate(df.columns,1):
+        if col in fmt_lens:
+            w = max(len(str(col)), fmt_lens[col])
+        else:
+            vmax = df[col].astype(str).map(len).max() if len(df) else 0
+            w = max(len(str(col)), int(vmax))
+        ws.column_dimensions[get_column_letter(j)].width = min(max(w+2, 9), 46)
 
-def write_df(ws, df, start_row, fmts=None, band=True):
-    """Write a dataframe with header styling, borders, number formats, banding."""
-    fmts = fmts or {}
-    for j, col in enumerate(df.columns, 1):
-        ws.cell(row=start_row, column=j, value=col)
-    style_header(ws, start_row, len(df.columns))
-    for i, (_, r) in enumerate(df.iterrows(), 1):
-        rr = start_row + i
-        for j, col in enumerate(df.columns, 1):
-            v = r[col]
-            if isinstance(v, (np.integer,)): v = int(v)
-            elif isinstance(v, (np.floating,)): v = float(v) if pd.notna(v) else None
-            cell = ws.cell(row=rr, column=j, value=v)
-            cell.border = BORD
-            if col in fmts: cell.number_format = fmts[col]
-            if j == 1: cell.font = BOLD
-            if band and i % 2 == 0: cell.fill = BANDF
-    return start_row + len(df) + 1
+def write_table(ws, df, start_row, fmts, band=True, header_wrap=True):
+    for j,col in enumerate(df.columns,1):
+        c=ws.cell(row=start_row,column=j,value=col); c.font=HFONT; c.fill=HFILL
+        c.alignment=CEN if header_wrap else Alignment(horizontal="center"); c.border=BORD
+    for i,(_,r) in enumerate(df.iterrows(),1):
+        rr=start_row+i
+        for j,col in enumerate(df.columns,1):
+            v=r[col]
+            if isinstance(v,(np.integer,)): v=int(v)
+            elif isinstance(v,(np.floating,)): v=float(v) if pd.notna(v) else None
+            elif isinstance(v,(np.bool_,)): v=bool(v)
+            c=ws.cell(row=rr,column=j,value=v); c.border=BORD
+            if col in fmts: c.number_format=fmts[col]
+            if j==1: c.font=BOLD
+            if band and i%2==0: c.fill=BANDF
+    ws.row_dimensions[start_row].height=30
+    return start_row+len(df)+1
 
-def autosize(ws, widths):
-    for col, w in widths.items(): ws.column_dimensions[col].width = w
+# ---------------- load + transform ----------------
+df=pd.read_csv(OUT+"audi_1141_campaign_grain.csv").dropna(subset=["vertical_id"])
+names=pd.read_csv(OUT+"audi_1141_advertiser_names.csv").drop_duplicates("advertiser_id")
+df=df.merge(names,on="advertiser_id",how="left")
+df["gated_frac"]=np.where(df.hhst_writes>0, df.hhst_writes_gated/df.hhst_writes, 0.0)
+df["capped"]=df.gated_frac>=0.5
+df=df[df.bucket!="Neither"].copy()
+df["bucket_detail"]=np.where(df.bucket=="MM", np.where(df.capped,"MM (gated)","MM (no gate)"), df.bucket)
 
-# ============================================================ 1) READ ME
-ws = wb.active; ws.title = "Read me"; ws.sheet_view.showGridLines = False
-ws["A1"] = "MNTN Matched vs 3P Segments — Prospecting Performance by Vertical"; ws["A1"].font = TITLE
-ws["A2"] = "Prepared for Jon Zucker · trailing 6 months · S1 prospecting · AUDI-1141 · 2026-07-20"; ws["A2"].font = SUB
-notes = [
- ("", ""),
- ("THE ONE THING", "For the typical advertiser, gated MNTN Matched drives ~4x the visit rate of 3P at ~1/3 the cost per visit — and wins in every vertical. Turn MM's score gate off and it collapses toward 3P."),
- ("", ""),
- ("How campaigns are bucketed", "Every S1 prospecting campaign classified from its live bidder audience expression:"),
- ("  MM", "MNTN scoring only (DS13/19/38/46), no 3P segment."),
- ("  3P", "Bought interest only — ShareThis / Dstillery / LiveRamp (DS17/18/35), no MM."),
- ("  Mixed", "Both. ~72% of campaigns using a 3P segment also carry MM, which does the scoring underneath — so a naive 'MM vs 3P' double-counts MM. Kept separate."),
- ("  MM (gated) vs (no gate)", "MM (gated) = an intent score threshold (HHST) is on; MM (no gate) = MM on but not gating. The gate is what creates MM's value."),
- ("", ""),
- ("Metrics", "VR = visits per 1,000 impressions · CPV = cost per visit · CVR = conversions per visit · ROAS = revenue / spend."),
- ("Weighting", "Headline = ADVERTISER-WEIGHTED MEDIAN (each advertiser = one vote; whale-robust). 'pooled' columns = impression/spend-weighted. Advertisers with <20k imps in a cell are excluded from the median."),
- ("", ""),
- ("READ BEFORE QUOTING", ""),
- ("  1. Pooled 3P is a whale", "If you pool all impressions, 3P's visit rate beats MM — but that's ~39% one non-representative account (WGU). Use the per-advertiser (median) numbers, not pooled totals."),
- ("  2. ROAS is directional", "Prospecting-only, last-touch. Revenue mostly lands in retargeting (excluded), and some verticals have bad conversion pixels (e.g. a ProServ advertiser shows 812x). Visit rate & CPV are the solid metrics."),
- ("  3. Vertical mapping", "37 MNTN internal verticals rolled into the 8 sales verticals — my crosswalk, not RevOps-official. Send the canonical one and it's a one-line swap. B2B, Food & Beverage are judgment calls."),
- ("  4. Zip filter", "Zip-code-targeted campaigns dropped for all verticals EXCEPT Auto and ProServ (per Jon)."),
- ("  5. MM (no gate)", "Small group (74 advertisers) — directionally clear, thinner than the rest."),
- ("", ""),
- ("Tabs", "'MM vs 3P by vertical' = the headline (filter here). 'Full scorecard' = every bucket x vertical, all metrics. 'Overall' = all verticals combined. 'Campaign detail' = raw campaign-level rows for your own pivots."),
- ("Questions", "Ping Malachi for a different cut (channel, specific advertiser, add a vertical, different attribution lens)."),
+ov=pd.read_csv(OUT+"audi_1141_scorecard_overall.csv")
+bv=pd.read_csv(OUT+"audi_1141_scorecard_by_vertical.csv")
+
+# ================= 1) READ ME =================
+ws=wb.active; ws.title="Read me"; ws.sheet_view.showGridLines=False
+ws["A1"]="MNTN Matched vs 3P Segments: Prospecting Performance by Vertical"; ws["A1"].font=TITLE
+ws["A2"]="Trailing 6 months. Stage-1 prospecting campaigns. Source AUDI-1141. Generated 2026-07-20."; ws["A2"].font=SUB
+rows=[
+ ("",""),
+ ("Summary","For the typical (median) advertiser, gated MNTN Matched delivers about 6x the visit rate of 3P segments at roughly one quarter the cost per visit, and leads visit rate in every vertical. Removing the intent gate, or narrowing the audience, erodes most of that edge."),
+ ("",""),
+ ("How campaigns are grouped","Each Stage-1 prospecting campaign is classified from its live bidder audience expression."),
+ ("MM (gated)","MNTN scoring (DS13/19/38/46) with an intent score threshold (HHST) active. Any 3P segment present is joined by OR (additive reach), and the geo is broad."),
+ ("MM (no gate)","Same as MM but no intent score threshold is set."),
+ ("MM restricted","MM whose audience is narrowed by an AND-required 3P clause, or by a sub-DMA geo (zip, city, or radius). Narrowing greatly restricts the eligible audience."),
+ ("3P","Bought interest segments only (ShareThis, Dstillery, LiveRamp), no MM signal."),
+ ("Why OR vs AND matters","About 85% of campaigns that carry a 3P segment join it with OR, which only adds reach and leaves MM doing the scoring. Only an AND-required 3P actually narrows the audience. Grouping all 3P-carrying campaigns together would misread additive 3P as restrictive."),
+ ("",""),
+ ("Metrics (all rates are over impressions)",""),
+ ("IVR","Visit rate. Visits divided by impressions (visits = views + clicks)."),
+ ("CVR","Conversion rate. Conversions divided by impressions."),
+ ("CTR","Click rate. Clicks divided by impressions."),
+ ("CPV","Cost per visit. Spend divided by visits."),
+ ("CPM","Cost per thousand impressions."),
+ ("ROAS","Revenue divided by spend."),
+ ("Weighting","Headline numbers are advertiser-weighted medians (each advertiser counts once, so one large account cannot set the result). Columns labeled 'pooled' are impression or spend weighted. Advertisers with under 20,000 impressions in a cell are excluded from the median."),
+ ("",""),
+ ("Read before quoting",""),
+ ("1. Pooled 3P is one account","If all impressions are pooled, 3P visit rate looks competitive, but roughly 39% of 3P impressions come from a single large, non-representative account. Use the per-advertiser (median) numbers."),
+ ("2. ROAS is directional","Prospecting only, last-touch. Revenue mostly lands in retargeting, which is excluded, and some verticals have unreliable conversion pixels (one account shows over 800x). Visit rate and cost per visit are the solid metrics."),
+ ("3. Vertical mapping","The 37 MNTN internal verticals are rolled up into the 8 sales verticals using an interim crosswalk, not an official one. Provide the RevOps crosswalk and it is a one-line swap."),
+ ("4. Restricted is expected for local","Auto and ProServ legitimately use local (zip, radius) targeting, so their 'MM restricted' share is high by design. In other verticals it flags narrowing."),
+ ("5. MM (no gate) is small","144 advertisers. Directionally clear, thinner than the other groups."),
+ ("",""),
+ ("Tabs","'MM vs 3P by vertical' is the headline. 'Full scorecard' has every group by vertical. 'Overall' is all verticals combined. 'Campaign detail' is the raw campaign rows for your own pivots. 'Queries' has the SQL used to produce these numbers."),
 ]
-r = 4
-for k, v in notes:
-    ws.cell(row=r, column=1, value=k).font = BOLD
-    c = ws.cell(row=r, column=2, value=v); c.alignment = LFT
-    r += 1
-autosize(ws, {"A": 26, "B": 105})
-ws.row_dimensions[1].height = 20
+r=4
+for k,v in rows:
+    ws.cell(row=r,column=1,value=k).font=BOLD
+    c=ws.cell(row=r,column=2,value=v); c.alignment=LFT
+    r+=1
+ws.column_dimensions["A"].width=30; ws.column_dimensions["B"].width=112
 
-# ============================================================ load + transform cohort (for detail tab)
-df = pd.read_csv(OUT+"audi_1141_campaign_grain.csv").dropna(subset=["vertical_id"])
-names = pd.read_csv(OUT+"audi_1141_advertiser_names.csv").drop_duplicates("advertiser_id")
-df = df.merge(names, on="advertiser_id", how="left")
-df["gated_frac"] = np.where(df.hhst_writes > 0, df.hhst_writes_gated/df.hhst_writes, 0.0)
-df["capped"] = df.gated_frac >= 0.5
-df = df[~(df.zip_narrow & ~df.sales_vertical.isin(ZIP_KEEP))]
-df = df[df.bucket != "Neither"].copy()
-df["bucket_detail"] = np.where(df.bucket=="MM", np.where(df.capped,"MM (gated)","MM (no gate)"), df.bucket)
-
-# ============================================================ 2) MM vs 3P BY VERTICAL (headline)
-bv = pd.read_csv(OUT+"audi_1141_scorecard_by_vertical.csv")
+# ================= 2) MM vs 3P by vertical =================
 def cell(v,b,col):
-    r = bv[(bv.sales_vertical==v)&(bv.bucket_detail==b)]
-    return r[col].iloc[0] if len(r) else np.nan
-verts = [v for v in bv.sales_vertical.unique() if v != "Other / Unmapped"]
-verts = sorted(verts, key=lambda v: -(cell(v,"MM (gated)","VR_med")/max(cell(v,"3P","VR_med"),0.01)))
-head = pd.DataFrame([{
-    "Sales vertical": v,
-    "MM VR": round(cell(v,"MM (gated)","VR_med"),1), "3P VR": round(cell(v,"3P","VR_med"),1),
-    "VR advantage (x)": round(cell(v,"MM (gated)","VR_med")/cell(v,"3P","VR_med"),1) if cell(v,"3P","VR_med") else np.nan,
-    "MM CPV": round(cell(v,"MM (gated)","CPV_med"),2), "3P CPV": round(cell(v,"3P","CPV_med"),2),
-    "CPV advantage (x)": round(cell(v,"3P","CPV_med")/cell(v,"MM (gated)","CPV_med"),1) if cell(v,"MM (gated)","CPV_med") else np.nan,
-    "MM advertisers": int(cell(v,"MM (gated)","n_adv_qual")), "3P advertisers": int(cell(v,"3P","n_adv_qual")),
+    x=bv[(bv.sales_vertical==v)&(bv.bucket_detail==b)]
+    return x[col].iloc[0] if len(x) else np.nan
+verts=[v for v in bv.sales_vertical.unique() if v!="Other / Unmapped"]
+verts=sorted(verts,key=lambda v:-(cell(v,"MM (gated)","IVR_med")/max(cell(v,"3P","IVR_med"),1e-9)))
+head=pd.DataFrame([{
+ "Sales vertical":v,
+ "MM (gated) IVR":cell(v,"MM (gated)","IVR_med"), "3P IVR":cell(v,"3P","IVR_med"),
+ "IVR advantage":cell(v,"MM (gated)","IVR_med")/cell(v,"3P","IVR_med") if cell(v,"3P","IVR_med") else np.nan,
+ "MM (gated) CPV":cell(v,"MM (gated)","CPV_med"), "3P CPV":cell(v,"3P","CPV_med"),
+ "MM restricted IVR":cell(v,"MM restricted","IVR_med"),
+ "MM advertisers":int(cell(v,"MM (gated)","n_adv_qual")) if pd.notna(cell(v,"MM (gated)","n_adv_qual")) else 0,
+ "3P advertisers":int(cell(v,"3P","n_adv_qual")) if pd.notna(cell(v,"3P","n_adv_qual")) else 0,
 } for v in verts])
-ws2 = wb.create_sheet("MM vs 3P by vertical"); ws2.sheet_view.showGridLines = False
-ws2["A1"] = "MM (gated) vs 3P — median advertiser, by vertical"; ws2["A1"].font = TITLE
-ws2["A2"] = "Visits per 1,000 imps (higher=better) · $ cost per visit (lower=better) · MM wins both in every vertical"; ws2["A2"].font = SUB
-end = write_df(ws2, head, 4, fmts={"MM VR":"0.0","3P VR":"0.0","VR advantage (x)":'0.0"x"',
-    "MM CPV":'"$"0.00',"3P CPV":'"$"0.00',"CPV advantage (x)":'0.0"x"'})
-ws2.freeze_panes = "A5"; ws2.auto_filter.ref = f"A4:I{4+len(head)}"
-autosize(ws2, {"A":28,"B":9,"C":9,"D":16,"E":11,"F":11,"G":17,"H":15,"I":14})
+ws2=wb.create_sheet("MM vs 3P by vertical"); ws2.sheet_view.showGridLines=False
+ws2["A1"]="MM (gated) vs 3P by vertical, median advertiser"; ws2["A1"].font=TITLE
+ws2["A2"]="Visit rate (higher is better) and cost per visit (lower is better). MM leads visit rate in every vertical."; ws2["A2"].font=SUB
+end=write_table(ws2,head,4,{"MM (gated) IVR":PCT2,"3P IVR":PCT2,"IVR advantage":"0.0\"x\"",
+  "MM (gated) CPV":USD,"3P CPV":USD,"MM restricted IVR":PCT2})
+ws2.freeze_panes="A5"; ws2.auto_filter.ref=f"A4:I{4+len(head)}"
+autosize(ws2,head,{"MM (gated) IVR":14,"3P IVR":10,"IVR advantage":13,"MM (gated) CPV":14,"3P CPV":10,"MM restricted IVR":16,"MM advertisers":14,"3P advertisers":14})
 
-# ============================================================ 3) FULL SCORECARD (vertical x bucket)
-full = bv.copy()
-full["_o"] = full.bucket_detail.map({b:i for i,b in enumerate(BO)})
-full = full.sort_values(["sales_vertical","_o"])
-fcols = {"sales_vertical":"Sales vertical","bucket_detail":"Bucket","n_adv":"Advertisers",
- "n_adv_qual":"Adv (qual.)","n_camp":"Campaigns","spend":"Spend","imps":"Impressions",
- "VR_med":"VR (median)","CPV_med":"CPV (median)","ROAS_med":"ROAS (median)*","n_adv_roas":"Adv w/ rev",
- "VR_pooled":"VR (pooled)","CPV_pooled":"CPV (pooled)","ROAS_pooled":"ROAS (pooled)*"}
-full = full[list(fcols)].rename(columns=fcols).round(2)
-ws3 = wb.create_sheet("Full scorecard"); ws3.sheet_view.showGridLines = False
-ws3["A1"] = "Full scorecard — every bucket x vertical"; ws3["A1"].font = TITLE
-ws3["A2"] = "*ROAS directional only (prospecting/last-touch; pixel artifacts). Median = whale-robust headline; pooled = impression/spend-weighted."; ws3["A2"].font = SUB
-write_df(ws3, full, 4, fmts={"Spend":'"$"#,##0',"Impressions":"#,##0","VR (median)":"0.0",
- "CPV (median)":'"$"0.00',"ROAS (median)*":"0.00","VR (pooled)":"0.0","CPV (pooled)":'"$"0.00',"ROAS (pooled)*":"0.00"})
-ws3.freeze_panes = "A5"; ws3.auto_filter.ref = f"A4:N{4+len(full)}"
-autosize(ws3, {"A":28,"B":14,"C":11,"D":11,"E":10,"F":13,"G":14,"H":11,"I":12,"J":13,"K":11,"L":11,"M":12,"N":13})
+# ================= 3) Full scorecard =================
+fcols={"sales_vertical":"Sales vertical","bucket_detail":"Group","n_adv":"Advertisers","n_adv_qual":"Adv (qualifying)",
+ "n_camp":"Campaigns","spend":"Spend","imps":"Impressions","IVR_med":"IVR (median)","CVR_med":"CVR (median)",
+ "CTR_med":"CTR (median)","CPV_med":"CPV (median)","ROAS_med":"ROAS (median)","n_adv_roas":"Adv with revenue",
+ "IVR_pooled":"IVR (pooled)","CPV_pooled":"CPV (pooled)","CPM_pooled":"CPM (pooled)","ROAS_pooled":"ROAS (pooled)"}
+full=bv[list(fcols)].rename(columns=fcols)
+ws3=wb.create_sheet("Full scorecard"); ws3.sheet_view.showGridLines=False
+ws3["A1"]="Full scorecard: every group by vertical"; ws3["A1"].font=TITLE
+ws3["A2"]="Median = advertiser-weighted (whale-robust). Pooled = impression or spend weighted. ROAS directional only."; ws3["A2"].font=SUB
+ffmt={"Spend":USD0,"Impressions":INT,"IVR (median)":PCT2,"CVR (median)":PCT3,"CTR (median)":PCT3,
+ "CPV (median)":USD,"ROAS (median)":NUM2,"IVR (pooled)":PCT2,"CPV (pooled)":USD,"CPM (pooled)":USD,"ROAS (pooled)":NUM2}
+write_table(ws3,full,4,ffmt)
+ws3.freeze_panes="C5"; ws3.auto_filter.ref=f"A4:{get_column_letter(len(full.columns))}{4+len(full)}"
+autosize(ws3,full,{"Spend":13,"Impressions":13,"IVR (median)":11,"CVR (median)":11,"CTR (median)":11,"CPV (median)":11,
+ "ROAS (median)":12,"Adv with revenue":15,"IVR (pooled)":11,"CPV (pooled)":11,"CPM (pooled)":11,"ROAS (pooled)":12})
 
-# ============================================================ 4) OVERALL
-ov = pd.read_csv(OUT+"audi_1141_scorecard_overall.csv")
-ov["_o"] = ov.bucket_detail.map({b:i for i,b in enumerate(BO)}); ov = ov.sort_values("_o")
-ov = ov[list(fcols)[1:]].rename(columns=fcols).round(2)  # drop sales_vertical col
-ws4 = wb.create_sheet("Overall"); ws4.sheet_view.showGridLines = False
-ws4["A1"] = "Overall — all verticals combined"; ws4["A1"].font = TITLE
-ws4["A2"] = "The gate story: un-gated MM collapses toward 3P. Use median (advertiser-weighted), not pooled (WGU dominates 3P)."; ws4["A2"].font = SUB
-write_df(ws4, ov, 4, fmts={"Spend":'"$"#,##0',"Impressions":"#,##0","VR (median)":"0.0",
- "CPV (median)":'"$"0.00',"ROAS (median)*":"0.00","VR (pooled)":"0.0","CPV (pooled)":'"$"0.00',"ROAS (pooled)*":"0.00"})
-ws4.freeze_panes = "A5"
-autosize(ws4, {"A":14,"B":11,"C":11,"D":10,"E":13,"F":13,"G":11,"H":12,"I":12,"J":11,"K":11,"L":12,"M":13})
+# ================= 4) Overall =================
+oc=[c for c in fcols if c!="sales_vertical"]
+overall=ov[oc].rename(columns=fcols)
+ws4=wb.create_sheet("Overall"); ws4.sheet_view.showGridLines=False
+ws4["A1"]="Overall: all verticals combined"; ws4["A1"].font=TITLE
+ws4["A2"]="The intent gate and audience breadth both matter: un-gated and restricted MM fall well below gated MM."; ws4["A2"].font=SUB
+write_table(ws4,overall,4,ffmt)
+ws4.freeze_panes="A5"
+autosize(ws4,overall,{"Spend":13,"Impressions":13,"IVR (median)":11,"CVR (median)":11,"CTR (median)":11,"CPV (median)":11,
+ "ROAS (median)":12,"Adv with revenue":15,"IVR (pooled)":11,"CPV (pooled)":11,"CPM (pooled)":11,"ROAS (pooled)":12})
 
-# ============================================================ 5) CAMPAIGN DETAIL (pivotable)
-det = df.copy()
-det["VR"] = (1000*det.visits/det.imps).round(2)
-det["CPV"] = (det.spend/det.visits).replace([np.inf,-np.inf],np.nan).round(2)
-det["ROAS"] = (det.revenue/det.spend).replace([np.inf,-np.inf],np.nan).round(2)
-det = det[["company_name","advertiser_id","campaign_id","sales_vertical","vertical_name","bucket_detail",
-           "capped","zip_narrow","imps","visits","conv","revenue","spend","VR","CPV","ROAS"]]
-det = det.rename(columns={"company_name":"Advertiser","advertiser_id":"Adv ID","campaign_id":"Campaign ID",
-  "sales_vertical":"Sales vertical","vertical_name":"MNTN vertical","bucket_detail":"Bucket",
-  "capped":"HHST gated","zip_narrow":"Zip-narrowed","imps":"Impressions","visits":"Visits","conv":"Conversions",
-  "revenue":"Revenue","spend":"Spend"}).sort_values(["Sales vertical","Bucket","Spend"],ascending=[True,True,False])
-ws5 = wb.create_sheet("Campaign detail"); ws5.sheet_view.showGridLines = False
-for j, col in enumerate(det.columns, 1): ws5.cell(row=1, column=j, value=col)
-style_header(ws5, 1, len(det.columns))
-for i, (_, r) in enumerate(det.iterrows(), 2):
-    for j, col in enumerate(det.columns, 1):
-        v = r[col]
-        if isinstance(v,(np.integer,)): v=int(v)
-        elif isinstance(v,(np.floating,)): v=float(v) if pd.notna(v) else None
-        elif isinstance(v,(np.bool_,)): v=bool(v)
-        ws5.cell(row=i, column=j, value=v)
-for col,fmt in {"Impressions":"#,##0","Visits":"#,##0","Conversions":"#,##0","Revenue":'"$"#,##0',
-                "Spend":'"$"#,##0',"CPV":'"$"0.00',"ROAS":"0.00","VR":"0.0"}.items():
-    ci = list(det.columns).index(col)+1
-    for rr in range(2, len(det)+2): ws5.cell(row=rr, column=ci).number_format = fmt
-ws5.freeze_panes = "A2"; ws5.auto_filter.ref = f"A1:{get_column_letter(len(det.columns))}{len(det)+1}"
-autosize(ws5, {"A":32,"B":9,"C":11,"D":26,"E":22,"F":13,"G":11,"H":12,"I":12,"J":10,"K":11,"L":12,"M":12,"N":8,"O":9,"P":8})
+# ================= 5) Campaign detail =================
+det=df.copy()
+det["IVR"]=det.visits/det.imps; det["CVR"]=det.conv/det.imps; det["CTR"]=det.clicks/det.imps
+det["CPV"]=(det.spend/det.visits).replace([np.inf,-np.inf],np.nan)
+det["ROAS"]=(det.revenue/det.spend).replace([np.inf,-np.inf],np.nan)
+det=det[["company_name","advertiser_id","campaign_id","sales_vertical","vertical_name","bucket_detail",
+  "semantics","capped","zip_narrow","city_narrow","radius_narrow","imps","visits","clicks","conv","revenue","spend",
+  "IVR","CVR","CTR","CPV","ROAS"]].rename(columns={
+  "company_name":"Advertiser","advertiser_id":"Adv ID","campaign_id":"Campaign ID","sales_vertical":"Sales vertical",
+  "vertical_name":"MNTN vertical","bucket_detail":"Group","semantics":"3P semantics","capped":"HHST gated",
+  "zip_narrow":"Zip","city_narrow":"City","radius_narrow":"Radius","imps":"Impressions","visits":"Visits",
+  "clicks":"Clicks","conv":"Conversions","revenue":"Revenue","spend":"Spend"}).sort_values(
+  ["Sales vertical","Group","Spend"],ascending=[True,True,False])
+ws5=wb.create_sheet("Campaign detail"); ws5.sheet_view.showGridLines=False
+write_table(ws5,det,1,{"Impressions":INT,"Visits":INT,"Clicks":INT,"Conversions":INT,"Revenue":USD0,"Spend":USD0,
+  "IVR":PCT2,"CVR":PCT3,"CTR":PCT3,"CPV":USD,"ROAS":NUM2},band=False,header_wrap=False)
+ws5.freeze_panes="A2"; ws5.auto_filter.ref=f"A1:{get_column_letter(len(det.columns))}{len(det)+1}"
+autosize(ws5,det,{"Impressions":12,"Visits":10,"Clicks":9,"Conversions":11,"Revenue":12,"Spend":12,
+  "IVR":8,"CVR":8,"CTR":8,"CPV":9,"ROAS":8,"Adv ID":8,"Campaign ID":11})
+ws5.row_dimensions[1].height=15
+
+# ================= 6) Queries =================
+ws6=wb.create_sheet("Queries"); ws6.sheet_view.showGridLines=False
+ws6["A1"]="Queries used (for validation)"; ws6["A1"].font=TITLE
+ws6["A2"]="Cohort SQL below (BigQuery). Aggregation to medians/pooled done in audi_1141_aggregate.py; see the ticket folder."; ws6["A2"].font=SUB
+with open(SQLFILE) as fh: sql_lines=fh.read().split("\n")
+r=4
+for ln in sql_lines:
+    c=ws6.cell(row=r,column=1,value=ln); c.font=MONO; r+=1
+ws6.column_dimensions["A"].width=120
 
 wb.save(DEST)
-print("saved", DEST, "|", len(det), "campaign rows across", det["Sales vertical"].nunique(), "verticals")
+print("saved",DEST,"|",len(det),"campaign rows |",wb.sheetnames)
