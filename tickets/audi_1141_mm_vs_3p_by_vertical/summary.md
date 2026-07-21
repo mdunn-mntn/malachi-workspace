@@ -1,8 +1,8 @@
 ---
 doc_type: ticket
 title: "AUDI-1141: MM vs 3P prospecting performance by sales vertical (6mo)"
-status: in_progress
-date: 2026-07-20
+status: done
+date: 2026-07-21
 summary: "Sales request: compare MNTN Matched vs 3P-segment prospecting performance across the 8 sales verticals, trailing 6 months."
 result: "MM (gated) beats 3P ~6x on visit rate and ~4x on cost-per-visit for the median advertiser, in all 8 verticals. Un-gated MM and audience-restricted MM both fall well below gated MM. 3P only looks competitive when impression-pooled, which is ~39% one account."
 ---
