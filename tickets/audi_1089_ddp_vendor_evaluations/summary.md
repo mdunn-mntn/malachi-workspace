@@ -629,9 +629,22 @@ Maya Triman present the 8-step pipeline) and `meetings/audi_1089_04_ddp_creditin
   **Andy Everson owns vendor contracts/terms + the flat-fee $ (BAE has no visibility)**; a change needs Andy's
   blessing + contract check; Mike Doltz/Kristen can formalize review time.
 
-**NEXT STEPS (from the 7/21 sync):** Malachi → make the queries digestible + a brief explainer → reach out to
-**Mike Doltz(er)** for BAE validation → if they confirm, pursue **full free-log preemption** (needs Andy's
-blessing). Not urgent. The 5x5-quality ask (TI-1027 origin) snowballed into the whole-roster coverage story.
+**PLAN / SEQUENCE (Malachi, 2026-07-21):**
+1. **Give the doc to Mike Dolzer** (PM for Sherwin's team) for BAE validation. [DONE: verify-claims query pack
+   `artifacts/audi_1089_verify_claims.md` + pipeline reference `ddp_pipeline_and_crediting_reference.md`, both in
+   Drive `Tickets/AUDI-1089`.]
+2. On their validation → **decide on the vendors** (keep / drop / renegotiate).
+3. **Discuss with the vendor-contract decision maker (Andy Everson):** raise the concern about paying vendors for
+   free-log-covered signal; gauge feasibility + their response; **incl. whether we can get the same coverage from
+   our already-provided 3P interest vendors** to limit cost while keeping full coverage.
+4. **Implement the credit change** → backlog **[AUDI-1143](https://mntn.atlassian.net/browse/AUDI-1143)** created
+   (zero paid-vendor credit when a free log won the impression; exact change point in the pipeline reference).
+- **Alyson is raising this with Kale** (Malachi bringing it up today). Malachi likely to **own the DDP pipeline**.
+- Origin: the 5x5-quality ask (TI-1027) snowballed into the whole-roster coverage + crediting story.
+
+I read the actual DDP crediting script (`SteelHouse/bae-sql-utility/ddp/usage reporting`, 1008 lines) — full
+walkthrough + the exact preemption change point in `artifacts/ddp_pipeline_and_crediting_reference.md`; scripts in
+`artifacts/ddp_scripts/`. Confirms: free logs take unpaid 1/N slots (`mm_dsid_count`), OR=lowest-CPM/AND=highest.
 
 ## 4d13. Post-preemption economics — bills if free logs stopped paying for co-held data (user question 2026-07-15)
 > **SUPERSEDED for the billing deck (2026-07-20):** the table below uses SAME-DAY free-cohold ($273.7K).
