@@ -200,7 +200,14 @@ Columns prefixed with `competing_` in visit_facts and conversion_facts represent
 impressions where the advertiser was NOT the attributed touch (i.e., they were "competing"
 for credit). Used in incremental attribution analysis.
 
-### Per-advertiser CVR can exceed 100% (multi-touch attribution artifact)
+### "CVR" is overloaded — disambiguate the denominator (AUDI-1141, 2026-07-20)
+Two distinct rates both get called "CVR". In rate-scorecard work (parallel to IVR = visits/impressions)
+the standard **CVR = conversions / impressions** (the glossary's "Effective Conversion Rate", per TI-999
+Pass 26). The conversions/**visits** metric below is the glossary's "Visit Conversion Rate" (quality of
+visits). Confirm which denominator is meant before comparing across analyses; MM-vs-3P scorecards use
+conversions/impressions.
+
+### Per-advertiser Visit Conversion Rate = conversions/visits can exceed 100% (multi-touch attribution artifact)
 When computing per-advertiser CVR = `conversions / visits` from the standard summarydata facts
 (`conversion_facts.click_conversions + view_conversions + competing_view_conversions` divided
 by `visit_facts.clicks + views + competing_views`), you can legitimately get CVR > 1.0
