@@ -23,16 +23,15 @@ PCT2="0.00%"; PCT3="0.000%"; USD="\"$\"#,##0.00"; USD0="\"$\"#,##0"; NUM2="0.00"
 
 wb=Workbook()
 
-def autosize(ws, df, fmt_lens=None):
-    """Width from max(header, formatted values). fmt_lens = {col: display_len} override for numeric cols."""
-    fmt_lens = fmt_lens or {}
+def autosize(ws, df, wide=None):
+    """Width fits the header's longest word (so multi-word headers wrap cleanly and single words
+    like 'Advertisers' never clip). wide = {col: value_display_len} for columns whose DATA is
+    longer than any header word (e.g. Spend, company names)."""
+    wide = wide or {}
     for j,col in enumerate(df.columns,1):
-        if col in fmt_lens:
-            w = max(len(str(col)), fmt_lens[col])
-        else:
-            vmax = df[col].astype(str).map(len).max() if len(df) else 0
-            w = max(len(str(col)), int(vmax))
-        ws.column_dimensions[get_column_letter(j)].width = min(max(w+2, 9), 46)
+        words=[len(w) for w in str(col).split()] or [len(str(col))]
+        w=max(max(words), int(wide.get(col,0)))
+        ws.column_dimensions[get_column_letter(j)].width = min(max(w+3, 10), 46)
 
 def write_table(ws, df, start_row, fmts, band=True, header_wrap=True):
     for j,col in enumerate(df.columns,1):
@@ -87,18 +86,19 @@ rows=[
  ("MM (all)","Every campaign with an MM signal: MM (gated), MM (no gate), and MM restricted combined."),
  ("Why OR vs AND matters","About 85% of campaigns that carry a 3P segment join it with OR, which only adds reach and leaves MM doing the scoring. Only an AND-required 3P actually narrows the audience. Grouping all 3P-carrying campaigns together would misread additive 3P as restrictive."),
  ("",""),
- ("Metrics (all rates are over impressions)",""),
+ ("Metrics","All rates below are over impressions."),
  ("IVR","Visit rate. Visits divided by impressions (visits = views + clicks)."),
  ("CVR","Conversion rate. Conversions divided by impressions."),
  ("CTR","Click rate. Clicks divided by impressions."),
  ("CPV","Cost per visit. Spend divided by visits."),
  ("CPM","Cost per thousand impressions."),
  ("ROAS","Revenue divided by spend."),
- ("Weighting","Headline numbers are advertiser-weighted medians (each advertiser counts once, so one large account cannot set the result). Columns labeled 'pooled' are impression or spend weighted. Advertisers with under 20,000 impressions in a cell are excluded from the median."),
+ ("Weighting","Headline numbers are advertiser-weighted medians (each advertiser counts once, so one large account cannot set the result). Columns labeled 'pooled' are impression or spend weighted. Advertisers with under 20,000 impressions in a group are excluded from the median so a tiny campaign cannot swing it."),
+ ("Advertisers / Campaigns","Counts of advertisers and campaigns in each group. Use them to see how much a number rests on: a small group is less reliable."),
  ("",""),
  ("Read before quoting",""),
  ("1. Pooled 3P is one account","If all impressions are pooled, 3P visit rate looks competitive, but roughly 39% of 3P impressions come from a single large, non-representative account. Use the per-advertiser (median) numbers."),
- ("2. ROAS is directional","Prospecting only, last-touch. Revenue mostly lands in retargeting, which is excluded, and some verticals have unreliable conversion pixels (one account shows over 800x). Visit rate and cost per visit are the solid metrics."),
+ ("2. ROAS is directional","Prospecting only, last-touch. Revenue mostly lands in retargeting, which is excluded, and some verticals have unreliable conversion pixels (one account shows over 800x). ROAS is computed only over advertisers with revenue, so where few have it the number is rough. Visit rate and cost per visit are the solid metrics."),
  ("3. Vertical mapping","The 37 MNTN internal verticals are rolled up into the 8 sales verticals using an interim crosswalk, not an official one. Provide the RevOps crosswalk and it is a one-line swap."),
  ("4. Restricted is expected for local","Auto and ProServ legitimately use local (zip, radius) targeting, so their 'MM restricted' share is high by design. In other verticals it flags narrowing."),
  ("5. MM (no gate) is small","144 advertisers. Directionally clear, thinner than the other groups."),
@@ -110,7 +110,8 @@ for k,v in rows:
     ws.cell(row=r,column=1,value=k).font=BOLD
     c=ws.cell(row=r,column=2,value=v); c.alignment=LFT
     r+=1
-ws.column_dimensions["A"].width=30; ws.column_dimensions["B"].width=112
+ws.column_dimensions["A"].width=max((len(str(k)) for k,_ in rows), default=30)+2
+ws.column_dimensions["B"].width=104
 
 # ================= 2 & 3) MM vs 3P by vertical (blended + gated) =================
 def compare_tab(wsname, tt, sub, src, gcol, gA, gB, ov_src=None):
@@ -142,7 +143,7 @@ def compare_tab(wsname, tt, sub, src, gcol, gA, gB, ov_src=None):
     fmts={aI:PCT2,bI:PCT2,"IVR advantage":"0.0\"x\"",aC:USD,bC:USD,aR:NUM2,bR:NUM2}
     write_table(ws,hd,start,fmts)
     ws.freeze_panes=f"A{start+1}"; ws.auto_filter.ref=f"A{start}:{get_column_letter(len(hd.columns))}{start+len(hd)}"
-    autosize(ws,hd,{ci:12 for ci in hd.columns if ci!="Sales vertical"})
+    autosize(ws,hd,{"Sales vertical":26})
     return ws
 
 compare_tab("MM vs 3P by vertical",
@@ -155,9 +156,9 @@ compare_tab("MM gated vs 3P by vertical",
     bv,"bucket_detail","MM (gated)","3P",ov_src=ov)
 
 # ================= 3) Full scorecard =================
-fcols={"sales_vertical":"Sales vertical","bucket_detail":"Group","n_adv":"Advertisers","n_adv_qual":"Adv (qualifying)",
+fcols={"sales_vertical":"Sales vertical","bucket_detail":"Group","n_adv":"Advertisers",
  "n_camp":"Campaigns","spend":"Spend","imps":"Impressions","IVR_med":"IVR (median)","CVR_med":"CVR (median)",
- "CTR_med":"CTR (median)","CPV_med":"CPV (median)","ROAS_med":"ROAS (median)","n_adv_roas":"Adv with revenue",
+ "CTR_med":"CTR (median)","CPV_med":"CPV (median)","ROAS_med":"ROAS (median)",
  "IVR_pooled":"IVR (pooled)","CPV_pooled":"CPV (pooled)","CPM_pooled":"CPM (pooled)","ROAS_pooled":"ROAS (pooled)"}
 full=bv[list(fcols)].rename(columns=fcols)
 ws3=wb.create_sheet("Full scorecard"); ws3.sheet_view.showGridLines=False
@@ -167,8 +168,7 @@ ffmt={"Spend":USD0,"Impressions":INT,"IVR (median)":PCT2,"CVR (median)":PCT3,"CT
  "CPV (median)":USD,"ROAS (median)":NUM2,"IVR (pooled)":PCT2,"CPV (pooled)":USD,"CPM (pooled)":USD,"ROAS (pooled)":NUM2}
 write_table(ws3,full,4,ffmt)
 ws3.freeze_panes="C5"; ws3.auto_filter.ref=f"A4:{get_column_letter(len(full.columns))}{4+len(full)}"
-autosize(ws3,full,{"Spend":13,"Impressions":13,"IVR (median)":11,"CVR (median)":11,"CTR (median)":11,"CPV (median)":11,
- "ROAS (median)":12,"Adv with revenue":15,"IVR (pooled)":11,"CPV (pooled)":11,"CPM (pooled)":11,"ROAS (pooled)":12})
+autosize(ws3,full,{"Sales vertical":26,"Spend":11,"Impressions":13})
 
 # ================= 4) Overall =================
 oc=[c for c in fcols if c!="sales_vertical"]
@@ -178,8 +178,7 @@ ws4["A1"]="Overall: all verticals combined"; ws4["A1"].font=TITLE
 ws4["A2"]="The intent gate and audience breadth both matter: un-gated and restricted MM fall well below gated MM."; ws4["A2"].font=SUB
 write_table(ws4,overall,4,ffmt)
 ws4.freeze_panes="A5"
-autosize(ws4,overall,{"Spend":13,"Impressions":13,"IVR (median)":11,"CVR (median)":11,"CTR (median)":11,"CPV (median)":11,
- "ROAS (median)":12,"Adv with revenue":15,"IVR (pooled)":11,"CPV (pooled)":11,"CPM (pooled)":11,"ROAS (pooled)":12})
+autosize(ws4,overall,{"Spend":11,"Impressions":13})
 
 # ================= 5) Campaign detail =================
 det=df.copy()
@@ -196,11 +195,10 @@ det=det[["company_name","advertiser_id","campaign_id","sales_vertical","vertical
   ["Sales vertical","Group","Spend"],ascending=[True,True,False])
 ws5=wb.create_sheet("Campaign detail"); ws5.sheet_view.showGridLines=False
 write_table(ws5,det,1,{"Impressions":INT,"Visits":INT,"Clicks":INT,"Conversions":INT,"Revenue":USD0,"Spend":USD0,
-  "IVR":PCT2,"CVR":PCT3,"CTR":PCT3,"CPV":USD,"ROAS":NUM2},band=False,header_wrap=False)
+  "IVR":PCT2,"CVR":PCT3,"CTR":PCT3,"CPV":USD,"ROAS":NUM2},band=False,header_wrap=True)
 ws5.freeze_panes="A2"; ws5.auto_filter.ref=f"A1:{get_column_letter(len(det.columns))}{len(det)+1}"
-autosize(ws5,det,{"Impressions":12,"Visits":10,"Clicks":9,"Conversions":11,"Revenue":12,"Spend":12,
-  "IVR":8,"CVR":8,"CTR":8,"CPV":9,"ROAS":8,"Adv ID":8,"Campaign ID":11})
-ws5.row_dimensions[1].height=15
+autosize(ws5,det,{"Advertiser":30,"Sales vertical":24,"MNTN vertical":24,"3P semantics":21,"Group":13,
+  "Impressions":11,"Revenue":11,"Spend":11,"Visits":8,"Conversions":9})
 
 # ================= 6) Queries =================
 ws6=wb.create_sheet("Queries"); ws6.sheet_view.showGridLines=False
