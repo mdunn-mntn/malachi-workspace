@@ -189,6 +189,12 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-21 · v3** — Text-heavy tables now render readably: body cells wrap in every column (not
+  just the first), auto-computed column widths cap at 58 (was 46) while explicit `widths=` are honored
+  up to 72, and `table()`/`notes()`/`glossary()` set per-row heights sized to the wrapped content so
+  long prose no longer clips (Excel does not auto-fit row height; Google Sheets already did). Fixes the
+  reference/list-style deliverable (many long BQ paths + sentence-length cells) that previously
+  truncated. Pass explicit `widths=` to make a prose column genuinely wide.
 - **2026-07-21 · v2** — Official brand applied: real MNTN logo on the cover (Primary Horizontal
   Colored/White), Slate Grey structure + Mountain Green/Blue accents from brand.mountain.com, **Inter**
   font (installed locally; renders in Google Sheets). Licensed kit gitignored under

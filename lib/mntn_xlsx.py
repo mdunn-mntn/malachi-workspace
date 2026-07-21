@@ -42,6 +42,7 @@ Notes
 """
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
 
@@ -133,6 +134,7 @@ _BORDER = Border(left=_THIN, right=_THIN, top=_THIN, bottom=_THIN)
 _NOBORDER = Border()
 _CEN = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _CEN_FLAT = Alignment(horizontal="center", vertical="center")
+_CEN_WRAP = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _LEFT = Alignment(horizontal="left", vertical="top", wrap_text=True)
 _LEFT_MID = Alignment(horizontal="left", vertical="center", wrap_text=True)
 _RIGHT = Alignment(horizontal="right", vertical="center")
@@ -222,22 +224,60 @@ class MntnWorkbook:
         c.font = _font(9, italic=True, color=BRAND["MUTE"])
         c.alignment = _LEFT
 
-    def _autosize(self, ws, df, widths=None, first_col=None):
-        """Fit the WHOLE header (+ padding for bold + filter dropdown), then widen for long data."""
+    def _autosize(self, ws, df, widths=None, first_col=None, cap=58):
+        """Fit the WHOLE header (+ padding for bold + filter dropdown), then widen for long data.
+
+        Returns {column_name: final_width_chars} so row heights can be sized to the wrapped text.
+        Explicit `widths` are honored as-is (up to a sane ceiling) so a caller can make a prose
+        column genuinely wide; auto-computed widths are capped at `cap` and the cell text wraps.
+        """
         widths = widths or {}
+        final = {}
         for j, col in enumerate(df.columns, 1):
             if col in widths:
-                w = int(widths[col])
+                w = min(max(int(widths[col]), 8), 72)   # honor caller intent, sane ceiling
             else:
                 header_w = len(str(col))
                 data_w = 0
                 if df[col].dtype == object:  # only strings can be longer than the header
                     sample = df[col].dropna().astype(str).head(200)
                     data_w = int(sample.map(len).max()) if len(sample) else 0
-                w = max(header_w, data_w)
-            ws.column_dimensions[get_column_letter(j)].width = min(max(w + 4, 10), 46)
+                w = min(max(header_w + 4, 10), cap)
+            ws.column_dimensions[get_column_letter(j)].width = w
+            final[col] = w
         if first_col:
             ws.column_dimensions["A"].width = first_col
+            final[df.columns[0]] = first_col
+        return final
+
+    def _fit_row_heights(self, ws, df, start, colw, per_line=15.0, pad=6.0, minh=18.0, maxlines=10):
+        """Size each data row to its tallest wrapped cell so nothing clips (Excel won't auto-fit).
+
+        colw = {column: width_chars} from _autosize. Slightly over-estimates lines (chars-per-line
+        uses 0.85 * width) so text errs tall rather than clipped.
+        """
+        for i, (_, r) in enumerate(df.iterrows(), 1):
+            rr = start + i
+            lines = 1
+            for col in df.columns:
+                v = r[col]
+                if v is None:
+                    continue
+                s = str(v)
+                cpl = max(int(colw.get(col, 12) * 0.85), 4)
+                need = sum(max(1, -(-len(seg) // cpl)) for seg in s.split("\n"))
+                lines = max(lines, need)
+            ws.row_dimensions[rr].height = max(minh, min(lines, maxlines) * per_line + pad)
+
+    @staticmethod
+    def _wrap_rows(ws, col_letter, rows, width_chars, per_line=15.0, pad=6.0, minh=16.0, maxlines=40):
+        """Size a single wrapped text column's rows (used by notes/glossary prose cells)."""
+        cpl = max(int(width_chars * 0.9), 8)
+        for rr, text in rows:
+            if text is None:
+                continue
+            need = sum(max(1, -(-len(seg) // cpl)) for seg in str(text).split("\n"))
+            ws.row_dimensions[rr].height = max(minh, min(need, maxlines) * per_line + pad)
 
     # -- public: table sheet -------------------------------------------------
     def table(self, name, df, finding, method="", formats=None, heat=None, rag=None,
@@ -276,7 +316,9 @@ class MntnWorkbook:
                 v = _to_native(r[col])
                 c = ws.cell(row=rr, column=j, value=v)
                 c.border = _BORDER
-                c.alignment = _LEFT_MID if (j == 1 and isinstance(v, str)) else _CEN_FLAT
+                # numbers stay centered on one line; text wraps so long cells never clip
+                c.alignment = (_LEFT_MID if (j == 1 and isinstance(v, str))
+                               else (_CEN_WRAP if isinstance(v, str) else _CEN_FLAT))
                 if col in formats:
                     c.number_format = formats[col]
                 if j == 1:
@@ -309,7 +351,8 @@ class MntnWorkbook:
 
         ws.freeze_panes = f"{freeze}{start+1}"
         ws.auto_filter.ref = f"A{start}:{last_col}{start+n}"
-        self._autosize(ws, df, widths=widths, first_col=first_col_width)
+        colw = self._autosize(ws, df, widths=widths, first_col=first_col_width)
+        self._fit_row_heights(ws, df, start, colw)
         self._footnote(ws, f"Source: {self.ticket}."
                        + (f"  Period: {self.period}." if self.period else "")
                        + (f"  Generated {self.generated}." if self.generated else ""),
@@ -327,6 +370,7 @@ class MntnWorkbook:
         sub = f"{self.ticket}." + (f"  {intro}" if intro else "")
         ws.cell(row=2, column=1, value=sub).font = _font(10, italic=True, color=BRAND["GREY"])
         r = 4
+        def_rows = []
         for k, v in rows:
             kc = ws.cell(row=r, column=1, value=(k or None))
             kc.font = _font(10, bold=True, color=BRAND["PRIMARY"] if v else BRAND["INK"])
@@ -334,9 +378,11 @@ class MntnWorkbook:
             vc = ws.cell(row=r, column=2, value=(v or None))
             vc.alignment = _LEFT
             vc.font = _font(10)
+            def_rows.append((r, v))
             r += 1
         ws.column_dimensions["A"].width = max((len(str(k)) for k, _ in rows), default=24) + 3
         ws.column_dimensions["B"].width = body_width
+        self._wrap_rows(ws, "B", def_rows, body_width)
         if toc:
             self._toc.append((ws.title, toc, "glossary"))
         return ws
@@ -365,6 +411,7 @@ class MntnWorkbook:
         if intro:
             ws.cell(row=2, column=1, value=intro).font = _font(10, italic=True, color=BRAND["GREY"])
         r = 4
+        body_rows = []
         for head, body in blocks:
             if head:
                 hc = ws.cell(row=r, column=1, value=head)
@@ -373,8 +420,10 @@ class MntnWorkbook:
             bc = ws.cell(row=r, column=1, value=body)
             bc.font = _font(10)
             bc.alignment = _LEFT
+            body_rows.append((r, body))
             r += 2
         ws.column_dimensions["A"].width = body_width
+        self._wrap_rows(ws, "A", body_rows, body_width)
         if toc:
             self._toc.append((ws.title, toc, "notes"))
         return ws
