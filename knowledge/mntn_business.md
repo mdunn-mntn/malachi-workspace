@@ -536,8 +536,8 @@ Effective Q2 2026, the following process changes apply to TI and AUD squads:
 
 **Ticket hygiene:**
 - Default priority is P3 (adjusted during grooming)
-- `Developer` field is required on all tickets (feeds software capitalization audit)
-- Avoid moving tickets directly from In Progress to Done
+- `Developer` field is required on all tickets (feeds software capitalization audit). **It is NOT reliably auto-assigned** — the `In Review` transition validator ("Please add a developer to the ticket") blocked AUDI-1141 (2026-07-21) because the field was empty, so In Review was unreachable without setting it first.
+- Avoid moving tickets directly from In Progress to Done — **but this matters for CODE/release tickets** (skipping Ready-for-Deployment loses the fix version + release Slack notification). For an **analysis/non-release ticket** (no Release Type set), moving straight to Done via transition id `6` works, is fine (no release to lose), and sidesteps the empty-Developer-field block on In Review. Done landed with resolution "Open" (MNTN default; the transition required no resolution).
 - `Release Type` defaults to Backend on creation — update to UI or N/A as appropriate
 
 **New ceremonies:**
