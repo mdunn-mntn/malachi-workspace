@@ -14,7 +14,7 @@ MM="#1a6e6a"; MMNG="#8fb4b2"; MMR="#c8a45c"; TP="#9a9a9a"; RED="#c0392b"
 OUT="tickets/audi_1141_mm_vs_3p_by_vertical/outputs/"; ART="tickets/audi_1141_mm_vs_3p_by_vertical/artifacts/"
 BO=["MM (gated)","MM (no gate)","MM restricted","3P"]
 ov=pd.read_csv(OUT+"audi_1141_scorecard_overall.csv").set_index("bucket_detail").loc[BO]
-bv=pd.read_csv(OUT+"audi_1141_scorecard_by_vertical.csv")
+bv=pd.read_csv(OUT+"audi_1141_scorecard2_by_vertical.csv").rename(columns={"bucket2":"bucket_detail"})
 
 def title(ax,t,sub):
     ax.text(0,1.11,t,transform=ax.transAxes,fontsize=13,fontweight="bold",va="bottom")
@@ -37,17 +37,17 @@ fig.text(.5,.005,"Removing the intent gate or narrowing the audience erodes most
          ha="center",fontsize=9,style="italic",color=RED)
 fig.tight_layout(rect=[0,.03,1,1]); fig.savefig(ART+"audi_1141_chart_overall.png",bbox_inches="tight"); plt.close(fig)
 
-# ---- MM(gated) vs 3P by vertical ----
+# ---- MM (all) vs 3P by vertical (blended, the realistic average) ----
 def by_vert(metric,fname,tt,sub,fmt,lower_better=False,as_pct=False):
-    m=bv.pivot(index="sales_vertical",columns="bucket_detail",values=metric)[["MM (gated)","3P"]].dropna()
+    m=bv.pivot(index="sales_vertical",columns="bucket_detail",values=metric)[["MM (all)","3P"]].dropna()
     m=m[m.index!="Other / Unmapped"]
     if as_pct: m=m*100
-    m=m.sort_values("MM (gated)",ascending=True)
+    m=m.sort_values("MM (all)",ascending=True)
     fig,ax=plt.subplots(figsize=(10.5,6)); y=np.arange(len(m)); h=.38
-    ax.barh(y+h/2,m["MM (gated)"],height=h,color=MM,label="MM (gated)")
+    ax.barh(y+h/2,m["MM (all)"],height=h,color=MM,label="MM (all)")
     ax.barh(y-h/2,m["3P"],height=h,color=TP,label="3P")
-    xmax=m[["MM (gated)","3P"]].max().max()
-    for i,(mm,tp) in enumerate(zip(m["MM (gated)"],m["3P"])):
+    xmax=m[["MM (all)","3P"]].max().max()
+    for i,(mm,tp) in enumerate(zip(m["MM (all)"],m["3P"])):
         ax.text(mm+xmax*.01,i+h/2,fmt(mm),va="center",fontsize=9,fontweight="bold",color=MM)
         ax.text(tp+xmax*.01,i-h/2,fmt(tp),va="center",fontsize=9,color="#666666")
     ax.set_yticks(y); ax.set_yticklabels(m.index,fontsize=10); ax.set_xticks([]); ax.set_xlim(0,xmax*1.16)

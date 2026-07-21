@@ -63,6 +63,9 @@ df["bucket_detail"]=np.where(df.bucket=="MM", np.where(df.capped,"MM (gated)","M
 
 ov=pd.read_csv(OUT+"audi_1141_scorecard_overall.csv")
 bv=pd.read_csv(OUT+"audi_1141_scorecard_by_vertical.csv")
+ov2=pd.read_csv(OUT+"audi_1141_scorecard2_overall.csv")
+bv2=pd.read_csv(OUT+"audi_1141_scorecard2_by_vertical.csv")
+def _int0(x): return int(x) if pd.notna(x) else 0
 
 # ================= 1) READ ME =================
 ws=wb.active; ws.title="Read me"; ws.sheet_view.showGridLines=False
@@ -70,13 +73,18 @@ ws["A1"]="MNTN Matched vs 3P Segments: Prospecting Performance by Vertical"; ws[
 ws["A2"]="Trailing 6 months. Stage-1 prospecting campaigns. Source AUDI-1141. Generated 2026-07-20."; ws["A2"].font=SUB
 rows=[
  ("",""),
- ("Summary","For the typical (median) advertiser, gated MNTN Matched delivers about 6x the visit rate of 3P segments at roughly one quarter the cost per visit, and leads visit rate in every vertical. Removing the intent gate, or narrowing the audience, erodes most of that edge."),
+ ("Summary","Across all MM campaigns, MNTN Matched delivers about 4x the visit rate of 3P segments at about one third the cost per visit and roughly double the ROAS, for the typical (median) advertiser, and leads visit rate in every vertical. When MM is configured well (intent gate on, audience not over-narrowed) the gap widens to about 6x on visit rate."),
+ ("",""),
+ ("Two ways to read this",""),
+ ("MM (all) vs 3P","The realistic average: every MM campaign vs 3P, including mis-configured ones. Use this for the general 'MM vs 3P' comparison."),
+ ("MM (gated) vs 3P","The best case: MM campaigns where the intent gate is on and the audience is broad. Use this to show what MM does when configured correctly."),
  ("",""),
  ("How campaigns are grouped","Each Stage-1 prospecting campaign is classified from its live bidder audience expression."),
- ("MM (gated)","MNTN scoring (DS13/19/38/46) with an intent score threshold (HHST) active. Any 3P segment present is joined by OR (additive reach), and the geo is broad."),
- ("MM (no gate)","Same as MM but no intent score threshold is set."),
- ("MM restricted","MM whose audience is narrowed by an AND-required 3P clause, or by a sub-DMA geo (zip, city, or radius). Narrowing greatly restricts the eligible audience."),
+ ("MM (gated)","MNTN scoring (DS13/19/38/46) with the intent score threshold above 0, so the bidder only bids on IPs the model scored as high intent. 3P (if present) is joined by OR (adds reach), and the geo is broad."),
+ ("MM (no gate)","MM with the intent score threshold at 0. This bypasses the model and bids broadly, similar to a 3P segment. The threshold drops to 0 for a few reasons: Max Reach, many short flights (lowered to keep delivery flowing), or an audience narrowed so far that the high-intent pool is exhausted and the score is lowered for deliverability. Note: the gate is the score threshold setting, not the scoring model itself."),
+ ("MM restricted","MM whose audience is narrowed by an AND-required 3P clause, or by a sub-DMA geo (zip, city, or radius)."),
  ("3P","Bought interest segments only (ShareThis, Dstillery, LiveRamp), no MM signal."),
+ ("MM (all)","Every campaign with an MM signal: MM (gated), MM (no gate), and MM restricted combined."),
  ("Why OR vs AND matters","About 85% of campaigns that carry a 3P segment join it with OR, which only adds reach and leaves MM doing the scoring. Only an AND-required 3P actually narrows the audience. Grouping all 3P-carrying campaigns together would misread additive 3P as restrictive."),
  ("",""),
  ("Metrics (all rates are over impressions)",""),
@@ -104,28 +112,47 @@ for k,v in rows:
     r+=1
 ws.column_dimensions["A"].width=30; ws.column_dimensions["B"].width=112
 
-# ================= 2) MM vs 3P by vertical =================
-def cell(v,b,col):
-    x=bv[(bv.sales_vertical==v)&(bv.bucket_detail==b)]
-    return x[col].iloc[0] if len(x) else np.nan
-verts=[v for v in bv.sales_vertical.unique() if v!="Other / Unmapped"]
-verts=sorted(verts,key=lambda v:-(cell(v,"MM (gated)","IVR_med")/max(cell(v,"3P","IVR_med"),1e-9)))
-head=pd.DataFrame([{
- "Sales vertical":v,
- "MM (gated) IVR":cell(v,"MM (gated)","IVR_med"), "3P IVR":cell(v,"3P","IVR_med"),
- "IVR advantage":cell(v,"MM (gated)","IVR_med")/cell(v,"3P","IVR_med") if cell(v,"3P","IVR_med") else np.nan,
- "MM (gated) CPV":cell(v,"MM (gated)","CPV_med"), "3P CPV":cell(v,"3P","CPV_med"),
- "MM restricted IVR":cell(v,"MM restricted","IVR_med"),
- "MM advertisers":int(cell(v,"MM (gated)","n_adv_qual")) if pd.notna(cell(v,"MM (gated)","n_adv_qual")) else 0,
- "3P advertisers":int(cell(v,"3P","n_adv_qual")) if pd.notna(cell(v,"3P","n_adv_qual")) else 0,
-} for v in verts])
-ws2=wb.create_sheet("MM vs 3P by vertical"); ws2.sheet_view.showGridLines=False
-ws2["A1"]="MM (gated) vs 3P by vertical, median advertiser"; ws2["A1"].font=TITLE
-ws2["A2"]="Visit rate (higher is better) and cost per visit (lower is better). MM leads visit rate in every vertical."; ws2["A2"].font=SUB
-end=write_table(ws2,head,4,{"MM (gated) IVR":PCT2,"3P IVR":PCT2,"IVR advantage":"0.0\"x\"",
-  "MM (gated) CPV":USD,"3P CPV":USD,"MM restricted IVR":PCT2})
-ws2.freeze_panes="A5"; ws2.auto_filter.ref=f"A4:I{4+len(head)}"
-autosize(ws2,head,{"MM (gated) IVR":14,"3P IVR":10,"IVR advantage":13,"MM (gated) CPV":14,"3P CPV":10,"MM restricted IVR":16,"MM advertisers":14,"3P advertisers":14})
+# ================= 2 & 3) MM vs 3P by vertical (blended + gated) =================
+def compare_tab(wsname, tt, sub, src, gcol, gA, gB, ov_src=None):
+    def c(v,g,col):
+        x=src[(src.sales_vertical==v)&(src[gcol]==g)]; return x[col].iloc[0] if len(x) else np.nan
+    verts=[v for v in src.sales_vertical.unique() if v!="Other / Unmapped"]
+    verts=sorted(verts,key=lambda v:-(c(v,gA,"IVR_med")/max(c(v,gB,"IVR_med"),1e-9)))
+    aI,bI=f"{gA} IVR",f"{gB} IVR"; aC,bC=f"{gA} CPV",f"{gB} CPV"; aR,bR=f"{gA} ROAS",f"{gB} ROAS"
+    aN,bN=f"{gA} advertisers",f"{gB} advertisers"
+    hd=pd.DataFrame([{
+        "Sales vertical":v, aI:c(v,gA,"IVR_med"), bI:c(v,gB,"IVR_med"),
+        "IVR advantage":c(v,gA,"IVR_med")/c(v,gB,"IVR_med") if c(v,gB,"IVR_med") else np.nan,
+        aC:c(v,gA,"CPV_med"), bC:c(v,gB,"CPV_med"),
+        aR:c(v,gA,"ROAS_med"), bR:c(v,gB,"ROAS_med"),
+        aN:_int0(c(v,gA,"n_adv")), bN:_int0(c(v,gB,"n_adv")),
+    } for v in verts])
+    ws=wb.create_sheet(wsname); ws.sheet_view.showGridLines=False
+    ws["A1"]=tt; ws["A1"].font=TITLE; ws["A2"]=sub; ws["A2"].font=SUB
+    start=4
+    if ov_src is not None:  # overall summary line(s) above the by-vertical table
+        ows=ov_src.set_index(gcol)
+        allrow=pd.DataFrame([{
+            "Sales vertical":"ALL VERTICALS", aI:ows.loc[gA,"IVR_med"], bI:ows.loc[gB,"IVR_med"],
+            "IVR advantage":ows.loc[gA,"IVR_med"]/ows.loc[gB,"IVR_med"],
+            aC:ows.loc[gA,"CPV_med"], bC:ows.loc[gB,"CPV_med"],
+            aR:ows.loc[gA,"ROAS_med"], bR:ows.loc[gB,"ROAS_med"],
+            aN:_int0(ows.loc[gA,"n_adv"]), bN:_int0(ows.loc[gB,"n_adv"])}])
+        start=write_table(ws,allrow,4,{aI:PCT2,bI:PCT2,"IVR advantage":"0.0\"x\"",aC:USD,bC:USD,aR:NUM2,bR:NUM2})+1
+    fmts={aI:PCT2,bI:PCT2,"IVR advantage":"0.0\"x\"",aC:USD,bC:USD,aR:NUM2,bR:NUM2}
+    write_table(ws,hd,start,fmts)
+    ws.freeze_panes=f"A{start+1}"; ws.auto_filter.ref=f"A{start}:{get_column_letter(len(hd.columns))}{start+len(hd)}"
+    autosize(ws,hd,{ci:12 for ci in hd.columns if ci!="Sales vertical"})
+    return ws
+
+compare_tab("MM vs 3P by vertical",
+    "MM vs 3P by vertical (all MM campaigns), median advertiser",
+    "Every MM campaign vs 3P: the realistic average. Visit rate higher is better, cost per visit lower is better. ROAS is directional (see Read me).",
+    bv2,"bucket2","MM (all)","3P",ov_src=ov2)
+compare_tab("MM gated vs 3P by vertical",
+    "MM (gated) vs 3P by vertical, median advertiser",
+    "MM configured with the intent gate on (best case) vs 3P. ROAS is directional (see Read me).",
+    bv,"bucket_detail","MM (gated)","3P",ov_src=ov)
 
 # ================= 3) Full scorecard =================
 fcols={"sales_vertical":"Sales vertical","bucket_detail":"Group","n_adv":"Advertisers","n_adv_qual":"Adv (qualifying)",

@@ -10,6 +10,7 @@ SRC = "tickets/audi_1141_mm_vs_3p_by_vertical/outputs/audi_1141_campaign_grain.c
 OUT = "tickets/audi_1141_mm_vs_3p_by_vertical/outputs/"
 ADV_MIN_IMPS = 20000
 BUCKET_ORDER = ["MM (gated)", "MM (no gate)", "MM restricted", "3P"]
+BUCKET2_ORDER = ["MM (all)", "3P"]
 
 df = pd.read_csv(SRC).dropna(subset=["vertical_id"])
 df["gated_frac"] = np.where(df.hhst_writes > 0, df.hhst_writes_gated / df.hhst_writes, 0.0)
@@ -20,6 +21,8 @@ def detail(r):
         return "MM (gated)" if r.capped else "MM (no gate)"
     return r.bucket
 df["bucket_detail"] = df.apply(detail, axis=1)
+# blended two-group view: any MM signal (gated/no-gate/restricted) vs pure 3P
+df["bucket2"] = np.where(df.bucket == "3P", "3P", "MM (all)")
 
 def scorecard(frame, keys):
     rows = []
@@ -49,12 +52,18 @@ def scorecard(frame, keys):
             "IVR_mean": ivr.mean(), "CPV_mean": cpv.mean(),
             **pooled})
     d = pd.DataFrame(rows)
-    d["_o"] = d.bucket_detail.map({b:i for i,b in enumerate(BUCKET_ORDER)})
+    bcol = "bucket_detail" if "bucket_detail" in keys else "bucket2"
+    order = {b:i for i,b in enumerate(BUCKET_ORDER if bcol=="bucket_detail" else BUCKET2_ORDER)}
+    d["_o"] = d[bcol].map(order)
     sort_keys = (["sales_vertical","_o"] if "sales_vertical" in keys else ["_o"])
     return d.sort_values(sort_keys).drop(columns="_o")
 
+# 4-bucket detail
 overall = scorecard(df, ["bucket_detail"]); overall.to_csv(OUT+"audi_1141_scorecard_overall.csv", index=False)
 byvert = scorecard(df, ["sales_vertical","bucket_detail"]); byvert.to_csv(OUT+"audi_1141_scorecard_by_vertical.csv", index=False)
+# blended two-group: MM (all) vs 3P
+overall2 = scorecard(df, ["bucket2"]); overall2.to_csv(OUT+"audi_1141_scorecard2_overall.csv", index=False)
+byvert2 = scorecard(df, ["sales_vertical","bucket2"]); byvert2.to_csv(OUT+"audi_1141_scorecard2_by_vertical.csv", index=False)
 
 pd.set_option("display.width",240,"display.max_columns",40)
 def pct(x): return f"{x*100:.2f}%" if pd.notna(x) else "-"
