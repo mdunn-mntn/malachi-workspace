@@ -109,6 +109,10 @@ some cells carry pixel artifacts (one ProServ advertiser shows >800x). Use media
 - artifacts/audi_1141_findings.md
 - queries/audi_1141_cohort_scorecard.sql, artifacts/audi_1141_aggregate.py, artifacts/generate_charts.py
 
+### Drive
+- Live workbook synced to `My Drive/Tickets/AUDI-1141 MM vs 3P by Vertical/AUDI-1141 MM vs 3P Scorecard.xlsx`
+  (via the local Drive mount). Rebuild `build_xlsx.py` then copy over the same path to update in place.
+
 ## 6. Questions answered
 - MM vs 3P by vertical, 6mo: MM (gated) wins IVR and CPV in every vertical; scorecard delivered.
 - Does score-limited MM behave like 3P: un-gated MM (0.13%) falls toward 3P (0.07%); gated MM is 0.46%.
