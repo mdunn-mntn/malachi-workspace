@@ -91,14 +91,12 @@
 
 <section>
   <div class="kicker">How I valued them</div>
-  <h2>One substrate, two independent lenses</h2>
+  <h2>Two simple questions per vendor</h2>
   <ul>
-    <li><span class="navy">One substrate</span> — all 10 sources (8 paid + 2 free) measured identically; the free logs are the $0 baseline every vendor is judged against.</li>
-    <li><span class="navy">Lens A — dependency ceiling.</span> Media revenue on impressions <em>only that vendor</em> could enable × a defensible margin. Above it, a loss is guaranteed.</li>
-    <li><span class="navy">Lens B — coverage/uniqueness.</span> What does the vendor add over what we already have free? Holder-mask signature per (IP×domain×date) → any keep-set's coverage, exact.</li>
-    <li>Value is always read against the <span class="navy">billed</span> base (the won impression), never raw rows delivered.</li>
+    <li><span class="navy">Did it pay for itself?</span> Money made = the impressions only this vendor could serve × our measured media rate × margin. Below the bill = overpaying.</li>
+    <li><span class="navy">What do we already have for free?</span> Every vendor is measured against our two internal free logs (guid, augmentor) — the $0 baseline we keep either way.</li>
+    <li>All 10 sources (8 paid + 2 free) are measured the same way, against the <span class="navy">billed</span> impressions — not raw rows delivered.</li>
   </ul>
-  <p class="sub">The two lenses are never added — the same impression can't be priced at media CPM and data CPM at once.</p>
 </section>
 
 <section>
@@ -139,18 +137,18 @@
 <section>
   <div class="kicker">What we should pay</div>
   <h2>Two moves, in order</h2>
-  <p class="lead"><span class="navy">1. Preempt</span> — stop billing prior-day free-covered signal: <span class="navy">−~$200K/yr</span>, keep all data, needs no vendor.
-     &nbsp;&nbsp;<span class="navy">2. Reprice the residual</span> toward fair value (cap = most-generous fair):</p>
+  <p class="lead"><span class="navy">1. Preempt</span> — stop billing signal a free log already had: <span class="navy">−~$200K/yr</span>, keep all data, needs no vendor.
+     &nbsp;&nbsp;<span class="navy">2. Renegotiate down or drop</span> the residual:</p>
   <table>
-    <tr><th>Vendor</th><th class="n">After preempt</th><th class="n">Cap at fair</th><th>Action</th></tr>
-    <tr><td>33Across (DS28)</td><td class="n">$259.9K</td><td class="n">≤$217K</td><td>Renegotiate — biggest lever</td></tr>
-    <tr><td>33Across API (DS40)</td><td class="n">$142.8K</td><td class="n">≤$134K</td><td>Renegotiate / drop (same vendor as DS28)</td></tr>
-    <tr><td>Sovrn (DS33)</td><td class="n">$115.8K</td><td class="n">≤$34K</td><td class="red">Drop</td></tr>
-    <tr><td>Cybba (DS36)</td><td class="n">$17.7K</td><td class="n">≤$4.7K</td><td class="red">Drop</td></tr>
-    <tr><td>Justuno (DS24)</td><td class="n">$75.8K</td><td class="n">≤$60K</td><td>Trim the meter</td></tr>
-    <tr><td>Klickly / Predactiv / 5x5</td><td class="n">flat</td><td class="n">—</td><td>Klickly drop unless ~free · Predactiv &amp; 5x5 keep (lock price)</td></tr>
+    <tr><th>Vendor</th><th class="n">Current</th><th class="n">After preempt</th><th>Recommendation</th></tr>
+    <tr><td>33Across (DS28)</td><td class="n">$422.0K</td><td class="n">$259.9K</td><td>Renegotiate down — biggest lever</td></tr>
+    <tr><td>33Across API (DS40)</td><td class="n">$175.9K</td><td class="n">$142.8K</td><td>Renegotiate down or drop (same vendor as DS28)</td></tr>
+    <tr><td>Sovrn (DS33)</td><td class="n">$115.9K</td><td class="n">$115.8K</td><td class="red">Drop</td></tr>
+    <tr><td>Cybba (DS36)</td><td class="n">$21.5K</td><td class="n">$17.7K</td><td class="red">Drop</td></tr>
+    <tr><td>Justuno (DS24)</td><td class="n">$77.1K</td><td class="n">$75.8K</td><td>Renegotiate down or drop</td></tr>
+    <tr><td>Klickly / Predactiv / 5x5</td><td class="n">flat</td><td class="n">—</td><td>Klickly drop · Predactiv &amp; 5x5 keep</td></tr>
   </table>
-  <p class="sub">The $0.50 rate isn't the problem — the volume is. Sequence: lock flats → preempt → renegotiate 33Across → drop Sovrn/Cybba.</p>
+  <p class="sub">The $0.50 rate isn't the problem — the volume is. Sequence: lock flats → preempt → renegotiate 33Across → drop the rest.</p>
 </section>
 
 <section>

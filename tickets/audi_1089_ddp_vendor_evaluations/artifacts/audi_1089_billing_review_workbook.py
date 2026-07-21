@@ -115,7 +115,7 @@ ws.row_dimensions[r].height = 92; r += 2
 ws.cell(r, 1, "Sheets").font = NAVYB
 ws.cell(r, 2, "Data: 1 Meter Proof · 2 Preemption (fair) · 3 Augmentor Fix · 4 Worth vs Bill · 5 Recommendations · 6 Audit Map. "
               "Each data sheet names its query on the green 'Query ▸' line. SQL: all 8 backing queries are embedded as "
-              "'Qn ...' sheets (Q1 Meter Proof, Q2 Targeted Signal, Q3 Fair Prior-Day, Q4 Bills, Q5 Dependency, Q6 Domain band, Q7 Free coverage, Q8 Drop savings) — paste-and-run.")
+              "'Qn ...' sheets (Q1 Meter Proof, Q2 Targeted Signal, Q3 Fair Prior-Day, Q4 Bills, Q5 Dependency, Q6 Free coverage, Q7 Drop savings) — paste-and-run.")
 ws.cell(r, 2).alignment = LEFT; ws.row_dimensions[r].height = 56
 
 # ---------------- 1 Meter Proof ----------------
@@ -213,26 +213,29 @@ ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_
 
 # ---------------- 5 Recommendations ----------------
 ws = wb.create_sheet("5 Recommendations")
-widths(ws, {"A": 16, "B": 6, "C": 12, "D": 14, "E": 14, "F": 13, "G": 34})
-title_block(ws, "What we should pay", "Move 1: preempt (-$200K). Move 2: reprice residual toward the fair cap. Sequence: lock flats -> preempt -> renegotiate 33Across -> drop Sovrn/Cybba.", "RECOMMENDATION", query_ref="composite: 'Q4 Bills (q0)' × 'Q3 Fair Prior-Day' × 'Q5 Dependency (q6)' / 'Q6 Domain band (q4)'")
-r = 5; hrow(ws, r, ["Vendor", "DS", "Billing", "Current / yr", "After preempt", "Cap at fair", "Action"])
-rec = [("33Across", 28, "$0.50 CPM", 422024, 259967, "<=$217K", "Renegotiate — biggest lever"),
-       ("33Across API", 40, "$0.50 CPM", 175879, 142814, "<=$134K", "Renegotiate / drop (same vendor as DS28)"),
-       ("Sovrn", 33, "$0.50 CPM", 115880, 115764, "<=$34K", "DROP — not overlap-driven"),
-       ("Justuno", 24, "$0.50 CPM", 77111, 75800, "<=$60K", "Trim the meter"),
-       ("Cybba", 36, "$0.50 CPM", 21504, 17698, "<=$4.7K", "DROP"),
-       ("Klickly", 39, "flat", None, None, "<=$1.5K", "DROP unless renewal ~free"),
-       ("Predactiv", 26, "flat", None, None, "high (domain)", "KEEP / lock price (hard non-MM HEM->CRM dep.)"),
-       ("5x5", 25, "flat", None, None, "high (domain)", "KEEP (TI-1027)")]
-for i, (v, ds, bt, cur, aft, cap, act) in enumerate(rec):
+widths(ws, {"A": 16, "B": 6, "C": 12, "D": 14, "E": 14, "F": 42})
+title_block(ws, "What we should do", "Move 1: preempt (-$200K, keep all data). Move 2: renegotiate down or drop the residual (worth is on sheet 4). Ranked by current bill.", "RECOMMENDATION", query_ref="'Q4 Bills (q0)' × 'Q3 Fair Prior-Day' × 'Q5 Dependency (q6)'")
+r = 5; hrow(ws, r, ["Vendor", "DS", "Billing", "Current / yr", "After preempt", "Recommendation"])
+rec = [("33Across", 28, "$0.50 CPM", 422024, 259967, "Renegotiate down — biggest lever"),
+       ("33Across API", 40, "$0.50 CPM", 175879, 142814, "Renegotiate down or drop (same vendor as DS28)"),
+       ("Sovrn", 33, "$0.50 CPM", 115880, 115764, "DROP"),
+       ("Justuno", 24, "$0.50 CPM", 77111, 75800, "Renegotiate down or drop"),
+       ("Cybba", 36, "$0.50 CPM", 21504, 17698, "DROP"),
+       ("Klickly", 39, "flat", None, None, "DROP"),
+       ("Predactiv", 26, "flat", None, None, "KEEP — we depend on it (CRM/identity)"),
+       ("5x5", 25, "flat", None, None, "KEEP")]
+for i, (v, ds, bt, cur, aft, act) in enumerate(rec):
     r += 1
-    drow(ws, r, [v, ds, bt, cur if cur else "pending", aft if aft else "-", cap, act],
-         fmts=[None, "0", None, "$#,##0" if cur else None, "$#,##0" if aft else None, None, None], alt=(i % 2))
-    ws.cell(r, 7).alignment = LEFT
+    drow(ws, r, [v, ds, bt, cur if cur else "pending", aft if aft else "-", act],
+         fmts=[None, "0", None, "$#,##0" if cur else None, "$#,##0" if aft else None, None], alt=(i % 2))
+    ws.cell(r, 6).alignment = LEFT
     if act.startswith("DROP"):
-        ws.cell(r, 7).font = REDB
+        ws.cell(r, 6).font = REDB
     if act.startswith("KEEP"):
-        ws.cell(r, 7).font = Font(color="1E7A34", bold=True)
+        ws.cell(r, 6).font = Font(color="1E7A34", bold=True)
+r += 2
+ws.cell(r, 1, "Renegotiate before dropping (a drop can hand credits to another vendor mid-deal); lock flat-fee prices first.").font = SUB
+ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=6); ws.row_dimensions[r].height = 22
 
 # ---------------- 6 Audit Map ----------------
 ws = wb.create_sheet("6 Audit Map")
@@ -247,8 +250,7 @@ amap = [
     ("Same-day (naive) / upper bound", "  q3e_v2 free_sameday / free_prior30", "$273.7K / $243.5K", ""),
     ("Free logs cover the universe", "runbook/queries/deck_d1_universe_coverage.sql", "59.4% visit-day / 60.4% pair", "BIG"),
     ("Row-level source, self-serve", "queries/audi_1089_targeted_signal_bq_per_vendor_split.sql", "per-vendor used-row split ($0)", "$0"),
-    ("Dependency ceiling (worth)", "runbook/queries/q6_value_tiers.sql (+q8b solo)", "per-vendor T1/T2 x52", "BIG"),
-    ("Unique-domain fee-band (worth)", "runbook/queries/q4_domain_value.sql", "per-vendor $ band", "BIG"),
+    ("Money-made value (worth)", "runbook/queries/q6_value_tiers.sql (+q8b solo)", "media on unique serves x margin x52", "BIG"),
     ("Drop-savings (reassignment classes)", "runbook/queries/q3b_credit_reassignment.sql", "33A $385.7K, Sovrn $109.0K ...", "BIG"),
 ]
 for i, (cl, qf, ex, co) in enumerate(amap):
@@ -278,13 +280,11 @@ QUERIES = [
     ("Q4 Bills (q0)", "runbook/queries/q0_roster_cost.sql",
      "Q4 (sheets 2 & 5) — roster + actual meter bills; meter check imps x $0.50 = usage. Console-cheap."),
     ("Q5 Dependency (q6)", "runbook/queries/q6_value_tiers.sql",
-     "Q5 (sheet 4) — media on each vendor's sole serves -> T1/T2 dependency value (x52). BIG."),
-    ("Q6 Domain band (q4)", "runbook/queries/q4_domain_value.sql",
-     "Q6 (sheet 4) — sole classified domains x fee band -> the unique-domain value lens. BIG."),
-    ("Q7 Free coverage (d1)", "runbook/queries/deck_d1_universe_coverage.sql",
-     "Q7 (audit map) — free-log coverage of the (ip x domain x date) universe (59.4% / 60.4%). BIG."),
-    ("Q8 Drop savings (q3b)", "runbook/queries/q3b_credit_reassignment.sql",
-     "Q8 (audit map) — first-reporter reassignment classes -> exact drop savings per vendor. BIG."),
+     "Q5 (sheet 4) — media on each vendor's unique serves -> money-made value (x52). BIG."),
+    ("Q6 Free coverage (d1)", "runbook/queries/deck_d1_universe_coverage.sql",
+     "Q6 (audit map) — free-log coverage of the (ip x domain x date) universe (59.4% / 60.4%). BIG."),
+    ("Q7 Drop savings (q3b)", "runbook/queries/q3b_credit_reassignment.sql",
+     "Q7 (audit map) — first-reporter reassignment classes -> exact drop savings per vendor. BIG."),
 ]
 for nm, pth, hd in QUERIES:
     sql_sheet(nm, pth, hd)

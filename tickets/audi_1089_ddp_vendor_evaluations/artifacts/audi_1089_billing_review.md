@@ -23,26 +23,17 @@ Everything after it is: *how I know each vendor's fair value, and what we should
 
 ## 1. How I valued them (the method)
 
-One substrate, two independent lenses, never merged.
+Two simple questions per vendor.
 
-- **One substrate.** All 10 site-visit sources — 8 paid vendors + 2 internal **free** logs (guid DS23,
-  augmentor DS30) — land in `site_visit_signal` and are measured **identically**. The free logs are the
-  baseline every paid vendor is judged against, because they cost $0 and we keep them either way.
-- **Lens A — Dependency ceiling (bottom-up).** The *most* a vendor can rationally be paid = the media
-  revenue on impressions that **only that vendor could have enabled** (households no other source, paid
-  or free, reported), annualized, times a defensible margin. Above that number, a loss is guaranteed.
-  This is a ceiling, not a fair price.
-- **Lens B — Coverage / uniqueness (top-down).** How much of the billable data universe does the vendor
-  add that we don't *already have for free*? Measured with **holder masks** — a 10-bit signature per
-  (IP × domain × date) recording which sources delivered it — so **any** keep-set's exact coverage is
-  computable without re-scanning.
-- **Billable grain = the won impression.** A vendor is credited once per won impression on an
-  MM-targeted serve, at contract CPM — not for ingestion. So "value" is always read against the
-  *billed* base, never raw rows delivered.
+- **Did it pay for itself?** Money made = the impressions only this vendor could serve × our measured
+  media rate × margin, annualized. If that's below the vendor's bill, we're overpaying. (The range is
+  the margin band; the media rate is measured, not assumed.)
+- **What do we already have for free?** Every vendor is measured against our two internal free logs
+  (guid DS23, augmentor DS30) — the $0 baseline we keep either way. If a free log already had an IP's
+  visit, the vendor's copy of it isn't worth paying for.
 
-The two lenses are never added together (the same impression can't be priced at media CPM *and* data
-CPM). Where they disagree — 5x5 and Predactiv have tiny dependency but huge unique-domain value — both
-are reported side by side.
+All 10 sources (8 paid + 2 free) go into one place (`site_visit_signal`) and are measured the same way,
+against the **billed** impression (the won impression at contract CPM) — never raw rows delivered.
 
 ---
 
@@ -53,12 +44,12 @@ Per source, one pass each, joined to the billing meter:
 1. **Delivery** — rows/day, reach (IPs, domains, IP×domain pairs), liveness, junk rate.
 2. **Usable survival** — the share that reaches a real consumer: DS13 (domain → vertical) **or** DS19
    (URL → product-category keyword). Only usable rows are creditable.
-3. **Uniqueness** — sole vs redundant vs free-co-held, at pair grain and visit-day grain, via the
-   holder-mask histogram (exact for all 2⁸ vendor keep-sets).
-4. **Serving** — won impressions on each source's IPs in the valuation week (from `cost_impression_log`).
-5. **Performance** — visit rate on the vendor's *sole* impressions vs the no-data baseline.
-6. **Dollars** — media revenue on sole serves → dependency value; billed usage from the meter
-   (`usage_reporting_data`) and the BAE winners table (`ddp_mm_winners_imp`).
+3. **Uniqueness** — how much of each vendor's data is unique vs already in a free log, per (IP, domain)
+   and per (IP, domain, date).
+4. **Serving** — won impressions on each vendor's IPs in the valuation week (from `cost_impression_log`).
+5. **Performance** — visit rate on the vendor's *unique* impressions vs the no-data baseline.
+6. **Dollars** — media revenue on the vendor's unique serves → money-made value; billed usage from the
+   meter (`usage_reporting_data`) and the BAE winners table (`ddp_mm_winners_imp`).
 
 **33 queries + 8 self-contained "deck" queries**, all read-only, all with the exact run command in the
 header. `MANIFEST.md` = run order + cost; `VALIDATION_GUIDE.md` = glossary + independent anchors (e.g.
@@ -154,22 +145,21 @@ can reassign its credits into another paid vendor mid-negotiation.
 **$812.4K → $612.0K/yr, −$200.4K (−24.7%), and we keep all the data.** This is the direct answer to the
 dispute and needs no vendor cooperation (we own the meter). (Upper bound −$243.5K if vendor recency isn't credited.)
 
-**Move 2 — reprice / drop the residual toward fair value (cap = most-generous fair):**
+**Move 2 — renegotiate down or drop the residual (worth is in §3.3):**
 
-| Vendor | DS | Current | After preempt | Cap at fair | Recommendation |
-|---|---|--:|--:|--:|---|
-| 33Across | 28 | $422.0K | $259.9K | ≤$217K | **Renegotiate** — biggest single lever |
-| 33Across API | 40 | $175.9K | $142.8K | ≤$134K | **Renegotiate / drop** (same vendor as DS28; batch vs real-time) |
-| Sovrn | 33 | $115.9K | $115.8K | ≤$34K | **Drop** — not overlap-driven; preemption won't help |
-| Justuno | 24 | $77.1K | $75.8K | ≤$60K | **Trim** the meter toward the band |
-| Cybba | 36 | $21.5K | $17.7K | ≤$4.7K | **Drop** |
-| Klickly | 39 | flat (pending) | — | $0.1–1.5K | **Drop** unless renewal is ~free |
-| Predactiv | 26 | flat (pending) | — | high (domain axis) | **Keep / lock price** — hard non-MM (HEM→CRM/identity) dependency |
-| 5x5 | 25 | flat (pending) | — | high (domain axis) | **Keep** (TI-1027) |
+| Vendor | DS | Current | After preempt | Recommendation |
+|---|---|--:|--:|---|
+| 33Across | 28 | $422.0K | $259.9K | **Renegotiate down** — biggest single lever |
+| 33Across API | 40 | $175.9K | $142.8K | **Renegotiate down or drop** (same vendor as DS28) |
+| Sovrn | 33 | $115.9K | $115.8K | **Drop** |
+| Justuno | 24 | $77.1K | $75.8K | **Renegotiate down or drop** |
+| Cybba | 36 | $21.5K | $17.7K | **Drop** |
+| Klickly | 39 | flat (pending) | — | **Drop** |
+| Predactiv | 26 | flat (pending) | — | **Keep** — we depend on it (CRM/identity) |
+| 5x5 | 25 | flat (pending) | — | **Keep** |
 
-Metered rate itself ($0.50 CPM) is **not** the problem — it's below the residual break-even. The
-overpayment is **volume**: billing on free-covered and non-marginal impressions. Preempt the volume,
-then reprice the two 33Across feeds; drop Sovrn and Cybba.
+The $0.50 rate itself is **not** the problem — it's below break-even. The overpayment is **volume**:
+billing on signal we already had. Preempt the volume, then renegotiate the two 33Across feeds; drop the rest.
 
 **Sequencing:** lock flat-fee prices first (dropped vendors' credits reassign into flat-fee vendors at
 $0 marginal cost today, inflating their measured value before renewal) → preempt → renegotiate 33Across
