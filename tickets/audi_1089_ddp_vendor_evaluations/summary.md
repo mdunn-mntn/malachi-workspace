@@ -637,8 +637,12 @@ Maya Triman present the 8-step pipeline) and `meetings/audi_1089_04_ddp_creditin
 3. **Discuss with the vendor-contract decision maker (Andy Everson):** raise the concern about paying vendors for
    free-log-covered signal; gauge feasibility + their response; **incl. whether we can get the same coverage from
    our already-provided 3P interest vendors** to limit cost while keeping full coverage.
-4. **Implement the credit change** → backlog **[AUDI-1143](https://mntn.atlassian.net/browse/AUDI-1143)** created
-   (zero paid-vendor credit when a free log won the impression; exact change point in the pipeline reference).
+4. **Implement the credit change** → backlog **[AUDI-1143](https://mntn.atlassian.net/browse/AUDI-1143)**.
+- **Backlog tickets (2026-07-21, from Malachi's Slack update):**
+  - **[AUDI-1143](https://mntn.atlassian.net/browse/AUDI-1143)** — reassign credit away from free-log-touched IPs (the implementation).
+  - **[AUDI-1144](https://mntn.atlassian.net/browse/AUDI-1144)** — meet with the vendor-contract owner (Andy Everson) re: free-log credit, cost, 3P coverage.
+  - **[AUDI-1145](https://mntn.atlassian.net/browse/AUDI-1145)** — own the DDP credit-awarding pipeline.
+- Mike Dolzer has the review file (verify-claims xlsx) → putting it in an upcoming BAE sprint. Malachi closing existing tickets w/ updates.
 - **Alyson is raising this with Kale** (Malachi bringing it up today). Malachi likely to **own the DDP pipeline**.
 - Origin: the 5x5-quality ask (TI-1027) snowballed into the whole-roster coverage + crediting story.
 
