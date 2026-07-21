@@ -62,11 +62,14 @@ def drow(ws, r, vals, start=1, fmts=None, alt=False, bolds=None, colors=None):
             c.font = Font(color=colors[j], bold=(bolds[j] if bolds else False))
 
 
-def title_block(ws, title, sub, kicker=None):
+def title_block(ws, title, sub, kicker=None, query_ref=None):
     if kicker:
         ws["A1"] = kicker; ws["A1"].font = Font(color=RED, bold=True, size=9)
     ws["A2"] = title; ws["A2"].font = TITLE
     ws["A3"] = sub; ws["A3"].font = SUB
+    if query_ref:
+        ws["A4"] = "Query ▸ " + query_ref
+        ws["A4"].font = Font(color="1E7A34", bold=True, size=9)
     ws.row_dimensions[2].height = 22
 
 
@@ -106,13 +109,15 @@ ws.cell(r, 1, "Caveats").font = NAVYB
 ws.cell(r, 2, "N=1 valuation week (July trough) -> dependency = scenario envelope, not a CI. Meter regime changed May 2026 (fractional->integer) — never mix months. Flat-fee amounts pending finance. Winners-table impression counts over-count the final meter (they prove the RATE, not the $)."); ws.cell(r, 2).alignment = LEFT
 ws.row_dimensions[r].height = 56; r += 2
 ws.cell(r, 1, "Sheets").font = NAVYB
-ws.cell(r, 2, "1 Meter Proof · 2 Preemption (fair) · 3 Augmentor Fix · 4 Worth vs Bill · 5 Recommendations · 6 Audit Map · then the runnable SQL for each proof.")
-ws.cell(r, 2).alignment = LEFT; ws.row_dimensions[r].height = 30
+ws.cell(r, 2, "Data: 1 Meter Proof · 2 Preemption (fair) · 3 Augmentor Fix · 4 Worth vs Bill · 5 Recommendations · 6 Audit Map. "
+              "Each data sheet names its query on the green 'Query ▸' line. SQL: all 8 backing queries are embedded as "
+              "'Qn ...' sheets (Q1 Meter Proof, Q2 Targeted Signal, Q3 Fair Prior-Day, Q4 Bills, Q5 Dependency, Q6 Domain band, Q7 Free coverage, Q8 Drop savings) — paste-and-run.")
+ws.cell(r, 2).alignment = LEFT; ws.row_dimensions[r].height = 56
 
 # ---------------- 1 Meter Proof ----------------
 ws = wb.create_sheet("1 Meter Proof")
 widths(ws, {"A": 42, "B": 20, "C": 16, "D": 40})
-title_block(ws, "The meter does not preempt", "gold.reporting.ddp_mm_winners_imp_202606 (June, verified live). tv_cpm tracks paid-vendor presence only.", "PROOF 1")
+title_block(ws, "The meter does not preempt", "gold.reporting.ddp_mm_winners_imp_202606 (June, verified live). tv_cpm tracks paid-vendor presence only.", "PROOF 1", query_ref="sheet 'Q1 Meter Proof'")
 r = 5; hrow(ws, r, ["Winners on the impression", "June impressions", "tv_cpm charged", "Reading"])
 mp = [
     ("Free log (23/30) AND paid vendor both win", 268886220, "$0.50 on 100%", "PAID STILL BILLS on a free-covered impression"),
@@ -126,14 +131,14 @@ for i, (a, imp, cpm, rd) in enumerate(mp):
     if i == 0:
         for cc in range(1, 5): ws.cell(r, cc).font = REDB
 r += 2
-ws.cell(r, 1, "If the meter preempted, the top row's tv_cpm would be $0. It is $0.50 — a free log co-winning the exact impression has ZERO effect on the charge. Query: sheet 'Q1 Preemption Proof'.").font = SUB
+ws.cell(r, 1, "If the meter preempted, the top row's tv_cpm would be $0. It is $0.50 — a free log co-winning the exact impression has ZERO effect on the charge. Query: sheet 'Q1 Meter Proof'.").font = SUB
 ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4); ws.row_dimensions[r].height = 44
 
 # ---------------- 2 Preemption (fair) ----------------
 q3e = {int(x["ds"]): x for x in load("q3e_v2_free_prior_lookback.csv")}
 ws = wb.create_sheet("2 Preemption (fair)")
 widths(ws, {"A": 18, "B": 15, "C": 16, "D": 15, "E": 15})
-title_block(ws, "Fair preemption — prior-day, recency-credited", "Recoverable = bill x free_prior_dominant share (q3e_v2). Ranked by recoverable $.", "FAIR = $200.4K/yr")
+title_block(ws, "Fair preemption — prior-day, recency-credited", "Recoverable = bill x free_prior_dominant share (q3e_v2). Ranked by recoverable $.", "FAIR = $200.4K/yr", query_ref="'Q3 Fair Prior-Day' (shares) × 'Q4 Bills (q0)' (bills)")
 r = 5; hrow(ws, r, ["Vendor", "Bill / yr", "Fair prior-day %", "Recoverable", "Bill after"])
 order = ["33Across", "33Across API", "Cybba", "Justuno", "Sovrn"]
 dsmap = {"33Across": 28, "33Across API": 40, "Cybba": 36, "Justuno": 24, "Sovrn": 33}
@@ -156,7 +161,7 @@ ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_
 ws = wb.create_sheet("3 Augmentor Fix")
 widths(ws, {"A": 16, "B": 13, "C": 13, "D": 13, "E": 15, "F": 15, "G": 12})
 title_block(ws, "Why $200K and not $274K — the augmentor fix",
-            "augmentor (DS30) is the SSP bid stream, so same-day cohold is circular. Fair test = prior-day within 30d AND free still as fresh. q3e_v2: 37d scan / 7d measure / full lookback / ALL IPs.", "METHODOLOGY")
+            "augmentor (DS30) is the SSP bid stream, so same-day cohold is circular. Fair test = prior-day within 30d AND free still as fresh. q3e_v2: 37d scan / 7d measure / full lookback / ALL IPs.", "METHODOLOGY", query_ref="sheet 'Q3 Fair Prior-Day' (q3e_v2)")
 r = 5; hrow(ws, r, ["Vendor", "same-day %", "prior-30d %", "FAIR %", "triples", "prior_dominant", "no_free"])
 rows3 = sorted(q3e.values(), key=lambda x: -float(x["pct_sameday_old"]))
 for i, x in enumerate(rows3):
@@ -181,7 +186,7 @@ for line in [
 ws = wb.create_sheet("4 Worth vs Bill")
 widths(ws, {"A": 16, "B": 15, "C": 18, "D": 12, "E": 12, "F": 24})
 title_block(ws, "Even after preemption, no metered vendor is worth its residual",
-            "Fair value = the higher of the two never-merged lenses (dependency ceiling / unique-domain fee-band). Ranked by worth/bill.", "RESULT")
+            "Fair value = the higher of the two never-merged lenses (dependency ceiling / unique-domain fee-band). Ranked by worth/bill.", "RESULT", query_ref="'Q5 Dependency (q6)' & 'Q6 Domain band (q4)'")
 r = 5; hrow(ws, r, ["Vendor", "Bill after preempt", "Fair value (best lens)", "Lens", "Worth / bill", "Read"])
 worth = [("33Across API", 142814, 134000, "dependency", "just under, even at ceiling"),
          ("33Across", 259967, 217000, "dependency", "~1.2x over"),
@@ -201,7 +206,7 @@ ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_
 # ---------------- 5 Recommendations ----------------
 ws = wb.create_sheet("5 Recommendations")
 widths(ws, {"A": 16, "B": 6, "C": 12, "D": 14, "E": 14, "F": 13, "G": 34})
-title_block(ws, "What we should pay", "Move 1: preempt (-$200K). Move 2: reprice residual toward the fair cap. Sequence: lock flats -> preempt -> renegotiate 33Across -> drop Sovrn/Cybba.", "RECOMMENDATION")
+title_block(ws, "What we should pay", "Move 1: preempt (-$200K). Move 2: reprice residual toward the fair cap. Sequence: lock flats -> preempt -> renegotiate 33Across -> drop Sovrn/Cybba.", "RECOMMENDATION", query_ref="composite: 'Q4 Bills (q0)' × 'Q3 Fair Prior-Day' × 'Q5 Dependency (q6)' / 'Q6 Domain band (q4)'")
 r = 5; hrow(ws, r, ["Vendor", "DS", "Billing", "Current / yr", "After preempt", "Cap at fair", "Action"])
 rec = [("33Across", 28, "$0.50 CPM", 422024, 259967, "<=$217K", "Renegotiate — biggest lever"),
        ("33Across API", 40, "$0.50 CPM", 175879, 142814, "<=$134K", "Renegotiate / drop (same vendor as DS28)"),
@@ -254,12 +259,27 @@ def sql_sheet(name, path, header):
             c = ws.cell(3 + i, 1, line if line else " ")
             c.font = MONO; c.alignment = Alignment(horizontal="left", vertical="top")
 
-sql_sheet("Q1 Preemption Proof", "queries/audi_1089_preemption_proof_winners_table.sql",
-          "Q1 — does the meter skip paid credit when a free log already covers the impression? (paste & run)")
-sql_sheet("Q2 Targeted Signal", "queries/audi_1089_targeted_signal_bq_per_vendor_split.sql",
-          "Q2 — row-level used-signal split by originating vendor (BQ external, $0)")
-sql_sheet("Q3 Fair Prior-Day", "runbook/queries/q3e_v2_free_prior_lookback.sql",
-          "Q3 — the fair preemption scan (prior-day + recency, full 30-day lookback, all IPs)")
+# every backing query, embedded as a paste-and-run SQL sheet (name matches the "Query ▸" refs above)
+QUERIES = [
+    ("Q1 Meter Proof", "queries/audi_1089_preemption_proof_winners_table.sql",
+     "Q1 (sheet 1) — does the meter skip paid credit when a free log already covers the impression? ~18 GB."),
+    ("Q2 Targeted Signal", "queries/audi_1089_targeted_signal_bq_per_vendor_split.sql",
+     "Q2 (audit map) — row-level used-signal split by originating vendor (BQ external, $0)."),
+    ("Q3 Fair Prior-Day", "runbook/queries/q3e_v2_free_prior_lookback.sql",
+     "Q3 (sheets 2 & 3) — the fair preemption scan (prior-day + recency, full 30d lookback, all IPs). BIG."),
+    ("Q4 Bills (q0)", "runbook/queries/q0_roster_cost.sql",
+     "Q4 (sheets 2 & 5) — roster + actual meter bills; meter check imps x $0.50 = usage. Console-cheap."),
+    ("Q5 Dependency (q6)", "runbook/queries/q6_value_tiers.sql",
+     "Q5 (sheet 4) — media on each vendor's sole serves -> T1/T2 dependency value (x52). BIG."),
+    ("Q6 Domain band (q4)", "runbook/queries/q4_domain_value.sql",
+     "Q6 (sheet 4) — sole classified domains x fee band -> the unique-domain value lens. BIG."),
+    ("Q7 Free coverage (d1)", "runbook/queries/deck_d1_universe_coverage.sql",
+     "Q7 (audit map) — free-log coverage of the (ip x domain x date) universe (59.4% / 60.4%). BIG."),
+    ("Q8 Drop savings (q3b)", "runbook/queries/q3b_credit_reassignment.sql",
+     "Q8 (audit map) — first-reporter reassignment classes -> exact drop savings per vendor. BIG."),
+]
+for nm, pth, hd in QUERIES:
+    sql_sheet(nm, pth, hd)
 
 # freeze header rows on the data sheets
 for nm in ["1 Meter Proof", "2 Preemption (fair)", "3 Augmentor Fix", "4 Worth vs Bill", "5 Recommendations", "6 Audit Map"]:
