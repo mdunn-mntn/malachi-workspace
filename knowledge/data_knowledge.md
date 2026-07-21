@@ -1287,6 +1287,15 @@ How an MM/CRM impression's credit is actually assigned (authoritative, from the 
   and inherited 1-5. **Andy Everson owns the vendor relationships/contracts/terms** (and has the flat-fee
   amounts — BAE has NO visibility). Changing the credit logic needs Andy's "blessing" + a contract-terms
   check; Mike Doltz / Kristen can formalize review time. See [[reference_ddp_billing_logic]].
+- **CONFIRMED IN CODE (`SteelHouse/bae-sql-utility/ddp/usage reporting`, read 2026-07-21; full walkthrough +
+  the exact change point in `tickets/audi_1089_ddp_vendor_evaluations/artifacts/ddp_pipeline_and_crediting_reference.md`,
+  scripts saved to `artifacts/ddp_scripts/`):** the 1/N division is literally `w.impression_cnt /
+  w.mm_dsid_count` where `mm_dsid_count` = distinct credit-vendors among winners INCLUDING free logs (23/30) —
+  free logs take unpaid slots. Winners = OR→`rank() order by tv_cpm ASC` (lowest), AND→`order by tv_cpm DESC`
+  (highest). MM priced `max(fixed_cpm)`; $0.50 also hardcoded in the Step-4 output. **FULL free-log preemption =
+  in `ddp_mm_winners_imp`/Step-4, zero the paid impression_cnt when `mm_dsids_winner` contains 23 or 30.**
+  Dates are hardcoded/manually edited each month (fragile). enriched_impressions gate = channel_id=8 ∧
+  funnel_level=1 ∧ objective_id=1 (CTV/F1/Prospecting), targeted_signal 30d lookback — all as documented.
 
 ### Canonical DDP usage-reporting pipeline — 8 steps, billed on **Funnel-1/CTV only** (BAE billing team, 2026-07-20)
 Authoritative end-to-end structure of how DDP usage is metered/billed (source: billing-team doc
