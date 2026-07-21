@@ -89,9 +89,17 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 | `LINE` | `#D9E1E8` | Thin cell borders |
 | `POS` / `NEG` / `WARN` | `#1B9E77` / `#D1495B` / `#E9A23B` | RAG traffic-lights & deltas |
 
-**Swapping in official MNTN brand:** edit the `BRAND` dict (one place) and pass `logo_path=` a
-transparent PNG. Everything re-colors automatically. Until we have official hexes, the palette above is
-built on the navy already used across our deliverables.
+**Swapping in official MNTN brand (zero code change):**
+- **Logo** — drop a transparent PNG (white/reversed reads best on the navy band) at
+  `lib/assets/mntn_logo.png`. Every cover uses it automatically in place of the "MNTN" wordmark.
+- **Colors** — drop official hexes in `lib/assets/brand.json` (e.g. `{"PRIMARY": "…", "ACCENT": "…"}`);
+  they override the `BRAND` defaults. Any subset is fine. See `lib/assets/README.md`.
+- (Both asset files are gitignored. Until they're provided, the palette above is built on the navy
+  already used across our deliverables.)
+
+**Attribution** — the cover's *Prepared by* defaults to **`Malachi Dunn · Audience Intelligence`**
+(author + team). Override per-workbook with `owner=`. This is the deliberate exception to the
+"no names in shared artifacts" rule, made by the user for `.xlsx` deliverables.
 
 - **Red reads as "bad" to execs** — reserve `NEG` for genuinely-bad values only, never for emphasis.
 - Heat = a per-column color scale (`"high"` green-is-large, `"low"` green-is-small e.g. cost,

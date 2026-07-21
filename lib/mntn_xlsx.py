@@ -74,6 +74,20 @@ BRAND = {
     "WHITE":   "FFFFFF",
 }
 
+# Assets + brand override. Drop the official MNTN logo at assets/mntn_logo.png and it is used on every
+# cover automatically. Drop official hexes in assets/brand.json ({"PRIMARY": "...", "ACCENT": "..."}) and
+# they override the defaults above — no code edit needed. See lib/assets/README.md.
+_ASSET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+_DEFAULT_LOGO = os.path.join(_ASSET_DIR, "mntn_logo.png")
+try:
+    import json
+    _bpath = os.path.join(_ASSET_DIR, "brand.json")
+    if os.path.exists(_bpath):
+        with open(_bpath) as _bf:
+            BRAND.update({k: str(v).lstrip("#").upper() for k, v in json.load(_bf).items()})
+except Exception:
+    pass  # malformed override never breaks a build; fall back to defaults
+
 # Typography. Arial round-trips identically into Google Sheets (Calibri is Excel-only and
 # gets substituted). Consolas/Menlo for SQL.
 FONT_BODY = "Arial"
@@ -150,14 +164,16 @@ def _to_native(v):
 class MntnWorkbook:
     """A branded, multi-sheet MNTN deliverable. Build content sheets, then call cover() last."""
 
-    def __init__(self, title, ticket, subtitle="", period="", owner="Audience Intelligence",
+    def __init__(self, title, ticket, subtitle="", period="", owner="Malachi Dunn · Audience Intelligence",
                  logo_path=None, generated=None, status="Final"):
         self.title = title
         self.ticket = ticket.upper().strip()
         self.subtitle = subtitle
         self.period = period
         self.owner = owner
-        self.logo_path = logo_path if (logo_path and os.path.exists(logo_path)) else None
+        # explicit logo_path wins; else use the canonical asset if it's been dropped in
+        cand = logo_path or _DEFAULT_LOGO
+        self.logo_path = cand if (cand and os.path.exists(cand)) else None
         self.generated = generated  # 'YYYY-MM-DD' string; pass one for reproducible files
         self.status = status
         self._toc = []  # (sheet_name, one-line description, role)

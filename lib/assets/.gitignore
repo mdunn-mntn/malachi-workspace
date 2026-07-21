@@ -1,0 +1,4 @@
+# Keep the instructions, ignore the actual (binary/local) brand assets
+*
+!.gitignore
+!README.md
