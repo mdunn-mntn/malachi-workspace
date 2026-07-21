@@ -14,10 +14,12 @@ Windows (identical everywhere): delivery/uniqueness = 30-day svs `dt 2026-06-02.
 > **Claim being tested:** "the meter already avoids paying vendors for signals our free logs
 > (guid_log DS23, augmentor DS30) also capture — so there's nothing to recover."
 
-**The data says the opposite.** The meter does **not** preempt. It pays $0.50 CPM on impressions our
-own free logs already had — **~$200K/yr** on a fair, conservative test (prior-day, recency-credited) —
-and it's visible three independent ways, each reproducible by you. That's the spine of this review.
-Everything after it is: *how I know each vendor's fair value, and what we should actually pay.*
+**The data says the opposite.** The meter does **not** preempt. It pays $0.50 CPM on households our own
+free logs already had — **~$200K/yr** at the exact-domain grain (a conservative floor), and **~$412K/yr**
+measured the way MM actually bids (a free log put the IP in the same vertical, on any website). That's
+**about half the metered bill**, for data we already get free. It's visible several independent ways, each
+reproducible by you. That's the spine of this review. Everything after it is: *how I know each vendor's
+fair value, and what we should actually pay.*
 
 ---
 
@@ -141,9 +143,10 @@ not here.) Preemption fixes the double-pay; the residual needs repricing or drop
 Two moves, in order. **Renegotiate before you drop** — dropping a vendor first destroys the BATNA and
 can reassign its credits into another paid vendor mid-negotiation.
 
-**Move 1 — implement prior-day free-log preemption (stop billing signal a free log already had).** Roster
-**$812.4K → $612.0K/yr, −$200.4K (−24.7%), and we keep all the data.** This is the direct answer to the
-dispute and needs no vendor cooperation (we own the meter). (Upper bound −$243.5K if vendor recency isn't credited.)
+**Move 1 — implement free-log preemption (stop billing signal a free log already had).** We keep all the
+data, and it needs no vendor cooperation (we own the meter). Recoverable: **−$200K/yr** at the exact-domain
+grain (conservative floor, roster → $612K), or **−$412K/yr** measured the way MM actually bids (same
+vertical, any website — roster $812K → $400K). The vertical figure is the targeting-truthful one.
 
 **Move 2 — renegotiate down or drop the residual (worth is in §3.3):**
 

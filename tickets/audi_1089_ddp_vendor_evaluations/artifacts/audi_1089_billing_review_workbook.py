@@ -91,12 +91,12 @@ ws.cell(r, 1, "The four findings").font = NAVYB; r += 1
 for a, b in [
     ("1. The meter does NOT preempt",
      "tv_cpm = $0.50 whenever ANY paid vendor wins, $0 only when none does. Free co-presence is ignored — 268.9M June impressions billed $0.50 despite a free log co-winning the same impression."),
-    ("2. Fair preemption = $200.4K/yr (-24.7%)",
-     "Roster $812.4K -> $612.0K, keeping ALL vendor data. Conservative (free-dominant); upper bound $243.5K. A naive same-day test says $273.7K but over-credits augmentor (the bid stream) — see sheet 3."),
+    ("2. Preemption: $200K floor, $412K at the targeting grain",
+     "Free logs already cover this signal. DOMAIN grain (exact-domain match, conservative floor): $200.4K. VERTICAL grain (how MM actually bids — same vertical, any website): $412.4K, roster $812K -> $400K. Both keep ALL vendor data; the vertical figure is the targeting-truthful one."),
     ("3. No metered vendor paid for itself",
      "On money-made (profit its unique data produced), every metered vendor is < 1.0x after preemption: API 0.94x, 33Across 0.83x, Sovrn 0.29x, Cybba 0.17x, Justuno 0.15x. (Justuno/Cybba have separate domain-licensing value if kept for coverage — see sheet 4.)"),
     ("4. What to do first",
-     "Add the preemption rule: -$200K/yr, keep all data, we own the meter (no vendor cooperation needed). Repricing the residual is a separate negotiation. Note: $200K is conservative on grain — MM targeting is CATEGORY-based, not domain-based, so free coverage (and the recoverable) is likely higher."),
+     "Add the preemption rule: keep all data, we own the meter (no vendor cooperation needed). Recoverable is $200K at the exact-domain grain, $412K measured the way MM actually bids (same vertical, any website). Repricing the residual is a separate negotiation."),
 ]:
     ws.cell(r, 1, a).font = BOLD; ws.cell(r, 1).alignment = Alignment(vertical="top")
     c = ws.cell(r, 2, b); c.alignment = LEFT
@@ -115,7 +115,7 @@ ws.row_dimensions[r].height = 92; r += 2
 ws.cell(r, 1, "Sheets").font = NAVYB
 ws.cell(r, 2, "Data: 1 Meter Proof · 2 Preemption (fair) · 3 Augmentor Fix · 4 Worth vs Bill · 5 Bill Impact · 6 Audit Map. "
               "Each data sheet names its query on the green 'Query ▸' line. SQL: all 8 backing queries are embedded as "
-              "'Qn ...' sheets (Q1 Meter Proof, Q2 Targeted Signal, Q3 Fair Prior-Day, Q4 Bills, Q5 Dependency, Q6 Free coverage, Q7 Drop savings) — paste-and-run.")
+              "'Qn ...' sheets (Q1 Meter Proof, Q2 Targeted Signal, Q3 Fair Prior-Day, Q4 Bills, Q5 Dependency, Q6 Free coverage, Q7 Drop savings, Q8 Vertical grain) — paste-and-run.")
 ws.cell(r, 2).alignment = LEFT; ws.row_dimensions[r].height = 56
 
 # ---------------- 1 Meter Proof ----------------
@@ -140,26 +140,30 @@ ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_
 
 # ---------------- 2 Preemption (fair) ----------------
 q3e = {int(x["ds"]): x for x in load("q3e_v2_free_prior_lookback.csv")}
+q3f = {int(x["ds"]): x for x in load("q3f_vertical_full.csv")}
 ws = wb.create_sheet("2 Preemption (fair)")
-widths(ws, {"A": 18, "B": 15, "C": 16, "D": 15, "E": 15})
-title_block(ws, "Fair preemption — prior-day, recency-credited", "Recoverable = bill x free_prior_dominant share (q3e_v2). Ranked by recoverable $.", "FAIR = $200.4K/yr", query_ref="'Q3 Fair Prior-Day' (shares) × 'Q4 Bills (q0)' (bills)")
-r = 5; hrow(ws, r, ["Vendor", "Bill / yr", "Fair prior-day %", "Recoverable", "Bill after"])
-order = ["33Across", "33Across API", "Cybba", "Justuno", "Sovrn"]
-dsmap = {"33Across": 28, "33Across API": 40, "Cybba": 36, "Justuno": 24, "Sovrn": 33}
-tot_bill = tot_rec = 0
+widths(ws, {"A": 16, "B": 13, "C": 16, "D": 19, "E": 14})
+title_block(ws, "Preemption — what our free logs already cover",
+            "Recoverable = bill x free prior-coverage share. Two grains: DOMAIN (exact match = conservative floor) and VERTICAL (how MM bids: same vertical, any domain). Bill-after uses vertical. Ranked by vertical $.",
+            "FLOOR $200K · TARGETING $412K", query_ref="'Q3 Fair Prior-Day' (domain) · 'Q8 Vertical grain (q3f)' · 'Q4 Bills (q0)'")
+r = 5; hrow(ws, r, ["Vendor", "Bill / yr", "Domain floor", "Vertical (targeting)", "Bill after"])
+order = ["33Across", "33Across API", "Sovrn", "Justuno", "Cybba"]
+dsmap = {"33Across": 28, "33Across API": 40, "Sovrn": 33, "Justuno": 24, "Cybba": 36}
+tb = td = tv = 0
 for i, v in enumerate(order):
-    b = BILL[v]; share = float(q3e[dsmap[v]]["pct_prior_dominant"]) / 100
-    rec = round(b * share); after = b - rec; tot_bill += b; tot_rec += rec
-    r += 1; drow(ws, r, [v, b, share, rec, after],
-                 fmts=[None, "$#,##0", "0.0%", "$#,##0", "$#,##0"], alt=(i % 2))
+    b = BILL[v]; ds = dsmap[v]
+    drec = round(b * float(q3e[ds]["pct_prior_dominant"]) / 100)
+    vrec = round(b * float(q3f[ds]["pct_dominant"]) / 100)
+    tb += b; td += drec; tv += vrec
+    r += 1; drow(ws, r, [v, b, drec, vrec, b - vrec],
+                 fmts=[None, "$#,##0", "$#,##0", "$#,##0", "$#,##0"], alt=(i % 2))
     ws.cell(r, 4).font = REDB
 r += 1
-drow(ws, r, ["ROSTER", tot_bill, tot_rec / tot_bill, tot_rec, tot_bill - tot_rec],
-     fmts=[None, "$#,##0", "0.0%", "$#,##0", "$#,##0"], bolds=[1, 1, 1, 1, 1])
+drow(ws, r, ["ROSTER", tb, td, tv, tb - tv], fmts=[None, "$#,##0", "$#,##0", "$#,##0", "$#,##0"], bolds=[1, 1, 1, 1, 1])
 for cc in range(1, 6): ws.cell(r, cc).fill = KICK; ws.cell(r, cc).font = NAVYB
 r += 2
-ws.cell(r, 1, "Sovrn & Justuno are barely overlap-driven — preemption does not fix them (see sheet 4). Same-day (naive) = $273.7K; upper bound (incl. vendor-fresher slice) = $243.5K.").font = SUB
-ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=5); ws.row_dimensions[r].height = 40
+ws.cell(r, 1, "Domain floor = a free log had the EXACT same (ip, domain) prior (conservative). Vertical = a free log put the IP in the same DS13 vertical prior — the grain MM actually bids on (an IP is biddable via ANY same-vertical visit, on any website). Vertical is DS13 only, a close proxy for the DS13+DS19 union (so slightly conservative). Both use the prior-day + recency-credited rule (see sheet 3).").font = SUB
+ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=5); ws.row_dimensions[r].height = 58
 
 # ---------------- 3 Augmentor Fix ----------------
 ws = wb.create_sheet("3 Augmentor Fix")
@@ -277,6 +281,8 @@ QUERIES = [
      "Q6 (audit map) — free-log coverage of the (ip x domain x date) universe (59.4% / 60.4%). BIG."),
     ("Q7 Drop savings (q3b)", "runbook/queries/q3b_credit_reassignment.sql",
      "Q7 (audit map) — first-reporter reassignment classes -> exact drop savings per vendor. BIG."),
+    ("Q8 Vertical grain (q3f)", "runbook/queries/q3f_category_prior_coverage.sql",
+     "Q8 (sheet 2) — the VERTICAL-grain preemption: did a free log put the IP in the same DS13 vertical prior. BIG (full run, all IPs)."),
 ]
 for nm, pth, hd in QUERIES:
     sql_sheet(nm, pth, hd)

@@ -579,6 +579,22 @@ Cybba 0.27×. Recommendation: preempt (−$200K) → renegotiate 33Across pair t
 Also fixed a two-lens bug (Justuno/Cybba are domain-driven; dependency-only ratio understated them) and a
 $0.1K footing rounding, both caught by an adversarial-verification workflow.
 
+**CATEGORY-GRAIN preemption — the targeting-truthful number ~2× the domain floor (q3f, 2026-07-21):** user
+clarified MM bids on an IP if it visited the advertiser's CATEGORY in the last 30 days — on ANY website, so
+targeting is (ip × category × 30d), not (ip × domain). Verified: at the IP grain a free log sees 88.5% of
+33Across's IPs same-day (just on different domains) vs 52.9% same-domain — so the domain grain understates
+redundancy. `q3f_category_prior_coverage.sql` measured free coverage at the **DS13 vertical** grain (one
+vertical/domain — cheaper than domain grain; the DS19 keyword multi-category explode blew the shuffle limit,
+deferred; vertical is broad so it's a close proxy for the DS13-OR-DS19 union → slightly conservative). FULL,
+all-IPs, prior_dominant (recency-credited) shares: **33Across 60.7%, 33A API 47.4%, Sovrn 43.8%, Cybba 42.0%,
+Justuno 17.0%**. **Vertical-grain preemption = $412.4K/yr** (33Across $256.2K, API $83.4K, Sovrn $50.8K,
+Justuno $13.1K, Cybba $9.0K) → roster **$812.4K → $400.0K**, vs the domain-grain floor $200.4K. **Sovrn is the
+headline: 0.1% domain → 43.8% vertical** — niche domains that never exact-match a free log, but its IPs sit in
+verticals free logs already cover. Workbook sheet 2 now shows BOTH grains (floor + targeting); q3f query =
+runbook Q8. 10% sample matched full to ~0.1pp. Query design lesson: category explode + per-event array-EXISTS
+timed out at 6h; MIN/MAX date GROUP BY + vendor-side-only-7-days made it tractable; DS19 explosion needs a
+separate heavily-sampled pass.
+
 ## 4d13. Post-preemption economics — bills if free logs stopped paying for co-held data (user question 2026-07-15)
 > **SUPERSEDED for the billing deck (2026-07-20):** the table below uses SAME-DAY free-cohold ($273.7K).
 > The augmentor bid-stream tautology inflates that; the fair prior-day number is **$200.4K** (see §4g).
