@@ -23,14 +23,15 @@
 -- Run (from workspace root): build 37d URIS as in q3e_v2, then bq_run.sh with svs+wcv+pc external defs.
 -- ============================================================================
 
+-- CATEGORY = DS13 VERTICAL only (one vertical per domain -> NO explosion; collapses domains into fewer
+-- rows than the domain grain, so this is CHEAPER than q3e_v2). Verticals are broad, so vertical coverage
+-- is a close proxy for the DS13-OR-DS19 union (an event covered by its vertical is in the union regardless
+-- of keyword). The DS19 keyword grain multiplies each domain into many categories and blows the shuffle
+-- limit at scale — it's a separate heavily-sampled refinement, deferred.
 WITH dom_cat AS (
-  SELECT domain_name AS dom, CONCAT('V:', CAST(vertical_id AS STRING)) AS cat
+  SELECT domain_name AS dom, CAST(vertical_id AS STRING) AS cat
   FROM wcv
   WHERE domain_name NOT IN ('yahoo.com', 'aol.com', 'easybrain.com') AND vertical_id IS NOT NULL
-  UNION DISTINCT
-  SELECT NET.REG_DOMAIN(composite_key) AS dom, CONCAT('K:', CAST(x.element AS STRING)) AS cat
-  FROM pc, UNNEST(data_source_category_id.list) x
-  WHERE NET.REG_DOMAIN(composite_key) IS NOT NULL AND SAFE_CAST(x.element AS INT64) >= 900000
 ),
 
 -- FREE side: full 37-day lookback, but only MIN/MAX date per (ip,cat) — cheap GROUP BY, no arrays.
