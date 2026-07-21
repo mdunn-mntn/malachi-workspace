@@ -188,26 +188,28 @@ for line in [
 
 # ---------------- 4 Worth vs Bill ----------------
 ws = wb.create_sheet("4 Worth vs Bill")
-widths(ws, {"A": 15, "B": 16, "C": 22, "D": 11, "E": 21, "F": 26})
-title_block(ws, "Did the vendor pay for itself? — money-made vs bill",
-            "WORTH = money-made = (media revenue on the vendor's UNIQUE serves) × margin, most generous. Data-licensing value (unique domains) is a SEPARATE coverage/keep comp, not money-made. Ranked by worth/bill.", "RESULT",
-            query_ref="'Q5 Dependency (q6)' = money-made · 'Q6 Domain band (q4)' = licensing")
-r = 5; hrow(ws, r, ["Vendor", "Bill after preempt", "Value produced (money-made)", "Worth / bill", "Data-licensing (domains)", "Read"])
-# (vendor, bill_after, money_made_ceiling, domain_value, read)
-worth = [("33Across API", 142814, 134000, 36000, "just under — pays only at the ceiling"),
-         ("33Across", 259967, 217000, 89000, "~1.2x over"),
-         ("Sovrn", 115764, 34000, 2400, "~3x over"),
-         ("Cybba", 17698, 3000, 4700, "~6x over"),
-         ("Justuno", 75800, 11000, 60000, "~7x over on profit; domain value $60K if kept for coverage")]
-for i, (v, after, money, dom, rd) in enumerate(worth):
-    ratio = money / after
-    r += 1; drow(ws, r, [v, after, money, ratio, dom, rd],
-                 fmts=[None, "$#,##0", "$#,##0", '0.00"x"', "$#,##0", None], alt=(i % 2))
-    ws.cell(r, 4).font = REDB if ratio < 0.5 else NAVYB
-    ws.cell(r, 6).alignment = LEFT
+widths(ws, {"A": 15, "B": 17, "C": 20, "D": 18})
+title_block(ws, "Did the vendor pay for itself?",
+            "Money-made = the vendor's UNIQUE won impressions × measured media eCPM × margin band, ×52 (solo counterfactual). Ranked by worth/bill.", "RESULT",
+            query_ref="sheet 'Q5 Dependency (q6)'")
+r = 5; hrow(ws, r, ["Vendor", "Bill after preempt", "Money-made value", "Worth ÷ bill"])
+# (vendor, bill_after, value_low_$K, value_high_$K) — range is the margin band; eCPM is measured-exact
+worth = [("33Across API", 142814, 45, 134),
+         ("33Across", 259967, 72, 217),
+         ("Sovrn", 115764, 11, 34),
+         ("Cybba", 17698, 1, 3),
+         ("Justuno", 75800, 4, 11)]
+for i, (v, after, lo, hi) in enumerate(worth):
+    wl, wh = lo * 1000 / after, hi * 1000 / after
+    r += 1
+    drow(ws, r, [v, after, f"${lo}K – ${hi}K", f"{wl:.2f}× – {wh:.2f}×"],
+         fmts=[None, "$#,##0", None, None], alt=(i % 2))
+    ws.cell(r, 3).alignment = RIGHT
+    ws.cell(r, 4).alignment = RIGHT
+    ws.cell(r, 4).font = REDB if wh < 0.5 else NAVYB
 r += 2
-ws.cell(r, 1, "Money-made = the profit the vendor's UNIQUE (sole) data actually produced: unique won impressions × MNTN's ~$11.5 media eCPM × margin, x52, most-generous (solo counterfactual). Every metered vendor < 1.0x -> none paid for itself even at the ceiling. The domain column is a DATA-LICENSING comp (unique classified domains x per-domain rate) — it does NOT reflect money made; it's the coverage value that can justify KEEPING a vendor (the reason the flat-fee 5x5/Predactiv are kept). Caveats: N=1 week, sole cut only, margin is an internal assumption -> generous.").font = SUB
-ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=6); ws.row_dimensions[r].height = 88
+ws.cell(r, 1, "Every vendor < 1.0× even at the top margin — none paid for itself. Media eCPM is measured per vendor (exact), not assumed; the range reflects the margin band only.").font = SUB
+ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4); ws.row_dimensions[r].height = 30
 
 # ---------------- 5 Recommendations ----------------
 ws = wb.create_sheet("5 Recommendations")

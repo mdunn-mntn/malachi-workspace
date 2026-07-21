@@ -1,28 +1,116 @@
 /* ============================================================================
-   AUDI-1141 — MM vs 3P prospecting performance by sales vertical (trailing 6mo)
+   AUDI-1141 - MM vs 3P prospecting performance by sales vertical (trailing 6mo)
    ----------------------------------------------------------------------------
-   Campaign-grain cohort with bucket / cap / zip flags + KPIs. Aggregation
-   (advertiser-weighted + impression-weighted) happens in Python.
+   Campaign-grain cohort. Aggregation (advertiser-weighted + pooled) in Python.
 
    Cohort : S1 prospecting (objective_id=1, funnel_level=1), delivered
-            (impressions>0) in trailing 180d. Classified at the bidder-facing
-            SEGMENT level (silver.audience.audience_segments, type=2, targeted).
-   Buckets: MM  = DS13/19/38/46 present, no 3P
-            3P  = DS17 ShareThis / DS18 Dstillery / DS35 LiveRamp, no MM
-            Mixed = both ; Neither = CRM/1P/geo-only (excluded downstream)
-   Cap    : HHST gate (household_score_threshold_archives). threshold>0 = gate on.
-   Zip    : zip-level (location_type_id=7) location_id in the INCLUDE block of
-            geos (before the first "op":"not") = narrowing → drop except Auto/ProServ.
-   Vertical: advertiser -> fpa_advertiser_verticals type=0 parent -> 8 sales buckets.
-   KPIs   : visits=views+clicks, conv=click+view conv, revenue=click+view order value,
-            spend=media+data+platform. Default (non-competing) attribution lens.
+            (impressions>0) trailing 180d. Latest bidder-facing targeted segment
+            (audience.audience_segments, type=2, is_targeted, rn=1 by update_time).
+
+   Bucketing (AND vs OR semantics, per TI-999 Pass 26 LCA tree-walk):
+     MM signal = DS13/19/38/46 positive ; 3P = DS17/18/35 positive.
+     A campaign is only counted as NARROWED when the 3P or geo clause is
+     AND-required (greatly restricts the audience); a 3P joined by OR is
+     additive ("also include these people") and stays MM.
+       3P            = 3P positive, no MM
+       MM restricted = MM AND (3P AND-include/mixed OR narrow geo zip/city/radius)
+       MM            = MM, 3P (if any) OR-additive, geo broad
+       Neither       = CRM/1P/geo-only (dropped downstream)
+     Narrow geo = zip (location_type_id=7) or city (6) in the geos INCLUDE block
+       (before first "op":"not"), or a geo_radii clause. Broad = national/DMA-tier.
+
+   HHST gate: household_score_threshold_archives.threshold>0 = intent gate on.
+   Vertical : advertiser -> fpa_advertiser_verticals type=0 parent -> 8 sales buckets.
+
+   Rates (per TI-999 Pass 26 - all over IMPRESSIONS):
+     IVR = visits/impressions   (visits = views+clicks)
+     CVR = conversions/impressions
+     CTR = clicks/impressions
+     CPV = spend/visits ; CPM = spend/impressions*1000 ; ROAS = revenue/spend
    ============================================================================ */
-WITH
-kpi AS (
+CREATE TEMP FUNCTION classify_3p_include_semantics(expr STRING) RETURNS STRING
+LANGUAGE js AS r"""
+  if (!expr) return 'no_3p_include';
+  let parsed; try { parsed = JSON.parse(expr); } catch (e) { return 'parse_error'; }
+  const root = parsed && parsed.categories && parsed.categories.where;
+  if (!root) return 'no_root';
+  const clauses = [];
+  function walk(node, parents, neg) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { for (const n of node) walk(n, parents, neg); return; }
+    const op = node.op;
+    if (op === 'not') { walk(node.value, parents.concat([{op:'not', node:node}]), neg + 1); return; }
+    if (op === 'or' || op === 'and') {
+      if (Array.isArray(node.value)) {
+        const np = parents.concat([{op:op, node:node}]);
+        for (const n of node.value) walk(n, np, neg);
+      }
+      return;
+    }
+    if (op === 'any') {
+      const ds = node.value && node.value.data_source_id;
+      const polarity = (neg % 2 === 1) ? 'neg' : 'pos';
+      clauses.push({ds:ds, polarity:polarity, parents:parents});
+      return;
+    }
+    if (node.value !== undefined) walk(node.value, parents, neg);
+  }
+  walk(root, [], 0);
+  const mmClauses = clauses.filter(c => c.polarity === 'pos' && [13,19,38,46].indexOf(c.ds) >= 0);
+  const tp3IncClauses = clauses.filter(c => c.polarity === 'pos' && [17,18,35].indexOf(c.ds) >= 0);
+  if (tp3IncClauses.length === 0) return 'no_3p_include';
+  if (mmClauses.length === 0) return '3p_include_without_mm';
+  let hasOR = false, hasAND = false;
+  for (const mm of mmClauses) {
+    for (const tp3 of tp3IncClauses) {
+      let lcaIdx = -1;
+      const minLen = Math.min(mm.parents.length, tp3.parents.length);
+      for (let i = 0; i < minLen; i++) {
+        if (mm.parents[i].node === tp3.parents[i].node) lcaIdx = i;
+        else break;
+      }
+      if (lcaIdx >= 0) {
+        const lcaOp = mm.parents[lcaIdx].op;
+        if (lcaOp === 'or') hasOR = true;
+        else if (lcaOp === 'and') hasAND = true;
+      } else { hasAND = true; }
+    }
+  }
+  if (hasOR && hasAND) return 'mixed';
+  if (hasOR) return 'OR_include';
+  if (hasAND) return 'AND_include';
+  return 'unclear';
+""";
+
+CREATE TEMP FUNCTION parse_expression(expr STRING)
+RETURNS ARRAY<STRUCT<data_source_id INT64, polarity STRING>>
+LANGUAGE js AS r"""
+  if (!expr) return [];
+  let parsed; try { parsed = JSON.parse(expr); } catch (e) { return []; }
+  const out = [];
+  function walk(node, negDepth) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { for (const n of node) walk(n, negDepth); return; }
+    const op = node.op;
+    if (op === 'not') { walk(node.value, negDepth + 1); return; }
+    if (op === 'any') {
+      if (node.value && node.value.data_source_id != null) {
+        out.push({data_source_id: node.value.data_source_id, polarity: (negDepth % 2 === 1) ? 'negative' : 'positive'});
+      }
+      return;
+    }
+    if (node.value !== undefined) walk(node.value, negDepth);
+  }
+  if (parsed && parsed.categories && parsed.categories.where) walk(parsed.categories.where, 0);
+  return out;
+""";
+
+WITH kpi AS (
   SELECT campaign_id,
     ANY_VALUE(advertiser_id) AS advertiser_id,
     SUM(impressions) AS imps,
     SUM(views) + SUM(clicks) AS visits,
+    SUM(clicks) AS clicks,
     SUM(click_conversions) + SUM(view_conversions) AS conv,
     SUM(click_order_value) + SUM(view_order_value) AS revenue,
     SUM(media_spend) + SUM(data_spend) + SUM(platform_spend) AS spend
@@ -37,43 +125,41 @@ camp AS (
   JOIN `dw-main-bronze.integrationprod.campaigns` c USING (campaign_id)
   WHERE c.deleted = FALSE AND c.objective_id = 1 AND c.funnel_level = 1
 ),
-seg AS (
-  SELECT s.campaign_id,
-    STRING_AGG(s.expression, "|||") AS expr_all,
-    ARRAY_CONCAT_AGG(REGEXP_EXTRACT_ALL(s.expression, r'"data_source_id":([0-9]+)')) AS ds_ids
-  FROM `dw-main-silver.audience.audience_segments` s
-  JOIN camp USING (campaign_id)
-  WHERE s.expression_type_id = 2 AND s.is_targeted = TRUE
-  GROUP BY s.campaign_id
+expr AS (
+  SELECT campaign_id, expression FROM (
+    SELECT s.campaign_id, s.expression,
+      ROW_NUMBER() OVER (PARTITION BY s.campaign_id ORDER BY s.update_time DESC) AS rn
+    FROM `dw-main-silver.audience.audience_segments` s
+    WHERE s.expression_type_id = 2 AND s.is_targeted = TRUE
+      AND s.campaign_id IN (SELECT campaign_id FROM camp)
+  ) WHERE rn = 1
 ),
-ds_flags AS (
-  SELECT campaign_id, expr_all,
-    ('13' IN UNNEST(ds_ids) OR '19' IN UNNEST(ds_ids) OR '38' IN UNNEST(ds_ids) OR '46' IN UNNEST(ds_ids)) AS has_mm,
-    ('17' IN UNNEST(ds_ids) OR '18' IN UNNEST(ds_ids) OR '35' IN UNNEST(ds_ids)) AS has_3p,
-    ('19' IN UNNEST(ds_ids)) AS has_ds19,
-    ('13' IN UNNEST(ds_ids)) AS has_ds13,
-    ('46' IN UNNEST(ds_ids)) AS has_ds46,
-    ('38' IN UNNEST(ds_ids)) AS has_ds38
-  FROM seg
-),
-inc AS (
-  SELECT campaign_id,
-    REGEXP_EXTRACT(expr_all, r'"geos":\{"where":\{"op":"and","value":\[(.*?)\{"op":"not"') AS inc_block,
-    REGEXP_CONTAINS(expr_all, r'geo_radii') AS has_radius
-  FROM ds_flags
+parsed AS (
+  SELECT campaign_id, expression,
+    classify_3p_include_semantics(expression) AS semantics,
+    parse_expression(expression) AS cats,
+    REGEXP_EXTRACT(expression, r'"geos":\{"where":\{"op":"and","value":\[(.*?)\{"op":"not"') AS inc_block,
+    REGEXP_CONTAINS(expression, r'geo_radii') AS radius_narrow
+  FROM expr
 ),
 inc_ids AS (
   SELECT campaign_id, CAST(TRIM(id) AS INT64) AS location_id
-  FROM inc, UNNEST(REGEXP_EXTRACT_ALL(inc_block, r'"location_ids":\[([0-9,]+)\]')) l, UNNEST(SPLIT(l, ",")) id
+  FROM parsed, UNNEST(REGEXP_EXTRACT_ALL(inc_block, r'"location_ids":\[([0-9,]+)\]')) l, UNNEST(SPLIT(l, ",")) id
   WHERE TRIM(id) != ""
 ),
-zip_flag AS (
+geo AS (
   SELECT i.campaign_id,
-    LOGICAL_OR(ld.location_type_id = 7) AS zip_in_include,
-    LOGICAL_OR(ld.location_type_id = 6) AS city_in_include
-  FROM inc_ids i
-  JOIN `dw-main-silver.geo.location_data` ld USING (location_id)
+    LOGICAL_OR(ld.location_type_id = 7) AS zip_narrow,
+    LOGICAL_OR(ld.location_type_id = 6) AS city_narrow
+  FROM inc_ids i JOIN `dw-main-silver.geo.location_data` ld USING (location_id)
   GROUP BY 1
+),
+flags AS (
+  SELECT p.campaign_id, p.semantics, p.radius_narrow,
+    LOGICAL_OR(c.data_source_id IN (13,19,38,46) AND c.polarity = 'positive') AS has_mm,
+    LOGICAL_OR(c.data_source_id IN (17,18,35) AND c.polarity = 'positive') AS has_3p_incl
+  FROM parsed p LEFT JOIN UNNEST(p.cats) c
+  GROUP BY 1,2,3
 ),
 hhst AS (
   SELECT a.campaign_id,
@@ -111,24 +197,30 @@ SELECT
     WHEN 137 THEN 'Auto, Travel & Hospitality' WHEN 135 THEN 'Auto, Travel & Hospitality' WHEN 134 THEN 'Auto, Travel & Hospitality' WHEN 123 THEN 'Auto, Travel & Hospitality'
     ELSE 'Other / Unmapped'
   END AS sales_vertical,
-  CASE WHEN f.has_mm AND f.has_3p THEN 'Mixed'
-       WHEN f.has_mm AND NOT f.has_3p THEN 'MM'
-       WHEN f.has_3p AND NOT f.has_mm THEN '3P'
-       ELSE 'Neither' END AS bucket,
-  f.has_ds19, f.has_ds13, f.has_ds46, f.has_ds38,
-  COALESCE(z.zip_in_include, FALSE) AS zip_narrow,
-  COALESCE(z.city_in_include, FALSE) AS city_narrow,
-  COALESCE(i.has_radius, FALSE) AS radius_narrow,
+  COALESCE(f.has_mm, FALSE) AS has_mm,
+  COALESCE(f.has_3p_incl, FALSE) AS has_3p_incl,
+  f.semantics,
+  COALESCE(g.zip_narrow, FALSE) AS zip_narrow,
+  COALESCE(g.city_narrow, FALSE) AS city_narrow,
+  COALESCE(f.radius_narrow, FALSE) AS radius_narrow,
+  CASE
+    WHEN COALESCE(f.has_mm,FALSE) AND (
+           f.semantics IN ('AND_include','mixed')
+           OR COALESCE(g.zip_narrow,FALSE) OR COALESCE(g.city_narrow,FALSE) OR COALESCE(f.radius_narrow,FALSE)
+         ) THEN 'MM restricted'
+    WHEN COALESCE(f.has_mm,FALSE) THEN 'MM'
+    WHEN COALESCE(f.has_3p_incl,FALSE) THEN '3P'
+    ELSE 'Neither'
+  END AS bucket,
   COALESCE(h.hhst_writes, 0) AS hhst_writes,
   COALESCE(h.hhst_writes_gated, 0) AS hhst_writes_gated,
   COALESCE(h.hhst_max, 0) AS hhst_max,
   COALESCE(h.hhst_latest, 0) AS hhst_latest,
   COALESCE(cu.hhst_current, 0) AS hhst_current,
-  c.imps, c.visits, c.conv, c.revenue, c.spend
+  c.imps, c.visits, c.clicks, c.conv, c.revenue, c.spend
 FROM camp c
-JOIN ds_flags f USING (campaign_id)
-LEFT JOIN inc i USING (campaign_id)
-LEFT JOIN zip_flag z USING (campaign_id)
+JOIN flags f USING (campaign_id)
+LEFT JOIN geo g USING (campaign_id)
 LEFT JOIN hhst h USING (campaign_id)
 LEFT JOIN cur cu USING (campaign_id)
 LEFT JOIN vert v ON v.advertiser_id = c.advertiser_id

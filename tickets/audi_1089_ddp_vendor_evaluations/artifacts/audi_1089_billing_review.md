@@ -128,23 +128,20 @@ already-tracked pair is a fresh billable event. So free logs, in practice, do **
 in AUDI-1093.
 
 ### 3.3 Even after preemption, no metered vendor paid for itself
-"Worth" here = **money-made** = the profit the vendor's *unique* data actually produced (media revenue on
-its sole serves × margin, most generous). That's the honest "did it pay for itself" test — not a
-licensing comp. After preemption:
+"Worth" = **money-made** = the vendor's unique won impressions × measured media eCPM (exact) × margin band,
+×52. The **range is the margin band only** — the eCPM is measured, not assumed. After preemption:
 
-| Vendor | Bill AFTER preempt | Value produced (money-made) | Worth ÷ bill | Data-licensing (domains) |
-|---|--:|--:|--:|--:|
-| 33Across API | $142.8K | $134K | **0.94×** | $36K |
-| 33Across | $259.9K | $217K | **0.83×** | $89K |
-| Sovrn | $115.8K | $34K | **0.29×** | $2.4K |
-| Cybba | $17.7K | $3K | **0.17×** | $4.7K |
-| Justuno | $75.8K | $11K | **0.15×** | $60K |
+| Vendor | Bill AFTER preempt | Money-made value | Worth ÷ bill |
+|---|--:|--:|--:|
+| 33Across API | $142.8K | $45K – $134K | 0.32× – 0.94× |
+| 33Across | $259.9K | $72K – $217K | 0.28× – 0.83× |
+| Sovrn | $115.8K | $11K – $34K | 0.09× – 0.29× |
+| Cybba | $17.7K | $1K – $3K | 0.06× – 0.17× |
+| Justuno | $75.8K | $4K – $11K | 0.05× – 0.15× |
 
-Every metered vendor is **< 1.0×** — none paid for itself, even at the most generous margin. The
-**data-licensing** column (unique classified domains × per-domain rate) is a *separate* coverage comp — it
-does **not** reflect money made. It matters for the KEEP call (it's why the flat-fee 5x5/Predactiv are
-kept), and it's the only reason to keep Justuno at a trimmed price rather than drop it. Preemption fixes
-the double-pay; the residual needs repricing or dropping.
+Every metered vendor is **< 1.0×** even at the top margin — none paid for itself. (The coverage/licensing
+value of a vendor's unique domains is a separate keep-decision lens — it lives on the recommendation table,
+not here.) Preemption fixes the double-pay; the residual needs repricing or dropping.
 
 ---
 
