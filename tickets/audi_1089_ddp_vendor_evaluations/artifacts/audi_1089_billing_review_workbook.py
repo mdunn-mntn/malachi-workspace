@@ -95,8 +95,8 @@ for a, b in [
      "Roster $812.4K -> $612.0K, keeping ALL vendor data. Conservative (free-dominant); upper bound $243.5K. A naive same-day test says $273.7K but over-credits augmentor (the bid stream) — see sheet 3."),
     ("3. No metered vendor paid for itself",
      "On money-made (profit its unique data produced), every metered vendor is < 1.0x after preemption: API 0.94x, 33Across 0.83x, Sovrn 0.29x, Cybba 0.17x, Justuno 0.15x. (Justuno/Cybba have separate domain-licensing value if kept for coverage — see sheet 4.)"),
-    ("4. Recommendation",
-     "Preempt (-$200K) -> renegotiate the two 33Across feeds toward the fair cap -> drop Sovrn + Cybba. Lock flat-fee (5x5/Predactiv) prices first."),
+    ("4. What to do first",
+     "Add the preemption rule: -$200K/yr, keep all data, we own the meter (no vendor cooperation needed). Repricing the residual is a separate negotiation. Note: $200K is conservative on grain — MM targeting is CATEGORY-based, not domain-based, so free coverage (and the recoverable) is likely higher."),
 ]:
     ws.cell(r, 1, a).font = BOLD; ws.cell(r, 1).alignment = Alignment(vertical="top")
     c = ws.cell(r, 2, b); c.alignment = LEFT
@@ -113,7 +113,7 @@ ws.cell(r, 2, "GRAIN (conservative): coverage is matched on the exact DOMAIN, bu
               "changed May 2026 (never mix months); flat-fee amounts pending finance; winners-table imp counts over-count the meter (prove the RATE, not the $)."); ws.cell(r, 2).alignment = LEFT
 ws.row_dimensions[r].height = 92; r += 2
 ws.cell(r, 1, "Sheets").font = NAVYB
-ws.cell(r, 2, "Data: 1 Meter Proof · 2 Preemption (fair) · 3 Augmentor Fix · 4 Worth vs Bill · 5 Recommendations · 6 Audit Map. "
+ws.cell(r, 2, "Data: 1 Meter Proof · 2 Preemption (fair) · 3 Augmentor Fix · 4 Worth vs Bill · 5 Bill Impact · 6 Audit Map. "
               "Each data sheet names its query on the green 'Query ▸' line. SQL: all 8 backing queries are embedded as "
               "'Qn ...' sheets (Q1 Meter Proof, Q2 Targeted Signal, Q3 Fair Prior-Day, Q4 Bills, Q5 Dependency, Q6 Free coverage, Q7 Drop savings) — paste-and-run.")
 ws.cell(r, 2).alignment = LEFT; ws.row_dimensions[r].height = 56
@@ -212,30 +212,22 @@ ws.cell(r, 1, "Every vendor < 1.0× even at the top margin — none paid for its
 ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4); ws.row_dimensions[r].height = 30
 
 # ---------------- 5 Recommendations ----------------
-ws = wb.create_sheet("5 Recommendations")
-widths(ws, {"A": 16, "B": 6, "C": 12, "D": 14, "E": 14, "F": 42})
-title_block(ws, "What we should do", "Move 1: preempt (-$200K, keep all data). Move 2: renegotiate down or drop the residual (worth is on sheet 4). Ranked by current bill.", "RECOMMENDATION", query_ref="'Q4 Bills (q0)' × 'Q3 Fair Prior-Day' × 'Q5 Dependency (q6)'")
-r = 5; hrow(ws, r, ["Vendor", "DS", "Billing", "Current / yr", "After preempt", "Recommendation"])
-rec = [("33Across", 28, "$0.50 CPM", 422024, 259967, "Renegotiate down — biggest lever"),
-       ("33Across API", 40, "$0.50 CPM", 175879, 142814, "Renegotiate down or drop (same vendor as DS28)"),
-       ("Sovrn", 33, "$0.50 CPM", 115880, 115764, "DROP"),
-       ("Justuno", 24, "$0.50 CPM", 77111, 75800, "Renegotiate down or drop"),
-       ("Cybba", 36, "$0.50 CPM", 21504, 17698, "DROP"),
-       ("Klickly", 39, "flat", None, None, "DROP"),
-       ("Predactiv", 26, "flat", None, None, "KEEP — we depend on it (CRM/identity)"),
-       ("5x5", 25, "flat", None, None, "KEEP")]
-for i, (v, ds, bt, cur, aft, act) in enumerate(rec):
+ws = wb.create_sheet("5 Bill Impact")
+widths(ws, {"A": 16, "B": 6, "C": 12, "D": 15, "E": 15})
+title_block(ws, "Per-vendor bills — before and after preemption", "All 8 site-visit vendors. Flat-fee vendors have no meter, so preemption doesn't change them. Ranked by current bill.", "BILLS", query_ref="'Q4 Bills (q0)' × 'Q3 Fair Prior-Day'")
+r = 5; hrow(ws, r, ["Vendor", "DS", "Billing", "Current / yr", "After preempt"])
+rec = [("33Across", 28, "$0.50 CPM", 422024, 259967),
+       ("33Across API", 40, "$0.50 CPM", 175879, 142814),
+       ("Sovrn", 33, "$0.50 CPM", 115880, 115764),
+       ("Justuno", 24, "$0.50 CPM", 77111, 75800),
+       ("Cybba", 36, "$0.50 CPM", 21504, 17698),
+       ("Klickly", 39, "flat", None, None),
+       ("Predactiv", 26, "flat", None, None),
+       ("5x5", 25, "flat", None, None)]
+for i, (v, ds, bt, cur, aft) in enumerate(rec):
     r += 1
-    drow(ws, r, [v, ds, bt, cur if cur else "pending", aft if aft else "-", act],
-         fmts=[None, "0", None, "$#,##0" if cur else None, "$#,##0" if aft else None, None], alt=(i % 2))
-    ws.cell(r, 6).alignment = LEFT
-    if act.startswith("DROP"):
-        ws.cell(r, 6).font = REDB
-    if act.startswith("KEEP"):
-        ws.cell(r, 6).font = Font(color="1E7A34", bold=True)
-r += 2
-ws.cell(r, 1, "Renegotiate before dropping (a drop can hand credits to another vendor mid-deal); lock flat-fee prices first.").font = SUB
-ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=6); ws.row_dimensions[r].height = 22
+    drow(ws, r, [v, ds, bt, cur if cur else "pending", aft if aft else "-"],
+         fmts=[None, "0", None, "$#,##0" if cur else None, "$#,##0" if aft else None], alt=(i % 2))
 
 # ---------------- 6 Audit Map ----------------
 ws = wb.create_sheet("6 Audit Map")
@@ -290,7 +282,7 @@ for nm, pth, hd in QUERIES:
     sql_sheet(nm, pth, hd)
 
 # freeze header rows on the data sheets
-for nm in ["1 Meter Proof", "2 Preemption (fair)", "3 Augmentor Fix", "4 Worth vs Bill", "5 Recommendations", "6 Audit Map"]:
+for nm in ["1 Meter Proof", "2 Preemption (fair)", "3 Augmentor Fix", "4 Worth vs Bill", "5 Bill Impact", "6 Audit Map"]:
     wb[nm].freeze_panes = "A6"
 
 path = os.path.join(HERE, "audi_1089_billing_review.xlsx")

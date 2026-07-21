@@ -1387,6 +1387,24 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   leftover/test); prompt has missing spaces; taxonomy auto-add disabled. BGE-large is free + already in-pipeline →
   candidate to replace gpt-4o-mini for many URLs.
 
+### MM targeting is at the (IP × CATEGORY × 30-day) grain — an IP is biddable via ANY same-category visit (user, 2026-07-20)
+The unit of MM targeting is the **category**, not the domain. An IP becomes eligible (and can score HI) for an MM
+advertiser if it had a site visit **in the same category/vertical as the advertiser within the last 30 days** — and
+the visit can be to **any** website, not the advertiser's own site, as long as that site's URL classifies into the
+target vertical (DS13) or keyword-category (DS19). Implications:
+- **(IP × domain × date)** is the raw signal / coverage total (and where keywords etc. are extracted), but it is NOT
+  the targeting unit. Two different domains that classify into the same category are interchangeable for targeting.
+- The **targeting-truthful grain** for "would this IP have been biddable from free-log data" is **(IP × category ×
+  30-day window)** — did a free log see the IP visit ANY same-category domain in the window (not the exact domain).
+- **Score depends on categorization + recency** — the 30-day window, with fresher visits scoring higher.
+- **Vendor-value implication:** a paid vendor's signal is redundant for targeting if a free log (or another source)
+  already put the IP into the same category within the window — **even via a different domain**. So measuring free
+  coverage at the exact (ip × domain × date) grain (q3c / q3e) **understates** redundancy; the AUDI-1089 preemption $
+  ($200.4K) built on domain-grain overlap is a conservative **floor**. The category-grain measure (`q3f`: map each
+  visited domain → its vertical/keyword, then check IP × category × 30d) is the correct targeting basis and recovers
+  more. This also explains why 33Across's same-day domain-grain free-cohold is only ~53% while augmentor (the bid
+  stream) has ~all the IPs: augmentor logs the bid-page domain, usually a *different* domain than the vendor reports.
+
 ### Vertical Classification
 `fpa.advertiser_verticals` (Greenplum/BQ) stores the advertiser→vertical mapping.
 - `type = 1` = primary vertical (use this for filtering)
