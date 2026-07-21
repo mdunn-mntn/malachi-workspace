@@ -33,51 +33,44 @@ WITH dom_cat AS (
   WHERE NET.REG_DOMAIN(composite_key) IS NOT NULL AND SAFE_CAST(x.element AS INT64) >= 900000
 ),
 
-trips AS (
-  SELECT DISTINCT
-    CAST(s.data_source_id AS INT64) AS ds,
-    s.ip,
-    NET.REG_DOMAIN(s.url) AS dom,
-    SAFE_CAST(s.dt AS DATE) AS dd
-  FROM svs s
-  WHERE s.ip IS NOT NULL AND s.ip NOT LIKE '%:%'
-    AND MOD(ABS(FARM_FINGERPRINT(s.ip)), 10) = 0          -- 10% IP SAMPLE (remove line for full run)
-),
-
-cat_events AS (                                            -- (ds, ip, category, date) — the targeting grain
-  SELECT DISTINCT t.ds, t.ip, dc.cat, t.dd
-  FROM trips t
-  JOIN dom_cat dc ON t.dom = dc.dom
-),
-
+-- FREE side: full 37-day lookback, but only MIN/MAX date per (ip,cat) — cheap GROUP BY, no arrays.
+-- free_min < D approximates "free had (ip,cat) in [D-30,D-1]" (the 37d scan bounds the lookback for the
+-- 7-day measurement window; slight over-credit of free dates 30-37d old on the latest day — negligible).
 free_cat AS (
-  SELECT ip, cat, ARRAY_AGG(DISTINCT dd) AS fdates, MAX(dd) AS free_last
-  FROM cat_events WHERE ds IN (23, 30) GROUP BY ip, cat
+  SELECT s.ip, dc.cat, MIN(SAFE_CAST(s.dt AS DATE)) AS free_min, MAX(SAFE_CAST(s.dt AS DATE)) AS free_last
+  FROM svs s
+  JOIN dom_cat dc ON NET.REG_DOMAIN(s.url) = dc.dom
+  WHERE s.data_source_id IN (23, 30) AND s.ip IS NOT NULL AND s.ip NOT LIKE '%:%'
+    AND MOD(ABS(FARM_FINGERPRINT(s.ip)), 10) = 0          -- 10% IP SAMPLE (remove line for full run)
+  GROUP BY 1, 2
 ),
 
+-- VENDOR side: only the 7-day measurement window (small).
 vt AS (
-  SELECT ds, ip, cat, dd FROM cat_events
-  WHERE ds NOT IN (23, 30) AND dd >= DATE '2026-06-25'     -- 7-day measurement window
+  SELECT DISTINCT CAST(s.data_source_id AS INT64) AS ds, s.ip, dc.cat, SAFE_CAST(s.dt AS DATE) AS dd
+  FROM svs s
+  JOIN dom_cat dc ON NET.REG_DOMAIN(s.url) = dc.dom
+  WHERE s.data_source_id NOT IN (23, 30) AND SAFE_CAST(s.dt AS DATE) >= DATE '2026-06-25'
+    AND s.ip IS NOT NULL AND s.ip NOT LIKE '%:%'
+    AND MOD(ABS(FARM_FINGERPRINT(s.ip)), 10) = 0          -- 10% IP SAMPLE (remove line for full run)
 ),
 
 cls AS (
   SELECT
     v.ds,
-    (fc.ip IS NOT NULL AND EXISTS(
-        SELECT 1 FROM UNNEST(fc.fdates) f
-        WHERE f >= DATE_SUB(v.dd, INTERVAL 30 DAY) AND f < v.dd))    AS free_prior30,
-    (fc.free_last IS NOT NULL AND fc.free_last >= v.dd)             AS free_asfresh
+    (fc.free_min IS NOT NULL AND fc.free_min < v.dd)     AS free_prior,
+    (fc.free_last IS NOT NULL AND fc.free_last >= v.dd)  AS free_asfresh
   FROM vt AS v
   LEFT JOIN free_cat fc USING (ip, cat)
 )
 
 SELECT
   ds,
-  COUNT(*)                                                          AS cat_events,
-  COUNTIF(free_prior30)                                             AS prior30,
-  COUNTIF(free_prior30 AND free_asfresh)                            AS prior_dominant,
-  ROUND(COUNTIF(free_prior30) / COUNT(*) * 100, 1)                  AS pct_prior30,
-  ROUND(COUNTIF(free_prior30 AND free_asfresh) / COUNT(*) * 100, 1) AS pct_dominant
+  COUNT(*)                                                       AS cat_events,
+  COUNTIF(free_prior)                                            AS prior,
+  COUNTIF(free_prior AND free_asfresh)                           AS prior_dominant,
+  ROUND(COUNTIF(free_prior) / COUNT(*) * 100, 1)                 AS pct_prior,
+  ROUND(COUNTIF(free_prior AND free_asfresh) / COUNT(*) * 100, 1) AS pct_dominant
 FROM cls
 GROUP BY ds
 ORDER BY ds;
