@@ -35,19 +35,22 @@ def scorecard(frame, keys):
             CTR_pooled = clicks/imps if imps else np.nan,
             CPV_pooled = spend/visits if visits else np.nan,
             CPM_pooled = 1000*spend/imps if imps else np.nan,
+            CPA_pooled = spend/conv if conv else np.nan,
             ROAS_pooled = rev/spend if spend else np.nan)
         adv = g.groupby("advertiser_id").agg(imps=("imps","sum"),visits=("visits","sum"),
                 clicks=("clicks","sum"),conv=("conv","sum"),revenue=("revenue","sum"),spend=("spend","sum"))
         adv = adv[adv.imps >= ADV_MIN_IMPS]
         ivr = adv.visits/adv.imps; cvr = adv.conv/adv.imps; ctr = adv.clicks/adv.imps
         cpv = (adv.spend/adv.visits).replace([np.inf,-np.inf],np.nan)
+        cpa = (adv.spend/adv.conv).replace([np.inf,-np.inf],np.nan)
         roas = (adv.revenue/adv.spend).replace([np.inf,-np.inf],np.nan)
         rows.append({**({k:v for k,v in zip(keys,(gkey if isinstance(gkey,tuple) else (gkey,)))}),
             "n_adv": g.advertiser_id.nunique(), "n_adv_qual": len(adv), "n_camp": len(g),
             "spend": spend, "imps": imps,
             # advertiser-weighted MEDIAN (headline)
             "IVR_med": ivr.median(), "CVR_med": cvr.median(), "CTR_med": ctr.median(),
-            "CPV_med": cpv.median(), "ROAS_med": roas[adv.revenue>0].median(), "n_adv_roas": int((adv.revenue>0).sum()),
+            "CPV_med": cpv.median(), "CPA_med": cpa[adv.conv>0].median(),
+            "ROAS_med": roas[adv.revenue>0].median(), "n_adv_roas": int((adv.revenue>0).sum()),
             # advertiser-weighted MEAN
             "IVR_mean": ivr.mean(), "CPV_mean": cpv.mean(),
             **pooled})

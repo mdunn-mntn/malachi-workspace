@@ -24,14 +24,13 @@ PCT2="0.00%"; PCT3="0.000%"; USD="\"$\"#,##0.00"; USD0="\"$\"#,##0"; NUM2="0.00"
 wb=Workbook()
 
 def autosize(ws, df, wide=None):
-    """Width fits the header's longest word (so multi-word headers wrap cleanly and single words
-    like 'Advertisers' never clip). wide = {col: value_display_len} for columns whose DATA is
-    longer than any header word (e.g. Spend, company names)."""
+    """Width fits the WHOLE header on one line, plus padding for bold text and the filter-dropdown
+    icon (headers must never clip). wide = {col: value_display_len} for columns whose DATA is longer
+    than the header (e.g. Spend, company names)."""
     wide = wide or {}
     for j,col in enumerate(df.columns,1):
-        words=[len(w) for w in str(col).split()] or [len(str(col))]
-        w=max(max(words), int(wide.get(col,0)))
-        ws.column_dimensions[get_column_letter(j)].width = min(max(w+3, 10), 46)
+        w=max(len(str(col)), int(wide.get(col,0)))
+        ws.column_dimensions[get_column_letter(j)].width = min(max(w+4, 10), 46)
 
 def write_table(ws, df, start_row, fmts, band=True, header_wrap=True):
     for j,col in enumerate(df.columns,1):
@@ -91,6 +90,7 @@ rows=[
  ("CVR","Conversion rate. Conversions divided by impressions."),
  ("CTR","Click rate. Clicks divided by impressions."),
  ("CPV","Cost per visit. Spend divided by visits."),
+ ("CPA","Cost per acquisition. Spend divided by conversions. Directional (pixel-dependent), like ROAS."),
  ("CPM","Cost per thousand impressions."),
  ("ROAS","Revenue divided by spend."),
  ("Weighting","Headline numbers are advertiser-weighted medians (each advertiser counts once, so one large account cannot set the result). Columns labeled 'pooled' are impression or spend weighted. Advertisers with under 20,000 impressions in a group are excluded from the median so a tiny campaign cannot swing it."),
@@ -119,28 +119,26 @@ def compare_tab(wsname, tt, sub, src, gcol, gA, gB, ov_src=None):
         x=src[(src.sales_vertical==v)&(src[gcol]==g)]; return x[col].iloc[0] if len(x) else np.nan
     verts=[v for v in src.sales_vertical.unique() if v!="Other / Unmapped"]
     verts=sorted(verts,key=lambda v:-(c(v,gA,"IVR_med")/max(c(v,gB,"IVR_med"),1e-9)))
-    aI,bI=f"{gA} IVR",f"{gB} IVR"; aC,bC=f"{gA} CPV",f"{gB} CPV"; aR,bR=f"{gA} ROAS",f"{gB} ROAS"
-    aN,bN=f"{gA} advertisers",f"{gB} advertisers"
-    hd=pd.DataFrame([{
-        "Sales vertical":v, aI:c(v,gA,"IVR_med"), bI:c(v,gB,"IVR_med"),
-        "IVR advantage":c(v,gA,"IVR_med")/c(v,gB,"IVR_med") if c(v,gB,"IVR_med") else np.nan,
-        aC:c(v,gA,"CPV_med"), bC:c(v,gB,"CPV_med"),
-        aR:c(v,gA,"ROAS_med"), bR:c(v,gB,"ROAS_med"),
-        aN:_int0(c(v,gA,"n_adv")), bN:_int0(c(v,gB,"n_adv")),
-    } for v in verts])
+    # short column labels (which MM group is named in the tab title/subtitle)
+    aI,bI="MM IVR","3P IVR"; aC,bC="MM CPV","3P CPV"; aR,bR="MM ROAS","3P ROAS"
+    aN,bN="MM advertisers","3P advertisers"
+    def rowd(vlabel, get):
+        return {"Sales vertical":vlabel,
+            aI:get("IVR_med",gA), bI:get("IVR_med",gB),
+            "IVR advantage": get("IVR_med",gA)/get("IVR_med",gB) if get("IVR_med",gB) else np.nan,
+            aC:get("CPV_med",gA), bC:get("CPV_med",gB),
+            aR:get("ROAS_med",gA), bR:get("ROAS_med",gB),
+            "ROAS advantage": get("ROAS_med",gA)/get("ROAS_med",gB) if get("ROAS_med",gB) else np.nan,
+            aN:_int0(get("n_adv",gA)), bN:_int0(get("n_adv",gB))}
+    hd=pd.DataFrame([rowd(v, lambda col,g,v=v: c(v,g,col)) for v in verts])
     ws=wb.create_sheet(wsname); ws.sheet_view.showGridLines=False
     ws["A1"]=tt; ws["A1"].font=TITLE; ws["A2"]=sub; ws["A2"].font=SUB
+    fmts={aI:PCT2,bI:PCT2,"IVR advantage":"0.0\"x\"",aC:USD,bC:USD,aR:NUM2,bR:NUM2,"ROAS advantage":"0.0\"x\""}
     start=4
-    if ov_src is not None:  # overall summary line(s) above the by-vertical table
+    if ov_src is not None:  # overall summary line above the by-vertical table
         ows=ov_src.set_index(gcol)
-        allrow=pd.DataFrame([{
-            "Sales vertical":"ALL VERTICALS", aI:ows.loc[gA,"IVR_med"], bI:ows.loc[gB,"IVR_med"],
-            "IVR advantage":ows.loc[gA,"IVR_med"]/ows.loc[gB,"IVR_med"],
-            aC:ows.loc[gA,"CPV_med"], bC:ows.loc[gB,"CPV_med"],
-            aR:ows.loc[gA,"ROAS_med"], bR:ows.loc[gB,"ROAS_med"],
-            aN:_int0(ows.loc[gA,"n_adv"]), bN:_int0(ows.loc[gB,"n_adv"])}])
-        start=write_table(ws,allrow,4,{aI:PCT2,bI:PCT2,"IVR advantage":"0.0\"x\"",aC:USD,bC:USD,aR:NUM2,bR:NUM2})+1
-    fmts={aI:PCT2,bI:PCT2,"IVR advantage":"0.0\"x\"",aC:USD,bC:USD,aR:NUM2,bR:NUM2}
+        allrow=pd.DataFrame([rowd("ALL VERTICALS", lambda col,g: ows.loc[g,col])])
+        start=write_table(ws,allrow,4,fmts)+1
     write_table(ws,hd,start,fmts)
     ws.freeze_panes=f"A{start+1}"; ws.auto_filter.ref=f"A{start}:{get_column_letter(len(hd.columns))}{start+len(hd)}"
     autosize(ws,hd,{"Sales vertical":26})
@@ -158,14 +156,15 @@ compare_tab("MM gated vs 3P by vertical",
 # ================= 3) Full scorecard =================
 fcols={"sales_vertical":"Sales vertical","bucket_detail":"Group","n_adv":"Advertisers",
  "n_camp":"Campaigns","spend":"Spend","imps":"Impressions","IVR_med":"IVR (median)","CVR_med":"CVR (median)",
- "CTR_med":"CTR (median)","CPV_med":"CPV (median)","ROAS_med":"ROAS (median)",
- "IVR_pooled":"IVR (pooled)","CPV_pooled":"CPV (pooled)","CPM_pooled":"CPM (pooled)","ROAS_pooled":"ROAS (pooled)"}
+ "CTR_med":"CTR (median)","CPV_med":"CPV (median)","CPA_med":"CPA (median)","ROAS_med":"ROAS (median)",
+ "IVR_pooled":"IVR (pooled)","CPV_pooled":"CPV (pooled)","CPM_pooled":"CPM (pooled)","CPA_pooled":"CPA (pooled)","ROAS_pooled":"ROAS (pooled)"}
 full=bv[list(fcols)].rename(columns=fcols)
 ws3=wb.create_sheet("Full scorecard"); ws3.sheet_view.showGridLines=False
 ws3["A1"]="Full scorecard: every group by vertical"; ws3["A1"].font=TITLE
 ws3["A2"]="Median = advertiser-weighted (whale-robust). Pooled = impression or spend weighted. ROAS directional only."; ws3["A2"].font=SUB
 ffmt={"Spend":USD0,"Impressions":INT,"IVR (median)":PCT2,"CVR (median)":PCT3,"CTR (median)":PCT3,
- "CPV (median)":USD,"ROAS (median)":NUM2,"IVR (pooled)":PCT2,"CPV (pooled)":USD,"CPM (pooled)":USD,"ROAS (pooled)":NUM2}
+ "CPV (median)":USD,"CPA (median)":USD,"ROAS (median)":NUM2,"IVR (pooled)":PCT2,"CPV (pooled)":USD,
+ "CPM (pooled)":USD,"CPA (pooled)":USD,"ROAS (pooled)":NUM2}
 write_table(ws3,full,4,ffmt)
 ws3.freeze_panes="C5"; ws3.auto_filter.ref=f"A4:{get_column_letter(len(full.columns))}{4+len(full)}"
 autosize(ws3,full,{"Sales vertical":26,"Spend":11,"Impressions":13})
