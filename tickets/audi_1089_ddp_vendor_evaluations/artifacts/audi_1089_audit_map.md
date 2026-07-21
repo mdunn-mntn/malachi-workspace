@@ -55,7 +55,7 @@ GROUP BY 1,2 ORDER BY consumer_dsid, n_rows DESC;
 | 5e | · Sovrn | −$0.1K (0.1%) | same | |
 | 5f | Same-day (naive, augmentor-inflated) / upper bound | $273.7K / $243.5K | `q3e_v2` `free_sameday` / `free_prior30` cols | context |
 | 6 | Roster after preemption | **$612.0K/yr** | $812.4K − $200.4K | derived |
-| 7 | Post-preempt worth ÷ bill (most-generous, best lens) | API 0.94× · 33A 0.83× · Justuno 0.79× · Sovrn 0.29× · Cybba 0.27× | max(`q8b` dependency ceiling, `q4` domain band) ÷ bill-after | BIG |
+| 7 | Post-preempt worth ÷ bill (money-made = did it pay for itself) | API 0.94× · 33A 0.83× · Sovrn 0.29× · Cybba 0.17× · Justuno 0.15× | `q6`/`q8b` dependency ceiling (media rev × margin) ÷ bill-after; `q4` domain = SEPARATE licensing comp (the cap, not worth) | BIG |
 | 8 | Dependency ceiling (media on sole serves ×52) | per-vendor T1/T2 | `q6_value_tiers.sql` + `q6b_sole_by_funnel.sql` | BIG |
 | 9 | Fee-band / unique-domain value | per-vendor $ band | `q4_domain_value.sql` (sole classified domains × band) | BIG |
 | 10 | Sole-serve performance ≈ no-data baseline | VR 0.026% vs 0.022% | `q7_sole_vr.sql` + `q7e_vr_baseline.sql` | BIG |

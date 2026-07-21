@@ -135,16 +135,16 @@ SLIDES = f"""
 
 <section>
   <div class="kicker">What the results show</div>
-  <h2>Even after preemption, NO metered vendor is worth its residual bill</h2>
+  <h2>No metered vendor paid for itself</h2>
   <table>
-    <tr><th>Vendor</th><th class="n">Bill after preempt</th><th class="n">Fair value (most generous)</th><th class="n">Worth ÷ bill</th><th>Read</th></tr>
-    <tr><td>33Across API</td><td class="n">\\$142.8K</td><td class="n">\\$134K</td><td class="n">0.94×</td><td>just under, even at ceiling</td></tr>
-    <tr><td>33Across</td><td class="n">\\$259.9K</td><td class="n">\\$217K</td><td class="n">0.83×</td><td>~1.2× over</td></tr>
-    <tr><td>Justuno</td><td class="n">\\$75.8K</td><td class="n">\\$60K</td><td class="n">0.79×</td><td>~1.3× over</td></tr>
-    <tr><td>Sovrn</td><td class="n">\\$115.8K</td><td class="n">\\$34K</td><td class="n red">0.29×</td><td>~3× over</td></tr>
-    <tr><td>Cybba</td><td class="n">\\$17.7K</td><td class="n">\\$4.7K</td><td class="n red">0.27×</td><td>~4× over</td></tr>
+    <tr><th>Vendor</th><th class="n">Bill after preempt</th><th class="n">Value produced (money-made)</th><th class="n">Worth ÷ bill</th><th class="n">Data-licensing (domains)</th></tr>
+    <tr><td>33Across API</td><td class="n">\\$142.8K</td><td class="n">\\$134K</td><td class="n">0.94×</td><td class="n">\\$36K</td></tr>
+    <tr><td>33Across</td><td class="n">\\$259.9K</td><td class="n">\\$217K</td><td class="n">0.83×</td><td class="n">\\$89K</td></tr>
+    <tr><td>Sovrn</td><td class="n">\\$115.8K</td><td class="n">\\$34K</td><td class="n red">0.29×</td><td class="n">\\$2.4K</td></tr>
+    <tr><td>Cybba</td><td class="n">\\$17.7K</td><td class="n">\\$3K</td><td class="n red">0.17×</td><td class="n">\\$4.7K</td></tr>
+    <tr><td>Justuno</td><td class="n">\\$75.8K</td><td class="n">\\$11K</td><td class="n red">0.15×</td><td class="n">\\$60K</td></tr>
   </table>
-  <p class="sub">Fair value = higher of the two never-merged lenses (dependency ceiling / unique-domain) — Justuno &amp; Cybba are domain-driven. All &lt; 1.0× ⇒ every metered bill exceeds even its most generous value.</p>
+  <p class="sub">Worth = <span class="navy">money-made</span> (media revenue on the vendor's unique serves × margin) — the "did it pay for itself" test. All &lt; 1.0×. The data-licensing column is a separate coverage comp (unique domains) — it's why 5x5/Predactiv are kept and the only reason to trim rather than drop Justuno.</p>
 </section>
 
 <section>
@@ -173,7 +173,7 @@ SLIDES = f"""
     <li><span class="navy">The fair-preemption scan</span> <code>q3e_v2</code> — full 30-day lookback, all IPs; reproduces same-day 52.9% for 33Across then applies the prior-day + recency rule.</li>
     <li><span class="navy">The source table</span> <code>bronze.external.targeted_signal</code> is now BQ-queryable (partitioned by <code>source_data_source_id</code>) — count vendor credit on free-covered rows directly. Anchors in <code>VALIDATION_GUIDE.md</code>.</li>
   </ul>
-  <p class="sub">Caveats disclosed: N=1 valuation week (July trough) → dependency is a scenario envelope; May-2026 regime change (never mix months); flat fees pending finance.</p>
+  <p class="sub"><span class="navy">$200K is a floor</span> — it matches the exact domain, but targeting keys off the <span class="navy">vertical/keyword category</span> the domain falls into; a free log with a different same-category visit already covers the IP, so the category grain recovers more. Also: N=1 July week (envelope not CI); May-2026 regime change (never mix months); flat fees pending finance.</p>
 </section>
 
 <section class="center">

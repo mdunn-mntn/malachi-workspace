@@ -93,8 +93,8 @@ for a, b in [
      "tv_cpm = $0.50 whenever ANY paid vendor wins, $0 only when none does. Free co-presence is ignored — 268.9M June impressions billed $0.50 despite a free log co-winning the same impression."),
     ("2. Fair preemption = $200.4K/yr (-24.7%)",
      "Roster $812.4K -> $612.0K, keeping ALL vendor data. Conservative (free-dominant); upper bound $243.5K. A naive same-day test says $273.7K but over-credits augmentor (the bid stream) — see sheet 3."),
-    ("3. No metered vendor is worth its residual",
-     "Even at the most generous valuation, every metered vendor is < 1.0x after preemption: API 0.94x, 33Across 0.83x, Justuno 0.79x, Sovrn 0.29x, Cybba 0.27x."),
+    ("3. No metered vendor paid for itself",
+     "On money-made (profit its unique data produced), every metered vendor is < 1.0x after preemption: API 0.94x, 33Across 0.83x, Sovrn 0.29x, Cybba 0.17x, Justuno 0.15x. (Justuno/Cybba have separate domain-licensing value if kept for coverage — see sheet 4.)"),
     ("4. Recommendation",
      "Preempt (-$200K) -> renegotiate the two 33Across feeds toward the fair cap -> drop Sovrn + Cybba. Lock flat-fee (5x5/Predactiv) prices first."),
 ]:
@@ -106,8 +106,12 @@ ws.cell(r, 1, "Windows").font = NAVYB
 ws.cell(r, 2, "Delivery/uniqueness = 30d svs (2026-06-02..07-01); fair-preemption scan = 37d (05-26..07-01) measured over the last 7d; serving = valuation week 07-02..08; bills = June 2026 x 12. All read-only."); ws.cell(r, 2).alignment = LEFT
 ws.row_dimensions[r].height = 42; r += 2
 ws.cell(r, 1, "Caveats").font = NAVYB
-ws.cell(r, 2, "N=1 valuation week (July trough) -> dependency = scenario envelope, not a CI. Meter regime changed May 2026 (fractional->integer) — never mix months. Flat-fee amounts pending finance. Winners-table impression counts over-count the final meter (they prove the RATE, not the $)."); ws.cell(r, 2).alignment = LEFT
-ws.row_dimensions[r].height = 56; r += 2
+ws.cell(r, 2, "GRAIN (conservative): coverage is matched on the exact DOMAIN, but targeting keys off the CATEGORY the domain "
+              "falls into (DS13 vertical / DS19 keyword) — 'did this IP have a prior visit in this vertical/keyword'. A free log seeing a "
+              "DIFFERENT same-category domain prior already makes the IP targetable, but the domain grain doesn't count it — so $200K is a "
+              "FLOOR; the category grain recovers more. Also: N=1 valuation week (July trough) -> dependency = envelope not a CI; meter regime "
+              "changed May 2026 (never mix months); flat-fee amounts pending finance; winners-table imp counts over-count the meter (prove the RATE, not the $)."); ws.cell(r, 2).alignment = LEFT
+ws.row_dimensions[r].height = 92; r += 2
 ws.cell(r, 1, "Sheets").font = NAVYB
 ws.cell(r, 2, "Data: 1 Meter Proof · 2 Preemption (fair) · 3 Augmentor Fix · 4 Worth vs Bill · 5 Recommendations · 6 Audit Map. "
               "Each data sheet names its query on the green 'Query ▸' line. SQL: all 8 backing queries are embedded as "
@@ -184,24 +188,26 @@ for line in [
 
 # ---------------- 4 Worth vs Bill ----------------
 ws = wb.create_sheet("4 Worth vs Bill")
-widths(ws, {"A": 16, "B": 15, "C": 18, "D": 12, "E": 12, "F": 24})
-title_block(ws, "Even after preemption, no metered vendor is worth its residual",
-            "Fair value = the higher of the two never-merged lenses (dependency ceiling / unique-domain fee-band). Ranked by worth/bill.", "RESULT", query_ref="'Q5 Dependency (q6)' & 'Q6 Domain band (q4)'")
-r = 5; hrow(ws, r, ["Vendor", "Bill after preempt", "Fair value (best lens)", "Lens", "Worth / bill", "Read"])
-worth = [("33Across API", 142814, 134000, "dependency", "just under, even at ceiling"),
-         ("33Across", 259967, 217000, "dependency", "~1.2x over"),
-         ("Justuno", 75800, 60000, "domain", "~1.3x over"),
-         ("Sovrn", 115764, 34000, "dependency", "~3x over"),
-         ("Cybba", 17698, 4700, "domain", "~4x over")]
-for i, (v, after, fair, lens, rd) in enumerate(worth):
-    ratio = fair / after
-    r += 1; drow(ws, r, [v, after, fair, lens, ratio, rd],
-                 fmts=[None, "$#,##0", "$#,##0", None, '0.00"x"', None], alt=(i % 2))
-    ws.cell(r, 5).font = REDB if ratio < 0.5 else NAVYB
+widths(ws, {"A": 15, "B": 16, "C": 22, "D": 11, "E": 21, "F": 26})
+title_block(ws, "Did the vendor pay for itself? — money-made vs bill",
+            "WORTH = money-made = (media revenue on the vendor's UNIQUE serves) × margin, most generous. Data-licensing value (unique domains) is a SEPARATE coverage/keep comp, not money-made. Ranked by worth/bill.", "RESULT",
+            query_ref="'Q5 Dependency (q6)' = money-made · 'Q6 Domain band (q4)' = licensing")
+r = 5; hrow(ws, r, ["Vendor", "Bill after preempt", "Value produced (money-made)", "Worth / bill", "Data-licensing (domains)", "Read"])
+# (vendor, bill_after, money_made_ceiling, domain_value, read)
+worth = [("33Across API", 142814, 134000, 36000, "just under — pays only at the ceiling"),
+         ("33Across", 259967, 217000, 89000, "~1.2x over"),
+         ("Sovrn", 115764, 34000, 2400, "~3x over"),
+         ("Cybba", 17698, 3000, 4700, "~6x over"),
+         ("Justuno", 75800, 11000, 60000, "~7x over on profit; domain value $60K if kept for coverage")]
+for i, (v, after, money, dom, rd) in enumerate(worth):
+    ratio = money / after
+    r += 1; drow(ws, r, [v, after, money, ratio, dom, rd],
+                 fmts=[None, "$#,##0", "$#,##0", '0.00"x"', "$#,##0", None], alt=(i % 2))
+    ws.cell(r, 4).font = REDB if ratio < 0.5 else NAVYB
     ws.cell(r, 6).alignment = LEFT
 r += 2
-ws.cell(r, 1, "All < 1.0x => every metered bill exceeds even its most generous value. Justuno & Cybba are DOMAIN-driven — the dependency-only lens understates them, so fair value takes the max of the two lenses.").font = SUB
-ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=6); ws.row_dimensions[r].height = 42
+ws.cell(r, 1, "Money-made = the profit the vendor's UNIQUE (sole) data actually produced: unique won impressions × MNTN's ~$11.5 media eCPM × margin, x52, most-generous (solo counterfactual). Every metered vendor < 1.0x -> none paid for itself even at the ceiling. The domain column is a DATA-LICENSING comp (unique classified domains x per-domain rate) — it does NOT reflect money made; it's the coverage value that can justify KEEPING a vendor (the reason the flat-fee 5x5/Predactiv are kept). Caveats: N=1 week, sole cut only, margin is an internal assumption -> generous.").font = SUB
+ws.cell(r, 1).alignment = LEFT; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=6); ws.row_dimensions[r].height = 88
 
 # ---------------- 5 Recommendations ----------------
 ws = wb.create_sheet("5 Recommendations")

@@ -25,6 +25,14 @@
 -- FAIR preemptable share = free_prior_dominant / triples (free had it in-window AND is still as fresh:
 -- the vendor adds neither coverage nor recency). free_prior_vendor_fresher is the judgment slice.
 --
+-- GRAIN CAVEAT (conservative; user note 2026-07-20): this matches on the exact REG_DOMAIN, but TARGETING
+-- keys off the CATEGORY the domain falls into (DS13 vertical via wcv / DS19 keyword via pc) — i.e. "did
+-- this IP have a prior visit in this vertical/keyword". A free log seeing a DIFFERENT same-category domain
+-- prior already makes the IP targetable, but the (ip,domain,date) grain does NOT count it -> this UNDER-counts
+-- free coverage. So free_prior_dominant here is a FLOOR; a category-grain variant (q3f: replace `dom` with
+-- the vertical/keyword-category the domain maps to, per consumer) would recover MORE. Domain grain kept here
+-- because the meter credits per (ip,url,date); the category grain is the targeting-truthful upper view.
+--
 -- Grain (ip, REG_DOMAIN(url), dt); usable (wcv OR pc); IPv4. Scan 37d, measure 7d. BIG (~25-35m).
 --
 -- Run (from workspace root):

@@ -127,23 +127,24 @@ free log only displaces a vendor when the free log reports *first* that day; and
 already-tracked pair is a fresh billable event. So free logs, in practice, do **not** preempt. Confirmed
 in AUDI-1093.
 
-### 3.3 Even after preemption, NO metered vendor is worth its residual bill
-Preemption keeps every vendor's data — it only stops paying for the prior-day free-covered slice. After it,
-compared against the **most generous** fair value (the higher of the two never-merged lenses — dependency
-ceiling or unique-domain fee-band; §1):
+### 3.3 Even after preemption, no metered vendor paid for itself
+"Worth" here = **money-made** = the profit the vendor's *unique* data actually produced (media revenue on
+its sole serves × margin, most generous). That's the honest "did it pay for itself" test — not a
+licensing comp. After preemption:
 
-| Vendor | Bill AFTER preempt | Fair value (most generous) | Worth ÷ bill | Read |
-|---|--:|--:|--:|---|
-| 33Across API | $142.8K | $134K (dependency) | **0.94×** | just under, even at ceiling |
-| 33Across | $259.9K | $217K (dependency) | **0.83×** | ~1.2× over |
-| Justuno | $75.8K | $60K (domain) | **0.79×** | ~1.3× over |
-| Sovrn | $115.8K | $34K (dependency) | **0.29×** | ~3× over |
-| Cybba | $17.7K | $4.7K (domain) | **0.27×** | ~4× over |
+| Vendor | Bill AFTER preempt | Value produced (money-made) | Worth ÷ bill | Data-licensing (domains) |
+|---|--:|--:|--:|--:|
+| 33Across API | $142.8K | $134K | **0.94×** | $36K |
+| 33Across | $259.9K | $217K | **0.83×** | $89K |
+| Sovrn | $115.8K | $34K | **0.29×** | $2.4K |
+| Cybba | $17.7K | $3K | **0.17×** | $4.7K |
+| Justuno | $75.8K | $11K | **0.15×** | $60K |
 
-Every metered vendor is **< 1.0×** — the residual bill exceeds even its most generous value. (Justuno and
-Cybba are *domain*-driven, not dependency-driven — using only the dependency lens understates them, which is
-why the fair value takes the higher of the two.) Preemption fixes the double-pay; the residual needs
-repricing or dropping.
+Every metered vendor is **< 1.0×** — none paid for itself, even at the most generous margin. The
+**data-licensing** column (unique classified domains × per-domain rate) is a *separate* coverage comp — it
+does **not** reflect money made. It matters for the KEEP call (it's why the flat-fee 5x5/Predactiv are
+kept), and it's the only reason to keep Justuno at a trimmed price rather than drop it. Preemption fixes
+the double-pay; the residual needs repricing or dropping.
 
 ---
 
@@ -193,6 +194,13 @@ lists the internal consistency anchors (meter identity, mask consistency, bounda
   A naive *same-day* test gives $273.7K but over-credits free (augmentor is the bid stream → trivially
   "has" every impression the day it's bid). The upper bound (~$243.5K) also preempts where the vendor is
   merely the freshest source. Measured with a full 30-day lookback and **all IPs** (no sampling).
+- **Conservative on grain, too — we match the exact DOMAIN, but targeting keys off the CATEGORY.** An IP
+  enters a targeted audience via the *vertical* (DS13) or *keyword-category* (DS19) its visit classifies
+  into, not the specific domain. If a free log saw the IP visit a *different* domain in the *same*
+  vertical/keyword on a prior day, the household was already targetable — but the (ip × domain × date)
+  grain does not credit that as coverage. So the true "would we have had it" share, and the recoverable $,
+  is **higher** than $200K on this axis; the domain grain is a floor. A category-grain scan (`q3f`, on
+  wcv-vertical / pc-keyword) would quantify the stronger number.
 - **The dollar figure is meter-anchored, not derived from Proof 1's impression counts.** The winners table
   over-counts the final meter (multiple path-rows per impression) — it proves the *rate behavior* (no
   preemption); the dollars are each vendor's fair prior-day **share** × its **actual** June meter bill.
