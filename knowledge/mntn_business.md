@@ -81,6 +81,24 @@ General knowledge about MNTN as a business — products, strategy, org structure
 
 ---
 
+## Brand & Design Assets (brand.mountain.com, 2025 guidelines)
+
+Use for any branded deliverable — .xlsx (`lib/mntn_xlsx.py`), decks, charts. Full detail in memory
+`reference_mntn_brand_assets`. Local kit at `documentation/mntn_assets/` (GITIGNORED — paid fonts + logos).
+
+- **Portal:** `https://brand.mountain.com/`, password `mountain123`.
+- **Colors:** brights — Mountain Blue `#0AABC5`, Mountain Green `#1AC9AA` (core), `#22E5BE`, Mountain Blue
+  `#26D1EA`, Pacific Blue `#0853E6`/`#0E44BF`. Neutrals (Slate Grey) `#323B4E`/`#262E3C`/`#191E28`, Glacier
+  White `#FFFFFF`/`#F6F6F6`. Copy rule: Slate `#191E28` on light, Glacier `#F6F6F6` on dark.
+- **Fonts:** headline = Neue Haas Grotesk Text Pro (paid); body/UI = Inter (open/OFL, renders in Google
+  Sheets). Logo: use the White-wordmark Primary Horizontal on dark backgrounds; drop-shadow marks on
+  white only; never split the "M" into a sub-brand.
+- **Routing:** brand-assets contact = Matt Collins (marketing). External-facing slides → build in your own
+  template, then file a ticket for **Marwan's design team** to apply the latest MNTN slide styles;
+  internal-only audiences don't need the design-team round-trip.
+
+---
+
 ## Products & Features
 
 ### Multi-Touch Display
@@ -901,6 +919,8 @@ Fangorn launched to a 3-advertiser Alpha cohort on April 30, 2026 at 5:00 PM PT 
 - ## SMB Performance Decline — Q1/Q2 2026
 
 As of late April 2026, the percentage of SMB campaign groups (CGs) hitting performance goals has been declining since mid-March, while Mid-Market and Large Corporate segments remain steady or improving over the same period. SMB is defined as advertisers spending less than $25K/month. (via Johnny, #q1-2026-performance-churn-investigation-how-am-i-alive-what-is-life-i-wanna-die, 2026-04-30)
+
+- **Exact advertiser spend-tier bands + the live instrument (verified 2026-07-21):** the BAE Mode report "Campaign Groups Hitting Goal Percentage" (report token `30fb4d3f8447`, runs daily) is the operational version of the "% of CGs hitting goal" metric above. It tiers advertisers by monthly spend: **SMB < $25K, Mid Market $25K-65K, Upper Mid Market >= $65K** (from `dw-main-gold.summarydata.sum_by_advertiser_by_day`). Current reading 2026-07-20: ~63% of active CGs hitting goal (Upper Mid Market 71%, Mid Market 66%, SMB 58%). Full methodology, goal source (`dw-main-gold.bae.v_daily_goal_by_campaign_group`), and caveats (CostPerCompletedView auto-passes; campaign-group not advertiser grain; trailing-3-day rolling) in `data_knowledge.md` "Hitting-goal %".
 
 <!-- slack-extracted: 2026-05-02 -->
 - **Tasha promoted to VP of Program Management.** Tasha has been promoted to VP of Program Management after 7-8 years at MNTN. She is also leading the merger of the Business PMO and Engineering PMO into a single unified organization. She has historically been the connective tissue between all product lines and the Engineering org, supporting PTV, Express, QF, Select, and other initiatives. (via richard, #engineering-team, 2026-05-01)
