@@ -110,8 +110,9 @@ some cells carry pixel artifacts (one ProServ advertiser shows >800x). Use media
 - queries/audi_1141_cohort_scorecard.sql, artifacts/audi_1141_aggregate.py, artifacts/generate_charts.py
 
 ### Drive
-- Live workbook synced to `My Drive/Tickets/AUDI-1141 MM vs 3P by Vertical/AUDI-1141 MM vs 3P Scorecard.xlsx`
-  (via the local Drive mount). Rebuild `build_xlsx.py` then copy over the same path to update in place.
+- Live workbook synced to `My Drive/Tickets/AUDI-1141/AUDI-1141 MM vs 3P Scorecard.xlsx` (via the local
+  Drive mount). Convention: folder = ticket number only; file = `<ticket> <description>.<ext>`. Rebuild
+  `build_xlsx.py` then copy over the same path to update in place.
 
 ## 6. Questions answered
 - MM vs 3P by vertical, 6mo: MM (gated) wins IVR and CPV in every vertical; scorecard delivered.
