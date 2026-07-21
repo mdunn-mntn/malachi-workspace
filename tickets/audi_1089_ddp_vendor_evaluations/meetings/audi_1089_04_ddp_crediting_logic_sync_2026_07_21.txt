@@ -1,0 +1,240 @@
+DDP Crediting-Logic Sync — Malachi x Sherwin Ocampo, Maya Triman, Matt Brorby
+2026-07-21 | source: Zoom GMT20260721-162947
+
+Malachi Dunn: Sherwin.
+Malachi Dunn: How you doing?
+Sherwin Ocampo: Hey, Malachi, how are you?
+Malachi Dunn: Good, good. You know, I feel like when I first joined.
+Malachi Dunn: That, I chatted with you a lot more.
+Malachi Dunn: You were always helping me with a lot of stuff in the beginning, so…
+Malachi Dunn: Sweet. Well, it looks like we got everybody here. I put a lot of people as optional, because I've already kind of gone through this with them.
+Malachi Dunn: But I wanted to share these things with you guys as well. So, let me pull them up here.
+Malachi Dunn: Basically, what I wanted to accomplish today Is to figure out
+Malachi Dunn: If we can agree about where the money is actually going, and if we're actually crediting things correctly. Because when I did my analysis, I saw a lot of things that I saw in the free logs.
+Malachi Dunn: That was credited.
+Malachi Dunn: To a vendor.
+Malachi Dunn: And…
+Malachi Dunn: I think that would be a huge cost savings if that's actually the case, so we can change that.
+Malachi Dunn: So yeah, let me bring up my… Files here.
+Malachi Dunn: And Matt, I'm not sure if you're aware, I put in the description… I'm gonna go over the same stuff that I went over with you guys, so this is totally optional for you to be here, I just put it on there. Okay. Just so you know.
+Matt Brorby: Sounds good. I'll drop if I get bored.
+Malachi Dunn: Yeah, okay, cool. I just wanted to make sure that you don't feel like… I just threw everybody in there just in case.
+Matt Brorby: I'm interested to hear the feedback, so that's why I want to be here.
+Malachi Dunn: Okay, cool, cool. No problem. Alright, I'm gonna share my screen. Sorry, I closed the wrong window before I joined it, so I had to pull it back up again.
+Malachi Dunn: Okay. So, Sherwin, Myla, Amaya, thank you for being here. So, let me just…
+Malachi Dunn: give you guys my logic behind how I calculated, basically, the value of a vendor.
+Malachi Dunn: So pretty straightforward. The value of a vendor is directly related to how much revenue it generates us, minus how much it costs, right? I think that's pretty straightforward. So how I calculated this is, if a vendor
+Malachi Dunn: delivered us an IP, and we served on the IP, right? It won. I would take the CPM,
+Malachi Dunn: of all its touch IPs, multiply it by a margin, because we don't, you know, the margin, I don't know what it is, it's usually secret between us and which advertiser, etc, but somewhere between 10% and 30% is the assumption here.
+Malachi Dunn: And so, if you were to take that CPM times the margin, that would give us how much, essentially, revenue that that vendor provided for us. And then if we subtracted the cost of the vendor, then we get, you know, the net, net, amount that we made.
+Malachi Dunn: Now… When I was doing this, I filtered out all of the things that the free logs touched.
+Malachi Dunn: So, that means that if I saw…
+Malachi Dunn: If the free logs delivered us an IP, domain, and date.
+Malachi Dunn: I guess pair, you could call, that was either more recent.
+Malachi Dunn: or equal to something a vendor had delivered us, I just assumed that the vendor got no credit. And so, not even partial credit if we had it in our free logs. Now, it makes sense if we had 5 vendors, and they all sent us the same IP, we award them all partial credit, that makes sense.
+Malachi Dunn: But in the case where we have the free logs, it wouldn't make any sense for us to give them credit, because we already had that IP to begin with, so even if they want it.
+Malachi Dunn: And, these are the numbers that I got. So here's just some rough,
+Malachi Dunn: numbers… I want to preface this one thing by saying that there is some… Room.
+Malachi Dunn: to meddle with the numbers as far as augmenter log is concerned, because Augmenter Log obviously is everything that we see that we can bid on, and so I have to do this filter for, like.
+Malachi Dunn: If we saw in the augmenter log today, I'm not including domains that we saw for the IP from today, so I'm only looking at the last 30 days, for example.
+Malachi Dunn: Certain things like that. So, anyways, I'll just get into the numbers. So, if you look at the augmenter log, and let me actually make this a little bit larger so you guys can see, these are the number of usable pairs unique for each vendor, and you'll see that I have the augmenter, the good log, etc.
+Malachi Dunn: this is how much of the total percentage of IPs and pairs that it covers. So you can see it's about 60% of everything we see is actually covered by the free logs, and that's whether or not we bid on it or not.
+Malachi Dunn: If you look over here.
+Malachi Dunn: This is the share of all our one impressions.
+Malachi Dunn: So, this means that it covers 60% of all the IPs, but of actual IPs that we end up bidding on.
+Malachi Dunn: It covers 99%.
+Malachi Dunn: So…
+Malachi Dunn: That is a huge indicator that we are probably… don't need the rest of the vendors as much.
+Malachi Dunn: And so let me bring up this here. So I've got the vendor, I've got the CPM,
+Malachi Dunn: And then you'll see something called unique.
+Malachi Dunn: or media CPM. And so, basically, what that would mean is I filtered out the free logs and said, like, of all the unique IP combinations that this vendor provided that wasn't touched by the free logs, what was their CPM? So that's all that is. So this is all touched, whether or not it also was touched by free logs, and then this is just unique.
+Malachi Dunn: So, I have the bill for each of these, because we could just look it up, but if I calculate everything that they touch.
+Malachi Dunn: I only see a profit… so, for example, like, 33 across, we paid $422,000 for them, right? But if you filter out the free logs that they…
+Malachi Dunn: or the IPs that the free logs touched.
+Malachi Dunn: And then you multiply it by that margin, we're making somewhere between $72,000 and $217,000.
+Malachi Dunn: Which means that we're, like, basically paying
+Malachi Dunn: double, I guess, what we could be paying if we were to filter out the free logs.
+Malachi Dunn: I brought up another table, this is kind of showing the same thing here.
+Malachi Dunn: But this is… this is my estimated cost that we would pay for if we were truly filtering out the free logs. So you can see here, this is the percent of the IPs that were also touched by free logs. And so, you can see this 422,000 number
+Malachi Dunn: If we filter out 52.5% that were actually in the free logs, we'd only pay roughly about this much, and then if you look at the actual profit that they generated us, we're in the ballpark, so it's not necessarily bad, it's just at the upper end.
+Malachi Dunn: But for a lot of them, besides 33 across.
+Malachi Dunn: It looks like we're paying way too much for them.
+Malachi Dunn: So, that is that. I just have one more thing to say. So, there's one thing that's not super easy to compare apples to apples with, is that not all vendors are providing us the same amount of data.
+Malachi Dunn: And so the amount of unique, the amount of impressions that they touch is different. And also.
+Malachi Dunn: Another thing is that the more vendors we have, the more overlap they're gonna have in between them, too. So the value of, like, a sole vendor
+Malachi Dunn: is not necessarily related to the value of all the vendors together. And what I mean by that is that
+Malachi Dunn: Let's just say 33 across provides us
+Malachi Dunn: a million IPs, unique. And Silver and…
+Malachi Dunn: Provides us $100,000, and 33 across comes… covers 96% of those.
+Malachi Dunn: then the only real value that Sovereign is providing to us, additionally, is just the 4% net unique IPs that they provide us. So I know that we do a fractional credit, so we would give them a fractional credit, but what's happening is, because there's no filtering out on free logs.
+Malachi Dunn: for all those cumulative ones, we're actually paying them all credit for things that we shouldn't be. So…
+Malachi Dunn: Anyways, that's it. That's kind of it. I wanted to have a discussion about it, because I have all the queries, but I'm basically wanting to
+Malachi Dunn: share these queries and see if we can get some validation that you're seeing the same thing that I am, because it sounded like yesterday that it seemed like we were filtering out free logs, but I'm just not seeing that from the actual numbers.
+Malachi Dunn: Which…
+Malachi Dunn: If we're not, that's cool, because we could basically filter this on and save, I don't know, I think my estimate… estimates were, like, around…
+Malachi Dunn: 300,000?
+Malachi Dunn: Total dollars? Yeah, it's roughly. Okay, here it is.
+Malachi Dunn: Just from doing that alone, without cutting vendors or doing anything else. So…
+Sherwin Ocampo: Yeah, okay, so I have a few questions, actually, because that's a lot of data, info. So, the, the overlap, like, your definition of
+Sherwin Ocampo: Touched by… The free logs, is that…
+Sherwin Ocampo: Like, bound by a certain time frame.
+Malachi Dunn: Yeah, 30 days.
+Sherwin Ocampo: 30 days, okay.
+Sherwin Ocampo: And then… This is… Targeted signals, right?
+Malachi Dunn: Yes.
+Sherwin Ocampo: Okay, so targeted signals… alright, a…
+Sherwin Ocampo: Yeah, so we do partial credit in terms of DDP.
+Sherwin Ocampo: And… It's basically dividing it by the number of vendors involved.
+Malachi Dunn: -Oh.
+Sherwin Ocampo: for that signal would then… 30 days of the impression.
+Sherwin Ocampo: So it's, simplistic.
+Sherwin Ocampo: lookup into targeted signals. It's just gathering all the vendors that have that category ID,
+Sherwin Ocampo: 30 days prior to the impression.
+Sherwin Ocampo: It's not doing the… what's the most recent vendor that's providing us that signal?
+Malachi Dunn: Yeah, and here's a query, that I have. So, I have the DDT… DDP- winners, and I did this after you guys shared this. So, if I just check and I say, is it in…
+Malachi Dunn: Day source 23 and 30, which are free in Augmenter log.
+Malachi Dunn: And then here, and then so you can see everything that was touched by the free logs. And I can verify, like, I mean, pretty verifiably show that we have been giving credit to vendors when it's touched by the free logs. And so I guess my thought process is, if it's touched by the free logs.
+Malachi Dunn: Would we just award it an even smaller fractional credit, or do you think that we have some sort of
+Malachi Dunn: Ability to say, okay, so…
+Sherwin Ocampo: Yeah.
+Malachi Dunn: Is that something.
+Sherwin Ocampo: Intention.
+Sherwin Ocampo: Yeah, or it was… it's… That… that's sort of, like, our…
+Sherwin Ocampo: I guess, the message that we were trying to, relay yesterday. There's just been no one really who's owned this logic piece, and we're just operating on our… what was…
+Sherwin Ocampo: instructed to us when.
+Malachi Dunn: Sure.
+Sherwin Ocampo: the mountain match was first introduced, and targeted signals was first introduced, so it's just been, like, there's no, like, a formal ownership of this, but that's essentially what we're doing. It's… we're awarding a smaller fraction
+Sherwin Ocampo: If it was.
+Sherwin Ocampo: If, if good log or log is involved.
+Malachi Dunn: Gotcha.
+Sherwin Ocampo: Because that one would be, like, let's say there's 5 vendors that are involved in 2 of those, but it's, like, Goodlog and, and Good, and Oglog, then you divide that impression, into 5.
+Sherwin Ocampo: But the 2, right, the good log and the odd log, would have… Zero cost to us.
+Malachi Dunn: Gotcha.
+Sherwin Ocampo: Yep.
+Malachi Dunn: That makes sense. Okay, so…
+Malachi Dunn: That makes total sense. I understand we're doing it that way. I guess a good discussion for everybody here is, does it make sense to anybody for us to be awarding fractional credit for a one impression if we had it already?
+Malachi Dunn: Because I didn't go much into this, Sherwin, but…
+Malachi Dunn: I had another deck, there's a very large, exhaustive, like, one with a ton of numbers in it. And basically… oh yeah, you can actually… here's a summary here. So, this is our coverage.
+Malachi Dunn: If we have all our vendors, right? This makes sense. 100%, here's how many, you know, unique pairs we had.
+Malachi Dunn: 13 billion something, right? Last 30 days.
+Malachi Dunn: Okay? Now, if you start dropping vendors.
+Malachi Dunn: our coverage is still pretty high. So, for example, we could drop Silver and Siva quickly, and we actually did drop quickly,
+Malachi Dunn: just do know, etc.
+Malachi Dunn: And, we could… if we dropped all those, we'd still have 98.69% coverage. And then if you look at our high intent and our peak performance.
+Malachi Dunn: which is, like, our, you know, main performance drivers, it's basically 99%. We haven't really lost anything. Our net amount of money that we would lose is negligible.
+Malachi Dunn: And we would save a lot of money, basically, so it's negligible. And this is because of the coverage. And so, actually, if you go down to, you know, the flat fee only, and you just say 5x5 for active, you still have 70% coverage.
+Malachi Dunn: If you did just 33 across, right, both of them, we'd get 90% coverage. So we could literally just do 33 across, and do our free logs, and get 90% coverage of all IPs, but still, I mean, the 99.9% of
+Malachi Dunn: you know, the important ones, and the ones that we actually end up bidding on. So you can see here, for example.
+Malachi Dunn: This is… the…
+Malachi Dunn: Okay, yeah, so this is the number of free covered IPs, so this is basically, like, how many IPs,
+Malachi Dunn: would we have covered with our free logs? Then this is the vendor-only IP, so these are unique IPs that are only with the vendor.
+Malachi Dunn: And then how much of coverage we would get if we actually, just across the board. And so you can see that we basically would severely decrease
+Malachi Dunn: all total IPs, like, unscored, things like that, right? You can see here. But then if you actually look at how many were bid on, so the only difference between here is this is just…
+Malachi Dunn: what's all the data? And then here is, like, what did we actually end up bidding on? You can see it's still, like, basically 97% across the board. So basically, what this is saying is that we would essentially have the same exact coverage of IPs we actually end up bidding on if we were to completely remove the vendors.
+Malachi Dunn: And so, where I'm getting at is that…
+Malachi Dunn: If we're not completely removing the cost of what we have in the free logs from the vendors, it's really hard for me to justify paying for them, because they don't make up
+Malachi Dunn: the difference in value that they provide, right? If we remove the free logs, then it is, because basically we're only paying them for net new IPs, and we're only paying them for the wins, and so that makes sense. And so at that point in time, I think I had the numbers up here, but…
+Malachi Dunn: I think the CPM calculations, or what I'm saying is, like, how, you know, how much money we're making per thousand was, like, $1.50 to $3, and it cost 50%, you know, 50 cents CPM, right? So we're making money on all of them, right?
+Malachi Dunn: But yeah, that's the dilemma we're at right now, is it doesn't really seem like, without completely filtering out free logs, that they're actually paying for themselves, essentially.
+Malachi Dunn: So… what I was hoping to get is…
+Malachi Dunn: and this is not in a rush, like, we don't need this by tomorrow, but if I were to share queries
+Malachi Dunn: just to get a second opinion, if you agree with that sentiment, and then maybe we can have a further discussion, because I think we need to do two things. One, see if it's valid for us to just start saying, hey, we're not going to give vendors any credit if it touched the free logs at all, and then two.
+Malachi Dunn: Whether or not we need to keep all the vendors, at all, if that's the case. Because, you know.
+Malachi Dunn: I guess there's some intrinsic value outside of just the direct amount of
+Malachi Dunn: Money that they make us, but it's hard to justify, like, You know, paying…
+Malachi Dunn: $422,000 when the ones that were… if we were to filter out the free logs, they only make us, at most, $217,000, right? That just seems like negative ROI to me.
+Sherwin Ocampo: Yeah. What… what would be interesting to me, if… Goodbye.
+Sherwin Ocampo: Wanted to, sort of, prove, or… Try to attribute
+Sherwin Ocampo: The, like, the contribution for that vendor is that if the very…
+Sherwin Ocampo: Like, if it wasn't for the vendor, right, initially.
+Sherwin Ocampo: would it have gotten to our good log, our AUG log?
+Malachi Dunn: What do you… like, it would…
+Sherwin Ocampo: Meaning, if the IP… when it first introduced to us, it came from 33 across, for example, right? And then we bid on it, and there were some activities, and so obviously there's gonna be in the GUID log an augmenter log for that IP.
+Sherwin Ocampo: But if it wasn't introduced to us by 33 Across.
+Sherwin Ocampo: Wouldn't have gotten to our good luck and bidlock.
+Malachi Dunn: I see. I think it would with the AUG log, because the augmenter log is just gonna be…
+Malachi Dunn: everything that is available on the market to bid on, right? The good log might… that might be valid.
+Malachi Dunn: Because we could have caused somebody to start visiting our advertiser websites.
+Malachi Dunn: So I guess there's some argument to be made there, but I'm not sure… unless I'm misunderstanding.
+Sherwin Ocampo: Yeah, no, it's… it's that one. I… I'm just not…
+Sherwin Ocampo: 100% on the Enclog. I know that's one that's biddable, but I don't know.
+Sherwin Ocampo: If it has, like, a… does it have another requirement to us that… Yeah, so.
+Sherwin Ocampo: Let's see… yeah, I think… We can certainly, sort of.
+Sherwin Ocampo: peruse through the… the queries that you have. It's… it's just that we're… relay.
+Sherwin Ocampo: dealing with lots of high-priority stuff as well, but, yeah, when, like, just ask. I think the better one would be to ask
+Sherwin Ocampo: Mike, Doltzer, or Kristen, to… to sort of, like, formalize it, and… and that way we could…
+Sherwin Ocampo: Carve the time, that's… To… to review this one, because… because there… yeah, I think…
+Sherwin Ocampo: We're onto something.
+Malachi Dunn: Okay. That sounds like a great… and like I said, it's not, like, high… the big… how this came about is a while ago.
+Malachi Dunn: I was asked to review the quality of 5x5, and I just looked at 5x5, and I looked at it just from a data standpoint, not coverage or anything, and I was like, yeah, it's a really good, you know, vendor. But then I got asked to review quickly, and so I started to be like, well, let's look at all the vendors together. And basically, I was like, well, some of these vendors
+Malachi Dunn: So this is where I'm saying it's not apples to apples, it's not exactly fair, because, like, if we were getting the same amount of data from all the vendors, do I think 33 across would be the best vendor?
+Malachi Dunn: Probably not. Maybe? We don't know.
+Malachi Dunn: So a lot of this is just a coverage thing, you know? Like, they just didn't generate enough value. But some of them are super value. Like, 5x5 has a lot… a ton of domain value, Clickly has a lot of Shopify stuff, which is super unique. But if you look at, like, the total…
+Malachi Dunn: profit, like, for Clickly, right? So Click… like, I'm just saying, Clickly is actually a valid vendor. I think it's a good vendor, just on paper. But the problem with it is, I don't know what the flat fee is for Clickly, but I doubt it's $1,000 to $3,000. That's the only unique money that Clickly has
+Malachi Dunn: generated us that wasn't in one of the other vendors, or a free log, right? So it's a really, hard…
+Malachi Dunn: to…
+Malachi Dunn: What really seems like the best solution would be to have one massive vendor that provides us as much data as possible, and then only pay them for what we don't already see in the free logs.
+Malachi Dunn: At least if we had, like, if we had, like, a flat rate deal. That seems like the best case scenario.
+Sherwin Ocampo: Yeah.
+Malachi Dunn: So, anyways, I don't want to jog this any longer, I think this is, totally valid. I could totally reach out to Mike, I can make the queries very digestible and in order and explain what's in them, and then we can postpone this to whenever
+Malachi Dunn: We can have that, discussion, and then if…
+Malachi Dunn: The answer is yes.
+Malachi Dunn: And you guys, like, you guys see the same things, then we could probably go ahead and work on
+Malachi Dunn: You know, removing complete free log credit.
+Malachi Dunn: I guess, who would you.
+Sherwin Ocampo: Yeah.
+Malachi Dunn: Who'd make the decision on that?
+Sherwin Ocampo: That, again, the same, the same, like, message that we've had, like, really…
+Sherwin Ocampo: no one. We've had to reach out to whoever, like, Andy now would own that vendor relationship, because he's the one responsible for crafting the contract and the terms. So if…
+Sherwin Ocampo: If our logic Does not break any of those.
+Sherwin Ocampo: terms, and… Then… then… then we just need, like, a blessing from…
+Sherwin Ocampo: outside of us, right? To get that.
+Sherwin Ocampo: reflected in our calculation. But other than that, it's just been, really, it's… for us, we're just…
+Sherwin Ocampo: calculating it the way we've been told to. So the first one, the first iteration of DDP, just to give you, like, some historic context, is that we were crediting impressions to any of the vendors, right? And this was…
+Sherwin Ocampo: when GDP was first handed to us, we didn't have mountain match, so it was basically just interest segments, right? There's a live ramp, and share this,
+Sherwin Ocampo: and some other, third-party, vendors. So we were duplicating the credits,
+Sherwin Ocampo: for anything that touched, right? So, we've gotten smarter since, and I forgot it was…
+Sherwin Ocampo: Who… who it was that was managing that vendor relationship before. But, he…
+Sherwin Ocampo: instructed us to do the evaluation of the AND OR, like, criteria, right?
+Malachi Dunn: And so…
+Sherwin Ocampo: So, by meaning, like, with the OR condition, you just pick the lowest per provider, because ultimately, you just need one.
+Sherwin Ocampo: Of those… signal to be valid for that IP to go through that… to…
+Sherwin Ocampo: To qualify for that audience, right?
+Sherwin Ocampo: So you just pick the lowest CPM. So that, that was a cost savings. That was a big cost savings. But then…
+Sherwin Ocampo: Aye.
+Sherwin Ocampo: Like, outside of, like, any discussion into whether that's a vendor-specific
+Sherwin Ocampo: like, requirement, contract, and all that? I don't know. Or is that just…
+Sherwin Ocampo: Like, just them, like, a cost-saving measure for us, and then, like.
+Sherwin Ocampo: And then it makes sense. I… I… yeah, that's the part where I don't know, anything more upstream than that, other than, yep, it's a cost-saving,
+Sherwin Ocampo: Calculation, then let's implement it.
+Malachi Dunn: Okay. That is good to know. I will pass that on to Alyson, and then I will see what I can do, because it sounds like there's not really an owner, and we could figure out some of that stuff, too. So,
+Sherwin Ocampo: There's a lot of, also, like, like, from an audience landscape as well, Malachi, just so you're aware, but I haven't looked into it for, like, more than 2 months now. I don't know if it's changed, but,
+Sherwin Ocampo: we…
+Sherwin Ocampo: I mean, there's a lot of campaigns that are match-only, but there's also a lot of campaigns that are…
+Sherwin Ocampo: a mix of mountain match and, intersegment, and, and intersect. So, so that further…
+Sherwin Ocampo: sort of reduces the… the share for these mountain match vendors if a…
+Sherwin Ocampo: an interest segment is involved in the audience, and that IP
+Sherwin Ocampo: Is associated to those interest segments that are being targeted by that campaign as well.
+Malachi Dunn: -
+Sherwin Ocampo: Yep.
+Malachi Dunn: Well, that's good to know.
+Sherwin Ocampo: Yeah. So, but… but that's basically, if it's, let's say, like, a very happy path, simple scenario, let's say it's a live ramp, it's targeting a live ramp segment, and it's a…
+Sherwin Ocampo: And then it says LiveRamp or mountain match keyword, right? So if the IP that was served has both.
+Sherwin Ocampo: Right? Then…
+Sherwin Ocampo: 50% of that, like, half of the impression goes to LiveRAMP, and then half of the impression goes to Mountain Match. And then within targeted signals, if that Mountain Match
+Sherwin Ocampo: Segment belongs to 5 vendors, then that .5 Gets divvied up to 5.
+Malachi Dunn: Okay.
+Malachi Dunn: Yep. That's good to know. Part of my… I didn't bring this up, but part of the thing I was also considering, like, well, we already have third-party vendors that we use for interest segments, like, could.
+Sherwin Ocampo: We just…
+Malachi Dunn: utilize those vendors instead, and just see if they can send us, like, the same type of stuff that 33 crosses, and then just…
+Sherwin Ocampo: Right.
+Malachi Dunn: Right? Because that's another thing that I was considering, so… Yeah, there seems like a lot of places.
+Sherwin Ocampo: But it's… it's just gonna be, like, just IP plus does it also include… that segment.
+Sherwin Ocampo: Right.
+Sherwin Ocampo: Which are two different ones, right? Because this is inter-segmented, this… Whereas… The targeted signals is keyword-based.
+Malachi Dunn: Okay. Well, hey, I really, really appreciate it. I want to be cognizant of everybody's time. Sherwin, I will…
+Malachi Dunn: I'll reach out to Mike Doltzer, and like I said, I will put together the queries and just a brief explanation, and then whenever there's some sort of validation, that can be done, that'd be great. But I will update the tickets I currently have.
+Malachi Dunn: just want to say thank you very much for taking the time to join this meeting, and yeah, hopefully we can save some money, so…
+Sherwin Ocampo: Alright, cool, thanks.
+Malachi Dunn: Thanks, everyone.
+Sherwin Ocampo: Right.

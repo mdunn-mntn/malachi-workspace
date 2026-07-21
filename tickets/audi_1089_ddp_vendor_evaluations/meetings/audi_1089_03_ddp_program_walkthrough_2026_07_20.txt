@@ -1,0 +1,220 @@
+DDP Program Walkthrough — BAE team (Kristen Colley, Sherwin Ocampo, Maya Triman) x AUDI (Malachi, Alyson, Sean)
+2026-07-20 | source: Zoom GMT20260720-170056
+
+Alyson Lefkowitz: Alright, we're good to go.
+Kristen Colley: Cool! Alright, well, thank you all for coming. We're excited to share, kind of, our current state of the DDP program, and what parts Bay owns today.
+Kristen Colley: And kind of honestly, how our teams can work together in the future, and possibly get assistance from your team with the logic and scripting portion of it.
+Kristen Colley: We think there could be some major wins here for your team, or even just the company, in terms of cost savings, if we could work more closely together. And I think, Malachi, you kind of started that work.
+Kristen Colley: Or looking into that.
+Malachi Dunn: Yeah, that's correct.
+Kristen Colley: Cool. So yeah, I'll just start with a high level of the program, and just the high level of the steps, and then Sherwin's gonna dive into the details.
+Kristen Colley: The process itself, which you guys probably are most interested in, and Maya will also add some additional context there, the two SMUs on our team for this process.
+Kristen Colley: But at a high level, just providing context, DDP has evolved quite a bit over the past two years, and it's changed hands several times.
+Kristen Colley: And historically, no teams really own the entire process.
+Kristen Colley: But… Our responsibility was primarily the final stages of the pipeline, just the reporting.
+Kristen Colley: However, as, like, this project's been handed off.
+Kristen Colley: And shifted over time, people have left the company. They also started taking on maintaining the logic that drives these reports.
+Kristen Colley: So we've kind of had to make calls on the logic, of what we think is best, but we might not be the best team to make those calls, quite honestly.
+Kristen Colley: So, these changes, for our scripting comes in about every two billing cycles or so on average in the past two years.
+Kristen Colley: And that's when a new data source comes in, or logic changes, and our team normally has to play a bit of catch-up of how this affects DDP, and learn from other teams, like your team or Mike Dolt's team, about what's transpiring with these changes. And I'm going to go ahead and share
+Kristen Colley: Sherwin's doc real quick.
+Kristen Colley: And then… Okay.
+Kristen Colley: Alright, so… Sherwin put together this doc.
+Kristen Colley: And it just kind of shows the 8 steps. And they historically, owned steps 6 through 8, just the reporting.
+Kristen Colley: and the audit, the QA portion of it, and the report distribution.
+Kristen Colley: But with the changing of hands, we've also had to own steps 1 through 5.
+Kristen Colley: And these are, like, the computationally heavy steps, the logic, the…
+Kristen Colley: really getting into the nitty-gritty details. So, this is definitely, I think, where we could partner with you guys better, and, and, I guess have a better sense of
+Kristen Colley: Of what needs to transpire with the logic.
+Kristen Colley: But with that being said, I'll pass it on to Sherwin, and he'll go ahead and walk you through the nitty-gritty of each of these steps, and what we do as a team.
+Sherwin Ocampo: Sure. Kristen, do you mind if I do the sharing?
+Kristen Colley: Yep, go for it. Let me just stop sharing.
+Sherwin Ocampo: Alright, hello. So, as Kristen mentioned, I'm just gonna walk through, this… document… And…
+Sherwin Ocampo: Let's see, it's structured in a way that, It's…
+Sherwin Ocampo: outlining the components that are involved, for the DDP usage, and also the, basically the workflow steps. It mimics how
+Sherwin Ocampo: The script is also written, and the step that it takes all the way to the end. So let's get right through it. So the first step is the data source, reference table. So this is a direct data partners, table,
+Sherwin Ocampo: That it basically formalizes the… DDP… the data sources that are involved, in
+Sherwin Ocampo: the DDP usage, some reporting requirements specific to those vendors, and also some preferences as to what their fee structures are, whether it's flat.
+Sherwin Ocampo: fee, or fixed CPM, or variable CPMs, and all like that. So what this one aims to do was, or it was…
+Sherwin Ocampo: designed to do was to limit a lot of the hard coding within the script, and also formalizes, sort of, like, our… this is our source of truth in terms of what DDPs need reporting, usage reporting.
+Sherwin Ocampo: So, that's the table.
+Sherwin Ocampo: And then the next one is the taxonomy. So you guys are very familiar with this one. So you've got the TPA categories, which is just basically all of our taxonomy combined. And then we've got some individual, DDP, specific category, taxonomy. And this is, where…
+Sherwin Ocampo: mostly, depending on the, the vendor requirements. So for LiveRamp, for example, it's variable CPM, so you gotta get down to every single data source category ID to determine what the TBCPM is, and that lives in this TPA LiveRamp categories table. Sharethis also has a specific need where they wanted, like.
+Sherwin Ocampo: There.
+Sherwin Ocampo: internal.
+Sherwin Ocampo: share this ID, and that lives within this table. So that's what the usage is this one for. And then, in general, also, it's just the segment ID that's being reported.
+Sherwin Ocampo: in most of the, DDP, usage.
+Sherwin Ocampo: Moving on, the next one is a very compute-heavy step, and this is where we're matching the impressions.
+Sherwin Ocampo: to the audience.
+Sherwin Ocampo: Target segments, and then which of those audience-targeted segments
+Sherwin Ocampo: is associated to the IP that we serve the impression to. So, as you may know, this would be involving your cost impression log, our audience segment data, and we need to do it historically, because a snapshot of
+Sherwin Ocampo: What the audience expression was at the point… at the time of the impression.
+Sherwin Ocampo: And so we've got this table built already to do that historical snapshot, and then also parsed out the individual data source
+Sherwin Ocampo: ID and data source category ID combinations, along with, also pre-serving the…
+Sherwin Ocampo: audience expression criteria structure, like the AND, OR,
+Sherwin Ocampo: conditions that is going to play into the next step, of the usage calculation. And then there's the IPDSC, which is just… which you guys are very familiar with, the IP to Data Source Category Association. So,
+Sherwin Ocampo: This use… this step used to be embedded within the DDP script, but we have since worked with the former
+Sherwin Ocampo: bigger data team, because the UI's audience segment reporting pipeline already does this same, very same matching, for it to be able to report in the UI for any segments that were responsible
+Sherwin Ocampo: For the impressions serve for the campaigns for that advertiser. So we've worked with them to be able to preserve this sort of intermediate resulting data set, from that pipeline.
+Sherwin Ocampo: And that lives within this… Mountain Analytics Prod, and we're calling it…
+Sherwin Ocampo: enriched impression. So, this basically is impression.
+Sherwin Ocampo: the granularity for this table is the impression plus the data source ID.
+Sherwin Ocampo: that it was able to match that impression to in the IPDSC data, based on the audience targets. And then the individual data source category IDs is an array, column in this
+Sherwin Ocampo: table.
+Sherwin Ocampo: So for… from a DDP perspective, we're not doing this compute-heavy step already, so we're just…
+Sherwin Ocampo: referencing this enrich impression table, that's available for us, already.
+Sherwin Ocampo: And then the next step is the business logic. So this is where we apply certain rules, based on,
+Sherwin Ocampo: what has been agreed upon, with the vendor partnership team.
+Sherwin Ocampo: And… this isn't a compute-heavy step, but it's a very…
+Sherwin Ocampo: Logic heavy, in terms of, determining, the…
+Sherwin Ocampo: credit that we are going to… or, like, where to place credit for that impression. So, let me go deeper into that one. So, it uses the enriched impression from the previous step. It uses certain,
+Sherwin Ocampo: identifiers from your data source, DDP, table, and obviously the CPM values that's gonna play a role into determining the credit. So what this one is, is doing some… something like.
+Sherwin Ocampo: From a DDP usage perspective, we're only interested in…
+Sherwin Ocampo: Prospecting Funnel 1 Impressions, because that one has a direct usage to
+Sherwin Ocampo: Sort of the audience criteria that are hitting all of these segments,
+Sherwin Ocampo: that are being targeted by the campaign, right? And the reason why we're not interested in Funnel 2 and Funnel 3… Funnels 2 and 3 in the prospecting campaign is that, technically, it's not using
+Sherwin Ocampo: it's not directly using the audience criteria at that point, right? It's just saying, hey, has this
+Sherwin Ocampo: household, been served a Funnel 1 campaign.
+Sherwin Ocampo: or funnel… funnel one, impression for this campaign. And if it is, then it gets… it's getting qualified for the funnel two, and, correspondingly for the funnel three, campaign, impressions, if they have visited the advertiser site after that point. So technically, those are first-party
+Sherwin Ocampo: identifiers, so that's why it's not included in the usage, the same way as the retargeting campaign that we're
+Sherwin Ocampo: we're excluding them entirely, because they're first party in nature. That's just, like, the filtering from the base population of the enriched impressions. The next… the big one is the…
+Sherwin Ocampo: as we know, the audience expression, like, the audience criteria is not really simple, so I'm gonna switch to the screen. So, for example, for this campaign, it's got a…
+Sherwin Ocampo: condition of, say, households that match at least one of these profiles, right? So, these…
+Sherwin Ocampo: For this set, it's an OR condition among all of these segments, right? But then it also has an AND, right? And then another set of, like, OR conditions. In this case, it's by itself, so. So we need…
+Sherwin Ocampo: from a,
+Sherwin Ocampo: crediting of the impression, the usage of this is we need to preserve, evaluated at impression at the time, and then also looking into which of the segments the IP is associated to, basically identifying who was
+Sherwin Ocampo: like, which segments were responsible for this IP to be served?
+Sherwin Ocampo: an impression for this campaign. So let me switch back to that. And so we have certain business rules if the impression
+Sherwin Ocampo: has several matches, like, for the segments that's being targeted. We have rules such as…
+Sherwin Ocampo: If it's an OR, pick the one that has the lowest CPM.
+Sherwin Ocampo: per provider.
+Sherwin Ocampo: and then you subject that with the AND conditions, is if it's an AND, then you pick the highest per data provider. So that's where it's… it gets a little bit tricky in terms of the coding.
+Sherwin Ocampo: But essentially, what that one is, accomplishing is that per impression.
+Sherwin Ocampo: So that's one impression count. It determines which advertiser gets credit for that impression, and if it's shared, then it's a partial credit for that impression.
+Sherwin Ocampo: I'm sure you've got a lot of questions.
+Alyson Lefkowitz: Yeah. So, on the assigning of credit, let's say that, we, for one specific category, we have data that comes from our GUID logs, and then we have… it also happens to come from several providers. How is that credited?
+Sherwin Ocampo: Yeah, so I'm assuming you're,
+Sherwin Ocampo: talking about, the mountain match vendors associated to those, right? Or…
+Alyson Lefkowitz: Interesting.
+Sherwin Ocampo: In general. Okay, so if it's Mountain Match, yeah, so that's, like, the next step of the process. So at this point, we don't know yet. Like, so from a, audience criteria perspective, the mountain match is mask
+Sherwin Ocampo: like, as a data source, 19, right? So we don't have that layer of
+Sherwin Ocampo: the vendors associated to that signal yet, right? So we're mapping it to, like, the…
+Sherwin Ocampo: like, we do an extra step of, if it was CRM or mounted mesh, then we use this targeted signal, table, which you guys own, and the targeted signal domain. But to answer your question, let me see if… I think Maya has some examples here for…
+Sherwin Ocampo: The business rules.
+Sherwin Ocampo: So…
+Sherwin Ocampo: Let me click on that. You guys see this one?
+Alyson Lefkowitz: Yep.
+Sherwin Ocampo: Alright. So,
+Sherwin Ocampo: This one does not have mountain mat, do we have mountain match here? Or maybe not.
+Maya Triman: Yes, at the bottom.
+Maya Triman: I think.
+Sherwin Ocampo: At the bottom? Okay, thanks, Mike. So, we've got, like,
+Sherwin Ocampo: let's say for this particular audience, it's got, like, LiveRamp, or CRM, or some FPA,
+Sherwin Ocampo: and let's say this FPA means it's, like, from Mountain Match, and then… but it's go with log is the signal, right? So in that case, we assume zero for that.
+Sherwin Ocampo: CPM for any… first party, vendor in our targeted signals.
+Alyson Lefkowitz: Okay, and, just to clarify, the first-party signals, are you purely looking at good log, or, I know, like, recently we added, AugmenterLog into that, Data Source 30. Do you guys.
+Sherwin Ocampo: Yeah.
+Alyson Lefkowitz: Yeah. Yeah.
+Sherwin Ocampo: Yeah, we consider those as well, so that's why it's key to have this in our steps. We're here in our DDP reference table, because that's our, basically, our…
+Sherwin Ocampo: source of truth in terms of, like, what are the data partners that are involved, really. So things like that does not exist here. We assume that it's first party, or if it exists here, and then it's a flat fee.
+Sherwin Ocampo: like, not fixed CPM, but a flat fee, then that's a zero CPM for that in our calculation, in our evaluation as well, because
+Sherwin Ocampo: it's a flat fee, right? So, regardless of whether… how many impressions we serve to, or we use that, it's a flat fee. So, from a crediting standpoint, we…
+Sherwin Ocampo: we still treat that as if it was a zero CPM.
+Alyson Lefkowitz: Got it, okay, thank you.
+Sherwin Ocampo: Yeah, yeah, you're welcome. Where can we find the slides?
+Malachi Dunn: feed data.
+Sherwin Ocampo: That's in this reference table, but again, this is…
+Sherwin Ocampo: Really, like, a manual, manually managed, table, and then it's… doesn't…
+Sherwin Ocampo: Like, we basically have to, every time there's a new data source, we need to work with, you guys, our audience to understand, alright, like, how do we want to represent that data source in this table? That way, our DDP script flows, and it doesn't break.
+Sherwin Ocampo: But that's… there's some, let me… Create that table, actually.
+Sherwin Ocampo: So we've got some… something like this.
+Malachi Dunn: Yeah, I think I've seen that table. What I was wondering is, like, do we have anywhere where it actually shares with us how much that flat fee is for the year?
+Sherwin Ocampo: No, we don't have visibility to see that. It would be our, like, Andy,
+Sherwin Ocampo: Who's our vendor partner, shit.
+Alyson Lefkowitz: Yeah, Andy Everson.
+Sherwin Ocampo: Okay. Yeah, and the accent, thanks. So…
+Sherwin Ocampo: And then, so, moving back, yeah, so I've touched this one a little bit, so now we're, if it was CRM or button match that is involved.
+Sherwin Ocampo: We go the extra layer to determine the underlying, vendor that's responsible for that signal, and then we further, divvy up the,
+Sherwin Ocampo: the credit for that impression, if it was multiple, vendors that Have, like, death.
+Sherwin Ocampo: I think, I believe now all of them have 50 cents for the ones that
+Sherwin Ocampo: we pay usage, if it's usage-based. And then at this point, and then after this, it would just be,
+Sherwin Ocampo: outputting the, the results into the different, reporting, aggregation and the data points that are involved, per vendor requirement.
+Sherwin Ocampo: And then up until this point, then we know.
+Sherwin Ocampo: what… how much usage we're paying for every single DDP that we pay usage for. And then we run an audit, step, so to sort of certify that, alright, this amount falls within the threshold of whatever we've defined.
+Sherwin Ocampo: I believe we have, like, 3 checks, that if it falls within the threshold of
+Sherwin Ocampo: like, a predetermined, value, then it's a pass, and then if it fails, then we do an extra step of analyzing,
+Sherwin Ocampo: what's the reason for the, for the uptick, or, the reduction in… in the usage that we've computed for this DDP for this month. Normally, it's been, like, impression levels, or the…
+Sherwin Ocampo: targeting signal landscape of, like, the IP to, like, the vendor, that's been the change, or that we can attribute the,
+Sherwin Ocampo: The usage, differences are,
+Sherwin Ocampo: And then as soon as we pass and we justify anything that fails within, like, our… our audit, then we do, like, the actual emailing of those reports to our vendors, and…
+Sherwin Ocampo: This is done via the script, and it does a Slack notification to a Slack group that it's been sent, and Finance and Andy Everson has visibility to that one.
+Sherwin Ocampo: So that basically is our end-to-end workflow of the, the DDP script.
+Sherwin Ocampo: Any questions?
+Sherwin Ocampo: clarifications.
+Malachi Dunn: Yeah, I've got a couple questions. So, I understand that we're only giving credit to vendors when we've actually won the impression. It's not just ingestion.
+Malachi Dunn: Is that the case?
+Sherwin Ocampo: Correct.
+Malachi Dunn: All of our vendors?
+Sherwin Ocampo: Correct.
+Malachi Dunn: Okay.
+Malachi Dunn: The other question, Herv… it sounds like what you were saying is that we are already filtering out
+Malachi Dunn: credit for the free logs and the augmenter logs? Does that sound correct?
+Sherwin Ocampo: Yeah, that is correct. There is a little bit of a caveat, though.
+Sherwin Ocampo: So, it would be anything…
+Sherwin Ocampo: If it was Mountain Match or… or CRM, we do, we do that. And if it was intentional within here in the DDP table,
+Sherwin Ocampo: we…
+Sherwin Ocampo: would also, exclude those. So, meaning, if it was CRM, and it doesn't have… like, I know for CRM, the only vendor that we're paying right now is Deep Sync. If it was purely CRM, right, and it's nothing to do with Deep Sync.
+Sherwin Ocampo: those get treated as if it was a zero, so if you have an audience criteria that says, hey, if it's this live ramp category, or it falls within this CRM,
+Sherwin Ocampo: list. If that's your audience, criteria. So, if that's CRM,
+Sherwin Ocampo: has nothing to do with Deep Sync, then it's a zero CPM, and it wins.
+Malachi Dunn: Okay.
+Sherwin Ocampo: Right? Or it wins, actually, no, let me see. Let me think if it wins, or if it wins, or if it's… it becomes, like, a part, maybe a partial, impression credit, like a half, because it's the lowest per provider.
+Malachi Dunn: Okay, that makes sense.
+Sherwin Ocampo: Yeah.
+Malachi Dunn: I pulled some numbers, I know we don't have time to go over them, but the gist of it is that I was basically calculating the value of each vendor based on…
+Malachi Dunn: I removed everything from the free log, so Augmenter log and GUID log, and so what did that vendor uniquely, I guess, touch?
+Malachi Dunn: And how much money did we make from those IPs?
+Malachi Dunn: And right now, I… Calculated that it didn't really seem like any of the vendors were actually
+Malachi Dunn: Providing more value, than what we're paying for them, at least when you remove the free logs.
+Malachi Dunn: But I think that the… I have a list of those queries, I think it would be really good for us to maybe sync
+Malachi Dunn: After, and see if we can go through some of those things, because… Basically, except for 33 across.
+Malachi Dunn: and the flat fee ones, because I didn't really know what the cost of the flat fee was. It didn't really seem like any of them were quite valuable, mostly because a lot of the IPs that they send us are just never used. So, for example, I got about 60% coverage with all the free logs, just of total IPs.
+Malachi Dunn: Unique IP, domain dates, etc.
+Malachi Dunn: But of the IPs that we actually served, it was, like, 99%, so pretty high.
+Malachi Dunn: So it did seem like there was some room there, but I'd like to see…
+Malachi Dunn: if there was anything, that I'm missing, and share those queries with you at some point in time, and see if we could,
+Malachi Dunn: Tackle this, because, like, what we were going to come into this,
+Malachi Dunn: meeting and say was that if we're not removing the credit for the free logs and the auglogs.
+Malachi Dunn: Then we should do that, because it seems like we're overpaying, but… Yeah, anyways.
+Malachi Dunn: That is… That is it, at least as far as the analysis is concerned.
+Kristen Colley: Would it… would it be helpful, because right now,
+Kristen Colley: Maya and Sherwin are working on incorporating Bambara.
+Kristen Colley: If… if you paired with them to kind of see the whole process and the update that transpires, and…
+Kristen Colley: I don't know, Alyson, what are your thoughts on kind of getting your team's feet wet with that?
+Alyson Lefkowitz: Yeah, so right now we're pretty focused on, mountain ID-related stuff, but, you know, as long as it's, like, not taking up too much time, I think that's a good idea.
+Kristen Colley: Okay.
+Kristen Colley: That sounds good. We'll… we'll…
+Sherwin Ocampo: Is that… is that the graph, Alyson? Sorry, I guess.
+Alyson Lefkowitz: Yes, it is.
+Sherwin Ocampo: Okay, yeah, that's actually next in our bucket, after Bombara. I think it's…
+Sherwin Ocampo: Is that data source 63?
+Sherwin Ocampo: That's… I think we need to, reflect, within the DDP script as well.
+Alyson Lefkowitz: Yeah, I'm not sure what the data source is, but,
+Alyson Lefkowitz: Yeah, I guess that's another thing we're gonna have to figure out, where all of our data sources are gonna be related to Mountain ID in some way, so this might.
+Sherwin Ocampo: it all happened.
+Alyson Lefkowitz: to change again.
+Sherwin Ocampo: Right, right, because it would be… it won't be in the targeted signals, then, that we'll look for the underlying data, right? Because this is IP-based, and we'll have to do, like, some extra step from what I have gathered.
+Alyson Lefkowitz: Yeah. So far. Exactly.
+Sherwin Ocampo: Yep, yep.
+Alyson Lefkowitz: Okay, oh…
+Malachi Dunn: Go ahead. You're good. I was just gonna say, we have a minute left, so, Sherwin, I was just gonna say, maybe I'll schedule a meeting with just you and Maya, perhaps?
+Malachi Dunn: To see if maybe we could talk about some of the logic of the analysis. I can go through it with you guys, and then,
+Malachi Dunn: Yeah, I guess the only other question I had was the DDP data. You said it wasn't your team that owns that, like, the actual logic, which…
+Malachi Dunn: Who actually owns the, crediting logic.
+Sherwin Ocampo: It would be, Andy, technically, because that's… if…
+Sherwin Ocampo: if we're, doing it per vendor contract, or whatever, I don't know. But that's, that historically, it's just been fed to us that say, yep, you do this one if this… for this scenario.
+Alyson Lefkowitz: Cool. Alright, well, thank you all. Kristen, I'll catch up with you offline, to figure out, if and how we want to transition this over, some of this over.
+Kristen Colley: Okay, sounds great. Thanks all!
+Malachi Dunn: Thank you.
+Sean Yang: Thank you.
+Kristen Colley: I…

@@ -1258,6 +1258,31 @@ Other notes: **Justuno DS24 ingest is now a dedicated hourly S3 file-drop** (s3:
 EMR → fpa_vendor_log), pixel-topic path is legacy. **Sovrn (FMX) is separately a PMP inventory partner**
 (gary-ql core.partners id 68) — DS33 data-feed decisions don't touch inventory deals.
 
+### DDP MM crediting mechanism — 1/N fractional split incl. free logs at $0; OR=lowest-CPM, AND=highest-CPM (Sherwin Ocampo, BAE, 2026-07-20/21)
+How an MM/CRM impression's credit is actually assigned (authoritative, from the BAE meetings; transcripts
+`tickets/audi_1089_ddp_vendor_evaluations/meetings/audi_1089_0{3,4}_*`):
+- **Fractional 1/N split.** For a credited impression, the credit is divided by **N = the number of vendors
+  that have the relevant category ID in `targeted_signal` within the 30 days PRIOR to the impression** — a
+  simple "gather all vendors with that category in the 30-day window" lookup, **NOT** "most-recent vendor".
+- **Free logs (guid DS23, augmentor DS30) ARE in the divisor N, but at $0 CPM** (their fractional slots are
+  unpaid). So free logs **dilute** paid-vendor credit (bigger N) but do **NOT** eliminate it — a paid vendor
+  still earns `(1/N) × $0.50` on impressions a free log also covers. (This reconciles the billing-table
+  finding that `ddp_mm_winners_imp.tv_cpm`=$0.50 on free+paid impressions: the $0.50 is the paid vendor's
+  residual fraction; the free log's fraction is $0.) All usage-based MM vendors are $0.50 CPM.
+- **Audience AND/OR evaluation (separate layer, a deliberate cost-saving instruction).** OR condition → pick
+  the **LOWEST-CPM** provider (only one signal is needed to qualify → a free log at $0 **wins** the OR and
+  zeroes it). AND condition → pick the **HIGHEST-CPM** provider. The first DDP iteration credited ALL vendors
+  (duplicated, interest-segments only, pre-MM); the AND/OR-lowest-CPM logic was added later as "a big cost
+  savings".
+- **Interest-segment dilution.** Many campaigns mix MM + interest segments (LiveRamp/ShareThis). When an
+  interest segment also matches the IP, it takes a slot first (e.g. LiveRamp 50% + MM 50%), then the MM 50%
+  is split 1/N across the MM vendors — further shrinking each MM vendor's share.
+- **OWNERSHIP: no one owns the crediting logic.** BAE (Sherwin/Maya, under Kristen Colley) just execute the
+  rules they were handed when MM/targeted_signal was introduced; they own steps 6-8 (reporting/audit/email)
+  and inherited 1-5. **Andy Everson owns the vendor relationships/contracts/terms** (and has the flat-fee
+  amounts — BAE has NO visibility). Changing the credit logic needs Andy's "blessing" + a contract-terms
+  check; Mike Doltz / Kristen can formalize review time. See [[reference_ddp_billing_logic]].
+
 ### Canonical DDP usage-reporting pipeline — 8 steps, billed on **Funnel-1/CTV only** (BAE billing team, 2026-07-20)
 Authoritative end-to-end structure of how DDP usage is metered/billed (source: billing-team doc
 `tickets/audi_1089_ddp_vendor_evaluations/artifacts/audi_1089_ddp_steps.xlsx`; script mirrors it at

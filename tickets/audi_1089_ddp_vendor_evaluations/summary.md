@@ -604,6 +604,34 @@ runbook Q8. 10% sample matched full to ~0.1pp. Query design lesson: category exp
 timed out at 6h; MIN/MAX date GROUP BY + vendor-side-only-7-days made it tractable; DS19 explosion needs a
 separate heavily-sampled pass.
 
+## 4h. BAE meetings — the ACTUAL crediting mechanism + reconciliation of the thesis (2026-07-20 walkthrough, 2026-07-21 sync)
+Transcripts: `meetings/audi_1089_03_ddp_program_walkthrough_2026_07_20.txt` (Kristen Colley + Sherwin Ocampo +
+Maya Triman present the 8-step pipeline) and `meetings/audi_1089_04_ddp_crediting_logic_sync_2026_07_21.txt`
+(Malachi walks Sherwin/Maya/Matt Brorby through the analysis). Full mechanism now in
+`data_knowledge.md` § "DDP MM crediting mechanism".
+
+**What we learned (Sherwin, who runs the meter):**
+- **Credit = 1/N fractional split** across ALL vendors with the category ID in `targeted_signal` in the 30d
+  before the impression (simple lookup, NOT most-recent-vendor). **Free logs (23/30) are in N but at $0 CPM**
+  (unpaid slots) → they DILUTE paid credit but don't eliminate it. This RECONCILES our billing-table finding:
+  the $0.50 on free-covered imps IS the paid vendor's residual fraction; the free fraction is $0.
+- Separate **AND/OR** layer: OR → lowest-CPM provider wins (free log $0 wins OR); AND → highest-CPM. Plus
+  interest-segment co-targeting further dilutes MM vendor share.
+- **So our ~$275K (same-date) / $412K (vertical) is the INCREMENTAL saving from FULL preemption** (pay paid
+  vendors $0 when a free log covers the imp), on top of the partial preemption already in place. Sherwin
+  agreed the direction is valid ("we're onto something").
+- **Sherwin's causality caveat (matters):** guid-log (23) coverage may be VENDOR-CAUSED (vendor introduced the
+  IP → we bid → guid captured the resulting visit) → preempting on guid over-credits free; augmentor (30) is
+  the bid stream (has the IP regardless) → clean. **Defensible full-preemption is on AUGMENTOR overlap; guid
+  overlap is debatable** — a refinement for the next analysis pass.
+- **OWNERSHIP: nobody owns the credit logic.** BAE (Sherwin/Maya under Kristen) execute MM-launch instructions;
+  **Andy Everson owns vendor contracts/terms + the flat-fee $ (BAE has no visibility)**; a change needs Andy's
+  blessing + contract check; Mike Doltz/Kristen can formalize review time.
+
+**NEXT STEPS (from the 7/21 sync):** Malachi → make the queries digestible + a brief explainer → reach out to
+**Mike Doltz(er)** for BAE validation → if they confirm, pursue **full free-log preemption** (needs Andy's
+blessing). Not urgent. The 5x5-quality ask (TI-1027 origin) snowballed into the whole-roster coverage story.
+
 ## 4d13. Post-preemption economics — bills if free logs stopped paying for co-held data (user question 2026-07-15)
 > **SUPERSEDED for the billing deck (2026-07-20):** the table below uses SAME-DAY free-cohold ($273.7K).
 > The augmentor bid-stream tautology inflates that; the fair prior-day number is **$200.4K** (see §4g).
