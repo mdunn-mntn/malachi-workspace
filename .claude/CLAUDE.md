@@ -90,6 +90,8 @@ workspace/
 | `documentation/docs/data_vendor_valuation_framework.md` | **Data-vendor valuation & willingness-to-pay** — how to value any 3P data vendor: richness → volume → layered uniqueness (IP/domain/event) → is-it-valuable → WTP (floor/fair/walk-away + per-unit) → tie-break rubric. Built from TI-1027 (5x5). Shareable. |
 | `documentation/docs/ddp_quality_score_runbook.md` | **DDP quality score runbook** — the repeatable per-vendor pipeline: 10 steps, one query + one visual each, composite score (V/R/Q/D/P × liveness gate) → fee band vs actual metered bill (`coredw.usage_reporting_data`) → verdict. Built from AUDI-1089. Run quarterly + at renewals. |
 | `documentation/docs/feature_rollout_experimental_design.md` | **Feature rollout experimental design** — how to DESIGN a rollout for clean causal inference: random stratified assignment, permanent holdout, 3 cadence options (5-week fast / 12-16-week standard / 7-month conservative), pre-flight checklist, canonical references. Apply BEFORE the next major release. Shareable. |
+| `documentation/docs/xlsx_deliverable_standard.md` | **The .xlsx deliverable standard** — the DEFAULT shareable is a branded `.xlsx` (not a deck/markdown unless asked). Read before building any shareable spreadsheet: palette, typography, sheet types, file/tab/Drive naming, workflow. |
+| `lib/mntn_xlsx.py` | **The shared .xlsx builder** (`MntnWorkbook`) — one import, one look. Branded cover + clickable contents, finding-led table sheets (heat + RAG), glossary/SQL/notes, color-coded tabs. Swap official MNTN hexes/logo via the `BRAND` dict + `logo_path`. Sample: `python3 lib/mntn_xlsx_demo.py`. |
 
 ## Self-Review Entry Guide
 
