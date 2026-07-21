@@ -100,9 +100,10 @@ some cells carry pixel artifacts (one ProServ advertiser shows >800x). Use media
 
 ## 5. Deliverables
 - outputs/audi_1141_mm_vs_3p_scorecard.xlsx: shareable workbook (upload to Google Sheets). Tabs: Read me,
-  MM vs 3P by vertical (blended MM-all vs 3P, ROAS + counts), MM gated vs 3P by vertical (best case, ROAS),
-  Full scorecard, Overall, Campaign detail (advertiser names, pivotable), Queries. Rebuild:
-  artifacts/audi_1141_build_xlsx.py.
+  MM vs 3P by vertical (blended MM-all vs 3P; IVR/CPV/ROAS + IVR-advantage + ROAS-advantage + counts),
+  MM gated vs 3P by vertical (best case, same columns), Full scorecard (adds CPA = cost per conversion),
+  Overall, Campaign detail (advertiser names, pivotable), Queries. Rebuild: artifacts/audi_1141_build_xlsx.py.
+  CPA is the only metric added from the TI-1037 Mode dashboard set (reach/frequency intentionally omitted).
 - outputs/audi_1141_campaign_grain.csv, audi_1141_scorecard_overall.csv, audi_1141_scorecard_by_vertical.csv,
   audi_1141_scorecard2_overall.csv, audi_1141_scorecard2_by_vertical.csv, audi_1141_advertiser_names.csv
 - artifacts/audi_1141_chart_overall.png, audi_1141_chart_ivr_by_vertical.png, audi_1141_chart_cpv_by_vertical.png
