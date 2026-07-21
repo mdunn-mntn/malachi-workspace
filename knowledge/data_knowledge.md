@@ -4273,3 +4273,40 @@ Also (TI-1037, 2026-07-08): **WGU runs UNGATED** — its 5 core prospecting camp
 day Jan'25–Jun'26 at HHST≤0 (905 campaign-days per half; the "905 of 925" scorecard row = 5 camps × 181d
 plus new campaign **127483, WGU's first-ever gated campaign** — 20 gated days by Jun'26). And a third
 tag-scope step: **May'26 pixel fires 2.8x** (44.7k→125.9k/mo) on top of the Jul'25/Oct'25 breaks.
+
+---
+
+## "Hitting-goal %" — the campaign-group goal-attainment metric (Mode report, discovered 2026-07-21)
+
+**There is a live report that already answers "what % of our customers hit their goal?"** — Mode report
+**"Campaign Groups Hitting Goal Percentage"** (`app.mode.com/mntn/reports/30fb4d3f8447`, runs daily, BigQuery
+data source 48787). Reuse its logic before rebuilding. Full table list for this question lives in the
+`GOAL-ATTAINMENT` .xlsx (My Drive/Tickets/GOAL-ATTAINMENT/).
+
+**How it scores a campaign group as "hitting goal":**
+1. Grain = campaign group, rolling child groups into parent via `COALESCE(parent_campaign_group_id, campaign_group_id)`.
+2. Goal (as-of-day) from `dw-main-gold.bae.v_daily_goal_by_campaign_group`; performance from a **trailing 3-day
+   rolling sum** of `dw-main-gold.summarydata.sum_by_campaign_by_day`.
+3. Compute the actual metric matching the goal_type and compare:
+   - `goal_type_id=1` ROAS = order_value/spend → hit if **>=** goal_value
+   - `goal_type_id=13` CostPerVisit = spend/visits → hit if **<=** goal_value
+   - `goal_type_id=16` CPA = spend/conversions → hit if **<=** goal_value
+   - `goal_type_id=14` CostPerCompletedView = tv_spend/vast_complete → **hard-coded hit=1 (always passes)**
+4. Active filter: trailing-3-day spend **>= $100**, goal_value>0, performance>0.
+5. Visits/conv/order_value **include `competing_*` (first-touch)** → industry_standard attribution applied to
+   everyone (does NOT respect per-advertiser `reporting_style`).
+
+**Current reading (2026-07-20):** ~**63%** of active campaign groups hitting goal — **Upper Mid Market 71%**
+(436/613), **Mid Market 66%** (295/450), **SMB 58%** (745/1278). Bigger advertisers hit goal more often.
+By feature: KW 57% · KW+PP 58% · PP 56%. A companion query buckets day-over-day transitions (NEW /
+MAINTAIN GOOD/BAD / IMPROVED / GOAL FAILURE / DEACTIVATED).
+
+**Caveats before quoting the number (where AUDI can add value):**
+- **CPCV auto-passes.** `goal_type_id=14` (CostPerCompletedView) is flagged hit=1 regardless of performance,
+  and it's ~25% of all cgs-with-a-goal (22.7k/94.9k on 2026-07-20). This **inflates the headline** — strip or
+  properly score it for a true rate.
+- **Campaign-GROUP grain, not advertiser.** "% of our **customers**" needs a roll-up to advertiser (an
+  advertiser with N groups counts N times here).
+- **3-day rolling window = live status,** not whole-flight "did they ultimately meet the goal."
+- **industry_standard attribution for all** (adds competing_*), not each advertiser's `reporting_style`.
+- 4 goal types scored, but they cover **94.5%** of cgs-with-a-goal; only Efficiency/reach (id 9) is dropped.

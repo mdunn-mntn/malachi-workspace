@@ -1798,6 +1798,15 @@ the `core_*` tables here.
 
 ---
 
+## dw-main-gold.bae.v_daily_goal_by_campaign_group + v_campaign_feature_date — daily goal & feature snapshots (goal-attainment spine, discovered 2026-07-21)
+- **Owner:** `bae` gold dataset. These are the tables the live Mode report **"Campaign Groups Hitting Goal Percentage"** is built on (report token `30fb4d3f8447`; see data_knowledge.md "Hitting-goal %"). Ready-made source for "did the customer hit their goal?".
+- **`v_daily_goal_by_campaign_group`** — authoritative **as-of-day goal** per campaign group. Grain: one row per `campaign_group_id` × `day`. Cols: `day` DATE, `advertiser_id` INT, `campaign_group_id` INT, `goal_type_id` INT (decode via `silver.core.goal_types`), `goal_type_name` STRING, `goal_value` NUMERIC, `current_record` INT (1 = currently-effective goal). **Prefer over live `campaign_groups.goal_value`** when you need the goal as it stood on a date. Join to performance on `campaign_group_id` + `day`.
+- **`v_campaign_feature_date`** — maps each campaign group to the **targeting feature** active over a date interval. Cols: `advertiser_id`, `campaign_group_id`, `feature_enabled_date`, `start_date`, `end_date` (report treats NULL as open via `COALESCE(end_date, DATE '2100-01-01')`), `feature_name`, `feature_type`. `feature_type` domain (2026-07-20) = **`KW`** (BUK keywords), **`PP`** (Peak Performance), **`KW+PP`** (both). Join where `start_date <= day < COALESCE(end_date,'2100-01-01')`. Lets you cut goal attainment by AUDI feature.
+- **Goal-type coverage (2026-07-20, 94,906 cgs-with-a-goal):** CostPerVisit(13) 31.9k · CostPerCompletedView(14) 22.7k · ROAS(1) 18.4k · CPA(16) 16.7k = **94.5%**; remainder (Efficiency(9) 5.2k = reach/awareness, no pass/fail number) unscored.
+- **Performance source the report trusts:** `dw-main-gold.summarydata.sum_by_campaign_by_day` (GOLD copy; silver equivalent also exists) joined to `dw-main-silver.public.{campaigns,campaign_groups,campaign_groups_raw}`. Advertiser spend **tier** from `dw-main-gold.summarydata.sum_by_advertiser_by_day`: SMB <$25k/mo, Mid Market $25–65k, Upper Mid Market ≥$65k.
+
+---
+
 ## bronze.integrationprod.audience_audience_segments
 - **Type:** TABLE — per-audience segment overlay rows. Captures *audience-segment-level* expressions, distinct from `audience_audiences.expression` (which captures the audience-level expression).
 - **Primary key:** audience_segment_id
