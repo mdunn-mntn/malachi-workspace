@@ -2279,6 +2279,7 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
   `dw-main-bronze.tpa.liveramp_categories` (719K-row TABLE — **carries `digital_cpm` + `tv_cpm` NUMERIC**, the
   LiveRamp variable-CPM source), `dw-main-bronze.external.sharethis_categories` (CSV EXTERNAL, categories only —
   **no CPM column**; ShareThis's $0.95 comes from the registry, not here).
+- **`website_crawl_verticals` (wcv)** — GCS parquet `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/*.parquet`, ~1.42M domains. Cols: **`domain_name → vertical_id, vertical_name` (e.g. 104008 "B2B - Information Technology & Engineering"), `bucket_id`, `is_manual_override`**. This is the **DS13 domain→vertical** map (cached, refreshed ~every few months). Used as the "usable domain" gate (any domain in wcv, minus a webmail blocklist) AND as the vertical grain for category-level coverage (q3f). `product_categorization` (pc, DS19): `composite_key (URL) → product_category` + `data_source_category_id.list[].element` (keyword cat ids **≥900000** = the DS19 keyword categories; ids <900000 are other taxonomy). Both queried as external tables via the runbook svs setup.
 - **`dw-main-bronze.coredw.usage_reporting_audits`** — audit/anomaly-gate table (documented above; 20 cols, 99 rows).
 - ⛔ **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the meter
   consumes (F1 impression ⋈ targeted segments ⋈ IPDSC, 30-day lookback; produced by the UI Audience Segment

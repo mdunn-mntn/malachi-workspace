@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Build the AUDI-1089 billing-review RevealJS deck (CDN + self-contained standalone).
 Charts base64-embedded from this folder. Reveal assets inlined from /tmp for standalone.
-Reproducible: rerun -> identical files. Author on title slide; no named attributions; ranked tables."""
+Reproducible: rerun -> identical files. Author on title slide; no named attributions; ranked tables.
+
+SUPERSEDED 2026-07-21 — DO NOT REGENERATE. This deck carries the retired prior-day framing
+(~$200K/yr, "Why $200K not $274K"), which was reverted after an IP-grain check proved the
+same-day (ip x domain x date) cohold is genuine, not an augmentor tautology. The live,
+audit-ready deliverable is the WORKBOOK: audi_1089_billing_review.xlsx (built by
+audi_1089_billing_review_workbook.py), with two grains -- DOMAIN same-visit $274.6K + VERTICAL
+$412.4K. Kept only as build history; see summary.md 4g/4h and reference_ddp_billing_logic."""
 import base64, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))

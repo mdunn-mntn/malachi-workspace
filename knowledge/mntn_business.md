@@ -162,6 +162,12 @@ Paulo announced a reorg merging big pieces of the **reporting world** under **Ka
 
 *(Name note: **Mike Dolzer ≠ Mike Dolt** — two different people. **Mike Dolzer** is a Senior Project Manager (the PM on Reporting Experience + continued support for Karen/BAE). **Mike Dolt** is an Engineering Manager on the targeting/AUDI side (covered product leadership for targeting during the GPM search). Do not conflate.)*
 
+**DDP (Direct Data Partner) billing — who owns what (confirmed in the 2026-07-20/21 BAE syncs):**
+- **BAE team = Kristen Colley (lead) + Sherwin Ocampo & Maya Triman (the DDP-billing SMEs who run the monthly credit + invoice), PM = Mike Dolzer.** BAE *executes* the usage-reporting pipeline (`SteelHouse/bae-sql-utility/ddp`, steps 6–8) against crediting **rules handed down to them** — they did not author the credit logic and don't own the rule that free logs (DS23/DS30) take unpaid $0 slots in the 1/N divisor.
+- **Nobody currently owns the credit logic itself** — it's inherited and unowned. This is the gap AUDI-1089 surfaced. **Malachi is likely to take ownership of the DDP crediting pipeline** (Alyson raising with Kale).
+- **Andy Everson owns the vendor contracts + the flat-fee amounts** (renewal terms, per-vendor $). BAE has **no visibility** into contract/fee numbers — so "what should we pay?" routes to Andy, "how is credit computed?" routes to BAE/the pipeline. Any credit-reassignment change needs Andy's blessing (incl. whether already-paid-for 3P interest vendors can cover the same signal).
+- See `knowledge/data_knowledge.md` § "DDP MM crediting mechanism" for the actual 1/N mechanic and the exact change point.
+
 ### Key People
 - **Mark** — Executive, drives product direction. Pushed multi-touch elimination (2022), pushes IVR as primary metric.
 - **Kirsa** — Experimentation Lead / Product Manager. Owns experiment design, execution, and analysis. Previously PM for data monitoring, then product PM for targeting (Mountain Match). Has a set monthly budget for experiments.
